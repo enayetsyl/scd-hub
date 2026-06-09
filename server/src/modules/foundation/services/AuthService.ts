@@ -1,0 +1,103 @@
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { User } from "../models/User";
+import { Guardian } from "../models/Guardian";
+import { writeAudit } from "../../platform/services/AuditService";
+import type { Role } from "@scd/shared";
+
+const SALT_ROUNDS = 12;
+
+export interface AuthTokenPayload {
+  userId: string;
+  role: Role;
+}
+
+function signToken(payload: AuthTokenPayload): string {
+  const secret = process.env.JWT_SECRET ?? "dev-secret";
+  return jwt.sign(payload, secret, { expiresIn: "8h" });
+}
+
+export async function hashPassword(plain: string): Promise<string> {
+  return bcrypt.hash(plain, SALT_ROUNDS);
+}
+
+export async function verifyPassword(plain: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(plain, hash);
+}
+
+// ---------------------------------------------------------------------------
+// Staff login (email + password, D-#5)
+// ---------------------------------------------------------------------------
+
+export interface StaffLoginInput {
+  email: string;
+  password: string;
+}
+
+export interface AuthResult {
+  token: string;
+  userId: string;
+  role: Role;
+  name: string;
+}
+
+export async function staffLogin(input: StaffLoginInput): Promise<AuthResult | null> {
+  const user = await User.findOne({ email: input.email.toLowerCase(), active: true });
+  if (!user) {
+    await writeAudit({ eventKind: "LOGIN_FAIL", meta: { email: input.email, reason: "user_not_found" } });
+    return null;
+  }
+
+  const ok = await verifyPassword(input.password, user.passwordHash);
+  if (!ok) {
+    await writeAudit({ eventKind: "LOGIN_FAIL", actorId: user._id, actorRole: user.role, meta: { reason: "bad_password" } });
+    return null;
+  }
+
+  await writeAudit({ eventKind: "LOGIN_SUCCESS", actorId: user._id, actorRole: user.role });
+
+  return {
+    token: signToken({ userId: user._id.toString(), role: user.role }),
+    userId: user._id.toString(),
+    role: user.role,
+    name: user.name,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Guardian login (flexible identifier: email | phone | school_id, D-#9)
+// ---------------------------------------------------------------------------
+
+export interface GuardianLoginInput {
+  identifier: string;
+  identifierKind: "email" | "phone" | "school_id";
+  password: string;
+}
+
+export async function guardianLogin(input: GuardianLoginInput): Promise<AuthResult | null> {
+  const guardian = await Guardian.findOne({
+    identifierKind: input.identifierKind,
+    identifier: input.identifier.trim(),
+    active: true,
+  });
+
+  if (!guardian) {
+    await writeAudit({ eventKind: "LOGIN_FAIL", meta: { reason: "guardian_not_found", kind: input.identifierKind } });
+    return null;
+  }
+
+  const ok = await verifyPassword(input.password, guardian.passwordHash);
+  if (!ok) {
+    await writeAudit({ eventKind: "LOGIN_FAIL", actorId: guardian._id, actorRole: "GUARDIAN", meta: { reason: "bad_password" } });
+    return null;
+  }
+
+  await writeAudit({ eventKind: "LOGIN_SUCCESS", actorId: guardian._id, actorRole: "GUARDIAN" });
+
+  return {
+    token: signToken({ userId: guardian._id.toString(), role: "GUARDIAN" }),
+    userId: guardian._id.toString(),
+    role: "GUARDIAN",
+    name: guardian.name,
+  };
+}
