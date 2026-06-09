@@ -3,18 +3,17 @@
 _Updated: 2026-06-09_
 
 ## Now / next
-- **Done:** Slice 1 — content import + view + PDF (J1 end-to-end).
-  - CorpusEvent model (corpus plane — de-identified, no identity refs, ADR-005)
-  - ImportBatch model (platform — audit row per import run)
-  - ContentArtifact model (content — JSON + rendered_markdown + version chain, ADR-006)
-  - ContentService: calls Python harness via child_process, persists artifact + batch + event, handles version supersede (J1.9)
-  - `importEnvelope` mutation (requires `content:import`; TEACHER denied — J1.4); `contentTree`, `contentArtifacts`, `artifact` queries (row-scope enforced — J1.5/J1.6)
-  - PDF route `GET /pdf/artifact/:id` — pdfkit + NotoSansBengali-Regular.ttf (ADR-009)
-  - Tests: 62/62 pass (J1.1–J1.4, J1.5/J1.6, J1.9, Bangla PDF smoke). `tsc --noEmit` clean. Vocab verifier PASS.
-- **Next:** build **Slice 2** — question bank + assembly (J2 + J3; question payload LOCKED D-#19).
+- **Done:** Slice 2 — question bank + assembly (J2 + J3 end-to-end).
+  - AssessmentSet model (`assessment` module) — basket items, CT/HW/AS metadata, draft→assembled lifecycle.
+  - `questions` / `question` / `stimuli` GraphQL queries — thin tag-filter view over ContentArtifact (no new collection); filters: subject/classLevel/topicTag/questionType/bloomLevel/difficulty/paperRole/marksMin/marksMax. Row-scope enforced (J2.4: supervisory grant passes naturally).
+  - `createSet` / `addQuestionToSet` / `assembleSet` mutations — write-scope via `assertCanWrite` (J3.5: supervisory-only teachers denied); basket accumulation emits `questions_selected` CorpusEvent; assembleSet emits `set_assembled` CorpusEvent.
+  - `assessmentSet` / `assessmentSets` queries — read-scope enforced.
+  - PDF route `GET /pdf/set/:id` — structured pdfkit renderer (NotoSansBengali; renders question_text + answer-carrier per type; no rendered_markdown for questions, ADR-006).
+  - Tests: 92/92 pass (J2.1–J2.4, J3.1–J3.2, J3.5 + all Slice 0+1 tests). `tsc --noEmit` clean. Vocab verifier PASS.
+- **Next:** build **Slice 3** — trackers (J4: class-test / assignment / homework trackers).
 
 ## In flight
-- (none — Slice 1 shipped)
+- (none — Slice 2 shipped)
 
 ## Blocked / waiting
 - (none blocking)
