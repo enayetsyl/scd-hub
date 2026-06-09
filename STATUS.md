@@ -9,7 +9,7 @@ _Updated: 2026-06-09_
   - `createSet` / `addQuestionToSet` / `assembleSet` mutations — write-scope via `assertCanWrite` (J3.5: supervisory-only teachers denied); basket accumulation emits `questions_selected` CorpusEvent; assembleSet emits `set_assembled` CorpusEvent.
   - `assessmentSet` / `assessmentSets` queries — read-scope enforced.
   - PDF route `GET /pdf/set/:id` — structured pdfkit renderer (NotoSansBengali; renders question_text + answer-carrier per type; no rendered_markdown for questions, ADR-006).
-  - Tests: 92/92 pass (J2.1–J2.4, J3.1–J3.2, J3.5 + all Slice 0+1 tests). `tsc --noEmit` clean. Vocab verifier PASS.
+  - Tests: 92/92 pass (J2.1–J2.4, J3.1–J3.2, J3.5 + all Slice 0+1 tests). `tsc --noEmit` clean. Vocab verifier PASS. [e1db6d7]
 - **Next:** build **Slice 3** — trackers (J4: class-test / assignment / homework trackers).
 
 ## In flight
