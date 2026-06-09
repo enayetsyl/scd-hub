@@ -26,6 +26,7 @@
 | ADR-014 | **GraphQL stack:** Yoga + Pothos + Envelop (server); graphql-codegen client-preset; **urql** client | Lightweight + free-tier-friendly vs Apollo platform gravity; Envelop/Pothos = home for resolver authz; codegen client-agnostic. |
 | ADR-015 | **Testing:** Jest repo-wide — `jest-expo` + RNTL (`/app`), Jest + Supertest (`/server`); **Maestro** e2e | One runner for solo-maintainability; depth on dense logic + fail-closed firewall test. |
 | ADR-016 | **Open-decision resolutions (REQ §10):** per-section keying; events export-then-prune; uniform guardian access (drop `access_level`); guardian flexible-identifier auth; daily backup | Folds resolved decisions into the model/ops. |
+| ADR-017 | **Scope-overlay model on TEACHER** (D-#17/#18): one role; row-scope = union of *scope grants* — teaching (read+write own sections), **supervisory** (read-only oversight: whole-school / grade-class / subject-dept / explicit set), **proxy** (read plans + assign HW + fill tracker, bounded to the covered class) | Class Teacher / Coordinator / Lead / cover need reach beyond own classes; modeled as scope, not new roles or new permissions. |
 
 **Decisions resolved (REQ §10).** All of REQ's open decisions #1–#10 are now resolved (see REQ v0.6 register). Model/ops-affecting ones recorded here: **#1** per-section keying (§4), **#2** events export-then-prune (§6), **#7a** daily backup + rotation (§11), **#8** uniform guardian access — drop `access_level` (§4), **#9** guardian flexible-identifier auth (§7). Captured as **ADR-016**.
 
@@ -133,7 +134,11 @@ The two logs answer different questions — `events` = "what pedagogy happened,"
 
 - **Action-level RBAC**, default-deny, role→permission map in `/shared`, hardcoded now / data-drivable later.
 - **Resolver-level enforcement (ADR-004):** every GraphQL resolver checks permission **and** row-scope **and** the plane boundary before resolving. Returning an entity must not let a client walk a relation it isn't entitled to (e.g., a guardian resolving from their child to another family). Authz is centralized in resolver middleware/directives, not scattered ad hoc.
-- **Row-scope:** teacher → own classes/sections; guardian → linked children via `guardian_links`.
+- **Row-scope (scope-overlay model, ADR-017):** a teacher's effective scope is the **union of their scope grants**, not just "own classes." Grant kinds:
+  - **teaching** — own classes/sections: read + assemble + tracker-write (the base grant).
+  - **supervisory** (Class Teacher / Coordinator / Subject Lead) — **read-only** oversight over a configurable extent: whole-school, a grade/class (all subjects), a subject/department (all classes), or an explicit assigned set. Grants only the `*:read` actions over that extent; no assemble/tracker-write.
+  - **proxy** (cover teacher) — for the covered class only: read chapter+lesson plans, `set:assemble` (assign homework), and `tracker:write`. A bounded **write** overlay, time/assignment-limited.
+  Guardian → linked children via `guardian_links`. Resolver middleware composes the grant union; the corpus-plane boundary still overrides everything (no overlay reaches identity from the corpus side).
 - **Plane boundary in code:** analytics/export resolvers are wired to the corpus plane only; they have no resolver path to identity types. The **fail-closed firewall test** (ADR-012) asserts this by trying to resolve identity from the export path and requiring it to fail.
 - **Authentication (ADR-016):** staff = email/password + email reset link (D-#5); guardian = flexible identifier (email / school unique-ID / phone) + password, with manual office reset for non-email guardians until SMS lands (D-#9). Passwords hashed; credentials live in the operational plane only, never the corpus plane.
 

@@ -50,7 +50,7 @@ A single, modular application — native Android, native iOS, and a web app from
 | Actor | Authenticated? | In first-priority build? | Notes |
 |---|---|---|---|
 | Principal | Yes — super-admin | Yes | Full visibility; user/role management; reads (never edits) the audit log. |
-| Teacher | Yes — staff | Yes | Row-scoped to **own classes** only. Consumes content, assembles sets, fills trackers. Authors nothing in-app. |
+| Teacher | Yes — staff | Yes | Row-scoped by **scope grants** (D-#17/#18): teaching (own sections, read+write), **supervisory** (Class Teacher / Coordinator / Subject Lead — read-only oversight beyond own classes), **proxy/cover** (read plans + assign HW + fill tracker for the covered class). Consumes content, assembles sets, fills trackers. Authors nothing in-app. |
 | Office/Admin | Yes — staff | Yes | Roster, guardian linkage, complaint intake, messaging dispatch. |
 | **Guardian** | **Yes — portal** | **Account + linkage in build; portal screens land with their modules** | Reads only **their linked children's** data. Broad surface (mostly deferred): routine, homework + how-to-guide docs, attendance report, fees report, push notifications, notices, leave application. |
 | Student | **No — data only** | Yes (as a profile) | Has a profile; **no login**. Keeps the minor-safety posture (no unsupervised student-facing access). |
@@ -127,7 +127,7 @@ A single, modular application — native Android, native iOS, and a web app from
 
 **R-AC2 PoLP.** Each role gets the minimum needed; no blanket access "for convenience."
 
-**R-AC3 Row/scope-level access (not just role-level).** Teacher → only own **classes/sections**; Guardian → only linked children, permitted slices. Enforced in the data layer, not just the UI.
+**R-AC3 Row/scope-level access (not just role-level).** A teacher's effective scope is the **union of their scope grants** (D-#17/#18, ARCH ADR-017), not merely "own classes": **teaching** (own classes/sections — read + assemble + tracker-write), **supervisory** (Class Teacher / Coordinator / Subject Lead — **read-only** oversight over a configurable extent: whole-school, a grade/class across all subjects, a subject/department across all classes, or an explicit assigned set), and **proxy/cover** (for the covered class only — read chapter+lesson plans, assign homework, fill tracker: a bounded write overlay). Guardian → only linked children, permitted slices. Enforced in the data layer, not just the UI. No new permissions or roles — these are scope grants over the existing TEACHER permission set.
 
 **R-AC4 Two access planes (structural).**
 - **Operational plane** — staff + guardians; row-scoped; sees identity as permitted.

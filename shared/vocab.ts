@@ -306,7 +306,11 @@ export const SCOPE_RULES: Record<Role, string> = {
   PRINCIPAL:
     "Unscoped (full visibility). audit:read is read-only; audit is never user-writable.",
   TEACHER:
-    "Row-scoped to own sections via class→section teacher assignment: content:read, set:*, tracker:*, message:dispatch apply only within those sections.",
+    "Scope = UNION of scope grants (D-#17/#18, ADR-017), not just own sections: " +
+    "(a) TEACHING — own sections via class→section assignment: content:read, set:*, tracker:*, message:dispatch apply there; " +
+    "(b) SUPERVISORY (Class Teacher / Coordinator / Subject Lead) — READ-ONLY oversight (*:read only) over a configurable extent: whole-school, grade/class (all subjects), subject/department (all classes), or an explicit assigned set; no assemble/tracker-write; " +
+    "(c) PROXY/cover — for the covered class only: read chapter+lesson plans, set:assemble (assign HW), tracker:write — a bounded write overlay. " +
+    "Resolvers compose the union; the corpus-plane boundary still overrides (no overlay reaches identity from the corpus side).",
   OFFICE:
     "Unscoped on roster/guardian-linkage/messaging/content-import; holds no tracker/user permissions. content:import is not row-scoped (publisher seam).",
   GUARDIAN:
