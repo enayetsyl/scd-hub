@@ -1,0 +1,15 @@
+{
+  "name": "scd-hub",
+  "private": true,
+  "workspaces": ["shared", "server", "app"],
+  "scripts": {
+    "dev:server": "npm run dev --workspace=server",
+    "test": "npm run test --workspace=server",
+    "test:server": "npm run test --workspace=server",
+    "typecheck": "npm run typecheck --workspace=server && npm run typecheck --workspace=shared",
+    "verify:vocab": "npx tsx skills/_tools/verify_shared_vocab.mjs docs/import-contract.schema.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
