@@ -12,8 +12,10 @@ import "./modules/foundation/resolvers/students";
 import "./modules/foundation/resolvers/guardians";
 import "./modules/foundation/resolvers/scopeGrants";
 import "./modules/corpus/resolvers/analytics";
+import "./modules/content/resolvers/content";
 
 import { builder } from "./schema";
+import { pdfRouter } from "./routes/pdf";
 
 const app = express();
 
@@ -39,6 +41,9 @@ const yoga = createYoga({
 });
 
 app.use(yoga.graphqlEndpoint, yoga as unknown as express.RequestHandler);
+
+// Thin HTTP surface — PDF export (ADR-003, ADR-009)
+app.use("/pdf", pdfRouter);
 
 const PORT = Number(process.env.PORT ?? 4000);
 

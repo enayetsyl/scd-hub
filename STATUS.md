@@ -3,14 +3,18 @@
 _Updated: 2026-06-09_
 
 ## Now / next
-- **Done:** Slice 0 — monorepo skeleton + auth + identity foundation + scope-grant model
-  (teaching/supervisory/proxy, D-#17/#18/#20) wired into resolver authz, with the fail-closed
-  firewall test green (31/31 tests pass, `tsc --noEmit` clean, vocab verifier green).
-- **Next:** build **Slice 1** — content import + view + PDF (J1 end-to-end; import validator
-  already exists).
+- **Done:** Slice 1 — content import + view + PDF (J1 end-to-end).
+  - CorpusEvent model (corpus plane — de-identified, no identity refs, ADR-005)
+  - ImportBatch model (platform — audit row per import run)
+  - ContentArtifact model (content — JSON + rendered_markdown + version chain, ADR-006)
+  - ContentService: calls Python harness via child_process, persists artifact + batch + event, handles version supersede (J1.9)
+  - `importEnvelope` mutation (requires `content:import`; TEACHER denied — J1.4); `contentTree`, `contentArtifacts`, `artifact` queries (row-scope enforced — J1.5/J1.6)
+  - PDF route `GET /pdf/artifact/:id` — pdfkit + NotoSansBengali-Regular.ttf (ADR-009)
+  - Tests: 62/62 pass (J1.1–J1.4, J1.5/J1.6, J1.9, Bangla PDF smoke). `tsc --noEmit` clean. Vocab verifier PASS.
+- **Next:** build **Slice 2** — question bank + assembly (J2 + J3; question payload LOCKED D-#19).
 
 ## In flight
-- (none — Slice 0 shipped; Slice 1 not yet started)
+- (none — Slice 1 shipped)
 
 ## Blocked / waiting
 - (none blocking)
@@ -41,6 +45,7 @@ _Updated: 2026-06-09_
 - D-#19: adopted Project-04 LOCKED question/stimulus contract.
 - D-#20: proxy grants duration-bounded in days; auto-expiry + audit.
 - **D-#21:** proxy-expiry audit stamped at request time (first denied-after-expiry) — no cron.
+- **Slice 1 design:** Python harness invoked via child_process (not re-ported to TS) — canonical gate stays single-source. pdfkit + NotoSansBengali font (not puppeteer) — no system Chromium dep on Oracle Always-Free.
 
 ## Backlog
 - Deferred pipeline (guardian portal, analytics, AI/LLM export, messaging automation, ops modules)
