@@ -61,7 +61,8 @@ policy, or decisions into this repo.
 /DECISIONS.md         ← why (append-only ADR log)
 /docs/
   requirements.md     ← what/why (the REQ)
-  architecture.md     ← how (modules, data planes, the 16 ADRs)
+  prd.md              ← first-priority slice: per-role journeys + acceptance criteria (feeds e2e)
+  architecture.md     ← how (modules, data planes, the ADRs)
   glossary.md         ← canonical terminology (read before naming anything)
   import-contract.md  ← the envelope contract narrative
   import-workflow.md  ← how content is authored (Claude Desktop) and imported into the app

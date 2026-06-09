@@ -3,12 +3,16 @@
 _Updated: 2026-06-09_
 
 ## Now / next
-- Repo bootstrap: migrate files to the §5 layout, scaffold KB + skills (this handoff).
-- After bootstrap: write the **lightweight PRD** (first-priority slice: per-role journeys +
-  acceptance criteria) — feeds the NFR-11 e2e tests.
+- **Done:** repo bootstrap (migration + KB + skills); **PRD drafted** (`docs/prd.md`, first-priority slice).
+- **Next:** build **Slice 0** — monorepo skeleton + auth + identity foundation + the scope-grant model
+  (teaching/supervisory/proxy, D-#17/#18) wired into resolver authz, with the fail-closed firewall test green.
 
 ## In flight
-- (none — bootstrap is the active task)
+- (none — awaiting go-ahead on Slice 0 scaffold)
+
+## Recent decisions
+- D-#17/#18: TEACHER scope overlays — supervisory (read-only oversight) + proxy/cover (bounded write).
+  See `DECISIONS.md`, ADR-017, R-AC3.
 
 ## Blocked / waiting
 - Tighten `questionPayload` to `additionalProperties:false` — waits on **Project 04** ratifying the
