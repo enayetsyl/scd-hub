@@ -47,9 +47,12 @@ policy, or decisions into this repo.
 | Purpose | Command |
 |---|---|
 | Shared vocab/RBAC verifier | `npx tsx skills/_tools/verify_shared_vocab.mjs docs/import-contract.schema.json` |
-| Import-envelope conformance | `python3 server/import/validate_import.py <envelope.json> --envelope-schema docs/import-contract.schema.json [--plan-schema <plan-schema.json>]` |
-| Typecheck | `npx tsc --noEmit` (workspace-wide once configured) |
-| Tests | _TBD — Jest repo-wide (jest-expo + RNTL in /app, Jest + Supertest in /server); Maestro e2e_ |
+| Import-envelope conformance | `python server/import/validate_import.py <envelope.json> --envelope-schema docs/import-contract.schema.json [--plan-schema <plan-schema.json>]` |
+| Typecheck (server) | `npm run typecheck --workspace=server` |
+| Typecheck (shared) | `npm run typecheck --workspace=shared` |
+| Build shared | `npm run build --workspace=shared` (required before server typecheck if dist/ is stale) |
+| Tests (server) | `npm run test --workspace=server` — Jest + Supertest; 31 tests |
+| Dev server | `npm run dev:server` (tsx watch) |
 | Lint | _TBD_ |
 
 ## Repo map ("before doing Y, read X")
@@ -71,8 +74,25 @@ policy, or decisions into this repo.
   adr/                ← long-form ADRs if/when they outgrow DECISIONS.md
 /shared/              ← cross-cutting source of truth; see /shared/AGENTS.md
   vocab.ts            ← controlled-vocab enums + role→permission map (mirrors the schema)
-/server/              ← Node/Express + GraphQL (Yoga + Pothos + Envelop)
-/app/                 ← Expo RN (iOS/Android/Web)
+  index.ts            ← re-exports vocab.ts; built to dist/ for server type resolution
+/server/              ← Node/Express + GraphQL Yoga + Pothos + Envelop (Slice 0+)
+  src/
+    index.ts          ← Express + Yoga entry; /healthz /readyz
+    db.ts             ← MongoDB Atlas connection
+    schema.ts         ← Pothos builder (RBAC auth-scopes via @pothos/plugin-scope-auth)
+    context.ts        ← request context (JWT → AuthPayload)
+    modules/
+      foundation/     ← auth, roles, org, student roster, guardian, scope grants
+        models/       ← User Guardian Student GuardianLink Class Section Subject AcademicYear ScopeGrant
+        services/     ← AuthService ScopeGrantService
+        resolvers/    ← auth users classes students guardians scopeGrants
+      platform/       ← audit log (append-only, ADR-008)
+      corpus/         ← analytics plane (NO identity imports — firewall boundary, ADR-005)
+    middleware/authz.ts ← assertCanRead / assertCanWrite (RBAC + proxy window + expiry stamp)
+    __tests__/        ← firewall.test auth.test scopeGrant.test (31 tests)
+/app/                 ← Expo RN (iOS/Android/Web) — Slice 0 skeleton, boots on web
+  App.tsx             ← entry point
+  src/graphql/client.ts ← urql client
 /skills/              ← repeatable SOPs, loaded on demand:
   feature-lifecycle/  ← add or change a feature, end to end
   contract-sync/      ← the two-place enum/schema sync procedure
