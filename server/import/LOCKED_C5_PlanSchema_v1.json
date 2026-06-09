@@ -1,0 +1,371 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://school.local/p03/C5_PlanSchema_v1.json",
+  "title": "Project 03 C5 Plan Schema v1 (unified Chapter Plan + Session Plan)",
+  "description": "DERIVATIVE of LOCKED_ChapterPlan_Layout_Instruction_v3_3 and LOCKED_SessionPlan_Layout_Instruction_v11. The layouts are authoritative; this schema is regenerated and re-locked whenever either layout supersedes. Enforces shape only (presence/order/enum/count/pattern). Arithmetic, cross-field equality, numeral-system, surface-purity and cross-plan checks live in validate_plan.py.",
+
+  "type": "object",
+  "required": ["schema_version", "plan_type", "subject", "class_level", "division", "curation_tag"],
+  "additionalProperties": false,
+
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "pinned_to": {
+      "type": "object",
+      "description": "Layout versions this plan was built to. Harness warns on mismatch with the current build target.",
+      "properties": {
+        "chapter_layout": { "type": "string" },
+        "session_layout": { "type": "string" },
+        "production_core": { "type": "string" }
+      }
+    },
+    "plan_type": { "enum": ["chapter_plan", "session_plan"] },
+    "subject": { "enum": ["BAN", "ENG", "MATH", "SCI", "BGS"] },
+    "class_level": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "curation_tag": { "enum": ["KEEP_AS_IS", "NEEDS_REPLACEMENT", "FLEXIBLE"] },
+
+    "division": {
+      "type": "object",
+      "required": ["anchor_word", "number", "title"],
+      "additionalProperties": false,
+      "properties": {
+        "anchor_word": { "enum": ["পাঠ", "অধ্যায়", "Unit", "Lesson"] },
+        "number": { "type": "integer", "minimum": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "replacement_label": { "type": "string", "description": "e.g. '(প্রতিস্থাপন; ইসলামি গল্প)' on a whole-lesson NEEDS-REPLACEMENT chapter" }
+      }
+    },
+
+    "footer": { "type": "object", "description": "Internal-layer traceability; free-form, rendered into the HTML comment footer." },
+
+    "chapter_plan": { "$ref": "#/$defs/chapterPlan" },
+    "session_plan": { "$ref": "#/$defs/sessionPlan" }
+  },
+
+  "allOf": [
+    {
+      "if": { "properties": { "plan_type": { "const": "chapter_plan" } } },
+      "then": { "required": ["chapter_plan"] }
+    },
+    {
+      "if": { "properties": { "plan_type": { "const": "session_plan" } } },
+      "then": { "required": ["session_plan"] }
+    },
+    {
+      "comment": "Anchor-word must match the subject's book hierarchy.",
+      "if": { "properties": { "subject": { "enum": ["BAN"] } } },
+      "then": { "properties": { "division": { "properties": { "anchor_word": { "const": "পাঠ" } } } } }
+    },
+    {
+      "if": { "properties": { "subject": { "enum": ["MATH", "SCI"] } } },
+      "then": { "properties": { "division": { "properties": { "anchor_word": { "const": "অধ্যায়" } } } } }
+    },
+    {
+      "if": { "properties": { "subject": { "const": "ENG" } } },
+      "then": { "properties": { "division": { "properties": { "anchor_word": { "enum": ["Unit", "Lesson"] } } } } }
+    }
+  ],
+
+  "$defs": {
+
+    "exitCheckItem": {
+      "type": "object",
+      "required": ["id", "objective_type", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "primary": { "type": "boolean", "default": false },
+        "objective_type": { "type": "string", "minLength": 1, "description": "groups items for the r6 >=2-per-type check" },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "bloomRow": {
+      "type": "object",
+      "required": ["level", "amount", "where"],
+      "additionalProperties": false,
+      "properties": {
+        "level": { "enum": ["মনে রাখা", "বোঝা", "প্রয়োগ", "বিশ্লেষণ", "মূল্যায়ন", "সৃষ্টি",
+                            "Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] },
+        "amount": { "type": "string" },
+        "where": { "type": "string" }
+      }
+    },
+
+    "sessionMapRow": {
+      "type": "object",
+      "required": ["period", "title", "objective", "must_cover", "exit_check_pointer", "homework", "time"],
+      "additionalProperties": false,
+      "properties": {
+        "period": { "type": "integer", "minimum": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "objective": { "type": "string", "minLength": 1 },
+        "must_cover": { "type": "string", "minLength": 1 },
+        "exit_check_pointer": { "type": "integer", "minimum": 1, "description": "id into spine.exit_check.bank" },
+        "homework": { "type": "string", "minLength": 1, "description": "topic name + count; NO TOP-/QP- code on the surface" },
+        "time": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "chapterPlan": {
+      "type": "object",
+      "required": ["period_count", "summary", "spine", "session_map", "overview_card"],
+      "additionalProperties": false,
+      "properties": {
+        "period_count": { "type": "integer", "minimum": 2, "description": "N; single-period chapters use a standalone session_plan, not a chapter_plan" },
+        "tg_baseline": { "type": "integer", "minimum": 1, "description": "internal; band check lives in harness" },
+
+        "summary": {
+          "type": "object",
+          "required": ["what_we_teach", "most_important", "islamic_note", "prep_checklist"],
+          "additionalProperties": false,
+          "properties": {
+            "what_we_teach": { "type": "string", "minLength": 1 },
+            "most_important": { "type": "string", "minLength": 1 },
+            "islamic_note": { "type": "string", "minLength": 1 },
+            "prep_checklist": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+          }
+        },
+
+        "spine": {
+          "type": "object",
+          "required": ["objective", "must_cover", "bloom", "exit_check", "islamic_alignment", "revision", "homework"],
+          "additionalProperties": false,
+          "properties": {
+            "objective": {
+              "type": "object",
+              "required": ["text", "how_known"],
+              "additionalProperties": false,
+              "properties": {
+                "text": { "type": "string", "minLength": 1 },
+                "how_known": { "type": "string", "minLength": 1 },
+                "per_period_note": { "type": "string" }
+              }
+            },
+            "must_cover": {
+              "type": "object",
+              "required": ["lead", "items"],
+              "additionalProperties": false,
+              "properties": {
+                "lead": { "type": "string", "minLength": 1 },
+                "items": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+                "example_words": { "type": "string" }
+              }
+            },
+            "bloom": {
+              "type": "object",
+              "required": ["arc", "table"],
+              "additionalProperties": false,
+              "properties": {
+                "arc": { "type": "string", "minLength": 1 },
+                "table": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/bloomRow" } }
+              }
+            },
+            "exit_check": {
+              "type": "object",
+              "required": ["bank", "reminder"],
+              "additionalProperties": false,
+              "properties": {
+                "bank": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/exitCheckItem" } },
+                "reminder": { "type": "string", "minLength": 1 }
+              }
+            },
+            "islamic_alignment": {
+              "type": "object",
+              "required": ["text"],
+              "additionalProperties": false,
+              "properties": {
+                "text": { "type": "string", "minLength": 1 },
+                "replacement_periods": { "type": "array", "items": { "type": "integer" }, "description": "NEEDS-REPLACEMENT: which periods carry the inline replacement" },
+                "positive_value": { "type": "string" }
+              }
+            },
+            "revision": {
+              "type": "object",
+              "required": ["before", "within", "later"],
+              "additionalProperties": false,
+              "properties": {
+                "before": { "type": "string", "minLength": 1 },
+                "within": { "type": "string", "minLength": 1 },
+                "later": { "type": "string", "minLength": 1 }
+              }
+            },
+            "homework": {
+              "type": "object",
+              "required": ["rows", "reason", "topic_tag"],
+              "additionalProperties": false,
+              "properties": {
+                "rows": { "type": "array", "minItems": 2, "items": {
+                  "type": "object",
+                  "required": ["label", "value"],
+                  "additionalProperties": false,
+                  "properties": { "label": { "type": "string" }, "value": { "type": "string" } }
+                }},
+                "reason": { "type": "string", "minLength": 1 },
+                "topic_tag": { "type": "string", "pattern": "^TOP-[A-Z]+-C[1-5]-[A-Z0-9]+$", "description": "internal only; never rendered to the surface" }
+              }
+            }
+          }
+        },
+
+        "session_map": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/sessionMapRow" } },
+
+        "overview_card": {
+          "type": "object",
+          "required": ["rows"],
+          "additionalProperties": false,
+          "properties": {
+            "rows": { "type": "array", "minItems": 5, "items": {
+              "type": "object",
+              "required": ["label", "value"],
+              "additionalProperties": false,
+              "properties": { "label": { "type": "string" }, "value": { "type": "string" } }
+            }}
+          }
+        }
+      }
+    },
+
+    "segment": {
+      "type": "object",
+      "required": ["name", "display", "minutes", "mandatory", "body"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "enum": ["Opening", "Hook", "DirectInstruction", "GuidedPractice", "IndependentPractice", "ExitCheck", "Closing"] },
+        "display": { "type": "string", "minLength": 1, "description": "frozen bilingual heading text, e.g. 'সূচনা / Opening'" },
+        "minutes": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "mandatory": { "type": "boolean" },
+        "is_checkbox": { "type": "boolean", "default": false, "description": "Opening + Closing render as checkbox ritual lists" },
+        "body": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+          ]
+        }
+      }
+    },
+
+    "sessionPlan": {
+      "type": "object",
+      "required": ["session_form", "summary", "lesson_flow", "flex_zone", "flow_card"],
+      "additionalProperties": false,
+      "properties": {
+        "session_form": { "enum": ["single_period_standalone", "multi_period"] },
+
+        "chapter_ref": { "type": "string", "description": "multi_period: filename of the locked Chapter Plan this pulls from" },
+        "period_index": { "type": "integer", "minimum": 1 },
+        "period_of": { "type": "integer", "minimum": 2 },
+        "session_title": { "type": "string", "description": "the period's short title (multi-period); defaults to division title if absent" },
+
+        "summary": {
+          "type": "object",
+          "required": ["paragraph", "prep_checklist"],
+          "additionalProperties": false,
+          "properties": {
+            "paragraph": { "type": "string", "minLength": 1 },
+            "prep_checklist": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+          }
+        },
+
+        "session_header": {
+          "type": "object",
+          "description": "multi_period §3.0 reference header; copied verbatim from the Chapter Session Map row + expanded Exit-Check",
+          "required": ["objective", "must_cover", "exit_check_text", "homework", "islamic_one_liner"],
+          "additionalProperties": false,
+          "properties": {
+            "objective": { "type": "string", "minLength": 1 },
+            "must_cover": { "type": "string", "minLength": 1 },
+            "exit_check_text": { "type": "string", "minLength": 1 },
+            "homework": { "type": "string", "minLength": 1 },
+            "islamic_one_liner": { "type": "string", "minLength": 1 }
+          }
+        },
+
+        "spine": { "$ref": "#/$defs/chapterPlan/properties/spine", "description": "single_period_standalone only: the Spine is inlined" },
+
+        "lesson_flow": {
+          "type": "object",
+          "required": ["intro", "segments"],
+          "additionalProperties": false,
+          "properties": {
+            "intro": { "type": "string", "minLength": 1 },
+            "segments": {
+              "type": "array",
+              "minItems": 7,
+              "maxItems": 7,
+              "items": { "$ref": "#/$defs/segment" }
+            }
+          }
+        },
+
+        "flex_zone": {
+          "type": "object",
+          "required": ["intro", "example_banks", "discovery_ways", "fallback"],
+          "additionalProperties": false,
+          "properties": {
+            "intro": { "type": "string", "minLength": 1 },
+            "example_banks": {
+              "type": "array", "minItems": 1, "items": {
+                "type": "object",
+                "required": ["heading", "items"],
+                "additionalProperties": false,
+                "properties": {
+                  "heading": { "type": "string", "pattern": "^যা শেখাতে হবে " },
+                  "items": { "type": "array", "minItems": 3, "items": { "type": "string", "minLength": 1 } }
+                }
+              }
+            },
+            "discovery_ways": { "type": "array", "minItems": 3, "items": { "type": "string", "minLength": 1 } },
+            "fallback": { "type": "string", "minLength": 1 }
+          }
+        },
+
+        "replacement_section": {
+          "type": "object",
+          "description": "multi_period NEEDS-REPLACEMENT periods only; null/absent otherwise",
+          "required": ["intro", "inline_content", "illustration", "teacher_note", "positive_value"],
+          "additionalProperties": false,
+          "properties": {
+            "rc_id": { "type": "string", "pattern": "^RC-[A-Z]+-C[1-5]-U[0-9]+(-S[0-9]+)?$", "description": "internal only" },
+            "intro": { "type": "string", "minLength": 1 },
+            "inline_content": { "type": "string", "minLength": 1, "description": "the full replacement story/poem/example, rendered as a blockquote" },
+            "illustration": { "type": "string", "minLength": 1 },
+            "teacher_note": { "type": "string", "minLength": 1 },
+            "positive_value": { "type": "string", "minLength": 1 }
+          }
+        },
+
+        "flow_card": {
+          "type": "object",
+          "required": ["rows", "remember_strip"],
+          "additionalProperties": false,
+          "properties": {
+            "rows": {
+              "type": "array", "minItems": 7, "maxItems": 7, "items": {
+                "type": "object",
+                "required": ["segment", "one_line"],
+                "additionalProperties": false,
+                "properties": {
+                  "segment": { "enum": ["Opening", "Hook", "DirectInstruction", "GuidedPractice", "IndependentPractice", "ExitCheck", "Closing"] },
+                  "one_line": { "type": "string", "minLength": 1 }
+                }
+              }
+            },
+            "remember_strip": { "type": "string", "minLength": 1 }
+          }
+        }
+      },
+
+      "allOf": [
+        {
+          "if": { "properties": { "session_form": { "const": "multi_period" } } },
+          "then": { "required": ["chapter_ref", "period_index", "period_of", "session_header"] }
+        },
+        {
+          "if": { "properties": { "session_form": { "const": "single_period_standalone" } } },
+          "then": { "required": ["spine"] }
+        }
+      ]
+    }
+  }
+}

@@ -136,8 +136,9 @@ All guardian *portal screens*, analytics (R-AN1–4), AI/LLM export, WhatsApp/SM
 deferred ops modules — `docs/roadmap.md`.
 
 ## 7. Dependencies / open items
-- **Project-03 plan schema** (`*PlanSchema*.json`) — needed to run the import gate's L2 on plan
-  envelopes; not yet in repo (STATUS *Blocked / waiting*). Blocks J1.1 full verification.
+- **Project-03 plan schema** (`*PlanSchema*.json`) — vendored at `server/import/LOCKED_C5_PlanSchema_v1.json`;
+  the import gate's L2 now runs and the worked example passes end-to-end. Upstream-owned (Project-03);
+  refresh the vendored copy when Project-03 re-locks the plan layouts. J1.1 is now fully verifiable.
 - **Project-04 question payload** — J2/J3 question shape is provisional until ratified (R-IMP5); only
   then tighten `questionPayload` to `additionalProperties:false` and finalize `QUESTION_TYPES`.
 - **Scope-grant data shape** — Slice 0 must define how teaching/supervisory/proxy grants are stored and
