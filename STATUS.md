@@ -3,17 +3,17 @@
 _Updated: 2026-06-09_
 
 ## Now / next
-- **Done:** Slice 2 — question bank + assembly (J2 + J3 end-to-end).
-  - AssessmentSet model (`assessment` module) — basket items, CT/HW/AS metadata, draft→assembled lifecycle.
-  - `questions` / `question` / `stimuli` GraphQL queries — thin tag-filter view over ContentArtifact (no new collection); filters: subject/classLevel/topicTag/questionType/bloomLevel/difficulty/paperRole/marksMin/marksMax. Row-scope enforced (J2.4: supervisory grant passes naturally).
-  - `createSet` / `addQuestionToSet` / `assembleSet` mutations — write-scope via `assertCanWrite` (J3.5: supervisory-only teachers denied); basket accumulation emits `questions_selected` CorpusEvent; assembleSet emits `set_assembled` CorpusEvent.
-  - `assessmentSet` / `assessmentSets` queries — read-scope enforced.
-  - PDF route `GET /pdf/set/:id` — structured pdfkit renderer (NotoSansBengali; renders question_text + answer-carrier per type; no rendered_markdown for questions, ADR-006).
-  - Tests: 92/92 pass (J2.1–J2.4, J3.1–J3.2, J3.5 + all Slice 0+1 tests). `tsc --noEmit` clean. Vocab verifier PASS. [e1db6d7]
-- **Next:** build **Slice 3** — trackers (J4: class-test / assignment / homework trackers).
+- **Done:** Slice 3 — trackers (J4 end-to-end).
+  - `TrackerRecord` model (`trackers` module) — open/closed lifecycle, per-student entries de-identified via sha256 pseudonym (ADR-005), CT score / AS submitted / HW complete fields.
+  - `openTracker` / `recordEntry` / `closeTracker` mutations — write-scope via `assertCanWrite` (J4.5: supervisory-only teachers denied); `recordEntry` emits `tracker_recorded` CorpusEvent (de-identified, ADR-005).
+  - `tracker` / `trackers` / `trackerSummary` queries — read-scope enforced; `trackers` supports filters: trackerKind / setId / status (J4.4).
+  - `waLink` query — pure wa.me deep-link builder (J4.2, ADR-003); no server dispatch.
+  - Tests: 124/124 pass (J4.1–J4.5 + all prior tests). `tsc --noEmit` clean. Vocab verifier PASS.
+- **Done:** Slice 2 — question bank + assembly (J2 + J3 end-to-end). [e1db6d7]
+- **Next:** Slice 4 — guardian portal screens (deferred; see docs/roadmap.md) or other prioritised work.
 
 ## In flight
-- (none — Slice 2 shipped)
+- (none — Slice 3 shipped)
 
 ## Blocked / waiting
 - (none blocking)
