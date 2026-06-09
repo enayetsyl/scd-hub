@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://school.local/swapp/StimulusPayload_v1.json",
+  "title": "Project 04 — Stimulus Payload v1 (LOCKED v1.0)",
+  "description": "LOCKED v1.0 (2026-06-09, D-PROJ04-005). A shared stimulus stored once and referenced by many questions via question.stimulus_ref (QDN-09). It is the body that rides under envelope.payload when doc_type='stimulus' (a new import doc_type added in deliverable 5). Rationale: the envelope is one-doc-per-file, so a passage reused across questions cannot live inside one question; inlining it would duplicate-and-drift, the very thing the JSON-canonical decision (QDN-01) removes. Already-live reuse: ENG U09 listening (audio_script) and BAN U13 poem. STANDARDS: content language single-by-subject — Bangla, ENG excepted (envelope.subject governs; harness scans ENG content Latin-pure); REF-22 glossary; REF-24/REF-01 C-05/C-02 media (diagram-only). Like the question payload, it does NOT carry subject/class_level — those stay on the envelope (no duplication, nothing to mismatch).",
+  "$comment": "Draft 2020-12, house style mirrors the question payload and C5_PlanSchema_v1.json: additionalProperties:false, $defs for reuse, allOf+if/then on the stimulus_type discriminator. glossItem and mediaRef are intentionally identical to the question payload's $defs of the same name (kept in sync in deliverable 5). Harness-owed (not expressible here): stimulus_id uniqueness across the store, and that every question.stimulus_ref resolves to a stored stimulus_id.",
+
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["stimulus_id", "stimulus_type", "content"],
+
+  "properties": {
+    "stimulus_id": {
+      "type": "string",
+      "pattern": "^STIM-[A-Z]+-C[1-5]-U\\d+(-L\\d+)?-\\d{2,}$",
+      "description": "Stable stimulus id, the target of question.stimulus_ref. PROPOSED scheme (confirm): STIM-{SUBJECT}-C{class}-U{unit}[-L{lesson}]-{nn}, e.g. STIM-ENG-C5-U09-01. Permanent, never reused."
+    },
+    "stimulus_type": {
+      "enum": ["passage", "poem", "audio_script", "image_set"],
+      "description": "passage = prose comprehension text; poem = stanzas; audio_script = text the teacher reads aloud for a listening task (no audio asset in build 1); image_set = a set of diagram-only figures with framing text."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional. Human-readable name (e.g. the poem/passage title) for teacher recognition and rendering."
+    },
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The readable stimulus body: the prose, the stanzas, the listening script, or — for image_set — the framing/instruction text (the figures themselves go in media)."
+    },
+    "glossary": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/glossItem" },
+      "description": "Optional. REF-22 receptive words glossed for this stimulus (same content language); referencing questions inherit the gloss."
+    },
+    "media": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/mediaRef" },
+      "description": "Optional in general; REQUIRED when stimulus_type='image_set'. Diagram-only (non-living-being) figures."
+    }
+  },
+
+  "allOf": [
+    {
+      "$comment": "image_set must carry at least one figure.",
+      "if": { "properties": { "stimulus_type": { "const": "image_set" } }, "required": ["stimulus_type"] },
+      "then": { "required": ["media"] }
+    }
+  ],
+
+  "$defs": {
+    "glossItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["term", "gloss"],
+      "properties": {
+        "term": { "type": "string", "minLength": 1 },
+        "gloss": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "mediaRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["media_type", "ref", "alt_text", "curation_status"],
+      "properties": {
+        "media_type": { "enum": ["image", "diagram"], "description": "Diagram-only scope (build 1): non-living-being figures." },
+        "ref": { "type": "string", "minLength": 1, "description": "Stored asset reference/id (the app holds the asset; no embedded blob)." },
+        "alt_text": { "type": "string", "minLength": 1, "description": "Required. Described-text equivalent of the figure." },
+        "curation_status": { "enum": ["clean", "described_text"], "description": "Author/reviewer-set REF-01 C-05/C-02 clearance. 'replaced' reserved (only if image scope 9-B is ever opened)." }
+      }
+    }
+  }
+}

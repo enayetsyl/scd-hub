@@ -1,0 +1,190 @@
+{
+  "_about": "LOCKED v1.0 (2026-06-09, D-PROJ04-005). Worked examples / conformance fixture for the Project 04 question data-contract (deliverable 4). 'stimuli' validate against StimulusPayload_v1; 'questions' validate against QuestionPayload_v1. Content is curation-clean (REF-01/REF-20), stems are self-identifying, BAN content in Bangla and ENG content Latin-pure. These are illustrative payload instances (the body that rides under envelope.payload); envelope wrapping is shown in deliverable 5. NOTE: MATH topic_tag numbers are illustrative/pattern-only (no MATH bank or REF-07 numbering yet); the ref19_topic_id values are real REF-19 slugs.",
+
+  "stimuli": [
+    {
+      "stimulus_id": "STIM-ENG-C5-U09-01",
+      "stimulus_type": "audio_script",
+      "title": "Library announcement",
+      "content": "Attention please. The school library will be open today after the second period. Pupils of Class 5 may borrow one book each and must return it next week.",
+      "glossary": [
+        { "term": "borrow", "gloss": "to take a book and return it later" }
+      ]
+    },
+    {
+      "stimulus_id": "STIM-MATH-C5-U09-01",
+      "stimulus_type": "image_set",
+      "title": "চারটি আকৃতি",
+      "content": "নিচের চারটি আকৃতি লক্ষ করো।",
+      "media": [
+        {
+          "media_type": "diagram",
+          "ref": "u09-shapes-01",
+          "alt_text": "চারটি আকৃতি পাশাপাশি: একটি ত্রিভুজ, একটি বর্গ, একটি আয়তক্ষেত্র ও একটি বৃত্ত।",
+          "curation_status": "clean"
+        }
+      ]
+    }
+  ],
+
+  "questions": [
+    {
+      "qid": "QP-BAN-C5-U13-Q01",
+      "topic_tag": "TOP-BAN-C5-05",
+      "ref19_topic_id": "BAN-POEM",
+      "question_text": "'পাখির মতো' কবিতায় কবি কীসের মতো হয়ে আকাশে উড়ে বেড়াতে চেয়েছেন?",
+      "question_type": "mcq",
+      "paper_role": "mcq",
+      "bloom_level": "Understand",
+      "difficulty": "easy",
+      "tier": "tier1",
+      "marks": 1,
+      "options": [
+        { "option_id": "ক", "text": "পাখি", "is_correct": true },
+        { "option_id": "খ", "text": "নদী", "is_correct": false, "why_wrong": "কবিতায় নদীর কথা মূল ইচ্ছার সঙ্গে আসেনি।" },
+        { "option_id": "গ", "text": "মেঘ", "is_correct": false, "why_wrong": "মেঘ উড়লেও কবির চাওয়া পাখির মতো ওড়া।" },
+        { "option_id": "ঘ", "text": "গাছ", "is_correct": false, "why_wrong": "গাছ স্থির; কবিতার ভাবের বিপরীত।" }
+      ]
+    },
+    {
+      "qid": "QP-BAN-C5-U13-Q02",
+      "topic_tag": "TOP-BAN-C5-05",
+      "ref19_topic_id": "BAN-POEM",
+      "question_text": "'পাখির মতো' কবিতায় শিশুটি কেন আকাশে উড়তে চায় — এক বাক্যে নিজের ভাষায় লেখো।",
+      "question_type": "short_answer",
+      "paper_role": "short",
+      "bloom_level": "Understand",
+      "difficulty": "medium",
+      "tier": "tier1",
+      "marks": 2,
+      "answer_key": {
+        "accepted": [
+          "মুক্তভাবে আকাশে উড়ে আল্লাহর সৃষ্টির সৌন্দর্য দেখতে চায়",
+          "পাখির মতো স্বাধীনভাবে উড়ে বেড়াতে চায়"
+        ],
+        "model_note": "ভাব ঠিক থাকলে শব্দভেদে গ্রহণযোগ্য; স্বাধীনতা/মুক্তির ভাব থাকতে হবে।"
+      }
+    },
+    {
+      "qid": "QP-BAN-C5-U13-Q03",
+      "topic_tag": "TOP-BAN-C5-05",
+      "ref19_topic_id": "BAN-POEM",
+      "question_text": "সত্য/মিথ্যা: 'পাখির মতো' একটি কবিতা।",
+      "question_type": "true_false",
+      "paper_role": "mcq",
+      "bloom_level": "Remember",
+      "difficulty": "easy",
+      "tier": "tier1",
+      "marks": 1,
+      "tf_answer": true
+    },
+    {
+      "qid": "QP-BAN-C5-U13-Q04",
+      "topic_tag": "TOP-BAN-C5-05",
+      "ref19_topic_id": "BAN-POEM",
+      "question_text": "শূন্যস্থান পূরণ করো: 'পাখির মতো' কবিতায় ____ মেলে শিশুটি আকাশে উড়ে বেড়াতে চায়।",
+      "question_type": "fill_blank",
+      "paper_role": "short",
+      "bloom_level": "Understand",
+      "difficulty": "easy",
+      "tier": "tier1",
+      "marks": 1,
+      "blanks": [
+        { "blank_no": 1, "accepted": ["পাখা", "ডানা"], "normalized_match": true }
+      ]
+    },
+    {
+      "qid": "QP-BAN-C5-U13-Q05",
+      "topic_tag": "TOP-BAN-C5-05",
+      "ref19_topic_id": "BAN-POEM",
+      "question_text": "'পাখির মতো' কবিতার শব্দগুলোর সঙ্গে তাদের অর্থ মেলাও।",
+      "question_type": "matching",
+      "paper_role": "structured",
+      "bloom_level": "Understand",
+      "difficulty": "medium",
+      "tier": "tier1",
+      "marks": 2,
+      "pairs": [
+        { "left": "ডানা", "right": "ওড়ার অঙ্গ", "marks": 1 },
+        { "left": "আকাশ", "right": "মাথার উপরের বিস্তৃত শূন্য", "marks": 1 }
+      ]
+    },
+    {
+      "qid": "QP-BAN-C5-U13-Q06",
+      "topic_tag": "TOP-BAN-C5-05",
+      "ref19_topic_id": "BAN-POEM",
+      "question_text": "'পাখির মতো' কবিতায় শিশুটি বড়দের কথা শোনার ইচ্ছা প্রকাশ করেছে। বড়দের কথা শোনা কেন একটি সুন্দর গুণ — নিজের ভাষায় দুটি বাক্যে লেখো।",
+      "question_type": "descriptive",
+      "paper_role": "creative",
+      "bloom_level": "Evaluate",
+      "difficulty": "easy",
+      "tier": "tier1",
+      "marks": 4,
+      "rubric": {
+        "bands": ["4", "3", "2", "1"],
+        "criteria": [
+          { "role": "content", "criterion": "বিষয়ের সঠিকতা", "band_descriptors": { "4": "কবিতার ভাবের সঙ্গে সম্পূর্ণ মিল", "3": "অধিকাংশ মিল", "2": "আংশিক মিল", "1": "মিল নেই" } },
+          { "role": "reasoning", "criterion": "যুক্তি/কারণ", "band_descriptors": { "4": "স্পষ্ট কারণসহ", "3": "সীমিত কারণ", "2": "দুর্বল কারণ", "1": "কোনো কারণ নেই" } },
+          { "role": "islamic_alignment", "criterion": "ইসলামি/নৈতিক সঙ্গতি", "band_descriptors": { "4": "মাতা-পিতার আনুগত্যের আদবের সঙ্গে পূর্ণ সঙ্গতিপূর্ণ", "3": "অধিকাংশ সঙ্গতিপূর্ণ", "2": "সংশোধন প্রয়োজন", "1": "অনুপযুক্ত" } }
+        ]
+      }
+    },
+    {
+      "qid": "QP-BAN-C5-U13-Q07",
+      "topic_tag": "TOP-BAN-C5-05",
+      "ref19_topic_id": "BAN-POEM",
+      "question_text": "'পাখির মতো' কবিতার ভাব মাথায় রেখে, আল্লাহর সৃষ্টির কোনো একটি জিনিস (যেমন পাখি) নিয়ে নিজে দুই লাইনের একটি ছোট ছড়া তৈরি করো — সুরে গেয়ে নয়, ছন্দে।",
+      "question_type": "descriptive",
+      "paper_role": "creative",
+      "bloom_level": "Create",
+      "difficulty": "hard",
+      "tier": "tier2",
+      "marks": 5,
+      "rubric": {
+        "bands": ["4", "3", "2", "1"],
+        "criteria": [
+          { "role": "content", "criterion": "মৌলিকতা ও বিষয়", "band_descriptors": { "4": "নিজস্ব ও বিষয়সঙ্গত", "3": "অধিকাংশ নিজস্ব", "2": "আংশিক", "1": "অনুকরণমাত্র" } },
+          { "role": "organization", "criterion": "ছন্দ ও গঠন", "band_descriptors": { "4": "স্পষ্ট ছন্দে দুই লাইন", "3": "মোটামুটি ছন্দ", "2": "দুর্বল ছন্দ", "1": "ছন্দহীন" } },
+          { "role": "islamic_alignment", "criterion": "ইসলামি/নৈতিক সঙ্গতি", "band_descriptors": { "4": "আল্লাহর সৃষ্টির প্রশংসার সঙ্গে সঙ্গতিপূর্ণ; সুর-বাদ্য বর্জিত", "3": "অধিকাংশ সঙ্গতিপূর্ণ", "2": "সংশোধন প্রয়োজন", "1": "অনুপযুক্ত" } }
+        ]
+      }
+    },
+    {
+      "qid": "QP-ENG-C5-U09-Q01",
+      "topic_tag": "TOP-ENG-C5-08",
+      "ref19_topic_id": "ENG-LISTENING",
+      "question_text": "Listen to the library announcement. In your own words, what is the main thing it tells the pupils?",
+      "question_type": "mcq",
+      "paper_role": "mcq",
+      "bloom_level": "Understand",
+      "difficulty": "easy",
+      "tier": "tier1",
+      "marks": 1,
+      "stimulus_ref": "STIM-ENG-C5-U09-01",
+      "options": [
+        { "option_id": "A", "text": "The library will be open after the second period.", "is_correct": true },
+        { "option_id": "B", "text": "The library is closed today.", "is_correct": false, "why_wrong": "The announcement says it will be open, not closed." },
+        { "option_id": "C", "text": "Pupils must buy a new book.", "is_correct": false, "why_wrong": "Pupils borrow a book; they do not buy one." }
+      ]
+    },
+    {
+      "qid": "QP-MATH-C5-U09-Q01",
+      "topic_tag": "TOP-MATH-C5-12",
+      "ref19_topic_id": "MATH-GEOMETRY",
+      "question_text": "উপরের আকৃতিগুলোর মধ্যে কোনটির চারটি সমান বাহু আছে?",
+      "question_type": "mcq",
+      "paper_role": "mcq",
+      "bloom_level": "Apply",
+      "difficulty": "medium",
+      "tier": "tier1",
+      "marks": 1,
+      "stimulus_ref": "STIM-MATH-C5-U09-01",
+      "options": [
+        { "option_id": "ক", "text": "বর্গ", "is_correct": true },
+        { "option_id": "খ", "text": "আয়তক্ষেত্র", "is_correct": false, "why_wrong": "আয়তক্ষেত্রের বিপরীত বাহু সমান, চারটি বাহু সমান নয়।" },
+        { "option_id": "গ", "text": "ত্রিভুজ", "is_correct": false, "why_wrong": "ত্রিভুজের তিনটি বাহু।" },
+        { "option_id": "ঘ", "text": "বৃত্ত", "is_correct": false, "why_wrong": "বৃত্তের কোনো বাহু নেই।" }
+      ]
+    }
+  ]
+}

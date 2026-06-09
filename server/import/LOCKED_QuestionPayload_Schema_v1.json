@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://school.local/swapp/QuestionPayload_v1.json",
+  "title": "Project 04 — Question Payload v1 (LOCKED v1.0)",
+  "description": "LOCKED v1.0 (2026-06-09, D-PROJ04-005). The ratified question-bank data contract (R-IMP5), replacing the PROVISIONAL questionPayload $def in SCHOOLSW_ImportEnvelope_Schema. This is the SINGLE SOURCE OF RECORD for one question (QDN-01): the teacher-facing Markdown production file, master read-file, and register TSV all render from it; the app ingests it and renders display/PDF itself. It is the body that rides under envelope.payload when doc_type='question'. INTEGRATION: deliverable 5 either inlines this as the envelope's $defs.questionPayload (additionalProperties false) or external-$refs this $id; the harness runs it as the L2-for-questions pass. STANDARDS: complies with REF-09 (Tier-1 floor) / REF-10 (Tier-2 stretch), REF-17/18 (Bloom), REF-19 (topic identity — ref19_topic_id hard-validated against it), REF-22 (English vocabulary — glossary), REF-24/REF-01 C-05/C-02 (media), REF-07 §3.5 (topic-tag scheme); it redefines none of them. PEDAGOGY (QDN-06): tier / bloom_level / difficulty are orthogonal axes, so an easy-difficulty high-Bloom open item is natural to express; descriptive items carry a first-class rubric whose Islamic-alignment row is mandatory.",
+  "$comment": "Draft 2020-12 to match the envelope and validate_plan.py (Draft202012Validator). House style mirrors C5_PlanSchema_v1.json: additionalProperties:false throughout, $defs for reuse, allOf+if/then on a discriminator (here question_type). Checks NOT expressible here and owed to the harness L2-for-questions pass: (a) marks == rubric total for descriptive items; (b) per-step / per-blank / per-pair breakdown sums to marks; (c) ref19_topic_id ∈ the REF-19 registry (pattern only here); (d) stimulus_ref resolves to a stored stimulus_id; (e) ENG content is Latin-pure on the rendered surface (ported ENG-LATIN rule). The 'exactly one correct MCQ option' rule IS expressed here via contains + minContains/maxContains.",
+
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "qid",
+    "topic_tag",
+    "ref19_topic_id",
+    "question_text",
+    "question_type",
+    "paper_role",
+    "bloom_level",
+    "difficulty",
+    "tier",
+    "marks"
+  ],
+
+  "properties": {
+    "qid": {
+      "type": "string",
+      "pattern": "^QP-[A-Z]+-C[1-5]-U\\d+(-L\\d+)?-Q\\d{2,}$",
+      "description": "Permanent stable question id (Conventions §3), never reused. E.g. QP-BAN-C5-U13-Q01 or QP-BAN-C1-U2-L4-Q03."
+    },
+    "topic_tag": {
+      "type": "string",
+      "pattern": "^TOP-(BAN|ENG|MATH|SCI|BGS)-C[1-5]-\\d{2}$",
+      "description": "Numbered topic tag (REF-07 §3.5 scheme). The register join key and the app filter key; MIRROR of envelope tags.topic_tag. Pattern-only — valid numbers come from the per-subject revision chart + REF-19, not a registry in this schema (QDN-02)."
+    },
+    "ref19_topic_id": {
+      "type": "string",
+      "pattern": "^(BAN|ENG|MATH|SCI|BGS)-[A-Z0-9]+$",
+      "description": "REF-19 canonical topic slug, e.g. BAN-POEM / ENG-SENTSTR / BGS-ETHICS. Payload-only (NOT an envelope tag). The durable vertical-map identity; hard-validated against the REF-19 registry in the harness."
+    },
+    "question_text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The stem. Authoring standard: name the chapter/poem within the wording so items are self-identifying on mixed worksheets (a build-side standard, not schema-enforceable). Content language is single-language-by-subject — Bangla, ENG excepted (QDN-07)."
+    },
+    "question_type": {
+      "enum": ["mcq", "short_answer", "true_false", "fill_blank", "matching", "descriptive"],
+      "description": "MIRROR of envelope questionPayload.question_type / vocab.ts QUESTION_TYPES. Selects the answer-carrier branch below."
+    },
+    "paper_role": {
+      "enum": ["mcq", "short", "structured", "creative"],
+      "description": "The REF-09 §4/§5.3 paper-section family this item is written for — a SEPARATE axis from question_type (a true_false item may serve paper_role 'mcq'). App filter for set assembly; MIRROR of envelope tags.paper_role / vocab.ts PAPER_ROLES (three-place sync)."
+    },
+    "bloom_level": {
+      "$ref": "#/$defs/bloomLevelEN",
+      "description": "Intended Bloom level (REF-17). MIRROR of envelope tags.bloom_level."
+    },
+    "difficulty": {
+      "enum": ["easy", "medium", "hard"],
+      "description": "Intended difficulty — a SEPARATE axis from Bloom (REF-09 §3). MIRROR of envelope tags.difficulty."
+    },
+    "tier": {
+      "enum": ["tier1", "tier2"],
+      "default": "tier1",
+      "description": "tier1 = the mandatory REF-09 floor; tier2 = optional REF-10 stretch (higher-Bloom enrichment). Same payload either way."
+    },
+    "marks": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "multipleOf": 0.5,
+      "description": "Item total. Half-marks allowed; no negative marking (QDN-05). For descriptive items, equals the rubric total (harness-checked)."
+    },
+
+    "learning_outcome_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional. The TG-reconciled যোগ্যতা/শিখনফল this item maps to (REF-09 alignment must #1). Internal metadata — the NCF-number surface ban does not apply here."
+    },
+    "chapter_ref": {
+      "type": "string",
+      "description": "Optional. Chapter/unit handle; MIRROR of envelope tags.chapter_ref."
+    },
+    "lesson_ref": {
+      "type": "string",
+      "description": "Optional. Lesson handle; MIRROR of envelope tags.lesson_ref."
+    },
+    "stimulus_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional. References a stored stimulus doc's stimulus_id (QDN-09) when the item depends on a shared passage/poem/audio-script. Resolution is harness/app-checked, not here."
+    },
+    "glossary": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/glossItem" },
+      "description": "Optional. REF-22 receptive words glossed in the item (same content language). Keeps an item answerable rather than blocked by an unknown word."
+    },
+    "media": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/mediaRef" },
+      "description": "Optional. Diagram-only references (QDN-08): non-living-being figures only. A concept needing a human/animal figure is authored as described-text instead."
+    },
+
+    "options":    { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/mcqOption" }, "description": "mcq only — answer-carrier." },
+    "tf_answer":  { "type": "boolean", "description": "true_false only — answer-carrier." },
+    "blanks":     { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/fillBlank" }, "description": "fill_blank only — answer-carrier." },
+    "pairs":      { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/matchPair" }, "description": "matching only — answer-carrier." },
+    "answer_key": { "$ref": "#/$defs/answerKey", "description": "short_answer only — answer-carrier." },
+    "rubric":     { "$ref": "#/$defs/rubric", "description": "descriptive only — criteria rubric (no single answer)." }
+  },
+
+  "allOf": [
+    {
+      "$comment": "mcq -> options (exactly one correct, enforced in $defs.mcqOption parent below); forbid all other carriers.",
+      "if": { "properties": { "question_type": { "const": "mcq" } }, "required": ["question_type"] },
+      "then": {
+        "required": ["options"],
+        "properties": {
+          "tf_answer": false, "blanks": false, "pairs": false, "answer_key": false, "rubric": false,
+          "options": {
+            "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/mcqOption" },
+            "contains": { "type": "object", "properties": { "is_correct": { "const": true } }, "required": ["is_correct"] },
+            "minContains": 1, "maxContains": 1
+          }
+        }
+      }
+    },
+    {
+      "$comment": "true_false -> tf_answer; forbid all other carriers.",
+      "if": { "properties": { "question_type": { "const": "true_false" } }, "required": ["question_type"] },
+      "then": {
+        "required": ["tf_answer"],
+        "properties": { "options": false, "blanks": false, "pairs": false, "answer_key": false, "rubric": false }
+      }
+    },
+    {
+      "$comment": "fill_blank -> blanks; forbid all other carriers.",
+      "if": { "properties": { "question_type": { "const": "fill_blank" } }, "required": ["question_type"] },
+      "then": {
+        "required": ["blanks"],
+        "properties": { "options": false, "tf_answer": false, "pairs": false, "answer_key": false, "rubric": false }
+      }
+    },
+    {
+      "$comment": "matching -> pairs; forbid all other carriers.",
+      "if": { "properties": { "question_type": { "const": "matching" } }, "required": ["question_type"] },
+      "then": {
+        "required": ["pairs"],
+        "properties": { "options": false, "tf_answer": false, "blanks": false, "answer_key": false, "rubric": false }
+      }
+    },
+    {
+      "$comment": "short_answer -> answer_key; forbid all other carriers.",
+      "if": { "properties": { "question_type": { "const": "short_answer" } }, "required": ["question_type"] },
+      "then": {
+        "required": ["answer_key"],
+        "properties": { "options": false, "tf_answer": false, "blanks": false, "pairs": false, "rubric": false }
+      }
+    },
+    {
+      "$comment": "descriptive -> rubric; forbid all closed carriers (QDN-04 xor).",
+      "if": { "properties": { "question_type": { "const": "descriptive" } }, "required": ["question_type"] },
+      "then": {
+        "required": ["rubric"],
+        "properties": { "options": false, "tf_answer": false, "blanks": false, "pairs": false, "answer_key": false }
+      }
+    }
+  ],
+
+  "$defs": {
+    "bloomLevelEN": {
+      "enum": ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"],
+      "description": "Canonical English Bloom levels for app indexing (MIRROR of envelope $defs.bloomLevelEN)."
+    },
+
+    "mcqOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["option_id", "text", "is_correct"],
+      "properties": {
+        "option_id": { "type": "string", "minLength": 1, "description": "Label (e.g. ক/খ/গ or A/B/C). Unique within the item (harness-checked)." },
+        "text": { "type": "string", "minLength": 1 },
+        "is_correct": { "type": "boolean" },
+        "why_wrong": { "type": "string", "minLength": 1, "description": "Distractor rationale (REF-09 §5). Expected on the incorrect options." }
+      }
+    },
+
+    "fillBlank": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blank_no", "accepted"],
+      "properties": {
+        "blank_no": { "type": "integer", "minimum": 1 },
+        "accepted": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "description": "Accepted-answer variants for this blank." },
+        "normalized_match": { "type": "boolean", "description": "If true, the app may match case/diacritic/whitespace-insensitively. Defaults to exact match when absent." },
+        "marks": { "type": "number", "exclusiveMinimum": 0, "multipleOf": 0.5, "description": "Optional per-blank mark for partial credit; sums to the item marks (harness-checked)." }
+      }
+    },
+
+    "matchPair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["left", "right"],
+      "properties": {
+        "left": { "type": "string", "minLength": 1 },
+        "right": { "type": "string", "minLength": 1 },
+        "marks": { "type": "number", "exclusiveMinimum": 0, "multipleOf": 0.5, "description": "Optional per-pair mark for partial credit." }
+      }
+    },
+
+    "answerKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accepted"],
+      "properties": {
+        "accepted": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "description": "Accepted-answer variants (REF-09 §5)." },
+        "normalized_match": { "type": "boolean", "description": "As fillBlank.normalized_match." },
+        "model_note": { "type": "string", "minLength": 1, "description": "Optional marker guidance / model answer note." },
+        "step_breakdown": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["step", "marks"],
+            "properties": {
+              "step": { "type": "string", "minLength": 1 },
+              "marks": { "type": "number", "exclusiveMinimum": 0, "multipleOf": 0.5 }
+            }
+          },
+          "description": "Multi-step mark breakdown for consistent partial credit (REF-09 §5); sums to the item marks (harness-checked)."
+        }
+      }
+    },
+
+    "rubric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bands", "criteria"],
+      "description": "The locked REF-09 §5 open-item rubric shape. The Islamic/moral-alignment row is MANDATORY (a criterion with role 'islamic_alignment') — the standing shared-rubric standard for open items.",
+      "properties": {
+        "bands": {
+          "type": "array", "minItems": 2,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Quality bands high→low, e.g. [\"4\",\"3\",\"2\",\"1\"]. The marker maps bands to marks per the school scheme."
+        },
+        "criteria": {
+          "type": "array", "minItems": 1,
+          "items": { "$ref": "#/$defs/criteriaRow" },
+          "contains": { "type": "object", "properties": { "role": { "const": "islamic_alignment" } }, "required": ["role"] },
+          "minContains": 1,
+          "description": "One row per criterion; MUST contain an 'islamic_alignment' row."
+        }
+      }
+    },
+
+    "criteriaRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "criterion", "band_descriptors"],
+      "properties": {
+        "role": {
+          "enum": ["content", "reasoning", "organization", "islamic_alignment", "other"],
+          "description": "The criterion's role; 'islamic_alignment' is required to appear once per rubric."
+        },
+        "criterion": { "type": "string", "minLength": 1, "description": "Human-readable criterion label (content language)." },
+        "band_descriptors": {
+          "type": "object",
+          "minProperties": 2,
+          "additionalProperties": { "type": "string", "minLength": 1 },
+          "description": "Maps each band label (from rubric.bands) to its descriptor text."
+        }
+      }
+    },
+
+    "glossItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["term", "gloss"],
+      "properties": {
+        "term": { "type": "string", "minLength": 1 },
+        "gloss": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "mediaRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["media_type", "ref", "alt_text", "curation_status"],
+      "properties": {
+        "media_type": { "enum": ["image", "diagram"], "description": "Diagram-only scope (build 1): non-living-being figures." },
+        "ref": { "type": "string", "minLength": 1, "description": "Stored asset reference/id (the app holds the asset; no embedded blob)." },
+        "alt_text": { "type": "string", "minLength": 1, "description": "Required. Described-text equivalent of the figure." },
+        "curation_status": { "enum": ["clean", "described_text"], "description": "Author/reviewer-set REF-01 C-05/C-02 clearance. 'replaced' is reserved (only if image scope 9-B is ever opened)." }
+      }
+    }
+  }
+}
