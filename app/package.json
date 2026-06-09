@@ -1,0 +1,27 @@
+{
+  "name": "@scd/app",
+  "version": "0.1.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "web": "expo start --web",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@scd/shared": "*",
+    "@urql/core": "^5.0.5",
+    "expo": "~51.0.8",
+    "expo-status-bar": "~1.12.1",
+    "graphql": "^16.8.1",
+    "react": "18.2.0",
+    "react-native": "0.74.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@types/react": "~18.2.79",
+    "typescript": "*"
+  }
+}
