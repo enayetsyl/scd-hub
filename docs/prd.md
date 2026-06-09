@@ -35,7 +35,9 @@ roles or permissions, just wider row-scope.
   configurable extent: whole-school, a grade/class (all subjects), a subject/department (all classes),
   or an explicit assigned set. `*:read` only; no assemble/tracker-write outside teaching scope.
 - **Proxy / cover** — for the covered class only: read chapter+lesson plans, `set:assemble`
-  (assign homework), `tracker:write`. A **bounded write** overlay, assignment/time-limited.
+  (assign homework), `tracker:write`. A **bounded write** overlay that is **duration-limited in days**:
+  the assigner (Principal/Admin) sets the number of days at grant time (matching the absent teacher's
+  leave); the grant **auto-expires** at the end of the last day and access is revoked (D-#20).
 
 ---
 
@@ -108,6 +110,18 @@ roles or permissions, just wider row-scope.
 - **J5.6 Fail-closed firewall** *(R-AC4, R-AC8, R-X8, NFR-11)*  ← **the non-negotiable test** — the
   corpus/analytics resolver path, when it attempts to resolve student/guardian identity, **must fail**.
   No scope overlay (supervisory or proxy) creates a corpus→identity path. The test passes by failing.
+- **J5.7 Proxy-grant lifecycle (duration-bounded)** *(R-AC3, D-#18/#20)*
+  - **Assign:** Given a Principal/Admin and an absent teacher's class, When they create a proxy grant for
+    the covering teacher and **enter a number of days N** (start date defaults to today, may be set
+    forward), Then the covering teacher gains write (read plans + `set:assemble` + `tracker:write`) on
+    **that class only**, effective `[start, start+N)`.
+  - **Active window:** Given an active proxy grant, When the covering teacher acts within the window,
+    Then writes to the covered class succeed; outside the covered class they are still denied.
+  - **Auto-expiry:** Given the window has elapsed (end of day N, school-local time), When the covering
+    teacher attempts a write, Then it is denied — the grant is expired (no manual cleanup required).
+  - **Early revoke / extend:** Given the assigner revokes early (teacher returned) or extends (leave
+    prolonged), Then the window updates accordingly and access follows.
+  - **Audit:** Every assign / extend / revoke / expiry is written to the `audit` log (R-AC7).
 
 ---
 
@@ -143,5 +157,9 @@ deferred ops modules — `docs/roadmap.md`.
 - **Project-04 question payload** — RESOLVED (D-#19): ratified + LOCKED; closed payload schema in
   `server/import/`, `paper_role` + `stimulus` added, gate green. Remaining follow-ons: wire the
   authoritative REF-19 registry; upgrade `topic_tag` to registry validation.
-- **Scope-grant data shape** — Slice 0 must define how teaching/supervisory/proxy grants are stored and
-  assigned (and how proxy is time-bounded). Captured here as a build task; modeled in `/server` foundation.
+- **Scope-grant data shape** — Slice 0 models teaching/supervisory/proxy grants in `/server` foundation.
+  Decided (D-#20): a **proxy** grant stores `{covering_teacher, covered_class/section, absent_teacher?,
+  start_date, duration_days, status}` with `end = start + duration_days`; resolver authz treats it as
+  active only within the window; auto-expiry is window-based (no cron required — checked at request
+  time), with optional early-revoke/extend. Supervisory grants store their extent (whole-school /
+  grade-class / subject-dept / explicit set); teaching grants are the class→section assignments.
