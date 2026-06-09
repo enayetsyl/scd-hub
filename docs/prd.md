@@ -68,7 +68,8 @@ roles or permissions, just wider row-scope.
 - **J2.1 Import questions via the same envelope** *(R-Q2, doc_type=question)* — same gate as J1.1/J1.2.
 - **J2.2 Filter by any combination of tags** *(R-Q1, R-Q3)* — filter by subject/class/chapter-or-lesson/
   type/Bloom/difficulty/marks (any combination) → only matching questions, with tag chips.
-  *`QUESTION_TYPES` + the question payload are PROVISIONAL pending Project 04 (R-IMP5).*
+  *`QUESTION_TYPES` + the question payload are RATIFIED + LOCKED (Project 04, D-#19). `paper_role` is
+  a distinct filter axis from `question_type`. `stimulus` doc-type carries shared passages.*
 - **J2.3 Preview a question** *(R-Q4)*.
 - **J2.4 Supervisory read of un-taught question banks** *(R-AC3, D-#17)* — a supervisor sees question
   banks across their extent, not only their teaching subjects/classes.
@@ -139,7 +140,8 @@ deferred ops modules — `docs/roadmap.md`.
 - **Project-03 plan schema** (`*PlanSchema*.json`) — vendored at `server/import/LOCKED_C5_PlanSchema_v1.json`;
   the import gate's L2 now runs and the worked example passes end-to-end. Upstream-owned (Project-03);
   refresh the vendored copy when Project-03 re-locks the plan layouts. J1.1 is now fully verifiable.
-- **Project-04 question payload** — J2/J3 question shape is provisional until ratified (R-IMP5); only
-  then tighten `questionPayload` to `additionalProperties:false` and finalize `QUESTION_TYPES`.
+- **Project-04 question payload** — RESOLVED (D-#19): ratified + LOCKED; closed payload schema in
+  `server/import/`, `paper_role` + `stimulus` added, gate green. Remaining follow-ons: wire the
+  authoritative REF-19 registry; upgrade `topic_tag` to registry validation.
 - **Scope-grant data shape** — Slice 0 must define how teaching/supervisory/proxy grants are stored and
   assigned (and how proxy is time-bounded). Captured here as a build task; modeled in `/server` foundation.

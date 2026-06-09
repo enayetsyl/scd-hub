@@ -10,18 +10,20 @@ _Updated: 2026-06-09_
 ## In flight
 - (none — awaiting go-ahead on Slice 0 scaffold)
 
-## Recent decisions
-- D-#17/#18: TEACHER scope overlays — supervisory (read-only oversight) + proxy/cover (bounded write).
-  See `DECISIONS.md`, ADR-017, R-AC3.
-
 ## Blocked / waiting
-- Tighten `questionPayload` to `additionalProperties:false` — waits on **Project 04** ratifying the
-  question payload shape (external coordination).
+- (none blocking) — open follow-ons from the Project-04 contract LOCK (D-#19), not blockers:
+  - Wire the **authoritative REF-19 registry** via `--ref19-registry` (harness ships a 121-slug default).
+  - Upgrade **`topic_tag`** from pattern-only to registry validation once the per-subject numbering lands.
 
 ## Foundation in place
-- Requirements (DRAFT), Architecture/17 ADRs (DRAFT), import-envelope schema (DRAFT, valid),
-  import conformance harness (working), Project-03 plan schema vendored at `server/import/`,
-  worked example **passes the full L1→L2→L3 gate in-repo**, `/shared` vocab + RBAC (verified).
+- Requirements (DRAFT), Architecture/17 ADRs (DRAFT), **import contract LOCKED v1.0** (envelope +
+  question + stimulus + plan payload schemas vendored at `server/import/`), import conformance harness
+  v1.0 (L1→L4, working), worked plan example + **11 question/stimulus fixture instances pass the gate**,
+  `/shared` vocab v1.0 + RBAC + paper_role mirror (verified).
+
+## Recent decisions
+- D-#17/#18: TEACHER scope overlays — supervisory (read-only) + proxy/cover (bounded write).
+- D-#19: adopted Project-04 LOCKED question/stimulus contract (additive; mirror now includes PaperRole).
 
 ## Backlog
 - Deferred pipeline (guardian portal, analytics, AI/LLM export, messaging automation, ops modules)

@@ -11,7 +11,11 @@ source docs disagree, the docs win — fix this file.
 | **Payload** | The `doc_type`-specific body inside the envelope. For plan types it is the whole Project-03 plan artifact, unchanged; for questions it is envelope-native (provisional, R-IMP5). |
 | **doc_type** | Discriminator selecting the payload shape: `chapter_plan`, `session_plan`, `question`, `question_set`. |
 | **Plan doc-types** | `chapter_plan` and `session_plan` — payloads validated against the Project-03 plan schema (L2). |
-| **Question doc-types** | `question` / `question_set` — payload provisional pending Project 04. |
+| **Question doc-types** | `question` (RATIFIED + LOCKED, Project 04) / `question_set` (reserved, app-generated). Question payload is closed (`LOCKED_QuestionPayload_Schema_v1.json`); app-rendered, no `rendered_markdown`. |
+| **Stimulus** | A shared passage/poem/audio-script/image-set (`doc_type: stimulus`) referenced by questions. Closed payload (`LOCKED_StimulusPayload_Schema_v1.json`); app-rendered. |
+| **paper_role** | Paper-section family (`mcq` / `short` / `structured` / `creative`, REF-09) — the app filter axis for set assembly. A SEPARATE axis from `question_type`. Mirrored enum (envelope `tags.paper_role` ↔ `vocab.ts PAPER_ROLES` ↔ payload). |
+| **topic_tag** | Per-subject topic code `TOP-<SUBJ>-C<level>-NN` the app filters on. Pattern-validated only (number registry pending). |
+| **ref19_topic_id** | REF-19 curriculum topic slug carried in the question payload (payload-only, not an envelope tag). Validated HARD against the REF-19 registry at import (L4). |
 | **rendered_markdown** | The co-generated Markdown carried beside a plan payload. The app displays/PDFs this; it NEVER re-renders from JSON (ADR-006, Option B). |
 | **curation_tag** | Upstream-authored curation signal (`KEEP_AS_IS`, `NEEDS_REPLACEMENT`, `FLEXIBLE`). Advisory at import; curation authority stays upstream (D-#4). |
 | **review_status** | Quality gate on content: `draft` → `reviewed` → `gold` (Principal-locked). Export/analytics filter on it (D-#3). |
