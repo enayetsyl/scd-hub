@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://school.local/swapp/ImportEnvelope_v1.json",
+  "title": "School Software — Unified Typed Import Envelope v1 (DRAFT)",
+  "description": "The single ingestion contract for the school software (REQ §4, R-IMP1). A minimal, stable OUTER contract plus a free-form PAYLOAD selected by doc_type. STATUS: DRAFT v0.1 — the plan doc-types (chapter_plan/session_plan) are stable because they wrap the locked Project-03 artifact; the question/question_set payloads are PROVISIONAL pending Project 04/05 alignment (R-IMP5). DESIGN NOTES: (1) Two-layer validation, mirroring Project 03's own Layer-1/Layer-2 split: THIS schema validates the outer contract + a light payload marker-gate; the import harness then runs a SECOND validator pass dispatching payload to its full schema by doc_type (plan types -> the locked Project-03 plan schema C5_PlanSchema_v1.json; question -> the Project-04 question schema once ratified). (2) ASYMMETRY by design: for plan doc-types, payload is the ENTIRE Project-03 plan artifact UNCHANGED (so Project 03 emits as-is, the app never re-renders, and the existing locked plan schema validates payload verbatim). For question doc-types, payload is envelope-native (greenfield, authored directly in this shape). (3) The outer subject/class_level/curation_tag are the app's authoritative INDEXED copies; a harness consistency-check (not expressible cleanly in JSON Schema across nesting) asserts they equal the payload's. (4) import_batch_id, imported_at, and importer_user are STAMPED BY THE APP after validation and are NOT part of the incoming contract. (5) review_status defaults to 'draft' on import; 'reviewed'/'gold' are set later via the Project-03 REVIEW workflow (D-#3). (6) To EXTEND: add a value to doc_type's enum and a matching branch in allOf + a $defs payload schema; the outer contract never changes (envelope_version stays 1.x for additive changes).",
+  "$comment": "Draft 2020-12 to match Project 03's validate_plan.py (jsonschema Draft202012Validator). Envelope_version is intentionally named distinctly from the payload's own schema_version to avoid collision when a plan artifact is nested under payload.",
+
+  "type": "object",
+  "required": ["envelope_version", "doc_type", "subject", "class_level", "provenance", "review_status", "payload"],
+  "additionalProperties": false,
+
+  "properties": {
+    "envelope_version": {
+      "const": "1.0",
+      "description": "Version of THIS outer contract, independent of any payload schema_version."
+    },
+    "doc_type": {
+      "enum": ["chapter_plan", "session_plan", "question", "question_set"],
+      "description": "Selects the payload sub-schema. 'question_set' is app-generated (REQ-ASSEMBLE) and reserved here only for possible future bulk import."
+    },
+    "subject": {
+      "enum": ["BAN", "ENG", "MATH", "SCI", "BGS"],
+      "description": "Authoritative indexed copy. Harness asserts equality with payload.subject for plan types."
+    },
+    "class_level": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Authoritative indexed copy (C1–C5). One evolving plan schema spans all classes (R-IMP2)."
+    },
+    "address": {
+      "$ref": "#/$defs/addressBlock",
+      "description": "The book-hierarchy address (division). Required for plan doc-types; optional for question doc-types."
+    },
+    "curation_tag": {
+      "enum": ["KEEP_AS_IS", "NEEDS_REPLACEMENT", "FLEXIBLE"],
+      "description": "Mirrors the Project-03 curation tag. Required for plan doc-types."
+    },
+    "pinned_to": {
+      "type": "object",
+      "description": "Layout/core versions the artifact was built against (carried through from Project 03).",
+      "properties": {
+        "chapter_layout": { "type": "string" },
+        "session_layout": { "type": "string" },
+        "production_core": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Author-supplied lineage (R-X2). App stamps import_batch_id/imported_at/importer_user separately after validation.",
+      "required": ["source_project", "author", "content_version"],
+      "additionalProperties": false,
+      "properties": {
+        "source_project": {
+          "enum": ["P01", "P02", "P03", "P04", "P05", "P06", "P07", "P08", "other"],
+          "description": "Originating curriculum Project."
+        },
+        "author": { "type": "string", "minLength": 1 },
+        "content_version": { "type": "string", "minLength": 1, "description": "Author's content version (e.g. 'v2', '1.3')." },
+        "authored_at": { "type": "string", "format": "date-time" },
+        "source_filename": { "type": "string", "description": "Original author filename, for traceability." }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Cross-cutting, app-indexed filter tags (controlled vocabulary, R-X6). Lifted from payload for questions or set directly.",
+      "additionalProperties": false,
+      "properties": {
+        "bloom_level": { "$ref": "#/$defs/bloomLevelEN" },
+        "difficulty": { "enum": ["easy", "medium", "hard"] },
+        "topic_tag": { "type": "string" },
+        "chapter_ref": { "type": "string" },
+        "lesson_ref": { "type": "string" }
+      }
+    },
+    "review_status": {
+      "enum": ["draft", "reviewed", "gold"],
+      "description": "Quality gate (D-#3). 'draft' = authored, not yet REVIEW-passed; 'reviewed' = passed the Project-03 substance REVIEW; 'gold' = Principal-locked. Export/analytics filter on this."
+    },
+    "rendered_markdown": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Co-generated teacher-facing Markdown (Option B). Required for plan doc-types; the app displays/PDFs this and NEVER re-renders from payload."
+    },
+    "payload": {
+      "type": "object",
+      "description": "Doc-type-specific body. For plan types this is the ENTIRE Project-03 plan artifact (validated in full by the plan schema in the harness's second pass); for question types it is envelope-native (see $defs.questionPayload)."
+    }
+  },
+
+  "allOf": [
+    {
+      "$comment": "Chapter Plan: wrap the whole Project-03 chapter artifact; require display Markdown + address + curation tag.",
+      "if": { "properties": { "doc_type": { "const": "chapter_plan" } } },
+      "then": {
+        "required": ["rendered_markdown", "address", "curation_tag"],
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["schema_version", "plan_type", "subject", "class_level", "division", "curation_tag"],
+            "properties": { "plan_type": { "const": "chapter_plan" } }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "Session Plan: same wrap discipline.",
+      "if": { "properties": { "doc_type": { "const": "session_plan" } } },
+      "then": {
+        "required": ["rendered_markdown", "address", "curation_tag"],
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["schema_version", "plan_type", "subject", "class_level", "division", "curation_tag"],
+            "properties": { "plan_type": { "const": "session_plan" } }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "Question: PROVISIONAL envelope-native payload, pending Project-04 ratification.",
+      "if": { "properties": { "doc_type": { "const": "question" } } },
+      "then": {
+        "properties": { "payload": { "$ref": "#/$defs/questionPayload" } }
+      }
+    }
+  ],
+
+  "$defs": {
+    "addressBlock": {
+      "type": "object",
+      "required": ["anchor_word", "number", "title"],
+      "additionalProperties": false,
+      "properties": {
+        "anchor_word": {
+          "enum": ["পাঠ", "অধ্যায়", "Unit", "Lesson"],
+          "description": "Must match the subject's book hierarchy (BAN→পাঠ, MATH/SCI→অধ্যায়, ENG→Unit/Lesson) — full subject↔anchor check lives in the harness, as in the plan schema."
+        },
+        "number": { "type": "integer", "minimum": 1 },
+        "title": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "bloomLevelEN": {
+      "enum": ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"],
+      "description": "Canonical English Bloom levels for app indexing (the plan schema accepts both Bangla and English on the rendered surface; the app index uses English)."
+    },
+
+    "questionPayload": {
+      "type": "object",
+      "$comment": "DRAFT / PROVISIONAL — illustrative shape to anchor Project-04 alignment (R-IMP5). additionalProperties kept TRUE during alignment; tighten to false on ratification.",
+      "required": ["question_text", "question_type", "marks"],
+      "additionalProperties": true,
+      "properties": {
+        "question_text": { "type": "string", "minLength": 1 },
+        "question_type": {
+          "enum": ["mcq", "short_answer", "true_false", "fill_blank", "matching", "descriptive"]
+        },
+        "options": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Present for mcq/matching; absent otherwise."
+        },
+        "answer": {
+          "description": "Free type during alignment (string, array, or object). Tighten with Project 04."
+        },
+        "marks": { "type": "number", "minimum": 0 },
+        "bloom_level": { "$ref": "#/$defs/bloomLevelEN" },
+        "difficulty": { "enum": ["easy", "medium", "hard"] },
+        "chapter_ref": { "type": "string" },
+        "lesson_ref": { "type": "string" },
+        "explanation": { "type": "string" }
+      }
+    }
+  }
+}
