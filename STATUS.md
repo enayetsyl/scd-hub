@@ -3,6 +3,17 @@
 _Updated: 2026-06-10_
 
 ## Now / next
+- **Designed (not built):** **HR / staff lifecycle module** — all four build-steps + offboarding designed
+  in `docs/hr-design.md`; per-journey PRD in `docs/prd-hr.md`; decisions **D-#22–D-#29** appended.
+  Build-steps mirror the slice approach: (1) staff records, (2) attendance & leave, (3) payroll,
+  (4) performance/conduct/development, + offboarding (cross-cutting). Operational/identity plane, behind
+  the PII firewall (ADR-005) — **no new corpus→identity path**; the J5.6 fail-closed firewall test must
+  stay green. **Remaining before build:** maternity legal check (D-#23) + parked numbers/specs (leave
+  entitlements + Hajj reset; attendance times/grace + **biometric device model/SDK**; Eid bonus + day-rate
+  basis; statutory deductions w/ accountant; payment-export target format; warning lapse periods + appraisal
+  cadence; REF-11 rubric from curriculum Projects; offboarding clearance-list + notice periods).
+  HR **pulled forward** from `docs/roadmap.md` "Deferred ops modules" into the active build (this is the
+  STATUS/roadmap call the design flagged).
 - **Done:** Slice 4 — connected frontend (Expo app). [45fe2eb 9210cd1 3e31a17]
   - All teacher/principal/office screens per `docs/prd.md` §8: Login; Content tree + Plan
     view + PDF; Question bank (multi-filter) + Preview + Basket; Set list/detail + Assemble
@@ -68,6 +79,11 @@ _Updated: 2026-06-10_
   - tsc --noEmit: CLEAN. npm test: 31/31 PASS. vocab verifier: PASS.
 
 ## Recent decisions
+- **HR module (D-#22–D-#29):** D-#22 cover proposal → admin approval; D-#23 maternity unpaid (accepted
+  risk, legal check pending); D-#24 attendance live device sync (first live external dependency);
+  D-#25 all staff incl. support attendance-tracked; D-#26 lateness no deduction by default (optional rule);
+  D-#27 advances interest- & fee-free (*qard hasan*); D-#28 supervisor observation-write; D-#29 final
+  settlement hard-held until clearance.
 - D-#17/#18: TEACHER scope overlays — supervisory (read-only) + proxy/cover (bounded write).
 - D-#19: adopted Project-04 LOCKED question/stimulus contract.
 - D-#20: proxy grants duration-bounded in days; auto-expiry + audit.

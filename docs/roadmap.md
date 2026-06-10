@@ -31,9 +31,18 @@ WhatsApp libraries are rejected (ToS risk).
 ### Trackers & misc
 Full vocabulary tracker, complaint tracker; video review vs REF-11 observation rubric.
 
-### Deferred ops modules
-Attendance, comms, notices, fees, expenses, payroll, routine, leave, exam/results, loanable-resource
-(library + asset register).
+### HR / staff lifecycle — **PULLED FORWARD into the active build**
+Staff records → attendance & leave → payroll → performance/conduct/development → offboarding.
+Designed in `docs/hr-design.md`; per-journey PRD with acceptance criteria in `docs/prd-hr.md`;
+decisions D-#22–D-#29 in `DECISIONS.md`. No longer deferred — tracked in `STATUS.md`, not here.
+Notes carried from the design: HR sits on the operational/identity plane behind the PII firewall
+(ADR-005) and adds **no** new corpus→identity path; biometric attendance sync (D-#24) is the app's
+**first live external dependency** (device model/SDK on the critical path); leave reuses the existing
+proxy/cover system (D-#20/#22).
+
+### Deferred ops modules (still deferred)
+Comms, notices, fees, expenses, routine, exam/results, loanable-resource (library + asset register).
+*(Attendance, leave and payroll moved up — see "HR / staff lifecycle" above.)*
 
 ## Distribution
 Internal-first (Expo internal dist / TestFlight / direct APK) to defer store fees; publish to public

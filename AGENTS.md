@@ -65,6 +65,8 @@ policy, or decisions into this repo.
 /docs/
   requirements.md     ← what/why (the REQ)
   prd.md              ← first-priority slice: per-role journeys + acceptance criteria (feeds e2e)
+  prd-hr.md           ← HR/staff-lifecycle module: per-role journeys + acceptance criteria (D-#22–#29)
+  hr-design.md        ← HR module design handoff (LOCKED source for prd-hr.md)
   architecture.md     ← how (modules, data planes, the ADRs)
   glossary.md         ← canonical terminology (read before naming anything)
   import-contract.md  ← the envelope contract narrative
