@@ -16,6 +16,7 @@ import PDFDocument from "pdfkit";
 import * as path from "path";
 import type { Router, Request, Response } from "express";
 import { Router as createRouter } from "express";
+import { mixedText } from "../../../routes/pdfRenderer";
 import { AssessmentSet } from "../models/AssessmentSet";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { buildContext } from "../../../context";
@@ -100,7 +101,9 @@ async function renderSetToPdf(
     doc.font("NotoSansBengali");
 
     // Title block
-    doc.fontSize(16).text(setTypeName, { align: "center" }).moveDown(0.2);
+    doc.fontSize(16);
+    mixedText(doc, setTypeName, { align: "center" });
+    doc.moveDown(0.2);
 
     const metaLine: string[] = [];
     if (set.setType === "CT") {
@@ -113,7 +116,9 @@ async function renderSetToPdf(
       }
     }
     if (metaLine.length > 0) {
-      doc.fontSize(10).text(metaLine.join("   |   "), { align: "center" }).moveDown(0.3);
+      doc.fontSize(10);
+      mixedText(doc, metaLine.join("   |   "), { align: "center" });
+      doc.moveDown(0.3);
     }
 
     // Separator
@@ -141,44 +146,49 @@ function renderQuestion(
   const questionText = String(payload.question_text ?? "");
   const questionType = String(payload.question_type ?? "");
 
-  // Question stem line
-  doc
-    .fontSize(11)
-    .font("NotoSansBengali")
-    .text(`${num}. ${questionText}   [${marks} marks]`, { lineGap: 2 })
-    .moveDown(0.2);
+  // Question stem line (mixed Bengali/Latin via the shared fallback renderer)
+  doc.fontSize(11);
+  mixedText(doc, `${num}. ${questionText}   [${marks} marks]`, { lineGap: 2 });
+  doc.moveDown(0.2);
 
   // Answer-carrier rendering per question type
   if (questionType === "mcq") {
     const options = (payload.options as Array<Record<string, unknown>>) ?? [];
     for (const opt of options) {
       const isCorrect = opt.is_correct ? " ✓" : "";
-      doc.fontSize(10).text(`    ${String(opt.option_id ?? "")}. ${String(opt.text ?? "")}${isCorrect}`, { lineGap: 1 });
+      doc.fontSize(10);
+      mixedText(doc, `    ${String(opt.option_id ?? "")}. ${String(opt.text ?? "")}${isCorrect}`, { lineGap: 1 });
     }
   } else if (questionType === "true_false") {
     const answer = payload.tf_answer === true ? "সত্য (True)" : "মিথ্যা (False)";
-    doc.fontSize(10).text(`    উত্তর: ${answer}`, { lineGap: 1 });
+    doc.fontSize(10);
+    mixedText(doc, `    উত্তর: ${answer}`, { lineGap: 1 });
   } else if (questionType === "fill_blank") {
     const blanks = (payload.blanks as Array<Record<string, unknown>>) ?? [];
     for (const b of blanks) {
       const accepted = Array.isArray(b.accepted) ? (b.accepted as string[]).join(" / ") : "";
-      doc.fontSize(10).text(`    শূন্যস্থান ${String(b.blank_no ?? "")}: ${accepted}`, { lineGap: 1 });
+      doc.fontSize(10);
+      mixedText(doc, `    শূন্যস্থান ${String(b.blank_no ?? "")}: ${accepted}`, { lineGap: 1 });
     }
   } else if (questionType === "matching") {
     const pairs = (payload.pairs as Array<Record<string, unknown>>) ?? [];
     for (const p of pairs) {
-      doc.fontSize(10).text(`    ${String(p.left ?? "")}  →  ${String(p.right ?? "")}`, { lineGap: 1 });
+      doc.fontSize(10);
+      mixedText(doc, `    ${String(p.left ?? "")}  →  ${String(p.right ?? "")}`, { lineGap: 1 });
     }
   } else if (questionType === "short_answer") {
     const ak = (payload.answer_key ?? {}) as Record<string, unknown>;
     const accepted = Array.isArray(ak.accepted) ? (ak.accepted as string[]).join(" / ") : "";
-    doc.fontSize(10).text(`    উত্তর: ${accepted}`, { lineGap: 1 });
+    doc.fontSize(10);
+    mixedText(doc, `    উত্তর: ${accepted}`, { lineGap: 1 });
     if (ak.model_note) {
-      doc.fontSize(9).fillColor("#444444").text(`    নোট: ${String(ak.model_note)}`, { lineGap: 1 });
+      doc.fontSize(9).fillColor("#444444");
+      mixedText(doc, `    নোট: ${String(ak.model_note)}`, { lineGap: 1 });
       doc.fillColor("#000000");
     }
   } else if (questionType === "descriptive") {
-    doc.fontSize(10).fillColor("#444444").text("    [বর্ণনামূলক — রুব্রিক দেখুন]", { lineGap: 1 });
+    doc.fontSize(10).fillColor("#444444");
+    mixedText(doc, "    [বর্ণনামূলক — রুব্রিক দেখুন]", { lineGap: 1 });
     doc.fillColor("#000000");
   }
 

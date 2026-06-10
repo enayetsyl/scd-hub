@@ -37,14 +37,39 @@ const schema = builder.toSchema();
 const yoga = createYoga({
   schema,
   context: ({ request }) => {
-    // yoga wraps the raw express req — pull it back out
-    const req = (request as unknown as { raw: express.Request }).raw ?? request;
-    const res = {} as express.Response;
-    return buildContext(req as express.Request, res);
+    // Yoga delivers a WHATWG Request whose headers are a Fetch `Headers` object
+    // (read via .get); the raw Node req is not reliably exposed as `.raw`, so
+    // `req.headers.authorization` was always undefined and every authenticated
+    // query failed. Normalise the auth header into what buildContext expects.
+    const headers = request.headers as { get?: (k: string) => string | null; authorization?: string };
+    const authorization =
+      typeof headers.get === "function"
+        ? headers.get("authorization") ?? ""
+        : headers.authorization ?? "";
+    const req = { headers: { authorization } } as unknown as express.Request;
+    return buildContext(req, {} as express.Response);
   },
 });
 
 app.use(yoga.graphqlEndpoint, yoga as unknown as express.RequestHandler);
+
+// CORS for the thin REST surface. The GraphQL endpoint gets CORS from Yoga, but
+// the web app fetches PDFs cross-origin (e.g. :8081 -> :4000) with an Authorization
+// header — that triggers a preflight the Express routes must answer, reflecting the
+// origin. Scoped to /pdf so it never double-sets headers on the Yoga endpoint.
+const corsForRest: express.RequestHandler = (req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+  if (req.method === "OPTIONS") {
+    res.sendStatus(204);
+    return;
+  }
+  next();
+};
+app.use("/pdf", corsForRest);
 
 // Thin HTTP surface — PDF export (ADR-003, ADR-009)
 app.use("/pdf", pdfRouter);
