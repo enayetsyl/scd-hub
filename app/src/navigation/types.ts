@@ -33,6 +33,8 @@ export type AdminStackParamList = {
   Import: undefined;
   UserList: undefined;
   ScopeGrant: undefined;
+  Roster: undefined;
+  SectionPicker: undefined;
 };
 
 export type TabParamList = {

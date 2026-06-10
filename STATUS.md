@@ -11,9 +11,14 @@ _Updated: 2026-06-10_
   C1–C5; content `class_level` LOCKED 1..5 untouched, D-#30); `Student` + core operational fields;
   `Guardian` login-optional (D-#31). Pipeline: `extract-students.py` → gitignored `students.json` →
   `import-students.ts` (idempotent upsert by schoolId). Gates green (124/124, typecheck, vocab verifier).
-  Source .xlsx + students.json are gitignored PII (ADR-005). **Next / not done:** **frontend doesn't surface
-  the new Student fields yet** (roster screens read name/class/section only); a `users`/section-picker
-  follow-up (Slice-4 list) would let staff browse the new classes. **Code changes uncommitted.**
+  Source .xlsx + students.json are gitignored PII (ADR-005). Model/script/contract layer committed [e4962a3].
+- **Built (frontend roster view):** new read-only **RosterScreen** under the Admin tab (gated `roster:manage`,
+  Office/Principal). `StudentRef` now exposes nameBn/gender/dob/phone/address/bloodGroup + a `guardians`
+  field (GuardianLink→Guardian); app `ROSTER_QUERY` + `RosterScreen` render them per section (reuses the
+  SectionPicker), with Bangla gender/relation/DOB labels and roster-aware `classLevelLabel` (Nursery/KG).
+  app tsc + server tsc clean, 124/124 tests, vocab verifier green. **Not executed:** live render against a
+  running server (golden path still needs a running server + seeded Atlas, as in Slice 4). **This
+  frontend batch is uncommitted.**
 - **Designed (not built):** **HR / staff lifecycle module** — all four build-steps + offboarding designed
   in `docs/hr-design.md`; per-journey PRD in `docs/prd-hr.md`; decisions **D-#22–D-#29** appended.
   Build-steps mirror the slice approach: (1) staff records, (2) attendance & leave, (3) payroll,

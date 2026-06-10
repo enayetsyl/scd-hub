@@ -17,9 +17,11 @@ import {
   type PaperRole,
   type ReviewStatus,
   type CurationTag,
+  ROSTER_CLASS_LABELS_BN,
   type SetType,
   type TrackerKind,
   type DocType,
+  type RosterClassLevel,
 } from "@scd/shared";
 
 const BN_DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
@@ -53,7 +55,16 @@ export const trackerKindLabel = (v?: string | null): string =>
 export const docTypeLabel = (v?: string | null): string =>
   (v && DOC_TYPE_LABELS_BN[v as DocType]) || v || "—";
 
-export const classLevelLabel = (level: number): string => `শ্রেণি ${bnNum(level)}`;
+/** Roster-aware: pre-primary (−1 Nursery / 0 KG) use the roster label; 1..5 stay "শ্রেণি N". */
+export const classLevelLabel = (level: number): string =>
+  level <= 0 ? ROSTER_CLASS_LABELS_BN[level as RosterClassLevel] ?? `শ্রেণি ${bnNum(level)}` : `শ্রেণি ${bnNum(level)}`;
+
+export const genderLabel = (v?: string | null): string =>
+  v === "male" ? "ছেলে" : v === "female" ? "মেয়ে" : v === "other" ? "অন্যান্য" : "—";
+
+/** Guardian relation → Bangla. */
+export const relationLabel = (v?: string | null): string =>
+  v === "father" ? "বাবা" : v === "mother" ? "মা" : v === "guardian" ? "অভিভাবক" : v || "—";
 
 /** UI chrome strings — Bangla labels, buttons, headers, statuses, errors. */
 export const STR = {
@@ -178,6 +189,16 @@ export const STR = {
   admin: "প্রশাসন",
   importContent: "কন্টেন্ট ইম্পোর্ট",
   pickFile: "ফাইল নির্বাচন",
+  pickFiles: "ফাইল নির্বাচন (JSON + Markdown)",
+  selectedFiles: "নির্বাচিত ফাইল",
+  removeFile: "সরান",
+  clearFiles: "সব মুছুন",
+  importHint: "একটি প্ল্যান হলে .json ও .md দুটোই দিন; অথবা একটি তৈরি খাম (.json) দিন।",
+  envelopeAutoBuilt: "অ্যাপ স্বয়ংক্রিয়ভাবে খাম তৈরি করেছে",
+  viewEnvelope: "তৈরি খাম দেখুন",
+  hideEnvelope: "খাম লুকান",
+  pasteEnvelopeOptional: "অথবা একটি তৈরি খাম JSON পেস্ট করুন (ঐচ্ছিক)",
+  noFilesSelected: "কোনো ফাইল নির্বাচিত হয়নি।",
   importing: "ইম্পোর্ট হচ্ছে…",
   verdict: "ফলাফল",
   warnings: "সতর্কতা",
@@ -193,6 +214,19 @@ export const STR = {
   extend: "মেয়াদ বৃদ্ধি",
   durationDays: "দিন সংখ্যা",
   startDate: "শুরুর তারিখ",
+
+  // Roster (read-only student list)
+  roster: "শিক্ষার্থী তালিকা",
+  rosterCount: "শিক্ষার্থী",
+  studentId: "আইডি",
+  gender: "লিঙ্গ",
+  dob: "জন্ম তারিখ",
+  phone: "ফোন",
+  address: "ঠিকানা",
+  bloodGroup: "রক্তের গ্রুপ",
+  guardians: "অভিভাবক",
+  noGuardians: "কোনো অভিভাবক যুক্ত নেই।",
+  changeSection: "শাখা পরিবর্তন",
 
   // Section context
   sectionContext: "শাখা প্রসঙ্গ",

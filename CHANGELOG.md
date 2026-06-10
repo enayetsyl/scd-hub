@@ -14,7 +14,11 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
   ADR-005). Decisions D-#30/#31. Identity-plane only — no new corpus→identity path; firewall test green (124/124,
   typecheck + vocab verifier green). **Loaded to Atlas + verified live:** 91 students / 7 classes / 10 sections /
   129 contact-only guardians / 194 links; seed leftovers cleared first via `clear-seed.ts` (6 fake students +
-  `@scd.test` users + grants + 3 empty seed sections).
+  `@scd.test` users + grants + 3 empty seed sections). [e4962a3]
+- Roster view (frontend): read-only `RosterScreen` under the Admin tab (gated `roster:manage`). `StudentRef`
+  exposes nameBn/gender/dob/phone/address/bloodGroup + a `guardians` field (GuardianLink→Guardian); app
+  `ROSTER_QUERY` + screen render per section (reuses SectionPicker); Bangla gender/relation/DOB labels +
+  roster-aware `classLevelLabel` (Nursery/KG). app tsc + server tsc clean, 124/124 tests, vocab verifier green.
 - HR module: design handoff landed (`docs/hr-design.md`) + per-journey PRD (`docs/prd-hr.md`) — staff
   lifecycle pulled forward from roadmap "Deferred ops modules" into the active build (records → attendance
   & leave → payroll → performance/conduct/development → offboarding). Appended decisions D-#22–D-#29;

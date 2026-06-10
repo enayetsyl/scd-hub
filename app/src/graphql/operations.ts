@@ -95,6 +95,14 @@ export const CLASSES_QUERY = gql<{ classes: ClassT[] }, { academicYearId: string
   }
 `;
 
+export interface GuardianContactT {
+  id: string;
+  name: string;
+  phone: string | null;
+  relation: string;
+  loginEnabled: boolean;
+}
+
 export interface StudentT {
   id: string;
   schoolId: string;
@@ -112,6 +120,44 @@ export const STUDENTS_QUERY = gql<
       schoolId
       name
       active
+    }
+  }
+`;
+
+/** Full roster view — the operational fields + linked guardians (read-only). */
+export interface RosterStudentT extends StudentT {
+  nameBn: string | null;
+  gender: string | null;
+  dob: string | null;
+  phone: string | null;
+  address: string | null;
+  bloodGroup: string | null;
+  guardians: GuardianContactT[];
+}
+
+export const ROSTER_QUERY = gql<
+  { studentsInSection: RosterStudentT[] },
+  { sectionId: string }
+>`
+  query Roster($sectionId: String!) {
+    studentsInSection(sectionId: $sectionId) {
+      id
+      schoolId
+      name
+      nameBn
+      gender
+      dob
+      phone
+      address
+      bloodGroup
+      active
+      guardians {
+        id
+        name
+        phone
+        relation
+        loginEnabled
+      }
     }
   }
 `;
@@ -629,6 +675,8 @@ export interface ImportResultT {
   advisories: string[];
   artifactId: string | null;
   batchId: string;
+  /** Set when the app auto-built the envelope from a plan + Markdown pair. */
+  envelopeJson: string | null;
 }
 
 export const IMPORT_ENVELOPE = gql<{ importEnvelope: ImportResultT }, { envelopeJson: string }>`
@@ -640,6 +688,30 @@ export const IMPORT_ENVELOPE = gql<{ importEnvelope: ImportResultT }, { envelope
       advisories
       artifactId
       batchId
+      envelopeJson
+    }
+  }
+`;
+
+export interface ImportFileT {
+  filename: string;
+  content: string;
+}
+
+/**
+ * Import one logical item: a built envelope (single .json) or a Project-03 plan
+ * as a .json + .md pair (the server auto-wraps it). Pairs by filename stem.
+ */
+export const IMPORT_FILES = gql<{ importFiles: ImportResultT }, { files: ImportFileT[] }>`
+  mutation ImportFiles($files: [ImportFileInput!]!) {
+    importFiles(files: $files) {
+      verdict
+      failChecks
+      warnings
+      advisories
+      artifactId
+      batchId
+      envelopeJson
     }
   }
 `;
