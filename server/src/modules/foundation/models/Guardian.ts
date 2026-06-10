@@ -10,7 +10,11 @@ export interface IGuardian extends Document {
   identifier: string;
   /** Email is optional — only present when identifierKind === "email" or added separately. */
   email?: string;
-  passwordHash: string;
+  /** Optional: absent for contact-only guardians imported from the roster (loginEnabled=false, D-#31).
+   *  Required in practice before a guardian can authenticate (enforced at login, not in the schema). */
+  passwordHash?: string;
+  /** Whether this guardian can log in to the portal. Roster-imported contacts start false. */
+  loginEnabled: boolean;
   name: string;
   phone?: string;
   active: boolean;
@@ -27,7 +31,8 @@ const GuardianSchema = new Schema<IGuardian>(
     },
     identifier: { type: String, required: true, trim: true },
     email: { type: String, sparse: true, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true },
+    passwordHash: { type: String },
+    loginEnabled: { type: Boolean, default: false },
     name: { type: String, required: true, trim: true },
     phone: { type: String, trim: true },
     active: { type: Boolean, default: true },

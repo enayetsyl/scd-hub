@@ -4,6 +4,17 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Roster import (real students): added a roster class-level axis (`ROSTER_CLASS_LEVELS` −1..5 = Nursery/KG/One..Five
+  + `ROSTER_CLASS_LABELS_BN`) separate from the LOCKED content `class_level` (1..5, unchanged — verifier stays green);
+  relaxed `Class.level` bounds to the roster range. Extended `Student` with optional operational fields
+  (nameBn/gender/dob/phone/address/bloodGroup); made `Guardian.passwordHash` optional + added `loginEnabled`
+  (default false) for contact-only guardians (guardianLogin now rejects login-disabled). Added the import pipeline
+  `server/scripts/extract-students.py` (xlsx→gitignored students.json) + `import-students.ts` (idempotent upsert by
+  schoolId; no clears; dry-run default, --commit to write); gitignored the source .xlsx + students.json (live PII,
+  ADR-005). Decisions D-#30/#31. Identity-plane only — no new corpus→identity path; firewall test green (124/124,
+  typecheck + vocab verifier green). **Loaded to Atlas + verified live:** 91 students / 7 classes / 10 sections /
+  129 contact-only guardians / 194 links; seed leftovers cleared first via `clear-seed.ts` (6 fake students +
+  `@scd.test` users + grants + 3 empty seed sections).
 - HR module: design handoff landed (`docs/hr-design.md`) + per-journey PRD (`docs/prd-hr.md`) — staff
   lifecycle pulled forward from roadmap "Deferred ops modules" into the active build (records → attendance
   & leave → payroll → performance/conduct/development → offboarding). Appended decisions D-#22–D-#29;

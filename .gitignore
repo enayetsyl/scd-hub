@@ -35,6 +35,12 @@ __pycache__/
 venv/
 .pytest_cache/
 
+# ---- Real student/guardian PII (NEVER commit — ADR-005) ----
+# Source roster exports and any normalized JSON the import scripts produce.
+*.xlsx
+*.xls
+server/scripts/students.json
+
 # ---- Editor / OS ----
 .vscode/*
 !.vscode/extensions.json

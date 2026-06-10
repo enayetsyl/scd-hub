@@ -35,6 +35,7 @@ builder.mutationField("createGuardian", (t) =>
         identifierKind: args.identifierKind,
         identifier: args.identifier.trim(),
         passwordHash,
+        loginEnabled: true,
         phone: args.phone ?? undefined,
       });
       await writeAudit({ eventKind: "ROSTER_MANAGE", actorId: ctx.auth?.userId, actorRole: ctx.auth?.role, targetId: g._id, targetKind: "Guardian" });

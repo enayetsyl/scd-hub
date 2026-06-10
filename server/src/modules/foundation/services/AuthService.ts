@@ -86,6 +86,12 @@ export async function guardianLogin(input: GuardianLoginInput): Promise<AuthResu
     return null;
   }
 
+  // Contact-only guardians imported from the roster have no password and cannot log in (D-#31).
+  if (!guardian.loginEnabled || !guardian.passwordHash) {
+    await writeAudit({ eventKind: "LOGIN_FAIL", actorId: guardian._id, actorRole: "GUARDIAN", meta: { reason: "login_disabled" } });
+    return null;
+  }
+
   const ok = await verifyPassword(input.password, guardian.passwordHash);
   if (!ok) {
     await writeAudit({ eventKind: "LOGIN_FAIL", actorId: guardian._id, actorRole: "GUARDIAN", meta: { reason: "bad_password" } });

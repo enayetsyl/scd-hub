@@ -3,6 +3,17 @@
 _Updated: 2026-06-10_
 
 ## Now / next
+- **LOADED to Atlas:** **real student roster** (91 students) — verified live: 91 students (all w/ phone, 88 w/ dob),
+  7 classes (Nursery 21 / KG 12 / One 7 / Two 14 / Three 17 / Four 12 / Five 8), 10 populated sections,
+  129 contact-only guardians (`loginEnabled:false`), 194 guardian links. Seed leftovers cleared first
+  (6 `S-30x` students + `@scd.test` users + their grants + 3 empty seed sections) via `clear-seed.ts`.
+  Model/contract work: roster class-level axis (`ROSTER_CLASS_LEVELS` −1..5, Nursery/KG below content's
+  C1–C5; content `class_level` LOCKED 1..5 untouched, D-#30); `Student` + core operational fields;
+  `Guardian` login-optional (D-#31). Pipeline: `extract-students.py` → gitignored `students.json` →
+  `import-students.ts` (idempotent upsert by schoolId). Gates green (124/124, typecheck, vocab verifier).
+  Source .xlsx + students.json are gitignored PII (ADR-005). **Next / not done:** **frontend doesn't surface
+  the new Student fields yet** (roster screens read name/class/section only); a `users`/section-picker
+  follow-up (Slice-4 list) would let staff browse the new classes. **Code changes uncommitted.**
 - **Designed (not built):** **HR / staff lifecycle module** — all four build-steps + offboarding designed
   in `docs/hr-design.md`; per-journey PRD in `docs/prd-hr.md`; decisions **D-#22–D-#29** appended.
   Build-steps mirror the slice approach: (1) staff records, (2) attendance & leave, (3) payroll,

@@ -1,10 +1,11 @@
 import { Schema, model, Document, Types } from "mongoose";
-import type { ClassLevel } from "@scd/shared";
-import { CLASS_LEVEL_MIN, CLASS_LEVEL_MAX } from "@scd/shared";
+import type { RosterClassLevel } from "@scd/shared";
+import { ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
 
 export interface IClass extends Document {
   _id: Types.ObjectId;
-  level: ClassLevel;
+  /** Roster axis (−1=Nursery, 0=KG, 1..5=One..Five). SUPERSET of content CLASS_LEVELS. */
+  level: RosterClassLevel;
   nameBn: string;
   academicYearId: Types.ObjectId;
   active: boolean;
@@ -16,8 +17,8 @@ const ClassSchema = new Schema<IClass>(
   {
     level: {
       type: Number,
-      min: CLASS_LEVEL_MIN,
-      max: CLASS_LEVEL_MAX,
+      min: ROSTER_CLASS_LEVEL_MIN,
+      max: ROSTER_CLASS_LEVEL_MAX,
       required: true,
     },
     nameBn: { type: String, required: true, trim: true },
