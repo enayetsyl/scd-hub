@@ -29,15 +29,23 @@ function execFilePromise(
   args: string[],
 ): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolve) => {
-    execFile(file, args, (err, stdout, stderr) => {
-      const code = err ? ((err as NodeJS.ErrnoException & { code?: number }).code ?? 1) : 0;
-      resolve({ stdout: stdout ?? "", stderr: stderr ?? "", code });
-    });
+    execFile(
+      file,
+      args,
+      // Force UTF-8 stdio (Bangla content) + a large buffer for big plans/envelopes.
+      { env: { ...process.env, PYTHONIOENCODING: "utf-8" }, maxBuffer: 20 * 1024 * 1024 },
+      (err, stdout, stderr) => {
+        const code = err ? ((err as NodeJS.ErrnoException & { code?: number }).code ?? 1) : 0;
+        resolve({ stdout: stdout ?? "", stderr: stderr ?? "", code });
+      },
+    );
   });
 }
 
 const HARNESS_PATH = path.resolve(__dirname, "../../../../import/validate_import.py");
+const BUILD_ENVELOPE_PATH = path.resolve(__dirname, "../../../../import/build_envelope.py");
 const SCHEMA_DIR = path.resolve(__dirname, "../../../../import");
+const ENVELOPE_SCHEMA_PATH = path.join(SCHEMA_DIR, "../../docs/import-contract.schema.json");
 
 export interface GateOutput {
   verdict: "PASS" | "FAIL";
@@ -55,6 +63,8 @@ export interface ImportResult {
   advisories: string[];
   artifactId?: string;
   batchId: string;
+  /** Set on the auto-wrap path: the envelope the app built from a plan+md pair. */
+  wrappedEnvelopeJson?: string;
 }
 
 /** Run the Python import harness against an envelope JSON object. */
@@ -112,9 +122,12 @@ export async function importEnvelope(
 
   const batchDoc = await ImportBatch.create({
     envelopeSnapshot: envelope,
-    docType: envelope.doc_type,
-    subject: envelope.subject,
-    classLevel: envelope.class_level,
+    // A malformed envelope may omit doc_type; the harness already FAILed it, but
+    // the audit row must still be written (J1.2), so fall back to a sentinel
+    // rather than throwing a validation error on the required field.
+    docType: typeof envelope.doc_type === "string" ? envelope.doc_type : "unknown",
+    subject: typeof envelope.subject === "string" ? envelope.subject : undefined,
+    classLevel: typeof envelope.class_level === "number" ? envelope.class_level : undefined,
     sourceProject: prov.source_project,
     author: prov.author,
     contentVersion: prov.content_version,
@@ -198,4 +211,150 @@ export async function importEnvelope(
     artifactId: artifact._id.toString(),
     batchId: batchDoc._id.toString(),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Auto-wrap ingest: plan JSON + Markdown -> envelope (build_envelope.py) -> import
+// ---------------------------------------------------------------------------
+
+export interface ImportFile {
+  filename: string;
+  content: string;
+}
+
+interface BuildEnvelopeResult {
+  ok: boolean;
+  envelope?: Record<string, unknown>;
+  error?: string;
+}
+
+/** Call build_envelope.py on a (plan.json, plan.md) pair; return the built envelope. */
+async function buildEnvelopeFromPair(
+  stem: string,
+  jsonContent: string,
+  mdContent: string,
+  jsonFilename: string,
+  author: string,
+): Promise<BuildEnvelopeResult> {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "scd_wrap_"));
+  const jsonPath = path.join(dir, `${stem}.json`);
+  const mdPath = path.join(dir, `${stem}.md`);
+  try {
+    await fs.writeFile(jsonPath, jsonContent, "utf-8");
+    await fs.writeFile(mdPath, mdContent, "utf-8");
+    const { stdout, stderr, code } = await execFilePromise("python", [
+      BUILD_ENVELOPE_PATH,
+      "--json", jsonPath,
+      "--md", mdPath,
+      "--envelope-schema", ENVELOPE_SCHEMA_PATH,
+      "--author", author,
+      "--authored-at", new Date().toISOString(),
+      "--source-file", jsonFilename,
+    ]);
+    if (code !== 0) {
+      return { ok: false, error: (stderr || stdout || "build_envelope.py failed").trim() };
+    }
+    try {
+      return { ok: true, envelope: JSON.parse(stdout) as Record<string, unknown> };
+    } catch {
+      return { ok: false, error: "build_envelope.py produced invalid JSON" };
+    }
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+function failResult(message: string): ImportResult {
+  return { verdict: "FAIL", failChecks: [message], warnings: [], advisories: [], batchId: "n/a" };
+}
+
+interface ClassifiedFile extends ImportFile {
+  stem: string;
+  ext: string;
+  json: Record<string, unknown> | null;
+}
+
+function classify(f: ImportFile): ClassifiedFile {
+  const stem = f.filename.replace(/\.[^.]+$/, "");
+  const ext = (f.filename.match(/\.([^.]+)$/)?.[1] ?? "").toLowerCase();
+  let json: Record<string, unknown> | null = null;
+  if (ext === "json") {
+    try {
+      json = JSON.parse(f.content) as Record<string, unknown>;
+    } catch {
+      json = null;
+    }
+  }
+  return { ...f, stem, ext, json };
+}
+
+/**
+ * Ingest ONE logical import (J1.1). Accepts one of:
+ *   - a built envelope (single .json with envelope_version) -> imported unchanged;
+ *   - a plan JSON + its rendered Markdown (matched filename stem) -> auto-wrapped, then imported.
+ * Orphans (plan with no .md, .md with no plan) and question/stimulus payloads are rejected with
+ * a clear message; nothing is stored on FAIL. Auto-wrapped envelopes still pass through the full
+ * gate (validate_import.py via importEnvelope) before persistence — the wrap is convenience, not a
+ * bypass. (Question auto-wrap is an intentional future seam.)
+ */
+export async function importContentFiles(
+  files: ImportFile[],
+  actorId: Types.ObjectId | string,
+  author: string,
+): Promise<ImportResult> {
+  if (!files || files.length === 0) return failResult("No files were provided.");
+
+  const items = files.map(classify);
+
+  // (1) Built-envelope passthrough.
+  const envelopeFile = items.find((c) => c.ext === "json" && c.json && "envelope_version" in c.json);
+  if (envelopeFile) {
+    if (files.length !== 1) return failResult("Upload an import envelope on its own (no paired files).");
+    return importEnvelope(envelopeFile.json as Record<string, unknown>, actorId);
+  }
+
+  const jsonFiles = items.filter((c) => c.ext === "json");
+  const mdFiles = items.filter((c) => c.ext === "md" || c.ext === "markdown");
+
+  // (2) Orphans.
+  if (jsonFiles.length === 1 && mdFiles.length === 0) {
+    const j = jsonFiles[0];
+    if (j.json && (j.json.question_type || j.json.stimulus_type)) {
+      return failResult("Question/stimulus auto-wrap is not supported yet — import a built envelope.");
+    }
+    if (j.json && j.json.plan_type) {
+      return failResult(`Orphan plan JSON '${j.stem}': also upload its rendered Markdown (${j.stem}.md).`);
+    }
+    return failResult("Unrecognised JSON: not an import envelope and not a Project-03 plan (no plan_type).");
+  }
+  if (mdFiles.length === 1 && jsonFiles.length === 0) {
+    return failResult(`Orphan Markdown '${mdFiles[0].stem}': also upload its plan JSON (${mdFiles[0].stem}.json).`);
+  }
+
+  // (3) Plan pair -> auto-wrap.
+  if (jsonFiles.length === 1 && mdFiles.length === 1) {
+    const j = jsonFiles[0];
+    const m = mdFiles[0];
+    if (j.stem !== m.stem) {
+      return failResult(`Filename-stem mismatch: '${j.filename}' vs '${m.filename}' — pair X.json with X.md.`);
+    }
+    if (!j.json) return failResult(`'${j.filename}' is not valid JSON.`);
+    if ("envelope_version" in j.json) {
+      return failResult("An envelope must be imported alone, not paired with Markdown.");
+    }
+    if (!j.json.plan_type) {
+      if (j.json.question_type || j.json.stimulus_type) {
+        return failResult("Question/stimulus auto-wrap is not supported yet — import a built envelope.");
+      }
+      return failResult(`'${j.filename}' is not a Project-03 plan (no plan_type).`);
+    }
+    const built = await buildEnvelopeFromPair(j.stem, j.content, m.content, j.filename, author);
+    if (!built.ok || !built.envelope) {
+      return failResult(built.error ?? "Could not build an envelope from the plan + Markdown.");
+    }
+    const result = await importEnvelope(built.envelope, actorId);
+    return { ...result, wrappedEnvelopeJson: JSON.stringify(built.envelope) };
+  }
+
+  return failResult("Upload either one import envelope, or one plan .json + its matching .md.");
 }

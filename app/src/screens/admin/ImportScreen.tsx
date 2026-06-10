@@ -1,18 +1,19 @@
 /**
- * ImportScreen (S14 / J1.1) — pick or paste an envelope JSON → importEnvelope →
- * show the gate result (verdict + failChecks + warnings + advisories). Requires
- * content:import (Principal/Office). The paste field is the universal path; the
- * file picker fills it on web.
+ * ImportScreen (S14 / J1.1) — upload content and run it through the import gate.
+ * Accepts a Project-03 plan as a .json + .md pair (the server auto-wraps it into
+ * an envelope) or a single built envelope .json; you can also paste a built
+ * envelope. Pairs are matched by filename stem server-side; orphans are rejected
+ * with a clear message. Requires content:import (Principal/Office).
  */
 import React, { useState } from "react";
 import { View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation } from "urql";
-import { IMPORT_ENVELOPE, type ImportResultT } from "../../graphql/operations";
+import { IMPORT_FILES, type ImportResultT, type ImportFileT } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Button, Field, Notice, Divider } from "../../components/ui";
-import { STR } from "../../lib/labels";
+import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
@@ -33,53 +34,108 @@ function StringList({ title, items }: { title: string; items: string[] }): React
 }
 
 export default function ImportScreen(_props: Props): React.ReactElement {
-  const [envelope, setEnvelope] = useState("");
+  const [files, setFiles] = useState<ImportFileT[]>([]);
+  const [paste, setPaste] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResultT | null>(null);
-  const [, importEnvelope] = useMutation(IMPORT_ENVELOPE);
+  const [showEnvelope, setShowEnvelope] = useState(false);
+  const [, importFiles] = useMutation(IMPORT_FILES);
 
-  async function pickFile(): Promise<void> {
+  async function pickFiles(): Promise<void> {
     setError(null);
     try {
-      const res = await DocumentPicker.getDocumentAsync({ type: "application/json", copyToCacheDirectory: true });
+      const res = await DocumentPicker.getDocumentAsync({ multiple: true, copyToCacheDirectory: true });
       if (res.canceled) return;
-      const asset = res.assets?.[0];
-      if (!asset?.uri) return;
-      const txt = await fetch(asset.uri).then((r) => r.text());
-      setEnvelope(txt);
+      const picked = await Promise.all(
+        (res.assets ?? []).map(async (a) => ({
+          filename: a.name,
+          content: await fetch(a.uri).then((r) => r.text()),
+        })),
+      );
+      // Merge with any already-picked files, de-duped by filename.
+      setFiles((prev) => {
+        const map = new Map(prev.map((f) => [f.filename, f]));
+        for (const p of picked) map.set(p.filename, p);
+        return Array.from(map.values());
+      });
     } catch {
       setError(STR.errGeneric);
     }
   }
 
+  function removeFile(name: string): void {
+    setFiles((prev) => prev.filter((f) => f.filename !== name));
+  }
+
   async function onImport(): Promise<void> {
-    if (!envelope.trim() || busy) return;
+    if (busy) return;
+    const payload: ImportFileT[] =
+      files.length > 0
+        ? files
+        : paste.trim()
+          ? [{ filename: "envelope.json", content: paste }]
+          : [];
+    if (payload.length === 0) return;
+
     setBusy(true);
     setError(null);
     setResult(null);
-    const res = await importEnvelope({ envelopeJson: envelope });
+    setShowEnvelope(false);
+    const res = await importFiles({ files: payload });
     setBusy(false);
-    if (res.error || !res.data?.importEnvelope) {
+    if (res.error || !res.data?.importFiles) {
       setError(friendlyError(res.error));
       return;
     }
-    setResult(res.data.importEnvelope);
+    setResult(res.data.importFiles);
+    if (res.data.importFiles.verdict === "PASS") {
+      setFiles([]);
+      setPaste("");
+    }
   }
 
   const pass = result?.verdict === "PASS";
+  const canImport = files.length > 0 || paste.trim().length > 0;
 
   return (
     <Screen scroll>
       <H2>{STR.importContent}</H2>
+      <Notice message={STR.importHint} tone="warn" />
 
-      <Button title={STR.pickFile} variant="secondary" onPress={pickFile} />
-      <View style={{ height: space(2) }} />
-      <Field label="ENVELOPE_JSON" value={envelope} onChangeText={setEnvelope} multiline placeholder='{ "doc_type": "session_plan", ... }' />
+      <Button title={STR.pickFiles} variant="secondary" onPress={pickFiles} />
+
+      {files.length > 0 ? (
+        <Card>
+          <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>
+            {STR.selectedFiles} ({bnNum(files.length)})
+          </Muted>
+          {files.map((f) => (
+            <View
+              key={f.filename}
+              style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: space(1) }}
+            >
+              <Body style={{ flex: 1 }}>{f.filename}</Body>
+              <Muted style={{ marginHorizontal: space(2) }}>{bnNum(Math.max(1, Math.round(f.content.length / 1024)))} KB</Muted>
+              <Button title={STR.removeFile} variant="ghost" onPress={() => removeFile(f.filename)} />
+            </View>
+          ))}
+          <Button title={STR.clearFiles} variant="ghost" onPress={() => setFiles([])} />
+        </Card>
+      ) : null}
+
+      <Divider />
+      <Field
+        label={STR.pasteEnvelopeOptional}
+        value={paste}
+        onChangeText={setPaste}
+        multiline
+        placeholder='{ "envelope_version": "1.0", "doc_type": "session_plan", ... }'
+      />
 
       {error ? <Notice message={error} tone="danger" /> : null}
 
-      <Button title={busy ? STR.importing : STR.importContent} onPress={onImport} loading={busy} disabled={!envelope.trim()} />
+      <Button title={busy ? STR.importing : STR.importContent} onPress={onImport} loading={busy} disabled={!canImport} />
 
       {result ? (
         <>
@@ -94,6 +150,17 @@ export default function ImportScreen(_props: Props): React.ReactElement {
             <StringList title={STR.advisories} items={result.advisories} />
             {result.artifactId ? <Muted style={{ marginTop: space(2) }}>artifactId: {result.artifactId}</Muted> : null}
             <Muted>batchId: {result.batchId}</Muted>
+            {result.envelopeJson ? (
+              <View style={{ marginTop: space(2) }}>
+                <Muted style={{ fontWeight: "700" }}>{STR.envelopeAutoBuilt}</Muted>
+                <Button
+                  title={showEnvelope ? STR.hideEnvelope : STR.viewEnvelope}
+                  variant="ghost"
+                  onPress={() => setShowEnvelope((s) => !s)}
+                />
+                {showEnvelope ? <Body style={{ fontSize: 12, marginTop: space(1) }}>{result.envelopeJson}</Body> : null}
+              </View>
+            ) : null}
           </Card>
         </>
       ) : null}

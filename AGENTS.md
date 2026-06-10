@@ -48,6 +48,7 @@ policy, or decisions into this repo.
 |---|---|
 | Shared vocab/RBAC verifier | `npx tsx skills/_tools/verify_shared_vocab.mjs docs/import-contract.schema.json` |
 | Import-envelope conformance | `python server/import/validate_import.py <envelope.json> --envelope-schema docs/import-contract.schema.json [--plan-schema <plan-schema.json>]` |
+| Auto-wrap a plan → envelope | `python server/import/build_envelope.py --json <plan.json> --md <plan.md> --envelope-schema docs/import-contract.schema.json --out <envelope.json>` (then run the conformance check above) |
 | Typecheck (server) | `npm run typecheck --workspace=server` |
 | Typecheck (shared) | `npm run typecheck --workspace=shared` |
 | Build shared | `npm run build --workspace=shared` (required before server typecheck if dist/ is stale) |

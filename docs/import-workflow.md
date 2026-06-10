@@ -42,6 +42,30 @@ Everything enters through one envelope (requirements §4, schema at
    `content_imported` event. Versioning is supersede-not-overwrite (new version = new doc, `current`
    flips). On FAIL: reject and surface the failing checks; nothing is written.
 
+## Auto-wrap (J1.1 convenience): upload a plan JSON + Markdown pair
+Authors never hand-write the envelope. The import endpoint (`importFiles` mutation / app Import
+screen) accepts **either** a built envelope **or** a **plan JSON + its rendered Markdown** as a pair;
+the app builds the envelope itself via `server/import/build_envelope.py`, then runs the SAME gate.
+- **Derived from the live contracts, not assumed.** The wrap copies exactly the indexed copies the
+  gate reconciles (`validate_import.py` `consistency()`): `doc_type ← payload.plan_type`,
+  `subject`/`class_level`/`curation_tag` copied, `address ← payload.division`, `pinned_to` copied. The
+  envelope STRUCTURE (`envelope_version` const, required fields, the `provenance`/`address` key sets) is
+  read from `docs/import-contract.schema.json`.
+- **Injected** (the plan doesn't carry these): `review_status = draft`; `provenance =
+  {source_project: P03, author = uploading user, authored_at = upload time, content_version (from the
+  filename version token, else the plan's schema_version), source_filename}`. `rendered_markdown` = the
+  paired `.md` **verbatim** (ADR-006 — the app never re-renders). The plan JSON becomes `payload`,
+  UNCHANGED. If a required envelope field has no source and no sensible default, the build refuses with
+  a clear message — nothing is fabricated.
+- **Pairing rule (the contract):** a plan JSON pairs to its Markdown by matched **filename stem**
+  (`X.json` ↔ `X.md`); the `.md` carries no machine link, so the stem is the join. **Orphans are
+  rejected** — a plan with no `.md`, or an `.md` with no plan, fails with a clear message (a plan is
+  never imported with no display body). A built envelope (`envelope_version` present) is passed straight
+  through. **Questions/stimulus auto-wrap is a deliberate future seam** — import a built envelope for now.
+- The auto-wrap is **convenience, not a bypass**: every wrapped envelope still goes through
+  L1→L2→L3→ADV (REF-21 advisory never blocks, D-#4). On PASS it persists exactly as step 7; on FAIL
+  (or orphan) nothing is stored.
+
 ## Coupling (how Project-03 JSON changes propagate here)
 - Plan-body change (inside payload) → update the plan schema only; harness L2 follows; envelope unaffected.
 - Mirrored-field enum add/rename → two-place edit (schema + shared/vocab.ts + harness) → see

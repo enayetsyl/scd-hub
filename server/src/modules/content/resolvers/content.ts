@@ -7,8 +7,9 @@
  * artifact       — J1.5/J1.7 open one plan (returns rendered_markdown; app never re-renders)
  */
 import { builder } from "../../../schema";
-import { importEnvelope as importEnvelopeSvc } from "../services/ContentService";
+import { importEnvelope as importEnvelopeSvc, importContentFiles, type ImportFile } from "../services/ContentService";
 import { ContentArtifact } from "../models/ContentArtifact";
+import { User } from "../../foundation/models/User";
 import { assertCanRead, ForbiddenError } from "../../../middleware/authz";
 import type { Types, FlattenMaps } from "mongoose";
 import type { FilterQuery } from "mongoose";
@@ -27,11 +28,12 @@ interface ImportResultShape {
   advisories: string[];
   artifactId?: string | null;
   batchId: string;
+  wrappedEnvelopeJson?: string | null;
 }
 
 const ImportResultRef = builder.objectRef<ImportResultShape>("ImportResult");
 ImportResultRef.implement({
-  description: "Result of an importEnvelope mutation",
+  description: "Result of an import (importEnvelope or importFiles)",
   fields: (t) => ({
     verdict: t.exposeString("verdict"),
     failChecks: t.field({ type: ["String"], resolve: (r) => r.failChecks }),
@@ -39,6 +41,16 @@ ImportResultRef.implement({
     advisories: t.field({ type: ["String"], resolve: (r) => r.advisories }),
     artifactId: t.string({ nullable: true, resolve: (r) => r.artifactId ?? null }),
     batchId: t.exposeString("batchId"),
+    /** The envelope the app auto-built from a plan+md pair (null for a direct envelope import). */
+    envelopeJson: t.string({ nullable: true, resolve: (r) => r.wrappedEnvelopeJson ?? null }),
+  }),
+});
+
+const ImportFileInput = builder.inputType("ImportFileInput", {
+  description: "One uploaded file (a plan .json, its .md, or a built envelope .json).",
+  fields: (t) => ({
+    filename: t.string({ required: true }),
+    content: t.string({ required: true }),
   }),
 });
 
@@ -150,6 +162,30 @@ builder.mutationField("importEnvelope", (t) =>
       }
       const result = await importEnvelopeSvc(envelope, ctx.auth.userId as unknown as import("mongoose").Types.ObjectId);
       return result;
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Mutation: importFiles — upload a plan JSON+MD pair (auto-wrapped) or an envelope (J1.1)
+// ---------------------------------------------------------------------------
+
+builder.mutationField("importFiles", (t) =>
+  t.field({
+    type: ImportResultRef,
+    description:
+      "Import a Project-03 plan as a JSON + Markdown pair (the app auto-wraps it into an envelope) " +
+      "or a single built envelope JSON. Same gate + persistence as importEnvelope. Requires content:import (J1.1).",
+    authScopes: { hasPermission: "content:import" },
+    args: {
+      files: t.arg({ type: [ImportFileInput], required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const user = await User.findById(ctx.auth.userId).lean();
+      const author = user?.name ?? ctx.auth.userId;
+      const files: ImportFile[] = args.files.map((f) => ({ filename: f.filename, content: f.content }));
+      return importContentFiles(files, ctx.auth.userId as unknown as import("mongoose").Types.ObjectId, author);
     },
   }),
 );
