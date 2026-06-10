@@ -20,6 +20,7 @@ coverage/
 .expo/
 .expo-shared/
 web-build/
+dist-web/
 *.jks
 *.p8
 *.p12
