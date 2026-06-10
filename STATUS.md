@@ -1,8 +1,24 @@
 # STATUS
 
-_Updated: 2026-06-09_
+_Updated: 2026-06-10_
 
 ## Now / next
+- **Done:** Slice 4 — connected frontend (Expo app). [45fe2eb 9210cd1 3e31a17]
+  - All teacher/principal/office screens per `docs/prd.md` §8: Login; Content tree + Plan
+    view + PDF; Question bank (multi-filter) + Preview + Basket; Set list/detail + Assemble
+    (HW/AS/CT); Tracker list/open/entry/summary + wa.me copy link; Admin import + user
+    create + proxy-grant assign/extend/revoke. 16 screens, role-gated bottom tabs.
+  - urql + hand-typed TypedDocumentNodes (codegen deferred — PRD §8 step 8); JWT in
+    SecureStore/localStorage; Bangla labels from `shared/vocab` (NFR-5), English codes on
+    forms; write-scope ForbiddenError → Bangla message. **`tsc --noEmit` CLEAN; web bundle
+    compiles green** (`expo export --platform web`, 471 modules, ~10 s).
+  - **NativeWind v4 wired in package.json (ADR-010/014) but its Babel/Metro transform is
+    left disabled:** on Windows (no watchman) the css-interop transformer hangs the cold
+    Metro web bundle 30+ min. UI uses a themed StyleSheet system; re-enable steps are inline
+    in `app/babel.config.js` / `app/metro.config.js` (do it on a watchman platform / CI).
+  - **Not executed:** golden-path data flows (needs a running server + seeded Atlas +
+    credentials) and native iOS/Android builds. PDF export + DocumentPicker are web-path
+    only this slice.
 - **Done:** Slice 3 — trackers (J4 end-to-end).
   - `TrackerRecord` model (`trackers` module) — open/closed lifecycle, per-student entries de-identified via sha256 pseudonym (ADR-005), CT score / AS submitted / HW complete fields.
   - `openTracker` / `recordEntry` / `closeTracker` mutations — write-scope via `assertCanWrite` (J4.5: supervisory-only teachers denied); `recordEntry` emits `tracker_recorded` CorpusEvent (de-identified, ADR-005).
@@ -10,10 +26,22 @@ _Updated: 2026-06-09_
   - `waLink` query — pure wa.me deep-link builder (J4.2, ADR-003); no server dispatch.
   - Tests: 124/124 pass (J4.1–J4.5 + all prior tests). `tsc --noEmit` clean. Vocab verifier PASS.
 - **Done:** Slice 2 — question bank + assembly (J2 + J3 end-to-end). [e1db6d7]
-- **Next:** Slice 4 — guardian portal screens (deferred; see docs/roadmap.md) or other prioritised work.
+- **Next:** verify the frontend golden path against a running server (seed Atlas + a staff
+  login), then guardian portal screens (deferred; `docs/roadmap.md`) or the server follow-ons
+  below.
+
+## Slice 4 follow-ups (frontend was built to the existing contract; these would improve it)
+- **`academicYears` query** + enrich **`myScopes`** to return classId/sectionId/subjectId, so
+  the section picker is automatic instead of pasting an academic-year id. (Set/tracker
+  journeys need a sectionId; only `classes(academicYearId)` exposes it today.)
+- **`users` list query** + teacher/grant lookups, so UserList/ScopeGrant aren't manual-id forms.
+- **CORS on the `/pdf` Express routes** (Yoga already sends permissive CORS; the PDF routes
+  don't) for cross-origin web PDF; and native PDF via expo-file-system + expo-sharing.
+- **Re-enable NativeWind** on a watchman platform / CI (see build-config notes above).
+- **graphql-codegen client-preset** to replace the hand-typed operations (PRD §8 step 8).
 
 ## In flight
-- (none — Slice 3 shipped)
+- (none — Slice 4 shipped)
 
 ## Blocked / waiting
 - (none blocking)
