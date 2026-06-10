@@ -61,10 +61,35 @@ the app builds the envelope itself via `server/import/build_envelope.py`, then r
   (`X.json` ↔ `X.md`); the `.md` carries no machine link, so the stem is the join. **Orphans are
   rejected** — a plan with no `.md`, or an `.md` with no plan, fails with a clear message (a plan is
   never imported with no display body). A built envelope (`envelope_version` present) is passed straight
-  through. **Questions/stimulus auto-wrap is a deliberate future seam** — import a built envelope for now.
+  through.
 - The auto-wrap is **convenience, not a bypass**: every wrapped envelope still goes through
   L1→L2→L3→ADV (REF-21 advisory never blocks, D-#4). On PASS it persists exactly as step 7; on FAIL
   (or orphan) nothing is stored.
+
+## Question-bank ingest (fan-out): upload one bank JSON
+A Project-04 **question bank** is a **collection** (`{ stimuli:[…], questions:[…] }`), but the envelope
+is one-doc-per-file and the app stores one `ContentArtifact` per question / per stimulus. So the import
+endpoint **fans the bank out** into N single-doc envelopes (one per stimulus + one per question) via
+`server/import/build_question_envelopes.py`, then runs **each** through the SAME gate. The build is the
+question analog of `build_envelope.py` and is **derived from the data, not fabricated**:
+- `subject` / `class_level` / unit are **parsed from the item ids** (`QP-ENG-C5-U09-…` → ENG / 5 / U09;
+  `STIM-ENG-…` likewise). A **mixed bank** (items disagreeing on subject/class/unit) is **refused**.
+- question `tags.{topic_tag,bloom_level,difficulty,paper_role}` are **copied verbatim from the payload**
+  (L3 reconciles them); stimuli carry no tags mirror.
+- **Injected:** `review_status=draft`; `address={anchor_word:Unit, number:<unit>, title:<--unit-title or
+  "Unit N">}` (required by the storage model — questions are filtered by tag, not browsed by address);
+  `provenance={source_project:P04, author=uploading user, content_version (from the `_vN` filename token),
+  source_filename}`. `curation_tag` is supplied by the **importing user** (the storage model requires it;
+  questions carry no curation decision) — the Import screen offers a picker (default `KEEP_AS_IS`).
+- payload = the item object **UNCHANGED**. Questions/stimuli are **app-rendered → no `rendered_markdown`**;
+  the bank's companion `.md` and the register `.tsv` are human read-views and are **NOT imported** (ignored
+  if uploaded alongside).
+- **Atomic (all-or-nothing):** every fanned-out envelope is validated FIRST; only if **all** pass is
+  anything persisted (each item supersede-not-overwrite per qid/stimulus_id). On any failure **nothing is
+  stored** and the failing items are returned, each line prefixed by its qid/stimulus_id.
+- **The register is NOT imported.** The app's live `questions()` filter + the Question-bank screen ARE the
+  register ("selection without reading"), rendered from the stored question artifacts → never stale, no
+  second record to drift (honors the JSON-canonical decision). The TSV stays an offline Project-04 deliverable.
 
 ## Coupling (how Project-03 JSON changes propagate here)
 - Plan-body change (inside payload) → update the plan schema only; harness L2 follows; envelope unaffected.

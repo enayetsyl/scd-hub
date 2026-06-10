@@ -13,6 +13,8 @@ export interface BasketEntry {
   /** Short label for display (question text or qid). */
   label: string;
   subject: string;
+  /** Content class level (1..5) — used to guard against assigning to a mismatched section. */
+  classLevel: number;
 }
 
 interface BasketContextValue {

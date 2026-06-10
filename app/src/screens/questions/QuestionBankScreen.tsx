@@ -189,6 +189,7 @@ export default function QuestionBankScreen({ navigation }: Props): React.ReactEl
                           marks: q.marks ?? 0,
                           label: text || q.qid || q.id,
                           subject: q.subject,
+                          classLevel: q.classLevel,
                         })
                   }
                   style={{ marginTop: space(2) }}

@@ -44,6 +44,7 @@ function execFilePromise(
 
 const HARNESS_PATH = path.resolve(__dirname, "../../../../import/validate_import.py");
 const BUILD_ENVELOPE_PATH = path.resolve(__dirname, "../../../../import/build_envelope.py");
+const BUILD_QUESTION_ENVELOPES_PATH = path.resolve(__dirname, "../../../../import/build_question_envelopes.py");
 const SCHEMA_DIR = path.resolve(__dirname, "../../../../import");
 const ENVELOPE_SCHEMA_PATH = path.join(SCHEMA_DIR, "../../docs/import-contract.schema.json");
 
@@ -65,6 +66,10 @@ export interface ImportResult {
   batchId: string;
   /** Set on the auto-wrap path: the envelope the app built from a plan+md pair. */
   wrappedEnvelopeJson?: string;
+  /** Set on the question-bank fan-out path: per-item tallies (114 = 14 stimulus + 100 question). */
+  itemsTotal?: number;
+  itemsPassed?: number;
+  itemsFailed?: number;
 }
 
 /** Run the Python import harness against an envelope JSON object. */
@@ -110,13 +115,17 @@ function extractLines(output: string, pattern: RegExp): string[] {
   return results;
 }
 
-/** Full import pipeline: validate → persist → audit → corpus event. */
-export async function importEnvelope(
+/**
+ * Persist ONE already-validated envelope: ImportBatch audit row → (on PASS)
+ * supersede-not-overwrite ContentArtifact → de-identified CorpusEvent. The gate
+ * verdict is passed in so callers can validate first (e.g. the atomic question-bank
+ * path validates every item before persisting any). On FAIL only the audit row is written.
+ */
+async function persistEnvelope(
   envelope: Record<string, unknown>,
   actorId: Types.ObjectId | string,
+  gate: GateOutput,
 ): Promise<ImportResult> {
-  const gate = await runImportGate(envelope);
-
   const prov = (envelope.provenance ?? {}) as Record<string, unknown>;
   const addr = (envelope.address ?? {}) as Record<string, unknown>;
 
@@ -150,15 +159,27 @@ export async function importEnvelope(
     };
   }
 
-  // Flip existing current version (J1.9 — supersede-not-overwrite, R-C7)
-  const versionKey = {
-    docType: envelope.doc_type,
-    subject: envelope.subject,
-    classLevel: envelope.class_level,
-    "address.anchorWord": addr.anchor_word,
-    "address.number": addr.number,
-    current: true,
-  };
+  // Flip existing current version (J1.9 — supersede-not-overwrite, R-C7).
+  // The version key is the content item's IDENTITY: a plan is one doc per address, but
+  // questions/stimuli are many per address (a whole unit shares one address), so their
+  // identity is the qid / stimulus_id — keying on address would make every item in a bank
+  // supersede the previous one, leaving only the last as `current`.
+  const payload = (envelope.payload ?? {}) as Record<string, unknown>;
+  let versionKey: Record<string, unknown>;
+  if (envelope.doc_type === "question") {
+    versionKey = { docType: "question", "envelopeJson.payload.qid": payload.qid, current: true };
+  } else if (envelope.doc_type === "stimulus") {
+    versionKey = { docType: "stimulus", "envelopeJson.payload.stimulus_id": payload.stimulus_id, current: true };
+  } else {
+    versionKey = {
+      docType: envelope.doc_type,
+      subject: envelope.subject,
+      classLevel: envelope.class_level,
+      "address.anchorWord": addr.anchor_word,
+      "address.number": addr.number,
+      current: true,
+    };
+  }
   const prior = await ContentArtifact.findOne(versionKey).lean();
   if (prior) {
     await ContentArtifact.updateOne({ _id: prior._id }, { $set: { current: false } });
@@ -211,6 +232,15 @@ export async function importEnvelope(
     artifactId: artifact._id.toString(),
     batchId: batchDoc._id.toString(),
   };
+}
+
+/** Full single-envelope import pipeline: validate → persist → audit → corpus event. */
+export async function importEnvelope(
+  envelope: Record<string, unknown>,
+  actorId: Types.ObjectId | string,
+): Promise<ImportResult> {
+  const gate = await runImportGate(envelope);
+  return persistEnvelope(envelope, actorId, gate);
 }
 
 // ---------------------------------------------------------------------------
@@ -268,6 +298,135 @@ function failResult(message: string): ImportResult {
   return { verdict: "FAIL", failChecks: [message], warnings: [], advisories: [], batchId: "n/a" };
 }
 
+// ---------------------------------------------------------------------------
+// Question-bank fan-out ingest: a COLLECTION ({stimuli,questions}) -> N envelopes
+// (one per stimulus + one per question) -> the SAME gate, persisted atomically.
+// ---------------------------------------------------------------------------
+
+/** True when a JSON object is a Project-04 question bank (a collection), not an envelope/plan/single item. */
+function isQuestionBank(json: Record<string, unknown> | null): boolean {
+  if (!json) return false;
+  if ("envelope_version" in json || "plan_type" in json) return false;
+  return Array.isArray(json.questions) || Array.isArray(json.stimuli);
+}
+
+/** Stable reference for a per-item message: the qid / stimulus_id, else the doc_type. */
+function envelopeRef(env: Record<string, unknown>): string {
+  const payload = (env.payload ?? {}) as Record<string, unknown>;
+  return (payload.qid as string) ?? (payload.stimulus_id as string) ?? (env.doc_type as string) ?? "item";
+}
+
+/** Call build_question_envelopes.py on a bank JSON; return the fanned-out envelope array. */
+async function buildQuestionEnvelopes(
+  bankJson: string,
+  curationTag: string,
+  author: string,
+  sourceFilename: string,
+  unitTitle?: string,
+): Promise<{ ok: boolean; envelopes?: Record<string, unknown>[]; error?: string }> {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "scd_qbank_"));
+  const bankPath = path.join(dir, "bank.json");
+  try {
+    await fs.writeFile(bankPath, bankJson, "utf-8");
+    const argv = [
+      BUILD_QUESTION_ENVELOPES_PATH,
+      "--json", bankPath,
+      "--curation-tag", curationTag,
+      "--envelope-schema", ENVELOPE_SCHEMA_PATH,
+      "--author", author,
+      "--source-file", sourceFilename,
+    ];
+    if (unitTitle) argv.push("--unit-title", unitTitle);
+    const { stdout, stderr, code } = await execFilePromise("python", argv);
+    if (code !== 0) {
+      return { ok: false, error: (stderr || stdout || "build_question_envelopes.py failed").trim() };
+    }
+    try {
+      const parsed = JSON.parse(stdout) as Record<string, unknown>[];
+      if (!Array.isArray(parsed)) return { ok: false, error: "build_question_envelopes.py did not produce an array" };
+      return { ok: true, envelopes: parsed };
+    } catch {
+      return { ok: false, error: "build_question_envelopes.py produced invalid JSON" };
+    }
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+/**
+ * Import a question bank ATOMICALLY (all-or-nothing). The bank is fanned out into N
+ * single-doc envelopes (stimuli + questions); EVERY envelope is run through the gate
+ * first, and only if all pass is anything persisted. On any failure nothing is stored
+ * (mirrors the plan path) and the failing items are returned, each line prefixed by its
+ * qid / stimulus_id. Curation is supplied by the importer (the storage model requires it;
+ * questions do not carry a curation decision).
+ */
+export async function importQuestionBank(
+  bankJson: string,
+  actorId: Types.ObjectId | string,
+  author: string,
+  curationTag: string,
+  sourceFilename: string,
+  unitTitle?: string,
+): Promise<ImportResult> {
+  const built = await buildQuestionEnvelopes(bankJson, curationTag, author, sourceFilename, unitTitle);
+  if (!built.ok || !built.envelopes) {
+    return failResult(built.error ?? "Could not build envelopes from the question bank.");
+  }
+  const envelopes = built.envelopes;
+  if (envelopes.length === 0) return failResult("The question bank produced no importable items.");
+
+  // Phase 1 — validate EVERY envelope (no persistence yet).
+  const gates = await Promise.all(envelopes.map((env) => runImportGate(env)));
+  const failChecks: string[] = [];
+  const warnings: string[] = [];
+  const advisories: string[] = [];
+  let failed = 0;
+  envelopes.forEach((env, i) => {
+    const ref = envelopeRef(env);
+    const g = gates[i];
+    if (g.verdict === "FAIL") {
+      failed += 1;
+      for (const f of g.failChecks) failChecks.push(`${ref}: ${f}`);
+    }
+    for (const w of g.warnings) warnings.push(`${ref}: ${w}`);
+    for (const a of g.advisories) advisories.push(`${ref}: ${a}`);
+  });
+
+  const total = envelopes.length;
+
+  // Phase 2 — atomic: persist only if every item passed; else store nothing.
+  if (failed > 0) {
+    return {
+      verdict: "FAIL",
+      failChecks,
+      warnings,
+      advisories,
+      batchId: "n/a",
+      itemsTotal: total,
+      itemsPassed: total - failed,
+      itemsFailed: failed,
+    };
+  }
+
+  let lastBatchId = "n/a";
+  for (let i = 0; i < envelopes.length; i++) {
+    const res = await persistEnvelope(envelopes[i], actorId, gates[i]);
+    lastBatchId = res.batchId;
+  }
+
+  return {
+    verdict: "PASS",
+    failChecks: [],
+    warnings,
+    advisories,
+    batchId: lastBatchId,
+    itemsTotal: total,
+    itemsPassed: total,
+    itemsFailed: 0,
+  };
+}
+
 interface ClassifiedFile extends ImportFile {
   stem: string;
   ext: string;
@@ -301,6 +460,8 @@ export async function importContentFiles(
   files: ImportFile[],
   actorId: Types.ObjectId | string,
   author: string,
+  curationTag?: string,
+  unitTitle?: string,
 ): Promise<ImportResult> {
   if (!files || files.length === 0) return failResult("No files were provided.");
 
@@ -311,6 +472,17 @@ export async function importContentFiles(
   if (envelopeFile) {
     if (files.length !== 1) return failResult("Upload an import envelope on its own (no paired files).");
     return importEnvelope(envelopeFile.json as Record<string, unknown>, actorId);
+  }
+
+  // (1b) Question-bank fan-out — a single bank JSON (a {stimuli,questions} collection) expands
+  // into N stimulus+question envelopes. Questions are app-rendered, so any companion .md/.tsv is
+  // a human read-view and is ignored here (the bank JSON is the only thing imported).
+  const bankFile = items.find((c) => c.ext === "json" && isQuestionBank(c.json));
+  if (bankFile) {
+    if (!curationTag) {
+      return failResult("Pick a curation tag for the question bank (KEEP_AS_IS / NEEDS_REPLACEMENT / FLEXIBLE).");
+    }
+    return importQuestionBank(bankFile.content, actorId, author, curationTag, bankFile.filename, unitTitle);
   }
 
   const jsonFiles = items.filter((c) => c.ext === "json");

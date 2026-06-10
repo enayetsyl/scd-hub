@@ -4,6 +4,25 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Set-assembly class guard (J3): the basket carries each question's `classLevel`, and BasketScreen now
+  blocks "create set" + shows a danger Notice when the basket's question class differs from the selected
+  section's class (the Question-bank class filter and the set's section are decoupled, so a Class-5 basket
+  could silently land on a Class-3 section). Offers a "change section" shortcut to the Section picker.
+- Question-bank import (fan-out, D-#32): a Project-04 bank JSON (a `{stimuli,questions}` collection) now imports by
+  fanning out into N single-doc envelopes (one per stimulus + one per question) via new
+  `server/import/build_question_envelopes.py` (the question analog of `build_envelope.py`), each run through the
+  unchanged gate. subject/class_level/unit parsed from the qid/stimulus_id (mixed bank refused); `tags` copied from the
+  payload; `review_status=draft` + a synthesized `address` injected; `curation_tag` supplied by the importer; the
+  companion `.md`/register `.tsv` are not imported (questions are app-rendered). Supersede-not-overwrite keys on the
+  item IDENTITY — **qid (questions) / stimulus_id (stimuli)**, not the shared unit address — so all 100 items coexist
+  as `current` rather than collapsing onto the last one. Import is **atomic** — validate all,
+  persist only if all pass, else store nothing and return the failing refs (`importQuestionBank` in `ContentService`;
+  `persistEnvelope` extracted from `importEnvelope`). `importFiles` mutation gains `curationTag`/`unitTitle` args and the
+  `ImportResult` gains `itemsTotal/Passed/Failed`; the app Import screen detects a bank and shows a curation picker +
+  "Imported X/Y". The **register is not stored** — the live `questions()` filter + Question-bank screen are the register
+  (never stale). No contract change. Executed proof: builder fanned the real C5_ENG_U09 bank into 114 envelopes,
+  **114/114 PASS** through `validate_import.py`; server 127/127 (3 new bank tests), shared+server+app tsc clean,
+  vocab verifier green.
 - HR-1 staff records (first HR slice — prd-hr H1): added `StaffProfile` model (foundation/identity plane;
   identity+bio+employment fields; sensitive NID/bankAccount/biometricId rows). New app-native vocab
   `HR_CATEGORY`/`EMPLOYMENT_TYPE`/`EMPLOYMENT_STATUS` (+ `*_LABELS_BN`, no wire-contract twin) and a

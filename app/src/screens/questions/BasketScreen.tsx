@@ -27,7 +27,7 @@ import {
   Divider,
   Row,
 } from "../../components/ui";
-import { STR, setTypeLabel, bnNum } from "../../lib/labels";
+import { STR, setTypeLabel, bnNum, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useBasket } from "../../state/BasketContext";
 import { useSectionContext } from "../../state/SectionContext";
@@ -45,8 +45,17 @@ export default function BasketScreen(_props: Props): React.ReactElement {
   const [, createSet] = useMutation(CREATE_SET);
   const [, addQuestion] = useMutation(ADD_QUESTION_TO_SET);
 
+  // Guard (J3): a set targets one section/class, so the basket's question class level must
+  // match the selected section's class. Class filter (question bank) and section (set target)
+  // are decoupled, so a Class-5 basket can land on a Class-3 section silently — block that.
+  const basketLevels = Array.from(new Set(basket.items.map((i) => i.classLevel)));
+  const classMismatch =
+    hasSection &&
+    selection.classLevel != null &&
+    basketLevels.some((l) => l !== selection.classLevel);
+
   async function onCreate(): Promise<void> {
-    if (!setType || !hasSection || basket.count === 0 || busy) return;
+    if (!setType || !hasSection || basket.count === 0 || busy || classMismatch) return;
     setBusy(true);
     setError(null);
 
@@ -121,13 +130,27 @@ export default function BasketScreen(_props: Props): React.ReactElement {
             </View>
           )}
 
+          {classMismatch ? (
+            <View style={{ marginBottom: space(2) }}>
+              <Notice
+                message={`${STR.classMismatchWarn} (${basketLevels.map(classLevelLabel).join(", ")} → ${classLevelLabel(selection.classLevel!)})`}
+                tone="danger"
+              />
+              <Button
+                title={STR.changeSection}
+                variant="secondary"
+                onPress={() => tabNav.navigate("SetsTab", { screen: "SectionPicker" })}
+              />
+            </View>
+          ) : null}
+
           {error ? <Notice message={error} tone="danger" /> : null}
 
           <Button
             title={busy ? STR.saving : STR.createSet}
             onPress={onCreate}
             loading={busy}
-            disabled={!setType || !hasSection || basket.count === 0}
+            disabled={!setType || !hasSection || basket.count === 0 || classMismatch}
             style={{ marginTop: space(3) }}
           />
         </>

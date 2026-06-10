@@ -3,6 +3,20 @@
 _Updated: 2026-06-10_
 
 ## Now / next
+- **Built (question-bank import / fan-out, D-#32):** the app now imports a Project-04 **question bank**
+  (a `{stimuli,questions}` collection) by **fanning it out** into N single-doc envelopes (one per stimulus
+  + one per question) via new `server/import/build_question_envelopes.py` (question analog of
+  `build_envelope.py`), each through the **unchanged** gate. subject/class/unit parsed from the qid/stimulus_id
+  (mixed bank refused); `tags` copied from payload; `review_status=draft` + synthesized `address` injected;
+  `curation_tag` picked in the UI; companion `.md`/register `.tsv` NOT imported (questions app-rendered).
+  Import is **atomic** (validate all → persist only if all pass → else store nothing). `persistEnvelope`
+  extracted from `importEnvelope`; `importQuestionBank` added; `importFiles` gains `curationTag`/`unitTitle`;
+  `ImportResult` gains item tallies; Import screen detects a bank + shows a curation picker + "Imported X/Y".
+  **Register stance (D-#32):** NOT stored — the live `questions()` filter + Question-bank screen ARE the
+  register (never stale); the TSV stays an offline P04 deliverable. **No contract change.** Executed proof:
+  real C5_ENG_U09 bank → 114 envelopes, **114/114 PASS** through `validate_import.py`; server **127/127**
+  (3 new bank tests), shared+server+app tsc clean, vocab verifier green. **Not yet verified live** against a
+  running server/Atlas (manual web golden path pending); not yet committed to git.
 - **LOADED to Atlas (HR-1 staff records):** **real staff roster** (23: 21 teacher / 2 office_accounts) — verified
   live, all with phone + biometricId. First HR slice (prd-hr H1): new `StaffProfile` model (foundation/identity
   plane; bio+employment + sensitive NID/bank/biometric rows), app-native vocab `HR_CATEGORY`/`EMPLOYMENT_TYPE`/

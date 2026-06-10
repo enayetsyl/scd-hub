@@ -29,11 +29,14 @@ interface ImportResultShape {
   artifactId?: string | null;
   batchId: string;
   wrappedEnvelopeJson?: string | null;
+  itemsTotal?: number | null;
+  itemsPassed?: number | null;
+  itemsFailed?: number | null;
 }
 
 const ImportResultRef = builder.objectRef<ImportResultShape>("ImportResult");
 ImportResultRef.implement({
-  description: "Result of an import (importEnvelope or importFiles)",
+  description: "Result of an import (importEnvelope, importFiles, or a question-bank fan-out)",
   fields: (t) => ({
     verdict: t.exposeString("verdict"),
     failChecks: t.field({ type: ["String"], resolve: (r) => r.failChecks }),
@@ -43,6 +46,10 @@ ImportResultRef.implement({
     batchId: t.exposeString("batchId"),
     /** The envelope the app auto-built from a plan+md pair (null for a direct envelope import). */
     envelopeJson: t.string({ nullable: true, resolve: (r) => r.wrappedEnvelopeJson ?? null }),
+    /** Question-bank fan-out tallies (null outside the bank path). */
+    itemsTotal: t.int({ nullable: true, resolve: (r) => r.itemsTotal ?? null }),
+    itemsPassed: t.int({ nullable: true, resolve: (r) => r.itemsPassed ?? null }),
+    itemsFailed: t.int({ nullable: true, resolve: (r) => r.itemsFailed ?? null }),
   }),
 });
 
@@ -174,18 +181,30 @@ builder.mutationField("importFiles", (t) =>
   t.field({
     type: ImportResultRef,
     description:
-      "Import a Project-03 plan as a JSON + Markdown pair (the app auto-wraps it into an envelope) " +
-      "or a single built envelope JSON. Same gate + persistence as importEnvelope. Requires content:import (J1.1).",
+      "Import a Project-03 plan as a JSON + Markdown pair (the app auto-wraps it into an envelope), " +
+      "a Project-04 question bank ({stimuli,questions} collection, fanned out into N envelopes; pass " +
+      "curationTag), or a single built envelope JSON. Same gate + persistence as importEnvelope. " +
+      "Requires content:import (J1.1).",
     authScopes: { hasPermission: "content:import" },
     args: {
       files: t.arg({ type: [ImportFileInput], required: true }),
+      /** Question-bank only: the curation tag for every fanned-out item (model-required; questions carry none). */
+      curationTag: t.arg.string({ required: false }),
+      /** Question-bank only: optional unit title for the synthesized address (defaults to "Unit N"). */
+      unitTitle: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const user = await User.findById(ctx.auth.userId).lean();
       const author = user?.name ?? ctx.auth.userId;
       const files: ImportFile[] = args.files.map((f) => ({ filename: f.filename, content: f.content }));
-      return importContentFiles(files, ctx.auth.userId as unknown as import("mongoose").Types.ObjectId, author);
+      return importContentFiles(
+        files,
+        ctx.auth.userId as unknown as import("mongoose").Types.ObjectId,
+        author,
+        args.curationTag ?? undefined,
+        args.unitTitle ?? undefined,
+      );
     },
   }),
 );

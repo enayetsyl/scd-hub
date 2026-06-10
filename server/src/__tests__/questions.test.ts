@@ -77,7 +77,8 @@ jest.mock("../modules/assessment/models/AssessmentSet", () => ({
 jest.mock("child_process");
 
 // Import AFTER mocks
-import { importEnvelope } from "../modules/content/services/ContentService";
+import { readFileSync } from "fs";
+import { importEnvelope, importContentFiles } from "../modules/content/services/ContentService";
 import { addQuestionToSet, assembleSet, createSet } from "../modules/assessment/services/AssessmentService";
 
 const execFileMock = cp.execFile as jest.MockedFunction<typeof cp.execFile>;
@@ -204,6 +205,121 @@ describe("J2.1 — question import round-trip (doc_type=question)", () => {
 
     expect(result.verdict).toBe("FAIL");
     expect(mockArtifactCreate).not.toHaveBeenCalled();
+  });
+});
+
+// ===========================================================================
+// Question-bank fan-out (collection → N envelopes, atomic all-or-nothing)
+// ===========================================================================
+
+/** A minimal stimulus/question envelope as build_question_envelopes.py would emit. */
+function bankEnvelope(ref: string, docType: "stimulus" | "question"): Record<string, unknown> {
+  const isStim = docType === "stimulus";
+  return {
+    envelope_version: "1.0",
+    doc_type: docType,
+    subject: "ENG",
+    class_level: 5,
+    address: { anchor_word: "Unit", number: 9, title: "Unit 9" },
+    curation_tag: "KEEP_AS_IS",
+    review_status: "draft",
+    ...(isStim ? {} : { tags: { topic_tag: "TOP-ENG-C5-08", bloom_level: "Understand", difficulty: "easy", paper_role: "mcq" } }),
+    provenance: { source_project: "P04", author: "Test", content_version: "v1" },
+    payload: isStim ? { stimulus_id: ref } : { qid: ref },
+  };
+}
+
+/**
+ * Mock child_process for the bank path: the build_question_envelopes.py call returns the given
+ * envelope array; each validate_import.py call reads the temp envelope and PASSes unless its
+ * qid/stimulus_id is in failRefs (then FAIL).
+ */
+function mockBankExecFile(envelopes: Record<string, unknown>[], failRefs: string[] = []): void {
+  execFileMock.mockImplementation((...args: unknown[]) => {
+    const argv = args[1] as string[];
+    const script = String(argv[0]);
+    const cb = args[args.length - 1] as (err: NodeJS.ErrnoException | null, stdout: string, stderr: string) => void;
+    if (script.includes("build_question_envelopes")) {
+      cb(null, JSON.stringify(envelopes), "");
+      return {} as ReturnType<typeof cp.execFile>;
+    }
+    // validate_import.py — argv[1] is the temp envelope file.
+    let ref = "";
+    try {
+      const env = JSON.parse(readFileSync(argv[1], "utf-8")) as Record<string, unknown>;
+      const p = (env.payload ?? {}) as Record<string, unknown>;
+      ref = (p.qid as string) ?? (p.stimulus_id as string) ?? "";
+    } catch {
+      /* ignore */
+    }
+    if (failRefs.includes(ref)) {
+      const err = Object.assign(new Error("exit 1"), { code: 1 });
+      cb(err as unknown as NodeJS.ErrnoException, `  FAIL [Q-PAYLOAD] ${ref} bad\nRESULT: FAIL (1 fail)`, "");
+    } else {
+      cb(null, "RESULT: PASS (0 warn, 0 advisory) — importable", "");
+    }
+    return {} as ReturnType<typeof cp.execFile>;
+  });
+}
+
+describe("question-bank fan-out (collection import)", () => {
+  const BANK_FILE = {
+    filename: "C5_ENG_U09_QuestionBank_v1.json",
+    content: JSON.stringify({ stimuli: [{ stimulus_id: "STIM-ENG-C5-U09-01" }], questions: [{ qid: "QP-ENG-C5-U09-Q01" }, { qid: "QP-ENG-C5-U09-Q02" }] }),
+  };
+
+  test("all items pass → one artifact created per fanned-out envelope, PASS with tallies", async () => {
+    const envelopes = [
+      bankEnvelope("STIM-ENG-C5-U09-01", "stimulus"),
+      bankEnvelope("QP-ENG-C5-U09-Q01", "question"),
+      bankEnvelope("QP-ENG-C5-U09-Q02", "question"),
+    ];
+    mockBankExecFile(envelopes);
+
+    const result = await importContentFiles([BANK_FILE], ACTOR_ID, "Test", "KEEP_AS_IS");
+
+    expect(result.verdict).toBe("PASS");
+    expect(result.itemsTotal).toBe(3);
+    expect(result.itemsPassed).toBe(3);
+    expect(result.itemsFailed).toBe(0);
+    expect(mockArtifactCreate).toHaveBeenCalledTimes(3);
+
+    // The supersede version key must be the item IDENTITY (qid / stimulus_id), NOT the
+    // shared unit address — else every bank item collapses onto the previous one and only
+    // the last stays `current` (the 100→1 bug).
+    const findKeys = mockArtifactFindOne.mock.calls.map((c) => c[0] as Record<string, unknown>);
+    expect(findKeys.every((k) => !("address.number" in k))).toBe(true);
+    const qidKeys = findKeys
+      .filter((k) => "envelopeJson.payload.qid" in k)
+      .map((k) => k["envelopeJson.payload.qid"]);
+    expect(qidKeys).toEqual(expect.arrayContaining(["QP-ENG-C5-U09-Q01", "QP-ENG-C5-U09-Q02"]));
+    expect(new Set(qidKeys).size).toBe(qidKeys.length); // distinct → no item supersedes another
+    const stimKeys = findKeys.filter((k) => "envelopeJson.payload.stimulus_id" in k);
+    expect(stimKeys).toHaveLength(1);
+  });
+
+  test("any item fails → ATOMIC: nothing persisted, FAIL with the failing ref prefixed", async () => {
+    const envelopes = [
+      bankEnvelope("STIM-ENG-C5-U09-01", "stimulus"),
+      bankEnvelope("QP-ENG-C5-U09-Q01", "question"),
+      bankEnvelope("QP-ENG-C5-U09-Q02", "question"),
+    ];
+    mockBankExecFile(envelopes, ["QP-ENG-C5-U09-Q02"]);
+
+    const result = await importContentFiles([BANK_FILE], ACTOR_ID, "Test", "KEEP_AS_IS");
+
+    expect(result.verdict).toBe("FAIL");
+    expect(result.itemsTotal).toBe(3);
+    expect(result.itemsFailed).toBe(1);
+    expect(mockArtifactCreate).not.toHaveBeenCalled();
+    expect(result.failChecks.some((f) => f.startsWith("QP-ENG-C5-U09-Q02:"))).toBe(true);
+  });
+
+  test("bank detected but no curation tag → rejected before any work", async () => {
+    const result = await importContentFiles([BANK_FILE], ACTOR_ID, "Test");
+    expect(result.verdict).toBe("FAIL");
+    expect(mockArtifactCreate).not.toHaveBeenCalled();
+    expect(result.failChecks[0]).toMatch(/curation tag/i);
   });
 });
 

@@ -743,6 +743,10 @@ export interface ImportResultT {
   batchId: string;
   /** Set when the app auto-built the envelope from a plan + Markdown pair. */
   envelopeJson: string | null;
+  /** Question-bank fan-out tallies (null outside the bank path). */
+  itemsTotal: number | null;
+  itemsPassed: number | null;
+  itemsFailed: number | null;
 }
 
 export const IMPORT_ENVELOPE = gql<{ importEnvelope: ImportResultT }, { envelopeJson: string }>`
@@ -765,12 +769,17 @@ export interface ImportFileT {
 }
 
 /**
- * Import one logical item: a built envelope (single .json) or a Project-03 plan
- * as a .json + .md pair (the server auto-wraps it). Pairs by filename stem.
+ * Import one logical item: a built envelope (single .json), a Project-03 plan as a
+ * .json + .md pair (the server auto-wraps it), or a Project-04 question bank
+ * ({stimuli,questions} collection — fanned out into N envelopes; pass curationTag).
+ * Pairs by filename stem; a bank's companion .md/.tsv is ignored.
  */
-export const IMPORT_FILES = gql<{ importFiles: ImportResultT }, { files: ImportFileT[] }>`
-  mutation ImportFiles($files: [ImportFileInput!]!) {
-    importFiles(files: $files) {
+export const IMPORT_FILES = gql<
+  { importFiles: ImportResultT },
+  { files: ImportFileT[]; curationTag?: string; unitTitle?: string }
+>`
+  mutation ImportFiles($files: [ImportFileInput!]!, $curationTag: String, $unitTitle: String) {
+    importFiles(files: $files, curationTag: $curationTag, unitTitle: $unitTitle) {
       verdict
       failChecks
       warnings
@@ -778,6 +787,9 @@ export const IMPORT_FILES = gql<{ importFiles: ImportResultT }, { files: ImportF
       artifactId
       batchId
       envelopeJson
+      itemsTotal
+      itemsPassed
+      itemsFailed
     }
   }
 `;
