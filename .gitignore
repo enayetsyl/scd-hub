@@ -40,6 +40,9 @@ venv/
 *.xlsx
 *.xls
 server/scripts/students.json
+server/scripts/staff.json
+_xlsx_dump.txt
+_xlsx_vals.txt
 
 # ---- Editor / OS ----
 .vscode/*

@@ -162,6 +162,72 @@ export const ROSTER_QUERY = gql<
   }
 `;
 
+// ===========================================================================
+// Staff (read-only HR roster — Principal/Office only, staff:manage)
+// ===========================================================================
+
+export interface StaffT {
+  id: string;
+  schoolId: string;
+  name: string;
+  nameBn: string | null;
+  category: string;
+  designation: string | null;
+  employmentType: string;
+  employmentStatus: string;
+  joiningDate: string | null;
+  gender: string | null;
+  dob: string | null;
+  bloodGroup: string | null;
+  maritalStatus: string | null;
+  qualification: string | null;
+  fatherName: string | null;
+  motherName: string | null;
+  spouseName: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  email: string | null;
+  presentAddress: string | null;
+  permanentAddress: string | null;
+  biometricId: string | null;
+  nid: string | null;
+  bankAccount: string | null;
+  active: boolean;
+}
+
+export const STAFF_QUERY = gql<{ staff: StaffT[] }, { category?: string | null }>`
+  query Staff($category: String) {
+    staff(category: $category) {
+      id
+      schoolId
+      name
+      nameBn
+      category
+      designation
+      employmentType
+      employmentStatus
+      joiningDate
+      gender
+      dob
+      bloodGroup
+      maritalStatus
+      qualification
+      fatherName
+      motherName
+      spouseName
+      phone
+      whatsapp
+      email
+      presentAddress
+      permanentAddress
+      biometricId
+      nid
+      bankAccount
+      active
+    }
+  }
+`;
+
 export interface ScopeGrantT {
   id: string;
   kind: string;

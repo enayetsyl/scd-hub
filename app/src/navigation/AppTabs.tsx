@@ -47,6 +47,7 @@ import ImportScreen from "../screens/admin/ImportScreen";
 import UserListScreen from "../screens/admin/UserListScreen";
 import ScopeGrantScreen from "../screens/admin/ScopeGrantScreen";
 import RosterScreen from "../screens/admin/RosterScreen";
+import StaffListScreen from "../screens/admin/StaffListScreen";
 
 export { LoginScreen };
 
@@ -129,6 +130,7 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="UserList" component={UserListScreen} options={{ title: STR.users }} />
       <AdminStack.Screen name="ScopeGrant" component={ScopeGrantScreen} options={{ title: STR.scopeGrants }} />
       <AdminStack.Screen name="Roster" component={RosterScreen} options={{ title: STR.roster }} />
+      <AdminStack.Screen name="Staff" component={StaffListScreen} options={{ title: STR.staff }} />
       <AdminStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </AdminStack.Navigator>
   );

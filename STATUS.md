@@ -3,6 +3,14 @@
 _Updated: 2026-06-10_
 
 ## Now / next
+- **LOADED to Atlas (HR-1 staff records):** **real staff roster** (23: 21 teacher / 2 office_accounts) — verified
+  live, all with phone + biometricId. First HR slice (prd-hr H1): new `StaffProfile` model (foundation/identity
+  plane; bio+employment + sensitive NID/bank/biometric rows), app-native vocab `HR_CATEGORY`/`EMPLOYMENT_TYPE`/
+  `EMPLOYMENT_STATUS` (+ BN labels, no wire twin), `staff:manage` perm (Principal/Office). `staff` query gated
+  `staff:manage` (default-deny to TEACHER, H1.4) + read-only **StaffListScreen** (Admin tab, category filter).
+  Pipeline: `extract-staff.py` (both .xlsx → gitignored `staff.json`) → `import-staff.ts` (idempotent upsert by
+  schoolId, no clears). **Data-only — no `User` logins yet** (login optional/separate, H1.2). No new corpus path;
+  firewall green (124/124, shared+server+app tsc clean, vocab verifier green). Not yet committed to git.
 - **LOADED to Atlas:** **real student roster** (91 students) — verified live: 91 students (all w/ phone, 88 w/ dob),
   7 classes (Nursery 21 / KG 12 / One 7 / Two 14 / Three 17 / Four 12 / Five 8), 10 populated sections,
   129 contact-only guardians (`loginEnabled:false`), 194 guardian links. Seed leftovers cleared first
@@ -16,9 +24,10 @@ _Updated: 2026-06-10_
   Office/Principal). `StudentRef` now exposes nameBn/gender/dob/phone/address/bloodGroup + a `guardians`
   field (GuardianLink→Guardian); app `ROSTER_QUERY` + `RosterScreen` render them per section (reuses the
   SectionPicker), with Bangla gender/relation/DOB labels and roster-aware `classLevelLabel` (Nursery/KG).
-  app tsc + server tsc clean, 124/124 tests, vocab verifier green. **Not executed:** live render against a
-  running server (golden path still needs a running server + seeded Atlas, as in Slice 4). **This
-  frontend batch is uncommitted.**
+  app tsc + server tsc clean, 124/124 tests, vocab verifier green. **Verified live** on Expo web
+  (localhost:8081): Admin → শিক্ষার্থী তালিকা lists real students with their fields + guardians.
+  Committed [56a9c0a] (server `guardians` field + RosterScreen; operations.ts/labels.ts also swept in
+  pre-existing import-screen WIP strings per operator choice).
 - **Designed (not built):** **HR / staff lifecycle module** — all four build-steps + offboarding designed
   in `docs/hr-design.md`; per-journey PRD in `docs/prd-hr.md`; decisions **D-#22–D-#29** appended.
   Build-steps mirror the slice approach: (1) staff records, (2) attendance & leave, (3) payroll,

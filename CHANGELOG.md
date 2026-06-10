@@ -4,6 +4,17 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- HR-1 staff records (first HR slice — prd-hr H1): added `StaffProfile` model (foundation/identity plane;
+  identity+bio+employment fields; sensitive NID/bankAccount/biometricId rows). New app-native vocab
+  `HR_CATEGORY`/`EMPLOYMENT_TYPE`/`EMPLOYMENT_STATUS` (+ `*_LABELS_BN`, no wire-contract twin) and a
+  `staff:manage` permission granted to PRINCIPAL+OFFICE (updated the vocab verifier's OFFICE-set + HR label
+  checks). Added the `staff` GraphQL query gated on `staff:manage` (default-deny to TEACHER — H1.4 row-scope)
+  + `StaffRef`. Import pipeline `extract-staff.py` (both source .xlsx → gitignored staff.json) +
+  `import-staff.ts` (idempotent upsert by schoolId; vocab-validates; no clears; dry-run default). Frontend:
+  read-only `StaffListScreen` under the Admin tab (gated `staff:manage`) with a category filter; `STAFF_QUERY`
+  + Bangla labels. Data-only (no `User` logins this slice — login optional/separate, H1.2). Identity plane only —
+  no new corpus→identity path; firewall test green (124/124, shared+server+app tsc clean, vocab verifier green).
+  **Loaded to Atlas + verified live:** 23 staff (21 teacher / 2 office_accounts), all with phone + biometricId.
 - Roster import (real students): added a roster class-level axis (`ROSTER_CLASS_LEVELS` −1..5 = Nursery/KG/One..Five
   + `ROSTER_CLASS_LABELS_BN`) separate from the LOCKED content `class_level` (1..5, unchanged — verifier stays green);
   relaxed `Class.level` bounds to the roster range. Extended `Student` with optional operational fields

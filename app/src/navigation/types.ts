@@ -34,6 +34,7 @@ export type AdminStackParamList = {
   UserList: undefined;
   ScopeGrant: undefined;
   Roster: undefined;
+  Staff: undefined;
   SectionPicker: undefined;
 };
 

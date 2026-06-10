@@ -9,6 +9,7 @@ import "./modules/foundation/resolvers/auth";
 import "./modules/foundation/resolvers/users";
 import "./modules/foundation/resolvers/classes";
 import "./modules/foundation/resolvers/students";
+import "./modules/foundation/resolvers/staff";
 import "./modules/foundation/resolvers/guardians";
 import "./modules/foundation/resolvers/scopeGrants";
 import "./modules/corpus/resolvers/analytics";

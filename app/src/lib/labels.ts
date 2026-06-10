@@ -18,10 +18,16 @@ import {
   type ReviewStatus,
   type CurationTag,
   ROSTER_CLASS_LABELS_BN,
+  HR_CATEGORY_LABELS_BN,
+  EMPLOYMENT_TYPE_LABELS_BN,
+  EMPLOYMENT_STATUS_LABELS_BN,
   type SetType,
   type TrackerKind,
   type DocType,
   type RosterClassLevel,
+  type HrCategory,
+  type EmploymentType,
+  type EmploymentStatus,
 } from "@scd/shared";
 
 const BN_DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
@@ -65,6 +71,16 @@ export const genderLabel = (v?: string | null): string =>
 /** Guardian relation → Bangla. */
 export const relationLabel = (v?: string | null): string =>
   v === "father" ? "বাবা" : v === "mother" ? "মা" : v === "guardian" ? "অভিভাবক" : v || "—";
+
+/** HR staff vocab → Bangla (falls back to the raw code, then —). */
+export const hrCategoryLabel = (v?: string | null): string =>
+  (v && HR_CATEGORY_LABELS_BN[v as HrCategory]) || v || "—";
+
+export const employmentTypeLabel = (v?: string | null): string =>
+  (v && EMPLOYMENT_TYPE_LABELS_BN[v as EmploymentType]) || v || "—";
+
+export const employmentStatusLabel = (v?: string | null): string =>
+  (v && EMPLOYMENT_STATUS_LABELS_BN[v as EmploymentStatus]) || v || "—";
 
 /** UI chrome strings — Bangla labels, buttons, headers, statuses, errors. */
 export const STR = {
@@ -227,6 +243,26 @@ export const STR = {
   guardians: "অভিভাবক",
   noGuardians: "কোনো অভিভাবক যুক্ত নেই।",
   changeSection: "শাখা পরিবর্তন",
+
+  // Staff (read-only HR roster)
+  staff: "কর্মী তালিকা",
+  staffCount: "কর্মী",
+  staffId: "আইডি",
+  category: "ক্যাটাগরি",
+  designation: "পদবি",
+  employmentType: "চুক্তির ধরন",
+  employmentStatus: "কর্মাবস্থা",
+  joiningDate: "যোগদানের তারিখ",
+  qualification: "যোগ্যতা",
+  fatherName: "পিতার নাম",
+  motherName: "মাতার নাম",
+  spouseName: "স্বামী/স্ত্রীর নাম",
+  maritalStatus: "বৈবাহিক অবস্থা",
+  whatsapp: "হোয়াটসঅ্যাপ",
+  biometricId: "বায়োমেট্রিক আইডি",
+  bankAccount: "ব্যাংক হিসাব",
+  nid: "জাতীয় পরিচয়পত্র",
+  allCategories: "সব ক্যাটাগরি",
 
   // Section context
   sectionContext: "শাখা প্রসঙ্গ",

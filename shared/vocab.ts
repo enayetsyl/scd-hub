@@ -238,6 +238,44 @@ export const TRACKER_KIND_LABELS_BN: Record<TrackerKind, string> = {
 
 export const DEFAULT_SECTION_LABEL_BN = "মূল" as const;
 
+// --- A.5 HR / STAFF-LIFECYCLE ENUMS (app-native; HR module — prd-hr §9, HR-1) -
+// These have NO wire-contract twin (identity/operational plane only, behind the
+// ADR-005 firewall), so they live ONLY here — no envelope-schema mirror, no
+// two-place sync. HR_CATEGORY is a StaffProfile field that drives defaults/
+// reporting; it is NOT an auth role (roles stay PRINCIPAL/TEACHER/OFFICE, D-#17).
+
+/** HR category — extensible StaffProfile field (prd-hr §2.2). */
+export const HR_CATEGORIES = ["teacher", "assistant_hifz", "office_accounts", "support"] as const;
+export type HrCategory = (typeof HR_CATEGORIES)[number];
+
+export const HR_CATEGORY_LABELS_BN: Record<HrCategory, string> = {
+  teacher: "শিক্ষক",
+  assistant_hifz: "সহকারী / হিফজ",
+  office_accounts: "অফিস ও হিসাব",
+  support: "সহায়ক কর্মী",
+};
+
+/** Employment type — scales leave/pay defaults (prd-hr §2.4). */
+export const EMPLOYMENT_TYPES = ["full_time", "part_time", "fixed_term"] as const;
+export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
+
+export const EMPLOYMENT_TYPE_LABELS_BN: Record<EmploymentType, string> = {
+  full_time: "পূর্ণকালীন",
+  part_time: "খণ্ডকালীন",
+  fixed_term: "নির্দিষ্ট মেয়াদি",
+};
+
+/** Employment status — lifecycle gate; feeds offboarding (prd-hr §2.4). Independent of type. */
+export const EMPLOYMENT_STATUSES = ["probation", "confirmed", "resigned", "terminated"] as const;
+export type EmploymentStatus = (typeof EMPLOYMENT_STATUSES)[number];
+
+export const EMPLOYMENT_STATUS_LABELS_BN: Record<EmploymentStatus, string> = {
+  probation: "শিক্ষানবিশ",
+  confirmed: "স্থায়ী",
+  resigned: "পদত্যাগী",
+  terminated: "অব্যাহতিপ্রাপ্ত",
+};
+
 
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
@@ -272,6 +310,7 @@ export const PERMISSIONS = [
   "tracker:export",
   // foundation / ops
   "roster:manage",
+  "staff:manage",          // HR staff-record read/manage (Principal/Office; prd-hr H1.4 row-scope)
   "guardian:link",
   "message:dispatch",      // wa.me / notices manual send (R-T2)
   "user:manage",
@@ -297,6 +336,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "tracker:write": "build",
   "tracker:export": "build",
   "roster:manage": "build",
+  "staff:manage": "build",
   "guardian:link": "build",
   "message:dispatch": "build",
   "user:manage": "build",
@@ -314,7 +354,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "question:read", "question:select",
     "set:read", "set:assemble", "set:export",
     "tracker:read", "tracker:write", "tracker:export",
-    "roster:manage", "guardian:link", "message:dispatch",
+    "roster:manage", "staff:manage", "guardian:link", "message:dispatch",
     "user:manage", "audit:read",
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
@@ -330,7 +370,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // Roster, guardian linkage, messaging dispatch (REQ §2), plus content import (the
   // publisher seam). No tracker/user surface under PoLP.
   OFFICE: [
-    "roster:manage", "guardian:link", "message:dispatch", "content:import",
+    "roster:manage", "staff:manage", "guardian:link", "message:dispatch", "content:import",
   ],
   // First-priority build = account + linkage only; portal reads are pipeline. The
   // single grant is gated off by PERMISSION_BUILD_STATUS until the portal ships.
