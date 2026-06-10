@@ -140,15 +140,144 @@ Bangla PDF smoke (J1.8).
 1. **Slice 0 — skeleton + auth + identity + scope grants:** monorepo boots; GraphQL health; staff/guardian
    auth (J5.1–J5.2); accounts/roles, classes/sections, subjects, thin student roster, guardian linkage
    (J5.3); the **scope-grant model** (teaching/supervisory/proxy) wired into resolver authz (J1.4, J1.6,
-   J3.5, J4.5, J5.4); **fail-closed firewall test green (J5.6)**.
-2. **Slice 1 — content import + view + PDF:** J1 end to end (the import validator already exists).
-3. **Slice 2 — question bank + assembly:** J2 + J3 (provisional question payload; revisit on Project 04).
-4. **Slice 3 — trackers:** J4.
+   J3.5, J4.5, J5.4); **fail-closed firewall test green (J5.6)**. ✓ DONE
+2. **Slice 1 — content import + view + PDF:** J1 end to end. ✓ DONE
+3. **Slice 2 — question bank + assembly:** J2 + J3. ✓ DONE
+4. **Slice 3 — trackers:** J4. ✓ DONE
+5. **Slice 4 — connected frontend (Expo app):** all J1–J4 journeys as working screens on
+   iOS / Android / Web. See §8 for the screen inventory and per-screen acceptance criteria.
 Each slice ships with its journey's acceptance criteria as tests, per `/skills/feature-lifecycle`.
 
 ## 6. Out of scope (this slice)
-All guardian *portal screens*, analytics (R-AN1–4), AI/LLM export, WhatsApp/SMS automation, and the
-deferred ops modules — `docs/roadmap.md`.
+Guardian *portal screens* (account exists; screens deferred), analytics (R-AN1–4), AI/LLM export,
+WhatsApp/SMS automation, and the deferred ops modules — `docs/roadmap.md`.
+The Slice 4 frontend covers all *teacher/principal/office* journeys (J1–J4). Guardian screens land
+with a later slice once the portal feature set is defined.
+
+---
+
+## 8. Slice 4 — Connected frontend: screen map & acceptance criteria
+
+**Stack (already decided — ADR-010/014):**
+- Expo 51 (React Native for iOS + Android + Web from one codebase)
+- urql + graphql-codegen typed hooks (client-preset into `/shared`)
+- React Navigation v6 (stack + bottom tabs)
+- NativeWind v4 (Tailwind-compatible styling — to be added)
+- Bangla labels from `shared/vocab.ts` LABELS_BN maps (NFR-5); English codes on forms/trackers
+- JWT stored in `SecureStore` (native) / `localStorage` (web) — already bootstrapped in `app/src/graphql/client.ts`
+
+**Navigation structure:**
+
+```
+RootStack
+├── AuthStack (unauthenticated)
+│   └── LoginScreen               — staff email+password (J5.1)
+└── AppTabs (authenticated; tabs vary by role)
+    ├── ContentTab
+    │   ├── ContentTreeScreen      — browse Subject × Class → Chapter → Lesson (J1.5)
+    │   └── PlanViewScreen         — rendered_markdown display + PDF export button (J1.7/J1.8)
+    ├── QuestionsTab  [TEACHER/PRINCIPAL]
+    │   ├── QuestionBankScreen     — filter by subject/class/bloom/difficulty/paper_role/marks (J2.2)
+    │   ├── QuestionPreviewScreen  — single question detail (J2.3)
+    │   └── BasketScreen           — accumulated basket → createSet flow (J3.1)
+    ├── SetsTab  [TEACHER/PRINCIPAL]
+    │   ├── SetListScreen          — list sets for a section; filter by status (J3.2)
+    │   ├── SetDetailScreen        — set metadata, question list, PDF button (J3.4)
+    │   └── AssembleSetScreen      — type picker (HW/AS/CT) + metadata form → assembleSet (J3.2/J3.3)
+    ├── TrackersTab  [TEACHER/PRINCIPAL]
+    │   ├── TrackerListScreen      — list trackers for a section; filter kind/status (J4.4)
+    │   ├── OpenTrackerScreen      — pick an assembled set → openTracker (J4.1/J4.3)
+    │   ├── TrackerEntryScreen     — per-student row: score (CT) / submitted (AS) / complete (HW) (J4.1–J4.3)
+    │   ├── TrackerSummaryScreen   — aggregate stats (total, submitted/complete count, avg score) (J4.4)
+    │   └── WaLinkScreen           — non-submitter: enter guardian phone → copy wa.me link (J4.2)
+    └── AdminTab  [PRINCIPAL/OFFICE only]
+        ├── ImportScreen           — upload envelope JSON → importEnvelope mutation (J1.1)
+        ├── UserListScreen         — list staff users (J5.1)
+        └── ScopeGrantScreen       — assign/extend/revoke teaching/supervisory/proxy grants (J5.4/J5.7)
+```
+
+**Per-screen acceptance criteria:**
+
+### S1 — LoginScreen
+- Given valid email + password → JWT stored; user navigated to AppTabs.
+- Given invalid credentials → error message in Bangla.
+- Role determines which tabs are visible after login.
+
+### S2 — ContentTreeScreen
+- Grouped list: Subject chips at top; then Class → Chapter → Lesson tree.
+- Filter bar: subject / classLevel / curationTag.
+- Tap a session plan → PlanViewScreen.
+- Supervisory teacher sees content beyond own teaching sections (J1.6).
+
+### S3 — PlanViewScreen
+- Displays `rendered_markdown` field as-is (no re-render, ADR-006).
+- "Export PDF" button → calls `GET /pdf/artifact/:id` and opens/shares the file.
+- Shows curationTag chip + reviewStatus badge.
+
+### S4 — QuestionBankScreen
+- Filter panel: subject / classLevel / questionType / bloomLevel / difficulty / paperRole / marksMin–marksMax.
+- Paginated question list; each row shows qid + question_text (truncated) + tag chips.
+- "Add to basket" button per row; basket count badge on tab icon.
+- Supervisory teacher sees questions beyond own classes (J2.4).
+
+### S5 — QuestionPreviewScreen
+- Full question detail: question_text, type, options (MCQ), answer (non-MCQ if present), marks, tags.
+
+### S6 — BasketScreen
+- Lists accumulated basket items with marks.
+- "Create Set" button → type picker (HW / AS / CT) + section picker → `createSet` mutation.
+- CT: totalMarks shown; duration input.
+- HW/AS: due-date picker.
+- "Assemble" → `assembleSet` mutation; navigates to SetDetailScreen.
+
+### S7 — SetListScreen
+- List of AssessmentSets for the teacher's sections; filter by status (draft/assembled) and type.
+
+### S8 — SetDetailScreen
+- Set metadata: type, section, status, totalMarks, dueDate/durationMinutes.
+- Question list (qid + marks per item).
+- "Export PDF" button → `GET /pdf/set/:id`.
+
+### S9 — TrackerListScreen
+- List TrackerRecords for a section. Filter chips: kind (CT/AS/HW) + status (open/closed).
+- Tap → TrackerEntryScreen (open) or TrackerSummaryScreen (closed).
+- FAB → OpenTrackerScreen.
+
+### S10 — OpenTrackerScreen
+- Picker: select an assembled set from the section.
+- "Open Tracker" → `openTracker` mutation → navigate to TrackerEntryScreen.
+
+### S11 — TrackerEntryScreen
+- Student roster for the section (fetched from `students` query, filtered by sectionId).
+- Per row:
+  - CT: numeric score input (0–totalMarks).
+  - AS: submitted / not-submitted toggle.
+  - HW: complete / incomplete toggle.
+- "Save" per row → `recordEntry` mutation.
+- AS non-submitters show a "Send reminder" button → WaLinkScreen.
+- "Close Tracker" button → `closeTracker` → navigate to TrackerSummaryScreen.
+
+### S12 — TrackerSummaryScreen
+- Shows trackerSummary stats: total entries, submitted/complete count, average score (CT).
+- Read-only; supervisory teachers can view (J4.5 read-scope).
+
+### S13 — WaLinkScreen (J4.2)
+- Pre-filled student name + set title; teacher enters / confirms guardian phone.
+- Displays generated `waLink` query result.
+- "Copy link" button → clipboard. No send button — manual dispatch only (ADR-003).
+
+### S14 — ImportScreen [PRINCIPAL/OFFICE]
+- JSON file picker → `importEnvelope` mutation → result panel (verdict, warnings, advisory flags).
+
+### S15 — ScopeGrantScreen [PRINCIPAL/OFFICE]
+- List grants for a teacher; create/extend/revoke teaching/supervisory/proxy grants.
+
+**RBAC-aware rendering rules:**
+- Tab visibility: QuestionsTab + SetsTab + TrackersTab hidden for OFFICE/GUARDIAN.
+- AdminTab visible only to PRINCIPAL + OFFICE.
+- Import button visible only where `roleHasPermission(role, "content:import")` is true.
+- Write actions (recordEntry, assembleSet, openTracker) call write-scope-enforced mutations;
+  on ForbiddenError show a Bangla error: "এই সেকশনে লেখার অনুমতি নেই।"
 
 ## 7. Dependencies / open items
 - **Project-03 plan schema** (`*PlanSchema*.json`) — vendored at `server/import/LOCKED_C5_PlanSchema_v1.json`;
