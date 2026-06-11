@@ -4,6 +4,50 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Homework Tracker — class-teacher designation (D-#42, resolves the D-#41 open item): added
+  `Section.classTeacherId` (a TEACHER User — the daily coordinator) + `assignClassTeacher(sectionId, userId)`
+  mutation (roster:manage, Principal/Office; pass null to clear, assignee must be a TEACHER). New
+  `assertIsClassTeacher` guard + pure `isClassTeacher`; `trimHomeworkItem`/`confirmHomeworkDay` now gate on
+  class-teacher-only (handoff §9) instead of any write-scoped teacher — Principal/Office assign rather than
+  reconcile. SectionRef exposes `classTeacherId`. No new permission, no wire-contract change. Gate green:
+  server tsc clean, vocab verifier PASS, **jest 195/195** (7 new in classTeacher.test; firewall green).
+- Homework Tracker HW-T2 (daily 240-min reconciliation + trim log + cadence, D-#41): new app-native vocab
+  `RECON_STATES` (within_ceiling/over_ceiling/reconciled), `TRIM_RANKS` (a/b/c → ক/খ/গ) + BN labels, and the
+  LOCKED figures `HW_DAILY_CEILING_MIN=240`/`FLOOR=120`/`SUBJECT_BAND_MAX=40`/`DEFAULT_TIME_DECL=20` (+ verifier
+  checks). New `HomeworkReconciliation` model (Layer C — one per class/day, immutable trim log: trimHw/rank/
+  from/to/min). New `HomeworkReconciliationService`: `tallyDay` (live DAY_TOTAL vs 240, band warnings),
+  `getTrimCandidates` (pre-ranked ক→খ→গ), `applyTrim` (cut by Q_COUNT → TIME_DECL follows proportionally,
+  never extends time; rank guards; logs an immutable row; rejected once reconciled), `confirmHomeworkDay`
+  (the gate: blocks if DAY_TOTAL>240, hard-blocks Fri/Sat, else issues every declared item with q>0 +
+  finalises reconciled). GraphQL: homeworkDayTally/homeworkTrimCandidates queries + trimHomeworkItem/
+  confirmHomeworkDay mutations (tracker:read/write). **Corrected HW-T1 over-strict TIME_DECL>40 reject →
+  now allowed (band warns at tally, never blocks; only the 240 day-sum blocks), per handoff §2.1.** RBAC:
+  reconcile/confirm uses tracker:write+assertCanWrite (interim); class-teacher-only narrowing deferred + routed
+  to Principal (D-#41). Gate green: vocab verifier PASS, shared+server tsc clean, **jest 170/170** (16 new
+  HW-T2 tests; firewall J5.6 green). Not yet committed.
+- Homework Tracker HW-T1 (model + 6-stage lifecycle, D-#36/#37): app-native vocab `HW_SUBJECTS`
+  (content `SUBJECTS` superset + Arabic/Islam, NOT Quran — D-#36, Quran→Quran Tracker), `LIFECYCLE_STATES` (8 atomic states for the
+  §3 6 stages, D-#37), `HW_RESULTS` (সঠিক/আংশিক/ভুল) + BN labels + verifier checks. New shared lifecycle
+  engine (`trackers/lifecycle.ts` — legal transition graph + guards + stage map, built once, shared with the
+  future Assignment tracker) and school-day calendar (`trackers/calendar.ts` — Sun–Thu). Models: `HomeworkItem`
+  (Layer A, one common sheet/class+subject+day), `HomeworkStudentRecord` (Layer B, identity-bearing lifecycle
+  carrier — operational plane, ADR-005), `HomeworkSequence` (atomic year-continuous HW_ID counter).
+  `HomeworkService`: HW_ID gen (HW-C{class}-{SUBJECT}-{nnnn}), declareHomeworkItem (validates §2.1 — ≥1 TOP
+  tag, 0–40 TIME_DECL band, C1–5, school-night, POOL_REF), issueHomeworkItem (present→GIVEN/absent→
+  ABSENT_REDELIVER), transitionRecord (one timestamped legal move, CHASE_COUNT++, →CHECKED requires RESULT,
+  re-delivery shifts due date). GraphQL: declare/issue/transition mutations + homeworkItems/homeworkStudentRecords
+  queries (tracker:read/write, assertCanRead/Write). Rides the existing `homework` tracker-kind — no new
+  tracker-kind, no envelope/harness sync. Gate green: vocab verifier PASS, shared+server tsc clean,
+  **jest 154/154** (27 new HW-T1 tests; firewall J5.6 still green). Not yet committed.
+- Homework Tracker (Project-06 handoff adopted by ADR, D-#33–#35): stored the LOCKED source verbatim
+  (`docs/tracker-homework-handoff.md`, PRD v1.1 incl. Amendment A-01) and authored the repo build
+  contract (`docs/prd-tracker-homework.md`) — gap table vs the bare Slice-3 generic tracker, per-role
+  journeys with the handoff §12 checklist as acceptance criteria, and a slice-by-slice build order
+  (HW-T1 model+6-stage lifecycle → HW-T2 budget reconciliation+trim log+cadence → HW-T3 resubmission+Pool
+  top-up → HW-T4 roll-ups+thresholds+question-usage feed, + cross-cut RBAC/plane/firewall). Settled the
+  handoff §11 open items per A-01 (HW_ID numbering, 3-value RESULT, thresholds). Rides the existing
+  `homework` tracker-kind — no new tracker-kind, no envelope-schema/harness sync. **Plan/docs only — no
+  feature code yet.** Appended D-#33–#35; updated STATUS + AGENTS repo map.
 - Set-assembly class guard (J3): the basket carries each question's `classLevel`, and BasketScreen now
   blocks "create set" + shows a danger Notice when the basket's question class differs from the selected
   section's class (the Question-bank class filter and the set's section are decoupled, so a Class-5 basket

@@ -68,6 +68,8 @@ policy, or decisions into this repo.
   prd.md              ← first-priority slice: per-role journeys + acceptance criteria (feeds e2e)
   prd-hr.md           ← HR/staff-lifecycle module: per-role journeys + acceptance criteria (D-#22–#29)
   hr-design.md        ← HR module design handoff (LOCKED source for prd-hr.md)
+  prd-tracker-homework.md      ← Homework Tracker build contract: slices HW-T1..T4 + §12 acceptance (D-#33–#35)
+  tracker-homework-handoff.md  ← Project-06 Homework-Tracker PRD v1.1 (LOCKED source for prd-tracker-homework.md)
   architecture.md     ← how (modules, data planes, the ADRs)
   glossary.md         ← canonical terminology (read before naming anything)
   import-contract.md  ← the envelope contract narrative

@@ -276,6 +276,104 @@ export const EMPLOYMENT_STATUS_LABELS_BN: Record<EmploymentStatus, string> = {
   terminated: "অব্যাহতিপ্রাপ্ত",
 };
 
+// --- A.6 HOMEWORK-TRACKER ENUMS (app-native; Project-06 handoff — HW-T1) ------
+// Daily HW-… channel. NO wire-contract twin: trackers are a feature, not import
+// content (no `doc_type: tracker`), and Layer-B records live on the operational/
+// identity plane behind the ADR-005 firewall. So these live ONLY here — no
+// envelope-schema mirror, no two-/three-place sync (D-#33). See
+// docs/prd-tracker-homework.md + docs/tracker-homework-handoff.md.
+
+/** Homework SUBJECT axis (handoff §2.1/§6.2) — a SUPERSET of the LOCKED content
+ *  `SUBJECTS` (which mirrors the envelope and is NOT widened here, D-#19/D-#30).
+ *  Adds the roster-only religious subjects that carry homework but no authored
+ *  content: Arabic + Islam. **Quran is EXCLUDED** by Principal ruling (D-#36) —
+ *  Quran homework is handled by the Quran Tracker, not this channel (a deliberate
+ *  deviation from handoff §6.3, routed to Project 06). Separate operational axis,
+ *  never mirrored into the envelope (D-#36, mirroring D-#30's roster-vs-content split). */
+export const HW_SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS", "ARABIC", "ISLAM"] as const;
+export type HwSubject = (typeof HW_SUBJECTS)[number];
+
+export const HW_SUBJECT_LABELS_BN: Record<HwSubject, string> = {
+  BAN: "বাংলা",
+  ENG: "ইংরেজি",
+  MATH: "গণিত",
+  SCI: "বিজ্ঞান",
+  BGS: "বাংলাদেশ ও বিশ্বপরিচয়",
+  ARABIC: "আরবি",
+  ISLAM: "ইসলাম শিক্ষা",
+};
+
+/** The ratified 6-stage lifecycle (handoff §3, FIRM) as 8 ATOMIC states — two
+ *  stages are compound (4 = Submitted/Chase, 5 = Checked/Resubmit), so the wire
+ *  state set splits them (D-#37). Built ONCE here and SHARED by the homework and
+ *  (future) assignment trackers (handoff §1/§3). The legal transition graph + the
+ *  stage grouping live in `server/.../trackers/lifecycle.ts` (logic, not vocab). */
+export const LIFECYCLE_STATES = [
+  "GIVEN",
+  "ABSENT_REDELIVER",
+  "DUE",
+  "SUBMITTED",
+  "CHASE",
+  "CHECKED",
+  "RESUBMIT",
+  "RETURNED",
+] as const;
+export type LifecycleState = (typeof LIFECYCLE_STATES)[number];
+
+export const LIFECYCLE_STATE_LABELS_BN: Record<LifecycleState, string> = {
+  GIVEN: "প্রদান করা হয়েছে",
+  ABSENT_REDELIVER: "অনুপস্থিত / পুনঃপ্রদান",
+  DUE: "জমার দিন",
+  SUBMITTED: "জমা হয়েছে",
+  CHASE: "তাগাদা",
+  CHECKED: "যাচাই হয়েছে",
+  RESUBMIT: "পুনঃজমা",
+  RETURNED: "ফেরত দেওয়া হয়েছে",
+};
+
+/** RESULT scale recorded at Checked (handoff §2.2; 3-value, confirmed A-01 /
+ *  D-#34). Only WRONG auto-spawns a resubmission; PARTIAL is teacher's judgment. */
+export const HW_RESULTS = ["CORRECT", "PARTIAL", "WRONG"] as const;
+export type HwResult = (typeof HW_RESULTS)[number];
+
+export const HW_RESULT_LABELS_BN: Record<HwResult, string> = {
+  CORRECT: "সঠিক",
+  PARTIAL: "আংশিক",
+  WRONG: "ভুল",
+};
+
+// Daily-budget LOCKED figures (handoff §0/§2.3/§4, D-024/D-030; restated verbatim,
+// NOT open — see handoff §11). The day-SUM ceiling is law; the per-subject band is
+// advisory (warn, never block). Floor is informational only (not enforced).
+export const HW_DAILY_CEILING_MIN = 240; // uniform C1–5 day-sum ceiling — the §4 gate
+export const HW_DAILY_FLOOR_MIN = 120; // informational only
+export const HW_SUBJECT_BAND_MAX_MIN = 40; // single-subject band; >40 WARNS, never blocks (§4 close / T2.5)
+export const HW_DEFAULT_TIME_DECL_MIN = 20; // Class-1 working default for TIME_DECL
+
+/** Daily reconciliation state (handoff §2.3 RECON_STATE). within/over are derived
+ *  live from DAY_TOTAL vs the ceiling; `reconciled` is the persisted terminal state
+ *  once the class teacher confirms + issues (HW-T2). */
+export const RECON_STATES = ["within_ceiling", "over_ceiling", "reconciled"] as const;
+export type ReconState = (typeof RECON_STATES)[number];
+
+export const RECON_STATE_LABELS_BN: Record<ReconState, string> = {
+  within_ceiling: "সীমার মধ্যে",
+  over_ceiling: "সীমা অতিক্রম — হ্রাস প্রয়োজন",
+  reconciled: "সমন্বিত",
+};
+
+/** Trim priority rank (handoff §4.4 / §2.3 TRIM_RANK). English codes a/b/c; the
+ *  trim log + UI render the Bangla letters ক/খ/গ. Order is the cut priority:
+ *  a = pure-revision items first, b = lightest-subject Q_COUNT cut, c = zero a subject. */
+export const TRIM_RANKS = ["a", "b", "c"] as const;
+export type TrimRank = (typeof TRIM_RANKS)[number];
+
+export const TRIM_RANK_LABELS_BN: Record<TrimRank, string> = {
+  a: "ক",
+  b: "খ",
+  c: "গ",
+};
+
 
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
