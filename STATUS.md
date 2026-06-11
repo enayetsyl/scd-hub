@@ -1,8 +1,20 @@
 # STATUS
 
-_Updated: 2026-06-10_
+_Updated: 2026-06-11_
 
 ## Now / next
+- **Built (Plan review/approval loop PR-2 — D-#38):** closes the loop. `approvePlan` — Principal
+  sign-off `reviewed→gold` (`content:promote_gold`, Principal-locked), closes the thread (supersedes
+  any open round), audits `PLAN_APPROVED`; rejects sign-off unless the plan is `reviewed` (a teacher
+  APPROVE must land first). `planReviewInbox` (Principal/Office — submitted rounds newest-first, the
+  `feedback` is the Claude-Desktop text) + `planReviewThread` (full round history by any artifact
+  version; Principal/Office see all, a teacher only threads they reviewed). **Re-import linkage
+  (R2.2):** `persistEnvelope` now calls `supersedeOpenRoundsForAddress` when a revised plan version
+  supersedes the prior — the open round flips `superseded`, the next round assigns on the new (`draft`)
+  version. Shared supersede helper (reused by reassign + re-import + sign-off). **No wire-contract
+  change.** Gates: vocab verifier green, server tsc clean, **205/205 tests** (incl. the merged D-#42
+  class-teacher suite + new PR-2 cases), firewall green. **Next = PR-3** (app screens: teacher review
+  form, admin assign + inbox/copy-feedback + approve).
 - **Built (Plan review/approval loop PR-1 — D-#38–#40):** server core of the in-app plan-vetting loop.
   Build contract `docs/prd-plan-review.md`. App-native vocab: new perm `content:assign_review`
   (Principal/Office), `content:review` extended to TEACHER, `REVIEW_VERDICTS` enum (`APPROVE`/
@@ -15,9 +27,8 @@ _Updated: 2026-06-10_
   query (an assigned teacher reads that exact version out-of-subject, read-only). `APPROVE` on a `draft`
   plan advances `reviewStatus`→`reviewed`; one open round per address (supersede on reassign, D-#40).
   Audit kinds `REVIEW_ASSIGNED`/`REVIEW_SUBMITTED`/`REVIEW_CANCELLED` (+`PLAN_APPROVED` reserved for PR-2).
-  **No wire-contract change.** Gates: vocab verifier green, shared+server tsc clean, **188/188 tests**
-  (18 new in `review.test.ts`), firewall green. **Not yet committed.** Next = **PR-2** (Principal
-  sign-off `reviewed→gold`, inbox/thread queries, re-import→`superseded` linkage).
+  **No wire-contract change.** Gates: vocab verifier green, shared+server tsc clean, 188/188 tests
+  (18 new in `review.test.ts`), firewall green. **Merged (PR #1).** Closed out by PR-2 above.
 - **Built (Homework Tracker HW-T2 — daily 240-min reconciliation + trim log + cadence, D-#41):** the ceiling
   is now real. `HomeworkReconciliation` (Layer C, one per class/day, immutable ক/খ/গ trim log) +
   `HomeworkReconciliationService`: `tallyDay` (live DAY_TOTAL vs 240 + >40 band warnings), `getTrimCandidates`

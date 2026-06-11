@@ -133,6 +133,48 @@ export function toDTO(d: RawAssignment): ReviewAssignmentDTO {
 }
 
 // ---------------------------------------------------------------------------
+// Supersede open rounds (shared by reassign — R1.2 — and re-import — R2.2)
+// ---------------------------------------------------------------------------
+
+/** The 5-field address-key filter used to find a plan's review rounds. */
+export interface ReviewAddressKey {
+  docType: string;
+  subject: string;
+  classLevel: number;
+  anchorWord: string;
+  addressNumber: string;
+}
+
+/**
+ * Mark every open (assigned|submitted) round for an address `superseded` and audit
+ * each. Returns how many were superseded. Used when a new round is assigned (D-#40)
+ * and when a revised version is re-imported (R2.2 — persistEnvelope calls this).
+ */
+export async function supersedeOpenRoundsForAddress(
+  key: ReviewAddressKey,
+  reason: string,
+  actorId?: string,
+  actorRole?: string,
+): Promise<number> {
+  const open = (await ReviewAssignment.find({
+    ...key,
+    status: { $in: ["assigned", "submitted"] },
+  }).lean()) as unknown as RawAssignment[];
+  for (const o of open) {
+    await ReviewAssignment.updateOne({ _id: o._id }, { $set: { status: "superseded" } });
+    await writeAudit({
+      eventKind: "REVIEW_CANCELLED",
+      actorId,
+      actorRole,
+      targetId: o._id.toString(),
+      targetKind: "ReviewAssignment",
+      meta: { reason },
+    });
+  }
+  return open.length;
+}
+
+// ---------------------------------------------------------------------------
 // assignPlanReview (R1.1, R1.2)
 // ---------------------------------------------------------------------------
 
@@ -160,18 +202,7 @@ export async function assignPlanReview(input: AssignReviewInput): Promise<Review
   };
 
   // Supersede any open round for this address key — one open round at a time (D-#40).
-  const open = await ReviewAssignment.find({ ...keyFilter, status: { $in: ["assigned", "submitted"] } }).lean();
-  for (const o of open as unknown as RawAssignment[]) {
-    await ReviewAssignment.updateOne({ _id: o._id }, { $set: { status: "superseded" } });
-    await writeAudit({
-      eventKind: "REVIEW_CANCELLED",
-      actorId: input.assignedBy,
-      actorRole: input.actorRole,
-      targetId: o._id.toString(),
-      targetKind: "ReviewAssignment",
-      meta: { reason: "superseded_by_new_round" },
-    });
-  }
+  await supersedeOpenRoundsForAddress(keyFilter, "superseded_by_new_round", input.assignedBy, input.actorRole);
 
   // Round number = max existing + 1 (monotonic across the address's history).
   const latest = await ReviewAssignment.find(keyFilter).sort({ roundNumber: -1 }).limit(1).lean();
@@ -316,8 +347,79 @@ export async function reviewerMayReadArtifact(reviewerId: string, artifactId: st
 // Queries (lists for PR-1 surfaces; the richer inbox/thread land in PR-2)
 // ---------------------------------------------------------------------------
 
-/** A teacher's open review queue (R2.5, surfaced early for PR-1 tests). */
+/** A teacher's open review queue (R2.5). */
 export async function listMyReviewAssignments(reviewerId: string): Promise<ReviewAssignmentDTO[]> {
   const docs = await ReviewAssignment.find({ reviewerId, status: "assigned" }).sort({ assignedAt: -1 }).lean();
   return (docs as unknown as RawAssignment[]).map(toDTO);
+}
+
+/** Principal/Office inbox: submitted rounds awaiting action, newest first (R2.3). The
+ *  `feedback` field is the text the admin copies into Claude Desktop. */
+export async function planReviewInbox(): Promise<ReviewAssignmentDTO[]> {
+  const docs = await ReviewAssignment.find({ status: "submitted" }).sort({ submittedAt: -1 }).lean();
+  return (docs as unknown as RawAssignment[]).map(toDTO);
+}
+
+/** Full round history for a plan's address, oldest→newest (R2.4). Resolved from any
+ *  artifactId of the plan (the thread spans every version of that address). */
+export async function planReviewThread(artifactId: string): Promise<ReviewAssignmentDTO[]> {
+  const artifact = await ContentArtifact.findById(artifactId).lean();
+  if (!artifact) throw new ReviewError("Artifact not found");
+  const key = addressKeyOf(artifact);
+  const docs = await ReviewAssignment.find({
+    docType: key.docType,
+    subject: key.subject,
+    classLevel: key.classLevel,
+    anchorWord: key.anchorWord,
+    addressNumber: key.addressNumber,
+  })
+    .sort({ roundNumber: 1 })
+    .lean();
+  return (docs as unknown as RawAssignment[]).map(toDTO);
+}
+
+// ---------------------------------------------------------------------------
+// approvePlan — Principal sign-off, reviewed → gold (R2.1)
+// ---------------------------------------------------------------------------
+
+export interface ApprovePlanResult {
+  artifactId: string;
+  reviewStatus: string;
+}
+
+export async function approvePlan(input: {
+  artifactId: string;
+  actorId: string;
+  actorRole?: string;
+}): Promise<ApprovePlanResult> {
+  const artifact = await ContentArtifact.findById(input.artifactId);
+  if (!artifact) throw new ReviewError("Artifact not found");
+  if (!isPlanDocType(artifact.docType)) {
+    throw new ReviewError(`Only plans can be signed off (got docType=${artifact.docType})`);
+  }
+  if (artifact.reviewStatus === "gold") {
+    throw new ReviewError("Plan is already approved (gold)");
+  }
+  if (artifact.reviewStatus !== "reviewed") {
+    // Must pass a teacher's APPROVE (draft→reviewed) before the Principal signs off (R2.1).
+    throw new ReviewError(`Plan must be 'reviewed' before sign-off (is '${artifact.reviewStatus}')`);
+  }
+
+  artifact.reviewStatus = "gold";
+  await artifact.save();
+
+  // Close the thread: no open round should remain after sign-off (R2.1).
+  const key = addressKeyOf(artifact);
+  await supersedeOpenRoundsForAddress(key, "approved_signed_off", input.actorId, input.actorRole);
+
+  await writeAudit({
+    eventKind: "PLAN_APPROVED",
+    actorId: input.actorId,
+    actorRole: input.actorRole,
+    targetId: artifact._id.toString(),
+    targetKind: "ContentArtifact",
+    meta: { subject: key.subject, classLevel: key.classLevel, addressNumber: key.addressNumber },
+  });
+
+  return { artifactId: artifact._id.toString(), reviewStatus: "gold" };
 }

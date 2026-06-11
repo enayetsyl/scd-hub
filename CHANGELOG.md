@@ -4,6 +4,21 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Plan review/approval loop PR-2 (D-#38): `approvePlan` — Principal sign-off `reviewed→gold`
+  (`content:promote_gold`), closes the thread (supersedes any open round), audits `PLAN_APPROVED`;
+  rejects unless the plan is `reviewed`. `planReviewInbox` (Principal/Office — submitted rounds, the
+  `feedback` is the Claude-Desktop text) + `planReviewThread` (full round history by any artifact
+  version; admins see all, a teacher only threads they reviewed). Re-import linkage: `persistEnvelope`
+  supersedes the open round when a revised plan version supersedes the prior (`supersedeOpenRoundsForAddress`,
+  shared by reassign/re-import/sign-off). No wire-contract change. Gate: server tsc clean, vocab verifier
+  PASS, **jest 205/205** (firewall green).
+- Plan review/approval loop PR-1 (D-#38/#39/#40): in-app vetting of imported plans. App-native vocab
+  `content:assign_review` perm (Principal/Office), `content:review` extended to TEACHER, `REVIEW_VERDICTS`
+  enum + BN labels (+ verifier checks). New `ReviewAssignment` model (address-keyed so the thread spans
+  re-imported versions; identity plane, ADR-005). `ReviewService` (assign/submit/cancel + `reviewerMayReadArtifact`);
+  resolvers `assignPlanReview`/`submitPlanReview`/`cancelPlanReview`/`myReviewAssignments`; reviewer
+  read-scope override in the `artifact` query. APPROVE drives `draft→reviewed`; one open round per address.
+  Audit `REVIEW_ASSIGNED`/`SUBMITTED`/`CANCELLED`. No wire-contract change. [0383da3]
 - Homework Tracker — class-teacher designation (D-#42, resolves the D-#41 open item): added
   `Section.classTeacherId` (a TEACHER User — the daily coordinator) + `assignClassTeacher(sectionId, userId)`
   mutation (roster:manage, Principal/Office; pass null to clear, assignee must be a TEACHER). New

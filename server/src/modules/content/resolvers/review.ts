@@ -19,9 +19,13 @@ import {
   assignPlanReview as assignSvc,
   submitPlanReview as submitSvc,
   cancelPlanReview as cancelSvc,
+  approvePlan as approveSvc,
   listMyReviewAssignments,
+  planReviewInbox as planReviewInboxSvc,
+  planReviewThread as planReviewThreadSvc,
   ReviewError,
   type ReviewAssignmentDTO,
+  type ApprovePlanResult,
 } from "../services/ReviewService";
 
 // ---------------------------------------------------------------------------
@@ -161,6 +165,93 @@ builder.queryField("myReviewAssignments", (t) =>
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return listMyReviewAssignments(ctx.auth.userId);
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Mutation: approvePlan — Principal sign-off, reviewed → gold (R2.1)
+// ---------------------------------------------------------------------------
+
+const ApprovePlanResultRef = builder.objectRef<ApprovePlanResult>("ApprovePlanResult");
+ApprovePlanResultRef.implement({
+  fields: (t) => ({
+    artifactId: t.exposeString("artifactId"),
+    reviewStatus: t.exposeString("reviewStatus"),
+  }),
+});
+
+builder.mutationField("approvePlan", (t) =>
+  t.field({
+    type: ApprovePlanResultRef,
+    description:
+      "Principal sign-off: advance a reviewed plan to gold and close its review thread. " +
+      "Requires content:promote_gold (Principal-locked).",
+    authScopes: { hasPermission: "content:promote_gold" },
+    args: {
+      artifactId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await approveSvc({
+          artifactId: args.artifactId,
+          actorId: ctx.auth.userId,
+          actorRole: ctx.auth.role,
+        });
+      } catch (err) {
+        return mapReviewError(err);
+      }
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Query: planReviewInbox — submitted rounds awaiting action (R2.3)
+// ---------------------------------------------------------------------------
+
+builder.queryField("planReviewInbox", (t) =>
+  t.field({
+    type: [ReviewAssignmentRef],
+    description:
+      "Submitted review rounds awaiting admin action (newest first); `feedback` is the text to " +
+      "carry to Claude Desktop. Requires content:assign_review (Principal/Office).",
+    authScopes: { hasPermission: "content:assign_review" },
+    resolve: async (_root, _args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return planReviewInboxSvc();
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Query: planReviewThread — full round history for a plan's address (R2.4)
+// ---------------------------------------------------------------------------
+
+builder.queryField("planReviewThread", (t) =>
+  t.field({
+    type: [ReviewAssignmentRef],
+    description:
+      "The full review-round history for a plan (by any of its artifact versions), oldest→newest. " +
+      "Principal/Office see any thread; a teacher sees only threads they reviewed.",
+    authScopes: { authenticated: true },
+    args: {
+      artifactId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      let thread: ReviewAssignmentDTO[];
+      try {
+        thread = await planReviewThreadSvc(args.artifactId);
+      } catch (err) {
+        return mapReviewError(err);
+      }
+      // Row-scope (R4): admins see all; a teacher only threads they participated in.
+      if (ctx.auth.role !== "PRINCIPAL" && ctx.auth.role !== "OFFICE") {
+        const isParticipant = thread.some((r) => r.reviewerId === ctx.auth!.userId);
+        if (!isParticipant) throw new ForbiddenError();
+      }
+      return thread;
     },
   }),
 );
