@@ -39,6 +39,7 @@ export type HomeworkStackParamList = {
   DeclareHomework: undefined;
   HomeworkReconcile: undefined;
   CheckingQueue: undefined;
+  HomeworkRollups: undefined;
   SectionPicker: undefined;
 };
 

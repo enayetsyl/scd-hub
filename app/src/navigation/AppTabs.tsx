@@ -47,6 +47,7 @@ import HomeworkHomeScreen from "../screens/homework/HomeworkHomeScreen";
 import DeclareHomeworkScreen from "../screens/homework/DeclareHomeworkScreen";
 import HomeworkReconcileScreen from "../screens/homework/HomeworkReconcileScreen";
 import CheckingQueueScreen from "../screens/homework/CheckingQueueScreen";
+import HomeworkRollupsScreen from "../screens/homework/HomeworkRollupsScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
@@ -138,6 +139,7 @@ function HomeworkNavigator(): React.ReactElement {
       <HomeworkStack.Screen name="DeclareHomework" component={DeclareHomeworkScreen} options={{ title: STR.hwDeclareTitle }} />
       <HomeworkStack.Screen name="HomeworkReconcile" component={HomeworkReconcileScreen} options={{ title: STR.hwReconcileTitle }} />
       <HomeworkStack.Screen name="CheckingQueue" component={CheckingQueueScreen} options={{ title: STR.hwCheckingTitle }} />
+      <HomeworkStack.Screen name="HomeworkRollups" component={HomeworkRollupsScreen} options={{ title: STR.hwRollupsTitle }} />
       <HomeworkStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </HomeworkStack.Navigator>
   );
