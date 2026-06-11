@@ -3,6 +3,65 @@
 _Updated: 2026-06-10_
 
 ## Now / next
+- **Built (Plan review/approval loop PR-1 — D-#38–#40):** server core of the in-app plan-vetting loop.
+  Build contract `docs/prd-plan-review.md`. App-native vocab: new perm `content:assign_review`
+  (Principal/Office), `content:review` extended to TEACHER, `REVIEW_VERDICTS` enum (`APPROVE`/
+  `CHANGES_REQUESTED`) + BN labels; verifier extended + green. New `ReviewAssignment` model
+  (`content` module — address-keyed `{docType,subject,classLevel,anchorWord,addressNumber}` so the
+  review thread spans re-imported versions; identity plane, behind ADR-005). `ReviewService`
+  (`assignPlanReview`/`submitPlanReview`/`cancelPlanReview` + pure `advanceOnApprove`/`isPlanDocType`/
+  `addressKeyOf` + `reviewerMayReadArtifact`). Resolvers `assignPlanReview`/`submitPlanReview`/
+  `cancelPlanReview`/`myReviewAssignments`; **reviewer read-scope override** wired into the `artifact`
+  query (an assigned teacher reads that exact version out-of-subject, read-only). `APPROVE` on a `draft`
+  plan advances `reviewStatus`→`reviewed`; one open round per address (supersede on reassign, D-#40).
+  Audit kinds `REVIEW_ASSIGNED`/`REVIEW_SUBMITTED`/`REVIEW_CANCELLED` (+`PLAN_APPROVED` reserved for PR-2).
+  **No wire-contract change.** Gates: vocab verifier green, shared+server tsc clean, **188/188 tests**
+  (18 new in `review.test.ts`), firewall green. **Not yet committed.** Next = **PR-2** (Principal
+  sign-off `reviewed→gold`, inbox/thread queries, re-import→`superseded` linkage).
+- **Built (Homework Tracker HW-T2 — daily 240-min reconciliation + trim log + cadence, D-#41):** the ceiling
+  is now real. `HomeworkReconciliation` (Layer C, one per class/day, immutable ক/খ/গ trim log) +
+  `HomeworkReconciliationService`: `tallyDay` (live DAY_TOTAL vs 240 + >40 band warnings), `getTrimCandidates`
+  (pre-ranked ক→খ→গ), `applyTrim` (cut Q_COUNT → TIME_DECL follows proportionally, never extends time; logs an
+  immutable row; rejected once reconciled), `confirmHomeworkDay` (BLOCKS if DAY_TOTAL>240, hard-blocks Fri/Sat,
+  else issues every declared item w/ q>0 + reconciles). New vocab `RECON_STATES`/`TRIM_RANKS` + the LOCKED
+  figures (240/120/40/20) + verifier checks. GraphQL: homeworkDayTally/homeworkTrimCandidates +
+  trimHomeworkItem/confirmHomeworkDay. **Fixed HW-T1's over-strict TIME_DECL>40 reject → now allowed (band
+  warns, never blocks; only the 240 sum blocks).** Gate green: vocab verifier PASS, shared+server tsc clean,
+  **jest 170/170** (16 new tests; firewall green). **Not committed; not verified live.** Covers handoff §12
+  #4 (240 block + trim by count not time + band-warn-not-block), #5 (immutable trim log w/ rank ক/খ/গ +
+  from/to + minutes), #7 (Fri/Sat hard-block + Thursday light), #8 (one common sheet). **Class-teacher-only
+  reconcile now ENFORCED (D-#42, resolves the D-#41 open item):** `Section.classTeacherId` (a TEACHER) +
+  `assignClassTeacher` mutation (roster:manage); `trimHomeworkItem`/`confirmHomeworkDay` gate on
+  `assertIsClassTeacher` (not any write-scoped teacher; Principal/Office assign, don't reconcile).
+  **Next = HW-T3** (resubmission + Pool top-up, 4 boundaries).
+- **Built (Homework Tracker HW-T1 — model + 6-stage lifecycle, D-#36/#37):** the daily HW machinery now has
+  its foundation. App-native vocab `HW_SUBJECTS` (content-subject superset + Arabic/Islam, NOT Quran — D-#36, Quran→Quran Tracker),
+  `LIFECYCLE_STATES` (8 atomic states for §3's 6 stages, D-#37), `HW_RESULTS` (+BN labels, verifier green).
+  Shared lifecycle engine `server/.../trackers/lifecycle.ts` (transition graph + guards + stage map — built
+  once, to be reused by the Assignment tracker) + `calendar.ts` (Sun–Thu school nights). Models `HomeworkItem`
+  (Layer A — one common sheet/class+subject+day), `HomeworkStudentRecord` (Layer B — **identity-bearing**
+  lifecycle carrier on the operational plane, ADR-005; corpus never imports it), `HomeworkSequence` (atomic
+  year-continuous HW_ID). `HomeworkService` (declare/issue/transition) + GraphQL resolvers wired
+  (declare/issue/transition mutations + homeworkItems/homeworkStudentRecords queries, tracker:read/write).
+  Gate green: vocab verifier PASS, shared+server tsc clean, **jest 154/154** (27 new tests; firewall green).
+  **Not verified live** (no running server/Atlas). **Not committed.** Acceptance covered: handoff §12 #2
+  (HW_ID + ≥1 TOP tag), #3 (6-stage lifecycle, timestamped, shared-once), #8 (one common sheet — no
+  per-student item variant), #9 (Bangla labels + English codes); partial #1 (no new tracker-kind/sync).
+  **Next = HW-T2** (daily 240-min reconciliation + trim log + Fri/Sat cadence block).
+- **Planned (Homework Tracker, Project-06 handoff adopted — D-#33–#35):** stored the LOCKED source verbatim
+  (`docs/tracker-homework-handoff.md`, PRD v1.1 incl. Amendment A-01) and authored the repo build contract
+  (`docs/prd-tracker-homework.md`). **Key finding:** the Slice-3 "homework tracker" is only the bare generic
+  tracker (`TrackerRecord` = one `complete` boolean per de-identified student) — the handoff's HW machinery
+  (§3 6-stage lifecycle, §4 240-min reconciliation+trim log, §5 resubmission+Pool top-up, §8 roll-ups) is
+  **unbuilt**, so "ratifies and completes" is really a multi-slice build. Build order:
+  **HW-T1** model + 6-stage lifecycle (FIRM, built once + shared w/ Assignment) → **HW-T2** daily budget
+  reconciliation (240 ceiling block, trim by count not time, immutable ক/খ/গ trim log) + Sun–Thu cadence
+  (Fri/Sat hard-block, Thursday light) → **HW-T3** resubmission + Pool top-up (4 boundaries) → **HW-T4**
+  `trackerSummary` roll-ups + thresholds (chase 2/3, watch-list ≥3/2wk, trim >30%/mo) + de-identified
+  question-usage feed; cross-cut RBAC (class-teacher-only reconcile/confirm) + plane split + firewall green.
+  Rides the existing `homework` tracker-kind — **no new tracker-kind, no envelope-schema/harness sync**;
+  only app-native `/shared/vocab.ts` additions (lifecycle states, RESULT scale). **Plan/docs only — no
+  feature code yet; not committed.** Next = build HW-T1.
 - **Built (question-bank import / fan-out, D-#32):** the app now imports a Project-04 **question bank**
   (a `{stimuli,questions}` collection) by **fanning it out** into N single-doc envelopes (one per stimulus
   + one per question) via new `server/import/build_question_envelopes.py` (question analog of

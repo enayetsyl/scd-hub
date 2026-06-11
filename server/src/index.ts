@@ -14,9 +14,11 @@ import "./modules/foundation/resolvers/guardians";
 import "./modules/foundation/resolvers/scopeGrants";
 import "./modules/corpus/resolvers/analytics";
 import "./modules/content/resolvers/content";
+import "./modules/content/resolvers/review";
 import "./modules/questions/resolvers/questions";
 import "./modules/assessment/resolvers/assessment";
 import "./modules/trackers/resolvers/trackers";
+import "./modules/trackers/resolvers/homework";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";
