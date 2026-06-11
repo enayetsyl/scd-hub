@@ -4,6 +4,13 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Routine R-1 — calendar/day-types + holidays + rooms + cross-grade Quran/Arabic SubjectGroups +
+  membership + per-(audience,season) period grids + schedule windows (D-#46–#58). New `/shared/vocab.ts`
+  routine enums + BN/EN labels + `routine:read`/`routine:manage` perms (verifier extended: new C.3 checks
+  + OFFICE exact-list). New `server/src/modules/routine/` (6 models, pure `calendar.ts`/`schedule.ts`
+  helpers reusing the trackers calendar, GraphQL CRUD + `dayType`/`resolvedDay` computed-clock queries).
+  Gate: vocab verifier PASS, shared+server tsc clean, jest 245/245 (22 new), firewall green. App-native —
+  no wire-contract/schema change. Covers R1.1–R1.6. [45aab9d]
 - Docs — Routine/Timetable + Class-teacher build contracts (D-#45–#57; no feature code yet). New
   `docs/prd-routine.md` (full module: day-type calendar incl. Sat Quran-only + holidays, rooms, general
   Sections + cross-grade gender-split SubjectGroups, audience×track×season period grids with admin
