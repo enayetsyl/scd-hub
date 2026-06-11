@@ -11,6 +11,7 @@ import "./modules/foundation/resolvers/classes";
 import "./modules/foundation/resolvers/students";
 import "./modules/foundation/resolvers/staff";
 import "./modules/foundation/resolvers/guardians";
+import "./modules/foundation/resolvers/provisioning";
 import "./modules/foundation/resolvers/scopeGrants";
 import "./modules/corpus/resolvers/analytics";
 import "./modules/content/resolvers/content";

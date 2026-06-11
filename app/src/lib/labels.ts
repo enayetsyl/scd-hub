@@ -229,6 +229,7 @@ const STR_BN = {
   login: "লগইন",
   logout: "লগআউট",
   email: "ইমেইল",
+  emailOrPhone: "ইমেইল বা ফোন",
   password: "পাসওয়ার্ড",
   loggingIn: "লগইন হচ্ছে…",
   loginInvalid: "ইমেইল বা পাসওয়ার্ড ভুল।",
@@ -473,6 +474,23 @@ const STR_BN = {
   noGuardians: "কোনো অভিভাবক যুক্ত নেই।",
   changeSection: "শাখা পরিবর্তন",
 
+  // Credential provisioning (D-#59 guardians, D-#60 staff)
+  guardianCredentials: "অভিভাবক লগইন",
+  staffCredentials: "শিক্ষক/স্টাফ লগইন",
+  generateLogin: "লগইন তৈরি করুন",
+  resetPassword: "পাসওয়ার্ড রিসেট",
+  loginId: "লগইন আইডি",
+  generatedPassword: "পাসওয়ার্ড",
+  shareWhatsApp: "WhatsApp এ পাঠান",
+  credentialOnceWarning: "পাসওয়ার্ড শুধু একবার দেখানো হবে — এখনই কপি বা শেয়ার করুন।",
+  loginExistsLabel: "লগইন আছে",
+  noLoginLabel: "লগইন নেই",
+  familyLoginHint: "এক ফোন = পরিবারের সব সন্তানের জন্য একটি লগইন; দুই অভিভাবকই একই তথ্য ব্যবহার করবেন।",
+  staffLoginHint: "ফোন নম্বর দিয়ে শিক্ষক/স্টাফ লগইন; ক্যাটাগরি অনুযায়ী রোল নির্ধারিত হয়।",
+  childrenLabel: "সন্তান",
+  noProvisionableStaff: "লগইনযোগ্য কোনো স্টাফ নেই।",
+  noGuardianCandidates: "কোনো পরিবার পাওয়া যায়নি।",
+
   // Staff (read-only HR roster)
   staff: "কর্মী তালিকা",
   staffCount: "কর্মী",
@@ -635,6 +653,7 @@ const STR_EN: StrTable = {
   login: "Log in",
   logout: "Log out",
   email: "Email",
+  emailOrPhone: "Email or phone",
   password: "Password",
   loggingIn: "Logging in…",
   loginInvalid: "Email or password is incorrect.",
@@ -878,6 +897,23 @@ const STR_EN: StrTable = {
   guardians: "Guardians",
   noGuardians: "No guardians linked.",
   changeSection: "Change section",
+
+  // Credential provisioning (D-#59 guardians, D-#60 staff)
+  guardianCredentials: "Guardian logins",
+  staffCredentials: "Teacher / staff logins",
+  generateLogin: "Generate login",
+  resetPassword: "Reset password",
+  loginId: "Login ID",
+  generatedPassword: "Password",
+  shareWhatsApp: "Send on WhatsApp",
+  credentialOnceWarning: "This password is shown only once — copy or share it now.",
+  loginExistsLabel: "Has login",
+  noLoginLabel: "No login",
+  familyLoginHint: "One phone = one login for the whole family; both parents use the same credentials.",
+  staffLoginHint: "Phone-number login for teachers/staff; role is mapped from the HR category.",
+  childrenLabel: "children",
+  noProvisionableStaff: "No staff eligible for a login.",
+  noGuardianCandidates: "No families found.",
 
   // Staff (read-only HR roster)
   staff: "Staff list",

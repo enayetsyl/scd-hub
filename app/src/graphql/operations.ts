@@ -19,7 +19,8 @@ type NoVars = Record<string, never>;
 
 export interface MeUser {
   id: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
   role: Role;
   name: string;
   active: boolean;
@@ -27,7 +28,7 @@ export interface MeUser {
 
 export const ME_QUERY = gql<{ me: MeUser | null }, NoVars>`
   query Me {
-    me { id email role name active }
+    me { id email phone role name active }
   }
 `;
 
@@ -904,6 +905,124 @@ export const CREATE_USER = gql<
       name
       active
     }
+  }
+`;
+
+// ===========================================================================
+// Credential provisioning (D-#59 guardians, D-#60 staff)
+// ===========================================================================
+
+export interface ProvisionedCredentialT {
+  identifier: string;
+  identifierKind: string;
+  password: string;
+  name: string;
+  contextLabel: string;
+  studentCount: number;
+  waLink: string;
+  alreadyExisted: boolean;
+}
+
+const PROVISIONED_FIELDS = `
+  identifier
+  identifierKind
+  password
+  name
+  contextLabel
+  studentCount
+  waLink
+  alreadyExisted
+`;
+
+export interface GuardianCandidateT {
+  phone: string;
+  suggestedName: string;
+  students: Array<{ id: string; name: string; className: string }>;
+  loginExists: boolean;
+  loginEnabled: boolean;
+  guardianId: string | null;
+}
+
+export const GUARDIAN_CREDENTIAL_CANDIDATES = gql<
+  { guardianCredentialCandidates: GuardianCandidateT[] },
+  NoVars
+>`
+  query GuardianCredentialCandidates {
+    guardianCredentialCandidates {
+      phone
+      suggestedName
+      students { id name className }
+      loginExists
+      loginEnabled
+      guardianId
+    }
+  }
+`;
+
+export const PROVISION_GUARDIAN_LOGIN = gql<
+  { provisionGuardianLogin: ProvisionedCredentialT },
+  { phone: string }
+>`
+  mutation ProvisionGuardianLogin($phone: String!) {
+    provisionGuardianLogin(phone: $phone) {${PROVISIONED_FIELDS}}
+  }
+`;
+
+export const RESET_GUARDIAN_PASSWORD = gql<
+  { resetGuardianPassword: ProvisionedCredentialT },
+  { guardianId: string }
+>`
+  mutation ResetGuardianPassword($guardianId: String!) {
+    resetGuardianPassword(guardianId: $guardianId) {${PROVISIONED_FIELDS}}
+  }
+`;
+
+export interface StaffCandidateT {
+  staffId: string;
+  name: string;
+  category: string;
+  phone: string | null;
+  mappedRole: string | null;
+  provisionable: boolean;
+  reason: string | null;
+  loginExists: boolean;
+  userId: string | null;
+}
+
+export const STAFF_CREDENTIAL_CANDIDATES = gql<
+  { staffCredentialCandidates: StaffCandidateT[] },
+  NoVars
+>`
+  query StaffCredentialCandidates {
+    staffCredentialCandidates {
+      staffId
+      name
+      category
+      phone
+      mappedRole
+      provisionable
+      reason
+      loginExists
+      userId
+    }
+  }
+`;
+
+export const PROVISION_STAFF_LOGIN = gql<
+  { provisionStaffLogin: ProvisionedCredentialT },
+  { staffProfileId: string }
+>`
+  mutation ProvisionStaffLogin($staffProfileId: String!) {
+    provisionStaffLogin(staffProfileId: $staffProfileId) {${PROVISIONED_FIELDS}}
+  }
+`;
+
+export const RESET_STAFF_PASSWORD = gql<
+  { resetStaffPassword: ProvisionedCredentialT },
+  { userId: string }
+>`
+  mutation ResetStaffPassword($userId: String!) {
+    resetStaffPassword(userId: $userId) {${PROVISIONED_FIELDS}}
   }
 `;
 

@@ -3,6 +3,27 @@
 _Updated: 2026-06-11_
 
 ## Now / next
+- **Built (Credential provisioning — phone logins for guardians + teachers, share via WhatsApp, D-#59/#60):**
+  server + app. Principal/Office now generate logins and hand them out over WhatsApp. **Guardians:** ONE shared
+  login per family keyed by `Student.phone` — auto-links every sibling on that phone, both parents use it
+  (D-#59); idempotent re-provision (resets password, links new siblings, no dup links). **Staff:** teachers had
+  **no `User` accounts** (StaffProfile data only) — `provisionStaffLogin` mints a **phone-login** `User`, role
+  mapped from HR category (teacher/assistant_hifz→TEACHER, office_accounts→OFFICE; support/phoneless rejected,
+  D-#25/#60). Model: `User.email`→optional sparse-unique + new sparse-unique `User.phone`; `staffLogin` accepts
+  email **or** phone. New `credentials.ts` (ambiguity-free `generatePassword` + Bangla `buildCredentialShareLink`
+  wa.me builder, ADR-003) + `ProvisioningService`; resolvers `guardian/staffCredentialCandidates` + `provision/
+  reset` mutations (gated `guardian:link` / `user:manage`, **no new permission**); audit kind
+  `CREDENTIAL_PROVISIONED`. App: Admin **Guardian logins** + **Teacher/staff logins** screens (generate/reset →
+  password shown **once** + "Send on WhatsApp" + copy); login screen takes email-or-phone. **Gate GREEN:** server
+  tsc + **jest 313/313** (24 new in `provisioning.test.ts`, firewall green), vocab verifier PASS; **app tsc clean
+  + web bundle green** (495 modules). Committed [fc755c6]. **MIGRATION APPLIED to live Atlas** (`migrate-user-
+  login-index.ts --commit`): the non-sparse `users.email_1` index was dropped + recreated **sparse** (phone-only
+  staff can now be inserted). **VERIFIED LIVE** (`verify-provisioning.ts`): real roster groups into **60 guardian
+  families** by phone (1 five-sibling family, 23 two-child; no phone groups ≥6 → no shared/default-number false
+  joins); **23 staff all provisionable** (21 TEACHER / 2 OFFICE). End-to-end provisioned **1 guardian** (2-child
+  family → password authenticates via `guardianLogin` ✓) + **1 teacher** (phone login authenticates via
+  `staffLogin` ✓) — **two real active logins now exist on Atlas** (Fardhousi Jahan Shaly +8801409514518; Afia
+  Loskor +8801706050753) — the Principal should reset/share their passwords (printed once at provision time).
 - **Built (Class-teacher CT-1 — generalize the coordinator gate + support teacher + history, D-#42/#45/#53):**
   server + app. `assertIsClassTeacher` doc generalized to the **section daily-coordinator** gate (CT1.1, no
   behavior change — reused by future attendance/leave/report-card/comms). New `Section.supportTeacherIds`

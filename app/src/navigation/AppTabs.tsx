@@ -68,6 +68,8 @@ import ScopeGrantScreen from "../screens/admin/ScopeGrantScreen";
 import RosterScreen from "../screens/admin/RosterScreen";
 import StaffListScreen from "../screens/admin/StaffListScreen";
 import AssignClassTeacherScreen from "../screens/admin/AssignClassTeacherScreen";
+import GuardianCredentialsScreen from "../screens/admin/GuardianCredentialsScreen";
+import StaffCredentialsScreen from "../screens/admin/StaffCredentialsScreen";
 
 export { LoginScreen };
 
@@ -212,6 +214,8 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="Roster" component={RosterScreen} options={{ title: STR.roster }} />
       <AdminStack.Screen name="Staff" component={StaffListScreen} options={{ title: STR.staff }} />
       <AdminStack.Screen name="AssignClassTeacher" component={AssignClassTeacherScreen} options={{ title: STR.assignClassTeacher }} />
+      <AdminStack.Screen name="GuardianCredentials" component={GuardianCredentialsScreen} options={{ title: STR.guardianCredentials }} />
+      <AdminStack.Screen name="StaffCredentials" component={StaffCredentialsScreen} options={{ title: STR.staffCredentials }} />
       <AdminStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </AdminStack.Navigator>
   );

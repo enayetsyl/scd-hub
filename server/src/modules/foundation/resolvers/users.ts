@@ -4,14 +4,15 @@ import { hashPassword } from "../services/AuthService";
 import type { Role } from "@scd/shared";
 import { ROLES } from "@scd/shared";
 
-type UserShape = Pick<IUser, "email" | "role" | "name" | "active"> & { _id: { toString(): string } };
+type UserShape = Pick<IUser, "email" | "phone" | "role" | "name" | "active"> & { _id: { toString(): string } };
 
 const UserRef = builder.objectRef<UserShape>("User");
 UserRef.implement({
   description: "Staff account (Principal / Teacher / Office)",
   fields: (t) => ({
     id: t.string({ resolve: (u) => u._id.toString() }),
-    email: t.exposeString("email"),
+    email: t.string({ nullable: true, resolve: (u) => u.email ?? null }),
+    phone: t.string({ nullable: true, resolve: (u) => u.phone ?? null }),
     role: t.exposeString("role"),
     name: t.exposeString("name"),
     active: t.exposeBoolean("active"),
