@@ -15,7 +15,6 @@ import {
   Screen,
   H1,
   H2,
-  Body,
   Muted,
   Card,
   Badge,
@@ -36,6 +35,7 @@ import {
 import { friendlyError } from "../../lib/errors";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { space } from "../../theme/tokens";
+import Markdown from "../../components/Markdown";
 
 type Props = NativeStackScreenProps<ContentStackParamList, "PlanView">;
 
@@ -150,7 +150,7 @@ export default function PlanViewScreen({ route }: Props): React.ReactElement {
       <Divider />
 
       {a.renderedMarkdown ? (
-        <Body>{a.renderedMarkdown}</Body>
+        <Markdown source={a.renderedMarkdown} />
       ) : (
         <Notice message={STR.noMarkdown} tone="warn" />
       )}
