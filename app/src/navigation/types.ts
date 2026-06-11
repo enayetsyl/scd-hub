@@ -49,6 +49,8 @@ export type RoutineStackParamList = {
   GroupRoutine: { groupType: string; groupId: string; title: string };
   RoutineEditor: { groupType: string; groupId: string; title: string };
   CoverManage: { groupType: string; groupId: string; title: string };
+  DailyNote: { groupType: string; groupId: string; title: string };
+  BellSchedule: undefined;
   SectionPicker: undefined;
 };
 

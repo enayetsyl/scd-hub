@@ -32,6 +32,9 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
       </View>
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }}>
         <Button title={STR.rtMyRoutine} onPress={() => navigation.navigate("MyRoutine")} />
+        {canManage ? (
+          <Button title={STR.rtBellSchedule} variant="secondary" onPress={() => navigation.navigate("BellSchedule")} />
+        ) : null}
 
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.rtSectionRoutine}</Body>
@@ -43,6 +46,17 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
                 variant="secondary"
                 onPress={() =>
                   navigation.navigate("GroupRoutine", {
+                    groupType: "section",
+                    groupId: selection.sectionId!,
+                    title: selection.sectionNameBn ?? STR.rtSectionRoutine,
+                  })
+                }
+              />
+              <Button
+                title={STR.rtClassNote}
+                variant="secondary"
+                onPress={() =>
+                  navigation.navigate("DailyNote", {
                     groupType: "section",
                     groupId: selection.sectionId!,
                     title: selection.sectionNameBn ?? STR.rtSectionRoutine,
@@ -100,6 +114,11 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
                 title={STR.rtView}
                 variant="secondary"
                 onPress={() => navigation.navigate("GroupRoutine", { groupType: "subjectgroup", groupId: g.id, title: g.nameBn })}
+              />
+              <Button
+                title={STR.rtClassNote}
+                variant="secondary"
+                onPress={() => navigation.navigate("DailyNote", { groupType: "subjectgroup", groupId: g.id, title: g.nameBn })}
               />
               {canManage ? (
                 <>

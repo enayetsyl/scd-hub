@@ -4,6 +4,14 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Routine R-5 — triggers + class-note/daily-diary (D-#52/#54); completes the routine module (R-1→R-5).
+  New ClassNote (one per slot+date; what-was-taught + optional HW-T1 homeworkItemId link) + BellDutyAssignment
+  models; pure trigger.ts buildBellSchedule + RoutineTriggerService (bellSchedule from the grid/window,
+  publishClassNote authorized to teacher/cover/admin, classNotesForDate, myClassNotePrompts, assignBellDuty).
+  Push delivery + guardian notify ride the deferred pipeline. App: DailyNoteScreen (publish/view per
+  group+date), BellScheduleScreen (schedule + assign bell-duty), MyRoutine "notes to publish today" prompt;
+  ops + STR keys (BN/EN). Gate: server tsc + jest 283/283 (8 new, firewall green); app tsc clean + web
+  bundle green (491 modules). Covers R5.1–R5.3. [2022a6f]
 - Routine R-4 — substitution/cover + proxy-manage (D-#22/#46/#49). New RoutineSubstitution model;
   RoutineCoverService (pure rankAvailability + teacherAvailability / assignCover / cancelCover /
   coversForDate); a Section cover is backed by a time-bounded proxy ScopeGrant (assignProxy/revokeProxy),

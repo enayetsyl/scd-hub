@@ -21,6 +21,7 @@ import "./modules/trackers/resolvers/trackers";
 import "./modules/trackers/resolvers/homework";
 import "./modules/routine/resolvers/routine";
 import "./modules/routine/resolvers/routineSlots";
+import "./modules/routine/resolvers/routineTriggers";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";
