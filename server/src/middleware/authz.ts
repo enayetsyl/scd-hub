@@ -83,12 +83,16 @@ export async function assertCanWrite(ctx: AppContext, sectionId: string): Promis
 }
 
 /**
- * Assert the caller is the section's CLASS TEACHER — the only role that may run
- * homework reconciliation + confirm-issue (handoff §9 / D-#42). Stricter than
- * assertCanWrite: even a teaching/proxy teacher on the section is denied unless
- * they are the assigned class teacher. Principal/Office are NOT auto-allowed here
- * (the daily-coordinator role is intentionally specific); they assign the class
- * teacher via `assignClassTeacher` instead.
+ * Assert the caller is the section's CLASS TEACHER — the section's **daily
+ * coordinator** (D-#42). This is the GENERAL coordinator gate (CT-1/CT1.1), reused
+ * by every coordinator-only action: homework reconciliation today, and the future
+ * attendance / leave-approval / report-card-sign-off / parent-comms duties (each
+ * module calls this rather than re-deciding "who's in charge", D-#45).
+ *
+ * Stricter than assertCanWrite: even a teaching/proxy teacher on the section is
+ * denied unless they are the assigned class teacher; a SUPPORT teacher (D-#53) does
+ * NOT pass. Principal/Office are NOT auto-allowed (the coordinator is intentionally
+ * specific); they assign the class teacher via `assignClassTeacher` instead.
  */
 export async function assertIsClassTeacher(ctx: AppContext, sectionId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");

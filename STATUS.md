@@ -3,6 +3,18 @@
 _Updated: 2026-06-11_
 
 ## Now / next
+- **Built (Class-teacher CT-1 — generalize the coordinator gate + support teacher + history, D-#42/#45/#53):**
+  server + app. `assertIsClassTeacher` doc generalized to the **section daily-coordinator** gate (CT1.1, no
+  behavior change — reused by future attendance/leave/report-card/comms). New `Section.supportTeacherIds`
+  (support/assistant teachers — recorded, NOT the gate, D-#53) + append-only `ClassTeacherAssignment` log
+  (every set/clear/add/remove + actor + timestamp, ADR-008). New `ClassTeacherService` (assign + support
+  add/remove + history); `assignClassTeacher` refactored through it (now logs). Resolvers: `setSupportTeacher`
+  + `mySectionsAsClassTeacher` (CT1.2 teacher self-view, query ready) + `classTeacherHistory`;
+  `supportTeacherIds` on the Section type. App: **AssignClassTeacherScreen** enhanced — overview of **all
+  sections** (unassigned flagged + per-teacher load badge, CT1.3/1.4) + support add/remove + assignment
+  history. **Gate GREEN:** server tsc + **jest 289/289** (6 new in `classTeacherService.test.ts`, firewall
+  green); **app tsc clean + web bundle green** (491 modules). Covers CT1.1–CT1.6. **Not verified live.**
+  CT-2..5 duty gates land with their (unbuilt) attendance/leave/report-card/comms modules.
 - **Built (Routine R-5 — triggers + class-note/daily-diary, D-#52/#54): ROUTINE MODULE COMPLETE (R-1→R-5).**
   Server: `ClassNote` (one per slot+date; what-was-taught + optional HW-T1 `homeworkItemId` link — no second
   homework path) + `BellDutyAssignment` (whole-day or per-period, D-#54). `RoutineTriggerService` + pure

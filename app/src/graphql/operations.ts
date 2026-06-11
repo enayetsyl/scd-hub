@@ -74,6 +74,7 @@ export interface SectionT {
   nameBn: string;
   active: boolean;
   classTeacherId?: string | null;
+  supportTeacherIds?: string[];
 }
 
 export interface ClassT {
@@ -91,7 +92,7 @@ export const CLASSES_QUERY = gql<{ classes: ClassT[] }, { academicYearId: string
       level
       nameBn
       active
-      sections { id code nameBn active classTeacherId }
+      sections { id code nameBn active classTeacherId supportTeacherIds }
     }
   }
 `;
@@ -1575,5 +1576,50 @@ export const ASSIGN_BELL_DUTY = gql<
     assignBellDuty(date: $date, periodNumber: $periodNumber, adminId: $adminId) {
       id date periodNumber adminId active
     }
+  }
+`;
+
+// --- Class-teacher generalization: support + history + my-sections (CT-1) ---
+
+export const SET_SUPPORT_TEACHER = gql<
+  { setSupportTeacher: { id: string; classTeacherId: string | null; supportTeacherIds: string[] } },
+  { sectionId: string; userId: string; add: boolean }
+>`
+  mutation SetSupportTeacher($sectionId: String!, $userId: String!, $add: Boolean!) {
+    setSupportTeacher(sectionId: $sectionId, userId: $userId, add: $add) {
+      id
+      classTeacherId
+      supportTeacherIds
+    }
+  }
+`;
+
+export interface ClassTeacherAssignmentT {
+  id: string;
+  sectionId: string;
+  role: string;
+  teacherId: string | null;
+  op: string;
+  actorId: string;
+  at: string;
+}
+
+export const CLASS_TEACHER_HISTORY_QUERY = gql<
+  { classTeacherHistory: ClassTeacherAssignmentT[] },
+  { sectionId: string }
+>`
+  query ClassTeacherHistory($sectionId: String!) {
+    classTeacherHistory(sectionId: $sectionId) {
+      id sectionId role teacherId op actorId at
+    }
+  }
+`;
+
+export const MY_SECTIONS_AS_CLASS_TEACHER_QUERY = gql<
+  { mySectionsAsClassTeacher: SectionT[] },
+  NoVars
+>`
+  query MySectionsAsClassTeacher {
+    mySectionsAsClassTeacher { id code nameBn active classTeacherId supportTeacherIds }
   }
 `;
