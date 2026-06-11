@@ -59,6 +59,13 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
+      {canRoster ? (
+        <Card onPress={() => navigation.navigate("AssignClassTeacher")}>
+          <Body style={{ fontWeight: "700" }}>{STR.assignClassTeacher}</Body>
+          <Muted>D-#42</Muted>
+        </Card>
+      ) : null}
+
       {!canImport && !canManageUsers && !canRoster && !canStaff ? <Notice message={STR.noPermission} tone="warn" /> : null}
     </Screen>
   );

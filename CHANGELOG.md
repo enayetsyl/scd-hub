@@ -4,6 +4,13 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Homework Tracker — assign-class-teacher screen (D-#42 UI): new `AssignClassTeacherScreen` in the Admin tab
+  (`roster:manage`, Principal/Office) — pick a section, enter a TEACHER user id, assign (or clear) the
+  section's class teacher (the daily coordinator who runs reconciliation/confirm, handoff §9). Shows the
+  current class teacher. Adds the `assignClassTeacher` app op + exposes `Section.classTeacherId` on
+  `CLASSES_QUERY`. Frontend-only, no server/contract change. Gate: app `tsc --noEmit` clean + web bundle
+  green (482 modules). This closes the "no UI for class-teacher assignment" gap; the actual live assignment
+  is still an operational step on a running deployment.
 - Homework Tracker — principal roll-ups screen (frontend for §7.3/§7.4/§8.4): new `HomeworkRollupsScreen` in
   the Homework tab (reachable from HomeworkHome) — resubmission watch-list (≥3 in a rolling 2 weeks),
   per-subject trim-pattern flags for a month (>30% of reconciled days; month picker → first/last-day range),
