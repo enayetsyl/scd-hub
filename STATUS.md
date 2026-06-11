@@ -3,6 +3,43 @@
 _Updated: 2026-06-11_
 
 ## Now / next
+- **Planned (Routine module + Class-teacher generalization — build contracts written, D-#45–#52):**
+  two new build contracts authored, **no feature code yet**. (1) `docs/prd-routine.md` — full Routine/
+  Timetable module, **scope-expanded after the Principal walkthrough** (D-#48–#52). Now owns: a **day-type
+  calendar** (Sun–Thu full, Fri off, **Sat Quran-only**, + holiday exceptions that suspend routine+
+  attendance, D-#50); **rooms**; **groupings** — general `Section` + new cross-grade **`SubjectGroup`** for
+  Quran/Arabic (a Hifz year mixes class 2/3/4, with student membership, D-#48); **period grids** keyed by
+  audience×track×season (Class 1–5: general 35-min / Arabic 40-min / Quran 90-min double, winter 60;
+  Nursery/KG own grid: single-period Quran + first-2 periods 45/30-min, D-#51); **routine slots** +
+  conflict engine (no teacher/group/room double-booking) + effective-dating; **scope binding** — a
+  subject-teacher slot **auto-grants** teaching access (`source:"routine"` ScopeGrant; manual+supervisory
+  coexist; proxy→time-bounded; D-#49); **substitution/cover** + an admin **proxy-manage** availability view
+  (who's free + how loaded that day); section/teacher/guardian **views**; and a **routine-driven trigger
+  schedule** (bell→duty-admin, attendance→teacher, class-note→subject-teacher, note-published→guardian)
+  feeding a **class-note/daily-diary** (reuses HW-T1 declaration; push **delivery rides the deferred
+  messaging/push pipeline**, D-#52). Slices **R-1** (calendar+rooms+groups+grids) → **R-2** (slots+conflict
+  engine+scope binding+RBAC) → **R-3** (views) → **R-4** (cover+proxy-manage) → **R-5** (triggers+
+  class-note). New app-native vocab `routine:read`/`routine:manage` + `DAYS_OF_WEEK`/`DAY_TYPES`/
+  `PERIOD_TRACKS`/`SEASONS`/`ROUTINE_SUBJECTS` (no wire twin). (2) `docs/prd-class-teacher.md` — generalize
+  `assertIsClassTeacher` (D-#42) into the section "daily coordinator" gate for attendance/leave/report-card/
+  parent-comms; **CT-1** now also adds a **support/assistant teacher** on the section (Nursery has one;
+  KG/others future) + an **append-only `ClassTeacherAssignment` history log** (both pulled INTO scope by
+  Principal, D-#53 — reverses D-#45). Duty gates still land with their (unbuilt) modules. Decisions
+  **D-#45–#54** appended; roadmap updated. **Routine open items resolved (D-#54):** `ROUTINE_SUBJECTS =
+  [BAN,ENG,MATH,SCI,BGS,ARABIC,ISLAM,QURAN]` (BGS+Science class 3–5 only, rest all classes); bell-duty =
+  per-day default + optional per-period; memberships year-stable (no mid-year class change); class-note =
+  what-taught + link to declared homework. **Seasons = admin-set `ScheduleWindow`s (D-#55):** winter dates
+  float yearly; day-start steps 07:00→07:15→07:30; `PeriodGrid` holds durations, absolute clock times
+  computed from the window's `dayStartTime`. **Grounded in the live V3 routine (`Class Routine
+  Teacher.xlsx`, D-#56):** double-period = two adjacent independently-staffed slots (not atomic);
+  `SubjectGroup`s are leveled + gender-split (Quran: Qaida/Ammapara/Najera/Hifz 1–3; Arabic: Book 1/2/3),
+  no separate group-lead; "Deen"→ISLAM label; sections gender-split (Boys/Girls) from ~Class 2/3; the
+  sheet's bottom table gives current Lead(class-teacher)+Support assignments + the period grid, **seedable
+  for CT-1/R-1**. **Period grids PINNED (D-#57):** Nursery/KG = 6 periods (single-period Quran, ends 10:50);
+  Class 1–5 = 8 periods (Quran double + Arabic + 4 general, ends 12:00); winter compresses only P1/P2
+  (45→30); exact minutes seed from V3. **All routine + class-teacher open items now resolved — contracts
+  build-ready.** **Next = build R-1** (calendar+rooms+groups+grids) — or CT-1 first if class-teacher
+  visibility is the priority.
 - **Built (Homework Tracker — app screens, frontend for HW-T1→T4):** new Expo **Homework tab** (📒, gated
   `tracker:read`) — 4 screens over the existing server contract (no server/contract change): `HomeworkHome`
   (daily DAY_TOTAL vs 240 + declarations w/ band warnings + summary roll-up: chase list w/ §7.2 badges, open

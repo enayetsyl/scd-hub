@@ -40,9 +40,21 @@ Notes carried from the design: HR sits on the operational/identity plane behind 
 **first live external dependency** (device model/SDK on the critical path); leave reuses the existing
 proxy/cover system (D-#20/#22).
 
+### Routine / Timetable — **PULLED FORWARD into the active build**
+Build contract `docs/prd-routine.md` (slices R-1 rooms+period-defs+slot-model+conflict-engine → R-2
+views → R-3 substitution/cover); decisions D-#46/#47. Operational/identity plane behind the PII firewall
+(ADR-005), **no** new corpus→identity path; reuses `calendar.ts` (Sun–Thu), `ScopeGrant` (teacher
+authority) and the proxy/cover system (D-#20/#22). App-native `routine:read`/`routine:manage` perms — no
+wire-contract sync. No longer deferred — tracked in `STATUS.md`, not here.
+
+### Class teacher → section daily-coordinator gate — **active (contract written)**
+Build contract `docs/prd-class-teacher.md`; decision D-#45. Generalizes the existing `assertIsClassTeacher`
+(D-#42) into the shared gate for attendance / leave-approval / report-card-sign-off / parent-comms — each
+duty gate lands **with its module**; only CT-1 (generalize + coordinator views) is buildable now.
+
 ### Deferred ops modules (still deferred)
-Comms, notices, fees, expenses, routine, exam/results, loanable-resource (library + asset register).
-*(Attendance, leave and payroll moved up — see "HR / staff lifecycle" above.)*
+Comms, notices, fees, expenses, exam/results, loanable-resource (library + asset register).
+*(Attendance, leave and payroll moved up — see "HR / staff lifecycle" above; routine moved up — see above.)*
 
 ## Distribution
 Internal-first (Expo internal dist / TestFlight / direct APK) to defer store fees; publish to public
