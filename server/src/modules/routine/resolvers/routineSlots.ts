@@ -59,6 +59,17 @@ builder.queryField("routineSlots", (t) =>
   }),
 );
 
+builder.queryField("myRoutineSlots", (t) =>
+  t.field({
+    type: [RoutineSlotRef],
+    authScopes: { hasPermission: "routine:read" },
+    resolve: async (_r, _args, ctx) =>
+      RoutineSlot.find({ teacherId: ctx.auth!.userId, active: true })
+        .sort({ dayOfWeek: 1, periodNumber: 1 })
+        .lean() as unknown as IRoutineSlot[],
+  }),
+);
+
 builder.queryField("routineForDate", (t) =>
   t.field({
     type: [RoutineSlotRef],

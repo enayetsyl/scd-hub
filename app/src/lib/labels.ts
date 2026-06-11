@@ -53,6 +53,12 @@ import {
   RECON_STATE_LABELS_EN,
   TRIM_RANK_LABELS_BN,
   TRIM_RANK_LABELS_EN,
+  ROUTINE_SUBJECT_LABELS_BN,
+  ROUTINE_SUBJECT_LABELS_EN,
+  DAY_OF_WEEK_LABELS_BN,
+  DAY_OF_WEEK_LABELS_EN,
+  PERIOD_TRACK_LABELS_BN,
+  PERIOD_TRACK_LABELS_EN,
   type SetType,
   type TrackerKind,
   type DocType,
@@ -65,6 +71,9 @@ import {
   type HwResult,
   type ReconState,
   type TrimRank,
+  type RoutineSubject,
+  type DayOfWeek,
+  type PeriodTrack,
 } from "@scd/shared";
 
 // --- Active language (module-level; read at render time) ---------------------
@@ -178,6 +187,16 @@ export const reconStateLabel = (v?: string | null): string =>
 
 export const trimRankLabel = (v?: string | null): string =>
   (v && pick(TRIM_RANK_LABELS_BN, TRIM_RANK_LABELS_EN)[v as TrimRank]) || v || DASH;
+
+// Routine / timetable (R-1..R-3)
+export const routineSubjectLabel = (v?: string | null): string =>
+  (v && pick(ROUTINE_SUBJECT_LABELS_BN, ROUTINE_SUBJECT_LABELS_EN)[v as RoutineSubject]) || v || DASH;
+
+export const dayOfWeekLabel = (v?: string | null): string =>
+  (v && pick(DAY_OF_WEEK_LABELS_BN, DAY_OF_WEEK_LABELS_EN)[v as DayOfWeek]) || v || DASH;
+
+export const periodTrackLabel = (v?: string | null): string =>
+  (v && pick(PERIOD_TRACK_LABELS_BN, PERIOD_TRACK_LABELS_EN)[v as PeriodTrack]) || v || DASH;
 
 export const employmentTypeLabel = (v?: string | null): string =>
   (v && pick(EMPLOYMENT_TYPE_LABELS_BN, EMPLOYMENT_TYPE_LABELS_EN)[v as EmploymentType]) || v || DASH;
@@ -518,6 +537,39 @@ const STR_BN = {
   errNetwork: "সার্ভারে সংযোগ করা যায়নি।",
   errForbiddenWrite: "এই সেকশনে লেখার অনুমতি নেই।",
   errForbiddenRead: "এই কন্টেন্ট দেখার অনুমতি নেই।",
+
+  // Routine / timetable (R-3)
+  tabRoutine: "রুটিন",
+  routineTitle: "রুটিন",
+  myRoutineTitle: "আমার রুটিন",
+  groupRoutineTitle: "ক্লাস রুটিন",
+  editRoutineTitle: "রুটিন সম্পাদনা",
+  rtMyRoutine: "আমার রুটিন",
+  rtSectionRoutine: "শাখার রুটিন",
+  rtSubjectGroups: "কুরআন / আরবি গ্রুপ",
+  rtEdit: "রুটিন সম্পাদনা",
+  rtView: "রুটিন দেখুন",
+  rtNoSlots: "কোনো রুটিন স্লট নেই।",
+  rtBreak: "বিরতি",
+  rtPeriodN: "পিরিয়ড",
+  rtDay: "দিন",
+  rtPeriod: "পিরিয়ড নম্বর",
+  rtSubjectF: "বিষয়",
+  rtTrack: "ট্র্যাক",
+  rtTeacher: "শিক্ষক",
+  rtTeacherId: "শিক্ষক আইডি",
+  rtRoom: "কক্ষ",
+  rtRoomId: "কক্ষ আইডি",
+  rtFrom: "কার্যকর শুরু (YYYY-MM-DD)",
+  rtTo: "কার্যকর শেষ (ঐচ্ছিক)",
+  rtIsBreak: "বিরতি পিরিয়ড",
+  rtCreate: "স্লট যোগ করুন",
+  rtCreated: "স্লট যোগ হয়েছে।",
+  rtDeleted: "স্লট মুছে ফেলা হয়েছে।",
+  rtDeleteConfirm: "এই স্লট মুছবেন?",
+  rtManageHint: "শাখা বা গ্রুপ নির্বাচন করে স্লট যোগ/মুছুন।",
+  rtExisting: "বিদ্যমান স্লট",
+  rtToday: "আজ",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -846,6 +898,39 @@ const STR_EN: StrTable = {
   errNetwork: "Could not connect to the server.",
   errForbiddenWrite: "You don't have write permission for this section.",
   errForbiddenRead: "You don't have permission to view this content.",
+
+  // Routine / timetable (R-3)
+  tabRoutine: "Routine",
+  routineTitle: "Routine",
+  myRoutineTitle: "My routine",
+  groupRoutineTitle: "Class routine",
+  editRoutineTitle: "Edit routine",
+  rtMyRoutine: "My routine",
+  rtSectionRoutine: "Section routine",
+  rtSubjectGroups: "Quran / Arabic groups",
+  rtEdit: "Edit routine",
+  rtView: "View routine",
+  rtNoSlots: "No routine slots.",
+  rtBreak: "Break",
+  rtPeriodN: "Period",
+  rtDay: "Day",
+  rtPeriod: "Period number",
+  rtSubjectF: "Subject",
+  rtTrack: "Track",
+  rtTeacher: "Teacher",
+  rtTeacherId: "Teacher id",
+  rtRoom: "Room",
+  rtRoomId: "Room id",
+  rtFrom: "Effective from (YYYY-MM-DD)",
+  rtTo: "Effective to (optional)",
+  rtIsBreak: "Break period",
+  rtCreate: "Add slot",
+  rtCreated: "Slot added.",
+  rtDeleted: "Slot deleted.",
+  rtDeleteConfirm: "Delete this slot?",
+  rtManageHint: "Pick a section or group, then add/remove slots.",
+  rtExisting: "Existing slots",
+  rtToday: "Today",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use
