@@ -4,6 +4,14 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Routine R-2 — routine slots + conflict engine + scope binding (D-#46/#49/#56). New `RoutineSlot` model
+  (group×day×period→subject/teacher/room, effective-dated; Quran double = two adjacent slots); pure
+  `conflicts.ts` (teacher/group/room double-booking with effective-window overlap) + `binding.ts` (grant
+  plan); `RoutineSlotService` (create/delete + `routineForDate`). Scope binding: a content-subject Section
+  slot auto-syncs a `source:"routine"` teaching ScopeGrant (new `source` field; Quran/Arabic groups bind
+  nothing; orphan-only revoke; manual grants untouched); teacher-authority warns, never blocks. Resolvers
+  `routineSlots`/`routineForDate` (read), `createRoutineSlot`/`deleteRoutineSlot` (manage). Gate: verifier
+  PASS, shared+server tsc clean, jest 269/269 (24 new), firewall green. Covers R2.1–R2.8. [551945e]
 - Routine R-1 — calendar/day-types + holidays + rooms + cross-grade Quran/Arabic SubjectGroups +
   membership + per-(audience,season) period grids + schedule windows (D-#46–#58). New `/shared/vocab.ts`
   routine enums + BN/EN labels + `routine:read`/`routine:manage` perms (verifier extended: new C.3 checks
