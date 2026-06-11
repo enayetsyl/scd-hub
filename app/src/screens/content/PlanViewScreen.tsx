@@ -6,16 +6,21 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useQuery } from "urql";
-import { ARTIFACT_QUERY } from "../../graphql/operations";
+import { useQuery, useMutation } from "urql";
+import { roleHasPermission, PLAN_DOC_TYPES } from "@scd/shared";
+import { ARTIFACT_QUERY, ASSIGN_PLAN_REVIEW, APPROVE_PLAN } from "../../graphql/operations";
 import type { ContentStackParamList } from "../../navigation/types";
+import { useAuth } from "../../auth/AuthContext";
 import {
   Screen,
   H1,
+  H2,
   Body,
   Muted,
+  Card,
   Badge,
   Button,
+  Field,
   Loader,
   ErrorBanner,
   Notice,
@@ -43,7 +48,45 @@ export default function PlanViewScreen({ route }: Props): React.ReactElement {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
+  const { role } = useAuth();
+  const canAssign = !!role && roleHasPermission(role, "content:assign_review");
+  const canApprove = !!role && roleHasPermission(role, "content:promote_gold");
+  const [, assignReview] = useMutation(ASSIGN_PLAN_REVIEW);
+  const [, approvePlan] = useMutation(APPROVE_PLAN);
+  const [reviewerId, setReviewerId] = useState("");
+  const [assignBusy, setAssignBusy] = useState(false);
+  const [approveBusy, setApproveBusy] = useState(false);
+  const [reviewMsg, setReviewMsg] = useState<{ text: string; tone: "ok" | "danger" } | null>(null);
+
   const a = data?.artifact;
+
+  async function onAssign(): Promise<void> {
+    if (assignBusy || reviewerId.trim() === "") return;
+    setReviewMsg(null);
+    setAssignBusy(true);
+    const res = await assignReview({ artifactId, reviewerId: reviewerId.trim() });
+    setAssignBusy(false);
+    if (res.error) {
+      setReviewMsg({ text: friendlyError(res.error), tone: "danger" });
+      return;
+    }
+    setReviewerId("");
+    setReviewMsg({ text: STR.reviewerAssigned, tone: "ok" });
+  }
+
+  async function onApprove(): Promise<void> {
+    if (approveBusy) return;
+    setReviewMsg(null);
+    setApproveBusy(true);
+    const res = await approvePlan({ artifactId });
+    setApproveBusy(false);
+    if (res.error) {
+      setReviewMsg({ text: friendlyError(res.error), tone: "danger" });
+      return;
+    }
+    setReviewMsg({ text: STR.planApproved, tone: "ok" });
+    refetch({ requestPolicy: "network-only" });
+  }
 
   async function onExport(): Promise<void> {
     setPdfBusy(true);
@@ -111,6 +154,41 @@ export default function PlanViewScreen({ route }: Props): React.ReactElement {
       ) : (
         <Notice message={STR.noMarkdown} tone="warn" />
       )}
+
+      {(canAssign || canApprove) && (PLAN_DOC_TYPES as readonly string[]).includes(a.docType) ? (
+        <>
+          <Divider />
+          <Card>
+            <H2>{STR.reviewActions}</H2>
+            {reviewMsg ? <Notice message={reviewMsg.text} tone={reviewMsg.tone} /> : null}
+            {canApprove ? (
+              <Button
+                title={approveBusy ? STR.approving : STR.approveSignOff}
+                onPress={onApprove}
+                loading={approveBusy}
+                disabled={a.reviewStatus !== "reviewed"}
+                style={{ marginTop: space(2) }}
+              />
+            ) : null}
+            {canApprove && a.reviewStatus !== "reviewed" ? (
+              <Muted style={{ marginTop: 4 }}>{STR.approveNeedsReviewed}</Muted>
+            ) : null}
+            {canAssign ? (
+              <View style={{ marginTop: space(3) }}>
+                <Field label={STR.reviewerId} value={reviewerId} onChangeText={setReviewerId} placeholder="User _id" />
+                <Button
+                  title={assignBusy ? STR.assigning : STR.assignForReview}
+                  onPress={onAssign}
+                  loading={assignBusy}
+                  disabled={reviewerId.trim() === ""}
+                  variant="secondary"
+                  style={{ marginTop: space(2) }}
+                />
+              </View>
+            ) : null}
+          </Card>
+        </>
+      ) : null}
     </Screen>
   );
 }

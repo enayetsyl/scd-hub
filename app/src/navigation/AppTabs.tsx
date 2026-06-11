@@ -18,6 +18,7 @@ import type {
   QuestionsStackParamList,
   SetsStackParamList,
   TrackersStackParamList,
+  ReviewStackParamList,
   AdminStackParamList,
   TabParamList,
 } from "./types";
@@ -41,6 +42,9 @@ import OpenTrackerScreen from "../screens/trackers/OpenTrackerScreen";
 import TrackerEntryScreen from "../screens/trackers/TrackerEntryScreen";
 import TrackerSummaryScreen from "../screens/trackers/TrackerSummaryScreen";
 import WaLinkScreen from "../screens/trackers/WaLinkScreen";
+import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
+import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
+import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
 import SectionPickerScreen from "../screens/common/SectionPickerScreen";
 import AdminHomeScreen from "../screens/admin/AdminHomeScreen";
 import ImportScreen from "../screens/admin/ImportScreen";
@@ -121,6 +125,17 @@ function TrackersNavigator(): React.ReactElement {
   );
 }
 
+const ReviewStack = createNativeStackNavigator<ReviewStackParamList>();
+function ReviewNavigator(): React.ReactElement {
+  return (
+    <ReviewStack.Navigator screenOptions={stackOptions}>
+      <ReviewStack.Screen name="ReviewHome" component={ReviewHomeScreen} options={{ title: STR.tabReview }} />
+      <ReviewStack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} options={{ title: STR.submitReview }} />
+      <ReviewStack.Screen name="ReviewThread" component={ReviewThreadScreen} options={{ title: STR.reviewThread }} />
+    </ReviewStack.Navigator>
+  );
+}
+
 const AdminStack = createNativeStackNavigator<AdminStackParamList>();
 function AdminNavigator(): React.ReactElement {
   return (
@@ -148,6 +163,8 @@ export function AppTabs(): React.ReactElement {
   const canQuestions = !!role && roleHasPermission(role, "question:read");
   const canSets = !!role && roleHasPermission(role, "set:read");
   const canTrackers = !!role && roleHasPermission(role, "tracker:read");
+  const canReview =
+    !!role && (roleHasPermission(role, "content:review") || roleHasPermission(role, "content:assign_review"));
   const canAdmin = !!role && (roleHasPermission(role, "content:import") || roleHasPermission(role, "user:manage"));
 
   return (
@@ -173,6 +190,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canTrackers ? (
         <Tab.Screen name="TrackersTab" component={TrackersNavigator} options={{ title: STR.tabTrackers, tabBarIcon: tabIcon("✅") }} />
+      ) : null}
+      {canReview ? (
+        <Tab.Screen name="ReviewTab" component={ReviewNavigator} options={{ title: STR.tabReview, tabBarIcon: tabIcon("📝") }} />
       ) : null}
       {canAdmin ? (
         <Tab.Screen name="AdminTab" component={AdminNavigator} options={{ title: STR.tabAdmin, tabBarIcon: tabIcon("⚙️") }} />
