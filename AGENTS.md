@@ -72,6 +72,8 @@ policy, or decisions into this repo.
   tracker-homework-handoff.md  ← Project-06 Homework-Tracker PRD v1.1 (LOCKED source for prd-tracker-homework.md)
   project06-deviation-quran.md ← consult-via-human note: Quran excluded from the HW tracker (D-#36 vs handoff §6.3)
   prd-plan-review.md  ← Plan review/approval loop: assign→review→re-import→sign-off, slices PR-1..3 (D-#38–#40)
+  prd-routine.md      ← Routine/Timetable module build contract: rooms+period-defs+slots+conflict-engine, slices R-1..3 (D-#46/#47)
+  prd-class-teacher.md ← Class-teacher → section daily-coordinator gate (attendance/leave/report-card/comms), slice CT-1 now (D-#45)
   architecture.md     ← how (modules, data planes, the ADRs)
   glossary.md         ← canonical terminology (read before naming anything)
   import-contract.md  ← the envelope contract narrative
