@@ -50,6 +50,7 @@ export type AdminStackParamList = {
   ScopeGrant: undefined;
   Roster: undefined;
   Staff: undefined;
+  AssignClassTeacher: undefined;
   SectionPicker: undefined;
 };
 

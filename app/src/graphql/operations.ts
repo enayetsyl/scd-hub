@@ -73,6 +73,7 @@ export interface SectionT {
   code: string;
   nameBn: string;
   active: boolean;
+  classTeacherId?: string | null;
 }
 
 export interface ClassT {
@@ -90,7 +91,7 @@ export const CLASSES_QUERY = gql<{ classes: ClassT[] }, { academicYearId: string
       level
       nameBn
       active
-      sections { id code nameBn active }
+      sections { id code nameBn active classTeacherId }
     }
   }
 `;
@@ -1295,6 +1296,25 @@ export const QUESTION_USAGE_FEED = gql<
     questionUsageFeed(sectionId: $sectionId, classId: $classId) {
       classId
       feed { qid count }
+    }
+  }
+`;
+
+// --- Class-teacher assignment (D-#42; roster:manage) -----------------------
+
+export interface AssignClassTeacherResultT {
+  id: string;
+  classTeacherId: string | null;
+}
+
+export const ASSIGN_CLASS_TEACHER = gql<
+  { assignClassTeacher: AssignClassTeacherResultT },
+  { sectionId: string; userId?: string | null }
+>`
+  mutation AssignClassTeacher($sectionId: String!, $userId: String) {
+    assignClassTeacher(sectionId: $sectionId, userId: $userId) {
+      id
+      classTeacherId
     }
   }
 `;

@@ -12,8 +12,10 @@ _Updated: 2026-06-11_
   Pool top-up). New homework labels/STR + `HomeworkTab` nav. Gate: **app tsc clean + web bundle green** (480
   modules). **Not verified against a live server.** **Principal roll-ups screen now also built**
   (`HomeworkRollupsScreen` — watch-list / trim-pattern / de-identified question-usage; reachable from
-  HomeworkHome). Homework feature is now complete server **and** app. Remaining = parked cross-feature items
-  only: Quran/§6.3→Project 06; assign class teachers live; live golden-path verification.
+  HomeworkHome). **Assign-class-teacher UI built** too (`AssignClassTeacherScreen`, Admin tab, roster:manage)
+  — D-#42 now has a UI. Homework feature complete server **and** app. Remaining = operational/governance only:
+  Quran/§6.3→Project 06; **run** the class-teacher assignments on the live roster (UI now exists); live
+  golden-path verification.
 - **Built (Homework Tracker HW-T4 — roll-ups + thresholds + question-usage feed, D-#44):** the homework build
   (HW-T1→T4) is now feature-complete server-side. `HomeworkSummaryService` + `tracker:read` queries:
   `homeworkSummary` (chase list + §7.2 attention/comms thresholds, open resubmissions, submitted-on-time % /
