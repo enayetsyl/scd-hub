@@ -48,6 +48,7 @@ export type RoutineStackParamList = {
   MyRoutine: undefined;
   GroupRoutine: { groupType: string; groupId: string; title: string };
   RoutineEditor: { groupType: string; groupId: string; title: string };
+  CoverManage: { groupType: string; groupId: string; title: string };
   SectionPicker: undefined;
 };
 

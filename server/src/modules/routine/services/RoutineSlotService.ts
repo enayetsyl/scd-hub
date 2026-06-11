@@ -6,6 +6,7 @@
 import { Types } from "mongoose";
 import { SUBJECTS, DAYS_OF_WEEK, type DayOfWeek, type RoutineSubject, type PeriodTrack } from "@scd/shared";
 import { RoutineSlot, type IRoutineSlot } from "../models/RoutineSlot";
+import { RoutineSubstitution } from "../models/RoutineSubstitution";
 import { Section } from "../../foundation/models/Section";
 import { SubjectGroup } from "../models/SubjectGroup";
 import { Subject } from "../../foundation/models/Subject";
@@ -250,15 +251,20 @@ async function unbindIfOrphaned(
   });
 }
 
+/** A resolved slot for a date — the stored slot plus the cover teacher (if any)
+ *  overriding it on that date (R4.4). `coverTeacherId` is null when uncovered. */
+export type ResolvedSlot = IRoutineSlot & { coverTeacherId: string | null };
+
 /** Resolve the effective slots for a group on a date (R2.7) — slots whose
- *  `[effectiveFrom, effectiveTo)` window contains the date, ordered by period. */
+ *  `[effectiveFrom, effectiveTo)` window contains the date, ordered by period —
+ *  with any active cover for that date overlaid (R4.4). */
 export async function routineForDate(
   groupType: "section" | "subjectgroup",
   groupId: string,
   date: Date,
-): Promise<IRoutineSlot[]> {
+): Promise<ResolvedSlot[]> {
   const dayOfWeek = DAYS_OF_WEEK[date.getDay()];
-  return RoutineSlot.find({
+  const slots = (await RoutineSlot.find({
     groupType,
     groupId,
     dayOfWeek,
@@ -267,5 +273,20 @@ export async function routineForDate(
     $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: date } }],
   })
     .sort({ periodNumber: 1 })
-    .lean() as unknown as IRoutineSlot[];
+    .lean()) as unknown as IRoutineSlot[];
+
+  // Overlay covers for this date (R4.4).
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+  const end = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+  const slotIds = slots.map((s) => s._id);
+  const subs = await RoutineSubstitution.find({
+    slotId: { $in: slotIds },
+    active: true,
+    date: { $gte: start, $lte: end },
+  }).lean();
+  const coverMap = new Map(subs.map((su) => [su.slotId.toString(), su.coverTeacherId.toString()]));
+  return slots.map((s) => ({
+    ...s,
+    coverTeacherId: coverMap.get(s._id.toString()) ?? null,
+  })) as unknown as ResolvedSlot[];
 }

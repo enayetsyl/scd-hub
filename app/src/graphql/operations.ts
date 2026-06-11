@@ -1338,11 +1338,12 @@ export interface RoutineSlotT {
   effectiveFrom: string;
   effectiveTo: string | null;
   active: boolean;
+  coverTeacherId: string | null;
 }
 
 const ROUTINE_SLOT_FIELDS = `
   id groupType groupId classId dayOfWeek periodNumber subject track
-  isBreak teacherId roomId effectiveFrom effectiveTo active
+  isBreak teacherId roomId effectiveFrom effectiveTo active coverTeacherId
 `;
 
 export const ROUTINE_SLOTS_QUERY = gql<
@@ -1422,5 +1423,72 @@ export const DELETE_ROUTINE_SLOT = gql<
 >`
   mutation DeleteRoutineSlot($id: String!) {
     deleteRoutineSlot(id: $id)
+  }
+`;
+
+// --- Routine cover / proxy-manage (R-4) ------------------------------------
+
+export const ROUTINE_FOR_DATE_QUERY = gql<
+  { routineForDate: RoutineSlotT[] },
+  { groupType: string; groupId: string; date: string }
+>`
+  query RoutineForDate($groupType: String!, $groupId: String!, $date: String!) {
+    routineForDate(groupType: $groupType, groupId: $groupId, date: $date) { ${ROUTINE_SLOT_FIELDS} }
+  }
+`;
+
+export interface AvailabilityRowT {
+  teacherId: string;
+  name: string;
+  classCount: number;
+  free: boolean;
+}
+
+export const TEACHER_AVAILABILITY_QUERY = gql<
+  { teacherAvailability: AvailabilityRowT[] },
+  { date: string; periodNumber: number }
+>`
+  query TeacherAvailability($date: String!, $periodNumber: Int!) {
+    teacherAvailability(date: $date, periodNumber: $periodNumber) {
+      teacherId name classCount free
+    }
+  }
+`;
+
+export interface SubstitutionT {
+  id: string;
+  slotId: string;
+  date: string;
+  coverTeacherId: string;
+  absentTeacherId: string | null;
+  reason: string | null;
+  active: boolean;
+}
+
+export const COVERS_FOR_DATE_QUERY = gql<
+  { coversForDate: SubstitutionT[] },
+  { date: string }
+>`
+  query CoversForDate($date: String!) {
+    coversForDate(date: $date) {
+      id slotId date coverTeacherId absentTeacherId reason active
+    }
+  }
+`;
+
+export const ASSIGN_COVER = gql<
+  { assignCover: SubstitutionT },
+  { slotId: string; date: string; coverTeacherId: string; reason?: string | null; durationDays?: number | null }
+>`
+  mutation AssignCover($slotId: String!, $date: String!, $coverTeacherId: String!, $reason: String, $durationDays: Int) {
+    assignCover(slotId: $slotId, date: $date, coverTeacherId: $coverTeacherId, reason: $reason, durationDays: $durationDays) {
+      id slotId coverTeacherId active
+    }
+  }
+`;
+
+export const CANCEL_COVER = gql<{ cancelCover: boolean }, { id: string }>`
+  mutation CancelCover($id: String!) {
+    cancelCover(id: $id)
   }
 `;

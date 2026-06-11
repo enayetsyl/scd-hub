@@ -7,12 +7,20 @@
 import { builder } from "../../../schema";
 import { DAYS_OF_WEEK, PERIOD_TRACKS, ROUTINE_SUBJECTS } from "@scd/shared";
 import { RoutineSlot, type IRoutineSlot } from "../models/RoutineSlot";
+import { type IRoutineSubstitution } from "../models/RoutineSubstitution";
 import {
   createRoutineSlot,
   deleteRoutineSlot,
   routineForDate,
   type CreateSlotResult,
 } from "../services/RoutineSlotService";
+import {
+  teacherAvailability,
+  assignCover,
+  cancelCover,
+  coversForDate,
+} from "../services/RoutineCoverService";
+import type { AvailabilityRow } from "../cover";
 
 const RoutineSlotRef = builder.objectRef<IRoutineSlot>("RoutineSlot").implement({
   fields: (t) => ({
@@ -29,6 +37,33 @@ const RoutineSlotRef = builder.objectRef<IRoutineSlot>("RoutineSlot").implement(
     roomId: t.string({ nullable: true, resolve: (s) => (s.roomId ? s.roomId.toString() : null) }),
     effectiveFrom: t.string({ resolve: (s) => new Date(s.effectiveFrom).toISOString() }),
     effectiveTo: t.string({ nullable: true, resolve: (s) => (s.effectiveTo ? new Date(s.effectiveTo).toISOString() : null) }),
+    active: t.exposeBoolean("active"),
+    // Populated only by routineForDate (the cover overlaying this slot on that date, R4.4).
+    coverTeacherId: t.string({
+      nullable: true,
+      resolve: (s) => (s as { coverTeacherId?: string | null }).coverTeacherId ?? null,
+    }),
+  }),
+});
+
+const AvailabilityRowRef = builder.objectRef<AvailabilityRow>("AvailabilityRow").implement({
+  fields: (t) => ({
+    teacherId: t.exposeString("teacherId"),
+    name: t.exposeString("name"),
+    classCount: t.exposeInt("classCount"),
+    free: t.exposeBoolean("free"),
+  }),
+});
+
+const RoutineSubstitutionRef = builder.objectRef<IRoutineSubstitution>("RoutineSubstitution").implement({
+  fields: (t) => ({
+    id: t.string({ resolve: (s) => s._id.toString() }),
+    slotId: t.string({ resolve: (s) => s.slotId.toString() }),
+    date: t.string({ resolve: (s) => new Date(s.date).toISOString() }),
+    coverTeacherId: t.string({ resolve: (s) => s.coverTeacherId.toString() }),
+    absentTeacherId: t.string({ nullable: true, resolve: (s) => (s.absentTeacherId ? s.absentTeacherId.toString() : null) }),
+    reason: t.string({ nullable: true, resolve: (s) => s.reason ?? null }),
+    proxyGrantId: t.string({ nullable: true, resolve: (s) => (s.proxyGrantId ? s.proxyGrantId.toString() : null) }),
     active: t.exposeBoolean("active"),
   }),
 });
@@ -152,6 +187,77 @@ builder.mutationField("deleteRoutineSlot", (t) =>
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => {
       await deleteRoutineSlot(args.id, ctx.auth!.userId);
+      return true;
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Cover / proxy-manage (R-4)
+// ---------------------------------------------------------------------------
+
+builder.queryField("teacherAvailability", (t) =>
+  t.field({
+    type: [AvailabilityRowRef],
+    authScopes: { hasPermission: "routine:manage" },
+    args: {
+      date: t.arg.string({ required: true }),
+      periodNumber: t.arg.int({ required: true }),
+    },
+    resolve: async (_r, args) => {
+      const d = new Date(args.date);
+      if (isNaN(d.getTime())) throw new Error("Invalid date");
+      return teacherAvailability(d, args.periodNumber);
+    },
+  }),
+);
+
+builder.queryField("coversForDate", (t) =>
+  t.field({
+    type: [RoutineSubstitutionRef],
+    authScopes: { hasPermission: "routine:read" },
+    args: { date: t.arg.string({ required: true }) },
+    resolve: async (_r, args) => {
+      const d = new Date(args.date);
+      if (isNaN(d.getTime())) throw new Error("Invalid date");
+      return coversForDate(d);
+    },
+  }),
+);
+
+builder.mutationField("assignCover", (t) =>
+  t.field({
+    type: RoutineSubstitutionRef,
+    authScopes: { hasPermission: "routine:manage" },
+    args: {
+      slotId: t.arg.string({ required: true }),
+      date: t.arg.string({ required: true }),
+      coverTeacherId: t.arg.string({ required: true }),
+      reason: t.arg.string({ required: false }),
+      durationDays: t.arg.int({ required: false }),
+    },
+    resolve: async (_r, args, ctx) => {
+      const d = new Date(args.date);
+      if (isNaN(d.getTime())) throw new Error("Invalid date");
+      return assignCover({
+        slotId: args.slotId,
+        date: d,
+        coverTeacherId: args.coverTeacherId,
+        reason: args.reason ?? null,
+        durationDays: args.durationDays ?? undefined,
+        actorId: ctx.auth!.userId,
+      });
+    },
+  }),
+);
+
+builder.mutationField("cancelCover", (t) =>
+  t.field({
+    type: "Boolean",
+    authScopes: { hasPermission: "routine:manage" },
+    args: { id: t.arg.string({ required: true }) },
+    resolve: async (_r, args, ctx) => {
+      await cancelCover(args.id, ctx.auth!.userId);
       return true;
     },
   }),

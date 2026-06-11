@@ -3,6 +3,20 @@
 _Updated: 2026-06-11_
 
 ## Now / next
+- **Built (Routine R-4 — substitution/cover + proxy-manage, D-#22/#46/#49):** server + app. New
+  `RoutineSubstitution` model (one cover per slot per date). **Server:** `RoutineCoverService` — pure
+  `rankAvailability` (free-first, lightest-load-next) + `teacherAvailability(date, period)` (who's free +
+  each teacher's class count that day), `assignCover` (records the sub; for a **Section** slot backs it
+  with a **time-bounded proxy `ScopeGrant`** via the existing `assignProxy`, D-#20/#22; a SubjectGroup
+  cover is record-only — no content scope), `cancelCover` (deactivate + `revokeProxy`), `coversForDate`.
+  `routineForDate` now **overlays covers** (each slot gains `coverTeacherId` for the date, R4.4).
+  Resolvers `teacherAvailability`/`coversForDate` + `assignCover`/`cancelCover` (manage) +
+  `coverTeacherId` on the slot type. **App:** `CoverManageScreen` (reachable per group from RoutineHome,
+  managers only) — date + the day's slots; "Find cover" → ranked availability → assign; active-covers
+  list with cancel. New cover operations + STR keys (BN/EN). **R4.5 (guardian read) is pipeline-deferred**
+  (guardian portal). **Gate GREEN:** server tsc + **jest 275/275** (6 new in `routineCover.test.ts`,
+  firewall green); **app tsc clean + web bundle green**. **Not verified live.** Covers R4.1–R4.4.
+  **Next = R-5** (routine-driven triggers + class-note/daily-diary).
 - **Built (Routine R-3 — app views, D-#46):** first routine **frontend** slice (Expo). New **Routine tab**
   (📅, gated `routine:read` → Principal/Teacher/Office), `RoutineStack` with 4 screens: `RoutineHome`
   (role-aware landing — My routine / section grid / Quran-Arabic group list; editor entries shown only to
