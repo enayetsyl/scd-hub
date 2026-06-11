@@ -8,7 +8,7 @@
  *   Admin     content:import | user:manage  (Principal, Office)
  */
 import React from "react";
-import { Text, Pressable } from "react-native";
+import { Text, Pressable, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { roleHasPermission } from "@scd/shared";
@@ -26,6 +26,7 @@ import type {
 
 import { useAuth } from "../auth/AuthContext";
 import { useBasket } from "../state/BasketContext";
+import { useLanguage } from "../state/LanguageContext";
 import { STR } from "../lib/labels";
 import { colors } from "../theme/tokens";
 
@@ -62,6 +63,16 @@ import AssignClassTeacherScreen from "../screens/admin/AssignClassTeacherScreen"
 
 export { LoginScreen };
 
+/** Tap to switch language — the button shows the language it switches TO. */
+function LangToggle(): React.ReactElement {
+  const { lang, toggle } = useLanguage();
+  return (
+    <Pressable onPress={toggle} style={{ paddingHorizontal: 12 }} hitSlop={8} accessibilityLabel={STR.language}>
+      <Text style={{ color: colors.white, fontWeight: "600" }}>{lang === "bn" ? "EN" : "বাং"}</Text>
+    </Pressable>
+  );
+}
+
 function LogoutButton(): React.ReactElement {
   const { logout } = useAuth();
   return (
@@ -71,12 +82,21 @@ function LogoutButton(): React.ReactElement {
   );
 }
 
+function HeaderRight(): React.ReactElement {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center" }}>
+      <LangToggle />
+      <LogoutButton />
+    </View>
+  );
+}
+
 const stackOptions = {
   headerStyle: { backgroundColor: colors.brand700 },
   headerTintColor: colors.white,
   headerTitleStyle: { fontWeight: "700" as const },
   contentStyle: { backgroundColor: colors.bg },
-  headerRight: () => <LogoutButton />,
+  headerRight: () => <HeaderRight />,
 } as const;
 
 function tabIcon(emoji: string) {

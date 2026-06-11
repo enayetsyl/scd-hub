@@ -385,6 +385,142 @@ export const TRIM_RANK_LABELS_BN: Record<TrimRank, string> = {
   c: "গ",
 };
 
+// --- A.7 ENGLISH DISPLAY LABELS (bilingual UI — app shows BN or EN per the -----
+// user's chosen language; NFR-5 keeps Bangla the default + English codes on
+// forms). Same keys as every *_LABELS_BN map above; the app's label lookup picks
+// the map by the active language. App-native, no wire-contract twin. Bloom stays
+// English-coded (curriculum-governed), so it has no label map in either language.
+
+export const ROSTER_CLASS_LABELS_EN: Record<RosterClassLevel, string> = {
+  [-1]: "Nursery",
+  [0]: "KG",
+  [1]: "Class 1",
+  [2]: "Class 2",
+  [3]: "Class 3",
+  [4]: "Class 4",
+  [5]: "Class 5",
+};
+
+export const SUBJECT_LABELS_EN: Record<Subject, string> = {
+  BAN: "Bangla",
+  ENG: "English",
+  MATH: "Mathematics",
+  SCI: "Science",
+  BGS: "Bangladesh & Global Studies",
+};
+
+export const DOC_TYPE_LABELS_EN: Record<DocType, string> = {
+  chapter_plan: "Chapter plan",
+  session_plan: "Session plan",
+  question: "Question",
+  question_set: "Question set",
+  stimulus: "Stimulus",
+};
+
+export const CURATION_TAG_LABELS_EN: Record<CurationTag, string> = {
+  KEEP_AS_IS: "Keep as is",
+  NEEDS_REPLACEMENT: "Needs replacement",
+  FLEXIBLE: "Flexible",
+};
+
+export const DIFFICULTY_LABELS_EN: Record<Difficulty, string> = {
+  easy: "Easy",
+  medium: "Medium",
+  hard: "Hard",
+};
+
+export const PAPER_ROLE_LABELS_EN: Record<PaperRole, string> = {
+  mcq: "MCQ",
+  short: "Short",
+  structured: "Structured",
+  creative: "Creative",
+};
+
+export const REVIEW_STATUS_LABELS_EN: Record<ReviewStatus, string> = {
+  draft: "Draft",
+  reviewed: "Reviewed",
+  gold: "Final", // Principal-locked
+};
+
+export const REVIEW_VERDICT_LABELS_EN: Record<ReviewVerdict, string> = {
+  APPROVE: "Approve",
+  CHANGES_REQUESTED: "Changes requested",
+};
+
+export const SET_TYPE_LABELS_EN: Record<SetType, string> = {
+  HW: "Homework",
+  AS: "Assignment",
+  CT: "Class test",
+};
+
+export const TRACKER_KIND_LABELS_EN: Record<TrackerKind, string> = {
+  classtest: "Class test",
+  assignment: "Assignment",
+  homework: "Homework",
+  generic: "Generic",
+};
+
+export const DEFAULT_SECTION_LABEL_EN = "Main" as const;
+
+export const HR_CATEGORY_LABELS_EN: Record<HrCategory, string> = {
+  teacher: "Teacher",
+  assistant_hifz: "Assistant / Hifz",
+  office_accounts: "Office & Accounts",
+  support: "Support staff",
+};
+
+export const EMPLOYMENT_TYPE_LABELS_EN: Record<EmploymentType, string> = {
+  full_time: "Full-time",
+  part_time: "Part-time",
+  fixed_term: "Fixed-term",
+};
+
+export const EMPLOYMENT_STATUS_LABELS_EN: Record<EmploymentStatus, string> = {
+  probation: "Probation",
+  confirmed: "Confirmed",
+  resigned: "Resigned",
+  terminated: "Terminated",
+};
+
+export const HW_SUBJECT_LABELS_EN: Record<HwSubject, string> = {
+  BAN: "Bangla",
+  ENG: "English",
+  MATH: "Mathematics",
+  SCI: "Science",
+  BGS: "Bangladesh & Global Studies",
+  ARABIC: "Arabic",
+  ISLAM: "Islamic Studies",
+};
+
+export const LIFECYCLE_STATE_LABELS_EN: Record<LifecycleState, string> = {
+  GIVEN: "Given",
+  ABSENT_REDELIVER: "Absent / redeliver",
+  DUE: "Due",
+  SUBMITTED: "Submitted",
+  CHASE: "Chase",
+  CHECKED: "Checked",
+  RESUBMIT: "Resubmit",
+  RETURNED: "Returned",
+};
+
+export const HW_RESULT_LABELS_EN: Record<HwResult, string> = {
+  CORRECT: "Correct",
+  PARTIAL: "Partial",
+  WRONG: "Wrong",
+};
+
+export const RECON_STATE_LABELS_EN: Record<ReconState, string> = {
+  within_ceiling: "Within limit",
+  over_ceiling: "Over limit — trim needed",
+  reconciled: "Reconciled",
+};
+
+export const TRIM_RANK_LABELS_EN: Record<TrimRank, string> = {
+  a: "a",
+  b: "b",
+  c: "c",
+};
+
 
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP

@@ -36,7 +36,7 @@ import {
   Notice,
   Divider,
 } from "../../components/ui";
-import { STR, trackerKindLabel, setTypeLabel, bnNum } from "../../lib/labels";
+import { STR, trackerKindLabel, setTypeLabel, bnNum, markRangeMsg } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
@@ -77,7 +77,7 @@ function StudentRow({
     if (mode === "classtest") {
       const n = Number(score);
       if (score.trim() === "" || Number.isNaN(n) || n < 0 || n > totalMarks) {
-        setErr(`নম্বর ${bnNum(0)}–${bnNum(totalMarks)} এর মধ্যে দিন।`);
+        setErr(markRangeMsg(0, totalMarks));
         return;
       }
       payload = { score: n };

@@ -4,6 +4,12 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- App i18n — bilingual UI (Bangla + English); Bangla stays the default. Added `*_LABELS_EN` maps to
+  `/shared/vocab.ts` mirroring every `*_LABELS_BN`; `app/src/lib/labels.ts` now resolves `STR` (a Proxy)
+  and all label fns + `bnNum` by a module-level active language; new `LanguageProvider` persists the choice
+  and keys only the nav subtree (auth/basket/section survive a switch); BN/EN toggle in the stack header +
+  Login screen; routed 5 hardcoded Bangla strings through `STR`. Vocab verifier extended with EN-totality
+  checks. Gates: verifier PASS, shared/server/app tsc clean, jest 223/223, web bundle green (483 modules).
 - Homework Tracker — drafted the consult-via-human deviation note to Project 06 re the Quran exclusion
   (`docs/project06-deviation-quran.md`): D-#36 excludes Quran from `HW_SUBJECTS`, which deviates from handoff
   §6.2/§6.3 (Quran-homework rows were meant to live here + count in the 240-min weekday budget). The note
