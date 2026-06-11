@@ -4,6 +4,14 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Plan render fix — proper Markdown in the app + grid tables in the PDF; strip the internal footer comment.
+  App: new hand-rolled Markdown component (headings, bold/italic/code, ordered & bullet lists incl. GFM task
+  items, GFM tables as a grid, blockquotes, hr) — PlanViewScreen rendered raw markdown before. PDF: tables
+  now a real bordered grid (weighted columns, measured rows, page-break aware) instead of joined " | " text
+  that wrapped and overlapped (the Chapter-Overview collision); doc.x reset after a table; emoji stripped and
+  unsupported math/arrow glyphs transliterated (≈→~) since the embedded fonts lack them. Both surfaces now
+  strip authored <!-- … --> comments. Gate: server tsc + jest 292/292 (3 new, firewall green); app tsc clean
+  + web export green. [7354ddd]
 - Class-teacher CT-1 — generalize the coordinator gate + support teacher + assignment history (D-#42/#45/#53).
   assertIsClassTeacher doc generalized to the section daily-coordinator gate (no behavior change). New
   Section.supportTeacherIds (recorded helpers, not the gate) + append-only ClassTeacherAssignment log;

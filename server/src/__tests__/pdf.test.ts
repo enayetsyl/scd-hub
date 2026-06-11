@@ -10,7 +10,7 @@
  * This test does NOT need a DB connection.
  */
 
-import { markdownToPdf } from "../routes/pdfRenderer";
+import { markdownToPdf, stripHtmlComments, transliterateForPdf } from "../routes/pdfRenderer";
 
 // Markdown with both English and Bengali content — mirrors a real session plan
 const BANGLA_MARKDOWN = `
@@ -63,5 +63,24 @@ describe("PDF smoke test (J1.8 — Bangla typography)", () => {
     const markdownBytes = Buffer.byteLength(BANGLA_MARKDOWN, "utf8");
     // PDF with embedded Noto Sans Bengali subset should be much larger than raw markdown
     expect(buf.byteLength).toBeGreaterThan(markdownBytes * 3);
+  }, 30_000);
+});
+
+describe("PDF — HTML comments + tables", () => {
+  test("stripHtmlComments removes single- and multi-line comments", () => {
+    expect(stripHtmlComments("a <!-- x --> b")).toBe("a  b");
+    expect(stripHtmlComments("keep\n<!-- INTERNAL FOOTER\nProject: 03\n-->\nkeep2")).toBe("keep\n\nkeep2");
+  });
+
+  test("transliterateForPdf maps unsupported math/arrow symbols to ASCII", () => {
+    expect(transliterateForPdf("≈35 min")).toBe("~35 min");
+    expect(transliterateForPdf("a → b, x ≤ y")).toBe("a -> b, x <= y");
+  });
+
+  test("a plan with an internal-footer comment + GFM table still renders a valid PDF", async () => {
+    const withComment = `# Plan\n\n| বিষয় | মান |\n| --- | --- |\n| Class | পঞ্চম |\n| Unit | Unit 9 |\n\n<!-- INTERNAL FOOTER\nProject: 03\nchapter_address: U09\n-->\n`;
+    const buf = await markdownToPdf(withComment, { title: "Comment + table" });
+    expect(buf.slice(0, 4).toString("ascii")).toBe("%PDF");
+    expect(buf.byteLength).toBeGreaterThan(5_000);
   }, 30_000);
 });

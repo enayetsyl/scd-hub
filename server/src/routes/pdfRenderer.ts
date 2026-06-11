@@ -21,6 +21,37 @@ export const LATIN_FONT = "Helvetica"; // pdfkit built-in (WinAnsi) — covers L
 
 const md = new MarkdownIt({ html: false, linkify: false });
 
+/** Drop HTML comments (e.g. the authored `<!-- INTERNAL FOOTER … -->`) before
+ *  parsing. With `html:false` markdown-it would otherwise render a comment block
+ *  as literal paragraph text — it must never surface in the plan. */
+export function stripHtmlComments(markdownText: string): string {
+  return markdownText.replace(/<!--[\s\S]*?-->/g, "");
+}
+
+/** Drop emoji / pictographs the embedded fonts can't render. The Noto-Bengali
+ *  subset and Helvetica have no emoji glyphs, so a char like 🟦 would render as a
+ *  .notdef box that smudges over the adjacent text. (Web renders emoji via system
+ *  fonts, so this strip is PDF-only.) */
+export function stripUnsupportedGlyphs(text: string): string {
+  return text.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{200D}]/gu, "").replace(/  +/g, " ");
+}
+
+/** Map math / arrow symbols outside the embedded fonts' coverage (Helvetica is
+ *  WinAnsi; the Noto subset is Bengali-only) to ASCII equivalents, so e.g. "≈35 min"
+ *  renders as "~35 min" instead of a .notdef box. PDF-only. */
+const PDF_TRANSLITERATIONS: Record<string, string> = {
+  "≈": "~",
+  "≤": "<=",
+  "≥": ">=",
+  "≠": "!=",
+  "→": "->",
+  "←": "<-",
+  "↔": "<->",
+};
+export function transliterateForPdf(text: string): string {
+  return text.replace(/[≈≤≥≠→←↔]/g, (ch) => PDF_TRANSLITERATIONS[ch] ?? ch);
+}
+
 // ---------------------------------------------------------------------------
 // Mixed-script text (Bengali via Noto, Latin/ASCII via Helvetica fallback)
 // ---------------------------------------------------------------------------
@@ -74,6 +105,28 @@ export function mixedText(
   });
 }
 
+/** Draw mixed Bengali/Latin text inside a fixed box (x, y, width) — used for table
+ *  cells. The first run is positioned absolutely; continued runs inherit the box and
+ *  wrap within `width`. After the call, doc.y sits just below the cell's last line,
+ *  so the caller can read the consumed height. */
+export function mixedTextInBox(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+  opts: PDFKit.Mixins.TextOptions = {},
+): void {
+  const runs = splitScriptRuns(text.length > 0 ? text : " ");
+  runs.forEach((run, idx) => {
+    const isFirst = idx === 0;
+    const isLast = idx === runs.length - 1;
+    const cellOpts = { ...opts, width, continued: !isLast };
+    if (isFirst) doc.font(run.font).text(run.text, x, y, cellOpts);
+    else doc.font(run.font).text(run.text, cellOpts);
+  });
+}
+
 interface RenderOptions {
   title?: string;
 }
@@ -103,7 +156,7 @@ export async function markdownToPdf(
     doc.registerFont(BENGALI_FONT, FONT_PATH);
     doc.font(BENGALI_FONT).fontSize(10);
 
-    const tokens = md.parse(markdownText, {});
+    const tokens = md.parse(transliterateForPdf(stripUnsupportedGlyphs(stripHtmlComments(markdownText))), {});
     renderTokens(doc, tokens);
 
     doc.end();
@@ -193,48 +246,132 @@ function renderTokens(doc: PDFKit.PDFDocument, tokens: Token[]): void {
     }
 
     if (token.type === "table_open") {
-      // Simple table: collect header + rows as plain text lines
-      const rows: string[][] = [];
+      const rows: TableRow[] = [];
       let inHead = false;
       i++;
       while (i < tokens.length && tokens[i].type !== "table_close") {
         const tt = tokens[i];
-        if (tt.type === "thead_open") { inHead = true; }
-        if (tt.type === "thead_close") { inHead = false; }
+        if (tt.type === "thead_open") inHead = true;
+        if (tt.type === "thead_close") inHead = false;
         if (tt.type === "tr_open") {
-          const row: string[] = [];
+          const cells: string[] = [];
+          const isHeader = inHead;
           i++;
           while (i < tokens.length && tokens[i].type !== "tr_close") {
             const cell = tokens[i];
             if (cell.type === "td_open" || cell.type === "th_open") {
               i++;
               if (i < tokens.length && tokens[i].type === "inline") {
-                row.push(collectInlineText(tokens[i].children ?? []));
+                cells.push(collectInlineText(tokens[i].children ?? []));
                 i++;
+              } else {
+                cells.push("");
               }
               i++; // skip td_close / th_close
               continue;
             }
             i++;
           }
-          rows.push(row);
-          doc.fontSize(9);
-          mixedText(doc, row.join("  |  "), { lineGap: 1 });
-          if (inHead && rows.length === 1) {
-            doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
-          }
+          rows.push({ cells, isHeader });
           i++; // skip tr_close
           continue;
         }
         i++;
       }
-      doc.moveDown(0.5);
+      renderTable(doc, rows);
       i++; // skip table_close
       continue;
     }
 
     i++;
   }
+}
+
+interface TableRow {
+  cells: string[];
+  isHeader: boolean;
+}
+
+/** Render a Markdown table as a real bordered grid: weighted column widths,
+ *  per-row height measured from the actual cell draw, header rows shaded. This
+ *  replaces the old `cells.join(" | ")` flow whose wrapping caused the columns to
+ *  collide (the Chapter-Overview overlap). */
+function renderTable(doc: PDFKit.PDFDocument, rows: TableRow[]): void {
+  if (rows.length === 0) return;
+  const nCols = Math.max(...rows.map((r) => r.cells.length));
+  if (nCols === 0) return;
+
+  const left = doc.page.margins.left;
+  const tableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const fontSize = 9;
+  const padX = 4;
+  const padY = 3;
+
+  // Weighted columns: width ∝ the column's longest cell (clamped so a "#" column
+  // stays slim and one verbose column can't starve the rest), normalised to fit.
+  const weights: number[] = [];
+  for (let c = 0; c < nCols; c++) {
+    let maxLen = 1;
+    for (const r of rows) maxLen = Math.max(maxLen, (r.cells[c] ?? "").length);
+    weights.push(Math.min(40, Math.max(4, maxLen)));
+  }
+  const weightSum = weights.reduce((a, b) => a + b, 0);
+  const colWidths = weights.map((w) => (w / weightSum) * tableWidth);
+  const colX: number[] = [];
+  let acc = left;
+  for (let c = 0; c < nCols; c++) {
+    colX.push(acc);
+    acc += colWidths[c];
+  }
+
+  doc.fontSize(fontSize);
+
+  for (const row of rows) {
+    const cells: string[] = [];
+    for (let c = 0; c < nCols; c++) cells.push(row.cells[c] ?? "");
+
+    // Estimate the row height (Noto is the taller face) for the page-break check.
+    let estHeight = 0;
+    doc.font(BENGALI_FONT);
+    for (let c = 0; c < nCols; c++) {
+      const h = doc.heightOfString(cells[c].length > 0 ? cells[c] : " ", {
+        width: colWidths[c] - 2 * padX,
+        lineGap: 1,
+      });
+      estHeight = Math.max(estHeight, h);
+    }
+    if (doc.y + estHeight + 2 * padY > doc.page.height - doc.page.margins.bottom) {
+      doc.addPage();
+    }
+
+    const rowTop = doc.y;
+    let rowBottom = rowTop;
+    for (let c = 0; c < nCols; c++) {
+      mixedTextInBox(doc, cells[c], colX[c] + padX, rowTop + padY, colWidths[c] - 2 * padX, { lineGap: 1 });
+      rowBottom = Math.max(rowBottom, doc.y);
+    }
+    rowBottom += padY;
+
+    // Header shading drawn behind the (already-placed) text would cover it, so
+    // shade as a thin tinted underline strip and use a heavier rule under headers.
+    for (let c = 0; c < nCols; c++) {
+      doc.rect(colX[c], rowTop, colWidths[c], rowBottom - rowTop).lineWidth(0.5).strokeColor("#999999").stroke();
+    }
+    if (row.isHeader) {
+      doc
+        .moveTo(left, rowBottom)
+        .lineTo(left + tableWidth, rowBottom)
+        .lineWidth(1.2)
+        .strokeColor("#333333")
+        .stroke();
+    }
+    doc.strokeColor("#000000").lineWidth(1);
+    doc.y = rowBottom;
+  }
+  // Cells were positioned at absolute x; restore the left margin so the next block
+  // (heading/paragraph) flows full-width instead of inside the last column.
+  doc.x = left;
+  doc.moveDown(0.5);
 }
 
 function collectInlineText(children: Token[]): string {
