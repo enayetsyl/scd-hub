@@ -23,6 +23,11 @@ import {
   HR_CATEGORY_LABELS_BN,
   EMPLOYMENT_TYPE_LABELS_BN,
   EMPLOYMENT_STATUS_LABELS_BN,
+  HW_SUBJECT_LABELS_BN,
+  LIFECYCLE_STATE_LABELS_BN,
+  HW_RESULT_LABELS_BN,
+  RECON_STATE_LABELS_BN,
+  TRIM_RANK_LABELS_BN,
   type SetType,
   type TrackerKind,
   type DocType,
@@ -30,6 +35,11 @@ import {
   type HrCategory,
   type EmploymentType,
   type EmploymentStatus,
+  type HwSubject,
+  type LifecycleState,
+  type HwResult,
+  type ReconState,
+  type TrimRank,
 } from "@scd/shared";
 
 const BN_DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
@@ -88,6 +98,22 @@ export const relationLabel = (v?: string | null): string =>
 /** HR staff vocab → Bangla (falls back to the raw code, then —). */
 export const hrCategoryLabel = (v?: string | null): string =>
   (v && HR_CATEGORY_LABELS_BN[v as HrCategory]) || v || "—";
+
+// Homework tracker (HW-T1..T4)
+export const hwSubjectLabel = (v?: string | null): string =>
+  (v && HW_SUBJECT_LABELS_BN[v as HwSubject]) || v || "—";
+
+export const lifecycleStateLabel = (v?: string | null): string =>
+  (v && LIFECYCLE_STATE_LABELS_BN[v as LifecycleState]) || v || "—";
+
+export const hwResultLabel = (v?: string | null): string =>
+  (v && HW_RESULT_LABELS_BN[v as HwResult]) || v || "—";
+
+export const reconStateLabel = (v?: string | null): string =>
+  (v && RECON_STATE_LABELS_BN[v as ReconState]) || v || "—";
+
+export const trimRankLabel = (v?: string | null): string =>
+  (v && TRIM_RANK_LABELS_BN[v as TrimRank]) || v || "—";
 
 export const employmentTypeLabel = (v?: string | null): string =>
   (v && EMPLOYMENT_TYPE_LABELS_BN[v as EmploymentType]) || v || "—";
@@ -213,6 +239,56 @@ export const STR = {
   guardianPhone: "অভিভাবকের ফোন",
   studentName: "শিক্ষার্থীর নাম",
   waLinkHint: "লিংকটি কপি করে নিজে পাঠান (স্বয়ংক্রিয় প্রেরণ নেই)।",
+
+  // Homework Tracker (HW-T1..T4)
+  tabHomework: "বাড়ির কাজ",
+  hwDate: "তারিখ",
+  hwToday: "আজকের বাড়ির কাজ",
+  hwDayTotal: "দিনের মোট সময়",
+  hwCeiling: "সর্বোচ্চ সীমা",
+  hwWithinCeiling: "সীমার মধ্যে",
+  hwOverCeiling: "সীমা অতিক্রম",
+  hwOverBy: "অতিরিক্ত",
+  hwMinutes: "মিনিট",
+  hwBandWarning: "৪০ মিনিটের বেশি (সতর্কতা)",
+  hwDeclare: "ঘোষণা করুন",
+  hwReconcile: "সমন্বয় ও ইস্যু",
+  hwChecking: "যাচাই তালিকা",
+  hwDeclareTitle: "বাড়ির কাজ ঘোষণা",
+  hwReconcileTitle: "দৈনিক সমন্বয়",
+  hwCheckingTitle: "যাচাই তালিকা",
+  hwSubject: "বিষয়",
+  hwTopTags: "টপিক ট্যাগ (কমা দিয়ে)",
+  hwTimeDecl: "নির্ধারিত সময় (মিনিট)",
+  hwQCount: "প্রশ্ন সংখ্যা",
+  hwPoolRef: "প্রশ্নভাণ্ডার সূত্র (ঐচ্ছিক)",
+  hwRevItem: "পুনরালোচনা আইটেম",
+  hwDeclared: "ঘোষিত",
+  hwIssued: "ইস্যু হয়েছে",
+  hwChaseList: "তাগাদা তালিকা",
+  hwAttention: "নজরে",
+  hwCommsPrompt: "অভিভাবককে জানান",
+  hwOpenResubmissions: "চলমান পুনঃজমা",
+  hwOnTimePct: "সময়মতো জমা %",
+  hwChaseVolume: "মোট তাগাদা",
+  hwReturnLatency: "ফেরত গড় (দিন)",
+  hwTopicTouches: "টপিক স্পর্শ",
+  hwTrimPanel: "হ্রাস প্যানেল",
+  hwTrimTo: "প্রশ্ন কমিয়ে আনুন",
+  hwTrim: "হ্রাস",
+  hwConfirmIssue: "নিশ্চিত করে ইস্যু করুন",
+  hwRosterPresent: "উপস্থিত",
+  hwRosterAbsent: "অনুপস্থিত",
+  hwIssuedItems: "ইস্যুকৃত আইটেম",
+  hwIssuedRecords: "শিক্ষার্থী রেকর্ড",
+  hwCheck: "যাচাই",
+  hwResult: "ফলাফল",
+  hwResubmit: "পুনঃজমা চান",
+  hwTopupQids: "টপ-আপ প্রশ্ন আইডি (কমা দিয়ে)",
+  hwTopupTime: "টপ-আপ সময় (মিনিট)",
+  hwNoSubmitted: "যাচাইয়ের অপেক্ষায় কিছু নেই",
+  hwResubSpawned: "পুনঃজমা তৈরি হয়েছে",
+  hwClassTeacherOnly: "শুধু শ্রেণিশিক্ষক সমন্বয় করতে পারেন",
 
   // Admin
   admin: "প্রশাসন",

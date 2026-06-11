@@ -18,6 +18,7 @@ import type {
   QuestionsStackParamList,
   SetsStackParamList,
   TrackersStackParamList,
+  HomeworkStackParamList,
   ReviewStackParamList,
   AdminStackParamList,
   TabParamList,
@@ -42,6 +43,10 @@ import OpenTrackerScreen from "../screens/trackers/OpenTrackerScreen";
 import TrackerEntryScreen from "../screens/trackers/TrackerEntryScreen";
 import TrackerSummaryScreen from "../screens/trackers/TrackerSummaryScreen";
 import WaLinkScreen from "../screens/trackers/WaLinkScreen";
+import HomeworkHomeScreen from "../screens/homework/HomeworkHomeScreen";
+import DeclareHomeworkScreen from "../screens/homework/DeclareHomeworkScreen";
+import HomeworkReconcileScreen from "../screens/homework/HomeworkReconcileScreen";
+import CheckingQueueScreen from "../screens/homework/CheckingQueueScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
@@ -125,6 +130,19 @@ function TrackersNavigator(): React.ReactElement {
   );
 }
 
+const HomeworkStack = createNativeStackNavigator<HomeworkStackParamList>();
+function HomeworkNavigator(): React.ReactElement {
+  return (
+    <HomeworkStack.Navigator screenOptions={stackOptions}>
+      <HomeworkStack.Screen name="HomeworkHome" component={HomeworkHomeScreen} options={{ title: STR.tabHomework }} />
+      <HomeworkStack.Screen name="DeclareHomework" component={DeclareHomeworkScreen} options={{ title: STR.hwDeclareTitle }} />
+      <HomeworkStack.Screen name="HomeworkReconcile" component={HomeworkReconcileScreen} options={{ title: STR.hwReconcileTitle }} />
+      <HomeworkStack.Screen name="CheckingQueue" component={CheckingQueueScreen} options={{ title: STR.hwCheckingTitle }} />
+      <HomeworkStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
+    </HomeworkStack.Navigator>
+  );
+}
+
 const ReviewStack = createNativeStackNavigator<ReviewStackParamList>();
 function ReviewNavigator(): React.ReactElement {
   return (
@@ -163,6 +181,7 @@ export function AppTabs(): React.ReactElement {
   const canQuestions = !!role && roleHasPermission(role, "question:read");
   const canSets = !!role && roleHasPermission(role, "set:read");
   const canTrackers = !!role && roleHasPermission(role, "tracker:read");
+  const canHomework = !!role && roleHasPermission(role, "tracker:read");
   const canReview =
     !!role && (roleHasPermission(role, "content:review") || roleHasPermission(role, "content:assign_review"));
   const canAdmin = !!role && (roleHasPermission(role, "content:import") || roleHasPermission(role, "user:manage"));
@@ -190,6 +209,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canTrackers ? (
         <Tab.Screen name="TrackersTab" component={TrackersNavigator} options={{ title: STR.tabTrackers, tabBarIcon: tabIcon("✅") }} />
+      ) : null}
+      {canHomework ? (
+        <Tab.Screen name="HomeworkTab" component={HomeworkNavigator} options={{ title: STR.tabHomework, tabBarIcon: tabIcon("📒") }} />
       ) : null}
       {canReview ? (
         <Tab.Screen name="ReviewTab" component={ReviewNavigator} options={{ title: STR.tabReview, tabBarIcon: tabIcon("📝") }} />

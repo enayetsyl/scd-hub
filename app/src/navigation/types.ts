@@ -34,6 +34,14 @@ export type ReviewStackParamList = {
   ReviewThread: { artifactId: string };
 };
 
+export type HomeworkStackParamList = {
+  HomeworkHome: undefined;
+  DeclareHomework: undefined;
+  HomeworkReconcile: undefined;
+  CheckingQueue: undefined;
+  SectionPicker: undefined;
+};
+
 export type AdminStackParamList = {
   AdminHome: undefined;
   Import: undefined;
@@ -49,6 +57,7 @@ export type TabParamList = {
   QuestionsTab: NavigatorScreenParams<QuestionsStackParamList>;
   SetsTab: NavigatorScreenParams<SetsStackParamList>;
   TrackersTab: NavigatorScreenParams<TrackersStackParamList>;
+  HomeworkTab: NavigatorScreenParams<HomeworkStackParamList>;
   ReviewTab: NavigatorScreenParams<ReviewStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
 };

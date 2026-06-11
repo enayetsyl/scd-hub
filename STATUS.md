@@ -3,6 +3,16 @@
 _Updated: 2026-06-11_
 
 ## Now / next
+- **Built (Homework Tracker — app screens, frontend for HW-T1→T4):** new Expo **Homework tab** (📒, gated
+  `tracker:read`) — 4 screens over the existing server contract (no server/contract change): `HomeworkHome`
+  (daily DAY_TOTAL vs 240 + declarations w/ band warnings + summary roll-up: chase list w/ §7.2 badges, open
+  resubmissions, on-time %/chase volume/return latency, topic touches), `DeclareHomework` (subject-teacher
+  declaration form, classLevel derived from the class), `HomeworkReconcile` (class-teacher trim ক/খ/গ +
+  present/absent roster + confirm-issue, over-ceiling blocks), `CheckingQueue` (SUBMITTED → RESULT + optional
+  Pool top-up). New homework labels/STR + `HomeworkTab` nav. Gate: **app tsc clean + web bundle green** (480
+  modules). **Not verified against a live server.** Remaining homework follow-ups: a principal-only roll-ups
+  screen (watch-list/trim-pattern/usage queries exist server-side); the parked cross-feature items
+  (Quran/§6.3→Project 06; assign class teachers live; live golden-path verification).
 - **Built (Homework Tracker HW-T4 — roll-ups + thresholds + question-usage feed, D-#44):** the homework build
   (HW-T1→T4) is now feature-complete server-side. `HomeworkSummaryService` + `tracker:read` queries:
   `homeworkSummary` (chase list + §7.2 attention/comms thresholds, open resubmissions, submitted-on-time % /
