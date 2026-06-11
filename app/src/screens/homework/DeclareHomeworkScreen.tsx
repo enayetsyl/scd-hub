@@ -46,7 +46,7 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
     setError(null);
     setOk(null);
     if (!subject) return setError(STR.hwSubject);
-    if (classLevel == null) return setError("শ্রেণি স্তর পাওয়া যায়নি");
+    if (classLevel == null) return setError(STR.hwNoClassLevel);
     const tags = topTags.split(",").map((t) => t.trim()).filter(Boolean);
     const q = parseInt(qCount, 10);
     if (!Number.isFinite(q)) return setError(STR.hwQCount);

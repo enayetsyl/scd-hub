@@ -57,7 +57,7 @@ function AnswerCarrier({ p }: { p: QuestionPayload }): React.ReactElement | null
     case "true_false":
       return (
         <Body>
-          {STR.answer}: {p.tf_answer === true ? "সত্য (True)" : "মিথ্যা (False)"}
+          {STR.answer}: {p.tf_answer === true ? STR.true : STR.false}
         </Body>
       );
     case "fill_blank":
@@ -92,7 +92,7 @@ function AnswerCarrier({ p }: { p: QuestionPayload }): React.ReactElement | null
         </View>
       );
     case "descriptive":
-      return <Muted>[বর্ণনামূলক — রুব্রিক দেখুন]</Muted>;
+      return <Muted>{STR.descriptiveSeeRubric}</Muted>;
     default:
       return null;
   }

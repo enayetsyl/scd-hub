@@ -59,7 +59,7 @@ export default function UserListScreen(_props: Props): React.ReactElement {
           <Row label={STR.role} value={user.role} />
         </Card>
       ) : null}
-      <Muted>সম্পূর্ণ ব্যবহারকারী তালিকা এখনো সার্ভারে উন্মুক্ত নয়।</Muted>
+      <Muted>{STR.userListNotExposed}</Muted>
 
       <Divider />
       <H2>{STR.createUser}</H2>

@@ -4,14 +4,16 @@
  * credentials surface a Bangla error.
  */
 import React, { useState } from "react";
-import { View } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { Screen, H1, Muted, Field, Button, Notice } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
+import { useLanguage } from "../../state/LanguageContext";
 import { STR } from "../../lib/labels";
-import { space } from "../../theme/tokens";
+import { space, colors } from "../../theme/tokens";
 
 export default function LoginScreen(): React.ReactElement {
   const { login } = useAuth();
+  const { lang, toggle } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -28,7 +30,12 @@ export default function LoginScreen(): React.ReactElement {
 
   return (
     <Screen scroll>
-      <View style={{ marginTop: space(12), marginBottom: space(6) }}>
+      <View style={{ alignItems: "flex-end", marginTop: space(4) }}>
+        <Pressable onPress={toggle} hitSlop={8} accessibilityLabel={STR.language}>
+          <Text style={{ color: colors.brand700, fontWeight: "600" }}>{lang === "bn" ? "English" : "বাংলা"}</Text>
+        </Pressable>
+      </View>
+      <View style={{ marginTop: space(8), marginBottom: space(6) }}>
         <H1>{STR.appName}</H1>
         <Muted>{STR.appSub}</Muted>
       </View>

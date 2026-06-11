@@ -1,18 +1,34 @@
 /**
- * Bangla display labels (NFR-5). Operational vocabulary is looked up from the
- * shared *_LABELS_BN maps (single source of truth); UI chrome strings live in
- * STR. English codes stay on form fields / tracker columns per the glossary.
+ * Bilingual display labels (NFR-5). The app renders Bangla **or** English per the
+ * user's chosen language (see state/LanguageContext). Operational vocabulary is
+ * looked up from the shared *_LABELS_BN / *_LABELS_EN maps (single source of
+ * truth); UI chrome strings live in STR_BN / STR_EN. English codes stay on form
+ * fields / tracker columns per the glossary.
+ *
+ * Reactivity: the active language is a module-level variable read at render time
+ * by `STR` (a Proxy) and the label functions below. LanguageContext flips it via
+ * `setActiveLang` and remounts the navigation subtree, so every screen re-reads
+ * the current language. Do not cache `STR.foo` across a language change.
  */
 import {
   SUBJECT_LABELS_BN,
+  SUBJECT_LABELS_EN,
   DIFFICULTY_LABELS_BN,
+  DIFFICULTY_LABELS_EN,
   PAPER_ROLE_LABELS_BN,
+  PAPER_ROLE_LABELS_EN,
   REVIEW_STATUS_LABELS_BN,
+  REVIEW_STATUS_LABELS_EN,
   REVIEW_VERDICT_LABELS_BN,
+  REVIEW_VERDICT_LABELS_EN,
   CURATION_TAG_LABELS_BN,
+  CURATION_TAG_LABELS_EN,
   SET_TYPE_LABELS_BN,
+  SET_TYPE_LABELS_EN,
   TRACKER_KIND_LABELS_BN,
+  TRACKER_KIND_LABELS_EN,
   DOC_TYPE_LABELS_BN,
+  DOC_TYPE_LABELS_EN,
   type Subject,
   type Difficulty,
   type PaperRole,
@@ -20,14 +36,23 @@ import {
   type ReviewVerdict,
   type CurationTag,
   ROSTER_CLASS_LABELS_BN,
+  ROSTER_CLASS_LABELS_EN,
   HR_CATEGORY_LABELS_BN,
+  HR_CATEGORY_LABELS_EN,
   EMPLOYMENT_TYPE_LABELS_BN,
+  EMPLOYMENT_TYPE_LABELS_EN,
   EMPLOYMENT_STATUS_LABELS_BN,
+  EMPLOYMENT_STATUS_LABELS_EN,
   HW_SUBJECT_LABELS_BN,
+  HW_SUBJECT_LABELS_EN,
   LIFECYCLE_STATE_LABELS_BN,
+  LIFECYCLE_STATE_LABELS_EN,
   HW_RESULT_LABELS_BN,
+  HW_RESULT_LABELS_EN,
   RECON_STATE_LABELS_BN,
+  RECON_STATE_LABELS_EN,
   TRIM_RANK_LABELS_BN,
+  TRIM_RANK_LABELS_EN,
   type SetType,
   type TrackerKind,
   type DocType,
@@ -42,90 +67,139 @@ import {
   type TrimRank,
 } from "@scd/shared";
 
+// --- Active language (module-level; read at render time) ---------------------
+
+export type Lang = "bn" | "en";
+
+let _lang: Lang = "bn";
+
+/** Set the active UI language. Called by LanguageContext; takes effect on the
+ *  next render of any component that reads STR / a label fn. */
+export function setActiveLang(lang: Lang): void {
+  _lang = lang;
+}
+
+/** The current active language. */
+export function getActiveLang(): Lang {
+  return _lang;
+}
+
+/** Pick the BN or EN variant of a value by the active language. */
+const pick = <T>(bn: T, en: T): T => (_lang === "en" ? en : bn);
+
 const BN_DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
 
-/** Render a number with Bangla numerals (NFR-5). */
+/** Render a number with Bangla numerals in Bangla mode, Latin digits in English
+ *  (NFR-5). Kept named `bnNum` for call-site stability. */
 export function bnNum(n: number | string): string {
+  if (_lang === "en") return String(n);
   return String(n).replace(/[0-9]/g, (d) => BN_DIGITS[Number(d)]);
 }
 
+const DASH = "—";
+
 export const subjectLabel = (code?: string | null): string =>
-  (code && SUBJECT_LABELS_BN[code as Subject]) || code || "—";
+  (code && pick(SUBJECT_LABELS_BN, SUBJECT_LABELS_EN)[code as Subject]) || code || DASH;
 
 export const difficultyLabel = (v?: string | null): string =>
-  (v && DIFFICULTY_LABELS_BN[v as Difficulty]) || v || "—";
+  (v && pick(DIFFICULTY_LABELS_BN, DIFFICULTY_LABELS_EN)[v as Difficulty]) || v || DASH;
 
 export const paperRoleLabel = (v?: string | null): string =>
-  (v && PAPER_ROLE_LABELS_BN[v as PaperRole]) || v || "—";
+  (v && pick(PAPER_ROLE_LABELS_BN, PAPER_ROLE_LABELS_EN)[v as PaperRole]) || v || DASH;
 
 export const reviewStatusLabel = (v?: string | null): string =>
-  (v && REVIEW_STATUS_LABELS_BN[v as ReviewStatus]) || v || "—";
+  (v && pick(REVIEW_STATUS_LABELS_BN, REVIEW_STATUS_LABELS_EN)[v as ReviewStatus]) || v || DASH;
 
 export const curationTagLabel = (v?: string | null): string =>
-  (v && CURATION_TAG_LABELS_BN[v as CurationTag]) || v || "—";
+  (v && pick(CURATION_TAG_LABELS_BN, CURATION_TAG_LABELS_EN)[v as CurationTag]) || v || DASH;
 
 export const reviewVerdictLabel = (v?: string | null): string =>
-  (v && REVIEW_VERDICT_LABELS_BN[v as ReviewVerdict]) || v || "—";
+  (v && pick(REVIEW_VERDICT_LABELS_BN, REVIEW_VERDICT_LABELS_EN)[v as ReviewVerdict]) || v || DASH;
 
-/** Review-round lifecycle status → Bangla (app-native ReviewAssignment.status). */
-export const reviewRoundStatusLabel = (v?: string | null): string =>
-  v === "assigned" ? "অপেক্ষমাণ"
-  : v === "submitted" ? "জমা হয়েছে"
-  : v === "superseded" ? "প্রতিস্থাপিত"
-  : v === "cancelled" ? "বাতিল"
-  : v || "—";
+/** Review-round lifecycle status → label (app-native ReviewAssignment.status). */
+export const reviewRoundStatusLabel = (v?: string | null): string => {
+  const en = _lang === "en";
+  return v === "assigned" ? (en ? "Pending" : "অপেক্ষমাণ")
+    : v === "submitted" ? (en ? "Submitted" : "জমা হয়েছে")
+    : v === "superseded" ? (en ? "Superseded" : "প্রতিস্থাপিত")
+    : v === "cancelled" ? (en ? "Cancelled" : "বাতিল")
+    : v || DASH;
+};
 
 export const setTypeLabel = (v?: string | null): string =>
-  (v && SET_TYPE_LABELS_BN[v as SetType]) || v || "—";
+  (v && pick(SET_TYPE_LABELS_BN, SET_TYPE_LABELS_EN)[v as SetType]) || v || DASH;
 
 export const trackerKindLabel = (v?: string | null): string =>
-  (v && TRACKER_KIND_LABELS_BN[v as TrackerKind]) || v || "—";
+  (v && pick(TRACKER_KIND_LABELS_BN, TRACKER_KIND_LABELS_EN)[v as TrackerKind]) || v || DASH;
 
 export const docTypeLabel = (v?: string | null): string =>
-  (v && DOC_TYPE_LABELS_BN[v as DocType]) || v || "—";
+  (v && pick(DOC_TYPE_LABELS_BN, DOC_TYPE_LABELS_EN)[v as DocType]) || v || DASH;
 
-/** Roster-aware: pre-primary (−1 Nursery / 0 KG) use the roster label; 1..5 stay "শ্রেণি N". */
-export const classLevelLabel = (level: number): string =>
-  level <= 0 ? ROSTER_CLASS_LABELS_BN[level as RosterClassLevel] ?? `শ্রেণি ${bnNum(level)}` : `শ্রেণি ${bnNum(level)}`;
+/** Roster-aware: pre-primary (−1 Nursery / 0 KG) use the roster label; 1..5 stay "শ্রেণি N" / "Class N". */
+export const classLevelLabel = (level: number): string => {
+  const roster = pick(ROSTER_CLASS_LABELS_BN, ROSTER_CLASS_LABELS_EN);
+  if (level <= 0) return roster[level as RosterClassLevel] ?? (_lang === "en" ? `Class ${bnNum(level)}` : `শ্রেণি ${bnNum(level)}`);
+  return _lang === "en" ? `Class ${bnNum(level)}` : `শ্রেণি ${bnNum(level)}`;
+};
 
-export const genderLabel = (v?: string | null): string =>
-  v === "male" ? "ছেলে" : v === "female" ? "মেয়ে" : v === "other" ? "অন্যান্য" : "—";
+export const genderLabel = (v?: string | null): string => {
+  const en = _lang === "en";
+  return v === "male" ? (en ? "Male" : "ছেলে")
+    : v === "female" ? (en ? "Female" : "মেয়ে")
+    : v === "other" ? (en ? "Other" : "অন্যান্য")
+    : DASH;
+};
 
-/** Guardian relation → Bangla. */
-export const relationLabel = (v?: string | null): string =>
-  v === "father" ? "বাবা" : v === "mother" ? "মা" : v === "guardian" ? "অভিভাবক" : v || "—";
+/** Guardian relation → label. */
+export const relationLabel = (v?: string | null): string => {
+  const en = _lang === "en";
+  return v === "father" ? (en ? "Father" : "বাবা")
+    : v === "mother" ? (en ? "Mother" : "মা")
+    : v === "guardian" ? (en ? "Guardian" : "অভিভাবক")
+    : v || DASH;
+};
 
-/** HR staff vocab → Bangla (falls back to the raw code, then —). */
+/** HR staff vocab → label (falls back to the raw code, then —). */
 export const hrCategoryLabel = (v?: string | null): string =>
-  (v && HR_CATEGORY_LABELS_BN[v as HrCategory]) || v || "—";
+  (v && pick(HR_CATEGORY_LABELS_BN, HR_CATEGORY_LABELS_EN)[v as HrCategory]) || v || DASH;
 
 // Homework tracker (HW-T1..T4)
 export const hwSubjectLabel = (v?: string | null): string =>
-  (v && HW_SUBJECT_LABELS_BN[v as HwSubject]) || v || "—";
+  (v && pick(HW_SUBJECT_LABELS_BN, HW_SUBJECT_LABELS_EN)[v as HwSubject]) || v || DASH;
 
 export const lifecycleStateLabel = (v?: string | null): string =>
-  (v && LIFECYCLE_STATE_LABELS_BN[v as LifecycleState]) || v || "—";
+  (v && pick(LIFECYCLE_STATE_LABELS_BN, LIFECYCLE_STATE_LABELS_EN)[v as LifecycleState]) || v || DASH;
 
 export const hwResultLabel = (v?: string | null): string =>
-  (v && HW_RESULT_LABELS_BN[v as HwResult]) || v || "—";
+  (v && pick(HW_RESULT_LABELS_BN, HW_RESULT_LABELS_EN)[v as HwResult]) || v || DASH;
 
 export const reconStateLabel = (v?: string | null): string =>
-  (v && RECON_STATE_LABELS_BN[v as ReconState]) || v || "—";
+  (v && pick(RECON_STATE_LABELS_BN, RECON_STATE_LABELS_EN)[v as ReconState]) || v || DASH;
 
 export const trimRankLabel = (v?: string | null): string =>
-  (v && TRIM_RANK_LABELS_BN[v as TrimRank]) || v || "—";
+  (v && pick(TRIM_RANK_LABELS_BN, TRIM_RANK_LABELS_EN)[v as TrimRank]) || v || DASH;
 
 export const employmentTypeLabel = (v?: string | null): string =>
-  (v && EMPLOYMENT_TYPE_LABELS_BN[v as EmploymentType]) || v || "—";
+  (v && pick(EMPLOYMENT_TYPE_LABELS_BN, EMPLOYMENT_TYPE_LABELS_EN)[v as EmploymentType]) || v || DASH;
 
 export const employmentStatusLabel = (v?: string | null): string =>
-  (v && EMPLOYMENT_STATUS_LABELS_BN[v as EmploymentStatus]) || v || "—";
+  (v && pick(EMPLOYMENT_STATUS_LABELS_BN, EMPLOYMENT_STATUS_LABELS_EN)[v as EmploymentStatus]) || v || DASH;
 
-/** UI chrome strings — Bangla labels, buttons, headers, statuses, errors. */
-export const STR = {
+/** "নম্বর X–Y এর মধ্যে দিন।" / "Enter a mark between X and Y." (TrackerEntry). */
+export const markRangeMsg = (min: number, max: number): string =>
+  _lang === "en"
+    ? `Enter a mark between ${bnNum(min)} and ${bnNum(max)}.`
+    : `নম্বর ${bnNum(min)}–${bnNum(max)} এর মধ্যে দিন।`;
+
+// --- UI chrome strings -------------------------------------------------------
+
+/** Bangla chrome strings — labels, buttons, headers, statuses, errors. The EN
+ *  table below mirrors these keys exactly. */
+const STR_BN = {
   // App / nav
   appName: "SCD Hub",
   appSub: "School for Community Development",
+  language: "ভাষা",
   tabContent: "কন্টেন্ট",
   tabQuestions: "প্রশ্ন",
   tabSets: "সেট",
@@ -198,6 +272,9 @@ export const STR = {
   questionsWord: "প্রশ্ন",
   studentsWord: "শিক্ষার্থী",
   items: "আইটেম",
+  true: "সত্য (True)",
+  false: "মিথ্যা (False)",
+  descriptiveSeeRubric: "[বর্ণনামূলক — রুব্রিক দেখুন]",
 
   // Sets
   sets: "সেট",
@@ -289,6 +366,7 @@ export const STR = {
   hwNoSubmitted: "যাচাইয়ের অপেক্ষায় কিছু নেই",
   hwResubSpawned: "পুনঃজমা তৈরি হয়েছে",
   hwClassTeacherOnly: "শুধু শ্রেণিশিক্ষক সমন্বয় করতে পারেন",
+  hwNoClassLevel: "শ্রেণি স্তর পাওয়া যায়নি",
   hwRollups: "সারসংক্ষেপ ও পর্যবেক্ষণ",
   hwRollupsTitle: "রোল-আপ",
   hwWatchList: "পুনঃজমা ওয়াচ-লিস্ট",
@@ -351,6 +429,7 @@ export const STR = {
   extend: "মেয়াদ বৃদ্ধি",
   durationDays: "দিন সংখ্যা",
   startDate: "শুরুর তারিখ",
+  userListNotExposed: "সম্পূর্ণ ব্যবহারকারী তালিকা এখনো সার্ভারে উন্মুক্ত নয়।",
 
   // Roster (read-only student list)
   roster: "শিক্ষার্থী তালিকা",
@@ -440,3 +519,339 @@ export const STR = {
   errForbiddenWrite: "এই সেকশনে লেখার অনুমতি নেই।",
   errForbiddenRead: "এই কন্টেন্ট দেখার অনুমতি নেই।",
 } as const;
+
+type StrTable = Record<keyof typeof STR_BN, string>;
+
+/** English chrome strings — same keys as STR_BN. */
+const STR_EN: StrTable = {
+  // App / nav
+  appName: "SCD Hub",
+  appSub: "School for Community Development",
+  language: "Language",
+  tabContent: "Content",
+  tabQuestions: "Questions",
+  tabSets: "Sets",
+  tabTrackers: "Trackers",
+  tabAdmin: "Admin",
+
+  // Auth
+  login: "Log in",
+  logout: "Log out",
+  email: "Email",
+  password: "Password",
+  loggingIn: "Logging in…",
+  loginInvalid: "Email or password is incorrect.",
+  welcome: "Welcome",
+
+  // Generic actions
+  save: "Save",
+  saving: "Saving…",
+  cancel: "Cancel",
+  close: "Close",
+  open: "Open",
+  apply: "Apply",
+  clear: "Clear",
+  retry: "Retry",
+  copy: "Copy",
+  copied: "Copied",
+  add: "Add",
+  remove: "Remove",
+  create: "Create",
+  select: "Select",
+  done: "Done",
+  loading: "Loading…",
+
+  // Filters / fields
+  filters: "Filters",
+  subject: "Subject",
+  classLevel: "Class",
+  all: "All",
+  curationTag: "Curation tag",
+  reviewStatus: "Review status",
+  difficulty: "Difficulty",
+  questionType: "Question type",
+  paperRole: "Paper role",
+  bloom: "Bloom level",
+  marks: "Marks",
+  marksMin: "Min marks",
+  marksMax: "Max marks",
+
+  // Content
+  contentTreeTitle: "Content",
+  planTitle: "Session plan",
+  exportPdf: "Export PDF",
+  preparingPdf: "Preparing PDF…",
+  noMarkdown: "This artifact has no displayable content.",
+  pdfWebOnly: "PDF export is currently available on web only.",
+  pdfError: "Could not generate the PDF.",
+  chapter: "Chapter",
+  lesson: "Lesson",
+
+  // Questions / basket
+  questionBank: "Question bank",
+  preview: "Preview",
+  addToBasket: "Add to basket",
+  inBasket: "In basket",
+  basket: "Basket",
+  basketEmpty: "The basket is empty.",
+  options: "Options",
+  answer: "Answer",
+  totalMarks: "Total marks",
+  questionsWord: "Questions",
+  studentsWord: "Students",
+  items: "Items",
+  true: "True",
+  false: "False",
+  descriptiveSeeRubric: "[Descriptive — see rubric]",
+
+  // Sets
+  sets: "Sets",
+  setList: "Set list",
+  setDetail: "Set detail",
+  createSet: "Create set",
+  assemble: "Assemble",
+  assembling: "Assembling…",
+  setType: "Set type",
+  status: "Status",
+  statusDraft: "Draft",
+  statusAssembled: "Assembled",
+  durationMinutes: "Duration (min)",
+  dueDate: "Due date",
+  section: "Section",
+  class: "Class",
+
+  // Trackers
+  trackers: "Trackers",
+  trackerList: "Tracker list",
+  openTracker: "Open tracker",
+  closeTracker: "Close tracker",
+  trackerEntry: "Entry",
+  trackerSummary: "Summary",
+  kind: "Kind",
+  statusOpen: "Open",
+  statusClosed: "Closed",
+  score: "Score",
+  submitted: "Submitted",
+  notSubmitted: "Not submitted",
+  complete: "Complete",
+  incomplete: "Incomplete",
+  sendReminder: "Send reminder",
+  pickSet: "Select an assembled set",
+  totalEntries: "Total entries",
+  submittedCount: "Submitted count",
+  completeCount: "Complete count",
+  averageScore: "Average score",
+  guardianPhone: "Guardian phone",
+  studentName: "Student name",
+  waLinkHint: "Copy the link and send it yourself (no automatic send).",
+
+  // Homework Tracker (HW-T1..T4)
+  tabHomework: "Homework",
+  hwDate: "Date",
+  hwToday: "Today's homework",
+  hwDayTotal: "Day total",
+  hwCeiling: "Ceiling",
+  hwWithinCeiling: "Within limit",
+  hwOverCeiling: "Over limit",
+  hwOverBy: "Over by",
+  hwMinutes: "min",
+  hwBandWarning: "More than 40 minutes (warning)",
+  hwDeclare: "Declare",
+  hwReconcile: "Reconcile & issue",
+  hwChecking: "Checking queue",
+  hwDeclareTitle: "Declare homework",
+  hwReconcileTitle: "Daily reconciliation",
+  hwCheckingTitle: "Checking queue",
+  hwSubject: "Subject",
+  hwTopTags: "Topic tags (comma-separated)",
+  hwTimeDecl: "Declared time (min)",
+  hwQCount: "Question count",
+  hwPoolRef: "Question-pool reference (optional)",
+  hwRevItem: "Revision item",
+  hwDeclared: "Declared",
+  hwIssued: "Issued",
+  hwChaseList: "Chase list",
+  hwAttention: "Attention",
+  hwCommsPrompt: "Notify guardian",
+  hwOpenResubmissions: "Open resubmissions",
+  hwOnTimePct: "On-time submission %",
+  hwChaseVolume: "Total chases",
+  hwReturnLatency: "Return latency (days)",
+  hwTopicTouches: "Topic touches",
+  hwTrimPanel: "Trim panel",
+  hwTrimTo: "Reduce questions to",
+  hwTrim: "Trim",
+  hwConfirmIssue: "Confirm & issue",
+  hwRosterPresent: "Present",
+  hwRosterAbsent: "Absent",
+  hwIssuedItems: "Issued items",
+  hwIssuedRecords: "Student records",
+  hwCheck: "Check",
+  hwResult: "Result",
+  hwResubmit: "Request resubmission",
+  hwTopupQids: "Top-up question IDs (comma-separated)",
+  hwTopupTime: "Top-up time (min)",
+  hwNoSubmitted: "Nothing awaiting checking",
+  hwResubSpawned: "Resubmission created",
+  hwClassTeacherOnly: "Only the class teacher can reconcile",
+  hwNoClassLevel: "Class level not found",
+  hwRollups: "Summary & monitoring",
+  hwRollupsTitle: "Roll-ups",
+  hwWatchList: "Resubmission watch-list",
+  hwWatchHint: "3+ resubmissions in a rolling 2 weeks",
+  hwResubmissions: "Resubmissions",
+  hwTrimPattern: "Trim pattern (monthly)",
+  hwTrimHint: "Flagged when trimmed on 30%+ of days in a month",
+  hwTrimmedDays: "Trimmed days",
+  hwSchoolDays: "School days",
+  assignClassTeacher: "Assign class teacher",
+  ctCurrent: "Current class teacher",
+  ctTeacherId: "Teacher ID (TEACHER)",
+  ctAssign: "Assign",
+  ctClear: "Remove",
+  ctAssigned: "Class teacher assigned",
+  ctCleared: "Class teacher removed",
+  ctNone: "Not assigned",
+  ctHint: "The class teacher runs daily reconciliation and issuing (handoff §9).",
+  hwFlagged: "Flagged",
+  hwQuestionUsage: "Question usage (anonymous)",
+  hwUses: "Uses",
+  hwMonth: "Month (YYYY-MM)",
+  hwNoFlags: "No flagged patterns",
+
+  // Admin
+  admin: "Admin",
+  importContent: "Import content",
+  pickFile: "Pick file",
+  pickFiles: "Pick files (JSON + Markdown)",
+  selectedFiles: "Selected files",
+  removeFile: "Remove",
+  clearFiles: "Clear all",
+  importHint: "For a plan, provide both .json and .md; for a question bank, provide just the .json; or provide a prebuilt envelope (.json).",
+  envelopeAutoBuilt: "The app built the envelope automatically",
+  questionBankDetected: "Question bank detected — each question and stimulus is imported in a separate envelope.",
+  curationTagLabel: "Curation tag (for the question bank)",
+  curationKeepAsIs: "Keep as is",
+  curationNeedsReplacement: "Needs replacement",
+  curationFlexible: "Flexible",
+  unitTitleLabel: "Unit title (optional)",
+  bankImported: "Import complete",
+  bankItems: "items",
+  classMismatchWarn: "The basket questions' class does not match the selected section's class. Select a section of the correct class.",
+  viewEnvelope: "View built envelope",
+  hideEnvelope: "Hide envelope",
+  pasteEnvelopeOptional: "Or paste a prebuilt envelope JSON (optional)",
+  noFilesSelected: "No files selected.",
+  importing: "Importing…",
+  verdict: "Verdict",
+  warnings: "Warnings",
+  advisories: "Advisories",
+  failChecks: "Failed checks",
+  users: "Users",
+  createUser: "Create user",
+  role: "Role",
+  name: "Name",
+  scopeGrants: "Scope grants",
+  assignProxy: "Proxy grant",
+  revoke: "Revoke",
+  extend: "Extend",
+  durationDays: "Number of days",
+  startDate: "Start date",
+  userListNotExposed: "A full user list is not yet exposed by the server.",
+
+  // Roster (read-only student list)
+  roster: "Student list",
+  rosterCount: "Students",
+  studentId: "ID",
+  gender: "Gender",
+  dob: "Date of birth",
+  phone: "Phone",
+  address: "Address",
+  bloodGroup: "Blood group",
+  guardians: "Guardians",
+  noGuardians: "No guardians linked.",
+  changeSection: "Change section",
+
+  // Staff (read-only HR roster)
+  staff: "Staff list",
+  staffCount: "Staff",
+  staffId: "ID",
+  category: "Category",
+  designation: "Designation",
+  employmentType: "Employment type",
+  employmentStatus: "Employment status",
+  joiningDate: "Joining date",
+  qualification: "Qualification",
+  fatherName: "Father's name",
+  motherName: "Mother's name",
+  spouseName: "Spouse's name",
+  maritalStatus: "Marital status",
+  whatsapp: "WhatsApp",
+  biometricId: "Biometric ID",
+  bankAccount: "Bank account",
+  nid: "National ID",
+  allCategories: "All categories",
+
+  // Plan review / approval loop (PR-3)
+  tabReview: "Review",
+  reviewInbox: "Review inbox",
+  myReviews: "My reviews",
+  noInbox: "No reviews pending.",
+  noMyReviews: "You have not been assigned any plan to review.",
+  reviewRound: "Round",
+  reviewVerdict: "Verdict",
+  verdictApprove: "Approve",
+  verdictChanges: "Changes requested",
+  feedback: "Feedback",
+  feedbackForClaude: "Take this feedback into Claude Desktop to produce a new plan.",
+  feedbackRequired: "Write feedback when requesting changes.",
+  submitReview: "Submit review",
+  submittingReview: "Submitting…",
+  reviewSubmitted: "Review submitted.",
+  reviewThread: "Review history",
+  reviewerId: "Reviewer ID (TEACHER)",
+  assignForReview: "Assign for review",
+  assignNextRound: "Assign next round",
+  assigning: "Assigning…",
+  reviewerAssigned: "Reviewer assigned.",
+  approveSignOff: "Approve / sign off",
+  approving: "Approving…",
+  planApproved: "Plan approved (final).",
+  approveNeedsReviewed: "The plan must be 'reviewed' before final sign-off.",
+  copyFeedback: "Copy feedback",
+  reviewActions: "Review actions",
+  openForReview: "Open plan",
+  awaitingReviewer: "Awaiting reviewer",
+
+  // Section context
+  sectionContext: "Section context",
+  pickSection: "Select a section",
+  academicYearId: "Academic year ID",
+  academicYearHint: "Sets and trackers need a section. Enter the academic year ID.",
+  noSectionSelected: "No section selected.",
+
+  // Misc results / validation
+  invalidDate: "Date is not valid (YYYY-MM-DD).",
+  saved: "Saved.",
+  noStudents: "There are no students in this section.",
+  noPermission: "You don't have permission for this action.",
+  userCreated: "User created.",
+  grantCreated: "Grant created.",
+  actionDone: "Done.",
+  pickSetFirst: "First select an assembled set.",
+
+  // Empty / error states
+  empty: "Nothing found.",
+  errGeneric: "Something went wrong. Please try again.",
+  errNetwork: "Could not connect to the server.",
+  errForbiddenWrite: "You don't have write permission for this section.",
+  errForbiddenRead: "You don't have permission to view this content.",
+};
+
+/** UI chrome strings — resolves to the active language at read time (Proxy). Use
+ *  exactly like a plain object: `STR.login`. Don't destructure or cache it across
+ *  a language change. */
+export const STR: StrTable = new Proxy({} as StrTable, {
+  get: (_t, key: string | symbol): string =>
+    (_lang === "en" ? STR_EN : (STR_BN as unknown as StrTable))[key as keyof StrTable],
+}) as StrTable;
