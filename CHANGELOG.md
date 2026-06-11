@@ -4,6 +4,14 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Routine R-4 — substitution/cover + proxy-manage (D-#22/#46/#49). New RoutineSubstitution model;
+  RoutineCoverService (pure rankAvailability + teacherAvailability / assignCover / cancelCover /
+  coversForDate); a Section cover is backed by a time-bounded proxy ScopeGrant (assignProxy/revokeProxy),
+  a SubjectGroup cover is record-only. routineForDate now overlays covers (coverTeacherId per date).
+  Resolvers teacherAvailability/coversForDate + assignCover/cancelCover; coverTeacherId on the slot type.
+  App: CoverManageScreen (per-group, managers) — availability view + assign/cancel; cover operations +
+  STR keys (BN/EN). R4.5 guardian read deferred (pipeline). Gate: server tsc + jest 275/275 (6 new,
+  firewall green); app tsc clean + web bundle green. Covers R4.1–R4.4. [a2b25b6]
 - Routine R-3 — app views (Expo). New Routine tab (routine:read) + RoutineStack: RoutineHome (role-aware
   landing), GroupRoutine (weekly grid for a Section/SubjectGroup, shared SlotList), MyRoutine (caller's
   slots, today highlighted), RoutineEditor (admin create/delete slots; server conflict rejection inline +

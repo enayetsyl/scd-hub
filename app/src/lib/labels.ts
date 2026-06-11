@@ -570,6 +570,22 @@ const STR_BN = {
   rtManageHint: "শাখা বা গ্রুপ নির্বাচন করে স্লট যোগ/মুছুন।",
   rtExisting: "বিদ্যমান স্লট",
   rtToday: "আজ",
+
+  // Routine cover / proxy-manage (R-4)
+  coverManageTitle: "কভার ব্যবস্থাপনা",
+  rtCover: "কভার",
+  rtDate: "তারিখ (YYYY-MM-DD)",
+  rtFindCover: "কভার খুঁজুন",
+  rtAvailableTeachers: "উপলব্ধ শিক্ষক",
+  rtClassesToday: "আজকের ক্লাস",
+  rtFree: "মুক্ত",
+  rtBusy: "ব্যস্ত",
+  rtAssignCover: "কভার নিয়োগ",
+  rtCoverAssigned: "কভার নিয়োগ হয়েছে।",
+  rtCoverCancelled: "কভার বাতিল হয়েছে।",
+  rtActiveCovers: "আজকের কভার",
+  rtCovered: "কভার করা হয়েছে",
+  rtNoCovers: "কোনো কভার নেই।",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -931,6 +947,22 @@ const STR_EN: StrTable = {
   rtManageHint: "Pick a section or group, then add/remove slots.",
   rtExisting: "Existing slots",
   rtToday: "Today",
+
+  // Routine cover / proxy-manage (R-4)
+  coverManageTitle: "Cover management",
+  rtCover: "Cover",
+  rtDate: "Date (YYYY-MM-DD)",
+  rtFindCover: "Find cover",
+  rtAvailableTeachers: "Available teachers",
+  rtClassesToday: "classes today",
+  rtFree: "Free",
+  rtBusy: "Busy",
+  rtAssignCover: "Assign cover",
+  rtCoverAssigned: "Cover assigned.",
+  rtCoverCancelled: "Cover cancelled.",
+  rtActiveCovers: "Today's covers",
+  rtCovered: "Covered",
+  rtNoCovers: "No covers.",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

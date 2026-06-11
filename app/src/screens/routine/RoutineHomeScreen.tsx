@@ -50,17 +50,30 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
                 }
               />
               {canManage ? (
-                <Button
-                  title={STR.rtEdit}
-                  variant="secondary"
-                  onPress={() =>
-                    navigation.navigate("RoutineEditor", {
-                      groupType: "section",
-                      groupId: selection.sectionId!,
-                      title: selection.sectionNameBn ?? STR.rtSectionRoutine,
-                    })
-                  }
-                />
+                <>
+                  <Button
+                    title={STR.rtEdit}
+                    variant="secondary"
+                    onPress={() =>
+                      navigation.navigate("RoutineEditor", {
+                        groupType: "section",
+                        groupId: selection.sectionId!,
+                        title: selection.sectionNameBn ?? STR.rtSectionRoutine,
+                      })
+                    }
+                  />
+                  <Button
+                    title={STR.rtCover}
+                    variant="secondary"
+                    onPress={() =>
+                      navigation.navigate("CoverManage", {
+                        groupType: "section",
+                        groupId: selection.sectionId!,
+                        title: selection.sectionNameBn ?? STR.rtSectionRoutine,
+                      })
+                    }
+                  />
+                </>
               ) : null}
             </View>
           ) : (
@@ -89,11 +102,18 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
                 onPress={() => navigation.navigate("GroupRoutine", { groupType: "subjectgroup", groupId: g.id, title: g.nameBn })}
               />
               {canManage ? (
-                <Button
-                  title={STR.rtEdit}
-                  variant="secondary"
-                  onPress={() => navigation.navigate("RoutineEditor", { groupType: "subjectgroup", groupId: g.id, title: g.nameBn })}
-                />
+                <>
+                  <Button
+                    title={STR.rtEdit}
+                    variant="secondary"
+                    onPress={() => navigation.navigate("RoutineEditor", { groupType: "subjectgroup", groupId: g.id, title: g.nameBn })}
+                  />
+                  <Button
+                    title={STR.rtCover}
+                    variant="secondary"
+                    onPress={() => navigation.navigate("CoverManage", { groupType: "subjectgroup", groupId: g.id, title: g.nameBn })}
+                  />
+                </>
               ) : null}
             </View>
           </Card>
