@@ -14,8 +14,8 @@ _Updated: 2026-06-11_
   (`HomeworkRollupsScreen` — watch-list / trim-pattern / de-identified question-usage; reachable from
   HomeworkHome). **Assign-class-teacher UI built** too (`AssignClassTeacherScreen`, Admin tab, roster:manage)
   — D-#42 now has a UI. Homework feature complete server **and** app. Remaining = operational/governance only:
-  Quran/§6.3→Project 06; **run** the class-teacher assignments on the live roster (UI now exists); live
-  golden-path verification.
+  Quran/§6.3→Project 06 (**note drafted** — `docs/project06-deviation-quran.md`, for the Principal to send);
+  **run** the class-teacher assignments on the live roster (UI now exists); live golden-path verification.
 - **Built (Homework Tracker HW-T4 — roll-ups + thresholds + question-usage feed, D-#44):** the homework build
   (HW-T1→T4) is now feature-complete server-side. `HomeworkSummaryService` + `tracker:read` queries:
   `homeworkSummary` (chase list + §7.2 attention/comms thresholds, open resubmissions, submitted-on-time % /

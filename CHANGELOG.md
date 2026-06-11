@@ -4,6 +4,12 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Homework Tracker — drafted the consult-via-human deviation note to Project 06 re the Quran exclusion
+  (`docs/project06-deviation-quran.md`): D-#36 excludes Quran from `HW_SUBJECTS`, which deviates from handoff
+  §6.2/§6.3 (Quran-homework rows were meant to live here + count in the 240-min weekday budget). The note
+  states the conflict, asks the substantive questions (ceiling math, double-log guard, roster), notes the
+  reversibility, and requests confirm-or-amend back through the Principal. Doc only; for the Principal to
+  forward.
 - Homework Tracker — assign-class-teacher screen (D-#42 UI): new `AssignClassTeacherScreen` in the Admin tab
   (`roster:manage`, Principal/Office) — pick a section, enter a TEACHER user id, assign (or clear) the
   section's class teacher (the daily coordinator who runs reconciliation/confirm, handoff §9). Shows the
