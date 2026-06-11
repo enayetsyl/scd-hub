@@ -4,6 +4,10 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- UI-1: app adopts UI guidelines v1 — deep-green/gold token palette light+dark (OS-followed), Noto Sans
+  Bengali app-wide (expo-font, splash-held), 48dp targets, container/on-container badges, web layout capped
+  at 720dp; `app/src/theme` is the single token source (`palette.json` shared with `tailwind.config.js`)
+  (D-#61).
 - docs: UI guidelines v1 — color tokens (light+dark), Bangla typography, layout/touch/accessibility/dark-mode rules (`docs/ui-guidelines.md`, D-#61).
 - Credential provisioning — Principal/Office generate phone logins for guardians + teachers and share via
   WhatsApp (D-#59/#60). Server: `User.email` now optional sparse-unique + new sparse-unique `User.phone`;

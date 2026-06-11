@@ -1,32 +1,54 @@
 /**
- * Runtime design tokens — mirror of the Tailwind/NativeWind palette in
- * tailwind.config.js. Components use NativeWind `className` where practical and
- * fall back to these tokens for StyleSheet props that need real values
- * (shadows, dynamic colors), so the UI renders correctly even on surfaces where
- * a utility class is not yet generated.
+ * Design tokens — the ONE code source for color / spacing / radius / type
+ * values (docs/ui-guidelines.md, D-#61). The guideline doc and this module are
+ * a TWO-PLACE SYNC: a value changes in §3–§6 of the doc AND here, or in
+ * neither. Screen code never hard-codes a hex or an off-scale size.
+ *
+ * The hex tables live in palette.json so tailwind.config.js (NativeWind,
+ * ADR-010/014) maps the same values when it is re-enabled — never a second
+ * palette.
  */
-export const colors = {
-  brand50: "#f0fdfa",
-  brand100: "#ccfbf1",
-  brand500: "#14b8a6",
-  brand600: "#0d9488",
-  brand700: "#0f766e",
-  brand800: "#115e59",
-  ink: "#0f172a",
-  muted: "#64748b",
-  line: "#e2e8f0",
-  bg: "#f8fafc",
-  card: "#ffffff",
-  white: "#ffffff",
-  danger: "#dc2626",
-  dangerBg: "#fef2f2",
-  warn: "#d97706",
-  warnBg: "#fffbeb",
-  ok: "#16a34a",
-  okBg: "#f0fdf4",
+import palette from "./palette.json";
+
+/** §3 — light theme. `success` reuses the primary family per the doc. */
+export const lightColors = { ...palette.light, success: palette.light.primary };
+
+export type ThemeColors = typeof lightColors;
+
+/** §4 — dark theme. Same token names; values swap. Components never branch on scheme. */
+export const darkColors: ThemeColors = { ...palette.dark, success: palette.dark.primary };
+
+/** §6 — corner radius: 8 small badges, 12 cards/buttons/inputs, pill chips. */
+export const radius = { sm: 8, md: 12, pill: 999 } as const;
+
+/**
+ * §6 — 4dp base spacing. The sanctioned scale is 4/8/12/16/24/32, i.e.
+ * space(1|2|3|4|6|8). Fractional steps are off-scale — do not use them.
+ */
+export const space = (n: number): number => n * 4;
+
+/**
+ * §5 — Noto Sans Bengali everywhere (loaded in App.tsx via expo-font).
+ * Weights are separate faces; styles set fontFamily, never fontWeight, so
+ * Android does not apply a synthetic bold on top of a real bold face.
+ */
+export const fonts = {
+  regular: "NotoSansBengali_400Regular",
+  medium: "NotoSansBengali_500Medium",
+  bold: "NotoSansBengali_700Bold",
 } as const;
 
-export const radius = { sm: 6, md: 10, lg: 16, pill: 999 } as const;
+/** §5 — type scale (sp; OS font scaling stays enabled). */
+export const typeScale = {
+  pageTitle: { fontSize: 22, lineHeight: 30, fontFamily: fonts.bold },
+  sectionTitle: { fontSize: 18, lineHeight: 24, fontFamily: fonts.bold },
+  body: { fontSize: 16, lineHeight: 24, fontFamily: fonts.regular },
+  bodyStrong: { fontSize: 16, lineHeight: 24, fontFamily: fonts.bold },
+  secondary: { fontSize: 14, lineHeight: 21, fontFamily: fonts.regular },
+  button: { fontSize: 16, lineHeight: 24, fontFamily: fonts.medium },
+  chip: { fontSize: 14, lineHeight: 20, fontFamily: fonts.medium },
+  caption: { fontSize: 12, lineHeight: 18, fontFamily: fonts.regular },
+} as const;
 
-/** 4px base spacing scale. */
-export const space = (n: number): number => n * 4;
+/** §6 — web/desktop renders the phone layout centered at this max width. */
+export const MAX_CONTENT_WIDTH = 720;

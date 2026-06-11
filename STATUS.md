@@ -3,15 +3,23 @@
 _Updated: 2026-06-11_
 
 ## Now / next
-- **Planned (UI guidelines v1 — D-#61):** `docs/ui-guidelines.md` adopted — mobile-first Android design system:
-  deep-green/gold token palette (light **and** dark sets — dark mode in scope v1), Noto Sans Bengali app-wide
-  (matches the Slice-1 PDF font), Bangla type rules (16sp body floor / ≥1.5 line-height / no caps / no
-  letter-spacing / Latin digits for codes), 48dp touch targets + 4dp spacing scale, borders-not-shadows for
-  low-end Android, initials avatars (no photos by default, ADR-005 posture). Tokens get ONE code source
-  (`app/src/theme`) — the doc and the token file sync **two-place**; NativeWind maps to the same tokens when
-  re-enabled (ADR-010/014). Docs-only this session — no code change. **Next = build UI-1 per
-  docs/ui-guidelines.md §13** (theme token file + font load + sweep existing screens to tokens, light+dark
-  verified).
+- **Built (UI-1 — adopt UI guidelines v1 in code, D-#61):** the app now renders from the
+  `docs/ui-guidelines.md` §3–§6 token system, light **and** dark (follows the OS;
+  `userInterfaceStyle:"automatic"`). `app/src/theme` is the ONE code source: `palette.json` (the §3/§4 hex
+  tables — also `require`d by `tailwind.config.js`, so NativeWind maps the SAME palette when re-enabled,
+  ADR-010/014) + `tokens.ts` (radius 8/12/pill, 4dp spacing, §5 type scale) + hooks
+  `useColors`/`makeStyles`/`useNavigationTheme` — components read tokens only, never branch on scheme.
+  **Noto Sans Bengali 400/500/700 loads at app start** (expo-font, splash held until loaded; only the 3
+  faces bundled) and applies app-wide via the type scale — the text primitives resolve the screens'
+  existing `fontWeight` idiom to the matching face (no Android faux-bold over a real bold face).
+  Primitives swept to spec: buttons 48dp (disabled = surfaceAlt/textDisabled, pressed = primaryPressed),
+  chips 36dp + hit-slop to 48dp, badges/notices/banners = `…Container`/`on…Container` pairs (+ new
+  info/gold tones), inputs ≥48dp label-above + new error/helper line, `Screen` centers at 720dp max on
+  web, tappable cards ≥56dp; Markdown, stack headers + tab bar tokenized; off-scale margins rounded to the
+  4dp scale. Color was already centralized, so screens needed only 3 small edits (Login + 2 homework).
+  **Gate GREEN: app `tsc --noEmit` clean + web bundle green (494 modules).** **NOT done: the §0 manual
+  checklist pass (Login/RoutineHome/HomeworkHome/Roster, both themes) on a device/browser — no browser in
+  this session**; icon-set migration + in-app theme toggle stay out of scope per §12.
 - **Built (Credential provisioning — phone logins for guardians + teachers, share via WhatsApp, D-#59/#60):**
   server + app. Principal/Office now generate logins and hand them out over WhatsApp. **Guardians:** ONE shared
   login per family keyed by `Student.phone` — auto-links every sibling on that phone, both parents use it

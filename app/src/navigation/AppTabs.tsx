@@ -29,7 +29,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useBasket } from "../state/BasketContext";
 import { useLanguage } from "../state/LanguageContext";
 import { STR } from "../lib/labels";
-import { colors } from "../theme/tokens";
+import { fonts, typeScale, useColors } from "../theme";
 
 import LoginScreen from "../screens/auth/LoginScreen";
 import ContentTreeScreen from "../screens/content/ContentTreeScreen";
@@ -76,18 +76,20 @@ export { LoginScreen };
 /** Tap to switch language — the button shows the language it switches TO. */
 function LangToggle(): React.ReactElement {
   const { lang, toggle } = useLanguage();
+  const colors = useColors();
   return (
-    <Pressable onPress={toggle} style={{ paddingHorizontal: 12 }} hitSlop={8} accessibilityLabel={STR.language}>
-      <Text style={{ color: colors.white, fontWeight: "600" }}>{lang === "bn" ? "EN" : "বাং"}</Text>
+    <Pressable onPress={toggle} style={{ paddingHorizontal: 12 }} hitSlop={12} accessibilityLabel={STR.language}>
+      <Text style={{ ...typeScale.button, color: colors.onPrimary }}>{lang === "bn" ? "EN" : "বাং"}</Text>
     </Pressable>
   );
 }
 
 function LogoutButton(): React.ReactElement {
   const { logout } = useAuth();
+  const colors = useColors();
   return (
-    <Pressable onPress={() => void logout()} style={{ paddingHorizontal: 12 }} hitSlop={8}>
-      <Text style={{ color: colors.white, fontWeight: "600" }}>{STR.logout}</Text>
+    <Pressable onPress={() => void logout()} style={{ paddingHorizontal: 12 }} hitSlop={12} accessibilityLabel={STR.logout}>
+      <Text style={{ ...typeScale.button, color: colors.onPrimary }}>{STR.logout}</Text>
     </Pressable>
   );
 }
@@ -101,13 +103,17 @@ function HeaderRight(): React.ReactElement {
   );
 }
 
-const stackOptions = {
-  headerStyle: { backgroundColor: colors.brand700 },
-  headerTintColor: colors.white,
-  headerTitleStyle: { fontWeight: "700" as const },
-  contentStyle: { backgroundColor: colors.bg },
-  headerRight: () => <HeaderRight />,
-} as const;
+/** Stack header/content styling from the active token set (light + dark). */
+function useStackOptions() {
+  const colors = useColors();
+  return {
+    headerStyle: { backgroundColor: colors.primary },
+    headerTintColor: colors.onPrimary,
+    headerTitleStyle: { fontFamily: fonts.bold },
+    contentStyle: { backgroundColor: colors.bg },
+    headerRight: () => <HeaderRight />,
+  } as const;
+}
 
 function tabIcon(emoji: string) {
   return () => <Text style={{ fontSize: 18 }}>{emoji}</Text>;
@@ -117,6 +123,7 @@ function tabIcon(emoji: string) {
 
 const ContentStack = createNativeStackNavigator<ContentStackParamList>();
 function ContentNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
   return (
     <ContentStack.Navigator screenOptions={stackOptions}>
       <ContentStack.Screen name="ContentTree" component={ContentTreeScreen} options={{ title: STR.contentTreeTitle }} />
@@ -127,6 +134,7 @@ function ContentNavigator(): React.ReactElement {
 
 const QuestionsStack = createNativeStackNavigator<QuestionsStackParamList>();
 function QuestionsNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
   return (
     <QuestionsStack.Navigator screenOptions={stackOptions}>
       <QuestionsStack.Screen name="QuestionBank" component={QuestionBankScreen} options={{ title: STR.questionBank }} />
@@ -138,6 +146,7 @@ function QuestionsNavigator(): React.ReactElement {
 
 const SetsStack = createNativeStackNavigator<SetsStackParamList>();
 function SetsNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
   return (
     <SetsStack.Navigator screenOptions={stackOptions}>
       <SetsStack.Screen name="SetList" component={SetListScreen} options={{ title: STR.setList }} />
@@ -150,6 +159,7 @@ function SetsNavigator(): React.ReactElement {
 
 const TrackersStack = createNativeStackNavigator<TrackersStackParamList>();
 function TrackersNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
   return (
     <TrackersStack.Navigator screenOptions={stackOptions}>
       <TrackersStack.Screen name="TrackerList" component={TrackerListScreen} options={{ title: STR.trackerList }} />
@@ -164,6 +174,7 @@ function TrackersNavigator(): React.ReactElement {
 
 const HomeworkStack = createNativeStackNavigator<HomeworkStackParamList>();
 function HomeworkNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
   return (
     <HomeworkStack.Navigator screenOptions={stackOptions}>
       <HomeworkStack.Screen name="HomeworkHome" component={HomeworkHomeScreen} options={{ title: STR.tabHomework }} />
@@ -178,6 +189,7 @@ function HomeworkNavigator(): React.ReactElement {
 
 const ReviewStack = createNativeStackNavigator<ReviewStackParamList>();
 function ReviewNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
   return (
     <ReviewStack.Navigator screenOptions={stackOptions}>
       <ReviewStack.Screen name="ReviewHome" component={ReviewHomeScreen} options={{ title: STR.tabReview }} />
@@ -189,6 +201,7 @@ function ReviewNavigator(): React.ReactElement {
 
 const RoutineStack = createNativeStackNavigator<RoutineStackParamList>();
 function RoutineNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
   return (
     <RoutineStack.Navigator screenOptions={stackOptions}>
       <RoutineStack.Screen name="RoutineHome" component={RoutineHomeScreen} options={{ title: STR.routineTitle }} />
@@ -205,6 +218,7 @@ function RoutineNavigator(): React.ReactElement {
 
 const AdminStack = createNativeStackNavigator<AdminStackParamList>();
 function AdminNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
   return (
     <AdminStack.Navigator screenOptions={stackOptions}>
       <AdminStack.Screen name="AdminHome" component={AdminHomeScreen} options={{ title: STR.admin }} />
@@ -228,6 +242,7 @@ const Tab = createBottomTabNavigator<TabParamList>();
 export function AppTabs(): React.ReactElement {
   const { role } = useAuth();
   const basket = useBasket();
+  const colors = useColors();
 
   const canContent = !!role && roleHasPermission(role, "content:read");
   const canQuestions = !!role && roleHasPermission(role, "question:read");
@@ -243,8 +258,10 @@ export function AppTabs(): React.ReactElement {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.brand700,
-        tabBarInactiveTintColor: colors.muted,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+        tabBarLabelStyle: { fontFamily: fonts.medium },
       }}
     >
       {canContent ? (

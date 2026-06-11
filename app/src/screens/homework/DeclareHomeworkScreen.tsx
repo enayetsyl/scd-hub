@@ -96,7 +96,7 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
         {ok ? <Notice message={ok} tone="ok" /> : null}
         {error ? <Notice message={error} tone="danger" /> : null}
         <Card>
-          <Body style={{ fontWeight: "700", marginBottom: 6 }}>{STR.hwSubject}</Body>
+          <Body style={{ fontWeight: "700", marginBottom: 8 }}>{STR.hwSubject}</Body>
           <ChipRow>
             {HW_SUBJECTS.map((s) => (
               <Chip key={s} label={hwSubjectLabel(s)} selected={subject === s} onPress={() => setSubject(s)} />

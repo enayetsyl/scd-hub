@@ -26,13 +26,14 @@ import { SectionBar } from "../../components/SectionBar";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
-import { space, colors } from "../../theme/tokens";
+import { space, useColors } from "../../theme";
 
 type Props = NativeStackScreenProps<HomeworkStackParamList, "HomeworkHome">;
 
 const today = (): string => new Date().toISOString().slice(0, 10);
 
 export default function HomeworkHomeScreen({ navigation }: Props): React.ReactElement {
+  const colors = useColors();
   const { selection, hasSection } = useSectionContext();
   const [date, setDate] = useState(today());
 
@@ -93,7 +94,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
                   <Muted style={{ marginTop: 4 }}>
                     {it.hwId} · {bnNum(it.timeDecl)} {STR.hwMinutes} · {bnNum(it.qCount)} {STR.questionsWord}
                   </Muted>
-                  {it.bandWarning ? <Muted style={{ color: colors.warn, marginTop: 2 }}>{STR.hwBandWarning}</Muted> : null}
+                  {it.bandWarning ? <Muted style={{ color: colors.warning, marginTop: 4 }}>{STR.hwBandWarning}</Muted> : null}
                 </Card>
               ))
             )}
@@ -101,7 +102,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
             {/* Summary roll-ups */}
             {summary ? (
               <Card>
-                <Body style={{ fontWeight: "700", marginBottom: 6 }}>{STR.trackerSummary}</Body>
+                <Body style={{ fontWeight: "700", marginBottom: 8 }}>{STR.trackerSummary}</Body>
                 <SummaryRow label={STR.hwOpenResubmissions} value={bnNum(summary.openResubmissions)} />
                 <SummaryRow
                   label={STR.hwOnTimePct}
@@ -156,7 +157,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
 
 function SummaryRow({ label, value }: { label: string; value: string }): React.ReactElement {
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 2 }}>
+    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
       <Muted>{label}</Muted>
       <Body>{value}</Body>
     </View>

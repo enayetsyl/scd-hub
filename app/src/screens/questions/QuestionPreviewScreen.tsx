@@ -47,7 +47,7 @@ function AnswerCarrier({ p }: { p: QuestionPayload }): React.ReactElement | null
         <View>
           <Muted>{STR.options}</Muted>
           {(p.options ?? []).map((o, i) => (
-            <Body key={o.option_id ?? i} style={{ marginTop: 2 }}>
+            <Body key={o.option_id ?? i} style={{ marginTop: 4 }}>
               {(o.option_id ? `${o.option_id}. ` : "") + (o.text ?? "")}
               {o.is_correct ? "  ✓" : ""}
             </Body>
@@ -65,7 +65,7 @@ function AnswerCarrier({ p }: { p: QuestionPayload }): React.ReactElement | null
         <View>
           <Muted>{STR.answer}</Muted>
           {(p.blanks ?? []).map((b, i) => (
-            <Body key={i} style={{ marginTop: 2 }}>
+            <Body key={i} style={{ marginTop: 4 }}>
               {bnNum(String(b.blank_no ?? i + 1))}: {(b.accepted ?? []).join(" / ")}
             </Body>
           ))}
@@ -76,7 +76,7 @@ function AnswerCarrier({ p }: { p: QuestionPayload }): React.ReactElement | null
         <View>
           <Muted>{STR.answer}</Muted>
           {(p.pairs ?? []).map((pair, i) => (
-            <Body key={i} style={{ marginTop: 2 }}>
+            <Body key={i} style={{ marginTop: 4 }}>
               {pair.left ?? ""} → {pair.right ?? ""}
             </Body>
           ))}
@@ -88,7 +88,7 @@ function AnswerCarrier({ p }: { p: QuestionPayload }): React.ReactElement | null
           <Body>
             {STR.answer}: {(p.answer_key?.accepted ?? []).join(" / ")}
           </Body>
-          {p.answer_key?.model_note ? <Muted style={{ marginTop: 2 }}>{p.answer_key.model_note}</Muted> : null}
+          {p.answer_key?.model_note ? <Muted style={{ marginTop: 4 }}>{p.answer_key.model_note}</Muted> : null}
         </View>
       );
     case "descriptive":

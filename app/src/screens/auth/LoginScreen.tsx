@@ -9,10 +9,11 @@ import { Screen, H1, Muted, Field, Button, Notice } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
 import { useLanguage } from "../../state/LanguageContext";
 import { STR } from "../../lib/labels";
-import { space, colors } from "../../theme/tokens";
+import { space, typeScale, useColors } from "../../theme";
 
 export default function LoginScreen(): React.ReactElement {
   const { login } = useAuth();
+  const colors = useColors();
   const { lang, toggle } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,8 +32,8 @@ export default function LoginScreen(): React.ReactElement {
   return (
     <Screen scroll>
       <View style={{ alignItems: "flex-end", marginTop: space(4) }}>
-        <Pressable onPress={toggle} hitSlop={8} accessibilityLabel={STR.language}>
-          <Text style={{ color: colors.brand700, fontWeight: "600" }}>{lang === "bn" ? "English" : "বাংলা"}</Text>
+        <Pressable onPress={toggle} hitSlop={12} accessibilityLabel={STR.language}>
+          <Text style={{ ...typeScale.button, color: colors.primary }}>{lang === "bn" ? "English" : "বাংলা"}</Text>
         </Pressable>
       </View>
       <View style={{ marginTop: space(8), marginBottom: space(6) }}>

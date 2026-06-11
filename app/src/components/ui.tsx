@@ -1,8 +1,9 @@
 /**
- * Shared UI primitives. Appearance is driven by themed StyleSheet values (the
- * reliable rendering path on iOS/Android/Web); NativeWind `className` is applied
- * on layout containers so the mandated Tailwind layer is exercised. Keeping both
- * means the UI renders correctly regardless of a utility class being generated.
+ * Shared UI primitives, styled per docs/ui-guidelines.md (D-#61): token colors
+ * only (light + dark via useColors), Noto Sans Bengali type scale, 48dp touch
+ * targets, 12dp radius, 1dp borders instead of shadows. Screens emphasise text
+ * with the existing `fontWeight` idiom; the text primitives resolve that to the
+ * matching font face (resolveTextStyle), so weight renders correctly on Android.
  */
 import React from "react";
 import {
@@ -12,14 +13,23 @@ import {
   Pressable,
   ActivityIndicator,
   ScrollView,
-  StyleSheet,
   type ViewStyle,
   type TextStyle,
   type StyleProp,
   type KeyboardTypeOptions,
 } from "react-native";
+import { StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, radius, space } from "../theme/tokens";
+import {
+  makeStyles,
+  resolveTextStyle,
+  useColors,
+  radius,
+  space,
+  typeScale,
+  MAX_CONTENT_WIDTH,
+  type ThemeColors,
+} from "../theme";
 
 // ---------------------------------------------------------------------------
 // Layout
@@ -36,6 +46,7 @@ export function Screen({
   padded?: boolean;
   style?: StyleProp<ViewStyle>;
 }): React.ReactElement {
+  const styles = useStyles();
   const inner = scroll ? (
     <ScrollView
       contentContainerStyle={[padded && styles.padded, style]}
@@ -48,7 +59,7 @@ export function Screen({
   );
   return (
     <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
-      {inner}
+      <View style={styles.frame}>{inner}</View>
     </SafeAreaView>
   );
 }
@@ -62,11 +73,12 @@ export function Card({
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }): React.ReactElement {
+  const styles = useStyles();
   if (onPress) {
     return (
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => [styles.card, pressed && styles.pressed, style]}
+        style={({ pressed }) => [styles.card, styles.cardTappable, pressed && styles.pressed, style]}
       >
         {children}
       </Pressable>
@@ -76,6 +88,7 @@ export function Card({
 }
 
 export function Divider(): React.ReactElement {
+  const styles = useStyles();
   return <View style={styles.divider} />;
 }
 
@@ -86,6 +99,7 @@ export function Row({
   label: string;
   value: React.ReactNode;
 }): React.ReactElement {
+  const styles = useStyles();
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -103,9 +117,11 @@ export function Row({
 // ---------------------------------------------------------------------------
 
 export function H1({ children }: { children: React.ReactNode }): React.ReactElement {
+  const styles = useStyles();
   return <Text style={styles.h1}>{children}</Text>;
 }
 export function H2({ children }: { children: React.ReactNode }): React.ReactElement {
+  const styles = useStyles();
   return <Text style={styles.h2}>{children}</Text>;
 }
 export function Body({
@@ -115,7 +131,12 @@ export function Body({
   children: React.ReactNode;
   style?: StyleProp<TextStyle>;
 }): React.ReactElement {
-  return <Text style={[styles.body, style]}>{children}</Text>;
+  const styles = useStyles();
+  return (
+    <Text style={resolveTextStyle(styles.body, StyleSheet.flatten(style) as TextStyle | undefined)}>
+      {children}
+    </Text>
+  );
 }
 export function Muted({
   children,
@@ -124,7 +145,12 @@ export function Muted({
   children: React.ReactNode;
   style?: StyleProp<TextStyle>;
 }): React.ReactElement {
-  return <Text style={[styles.muted, style]}>{children}</Text>;
+  const styles = useStyles();
+  return (
+    <Text style={resolveTextStyle(styles.muted, StyleSheet.flatten(style) as TextStyle | undefined)}>
+      {children}
+    </Text>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -148,35 +174,44 @@ export function Button({
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 }): React.ReactElement {
+  const styles = useStyles();
+  const colors = useColors();
   const isDisabled = disabled || loading;
-  const v = BUTTON_VARIANTS[variant];
+  const v = buttonVariants(colors)[variant];
   return (
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
+      hitSlop={4}
       style={({ pressed }) => [
         styles.btn,
         { backgroundColor: v.bg, borderColor: v.border },
-        pressed && !isDisabled && styles.pressed,
+        pressed && !isDisabled && { backgroundColor: v.pressedBg, borderColor: v.pressedBg },
         isDisabled && styles.btnDisabled,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={v.fg} size="small" />
+        <ActivityIndicator color={isDisabled ? colors.textDisabled : v.fg} size="small" />
       ) : (
-        <Text style={[styles.btnText, { color: v.fg }]}>{title}</Text>
+        <Text style={[styles.btnText, { color: isDisabled ? colors.textDisabled : v.fg }]}>
+          {title}
+        </Text>
       )}
     </Pressable>
   );
 }
 
-const BUTTON_VARIANTS: Record<ButtonVariant, { bg: string; fg: string; border: string }> = {
-  primary: { bg: colors.brand700, fg: colors.white, border: colors.brand700 },
-  secondary: { bg: colors.white, fg: colors.brand700, border: colors.brand600 },
-  danger: { bg: colors.danger, fg: colors.white, border: colors.danger },
-  ghost: { bg: "transparent", fg: colors.brand700, border: "transparent" },
-};
+function buttonVariants(
+  c: ThemeColors,
+): Record<ButtonVariant, { bg: string; fg: string; border: string; pressedBg: string }> {
+  return {
+    primary: { bg: c.primary, fg: c.onPrimary, border: c.primary, pressedBg: c.primaryPressed },
+    secondary: { bg: "transparent", fg: c.primary, border: c.primary, pressedBg: c.primaryContainer },
+    danger: { bg: c.error, fg: c.onPrimary, border: c.error, pressedBg: c.error },
+    ghost: { bg: "transparent", fg: c.primary, border: "transparent", pressedBg: c.primaryContainer },
+  };
+}
 
 export function Chip({
   label,
@@ -187,9 +222,11 @@ export function Chip({
   selected?: boolean;
   onPress: () => void;
 }): React.ReactElement {
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
+      hitSlop={{ top: 6, bottom: 6, left: 0, right: 0 }}
       style={({ pressed }) => [
         styles.chip,
         selected ? styles.chipOn : styles.chipOff,
@@ -202,10 +239,11 @@ export function Chip({
 }
 
 export function ChipRow({ children }: { children: React.ReactNode }): React.ReactElement {
+  const styles = useStyles();
   return <View style={styles.chipRow}>{children}</View>;
 }
 
-type BadgeTone = "brand" | "ok" | "warn" | "danger" | "muted";
+type BadgeTone = "brand" | "ok" | "warn" | "danger" | "muted" | "info" | "gold";
 
 export function Badge({
   text,
@@ -214,7 +252,9 @@ export function Badge({
   text: string;
   tone?: BadgeTone;
 }): React.ReactElement {
-  const t = BADGE_TONES[tone];
+  const styles = useStyles();
+  const colors = useColors();
+  const t = badgeTones(colors)[tone];
   return (
     <View style={[styles.badge, { backgroundColor: t.bg }]}>
       <Text style={[styles.badgeText, { color: t.fg }]}>{text}</Text>
@@ -222,13 +262,18 @@ export function Badge({
   );
 }
 
-const BADGE_TONES: Record<BadgeTone, { bg: string; fg: string }> = {
-  brand: { bg: colors.brand100, fg: colors.brand800 },
-  ok: { bg: colors.okBg, fg: colors.ok },
-  warn: { bg: colors.warnBg, fg: colors.warn },
-  danger: { bg: colors.dangerBg, fg: colors.danger },
-  muted: { bg: "#f1f5f9", fg: colors.muted },
-};
+/** §7 status-badge mapping: container fill + the matching `on…` text token. */
+function badgeTones(c: ThemeColors): Record<BadgeTone, { bg: string; fg: string }> {
+  return {
+    brand: { bg: c.primaryContainer, fg: c.onPrimaryContainer },
+    ok: { bg: c.primaryContainer, fg: c.onPrimaryContainer },
+    warn: { bg: c.warningContainer, fg: c.warning },
+    danger: { bg: c.errorContainer, fg: c.onErrorContainer },
+    muted: { bg: c.surfaceAlt, fg: c.textSecondary },
+    info: { bg: c.infoContainer, fg: c.info },
+    gold: { bg: c.goldContainer, fg: c.onGoldContainer },
+  };
+}
 
 export function Field({
   label,
@@ -240,6 +285,8 @@ export function Field({
   multiline,
   autoCapitalize = "none",
   editable = true,
+  error,
+  helper,
 }: {
   label?: string;
   value: string;
@@ -250,22 +297,36 @@ export function Field({
   multiline?: boolean;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   editable?: boolean;
+  error?: string;
+  helper?: string;
 }): React.ReactElement {
+  const styles = useStyles();
+  const colors = useColors();
   return (
     <View style={styles.fieldWrap}>
       {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
       <TextInput
-        style={[styles.input, multiline && styles.inputMultiline, !editable && styles.inputDisabled]}
+        style={[
+          styles.input,
+          multiline && styles.inputMultiline,
+          !editable && styles.inputDisabled,
+          !!error && styles.inputError,
+        ]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.muted}
+        placeholderTextColor={colors.textSecondary}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         multiline={multiline}
         autoCapitalize={autoCapitalize}
         editable={editable}
       />
+      {error ? (
+        <Text style={styles.fieldError}>⚠ {error}</Text>
+      ) : helper ? (
+        <Text style={styles.fieldHelper}>{helper}</Text>
+      ) : null}
     </View>
   );
 }
@@ -275,9 +336,11 @@ export function Field({
 // ---------------------------------------------------------------------------
 
 export function Loader({ label }: { label?: string }): React.ReactElement {
+  const styles = useStyles();
+  const colors = useColors();
   return (
     <View style={styles.center}>
-      <ActivityIndicator size="large" color={colors.brand700} />
+      <ActivityIndicator size="large" color={colors.primary} />
       {label ? <Muted style={{ marginTop: space(3) }}>{label}</Muted> : null}
     </View>
   );
@@ -290,6 +353,7 @@ export function EmptyState({
   message: string;
   action?: React.ReactNode;
 }): React.ReactElement {
+  const styles = useStyles();
   return (
     <View style={styles.center}>
       <Muted style={{ textAlign: "center" }}>{message}</Muted>
@@ -305,11 +369,12 @@ export function ErrorBanner({
   message: string;
   onRetry?: () => void;
 }): React.ReactElement {
+  const styles = useStyles();
   return (
     <View style={styles.errorBanner}>
-      <Text style={styles.errorText}>{message}</Text>
+      <Text style={styles.errorText}>⚠ {message}</Text>
       {onRetry ? (
-        <Pressable onPress={onRetry} style={styles.errorRetry}>
+        <Pressable onPress={onRetry} style={styles.errorRetry} hitSlop={12} accessibilityLabel="আবার চেষ্টা করুন">
           <Text style={styles.errorRetryText}>↻</Text>
         </Pressable>
       ) : null}
@@ -322,12 +387,15 @@ export function Notice({
   tone = "ok",
 }: {
   message: string;
-  tone?: "ok" | "warn" | "danger";
+  tone?: "ok" | "warn" | "danger" | "info";
 }): React.ReactElement {
+  const styles = useStyles();
+  const colors = useColors();
   const map = {
-    ok: { bg: colors.okBg, fg: colors.ok },
-    warn: { bg: colors.warnBg, fg: colors.warn },
-    danger: { bg: colors.dangerBg, fg: colors.danger },
+    ok: { bg: colors.primaryContainer, fg: colors.onPrimaryContainer },
+    warn: { bg: colors.warningContainer, fg: colors.warning },
+    danger: { bg: colors.errorContainer, fg: colors.onErrorContainer },
+    info: { bg: colors.infoContainer, fg: colors.info },
   } as const;
   const t = map[tone];
   return (
@@ -338,25 +406,28 @@ export function Notice({
 }
 
 // ---------------------------------------------------------------------------
-// Styles
+// Styles (token-driven; created per color scheme)
 // ---------------------------------------------------------------------------
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.bg },
+  // §6 web/desktop: the phone layout centered at max 720dp, bg filling the rest.
+  frame: { flex: 1, width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
   flex: { flex: 1 },
   padded: { padding: space(4) },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: space(6) },
   pressed: { opacity: 0.7 },
 
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: space(3.5),
+    borderColor: colors.border,
+    padding: space(4),
     marginBottom: space(3),
   },
-  divider: { height: 1, backgroundColor: colors.line, marginVertical: space(3) },
+  cardTappable: { minHeight: 56, justifyContent: "center" },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: space(3) },
 
   row: {
     flexDirection: "row",
@@ -365,71 +436,88 @@ const styles = StyleSheet.create({
     paddingVertical: space(2),
     gap: space(3),
   },
-  rowLabel: { color: colors.muted, fontSize: 14 },
-  rowValue: { color: colors.ink, fontSize: 14, fontWeight: "600", flexShrink: 1, textAlign: "right" },
+  rowLabel: { ...typeScale.secondary, color: colors.textSecondary },
+  rowValue: {
+    ...typeScale.secondary,
+    fontFamily: typeScale.bodyStrong.fontFamily,
+    color: colors.textPrimary,
+    flexShrink: 1,
+    textAlign: "right",
+  },
 
-  h1: { fontSize: 24, fontWeight: "700", color: colors.ink, marginBottom: space(1) },
-  h2: { fontSize: 18, fontWeight: "700", color: colors.ink, marginBottom: space(1) },
-  body: { fontSize: 15, color: colors.ink, lineHeight: 22 },
-  muted: { fontSize: 14, color: colors.muted },
+  h1: { ...typeScale.pageTitle, color: colors.textPrimary, marginBottom: space(1) },
+  h2: { ...typeScale.sectionTitle, color: colors.textPrimary, marginBottom: space(1) },
+  body: { ...typeScale.body, color: colors.textPrimary },
+  muted: { ...typeScale.secondary, color: colors.textSecondary },
 
   btn: {
-    minHeight: 46,
+    minHeight: 48,
     borderRadius: radius.md,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: space(4),
-    paddingVertical: space(2.5),
+    paddingVertical: space(2),
   },
-  btnText: { fontSize: 15, fontWeight: "700" },
-  btnDisabled: { opacity: 0.45 },
+  btnText: typeScale.button,
+  btnDisabled: { backgroundColor: colors.surfaceAlt, borderColor: colors.surfaceAlt },
 
   chip: {
+    minHeight: 36,
+    justifyContent: "center",
     borderRadius: radius.pill,
     borderWidth: 1,
     paddingHorizontal: space(3),
-    paddingVertical: space(1.5),
+    paddingVertical: space(1),
     marginRight: space(2),
     marginBottom: space(2),
   },
-  chipOn: { backgroundColor: colors.brand700, borderColor: colors.brand700 },
-  chipOff: { backgroundColor: colors.white, borderColor: colors.line },
-  chipTextOn: { color: colors.white, fontSize: 13, fontWeight: "600" },
-  chipTextOff: { color: colors.ink, fontSize: 13, fontWeight: "500" },
+  chipOn: { backgroundColor: colors.primaryContainer, borderColor: colors.primary },
+  chipOff: { backgroundColor: colors.surface, borderColor: colors.border },
+  chipTextOn: { ...typeScale.chip, color: colors.onPrimaryContainer },
+  chipTextOff: { ...typeScale.chip, color: colors.textPrimary },
   chipRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center" },
 
-  badge: { borderRadius: radius.sm, paddingHorizontal: space(2), paddingVertical: space(0.5), alignSelf: "flex-start" },
-  badgeText: { fontSize: 12, fontWeight: "700" },
+  badge: {
+    borderRadius: radius.sm,
+    paddingHorizontal: space(2),
+    paddingVertical: space(1),
+    alignSelf: "flex-start",
+  },
+  badgeText: typeScale.chip,
 
-  fieldWrap: { marginBottom: space(3) },
-  fieldLabel: { fontSize: 13, fontWeight: "600", color: colors.muted, marginBottom: space(1.5) },
+  fieldWrap: { marginBottom: space(4) },
+  fieldLabel: { ...typeScale.secondary, color: colors.textSecondary, marginBottom: space(1) },
+  fieldHelper: { ...typeScale.secondary, color: colors.textSecondary, marginTop: space(1) },
+  fieldError: { ...typeScale.secondary, color: colors.error, marginTop: space(1) },
   input: {
-    backgroundColor: colors.white,
+    minHeight: 48,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.border,
     borderRadius: radius.md,
     paddingHorizontal: space(3),
-    paddingVertical: space(2.5),
-    fontSize: 15,
-    color: colors.ink,
+    paddingVertical: space(2),
+    ...typeScale.body,
+    color: colors.textPrimary,
   },
   inputMultiline: { minHeight: 120, textAlignVertical: "top" },
-  inputDisabled: { backgroundColor: "#f1f5f9", color: colors.muted },
+  inputDisabled: { backgroundColor: colors.surfaceAlt, color: colors.textSecondary },
+  inputError: { borderColor: colors.error },
 
   errorBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.dangerBg,
+    backgroundColor: colors.errorContainer,
     borderRadius: radius.md,
     padding: space(3),
     marginBottom: space(3),
     gap: space(2),
   },
-  errorText: { color: colors.danger, fontSize: 14, flex: 1 },
+  errorText: { ...typeScale.secondary, color: colors.onErrorContainer, flex: 1 },
   errorRetry: { paddingHorizontal: space(2) },
-  errorRetryText: { color: colors.danger, fontSize: 18, fontWeight: "700" },
+  errorRetryText: { ...typeScale.sectionTitle, color: colors.onErrorContainer },
 
   notice: { borderRadius: radius.md, padding: space(3), marginBottom: space(3) },
-  noticeText: { fontSize: 14, fontWeight: "500" },
-});
+  noticeText: { ...typeScale.secondary, fontFamily: typeScale.chip.fontFamily },
+}));

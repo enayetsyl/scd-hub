@@ -1,26 +1,17 @@
 /** @type {import('tailwindcss').Config} */
+// NativeWind is wired but its transform is disabled (ADR-010/014; see
+// babel.config.js / metro.config.js). When re-enabled it maps onto the SAME
+// token source as the runtime theme — app/src/theme/palette.json — never a
+// second palette (docs/ui-guidelines.md §2.5).
+const palette = require("./src/theme/palette.json");
+
 module.exports = {
   content: ["./App.tsx", "./src/**/*.{ts,tsx}"],
   presets: [require("nativewind/preset")],
+  darkMode: "media",
   theme: {
     extend: {
-      colors: {
-        // SCD Hub brand palette (teal). Mirrored as runtime tokens in src/theme/tokens.ts.
-        brand: {
-          50: "#f0fdfa",
-          100: "#ccfbf1",
-          500: "#14b8a6",
-          600: "#0d9488",
-          700: "#0f766e",
-          800: "#115e59",
-        },
-        ink: "#0f172a",
-        muted: "#64748b",
-        line: "#e2e8f0",
-        danger: "#dc2626",
-        warn: "#d97706",
-        ok: "#16a34a",
-      },
+      colors: palette.light,
     },
   },
   plugins: [],
