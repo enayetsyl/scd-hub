@@ -4,6 +4,14 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Class-teacher CT-1 — generalize the coordinator gate + support teacher + assignment history (D-#42/#45/#53).
+  assertIsClassTeacher doc generalized to the section daily-coordinator gate (no behavior change). New
+  Section.supportTeacherIds (recorded helpers, not the gate) + append-only ClassTeacherAssignment log;
+  ClassTeacherService (assign + support add/remove + history append); assignClassTeacher now logs. Resolvers
+  setSupportTeacher / mySectionsAsClassTeacher / classTeacherHistory; supportTeacherIds on the Section type.
+  App: AssignClassTeacherScreen enhanced — all-sections overview (unassigned flagged + per-teacher load) +
+  support add/remove + history. Gate: server tsc + jest 289/289 (6 new, firewall green); app tsc clean +
+  web bundle green (491 modules). Covers CT1.1–CT1.6. [2bb1ad6]
 - Routine R-5 — triggers + class-note/daily-diary (D-#52/#54); completes the routine module (R-1→R-5).
   New ClassNote (one per slot+date; what-was-taught + optional HW-T1 homeworkItemId link) + BellDutyAssignment
   models; pure trigger.ts buildBellSchedule + RoutineTriggerService (bellSchedule from the grid/window,

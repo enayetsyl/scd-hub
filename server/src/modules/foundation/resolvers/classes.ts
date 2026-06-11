@@ -1,15 +1,21 @@
-import { Types } from "mongoose";
 import { builder } from "../../../schema";
 import { Class, type IClass } from "../models/Class";
 import { Section, type ISection } from "../models/Section";
 import { Subject, type ISubject } from "../models/Subject";
-import { User } from "../models/User";
+import { type IClassTeacherAssignment } from "../models/ClassTeacherAssignment";
+import {
+  assignClassTeacher as svcAssignClassTeacher,
+  setSupportTeacher,
+  classTeacherHistory,
+  mySectionsAsClassTeacher,
+} from "../services/ClassTeacherService";
 import { DEFAULT_SECTION_CODE, DEFAULT_SECTION_LABEL_BN } from "@scd/shared";
 
 type SubjectShape = Pick<ISubject, "code" | "nameBn"> & { _id: { toString(): string } };
 type SectionShape = Pick<ISection, "code" | "nameBn" | "active"> & {
   _id: { toString(): string };
   classTeacherId?: { toString(): string } | null;
+  supportTeacherIds?: Array<{ toString(): string }> | null;
 };
 type ClassShape = Pick<IClass, "level" | "nameBn" | "active"> & { _id: { toString(): string } };
 
@@ -32,6 +38,9 @@ SectionRef.implement({
     classTeacherId: t.string({
       nullable: true,
       resolve: (s) => (s.classTeacherId ? s.classTeacherId.toString() : null),
+    }),
+    supportTeacherIds: t.stringList({
+      resolve: (s) => (s.supportTeacherIds ?? []).map((id) => id.toString()),
     }),
   }),
 });
@@ -97,10 +106,10 @@ builder.mutationField("createClass", (t) =>
 );
 
 /**
- * Assign (or clear) a section's CLASS TEACHER — the daily coordinator who runs
- * homework reconciliation/confirm (handoff §9 / D-#42). Admin action
- * (roster:manage = Principal/Office, no new permission). Pass `userId: null` to
- * clear. The assignee must be a TEACHER.
+ * Assign (or clear) a section's CLASS TEACHER — the section's daily coordinator
+ * (D-#42, the general `assertIsClassTeacher` gate). Admin action (roster:manage =
+ * Principal/Office). Pass `userId: null` to clear. The assignee must be a TEACHER.
+ * The change is appended to the immutable assignment log (CT-1/CT1.6).
  */
 builder.mutationField("assignClassTeacher", (t) =>
   t.field({
@@ -110,19 +119,58 @@ builder.mutationField("assignClassTeacher", (t) =>
       sectionId: t.arg.string({ required: true }),
       userId: t.arg.string({ required: false }),
     },
-    resolve: async (_root, args) => {
-      const section = await Section.findById(args.sectionId);
-      if (!section) throw new Error("Section not found");
-      if (args.userId) {
-        const user = await User.findById(args.userId).lean();
-        if (!user) throw new Error("User not found");
-        if (user.role !== "TEACHER") throw new Error("Class teacher must be a TEACHER");
-        section.classTeacherId = new Types.ObjectId(args.userId);
-      } else {
-        section.classTeacherId = undefined;
-      }
-      await section.save();
-      return Section.findById(section._id).lean() as unknown as SectionShape;
+    resolve: async (_root, args, ctx) =>
+      svcAssignClassTeacher(args.sectionId, args.userId ?? null, ctx.auth!.userId) as unknown as Promise<SectionShape>,
+  }),
+);
+
+/**
+ * Add (or remove) a SUPPORT / assistant teacher on a section (CT1.5, D-#53). The
+ * class teacher stays the single coordinator gate; support is a recorded helper.
+ * Admin action (roster:manage); the assignee must be a TEACHER. Logged (CT1.6).
+ */
+builder.mutationField("setSupportTeacher", (t) =>
+  t.field({
+    type: SectionRef,
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      userId: t.arg.string({ required: true }),
+      add: t.arg.boolean({ required: true }),
     },
+    resolve: async (_root, args, ctx) =>
+      setSupportTeacher(args.sectionId, args.userId, args.add, ctx.auth!.userId) as unknown as Promise<SectionShape>,
+  }),
+);
+
+/** The sections the caller is class teacher of (CT1.2 — teacher self-view). */
+builder.queryField("mySectionsAsClassTeacher", (t) =>
+  t.field({
+    type: [SectionRef],
+    authScopes: { authenticated: true },
+    resolve: async (_root, _args, ctx) =>
+      mySectionsAsClassTeacher(ctx.auth!.userId) as unknown as Promise<SectionShape[]>,
+  }),
+);
+
+const ClassTeacherAssignmentRef = builder.objectRef<IClassTeacherAssignment>("ClassTeacherAssignment").implement({
+  fields: (t) => ({
+    id: t.string({ resolve: (a) => a._id.toString() }),
+    sectionId: t.string({ resolve: (a) => a.sectionId.toString() }),
+    role: t.exposeString("role"),
+    teacherId: t.string({ nullable: true, resolve: (a) => (a.teacherId ? a.teacherId.toString() : null) }),
+    op: t.exposeString("op"),
+    actorId: t.string({ resolve: (a) => a.actorId.toString() }),
+    at: t.string({ resolve: (a) => new Date(a.at).toISOString() }),
+  }),
+});
+
+/** The append-only class-teacher/support assignment history for a section (CT1.6). */
+builder.queryField("classTeacherHistory", (t) =>
+  t.field({
+    type: [ClassTeacherAssignmentRef],
+    authScopes: { hasPermission: "roster:manage" },
+    args: { sectionId: t.arg.string({ required: true }) },
+    resolve: async (_root, args) => classTeacherHistory(args.sectionId),
   }),
 );

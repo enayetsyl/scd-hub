@@ -7,10 +7,15 @@ export interface ISection extends Document {
   code: string;
   nameBn: string;
   active: boolean;
-  /** The section's CLASS TEACHER — the daily coordinator who runs homework
-   *  reconciliation + confirms issue (handoff §9 / D-#42). A TEACHER User; optional
-   *  (an unassigned section cannot reconcile until one is set). */
+  /** The section's CLASS TEACHER — the section's **daily coordinator** (D-#42, the
+   *  general gate behind `assertIsClassTeacher`): runs homework reconciliation today,
+   *  and the future attendance / leave / report-card / parent-comms duties. A TEACHER
+   *  User; optional (an unassigned section cannot run a coordinator action until set). */
   classTeacherId?: Types.ObjectId;
+  /** Optional SUPPORT / assistant teachers on the section (D-#53) — recorded helpers
+   *  (Nursery has one; KG/others may later). NOT the coordinator gate: a support
+   *  teacher does not inherit `assertIsClassTeacher` rights. A list of TEACHER Users. */
+  supportTeacherIds?: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +27,7 @@ const SectionSchema = new Schema<ISection>(
     nameBn: { type: String, required: true, trim: true },
     active: { type: Boolean, default: true },
     classTeacherId: { type: Schema.Types.ObjectId, ref: "User" },
+    supportTeacherIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true },
 );
