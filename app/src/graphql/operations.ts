@@ -1318,3 +1318,109 @@ export const ASSIGN_CLASS_TEACHER = gql<
     }
   }
 `;
+
+// ===========================================================================
+// Routine / Timetable (R-1..R-3) — routine:read / routine:manage
+// ===========================================================================
+
+export interface RoutineSlotT {
+  id: string;
+  groupType: string;
+  groupId: string;
+  classId: string | null;
+  dayOfWeek: string;
+  periodNumber: number;
+  subject: string;
+  track: string;
+  isBreak: boolean;
+  teacherId: string | null;
+  roomId: string | null;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  active: boolean;
+}
+
+const ROUTINE_SLOT_FIELDS = `
+  id groupType groupId classId dayOfWeek periodNumber subject track
+  isBreak teacherId roomId effectiveFrom effectiveTo active
+`;
+
+export const ROUTINE_SLOTS_QUERY = gql<
+  { routineSlots: RoutineSlotT[] },
+  { groupType: string; groupId: string }
+>`
+  query RoutineSlots($groupType: String!, $groupId: String!) {
+    routineSlots(groupType: $groupType, groupId: $groupId) { ${ROUTINE_SLOT_FIELDS} }
+  }
+`;
+
+export const MY_ROUTINE_QUERY = gql<{ myRoutineSlots: RoutineSlotT[] }, NoVars>`
+  query MyRoutine {
+    myRoutineSlots { ${ROUTINE_SLOT_FIELDS} }
+  }
+`;
+
+export interface SubjectGroupT {
+  id: string;
+  track: string;
+  level: string;
+  gender: string;
+  code: string;
+  nameBn: string;
+  active: boolean;
+}
+
+export const SUBJECT_GROUPS_QUERY = gql<
+  { subjectGroups: SubjectGroupT[] },
+  { track?: string | null }
+>`
+  query SubjectGroups($track: String) {
+    subjectGroups(track: $track) { id track level gender code nameBn active }
+  }
+`;
+
+export interface CreateSlotResultT {
+  warnings: string[];
+  slot: RoutineSlotT;
+}
+
+export const CREATE_ROUTINE_SLOT = gql<
+  { createRoutineSlot: CreateSlotResultT },
+  {
+    groupType: string;
+    groupId: string;
+    dayOfWeek: string;
+    periodNumber: number;
+    subject: string;
+    track: string;
+    isBreak: boolean;
+    teacherId?: string | null;
+    roomId?: string | null;
+    effectiveFrom: string;
+    effectiveTo?: string | null;
+  }
+>`
+  mutation CreateRoutineSlot(
+    $groupType: String!, $groupId: String!, $dayOfWeek: String!, $periodNumber: Int!,
+    $subject: String!, $track: String!, $isBreak: Boolean!, $teacherId: String,
+    $roomId: String, $effectiveFrom: String!, $effectiveTo: String
+  ) {
+    createRoutineSlot(
+      groupType: $groupType, groupId: $groupId, dayOfWeek: $dayOfWeek, periodNumber: $periodNumber,
+      subject: $subject, track: $track, isBreak: $isBreak, teacherId: $teacherId,
+      roomId: $roomId, effectiveFrom: $effectiveFrom, effectiveTo: $effectiveTo
+    ) {
+      warnings
+      slot { ${ROUTINE_SLOT_FIELDS} }
+    }
+  }
+`;
+
+export const DELETE_ROUTINE_SLOT = gql<
+  { deleteRoutineSlot: boolean },
+  { id: string }
+>`
+  mutation DeleteRoutineSlot($id: String!) {
+    deleteRoutineSlot(id: $id)
+  }
+`;

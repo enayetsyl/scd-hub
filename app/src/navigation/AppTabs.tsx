@@ -20,6 +20,7 @@ import type {
   TrackersStackParamList,
   HomeworkStackParamList,
   ReviewStackParamList,
+  RoutineStackParamList,
   AdminStackParamList,
   TabParamList,
 } from "./types";
@@ -52,6 +53,10 @@ import HomeworkRollupsScreen from "../screens/homework/HomeworkRollupsScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
+import RoutineHomeScreen from "../screens/routine/RoutineHomeScreen";
+import MyRoutineScreen from "../screens/routine/MyRoutineScreen";
+import GroupRoutineScreen from "../screens/routine/GroupRoutineScreen";
+import RoutineEditorScreen from "../screens/routine/RoutineEditorScreen";
 import SectionPickerScreen from "../screens/common/SectionPickerScreen";
 import AdminHomeScreen from "../screens/admin/AdminHomeScreen";
 import ImportScreen from "../screens/admin/ImportScreen";
@@ -177,6 +182,19 @@ function ReviewNavigator(): React.ReactElement {
   );
 }
 
+const RoutineStack = createNativeStackNavigator<RoutineStackParamList>();
+function RoutineNavigator(): React.ReactElement {
+  return (
+    <RoutineStack.Navigator screenOptions={stackOptions}>
+      <RoutineStack.Screen name="RoutineHome" component={RoutineHomeScreen} options={{ title: STR.routineTitle }} />
+      <RoutineStack.Screen name="MyRoutine" component={MyRoutineScreen} options={{ title: STR.myRoutineTitle }} />
+      <RoutineStack.Screen name="GroupRoutine" component={GroupRoutineScreen} options={{ title: STR.groupRoutineTitle }} />
+      <RoutineStack.Screen name="RoutineEditor" component={RoutineEditorScreen} options={{ title: STR.editRoutineTitle }} />
+      <RoutineStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
+    </RoutineStack.Navigator>
+  );
+}
+
 const AdminStack = createNativeStackNavigator<AdminStackParamList>();
 function AdminNavigator(): React.ReactElement {
   return (
@@ -208,6 +226,7 @@ export function AppTabs(): React.ReactElement {
   const canHomework = !!role && roleHasPermission(role, "tracker:read");
   const canReview =
     !!role && (roleHasPermission(role, "content:review") || roleHasPermission(role, "content:assign_review"));
+  const canRoutine = !!role && roleHasPermission(role, "routine:read");
   const canAdmin = !!role && (roleHasPermission(role, "content:import") || roleHasPermission(role, "user:manage"));
 
   return (
@@ -239,6 +258,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canReview ? (
         <Tab.Screen name="ReviewTab" component={ReviewNavigator} options={{ title: STR.tabReview, tabBarIcon: tabIcon("📝") }} />
+      ) : null}
+      {canRoutine ? (
+        <Tab.Screen name="RoutineTab" component={RoutineNavigator} options={{ title: STR.tabRoutine, tabBarIcon: tabIcon("📅") }} />
       ) : null}
       {canAdmin ? (
         <Tab.Screen name="AdminTab" component={AdminNavigator} options={{ title: STR.tabAdmin, tabBarIcon: tabIcon("⚙️") }} />

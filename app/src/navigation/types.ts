@@ -43,6 +43,14 @@ export type HomeworkStackParamList = {
   SectionPicker: undefined;
 };
 
+export type RoutineStackParamList = {
+  RoutineHome: undefined;
+  MyRoutine: undefined;
+  GroupRoutine: { groupType: string; groupId: string; title: string };
+  RoutineEditor: { groupType: string; groupId: string; title: string };
+  SectionPicker: undefined;
+};
+
 export type AdminStackParamList = {
   AdminHome: undefined;
   Import: undefined;
@@ -61,5 +69,6 @@ export type TabParamList = {
   TrackersTab: NavigatorScreenParams<TrackersStackParamList>;
   HomeworkTab: NavigatorScreenParams<HomeworkStackParamList>;
   ReviewTab: NavigatorScreenParams<ReviewStackParamList>;
+  RoutineTab: NavigatorScreenParams<RoutineStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
 };

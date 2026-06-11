@@ -3,6 +3,18 @@
 _Updated: 2026-06-11_
 
 ## Now / next
+- **Built (Routine R-3 — app views, D-#46):** first routine **frontend** slice (Expo). New **Routine tab**
+  (📅, gated `routine:read` → Principal/Teacher/Office), `RoutineStack` with 4 screens: `RoutineHome`
+  (role-aware landing — My routine / section grid / Quran-Arabic group list; editor entries shown only to
+  `routine:manage`), `GroupRoutineScreen` (R3.1 weekly grid for a Section/SubjectGroup, grouped by day via
+  shared `SlotList`), `MyRoutineScreen` (R3.2 the teacher's own slots, today highlighted), `RoutineEditor`
+  (R3.3 admin create/delete slots — day/period/subject/track/teacher/room chips+fields; **server conflict
+  rejection shown inline + authority warnings surfaced as a notice**). One small server read added:
+  `myRoutineSlots` (`routine:read`, scoped to the caller). App-native operations + `routineSubjectLabel`/
+  `dayOfWeekLabel`/`periodTrackLabel` + STR keys (BN/EN). **Frontend-only beyond the one read; no
+  contract/schema change.** **Gate GREEN:** server tsc + **jest 269/269** (firewall green); **app
+  `tsc --noEmit` clean + web bundle green** (`expo export --platform web`, 488 modules). **Not verified
+  against a live server.** Covers R3.1–R3.3. **Next = R-4** (substitution/cover + proxy-manage).
 - **Built (Routine R-2 — slots + conflict engine + scope binding, D-#46/#49/#56):** server-side. New
   `RoutineSlot` model (`(group×day×period)→subject,teacher,room`; group = Section or SubjectGroup;
   effective-dated `[from,to)`; a Quran double = two adjacent slots, D-#56). **Conflict engine** (pure
