@@ -20,12 +20,21 @@ import {
   type ScopeItem,
 } from "../modules/foundation/services/ScopeGrantService";
 import { ScopeGrant } from "../modules/foundation/models/ScopeGrant";
+import { Section } from "../modules/foundation/models/Section";
 
 export class ForbiddenError extends Error {
   constructor(msg = "Forbidden") {
     super(msg);
     this.name = "ForbiddenError";
   }
+}
+
+/** Pure predicate: is `userId` the section's assigned class teacher? */
+export function isClassTeacher(
+  classTeacherId: string | null | undefined,
+  userId: string,
+): boolean {
+  return !!classTeacherId && classTeacherId === userId;
 }
 
 /** Builds the teacher's scope union and stamps any expired proxy grants.
@@ -71,4 +80,24 @@ export async function assertCanWrite(ctx: AppContext, sectionId: string): Promis
   if (ctx.auth?.role === "OFFICE" || ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
   const scopes = await resolveTeacherScopes(ctx);
   if (!canWrite(scopes, sectionId)) throw new ForbiddenError();
+}
+
+/**
+ * Assert the caller is the section's CLASS TEACHER — the only role that may run
+ * homework reconciliation + confirm-issue (handoff §9 / D-#42). Stricter than
+ * assertCanWrite: even a teaching/proxy teacher on the section is denied unless
+ * they are the assigned class teacher. Principal/Office are NOT auto-allowed here
+ * (the daily-coordinator role is intentionally specific); they assign the class
+ * teacher via `assignClassTeacher` instead.
+ */
+export async function assertIsClassTeacher(ctx: AppContext, sectionId: string): Promise<void> {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  const section = await Section.findById(sectionId).lean();
+  if (!section) throw new ForbiddenError("Section not found");
+  const ctId = section.classTeacherId ? section.classTeacherId.toString() : null;
+  if (!isClassTeacher(ctId, ctx.auth.userId)) {
+    throw new ForbiddenError(
+      "Only the section's class teacher may reconcile/confirm homework (handoff §9)",
+    );
+  }
 }

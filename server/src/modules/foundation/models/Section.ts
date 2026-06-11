@@ -7,6 +7,10 @@ export interface ISection extends Document {
   code: string;
   nameBn: string;
   active: boolean;
+  /** The section's CLASS TEACHER — the daily coordinator who runs homework
+   *  reconciliation + confirms issue (handoff §9 / D-#42). A TEACHER User; optional
+   *  (an unassigned section cannot reconcile until one is set). */
+  classTeacherId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,6 +21,7 @@ const SectionSchema = new Schema<ISection>(
     code: { type: String, required: true, trim: true, default: DEFAULT_SECTION_CODE },
     nameBn: { type: String, required: true, trim: true },
     active: { type: Boolean, default: true },
+    classTeacherId: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true },
 );
