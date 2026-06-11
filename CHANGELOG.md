@@ -11,6 +11,18 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
   `PlanViewScreen` gains Principal assign + approve actions. New label helpers `reviewVerdictLabel`/
   `reviewRoundStatusLabel` + STR strings; nav `ReviewStackParamList` + `ReviewTab`. Frontend-only, no
   server/contract change. Gate: app `tsc --noEmit` clean + web bundle green (476 modules).
+- Homework Tracker HW-T3 (resubmission + Pool top-up, D-#43): new `HomeworkResubmissionService` —
+  `checkRecord` records RESULT at SUBMITTED→CHECKED; **WRONG auto-spawns** a resubmission (a NEW record,
+  same `HW_ID`, `resubOf` set, fresh GIVEN→…→RETURNED pass; original → RESUBMIT), **PARTIAL** spawns only
+  on the teacher's `resubmit` judgment, **CORRECT** advances with no spawn. Four §5 top-up boundaries
+  enforced: (1) selected-not-authored — `TOPUP_QIDS` must resolve to existing CURRENT question artifacts in
+  the same subject+class (reads the Slice-2 question store; no corpus/identity path); (2) reactive-only — a
+  top-up attaches only to a spawned resubmission; (3) time-counted — `TOPUP_TIME` summed in
+  `getStudentDayLoad`; (4) inside the resubmission — same `HW_ID`, `TOPUP_FLAG`. GraphQL: `checkHomeworkRecord`
+  mutation (subject-teacher write-scope) + `studentDayLoad` query (per-child base+top-up minutes vs 240).
+  **Fix:** dropped the HW-T1 unique index on `HomeworkStudentRecord {hwItemId, studentId}` (a resubmission is
+  a legitimate 2nd record for the same student+item). No new vocab, no wire-contract change. Gate green:
+  server tsc clean, vocab verifier PASS, **jest 218/218** (14 new in homeworkResubmission.test; firewall green).
 - Plan review/approval loop PR-2 (D-#38): `approvePlan` — Principal sign-off `reviewed→gold`
   (`content:promote_gold`), closes the thread (supersedes any open round), audits `PLAN_APPROVED`;
   rejects unless the plan is `reviewed`. `planReviewInbox` (Principal/Office — submitted rounds, the

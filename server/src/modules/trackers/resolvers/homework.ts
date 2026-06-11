@@ -28,6 +28,10 @@ import {
   confirmHomeworkDay as confirmDaySvc,
 } from "../services/HomeworkReconciliationService";
 import {
+  checkRecord as checkRecordSvc,
+  getStudentDayLoad as studentDayLoadSvc,
+} from "../services/HomeworkResubmissionService";
+import {
   assertCanWrite,
   assertCanRead,
   assertIsClassTeacher,
@@ -534,6 +538,132 @@ builder.mutationField("confirmHomeworkDay", (t) =>
         roster: args.roster.map((r) => ({ studentId: r.studentId, present: r.present })),
         actorId: ctx.auth.userId as string,
       });
+    },
+  }),
+);
+
+// ===========================================================================
+// HW-T3 — checking, resubmission spawn + Pool top-up (handoff §5)
+// ===========================================================================
+
+interface ResubSpawnShape {
+  recordId: string;
+  hwId: string;
+  state: string;
+  topupFlag: boolean;
+  topupQids: string[];
+  topupTime: number | null;
+  dueDate: string | null;
+}
+
+const ResubSpawnRef = builder.objectRef<ResubSpawnShape>("HomeworkResubmission");
+ResubSpawnRef.implement({
+  description: "A spawned resubmission record — same HW_ID, its own 1→6 pass (handoff §5.4).",
+  fields: (t) => ({
+    recordId: t.exposeString("recordId"),
+    hwId: t.exposeString("hwId"),
+    state: t.exposeString("state"),
+    topupFlag: t.exposeBoolean("topupFlag"),
+    topupQids: t.field({ type: ["String"], resolve: (r) => r.topupQids }),
+    topupTime: t.int({ nullable: true, resolve: (r) => r.topupTime }),
+    dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),
+  }),
+});
+
+interface CheckResultShape {
+  recordId: string;
+  hwId: string;
+  state: string;
+  result: string;
+  resubmission: ResubSpawnShape | null;
+}
+
+const CheckResultRef = builder.objectRef<CheckResultShape>("HomeworkCheckResult");
+CheckResultRef.implement({
+  fields: (t) => ({
+    recordId: t.exposeString("recordId"),
+    hwId: t.exposeString("hwId"),
+    state: t.exposeString("state"),
+    result: t.exposeString("result"),
+    resubmission: t.field({ type: ResubSpawnRef, nullable: true, resolve: (r) => r.resubmission }),
+  }),
+});
+
+interface StudentDayLoadShape {
+  studentId: string;
+  classId: string;
+  baseMinutes: number;
+  topupMinutes: number;
+  totalMinutes: number;
+  ceiling: number;
+  overCeiling: boolean;
+}
+
+const StudentDayLoadRef = builder.objectRef<StudentDayLoadShape>("StudentDayLoad");
+StudentDayLoadRef.implement({
+  description: "A child's personal day-load incl. TOPUP_TIME (handoff §5.3) — a top-up may push them over.",
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    classId: t.exposeString("classId"),
+    baseMinutes: t.exposeInt("baseMinutes"),
+    topupMinutes: t.exposeInt("topupMinutes"),
+    totalMinutes: t.exposeInt("totalMinutes"),
+    ceiling: t.exposeInt("ceiling"),
+    overCeiling: t.exposeBoolean("overCeiling"),
+  }),
+});
+
+// Mutation: checkHomeworkRecord (record RESULT; WRONG auto-spawns a resubmission) --
+builder.mutationField("checkHomeworkRecord", (t) =>
+  t.field({
+    type: CheckResultRef,
+    description:
+      "Check a submitted record: record RESULT (CORRECT/PARTIAL/WRONG). WRONG auto-spawns a same-HW_ID " +
+      "resubmission; PARTIAL spawns only if resubmit=true. Optional Pool top-up (reactive only). " +
+      "Subject-teacher write-scope (handoff §9).",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      recordId: t.arg.string({ required: true }),
+      result: t.arg.string({ required: true }),
+      resubmit: t.arg.boolean({ required: false }),
+      topupQids: t.arg({ type: ["String"], required: false }),
+      topupTime: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanWrite(ctx, args.sectionId);
+      const topup =
+        args.topupQids && args.topupQids.length > 0
+          ? { qids: [...args.topupQids], time: args.topupTime ?? 0 }
+          : undefined;
+      return checkRecordSvc({
+        recordId: args.recordId,
+        result: args.result,
+        resubmit: args.resubmit ?? undefined,
+        topup,
+        actorId: ctx.auth.userId as string,
+      });
+    },
+  }),
+);
+
+// Query: studentDayLoad (the child's personal load incl. top-ups, §5.3 / T3.4) ----
+builder.queryField("studentDayLoad", (t) =>
+  t.field({
+    type: StudentDayLoadRef,
+    description: "A student's personal homework day-load including top-up minutes. Read-scope enforced.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+      studentId: t.arg.string({ required: true }),
+      date: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      return studentDayLoadSvc(args.classId, args.studentId, new Date(args.date));
     },
   }),
 );

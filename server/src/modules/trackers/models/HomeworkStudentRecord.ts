@@ -85,10 +85,14 @@ const HomeworkStudentRecordSchema = new Schema<IHomeworkStudentRecord>(
   { timestamps: true },
 );
 
-// One record per student per item; lookups by item, by student, and by state (chase/checking queues, §8).
-HomeworkStudentRecordSchema.index({ hwItemId: 1, studentId: 1 }, { unique: true });
+// Lookups by item+student, by student, and by state (chase/checking queues, §8).
+// NOT unique on (hwItemId, studentId): a resubmission (HW-T3) is a SECOND record
+// for the same student+item, distinguished by `resubOf` (handoff §3 / §5.4) — the
+// original + each resubmission of the same HW_ID coexist.
+HomeworkStudentRecordSchema.index({ hwItemId: 1, studentId: 1 });
 HomeworkStudentRecordSchema.index({ studentId: 1, state: 1 });
 HomeworkStudentRecordSchema.index({ hwItemId: 1, state: 1 });
+HomeworkStudentRecordSchema.index({ resubOf: 1 });
 
 export const HomeworkStudentRecord = model<IHomeworkStudentRecord>(
   "HomeworkStudentRecord",
