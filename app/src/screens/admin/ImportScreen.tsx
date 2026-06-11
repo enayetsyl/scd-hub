@@ -43,7 +43,7 @@ function StringList({ title, items }: { title: string; items: string[] }): React
     <View style={{ marginTop: space(2) }}>
       <Muted style={{ fontWeight: "700" }}>{title}</Muted>
       {items.map((it, i) => (
-        <Body key={i} style={{ marginTop: 2 }}>
+        <Body key={i} style={{ marginTop: 4 }}>
           • {it}
         </Body>
       ))}

@@ -11,8 +11,8 @@
  * Intentionally a focused subset, not a full CommonMark engine.
  */
 import React from "react";
-import { View, Text, StyleSheet, type TextStyle } from "react-native";
-import { colors, radius, space } from "../theme/tokens";
+import { View, Text, type TextStyle } from "react-native";
+import { makeStyles, radius, space, typeScale, fonts } from "../theme";
 
 /** Drop HTML comments before rendering — they are internal provenance, never shown. */
 export function stripHtmlComments(src: string): string {
@@ -145,7 +145,9 @@ function parseBlocks(src: string): Block[] {
 
 const INLINE = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*\n]+\*|_[^_\n]+_)/g;
 
-function renderInline(text: string, keyPrefix: string, base?: TextStyle): React.ReactNode {
+type MdStyles = ReturnType<typeof useStyles>;
+
+function renderInline(styles: MdStyles, text: string, keyPrefix: string, base?: TextStyle): React.ReactNode {
   const parts = text.split(INLINE);
   return parts.map((part, idx) => {
     if (!part) return null;
@@ -184,6 +186,7 @@ function renderInline(text: string, keyPrefix: string, base?: TextStyle): React.
 // ---------------------------------------------------------------------------
 
 function Table({ header, rows, k }: { header: string[]; rows: string[][]; k: string }): React.ReactElement {
+  const styles = useStyles();
   const nCols = Math.max(header.length, ...rows.map((r) => r.length));
   const pad = (cells: string[]): string[] => {
     const out = [...cells];
@@ -195,7 +198,7 @@ function Table({ header, rows, k }: { header: string[]; rows: string[][]; k: str
       <View style={[styles.tr, styles.thead]}>
         {pad(header).map((cell, ci) => (
           <View key={`${k}-h-${ci}`} style={styles.cell}>
-            <Text style={styles.body}>{renderInline(cell, `${k}-h-${ci}`, styles.thText)}</Text>
+            <Text style={styles.body}>{renderInline(styles, cell, `${k}-h-${ci}`, styles.thText)}</Text>
           </View>
         ))}
       </View>
@@ -203,7 +206,7 @@ function Table({ header, rows, k }: { header: string[]; rows: string[][]; k: str
         <View key={`${k}-r-${ri}`} style={styles.tr}>
           {pad(row).map((cell, ci) => (
             <View key={`${k}-r-${ri}-${ci}`} style={styles.cell}>
-              <Text style={styles.body}>{renderInline(cell, `${k}-r-${ri}-${ci}`)}</Text>
+              <Text style={styles.body}>{renderInline(styles, cell, `${k}-r-${ri}-${ci}`)}</Text>
             </View>
           ))}
         </View>
@@ -212,13 +215,13 @@ function Table({ header, rows, k }: { header: string[]; rows: string[][]; k: str
   );
 }
 
-function renderBlock(b: Block, k: string): React.ReactElement {
+function renderBlock(styles: MdStyles, b: Block, k: string): React.ReactElement {
   switch (b.kind) {
     case "heading": {
       const hStyle = b.level === 1 ? styles.h1 : b.level === 2 ? styles.h2 : styles.h3;
       return (
         <Text key={k} style={hStyle}>
-          {renderInline(b.text, k)}
+          {renderInline(styles, b.text, k)}
         </Text>
       );
     }
@@ -227,21 +230,21 @@ function renderBlock(b: Block, k: string): React.ReactElement {
     case "quote":
       return (
         <View key={k} style={styles.quote}>
-          <Text style={styles.quoteText}>{renderInline(b.text, k, styles.quoteText)}</Text>
+          <Text style={styles.quoteText}>{renderInline(styles, b.text, k, styles.quoteText)}</Text>
         </View>
       );
     case "bullet":
       return (
         <View key={k} style={styles.listItem}>
           <Text style={styles.bulletMark}>{b.checked === null ? "•" : b.checked ? "☑" : "☐"}</Text>
-          <Text style={[styles.body, styles.listText]}>{renderInline(b.text, k)}</Text>
+          <Text style={[styles.body, styles.listText]}>{renderInline(styles, b.text, k)}</Text>
         </View>
       );
     case "ordered":
       return (
         <View key={k} style={styles.listItem}>
           <Text style={styles.orderedMark}>{b.num}.</Text>
-          <Text style={[styles.body, styles.listText]}>{renderInline(b.text, k)}</Text>
+          <Text style={[styles.body, styles.listText]}>{renderInline(styles, b.text, k)}</Text>
         </View>
       );
     case "table":
@@ -250,67 +253,69 @@ function renderBlock(b: Block, k: string): React.ReactElement {
     default:
       return (
         <Text key={k} style={[styles.body, styles.paragraph]}>
-          {renderInline(b.text, k)}
+          {renderInline(styles, b.text, k)}
         </Text>
       );
   }
 }
 
 export default function Markdown({ source }: { source: string }): React.ReactElement {
+  const styles = useStyles();
   const blocks = React.useMemo(() => parseBlocks(source), [source]);
-  return <View>{blocks.map((b, idx) => renderBlock(b, `b-${idx}`))}</View>;
+  return <View>{blocks.map((b, idx) => renderBlock(styles, b, `b-${idx}`))}</View>;
 }
 
-const styles = StyleSheet.create({
-  h1: { fontSize: 20, fontWeight: "700", color: colors.ink, marginTop: space(4), marginBottom: space(2), lineHeight: 28 },
-  h2: { fontSize: 17, fontWeight: "700", color: colors.ink, marginTop: space(4), marginBottom: space(1.5), lineHeight: 24 },
-  h3: { fontSize: 15, fontWeight: "700", color: colors.ink, marginTop: space(3), marginBottom: space(1), lineHeight: 22 },
-  body: { fontSize: 15, color: colors.ink, lineHeight: 22 },
-  paragraph: { marginBottom: space(2.5) },
+const useStyles = makeStyles((colors) => ({
+  // Headings map onto the §5 scale: h1=pageTitle, h2=sectionTitle, h3=bodyStrong.
+  h1: { ...typeScale.pageTitle, color: colors.textPrimary, marginTop: space(4), marginBottom: space(2) },
+  h2: { ...typeScale.sectionTitle, color: colors.textPrimary, marginTop: space(4), marginBottom: space(2) },
+  h3: { ...typeScale.bodyStrong, color: colors.textPrimary, marginTop: space(3), marginBottom: space(1) },
+  body: { ...typeScale.body, color: colors.textPrimary },
+  paragraph: { marginBottom: space(3) },
 
-  bold: { fontWeight: "700" },
-  italic: { fontStyle: "italic" },
+  bold: { fontFamily: fonts.bold },
+  italic: { fontStyle: "italic" as const },
   code: {
     fontFamily: "monospace",
-    backgroundColor: "#f1f5f9",
-    color: colors.brand800,
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textPrimary,
     fontSize: 14,
   },
 
-  hr: { height: 1, backgroundColor: colors.line, marginVertical: space(3) },
+  hr: { height: 1, backgroundColor: colors.border, marginVertical: space(3) },
 
   quote: {
     borderLeftWidth: 3,
-    borderLeftColor: colors.brand500,
-    backgroundColor: colors.brand50,
+    borderLeftColor: colors.primary,
+    backgroundColor: colors.surfaceAlt,
     paddingHorizontal: space(3),
     paddingVertical: space(2),
-    marginBottom: space(2.5),
+    marginBottom: space(3),
     borderRadius: radius.sm,
   },
-  quoteText: { fontSize: 14, color: colors.muted, lineHeight: 21 },
+  quoteText: { ...typeScale.secondary, color: colors.textSecondary },
 
-  listItem: { flexDirection: "row", marginBottom: space(1.5), paddingRight: space(2) },
-  bulletMark: { fontSize: 15, color: colors.brand700, width: space(5), lineHeight: 22 },
-  orderedMark: { fontSize: 15, color: colors.brand700, fontWeight: "700", minWidth: space(6), lineHeight: 22 },
+  listItem: { flexDirection: "row" as const, marginBottom: space(2), paddingRight: space(2) },
+  bulletMark: { ...typeScale.body, color: colors.primary, width: space(5) },
+  orderedMark: { ...typeScale.bodyStrong, color: colors.primary, minWidth: space(6) },
   listText: { flex: 1 },
 
   table: {
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.border,
     borderRadius: radius.sm,
-    overflow: "hidden",
+    overflow: "hidden" as const,
     marginBottom: space(3),
   },
-  tr: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: colors.line },
-  thead: { backgroundColor: colors.brand50 },
-  thText: { fontWeight: "700", color: colors.brand800 },
+  tr: { flexDirection: "row" as const, borderBottomWidth: 1, borderBottomColor: colors.border },
+  thead: { backgroundColor: colors.surfaceAlt },
+  thText: { fontFamily: fonts.bold, color: colors.textPrimary },
   cell: {
     flex: 1,
     minWidth: 0,
     paddingHorizontal: space(2),
-    paddingVertical: space(1.5),
+    paddingVertical: space(2),
     borderRightWidth: 1,
-    borderRightColor: colors.line,
+    borderRightColor: colors.border,
   },
-});
+}));

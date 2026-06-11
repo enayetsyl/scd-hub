@@ -16,13 +16,14 @@ import { SectionBar } from "../../components/SectionBar";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
-import { space, colors } from "../../theme/tokens";
+import { space, useColors } from "../../theme";
 
 type Props = NativeStackScreenProps<HomeworkStackParamList, "HomeworkReconcile">;
 
 const today = (): string => new Date().toISOString().slice(0, 10);
 
 export default function HomeworkReconcileScreen({ navigation }: Props): React.ReactElement {
+  const colors = useColors();
   const { selection, hasSection } = useSectionContext();
   const [date, setDate] = useState(today());
   const [trimTo, setTrimTo] = useState<Record<string, string>>({});
@@ -101,7 +102,7 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
                 <Body style={{ fontWeight: "700" }}>{STR.hwDayTotal}</Body>
                 <Badge text={`${bnNum(tally?.dayTotal ?? 0)} / ${bnNum(tally?.ceiling ?? 240)}`} tone={over ? "danger" : "ok"} />
               </View>
-              {over ? <Muted style={{ color: colors.danger, marginTop: 4 }}>{STR.hwOverCeiling} · {STR.hwTrimPanel}</Muted> : null}
+              {over ? <Muted style={{ color: colors.error, marginTop: 4 }}>{STR.hwOverCeiling} · {STR.hwTrimPanel}</Muted> : null}
             </Card>
 
             {/* Trim panel — one row per declared item */}
@@ -111,7 +112,7 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
                   <Body style={{ fontWeight: "700" }}>{hwSubjectLabel(it.subject)}</Body>
                   <Muted>{bnNum(it.timeDecl)} {STR.hwMinutes} · {bnNum(it.qCount)} {STR.questionsWord}</Muted>
                 </View>
-                <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-end", marginTop: 6 }}>
+                <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-end", marginTop: 8 }}>
                   <View style={{ flex: 1 }}>
                     <Field
                       label={STR.hwTrimTo}
@@ -129,7 +130,7 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
 
             {/* Roster present/absent */}
             <Card>
-              <Body style={{ fontWeight: "700", marginBottom: 6 }}>{STR.hwRosterPresent} / {STR.hwRosterAbsent}</Body>
+              <Body style={{ fontWeight: "700", marginBottom: 8 }}>{STR.hwRosterPresent} / {STR.hwRosterAbsent}</Body>
               {students.length === 0 ? (
                 <Muted>{STR.empty}</Muted>
               ) : (
@@ -147,7 +148,7 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
             </Card>
 
             <View style={{ marginTop: space(2) }}>
-              {over ? <Muted style={{ color: colors.danger, marginBottom: 6 }}>{STR.hwOverCeiling}</Muted> : null}
+              {over ? <Muted style={{ color: colors.error, marginBottom: 8 }}>{STR.hwOverCeiling}</Muted> : null}
               <Button title={STR.hwConfirmIssue} onPress={onConfirm} loading={busy} disabled={busy || over} />
             </View>
           </>

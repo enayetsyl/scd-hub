@@ -109,7 +109,7 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
             {error ? <Notice message={error} tone="danger" /> : null}
 
             <Card>
-              <Body style={{ fontWeight: "700", marginBottom: 6 }}>{STR.hwToday}</Body>
+              <Body style={{ fontWeight: "700", marginBottom: 8 }}>{STR.hwToday}</Body>
               <ChipRow>
                 {items.map((i) => (
                   <Chip key={i.id} label={`${hwSubjectLabel(i.subject)}`} selected={itemId === i.id} onPress={() => setItemId(i.id)} />
@@ -139,7 +139,7 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
                         ))}
                       </ChipRow>
                       {showTopup ? (
-                        <View style={{ marginTop: 6 }}>
+                        <View style={{ marginTop: 8 }}>
                           {p?.result === "PARTIAL" ? (
                             <ChipRow>
                               <Chip label={STR.hwResubmit} selected={!!p?.resubmit} onPress={() => setPend(r.id, { resubmit: !p?.resubmit })} />
@@ -149,7 +149,7 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
                           <Field label={STR.hwTopupTime} value={p?.topupTime ?? ""} onChangeText={(t) => setPend(r.id, { topupTime: t })} keyboardType="number-pad" />
                         </View>
                       ) : null}
-                      <View style={{ marginTop: 6 }}>
+                      <View style={{ marginTop: 8 }}>
                         <Button title={STR.hwCheck} onPress={() => onCheck(r.id)} loading={busy} disabled={busy || !p?.result} />
                       </View>
                     </Card>

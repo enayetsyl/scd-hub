@@ -1,5 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useColorScheme } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
+import { useFonts } from "expo-font";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { Provider as UrqlProvider } from "urql";
@@ -10,6 +13,11 @@ import { BasketProvider } from "./src/state/BasketContext";
 import { SectionProvider } from "./src/state/SectionContext";
 import { LanguageProvider, useLanguage } from "./src/state/LanguageContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
+import { useNavigationTheme } from "./src/theme";
+
+// Splash holds until Noto Sans Bengali is loaded (ui-guidelines §13.2) — text
+// never flashes in the platform font.
+void SplashScreen.preventAutoHideAsync();
 
 /**
  * Keying RootNavigator by the active language remounts the navigation subtree on a
@@ -21,7 +29,34 @@ function LanguageScopedNavigator(): React.ReactElement {
   return <RootNavigator key={lang} />;
 }
 
-export default function App(): React.ReactElement {
+function ThemedNavigation(): React.ReactElement {
+  const navTheme = useNavigationTheme();
+  const scheme = useColorScheme();
+  return (
+    <NavigationContainer theme={navTheme}>
+      <LanguageScopedNavigator />
+      {/* The header is a `primary` block in both themes: light primary is deep
+          green (light icons), dark primary is light green (dark icons). */}
+      <StatusBar style={scheme === "dark" ? "dark" : "light"} />
+    </NavigationContainer>
+  );
+}
+
+export default function App(): React.ReactElement | null {
+  // Only the three faces the type scale uses (§5) — requiring the package
+  // index would bundle every weight.
+  const [fontsLoaded] = useFonts({
+    NotoSansBengali_400Regular: require("@expo-google-fonts/noto-sans-bengali/NotoSansBengali_400Regular.ttf"),
+    NotoSansBengali_500Medium: require("@expo-google-fonts/noto-sans-bengali/NotoSansBengali_500Medium.ttf"),
+    NotoSansBengali_700Bold: require("@expo-google-fonts/noto-sans-bengali/NotoSansBengali_700Bold.ttf"),
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) void SplashScreen.hideAsync();
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
   return (
     <SafeAreaProvider>
       <UrqlProvider value={urqlClient}>
@@ -29,10 +64,7 @@ export default function App(): React.ReactElement {
           <AuthProvider>
             <BasketProvider>
               <SectionProvider>
-                <NavigationContainer>
-                  <LanguageScopedNavigator />
-                  <StatusBar style="light" />
-                </NavigationContainer>
+                <ThemedNavigation />
               </SectionProvider>
             </BasketProvider>
           </AuthProvider>
