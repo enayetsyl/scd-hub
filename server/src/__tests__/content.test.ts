@@ -52,6 +52,15 @@ jest.mock("../modules/corpus/models/CorpusEvent", () => ({
   },
 }));
 
+// persistEnvelope calls supersedeOpenRoundsForAddress on a plan re-import (R2.2);
+// no open rounds in these tests → find() resolves to [] (no writes, no audit).
+jest.mock("../modules/content/models/ReviewAssignment", () => ({
+  ReviewAssignment: {
+    find: jest.fn(() => ({ lean: () => Promise.resolve([]) })),
+    updateOne: jest.fn().mockResolvedValue({}),
+  },
+}));
+
 jest.mock("child_process");
 
 // Import AFTER mocks are installed

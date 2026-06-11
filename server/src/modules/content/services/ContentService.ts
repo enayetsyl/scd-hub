@@ -22,6 +22,7 @@ import type { Types } from "mongoose";
 import { ContentArtifact } from "../models/ContentArtifact";
 import { ImportBatch } from "../../platform/models/ImportBatch";
 import { CorpusEvent } from "../../corpus/models/CorpusEvent";
+import { isPlanDocType, supersedeOpenRoundsForAddress } from "./ReviewService";
 
 /** Wrap execFile in a Promise that always resolves (never throws) — returns {stdout,stderr,code}. */
 function execFilePromise(
@@ -183,6 +184,22 @@ async function persistEnvelope(
   const prior = await ContentArtifact.findOne(versionKey).lean();
   if (prior) {
     await ContentArtifact.updateOne({ _id: prior._id }, { $set: { current: false } });
+    // Re-import carries the review thread forward (R2.2): a revised plan version
+    // supersedes any open review round on the prior version. The next round is then
+    // assigned on this new version (born `draft`). Plans only; harmless no-op otherwise.
+    if (typeof envelope.doc_type === "string" && isPlanDocType(envelope.doc_type)) {
+      await supersedeOpenRoundsForAddress(
+        {
+          docType: envelope.doc_type,
+          subject: String(envelope.subject),
+          classLevel: Number(envelope.class_level),
+          anchorWord: String(addr.anchor_word),
+          addressNumber: String(addr.number),
+        },
+        "superseded_by_reimport",
+        actorId.toString(),
+      );
+    }
   }
 
   const artifact = await ContentArtifact.create({

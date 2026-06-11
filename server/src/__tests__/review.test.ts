@@ -51,6 +51,10 @@ import {
   submitPlanReview,
   cancelPlanReview,
   reviewerMayReadArtifact,
+  approvePlan,
+  supersedeOpenRoundsForAddress,
+  planReviewInbox,
+  planReviewThread,
   ReviewError,
 } from "../modules/content/services/ReviewService";
 
@@ -387,5 +391,127 @@ describe("reviewerMayReadArtifact (R1.3)", () => {
   test("false when no active round", async () => {
     mockReviewFindOne.mockReturnValue(query(null));
     expect(await reviewerMayReadArtifact(OTHER_TEACHER_ID.toString(), ARTIFACT_ID)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR-2 — sign-off, supersession, inbox, thread
+// ---------------------------------------------------------------------------
+
+/** A lean ReviewAssignment row (as returned by find().lean()). */
+function rawRound(over: Record<string, unknown> = {}) {
+  return {
+    _id: new mongoose.Types.ObjectId(),
+    docType: "chapter_plan",
+    subject: "BAN",
+    classLevel: 3,
+    anchorWord: "পাঠ",
+    addressNumber: "5",
+    artifactId: ARTIFACT_ID,
+    reviewerId: REVIEWER_ID,
+    assignedBy: ADMIN_ID,
+    assignedAt: new Date("2026-06-11T09:00:00Z"),
+    roundNumber: 1,
+    status: "submitted",
+    verdict: "CHANGES_REQUESTED",
+    feedback: "fix objectives",
+    submittedAt: new Date("2026-06-11T10:00:00Z"),
+    ...over,
+  };
+}
+
+describe("approvePlan (R2.1)", () => {
+  test("reviewed → gold; closes thread; audits PLAN_APPROVED", async () => {
+    const artifact = { ...planArtifact({ reviewStatus: "reviewed" }), save: jest.fn().mockResolvedValue(true) };
+    mockArtifactFindById.mockReturnValue(artifact); // approve awaits the doc directly
+    mockReviewFind.mockReturnValue(query([])); // no open rounds to supersede
+
+    const res = await approvePlan({ artifactId: ARTIFACT_ID.toString(), actorId: ADMIN_ID.toString(), actorRole: "PRINCIPAL" });
+
+    expect(res.reviewStatus).toBe("gold");
+    expect(artifact.reviewStatus).toBe("gold");
+    expect(artifact.save).toHaveBeenCalled();
+    expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "PLAN_APPROVED" }));
+  });
+
+  test("supersedes an open round on sign-off", async () => {
+    const artifact = { ...planArtifact({ reviewStatus: "reviewed" }), save: jest.fn().mockResolvedValue(true) };
+    const open = rawRound({ status: "submitted" });
+    mockArtifactFindById.mockReturnValue(artifact);
+    mockReviewFind.mockReturnValue(query([open]));
+    mockReviewUpdateOne.mockResolvedValue({ acknowledged: true });
+
+    await approvePlan({ artifactId: ARTIFACT_ID.toString(), actorId: ADMIN_ID.toString() });
+
+    expect(mockReviewUpdateOne).toHaveBeenCalledWith({ _id: open._id }, { $set: { status: "superseded" } });
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventKind: "REVIEW_CANCELLED", meta: { reason: "approved_signed_off" } }),
+    );
+  });
+
+  test("rejects sign-off on a draft plan (must be reviewed first)", async () => {
+    mockArtifactFindById.mockReturnValue({ ...planArtifact({ reviewStatus: "draft" }), save: jest.fn() });
+    await expect(approvePlan({ artifactId: ARTIFACT_ID.toString(), actorId: ADMIN_ID.toString() })).rejects.toThrow(/must be 'reviewed'/);
+  });
+
+  test("rejects an already-gold plan", async () => {
+    mockArtifactFindById.mockReturnValue({ ...planArtifact({ reviewStatus: "gold" }), save: jest.fn() });
+    await expect(approvePlan({ artifactId: ARTIFACT_ID.toString(), actorId: ADMIN_ID.toString() })).rejects.toThrow(/already approved/);
+  });
+
+  test("rejects a non-plan artifact", async () => {
+    mockArtifactFindById.mockReturnValue({ ...planArtifact({ docType: "question", reviewStatus: "reviewed" }), save: jest.fn() });
+    await expect(approvePlan({ artifactId: ARTIFACT_ID.toString(), actorId: ADMIN_ID.toString() })).rejects.toThrow(ReviewError);
+  });
+});
+
+describe("supersedeOpenRoundsForAddress (R2.2 re-import linkage)", () => {
+  const key = { docType: "chapter_plan", subject: "BAN", classLevel: 3, anchorWord: "পাঠ", addressNumber: "5" };
+
+  test("marks every open round superseded + audits each; returns the count", async () => {
+    const a = rawRound({ status: "assigned" });
+    const b = rawRound({ status: "submitted" });
+    mockReviewFind.mockReturnValue(query([a, b]));
+    mockReviewUpdateOne.mockResolvedValue({ acknowledged: true });
+
+    const n = await supersedeOpenRoundsForAddress(key, "superseded_by_reimport", ADMIN_ID.toString());
+
+    expect(n).toBe(2);
+    expect(mockReviewUpdateOne).toHaveBeenCalledTimes(2);
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventKind: "REVIEW_CANCELLED", meta: { reason: "superseded_by_reimport" } }),
+    );
+  });
+
+  test("no open rounds → no writes, returns 0", async () => {
+    mockReviewFind.mockReturnValue(query([]));
+    const n = await supersedeOpenRoundsForAddress(key, "superseded_by_reimport");
+    expect(n).toBe(0);
+    expect(mockReviewUpdateOne).not.toHaveBeenCalled();
+  });
+});
+
+describe("planReviewInbox (R2.3)", () => {
+  test("returns submitted rounds as DTOs with feedback", async () => {
+    mockReviewFind.mockReturnValue(query([rawRound(), rawRound({ verdict: "APPROVE", feedback: undefined })]));
+    const inbox = await planReviewInbox();
+    expect(inbox).toHaveLength(2);
+    expect(inbox[0].feedback).toBe("fix objectives");
+    expect(inbox[0].status).toBe("submitted");
+  });
+});
+
+describe("planReviewThread (R2.4)", () => {
+  test("resolves the address from an artifact and returns its rounds", async () => {
+    mockArtifactFindById.mockReturnValue(query(planArtifact()));
+    mockReviewFind.mockReturnValue(query([rawRound({ roundNumber: 1 }), rawRound({ roundNumber: 2, status: "assigned", verdict: undefined })]));
+    const thread = await planReviewThread(ARTIFACT_ID.toString());
+    expect(thread).toHaveLength(2);
+    expect(thread.map((r) => r.roundNumber)).toEqual([1, 2]);
+  });
+
+  test("throws on a missing artifact", async () => {
+    mockArtifactFindById.mockReturnValue(query(null));
+    await expect(planReviewThread(ARTIFACT_ID.toString())).rejects.toThrow(/not found/i);
   });
 });
