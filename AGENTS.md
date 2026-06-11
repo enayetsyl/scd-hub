@@ -70,6 +70,7 @@ policy, or decisions into this repo.
   hr-design.md        ← HR module design handoff (LOCKED source for prd-hr.md)
   prd-tracker-homework.md      ← Homework Tracker build contract: slices HW-T1..T4 + §12 acceptance (D-#33–#35)
   tracker-homework-handoff.md  ← Project-06 Homework-Tracker PRD v1.1 (LOCKED source for prd-tracker-homework.md)
+  prd-plan-review.md  ← Plan review/approval loop: assign→review→re-import→sign-off, slices PR-1..3 (D-#38–#40)
   architecture.md     ← how (modules, data planes, the ADRs)
   glossary.md         ← canonical terminology (read before naming anything)
   import-contract.md  ← the envelope contract narrative

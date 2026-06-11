@@ -14,6 +14,10 @@ export type AuditEventKind =
   | "SCOPE_GRANT_REVOKE"
   | "SCOPE_GRANT_EXTEND"
   | "PROXY_EXPIRED"       // stamped at request-time on first denied-after-expiry (D-#21)
+  | "REVIEW_ASSIGNED"     // plan-review round assigned to a teacher (D-#39)
+  | "REVIEW_SUBMITTED"    // reviewer submitted a verdict + feedback (D-#38)
+  | "REVIEW_CANCELLED"    // an open review round was cancelled/superseded (D-#40)
+  | "PLAN_APPROVED"       // Principal sign-off: reviewed → gold (D-#38; PR-2)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

@@ -3,6 +3,21 @@
 _Updated: 2026-06-10_
 
 ## Now / next
+- **Built (Plan review/approval loop PR-1 — D-#38–#40):** server core of the in-app plan-vetting loop.
+  Build contract `docs/prd-plan-review.md`. App-native vocab: new perm `content:assign_review`
+  (Principal/Office), `content:review` extended to TEACHER, `REVIEW_VERDICTS` enum (`APPROVE`/
+  `CHANGES_REQUESTED`) + BN labels; verifier extended + green. New `ReviewAssignment` model
+  (`content` module — address-keyed `{docType,subject,classLevel,anchorWord,addressNumber}` so the
+  review thread spans re-imported versions; identity plane, behind ADR-005). `ReviewService`
+  (`assignPlanReview`/`submitPlanReview`/`cancelPlanReview` + pure `advanceOnApprove`/`isPlanDocType`/
+  `addressKeyOf` + `reviewerMayReadArtifact`). Resolvers `assignPlanReview`/`submitPlanReview`/
+  `cancelPlanReview`/`myReviewAssignments`; **reviewer read-scope override** wired into the `artifact`
+  query (an assigned teacher reads that exact version out-of-subject, read-only). `APPROVE` on a `draft`
+  plan advances `reviewStatus`→`reviewed`; one open round per address (supersede on reassign, D-#40).
+  Audit kinds `REVIEW_ASSIGNED`/`REVIEW_SUBMITTED`/`REVIEW_CANCELLED` (+`PLAN_APPROVED` reserved for PR-2).
+  **No wire-contract change.** Gates: vocab verifier green, shared+server tsc clean, **188/188 tests**
+  (18 new in `review.test.ts`), firewall green. **Not yet committed.** Next = **PR-2** (Principal
+  sign-off `reviewed→gold`, inbox/thread queries, re-import→`superseded` linkage).
 - **Built (Homework Tracker HW-T2 — daily 240-min reconciliation + trim log + cadence, D-#41):** the ceiling
   is now real. `HomeworkReconciliation` (Layer C, one per class/day, immutable ক/খ/গ trim log) +
   `HomeworkReconciliationService`: `tallyDay` (live DAY_TOTAL vs 240 + >40 band warnings), `getTrimCandidates`

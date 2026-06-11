@@ -11,6 +11,7 @@ import { importEnvelope as importEnvelopeSvc, importContentFiles, type ImportFil
 import { ContentArtifact } from "../models/ContentArtifact";
 import { User } from "../../foundation/models/User";
 import { assertCanRead, ForbiddenError } from "../../../middleware/authz";
+import { reviewerMayReadArtifact } from "../services/ReviewService";
 import type { Types, FlattenMaps } from "mongoose";
 import type { FilterQuery } from "mongoose";
 import type { IContentArtifact } from "../models/ContentArtifact";
@@ -225,8 +226,14 @@ builder.queryField("artifact", (t) =>
     resolve: async (_root, args, ctx) => {
       const doc = await ContentArtifact.findById(args.id).lean();
       if (!doc) return null;
-      // Row-scope: PRINCIPAL/OFFICE bypass; TEACHER must have a grant covering this content
-      await assertCanRead(ctx, "", doc.subject, doc.subject);
+      // Row-scope: PRINCIPAL/OFFICE bypass; TEACHER must have a grant covering this content.
+      // Override (D-#39): a teacher with an active review assignment for this exact version
+      // may read it even outside their teaching subject (read-only, artifact-scoped).
+      try {
+        await assertCanRead(ctx, "", doc.subject, doc.subject);
+      } catch (err) {
+        if (!(ctx.auth && (await reviewerMayReadArtifact(ctx.auth.userId, doc._id)))) throw err;
+      }
       return docToShape(doc);
     },
   }),

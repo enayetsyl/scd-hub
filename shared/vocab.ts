@@ -151,6 +151,12 @@ export type SetType = (typeof SET_TYPES)[number];
 export const TRACKER_KINDS = ["classtest", "assignment", "homework", "generic"] as const;
 export type TrackerKind = (typeof TRACKER_KINDS)[number];
 
+/** Plan-review verdicts (D-#38/#39) — a teacher reviewer's call on an assigned plan.
+ *  APPROVE drives the artifact `draft → reviewed`; CHANGES_REQUESTED leaves it `draft`
+ *  (the admin re-imports a revision and reassigns). App-native — no wire-contract twin. */
+export const REVIEW_VERDICTS = ["APPROVE", "CHANGES_REQUESTED"] as const;
+export type ReviewVerdict = (typeof REVIEW_VERDICTS)[number];
+
 /** Default section auto-created per class (D-#1). Code stays "Main"; UI shows the label. */
 export const DEFAULT_SECTION_CODE = "Main" as const;
 
@@ -221,6 +227,11 @@ export const REVIEW_STATUS_LABELS_BN: Record<ReviewStatus, string> = {
   draft: "খসড়া",
   reviewed: "পর্যালোচিত",
   gold: "চূড়ান্ত", // Principal-locked
+};
+
+export const REVIEW_VERDICT_LABELS_BN: Record<ReviewVerdict, string> = {
+  APPROVE: "অনুমোদন",
+  CHANGES_REQUESTED: "পরিবর্তন প্রয়োজন",
 };
 
 export const SET_TYPE_LABELS_BN: Record<SetType, string> = {
@@ -394,8 +405,9 @@ export const PERMISSIONS = [
   // content (publisher seam + lifecycle)
   "content:read",
   "content:import",        // the import gate; granted to Principal + Office
-  "content:review",        // draft → reviewed (Project-03 REVIEW pass, D-#3)
-  "content:promote_gold",  // reviewed → gold (Principal-locked)
+  "content:assign_review", // assign/cancel a plan-review round + read the inbox (Principal/Office, D-#39)
+  "content:review",        // draft → reviewed — a reviewer's APPROVE verdict (D-#38; now also TEACHER)
+  "content:promote_gold",  // reviewed → gold (Principal-locked sign-off, D-#38)
   // questions + assembly
   "question:read",
   "question:select",
@@ -423,6 +435,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> = {
   "content:read": "build",
   "content:import": "build",
+  "content:assign_review": "build",
   "content:review": "build",
   "content:promote_gold": "build",
   "question:read": "build",
@@ -448,7 +461,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // edits) the audit log. No guardian:read_child — Principal sees children via
   // unscoped staff views (tracker:read), not the guardian-scoped resolver path.
   PRINCIPAL: [
-    "content:read", "content:import", "content:review", "content:promote_gold",
+    "content:read", "content:import", "content:assign_review", "content:review", "content:promote_gold",
     "question:read", "question:select",
     "set:read", "set:assemble", "set:export",
     "tracker:read", "tracker:write", "tracker:export",
@@ -460,15 +473,17 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // granted for the tracker→non-submitter wa.me flow (R-T2).
   TEACHER: [
     "content:read",
+    "content:review",        // a teacher reviewer's APPROVE verdict drives draft→reviewed (D-#38)
     "question:read", "question:select",
     "set:read", "set:assemble", "set:export",
     "tracker:read", "tracker:write", "tracker:export",
     "message:dispatch",
   ],
   // Roster, guardian linkage, messaging dispatch (REQ §2), plus content import (the
-  // publisher seam). No tracker/user surface under PoLP.
+  // publisher seam) and plan-review assignment (D-#39). No tracker/user surface under PoLP.
   OFFICE: [
-    "roster:manage", "staff:manage", "guardian:link", "message:dispatch", "content:import",
+    "roster:manage", "staff:manage", "guardian:link", "message:dispatch",
+    "content:import", "content:assign_review",
   ],
   // First-priority build = account + linkage only; portal reads are pipeline. The
   // single grant is gated off by PERMISSION_BUILD_STATUS until the portal ships.
