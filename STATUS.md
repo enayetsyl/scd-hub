@@ -3,6 +3,15 @@
 _Updated: 2026-06-11_
 
 ## Now / next
+- **Planned (UI guidelines v1 — D-#61):** `docs/ui-guidelines.md` adopted — mobile-first Android design system:
+  deep-green/gold token palette (light **and** dark sets — dark mode in scope v1), Noto Sans Bengali app-wide
+  (matches the Slice-1 PDF font), Bangla type rules (16sp body floor / ≥1.5 line-height / no caps / no
+  letter-spacing / Latin digits for codes), 48dp touch targets + 4dp spacing scale, borders-not-shadows for
+  low-end Android, initials avatars (no photos by default, ADR-005 posture). Tokens get ONE code source
+  (`app/src/theme`) — the doc and the token file sync **two-place**; NativeWind maps to the same tokens when
+  re-enabled (ADR-010/014). Docs-only this session — no code change. **Next = build UI-1 per
+  docs/ui-guidelines.md §13** (theme token file + font load + sweep existing screens to tokens, light+dark
+  verified).
 - **Built (Credential provisioning — phone logins for guardians + teachers, share via WhatsApp, D-#59/#60):**
   server + app. Principal/Office now generate logins and hand them out over WhatsApp. **Guardians:** ONE shared
   login per family keyed by `Student.phone` — auto-links every sibling on that phone, both parents use it

@@ -4,6 +4,7 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- docs: UI guidelines v1 — color tokens (light+dark), Bangla typography, layout/touch/accessibility/dark-mode rules (`docs/ui-guidelines.md`, D-#61).
 - Credential provisioning — Principal/Office generate phone logins for guardians + teachers and share via
   WhatsApp (D-#59/#60). Server: `User.email` now optional sparse-unique + new sparse-unique `User.phone`;
   `staffLogin` accepts email **or** phone; new `credentials.ts` (`generatePassword` ambiguity-free + Bangla
