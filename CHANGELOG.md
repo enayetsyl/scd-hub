@@ -4,6 +4,18 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Homework Tracker — app screens (frontend for HW-T1→T4): new Expo **Homework tab** (📒, gated `tracker:read`)
+  with a native-stack of 4 screens consuming the existing server contract (no server/contract change).
+  `HomeworkHomeScreen` — section + date aware daily dashboard: live DAY_TOTAL vs the 240 ceiling, per-subject
+  declarations with >40 band warnings, and the summary roll-up (chase list with §7.2 attention/comms badges,
+  open resubmissions, on-time % / chase volume / return latency, topic touches). `DeclareHomeworkScreen` —
+  subject-teacher declaration form (subject chips, TOP-tags, TIME_DECL, Q_COUNT, Pool ref, revision flag;
+  classLevel derived from the selected class). `HomeworkReconcileScreen` — class-teacher trim (Q_COUNT → time
+  follows; rank ক/খ/গ auto-chosen) + present/absent roster + confirm-issue (over-ceiling blocks the button;
+  server also enforces). `CheckingQueueScreen` — pick an item → SUBMITTED records → record RESULT (WRONG
+  auto-spawns; PARTIAL on judgment) with optional Pool top-up (qids + minutes). New homework label helpers +
+  STR strings; `HomeworkStackParamList` + `HomeworkTab` nav. Gate: **app `tsc --noEmit` clean + web bundle
+  green** (`expo export --platform web`, 480 modules). **Not verified against a live server.**
 - Homework Tracker HW-T4 (roll-ups + thresholds + question-usage feed, D-#44): new `HomeworkSummaryService`
   + GraphQL (all `tracker:read`): `homeworkSummary` (chase list + §7.2 attention/comms thresholds at
   CHASE_COUNT≥2/≥3, open resubmissions, submitted-on-time % / chase volume / Given→Returned latency,

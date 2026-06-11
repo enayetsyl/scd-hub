@@ -951,3 +951,274 @@ export const EXTEND_PROXY = gql<
     extendProxy(grantId: $grantId, additionalDays: $additionalDays)
   }
 `;
+
+// ===========================================================================
+// Homework Tracker (HW-T1..T4 — server/src/modules/trackers/*)
+// ===========================================================================
+
+export interface HwDayItemT {
+  itemId: string;
+  hwId: string;
+  subject: string;
+  timeDecl: number;
+  qCount: number;
+  revItem: boolean;
+  status: string;
+  bandWarning: boolean;
+}
+
+export interface HwDayTallyT {
+  classId: string;
+  dayTotal: number;
+  ceiling: number;
+  overBy: number;
+  withinCeiling: boolean;
+  state: string;
+  items: HwDayItemT[];
+  bandWarnings: string[];
+}
+
+export const HOMEWORK_DAY_TALLY = gql<
+  { homeworkDayTally: HwDayTallyT },
+  { sectionId: string; classId: string; date: string }
+>`
+  query HomeworkDayTally($sectionId: String!, $classId: String!, $date: String!) {
+    homeworkDayTally(sectionId: $sectionId, classId: $classId, date: $date) {
+      classId
+      dayTotal
+      ceiling
+      overBy
+      withinCeiling
+      state
+      items { itemId hwId subject timeDecl qCount revItem status bandWarning }
+      bandWarnings
+    }
+  }
+`;
+
+export interface HwTrimCandidatesT {
+  rankA: HwDayItemT[];
+  rankB: HwDayItemT[];
+  rankC: HwDayItemT[];
+}
+
+export const HOMEWORK_TRIM_CANDIDATES = gql<
+  { homeworkTrimCandidates: HwTrimCandidatesT },
+  { sectionId: string; classId: string; date: string }
+>`
+  query HomeworkTrimCandidates($sectionId: String!, $classId: String!, $date: String!) {
+    homeworkTrimCandidates(sectionId: $sectionId, classId: $classId, date: $date) {
+      rankA { itemId hwId subject timeDecl qCount revItem status bandWarning }
+      rankB { itemId hwId subject timeDecl qCount revItem status bandWarning }
+      rankC { itemId hwId subject timeDecl qCount revItem status bandWarning }
+    }
+  }
+`;
+
+export interface HwChaseEntryT {
+  recordId: string;
+  hwId: string;
+  studentId: string;
+  chaseCount: number;
+  attention: boolean;
+  commsPrompt: boolean;
+}
+export interface HwTopicTouchT {
+  topTag: string;
+  count: number;
+}
+export interface HwSummaryT {
+  classId: string;
+  chaseList: HwChaseEntryT[];
+  attentionCount: number;
+  commsPromptCount: number;
+  openResubmissions: number;
+  submittedOnTimePct: number | null;
+  chaseVolume: number;
+  avgReturnLatencyDays: number | null;
+  topicTouches: HwTopicTouchT[];
+}
+
+export const HOMEWORK_SUMMARY = gql<
+  { homeworkSummary: HwSummaryT },
+  { sectionId: string; classId: string }
+>`
+  query HomeworkSummary($sectionId: String!, $classId: String!) {
+    homeworkSummary(sectionId: $sectionId, classId: $classId) {
+      classId
+      chaseList { recordId hwId studentId chaseCount attention commsPrompt }
+      attentionCount
+      commsPromptCount
+      openResubmissions
+      submittedOnTimePct
+      chaseVolume
+      avgReturnLatencyDays
+      topicTouches { topTag count }
+    }
+  }
+`;
+
+export interface HwStateStampT {
+  state: string;
+  at: string;
+}
+export interface HwStudentRecordT {
+  id: string;
+  hwId: string;
+  studentId: string;
+  state: string;
+  stateDates: HwStateStampT[];
+  dueDate: string | null;
+  chaseCount: number;
+  result: string | null;
+}
+
+export const HOMEWORK_STUDENT_RECORDS = gql<
+  { homeworkStudentRecords: HwStudentRecordT[] },
+  { sectionId: string; classId: string; itemId: string }
+>`
+  query HomeworkStudentRecords($sectionId: String!, $classId: String!, $itemId: String!) {
+    homeworkStudentRecords(sectionId: $sectionId, classId: $classId, itemId: $itemId) {
+      id hwId studentId state stateDates { state at } dueDate chaseCount result
+    }
+  }
+`;
+
+export interface HwItemT {
+  id: string;
+  hwId: string;
+  classLevel: number;
+  subject: string;
+  dateGiven: string;
+  topTags: string[];
+  timeDecl: number;
+  qCount: number;
+  revItem: boolean;
+  status: string;
+}
+
+export const HOMEWORK_ITEMS = gql<
+  { homeworkItems: HwItemT[] },
+  { sectionId: string; classId: string; dateGiven?: string | null }
+>`
+  query HomeworkItems($sectionId: String!, $classId: String!, $dateGiven: String) {
+    homeworkItems(sectionId: $sectionId, classId: $classId, dateGiven: $dateGiven) {
+      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status
+    }
+  }
+`;
+
+export const DECLARE_HOMEWORK_ITEM = gql<
+  { declareHomeworkItem: HwItemT },
+  {
+    academicYearId: string;
+    classId: string;
+    classLevel: number;
+    sectionId: string;
+    subject: string;
+    dateGiven: string;
+    topTags: string[];
+    timeDecl?: number | null;
+    qCount: number;
+    poolRef?: string | null;
+    revItem?: boolean | null;
+  }
+>`
+  mutation DeclareHomeworkItem(
+    $academicYearId: String!, $classId: String!, $classLevel: Int!, $sectionId: String!,
+    $subject: String!, $dateGiven: String!, $topTags: [String!]!, $timeDecl: Int,
+    $qCount: Int!, $poolRef: String, $revItem: Boolean
+  ) {
+    declareHomeworkItem(
+      academicYearId: $academicYearId, classId: $classId, classLevel: $classLevel, sectionId: $sectionId,
+      subject: $subject, dateGiven: $dateGiven, topTags: $topTags, timeDecl: $timeDecl,
+      qCount: $qCount, poolRef: $poolRef, revItem: $revItem
+    ) {
+      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status
+    }
+  }
+`;
+
+export interface HwTrimResultT {
+  hwId: string;
+  rank: string;
+  trimFrom: number;
+  trimTo: number;
+  trimMin: number;
+  tally: HwDayTallyT;
+}
+
+export const TRIM_HOMEWORK_ITEM = gql<
+  { trimHomeworkItem: HwTrimResultT },
+  { sectionId: string; classId: string; date: string; itemId: string; newQCount: number; rank: string }
+>`
+  mutation TrimHomeworkItem(
+    $sectionId: String!, $classId: String!, $date: String!, $itemId: String!, $newQCount: Int!, $rank: String!
+  ) {
+    trimHomeworkItem(
+      sectionId: $sectionId, classId: $classId, date: $date, itemId: $itemId, newQCount: $newQCount, rank: $rank
+    ) {
+      hwId rank trimFrom trimTo trimMin
+      tally {
+        classId dayTotal ceiling overBy withinCeiling state
+        items { itemId hwId subject timeDecl qCount revItem status bandWarning }
+        bandWarnings
+      }
+    }
+  }
+`;
+
+export interface HwConfirmResultT {
+  classId: string;
+  reconDate: string;
+  dayTotal: number;
+  ceiling: number;
+  reconState: string;
+  issuedItems: number;
+  issuedRecords: number;
+}
+
+export const CONFIRM_HOMEWORK_DAY = gql<
+  { confirmHomeworkDay: HwConfirmResultT },
+  { sectionId: string; classId: string; date: string; roster: { studentId: string; present: boolean }[] }
+>`
+  mutation ConfirmHomeworkDay(
+    $sectionId: String!, $classId: String!, $date: String!, $roster: [IssueRosterEntryInput!]!
+  ) {
+    confirmHomeworkDay(sectionId: $sectionId, classId: $classId, date: $date, roster: $roster) {
+      classId reconDate dayTotal ceiling reconState issuedItems issuedRecords
+    }
+  }
+`;
+
+export interface HwCheckResultT {
+  recordId: string;
+  hwId: string;
+  state: string;
+  result: string;
+  resubmission: {
+    recordId: string;
+    hwId: string;
+    state: string;
+    topupFlag: boolean;
+    topupQids: string[];
+    topupTime: number | null;
+    dueDate: string | null;
+  } | null;
+}
+
+export const CHECK_HOMEWORK_RECORD = gql<
+  { checkHomeworkRecord: HwCheckResultT },
+  { sectionId: string; recordId: string; result: string; resubmit?: boolean | null; topupQids?: string[] | null; topupTime?: number | null }
+>`
+  mutation CheckHomeworkRecord(
+    $sectionId: String!, $recordId: String!, $result: String!, $resubmit: Boolean, $topupQids: [String!], $topupTime: Int
+  ) {
+    checkHomeworkRecord(
+      sectionId: $sectionId, recordId: $recordId, result: $result, resubmit: $resubmit, topupQids: $topupQids, topupTime: $topupTime
+    ) {
+      recordId hwId state result
+      resubmission { recordId hwId state topupFlag topupQids topupTime dueDate }
+    }
+  }
+`;
