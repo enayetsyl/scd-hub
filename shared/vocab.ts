@@ -521,6 +521,110 @@ export const TRIM_RANK_LABELS_EN: Record<TrimRank, string> = {
   c: "c",
 };
 
+// --- A.8 ROUTINE / TIMETABLE ENUMS (app-native; Routine module — prd-routine, --
+// D-#46–#57). NO wire-contract twin: a routine is a feature, not import content,
+// and every row is operational/identity-plane behind the ADR-005 firewall. So
+// these live ONLY here — no envelope-schema mirror, no two-place sync; only
+// /shared + the vocab verifier run. BN + EN labels are kept together here
+// (self-contained) rather than split into the A.7 EN block above.
+
+/** Days of the week, index-aligned to JS `Date#getDay` (0=Sun … 6=Sat) so the
+ *  calendar resolver can index directly. SUN–THU teach; FRI off; SAT Quran-only. */
+export const DAYS_OF_WEEK = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"] as const;
+export type DayOfWeek = (typeof DAYS_OF_WEEK)[number];
+
+export const DAY_OF_WEEK_LABELS_BN: Record<DayOfWeek, string> = {
+  SUN: "রবিবার", MON: "সোমবার", TUE: "মঙ্গলবার", WED: "বুধবার",
+  THU: "বৃহস্পতিবার", FRI: "শুক্রবার", SAT: "শনিবার",
+};
+export const DAY_OF_WEEK_LABELS_EN: Record<DayOfWeek, string> = {
+  SUN: "Sunday", MON: "Monday", TUE: "Tuesday", WED: "Wednesday",
+  THU: "Thursday", FRI: "Friday", SAT: "Saturday",
+};
+
+/** Day-type the calendar resolves for a date (D-#50). FULL = Sun–Thu (all tracks);
+ *  OFF = Fri; QURAN_ONLY = Sat (only Quran-track for Quran groups); HOLIDAY = a
+ *  HolidayException override (no routine, attendance not expected). */
+export const DAY_TYPES = ["FULL", "OFF", "QURAN_ONLY", "HOLIDAY"] as const;
+export type DayType = (typeof DAY_TYPES)[number];
+
+export const DAY_TYPE_LABELS_BN: Record<DayType, string> = {
+  FULL: "পূর্ণ দিবস", OFF: "ছুটি", QURAN_ONLY: "শুধু কুরআন", HOLIDAY: "বিশেষ ছুটি",
+};
+export const DAY_TYPE_LABELS_EN: Record<DayType, string> = {
+  FULL: "Full day", OFF: "Off", QURAN_ONLY: "Quran only", HOLIDAY: "Holiday",
+};
+
+/** Period track — period grids + slots are keyed by this (D-#51). general =
+ *  35-min single periods; quran = the first-two-period double (Class 1–5);
+ *  arabic = the ~40-min P3 slot. */
+export const PERIOD_TRACKS = ["general", "quran", "arabic"] as const;
+export type PeriodTrack = (typeof PERIOD_TRACKS)[number];
+
+export const PERIOD_TRACK_LABELS_BN: Record<PeriodTrack, string> = {
+  general: "সাধারণ", quran: "কুরআন", arabic: "আরবি",
+};
+export const PERIOD_TRACK_LABELS_EN: Record<PeriodTrack, string> = {
+  general: "General", quran: "Quran", arabic: "Arabic",
+};
+
+/** Schedule season (D-#55) — drives the duration profile + day-start window.
+ *  Winter compresses only P1/P2 (45→30) and starts later (07:15 → 07:30). */
+export const SEASONS = ["regular", "winter"] as const;
+export type Season = (typeof SEASONS)[number];
+
+export const SEASON_LABELS_BN: Record<Season, string> = {
+  regular: "নিয়মিত", winter: "শীতকাল",
+};
+export const SEASON_LABELS_EN: Record<Season, string> = {
+  regular: "Regular", winter: "Winter",
+};
+
+/** Holiday-exception type (D-#50) — overrides a day to no-school. */
+export const HOLIDAY_TYPES = ["eid", "govt", "special"] as const;
+export type HolidayType = (typeof HOLIDAY_TYPES)[number];
+
+export const HOLIDAY_TYPE_LABELS_BN: Record<HolidayType, string> = {
+  eid: "ঈদ", govt: "সরকারি ছুটি", special: "বিশেষ ছুটি",
+};
+export const HOLIDAY_TYPE_LABELS_EN: Record<HolidayType, string> = {
+  eid: "Eid", govt: "Govt holiday", special: "Special",
+};
+
+/** Group gender — general Sections + Quran/Arabic SubjectGroups are gender-split
+ *  from ~Class 2/3 (D-#56); `mixed` covers the un-split lower classes. */
+export const GROUP_GENDERS = ["boys", "girls", "mixed"] as const;
+export type GroupGender = (typeof GROUP_GENDERS)[number];
+
+export const GROUP_GENDER_LABELS_BN: Record<GroupGender, string> = {
+  boys: "ছেলে", girls: "মেয়ে", mixed: "মিশ্র",
+};
+export const GROUP_GENDER_LABELS_EN: Record<GroupGender, string> = {
+  boys: "Boys", girls: "Girls", mixed: "Mixed",
+};
+
+/** Routine SUBJECT axis (D-#54) — a SUPERSET of HW_SUBJECTS, adding QURAN (the
+ *  routine carries Quran; homework excludes it, D-#36). ISLAM is labeled "Deen"
+ *  on the source routine (D-#56). Availability by class is a data rule
+ *  (`ROUTINE_SUBJECTS_CLASS3_PLUS`), enforced in the resolver, not the enum.
+ *  Never mirrored into the envelope (mirrors D-#30/#36's operational superset). */
+export const ROUTINE_SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS", "ARABIC", "ISLAM", "QURAN"] as const;
+export type RoutineSubject = (typeof ROUTINE_SUBJECTS)[number];
+
+export const ROUTINE_SUBJECT_LABELS_BN: Record<RoutineSubject, string> = {
+  BAN: "বাংলা", ENG: "ইংরেজি", MATH: "গণিত", SCI: "বিজ্ঞান",
+  BGS: "বাংলাদেশ ও বিশ্বপরিচয়", ARABIC: "আরবি", ISLAM: "ইসলাম শিক্ষা", QURAN: "কুরআন",
+};
+export const ROUTINE_SUBJECT_LABELS_EN: Record<RoutineSubject, string> = {
+  BAN: "Bangla", ENG: "English", MATH: "Mathematics", SCI: "Science",
+  BGS: "Bangladesh & Global Studies", ARABIC: "Arabic", ISLAM: "Islamic Studies", QURAN: "Quran",
+};
+
+/** Subjects taught only from Class 3 upward (D-#54) — BGS + Science. Every other
+ *  ROUTINE_SUBJECT runs for all roster classes (incl. Nursery/KG). A data rule the
+ *  routine resolver enforces per class level. */
+export const ROUTINE_SUBJECTS_CLASS3_PLUS = ["BGS", "SCI"] as const;
+
 
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
@@ -554,6 +658,9 @@ export const PERMISSIONS = [
   "tracker:read",
   "tracker:write",
   "tracker:export",
+  // routine / timetable (app-native; D-#46)
+  "routine:read",          // read the routine (Principal/Teacher/Office; guardian read is pipeline)
+  "routine:manage",        // build/edit calendar, rooms, groups, grids, slots (Principal/Office)
   // foundation / ops
   "roster:manage",
   "staff:manage",          // HR staff-record read/manage (Principal/Office; prd-hr H1.4 row-scope)
@@ -582,6 +689,8 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "tracker:read": "build",
   "tracker:write": "build",
   "tracker:export": "build",
+  "routine:read": "build",
+  "routine:manage": "build",
   "roster:manage": "build",
   "staff:manage": "build",
   "guardian:link": "build",
@@ -601,6 +710,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "question:read", "question:select",
     "set:read", "set:assemble", "set:export",
     "tracker:read", "tracker:write", "tracker:export",
+    "routine:read", "routine:manage",
     "roster:manage", "staff:manage", "guardian:link", "message:dispatch",
     "user:manage", "audit:read",
   ],
@@ -613,13 +723,16 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "question:read", "question:select",
     "set:read", "set:assemble", "set:export",
     "tracker:read", "tracker:write", "tracker:export",
+    "routine:read",          // a teacher reads their own + their sections' routine (D-#46)
     "message:dispatch",
   ],
   // Roster, guardian linkage, messaging dispatch (REQ §2), plus content import (the
-  // publisher seam) and plan-review assignment (D-#39). No tracker/user surface under PoLP.
+  // publisher seam), plan-review assignment (D-#39), and routine authoring (D-#46).
+  // No tracker/user surface under PoLP.
   OFFICE: [
     "roster:manage", "staff:manage", "guardian:link", "message:dispatch",
     "content:import", "content:assign_review",
+    "routine:read", "routine:manage",
   ],
   // First-priority build = account + linkage only; portal reads are pipeline. The
   // single grant is gated off by PERMISSION_BUILD_STATUS until the portal ships.

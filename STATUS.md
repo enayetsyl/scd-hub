@@ -3,6 +3,22 @@
 _Updated: 2026-06-11_
 
 ## Now / next
+- **Built (Routine R-1 — calendar + rooms + groups + grids + windows, D-#46–#58):** first routine slice,
+  server-side. New app-native vocab in `/shared/vocab.ts`: `DAYS_OF_WEEK`/`DAY_TYPES`/`PERIOD_TRACKS`/
+  `SEASONS`/`HOLIDAY_TYPES`/`GROUP_GENDERS`/`ROUTINE_SUBJECTS` (⊇ HW_SUBJECTS + QURAN) + BN/EN labels +
+  `routine:read`/`routine:manage` perms (PRINCIPAL/OFFICE manage, TEACHER read). New `server/src/modules/
+  routine/`: models `Room`, `SubjectGroup` + `SubjectGroupMembership` (cross-grade gender-split Quran/Arabic
+  groups, ≤1-per-track), `PeriodGrid` (per-(audienceKey,season), per-period track tag + durationMin — D-#58),
+  `ScheduleWindow` (admin date windows + `dayStartMinutes`), `HolidayException`. Pure helpers `calendar.ts`
+  (`dayTypeFor`/`dayTypeAdmitsTrack`/`resolveDayType` — reuses trackers `isSchoolDay`, no second calendar)
+  + `schedule.ts` (`computePeriodTimes` from a day-start, `windowFor`, `dateRangesOverlap`, HH:MM helpers).
+  GraphQL resolvers: queries `rooms`/`subjectGroups`/`subjectGroupMembers`/`periodGrids`/`scheduleWindows`/
+  `holidays`/`dayType`/`resolvedDay` (computes a day's clock times) gated `routine:read`; mutations
+  `createRoom`/`setRoomActive`/`createSubjectGroup`/`add|removeGroupMember`/`upsertPeriodGrid`/
+  `createScheduleWindow`/`createHolidayException` gated `routine:manage`. **Gate GREEN:** vocab verifier PASS
+  (incl. new C.3 routine checks + OFFICE exact-list updated), shared+server tsc clean, **jest 245/245**
+  (22 new in `routine.test.ts`; firewall green). **Not verified live; not committed yet.** Covers R1.1–R1.6.
+  **Next = R-2** (routine slots + conflict engine + scope binding + RBAC).
 - **Planned (Routine module + Class-teacher generalization — build contracts written, D-#45–#52):**
   two new build contracts authored, **no feature code yet**. (1) `docs/prd-routine.md` — full Routine/
   Timetable module, **scope-expanded after the Principal walkthrough** (D-#48–#52). Now owns: a **day-type
