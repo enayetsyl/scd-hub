@@ -32,6 +32,12 @@ import {
   getStudentDayLoad as studentDayLoadSvc,
 } from "../services/HomeworkResubmissionService";
 import {
+  homeworkSummary as homeworkSummarySvc,
+  resubmissionWatchList as watchListSvc,
+  trimPatternFlags as trimPatternSvc,
+  questionUsageFeed as usageFeedSvc,
+} from "../services/HomeworkSummaryService";
+import {
   assertCanWrite,
   assertCanRead,
   assertIsClassTeacher,
@@ -664,6 +670,232 @@ builder.queryField("studentDayLoad", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
       return studentDayLoadSvc(args.classId, args.studentId, new Date(args.date));
+    },
+  }),
+);
+
+// ===========================================================================
+// HW-T4 — roll-ups + thresholds + question-usage feed (handoff §7/§8)
+// ===========================================================================
+
+interface ChaseEntryShape {
+  recordId: string;
+  hwId: string;
+  studentId: string;
+  chaseCount: number;
+  attention: boolean;
+  commsPrompt: boolean;
+}
+const ChaseEntryRef = builder.objectRef<ChaseEntryShape>("HomeworkChaseEntry");
+ChaseEntryRef.implement({
+  fields: (t) => ({
+    recordId: t.exposeString("recordId"),
+    hwId: t.exposeString("hwId"),
+    studentId: t.exposeString("studentId"),
+    chaseCount: t.exposeInt("chaseCount"),
+    attention: t.exposeBoolean("attention"),
+    commsPrompt: t.exposeBoolean("commsPrompt"),
+  }),
+});
+
+interface TopicTouchShape {
+  topTag: string;
+  count: number;
+}
+const TopicTouchRef = builder.objectRef<TopicTouchShape>("HomeworkTopicTouch");
+TopicTouchRef.implement({
+  fields: (t) => ({
+    topTag: t.exposeString("topTag"),
+    count: t.exposeInt("count"),
+  }),
+});
+
+interface HomeworkSummaryShape {
+  classId: string;
+  chaseList: ChaseEntryShape[];
+  attentionCount: number;
+  commsPromptCount: number;
+  openResubmissions: number;
+  submittedOnTimePct: number | null;
+  chaseVolume: number;
+  avgReturnLatencyDays: number | null;
+  topicTouches: TopicTouchShape[];
+}
+const HomeworkSummaryRef = builder.objectRef<HomeworkSummaryShape>("HomeworkSummary");
+HomeworkSummaryRef.implement({
+  description: "Roll-up for the Master/principal dashboard (handoff §8.1/§8.3).",
+  fields: (t) => ({
+    classId: t.exposeString("classId"),
+    chaseList: t.field({ type: [ChaseEntryRef], resolve: (r) => r.chaseList }),
+    attentionCount: t.exposeInt("attentionCount"),
+    commsPromptCount: t.exposeInt("commsPromptCount"),
+    openResubmissions: t.exposeInt("openResubmissions"),
+    submittedOnTimePct: t.int({ nullable: true, resolve: (r) => r.submittedOnTimePct }),
+    chaseVolume: t.exposeInt("chaseVolume"),
+    avgReturnLatencyDays: t.float({ nullable: true, resolve: (r) => r.avgReturnLatencyDays }),
+    topicTouches: t.field({ type: [TopicTouchRef], resolve: (r) => r.topicTouches }),
+  }),
+});
+
+interface WatchEntryShape {
+  studentId: string;
+  resubmissionCount: number;
+}
+const WatchEntryRef = builder.objectRef<WatchEntryShape>("HomeworkWatchEntry");
+WatchEntryRef.implement({
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    resubmissionCount: t.exposeInt("resubmissionCount"),
+  }),
+});
+
+interface WatchListShape {
+  classId: string;
+  threshold: number;
+  windowDays: number;
+  watchList: WatchEntryShape[];
+}
+const WatchListRef = builder.objectRef<WatchListShape>("HomeworkWatchList");
+WatchListRef.implement({
+  description: "Students with ≥3 open/recent resubmissions in a rolling 2-week window (§7.3).",
+  fields: (t) => ({
+    classId: t.exposeString("classId"),
+    threshold: t.exposeInt("threshold"),
+    windowDays: t.exposeInt("windowDays"),
+    watchList: t.field({ type: [WatchEntryRef], resolve: (r) => r.watchList }),
+  }),
+});
+
+interface TrimFlagShape {
+  subject: string;
+  trimmedDays: number;
+  schoolDays: number;
+  ratio: number;
+  flagged: boolean;
+}
+const TrimFlagRef = builder.objectRef<TrimFlagShape>("HomeworkTrimFlag");
+TrimFlagRef.implement({
+  fields: (t) => ({
+    subject: t.exposeString("subject"),
+    trimmedDays: t.exposeInt("trimmedDays"),
+    schoolDays: t.exposeInt("schoolDays"),
+    ratio: t.exposeFloat("ratio"),
+    flagged: t.exposeBoolean("flagged"),
+  }),
+});
+
+interface TrimPatternShape {
+  classId: string;
+  schoolDays: number;
+  threshold: number;
+  flags: TrimFlagShape[];
+}
+const TrimPatternRef = builder.objectRef<TrimPatternShape>("HomeworkTrimPattern");
+TrimPatternRef.implement({
+  description: "Per-subject trim-pattern flags for a month (>30% of school days → flagged, §7.4).",
+  fields: (t) => ({
+    classId: t.exposeString("classId"),
+    schoolDays: t.exposeInt("schoolDays"),
+    threshold: t.exposeFloat("threshold"),
+    flags: t.field({ type: [TrimFlagRef], resolve: (r) => r.flags }),
+  }),
+});
+
+interface UsageEntryShape {
+  qid: string;
+  count: number;
+}
+const UsageEntryRef = builder.objectRef<UsageEntryShape>("QuestionUsageEntry");
+UsageEntryRef.implement({
+  fields: (t) => ({
+    qid: t.exposeString("qid"),
+    count: t.exposeInt("count"),
+  }),
+});
+
+interface QuestionUsageShape {
+  classId: string;
+  feed: UsageEntryShape[];
+}
+const QuestionUsageRef = builder.objectRef<QuestionUsageShape>("QuestionUsageFeed");
+QuestionUsageRef.implement({
+  description: "De-identified per-question Pool usage counts (§8.4) — no student identity (ADR-005).",
+  fields: (t) => ({
+    classId: t.exposeString("classId"),
+    feed: t.field({ type: [UsageEntryRef], resolve: (r) => r.feed }),
+  }),
+});
+
+// Query: homeworkSummary (the trackerSummary roll-up) ------------------------
+builder.queryField("homeworkSummary", (t) =>
+  t.field({
+    type: HomeworkSummaryRef,
+    description: "Homework roll-up for a class: chase list + thresholds, open resubmissions, completion health, topic touches. Read-scope enforced.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      return homeworkSummarySvc(args.classId);
+    },
+  }),
+);
+
+// Query: homeworkWatchList (resubmission watch-list, §7.3) -------------------
+builder.queryField("homeworkWatchList", (t) =>
+  t.field({
+    type: WatchListRef,
+    description: "Students with ≥3 open/recent resubmissions in a rolling 2-week window (§7.3). Read-scope enforced.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      return watchListSvc(args.classId, Date.now());
+    },
+  }),
+);
+
+// Query: homeworkTrimPattern (trim-pattern flags for a month, §7.4) ----------
+builder.queryField("homeworkTrimPattern", (t) =>
+  t.field({
+    type: TrimPatternRef,
+    description: "Per-subject trim-pattern flags over a date range (month). Read-scope enforced.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+      from: t.arg.string({ required: true }),
+      to: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      return trimPatternSvc(args.classId, new Date(args.from).getTime(), new Date(args.to).getTime());
+    },
+  }),
+);
+
+// Query: questionUsageFeed (de-identified Pool usage, §8.4) ------------------
+builder.queryField("questionUsageFeed", (t) =>
+  t.field({
+    type: QuestionUsageRef,
+    description: "De-identified per-question Pool usage counts for a class (§8.4). Read-scope enforced.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      return usageFeedSvc(args.classId);
     },
   }),
 );

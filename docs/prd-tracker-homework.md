@@ -165,6 +165,10 @@ Written Given/When/Then. Each maps to one or more handoff §12 checklist items (
   new stream**. → checklist #6.
 
 ### T4 — Roll-ups + thresholds + question-usage feed  *(handoff §7, §8; slice HW-T4)*
+> **Status: BUILT** (D-#44) — `HomeworkSummaryService` (`homeworkSummary` / `resubmissionWatchList` /
+> `trimPatternFlags` / `questionUsageFeed`) + four `tracker:read` queries. Thresholds = A-01/D-#34.
+> Question-usage feed is de-identified (no corpus→identity path). Gate green (server tsc, jest 223/223,
+> firewall green). Covers §12 #10. Not committed.
 - **T4.1 `trackerSummary` extended** *(§8.1–8.3)* — Then it exposes: per-subject declarations + live
   `DAY_TOTAL` vs 240; chase list (records in `CHASE` with counts); open resubmissions; **per-child day-load
   incl. `TOPUP_TIME`**; submitted-on-time %, chase volume, return latency (Given→Returned); **touches per
