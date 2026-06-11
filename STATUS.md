@@ -3,6 +3,19 @@
 _Updated: 2026-06-11_
 
 ## Now / next
+- **Built (Routine R-2 — slots + conflict engine + scope binding, D-#46/#49/#56):** server-side. New
+  `RoutineSlot` model (`(group×day×period)→subject,teacher,room`; group = Section or SubjectGroup;
+  effective-dated `[from,to)`; a Quran double = two adjacent slots, D-#56). **Conflict engine** (pure
+  `conflicts.ts`): rejects teacher / group / room double-booking at the same (day, period) with
+  overlapping effective windows. **Scope binding** (D-#49): a content-subject Section slot auto-upserts a
+  teaching `ScopeGrant` tagged `source:"routine"` (new field on the model) — Quran/Arabic groups +
+  non-content subjects bind nothing (no content scope); delete revokes **only** when no remaining slot
+  maps to it (manual grants never touched). **Teacher-authority = warn, never blocks** (R2.6). Day rule
+  (`weekdayBaseDayType`): Fri rejected, Sat only quran, Sun–Thu all. `RoutineSlotService` + resolvers
+  `routineSlots`/`routineForDate` (read) + `createRoutineSlot` (→ `{slot, warnings}`)/`deleteRoutineSlot`
+  (manage). **Gate GREEN:** vocab verifier PASS, shared+server tsc clean, **jest 269/269** (24 new in
+  `routineSlots.test.ts`; firewall green). **Not verified live; not committed yet.** Covers R2.1–R2.8.
+  **Next = R-3** (views: group grid + my-routine + admin editor — app).
 - **Built (Routine R-1 — calendar + rooms + groups + grids + windows, D-#46–#58):** first routine slice,
   server-side. New app-native vocab in `/shared/vocab.ts`: `DAYS_OF_WEEK`/`DAY_TYPES`/`PERIOD_TRACKS`/
   `SEASONS`/`HOLIDAY_TYPES`/`GROUP_GENDERS`/`ROUTINE_SUBJECTS` (⊇ HW_SUBJECTS + QURAN) + BN/EN labels +

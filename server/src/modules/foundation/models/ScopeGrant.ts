@@ -13,11 +13,18 @@ export type SupervisoryExtent =
 /** Proxy/cover grant lifecycle status. */
 export type ProxyStatus = "active" | "revoked" | "expired";
 
+/** What created the grant (D-#49). "routine" grants are auto-synced by the routine
+ *  slot binding (created/revoked with the slot); "manual" grants (the default, incl.
+ *  absent) are admin-added and the routine sync never touches them. */
+export type GrantSource = "manual" | "routine";
+
 /** Base fields all grants share. */
 interface BaseGrant {
   teacherId: Types.ObjectId;
   kind: GrantKind;
   active: boolean;
+  /** Provenance for idempotent routine sync (D-#49); absent = manual. */
+  source?: GrantSource;
   createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -64,6 +71,7 @@ const ScopeGrantSchema = new Schema<IScopeGrant>(
     teacherId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     kind: { type: String, enum: ["teaching", "supervisory", "proxy"], required: true },
     active: { type: Boolean, default: true },
+    source: { type: String, enum: ["manual", "routine"], default: "manual" },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
 
     // teaching + proxy
