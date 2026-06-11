@@ -51,3 +51,6 @@ _xlsx_vals.txt
 .DS_Store
 Thumbs.db
 *.log
+
+# ---- Claude Code (local agent settings) ----
+.claude/
