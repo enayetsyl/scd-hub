@@ -4,6 +4,12 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Routine R-3 — app views (Expo). New Routine tab (routine:read) + RoutineStack: RoutineHome (role-aware
+  landing), GroupRoutine (weekly grid for a Section/SubjectGroup, shared SlotList), MyRoutine (caller's
+  slots, today highlighted), RoutineEditor (admin create/delete slots; server conflict rejection inline +
+  authority warnings). Added one server read `myRoutineSlots` (routine:read, caller-scoped). App routine
+  operations + routineSubjectLabel/dayOfWeekLabel/periodTrackLabel + STR keys (BN/EN). Gate: server tsc +
+  jest 269/269 (firewall green); app tsc clean + web bundle green (488 modules). Covers R3.1–R3.3. [a47db8c]
 - Routine R-2 — routine slots + conflict engine + scope binding (D-#46/#49/#56). New `RoutineSlot` model
   (group×day×period→subject/teacher/room, effective-dated; Quran double = two adjacent slots); pure
   `conflicts.ts` (teacher/group/room double-booking with effective-window overlap) + `binding.ts` (grant
