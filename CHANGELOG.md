@@ -4,6 +4,12 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Homework Tracker — principal roll-ups screen (frontend for §7.3/§7.4/§8.4): new `HomeworkRollupsScreen` in
+  the Homework tab (reachable from HomeworkHome) — resubmission watch-list (≥3 in a rolling 2 weeks),
+  per-subject trim-pattern flags for a month (>30% of reconciled days; month picker → first/last-day range),
+  and the de-identified question-usage feed. Adds the `homeworkWatchList` / `homeworkTrimPattern` /
+  `questionUsageFeed` app operations + STR strings. Frontend-only, no server/contract change. Gate: app
+  `tsc --noEmit` clean + web bundle green (`expo export --platform web`). Not verified against a live server.
 - Homework Tracker — app screens (frontend for HW-T1→T4): new Expo **Homework tab** (📒, gated `tracker:read`)
   with a native-stack of 4 screens consuming the existing server contract (no server/contract change).
   `HomeworkHomeScreen` — section + date aware daily dashboard: live DAY_TOTAL vs the 240 ceiling, per-subject

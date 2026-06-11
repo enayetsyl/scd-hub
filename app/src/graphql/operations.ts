@@ -1222,3 +1222,79 @@ export const CHECK_HOMEWORK_RECORD = gql<
     }
   }
 `;
+
+// --- HW-T4 roll-ups: watch-list / trim-pattern / question-usage (§7.3/§7.4/§8.4) ---
+
+export interface HwWatchEntryT {
+  studentId: string;
+  resubmissionCount: number;
+}
+export interface HwWatchListT {
+  classId: string;
+  threshold: number;
+  windowDays: number;
+  watchList: HwWatchEntryT[];
+}
+
+export const HOMEWORK_WATCHLIST = gql<
+  { homeworkWatchList: HwWatchListT },
+  { sectionId: string; classId: string }
+>`
+  query HomeworkWatchList($sectionId: String!, $classId: String!) {
+    homeworkWatchList(sectionId: $sectionId, classId: $classId) {
+      classId
+      threshold
+      windowDays
+      watchList { studentId resubmissionCount }
+    }
+  }
+`;
+
+export interface HwTrimFlagT {
+  subject: string;
+  trimmedDays: number;
+  schoolDays: number;
+  ratio: number;
+  flagged: boolean;
+}
+export interface HwTrimPatternT {
+  classId: string;
+  schoolDays: number;
+  threshold: number;
+  flags: HwTrimFlagT[];
+}
+
+export const HOMEWORK_TRIM_PATTERN = gql<
+  { homeworkTrimPattern: HwTrimPatternT },
+  { sectionId: string; classId: string; from: string; to: string }
+>`
+  query HomeworkTrimPattern($sectionId: String!, $classId: String!, $from: String!, $to: String!) {
+    homeworkTrimPattern(sectionId: $sectionId, classId: $classId, from: $from, to: $to) {
+      classId
+      schoolDays
+      threshold
+      flags { subject trimmedDays schoolDays ratio flagged }
+    }
+  }
+`;
+
+export interface HwUsageEntryT {
+  qid: string;
+  count: number;
+}
+export interface HwQuestionUsageT {
+  classId: string;
+  feed: HwUsageEntryT[];
+}
+
+export const QUESTION_USAGE_FEED = gql<
+  { questionUsageFeed: HwQuestionUsageT },
+  { sectionId: string; classId: string }
+>`
+  query QuestionUsageFeed($sectionId: String!, $classId: String!) {
+    questionUsageFeed(sectionId: $sectionId, classId: $classId) {
+      classId
+      feed { qid count }
+    }
+  }
+`;
