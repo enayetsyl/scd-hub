@@ -3,6 +3,17 @@
 _Updated: 2026-06-11_
 
 ## Now / next
+- **Built (Homework Tracker HW-T4 — roll-ups + thresholds + question-usage feed, D-#44):** the homework build
+  (HW-T1→T4) is now feature-complete server-side. `HomeworkSummaryService` + `tracker:read` queries:
+  `homeworkSummary` (chase list + §7.2 attention/comms thresholds, open resubmissions, submitted-on-time % /
+  chase volume / Given→Returned latency, touches-per-TOP-tag), `homeworkWatchList` (§7.3 ≥3 open/recent
+  resubmissions per rolling 14 days), `homeworkTrimPattern` (§7.4 subject trimmed >30% of the month's
+  reconciled days), `questionUsageFeed` (§8.4 **de-identified** per-qid usage — no identity, firewall green).
+  Thresholds = A-01/D-#34. No new vocab/wire change. Gate green: server tsc clean, vocab verifier PASS,
+  **jest 223/223** (5 new; firewall green). **Not committed yet; not verified live.** Covers handoff §12 #10.
+  **Homework Tracker §12 acceptance now fully covered (#1–#11).** Remaining: optional app screens (handoff
+  §8.1/§8.2 views) + the parked cross-feature items (Quran/§6.3 deviation to Project 06; assign class teachers
+  live; live golden-path verification).
 - **Built (Plan review/approval loop PR-3 — app screens, D-#38):** the loop is now usable end-to-end in
   the Expo app. New **Review tab** (📝, gated `content:review` OR `content:assign_review` → Teacher +
   Principal + Office). `ReviewHomeScreen` — role-aware: **Inbox** (admins: `planReviewInbox`, submitted

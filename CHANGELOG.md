@@ -4,6 +4,16 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Homework Tracker HW-T4 (roll-ups + thresholds + question-usage feed, D-#44): new `HomeworkSummaryService`
+  + GraphQL (all `tracker:read`): `homeworkSummary` (chase list + §7.2 attention/comms thresholds at
+  CHASE_COUNT≥2/≥3, open resubmissions, submitted-on-time % / chase volume / Given→Returned latency,
+  touches-per-TOP-tag), `homeworkWatchList` (§7.3 — students with ≥3 open/recent resubmissions in a rolling
+  14-day window), `homeworkTrimPattern` (§7.4 — subjects trimmed on >30% of the month's reconciled days),
+  `questionUsageFeed` (§8.4 — **de-identified** per-qid Pool usage counts across `selectedQids` + top-ups; no
+  student identity, ADR-005 firewall untouched). Thresholds are the A-01/D-#34 figures; time inputs passed as
+  epoch millis for deterministic math. No new vocab, no wire-contract change. Gate green: server tsc clean,
+  vocab verifier PASS, **jest 223/223** (5 new in homeworkSummary.test; firewall green). Closes the homework
+  build (HW-T1→T4); covers handoff §12 #10.
 - Plan review/approval loop PR-3 (app screens, D-#38): new Expo **Review tab** (gated `content:review`
   OR `content:assign_review`). `ReviewHomeScreen` (role-aware inbox + my-reviews, each query paused per
   perm), `ReviewSubmitScreen` (teacher: plan render + verdict chips + feedback → `submitPlanReview`),
