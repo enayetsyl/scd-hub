@@ -35,6 +35,16 @@ export function dayTypeAdmitsTrack(dayType: DayType, track: PeriodTrack): boolea
   return false; // OFF | HOLIDAY
 }
 
+/**
+ * The base day-type for a weekday index (0=Sun … 6=Sat), holidays aside — used to
+ * validate a recurring weekly slot (R2.1): Sun–Thu = FULL, Sat = QURAN_ONLY, Fri =
+ * OFF. (Holidays are date-specific overrides and don't bear on a weekly slot.)
+ */
+export function weekdayBaseDayType(dayIndex: number): DayType {
+  if (dayIndex >= 0 && dayIndex <= 4) return "FULL";
+  return dayIndex === 6 ? "QURAN_ONLY" : "OFF";
+}
+
 /** Local-day bounds (midnight..23:59:59.999) for holiday range queries. */
 function dayBounds(date: Date): { start: Date; end: Date } {
   const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
