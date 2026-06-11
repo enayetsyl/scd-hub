@@ -4,6 +4,15 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Docs — Routine/Timetable + Class-teacher build contracts (D-#45–#57; no feature code yet). New
+  `docs/prd-routine.md` (full module: day-type calendar incl. Sat Quran-only + holidays, rooms, general
+  Sections + cross-grade gender-split SubjectGroups, audience×track×season period grids with admin
+  ScheduleWindows + computed clock times, routine slots + conflict engine, routine→ScopeGrant binding,
+  substitution/cover + proxy-manage, routine-driven triggers + class-note via the deferred push pipeline;
+  slices R-1..R-5; grids pinned from the live V3 routine, D-#57) and `docs/prd-class-teacher.md`
+  (generalize `assertIsClassTeacher` into the section daily-coordinator gate + support-teacher list +
+  append-only assignment history, D-#53). DECISIONS D-#45–#57 appended; roadmap + STATUS + AGENTS updated.
+  Docs-only — no vocab/schema/code change, no verifier gate at this stage. [22d4f22]
 - App i18n — bilingual UI (Bangla + English); Bangla stays the default. Added `*_LABELS_EN` maps to
   `/shared/vocab.ts` mirroring every `*_LABELS_BN`; `app/src/lib/labels.ts` now resolves `STR` (a Proxy)
   and all label fns + `bnNum` by a module-level active language; new `LanguageProvider` persists the choice
