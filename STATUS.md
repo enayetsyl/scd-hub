@@ -16,6 +16,16 @@ _Updated: 2026-06-11_
   **Frontend-only, no server/contract change.** Gate: **app `tsc --noEmit` clean + web bundle green**
   (`expo export --platform web`, 476 modules). **Not verified against a live server.** Plan-review loop
   (PR-1→PR-3) is now feature-complete server+app.
+- **Built (Homework Tracker HW-T3 — resubmission + Pool top-up, D-#43):** `HomeworkResubmissionService` —
+  `checkRecord` records RESULT at SUBMITTED→CHECKED; WRONG auto-spawns a resubmission (NEW record, same
+  HW_ID, `resubOf`, fresh GIVEN→…→RETURNED; original→RESUBMIT), PARTIAL spawns only on teacher judgment,
+  CORRECT advances. All four §5 top-up boundaries enforced (selected-not-authored via the question store;
+  reactive-only; time-counted in `getStudentDayLoad`; inside the resubmission/same HW_ID). GraphQL
+  `checkHomeworkRecord` (subject-teacher write) + `studentDayLoad` (per-child base+top-up vs 240). Fixed an
+  HW-T1 bug: dropped the unique `{hwItemId,studentId}` index (a resubmission is a legit 2nd record). No new
+  vocab/wire change. Gate green: server tsc clean, vocab verifier PASS, **jest 218/218** (14 new; firewall
+  green). **Not committed yet; not verified live.** Covers handoff §12 #6 (all four boundaries) + #3 (the
+  resubmission's own 1→6 pass). **Next = HW-T4** (trackerSummary roll-ups + thresholds + question-usage feed).
 - **Built (Plan review/approval loop PR-2 — D-#38):** closes the loop. `approvePlan` — Principal
   sign-off `reviewed→gold` (`content:promote_gold`, Principal-locked), closes the thread (supersedes
   any open round), audits `PLAN_APPROVED`; rejects sign-off unless the plan is `reviewed` (a teacher

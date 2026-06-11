@@ -143,6 +143,11 @@ Written Given/When/Then. Each maps to one or more handoff §12 checklist items (
   variant can be created (the only per-student divergence is the §5 top-up). → checklist #8.
 
 ### T3 — Resubmission + Pool top-up  *(handoff §5; slice HW-T3)*
+> **Status: BUILT** (D-#43) — `HomeworkResubmissionService` (`checkRecord` + `getStudentDayLoad`) + GraphQL
+> (`checkHomeworkRecord`, `studentDayLoad`); WRONG auto-spawns, PARTIAL by judgment, all four §5 boundaries
+> enforced (top-up validated against the question store). Dropped the HW-T1 unique Layer-B index (a
+> resubmission is a legit 2nd record). Gate green (server tsc, jest 218/218, firewall green). Covers §12 #6.
+> Not committed.
 - **T3.1 `RESULT` recording + auto-spawn** *(§2.2, §3 stage 5)* — Given a record at `CHECKED`, When
   `RESULT = ভুল (WRONG)`, Then a resubmission record auto-spawns (`RESUB_OF` set, **same `HW_ID`**, its own
   1→6 pass); `আংশিক (PARTIAL)` spawns only at the teacher's judgment; `সঠিক (CORRECT)` advances to
