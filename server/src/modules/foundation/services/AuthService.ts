@@ -26,10 +26,11 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
 }
 
 // ---------------------------------------------------------------------------
-// Staff login (email + password, D-#5)
+// Staff login (identifier = email OR phone, + password, D-#5/#60)
 // ---------------------------------------------------------------------------
 
 export interface StaffLoginInput {
+  /** Email or phone — the arg is still named `email` for backward compat (D-#60). */
   email: string;
   password: string;
 }
@@ -42,9 +43,14 @@ export interface AuthResult {
 }
 
 export async function staffLogin(input: StaffLoginInput): Promise<AuthResult | null> {
-  const user = await User.findOne({ email: input.email.toLowerCase(), active: true });
+  // Accept either an email (case-insensitive) or a phone number as the identifier (D-#60).
+  const id = input.email.trim();
+  const user = await User.findOne({
+    $or: [{ email: id.toLowerCase() }, { phone: id }],
+    active: true,
+  });
   if (!user) {
-    await writeAudit({ eventKind: "LOGIN_FAIL", meta: { email: input.email, reason: "user_not_found" } });
+    await writeAudit({ eventKind: "LOGIN_FAIL", meta: { identifier: id, reason: "user_not_found" } });
     return null;
   }
 

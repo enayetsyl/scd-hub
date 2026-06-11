@@ -55,7 +55,7 @@ export default function UserListScreen(_props: Props): React.ReactElement {
       {user ? (
         <Card>
           <Row label={STR.name} value={user.name} />
-          <Row label={STR.email} value={user.email} />
+          <Row label={STR.emailOrPhone} value={user.email ?? user.phone ?? "—"} />
           <Row label={STR.role} value={user.role} />
         </Card>
       ) : null}

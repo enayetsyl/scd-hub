@@ -3,6 +3,21 @@
 _Updated: 2026-06-11_
 
 ## Now / next
+- **Built (Credential provisioning — phone logins for guardians + teachers, share via WhatsApp, D-#59/#60):**
+  server + app. Principal/Office now generate logins and hand them out over WhatsApp. **Guardians:** ONE shared
+  login per family keyed by `Student.phone` — auto-links every sibling on that phone, both parents use it
+  (D-#59); idempotent re-provision (resets password, links new siblings, no dup links). **Staff:** teachers had
+  **no `User` accounts** (StaffProfile data only) — `provisionStaffLogin` mints a **phone-login** `User`, role
+  mapped from HR category (teacher/assistant_hifz→TEACHER, office_accounts→OFFICE; support/phoneless rejected,
+  D-#25/#60). Model: `User.email`→optional sparse-unique + new sparse-unique `User.phone`; `staffLogin` accepts
+  email **or** phone. New `credentials.ts` (ambiguity-free `generatePassword` + Bangla `buildCredentialShareLink`
+  wa.me builder, ADR-003) + `ProvisioningService`; resolvers `guardian/staffCredentialCandidates` + `provision/
+  reset` mutations (gated `guardian:link` / `user:manage`, **no new permission**); audit kind
+  `CREDENTIAL_PROVISIONED`. App: Admin **Guardian logins** + **Teacher/staff logins** screens (generate/reset →
+  password shown **once** + "Send on WhatsApp" + copy); login screen takes email-or-phone. **Gate GREEN:** server
+  tsc + **jest 313/313** (24 new in `provisioning.test.ts`, firewall green), vocab verifier PASS; **app tsc clean
+  + web bundle green** (495 modules). **Not verified live; not committed yet.** **MIGRATION (live Atlas):** drop
+  the old non-sparse `users.email_1` index once so the sparse index replaces it (lets phone-only staff omit email).
 - **Built (Class-teacher CT-1 — generalize the coordinator gate + support teacher + history, D-#42/#45/#53):**
   server + app. `assertIsClassTeacher` doc generalized to the **section daily-coordinator** gate (CT1.1, no
   behavior change — reused by future attendance/leave/report-card/comms). New `Section.supportTeacherIds`

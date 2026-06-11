@@ -19,6 +19,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   const canManageUsers = !!role && roleHasPermission(role, "user:manage");
   const canRoster = !!role && roleHasPermission(role, "roster:manage");
   const canStaff = !!role && roleHasPermission(role, "staff:manage");
+  const canGuardianCreds = !!role && roleHasPermission(role, "guardian:link");
 
   return (
     <Screen scroll>
@@ -66,7 +67,23 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {!canImport && !canManageUsers && !canRoster && !canStaff ? <Notice message={STR.noPermission} tone="warn" /> : null}
+      {canGuardianCreds ? (
+        <Card onPress={() => navigation.navigate("GuardianCredentials")}>
+          <Body style={{ fontWeight: "700" }}>{STR.guardianCredentials}</Body>
+          <Muted>D-#59</Muted>
+        </Card>
+      ) : null}
+
+      {canManageUsers ? (
+        <Card onPress={() => navigation.navigate("StaffCredentials")}>
+          <Body style={{ fontWeight: "700" }}>{STR.staffCredentials}</Body>
+          <Muted>D-#60</Muted>
+        </Card>
+      ) : null}
+
+      {!canImport && !canManageUsers && !canRoster && !canStaff && !canGuardianCreds ? (
+        <Notice message={STR.noPermission} tone="warn" />
+      ) : null}
     </Screen>
   );
 }

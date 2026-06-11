@@ -43,11 +43,10 @@ export default function LoginScreen(): React.ReactElement {
       {error ? <Notice message={error} tone="danger" /> : null}
 
       <Field
-        label={STR.email}
+        label={STR.emailOrPhone}
         value={email}
         onChangeText={setEmail}
-        placeholder="you@school.edu"
-        keyboardType="email-address"
+        placeholder="you@school.edu / 01XXXXXXXXX"
       />
       <Field label={STR.password} value={password} onChangeText={setPassword} secureTextEntry />
 
