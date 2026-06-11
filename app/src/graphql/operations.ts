@@ -1492,3 +1492,88 @@ export const CANCEL_COVER = gql<{ cancelCover: boolean }, { id: string }>`
     cancelCover(id: $id)
   }
 `;
+
+// --- Routine triggers + class-note / daily-diary (R-5) ---------------------
+
+export interface ClassNoteT {
+  id: string;
+  slotId: string;
+  groupType: string;
+  groupId: string;
+  date: string;
+  subject: string;
+  taughtSummaryBn: string;
+  homeworkItemId: string | null;
+  publishedBy: string;
+  publishedAt: string;
+}
+
+const CLASS_NOTE_FIELDS = `
+  id slotId groupType groupId date subject taughtSummaryBn homeworkItemId publishedBy publishedAt
+`;
+
+export const CLASS_NOTES_FOR_DATE_QUERY = gql<
+  { classNotesForDate: ClassNoteT[] },
+  { groupType: string; groupId: string; date: string }
+>`
+  query ClassNotesForDate($groupType: String!, $groupId: String!, $date: String!) {
+    classNotesForDate(groupType: $groupType, groupId: $groupId, date: $date) { ${CLASS_NOTE_FIELDS} }
+  }
+`;
+
+export const MY_CLASS_NOTE_PROMPTS_QUERY = gql<
+  { myClassNotePrompts: RoutineSlotT[] },
+  { date: string }
+>`
+  query MyClassNotePrompts($date: String!) {
+    myClassNotePrompts(date: $date) { ${ROUTINE_SLOT_FIELDS} }
+  }
+`;
+
+export const PUBLISH_CLASS_NOTE = gql<
+  { publishClassNote: ClassNoteT },
+  { slotId: string; date: string; taughtSummaryBn: string; homeworkItemId?: string | null }
+>`
+  mutation PublishClassNote($slotId: String!, $date: String!, $taughtSummaryBn: String!, $homeworkItemId: String) {
+    publishClassNote(slotId: $slotId, date: $date, taughtSummaryBn: $taughtSummaryBn, homeworkItemId: $homeworkItemId) {
+      ${CLASS_NOTE_FIELDS}
+    }
+  }
+`;
+
+export interface BellTriggerT {
+  periodNumber: number;
+  endHHMM: string;
+  isBreak: boolean;
+  bellAdminId: string | null;
+}
+
+export const BELL_SCHEDULE_QUERY = gql<
+  { bellSchedule: BellTriggerT[] },
+  { date: string; audienceKey: string }
+>`
+  query BellSchedule($date: String!, $audienceKey: String!) {
+    bellSchedule(date: $date, audienceKey: $audienceKey) {
+      periodNumber endHHMM isBreak bellAdminId
+    }
+  }
+`;
+
+export interface BellDutyT {
+  id: string;
+  date: string;
+  periodNumber: number | null;
+  adminId: string;
+  active: boolean;
+}
+
+export const ASSIGN_BELL_DUTY = gql<
+  { assignBellDuty: BellDutyT },
+  { date: string; periodNumber?: number | null; adminId: string }
+>`
+  mutation AssignBellDuty($date: String!, $periodNumber: Int, $adminId: String!) {
+    assignBellDuty(date: $date, periodNumber: $periodNumber, adminId: $adminId) {
+      id date periodNumber adminId active
+    }
+  }
+`;

@@ -22,7 +22,7 @@ import {
 } from "../services/RoutineCoverService";
 import type { AvailabilityRow } from "../cover";
 
-const RoutineSlotRef = builder.objectRef<IRoutineSlot>("RoutineSlot").implement({
+export const RoutineSlotRef = builder.objectRef<IRoutineSlot>("RoutineSlot").implement({
   fields: (t) => ({
     id: t.string({ resolve: (s) => s._id.toString() }),
     groupType: t.exposeString("groupType"),

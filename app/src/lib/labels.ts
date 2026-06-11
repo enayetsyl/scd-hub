@@ -586,6 +586,25 @@ const STR_BN = {
   rtActiveCovers: "আজকের কভার",
   rtCovered: "কভার করা হয়েছে",
   rtNoCovers: "কোনো কভার নেই।",
+
+  // Routine triggers + class-note / daily-diary (R-5)
+  dailyNoteTitle: "ক্লাস নোট",
+  bellScheduleTitle: "ঘণ্টা সূচি",
+  rtClassNote: "ক্লাস নোট",
+  rtBellSchedule: "ঘণ্টা সূচি",
+  rtTaughtSummary: "আজ যা পড়ানো হয়েছে",
+  rtHomeworkId: "বাড়ির কাজ আইডি (ঐচ্ছিক)",
+  rtPublish: "প্রকাশ করুন",
+  rtPublished: "প্রকাশিত হয়েছে।",
+  rtNoteFor: "নোট",
+  rtNoNotes: "কোনো নোট নেই।",
+  rtNotesToPublish: "আজ প্রকাশযোগ্য নোট",
+  rtAudienceKey: "অডিয়েন্স কী (যেমন class_1_5)",
+  rtBellEnds: "পিরিয়ড শেষ",
+  rtBellAdmin: "ঘণ্টা দায়িত্ব",
+  rtAdminId: "অ্যাডমিন আইডি",
+  rtAssignBell: "ঘণ্টা দায়িত্ব নিয়োগ",
+  rtBellAssigned: "ঘণ্টা দায়িত্ব নিয়োগ হয়েছে।",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -963,6 +982,25 @@ const STR_EN: StrTable = {
   rtActiveCovers: "Today's covers",
   rtCovered: "Covered",
   rtNoCovers: "No covers.",
+
+  // Routine triggers + class-note / daily-diary (R-5)
+  dailyNoteTitle: "Class note",
+  bellScheduleTitle: "Bell schedule",
+  rtClassNote: "Class note",
+  rtBellSchedule: "Bell schedule",
+  rtTaughtSummary: "What was taught today",
+  rtHomeworkId: "Homework id (optional)",
+  rtPublish: "Publish",
+  rtPublished: "Published.",
+  rtNoteFor: "Note",
+  rtNoNotes: "No notes.",
+  rtNotesToPublish: "Notes to publish today",
+  rtAudienceKey: "Audience key (e.g. class_1_5)",
+  rtBellEnds: "Period end",
+  rtBellAdmin: "Bell duty",
+  rtAdminId: "Admin id",
+  rtAssignBell: "Assign bell duty",
+  rtBellAssigned: "Bell duty assigned.",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

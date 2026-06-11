@@ -3,6 +3,20 @@
 _Updated: 2026-06-11_
 
 ## Now / next
+- **Built (Routine R-5 — triggers + class-note/daily-diary, D-#52/#54): ROUTINE MODULE COMPLETE (R-1→R-5).**
+  Server: `ClassNote` (one per slot+date; what-was-taught + optional HW-T1 `homeworkItemId` link — no second
+  homework path) + `BellDutyAssignment` (whole-day or per-period, D-#54). `RoutineTriggerService` + pure
+  `trigger.ts` `buildBellSchedule` (per-period override → whole-day duty → null). Queries `bellSchedule`
+  (period end times from the R-1 grid/window + the bell-duty admin), `classNotesForDate`,
+  `myClassNotePrompts` (the teacher's slots still needing a note), `bellDutyForDate`; mutations
+  `publishClassNote` (authorized to the slot's teacher / active cover / admin), `assignBellDuty`. **Delivery
+  (push) rides the deferred messaging pipeline; R5.4 guardian notify + R5.5 push are pipeline.** App:
+  `DailyNoteScreen` (per group+date — publish what-was-taught per slot + view notes), `BellScheduleScreen`
+  (date+audience bell schedule + assign bell-duty, managers), MyRoutine **"notes to publish today"** prompt.
+  **Gate GREEN:** server tsc + **jest 283/283** (8 new in `routineTrigger.test.ts`, firewall green); **app
+  tsc clean + web bundle green** (491 modules). Covers R5.1–R5.3. **Not verified live.** **Routine module is
+  feature-complete server+app (R-1 calendar/grids → R-2 slots/conflict/scope → R-3 views → R-4 cover/
+  proxy-manage → R-5 triggers/class-note).** Next: live verification, or another module.
 - **Built (Routine R-4 — substitution/cover + proxy-manage, D-#22/#46/#49):** server + app. New
   `RoutineSubstitution` model (one cover per slot per date). **Server:** `RoutineCoverService` — pure
   `rankAvailability` (free-first, lightest-load-next) + `teacherAvailability(date, period)` (who's free +

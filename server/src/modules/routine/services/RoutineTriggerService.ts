@@ -1,0 +1,153 @@
+/**
+ * RoutineTriggerService (R-5, D-#52) — the routine-driven trigger schedule (bell)
+ * + the class-note / daily-diary. The schedule is computed here; delivery (push)
+ * rides the deferred messaging pipeline. Class-note publish is authorized to the
+ * slot's teacher, its active cover, or an admin.
+ */
+import { Types } from "mongoose";
+import { DAYS_OF_WEEK } from "@scd/shared";
+import { ScheduleWindow, type IScheduleWindow } from "../models/ScheduleWindow";
+import { PeriodGrid, type IPeriodGrid } from "../models/PeriodGrid";
+import { BellDutyAssignment, type IBellDutyAssignment } from "../models/BellDutyAssignment";
+import { RoutineSlot, type IRoutineSlot } from "../models/RoutineSlot";
+import { RoutineSubstitution } from "../models/RoutineSubstitution";
+import { ClassNote, type IClassNote } from "../models/ClassNote";
+import { computePeriodTimes, windowFor } from "../schedule";
+import { buildBellSchedule, type BellTrigger } from "../trigger";
+import { ForbiddenError } from "../../../middleware/authz";
+
+function dayBounds(date: Date): { start: Date; end: Date } {
+  const s = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+  const e = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+  return { start: s, end: e };
+}
+
+/** The bell-ring schedule for a date + audience (R5.1): each period's end time and
+ *  the admin who rings it (per-period override → whole-day duty admin → null). */
+export async function bellSchedule(date: Date, audienceKey: string): Promise<BellTrigger[]> {
+  const windows = (await ScheduleWindow.find({ active: true }).lean()) as unknown as IScheduleWindow[];
+  const win = windowFor(date, windows);
+  const season = win ? win.season : "regular";
+  const dayStartMinutes = win ? win.dayStartMinutes : 420;
+  const grid = (await PeriodGrid.findOne({ audienceKey, season, active: true }).lean()) as unknown as IPeriodGrid | null;
+  if (!grid) return [];
+  const periods = computePeriodTimes(dayStartMinutes, grid.periods);
+
+  const { start, end } = dayBounds(date);
+  const duties = (await BellDutyAssignment.find({ active: true, date: { $gte: start, $lte: end } }).lean()) as unknown as IBellDutyAssignment[];
+  let wholeDay: string | null = null;
+  const perPeriod: Record<number, string> = {};
+  for (const d of duties) {
+    if (d.periodNumber === undefined || d.periodNumber === null) wholeDay = d.adminId.toString();
+    else perPeriod[d.periodNumber] = d.adminId.toString();
+  }
+  return buildBellSchedule(
+    periods.map((p) => ({ number: p.number, isBreak: p.isBreak, endHHMM: p.endHHMM })),
+    wholeDay,
+    perPeriod,
+  );
+}
+
+/** Assign (replace) the bell-duty admin for a date — whole-day (periodNumber null)
+ *  or a single-period override (D-#54). */
+export async function assignBellDuty(input: {
+  date: Date;
+  periodNumber?: number | null;
+  adminId: string;
+  actorId: string;
+}): Promise<IBellDutyAssignment> {
+  const { start, end } = dayBounds(input.date);
+  const periodMatch = input.periodNumber == null ? { periodNumber: { $exists: false } } : { periodNumber: input.periodNumber };
+  await BellDutyAssignment.updateMany(
+    { active: true, date: { $gte: start, $lte: end }, ...periodMatch },
+    { $set: { active: false } },
+  );
+  return BellDutyAssignment.create({
+    date: input.date,
+    periodNumber: input.periodNumber ?? undefined,
+    adminId: new Types.ObjectId(input.adminId),
+    createdBy: new Types.ObjectId(input.actorId),
+  });
+}
+
+export async function bellDutyForDate(date: Date): Promise<IBellDutyAssignment[]> {
+  const { start, end } = dayBounds(date);
+  return BellDutyAssignment.find({ active: true, date: { $gte: start, $lte: end } }).lean() as unknown as IBellDutyAssignment[];
+}
+
+/** Publish (or update) the class-note for a slot on a date (R5.3). Authorized to the
+ *  slot's teacher, its active cover for that date, or an admin (`canManage`). */
+export async function publishClassNote(input: {
+  slotId: string;
+  date: Date;
+  taughtSummaryBn: string;
+  homeworkItemId?: string | null;
+  actorId: string;
+  canManage: boolean;
+}): Promise<IClassNote> {
+  const slot = (await RoutineSlot.findById(input.slotId).lean()) as unknown as IRoutineSlot | null;
+  if (!slot) throw new Error("Routine slot not found");
+
+  let allowed = input.canManage || (slot.teacherId ? slot.teacherId.toString() === input.actorId : false);
+  if (!allowed) {
+    const { start, end } = dayBounds(input.date);
+    const cover = await RoutineSubstitution.findOne({
+      slotId: input.slotId,
+      active: true,
+      coverTeacherId: input.actorId,
+      date: { $gte: start, $lte: end },
+    }).lean();
+    allowed = cover !== null;
+  }
+  if (!allowed) throw new ForbiddenError("Only the slot's teacher (or cover) may publish its class note");
+
+  const publishedAt = new Date();
+  await ClassNote.updateOne(
+    { slotId: input.slotId, date: input.date },
+    {
+      $set: {
+        groupType: slot.groupType,
+        groupId: slot.groupId,
+        subject: slot.subject,
+        taughtSummaryBn: input.taughtSummaryBn,
+        homeworkItemId: input.homeworkItemId ? new Types.ObjectId(input.homeworkItemId) : undefined,
+        publishedBy: new Types.ObjectId(input.actorId),
+        publishedAt,
+      },
+    },
+    { upsert: true },
+  );
+  return ClassNote.findOne({ slotId: input.slotId, date: input.date }).lean() as unknown as IClassNote;
+}
+
+export async function classNotesForDate(
+  groupType: "section" | "subjectgroup",
+  groupId: string,
+  date: Date,
+): Promise<IClassNote[]> {
+  const { start, end } = dayBounds(date);
+  return ClassNote.find({ groupType, groupId, date: { $gte: start, $lte: end } })
+    .sort({ subject: 1 })
+    .lean() as unknown as IClassNote[];
+}
+
+/** The teacher's slots on a date that still need a class note (R5.3 reminder). */
+export async function myClassNotePrompts(date: Date, teacherId: string): Promise<IRoutineSlot[]> {
+  const dayOfWeek = DAYS_OF_WEEK[date.getDay()];
+  const slots = (await RoutineSlot.find({
+    teacherId,
+    dayOfWeek,
+    active: true,
+    isBreak: false,
+    effectiveFrom: { $lte: date },
+    $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: date } }],
+  })
+    .sort({ periodNumber: 1 })
+    .lean()) as unknown as IRoutineSlot[];
+
+  const { start, end } = dayBounds(date);
+  const slotIds = slots.map((s) => s._id);
+  const notes = await ClassNote.find({ slotId: { $in: slotIds }, date: { $gte: start, $lte: end } }).select("slotId").lean();
+  const noted = new Set(notes.map((n) => n.slotId.toString()));
+  return slots.filter((s) => !noted.has(s._id.toString()));
+}
