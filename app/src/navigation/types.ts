@@ -28,6 +28,12 @@ export type TrackersStackParamList = {
   SectionPicker: undefined;
 };
 
+export type ReviewStackParamList = {
+  ReviewHome: undefined;
+  ReviewSubmit: { assignmentId: string; artifactId: string };
+  ReviewThread: { artifactId: string };
+};
+
 export type AdminStackParamList = {
   AdminHome: undefined;
   Import: undefined;
@@ -43,5 +49,6 @@ export type TabParamList = {
   QuestionsTab: NavigatorScreenParams<QuestionsStackParamList>;
   SetsTab: NavigatorScreenParams<SetsStackParamList>;
   TrackersTab: NavigatorScreenParams<TrackersStackParamList>;
+  ReviewTab: NavigatorScreenParams<ReviewStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
 };

@@ -4,6 +4,13 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Plan review/approval loop PR-3 (app screens, D-#38): new Expo **Review tab** (gated `content:review`
+  OR `content:assign_review`). `ReviewHomeScreen` (role-aware inbox + my-reviews, each query paused per
+  perm), `ReviewSubmitScreen` (teacher: plan render + verdict chips + feedback → `submitPlanReview`),
+  `ReviewThreadScreen` (admin: round history + copy-feedback-to-clipboard + assign-next-round + approve).
+  `PlanViewScreen` gains Principal assign + approve actions. New label helpers `reviewVerdictLabel`/
+  `reviewRoundStatusLabel` + STR strings; nav `ReviewStackParamList` + `ReviewTab`. Frontend-only, no
+  server/contract change. Gate: app `tsc --noEmit` clean + web bundle green (476 modules).
 - Plan review/approval loop PR-2 (D-#38): `approvePlan` — Principal sign-off `reviewed→gold`
   (`content:promote_gold`), closes the thread (supersedes any open round), audits `PLAN_APPROVED`;
   rejects unless the plan is `reviewed`. `planReviewInbox` (Principal/Office — submitted rounds, the

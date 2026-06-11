@@ -3,6 +3,19 @@
 _Updated: 2026-06-11_
 
 ## Now / next
+- **Built (Plan review/approval loop PR-3 — app screens, D-#38):** the loop is now usable end-to-end in
+  the Expo app. New **Review tab** (📝, gated `content:review` OR `content:assign_review` → Teacher +
+  Principal + Office). `ReviewHomeScreen` — role-aware: **Inbox** (admins: `planReviewInbox`, submitted
+  rounds) + **My reviews** (teacher: `myReviewAssignments`); each query paused when the role lacks the perm.
+  `ReviewSubmitScreen` (teacher) — renders the assigned plan (reviewer read-override) + verdict chips
+  (অনুমোদন / পরিবর্তন প্রয়োজন) + feedback → `submitPlanReview`. `ReviewThreadScreen` (admin) — full round
+  history with **copy-feedback to clipboard** (the Claude-Desktop text), **Assign next round** (reviewer id),
+  and **Approve / sign-off** (Principal, enabled only when `reviewed`). `PlanViewScreen` gains the same
+  assign + approve actions for the Principal (who browses content). New app-native vocab labels
+  (`reviewVerdictLabel`/`reviewRoundStatusLabel` + STR). Re-upload uses the existing Import screen (R3.4).
+  **Frontend-only, no server/contract change.** Gate: **app `tsc --noEmit` clean + web bundle green**
+  (`expo export --platform web`, 476 modules). **Not verified against a live server.** Plan-review loop
+  (PR-1→PR-3) is now feature-complete server+app.
 - **Built (Plan review/approval loop PR-2 — D-#38):** closes the loop. `approvePlan` — Principal
   sign-off `reviewed→gold` (`content:promote_gold`, Principal-locked), closes the thread (supersedes
   any open round), audits `PLAN_APPROVED`; rejects sign-off unless the plan is `reviewed` (a teacher
@@ -13,8 +26,7 @@ _Updated: 2026-06-11_
   supersedes the prior — the open round flips `superseded`, the next round assigns on the new (`draft`)
   version. Shared supersede helper (reused by reassign + re-import + sign-off). **No wire-contract
   change.** Gates: vocab verifier green, server tsc clean, **205/205 tests** (incl. the merged D-#42
-  class-teacher suite + new PR-2 cases), firewall green. **Next = PR-3** (app screens: teacher review
-  form, admin assign + inbox/copy-feedback + approve).
+  class-teacher suite + new PR-2 cases), firewall green. **Merged (PR #3).** Closed out by PR-3 above.
 - **Built (Plan review/approval loop PR-1 — D-#38–#40):** server core of the in-app plan-vetting loop.
   Build contract `docs/prd-plan-review.md`. App-native vocab: new perm `content:assign_review`
   (Principal/Office), `content:review` extended to TEACHER, `REVIEW_VERDICTS` enum (`APPROVE`/

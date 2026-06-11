@@ -8,6 +8,7 @@ import {
   DIFFICULTY_LABELS_BN,
   PAPER_ROLE_LABELS_BN,
   REVIEW_STATUS_LABELS_BN,
+  REVIEW_VERDICT_LABELS_BN,
   CURATION_TAG_LABELS_BN,
   SET_TYPE_LABELS_BN,
   TRACKER_KIND_LABELS_BN,
@@ -16,6 +17,7 @@ import {
   type Difficulty,
   type PaperRole,
   type ReviewStatus,
+  type ReviewVerdict,
   type CurationTag,
   ROSTER_CLASS_LABELS_BN,
   HR_CATEGORY_LABELS_BN,
@@ -51,6 +53,17 @@ export const reviewStatusLabel = (v?: string | null): string =>
 
 export const curationTagLabel = (v?: string | null): string =>
   (v && CURATION_TAG_LABELS_BN[v as CurationTag]) || v || "—";
+
+export const reviewVerdictLabel = (v?: string | null): string =>
+  (v && REVIEW_VERDICT_LABELS_BN[v as ReviewVerdict]) || v || "—";
+
+/** Review-round lifecycle status → Bangla (app-native ReviewAssignment.status). */
+export const reviewRoundStatusLabel = (v?: string | null): string =>
+  v === "assigned" ? "অপেক্ষমাণ"
+  : v === "submitted" ? "জমা হয়েছে"
+  : v === "superseded" ? "প্রতিস্থাপিত"
+  : v === "cancelled" ? "বাতিল"
+  : v || "—";
 
 export const setTypeLabel = (v?: string | null): string =>
   (v && SET_TYPE_LABELS_BN[v as SetType]) || v || "—";
@@ -272,6 +285,37 @@ export const STR = {
   bankAccount: "ব্যাংক হিসাব",
   nid: "জাতীয় পরিচয়পত্র",
   allCategories: "সব ক্যাটাগরি",
+
+  // Plan review / approval loop (PR-3)
+  tabReview: "পর্যালোচনা",
+  reviewInbox: "পর্যালোচনা ইনবক্স",
+  myReviews: "আমার পর্যালোচনা",
+  noInbox: "অপেক্ষমাণ কোনো পর্যালোচনা নেই।",
+  noMyReviews: "আপনাকে কোনো পরিকল্পনা পর্যালোচনার জন্য দেওয়া হয়নি।",
+  reviewRound: "রাউন্ড",
+  reviewVerdict: "মতামত",
+  verdictApprove: "অনুমোদন",
+  verdictChanges: "পরিবর্তন প্রয়োজন",
+  feedback: "মতামত / প্রতিক্রিয়া",
+  feedbackForClaude: "এই মতামত Claude Desktop-এ দিয়ে নতুন পরিকল্পনা তৈরি করুন।",
+  feedbackRequired: "পরিবর্তন চাইলে মতামত লিখুন।",
+  submitReview: "পর্যালোচনা জমা দিন",
+  submittingReview: "জমা হচ্ছে…",
+  reviewSubmitted: "পর্যালোচনা জমা হয়েছে।",
+  reviewThread: "পর্যালোচনার ইতিহাস",
+  reviewerId: "পর্যালোচক আইডি (TEACHER)",
+  assignForReview: "পর্যালোচনার জন্য বরাদ্দ",
+  assignNextRound: "পরবর্তী রাউন্ড বরাদ্দ",
+  assigning: "বরাদ্দ হচ্ছে…",
+  reviewerAssigned: "পর্যালোচক বরাদ্দ হয়েছে।",
+  approveSignOff: "অনুমোদন / চূড়ান্ত",
+  approving: "অনুমোদন হচ্ছে…",
+  planApproved: "পরিকল্পনা অনুমোদিত (চূড়ান্ত)।",
+  approveNeedsReviewed: "চূড়ান্ত করার আগে পরিকল্পনা 'পর্যালোচিত' হতে হবে।",
+  copyFeedback: "মতামত কপি",
+  reviewActions: "পর্যালোচনা কার্যক্রম",
+  openForReview: "পরিকল্পনা খুলুন",
+  awaitingReviewer: "পর্যালোচকের অপেক্ষায়",
 
   // Section context
   sectionContext: "শাখা প্রসঙ্গ",

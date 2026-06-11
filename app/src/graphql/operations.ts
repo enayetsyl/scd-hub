@@ -329,6 +329,94 @@ export const ARTIFACT_QUERY = gql<{ artifact: ContentArtifactT | null }, { id: s
 `;
 
 // ===========================================================================
+// Plan review / approval loop (PR-1/PR-2 — D-#38/#39/#40)
+// ===========================================================================
+
+/** One review round (mirrors the server ReviewAssignment GraphQL type). */
+export interface ReviewAssignmentT {
+  id: string;
+  docType: string;
+  subject: string;
+  classLevel: number;
+  anchorWord: string;
+  addressNumber: string;
+  artifactId: string;
+  reviewerId: string;
+  assignedBy: string;
+  assignedAt: string;
+  roundNumber: number;
+  status: string;
+  verdict: string | null;
+  feedback: string | null;
+  submittedAt: string | null;
+}
+
+const REVIEW_ASSIGNMENT_FIELDS = `
+  id docType subject classLevel anchorWord addressNumber
+  artifactId reviewerId assignedBy assignedAt roundNumber status
+  verdict feedback submittedAt
+`;
+
+/** Teacher's open review queue. */
+export const MY_REVIEW_ASSIGNMENTS = gql<{ myReviewAssignments: ReviewAssignmentT[] }, NoVars>`
+  query MyReviewAssignments {
+    myReviewAssignments { ${REVIEW_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+/** Principal/Office inbox — submitted rounds awaiting action. */
+export const PLAN_REVIEW_INBOX = gql<{ planReviewInbox: ReviewAssignmentT[] }, NoVars>`
+  query PlanReviewInbox {
+    planReviewInbox { ${REVIEW_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+/** Full round history for a plan's address (by any artifact version). */
+export const PLAN_REVIEW_THREAD = gql<{ planReviewThread: ReviewAssignmentT[] }, { artifactId: string }>`
+  query PlanReviewThread($artifactId: String!) {
+    planReviewThread(artifactId: $artifactId) { ${REVIEW_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const ASSIGN_PLAN_REVIEW = gql<
+  { assignPlanReview: ReviewAssignmentT },
+  { artifactId: string; reviewerId: string }
+>`
+  mutation AssignPlanReview($artifactId: String!, $reviewerId: String!) {
+    assignPlanReview(artifactId: $artifactId, reviewerId: $reviewerId) { ${REVIEW_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const SUBMIT_PLAN_REVIEW = gql<
+  { submitPlanReview: ReviewAssignmentT },
+  { assignmentId: string; verdict: string; feedback?: string | null }
+>`
+  mutation SubmitPlanReview($assignmentId: String!, $verdict: String!, $feedback: String) {
+    submitPlanReview(assignmentId: $assignmentId, verdict: $verdict, feedback: $feedback) { ${REVIEW_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const CANCEL_PLAN_REVIEW = gql<
+  { cancelPlanReview: ReviewAssignmentT },
+  { assignmentId: string }
+>`
+  mutation CancelPlanReview($assignmentId: String!) {
+    cancelPlanReview(assignmentId: $assignmentId) { id status }
+  }
+`;
+
+export interface ApprovePlanResultT {
+  artifactId: string;
+  reviewStatus: string;
+}
+
+export const APPROVE_PLAN = gql<{ approvePlan: ApprovePlanResultT }, { artifactId: string }>`
+  mutation ApprovePlan($artifactId: String!) {
+    approvePlan(artifactId: $artifactId) { artifactId reviewStatus }
+  }
+`;
+
+// ===========================================================================
 // Questions (J2)
 // ===========================================================================
 
