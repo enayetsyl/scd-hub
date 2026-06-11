@@ -19,6 +19,7 @@ import "./modules/questions/resolvers/questions";
 import "./modules/assessment/resolvers/assessment";
 import "./modules/trackers/resolvers/trackers";
 import "./modules/trackers/resolvers/homework";
+import "./modules/routine/resolvers/routine";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";
