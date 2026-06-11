@@ -16,8 +16,14 @@ _Updated: 2026-06-11_
   `CREDENTIAL_PROVISIONED`. App: Admin **Guardian logins** + **Teacher/staff logins** screens (generate/reset →
   password shown **once** + "Send on WhatsApp" + copy); login screen takes email-or-phone. **Gate GREEN:** server
   tsc + **jest 313/313** (24 new in `provisioning.test.ts`, firewall green), vocab verifier PASS; **app tsc clean
-  + web bundle green** (495 modules). **Not verified live; not committed yet.** **MIGRATION (live Atlas):** drop
-  the old non-sparse `users.email_1` index once so the sparse index replaces it (lets phone-only staff omit email).
+  + web bundle green** (495 modules). Committed [fc755c6]. **MIGRATION APPLIED to live Atlas** (`migrate-user-
+  login-index.ts --commit`): the non-sparse `users.email_1` index was dropped + recreated **sparse** (phone-only
+  staff can now be inserted). **VERIFIED LIVE** (`verify-provisioning.ts`): real roster groups into **60 guardian
+  families** by phone (1 five-sibling family, 23 two-child; no phone groups ≥6 → no shared/default-number false
+  joins); **23 staff all provisionable** (21 TEACHER / 2 OFFICE). End-to-end provisioned **1 guardian** (2-child
+  family → password authenticates via `guardianLogin` ✓) + **1 teacher** (phone login authenticates via
+  `staffLogin` ✓) — **two real active logins now exist on Atlas** (Fardhousi Jahan Shaly +8801409514518; Afia
+  Loskor +8801706050753) — the Principal should reset/share their passwords (printed once at provision time).
 - **Built (Class-teacher CT-1 — generalize the coordinator gate + support teacher + history, D-#42/#45/#53):**
   server + app. `assertIsClassTeacher` doc generalized to the **section daily-coordinator** gate (CT1.1, no
   behavior change — reused by future attendance/leave/report-card/comms). New `Section.supportTeacherIds`

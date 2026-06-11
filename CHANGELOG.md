@@ -16,7 +16,12 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
   → password shown once + "Send on WhatsApp" + copy); login screen accepts email-or-phone. Gate: server tsc
   + **jest 313/313** (24 new in `provisioning.test.ts`, firewall green), vocab verifier PASS; app tsc clean +
   web bundle green (495 modules). **MIGRATION (live Atlas):** drop the old non-sparse `email_1` index on
-  `users` once so the sparse index replaces it (lets phone-only staff have no email). Not verified live.
+  `users` once so the sparse index replaces it (lets phone-only staff have no email). [fc755c6]
+- Credential provisioning — ops scripts + live verification. `migrate-user-login-index.ts` (idempotent: drops
+  non-sparse `users.email_1`, recreates sparse via syncIndexes) **APPLIED to live Atlas**. `verify-provisioning.ts`
+  (read-only candidate report + optional `--provision`/`--staff` end-to-end check). Live: real roster → 60
+  guardian families (no phone groups ≥6); 23 staff all provisionable; provisioned 1 guardian + 1 teacher, both
+  generated passwords authenticate (`guardianLogin`/`staffLogin` ✓).
 - Plan render fix — proper Markdown in the app + grid tables in the PDF; strip the internal footer comment.
   App: new hand-rolled Markdown component (headings, bold/italic/code, ordered & bullet lists incl. GFM task
   items, GFM tables as a grid, blockquotes, hr) — PlanViewScreen rendered raw markdown before. PDF: tables
