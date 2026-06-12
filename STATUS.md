@@ -3,6 +3,26 @@
 _Updated: 2026-06-12 (guardian portal v1 built)_
 
 ## Now / next
+- **Built (Attendance AT-4 — reminder + escalation engine, D-#65):** server + app on branch
+  `feat/attendance-at4` (PR open). The attendance module is now AT-1..AT-5 complete (general Section flow).
+  New `PushDevice` (Expo tokens per User, reusable) + `AttendanceReminderDispatch` (idempotency ledger,
+  one row per date×tier×section) models; `ExpoPush` transport (plain-fetch to exp.host, best-effort, dead-
+  token pruning — no SDK dep) in platform; `AttendanceReminderService.dispatchAttendanceReminders(tier,
+  dateKey?)`: **AT4.1** FULL-day gate (single calendar `resolveDayType`), **AT4.2** reuses `unmarkedSections`,
+  **AT4.3** T1210→marker + class teacher, **AT4.4** T1245→all Office, **AT4.5** T1400→all Principal,
+  **AT4.6** idempotent (a 2nd call for the same date/tier re-sends nothing), each section dispatch audited
+  `ATTENDANCE_REMINDER_SENT`. **Endpoint** `POST /triggers/attendance-reminder {tier}` — Express beside /pdf,
+  **shared-secret header** `x-trigger-secret` (env `ATTENDANCE_TRIGGER_SECRET`, **fail-closed** if unset),
+  driven by an **external scheduler** (no in-process cron) — cron lines (12:10/12:45/14:00 Asia/Dhaka) in
+  `server/README.md`. Mutations `registerPushDevice`/`unregisterPushDevice` (own-row, no new perm); app
+  registers its Expo token on auth (web/sim/denied → graceful no-op via `expo-notifications`). **AT4.7
+  Office guardian-chase** = manual wa.me button per absent-no-application row (`guardianChaseLink`,
+  attendance:manage; teachers NEVER chase, O3; WhatsApp stays manual, D-#65). **No vocab/contract change**
+  (tiers + audit kind already existed). **Gate GREEN:** vocab verifier PASS, shared+server tsc clean,
+  **jest 423/423** (9 new in `attendanceReminder.test.ts`, firewall green); app tsc clean + web export green.
+  **Not verified live.** Out of scope (unchanged): SubjectGroup/Quran attendance, staff-leave entry,
+  automatic WhatsApp, per-period, leave approval. Roll-numbers (O1) import script NOT built — awaiting the
+  source file from the Principal.
 - **Planned (Messaging module — staff chat + guardian notices + push transport, D-#76/#77/#78/#79):** build
   contract `docs/prd-messaging.md` authored — pulls the deferred messaging pipeline forward (this is the
   transport D-#52/R5.4–R5.5 await). Staff-only chat (guardians are notice recipients, NOT participants):
@@ -118,7 +138,7 @@ _Updated: 2026-06-12 (guardian portal v1 built)_
   session. **GP-A file attach/view still NOT live-verified** — needs the Google Drive credential (D-#70/#71;
   `server/.env` GOOGLE_OAUTH_* absent; setup steps below). GP-3+ riders (attendance/fees/notices/leave/push
   surfaces) land with their modules.
-- **Planned (Attendance PRD — D-#63–#67, AT-1..3+5 BUILT above, AT-4 remains):** finalized the build contract for **teacher +
+- **Planned (Attendance PRD — D-#63–#67, AT-1..AT-5 now BUILT incl. AT-4 above):** finalized the build contract for **teacher +
   student attendance** in `docs/prd-attendance.md`. Teacher = daily **Excel snapshot** of the biometric
   "Employee Attendance Report" (legend ✔=present / 𝓛=late / ✘=leave-or-absent / ℞=ignored; **name-matched**
   since the export drops the ID column → `StaffNameAlias` remembers the mapping; both punch times; date from

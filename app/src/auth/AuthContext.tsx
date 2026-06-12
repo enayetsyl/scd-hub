@@ -9,6 +9,7 @@ import { useClient } from "urql";
 import { ME_QUERY, STAFF_LOGIN, GUARDIAN_LOGIN, type MeUser } from "../graphql/operations";
 import { hydrateToken, persistToken } from "../lib/tokenStore";
 import { friendlyError } from "../lib/errors";
+import { registerPushToken } from "../lib/push";
 import { STR } from "../lib/labels";
 import type { Role } from "@scd/shared";
 
@@ -56,6 +57,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       cancelled = true;
     };
   }, [resolveMe]);
+
+  // Register this device for push once authenticated (AT-4, D-#65). Best-effort;
+  // never blocks the session (web/simulator/denied → silent no-op).
+  useEffect(() => {
+    if (status === "authed") void registerPushToken(client);
+  }, [status, client]);
 
   const login = useCallback(
     async (email: string, password: string) => {

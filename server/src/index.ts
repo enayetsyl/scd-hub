@@ -26,12 +26,14 @@ import "./modules/routine/resolvers/routineSlots";
 import "./modules/routine/resolvers/routineTriggers";
 import "./modules/attendance/resolvers/teacherAttendance";
 import "./modules/attendance/resolvers/studentAttendance";
+import "./modules/attendance/resolvers/push";
 import "./modules/guardian/resolvers/guardianPortal";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";
 import { setPdfRouter } from "./modules/assessment/routes/setPdf";
 import { filesRouter } from "./routes/files";
+import { triggersRouter } from "./routes/triggers";
 
 const app = express();
 
@@ -91,6 +93,10 @@ app.use("/pdf/set", setPdfRouter);
 // Thin HTTP surface — homework files (GP-A, D-#70): server-in-the-middle
 // upload/download; Drive is never exposed to a client.
 app.use("/files", filesRouter);
+
+// Trigger endpoints (AT-4, D-#65): external scheduler → idempotent reminder
+// dispatch (shared-secret auth, not a browser surface → no CORS).
+app.use("/triggers", triggersRouter);
 
 const PORT = Number(process.env.PORT ?? 4000);
 

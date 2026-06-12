@@ -9,15 +9,16 @@
  * attendance:manage (Principal/Office).
  */
 import React, { useState } from "react";
-import { View } from "react-native";
+import { View, Linking } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useQuery, useMutation } from "urql";
+import { useQuery, useMutation, useClient } from "urql";
 import {
   ABSENTEE_REPORT,
   UNMARKED_SECTIONS,
   ABSENT_NO_APPLICATION,
   TEACHER_ATTENDANCE_SUMMARY,
   SUBMIT_LEAVE_APPLICATION,
+  GUARDIAN_CHASE_LINK,
 } from "../../graphql/operations";
 import type { AttendanceStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Button, Field, Notice, Divider, Loader } from "../../components/ui";
@@ -58,6 +59,7 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
     variables: { fromKey, toKey: dateKey },
   });
   const [, submitLeave] = useMutation(SUBMIT_LEAVE_APPLICATION);
+  const client = useClient();
 
   const report = reportQ.data?.absenteeReport ?? [];
   const unmarked = unmarkedQ.data?.unmarkedSections ?? [];
@@ -79,6 +81,26 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
     setLeaveReason("");
     refetchNoApp({ requestPolicy: "network-only" });
     refetchReport({ requestPolicy: "network-only" });
+  }
+
+  // AT4.7 — Office manual guardian chase: fetch the wa.me link, then open it.
+  // WhatsApp stays a manual click (D-#65); the teacher never chases (O3).
+  async function onChase(studentId: string): Promise<void> {
+    setError(null);
+    setOk(null);
+    const res = await client
+      .query(GUARDIAN_CHASE_LINK, { studentId }, { requestPolicy: "network-only" })
+      .toPromise();
+    if (res.error) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    const url = res.data?.guardianChaseLink;
+    if (!url) {
+      setError(STR.attNoGuardianPhone);
+      return;
+    }
+    void Linking.openURL(url);
   }
 
   const loading = reportQ.fetching || unmarkedQ.fetching;
@@ -158,7 +180,10 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
               <Button title={STR.attRecordLeave} onPress={() => onRecordLeave(s.studentId)} loading={busy} disabled={!leaveReason.trim()} />
             </View>
           ) : (
-            <Button title={STR.attRecordLeave} variant="ghost" onPress={() => setLeaveFor(s.studentId)} />
+            <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
+              <Button title={STR.attRecordLeave} variant="ghost" onPress={() => setLeaveFor(s.studentId)} />
+              <Button title={STR.attChaseWhatsApp} variant="ghost" onPress={() => onChase(s.studentId)} />
+            </View>
           )}
         </Card>
       ))}
