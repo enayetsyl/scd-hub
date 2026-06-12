@@ -9,12 +9,15 @@ import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
+import { roleHasPermission } from "@scd/shared";
+import type { Role } from "@scd/shared";
 import { ASSIGN_PROXY, REVOKE_PROXY, EXTEND_PROXY, CLASSES_QUERY, PROXY_GRANTS_QUERY, TEACHERS_QUERY } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Button, Field, Select, Notice, Divider, EmptyState, Loader } from "../../components/ui";
 import { TeacherSelect, AcademicYearSelect } from "../../components/selects";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "ScopeGrant">;
@@ -47,16 +50,21 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
   const [, revokeProxy] = useMutation(REVOKE_PROXY);
   const [, extendProxy] = useMutation(EXTEND_PROXY);
 
+  const { user } = useAuth();
+  const canManage = !!user && roleHasPermission(user.role as Role, "user:manage");
+
   // Active grants list (Slice-4 follow-up): pick a grant to extend/revoke.
   const [{ data: grantData, fetching: grantsFetching }, refetchGrants] = useQuery({
     query: PROXY_GRANTS_QUERY,
     variables: {},
+    pause: !canManage,
   });
   const grants = grantData?.proxyGrants ?? [];
-  const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY });
+  const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY, pause: !canManage });
+  const teacherById = new Map((teacherData?.teachers ?? []).map((t) => [t.id, t.name]));
   const teacherName = (id: string | null): string => {
     if (!id) return "—";
-    return teacherData?.teachers.find((t) => t.id === id)?.name ?? id;
+    return teacherById.get(id) ?? id;
   };
   const reloadGrants = (): void => refetchGrants({ requestPolicy: "network-only" });
 

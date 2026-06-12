@@ -997,7 +997,7 @@ export const IMPORT_FILES = gql<
 export interface UserT {
   id: string;
   email: string | null;
-  phone?: string | null;
+  phone: string | null;
   role: string;
   name: string;
   active: boolean;
@@ -1018,6 +1018,7 @@ export const CREATE_USER = gql<
     createUser(email: $email, password: $password, role: $role, name: $name) {
       id
       email
+      phone
       role
       name
       active
