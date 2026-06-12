@@ -32,6 +32,16 @@ builder.queryField("me", (t) =>
   }),
 );
 
+builder.queryField("teachers", (t) =>
+  t.field({
+    type: [UserRef],
+    authScopes: { hasPermission: "content:assign_review" },
+    description: "Active teacher accounts — for reviewer-assignment pickers (Principal/Office).",
+    resolve: async () =>
+      User.find({ role: "TEACHER", active: true }).sort({ name: 1 }).lean(),
+  }),
+);
+
 builder.mutationField("createUser", (t) =>
   t.field({
     type: UserRef,

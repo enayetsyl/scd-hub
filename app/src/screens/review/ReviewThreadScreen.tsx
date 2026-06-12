@@ -22,6 +22,7 @@ import {
   PLAN_REVIEW_THREAD,
   ASSIGN_PLAN_REVIEW,
   APPROVE_PLAN,
+  TEACHERS_QUERY,
   type ReviewAssignmentT,
 } from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
@@ -35,7 +36,7 @@ import {
   Card,
   Badge,
   Button,
-  Field,
+  Select,
   Loader,
   EmptyState,
   ErrorBanner,
@@ -100,6 +101,12 @@ export default function ReviewThreadScreen({ route }: Props): React.ReactElement
   const [{ data: aData }, refetchArtifact] = useQuery({ query: ARTIFACT_QUERY, variables: { id: artifactId } });
   const [, assignReview] = useMutation(ASSIGN_PLAN_REVIEW);
   const [, approvePlan] = useMutation(APPROVE_PLAN);
+  const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY, pause: !canAssign });
+  const teacherOptions = (teacherData?.teachers ?? []).map((t) => ({
+    label: t.name,
+    value: t.id,
+    hint: t.phone ?? undefined,
+  }));
 
   const [reviewerId, setReviewerId] = useState("");
   const [assignBusy, setAssignBusy] = useState(false);
@@ -194,7 +201,14 @@ export default function ReviewThreadScreen({ route }: Props): React.ReactElement
       {canAssign ? (
         <Card style={{ marginTop: space(3) }}>
           <H2>{STR.assignForReview}</H2>
-          <Field label={STR.reviewerId} value={reviewerId} onChangeText={setReviewerId} placeholder="User _id" />
+          <Select
+            label={STR.reviewer}
+            value={reviewerId === "" ? null : reviewerId}
+            options={teacherOptions}
+            onChange={setReviewerId}
+            placeholder={STR.selectTeacher}
+            emptyText={STR.noTeachers}
+          />
           <Button
             title={assignBusy ? STR.assigning : STR.assignNextRound}
             onPress={onAssign}

@@ -331,6 +331,83 @@ export function Field({
   );
 }
 
+/** A tap-to-expand dropdown styled like Field. Options list inline below the
+ *  trigger (scrolls past ~6 rows); picking one closes the menu. */
+export function Select<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  placeholder,
+  emptyText,
+  helper,
+}: {
+  label?: string;
+  value: T | null;
+  options: { label: string; value: T; hint?: string }[];
+  onChange: (v: T) => void;
+  placeholder?: string;
+  emptyText?: string;
+  helper?: string;
+}): React.ReactElement {
+  const styles = useStyles();
+  const colors = useColors();
+  const [open, setOpen] = React.useState(false);
+  const selected = options.find((o) => o.value === value) ?? null;
+  return (
+    <View style={styles.fieldWrap}>
+      {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
+      <Pressable
+        onPress={() => setOpen((o) => !o)}
+        hitSlop={4}
+        style={({ pressed }) => [styles.select, pressed && styles.pressed]}
+      >
+        <Text style={[styles.selectText, !selected && { color: colors.textSecondary }]} numberOfLines={1}>
+          {selected ? selected.label : placeholder ?? ""}
+        </Text>
+        <Text style={styles.selectChevron}>{open ? "▴" : "▾"}</Text>
+      </Pressable>
+      {open ? (
+        options.length === 0 ? (
+          <View style={styles.selectMenu}>
+            <Text style={styles.selectEmpty}>{emptyText ?? placeholder ?? ""}</Text>
+          </View>
+        ) : (
+          <ScrollView style={styles.selectMenu} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+            {options.map((o) => {
+              const isSel = o.value === value;
+              return (
+                <Pressable
+                  key={o.value}
+                  onPress={() => {
+                    onChange(o.value);
+                    setOpen(false);
+                  }}
+                  style={({ pressed }) => [
+                    styles.selectOption,
+                    isSel && styles.selectOptionOn,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={[styles.selectOptionText, isSel && styles.selectOptionTextOn]} numberOfLines={1}>
+                    {o.label}
+                  </Text>
+                  {o.hint ? (
+                    <Text style={styles.selectOptionHint} numberOfLines={1}>
+                      {o.hint}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )
+      ) : null}
+      {helper ? <Text style={styles.fieldHelper}>{helper}</Text> : null}
+    </View>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // States
 // ---------------------------------------------------------------------------
@@ -504,6 +581,43 @@ const useStyles = makeStyles((colors) => ({
   inputMultiline: { minHeight: 120, textAlignVertical: "top" },
   inputDisabled: { backgroundColor: colors.surfaceAlt, color: colors.textSecondary },
   inputError: { borderColor: colors.error },
+
+  select: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: space(3),
+    paddingVertical: space(2),
+    gap: space(2),
+  },
+  selectText: { ...typeScale.body, color: colors.textPrimary, flex: 1 },
+  selectChevron: { ...typeScale.body, color: colors.textSecondary },
+  selectMenu: {
+    marginTop: space(1),
+    maxHeight: 260,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  selectEmpty: { ...typeScale.secondary, color: colors.textSecondary, padding: space(3) },
+  selectOption: {
+    minHeight: 44,
+    justifyContent: "center",
+    paddingHorizontal: space(3),
+    paddingVertical: space(2),
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  selectOptionOn: { backgroundColor: colors.primaryContainer },
+  selectOptionText: { ...typeScale.body, color: colors.textPrimary },
+  selectOptionTextOn: { color: colors.onPrimaryContainer, fontFamily: typeScale.bodyStrong.fontFamily },
+  selectOptionHint: { ...typeScale.secondary, color: colors.textSecondary },
 
   errorBanner: {
     flexDirection: "row",

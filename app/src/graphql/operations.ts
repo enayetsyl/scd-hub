@@ -381,6 +381,19 @@ export const PLAN_REVIEW_THREAD = gql<{ planReviewThread: ReviewAssignmentT[] },
   }
 `;
 
+/** Teacher options for the reviewer-assignment picker (content:assign_review). */
+export interface TeacherOptionT {
+  id: string;
+  name: string;
+  phone: string | null;
+}
+
+export const TEACHERS_QUERY = gql<{ teachers: TeacherOptionT[] }, NoVars>`
+  query Teachers {
+    teachers { id name phone }
+  }
+`;
+
 export const ASSIGN_PLAN_REVIEW = gql<
   { assignPlanReview: ReviewAssignmentT },
   { artifactId: string; reviewerId: string }
