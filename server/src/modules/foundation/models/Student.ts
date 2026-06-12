@@ -11,6 +11,9 @@ export interface IStudent extends Document {
   name: string;
   /** Bangla name where available (sparse in source roster). */
   nameBn?: string;
+  /** Class roll number — DIFFERS from schoolId/ID (prd-attendance O1, D-#67); the
+   *  absentee report carries both. Optional/additive — existing records stay valid. */
+  rollNumber?: string;
   classId: Types.ObjectId;
   sectionId: Types.ObjectId;
   gender?: Gender;
@@ -29,6 +32,7 @@ const StudentSchema = new Schema<IStudent>(
     schoolId: { type: String, required: true, unique: true, trim: true },
     name: { type: String, required: true, trim: true },
     nameBn: { type: String, trim: true },
+    rollNumber: { type: String, trim: true },
     classId: { type: Schema.Types.ObjectId, ref: "Class", required: true },
     sectionId: { type: Schema.Types.ObjectId, ref: "Section", required: true },
     gender: { type: String, enum: ["male", "female", "other"] },

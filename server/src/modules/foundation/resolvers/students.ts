@@ -6,7 +6,7 @@ import type { Types } from "mongoose";
 
 type StudentShape = Pick<
   IStudent,
-  "schoolId" | "name" | "nameBn" | "gender" | "dob" | "phone" | "address" | "bloodGroup" | "active"
+  "schoolId" | "name" | "nameBn" | "rollNumber" | "gender" | "dob" | "phone" | "address" | "bloodGroup" | "active"
 > & { _id: Types.ObjectId };
 
 type GuardianContactShape = {
@@ -37,6 +37,7 @@ StudentRef.implement({
     schoolId: t.exposeString("schoolId"),
     name: t.exposeString("name"),
     nameBn: t.string({ nullable: true, resolve: (s) => s.nameBn ?? null }),
+    rollNumber: t.string({ nullable: true, resolve: (s) => s.rollNumber ?? null }),
     gender: t.string({ nullable: true, resolve: (s) => s.gender ?? null }),
     dob: t.string({ nullable: true, resolve: (s) => (s.dob ? s.dob.toISOString() : null) }),
     phone: t.string({ nullable: true, resolve: (s) => s.phone ?? null }),
@@ -75,6 +76,26 @@ builder.queryField("studentsInSection", (t) =>
     },
     resolve: async (_root, args) =>
       Student.find({ sectionId: args.sectionId, active: true }).sort({ name: 1 }).lean(),
+  }),
+);
+
+/** Set/clear a student's class roll number (prd-attendance O1 — roll ≠ ID;
+ *  the absentee report carries both). Pass null to clear. */
+builder.mutationField("setStudentRollNumber", (t) =>
+  t.field({
+    type: StudentRef,
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      rollNumber: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args) => {
+      const student = await Student.findById(args.studentId);
+      if (!student) throw new Error("Student not found");
+      student.rollNumber = args.rollNumber?.trim() || undefined;
+      await student.save();
+      return student;
+    },
   }),
 );
 
