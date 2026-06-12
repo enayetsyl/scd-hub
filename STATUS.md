@@ -21,8 +21,9 @@ _Updated: 2026-06-12 (guardian portal v1 built)_
   (tiers + audit kind already existed). **Gate GREEN:** vocab verifier PASS, shared+server tsc clean,
   **jest 423/423** (9 new in `attendanceReminder.test.ts`, firewall green); app tsc clean + web export green.
   **Not verified live.** Out of scope (unchanged): SubjectGroup/Quran attendance, staff-leave entry,
-  automatic WhatsApp, per-period, leave approval. Roll-numbers (O1) import script NOT built — awaiting the
-  source file from the Principal.
+  automatic WhatsApp, per-period, leave approval. **O1 resolved: roll number = the ID (D-#80)** — the roster
+  has no separate roll, so no import script; absentee reports surface `rollNumber ?? schoolId` (Roll column
+  shows the ID); `Student.rollNumber` kept unset/forward-safe.
 - **Planned (Messaging module — staff chat + guardian notices + push transport, D-#76/#77/#78/#79):** build
   contract `docs/prd-messaging.md` authored — pulls the deferred messaging pipeline forward (this is the
   transport D-#52/R5.4–R5.5 await). Staff-only chat (guardians are notice recipients, NOT participants):
