@@ -508,7 +508,11 @@ const STR_BN = {
   scMergeDone: "শাখা একত্র হয়েছে।",
   scSplitDone: "শাখা আলাদা হয়েছে।",
   scNeedsTwo: "একত্র করতে অন্তত দুটি সক্রিয় শাখা দরকার।",
-  userListNotExposed: "সম্পূর্ণ ব্যবহারকারী তালিকা এখনো সার্ভারে উন্মুক্ত নয়।",
+  noUsers: "কোনো ব্যবহারকারী পাওয়া যায়নি।",
+  inactive: "নিষ্ক্রিয়",
+  activeProxyGrants: "সক্রিয় প্রক্সি গ্রান্ট",
+  noActiveGrants: "কোনো সক্রিয় প্রক্সি গ্রান্ট নেই।",
+  mySections: "আমার শাখা",
 
   // Roster (read-only student list)
   roster: "শিক্ষার্থী তালিকা",
@@ -1046,7 +1050,11 @@ const STR_EN: StrTable = {
   scMergeDone: "Sections merged.",
   scSplitDone: "Sections split back.",
   scNeedsTwo: "Need at least two active sections to merge.",
-  userListNotExposed: "A full user list is not yet exposed by the server.",
+  noUsers: "No users found.",
+  inactive: "Inactive",
+  activeProxyGrants: "Active proxy grants",
+  noActiveGrants: "No active proxy grants.",
+  mySections: "My sections",
 
   // Roster (read-only student list)
   roster: "Student list",

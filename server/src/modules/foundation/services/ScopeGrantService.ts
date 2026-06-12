@@ -116,6 +116,60 @@ export async function composeTeacherScope(
 }
 
 // ---------------------------------------------------------------------------
+// GraphQL view mapping (myScopes / proxyGrants lookups)
+// ---------------------------------------------------------------------------
+
+/** Flat, client-facing view of a grant: every ObjectId stringified, dates ISO.
+ *  Slice-4 follow-up — myScopes returns class/section/subject ids so the app's
+ *  section picker can offer the teacher's own sections; the proxy fields drive
+ *  the admin grant list (no more pasted GRANT_IDs). */
+export interface ScopeGrantView {
+  id: string;
+  kind: string;
+  active: boolean;
+  classId: string | null;
+  sectionId: string | null;
+  subjectId: string | null;
+  coveringTeacherId: string | null;
+  absentTeacherId: string | null;
+  startDate: string | null;
+  durationDays: number | null;
+  proxyStatus: string | null;
+}
+
+/** A lean ScopeGrant doc, loosely typed (the union hides optional fields). */
+interface LeanGrant {
+  _id: { toString(): string };
+  kind: string;
+  active: boolean;
+  classId?: { toString(): string } | null;
+  sectionId?: { toString(): string } | null;
+  subjectId?: { toString(): string } | null;
+  coveringTeacherId?: { toString(): string } | null;
+  absentTeacherId?: { toString(): string } | null;
+  startDate?: Date | null;
+  durationDays?: number | null;
+  proxyStatus?: string | null;
+}
+
+/** Pure mapper: lean grant doc → ScopeGrantView. */
+export function grantView(g: LeanGrant): ScopeGrantView {
+  return {
+    id: g._id.toString(),
+    kind: g.kind,
+    active: g.active,
+    classId: g.classId ? g.classId.toString() : null,
+    sectionId: g.sectionId ? g.sectionId.toString() : null,
+    subjectId: g.subjectId ? g.subjectId.toString() : null,
+    coveringTeacherId: g.coveringTeacherId ? g.coveringTeacherId.toString() : null,
+    absentTeacherId: g.absentTeacherId ? g.absentTeacherId.toString() : null,
+    startDate: g.startDate ? new Date(g.startDate).toISOString() : null,
+    durationDays: g.durationDays ?? null,
+    proxyStatus: g.proxyStatus ?? null,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Row-scope predicates (used by resolver middleware)
 // ---------------------------------------------------------------------------
 

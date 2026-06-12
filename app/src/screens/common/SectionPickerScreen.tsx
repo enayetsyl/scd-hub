@@ -1,15 +1,16 @@
 /**
  * SectionPickerScreen — sets the academic-year → class → section selection used
- * by the set/tracker journeys. The server exposes no `academicYears` query, so
- * the academicYearId is entered once (or seeded via EXPO_PUBLIC_DEFAULT_ACADEMIC_YEAR_ID)
- * and classes(academicYearId) drives class/section pick. Registered in both the
- * Sets and Trackers stacks; navigates back on selection.
+ * by the set/tracker journeys. The year comes from the `academicYears` picker
+ * (auto-selects the current year — no pasted ids) and a teacher's own granted
+ * sections (`myScopes` class/section ids, Slice-4 follow-up) surface as one-tap
+ * shortcuts above the full class list. Registered in both the Sets and Trackers
+ * stacks; navigates back on selection.
  */
 import React from "react";
 import { View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "urql";
-import { CLASSES_QUERY } from "../../graphql/operations";
+import { CLASSES_QUERY, MY_SCOPES_QUERY } from "../../graphql/operations";
 import {
   Screen,
   H2,
@@ -40,6 +41,26 @@ export default function SectionPickerScreen(): React.ReactElement {
 
   const classes = data?.classes ?? [];
 
+  // The caller's granted sections (teaching/proxy) → one-tap shortcuts.
+  const [{ data: scopeData }] = useQuery({ query: MY_SCOPES_QUERY });
+  const grantedSectionIds = new Set(
+    (scopeData?.myScopes ?? []).filter((g) => g.sectionId).map((g) => g.sectionId as string),
+  );
+  const mySections = classes.flatMap((c) =>
+    c.sections.filter((s) => grantedSectionIds.has(s.id)).map((s) => ({ cls: c, sec: s })),
+  );
+
+  function pick(c: (typeof classes)[number], s: (typeof classes)[number]["sections"][number]): void {
+    setSection({
+      classId: c.id,
+      sectionId: s.id,
+      classLevel: c.level,
+      classNameBn: c.nameBn,
+      sectionNameBn: s.nameBn,
+    });
+    nav.goBack();
+  }
+
   return (
     <Screen scroll>
       <H2>{STR.pickSection}</H2>
@@ -56,36 +77,48 @@ export default function SectionPickerScreen(): React.ReactElement {
           ) : classes.length === 0 ? (
             <EmptyState message={STR.empty} />
           ) : (
-            classes.map((c) => (
-              <Card key={c.id}>
-                <Body style={{ fontWeight: "700" }}>
-                  {c.nameBn} · {classLevelLabel(c.level)}
-                </Body>
-                <View style={{ marginTop: space(2) }}>
-                  {c.sections.map((s) => {
-                    const active = selection.sectionId === s.id;
-                    return (
-                      <Button
-                        key={s.id}
-                        title={`${s.nameBn} (${s.code})${active ? "  ✓" : ""}`}
-                        variant={active ? "primary" : "secondary"}
-                        style={{ marginBottom: space(2) }}
-                        onPress={() => {
-                          setSection({
-                            classId: c.id,
-                            sectionId: s.id,
-                            classLevel: c.level,
-                            classNameBn: c.nameBn,
-                            sectionNameBn: s.nameBn,
-                          });
-                          nav.goBack();
-                        }}
-                      />
-                    );
-                  })}
-                </View>
-              </Card>
-            ))
+            <>
+              {mySections.length > 0 ? (
+                <Card>
+                  <Body style={{ fontWeight: "700" }}>{STR.mySections}</Body>
+                  <View style={{ marginTop: space(2) }}>
+                    {mySections.map(({ cls, sec }) => {
+                      const active = selection.sectionId === sec.id;
+                      return (
+                        <Button
+                          key={sec.id}
+                          title={`${cls.nameBn} · ${sec.nameBn} (${sec.code})${active ? "  ✓" : ""}`}
+                          variant={active ? "primary" : "secondary"}
+                          style={{ marginBottom: space(2) }}
+                          onPress={() => pick(cls, sec)}
+                        />
+                      );
+                    })}
+                  </View>
+                </Card>
+              ) : null}
+              {classes.map((c) => (
+                <Card key={c.id}>
+                  <Body style={{ fontWeight: "700" }}>
+                    {c.nameBn} · {classLevelLabel(c.level)}
+                  </Body>
+                  <View style={{ marginTop: space(2) }}>
+                    {c.sections.map((s) => {
+                      const active = selection.sectionId === s.id;
+                      return (
+                        <Button
+                          key={s.id}
+                          title={`${s.nameBn} (${s.code})${active ? "  ✓" : ""}`}
+                          variant={active ? "primary" : "secondary"}
+                          style={{ marginBottom: space(2) }}
+                          onPress={() => pick(c, s)}
+                        />
+                      );
+                    })}
+                  </View>
+                </Card>
+              ))}
+            </>
           )}
         </>
       ) : null}
