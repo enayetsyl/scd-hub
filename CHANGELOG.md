@@ -4,6 +4,12 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- UI: replace raw-id text inputs with name dropdowns app-wide + header full-name tooltip. New server
+  `academicYears` query; `teachers` relaxed to authenticated (picker data; assign actions stay gated).
+  Reusable TeacherSelect/RoomSelect/AcademicYearSelect over <Select>; ScopeGrant (covering/absent teacher +
+  year→class→section cascade), RoutineEditor (teacher/room), AssignClassTeacher (class-teacher/support +
+  name displays), BellSchedule (duty admin), SectionPicker (academic year) no longer paste ids. Header name
+  truncates with a web `title` hover tooltip. Gate: server tsc + jest 313/313 + vocab; app tsc + web export. [f287d91]
 - UI: show the logged-in user's name in the stack header (HeaderName, left of language/logout). Re-applied
   onto the post-UI-1 theme after the original feat/header-username branch was never merged. [8225d5c]
 - Reviewer assignment — teacher-name dropdown replaces pasting a User _id. New server `teachers` query
