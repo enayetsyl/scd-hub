@@ -668,7 +668,9 @@ export const ATTENDANCE_REMINDER_TIER_LABELS_EN: Record<AttendanceReminderTier, 
  *  writes carries exactly one. The event-driven kinds (CLASS_NOTE_PUBLISHED,
  *  HW_PARENT_COMMS, REVIEW_ASSIGNED, COVER_ASSIGNED) ship in slice N-1; the
  *  scheduler-fired kinds (BELL_REMINDER, ATTENDANCE_REMINDER, CLASS_NOTE_PROMPT,
- *  CLASS_NOTE_ESCALATION) fire from the D-#73 in-process ticker in N-2. */
+ *  CLASS_NOTE_ESCALATION) fire from the D-#73 in-process ticker in N-2. The
+ *  library kinds (LIBRARY_DUE_SOON, LIBRARY_OVERDUE — prd-library LB-5, D-#84)
+ *  ride the same seam, dispatched by the library reminder service. */
 export const NOTIFICATION_KINDS = [
   "BELL_REMINDER",
   "ATTENDANCE_REMINDER",
@@ -678,6 +680,8 @@ export const NOTIFICATION_KINDS = [
   "HW_PARENT_COMMS",
   "REVIEW_ASSIGNED",
   "COVER_ASSIGNED",
+  "LIBRARY_DUE_SOON",
+  "LIBRARY_OVERDUE",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -690,6 +694,8 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   HW_PARENT_COMMS: "অভিভাবক যোগাযোগের তাগিদ",
   REVIEW_ASSIGNED: "পর্যালোচনার দায়িত্ব",
   COVER_ASSIGNED: "কাভার ক্লাসের দায়িত্ব",
+  LIBRARY_DUE_SOON: "বই ফেরতের স্মরণিকা",
+  LIBRARY_OVERDUE: "বই ফেরত বকেয়া",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -700,6 +706,81 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   HW_PARENT_COMMS: "Parent-contact prompt",
   REVIEW_ASSIGNED: "Review assigned",
   COVER_ASSIGNED: "Cover assigned",
+  LIBRARY_DUE_SOON: "Book due soon",
+  LIBRARY_OVERDUE: "Book overdue",
+};
+
+
+// --- A.11 LIBRARY ENUMS (app-native; Library module — prd-library, ----------
+// D-#81–#84). NO wire-contract twin: the library is a feature, not import
+// content, and every row (a child's reading record included) is operational/
+// identity-plane behind the ADR-005 firewall — no envelope-schema mirror, no
+// two-place sync; only /shared + the vocab verifier run. NO new role: desk
+// duty rides `library:manage` OR the append-only `LibrarianAssignment`
+// duty-gate (D-#42/#64 pattern).
+
+/** Who borrows (D-#81). Students + guardians are desk-mediated (no student
+ *  logins; guardian portal read-only, D-#68); staff also self-serve in-app. */
+export const BORROWER_TYPES = ["STUDENT", "STAFF", "GUARDIAN"] as const;
+export type BorrowerType = (typeof BORROWER_TYPES)[number];
+
+export const BORROWER_TYPE_LABELS_BN: Record<BorrowerType, string> = {
+  STUDENT: "শিক্ষার্থী", STAFF: "শিক্ষক/কর্মী", GUARDIAN: "অভিভাবক",
+};
+export const BORROWER_TYPE_LABELS_EN: Record<BorrowerType, string> = {
+  STUDENT: "Student", STAFF: "Staff", GUARDIAN: "Guardian",
+};
+
+/** Per-copy status (D-#82). WITHDRAWN = removed from circulation but never
+ *  deleted (loan history keeps pointing at the accession number). */
+export const COPY_STATUSES = ["AVAILABLE", "ON_LOAN", "ON_HOLD", "LOST", "DAMAGED", "WITHDRAWN"] as const;
+export type CopyStatus = (typeof COPY_STATUSES)[number];
+
+export const COPY_STATUS_LABELS_BN: Record<CopyStatus, string> = {
+  AVAILABLE: "উপলব্ধ", ON_LOAN: "ইস্যুকৃত", ON_HOLD: "সংরক্ষিত (হোল্ড)",
+  LOST: "হারানো", DAMAGED: "ক্ষতিগ্রস্ত", WITHDRAWN: "প্রত্যাহৃত",
+};
+export const COPY_STATUS_LABELS_EN: Record<CopyStatus, string> = {
+  AVAILABLE: "Available", ON_LOAN: "On loan", ON_HOLD: "On hold",
+  LOST: "Lost", DAMAGED: "Damaged", WITHDRAWN: "Withdrawn",
+};
+
+/** Loan lifecycle (D-#82). OVERDUE is deliberately NOT a status — it is
+ *  COMPUTED from `dueDate` at read time, never stored (it would go stale). */
+export const LOAN_STATUSES = ["ACTIVE", "RETURNED", "LOST"] as const;
+export type LoanStatus = (typeof LOAN_STATUSES)[number];
+
+export const LOAN_STATUS_LABELS_BN: Record<LoanStatus, string> = {
+  ACTIVE: "চলমান", RETURNED: "ফেরত হয়েছে", LOST: "হারানো",
+};
+export const LOAN_STATUS_LABELS_EN: Record<LoanStatus, string> = {
+  ACTIVE: "Active", RETURNED: "Returned", LOST: "Lost",
+};
+
+/** Title-level FIFO reservation states (D-#83). READY = a returned copy is
+ *  held for this borrower until `expiresAt`; expiry is LAZY at request time
+ *  (D-#21 posture — no scheduler dependency). */
+export const RESERVATION_STATUSES = ["QUEUED", "READY", "FULFILLED", "CANCELLED", "EXPIRED"] as const;
+export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
+
+export const RESERVATION_STATUS_LABELS_BN: Record<ReservationStatus, string> = {
+  QUEUED: "অপেক্ষমাণ", READY: "সংগ্রহের জন্য প্রস্তুত", FULFILLED: "সম্পন্ন",
+  CANCELLED: "বাতিল", EXPIRED: "মেয়াদোত্তীর্ণ",
+};
+export const RESERVATION_STATUS_LABELS_EN: Record<ReservationStatus, string> = {
+  QUEUED: "Queued", READY: "Ready for pickup", FULFILLED: "Fulfilled",
+  CANCELLED: "Cancelled", EXPIRED: "Expired",
+};
+
+/** Catalog language facet (browse filter). */
+export const BOOK_LANGUAGES = ["BANGLA", "ARABIC", "ENGLISH", "OTHER"] as const;
+export type BookLanguage = (typeof BOOK_LANGUAGES)[number];
+
+export const BOOK_LANGUAGE_LABELS_BN: Record<BookLanguage, string> = {
+  BANGLA: "বাংলা", ARABIC: "আরবি", ENGLISH: "ইংরেজি", OTHER: "অন্যান্য",
+};
+export const BOOK_LANGUAGE_LABELS_EN: Record<BookLanguage, string> = {
+  BANGLA: "Bangla", ARABIC: "Arabic", ENGLISH: "English", OTHER: "Other",
 };
 
 
@@ -741,6 +822,11 @@ export const PERMISSIONS = [
   // attendance (app-native; D-#63–#67)
   "attendance:mark",       // mark a section's absentees — gated to the section's marker-of-the-day (CT-2, D-#64)
   "attendance:manage",     // upload teacher Excel, resolve names, assign markers, full reports (Principal/Office)
+  // library (app-native; D-#81–#84)
+  "library:read",          // browse the catalog + own loans/reservations (Principal/Teacher/Office)
+  "library:manage",        // desk ops, catalog, policy, librarian assignment (Principal/Office); a TEACHER
+                           // passes DESK-OP gates only via assertIsLibrarian (LibrarianAssignment) — the
+                           // TEACHER permission set is NOT widened (D-#17, D-#42 pattern)
   // foundation / ops
   "roster:manage",
   "staff:manage",          // HR staff-record read/manage (Principal/Office; prd-hr H1.4 row-scope)
@@ -773,6 +859,8 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "routine:manage": "build",
   "attendance:mark": "build",
   "attendance:manage": "build",
+  "library:read": "build",
+  "library:manage": "build",
   "roster:manage": "build",
   "staff:manage": "build",
   "guardian:link": "build",
@@ -794,6 +882,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "tracker:read", "tracker:write", "tracker:export",
     "routine:read", "routine:manage",
     "attendance:manage", // NOT attendance:mark — Principal assigns markers, doesn't mark (D-#64)
+    "library:read", "library:manage",
     "roster:manage", "staff:manage", "guardian:link", "message:dispatch",
     "user:manage", "audit:read",
   ],
@@ -808,6 +897,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "tracker:read", "tracker:write", "tracker:export",
     "routine:read",          // a teacher reads their own + their sections' routine (D-#46)
     "attendance:mark",       // row-scoped further to "the section's marker today" (CT-2, D-#64)
+    "library:read",          // browse the catalog + own loans/reservations; desk ops only via LibrarianAssignment (D-#81)
     "message:dispatch",
   ],
   // Roster, guardian linkage, messaging dispatch (REQ §2), plus content import (the
@@ -818,6 +908,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "content:import", "content:assign_review",
     "routine:read", "routine:manage",
     "attendance:manage",     // upload teacher Excel, assign markers, chase guardians (D-#64/#65; no mark)
+    "library:read", "library:manage", // the default library desk (D-#81)
   ],
   // Guardian portal v1 (GP-1, D-#68): the single grant is ACTIVE — guardian-scoped
   // resolvers read linked children only (assertGuardianOfStudent, link-scoped).

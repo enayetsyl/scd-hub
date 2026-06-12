@@ -27,6 +27,14 @@ export type AuditEventKind =
   | "ATTENDANCE_REMINDER_SENT"   // a reminder/escalation tier dispatched (AT4.6, D-#65; engine = AT-4)
   | "LEAVE_APPLICATION_SUBMITTED" // student leave application recorded (AT3.1, D-#66)
   | "HW_FILE_ATTACHED"    // a question/answer file attached to homework (GP-A, D-#70)
+  | "BOOK_ISSUED"         // library desk issued a copy to a borrower (LB-2, D-#81/#82)
+  | "BOOK_RETURNED"       // copy returned at the desk (LB-2)
+  | "BOOK_RENEWED"        // loan renewed (LB-2)
+  | "BOOK_MARKED_LOST"    // loan settled as lost — replacement note, no money (LB-2, D-#27)
+  | "RESERVATION_PLACED"  // title-level reservation queued (LB-3, D-#83)
+  | "RESERVATION_EXPIRED" // a READY hold lapsed at request time (lazy expiry, D-#21/#83)
+  | "LIBRARIAN_ASSIGNED"  // librarian duty assigned/revoked on a teacher (LB-1, D-#81)
+  | "LIBRARY_CATALOG_CHANGED" // title/copy/policy catalog mutation (LB-1)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

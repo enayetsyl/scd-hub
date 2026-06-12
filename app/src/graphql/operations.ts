@@ -2366,3 +2366,414 @@ export const GUARDIAN_CHASE_LINK = gql<
     guardianChaseLink(studentId: $studentId)
   }
 `;
+
+// ===========================================================================
+// Library (LB-1..LB-4, D-#81–#84)
+// ===========================================================================
+
+export interface BookTitleRowT {
+  id: string;
+  titleBn: string;
+  titleEn: string | null;
+  author: string | null;
+  language: string;
+  category: string | null;
+  shelf: string | null;
+  active: boolean;
+  totalCopies: number;
+  availableCopies: number;
+}
+
+export interface BookCopyT {
+  id: string;
+  titleId: string;
+  accessionNo: string;
+  status: string;
+  conditionNote: string | null;
+}
+
+export interface BookTitleDetailT extends BookTitleRowT {
+  isbn: string | null;
+  copies: BookCopyT[];
+}
+
+export interface BookLoanT {
+  id: string;
+  copyId: string;
+  titleId: string;
+  titleBn: string | null;
+  accessionNo: string | null;
+  borrowerType: string;
+  borrowerId: string;
+  borrowerName: string | null;
+  issuedAt: string;
+  dueDate: string;
+  renewCount: number;
+  status: string;
+  returnedAt: string | null;
+  lostNote: string | null;
+  overdue: boolean;
+}
+
+export interface BookReservationT {
+  id: string;
+  titleId: string;
+  titleBn: string | null;
+  borrowerType: string;
+  borrowerId: string;
+  borrowerName: string | null;
+  status: string;
+  createdAt: string;
+  readyAt: string | null;
+  heldCopyId: string | null;
+  heldAccessionNo: string | null;
+  expiresAt: string | null;
+}
+
+export interface LibraryPolicyT {
+  borrowerType: string;
+  loanDays: number;
+  maxConcurrent: number;
+  maxRenewals: number;
+  holdDays: number;
+  isDefault: boolean;
+}
+
+export interface LibrarianAssignmentT {
+  id: string;
+  userId: string;
+  userName: string | null;
+  action: string;
+  at: string;
+}
+
+const LOAN_FIELDS = `
+  id copyId titleId titleBn accessionNo borrowerType borrowerId borrowerName
+  issuedAt dueDate renewCount status returnedAt lostNote overdue
+`;
+
+const RESERVATION_FIELDS = `
+  id titleId titleBn borrowerType borrowerId borrowerName status createdAt
+  readyAt heldCopyId heldAccessionNo expiresAt
+`;
+
+/** Does the caller pass the desk gate (library:manage OR LibrarianAssignment)? */
+export const AM_I_LIBRARIAN_QUERY = gql<{ amILibrarian: boolean }, NoVars>`
+  query AmILibrarian {
+    amILibrarian
+  }
+`;
+
+export const BOOK_TITLES_QUERY = gql<
+  { bookTitles: BookTitleRowT[] },
+  { search?: string | null; language?: string | null; includeInactive?: boolean | null }
+>`
+  query BookTitles($search: String, $language: String, $includeInactive: Boolean) {
+    bookTitles(search: $search, language: $language, includeInactive: $includeInactive) {
+      id titleBn titleEn author language category shelf active totalCopies availableCopies
+    }
+  }
+`;
+
+export const BOOK_TITLE_QUERY = gql<
+  { bookTitle: BookTitleDetailT | null },
+  { titleId: string }
+>`
+  query BookTitle($titleId: String!) {
+    bookTitle(titleId: $titleId) {
+      id titleBn titleEn author language category isbn shelf active totalCopies availableCopies
+      copies { id titleId accessionNo status conditionNote }
+    }
+  }
+`;
+
+export const LIBRARY_POLICIES_QUERY = gql<{ libraryPolicies: LibraryPolicyT[] }, NoVars>`
+  query LibraryPolicies {
+    libraryPolicies { borrowerType loanDays maxConcurrent maxRenewals holdDays isDefault }
+  }
+`;
+
+export const LIBRARIAN_HISTORY_QUERY = gql<{ librarianHistory: LibrarianAssignmentT[] }, NoVars>`
+  query LibrarianHistory {
+    librarianHistory { id userId userName action at }
+  }
+`;
+
+export const CURRENT_LIBRARIANS_QUERY = gql<{ currentLibrarians: LibrarianAssignmentT[] }, NoVars>`
+  query CurrentLibrarians {
+    currentLibrarians { id userId userName action at }
+  }
+`;
+
+export const CREATE_BOOK_TITLE = gql<
+  { createBookTitle: BookTitleRowT },
+  {
+    titleBn: string;
+    titleEn?: string | null;
+    author?: string | null;
+    language: string;
+    category?: string | null;
+    isbn?: string | null;
+    shelf?: string | null;
+  }
+>`
+  mutation CreateBookTitle(
+    $titleBn: String!
+    $titleEn: String
+    $author: String
+    $language: String!
+    $category: String
+    $isbn: String
+    $shelf: String
+  ) {
+    createBookTitle(
+      titleBn: $titleBn
+      titleEn: $titleEn
+      author: $author
+      language: $language
+      category: $category
+      isbn: $isbn
+      shelf: $shelf
+    ) {
+      id titleBn titleEn author language category shelf active totalCopies availableCopies
+    }
+  }
+`;
+
+export const UPDATE_BOOK_TITLE = gql<
+  { updateBookTitle: BookTitleRowT },
+  { titleId: string; active?: boolean | null }
+>`
+  mutation UpdateBookTitle($titleId: String!, $active: Boolean) {
+    updateBookTitle(titleId: $titleId, active: $active) {
+      id titleBn titleEn author language category shelf active totalCopies availableCopies
+    }
+  }
+`;
+
+export const ADD_BOOK_COPY = gql<
+  { addBookCopy: BookCopyT },
+  { titleId: string; accessionNo: string; conditionNote?: string | null }
+>`
+  mutation AddBookCopy($titleId: String!, $accessionNo: String!, $conditionNote: String) {
+    addBookCopy(titleId: $titleId, accessionNo: $accessionNo, conditionNote: $conditionNote) {
+      id titleId accessionNo status conditionNote
+    }
+  }
+`;
+
+export const SET_COPY_STATUS = gql<
+  { setCopyStatus: BookCopyT },
+  { copyId: string; status: string; conditionNote?: string | null }
+>`
+  mutation SetCopyStatus($copyId: String!, $status: String!, $conditionNote: String) {
+    setCopyStatus(copyId: $copyId, status: $status, conditionNote: $conditionNote) {
+      id titleId accessionNo status conditionNote
+    }
+  }
+`;
+
+export const UPSERT_LIBRARY_POLICY = gql<
+  { upsertLibraryPolicy: LibraryPolicyT },
+  { borrowerType: string; loanDays: number; maxConcurrent: number; maxRenewals: number; holdDays: number }
+>`
+  mutation UpsertLibraryPolicy(
+    $borrowerType: String!
+    $loanDays: Int!
+    $maxConcurrent: Int!
+    $maxRenewals: Int!
+    $holdDays: Int!
+  ) {
+    upsertLibraryPolicy(
+      borrowerType: $borrowerType
+      loanDays: $loanDays
+      maxConcurrent: $maxConcurrent
+      maxRenewals: $maxRenewals
+      holdDays: $holdDays
+    ) {
+      borrowerType loanDays maxConcurrent maxRenewals holdDays isDefault
+    }
+  }
+`;
+
+export const ASSIGN_LIBRARIAN = gql<
+  { assignLibrarian: LibrarianAssignmentT },
+  { teacherUserId: string }
+>`
+  mutation AssignLibrarian($teacherUserId: String!) {
+    assignLibrarian(teacherUserId: $teacherUserId) { id userId userName action at }
+  }
+`;
+
+export const REVOKE_LIBRARIAN = gql<
+  { revokeLibrarian: LibrarianAssignmentT },
+  { teacherUserId: string }
+>`
+  mutation RevokeLibrarian($teacherUserId: String!) {
+    revokeLibrarian(teacherUserId: $teacherUserId) { id userId userName action at }
+  }
+`;
+
+export interface LibraryBorrowerHitT {
+  id: string;
+  name: string;
+  detail: string | null;
+}
+
+export const LIBRARY_BORROWER_SEARCH = gql<
+  { libraryBorrowerSearch: LibraryBorrowerHitT[] },
+  { borrowerType: string; search: string }
+>`
+  query LibraryBorrowerSearch($borrowerType: String!, $search: String!) {
+    libraryBorrowerSearch(borrowerType: $borrowerType, search: $search) { id name detail }
+  }
+`;
+
+export const ISSUE_BOOK = gql<
+  { issueBook: BookLoanT },
+  { accessionNo: string; borrowerType: string; borrowerId: string }
+>`
+  mutation IssueBook($accessionNo: String!, $borrowerType: String!, $borrowerId: String!) {
+    issueBook(accessionNo: $accessionNo, borrowerType: $borrowerType, borrowerId: $borrowerId) {
+      ${LOAN_FIELDS}
+    }
+  }
+`;
+
+export const RETURN_BOOK = gql<{ returnBook: BookLoanT }, { loanId: string }>`
+  mutation ReturnBook($loanId: String!) {
+    returnBook(loanId: $loanId) { ${LOAN_FIELDS} }
+  }
+`;
+
+export const RENEW_LOAN = gql<{ renewLoan: BookLoanT }, { loanId: string }>`
+  mutation RenewLoan($loanId: String!) {
+    renewLoan(loanId: $loanId) { ${LOAN_FIELDS} }
+  }
+`;
+
+export const MARK_BOOK_LOST = gql<
+  { markBookLost: BookLoanT },
+  { loanId: string; note: string }
+>`
+  mutation MarkBookLost($loanId: String!, $note: String!) {
+    markBookLost(loanId: $loanId, note: $note) { ${LOAN_FIELDS} }
+  }
+`;
+
+export const LOANS_QUERY = gql<
+  { loans: BookLoanT[] },
+  { status?: string | null; borrowerType?: string | null; overdueOnly?: boolean | null }
+>`
+  query Loans($status: String, $borrowerType: String, $overdueOnly: Boolean) {
+    loans(status: $status, borrowerType: $borrowerType, overdueOnly: $overdueOnly) {
+      ${LOAN_FIELDS}
+    }
+  }
+`;
+
+export const BORROWER_LOANS_QUERY = gql<
+  { borrowerLoans: BookLoanT[] },
+  { borrowerType: string; borrowerId: string }
+>`
+  query BorrowerLoans($borrowerType: String!, $borrowerId: String!) {
+    borrowerLoans(borrowerType: $borrowerType, borrowerId: $borrowerId) { ${LOAN_FIELDS} }
+  }
+`;
+
+export const MY_LOANS_QUERY = gql<{ myLoans: BookLoanT[] }, NoVars>`
+  query MyLoans {
+    myLoans { ${LOAN_FIELDS} }
+  }
+`;
+
+export const RESERVE_TITLE = gql<
+  { reserveTitle: BookReservationT },
+  { titleId: string; borrowerType?: string | null; borrowerId?: string | null }
+>`
+  mutation ReserveTitle($titleId: String!, $borrowerType: String, $borrowerId: String) {
+    reserveTitle(titleId: $titleId, borrowerType: $borrowerType, borrowerId: $borrowerId) {
+      ${RESERVATION_FIELDS}
+    }
+  }
+`;
+
+export const CANCEL_RESERVATION = gql<
+  { cancelReservation: BookReservationT },
+  { reservationId: string }
+>`
+  mutation CancelReservation($reservationId: String!) {
+    cancelReservation(reservationId: $reservationId) { ${RESERVATION_FIELDS} }
+  }
+`;
+
+export const RESERVATIONS_FOR_TITLE_QUERY = gql<
+  { reservationsForTitle: BookReservationT[] },
+  { titleId: string }
+>`
+  query ReservationsForTitle($titleId: String!) {
+    reservationsForTitle(titleId: $titleId) { ${RESERVATION_FIELDS} }
+  }
+`;
+
+export const MY_RESERVATIONS_QUERY = gql<{ myReservations: BookReservationT[] }, NoVars>`
+  query MyReservations {
+    myReservations { ${RESERVATION_FIELDS} }
+  }
+`;
+
+export const BORROWER_RESERVATIONS_QUERY = gql<
+  { borrowerReservations: BookReservationT[] },
+  { borrowerType: string; borrowerId: string }
+>`
+  query BorrowerReservations($borrowerType: String!, $borrowerId: String!) {
+    borrowerReservations(borrowerType: $borrowerType, borrowerId: $borrowerId) {
+      ${RESERVATION_FIELDS}
+    }
+  }
+`;
+
+// --- LB-5: overdue chase list (librarian) + guardian child-loans rider --------
+
+export interface LibraryChaseRowT {
+  loanId: string;
+  borrowerType: string;
+  borrowerId: string;
+  borrowerName: string | null;
+  phone: string | null;
+  titleBn: string | null;
+  accessionNo: string | null;
+  dueDate: string;
+  daysOverdue: number;
+  waLink: string | null;
+}
+
+export const LIBRARY_CHASE_LIST_QUERY = gql<{ libraryChaseList: LibraryChaseRowT[] }, NoVars>`
+  query LibraryChaseList {
+    libraryChaseList {
+      loanId borrowerType borrowerId borrowerName phone titleBn accessionNo dueDate daysOverdue waLink
+    }
+  }
+`;
+
+export interface ChildLibraryLoanT {
+  id: string;
+  titleBn: string | null;
+  accessionNo: string | null;
+  issuedAt: string;
+  dueDate: string;
+  status: string;
+  returnedAt: string | null;
+  overdue: boolean;
+}
+
+export const CHILD_LIBRARY_LOANS_QUERY = gql<
+  { childLibraryLoans: ChildLibraryLoanT[] },
+  { studentId: string }
+>`
+  query ChildLibraryLoans($studentId: String!) {
+    childLibraryLoans(studentId: $studentId) {
+      id titleBn accessionNo issuedAt dueDate status returnedAt overdue
+    }
+  }
+`;
