@@ -1,28 +1,37 @@
 # STATUS
 
-_Updated: 2026-06-12_
+_Updated: 2026-06-12 (guardian portal v1 built)_
 
 ## Now / next
-- **Planned (Guardian portal v1 — D-#68/#69/#70):** `docs/prd-guardian-portal.md` adopted —
-  activates the pipeline-gated `guardian:read_child` (vocab status flip only in GP-1, verifier must
-  stay green; no wire/schema/harness sync; no new permission). **GP-1** (server):
-  `assertGuardianOfStudent` link-scoped authz helper + guardian queries `myChildren` / `childRoutine` /
-  `childClassNotes` / `childHomework` (FULL lifecycle incl. chase/resubmission/results + day-load vs 240).
-  **Guardian routine shows subject + period + time ONLY — no teacher name, no room, no cover data
-  (D-#69, closes R4.5's deferred guardian-read as won't-show); separate narrow guardian slot type.**
-  **GP-A:** first file capability — teacher-attached optional question file (per HomeworkItem) +
-  checked-answer file (per HomeworkStudentRecord), 5 MB jpeg/png/pdf, Express multipart beside /pdf;
-  **storage RULED = the school's Google Drive as the LIVE store (D-#70) — the app's SECOND live external
-  dependency (after D-#24); server always in the middle, no Drive id/URL ever reaches a client;
-  credential in server secrets only (public repo), setup gates GP-A LIVE verification (jest mocks
-  Drive)**; guardian download gated by the link helper; audit `HW_FILE_ATTACHED`; guardians never upload.
-  **GP-2** (app, AFTER UI-1; file display needs GP-A): Guardian tab set + child switcher (J5.3) + আজ home
-  + homework (with প্রশ্নপত্র/উত্তরপত্র viewers) + weekly routine + inert "শীঘ্রই আসছে" placeholders for
-  attendance/fees/notices/leave/push (real surfaces ride their modules, GP-3+; push stays on the deferred
-  messaging pipeline, D-#52). How-to-guide docs out of scope (no guide doc_type in the LOCKED contract).
-  Identity-plane only; J5.6 + a new guardian-firewall assertion must stay green. Docs-only this session —
-  no code change. **Next = build GP-1 per docs/prd-guardian-portal.md §6 (server only); then GP-A; UI-1;
-  GP-2 after UI-1. Drive credential setup (Principal/Office + ops note) runs in parallel.**
+- **Built (Guardian portal v1 — GP-1 + GP-A + GP-2, D-#68/#69/#70/#71): the portal is feature-complete
+  server+app on branch `feat/guardian-portal`** [abe7ed3, 4556696, 56624d9].
+  **GP-1 (server):** `guardian:read_child` flipped pipeline→build (verifier check updated, green);
+  `assertGuardianOfStudent` link-scoped gate (Bangla deny; new additive `GuardianLink.active`, missing =
+  active for the 194 live links); queries `myChildren`/`childRoutine`/`childClassNotes`/`childHomework`
+  (FULL lifecycle: stage timeline, chase, resubmission chain, result, top-up)/`childDayLoad` (vs 240).
+  **D-#69 enforced structurally:** narrow `GuardianSlot` type (subject+period+time only); slots come from a
+  new substitution-free `slotsForDate` (routineForDate keeps the cover overlay for staff); source-guard +
+  guardian-firewall tests assert no teacher/room/cover field and no corpus⇄guardian import path.
+  **GP-A (files):** `StoredFile` + `DriveStore` (OAuth refresh token on the school account — **D-#71**,
+  the D-#70 delegated mechanism choice; plain fetch, no googleapis dep); `POST /files/hw` (staff,
+  tracker:write, jpeg/png/pdf ≤5 MB, Bangla rejections, Drive-fail ⇒ 503 + nothing persisted) +
+  `GET /files/:id` (authz FIRST: staff read-scope / guardian link gate; server streams — `driveFileId`
+  never reaches any client, source-guarded); attach mutations + audit `HW_FILE_ATTACHED`;
+  `questionFileId`/`answerFileId` on items/records (staff + guardian GraphQL); teacher attach hooks in
+  DeclareHomework + CheckingQueue; ops setup note `server/README.md` + `.env.example` GOOGLE_* keys.
+  **GP-2 (app):** GUARDIAN sees ONLY the guardian tabs (আজ / বাড়ির কাজ / রুটিন — staff tabs permission-gated
+  off); `GuardianChildProvider` + `ChildSwitcher` (J5.3); GuardianHome (day-type routine w/ holiday label,
+  class notes, open homework chips, day-load vs 240, inert শীঘ্রই-আসছে placeholder cards — GP-J11, no dead
+  queries); ChildHomework (date-range, day-grouped, full lifecycle + প্রশ্নপত্র/উত্তরপত্র viewers via
+  /files/:id, web); ChildRoutine weekly grid. **Login fixed for guardians:** app falls back to
+  `guardianLogin` (phone/email identifier) and `me` now resolves a Guardian's own account (it returned
+  null for guardian JWTs — guardians could not complete app login before).
+  **Gate GREEN:** vocab verifier PASS; shared+server tsc clean; **jest 371/371** (26 GP-1 + 25 GP-A new;
+  J5.6 + new guardian-firewall green); app tsc clean + web bundle green.
+  **NOT verified live** (no running server/Atlas this session). Remaining for live: (1) Drive credential
+  setup per `server/README.md` (gates GP-A live verification only, D-#70); (2) golden path with the real
+  provisioned family login (Fardhousi Jahan Shaly, 2 children); (3) merge `feat/guardian-portal`.
+  GP-3+ riders (attendance/fees/notices/leave/push surfaces) land with their modules.
 - **Planned (Attendance PRD — NOT built, D-#63–#67):** finalized the build contract for **teacher +
   student attendance** in `docs/prd-attendance.md`. Teacher = daily **Excel snapshot** of the biometric
   "Employee Attendance Report" (legend ✔=present / 𝓛=late / ✘=leave-or-absent / ℞=ignored; **name-matched**
