@@ -53,7 +53,33 @@ _Updated: 2026-06-12_
   Identity-plane only; J5.6 + a new guardian-firewall assertion must stay green. Docs-only this session —
   no code change. **Next = build GP-1 per docs/prd-guardian-portal.md §6 (server only); then GP-A; UI-1;
   GP-2 after UI-1. Drive credential setup (Principal/Office + ops note) runs in parallel.**
-- **Planned (Attendance PRD — NOT built, D-#63–#67):** finalized the build contract for **teacher +
+- **Built (Attendance AT-1..AT-3 + AT-5 — server + app, D-#63–#67) [branch `feat/attendance`]:** the
+  contract below is now BUILT except AT-4. **Server:** new `modules/attendance/` — `TeacherAttendanceDay`
+  (Excel snapshot import: legend ✔/𝓛/✘/℞, both punches, **date read from the sheet** w/ year inference;
+  **name reconciliation** vs active StaffProfiles + remembered `StaffNameAlias`; preview→commit, no silent
+  drop — unmatched names must be mapped or explicitly ignored; re-upload replaces the date; ✘→ABSENT until a
+  staff-leave source exists), `SectionAttendanceAssignment` (per-day/range marker override, newest-covering
+  wins, revoke keeps history), `StudentAttendanceDay` (once-daily absent-only per section, **CT-2 marker
+  gate** = override else classTeacherId, Principal/Office do NOT mark; FULL-day calendar gate via D-#50
+  `resolveDayType`; same-day editable, past = admin `amendStudentAttendance`, O2), `StudentLeaveApplication`
+  (recorded-only, D-#66). Reports (§8): `absenteeReport` (class→section, names + **roll + ID**, leave-covered
+  flag), `sectionAbsentees` (class-teacher own), `studentAttendanceHistory` (% over range),
+  `absentNoApplication` (Office chase list), `unmarkedSections` (AT4.2 detection), `teacherAttendanceSummary`
+  + daily roster. Vocab: perms `attendance:mark` (TEACHER) / `attendance:manage` (Principal/Office) +
+  `TEACHER_ATTENDANCE_STATUSES` + `ATTENDANCE_REMINDER_TIERS` (verifier C.4 added, OFFICE exact-list updated);
+  `Student.rollNumber` + `setStudentRollNumber`; 5 audit kinds; `exceljs` dep. **App:** new 🙋 **Attendance
+  tab** — AttendanceHome (teacher worklist `myMarkingSections` + admin entries), MarkAttendance (tap-absent
+  capture), TeacherAttendanceImport (pick .xlsx → preview → map/ignore → commit + past uploads),
+  AttendanceReport (absentee + unmarked + absent-no-application w/ inline leave recording + staff summary),
+  AssignMarker (assign/revoke overrides). **Gate GREEN:** vocab verifier PASS, shared+server tsc clean,
+  **jest 363/363** (43 new across `attendanceImport.test.ts`/`attendance.test.ts`; firewall green); app tsc
+  clean + web export green. **Executed proof:** the real `Employee Attendance Report….xlsx` parses to
+  2026-06-11, 23 rows (17✔/3𝓛/3✘, double punches captured). **Not verified live; NOT merged — built in a
+  separate worktree on `feat/attendance` (GP-1 was in flight on the shared tree). Remaining: AT-4
+  reminder/escalation engine (external scheduler + expo-notifications + `PushDevice` — needs infra, §9);
+  roll numbers not yet loaded onto the live roster (`setStudentRollNumber` exists); SubjectGroup/Quran
+  attendance fast-follow (§7, model-shaped).**
+- **Planned (Attendance PRD — D-#63–#67, AT-1..3+5 BUILT above, AT-4 remains):** finalized the build contract for **teacher +
   student attendance** in `docs/prd-attendance.md`. Teacher = daily **Excel snapshot** of the biometric
   "Employee Attendance Report" (legend ✔=present / 𝓛=late / ✘=leave-or-absent / ℞=ignored; **name-matched**
   since the export drops the ID column → `StaffNameAlias` remembers the mapping; both punch times; date from

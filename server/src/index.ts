@@ -23,6 +23,8 @@ import "./modules/trackers/resolvers/homework";
 import "./modules/routine/resolvers/routine";
 import "./modules/routine/resolvers/routineSlots";
 import "./modules/routine/resolvers/routineTriggers";
+import "./modules/attendance/resolvers/teacherAttendance";
+import "./modules/attendance/resolvers/studentAttendance";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";

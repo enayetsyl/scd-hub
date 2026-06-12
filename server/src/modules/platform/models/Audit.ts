@@ -21,6 +21,11 @@ export type AuditEventKind =
   | "CREDENTIAL_PROVISIONED" // login generated/reset for a guardian or staff member (D-#59/#60)
   | "SECTIONS_MERGED"     // a class's gender sections combined into one (D-#62)
   | "SECTIONS_SPLIT"      // a merged class split back to its source sections (D-#62)
+  | "ATTENDANCE_IMPORTED"        // teacher Excel snapshot committed for a date (AT1.5, D-#63)
+  | "ATTENDANCE_MARKED"          // a section's student-attendance day written/amended (AT2.3, D-#63)
+  | "ATTENDANCE_MARKER_ASSIGNED" // marker override assigned/revoked on a section (AT2.1, D-#64)
+  | "ATTENDANCE_REMINDER_SENT"   // a reminder/escalation tier dispatched (AT4.6, D-#65; engine = AT-4)
+  | "LEAVE_APPLICATION_SUBMITTED" // student leave application recorded (AT3.1, D-#66)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

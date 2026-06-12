@@ -625,6 +625,37 @@ export const ROUTINE_SUBJECT_LABELS_EN: Record<RoutineSubject, string> = {
  *  routine resolver enforces per class level. */
 export const ROUTINE_SUBJECTS_CLASS3_PLUS = ["BGS", "SCI"] as const;
 
+// --- A.9 ATTENDANCE ENUMS (app-native; Attendance module — prd-attendance, ------
+// D-#63–#67). NO wire-contract twin: attendance is a feature, not import content,
+// and every row is operational/identity-plane behind the ADR-005 firewall — no
+// envelope-schema mirror, no two-place sync; only /shared + the vocab verifier run.
+
+/** Teacher per-day status, mapped from the biometric export's legend (§4, D-#63):
+ *  ✔ → PRESENT, 𝓛 → LATE (read the symbol — no grace computation), ✘ → LEAVE iff a
+ *  staff leave record covers that date else ABSENT, ℞ → ignored (never stored). */
+export const TEACHER_ATTENDANCE_STATUSES = ["PRESENT", "LATE", "LEAVE", "ABSENT"] as const;
+export type TeacherAttendanceStatus = (typeof TEACHER_ATTENDANCE_STATUSES)[number];
+
+export const TEACHER_ATTENDANCE_STATUS_LABELS_BN: Record<TeacherAttendanceStatus, string> = {
+  PRESENT: "উপস্থিত", LATE: "বিলম্বে", LEAVE: "ছুটিতে", ABSENT: "অনুপস্থিত",
+};
+export const TEACHER_ATTENDANCE_STATUS_LABELS_EN: Record<TeacherAttendanceStatus, string> = {
+  PRESENT: "Present", LATE: "Late", LEAVE: "On leave", ABSENT: "Absent",
+};
+
+/** Reminder/escalation tiers (D-#65): the external scheduler calls the idempotent
+ *  endpoint with one of these — 12:10 marker → 12:45 Office → 2:00 Principal,
+ *  FULL days only. Declared with the module's vocab; the engine itself is AT-4. */
+export const ATTENDANCE_REMINDER_TIERS = ["T1210", "T1245", "T1400"] as const;
+export type AttendanceReminderTier = (typeof ATTENDANCE_REMINDER_TIERS)[number];
+
+export const ATTENDANCE_REMINDER_TIER_LABELS_BN: Record<AttendanceReminderTier, string> = {
+  T1210: "১২:১০ — শিক্ষককে স্মরণ", T1245: "১২:৪৫ — অফিসে প্রেরণ", T1400: "২:০০ — অধ্যক্ষকে প্রেরণ",
+};
+export const ATTENDANCE_REMINDER_TIER_LABELS_EN: Record<AttendanceReminderTier, string> = {
+  T1210: "12:10 — remind marker", T1245: "12:45 — escalate to Office", T1400: "2:00 — escalate to Principal",
+};
+
 
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
@@ -661,6 +692,9 @@ export const PERMISSIONS = [
   // routine / timetable (app-native; D-#46)
   "routine:read",          // read the routine (Principal/Teacher/Office; guardian read is pipeline)
   "routine:manage",        // build/edit calendar, rooms, groups, grids, slots (Principal/Office)
+  // attendance (app-native; D-#63–#67)
+  "attendance:mark",       // mark a section's absentees — gated to the section's marker-of-the-day (CT-2, D-#64)
+  "attendance:manage",     // upload teacher Excel, resolve names, assign markers, full reports (Principal/Office)
   // foundation / ops
   "roster:manage",
   "staff:manage",          // HR staff-record read/manage (Principal/Office; prd-hr H1.4 row-scope)
@@ -691,6 +725,8 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "tracker:export": "build",
   "routine:read": "build",
   "routine:manage": "build",
+  "attendance:mark": "build",
+  "attendance:manage": "build",
   "roster:manage": "build",
   "staff:manage": "build",
   "guardian:link": "build",
@@ -711,6 +747,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "set:read", "set:assemble", "set:export",
     "tracker:read", "tracker:write", "tracker:export",
     "routine:read", "routine:manage",
+    "attendance:manage", // NOT attendance:mark — Principal assigns markers, doesn't mark (D-#64)
     "roster:manage", "staff:manage", "guardian:link", "message:dispatch",
     "user:manage", "audit:read",
   ],
@@ -724,6 +761,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "set:read", "set:assemble", "set:export",
     "tracker:read", "tracker:write", "tracker:export",
     "routine:read",          // a teacher reads their own + their sections' routine (D-#46)
+    "attendance:mark",       // row-scoped further to "the section's marker today" (CT-2, D-#64)
     "message:dispatch",
   ],
   // Roster, guardian linkage, messaging dispatch (REQ §2), plus content import (the
@@ -733,6 +771,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "roster:manage", "staff:manage", "guardian:link", "message:dispatch",
     "content:import", "content:assign_review",
     "routine:read", "routine:manage",
+    "attendance:manage",     // upload teacher Excel, assign markers, chase guardians (D-#64/#65; no mark)
   ],
   // First-priority build = account + linkage only; portal reads are pipeline. The
   // single grant is gated off by PERMISSION_BUILD_STATUS until the portal ships.

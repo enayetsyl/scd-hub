@@ -21,6 +21,7 @@ import type {
   HomeworkStackParamList,
   ReviewStackParamList,
   RoutineStackParamList,
+  AttendanceStackParamList,
   AdminStackParamList,
   TabParamList,
 } from "./types";
@@ -60,6 +61,11 @@ import RoutineEditorScreen from "../screens/routine/RoutineEditorScreen";
 import CoverManageScreen from "../screens/routine/CoverManageScreen";
 import DailyNoteScreen from "../screens/routine/DailyNoteScreen";
 import BellScheduleScreen from "../screens/routine/BellScheduleScreen";
+import AttendanceHomeScreen from "../screens/attendance/AttendanceHomeScreen";
+import MarkAttendanceScreen from "../screens/attendance/MarkAttendanceScreen";
+import TeacherAttendanceImportScreen from "../screens/attendance/TeacherAttendanceImportScreen";
+import AttendanceReportScreen from "../screens/attendance/AttendanceReportScreen";
+import AssignMarkerScreen from "../screens/attendance/AssignMarkerScreen";
 import SectionPickerScreen from "../screens/common/SectionPickerScreen";
 import AdminHomeScreen from "../screens/admin/AdminHomeScreen";
 import ImportScreen from "../screens/admin/ImportScreen";
@@ -244,6 +250,21 @@ function RoutineNavigator(): React.ReactElement {
   );
 }
 
+const AttendanceStack = createNativeStackNavigator<AttendanceStackParamList>();
+function AttendanceNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <AttendanceStack.Navigator screenOptions={stackOptions}>
+      <AttendanceStack.Screen name="AttendanceHome" component={AttendanceHomeScreen} options={{ title: STR.tabAttendance }} />
+      <AttendanceStack.Screen name="MarkAttendance" component={MarkAttendanceScreen} options={{ title: STR.attMarkTitle }} />
+      <AttendanceStack.Screen name="TeacherAttendanceImport" component={TeacherAttendanceImportScreen} options={{ title: STR.attUploadTitle }} />
+      <AttendanceStack.Screen name="AttendanceReport" component={AttendanceReportScreen} options={{ title: STR.attReportTitle }} />
+      <AttendanceStack.Screen name="AssignMarker" component={AssignMarkerScreen} options={{ title: STR.attAssignMarkerTitle }} />
+      <AttendanceStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
+    </AttendanceStack.Navigator>
+  );
+}
+
 const AdminStack = createNativeStackNavigator<AdminStackParamList>();
 function AdminNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -281,6 +302,8 @@ export function AppTabs(): React.ReactElement {
   const canReview =
     !!role && (roleHasPermission(role, "content:review") || roleHasPermission(role, "content:assign_review"));
   const canRoutine = !!role && roleHasPermission(role, "routine:read");
+  const canAttendance =
+    !!role && (roleHasPermission(role, "attendance:mark") || roleHasPermission(role, "attendance:manage"));
   const canAdmin = !!role && (roleHasPermission(role, "content:import") || roleHasPermission(role, "user:manage"));
 
   return (
@@ -317,6 +340,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canRoutine ? (
         <Tab.Screen name="RoutineTab" component={RoutineNavigator} options={{ title: STR.tabRoutine, tabBarIcon: tabIcon("📅") }} />
+      ) : null}
+      {canAttendance ? (
+        <Tab.Screen name="AttendanceTab" component={AttendanceNavigator} options={{ title: STR.tabAttendance, tabBarIcon: tabIcon("🙋") }} />
       ) : null}
       {canAdmin ? (
         <Tab.Screen name="AdminTab" component={AdminNavigator} options={{ title: STR.tabAdmin, tabBarIcon: tabIcon("⚙️") }} />
