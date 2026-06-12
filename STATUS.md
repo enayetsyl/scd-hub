@@ -33,7 +33,6 @@ _Updated: 2026-06-12 (notifications N-1 + Slice-4 follow-ups built)_
   then N-3 (app 🔔 badge + NotificationCenter), N-4 (push — NB: AT-4 already shipped `PushDevice` + the
   platform `ExpoPush` transport; N-4 should ride/reconcile those with D-#75's `DeviceToken` registry as a
   registered channel behind emit(), not build a twin).
->>>>>>> origin/main
 - **Planned (Deployment — go-live + dev pipeline, D-#90–#93):** build contract
   `docs/deployment.md`. Slices DEP-1 (Oracle VM + DNS) → DEP-2 (prod install,
   systemd + Caddy/HTTPS, Atlas IP allow-list; closes the /pdf CORS follow-up via
