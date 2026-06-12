@@ -3,6 +3,22 @@
 _Updated: 2026-06-12_
 
 ## Now / next
+- **Planned (Notifications phase 1 — in-app inbox + scheduler + push, D-#72/#73/#74/#75):** build contract
+  `docs/prd-notifications.md` authored — **no feature code yet**. Delivers the D-#52 trigger schedule:
+  `Notification` model + single `NotificationService.emit()` seam (idempotent by dedupeKey, channels fan
+  out behind it) + own-row inbox queries (no new permissions); event emitters (class-note publish → login
+  guardians [R5.4 partial — 129 contact-only guardians unreachable until the WA/SMS phase], HW §7.2
+  chase≥3 → class teacher, review assigned, cover assigned); **first internal scheduler** (D-#73 — refines
+  the D-#20/#21 no-cron posture; 60s in-process ticker, school-day aware, stale-skip, single-instance)
+  firing the **Principal's D-#74 timing rules** (refine D-#52 b/c): bell ~5 min before each period end;
+  attendance once daily 12:00 to every class teacher (interim unconditional — conditional check ships with
+  the attendance module); class-note ladder 12:00/13:00/14:00 → teacher, escalation 15:00 → Office, 16:00
+  → Principal; 🔔 badge + NotificationCenter; **Expo push** (D-#75 — second live external dependency after
+  D-#24; native only, web = inbox; no quiet hours; push never blocks the inbox row). App-native
+  `NOTIFICATION_KINDS` vocab only — no wire-contract sync; vocab verifier extends at build time.
+  WhatsApp/SMS stay deferred (roadmap patched). **Next = build N-1 per docs/prd-notifications.md §7, slice
+  order.** (Handoff proposed D-#59–#62 — renumbered: those are taken by credential provisioning / UI /
+  section merge, and D-#71 is held by the in-flight guardian-portal build.)
 - **Planned (Guardian portal v1 — D-#68/#69/#70):** `docs/prd-guardian-portal.md` adopted —
   activates the pipeline-gated `guardian:read_child` (vocab status flip only in GP-1, verifier must
   stay green; no wire/schema/harness sync; no new permission). **GP-1** (server):

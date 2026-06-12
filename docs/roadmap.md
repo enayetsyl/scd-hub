@@ -26,7 +26,7 @@ parked). Fine-tuning on the proprietary corpus is a multi-year goal; storage sha
 
 ### Messaging automation
 WhatsApp Cloud API + local bulk-SMS gateway (replacing manual `wa.me` deep links). Unofficial
-WhatsApp libraries are rejected (ToS risk).
+WhatsApp libraries are rejected (ToS risk). **In-app notification pipeline + push PULLED FORWARD** — build contract `docs/prd-notifications.md` (N-1 inbox/seam → N-2 scheduler → N-3 app UI → N-4 Expo push; D-#72–#75); WhatsApp Cloud API + bulk SMS remain deferred and will plug into the same `emit()` seam.
 
 ### Trackers & misc
 Full vocabulary tracker, complaint tracker; video review vs REF-11 observation rubric.
