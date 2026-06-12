@@ -88,6 +88,37 @@ describe("Fail-closed firewall (ADR-005 / J5.6)", () => {
   });
 });
 
+/**
+ * Guardian-portal firewall (GP-1, D-#68 / prd-guardian-portal §4).
+ *
+ * The guardian read path is identity-plane ONLY. Fail-closed both ways:
+ * the guardian module must have NO import path into the corpus plane (so a
+ * guardian token can never reach analytics/export data), and the corpus
+ * module must have NO import path into the guardian module (so the analytics
+ * plane can never join back through guardian-scoped identity reads).
+ */
+describe("Guardian-portal firewall (ADR-005 / GP-1)", () => {
+  const guardianDir = path.resolve(__dirname, "../modules/guardian");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("guardian module has NO import from the corpus plane", () => {
+    const files = walkDir(guardianDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (GP-1 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the guardian module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/guardian"));
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;

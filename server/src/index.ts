@@ -23,6 +23,7 @@ import "./modules/trackers/resolvers/homework";
 import "./modules/routine/resolvers/routine";
 import "./modules/routine/resolvers/routineSlots";
 import "./modules/routine/resolvers/routineTriggers";
+import "./modules/guardian/resolvers/guardianPortal";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";

@@ -255,16 +255,19 @@ async function unbindIfOrphaned(
  *  overriding it on that date (R4.4). `coverTeacherId` is null when uncovered. */
 export type ResolvedSlot = IRoutineSlot & { coverTeacherId: string | null };
 
-/** Resolve the effective slots for a group on a date (R2.7) — slots whose
- *  `[effectiveFrom, effectiveTo)` window contains the date, ordered by period —
- *  with any active cover for that date overlaid (R4.4). */
-export async function routineForDate(
+/** The effective slots for a group on a date (R2.7) — slots whose
+ *  `[effectiveFrom, effectiveTo)` window contains the date, ordered by period.
+ *  NO cover overlay: this never reads `RoutineSubstitution`, so it is the safe
+ *  source for the guardian portal's narrow view (D-#69 — guardians see no
+ *  cover/substitution data at all). Staff views overlay covers via
+ *  `routineForDate` below. */
+export async function slotsForDate(
   groupType: "section" | "subjectgroup",
   groupId: string,
   date: Date,
-): Promise<ResolvedSlot[]> {
+): Promise<IRoutineSlot[]> {
   const dayOfWeek = DAYS_OF_WEEK[date.getDay()];
-  const slots = (await RoutineSlot.find({
+  return RoutineSlot.find({
     groupType,
     groupId,
     dayOfWeek,
@@ -273,7 +276,17 @@ export async function routineForDate(
     $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: date } }],
   })
     .sort({ periodNumber: 1 })
-    .lean()) as unknown as IRoutineSlot[];
+    .lean() as unknown as Promise<IRoutineSlot[]>;
+}
+
+/** Resolve the effective slots for a group on a date (R2.7) with any active
+ *  cover for that date overlaid (R4.4). Staff-facing only. */
+export async function routineForDate(
+  groupType: "section" | "subjectgroup",
+  groupId: string,
+  date: Date,
+): Promise<ResolvedSlot[]> {
+  const slots = await slotsForDate(groupType, groupId, date);
 
   // Overlay covers for this date (R4.4).
   const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
