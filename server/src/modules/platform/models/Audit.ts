@@ -26,6 +26,7 @@ export type AuditEventKind =
   | "ATTENDANCE_MARKER_ASSIGNED" // marker override assigned/revoked on a section (AT2.1, D-#64)
   | "ATTENDANCE_REMINDER_SENT"   // a reminder/escalation tier dispatched (AT4.6, D-#65; engine = AT-4)
   | "LEAVE_APPLICATION_SUBMITTED" // student leave application recorded (AT3.1, D-#66)
+  | "HW_FILE_ATTACHED"    // a question/answer file attached to homework (GP-A, D-#70)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

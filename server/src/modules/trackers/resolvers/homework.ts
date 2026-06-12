@@ -59,6 +59,8 @@ interface HomeworkItemShape {
   qCount: number;
   revItem: boolean;
   status: string;
+  /** StoredFile id of the attached question file (GP-A) — null when none. */
+  questionFileId?: string | null;
 }
 
 const HomeworkItemRef = builder.objectRef<HomeworkItemShape>("HomeworkItem");
@@ -75,6 +77,7 @@ HomeworkItemRef.implement({
     qCount: t.exposeInt("qCount"),
     revItem: t.exposeBoolean("revItem"),
     status: t.exposeString("status"),
+    questionFileId: t.string({ nullable: true, resolve: (r) => r.questionFileId ?? null }),
   }),
 });
 
@@ -100,6 +103,8 @@ interface HomeworkStudentRecordShape {
   dueDate: string | null;
   chaseCount: number;
   result: string | null;
+  /** StoredFile id of the attached checked-answer file (GP-A) — null when none. */
+  answerFileId?: string | null;
 }
 
 const HomeworkStudentRecordRef = builder.objectRef<HomeworkStudentRecordShape>(
@@ -116,6 +121,7 @@ HomeworkStudentRecordRef.implement({
     dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),
     chaseCount: t.exposeInt("chaseCount"),
     result: t.string({ nullable: true, resolve: (r) => r.result }),
+    answerFileId: t.string({ nullable: true, resolve: (r) => r.answerFileId ?? null }),
   }),
 });
 
@@ -300,6 +306,7 @@ builder.queryField("homeworkItems", (t) =>
         qCount: d.qCount,
         revItem: d.revItem,
         status: d.status,
+        questionFileId: d.questionFileId ? d.questionFileId.toString() : null,
       }));
     },
   }),
@@ -335,6 +342,7 @@ builder.queryField("homeworkStudentRecords", (t) =>
         dueDate: d.dueDate ? (d.dueDate as unknown as Date).toISOString() : null,
         chaseCount: d.chaseCount,
         result: d.result ?? null,
+        answerFileId: d.answerFileId ? d.answerFileId.toString() : null,
       }));
     },
   }),

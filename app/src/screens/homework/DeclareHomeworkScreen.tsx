@@ -8,7 +8,8 @@ import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { HW_SUBJECTS } from "@scd/shared";
-import { CLASSES_QUERY, DECLARE_HOMEWORK_ITEM } from "../../graphql/operations";
+import { CLASSES_QUERY, DECLARE_HOMEWORK_ITEM, ATTACH_HW_QUESTION_FILE } from "../../graphql/operations";
+import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, Notice, EmptyState } from "../../components/ui";
 import { SectionBar } from "../../components/SectionBar";
@@ -33,7 +34,12 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** The just-declared item — target for the optional question-file attach (GP-A). */
+  const [lastItem, setLastItem] = useState<{ id: string; hwId: string } | null>(null);
+  const [fileBusy, setFileBusy] = useState(false);
+  const [fileNote, setFileNote] = useState<string | null>(null);
   const [, declare] = useMutation(DECLARE_HOMEWORK_ITEM);
+  const [, attachQuestion] = useMutation(ATTACH_HW_QUESTION_FILE);
 
   const [classesQ] = useQuery({
     query: CLASSES_QUERY,
@@ -72,10 +78,34 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
       return;
     }
     setOk(`${res.data.declareHomeworkItem.hwId} ${STR.hwDeclared}`);
+    setLastItem({ id: res.data.declareHomeworkItem.id, hwId: res.data.declareHomeworkItem.hwId });
+    setFileNote(null);
     setTopTags("");
     setQCount("");
     setPoolRef("");
     setRevItem(false);
+  }
+
+  /** Optional question-file attach (GP-A, D-#70) — failure shows a Bangla
+   *  notice and never blocks the declaration (GP-J8). */
+  async function onAttachQuestion(): Promise<void> {
+    if (!lastItem || fileBusy) return;
+    setFileNote(null);
+    setFileBusy(true);
+    try {
+      const uploaded = await pickAndUploadHomeworkFile("question");
+      if (!uploaded) return; // picker cancelled
+      const res = await attachQuestion({ hwItemId: lastItem.id, fileId: uploaded.fileId });
+      if (res.error || !res.data?.attachHomeworkQuestionFile) {
+        setFileNote(friendlyError(res.error));
+        return;
+      }
+      setFileNote(`${lastItem.hwId} — ${STR.hwFileAttached}`);
+    } catch (e) {
+      setFileNote(e instanceof FileUploadError ? e.message : STR.hwFileUploadFail);
+    } finally {
+      setFileBusy(false);
+    }
   }
 
   if (!hasSection) {
@@ -95,6 +125,20 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
         {ok ? <Notice message={ok} tone="ok" /> : null}
         {error ? <Notice message={error} tone="danger" /> : null}
+        {fileNote ? (
+          <Notice message={fileNote} tone={fileNote.endsWith(STR.hwFileAttached) ? "ok" : "danger"} />
+        ) : null}
+        {lastItem ? (
+          <View style={{ marginBottom: space(3) }}>
+            <Button
+              title={`${STR.hwAttachQuestion} (${lastItem.hwId})`}
+              variant="secondary"
+              onPress={onAttachQuestion}
+              loading={fileBusy}
+              disabled={fileBusy}
+            />
+          </View>
+        ) : null}
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: 8 }}>{STR.hwSubject}</Body>
           <ChipRow>

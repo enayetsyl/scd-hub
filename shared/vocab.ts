@@ -690,7 +690,7 @@ export const PERMISSIONS = [
   "tracker:write",
   "tracker:export",
   // routine / timetable (app-native; D-#46)
-  "routine:read",          // read the routine (Principal/Teacher/Office; guardian read is pipeline)
+  "routine:read",          // read the routine (Principal/Teacher/Office; guardian read rides guardian:read_child — narrow slot, D-#69)
   "routine:manage",        // build/edit calendar, rooms, groups, grids, slots (Principal/Office)
   // attendance (app-native; D-#63–#67)
   "attendance:mark",       // mark a section's absentees — gated to the section's marker-of-the-day (CT-2, D-#64)
@@ -702,7 +702,7 @@ export const PERMISSIONS = [
   "message:dispatch",      // wa.me / notices manual send (R-T2)
   "user:manage",
   "audit:read",            // Principal reads; audit is system-appended, never user-written
-  // guardian portal (DEFERRED — see PERMISSION_BUILD_STATUS)
+  // guardian portal (ACTIVE since GP-1, D-#68)
   "guardian:read_child",   // reads linked children's permitted operational slices
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
@@ -733,7 +733,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "message:dispatch": "build",
   "user:manage": "build",
   "audit:read": "build",
-  "guardian:read_child": "pipeline", // guardian portal screens deferred (REQ §2/§9)
+  "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
 };
 
 /** ROLE → granted permissions. DEFAULT-DENY: anything not listed is denied. */
@@ -773,8 +773,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "routine:read", "routine:manage",
     "attendance:manage",     // upload teacher Excel, assign markers, chase guardians (D-#64/#65; no mark)
   ],
-  // First-priority build = account + linkage only; portal reads are pipeline. The
-  // single grant is gated off by PERMISSION_BUILD_STATUS until the portal ships.
+  // Guardian portal v1 (GP-1, D-#68): the single grant is ACTIVE — guardian-scoped
+  // resolvers read linked children only (assertGuardianOfStudent, link-scoped).
   // Row-scoped to linked children (uniform access, D-#8); corpus plane unreachable.
   GUARDIAN: [
     "guardian:read_child",

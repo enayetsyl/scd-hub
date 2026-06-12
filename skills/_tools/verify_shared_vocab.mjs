@@ -39,7 +39,7 @@ check("routine: PRINCIPAL+OFFICE manage, TEACHER read-only, GUARDIAN none", V.ro
 check("TEACHER has content:review (reviewer APPROVE), lacks assign/promote", V.roleHasPermission("TEACHER","content:review") && !["content:assign_review","content:promote_gold"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("GUARDIAN only has guardian:read_child", eq(V.permissionsForRole("GUARDIAN"), ["guardian:read_child"]));
 check("no role can write audit (audit:write undeclared)", !V.PERMISSIONS.includes("audit:write"));
-check("guardian:read_child is pipeline; everything else build", V.PERMISSION_BUILD_STATUS["guardian:read_child"] === "pipeline" && V.PERMISSIONS.filter((p) => p !== "guardian:read_child").every((p) => V.PERMISSION_BUILD_STATUS[p] === "build"));
+check("all permissions active (guardian:read_child flipped to build by GP-1, D-#68)", V.PERMISSIONS.every((p) => V.PERMISSION_BUILD_STATUS[p] === "build"));
 
 console.log("=== C. label maps total over their enums ===");
 const total = (labels, keys) => keys.every((k) => typeof labels[k] === "string" && labels[k].length > 0);

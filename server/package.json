@@ -25,6 +25,7 @@
     "jsonwebtoken": "^9.0.2",
     "markdown-it": "^14.2.0",
     "mongoose": "^8.4.0",
+    "multer": "^2.1.1",
     "pdfkit": "^0.19.0"
   },
   "devDependencies": {
@@ -33,6 +34,7 @@
     "@types/jest": "^29.5.12",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/markdown-it": "^14.1.2",
+    "@types/multer": "^2.1.0",
     "@types/node": "^20.14.0",
     "@types/pdfkit": "^0.17.6",
     "@types/supertest": "^6.0.2",
