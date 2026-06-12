@@ -42,6 +42,13 @@ jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
 }));
 
+// Notification emitters (N-1, D-#72) — mocked: the host-side call is under test
+// here; the emitter internals are covered in notifications.test.ts.
+const mockEmitReviewAssigned = jest.fn().mockResolvedValue(undefined);
+jest.mock("../modules/notifications/services/emitters", () => ({
+  emitReviewAssigned: (...args: unknown[]) => mockEmitReviewAssigned(...args),
+}));
+
 // Import AFTER mocks
 import {
   isPlanDocType,
@@ -163,6 +170,11 @@ describe("assignPlanReview", () => {
     expect(mockReviewUpdateOne).not.toHaveBeenCalled(); // nothing to supersede
     expect(mockWriteAudit).toHaveBeenCalledWith(
       expect.objectContaining({ eventKind: "REVIEW_ASSIGNED" }),
+    );
+    // N1.5 — the reviewer is notified once per assigned round.
+    expect(mockEmitReviewAssigned).toHaveBeenCalledTimes(1);
+    expect(mockEmitReviewAssigned).toHaveBeenCalledWith(
+      expect.objectContaining({ reviewerId: REVIEWER_ID.toString(), roundNumber: 1 }),
     );
   });
 

@@ -11,6 +11,7 @@ import { RoutineSubstitution, type IRoutineSubstitution } from "../models/Routin
 import { User } from "../../foundation/models/User";
 import { assignProxy, revokeProxy } from "../../foundation/services/ScopeGrantService";
 import { rankAvailability, type AvailabilityRow } from "../cover";
+import { emitCoverAssigned } from "../../notifications/services/emitters";
 
 /** Local-day bounds for date-range queries. */
 function dayBounds(date: Date): { start: Date; end: Date } {
@@ -110,6 +111,16 @@ export async function assignCover(input: AssignCoverInput): Promise<IRoutineSubs
     });
     await RoutineSubstitution.updateOne({ _id: sub._id }, { $set: { proxyGrantId: new Types.ObjectId(grantId) } });
   }
+
+  // N1.6: tell the covering teacher. Best-effort — never blocks the assignment
+  // (D-#72). Cancel emits nothing (the cover list is the truth).
+  await emitCoverAssigned({
+    _id: sub._id,
+    slotId: sub.slotId,
+    date: sub.date,
+    coverTeacherId: sub.coverTeacherId,
+  });
+
   return sub;
 }
 
