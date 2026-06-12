@@ -4,6 +4,10 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Reviewer assignment — teacher-name dropdown replaces pasting a User _id. New server `teachers` query
+  (active TEACHER accounts, gated content:assign_review) + a reusable `Select` dropdown primitive (ui.tsx);
+  PlanViewScreen + ReviewThreadScreen pick a reviewer by name (phone hint) instead of a raw id. BN/EN labels
+  added. Gate: server tsc + jest 313/313 + vocab verifier; app tsc + web export green. [5903010]
 - UI-1: app adopts UI guidelines v1 — deep-green/gold token palette light+dark (OS-followed), Noto Sans
   Bengali app-wide (expo-font, splash-held), 48dp targets, container/on-container badges, web layout capped
   at 720dp; `app/src/theme` is the single token source (`palette.json` shared with `tailwind.config.js`)
