@@ -4,14 +4,14 @@ _Updated: 2026-06-13 (Library module LB-1..LB-5 built)_
 
 ## Now / next
 - **Built (Library module — catalog + circulation + reservations + overdue chasing, LB-1..LB-5,
-  D-#81–#84 + build rulings D-#94/#95) [branch `worktree-library`]:** the full prd-library contract,
+  D-#81–#84 + build rulings D-#96/#97) [branch `worktree-library`]:** the full prd-library contract,
   server+app. **LB-1:** app-native vocab (`library:read` P/T/O + `library:manage` P/O; BORROWER_TYPES/
   COPY_STATUSES/LOAN_STATUSES/RESERVATION_STATUSES/BOOK_LANGUAGES + BN/EN; verifier §C.6, no wire sync);
   BookTitle/BookCopy (unique accessionNo)/LibraryPolicy/LibrarianAssignment (append-only duty log);
   `assertIsLibrarian` (library:manage OR latest duty row = assign — D-#42/#64 pattern, NO new role);
   catalog resolvers + availability computed from copies. **Policy = admin data with READ-TIME defaults**
   (7/2/1/3 student · 14/4/2/3 staff · 7/2/1/3 guardian · hold 3) — no seed write against the shared live
-  DB (D-#95); Principal edits in-app (LibraryAdmin). **LB-2:** issue (by accession; ON_HOLD only to its
+  DB (D-#97); Principal edits in-app (LibraryAdmin). **LB-2:** issue (by accession; ON_HOLD only to its
   READY borrower) / return / renew (blocked at maxRenewals OR any QUEUED/READY reservation) / markLost
   (replacement note only — NO money fields anywhere, D-#27); per-type maxConcurrent + loanDays from
   policy; desk mutations gated assertIsLibrarian. **LB-3:** title-level FIFO reservations; return → copy
@@ -28,7 +28,7 @@ _Updated: 2026-06-13 (Library module LB-1..LB-5 built)_
   riding the **merged D-#72 emit() seam** (due-tomorrow once; overdue on school-day rungs 1/4/7… via
   `resolveDayType`; STUDENT borrower → login-enabled linked guardians; contact-only guardians stay
   wa.me-only) dispatched by **POST /triggers/library-reminder** (AT-4 external-scheduler pattern, same
-  shared secret, idempotent — D-#94; N-2's ticker should call the same `dispatchLibraryReminders`) +
+  shared secret, idempotent — D-#96; N-2's ticker should call the same `dispatchLibraryReminders`) +
   guardian rider `childLibraryLoans` (assertGuardianOfStudent, narrow read-only type; loans card on
   GuardianHome — no guardian mutations). Audit: 8 new BOOK_*/RESERVATION_*/LIBRARIAN_ASSIGNED/
   LIBRARY_CATALOG_CHANGED kinds. Firewall test extended both ways (corpus ⇄ library). **Gate GREEN
