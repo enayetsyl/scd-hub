@@ -309,3 +309,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - Added skills: feature-lifecycle, contract-sync, verify-before-commit. [9715c45]
 - RBAC: granted content:import to Office in addition to Principal (D-#11). [19618c5]
 - PRD: drafted Attendance build contract (docs/prd-attendance.md) — teacher Excel ingest + in-app student capture, marker assignment (CT-2), external-scheduler reminder/escalation, recorded-only student leave (D-#63–#67). [pending-commit]
+- 2026-06-12 — docs: Guardian Portal v1 build contract (docs/prd-guardian-portal.md); D-#68/#69/#70 appended (incl. Google Drive live-store ruling); R4.5 closed as won't-show; next build = GP-1 (server), then GP-A, GP-2 after UI-1. (handoff proposed D-#62/#63/#64 — renumbered, those are taken by Section merge + Attendance). [pending-commit]
