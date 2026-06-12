@@ -54,6 +54,15 @@ export type RoutineStackParamList = {
   SectionPicker: undefined;
 };
 
+export type AttendanceStackParamList = {
+  AttendanceHome: undefined;
+  MarkAttendance: { sectionId: string; title: string; dateKey: string };
+  TeacherAttendanceImport: undefined;
+  AttendanceReport: undefined;
+  AssignMarker: undefined;
+  SectionPicker: undefined;
+};
+
 export type AdminStackParamList = {
   AdminHome: undefined;
   Import: undefined;
@@ -76,5 +85,6 @@ export type TabParamList = {
   HomeworkTab: NavigatorScreenParams<HomeworkStackParamList>;
   ReviewTab: NavigatorScreenParams<ReviewStackParamList>;
   RoutineTab: NavigatorScreenParams<RoutineStackParamList>;
+  AttendanceTab: NavigatorScreenParams<AttendanceStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
 };

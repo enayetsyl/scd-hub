@@ -1818,3 +1818,310 @@ export const MY_SECTIONS_AS_CLASS_TEACHER_QUERY = gql<
     mySectionsAsClassTeacher { id code nameBn active classTeacherId supportTeacherIds }
   }
 `;
+
+// ===========================================================================
+// Attendance (AT-1..AT-3 + AT-5, D-#63..#67)
+// ===========================================================================
+
+export interface AttPreviewRowT {
+  name: string;
+  shift: string | null;
+  status: string | null;
+  punchIn: string | null;
+  punchOut: string | null;
+  staffProfileId: string | null;
+  staffName: string | null;
+  skipped: boolean;
+}
+
+export interface AttImportPreviewT {
+  dateKey: string;
+  rows: AttPreviewRowT[];
+  matched: number;
+  unmatched: number;
+  skipped: number;
+  alreadyImported: boolean;
+}
+
+export const PREVIEW_TEACHER_ATTENDANCE = gql<
+  { previewTeacherAttendanceImport: AttImportPreviewT },
+  { fileBase64: string }
+>`
+  mutation PreviewTeacherAttendance($fileBase64: String!) {
+    previewTeacherAttendanceImport(fileBase64: $fileBase64) {
+      dateKey
+      rows { name shift status punchIn punchOut staffProfileId staffName skipped }
+      matched unmatched skipped alreadyImported
+    }
+  }
+`;
+
+export interface AttImportResultT {
+  dateKey: string;
+  imported: number;
+  skipped: number;
+  ignored: number;
+  replaced: boolean;
+}
+
+export const COMMIT_TEACHER_ATTENDANCE = gql<
+  { commitTeacherAttendanceImport: AttImportResultT },
+  { fileBase64: string; mappings?: { name: string; staffProfileId: string }[] | null; ignoreNames?: string[] | null }
+>`
+  mutation CommitTeacherAttendance($fileBase64: String!, $mappings: [StaffAliasMappingInput!], $ignoreNames: [String!]) {
+    commitTeacherAttendanceImport(fileBase64: $fileBase64, mappings: $mappings, ignoreNames: $ignoreNames) {
+      dateKey imported skipped ignored replaced
+    }
+  }
+`;
+
+export interface TeacherAttendanceRecordT {
+  id: string;
+  staffProfileId: string;
+  staffName: string;
+  category: string;
+  status: string;
+  punchIn: string | null;
+  punchOut: string | null;
+  shift: string | null;
+}
+
+export const TEACHER_ATTENDANCE_FOR_DATE = gql<
+  { teacherAttendanceForDate: TeacherAttendanceRecordT[] },
+  { dateKey: string }
+>`
+  query TeacherAttendanceForDate($dateKey: String!) {
+    teacherAttendanceForDate(dateKey: $dateKey) {
+      id staffProfileId staffName category status punchIn punchOut shift
+    }
+  }
+`;
+
+export const TEACHER_ATTENDANCE_IMPORTS = gql<
+  { teacherAttendanceImports: { dateKey: string; records: number }[] },
+  NoVars
+>`
+  query TeacherAttendanceImports {
+    teacherAttendanceImports { dateKey records }
+  }
+`;
+
+export interface StaffAttendanceSummaryT {
+  staffProfileId: string;
+  staffName: string;
+  category: string;
+  days: number;
+  present: number;
+  late: number;
+  leave: number;
+  absent: number;
+  presentPct: number;
+}
+
+export const TEACHER_ATTENDANCE_SUMMARY = gql<
+  { teacherAttendanceSummary: StaffAttendanceSummaryT[] },
+  { fromKey: string; toKey: string }
+>`
+  query TeacherAttendanceSummary($fromKey: String!, $toKey: String!) {
+    teacherAttendanceSummary(fromKey: $fromKey, toKey: $toKey) {
+      staffProfileId staffName category days present late leave absent presentPct
+    }
+  }
+`;
+
+export interface MarkingSectionT {
+  sectionId: string;
+  sectionCode: string;
+  sectionNameBn: string;
+  classLevel: number;
+  classNameBn: string;
+  marked: boolean;
+  viaAssignment: boolean;
+  studentCount: number;
+}
+
+export const MY_MARKING_SECTIONS = gql<
+  { myMarkingSections: MarkingSectionT[] },
+  { dateKey: string }
+>`
+  query MyMarkingSections($dateKey: String!) {
+    myMarkingSections(dateKey: $dateKey) {
+      sectionId sectionCode sectionNameBn classLevel classNameBn marked viaAssignment studentCount
+    }
+  }
+`;
+
+export interface StudentAttendanceDayT {
+  id: string;
+  sectionId: string;
+  dateKey: string;
+  absentStudentIds: string[];
+  markedBy: string;
+  markedAt: string;
+  amendedBy: string | null;
+  amendedAt: string | null;
+}
+
+export const SECTION_ATTENDANCE = gql<
+  { sectionAttendance: StudentAttendanceDayT | null },
+  { sectionId: string; dateKey: string }
+>`
+  query SectionAttendance($sectionId: String!, $dateKey: String!) {
+    sectionAttendance(sectionId: $sectionId, dateKey: $dateKey) {
+      id sectionId dateKey absentStudentIds markedBy markedAt amendedBy amendedAt
+    }
+  }
+`;
+
+export const MARK_SECTION_ATTENDANCE = gql<
+  { markSectionAttendance: StudentAttendanceDayT },
+  { sectionId: string; dateKey: string; absentStudentIds: string[] }
+>`
+  mutation MarkSectionAttendance($sectionId: String!, $dateKey: String!, $absentStudentIds: [String!]!) {
+    markSectionAttendance(sectionId: $sectionId, dateKey: $dateKey, absentStudentIds: $absentStudentIds) {
+      id sectionId dateKey absentStudentIds markedBy markedAt amendedBy amendedAt
+    }
+  }
+`;
+
+export interface MarkerAssignmentT {
+  id: string;
+  sectionId: string;
+  teacherId: string;
+  teacherName: string | null;
+  sectionCode: string | null;
+  sectionNameBn: string | null;
+  classNameBn: string | null;
+  fromKey: string;
+  toKey: string;
+  active: boolean;
+}
+
+const MARKER_ASSIGNMENT_FIELDS =
+  "id sectionId teacherId teacherName sectionCode sectionNameBn classNameBn fromKey toKey active";
+
+export const ASSIGN_SECTION_MARKER = gql<
+  { assignSectionMarker: MarkerAssignmentT },
+  { sectionId: string; teacherId: string; fromKey: string; toKey: string }
+>`
+  mutation AssignSectionMarker($sectionId: String!, $teacherId: String!, $fromKey: String!, $toKey: String!) {
+    assignSectionMarker(sectionId: $sectionId, teacherId: $teacherId, fromKey: $fromKey, toKey: $toKey) {
+      ${MARKER_ASSIGNMENT_FIELDS}
+    }
+  }
+`;
+
+export const REVOKE_SECTION_MARKER = gql<
+  { revokeSectionMarker: MarkerAssignmentT },
+  { assignmentId: string }
+>`
+  mutation RevokeSectionMarker($assignmentId: String!) {
+    revokeSectionMarker(assignmentId: $assignmentId) { ${MARKER_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const SECTION_MARKER_ASSIGNMENTS = gql<
+  { sectionMarkerAssignments: MarkerAssignmentT[] },
+  { dateKey: string }
+>`
+  query SectionMarkerAssignments($dateKey: String!) {
+    sectionMarkerAssignments(dateKey: $dateKey) { ${MARKER_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export interface AbsenteeEntryT {
+  studentId: string;
+  name: string;
+  nameBn: string | null;
+  rollNumber: string | null;
+  schoolId: string;
+  leaveCovered: boolean;
+}
+
+export interface SectionAbsenteesT {
+  sectionId: string;
+  sectionCode: string;
+  sectionNameBn: string;
+  absentCount: number;
+  absentees: AbsenteeEntryT[];
+}
+
+export interface ClassAbsenteesT {
+  classId: string;
+  classLevel: number;
+  classNameBn: string;
+  absentCount: number;
+  sections: SectionAbsenteesT[];
+}
+
+export const ABSENTEE_REPORT = gql<{ absenteeReport: ClassAbsenteesT[] }, { dateKey: string }>`
+  query AbsenteeReport($dateKey: String!) {
+    absenteeReport(dateKey: $dateKey) {
+      classId classLevel classNameBn absentCount
+      sections {
+        sectionId sectionCode sectionNameBn absentCount
+        absentees { studentId name nameBn rollNumber schoolId leaveCovered }
+      }
+    }
+  }
+`;
+
+export interface UnmarkedSectionT {
+  sectionId: string;
+  sectionCode: string;
+  sectionNameBn: string;
+  classLevel: number;
+  classNameBn: string;
+  markerTeacherId: string | null;
+  markerName: string | null;
+}
+
+export const UNMARKED_SECTIONS = gql<{ unmarkedSections: UnmarkedSectionT[] }, { dateKey: string }>`
+  query UnmarkedSections($dateKey: String!) {
+    unmarkedSections(dateKey: $dateKey) {
+      sectionId sectionCode sectionNameBn classLevel classNameBn markerTeacherId markerName
+    }
+  }
+`;
+
+export interface AbsentNoApplicationT {
+  studentId: string;
+  name: string;
+  nameBn: string | null;
+  rollNumber: string | null;
+  schoolId: string;
+  sectionId: string;
+  dateKeys: string[];
+}
+
+export const ABSENT_NO_APPLICATION = gql<
+  { absentNoApplication: AbsentNoApplicationT[] },
+  { sectionId?: string | null; fromKey: string; toKey: string }
+>`
+  query AbsentNoApplication($sectionId: String, $fromKey: String!, $toKey: String!) {
+    absentNoApplication(sectionId: $sectionId, fromKey: $fromKey, toKey: $toKey) {
+      studentId name nameBn rollNumber schoolId sectionId dateKeys
+    }
+  }
+`;
+
+export interface LeaveApplicationT {
+  id: string;
+  studentId: string;
+  fromKey: string;
+  toKey: string;
+  reason: string;
+  submittedBy: string;
+  submittedAt: string;
+}
+
+export const SUBMIT_LEAVE_APPLICATION = gql<
+  { submitLeaveApplication: LeaveApplicationT },
+  { studentId: string; fromKey: string; toKey: string; reason: string }
+>`
+  mutation SubmitLeaveApplication($studentId: String!, $fromKey: String!, $toKey: String!, $reason: String!) {
+    submitLeaveApplication(studentId: $studentId, fromKey: $fromKey, toKey: $toKey, reason: $reason) {
+      id studentId fromKey toKey reason submittedBy submittedAt
+    }
+  }
+`;
