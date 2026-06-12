@@ -8,6 +8,14 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
   (active TEACHER accounts, gated content:assign_review) + a reusable `Select` dropdown primitive (ui.tsx);
   PlanViewScreen + ReviewThreadScreen pick a reviewer by name (phone hint) instead of a raw id. BN/EN labels
   added. Gate: server tsc + jest 313/313 + vocab verifier; app tsc + web export green. [5903010]
+- Plan render fix — proper Markdown in the app + grid tables in the PDF; strip the internal footer comment.
+  App: new hand-rolled Markdown component (headings, bold/italic/code, ordered & bullet lists incl. GFM task
+  items, GFM tables as a grid, blockquotes, hr) — PlanViewScreen rendered raw markdown before. PDF: tables
+  now a real bordered grid (weighted columns, measured rows, page-break aware) instead of joined " | " text
+  that wrapped and overlapped (the Chapter-Overview collision); doc.x reset after a table; emoji stripped and
+  unsupported math/arrow glyphs transliterated (≈→~) since the embedded fonts lack them. Both surfaces now
+  strip authored <!-- … --> comments. Gate: server tsc + jest 292/292 (3 new, firewall green); app tsc clean
+  + web export green. [7354ddd] (line restored — dropped in the PR #22 append-only merge)
 - UI-1: app adopts UI guidelines v1 — deep-green/gold token palette light+dark (OS-followed), Noto Sans
   Bengali app-wide (expo-font, splash-held), 48dp targets, container/on-container badges, web layout capped
   at 720dp; `app/src/theme` is the single token source (`palette.json` shared with `tailwind.config.js`)
