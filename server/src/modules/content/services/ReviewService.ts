@@ -18,6 +18,7 @@ import type { ReviewStatus, ReviewVerdict } from "@scd/shared";
 import { ReviewAssignment } from "../models/ReviewAssignment";
 import { ContentArtifact } from "../models/ContentArtifact";
 import { writeAudit } from "../../platform/services/AuditService";
+import { emitReviewAssigned } from "../../notifications/services/emitters";
 
 /** Raised for review-loop rule violations (mapped to a 4xx-ish error by the resolver). */
 export class ReviewError extends Error {
@@ -225,6 +226,18 @@ export async function assignPlanReview(input: AssignReviewInput): Promise<Review
     targetId: created._id.toString(),
     targetKind: "ReviewAssignment",
     meta: { artifactId: input.artifactId, reviewerId: input.reviewerId, roundNumber: prevRound + 1 },
+  });
+
+  // N1.5: tell the reviewer. Best-effort — never blocks the assignment (D-#72).
+  await emitReviewAssigned({
+    _id: created._id,
+    reviewerId: created.reviewerId,
+    artifactId: created.artifactId,
+    subject: created.subject,
+    classLevel: created.classLevel,
+    anchorWord: created.anchorWord,
+    addressNumber: created.addressNumber,
+    roundNumber: created.roundNumber,
   });
 
   return toDTO(created as unknown as RawAssignment);

@@ -18,6 +18,7 @@ import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkSequence } from "../models/HomeworkSequence";
 import { assertTransition, isEntryState } from "../lifecycle";
 import { isSchoolDay, nextSchoolDay } from "../calendar";
+import { emitHwParentComms } from "../../notifications/services/emitters";
 
 // ---------------------------------------------------------------------------
 // HW_ID generation (handoff §2.1 / D-#34)
@@ -278,6 +279,18 @@ export async function transitionRecord(
   record.state = to;
   record.stateDates.push({ state: to, at });
   await record.save();
+
+  // N1.4 (§7.2, D-#34/D-#45): the 3rd chase prompts the class teacher to contact
+  // the parents. Best-effort + deduped per student+item inside the emitter.
+  if (to === "CHASE" && record.chaseCount >= 3) {
+    await emitHwParentComms({
+      hwItemId: record.hwItemId,
+      hwId: record.hwId,
+      studentId: record.studentId,
+      sectionId: record.sectionId,
+      chaseCount: record.chaseCount,
+    });
+  }
 
   return {
     recordId: record._id.toString(),

@@ -58,6 +58,13 @@ jest.mock("../modules/routine/models/ClassNote", () => ({
   },
 }));
 
+// Notification emitters (N-1, D-#72) — mocked: the host-side call is under test
+// here; the emitter internals are covered in notifications.test.ts.
+const mockEmitClassNotePublished = jest.fn().mockResolvedValue(undefined);
+jest.mock("../modules/notifications/services/emitters", () => ({
+  emitClassNotePublished: (...args: unknown[]) => mockEmitClassNotePublished(...args),
+}));
+
 import { bellSchedule, publishClassNote, myClassNotePrompts } from "../modules/routine/services/RoutineTriggerService";
 
 const DATE = new Date(2026, 5, 2, 9, 0, 0); // a 2026 date
@@ -118,6 +125,7 @@ describe("R5.3 publishClassNote", () => {
     mockSlotFindById.mockResolvedValue(section);
     await publishClassNote({ slotId: oid().toString(), date: DATE, taughtSummaryBn: "Taught X", actorId: TEACHER.toString(), canManage: false });
     expect(mockNoteUpdateOne).toHaveBeenCalledTimes(1);
+    expect(mockEmitClassNotePublished).toHaveBeenCalledTimes(1); // N1.3 — guardians notified on publish
     expect(mockNoteUpdateOne.mock.calls[0][2]).toMatchObject({ upsert: true });
   });
 

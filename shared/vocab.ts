@@ -656,6 +656,52 @@ export const ATTENDANCE_REMINDER_TIER_LABELS_EN: Record<AttendanceReminderTier, 
   T1210: "12:10 — remind marker", T1245: "12:45 — escalate to Office", T1400: "2:00 — escalate to Principal",
 };
 
+// --- A.10 NOTIFICATION ENUMS (app-native; Notifications phase 1 — ------------
+// prd-notifications, D-#72–#75). NO wire-contract twin: a notification is a
+// feature, not import content, and every row is operational/identity-plane
+// behind the ADR-005 firewall — no envelope-schema mirror, no two-place sync;
+// only /shared + the vocab verifier run. NO new permissions either: inbox reads/
+// markRead and device registration are own-row only; emission is server-internal
+// (D-#72, keeps the small permission set D-#17).
+
+/** Notification kinds (D-#72/#74) — every row `NotificationService.emit()`
+ *  writes carries exactly one. The event-driven kinds (CLASS_NOTE_PUBLISHED,
+ *  HW_PARENT_COMMS, REVIEW_ASSIGNED, COVER_ASSIGNED) ship in slice N-1; the
+ *  scheduler-fired kinds (BELL_REMINDER, ATTENDANCE_REMINDER, CLASS_NOTE_PROMPT,
+ *  CLASS_NOTE_ESCALATION) fire from the D-#73 in-process ticker in N-2. */
+export const NOTIFICATION_KINDS = [
+  "BELL_REMINDER",
+  "ATTENDANCE_REMINDER",
+  "CLASS_NOTE_PROMPT",
+  "CLASS_NOTE_ESCALATION",
+  "CLASS_NOTE_PUBLISHED",
+  "HW_PARENT_COMMS",
+  "REVIEW_ASSIGNED",
+  "COVER_ASSIGNED",
+] as const;
+export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
+
+export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
+  BELL_REMINDER: "ঘণ্টার স্মরণিকা",
+  ATTENDANCE_REMINDER: "হাজিরা জমার স্মরণিকা",
+  CLASS_NOTE_PROMPT: "পাঠ নোট লেখার তাগিদ",
+  CLASS_NOTE_ESCALATION: "পাঠ নোট অনিষ্পন্ন",
+  CLASS_NOTE_PUBLISHED: "পাঠ নোট প্রকাশিত",
+  HW_PARENT_COMMS: "অভিভাবক যোগাযোগের তাগিদ",
+  REVIEW_ASSIGNED: "পর্যালোচনার দায়িত্ব",
+  COVER_ASSIGNED: "কাভার ক্লাসের দায়িত্ব",
+};
+export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
+  BELL_REMINDER: "Bell reminder",
+  ATTENDANCE_REMINDER: "Attendance reminder",
+  CLASS_NOTE_PROMPT: "Class-note prompt",
+  CLASS_NOTE_ESCALATION: "Class-note escalation",
+  CLASS_NOTE_PUBLISHED: "Class note published",
+  HW_PARENT_COMMS: "Parent-contact prompt",
+  REVIEW_ASSIGNED: "Review assigned",
+  COVER_ASSIGNED: "Cover assigned",
+};
+
 
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP

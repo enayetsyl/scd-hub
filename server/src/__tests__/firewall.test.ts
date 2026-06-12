@@ -119,6 +119,38 @@ describe("Guardian-portal firewall (ADR-005 / GP-1)", () => {
   });
 });
 
+/**
+ * Notifications firewall (N-1, D-#72 / prd-notifications N5.1).
+ *
+ * Notification + DeviceToken rows name recipients (Users/Guardians) — strictly
+ * identity-plane. Fail-closed both ways: the notifications module must have NO
+ * import path into the corpus plane, and the corpus module must have NO import
+ * path into the notifications module (no analytics/export join back to a
+ * notification or token row).
+ */
+describe("Notifications firewall (ADR-005 / N5.1)", () => {
+  const notificationsDir = path.resolve(__dirname, "../modules/notifications");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("notifications module has NO import from the corpus plane", () => {
+    const files = walkDir(notificationsDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (N-1 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the notifications module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/notifications"));
+      expect(content).not.toMatch(importPattern("models/Notification"));
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;

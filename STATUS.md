@@ -1,8 +1,32 @@
 # STATUS
 
-_Updated: 2026-06-12 (guardian portal v1 built)_
+_Updated: 2026-06-12 (notifications N-1 built)_
 
 ## Now / next
+- **Built (Notifications N-1 — model + emit() seam + own-row inbox + event emitters, D-#72) [branch
+  `worktree-notifications-n1`, PR open]:** first notifications slice, server-side. New
+  `server/src/modules/notifications/` — `Notification` model (per-recipient, exactly ONE of User/Guardian,
+  unique `dedupeKey`, **append + markRead only**, identity-plane) + **`NotificationService.emit()`** — the
+  single seam every emitter calls (idempotent by dedupeKey: a duplicate emit is a silent no-op, incl. the
+  concurrent unique-index race; a **channel registry fans out BEHIND the seam** — the inbox row is written
+  always and is the source of truth; channels run best-effort on NEW rows only and never block the row; none
+  registered in N-1, Expo push registers in N-4) + own-row inbox API `myNotifications`/
+  `myUnreadNotificationCount`/`markNotificationRead`/`markAllNotificationsRead` (**NO new permissions** —
+  recipient derived from the auth token; a GUARDIAN token reads guardian rows, any staff token its user rows).
+  **Four event emitters wired (one best-effort call each — a notification failure never blocks the host
+  mutation):** class-note publish → **login-enabled** guardians of the Section/SubjectGroup (R5.4 partial;
+  contact-only guardians get nothing, the recorded D-#31/D-#72 limitation; dedupe `CNPUB:slot:date:guardian`),
+  HW chase reaching ≥3 → the section's class teacher (§7.2/D-#34/D-#45; dedupe `HWPC:item:student`; unassigned
+  section skipped), review-round assigned → the reviewer (`REV:assignment`), cover assigned → the covering
+  teacher (`COV:substitution`; cancel emits nothing). New app-native `NOTIFICATION_KINDS` (8 kinds + BN/EN
+  labels) — **vocab.ts additive only, no wire-contract sync**; verifier §C.5 added (labels total + exact kind
+  list + no notification:* permission). Firewall test extended both ways (corpus ↛ notifications,
+  notifications ↛ corpus). **Gate GREEN:** vocab verifier PASS, shared build + shared/server tsc clean,
+  **jest 452/452** (29 new; firewall green). **Not verified live.** **Next = N-2** (the D-#73 60s in-process
+  scheduler: bell per-period + 12:00 attendance sweep + class-note 12/13/14 ladder + 15:00/16:00 escalation),
+  then N-3 (app 🔔 badge + NotificationCenter), N-4 (push — NB: AT-4 already shipped `PushDevice` + the
+  platform `ExpoPush` transport; N-4 should ride/reconcile those with D-#75's `DeviceToken` registry as a
+  registered channel behind emit(), not build a twin).
 - **Planned (Deployment — go-live + dev pipeline, D-#90–#93):** build contract
   `docs/deployment.md`. Slices DEP-1 (Oracle VM + DNS) → DEP-2 (prod install,
   systemd + Caddy/HTTPS, Atlas IP allow-list; closes the /pdf CORS follow-up via
@@ -84,7 +108,7 @@ _Updated: 2026-06-12 (guardian portal v1 built)_
   **Plan/docs only — no feature code yet. Next = build M-1 per docs/prd-messaging.md §5, slice order.**
   (Handoff proposed D-#59–#62 — renumbered, taken through D-#75.)
 - **Planned (Notifications phase 1 — in-app inbox + scheduler + push, D-#72/#73/#74/#75):** build contract
-  `docs/prd-notifications.md` authored — **no feature code yet**. Delivers the D-#52 trigger schedule:
+  `docs/prd-notifications.md` authored — **N-1 now BUILT (see bullet above); N-2..N-4 remain**. Delivers the D-#52 trigger schedule:
   `Notification` model + single `NotificationService.emit()` seam (idempotent by dedupeKey, channels fan
   out behind it) + own-row inbox queries (no new permissions); event emitters (class-note publish → login
   guardians [R5.4 partial — 129 contact-only guardians unreachable until the WA/SMS phase], HW §7.2
@@ -96,8 +120,8 @@ _Updated: 2026-06-12 (guardian portal v1 built)_
   → Principal; 🔔 badge + NotificationCenter; **Expo push** (D-#75 — second live external dependency after
   D-#24; native only, web = inbox; no quiet hours; push never blocks the inbox row). App-native
   `NOTIFICATION_KINDS` vocab only — no wire-contract sync; vocab verifier extends at build time.
-  WhatsApp/SMS stay deferred (roadmap patched). **Next = build N-1 per docs/prd-notifications.md §7, slice
-  order.** (Handoff proposed D-#59–#62 — renumbered: those are taken by credential provisioning / UI /
+  WhatsApp/SMS stay deferred (roadmap patched). **N-1 built; next = N-2 per docs/prd-notifications.md §7,
+  slice order.** (Handoff proposed D-#59–#62 — renumbered: those are taken by credential provisioning / UI /
   section merge, and D-#71 is held by the in-flight guardian-portal build.)
 - **Planned (Guardian portal v1 — D-#68/#69/#70):** `docs/prd-guardian-portal.md` adopted —
   activates the pipeline-gated `guardian:read_child` (vocab status flip only in GP-1, verifier must

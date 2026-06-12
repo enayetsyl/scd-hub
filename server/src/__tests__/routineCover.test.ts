@@ -46,6 +46,13 @@ jest.mock("../modules/foundation/services/ScopeGrantService", () => ({
   revokeProxy: (id: unknown, by: unknown) => mockRevokeProxy(id, by),
 }));
 
+// Notification emitters (N-1, D-#72) — mocked: the host-side call is under test
+// here; the emitter internals are covered in notifications.test.ts.
+const mockEmitCoverAssigned = jest.fn().mockResolvedValue(undefined);
+jest.mock("../modules/notifications/services/emitters", () => ({
+  emitCoverAssigned: (...args: unknown[]) => mockEmitCoverAssigned(...args),
+}));
+
 import { teacherAvailability, assignCover, cancelCover } from "../modules/routine/services/RoutineCoverService";
 
 const DATE = new Date(2026, 5, 2, 9, 0, 0); // a Tuesday in June 2026
@@ -113,6 +120,7 @@ describe("R4.2 assignCover", () => {
     expect(mockAssignProxy).toHaveBeenCalledTimes(1);
     expect(mockAssignProxy.mock.calls[0][0]).toMatchObject({ durationDays: 1 });
     expect(mockSubUpdateOne).toHaveBeenCalledTimes(1); // proxyGrantId stamped
+    expect(mockEmitCoverAssigned).toHaveBeenCalledTimes(1); // N1.6 — covering teacher notified
   });
 
   test("a SubjectGroup slot records the cover but binds no grant", async () => {
@@ -134,6 +142,7 @@ describe("R4.3 cancelCover", () => {
     await cancelCover(oid().toString(), oid().toString());
     expect(mockSubUpdateOne).toHaveBeenCalledWith(expect.anything(), { $set: { active: false } });
     expect(mockRevokeProxy).toHaveBeenCalledWith(grantId.toString(), expect.any(String));
+    expect(mockEmitCoverAssigned).not.toHaveBeenCalled(); // N1.6 — cancel emits nothing
   });
 
   test("no proxy grant to revoke when the cover had none (group cover)", async () => {
