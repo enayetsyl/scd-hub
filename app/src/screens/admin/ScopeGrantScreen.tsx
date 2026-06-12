@@ -7,24 +7,23 @@
  */
 import React, { useState } from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useMutation } from "urql";
-import { ASSIGN_PROXY, REVOKE_PROXY, EXTEND_PROXY } from "../../graphql/operations";
+import { useMutation, useQuery } from "urql";
+import { ASSIGN_PROXY, REVOKE_PROXY, EXTEND_PROXY, CLASSES_QUERY } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
-import { Screen, H2, Muted, Card, Button, Field, Notice, Divider } from "../../components/ui";
+import { Screen, H2, Muted, Card, Button, Field, Select, Notice, Divider } from "../../components/ui";
+import { TeacherSelect, AcademicYearSelect } from "../../components/selects";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
-import { useSectionContext } from "../../state/SectionContext";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "ScopeGrant">;
 
 export default function ScopeGrantScreen(_props: Props): React.ReactElement {
-  const { selection } = useSectionContext();
-
   // Assign
   const [covering, setCovering] = useState("");
   const [absent, setAbsent] = useState("");
-  const [classId, setClassId] = useState(selection.classId ?? "");
-  const [sectionId, setSectionId] = useState(selection.sectionId ?? "");
+  const [yearId, setYearId] = useState("");
+  const [classId, setClassId] = useState("");
+  const [sectionId, setSectionId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [duration, setDuration] = useState("");
   const [assignBusy, setAssignBusy] = useState(false);
@@ -45,6 +44,29 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
   const [, assignProxy] = useMutation(ASSIGN_PROXY);
   const [, revokeProxy] = useMutation(REVOKE_PROXY);
   const [, extendProxy] = useMutation(EXTEND_PROXY);
+
+  // Class/section cascade: pick year → class → section (no pasting ids).
+  const [{ data: classData }] = useQuery({
+    query: CLASSES_QUERY,
+    variables: { academicYearId: yearId },
+    pause: yearId === "",
+  });
+  const classes = classData?.classes ?? [];
+  const classOptions = classes.map((c) => ({ label: c.nameBn, value: c.id }));
+  const sectionOptions = (classes.find((c) => c.id === classId)?.sections ?? []).map((s) => ({
+    label: s.nameBn,
+    value: s.id,
+    hint: s.code,
+  }));
+  function onYear(v: string): void {
+    setYearId(v);
+    setClassId("");
+    setSectionId("");
+  }
+  function onClass(v: string): void {
+    setClassId(v);
+    setSectionId("");
+  }
 
   async function onAssign(): Promise<void> {
     if (!covering.trim() || !classId.trim() || !sectionId.trim() || !duration.trim() || assignBusy) return;
@@ -115,12 +137,25 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
       {/* Assign proxy */}
       <Card>
         <Muted style={{ fontWeight: "700", marginBottom: 8 }}>{STR.assignProxy}</Muted>
-        <Field label="COVERING_TEACHER_ID" value={covering} onChangeText={setCovering} />
-        <Field label="ABSENT_TEACHER_ID (optional)" value={absent} onChangeText={setAbsent} />
-        <Field label="CLASS_ID" value={classId} onChangeText={setClassId} />
-        <Field label="SECTION_ID" value={sectionId} onChangeText={setSectionId} />
-        <Field label="START_DATE (YYYY-MM-DD, default today)" value={startDate} onChangeText={setStartDate} placeholder="2026-06-10" />
-        <Field label="DURATION_DAYS" value={duration} onChangeText={setDuration} keyboardType="numeric" placeholder="5" />
+        <TeacherSelect label={STR.coveringTeacher} value={covering} onChange={setCovering} />
+        <TeacherSelect label={STR.absentTeacher} value={absent} onChange={setAbsent} />
+        <AcademicYearSelect label={STR.academicYear} value={yearId} onChange={onYear} />
+        <Select
+          label={STR.class}
+          value={classId === "" ? null : classId}
+          options={classOptions}
+          onChange={onClass}
+          placeholder={STR.selectClass}
+        />
+        <Select
+          label={STR.section}
+          value={sectionId === "" ? null : sectionId}
+          options={sectionOptions}
+          onChange={setSectionId}
+          placeholder={STR.selectSection}
+        />
+        <Field label={`${STR.startDate} (YYYY-MM-DD)`} value={startDate} onChangeText={setStartDate} placeholder="2026-06-10" />
+        <Field label={STR.durationDays} value={duration} onChangeText={setDuration} keyboardType="numeric" placeholder="5" />
         {assignErr ? <Notice message={assignErr} tone="danger" /> : null}
         {assignMsg ? <Notice message={assignMsg} tone="ok" /> : null}
         <Button title={assignBusy ? STR.saving : STR.assignProxy} onPress={onAssign} loading={assignBusy} />

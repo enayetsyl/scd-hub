@@ -9,9 +9,10 @@ import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { roleHasPermission } from "@scd/shared";
-import { BELL_SCHEDULE_QUERY, ASSIGN_BELL_DUTY } from "../../graphql/operations";
+import { BELL_SCHEDULE_QUERY, ASSIGN_BELL_DUTY, TEACHERS_QUERY } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Badge, Notice, Loader } from "../../components/ui";
+import { TeacherSelect } from "../../components/selects";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
@@ -32,6 +33,8 @@ export default function BellScheduleScreen(_props: Props): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
 
   const [schedQ, refetch] = useQuery({ query: BELL_SCHEDULE_QUERY, variables: { date, audienceKey } });
+  const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY });
+  const teacherName = new Map((teacherData?.teachers ?? []).map((t) => [t.id, t.name]));
   const [, assign] = useMutation(ASSIGN_BELL_DUTY);
 
   async function assignDuty(): Promise<void> {
@@ -62,7 +65,7 @@ export default function BellScheduleScreen(_props: Props): React.ReactElement {
         {canManage ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.rtBellAdmin}</Body>
-            <Field label={STR.rtAdminId} value={adminId} onChangeText={setAdminId} />
+            <TeacherSelect label={STR.rtAdminId} value={adminId} onChange={setAdminId} />
             <Button title={STR.rtAssignBell} onPress={assignDuty} loading={busy} disabled={busy || adminId.trim() === ""} style={{ marginTop: space(2) }} />
           </Card>
         ) : null}
@@ -75,7 +78,11 @@ export default function BellScheduleScreen(_props: Props): React.ReactElement {
               <Body style={{ fontWeight: "700" }}>
                 {STR.rtPeriodN} {bnNum(b.periodNumber)} · {STR.rtBellEnds} {b.endHHMM}
               </Body>
-              {b.bellAdminId ? <Badge text={b.bellAdminId} tone="brand" /> : <Badge text="—" tone="muted" />}
+              {b.bellAdminId ? (
+                <Badge text={teacherName.get(b.bellAdminId) ?? b.bellAdminId} tone="brand" />
+              ) : (
+                <Badge text="—" tone="muted" />
+              )}
             </View>
           </Card>
         ))}

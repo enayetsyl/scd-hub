@@ -5,7 +5,7 @@
  * and classes(academicYearId) drives class/section pick. Registered in both the
  * Sets and Trackers stacks; navigates back on selection.
  */
-import React, { useState } from "react";
+import React from "react";
 import { View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "urql";
@@ -16,13 +16,12 @@ import {
   Body,
   Card,
   Button,
-  Field,
   Loader,
   EmptyState,
   ErrorBanner,
-  Notice,
   Divider,
 } from "../../components/ui";
+import { AcademicYearSelect } from "../../components/selects";
 import { STR, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
@@ -31,7 +30,6 @@ import { space } from "../../theme/tokens";
 export default function SectionPickerScreen(): React.ReactElement {
   const nav = useNavigation();
   const { selection, setAcademicYearId, setSection } = useSectionContext();
-  const [yearInput, setYearInput] = useState(selection.academicYearId ?? "");
   const ayId = selection.academicYearId;
 
   const [{ data, fetching, error }, refetch] = useQuery({
@@ -45,14 +43,7 @@ export default function SectionPickerScreen(): React.ReactElement {
   return (
     <Screen scroll>
       <H2>{STR.pickSection}</H2>
-      <Notice message={STR.academicYearHint} tone="warn" />
-      <Field
-        label="ACADEMIC_YEAR_ID"
-        value={yearInput}
-        onChangeText={setYearInput}
-        placeholder="e.g. 6650f1a2c…"
-      />
-      <Button title={STR.apply} variant="secondary" onPress={() => setAcademicYearId(yearInput)} />
+      <AcademicYearSelect label={STR.academicYear} value={ayId ?? ""} onChange={setAcademicYearId} />
 
       {ayId ? (
         <>

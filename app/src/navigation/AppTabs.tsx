@@ -8,7 +8,7 @@
  *   Admin     content:import | user:manage  (Principal, Office)
  */
 import React from "react";
-import { Text, Pressable, View } from "react-native";
+import { Text, Pressable, View, Platform } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { roleHasPermission } from "@scd/shared";
@@ -94,18 +94,28 @@ function LogoutButton(): React.ReactElement {
   );
 }
 
-/** The logged-in user's name, shown left of the language/logout actions. */
+/** The logged-in user's name, shown left of the language/logout actions. The name
+ *  is truncated to fit; on web a native `title` tooltip shows the full name on hover. */
 function HeaderName(): React.ReactElement | null {
   const { user } = useAuth();
   const colors = useColors();
-  if (!user?.name) return null;
+  const ref = React.useRef<Text>(null);
+  const name = user?.name ?? "";
+  React.useEffect(() => {
+    if (Platform.OS === "web" && name && ref.current) {
+      (ref.current as unknown as { setAttribute?: (k: string, v: string) => void }).setAttribute?.("title", name);
+    }
+  }, [name]);
+  if (!name) return null;
   return (
     <Text
+      ref={ref}
       style={{ ...typeScale.button, color: colors.onPrimary, maxWidth: 150, marginRight: 4 }}
       numberOfLines={1}
       ellipsizeMode="tail"
+      accessibilityLabel={name}
     >
-      👤 {user.name}
+      👤 {name}
     </Text>
   );
 }

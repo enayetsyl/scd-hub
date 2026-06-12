@@ -98,6 +98,30 @@ export const CLASSES_QUERY = gql<{ classes: ClassT[] }, { academicYearId: string
   }
 `;
 
+export interface AcademicYearT {
+  id: string;
+  label: string;
+  current: boolean;
+}
+
+export const ACADEMIC_YEARS_QUERY = gql<{ academicYears: AcademicYearT[] }, NoVars>`
+  query AcademicYears {
+    academicYears { id label current }
+  }
+`;
+
+export interface RoomT {
+  id: string;
+  code: string;
+  nameBn: string;
+}
+
+export const ROOMS_QUERY = gql<{ rooms: RoomT[] }, NoVars>`
+  query Rooms {
+    rooms { id code nameBn }
+  }
+`;
+
 export interface GuardianContactT {
   id: string;
   name: string;

@@ -12,9 +12,10 @@ import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { DAYS_OF_WEEK, ROUTINE_SUBJECTS, PERIOD_TRACKS } from "@scd/shared";
-import { ROUTINE_SLOTS_QUERY, CREATE_ROUTINE_SLOT, DELETE_ROUTINE_SLOT } from "../../graphql/operations";
+import { ROUTINE_SLOTS_QUERY, CREATE_ROUTINE_SLOT, DELETE_ROUTINE_SLOT, TEACHERS_QUERY } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, Notice } from "../../components/ui";
+import { TeacherSelect, RoomSelect } from "../../components/selects";
 import { STR, routineSubjectLabel, periodTrackLabel, dayOfWeekLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -39,6 +40,8 @@ export default function RoutineEditorScreen({ route }: Props): React.ReactElemen
   const [warn, setWarn] = useState<string | null>(null);
 
   const [slotsQ, refetch] = useQuery({ query: ROUTINE_SLOTS_QUERY, variables: { groupType, groupId } });
+  const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY });
+  const teacherName = new Map((teacherData?.teachers ?? []).map((t) => [t.id, t.name]));
   const [, createSlot] = useMutation(CREATE_ROUTINE_SLOT);
   const [, deleteSlot] = useMutation(DELETE_ROUTINE_SLOT);
 
@@ -121,8 +124,8 @@ export default function RoutineEditorScreen({ route }: Props): React.ReactElemen
               <Chip key={tr} label={periodTrackLabel(tr)} selected={track === tr} onPress={() => setTrack(tr)} />
             ))}
           </ChipRow>
-          <Field label={STR.rtTeacherId} value={teacherId} onChangeText={setTeacherId} />
-          <Field label={STR.rtRoomId} value={roomId} onChangeText={setRoomId} />
+          <TeacherSelect label={STR.rtTeacherId} value={teacherId} onChange={setTeacherId} />
+          <RoomSelect label={STR.rtRoomId} value={roomId} onChange={setRoomId} />
           <Field label={STR.rtFrom} value={from} onChangeText={setFrom} />
           <Button title={STR.rtCreate} onPress={submit} loading={busy} disabled={busy} style={{ marginTop: space(2) }} />
         </Card>
@@ -138,7 +141,7 @@ export default function RoutineEditorScreen({ route }: Props): React.ReactElemen
                 </Body>
                 <Muted>
                   {routineSubjectLabel(s.subject)} · {periodTrackLabel(s.track)}
-                  {s.teacherId ? ` · ${s.teacherId}` : ""}
+                  {s.teacherId ? ` · ${teacherName.get(s.teacherId) ?? s.teacherId}` : ""}
                 </Muted>
               </View>
               <Button title={STR.remove} variant="danger" onPress={() => remove(s.id)} disabled={busy} />
