@@ -1,5 +1,6 @@
 import { builder } from "../../../schema";
 import { User, type IUser } from "../models/User";
+import { Guardian } from "../models/Guardian";
 import { hashPassword } from "../services/AuthService";
 import type { Role } from "@scd/shared";
 import { ROLES } from "@scd/shared";
@@ -24,9 +25,24 @@ builder.queryField("me", (t) =>
     type: UserRef,
     nullable: true,
     authScopes: { authenticated: true },
-    description: "Currently authenticated staff user",
+    description: "Currently authenticated account (staff User, or the Guardian mapped to the same shape)",
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) return null;
+      // A GUARDIAN JWT subjects the Guardian collection (GP-1/GP-2): map the
+      // guardian's own account onto the same shape so the app boot flow works.
+      // Reads only the caller's own row — no new data surface.
+      if (ctx.auth.role === "GUARDIAN") {
+        const g = await Guardian.findById(ctx.auth.userId).lean();
+        if (!g || !g.active) return null;
+        return {
+          _id: g._id,
+          email: g.email,
+          phone: g.phone,
+          role: "GUARDIAN" as IUser["role"],
+          name: g.name,
+          active: g.active,
+        };
+      }
       return User.findById(ctx.auth.userId).lean();
     },
   }),

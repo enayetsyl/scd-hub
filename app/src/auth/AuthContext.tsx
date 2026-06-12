@@ -6,7 +6,7 @@
  */
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useClient } from "urql";
-import { ME_QUERY, STAFF_LOGIN, type MeUser } from "../graphql/operations";
+import { ME_QUERY, STAFF_LOGIN, GUARDIAN_LOGIN, type MeUser } from "../graphql/operations";
 import { hydrateToken, persistToken } from "../lib/tokenStore";
 import { friendlyError } from "../lib/errors";
 import { STR } from "../lib/labels";
@@ -59,11 +59,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const res = await client
-        .mutation(STAFF_LOGIN, { email: email.trim(), password })
-        .toPromise();
-      const auth = res.data?.staffLogin;
+      const id = email.trim();
+      const res = await client.mutation(STAFF_LOGIN, { email: id, password }).toPromise();
       if (res.error) return { ok: false, message: friendlyError(res.error) };
+      let auth = res.data?.staffLogin ?? null;
+      // Guardian family fallback (GP-2, J5.2/D-#59): no staff account matched —
+      // try the flexible guardian login with the same identifier (phone unless
+      // it looks like an email).
+      if (!auth) {
+        const gres = await client
+          .mutation(GUARDIAN_LOGIN, {
+            identifier: id,
+            identifierKind: id.includes("@") ? "email" : "phone",
+            password,
+          })
+          .toPromise();
+        if (gres.error) return { ok: false, message: friendlyError(gres.error) };
+        auth = gres.data?.guardianLogin ?? null;
+      }
       if (!auth) return { ok: false, message: STR.loginInvalid };
 
       await persistToken(auth.token);

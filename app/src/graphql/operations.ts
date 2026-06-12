@@ -53,6 +53,22 @@ export const STAFF_LOGIN = gql<
   }
 `;
 
+/** Guardian family login (J5.2/D-#59) — the app falls back to this when
+ *  staffLogin does not match (guardians log in with the family phone). */
+export const GUARDIAN_LOGIN = gql<
+  { guardianLogin: AuthResult | null },
+  { identifier: string; identifierKind: string; password: string }
+>`
+  mutation GuardianLogin($identifier: String!, $identifierKind: String!, $password: String!) {
+    guardianLogin(identifier: $identifier, identifierKind: $identifierKind, password: $password) {
+      token
+      userId
+      role
+      name
+    }
+  }
+`;
+
 // ===========================================================================
 // Foundation: subjects / classes / sections / students / scopes
 // ===========================================================================
@@ -1683,6 +1699,149 @@ export const TEACHER_AVAILABILITY_QUERY = gql<
   query TeacherAvailability($date: String!, $periodNumber: Int!) {
     teacherAvailability(date: $date, periodNumber: $periodNumber) {
       teacherId name classCount free
+    }
+  }
+`;
+
+// ===========================================================================
+// Guardian portal (GP-1/GP-2, D-#68/#69) — guardian:read_child, link-scoped.
+// The slot shape is the NARROW guardian type: subject + period + time ONLY.
+// ===========================================================================
+
+export interface GuardianChildGroupT {
+  id: string;
+  name: string;
+}
+
+export interface GuardianChildT {
+  studentId: string;
+  nameBn: string;
+  gender: string | null;
+  rosterClassLabel: string;
+  sectionId: string;
+  sectionName: string;
+  quranGroup: GuardianChildGroupT | null;
+  arabicGroup: GuardianChildGroupT | null;
+}
+
+export const MY_CHILDREN_QUERY = gql<{ myChildren: GuardianChildT[] }, NoVars>`
+  query MyChildren {
+    myChildren {
+      studentId nameBn gender rosterClassLabel sectionId sectionName
+      quranGroup { id name }
+      arabicGroup { id name }
+    }
+  }
+`;
+
+export interface GuardianSlotT {
+  subject: string;
+  subjectLabelBn: string;
+  periodNumber: number;
+  startHHMM: string | null;
+  endHHMM: string | null;
+}
+
+export interface GuardianDayT {
+  dayType: string;
+  dayTypeLabelBn: string;
+  holidayNameBn: string | null;
+  slots: GuardianSlotT[];
+}
+
+export const CHILD_ROUTINE_QUERY = gql<
+  { childRoutine: GuardianDayT },
+  { studentId: string; date: string }
+>`
+  query ChildRoutine($studentId: String!, $date: String!) {
+    childRoutine(studentId: $studentId, date: $date) {
+      dayType dayTypeLabelBn holidayNameBn
+      slots { subject subjectLabelBn periodNumber startHHMM endHHMM }
+    }
+  }
+`;
+
+export interface GuardianClassNoteT {
+  subject: string;
+  subjectLabelBn: string;
+  periodNumber: number | null;
+  taughtSummaryBn: string;
+  homework: {
+    hwId: string;
+    subject: string;
+    subjectLabelBn: string;
+    qCount: number;
+    timeDecl: number;
+  } | null;
+}
+
+export const CHILD_CLASS_NOTES_QUERY = gql<
+  { childClassNotes: GuardianClassNoteT[] },
+  { studentId: string; date: string }
+>`
+  query ChildClassNotes($studentId: String!, $date: String!) {
+    childClassNotes(studentId: $studentId, date: $date) {
+      subject subjectLabelBn periodNumber taughtSummaryBn
+      homework { hwId subject subjectLabelBn qCount timeDecl }
+    }
+  }
+`;
+
+export interface GuardianHwRecordT {
+  recordId: string;
+  hwId: string;
+  subject: string;
+  subjectLabelBn: string;
+  dateGiven: string;
+  state: string;
+  stateLabelBn: string;
+  givenAt: string | null;
+  dueDate: string | null;
+  submittedAt: string | null;
+  checkedAt: string | null;
+  returnedAt: string | null;
+  chaseCount: number;
+  result: string | null;
+  resultLabelBn: string | null;
+  resubOf: string | null;
+  topupFlag: boolean;
+  topupQCount: number;
+  topupTimeMin: number | null;
+  questionFileId: string | null;
+  answerFileId: string | null;
+}
+
+export const CHILD_HOMEWORK_QUERY = gql<
+  { childHomework: GuardianHwRecordT[] },
+  { studentId: string; from: string; to: string }
+>`
+  query ChildHomework($studentId: String!, $from: String!, $to: String!) {
+    childHomework(studentId: $studentId, from: $from, to: $to) {
+      recordId hwId subject subjectLabelBn dateGiven state stateLabelBn
+      givenAt dueDate submittedAt checkedAt returnedAt
+      chaseCount result resultLabelBn resubOf
+      topupFlag topupQCount topupTimeMin
+      questionFileId answerFileId
+    }
+  }
+`;
+
+export interface GuardianDayLoadT {
+  studentId: string;
+  baseMinutes: number;
+  topupMinutes: number;
+  totalMinutes: number;
+  ceiling: number;
+  overCeiling: boolean;
+}
+
+export const CHILD_DAY_LOAD_QUERY = gql<
+  { childDayLoad: GuardianDayLoadT },
+  { studentId: string; date: string }
+>`
+  query ChildDayLoad($studentId: String!, $date: String!) {
+    childDayLoad(studentId: $studentId, date: $date) {
+      studentId baseMinutes topupMinutes totalMinutes ceiling overCeiling
     }
   }
 `;

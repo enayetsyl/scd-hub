@@ -54,6 +54,17 @@ export type RoutineStackParamList = {
   SectionPicker: undefined;
 };
 
+/** Guardian portal (GP-2) — one single-screen stack per guardian tab. */
+export type GuardianHomeStackParamList = {
+  GuardianHome: undefined;
+};
+export type GuardianHomeworkStackParamList = {
+  ChildHomework: undefined;
+};
+export type GuardianRoutineStackParamList = {
+  ChildRoutine: undefined;
+};
+
 export type AdminStackParamList = {
   AdminHome: undefined;
   Import: undefined;
@@ -77,4 +88,7 @@ export type TabParamList = {
   ReviewTab: NavigatorScreenParams<ReviewStackParamList>;
   RoutineTab: NavigatorScreenParams<RoutineStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
+  GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;
+  GuardianHomeworkTab: NavigatorScreenParams<GuardianHomeworkStackParamList>;
+  GuardianRoutineTab: NavigatorScreenParams<GuardianRoutineStackParamList>;
 };

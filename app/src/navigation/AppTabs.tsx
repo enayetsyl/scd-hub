@@ -22,6 +22,9 @@ import type {
   ReviewStackParamList,
   RoutineStackParamList,
   AdminStackParamList,
+  GuardianHomeStackParamList,
+  GuardianHomeworkStackParamList,
+  GuardianRoutineStackParamList,
   TabParamList,
 } from "./types";
 
@@ -71,6 +74,10 @@ import AssignClassTeacherScreen from "../screens/admin/AssignClassTeacherScreen"
 import SectionConfigScreen from "../screens/admin/SectionConfigScreen";
 import GuardianCredentialsScreen from "../screens/admin/GuardianCredentialsScreen";
 import StaffCredentialsScreen from "../screens/admin/StaffCredentialsScreen";
+import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
+import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
+import ChildRoutineScreen from "../screens/guardian/ChildRoutineScreen";
+import { GuardianChildProvider } from "../state/GuardianChildContext";
 
 export { LoginScreen };
 
@@ -264,6 +271,40 @@ function AdminNavigator(): React.ReactElement {
   );
 }
 
+// --- Guardian portal stacks (GP-2, D-#68) ------------------------------------
+// Three single-screen stacks; the shared GuardianChildProvider above the tab
+// navigator keeps the child switcher's selection scoped across all of them.
+
+const GuardianHomeStack = createNativeStackNavigator<GuardianHomeStackParamList>();
+function GuardianHomeNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <GuardianHomeStack.Navigator screenOptions={stackOptions}>
+      <GuardianHomeStack.Screen name="GuardianHome" component={GuardianHomeScreen} options={{ title: STR.gpToday }} />
+    </GuardianHomeStack.Navigator>
+  );
+}
+
+const GuardianHomeworkStack = createNativeStackNavigator<GuardianHomeworkStackParamList>();
+function GuardianHomeworkNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <GuardianHomeworkStack.Navigator screenOptions={stackOptions}>
+      <GuardianHomeworkStack.Screen name="ChildHomework" component={ChildHomeworkScreen} options={{ title: STR.tabHomework }} />
+    </GuardianHomeworkStack.Navigator>
+  );
+}
+
+const GuardianRoutineStack = createNativeStackNavigator<GuardianRoutineStackParamList>();
+function GuardianRoutineNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <GuardianRoutineStack.Navigator screenOptions={stackOptions}>
+      <GuardianRoutineStack.Screen name="ChildRoutine" component={ChildRoutineScreen} options={{ title: STR.gpWeeklyRoutine }} />
+    </GuardianRoutineStack.Navigator>
+  );
+}
+
 // --- Tabs ------------------------------------------------------------------
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -282,8 +323,12 @@ export function AppTabs(): React.ReactElement {
     !!role && (roleHasPermission(role, "content:review") || roleHasPermission(role, "content:assign_review"));
   const canRoutine = !!role && roleHasPermission(role, "routine:read");
   const canAdmin = !!role && (roleHasPermission(role, "content:import") || roleHasPermission(role, "user:manage"));
+  // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
+  // staff gate above is false for guardians — the guardian tab set is all they see.
+  const canGuardian = !!role && roleHasPermission(role, "guardian:read_child");
 
   return (
+    <GuardianChildProvider enabled={role === "GUARDIAN"}>
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
@@ -321,6 +366,16 @@ export function AppTabs(): React.ReactElement {
       {canAdmin ? (
         <Tab.Screen name="AdminTab" component={AdminNavigator} options={{ title: STR.tabAdmin, tabBarIcon: tabIcon("⚙️") }} />
       ) : null}
+      {canGuardian ? (
+        <Tab.Screen name="GuardianHomeTab" component={GuardianHomeNavigator} options={{ title: STR.gpToday, tabBarIcon: tabIcon("🏠") }} />
+      ) : null}
+      {canGuardian ? (
+        <Tab.Screen name="GuardianHomeworkTab" component={GuardianHomeworkNavigator} options={{ title: STR.tabHomework, tabBarIcon: tabIcon("📒") }} />
+      ) : null}
+      {canGuardian ? (
+        <Tab.Screen name="GuardianRoutineTab" component={GuardianRoutineNavigator} options={{ title: STR.tabRoutine, tabBarIcon: tabIcon("📅") }} />
+      ) : null}
     </Tab.Navigator>
+    </GuardianChildProvider>
   );
 }
