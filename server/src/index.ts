@@ -20,6 +20,7 @@ import "./modules/questions/resolvers/questions";
 import "./modules/assessment/resolvers/assessment";
 import "./modules/trackers/resolvers/trackers";
 import "./modules/trackers/resolvers/homework";
+import "./modules/trackers/resolvers/homeworkFiles";
 import "./modules/routine/resolvers/routine";
 import "./modules/routine/resolvers/routineSlots";
 import "./modules/routine/resolvers/routineTriggers";
@@ -28,6 +29,7 @@ import "./modules/guardian/resolvers/guardianPortal";
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";
 import { setPdfRouter } from "./modules/assessment/routes/setPdf";
+import { filesRouter } from "./routes/files";
 
 const app = express();
 
@@ -69,7 +71,7 @@ const corsForRest: express.RequestHandler = (req, res, next) => {
   const origin = req.headers.origin;
   if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Vary", "Origin");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
   if (req.method === "OPTIONS") {
     res.sendStatus(204);
@@ -78,10 +80,15 @@ const corsForRest: express.RequestHandler = (req, res, next) => {
   next();
 };
 app.use("/pdf", corsForRest);
+app.use("/files", corsForRest);
 
 // Thin HTTP surface — PDF export (ADR-003, ADR-009)
 app.use("/pdf", pdfRouter);
 app.use("/pdf/set", setPdfRouter);
+
+// Thin HTTP surface — homework files (GP-A, D-#70): server-in-the-middle
+// upload/download; Drive is never exposed to a client.
+app.use("/files", filesRouter);
 
 const PORT = Number(process.env.PORT ?? 4000);
 

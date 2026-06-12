@@ -21,6 +21,7 @@ export type AuditEventKind =
   | "CREDENTIAL_PROVISIONED" // login generated/reset for a guardian or staff member (D-#59/#60)
   | "SECTIONS_MERGED"     // a class's gender sections combined into one (D-#62)
   | "SECTIONS_SPLIT"      // a merged class split back to its source sections (D-#62)
+  | "HW_FILE_ATTACHED"    // a question/answer file attached to homework (GP-A, D-#70)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

@@ -52,6 +52,10 @@ export interface IHomeworkItem extends Document {
   status: HomeworkItemStatus;
   declaredBy: Types.ObjectId;
   issuedAt?: Date;
+  /** Optional teacher-attached QUESTION file (GP-A, D-#70) — one per item, shared
+   *  by the class. A `StoredFile` ref; re-attach replaces the reference (the old
+   *  Drive file stays under the year's retention). */
+  questionFileId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,6 +86,7 @@ const HomeworkItemSchema = new Schema<IHomeworkItem>(
     status: { type: String, enum: HOMEWORK_ITEM_STATUSES, required: true, default: "declared" },
     declaredBy: { type: Schema.Types.ObjectId, required: true },
     issuedAt: { type: Date },
+    questionFileId: { type: Schema.Types.ObjectId, ref: "StoredFile" },
   },
   { timestamps: true },
 );

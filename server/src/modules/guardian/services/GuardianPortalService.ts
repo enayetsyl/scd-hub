@@ -399,7 +399,6 @@ export async function childHomework(
     if (!item) continue;
     const given = new Date(item.dateGiven);
     if (given < start || given > end) continue;
-    const rec = r as typeof r & { questionFileId?: unknown; answerFileId?: unknown };
     out.push({
       recordId: idStr(r._id),
       hwId: r.hwId,
@@ -420,11 +419,9 @@ export async function childHomework(
       topupFlag: r.topupFlag,
       topupQCount: r.topupQids?.length ?? 0,
       topupTimeMin: r.topupTime ?? null,
-      // GP-A wires these to StoredFile refs; null until then / when unattached.
-      questionFileId: (item as IHomeworkItem & { questionFileId?: unknown }).questionFileId
-        ? String((item as IHomeworkItem & { questionFileId?: unknown }).questionFileId)
-        : null,
-      answerFileId: rec.answerFileId ? String(rec.answerFileId) : null,
+      // GP-A StoredFile refs — null when no file is attached.
+      questionFileId: item.questionFileId ? item.questionFileId.toString() : null,
+      answerFileId: r.answerFileId ? r.answerFileId.toString() : null,
     });
   }
 

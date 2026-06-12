@@ -51,6 +51,10 @@ export interface IHomeworkStudentRecord extends Document {
   topupFlag: boolean;
   topupQids: string[];
   topupTime?: number;
+  /** Optional teacher-attached checked-ANSWER file (GP-A, D-#70) — per student,
+   *  per record (a resubmission record may carry its own). Child PII (ADR-005):
+   *  download is link-gated; never any corpus path, never a public URL. */
+  answerFileId?: Types.ObjectId;
   issuedBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -80,6 +84,7 @@ const HomeworkStudentRecordSchema = new Schema<IHomeworkStudentRecord>(
     topupFlag: { type: Boolean, required: true, default: false },
     topupQids: { type: [String], default: [] },
     topupTime: { type: Number },
+    answerFileId: { type: Schema.Types.ObjectId, ref: "StoredFile" },
     issuedBy: { type: Schema.Types.ObjectId, required: true },
   },
   { timestamps: true },

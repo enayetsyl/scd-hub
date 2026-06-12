@@ -1268,6 +1268,8 @@ export interface HwStudentRecordT {
   dueDate: string | null;
   chaseCount: number;
   result: string | null;
+  /** StoredFile id of the attached checked-answer file (GP-A) — null when none. */
+  answerFileId: string | null;
 }
 
 export const HOMEWORK_STUDENT_RECORDS = gql<
@@ -1276,7 +1278,7 @@ export const HOMEWORK_STUDENT_RECORDS = gql<
 >`
   query HomeworkStudentRecords($sectionId: String!, $classId: String!, $itemId: String!) {
     homeworkStudentRecords(sectionId: $sectionId, classId: $classId, itemId: $itemId) {
-      id hwId studentId state stateDates { state at } dueDate chaseCount result
+      id hwId studentId state stateDates { state at } dueDate chaseCount result answerFileId
     }
   }
 `;
@@ -1292,6 +1294,8 @@ export interface HwItemT {
   qCount: number;
   revItem: boolean;
   status: string;
+  /** StoredFile id of the attached question file (GP-A) — null when none. */
+  questionFileId: string | null;
 }
 
 export const HOMEWORK_ITEMS = gql<
@@ -1300,7 +1304,7 @@ export const HOMEWORK_ITEMS = gql<
 >`
   query HomeworkItems($sectionId: String!, $classId: String!, $dateGiven: String) {
     homeworkItems(sectionId: $sectionId, classId: $classId, dateGiven: $dateGiven) {
-      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status
+      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId
     }
   }
 `;
@@ -1331,7 +1335,39 @@ export const DECLARE_HOMEWORK_ITEM = gql<
       subject: $subject, dateGiven: $dateGiven, topTags: $topTags, timeDecl: $timeDecl,
       qCount: $qCount, poolRef: $poolRef, revItem: $revItem
     ) {
-      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status
+      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId
+    }
+  }
+`;
+
+// --- GP-A homework file attachments (D-#70) ---------------------------------
+// Upload itself is REST (POST /files/hw, see lib/files.ts); these bind the
+// uploaded StoredFile to its homework doc. Teachers attach; guardians only view.
+
+export interface HwFileAttachResultT {
+  id: string;
+  hwId: string;
+  fileId: string;
+}
+
+export const ATTACH_HW_QUESTION_FILE = gql<
+  { attachHomeworkQuestionFile: HwFileAttachResultT },
+  { hwItemId: string; fileId: string }
+>`
+  mutation AttachHomeworkQuestionFile($hwItemId: String!, $fileId: String!) {
+    attachHomeworkQuestionFile(hwItemId: $hwItemId, fileId: $fileId) {
+      id hwId fileId
+    }
+  }
+`;
+
+export const ATTACH_HW_ANSWER_FILE = gql<
+  { attachHomeworkAnswerFile: HwFileAttachResultT },
+  { recordId: string; fileId: string }
+>`
+  mutation AttachHomeworkAnswerFile($recordId: String!, $fileId: String!) {
+    attachHomeworkAnswerFile(recordId: $recordId, fileId: $fileId) {
+      id hwId fileId
     }
   }
 `;

@@ -9,7 +9,8 @@ import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { HW_RESULTS } from "@scd/shared";
-import { HOMEWORK_ITEMS, HOMEWORK_STUDENT_RECORDS, CHECK_HOMEWORK_RECORD } from "../../graphql/operations";
+import { HOMEWORK_ITEMS, HOMEWORK_STUDENT_RECORDS, CHECK_HOMEWORK_RECORD, ATTACH_HW_ANSWER_FILE } from "../../graphql/operations";
+import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
 import { SectionBar } from "../../components/SectionBar";
@@ -50,6 +51,9 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
     pause: !hasSection || !itemId,
   });
   const [, check] = useMutation(CHECK_HOMEWORK_RECORD);
+  const [, attachAnswer] = useMutation(ATTACH_HW_ANSWER_FILE);
+  /** Which record's answer-file upload is in flight (GP-A). */
+  const [fileBusyId, setFileBusyId] = useState<string | null>(null);
 
   const items = (itemsQ.data?.homeworkItems ?? []).filter((i) => i.status === "issued");
   const submitted = (recsQ.data?.homeworkStudentRecords ?? []).filter((r) => r.state === "SUBMITTED");
@@ -88,6 +92,30 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
       return next;
     });
     refetchRecs({ requestPolicy: "network-only" });
+  }
+
+  /** Optional checked-answer attach (GP-A, D-#70) — failure shows a Bangla
+   *  notice and never blocks checking (GP-J8). */
+  async function onAttachAnswer(recordId: string): Promise<void> {
+    if (fileBusyId) return;
+    setError(null);
+    setOk(null);
+    setFileBusyId(recordId);
+    try {
+      const uploaded = await pickAndUploadHomeworkFile("answer");
+      if (!uploaded) return; // picker cancelled
+      const res = await attachAnswer({ recordId, fileId: uploaded.fileId });
+      if (res.error || !res.data?.attachHomeworkAnswerFile) {
+        setError(friendlyError(res.error));
+        return;
+      }
+      setOk(STR.hwFileAttached);
+      refetchRecs({ requestPolicy: "network-only" });
+    } catch (e) {
+      setError(e instanceof FileUploadError ? e.message : STR.hwFileUploadFail);
+    } finally {
+      setFileBusyId(null);
+    }
   }
 
   return (
@@ -130,7 +158,10 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
                     <Card key={r.id}>
                       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                         <Muted>{r.hwId}</Muted>
-                        <Badge text={lifecycleStateLabel(r.state)} tone="brand" />
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+                          {r.answerFileId ? <Badge text={STR.hwFileHas} tone="ok" /> : null}
+                          <Badge text={lifecycleStateLabel(r.state)} tone="brand" />
+                        </View>
                       </View>
                       <Muted style={{ marginTop: 4 }}>{STR.hwResult}</Muted>
                       <ChipRow>
@@ -151,6 +182,15 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
                       ) : null}
                       <View style={{ marginTop: 8 }}>
                         <Button title={STR.hwCheck} onPress={() => onCheck(r.id)} loading={busy} disabled={busy || !p?.result} />
+                      </View>
+                      <View style={{ marginTop: 8 }}>
+                        <Button
+                          title={STR.hwAttachAnswer}
+                          variant="secondary"
+                          onPress={() => onAttachAnswer(r.id)}
+                          loading={fileBusyId === r.id}
+                          disabled={fileBusyId !== null}
+                        />
                       </View>
                     </Card>
                   );
