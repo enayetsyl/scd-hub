@@ -98,14 +98,14 @@ export async function absenteeReport(dateKey: string): Promise<ClassAbsentees[]>
       byClass.set(classKey, entry);
     }
     const absentees: AbsenteeEntry[] = day.absentStudentIds
-      .map((id) => {
+      .map((id): AbsenteeEntry | null => {
         const student = studentById.get(id.toString());
         if (!student) return null;
         return {
           studentId: student._id.toString(),
           name: student.name,
           nameBn: student.nameBn ?? null,
-          rollNumber: student.rollNumber ?? null,
+          rollNumber: student.rollNumber ?? student.schoolId, // roll = ID (D-#80)
           schoolId: student.schoolId,
           leaveCovered: applicationCovers(apps, student._id.toString(), dateKey),
         };
@@ -255,7 +255,7 @@ export async function absentNoApplication(
       studentId: s._id.toString(),
       name: s.name,
       nameBn: s.nameBn ?? null,
-      rollNumber: s.rollNumber ?? null,
+      rollNumber: s.rollNumber ?? s.schoolId, // roll = ID (D-#80)
       schoolId: s.schoolId,
       sectionId: s.sectionId.toString(),
       dateKeys: (datesByStudent.get(s._id.toString()) ?? []).sort(),
