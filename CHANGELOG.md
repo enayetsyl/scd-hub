@@ -4,6 +4,8 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- UI: show the logged-in user's name in the stack header (HeaderName, left of language/logout). Re-applied
+  onto the post-UI-1 theme after the original feat/header-username branch was never merged. [8225d5c]
 - Reviewer assignment — teacher-name dropdown replaces pasting a User _id. New server `teachers` query
   (active TEACHER accounts, gated content:assign_review) + a reusable `Select` dropdown primitive (ui.tsx);
   PlanViewScreen + ReviewThreadScreen pick a reviewer by name (phone hint) instead of a raw id. BN/EN labels
