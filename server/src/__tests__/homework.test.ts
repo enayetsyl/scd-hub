@@ -53,6 +53,13 @@ jest.mock("../modules/trackers/models/HomeworkSequence", () => ({
   },
 }));
 
+// Notification emitters (N-1, D-#72) — mocked: the host-side threshold logic is
+// under test here; the emitter internals are covered in notifications.test.ts.
+const mockEmitHwParentComms = jest.fn().mockResolvedValue(undefined);
+jest.mock("../modules/notifications/services/emitters", () => ({
+  emitHwParentComms: (...args: unknown[]) => mockEmitHwParentComms(...args),
+}));
+
 // Import AFTER mocks
 import {
   generateHwId,
@@ -390,6 +397,25 @@ describe("transitionRecord — lifecycle moves (timestamped)", () => {
     mockRecordFindById.mockResolvedValue(rec);
     const res = await transitionRecord({ recordId: REC_ID.toString(), toState: "CHASE", actorId: ACTOR_ID });
     expect(res.chaseCount).toBe(1);
+  });
+
+  test("N1.4 — the 1st/2nd chase emits NO parent-comms notification", async () => {
+    mockEmitHwParentComms.mockClear();
+    const rec = makeRecord({ state: "DUE", chaseCount: 0, hwItemId: ITEM_ID, studentId: "S1", sectionId: new mongoose.Types.ObjectId() });
+    mockRecordFindById.mockResolvedValue(rec);
+    await transitionRecord({ recordId: REC_ID.toString(), toState: "CHASE", actorId: ACTOR_ID });
+    expect(mockEmitHwParentComms).not.toHaveBeenCalled();
+  });
+
+  test("N1.4 — CHASE_COUNT reaching 3 emits the parent-comms prompt (§7.2)", async () => {
+    mockEmitHwParentComms.mockClear();
+    const rec = makeRecord({ state: "DUE", chaseCount: 2, hwItemId: ITEM_ID, studentId: "S1", sectionId: new mongoose.Types.ObjectId() });
+    mockRecordFindById.mockResolvedValue(rec);
+    await transitionRecord({ recordId: REC_ID.toString(), toState: "CHASE", actorId: ACTOR_ID });
+    expect(mockEmitHwParentComms).toHaveBeenCalledTimes(1);
+    expect(mockEmitHwParentComms).toHaveBeenCalledWith(
+      expect.objectContaining({ hwId: "HW-C1-MATH-0001", chaseCount: 3 }),
+    );
   });
 
   test("T1.4 — re-delivery (ABSENT_REDELIVER→GIVEN) shifts the due date to the next school day", async () => {

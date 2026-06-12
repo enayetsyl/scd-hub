@@ -15,6 +15,7 @@ import { ClassNote, type IClassNote } from "../models/ClassNote";
 import { computePeriodTimes, windowFor } from "../schedule";
 import { buildBellSchedule, type BellTrigger } from "../trigger";
 import { ForbiddenError } from "../../../middleware/authz";
+import { emitClassNotePublished } from "../../notifications/services/emitters";
 
 function dayBounds(date: Date): { start: Date; end: Date } {
   const s = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
@@ -117,7 +118,13 @@ export async function publishClassNote(input: {
     },
     { upsert: true },
   );
-  return ClassNote.findOne({ slotId: input.slotId, date: input.date }).lean() as unknown as IClassNote;
+  const note = (await ClassNote.findOne({ slotId: input.slotId, date: input.date }).lean()) as unknown as IClassNote;
+
+  // N1.3 (R5.4, in-app half): notify each login-enabled guardian of the group.
+  // Best-effort — a notification failure never blocks the publish (D-#72).
+  await emitClassNotePublished(note);
+
+  return note;
 }
 
 export async function classNotesForDate(
