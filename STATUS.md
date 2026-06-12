@@ -3,6 +3,20 @@
 _Updated: 2026-06-12_
 
 ## Now / next
+- **Planned (Messaging module — staff chat + guardian notices + push transport, D-#76/#77/#78/#79):** build
+  contract `docs/prd-messaging.md` authored — pulls the deferred messaging pipeline forward (this is the
+  transport D-#52/R5.4–R5.5 await). Staff-only chat (guardians are notice recipients, NOT participants):
+  1:1 + auto-provisioned groups (per-Section staff / per-ROUTINE_SUBJECT teacher set / school-wide,
+  idempotent source-tagged sync per D-#49 pattern) + Principal/Office-only manual ad-hoc groups; reply/
+  forward/reactions/edit/delete (delete hides for all, original audit-retained, ADR-008); attachments
+  photo/PDF/video/voice ≤10 MB (storage backend = Oracle VM disk, proposed — PRD §9); read receipts;
+  Principal read-oversight on ALL chats incl. 1:1 (each open itself audited); school-wide switchable
+  announcement-only. Guardian notices NOW via composer + ADR-003 wa.me fan-out (no guardian login;
+  SECTION notices gate on the class teacher — lands the D-#45 parent-comms duty); guardian push stays
+  portal-deferred; wa.me links permanent fallback (ADR-003 reaffirmed). App-native vocab only (`chat:*`
+  perms + CONVERSATION_KINDS/POSTING_POLICIES/ATTACHMENT_KINDS/NOTICE_SCOPES + BN) — no wire sync.
+  **Plan/docs only — no feature code yet. Next = build M-1 per docs/prd-messaging.md §5, slice order.**
+  (Handoff proposed D-#59–#62 — renumbered, taken through D-#75.)
 - **Planned (Notifications phase 1 — in-app inbox + scheduler + push, D-#72/#73/#74/#75):** build contract
   `docs/prd-notifications.md` authored — **no feature code yet**. Delivers the D-#52 trigger schedule:
   `Notification` model + single `NotificationService.emit()` seam (idempotent by dedupeKey, channels fan
