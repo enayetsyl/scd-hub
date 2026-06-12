@@ -37,3 +37,30 @@ attach/view shows a Bangla notice — homework declare/check itself never blocks
 - Revoking access: remove the app's access from the school account's
   [security page](https://myaccount.google.com/permissions) — uploads/views
   fail gracefully until a new refresh token is configured.
+
+## Ops: Attendance reminder scheduler (AT-4, D-#65)
+
+The timed reminder + escalation engine has **no in-process cron** — an external
+scheduler hits one idempotent endpoint. The server decides *what* to send (only
+unmarked sections, FULL school-days only) and dedupes per `(date, tier, section)`,
+so calling repeatedly is safe.
+
+1. Set `ATTENDANCE_TRIGGER_SECRET` in the server env to a long random string
+   (fail-closed: if unset, the endpoint rejects everything).
+2. Configure three cron jobs in **Asia/Dhaka** time calling the endpoint:
+
+   ```cron
+   # m  h        (Asia/Dhaka)  — attendance reminder + escalation
+   10 12 * * *   curl -fsS -X POST https://<host>/triggers/attendance-reminder \
+                   -H "content-type: application/json" \
+                   -H "x-trigger-secret: $ATTENDANCE_TRIGGER_SECRET" \
+                   -d '{"tier":"T1210"}'   # → section marker + class teacher
+   45 12 * * *   curl ... -d '{"tier":"T1245"}'   # → Office (still unmarked)
+    0 14 * * *   curl ... -d '{"tier":"T1400"}'   # → Principal (still unmarked)
+   ```
+
+   Use any scheduler that can fire an authenticated HTTP POST (system cron,
+   a platform scheduler, GitHub Actions `schedule`, etc.). On OFF/holiday/
+   Saturday days the endpoint is a no-op (single calendar source, D-#50).
+3. Push delivery is automatic (Expo); the guardian chase stays a **manual**
+   WhatsApp button in the app for Office (`attendance:manage`, AT4.7).

@@ -2320,3 +2320,23 @@ export const SUBMIT_LEAVE_APPLICATION = gql<
     }
   }
 `;
+
+// AT-4 (D-#65): register this device's Expo push token (own-row; any authed user).
+export const REGISTER_PUSH_DEVICE = gql<
+  { registerPushDevice: boolean },
+  { token: string; platform?: string | null }
+>`
+  mutation RegisterPushDevice($token: String!, $platform: String) {
+    registerPushDevice(token: $token, platform: $platform)
+  }
+`;
+
+// AT4.7: Office-only wa.me chase link for an absent-no-application student.
+export const GUARDIAN_CHASE_LINK = gql<
+  { guardianChaseLink: string | null },
+  { studentId: string }
+>`
+  query GuardianChaseLink($studentId: String!) {
+    guardianChaseLink(studentId: $studentId)
+  }
+`;
