@@ -67,6 +67,13 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
+      {canRoster ? (
+        <Card onPress={() => navigation.navigate("SectionConfig")}>
+          <Body style={{ fontWeight: "700" }}>{STR.sectionConfig}</Body>
+          <Muted>D-#62</Muted>
+        </Card>
+      ) : null}
+
       {canGuardianCreds ? (
         <Card onPress={() => navigation.navigate("GuardianCredentials")}>
           <Body style={{ fontWeight: "700" }}>{STR.guardianCredentials}</Body>

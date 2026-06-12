@@ -4,6 +4,13 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Section merge/split — Principal/Office combine a class's gender sections (Boys+Girls) into one and split
+  back, per class, reversibly (D-#62). New `SectionMerge` model (move snapshot) + `SectionMergeService`
+  (mergeSections/splitSections/activeSectionMerges + pure `deriveGenderToSource`); merge moves students into
+  a combined section (code `ALL`) and deactivates sources, split restores originals exactly and places
+  post-merge newcomers by gender. Resolvers gated `roster:manage`; `Section.studentCount`; audit kinds
+  SECTIONS_MERGED/SPLIT. App: **SectionConfigScreen** (Admin tab) — year→class list with per-class merge/
+  split + student counts. Gate: server tsc + jest 320/320 (7 new) + vocab verifier; app tsc + web export green.
 - UI: replace raw-id text inputs with name dropdowns app-wide + header full-name tooltip. New server
   `academicYears` query; `teachers` relaxed to authenticated (picker data; assign actions stay gated).
   Reusable TeacherSelect/RoomSelect/AcademicYearSelect over <Select>; ScopeGrant (covering/absent teacher +

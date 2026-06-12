@@ -19,6 +19,8 @@ export type AuditEventKind =
   | "REVIEW_CANCELLED"    // an open review round was cancelled/superseded (D-#40)
   | "PLAN_APPROVED"       // Principal sign-off: reviewed → gold (D-#38; PR-2)
   | "CREDENTIAL_PROVISIONED" // login generated/reset for a guardian or staff member (D-#59/#60)
+  | "SECTIONS_MERGED"     // a class's gender sections combined into one (D-#62)
+  | "SECTIONS_SPLIT"      // a merged class split back to its source sections (D-#62)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {
