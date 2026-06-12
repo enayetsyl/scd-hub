@@ -2,6 +2,7 @@ import { builder } from "../../../schema";
 import { Class, type IClass } from "../models/Class";
 import { Section, type ISection } from "../models/Section";
 import { Subject, type ISubject } from "../models/Subject";
+import { AcademicYear, type IAcademicYear } from "../models/AcademicYear";
 import { type IClassTeacherAssignment } from "../models/ClassTeacherAssignment";
 import {
   assignClassTeacher as svcAssignClassTeacher,
@@ -76,6 +77,25 @@ builder.queryField("subjects", (t) =>
     type: [SubjectRef],
     authScopes: { authenticated: true },
     resolve: async () => Subject.find({ active: true }).lean(),
+  }),
+);
+
+type AcademicYearShape = Pick<IAcademicYear, "label" | "current"> & { _id: { toString(): string } };
+const AcademicYearRef = builder.objectRef<AcademicYearShape>("AcademicYear");
+AcademicYearRef.implement({
+  fields: (t) => ({
+    id: t.string({ resolve: (y) => y._id.toString() }),
+    label: t.exposeString("label"),
+    current: t.exposeBoolean("current"),
+  }),
+});
+
+/** All academic years (newest label first) — for year pickers. */
+builder.queryField("academicYears", (t) =>
+  t.field({
+    type: [AcademicYearRef],
+    authScopes: { authenticated: true },
+    resolve: async () => AcademicYear.find({}).sort({ label: -1 }).lean(),
   }),
 );
 

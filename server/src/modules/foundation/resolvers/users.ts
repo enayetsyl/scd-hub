@@ -35,8 +35,10 @@ builder.queryField("me", (t) =>
 builder.queryField("teachers", (t) =>
   t.field({
     type: [UserRef],
-    authScopes: { hasPermission: "content:assign_review" },
-    description: "Active teacher accounts — for reviewer-assignment pickers (Principal/Office).",
+    authScopes: { authenticated: true },
+    description:
+      "Active teacher accounts — for name pickers (reviewer assignment, routine/cover, class-teacher). " +
+      "Names are non-sensitive and already shown in rosters; any authenticated staff may read.",
     resolve: async () =>
       User.find({ role: "TEACHER", active: true }).sort({ name: 1 }).lean(),
   }),

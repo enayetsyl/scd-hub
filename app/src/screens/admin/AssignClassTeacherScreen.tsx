@@ -13,9 +13,11 @@ import {
   ASSIGN_CLASS_TEACHER,
   SET_SUPPORT_TEACHER,
   CLASS_TEACHER_HISTORY_QUERY,
+  TEACHERS_QUERY,
 } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
-import { Screen, Body, Muted, Card, Field, Button, Badge, Notice, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Button, Badge, Notice, EmptyState } from "../../components/ui";
+import { TeacherSelect } from "../../components/selects";
 import { SectionBar } from "../../components/SectionBar";
 import { STR, classLevelLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -44,6 +46,9 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
     variables: { sectionId: selection.sectionId ?? "" },
     pause: !selection.sectionId,
   });
+  const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY });
+  const teacherName = new Map((teacherData?.teachers ?? []).map((t) => [t.id, t.name]));
+  const nameOf = (id: string): string => teacherName.get(id) ?? id;
 
   const classes = classesQ.data?.classes ?? [];
   const section = classes.find((c) => c.id === selection.classId)?.sections.find((s) => s.id === selection.sectionId);
@@ -136,9 +141,9 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
                 <Body style={{ fontWeight: "700" }}>{STR.ctCurrent}</Body>
                 <Badge text={currentCt ? "✓" : STR.ctNone} tone={currentCt ? "ok" : "muted"} />
               </View>
-              {currentCt ? <Muted style={{ marginTop: 4 }}>{currentCt}</Muted> : null}
+              {currentCt ? <Muted style={{ marginTop: 4 }}>{nameOf(currentCt)}</Muted> : null}
             </Card>
-            <Field label={STR.ctTeacherId} value={teacherId} onChangeText={setTeacherId} />
+            <TeacherSelect label={STR.ctTeacherId} value={teacherId} onChange={setTeacherId} />
             <View style={{ gap: space(2), marginTop: space(2) }}>
               <Button title={STR.ctAssign} onPress={() => runAssign(teacherId.trim())} loading={busy} disabled={busy || teacherId.trim() === ""} />
               {currentCt ? <Button title={STR.ctClear} variant="danger" onPress={() => runAssign(null)} disabled={busy} /> : null}
@@ -150,12 +155,12 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
             {support.map((id) => (
               <Card key={id}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Muted style={{ flex: 1 }}>{id}</Muted>
+                  <Muted style={{ flex: 1 }}>{nameOf(id)}</Muted>
                   <Button title={STR.remove} variant="danger" onPress={() => runSupport(id, false)} disabled={busy} />
                 </View>
               </Card>
             ))}
-            <Field label={STR.ctSupportId} value={supportId} onChangeText={setSupportId} />
+            <TeacherSelect label={STR.ctSupportId} value={supportId} onChange={setSupportId} />
             <Button title={STR.ctSupportAdd} variant="secondary" onPress={() => runSupport(supportId, true)} disabled={busy || supportId.trim() === ""} style={{ marginTop: space(2) }} />
 
             {/* History (CT1.6) */}
@@ -167,7 +172,7 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
                   {h.role} · {h.op}
                 </Body>
                 <Muted>
-                  {h.teacherId ?? "—"} · {new Date(h.at).toLocaleString()}
+                  {h.teacherId ? nameOf(h.teacherId) : "—"} · {new Date(h.at).toLocaleString()}
                 </Muted>
               </Card>
             ))}
