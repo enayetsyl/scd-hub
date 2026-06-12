@@ -104,10 +104,20 @@ _Updated: 2026-06-12 (guardian portal v1 built)_
   null for guardian JWTs — guardians could not complete app login before).
   **Gate GREEN:** vocab verifier PASS; shared+server tsc clean; **jest 371/371** (26 GP-1 + 25 GP-A new;
   J5.6 + new guardian-firewall green); app tsc clean + web bundle green.
-  **NOT verified live** (no running server/Atlas this session). Remaining for live: (1) Drive credential
-  setup per `server/README.md` (gates GP-A live verification only, D-#70); (2) golden path with the real
-  provisioned family login (Fardhousi Jahan Shaly, 2 children); (3) merge `feat/guardian-portal`.
-  GP-3+ riders (attendance/fees/notices/leave/push surfaces) land with their modules.
+  **MERGED to main** (PR #31; integrated with PR #30 attendance — vocab/verifier/ledger conflicts resolved so
+  both features survive; integrated gate green: **jest 414/414**, app tsc + web export green).
+  **LIVE-VERIFIED against Atlas (2026-06-12)** with the real provisioned family login (Fardhousi Jahan Shaly,
+  +8801409514518, password reset via `verify-provisioning.ts --provision` to obtain a known credential):
+  `guardianLogin` → role GUARDIAN ✓; `myChildren` → both children (Barakah Binte Habib/কেজি, Yousuf Bin
+  Habib/তৃতীয়) ✓; `childRoutine` day-type aware (Fri=OFF/ছুটি empty; Sun–Thu=FULL — slots empty as no
+  RoutineSlots are authored for the live sections yet, a data state) ✓; **D-#69 proven structurally** — the
+  schema rejects `GuardianSlot.teacherId` (no teacher/room field exists) ✓; `childHomework`/`childClassNotes`
+  empty (none authored), `childDayLoad` → 0/240 ✓; an **unlinked studentId → ForbiddenError** (Bangla
+  "এই শিক্ষার্থীর তথ্য দেখার অনুমতি নেই") ✓. **Frontend-only checks still need a manual browser pass** (guardian
+  sees ONLY guardian tabs; child-switcher interaction) — covered by GP-2 tests + app build, no browser this
+  session. **GP-A file attach/view still NOT live-verified** — needs the Google Drive credential (D-#70/#71;
+  `server/.env` GOOGLE_OAUTH_* absent; setup steps below). GP-3+ riders (attendance/fees/notices/leave/push
+  surfaces) land with their modules.
 - **Planned (Attendance PRD — D-#63–#67, AT-1..3+5 BUILT above, AT-4 remains):** finalized the build contract for **teacher +
   student attendance** in `docs/prd-attendance.md`. Teacher = daily **Excel snapshot** of the biometric
   "Employee Attendance Report" (legend ✔=present / 𝓛=late / ✘=leave-or-absent / ℞=ignored; **name-matched**
