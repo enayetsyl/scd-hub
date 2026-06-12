@@ -1,8 +1,17 @@
 # STATUS
 
-_Updated: 2026-06-11_
+_Updated: 2026-06-12_
 
 ## Now / next
+- **Built (Section merge/split — reversible per-class section config, D-#62):** Principal/Office can combine a
+  class's gender-split sections (Boys+Girls) into one combined section so the children sit as a single class,
+  and split them back. New `SectionMerge` model + `SectionMergeService` (merge moves students into a combined
+  section [code `ALL`] + deactivates sources; split restores the originals exactly and places post-merge
+  newcomers by `Student.gender`); resolvers `mergeSections`/`splitSections`/`activeSectionMerges` (roster:manage)
+  + `Section.studentCount`; audit `SECTIONS_MERGED`/`SECTIONS_SPLIT`. App: **SectionConfigScreen** (Admin tab,
+  year→class list, per-class merge/split + counts). **Gate GREEN:** server tsc + **jest 320/320** (7 new in
+  `sectionMerge.test.ts`, firewall green) + vocab verifier; app tsc + web export green. **Not verified live;
+  merge moves REAL students — run only via the UI on purpose.** Reverses cleanly via split.
 - **Built (UI-1 — adopt UI guidelines v1 in code, D-#61):** the app now renders from the
   `docs/ui-guidelines.md` §3–§6 token system, light **and** dark (follows the OS;
   `userInterfaceStyle:"automatic"`). `app/src/theme` is the ONE code source: `palette.json` (the §3/§4 hex

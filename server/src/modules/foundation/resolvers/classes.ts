@@ -2,6 +2,7 @@ import { builder } from "../../../schema";
 import { Class, type IClass } from "../models/Class";
 import { Section, type ISection } from "../models/Section";
 import { Subject, type ISubject } from "../models/Subject";
+import { Student } from "../models/Student";
 import { AcademicYear, type IAcademicYear } from "../models/AcademicYear";
 import { type IClassTeacherAssignment } from "../models/ClassTeacherAssignment";
 import {
@@ -10,6 +11,7 @@ import {
   classTeacherHistory,
   mySectionsAsClassTeacher,
 } from "../services/ClassTeacherService";
+import { mergeSections, splitSections, activeSectionMerges } from "../services/SectionMergeService";
 import { DEFAULT_SECTION_CODE, DEFAULT_SECTION_LABEL_BN } from "@scd/shared";
 
 type SubjectShape = Pick<ISubject, "code" | "nameBn"> & { _id: { toString(): string } };
@@ -42,6 +44,10 @@ SectionRef.implement({
     }),
     supportTeacherIds: t.stringList({
       resolve: (s) => (s.supportTeacherIds ?? []).map((id) => id.toString()),
+    }),
+    studentCount: t.int({
+      description: "Active students currently in this section.",
+      resolve: (s) => Student.countDocuments({ sectionId: s._id, active: true }),
     }),
   }),
 });
@@ -96,6 +102,72 @@ builder.queryField("academicYears", (t) =>
     type: [AcademicYearRef],
     authScopes: { authenticated: true },
     resolve: async () => AcademicYear.find({}).sort({ label: -1 }).lean(),
+  }),
+);
+
+// --- Section merge / split (D-#62) — Principal/Office combine a class's gender ---
+// sections into one (students moved) and reverse it later. `roster:manage`.
+
+const SectionMergeRef = builder
+  .objectRef<{ id: string; classId: string; combinedSectionId: string; sourceSectionIds: string[] }>("SectionMerge")
+  .implement({
+    fields: (t) => ({
+      id: t.exposeString("id"),
+      classId: t.exposeString("classId"),
+      combinedSectionId: t.exposeString("combinedSectionId"),
+      sourceSectionIds: t.exposeStringList("sourceSectionIds"),
+    }),
+  });
+
+/** The classes currently merged — the admin UI shows a "split" action for these. */
+builder.queryField("activeSectionMerges", (t) =>
+  t.field({
+    type: [SectionMergeRef],
+    authScopes: { hasPermission: "roster:manage" },
+    resolve: async () => activeSectionMerges(),
+  }),
+);
+
+const SectionMergeResultRef = builder
+  .objectRef<{ combinedSectionId: string; movedStudents: number; sourceSectionIds: string[] }>("SectionMergeResult")
+  .implement({
+    fields: (t) => ({
+      combinedSectionId: t.exposeString("combinedSectionId"),
+      movedStudents: t.exposeInt("movedStudents"),
+      sourceSectionIds: t.exposeStringList("sourceSectionIds"),
+    }),
+  });
+
+/** Merge a class's active sections into one combined section (students moved). */
+builder.mutationField("mergeSections", (t) =>
+  t.field({
+    type: SectionMergeResultRef,
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      classId: t.arg.string({ required: true }),
+      combinedNameBn: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) =>
+      mergeSections(args.classId, args.combinedNameBn ?? null, ctx.auth!.userId),
+  }),
+);
+
+const SectionSplitResultRef = builder
+  .objectRef<{ restoredSections: number; movedStudents: number }>("SectionSplitResult")
+  .implement({
+    fields: (t) => ({
+      restoredSections: t.exposeInt("restoredSections"),
+      movedStudents: t.exposeInt("movedStudents"),
+    }),
+  });
+
+/** Reverse a class's merge: students return to their source sections. */
+builder.mutationField("splitSections", (t) =>
+  t.field({
+    type: SectionSplitResultRef,
+    authScopes: { hasPermission: "roster:manage" },
+    args: { classId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => splitSections(args.classId, ctx.auth!.userId),
   }),
 );
 

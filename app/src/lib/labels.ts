@@ -462,6 +462,16 @@ const STR_BN = {
   coveringTeacher: "কভারকারী শিক্ষক",
   absentTeacher: "অনুপস্থিত শিক্ষক (ঐচ্ছিক)",
   academicYear: "শিক্ষাবর্ষ",
+  sectionConfig: "শাখা বিন্যাস",
+  sectionConfigHint: "একই শ্রেণির বালক ও বালিকা শাখা একত্র করে এক শাখায় বসান — পরে আবার আলাদা করা যাবে।",
+  scMerged: "একত্রিত",
+  scMergeBtn: "শাখা একত্র করুন",
+  scSplitBtn: "আবার আলাদা করুন",
+  scCombinedName: "একত্রিত শাখার নাম",
+  scStudents: "শিক্ষার্থী",
+  scMergeDone: "শাখা একত্র হয়েছে।",
+  scSplitDone: "শাখা আলাদা হয়েছে।",
+  scNeedsTwo: "একত্র করতে অন্তত দুটি সক্রিয় শাখা দরকার।",
   userListNotExposed: "সম্পূর্ণ ব্যবহারকারী তালিকা এখনো সার্ভারে উন্মুক্ত নয়।",
 
   // Roster (read-only student list)
@@ -897,6 +907,16 @@ const STR_EN: StrTable = {
   coveringTeacher: "Covering teacher",
   absentTeacher: "Absent teacher (optional)",
   academicYear: "Academic year",
+  sectionConfig: "Section layout",
+  sectionConfigHint: "Merge a class's boys + girls sections so they sit as one — split them back any time.",
+  scMerged: "Merged",
+  scMergeBtn: "Merge sections",
+  scSplitBtn: "Split back",
+  scCombinedName: "Combined section name",
+  scStudents: "students",
+  scMergeDone: "Sections merged.",
+  scSplitDone: "Sections split back.",
+  scNeedsTwo: "Need at least two active sections to merge.",
   userListNotExposed: "A full user list is not yet exposed by the server.",
 
   // Roster (read-only student list)

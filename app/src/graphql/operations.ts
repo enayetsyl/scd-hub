@@ -76,6 +76,7 @@ export interface SectionT {
   active: boolean;
   classTeacherId?: string | null;
   supportTeacherIds?: string[];
+  studentCount?: number;
 }
 
 export interface ClassT {
@@ -93,7 +94,45 @@ export const CLASSES_QUERY = gql<{ classes: ClassT[] }, { academicYearId: string
       level
       nameBn
       active
-      sections { id code nameBn active classTeacherId supportTeacherIds }
+      sections { id code nameBn active classTeacherId supportTeacherIds studentCount }
+    }
+  }
+`;
+
+export interface SectionMergeT {
+  id: string;
+  classId: string;
+  combinedSectionId: string;
+  sourceSectionIds: string[];
+}
+
+export const ACTIVE_SECTION_MERGES_QUERY = gql<{ activeSectionMerges: SectionMergeT[] }, NoVars>`
+  query ActiveSectionMerges {
+    activeSectionMerges { id classId combinedSectionId sourceSectionIds }
+  }
+`;
+
+export const MERGE_SECTIONS = gql<
+  { mergeSections: { combinedSectionId: string; movedStudents: number; sourceSectionIds: string[] } },
+  { classId: string; combinedNameBn?: string | null }
+>`
+  mutation MergeSections($classId: String!, $combinedNameBn: String) {
+    mergeSections(classId: $classId, combinedNameBn: $combinedNameBn) {
+      combinedSectionId
+      movedStudents
+      sourceSectionIds
+    }
+  }
+`;
+
+export const SPLIT_SECTIONS = gql<
+  { splitSections: { restoredSections: number; movedStudents: number } },
+  { classId: string }
+>`
+  mutation SplitSections($classId: String!) {
+    splitSections(classId: $classId) {
+      restoredSections
+      movedStudents
     }
   }
 `;
