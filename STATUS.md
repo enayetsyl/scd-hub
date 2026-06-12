@@ -3,6 +3,19 @@
 _Updated: 2026-06-12_
 
 ## Now / next
+- **Planned (Attendance PRD — NOT built, D-#63–#67):** finalized the build contract for **teacher +
+  student attendance** in `docs/prd-attendance.md`. Teacher = daily **Excel snapshot** of the biometric
+  "Employee Attendance Report" (legend ✔=present / 𝓛=late / ✘=leave-or-absent / ℞=ignored; **name-matched**
+  since the export drops the ID column → `StaffNameAlias` remembers the mapping; both punch times; date from
+  sheet; re-upload overwrites). Student = **in-app, once-daily, absent-only** (assigned marker taps
+  absentees, rest present) → app **produces the absentee report** (roll + ID; residential dropped). Marking
+  gated by `assertIsClassTeacher` (**CT-2**) with a per-day/range **marker override** (Principal/Office).
+  **Reminder/escalation** via **external scheduler** → idempotent endpoint at **12:10 marker → 12:45 Office
+  → 2:00 Principal** on FULL days; **push auto, WhatsApp manual**; **Office** (not teachers) chases guardians.
+  Student **leave application = recorded-only** (no approval); "absent & no application" is a report. Adds
+  perms `attendance:mark`/`attendance:manage`, `Student.rollNumber`, `expo-notifications` + `PushDevice`.
+  Slices **AT-1..AT-5**; SubjectGroup/Quran attendance is a fast-follow. **Next: build AT-1 (teacher import)
+  + AT-2 (student capture).**
 - **Built (Section merge/split — reversible per-class section config, D-#62):** Principal/Office can combine a
   class's gender-split sections (Boys+Girls) into one combined section so the children sit as a single class,
   and split them back. New `SectionMerge` model + `SectionMergeService` (merge moves students into a combined
