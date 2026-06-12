@@ -1,8 +1,14 @@
 # STATUS
 
-_Updated: 2026-06-12 (notifications N-1 built)_
+_Updated: 2026-06-12 (notifications N-1 + Slice-4 follow-ups built)_
 
 ## Now / next
+- **Built (Slice-4 follow-ups — server lookups + app wiring):** `myScopes` enriched
+  (class/section/subject ids + proxy detail), new `users` + `proxyGrants` queries (existing
+  `user:manage`, no permission change); SectionPicker my-sections shortcuts, UserList real list,
+  ScopeGrant list-driven extend/revoke. `/pdf` CORS found already closed (GP-A [4556696]).
+  Gate green: shared+server tsc, jest 430/430 (firewall green), app tsc + web export. Details in
+  "Slice 4 follow-ups" below. **Not verified live.** [branch `worktree-slice4-followups`]
 - **Built (Notifications N-1 — model + emit() seam + own-row inbox + event emitters, D-#72) [branch
   `worktree-notifications-n1`, PR open]:** first notifications slice, server-side. New
   `server/src/modules/notifications/` — `Notification` model (per-recipient, exactly ONE of User/Guardian,
@@ -580,12 +586,16 @@ _Updated: 2026-06-12 (notifications N-1 built)_
   below.
 
 ## Slice 4 follow-ups (frontend was built to the existing contract; these would improve it)
-- **`academicYears` query** + enrich **`myScopes`** to return classId/sectionId/subjectId, so
-  the section picker is automatic instead of pasting an academic-year id. (Set/tracker
-  journeys need a sectionId; only `classes(academicYearId)` exposes it today.)
-- **`users` list query** + teacher/grant lookups, so UserList/ScopeGrant aren't manual-id forms.
-- **CORS on the `/pdf` Express routes** (Yoga already sends permissive CORS; the PDF routes
-  don't) for cross-origin web PDF; and native PDF via expo-file-system + expo-sharing.
+- **DONE (2026-06-12, branch `worktree-slice4-followups`):** the first three follow-ups are closed.
+  `academicYears` + `teachers` queries had already landed with later modules (year/teacher pickers
+  in `app/src/components/selects.tsx` use them); this session added the rest: **`myScopes` enriched**
+  (classId/sectionId/subjectId + proxy detail via pure `grantView`), **`users`** + **`proxyGrants`**
+  lookups (existing `user:manage`, Principal — no new permission), SectionPicker **"আমার শাখা"
+  shortcuts** from myScopes, UserList renders the real list, ScopeGrant extend/revoke is list-driven
+  (no pasted GRANT_IDs). **`/pdf` CORS was already closed by GP-A [4556696]** — `corsForRest` in
+  `server/src/index.ts` covers `/pdf` (incl. `/pdf/set`) + `/files`. Gate: shared+server tsc clean,
+  jest 430/430 (7 new in adminLookups.test.ts, firewall green), app tsc clean + web export green.
+- native PDF via expo-file-system + expo-sharing (web PDF path works today).
 - **Re-enable NativeWind** on a watchman platform / CI (see build-config notes above).
 - **graphql-codegen client-preset** to replace the hand-typed operations (PRD §8 step 8).
 

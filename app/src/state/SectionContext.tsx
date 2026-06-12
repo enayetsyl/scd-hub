@@ -1,11 +1,10 @@
 /**
  * Section context — the academic-year → class → section selection that the
- * set/tracker journeys (J3/J4) need. The server exposes `classes(academicYearId)`
- * but no `academicYears` query and `myScopes` does not return section ids, so the
- * academicYearId is supplied once (env default or manual entry) and the class /
- * section are picked from the classes query. The selection is persisted so it
- * survives reloads. See STATUS.md follow-up: an `academicYears` query + enriched
- * `myScopes` would make this automatic.
+ * set/tracker journeys (J3/J4) need. The year comes from the `academicYears`
+ * picker (auto-selects the current year) and the class/section from
+ * `classes(academicYearId)`, with the teacher's own `myScopes` sections as
+ * shortcuts (Slice-4 follow-up — no pasted ids). The selection is persisted so
+ * it survives reloads.
  */
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { getItem, setItem } from "../lib/storage";

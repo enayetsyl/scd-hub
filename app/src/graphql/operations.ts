@@ -314,11 +314,28 @@ export interface ScopeGrantT {
   id: string;
   kind: string;
   active: boolean;
+  classId: string | null;
+  sectionId: string | null;
+  subjectId: string | null;
+  coveringTeacherId: string | null;
+  absentTeacherId: string | null;
+  startDate: string | null;
+  durationDays: number | null;
+  proxyStatus: string | null;
 }
+
+const SCOPE_GRANT_FIELDS = `id kind active classId sectionId subjectId coveringTeacherId absentTeacherId startDate durationDays proxyStatus`;
 
 export const MY_SCOPES_QUERY = gql<{ myScopes: ScopeGrantT[] }, NoVars>`
   query MyScopes {
-    myScopes { id kind active }
+    myScopes { ${SCOPE_GRANT_FIELDS} }
+  }
+`;
+
+/** Admin proxy-grant list (user:manage) — extend/revoke without pasting ids. */
+export const PROXY_GRANTS_QUERY = gql<{ proxyGrants: ScopeGrantT[] }, { activeOnly?: boolean | null }>`
+  query ProxyGrants($activeOnly: Boolean) {
+    proxyGrants(activeOnly: $activeOnly) { ${SCOPE_GRANT_FIELDS} }
   }
 `;
 
@@ -979,11 +996,19 @@ export const IMPORT_FILES = gql<
 
 export interface UserT {
   id: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
   role: string;
   name: string;
   active: boolean;
 }
+
+/** Full staff-account list (user:manage / Principal) — the UserList screen. */
+export const USERS_QUERY = gql<{ users: UserT[] }, NoVars>`
+  query Users {
+    users { id email phone role name active }
+  }
+`;
 
 export const CREATE_USER = gql<
   { createUser: UserT },
@@ -993,6 +1018,7 @@ export const CREATE_USER = gql<
     createUser(email: $email, password: $password, role: $role, name: $name) {
       id
       email
+      phone
       role
       name
       active

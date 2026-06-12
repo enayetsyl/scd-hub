@@ -1,19 +1,24 @@
 /**
  * ScopeGrantScreen (S15 / J5.4, J5.7) — assign / extend / revoke proxy (cover)
- * grants. Requires user:manage (Principal). IDs are entered directly (the server
- * exposes no teacher/grant list queries yet); class/section prefill from the
- * current section context when available. Teaching/supervisory grant CRUD needs
+ * grants. Requires user:manage (Principal). The active grants list (proxyGrants,
+ * Slice-4 follow-up) drives extend/revoke — no pasted GRANT_IDs; teachers and
+ * class/section come from name pickers. Teaching/supervisory grant CRUD needs
  * server mutations not yet exposed — see STATUS follow-ups.
  */
 import React, { useState } from "react";
+import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
-import { ASSIGN_PROXY, REVOKE_PROXY, EXTEND_PROXY, CLASSES_QUERY } from "../../graphql/operations";
+import { roleHasPermission } from "@scd/shared";
+import type { Role } from "@scd/shared";
+import { ASSIGN_PROXY, REVOKE_PROXY, EXTEND_PROXY, CLASSES_QUERY, PROXY_GRANTS_QUERY, TEACHERS_QUERY } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
-import { Screen, H2, Muted, Card, Button, Field, Select, Notice, Divider } from "../../components/ui";
+import { Screen, H2, Body, Muted, Card, Button, Field, Select, Notice, Divider, EmptyState, Loader } from "../../components/ui";
 import { TeacherSelect, AcademicYearSelect } from "../../components/selects";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useAuth } from "../../auth/AuthContext";
+import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "ScopeGrant">;
 
@@ -44,6 +49,24 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
   const [, assignProxy] = useMutation(ASSIGN_PROXY);
   const [, revokeProxy] = useMutation(REVOKE_PROXY);
   const [, extendProxy] = useMutation(EXTEND_PROXY);
+
+  const { user } = useAuth();
+  const canManage = !!user && roleHasPermission(user.role as Role, "user:manage");
+
+  // Active grants list (Slice-4 follow-up): pick a grant to extend/revoke.
+  const [{ data: grantData, fetching: grantsFetching }, refetchGrants] = useQuery({
+    query: PROXY_GRANTS_QUERY,
+    variables: {},
+    pause: !canManage,
+  });
+  const grants = grantData?.proxyGrants ?? [];
+  const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY, pause: !canManage });
+  const teacherById = new Map((teacherData?.teachers ?? []).map((t) => [t.id, t.name]));
+  const teacherName = (id: string | null): string => {
+    if (!id) return "—";
+    return teacherById.get(id) ?? id;
+  };
+  const reloadGrants = (): void => refetchGrants({ requestPolicy: "network-only" });
 
   // Class/section cascade: pick year → class → section (no pasting ids).
   const [{ data: classData }] = useQuery({
@@ -102,17 +125,22 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
       setAssignErr(friendlyError(res.error));
       return;
     }
-    setAssignMsg(`${STR.grantCreated} (${res.data.assignProxy.grantId})`);
+    setAssignMsg(STR.grantCreated);
+    reloadGrants();
   }
 
-  async function onRevoke(): Promise<void> {
-    if (!revokeId.trim() || revokeBusy) return;
+  async function onRevoke(grantId: string): Promise<void> {
+    if (revokeBusy) return;
+    setRevokeId(grantId);
     setRevokeBusy(true);
     setRevokeMsg(null);
-    const res = await revokeProxy({ grantId: revokeId.trim() });
+    const res = await revokeProxy({ grantId });
     setRevokeBusy(false);
     setRevokeMsg(res.error ? friendlyError(res.error) : STR.actionDone);
-    if (!res.error) setRevokeId("");
+    if (!res.error) {
+      setRevokeId("");
+      reloadGrants();
+    }
   }
 
   async function onExtend(): Promise<void> {
@@ -127,7 +155,11 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
     const res = await extendProxy({ grantId: extendId.trim(), additionalDays: days });
     setExtendBusy(false);
     setExtendMsg(res.error ? friendlyError(res.error) : STR.actionDone);
-    if (!res.error) setExtendId("");
+    if (!res.error) {
+      setExtendId("");
+      setAddDays("");
+      reloadGrants();
+    }
   }
 
   return (
@@ -163,24 +195,66 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
 
       <Divider />
 
-      {/* Extend */}
-      <Card>
-        <Muted style={{ fontWeight: "700", marginBottom: 8 }}>{STR.extend}</Muted>
-        <Field label="GRANT_ID" value={extendId} onChangeText={setExtendId} />
-        <Field label="ADDITIONAL_DAYS" value={addDays} onChangeText={setAddDays} keyboardType="numeric" placeholder="3" />
-        {extendMsg ? <Notice message={extendMsg} tone="ok" /> : null}
-        <Button title={extendBusy ? STR.saving : STR.extend} onPress={onExtend} loading={extendBusy} variant="secondary" />
-      </Card>
-
-      <Divider />
-
-      {/* Revoke */}
-      <Card>
-        <Muted style={{ fontWeight: "700", marginBottom: 8 }}>{STR.revoke}</Muted>
-        <Field label="GRANT_ID" value={revokeId} onChangeText={setRevokeId} />
-        {revokeMsg ? <Notice message={revokeMsg} tone="ok" /> : null}
-        <Button title={revokeBusy ? STR.saving : STR.revoke} onPress={onRevoke} loading={revokeBusy} variant="danger" />
-      </Card>
+      {/* Active grants — pick one to extend or revoke (no pasted GRANT_IDs) */}
+      <H2>{STR.activeProxyGrants}</H2>
+      {extendMsg ? <Notice message={extendMsg} tone="ok" /> : null}
+      {revokeMsg ? <Notice message={revokeMsg} tone="ok" /> : null}
+      {grantsFetching ? (
+        <Loader label={STR.loading} />
+      ) : grants.length === 0 ? (
+        <EmptyState message={STR.noActiveGrants} />
+      ) : (
+        grants.map((g) => (
+          <Card key={g.id}>
+            <Body style={{ fontWeight: "700" }}>{teacherName(g.coveringTeacherId)}</Body>
+            {g.absentTeacherId ? (
+              <Muted>
+                {STR.absentTeacher}: {teacherName(g.absentTeacherId)}
+              </Muted>
+            ) : null}
+            <Muted>
+              {STR.startDate}: {g.startDate ? g.startDate.slice(0, 10) : "—"} · {STR.durationDays}:{" "}
+              {g.durationDays ?? "—"} · {g.proxyStatus ?? ""}
+            </Muted>
+            {extendId === g.id ? (
+              <View style={{ marginTop: space(2) }}>
+                <Field
+                  label={STR.durationDays}
+                  value={addDays}
+                  onChangeText={setAddDays}
+                  keyboardType="numeric"
+                  placeholder="3"
+                />
+                <Button
+                  title={extendBusy ? STR.saving : STR.extend}
+                  onPress={onExtend}
+                  loading={extendBusy}
+                  variant="secondary"
+                />
+              </View>
+            ) : (
+              <View style={{ flexDirection: "row", marginTop: space(2) }}>
+                <Button
+                  title={STR.extend}
+                  variant="secondary"
+                  style={{ marginRight: space(2) }}
+                  onPress={() => {
+                    setExtendId(g.id);
+                    setAddDays("");
+                    setExtendMsg(null);
+                  }}
+                />
+                <Button
+                  title={revokeBusy && revokeId === g.id ? STR.saving : STR.revoke}
+                  variant="danger"
+                  loading={revokeBusy && revokeId === g.id}
+                  onPress={() => onRevoke(g.id)}
+                />
+              </View>
+            )}
+          </Card>
+        ))
+      )}
     </Screen>
   );
 }

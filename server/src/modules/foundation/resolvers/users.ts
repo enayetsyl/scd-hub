@@ -60,6 +60,17 @@ builder.queryField("teachers", (t) =>
   }),
 );
 
+builder.queryField("users", (t) =>
+  t.field({
+    type: [UserRef],
+    authScopes: { hasPermission: "user:manage" },
+    description:
+      "All staff accounts (incl. inactive) for the admin user list — Slice-4 follow-up. " +
+      "Gated user:manage (Principal), same as createUser.",
+    resolve: async () => User.find({}).sort({ name: 1 }).lean(),
+  }),
+);
+
 builder.mutationField("createUser", (t) =>
   t.field({
     type: UserRef,

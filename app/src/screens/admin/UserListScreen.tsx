@@ -1,16 +1,16 @@
 /**
- * UserListScreen (S15 / J5.1) — staff users. The server exposes `me` and
- * createUser but no `users` list query, so we show the current user and a
- * create-staff form (createUser → user:manage). A full roster needs a server
- * `users` query (noted in STATUS as a follow-up).
+ * UserListScreen (S15 / J5.1) — staff users. Lists every staff account via the
+ * `users` query (user:manage / Principal — Slice-4 follow-up; no more
+ * "current user only") plus the create-staff form (createUser → user:manage).
  */
 import React, { useState } from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useMutation } from "urql";
-import { ROLES } from "@scd/shared";
-import { CREATE_USER } from "../../graphql/operations";
+import { useMutation, useQuery } from "urql";
+import { ROLES, roleHasPermission } from "@scd/shared";
+import type { Role } from "@scd/shared";
+import { CREATE_USER, USERS_QUERY } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
-import { Screen, H2, Body, Muted, Card, Row, Chip, ChipRow, Button, Field, Notice, Divider } from "../../components/ui";
+import { Screen, H2, Body, Muted, Card, Row, Chip, ChipRow, Button, Field, Notice, Divider, Loader, EmptyState, ErrorBanner } from "../../components/ui";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
@@ -21,6 +21,12 @@ const STAFF_ROLES = ROLES.filter((r) => r !== "GUARDIAN");
 
 export default function UserListScreen(_props: Props): React.ReactElement {
   const { user } = useAuth();
+  const canManage = !!user && roleHasPermission(user.role as Role, "user:manage");
+  const [{ data, fetching, error: usersError }, refetchUsers] = useQuery({
+    query: USERS_QUERY,
+    pause: !canManage,
+  });
+  const users = data?.users ?? [];
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,20 +52,40 @@ export default function UserListScreen(_props: Props): React.ReactElement {
     setEmail("");
     setPassword("");
     setRole(null);
+    refetchUsers({ requestPolicy: "network-only" });
   }
 
   return (
     <Screen scroll>
       <H2>{STR.users}</H2>
 
-      {user ? (
+      {canManage ? (
+        <>
+          {usersError ? <ErrorBanner message={friendlyError(usersError)} onRetry={() => refetchUsers({ requestPolicy: "network-only" })} /> : null}
+          {fetching ? (
+            <Loader label={STR.loading} />
+          ) : users.length === 0 ? (
+            <EmptyState message={STR.noUsers} />
+          ) : (
+            users.map((u) => (
+              <Card key={u.id}>
+                <Body style={{ fontWeight: "700" }}>
+                  {u.name}
+                  {u.active ? "" : ` — ${STR.inactive}`}
+                </Body>
+                <Row label={STR.role} value={u.role} />
+                <Row label={STR.emailOrPhone} value={u.email ?? u.phone ?? "—"} />
+              </Card>
+            ))
+          )}
+        </>
+      ) : user ? (
         <Card>
           <Row label={STR.name} value={user.name} />
           <Row label={STR.emailOrPhone} value={user.email ?? user.phone ?? "—"} />
           <Row label={STR.role} value={user.role} />
         </Card>
       ) : null}
-      <Muted>{STR.userListNotExposed}</Muted>
 
       <Divider />
       <H2>{STR.createUser}</H2>
