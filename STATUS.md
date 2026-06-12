@@ -3,6 +3,26 @@
 _Updated: 2026-06-12_
 
 ## Now / next
+- **Planned (Guardian portal v1 — D-#68/#69/#70):** `docs/prd-guardian-portal.md` adopted —
+  activates the pipeline-gated `guardian:read_child` (vocab status flip only in GP-1, verifier must
+  stay green; no wire/schema/harness sync; no new permission). **GP-1** (server):
+  `assertGuardianOfStudent` link-scoped authz helper + guardian queries `myChildren` / `childRoutine` /
+  `childClassNotes` / `childHomework` (FULL lifecycle incl. chase/resubmission/results + day-load vs 240).
+  **Guardian routine shows subject + period + time ONLY — no teacher name, no room, no cover data
+  (D-#69, closes R4.5's deferred guardian-read as won't-show); separate narrow guardian slot type.**
+  **GP-A:** first file capability — teacher-attached optional question file (per HomeworkItem) +
+  checked-answer file (per HomeworkStudentRecord), 5 MB jpeg/png/pdf, Express multipart beside /pdf;
+  **storage RULED = the school's Google Drive as the LIVE store (D-#70) — the app's SECOND live external
+  dependency (after D-#24); server always in the middle, no Drive id/URL ever reaches a client;
+  credential in server secrets only (public repo), setup gates GP-A LIVE verification (jest mocks
+  Drive)**; guardian download gated by the link helper; audit `HW_FILE_ATTACHED`; guardians never upload.
+  **GP-2** (app, AFTER UI-1; file display needs GP-A): Guardian tab set + child switcher (J5.3) + আজ home
+  + homework (with প্রশ্নপত্র/উত্তরপত্র viewers) + weekly routine + inert "শীঘ্রই আসছে" placeholders for
+  attendance/fees/notices/leave/push (real surfaces ride their modules, GP-3+; push stays on the deferred
+  messaging pipeline, D-#52). How-to-guide docs out of scope (no guide doc_type in the LOCKED contract).
+  Identity-plane only; J5.6 + a new guardian-firewall assertion must stay green. Docs-only this session —
+  no code change. **Next = build GP-1 per docs/prd-guardian-portal.md §6 (server only); then GP-A; UI-1;
+  GP-2 after UI-1. Drive credential setup (Principal/Office + ops note) runs in parallel.**
 - **Planned (Attendance PRD — NOT built, D-#63–#67):** finalized the build contract for **teacher +
   student attendance** in `docs/prd-attendance.md`. Teacher = daily **Excel snapshot** of the biometric
   "Employee Attendance Report" (legend ✔=present / 𝓛=late / ✘=leave-or-absent / ℞=ignored; **name-matched**
