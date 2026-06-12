@@ -5,6 +5,9 @@
 *.pem
 *.key
 secrets/
+# Google OAuth client downloads (GP-A creds live in .env only, D-#70/#71)
+client_secret*.json
+*.apps.googleusercontent.com.json
 
 # ---- Node / JS ----
 node_modules/
