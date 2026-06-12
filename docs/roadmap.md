@@ -53,7 +53,7 @@ Build contract `docs/prd-class-teacher.md`; decision D-#45. Generalizes the exis
 duty gate lands **with its module**; only CT-1 (generalize + coordinator views) is buildable now.
 
 ### Deferred ops modules (still deferred)
-Comms, notices, fees, expenses, exam/results, loanable-resource (library + asset register).
+Comms, notices, fees, expenses, exam/results, asset register (the library half pulled forward — build contract docs/prd-library.md, tracked in STATUS).
 *(Attendance, leave and payroll moved up — see "HR / staff lifecycle" above; routine moved up — see above.)*
 
 ## Distribution

@@ -3,6 +3,25 @@
 _Updated: 2026-06-12 (guardian portal v1 built)_
 
 ## Now / next
+- **Planned (Library module — catalog + circulation + reservations, D-#81–#84):** build contract
+  `docs/prd-library.md` authored — pulls the LIBRARY half of the deferred "loanable-resource" ops
+  module forward (asset register stays deferred; roadmap patched). Per-copy catalog (unique accession
+  numbers) + admin-set per-borrower-type `LibraryPolicy` (loanDays/maxConcurrent/maxRenewals/holdDays;
+  seed working values 7/2/1 student · 14/4/2 staff · 7/2/1 guardian · 3-day hold). Borrowers =
+  **students, staff AND guardians** — all desk-mediated (students have no logins; guardian portal is
+  read-only, D-#68); staff additionally browse + self-reserve in-app. **NO fines ever** — overdue =
+  reminders + chase list; lost/damaged = replacement recorded, no money in-app (D-#27 posture).
+  Title-level FIFO **reservations** (renewal blocked while queued; hold + pickup window on return;
+  **lazy request-time expiry**, D-#21 posture — no scheduler dependency). Desk gated by
+  `assertIsLibrarian` — `library:manage` (Principal/Office) OR a TEACHER via append-only
+  `LibrarianAssignment` (D-#42/#64 duty pattern, no new role). LB-5 overdue emitters ride the D-#72
+  `emit()` seam (needs N-1; the chase-list report + ADR-003 wa.me links stand alone); guardian portal
+  gets a read-only **child-loans card** (GP-2 rider, `assertGuardianOfStudent`). App-native vocab only
+  (`library:read`/`library:manage` + BORROWER_TYPES/COPY_STATUSES/LOAN_STATUSES/RESERVATION_STATUSES/
+  BOOK_LANGUAGES + BN) — no wire sync; verifier extends at build time. Open items: possible
+  `import-books` ingest if a register spreadsheet exists (Principal to confirm); seed figures are
+  working values. **Plan/docs only — no feature code yet. Next = build LB-1 per docs/prd-library.md §6,
+  slice order.** (Handoff proposed D-#80–#83 — renumbered; D-#80 is taken by roll-number=ID.)
 - **Built (Attendance AT-4 — reminder + escalation engine, D-#65):** server + app on branch
   `feat/attendance-at4` (PR open). The attendance module is now AT-1..AT-5 complete (general Section flow).
   New `PushDevice` (Expo tokens per User, reusable) + `AttendanceReminderDispatch` (idempotency ledger,
