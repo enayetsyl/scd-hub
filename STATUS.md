@@ -3,6 +3,17 @@
 _Updated: 2026-06-12 (guardian portal v1 built)_
 
 ## Now / next
+- **Planned (Deployment — go-live + dev pipeline, D-#90–#93):** build contract
+  `docs/deployment.md`. Slices DEP-1 (Oracle VM + DNS) → DEP-2 (prod install,
+  systemd + Caddy/HTTPS, Atlas IP allow-list; closes the /pdf CORS follow-up via
+  same-origin) → DEP-3 (live golden-path verification — clears the standing
+  'not verified live' debt) → DEP-4 (nightly Atlas→Drive backup + executed
+  restore drill, ADR-011/016) → DEP-5 (`dev` branch + dev environment + separate
+  seeded dev DB; feature code now pushes to `dev`, docs-only commits stay on
+  `main`) → DEP-6 (GitHub Actions: CI gate + auto-deploy dev/prod). Plan/docs
+  only — nothing executed. Next = execute DEP-1 per docs/deployment.md §4,
+  slice order. (Handoff proposed D-#59–#62 — renumbered, taken through D-#89.
+  The D-#91 "push to dev" handoff rule takes effect when DEP-5 executes.)
 - **Planned (Assignment Tracker — build contract written, D-#85–#89):** weekly AS-… channel
   replacing the Google Sheet tracker — `docs/prd-tracker-assignment.md`. Per-student
   lifecycle via the shared engine (D-#37's second consumer), admin 4-week
