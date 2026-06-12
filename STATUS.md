@@ -3,6 +3,21 @@
 _Updated: 2026-06-12 (guardian portal v1 built)_
 
 ## Now / next
+- **Planned (Assignment Tracker — build contract written, D-#85–#89):** weekly AS-… channel
+  replacing the Google Sheet tracker — `docs/prd-tracker-assignment.md`. Per-student
+  lifecycle via the shared engine (D-#37's second consumer), admin 4-week
+  `AssignmentSchedule` + computed expected items, Thu-deliver (roll previous open day) /
+  Sun-due (roll next open day, both admin-configurable, D-#86), checking = result +
+  optional marks + feedback with teacher-optional (never auto) resubmission (D-#87),
+  Office-owned follow-up with guardian escalation ladder (in-app ×2 → WhatsApp; in-app
+  delivery + guardian screens ride the deferred portal/messaging pipeline, D-#88),
+  Sun/Mon teacher prep prompts in-app now, push pipeline-deferred (D-#89). Rides the
+  existing `assignment` tracker-kind — no contract sync. **Plan/docs only — no feature
+  code yet.** Next = build AS-T1 per `docs/prd-tracker-assignment.md` §5, slice order
+  AS-T1→AS-T5. (Handoff proposed D-#59–#63 — renumbered, taken through D-#84. Handoff
+  predates the live repo: guardian portal is now BUILT/live-verified and the D-#72
+  notification seam is contracted — AS-T4/AS-T5 should ride them at build time; PRD
+  pre-flight note records this.)
 - **Planned (Library module — catalog + circulation + reservations, D-#81–#84):** build contract
   `docs/prd-library.md` authored — pulls the LIBRARY half of the deferred "loanable-resource" ops
   module forward (asset register stays deferred; roadmap patched). Per-copy catalog (unique accession
