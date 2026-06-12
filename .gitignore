@@ -55,5 +55,8 @@ _xlsx_vals.txt
 Thumbs.db
 *.log
 
-# ---- Claude Code (local agent settings) ----
-.claude/
+# ---- Claude Code ----
+# Ignore everything except the shared project settings (hooks live there and
+# must be present in worktree checkouts); local overrides + worktrees stay out.
+.claude/*
+!.claude/settings.json

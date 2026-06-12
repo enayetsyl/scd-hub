@@ -114,6 +114,25 @@ policy, or decisions into this repo.
 3. Run the relevant verifier/tests — green before commit.
 4. Commit with a clear message; tag if it's a version milestone.
 
+## Parallel sessions (worktrees)
+Multiple agent sessions may run concurrently, each in its own git worktree under
+`.claude/worktrees/<name>/`. Rules for any session running in a worktree:
+1. **Fresh-worktree setup (run before anything else):** `npm install`, then
+   `npm run build --workspace=shared`. A new worktree has no `node_modules/` or `dist/`.
+   `.env` is copied in automatically via `.worktreeinclude`.
+2. **One feature per session.** Commit to this worktree's own branch; one PR per feature.
+3. **The database is NOT isolated.** All worktrees share the live Atlas DB (real roster of
+   91 students). Never run `server/scripts/seed.ts` against it (it `deleteMany`s Students),
+   and don't run migrations or bulk writes from two sessions at the same time.
+4. **Ports are shared.** Only one `npm run dev:server` per port — set a different `PORT`
+   in this worktree's `.env` if another session's server is running. Jest tests are safe
+   to run in parallel sessions.
+5. **Contract files are serialized.** Do not edit `/shared/vocab.ts` or
+   `docs/import-contract.schema.json` if another in-flight branch also changes them —
+   land one PR first, rebase the other.
+6. **Append-only log conflicts are expected.** When `CHANGELOG.md` / `DECISIONS.md` /
+   `STATUS.md` conflict at merge, keep both sides' rows (out-of-order numbering is fine).
+
 ## Scope boundary
 This repo is the software. Curriculum authoring, policy, and the REF library live in the curriculum
 Projects and are **out of scope here**. Cross-Project alignment (e.g. Project 04 question payload) is

@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"Invoke-WebRequest -Uri 'https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSansBengali/NotoSansBengali-Regular.ttf' -OutFile 'c:/pHero/Hobby/scd/scd-hub/server/assets/fonts/NotoSansBengali-Regular.ttf' -UseBasicParsing\")",
+      "Bash(echo \"Exit: $?\")"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "case \"$PWD\" in *.claude/worktrees/*) [ -d node_modules ] || npm install; [ -d shared/dist ] || npm run build --workspace=shared;; esac",
+            "timeout": 600,
+            "statusMessage": "Worktree setup: npm install + shared build"
+          }
+        ]
+      }
+    ],
+    "CwdChanged": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "case \"$PWD\" in *.claude/worktrees/*) [ -d node_modules ] || npm install; [ -d shared/dist ] || npm run build --workspace=shared;; esac",
+            "timeout": 600,
+            "statusMessage": "Worktree setup: npm install + shared build"
+          }
+        ]
+      }
+    ]
+  }
+}
