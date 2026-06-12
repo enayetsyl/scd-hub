@@ -8,7 +8,7 @@ import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { roleHasPermission, PLAN_DOC_TYPES } from "@scd/shared";
-import { ARTIFACT_QUERY, ASSIGN_PLAN_REVIEW, APPROVE_PLAN } from "../../graphql/operations";
+import { ARTIFACT_QUERY, ASSIGN_PLAN_REVIEW, APPROVE_PLAN, TEACHERS_QUERY } from "../../graphql/operations";
 import type { ContentStackParamList } from "../../navigation/types";
 import { useAuth } from "../../auth/AuthContext";
 import {
@@ -19,7 +19,7 @@ import {
   Card,
   Badge,
   Button,
-  Field,
+  Select,
   Loader,
   ErrorBanner,
   Notice,
@@ -53,6 +53,12 @@ export default function PlanViewScreen({ route }: Props): React.ReactElement {
   const canApprove = !!role && roleHasPermission(role, "content:promote_gold");
   const [, assignReview] = useMutation(ASSIGN_PLAN_REVIEW);
   const [, approvePlan] = useMutation(APPROVE_PLAN);
+  const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY, pause: !canAssign });
+  const teacherOptions = (teacherData?.teachers ?? []).map((t) => ({
+    label: t.name,
+    value: t.id,
+    hint: t.phone ?? undefined,
+  }));
   const [reviewerId, setReviewerId] = useState("");
   const [assignBusy, setAssignBusy] = useState(false);
   const [approveBusy, setApproveBusy] = useState(false);
@@ -175,7 +181,14 @@ export default function PlanViewScreen({ route }: Props): React.ReactElement {
             ) : null}
             {canAssign ? (
               <View style={{ marginTop: space(3) }}>
-                <Field label={STR.reviewerId} value={reviewerId} onChangeText={setReviewerId} placeholder="User _id" />
+                <Select
+                  label={STR.reviewer}
+                  value={reviewerId === "" ? null : reviewerId}
+                  options={teacherOptions}
+                  onChange={setReviewerId}
+                  placeholder={STR.selectTeacher}
+                  emptyText={STR.noTeachers}
+                />
                 <Button
                   title={assignBusy ? STR.assigning : STR.assignForReview}
                   onPress={onAssign}
