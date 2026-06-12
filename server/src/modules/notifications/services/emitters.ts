@@ -25,6 +25,32 @@ import { dateKeyOf } from "../../attendance/dates";
 
 type IdLike = { toString(): string };
 
+/** The best-effort contract, encoded once: an emitter failure is logged and
+ *  swallowed — it must never throw into (or roll back) the host mutation.
+ *  Every emitter body runs inside this; new emitters (N-2 scheduler) must too. */
+async function bestEffort(label: string, body: () => Promise<void>): Promise<void> {
+  try {
+    await body();
+  } catch (err) {
+    console.error(`notification emit failed (${label} — never blocks the host operation):`, err);
+  }
+}
+
+/** Every dedupe-key format lives HERE — one registry of prefixes, so a new
+ *  kind can't silently collide with an existing one (a colliding key is eaten
+ *  by the unique index as a "duplicate" and the notification never appears). */
+const dedupeKeys = {
+  /** Per slot+date+guardian: a re-publish the same day re-emits the same key → no-op. */
+  classNotePublished: (slotId: string, dateKey: string, guardianId: string) =>
+    `CNPUB:${slotId}:${dateKey}:${guardianId}`,
+  /** Per student+item (PRD N1.4): a 4th chase re-emits the same key → no-op. */
+  hwParentComms: (hwItemId: string, studentId: string) => `HWPC:${hwItemId}:${studentId}`,
+  /** Per assignment: re-running the host mutation can't double-notify. */
+  reviewAssigned: (assignmentId: string) => `REV:${assignmentId}`,
+  /** Per substitution: one notification per recorded cover. */
+  coverAssigned: (substitutionId: string) => `COV:${substitutionId}`,
+} as const;
+
 // ---------------------------------------------------------------------------
 // N1.3 — class-note publish → each login-enabled guardian of the group
 // ---------------------------------------------------------------------------
@@ -39,7 +65,7 @@ export interface ClassNotePublishedEvent {
 }
 
 export async function emitClassNotePublished(note: ClassNotePublishedEvent): Promise<void> {
-  try {
+  return bestEffort("class-note publish", async () => {
     const studentIds =
       note.groupType === "section"
         ? (
@@ -67,25 +93,27 @@ export async function emitClassNotePublished(note: ClassNotePublishedEvent): Pro
 
     const dateKey = dateKeyOf(new Date(note.date));
     const subjectBn = (ROUTINE_SUBJECT_LABELS_BN as Record<string, string>)[note.subject] ?? note.subject;
-    for (const g of guardians) {
-      await emit({
-        recipientGuardianId: g._id.toString(),
-        kind: "CLASS_NOTE_PUBLISHED",
-        titleBn: "পাঠ নোট প্রকাশিত হয়েছে",
-        bodyBn: `${subjectBn} — আজ ক্লাসে যা পড়ানো হয়েছে তার নোট প্রকাশিত হয়েছে।`,
-        refs: {
-          classNoteId: note._id.toString(),
-          slotId: note.slotId.toString(),
-          date: dateKey,
-          groupType: note.groupType,
-          groupId: note.groupId.toString(),
-        },
-        dedupeKey: `CNPUB:${note.slotId.toString()}:${dateKey}:${g._id.toString()}`,
-      });
-    }
-  } catch (err) {
-    console.error("notification emit failed (class-note publish — never blocks the publish):", err);
-  }
+    // One upsert per guardian — in parallel: this runs awaited inside the
+    // publish mutation, and serial round-trips to Atlas would stall it.
+    await Promise.all(
+      guardians.map((g) =>
+        emit({
+          recipientGuardianId: g._id.toString(),
+          kind: "CLASS_NOTE_PUBLISHED",
+          titleBn: "পাঠ নোট প্রকাশিত হয়েছে",
+          bodyBn: `${subjectBn} — আজ ক্লাসে যা পড়ানো হয়েছে তার নোট প্রকাশিত হয়েছে।`,
+          refs: {
+            classNoteId: note._id.toString(),
+            slotId: note.slotId.toString(),
+            date: dateKey,
+            groupType: note.groupType,
+            groupId: note.groupId.toString(),
+          },
+          dedupeKey: dedupeKeys.classNotePublished(note.slotId.toString(), dateKey, g._id.toString()),
+        }),
+      ),
+    );
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -101,7 +129,7 @@ export interface HwParentCommsEvent {
 }
 
 export async function emitHwParentComms(record: HwParentCommsEvent): Promise<void> {
-  try {
+  return bestEffort("HW parent-comms", async () => {
     const section = (await Section.findById(record.sectionId).lean()) as unknown as {
       classTeacherId?: IdLike;
     } | null;
@@ -120,12 +148,9 @@ export async function emitHwParentComms(record: HwParentCommsEvent): Promise<voi
         studentId: record.studentId.toString(),
         sectionId: record.sectionId.toString(),
       },
-      // Per student+item (PRD N1.4): a 4th chase re-emits the same key → no-op.
-      dedupeKey: `HWPC:${record.hwItemId.toString()}:${record.studentId.toString()}`,
+      dedupeKey: dedupeKeys.hwParentComms(record.hwItemId.toString(), record.studentId.toString()),
     });
-  } catch (err) {
-    console.error("notification emit failed (HW parent-comms — never blocks the transition):", err);
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -144,7 +169,7 @@ export interface ReviewAssignedEvent {
 }
 
 export async function emitReviewAssigned(assignment: ReviewAssignedEvent): Promise<void> {
-  try {
+  return bestEffort("review assigned", async () => {
     await emit({
       recipientUserId: assignment.reviewerId.toString(),
       kind: "REVIEW_ASSIGNED",
@@ -154,11 +179,9 @@ export async function emitReviewAssigned(assignment: ReviewAssignedEvent): Promi
         reviewAssignmentId: assignment._id.toString(),
         artifactId: assignment.artifactId.toString(),
       },
-      dedupeKey: `REV:${assignment._id.toString()}`,
+      dedupeKey: dedupeKeys.reviewAssigned(assignment._id.toString()),
     });
-  } catch (err) {
-    console.error("notification emit failed (review assigned — never blocks the assignment):", err);
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -173,7 +196,7 @@ export interface CoverAssignedEvent {
 }
 
 export async function emitCoverAssigned(substitution: CoverAssignedEvent): Promise<void> {
-  try {
+  return bestEffort("cover assigned", async () => {
     const dateKey = dateKeyOf(new Date(substitution.date));
     await emit({
       recipientUserId: substitution.coverTeacherId.toString(),
@@ -185,9 +208,7 @@ export async function emitCoverAssigned(substitution: CoverAssignedEvent): Promi
         slotId: substitution.slotId.toString(),
         date: dateKey,
       },
-      dedupeKey: `COV:${substitution._id.toString()}`,
+      dedupeKey: dedupeKeys.coverAssigned(substitution._id.toString()),
     });
-  } catch (err) {
-    console.error("notification emit failed (cover assigned — never blocks the assignment):", err);
-  }
+  });
 }

@@ -84,21 +84,35 @@ const NotificationSchema = new Schema<INotification>(
   { timestamps: true },
 );
 
-// Exactly one recipient (D-#72). emit() validates before writing; this guard
-// covers any direct create path as well.
+/** The exactly-one-recipient invariant (D-#72), shared by every guard site.
+ *  Returns true for a user recipient, false for a guardian recipient. */
+export function assertExactlyOneRecipient(label: string, userId: unknown, guardianId: unknown): boolean {
+  const hasUser = !!userId;
+  if (hasUser === !!guardianId) {
+    throw new Error(`${label}: exactly one of a user / guardian recipient is required`);
+  }
+  return hasUser;
+}
+
+// Guards direct create()/save() paths only — emit()'s updateOne-upsert bypasses
+// document validation (Mongoose), so emit() asserts the same invariant itself.
 NotificationSchema.pre("validate", function (next) {
-  const hasUser = !!this.recipientUserId;
-  const hasGuardian = !!this.recipientGuardianId;
-  if (hasUser === hasGuardian) {
-    next(new Error("Notification requires exactly one of recipientUserId / recipientGuardianId"));
-  } else {
+  try {
+    assertExactlyOneRecipient("Notification", this.recipientUserId, this.recipientGuardianId);
     next();
+  } catch (err) {
+    next(err as Error);
   }
 });
 
 // The idempotency contract (N1.1) + the two own-row inbox listings (N1.2).
+// The readAt composites cover the hot unread paths (myUnreadCount badge +
+// unreadOnly listing) — without readAt in the key, those scan every row the
+// recipient has ever received.
 NotificationSchema.index({ dedupeKey: 1 }, { unique: true });
 NotificationSchema.index({ recipientUserId: 1, createdAt: -1 });
 NotificationSchema.index({ recipientGuardianId: 1, createdAt: -1 });
+NotificationSchema.index({ recipientUserId: 1, readAt: 1, createdAt: -1 });
+NotificationSchema.index({ recipientGuardianId: 1, readAt: 1, createdAt: -1 });
 
 export const Notification = model<INotification>("Notification", NotificationSchema);

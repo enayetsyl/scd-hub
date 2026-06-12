@@ -36,6 +36,8 @@ const mockNotifFindOneAndUpdate = jest.fn();
 const mockNotifUpdateMany = jest.fn();
 
 jest.mock("../modules/notifications/models/Notification", () => ({
+  // Keep the real exports (assertExactlyOneRecipient) — only the model is mocked.
+  ...jest.requireActual("../modules/notifications/models/Notification"),
   Notification: {
     updateOne: (f: unknown, u: unknown, o: unknown) => mockNotifUpdateOne(f, u, o),
     findOne: (f: unknown) => ({ lean: () => mockNotifFindOne(f) }),

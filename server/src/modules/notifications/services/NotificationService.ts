@@ -17,7 +17,12 @@
  */
 import { NOTIFICATION_KINDS } from "@scd/shared";
 import type { NotificationKind } from "@scd/shared";
-import { Notification, type INotification, type NotificationRefs } from "../models/Notification";
+import {
+  Notification,
+  assertExactlyOneRecipient,
+  type INotification,
+  type NotificationRefs,
+} from "../models/Notification";
 import { ForbiddenError } from "../../../middleware/authz";
 
 // ---------------------------------------------------------------------------
@@ -59,11 +64,7 @@ export interface EmitResult {
 }
 
 export async function emit(input: EmitInput): Promise<EmitResult> {
-  const hasUser = !!input.recipientUserId;
-  const hasGuardian = !!input.recipientGuardianId;
-  if (hasUser === hasGuardian) {
-    throw new Error("emit(): exactly one of recipientUserId / recipientGuardianId is required");
-  }
+  assertExactlyOneRecipient("emit()", input.recipientUserId, input.recipientGuardianId);
   if (!(NOTIFICATION_KINDS as readonly string[]).includes(input.kind)) {
     throw new Error(`emit(): unknown notification kind: ${input.kind}`);
   }
@@ -98,14 +99,17 @@ export async function emit(input: EmitInput): Promise<EmitResult> {
   if (created && channels.length > 0) {
     const row = (await Notification.findOne({ dedupeKey: input.dedupeKey }).lean()) as unknown as INotification | null;
     if (row) {
-      for (const channel of channels) {
-        try {
-          await channel.deliver(row);
-        } catch (err) {
-          // Best-effort: the inbox row stands regardless (D-#75 / N4.3 posture).
-          console.error(`notification channel "${channel.name}" failed (never blocks the row):`, err);
-        }
-      }
+      // Channels are independent of each other — deliver in parallel.
+      await Promise.all(
+        channels.map(async (channel) => {
+          try {
+            await channel.deliver(row);
+          } catch (err) {
+            // Best-effort: the inbox row stands regardless (D-#75 / N4.3 posture).
+            console.error(`notification channel "${channel.name}" failed (never blocks the row):`, err);
+          }
+        }),
+      );
     }
   }
 
@@ -124,11 +128,7 @@ export interface RecipientRef {
 }
 
 function ownRowFilter(recipient: RecipientRef): Record<string, unknown> {
-  const hasUser = !!recipient.userId;
-  const hasGuardian = !!recipient.guardianId;
-  if (hasUser === hasGuardian) {
-    throw new Error("recipient: exactly one of userId / guardianId is required");
-  }
+  const hasUser = assertExactlyOneRecipient("recipient", recipient.userId, recipient.guardianId);
   return hasUser ? { recipientUserId: recipient.userId } : { recipientGuardianId: recipient.guardianId };
 }
 
