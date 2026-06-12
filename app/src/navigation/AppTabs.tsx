@@ -94,9 +94,26 @@ function LogoutButton(): React.ReactElement {
   );
 }
 
+/** The logged-in user's name, shown left of the language/logout actions. */
+function HeaderName(): React.ReactElement | null {
+  const { user } = useAuth();
+  const colors = useColors();
+  if (!user?.name) return null;
+  return (
+    <Text
+      style={{ ...typeScale.button, color: colors.onPrimary, maxWidth: 150, marginRight: 4 }}
+      numberOfLines={1}
+      ellipsizeMode="tail"
+    >
+      👤 {user.name}
+    </Text>
+  );
+}
+
 function HeaderRight(): React.ReactElement {
   return (
     <View style={{ flexDirection: "row", alignItems: "center" }}>
+      <HeaderName />
       <LangToggle />
       <LogoutButton />
     </View>
