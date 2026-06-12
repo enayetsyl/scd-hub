@@ -197,3 +197,15 @@ English codes (AS-ID, status codes) on forms per house rule.
 >    portal screens (a GP rider, like the library child-loans card), and AS-T4's in-app
 >    guardian notification records should ride the D-#72 `emit()` seam rather than invent
 >    a parallel mechanism. The slice contracts above are otherwise unchanged.
+>
+> **Build notes (recorded at the AS-T1..T5 build, 2026-06-13 — D-#94):**
+> 1. **RBAC as built (vocab frozen during the build session):** schedule CRUD =
+>    `roster:manage` (NOT "tracker:write admin scope" — OFFICE holds no tracker:*
+>    in the live vocab and D-#88 makes Office the follow-up owner); the Office
+>    follow-up surface = `message:dispatch` + an explicit Principal/Office check;
+>    teacher flows = `tracker:write` + assertCanWrite; guardian read =
+>    `guardian:read_child` + assertGuardianOfStudent.
+> 2. **AS-T4 in-app steps are kind-gated:** the guardian emitter rides emit() but
+>    `ASSIGNMENT_CHASE` is not yet in NOTIFICATION_KINDS — steps log SKIPPED and
+>    Office proceeds to WhatsApp until the kind (+ labels + verifier §C.5 update)
+>    lands in a vocab-owning session. No assignment code changes at activation.

@@ -1,0 +1,83 @@
+/**
+ * AssignmentItem — Layer A of the Assignment Tracker (PRD §3, AS-T1/AS-T2).
+ *
+ * ONE item per (week × section × subject), materialized when the teacher runs
+ * the delivery pass against a schedule entry (the expected grid itself is
+ * computed on read from AssignmentSchedule — an AssignmentItem row exists only
+ * once delivery happened). `deliveryDate` + `dueDate` are resolved server-side
+ * per the §4 holiday rolls (D-#86), never client-supplied.
+ *
+ * Counts (# delivered / # not-received / # submitted / # missing) are DERIVED
+ * from the Layer-B records (PRD §1 — never typed), so this model stores none.
+ *
+ * Rides the existing `assignment` tracker-kind (D-#85) — no new tracker-kind,
+ * no envelope/harness sync. Operational/identity plane behind ADR-005.
+ */
+import { Schema, model, Document, Types } from "mongoose";
+import { HW_SUBJECTS } from "@scd/shared";
+import type { HwSubject } from "@scd/shared";
+
+export interface IAssignmentItem extends Document {
+  _id: Types.ObjectId;
+  /** AS_ID — AS-C{class}-{SUBJECT}-{nnnn} (D-#34 numbering pattern). Unique, year-continuous. */
+  asId: string;
+  academicYearId: Types.ObjectId;
+  /** The rotation entry this item realizes (subdocument _id on AssignmentSchedule.entries). */
+  scheduleEntryId: Types.ObjectId;
+  /** 1-based week of the year (relative to the schedule's term anchor). */
+  weekNumber: number;
+  /** ((weekNumber−1) mod 4)+1 — denormalised for roll-ups. */
+  cycleWeek: number;
+  classId: Types.ObjectId;
+  classLevel: number;
+  sectionId: Types.ObjectId;
+  subject: HwSubject;
+  teacherId: Types.ObjectId;
+  /** Resolved per §4 rule 1 (delivery anchor, holiday → previous open day). */
+  deliveryDate: Date;
+  /** Resolved per §4 rule 2 (due anchor, holiday → next open day). */
+  dueDate: Date;
+  /** Optional link to an assembled AS set (D-#88) — content-free items equally valid. */
+  setId?: Types.ObjectId;
+  /** Teacher-set marks ceiling; checking validates 0 ≤ marks ≤ totalMarks (D-#87). */
+  totalMarks?: number;
+  deliveredBy: Types.ObjectId;
+  deliveredAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const AssignmentItemSchema = new Schema<IAssignmentItem>(
+  {
+    asId: { type: String, required: true, unique: true },
+    academicYearId: { type: Schema.Types.ObjectId, required: true },
+    scheduleEntryId: { type: Schema.Types.ObjectId, required: true },
+    weekNumber: { type: Number, required: true, min: 1 },
+    cycleWeek: { type: Number, required: true, min: 1, max: 4 },
+    classId: { type: Schema.Types.ObjectId, required: true },
+    classLevel: { type: Number, required: true, min: 1, max: 5 },
+    sectionId: { type: Schema.Types.ObjectId, required: true },
+    subject: { type: String, enum: HW_SUBJECTS, required: true },
+    teacherId: { type: Schema.Types.ObjectId, required: true },
+    deliveryDate: { type: Date, required: true },
+    dueDate: { type: Date, required: true },
+    setId: { type: Schema.Types.ObjectId },
+    totalMarks: { type: Number, min: 1 },
+    deliveredBy: { type: Schema.Types.ObjectId, required: true },
+    deliveredAt: { type: Date, required: true },
+  },
+  { timestamps: true },
+);
+
+// One item per realized (week × section × subject) — a second delivery pass for
+// the same expected cell is a duplicate, not a new item.
+AssignmentItemSchema.index(
+  { academicYearId: 1, weekNumber: 1, sectionId: 1, subject: 1 },
+  { unique: true },
+);
+// Prep-prompt / roll-up lookups: "which entries did this teacher already deliver
+// this week" and per-class summaries.
+AssignmentItemSchema.index({ academicYearId: 1, weekNumber: 1, teacherId: 1 });
+AssignmentItemSchema.index({ academicYearId: 1, classId: 1, weekNumber: 1 });
+
+export const AssignmentItem = model<IAssignmentItem>("AssignmentItem", AssignmentItemSchema);
