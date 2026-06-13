@@ -4,6 +4,15 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Guardian portal app — surface already-existing guardian reads the app didn't render + polish (FRONTEND
+  ONLY; no server/vocab/contract change). GuardianHome gains a **child-info card** (section + Quran/Arabic
+  group memberships from `myChildren` — fetched by the provider but never shown; D-#48/#56) and a day-load
+  **base+top-up breakdown** (fields already in `childDayLoad`). New **ChildClassNotesScreen** (lesson
+  history — last 7 days of `childClassNotes`, the date-parameterized read the Home tab only used for today),
+  reachable via a "আগের পাঠ দেখুন" link on the Home class-notes card (GuardianHome stack gains the
+  `ChildClassNotes` route). Attendance/leave/results stay placeholdered — no guardian server read exists for
+  them yet (would be a server change this session must not make). Gate: app tsc clean + expo web export
+  green (698 modules); no-drift confirmed — vocab verifier PASS + jest 643/643 untouched.
 - Section merge/split — Principal/Office combine a class's gender sections (Boys+Girls) into one and split
   back, per class, reversibly (D-#62). New `SectionMerge` model (move snapshot) + `SectionMergeService`
   (mergeSections/splitSections/activeSectionMerges + pure `deriveGenderToSource`); merge moves students into

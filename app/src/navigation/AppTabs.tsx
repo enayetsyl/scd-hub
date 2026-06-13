@@ -99,6 +99,7 @@ import SectionConfigScreen from "../screens/admin/SectionConfigScreen";
 import GuardianCredentialsScreen from "../screens/admin/GuardianCredentialsScreen";
 import StaffCredentialsScreen from "../screens/admin/StaffCredentialsScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
+import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
 import ChildRoutineScreen from "../screens/guardian/ChildRoutineScreen";
 import { GuardianChildProvider } from "../state/GuardianChildContext";
@@ -393,6 +394,7 @@ function GuardianHomeNavigator(): React.ReactElement {
   return (
     <GuardianHomeStack.Navigator screenOptions={stackOptions}>
       <GuardianHomeStack.Screen name="GuardianHome" component={GuardianHomeScreen} options={{ title: STR.gpToday }} />
+      <GuardianHomeStack.Screen name="ChildClassNotes" component={ChildClassNotesScreen} options={{ title: STR.gpClassNotesHistory }} />
     </GuardianHomeStack.Navigator>
   );
 }

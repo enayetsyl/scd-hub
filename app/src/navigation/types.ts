@@ -83,9 +83,10 @@ export type AttendanceStackParamList = {
   SectionPicker: undefined;
 };
 
-/** Guardian portal (GP-2) — one single-screen stack per guardian tab. */
+/** Guardian portal (GP-2) — the Home tab carries a class-notes history sub-screen. */
 export type GuardianHomeStackParamList = {
   GuardianHome: undefined;
+  ChildClassNotes: undefined;
 };
 export type GuardianHomeworkStackParamList = {
   ChildHomework: undefined;

@@ -3,6 +3,24 @@
 _Updated: 2026-06-13 (Notifications N-2..N-4 built; Messaging M-1 merged PR #41; coordinator review applied to both)_
 
 ## Now / next
+- **Built (Guardian portal app — surface existing reads + polish, FRONTEND ONLY) [branch
+  `worktree-guardian-app-riders`, PR open]:** an app-only pass that renders guardian-readable server data the
+  portal already had but never showed, and polishes the existing screens. **NO server / vocab / contract
+  change** (parallel session owns those) — uses only guardian queries that already exist. **Gaps closed:**
+  (1) **child-info card** on GuardianHome — section name + Quran/Arabic **group memberships** (from
+  `myChildren`, fetched by `GuardianChildProvider` but previously unrendered; cross-grade groups D-#48/#56);
+  (2) **ChildClassNotesScreen** — lesson history (last 7 days of `childClassNotes`, the date-parameterized
+  read GuardianHome only ever used for *today*), a sub-screen of the GuardianHome stack reachable via a
+  "আগের পাঠ দেখুন" ghost-button on the class-notes card (new `ChildClassNotes` route in
+  GuardianHomeStackParamList); (3) **day-load breakdown** — base + top-up split on GuardianHome (fields
+  already in `childDayLoad`). New BN+EN labels (gpChildInfo/gpSection/gpQuranGroup/gpArabicGroup/
+  gpDayLoadBase/gpDayLoadTopup/gpPastLessons/gpClassNotesHistory/gpNoNotesDay). Follows the existing guardian
+  tab + `GuardianChildProvider`/`ChildSwitcher` pattern + `docs/ui-guidelines.md` tokens; Bangla
+  guardian-facing labels. **Surfaces deliberately NOT built (no server read exists — would collide):**
+  guardian attendance / leave / results — these stay inert "শীঘ্রই আসছে" placeholders (a guardian
+  attendance read does not exist server-side; building it is the parallel session's plane). **Gate GREEN
+  (executed):** app `tsc --noEmit` clean + `expo export --platform web` green (698 modules); no-drift
+  confirmed — vocab verifier PASS + **jest 643/643** untouched. **Not verified live** (rides DEP-3).
 - **Built (Notifications N-2+N-3+N-4 — scheduler + app inbox + Expo push, D-#73/#74/#75 + build
   reconciliations D-#99) [branch `worktree-notifications-n2-n4`, PR #42 — coordinator review applied]: the notifications module
   (N-1..N-4) is COMPLETE server+app.** **N-2:** the app's FIRST internal scheduler — a 60s in-process

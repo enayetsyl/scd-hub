@@ -7,6 +7,8 @@
  */
 import React, { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import {
   CHILD_ROUTINE_QUERY,
@@ -15,11 +17,14 @@ import {
   CHILD_DAY_LOAD_QUERY,
   CHILD_LIBRARY_LOANS_QUERY,
 } from "../../graphql/operations";
-import { Screen, Body, Muted, Card, Badge, Notice, Loader, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import type { GuardianHomeStackParamList } from "../../navigation/types";
 import { STR, bnNum, loanStatusLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
+
+type Nav = NativeStackNavigationProp<GuardianHomeStackParamList>;
 
 const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
 const today = (): string => isoDay(new Date());
@@ -33,6 +38,7 @@ const daysAgo = (n: number): string => {
 const OPEN_STATES = new Set(["GIVEN", "ABSENT_REDELIVER", "DUE", "SUBMITTED", "CHASE", "CHECKED", "RESUBMIT"]);
 
 export default function GuardianHomeScreen(): React.ReactElement {
+  const nav = useNavigation<Nav>();
   const { selected, fetching } = useGuardianChild();
   const [placeholderNote, setPlaceholderNote] = useState<string | null>(null);
   const sid = selected?.studentId ?? "";
@@ -93,6 +99,28 @@ export default function GuardianHomeScreen(): React.ReactElement {
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
         <ChildSwitcher />
 
+        {/* Child info — section + Quran/Arabic group memberships (myChildren,
+            already loaded by the provider; cross-grade groups per D-#48/#56). */}
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.gpChildInfo}</Body>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(2) }}>
+            <Muted>{STR.gpSection}</Muted>
+            <Body>{selected.sectionName}</Body>
+          </View>
+          {selected.quranGroup ? (
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(1) }}>
+              <Muted>{STR.gpQuranGroup}</Muted>
+              <Body>{selected.quranGroup.name}</Body>
+            </View>
+          ) : null}
+          {selected.arabicGroup ? (
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(1) }}>
+              <Muted>{STR.gpArabicGroup}</Muted>
+              <Body>{selected.arabicGroup.name}</Body>
+            </View>
+          ) : null}
+        </Card>
+
         {/* Today's routine (subject + period + time ONLY, D-#69) */}
         <Card>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -144,6 +172,13 @@ export default function GuardianHomeScreen(): React.ReactElement {
               </View>
             ))
           )}
+          <View style={{ marginTop: space(2) }}>
+            <Button
+              title={STR.gpPastLessons}
+              variant="ghost"
+              onPress={() => nav.navigate("ChildClassNotes")}
+            />
+          </View>
         </Card>
 
         {/* Open homework + day-load vs 240 */}
@@ -152,6 +187,11 @@ export default function GuardianHomeScreen(): React.ReactElement {
           {load ? (
             <Muted style={{ marginTop: space(1) }}>
               {STR.gpDayLoad}: {bnNum(load.totalMinutes)}/{bnNum(load.ceiling)} {STR.gpMinutes}
+              {load.topupMinutes > 0
+                ? ` (${STR.gpDayLoadBase} ${bnNum(load.baseMinutes)} + ${STR.gpDayLoadTopup} ${bnNum(
+                    load.topupMinutes,
+                  )})`
+                : ""}
             </Muted>
           ) : null}
           {load?.overCeiling ? (
