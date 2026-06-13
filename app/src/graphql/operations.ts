@@ -4251,3 +4251,84 @@ export const CANCEL_OFFBOARDING = gql<{ cancelOffboarding: OffboardingCaseT }, {
     cancelOffboarding(caseId: $caseId) { ${OFFBOARDING_CASE_FIELDS} }
   }
 `;
+
+// ===========================================================================
+// Message templates (MT-1..MT-3, D-#128–#131) — Principal-only (template:manage)
+// ===========================================================================
+
+export interface MessageTemplateRow {
+  key: string;
+  group: string;
+  labelBn: string;
+  placeholders: string[];
+  bnBody: string;
+  enBody: string | null;
+  langMode: string;
+  isDefault: boolean;
+  defaultBnBody: string;
+  defaultEnBody: string | null;
+  defaultLangMode: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
+const MESSAGE_TEMPLATE_FIELDS = `
+  key group labelBn placeholders bnBody enBody langMode isDefault
+  defaultBnBody defaultEnBody defaultLangMode updatedAt updatedBy
+`;
+
+export const MESSAGE_TEMPLATES_QUERY = gql<{ messageTemplates: MessageTemplateRow[] }, NoVars>`
+  query MessageTemplates {
+    messageTemplates { ${MESSAGE_TEMPLATE_FIELDS} }
+  }
+`;
+
+export const MESSAGE_TEMPLATE_QUERY = gql<
+  { messageTemplate: MessageTemplateRow | null },
+  { key: string }
+>`
+  query MessageTemplate($key: String!) {
+    messageTemplate(key: $key) { ${MESSAGE_TEMPLATE_FIELDS} }
+  }
+`;
+
+export interface MessageTemplateHistoryRow {
+  at: string;
+  actorId: string | null;
+  action: string;
+  priorBnBody: string | null;
+  priorEnBody: string | null;
+  priorLangMode: string | null;
+  wasDefault: boolean;
+}
+
+export const MESSAGE_TEMPLATE_HISTORY_QUERY = gql<
+  { messageTemplateHistory: MessageTemplateHistoryRow[] },
+  { key: string }
+>`
+  query MessageTemplateHistory($key: String!) {
+    messageTemplateHistory(key: $key) {
+      at actorId action priorBnBody priorEnBody priorLangMode wasDefault
+    }
+  }
+`;
+
+export const EDIT_MESSAGE_TEMPLATE = gql<
+  { editMessageTemplate: MessageTemplateRow | null },
+  { key: string; bnBody: string; enBody?: string | null; langMode: string }
+>`
+  mutation EditMessageTemplate($key: String!, $bnBody: String!, $enBody: String, $langMode: String!) {
+    editMessageTemplate(key: $key, bnBody: $bnBody, enBody: $enBody, langMode: $langMode) {
+      ${MESSAGE_TEMPLATE_FIELDS}
+    }
+  }
+`;
+
+export const RESET_MESSAGE_TEMPLATE = gql<
+  { resetMessageTemplate: { key: string; reset: boolean } },
+  { key: string }
+>`
+  mutation ResetMessageTemplate($key: String!) {
+    resetMessageTemplate(key: $key) { key reset }
+  }
+`;

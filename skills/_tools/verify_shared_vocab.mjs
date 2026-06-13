@@ -282,5 +282,37 @@ check("VOCAB_ASSIGNMENT_SOURCE_LABELS_BN total",  total(V.VOCAB_ASSIGNMENT_SOURC
 check("VOCAB_ASSIGNMENT_SOURCE_LABELS_EN total",  total(V.VOCAB_ASSIGNMENT_SOURCE_LABELS_EN, V.VOCAB_ASSIGNMENT_SOURCES));
 check("vocab assignment sources exact (§3.5)",    eq(V.VOCAB_ASSIGNMENT_SOURCES, ["direct", "proxy"]));
 
+console.log("=== C.13 Message-template vocab + code-default registry + RBAC invariants (MT-1 — prd-message-templates §3, D-#128–#131) ===");
+check("TEMPLATE_LANGUAGE_MODES exact (D-#130)",        eq(V.TEMPLATE_LANGUAGE_MODES, ["BN", "EN", "BOTH"]));
+check("TEMPLATE_LANGUAGE_MODE_LABELS_BN total",        total(V.TEMPLATE_LANGUAGE_MODE_LABELS_BN, V.TEMPLATE_LANGUAGE_MODES));
+check("TEMPLATE_LANGUAGE_MODE_LABELS_EN total",        total(V.TEMPLATE_LANGUAGE_MODE_LABELS_EN, V.TEMPLATE_LANGUAGE_MODES));
+check("MESSAGE_TEMPLATE_KEYS non-empty + unique",      V.MESSAGE_TEMPLATE_KEYS.length > 0 && new Set(V.MESSAGE_TEMPLATE_KEYS).size === V.MESSAGE_TEMPLATE_KEYS.length);
+check("MESSAGE_TEMPLATE_REGISTRY total over keys (every key has a code default — D-#128/§3.2)",
+  V.MESSAGE_TEMPLATE_KEYS.every((k) => {
+    const d = V.MESSAGE_TEMPLATE_REGISTRY[k];
+    return d && typeof d.bnDefault === "string" && d.bnDefault.length > 0 &&
+      Array.isArray(d.placeholders) && typeof d.group === "string" && d.group.length > 0 &&
+      typeof d.labelBn === "string" && d.labelBn.length > 0 &&
+      V.TEMPLATE_LANGUAGE_MODES.includes(d.defaultLangMode);
+  }));
+check("registry has no key outside MESSAGE_TEMPLATE_KEYS",
+  Object.keys(V.MESSAGE_TEMPLATE_REGISTRY).every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k)));
+const tplTokens = (s) => (typeof s === "string" ? [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]) : []);
+check("every {token} in a default body is a DECLARED placeholder (the edit-time safety net, applied to defaults — D-#129)",
+  V.MESSAGE_TEMPLATE_KEYS.every((k) => {
+    const d = V.MESSAGE_TEMPLATE_REGISTRY[k];
+    const declared = new Set(d.placeholders);
+    return [...tplTokens(d.bnDefault), ...tplTokens(d.enDefault)].every((t) => declared.has(t));
+  }));
+check("empty-EN guard at vocab level: a default langMode of EN/BOTH requires a non-empty enDefault (D-#130)",
+  V.MESSAGE_TEMPLATE_KEYS.every((k) => {
+    const d = V.MESSAGE_TEMPLATE_REGISTRY[k];
+    return d.defaultLangMode === "BN" || (typeof d.enDefault === "string" && d.enDefault.length > 0);
+  }));
+check("template:manage = PRINCIPAL ONLY (verifier-proven exact-holder set — the payroll:approve/performance:signoff posture, D-#129)",
+  V.roleHasPermission("PRINCIPAL", "template:manage") &&
+  !["TEACHER", "OFFICE", "GUARDIAN"].some((r) => V.roleHasPermission(r, "template:manage")));
+check("template:manage is BUILD (MT-1 active)", V.PERMISSION_BUILD_STATUS["template:manage"] === "build");
+
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

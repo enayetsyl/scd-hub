@@ -186,7 +186,7 @@ export async function provisionGuardianLogin(phoneRaw: string, actor: Actor): Pr
     name: guardian.name,
     contextLabel: `${students.length} জন শিক্ষার্থী`,
     studentCount: students.length,
-    waLink: buildCredentialShareLink({ toPhone: phone, identifier: phone, password, name: guardian.name, audience: "guardian" }),
+    waLink: await buildCredentialShareLink({ toPhone: phone, identifier: phone, password, name: guardian.name, audience: "guardian" }),
     alreadyExisted,
   };
 }
@@ -219,7 +219,7 @@ export async function resetGuardianPassword(guardianId: string, actor: Actor): P
     name: guardian.name,
     contextLabel: `${studentCount} জন শিক্ষার্থী`,
     studentCount,
-    waLink: buildCredentialShareLink({ toPhone: guardian.identifier, identifier: guardian.identifier, password, name: guardian.name, audience: "guardian" }),
+    waLink: await buildCredentialShareLink({ toPhone: guardian.identifier, identifier: guardian.identifier, password, name: guardian.name, audience: "guardian" }),
     alreadyExisted: true,
   };
 }
@@ -296,7 +296,7 @@ export async function provisionStaffLogin(staffProfileId: string, actor: Actor):
     name: staff.name,
     contextLabel: user.role,
     studentCount: 0,
-    waLink: buildCredentialShareLink({ toPhone: phone, identifier: phone, password, name: staff.name, audience: "staff" }),
+    waLink: await buildCredentialShareLink({ toPhone: phone, identifier: phone, password, name: staff.name, audience: "staff" }),
     alreadyExisted,
   };
 }
@@ -327,7 +327,7 @@ export async function resetStaffPassword(userId: string, actor: Actor): Promise<
     name: user.name,
     contextLabel: user.role,
     studentCount: 0,
-    waLink: buildCredentialShareLink({ toPhone: user.phone, identifier: user.phone, password, name: user.name, audience: "staff" }),
+    waLink: await buildCredentialShareLink({ toPhone: user.phone, identifier: user.phone, password, name: user.name, audience: "staff" }),
     alreadyExisted: true,
   };
 }

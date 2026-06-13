@@ -1204,6 +1204,256 @@ export const VOCAB_ASSIGNMENT_SOURCE_LABELS_EN: Record<VocabAssignmentSource, st
 };
 
 
+// --- A.14 MESSAGE-TEMPLATE VOCAB (app-native; Message Templates module — -------
+// prd-message-templates, D-#128–#131). NO wire-contract twin: a generated-message
+// template is a feature, not import content, and every body is operational/
+// identity-plane behind the ADR-005 firewall — no envelope-schema mirror, no
+// two-place sync; only /shared + the vocab verifier run.
+//
+// THE CODE-DEFAULT REGISTRY (D-#128, §3.2): MESSAGE_TEMPLATE_REGISTRY is the
+// "printed page" — one entry per controlled key (MESSAGE_TEMPLATE_KEYS), declaring
+// AS DATA its allowed placeholder set, its default Bangla body, an optional default
+// English body, and its default language mode. The defaults are the CURRENT inline
+// strings lifted VERBATIM during MT-2, so adoption is byte-identical (D-#131). The
+// admin override (a MessageTemplate DB row) wins at read-time; absent ⇒ this default
+// is used (no seed write ever runs — D-#97/#103). Placeholder tokens are `{curly}`;
+// the renderer replaces `{name}` with `params[name]` (a missing declared placeholder
+// renders BLANK, never throws — D-#129). A title and a body are SEPARATE keys (each
+// independently editable); wa.me messages are body-only (`*.wa`). The ONE new
+// permission `template:manage` is PRINCIPAL-only (verifier-proven exact-holder set,
+// the payroll:approve / performance:signoff posture — D-#129).
+
+/** Per-template language mode (D-#130). Default BN; BOTH renders Bangla then English
+ *  in one body. A template cannot be set to EN/BOTH while its English body is empty
+ *  (the empty-English-send guard) — enforced at edit time + asserted in the verifier. */
+export const TEMPLATE_LANGUAGE_MODES = ["BN", "EN", "BOTH"] as const;
+export type TemplateLanguageMode = (typeof TEMPLATE_LANGUAGE_MODES)[number];
+
+export const TEMPLATE_LANGUAGE_MODE_LABELS_BN: Record<TemplateLanguageMode, string> = {
+  BN: "বাংলা", EN: "ইংরেজি", BOTH: "বাংলা ও ইংরেজি",
+};
+export const TEMPLATE_LANGUAGE_MODE_LABELS_EN: Record<TemplateLanguageMode, string> = {
+  BN: "Bangla", EN: "English", BOTH: "Bangla & English",
+};
+
+/** A code-default template declaration (the §3.2 "printed page" entry). */
+export interface MessageTemplateDef {
+  /** Feature group for the MT-3 list (English code; the app supplies the Bangla group label). */
+  group: string;
+  /** Bangla human label of what this message is (the MT-3 list row). */
+  labelBn: string;
+  /** The blanks this message provides — a body may use ONLY these placeholders (D-#129). */
+  placeholders: readonly string[];
+  /** Default Bangla body — the current inline string, lifted VERBATIM (D-#131). */
+  bnDefault: string;
+  /** Optional default English body (hand-written; none today — every live string is BN). */
+  enDefault?: string;
+  /** Default language mode (D-#130; BN for every migrated default → byte-identical). */
+  defaultLangMode: TemplateLanguageMode;
+}
+
+/** Controlled key set — one per generated-message variant (D-#128). */
+export const MESSAGE_TEMPLATE_KEYS = [
+  "classNote.published.title",
+  "classNote.published.body",
+  "classNote.prompt.title",
+  "classNote.prompt.body",
+  "classNote.escalation.title",
+  "classNote.escalation.body",
+  "homework.parentComms.title",
+  "homework.parentComms.body",
+  "review.assigned.title",
+  "review.assigned.body",
+  "cover.assigned.title",
+  "cover.assigned.body",
+  "bell.reminder.title",
+  "bell.reminder.body",
+  "attendance.reminder.marker.title",
+  "attendance.reminder.marker.body",
+  "attendance.reminder.office.title",
+  "attendance.reminder.office.body",
+  "attendance.reminder.principal.title",
+  "attendance.reminder.principal.body",
+  "library.dueSoon.title",
+  "library.dueSoon.body",
+  "library.overdue.title",
+  "library.overdue.body",
+  "library.overdue.wa",
+  "assignment.chase.title",
+  "assignment.chase.body",
+  "credential.share.guardian.wa",
+  "credential.share.staff.wa",
+  "tracker.nonSubmitter.wa",
+] as const;
+export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
+
+/** The code-default registry (D-#128/#131). `Record<MessageTemplateKey, …>` makes
+ *  tsc enforce one entry per key (the verifier double-checks totality + that every
+ *  `{token}` in a default is a declared placeholder). EVERY bnDefault is the current
+ *  inline string, lifted verbatim — DO NOT reword (it would break byte-identical). */
+export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTemplateDef> = {
+  // --- Class notes (N1.3 / N2.3 / N2.4) ---
+  "classNote.published.title": {
+    group: "classNote", labelBn: "পাঠ নোট প্রকাশিত — শিরোনাম", placeholders: [],
+    bnDefault: "পাঠ নোট প্রকাশিত হয়েছে", defaultLangMode: "BN",
+  },
+  "classNote.published.body": {
+    group: "classNote", labelBn: "পাঠ নোট প্রকাশিত — বার্তা", placeholders: ["subject"],
+    bnDefault: "{subject} — আজ ক্লাসে যা পড়ানো হয়েছে তার নোট প্রকাশিত হয়েছে।", defaultLangMode: "BN",
+  },
+  "classNote.prompt.title": {
+    group: "classNote", labelBn: "পাঠ নোট লেখার তাগিদ — শিরোনাম", placeholders: [],
+    bnDefault: "পাঠ নোট লেখা বাকি", defaultLangMode: "BN",
+  },
+  "classNote.prompt.body": {
+    group: "classNote", labelBn: "পাঠ নোট লেখার তাগিদ — বার্তা", placeholders: ["count", "lines"],
+    bnDefault: "আজকের {count}টি পাঠ নোট এখনও লেখা হয়নি: {lines}। ডেইলি নোট স্ক্রিনে লিখুন।", defaultLangMode: "BN",
+  },
+  "classNote.escalation.title": {
+    group: "classNote", labelBn: "পাঠ নোট অনিষ্পন্ন (এসকেলেশন) — শিরোনাম", placeholders: [],
+    bnDefault: "পাঠ নোট অনিষ্পন্ন", defaultLangMode: "BN",
+  },
+  "classNote.escalation.body": {
+    group: "classNote", labelBn: "পাঠ নোট অনিষ্পন্ন (এসকেলেশন) — বার্তা", placeholders: ["count", "lines"],
+    bnDefault: "আজ {count}টি পাঠ নোট এখনও লেখা হয়নি: {lines}", defaultLangMode: "BN",
+  },
+  // --- Homework parent-comms (N1.4) ---
+  "homework.parentComms.title": {
+    group: "homework", labelBn: "অভিভাবক যোগাযোগের তাগিদ — শিরোনাম", placeholders: [],
+    bnDefault: "অভিভাবকের সাথে যোগাযোগ প্রয়োজন", defaultLangMode: "BN",
+  },
+  "homework.parentComms.body": {
+    group: "homework", labelBn: "অভিভাবক যোগাযোগের তাগিদ — বার্তা", placeholders: ["hwId", "chaseCount"],
+    bnDefault: "বাড়ির কাজ {hwId}: একজন শিক্ষার্থীর তাগাদা {chaseCount} বার হয়েছে — অভিভাবককে জানান।", defaultLangMode: "BN",
+  },
+  // --- Plan review assigned (N1.5) ---
+  "review.assigned.title": {
+    group: "review", labelBn: "পর্যালোচনার দায়িত্ব — শিরোনাম", placeholders: [],
+    bnDefault: "পরিকল্পনা পর্যালোচনার দায়িত্ব", defaultLangMode: "BN",
+  },
+  "review.assigned.body": {
+    group: "review", labelBn: "পর্যালোচনার দায়িত্ব — বার্তা",
+    placeholders: ["subject", "classLevel", "anchorWord", "addressNumber", "roundNumber"],
+    bnDefault: "{subject} · শ্রেণি {classLevel} · {anchorWord} {addressNumber} — পরিকল্পনাটি আপনার পর্যালোচনার জন্য নির্ধারিত হয়েছে (রাউন্ড {roundNumber})।", defaultLangMode: "BN",
+  },
+  // --- Cover assigned (N1.6) ---
+  "cover.assigned.title": {
+    group: "cover", labelBn: "কাভার ক্লাসের দায়িত্ব — শিরোনাম", placeholders: [],
+    bnDefault: "কাভার ক্লাসের দায়িত্ব", defaultLangMode: "BN",
+  },
+  "cover.assigned.body": {
+    group: "cover", labelBn: "কাভার ক্লাসের দায়িত্ব — বার্তা", placeholders: ["dateKey"],
+    bnDefault: "{dateKey} তারিখে একটি ক্লাস কাভারের দায়িত্ব আপনাকে দেওয়া হয়েছে — আমার রুটিন দেখুন।", defaultLangMode: "BN",
+  },
+  // --- Bell reminder (N2.1) ---
+  "bell.reminder.title": {
+    group: "bell", labelBn: "ঘণ্টার স্মরণিকা — শিরোনাম", placeholders: [],
+    bnDefault: "ঘণ্টা বাজানোর স্মরণিকা", defaultLangMode: "BN",
+  },
+  "bell.reminder.body": {
+    group: "bell", labelBn: "ঘণ্টার স্মরণিকা — বার্তা", placeholders: ["periodNumber", "endHHMM"],
+    bnDefault: "পিরিয়ড {periodNumber} শেষ হবে {endHHMM}-এ — ঘণ্টা বাজানোর প্রস্তুতি নিন।", defaultLangMode: "BN",
+  },
+  // --- Attendance reminders, per tier (AT-4 / N-2, D-#99) ---
+  "attendance.reminder.marker.title": {
+    group: "attendance", labelBn: "উপস্থিতি স্মরণিকা (শিক্ষক) — শিরোনাম", placeholders: [],
+    bnDefault: "উপস্থিতি চিহ্নিত করুন", defaultLangMode: "BN",
+  },
+  "attendance.reminder.marker.body": {
+    group: "attendance", labelBn: "উপস্থিতি স্মরণিকা (শিক্ষক) — বার্তা", placeholders: ["section"],
+    bnDefault: "{section} সেকশনের আজকের উপস্থিতি এখনও চিহ্নিত হয়নি — অনুগ্রহ করে এখনই চিহ্নিত করুন।", defaultLangMode: "BN",
+  },
+  "attendance.reminder.office.title": {
+    group: "attendance", labelBn: "উপস্থিতি স্মরণিকা (অফিস) — শিরোনাম", placeholders: [],
+    bnDefault: "উপস্থিতি চিহ্নিত হয়নি", defaultLangMode: "BN",
+  },
+  "attendance.reminder.office.body": {
+    group: "attendance", labelBn: "উপস্থিতি স্মরণিকা (অফিস) — বার্তা", placeholders: ["section"],
+    bnDefault: "{section} সেকশনের আজকের উপস্থিতি এখনও চিহ্নিত হয়নি (অফিসে প্রেরিত)।", defaultLangMode: "BN",
+  },
+  "attendance.reminder.principal.title": {
+    group: "attendance", labelBn: "উপস্থিতি স্মরণিকা (অধ্যক্ষ) — শিরোনাম", placeholders: [],
+    bnDefault: "উপস্থিতি চিহ্নিত হয়নি", defaultLangMode: "BN",
+  },
+  "attendance.reminder.principal.body": {
+    group: "attendance", labelBn: "উপস্থিতি স্মরণিকা (অধ্যক্ষ) — বার্তা", placeholders: ["section"],
+    bnDefault: "{section} সেকশনের আজকের উপস্থিতি এখনও চিহ্নিত হয়নি (অধ্যক্ষকে প্রেরিত)।", defaultLangMode: "BN",
+  },
+  // --- Library reminders (LB-5, D-#84) ---
+  "library.dueSoon.title": {
+    group: "library", labelBn: "বই ফেরতের স্মরণিকা — শিরোনাম", placeholders: [],
+    bnDefault: "বই ফেরতের স্মরণিকা", defaultLangMode: "BN",
+  },
+  "library.dueSoon.body": {
+    group: "library", labelBn: "বই ফেরতের স্মরণিকা — বার্তা", placeholders: ["title", "dueKey"],
+    bnDefault: "“{title}” বইটির ফেরতের তারিখ আগামীকাল ({dueKey})। অনুগ্রহ করে সময়মতো ফেরত দিন।", defaultLangMode: "BN",
+  },
+  "library.overdue.title": {
+    group: "library", labelBn: "বই ফেরত বকেয়া (ইনবক্স) — শিরোনাম", placeholders: [],
+    bnDefault: "বই ফেরত বকেয়া", defaultLangMode: "BN",
+  },
+  "library.overdue.body": {
+    group: "library", labelBn: "বই ফেরত বকেয়া (ইনবক্স) — বার্তা", placeholders: ["title", "dueKey"],
+    bnDefault: "“{title}” বইটির ফেরতের তারিখ ({dueKey}) পেরিয়ে গেছে। অনুগ্রহ করে বইটি লাইব্রেরিতে ফেরত দিন।", defaultLangMode: "BN",
+  },
+  "library.overdue.wa": {
+    group: "library", labelBn: "বই ফেরত বকেয়া (হোয়াটসঅ্যাপ)",
+    placeholders: ["borrowerName", "title", "accessionNo", "dueDateKey"],
+    bnDefault:
+      "আসসালামু আলাইকুম {borrowerName}। SCD লাইব্রেরি থেকে নেওয়া বইটির ফেরতের তারিখ পেরিয়ে গেছে:\n" +
+      "বই: {title} ({accessionNo})\n" +
+      "ফেরতের তারিখ ছিল: {dueDateKey}\n" +
+      "অনুগ্রহ করে বইটি লাইব্রেরিতে ফেরত দিন। জাযাকাল্লাহু খাইরান।",
+    defaultLangMode: "BN",
+  },
+  // --- Assignment guardian chase (AS-T4, D-#88): the body is shared by the in-app
+  //     inbox row (steps 1–2) AND the wa.me link (step 3+) — one source. ---
+  "assignment.chase.title": {
+    group: "assignment", labelBn: "অ্যাসাইনমেন্ট চেজ — শিরোনাম", placeholders: [],
+    bnDefault: "অ্যাসাইনমেন্ট জমা হয়নি", defaultLangMode: "BN",
+  },
+  "assignment.chase.body": {
+    group: "assignment", labelBn: "অ্যাসাইনমেন্ট চেজ — বার্তা (ইনবক্স + হোয়াটসঅ্যাপ)",
+    placeholders: ["studentName", "subject", "asId", "deliveryDate", "dueDate"],
+    bnDefault:
+      "আসসালামু আলাইকুম। সম্মানিত অভিভাবক, " +
+      "আপনার সন্তান {studentName}-এর {subject} অ্যাসাইনমেন্টটি ({asId}) এখনও জমা হয়নি। " +
+      "অ্যাসাইনমেন্টটি {deliveryDate} তারিখে দেওয়া হয়েছিল এবং " +
+      "{dueDate} তারিখে জমা দেওয়ার কথা ছিল। " +
+      "অনুগ্রহ করে আপনার সন্তানকে অ্যাসাইনমেন্টটি দ্রুত জমা দিতে সহায়তা করুন। " +
+      "মা'আসসালামাহ — SCD Admin",
+    defaultLangMode: "BN",
+  },
+  // --- Credential share (D-#59/#60) — one variant per audience (the (who) is baked in). ---
+  "credential.share.guardian.wa": {
+    group: "credential", labelBn: "লগইন তথ্য শেয়ার (অভিভাবক)",
+    placeholders: ["name", "identifier", "password"],
+    bnDefault:
+      "আসসালামু আলাইকুম {name}। SCD Hub অ্যাপে আপনার (অভিভাবক) লগইন তথ্য:\n" +
+      "আইডি: {identifier}\n" +
+      "পাসওয়ার্ড: {password}\n" +
+      "অনুগ্রহ করে তথ্যগুলো গোপন রাখুন এবং প্রথমবার লগইনের পর সংরক্ষণ করুন।",
+    defaultLangMode: "BN",
+  },
+  "credential.share.staff.wa": {
+    group: "credential", labelBn: "লগইন তথ্য শেয়ার (শিক্ষক/স্টাফ)",
+    placeholders: ["name", "identifier", "password"],
+    bnDefault:
+      "আসসালামু আলাইকুম {name}। SCD Hub অ্যাপে আপনার (শিক্ষক/স্টাফ) লগইন তথ্য:\n" +
+      "আইডি: {identifier}\n" +
+      "পাসওয়ার্ড: {password}\n" +
+      "অনুগ্রহ করে তথ্যগুলো গোপন রাখুন এবং প্রথমবার লগইনের পর সংরক্ষণ করুন।",
+    defaultLangMode: "BN",
+  },
+  // --- Tracker non-submitter wa.me (J4.2, R-T2) ---
+  "tracker.nonSubmitter.wa": {
+    group: "tracker", labelBn: "জমা দেয়নি — অভিভাবক (হোয়াটসঅ্যাপ)",
+    placeholders: ["studentName", "setTitle"],
+    bnDefault: "প্রিয় অভিভাবক, আপনার সন্তান {studentName} \"{setTitle}\" জমা দেননি। অনুগ্রহ করে শিক্ষকের সাথে যোগাযোগ করুন।", defaultLangMode: "BN",
+  },
+};
+
+
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
 // =============================================================================
@@ -1264,6 +1514,7 @@ export const PERMISSIONS = [
   "message:dispatch",      // wa.me / notices manual send (R-T2)
   "user:manage",
   "audit:read",            // Principal reads; audit is system-appended, never user-written
+  "template:manage",       // PRINCIPAL ONLY — edit/reset the generated-message templates (Message Templates, D-#129; verifier-proven exact-holder set, the payroll:approve posture)
   // guardian portal (ACTIVE since GP-1, D-#68)
   "guardian:read_child",   // reads linked children's permitted operational slices
 ] as const;
@@ -1306,6 +1557,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "message:dispatch": "build",
   "user:manage": "build",
   "audit:read": "build",
+  "template:manage": "build", // Message Templates MT-1 (Principal-only edit/reset, D-#129)
   "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
 };
 
@@ -1327,6 +1579,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "roster:manage", "staff:manage", "leave:manage", "payroll:manage", "payroll:approve",
     "performance:manage", "performance:signoff", "guardian:link", "message:dispatch",
     "user:manage", "audit:read",
+    "template:manage",       // PRINCIPAL ONLY (D-#129) — Office/Teacher/Guardian never get it
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
   // fills trackers; authors nothing in-app (no content:import). message:dispatch

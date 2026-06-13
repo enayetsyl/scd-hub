@@ -364,3 +364,5 @@ builder.queryField("waLink", (t) =>
       buildNonSubmitterLink(args.guardianPhone, args.studentName, args.setTitle),
   }),
 );
+// NOTE: buildNonSubmitterLink is async since MT-2 (renderTemplate). Pothos awaits a
+// Promise<string> returned from resolve, so the String field resolves correctly.

@@ -3,6 +3,7 @@ import { BookTitle } from "../models/BookTitle";
 import { Guardian } from "../../foundation/models/Guardian";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { emit } from "../../notifications/services/NotificationService";
+import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { dateKeyOf, parseDateKey } from "../../attendance/dates";
 import { resolveDayType } from "../../routine/calendar";
 
@@ -123,13 +124,15 @@ export async function dispatchLibraryReminders(now = new Date()): Promise<Librar
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     if (dueKey === dateKeyOf(tomorrow)) {
+      const dsTitle = await renderTemplate("library.dueSoon.title");
+      const dsBody = await renderTemplate("library.dueSoon.body", { title: titleBn, dueKey });
       for (const r of await recipientsOf(loan)) {
         const res = await emit({
           recipientUserId: r.userId ?? null,
           recipientGuardianId: r.guardianId ?? null,
           kind: "LIBRARY_DUE_SOON",
-          titleBn: "বই ফেরতের স্মরণিকা",
-          bodyBn: `“${titleBn}” বইটির ফেরতের তারিখ আগামীকাল (${dueKey})। অনুগ্রহ করে সময়মতো ফেরত দিন।`,
+          titleBn: dsTitle,
+          bodyBn: dsBody,
           refs: { loanId, date: dueKey },
           dedupeKey: r.guardianId
             ? `${libraryDedupeKeys.dueSoon(loanId)}:${r.guardianId}`
@@ -145,13 +148,15 @@ export async function dispatchLibraryReminders(now = new Date()): Promise<Librar
       const schoolDays = await countSchoolDaysBetween(dueKey, todayKey);
       const rung = overdueRungFor(schoolDays);
       if (rung === 0) continue;
+      const odTitle = await renderTemplate("library.overdue.title");
+      const odBody = await renderTemplate("library.overdue.body", { title: titleBn, dueKey });
       for (const r of await recipientsOf(loan)) {
         const res = await emit({
           recipientUserId: r.userId ?? null,
           recipientGuardianId: r.guardianId ?? null,
           kind: "LIBRARY_OVERDUE",
-          titleBn: "বই ফেরত বকেয়া",
-          bodyBn: `“${titleBn}” বইটির ফেরতের তারিখ (${dueKey}) পেরিয়ে গেছে। অনুগ্রহ করে বইটি লাইব্রেরিতে ফেরত দিন।`,
+          titleBn: odTitle,
+          bodyBn: odBody,
           refs: { loanId, date: dueKey, rung },
           dedupeKey: r.guardianId
             ? `${libraryDedupeKeys.overdue(loanId, rung)}:${r.guardianId}`

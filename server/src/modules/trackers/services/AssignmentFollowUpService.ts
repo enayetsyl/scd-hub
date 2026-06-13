@@ -23,6 +23,7 @@ import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { AssignmentItem, type IAssignmentItem } from "../models/AssignmentItem";
 import { Student } from "../../foundation/models/Student";
 import { emitAssignmentGuardianChase } from "../../notifications/services/emitters";
+import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { atMidnight } from "../assignmentCalendar";
 
 // ---------------------------------------------------------------------------
@@ -46,18 +47,19 @@ export interface GuardianMessageInput {
 }
 
 /** Placeholders filled from the record: student name, subject label (Bangla),
- *  delivery date, due date (PRD §7). English codes (AS-ID) stay English. */
-export function buildAssignmentGuardianMessage(input: GuardianMessageInput): string {
+ *  delivery date, due date (PRD §7). English codes (AS-ID) stay English. The body
+ *  is the `assignment.chase.body` template (MT-2) — used here for the wa.me link AND
+ *  reused as the in-app inbox body (one source). */
+export async function buildAssignmentGuardianMessage(input: GuardianMessageInput): Promise<string> {
   const subjectBn =
     (HW_SUBJECT_LABELS_BN as Record<string, string>)[input.subject] ?? input.subject;
-  return (
-    `আসসালামু আলাইকুম। সম্মানিত অভিভাবক, ` +
-    `আপনার সন্তান ${input.studentName}-এর ${subjectBn} অ্যাসাইনমেন্টটি (${input.asId}) এখনও জমা হয়নি। ` +
-    `অ্যাসাইনমেন্টটি ${formatDateBn(input.deliveryDate)} তারিখে দেওয়া হয়েছিল এবং ` +
-    `${formatDateBn(input.dueDate)} তারিখে জমা দেওয়ার কথা ছিল। ` +
-    `অনুগ্রহ করে আপনার সন্তানকে অ্যাসাইনমেন্টটি দ্রুত জমা দিতে সহায়তা করুন। ` +
-    `মা'আসসালামাহ — SCD Admin`
-  );
+  return renderTemplate("assignment.chase.body", {
+    studentName: input.studentName,
+    subject: subjectBn,
+    asId: input.asId,
+    deliveryDate: formatDateBn(input.deliveryDate),
+    dueDate: formatDateBn(input.dueDate),
+  });
 }
 
 /** Normalise a phone to a wa.me target (digits only; same convention as the
@@ -205,7 +207,7 @@ export async function escalateAssignmentChase(input: EscalateInput): Promise<Esc
   }
 
   const at = input.at ?? new Date();
-  const messageBn = buildAssignmentGuardianMessage({
+  const messageBn = await buildAssignmentGuardianMessage({
     studentName: student.name,
     subject: item.subject,
     asId: rec.asId,

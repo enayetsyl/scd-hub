@@ -29,26 +29,19 @@ import { User } from "../../foundation/models/User";
 import { AttendanceReminderDispatch } from "../models/AttendanceReminderDispatch";
 import { emit } from "../../notifications/services/NotificationService";
 import { writeAudit } from "../../platform/services/AuditService";
+import { renderTemplate } from "../../templates/services/MessageTemplateService";
+import type { MessageTemplateKey } from "@scd/shared";
 import { ATTENDANCE_REMINDER_TIERS, type AttendanceReminderTier } from "@scd/shared";
 
 export class AttendanceReminderError extends Error {}
 
-// Bangla copy per tier (NFR-5) — the inbox row's title/body (push shows the
-// same text via the N-4 channel). The marker line is strictly "mark your
-// section" — never a guardian-chase instruction (O3).
-const TIER_MESSAGE: Record<AttendanceReminderTier, { title: string; body: (sectionName: string) => string }> = {
-  T1210: {
-    title: "উপস্থিতি চিহ্নিত করুন",
-    body: (s) => `${s} সেকশনের আজকের উপস্থিতি এখনও চিহ্নিত হয়নি — অনুগ্রহ করে এখনই চিহ্নিত করুন।`,
-  },
-  T1245: {
-    title: "উপস্থিতি চিহ্নিত হয়নি",
-    body: (s) => `${s} সেকশনের আজকের উপস্থিতি এখনও চিহ্নিত হয়নি (অফিসে প্রেরিত)।`,
-  },
-  T1400: {
-    title: "উপস্থিতি চিহ্নিত হয়নি",
-    body: (s) => `${s} সেকশনের আজকের উপস্থিতি এখনও চিহ্নিত হয়নি (অধ্যক্ষকে প্রেরিত)।`,
-  },
+// Per-tier message-template variant (MT-2). The inbox row's title/body now resolve
+// through renderTemplate (push shows the same text via the N-4 channel). The marker
+// line is strictly "mark your section" — never a guardian-chase instruction (O3).
+const TIER_VARIANT: Record<AttendanceReminderTier, "marker" | "office" | "principal"> = {
+  T1210: "marker",
+  T1245: "office",
+  T1400: "principal",
 };
 
 export interface TierEscalation {
@@ -155,7 +148,8 @@ export async function dispatchAttendanceReminders(
     sections.map((s) => [s._id.toString(), s.classTeacherId ? s.classTeacherId.toString() : null]),
   );
 
-  const message = TIER_MESSAGE[tier];
+  const variant = TIER_VARIANT[tier];
+  const titleBn = await renderTemplate(`attendance.reminder.${variant}.title` as MessageTemplateKey);
 
   for (const section of todo) {
     const recipientIds = recipientsForTier(
@@ -167,6 +161,10 @@ export async function dispatchAttendanceReminders(
       escalation,
     );
 
+    const bodyBn = await renderTemplate(`attendance.reminder.${variant}.body` as MessageTemplateKey, {
+      section: section.sectionNameBn,
+    });
+
     // One inbox row per recipient through the seam (D-#99) — push fans out
     // behind it (N-4 channel); the seam's dedupeKey absorbs a racing re-call.
     await Promise.all(
@@ -174,8 +172,8 @@ export async function dispatchAttendanceReminders(
         emit({
           recipientUserId: userId,
           kind: "ATTENDANCE_REMINDER",
-          titleBn: message.title,
-          bodyBn: message.body(section.sectionNameBn),
+          titleBn,
+          bodyBn,
           refs: { sectionId: section.sectionId, date: key, tier },
           dedupeKey: `ATT:${key}:${tier}:${section.sectionId}:${userId}`,
         }),

@@ -231,6 +231,23 @@ export const genderLabel = (v?: string | null): string => {
     : DASH;
 };
 
+/** Bilingual label for a message-template feature group (MT-3, D-#128). */
+export const mtGroupLabel = (group: string): string => {
+  switch (group) {
+    case "classNote": return STR.mtGrpClassNote;
+    case "homework": return STR.mtGrpHomework;
+    case "review": return STR.mtGrpReview;
+    case "cover": return STR.mtGrpCover;
+    case "bell": return STR.mtGrpBell;
+    case "attendance": return STR.mtGrpAttendance;
+    case "library": return STR.mtGrpLibrary;
+    case "assignment": return STR.mtGrpAssignment;
+    case "credential": return STR.mtGrpCredential;
+    case "tracker": return STR.mtGrpTracker;
+    default: return group;
+  }
+};
+
 /** Guardian relation → label. */
 export const relationLabel = (v?: string | null): string => {
   const en = _lang === "en";
@@ -750,6 +767,38 @@ const STR_BN = {
   noGuardians: "কোনো অভিভাবক যুক্ত নেই।",
   changeSection: "শাখা পরিবর্তন",
 
+  // Message templates (MT-1..MT-3, D-#128–#131) — Principal-only
+  mtMessageTemplates: "বার্তা টেমপ্লেট",
+  mtTitle: "বার্তা টেমপ্লেট",
+  mtSubtitle: "অ্যাপের স্বয়ংক্রিয় বার্তাগুলোর শব্দ সম্পাদনা করুন",
+  mtDefaultBadge: "ডিফল্ট",
+  mtOverriddenBadge: "সম্পাদিত",
+  mtBnBody: "বাংলা বার্তা",
+  mtEnBody: "ইংরেজি বার্তা",
+  mtLangMode: "ভাষা",
+  mtAllowedPlaceholders: "অনুমোদিত প্লেসহোল্ডার (ট্যাপ করে যোগ করুন)",
+  mtNoPlaceholders: "এই বার্তায় কোনো প্লেসহোল্ডার নেই",
+  mtPreview: "প্রিভিউ (নমুনা মান সহ)",
+  mtEditHistory: "সম্পাদনার ইতিহাস",
+  mtHistoryEmpty: "কোনো সম্পাদনা নেই",
+  mtReset: "ডিফল্টে ফিরে যান",
+  mtSave: "সংরক্ষণ করুন",
+  mtSaved: "টেমপ্লেট সংরক্ষিত হয়েছে",
+  mtResetDone: "ডিফল্ট ফিরে এসেছে",
+  mtNoOverrideToReset: "এটি ইতিমধ্যে ডিফল্ট",
+  mtActionEdit: "সম্পাদনা",
+  mtActionReset: "রিসেট",
+  mtPriorBody: "পূর্ববর্তী বার্তা",
+  mtGrpClassNote: "পাঠ নোট",
+  mtGrpHomework: "বাড়ির কাজ",
+  mtGrpReview: "পরিকল্পনা পর্যালোচনা",
+  mtGrpCover: "কাভার ক্লাস",
+  mtGrpBell: "ঘণ্টা",
+  mtGrpAttendance: "উপস্থিতি",
+  mtGrpLibrary: "লাইব্রেরি",
+  mtGrpAssignment: "অ্যাসাইনমেন্ট",
+  mtGrpCredential: "লগইন তথ্য",
+  mtGrpTracker: "ট্র্যাকার",
   // Credential provisioning (D-#59 guardians, D-#60 staff)
   guardianCredentials: "অভিভাবক লগইন",
   staffCredentials: "শিক্ষক/স্টাফ লগইন",
@@ -1800,6 +1849,38 @@ const STR_EN: StrTable = {
   noGuardians: "No guardians linked.",
   changeSection: "Change section",
 
+  // Message templates (MT-1..MT-3, D-#128–#131) — Principal-only
+  mtMessageTemplates: "Message templates",
+  mtTitle: "Message templates",
+  mtSubtitle: "Edit the wording of the app's generated messages",
+  mtDefaultBadge: "Default",
+  mtOverriddenBadge: "Edited",
+  mtBnBody: "Bangla body",
+  mtEnBody: "English body",
+  mtLangMode: "Language",
+  mtAllowedPlaceholders: "Allowed placeholders (tap to insert)",
+  mtNoPlaceholders: "This message has no placeholders",
+  mtPreview: "Preview (with sample values)",
+  mtEditHistory: "Edit history",
+  mtHistoryEmpty: "No edits yet",
+  mtReset: "Reset to default",
+  mtSave: "Save",
+  mtSaved: "Template saved",
+  mtResetDone: "Default restored",
+  mtNoOverrideToReset: "Already the default",
+  mtActionEdit: "Edit",
+  mtActionReset: "Reset",
+  mtPriorBody: "Previous body",
+  mtGrpClassNote: "Class notes",
+  mtGrpHomework: "Homework",
+  mtGrpReview: "Plan review",
+  mtGrpCover: "Cover class",
+  mtGrpBell: "Bell",
+  mtGrpAttendance: "Attendance",
+  mtGrpLibrary: "Library",
+  mtGrpAssignment: "Assignment",
+  mtGrpCredential: "Login details",
+  mtGrpTracker: "Tracker",
   // Credential provisioning (D-#59 guardians, D-#60 staff)
   guardianCredentials: "Guardian logins",
   staffCredentials: "Teacher / staff logins",

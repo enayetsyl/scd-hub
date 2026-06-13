@@ -326,6 +326,38 @@ describe("Vocabulary-tracker firewall (ADR-005 / VC-1, D-#104)", () => {
   });
 });
 
+/**
+ * Message-templates firewall (MT-1, D-#128 / prd-message-templates §3/§10).
+ *
+ * A template body is shared operational content, but the module sits on the
+ * identity/operational plane (ADR-005) and must never become an analytics join
+ * surface. Fail-closed both ways: the templates module must have NO import path
+ * into the corpus plane, and the corpus module must have NO import path into the
+ * templates module or its MessageTemplate model.
+ */
+describe("Message-templates firewall (ADR-005 / MT-1, D-#128)", () => {
+  const templatesDir = path.resolve(__dirname, "../modules/templates");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("templates module has NO import from the corpus plane", () => {
+    const files = walkDir(templatesDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (MT-1 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the templates module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/templates"));
+      expect(content).not.toMatch(importPattern("models/MessageTemplate"));
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;
