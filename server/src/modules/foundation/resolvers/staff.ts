@@ -16,7 +16,7 @@ type StaffShape = Pick<
   | "qualification" | "majoredIn" | "studiedAt"
   | "fatherName" | "motherName" | "spouseName"
   | "phone" | "whatsapp" | "email" | "presentAddress" | "permanentAddress"
-  | "nid" | "bankAccount" | "active"
+  | "nid" | "bankAccount" | "monthlySalary" | "paymentMethod" | "active"
 > & { _id: Types.ObjectId };
 
 const iso = (d?: Date | null) => (d ? d.toISOString() : null);
@@ -54,6 +54,8 @@ StaffRef.implement({
     // sensitive rows (H1.4) — only reachable through this staff:manage-gated type
     nid: t.string({ nullable: true, resolve: (s) => s.nid ?? null }),
     bankAccount: t.string({ nullable: true, resolve: (s) => s.bankAccount ?? null }),
+    monthlySalary: t.float({ nullable: true, resolve: (s) => s.monthlySalary ?? null }),
+    paymentMethod: t.string({ nullable: true, resolve: (s) => s.paymentMethod ?? null }),
     active: t.exposeBoolean("active"),
   }),
 });

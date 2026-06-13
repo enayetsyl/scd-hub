@@ -29,6 +29,7 @@ import "./modules/attendance/resolvers/teacherAttendance";
 import "./modules/attendance/resolvers/studentAttendance";
 import "./modules/attendance/resolvers/push";
 import "./modules/hr/resolvers/staffLeave";
+import "./modules/hr/resolvers/payroll";
 import "./modules/guardian/resolvers/guardianPortal";
 import "./modules/notifications/resolvers/notifications";
 import "./modules/library/resolvers/library";
