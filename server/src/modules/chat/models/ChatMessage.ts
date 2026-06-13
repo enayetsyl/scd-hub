@@ -47,5 +47,9 @@ const ChatMessageSchema = new Schema<IChatMessage>(
 // time-ordered, so _id IS the stable sort key AND the pagination cursor
 // (filter `_id < cursor`) — one index serves both.
 ChatMessageSchema.index({ conversationId: 1, _id: -1 });
+// M-4 file read gate: GET /files/:id asks "is there a LIVE message referencing
+// this attachment?" — a multikey lookup by attachmentIds. Index it so a chat-file
+// download is an indexed hit, not a full message-collection scan per download.
+ChatMessageSchema.index({ attachmentIds: 1 });
 
 export const ChatMessage = model<IChatMessage>("ChatMessage", ChatMessageSchema);
