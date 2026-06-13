@@ -1,6 +1,6 @@
 # STATUS
 
-_Updated: 2026-06-13 (Library module LB-1..LB-5 built)_
+_Updated: 2026-06-13 (Assignment Tracker AS-T1..T5 + Library module LB-1..LB-5 built)_
 
 ## Now / next
 - **Built (Library module — catalog + circulation + reservations + overdue chasing, LB-1..LB-5,
@@ -77,21 +77,47 @@ _Updated: 2026-06-13 (Library module LB-1..LB-5 built)_
   only — nothing executed. Next = execute DEP-1 per docs/deployment.md §4,
   slice order. (Handoff proposed D-#59–#62 — renumbered, taken through D-#89.
   The D-#91 "push to dev" handoff rule takes effect when DEP-5 executes.)
-- **Planned (Assignment Tracker — build contract written, D-#85–#89):** weekly AS-… channel
-  replacing the Google Sheet tracker — `docs/prd-tracker-assignment.md`. Per-student
-  lifecycle via the shared engine (D-#37's second consumer), admin 4-week
-  `AssignmentSchedule` + computed expected items, Thu-deliver (roll previous open day) /
-  Sun-due (roll next open day, both admin-configurable, D-#86), checking = result +
-  optional marks + feedback with teacher-optional (never auto) resubmission (D-#87),
-  Office-owned follow-up with guardian escalation ladder (in-app ×2 → WhatsApp; in-app
-  delivery + guardian screens ride the deferred portal/messaging pipeline, D-#88),
-  Sun/Mon teacher prep prompts in-app now, push pipeline-deferred (D-#89). Rides the
-  existing `assignment` tracker-kind — no contract sync. **Plan/docs only — no feature
-  code yet.** Next = build AS-T1 per `docs/prd-tracker-assignment.md` §5, slice order
-  AS-T1→AS-T5. (Handoff proposed D-#59–#63 — renumbered, taken through D-#84. Handoff
-  predates the live repo: guardian portal is now BUILT/live-verified and the D-#72
-  notification seam is contracted — AS-T4/AS-T5 should ride them at build time; PRD
-  pre-flight note records this.)
+- **Built (Assignment Tracker AS-T1..AS-T5 — server + app, D-#85–#89 + D-#94) [branch
+  `worktree-assignment-tracker`]:** the weekly AS-… channel replacing the Google Sheet
+  tracker is feature-complete server+app, per `docs/prd-tracker-assignment.md`. **Server**
+  (`trackers` module): `AssignmentSchedule` (per-year term anchor + admin-configurable
+  Thu-deliver/Sun-due cadence + 4-week rotation; anchors Sun–Thu only) · `AssignmentItem`
+  (one per realized week×section×subject, §4 dates resolved SERVER-side, unique per cell) ·
+  `AssignmentStudentRecord` (the shared D-#37 lifecycle engine's second consumer; marks ≤
+  teacher-set totalMarks + feedback, D-#87; non-unique for resubmissions) ·
+  `AssignmentFollowUp` (append-only ladder log; the only post-append mutation is the
+  sent-status/outcome stamp) · `AssignmentSequence` (`AS-C{class}-{SUBJ}-{nnnn}`, D-#34).
+  Pure cadence calendar (`assignmentCalendar.ts`): 52-week grid computed on read; delivery
+  rolls to the PREVIOUS open day, due to the NEXT open day, vacation weeks suspended +
+  excluded from rate denominators — single D-#50 calendar source. Slices: AS-T1 schedule
+  CRUD + expected-grid + `myAssignmentPrepPrompts` (D-#89 Sun/Mon); AS-T2 deliver/
+  redeliver/collect/chase-sweep with ALL counts derived (never typed); AS-T3 checking +
+  teacher-explicit resubmission (NO auto-spawn on any result); AS-T4 Office chase list +
+  escalation ladder (in-app ×2 → WhatsApp w/ generated §7 Bangla message + wa.me, manual
+  send, outcome logged); AS-T5 `assignmentSummary` (delivery rate vs scheduled excl.
+  suspended weeks per teacher/class/week, submission rate, D-#34 thresholds 2/3, checking
+  latency, open resubs) + `childAssignments` guardian read (assertGuardianOfStudent).
+  **RBAC composed from EXISTING permissions — vocab frozen this session (D-#94):** schedule
+  CRUD = `roster:manage`; Office follow-up surface = `message:dispatch` + explicit
+  Principal/Office check (D-#88 — teachers never chase); teacher flows = `tracker:write` +
+  assertCanWrite with the record's/item's real section verified server-side; guardian =
+  `guardian:read_child`. **Guardian in-app chase steps ride the D-#72 emit() seam but are
+  KIND-GATED:** `ASSIGNMENT_CHASE` is not yet in NOTIFICATION_KINDS (another in-flight
+  session owns vocab.ts) — the emitter is a recorded no-op (the ladder step logs SKIPPED
+  and Office proceeds to WhatsApp, the PRD's delivery-reality posture); activation = add
+  the kind + BN/EN labels + extend verifier §C.5 (it currently asserts EXACTLY 8 kinds).
+  **App:** new 📋 Assignment tab (tracker:read OR roster:manage so Office sees it) —
+  AssignmentHome (prep prompts + week-navigable expected grid + deliver/collect/check
+  entries) · AssignmentSchedule (admin rotation editor — the sheet's Schedule tab is
+  entered here, xlsx never imported) · DeliverAssignment (tap-absent roster) ·
+  CollectAssignment (submitted toggles + redeliver) · AssignmentChecking (result/marks/
+  feedback + return/resubmission) · AssignmentChase (ladder + wa.me + outcome stamp) ·
+  AssignmentRollups; guardians get a 4th tab অ্যাসাইনমেন্ট (ChildAssignmentsScreen — the
+  GP rider the PRD pre-flight allows). Firewall test extended (corpus ↛ assignment models).
+  **Gate GREEN (executed):** vocab verifier PASS, shared+server tsc clean, **jest 514/514**
+  (55 new across 5 assignment suites; firewall green), app tsc clean + web export green
+  (688 modules). **Not verified live.** Remaining: enter the live rotation via the editor;
+  register `ASSIGNMENT_CHASE` once vocab unfreezes; live golden path (DEP-3 posture).
 - **Planned (Library module — catalog + circulation + reservations, D-#81–#84):** build contract
   `docs/prd-library.md` authored — pulls the LIBRARY half of the deferred "loanable-resource" ops
   module forward (asset register stays deferred; roadmap patched). Per-copy catalog (unique accession

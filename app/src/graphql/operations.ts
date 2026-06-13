@@ -2368,6 +2368,290 @@ export const GUARDIAN_CHASE_LINK = gql<
 `;
 
 // ===========================================================================
+// Assignment Tracker (AS-T1..AS-T5, D-#85–#89)
+// ===========================================================================
+
+export interface AsScheduleEntryT {
+  id: string;
+  cycleWeek: number;
+  classId: string;
+  classLevel: number;
+  sectionId: string;
+  subject: string;
+  teacherId: string;
+}
+
+export interface AsScheduleT {
+  id: string;
+  academicYearId: string;
+  termStartDate: string;
+  deliveryDayOfWeek: number;
+  dueDayOfWeek: number;
+  entries: AsScheduleEntryT[];
+}
+
+const AS_SCHEDULE_FIELDS = `
+  id academicYearId termStartDate deliveryDayOfWeek dueDayOfWeek
+  entries { id cycleWeek classId classLevel sectionId subject teacherId }
+`;
+
+export const AS_SCHEDULE_QUERY = gql<
+  { assignmentSchedule: AsScheduleT | null },
+  { academicYearId: string }
+>`
+  query AssignmentSchedule($academicYearId: String!) {
+    assignmentSchedule(academicYearId: $academicYearId) { ${AS_SCHEDULE_FIELDS} }
+  }
+`;
+
+export const UPSERT_AS_SCHEDULE = gql<
+  { upsertAssignmentSchedule: AsScheduleT },
+  { academicYearId: string; termStartDate: string; deliveryDayOfWeek?: number | null; dueDayOfWeek?: number | null }
+>`
+  mutation UpsertAssignmentSchedule($academicYearId: String!, $termStartDate: String!, $deliveryDayOfWeek: Int, $dueDayOfWeek: Int) {
+    upsertAssignmentSchedule(academicYearId: $academicYearId, termStartDate: $termStartDate, deliveryDayOfWeek: $deliveryDayOfWeek, dueDayOfWeek: $dueDayOfWeek) { ${AS_SCHEDULE_FIELDS} }
+  }
+`;
+
+export const ADD_AS_SCHEDULE_ENTRY = gql<
+  { addAssignmentScheduleEntry: AsScheduleT },
+  { academicYearId: string; cycleWeek: number; classId: string; classLevel: number; sectionId: string; subject: string; teacherId: string }
+>`
+  mutation AddAssignmentScheduleEntry($academicYearId: String!, $cycleWeek: Int!, $classId: String!, $classLevel: Int!, $sectionId: String!, $subject: String!, $teacherId: String!) {
+    addAssignmentScheduleEntry(academicYearId: $academicYearId, cycleWeek: $cycleWeek, classId: $classId, classLevel: $classLevel, sectionId: $sectionId, subject: $subject, teacherId: $teacherId) { ${AS_SCHEDULE_FIELDS} }
+  }
+`;
+
+export const REMOVE_AS_SCHEDULE_ENTRY = gql<
+  { removeAssignmentScheduleEntry: AsScheduleT },
+  { academicYearId: string; entryId: string }
+>`
+  mutation RemoveAssignmentScheduleEntry($academicYearId: String!, $entryId: String!) {
+    removeAssignmentScheduleEntry(academicYearId: $academicYearId, entryId: $entryId) { ${AS_SCHEDULE_FIELDS} }
+  }
+`;
+
+export interface ExpectedAsItemT {
+  entryId: string;
+  cycleWeek: number;
+  classId: string;
+  classLevel: number;
+  sectionId: string;
+  subject: string;
+  teacherId: string;
+  delivered: boolean;
+  asItemId: string | null;
+  asId: string | null;
+}
+
+export interface ExpectedAsWeekT {
+  academicYearId: string;
+  weekNumber: number;
+  cycleWeek: number;
+  weekStart: string;
+  suspended: boolean;
+  deliveryDate: string | null;
+  dueDate: string | null;
+  items: ExpectedAsItemT[];
+}
+
+export const EXPECTED_AS_WEEK = gql<
+  { expectedAssignmentsForWeek: ExpectedAsWeekT },
+  { academicYearId: string; weekNumber: number }
+>`
+  query ExpectedAssignmentsForWeek($academicYearId: String!, $weekNumber: Int!) {
+    expectedAssignmentsForWeek(academicYearId: $academicYearId, weekNumber: $weekNumber) {
+      academicYearId weekNumber cycleWeek weekStart suspended deliveryDate dueDate
+      items { entryId cycleWeek classId classLevel sectionId subject teacherId delivered asItemId asId }
+    }
+  }
+`;
+
+export interface AsPrepPromptT {
+  entryId: string;
+  weekNumber: number;
+  classId: string;
+  classLevel: number;
+  sectionId: string;
+  subject: string;
+  deliveryDate: string;
+  dueDate: string;
+}
+
+export const MY_AS_PREP_PROMPTS = gql<
+  { myAssignmentPrepPrompts: AsPrepPromptT[] },
+  { academicYearId: string }
+>`
+  query MyAssignmentPrepPrompts($academicYearId: String!) {
+    myAssignmentPrepPrompts(academicYearId: $academicYearId) {
+      entryId weekNumber classId classLevel sectionId subject deliveryDate dueDate
+    }
+  }
+`;
+
+export interface AsRosterEntryIn {
+  studentId: string;
+  present: boolean;
+}
+
+export const DELIVER_ASSIGNMENT = gql<
+  { deliverAssignment: { itemId: string; asId: string; deliveryDate: string; dueDate: string; deliveredCount: number; absentCount: number } },
+  { academicYearId: string; weekNumber: number; entryId: string; sectionId: string; roster: AsRosterEntryIn[]; setId?: string | null; totalMarks?: number | null }
+>`
+  mutation DeliverAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!, $roster: [AssignmentRosterEntryInput!]!, $setId: String, $totalMarks: Int) {
+    deliverAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId, roster: $roster, setId: $setId, totalMarks: $totalMarks) {
+      itemId asId deliveryDate dueDate deliveredCount absentCount
+    }
+  }
+`;
+
+export interface AsItemT {
+  id: string;
+  asId: string;
+  weekNumber: number;
+  subject: string;
+  classId: string;
+  sectionId: string;
+  deliveryDate: string;
+  dueDate: string;
+  totalMarks: number | null;
+}
+
+export const AS_ITEMS = gql<
+  { assignmentItems: AsItemT[] },
+  { sectionId: string; classId: string; weekNumber?: number | null }
+>`
+  query AssignmentItems($sectionId: String!, $classId: String!, $weekNumber: Int) {
+    assignmentItems(sectionId: $sectionId, classId: $classId, weekNumber: $weekNumber) {
+      id asId weekNumber subject classId sectionId deliveryDate dueDate totalMarks
+    }
+  }
+`;
+
+export interface AsRecordT {
+  id: string;
+  asId: string;
+  studentId: string;
+  state: string;
+  dueDate: string | null;
+  chaseCount: number;
+  result: string | null;
+  marks: number | null;
+  feedback: string | null;
+  resubOf: string | null;
+}
+
+export const AS_RECORDS = gql<
+  { assignmentRecords: AsRecordT[] },
+  { sectionId: string; classId: string; itemId: string }
+>`
+  query AssignmentRecords($sectionId: String!, $classId: String!, $itemId: String!) {
+    assignmentRecords(sectionId: $sectionId, classId: $classId, itemId: $itemId) {
+      id asId studentId state dueDate chaseCount result marks feedback resubOf
+    }
+  }
+`;
+
+export interface AsCollectionEntryIn {
+  recordId: string;
+  submitted: boolean;
+}
+
+export const COLLECT_ASSIGNMENT = gql<
+  { collectAssignment: { itemId: string; asId: string; submittedCount: number; chaseCount: number; pendingCount: number } },
+  { sectionId: string; itemId: string; entries: AsCollectionEntryIn[] }
+>`
+  mutation CollectAssignment($sectionId: String!, $itemId: String!, $entries: [AssignmentCollectionEntryInput!]!) {
+    collectAssignment(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
+      itemId asId submittedCount chaseCount pendingCount
+    }
+  }
+`;
+
+export const REDELIVER_AS_RECORD = gql<
+  { redeliverAssignmentRecord: { recordId: string; state: string; dueDate: string | null } },
+  { sectionId: string; recordId: string }
+>`
+  mutation RedeliverAssignmentRecord($sectionId: String!, $recordId: String!) {
+    redeliverAssignmentRecord(sectionId: $sectionId, recordId: $recordId) { recordId state dueDate }
+  }
+`;
+
+export const TRANSITION_AS_RECORD = gql<
+  { transitionAssignmentRecord: { recordId: string; state: string } },
+  { sectionId: string; recordId: string; toState: string }
+>`
+  mutation TransitionAssignmentRecord($sectionId: String!, $recordId: String!, $toState: String!) {
+    transitionAssignmentRecord(sectionId: $sectionId, recordId: $recordId, toState: $toState) { recordId state }
+  }
+`;
+
+export const CHECK_AS_RECORD = gql<
+  { checkAssignmentRecord: { recordId: string; state: string; result: string; marks: number | null } },
+  { sectionId: string; recordId: string; result: string; marks?: number | null; feedback?: string | null }
+>`
+  mutation CheckAssignmentRecord($sectionId: String!, $recordId: String!, $result: String!, $marks: Int, $feedback: String) {
+    checkAssignmentRecord(sectionId: $sectionId, recordId: $recordId, result: $result, marks: $marks, feedback: $feedback) {
+      recordId state result marks
+    }
+  }
+`;
+
+export const ISSUE_AS_RESUBMISSION = gql<
+  { issueAssignmentResubmission: { recordId: string; originalRecordId: string; state: string } },
+  { sectionId: string; recordId: string }
+>`
+  mutation IssueAssignmentResubmission($sectionId: String!, $recordId: String!) {
+    issueAssignmentResubmission(sectionId: $sectionId, recordId: $recordId) { recordId originalRecordId state }
+  }
+`;
+
+export interface AsChaseEntryT {
+  recordId: string;
+  asId: string;
+  subject: string;
+  weekNumber: number;
+  studentId: string;
+  studentName: string;
+  guardianPhone: string | null;
+  dueDate: string | null;
+  daysOverdue: number;
+  chaseCount: number;
+  followUpCount: number;
+  nextStepNumber: number;
+}
+
+export const AS_CHASE_LIST = gql<{ assignmentChaseList: AsChaseEntryT[] }, NoVars>`
+  query AssignmentChaseList {
+    assignmentChaseList {
+      recordId asId subject weekNumber studentId studentName guardianPhone
+      dueDate daysOverdue chaseCount followUpCount nextStepNumber
+    }
+  }
+`;
+
+export interface AsEscalateResultT {
+  followUpId: string;
+  recordId: string;
+  stepNumber: number;
+  step: string;
+  sentStatus: string;
+  messageBn: string;
+  waLink: string | null;
+}
+
+export const ESCALATE_AS_CHASE = gql<
+  { escalateAssignmentChase: AsEscalateResultT },
+  { recordId: string; skipInApp?: boolean | null; manualStep?: string | null }
+>`
+  mutation EscalateAssignmentChase($recordId: String!, $skipInApp: Boolean, $manualStep: String) {
+    escalateAssignmentChase(recordId: $recordId, skipInApp: $skipInApp, manualStep: $manualStep) {
+      followUpId recordId stepNumber step sentStatus messageBn waLink
+    }
+  }
+`;
+
+// ===========================================================================
 // Library (LB-1..LB-4, D-#81–#84)
 // ===========================================================================
 
@@ -2752,6 +3036,103 @@ export const LIBRARY_CHASE_LIST_QUERY = gql<{ libraryChaseList: LibraryChaseRowT
   query LibraryChaseList {
     libraryChaseList {
       loanId borrowerType borrowerId borrowerName phone titleBn accessionNo dueDate daysOverdue waLink
+    }
+  }
+`;
+
+export interface AsFollowUpT {
+  id: string;
+  stepNumber: number;
+  step: string;
+  messageBn: string;
+  waLink: string | null;
+  sentStatus: string;
+  outcome: string | null;
+  followUpDate: string;
+}
+
+export const AS_FOLLOWUPS = gql<{ assignmentFollowUps: AsFollowUpT[] }, { recordId: string }>`
+  query AssignmentFollowUps($recordId: String!) {
+    assignmentFollowUps(recordId: $recordId) {
+      id stepNumber step messageBn waLink sentStatus outcome followUpDate
+    }
+  }
+`;
+
+export const RECORD_AS_FOLLOWUP_OUTCOME = gql<
+  { recordAssignmentFollowUpOutcome: AsFollowUpT },
+  { followUpId: string; sentStatus: string; outcome?: string | null }
+>`
+  mutation RecordAssignmentFollowUpOutcome($followUpId: String!, $sentStatus: String!, $outcome: String) {
+    recordAssignmentFollowUpOutcome(followUpId: $followUpId, sentStatus: $sentStatus, outcome: $outcome) {
+      id stepNumber step messageBn waLink sentStatus outcome followUpDate
+    }
+  }
+`;
+
+export interface AsRateRowT {
+  key: string;
+  scheduled: number;
+  delivered: number;
+  deliveryRatePct: number | null;
+}
+
+export interface AsSummaryT {
+  academicYearId: string;
+  weekFrom: number;
+  weekTo: number;
+  scheduledTotal: number;
+  deliveredTotal: number;
+  suspendedWeeks: number[];
+  byTeacher: AsRateRowT[];
+  byClass: AsRateRowT[];
+  byWeek: AsRateRowT[];
+  submissionRatePct: number | null;
+  chaseVolume: number;
+  attentionStudentIds: string[];
+  commsPromptStudentIds: string[];
+  openResubmissions: number;
+  avgCheckingLatencyDays: number | null;
+}
+
+export const AS_SUMMARY = gql<
+  { assignmentSummary: AsSummaryT },
+  { academicYearId: string; weekFrom?: number | null; weekTo?: number | null }
+>`
+  query AssignmentSummary($academicYearId: String!, $weekFrom: Int, $weekTo: Int) {
+    assignmentSummary(academicYearId: $academicYearId, weekFrom: $weekFrom, weekTo: $weekTo) {
+      academicYearId weekFrom weekTo scheduledTotal deliveredTotal suspendedWeeks
+      byTeacher { key scheduled delivered deliveryRatePct }
+      byClass { key scheduled delivered deliveryRatePct }
+      byWeek { key scheduled delivered deliveryRatePct }
+      submissionRatePct chaseVolume attentionStudentIds commsPromptStudentIds
+      openResubmissions avgCheckingLatencyDays
+    }
+  }
+`;
+
+export interface ChildAssignmentT {
+  recordId: string;
+  asId: string;
+  subject: string;
+  weekNumber: number;
+  state: string;
+  pending: boolean;
+  daysLate: number;
+  deliveryDate: string;
+  dueDate: string | null;
+  marks: number | null;
+  totalMarks: number | null;
+  result: string | null;
+  feedback: string | null;
+  isResubmission: boolean;
+}
+
+export const CHILD_ASSIGNMENTS = gql<{ childAssignments: ChildAssignmentT[] }, { studentId: string }>`
+  query ChildAssignments($studentId: String!) {
+    childAssignments(studentId: $studentId) {
+      recordId asId subject weekNumber state pending daysLate deliveryDate dueDate
+      marks totalMarks result feedback isResubmission
     }
   }
 `;

@@ -43,6 +43,26 @@ export type HomeworkStackParamList = {
   SectionPicker: undefined;
 };
 
+export type AssignmentStackParamList = {
+  AssignmentHome: undefined;
+  AssignmentSchedule: undefined;
+  DeliverAssignment: {
+    academicYearId: string;
+    entryId: string;
+    weekNumber: number;
+    sectionId: string;
+    classId: string;
+    classLevel: number;
+    subject: string;
+    deliveryDate: string;
+    dueDate: string;
+  };
+  CollectAssignment: { itemId: string; sectionId: string; classId: string; asId: string };
+  AssignmentChecking: { itemId: string; sectionId: string; classId: string; asId: string };
+  AssignmentChase: undefined;
+  AssignmentRollups: { academicYearId: string };
+};
+
 export type RoutineStackParamList = {
   RoutineHome: undefined;
   MyRoutine: undefined;
@@ -72,6 +92,9 @@ export type GuardianHomeworkStackParamList = {
 };
 export type GuardianRoutineStackParamList = {
   ChildRoutine: undefined;
+};
+export type GuardianAssignmentsStackParamList = {
+  ChildAssignments: undefined;
 };
 
 /** Library (LB-4, D-#81–#84). */
@@ -103,6 +126,7 @@ export type TabParamList = {
   SetsTab: NavigatorScreenParams<SetsStackParamList>;
   TrackersTab: NavigatorScreenParams<TrackersStackParamList>;
   HomeworkTab: NavigatorScreenParams<HomeworkStackParamList>;
+  AssignmentTab: NavigatorScreenParams<AssignmentStackParamList>;
   ReviewTab: NavigatorScreenParams<ReviewStackParamList>;
   RoutineTab: NavigatorScreenParams<RoutineStackParamList>;
   AttendanceTab: NavigatorScreenParams<AttendanceStackParamList>;
@@ -111,4 +135,5 @@ export type TabParamList = {
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;
   GuardianHomeworkTab: NavigatorScreenParams<GuardianHomeworkStackParamList>;
   GuardianRoutineTab: NavigatorScreenParams<GuardianRoutineStackParamList>;
+  GuardianAssignmentsTab: NavigatorScreenParams<GuardianAssignmentsStackParamList>;
 };

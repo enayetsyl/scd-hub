@@ -19,6 +19,7 @@ import type {
   SetsStackParamList,
   TrackersStackParamList,
   HomeworkStackParamList,
+  AssignmentStackParamList,
   ReviewStackParamList,
   RoutineStackParamList,
   AttendanceStackParamList,
@@ -27,6 +28,7 @@ import type {
   GuardianHomeStackParamList,
   GuardianHomeworkStackParamList,
   GuardianRoutineStackParamList,
+  GuardianAssignmentsStackParamList,
   TabParamList,
 } from "./types";
 
@@ -55,6 +57,14 @@ import DeclareHomeworkScreen from "../screens/homework/DeclareHomeworkScreen";
 import HomeworkReconcileScreen from "../screens/homework/HomeworkReconcileScreen";
 import CheckingQueueScreen from "../screens/homework/CheckingQueueScreen";
 import HomeworkRollupsScreen from "../screens/homework/HomeworkRollupsScreen";
+import AssignmentHomeScreen from "../screens/assignment/AssignmentHomeScreen";
+import AssignmentScheduleScreen from "../screens/assignment/AssignmentScheduleScreen";
+import DeliverAssignmentScreen from "../screens/assignment/DeliverAssignmentScreen";
+import CollectAssignmentScreen from "../screens/assignment/CollectAssignmentScreen";
+import AssignmentCheckingScreen from "../screens/assignment/AssignmentCheckingScreen";
+import AssignmentChaseScreen from "../screens/assignment/AssignmentChaseScreen";
+import AssignmentRollupsScreen from "../screens/assignment/AssignmentRollupsScreen";
+import ChildAssignmentsScreen from "../screens/guardian/ChildAssignmentsScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
@@ -234,6 +244,22 @@ function HomeworkNavigator(): React.ReactElement {
   );
 }
 
+const AssignmentStack = createNativeStackNavigator<AssignmentStackParamList>();
+function AssignmentNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <AssignmentStack.Navigator screenOptions={stackOptions}>
+      <AssignmentStack.Screen name="AssignmentHome" component={AssignmentHomeScreen} options={{ title: STR.tabAssignment }} />
+      <AssignmentStack.Screen name="AssignmentSchedule" component={AssignmentScheduleScreen} options={{ title: STR.asScheduleTitle }} />
+      <AssignmentStack.Screen name="DeliverAssignment" component={DeliverAssignmentScreen} options={{ title: STR.asDeliverTitle }} />
+      <AssignmentStack.Screen name="CollectAssignment" component={CollectAssignmentScreen} options={{ title: STR.asCollectTitle }} />
+      <AssignmentStack.Screen name="AssignmentChecking" component={AssignmentCheckingScreen} options={{ title: STR.asCheckTitle }} />
+      <AssignmentStack.Screen name="AssignmentChase" component={AssignmentChaseScreen} options={{ title: STR.asChaseTitle }} />
+      <AssignmentStack.Screen name="AssignmentRollups" component={AssignmentRollupsScreen} options={{ title: STR.asRollupsTitle }} />
+    </AssignmentStack.Navigator>
+  );
+}
+
 const ReviewStack = createNativeStackNavigator<ReviewStackParamList>();
 function ReviewNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -346,6 +372,16 @@ function GuardianRoutineNavigator(): React.ReactElement {
   );
 }
 
+const GuardianAssignmentsStack = createNativeStackNavigator<GuardianAssignmentsStackParamList>();
+function GuardianAssignmentsNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <GuardianAssignmentsStack.Navigator screenOptions={stackOptions}>
+      <GuardianAssignmentsStack.Screen name="ChildAssignments" component={ChildAssignmentsScreen} options={{ title: STR.tabAssignment }} />
+    </GuardianAssignmentsStack.Navigator>
+  );
+}
+
 // --- Tabs ------------------------------------------------------------------
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -360,6 +396,10 @@ export function AppTabs(): React.ReactElement {
   const canSets = !!role && roleHasPermission(role, "set:read");
   const canTrackers = !!role && roleHasPermission(role, "tracker:read");
   const canHomework = !!role && roleHasPermission(role, "tracker:read");
+  // Assignment tab: teachers/Principal via tracker:read; OFFICE via roster:manage
+  // (Office owns the schedule + the D-#88 follow-up; it holds no tracker:* — D-#94).
+  const canAssignment =
+    !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
   const canReview =
     !!role && (roleHasPermission(role, "content:review") || roleHasPermission(role, "content:assign_review"));
   const canRoutine = !!role && roleHasPermission(role, "routine:read");
@@ -401,6 +441,9 @@ export function AppTabs(): React.ReactElement {
       {canHomework ? (
         <Tab.Screen name="HomeworkTab" component={HomeworkNavigator} options={{ title: STR.tabHomework, tabBarIcon: tabIcon("📒") }} />
       ) : null}
+      {canAssignment ? (
+        <Tab.Screen name="AssignmentTab" component={AssignmentNavigator} options={{ title: STR.tabAssignment, tabBarIcon: tabIcon("📋") }} />
+      ) : null}
       {canReview ? (
         <Tab.Screen name="ReviewTab" component={ReviewNavigator} options={{ title: STR.tabReview, tabBarIcon: tabIcon("📝") }} />
       ) : null}
@@ -424,6 +467,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canGuardian ? (
         <Tab.Screen name="GuardianRoutineTab" component={GuardianRoutineNavigator} options={{ title: STR.tabRoutine, tabBarIcon: tabIcon("📅") }} />
+      ) : null}
+      {canGuardian ? (
+        <Tab.Screen name="GuardianAssignmentsTab" component={GuardianAssignmentsNavigator} options={{ title: STR.tabAssignment, tabBarIcon: tabIcon("📋") }} />
       ) : null}
     </Tab.Navigator>
     </GuardianChildProvider>

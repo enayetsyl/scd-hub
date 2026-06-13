@@ -14,7 +14,7 @@
  * Identity-plane only (reads roster/guardian linkage to resolve recipients);
  * no corpus path (N5.1).
  */
-import { ROUTINE_SUBJECT_LABELS_BN } from "@scd/shared";
+import { ROUTINE_SUBJECT_LABELS_BN, NOTIFICATION_KINDS } from "@scd/shared";
 import { emit } from "./NotificationService";
 import { Student } from "../../foundation/models/Student";
 import { Guardian } from "../../foundation/models/Guardian";
@@ -49,6 +49,9 @@ const dedupeKeys = {
   reviewAssigned: (assignmentId: string) => `REV:${assignmentId}`,
   /** Per substitution: one notification per recorded cover. */
   coverAssigned: (substitutionId: string) => `COV:${substitutionId}`,
+  /** Per record+ladder-step+guardian (AS-T4): re-running a step can't double-notify. */
+  assignmentGuardianChase: (recordId: string, stepNumber: number, guardianId: string) =>
+    `ASCH:${recordId}:${stepNumber}:${guardianId}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -182,6 +185,80 @@ export async function emitReviewAssigned(assignment: ReviewAssignedEvent): Promi
       dedupeKey: dedupeKeys.reviewAssigned(assignment._id.toString()),
     });
   });
+}
+
+// ---------------------------------------------------------------------------
+// AS-T4 (D-#88) — assignment chase escalation steps 1–2 → the student's
+// login-enabled guardians, riding THIS seam (the PRD pre-flight ruling: no
+// parallel mechanism). GATED on the notification kind being registered:
+// "ASSIGNMENT_CHASE" is NOT yet in NOTIFICATION_KINDS and /shared/vocab.ts is
+// owned by another in-flight session, so this emitter is a recorded no-op
+// (returns []) until the kind lands — exactly the PRD's delivery-reality
+// posture (Office logs the step SKIPPED and proceeds to WhatsApp). Activation
+// is a one-line vocab addition; nothing here changes.
+// ---------------------------------------------------------------------------
+
+export const ASSIGNMENT_CHASE_KIND = "ASSIGNMENT_CHASE";
+
+export interface AssignmentGuardianChaseEvent {
+  recordId: IdLike;
+  asItemId: IdLike;
+  asId: string;
+  studentId: IdLike;
+  sectionId: IdLike;
+  stepNumber: number;
+  /** The PRD §7 generated guardian message — the inbox body. */
+  messageBn: string;
+}
+
+/** Returns the guardian ids whose inbox rows were written ([] when the kind is
+ *  not yet registered, the student has no login-enabled guardian, or the emit
+ *  failed — the caller logs the ladder step accordingly). */
+export async function emitAssignmentGuardianChase(
+  ev: AssignmentGuardianChaseEvent,
+): Promise<string[]> {
+  const notified: string[] = [];
+  await bestEffort("assignment guardian chase", async () => {
+    if (!(NOTIFICATION_KINDS as readonly string[]).includes(ASSIGNMENT_CHASE_KIND)) return;
+
+    const links = (await GuardianLink.find({
+      studentId: ev.studentId,
+      active: { $ne: false }, // missing = active (pre-GP-1 rows)
+    })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+
+    // Login-enabled only — contact-only guardians have no inbox (D-#31/D-#72);
+    // they are reached at ladder step 3 via the manual WhatsApp path.
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+
+    await Promise.all(
+      guardians.map(async (g) => {
+        await emit({
+          recipientGuardianId: g._id.toString(),
+          kind: ASSIGNMENT_CHASE_KIND,
+          titleBn: "অ্যাসাইনমেন্ট জমা হয়নি",
+          bodyBn: ev.messageBn,
+          refs: {
+            studentId: ev.studentId.toString(),
+            sectionId: ev.sectionId.toString(),
+          },
+          dedupeKey: dedupeKeys.assignmentGuardianChase(
+            ev.recordId.toString(),
+            ev.stepNumber,
+            g._id.toString(),
+          ),
+        });
+        // The row exists after a non-throwing emit — newly written or deduped.
+        notified.push(g._id.toString());
+      }),
+    );
+  });
+  return notified;
 }
 
 // ---------------------------------------------------------------------------
