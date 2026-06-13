@@ -1,8 +1,32 @@
 # STATUS
 
-_Updated: 2026-06-13 (Messaging M-3 built — rich messaging, server; PR open. M-2 merged PR #44; Guardian portal app riders PR #43)_
+_Updated: 2026-06-13 (Messaging M-4 built — attachments, server; PR open. M-3 merged PR #45; M-2 merged PR #44)_
 
 ## Now / next
+- **Built (Messaging M-4 — chat attachments image/PDF/video/voice ≤10 MB, server, D-#102) [branch
+  `worktree-messaging-m4`, PR open — coordinator reviews]:** fourth messaging slice per
+  `docs/prd-messaging.md` §5. **Storage pre-flight (AGENTS rule 3 — live repo wins over the PRD):
+  REUSES the GP-A Google Drive store; the PRD §9 Oracle-VM-disk path is NOT built** (Drive already
+  holds the bytes on the school's My-Drive quota — D-#70/#71; the §9 VM-disk reason, GridFS can't hold
+  video, is moot). **No twin store/transport/model:** generalized `platform/services/DriveStore` (a
+  `subfolder` param → `SCD-Hub-Files/<year>/chat/`) + `platform/models/StoredFile` (four `chat_*` kinds
+  on the existing `hw_*` enum + optional `conversationId`) + the existing server-streamed `GET /files/:id`
+  (Drive id never reaches a client). **Upload:** `POST /files/chat` (multipart, `chat:write` +
+  `assertChatMember`; MIME whitelist per ATTACHMENT_KINDS + 10 MB hard cap; Bangla 422; Drive-first ⇒ 503
+  + nothing persisted — GP-J8 posture). **Read gate** (`ChatFileService.assertChatFileReadAccess`): member
+  of SOME conversation holding a LIVE message that references the file → a **deleted message's attachment
+  becomes inaccessible** (M-4 acceptance; refs stay in the MESSAGE_DELETED audit); `GET /files/:id`
+  dispatches by the file's OWN kind (hw → HomeworkFile, chat → ChatFile) so neither plane re-exposes the
+  other's files. **Send binding:** `sendMessage` gains `attachmentIds` — `resolveSendAttachments` admits
+  only CHAT files the SENDER uploaded FOR this conversation (no foreign/cross-conversation/hw file);
+  attachment-only messages (no body) now allowed; `ChatMessage` GraphQL gains an `attachments` field
+  (batched). One new audit kind `CHAT_ATTACHMENT_UPLOADED` in `platform/models/Audit.ts` — NOT vocab
+  (HR owns it this cycle; verifier untouched + PASS). **Gate GREEN (executed):** vocab verifier PASS,
+  shared+server tsc clean, **jest 710/710** (43 suites; 26 new in `chatAttachments.test.ts`; firewall
+  green), app tsc clean + expo web export green. **Not verified live** (needs the Drive credential —
+  D-#70/#71 — + DEP-3). **Next = M-5** (app screens: Chat tab — conversation list, thread, reply/forward/
+  react/edit/delete, attachment picker + voice recorder, seen-by) → M-6 oversight + guardian notices
+  (flips `chat:oversee`) → M-7 staff push.
 - **Built (Messaging M-3 — reply/forward/reactions/edit/delete, server, D-#77/#101) [branch
   `worktree-messaging-m3`, PR open — coordinator reviews]:** third messaging slice per
   `docs/prd-messaging.md` §5. Wires the inert M-1 `ChatMessage` fields (replyTo was already validated in

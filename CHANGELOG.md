@@ -4,6 +4,25 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Messaging M-4 — chat attachments: image/PDF/video/voice ≤10 MB (server, D-#102). **Storage REUSES the
+  GP-A Google Drive store — the PRD §9 Oracle-VM-disk proposal is NOT built** (Drive already holds the
+  bytes on the school's My-Drive quota; the VM-disk reason — GridFS can't hold video — is moot). No twin
+  `Attachment` model/transport: generalized `DriveStore` (a `subfolder` param → `SCD-Hub-Files/<year>/chat/`)
+  + `StoredFile` (four `chat_*` kinds added to the existing `hw_*` enum + an optional `conversationId`) +
+  the existing `GET /files/:id` server-streamed transport (Drive id never reaches a client). New
+  `POST /files/chat` (multipart, `chat:write` + `assertChatMember`, MIME whitelist per ATTACHMENT_KINDS +
+  10 MB cap, Bangla 422, Drive-first ⇒ 503 + nothing persisted). New `ChatFileService`: read gate
+  `assertChatFileReadAccess` (member of a conversation with a LIVE message referencing the file → a deleted
+  message's attachment becomes inaccessible, the M-4 acceptance; refs stay in the MESSAGE_DELETED audit);
+  `GET /files/:id` dispatches the gate by the file's OWN kind (hw → HomeworkFile, chat → ChatFile) so neither
+  plane can re-expose the other's files. `sendMessage` gains `attachmentIds` — `resolveSendAttachments`
+  admits only CHAT files the SENDER uploaded FOR this conversation (no foreign/cross-conversation/hw file);
+  an attachment-only message (no body) is now allowed; `ChatMessage` GraphQL type gains an `attachments`
+  field (batched per page). One new audit kind `CHAT_ATTACHMENT_UPLOADED` in `platform/models/Audit.ts`
+  (NOT vocab — HR owns shared/vocab.ts this cycle). Gate GREEN (executed): vocab verifier PASS (untouched),
+  shared+server tsc clean, **jest 710/710** (43 suites; 26 new in `chatAttachments.test.ts`; firewall green;
+  homeworkFiles StoredFile mock extended for the generalized kinds), app tsc clean + expo web export green.
+  Not verified live (Drive credential + DEP-3). Next = M-5 app screens.
 - Messaging M-3 — rich messaging: reply/forward/reactions/edit/delete (server, D-#77/#101). Wires the
   inert M-1 ChatMessage fields. **forward** (`forwardMessage`): sender must be a member of BOTH source +
   target; sets `forwardOfId`, carries attachment refs forward, honours the target's ANNOUNCEMENT posting

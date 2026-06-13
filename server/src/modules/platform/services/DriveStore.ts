@@ -125,12 +125,13 @@ async function ensureFolder(name: string, parentId: string | null): Promise<stri
   return id;
 }
 
-/** SCD-Hub-Files/<year>/hw — the GP-A homework folder for a year. */
-async function ensureHwFolder(year: string): Promise<string> {
+/** SCD-Hub-Files/<year>/<subfolder> — the private folder for a year + use.
+ *  `hw` is the GP-A homework store; `chat` is the M-4 attachment store. */
+async function ensureYearSubfolder(year: string, subfolder: string): Promise<string> {
   const rootId =
     process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID ?? (await ensureFolder(ROOT_FOLDER_NAME, null));
   const yearId = await ensureFolder(year, rootId);
-  return ensureFolder("hw", yearId);
+  return ensureFolder(subfolder, yearId);
 }
 
 export interface DriveUploadInput {
@@ -139,12 +140,14 @@ export interface DriveUploadInput {
   data: Buffer;
   /** Academic-year folder, e.g. "2026". */
   year: string;
+  /** Use-folder under the year (default "hw"; chat attachments pass "chat"). */
+  subfolder?: string;
 }
 
-/** Stream a file into the private hw folder; returns the Drive file id
+/** Stream a file into its private folder; returns the Drive file id
  *  (SERVER-INTERNAL — never expose it to a client). */
 export async function uploadToDrive(input: DriveUploadInput): Promise<string> {
-  const folderId = await ensureHwFolder(input.year);
+  const folderId = await ensureYearSubfolder(input.year, input.subfolder ?? "hw");
   const boundary = `scdhub-${Math.abs(Date.now() ^ input.data.length)}`;
   const meta = JSON.stringify({ name: input.name, parents: [folderId] });
   const body = Buffer.concat([

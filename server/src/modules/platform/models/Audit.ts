@@ -39,6 +39,7 @@ export type AuditEventKind =
   | "CHAT_MEMBERSHIP_CHANGED" // manual add/remove or an auto-provision resync (M-2, D-#78)
   | "MESSAGE_EDITED"      // sender edited own message — prior body retained here (M-3, D-#77; ADR-008)
   | "MESSAGE_DELETED"     // sender deleted own message — original body/attachment refs retained here (M-3, D-#77)
+  | "CHAT_ATTACHMENT_UPLOADED" // a chat attachment (image/pdf/video/audio) streamed to Drive (M-4, D-#102)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

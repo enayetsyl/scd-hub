@@ -9,10 +9,16 @@
  *                      persists StoredFile, returns { fileId, ... }. On Drive
  *                      failure: Bangla error, NOTHING persisted (GP-J8) — the
  *                      declare/check flow is never blocked by a file.
- *   GET  /files/:id  — JWT-authed download. Default-deny authz FIRST
- *                      (HomeworkFileService.assertFileReadAccess: staff read
- *                      scope / guardian link gate), THEN the server fetches
- *                      from Drive and streams to the client.
+ *   POST /files/chat — staff upload for a chat attachment (M-4, JWT + chat:write
+ *                      + membership of `conversationId`). Multipart `file` +
+ *                      field/query `conversationId`. Validates mime ∈ image/pdf/
+ *                      video/audio + size ≤ 10 MB, streams to the Drive `chat`
+ *                      folder, persists StoredFile (chat kind + conversationId),
+ *                      returns { fileId, kind, ... }. Then `sendMessage` binds it.
+ *   GET  /files/:id  — JWT-authed download. Default-deny authz FIRST, DISPATCHED
+ *                      BY KIND (hw → HomeworkFile read scope / guardian link;
+ *                      chat → ChatFile conversation membership), THEN the server
+ *                      fetches from Drive and streams to the client.
  */
 import type { Router, Request, Response } from "express";
 import express, { Router as createRouter } from "express";
@@ -20,13 +26,26 @@ import multer from "multer";
 import { buildContext } from "../context";
 import { roleHasPermission, type Role } from "@scd/shared";
 import { ForbiddenError } from "../middleware/authz";
-import { StoredFile, type IStoredFile, type StoredFileKind } from "../modules/platform/models/StoredFile";
+import {
+  StoredFile,
+  CHAT_STORED_FILE_KINDS,
+  type IStoredFile,
+  type StoredFileKind,
+} from "../modules/platform/models/StoredFile";
 import {
   uploadToDrive,
   downloadFromDrive,
   DriveUnavailableError,
 } from "../modules/platform/services/DriveStore";
 import { assertFileReadAccess } from "../modules/trackers/services/HomeworkFileService";
+import {
+  validateChatUpload,
+  assertChatFileReadAccess,
+  MAX_CHAT_ATTACHMENT_BYTES,
+  CHAT_FILE_ERRORS_BN,
+} from "../modules/chat/services/ChatFileService";
+import { assertChatMember } from "../modules/chat/services/ChatService";
+import { writeAudit } from "../modules/platform/services/AuditService";
 
 export const ALLOWED_FILE_MIMES = ["image/jpeg", "image/png", "application/pdf"] as const;
 export const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB (prd-guardian-portal §5)
@@ -50,6 +69,13 @@ export function validateUpload(mime: string, sizeBytes: number): string | null {
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_BYTES + 1 }, // +1 so OUR size check produces the Bangla message
+});
+
+// Chat attachments are larger (10 MB, prd §5) — a separate limit so OUR Bangla
+// size check fires rather than a bare multer error.
+const uploadChat = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_CHAT_ATTACHMENT_BYTES + 1 },
 });
 
 export const filesRouter: Router = createRouter();
@@ -127,6 +153,95 @@ filesRouter.post("/hw", parseUpload, async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/chat — staff upload a chat attachment (M-4, chat:write + member)
+// ---------------------------------------------------------------------------
+
+const parseChatUpload: express.RequestHandler = (req, res, next) => {
+  uploadChat.single("file")(req, res, (err: unknown) => {
+    if (err) {
+      res.status(422).json({ error: CHAT_FILE_ERRORS_BN.tooLarge });
+      return;
+    }
+    next();
+  });
+};
+
+filesRouter.post("/chat", parseChatUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !roleHasPermission(ctx.auth.role as Role, "chat:write")) {
+    res.status(403).json({ error: CHAT_FILE_ERRORS_BN.forbidden });
+    return;
+  }
+
+  const conversationId = (req.body?.conversationId ?? req.query.conversationId) as string | undefined;
+  if (!conversationId) {
+    res.status(400).json({ error: "conversationId required" });
+    return;
+  }
+  // Membership gate — you may only upload into a conversation you belong to.
+  try {
+    await assertChatMember(conversationId, ctx.auth.userId);
+  } catch (e) {
+    if (e instanceof ForbiddenError) {
+      res.status(403).json({ error: e.message || CHAT_FILE_ERRORS_BN.forbidden });
+      return;
+    }
+    throw e;
+  }
+
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const validation = validateChatUpload(file.mimetype, file.size);
+  if (typeof validation === "string") {
+    res.status(422).json({ error: validation });
+    return;
+  }
+
+  try {
+    // Drive FIRST — only a successful upload persists metadata (the GP-J8 posture).
+    const driveFileId = await uploadToDrive({
+      name: `${Date.now()}_${file.originalname}`,
+      mime: file.mimetype,
+      data: file.buffer,
+      year: String(new Date().getFullYear()),
+      subfolder: "chat",
+    });
+    const stored = await StoredFile.create({
+      kind: validation.storedKind,
+      mime: file.mimetype,
+      sizeBytes: file.size,
+      originalName: file.originalname,
+      driveFileId, // server-internal — NOT in the response below
+      uploadedBy: ctx.auth.userId,
+      conversationId,
+    });
+    await writeAudit({
+      eventKind: "CHAT_ATTACHMENT_UPLOADED",
+      actorId: ctx.auth.userId,
+      targetId: stored._id,
+      targetKind: "StoredFile",
+      meta: { kind: validation.kind, conversationId, sizeBytes: file.size },
+    });
+    res.json({
+      fileId: stored._id.toString(),
+      kind: validation.kind,
+      mime: stored.mime,
+      sizeBytes: stored.sizeBytes,
+      originalName: stored.originalName,
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      res.status(503).json({ error: FILE_ERRORS_BN.driveDown });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /files/:id — authz first, then stream from Drive (no redirect, ever)
 // ---------------------------------------------------------------------------
 
@@ -149,7 +264,13 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
   }
 
   try {
-    await assertFileReadAccess(ctx, file);
+    // Dispatch the read gate by the file's OWN kind (not by how it's referenced),
+    // so a chat message can never re-expose a homework file and vice-versa.
+    if ((CHAT_STORED_FILE_KINDS as readonly string[]).includes(file.kind)) {
+      await assertChatFileReadAccess(ctx, file);
+    } else {
+      await assertFileReadAccess(ctx, file);
+    }
   } catch (e) {
     if (e instanceof ForbiddenError) {
       res.status(403).json({ error: e.message || FILE_ERRORS_BN.forbidden });
