@@ -1,6 +1,6 @@
 # STATUS
 
-_Updated: 2026-06-13 (Vocabulary Tracker VC-1 built — server, PR #55 open [first slice of the new vocab module]; Class Test Tracker PRD added D-#119–#122. HR-5 PR #54 + Messaging M-6+M-7 app pass PR #53 merged [**HR + messaging both COMPLETE**]. In flight: HR-app #135+)_
+_Updated: 2026-06-13 (HR app PR-1 [#56] merging — Staff/HR tab + leave + self-service, APP-ONLY, D-#135; merged origin/main = VC-2 [PR #58] + Message-Templates/Comments PRDs. VC-1 PR #55 MERGED; Class Test Tracker PRD added D-#119–#122. HR-5 PR #54 + Messaging M-6+M-7 app pass PR #53 merged [**HR + messaging both COMPLETE**]. In flight: HR-app #57/#59/#60)_
 
 ## Now / next
 - **Built (HR app PR-3 — performance/conduct/development surfaces, Expo, APP-ONLY, D-#135) [branch
@@ -55,8 +55,73 @@ _Updated: 2026-06-13 (Vocabulary Tracker VC-1 built — server, PR #55 open [fir
   separate server slice for the coordinator. **Gate GREEN (executed):** app tsc clean + expo web export
   green; no-drift = vocab verifier PASS + full jest unchanged at the e913ee5 base (server untouched).
   **Not verified live.** **Next = HR app PR-2 (payroll surfaces)** → PR-3 performance → PR-4 offboarding.
+- **Planned (Message Templates MT-1..MT-3, D-#128–#131):** build contract
+  docs/prd-message-templates.md — one admin-editable registry for every GENERATED
+  message body (guardian wa.me + in-app notification title/body per kind + staff
+  notification bodies); EXCLUDES free-form authored (M-1..M-7 chat, M-6 guardian-notice
+  composer). Default-in-code + admin-row-wins + read-time resolve + no seed write
+  (D-#97/#103). Controlled MESSAGE_TEMPLATE_KEYS (one key per variant, each declaring its
+  placeholder set); per-template language mode BN/EN/BOTH (default BN; can't set EN/BOTH
+  until EN body filled). NEW permission template:manage (PRINCIPAL only, verifier-proven —
+  payroll:approve posture); edit/reset audited (MESSAGE_TEMPLATE_EDITED, prior body
+  retained). Edit-time placeholder validation (only declared placeholders; unknown →
+  Bangla 422). renderTemplate(key,params) interpolates + applies langMode. MT-2 = big-bang
+  migration: every in-scope generated-message site swaps to renderTemplate, current inline
+  string becomes that key's verbatim code default (zero visible change); exact site
+  inventory produced at build against live code (broader than the 6 first listed — also
+  staff notification bodies + per-kind in-app text). MT-3 = Principal-only screen
+  (list/edit/BN+EN/langMode toggle/allowed-placeholder chips/live preview with sample
+  values/validation/edit history/reset-to-default, UI per D-#61). App-native vocab — no
+  wire sync; serialize vocab.ts per AGENTS rule 5 (MT-1 waits for the in-flight vocab
+  owner to land, then rebases). Class Test Tracker, when built, targets the registry
+  directly (no inline-then-migrate) if this lands first. Plan/docs only — nothing executed.
+  Next = build MT-1 per docs/prd-message-templates.md §6, slice order.
+  _(Renumbered from the handoff's D-#117–#120 at commit — taken on main by HR-5 + Class-Test;
+  MT slotted into the free #128–#131 run, clear of in-flight VC #132+ / HR-app #135+.)_
+- **Planned (Comments & Parents-Meeting CM-1..CM-6, D-#114/#115/#123/#124):** build contract
+  docs/prd-comments-meetings.md — replaces the Student-Complain Google Form→Sheet (daily teacher
+  observations to guardians) AND the parents-meeting spreadsheets (schedule + per-child comments +
+  cross-meeting comparison). Two stores: `StudentComment` (daily, typed [COMMENT_TYPES 5 values +
+  COMMENT_SENTIMENTS concern/positive], subject-free, author = auth teacher, section-verified, permanent;
+  delivered per-comment — wa.me all + emit() inbox/push login-enabled, kind-gated no-op fallback if vocab
+  frozen per D-#94; attachments reuse DriveStore /comments/ ≤10 MB) and `MeetingComment` (class-teacher
+  authored positive+concern per student×meeting — lands the D-#45 parent-comms duty). `ParentMeeting`+
+  per-family `ParentMeetingSlot` (siblings collapsed by Student.phone, On-Call, configurable slotMinutes/
+  dayStart, reorderable; present/absent derived); timing dispatch = wa.me + emit() MEETING_SCHEDULE + push.
+  Comparison timeline = prior meeting comments + daily-by-type rollup since last meeting (D-#44 read-aggregate).
+  RBAC composes existing perms — teacher tracker:write+section verify, Office roster:manage, class-teacher
+  assertIsClassTeacher (meeting comment), guardian guardian:read_child; NO new role/permission (D-#17).
+  App-native vocab only (COMMENT_TYPES/COMMENT_SENTIMENTS + NOTIFICATION_KINDS += STUDENT_COMMENT/
+  MEETING_SCHEDULE, verifier §C.5/§C.x) — no wire/envelope/harness sync; serialize vocab per AGENTS rule 5.
+  Identity plane (ADR-005); no corpus path; J5.6 firewall extends both ways. Slices server-then-app:
+  CM-1 store+vocab → CM-2 delivery+attachments → CM-3 meeting+slot-gen → CM-4 dispatch+attendance →
+  CM-5 meeting-comment+comparison+guardian-reads → CM-6 app. Plan/docs only — nothing executed.
+  Next = build CM-1 per docs/prd-comments-meetings.md §6, slice order.
+- **Built (Vocabulary Tracker VC-2 — server, prd-vocabulary-tracker §3.3–§3.5/§5/§6, D-#106 + build ruling
+  D-#127) [branch `worktree-vocab-vc2`, PR open — coordinator reviews]:** the SECOND vocab slice — build-a-test
+  + weekly tester assignment. **New `modules/vocab/` models:** `VocabTest` (per program×section, period-agnostic
+  keyed by date; teacher-set `totalMarks` + per-test `dictationHalfMissCounts`, D-#105; `draft→ready→marked`),
+  `VocabTestPosition` (Script_Map analog — auto-laid `{direction, qNumber, wordId}`; DICTATION field count is
+  program-derived at mark time, not stored), `VocabTestAssignment` (append-only weekly (section×program) tester,
+  the D-#64 marker pattern; `source direct|proxy`). **Services:** `vocabCalendar` (pure week/Thursday + holiday
+  roll over the ONE D-#50 source), `VocabTestService` (create/update/`setVocabTestPositions` layout engine =
+  delete+relay, validates directions vs program + words vs the program×classLevel bank), `VocabAssignmentService`
+  (assign/current/history/mine + pure `isVocabOperator`), `vocabGate` (builder-free gates, deny-paths unit-tested).
+  **RBAC (D-#127) — NO new role/permission:** test build (create/edit/lay positions) = `tracker:write` + the
+  OPERATOR gate (`assertCanOperateVocab` — the current assigned tester OR an active D-#20 proxy on the section;
+  stricter than assertCanWrite — teaching/supervisory scope does NOT qualify; Principal unscoped, Office/Guardian
+  denied); weekly assignment = `roster:manage`; reads = `tracker:read`. Default test date = the week's THURSDAY,
+  holiday-rolled backward; `weekOf` normalised to Sunday (test↔assignment share a key). 4 new audit kinds
+  (VOCAB_TEST_*); vocab additions VOCAB_TEST_STATUSES + VOCAB_ASSIGNMENT_SOURCES (+BN/EN) + verifier §C.12;
+  firewall block extended with the 3 new models. **Closed the VC-1 coordinator follow-up:** the auth gates were
+  extracted into `vocabGate.ts` so their deny paths are unit-tested. **Gate GREEN (executed):** vocab verifier
+  PASS, shared build + shared/server tsc clean, **jest 887/887** (54 suites; +2 new suites `vocabTest.test.ts`
+  + `vocabGate.test.ts`, +34 tests over the 853 VC-1 base; firewall green). **Server-only** (no app — VC-5 is
+  the app slice). **Not verified live.** **Next = VC-3**
+  (`VocabStudentResult` — mistake capture on a student × position grid; 2-field dictation sub-marks; per-test
+  ABSENT; derived score/wrong-count/wrong-words).
 - **Built (Vocabulary Tracker VC-1 — server, prd-vocabulary-tracker §3/§6, D-#104/#105 + build ruling
-  D-#126) [branch `worktree-vocab`, PR open — coordinator reviews]:** the FIRST slice of the new
+  D-#126) [branch `worktree-vocab`, PR #55 MERGED — coordinator reviewed]:** the FIRST slice of the new
   vocab module (replacing the two-phase Google-Sheet system). **The data-driven trilingual model
   (D-#105):** `VOCAB_PROGRAMS` (ENGLISH/BANGLA/ARABIC) + `VOCAB_DIRECTIONS` (DICTATION/
   HEADWORD_TO_BANGLA/BANGLA_TO_HEADWORD) + BN/EN labels + the program→directions map
