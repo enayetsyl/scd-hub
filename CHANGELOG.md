@@ -4,6 +4,25 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Messaging M-5 — Chat tab + screens (Expo app; APP-ONLY, no server/vocab/contract change). New 💬 **Chat
+  tab** gated `chat:read` (Principal/Teacher/Office; GUARDIAN never sees it), a `ChatStack` with four
+  screens consuming the existing M-1..M-4 server APIs: **ChatHome** (conversation list from
+  `myConversations` — DIRECT + auto SECTION/SUBJECT/SCHOOL + manual CUSTOM, ANNOUNCEMENT badge, last
+  activity; "+new DM" + managers' "new group"), **ChatThread** (messages with `_id`-cursor "load older",
+  per-message reply / forward / react-toggle / edit / delete own-only, deleted → Bangla removed-placeholder,
+  reactions aggregated by emoji, seen ✓count on own messages, `markSeen` on focus; ANNOUNCEMENT groups
+  hide the composer for non-managers but keep reactions; attachment picker + viewer via `POST /files/chat`
+  and `GET /files/:id`, web-only with graceful degrade), **NewChat** (1:1 picker), **GroupManage**
+  (`chat:manage`: create group + posting policy, add/remove manual members, flip OPEN⇄ANNOUNCEMENT, archive
+  CUSTOM). **The staff directory for the new-DM / add-member pickers is DERIVED from conversation
+  memberships** (the SCHOOL auto-group holds every active staff member) — there is **no `chat:read`-scoped
+  staff-directory query** on the server, and per the app-only guardrail I did not add one; this membership
+  derivation is sufficient because SCHOOL contains all staff (flagged for the coordinator if a dedicated
+  directory read is wanted later). New `lib/chat.ts` helpers + `pickAndUploadChatFile` in `lib/files.ts` +
+  chat labels (BN/EN) in `lib/labels.ts`; follows the existing tab-nav / urql / `docs/ui-guidelines.md`
+  token patterns (D-#61). Gate GREEN (executed): app `tsc --noEmit` clean + `expo export --platform web`
+  green; no-drift confirmed — vocab verifier PASS + **jest 738/738** untouched (server unchanged). Not
+  verified live. Next = M-6 (oversight + guardian notices — flips `chat:oversee`, a vocab-toucher).
 - HR step 3 — payroll (server, prd-hr §4, D-#26/#27; build rulings D-#109/#110). New `modules/hr/` models
   `PayrollRun` (monthly; prepared → approved_locked, immutable once locked), `Payslip` (itemised net =
   gross − deductions + additions), `AdvanceLoan` (qard-hasan — interest- & fee-free, no rate/fee field).

@@ -24,6 +24,7 @@ import type {
   RoutineStackParamList,
   AttendanceStackParamList,
   LibraryStackParamList,
+  ChatStackParamList,
   AdminStackParamList,
   GuardianHomeStackParamList,
   GuardianHomeworkStackParamList,
@@ -87,6 +88,10 @@ import TitleDetailScreen from "../screens/library/TitleDetailScreen";
 import LibraryDeskScreen from "../screens/library/LibraryDeskScreen";
 import CatalogManageScreen from "../screens/library/CatalogManageScreen";
 import LibraryAdminScreen from "../screens/library/LibraryAdminScreen";
+import ChatHomeScreen from "../screens/chat/ChatHomeScreen";
+import ChatThreadScreen from "../screens/chat/ChatThreadScreen";
+import NewChatScreen from "../screens/chat/NewChatScreen";
+import GroupManageScreen from "../screens/chat/GroupManageScreen";
 import SectionPickerScreen from "../screens/common/SectionPickerScreen";
 import AdminHomeScreen from "../screens/admin/AdminHomeScreen";
 import ImportScreen from "../screens/admin/ImportScreen";
@@ -364,6 +369,23 @@ function LibraryNavigator(): React.ReactElement {
   );
 }
 
+const ChatStack = createNativeStackNavigator<ChatStackParamList>();
+function ChatNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ChatStack.Navigator screenOptions={stackOptions}>
+      <ChatStack.Screen name="ChatHome" component={ChatHomeScreen} options={{ title: STR.chatTitle }} />
+      <ChatStack.Screen
+        name="ChatThread"
+        component={ChatThreadScreen}
+        options={({ route }) => ({ title: route.params.title || STR.chatThreadTitle })}
+      />
+      <ChatStack.Screen name="NewChat" component={NewChatScreen} options={{ title: STR.chatNewTitle }} />
+      <ChatStack.Screen name="GroupManage" component={GroupManageScreen} options={{ title: STR.chatGroupManageTitle }} />
+    </ChatStack.Navigator>
+  );
+}
+
 const AdminStack = createNativeStackNavigator<AdminStackParamList>();
 function AdminNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -453,6 +475,8 @@ export function AppTabs(): React.ReactElement {
   const canAttendance =
     !!role && (roleHasPermission(role, "attendance:mark") || roleHasPermission(role, "attendance:manage"));
   const canLibrary = !!role && roleHasPermission(role, "library:read");
+  // Chat (M-5): Principal/Teacher/Office hold chat:read; GUARDIAN never does.
+  const canChat = !!role && roleHasPermission(role, "chat:read");
   const canAdmin = !!role && (roleHasPermission(role, "content:import") || roleHasPermission(role, "user:manage"));
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
@@ -502,6 +526,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canLibrary ? (
         <Tab.Screen name="LibraryTab" component={LibraryNavigator} options={{ title: STR.tabLibrary, tabBarIcon: tabIcon("📖") }} />
+      ) : null}
+      {canChat ? (
+        <Tab.Screen name="ChatTab" component={ChatNavigator} options={{ title: STR.tabChat, tabBarIcon: tabIcon("💬") }} />
       ) : null}
       {canAdmin ? (
         <Tab.Screen name="AdminTab" component={AdminNavigator} options={{ title: STR.tabAdmin, tabBarIcon: tabIcon("⚙️") }} />

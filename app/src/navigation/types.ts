@@ -107,6 +107,14 @@ export type LibraryStackParamList = {
   LibraryAdmin: undefined;
 };
 
+/** Messaging (M-5, prd-messaging §5). */
+export type ChatStackParamList = {
+  ChatHome: undefined;
+  ChatThread: { conversationId: string; title: string };
+  NewChat: undefined;
+  GroupManage: { conversationId?: string };
+};
+
 export type AdminStackParamList = {
   AdminHome: undefined;
   Import: undefined;
@@ -132,6 +140,7 @@ export type TabParamList = {
   RoutineTab: NavigatorScreenParams<RoutineStackParamList>;
   AttendanceTab: NavigatorScreenParams<AttendanceStackParamList>;
   LibraryTab: NavigatorScreenParams<LibraryStackParamList>;
+  ChatTab: NavigatorScreenParams<ChatStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;
   GuardianHomeworkTab: NavigatorScreenParams<GuardianHomeworkStackParamList>;

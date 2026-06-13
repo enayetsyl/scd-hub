@@ -3251,3 +3251,203 @@ export const UNREGISTER_PUSH_DEVICE = gql<
     unregisterPushDevice(token: $token)
   }
 `;
+
+// ===========================================================================
+// Messaging M-5 (prd-messaging §5; consumes the M-1..M-4 server APIs as-is)
+// ===========================================================================
+
+export interface ChatMemberT {
+  userId: string;
+  name: string;
+  source: string;
+  joinedAt: string;
+}
+export interface ConversationT {
+  id: string;
+  kind: string; // DIRECT | SECTION | SUBJECT | SCHOOL | CUSTOM
+  refId: string | null;
+  title: string | null;
+  postingPolicy: string; // OPEN | ANNOUNCEMENT
+  active: boolean;
+  lastMessageAt: string | null;
+  members: ChatMemberT[];
+  createdAt: string;
+}
+export interface SeenByT {
+  userId: string;
+  seenAt: string;
+}
+export interface ReactionT {
+  userId: string;
+  emoji: string;
+}
+export interface ChatAttachmentT {
+  fileId: string;
+  kind: string; // IMAGE | PDF | VIDEO | AUDIO
+  mime: string;
+  sizeBytes: number;
+  originalName: string;
+}
+export interface ChatMessageT {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  body: string;
+  replyToId: string | null;
+  forwardOfId: string | null;
+  editedAt: string | null;
+  deletedAt: string | null;
+  seenBy: SeenByT[];
+  seenCount: number;
+  reactions: ReactionT[];
+  attachments: ChatAttachmentT[];
+  createdAt: string;
+}
+
+const CONVERSATION_FIELDS = `
+  id
+  kind
+  refId
+  title
+  postingPolicy
+  active
+  lastMessageAt
+  createdAt
+  members { userId name source joinedAt }
+`;
+
+const MESSAGE_FIELDS = `
+  id
+  conversationId
+  senderId
+  body
+  replyToId
+  forwardOfId
+  editedAt
+  deletedAt
+  seenCount
+  seenBy { userId seenAt }
+  reactions { userId emoji }
+  attachments { fileId kind mime sizeBytes originalName }
+  createdAt
+`;
+
+export const MY_CONVERSATIONS_QUERY = gql<{ myConversations: ConversationT[] }, NoVars>`
+  query MyConversations {
+    myConversations { ${CONVERSATION_FIELDS} }
+  }
+`;
+
+export const CONVERSATION_QUERY = gql<{ conversation: ConversationT | null }, { id: string }>`
+  query Conversation($id: String!) {
+    conversation(id: $id) { ${CONVERSATION_FIELDS} }
+  }
+`;
+
+export const MESSAGES_QUERY = gql<
+  { messages: ChatMessageT[] },
+  { conversationId: string; beforeId?: string | null; limit?: number | null }
+>`
+  query Messages($conversationId: String!, $beforeId: String, $limit: Int) {
+    messages(conversationId: $conversationId, beforeId: $beforeId, limit: $limit) { ${MESSAGE_FIELDS} }
+  }
+`;
+
+export const OPEN_DIRECT_CONVERSATION = gql<
+  { openDirectConversation: ConversationT },
+  { otherUserId: string }
+>`
+  mutation OpenDirect($otherUserId: String!) {
+    openDirectConversation(otherUserId: $otherUserId) { ${CONVERSATION_FIELDS} }
+  }
+`;
+
+export const SEND_MESSAGE = gql<
+  { sendMessage: ChatMessageT },
+  { conversationId: string; body?: string | null; replyToId?: string | null; attachmentIds?: string[] | null }
+>`
+  mutation SendMessage($conversationId: String!, $body: String, $replyToId: String, $attachmentIds: [String!]) {
+    sendMessage(conversationId: $conversationId, body: $body, replyToId: $replyToId, attachmentIds: $attachmentIds) { ${MESSAGE_FIELDS} }
+  }
+`;
+
+export const MARK_SEEN = gql<{ markSeen: number }, { conversationId: string }>`
+  mutation MarkSeen($conversationId: String!) {
+    markSeen(conversationId: $conversationId)
+  }
+`;
+
+export const FORWARD_MESSAGE = gql<
+  { forwardMessage: ChatMessageT },
+  { messageId: string; toConversationId: string }
+>`
+  mutation ForwardMessage($messageId: String!, $toConversationId: String!) {
+    forwardMessage(messageId: $messageId, toConversationId: $toConversationId) { ${MESSAGE_FIELDS} }
+  }
+`;
+
+export const EDIT_MESSAGE = gql<{ editMessage: ChatMessageT }, { messageId: string; body: string }>`
+  mutation EditMessage($messageId: String!, $body: String!) {
+    editMessage(messageId: $messageId, body: $body) { ${MESSAGE_FIELDS} }
+  }
+`;
+
+export const DELETE_MESSAGE = gql<{ deleteMessage: ChatMessageT }, { messageId: string }>`
+  mutation DeleteMessage($messageId: String!) {
+    deleteMessage(messageId: $messageId) { ${MESSAGE_FIELDS} }
+  }
+`;
+
+export const TOGGLE_REACTION = gql<
+  { toggleReaction: ChatMessageT },
+  { messageId: string; emoji: string }
+>`
+  mutation ToggleReaction($messageId: String!, $emoji: String!) {
+    toggleReaction(messageId: $messageId, emoji: $emoji) { ${MESSAGE_FIELDS} }
+  }
+`;
+
+export const CREATE_GROUP_CONVERSATION = gql<
+  { createGroupConversation: ConversationT },
+  { title: string; memberIds?: string[] | null; postingPolicy?: string | null }
+>`
+  mutation CreateGroup($title: String!, $memberIds: [String!], $postingPolicy: String) {
+    createGroupConversation(title: $title, memberIds: $memberIds, postingPolicy: $postingPolicy) { ${CONVERSATION_FIELDS} }
+  }
+`;
+
+export const ADD_CONVERSATION_MEMBER = gql<
+  { addConversationMember: boolean },
+  { conversationId: string; userId: string }
+>`
+  mutation AddMember($conversationId: String!, $userId: String!) {
+    addConversationMember(conversationId: $conversationId, userId: $userId)
+  }
+`;
+
+export const REMOVE_CONVERSATION_MEMBER = gql<
+  { removeConversationMember: boolean },
+  { conversationId: string; userId: string }
+>`
+  mutation RemoveMember($conversationId: String!, $userId: String!) {
+    removeConversationMember(conversationId: $conversationId, userId: $userId)
+  }
+`;
+
+export const ARCHIVE_CONVERSATION = gql<
+  { archiveConversation: ConversationT },
+  { conversationId: string }
+>`
+  mutation ArchiveConversation($conversationId: String!) {
+    archiveConversation(conversationId: $conversationId) { ${CONVERSATION_FIELDS} }
+  }
+`;
+
+export const SET_POSTING_POLICY = gql<
+  { setPostingPolicy: ConversationT },
+  { conversationId: string; policy: string }
+>`
+  mutation SetPostingPolicy($conversationId: String!, $policy: String!) {
+    setPostingPolicy(conversationId: $conversationId, policy: $policy) { ${CONVERSATION_FIELDS} }
+  }
+`;
