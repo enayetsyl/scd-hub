@@ -34,12 +34,12 @@ check("default-deny: unknown role", V.roleHasPermission("GHOST", "content:read")
 check("PRINCIPAL has user:manage + audit:read", V.roleHasPermission("PRINCIPAL", "user:manage") && V.roleHasPermission("PRINCIPAL", "audit:read"));
 check("TEACHER lacks user:manage / audit:read / content:import", !["user:manage","audit:read","content:import"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("TEACHER can read content + assemble + write trackers", ["content:read","set:assemble","tracker:write"].every((p) => V.roleHasPermission("TEACHER", p)));
-check("OFFICE = roster/staff/guardian/message/import/assign_review/routine/attendance/library", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage"]));
+check("OFFICE = roster/staff/guardian/message/import/assign_review/routine/attendance/library/chat", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage"]));
 check("routine: PRINCIPAL+OFFICE manage, TEACHER read-only, GUARDIAN none", V.roleHasPermission("PRINCIPAL","routine:manage") && V.roleHasPermission("OFFICE","routine:manage") && V.roleHasPermission("TEACHER","routine:read") && !V.roleHasPermission("TEACHER","routine:manage") && !V.roleHasPermission("GUARDIAN","routine:read"));
 check("TEACHER has content:review (reviewer APPROVE), lacks assign/promote", V.roleHasPermission("TEACHER","content:review") && !["content:assign_review","content:promote_gold"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("GUARDIAN only has guardian:read_child", eq(V.permissionsForRole("GUARDIAN"), ["guardian:read_child"]));
 check("no role can write audit (audit:write undeclared)", !V.PERMISSIONS.includes("audit:write"));
-check("all permissions active (guardian:read_child flipped to build by GP-1, D-#68)", V.PERMISSIONS.every((p) => V.PERMISSION_BUILD_STATUS[p] === "build"));
+check("pipeline perms are EXACTLY chat:manage + chat:oversee (land with M-2/M-6; everything else active)", eq(V.PERMISSIONS.filter((p) => V.PERMISSION_BUILD_STATUS[p] !== "build"), ["chat:manage","chat:oversee"]));
 
 console.log("=== C. label maps total over their enums ===");
 const total = (labels, keys) => keys.every((k) => typeof labels[k] === "string" && labels[k].length > 0);
@@ -144,6 +144,29 @@ check("library: PRINCIPAL+OFFICE read+manage, TEACHER read-only (desk via Librar
   V.roleHasPermission("TEACHER","library:read") && !V.roleHasPermission("TEACHER","library:manage") &&
   !V.roleHasPermission("GUARDIAN","library:read") && !V.roleHasPermission("GUARDIAN","library:manage"));
 check("no librarian role added — roles stay PRINCIPAL/TEACHER/OFFICE/GUARDIAN (D-#17/#81)", eq(V.ROLES, ["PRINCIPAL","TEACHER","OFFICE","GUARDIAN"]));
+
+console.log("=== C.7 Chat/messaging vocab + RBAC invariants (D-#76–#79) ===");
+check("CONVERSATION_KIND_LABELS_BN total",  total(V.CONVERSATION_KIND_LABELS_BN, V.CONVERSATION_KINDS));
+check("CONVERSATION_KIND_LABELS_EN total",  total(V.CONVERSATION_KIND_LABELS_EN, V.CONVERSATION_KINDS));
+check("POSTING_POLICY_LABELS_BN total",     total(V.POSTING_POLICY_LABELS_BN, V.POSTING_POLICIES));
+check("POSTING_POLICY_LABELS_EN total",     total(V.POSTING_POLICY_LABELS_EN, V.POSTING_POLICIES));
+check("ATTACHMENT_KIND_LABELS_BN total",    total(V.ATTACHMENT_KIND_LABELS_BN, V.ATTACHMENT_KINDS));
+check("ATTACHMENT_KIND_LABELS_EN total",    total(V.ATTACHMENT_KIND_LABELS_EN, V.ATTACHMENT_KINDS));
+check("NOTICE_SCOPE_LABELS_BN total",       total(V.NOTICE_SCOPE_LABELS_BN, V.NOTICE_SCOPES));
+check("NOTICE_SCOPE_LABELS_EN total",       total(V.NOTICE_SCOPE_LABELS_EN, V.NOTICE_SCOPES));
+check("conversation kinds exact (D-#76/#78)", eq(V.CONVERSATION_KINDS, ["DIRECT","SECTION","SUBJECT","SCHOOL","CUSTOM"]));
+check("posting policies exact (D-#78)",       eq(V.POSTING_POLICIES, ["OPEN","ANNOUNCEMENT"]));
+check("attachment kinds exact (D-#79)",       eq(V.ATTACHMENT_KINDS, ["IMAGE","PDF","VIDEO","AUDIO"]));
+check("notice scopes exact (D-#79)",          eq(V.NOTICE_SCOPES, ["SCHOOL","SECTION"]));
+check("chat: PRINCIPAL/TEACHER/OFFICE read+write; GUARDIAN none (D-#76 — guardians are never participants)",
+  ["PRINCIPAL","TEACHER","OFFICE"].every((r) => V.roleHasPermission(r, "chat:read") && V.roleHasPermission(r, "chat:write")) &&
+  !V.roleHasPermission("GUARDIAN","chat:read") && !V.roleHasPermission("GUARDIAN","chat:write"));
+check("chat:manage = PRINCIPAL+OFFICE only — teachers cannot create groups (D-#78)",
+  V.roleHasPermission("PRINCIPAL","chat:manage") && V.roleHasPermission("OFFICE","chat:manage") &&
+  !V.roleHasPermission("TEACHER","chat:manage") && !V.roleHasPermission("GUARDIAN","chat:manage"));
+check("chat:oversee = PRINCIPAL ONLY (D-#77)",
+  V.roleHasPermission("PRINCIPAL","chat:oversee") &&
+  !["TEACHER","OFFICE","GUARDIAN"].some((r) => V.roleHasPermission(r, "chat:oversee")));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);
