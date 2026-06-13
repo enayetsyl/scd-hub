@@ -142,6 +142,9 @@ export type HrStackParamList = {
   StaffConduct: { staffProfileId: string; name: string };
   StaffCpd: { staffProfileId: string; name: string };
   GrievanceInbox: undefined;
+  // PR-4: offboarding
+  OffboardingHome: undefined;
+  OffboardingCase: { caseId: string; name: string };
 };
 
 export type AdminStackParamList = {

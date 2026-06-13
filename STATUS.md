@@ -3,6 +3,25 @@
 _Updated: 2026-06-13 (Vocabulary Tracker VC-1 built — server, PR #55 open [first slice of the new vocab module]; Class Test Tracker PRD added D-#119–#122. HR-5 PR #54 + Messaging M-6+M-7 app pass PR #53 merged [**HR + messaging both COMPLETE**]. In flight: HR-app #135+)_
 
 ## Now / next
+- **Built (HR app PR-4 — offboarding surfaces, Expo, APP-ONLY, D-#135) [branch `worktree-hr-app-offboarding`
+  stacked on PR-3, PR open — coordinator reviews] — COMPLETES the HR app surfaces (PR-1..PR-4):** the
+  cross-cutting exit workflow (consumes the HR-5 offboarding resolvers; NO server/vocab/contract change).
+  Adds an **Offboarding** hub entry (`staff:manage`): `OffboardingHomeScreen` (status-filtered
+  `offboardingCases` + `initiateOffboarding` trigger/last-working-day/notice → seeds the default clearance
+  list server-side) → `OffboardingCaseScreen` (the whole case): clearance checklist
+  (`addOffboardingClearanceItem` / `updateOffboardingClearanceItem`), **system access** (`revokeOffboardingAccess`
+  — login disable + all grants withdrawn, with revoked badge/count), the **hard-held final settlement**
+  (`computeFinalSettlement` [`payroll:manage`] showing gross/day-rate/encashment/advance-recovery/net + a
+  held/released badge; **`releaseFinalSettlement` is PRINCIPAL-only `payroll:approve` and the server gates it
+  on clearance complete, D-#29** — Office sees an info note), exit interview (`recordExitInterview`), service
+  certificate (`issueServiceCertificate`), and `cancelOffboarding`. NOTE: the model's `OFFBOARDING_STATUSES`
+  (initiated/access_revoked/completed/cancelled) matched the vocab labels (the earlier in_progress/settled
+  guess was wrong). New BN/EN STR + offboarding label helpers. **Gate GREEN (executed):** app tsc clean +
+  expo web export green (726 modules); vocab PASS + **jest 853/853** + the PR-4 diff vs its base touches no
+  server/shared/contract. **Heads-up:** origin/main advanced past the chain's `e913ee5` base (VC-2 merged);
+  the stacked PR chain (#56→#57→#59→this) is internally consistent and each PR's diff-vs-base is clean, but
+  the chain needs a rebase onto current origin/main at merge time. **Not verified live. HR module is now
+  fully built server + app.**
 - **Built (HR app PR-3 — performance/conduct/development surfaces, Expo, APP-ONLY, D-#135) [branch
   `worktree-hr-app-performance` stacked on PR-2, PR open — coordinator reviews]:** the third HR app PR
   (consumes the HR-4 performance resolvers; NO server/vocab/contract change). Adds a **Performance** hub

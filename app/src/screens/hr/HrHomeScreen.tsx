@@ -21,7 +21,8 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
   const canLeaveManage = !!role && roleHasPermission(role, "leave:manage");
   const canPayroll = !!role && roleHasPermission(role, "payroll:manage");
   const canPerformance = !!role && roleHasPermission(role, "performance:manage");
-  const showAdmin = canLeaveManage || canPayroll || canPerformance;
+  const canOffboarding = !!role && roleHasPermission(role, "staff:manage");
+  const showAdmin = canLeaveManage || canPayroll || canPerformance || canOffboarding;
 
   return (
     <Screen scroll>
@@ -54,6 +55,12 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
         <Card onPress={() => navigation.navigate("PerformanceHome")}>
           <Body style={{ fontWeight: "700" }}>{STR.hrPerformance}</Body>
           <Muted>{STR.hrPerformanceSub}</Muted>
+        </Card>
+      ) : null}
+      {canOffboarding ? (
+        <Card onPress={() => navigation.navigate("OffboardingHome")}>
+          <Body style={{ fontWeight: "700" }}>{STR.hrOffboarding}</Body>
+          <Muted>{STR.hrOffboardingSub}</Muted>
         </Card>
       ) : null}
     </Screen>
