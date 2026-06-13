@@ -285,6 +285,7 @@ describe("HR staff-leave firewall (ADR-005 / prd-hr H7.4)", () => {
       expect(content).not.toMatch(importPattern("models/ConductRecord"));
       expect(content).not.toMatch(importPattern("models/Grievance"));
       expect(content).not.toMatch(importPattern("models/DevelopmentLog"));
+      expect(content).not.toMatch(importPattern("models/OffboardingCase")); // HR-5 offboarding (exit/settlement/clearance, H6/H7.1)
     }
   });
 });

@@ -52,6 +52,11 @@ jest.mock("../modules/attendance/services/AttendanceReminderService", () => ({
 jest.mock("../modules/library/services/LibraryReminderService", () => ({
   dispatchLibraryReminders: (n: unknown) => mockDispatchLibrary(n),
 }));
+// HR-5: the ticker now also sweeps due offboarding access revocations (H6.3). Mock
+// it so the scheduler test stays DB-free (the sweep itself is covered in offboarding.test.ts).
+jest.mock("../modules/hr/services/OffboardingService", () => ({
+  runDueOffboardingRevocations: jest.fn().mockResolvedValue(0),
+}));
 jest.mock("../modules/notifications/services/NotificationService", () => ({
   emit: (input: unknown) => mockEmit(input),
 }));

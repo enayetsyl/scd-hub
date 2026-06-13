@@ -247,6 +247,29 @@ export async function assignProxy(input: AssignProxyInput): Promise<string> {
   return grant._id.toString();
 }
 
+/**
+ * Revoke ALL active scope grants (teaching / supervisory / proxy) for a user — the
+ * offboarding access-revocation step (HR-5/H6.3). Each revoked grant is audited
+ * (`SCOPE_GRANT_REVOKE`, reusing the existing lifecycle event). Idempotent: a user
+ * with no active grants revokes nothing and returns 0. Returns the count revoked.
+ */
+export async function revokeAllGrantsForUser(userId: string, revokedBy: string): Promise<number> {
+  const grants = await ScopeGrant.find({ teacherId: userId, active: true }).select("_id kind").lean();
+  for (const g of grants) {
+    const patch: Record<string, unknown> = { active: false };
+    if (g.kind === "proxy") patch.proxyStatus = "revoked";
+    await ScopeGrant.findByIdAndUpdate(g._id, patch);
+    await writeAudit({
+      eventKind: "SCOPE_GRANT_REVOKE",
+      actorId: revokedBy,
+      targetId: g._id,
+      targetKind: g.kind === "proxy" ? "ProxyGrant" : "ScopeGrant",
+      meta: { reason: "offboarding_access_revoked", kind: g.kind },
+    });
+  }
+  return grants.length;
+}
+
 export async function revokeProxy(grantId: string, revokedBy: string): Promise<void> {
   await ScopeGrant.findByIdAndUpdate(grantId, { proxyStatus: "revoked", active: false });
   await writeAudit({

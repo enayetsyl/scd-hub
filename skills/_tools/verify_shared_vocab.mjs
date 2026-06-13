@@ -237,5 +237,22 @@ check("performance:manage = PRINCIPAL+OFFICE; signoff PRINCIPAL ONLY (Office can
   V.roleHasPermission("PRINCIPAL","performance:signoff") && !V.roleHasPermission("OFFICE","performance:signoff") &&
   !["TEACHER","GUARDIAN"].some((r) => V.roleHasPermission(r, "performance:manage") || V.roleHasPermission(r, "performance:signoff")));
 
+console.log("=== C.11 HR offboarding vocab + RBAC invariants (HR step 5 — prd-hr §6, D-#29/#117) ===");
+check("OFFBOARDING_TRIGGER_LABELS_BN total",     total(V.OFFBOARDING_TRIGGER_LABELS_BN, V.OFFBOARDING_TRIGGERS));
+check("OFFBOARDING_TRIGGER_LABELS_EN total",     total(V.OFFBOARDING_TRIGGER_LABELS_EN, V.OFFBOARDING_TRIGGERS));
+check("OFFBOARDING_STATUS_LABELS_BN total",      total(V.OFFBOARDING_STATUS_LABELS_BN, V.OFFBOARDING_STATUSES));
+check("OFFBOARDING_STATUS_LABELS_EN total",      total(V.OFFBOARDING_STATUS_LABELS_EN, V.OFFBOARDING_STATUSES));
+check("CLEARANCE_ITEM_STATUS_LABELS_BN total",   total(V.CLEARANCE_ITEM_STATUS_LABELS_BN, V.CLEARANCE_ITEM_STATUSES));
+check("CLEARANCE_ITEM_STATUS_LABELS_EN total",   total(V.CLEARANCE_ITEM_STATUS_LABELS_EN, V.CLEARANCE_ITEM_STATUSES));
+check("offboarding triggers are exactly the 4 H6.1 triggers", eq(V.OFFBOARDING_TRIGGERS, ["resignation","termination","fixed_term_end","retirement"]));
+check("offboarding statuses exact (§6)",         eq(V.OFFBOARDING_STATUSES, ["initiated","access_revoked","completed","cancelled"]));
+check("clearance item statuses exact (H6.2)",    eq(V.CLEARANCE_ITEM_STATUSES, ["pending","done","waived"]));
+check("EMPLOYMENT_STATUSES gained retired + contract_ended so each H6.1 trigger maps to a status (D-#117)",
+  V.EMPLOYMENT_STATUSES.includes("retired") && V.EMPLOYMENT_STATUSES.includes("contract_ended") &&
+  ["resigned","terminated"].every((s) => V.EMPLOYMENT_STATUSES.includes(s)));
+check("offboarding adds NO new permission — it composes from staff:manage (admin/clearance/access) + payroll:manage (settlement compute) + payroll:approve (settlement release/lock, D-#29/#117)",
+  !V.PERMISSIONS.some((p) => p.startsWith("offboard")) &&
+  V.roleHasPermission("OFFICE","staff:manage") && V.roleHasPermission("PRINCIPAL","payroll:approve") && !V.roleHasPermission("OFFICE","payroll:approve"));
+
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

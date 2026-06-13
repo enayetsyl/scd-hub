@@ -53,6 +53,7 @@ import { User } from "../../foundation/models/User";
 import { dateKeyOf } from "../../attendance/dates";
 import { dispatchAttendanceReminders } from "../../attendance/services/AttendanceReminderService";
 import { dispatchLibraryReminders } from "../../library/services/LibraryReminderService";
+import { runDueOffboardingRevocations } from "../../hr/services/OffboardingService";
 import { emit } from "./NotificationService";
 
 type IdLike = { toString(): string };
@@ -169,6 +170,16 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     attendanceTiersRun: [],
     librarySweepRan: false,
   };
+
+  // --- Offboarding access revocation (HR-5/H6.3, D-#117) — the SYSTEM disables the
+  // login + revokes all scope grants on the last working day. Reuses THIS ticker (no
+  // new scheduler); runs once per CALENDAR day BEFORE the school-day gate (an exit's
+  // last working day can fall on any day), lazy + idempotent inside the service.
+  await family("offboarding access", async () => {
+    await runOnce(dateKey, "OFFBOARD", async () => {
+      await runDueOffboardingRevocations(now);
+    });
+  });
 
   const dayType = await resolveDayType(now);
   summary.dayType = dayType;

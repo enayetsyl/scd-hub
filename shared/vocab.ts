@@ -276,8 +276,11 @@ export const EMPLOYMENT_TYPE_LABELS_BN: Record<EmploymentType, string> = {
   fixed_term: "নির্দিষ্ট মেয়াদি",
 };
 
-/** Employment status — lifecycle gate; feeds offboarding (prd-hr §2.4). Independent of type. */
-export const EMPLOYMENT_STATUSES = ["probation", "confirmed", "resigned", "terminated"] as const;
+/** Employment status — lifecycle gate; feeds offboarding (prd-hr §2.4/§6). Independent
+ *  of type. The first four are the §2.4 lifecycle; `retired` + `contract_ended` are the
+ *  two exit states HR-5 needs so each H6.1 trigger maps to a status (resignation→resigned,
+ *  termination→terminated, retirement→retired, fixed_term_end→contract_ended, D-#117). */
+export const EMPLOYMENT_STATUSES = ["probation", "confirmed", "resigned", "terminated", "retired", "contract_ended"] as const;
 export type EmploymentStatus = (typeof EMPLOYMENT_STATUSES)[number];
 
 export const EMPLOYMENT_STATUS_LABELS_BN: Record<EmploymentStatus, string> = {
@@ -285,6 +288,8 @@ export const EMPLOYMENT_STATUS_LABELS_BN: Record<EmploymentStatus, string> = {
   confirmed: "স্থায়ী",
   resigned: "পদত্যাগী",
   terminated: "অব্যাহতিপ্রাপ্ত",
+  retired: "অবসরপ্রাপ্ত",
+  contract_ended: "চুক্তি সমাপ্ত",
 };
 
 // --- A.5b HR LEAVE ENUMS (app-native; HR module step 2 — prd-hr §3/H2, D-#22/#23) ----
@@ -501,6 +506,56 @@ export const GRIEVANCE_STATUS_LABELS_EN: Record<GrievanceStatus, string> = {
   open: "Open", under_review: "Under review", resolved: "Resolved", closed: "Closed",
 };
 
+// --- A.5e HR OFFBOARDING ENUMS (app-native; HR module step 5 — prd-hr §6/H6, ---
+// D-#29/#117). Identity/operational plane, behind the ADR-005 firewall — NO
+// wire-contract twin, NO envelope-schema mirror, NO two-place sync; only /shared
+// + the vocab verifier run. NO new permission: offboarding/clearance/access-revoke
+// ride `staff:manage` (Office HR admin), final-settlement compute rides
+// `payroll:manage`, and the final-settlement RELEASE/lock rides `payroll:approve`
+// (PRINCIPAL only — the D-#29 hard-hold authority); the compose-don't-add posture.
+
+/** Exit trigger (prd-hr §6/H6.1). Each maps to an EMPLOYMENT_STATUS:
+ *  resignation→resigned, termination→terminated (already wired from HR-4 H5.3),
+ *  fixed_term_end→contract_ended, retirement→retired (D-#117). */
+export const OFFBOARDING_TRIGGERS = ["resignation", "termination", "fixed_term_end", "retirement"] as const;
+export type OffboardingTrigger = (typeof OFFBOARDING_TRIGGERS)[number];
+
+export const OFFBOARDING_TRIGGER_LABELS_BN: Record<OffboardingTrigger, string> = {
+  resignation: "পদত্যাগ", termination: "চাকরিচ্যুতি", fixed_term_end: "চুক্তির মেয়াদ শেষ", retirement: "অবসর",
+};
+export const OFFBOARDING_TRIGGER_LABELS_EN: Record<OffboardingTrigger, string> = {
+  resignation: "Resignation", termination: "Termination", fixed_term_end: "Fixed-term end", retirement: "Retirement",
+};
+
+/** Offboarding case lifecycle (prd-hr §6). `initiated` on open → `access_revoked`
+ *  once the system disables the login + revokes all scope grants on the last working
+ *  day (H6.3) → `completed` once clearance is done AND the hard-held final settlement
+ *  is released (H6.4). `cancelled` = the exit was withdrawn (e.g. resignation pulled).
+ *  The StaffProfile is NEVER deleted — the case + history are retained (H6.5). */
+export const OFFBOARDING_STATUSES = ["initiated", "access_revoked", "completed", "cancelled"] as const;
+export type OffboardingStatus = (typeof OFFBOARDING_STATUSES)[number];
+
+export const OFFBOARDING_STATUS_LABELS_BN: Record<OffboardingStatus, string> = {
+  initiated: "শুরু হয়েছে", access_revoked: "প্রবেশাধিকার বাতিল", completed: "সম্পন্ন", cancelled: "বাতিল",
+};
+export const OFFBOARDING_STATUS_LABELS_EN: Record<OffboardingStatus, string> = {
+  initiated: "Initiated", access_revoked: "Access revoked", completed: "Completed", cancelled: "Cancelled",
+};
+
+/** Clearance checklist item status (prd-hr §6/H6.2). The specific items (asset return /
+ *  handover / no-dues) are admin DATA with read-time defaults (numbers/list PARKED, §10,
+ *  the D-#97 no-seed posture); `waived` = not applicable / explicitly excused.
+ *  Settlement is hard-held until EVERY item is `done` or `waived` (H6.4/D-#29). */
+export const CLEARANCE_ITEM_STATUSES = ["pending", "done", "waived"] as const;
+export type ClearanceItemStatus = (typeof CLEARANCE_ITEM_STATUSES)[number];
+
+export const CLEARANCE_ITEM_STATUS_LABELS_BN: Record<ClearanceItemStatus, string> = {
+  pending: "অপেক্ষমাণ", done: "সম্পন্ন", waived: "অব্যাহতি",
+};
+export const CLEARANCE_ITEM_STATUS_LABELS_EN: Record<ClearanceItemStatus, string> = {
+  pending: "Pending", done: "Done", waived: "Waived",
+};
+
 // --- A.6 HOMEWORK-TRACKER ENUMS (app-native; Project-06 handoff — HW-T1) ------
 // Daily HW-… channel. NO wire-contract twin: trackers are a feature, not import
 // content (no `doc_type: tracker`), and Layer-B records live on the operational/
@@ -694,6 +749,8 @@ export const EMPLOYMENT_STATUS_LABELS_EN: Record<EmploymentStatus, string> = {
   confirmed: "Confirmed",
   resigned: "Resigned",
   terminated: "Terminated",
+  retired: "Retired",
+  contract_ended: "Contract ended",
 };
 
 export const HW_SUBJECT_LABELS_EN: Record<HwSubject, string> = {
