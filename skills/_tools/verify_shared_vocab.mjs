@@ -254,5 +254,26 @@ check("offboarding adds NO new permission — it composes from staff:manage (adm
   !V.PERMISSIONS.some((p) => p.startsWith("offboard")) &&
   V.roleHasPermission("OFFICE","staff:manage") && V.roleHasPermission("PRINCIPAL","payroll:approve") && !V.roleHasPermission("OFFICE","payroll:approve"));
 
+console.log("=== C.12 Vocabulary-tracker vocab + data-driven program/direction model (VC-1 — prd-vocabulary-tracker §3, D-#104/#105) ===");
+check("VOCAB_PROGRAM_LABELS_BN total",   total(V.VOCAB_PROGRAM_LABELS_BN, V.VOCAB_PROGRAMS));
+check("VOCAB_PROGRAM_LABELS_EN total",   total(V.VOCAB_PROGRAM_LABELS_EN, V.VOCAB_PROGRAMS));
+check("VOCAB_DIRECTION_LABELS_BN total", total(V.VOCAB_DIRECTION_LABELS_BN, V.VOCAB_DIRECTIONS));
+check("VOCAB_DIRECTION_LABELS_EN total", total(V.VOCAB_DIRECTION_LABELS_EN, V.VOCAB_DIRECTIONS));
+check("vocab programs exact (D-#104/#105)",   eq(V.VOCAB_PROGRAMS, ["ENGLISH", "BANGLA", "ARABIC"]));
+check("vocab directions exact (D-#105)",      eq(V.VOCAB_DIRECTIONS, ["DICTATION", "HEADWORD_TO_BANGLA", "BANGLA_TO_HEADWORD"]));
+check("VOCAB_PROGRAM_DIRECTIONS total over programs; every listed direction is a real VocabDirection (§3.1)",
+  V.VOCAB_PROGRAMS.every((p) => Array.isArray(V.VOCAB_PROGRAM_DIRECTIONS[p]) && V.VOCAB_PROGRAM_DIRECTIONS[p].length > 0 &&
+    V.VOCAB_PROGRAM_DIRECTIONS[p].every((d) => V.VOCAB_DIRECTIONS.includes(d))));
+check("every program declares DICTATION (the multi-field direction, §3.1)",
+  V.VOCAB_PROGRAMS.every((p) => V.VOCAB_PROGRAM_DIRECTIONS[p].includes("DICTATION")));
+check("VOCAB_DICTATION_FIELDS total + 1 or 2 fields per program (§3.1)",
+  V.VOCAB_PROGRAMS.every((p) => [1, 2].includes(V.VOCAB_DICTATION_FIELDS[p])));
+check("ENGLISH+ARABIC dictation = 2 fields, BANGLA = 1 (§3.1)",
+  V.VOCAB_DICTATION_FIELDS.ENGLISH === 2 && V.VOCAB_DICTATION_FIELDS.ARABIC === 2 && V.VOCAB_DICTATION_FIELDS.BANGLA === 1);
+check("BANGLA omits the reverse meaning direction (DICTATION + HEADWORD_TO_BANGLA only, §3.1)",
+  eq(V.VOCAB_PROGRAM_DIRECTIONS.BANGLA, ["DICTATION", "HEADWORD_TO_BANGLA"]));
+check("no vocab:* permission — word bank rides tracker:write/tracker:read; weekly assignment rides roster:manage (D-#94/#106 compose, no new perm)",
+  !V.PERMISSIONS.some((p) => p.startsWith("vocab")));
+
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

@@ -1118,6 +1118,65 @@ export const NOTICE_SCOPE_LABELS_EN: Record<NoticeScope, string> = {
 };
 
 
+// --- A.13 VOCABULARY-TRACKER ENUMS (app-native; Vocabulary Tracker module — --
+// prd-vocabulary-tracker, D-#104–#107). NO wire-contract twin: a vocab test is a
+// feature, not import content (no `doc_type` for it), and every row is
+// operational/identity-plane behind the ADR-005 firewall — no envelope-schema
+// mirror, no two-/three-place sync; only /shared + the vocab verifier run (D-#104).
+// NO new role / permission: the word bank rides `tracker:write` (manage) +
+// `tracker:read` (read), weekly assignment rides `roster:manage` at VC-2 — the
+// D-#94/#106 compose-don't-add pattern (D-#17 small role set).
+//
+// The trilingual model is DATA-DRIVEN (D-#105): one engine serves English, Bangla
+// and Arabic by declaring, in code, which directions each program uses and how many
+// markable fields its DICTATION has. A new language later = a new VOCAB_PROGRAMS
+// value + two map rows, not a rebuild. There is NO Old/New axis (D-#104).
+
+/** Vocab program (D-#104/#105). Three independent programs share one engine; a new
+ *  language later is a new value here + a row in the two maps below. */
+export const VOCAB_PROGRAMS = ["ENGLISH", "BANGLA", "ARABIC"] as const;
+export type VocabProgram = (typeof VOCAB_PROGRAMS)[number];
+
+export const VOCAB_PROGRAM_LABELS_BN: Record<VocabProgram, string> = {
+  ENGLISH: "ইংরেজি", BANGLA: "বাংলা", ARABIC: "আরবি",
+};
+export const VOCAB_PROGRAM_LABELS_EN: Record<VocabProgram, string> = {
+  ENGLISH: "English", BANGLA: "Bangla", ARABIC: "Arabic",
+};
+
+/** Test directions (D-#105). DICTATION is the multi-field spelling direction (field
+ *  count per program below). HEADWORD_TO_BANGLA / BANGLA_TO_HEADWORD are MEANING
+ *  directions (the program-language word ↔ its Bangla meaning), NOT transliteration. */
+export const VOCAB_DIRECTIONS = ["DICTATION", "HEADWORD_TO_BANGLA", "BANGLA_TO_HEADWORD"] as const;
+export type VocabDirection = (typeof VOCAB_DIRECTIONS)[number];
+
+export const VOCAB_DIRECTION_LABELS_BN: Record<VocabDirection, string> = {
+  DICTATION: "শ্রুতিলিখন", HEADWORD_TO_BANGLA: "শব্দ → বাংলা অর্থ", BANGLA_TO_HEADWORD: "বাংলা অর্থ → শব্দ",
+};
+export const VOCAB_DIRECTION_LABELS_EN: Record<VocabDirection, string> = {
+  DICTATION: "Dictation", HEADWORD_TO_BANGLA: "Headword → Bangla", BANGLA_TO_HEADWORD: "Bangla → headword",
+};
+
+/** Which directions each program uses (D-#105, §3.1) — the program→directions map AS
+ *  DATA. ENGLISH & ARABIC run all three; BANGLA omits the reverse meaning direction.
+ *  Every program includes DICTATION. VC-2 lays out positions from a program's list. */
+export const VOCAB_PROGRAM_DIRECTIONS: Record<VocabProgram, readonly VocabDirection[]> = {
+  ENGLISH: ["DICTATION", "HEADWORD_TO_BANGLA", "BANGLA_TO_HEADWORD"],
+  BANGLA: ["DICTATION", "HEADWORD_TO_BANGLA"],
+  ARABIC: ["DICTATION", "HEADWORD_TO_BANGLA", "BANGLA_TO_HEADWORD"],
+};
+
+/** How many independently-markable fields a DICTATION position has per program
+ *  (D-#105, §3.1): ENGLISH & ARABIC = 2 (headword spelling + Bangla meaning),
+ *  BANGLA = 1 (spelling only). VC-3 marks each field independently; whether a
+ *  half-miss costs 1 or 2 marks is configured PER TEST (VC-2), not here. */
+export const VOCAB_DICTATION_FIELDS: Record<VocabProgram, number> = {
+  ENGLISH: 2,
+  BANGLA: 1,
+  ARABIC: 2,
+};
+
+
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
 // =============================================================================

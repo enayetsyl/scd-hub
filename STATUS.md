@@ -1,8 +1,31 @@
 # STATUS
 
-_Updated: 2026-06-13 (HR-5 offboarding built — server, PR #54 open [**HR module HR-1..HR-5 COMPLETE**]; Messaging M-6+M-7 app pass PR #53 open [**messaging fully built server+app**]. HR-4 PR #52 + messaging M-1..M-7 merged)_
+_Updated: 2026-06-13 (Vocabulary Tracker VC-1 built — server, PR open [first slice of the new vocab module]. HR-5 offboarding PR #54 merged [**HR HR-1..HR-5 COMPLETE**]; Messaging M-6+M-7 app pass PR #53 merged [**messaging fully built server+app**])_
 
 ## Now / next
+- **Built (Vocabulary Tracker VC-1 — server, prd-vocabulary-tracker §3/§6, D-#104/#105 + build ruling
+  D-#126) [branch `worktree-vocab`, PR open — coordinator reviews]:** the FIRST slice of the new
+  vocab module (replacing the two-phase Google-Sheet system). **The data-driven trilingual model
+  (D-#105):** `VOCAB_PROGRAMS` (ENGLISH/BANGLA/ARABIC) + `VOCAB_DIRECTIONS` (DICTATION/
+  HEADWORD_TO_BANGLA/BANGLA_TO_HEADWORD) + BN/EN labels + the program→directions map
+  (`VOCAB_PROGRAM_DIRECTIONS`) and dictation-field map (`VOCAB_DICTATION_FIELDS`: ENGLISH/ARABIC=2,
+  BANGLA=1) AS DATA — a new language later = a new value + two map rows, not a rebuild; **no Old/New**
+  (D-#104). Verifier §C.12 added. **New `modules/vocab/`:** `VocabWord` model (minimal —
+  `{program, classLevel, headword, banglaMeaning, active, addedBy, addedOn}`; no transliteration/
+  example/POS, no academicYearId [persistent], no schoolId [single-school live-repo convention]);
+  `VocabWordService` (validators + add/edit/(de)activate-soft/list/get + audit); resolvers. **RBAC
+  (D-#126) — NO new role/permission (D-#94/#106 compose pattern):** word-bank WRITE rides `tracker:write`
+  + a class-level write-reach check (`assertCanManageClassLevel` — the §7 J1 actor; Principal unscoped,
+  teacher needs a teaching/proxy scope at that class level, Office/Guardian denied); READ rides
+  `tracker:read` (shared content, not reach-restricted); the VC-2 weekly tester assignment is reserved
+  for `roster:manage`. 3 new audit kinds (VOCAB_WORD_*) in `platform/models/Audit.ts`. New vocab firewall
+  block (corpus ⇄ vocab both ways — the module holds per-student results from VC-3). **Gate GREEN
+  (executed):** vocab verifier PASS, shared build + shared/server tsc clean, **jest 853/853** (52 suites;
+  1 new suite `vocabWord.test.ts` + 2 firewall checks; firewall green). **Server-only** (no app — VC-5 is
+  the app slice; expo export skipped). **Not verified live.** **Next = VC-2** (`VocabTest` +
+  `VocabTestPosition` build-a-test from selected words → auto-laid positions; teacher sets totalMarks +
+  the dictation half-miss rule; `VocabTestAssignment` append-only weekly assignment via `roster:manage` +
+  D-#20 proxy resolution; Thursday default + D-#50 holiday roll).
 - **Built (HR step 5 — offboarding, server, prd-hr §6/H6, D-#29 + build rulings D-#117/#118)
   [branch `worktree-hr-offboarding`, PR open — coordinator reviews]:** the cross-cutting exit workflow that
   COMPLETES the HR module (HR-1..HR-5); it COMPOSES the earlier slices, never twins them. The HR-4
