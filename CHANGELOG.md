@@ -4,6 +4,15 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Guardian portal app — surface already-existing guardian reads the app didn't render + polish (FRONTEND
+  ONLY; no server/vocab/contract change). GuardianHome gains a **child-info card** (section + Quran/Arabic
+  group memberships from `myChildren` — fetched by the provider but never shown; D-#48/#56) and a day-load
+  **base+top-up breakdown** (fields already in `childDayLoad`). New **ChildClassNotesScreen** (lesson
+  history — last 7 days of `childClassNotes`, the date-parameterized read the Home tab only used for today),
+  reachable via a "আগের পাঠ দেখুন" link on the Home class-notes card (GuardianHome stack gains the
+  `ChildClassNotes` route). Attendance/leave/results stay placeholdered — no guardian server read exists for
+  them yet (would be a server change this session must not make). Gate: app tsc clean + expo web export
+  green (698 modules); no-drift confirmed — vocab verifier PASS + jest 643/643 untouched.
 - Messaging M-2 — auto-provisioned groups + manual groups + posting policy (server, D-#78/#98/#100). Flipped
   `chat:manage` pipeline→build in `PERMISSION_BUILD_STATUS` (D-#98's planned M-2 flip) + updated the vocab
   verifier's exact pipeline-set check to `{chat:oversee}` only (+ a §C.7 build-status assertion). New

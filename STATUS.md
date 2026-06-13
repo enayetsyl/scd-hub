@@ -1,10 +1,28 @@
 # STATUS
 
-_Updated: 2026-06-13 (Messaging M-2 built — auto/manual groups + posting policy; Notifications N-2..N-4 built; Messaging M-1 merged PR #41)_
+_Updated: 2026-06-13 (Messaging M-2 merged PR #44; Guardian portal app riders PR #43; Notifications N-2..N-4 + Messaging M-1 merged)_
 
 ## Now / next
+- **Built (Guardian portal app — surface existing reads + polish, FRONTEND ONLY) [branch
+  `worktree-guardian-app-riders`, PR #43 — coordinator review applied]:** an app-only pass that renders guardian-readable server data the
+  portal already had but never showed, and polishes the existing screens. **NO server / vocab / contract
+  change** (parallel session owns those) — uses only guardian queries that already exist. **Gaps closed:**
+  (1) **child-info card** on GuardianHome — section name + Quran/Arabic **group memberships** (from
+  `myChildren`, fetched by `GuardianChildProvider` but previously unrendered; cross-grade groups D-#48/#56);
+  (2) **ChildClassNotesScreen** — lesson history (last 7 days of `childClassNotes`, the date-parameterized
+  read GuardianHome only ever used for *today*), a sub-screen of the GuardianHome stack reachable via a
+  "আগের পাঠ দেখুন" ghost-button on the class-notes card (new `ChildClassNotes` route in
+  GuardianHomeStackParamList); (3) **day-load breakdown** — base + top-up split on GuardianHome (fields
+  already in `childDayLoad`). New BN+EN labels (gpChildInfo/gpSection/gpQuranGroup/gpArabicGroup/
+  gpDayLoadBase/gpDayLoadTopup/gpPastLessons/gpClassNotesHistory/gpNoNotesDay). Follows the existing guardian
+  tab + `GuardianChildProvider`/`ChildSwitcher` pattern + `docs/ui-guidelines.md` tokens; Bangla
+  guardian-facing labels. **Surfaces deliberately NOT built (no server read exists — would collide):**
+  guardian attendance / leave / results — these stay inert "শীঘ্রই আসছে" placeholders (a guardian
+  attendance read does not exist server-side; building it is the parallel session's plane). **Gate GREEN
+  (executed):** app `tsc --noEmit` clean + `expo export --platform web` green (698 modules); no-drift
+  confirmed — vocab verifier PASS + **jest 643/643** untouched. **Not verified live** (rides DEP-3).
 - **Built (Messaging M-2 — auto-provisioned + manual groups + posting policy, server, D-#78/#98/#100)
-  [branch `worktree-messaging-m2`, PR open]:** second messaging slice per `docs/prd-messaging.md` §5.
+  [MERGED to main, PR #44]:** second messaging slice per `docs/prd-messaging.md` §5.
   **Vocab (the D-#98 flip):** `chat:manage` pipeline→**build** in `PERMISSION_BUILD_STATUS`; the vocab
   verifier's exact pipeline-set check is now `{chat:oversee}` ONLY (+ a §C.7 build-status assertion).
   `chat:oversee` stays pipeline → flips at M-6. **Server** (`modules/chat/ChatGroupService`):
@@ -21,8 +39,8 @@ _Updated: 2026-06-13 (Messaging M-2 built — auto/manual groups + posting polic
   in Bangla; OPEN/DIRECT unrestricted; reactions are M-3). Audit kinds CHAT_GROUP_CREATED /
   CHAT_MEMBERSHIP_CHANGED. Firewall test covers the new file both ways (corpus⇄chat). **Gate GREEN
   (executed):** vocab verifier PASS, shared+server tsc clean, **jest 663/663** (41 suites; chatGroups 19
-  new; firewall green), app tsc clean + expo web export green. **Not verified live; NOT merged — coordinator
-  reviews first.** **Next = M-3** (reply/forward/reactions/edit/delete) → M-4 attachments → M-5 app screens →
+  new; firewall green), app tsc clean + expo web export green. **Not verified live.** **Next = M-3**
+  (reply/forward/reactions/edit/delete) → M-4 attachments → M-5 app screens →
   M-6 oversight + guardian notices (flips `chat:oversee`) → M-7 staff push.
 - **Built (Notifications N-2+N-3+N-4 — scheduler + app inbox + Expo push, D-#73/#74/#75 + build
   reconciliations D-#99) [branch `worktree-notifications-n2-n4`, PR #42 — coordinator review applied]: the notifications module
