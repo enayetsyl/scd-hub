@@ -1,10 +1,10 @@
 # STATUS
 
-_Updated: 2026-06-13 (Messaging M-4 built — attachments, server; PR open. M-3 merged PR #45; M-2 merged PR #44)_
+_Updated: 2026-06-13 (Messaging M-4 PR #47 — coordinator review applied; Vocabulary Tracker PRD D-#104–#107; HR step 2 PR #46 + M-3 PR #45 + M-2 + Guardian app + Notifications + M-1 all merged)_
 
 ## Now / next
-- **Built (Messaging M-4 — chat attachments image/PDF/video/voice ≤10 MB, server, D-#102) [branch
-  `worktree-messaging-m4`, PR open — coordinator reviews]:** fourth messaging slice per
+- **Built (Messaging M-4 — chat attachments image/PDF/video/voice ≤10 MB, server, D-#108) [MERGED to main,
+  PR #47 — coordinator review applied]:** fourth messaging slice per
   `docs/prd-messaging.md` §5. **Storage pre-flight (AGENTS rule 3 — live repo wins over the PRD):
   REUSES the GP-A Google Drive store; the PRD §9 Oracle-VM-disk path is NOT built** (Drive already
   holds the bytes on the school's My-Drive quota — D-#70/#71; the §9 VM-disk reason, GridFS can't hold
@@ -27,8 +27,45 @@ _Updated: 2026-06-13 (Messaging M-4 built — attachments, server; PR open. M-3 
   D-#70/#71 — + DEP-3). **Next = M-5** (app screens: Chat tab — conversation list, thread, reply/forward/
   react/edit/delete, attachment picker + voice recorder, seen-by) → M-6 oversight + guardian notices
   (flips `chat:oversee`) → M-7 staff push.
-- **Built (Messaging M-3 — reply/forward/reactions/edit/delete, server, D-#77/#101) [branch
-  `worktree-messaging-m3`, PR open — coordinator reviews]:** third messaging slice per
+- **Planned (Vocabulary Tracker VC-1..VC-5, D-#104–#107):** build contract
+  docs/prd-vocabulary-tracker.md — replaces the two-phase Google-Sheet vocab system (Phase-1
+  per-test files + Phase-2 IMPORTRANGE). Three data-driven programs (English/Bangla/Arabic),
+  per-class word bank, **no Old/New**, per-test totalMarks, configurable dictation half-miss,
+  no auto-grading; weekly per-(section×program) assigned teacher + D-#20 proxy + append-only
+  assignment log; reports/guardian-messages ride D-#44 aggregates + wa.me/emit() seam. App-native
+  vocab only — no wire/harness sync (serialize per AGENTS rule 5 at VC-1/VC-4). Identity-plane
+  (ADR-005), no new role/permission (D-#94 pattern). Plan/docs only — nothing executed.
+  Next = build VC-1 per docs/prd-vocabulary-tracker.md §6, slice order.
+- **Built (HR step 2 — staff ATTENDANCE & LEAVE, server, prd-hr §3/H2, D-#22/#23 + build rulings
+  D-#102/#103) [MERGED to main, PR #46]:** the genuinely-missing
+  **staff LEAVE source** + the staff-attendance leave reconciliation AT-1 left open. **Scope boundary
+  (D-#102, the pre-flight call):** the existing `attendance` module (D-#63–#67) already ingests staff
+  attendance as a biometric Excel SNAPSHOT (`TeacherAttendanceDay`) = HR-2b's "internal record + manual
+  transport"; HR-2 does NOT rebuild the punch-driven §3a schedule/grace/working-days/manual-source layer
+  (it presupposes punch-level data the symbol snapshot lacks + the parked live device sync, D-#24/H7.6) —
+  it builds leave + closes the ✘→LEAVE seam. **New `modules/hr/`:** `StaffLeaveEntitlement` (per
+  staff/year/type allowance — admin DATA, numbers parked §10, read-time 0 default, NO seed — D-#97 posture),
+  `StaffLeaveApplication` (parent record; approval stamps a paid/unpaid split — the exceed rule WARNS, never
+  blocks §3.3; maternity/hajj wholly unpaid, D-#23), `StaffCoverSlot` (fans out one slot per class the
+  absent teacher teaches → approval mints a **D-#20 proxy grant** via `assignProxy`; cancel/reject revoke it
+  — the D-#22 propose-then-approve gate, grant model unchanged). Services: LeaveEntitlementService
+  (balance/proration/day-count pure math), StaffLeaveService, CoverService, `staffMatch` (the **phone-only
+  `User`↔`StaffProfile` join** provisioning uses — NO FK/migration added, worktree-rule-3 safe). **AT-1 seam
+  CLOSED:** a biometric ✘ now reads LEAVE when an approved staff leave covers that staff/date — a READ-TIME
+  overlay in `TeacherAttendanceService` (forDate + summary), correct even when leave is approved AFTER the
+  snapshot import (D-#103). **RBAC (D-#103):** `leave:manage` (PRINCIPAL/OFFICE, build) = the admin surface +
+  record-on-behalf for support (no login, D-#25); teacher self-apply/propose-cover/cancel/view-own = OWN-ROW,
+  **no new permission** (D-#17/#72 posture). **Vocab (app-native, NO wire sync, I own vocab this cycle):**
+  `LEAVE_TYPES`/`LEAVE_STATUSES`/`COVER_SLOT_STATUSES` + BN/EN + `LEAVE_TYPE_RULES` (settled §3.2 table) +
+  `leave:manage`; verifier §C.8 added + OFFICE exact-list updated. New audit kinds STAFF_LEAVE_*/STAFF_COVER_*.
+  Firewall test extended both ways (corpus ⇄ hr). **Gate GREEN (executed):** vocab verifier PASS, shared
+  build + shared/server tsc clean, **jest 690/690** (42 suites; 27 new in `staffLeave` + 2 firewall;
+  firewall green). **Server-only** (no app screens — the Messaging M-1/M-2 precedent; an HR app slice is the
+  follow-up). **Not verified live.** Parked (prd-hr §10, unchanged): leave entitlement amounts/Hajj reset,
+  maternity legal check (H7.5/D-#23), the §3a live-sync layer (H7.6). **Next after merge = HR-3 (payroll)** —
+  needs HR-1 salary + this leave (encashment) + attendance (unpaid-leave day-rate deduction).
+- **Built (Messaging M-3 — reply/forward/reactions/edit/delete, server, D-#77/#101) [MERGED to main,
+  PR #45 + coordinator review fix — reaction emoji bounded]:** third messaging slice per
   `docs/prd-messaging.md` §5. Wires the inert M-1 `ChatMessage` fields (replyTo was already validated in
   M-1 sendMessage). **forward** (`forwardMessage`): member of BOTH source + target, sets `forwardOfId`,
   carries attachment refs forward, honours the target's M-2 ANNOUNCEMENT gate; deleted source rejected.
