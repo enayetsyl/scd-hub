@@ -4,15 +4,15 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
-- HR step 3 — payroll (server, prd-hr §4, D-#26/#27; build rulings D-#108/#109). New `modules/hr/` models
+- HR step 3 — payroll (server, prd-hr §4, D-#26/#27; build rulings D-#109/#110). New `modules/hr/` models
   `PayrollRun` (monthly; prepared → approved_locked, immutable once locked), `Payslip` (itemised net =
   gross − deductions + additions), `AdvanceLoan` (qard-hasan — interest- & fee-free, no rate/fee field).
   Services: `payrollMath` (pure dayRate + computePayslip with the §4.5 net-pay guard), `PayrollService`
   (prepare/recompute → approve+lock+commit-advance-recovery → cancel → paymentExport), `AdvanceService`
   (issue/settle/read). `StaffProfile` gains optional `monthlySalary` + `paymentMethod` (no migration);
-  `setStaffPay` (payroll:manage) sets them. **RBAC (D-#108):** `payroll:manage` (PRINCIPAL/OFFICE) prepares/
+  `setStaffPay` (payroll:manage) sets them. **RBAC (D-#109):** `payroll:manage` (PRINCIPAL/OFFICE) prepares/
   reads; `payroll:approve` (PRINCIPAL only) locks runs + issues/settles advances — Office cannot approve, a
-  distinct permission the verifier proves. **Lock/correction seam (D-#109):** a locked run is never
+  distinct permission the verifier proves. **Lock/correction seam (D-#110):** a locked run is never
   retro-edited — post-lock corrections ride `arrears`/clawback lines on the NEXT run; the unpaid-leave
   deduction reads the STORED leave paid/unpaid split (not the read-time attendance overlay); advance recovery
   commits at lock (recompute-safe); day-rate = monthlySalary ÷ run working days; cash-paid staff excluded
@@ -23,6 +23,25 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
   Gate GREEN: vocab verifier PASS, shared+server tsc clean, jest 731/731 (44 suites; 19 new in payroll).
   Server-only; not verified live. Parked (prd-hr §10): entitlement/bonus figures, statutory deductions,
   payment-export target format, lateness-rule parameters, day-rate ÷30 alternative.
+- Messaging M-4 — chat attachments: image/PDF/video/voice ≤10 MB (server, D-#108). **Storage REUSES the
+  GP-A Google Drive store — the PRD §9 Oracle-VM-disk proposal is NOT built** (Drive already holds the
+  bytes on the school's My-Drive quota; the VM-disk reason — GridFS can't hold video — is moot). No twin
+  `Attachment` model/transport: generalized `DriveStore` (a `subfolder` param → `SCD-Hub-Files/<year>/chat/`)
+  + `StoredFile` (four `chat_*` kinds added to the existing `hw_*` enum + an optional `conversationId`) +
+  the existing `GET /files/:id` server-streamed transport (Drive id never reaches a client). New
+  `POST /files/chat` (multipart, `chat:write` + `assertChatMember`, MIME whitelist per ATTACHMENT_KINDS +
+  10 MB cap, Bangla 422, Drive-first ⇒ 503 + nothing persisted). New `ChatFileService`: read gate
+  `assertChatFileReadAccess` (member of a conversation with a LIVE message referencing the file → a deleted
+  message's attachment becomes inaccessible, the M-4 acceptance; refs stay in the MESSAGE_DELETED audit);
+  `GET /files/:id` dispatches the gate by the file's OWN kind (hw → HomeworkFile, chat → ChatFile) so neither
+  plane can re-expose the other's files. `sendMessage` gains `attachmentIds` — `resolveSendAttachments`
+  admits only CHAT files the SENDER uploaded FOR this conversation (no foreign/cross-conversation/hw file);
+  an attachment-only message (no body) is now allowed; `ChatMessage` GraphQL type gains an `attachments`
+  field (batched per page). One new audit kind `CHAT_ATTACHMENT_UPLOADED` in `platform/models/Audit.ts`
+  (NOT vocab — HR owns shared/vocab.ts this cycle). Gate GREEN (executed): vocab verifier PASS (untouched),
+  shared+server tsc clean, **jest 710/710** (43 suites; 26 new in `chatAttachments.test.ts`; firewall green;
+  homeworkFiles StoredFile mock extended for the generalized kinds), app tsc clean + expo web export green.
+  Not verified live (Drive credential + DEP-3). Next = M-5 app screens.
 - HR step 2 — staff LEAVE source + the staff-attendance leave reconciliation (server, prd-hr §3/H2,
   D-#22/#23; build rulings D-#102/#103). New `modules/hr/`: `StaffLeaveEntitlement` (per staff/year/type
   allowance — admin DATA, numbers parked, no seed), `StaffLeaveApplication` (parent record + paid/unpaid

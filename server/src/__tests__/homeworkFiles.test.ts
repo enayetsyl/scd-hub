@@ -41,7 +41,8 @@ jest.mock("../modules/platform/services/DriveStore", () => {
 const mockStoredCreate = jest.fn();
 const mockStoredFindById = jest.fn();
 jest.mock("../modules/platform/models/StoredFile", () => ({
-  STORED_FILE_KINDS: ["hw_question", "hw_answer"],
+  STORED_FILE_KINDS: ["hw_question", "hw_answer", "chat_image", "chat_pdf", "chat_video", "chat_audio"],
+  CHAT_STORED_FILE_KINDS: ["chat_image", "chat_pdf", "chat_video", "chat_audio"],
   StoredFile: {
     create: (a: unknown) => mockStoredCreate(a),
     findById: (id: unknown) => ({ lean: () => mockStoredFindById(id) }),

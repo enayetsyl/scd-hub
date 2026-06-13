@@ -7,7 +7,7 @@ import { PAYROLL_RUN_STATUSES, type PayrollRunStatus } from "@scd/shared";
  * payslips + the payment export issue only from a locked run. A `prepared` run may be
  * recomputed or `cancelled` before approval. A locked run is NEVER retro-edited — a
  * post-lock correction (e.g. a leave cancelled after the month locked) rides an
- * `arrears` line on the NEXT run (D-#109). At most one non-cancelled run per month
+ * `arrears` line on the NEXT run (D-#110). At most one non-cancelled run per month
  * (enforced in the service — no partial-unique index).
  *
  * `workingDays` is captured on the run so the day-rate (= monthlySalary ÷ workingDays)

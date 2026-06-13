@@ -46,7 +46,7 @@ export interface ComputePayslipInput {
   unpaidLeaveDays: number;
   /** Optional Principal-configured lateness deduction (off by default, §4.3/D-#26). */
   latenessDeduction?: number;
-  /** Manual arrears/bonus/encashment/statutory/other lines (§4.4 + the D-#109 seam). */
+  /** Manual arrears/bonus/encashment/statutory/other lines (§4.4 + the D-#110 seam). */
   manualDeductions?: PayLineInput[];
   manualAdditions?: PayLineInput[];
   advance?: AdvanceRecovery | null;
@@ -70,7 +70,12 @@ const sum = (lines: PayLineInput[]) => lines.reduce((s, l) => s + l.amount, 0);
  * the running net so it can never drive net below zero (the §4.5 net-pay guard).
  */
 export function computePayslip(input: ComputePayslipInput): ComputedPayslip {
-  const additions: PayLineInput[] = [...(input.manualAdditions ?? [])];
+  // Additions are whole-taka rounded too (mirrors deductions below) so net can
+  // never come out fractional — the header invariant "all figures whole-taka".
+  const additions: PayLineInput[] = (input.manualAdditions ?? []).map((a) => ({
+    ...a,
+    amount: Math.round(a.amount),
+  }));
   const deductions: PayLineInput[] = [];
 
   if (input.unpaidLeaveDays > 0) {

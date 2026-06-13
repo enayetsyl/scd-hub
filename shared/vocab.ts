@@ -369,7 +369,7 @@ export const PAYMENT_METHOD_LABELS_EN: Record<PaymentMethod, string> = {
 /** Monthly run lifecycle (prd-hr §4.2). Office PREPARES → Principal APPROVES → the
  *  run is `approved_locked` (immutable; payslips + payment export issue only from it).
  *  A prepared run may be recomputed or `cancelled` before approval; a locked run is
- *  NEVER retro-edited — post-lock corrections ride arrears lines on the NEXT run (D-#109). */
+ *  NEVER retro-edited — post-lock corrections ride arrears lines on the NEXT run (D-#110). */
 export const PAYROLL_RUN_STATUSES = ["prepared", "approved_locked", "cancelled"] as const;
 export type PayrollRunStatus = (typeof PAYROLL_RUN_STATUSES)[number];
 
@@ -398,7 +398,7 @@ export const PAY_DEDUCTION_TYPE_LABELS_EN: Record<PayDeductionType, string> = {
 };
 
 /** Addition lines (prd-hr §4.4). `leave_encashment` surfaces the §3.4 cash-out + exit
- *  settlement; `arrears` carries back-pay + post-lock corrections (D-#109). */
+ *  settlement; `arrears` carries back-pay + post-lock corrections (D-#110). */
 export const PAY_ADDITION_TYPES = ["bonus", "arrears", "leave_encashment", "other"] as const;
 export type PayAdditionType = (typeof PAY_ADDITION_TYPES)[number];
 
@@ -1034,8 +1034,8 @@ export const PERMISSIONS = [
   "roster:manage",
   "staff:manage",          // HR staff-record read/manage (Principal/Office; prd-hr H1.4 row-scope)
   "leave:manage",          // HR staff-LEAVE admin: entitlements, approve/reject, cover approval, all balances (Principal/Office; prd-hr H2, D-#22). Teacher own-row self-apply needs NO permission.
-  "payroll:manage",        // HR PAYROLL: set pay, prepare/recompute a monthly run, read payslips/export/advances (Principal/Office; prd-hr H4, D-#108)
-  "payroll:approve",       // PRINCIPAL ONLY — approve+LOCK a payroll run + issue/settle advances (prd-hr H4.2/H4.5/H4.7; Office cannot approve, D-#108)
+  "payroll:manage",        // HR PAYROLL: set pay, prepare/recompute a monthly run, read payslips/export/advances (Principal/Office; prd-hr H4, D-#109)
+  "payroll:approve",       // PRINCIPAL ONLY — approve+LOCK a payroll run + issue/settle advances (prd-hr H4.2/H4.5/H4.7; Office cannot approve, D-#109)
   "guardian:link",
   "message:dispatch",      // wa.me / notices manual send (R-T2)
   "user:manage",

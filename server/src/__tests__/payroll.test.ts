@@ -1,6 +1,6 @@
 /**
  * HR-3 — payroll math, the monthly run lifecycle, advances, payment export
- * (prd-hr §4, D-#26/#27/#108/#109). Pure math exercised directly; services run
+ * (prd-hr §4, D-#26/#27/#109/#110). Pure math exercised directly; services run
  * against mocked models (DB-free, the repo's convention).
  */
 import mongoose from "mongoose";
@@ -17,6 +17,7 @@ const mockSlipInsert = jest.fn();
 const mockSlipFind = jest.fn();
 const mockSlipDelete = jest.fn().mockResolvedValue(undefined);
 const mockAdvFind = jest.fn();
+const mockAdvFindOne = jest.fn();
 const mockAdvFindById = jest.fn();
 const mockAdvCreate = jest.fn();
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
@@ -49,6 +50,7 @@ jest.mock("../modules/hr/models/Payslip", () => ({
 jest.mock("../modules/hr/models/AdvanceLoan", () => ({
   AdvanceLoan: {
     find: (q: unknown) => ({ lean: () => mockAdvFind(q) }),
+    findOne: (q: unknown) => ({ select: () => ({ lean: () => mockAdvFindOne(q) }) }),
     findById: (id: unknown) => mockAdvFindById(id),
     create: (d: unknown) => mockAdvCreate(d),
   },
@@ -85,6 +87,15 @@ describe("payroll math (pure)", () => {
     expect(r.totalAdditions).toBe(2000);
     expect(r.totalDeductions).toBe(500);
     expect(r.netPay).toBe(11500);
+  });
+  test("additions are whole-taka rounded (net never comes out fractional)", () => {
+    const r = computePayslip({
+      grossSalary: 10000, dayRate: 333, unpaidLeaveDays: 0,
+      manualAdditions: [{ type: "bonus", amount: 1500.5 }],
+    });
+    expect(r.totalAdditions).toBe(1501);
+    expect(Number.isInteger(r.netPay)).toBe(true);
+    expect(r.netPay).toBe(11501);
   });
   test("unpaid leave deducts day-rate × days (the only always-on deduction, D-#26)", () => {
     const r = computePayslip({ grossSalary: 30000, dayRate: 1000, unpaidLeaveDays: 3 });
@@ -145,7 +156,7 @@ describe("preparePayrollRun", () => {
     expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "PAYROLL_PREPARED" }));
   });
 
-  test("refuses to re-prepare a LOCKED month (corrections ride arrears, D-#109)", async () => {
+  test("refuses to re-prepare a LOCKED month (corrections ride arrears, D-#110)", async () => {
     mockRunFindOne.mockResolvedValue({ _id: oid(), status: "approved_locked" });
     await expect(preparePayrollRun({ monthKey: "2026-06", workingDays: 30, actorId: ACTOR })).rejects.toThrow(/locked/i);
     expect(mockRunCreate).not.toHaveBeenCalled();
@@ -241,6 +252,14 @@ describe("advances (qard hasan, D-#27)", () => {
     await expect(
       issueAdvance({ staffProfileId: oid().toString(), principal: 5000, issueDate: new Date(), recoveryMode: "installments", actorId: ACTOR }),
     ).rejects.toThrow(PayrollError);
+  });
+  test("rejects a SECOND active advance for the same staff (§4.5 one-active invariant)", async () => {
+    mockStaffFindById.mockResolvedValue({ active: true });
+    mockAdvFindOne.mockResolvedValue({ _id: oid() }); // an active advance already exists
+    await expect(
+      issueAdvance({ staffProfileId: oid().toString(), principal: 5000, issueDate: new Date(), recoveryMode: "one_shot", actorId: ACTOR }),
+    ).rejects.toThrow(PayrollError);
+    expect(mockAdvCreate).not.toHaveBeenCalled();
   });
   test("settleAdvance zeroes the balance and closes the record", async () => {
     const advance: any = { _id: oid(), balance: 3000, status: "active", save: jest.fn() };

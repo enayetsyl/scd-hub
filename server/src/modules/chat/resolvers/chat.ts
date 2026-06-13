@@ -34,6 +34,10 @@ import {
   reactionsForMessages,
 } from "../services/ChatService";
 import {
+  attachmentsForFileIds,
+  type AttachmentView,
+} from "../services/ChatFileService";
+import {
   createGroupConversation,
   addMember,
   removeMember,
@@ -50,6 +54,7 @@ type WithMembers = IConversation & { _members?: ChatMemberView[] };
 type WithReceipts = IChatMessage & {
   _receipts?: IMessageReceipt[];
   _reactions?: IReaction[];
+  _attachments?: AttachmentView[];
 };
 
 interface ChatMemberView {
@@ -96,6 +101,27 @@ const ReactionRef = builder.objectRef<ReactionView>("MessageReaction").implement
 async function reactionViews(m: IChatMessage): Promise<ReactionView[]> {
   const rows = (m as WithReceipts)._reactions ?? (await reactionsForMessage(m._id.toString()));
   return rows.map((r) => ({ userId: r.userId.toString(), emoji: r.emoji }));
+}
+
+const AttachmentRef = builder.objectRef<AttachmentView>("ChatAttachment").implement({
+  fields: (t) => ({
+    fileId: t.exposeString("fileId"), // download via GET /files/:fileId (auth header)
+    kind: t.exposeString("kind"), // ATTACHMENT_KINDS: IMAGE/PDF/VIDEO/AUDIO
+    mime: t.exposeString("mime"),
+    sizeBytes: t.exposeInt("sizeBytes"),
+    originalName: t.exposeString("originalName"),
+  }),
+});
+
+/** Resolve a message's attachments (batched if pre-loaded, else a single fetch).
+ *  A deleted message lists no attachments (its attachmentIds are masked off). */
+async function attachmentViews(m: IChatMessage): Promise<AttachmentView[]> {
+  const pre = (m as WithReceipts)._attachments;
+  if (pre) return pre;
+  const ids = (m.attachmentIds ?? []).map((a) => a.toString());
+  if (ids.length === 0) return [];
+  const byId = await attachmentsForFileIds(ids);
+  return ids.map((id) => byId.get(id)).filter((v): v is AttachmentView => Boolean(v));
 }
 
 /** Resolve member rows → views, looking names up in a prebuilt id→name map. */
@@ -181,6 +207,9 @@ const ChatMessageRef = builder.objectRef<IChatMessage>("ChatMessage").implement(
     }),
     // Reactions (M-3): one per user per message; the client aggregates by emoji.
     reactions: t.field({ type: [ReactionRef], resolve: (m) => reactionViews(m) }),
+    // Attachments (M-4): image/pdf/video/audio metadata; bytes stream via
+    // GET /files/:fileId (the server-internal Drive id never reaches a client).
+    attachments: t.field({ type: [AttachmentRef], resolve: (m) => attachmentViews(m) }),
     // Receipts (M1.5): who has seen this message + the count. The sender never
     // has a receipt row of their own.
     seenBy: t.field({
@@ -235,18 +264,23 @@ builder.queryField("messages", (t) =>
         beforeId: args.beforeId ?? undefined,
         limit: args.limit ?? undefined,
       });
-      // Pre-batch receipts + reactions for the page so seenBy/seenCount and the
-      // reactions field don't fire a query per message.
+      // Pre-batch receipts + reactions + attachments for the page so seenBy/
+      // seenCount, reactions and attachments don't fire a query per message.
       if (msgs.length) {
         const ids = msgs.map((m) => m._id.toString());
-        const [byReceipt, byReaction] = await Promise.all([
+        const allFileIds = msgs.flatMap((m) => (m.attachmentIds ?? []).map((a) => a.toString()));
+        const [byReceipt, byReaction, byFile] = await Promise.all([
           receiptsForMessages(ids),
           reactionsForMessages(ids),
+          attachmentsForFileIds(allFileIds),
         ]);
         for (const m of msgs) {
           const key = m._id.toString();
           (m as WithReceipts)._receipts = byReceipt.get(key) ?? [];
           (m as WithReceipts)._reactions = byReaction.get(key) ?? [];
+          (m as WithReceipts)._attachments = (m.attachmentIds ?? [])
+            .map((a) => byFile.get(a.toString()))
+            .filter((v): v is AttachmentView => Boolean(v));
         }
       }
       return msgs;
@@ -271,15 +305,18 @@ builder.mutationField("sendMessage", (t) =>
     authScopes: { hasPermission: "chat:write" },
     args: {
       conversationId: t.arg.string({ required: true }),
-      body: t.arg.string({ required: true }),
+      // Optional now (M-4): an attachment-only message carries no body.
+      body: t.arg.string({ required: false }),
       replyToId: t.arg.string({ required: false }),
+      attachmentIds: t.arg.stringList({ required: false }),
     },
     resolve: async (_r, args, ctx) =>
       sendMessage({
         conversationId: args.conversationId,
         senderId: ctx.auth!.userId,
-        body: args.body,
+        body: args.body ?? "",
         replyToId: args.replyToId ?? undefined,
+        attachmentIds: args.attachmentIds ?? undefined,
         // ANNOUNCEMENT gate (M-2, D-#78): managers may post, others are blocked.
         canManage: roleHasPermission(ctx.auth!.role as Role, "chat:manage"),
       }),

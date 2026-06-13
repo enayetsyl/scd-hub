@@ -11,11 +11,40 @@ import { Schema, model, Document, Types } from "mongoose";
  * (server-in-the-middle; no Drive URL or redirect ever reaches a client).
  *
  * Identity plane (an answer file is child PII, ADR-005): no corpus path, no
- * public URL, default-deny access via HomeworkFileService.assertFileReadAccess.
+ * public URL, default-deny access via the per-kind read gate.
+ *
+ * GENERALIZED for chat attachments (M-4, prd-messaging §5): rather than a twin
+ * `Attachment` model + storage path (the PRD §9 VM-disk proposal), chat
+ * attachments REUSE this Drive-backed store — new `chat_*` kinds + an optional
+ * `conversationId` (chat files only). The GP-A §9 reason for VM-disk (Atlas
+ * GridFS can't hold 10 MB video) is moot: Drive already holds the bytes. The
+ * `GET /files/:id` route dispatches the read gate by kind (hw → HomeworkFile,
+ * chat → ChatFile membership).
  */
-export type StoredFileKind = "hw_question" | "hw_answer";
+export type StoredFileKind =
+  | "hw_question"
+  | "hw_answer"
+  | "chat_image"
+  | "chat_pdf"
+  | "chat_video"
+  | "chat_audio";
 
-export const STORED_FILE_KINDS: readonly StoredFileKind[] = ["hw_question", "hw_answer"];
+export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
+  "hw_question",
+  "hw_answer",
+  "chat_image",
+  "chat_pdf",
+  "chat_video",
+  "chat_audio",
+];
+
+/** The chat-attachment subset (M-4) — the read gate routes these to chat. */
+export const CHAT_STORED_FILE_KINDS: readonly StoredFileKind[] = [
+  "chat_image",
+  "chat_pdf",
+  "chat_video",
+  "chat_audio",
+];
 
 export interface IStoredFile extends Document {
   _id: Types.ObjectId;
@@ -27,6 +56,9 @@ export interface IStoredFile extends Document {
   driveFileId: string;
   uploadedBy: Types.ObjectId;
   uploadedAt: Date;
+  /** Chat attachments only (M-4): the conversation the file was uploaded for —
+   *  bound at upload (membership-gated) + matched at sendMessage. Unset for hw. */
+  conversationId?: Types.ObjectId;
 }
 
 const StoredFileSchema = new Schema<IStoredFile>(
@@ -38,6 +70,7 @@ const StoredFileSchema = new Schema<IStoredFile>(
     driveFileId: { type: String, required: true },
     uploadedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     uploadedAt: { type: Date, required: true, default: () => new Date() },
+    conversationId: { type: Schema.Types.ObjectId, ref: "Conversation" },
   },
   { timestamps: false, versionKey: false },
 );

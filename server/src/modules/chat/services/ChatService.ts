@@ -22,6 +22,7 @@ import { ConversationMember, type IConversationMember } from "../models/Conversa
 import { ChatMessage, type IChatMessage } from "../models/ChatMessage";
 import { MessageReceipt, type IMessageReceipt } from "../models/MessageReceipt";
 import { Reaction, type IReaction } from "../models/Reaction";
+import { resolveSendAttachments, ChatAttachmentError } from "./ChatFileService";
 
 /** Body shown in place of a deleted message — the original is gone from every
  *  read but retained in the append-only audit (D-#77, ADR-008). */
@@ -124,6 +125,9 @@ export interface SendMessageInput {
   senderId: string;
   body: string;
   replyToId?: string | null;
+  /** Chat attachment file ids (M-4) — each must be a CHAT StoredFile the sender
+   *  uploaded for THIS conversation (validated via resolveSendAttachments). */
+  attachmentIds?: string[] | null;
   /** Does the sender hold chat:manage? Set by the resolver from the caller's role.
    *  Gates ANNOUNCEMENT posting (M-2, D-#78) — managers post, others are blocked. */
   canManage?: boolean;
@@ -139,7 +143,11 @@ export async function sendMessage(input: SendMessageInput): Promise<IChatMessage
   }
 
   const body = (input.body ?? "").trim();
-  if (!body) throw new ChatError("বার্তা খালি হতে পারে না");
+  // M-4: an attachment-only message is allowed (no body required when files ride).
+  const attachmentIdsIn = input.attachmentIds ?? [];
+  if (!body && attachmentIdsIn.length === 0) {
+    throw new ChatError("বার্তা খালি হতে পারে না");
+  }
 
   if (input.replyToId) {
     const parent = (await ChatMessage.findById(input.replyToId).lean()) as IChatMessage | null;
@@ -148,11 +156,24 @@ export async function sendMessage(input: SendMessageInput): Promise<IChatMessage
     }
   }
 
+  // M-4: bind attachments — only the sender's own files, uploaded for this
+  // conversation, may ride (resolveSendAttachments throws on any violation).
+  let attachmentIds: Types.ObjectId[] = [];
+  if (attachmentIdsIn.length) {
+    try {
+      attachmentIds = await resolveSendAttachments(attachmentIdsIn, input.senderId, input.conversationId);
+    } catch (err) {
+      if (err instanceof ChatAttachmentError) throw new ChatError("সংযুক্ত ফাইলটি বৈধ নয়");
+      throw err;
+    }
+  }
+
   const message = await ChatMessage.create({
     conversationId: input.conversationId,
     senderId: input.senderId,
     body,
     replyToId: input.replyToId || undefined,
+    attachmentIds,
   });
 
   // Denormalized list-ordering stamp — best-effort, never blocks the send.

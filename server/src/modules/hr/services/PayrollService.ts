@@ -4,7 +4,7 @@
  *   preparePayrollRun  — Office computes payslips for every active salaried staff
  *                        (incl. support, D-#25): gross (pro-rated on the day-rate via
  *                        an optional per-staff payableDays), the unpaid-leave deduction
- *                        from the STORED leave split (D-#109 — NOT the read-time
+ *                        from the STORED leave split (D-#110 — NOT the read-time
  *                        attendance overlay), advance recovery with the net-pay guard,
  *                        and any manual arrears/bonus/clawback lines. Re-preparing a
  *                        `prepared` month recomputes it; a locked month is refused.
@@ -14,7 +14,7 @@
  *   paymentExport      — net pay per staff for bank/bKash bulk upload; cash EXCLUDED.
  *
  * A locked run is NEVER retro-edited; a post-lock correction rides an `arrears` line on
- * the NEXT run (D-#109). Identity/operational plane; NO corpus path (ADR-005).
+ * the NEXT run (D-#110). Identity/operational plane; NO corpus path (ADR-005).
  */
 import { Types } from "mongoose";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
@@ -45,7 +45,7 @@ export interface PreparePayrollInput {
 }
 
 /** Stored unpaid-leave days per staff for a month — summed from APPROVED leaves whose
- *  fromKey falls in the month (D-#109: the leave application's STORED split is the
+ *  fromKey falls in the month (D-#110: the leave application's STORED split is the
  *  payroll truth; a cross-month leave's unpaid days attribute to its start month). */
 async function unpaidLeaveDaysByStaff(monthKey: string): Promise<Map<string, number>> {
   const rows = await StaffLeaveApplication.find({
@@ -71,7 +71,7 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
   const existing = await PayrollRun.findOne({ monthKey: input.monthKey, status: { $ne: "cancelled" } });
   if (existing) {
     if (existing.status === "approved_locked") {
-      throw new PayrollError(`${input.monthKey} is locked — corrections ride arrears on a later run (D-#109)`);
+      throw new PayrollError(`${input.monthKey} is locked — corrections ride arrears on a later run (D-#110)`);
     }
     await Payslip.deleteMany({ payrollRunId: existing._id });
     await PayrollRun.deleteOne({ _id: existing._id });

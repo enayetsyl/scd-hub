@@ -1,10 +1,10 @@
 # STATUS
 
-_Updated: 2026-06-13 (HR step 3 — payroll, PR open; Vocabulary Tracker PRD added D-#104–#107; HR step 2 merged PR #46; Messaging M-3 merged PR #45; M-2/#44 + Guardian app/#43 + Notifications + M-1 all merged)_
+_Updated: 2026-06-13 (HR step 3 payroll PR #48 — coordinator review applied; Messaging M-4 PR #47 merged; Vocabulary Tracker PRD D-#104–#107; HR-2 #46 + M-3 #45 + M-2 + Guardian app + Notifications + M-1 all merged)_
 
 ## Now / next
-- **Built (HR step 3 — payroll, server, prd-hr §4, D-#26/#27 + build rulings D-#108/#109) [branch
-  `worktree-hr-attendance-leave`, PR open — coordinator reviews]:** the monthly payroll run on top of HR-1
+- **Built (HR step 3 — payroll, server, prd-hr §4, D-#26/#27 + build rulings D-#109/#110) [MERGED to main,
+  PR #48 — coordinator review applied]:** the monthly payroll run on top of HR-1
   salary + HR-2 leave. **New `modules/hr/` models:** `PayrollRun` (monthly, `prepared → approved_locked`,
   immutable once locked), `Payslip` (itemised **net = gross − deductions + additions**), `AdvanceLoan`
   (qard-hasan — interest- & fee-free, NO rate/fee field exists, D-#27). **Services:** `payrollMath` (pure
@@ -12,9 +12,9 @@ _Updated: 2026-06-13 (HR step 3 — payroll, PR open; Vocabulary Tracker PRD add
   never drives net < 0, excess rolls forward), `PayrollService` (prepare/recompute → **approve+LOCK**
   commits advance recovery → cancel → `paymentExport`), `AdvanceService` (issue/settle/read).
   `StaffProfile` gains optional `monthlySalary` + `paymentMethod` (additive, no migration); `setStaffPay`
-  (payroll:manage). **RBAC (D-#108):** `payroll:manage` (PRINCIPAL/OFFICE) prepares/reads; `payroll:approve`
+  (payroll:manage). **RBAC (D-#109):** `payroll:manage` (PRINCIPAL/OFFICE) prepares/reads; `payroll:approve`
   (**PRINCIPAL only**) locks + issues/settles advances — Office cannot approve, a distinct permission the
-  verifier proves (H4.2/H4.7). **Lock/correction seam (D-#109, the design ask):** a locked run is NEVER
+  verifier proves (H4.2/H4.7). **Lock/correction seam (D-#110, the design ask):** a locked run is NEVER
   retro-edited — post-lock corrections ride `arrears`/clawback lines on the NEXT run; the unpaid-leave
   deduction reads the **STORED** leave paid/unpaid split (not the read-time attendance overlay), attributed
   to the leave's start month; advance recovery commits at lock so recompute is safe; cash-paid staff
@@ -28,6 +28,30 @@ _Updated: 2026-06-13 (HR step 3 — payroll, PR open; Vocabulary Tracker PRD add
   Parked (prd-hr §10): entitlement/bonus figures, statutory deductions, payment-export target format,
   lateness-rule params, ÷30 day-rate alternative. **Next after merge = HR-4 (performance/conduct/
   development)** — independent of payroll; needs HR-1 + supervisory scope (D-#28).
+- **Built (Messaging M-4 — chat attachments image/PDF/video/voice ≤10 MB, server, D-#108) [MERGED to main,
+  PR #47 — coordinator review applied]:** fourth messaging slice per
+  `docs/prd-messaging.md` §5. **Storage pre-flight (AGENTS rule 3 — live repo wins over the PRD):
+  REUSES the GP-A Google Drive store; the PRD §9 Oracle-VM-disk path is NOT built** (Drive already
+  holds the bytes on the school's My-Drive quota — D-#70/#71; the §9 VM-disk reason, GridFS can't hold
+  video, is moot). **No twin store/transport/model:** generalized `platform/services/DriveStore` (a
+  `subfolder` param → `SCD-Hub-Files/<year>/chat/`) + `platform/models/StoredFile` (four `chat_*` kinds
+  on the existing `hw_*` enum + optional `conversationId`) + the existing server-streamed `GET /files/:id`
+  (Drive id never reaches a client). **Upload:** `POST /files/chat` (multipart, `chat:write` +
+  `assertChatMember`; MIME whitelist per ATTACHMENT_KINDS + 10 MB hard cap; Bangla 422; Drive-first ⇒ 503
+  + nothing persisted — GP-J8 posture). **Read gate** (`ChatFileService.assertChatFileReadAccess`): member
+  of SOME conversation holding a LIVE message that references the file → a **deleted message's attachment
+  becomes inaccessible** (M-4 acceptance; refs stay in the MESSAGE_DELETED audit); `GET /files/:id`
+  dispatches by the file's OWN kind (hw → HomeworkFile, chat → ChatFile) so neither plane re-exposes the
+  other's files. **Send binding:** `sendMessage` gains `attachmentIds` — `resolveSendAttachments` admits
+  only CHAT files the SENDER uploaded FOR this conversation (no foreign/cross-conversation/hw file);
+  attachment-only messages (no body) now allowed; `ChatMessage` GraphQL gains an `attachments` field
+  (batched). One new audit kind `CHAT_ATTACHMENT_UPLOADED` in `platform/models/Audit.ts` — NOT vocab
+  (HR owns it this cycle; verifier untouched + PASS). **Gate GREEN (executed):** vocab verifier PASS,
+  shared+server tsc clean, **jest 710/710** (43 suites; 26 new in `chatAttachments.test.ts`; firewall
+  green), app tsc clean + expo web export green. **Not verified live** (needs the Drive credential —
+  D-#70/#71 — + DEP-3). **Next = M-5** (app screens: Chat tab — conversation list, thread, reply/forward/
+  react/edit/delete, attachment picker + voice recorder, seen-by) → M-6 oversight + guardian notices
+  (flips `chat:oversee`) → M-7 staff push.
 - **Planned (Vocabulary Tracker VC-1..VC-5, D-#104–#107):** build contract
   docs/prd-vocabulary-tracker.md — replaces the two-phase Google-Sheet vocab system (Phase-1
   per-test files + Phase-2 IMPORTRANGE). Three data-driven programs (English/Bangla/Arabic),

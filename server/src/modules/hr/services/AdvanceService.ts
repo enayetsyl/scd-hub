@@ -28,6 +28,20 @@ export async function issueAdvance(input: IssueAdvanceInput): Promise<IAdvanceLo
   const staff = await StaffProfile.findById(input.staffProfileId).select("active").lean();
   if (!staff || !staff.active) throw new PayrollError("Staff profile not found");
 
+  // One active advance per staff (§4.5): recovery (activeAdvanceByStaff) only ever
+  // takes the FIRST active row, so a second active advance would be silently never
+  // recovered. Enforce the invariant at issue rather than leak recovery capacity.
+  const existingActive = await AdvanceLoan.findOne({
+    staffProfileId: new Types.ObjectId(input.staffProfileId),
+    status: "active",
+    balance: { $gt: 0 },
+  })
+    .select("_id")
+    .lean();
+  if (existingActive) {
+    throw new PayrollError("This staff member already has an active advance — settle it before issuing another (§4.5)");
+  }
+
   const advance = await AdvanceLoan.create({
     staffProfileId: new Types.ObjectId(input.staffProfileId),
     principal: input.principal,

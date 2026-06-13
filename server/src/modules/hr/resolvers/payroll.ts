@@ -1,5 +1,5 @@
 /**
- * Payroll resolvers (HR-3; prd-hr §4, D-#26/#27/#108/#109).
+ * Payroll resolvers (HR-3; prd-hr §4, D-#26/#27/#109/#110).
  *
  * RBAC (§4.7 — Principal/Office only; never the corpus plane):
  *   payroll:manage  (Principal/Office) — set pay, prepare/recompute/cancel a run, read
@@ -181,7 +181,7 @@ builder.mutationField("preparePayrollRun", (t) =>
   t.field({
     type: PayrollRunRef,
     description:
-      "Compute (or recompute) a monthly run: gross + unpaid-leave deduction (stored split, D-#109) + " +
+      "Compute (or recompute) a monthly run: gross + unpaid-leave deduction (stored split, D-#110) + " +
       "advance recovery (net-pay guard) + manual lines. Requires payroll:manage. Audited.",
     authScopes: { hasPermission: "payroll:manage" },
     args: {
