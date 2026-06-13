@@ -35,6 +35,7 @@ import { expoPushChannel } from "../modules/notifications/services/pushChannel";
 import type { INotification } from "../modules/notifications/models/Notification";
 import {
   registerPushDevice,
+  unregisterPushDevice,
   PushDeviceError,
 } from "../modules/attendance/services/PushDeviceService";
 
@@ -151,5 +152,31 @@ describe("registerPushDevice — exactly-one owner upsert (N4.1)", () => {
 
   it("an empty token is rejected", async () => {
     await expect(registerPushDevice({ userId: "u1" }, "  ")).rejects.toThrow(PushDeviceError);
+  });
+});
+
+describe("unregisterPushDevice — owner-scoped (no cross-user silencing)", () => {
+  it("staff logout deactivates only the caller's own row for that token", async () => {
+    await unregisterPushDevice({ userId: "u1" }, " ExponentPushToken[a] ");
+    expect(mockPushUpdateMany).toHaveBeenCalledWith(
+      { expoPushToken: "ExponentPushToken[a]", userId: "u1" },
+      { $set: { active: false } },
+    );
+  });
+
+  it("guardian logout scopes by guardianId", async () => {
+    await unregisterPushDevice({ guardianId: "g1" }, "ExponentPushToken[b]");
+    expect(mockPushUpdateMany).toHaveBeenCalledWith(
+      { expoPushToken: "ExponentPushToken[b]", guardianId: "g1" },
+      { $set: { active: false } },
+    );
+  });
+
+  it("zero or two owners is rejected (no unscoped write)", async () => {
+    await expect(unregisterPushDevice({}, "ExponentPushToken[x]")).rejects.toThrow(PushDeviceError);
+    await expect(
+      unregisterPushDevice({ userId: "u1", guardianId: "g1" }, "ExponentPushToken[x]"),
+    ).rejects.toThrow(PushDeviceError);
+    expect(mockPushUpdateMany).not.toHaveBeenCalled();
   });
 });

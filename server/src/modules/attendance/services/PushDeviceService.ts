@@ -49,10 +49,20 @@ export async function registerPushDevice(
   return device as IPushDevice;
 }
 
-/** Deactivate a token (app logout, or Expo "DeviceNotRegistered"). */
-export async function unregisterPushDevice(expoPushToken: string): Promise<void> {
+/** Deactivate a token on app logout. Scoped to the CALLER's own owner so a
+ *  caller can only deactivate a device they own — never silence someone else's
+ *  push by passing their token (server-side dead-token pruning in the push
+ *  channel takes its own unscoped path on Expo "DeviceNotRegistered"). */
+export async function unregisterPushDevice(
+  owner: PushDeviceOwner,
+  expoPushToken: string,
+): Promise<void> {
+  if (!!owner.userId === !!owner.guardianId) {
+    throw new PushDeviceError("Exactly one of a user / guardian owner is required");
+  }
+  const ownerFilter = owner.userId ? { userId: owner.userId } : { guardianId: owner.guardianId };
   await PushDevice.updateMany(
-    { expoPushToken: expoPushToken.trim() },
+    { expoPushToken: expoPushToken.trim(), ...ownerFilter },
     { $set: { active: false } },
   );
 }

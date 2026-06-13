@@ -316,6 +316,22 @@ let tickerHandle: NodeJS.Timeout | null = null;
  *  self-heals without waiting a minute. Never started under jest. */
 export function startNotificationTicker(intervalMs = 60_000): void {
   if (tickerHandle) return;
+  // The tick reads wall-clock hours/minutes in the SERVER's local timezone
+  // (D-#73 single-node posture). The trigger times are Asia/Dhaka — a VM in
+  // UTC would fire everything ~6h off, silently. Fail LOUD at startup so a
+  // misconfigured host is obvious in the logs rather than discovered live.
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz !== "Asia/Dhaka") {
+      console.warn(
+        `[scheduler] server timezone is "${tz}", expected "Asia/Dhaka" — ` +
+          `trigger times (bell/attendance/class-note) will fire at the wrong ` +
+          `wall-clock time. Set TZ=Asia/Dhaka on the host.`,
+      );
+    }
+  } catch {
+    /* Intl unavailable — skip the advisory check, never block startup. */
+  }
   const safeTick = () =>
     void runSchedulerTick().catch((err) => console.error("[scheduler] tick failed:", err));
   tickerHandle = setInterval(safeTick, intervalMs);
