@@ -1,6 +1,6 @@
 # STATUS
 
-_Updated: 2026-06-13 (Vocabulary Tracker VC-1 built — server, PR open [first slice of the new vocab module]. HR-5 offboarding PR #54 merged [**HR HR-1..HR-5 COMPLETE**]; Messaging M-6+M-7 app pass PR #53 merged [**messaging fully built server+app**])_
+_Updated: 2026-06-13 (Vocabulary Tracker VC-1 built — server, PR #55 open [first slice of the new vocab module]; Class Test Tracker PRD added D-#119–#122. HR-5 PR #54 + Messaging M-6+M-7 app pass PR #53 merged [**HR + messaging both COMPLETE**]. In flight: HR-app #135+)_
 
 ## Now / next
 - **Built (Vocabulary Tracker VC-1 — server, prd-vocabulary-tracker §3/§6, D-#104/#105 + build ruling
@@ -26,6 +26,30 @@ _Updated: 2026-06-13 (Vocabulary Tracker VC-1 built — server, PR open [first s
   `VocabTestPosition` build-a-test from selected words → auto-laid positions; teacher sets totalMarks +
   the dictation half-miss rule; `VocabTestAssignment` append-only weekly assignment via `roster:manage` +
   D-#20 proxy resolution; Thursday default + D-#50 holiday roll).
+- **Planned (Class Test Tracker CT-1..CT-5, D-#119–#122):** build contract
+  docs/prd-tracker-class-test.md — replaces the Google-Sheet Class Test system
+  (Exam Log + per-class Google Forms + IMPORTRANGE analysis). In-app lifecycle:
+  teacher assembles a CT-set from the question pool (or uploads own paper) →
+  print request → Office prints the PDF + marks printed (creates the exam record;
+  deadline anchors the EXAM date not the print date, school-day-aware via D-#50,
+  default 2, admin-configurable) → teacher enters per-student results
+  (marks/Absent + weakness + teacher-action + guardian-action; %/pass-fail
+  derived; passMark configurable; no auto-grading; no retake) → publish
+  per-student/per-exam (edit + unpublish; republish RE-notifies via versioned
+  dedupeKey) → guardian portal results card + wa.me (all) + emit() Notification
+  (login-enabled). Read aggregates (D-#44): Reports Status, Principal Dashboard
+  (KPIs + overdue-by-teacher), Class×Subject Analysis, Student Profile; Office
+  (not teachers) chases overdue (message:dispatch). Uploaded papers reuse the
+  StoredFile/DriveStore store (D-#70/#71/M-4). RBAC composes existing perms —
+  teacher=tracker:write+section verify, Office=roster:manage, guardian=
+  guardian:read_child; no new role/permission (D-#17). App-native vocab
+  (CLASS_TEST_* + NOTIFICATION_KINDS += CLASS_TEST_RESULT + StoredFile classtest
+  kind) — no wire sync; serialize vocab.ts per AGENTS rule 5. Inline Bangla
+  guardian templates ship now; migrate to the planned Message Templates registry
+  later (no rework). Plan/docs only — nothing executed.
+  Next = build CT-1 per docs/prd-tracker-class-test.md §6, slice order.
+  _(Renumbered from the handoff's D-#111–#114 at commit — those taken on main; CT
+  slotted into the free #119–#122 gap, clear of in-flight VC-1 #126+ / HR-app #135+.)_
 - **Built (HR step 5 — offboarding, server, prd-hr §6/H6, D-#29 + build rulings D-#117/#118)
   [branch `worktree-hr-offboarding`, PR open — coordinator reviews]:** the cross-cutting exit workflow that
   COMPLETES the HR module (HR-1..HR-5); it COMPOSES the earlier slices, never twins them. The HR-4

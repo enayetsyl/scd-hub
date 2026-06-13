@@ -4,6 +4,7 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- docs(class-test): add Class Test Tracker build contract — prd-tracker-class-test.md, slices CT-1..CT-5, D-#119–#122 (renumbered at commit from the handoff's proposed D-#111–#114 — those taken on main by M-6/HR-4); replaces the Google-Sheet Exam Log + per-class Forms + IMPORTRANGE analysis.
 - Messaging M-6 — Principal oversight + guardian notice composer + dispatch seam (server, D-#77/#79/#111).
   **Flipped `chat:oversee` pipeline→build** in `PERMISSION_BUILD_STATUS` (the LAST pipeline perm — the
   verifier's pipeline-set is now EMPTY; §C.7 build-status assertion updated). **Oversight** (`chat:oversee`
