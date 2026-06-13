@@ -27,7 +27,11 @@ const ReactionSchema = new Schema<IReaction>(
     // without a second message lookup (mirrors MessageReceipt.conversationId).
     conversationId: { type: Schema.Types.ObjectId, ref: "Conversation", required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    emoji: { type: String, required: true, trim: true },
+    // Free-form (no controlled enum, D-#101) but length-bounded: a reaction is a
+    // single emoji grapheme (ZWJ sequences fit well under 64) — the cap stops a
+    // client storing arbitrary multi-KB text as a "reaction". The service guards
+    // it too, so a bad value errors cleanly rather than as a schema-validation throw.
+    emoji: { type: String, required: true, trim: true, maxlength: 64 },
   },
   { timestamps: true },
 );

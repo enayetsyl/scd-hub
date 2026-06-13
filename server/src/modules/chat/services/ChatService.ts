@@ -432,6 +432,9 @@ export async function toggleReaction(
 ): Promise<string | null> {
   const value = (emoji ?? "").trim();
   if (!value) throw new ChatError("রিঅ্যাকশন খালি হতে পারে না");
+  // Free-form per D-#101, but bound the length — a reaction is one emoji, not a
+  // payload (the model caps this too; guarding here gives a clean Bangla error).
+  if (value.length > 64) throw new ChatError("রিঅ্যাকশন অবৈধ");
 
   const msg = (await ChatMessage.findById(messageId).lean()) as IChatMessage | null;
   if (!msg) throw new ChatError("বার্তাটি পাওয়া যায়নি");

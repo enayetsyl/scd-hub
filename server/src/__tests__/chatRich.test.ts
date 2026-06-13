@@ -319,6 +319,11 @@ describe("M-3 toggleReaction", () => {
     await expect(toggleReaction(MSG_ID, ME, "👍")).rejects.toThrow(/মুছে ফেলা/);
   });
 
+  test("an over-long 'emoji' is rejected (free-form but bounded, D-#101)", async () => {
+    await expect(toggleReaction(MSG_ID, ME, "x".repeat(65))).rejects.toThrow(ChatError);
+    expect(mockReactionUpdateOne).not.toHaveBeenCalled();
+  });
+
   test("a non-member cannot react", async () => {
     memberOf(); // member of nothing
     await expect(toggleReaction(MSG_ID, ME, "👍")).rejects.toThrow(ForbiddenError);

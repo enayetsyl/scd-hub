@@ -22,6 +22,15 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
   `models/Reaction`). Gate GREEN (executed): vocab verifier PASS (untouched), shared+server tsc clean,
   **jest 683/683** (42 suites; 20 new in `chatRich.test.ts`; firewall green), app tsc clean + expo web
   export green. Not verified live. Next = M-4 attachments.
+- Messaging M-3 coordinator-review fix — bound the free-form reaction emoji length (D-#101 keeps it
+  enum-free, but it was UNbounded: a client could store an arbitrary multi-KB string as a "reaction").
+  `Reaction.emoji` now `maxlength: 64` + a service-side guard in `toggleReaction` (rejects > 64 chars
+  with a clean Bangla error before any DB write); 64 comfortably fits any single-emoji ZWJ grapheme.
+  Other review findings judged not worth changing at this scale: the toggle's read-then-write (2 round-trips)
+  and a not-yet-needed `(conversationId,userId)` Reaction index — left as-is; the "edit leaks deleted body"
+  and ObjectId/string-cast flags were REFUTED (edit rejects deleted messages; Mongoose casts filters).
+  Gate GREEN (executed): vocab verifier PASS, shared+server tsc clean, **jest 684/684** (+1 bound test),
+  app tsc + expo web export green. [worktree-messaging-m3]
 - Guardian portal app — surface already-existing guardian reads the app didn't render + polish (FRONTEND
   ONLY; no server/vocab/contract change). GuardianHome gains a **child-info card** (section + Quran/Arabic
   group memberships from `myChildren` — fetched by the provider but never shown; D-#48/#56) and a day-load
