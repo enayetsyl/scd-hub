@@ -79,11 +79,17 @@ jest.mock("../modules/chat/models/ChatMessage", () => ({
 }));
 
 const mockReceiptBulkWrite = jest.fn();
-const mockReceiptFind = jest.fn();
+const mockReceiptFind = jest.fn(); // receiptsForMessage chain: find→lean
+const mockReceiptLastSeen = jest.fn(); // markSeen chain: find→sort→limit→select→lean
 jest.mock("../modules/chat/models/MessageReceipt", () => ({
   MessageReceipt: {
     bulkWrite: (ops: unknown, o: unknown) => mockReceiptBulkWrite(ops, o),
-    find: (f: unknown) => ({ lean: () => mockReceiptFind(f) }),
+    find: (f: unknown) => ({
+      lean: () => mockReceiptFind(f),
+      sort: () => ({
+        limit: () => ({ select: () => ({ lean: () => mockReceiptLastSeen(f) }) }),
+      }),
+    }),
   },
 }));
 
@@ -131,6 +137,7 @@ beforeEach(() => {
   mockMsgFindIds.mockResolvedValue([]);
   mockReceiptBulkWrite.mockResolvedValue({ upsertedCount: 0 });
   mockReceiptFind.mockResolvedValue([]);
+  mockReceiptLastSeen.mockResolvedValue([]); // no prior receipt → full first sweep
 });
 
 // ===========================================================================
@@ -317,6 +324,19 @@ describe("M1.5 markConversationSeen + receipts", () => {
     mockMsgFindIds.mockResolvedValue([{ _id: oid() }]);
     mockReceiptBulkWrite.mockResolvedValue({ upsertedCount: 0 }); // all receipts already exist
     expect(await markConversationSeen(CONV_ID, ME)).toBe(0);
+  });
+
+  test("re-open sweeps only messages newer than the caller's last receipt (no full rescan)", async () => {
+    const lastSeenId = oid();
+    mockReceiptLastSeen.mockResolvedValue([{ messageId: lastSeenId }]);
+    mockMsgFindIds.mockResolvedValue([{ _id: oid() }]);
+    mockReceiptBulkWrite.mockResolvedValue({ upsertedCount: 1 });
+
+    await markConversationSeen(CONV_ID, ME);
+    // The unseen lookup is bounded to messages after the last-seen receipt.
+    const [filter] = mockMsgFindIds.mock.calls[0];
+    expect(filter).toMatchObject({ conversationId: CONV_ID, senderId: { $ne: ME } });
+    expect(filter._id.$gt).toBe(lastSeenId);
   });
 
   test("nothing to see → 0, no bulk write", async () => {

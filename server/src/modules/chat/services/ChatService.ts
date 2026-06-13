@@ -38,10 +38,13 @@ export async function assertChatMember(
   conversationId: string,
   userId: string,
 ): Promise<IConversation> {
-  const conversation = (await Conversation.findById(conversationId).lean()) as IConversation | null;
-  const member = conversation
-    ? await ConversationMember.findOne({ conversationId, userId }).lean()
-    : null;
+  // Both reads are independent — fetch in one round-trip, not two (this gate
+  // runs on every chat read/write). A member row without its conversation
+  // still denies below, so the unconditional member lookup is harmless.
+  const [conversation, member] = await Promise.all([
+    Conversation.findById(conversationId).lean() as Promise<IConversation | null>,
+    ConversationMember.findOne({ conversationId, userId }).lean(),
+  ]);
   if (!conversation || conversation.active === false || !member) {
     throw new ForbiddenError("আপনি এই কথোপকথনের সদস্য নন");
   }
@@ -183,6 +186,17 @@ export async function membersOf(conversationId: string): Promise<IConversationMe
   return ConversationMember.find({ conversationId }).lean() as unknown as IConversationMember[];
 }
 
+/** Members of MANY conversations in one query — the list resolver batches the
+ *  per-conversation members field through this to avoid an N+1 across the page. */
+export async function membersForConversations(
+  conversationIds: string[],
+): Promise<IConversationMember[]> {
+  if (conversationIds.length === 0) return [];
+  return ConversationMember.find({
+    conversationId: { $in: conversationIds },
+  }).lean() as unknown as IConversationMember[];
+}
+
 // ---------------------------------------------------------------------------
 // Seen receipts (M1.5, settled choice #8)
 // ---------------------------------------------------------------------------
@@ -195,7 +209,18 @@ export async function markConversationSeen(
   userId: string,
 ): Promise<number> {
   await assertChatMember(conversationId, userId);
-  const unseen = (await ChatMessage.find({ conversationId, senderId: { $ne: userId } })
+  // Sweep only messages NEWER than the caller's most recent receipt in this
+  // thread. Receipts are written in message order and `_id` is monotonic by
+  // creation, so a re-open re-scans/re-writes nothing already seen — bounding
+  // an otherwise full-conversation rescan + no-op bulkWrite on every open.
+  const lastSeen = (await MessageReceipt.find({ conversationId, userId })
+    .sort({ messageId: -1 })
+    .limit(1)
+    .select("messageId")
+    .lean()) as unknown as Pick<IMessageReceipt, "messageId">[];
+  const msgFilter: Record<string, unknown> = { conversationId, senderId: { $ne: userId } };
+  if (lastSeen.length) msgFilter._id = { $gt: lastSeen[0].messageId };
+  const unseen = (await ChatMessage.find(msgFilter)
     .select("_id")
     .lean()) as unknown as Pick<IChatMessage, "_id">[];
   if (unseen.length === 0) return 0;
@@ -218,4 +243,25 @@ export async function markConversationSeen(
 /** Who has seen a message (list + count ride this; sender's own row never exists). */
 export async function receiptsForMessage(messageId: string): Promise<IMessageReceipt[]> {
   return MessageReceipt.find({ messageId }).lean() as unknown as IMessageReceipt[];
+}
+
+/** Receipts for MANY messages in one query, grouped by message id — the thread
+ *  resolver pre-loads a page through this so seenBy/seenCount don't fire one
+ *  (or two) queries per message. */
+export async function receiptsForMessages(
+  messageIds: string[],
+): Promise<Map<string, IMessageReceipt[]>> {
+  const byMessage = new Map<string, IMessageReceipt[]>();
+  if (messageIds.length === 0) return byMessage;
+  const oids = messageIds.map((id) => new Types.ObjectId(id));
+  const rows = (await MessageReceipt.find({
+    messageId: { $in: oids },
+  }).lean()) as unknown as IMessageReceipt[];
+  for (const r of rows) {
+    const key = r.messageId.toString();
+    const arr = byMessage.get(key);
+    if (arr) arr.push(r);
+    else byMessage.set(key, [r]);
+  }
+  return byMessage;
 }
