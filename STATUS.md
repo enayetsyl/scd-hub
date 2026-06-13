@@ -3,6 +3,23 @@
 _Updated: 2026-06-13 (Vocabulary Tracker VC-1 built — server, PR #55 open [first slice of the new vocab module]; Class Test Tracker PRD added D-#119–#122. HR-5 PR #54 + Messaging M-6+M-7 app pass PR #53 merged [**HR + messaging both COMPLETE**]. In flight: HR-app #135+)_
 
 ## Now / next
+- **Built (HR app PR-3 — performance/conduct/development surfaces, Expo, APP-ONLY, D-#135) [branch
+  `worktree-hr-app-performance` stacked on PR-2, PR open — coordinator reviews]:** the third HR app PR
+  (consumes the HR-4 performance resolvers; NO server/vocab/contract change). Adds a **Performance** hub
+  entry (`performance:manage`): `PerformanceHomeScreen` (StaffSelect → `StaffPerformanceScreen` +
+  grievance inbox) → per-staff `StaffObservationsScreen` (`staffObservations` + `submitObservation`),
+  `StaffAppraisalsScreen` (`staffAppraisals` + `upsertAppraisal`; **sign-off PRINCIPAL-only
+  `performance:signoff`**, outcome form hidden for Office), `StaffConductScreen` (`staffConductRecords` +
+  `recordConductStep`→`recordConductHearing`→**`finalizeConductStep` PRINCIPAL-only**; gross-misconduct
+  fast-track flag; confidential), `StaffCpdScreen` (`staffDevelopmentLog` + `addDevelopmentLog`);
+  `GrievanceInboxScreen` (`grievances` filter + `updateGrievance`). Confidentiality respected — the whole
+  surface is `performance:manage`-gated so supervisors (neither perm) never reach conduct/grievance/outcome
+  (H5.5). New BN/EN STR. **FLAGGED, not built (D-#135 umbrella):** the SUPERVISOR observation-write (H5.2)
+  needs a teacher-readable staff-profile directory to pick the observed staff; only the manager-gated
+  `staff` roster exists, so in-app a supervisor can't select the observed `staffProfileId` — managers
+  observe here, a supervisor's own authored observations already read in My record (PR-1). **Gate GREEN
+  (executed):** app tsc clean + expo web export green (724 modules); vocab PASS + no server/shared/contract
+  drift + **jest 853/853 unchanged**. **Not verified live.** **Next = PR-4 (offboarding).**
 - **Built (HR app PR-2 — payroll surfaces, Expo, APP-ONLY, D-#135) [branch `worktree-hr-app-payroll`
   stacked on PR-1, PR open — coordinator reviews]:** the second HR app-surface PR (consumes the HR-3
   payroll resolvers; NO server/vocab/contract change). Adds to the Staff/HR hub a **Payroll** entry

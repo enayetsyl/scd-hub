@@ -107,6 +107,13 @@ import PayrollRunDetailScreen from "../screens/hr/PayrollRunDetailScreen";
 import PaymentExportScreen from "../screens/hr/PaymentExportScreen";
 import StaffPayScreen from "../screens/hr/StaffPayScreen";
 import AdvancesScreen from "../screens/hr/AdvancesScreen";
+import PerformanceHomeScreen from "../screens/hr/PerformanceHomeScreen";
+import StaffPerformanceScreen from "../screens/hr/StaffPerformanceScreen";
+import StaffObservationsScreen from "../screens/hr/StaffObservationsScreen";
+import StaffAppraisalsScreen from "../screens/hr/StaffAppraisalsScreen";
+import StaffConductScreen from "../screens/hr/StaffConductScreen";
+import StaffCpdScreen from "../screens/hr/StaffCpdScreen";
+import GrievanceInboxScreen from "../screens/hr/GrievanceInboxScreen";
 import SectionPickerScreen from "../screens/common/SectionPickerScreen";
 import AdminHomeScreen from "../screens/admin/AdminHomeScreen";
 import ImportScreen from "../screens/admin/ImportScreen";
@@ -432,6 +439,17 @@ function HrNavigator(): React.ReactElement {
       <HrStack.Screen name="PaymentExport" component={PaymentExportScreen} options={{ title: STR.hrPaymentExport }} />
       <HrStack.Screen name="StaffPay" component={StaffPayScreen} options={{ title: STR.hrStaffPay }} />
       <HrStack.Screen name="Advances" component={AdvancesScreen} options={{ title: STR.hrAdvances }} />
+      <HrStack.Screen name="PerformanceHome" component={PerformanceHomeScreen} options={{ title: STR.hrPerformance }} />
+      <HrStack.Screen
+        name="StaffPerformance"
+        component={StaffPerformanceScreen}
+        options={({ route }) => ({ title: route.params.name || STR.hrStaffPerformance })}
+      />
+      <HrStack.Screen name="StaffObservations" component={StaffObservationsScreen} options={{ title: STR.hrObservations }} />
+      <HrStack.Screen name="StaffAppraisals" component={StaffAppraisalsScreen} options={{ title: STR.hrAppraisals }} />
+      <HrStack.Screen name="StaffConduct" component={StaffConductScreen} options={{ title: STR.hrConduct }} />
+      <HrStack.Screen name="StaffCpd" component={StaffCpdScreen} options={{ title: STR.hrCpd }} />
+      <HrStack.Screen name="GrievanceInbox" component={GrievanceInboxScreen} options={{ title: STR.hrGrievances }} />
     </HrStack.Navigator>
   );
 }

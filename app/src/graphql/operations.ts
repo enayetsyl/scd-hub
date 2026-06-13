@@ -3972,3 +3972,124 @@ export const SETTLE_STAFF_ADVANCE = gql<
     settleStaffAdvance(advanceId: $advanceId, writeOff: $writeOff) { ${ADVANCE_FIELDS} }
   }
 `;
+
+// ===========================================================================
+// HR app surfaces — Performance / conduct / development (PR-3; prd-hr §5, H5)
+// performance:manage (P/O) reads+manages all; performance:signoff (PRINCIPAL)
+// signs off appraisals + finalizes conduct. Reuses the ObservationT/AppraisalT/
+// ConductRecordT/GrievanceT/DevelopmentLogT types + field fragments from PR-1.
+// APP-ONLY; consumes existing resolvers.
+// ===========================================================================
+
+// --- Observations ---
+export const STAFF_OBSERVATIONS_QUERY = gql<{ staffObservations: ObservationT[] }, { staffProfileId: string }>`
+  query StaffObservations($staffProfileId: String!) {
+    staffObservations(staffProfileId: $staffProfileId) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+export const SUBMIT_OBSERVATION = gql<
+  { submitObservation: ObservationT },
+  { staffProfileId: string; dateKey: string; notes: string; classId?: string | null; subjectId?: string | null; followUp?: string | null }
+>`
+  mutation SubmitObservation($staffProfileId: String!, $dateKey: String!, $notes: String!, $classId: String, $subjectId: String, $followUp: String) {
+    submitObservation(staffProfileId: $staffProfileId, dateKey: $dateKey, notes: $notes, classId: $classId, subjectId: $subjectId, followUp: $followUp) {
+      ${OBSERVATION_FIELDS}
+    }
+  }
+`;
+
+// --- Appraisals ---
+export const STAFF_APPRAISALS_QUERY = gql<{ staffAppraisals: AppraisalT[] }, { staffProfileId: string }>`
+  query StaffAppraisals($staffProfileId: String!) {
+    staffAppraisals(staffProfileId: $staffProfileId) { ${APPRAISAL_FIELDS} }
+  }
+`;
+
+export const UPSERT_APPRAISAL = gql<
+  { upsertAppraisal: AppraisalT },
+  { staffProfileId: string; academicYearId: string; goals?: string[] | null; developmentNeeds?: string[] | null }
+>`
+  mutation UpsertAppraisal($staffProfileId: String!, $academicYearId: String!, $goals: [String!], $developmentNeeds: [String!]) {
+    upsertAppraisal(staffProfileId: $staffProfileId, academicYearId: $academicYearId, goals: $goals, developmentNeeds: $developmentNeeds) {
+      ${APPRAISAL_FIELDS}
+    }
+  }
+`;
+
+export const SIGN_OFF_APPRAISAL = gql<
+  { signOffAppraisal: AppraisalT },
+  { appraisalId: string; outcome: string; outcomeNote?: string | null }
+>`
+  mutation SignOffAppraisal($appraisalId: String!, $outcome: String!, $outcomeNote: String) {
+    signOffAppraisal(appraisalId: $appraisalId, outcome: $outcome, outcomeNote: $outcomeNote) { ${APPRAISAL_FIELDS} }
+  }
+`;
+
+// --- Conduct ladder ---
+export const STAFF_CONDUCT_RECORDS_QUERY = gql<{ staffConductRecords: ConductRecordT[] }, { staffProfileId: string }>`
+  query StaffConductRecords($staffProfileId: String!) {
+    staffConductRecords(staffProfileId: $staffProfileId) { ${CONDUCT_RECORD_FIELDS} }
+  }
+`;
+
+export const RECORD_CONDUCT_STEP = gql<
+  { recordConductStep: ConductRecordT },
+  { staffProfileId: string; stage: string; issue: string; category?: string | null; evidence?: string | null; grossMisconduct?: boolean | null }
+>`
+  mutation RecordConductStep($staffProfileId: String!, $stage: String!, $issue: String!, $category: String, $evidence: String, $grossMisconduct: Boolean) {
+    recordConductStep(staffProfileId: $staffProfileId, stage: $stage, issue: $issue, category: $category, evidence: $evidence, grossMisconduct: $grossMisconduct) {
+      ${CONDUCT_RECORD_FIELDS}
+    }
+  }
+`;
+
+export const RECORD_CONDUCT_HEARING = gql<
+  { recordConductHearing: ConductRecordT },
+  { recordId: string; hearingNote: string }
+>`
+  mutation RecordConductHearing($recordId: String!, $hearingNote: String!) {
+    recordConductHearing(recordId: $recordId, hearingNote: $hearingNote) { ${CONDUCT_RECORD_FIELDS} }
+  }
+`;
+
+export const FINALIZE_CONDUCT_STEP = gql<
+  { finalizeConductStep: ConductRecordT },
+  { recordId: string; liveUntilKey?: string | null; outcome?: string | null }
+>`
+  mutation FinalizeConductStep($recordId: String!, $liveUntilKey: String, $outcome: String) {
+    finalizeConductStep(recordId: $recordId, liveUntilKey: $liveUntilKey, outcome: $outcome) { ${CONDUCT_RECORD_FIELDS} }
+  }
+`;
+
+// --- Grievances (admin inbox) ---
+export const GRIEVANCES_QUERY = gql<{ grievances: GrievanceT[] }, { status?: string | null }>`
+  query Grievances($status: String) {
+    grievances(status: $status) { ${GRIEVANCE_FIELDS} }
+  }
+`;
+
+export const UPDATE_GRIEVANCE = gql<
+  { updateGrievance: GrievanceT },
+  { grievanceId: string; status: string; resolutionNote?: string | null }
+>`
+  mutation UpdateGrievance($grievanceId: String!, $status: String!, $resolutionNote: String) {
+    updateGrievance(grievanceId: $grievanceId, status: $status, resolutionNote: $resolutionNote) { ${GRIEVANCE_FIELDS} }
+  }
+`;
+
+// --- Development (CPD) ---
+export const STAFF_DEVELOPMENT_LOG_QUERY = gql<{ staffDevelopmentLog: DevelopmentLogT[] }, { staffProfileId: string }>`
+  query StaffDevelopmentLog($staffProfileId: String!) {
+    staffDevelopmentLog(staffProfileId: $staffProfileId) { ${DEVELOPMENT_LOG_FIELDS} }
+  }
+`;
+
+export const ADD_DEVELOPMENT_LOG = gql<
+  { addDevelopmentLog: DevelopmentLogT },
+  { staffProfileId: string; activity: string; dateKey?: string | null; outcome?: string | null }
+>`
+  mutation AddDevelopmentLog($staffProfileId: String!, $activity: String!, $dateKey: String, $outcome: String) {
+    addDevelopmentLog(staffProfileId: $staffProfileId, activity: $activity, dateKey: $dateKey, outcome: $outcome) { ${DEVELOPMENT_LOG_FIELDS} }
+  }
+`;

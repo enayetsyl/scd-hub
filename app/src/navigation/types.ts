@@ -134,6 +134,14 @@ export type HrStackParamList = {
   PaymentExport: { runId: string; monthKey: string };
   StaffPay: undefined;
   Advances: undefined;
+  // PR-3: performance / conduct / development
+  PerformanceHome: undefined;
+  StaffPerformance: { staffProfileId: string; name: string };
+  StaffObservations: { staffProfileId: string; name: string };
+  StaffAppraisals: { staffProfileId: string; name: string };
+  StaffConduct: { staffProfileId: string; name: string };
+  StaffCpd: { staffProfileId: string; name: string };
+  GrievanceInbox: undefined;
 };
 
 export type AdminStackParamList = {
