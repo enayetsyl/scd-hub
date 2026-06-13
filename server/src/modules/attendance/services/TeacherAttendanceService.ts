@@ -9,10 +9,13 @@
  *                    wholesale (AT1.5 snapshot semantics). Audited.
  *   teacherAttendanceForDate / importedDates / summarize — the read side (§8).
  *
- * ✘ resolution (AT1.4): LEAVE iff a staff leave record covers that staff/date —
- * a staff-leave SOURCE doesn't exist yet (out of this PRD's first cut, §12), so
- * ✘ maps to ABSENT in `resolveCrossMark`. When staff-leave lands, that seam
- * queries it — the split is data-driven, no importer change.
+ * ✘ resolution (AT1.4): LEAVE iff an APPROVED staff leave covers that staff/date.
+ * HR-2 lands the staff-leave SOURCE the first cut lacked (§12). The split is now a
+ * READ-TIME OVERLAY (`overlayApprovedLeave`), not a mutation of the stored import:
+ * `resolveCrossMark` keeps storing the raw ✘ → ABSENT, and the read side flips it to
+ * LEAVE when an approved leave covers it. Read-time is the one correct point because
+ * a leave may be approved AFTER the biometric snapshot is imported (a re-upload
+ * replaces the date wholesale, AT1.5) — querying at import time would miss those.
  */
 import { Types } from "mongoose";
 import type { TeacherAttendanceStatus } from "@scd/shared";
@@ -22,6 +25,7 @@ import { TeacherAttendanceDay, type ITeacherAttendanceDay } from "../models/Teac
 import { StaffNameAlias } from "../models/StaffNameAlias";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { writeAudit } from "../../platform/services/AuditService";
+import { loadApprovedLeaves, staffLeaveCovers } from "../../hr/services/StaffLeaveService";
 
 export class AttendanceImportError extends Error {
   constructor(msg: string) {
@@ -60,10 +64,25 @@ export interface ImportCommit {
   replaced: boolean;
 }
 
-/** AT1.4 — ✘ legend resolution. LEAVE iff a staff leave record covers the date;
- *  until a staff-leave source exists (§12), every ✘ is ABSENT. */
+/** AT1.4 — ✘ legend resolution. The RAW stored value is ABSENT; the LEAVE-vs-ABSENT
+ *  split is a read-time overlay against approved staff leave (HR-2, see header). */
 function resolveCrossMark(): TeacherAttendanceStatus {
   return "ABSENT";
+}
+
+/** HR-2 overlay: flip a raw ABSENT → LEAVE when an approved staff leave covers the
+ *  staff member on the date. Mutates the passed rows' status in place. */
+function applyLeaveOverlay<T extends { staffProfileId: string; dateKey: string; status: TeacherAttendanceStatus }>(
+  rows: T[],
+  leaves: Awaited<ReturnType<typeof loadApprovedLeaves>>,
+): T[] {
+  if (leaves.length === 0) return rows;
+  for (const r of rows) {
+    if (r.status === "ABSENT" && staffLeaveCovers(leaves, r.staffProfileId, r.dateKey)) {
+      r.status = "LEAVE";
+    }
+  }
+  return rows;
 }
 
 function statusOf(row: ParsedAttendanceRow): TeacherAttendanceStatus | null {
@@ -260,22 +279,24 @@ export async function teacherAttendanceForDate(dateKey: string): Promise<Teacher
     .select("name category")
     .lean();
   const byId = new Map(staff.map((s) => [s._id.toString(), s]));
-  return rows
-    .map((r) => {
-      const profile = byId.get(r.staffProfileId.toString());
-      return {
-        id: r._id.toString(),
-        staffProfileId: r.staffProfileId.toString(),
-        staffName: profile?.name ?? "(unknown)",
-        category: profile?.category ?? "",
-        dateKey: r.dateKey,
-        status: r.status,
-        punchIn: r.punchIn ?? null,
-        punchOut: r.punchOut ?? null,
-        shift: r.shift ?? null,
-      };
-    })
-    .sort((a, b) => a.staffName.localeCompare(b.staffName));
+  const records = rows.map((r) => {
+    const profile = byId.get(r.staffProfileId.toString());
+    return {
+      id: r._id.toString(),
+      staffProfileId: r.staffProfileId.toString(),
+      staffName: profile?.name ?? "(unknown)",
+      category: profile?.category ?? "",
+      dateKey: r.dateKey,
+      status: r.status,
+      punchIn: r.punchIn ?? null,
+      punchOut: r.punchOut ?? null,
+      shift: r.shift ?? null,
+    };
+  });
+  // HR-2: overlay approved staff leave so ✘=ABSENT shows as LEAVE (the AT1.4 split).
+  const leaves = await loadApprovedLeaves(records.map((r) => r.staffProfileId), dateKey, dateKey);
+  applyLeaveOverlay(records, leaves);
+  return records.sort((a, b) => a.staffName.localeCompare(b.staffName));
 }
 
 export interface ImportedDate {
@@ -331,14 +352,26 @@ export async function teacherAttendanceSummary(
   toKey: string,
 ): Promise<StaffAttendanceSummary[]> {
   const rows = await TeacherAttendanceDay.find({ dateKey: { $gte: fromKey, $lte: toKey } })
-    .select("staffProfileId status")
+    .select("staffProfileId status dateKey")
     .lean();
+  // HR-2: overlay approved leave per (staff, date) BEFORE rolling up, so the leave
+  // count reflects the ✘=ABSENT → LEAVE split (the AT1.4 seam).
+  const flat = rows.map((r) => ({
+    staffProfileId: r.staffProfileId.toString(),
+    dateKey: r.dateKey,
+    status: r.status,
+  }));
+  const leaves = await loadApprovedLeaves(
+    [...new Set(flat.map((r) => r.staffProfileId))],
+    fromKey,
+    toKey,
+  );
+  applyLeaveOverlay(flat, leaves);
   const byStaff = new Map<string, TeacherAttendanceStatus[]>();
-  for (const r of rows) {
-    const key = r.staffProfileId.toString();
-    const list = byStaff.get(key);
+  for (const r of flat) {
+    const list = byStaff.get(r.staffProfileId);
     if (list) list.push(r.status);
-    else byStaff.set(key, [r.status]);
+    else byStaff.set(r.staffProfileId, [r.status]);
   }
   const staff = await StaffProfile.find({ _id: { $in: [...byStaff.keys()] } })
     .select("name category")

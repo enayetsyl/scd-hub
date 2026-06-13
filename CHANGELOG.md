@@ -4,6 +4,26 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- HR step 2 — staff LEAVE source + the staff-attendance leave reconciliation (server, prd-hr §3/H2,
+  D-#22/#23; build rulings D-#102/#103). New `modules/hr/`: `StaffLeaveEntitlement` (per staff/year/type
+  allowance — admin DATA, numbers parked, no seed), `StaffLeaveApplication` (parent record + paid/unpaid
+  split; exceed WARNS, never blocks, §3.3; maternity/hajj wholly unpaid, D-#23), `StaffCoverSlot` (fans out
+  one slot per class the absent teacher teaches → on approval mints a D-#20 proxy grant via assignProxy;
+  cancel/reject revoke it — D-#22 propose-then-approve). Services: LeaveEntitlementService (balance/proration/
+  day-count pure math), StaffLeaveService (apply/decide + the `loadApprovedLeaves`/`staffLeaveCovers` overlay
+  helpers), CoverService (fan-out/propose/approve/revoke), staffMatch (the phone-only User↔StaffProfile join,
+  no FK/migration added). **Closed the AT-1 ✘-resolution seam**: a biometric ✘ now reads LEAVE when an
+  APPROVED staff leave covers that staff/date — a READ-TIME overlay in `TeacherAttendanceService`
+  (forDate + summary), correct even when leave is approved after the snapshot import. Vocab (app-native, NO
+  wire sync): `LEAVE_TYPES`/`LEAVE_STATUSES`/`COVER_SLOT_STATUSES` + BN/EN + `LEAVE_TYPE_RULES` (the settled
+  §3.2 table) + `leave:manage` perm (PRINCIPAL/OFFICE, build); teacher own-row self-apply needs NO permission;
+  verifier §C.8 added + OFFICE exact-list updated. New audit kinds STAFF_LEAVE_ENTITLEMENT_SET/SUBMITTED/
+  DECIDED + STAFF_COVER_PROPOSED/DECIDED. Firewall test extended both ways (corpus ⇄ hr). **Scope boundary
+  (D-#102):** the §3a punch/schedule/grace/working-days attendance model is NOT rebuilt — the live
+  symbol-snapshot importer already is HR-2b's internal record + manual transport; punch-level §3a presupposes
+  the parked live-device sync (D-#24/H7.6). Gate GREEN (executed): vocab verifier PASS, shared+server tsc
+  clean, jest 690/690 (27 new in staffLeave + 2 firewall; firewall green). Server-only (no app screens, the
+  Messaging-M-1/M-2 precedent); not verified live.
 - Messaging M-3 — rich messaging: reply/forward/reactions/edit/delete (server, D-#77/#101). Wires the
   inert M-1 ChatMessage fields. **forward** (`forwardMessage`): sender must be a member of BOTH source +
   target; sets `forwardOfId`, carries attachment refs forward, honours the target's ANNOUNCEMENT posting
