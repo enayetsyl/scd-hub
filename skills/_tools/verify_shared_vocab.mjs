@@ -274,6 +274,13 @@ check("BANGLA omits the reverse meaning direction (DICTATION + HEADWORD_TO_BANGL
   eq(V.VOCAB_PROGRAM_DIRECTIONS.BANGLA, ["DICTATION", "HEADWORD_TO_BANGLA"]));
 check("no vocab:* permission — word bank rides tracker:write/tracker:read; weekly assignment rides roster:manage (D-#94/#106 compose, no new perm)",
   !V.PERMISSIONS.some((p) => p.startsWith("vocab")));
+// VC-2 — test lifecycle + assignment source (prd-vocabulary-tracker §3.3/§3.5, D-#106)
+check("VOCAB_TEST_STATUS_LABELS_BN total",        total(V.VOCAB_TEST_STATUS_LABELS_BN, V.VOCAB_TEST_STATUSES));
+check("VOCAB_TEST_STATUS_LABELS_EN total",        total(V.VOCAB_TEST_STATUS_LABELS_EN, V.VOCAB_TEST_STATUSES));
+check("vocab test statuses exact (§3.3)",         eq(V.VOCAB_TEST_STATUSES, ["draft", "ready", "marked"]));
+check("VOCAB_ASSIGNMENT_SOURCE_LABELS_BN total",  total(V.VOCAB_ASSIGNMENT_SOURCE_LABELS_BN, V.VOCAB_ASSIGNMENT_SOURCES));
+check("VOCAB_ASSIGNMENT_SOURCE_LABELS_EN total",  total(V.VOCAB_ASSIGNMENT_SOURCE_LABELS_EN, V.VOCAB_ASSIGNMENT_SOURCES));
+check("vocab assignment sources exact (§3.5)",    eq(V.VOCAB_ASSIGNMENT_SOURCES, ["direct", "proxy"]));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);
