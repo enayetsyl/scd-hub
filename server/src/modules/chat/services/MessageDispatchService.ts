@@ -19,6 +19,7 @@ import { Conversation, directKeyFor, type IConversation } from "../models/Conver
 import { ConversationMember } from "../models/ConversationMember";
 import { ChatMessage, type IChatMessage } from "../models/ChatMessage";
 import { ChatError } from "./ChatService";
+import { pushNewChatMessage } from "./ChatPushService";
 
 /** The sentinel "System" sender id (zero ObjectId) — no real User row; the
  *  resolver renders it with a system label. Stable across processes. */
@@ -80,6 +81,11 @@ export async function dispatchSystemMessage(
     { _id: conv._id },
     { $set: { lastMessageAt: message.createdAt } },
   ).catch((err) => console.error("[chat] system lastMessageAt stamp failed:", err));
+
+  // M-7: push the system message to the recipient (best-effort, fire-and-forget
+  // — never blocks the dispatch). This is the routine-trigger push path; the
+  // recipient gets the same Expo push as a peer message, respecting their mute.
+  void pushNewChatMessage(message);
 
   return message;
 }

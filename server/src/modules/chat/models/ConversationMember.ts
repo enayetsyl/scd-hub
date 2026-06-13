@@ -16,6 +16,10 @@ export interface IConversationMember extends Document {
   source: "auto" | "manual";
   /** The admin who added a manual member (M-2); unset for auto rows. */
   addedBy?: Types.ObjectId;
+  /** Per-user push mute for THIS conversation (M-7): a muted member still reads
+   *  the thread normally (it stays in their list), they just receive no Expo
+   *  push for new messages here. Default false (push on). */
+  muted?: boolean;
   joinedAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -27,6 +31,7 @@ const ConversationMemberSchema = new Schema<IConversationMember>(
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     source: { type: String, enum: ["auto", "manual"], required: true },
     addedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    muted: { type: Boolean, default: false },
     joinedAt: { type: Date, required: true, default: () => new Date() },
   },
   { timestamps: true },

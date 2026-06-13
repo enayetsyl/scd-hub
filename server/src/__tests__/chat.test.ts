@@ -112,6 +112,7 @@ import {
   myConversations,
   markConversationSeen,
   receiptsForMessage,
+  setConversationMuted,
 } from "../modules/chat/services/ChatService";
 
 const ME = oid().toString();
@@ -366,5 +367,37 @@ describe("M1.5 markConversationSeen + receipts", () => {
     const receipts = await receiptsForMessage(MSG_ID);
     expect(mockReceiptFind).toHaveBeenCalledWith({ messageId: MSG_ID });
     expect(receipts).toEqual([{ messageId: MSG_ID, userId: B, seenAt }]);
+  });
+});
+
+// ===========================================================================
+// M-7 — per-user mute toggle (own-row, membership-gated)
+// ===========================================================================
+
+describe("M-7 setConversationMuted", () => {
+  test("a member toggles their own mute for the conversation", async () => {
+    const result = await setConversationMuted(CONV_ID, ME, true);
+    expect(result).toBe(true);
+    // (the mock wrapper forwards a third, undefined, options arg)
+    expect(mockMemberUpdateOne).toHaveBeenCalledWith(
+      { conversationId: CONV_ID, userId: ME },
+      { $set: { muted: true } },
+      undefined,
+    );
+  });
+
+  test("unmuting writes muted:false and returns the new state", async () => {
+    expect(await setConversationMuted(CONV_ID, ME, false)).toBe(false);
+    expect(mockMemberUpdateOne).toHaveBeenCalledWith(
+      { conversationId: CONV_ID, userId: ME },
+      { $set: { muted: false } },
+      undefined,
+    );
+  });
+
+  test("a non-member cannot mute (membership-gated)", async () => {
+    mockMemberFindOne.mockResolvedValue(null);
+    await expect(setConversationMuted(CONV_ID, ME, true)).rejects.toThrow(ForbiddenError);
+    expect(mockMemberUpdateOne).not.toHaveBeenCalled();
   });
 });

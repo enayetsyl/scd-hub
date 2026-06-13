@@ -233,6 +233,23 @@ export async function membersOf(conversationId: string): Promise<IConversationMe
   return ConversationMember.find({ conversationId }).lean() as unknown as IConversationMember[];
 }
 
+/** Mute / unmute push for THIS conversation, for the caller only (M-7). The
+ *  caller must be a member (own-row toggle; no new permission). A muted member
+ *  still reads the thread — only the Expo push for new messages is suppressed
+ *  (the conversation stays in their list). Idempotent; returns the new state. */
+export async function setConversationMuted(
+  conversationId: string,
+  userId: string,
+  muted: boolean,
+): Promise<boolean> {
+  await assertChatMember(conversationId, userId);
+  await ConversationMember.updateOne(
+    { conversationId, userId },
+    { $set: { muted } },
+  );
+  return muted;
+}
+
 /** Members of MANY conversations in one query — the list resolver batches the
  *  per-conversation members field through this to avoid an N+1 across the page. */
 export async function membersForConversations(
