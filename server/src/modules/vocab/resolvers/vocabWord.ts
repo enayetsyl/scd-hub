@@ -16,9 +16,7 @@
  * Identity/operational plane; NO corpus path (ADR-005).
  */
 import { builder } from "../../../schema";
-import { ForbiddenError, resolveTeacherScopes } from "../../../middleware/authz";
-import type { AppContext } from "../../../context";
-import { Class } from "../../foundation/models/Class";
+import { ForbiddenError } from "../../../middleware/authz";
 import {
   addVocabWord,
   editVocabWord,
@@ -26,35 +24,8 @@ import {
   listVocabWords,
   getVocabWord,
 } from "../services/VocabWordService";
+import { assertCanManageClassLevel } from "../services/vocabGate";
 import type { IVocabWord } from "../models/VocabWord";
-
-// ---------------------------------------------------------------------------
-// Class-level write-reach gate (J1 / D-#126)
-// ---------------------------------------------------------------------------
-
-/**
- * Assert the caller may MANAGE the (program-agnostic) word bank for `classLevel`.
- * Principal → unscoped. Teacher → must hold a teaching/proxy scope on a section
- * whose class sits at `classLevel`. Office/Guardian → denied (no tracker:write).
- *
- * This mirrors `assertCanWrite` (which is section-keyed) but resolves to a CLASS
- * LEVEL, since the word bank is per (program × classLevel), not per section.
- */
-async function assertCanManageClassLevel(ctx: AppContext, classLevel: number): Promise<void> {
-  if (ctx.auth?.role === "PRINCIPAL") return;
-  if (ctx.auth?.role !== "TEACHER") throw new ForbiddenError();
-  const scopes = await resolveTeacherScopes(ctx);
-  const writableClassIds = scopes
-    .filter((s) => s.kind === "teaching" || s.kind === "proxy")
-    .map((s) => (s as { classId: string }).classId);
-  if (writableClassIds.length === 0) throw new ForbiddenError();
-  const match = await Class.findOne({ _id: { $in: writableClassIds }, level: classLevel })
-    .select("_id")
-    .lean();
-  if (!match) {
-    throw new ForbiddenError("You may only manage the word bank for a class level you teach");
-  }
-}
 
 // ---------------------------------------------------------------------------
 // GraphQL shape

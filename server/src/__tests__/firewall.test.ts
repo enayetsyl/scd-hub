@@ -319,6 +319,9 @@ describe("Vocabulary-tracker firewall (ADR-005 / VC-1, D-#104)", () => {
       const content = fs.readFileSync(f, "utf8");
       expect(content).not.toMatch(importPattern("modules/vocab"));
       expect(content).not.toMatch(importPattern("models/VocabWord"));
+      expect(content).not.toMatch(importPattern("models/VocabTest"));          // VC-2 tests (per-section, will carry results at VC-3)
+      expect(content).not.toMatch(importPattern("models/VocabTestPosition"));
+      expect(content).not.toMatch(importPattern("models/VocabTestAssignment"));
     }
   });
 });
