@@ -1176,6 +1176,33 @@ export const VOCAB_DICTATION_FIELDS: Record<VocabProgram, number> = {
   ARABIC: 2,
 };
 
+/** Vocab test lifecycle (VC-2/VC-3, §3.3). `draft` = created, positions still being
+ *  laid out; `ready` = positions laid + totalMarks/half-miss set, ready to mark;
+ *  `marked` = results recorded (VC-3). A test is never hard-deleted. */
+export const VOCAB_TEST_STATUSES = ["draft", "ready", "marked"] as const;
+export type VocabTestStatus = (typeof VOCAB_TEST_STATUSES)[number];
+
+export const VOCAB_TEST_STATUS_LABELS_BN: Record<VocabTestStatus, string> = {
+  draft: "খসড়া", ready: "প্রস্তুত", marked: "মূল্যায়িত",
+};
+export const VOCAB_TEST_STATUS_LABELS_EN: Record<VocabTestStatus, string> = {
+  draft: "Draft", ready: "Ready", marked: "Marked",
+};
+
+/** Source of a weekly tester assignment (VC-2, §3.5). `direct` = the admin assigned
+ *  the tester (roster:manage); `proxy` = recorded as riding a D-#20 cover grant. The
+ *  resolver also composes an active proxy grant at request time (D-#21/#22) so a
+ *  covering teacher can build/mark even without a stored `proxy` row. */
+export const VOCAB_ASSIGNMENT_SOURCES = ["direct", "proxy"] as const;
+export type VocabAssignmentSource = (typeof VOCAB_ASSIGNMENT_SOURCES)[number];
+
+export const VOCAB_ASSIGNMENT_SOURCE_LABELS_BN: Record<VocabAssignmentSource, string> = {
+  direct: "সরাসরি", proxy: "প্রক্সি (কভার)",
+};
+export const VOCAB_ASSIGNMENT_SOURCE_LABELS_EN: Record<VocabAssignmentSource, string> = {
+  direct: "Direct", proxy: "Proxy (cover)",
+};
+
 
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
