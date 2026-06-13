@@ -1,8 +1,36 @@
 # STATUS
 
-_Updated: 2026-06-13 (Messaging M-6+M-7 app pass built — Expo, PR open. HR-4 PR #52 + M-7 PR #51 + M-6 PR #50 merged; **messaging M-1..M-7 server COMPLETE, now app-surfaced**)_
+_Updated: 2026-06-13 (HR-5 offboarding built — server, PR #54 open [**HR module HR-1..HR-5 COMPLETE**]; Messaging M-6+M-7 app pass PR #53 open [**messaging fully built server+app**]. HR-4 PR #52 + messaging M-1..M-7 merged)_
 
 ## Now / next
+- **Built (HR step 5 — offboarding, server, prd-hr §6/H6, D-#29 + build rulings D-#117/#118)
+  [branch `worktree-hr-offboarding`, PR open — coordinator reviews]:** the cross-cutting exit workflow that
+  COMPLETES the HR module (HR-1..HR-5); it COMPOSES the earlier slices, never twins them. The HR-4
+  termination→employmentStatus trigger is its entry point. **New `modules/hr/` model:** `OffboardingCase`
+  (trigger + status + lastWorkingDay + embedded clearance checklist + embedded hard-held final settlement +
+  exit interview + service-certificate flags). **Services:** `offboardingMath` (pure: trigger→status,
+  default checklist, clearanceComplete, lazy date-gate), `OffboardingService` (initiate / clearance / access
+  revoke + the `runDueOffboardingRevocations` sweep / settlement compute+release / exit interview /
+  certificate / cancel / reads); foundation `ScopeGrantService.revokeAllGrantsForUser` (REUSED).
+  **H6.1:** the trigger sets `StaffProfile.employmentStatus` (resignation→resigned, termination→terminated
+  [HR-4 entry point], fixed_term_end→contract_ended, retirement→retired — EMPLOYMENT_STATUSES gained the two
+  new exit states, D-#117). **H6.2:** configurable clearance checklist (3 §6 categories seeded as read-time
+  defaults, D-#97 no-seed). **H6.3 — by the system:** access revoked on the last working day via the EXISTING
+  N-2 ticker (no new scheduler; no-cron/lazy posture D-#20/#21) — `runDueOffboardingRevocations` runs
+  once-per-day from the tick, disables the `User` login + revokes ALL scope grants (idempotent, lazy
+  date-gate); manual admin path too. **H6.4:** `computeFinalSettlement` composes salary pro-rated to last day
+  + arrears + full leave encashment (HR-2) − outstanding advance (HR-3, full one_shot netting via the
+  payrollMath net-pay guard), **HARD-HELD until clearance complete** (`releaseFinalSettlement`,
+  payroll:approve/Principal — throws unless every item done/waived, D-#29; commits advance recovery +
+  completes). **H6.5:** StaffProfile retained never deleted; exit interview + service certificate.
+  **RBAC (D-#117) — NO new permission:** composes `staff:manage` + `payroll:manage` + `payroll:approve`
+  (Principal-only release). **Vocab (app-native, NO wire sync):** EMPLOYMENT_STATUSES += retired/contract_ended;
+  OFFBOARDING_TRIGGERS/OFFBOARDING_STATUSES/CLEARANCE_ITEM_STATUSES + BN/EN; verifier §C.11 (no OFFICE-list
+  change). 8 new audit kinds; HR firewall extended with `OffboardingCase`. **Gate GREEN (executed):** vocab
+  verifier PASS, shared build + shared/server tsc clean, **jest 831/831** (51 suites; 17 new in
+  `offboarding.test.ts`; firewall green). **Server-only** (no app — HR precedent; expo export skipped). **Not
+  verified live.** Parked (prd-hr §10/H7.7): clearance-list items, BD statutory final-dues timeline (vs D-#29),
+  §6 app screens. **HR MODULE COMPLETE (HR-1..HR-5)** — next HR work = the §6/§5 app surfaces + live verification.
 - **Built (Messaging M-6 + M-7 app pass — Expo, APP-ONLY, D-#125) [branch `worktree-messaging-app`,
   PR open — coordinator reviews]:** the deferred app surfaces for the already-merged M-6/M-7 server
   work, per `docs/prd-messaging.md` §5/§6. **NO server / vocab / contract change** (proven: `git diff
