@@ -1,10 +1,10 @@
 # STATUS
 
-_Updated: 2026-06-13 (HR app PR-1 [#56] merging — Staff/HR tab + leave + self-service, APP-ONLY, D-#135; merged origin/main = VC-2 [PR #58] + Message-Templates/Comments PRDs. VC-1 PR #55 MERGED; Class Test Tracker PRD added D-#119–#122. HR-5 PR #54 + Messaging M-6+M-7 app pass PR #53 merged [**HR + messaging both COMPLETE**]. In flight: HR-app #57/#59/#60)_
+_Updated: 2026-06-13 (**HR app surfaces COMPLETE** — all 4 stacked APP-ONLY PRs MERGED #56→#57→#59→#60 [D-#135]; coordinator review fixes applied [#59 staffProfileId typing, #60 clearance-update label]; **HR now fully built server+app**. Integrated gate green on main a58754d: jest **887/887** [54 suites, unchanged], vocab PASS, shared+server tsc, app tsc + expo web. VC-2 [PR #58] + Message-Templates/Comments PRDs already on main. In flight: Vocab VC-3 [dispatched, not yet PR'd]. Next free vocab-owner slot after VC: CT-1 / MT-1 / CM-1)_
 
 ## Now / next
 - **Built (HR app PR-4 — offboarding surfaces, Expo, APP-ONLY, D-#135) [branch `worktree-hr-app-offboarding`
-  stacked on PR-3, PR open — coordinator reviews] — COMPLETES the HR app surfaces (PR-1..PR-4):** the
+  stacked on PR-3, PR #60 MERGED] — COMPLETES the HR app surfaces (PR-1..PR-4):** the
   cross-cutting exit workflow (consumes the HR-5 offboarding resolvers; NO server/vocab/contract change).
   Adds an **Offboarding** hub entry (`staff:manage`): `OffboardingHomeScreen` (status-filtered
   `offboardingCases` + `initiateOffboarding` trigger/last-working-day/notice → seeds the default clearance
@@ -23,7 +23,7 @@ _Updated: 2026-06-13 (HR app PR-1 [#56] merging — Staff/HR tab + leave + self-
   the chain needs a rebase onto current origin/main at merge time. **Not verified live. HR module is now
   fully built server + app.**
 - **Built (HR app PR-3 — performance/conduct/development surfaces, Expo, APP-ONLY, D-#135) [branch
-  `worktree-hr-app-performance` stacked on PR-2, PR open — coordinator reviews]:** the third HR app PR
+  `worktree-hr-app-performance` stacked on PR-2, PR #59 MERGED]:** the third HR app PR
   (consumes the HR-4 performance resolvers; NO server/vocab/contract change). Adds a **Performance** hub
   entry (`performance:manage`): `PerformanceHomeScreen` (StaffSelect → `StaffPerformanceScreen` +
   grievance inbox) → per-staff `StaffObservationsScreen` (`staffObservations` + `submitObservation`),
@@ -40,7 +40,7 @@ _Updated: 2026-06-13 (HR app PR-1 [#56] merging — Staff/HR tab + leave + self-
   (executed):** app tsc clean + expo web export green (724 modules); vocab PASS + no server/shared/contract
   drift + **jest 853/853 unchanged**. **Not verified live.** **Next = PR-4 (offboarding).**
 - **Built (HR app PR-2 — payroll surfaces, Expo, APP-ONLY, D-#135) [branch `worktree-hr-app-payroll`
-  stacked on PR-1, PR open — coordinator reviews]:** the second HR app-surface PR (consumes the HR-3
+  stacked on PR-1, PR #57 MERGED]:** the second HR app-surface PR (consumes the HR-3
   payroll resolvers; NO server/vocab/contract change). Adds to the Staff/HR hub a **Payroll** entry
   (`payroll:manage`): `PayrollHomeScreen` (run list + links) → `PreparePayrollScreen` (`preparePayrollRun`
   month/working-days/note) → `PayrollRunDetailScreen` (`payslipsForRun` itemised net = gross − deductions +
@@ -54,7 +54,7 @@ _Updated: 2026-06-13 (HR app PR-1 [#56] merging — Staff/HR tab + leave + self-
   server/shared/contract drift + **jest 853/853 unchanged**. **Not verified live.** **Next = PR-3
   (performance/conduct/development)** → PR-4 offboarding.
 - **Built (HR app PR-1 — Staff/HR tab + leave + staff self-service, Expo, APP-ONLY, D-#135)
-  [branch `worktree-hr-app-leave`, PR open — coordinator reviews]:** the first of four HR app-surface
+  [branch `worktree-hr-app-leave`, PR #56 MERGED]:** the first of four HR app-surface
   PRs over the now-complete HR-1..HR-5 server module (which was server-only by HR precedent). **NO
   server / vocab / contract change** (proven: `git diff origin/main -- server shared docs skills` empty)
   — consumes existing HR resolvers + adds client ops/labels only. New **🧑‍💼 Staff/HR tab** gated
