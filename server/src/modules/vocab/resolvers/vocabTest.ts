@@ -148,12 +148,22 @@ builder.mutationField("updateVocabTest", (t) =>
       const test = await getVocabTest(args.testId);
       if (!test) throw new ForbiddenError("Test not found");
       await assertCanOperateVocab(ctx, test.sectionId.toString(), test.program, test.weekOf);
+      // VC-2 follow-up (coordinator): a testDate move into a DIFFERENT week must also
+      // satisfy the operator gate for that target week — else a Week-1 tester could
+      // reschedule a test into a week they don't operate.
+      const newDate = args.testDate ? parseDate(args.testDate, "testDate") : undefined;
+      if (newDate) {
+        const newWeek = weekStartFor(newDate);
+        if (newWeek.getTime() !== new Date(test.weekOf).getTime()) {
+          await assertCanOperateVocab(ctx, test.sectionId.toString(), test.program, newWeek);
+        }
+      }
       return updateVocabTest({
         testId: args.testId,
         label: args.label ?? undefined,
         totalMarks: args.totalMarks ?? undefined,
         dictationHalfMissCounts: args.dictationHalfMissCounts ?? undefined,
-        testDate: args.testDate ? parseDate(args.testDate, "testDate") : undefined,
+        testDate: newDate,
         actorId: ctx.auth!.userId,
       });
     },
