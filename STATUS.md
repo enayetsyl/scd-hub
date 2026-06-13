@@ -1,8 +1,40 @@
 # STATUS
 
-_Updated: 2026-06-14 (**Message Templates MT-1..MT-3 MERGED** — PR #61, server+app, D-#128–#131 + build rulings D-#140/#141; admin-editable registry for all generated message bodies, byte-identical big-bang migration; coordinator 7-finder review = no code fixes [client-nullable + N+1 refuted/deferred — N+1 hoist follow-up recorded]. Integrated gate green on main **63f0b79**: jest **910/910** [55 suites], vocab PASS, shared+server+app tsc, expo web. Prior: HR app surfaces COMPLETE [#56→#60, D-#135]. In flight: Vocab VC-3 [dispatched, not yet PR'd — the current vocab owner]. Parked vocab-touchers behind VC: CT-1 / CM-1 [MT now done])_
+_Updated: 2026-06-14 (**Message Templates MT-1..MT-3 MERGED** — PR #61, server+app, D-#128–#131 + build rulings D-#140/#141; admin-editable registry for all generated message bodies, byte-identical big-bang migration; coordinator 7-finder review = no code fixes [client-nullable + N+1 refuted/deferred — N+1 hoist follow-up recorded]. Integrated gate green on main **63f0b79**: jest **910/910** [55 suites], vocab PASS, shared+server+app tsc, expo web. Prior: HR app surfaces COMPLETE [#56→#60, D-#135]. In flight: Vocab VC-3 [dispatched, not yet PR'd] + **Class Test CT-1 [server, PR'd — see below; vocab additive, parallel-safe with VC-3 per AGENTS rule 5]**. Parked vocab-touchers behind VC: CM-1 [CT-1 now done])_
 
 ## Now / next
+- **Built (Class Test Tracker CT-1 — server, prd-tracker-class-test §3/§5/§6, D-#119–#122 + build rulings
+  D-#142–#144) [branch `worktree-class-test-ct1`, PR open — coordinator reviews]:** the FIRST class-test slice —
+  the print-request → official-exam lifecycle replacing the Exam-Log + per-class Google Forms + IMPORTRANGE sheet.
+  **Vocab (app-native, NO wire sync — a class test is a FEATURE not `doc_type` content; PARALLEL-SAFE with the
+  in-flight VC-3 per AGENTS rule 5 — purely additive, disjoint enums):** `CLASS_TEST_STATUSES`
+  (REQUESTED/PRINTED/CANCELLED) + `CLASS_TEST_SOURCES` (POOL_SET/UPLOADED_PAPER) + BN/EN labels;
+  `NOTIFICATION_KINDS += CLASS_TEST_RESULT` (+BN/EN — extends verifier §C.5 exact-list, CONSUMED at CT-3);
+  `StoredFile` kind += `classtest_question` (the M-4 model-enum pattern); new verifier **§C.14**. **The CT-kind
+  question set already existed** (`SET_TYPES` "CT" → `SET_TYPE_TO_TRACKER.classtest`) so linking a pool set needed
+  NO new set-kind enum (no STOP). **Server (`modules/trackers/`):** `ClassTest` model (the exam header / print
+  request — born REQUESTED, promoted to the official exam on Office mark-printed; `testNumber` auto-suggested +
+  editable, atomic `ctId`; `passMark` default round(0.40×total); `deadlineDays` stored default 2 — the school-day
+  deadline derivation is CT-2, not here), `ClassTestSequence` (atomic `CT-C{class}-{SUBJ}-{nnnn}`, the D-#34
+  pattern, replacing the fragile composite text key), `ClassTestService` (generateCtId / suggestTestNumber /
+  createRequest [POOL_SET set-link OR UPLOADED_PAPER; **year+level+class resolved server-side from the section**,
+  D-#143] / markPrinted [REQUESTED→PRINTED + printedAt/By] / cancelRequest [REQUESTED→CANCELLED] / reads),
+  `ClassTestFileService` (the uploaded-paper read gate), resolvers (`createClassTestRequest` /
+  `suggestClassTestNumber` / `markClassTestPrinted` / `cancelClassTest` / `classTestPrintQueue` / `myClassTests` /
+  `classTestsForSection` / `classTest`). **Files (§5.2):** `POST /files/classtest` (multipart, `tracker:write`,
+  jpeg/png/pdf ≤ 5 MB reusing `validateUpload`, Drive-first ⇒ 503 + nothing persisted — GP-J8) over the GP-A/M-4
+  `DriveStore` `subfolder` (`SCD-Hub-Files/<year>/classtest/`); `GET /files/:id` dispatches `classtest_question`
+  to a class-test gate = Office (`roster:manage`) OR the uploading teacher; the Drive id never reaches a client.
+  **RBAC (D-#144) — composes existing perms, NO new role/permission (D-#94/#17):** teacher request/results =
+  `tracker:write` + `assertCanWrite` section verify; Office mark-printed/cancel = `roster:manage`; staff reads =
+  `tracker:read`. 3 new audit kinds (CLASS_TEST_REQUESTED/_PRINTED/_CANCELLED). **Firewall:** new class-test block
+  (corpus ↛ class-test models + class-test source files ↛ corpus, both ways). **Build rulings:** D-#142 (no
+  `schoolId` — single-school convention), D-#143 (year/level/class derived from the section — blocks
+  sequence-key spoofing), D-#144 (file-store reuse + Office-or-uploader read gate). **Gate GREEN (executed):**
+  vocab verifier PASS, shared build + shared/server tsc clean, **jest 943/943** (56 suites; +1 new suite
+  `classTest.test.ts` + 2 new firewall checks over the 910 base; firewall green). **Server-only** (no app — CT-5
+  is the app slice; expo export skipped). **Not verified live.** **Next = CT-2** (per-student `ClassTestResult` +
+  derived percent/pass-fail + configurable passMark + the school-day-aware exam-date-anchored deadline/overdue).
 - **Built (Message Templates MT-1..MT-3 — server + app, prd-message-templates §3–§7, D-#128–#131 + build
   rulings D-#140/#141) [branch `worktree-message-templates`, PR #61 MERGED — integrated gate green, jest
   910/910; coordinator 7-finder review = no code fixes, N+1 hoist follow-up recorded in memory]:** ONE

@@ -19,7 +19,11 @@ import { Schema, model, Document, Types } from "mongoose";
  * `conversationId` (chat files only). The GP-A §9 reason for VM-disk (Atlas
  * GridFS can't hold 10 MB video) is moot: Drive already holds the bytes. The
  * `GET /files/:id` route dispatches the read gate by kind (hw → HomeworkFile,
- * chat → ChatFile membership).
+ * chat → ChatFile membership, classtest → ClassTestFile Office/requesting-teacher).
+ *
+ * EXTENDED for class-test uploaded papers (CT-1, prd-tracker-class-test §5.2):
+ * the same Drive-backed store gains a `classtest_question` kind (the M-4 pattern)
+ * under the `SCD-Hub-Files/<year>/classtest/` subfolder — no twin store/route.
  */
 export type StoredFileKind =
   | "hw_question"
@@ -27,7 +31,8 @@ export type StoredFileKind =
   | "chat_image"
   | "chat_pdf"
   | "chat_video"
-  | "chat_audio";
+  | "chat_audio"
+  | "classtest_question";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -36,6 +41,7 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "chat_pdf",
   "chat_video",
   "chat_audio",
+  "classtest_question",
 ];
 
 /** The chat-attachment subset (M-4) — the read gate routes these to chat. */

@@ -38,6 +38,7 @@ import {
   DriveUnavailableError,
 } from "../modules/platform/services/DriveStore";
 import { assertFileReadAccess } from "../modules/trackers/services/HomeworkFileService";
+import { assertClassTestFileReadAccess } from "../modules/trackers/services/ClassTestFileService";
 import {
   validateChatUpload,
   assertChatFileReadAccess,
@@ -242,6 +243,64 @@ filesRouter.post("/chat", parseChatUpload, async (req: Request, res: Response) =
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/classtest — teacher uploads their own class-test paper (CT-1,
+// prd-tracker-class-test §5.2). tracker:write + jpeg/png/pdf ≤ 5 MB (GP-A cap,
+// reuses validateUpload). The uploader is the requesting teacher; the returned
+// fileId is then carried into createClassTestRequest as questionFileId.
+// ---------------------------------------------------------------------------
+
+filesRouter.post("/classtest", parseUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !roleHasPermission(ctx.auth.role as Role, "tracker:write")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const rejection = validateUpload(file.mimetype, file.size);
+  if (rejection) {
+    res.status(422).json({ error: rejection });
+    return;
+  }
+
+  try {
+    // Drive FIRST — only a successful upload persists metadata (GP-J8 posture).
+    const driveFileId = await uploadToDrive({
+      name: `${Date.now()}_${file.originalname}`,
+      mime: file.mimetype,
+      data: file.buffer,
+      year: String(new Date().getFullYear()),
+      subfolder: "classtest",
+    });
+    const stored = await StoredFile.create({
+      kind: "classtest_question" as StoredFileKind,
+      mime: file.mimetype,
+      sizeBytes: file.size,
+      originalName: file.originalname,
+      driveFileId, // server-internal — NOT in the response below
+      uploadedBy: ctx.auth.userId,
+    });
+    res.json({
+      fileId: stored._id.toString(),
+      kind: "classtest_question",
+      mime: stored.mime,
+      sizeBytes: stored.sizeBytes,
+      originalName: stored.originalName,
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      res.status(503).json({ error: FILE_ERRORS_BN.driveDown });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /files/:id — authz first, then stream from Drive (no redirect, ever)
 // ---------------------------------------------------------------------------
 
@@ -268,6 +327,8 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
     // so a chat message can never re-expose a homework file and vice-versa.
     if ((CHAT_STORED_FILE_KINDS as readonly string[]).includes(file.kind)) {
       await assertChatFileReadAccess(ctx, file);
+    } else if (file.kind === "classtest_question") {
+      await assertClassTestFileReadAccess(ctx, file);
     } else {
       await assertFileReadAccess(ctx, file);
     }
