@@ -422,6 +422,85 @@ export const ADVANCE_STATUS_LABELS_EN: Record<AdvanceStatus, string> = {
   active: "Active", settled: "Settled", written_off: "Written off",
 };
 
+// --- A.5d HR PERFORMANCE / CONDUCT / DEVELOPMENT ENUMS (app-native; HR step 4 --
+// — prd-hr §5/H5, D-#28/#112/#113). Identity/operational plane, behind the
+// ADR-005 firewall — NO wire-contract twin, NO envelope-schema mirror, NO
+// two-place sync; only /shared + the vocab verifier run. NO new auth role: the
+// supervisor observation-write is a bounded write inside the EXISTING supervisory
+// ScopeGrant extent (D-#28/#17), composed in the resolver — not a permission.
+
+/** The conduct ladder's escalating stages (prd-hr §5.2/H5.3). Order IS the ladder:
+ *  verbal → written → final → termination; the index in this array is the rung, so
+ *  normal escalation may not skip a rung (a gross-misconduct fast-track may jump to
+ *  final/termination). The `termination` step writes employmentStatus → terminated
+ *  and triggers offboarding (HR-5/H6). Stages are "configurable" in the PRD; this is
+ *  the LOCKED default set (lapse period per stage is parked, §10). */
+export const CONDUCT_STAGES = ["verbal", "written", "final", "termination"] as const;
+export type ConductStage = (typeof CONDUCT_STAGES)[number];
+
+export const CONDUCT_STAGE_LABELS_BN: Record<ConductStage, string> = {
+  verbal: "মৌখিক সতর্কতা", written: "লিখিত সতর্কতা", final: "চূড়ান্ত সতর্কতা", termination: "চাকরিচ্যুতি",
+};
+export const CONDUCT_STAGE_LABELS_EN: Record<ConductStage, string> = {
+  verbal: "Verbal warning", written: "Written warning", final: "Final warning", termination: "Termination",
+};
+
+/** Conduct-record lifecycle (prd-hr §5.2/H5.3). A step is `draft` when raised; the
+ *  person's response/hearing is captured BEFORE finalisation (*'adl*, not optional) →
+ *  `hearing_held`; the issuer then `finalized` it (the disciplinary judgement, a
+ *  Principal-only sign-off, D-#112). A finalised warning `lapsed` once past its
+ *  `liveUntil` date — it stops counting toward escalation but stays on file as history
+ *  (never deleted); lapse is LAZY at read time (D-#21/library posture, D-#113). */
+export const CONDUCT_RECORD_STATUSES = ["draft", "hearing_held", "finalized", "lapsed"] as const;
+export type ConductRecordStatus = (typeof CONDUCT_RECORD_STATUSES)[number];
+
+export const CONDUCT_RECORD_STATUS_LABELS_BN: Record<ConductRecordStatus, string> = {
+  draft: "খসড়া", hearing_held: "শুনানি সম্পন্ন", finalized: "চূড়ান্ত", lapsed: "মেয়াদোত্তীর্ণ",
+};
+export const CONDUCT_RECORD_STATUS_LABELS_EN: Record<ConductRecordStatus, string> = {
+  draft: "Draft", hearing_held: "Hearing held", finalized: "Finalized", lapsed: "Lapsed",
+};
+
+/** Appraisal lifecycle (prd-hr §5.1/H5.1). One per staff per cycle (= annual, aligned
+ *  to the academic year). Office/Principal PREPARE the `draft` (gather observations +
+ *  goals); the overall outcome + sign-off is PRINCIPAL-only (D-#28/H5.2) →
+ *  `signed_off`, which emits development needs into the CPD log (H5.4). */
+export const APPRAISAL_STATUSES = ["draft", "signed_off"] as const;
+export type AppraisalStatus = (typeof APPRAISAL_STATUSES)[number];
+
+export const APPRAISAL_STATUS_LABELS_BN: Record<AppraisalStatus, string> = {
+  draft: "খসড়া", signed_off: "চূড়ান্ত অনুমোদিত",
+};
+export const APPRAISAL_STATUS_LABELS_EN: Record<AppraisalStatus, string> = {
+  draft: "Draft", signed_off: "Signed off",
+};
+
+/** The overall appraisal outcome scale (prd-hr §5.1/H5.1 — the "OBSERVATION/
+ *  APPRAISAL_OUTCOME vocab", §9). Recorded ONLY at Principal sign-off; the
+ *  REF-11 per-observation rubric is curriculum-owned + parked (§6/§10). */
+export const APPRAISAL_OUTCOMES = ["exceeds", "meets", "needs_improvement", "unsatisfactory"] as const;
+export type AppraisalOutcome = (typeof APPRAISAL_OUTCOMES)[number];
+
+export const APPRAISAL_OUTCOME_LABELS_BN: Record<AppraisalOutcome, string> = {
+  exceeds: "প্রত্যাশা ছাড়িয়েছে", meets: "প্রত্যাশা পূরণ", needs_improvement: "উন্নতি প্রয়োজন", unsatisfactory: "অসন্তোষজনক",
+};
+export const APPRAISAL_OUTCOME_LABELS_EN: Record<AppraisalOutcome, string> = {
+  exceeds: "Exceeds expectations", meets: "Meets expectations", needs_improvement: "Needs improvement", unsatisfactory: "Unsatisfactory",
+};
+
+/** Grievance lifecycle (prd-hr §5.2/H5.4). A staff-raised CONFIDENTIAL channel routed
+ *  to the Principal (same confidentiality as conduct, opposite direction). `open` on
+ *  raise → `under_review` when an admin picks it up → `resolved`/`closed` with a note. */
+export const GRIEVANCE_STATUSES = ["open", "under_review", "resolved", "closed"] as const;
+export type GrievanceStatus = (typeof GRIEVANCE_STATUSES)[number];
+
+export const GRIEVANCE_STATUS_LABELS_BN: Record<GrievanceStatus, string> = {
+  open: "উত্থাপিত", under_review: "পর্যালোচনাধীন", resolved: "নিষ্পন্ন", closed: "বন্ধ",
+};
+export const GRIEVANCE_STATUS_LABELS_EN: Record<GrievanceStatus, string> = {
+  open: "Open", under_review: "Under review", resolved: "Resolved", closed: "Closed",
+};
+
 // --- A.6 HOMEWORK-TRACKER ENUMS (app-native; Project-06 handoff — HW-T1) ------
 // Daily HW-… channel. NO wire-contract twin: trackers are a feature, not import
 // content (no `doc_type: tracker`), and Layer-B records live on the operational/
@@ -1036,6 +1115,8 @@ export const PERMISSIONS = [
   "leave:manage",          // HR staff-LEAVE admin: entitlements, approve/reject, cover approval, all balances (Principal/Office; prd-hr H2, D-#22). Teacher own-row self-apply needs NO permission.
   "payroll:manage",        // HR PAYROLL: set pay, prepare/recompute a monthly run, read payslips/export/advances (Principal/Office; prd-hr H4, D-#109)
   "payroll:approve",       // PRINCIPAL ONLY — approve+LOCK a payroll run + issue/settle advances (prd-hr H4.2/H4.5/H4.7; Office cannot approve, D-#109)
+  "performance:manage",    // HR PERFORMANCE/CONDUCT/DEVELOPMENT: read+manage observations(all)/appraisals(prepare)/conduct ladder/grievances/CPD (Principal/Office; prd-hr H5, D-#112). Supervisor observation-WRITE is NOT this — it rides the existing supervisory scope (D-#28).
+  "performance:signoff",   // PRINCIPAL ONLY — sign off an appraisal outcome + finalize a conduct step (the central judgement; Office cannot sign off, prd-hr §2/H5.2, D-#112)
   "guardian:link",
   "message:dispatch",      // wa.me / notices manual send (R-T2)
   "user:manage",
@@ -1076,6 +1157,8 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "leave:manage": "build",  // HR step 2 (staff leave admin surface)
   "payroll:manage": "build", // HR step 3 (payroll prepare + pay records + reads)
   "payroll:approve": "build", // HR step 3 (Principal lock + advances)
+  "performance:manage": "build", // HR step 4 (performance/conduct/development admin surface)
+  "performance:signoff": "build", // HR step 4 (Principal appraisal sign-off + conduct finalize)
   "guardian:link": "build",
   "message:dispatch": "build",
   "user:manage": "build",
@@ -1098,7 +1181,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "library:read", "library:manage",
     "chat:read", "chat:write", "chat:manage",
     "chat:oversee",          // PRINCIPAL ONLY (D-#77) — every oversight open is audited (M-6)
-    "roster:manage", "staff:manage", "leave:manage", "payroll:manage", "payroll:approve", "guardian:link", "message:dispatch",
+    "roster:manage", "staff:manage", "leave:manage", "payroll:manage", "payroll:approve",
+    "performance:manage", "performance:signoff", "guardian:link", "message:dispatch",
     "user:manage", "audit:read",
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
@@ -1120,7 +1204,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // publisher seam), plan-review assignment (D-#39), and routine authoring (D-#46).
   // No tracker/user surface under PoLP.
   OFFICE: [
-    "roster:manage", "staff:manage", "leave:manage", "payroll:manage", "guardian:link", "message:dispatch",
+    "roster:manage", "staff:manage", "leave:manage", "payroll:manage", "performance:manage", "guardian:link", "message:dispatch",
     "content:import", "content:assign_review",
     "routine:read", "routine:manage",
     "attendance:manage",     // upload teacher Excel, assign markers, chase guardians (D-#64/#65; no mark)

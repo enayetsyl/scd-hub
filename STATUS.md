@@ -1,8 +1,40 @@
 # STATUS
 
-_Updated: 2026-06-13 (Messaging M-7 built — staff Expo push, server; PR open. **Messaging M-1..M-7 COMPLETE.** M-6 PR #50 + M-5 PR #49 + HR-3 PR #48 merged)_
+_Updated: 2026-06-13 (HR-4 performance/conduct/development built — server, PR #52 open. Messaging M-7 PR #51 + M-6 PR #50 merged; **messaging M-1..M-7 COMPLETE**)_
 
 ## Now / next
+- **Built (HR step 4 — performance / conduct / development, server, prd-hr §5/H5, D-#28 + build rulings
+  D-#112/#113) [branch `worktree-hr-performance`, PR open — coordinator reviews]:** the fourth HR slice,
+  independent of payroll; needs HR-1 (StaffProfile) + the supervisory scope (D-#28). **New `modules/hr/`
+  models:** `Observation` (event: observer/date/class+subject/notes/follow-up + free-form REF-11
+  `rubricScores`, parked), `Appraisal` (one per staff per academic year, `draft→signed_off`, goals +
+  developmentNeeds + Principal-only `overallOutcome`), `ConductRecord` (ladder stage/status/grossMisconduct
+  + hearing + `liveUntil` lapse), `Grievance` (staff-raised confidential), `DevelopmentLog` (CPD).
+  **Services:** `conductLadder` (pure order/fast-track/lapse), `observationScope` (pure `supervisoryCovers`
+  + `userCanObserve` reusing `composeTeacherScope`), `ConductService` (record→hearing→finalize with enforced
+  order + 'adl hearing-before-finalize + termination→employmentStatus + lazy `lapseExpiredConduct`),
+  `PerformanceService` (observations/appraisals; sign-off EMITS CPD), `GrievanceService`. **RBAC (D-#112):**
+  two NEW permissions — `performance:manage` (PRINCIPAL/OFFICE) prepares/reads everything; `performance:signoff`
+  (**PRINCIPAL only**) signs off appraisals + finalizes conduct (Office cannot — a distinct permission the
+  verifier proves, mirrors payroll:approve, H5.2/§2). The **supervisor observation-WRITE is NOT a permission**
+  — it rides the existing supervisory `ScopeGrant` extent (D-#28, the D-#94 compose-don't-add pattern); a
+  supervisor reads ONLY their own observations, never conduct/outcome (H5.2). **Confidentiality (satr,
+  H5.5/H7.3):** conduct/grievance/appraisal-outcome = `performance:manage` (P/O) + subject own-row
+  (`myConductRecords`/`myAppraisals`/`myGrievances` via the staffMatch phone-link); supervisors hold neither
+  perm so they structurally can't read conduct. **Conduct ladder (D-#113):** enforces verbal→written→final→
+  termination (no rung-skip; gross misconduct fast-tracks), hearing recorded before finalisation, termination
+  writes `employmentStatus → terminated` (the offboarding TRIGGER; the H6 workflow stays HR-5's court),
+  warnings lapse LAZILY (D-#21 posture) + stay on file. **Vocab (app-native, NO wire sync; HR owns vocab this
+  cycle):** CONDUCT_STAGES/CONDUCT_RECORD_STATUSES/APPRAISAL_STATUSES/APPRAISAL_OUTCOMES/GRIEVANCE_STATUSES +
+  BN/EN + performance:manage/performance:signoff; verifier §C.10 + OFFICE exact-list. 12 new audit kinds
+  (OBSERVATION_SUBMITTED / APPRAISAL_* / CONDUCT_* / STAFF_TERMINATED / GRIEVANCE_* / DEVELOPMENT_LOGGED) in
+  `platform/models/Audit.ts`. HR firewall block extended with the five new models (green both ways).
+  **Gate GREEN (executed):** vocab verifier PASS, shared build + shared/server tsc clean, **jest 801/801**
+  (49 suites; 25 new in `performance.test.ts`; firewall green). **Server-only** (no app screens — the HR-1..HR-3
+  precedent; expo export skipped). **Not verified live.** Parked (prd-hr §6/§10): REF-11 observation rubric
+  (curriculum-owned), per-stage warning-lapse period, the §5 app screens. **Next after merge = HR-5
+  (offboarding)** — stitches records + leave + payroll + conduct; the termination trigger this slice stamps
+  is its entry point.
 - **Built (Messaging M-7 — staff Expo push, server, D-#116) [branch `worktree-messaging-m7`, PR open
   — coordinator reviews]:** the SEVENTH and FINAL messaging slice per `docs/prd-messaging.md` §5/J-M1 —
   **messaging M-1..M-7 is now COMPLETE**. **VOCAB-FREE** (HR-4 owns `shared/vocab.ts` this cycle):
