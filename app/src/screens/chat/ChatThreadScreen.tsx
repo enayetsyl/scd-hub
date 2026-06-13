@@ -236,6 +236,7 @@ export default function ChatThreadScreen({ route, navigation }: Props): React.Re
               mine={m.senderId === myUserId}
               senderName={nameById.get(m.senderId) ?? ""}
               isGroup={conv?.kind !== "DIRECT"}
+              composerLocked={announcementLocked}
               parent={m.replyToId ? messages.find((x) => x.id === m.replyToId) ?? null : null}
               myUserId={myUserId}
               active={activeAction}
@@ -346,6 +347,7 @@ function MessageBubble({
   mine,
   senderName,
   isGroup,
+  composerLocked,
   parent,
   myUserId,
   active,
@@ -362,6 +364,7 @@ function MessageBubble({
   mine: boolean;
   senderName: string;
   isGroup: boolean;
+  composerLocked: boolean;
   parent: ChatMessageT | null;
   myUserId: string;
   active: ActiveAction;
@@ -431,12 +434,15 @@ function MessageBubble({
       {/* Action row (skip for deleted) */}
       {!deleted ? (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1), marginTop: space(1) }}>
-          <Button title={STR.chatReply} variant="ghost" onPress={onReply} />
+          {/* Reply + Edit feed the composer; in a locked ANNOUNCEMENT group the
+              composer is hidden for non-managers, so suppress them (React /
+              Forward / Delete do not post and stay available). */}
+          {!composerLocked ? <Button title={STR.chatReply} variant="ghost" onPress={onReply} /> : null}
           <Button title={STR.chatReact} variant="ghost" onPress={() => onToggleAction("react")} />
           {otherConvs.length > 0 ? (
             <Button title={STR.chatForward} variant="ghost" onPress={() => onToggleAction("forward")} />
           ) : null}
-          {mine ? <Button title={STR.chatEdit} variant="ghost" onPress={onStartEdit} /> : null}
+          {mine && !composerLocked ? <Button title={STR.chatEdit} variant="ghost" onPress={onStartEdit} /> : null}
           {mine ? <Button title={STR.chatDelete} variant="ghost" onPress={onDelete} /> : null}
         </View>
       ) : null}
