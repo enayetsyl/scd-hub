@@ -784,6 +784,69 @@ export const BOOK_LANGUAGE_LABELS_EN: Record<BookLanguage, string> = {
 };
 
 
+// --- A.12 CHAT / MESSAGING ENUMS (app-native; Messaging module — ------------
+// prd-messaging, D-#76–#79). NO wire-contract twin: a chat is a feature, not
+// import content, and every row (conversations, messages, receipts) names
+// staff Users — strictly operational/identity-plane behind the ADR-005
+// firewall. No envelope-schema mirror, no two-place sync; only /shared + the
+// vocab verifier run. Guardians are notice RECIPIENTS (wa.me fan-out, ADR-003
+// permanent), NEVER chat participants (D-#76) — no guardian chat permission.
+
+/** Conversation kinds (D-#76/#78). DIRECT = 1:1 between any two staff (one per
+ *  pair, idempotent). SECTION/SUBJECT/SCHOOL are AUTO-PROVISIONED from roster +
+ *  routine with source-tagged idempotent membership sync (D-#49 pattern, M-2).
+ *  CUSTOM = ad-hoc/regular groups, Principal/Office only (`chat:manage`). */
+export const CONVERSATION_KINDS = ["DIRECT", "SECTION", "SUBJECT", "SCHOOL", "CUSTOM"] as const;
+export type ConversationKind = (typeof CONVERSATION_KINDS)[number];
+
+export const CONVERSATION_KIND_LABELS_BN: Record<ConversationKind, string> = {
+  DIRECT: "সরাসরি বার্তা", SECTION: "শাখা গ্রুপ", SUBJECT: "বিষয় গ্রুপ",
+  SCHOOL: "স্কুল-ব্যাপী", CUSTOM: "নিজস্ব গ্রুপ",
+};
+export const CONVERSATION_KIND_LABELS_EN: Record<ConversationKind, string> = {
+  DIRECT: "Direct message", SECTION: "Section group", SUBJECT: "Subject group",
+  SCHOOL: "School-wide", CUSTOM: "Custom group",
+};
+
+/** Posting policy (D-#78). Every group defaults OPEN; ANNOUNCEMENT blocks
+ *  posting for members without `chat:manage` (reactions still allowed, M-2). */
+export const POSTING_POLICIES = ["OPEN", "ANNOUNCEMENT"] as const;
+export type PostingPolicy = (typeof POSTING_POLICIES)[number];
+
+export const POSTING_POLICY_LABELS_BN: Record<PostingPolicy, string> = {
+  OPEN: "উন্মুক্ত আলোচনা", ANNOUNCEMENT: "শুধু ঘোষণা",
+};
+export const POSTING_POLICY_LABELS_EN: Record<PostingPolicy, string> = {
+  OPEN: "Open discussion", ANNOUNCEMENT: "Announcement only",
+};
+
+/** Attachment kinds (D-#79) — photo / PDF / video / voice note, hard limit
+ *  10 MB per file, MIME-whitelisted at the upload path (M-4). */
+export const ATTACHMENT_KINDS = ["IMAGE", "PDF", "VIDEO", "AUDIO"] as const;
+export type AttachmentKind = (typeof ATTACHMENT_KINDS)[number];
+
+export const ATTACHMENT_KIND_LABELS_BN: Record<AttachmentKind, string> = {
+  IMAGE: "ছবি", PDF: "পিডিএফ", VIDEO: "ভিডিও", AUDIO: "ভয়েস বার্তা",
+};
+export const ATTACHMENT_KIND_LABELS_EN: Record<AttachmentKind, string> = {
+  IMAGE: "Photo", PDF: "PDF", VIDEO: "Video", AUDIO: "Voice note",
+};
+
+/** Guardian-notice scope (D-#79, M-6). SECTION gates on the section's class
+ *  teacher (`assertIsClassTeacher` — the D-#45 parent-comms duty) or
+ *  Principal/Office; SCHOOL gates on `chat:manage`. Delivery = per-guardian
+ *  wa.me fan-out (ADR-003 permanent); no guardian login involved. */
+export const NOTICE_SCOPES = ["SCHOOL", "SECTION"] as const;
+export type NoticeScope = (typeof NOTICE_SCOPES)[number];
+
+export const NOTICE_SCOPE_LABELS_BN: Record<NoticeScope, string> = {
+  SCHOOL: "সারা স্কুল", SECTION: "শাখা",
+};
+export const NOTICE_SCOPE_LABELS_EN: Record<NoticeScope, string> = {
+  SCHOOL: "School-wide", SECTION: "Section",
+};
+
+
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
 // =============================================================================
@@ -827,6 +890,11 @@ export const PERMISSIONS = [
   "library:manage",        // desk ops, catalog, policy, librarian assignment (Principal/Office); a TEACHER
                            // passes DESK-OP gates only via assertIsLibrarian (LibrarianAssignment) — the
                            // TEACHER permission set is NOT widened (D-#17, D-#42 pattern)
+  // messaging / staff chat (app-native; D-#76–#79)
+  "chat:read",             // read own conversations + messages (Principal/Teacher/Office; every row membership-gated in the resolver)
+  "chat:write",            // open 1:1, send messages, mark seen (same roles; membership-gated)
+  "chat:manage",           // group create/edit, membership, posting policy, resync (Principal/Office; lands M-2)
+  "chat:oversee",          // PRINCIPAL ONLY — read-override on ANY conversation incl. 1:1; each open itself audited (D-#77; lands M-6)
   // foundation / ops
   "roster:manage",
   "staff:manage",          // HR staff-record read/manage (Principal/Office; prd-hr H1.4 row-scope)
@@ -861,6 +929,10 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "attendance:manage": "build",
   "library:read": "build",
   "library:manage": "build",
+  "chat:read": "build",     // M-1 (1:1 chat + receipts)
+  "chat:write": "build",    // M-1
+  "chat:manage": "pipeline", // lands with M-2 (groups + posting policy)
+  "chat:oversee": "pipeline", // lands with M-6 (Principal oversight, D-#77)
   "roster:manage": "build",
   "staff:manage": "build",
   "guardian:link": "build",
@@ -883,6 +955,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "routine:read", "routine:manage",
     "attendance:manage", // NOT attendance:mark — Principal assigns markers, doesn't mark (D-#64)
     "library:read", "library:manage",
+    "chat:read", "chat:write", "chat:manage",
+    "chat:oversee",          // PRINCIPAL ONLY (D-#77) — every oversight open is audited (M-6)
     "roster:manage", "staff:manage", "guardian:link", "message:dispatch",
     "user:manage", "audit:read",
   ],
@@ -898,6 +972,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "routine:read",          // a teacher reads their own + their sections' routine (D-#46)
     "attendance:mark",       // row-scoped further to "the section's marker today" (CT-2, D-#64)
     "library:read",          // browse the catalog + own loans/reservations; desk ops only via LibrarianAssignment (D-#81)
+    "chat:read", "chat:write", // staff chat (D-#76) — 1:1 + group membership; NO chat:manage (teachers cannot create groups, D-#78)
     "message:dispatch",
   ],
   // Roster, guardian linkage, messaging dispatch (REQ §2), plus content import (the
@@ -909,6 +984,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "routine:read", "routine:manage",
     "attendance:manage",     // upload teacher Excel, assign markers, chase guardians (D-#64/#65; no mark)
     "library:read", "library:manage", // the default library desk (D-#81)
+    "chat:read", "chat:write", "chat:manage", // staff chat + group/posting-policy admin (D-#76/#78); NO chat:oversee (Principal only, D-#77)
   ],
   // Guardian portal v1 (GP-1, D-#68): the single grant is ACTIVE — guardian-scoped
   // resolvers read linked children only (assertGuardianOfStudent, link-scoped).
