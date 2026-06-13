@@ -39,7 +39,7 @@ check("routine: PRINCIPAL+OFFICE manage, TEACHER read-only, GUARDIAN none", V.ro
 check("TEACHER has content:review (reviewer APPROVE), lacks assign/promote", V.roleHasPermission("TEACHER","content:review") && !["content:assign_review","content:promote_gold"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("GUARDIAN only has guardian:read_child", eq(V.permissionsForRole("GUARDIAN"), ["guardian:read_child"]));
 check("no role can write audit (audit:write undeclared)", !V.PERMISSIONS.includes("audit:write"));
-check("pipeline perms are EXACTLY chat:oversee (lands at M-6; chat:manage flipped build at M-2 per D-#98; everything else active)", eq(V.PERMISSIONS.filter((p) => V.PERMISSION_BUILD_STATUS[p] !== "build"), ["chat:oversee"]));
+check("NO pipeline perms remain — every permission is BUILD (chat:oversee flipped at M-6 per D-#111; chat:manage at M-2 per D-#98)", eq(V.PERMISSIONS.filter((p) => V.PERMISSION_BUILD_STATUS[p] !== "build"), []));
 
 console.log("=== C. label maps total over their enums ===");
 const total = (labels, keys) => keys.every((k) => typeof labels[k] === "string" && labels[k].length > 0);
@@ -167,8 +167,8 @@ check("chat:manage = PRINCIPAL+OFFICE only — teachers cannot create groups (D-
 check("chat:oversee = PRINCIPAL ONLY (D-#77)",
   V.roleHasPermission("PRINCIPAL","chat:oversee") &&
   !["TEACHER","OFFICE","GUARDIAN"].some((r) => V.roleHasPermission(r, "chat:oversee")));
-check("chat:manage is now BUILD (M-2 activates groups + posting policy), chat:oversee stays pipeline until M-6 (D-#98)",
-  V.PERMISSION_BUILD_STATUS["chat:manage"] === "build" && V.PERMISSION_BUILD_STATUS["chat:oversee"] === "pipeline");
+check("chat:manage AND chat:oversee are both BUILD (M-2 activated manage; M-6 activates oversight, D-#111)",
+  V.PERMISSION_BUILD_STATUS["chat:manage"] === "build" && V.PERMISSION_BUILD_STATUS["chat:oversee"] === "build");
 
 console.log("=== C.8 HR staff-leave vocab + RBAC invariants (HR step 2 — prd-hr §3, D-#22/#23) ===");
 check("LEAVE_TYPE_LABELS_BN total",        total(V.LEAVE_TYPE_LABELS_BN, V.LEAVE_TYPES));
