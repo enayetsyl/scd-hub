@@ -114,6 +114,8 @@ import StaffAppraisalsScreen from "../screens/hr/StaffAppraisalsScreen";
 import StaffConductScreen from "../screens/hr/StaffConductScreen";
 import StaffCpdScreen from "../screens/hr/StaffCpdScreen";
 import GrievanceInboxScreen from "../screens/hr/GrievanceInboxScreen";
+import OffboardingHomeScreen from "../screens/hr/OffboardingHomeScreen";
+import OffboardingCaseScreen from "../screens/hr/OffboardingCaseScreen";
 import SectionPickerScreen from "../screens/common/SectionPickerScreen";
 import AdminHomeScreen from "../screens/admin/AdminHomeScreen";
 import ImportScreen from "../screens/admin/ImportScreen";
@@ -450,6 +452,12 @@ function HrNavigator(): React.ReactElement {
       <HrStack.Screen name="StaffConduct" component={StaffConductScreen} options={{ title: STR.hrConduct }} />
       <HrStack.Screen name="StaffCpd" component={StaffCpdScreen} options={{ title: STR.hrCpd }} />
       <HrStack.Screen name="GrievanceInbox" component={GrievanceInboxScreen} options={{ title: STR.hrGrievances }} />
+      <HrStack.Screen name="OffboardingHome" component={OffboardingHomeScreen} options={{ title: STR.hrOffboarding }} />
+      <HrStack.Screen
+        name="OffboardingCase"
+        component={OffboardingCaseScreen}
+        options={({ route }) => ({ title: route.params.name || STR.hrOffboarding })}
+      />
     </HrStack.Navigator>
   );
 }

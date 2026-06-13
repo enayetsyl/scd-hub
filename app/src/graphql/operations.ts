@@ -4095,3 +4095,159 @@ export const ADD_DEVELOPMENT_LOG = gql<
     addDevelopmentLog(staffProfileId: $staffProfileId, activity: $activity, dateKey: $dateKey, outcome: $outcome) { ${DEVELOPMENT_LOG_FIELDS} }
   }
 `;
+
+// ===========================================================================
+// HR app surfaces — Offboarding (PR-4; prd-hr §6, H6, D-#29/#117)
+// staff:manage = initiate / clearance / access revoke / exit interview / cert /
+// cancel; payroll:manage = compute settlement; payroll:approve (PRINCIPAL) =
+// release. APP-ONLY; consumes existing resolvers.
+// ===========================================================================
+
+export interface ClearanceItemT {
+  key: string;
+  label: string;
+  status: string;
+  note: string | null;
+  updatedAt: string | null;
+}
+
+export interface SettlementLineT {
+  type: string;
+  amount: number;
+  days: number | null;
+  note: string | null;
+}
+
+export interface FinalSettlementT {
+  workingDays: number;
+  payableDays: number | null;
+  dayRate: number;
+  grossSalary: number;
+  leaveEncashmentDays: number;
+  deductions: SettlementLineT[];
+  additions: SettlementLineT[];
+  totalDeductions: number;
+  totalAdditions: number;
+  netPay: number;
+  advanceRecovered: number;
+  held: boolean;
+  computedAt: string;
+  releasedAt: string | null;
+}
+
+export interface OffboardingCaseT {
+  id: string;
+  staffProfileId: string;
+  trigger: string;
+  status: string;
+  noticeDateKey: string | null;
+  lastWorkingDayKey: string;
+  clearanceItems: ClearanceItemT[];
+  accessRevoked: boolean;
+  accessRevokedAt: string | null;
+  grantsRevokedCount: number | null;
+  loginDisabled: boolean | null;
+  settlement: FinalSettlementT | null;
+  exitInterviewReason: string | null;
+  exitInterviewFeedback: string | null;
+  serviceCertificateIssuedAt: string | null;
+  createdAt: string;
+}
+
+const OFFBOARDING_CASE_FIELDS = `
+  id staffProfileId trigger status noticeDateKey lastWorkingDayKey
+  clearanceItems { key label status note updatedAt }
+  accessRevoked accessRevokedAt grantsRevokedCount loginDisabled
+  settlement {
+    workingDays payableDays dayRate grossSalary leaveEncashmentDays
+    deductions { type amount days note }
+    additions { type amount days note }
+    totalDeductions totalAdditions netPay advanceRecovered held computedAt releasedAt
+  }
+  exitInterviewReason exitInterviewFeedback serviceCertificateIssuedAt createdAt
+`;
+
+export const OFFBOARDING_CASES_QUERY = gql<{ offboardingCases: OffboardingCaseT[] }, { status?: string | null }>`
+  query OffboardingCases($status: String) {
+    offboardingCases(status: $status) { ${OFFBOARDING_CASE_FIELDS} }
+  }
+`;
+
+export const OFFBOARDING_CASE_QUERY = gql<{ offboardingCase: OffboardingCaseT | null }, { caseId: string }>`
+  query OffboardingCase($caseId: String!) {
+    offboardingCase(caseId: $caseId) { ${OFFBOARDING_CASE_FIELDS} }
+  }
+`;
+
+export const INITIATE_OFFBOARDING = gql<
+  { initiateOffboarding: OffboardingCaseT },
+  { staffProfileId: string; trigger: string; lastWorkingDayKey: string; noticeDateKey?: string | null }
+>`
+  mutation InitiateOffboarding($staffProfileId: String!, $trigger: String!, $lastWorkingDayKey: String!, $noticeDateKey: String) {
+    initiateOffboarding(staffProfileId: $staffProfileId, trigger: $trigger, lastWorkingDayKey: $lastWorkingDayKey, noticeDateKey: $noticeDateKey) {
+      ${OFFBOARDING_CASE_FIELDS}
+    }
+  }
+`;
+
+export const ADD_OFFBOARDING_CLEARANCE_ITEM = gql<
+  { addOffboardingClearanceItem: OffboardingCaseT },
+  { caseId: string; key: string; label: string }
+>`
+  mutation AddOffboardingClearanceItem($caseId: String!, $key: String!, $label: String!) {
+    addOffboardingClearanceItem(caseId: $caseId, key: $key, label: $label) { ${OFFBOARDING_CASE_FIELDS} }
+  }
+`;
+
+export const UPDATE_OFFBOARDING_CLEARANCE_ITEM = gql<
+  { updateOffboardingClearanceItem: OffboardingCaseT },
+  { caseId: string; key: string; status: string; note?: string | null }
+>`
+  mutation UpdateOffboardingClearanceItem($caseId: String!, $key: String!, $status: String!, $note: String) {
+    updateOffboardingClearanceItem(caseId: $caseId, key: $key, status: $status, note: $note) { ${OFFBOARDING_CASE_FIELDS} }
+  }
+`;
+
+export const REVOKE_OFFBOARDING_ACCESS = gql<{ revokeOffboardingAccess: OffboardingCaseT }, { caseId: string }>`
+  mutation RevokeOffboardingAccess($caseId: String!) {
+    revokeOffboardingAccess(caseId: $caseId) { ${OFFBOARDING_CASE_FIELDS} }
+  }
+`;
+
+export const COMPUTE_FINAL_SETTLEMENT = gql<
+  { computeFinalSettlement: OffboardingCaseT },
+  { caseId: string; workingDays: number; academicYearId?: string | null; payableDays?: number | null; arrearsAmount?: number | null; arrearsNote?: string | null }
+>`
+  mutation ComputeFinalSettlement($caseId: String!, $workingDays: Int!, $academicYearId: String, $payableDays: Int, $arrearsAmount: Int, $arrearsNote: String) {
+    computeFinalSettlement(caseId: $caseId, workingDays: $workingDays, academicYearId: $academicYearId, payableDays: $payableDays, arrearsAmount: $arrearsAmount, arrearsNote: $arrearsNote) {
+      ${OFFBOARDING_CASE_FIELDS}
+    }
+  }
+`;
+
+export const RELEASE_FINAL_SETTLEMENT = gql<{ releaseFinalSettlement: OffboardingCaseT }, { caseId: string }>`
+  mutation ReleaseFinalSettlement($caseId: String!) {
+    releaseFinalSettlement(caseId: $caseId) { ${OFFBOARDING_CASE_FIELDS} }
+  }
+`;
+
+export const RECORD_EXIT_INTERVIEW = gql<
+  { recordExitInterview: OffboardingCaseT },
+  { caseId: string; reason?: string | null; feedback?: string | null }
+>`
+  mutation RecordExitInterview($caseId: String!, $reason: String, $feedback: String) {
+    recordExitInterview(caseId: $caseId, reason: $reason, feedback: $feedback) { ${OFFBOARDING_CASE_FIELDS} }
+  }
+`;
+
+export const ISSUE_SERVICE_CERTIFICATE = gql<{ issueServiceCertificate: OffboardingCaseT }, { caseId: string }>`
+  mutation IssueServiceCertificate($caseId: String!) {
+    issueServiceCertificate(caseId: $caseId) { ${OFFBOARDING_CASE_FIELDS} }
+  }
+`;
+
+export const CANCEL_OFFBOARDING = gql<{ cancelOffboarding: OffboardingCaseT }, { caseId: string }>`
+  mutation CancelOffboarding($caseId: String!) {
+    cancelOffboarding(caseId: $caseId) { ${OFFBOARDING_CASE_FIELDS} }
+  }
+`;

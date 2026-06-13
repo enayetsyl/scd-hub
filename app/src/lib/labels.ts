@@ -69,6 +69,15 @@ import {
   PAY_ADDITION_TYPE_LABELS_EN,
   ADVANCE_STATUS_LABELS_BN,
   ADVANCE_STATUS_LABELS_EN,
+  OFFBOARDING_TRIGGER_LABELS_BN,
+  OFFBOARDING_TRIGGER_LABELS_EN,
+  OFFBOARDING_STATUS_LABELS_BN,
+  OFFBOARDING_STATUS_LABELS_EN,
+  CLEARANCE_ITEM_STATUS_LABELS_BN,
+  CLEARANCE_ITEM_STATUS_LABELS_EN,
+  type OffboardingTrigger,
+  type OffboardingStatus,
+  type ClearanceItemStatus,
   type LeaveType,
   type LeaveStatus,
   type CoverSlotStatus,
@@ -329,6 +338,16 @@ export const advanceStatusLabel = (v?: string | null): string =>
 
 /** Taka amount with localized digits (integers plain; fractions to 2dp). */
 export const money = (n: number): string => `৳ ${bnNum(Number.isInteger(n) ? n : n.toFixed(2))}`;
+
+// HR — offboarding (HR-5; prd-hr §6)
+export const offboardingTriggerLabel = (v?: string | null): string =>
+  (v && pick(OFFBOARDING_TRIGGER_LABELS_BN, OFFBOARDING_TRIGGER_LABELS_EN)[v as OffboardingTrigger]) || v || DASH;
+
+export const offboardingStatusLabel = (v?: string | null): string =>
+  (v && pick(OFFBOARDING_STATUS_LABELS_BN, OFFBOARDING_STATUS_LABELS_EN)[v as OffboardingStatus]) || v || DASH;
+
+export const clearanceItemStatusLabel = (v?: string | null): string =>
+  (v && pick(CLEARANCE_ITEM_STATUS_LABELS_BN, CLEARANCE_ITEM_STATUS_LABELS_EN)[v as ClearanceItemStatus]) || v || DASH;
 
 /** "নম্বর X–Y এর মধ্যে দিন।" / "Enter a mark between X and Y." (TrackerEntry). */
 export const markRangeMsg = (min: number, max: number): string =>
@@ -1332,6 +1351,59 @@ const STR_BN = {
   hrCpdActivity: "কার্যক্রম",
   hrCpdDate: "তারিখ (ঐচ্ছিক)",
   hrCpdAdded: "CPD যোগ হয়েছে",
+
+  // --- HR PR-4: offboarding ---
+  hrOffboarding: "অফবোর্ডিং",
+  hrOffboardingSub: "প্রস্থান, ক্লিয়ারেন্স ও চূড়ান্ত নিষ্পত্তি",
+  hrInitiateOffboarding: "অফবোর্ডিং শুরু করুন",
+  hrTrigger: "কারণ",
+  hrLastWorkingDay: "শেষ কর্মদিবস",
+  hrNoticeDate: "নোটিশের তারিখ (ঐচ্ছিক)",
+  hrInitiate: "শুরু করুন",
+  hrOffboardingStarted: "অফবোর্ডিং শুরু হয়েছে",
+  hrNoCases: "কোনো অফবোর্ডিং কেস নেই।",
+  hrClearance: "ক্লিয়ারেন্স চেকলিস্ট",
+  hrClearanceAdd: "আইটেম যোগ করুন",
+  hrClearanceKey: "কী (কোড)",
+  hrClearanceLabel: "বিবরণ",
+  hrClearanceItemStatus: "অবস্থা",
+  hrClearanceItemSave: "আইটেম হালনাগাদ করুন",
+  hrClearanceNote: "নোট (ঐচ্ছিক)",
+  hrClearanceUpdated: "ক্লিয়ারেন্স হালনাগাদ হয়েছে",
+  hrClearanceItemAdded: "আইটেম যোগ হয়েছে",
+  hrAccess: "সিস্টেম অ্যাক্সেস",
+  hrAccessRevokedBadge: "অ্যাক্সেস বাতিল",
+  hrAccessActive: "অ্যাক্সেস সক্রিয়",
+  hrRevokeAccess: "এখনই অ্যাক্সেস বাতিল করুন",
+  hrAccessRevokedMsg: "অ্যাক্সেস বাতিল হয়েছে — লগইন নিষ্ক্রিয় + সব গ্রান্ট প্রত্যাহার",
+  hrGrantsRevoked: "প্রত্যাহৃত গ্রান্ট",
+  hrLoginDisabled: "লগইন নিষ্ক্রিয়",
+  hrSettlement: "চূড়ান্ত নিষ্পত্তি",
+  hrComputeSettlement: "নিষ্পত্তি গণনা করুন",
+  hrSettlementWorkingDays: "মাসের কর্মদিবস",
+  hrSettlementPayableDays: "প্রদেয় দিন (ঐচ্ছিক)",
+  hrSettlementArrears: "বকেয়া পরিমাণ (ঐচ্ছিক)",
+  hrSettlementArrearsNote: "বকেয়ার নোট (ঐচ্ছিক)",
+  hrCompute: "গণনা করুন",
+  hrSettlementComputed: "নিষ্পত্তি গণনা হয়েছে",
+  hrSettlementHeld: "আটকে রাখা — ক্লিয়ারেন্স অসম্পূর্ণ",
+  hrSettlementReleasedBadge: "মুক্ত হয়েছে",
+  hrReleaseSettlement: "নিষ্পত্তি মুক্ত করুন",
+  hrReleasedMsg: "চূড়ান্ত নিষ্পত্তি মুক্ত হয়েছে",
+  hrReleaseGated: "ক্লিয়ারেন্স সম্পূর্ণ হলে শুধু প্রধান শিক্ষক মুক্ত করতে পারেন।",
+  hrLeaveEncashDays: "ছুটি নগদায়ন (দিন)",
+  hrAdvanceRecovered: "অগ্রিম আদায়",
+  hrExitInterview: "প্রস্থান সাক্ষাৎকার",
+  hrExitReason: "কারণ",
+  hrExitFeedback: "মতামত",
+  hrExitSave: "সংরক্ষণ",
+  hrExitSaved: "সাক্ষাৎকার সংরক্ষিত হয়েছে",
+  hrServiceCert: "সার্ভিস সার্টিফিকেট",
+  hrIssueCert: "সার্টিফিকেট ইস্যু করুন",
+  hrCertIssued: "সার্টিফিকেট ইস্যু হয়েছে",
+  hrCertIssuedOn: "ইস্যু তারিখ",
+  hrCancelOffboarding: "অফবোর্ডিং বাতিল করুন",
+  hrOffboardingCancelled: "অফবোর্ডিং বাতিল হয়েছে",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -2325,6 +2397,59 @@ const STR_EN: StrTable = {
   hrCpdActivity: "Activity",
   hrCpdDate: "Date (optional)",
   hrCpdAdded: "CPD entry added",
+
+  // --- HR PR-4: offboarding ---
+  hrOffboarding: "Offboarding",
+  hrOffboardingSub: "Exit, clearance & final settlement",
+  hrInitiateOffboarding: "Initiate offboarding",
+  hrTrigger: "Trigger",
+  hrLastWorkingDay: "Last working day",
+  hrNoticeDate: "Notice date (optional)",
+  hrInitiate: "Initiate",
+  hrOffboardingStarted: "Offboarding started",
+  hrNoCases: "No offboarding cases.",
+  hrClearance: "Clearance checklist",
+  hrClearanceAdd: "Add item",
+  hrClearanceKey: "Key (code)",
+  hrClearanceLabel: "Label",
+  hrClearanceItemStatus: "Status",
+  hrClearanceItemSave: "Update item",
+  hrClearanceNote: "Note (optional)",
+  hrClearanceUpdated: "Clearance updated",
+  hrClearanceItemAdded: "Item added",
+  hrAccess: "System access",
+  hrAccessRevokedBadge: "Access revoked",
+  hrAccessActive: "Access active",
+  hrRevokeAccess: "Revoke access now",
+  hrAccessRevokedMsg: "Access revoked — login disabled + all grants withdrawn",
+  hrGrantsRevoked: "Grants revoked",
+  hrLoginDisabled: "Login disabled",
+  hrSettlement: "Final settlement",
+  hrComputeSettlement: "Compute settlement",
+  hrSettlementWorkingDays: "Working days in month",
+  hrSettlementPayableDays: "Payable days (optional)",
+  hrSettlementArrears: "Arrears amount (optional)",
+  hrSettlementArrearsNote: "Arrears note (optional)",
+  hrCompute: "Compute",
+  hrSettlementComputed: "Settlement computed",
+  hrSettlementHeld: "Held — clearance incomplete",
+  hrSettlementReleasedBadge: "Released",
+  hrReleaseSettlement: "Release settlement",
+  hrReleasedMsg: "Final settlement released",
+  hrReleaseGated: "Only the Principal can release, once clearance is complete.",
+  hrLeaveEncashDays: "Leave encashment (days)",
+  hrAdvanceRecovered: "Advance recovered",
+  hrExitInterview: "Exit interview",
+  hrExitReason: "Reason",
+  hrExitFeedback: "Feedback",
+  hrExitSave: "Save",
+  hrExitSaved: "Interview saved",
+  hrServiceCert: "Service certificate",
+  hrIssueCert: "Issue certificate",
+  hrCertIssued: "Certificate issued",
+  hrCertIssuedOn: "Issued on",
+  hrCancelOffboarding: "Cancel offboarding",
+  hrOffboardingCancelled: "Offboarding cancelled",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use
