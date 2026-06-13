@@ -30,6 +30,10 @@ import "./modules/attendance/resolvers/studentAttendance";
 import "./modules/attendance/resolvers/push";
 import "./modules/guardian/resolvers/guardianPortal";
 import "./modules/notifications/resolvers/notifications";
+import "./modules/library/resolvers/library";
+import "./modules/library/resolvers/circulation";
+import "./modules/library/resolvers/chase";
+import "./modules/library/resolvers/libraryGuardian";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";

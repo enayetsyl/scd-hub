@@ -179,6 +179,38 @@ describe("Assignment-tracker firewall (ADR-005 / D-#85)", () => {
   });
 });
 
+/**
+ * Library firewall (LB-1..LB-5, D-#81–#84 / prd-library §9).
+ *
+ * Every library row (a child's reading record included) is identity-plane
+ * (ADR-005). Fail-closed both ways: the library module must have NO import
+ * path into the corpus plane, and the corpus module must have NO import path
+ * into the library module (no analytics/export join back to who read what).
+ */
+describe("Library firewall (ADR-005 / D-#81)", () => {
+  const libraryDir = path.resolve(__dirname, "../modules/library");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("library module has NO import from the corpus plane", () => {
+    const files = walkDir(libraryDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (LB-1 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the library module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/library"));
+      expect(content).not.toMatch(importPattern("models/BookLoan"));
+      expect(content).not.toMatch(importPattern("models/BookReservation"));
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;

@@ -23,6 +23,7 @@ import type {
   ReviewStackParamList,
   RoutineStackParamList,
   AttendanceStackParamList,
+  LibraryStackParamList,
   AdminStackParamList,
   GuardianHomeStackParamList,
   GuardianHomeworkStackParamList,
@@ -79,6 +80,11 @@ import MarkAttendanceScreen from "../screens/attendance/MarkAttendanceScreen";
 import TeacherAttendanceImportScreen from "../screens/attendance/TeacherAttendanceImportScreen";
 import AttendanceReportScreen from "../screens/attendance/AttendanceReportScreen";
 import AssignMarkerScreen from "../screens/attendance/AssignMarkerScreen";
+import LibraryHomeScreen from "../screens/library/LibraryHomeScreen";
+import TitleDetailScreen from "../screens/library/TitleDetailScreen";
+import LibraryDeskScreen from "../screens/library/LibraryDeskScreen";
+import CatalogManageScreen from "../screens/library/CatalogManageScreen";
+import LibraryAdminScreen from "../screens/library/LibraryAdminScreen";
 import SectionPickerScreen from "../screens/common/SectionPickerScreen";
 import AdminHomeScreen from "../screens/admin/AdminHomeScreen";
 import ImportScreen from "../screens/admin/ImportScreen";
@@ -298,6 +304,20 @@ function AttendanceNavigator(): React.ReactElement {
   );
 }
 
+const LibraryStack = createNativeStackNavigator<LibraryStackParamList>();
+function LibraryNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <LibraryStack.Navigator screenOptions={stackOptions}>
+      <LibraryStack.Screen name="LibraryHome" component={LibraryHomeScreen} options={{ title: STR.tabLibrary }} />
+      <LibraryStack.Screen name="TitleDetail" component={TitleDetailScreen} options={{ title: STR.libTitleDetail }} />
+      <LibraryStack.Screen name="LibraryDesk" component={LibraryDeskScreen} options={{ title: STR.libDesk }} />
+      <LibraryStack.Screen name="CatalogManage" component={CatalogManageScreen} options={{ title: STR.libCatalogManage }} />
+      <LibraryStack.Screen name="LibraryAdmin" component={LibraryAdminScreen} options={{ title: STR.libAdmin }} />
+    </LibraryStack.Navigator>
+  );
+}
+
 const AdminStack = createNativeStackNavigator<AdminStackParamList>();
 function AdminNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -385,6 +405,7 @@ export function AppTabs(): React.ReactElement {
   const canRoutine = !!role && roleHasPermission(role, "routine:read");
   const canAttendance =
     !!role && (roleHasPermission(role, "attendance:mark") || roleHasPermission(role, "attendance:manage"));
+  const canLibrary = !!role && roleHasPermission(role, "library:read");
   const canAdmin = !!role && (roleHasPermission(role, "content:import") || roleHasPermission(role, "user:manage"));
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
@@ -431,6 +452,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canAttendance ? (
         <Tab.Screen name="AttendanceTab" component={AttendanceNavigator} options={{ title: STR.tabAttendance, tabBarIcon: tabIcon("🙋") }} />
+      ) : null}
+      {canLibrary ? (
+        <Tab.Screen name="LibraryTab" component={LibraryNavigator} options={{ title: STR.tabLibrary, tabBarIcon: tabIcon("📖") }} />
       ) : null}
       {canAdmin ? (
         <Tab.Screen name="AdminTab" component={AdminNavigator} options={{ title: STR.tabAdmin, tabBarIcon: tabIcon("⚙️") }} />

@@ -13,11 +13,12 @@ import {
   CHILD_CLASS_NOTES_QUERY,
   CHILD_HOMEWORK_QUERY,
   CHILD_DAY_LOAD_QUERY,
+  CHILD_LIBRARY_LOANS_QUERY,
 } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Badge, Notice, Loader, EmptyState } from "../../components/ui";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
-import { STR, bnNum } from "../../lib/labels";
+import { STR, bnNum, loanStatusLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
 const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
@@ -55,6 +56,11 @@ export default function GuardianHomeScreen(): React.ReactElement {
   const [loadQ] = useQuery({
     query: CHILD_DAY_LOAD_QUERY,
     variables: { studentId: sid, date },
+    pause: !selected,
+  });
+  const [libraryQ] = useQuery({
+    query: CHILD_LIBRARY_LOANS_QUERY,
+    variables: { studentId: sid },
     pause: !selected,
   });
 
@@ -174,6 +180,47 @@ export default function GuardianHomeScreen(): React.ReactElement {
                   <Muted>{r.hwId}</Muted>
                 </View>
                 <Badge text={r.stateLabelBn} tone={r.state === "CHASE" ? "danger" : "brand"} />
+              </View>
+            ))
+          )}
+        </Card>
+
+        {/* Library loans — read-only child-loans card (LB-5 rider, J-L9; D-#68:
+            no reserve/renew control exists for guardians) */}
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.gpLibraryLoans}</Body>
+          {libraryQ.fetching ? (
+            <Loader label={STR.loading} />
+          ) : (libraryQ.data?.childLibraryLoans ?? []).length === 0 ? (
+            <Muted style={{ marginTop: space(2) }}>{STR.gpNoLibraryLoans}</Muted>
+          ) : (
+            (libraryQ.data?.childLibraryLoans ?? []).map((loan) => (
+              <View
+                key={loan.id}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: space(2),
+                }}
+              >
+                <View style={{ flexShrink: 1 }}>
+                  <Body>{loan.titleBn ?? loan.accessionNo ?? "—"}</Body>
+                  <Muted>
+                    {loan.status === "ACTIVE"
+                      ? `${STR.libDue}: ${new Date(loan.dueDate).toLocaleDateString()}`
+                      : loan.returnedAt
+                        ? `${loanStatusLabel(loan.status)}: ${new Date(loan.returnedAt).toLocaleDateString()}`
+                        : loanStatusLabel(loan.status)}
+                  </Muted>
+                </View>
+                {loan.overdue ? (
+                  <Badge text={STR.libOverdue} tone="danger" />
+                ) : loan.status === "ACTIVE" ? (
+                  <Badge text={loanStatusLabel(loan.status)} tone="brand" />
+                ) : (
+                  <Badge text={loanStatusLabel(loan.status)} tone="muted" />
+                )}
               </View>
             ))
           )}

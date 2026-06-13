@@ -97,6 +97,15 @@ export type GuardianAssignmentsStackParamList = {
   ChildAssignments: undefined;
 };
 
+/** Library (LB-4, D-#81–#84). */
+export type LibraryStackParamList = {
+  LibraryHome: undefined;
+  TitleDetail: { titleId: string };
+  LibraryDesk: undefined;
+  CatalogManage: undefined;
+  LibraryAdmin: undefined;
+};
+
 export type AdminStackParamList = {
   AdminHome: undefined;
   Import: undefined;
@@ -121,6 +130,7 @@ export type TabParamList = {
   ReviewTab: NavigatorScreenParams<ReviewStackParamList>;
   RoutineTab: NavigatorScreenParams<RoutineStackParamList>;
   AttendanceTab: NavigatorScreenParams<AttendanceStackParamList>;
+  LibraryTab: NavigatorScreenParams<LibraryStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;
   GuardianHomeworkTab: NavigatorScreenParams<GuardianHomeworkStackParamList>;

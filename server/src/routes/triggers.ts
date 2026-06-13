@@ -17,6 +17,7 @@ import {
   dispatchAttendanceReminders,
   AttendanceReminderError,
 } from "../modules/attendance/services/AttendanceReminderService";
+import { dispatchLibraryReminders } from "../modules/library/services/LibraryReminderService";
 import { ATTENDANCE_REMINDER_TIERS, type AttendanceReminderTier } from "@scd/shared";
 
 export const triggersRouter: Router = createRouter();
@@ -50,6 +51,30 @@ triggersRouter.post("/attendance-reminder", async (req, res) => {
       return;
     }
     console.error("[triggers] attendance-reminder failed:", e);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+/**
+ * POST /triggers/library-reminder (LB-5, D-#84) — one due-soon/overdue
+ * dispatcher pass over the D-#72 emit() seam. Idempotent (dedupeKeys), so the
+ * external scheduler may call it daily (or more) — same posture as the
+ * attendance trigger; same shared secret (one scheduler identity). When the
+ * D-#73 in-process ticker (N-2) lands it should call
+ * `dispatchLibraryReminders` directly — never a second dispatch truth.
+ */
+triggersRouter.post("/library-reminder", async (req, res) => {
+  const secret = process.env.ATTENDANCE_TRIGGER_SECRET;
+  const provided = req.header("x-trigger-secret");
+  if (!secret || provided !== secret) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    const summary = await dispatchLibraryReminders();
+    res.json({ ok: true, ...summary });
+  } catch (e) {
+    console.error("[triggers] library-reminder failed:", e);
     res.status(500).json({ error: "Internal error" });
   }
 });

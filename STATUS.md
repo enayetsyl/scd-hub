@@ -1,8 +1,41 @@
 # STATUS
 
-_Updated: 2026-06-13 (Assignment Tracker AS-T1..T5 built, server+app)_
+_Updated: 2026-06-13 (Assignment Tracker AS-T1..T5 + Library module LB-1..LB-5 built)_
 
 ## Now / next
+- **Built (Library module — catalog + circulation + reservations + overdue chasing, LB-1..LB-5,
+  D-#81–#84 + build rulings D-#96/#97) [branch `worktree-library`]:** the full prd-library contract,
+  server+app. **LB-1:** app-native vocab (`library:read` P/T/O + `library:manage` P/O; BORROWER_TYPES/
+  COPY_STATUSES/LOAN_STATUSES/RESERVATION_STATUSES/BOOK_LANGUAGES + BN/EN; verifier §C.6, no wire sync);
+  BookTitle/BookCopy (unique accessionNo)/LibraryPolicy/LibrarianAssignment (append-only duty log);
+  `assertIsLibrarian` (library:manage OR latest duty row = assign — D-#42/#64 pattern, NO new role);
+  catalog resolvers + availability computed from copies. **Policy = admin data with READ-TIME defaults**
+  (7/2/1/3 student · 14/4/2/3 staff · 7/2/1/3 guardian · hold 3) — no seed write against the shared live
+  DB (D-#97); Principal edits in-app (LibraryAdmin). **LB-2:** issue (by accession; ON_HOLD only to its
+  READY borrower) / return / renew (blocked at maxRenewals OR any QUEUED/READY reservation) / markLost
+  (replacement note only — NO money fields anywhere, D-#27); per-type maxConcurrent + loanDays from
+  policy; desk mutations gated assertIsLibrarian. **LB-3:** title-level FIFO reservations; return → copy
+  ON_HOLD + head READY with holdDays window; **lazy request-time expiry is the ONE truth**
+  (`expireLapsedHolds`, D-#21/#83 — every touch runs it; a future N-2 sweep calls the same fn); staff
+  self-reserve + desk on-behalf; duplicate/holding-borrower rejected. **LB-4:** new 📖 **Library tab**
+  (`library:read`; 📚 was taken by Content) — LibraryHome (search/browse + my loans/reservations +
+  librarian chase list; desk/manage entries gated by amILibrarian / library:manage), TitleDetail (copies
+  + self-reserve + FIFO queue), LibraryDesk (borrower picker via new librarian-gated
+  `libraryBorrowerSearch` + issue/return/renew/lost + desk reservations), CatalogManage, LibraryAdmin
+  (policy editor + librarian assign/revoke + duty history). **LB-5:** chase list (`libraryChaseList` —
+  overdue grouped by borrower type, family/guardian phone + ADR-003 wa.me Bangla links, staff chased
+  in-app, works with zero notification infra) + NOTIFICATION_KINDS += LIBRARY_DUE_SOON/LIBRARY_OVERDUE
+  riding the **merged D-#72 emit() seam** (due-tomorrow once; overdue on school-day rungs 1/4/7… via
+  `resolveDayType`; STUDENT borrower → login-enabled linked guardians; contact-only guardians stay
+  wa.me-only) dispatched by **POST /triggers/library-reminder** (AT-4 external-scheduler pattern, same
+  shared secret, idempotent — D-#96; N-2's ticker should call the same `dispatchLibraryReminders`) +
+  guardian rider `childLibraryLoans` (assertGuardianOfStudent, narrow read-only type; loans card on
+  GuardianHome — no guardian mutations). Audit: 8 new BOOK_*/RESERVATION_*/LIBRARIAN_ASSIGNED/
+  LIBRARY_CATALOG_CHANGED kinds. Firewall test extended both ways (corpus ⇄ library). **Gate GREEN
+  (executed):** vocab verifier PASS, shared+server tsc clean, **jest 532/532** (32 suites; 73 new),
+  app tsc clean + expo web export green. **Not verified live.** Open items unchanged from the PRD:
+  possible `import-books` ingest if a register spreadsheet exists (Principal to confirm); policy
+  figures are working values until the Principal edits them in-app.
 - **Built (Slice-4 follow-ups — server lookups + app wiring):** `myScopes` enriched
   (class/section/subject ids + proxy detail), new `users` + `proxyGrants` queries (existing
   `user:manage`, no permission change); SectionPicker my-sections shortcuts, UserList real list,
@@ -102,8 +135,8 @@ _Updated: 2026-06-13 (Assignment Tracker AS-T1..T5 built, server+app)_
   (`library:read`/`library:manage` + BORROWER_TYPES/COPY_STATUSES/LOAN_STATUSES/RESERVATION_STATUSES/
   BOOK_LANGUAGES + BN) — no wire sync; verifier extends at build time. Open items: possible
   `import-books` ingest if a register spreadsheet exists (Principal to confirm); seed figures are
-  working values. **Plan/docs only — no feature code yet. Next = build LB-1 per docs/prd-library.md §6,
-  slice order.** (Handoff proposed D-#80–#83 — renumbered; D-#80 is taken by roll-number=ID.)
+  working values. **BUILT 2026-06-13 (LB-1..LB-5 complete, server+app) — see the "Built (Library
+  module …)" bullet above.** (Handoff proposed D-#80–#83 — renumbered; D-#80 is taken by roll-number=ID.)
 - **Built (Attendance AT-4 — reminder + escalation engine, D-#65):** server + app on branch
   `feat/attendance-at4` (PR open). The attendance module is now AT-1..AT-5 complete (general Section flow).
   New `PushDevice` (Expo tokens per User, reusable) + `AttendanceReminderDispatch` (idempotency ledger,

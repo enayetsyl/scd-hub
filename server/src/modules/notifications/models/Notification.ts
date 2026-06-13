@@ -33,6 +33,10 @@ export interface NotificationRefs {
   artifactId?: string;
   /** Cover assigned (deep-link: MyRoutine). */
   substitutionId?: string;
+  /** Library due-soon/overdue reminders (deep-link: LibraryHome; LB-5, D-#84). */
+  loanId?: string;
+  /** Overdue ladder rung (1 = first school day after due, then every 3rd). */
+  rung?: number;
 }
 
 export interface INotification extends Document {
@@ -66,6 +70,8 @@ const RefsSchema = new Schema<NotificationRefs>(
     reviewAssignmentId: { type: String },
     artifactId: { type: String },
     substitutionId: { type: String },
+    loanId: { type: String },
+    rung: { type: Number },
   },
   { _id: false },
 );
