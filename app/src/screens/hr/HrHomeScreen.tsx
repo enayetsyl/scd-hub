@@ -19,6 +19,8 @@ type Props = NativeStackScreenProps<HrStackParamList, "HrHome">;
 export default function HrHomeScreen({ navigation }: Props): React.ReactElement {
   const { role } = useAuth();
   const canLeaveManage = !!role && roleHasPermission(role, "leave:manage");
+  const canPayroll = !!role && roleHasPermission(role, "payroll:manage");
+  const showAdmin = canLeaveManage || canPayroll;
 
   return (
     <Screen scroll>
@@ -34,14 +36,18 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
         <Muted>{STR.hrMyRecordSub}</Muted>
       </Card>
 
+      {showAdmin ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.hrAdmin}</Muted> : null}
       {canLeaveManage ? (
-        <>
-          <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.hrAdmin}</Muted>
-          <Card onPress={() => navigation.navigate("LeaveAdmin")}>
-            <Body style={{ fontWeight: "700" }}>{STR.hrLeaveAdmin}</Body>
-            <Muted>{STR.hrLeaveAdminSub}</Muted>
-          </Card>
-        </>
+        <Card onPress={() => navigation.navigate("LeaveAdmin")}>
+          <Body style={{ fontWeight: "700" }}>{STR.hrLeaveAdmin}</Body>
+          <Muted>{STR.hrLeaveAdminSub}</Muted>
+        </Card>
+      ) : null}
+      {canPayroll ? (
+        <Card onPress={() => navigation.navigate("PayrollHome")}>
+          <Body style={{ fontWeight: "700" }}>{STR.hrPayroll}</Body>
+          <Muted>{STR.hrPayrollSub}</Muted>
+        </Card>
       ) : null}
     </Screen>
   );

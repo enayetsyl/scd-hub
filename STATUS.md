@@ -3,6 +3,20 @@
 _Updated: 2026-06-13 (Vocabulary Tracker VC-1 built — server, PR #55 open [first slice of the new vocab module]; Class Test Tracker PRD added D-#119–#122. HR-5 PR #54 + Messaging M-6+M-7 app pass PR #53 merged [**HR + messaging both COMPLETE**]. In flight: HR-app #135+)_
 
 ## Now / next
+- **Built (HR app PR-2 — payroll surfaces, Expo, APP-ONLY, D-#135) [branch `worktree-hr-app-payroll`
+  stacked on PR-1, PR open — coordinator reviews]:** the second HR app-surface PR (consumes the HR-3
+  payroll resolvers; NO server/vocab/contract change). Adds to the Staff/HR hub a **Payroll** entry
+  (`payroll:manage`): `PayrollHomeScreen` (run list + links) → `PreparePayrollScreen` (`preparePayrollRun`
+  month/working-days/note) → `PayrollRunDetailScreen` (`payslipsForRun` itemised net = gross − deductions +
+  additions; **Approve+lock is PRINCIPAL-only — `payroll:approve`, button hidden for Office** with an info
+  note; Cancel for `payroll:manage`) → `PaymentExportScreen` (`payrollPaymentExport`, locked run, cash
+  excluded); `StaffPayScreen` (`setStaffPay` salary + method — set-and-confirm since the pay row isn't in
+  the `staff` read); `AdvancesScreen` (`staffAdvances` list + qard-hasan `issueStaffAdvance`/
+  `settleStaffAdvance` — **Principal-only controls gated `payroll:approve`**). New `paymentMethod`/
+  `payrollRunStatus`/`payDeduction`/`payAddition`/`advanceStatus` label helpers + `money()` + BN/EN STR.
+  **Gate GREEN (executed):** app tsc clean + expo web export green (717 modules); vocab PASS + no
+  server/shared/contract drift + **jest 853/853 unchanged**. **Not verified live.** **Next = PR-3
+  (performance/conduct/development)** → PR-4 offboarding.
 - **Built (HR app PR-1 — Staff/HR tab + leave + staff self-service, Expo, APP-ONLY, D-#135)
   [branch `worktree-hr-app-leave`, PR open — coordinator reviews]:** the first of four HR app-surface
   PRs over the now-complete HR-1..HR-5 server module (which was server-only by HR precedent). **NO

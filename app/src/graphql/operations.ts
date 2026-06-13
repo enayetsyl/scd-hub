@@ -3815,3 +3815,160 @@ export const MY_OBSERVATIONS_QUERY = gql<{ myObservations: ObservationT[] }, NoV
     myObservations { ${OBSERVATION_FIELDS} }
   }
 `;
+
+// ===========================================================================
+// HR app surfaces — Payroll (PR-2; prd-hr §4, H4, D-#26/#27/#109/#110)
+// payroll:manage prepares/reads; payroll:approve (PRINCIPAL only) locks +
+// issues/settles advances. APP-ONLY; consumes existing resolvers.
+// ===========================================================================
+
+export interface StaffPayT {
+  id: string;
+  monthlySalary: number | null;
+  paymentMethod: string | null;
+}
+
+export const SET_STAFF_PAY = gql<
+  { setStaffPay: StaffPayT },
+  { staffProfileId: string; monthlySalary?: number | null; paymentMethod?: string | null }
+>`
+  mutation SetStaffPay($staffProfileId: String!, $monthlySalary: Float, $paymentMethod: String) {
+    setStaffPay(staffProfileId: $staffProfileId, monthlySalary: $monthlySalary, paymentMethod: $paymentMethod) {
+      id monthlySalary paymentMethod
+    }
+  }
+`;
+
+export interface PayrollRunT {
+  id: string;
+  monthKey: string;
+  status: string;
+  workingDays: number;
+  preparedAt: string;
+  approvedAt: string | null;
+  note: string | null;
+}
+
+const PAYROLL_RUN_FIELDS = `id monthKey status workingDays preparedAt approvedAt note`;
+
+export const PAYROLL_RUNS_QUERY = gql<{ payrollRuns: PayrollRunT[] }, NoVars>`
+  query PayrollRuns {
+    payrollRuns { ${PAYROLL_RUN_FIELDS} }
+  }
+`;
+
+export const PREPARE_PAYROLL_RUN = gql<
+  { preparePayrollRun: PayrollRunT },
+  { monthKey: string; workingDays: number; note?: string | null }
+>`
+  mutation PreparePayrollRun($monthKey: String!, $workingDays: Int!, $note: String) {
+    preparePayrollRun(monthKey: $monthKey, workingDays: $workingDays, note: $note) { ${PAYROLL_RUN_FIELDS} }
+  }
+`;
+
+export const APPROVE_PAYROLL_RUN = gql<{ approvePayrollRun: PayrollRunT }, { runId: string }>`
+  mutation ApprovePayrollRun($runId: String!) {
+    approvePayrollRun(runId: $runId) { ${PAYROLL_RUN_FIELDS} }
+  }
+`;
+
+export const CANCEL_PAYROLL_RUN = gql<{ cancelPayrollRun: PayrollRunT }, { runId: string }>`
+  mutation CancelPayrollRun($runId: String!) {
+    cancelPayrollRun(runId: $runId) { ${PAYROLL_RUN_FIELDS} }
+  }
+`;
+
+export interface PayLineT {
+  type: string;
+  amount: number;
+  days: number | null;
+  note: string | null;
+}
+
+export interface PayslipT {
+  id: string;
+  payrollRunId: string;
+  staffProfileId: string;
+  monthKey: string;
+  snapshotName: string;
+  category: string;
+  paymentMethod: string | null;
+  grossSalary: number;
+  dayRate: number;
+  unpaidLeaveDays: number;
+  deductions: PayLineT[];
+  additions: PayLineT[];
+  totalDeductions: number;
+  totalAdditions: number;
+  netPay: number;
+  advanceRepaid: number;
+}
+
+export const PAYSLIPS_FOR_RUN_QUERY = gql<{ payslipsForRun: PayslipT[] }, { runId: string }>`
+  query PayslipsForRun($runId: String!) {
+    payslipsForRun(runId: $runId) {
+      id payrollRunId staffProfileId monthKey snapshotName category paymentMethod
+      grossSalary dayRate unpaidLeaveDays
+      deductions { type amount days note }
+      additions { type amount days note }
+      totalDeductions totalAdditions netPay advanceRepaid
+    }
+  }
+`;
+
+export interface PaymentExportRowT {
+  staffProfileId: string;
+  name: string;
+  paymentMethod: string;
+  account: string | null;
+  netPay: number;
+}
+
+export const PAYROLL_PAYMENT_EXPORT_QUERY = gql<
+  { payrollPaymentExport: PaymentExportRowT[] },
+  { runId: string }
+>`
+  query PayrollPaymentExport($runId: String!) {
+    payrollPaymentExport(runId: $runId) { staffProfileId name paymentMethod account netPay }
+  }
+`;
+
+export interface AdvanceLoanT {
+  id: string;
+  staffProfileId: string;
+  principal: number;
+  balance: number;
+  recoveryMode: string;
+  installmentAmount: number | null;
+  status: string;
+  issueDate: string;
+  note: string | null;
+}
+
+const ADVANCE_FIELDS = `id staffProfileId principal balance recoveryMode installmentAmount status issueDate note`;
+
+export const STAFF_ADVANCES_QUERY = gql<{ staffAdvances: AdvanceLoanT[] }, { staffProfileId: string }>`
+  query StaffAdvances($staffProfileId: String!) {
+    staffAdvances(staffProfileId: $staffProfileId) { ${ADVANCE_FIELDS} }
+  }
+`;
+
+export const ISSUE_STAFF_ADVANCE = gql<
+  { issueStaffAdvance: AdvanceLoanT },
+  { staffProfileId: string; principal: number; issueDate: string; recoveryMode: string; installmentAmount?: number | null; note?: string | null }
+>`
+  mutation IssueStaffAdvance($staffProfileId: String!, $principal: Float!, $issueDate: String!, $recoveryMode: String!, $installmentAmount: Float, $note: String) {
+    issueStaffAdvance(staffProfileId: $staffProfileId, principal: $principal, issueDate: $issueDate, recoveryMode: $recoveryMode, installmentAmount: $installmentAmount, note: $note) {
+      ${ADVANCE_FIELDS}
+    }
+  }
+`;
+
+export const SETTLE_STAFF_ADVANCE = gql<
+  { settleStaffAdvance: AdvanceLoanT },
+  { advanceId: string; writeOff?: boolean | null }
+>`
+  mutation SettleStaffAdvance($advanceId: String!, $writeOff: Boolean) {
+    settleStaffAdvance(advanceId: $advanceId, writeOff: $writeOff) { ${ADVANCE_FIELDS} }
+  }
+`;

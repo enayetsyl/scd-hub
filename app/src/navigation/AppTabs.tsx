@@ -101,6 +101,12 @@ import MyLeaveScreen from "../screens/hr/MyLeaveScreen";
 import MyRecordScreen from "../screens/hr/MyRecordScreen";
 import LeaveCoverScreen from "../screens/hr/LeaveCoverScreen";
 import LeaveAdminScreen from "../screens/hr/LeaveAdminScreen";
+import PayrollHomeScreen from "../screens/hr/PayrollHomeScreen";
+import PreparePayrollScreen from "../screens/hr/PreparePayrollScreen";
+import PayrollRunDetailScreen from "../screens/hr/PayrollRunDetailScreen";
+import PaymentExportScreen from "../screens/hr/PaymentExportScreen";
+import StaffPayScreen from "../screens/hr/StaffPayScreen";
+import AdvancesScreen from "../screens/hr/AdvancesScreen";
 import SectionPickerScreen from "../screens/common/SectionPickerScreen";
 import AdminHomeScreen from "../screens/admin/AdminHomeScreen";
 import ImportScreen from "../screens/admin/ImportScreen";
@@ -416,6 +422,16 @@ function HrNavigator(): React.ReactElement {
         options={({ route }) => ({ title: route.params.title || STR.hrCoverTitle })}
       />
       <HrStack.Screen name="LeaveAdmin" component={LeaveAdminScreen} options={{ title: STR.hrLeaveAdmin }} />
+      <HrStack.Screen name="PayrollHome" component={PayrollHomeScreen} options={{ title: STR.hrPayroll }} />
+      <HrStack.Screen name="PreparePayroll" component={PreparePayrollScreen} options={{ title: STR.hrPrepareRun }} />
+      <HrStack.Screen
+        name="PayrollRunDetail"
+        component={PayrollRunDetailScreen}
+        options={({ route }) => ({ title: route.params.monthKey || STR.hrPayrollRuns })}
+      />
+      <HrStack.Screen name="PaymentExport" component={PaymentExportScreen} options={{ title: STR.hrPaymentExport }} />
+      <HrStack.Screen name="StaffPay" component={StaffPayScreen} options={{ title: STR.hrStaffPay }} />
+      <HrStack.Screen name="Advances" component={AdvancesScreen} options={{ title: STR.hrAdvances }} />
     </HrStack.Navigator>
   );
 }

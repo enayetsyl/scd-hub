@@ -59,6 +59,16 @@ import {
   APPRAISAL_OUTCOME_LABELS_EN,
   GRIEVANCE_STATUS_LABELS_BN,
   GRIEVANCE_STATUS_LABELS_EN,
+  PAYMENT_METHOD_LABELS_BN,
+  PAYMENT_METHOD_LABELS_EN,
+  PAYROLL_RUN_STATUS_LABELS_BN,
+  PAYROLL_RUN_STATUS_LABELS_EN,
+  PAY_DEDUCTION_TYPE_LABELS_BN,
+  PAY_DEDUCTION_TYPE_LABELS_EN,
+  PAY_ADDITION_TYPE_LABELS_BN,
+  PAY_ADDITION_TYPE_LABELS_EN,
+  ADVANCE_STATUS_LABELS_BN,
+  ADVANCE_STATUS_LABELS_EN,
   type LeaveType,
   type LeaveStatus,
   type CoverSlotStatus,
@@ -67,6 +77,11 @@ import {
   type AppraisalStatus,
   type AppraisalOutcome,
   type GrievanceStatus,
+  type PaymentMethod,
+  type PayrollRunStatus,
+  type PayDeductionType,
+  type PayAdditionType,
+  type AdvanceStatus,
   HW_SUBJECT_LABELS_BN,
   HW_SUBJECT_LABELS_EN,
   LIFECYCLE_STATE_LABELS_BN,
@@ -295,6 +310,25 @@ export const appraisalOutcomeLabel = (v?: string | null): string =>
 
 export const grievanceStatusLabel = (v?: string | null): string =>
   (v && pick(GRIEVANCE_STATUS_LABELS_BN, GRIEVANCE_STATUS_LABELS_EN)[v as GrievanceStatus]) || v || DASH;
+
+// HR — payroll (HR-3; prd-hr §4)
+export const paymentMethodLabel = (v?: string | null): string =>
+  (v && pick(PAYMENT_METHOD_LABELS_BN, PAYMENT_METHOD_LABELS_EN)[v as PaymentMethod]) || v || DASH;
+
+export const payrollRunStatusLabel = (v?: string | null): string =>
+  (v && pick(PAYROLL_RUN_STATUS_LABELS_BN, PAYROLL_RUN_STATUS_LABELS_EN)[v as PayrollRunStatus]) || v || DASH;
+
+export const payDeductionTypeLabel = (v?: string | null): string =>
+  (v && pick(PAY_DEDUCTION_TYPE_LABELS_BN, PAY_DEDUCTION_TYPE_LABELS_EN)[v as PayDeductionType]) || v || DASH;
+
+export const payAdditionTypeLabel = (v?: string | null): string =>
+  (v && pick(PAY_ADDITION_TYPE_LABELS_BN, PAY_ADDITION_TYPE_LABELS_EN)[v as PayAdditionType]) || v || DASH;
+
+export const advanceStatusLabel = (v?: string | null): string =>
+  (v && pick(ADVANCE_STATUS_LABELS_BN, ADVANCE_STATUS_LABELS_EN)[v as AdvanceStatus]) || v || DASH;
+
+/** Taka amount with localized digits (integers plain; fractions to 2dp). */
+export const money = (n: number): string => `৳ ${bnNum(Number.isInteger(n) ? n : n.toFixed(2))}`;
 
 /** "নম্বর X–Y এর মধ্যে দিন।" / "Enter a mark between X and Y." (TrackerEntry). */
 export const markRangeMsg = (min: number, max: number): string =>
@@ -1199,6 +1233,54 @@ const STR_BN = {
   hrNoStaff: "কোনো কর্মী নেই",
   hrApplicant: "আবেদনকারী",
   hrYear: "শিক্ষাবর্ষ",
+
+  // --- HR PR-2: payroll ---
+  hrPayroll: "বেতন",
+  hrPayrollSub: "মাসিক রান, পে-স্লিপ ও অগ্রিম",
+  hrPayrollRuns: "বেতন রান",
+  hrPrepareRun: "নতুন রান প্রস্তুত করুন",
+  hrPayMonth: "মাস (YYYY-MM)",
+  hrPayWorkingDays: "কর্মদিবস",
+  hrPayNote: "নোট (ঐচ্ছিক)",
+  hrPrepare: "প্রস্তুত করুন",
+  hrRecompute: "পুনঃগণনা",
+  hrRunPrepared: "রান প্রস্তুত হয়েছে",
+  hrApproveLock: "অনুমোদন ও লক",
+  hrRunApproved: "রান অনুমোদিত ও লক হয়েছে",
+  hrCancelRun: "রান বাতিল",
+  hrRunCancelled: "রান বাতিল হয়েছে",
+  hrPayslips: "পে-স্লিপ",
+  hrPaymentExport: "পেমেন্ট এক্সপোর্ট",
+  hrPayGross: "মোট বেতন",
+  hrPayDayRate: "দৈনিক হার",
+  hrPayUnpaidLeave: "অবৈতনিক ছুটি (দিন)",
+  hrPayDeductions: "কর্তন",
+  hrPayAdditions: "সংযোজন",
+  hrPayNet: "নিট বেতন",
+  hrPayAdvanceRepaid: "অগ্রিম আদায়",
+  hrPayAccount: "অ্যাকাউন্ট",
+  hrViewPayslips: "পে-স্লিপ দেখুন",
+  hrNoRuns: "কোনো বেতন রান নেই।",
+  hrPayApproveOnly: "শুধু প্রধান শিক্ষক রান অনুমোদন/লক বা অগ্রিম ইস্যু করতে পারেন।",
+  hrStaffPay: "কর্মীর বেতন",
+  hrStaffPaySub: "মাসিক বেতন ও পেমেন্ট পদ্ধতি",
+  hrMonthlySalary: "মাসিক বেতন",
+  hrPaymentMethod: "পেমেন্ট পদ্ধতি",
+  hrPaySaved: "বেতন সংরক্ষিত হয়েছে",
+  hrAdvances: "অগ্রিম / ঋণ",
+  hrAdvancesSub: "কর্দে হাসানা — সুদ ও ফি মুক্ত",
+  hrAdvancePrincipal: "মূল পরিমাণ",
+  hrAdvanceIssueDate: "ইস্যু তারিখ",
+  hrAdvanceRecovery: "আদায় পদ্ধতি",
+  hrRecoveryOneShot: "এককালীন",
+  hrRecoveryInstallments: "কিস্তি",
+  hrInstallmentAmount: "কিস্তির পরিমাণ",
+  hrIssueAdvance: "অগ্রিম ইস্যু করুন",
+  hrAdvanceIssued: "অগ্রিম ইস্যু হয়েছে",
+  hrAdvanceBalance: "বাকি",
+  hrAdvanceSettle: "নিষ্পত্তি",
+  hrAdvanceWriteOff: "মওকুফ",
+  hrAdvanceSettled: "অগ্রিম নিষ্পত্তি হয়েছে",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -2093,6 +2175,54 @@ const STR_EN: StrTable = {
   hrNoStaff: "No staff",
   hrApplicant: "Applicant",
   hrYear: "Academic year",
+
+  // --- HR PR-2: payroll ---
+  hrPayroll: "Payroll",
+  hrPayrollSub: "Monthly run, payslips & advances",
+  hrPayrollRuns: "Payroll runs",
+  hrPrepareRun: "Prepare a run",
+  hrPayMonth: "Month (YYYY-MM)",
+  hrPayWorkingDays: "Working days",
+  hrPayNote: "Note (optional)",
+  hrPrepare: "Prepare",
+  hrRecompute: "Recompute",
+  hrRunPrepared: "Run prepared",
+  hrApproveLock: "Approve + lock",
+  hrRunApproved: "Run approved + locked",
+  hrCancelRun: "Cancel run",
+  hrRunCancelled: "Run cancelled",
+  hrPayslips: "Payslips",
+  hrPaymentExport: "Payment export",
+  hrPayGross: "Gross salary",
+  hrPayDayRate: "Day rate",
+  hrPayUnpaidLeave: "Unpaid leave (days)",
+  hrPayDeductions: "Deductions",
+  hrPayAdditions: "Additions",
+  hrPayNet: "Net pay",
+  hrPayAdvanceRepaid: "Advance recovered",
+  hrPayAccount: "Account",
+  hrViewPayslips: "View payslips",
+  hrNoRuns: "No payroll runs yet.",
+  hrPayApproveOnly: "Only the Principal can approve/lock a run or issue advances.",
+  hrStaffPay: "Staff pay",
+  hrStaffPaySub: "Monthly salary & payment method",
+  hrMonthlySalary: "Monthly salary",
+  hrPaymentMethod: "Payment method",
+  hrPaySaved: "Pay saved",
+  hrAdvances: "Advances / loans",
+  hrAdvancesSub: "Qard hasan — interest- & fee-free",
+  hrAdvancePrincipal: "Principal amount",
+  hrAdvanceIssueDate: "Issue date",
+  hrAdvanceRecovery: "Recovery mode",
+  hrRecoveryOneShot: "One-shot",
+  hrRecoveryInstallments: "Installments",
+  hrInstallmentAmount: "Installment amount",
+  hrIssueAdvance: "Issue advance",
+  hrAdvanceIssued: "Advance issued",
+  hrAdvanceBalance: "Balance",
+  hrAdvanceSettle: "Settle",
+  hrAdvanceWriteOff: "Write off",
+  hrAdvanceSettled: "Advance settled",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

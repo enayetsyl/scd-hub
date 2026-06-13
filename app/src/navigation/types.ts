@@ -127,6 +127,13 @@ export type HrStackParamList = {
   MyRecord: undefined;
   LeaveCover: { leaveApplicationId: string; title: string; manage: boolean };
   LeaveAdmin: undefined;
+  // PR-2: payroll
+  PayrollHome: undefined;
+  PreparePayroll: undefined;
+  PayrollRunDetail: { runId: string; monthKey: string; status: string };
+  PaymentExport: { runId: string; monthKey: string };
+  StaffPay: undefined;
+  Advances: undefined;
 };
 
 export type AdminStackParamList = {
