@@ -4,6 +4,7 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- feat(hr-app): HR app PR-3 — performance/conduct/development surfaces (observations view+submit, appraisal prepare + Principal sign-off, conduct ladder record→hearing→finalize, grievance inbox, CPD log) (Expo, APP-ONLY; performance:manage / performance:signoff gated, signoff/finalize hidden for Office; flags supervisor-observation-submit needing a teacher-readable staff directory; D-#135).
 - feat(hr-app): HR app PR-2 — payroll surfaces (monthly run prepare → Principal approve+lock → cancel; payslips; payment export; set staff pay; qard-hasan advances issue/settle) (Expo, APP-ONLY; payroll:manage / payroll:approve gated, approve-only controls hidden for Office; D-#135).
 - feat(hr-app): HR app PR-1 — new Staff/HR tab + leave self-service (balances/apply/cancel/cover-propose) + own employment record (appraisals/conduct/grievances+raise/CPD/observations) + leave admin (approve/reject/cover-approve→proxy/entitlements) (Expo, APP-ONLY; consumes existing HR resolvers; flags missing own-row payslip + staff-attendance reads; D-#135).
 - docs(message-templates): add Message Templates registry build contract — prd-message-templates.md, slices MT-1..MT-3, D-#128–#131 (renumbered at commit from the handoff's proposed D-#117–#120 — taken on main by HR-5 + Class-Test); single editable source for all generated message bodies + big-bang migration of live sites.
