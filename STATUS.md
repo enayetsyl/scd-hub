@@ -1,8 +1,36 @@
 # STATUS
 
-_Updated: 2026-06-13 (Messaging M-2 merged PR #44; Guardian portal app riders PR #43; Notifications N-2..N-4 + Messaging M-1 merged)_
+_Updated: 2026-06-13 (HR step 2 — staff attendance & leave, PR open; Messaging M-2 merged PR #44; Guardian portal app riders PR #43; Notifications N-2..N-4 + Messaging M-1 merged)_
 
 ## Now / next
+- **Built (HR step 2 — staff ATTENDANCE & LEAVE, server, prd-hr §3/H2, D-#22/#23 + build rulings
+  D-#101/#102) [branch `worktree-hr-attendance-leave`, PR open — coordinator reviews]:** the genuinely-missing
+  **staff LEAVE source** + the staff-attendance leave reconciliation AT-1 left open. **Scope boundary
+  (D-#101, the pre-flight call):** the existing `attendance` module (D-#63–#67) already ingests staff
+  attendance as a biometric Excel SNAPSHOT (`TeacherAttendanceDay`) = HR-2b's "internal record + manual
+  transport"; HR-2 does NOT rebuild the punch-driven §3a schedule/grace/working-days/manual-source layer
+  (it presupposes punch-level data the symbol snapshot lacks + the parked live device sync, D-#24/H7.6) —
+  it builds leave + closes the ✘→LEAVE seam. **New `modules/hr/`:** `StaffLeaveEntitlement` (per
+  staff/year/type allowance — admin DATA, numbers parked §10, read-time 0 default, NO seed — D-#97 posture),
+  `StaffLeaveApplication` (parent record; approval stamps a paid/unpaid split — the exceed rule WARNS, never
+  blocks §3.3; maternity/hajj wholly unpaid, D-#23), `StaffCoverSlot` (fans out one slot per class the
+  absent teacher teaches → approval mints a **D-#20 proxy grant** via `assignProxy`; cancel/reject revoke it
+  — the D-#22 propose-then-approve gate, grant model unchanged). Services: LeaveEntitlementService
+  (balance/proration/day-count pure math), StaffLeaveService, CoverService, `staffMatch` (the **phone-only
+  `User`↔`StaffProfile` join** provisioning uses — NO FK/migration added, worktree-rule-3 safe). **AT-1 seam
+  CLOSED:** a biometric ✘ now reads LEAVE when an approved staff leave covers that staff/date — a READ-TIME
+  overlay in `TeacherAttendanceService` (forDate + summary), correct even when leave is approved AFTER the
+  snapshot import (D-#102). **RBAC (D-#102):** `leave:manage` (PRINCIPAL/OFFICE, build) = the admin surface +
+  record-on-behalf for support (no login, D-#25); teacher self-apply/propose-cover/cancel/view-own = OWN-ROW,
+  **no new permission** (D-#17/#72 posture). **Vocab (app-native, NO wire sync, I own vocab this cycle):**
+  `LEAVE_TYPES`/`LEAVE_STATUSES`/`COVER_SLOT_STATUSES` + BN/EN + `LEAVE_TYPE_RULES` (settled §3.2 table) +
+  `leave:manage`; verifier §C.8 added + OFFICE exact-list updated. New audit kinds STAFF_LEAVE_*/STAFF_COVER_*.
+  Firewall test extended both ways (corpus ⇄ hr). **Gate GREEN (executed):** vocab verifier PASS, shared
+  build + shared/server tsc clean, **jest 690/690** (42 suites; 27 new in `staffLeave` + 2 firewall;
+  firewall green). **Server-only** (no app screens — the Messaging M-1/M-2 precedent; an HR app slice is the
+  follow-up). **Not verified live.** Parked (prd-hr §10, unchanged): leave entitlement amounts/Hajj reset,
+  maternity legal check (H7.5/D-#23), the §3a live-sync layer (H7.6). **Next after merge = HR-3 (payroll)** —
+  needs HR-1 salary + this leave (encashment) + attendance (unpaid-leave day-rate deduction).
 - **Built (Guardian portal app — surface existing reads + polish, FRONTEND ONLY) [branch
   `worktree-guardian-app-riders`, PR #43 — coordinator review applied]:** an app-only pass that renders guardian-readable server data the
   portal already had but never showed, and polishes the existing screens. **NO server / vocab / contract

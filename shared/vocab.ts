@@ -287,6 +287,69 @@ export const EMPLOYMENT_STATUS_LABELS_BN: Record<EmploymentStatus, string> = {
   terminated: "অব্যাহতিপ্রাপ্ত",
 };
 
+// --- A.5b HR LEAVE ENUMS (app-native; HR module step 2 — prd-hr §3/H2, D-#22/#23) ----
+// Staff LEAVE is the source AT-1 left missing (the ✘→LEAVE-vs-ABSENT split needs it).
+// Identity/operational plane, behind the ADR-005 firewall — NO wire-contract twin,
+// NO envelope-schema mirror, NO two-place sync; only /shared + the vocab verifier run.
+
+/** Staff leave types (prd-hr §3.2). Maternity is UNPAID by Principal ruling
+ *  (D-#23, legal check pending H7.5); Hajj unpaid/event-capped; unpaid_lwp is the
+ *  overflow bucket (the exceed-rule lands here, §3.3). */
+export const LEAVE_TYPES = ["casual", "sick", "bereavement", "maternity", "hajj", "unpaid_lwp"] as const;
+export type LeaveType = (typeof LEAVE_TYPES)[number];
+
+export const LEAVE_TYPE_LABELS_BN: Record<LeaveType, string> = {
+  casual: "নৈমিত্তিক", sick: "অসুস্থতাজনিত", bereavement: "শোক", maternity: "মাতৃত্বকালীন",
+  hajj: "হজ", unpaid_lwp: "বিনা বেতনে (LWP)",
+};
+export const LEAVE_TYPE_LABELS_EN: Record<LeaveType, string> = {
+  casual: "Casual", sick: "Sick", bereavement: "Bereavement", maternity: "Maternity",
+  hajj: "Hajj", unpaid_lwp: "Unpaid (LWP)",
+};
+
+/** The SETTLED §3.2 per-type behaviour table (the numbers are parked, the rules are
+ *  not). `paid` drives the day-rate deduction (HR-3); `balanceTracked` types draw a
+ *  per-year entitlement (allowance/taken/remaining); `carryover`/`encashable` feed
+ *  the §3.4 paths; `eventCapped` types (maternity/hajj) are per-event, not annual. */
+export const LEAVE_TYPE_RULES: Record<
+  LeaveType,
+  { paid: boolean; balanceTracked: boolean; carryover: boolean; encashable: boolean; eventCapped: boolean }
+> = {
+  casual:      { paid: true,  balanceTracked: true,  carryover: true,  encashable: true,  eventCapped: false },
+  sick:        { paid: true,  balanceTracked: true,  carryover: true,  encashable: true,  eventCapped: false },
+  bereavement: { paid: true,  balanceTracked: true,  carryover: true,  encashable: true,  eventCapped: false },
+  maternity:   { paid: false, balanceTracked: false, carryover: false, encashable: false, eventCapped: true  }, // D-#23
+  hajj:        { paid: false, balanceTracked: false, carryover: false, encashable: false, eventCapped: true  },
+  unpaid_lwp:  { paid: false, balanceTracked: false, carryover: false, encashable: false, eventCapped: false },
+};
+
+/** Leave application lifecycle (prd-hr §9). Recorded → Principal/Office decide;
+ *  the exceed rule WARNS, never blocks (§3.3) — approval can still proceed with the
+ *  excess as unpaid. */
+export const LEAVE_STATUSES = ["applied", "approved", "rejected", "cancelled"] as const;
+export type LeaveStatus = (typeof LEAVE_STATUSES)[number];
+
+export const LEAVE_STATUS_LABELS_BN: Record<LeaveStatus, string> = {
+  applied: "আবেদিত", approved: "অনুমোদিত", rejected: "প্রত্যাখ্যাত", cancelled: "বাতিল",
+};
+export const LEAVE_STATUS_LABELS_EN: Record<LeaveStatus, string> = {
+  applied: "Applied", approved: "Approved", rejected: "Rejected", cancelled: "Cancelled",
+};
+
+/** Cover-slot status (prd-hr §3.5, D-#22). A leave fans out one slot per class the
+ *  absent teacher teaches; each is `needs_cover` until a teacher is `proposed`, and
+ *  becomes `approved` only on Principal/Office approval — that approval is what mints
+ *  the D-#20 proxy grant (write access begins). */
+export const COVER_SLOT_STATUSES = ["needs_cover", "proposed", "approved"] as const;
+export type CoverSlotStatus = (typeof COVER_SLOT_STATUSES)[number];
+
+export const COVER_SLOT_STATUS_LABELS_BN: Record<CoverSlotStatus, string> = {
+  needs_cover: "কভার প্রয়োজন", proposed: "প্রস্তাবিত", approved: "অনুমোদিত",
+};
+export const COVER_SLOT_STATUS_LABELS_EN: Record<CoverSlotStatus, string> = {
+  needs_cover: "Needs cover", proposed: "Proposed", approved: "Approved",
+};
+
 // --- A.6 HOMEWORK-TRACKER ENUMS (app-native; Project-06 handoff — HW-T1) ------
 // Daily HW-… channel. NO wire-contract twin: trackers are a feature, not import
 // content (no `doc_type: tracker`), and Layer-B records live on the operational/
@@ -898,6 +961,7 @@ export const PERMISSIONS = [
   // foundation / ops
   "roster:manage",
   "staff:manage",          // HR staff-record read/manage (Principal/Office; prd-hr H1.4 row-scope)
+  "leave:manage",          // HR staff-LEAVE admin: entitlements, approve/reject, cover approval, all balances (Principal/Office; prd-hr H2, D-#22). Teacher own-row self-apply needs NO permission.
   "guardian:link",
   "message:dispatch",      // wa.me / notices manual send (R-T2)
   "user:manage",
@@ -935,6 +999,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "chat:oversee": "pipeline", // lands with M-6 (Principal oversight, D-#77)
   "roster:manage": "build",
   "staff:manage": "build",
+  "leave:manage": "build",  // HR step 2 (staff leave admin surface)
   "guardian:link": "build",
   "message:dispatch": "build",
   "user:manage": "build",
@@ -957,7 +1022,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "library:read", "library:manage",
     "chat:read", "chat:write", "chat:manage",
     "chat:oversee",          // PRINCIPAL ONLY (D-#77) — every oversight open is audited (M-6)
-    "roster:manage", "staff:manage", "guardian:link", "message:dispatch",
+    "roster:manage", "staff:manage", "leave:manage", "guardian:link", "message:dispatch",
     "user:manage", "audit:read",
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
@@ -979,7 +1044,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // publisher seam), plan-review assignment (D-#39), and routine authoring (D-#46).
   // No tracker/user surface under PoLP.
   OFFICE: [
-    "roster:manage", "staff:manage", "guardian:link", "message:dispatch",
+    "roster:manage", "staff:manage", "leave:manage", "guardian:link", "message:dispatch",
     "content:import", "content:assign_review",
     "routine:read", "routine:manage",
     "attendance:manage",     // upload teacher Excel, assign markers, chase guardians (D-#64/#65; no mark)

@@ -34,7 +34,7 @@ check("default-deny: unknown role", V.roleHasPermission("GHOST", "content:read")
 check("PRINCIPAL has user:manage + audit:read", V.roleHasPermission("PRINCIPAL", "user:manage") && V.roleHasPermission("PRINCIPAL", "audit:read"));
 check("TEACHER lacks user:manage / audit:read / content:import", !["user:manage","audit:read","content:import"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("TEACHER can read content + assemble + write trackers", ["content:read","set:assemble","tracker:write"].every((p) => V.roleHasPermission("TEACHER", p)));
-check("OFFICE = roster/staff/guardian/message/import/assign_review/routine/attendance/library/chat", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage"]));
+check("OFFICE = roster/staff/leave/guardian/message/import/assign_review/routine/attendance/library/chat", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage"]));
 check("routine: PRINCIPAL+OFFICE manage, TEACHER read-only, GUARDIAN none", V.roleHasPermission("PRINCIPAL","routine:manage") && V.roleHasPermission("OFFICE","routine:manage") && V.roleHasPermission("TEACHER","routine:read") && !V.roleHasPermission("TEACHER","routine:manage") && !V.roleHasPermission("GUARDIAN","routine:read"));
 check("TEACHER has content:review (reviewer APPROVE), lacks assign/promote", V.roleHasPermission("TEACHER","content:review") && !["content:assign_review","content:promote_gold"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("GUARDIAN only has guardian:read_child", eq(V.permissionsForRole("GUARDIAN"), ["guardian:read_child"]));
@@ -169,6 +169,31 @@ check("chat:oversee = PRINCIPAL ONLY (D-#77)",
   !["TEACHER","OFFICE","GUARDIAN"].some((r) => V.roleHasPermission(r, "chat:oversee")));
 check("chat:manage is now BUILD (M-2 activates groups + posting policy), chat:oversee stays pipeline until M-6 (D-#98)",
   V.PERMISSION_BUILD_STATUS["chat:manage"] === "build" && V.PERMISSION_BUILD_STATUS["chat:oversee"] === "pipeline");
+
+console.log("=== C.8 HR staff-leave vocab + RBAC invariants (HR step 2 — prd-hr §3, D-#22/#23) ===");
+check("LEAVE_TYPE_LABELS_BN total",        total(V.LEAVE_TYPE_LABELS_BN, V.LEAVE_TYPES));
+check("LEAVE_TYPE_LABELS_EN total",        total(V.LEAVE_TYPE_LABELS_EN, V.LEAVE_TYPES));
+check("LEAVE_STATUS_LABELS_BN total",      total(V.LEAVE_STATUS_LABELS_BN, V.LEAVE_STATUSES));
+check("LEAVE_STATUS_LABELS_EN total",      total(V.LEAVE_STATUS_LABELS_EN, V.LEAVE_STATUSES));
+check("COVER_SLOT_STATUS_LABELS_BN total", total(V.COVER_SLOT_STATUS_LABELS_BN, V.COVER_SLOT_STATUSES));
+check("COVER_SLOT_STATUS_LABELS_EN total", total(V.COVER_SLOT_STATUS_LABELS_EN, V.COVER_SLOT_STATUSES));
+check("leave types exact (prd-hr §3.2)",    eq(V.LEAVE_TYPES, ["casual","sick","bereavement","maternity","hajj","unpaid_lwp"]));
+check("leave statuses exact (prd-hr §9)",   eq(V.LEAVE_STATUSES, ["applied","approved","rejected","cancelled"]));
+check("cover-slot statuses exact (D-#22)",  eq(V.COVER_SLOT_STATUSES, ["needs_cover","proposed","approved"]));
+check("LEAVE_TYPE_RULES total over LEAVE_TYPES", V.LEAVE_TYPES.every((t) => typeof V.LEAVE_TYPE_RULES[t]?.paid === "boolean"));
+check("maternity + hajj are UNPAID event-capped (D-#23, §3.2)",
+  V.LEAVE_TYPE_RULES.maternity.paid === false && V.LEAVE_TYPE_RULES.maternity.eventCapped === true &&
+  V.LEAVE_TYPE_RULES.hajj.paid === false && V.LEAVE_TYPE_RULES.hajj.eventCapped === true);
+check("casual/sick/bereavement are paid+balance-tracked+carryover+encashable (§3.2/§3.4)",
+  ["casual","sick","bereavement"].every((t) => {
+    const r = V.LEAVE_TYPE_RULES[t];
+    return r.paid && r.balanceTracked && r.carryover && r.encashable;
+  }));
+check("unpaid_lwp = no balance, no pay (§3.3 overflow bucket)",
+  V.LEAVE_TYPE_RULES.unpaid_lwp.paid === false && V.LEAVE_TYPE_RULES.unpaid_lwp.balanceTracked === false);
+check("leave:manage = PRINCIPAL+OFFICE only — TEACHER self-applies own-row (no perm), GUARDIAN none (prd-hr H2.6/H2.7)",
+  V.roleHasPermission("PRINCIPAL","leave:manage") && V.roleHasPermission("OFFICE","leave:manage") &&
+  !V.roleHasPermission("TEACHER","leave:manage") && !V.roleHasPermission("GUARDIAN","leave:manage"));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

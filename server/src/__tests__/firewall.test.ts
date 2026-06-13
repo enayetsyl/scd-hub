@@ -245,6 +245,40 @@ describe("Chat firewall (ADR-005 / D-#76)", () => {
   });
 });
 
+/**
+ * HR staff-leave firewall (HR-2, prd-hr §1/H7.4 / ADR-005).
+ *
+ * HR is the most sensitive identity-bearing plane (leave, balances, cover). The
+ * leave module names StaffProfiles/Users — strictly identity-plane. Fail-closed
+ * both ways: the hr module must have NO import path into the corpus plane, and the
+ * corpus module must have NO import path into the hr module or its leave models
+ * (no analytics/export join back to who took what leave).
+ */
+describe("HR staff-leave firewall (ADR-005 / prd-hr H7.4)", () => {
+  const hrDir = path.resolve(__dirname, "../modules/hr");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("hr module has NO import from the corpus plane", () => {
+    const files = walkDir(hrDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (HR-2 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the hr module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/hr"));
+      expect(content).not.toMatch(importPattern("models/StaffLeaveApplication"));
+      expect(content).not.toMatch(importPattern("models/StaffLeaveEntitlement"));
+      expect(content).not.toMatch(importPattern("models/StaffCoverSlot"));
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;
