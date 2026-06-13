@@ -6,8 +6,37 @@
 import React from "react";
 import { useQuery } from "urql";
 import { Select } from "./ui";
-import { TEACHERS_QUERY, ROOMS_QUERY, ACADEMIC_YEARS_QUERY } from "../graphql/operations";
-import { STR } from "../lib/labels";
+import { TEACHERS_QUERY, ROOMS_QUERY, ACADEMIC_YEARS_QUERY, STAFF_QUERY } from "../graphql/operations";
+import { STR, hrCategoryLabel } from "../lib/labels";
+
+/** Pick a staff member by name → yields the StaffProfile id (HR admin surfaces).
+ *  Reads the manager-gated staff roster; the hint shows the HR category. */
+export function StaffSelect({
+  label,
+  value,
+  onChange,
+}: {
+  label?: string;
+  value: string;
+  onChange: (v: string) => void;
+}): React.ReactElement {
+  const [{ data }] = useQuery({ query: STAFF_QUERY, variables: {} });
+  const options = (data?.staff ?? []).map((s) => ({
+    label: s.nameBn || s.name,
+    value: s.id,
+    hint: hrCategoryLabel(s.category),
+  }));
+  return (
+    <Select
+      label={label}
+      value={value === "" ? null : value}
+      options={options}
+      onChange={onChange}
+      placeholder={STR.hrSelectStaff}
+      emptyText={STR.hrNoStaff}
+    />
+  );
+}
 
 /** Pick a teacher by name → yields the teacher's User id. */
 export function TeacherSelect({

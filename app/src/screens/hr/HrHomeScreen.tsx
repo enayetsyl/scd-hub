@@ -1,0 +1,48 @@
+/**
+ * HrHomeScreen — the staff/HR hub. Self-service entries (My leave, My record)
+ * show for every logged-in staff member; the management entries are gated by the
+ * caller's permission and the server enforces them again (prd-hr §2 row-scope).
+ * Later HR slices (payroll / performance / offboarding) add their own gated
+ * entries to this same hub.
+ */
+import React from "react";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { roleHasPermission } from "@scd/shared";
+import type { HrStackParamList } from "../../navigation/types";
+import { Screen, H2, Body, Muted, Card } from "../../components/ui";
+import { STR } from "../../lib/labels";
+import { useAuth } from "../../auth/AuthContext";
+import { space } from "../../theme/tokens";
+
+type Props = NativeStackScreenProps<HrStackParamList, "HrHome">;
+
+export default function HrHomeScreen({ navigation }: Props): React.ReactElement {
+  const { role } = useAuth();
+  const canLeaveManage = !!role && roleHasPermission(role, "leave:manage");
+
+  return (
+    <Screen scroll>
+      <H2>{STR.tabHr}</H2>
+
+      <Muted style={{ marginBottom: space(2) }}>{STR.hrSelfService}</Muted>
+      <Card onPress={() => navigation.navigate("MyLeave")}>
+        <Body style={{ fontWeight: "700" }}>{STR.hrMyLeave}</Body>
+        <Muted>{STR.hrMyLeaveSub}</Muted>
+      </Card>
+      <Card onPress={() => navigation.navigate("MyRecord")}>
+        <Body style={{ fontWeight: "700" }}>{STR.hrMyRecord}</Body>
+        <Muted>{STR.hrMyRecordSub}</Muted>
+      </Card>
+
+      {canLeaveManage ? (
+        <>
+          <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.hrAdmin}</Muted>
+          <Card onPress={() => navigation.navigate("LeaveAdmin")}>
+            <Body style={{ fontWeight: "700" }}>{STR.hrLeaveAdmin}</Body>
+            <Muted>{STR.hrLeaveAdminSub}</Muted>
+          </Card>
+        </>
+      ) : null}
+    </Screen>
+  );
+}

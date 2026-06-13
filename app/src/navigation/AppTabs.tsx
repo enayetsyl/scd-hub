@@ -25,6 +25,7 @@ import type {
   AttendanceStackParamList,
   LibraryStackParamList,
   ChatStackParamList,
+  HrStackParamList,
   AdminStackParamList,
   GuardianHomeStackParamList,
   GuardianHomeworkStackParamList,
@@ -95,6 +96,11 @@ import GroupManageScreen from "../screens/chat/GroupManageScreen";
 import ChatOversightScreen from "../screens/chat/ChatOversightScreen";
 import ChatOversightThreadScreen from "../screens/chat/ChatOversightThreadScreen";
 import GuardianNoticeScreen from "../screens/chat/GuardianNoticeScreen";
+import HrHomeScreen from "../screens/hr/HrHomeScreen";
+import MyLeaveScreen from "../screens/hr/MyLeaveScreen";
+import MyRecordScreen from "../screens/hr/MyRecordScreen";
+import LeaveCoverScreen from "../screens/hr/LeaveCoverScreen";
+import LeaveAdminScreen from "../screens/hr/LeaveAdminScreen";
 import SectionPickerScreen from "../screens/common/SectionPickerScreen";
 import AdminHomeScreen from "../screens/admin/AdminHomeScreen";
 import ImportScreen from "../screens/admin/ImportScreen";
@@ -396,6 +402,24 @@ function ChatNavigator(): React.ReactElement {
   );
 }
 
+const HrStack = createNativeStackNavigator<HrStackParamList>();
+function HrNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <HrStack.Navigator screenOptions={stackOptions}>
+      <HrStack.Screen name="HrHome" component={HrHomeScreen} options={{ title: STR.tabHr }} />
+      <HrStack.Screen name="MyLeave" component={MyLeaveScreen} options={{ title: STR.hrMyLeave }} />
+      <HrStack.Screen name="MyRecord" component={MyRecordScreen} options={{ title: STR.hrMyRecord }} />
+      <HrStack.Screen
+        name="LeaveCover"
+        component={LeaveCoverScreen}
+        options={({ route }) => ({ title: route.params.title || STR.hrCoverTitle })}
+      />
+      <HrStack.Screen name="LeaveAdmin" component={LeaveAdminScreen} options={{ title: STR.hrLeaveAdmin }} />
+    </HrStack.Navigator>
+  );
+}
+
 const AdminStack = createNativeStackNavigator<AdminStackParamList>();
 function AdminNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -487,6 +511,10 @@ export function AppTabs(): React.ReactElement {
   const canLibrary = !!role && roleHasPermission(role, "library:read");
   // Chat (M-5): Principal/Teacher/Office hold chat:read; GUARDIAN never does.
   const canChat = !!role && roleHasPermission(role, "chat:read");
+  // HR/staff tab: every logged-in staff member (Principal/Teacher/Office) — leave
+  // + self-service is universal; GUARDIAN never sees it. Admin entries inside are
+  // permission-gated per slice and re-checked server-side.
+  const canHr = !!role && role !== "GUARDIAN";
   const canAdmin = !!role && (roleHasPermission(role, "content:import") || roleHasPermission(role, "user:manage"));
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
@@ -539,6 +567,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canChat ? (
         <Tab.Screen name="ChatTab" component={ChatNavigator} options={{ title: STR.tabChat, tabBarIcon: tabIcon("💬") }} />
+      ) : null}
+      {canHr ? (
+        <Tab.Screen name="HrTab" component={HrNavigator} options={{ title: STR.tabHr, tabBarIcon: tabIcon("🧑‍💼") }} />
       ) : null}
       {canAdmin ? (
         <Tab.Screen name="AdminTab" component={AdminNavigator} options={{ title: STR.tabAdmin, tabBarIcon: tabIcon("⚙️") }} />
