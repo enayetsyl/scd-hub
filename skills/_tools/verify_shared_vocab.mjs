@@ -39,7 +39,7 @@ check("routine: PRINCIPAL+OFFICE manage, TEACHER read-only, GUARDIAN none", V.ro
 check("TEACHER has content:review (reviewer APPROVE), lacks assign/promote", V.roleHasPermission("TEACHER","content:review") && !["content:assign_review","content:promote_gold"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("GUARDIAN only has guardian:read_child", eq(V.permissionsForRole("GUARDIAN"), ["guardian:read_child"]));
 check("no role can write audit (audit:write undeclared)", !V.PERMISSIONS.includes("audit:write"));
-check("pipeline perms are EXACTLY chat:manage + chat:oversee (land with M-2/M-6; everything else active)", eq(V.PERMISSIONS.filter((p) => V.PERMISSION_BUILD_STATUS[p] !== "build"), ["chat:manage","chat:oversee"]));
+check("pipeline perms are EXACTLY chat:oversee (lands at M-6; chat:manage flipped build at M-2 per D-#98; everything else active)", eq(V.PERMISSIONS.filter((p) => V.PERMISSION_BUILD_STATUS[p] !== "build"), ["chat:oversee"]));
 
 console.log("=== C. label maps total over their enums ===");
 const total = (labels, keys) => keys.every((k) => typeof labels[k] === "string" && labels[k].length > 0);
@@ -167,6 +167,8 @@ check("chat:manage = PRINCIPAL+OFFICE only — teachers cannot create groups (D-
 check("chat:oversee = PRINCIPAL ONLY (D-#77)",
   V.roleHasPermission("PRINCIPAL","chat:oversee") &&
   !["TEACHER","OFFICE","GUARDIAN"].some((r) => V.roleHasPermission(r, "chat:oversee")));
+check("chat:manage is now BUILD (M-2 activates groups + posting policy), chat:oversee stays pipeline until M-6 (D-#98)",
+  V.PERMISSION_BUILD_STATUS["chat:manage"] === "build" && V.PERMISSION_BUILD_STATUS["chat:oversee"] === "pipeline");
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

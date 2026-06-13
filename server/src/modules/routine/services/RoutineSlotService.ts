@@ -15,6 +15,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { weekdayBaseDayType, dayTypeAdmitsTrack } from "../calendar";
 import { detectConflicts, type SlotLite } from "../conflicts";
 import { routineGrantPlan } from "../binding";
+import { onRoutineSlotChangedSync } from "../../chat/services/ChatGroupService";
 
 export interface CreateSlotInput {
   groupType: "section" | "subjectgroup";
@@ -137,6 +138,11 @@ export async function createRoutineSlot(input: CreateSlotInput): Promise<CreateS
     );
     if (warn) warnings.push(warn);
   }
+
+  // M-2 (D-#78): keep the SECTION + SUBJECT chat groups in sync with the new
+  // slot's teacher. Best-effort — never blocks the routine mutation.
+  await onRoutineSlotChangedSync(slot);
+
   return { slot, warnings };
 }
 
@@ -211,6 +217,10 @@ export async function deleteRoutineSlot(slotId: string, actorId: string): Promis
   if (plan.bind && slot.teacherId) {
     await unbindIfOrphaned(slot.teacherId.toString(), slot.groupId.toString(), slot.subject, actorId);
   }
+
+  // M-2 (D-#78): re-sync the affected SECTION + SUBJECT chat groups (the teacher
+  // may now have dropped out of one). Best-effort — never blocks the delete.
+  await onRoutineSlotChangedSync(slot);
 }
 
 /** Revoke the routine teaching grant for (teacher, section, subject) iff no other
