@@ -92,6 +92,9 @@ import ChatHomeScreen from "../screens/chat/ChatHomeScreen";
 import ChatThreadScreen from "../screens/chat/ChatThreadScreen";
 import NewChatScreen from "../screens/chat/NewChatScreen";
 import GroupManageScreen from "../screens/chat/GroupManageScreen";
+import ChatOversightScreen from "../screens/chat/ChatOversightScreen";
+import ChatOversightThreadScreen from "../screens/chat/ChatOversightThreadScreen";
+import GuardianNoticeScreen from "../screens/chat/GuardianNoticeScreen";
 import SectionPickerScreen from "../screens/common/SectionPickerScreen";
 import AdminHomeScreen from "../screens/admin/AdminHomeScreen";
 import ImportScreen from "../screens/admin/ImportScreen";
@@ -382,6 +385,13 @@ function ChatNavigator(): React.ReactElement {
       />
       <ChatStack.Screen name="NewChat" component={NewChatScreen} options={{ title: STR.chatNewTitle }} />
       <ChatStack.Screen name="GroupManage" component={GroupManageScreen} options={{ title: STR.chatGroupManageTitle }} />
+      <ChatStack.Screen name="ChatOversight" component={ChatOversightScreen} options={{ title: STR.chatOversightTitle }} />
+      <ChatStack.Screen
+        name="ChatOversightThread"
+        component={ChatOversightThreadScreen}
+        options={({ route }) => ({ title: route.params.title || STR.chatOversightThreadTitle })}
+      />
+      <ChatStack.Screen name="GuardianNotice" component={GuardianNoticeScreen} options={{ title: STR.chatNoticeTitle }} />
     </ChatStack.Navigator>
   );
 }
