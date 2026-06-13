@@ -1,10 +1,19 @@
 # STATUS
 
-_Updated: 2026-06-13 (HR step 2 staff attendance & leave PR #46 — coordinator review applied; Messaging M-3 merged PR #45; M-2/#44 + Guardian app/#43 + Notifications + M-1 all merged)_
+_Updated: 2026-06-13 (Vocabulary Tracker PRD added, D-#104–#107; HR step 2 merged PR #46; Messaging M-3 merged PR #45; M-2/#44 + Guardian app/#43 + Notifications + M-1 all merged)_
 
 ## Now / next
+- **Planned (Vocabulary Tracker VC-1..VC-5, D-#104–#107):** build contract
+  docs/prd-vocabulary-tracker.md — replaces the two-phase Google-Sheet vocab system (Phase-1
+  per-test files + Phase-2 IMPORTRANGE). Three data-driven programs (English/Bangla/Arabic),
+  per-class word bank, **no Old/New**, per-test totalMarks, configurable dictation half-miss,
+  no auto-grading; weekly per-(section×program) assigned teacher + D-#20 proxy + append-only
+  assignment log; reports/guardian-messages ride D-#44 aggregates + wa.me/emit() seam. App-native
+  vocab only — no wire/harness sync (serialize per AGENTS rule 5 at VC-1/VC-4). Identity-plane
+  (ADR-005), no new role/permission (D-#94 pattern). Plan/docs only — nothing executed.
+  Next = build VC-1 per docs/prd-vocabulary-tracker.md §6, slice order.
 - **Built (HR step 2 — staff ATTENDANCE & LEAVE, server, prd-hr §3/H2, D-#22/#23 + build rulings
-  D-#102/#103) [branch `worktree-hr-attendance-leave`, PR #46 — coordinator review applied]:** the genuinely-missing
+  D-#102/#103) [MERGED to main, PR #46]:** the genuinely-missing
   **staff LEAVE source** + the staff-attendance leave reconciliation AT-1 left open. **Scope boundary
   (D-#102, the pre-flight call):** the existing `attendance` module (D-#63–#67) already ingests staff
   attendance as a biometric Excel SNAPSHOT (`TeacherAttendanceDay`) = HR-2b's "internal record + manual
