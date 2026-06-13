@@ -1,8 +1,33 @@
 # STATUS
 
-_Updated: 2026-06-13 (Vocabulary Tracker PRD added, D-#104–#107; HR step 2 merged PR #46; Messaging M-3 merged PR #45; M-2/#44 + Guardian app/#43 + Notifications + M-1 all merged)_
+_Updated: 2026-06-13 (HR step 3 — payroll, PR open; Vocabulary Tracker PRD added D-#104–#107; HR step 2 merged PR #46; Messaging M-3 merged PR #45; M-2/#44 + Guardian app/#43 + Notifications + M-1 all merged)_
 
 ## Now / next
+- **Built (HR step 3 — payroll, server, prd-hr §4, D-#26/#27 + build rulings D-#108/#109) [branch
+  `worktree-hr-attendance-leave`, PR open — coordinator reviews]:** the monthly payroll run on top of HR-1
+  salary + HR-2 leave. **New `modules/hr/` models:** `PayrollRun` (monthly, `prepared → approved_locked`,
+  immutable once locked), `Payslip` (itemised **net = gross − deductions + additions**), `AdvanceLoan`
+  (qard-hasan — interest- & fee-free, NO rate/fee field exists, D-#27). **Services:** `payrollMath` (pure
+  `dayRate` = monthly ÷ run working-days + `computePayslip` with the §4.5 **net-pay guard** — a repayment
+  never drives net < 0, excess rolls forward), `PayrollService` (prepare/recompute → **approve+LOCK**
+  commits advance recovery → cancel → `paymentExport`), `AdvanceService` (issue/settle/read).
+  `StaffProfile` gains optional `monthlySalary` + `paymentMethod` (additive, no migration); `setStaffPay`
+  (payroll:manage). **RBAC (D-#108):** `payroll:manage` (PRINCIPAL/OFFICE) prepares/reads; `payroll:approve`
+  (**PRINCIPAL only**) locks + issues/settles advances — Office cannot approve, a distinct permission the
+  verifier proves (H4.2/H4.7). **Lock/correction seam (D-#109, the design ask):** a locked run is NEVER
+  retro-edited — post-lock corrections ride `arrears`/clawback lines on the NEXT run; the unpaid-leave
+  deduction reads the **STORED** leave paid/unpaid split (not the read-time attendance overlay), attributed
+  to the leave's start month; advance recovery commits at lock so recompute is safe; cash-paid staff
+  excluded from the export. **Vocab (app-native, NO wire sync; serialized to this session this cycle — the
+  parallel Vocab-Tracker session adds only VOCAB_* + no perms, no collision):** PAYMENT_METHODS /
+  PAYROLL_RUN_STATUSES / PAY_DEDUCTION_TYPES / PAY_ADDITION_TYPES / ADVANCE_STATUSES + BN/EN +
+  payroll:manage/payroll:approve; verifier §C.9 + OFFICE exact-list. New audit kinds STAFF_PAY_SET /
+  PAYROLL_* / ADVANCE_*. HR firewall block extended with the payroll models. **Gate GREEN (executed):**
+  vocab verifier PASS, shared build + shared/server tsc clean, **jest 731/731** (44 suites; 19 new in
+  `payroll`). **Server-only** (no app screens — the HR-2 / Messaging precedent). **Not verified live.**
+  Parked (prd-hr §10): entitlement/bonus figures, statutory deductions, payment-export target format,
+  lateness-rule params, ÷30 day-rate alternative. **Next after merge = HR-4 (performance/conduct/
+  development)** — independent of payroll; needs HR-1 + supervisory scope (D-#28).
 - **Planned (Vocabulary Tracker VC-1..VC-5, D-#104–#107):** build contract
   docs/prd-vocabulary-tracker.md — replaces the two-phase Google-Sheet vocab system (Phase-1
   per-test files + Phase-2 IMPORTRANGE). Three data-driven programs (English/Bangla/Arabic),

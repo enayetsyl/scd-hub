@@ -3,9 +3,11 @@ import {
   HR_CATEGORIES,
   EMPLOYMENT_TYPES,
   EMPLOYMENT_STATUSES,
+  PAYMENT_METHODS,
   type HrCategory,
   type EmploymentType,
   type EmploymentStatus,
+  type PaymentMethod,
 } from "@scd/shared";
 
 /** Local to the identity plane (mirrors Student.Gender). */
@@ -61,6 +63,11 @@ export interface IStaffProfile extends Document {
   // --- Principal/Office-only sensitive rows (H1.4) -------------------------
   nid?: string;
   bankAccount?: string;
+  /** Consolidated monthly salary — one figure, no basic/allowance split (HR-3, §4.1).
+   *  Payroll-sensitive; set via setStaffPay (payroll:manage). Absent = no run line. */
+  monthlySalary?: number;
+  /** Disbursement channel (HR-3, §4.6). `cash` is flagged + excluded from the export file. */
+  paymentMethod?: PaymentMethod;
 
   active: boolean;
   createdAt: Date;
@@ -98,6 +105,8 @@ const StaffProfileSchema = new Schema<IStaffProfile>(
 
     nid: { type: String, trim: true },
     bankAccount: { type: String, trim: true },
+    monthlySalary: { type: Number, min: 0 },
+    paymentMethod: { type: String, enum: PAYMENT_METHODS },
 
     active: { type: Boolean, default: true },
   },

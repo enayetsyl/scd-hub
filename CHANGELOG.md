@@ -4,6 +4,25 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- HR step 3 — payroll (server, prd-hr §4, D-#26/#27; build rulings D-#108/#109). New `modules/hr/` models
+  `PayrollRun` (monthly; prepared → approved_locked, immutable once locked), `Payslip` (itemised net =
+  gross − deductions + additions), `AdvanceLoan` (qard-hasan — interest- & fee-free, no rate/fee field).
+  Services: `payrollMath` (pure dayRate + computePayslip with the §4.5 net-pay guard), `PayrollService`
+  (prepare/recompute → approve+lock+commit-advance-recovery → cancel → paymentExport), `AdvanceService`
+  (issue/settle/read). `StaffProfile` gains optional `monthlySalary` + `paymentMethod` (no migration);
+  `setStaffPay` (payroll:manage) sets them. **RBAC (D-#108):** `payroll:manage` (PRINCIPAL/OFFICE) prepares/
+  reads; `payroll:approve` (PRINCIPAL only) locks runs + issues/settles advances — Office cannot approve, a
+  distinct permission the verifier proves. **Lock/correction seam (D-#109):** a locked run is never
+  retro-edited — post-lock corrections ride `arrears`/clawback lines on the NEXT run; the unpaid-leave
+  deduction reads the STORED leave paid/unpaid split (not the read-time attendance overlay); advance recovery
+  commits at lock (recompute-safe); day-rate = monthlySalary ÷ run working days; cash-paid staff excluded
+  from the payment export. Vocab (app-native, NO wire sync): `PAYMENT_METHODS`/`PAYROLL_RUN_STATUSES`/
+  `PAY_DEDUCTION_TYPES`/`PAY_ADDITION_TYPES`/`ADVANCE_STATUSES` + BN/EN + `payroll:manage`/`payroll:approve`;
+  verifier §C.9 + OFFICE exact-list updated. New audit kinds STAFF_PAY_SET/PAYROLL_PREPARED/PAYROLL_APPROVED/
+  PAYROLL_CANCELLED/ADVANCE_ISSUED/ADVANCE_SETTLED. HR firewall block extended with the payroll models.
+  Gate GREEN: vocab verifier PASS, shared+server tsc clean, jest 731/731 (44 suites; 19 new in payroll).
+  Server-only; not verified live. Parked (prd-hr §10): entitlement/bonus figures, statutory deductions,
+  payment-export target format, lateness-rule parameters, day-rate ÷30 alternative.
 - HR step 2 — staff LEAVE source + the staff-attendance leave reconciliation (server, prd-hr §3/H2,
   D-#22/#23; build rulings D-#102/#103). New `modules/hr/`: `StaffLeaveEntitlement` (per staff/year/type
   allowance — admin DATA, numbers parked, no seed), `StaffLeaveApplication` (parent record + paid/unpaid
