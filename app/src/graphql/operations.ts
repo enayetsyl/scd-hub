@@ -3696,6 +3696,7 @@ export const STAFF_LEAVE_BALANCES_QUERY = gql<
 
 export interface ConductRecordT {
   id: string;
+  staffProfileId: string;
   stage: string;
   status: string;
   grossMisconduct: boolean;
@@ -3777,6 +3778,7 @@ export const RAISE_GRIEVANCE = gql<
 
 export interface DevelopmentLogT {
   id: string;
+  staffProfileId: string;
   activity: string;
   dateKey: string;
   outcome: string | null;
