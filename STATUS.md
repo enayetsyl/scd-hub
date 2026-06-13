@@ -1,8 +1,31 @@
 # STATUS
 
-_Updated: 2026-06-13 (Messaging M-4 PR #47 — coordinator review applied; Vocabulary Tracker PRD D-#104–#107; HR step 2 PR #46 + M-3 PR #45 + M-2 + Guardian app + Notifications + M-1 all merged)_
+_Updated: 2026-06-13 (Messaging M-5 built — Chat tab + screens, app-only; PR open. M-4 PR #47 merged; Vocabulary Tracker PRD D-#104–#107; HR-2 PR #46 + M-3 PR #45 merged)_
 
 ## Now / next
+- **Built (Messaging M-5 — Chat tab + screens, Expo app, APP-ONLY) [branch `worktree-messaging-m5`,
+  PR open — coordinator reviews]:** the frontend slice for everything M-1..M-4 shipped server-side,
+  per `docs/prd-messaging.md` §5. **NO server / vocab / contract change** — consumes the existing chat
+  queries/mutations + `/files` endpoints only. New 💬 **Chat tab** gated `chat:read` (Principal/Teacher/
+  Office; GUARDIAN never sees it). Four screens (`ChatStack`): **ChatHome** (conversation list from
+  `myConversations` — DIRECT + auto SECTION/SUBJECT/SCHOOL + manual CUSTOM; ANNOUNCEMENT badge, member
+  count, last activity; "+new DM" + managers' "new group"); **ChatThread** (`messages` with `_id`-cursor
+  "load older"; per-message reply / forward / react-toggle / edit / delete own-only; deleted → Bangla
+  removed-placeholder; reactions aggregated by emoji + a free-form palette; seen ✓count on own messages;
+  `markSeen` on focus; ANNOUNCEMENT hides the composer for non-managers but keeps reactions; attachment
+  picker + viewer via `POST /files/chat` + `GET /files/:id`, web-only graceful-degrade like GP-A; managers
+  get an inline ⚙ Manage-group link); **NewChat** (1:1 staff picker → `openDirectConversation`);
+  **GroupManage** (`chat:manage`: create group + posting policy, add/remove MANUAL members, flip
+  OPEN⇄ANNOUNCEMENT, archive CUSTOM). **Design note / flag:** the staff directory for the new-DM /
+  add-member pickers is **DERIVED from conversation memberships** (the SCHOOL auto-group holds every active
+  staff member) because **no `chat:read`-scoped staff-directory query exists** server-side (`users`/`staff`
+  are manager-only) — the app-only guardrail meant I did NOT add one; sufficient because SCHOOL contains all
+  staff, flagged for the coordinator if a dedicated directory read is wanted. New `lib/chat.ts` +
+  `pickAndUploadChatFile` (`lib/files.ts`) + chat BN/EN labels; existing tab-nav / urql / ui-guidelines
+  token patterns (D-#61). **Gate GREEN (executed):** app `tsc --noEmit` clean + `expo export --platform web`
+  green; no-drift — vocab verifier PASS + **jest 738/738** untouched (server unchanged). **Not verified
+  live** (rides DEP-3). **Next = M-6** (Principal oversight + guardian notice composer — flips
+  `chat:oversee` pipeline→build, a vocab-toucher; sequence against whoever owns vocab then) → M-7 staff push.
 - **Built (Messaging M-4 — chat attachments image/PDF/video/voice ≤10 MB, server, D-#108) [MERGED to main,
   PR #47 — coordinator review applied]:** fourth messaging slice per
   `docs/prd-messaging.md` §5. **Storage pre-flight (AGENTS rule 3 — live repo wins over the PRD):
