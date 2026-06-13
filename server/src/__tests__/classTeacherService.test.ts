@@ -33,6 +33,12 @@ jest.mock("../modules/foundation/models/ClassTeacherAssignment", () => ({
   },
 }));
 
+// Chat group auto-sync (M-2) — mocked: the coordinator mutation is under test;
+// its best-effort SECTION-group hook is exercised in the chat group suite.
+jest.mock("../modules/chat/services/ChatGroupService", () => ({
+  onSectionTeachersChangedSync: jest.fn().mockResolvedValue(undefined),
+}));
+
 import {
   assignClassTeacher,
   setSupportTeacher,

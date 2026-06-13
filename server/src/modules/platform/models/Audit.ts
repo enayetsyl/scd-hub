@@ -35,6 +35,8 @@ export type AuditEventKind =
   | "RESERVATION_EXPIRED" // a READY hold lapsed at request time (lazy expiry, D-#21/#83)
   | "LIBRARIAN_ASSIGNED"  // librarian duty assigned/revoked on a teacher (LB-1, D-#81)
   | "LIBRARY_CATALOG_CHANGED" // title/copy/policy catalog mutation (LB-1)
+  | "CHAT_GROUP_CREATED"  // a CUSTOM ad-hoc group created by Principal/Office (M-2, D-#78)
+  | "CHAT_MEMBERSHIP_CHANGED" // manual add/remove or an auto-provision resync (M-2, D-#78)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

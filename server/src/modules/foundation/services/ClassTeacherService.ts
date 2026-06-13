@@ -8,6 +8,7 @@ import { Types } from "mongoose";
 import { Section, type ISection } from "../models/Section";
 import { User } from "../models/User";
 import { ClassTeacherAssignment, type IClassTeacherAssignment } from "../models/ClassTeacherAssignment";
+import { onSectionTeachersChangedSync } from "../../chat/services/ChatGroupService";
 
 async function assertTeacher(userId: string): Promise<void> {
   const user = await User.findById(userId).lean();
@@ -48,6 +49,8 @@ export async function assignClassTeacher(
   }
   await section.save();
   await appendLog(sectionId, "class_teacher", userId, userId ? "assigned" : "cleared", actorId);
+  // M-2 (D-#78): the SECTION chat group's membership follows the class teacher.
+  await onSectionTeachersChangedSync(sectionId);
   return Section.findById(sectionId).lean() as unknown as ISection;
 }
 
@@ -72,6 +75,8 @@ export async function setSupportTeacher(
   }
   await section.save();
   await appendLog(sectionId, "support", userId, add ? "assigned" : "removed", actorId);
+  // M-2 (D-#78): support teachers are SECTION chat-group members too.
+  await onSectionTeachersChangedSync(sectionId);
   return Section.findById(sectionId).lean() as unknown as ISection;
 }
 

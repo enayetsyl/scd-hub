@@ -4,6 +4,20 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Messaging M-2 — auto-provisioned groups + manual groups + posting policy (server, D-#78/#98/#100). Flipped
+  `chat:manage` pipeline→build in `PERMISSION_BUILD_STATUS` (D-#98's planned M-2 flip) + updated the vocab
+  verifier's exact pipeline-set check to `{chat:oversee}` only (+ a §C.7 build-status assertion). New
+  `ChatGroupService`: idempotent source-tagged auto-provision (the D-#49 pattern) of SECTION (class teacher +
+  support + routine-slot/teaching-grant teachers), SUBJECT (per ROUTINE_SUBJECTS slot teachers, incl.
+  Quran/Arabic via SubjectGroup slots), and SCHOOL (all active non-guardian staff) groups — the reconcile
+  writes/removes ONLY `source:"auto"` rows, never a manual one; `resyncAllChatGroups` (chat:manage) + best-effort
+  hooks wired into RoutineSlotService (slot create/delete) and ClassTeacherService (class-teacher/support change).
+  Manual CUSTOM groups (`createGroupConversation`/`addConversationMember`/`removeConversationMember`/
+  `archiveConversation`) + `setPostingPolicy`, all `chat:manage` (teachers cannot create groups). ANNOUNCEMENT
+  enforcement wired into `ChatService.sendMessage` (non-managers blocked; OPEN/DIRECT unrestricted). Audit kinds
+  CHAT_GROUP_CREATED/CHAT_MEMBERSHIP_CHANGED. Firewall test covers the new file (corpus⇄chat both ways). Gate
+  GREEN: vocab verifier PASS, shared+server tsc clean, **jest 663/663** (41 suites; chatGroups 19 new), app tsc
+  clean + expo web export green. Not verified live. Next = M-3 (reply/forward/reactions/edit/delete).
 - Section merge/split — Principal/Office combine a class's gender sections (Boys+Girls) into one and split
   back, per class, reversibly (D-#62). New `SectionMerge` model (move snapshot) + `SectionMergeService`
   (mergeSections/splitSections/activeSectionMerges + pure `deriveGenderToSource`); merge moves students into

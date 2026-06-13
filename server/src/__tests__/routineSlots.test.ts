@@ -66,6 +66,12 @@ jest.mock("../modules/foundation/models/ScopeGrant", () => ({
 
 jest.mock("../modules/platform/services/AuditService", () => ({ writeAudit: jest.fn() }));
 
+// Chat group auto-sync (M-2) — mocked: the routine mutation is what's under test;
+// its best-effort chat hook is exercised in the chat group suite, not here.
+jest.mock("../modules/chat/services/ChatGroupService", () => ({
+  onRoutineSlotChangedSync: jest.fn().mockResolvedValue(undefined),
+}));
+
 import { createRoutineSlot, deleteRoutineSlot } from "../modules/routine/services/RoutineSlotService";
 
 // ---------------------------------------------------------------------------

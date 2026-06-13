@@ -110,10 +110,19 @@ export interface SendMessageInput {
   senderId: string;
   body: string;
   replyToId?: string | null;
+  /** Does the sender hold chat:manage? Set by the resolver from the caller's role.
+   *  Gates ANNOUNCEMENT posting (M-2, D-#78) — managers post, others are blocked. */
+  canManage?: boolean;
 }
 
 export async function sendMessage(input: SendMessageInput): Promise<IChatMessage> {
-  await assertChatMember(input.conversationId, input.senderId);
+  const conversation = await assertChatMember(input.conversationId, input.senderId);
+
+  // M-2 (D-#78): in an ANNOUNCEMENT group only chat:manage holders may post
+  // (reactions — M-3 — stay allowed). OPEN groups + DIRECT are unrestricted.
+  if (conversation.postingPolicy === "ANNOUNCEMENT" && !input.canManage) {
+    throw new ChatError("এই গ্রুপে শুধুমাত্র ব্যবস্থাপক বার্তা পাঠাতে পারেন");
+  }
 
   const body = (input.body ?? "").trim();
   if (!body) throw new ChatError("বার্তা খালি হতে পারে না");

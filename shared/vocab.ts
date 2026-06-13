@@ -893,7 +893,7 @@ export const PERMISSIONS = [
   // messaging / staff chat (app-native; D-#76–#79)
   "chat:read",             // read own conversations + messages (Principal/Teacher/Office; every row membership-gated in the resolver)
   "chat:write",            // open 1:1, send messages, mark seen (same roles; membership-gated)
-  "chat:manage",           // group create/edit, membership, posting policy, resync (Principal/Office; lands M-2)
+  "chat:manage",           // group create/edit, membership, posting policy, resync (Principal/Office; ACTIVE since M-2, D-#98)
   "chat:oversee",          // PRINCIPAL ONLY — read-override on ANY conversation incl. 1:1; each open itself audited (D-#77; lands M-6)
   // foundation / ops
   "roster:manage",
@@ -931,7 +931,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "library:manage": "build",
   "chat:read": "build",     // M-1 (1:1 chat + receipts)
   "chat:write": "build",    // M-1
-  "chat:manage": "pipeline", // lands with M-2 (groups + posting policy)
+  "chat:manage": "build",   // ACTIVATED by M-2 (groups + posting policy + resync, D-#98 flip)
   "chat:oversee": "pipeline", // lands with M-6 (Principal oversight, D-#77)
   "roster:manage": "build",
   "staff:manage": "build",
