@@ -1,8 +1,32 @@
 # STATUS
 
-_Updated: 2026-06-13 (Messaging M-2 merged PR #44; Guardian portal app riders PR #43; Notifications N-2..N-4 + Messaging M-1 merged)_
+_Updated: 2026-06-13 (Messaging M-3 built — rich messaging, server; PR open. M-2 merged PR #44; Guardian portal app riders PR #43)_
 
 ## Now / next
+- **Built (Messaging M-3 — reply/forward/reactions/edit/delete, server, D-#77/#101) [branch
+  `worktree-messaging-m3`, PR open — coordinator reviews]:** third messaging slice per
+  `docs/prd-messaging.md` §5. Wires the inert M-1 `ChatMessage` fields (replyTo was already validated in
+  M-1 sendMessage). **forward** (`forwardMessage`): member of BOTH source + target, sets `forwardOfId`,
+  carries attachment refs forward, honours the target's M-2 ANNOUNCEMENT gate; deleted source rejected.
+  **reactions** (new `Reaction` model, unique `(messageId,userId)` + `toggleReaction`): ONE per user per
+  message — same emoji toggles OFF, different SWITCHES (single upsert); **free-form emoji, NO vocab enum**
+  (D-#101 — the cycle's vocab guardrail; a fixed palette would be a separate coordinator-sequenced vocab
+  add); allowed in ANNOUNCEMENT groups, rejected on a deleted message; batched per page next to receipts.
+  **edit** (`editMessage`): own-only + membership; prior body → append-only audit (`MESSAGE_EDITED`) FIRST,
+  then `editedAt`; empty/deleted rejected; no time limit. **delete** (`deleteMessage`): own-only,
+  hide-not-erase — original body + attachment refs → audit (`MESSAGE_DELETED`), row masked behind a Bangla
+  removed-placeholder for ALL readers (`listMessages`/`getChatMessage` mask; attachment refs cleared; hard
+  delete never occurs; re-delete idempotent). All four reuse `assertChatMember` + `ChatError` + `writeAudit`
+  (no twins). Resolvers `forwardMessage`/`editMessage`/`deleteMessage`/`toggleReaction` (chat:write +
+  membership); ChatMessage type gains `deletedAt` + `reactions`. **Two new audit kinds in
+  `platform/models/Audit.ts` — NOT `shared/vocab.ts`** (parallel HR session owns vocab this cycle; verifier
+  untouched). Firewall test extended (corpus ↛ `models/Reaction`). **Gate GREEN (executed):** vocab verifier
+  PASS (untouched), shared+server tsc clean, **jest 683/683** (42 suites; 20 new in `chatRich.test.ts`;
+  firewall green), app tsc clean + expo web export green. **Not verified live.** **Next = M-4** (attachments:
+  photo/PDF/video/voice ≤10 MB, Oracle VM disk storage — confirm storage backend at build, PRD §9) → M-5 app
+  screens → M-6 oversight + guardian notices (flips `chat:oversee`) → M-7 staff push. **One vocab flag for
+  the coordinator:** if a controlled reaction palette is wanted, sequence it as a vocab add (the M-3 build
+  kept reactions free-form to honour the guardrail).
 - **Built (Guardian portal app — surface existing reads + polish, FRONTEND ONLY) [branch
   `worktree-guardian-app-riders`, PR #43 — coordinator review applied]:** an app-only pass that renders guardian-readable server data the
   portal already had but never showed, and polishes the existing screens. **NO server / vocab / contract

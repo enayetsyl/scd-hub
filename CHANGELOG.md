@@ -4,6 +4,33 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Messaging M-3 — rich messaging: reply/forward/reactions/edit/delete (server, D-#77/#101). Wires the
+  inert M-1 ChatMessage fields. **forward** (`forwardMessage`): sender must be a member of BOTH source +
+  target; sets `forwardOfId`, carries attachment refs forward, honours the target's ANNOUNCEMENT posting
+  policy (M-2 gate reused); a deleted source is rejected. **reactions** (new `Reaction` model + `toggleReaction`):
+  ONE per user per message — same emoji toggles OFF, a different emoji SWITCHES (no controlled reaction-set
+  enum, so vocab stays untouched); allowed in ANNOUNCEMENT groups, rejected on a deleted message;
+  batched per page next to receipts (no N+1). **edit** (`editMessage`): own messages only; prior body written
+  to the append-only audit (`MESSAGE_EDITED`) FIRST, then `editedAt` stamped; empty/deleted rejected; no time
+  limit (Principal's choice). **delete** (`deleteMessage`): own only, hide-not-erase — original body +
+  attachment refs retained in the audit (`MESSAGE_DELETED`), the row then masked behind a Bangla
+  removed-placeholder for every reader (`listMessages`/`getChatMessage` mask; hard delete never occurs);
+  re-delete is idempotent. All four reuse `assertChatMember` + `ChatError` + `writeAudit` (no twins).
+  Resolvers `forwardMessage`/`editMessage`/`deleteMessage`/`toggleReaction` (chat:write + membership);
+  ChatMessage type gains `deletedAt` + `reactions`. Two new audit kinds in `platform/models/Audit.ts`
+  (NOT vocab — a parallel HR session owns shared/vocab.ts this cycle). Firewall test extended (corpus ↛
+  `models/Reaction`). Gate GREEN (executed): vocab verifier PASS (untouched), shared+server tsc clean,
+  **jest 683/683** (42 suites; 20 new in `chatRich.test.ts`; firewall green), app tsc clean + expo web
+  export green. Not verified live. Next = M-4 attachments.
+- Messaging M-3 coordinator-review fix — bound the free-form reaction emoji length (D-#101 keeps it
+  enum-free, but it was UNbounded: a client could store an arbitrary multi-KB string as a "reaction").
+  `Reaction.emoji` now `maxlength: 64` + a service-side guard in `toggleReaction` (rejects > 64 chars
+  with a clean Bangla error before any DB write); 64 comfortably fits any single-emoji ZWJ grapheme.
+  Other review findings judged not worth changing at this scale: the toggle's read-then-write (2 round-trips)
+  and a not-yet-needed `(conversationId,userId)` Reaction index — left as-is; the "edit leaks deleted body"
+  and ObjectId/string-cast flags were REFUTED (edit rejects deleted messages; Mongoose casts filters).
+  Gate GREEN (executed): vocab verifier PASS, shared+server tsc clean, **jest 684/684** (+1 bound test),
+  app tsc + expo web export green. [worktree-messaging-m3]
 - Guardian portal app — surface already-existing guardian reads the app didn't render + polish (FRONTEND
   ONLY; no server/vocab/contract change). GuardianHome gains a **child-info card** (section + Quran/Arabic
   group memberships from `myChildren` — fetched by the provider but never shown; D-#48/#56) and a day-load

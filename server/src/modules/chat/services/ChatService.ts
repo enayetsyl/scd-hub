@@ -6,19 +6,33 @@
  *
  * Row scope = MEMBERSHIP: every read/write goes through assertChatMember —
  * a non-member is denied (Bangla, NFR-5) whether or not the conversation
- * exists (no existence leak). Group provisioning/membership sync is M-2;
- * reply rendering, forward, reactions, edit/delete are M-3; this slice only
- * persists the forward-compatible fields.
+ * exists (no existence leak). Group provisioning/membership sync is M-2.
+ * M-3 wires rich messaging on the M-1 fields: forward, reactions, edit, and
+ * hide-not-erase delete (the model already persists replyToId/forwardOfId/
+ * editedAt/deletedAt; reply is validated in sendMessage since M-1).
  *
  * Identity-plane behind the ADR-005 firewall — no corpus import in this module.
  */
 import { Types } from "mongoose";
 import { ForbiddenError } from "../../../middleware/authz";
 import { User } from "../../foundation/models/User";
+import { writeAudit } from "../../platform/services/AuditService";
 import { Conversation, directKeyFor, type IConversation } from "../models/Conversation";
 import { ConversationMember, type IConversationMember } from "../models/ConversationMember";
 import { ChatMessage, type IChatMessage } from "../models/ChatMessage";
 import { MessageReceipt, type IMessageReceipt } from "../models/MessageReceipt";
+import { Reaction, type IReaction } from "../models/Reaction";
+
+/** Body shown in place of a deleted message — the original is gone from every
+ *  read but retained in the append-only audit (D-#77, ADR-008). */
+export const REMOVED_PLACEHOLDER = "এই বার্তাটি মুছে ফেলা হয়েছে";
+
+/** Mask a deleted message for the read path: the original body + attachment
+ *  refs never leave the server (they live only in the MESSAGE_DELETED audit). */
+function maskDeleted(msg: IChatMessage): IChatMessage {
+  if (!msg.deletedAt) return msg;
+  return { ...msg, body: REMOVED_PLACEHOLDER, attachmentIds: [] } as unknown as IChatMessage;
+}
 
 /** Validation failure (bad input, not an authz denial). Bangla message (NFR-5). */
 export class ChatError extends Error {
@@ -166,10 +180,13 @@ export async function listMessages(
   const filter: Record<string, unknown> = { conversationId };
   if (opts.beforeId) filter._id = { $lt: new Types.ObjectId(opts.beforeId) };
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
-  return ChatMessage.find(filter)
+  const msgs = (await ChatMessage.find(filter)
     .sort({ _id: -1 })
     .limit(limit)
-    .lean() as unknown as IChatMessage[];
+    .lean()) as unknown as IChatMessage[];
+  // A deleted message stays in the thread as a removed-placeholder (M-3, D-#77);
+  // its original body never reaches a client.
+  return msgs.map(maskDeleted);
 }
 
 // ---------------------------------------------------------------------------
@@ -266,6 +283,208 @@ export async function receiptsForMessages(
   const rows = (await MessageReceipt.find({
     messageId: { $in: oids },
   }).lean()) as unknown as IMessageReceipt[];
+  for (const r of rows) {
+    const key = r.messageId.toString();
+    const arr = byMessage.get(key);
+    if (arr) arr.push(r);
+    else byMessage.set(key, [r]);
+  }
+  return byMessage;
+}
+
+// ---------------------------------------------------------------------------
+// M-3 — forward (J-M9)
+// ---------------------------------------------------------------------------
+
+export interface ForwardMessageInput {
+  messageId: string;
+  toConversationId: string;
+  senderId: string;
+  /** Does the sender hold chat:manage? Gates ANNOUNCEMENT posting on the TARGET
+   *  (a forward is a post; same rule as sendMessage, M-2/D-#78). */
+  canManage?: boolean;
+}
+
+/** Forward a message into another conversation. The sender must be a member of
+ *  BOTH the source (to read it) and the target (to post into it); `forwardOfId`
+ *  records provenance. A deleted message cannot be forwarded. */
+export async function forwardMessage(input: ForwardMessageInput): Promise<IChatMessage> {
+  const source = (await ChatMessage.findById(input.messageId).lean()) as IChatMessage | null;
+  if (!source) throw new ChatError("ফরওয়ার্ড করার বার্তাটি পাওয়া যায়নি");
+  if (source.deletedAt) throw new ChatError("মুছে ফেলা বার্তা ফরওয়ার্ড করা যায় না");
+
+  // Membership on both ends — source to read, target to post.
+  await assertChatMember(source.conversationId.toString(), input.senderId);
+  const target = await assertChatMember(input.toConversationId, input.senderId);
+
+  // A forward is a post — honour the target's ANNOUNCEMENT policy (M-2, D-#78).
+  if (target.postingPolicy === "ANNOUNCEMENT" && !input.canManage) {
+    throw new ChatError("এই গ্রুপে শুধুমাত্র ব্যবস্থাপক বার্তা পাঠাতে পারেন");
+  }
+
+  const message = await ChatMessage.create({
+    conversationId: input.toConversationId,
+    senderId: input.senderId,
+    body: source.body,
+    forwardOfId: source._id,
+    // Carry the attachment refs forward (the M-4 binaries are shared, not copied).
+    attachmentIds: source.attachmentIds ?? [],
+  });
+
+  await Conversation.updateOne(
+    { _id: input.toConversationId },
+    { $set: { lastMessageAt: message.createdAt } },
+  ).catch((err) => console.error("[chat] lastMessageAt stamp failed:", err));
+
+  return message;
+}
+
+// ---------------------------------------------------------------------------
+// M-3 — edit (own only; prior body retained in audit — D-#77, ADR-008)
+// ---------------------------------------------------------------------------
+
+/** Edit one's OWN message. The prior body is written to the append-only audit
+ *  (MESSAGE_EDITED) before the row is updated; `editedAt` is stamped. No time
+ *  limit (Principal's choice). A deleted message cannot be edited. */
+export async function editMessage(
+  messageId: string,
+  userId: string,
+  newBody: string,
+): Promise<IChatMessage> {
+  const msg = (await ChatMessage.findById(messageId).lean()) as IChatMessage | null;
+  if (!msg) throw new ChatError("বার্তাটি পাওয়া যায়নি");
+  await assertChatMember(msg.conversationId.toString(), userId);
+  if (msg.senderId.toString() !== userId) {
+    throw new ForbiddenError("শুধুমাত্র নিজের বার্তা সম্পাদনা করা যায়");
+  }
+  if (msg.deletedAt) throw new ChatError("মুছে ফেলা বার্তা সম্পাদনা করা যায় না");
+
+  const body = (newBody ?? "").trim();
+  if (!body) throw new ChatError("বার্তা খালি হতে পারে না");
+
+  // Retain the prior body in the audit FIRST (append-only, ADR-008).
+  await writeAudit({
+    eventKind: "MESSAGE_EDITED",
+    actorId: userId,
+    targetId: msg._id,
+    targetKind: "ChatMessage",
+    meta: { conversationId: msg.conversationId.toString(), priorBody: msg.body },
+  });
+
+  const editedAt = new Date();
+  await ChatMessage.updateOne({ _id: messageId }, { $set: { body, editedAt } });
+  return { ...msg, body, editedAt } as unknown as IChatMessage;
+}
+
+// ---------------------------------------------------------------------------
+// M-3 — delete (own only; hide-not-erase — D-#77, ADR-008)
+// ---------------------------------------------------------------------------
+
+/** Delete one's OWN message: the original body + attachment refs are retained in
+ *  the append-only audit (MESSAGE_DELETED), then the row is masked behind a
+ *  removed-placeholder for every reader. Hard delete never occurs; a re-delete
+ *  is an idempotent no-op. */
+export async function deleteMessage(
+  messageId: string,
+  userId: string,
+): Promise<IChatMessage> {
+  const msg = (await ChatMessage.findById(messageId).lean()) as IChatMessage | null;
+  if (!msg) throw new ChatError("বার্তাটি পাওয়া যায়নি");
+  await assertChatMember(msg.conversationId.toString(), userId);
+  if (msg.senderId.toString() !== userId) {
+    throw new ForbiddenError("শুধুমাত্র নিজের বার্তা মুছে ফেলা যায়");
+  }
+  if (msg.deletedAt) return maskDeleted(msg); // already removed — idempotent
+
+  await writeAudit({
+    eventKind: "MESSAGE_DELETED",
+    actorId: userId,
+    targetId: msg._id,
+    targetKind: "ChatMessage",
+    meta: {
+      conversationId: msg.conversationId.toString(),
+      originalBody: msg.body,
+      attachmentIds: (msg.attachmentIds ?? []).map((a) => a.toString()),
+    },
+  });
+
+  const deletedAt = new Date();
+  await ChatMessage.updateOne(
+    { _id: messageId },
+    { $set: { deletedAt, deletedBy: new Types.ObjectId(userId) } },
+  );
+  return maskDeleted({ ...msg, deletedAt, deletedBy: new Types.ObjectId(userId) } as unknown as IChatMessage);
+}
+
+// ---------------------------------------------------------------------------
+// M-3 — reactions (one per user per message, toggle/switch — J-M9)
+// ---------------------------------------------------------------------------
+
+/** Add / switch / remove the caller's reaction on a message (membership-gated;
+ *  reactions are allowed even in an ANNOUNCEMENT group, M-2/D-#78). One row per
+ *  user per message: the SAME emoji toggles OFF (removes the row), a DIFFERENT
+ *  emoji SWITCHES it. Returns the caller's resulting emoji, or null if toggled
+ *  off. Reacting to a deleted message is rejected. */
+export async function toggleReaction(
+  messageId: string,
+  userId: string,
+  emoji: string,
+): Promise<string | null> {
+  const value = (emoji ?? "").trim();
+  if (!value) throw new ChatError("রিঅ্যাকশন খালি হতে পারে না");
+  // Free-form per D-#101, but bound the length — a reaction is one emoji, not a
+  // payload (the model caps this too; guarding here gives a clean Bangla error).
+  if (value.length > 64) throw new ChatError("রিঅ্যাকশন অবৈধ");
+
+  const msg = (await ChatMessage.findById(messageId).lean()) as IChatMessage | null;
+  if (!msg) throw new ChatError("বার্তাটি পাওয়া যায়নি");
+  await assertChatMember(msg.conversationId.toString(), userId);
+  if (msg.deletedAt) throw new ChatError("মুছে ফেলা বার্তায় রিঅ্যাকশন দেওয়া যায় না");
+
+  const existing = (await Reaction.findOne({ messageId, userId }).lean()) as IReaction | null;
+  if (existing && existing.emoji === value) {
+    // Same emoji → toggle off.
+    await Reaction.deleteOne({ messageId, userId });
+    return null;
+  }
+  // New or switched emoji → upsert the single (message,user) row.
+  await Reaction.updateOne(
+    { messageId: new Types.ObjectId(messageId), userId: new Types.ObjectId(userId) },
+    {
+      $set: { emoji: value },
+      $setOnInsert: { conversationId: msg.conversationId },
+    },
+    { upsert: true },
+  );
+  return value;
+}
+
+/** A single message, membership-gated + masked if deleted — the read a mutation
+ *  resolver uses to return the current row after a reaction toggle. */
+export async function getChatMessage(
+  messageId: string,
+  userId: string,
+): Promise<IChatMessage> {
+  const msg = (await ChatMessage.findById(messageId).lean()) as IChatMessage | null;
+  if (!msg) throw new ChatError("বার্তাটি পাওয়া যায়নি");
+  await assertChatMember(msg.conversationId.toString(), userId);
+  return maskDeleted(msg);
+}
+
+/** All reactions on one message (the per-message field falls back to this). */
+export async function reactionsForMessage(messageId: string): Promise<IReaction[]> {
+  return Reaction.find({ messageId }).lean() as unknown as IReaction[];
+}
+
+/** Reactions for MANY messages in one query, grouped by message id — the thread
+ *  resolver pre-loads a page so the reactions field doesn't fire per message. */
+export async function reactionsForMessages(
+  messageIds: string[],
+): Promise<Map<string, IReaction[]>> {
+  const byMessage = new Map<string, IReaction[]>();
+  if (messageIds.length === 0) return byMessage;
+  const oids = messageIds.map((id) => new Types.ObjectId(id));
+  const rows = (await Reaction.find({ messageId: { $in: oids } }).lean()) as unknown as IReaction[];
   for (const r of rows) {
     const key = r.messageId.toString();
     const arr = byMessage.get(key);
