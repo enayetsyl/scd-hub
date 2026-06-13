@@ -359,4 +359,14 @@ describe("staffMatch (the phone-only User↔StaffProfile join)", () => {
     const res = await resolveStaffProfileForUser(oid().toString());
     expect(res).toBe(match);
   });
+
+  test("resolveStaffProfileForUser fails CLOSED when two staff share the caller's phone (no masquerade)", async () => {
+    mockUserFindById.mockResolvedValue({ phone: "1700000000" });
+    // Two active StaffProfiles with the same normalized phone — ambiguous join.
+    mockStaffFind.mockResolvedValue([
+      { _id: oid(), phone: "01700000000" },
+      { _id: oid(), phone: "0 1700-000000" },
+    ]);
+    expect(await resolveStaffProfileForUser(oid().toString())).toBeNull();
+  });
 });

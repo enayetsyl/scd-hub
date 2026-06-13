@@ -12,6 +12,7 @@ import { User } from "../../foundation/models/User";
 import type { IConversation } from "../models/Conversation";
 import type { IChatMessage } from "../models/ChatMessage";
 import type { IMessageReceipt } from "../models/MessageReceipt";
+import type { IReaction } from "../models/Reaction";
 import type { IConversationMember } from "../models/ConversationMember";
 import {
   openDirectConversation,
@@ -24,6 +25,13 @@ import {
   assertChatMember,
   receiptsForMessage,
   receiptsForMessages,
+  forwardMessage,
+  editMessage,
+  deleteMessage,
+  toggleReaction,
+  getChatMessage,
+  reactionsForMessage,
+  reactionsForMessages,
 } from "../services/ChatService";
 import {
   createGroupConversation,
@@ -39,7 +47,10 @@ import {
  *  resolver to spare the per-row field resolvers an N+1. Field resolvers read
  *  the attachment when present and fall back to a single-row fetch otherwise. */
 type WithMembers = IConversation & { _members?: ChatMemberView[] };
-type WithReceipts = IChatMessage & { _receipts?: IMessageReceipt[] };
+type WithReceipts = IChatMessage & {
+  _receipts?: IMessageReceipt[];
+  _reactions?: IReaction[];
+};
 
 interface ChatMemberView {
   userId: string;
@@ -51,6 +62,11 @@ interface ChatMemberView {
 interface SeenByView {
   userId: string;
   seenAt: Date;
+}
+
+interface ReactionView {
+  userId: string;
+  emoji: string;
 }
 
 const ChatMemberRef = builder.objectRef<ChatMemberView>("ConversationMember").implement({
@@ -68,6 +84,19 @@ const SeenByRef = builder.objectRef<SeenByView>("MessageSeenBy").implement({
     seenAt: t.string({ resolve: (r) => new Date(r.seenAt).toISOString() }),
   }),
 });
+
+const ReactionRef = builder.objectRef<ReactionView>("MessageReaction").implement({
+  fields: (t) => ({
+    userId: t.exposeString("userId"),
+    emoji: t.exposeString("emoji"),
+  }),
+});
+
+/** Resolve a message's reactions (batched if pre-loaded, else a single fetch). */
+async function reactionViews(m: IChatMessage): Promise<ReactionView[]> {
+  const rows = (m as WithReceipts)._reactions ?? (await reactionsForMessage(m._id.toString()));
+  return rows.map((r) => ({ userId: r.userId.toString(), emoji: r.emoji }));
+}
 
 /** Resolve member rows → views, looking names up in a prebuilt id→name map. */
 function viewsFromMembers(
@@ -144,6 +173,14 @@ const ChatMessageRef = builder.objectRef<IChatMessage>("ChatMessage").implement(
       nullable: true,
       resolve: (m) => (m.editedAt ? new Date(m.editedAt).toISOString() : null),
     }),
+    // Hide-not-erase delete (M-3, D-#77): the service has already masked the body
+    // behind the removed-placeholder; deletedAt lets the client render it as such.
+    deletedAt: t.string({
+      nullable: true,
+      resolve: (m) => (m.deletedAt ? new Date(m.deletedAt).toISOString() : null),
+    }),
+    // Reactions (M-3): one per user per message; the client aggregates by emoji.
+    reactions: t.field({ type: [ReactionRef], resolve: (m) => reactionViews(m) }),
     // Receipts (M1.5): who has seen this message + the count. The sender never
     // has a receipt row of their own.
     seenBy: t.field({
@@ -198,10 +235,19 @@ builder.queryField("messages", (t) =>
         beforeId: args.beforeId ?? undefined,
         limit: args.limit ?? undefined,
       });
-      // Pre-batch receipts for the page so seenBy/seenCount don't query per message.
+      // Pre-batch receipts + reactions for the page so seenBy/seenCount and the
+      // reactions field don't fire a query per message.
       if (msgs.length) {
-        const byMessage = await receiptsForMessages(msgs.map((m) => m._id.toString()));
-        for (const m of msgs) (m as WithReceipts)._receipts = byMessage.get(m._id.toString()) ?? [];
+        const ids = msgs.map((m) => m._id.toString());
+        const [byReceipt, byReaction] = await Promise.all([
+          receiptsForMessages(ids),
+          reactionsForMessages(ids),
+        ]);
+        for (const m of msgs) {
+          const key = m._id.toString();
+          (m as WithReceipts)._receipts = byReceipt.get(key) ?? [];
+          (m as WithReceipts)._reactions = byReaction.get(key) ?? [];
+        }
       }
       return msgs;
     },
@@ -246,6 +292,65 @@ builder.mutationField("markSeen", (t) =>
     authScopes: { hasPermission: "chat:write" },
     args: { conversationId: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => markConversationSeen(args.conversationId, ctx.auth!.userId),
+  }),
+);
+
+// --- Rich messaging: forward / edit / delete / react (M-3) --------------------
+
+builder.mutationField("forwardMessage", (t) =>
+  t.field({
+    type: ChatMessageRef,
+    authScopes: { hasPermission: "chat:write" },
+    args: {
+      messageId: t.arg.string({ required: true }),
+      toConversationId: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) =>
+      forwardMessage({
+        messageId: args.messageId,
+        toConversationId: args.toConversationId,
+        senderId: ctx.auth!.userId,
+        // ANNOUNCEMENT gate on the target (M-2, D-#78) — same rule as sendMessage.
+        canManage: roleHasPermission(ctx.auth!.role as Role, "chat:manage"),
+      }),
+  }),
+);
+
+builder.mutationField("editMessage", (t) =>
+  t.field({
+    type: ChatMessageRef,
+    authScopes: { hasPermission: "chat:write" },
+    args: {
+      messageId: t.arg.string({ required: true }),
+      body: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => editMessage(args.messageId, ctx.auth!.userId, args.body),
+  }),
+);
+
+builder.mutationField("deleteMessage", (t) =>
+  t.field({
+    type: ChatMessageRef,
+    authScopes: { hasPermission: "chat:write" },
+    args: { messageId: t.arg.string({ required: true }) },
+    resolve: async (_r, args, ctx) => deleteMessage(args.messageId, ctx.auth!.userId),
+  }),
+);
+
+builder.mutationField("toggleReaction", (t) =>
+  t.field({
+    type: ChatMessageRef,
+    authScopes: { hasPermission: "chat:write" },
+    args: {
+      messageId: t.arg.string({ required: true }),
+      emoji: t.arg.string({ required: true }),
+    },
+    // Toggle/switch the caller's reaction, then return the message so the client
+    // re-renders its (freshly fetched) reactions field.
+    resolve: async (_r, args, ctx) => {
+      await toggleReaction(args.messageId, ctx.auth!.userId, args.emoji);
+      return getChatMessage(args.messageId, ctx.auth!.userId);
+    },
   }),
 );
 

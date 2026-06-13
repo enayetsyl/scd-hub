@@ -33,8 +33,12 @@ export async function resolveStaffProfileForUser(userId: string): Promise<IStaff
   const user = await User.findById(userId).select("phone").lean();
   if (!user?.phone) return null;
   const candidates = await StaffProfile.find({ active: true, phone: { $ne: null } }).lean();
-  return (
-    (candidates.find((s) => s.phone && normalizePhone(s.phone) === user.phone) as IStaffProfile | undefined) ??
-    null
-  );
+  const matches = candidates.filter((s) => s.phone && normalizePhone(s.phone) === user.phone);
+  // Fail CLOSED on an ambiguous phone: User.phone is sparse-unique (the auth side
+  // is 1:1), but StaffProfile carries no unique phone constraint (the HR-2 RBAC
+  // ruling adds no index/migration). If two active StaffProfiles share the caller's
+  // phone the join can't say which is theirs — deny self-service rather than
+  // silently resolve to the wrong record (an own-row masquerade). One match only.
+  if (matches.length !== 1) return null;
+  return matches[0] as unknown as IStaffProfile;
 }

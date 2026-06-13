@@ -241,6 +241,7 @@ describe("Chat firewall (ADR-005 / D-#76)", () => {
       expect(content).not.toMatch(importPattern("models/Conversation"));
       expect(content).not.toMatch(importPattern("models/ChatMessage"));
       expect(content).not.toMatch(importPattern("models/MessageReceipt"));
+      expect(content).not.toMatch(importPattern("models/Reaction"));
     }
   });
 });

@@ -1,12 +1,12 @@
 # STATUS
 
-_Updated: 2026-06-13 (HR step 2 — staff attendance & leave, PR open; Messaging M-2 merged PR #44; Guardian portal app riders PR #43; Notifications N-2..N-4 + Messaging M-1 merged)_
+_Updated: 2026-06-13 (HR step 2 staff attendance & leave PR #46 — coordinator review applied; Messaging M-3 merged PR #45; M-2/#44 + Guardian app/#43 + Notifications + M-1 all merged)_
 
 ## Now / next
 - **Built (HR step 2 — staff ATTENDANCE & LEAVE, server, prd-hr §3/H2, D-#22/#23 + build rulings
-  D-#101/#102) [branch `worktree-hr-attendance-leave`, PR open — coordinator reviews]:** the genuinely-missing
+  D-#102/#103) [branch `worktree-hr-attendance-leave`, PR #46 — coordinator review applied]:** the genuinely-missing
   **staff LEAVE source** + the staff-attendance leave reconciliation AT-1 left open. **Scope boundary
-  (D-#101, the pre-flight call):** the existing `attendance` module (D-#63–#67) already ingests staff
+  (D-#102, the pre-flight call):** the existing `attendance` module (D-#63–#67) already ingests staff
   attendance as a biometric Excel SNAPSHOT (`TeacherAttendanceDay`) = HR-2b's "internal record + manual
   transport"; HR-2 does NOT rebuild the punch-driven §3a schedule/grace/working-days/manual-source layer
   (it presupposes punch-level data the symbol snapshot lacks + the parked live device sync, D-#24/H7.6) —
@@ -20,7 +20,7 @@ _Updated: 2026-06-13 (HR step 2 — staff attendance & leave, PR open; Messaging
   `User`↔`StaffProfile` join** provisioning uses — NO FK/migration added, worktree-rule-3 safe). **AT-1 seam
   CLOSED:** a biometric ✘ now reads LEAVE when an approved staff leave covers that staff/date — a READ-TIME
   overlay in `TeacherAttendanceService` (forDate + summary), correct even when leave is approved AFTER the
-  snapshot import (D-#102). **RBAC (D-#102):** `leave:manage` (PRINCIPAL/OFFICE, build) = the admin surface +
+  snapshot import (D-#103). **RBAC (D-#103):** `leave:manage` (PRINCIPAL/OFFICE, build) = the admin surface +
   record-on-behalf for support (no login, D-#25); teacher self-apply/propose-cover/cancel/view-own = OWN-ROW,
   **no new permission** (D-#17/#72 posture). **Vocab (app-native, NO wire sync, I own vocab this cycle):**
   `LEAVE_TYPES`/`LEAVE_STATUSES`/`COVER_SLOT_STATUSES` + BN/EN + `LEAVE_TYPE_RULES` (settled §3.2 table) +
@@ -31,6 +31,30 @@ _Updated: 2026-06-13 (HR step 2 — staff attendance & leave, PR open; Messaging
   follow-up). **Not verified live.** Parked (prd-hr §10, unchanged): leave entitlement amounts/Hajj reset,
   maternity legal check (H7.5/D-#23), the §3a live-sync layer (H7.6). **Next after merge = HR-3 (payroll)** —
   needs HR-1 salary + this leave (encashment) + attendance (unpaid-leave day-rate deduction).
+- **Built (Messaging M-3 — reply/forward/reactions/edit/delete, server, D-#77/#101) [MERGED to main,
+  PR #45 + coordinator review fix — reaction emoji bounded]:** third messaging slice per
+  `docs/prd-messaging.md` §5. Wires the inert M-1 `ChatMessage` fields (replyTo was already validated in
+  M-1 sendMessage). **forward** (`forwardMessage`): member of BOTH source + target, sets `forwardOfId`,
+  carries attachment refs forward, honours the target's M-2 ANNOUNCEMENT gate; deleted source rejected.
+  **reactions** (new `Reaction` model, unique `(messageId,userId)` + `toggleReaction`): ONE per user per
+  message — same emoji toggles OFF, different SWITCHES (single upsert); **free-form emoji, NO vocab enum**
+  (D-#101 — the cycle's vocab guardrail; a fixed palette would be a separate coordinator-sequenced vocab
+  add); allowed in ANNOUNCEMENT groups, rejected on a deleted message; batched per page next to receipts.
+  **edit** (`editMessage`): own-only + membership; prior body → append-only audit (`MESSAGE_EDITED`) FIRST,
+  then `editedAt`; empty/deleted rejected; no time limit. **delete** (`deleteMessage`): own-only,
+  hide-not-erase — original body + attachment refs → audit (`MESSAGE_DELETED`), row masked behind a Bangla
+  removed-placeholder for ALL readers (`listMessages`/`getChatMessage` mask; attachment refs cleared; hard
+  delete never occurs; re-delete idempotent). All four reuse `assertChatMember` + `ChatError` + `writeAudit`
+  (no twins). Resolvers `forwardMessage`/`editMessage`/`deleteMessage`/`toggleReaction` (chat:write +
+  membership); ChatMessage type gains `deletedAt` + `reactions`. **Two new audit kinds in
+  `platform/models/Audit.ts` — NOT `shared/vocab.ts`** (parallel HR session owns vocab this cycle; verifier
+  untouched). Firewall test extended (corpus ↛ `models/Reaction`). **Gate GREEN (executed):** vocab verifier
+  PASS (untouched), shared+server tsc clean, **jest 683/683** (42 suites; 20 new in `chatRich.test.ts`;
+  firewall green), app tsc clean + expo web export green. **Not verified live.** **Next = M-4** (attachments:
+  photo/PDF/video/voice ≤10 MB, Oracle VM disk storage — confirm storage backend at build, PRD §9) → M-5 app
+  screens → M-6 oversight + guardian notices (flips `chat:oversee`) → M-7 staff push. **One vocab flag for
+  the coordinator:** if a controlled reaction palette is wanted, sequence it as a vocab add (the M-3 build
+  kept reactions free-form to honour the guardrail).
 - **Built (Guardian portal app — surface existing reads + polish, FRONTEND ONLY) [branch
   `worktree-guardian-app-riders`, PR #43 — coordinator review applied]:** an app-only pass that renders guardian-readable server data the
   portal already had but never showed, and polishes the existing screens. **NO server / vocab / contract
