@@ -34,6 +34,7 @@ import "./modules/library/resolvers/library";
 import "./modules/library/resolvers/circulation";
 import "./modules/library/resolvers/chase";
 import "./modules/library/resolvers/libraryGuardian";
+import "./modules/chat/resolvers/chat";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";

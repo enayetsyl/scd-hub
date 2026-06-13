@@ -211,6 +211,40 @@ describe("Library firewall (ADR-005 / D-#81)", () => {
   });
 });
 
+/**
+ * Chat/messaging firewall (M-1, D-#76 / prd-messaging §8).
+ *
+ * Every chat row (conversations, memberships, messages, receipts) names staff
+ * Users — strictly identity-plane (ADR-005). Fail-closed both ways: the chat
+ * module must have NO import path into the corpus plane, and the corpus module
+ * must have NO import path into the chat module (no analytics/export join back
+ * to who said what to whom).
+ */
+describe("Chat firewall (ADR-005 / D-#76)", () => {
+  const chatDir = path.resolve(__dirname, "../modules/chat");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("chat module has NO import from the corpus plane", () => {
+    const files = walkDir(chatDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (M-1 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the chat module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/chat"));
+      expect(content).not.toMatch(importPattern("models/Conversation"));
+      expect(content).not.toMatch(importPattern("models/ChatMessage"));
+      expect(content).not.toMatch(importPattern("models/MessageReceipt"));
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;

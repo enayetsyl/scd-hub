@@ -1,8 +1,30 @@
 # STATUS
 
-_Updated: 2026-06-13 (Assignment Tracker AS-T1..T5 + Library module LB-1..LB-5 built)_
+_Updated: 2026-06-13 (Messaging M-1 built; Assignment Tracker AS-T1..T5 + Library LB-1..LB-5 merged)_
 
 ## Now / next
+- **Built (Messaging M-1 — core chat models + 1:1 + read receipts, server, D-#76/#77) [branch
+  `worktree-messaging-m1`, PR open]:** first messaging slice per `docs/prd-messaging.md` §5. **Vocab
+  (app-native, NO wire sync):** `chat:read`/`chat:write` (P/T/O, build) + `chat:manage` (P/O,
+  **pipeline → flips at M-2**) + `chat:oversee` (PRINCIPAL only, **pipeline → flips at M-6**, D-#77) +
+  CONVERSATION_KINDS/POSTING_POLICIES/ATTACHMENT_KINDS/NOTICE_SCOPES + BN/EN labels; verifier §C.7
+  added (15 checks), OFFICE exact-list + pipeline-set checks updated. **Server** (`modules/chat/`):
+  `Conversation` (sparse-unique `directKey` = sorted pair key — ONE DIRECT thread per pair, race-safe
+  like dedupeKey) · `ConversationMember` (source `auto|manual`, the D-#49 pattern — M-2's sync will
+  touch only auto rows) · `ChatMessage` (forward-compatible replyToId/forwardOfId/attachmentIds/
+  editedAt/deletedAt fields; their mutations land M-3/M-4) · `MessageReceipt` (one per reader×message,
+  first-seen wins via $setOnInsert). `ChatService`: openDirectConversation (idempotent, staff-only —
+  guardians rejected, D-#76; self-DM rejected) / sendMessage (same-conversation replyTo validated,
+  lastMessageAt stamped) / listMessages (newest-first, _id-cursor pagination) / myConversations /
+  markConversationSeen (sweeps only OTHERS' messages); EVERY read/write through `assertChatMember`
+  (Bangla deny, no existence leak). Resolvers: myConversations/conversation/messages (chat:read) +
+  openDirectConversation/sendMessage/markSeen (chat:write); per-message seenBy list + seenCount.
+  Firewall test extended both ways (corpus ⇄ chat). **Gate GREEN (executed):** vocab verifier PASS,
+  shared+server tsc clean, **jest 610/610** (21 chat + 2 firewall new; 38 suites), app tsc clean +
+  expo web export green (693 modules). **Not verified live.** **Next = M-2** (auto-provisioned
+  SECTION/SUBJECT/SCHOOL groups + manual CUSTOM groups + posting policy; flip `chat:manage`
+  pipeline→build + verifier there), then M-3 rich messaging → M-4 attachments → M-5 app screens →
+  M-6 oversight + guardian notices (flips `chat:oversee`) → M-7 staff push.
 - **Built (Library module — catalog + circulation + reservations + overdue chasing, LB-1..LB-5,
   D-#81–#84 + build rulings D-#96/#97) [MERGED to main, PR #40, 887468c]:** the full prd-library contract,
   server+app. **LB-1:** app-native vocab (`library:read` P/T/O + `library:manage` P/O; BORROWER_TYPES/
@@ -170,8 +192,8 @@ _Updated: 2026-06-13 (Assignment Tracker AS-T1..T5 + Library module LB-1..LB-5 b
   SECTION notices gate on the class teacher — lands the D-#45 parent-comms duty); guardian push stays
   portal-deferred; wa.me links permanent fallback (ADR-003 reaffirmed). App-native vocab only (`chat:*`
   perms + CONVERSATION_KINDS/POSTING_POLICIES/ATTACHMENT_KINDS/NOTICE_SCOPES + BN) — no wire sync.
-  **Plan/docs only — no feature code yet. Next = build M-1 per docs/prd-messaging.md §5, slice order.**
-  (Handoff proposed D-#59–#62 — renumbered, taken through D-#75.)
+  **M-1 now BUILT (see the "Built (Messaging M-1 …)" bullet above); next = M-2 per
+  docs/prd-messaging.md §5, slice order.** (Handoff proposed D-#59–#62 — renumbered, taken through D-#75.)
 - **Planned (Notifications phase 1 — in-app inbox + scheduler + push, D-#72/#73/#74/#75):** build contract
   `docs/prd-notifications.md` authored — **N-1 now BUILT (see bullet above); N-2..N-4 remain**. Delivers the D-#52 trigger schedule:
   `Notification` model + single `NotificationService.emit()` seam (idempotent by dedupeKey, channels fan
