@@ -32,10 +32,12 @@ import type {
   TabParamList,
 } from "./types";
 
+import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../auth/AuthContext";
 import { useBasket } from "../state/BasketContext";
 import { useLanguage } from "../state/LanguageContext";
-import { STR } from "../lib/labels";
+import { useNotifications } from "../state/NotificationContext";
+import { STR, bnNum } from "../lib/labels";
 import { fonts, typeScale, useColors } from "../theme";
 
 import LoginScreen from "../screens/auth/LoginScreen";
@@ -114,6 +116,48 @@ function LangToggle(): React.ReactElement {
   );
 }
 
+/** The 🔔 + unread badge (N3.1) — rendered in every stack header (staff and
+ *  guardian alike); opens the root-level NotificationCenter. The count comes
+ *  from the shared NotificationContext poll. */
+function HeaderBell(): React.ReactElement {
+  const navigation = useNavigation();
+  const colors = useColors();
+  const { unreadCount } = useNotifications();
+  return (
+    <Pressable
+      // The route lives on the ROOT stack — navigate bubbles up from any tab.
+      onPress={() => (navigation as unknown as { navigate: (name: string) => void }).navigate("NotificationCenter")}
+      style={{ paddingHorizontal: 8 }}
+      hitSlop={12}
+      accessibilityLabel={STR.notifications}
+    >
+      <View>
+        <Text style={{ fontSize: 18 }}>🔔</Text>
+        {unreadCount > 0 ? (
+          <View
+            style={{
+              position: "absolute",
+              top: -4,
+              right: -10,
+              backgroundColor: colors.error,
+              borderRadius: 9,
+              minWidth: 18,
+              height: 18,
+              alignItems: "center",
+              justifyContent: "center",
+              paddingHorizontal: 3,
+            }}
+          >
+            <Text style={{ color: colors.onPrimary, fontSize: 11, fontWeight: "700" }}>
+              {unreadCount > 99 ? bnNum("99+") : bnNum(unreadCount)}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
 function LogoutButton(): React.ReactElement {
   const { logout } = useAuth();
   const colors = useColors();
@@ -154,6 +198,7 @@ function HeaderRight(): React.ReactElement {
   return (
     <View style={{ flexDirection: "row", alignItems: "center" }}>
       <HeaderName />
+      <HeaderBell />
       <LangToggle />
       <LogoutButton />
     </View>

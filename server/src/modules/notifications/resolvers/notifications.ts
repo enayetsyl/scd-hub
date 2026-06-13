@@ -34,6 +34,12 @@ const NotificationRefsRef = builder.objectRef<NotificationRefs>("NotificationRef
     reviewAssignmentId: t.string({ nullable: true, resolve: (r) => r.reviewAssignmentId ?? null }),
     artifactId: t.string({ nullable: true, resolve: (r) => r.artifactId ?? null }),
     substitutionId: t.string({ nullable: true, resolve: (r) => r.substitutionId ?? null }),
+    loanId: t.string({ nullable: true, resolve: (r) => r.loanId ?? null }),
+    rung: t.int({ nullable: true, resolve: (r) => r.rung ?? null }),
+    audienceKey: t.string({ nullable: true, resolve: (r) => r.audienceKey ?? null }),
+    periodNumber: t.int({ nullable: true, resolve: (r) => r.periodNumber ?? null }),
+    tier: t.string({ nullable: true, resolve: (r) => r.tier ?? null }),
+    hour: t.int({ nullable: true, resolve: (r) => r.hour ?? null }),
   }),
 });
 

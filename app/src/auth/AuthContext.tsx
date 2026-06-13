@@ -9,7 +9,7 @@ import { useClient } from "urql";
 import { ME_QUERY, STAFF_LOGIN, GUARDIAN_LOGIN, type MeUser } from "../graphql/operations";
 import { hydrateToken, persistToken } from "../lib/tokenStore";
 import { friendlyError } from "../lib/errors";
-import { registerPushToken } from "../lib/push";
+import { registerPushToken, unregisterPushToken } from "../lib/push";
 import { STR } from "../lib/labels";
 import type { Role } from "@scd/shared";
 
@@ -100,10 +100,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   );
 
   const logout = useCallback(async () => {
+    // N4.1: deactivate this device's push token while the session still works.
+    await unregisterPushToken(client);
     await persistToken(null);
     setUser(null);
     setStatus("anon");
-  }, []);
+  }, [client]);
 
   return (
     <AuthContext.Provider value={{ status, user, role: user?.role ?? null, login, logout }}>

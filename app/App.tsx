@@ -1,8 +1,9 @@
 import React, { useEffect } from "react";
-import { useColorScheme } from "react-native";
+import { Platform, useColorScheme } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { useFonts } from "expo-font";
+import * as Notifications from "expo-notifications";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { Provider as UrqlProvider } from "urql";
@@ -13,6 +14,7 @@ import { BasketProvider } from "./src/state/BasketContext";
 import { SectionProvider } from "./src/state/SectionContext";
 import { LanguageProvider, useLanguage } from "./src/state/LanguageContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
+import { navigationRef, openNotificationCenter } from "./src/navigation/navigationRef";
 import { useNavigationTheme } from "./src/theme";
 
 // Splash holds until Noto Sans Bengali is loaded (ui-guidelines §13.2) — text
@@ -32,8 +34,19 @@ function LanguageScopedNavigator(): React.ReactElement {
 function ThemedNavigation(): React.ReactElement {
   const navTheme = useNavigationTheme();
   const scheme = useColorScheme();
+
+  // N4.2: tapping a push opens the NotificationCenter — the role-agnostic
+  // inbox; the row inside carries the same deep-link the badge path uses.
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const sub = Notifications.addNotificationResponseReceivedListener(() => {
+      openNotificationCenter();
+    });
+    return () => sub.remove();
+  }, []);
+
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer ref={navigationRef} theme={navTheme}>
       <LanguageScopedNavigator />
       {/* The header is a `primary` block in both themes: light primary is deep
           green (light icons), dark primary is light green (dark icons). */}

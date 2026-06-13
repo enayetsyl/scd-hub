@@ -1,19 +1,19 @@
 /**
- * AT-4 — reminder + escalation engine (prd-attendance §6 AT4.1–AT4.6, §9, D-#65).
- * Pure helpers exercised directly; the orchestrator runs against mocked models
- * (DB-free) + a mocked Expo transport. Covers: FULL-day gate, unmarked-only
- * dispatch, tier→audience routing, idempotency, no-op when already marked,
- * dead-token pruning, audit.
+ * AT-4 — reminder + escalation engine (prd-attendance §6 AT4.1–AT4.6, §9, D-#65;
+ * delivery reconciled onto the D-#72 emit() seam by N-2, D-#99). Pure helpers
+ * exercised directly; the orchestrator runs against mocked models (DB-free) +
+ * a mocked emit seam. Covers: FULL-day gate, unmarked-only dispatch,
+ * tier→audience routing, per-recipient inbox emission (push rides the N-4
+ * channel BEHIND the seam — no direct transport here anymore), idempotency,
+ * no-op when already marked, audit.
  */
 const mockResolveDayType = jest.fn();
 const mockUnmarkedSections = jest.fn();
 const mockSectionFind = jest.fn();
 const mockUserFind = jest.fn();
-const mockPushFind = jest.fn();
-const mockPushUpdateMany = jest.fn().mockResolvedValue(undefined);
 const mockDispatchFind = jest.fn();
 const mockDispatchCreate = jest.fn().mockResolvedValue({});
-const mockSendExpoPush = jest.fn();
+const mockEmit = jest.fn();
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
 
 jest.mock("../modules/routine/calendar", () => ({
@@ -28,21 +28,14 @@ jest.mock("../modules/foundation/models/Section", () => ({
 jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (f: unknown) => ({ select: () => ({ lean: () => mockUserFind(f) }) }) },
 }));
-jest.mock("../modules/attendance/models/PushDevice", () => ({
-  PushDevice: {
-    find: (f: unknown) => ({ select: () => ({ lean: () => mockPushFind(f) }) }),
-    updateMany: (a: unknown, b: unknown) => mockPushUpdateMany(a, b),
-  },
-}));
 jest.mock("../modules/attendance/models/AttendanceReminderDispatch", () => ({
   AttendanceReminderDispatch: {
     find: (f: unknown) => ({ select: () => ({ lean: () => mockDispatchFind(f) }) }),
     create: (d: unknown) => mockDispatchCreate(d),
   },
 }));
-jest.mock("../modules/platform/services/ExpoPush", () => ({
-  ...jest.requireActual("../modules/platform/services/ExpoPush"),
-  sendExpoPush: (m: unknown) => mockSendExpoPush(m),
+jest.mock("../modules/notifications/services/NotificationService", () => ({
+  emit: (input: unknown) => mockEmit(input),
 }));
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
@@ -63,9 +56,8 @@ beforeEach(() => {
   mockUnmarkedSections.mockResolvedValue([]);
   mockSectionFind.mockResolvedValue([]);
   mockUserFind.mockResolvedValue([]);
-  mockPushFind.mockResolvedValue([]);
   mockDispatchFind.mockResolvedValue([]);
-  mockSendExpoPush.mockResolvedValue({ okCount: 0, deadTokens: [] });
+  mockEmit.mockResolvedValue({ created: true, dedupeKey: "x" });
 });
 
 // ---------------------------------------------------------------------------
@@ -112,7 +104,7 @@ describe("dispatchAttendanceReminders", () => {
     expect(r.isFullDay).toBe(false);
     expect(r.dispatchedSections).toBe(0);
     expect(mockUnmarkedSections).not.toHaveBeenCalled();
-    expect(mockSendExpoPush).not.toHaveBeenCalled();
+    expect(mockEmit).not.toHaveBeenCalled();
   });
 
   it("AT4.2 — no-op when nothing is unmarked", async () => {
@@ -121,31 +113,32 @@ describe("dispatchAttendanceReminders", () => {
     expect(r.isFullDay).toBe(true);
     expect(r.unmarkedCount).toBe(0);
     expect(r.dispatchedSections).toBe(0);
-    expect(mockSendExpoPush).not.toHaveBeenCalled();
+    expect(mockEmit).not.toHaveBeenCalled();
     expect(mockDispatchCreate).not.toHaveBeenCalled();
   });
 
-  it("AT4.3 — T1210 pushes to marker + class teacher, records ledger + audit", async () => {
+  it("AT4.3/D-#99 — T1210 emits one ATTENDANCE_REMINDER row per recipient (marker + class teacher), records ledger + audit", async () => {
     mockUnmarkedSections.mockResolvedValue([
       { sectionId: "s1", sectionNameBn: "মূল", markerTeacherId: "t1" },
     ]);
     mockSectionFind.mockResolvedValue([{ _id: oid("s1"), classTeacherId: oid("ct1") }]);
-    mockPushFind.mockResolvedValue([
-      { expoPushToken: "ExponentPushToken[a]" },
-      { expoPushToken: "ExponentPushToken[b]" },
-    ]);
-    mockSendExpoPush.mockResolvedValue({ okCount: 2, deadTokens: [] });
 
     const r = await dispatchAttendanceReminders("T1210", DATE);
 
     expect(r.dispatchedSections).toBe(1);
-    expect(r.deviceCount).toBe(2);
-    // recipients resolved = marker t1 + class teacher ct1
-    expect(mockPushFind).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: { $in: ["t1", "ct1"] }, active: true }),
+    expect(r.recipientCount).toBe(2);
+    // one seam call per recipient, idempotent per (date,tier,section,recipient)
+    expect(mockEmit).toHaveBeenCalledTimes(2);
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientUserId: "t1",
+        kind: "ATTENDANCE_REMINDER",
+        refs: expect.objectContaining({ sectionId: "s1", date: DATE, tier: "T1210" }),
+        dedupeKey: `ATT:${DATE}:T1210:s1:t1`,
+      }),
     );
-    expect(mockSendExpoPush).toHaveBeenCalledWith(
-      expect.arrayContaining([expect.objectContaining({ to: "ExponentPushToken[a]" })]),
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: "ct1", dedupeKey: `ATT:${DATE}:T1210:s1:ct1` }),
     );
     expect(mockDispatchCreate).toHaveBeenCalledWith(
       expect.objectContaining({ dateKey: DATE, tier: "T1210", sectionId: "s1" }),
@@ -161,13 +154,15 @@ describe("dispatchAttendanceReminders", () => {
     ]);
     mockSectionFind.mockResolvedValue([{ _id: oid("s1"), classTeacherId: oid("ct1") }]);
     mockUserFind.mockResolvedValue([{ _id: oid("o1") }, { _id: oid("o2") }]);
-    mockPushFind.mockResolvedValue([{ expoPushToken: "ExponentPushToken[o]" }]);
-    mockSendExpoPush.mockResolvedValue({ okCount: 1, deadTokens: [] });
 
     await dispatchAttendanceReminders("T1245", DATE);
     expect(mockUserFind).toHaveBeenCalledWith(expect.objectContaining({ role: "OFFICE", active: true }));
-    expect(mockPushFind).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: { $in: ["o1", "o2"] }, active: true }),
+    expect(mockEmit).toHaveBeenCalledTimes(2);
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: "o1", dedupeKey: `ATT:${DATE}:T1245:s1:o1` }),
+    );
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: "o2", dedupeKey: `ATT:${DATE}:T1245:s1:o2` }),
     );
   });
 
@@ -181,22 +176,20 @@ describe("dispatchAttendanceReminders", () => {
 
     expect(r.alreadyDispatched).toBe(1);
     expect(r.dispatchedSections).toBe(0);
-    expect(mockSendExpoPush).not.toHaveBeenCalled();
+    expect(mockEmit).not.toHaveBeenCalled();
     expect(mockDispatchCreate).not.toHaveBeenCalled();
   });
 
-  it("prunes dead tokens Expo reports", async () => {
+  it("a racing ledger insert (E11000) counts the section as already dispatched", async () => {
     mockUnmarkedSections.mockResolvedValue([
       { sectionId: "s1", sectionNameBn: "মূল", markerTeacherId: "t1" },
     ]);
     mockSectionFind.mockResolvedValue([{ _id: oid("s1"), classTeacherId: null }]);
-    mockPushFind.mockResolvedValue([{ expoPushToken: "ExponentPushToken[dead]" }]);
-    mockSendExpoPush.mockResolvedValue({ okCount: 0, deadTokens: ["ExponentPushToken[dead]"] });
+    mockDispatchCreate.mockRejectedValueOnce({ code: 11000 });
 
-    await dispatchAttendanceReminders("T1210", DATE);
-    expect(mockPushUpdateMany).toHaveBeenCalledWith(
-      { expoPushToken: { $in: ["ExponentPushToken[dead]"] } },
-      { $set: { active: false } },
-    );
+    const r = await dispatchAttendanceReminders("T1210", DATE);
+    expect(r.alreadyDispatched).toBe(1);
+    expect(r.dispatchedSections).toBe(0);
+    expect(mockWriteAudit).not.toHaveBeenCalled();
   });
 });

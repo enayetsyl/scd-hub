@@ -1,8 +1,41 @@
 # STATUS
 
-_Updated: 2026-06-13 (Assignment Tracker AS-T1..T5 + Library module LB-1..LB-5 built)_
+_Updated: 2026-06-13 (Notifications N-2..N-4 built — module complete server+app)_
 
 ## Now / next
+- **Built (Notifications N-2+N-3+N-4 — scheduler + app inbox + Expo push, D-#73/#74/#75 + build
+  reconciliations D-#99) [branch `worktree-notifications-n2-n4`, PR open]: the notifications module
+  (N-1..N-4) is COMPLETE server+app.** **N-2:** the app's FIRST internal scheduler — a 60s in-process
+  ticker (`notifications/SchedulerService`, started in server `start()`; single-instance, never under
+  jest) — school-day aware (`resolveDayType`; OFF/HOLIDAY silent, Saturday = quran-track bell only),
+  30-min stale-skip, restart-safe by dedupeKey + an in-memory once-per-day guard for the dispatcher
+  calls. Fires BELL_REMINDER (~5 min before each period end, per active PeriodGrid audience → bell-duty
+  admin; `BellTrigger` gained `track`), the CLASS_NOTE_PROMPT 12/13/14 ladder (one combined row per
+  teacher, recomputed per rung via the new all-teachers `unwrittenClassNoteSlots` — `myClassNotePrompts`
+  now delegates to it) + CLASS_NOTE_ESCALATION (15:00 → all OFFICE, 16:00 → all PRINCIPAL, combined
+  teacher+group+period list), the attendance tiers by **CALLING AT-4's `dispatchAttendanceReminders`**
+  (12:10/12:45/14:00 — the merged conditional engine SUPERSEDES the PRD's interim-unconditional 12:00
+  sweep, the upgrade D-#74 anticipated) and the library sweep by **CALLING `dispatchLibraryReminders`**
+  hourly 09–16 (D-#96 — ONE dispatch truth, nothing re-implemented). `/triggers/*` endpoints remain a
+  redundant ops path; `server/README.md` ops note updated (external cron now optional). **D-#99:** AT-4's
+  delivery moved OFF direct Expo sends ONTO the D-#72 emit() seam — ATTENDANCE_REMINDER inbox rows per
+  recipient, push riding the channel (no double transport; ledger + audit kept; summary
+  `deviceCount`→`recipientCount`). **N-3:** 🔔 + unread badge in EVERY stack header (staff and guardian;
+  shared 60s poll via `NotificationContext`) → root-level `NotificationCenterScreen` modal
+  (newest-first/unread-first, Bangla title/body + kind chip, markRead-on-tap + per-kind deep links in
+  `lib/notificationNav.ts`, mark-all-read; badge snaps via context refresh). **N-4:** Expo push channel
+  (`notifications/pushChannel`) registered behind emit() at server start — rides AT-4's `PushDevice` +
+  platform `sendExpoPush`, dead tokens pruned; **D-#75's DeviceToken reconciled ONTO PushDevice** (optional
+  guardian owner, exactly-one invariant, owner derived from auth role in `registerPushDevice` — no twin
+  registry); app adds a foreground display handler, logout now unregisters the device token, push-tap
+  opens the NotificationCenter (the row inside carries the same deep-link). NotificationRefs extended
+  (audienceKey/periodNumber/tier/hour + loanId/rung now GraphQL-exposed). **NO vocab/contract change**
+  (the scheduler kinds existed since N-1; verifier untouched). **Gate GREEN (executed):** shared build +
+  shared/server tsc clean, vocab verifier PASS, **jest 616/616** (39 suites; 29 new — notificationsScheduler
+  16 + pushChannel 8 + attendanceReminder reworked to the seam; firewall green), app tsc clean + expo web
+  export green. **Not verified live** (rides DEP-3). NB for the live deploy: the in-process ticker fires in
+  the SERVER's local timezone — the Oracle VM must run Asia/Dhaka (or systemd `Environment=TZ=Asia/Dhaka`)
+  for the 12:00-ladder times to mean school time.
 - **Built (Library module — catalog + circulation + reservations + overdue chasing, LB-1..LB-5,
   D-#81–#84 + build rulings D-#96/#97) [MERGED to main, PR #40, 887468c]:** the full prd-library contract,
   server+app. **LB-1:** app-native vocab (`library:read` P/T/O + `library:manage` P/O; BORROWER_TYPES/
@@ -61,11 +94,8 @@ _Updated: 2026-06-13 (Assignment Tracker AS-T1..T5 + Library module LB-1..LB-5 b
   labels) — **vocab.ts additive only, no wire-contract sync**; verifier §C.5 added (labels total + exact kind
   list + no notification:* permission). Firewall test extended both ways (corpus ↛ notifications,
   notifications ↛ corpus). **Gate GREEN:** vocab verifier PASS, shared build + shared/server tsc clean,
-  **jest 452/452** (29 new; firewall green). **Not verified live.** **Next = N-2** (the D-#73 60s in-process
-  scheduler: bell per-period + 12:00 attendance sweep + class-note 12/13/14 ladder + 15:00/16:00 escalation),
-  then N-3 (app 🔔 badge + NotificationCenter), N-4 (push — NB: AT-4 already shipped `PushDevice` + the
-  platform `ExpoPush` transport; N-4 should ride/reconcile those with D-#75's `DeviceToken` registry as a
-  registered channel behind emit(), not build a twin).
+  **jest 452/452** (29 new; firewall green). **Not verified live.** **N-2/N-3/N-4 now BUILT — see the
+  "Built (Notifications N-2+N-3+N-4 …)" bullet at the top; the module is complete.**
 - **Planned (Deployment — go-live + dev pipeline, D-#90–#93):** build contract
   `docs/deployment.md`. Slices DEP-1 (Oracle VM + DNS) → DEP-2 (prod install,
   systemd + Caddy/HTTPS, Atlas IP allow-list; closes the /pdf CORS follow-up via
@@ -185,9 +215,10 @@ _Updated: 2026-06-13 (Assignment Tracker AS-T1..T5 + Library module LB-1..LB-5 b
   → Principal; 🔔 badge + NotificationCenter; **Expo push** (D-#75 — second live external dependency after
   D-#24; native only, web = inbox; no quiet hours; push never blocks the inbox row). App-native
   `NOTIFICATION_KINDS` vocab only — no wire-contract sync; vocab verifier extends at build time.
-  WhatsApp/SMS stay deferred (roadmap patched). **N-1 built; next = N-2 per docs/prd-notifications.md §7,
-  slice order.** (Handoff proposed D-#59–#62 — renumbered: those are taken by credential provisioning / UI /
-  section merge, and D-#71 is held by the in-flight guardian-portal build.)
+  WhatsApp/SMS stay deferred (roadmap patched). **N-1..N-4 ALL BUILT — the module is complete (see the
+  top bullet); remaining = live verification (DEP-3).** (Handoff proposed D-#59–#62 — renumbered: those are
+  taken by credential provisioning / UI / section merge, and D-#71 is held by the in-flight guardian-portal
+  build.)
 - **Planned (Guardian portal v1 — D-#68/#69/#70):** `docs/prd-guardian-portal.md` adopted —
   activates the pipeline-gated `guardian:read_child` (vocab status flip only in GP-1, verifier must
   stay green; no wire/schema/harness sync; no new permission). **GP-1** (server):

@@ -40,6 +40,8 @@ import { pdfRouter } from "./routes/pdf";
 import { setPdfRouter } from "./modules/assessment/routes/setPdf";
 import { filesRouter } from "./routes/files";
 import { triggersRouter } from "./routes/triggers";
+import { registerExpoPushChannel } from "./modules/notifications/services/pushChannel";
+import { startNotificationTicker } from "./modules/notifications/services/SchedulerService";
 
 const app = express();
 
@@ -108,6 +110,11 @@ const PORT = Number(process.env.PORT ?? 4000);
 
 async function start() {
   await connectDb();
+  // N-4 (D-#75): Expo push fans out behind emit(). Registered here — not at
+  // import time — so jest suites never touch a live transport.
+  registerExpoPushChannel();
+  // N-2 (D-#73): the 60s in-process trigger ticker (single-instance).
+  startNotificationTicker();
   app.listen(PORT, () => {
     console.log(`SCD Hub server listening on http://localhost:${PORT}/graphql`);
   });

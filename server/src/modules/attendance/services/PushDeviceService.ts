@@ -10,25 +10,40 @@ import { normalizePhone } from "../../foundation/services/credentials";
 
 export class PushDeviceError extends Error {}
 
-/** Upsert a device token for a user (called by the app on login / permission
+/** The device owner — exactly one of the two (the D-#72 recipient shape; N-4
+ *  extends registration to guardian logins, D-#75). */
+export interface PushDeviceOwner {
+  userId?: string | null;
+  guardianId?: string | null;
+}
+
+/** Upsert a device token for its owner (called by the app on login / permission
  *  grant). Idempotent: re-registering the same token reactivates + refreshes it;
- *  a token that moves to another user is reassigned (unique on token). */
+ *  a token that moves to another owner is reassigned (unique on token) and the
+ *  previous owner field is cleared (a shared family phone switching accounts). */
 export async function registerPushDevice(
-  userId: string,
+  owner: PushDeviceOwner,
   expoPushToken: string,
   platform?: "ios" | "android" | "web",
 ): Promise<IPushDevice> {
   const token = expoPushToken.trim();
   if (!token) throw new PushDeviceError("Empty push token");
-  const update: Record<string, unknown> = {
-    userId,
-    active: true,
-    lastSeenAt: new Date(),
-  };
-  if (platform) update.platform = platform;
+  if (!!owner.userId === !!owner.guardianId) {
+    throw new PushDeviceError("Exactly one of a user / guardian owner is required");
+  }
+  const set: Record<string, unknown> = { active: true, lastSeenAt: new Date() };
+  const unset: Record<string, unknown> = {};
+  if (owner.userId) {
+    set.userId = owner.userId;
+    unset.guardianId = "";
+  } else {
+    set.guardianId = owner.guardianId;
+    unset.userId = "";
+  }
+  if (platform) set.platform = platform;
   const device = await PushDevice.findOneAndUpdate(
     { expoPushToken: token },
-    { $set: update, $setOnInsert: { expoPushToken: token } },
+    { $set: set, $unset: unset, $setOnInsert: { expoPushToken: token } },
     { new: true, upsert: true },
   );
   return device as IPushDevice;

@@ -38,16 +38,25 @@ attach/view shows a Bangla notice — homework declare/check itself never blocks
   [security page](https://myaccount.google.com/permissions) — uploads/views
   fail gracefully until a new refresh token is configured.
 
-## Ops: Attendance reminder scheduler (AT-4, D-#65)
+## Ops: Reminder scheduling (AT-4 D-#65 → N-2 D-#73)
 
-The timed reminder + escalation engine has **no in-process cron** — an external
-scheduler hits one idempotent endpoint. The server decides *what* to send (only
-unmarked sections, FULL school-days only) and dedupes per `(date, tier, section)`,
-so calling repeatedly is safe.
+**Since N-2 the server runs its own 60s in-process ticker** (started with the
+server): bell reminders, the class-note ladder/escalation, the attendance tiers
+and the library sweep all fire automatically — **no external cron is required
+anymore.** The `/triggers/*` endpoints below remain as a redundant manual/ops
+path (both paths call the same idempotent dispatchers, D-#96/#99), useful if
+the ticker is ever disabled or a tier must be re-fired by hand.
+
+The server decides *what* to send (only unmarked sections, FULL school-days
+only) and dedupes per `(date, tier, section)` plus per-recipient inbox
+dedupe-keys, so calling repeatedly is safe. Delivery = an in-app inbox row per
+recipient (`ATTENDANCE_REMINDER`), with Expo push fanning out behind the same
+seam (D-#99).
 
 1. Set `ATTENDANCE_TRIGGER_SECRET` in the server env to a long random string
    (fail-closed: if unset, the endpoint rejects everything).
-2. Configure three cron jobs in **Asia/Dhaka** time calling the endpoint:
+2. (Optional since N-2) Configure three cron jobs in **Asia/Dhaka** time calling
+   the endpoint:
 
    ```cron
    # m  h        (Asia/Dhaka)  — attendance reminder + escalation

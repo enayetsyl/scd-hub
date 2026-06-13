@@ -37,6 +37,13 @@ export interface NotificationRefs {
   loanId?: string;
   /** Overdue ladder rung (1 = first school day after due, then every 3rd). */
   rung?: number;
+  /** Bell reminder (N-2): which grid + period the bell is for (deep-link: BellSchedule). */
+  audienceKey?: string;
+  periodNumber?: number;
+  /** Attendance reminder tier (N-2/D-#99: T1210 | T1245 | T1400). */
+  tier?: string;
+  /** Class-note ladder/escalation rung hour (12/13/14 prompt; 15/16 escalation). */
+  hour?: number;
 }
 
 export interface INotification extends Document {
@@ -72,6 +79,10 @@ const RefsSchema = new Schema<NotificationRefs>(
     substitutionId: { type: String },
     loanId: { type: String },
     rung: { type: Number },
+    audienceKey: { type: String },
+    periodNumber: { type: Number },
+    tier: { type: String },
+    hour: { type: Number },
   },
   { _id: false },
 );

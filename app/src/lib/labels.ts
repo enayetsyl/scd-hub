@@ -92,6 +92,9 @@ import {
   type RoutineSubject,
   type DayOfWeek,
   type PeriodTrack,
+  NOTIFICATION_KIND_LABELS_BN,
+  NOTIFICATION_KIND_LABELS_EN,
+  type NotificationKind,
 } from "@scd/shared";
 
 // --- Active language (module-level; read at render time) ---------------------
@@ -231,6 +234,9 @@ export const loanStatusLabel = (v?: string | null): string =>
 
 export const reservationStatusLabel = (v?: string | null): string =>
   (v && pick(RESERVATION_STATUS_LABELS_BN, RESERVATION_STATUS_LABELS_EN)[v as ReservationStatus]) || v || DASH;
+
+export const notificationKindLabel = (v?: string | null): string =>
+  (v && pick(NOTIFICATION_KIND_LABELS_BN, NOTIFICATION_KIND_LABELS_EN)[v as NotificationKind]) || v || DASH;
 
 export const bookLanguageLabel = (v?: string | null): string =>
   (v && pick(BOOK_LANGUAGE_LABELS_BN, BOOK_LANGUAGE_LABELS_EN)[v as BookLanguage]) || v || DASH;
@@ -946,6 +952,12 @@ const STR_BN = {
   libSendWhatsApp: "হোয়াটসঅ্যাপে জানান",
   gpLibraryLoans: "লাইব্রেরির বই",
   gpNoLibraryLoans: "লাইব্রেরি থেকে নেওয়া কোনো বই নেই।",
+
+  // Notifications (N-3, D-#72–#75)
+  notifications: "নোটিফিকেশন",
+  notifMarkAllRead: "সব পঠিত করুন",
+  notifEmpty: "কোনো নোটিফিকেশন নেই।",
+  notifUnreadBadge: "অপঠিত",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -1646,6 +1658,12 @@ const STR_EN: StrTable = {
   libSendWhatsApp: "Notify on WhatsApp",
   gpLibraryLoans: "Library books",
   gpNoLibraryLoans: "No books borrowed from the library.",
+
+  // Notifications (N-3, D-#72–#75)
+  notifications: "Notifications",
+  notifMarkAllRead: "Mark all read",
+  notifEmpty: "No notifications.",
+  notifUnreadBadge: "Unread",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use
