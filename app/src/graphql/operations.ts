@@ -3260,6 +3260,7 @@ export interface ChatMemberT {
   userId: string;
   name: string;
   source: string;
+  muted: boolean; // M-7: the caller reads its OWN row's mute state
   joinedAt: string;
 }
 export interface ConversationT {
@@ -3313,7 +3314,7 @@ const CONVERSATION_FIELDS = `
   active
   lastMessageAt
   createdAt
-  members { userId name source joinedAt }
+  members { userId name source muted joinedAt }
 `;
 
 const MESSAGE_FIELDS = `
@@ -3449,5 +3450,87 @@ export const SET_POSTING_POLICY = gql<
 >`
   mutation SetPostingPolicy($conversationId: String!, $policy: String!) {
     setPostingPolicy(conversationId: $conversationId, policy: $policy) { ${CONVERSATION_FIELDS} }
+  }
+`;
+
+// ===========================================================================
+// Messaging M-6 + M-7 app pass (prd-messaging §5/§6) — consumes the EXISTING
+// M-6/M-7 server resolvers as-is; no server/vocab change.
+// ===========================================================================
+
+// --- M-7: per-user mute toggle (own-row; the `muted` field rides the member
+//     selection in CONVERSATION_FIELDS above). ------------------------------
+export const SET_CONVERSATION_MUTED = gql<
+  { setConversationMuted: boolean },
+  { conversationId: string; muted: boolean }
+>`
+  mutation SetConversationMuted($conversationId: String!, $muted: Boolean!) {
+    setConversationMuted(conversationId: $conversationId, muted: $muted)
+  }
+`;
+
+// --- M-6: Principal oversight (chat:oversee) — read-only over ANY conversation;
+//     the OPEN mutation is the audited entry (CHAT_OVERSIGHT_OPENED), so it is
+//     called when a thread is opened, not just read. oversightMessages returns
+//     deleted originals UN-masked (server renders them normally). --------------
+export const OVERSIGHT_CONVERSATIONS_QUERY = gql<
+  { oversightConversations: ConversationT[] },
+  NoVars
+>`
+  query OversightConversations {
+    oversightConversations { ${CONVERSATION_FIELDS} }
+  }
+`;
+
+export const OPEN_CONVERSATION_OVERSIGHT = gql<
+  { openConversationOversight: ConversationT },
+  { conversationId: string }
+>`
+  mutation OpenConversationOversight($conversationId: String!) {
+    openConversationOversight(conversationId: $conversationId) { ${CONVERSATION_FIELDS} }
+  }
+`;
+
+export const OVERSIGHT_MESSAGES_QUERY = gql<
+  { oversightMessages: ChatMessageT[] },
+  { conversationId: string; beforeId?: string | null; limit?: number | null }
+>`
+  query OversightMessages($conversationId: String!, $beforeId: String, $limit: Int) {
+    oversightMessages(conversationId: $conversationId, beforeId: $beforeId, limit: $limit) { ${MESSAGE_FIELDS} }
+  }
+`;
+
+// --- M-6: guardian-notice composer (chat:write + per-scope server check) —
+//     produces one ADR-003 wa.me link per reachable guardian + the reach counts.
+export interface GuardianNoticeRecipientT {
+  studentId: string;
+  studentName: string;
+  phone: string;
+  waLink: string;
+}
+export interface GuardianNoticeResultT {
+  noticeId: string;
+  scope: string;
+  title: string;
+  body: string;
+  recipientCount: number;
+  unreachableCount: number;
+  recipients: GuardianNoticeRecipientT[];
+}
+
+export const COMPOSE_GUARDIAN_NOTICE = gql<
+  { composeGuardianNotice: GuardianNoticeResultT },
+  { scope: string; title: string; body: string; sectionId?: string | null }
+>`
+  mutation ComposeGuardianNotice($scope: String!, $title: String!, $body: String!, $sectionId: String) {
+    composeGuardianNotice(scope: $scope, title: $title, body: $body, sectionId: $sectionId) {
+      noticeId
+      scope
+      title
+      body
+      recipientCount
+      unreachableCount
+      recipients { studentId studentName phone waLink }
+    }
   }
 `;

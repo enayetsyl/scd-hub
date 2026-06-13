@@ -107,12 +107,16 @@ export type LibraryStackParamList = {
   LibraryAdmin: undefined;
 };
 
-/** Messaging (M-5, prd-messaging §5). */
+/** Messaging (M-5; M-6/M-7 app pass, prd-messaging §5/§6). */
 export type ChatStackParamList = {
   ChatHome: undefined;
   ChatThread: { conversationId: string; title: string };
   NewChat: undefined;
   GroupManage: { conversationId?: string };
+  // M-6 app pass: Principal oversight browser + read-only thread; notice composer.
+  ChatOversight: undefined;
+  ChatOversightThread: { conversationId: string; title: string };
+  GuardianNotice: undefined;
 };
 
 export type AdminStackParamList = {

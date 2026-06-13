@@ -22,6 +22,7 @@ import {
   DELETE_MESSAGE,
   TOGGLE_REACTION,
   FORWARD_MESSAGE,
+  SET_CONVERSATION_MUTED,
   type ChatMessageT,
   type ConversationT,
 } from "../../graphql/operations";
@@ -68,6 +69,10 @@ export default function ChatThreadScreen({ route, navigation }: Props): React.Re
   const [, deleteMessage] = useMutation(DELETE_MESSAGE);
   const [, toggleReaction] = useMutation(TOGGLE_REACTION);
   const [, forwardMessage] = useMutation(FORWARD_MESSAGE);
+  const [, setConversationMuted] = useMutation(SET_CONVERSATION_MUTED);
+
+  // M-7: the caller's own mute state for this conversation (own member row).
+  const myMuted = conv?.members.find((m) => m.userId === myUserId)?.muted ?? false;
 
   const nameById = React.useMemo(() => {
     const m = new Map<string, string>();
@@ -185,6 +190,21 @@ export default function ChatThreadScreen({ route, navigation }: Props): React.Re
     setBody(m.body);
   }
 
+  async function onToggleMute(): Promise<void> {
+    const next = !myMuted;
+    const res = await setConversationMuted({ conversationId, muted: next });
+    if (res.error) {
+      setError(friendly(res.error));
+      return;
+    }
+    // Reflect the new state locally on my own member row (no full refetch).
+    setConv((prev) =>
+      prev
+        ? { ...prev, members: prev.members.map((m) => (m.userId === myUserId ? { ...m, muted: next } : m)) }
+        : prev,
+    );
+  }
+
   async function onOpenFile(fileId: string): Promise<void> {
     setError(null);
     try {
@@ -210,13 +230,23 @@ export default function ChatThreadScreen({ route, navigation }: Props): React.Re
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
-        {canManage && conv && conv.kind !== "DIRECT" ? (
-          <Button
-            title={`⚙ ${STR.chatManageGroup}`}
-            variant="ghost"
-            onPress={() => navigation.navigate("GroupManage", { conversationId })}
-          />
-        ) : null}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1) }}>
+          {canManage && conv && conv.kind !== "DIRECT" ? (
+            <Button
+              title={`⚙ ${STR.chatManageGroup}`}
+              variant="ghost"
+              onPress={() => navigation.navigate("GroupManage", { conversationId })}
+            />
+          ) : null}
+          {/* M-7: per-user push mute for this conversation (own-row toggle). */}
+          {conv ? (
+            <Button
+              title={myMuted ? `🔔 ${STR.chatUnmute}` : `🔕 ${STR.chatMute}`}
+              variant="ghost"
+              onPress={() => void onToggleMute()}
+            />
+          ) : null}
+        </View>
         {!exhausted && messages.length > 0 ? (
           <Button
             title={STR.chatLoadOlder}
