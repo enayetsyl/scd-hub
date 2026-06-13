@@ -280,6 +280,11 @@ describe("HR staff-leave firewall (ADR-005 / prd-hr H7.4)", () => {
       expect(content).not.toMatch(importPattern("models/PayrollRun"));     // HR-3 payroll (most-sensitive plane, §4.7)
       expect(content).not.toMatch(importPattern("models/Payslip"));
       expect(content).not.toMatch(importPattern("models/AdvanceLoan"));
+      expect(content).not.toMatch(importPattern("models/Observation"));    // HR-4 performance/conduct/development (satr, H5.5/H7.3)
+      expect(content).not.toMatch(importPattern("models/Appraisal"));
+      expect(content).not.toMatch(importPattern("models/ConductRecord"));
+      expect(content).not.toMatch(importPattern("models/Grievance"));
+      expect(content).not.toMatch(importPattern("models/DevelopmentLog"));
     }
   });
 });

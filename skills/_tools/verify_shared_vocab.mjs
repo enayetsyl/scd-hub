@@ -34,7 +34,7 @@ check("default-deny: unknown role", V.roleHasPermission("GHOST", "content:read")
 check("PRINCIPAL has user:manage + audit:read", V.roleHasPermission("PRINCIPAL", "user:manage") && V.roleHasPermission("PRINCIPAL", "audit:read"));
 check("TEACHER lacks user:manage / audit:read / content:import", !["user:manage","audit:read","content:import"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("TEACHER can read content + assemble + write trackers", ["content:read","set:assemble","tracker:write"].every((p) => V.roleHasPermission("TEACHER", p)));
-check("OFFICE = roster/staff/leave/payroll/guardian/message/import/assign_review/routine/attendance/library/chat", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage"]));
+check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/routine/attendance/library/chat", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage"]));
 check("routine: PRINCIPAL+OFFICE manage, TEACHER read-only, GUARDIAN none", V.roleHasPermission("PRINCIPAL","routine:manage") && V.roleHasPermission("OFFICE","routine:manage") && V.roleHasPermission("TEACHER","routine:read") && !V.roleHasPermission("TEACHER","routine:manage") && !V.roleHasPermission("GUARDIAN","routine:read"));
 check("TEACHER has content:review (reviewer APPROVE), lacks assign/promote", V.roleHasPermission("TEACHER","content:review") && !["content:assign_review","content:promote_gold"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("GUARDIAN only has guardian:read_child", eq(V.permissionsForRole("GUARDIAN"), ["guardian:read_child"]));
@@ -215,6 +215,27 @@ check("payroll: PRINCIPAL+OFFICE manage; approve PRINCIPAL ONLY (Office cannot a
   V.roleHasPermission("PRINCIPAL","payroll:manage") && V.roleHasPermission("OFFICE","payroll:manage") &&
   V.roleHasPermission("PRINCIPAL","payroll:approve") && !V.roleHasPermission("OFFICE","payroll:approve") &&
   !["TEACHER","GUARDIAN"].some((r) => V.roleHasPermission(r, "payroll:manage") || V.roleHasPermission(r, "payroll:approve")));
+
+console.log("=== C.10 HR performance/conduct/development vocab + RBAC invariants (HR step 4 — prd-hr §5, D-#28/#112/#113) ===");
+check("CONDUCT_STAGE_LABELS_BN total",          total(V.CONDUCT_STAGE_LABELS_BN, V.CONDUCT_STAGES));
+check("CONDUCT_STAGE_LABELS_EN total",          total(V.CONDUCT_STAGE_LABELS_EN, V.CONDUCT_STAGES));
+check("CONDUCT_RECORD_STATUS_LABELS_BN total",  total(V.CONDUCT_RECORD_STATUS_LABELS_BN, V.CONDUCT_RECORD_STATUSES));
+check("CONDUCT_RECORD_STATUS_LABELS_EN total",  total(V.CONDUCT_RECORD_STATUS_LABELS_EN, V.CONDUCT_RECORD_STATUSES));
+check("APPRAISAL_STATUS_LABELS_BN total",       total(V.APPRAISAL_STATUS_LABELS_BN, V.APPRAISAL_STATUSES));
+check("APPRAISAL_STATUS_LABELS_EN total",       total(V.APPRAISAL_STATUS_LABELS_EN, V.APPRAISAL_STATUSES));
+check("APPRAISAL_OUTCOME_LABELS_BN total",      total(V.APPRAISAL_OUTCOME_LABELS_BN, V.APPRAISAL_OUTCOMES));
+check("APPRAISAL_OUTCOME_LABELS_EN total",      total(V.APPRAISAL_OUTCOME_LABELS_EN, V.APPRAISAL_OUTCOMES));
+check("GRIEVANCE_STATUS_LABELS_BN total",       total(V.GRIEVANCE_STATUS_LABELS_BN, V.GRIEVANCE_STATUSES));
+check("GRIEVANCE_STATUS_LABELS_EN total",       total(V.GRIEVANCE_STATUS_LABELS_EN, V.GRIEVANCE_STATUSES));
+check("conduct stages are the ordered ladder verbal→written→final→termination (H5.3)", eq(V.CONDUCT_STAGES, ["verbal","written","final","termination"]) && V.CONDUCT_STAGES[0] === "verbal" && V.CONDUCT_STAGES[3] === "termination");
+check("conduct record statuses exact (D-#113)", eq(V.CONDUCT_RECORD_STATUSES, ["draft","hearing_held","finalized","lapsed"]));
+check("appraisal statuses exact (H5.1)",        eq(V.APPRAISAL_STATUSES, ["draft","signed_off"]));
+check("appraisal outcomes exact (§9)",          eq(V.APPRAISAL_OUTCOMES, ["exceeds","meets","needs_improvement","unsatisfactory"]));
+check("grievance statuses exact (H5.4)",        eq(V.GRIEVANCE_STATUSES, ["open","under_review","resolved","closed"]));
+check("performance:manage = PRINCIPAL+OFFICE; signoff PRINCIPAL ONLY (Office cannot sign off conduct/appraisal, §2/H5.2/D-#112); TEACHER+GUARDIAN none — a supervisor's observation-write rides the EXISTING supervisory scope, NOT a permission (D-#28)",
+  V.roleHasPermission("PRINCIPAL","performance:manage") && V.roleHasPermission("OFFICE","performance:manage") &&
+  V.roleHasPermission("PRINCIPAL","performance:signoff") && !V.roleHasPermission("OFFICE","performance:signoff") &&
+  !["TEACHER","GUARDIAN"].some((r) => V.roleHasPermission(r, "performance:manage") || V.roleHasPermission(r, "performance:signoff")));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);
