@@ -1,10 +1,10 @@
 # STATUS
 
-_Updated: 2026-06-13 (Notifications N-2..N-4 built; Messaging M-1 merged PR #41; coordinator review applied to both)_
+_Updated: 2026-06-13 (Messaging M-2 merged PR #44; Guardian portal app riders PR #43; Notifications N-2..N-4 + Messaging M-1 merged)_
 
 ## Now / next
 - **Built (Guardian portal app — surface existing reads + polish, FRONTEND ONLY) [branch
-  `worktree-guardian-app-riders`, PR open]:** an app-only pass that renders guardian-readable server data the
+  `worktree-guardian-app-riders`, PR #43 — coordinator review applied]:** an app-only pass that renders guardian-readable server data the
   portal already had but never showed, and polishes the existing screens. **NO server / vocab / contract
   change** (parallel session owns those) — uses only guardian queries that already exist. **Gaps closed:**
   (1) **child-info card** on GuardianHome — section name + Quran/Arabic **group memberships** (from
@@ -21,6 +21,27 @@ _Updated: 2026-06-13 (Notifications N-2..N-4 built; Messaging M-1 merged PR #41;
   attendance read does not exist server-side; building it is the parallel session's plane). **Gate GREEN
   (executed):** app `tsc --noEmit` clean + `expo export --platform web` green (698 modules); no-drift
   confirmed — vocab verifier PASS + **jest 643/643** untouched. **Not verified live** (rides DEP-3).
+- **Built (Messaging M-2 — auto-provisioned + manual groups + posting policy, server, D-#78/#98/#100)
+  [MERGED to main, PR #44]:** second messaging slice per `docs/prd-messaging.md` §5.
+  **Vocab (the D-#98 flip):** `chat:manage` pipeline→**build** in `PERMISSION_BUILD_STATUS`; the vocab
+  verifier's exact pipeline-set check is now `{chat:oversee}` ONLY (+ a §C.7 build-status assertion).
+  `chat:oversee` stays pipeline → flips at M-6. **Server** (`modules/chat/ChatGroupService`):
+  idempotent **source-tagged auto-provision** (the D-#49 pattern — the reconcile writes/removes ONLY
+  `source:"auto"` rows, NEVER a manual one): SECTION per active Section (class teacher + support +
+  routine-slot teachers + active `teaching` ScopeGrant teachers), SUBJECT per ROUTINE_SUBJECTS value
+  (its slot teachers; Quran/Arabic flow via SubjectGroup slots, D-#48), SCHOOL singleton (all active
+  non-guardian staff). `resyncChatGroups` (chat:manage) full rebuild + best-effort hooks wired into
+  `RoutineSlotService` (slot create/delete) and `ClassTeacherService` (class-teacher/support change) —
+  awaited best-effort, never block the host mutation (the N-1 emitter posture). **Manual CUSTOM groups**
+  (`createGroupConversation`/`addConversationMember`/`removeConversationMember`/`archiveConversation`) +
+  `setPostingPolicy`, all gated `chat:manage` (Principal/Office; teachers cannot create groups — DIRECT
+  stays open). **ANNOUNCEMENT enforcement** wired into `ChatService.sendMessage` (non-manager post blocked
+  in Bangla; OPEN/DIRECT unrestricted; reactions are M-3). Audit kinds CHAT_GROUP_CREATED /
+  CHAT_MEMBERSHIP_CHANGED. Firewall test covers the new file both ways (corpus⇄chat). **Gate GREEN
+  (executed):** vocab verifier PASS, shared+server tsc clean, **jest 663/663** (41 suites; chatGroups 19
+  new; firewall green), app tsc clean + expo web export green. **Not verified live.** **Next = M-3**
+  (reply/forward/reactions/edit/delete) → M-4 attachments → M-5 app screens →
+  M-6 oversight + guardian notices (flips `chat:oversee`) → M-7 staff push.
 - **Built (Notifications N-2+N-3+N-4 — scheduler + app inbox + Expo push, D-#73/#74/#75 + build
   reconciliations D-#99) [branch `worktree-notifications-n2-n4`, PR #42 — coordinator review applied]: the notifications module
   (N-1..N-4) is COMPLETE server+app.** **N-2:** the app's FIRST internal scheduler — a 60s in-process

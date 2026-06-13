@@ -7,6 +7,7 @@
  * NO read path in this slice.
  */
 import { builder } from "../../../schema";
+import { POSTING_POLICIES, roleHasPermission, type PostingPolicy, type Role } from "@scd/shared";
 import { User } from "../../foundation/models/User";
 import type { IConversation } from "../models/Conversation";
 import type { IChatMessage } from "../models/ChatMessage";
@@ -24,6 +25,15 @@ import {
   receiptsForMessage,
   receiptsForMessages,
 } from "../services/ChatService";
+import {
+  createGroupConversation,
+  addMember,
+  removeMember,
+  archiveConversation,
+  setPostingPolicy,
+  resyncAllChatGroups,
+  type ResyncSummary,
+} from "../services/ChatGroupService";
 
 /** A conversation/message may carry pre-batched children, attached by a list
  *  resolver to spare the per-row field resolvers an N+1. Field resolvers read
@@ -224,6 +234,8 @@ builder.mutationField("sendMessage", (t) =>
         senderId: ctx.auth!.userId,
         body: args.body,
         replyToId: args.replyToId ?? undefined,
+        // ANNOUNCEMENT gate (M-2, D-#78): managers may post, others are blocked.
+        canManage: roleHasPermission(ctx.auth!.role as Role, "chat:manage"),
       }),
   }),
 );
@@ -234,5 +246,104 @@ builder.mutationField("markSeen", (t) =>
     authScopes: { hasPermission: "chat:write" },
     args: { conversationId: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => markConversationSeen(args.conversationId, ctx.auth!.userId),
+  }),
+);
+
+// --- Group management (chat:manage — Principal/Office only, M-2, D-#78) -------
+
+const ResyncSummaryRef = builder.objectRef<ResyncSummary>("ChatResyncSummary").implement({
+  fields: (t) => ({
+    sections: t.exposeInt("sections"),
+    subjects: t.exposeInt("subjects"),
+    school: t.exposeInt("school"),
+  }),
+});
+
+builder.mutationField("createGroupConversation", (t) =>
+  t.field({
+    type: ConversationRef,
+    authScopes: { hasPermission: "chat:manage" },
+    args: {
+      title: t.arg.string({ required: true }),
+      memberIds: t.arg.stringList({ required: false }),
+      postingPolicy: t.arg.string({ required: false }),
+    },
+    resolve: async (_r, args, ctx) => {
+      let policy: PostingPolicy | null = null;
+      if (args.postingPolicy) {
+        if (!(POSTING_POLICIES as readonly string[]).includes(args.postingPolicy))
+          throw new Error("Invalid postingPolicy");
+        policy = args.postingPolicy as PostingPolicy;
+      }
+      return createGroupConversation({
+        title: args.title,
+        memberIds: args.memberIds ?? [],
+        postingPolicy: policy,
+        createdBy: ctx.auth!.userId,
+      });
+    },
+  }),
+);
+
+builder.mutationField("addConversationMember", (t) =>
+  t.field({
+    type: "Boolean",
+    authScopes: { hasPermission: "chat:manage" },
+    args: {
+      conversationId: t.arg.string({ required: true }),
+      userId: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => {
+      await addMember(args.conversationId, args.userId, ctx.auth!.userId);
+      return true;
+    },
+  }),
+);
+
+builder.mutationField("removeConversationMember", (t) =>
+  t.field({
+    type: "Boolean",
+    authScopes: { hasPermission: "chat:manage" },
+    args: {
+      conversationId: t.arg.string({ required: true }),
+      userId: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => {
+      await removeMember(args.conversationId, args.userId, ctx.auth!.userId);
+      return true;
+    },
+  }),
+);
+
+builder.mutationField("archiveConversation", (t) =>
+  t.field({
+    type: ConversationRef,
+    authScopes: { hasPermission: "chat:manage" },
+    args: { conversationId: t.arg.string({ required: true }) },
+    resolve: async (_r, args, ctx) => archiveConversation(args.conversationId, ctx.auth!.userId),
+  }),
+);
+
+builder.mutationField("setPostingPolicy", (t) =>
+  t.field({
+    type: ConversationRef,
+    authScopes: { hasPermission: "chat:manage" },
+    args: {
+      conversationId: t.arg.string({ required: true }),
+      policy: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => {
+      if (!(POSTING_POLICIES as readonly string[]).includes(args.policy))
+        throw new Error("Invalid policy");
+      return setPostingPolicy(args.conversationId, args.policy as PostingPolicy, ctx.auth!.userId);
+    },
+  }),
+);
+
+builder.mutationField("resyncChatGroups", (t) =>
+  t.field({
+    type: ResyncSummaryRef,
+    authScopes: { hasPermission: "chat:manage" },
+    resolve: async (_r, _args, ctx) => resyncAllChatGroups(ctx.auth!.userId),
   }),
 );
