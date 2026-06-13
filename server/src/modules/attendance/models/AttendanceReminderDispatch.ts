@@ -17,9 +17,10 @@ export interface IAttendanceReminderDispatch extends Document {
   dateKey: string;
   tier: (typeof ATTENDANCE_REMINDER_TIERS)[number];
   sectionId: Types.ObjectId;
-  /** Recipients the push targeted (for audit/debug — not identity-sensitive). */
+  /** Recipients the reminder targeted (for audit/debug — not identity-sensitive). */
   recipientUserIds: Types.ObjectId[];
-  /** Active device tokens the push reached at send time. */
+  /** LEGACY (pre-D-#99 direct-push rows): device tokens reached at send time.
+   *  Delivery now rides the emit() seam; new rows default to 0. */
   deviceCount: number;
   sentAt: Date;
   createdAt: Date;

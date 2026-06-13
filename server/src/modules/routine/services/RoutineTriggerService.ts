@@ -43,7 +43,7 @@ export async function bellSchedule(date: Date, audienceKey: string): Promise<Bel
     else perPeriod[d.periodNumber] = d.adminId.toString();
   }
   return buildBellSchedule(
-    periods.map((p) => ({ number: p.number, isBreak: p.isBreak, endHHMM: p.endHHMM })),
+    periods.map((p) => ({ number: p.number, isBreak: p.isBreak, endHHMM: p.endHHMM, track: p.track })),
     wholeDay,
     perPeriod,
   );
@@ -138,11 +138,16 @@ export async function classNotesForDate(
     .lean() as unknown as IClassNote[];
 }
 
-/** The teacher's slots on a date that still need a class note (R5.3 reminder). */
-export async function myClassNotePrompts(date: Date, teacherId: string): Promise<IRoutineSlot[]> {
+/**
+ * Slots on a date that still need a class note — for ONE teacher when
+ * `teacherId` is given (the R5.3 per-teacher prompt), else for EVERY teacher
+ * (the N-2 ladder/escalation work-list, D-#74). One truth: the scheduler and
+ * `myClassNotePrompts` both read this.
+ */
+export async function unwrittenClassNoteSlots(date: Date, teacherId?: string): Promise<IRoutineSlot[]> {
   const dayOfWeek = DAYS_OF_WEEK[date.getDay()];
   const slots = (await RoutineSlot.find({
-    teacherId,
+    teacherId: teacherId ?? { $exists: true, $ne: null },
     dayOfWeek,
     active: true,
     isBreak: false,
@@ -157,4 +162,9 @@ export async function myClassNotePrompts(date: Date, teacherId: string): Promise
   const notes = await ClassNote.find({ slotId: { $in: slotIds }, date: { $gte: start, $lte: end } }).select("slotId").lean();
   const noted = new Set(notes.map((n) => n.slotId.toString()));
   return slots.filter((s) => !noted.has(s._id.toString()));
+}
+
+/** The teacher's slots on a date that still need a class note (R5.3 reminder). */
+export async function myClassNotePrompts(date: Date, teacherId: string): Promise<IRoutineSlot[]> {
+  return unwrittenClassNoteSlots(date, teacherId);
 }

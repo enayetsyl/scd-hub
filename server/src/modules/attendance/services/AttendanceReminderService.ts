@@ -14,26 +14,29 @@
  *   AT4.6  one AttendanceReminderDispatch row per (date, tier, section); a second
  *          call for the same date/tier re-sends NOTHING.
  *
- * Push (Expo) is the only automatic channel (D-#65); it is best-effort and never
- * throws. Each section dispatch is audited (ATTENDANCE_REMINDER_SENT). Identity-
- * plane only (ADR-005) — no corpus path.
+ * Delivery (N-2 reconciliation, D-#99): each reminder is an ATTENDANCE_REMINDER
+ * row through the D-#72 `emit()` seam — the inbox is the always-working surface,
+ * and push rides the N-4 Expo channel BEHIND the seam (one transport, no double
+ * send). The seam is idempotent per (date, tier, section, recipient) on top of
+ * this service's per-section ledger. Each section dispatch is audited
+ * (ATTENDANCE_REMINDER_SENT). Identity-plane only (ADR-005) — no corpus path.
  */
 import { resolveDayType } from "../../routine/calendar";
 import { parseDateKey, dateKeyOf } from "../dates";
 import { unmarkedSections } from "./AttendanceReportService";
 import { Section } from "../../foundation/models/Section";
 import { User } from "../../foundation/models/User";
-import { PushDevice } from "../models/PushDevice";
 import { AttendanceReminderDispatch } from "../models/AttendanceReminderDispatch";
-import { sendExpoPush, type ExpoPushMessage } from "../../platform/services/ExpoPush";
+import { emit } from "../../notifications/services/NotificationService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { ATTENDANCE_REMINDER_TIERS, type AttendanceReminderTier } from "@scd/shared";
 
 export class AttendanceReminderError extends Error {}
 
-// Bangla push copy per tier (NFR-5). The marker line is strictly "mark your
+// Bangla copy per tier (NFR-5) — the inbox row's title/body (push shows the
+// same text via the N-4 channel). The marker line is strictly "mark your
 // section" — never a guardian-chase instruction (O3).
-const TIER_PUSH: Record<AttendanceReminderTier, { title: string; body: (sectionName: string) => string }> = {
+const TIER_MESSAGE: Record<AttendanceReminderTier, { title: string; body: (sectionName: string) => string }> = {
   T1210: {
     title: "উপস্থিতি চিহ্নিত করুন",
     body: (s) => `${s} সেকশনের আজকের উপস্থিতি এখনও চিহ্নিত হয়নি — অনুগ্রহ করে এখনই চিহ্নিত করুন।`,
@@ -84,8 +87,8 @@ export interface ReminderDispatchSummary {
   dispatchedSections: number;
   /** Sections skipped because already dispatched for this date/tier (idempotency). */
   alreadyDispatched: number;
-  /** Total active device tokens the pushes reached this call. */
-  deviceCount: number;
+  /** Recipients whose inbox rows were emitted this call (push rides the channel). */
+  recipientCount: number;
 }
 
 async function userIdsByRole(role: "OFFICE" | "PRINCIPAL"): Promise<string[]> {
@@ -95,7 +98,8 @@ async function userIdsByRole(role: "OFFICE" | "PRINCIPAL"): Promise<string[]> {
 
 /**
  * Run one trigger tier for a date (default: today, school-local). Idempotent and
- * FULL-day-gated. Returns a summary; never throws on push failure (best-effort).
+ * FULL-day-gated. Returns a summary; delivery is the emit() seam (the inbox row
+ * always stands; a push/channel failure never propagates — D-#75).
  */
 export async function dispatchAttendanceReminders(
   tier: AttendanceReminderTier,
@@ -113,7 +117,7 @@ export async function dispatchAttendanceReminders(
     unmarkedCount: 0,
     dispatchedSections: 0,
     alreadyDispatched: 0,
-    deviceCount: 0,
+    recipientCount: 0,
   };
 
   // AT4.1 — single calendar source; only FULL days fire.
@@ -151,7 +155,7 @@ export async function dispatchAttendanceReminders(
     sections.map((s) => [s._id.toString(), s.classTeacherId ? s.classTeacherId.toString() : null]),
   );
 
-  const push = TIER_PUSH[tier];
+  const message = TIER_MESSAGE[tier];
 
   for (const section of todo) {
     const recipientIds = recipientsForTier(
@@ -163,32 +167,20 @@ export async function dispatchAttendanceReminders(
       escalation,
     );
 
-    // Resolve active device tokens for the recipients.
-    const devices = recipientIds.length
-      ? await PushDevice.find({
-          userId: { $in: recipientIds },
-          active: true,
-        })
-          .select("expoPushToken")
-          .lean()
-      : [];
-    const tokens = devices.map((d) => d.expoPushToken);
-
-    const messages: ExpoPushMessage[] = tokens.map((to) => ({
-      to,
-      title: push.title,
-      body: push.body(section.sectionNameBn),
-      data: { type: "attendance_reminder", tier, sectionId: section.sectionId, dateKey: key },
-    }));
-
-    // Best-effort send (never throws); prune dead tokens.
-    const result = await sendExpoPush(messages);
-    if (result.deadTokens.length) {
-      await PushDevice.updateMany(
-        { expoPushToken: { $in: result.deadTokens } },
-        { $set: { active: false } },
-      );
-    }
+    // One inbox row per recipient through the seam (D-#99) — push fans out
+    // behind it (N-4 channel); the seam's dedupeKey absorbs a racing re-call.
+    await Promise.all(
+      recipientIds.map((userId) =>
+        emit({
+          recipientUserId: userId,
+          kind: "ATTENDANCE_REMINDER",
+          titleBn: message.title,
+          bodyBn: message.body(section.sectionNameBn),
+          refs: { sectionId: section.sectionId, date: key, tier },
+          dedupeKey: `ATT:${key}:${tier}:${section.sectionId}:${userId}`,
+        }),
+      ),
+    );
 
     // Record the idempotency row (guard the unique index against a racing call).
     try {
@@ -197,7 +189,6 @@ export async function dispatchAttendanceReminders(
         tier,
         sectionId: section.sectionId,
         recipientUserIds: recipientIds,
-        deviceCount: tokens.length,
         sentAt: new Date(),
       });
     } catch (err) {
@@ -214,11 +205,11 @@ export async function dispatchAttendanceReminders(
       actorRole: "SYSTEM",
       targetId: section.sectionId,
       targetKind: "Section",
-      meta: { tier, dateKey: key, recipientCount: recipientIds.length, deviceCount: tokens.length },
+      meta: { tier, dateKey: key, recipientCount: recipientIds.length },
     });
 
     base.dispatchedSections += 1;
-    base.deviceCount += tokens.length;
+    base.recipientCount += recipientIds.length;
   }
 
   return base;

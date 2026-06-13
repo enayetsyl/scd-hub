@@ -3158,3 +3158,96 @@ export const CHILD_LIBRARY_LOANS_QUERY = gql<
     }
   }
 `;
+
+// ===========================================================================
+// Notifications (N-3/N-4, D-#72–#75) — the own-row inbox + device tokens
+// ===========================================================================
+
+export interface NotificationRefsT {
+  classNoteId: string | null;
+  slotId: string | null;
+  date: string | null;
+  groupType: string | null;
+  groupId: string | null;
+  hwItemId: string | null;
+  studentId: string | null;
+  sectionId: string | null;
+  reviewAssignmentId: string | null;
+  artifactId: string | null;
+  substitutionId: string | null;
+  loanId: string | null;
+  rung: number | null;
+  audienceKey: string | null;
+  periodNumber: number | null;
+  tier: string | null;
+  hour: number | null;
+}
+
+export interface NotificationT {
+  id: string;
+  kind: string;
+  titleBn: string;
+  bodyBn: string;
+  refs: NotificationRefsT;
+  readAt: string | null;
+  createdAt: string;
+}
+
+const NOTIFICATION_FIELDS = `
+  id kind titleBn bodyBn readAt createdAt
+  refs {
+    classNoteId slotId date groupType groupId hwItemId studentId sectionId
+    reviewAssignmentId artifactId substitutionId loanId rung
+    audienceKey periodNumber tier hour
+  }
+`;
+
+export const MY_NOTIFICATIONS_QUERY = gql<
+  { myNotifications: NotificationT[] },
+  { unreadOnly?: boolean | null; limit?: number | null }
+>`
+  query MyNotifications($unreadOnly: Boolean, $limit: Int) {
+    myNotifications(unreadOnly: $unreadOnly, limit: $limit) {
+      ${NOTIFICATION_FIELDS}
+    }
+  }
+`;
+
+export const MY_UNREAD_NOTIFICATION_COUNT = gql<
+  { myUnreadNotificationCount: number },
+  NoVars
+>`
+  query MyUnreadNotificationCount {
+    myUnreadNotificationCount
+  }
+`;
+
+export const MARK_NOTIFICATION_READ = gql<
+  { markNotificationRead: { id: string; readAt: string | null } },
+  { id: string }
+>`
+  mutation MarkNotificationRead($id: String!) {
+    markNotificationRead(id: $id) {
+      id readAt
+    }
+  }
+`;
+
+export const MARK_ALL_NOTIFICATIONS_READ = gql<
+  { markAllNotificationsRead: number },
+  NoVars
+>`
+  mutation MarkAllNotificationsRead {
+    markAllNotificationsRead
+  }
+`;
+
+// N-4 (D-#75): deactivate this device's token at logout (own-row).
+export const UNREGISTER_PUSH_DEVICE = gql<
+  { unregisterPushDevice: boolean },
+  { token: string }
+>`
+  mutation UnregisterPushDevice($token: String!) {
+    unregisterPushDevice(token: $token)
+  }
+`;

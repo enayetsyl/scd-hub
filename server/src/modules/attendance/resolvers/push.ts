@@ -1,7 +1,9 @@
 /**
  * Push-device + guardian-chase resolvers (AT-4, D-#65).
- *   registerPushDevice / unregisterPushDevice — any authenticated user manages
- *     their OWN device tokens (own-row; no new permission).
+ *   registerPushDevice / unregisterPushDevice — any authenticated recipient
+ *     manages their OWN device tokens (own-row; no new permission). The owner
+ *     is derived from the auth context (a GUARDIAN token registers a
+ *     guardian-owned device, N-4/D-#75 — same split as the notification inbox).
  *   guardianChaseLink — Office (attendance:manage) gets the AT4.7 manual wa.me
  *     link for an absent-no-application student. Teachers never chase (O3).
  * Identity-plane (ADR-005).
@@ -24,7 +26,11 @@ builder.mutationField("registerPushDevice", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       const platform = args.platform as "ios" | "android" | "web" | undefined;
-      await registerPushDevice(ctx.auth!.userId, args.token, platform ?? undefined);
+      const owner =
+        ctx.auth!.role === "GUARDIAN"
+          ? { guardianId: ctx.auth!.userId }
+          : { userId: ctx.auth!.userId };
+      await registerPushDevice(owner, args.token, platform ?? undefined);
       return true;
     },
   }),
@@ -34,8 +40,14 @@ builder.mutationField("unregisterPushDevice", (t) =>
   t.boolean({
     authScopes: { authenticated: true },
     args: { token: t.arg.string({ required: true }) },
-    resolve: async (_root, args) => {
-      await unregisterPushDevice(args.token);
+    resolve: async (_root, args, ctx) => {
+      // Owner-scoped (same split as register) — a caller can only deactivate
+      // a device they own, never another user's token.
+      const owner =
+        ctx.auth!.role === "GUARDIAN"
+          ? { guardianId: ctx.auth!.userId }
+          : { userId: ctx.auth!.userId };
+      await unregisterPushDevice(owner, args.token);
       return true;
     },
   }),
