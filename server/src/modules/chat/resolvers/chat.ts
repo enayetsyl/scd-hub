@@ -32,7 +32,9 @@ import {
   getChatMessage,
   reactionsForMessage,
   reactionsForMessages,
+  setConversationMuted,
 } from "../services/ChatService";
+import { pushNewChatMessage } from "../services/ChatPushService";
 import {
   attachmentsForFileIds,
   type AttachmentView,
@@ -72,6 +74,7 @@ interface ChatMemberView {
   userId: string;
   name: string;
   source: string;
+  muted: boolean;
   joinedAt: Date;
 }
 
@@ -90,6 +93,8 @@ const ChatMemberRef = builder.objectRef<ChatMemberView>("ConversationMember").im
     userId: t.exposeString("userId"),
     name: t.exposeString("name"),
     source: t.exposeString("source"),
+    // M-7 per-user push mute for this conversation (the client reads its own row).
+    muted: t.exposeBoolean("muted"),
     joinedAt: t.string({ resolve: (m) => new Date(m.joinedAt).toISOString() }),
   }),
 });
@@ -144,6 +149,7 @@ function viewsFromMembers(
     userId: m.userId.toString(),
     name: nameById.get(m.userId.toString()) ?? "",
     source: m.source,
+    muted: m.muted ?? false,
     joinedAt: m.joinedAt,
   }));
 }
@@ -321,8 +327,8 @@ builder.mutationField("sendMessage", (t) =>
       replyToId: t.arg.string({ required: false }),
       attachmentIds: t.arg.stringList({ required: false }),
     },
-    resolve: async (_r, args, ctx) =>
-      sendMessage({
+    resolve: async (_r, args, ctx) => {
+      const msg = await sendMessage({
         conversationId: args.conversationId,
         senderId: ctx.auth!.userId,
         body: args.body ?? "",
@@ -330,7 +336,12 @@ builder.mutationField("sendMessage", (t) =>
         attachmentIds: args.attachmentIds ?? undefined,
         // ANNOUNCEMENT gate (M-2, D-#78): managers may post, others are blocked.
         canManage: roleHasPermission(ctx.auth!.role as Role, "chat:manage"),
-      }),
+      });
+      // M-7: push to the other members (best-effort, fire-and-forget — never
+      // delays or blocks the send; the message is already persisted).
+      void pushNewChatMessage(msg);
+      return msg;
+    },
   }),
 );
 
@@ -340,6 +351,23 @@ builder.mutationField("markSeen", (t) =>
     authScopes: { hasPermission: "chat:write" },
     args: { conversationId: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => markConversationSeen(args.conversationId, ctx.auth!.userId),
+  }),
+);
+
+// --- Per-user push mute (M-7) -------------------------------------------------
+// Own-row toggle (membership-gated, no new permission): suppress this caller's
+// Expo push for a conversation without leaving it. Returns the new muted state.
+
+builder.mutationField("setConversationMuted", (t) =>
+  t.field({
+    type: "Boolean",
+    authScopes: { hasPermission: "chat:read" },
+    args: {
+      conversationId: t.arg.string({ required: true }),
+      muted: t.arg.boolean({ required: true }),
+    },
+    resolve: async (_r, args, ctx) =>
+      setConversationMuted(args.conversationId, ctx.auth!.userId, args.muted),
   }),
 );
 
@@ -353,14 +381,18 @@ builder.mutationField("forwardMessage", (t) =>
       messageId: t.arg.string({ required: true }),
       toConversationId: t.arg.string({ required: true }),
     },
-    resolve: async (_r, args, ctx) =>
-      forwardMessage({
+    resolve: async (_r, args, ctx) => {
+      const msg = await forwardMessage({
         messageId: args.messageId,
         toConversationId: args.toConversationId,
         senderId: ctx.auth!.userId,
         // ANNOUNCEMENT gate on the target (M-2, D-#78) — same rule as sendMessage.
         canManage: roleHasPermission(ctx.auth!.role as Role, "chat:manage"),
-      }),
+      });
+      // M-7: push to the target conversation's other members (best-effort).
+      void pushNewChatMessage(msg);
+      return msg;
+    },
   }),
 );
 

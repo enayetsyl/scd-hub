@@ -35,6 +35,13 @@ jest.mock("../modules/chat/models/ChatMessage", () => ({
   ChatMessage: { create: (d: unknown) => mockMsgCreate(d) },
 }));
 
+// M-7: the dispatch seam fires a (best-effort) chat push. Mock it here so the
+// seam test stays DB-free and can assert the recipient is pushed.
+const mockPushNewChatMessage = jest.fn().mockResolvedValue(undefined);
+jest.mock("../modules/chat/services/ChatPushService", () => ({
+  pushNewChatMessage: (m: unknown) => mockPushNewChatMessage(m),
+}));
+
 import { directKeyFor } from "../modules/chat/models/Conversation";
 import { ChatError } from "../modules/chat/services/ChatService";
 import { dispatchSystemMessage, SYSTEM_SENDER_ID } from "../modules/chat/services/MessageDispatchService";
@@ -73,6 +80,8 @@ describe("M-6 dispatchSystemMessage", () => {
     expect(mockMsgCreate.mock.calls[0][0].senderId.toString()).toBe(SYSTEM_SENDER_ID);
     // lastMessageAt is stamped for list ordering.
     expect(mockConvUpdateOne).toHaveBeenCalledWith({ _id: SYS_CONV }, { $set: { lastMessageAt: msg.createdAt } });
+    // M-7: the recipient is pushed (best-effort) with the system message.
+    expect(mockPushNewChatMessage).toHaveBeenCalledWith(msg);
   });
 
   test("empty/whitespace text is rejected (no conversation, no message)", async () => {
