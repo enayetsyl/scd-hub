@@ -4,7 +4,7 @@ _Updated: 2026-06-13 (Assignment Tracker AS-T1..T5 + Library module LB-1..LB-5 b
 
 ## Now / next
 - **Built (Library module — catalog + circulation + reservations + overdue chasing, LB-1..LB-5,
-  D-#81–#84 + build rulings D-#96/#97) [branch `worktree-library`]:** the full prd-library contract,
+  D-#81–#84 + build rulings D-#96/#97) [MERGED to main, PR #40, 887468c]:** the full prd-library contract,
   server+app. **LB-1:** app-native vocab (`library:read` P/T/O + `library:manage` P/O; BORROWER_TYPES/
   COPY_STATUSES/LOAN_STATUSES/RESERVATION_STATUSES/BOOK_LANGUAGES + BN/EN; verifier §C.6, no wire sync);
   BookTitle/BookCopy (unique accessionNo)/LibraryPolicy/LibrarianAssignment (append-only duty log);
@@ -77,8 +77,8 @@ _Updated: 2026-06-13 (Assignment Tracker AS-T1..T5 + Library module LB-1..LB-5 b
   only — nothing executed. Next = execute DEP-1 per docs/deployment.md §4,
   slice order. (Handoff proposed D-#59–#62 — renumbered, taken through D-#89.
   The D-#91 "push to dev" handoff rule takes effect when DEP-5 executes.)
-- **Built (Assignment Tracker AS-T1..AS-T5 — server + app, D-#85–#89 + D-#94) [branch
-  `worktree-assignment-tracker`]:** the weekly AS-… channel replacing the Google Sheet
+- **Built (Assignment Tracker AS-T1..AS-T5 — server + app, D-#85–#89 + D-#94) [MERGED to
+  main, PR #39, 5dd55b3]:** the weekly AS-… channel replacing the Google Sheet
   tracker is feature-complete server+app, per `docs/prd-tracker-assignment.md`. **Server**
   (`trackers` module): `AssignmentSchedule` (per-year term anchor + admin-configurable
   Thu-deliver/Sun-due cadence + 4-week rotation; anchors Sun–Thu only) · `AssignmentItem`
