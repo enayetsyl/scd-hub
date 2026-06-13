@@ -350,6 +350,78 @@ export const COVER_SLOT_STATUS_LABELS_EN: Record<CoverSlotStatus, string> = {
   needs_cover: "Needs cover", proposed: "Proposed", approved: "Approved",
 };
 
+// --- A.5c HR PAYROLL ENUMS (app-native; HR module step 3 — prd-hr §4/H4, D-#26/#27) -
+// Identity/operational plane, behind the ADR-005 firewall — NO wire-contract twin,
+// NO envelope-schema mirror, NO two-place sync; only /shared + the vocab verifier run.
+
+/** How a staff member is paid (prd-hr §4.6). Cash-paid staff are flagged + EXCLUDED
+ *  from the bank/bKash payment-export file. */
+export const PAYMENT_METHODS = ["bank", "bkash", "cash"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export const PAYMENT_METHOD_LABELS_BN: Record<PaymentMethod, string> = {
+  bank: "ব্যাংক", bkash: "বিকাশ", cash: "নগদ",
+};
+export const PAYMENT_METHOD_LABELS_EN: Record<PaymentMethod, string> = {
+  bank: "Bank", bkash: "bKash", cash: "Cash",
+};
+
+/** Monthly run lifecycle (prd-hr §4.2). Office PREPARES → Principal APPROVES → the
+ *  run is `approved_locked` (immutable; payslips + payment export issue only from it).
+ *  A prepared run may be recomputed or `cancelled` before approval; a locked run is
+ *  NEVER retro-edited — post-lock corrections ride arrears lines on the NEXT run (D-#110). */
+export const PAYROLL_RUN_STATUSES = ["prepared", "approved_locked", "cancelled"] as const;
+export type PayrollRunStatus = (typeof PAYROLL_RUN_STATUSES)[number];
+
+export const PAYROLL_RUN_STATUS_LABELS_BN: Record<PayrollRunStatus, string> = {
+  prepared: "প্রস্তুত", approved_locked: "অনুমোদিত ও লকড", cancelled: "বাতিল",
+};
+export const PAYROLL_RUN_STATUS_LABELS_EN: Record<PayrollRunStatus, string> = {
+  prepared: "Prepared", approved_locked: "Approved & locked", cancelled: "Cancelled",
+};
+
+/** Deduction lines (prd-hr §4.3, D-#26). `unpaid_leave` (day-rate × LWP days) is the
+ *  ONLY always-on attendance-driven deduction; `lateness` is the optional
+ *  Principal-configurable rule (off by default, parameters parked); `statutory` is a
+ *  confirm-with-accountant placeholder (no rates baked in); `advance_repayment` ties to
+ *  the qard-hasan ledger; `other` carries arrears clawbacks / manual corrections. */
+export const PAY_DEDUCTION_TYPES = ["unpaid_leave", "advance_repayment", "lateness", "statutory", "other"] as const;
+export type PayDeductionType = (typeof PAY_DEDUCTION_TYPES)[number];
+
+export const PAY_DEDUCTION_TYPE_LABELS_BN: Record<PayDeductionType, string> = {
+  unpaid_leave: "বিনা বেতনে ছুটি", advance_repayment: "অগ্রিম কর্তন", lateness: "বিলম্ব কর্তন",
+  statutory: "সরকারি কর্তন", other: "অন্যান্য কর্তন",
+};
+export const PAY_DEDUCTION_TYPE_LABELS_EN: Record<PayDeductionType, string> = {
+  unpaid_leave: "Unpaid leave", advance_repayment: "Advance repayment", lateness: "Lateness",
+  statutory: "Statutory", other: "Other",
+};
+
+/** Addition lines (prd-hr §4.4). `leave_encashment` surfaces the §3.4 cash-out + exit
+ *  settlement; `arrears` carries back-pay + post-lock corrections (D-#110). */
+export const PAY_ADDITION_TYPES = ["bonus", "arrears", "leave_encashment", "other"] as const;
+export type PayAdditionType = (typeof PAY_ADDITION_TYPES)[number];
+
+export const PAY_ADDITION_TYPE_LABELS_BN: Record<PayAdditionType, string> = {
+  bonus: "বোনাস", arrears: "বকেয়া", leave_encashment: "ছুটি নগদায়ন", other: "অন্যান্য সংযোজন",
+};
+export const PAY_ADDITION_TYPE_LABELS_EN: Record<PayAdditionType, string> = {
+  bonus: "Bonus", arrears: "Arrears", leave_encashment: "Leave encashment", other: "Other",
+};
+
+/** Advance / loan lifecycle (prd-hr §4.5, D-#27 — qard hasan, interest- & fee-free).
+ *  `active` = outstanding balance; `settled` = fully recovered / early-settled / exit-netted;
+ *  `written_off` = Principal forgave the remaining balance. */
+export const ADVANCE_STATUSES = ["active", "settled", "written_off"] as const;
+export type AdvanceStatus = (typeof ADVANCE_STATUSES)[number];
+
+export const ADVANCE_STATUS_LABELS_BN: Record<AdvanceStatus, string> = {
+  active: "চলমান", settled: "পরিশোধিত", written_off: "মওকুফ",
+};
+export const ADVANCE_STATUS_LABELS_EN: Record<AdvanceStatus, string> = {
+  active: "Active", settled: "Settled", written_off: "Written off",
+};
+
 // --- A.6 HOMEWORK-TRACKER ENUMS (app-native; Project-06 handoff — HW-T1) ------
 // Daily HW-… channel. NO wire-contract twin: trackers are a feature, not import
 // content (no `doc_type: tracker`), and Layer-B records live on the operational/
@@ -962,6 +1034,8 @@ export const PERMISSIONS = [
   "roster:manage",
   "staff:manage",          // HR staff-record read/manage (Principal/Office; prd-hr H1.4 row-scope)
   "leave:manage",          // HR staff-LEAVE admin: entitlements, approve/reject, cover approval, all balances (Principal/Office; prd-hr H2, D-#22). Teacher own-row self-apply needs NO permission.
+  "payroll:manage",        // HR PAYROLL: set pay, prepare/recompute a monthly run, read payslips/export/advances (Principal/Office; prd-hr H4, D-#109)
+  "payroll:approve",       // PRINCIPAL ONLY — approve+LOCK a payroll run + issue/settle advances (prd-hr H4.2/H4.5/H4.7; Office cannot approve, D-#109)
   "guardian:link",
   "message:dispatch",      // wa.me / notices manual send (R-T2)
   "user:manage",
@@ -1000,6 +1074,8 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "roster:manage": "build",
   "staff:manage": "build",
   "leave:manage": "build",  // HR step 2 (staff leave admin surface)
+  "payroll:manage": "build", // HR step 3 (payroll prepare + pay records + reads)
+  "payroll:approve": "build", // HR step 3 (Principal lock + advances)
   "guardian:link": "build",
   "message:dispatch": "build",
   "user:manage": "build",
@@ -1022,7 +1098,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "library:read", "library:manage",
     "chat:read", "chat:write", "chat:manage",
     "chat:oversee",          // PRINCIPAL ONLY (D-#77) — every oversight open is audited (M-6)
-    "roster:manage", "staff:manage", "leave:manage", "guardian:link", "message:dispatch",
+    "roster:manage", "staff:manage", "leave:manage", "payroll:manage", "payroll:approve", "guardian:link", "message:dispatch",
     "user:manage", "audit:read",
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
@@ -1044,7 +1120,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // publisher seam), plan-review assignment (D-#39), and routine authoring (D-#46).
   // No tracker/user surface under PoLP.
   OFFICE: [
-    "roster:manage", "staff:manage", "leave:manage", "guardian:link", "message:dispatch",
+    "roster:manage", "staff:manage", "leave:manage", "payroll:manage", "guardian:link", "message:dispatch",
     "content:import", "content:assign_review",
     "routine:read", "routine:manage",
     "attendance:manage",     // upload teacher Excel, assign markers, chase guardians (D-#64/#65; no mark)

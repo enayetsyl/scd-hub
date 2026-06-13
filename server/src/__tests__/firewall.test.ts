@@ -276,6 +276,9 @@ describe("HR staff-leave firewall (ADR-005 / prd-hr H7.4)", () => {
       expect(content).not.toMatch(importPattern("models/StaffLeaveApplication"));
       expect(content).not.toMatch(importPattern("models/StaffLeaveEntitlement"));
       expect(content).not.toMatch(importPattern("models/StaffCoverSlot"));
+      expect(content).not.toMatch(importPattern("models/PayrollRun"));     // HR-3 payroll (most-sensitive plane, §4.7)
+      expect(content).not.toMatch(importPattern("models/Payslip"));
+      expect(content).not.toMatch(importPattern("models/AdvanceLoan"));
     }
   });
 });

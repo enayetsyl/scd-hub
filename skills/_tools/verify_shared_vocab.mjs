@@ -34,7 +34,7 @@ check("default-deny: unknown role", V.roleHasPermission("GHOST", "content:read")
 check("PRINCIPAL has user:manage + audit:read", V.roleHasPermission("PRINCIPAL", "user:manage") && V.roleHasPermission("PRINCIPAL", "audit:read"));
 check("TEACHER lacks user:manage / audit:read / content:import", !["user:manage","audit:read","content:import"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("TEACHER can read content + assemble + write trackers", ["content:read","set:assemble","tracker:write"].every((p) => V.roleHasPermission("TEACHER", p)));
-check("OFFICE = roster/staff/leave/guardian/message/import/assign_review/routine/attendance/library/chat", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage"]));
+check("OFFICE = roster/staff/leave/payroll/guardian/message/import/assign_review/routine/attendance/library/chat", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage"]));
 check("routine: PRINCIPAL+OFFICE manage, TEACHER read-only, GUARDIAN none", V.roleHasPermission("PRINCIPAL","routine:manage") && V.roleHasPermission("OFFICE","routine:manage") && V.roleHasPermission("TEACHER","routine:read") && !V.roleHasPermission("TEACHER","routine:manage") && !V.roleHasPermission("GUARDIAN","routine:read"));
 check("TEACHER has content:review (reviewer APPROVE), lacks assign/promote", V.roleHasPermission("TEACHER","content:review") && !["content:assign_review","content:promote_gold"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("GUARDIAN only has guardian:read_child", eq(V.permissionsForRole("GUARDIAN"), ["guardian:read_child"]));
@@ -194,6 +194,27 @@ check("unpaid_lwp = no balance, no pay (§3.3 overflow bucket)",
 check("leave:manage = PRINCIPAL+OFFICE only — TEACHER self-applies own-row (no perm), GUARDIAN none (prd-hr H2.6/H2.7)",
   V.roleHasPermission("PRINCIPAL","leave:manage") && V.roleHasPermission("OFFICE","leave:manage") &&
   !V.roleHasPermission("TEACHER","leave:manage") && !V.roleHasPermission("GUARDIAN","leave:manage"));
+
+console.log("=== C.9 HR payroll vocab + RBAC invariants (HR step 3 — prd-hr §4, D-#26/#27/#109) ===");
+check("PAYMENT_METHOD_LABELS_BN total",       total(V.PAYMENT_METHOD_LABELS_BN, V.PAYMENT_METHODS));
+check("PAYMENT_METHOD_LABELS_EN total",       total(V.PAYMENT_METHOD_LABELS_EN, V.PAYMENT_METHODS));
+check("PAYROLL_RUN_STATUS_LABELS_BN total",   total(V.PAYROLL_RUN_STATUS_LABELS_BN, V.PAYROLL_RUN_STATUSES));
+check("PAYROLL_RUN_STATUS_LABELS_EN total",   total(V.PAYROLL_RUN_STATUS_LABELS_EN, V.PAYROLL_RUN_STATUSES));
+check("PAY_DEDUCTION_TYPE_LABELS_BN total",   total(V.PAY_DEDUCTION_TYPE_LABELS_BN, V.PAY_DEDUCTION_TYPES));
+check("PAY_DEDUCTION_TYPE_LABELS_EN total",   total(V.PAY_DEDUCTION_TYPE_LABELS_EN, V.PAY_DEDUCTION_TYPES));
+check("PAY_ADDITION_TYPE_LABELS_BN total",    total(V.PAY_ADDITION_TYPE_LABELS_BN, V.PAY_ADDITION_TYPES));
+check("PAY_ADDITION_TYPE_LABELS_EN total",    total(V.PAY_ADDITION_TYPE_LABELS_EN, V.PAY_ADDITION_TYPES));
+check("ADVANCE_STATUS_LABELS_BN total",       total(V.ADVANCE_STATUS_LABELS_BN, V.ADVANCE_STATUSES));
+check("ADVANCE_STATUS_LABELS_EN total",       total(V.ADVANCE_STATUS_LABELS_EN, V.ADVANCE_STATUSES));
+check("payment methods exact (§4.6)",         eq(V.PAYMENT_METHODS, ["bank","bkash","cash"]));
+check("payroll run statuses exact — locked is approved_locked (§4.2)", eq(V.PAYROLL_RUN_STATUSES, ["prepared","approved_locked","cancelled"]));
+check("advance statuses exact (§4.5, D-#27)", eq(V.ADVANCE_STATUSES, ["active","settled","written_off"]));
+check("unpaid_leave is a deduction type (the only always-on attendance-driven deduction, D-#26)", V.PAY_DEDUCTION_TYPES.includes("unpaid_leave"));
+check("leave_encashment is an addition type (§4.4)", V.PAY_ADDITION_TYPES.includes("leave_encashment"));
+check("payroll: PRINCIPAL+OFFICE manage; approve PRINCIPAL ONLY (Office cannot approve, H4.2/H4.7/D-#109); TEACHER+GUARDIAN none",
+  V.roleHasPermission("PRINCIPAL","payroll:manage") && V.roleHasPermission("OFFICE","payroll:manage") &&
+  V.roleHasPermission("PRINCIPAL","payroll:approve") && !V.roleHasPermission("OFFICE","payroll:approve") &&
+  !["TEACHER","GUARDIAN"].some((r) => V.roleHasPermission(r, "payroll:manage") || V.roleHasPermission(r, "payroll:approve")));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);
