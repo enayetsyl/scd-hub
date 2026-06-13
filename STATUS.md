@@ -1,8 +1,28 @@
 # STATUS
 
-_Updated: 2026-06-13 (HR-4 performance/conduct/development built — server, PR #52 open. Messaging M-7 PR #51 + M-6 PR #50 merged; **messaging M-1..M-7 COMPLETE**)_
+_Updated: 2026-06-13 (Messaging M-6+M-7 app pass built — Expo, PR open. HR-4 PR #52 + M-7 PR #51 + M-6 PR #50 merged; **messaging M-1..M-7 server COMPLETE, now app-surfaced**)_
 
 ## Now / next
+- **Built (Messaging M-6 + M-7 app pass — Expo, APP-ONLY, D-#125) [branch `worktree-messaging-app`,
+  PR open — coordinator reviews]:** the deferred app surfaces for the already-merged M-6/M-7 server
+  work, per `docs/prd-messaging.md` §5/§6. **NO server / vocab / contract change** (proven: `git diff
+  origin/main -- server shared docs` is empty) — consumes the existing M-6/M-7 resolvers + adds client
+  ops. **New ops** (`operations.ts`): `setConversationMuted`, `oversightConversations`,
+  `openConversationOversight`, `oversightMessages`, `composeGuardianNotice` (+ result types); `muted`
+  added to `ChatMemberT` + the member selection in `CONVERSATION_FIELDS`. **M-7 mute:** ChatThread 🔕/🔔
+  own-row toggle (reads `members[].muted`, flips via `setConversationMuted`, optimistic); ChatHome shows
+  a muted badge/prefix. **M-6 oversight** (`chat:oversee` = PRINCIPAL): ChatHome entry → `ChatOversightScreen`
+  (browser over `oversightConversations`) → `ChatOversightThreadScreen` fires the **audited**
+  `openConversationOversight` on open then pages `oversightMessages` (load-older); READ-ONLY, deleted
+  originals shown un-masked with a marker. **M-6 notice composer** (`chat:write`): ChatHome entry →
+  `GuardianNoticeScreen` — scope SECTION/SCHOOL (SCHOOL chip only for `chat:manage`), SECTION picker from
+  `mySectionsAsClassTeacher`, → `composeGuardianNotice` → `recipients[]` as ADR-003 `wa.me` links +
+  reach counts; the server enforces D-#45 and its Bangla deny shows inline. New ChatStack routes + BN/EN
+  labels. **Gate GREEN (executed):** app tsc clean + expo web export green (706 modules); no-drift =
+  vocab verifier PASS + **jest 814/814 unchanged** (server untouched). **Not verified live.** **Messaging
+  module is now fully built server + app (M-1..M-7).** Follow-up (deferred, D-#125): a full-section picker
+  so Principal/Office can target an arbitrary SECTION notice (server already authorizes it; only the
+  picker UI is absent — SCHOOL scope covers the gap today) + live verification.
 - **Built (HR step 4 — performance / conduct / development, server, prd-hr §5/H5, D-#28 + build rulings
   D-#112/#113) [branch `worktree-hr-performance`, PR open — coordinator reviews]:** the fourth HR slice,
   independent of payroll; needs HR-1 (StaffProfile) + the supervisory scope (D-#28). **New `modules/hr/`
