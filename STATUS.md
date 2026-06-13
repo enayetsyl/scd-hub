@@ -1,8 +1,29 @@
 # STATUS
 
-_Updated: 2026-06-13 (Vocabulary Tracker VC-2 built — server, PR open [test build + positions + weekly assignment + proxy]; VC-1 PR #55 MERGED; Class Test Tracker PRD added D-#119–#122. HR-5 PR #54 + Messaging M-6+M-7 app pass PR #53 merged [**HR + messaging both COMPLETE**]. In flight: HR-app #135+)_
+_Updated: 2026-06-13 (HR app PR-1 [#56] merging — Staff/HR tab + leave + self-service, APP-ONLY, D-#135; merged origin/main = VC-2 [PR #58] + Message-Templates/Comments PRDs. VC-1 PR #55 MERGED; Class Test Tracker PRD added D-#119–#122. HR-5 PR #54 + Messaging M-6+M-7 app pass PR #53 merged [**HR + messaging both COMPLETE**]. In flight: HR-app #57/#59/#60)_
 
 ## Now / next
+- **Built (HR app PR-1 — Staff/HR tab + leave + staff self-service, Expo, APP-ONLY, D-#135)
+  [branch `worktree-hr-app-leave`, PR open — coordinator reviews]:** the first of four HR app-surface
+  PRs over the now-complete HR-1..HR-5 server module (which was server-only by HR precedent). **NO
+  server / vocab / contract change** (proven: `git diff origin/main -- server shared docs skills` empty)
+  — consumes existing HR resolvers + adds client ops/labels only. New **🧑‍💼 Staff/HR tab** gated
+  `role !== "GUARDIAN"` (universal staff self-service; GUARDIAN never sees it) → `HrHomeScreen` hub
+  branching self-service (all staff) vs management (permission-gated, re-checked server-side). **Self-
+  service (own-row `my*`, no perm):** `MyLeaveScreen` (per-type balances for the current AY via
+  `myStaffLeaveBalances` + `myStaffLeave` list with the approval paid/unpaid split + exceed-warning
+  banner + `applyForStaffLeave` + own-cancel) → `LeaveCoverScreen` (per-slot `proposeStaffCover` via
+  TeacherSelect); `MyRecordScreen` (read-only `myAppraisals`/`myConductRecords`/`myGrievances`+
+  `raiseGrievance`/`myDevelopmentLog`/`myObservations`, confidentiality respected — own record only).
+  **Admin (`leave:manage`):** `LeaveAdminScreen` (status-filtered `staffLeaveApplications` → approve/
+  reject; `LeaveCover` in manage mode → `decideStaffCoverSlot` mints the D-#20 proxy; entitlements
+  editor `upsertStaffLeaveEntitlement` w/ StaffSelect + AcademicYearSelect). New `HrStack` routes +
+  BN/EN labels + `StaffSelect`. **Two server gaps FLAGGED, not built (D-#135 / guardrail):** no own-row
+  **payslip** read (only `payslipsForRun`/payroll:manage) and no own-row **staff-attendance** read
+  (only `teacherAttendance*`/attendance:manage) — surfaced as "pending" notices; adding them is a
+  separate server slice for the coordinator. **Gate GREEN (executed):** app tsc clean + expo web export
+  green; no-drift = vocab verifier PASS + full jest unchanged at the e913ee5 base (server untouched).
+  **Not verified live.** **Next = HR app PR-2 (payroll surfaces)** → PR-3 performance → PR-4 offboarding.
 - **Planned (Message Templates MT-1..MT-3, D-#128–#131):** build contract
   docs/prd-message-templates.md — one admin-editable registry for every GENERATED
   message body (guardian wa.me + in-app notification title/body per kind + staff

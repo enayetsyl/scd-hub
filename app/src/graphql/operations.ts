@@ -3534,3 +3534,284 @@ export const COMPOSE_GUARDIAN_NOTICE = gql<
     }
   }
 `;
+
+// ===========================================================================
+// HR app surfaces — Leave + staff self-service (PR-1; prd-hr §3/§5, H2/H5)
+// All consume EXISTING resolvers (server/src/modules/hr/**); APP-ONLY, no
+// server/vocab change. Self-service my* queries need only authentication; the
+// admin surfaces are gated leave:manage server-side and deny in-band.
+// ===========================================================================
+
+export interface StaffLeaveT {
+  id: string;
+  staffProfileId: string;
+  leaveType: string;
+  fromKey: string;
+  toKey: string;
+  days: number;
+  reason: string;
+  status: string;
+  paidDays: number | null;
+  unpaidDays: number | null;
+  exceedWarning: string | null;
+  decisionNote: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+}
+
+const STAFF_LEAVE_FIELDS = `
+  id staffProfileId leaveType fromKey toKey days reason status
+  paidDays unpaidDays exceedWarning decisionNote decidedAt createdAt
+`;
+
+export const MY_STAFF_LEAVE_QUERY = gql<{ myStaffLeave: StaffLeaveT[] }, NoVars>`
+  query MyStaffLeave {
+    myStaffLeave { ${STAFF_LEAVE_FIELDS} }
+  }
+`;
+
+export interface StaffLeaveBalanceT {
+  leaveType: string;
+  paid: boolean;
+  balanceTracked: boolean;
+  allowanceDays: number;
+  carriedOverDays: number;
+  takenDays: number;
+  remainingDays: number;
+  encashableDays: number;
+}
+
+const STAFF_LEAVE_BALANCE_FIELDS = `
+  leaveType paid balanceTracked allowanceDays carriedOverDays
+  takenDays remainingDays encashableDays
+`;
+
+export const MY_STAFF_LEAVE_BALANCES_QUERY = gql<
+  { myStaffLeaveBalances: StaffLeaveBalanceT[] },
+  { academicYearId: string }
+>`
+  query MyStaffLeaveBalances($academicYearId: String!) {
+    myStaffLeaveBalances(academicYearId: $academicYearId) { ${STAFF_LEAVE_BALANCE_FIELDS} }
+  }
+`;
+
+export const APPLY_FOR_STAFF_LEAVE = gql<
+  { applyForStaffLeave: StaffLeaveT },
+  { leaveType: string; fromKey: string; toKey: string; reason: string; staffProfileId?: string | null }
+>`
+  mutation ApplyForStaffLeave($leaveType: String!, $fromKey: String!, $toKey: String!, $reason: String!, $staffProfileId: String) {
+    applyForStaffLeave(leaveType: $leaveType, fromKey: $fromKey, toKey: $toKey, reason: $reason, staffProfileId: $staffProfileId) {
+      ${STAFF_LEAVE_FIELDS}
+    }
+  }
+`;
+
+export const DECIDE_STAFF_LEAVE = gql<
+  { decideStaffLeave: StaffLeaveT },
+  { applicationId: string; decision: string; note?: string | null }
+>`
+  mutation DecideStaffLeave($applicationId: String!, $decision: String!, $note: String) {
+    decideStaffLeave(applicationId: $applicationId, decision: $decision, note: $note) {
+      ${STAFF_LEAVE_FIELDS}
+    }
+  }
+`;
+
+export interface StaffCoverSlotT {
+  id: string;
+  leaveApplicationId: string;
+  classId: string;
+  sectionId: string;
+  subjectId: string | null;
+  absentTeacherUserId: string | null;
+  proposedCoverTeacherId: string | null;
+  status: string;
+  proxyGrantId: string | null;
+}
+
+const STAFF_COVER_SLOT_FIELDS = `
+  id leaveApplicationId classId sectionId subjectId
+  absentTeacherUserId proposedCoverTeacherId status proxyGrantId
+`;
+
+export const STAFF_COVER_SLOTS_QUERY = gql<
+  { staffCoverSlots: StaffCoverSlotT[] },
+  { leaveApplicationId: string }
+>`
+  query StaffCoverSlots($leaveApplicationId: String!) {
+    staffCoverSlots(leaveApplicationId: $leaveApplicationId) { ${STAFF_COVER_SLOT_FIELDS} }
+  }
+`;
+
+export const PROPOSE_STAFF_COVER = gql<
+  { proposeStaffCover: StaffCoverSlotT },
+  { slotId: string; coverTeacherUserId: string }
+>`
+  mutation ProposeStaffCover($slotId: String!, $coverTeacherUserId: String!) {
+    proposeStaffCover(slotId: $slotId, coverTeacherUserId: $coverTeacherUserId) { ${STAFF_COVER_SLOT_FIELDS} }
+  }
+`;
+
+export const DECIDE_STAFF_COVER_SLOT = gql<
+  { decideStaffCoverSlot: StaffCoverSlotT },
+  { slotId: string; approve: boolean }
+>`
+  mutation DecideStaffCoverSlot($slotId: String!, $approve: Boolean!) {
+    decideStaffCoverSlot(slotId: $slotId, approve: $approve) { ${STAFF_COVER_SLOT_FIELDS} }
+  }
+`;
+
+// --- Admin leave surface (leave:manage) --------------------------------------
+
+export const STAFF_LEAVE_APPLICATIONS_QUERY = gql<
+  { staffLeaveApplications: StaffLeaveT[] },
+  { status?: string | null; fromKey?: string | null; toKey?: string | null }
+>`
+  query StaffLeaveApplications($status: String, $fromKey: String, $toKey: String) {
+    staffLeaveApplications(status: $status, fromKey: $fromKey, toKey: $toKey) { ${STAFF_LEAVE_FIELDS} }
+  }
+`;
+
+export const UPSERT_STAFF_LEAVE_ENTITLEMENT = gql<
+  { upsertStaffLeaveEntitlement: StaffLeaveBalanceT },
+  { staffProfileId: string; academicYearId: string; leaveType: string; allowanceDays: number; carriedOverDays?: number | null; note?: string | null }
+>`
+  mutation UpsertStaffLeaveEntitlement($staffProfileId: String!, $academicYearId: String!, $leaveType: String!, $allowanceDays: Int!, $carriedOverDays: Int, $note: String) {
+    upsertStaffLeaveEntitlement(staffProfileId: $staffProfileId, academicYearId: $academicYearId, leaveType: $leaveType, allowanceDays: $allowanceDays, carriedOverDays: $carriedOverDays, note: $note) {
+      ${STAFF_LEAVE_BALANCE_FIELDS}
+    }
+  }
+`;
+
+export const STAFF_LEAVE_BALANCES_QUERY = gql<
+  { staffLeaveBalances: StaffLeaveBalanceT[] },
+  { staffProfileId: string; academicYearId: string }
+>`
+  query StaffLeaveBalances($staffProfileId: String!, $academicYearId: String!) {
+    staffLeaveBalances(staffProfileId: $staffProfileId, academicYearId: $academicYearId) { ${STAFF_LEAVE_BALANCE_FIELDS} }
+  }
+`;
+
+// --- Own employment record (read-only self-view; prd-hr H5.5 own-row) --------
+
+export interface ConductRecordT {
+  id: string;
+  stage: string;
+  status: string;
+  grossMisconduct: boolean;
+  issue: string;
+  category: string | null;
+  evidence: string | null;
+  hearingNote: string | null;
+  hearingHeldAt: string | null;
+  liveUntil: string | null;
+  outcome: string | null;
+  finalizedAt: string | null;
+  createdAt: string;
+}
+
+const CONDUCT_RECORD_FIELDS = `
+  id staffProfileId stage status grossMisconduct issue category evidence
+  hearingNote hearingHeldAt liveUntil outcome finalizedAt createdAt
+`;
+
+export const MY_CONDUCT_RECORDS_QUERY = gql<{ myConductRecords: ConductRecordT[] }, NoVars>`
+  query MyConductRecords {
+    myConductRecords { ${CONDUCT_RECORD_FIELDS} }
+  }
+`;
+
+export interface AppraisalT {
+  id: string;
+  staffProfileId: string;
+  academicYearId: string;
+  status: string;
+  goals: string[];
+  developmentNeeds: string[];
+  overallOutcome: string | null;
+  outcomeNote: string | null;
+  signedOffAt: string | null;
+  createdAt: string;
+}
+
+const APPRAISAL_FIELDS = `
+  id staffProfileId academicYearId status goals developmentNeeds
+  overallOutcome outcomeNote signedOffAt createdAt
+`;
+
+export const MY_APPRAISALS_QUERY = gql<{ myAppraisals: AppraisalT[] }, NoVars>`
+  query MyAppraisals {
+    myAppraisals { ${APPRAISAL_FIELDS} }
+  }
+`;
+
+export interface GrievanceT {
+  id: string;
+  raisedByStaffProfileId: string;
+  subject: string;
+  detail: string;
+  status: string;
+  resolutionNote: string | null;
+  handledAt: string | null;
+  createdAt: string;
+}
+
+const GRIEVANCE_FIELDS = `
+  id raisedByStaffProfileId subject detail status resolutionNote handledAt createdAt
+`;
+
+export const MY_GRIEVANCES_QUERY = gql<{ myGrievances: GrievanceT[] }, NoVars>`
+  query MyGrievances {
+    myGrievances { ${GRIEVANCE_FIELDS} }
+  }
+`;
+
+export const RAISE_GRIEVANCE = gql<
+  { raiseGrievance: GrievanceT },
+  { subject: string; detail: string }
+>`
+  mutation RaiseGrievance($subject: String!, $detail: String!) {
+    raiseGrievance(subject: $subject, detail: $detail) { ${GRIEVANCE_FIELDS} }
+  }
+`;
+
+export interface DevelopmentLogT {
+  id: string;
+  activity: string;
+  dateKey: string;
+  outcome: string | null;
+  sourceAppraisalId: string | null;
+  createdAt: string;
+}
+
+const DEVELOPMENT_LOG_FIELDS = `
+  id staffProfileId activity dateKey outcome sourceAppraisalId createdAt
+`;
+
+export const MY_DEVELOPMENT_LOG_QUERY = gql<{ myDevelopmentLog: DevelopmentLogT[] }, NoVars>`
+  query MyDevelopmentLog {
+    myDevelopmentLog { ${DEVELOPMENT_LOG_FIELDS} }
+  }
+`;
+
+export interface ObservationT {
+  id: string;
+  staffProfileId: string;
+  observerId: string;
+  dateKey: string;
+  classId: string | null;
+  subjectId: string | null;
+  notes: string;
+  followUp: string | null;
+  createdAt: string;
+}
+
+const OBSERVATION_FIELDS = `
+  id staffProfileId observerId dateKey classId subjectId notes followUp createdAt
+`;
+
+export const MY_OBSERVATIONS_QUERY = gql<{ myObservations: ObservationT[] }, NoVars>`
+  query MyObservations {
+    myObservations { ${OBSERVATION_FIELDS} }
+  }
+`;

@@ -4,6 +4,7 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- feat(hr-app): HR app PR-1 — new Staff/HR tab + leave self-service (balances/apply/cancel/cover-propose) + own employment record (appraisals/conduct/grievances+raise/CPD/observations) + leave admin (approve/reject/cover-approve→proxy/entitlements) (Expo, APP-ONLY; consumes existing HR resolvers; flags missing own-row payslip + staff-attendance reads; D-#135).
 - docs(message-templates): add Message Templates registry build contract — prd-message-templates.md, slices MT-1..MT-3, D-#128–#131 (renumbered at commit from the handoff's proposed D-#117–#120 — taken on main by HR-5 + Class-Test); single editable source for all generated message bodies + big-bang migration of live sites.
 - Planned Student-Comments + Parents'-Meeting module (CM-1..CM-6) — docs/prd-comments-meetings.md, D-#114/#115/#123/#124. Replaces the Student-Complain Google Form→Sheet and the parents-meeting spreadsheets; app-native vocab only, no wire sync.
 - docs(class-test): add Class Test Tracker build contract — prd-tracker-class-test.md, slices CT-1..CT-5, D-#119–#122 (renumbered at commit from the handoff's proposed D-#111–#114 — those taken on main by M-6/HR-4); replaces the Google-Sheet Exam Log + per-class Forms + IMPORTRANGE analysis.

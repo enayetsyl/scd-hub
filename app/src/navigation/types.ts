@@ -119,6 +119,16 @@ export type ChatStackParamList = {
   GuardianNotice: undefined;
 };
 
+/** HR / staff module (PR-1: leave + self-service; later PRs add payroll /
+ *  performance / offboarding screens to this same stack). */
+export type HrStackParamList = {
+  HrHome: undefined;
+  MyLeave: undefined;
+  MyRecord: undefined;
+  LeaveCover: { leaveApplicationId: string; title: string; manage: boolean };
+  LeaveAdmin: undefined;
+};
+
 export type AdminStackParamList = {
   AdminHome: undefined;
   Import: undefined;
@@ -145,6 +155,7 @@ export type TabParamList = {
   AttendanceTab: NavigatorScreenParams<AttendanceStackParamList>;
   LibraryTab: NavigatorScreenParams<LibraryStackParamList>;
   ChatTab: NavigatorScreenParams<ChatStackParamList>;
+  HrTab: NavigatorScreenParams<HrStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;
   GuardianHomeworkTab: NavigatorScreenParams<GuardianHomeworkStackParamList>;
