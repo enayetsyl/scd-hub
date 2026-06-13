@@ -2,7 +2,45 @@
   "permissions": {
     "allow": [
       "Bash(powershell -Command \"Invoke-WebRequest -Uri 'https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSansBengali/NotoSansBengali-Regular.ttf' -OutFile 'c:/pHero/Hobby/scd/scd-hub/server/assets/fonts/NotoSansBengali-Regular.ttf' -UseBasicParsing\")",
-      "Bash(echo \"Exit: $?\")"
+      "Bash(echo \"Exit: $?\")",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git log *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git show *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push)",
+      "Bash(git push *)",
+      "Bash(git pull)",
+      "Bash(git fetch)",
+      "Bash(git fetch *)",
+      "Bash(git branch)",
+      "Bash(git branch *)",
+      "Bash(git worktree list)",
+      "Bash(npm install)",
+      "Bash(npm run *)",
+      "Bash(npx jest *)",
+      "Bash(npx tsc *)",
+      "Bash(npx tsx skills/_tools/verify_shared_vocab.mjs *)",
+      "Bash(npx expo export *)",
+      "Bash(gh pr *)",
+      "PowerShell(git status)",
+      "PowerShell(git status *)",
+      "PowerShell(git log *)",
+      "PowerShell(git diff *)",
+      "PowerShell(git fetch *)",
+      "PowerShell(npm install)",
+      "PowerShell(npm run *)",
+      "PowerShell(npx jest *)",
+      "PowerShell(npx tsc *)"
+    ],
+    "deny": [
+      "Bash(npx tsx server/scripts/seed.ts)",
+      "Bash(npx tsx server/scripts/seed.ts *)",
+      "PowerShell(npx tsx server/scripts/seed.ts)",
+      "PowerShell(npx tsx server/scripts/seed.ts *)"
     ]
   },
   "hooks": {
