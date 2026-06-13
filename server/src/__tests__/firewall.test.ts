@@ -151,6 +151,34 @@ describe("Notifications firewall (ADR-005 / N5.1)", () => {
   });
 });
 
+/**
+ * Assignment-tracker firewall (AS-T2/AS-T4, D-#85 / prd-tracker-assignment).
+ *
+ * Layer-B AssignmentStudentRecords and AssignmentFollowUps name students and
+ * guardians — strictly identity-plane (same posture as HomeworkStudentRecord).
+ * Fail-closed: the corpus module must have NO import path to any assignment
+ * model (no analytics/export join back to a per-student assignment row).
+ */
+describe("Assignment-tracker firewall (ADR-005 / D-#85)", () => {
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+  const ASSIGNMENT_MODELS = [
+    "models/AssignmentSchedule",
+    "models/AssignmentItem",
+    "models/AssignmentStudentRecord",
+    "models/AssignmentFollowUp",
+    "models/AssignmentSequence",
+  ];
+
+  test("corpus module has NO import of any assignment model", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      for (const model of ASSIGNMENT_MODELS) {
+        expect(content).not.toMatch(importPattern(model));
+      }
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;
