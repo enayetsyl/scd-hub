@@ -1,6 +1,6 @@
 # STATUS
 
-_Updated: 2026-06-13 (HR-4 performance/conduct/development built — server; PR open. M-6 PR #50 merged; M-7 PR #51 open)_
+_Updated: 2026-06-13 (HR-4 performance/conduct/development built — server, PR #52 open. Messaging M-7 PR #51 + M-6 PR #50 merged; **messaging M-1..M-7 COMPLETE**)_
 
 ## Now / next
 - **Built (HR step 4 — performance / conduct / development, server, prd-hr §5/H5, D-#28 + build rulings
@@ -35,6 +35,32 @@ _Updated: 2026-06-13 (HR-4 performance/conduct/development built — server; PR 
   (curriculum-owned), per-stage warning-lapse period, the §5 app screens. **Next after merge = HR-5
   (offboarding)** — stitches records + leave + payroll + conduct; the termination trigger this slice stamps
   is its entry point.
+- **Built (Messaging M-7 — staff Expo push, server, D-#116) [branch `worktree-messaging-m7`, PR open
+  — coordinator reviews]:** the SEVENTH and FINAL messaging slice per `docs/prd-messaging.md` §5/J-M1 —
+  **messaging M-1..M-7 is now COMPLETE**. **VOCAB-FREE** (HR-4 owns `shared/vocab.ts` this cycle):
+  chat push is **transient** — straight through the existing platform `sendExpoPush` transport, with
+  **NO Notification inbox row and NO `NOTIFICATION_KINDS` value** (the conversation list `myConversations`
+  IS the chat inbox; a push is only the live nudge), so the verifier is untouched-PASS. New
+  `ChatPushService.pushNewChatMessage(message)`: loads the conversation's members EXCEPT the sender +
+  EXCEPT muted, looks up their **active non-web `PushDevice` tokens** (the AT-4/N-4 staff registry —
+  REUSED, not twinned), fans out one Expo push each (title = group title, else sender name for DIRECT,
+  else "SCD Hub" for the system feed; body = text or "📎 সংযুক্তি" for an attachment-only message;
+  `data.kind:"CHAT_MESSAGE"` is a transport label for the app tap-router, NOT a vocab enum); best-effort
+  + fully defensive (never throws), dead tokens pruned exactly as AT-4/N-4. **Per-user mute** = new
+  `muted` boolean on `ConversationMember` + `setConversationMuted(conversationId, muted)` (own-row,
+  membership-gated, **no new permission** — D-#42 pattern; a muted member still reads the thread, only
+  the push is suppressed; exposed per-member on the GraphQL `ConversationMember` type). Push wired at
+  each path's **public entry point**, fire-and-forget: the `sendMessage`/`forwardMessage` resolvers fire
+  after the service persists (no added latency, never blocks/rolls back the send); the M-6
+  **`dispatchSystemMessage` seam** fires it in-service — the **D-#52 routine-trigger push path** (wiring
+  the triggers themselves still stays in the routine module's court). **NO app change** — the staff
+  device-token login/logout lifecycle already exists (N-4 `registerPushToken`/`unregisterPushToken`,
+  web no-op) and is reused; **guardian push stays portal-deferred** (PRD §7, chat is staff-only D-#76).
+  Firewall unaffected (ChatPushService is identity/platform-plane; no corpus path). **Gate GREEN
+  (executed):** vocab verifier PASS, shared build + shared/server tsc clean, **jest 789/789** (49 suites;
+  13 new across chatPush 10 + chat mute 3; firewall green). **Not verified live** (rides DEP-3). **Next =
+  the messaging app pass for M-7** (a small mute-toggle on the conversation/thread screen — server slice
+  preceded the app like M-1..M-4 → M-5) + live verification; the messaging MODULE is otherwise done.
 - **Built (Messaging M-6 — Principal oversight + guardian notice composer + dispatch seam, server, D-#111)
   [branch `worktree-messaging-m6`, PR open — coordinator reviews]:** sixth messaging slice per
   `docs/prd-messaging.md` §5/§6. **Vocab (the planned M-6 flip):** `chat:oversee` pipeline→**build** in
