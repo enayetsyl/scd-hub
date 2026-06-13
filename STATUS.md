@@ -1,10 +1,11 @@
 # STATUS
 
-_Updated: 2026-06-13 (**HR app surfaces COMPLETE** — all 4 stacked APP-ONLY PRs MERGED #56→#57→#59→#60 [D-#135]; coordinator review fixes applied [#59 staffProfileId typing, #60 clearance-update label]; **HR now fully built server+app**. Integrated gate green on main a58754d: jest **887/887** [54 suites, unchanged], vocab PASS, shared+server tsc, app tsc + expo web. VC-2 [PR #58] + Message-Templates/Comments PRDs already on main. In flight: Vocab VC-3 [dispatched, not yet PR'd]. Next free vocab-owner slot after VC: CT-1 / MT-1 / CM-1)_
+_Updated: 2026-06-14 (**Message Templates MT-1..MT-3 MERGED** — PR #61, server+app, D-#128–#131 + build rulings D-#140/#141; admin-editable registry for all generated message bodies, byte-identical big-bang migration; coordinator 7-finder review = no code fixes [client-nullable + N+1 refuted/deferred — N+1 hoist follow-up recorded]. Integrated gate green on main **63f0b79**: jest **910/910** [55 suites], vocab PASS, shared+server+app tsc, expo web. Prior: HR app surfaces COMPLETE [#56→#60, D-#135]. In flight: Vocab VC-3 [dispatched, not yet PR'd — the current vocab owner]. Parked vocab-touchers behind VC: CT-1 / CM-1 [MT now done])_
 
 ## Now / next
 - **Built (Message Templates MT-1..MT-3 — server + app, prd-message-templates §3–§7, D-#128–#131 + build
-  rulings D-#140/#141) [branch `worktree-message-templates`, PR open — coordinator reviews + merges]:** ONE
+  rulings D-#140/#141) [branch `worktree-message-templates`, PR #61 MERGED — integrated gate green, jest
+  910/910; coordinator 7-finder review = no code fixes, N+1 hoist follow-up recorded in memory]:** ONE
   admin-editable registry for EVERY generated message body + a big-bang migration of all live sites.
   **MT-1:** `MESSAGE_TEMPLATE_KEYS` (30 — title+body per notification kind + wa.me variants) +
   `MESSAGE_TEMPLATE_REGISTRY` (the code-default "printed page": per-key placeholders + default BN body +
