@@ -169,7 +169,7 @@ export default function OffboardingCaseScreen({ route }: Props): React.ReactElem
                 autoCapitalize="sentences"
               />
               <Button
-                title={STR.hrClearanceItemStatus}
+                title={STR.hrClearanceItemSave}
                 variant="secondary"
                 onPress={() =>
                   run(
