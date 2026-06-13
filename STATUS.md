@@ -1,10 +1,33 @@
 # STATUS
 
-_Updated: 2026-06-13 (Vocabulary Tracker VC-1 built — server, PR #55 open [first slice of the new vocab module]; Class Test Tracker PRD added D-#119–#122. HR-5 PR #54 + Messaging M-6+M-7 app pass PR #53 merged [**HR + messaging both COMPLETE**]. In flight: HR-app #135+)_
+_Updated: 2026-06-13 (Vocabulary Tracker VC-2 built — server, PR open [test build + positions + weekly assignment + proxy]; VC-1 PR #55 MERGED; Class Test Tracker PRD added D-#119–#122. HR-5 PR #54 + Messaging M-6+M-7 app pass PR #53 merged [**HR + messaging both COMPLETE**]. In flight: HR-app #135+)_
 
 ## Now / next
+- **Built (Vocabulary Tracker VC-2 — server, prd-vocabulary-tracker §3.3–§3.5/§5/§6, D-#106 + build ruling
+  D-#127) [branch `worktree-vocab-vc2`, PR open — coordinator reviews]:** the SECOND vocab slice — build-a-test
+  + weekly tester assignment. **New `modules/vocab/` models:** `VocabTest` (per program×section, period-agnostic
+  keyed by date; teacher-set `totalMarks` + per-test `dictationHalfMissCounts`, D-#105; `draft→ready→marked`),
+  `VocabTestPosition` (Script_Map analog — auto-laid `{direction, qNumber, wordId}`; DICTATION field count is
+  program-derived at mark time, not stored), `VocabTestAssignment` (append-only weekly (section×program) tester,
+  the D-#64 marker pattern; `source direct|proxy`). **Services:** `vocabCalendar` (pure week/Thursday + holiday
+  roll over the ONE D-#50 source), `VocabTestService` (create/update/`setVocabTestPositions` layout engine =
+  delete+relay, validates directions vs program + words vs the program×classLevel bank), `VocabAssignmentService`
+  (assign/current/history/mine + pure `isVocabOperator`), `vocabGate` (builder-free gates, deny-paths unit-tested).
+  **RBAC (D-#127) — NO new role/permission:** test build (create/edit/lay positions) = `tracker:write` + the
+  OPERATOR gate (`assertCanOperateVocab` — the current assigned tester OR an active D-#20 proxy on the section;
+  stricter than assertCanWrite — teaching/supervisory scope does NOT qualify; Principal unscoped, Office/Guardian
+  denied); weekly assignment = `roster:manage`; reads = `tracker:read`. Default test date = the week's THURSDAY,
+  holiday-rolled backward; `weekOf` normalised to Sunday (test↔assignment share a key). 4 new audit kinds
+  (VOCAB_TEST_*); vocab additions VOCAB_TEST_STATUSES + VOCAB_ASSIGNMENT_SOURCES (+BN/EN) + verifier §C.12;
+  firewall block extended with the 3 new models. **Closed the VC-1 coordinator follow-up:** the auth gates were
+  extracted into `vocabGate.ts` so their deny paths are unit-tested. **Gate GREEN (executed):** vocab verifier
+  PASS, shared build + shared/server tsc clean, **jest 887/887** (54 suites; +2 new suites `vocabTest.test.ts`
+  + `vocabGate.test.ts`, +34 tests over the 853 VC-1 base; firewall green). **Server-only** (no app — VC-5 is
+  the app slice). **Not verified live.** **Next = VC-3**
+  (`VocabStudentResult` — mistake capture on a student × position grid; 2-field dictation sub-marks; per-test
+  ABSENT; derived score/wrong-count/wrong-words).
 - **Built (Vocabulary Tracker VC-1 — server, prd-vocabulary-tracker §3/§6, D-#104/#105 + build ruling
-  D-#126) [branch `worktree-vocab`, PR open — coordinator reviews]:** the FIRST slice of the new
+  D-#126) [branch `worktree-vocab`, PR #55 MERGED — coordinator reviewed]:** the FIRST slice of the new
   vocab module (replacing the two-phase Google-Sheet system). **The data-driven trilingual model
   (D-#105):** `VOCAB_PROGRAMS` (ENGLISH/BANGLA/ARABIC) + `VOCAB_DIRECTIONS` (DICTATION/
   HEADWORD_TO_BANGLA/BANGLA_TO_HEADWORD) + BN/EN labels + the program→directions map
