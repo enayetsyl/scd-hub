@@ -255,18 +255,18 @@ describe("J4.1 — class-test tracker lifecycle (openTracker → recordEntry →
 // ===========================================================================
 
 describe("J4.2 — wa.me link builder (buildNonSubmitterLink)", () => {
-  test("returns a https://wa.me/ URL", () => {
-    const link = buildNonSubmitterLink("+8801711000000", "রহিম", "গণিত HW সেট-১");
+  test("returns a https://wa.me/ URL", async () => {
+    const link = await buildNonSubmitterLink("+8801711000000", "রহিম", "গণিত HW সেট-১");
     expect(link).toMatch(/^https:\/\/wa\.me\//);
   });
 
-  test("includes the phone number in the URL", () => {
-    const link = buildNonSubmitterLink("+8801711000000", "রহিম", "গণিত");
+  test("includes the phone number in the URL", async () => {
+    const link = await buildNonSubmitterLink("+8801711000000", "রহিম", "গণিত");
     expect(link).toContain("+8801711000000");
   });
 
-  test("includes a ?text= query param with encoded Bangla content", () => {
-    const link = buildNonSubmitterLink("8801711000000", "করিম", "বিজ্ঞান সেট-২");
+  test("includes a ?text= query param with encoded Bangla content", async () => {
+    const link = await buildNonSubmitterLink("8801711000000", "করিম", "বিজ্ঞান সেট-২");
     expect(link).toContain("?text=");
     const url = new URL(link);
     const text = decodeURIComponent(url.searchParams.get("text") ?? "");
@@ -274,8 +274,8 @@ describe("J4.2 — wa.me link builder (buildNonSubmitterLink)", () => {
     expect(text).toContain("বিজ্ঞান সেট-২");
   });
 
-  test("strips spaces from phone before inserting into URL", () => {
-    const link = buildNonSubmitterLink("880 1711 000000", "X", "Y");
+  test("strips spaces from phone before inserting into URL", async () => {
+    const link = await buildNonSubmitterLink("880 1711 000000", "X", "Y");
     expect(link).not.toContain(" ");
     expect(link).toContain("8801711000000");
   });

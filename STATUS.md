@@ -3,6 +3,33 @@
 _Updated: 2026-06-13 (**HR app surfaces COMPLETE** — all 4 stacked APP-ONLY PRs MERGED #56→#57→#59→#60 [D-#135]; coordinator review fixes applied [#59 staffProfileId typing, #60 clearance-update label]; **HR now fully built server+app**. Integrated gate green on main a58754d: jest **887/887** [54 suites, unchanged], vocab PASS, shared+server tsc, app tsc + expo web. VC-2 [PR #58] + Message-Templates/Comments PRDs already on main. In flight: Vocab VC-3 [dispatched, not yet PR'd]. Next free vocab-owner slot after VC: CT-1 / MT-1 / CM-1)_
 
 ## Now / next
+- **Built (Message Templates MT-1..MT-3 — server + app, prd-message-templates §3–§7, D-#128–#131 + build
+  rulings D-#140/#141) [branch `worktree-message-templates`, PR open — coordinator reviews + merges]:** ONE
+  admin-editable registry for EVERY generated message body + a big-bang migration of all live sites.
+  **MT-1:** `MESSAGE_TEMPLATE_KEYS` (30 — title+body per notification kind + wa.me variants) +
+  `MESSAGE_TEMPLATE_REGISTRY` (the code-default "printed page": per-key placeholders + default BN body +
+  optional EN body + default langMode AS DATA) + `TEMPLATE_LANGUAGE_MODES` (BN/EN/BOTH) + the NEW permission
+  **`template:manage` (PRINCIPAL only, verifier-proven exact-holder set — the payroll:approve posture)** +
+  verifier §C.13. New `modules/templates/`: `MessageTemplate` override model (key globally unique, **no
+  schoolId — D-#140**; `bufferCommands:false`), `MessageTemplateService` (`getEffectiveTemplate`
+  override-or-default, `renderTemplate` interpolate+langMode, edit-time placeholder validation [unknown ⇒
+  Bangla 422 naming the allowed set], empty-EN guard, edit/reset with **prior body audited first**
+  [MESSAGE_TEMPLATE_EDITED], list + history), Principal-only resolvers; 1 audit kind; firewall corpus↛templates.
+  **MT-2 (big-bang migration):** every in-scope site swapped to `renderTemplate`, each current inline string
+  registered as that key's **VERBATIM** default — class-note published/prompt/escalation, HW parent-comms,
+  review-assigned, cover-assigned, bell, attendance reminders (3 tiers), library due-soon/overdue, assignment
+  guardian chase (in-app + wa.me, one shared body), credential-share (guardian/staff), tracker non-submitter.
+  **`renderTemplate` is async (D-#141)** → the 5 pure builders became async delegates; the byte-identical
+  notification/wa.me jest tests gained `await` ONLY (asserted strings unchanged → zero visible change proven).
+  EXCLUDED: free-form chat (M-1..M-7) + the M-6 guardian-notice composer. **MT-3 (app, Principal-only):**
+  `MessageTemplatesScreen` (list grouped by feature, Default/Edited badge) + `MessageTemplateEditScreen`
+  (BN+EN fields, BN/EN/BOTH toggle, tap-to-insert placeholder chips, live preview with sample values, inline
+  Bangla validation, edit history, reset-to-default) under the Admin tab, gated `template:manage`. **Vocab is
+  PURELY ADDITIVE (AGENTS rule 5)** — no existing enum / RBAC-shape / import-contract change; rebases trivially
+  behind the in-flight VC owner. **Gate GREEN (executed):** vocab verifier PASS, shared build + shared/server
+  tsc clean, **jest 910/910** (55 suites; +1 new suite `messageTemplates.test.ts` [21] + 2 firewall over the
+  887 base; all byte-identical migration tests unchanged-green), app tsc clean + expo web export green. **Not
+  verified live.** Future features (e.g. Class Test) build on the registry directly (D-#131, no inline-then-migrate).
 - **Built (HR app PR-4 — offboarding surfaces, Expo, APP-ONLY, D-#135) [branch `worktree-hr-app-offboarding`
   stacked on PR-3, PR #60 MERGED] — COMPLETES the HR app surfaces (PR-1..PR-4):** the
   cross-cutting exit workflow (consumes the HR-5 offboarding resolvers; NO server/vocab/contract change).

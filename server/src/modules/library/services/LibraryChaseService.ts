@@ -6,6 +6,7 @@ import { Student } from "../../foundation/models/Student";
 import { User } from "../../foundation/models/User";
 import { Guardian } from "../../foundation/models/Guardian";
 import { normalizePhone } from "../../foundation/services/credentials";
+import { renderTemplate } from "../../templates/services/MessageTemplateService";
 
 /**
  * The overdue CHASE LIST (LB-5, D-#84) — works with ZERO notification
@@ -33,20 +34,22 @@ export interface ChaseRow {
   waLink: string | null;
 }
 
-/** Pure: the ADR-003 Bangla overdue-reminder deep link (no fines language). */
-export function buildOverdueReminderLink(args: {
+/** The ADR-003 Bangla overdue-reminder deep link (no fines language). The body is the
+ *  `library.overdue.wa` template (MT-2) — admin-editable, byte-identical by default. */
+export async function buildOverdueReminderLink(args: {
   toPhone: string;
   borrowerName: string;
   titleBn: string;
   accessionNo: string;
   dueDateKey: string;
-}): string {
+}): Promise<string> {
   const phone = normalizePhone(args.toPhone);
-  const msg =
-    `আসসালামু আলাইকুম ${args.borrowerName}। SCD লাইব্রেরি থেকে নেওয়া বইটির ফেরতের তারিখ পেরিয়ে গেছে:\n` +
-    `বই: ${args.titleBn} (${args.accessionNo})\n` +
-    `ফেরতের তারিখ ছিল: ${args.dueDateKey}\n` +
-    `অনুগ্রহ করে বইটি লাইব্রেরিতে ফেরত দিন। জাযাকাল্লাহু খাইরান।`;
+  const msg = await renderTemplate("library.overdue.wa", {
+    borrowerName: args.borrowerName,
+    title: args.titleBn,
+    accessionNo: args.accessionNo,
+    dueDateKey: args.dueDateKey,
+  });
   return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 }
 
@@ -116,8 +119,8 @@ export async function libraryChaseList(now = new Date()): Promise<ChaseRow[]> {
 
   const order: Record<BorrowerType, number> = { STUDENT: 0, GUARDIAN: 1, STAFF: 2 };
 
-  return overdue
-    .map((loan) => {
+  const rows = await Promise.all(
+    overdue.map(async (loan) => {
       let borrowerId = "";
       let borrowerName: string | null = null;
       let phone: string | null = null;
@@ -142,7 +145,7 @@ export async function libraryChaseList(now = new Date()): Promise<ChaseRow[]> {
       // Staff are chased in-app (inbox), not over WhatsApp (J-L8 scope).
       const waLink =
         loan.borrowerType !== "STAFF" && phone && borrowerName && titleBn && accessionNo
-          ? buildOverdueReminderLink({
+          ? await buildOverdueReminderLink({
               toPhone: phone,
               borrowerName,
               titleBn,
@@ -162,6 +165,9 @@ export async function libraryChaseList(now = new Date()): Promise<ChaseRow[]> {
         daysOverdue: daysOverdueOf(new Date(loan.dueDate), now),
         waLink,
       };
-    })
-    .sort((a, b) => order[a.borrowerType] - order[b.borrowerType] || a.dueDate.getTime() - b.dueDate.getTime());
+    }),
+  );
+  return rows.sort(
+    (a, b) => order[a.borrowerType] - order[b.borrowerType] || a.dueDate.getTime() - b.dueDate.getTime(),
+  );
 }

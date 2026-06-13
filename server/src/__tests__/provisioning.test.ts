@@ -152,8 +152,8 @@ describe("credentials helpers", () => {
     expect(normalizePhone(" (017) 1234-5678 ")).toBe("01712345678");
   });
 
-  test("buildCredentialShareLink embeds id + password in a wa.me link", () => {
-    const link = buildCredentialShareLink({ toPhone: "01711", identifier: "01711", password: "Ab2Cd3Ef", name: "Test", audience: "guardian" });
+  test("buildCredentialShareLink embeds id + password in a wa.me link", async () => {
+    const link = await buildCredentialShareLink({ toPhone: "01711", identifier: "01711", password: "Ab2Cd3Ef", name: "Test", audience: "guardian" });
     expect(link).toMatch(/^https:\/\/wa\.me\/01711\?text=/);
     expect(decodeURIComponent(link)).toContain("01711");
     expect(decodeURIComponent(link)).toContain("Ab2Cd3Ef");

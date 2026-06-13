@@ -115,8 +115,8 @@ beforeEach(() => {
 // ===========================================================================
 
 describe("§7 — buildAssignmentGuardianMessage", () => {
-  test("Bangla wording + placeholders: name, subject label BN, dates, AS-ID code", () => {
-    const msg = buildAssignmentGuardianMessage({
+  test("Bangla wording + placeholders: name, subject label BN, dates, AS-ID code", async () => {
+    const msg = await buildAssignmentGuardianMessage({
       studentName: "Yousuf Bin Habib",
       subject: "BAN",
       asId: "AS-C2-BAN-0003",

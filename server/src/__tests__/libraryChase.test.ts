@@ -152,8 +152,8 @@ describe("libraryChaseList (J-L8)", () => {
     expect(staff.waLink).toBeNull(); // staff are chased in-app
   });
 
-  test("the wa.me message asks for the return and never mentions money (D-#27)", () => {
-    const link = buildOverdueReminderLink({
+  test("the wa.me message asks for the return and never mentions money (D-#27)", async () => {
+    const link = await buildOverdueReminderLink({
       toPhone: "01700000000",
       borrowerName: "অভিভাবক",
       titleBn: "সীরাত গ্রন্থ",

@@ -1,4 +1,5 @@
 import { randomInt } from "crypto";
+import { renderTemplate } from "../../templates/services/MessageTemplateService";
 
 /**
  * Credential helpers for login provisioning (D-#59/#60).
@@ -30,19 +31,17 @@ export function normalizePhone(phone: string): string {
  * (ADR-003, same posture as buildNonSubmitterLink). The password rides the
  * message text by design (manual one-time share).
  */
-export function buildCredentialShareLink(args: {
+export async function buildCredentialShareLink(args: {
   toPhone: string;
   identifier: string;
   password: string;
   name: string;
   audience: "guardian" | "staff";
-}): string {
+}): Promise<string> {
   const phone = normalizePhone(args.toPhone);
-  const who = args.audience === "guardian" ? "অভিভাবক" : "শিক্ষক/স্টাফ";
-  const msg =
-    `আসসালামু আলাইকুম ${args.name}। SCD Hub অ্যাপে আপনার (${who}) লগইন তথ্য:\n` +
-    `আইডি: ${args.identifier}\n` +
-    `পাসওয়ার্ড: ${args.password}\n` +
-    `অনুগ্রহ করে তথ্যগুলো গোপন রাখুন এবং প্রথমবার লগইনের পর সংরক্ষণ করুন।`;
+  const msg = await renderTemplate(
+    args.audience === "guardian" ? "credential.share.guardian.wa" : "credential.share.staff.wa",
+    { name: args.name, identifier: args.identifier, password: args.password },
+  );
   return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 }

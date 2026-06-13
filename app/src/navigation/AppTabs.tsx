@@ -127,6 +127,8 @@ import AssignClassTeacherScreen from "../screens/admin/AssignClassTeacherScreen"
 import SectionConfigScreen from "../screens/admin/SectionConfigScreen";
 import GuardianCredentialsScreen from "../screens/admin/GuardianCredentialsScreen";
 import StaffCredentialsScreen from "../screens/admin/StaffCredentialsScreen";
+import MessageTemplatesScreen from "../screens/admin/MessageTemplatesScreen";
+import MessageTemplateEditScreen from "../screens/admin/MessageTemplateEditScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
@@ -477,6 +479,12 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="SectionConfig" component={SectionConfigScreen} options={{ title: STR.sectionConfig }} />
       <AdminStack.Screen name="GuardianCredentials" component={GuardianCredentialsScreen} options={{ title: STR.guardianCredentials }} />
       <AdminStack.Screen name="StaffCredentials" component={StaffCredentialsScreen} options={{ title: STR.staffCredentials }} />
+      <AdminStack.Screen name="MessageTemplates" component={MessageTemplatesScreen} options={{ title: STR.mtTitle }} />
+      <AdminStack.Screen
+        name="MessageTemplateEdit"
+        component={MessageTemplateEditScreen}
+        options={({ route }) => ({ title: route.params.labelBn || STR.mtTitle })}
+      />
       <AdminStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </AdminStack.Navigator>
   );

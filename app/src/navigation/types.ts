@@ -158,6 +158,8 @@ export type AdminStackParamList = {
   SectionConfig: undefined;
   GuardianCredentials: undefined;
   StaffCredentials: undefined;
+  MessageTemplates: undefined;
+  MessageTemplateEdit: { key: string; labelBn: string };
   SectionPicker: undefined;
 };
 

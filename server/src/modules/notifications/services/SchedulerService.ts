@@ -55,6 +55,7 @@ import { dispatchAttendanceReminders } from "../../attendance/services/Attendanc
 import { dispatchLibraryReminders } from "../../library/services/LibraryReminderService";
 import { runDueOffboardingRevocations } from "../../hr/services/OffboardingService";
 import { emit } from "./NotificationService";
+import { renderTemplate } from "../../templates/services/MessageTemplateService";
 
 type IdLike = { toString(): string };
 
@@ -199,8 +200,11 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
         const res = await emit({
           recipientUserId: trigger.bellAdminId,
           kind: "BELL_REMINDER",
-          titleBn: "ঘণ্টা বাজানোর স্মরণিকা",
-          bodyBn: `পিরিয়ড ${trigger.periodNumber} শেষ হবে ${trigger.endHHMM}-এ — ঘণ্টা বাজানোর প্রস্তুতি নিন।`,
+          titleBn: await renderTemplate("bell.reminder.title"),
+          bodyBn: await renderTemplate("bell.reminder.body", {
+            periodNumber: trigger.periodNumber,
+            endHHMM: trigger.endHHMM,
+          }),
           refs: { date: dateKey, audienceKey, periodNumber: trigger.periodNumber },
           dedupeKey: schedulerDedupeKeys.bell(dateKey, audienceKey, trigger.periodNumber, trigger.bellAdminId),
         });
@@ -229,8 +233,8 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       const res = await emit({
         recipientUserId: teacherId,
         kind: "CLASS_NOTE_PROMPT",
-        titleBn: "পাঠ নোট লেখা বাকি",
-        bodyBn: `আজকের ${slots.length}টি পাঠ নোট এখনও লেখা হয়নি: ${lines}। ডেইলি নোট স্ক্রিনে লিখুন।`,
+        titleBn: await renderTemplate("classNote.prompt.title"),
+        bodyBn: await renderTemplate("classNote.prompt.body", { count: slots.length, lines }),
         refs: { date: dateKey, hour },
         dedupeKey: schedulerDedupeKeys.classNotePrompt(dateKey, hour, teacherId),
       });
@@ -269,7 +273,8 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
           `${teacherName.get(s.teacherId!.toString()) ?? "?"} — ${groupName.get(s.groupId.toString()) ?? "?"} — পিরিয়ড ${s.periodNumber} (${subjectBn(s.subject)})`,
       )
       .join("; ");
-    const bodyBn = `আজ ${missing.length}টি পাঠ নোট এখনও লেখা হয়নি: ${lines}`;
+    const titleBn = await renderTemplate("classNote.escalation.title");
+    const bodyBn = await renderTemplate("classNote.escalation.body", { count: missing.length, lines });
 
     const recipients = (await User.find({ role: rung.role, active: true })
       .select("_id")
@@ -278,7 +283,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       const res = await emit({
         recipientUserId: recipient._id.toString(),
         kind: "CLASS_NOTE_ESCALATION",
-        titleBn: "পাঠ নোট অনিষ্পন্ন",
+        titleBn,
         bodyBn,
         refs: { date: dateKey, hour: rung.hour },
         dedupeKey: schedulerDedupeKeys.classNoteEscalation(dateKey, rung.hour, recipient._id.toString()),

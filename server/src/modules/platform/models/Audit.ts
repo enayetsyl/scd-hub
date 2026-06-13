@@ -79,6 +79,7 @@ export type AuditEventKind =
   | "CHAT_ATTACHMENT_UPLOADED" // a chat attachment (image/pdf/video/audio) streamed to Drive (M-4, D-#108)
   | "CHAT_OVERSIGHT_OPENED" // Principal opened a conversation via chat:oversee read-override (M-6, D-#77/#111)
   | "NOTICE_SENT"         // a guardian notice composed + fanned out as wa.me links (M-6, D-#79/#111)
+  | "MESSAGE_TEMPLATE_EDITED" // Principal edited/reset a generated-message template — prior body retained here (MT-1, D-#129; ADR-008)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

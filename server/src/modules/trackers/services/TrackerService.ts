@@ -16,6 +16,7 @@ import { AssessmentSet } from "../../assessment/models/AssessmentSet";
 import { CorpusEvent } from "../../corpus/models/CorpusEvent";
 import { SET_TYPE_TO_TRACKER } from "@scd/shared";
 import type { TrackerKind } from "@scd/shared";
+import { renderTemplate } from "../../templates/services/MessageTemplateService";
 
 /** Deterministic pseudonym for a student — sha256(studentId), ADR-005. */
 function pseudonymize(studentId: string): string {
@@ -224,14 +225,12 @@ export async function getTrackerSummary(trackerId: string): Promise<TrackerSumma
  * Returns a wa.me deep link pre-filled with a Bangla non-submission message.
  * No server dispatch — teacher copies and sends manually (ADR-003, R-T2).
  */
-export function buildNonSubmitterLink(
+export async function buildNonSubmitterLink(
   guardianPhone: string,
   studentName: string,
   setTitle: string,
-): string {
+): Promise<string> {
   const phone = guardianPhone.replace(/[\s\-\(\)]/g, "");
-  const msg =
-    `প্রিয় অভিভাবক, আপনার সন্তান ${studentName} "${setTitle}" জমা দেননি। ` +
-    `অনুগ্রহ করে শিক্ষকের সাথে যোগাযোগ করুন।`;
+  const msg = await renderTemplate("tracker.nonSubmitter.wa", { studentName, setTitle });
   return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 }

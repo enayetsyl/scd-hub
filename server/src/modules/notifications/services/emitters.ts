@@ -16,6 +16,7 @@
  */
 import { ROUTINE_SUBJECT_LABELS_BN, NOTIFICATION_KINDS } from "@scd/shared";
 import { emit } from "./NotificationService";
+import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { Student } from "../../foundation/models/Student";
 import { Guardian } from "../../foundation/models/Guardian";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
@@ -96,6 +97,8 @@ export async function emitClassNotePublished(note: ClassNotePublishedEvent): Pro
 
     const dateKey = dateKeyOf(new Date(note.date));
     const subjectBn = (ROUTINE_SUBJECT_LABELS_BN as Record<string, string>)[note.subject] ?? note.subject;
+    const titleBn = await renderTemplate("classNote.published.title");
+    const bodyBn = await renderTemplate("classNote.published.body", { subject: subjectBn });
     // One upsert per guardian — in parallel: this runs awaited inside the
     // publish mutation, and serial round-trips to Atlas would stall it.
     await Promise.all(
@@ -103,8 +106,8 @@ export async function emitClassNotePublished(note: ClassNotePublishedEvent): Pro
         emit({
           recipientGuardianId: g._id.toString(),
           kind: "CLASS_NOTE_PUBLISHED",
-          titleBn: "পাঠ নোট প্রকাশিত হয়েছে",
-          bodyBn: `${subjectBn} — আজ ক্লাসে যা পড়ানো হয়েছে তার নোট প্রকাশিত হয়েছে।`,
+          titleBn,
+          bodyBn,
           refs: {
             classNoteId: note._id.toString(),
             slotId: note.slotId.toString(),
@@ -144,8 +147,11 @@ export async function emitHwParentComms(record: HwParentCommsEvent): Promise<voi
     await emit({
       recipientUserId: classTeacherId.toString(),
       kind: "HW_PARENT_COMMS",
-      titleBn: "অভিভাবকের সাথে যোগাযোগ প্রয়োজন",
-      bodyBn: `বাড়ির কাজ ${record.hwId}: একজন শিক্ষার্থীর তাগাদা ${record.chaseCount} বার হয়েছে — অভিভাবককে জানান।`,
+      titleBn: await renderTemplate("homework.parentComms.title"),
+      bodyBn: await renderTemplate("homework.parentComms.body", {
+        hwId: record.hwId,
+        chaseCount: record.chaseCount,
+      }),
       refs: {
         hwItemId: record.hwItemId.toString(),
         studentId: record.studentId.toString(),
@@ -176,8 +182,14 @@ export async function emitReviewAssigned(assignment: ReviewAssignedEvent): Promi
     await emit({
       recipientUserId: assignment.reviewerId.toString(),
       kind: "REVIEW_ASSIGNED",
-      titleBn: "পরিকল্পনা পর্যালোচনার দায়িত্ব",
-      bodyBn: `${assignment.subject} · শ্রেণি ${assignment.classLevel} · ${assignment.anchorWord} ${assignment.addressNumber} — পরিকল্পনাটি আপনার পর্যালোচনার জন্য নির্ধারিত হয়েছে (রাউন্ড ${assignment.roundNumber})।`,
+      titleBn: await renderTemplate("review.assigned.title"),
+      bodyBn: await renderTemplate("review.assigned.body", {
+        subject: assignment.subject,
+        classLevel: assignment.classLevel,
+        anchorWord: assignment.anchorWord,
+        addressNumber: assignment.addressNumber,
+        roundNumber: assignment.roundNumber,
+      }),
       refs: {
         reviewAssignmentId: assignment._id.toString(),
         artifactId: assignment.artifactId.toString(),
@@ -236,12 +248,13 @@ export async function emitAssignmentGuardianChase(
       .select("_id")
       .lean()) as unknown as Array<{ _id: IdLike }>;
 
+    const titleBn = await renderTemplate("assignment.chase.title");
     await Promise.all(
       guardians.map(async (g) => {
         await emit({
           recipientGuardianId: g._id.toString(),
           kind: ASSIGNMENT_CHASE_KIND,
-          titleBn: "অ্যাসাইনমেন্ট জমা হয়নি",
+          titleBn,
           bodyBn: ev.messageBn,
           refs: {
             studentId: ev.studentId.toString(),
@@ -278,8 +291,8 @@ export async function emitCoverAssigned(substitution: CoverAssignedEvent): Promi
     await emit({
       recipientUserId: substitution.coverTeacherId.toString(),
       kind: "COVER_ASSIGNED",
-      titleBn: "কাভার ক্লাসের দায়িত্ব",
-      bodyBn: `${dateKey} তারিখে একটি ক্লাস কাভারের দায়িত্ব আপনাকে দেওয়া হয়েছে — আমার রুটিন দেখুন।`,
+      titleBn: await renderTemplate("cover.assigned.title"),
+      bodyBn: await renderTemplate("cover.assigned.body", { dateKey }),
       refs: {
         substitutionId: substitution._id.toString(),
         slotId: substitution.slotId.toString(),
