@@ -3,11 +3,11 @@
  * chat:write (Principal/Teacher/Office; GUARDIAN holds neither). Row scope =
  * membership: every conversation/message read and every write passes the
  * service's assertChatMember gate — holding the permission alone reaches
- * nothing you are not a member of. Oversight (chat:oversee) is M-6 and has
- * NO read path in this slice.
+ * nothing you are not a member of. M-6 adds the chat:oversee read paths
+ * (oversight, audited) + the guardian-notice composer below.
  */
 import { builder } from "../../../schema";
-import { POSTING_POLICIES, roleHasPermission, type PostingPolicy, type Role } from "@scd/shared";
+import { POSTING_POLICIES, NOTICE_SCOPES, roleHasPermission, type PostingPolicy, type Role } from "@scd/shared";
 import { User } from "../../foundation/models/User";
 import type { IConversation } from "../models/Conversation";
 import type { IChatMessage } from "../models/ChatMessage";
@@ -46,6 +46,17 @@ import {
   resyncAllChatGroups,
   type ResyncSummary,
 } from "../services/ChatGroupService";
+import {
+  oversightConversations,
+  openConversationOversight,
+  oversightMessages,
+} from "../services/ChatOversightService";
+import {
+  composeGuardianNotice,
+  assertCanComposeNotice,
+  type ComposeNoticeResult,
+  type NoticeRecipient,
+} from "../services/GuardianNoticeService";
 
 /** A conversation/message may carry pre-batched children, attached by a list
  *  resolver to spare the per-row field resolvers an N+1. Field resolvers read
@@ -487,5 +498,126 @@ builder.mutationField("resyncChatGroups", (t) =>
     type: ResyncSummaryRef,
     authScopes: { hasPermission: "chat:manage" },
     resolve: async (_r, _args, ctx) => resyncAllChatGroups(ctx.auth!.userId),
+  }),
+);
+
+// --- Principal oversight (chat:oversee — PRINCIPAL only, M-6, D-#77/#111) -----
+// Read-only on ANY conversation incl. DIRECT; NOT membership-gated; deleted
+// originals are visible (un-masked). Opening a thread is itself audited.
+
+builder.queryField("oversightConversations", (t) =>
+  t.field({
+    type: [ConversationRef],
+    authScopes: { hasPermission: "chat:oversee" },
+    resolve: async () => {
+      const conversations = await oversightConversations();
+      await attachMembers(conversations); // batch the members field (no N+1)
+      return conversations;
+    },
+  }),
+);
+
+builder.queryField("oversightMessages", (t) =>
+  t.field({
+    type: [ChatMessageRef],
+    authScopes: { hasPermission: "chat:oversee" },
+    args: {
+      conversationId: t.arg.string({ required: true }),
+      beforeId: t.arg.string({ required: false }),
+      limit: t.arg.int({ required: false }),
+    },
+    resolve: async (_r, args) => {
+      const msgs = await oversightMessages(args.conversationId, {
+        beforeId: args.beforeId ?? undefined,
+        limit: args.limit ?? undefined,
+      });
+      // Pre-batch receipts + reactions + attachments (same as the member read).
+      if (msgs.length) {
+        const ids = msgs.map((m) => m._id.toString());
+        const allFileIds = msgs.flatMap((m) => (m.attachmentIds ?? []).map((a) => a.toString()));
+        const [byReceipt, byReaction, byFile] = await Promise.all([
+          receiptsForMessages(ids),
+          reactionsForMessages(ids),
+          attachmentsForFileIds(allFileIds),
+        ]);
+        for (const m of msgs) {
+          const key = m._id.toString();
+          (m as WithReceipts)._receipts = byReceipt.get(key) ?? [];
+          (m as WithReceipts)._reactions = byReaction.get(key) ?? [];
+          (m as WithReceipts)._attachments = (m.attachmentIds ?? [])
+            .map((a) => byFile.get(a.toString()))
+            .filter((v): v is AttachmentView => Boolean(v));
+        }
+      }
+      return msgs;
+    },
+  }),
+);
+
+builder.mutationField("openConversationOversight", (t) =>
+  t.field({
+    type: ConversationRef,
+    authScopes: { hasPermission: "chat:oversee" },
+    args: { conversationId: t.arg.string({ required: true }) },
+    // The audited "open" (CHAT_OVERSIGHT_OPENED) — accountability both ways.
+    resolve: async (_r, args, ctx) => openConversationOversight(args.conversationId, ctx.auth!.userId),
+  }),
+);
+
+// --- Guardian notice composer (M-6, D-#79/#111) -------------------------------
+// Guardians are recipients, not participants (D-#76). Authorization lands the
+// D-#45 parent-comms duty: SECTION → the class teacher OR chat:manage; SCHOOL →
+// chat:manage. No new permission (the D-#42 pattern). Gated chat:write so a
+// non-staff token can't reach it; the per-scope check is enforced below.
+
+const NoticeRecipientRef = builder.objectRef<NoticeRecipient>("GuardianNoticeRecipient").implement({
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    studentName: t.exposeString("studentName"),
+    phone: t.exposeString("phone"),
+    waLink: t.exposeString("waLink"), // ADR-003 manual wa.me deep link
+  }),
+});
+
+const ComposeNoticeResultRef = builder.objectRef<ComposeNoticeResult>("GuardianNoticeResult").implement({
+  fields: (t) => ({
+    noticeId: t.exposeString("noticeId"),
+    scope: t.exposeString("scope"),
+    title: t.exposeString("title"),
+    body: t.exposeString("body"),
+    recipientCount: t.exposeInt("recipientCount"),
+    unreachableCount: t.exposeInt("unreachableCount"),
+    recipients: t.field({ type: [NoticeRecipientRef], resolve: (r) => r.recipients }),
+  }),
+});
+
+builder.mutationField("composeGuardianNotice", (t) =>
+  t.field({
+    type: ComposeNoticeResultRef,
+    authScopes: { hasPermission: "chat:write" },
+    args: {
+      scope: t.arg.string({ required: true }),
+      title: t.arg.string({ required: true }),
+      body: t.arg.string({ required: true }),
+      sectionId: t.arg.string({ required: false }),
+    },
+    resolve: async (_r, args, ctx) => {
+      if (!(NOTICE_SCOPES as readonly string[]).includes(args.scope)) {
+        throw new Error("Invalid notice scope");
+      }
+      const scope = args.scope as "SCHOOL" | "SECTION";
+      const canManage = roleHasPermission(ctx.auth!.role as Role, "chat:manage");
+
+      // Authorization lands the D-#45 parent-comms duty (deny → ForbiddenError).
+      await assertCanComposeNotice(ctx, { scope, sectionId: args.sectionId ?? null, canManage });
+
+      return composeGuardianNotice({
+        scope,
+        title: args.title,
+        body: args.body,
+        sectionId: args.sectionId ?? null,
+        composedBy: ctx.auth!.userId,
+      });
+    },
   }),
 );

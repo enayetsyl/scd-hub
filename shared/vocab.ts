@@ -1029,7 +1029,7 @@ export const PERMISSIONS = [
   "chat:read",             // read own conversations + messages (Principal/Teacher/Office; every row membership-gated in the resolver)
   "chat:write",            // open 1:1, send messages, mark seen (same roles; membership-gated)
   "chat:manage",           // group create/edit, membership, posting policy, resync (Principal/Office; ACTIVE since M-2, D-#98)
-  "chat:oversee",          // PRINCIPAL ONLY — read-override on ANY conversation incl. 1:1; each open itself audited (D-#77; lands M-6)
+  "chat:oversee",          // PRINCIPAL ONLY — read-override on ANY conversation incl. 1:1; each open itself audited (D-#77; ACTIVE since M-6, D-#111)
   // foundation / ops
   "roster:manage",
   "staff:manage",          // HR staff-record read/manage (Principal/Office; prd-hr H1.4 row-scope)
@@ -1070,7 +1070,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "chat:read": "build",     // M-1 (1:1 chat + receipts)
   "chat:write": "build",    // M-1
   "chat:manage": "build",   // ACTIVATED by M-2 (groups + posting policy + resync, D-#98 flip)
-  "chat:oversee": "pipeline", // lands with M-6 (Principal oversight, D-#77)
+  "chat:oversee": "build",  // ACTIVATED by M-6 (Principal read-oversight + audited open, D-#77/#111)
   "roster:manage": "build",
   "staff:manage": "build",
   "leave:manage": "build",  // HR step 2 (staff leave admin surface)

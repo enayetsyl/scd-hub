@@ -4,6 +4,25 @@ Append-only. One line per meaningful change. Add the short commit hash once comm
 Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
+- Messaging M-6 — Principal oversight + guardian notice composer + dispatch seam (server, D-#77/#79/#111).
+  **Flipped `chat:oversee` pipeline→build** in `PERMISSION_BUILD_STATUS` (the LAST pipeline perm — the
+  verifier's pipeline-set is now EMPTY; §C.7 build-status assertion updated). **Oversight** (`chat:oversee`
+  = PRINCIPAL only): `ChatOversightService` — `oversightConversations` (EVERY conversation incl. DIRECT +
+  archived, no membership filter), `oversightMessages` (UN-MASKED — Principal sees deleted originals, since
+  M-3 delete only stamps `deletedAt`), `openConversationOversight` (the audited open, `CHAT_OVERSIGHT_OPENED`,
+  one row per open); read-only — post/edit/delete stay membership-gated. **Guardian notices** (`GuardianNotice`
+  model + `composeGuardianNotice`): per-guardian ADR-003 wa.me fan-out (one link per active student WITH a
+  family phone; phone-less → `unreachableCount`); authorization is the extracted, unit-tested
+  `assertCanComposeNotice` (the D-#45 duty: SECTION → class teacher via `assertIsClassTeacher` OR chat:manage;
+  SCHOOL → chat:manage; no new permission); `NOTICE_SENT` audited. **Dispatch seam**:
+  `MessageDispatchService.dispatchSystemMessage(userId, text)` posts as a sentinel SYSTEM sender into a
+  per-user system→user DIRECT thread (ANNOUNCEMENT one-way feed; privileged, bypasses membership/posting
+  gates; idempotent on directKey) — the interface the routine triggers will call (wiring stays in the routine
+  module's court). Two new audit kinds in `platform/models/Audit.ts`. Firewall extended (corpus ↛
+  `models/GuardianNotice`). App surfaces (oversight browser + notice composer) are a later app pass. Gate
+  GREEN (executed): vocab verifier PASS (chat:oversee flip), shared+server tsc clean, **jest 776/776**
+  (48 suites; 17 new across chatOversight/guardianNotice/messageDispatch; firewall green), app tsc clean +
+  expo web export green. Not verified live. Next = M-7 (staff Expo push).
 - Messaging M-5 — Chat tab + screens (Expo app; APP-ONLY, no server/vocab/contract change). New 💬 **Chat
   tab** gated `chat:read` (Principal/Teacher/Office; GUARDIAN never sees it), a `ChatStack` with four
   screens consuming the existing M-1..M-4 server APIs: **ChatHome** (conversation list from

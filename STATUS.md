@@ -1,8 +1,34 @@
 # STATUS
 
-_Updated: 2026-06-13 (Messaging M-5 built — Chat tab + screens, app-only; PR #49 open. HR-3 payroll PR #48 + M-4 PR #47 merged; Vocabulary Tracker PRD D-#104–#107; HR-2 PR #46 + M-3 PR #45 merged)_
+_Updated: 2026-06-13 (Messaging M-6 built — oversight + guardian notices + dispatch seam, server; PR open. M-5 PR #49 + HR-3 PR #48 + M-4 PR #47 merged)_
 
 ## Now / next
+- **Built (Messaging M-6 — Principal oversight + guardian notice composer + dispatch seam, server, D-#111)
+  [branch `worktree-messaging-m6`, PR open — coordinator reviews]:** sixth messaging slice per
+  `docs/prd-messaging.md` §5/§6. **Vocab (the planned M-6 flip):** `chat:oversee` pipeline→**build** in
+  `PERMISSION_BUILD_STATUS` — the LAST pipeline perm, so the verifier's pipeline-set is now **EMPTY**
+  (every permission is BUILD); §C.7 build-status assertion updated. **Oversight** (`chat:oversee` =
+  PRINCIPAL only): `ChatOversightService` — `oversightConversations` (EVERY conversation incl. DIRECT +
+  archived; NO membership filter), `oversightMessages` (**UN-MASKED** — Principal sees deleted originals,
+  since M-3 delete only stamps `deletedAt`, never erases; the member path still masks), `openConversationOversight`
+  (the **audited open** `CHAT_OVERSIGHT_OPENED`, one row per open — accountability both ways); READ-ONLY
+  (post/edit/delete stay membership-gated). **Guardian notices** (`GuardianNotice` model +
+  `composeGuardianNotice`): per-guardian ADR-003 **wa.me fan-out** (one link per active student WITH a family
+  phone — `Student.phone`, the D-#31/#59 contact reality; phone-less → `unreachableCount`); authorization =
+  extracted unit-tested `assertCanComposeNotice` (the **D-#45 duty**: SECTION → class teacher
+  `assertIsClassTeacher` OR chat:manage; SCHOOL → chat:manage; no new perm, D-#42 pattern; J-M8 deny tested);
+  `NOTICE_SENT` audited. **Dispatch seam**: `MessageDispatchService.dispatchSystemMessage(userId, text)` posts
+  as a sentinel SYSTEM sender (zero ObjectId, no User row) into a per-user system→user DIRECT thread
+  (ANNOUNCEMENT one-way feed; privileged — bypasses membership/posting gates; idempotent on directKey) — the
+  interface the **routine triggers** (bell/attendance/class-note) will call; **wiring the triggers stays in
+  the routine module's court** (PRD §5/§7), this slice only builds + unit-tests the API. Two new audit kinds
+  in `platform/models/Audit.ts`. Firewall extended (corpus ↛ `models/GuardianNotice`). **App surfaces (the
+  oversight browser + the notice composer screen) are a LATER app pass** (like M-1..M-4 server preceded the
+  M-5 app). **Gate GREEN (executed):** vocab verifier PASS (chat:oversee flip), shared+server tsc clean,
+  **jest 776/776** (48 suites; 17 new across chatOversight 5 / guardianNotice 9 / messageDispatch 3; firewall
+  green), app tsc clean + expo web export green. **Not verified live.** **Next = M-7** (staff Expo push — the
+  D-#52/R5.4–R5.5 transport for STAFF; rides AT-4's `PushDevice` + the N-4 push channel; guardian push stays
+  portal-deferred). **Messaging module is then complete (M-1..M-7).**
 - **Built (Messaging M-5 — Chat tab + screens, Expo app, APP-ONLY) [branch `worktree-messaging-m5`,
   PR open — coordinator reviews]:** the frontend slice for everything M-1..M-4 shipped server-side,
   per `docs/prd-messaging.md` §5. **NO server / vocab / contract change** — consumes the existing chat
