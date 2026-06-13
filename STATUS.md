@@ -3,6 +3,25 @@
 _Updated: 2026-06-13 (Vocabulary Tracker VC-2 built — server, PR open [test build + positions + weekly assignment + proxy]; VC-1 PR #55 MERGED; Class Test Tracker PRD added D-#119–#122. HR-5 PR #54 + Messaging M-6+M-7 app pass PR #53 merged [**HR + messaging both COMPLETE**]. In flight: HR-app #135+)_
 
 ## Now / next
+- **Planned (Comments & Parents-Meeting CM-1..CM-6, D-#114/#115/#123/#124):** build contract
+  docs/prd-comments-meetings.md — replaces the Student-Complain Google Form→Sheet (daily teacher
+  observations to guardians) AND the parents-meeting spreadsheets (schedule + per-child comments +
+  cross-meeting comparison). Two stores: `StudentComment` (daily, typed [COMMENT_TYPES 5 values +
+  COMMENT_SENTIMENTS concern/positive], subject-free, author = auth teacher, section-verified, permanent;
+  delivered per-comment — wa.me all + emit() inbox/push login-enabled, kind-gated no-op fallback if vocab
+  frozen per D-#94; attachments reuse DriveStore /comments/ ≤10 MB) and `MeetingComment` (class-teacher
+  authored positive+concern per student×meeting — lands the D-#45 parent-comms duty). `ParentMeeting`+
+  per-family `ParentMeetingSlot` (siblings collapsed by Student.phone, On-Call, configurable slotMinutes/
+  dayStart, reorderable; present/absent derived); timing dispatch = wa.me + emit() MEETING_SCHEDULE + push.
+  Comparison timeline = prior meeting comments + daily-by-type rollup since last meeting (D-#44 read-aggregate).
+  RBAC composes existing perms — teacher tracker:write+section verify, Office roster:manage, class-teacher
+  assertIsClassTeacher (meeting comment), guardian guardian:read_child; NO new role/permission (D-#17).
+  App-native vocab only (COMMENT_TYPES/COMMENT_SENTIMENTS + NOTIFICATION_KINDS += STUDENT_COMMENT/
+  MEETING_SCHEDULE, verifier §C.5/§C.x) — no wire/envelope/harness sync; serialize vocab per AGENTS rule 5.
+  Identity plane (ADR-005); no corpus path; J5.6 firewall extends both ways. Slices server-then-app:
+  CM-1 store+vocab → CM-2 delivery+attachments → CM-3 meeting+slot-gen → CM-4 dispatch+attendance →
+  CM-5 meeting-comment+comparison+guardian-reads → CM-6 app. Plan/docs only — nothing executed.
+  Next = build CM-1 per docs/prd-comments-meetings.md §6, slice order.
 - **Built (Vocabulary Tracker VC-2 — server, prd-vocabulary-tracker §3.3–§3.5/§5/§6, D-#106 + build ruling
   D-#127) [branch `worktree-vocab-vc2`, PR open — coordinator reviews]:** the SECOND vocab slice — build-a-test
   + weekly tester assignment. **New `modules/vocab/` models:** `VocabTest` (per program×section, period-agnostic
