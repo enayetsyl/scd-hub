@@ -290,6 +290,39 @@ describe("HR staff-leave firewall (ADR-005 / prd-hr H7.4)", () => {
   });
 });
 
+/**
+ * Vocabulary-tracker firewall (VC-1, D-#104 / prd-vocabulary-tracker §1/§5).
+ *
+ * The vocab tracker is identity/operational plane (ADR-005). The VC-1 word bank
+ * itself is shared content, but the module grows to hold per-student results
+ * (VC-3) and guardian messaging (VC-4) — so it is firewall-isolated from the
+ * corpus plane from the start. Fail-closed both ways: the vocab module must have
+ * NO import path into the corpus plane, and the corpus module must have NO import
+ * path into the vocab module (no analytics/export join back to who scored what).
+ */
+describe("Vocabulary-tracker firewall (ADR-005 / VC-1, D-#104)", () => {
+  const vocabDir = path.resolve(__dirname, "../modules/vocab");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("vocab module has NO import from the corpus plane", () => {
+    const files = walkDir(vocabDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (VC-1 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the vocab module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/vocab"));
+      expect(content).not.toMatch(importPattern("models/VocabWord"));
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;
