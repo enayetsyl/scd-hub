@@ -9,8 +9,9 @@
  * StoredFile `classtest_question`, when source = UPLOADED_PAPER) — exactly one.
  *
  * Build rulings (server-only, single-school live repo — AGENTS rule 3):
- *  - D-#142: NO `schoolId` (the §3.2 sketch lists it, but every live feature
+ *  - D-#145: NO `schoolId` (the §3.2 sketch lists it, but every live feature
  *    model drops it under the single-school convention — MT D-#140 precedent).
+ *    (renumbered from D-#142 at merge — VC-3 took #142.)
  *  - D-#143: `academicYearId` + `classLevel` + `classId` are RESOLVED
  *    server-side from the section (Section → Class.level/academicYearId), never
  *    client-supplied — the §3.2 sketch named only classLevel+sectionId, but the

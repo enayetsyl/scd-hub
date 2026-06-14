@@ -281,6 +281,10 @@ check("vocab test statuses exact (§3.3)",         eq(V.VOCAB_TEST_STATUSES, ["d
 check("VOCAB_ASSIGNMENT_SOURCE_LABELS_BN total",  total(V.VOCAB_ASSIGNMENT_SOURCE_LABELS_BN, V.VOCAB_ASSIGNMENT_SOURCES));
 check("VOCAB_ASSIGNMENT_SOURCE_LABELS_EN total",  total(V.VOCAB_ASSIGNMENT_SOURCE_LABELS_EN, V.VOCAB_ASSIGNMENT_SOURCES));
 check("vocab assignment sources exact (§3.5)",    eq(V.VOCAB_ASSIGNMENT_SOURCES, ["direct", "proxy"]));
+// VC-3 — per-(student × test) attendance status (prd-vocabulary-tracker §3.6/§4, D-#142)
+check("VOCAB_ATTENDANCE_STATUS_LABELS_BN total",  total(V.VOCAB_ATTENDANCE_STATUS_LABELS_BN, V.VOCAB_ATTENDANCE_STATUSES));
+check("VOCAB_ATTENDANCE_STATUS_LABELS_EN total",  total(V.VOCAB_ATTENDANCE_STATUS_LABELS_EN, V.VOCAB_ATTENDANCE_STATUSES));
+check("vocab attendance statuses exact (§3.6)",   eq(V.VOCAB_ATTENDANCE_STATUSES, ["PRESENT", "ABSENT"]));
 
 console.log("=== C.13 Message-template vocab + code-default registry + RBAC invariants (MT-1 — prd-message-templates §3, D-#128–#131) ===");
 check("TEMPLATE_LANGUAGE_MODES exact (D-#130)",        eq(V.TEMPLATE_LANGUAGE_MODES, ["BN", "EN", "BOTH"]));

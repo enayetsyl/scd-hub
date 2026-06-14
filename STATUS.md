@@ -1,10 +1,10 @@
 # STATUS
 
-_Updated: 2026-06-14 (**Message Templates MT-1..MT-3 MERGED** — PR #61, server+app, D-#128–#131 + build rulings D-#140/#141; admin-editable registry for all generated message bodies, byte-identical big-bang migration; coordinator 7-finder review = no code fixes [client-nullable + N+1 refuted/deferred — N+1 hoist follow-up recorded]. Integrated gate green on main **63f0b79**: jest **910/910** [55 suites], vocab PASS, shared+server+app tsc, expo web. Prior: HR app surfaces COMPLETE [#56→#60, D-#135]. In flight: Vocab VC-3 [dispatched, not yet PR'd] + **Class Test CT-1 [server, PR'd — see below; vocab additive, parallel-safe with VC-3 per AGENTS rule 5]**. Parked vocab-touchers behind VC: CM-1 [CT-1 now done])_
+_Updated: 2026-06-14 (**VC-3 + CT-1 both MERGED** — Vocab VC-3 [#62, grid mistake capture + derived scoring, D-#142] then Class Test CT-1 [#63, print-request→official-exam lifecycle, D-#143/#144/#145 — renumbered from #142–#144 at merge since VC-3 took #142]. Earlier this run: MT-1..MT-3 #61 [D-#128–#131], HR app #56→#60 [D-#135]. Parked vocab-toucher behind the vocab lock: CM-1. Next: VC-4 / CT-2 continue their chains)_
 
 ## Now / next
 - **Built (Class Test Tracker CT-1 — server, prd-tracker-class-test §3/§5/§6, D-#119–#122 + build rulings
-  D-#142–#144) [branch `worktree-class-test-ct1`, PR open — coordinator reviews]:** the FIRST class-test slice —
+  D-#143/#144/#145) [branch `worktree-class-test-ct1`, PR #63 MERGED]:** the FIRST class-test slice —
   the print-request → official-exam lifecycle replacing the Exam-Log + per-class Google Forms + IMPORTRANGE sheet.
   **Vocab (app-native, NO wire sync — a class test is a FEATURE not `doc_type` content; PARALLEL-SAFE with the
   in-flight VC-3 per AGENTS rule 5 — purely additive, disjoint enums):** `CLASS_TEST_STATUSES`
@@ -28,13 +28,34 @@ _Updated: 2026-06-14 (**Message Templates MT-1..MT-3 MERGED** — PR #61, server
   **RBAC (D-#144) — composes existing perms, NO new role/permission (D-#94/#17):** teacher request/results =
   `tracker:write` + `assertCanWrite` section verify; Office mark-printed/cancel = `roster:manage`; staff reads =
   `tracker:read`. 3 new audit kinds (CLASS_TEST_REQUESTED/_PRINTED/_CANCELLED). **Firewall:** new class-test block
-  (corpus ↛ class-test models + class-test source files ↛ corpus, both ways). **Build rulings:** D-#142 (no
-  `schoolId` — single-school convention), D-#143 (year/level/class derived from the section — blocks
-  sequence-key spoofing), D-#144 (file-store reuse + Office-or-uploader read gate). **Gate GREEN (executed):**
+  (corpus ↛ class-test models + class-test source files ↛ corpus, both ways). **Build rulings:** D-#145 (no
+  `schoolId` — single-school convention; renumbered from #142 at merge), D-#143 (year/level/class derived from
+  the section — blocks sequence-key spoofing), D-#144 (file-store reuse + Office-or-uploader read gate). **Gate GREEN (executed):**
   vocab verifier PASS, shared build + shared/server tsc clean, **jest 943/943** (56 suites; +1 new suite
   `classTest.test.ts` + 2 new firewall checks over the 910 base; firewall green). **Server-only** (no app — CT-5
   is the app slice; expo export skipped). **Not verified live.** **Next = CT-2** (per-student `ClassTestResult` +
   derived percent/pass-fail + configurable passMark + the school-day-aware exam-date-anchored deadline/overdue).
+- **Built (Vocabulary Tracker VC-3 — server, prd-vocabulary-tracker §3.6/§4/§6, D-#142) [branch
+  `worktree-vocab-vc3`, PR #62 MERGED]:** the THIRD vocab slice — mistake capture + derived
+  scoring. **New `modules/vocab/` models:** `VocabStudentTest` (per student × test — the ONE PRESENT/ABSENT
+  attendance flag, sheet parity; the marked-roster anchor) + `VocabStudentResult` (per student × position — the
+  Mistakes_Input analog; `wrongFields` = 1-based field indices marked wrong; only mistakes stored, no row =
+  correct). **Pure `vocabScoring` engine** (no DB/clock): marks-lost per §4 (single-field wrong=1; 2-field
+  DICTATION governed by the test's `dictationHalfMissCounts` — off ⇒ any field=1, on ⇒ 1/field), `score =
+  max(0, totalMarks − Σlost)`, wrongCount + wrong-words-by-direction; **ABSENT excluded (null score)**.
+  **`VocabResultService`:** `submitStudentResult` (WHOLESALE per student×test — set status + replace mistake
+  rows, validates position-belongs-to-test + wrongFields-in-range, flips test→marked, audited) + derived reads
+  `studentResult`/`testResults` (never stored, D-#85). **RBAC (D-#142) — NO new role/permission:** marking =
+  `tracker:write` + the VC-2 operator gate (assigned/covering tester); reads = `tracker:read`. **Closed the VC-2
+  coordinator follow-up:** `updateVocabTest` now re-gates on the TARGET week when a testDate change crosses weeks.
+  Vocab `VOCAB_ATTENDANCE_STATUSES` (+BN/EN) + verifier §C.12; 1 audit kind VOCAB_RESULT_RECORDED; firewall block
+  extended with the 2 student-bearing models. **Gate GREEN (executed):** vocab verifier PASS, shared build +
+  shared/server tsc clean, **jest 926/926** (56 suites; +1 suite `vocabResult.test.ts`, +16 tests over the 910
+  main base; firewall green). **Server-only** (no app — VC-5 is the app slice). **Not verified live.** **Next =
+  VC-4** (read aggregates: per-test/student/class/cumulative reports + persistent weak words via admin thresholds;
+  guardian messages server-resolved via the MT-1 template registry + wa.me/emit() seam; `childVocab` guardian read).
+- **Built (Message Templates MT-1..MT-3 — server + app, prd-message-templates §3–§7, D-#128–#131 + build
+  rulings D-#140/#141) [branch `worktree-message-templates`, PR #61 MERGED — integrated gate green, jest
 - **Built (Message Templates MT-1..MT-3 — server + app, prd-message-templates §3–§7, D-#128–#131 + build
   rulings D-#140/#141) [branch `worktree-message-templates`, PR #61 MERGED — integrated gate green, jest
   910/910; coordinator 7-finder review = no code fixes, N+1 hoist follow-up recorded in memory]:** ONE

@@ -42,6 +42,7 @@ import "./modules/library/resolvers/libraryGuardian";
 import "./modules/chat/resolvers/chat";
 import "./modules/vocab/resolvers/vocabWord";
 import "./modules/vocab/resolvers/vocabTest";
+import "./modules/vocab/resolvers/vocabResult";
 import "./modules/templates/resolvers/messageTemplates";
 
 import { builder } from "./schema";
