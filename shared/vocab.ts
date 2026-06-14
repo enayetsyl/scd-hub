@@ -1902,6 +1902,7 @@ export const PERMISSIONS = [
   "user:manage",
   "audit:read",            // Principal reads; audit is system-appended, never user-written
   "template:manage",       // PRINCIPAL ONLY — edit/reset the generated-message templates (Message Templates, D-#129; verifier-proven exact-holder set, the payroll:approve posture)
+  "access:manage",         // PRINCIPAL ONLY — the per-user permission editor: tune additional templates / per-user grants / revokes (Access Control AC-1, D-#193/#212; RESERVED-locked, verifier-proven exact-holder set, the template:manage posture)
   // classroom observation (app-native; Classroom-Observation module, D-#147/#191)
   "observation:upload",    // upload a recorded session + ASSIGN a senior-teacher observer (Principal/Office; CO-1)
   "observation:review",    // TEACHER base perm — the assigned senior-teacher observer scores+comments; the RESOLVER gates it to the assigned observerId (CO-1, D-#147)
@@ -1950,6 +1951,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "user:manage": "build",
   "audit:read": "build",
   "template:manage": "build", // Message Templates MT-1 (Principal-only edit/reset, D-#129)
+  "access:manage": "build",   // Access Control AC-1 (Principal-only per-user permission editor, D-#193/#212)
   "observation:upload": "build",  // Classroom-Observation CO-1 (upload + assign, D-#195)
   "observation:review": "build",  // Classroom-Observation CO-1 (assigned-observer scoring, D-#195)
   "observation:read": "build",    // Classroom-Observation CO-1 (row-scoped read, D-#195)
@@ -1976,6 +1978,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "performance:manage", "performance:signoff", "guardian:link", "message:dispatch",
     "user:manage", "audit:read",
     "template:manage",       // PRINCIPAL ONLY (D-#129) — Office/Teacher/Guardian never get it
+    "access:manage",         // PRINCIPAL ONLY (Access Control AC-1, D-#193/#212) — RESERVED-locked; Office/Teacher/Guardian never get it
     "observation:upload", "observation:read", "observation:manage", // classroom observation (CO-1, D-#195) — NOT observation:review (the observer is an assigned TEACHER, D-#147)
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
@@ -2058,3 +2061,159 @@ export function permissionsForRole(role: Role): readonly Permission[] {
 export function isPermissionActive(perm: Permission): boolean {
   return PERMISSION_BUILD_STATUS[perm] === "build";
 }
+
+// --- B.2 PER-USER ACCESS CONTROL (role-as-template + grant/revoke, AC-1) -------
+// Role stops being the final word on permissions → it becomes the PRIMARY TEMPLATE.
+// A staff login resolves to: effective = (∪ templates ∪ granted) − revoked, with the
+// RESERVED-locked set subtracted for every non-Principal login (the structural backstop).
+// Fully additive: with all three arrays empty, effectivePermissions(profile) equals the
+// old role set byte-for-byte (the reserved subtraction is a no-op — no non-Principal
+// template holds a reserved perm). See docs/prd-access-control.md (D-#193, D-#210–#212).
+
+/** PRINCIPAL-only, ungrantable permissions. They reach ONLY a PRINCIPAL login — a
+ *  write-time rejection is the first gate, this set's subtraction the structural backstop
+ *  (Fork-2 ruling, D-#193). Adding/removing one here is a deliberate, verifier-checked act. */
+export const RESERVED_PERMISSIONS = [
+  "payroll:approve",
+  "performance:signoff",
+  "chat:oversee",
+  "template:manage",
+  "access:manage",
+] as const satisfies readonly Permission[];
+
+/** Roles a Principal may add to a staff User as an ADDITIONAL template (the deputy /
+ *  acting-office config). PRINCIPAL is provisioned, not template-assigned; GUARDIAN is a
+ *  walled-off login plane and is never assignable to a staff User (D-#193, J-AC4). */
+export const ASSIGNABLE_TEMPLATES = ["TEACHER", "OFFICE"] as const satisfies readonly Role[];
+
+/** The per-caller access profile: the primary role template + the per-user overrides.
+ *  The server's AuthPayload satisfies this shape; absent arrays ⇒ treated as empty (the
+ *  zero-migration default = identical-to-today behaviour). */
+export interface AccessProfile {
+  role: Role;
+  additionalTemplates?: readonly Role[];
+  grantedPermissions?: readonly Permission[];
+  revokedPermissions?: readonly Permission[];
+}
+
+/** The single resolution seam (the only behavioural change AC-1 introduces). Pure:
+ *    base = ⋃ permissionsForRole(t) for t in [role, ...additionalTemplates]
+ *    eff  = (base ∪ granted) − revoked        // a revoke always wins
+ *    if role !== PRINCIPAL: eff = eff − RESERVED_PERMISSIONS   // structural backstop
+ *  `roleHasPermission` / `permissionsForRole` are RETAINED — templates still consume them;
+ *  they are simply no longer the per-caller authority. */
+export function effectivePermissions(profile: AccessProfile): Set<Permission> {
+  const eff = new Set<Permission>();
+  for (const t of [profile.role, ...(profile.additionalTemplates ?? [])]) {
+    for (const p of permissionsForRole(t)) eff.add(p);
+  }
+  for (const p of profile.grantedPermissions ?? []) eff.add(p);
+  for (const p of profile.revokedPermissions ?? []) eff.delete(p); // revoke wins over template + grant
+  if (profile.role !== "PRINCIPAL") {
+    for (const p of RESERVED_PERMISSIONS) eff.delete(p); // reserved perms reach ONLY a PRINCIPAL login
+  }
+  return eff;
+}
+
+/** Per-caller grant check (the `roleHasPermission` replacement at every gate). True =
+ *  the caller's effective set holds the permission AND it is active in this build. */
+export function callerHasPermission(profile: AccessProfile, perm: Permission): boolean {
+  return effectivePermissions(profile).has(perm) && isPermissionActive(perm);
+}
+
+// --- B.3 PERMISSION LABELS (Bangla-first name + short description; the AC-2 editor) ---
+// Total over the live PERMISSIONS array (verifier-checked). name = the chip; desc = the
+// one-line "what this lets the holder do". RESERVED perms are tagged (সংরক্ষিত / reserved).
+
+export interface PermissionLabel {
+  name: string;
+  desc: string;
+}
+
+export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
+  "content:read": { name: "কনটেন্ট দেখা", desc: "প্রকাশিত পাঠ ও কনটেন্ট পড়া" },
+  "content:import": { name: "কনটেন্ট ইম্পোর্ট", desc: "নতুন কনটেন্ট আমদানি ও প্রকাশ" },
+  "content:assign_review": { name: "রিভিউ বরাদ্দ", desc: "প্ল্যান-রিভিউ রাউন্ড বরাদ্দ ও ইনবক্স" },
+  "content:review": { name: "রিভিউ-অনুমোদন", desc: "রিভিউয়ারের অনুমোদন: ড্রাফট→রিভিউড" },
+  "content:promote_gold": { name: "গোল্ড চিহ্নিত", desc: "রিভিউড→গোল্ড চূড়ান্ত সাইন-অফ" },
+  "question:read": { name: "প্রশ্ন দেখা", desc: "প্রশ্নব্যাংক পড়া" },
+  "question:select": { name: "প্রশ্ন নির্বাচন", desc: "সেটের জন্য প্রশ্ন বাছাই" },
+  "set:read": { name: "সেট দেখা", desc: "অ্যাসেসমেন্ট সেট পড়া" },
+  "set:assemble": { name: "সেট তৈরি", desc: "প্রশ্ন সেট সংকলন" },
+  "set:export": { name: "সেট এক্সপোর্ট", desc: "সেট পিডিএফ এক্সপোর্ট" },
+  "tracker:read": { name: "ট্র্যাকার দেখা", desc: "ট্র্যাকার রিপোর্ট পড়া" },
+  "tracker:write": { name: "ট্র্যাকার এন্ট্রি", desc: "ট্র্যাকারে এন্ট্রি ও আপডেট" },
+  "tracker:export": { name: "ট্র্যাকার এক্সপোর্ট", desc: "ট্র্যাকার রিপোর্ট রপ্তানি" },
+  "routine:read": { name: "রুটিন দেখা", desc: "ক্লাস রুটিন ও টাইমটেবিল পড়া" },
+  "routine:manage": { name: "রুটিন পরিচালনা", desc: "ক্যালেন্ডার, রুম, গ্রিড ও স্লট সম্পাদনা" },
+  "attendance:mark": { name: "হাজিরা মার্ক", desc: "সেকশনের অনুপস্থিতি মার্ক করা" },
+  "attendance:manage": { name: "হাজিরা পরিচালনা", desc: "এক্সেল আপলোড, মার্কার বরাদ্দ ও রিপোর্ট" },
+  "library:read": { name: "লাইব্রেরি ব্রাউজ", desc: "ক্যাটালগ ও নিজের লোন দেখা" },
+  "library:manage": { name: "লাইব্রেরি ডেস্ক ও ক্যাটালগ", desc: "ডেস্ক অপস, ক্যাটালগ ও নীতি" },
+  "chat:read": { name: "চ্যাট পড়া", desc: "নিজের কথোপকথন ও বার্তা পড়া" },
+  "chat:write": { name: "চ্যাট পাঠানো", desc: "বার্তা পাঠানো ও সিন মার্ক" },
+  "chat:manage": { name: "গ্রুপ পরিচালনা", desc: "গ্রুপ তৈরি, সদস্য ও পোস্টিং নীতি" },
+  "chat:oversee": { name: "চ্যাট তদারকি (সংরক্ষিত)", desc: "যেকোনো কথোপকথন রিড-ওভাররাইড (অডিটেড)" },
+  "roster:manage": { name: "রোস্টার ও ক্লাস-টিচার বরাদ্দ", desc: "রোস্টার, সেকশন ও ক্লাস-টিচার পরিচালনা" },
+  "staff:manage": { name: "স্টাফ রেকর্ড", desc: "এইচআর স্টাফ-রেকর্ড পরিচালনা" },
+  "leave:manage": { name: "স্টাফ ছুটি পরিচালনা", desc: "এনটাইটেলমেন্ট, অনুমোদন ও ব্যালেন্স" },
+  "payroll:manage": { name: "বেতন প্রস্তুত", desc: "বেতন সেট, রান ও পে-স্লিপ" },
+  "payroll:approve": { name: "বেতন অনুমোদন ও লক (সংরক্ষিত)", desc: "বেতন রান অনুমোদন ও লক, অগ্রিম" },
+  "performance:manage": { name: "পারফরম্যান্স পরিচালনা", desc: "পর্যবেক্ষণ, অ্যাপ্রাইজাল, কন্ডাক্ট ও সিপিডি" },
+  "performance:signoff": { name: "মূল্যায়ন চূড়ান্ত অনুমোদন (সংরক্ষিত)", desc: "অ্যাপ্রাইজাল সাইন-অফ ও কন্ডাক্ট চূড়ান্ত" },
+  "guardian:link": { name: "অভিভাবক লগইন সংযুক্ত", desc: "অভিভাবক অ্যাকাউন্ট লিংক করা" },
+  "message:dispatch": { name: "বার্তা পাঠানো", desc: "wa.me ও নোটিশ ম্যানুয়াল প্রেরণ" },
+  "user:manage": { name: "ইউজার লগইন পরিচালনা", desc: "স্টাফ অ্যাকাউন্ট তৈরি ও পরিচালনা" },
+  "audit:read": { name: "অডিট লগ পড়া", desc: "নিরাপত্তা ও অডিট লগ পড়া" },
+  "template:manage": { name: "বার্তা টেমপ্লেট সম্পাদনা (সংরক্ষিত)", desc: "জেনারেটেড-বার্তা টেমপ্লেট সম্পাদনা ও রিসেট" },
+  "access:manage": { name: "অনুমতি পরিচালনা (সংরক্ষিত)", desc: "প্রতি-ইউজার অনুমতি সম্পাদনা" },
+  "observation:upload": { name: "অবজারভেশন আপলোড ও বরাদ্দ", desc: "রেকর্ডেড সেশন আপলোড ও পর্যবেক্ষক বরাদ্দ" },
+  "observation:review": { name: "অবজারভেশন রিভিউ", desc: "বরাদ্দকৃত পর্যবেক্ষকের স্কোরিং ও মন্তব্য" },
+  "observation:read": { name: "অবজারভেশন পড়া", desc: "রো-স্কোপড অবজারভেশন পড়া" },
+  "observation:manage": { name: "অবজারভেশন পরিচালনা", desc: "ডেজিগনেশন, কনফিগ ও ড্যাশবোর্ড" },
+  "guardian:read_child": { name: "সন্তানের তথ্য দেখা (অভিভাবক প্লেন)", desc: "অভিভাবক প্লেন — স্টাফকে দেওয়া যায় না" },
+};
+
+export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
+  "content:read": { name: "Read content", desc: "View published lessons and content" },
+  "content:import": { name: "Import content", desc: "Import and publish new content" },
+  "content:assign_review": { name: "Assign review", desc: "Assign plan-review rounds + inbox" },
+  "content:review": { name: "Review content", desc: "Reviewer APPROVE: draft→reviewed" },
+  "content:promote_gold": { name: "Promote to gold", desc: "Reviewed→gold final sign-off" },
+  "question:read": { name: "Read questions", desc: "Browse the question bank" },
+  "question:select": { name: "Select questions", desc: "Pick questions for a set" },
+  "set:read": { name: "Read sets", desc: "View assessment sets" },
+  "set:assemble": { name: "Assemble sets", desc: "Compose question sets" },
+  "set:export": { name: "Export sets", desc: "Server-side set PDF" },
+  "tracker:read": { name: "Read trackers", desc: "View tracker reports" },
+  "tracker:write": { name: "Write trackers", desc: "Enter and update tracker rows" },
+  "tracker:export": { name: "Export trackers", desc: "Export tracker reports" },
+  "routine:read": { name: "Read routine", desc: "View the class routine/timetable" },
+  "routine:manage": { name: "Manage routine", desc: "Edit calendar, rooms, grids, slots" },
+  "attendance:mark": { name: "Mark attendance", desc: "Mark a section's absentees" },
+  "attendance:manage": { name: "Manage attendance", desc: "Upload Excel, assign markers, reports" },
+  "library:read": { name: "Browse library", desc: "Catalog and own loans" },
+  "library:manage": { name: "Library desk & catalog", desc: "Desk ops, catalog, policy" },
+  "chat:read": { name: "Read chat", desc: "Read own conversations and messages" },
+  "chat:write": { name: "Send chat", desc: "Send messages and mark seen" },
+  "chat:manage": { name: "Manage chat", desc: "Group create, members, posting policy" },
+  "chat:oversee": { name: "Oversee chat (reserved)", desc: "Read-override any conversation (audited)" },
+  "roster:manage": { name: "Roster & class-teacher", desc: "Roster, sections, class-teacher assignment" },
+  "staff:manage": { name: "Manage staff", desc: "HR staff-record management" },
+  "leave:manage": { name: "Manage staff leave", desc: "Entitlements, approvals, balances" },
+  "payroll:manage": { name: "Prepare payroll", desc: "Set pay, runs, payslips" },
+  "payroll:approve": { name: "Approve payroll (reserved)", desc: "Approve + lock a run, advances" },
+  "performance:manage": { name: "Manage performance", desc: "Observations, appraisals, conduct, CPD" },
+  "performance:signoff": { name: "Sign off performance (reserved)", desc: "Appraisal sign-off, conduct finalize" },
+  "guardian:link": { name: "Link guardian", desc: "Link guardian logins" },
+  "message:dispatch": { name: "Dispatch messages", desc: "wa.me and notice manual send" },
+  "user:manage": { name: "Manage users", desc: "Create and manage staff accounts" },
+  "audit:read": { name: "Read audit log", desc: "Read the security/audit log" },
+  "template:manage": { name: "Manage templates (reserved)", desc: "Edit and reset message templates" },
+  "access:manage": { name: "Manage access (reserved)", desc: "The per-user permission editor" },
+  "observation:upload": { name: "Upload observation", desc: "Upload a session + assign an observer" },
+  "observation:review": { name: "Review observation", desc: "Assigned observer scoring and comments" },
+  "observation:read": { name: "Read observation", desc: "Row-scoped observation read" },
+  "observation:manage": { name: "Manage observation", desc: "Designations, config, dashboards" },
+  "guardian:read_child": { name: "Read child (guardian plane)", desc: "Guardian plane — not grantable to staff" },
+};

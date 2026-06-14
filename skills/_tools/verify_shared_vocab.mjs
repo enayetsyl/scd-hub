@@ -398,5 +398,39 @@ check("observation:manage = PRINCIPAL+OFFICE only (designations/config/dashboard
 check("GUARDIAN holds NO observation:* permission (staff-internal, §7)",
   !V.PERMISSIONS.filter((p) => p.startsWith("observation")).some((p) => V.roleHasPermission("GUARDIAN", p)));
 
+console.log("=== C.17 Per-user access control: access:manage + RESERVED_PERMISSIONS + ASSIGNABLE_TEMPLATES + permission labels (AC-1 — prd-access-control §7/§8, D-#193/#210–#212) ===");
+// access:manage — the per-user editor gate: declared, BUILD, PRINCIPAL-exact-holder (the template:manage/payroll:approve posture)
+check("access:manage is declared + BUILD",
+  V.PERMISSIONS.includes("access:manage") && V.PERMISSION_BUILD_STATUS["access:manage"] === "build");
+check("access:manage = PRINCIPAL ONLY (verifier-proven exact-holder set — Office/Teacher/Guardian never, §7)",
+  V.roleHasPermission("PRINCIPAL", "access:manage") &&
+  !["TEACHER", "OFFICE", "GUARDIAN"].some((r) => V.roleHasPermission(r, "access:manage")));
+// RESERVED_PERMISSIONS — exactly the five, all real perms, none reachable by a non-Principal template (the structural backstop, §5)
+check("RESERVED_PERMISSIONS is exactly the five (§5/§8)",
+  eq(V.RESERVED_PERMISSIONS, ["payroll:approve", "performance:signoff", "chat:oversee", "template:manage", "access:manage"]));
+check("every RESERVED_PERMISSION is a declared PERMISSION",
+  V.RESERVED_PERMISSIONS.every((p) => V.PERMISSIONS.includes(p)));
+check("no RESERVED_PERMISSION appears in ROLE_PERMISSIONS.TEACHER or .OFFICE (reserved perms reach only PRINCIPAL, §8)",
+  !V.RESERVED_PERMISSIONS.some((p) => V.roleHasPermission("TEACHER", p) || V.roleHasPermission("OFFICE", p)));
+check("every RESERVED_PERMISSION IS held by PRINCIPAL (reserved = Principal-only, not Principal-never)",
+  V.RESERVED_PERMISSIONS.every((p) => V.roleHasPermission("PRINCIPAL", p)));
+// ASSIGNABLE_TEMPLATES — the only roles a Principal may add as an additional template (excludes PRINCIPAL + GUARDIAN, §8/J-AC4)
+check("ASSIGNABLE_TEMPLATES is exactly TEACHER+OFFICE (excludes PRINCIPAL + GUARDIAN, §8)",
+  eq(V.ASSIGNABLE_TEMPLATES, ["TEACHER", "OFFICE"]));
+check("every ASSIGNABLE_TEMPLATE is a real Role",
+  V.ASSIGNABLE_TEMPLATES.every((r) => V.ROLES.includes(r)));
+// effectivePermissions — BYTE-IDENTICAL default: empty arrays ⇒ the old role set exactly, for EVERY role (J-AC5)
+check("BYTE-IDENTICAL: effectivePermissions({role}) === permissionsForRole(role) for every role with empty arrays (J-AC5)",
+  V.ROLES.every((r) => eq([...V.effectivePermissions({ role: r })], V.permissionsForRole(r))));
+// PERMISSION_LABELS_BN/_EN — total over PERMISSIONS, each a non-empty {name, desc} (the AC-2 editor, §7)
+const totalLabelObj = (labels, keys) =>
+  keys.every((k) => labels[k] && typeof labels[k].name === "string" && labels[k].name.length > 0 &&
+    typeof labels[k].desc === "string" && labels[k].desc.length > 0);
+check("PERMISSION_LABELS_BN total over PERMISSIONS (name + desc)", totalLabelObj(V.PERMISSION_LABELS_BN, V.PERMISSIONS));
+check("PERMISSION_LABELS_EN total over PERMISSIONS (name + desc)", totalLabelObj(V.PERMISSION_LABELS_EN, V.PERMISSIONS));
+check("PERMISSION_LABELS have no key outside PERMISSIONS (BN + EN)",
+  Object.keys(V.PERMISSION_LABELS_BN).every((k) => V.PERMISSIONS.includes(k)) &&
+  Object.keys(V.PERMISSION_LABELS_EN).every((k) => V.PERMISSIONS.includes(k)));
+
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

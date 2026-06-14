@@ -3,13 +3,19 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/User";
 import { Guardian } from "../models/Guardian";
 import { writeAudit } from "../../platform/services/AuditService";
-import type { Role } from "@scd/shared";
+import type { Role, Permission } from "@scd/shared";
 
 const SALT_ROUNDS = 12;
 
 export interface AuthTokenPayload {
   userId: string;
   role: Role;
+  /** Per-user access overrides (AC-1, D-#193/#211) — baked into the staff token so the
+   *  resolver seam (`callerHasPermission`) sees them. Absent on a pre-AC / GUARDIAN token
+   *  ⇒ identical-to-today. A grant/revoke change applies on the user's next login (re-mint). */
+  additionalTemplates?: Role[];
+  grantedPermissions?: Permission[];
+  revokedPermissions?: Permission[];
 }
 
 function signToken(payload: AuthTokenPayload): string {
@@ -63,7 +69,14 @@ export async function staffLogin(input: StaffLoginInput): Promise<AuthResult | n
   await writeAudit({ eventKind: "LOGIN_SUCCESS", actorId: user._id, actorRole: user.role });
 
   return {
-    token: signToken({ userId: user._id.toString(), role: user.role }),
+    token: signToken({
+      userId: user._id.toString(),
+      role: user.role,
+      // Per-user access overrides (AC-1, D-#193/#211). Empty ⇒ identical-to-today.
+      additionalTemplates: user.additionalTemplates ?? [],
+      grantedPermissions: user.grantedPermissions ?? [],
+      revokedPermissions: user.revokedPermissions ?? [],
+    }),
     userId: user._id.toString(),
     role: user.role,
     name: user.name,

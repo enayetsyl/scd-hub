@@ -23,7 +23,7 @@
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
-import { roleHasPermission } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import {
   upsertAssignmentSchedule as upsertScheduleSvc,
@@ -85,7 +85,7 @@ function assertStaffScheduleRead(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role as Role;
   if (role === "PRINCIPAL" || role === "OFFICE") return;
-  if (roleHasPermission(role, "tracker:read")) return;
+  if (callerHasPermission(ctx.auth, "tracker:read")) return;
   throw new ForbiddenError();
 }
 

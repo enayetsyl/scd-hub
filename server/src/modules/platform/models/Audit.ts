@@ -99,6 +99,7 @@ export type AuditEventKind =
   | "PARENT_MEETING_SLOTS_REORDERED" // slots reordered / a family flagged On-Call → re-timed (CM-3, J-CM4, D-#123)
   | "PARENT_MEETING_SCHEDULED"  // a meeting dispatched (draft → scheduled) — timing notices fanned out (CM-4, §6/J-CM5, D-#176)
   | "MEETING_SLOT_ATTENDANCE_SET" // a family slot's present/absent captured at the meeting (CM-4, §6, D-#176)
+  | "USER_ACCESS_CHANGED"   // Principal edited a staff User's per-user access — prior + new {templates, granted, revoked} retained here (Access Control AC-1, §6/J-AC6, D-#193/#214; ADR-008/D-#101 prior-state pattern)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

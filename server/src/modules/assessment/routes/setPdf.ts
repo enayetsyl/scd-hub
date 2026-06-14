@@ -20,8 +20,7 @@ import { mixedText } from "../../../routes/pdfRenderer";
 import { AssessmentSet } from "../models/AssessmentSet";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { buildContext } from "../../../context";
-import { roleHasPermission } from "@scd/shared";
-import type { Role } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import type { IAssessmentSet, BasketItem } from "../models/AssessmentSet";
 import type { FlattenMaps, Types } from "mongoose";
 
@@ -33,7 +32,7 @@ export const setPdfRouter: Router = createRouter();
 
 setPdfRouter.get("/:id", async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !roleHasPermission(ctx.auth.role as Role, "set:read")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "set:read")) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
