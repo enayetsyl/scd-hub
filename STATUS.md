@@ -1,8 +1,42 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CM-2 MERGED** — Comments CM-2 [#71, daily-comment delivery wa.me+emit STUDENT_COMMENT + comment attachment store, D-#172/#173]; sole vocab owner. Integrated gate green on main 8511504: **jest 1071/1071** [63 suites], vocab PASS, shared/server tsc. Merge-reconcile: a local-only DEP-4 deploy commit had landed on main → rebased it onto origin/main (disjoint), re-gated. Prior: CT-5 #70 [Class Test Tracker COMPLETE], CM-1 #69, CT-4 #68, VC-5 #67 [Vocab COMPLETE], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, CO PRD [D-#146–#152], MT #61, HR app #56→#60. **DEP-1..4 DONE — prod LIVE at scdhub.shafayet.me + nightly Drive backup (DEP-5 dev-env next).** Open PR: APP-FU1 #72 [guardian-notice full-section picker]. In flight: CM-3 next. Parked standalone: CO-1 [vocab slot now free]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out (relax authScopes))_
+_Updated: 2026-06-14 (**CO-1 BUILT — PR open, NOT merged** — Classroom Observation CO-1 [worktree-classroom-obs-co1, server: REF-11 form core + upload→assign→review→supersede pipeline + 4 new perms observation:{upload,review,read,manage}, D-#190/#191; sole vocab owner; new module distinct from HR's Observation]. Branched off `dev` per D-#91. Gate green: **jest 1113/1113** [64 suites, +1 over the 1071 base], vocab PASS incl. §C.16, shared/server/app tsc. Prior: CM-2 MERGED [#71, D-#172/#173], CT-5 #70 [Class Test Tracker COMPLETE], CM-1 #69, CT-4 #68, VC-5 #67 [Vocab COMPLETE], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, CO PRD [D-#146–#152], MT #61, HR app #56→#60. **DEP-1..6 DONE — prod LIVE scdhub.shafayet.me + dev dev.scdhub.shafayet.me + GitHub Actions CI/CD; standing workflow feature→dev→prod (D-#91).** Open PRs: CO-1 [this], APP-FU1 #72 [guardian-notice full-section picker]. In flight: CM-3. Next CO = CO-2 [SessionRecording/YouTube footage]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out (relax authScopes))_
 
 ## Now / next
+- **Built (Classroom Observation CO-1 — server, prd-classroom-observation §4/§5/§6 + J1/J2,
+  D-#146/#147 + build rulings D-#190/#191) [branch `worktree-classroom-obs-co1`, PR OPEN — do NOT
+  merge, coordinator reviews]:** the FIRST slice of the standalone classroom-observation module —
+  the REF-11 form core + the upload→assign→review→supersede pipeline + the FOUR new app-native
+  permissions. **New `server/src/modules/classroom-observation/`, model `ClassroomObservation`**
+  (DISTINCT from HR-4's `modules/hr/models/Observation` — pre-flight clash check; no touch to HR's
+  model). **Model:** `form ∈ OBSERVATION_FORMS`; session anchor `{routineSlotId?, EXACTLY ONE of
+  sectionId|subjectGroupId, subject, teacherId, classDate, periodNumber?}` (REUSES RoutineSlot/Section/
+  SubjectGroup/HW_SUBJECTS, D-#48/#54/#56; REF11 subject ∈ HW_SUBJECTS, QURAN=CO-5); `observerId?`;
+  REF-11 payload `{domains:[{domain,level1-4,note}]×5, gates:[{gate,result,breachNote?}]×2, oneStrength,
+  growthFocus, prevObservationId?, priorFocusProgress?}` — **NO total/average**; `state ∈
+  OBSERVATION_STATES`; `recordingId?` (CO-2) + `teacherResponse?` (CO-3) present but unset; no schoolId
+  (D-#145). **Pure `ref11.ts` validator** (no DB/clock — the classTestScoring posture): exactly 5
+  distinct domains (1–4 + note), 2 distinct gates, 1 strength + 1 growth focus; **a gate BREACH stands
+  on its own regardless of levels** (§2.1). **`ClassroomObservationService`:** `uploadObservation`
+  (Principal/Office UPLOADED + assign → ASSIGNED, J1; **CONFLICT GUARD observer ≠ observed teacher,
+  refused**), `assignObserver`, `reviewObservation` (ASSIGNED-only + gated to the assigned observerId →
+  **REVIEWED releases to the observed teacher, NO Principal sign-off**, REF-11 §1.3), `requestReReview`
+  (prior REVIEWED → NEW ASSIGNED on the same anchor/recording + prior SUPERSEDED — enables CO-7
+  calibration), reads + the **pure `canReadObservation` row-scope predicate** (observer own; observed
+  teacher own ONLY at/after REVIEWED — UPLOADED/ASSIGNED hidden, never another observer's input;
+  Principal/Office all — §5/D-#28). 7 resolvers (upload/assign/review/reRequest + classroomObservation/
+  teacherClassroomObservations/myObservationReviewQueue, row-scoped). **Vocab (app-native, NO wire/
+  harness sync — SOLE owner this cycle):** OBSERVATION_FORMS/DOMAINS/LEVELS/GATES/GATE_RESULTS/STATES/
+  GROWTH_PROGRESS (+BN/EN) + the **4 NEW permissions** observation:{upload(P/O),review(TEACHER, resolver
+  gates to observerId),read(P/T/O row-scoped),manage(P/O)} (PERMISSIONS + ROLE_PERMISSIONS +
+  PERMISSION_BUILD_STATUS all "build" + OFFICE exact-list) + new verifier §C.16. 4 audit kinds
+  (CLASSROOM_OBSERVATION_UPLOADED/_ASSIGNED/_REVIEWED/_SUPERSEDED, in Audit.ts not vocab); new CO
+  firewall block (corpus ⇄ classroom-observation both ways). **GUARDIAN holds no observation:* perm**
+  (staff-internal, §7). **Gate GREEN (executed):** vocab verifier PASS (incl. §C.16), shared build +
+  shared/server/app tsc clean, **jest 1113/1113** (64 suites; +1 new suite `classroomObservation.test.ts`
+  [40] + 2 firewall CO checks over the 1071 base). **Server-only** (footage upload=CO-2; teacher-response/
+  notify/escalation=CO-3; Quran payload=CO-5; app later; expo skipped). **Not verified live.** **Next =
+  CO-2** (SessionRecording / YouTube-unlisted footage).
 - **Built (Student Comments + Parents-Meeting CM-2 — server, prd-comments-meetings §4.1/§5/§6, J-CM1,
   D-#172/#173) [branch `worktree-comments-cm2`, PR #71 MERGED]:** the SECOND CM slice —
   daily-comment DELIVERY + the comment-attachment file store. **Delivery (`CommentDeliveryService`):**

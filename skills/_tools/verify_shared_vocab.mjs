@@ -34,7 +34,7 @@ check("default-deny: unknown role", V.roleHasPermission("GHOST", "content:read")
 check("PRINCIPAL has user:manage + audit:read", V.roleHasPermission("PRINCIPAL", "user:manage") && V.roleHasPermission("PRINCIPAL", "audit:read"));
 check("TEACHER lacks user:manage / audit:read / content:import", !["user:manage","audit:read","content:import"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("TEACHER can read content + assemble + write trackers", ["content:read","set:assemble","tracker:write"].every((p) => V.roleHasPermission("TEACHER", p)));
-check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/routine/attendance/library/chat", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage"]));
+check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/routine/attendance/library/chat/observation", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage"]));
 check("routine: PRINCIPAL+OFFICE manage, TEACHER read-only, GUARDIAN none", V.roleHasPermission("PRINCIPAL","routine:manage") && V.roleHasPermission("OFFICE","routine:manage") && V.roleHasPermission("TEACHER","routine:read") && !V.roleHasPermission("TEACHER","routine:manage") && !V.roleHasPermission("GUARDIAN","routine:read"));
 check("TEACHER has content:review (reviewer APPROVE), lacks assign/promote", V.roleHasPermission("TEACHER","content:review") && !["content:assign_review","content:promote_gold"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("GUARDIAN only has guardian:read_child", eq(V.permissionsForRole("GUARDIAN"), ["guardian:read_child"]));
@@ -355,6 +355,48 @@ check("comments compose existing perms — no comment:*/meeting:* permission (D-
 check("STUDENT_COMMENT is a registered NotificationKind (CM-2 §6/J-CM1, extends §C.5)", V.NOTIFICATION_KINDS.includes("STUDENT_COMMENT"));
 check("student_comment.* guardian-message template keys registered (title + body, §6 — built on the MT registry, D-#131)",
   ["student_comment.notify.title", "student_comment.notify.body"].every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k) && V.MESSAGE_TEMPLATE_REGISTRY[k]));
+
+console.log("=== C.16 Classroom-observation vocab + the four new permissions (CO-1 — prd-classroom-observation §4/§5, D-#146/#147/#190/#191) ===");
+check("OBSERVATION_FORMS exact (§4)",            eq(V.OBSERVATION_FORMS, ["REF11", "QURAN"]));
+check("OBSERVATION_FORM_LABELS_BN total",        total(V.OBSERVATION_FORM_LABELS_BN, V.OBSERVATION_FORMS));
+check("OBSERVATION_FORM_LABELS_EN total",        total(V.OBSERVATION_FORM_LABELS_EN, V.OBSERVATION_FORMS));
+check("OBSERVATION_DOMAINS exact — 5 REF-11 domains (§4)", eq(V.OBSERVATION_DOMAINS, ["D1", "D2", "D3", "D4", "D5"]));
+check("OBSERVATION_DOMAIN_LABELS_BN total",      total(V.OBSERVATION_DOMAIN_LABELS_BN, V.OBSERVATION_DOMAINS));
+check("OBSERVATION_DOMAIN_LABELS_EN total",      total(V.OBSERVATION_DOMAIN_LABELS_EN, V.OBSERVATION_DOMAINS));
+check("OBSERVATION_LEVELS exact 1..4 — no total/average (§4)", eq(V.OBSERVATION_LEVELS, [1, 2, 3, 4]));
+check("OBSERVATION_LEVEL_LABELS_BN total",       total(V.OBSERVATION_LEVEL_LABELS_BN, V.OBSERVATION_LEVELS));
+check("OBSERVATION_LEVEL_LABELS_EN total",       total(V.OBSERVATION_LEVEL_LABELS_EN, V.OBSERVATION_LEVELS));
+check("OBSERVATION_GATES exact (§4)",            eq(V.OBSERVATION_GATES, ["G1", "G2"]));
+check("OBSERVATION_GATE_LABELS_BN total",        total(V.OBSERVATION_GATE_LABELS_BN, V.OBSERVATION_GATES));
+check("OBSERVATION_GATE_LABELS_EN total",        total(V.OBSERVATION_GATE_LABELS_EN, V.OBSERVATION_GATES));
+check("GATE_RESULTS exact (§4)",                 eq(V.GATE_RESULTS, ["PASS", "BREACH"]));
+check("GATE_RESULT_LABELS_BN total",             total(V.GATE_RESULT_LABELS_BN, V.GATE_RESULTS));
+check("GATE_RESULT_LABELS_EN total",             total(V.GATE_RESULT_LABELS_EN, V.GATE_RESULTS));
+check("OBSERVATION_STATES exact — UPLOADED→ASSIGNED→REVIEWED→TEACHER_RESPONDED, SUPERSEDED (§4)",
+  eq(V.OBSERVATION_STATES, ["UPLOADED", "ASSIGNED", "REVIEWED", "TEACHER_RESPONDED", "SUPERSEDED"]));
+check("OBSERVATION_STATE_LABELS_BN total",       total(V.OBSERVATION_STATE_LABELS_BN, V.OBSERVATION_STATES));
+check("OBSERVATION_STATE_LABELS_EN total",       total(V.OBSERVATION_STATE_LABELS_EN, V.OBSERVATION_STATES));
+check("GROWTH_PROGRESS exact (§4)",              eq(V.GROWTH_PROGRESS, ["YES", "PARTLY", "NOT_YET"]));
+check("GROWTH_PROGRESS_LABELS_BN total",         total(V.GROWTH_PROGRESS_LABELS_BN, V.GROWTH_PROGRESS));
+check("GROWTH_PROGRESS_LABELS_EN total",         total(V.GROWTH_PROGRESS_LABELS_EN, V.GROWTH_PROGRESS));
+// the four NEW permissions — the sensitive part (the template:manage/performance:* verifier-proven precedent, D-#147/#191)
+check("the 4 observation perms are declared + all BUILD (no pipeline residue)",
+  ["observation:upload", "observation:review", "observation:read", "observation:manage"].every(
+    (p) => V.PERMISSIONS.includes(p) && V.PERMISSION_BUILD_STATUS[p] === "build"));
+check("observation:upload = PRINCIPAL+OFFICE only (upload+assign; D-#147)",
+  V.roleHasPermission("PRINCIPAL", "observation:upload") && V.roleHasPermission("OFFICE", "observation:upload") &&
+  !["TEACHER", "GUARDIAN"].some((r) => V.roleHasPermission(r, "observation:upload")));
+check("observation:review = TEACHER ONLY — the assigned senior-teacher observer (resolver gates to observerId; Principal/Office/Guardian never review, D-#147)",
+  V.roleHasPermission("TEACHER", "observation:review") &&
+  !["PRINCIPAL", "OFFICE", "GUARDIAN"].some((r) => V.roleHasPermission(r, "observation:review")));
+check("observation:read = PRINCIPAL+TEACHER+OFFICE (row-scoped in the resolver), GUARDIAN none — staff-internal (§7)",
+  ["PRINCIPAL", "TEACHER", "OFFICE"].every((r) => V.roleHasPermission(r, "observation:read")) &&
+  !V.roleHasPermission("GUARDIAN", "observation:read"));
+check("observation:manage = PRINCIPAL+OFFICE only (designations/config/dashboards, D-#147)",
+  V.roleHasPermission("PRINCIPAL", "observation:manage") && V.roleHasPermission("OFFICE", "observation:manage") &&
+  !["TEACHER", "GUARDIAN"].some((r) => V.roleHasPermission(r, "observation:manage")));
+check("GUARDIAN holds NO observation:* permission (staff-internal, §7)",
+  !V.PERMISSIONS.filter((p) => p.startsWith("observation")).some((p) => V.roleHasPermission("GUARDIAN", p)));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);
