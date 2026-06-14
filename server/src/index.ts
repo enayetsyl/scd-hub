@@ -56,6 +56,7 @@ import "./modules/comments/resolvers/commentDelivery";
 import "./modules/classroom-observation/resolvers/classroomObservation";
 import "./modules/comments/resolvers/parentMeeting";
 import "./modules/comments/resolvers/meetingDispatch";
+import "./modules/comments/resolvers/meetingComment";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";
