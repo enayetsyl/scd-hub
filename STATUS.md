@@ -1,8 +1,37 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CM-3 MERGED** — Comments CM-3 [#74, ParentMeeting + per-family slot generation, VOCAB-FREE, D-#174/#175]. Integrated gate green on main: **jest 1096/1096**, vocab PASS, shared/server tsc. Prior: HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70 [Class Test COMPLETE], VC-5 [Vocab COMPLETE], CM-1 #69, MT #61, HR app #56→#60. **DEP-1..6 DONE — prod LIVE at scdhub.shafayet.me; main branch-protected + GitHub Actions CI/CD (gate + auto-deploy dev/prod); dev env + `dev` branch live; nightly Drive backup.** In flight: CO-1 [Classroom Observation, sole vocab owner]. Next: CM-4 [dispatch + MEETING_SCHEDULE — vocab-toucher; serialize behind CO-1 or ship kind-gated]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out. MERGE NOTE: protected main → `gh pr merge` may need re-fetch+retry on "Base branch was modified")_
+_Updated: 2026-06-14 (**CM-4 BUILT, PR open** — Comments CM-4 [parents'-meeting dispatch + present/absent capture + derived aggregates, server, **VOCAB-FREE / kind-gated** MEETING_SCHEDULE + inline Bangla, D-#176] on `worktree-comments-cm4`. Gate green: **jest 1112/1112** [66 suites], vocab verifier PASS [UNTOUCHED — ran fully parallel with CO-1's vocab lock], shared/server tsc. ACTIVATION FOLLOW-UP recorded: when the vocab lock frees, add NOTIFICATION_KINDS += MEETING_SCHEDULE (+BN/EN, verifier §C.5) + migrate the inline message to a meeting_schedule.* MT key (D-#131) — no logic change. Coordinator reviews + merges. Prior: **CM-3 MERGED** [#74, ParentMeeting + per-family slot gen, D-#174/#175], HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70 [Class Test COMPLETE], VC-5 [Vocab COMPLETE], CM-1 #69, MT #61, HR app #56→#60. **DEP-1..6 DONE — prod LIVE at scdhub.shafayet.me; main branch-protected + GitHub Actions CI/CD; dev env + `dev` branch live; nightly Drive backup.** **Branch workflow CHANGED: feature work now branches from + PRs into `dev` (not main); promote to prod via a deliberate dev→main PR** — CM-4 PR raised against `dev`. In flight: CO-1 [Classroom Observation, sole vocab owner]. Next: CM-5 [MeetingComment + comparison timeline + guardian reads]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out)_
 
 ## Now / next
+- **Built (Student Comments + Parents-Meeting CM-4 — server, prd-comments-meetings §4.1/§6, J-CM4/J-CM5,
+  D-#176) [branch `worktree-comments-cm4`, PR open — coordinator reviews]:** the FOURTH CM slice — the
+  parents'-meeting timing DISPATCH + present/absent capture over the CM-3 `ParentMeeting`/`ParentMeetingSlot`
+  arrangement (no new model). **VOCAB-FREE** (CO-1 holds the vocab lock) — `shared/vocab.ts` + the verifier
+  UNTOUCHED (git diff empty), so it ran fully parallel with CO-1. **`MeetingDispatchService`:**
+  `dispatchMeetingSchedule(meetingId)` flips the meeting `draft → scheduled` and, per slot, renders the Bangla
+  timing message ONCE (`meetingSlotMessageBn` — the slot time, or "ডাকা হলে আসবেন (On Call)" for `onCall`,
+  J-CM4), stamps `dispatchedAt`, builds a `wa.me` link for every family with a phone (the CM-3 `familyKey` IS
+  the digits-only number → no Student re-query; phone-less → `unreachableCount`), and emits `MEETING_SCHEDULE`
+  via the D-#72 seam — **kind-gated** (`emitMeetingSchedule` checks `NOTIFICATION_KINDS.includes("MEETING_SCHEDULE")`
+  and no-ops → wa.me-only until the kind is activated; the §4.1/D-#94 path; the emitter resolves login-enabled
+  guardians across the slot's siblings). **N+1 guard:** the message is rendered once per slot, the pre-rendered
+  text passed to the emitter (never re-rendered per guardian). `setSlotAttendance(slotId, attended, remark?)`
+  captures present/absent per family slot, gated to a dispatched (non-draft) meeting; `meetingAttendanceSummary`
+  is a DERIVED read (present/absent/pending/on-call/dispatched/reachable — never stored, replaces the Office-Copy
+  hand-typed counts). **Two vocab-lock deferrals (§4.1) + recorded ACTIVATION FOLLOW-UP:** `MEETING_SCHEDULE` is
+  NOT added to `NOTIFICATION_KINDS` and the message is INLINE Bangla (not a `meeting_schedule.*` MT key) — both
+  would touch `shared/vocab.ts`; **when the lock frees, a small slice adds `NOTIFICATION_KINDS += MEETING_SCHEDULE`
+  (+BN/EN, verifier §C.5) + migrates the inline message to a `meeting_schedule.*` MT key (D-#131) — no CM-4 logic
+  change.** **Resolvers (`meetingDispatch.ts`):** `dispatchMeetingSchedule` / `setMeetingSlotAttendance` /
+  `meetingAttendanceSummary` — all `roster:manage` (the D-#94 admin gate; meetings span sections → no per-section
+  scope). **RBAC: NO new role/permission** (D-#17/#94). 2 new audit kinds in `Audit.ts`
+  (`PARENT_MEETING_SCHEDULED` / `MEETING_SLOT_ATTENDANCE_SET`); `NotificationRefs += parentMeetingId/meetingSlotId`
+  (server model, NOT vocab). CM firewall block extended (MeetingDispatchService corpus-clean, both ways).
+  **Gate GREEN (executed):** vocab verifier PASS (UNTOUCHED), shared build + shared/server tsc clean, **jest
+  1112/1112** (66 suites; +1 new suite `meetingDispatch.test.ts` [18 — incl. the kind-gated no-op short-circuit,
+  the On-Call message, wa.me-for-all + unreachableCount, the derived aggregates] + 1 firewall check; firewall
+  green). **Server-only** (no app — CM-6 is the app slice; expo skipped). **Not verified live.** **Next = CM-5**
+  (`MeetingComment` class-teacher-authored + the comparison timeline + guardian `childComments`/`childMeetingSlot` reads).
 - **Built (Student Comments + Parents-Meeting CM-3 — server, prd-comments-meetings §3/§6, D-#123,
   J-CM3/J-CM4 + build rulings D-#174/#175) [branch `worktree-comments-cm3`, PR open — coordinator reviews]:**
   the THIRD CM slice — the `ParentMeeting` + per-family `ParentMeetingSlot` models, slot generation, On-Call,

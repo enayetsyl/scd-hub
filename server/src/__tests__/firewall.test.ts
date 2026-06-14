@@ -473,6 +473,22 @@ describe("Comments & Parents-Meeting firewall (ADR-005 / CM-1/CM-2, D-#114/#172)
     }
   });
 
+  // CM-4 dispatch service must exist + stay corpus-clean (it reads slots that name
+  // studentIds + the family phone — strictly identity-plane).
+  const CM4_FILES = [
+    "../modules/comments/services/MeetingDispatchService.ts",
+    "../modules/comments/resolvers/meetingDispatch.ts",
+  ].map((p) => path.resolve(__dirname, p));
+
+  test("CM-4 meeting-dispatch source files exist and have no corpus import", () => {
+    for (const f of CM4_FILES) {
+      expect(fs.existsSync(f)).toBe(true); // shipped (CM-4)
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
   test("corpus module has NO import from the comments module", () => {
     for (const f of walkDir(corpusDir)) {
       const content = fs.readFileSync(f, "utf8");
@@ -483,6 +499,7 @@ describe("Comments & Parents-Meeting firewall (ADR-005 / CM-1/CM-2, D-#114/#172)
       expect(content).not.toMatch(importPattern("services/CommentDeliveryService"));
       expect(content).not.toMatch(importPattern("services/CommentFileService"));
       expect(content).not.toMatch(importPattern("services/ParentMeetingService"));
+      expect(content).not.toMatch(importPattern("services/MeetingDispatchService"));
     }
   });
 });

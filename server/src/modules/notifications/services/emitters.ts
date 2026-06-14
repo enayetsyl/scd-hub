@@ -63,6 +63,9 @@ const dedupeKeys = {
   /** Per comment+guardian (CM-2): a comment is delivered once + then immutable, so a
    *  re-delivery is correctly a no-op (no version — unlike the class-test republish). */
   studentComment: (commentId: string, guardianId: string) => `SCMT:${commentId}:${guardianId}`,
+  /** Per slot+guardian (CM-4): a re-dispatch of the same meeting slot is a no-op for the
+   *  inbox (the wa.me link is re-built each call regardless). */
+  meetingSchedule: (slotId: string, guardianId: string) => `MTSCH:${slotId}:${guardianId}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -393,6 +396,73 @@ export async function emitClassTestGuardianResult(ev: ClassTestGuardianResultEve
             g._id.toString(),
             ev.publishedVersion,
           ),
+        });
+        notified.push(g._id.toString());
+      }),
+    );
+  });
+  return notified;
+}
+
+// ---------------------------------------------------------------------------
+// CM-4 (§4.1/§6, J-CM5) — parents'-meeting timing notice → the family's
+// login-enabled guardians (across the slot's siblings), riding THIS seam (D-#72).
+// GATED on the kind being registered (the §4.1/D-#94 path): "MEETING_SCHEDULE" is
+// NOT yet in NOTIFICATION_KINDS (/shared/vocab.ts is locked by a parallel session,
+// CO-1), so this emitter is a recorded no-op (returns []) and delivery falls through
+// to the wa.me link the caller (MeetingDispatchService) builds for every family with
+// a phone — exactly the CM-2 STUDENT_COMMENT / ASSIGNMENT_CHASE posture. Activation
+// when the vocab lock frees = add MEETING_SCHEDULE to NOTIFICATION_KINDS; nothing
+// here changes. The title + body are PRE-RENDERED by the caller (inline Bangla in
+// CM-4; an MT key after activation) and passed in — renderTemplate is NEVER called
+// inside this per-guardian loop (the recorded MT N+1 guard). Returns notified ids.
+// ---------------------------------------------------------------------------
+
+export const MEETING_SCHEDULE_KIND = "MEETING_SCHEDULE";
+
+export interface MeetingScheduleEvent {
+  meetingId: IdLike;
+  slotId: IdLike;
+  /** The family's children — guardians are resolved across all of them (siblings). */
+  studentIds: IdLike[];
+  /** Pre-rendered title (inline Bangla in CM-4). */
+  titleBn: string;
+  /** Pre-rendered per-slot body (the slot time, or On-Call). */
+  messageBn: string;
+}
+
+export async function emitMeetingSchedule(ev: MeetingScheduleEvent): Promise<string[]> {
+  const notified: string[] = [];
+  await bestEffort("meeting schedule notice", async () => {
+    // §4.1 / D-#94 safety net — a no-op until MEETING_SCHEDULE is registered (CM-4
+    // ships it kind-gated because /shared/vocab.ts is locked by CO-1).
+    if (!(NOTIFICATION_KINDS as readonly string[]).includes(MEETING_SCHEDULE_KIND)) return;
+    if (ev.studentIds.length === 0) return;
+
+    const links = (await GuardianLink.find({
+      studentId: { $in: ev.studentIds },
+      active: { $ne: false }, // missing = active (pre-GP-1 rows)
+    })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+
+    // Login-enabled only — contact-only guardians have no inbox (D-#31/#72); they are
+    // reached via the wa.me link the caller produces for every family with a phone.
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+
+    await Promise.all(
+      guardians.map(async (g) => {
+        await emit({
+          recipientGuardianId: g._id.toString(),
+          kind: MEETING_SCHEDULE_KIND,
+          titleBn: ev.titleBn,
+          bodyBn: ev.messageBn,
+          refs: { parentMeetingId: ev.meetingId.toString(), meetingSlotId: ev.slotId.toString() },
+          dedupeKey: dedupeKeys.meetingSchedule(ev.slotId.toString(), g._id.toString()),
         });
         notified.push(g._id.toString());
       }),

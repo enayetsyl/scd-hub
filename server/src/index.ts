@@ -54,6 +54,7 @@ import "./modules/templates/resolvers/messageTemplates";
 import "./modules/comments/resolvers/studentComment";
 import "./modules/comments/resolvers/commentDelivery";
 import "./modules/comments/resolvers/parentMeeting";
+import "./modules/comments/resolvers/meetingDispatch";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";
