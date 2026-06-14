@@ -1,6 +1,6 @@
 # STATUS
 
-_Updated: 2026-06-14 (**VC-5 MERGED — Vocabulary Tracker COMPLETE (VC-1..VC-5), server + app** — VC-5 [#67, 10 Expo app screens + guardian vocab card, APP-ONLY]. Integrated gate green on main 19500cf: **jest 1021/1021** [60 suites, unchanged], vocab PASS, shared/server/app tsc, expo web. Prior: CT-3 #66 [publish + guardian delivery, D-#160/#161], VC-4 #65 + CT-2 #64 [D-#153–#155/#158/#159], VC-3 #62 + CT-1 #63 [D-#142–#145], Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. In flight: CT-4 [reports/dashboards] + CM-1 [PR open — Comments/Parents-Meeting first slice, server, D-#170/#171]. Planned standalone: CO-1. Vocab module remaining = live verification only)_
+_Updated: 2026-06-14 (**CM-1 MERGING** — Comments/Parents-Meeting CM-1 [#69, StudentComment store + COMMENT_TYPES/COMMENT_SENTIMENTS vocab, server, D-#170/#171]; ran PARALLEL with CT-4 as 2nd additive+disjoint vocab owner → DECISIONS/CHANGELOG keep-both, no renumber. Prior: CT-4 #68 [read aggregates + overdue-chase, D-#166/#167], VC-5 #67 [Vocabulary Tracker COMPLETE VC-1..VC-5], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. DEP-1+DEP-2 DONE — prod LIVE at scdhub.shafayet.me (DEP-3 live golden-path next). Next: CT-5 [app — completes Class Test Tracker] + CM-2 [comment delivery]. Parked standalone: CO-1)_
 
 ## Now / next
 - **Built (Student Comments + Parents-Meeting CM-1 — server, prd-comments-meetings §3/§4/§6, J-CM1/J-CM9,
@@ -102,6 +102,29 @@ _Updated: 2026-06-14 (**VC-5 MERGED — Vocabulary Tracker COMPLETE (VC-1..VC-5)
   flag: an `Observation` model already exists in `modules/hr` [HR-4's lightweight observation w/ parked REF-11
   rubricScores] — the new module's `ClassroomObservation` is a distinct name/module, no clash, but related.)_
   **Next = build CO-1 per `docs/prd-classroom-observation.md` §5, slice order CO-1→CO-7.**
+- **Built (Class Test Tracker CT-4 — server, prd-tracker-class-test §6/§9/J5/J6, D-#44 + build rulings
+  D-#166/#167) [branch `worktree-class-test-ct4`, PR #68 MERGED]:** the FOURTH class-test
+  slice — the read-side aggregates + the Office overdue-chase. **New `ClassTestSummaryService` (ALL DERIVED
+  D-#85; `now`/`asOf` injected, deterministic; REUSES CT-2's `examReportStatus` — deadline/overdue NOT
+  re-derived, the ONE D-#50 calendar source stays single-truth):** `reportsStatus` (per-exam submitted/
+  pending/overdue + school-days late + a derived state via pure `reportStateOf` — 4-way partition complete >
+  overdue > in_progress > not_started); `principalDashboard` (KPIs over the partition + completionRatePct +
+  **overdue-by-teacher** grouped on `requestedBy`); `classSubjectAnalysis` (per-student PRESENT-percent series
+  + `trendOf` ↑/↓/→, latest vs previous §9, **ABSENT excluded** §4); `studentProfile` (one student across
+  subjects — per-result newest-first + per-subject avg/latest/trend); `overdueChaseList` (J6, AS-T4 posture:
+  overdue rows grouped by teacher → Bangla wa.me nudge naming the overdue exams; **the Office chases, never the
+  teacher**). **Resolvers:** `classTestReportsStatus`/`classTestClassSubjectAnalysis`/`classTestStudentProfile`
+  (`tracker:read`, teacher section-scoped via `assertCanRead`, P/O unscoped); `classTestPrincipalDashboard`
+  (Principal/Office); `classTestOverdueChase` (`message:dispatch` + P/O). **Vocab (app-native, additive):** ONE
+  MT registry key `class_test.overdue_chase.wa` (D-#131 build-on-registry, NOT inline; TeacherName/Count/
+  ExamList) + verifier check; **N+1 guard** — `getEffectiveTemplate` resolved ONCE per call, `interpolate`d per
+  teacher. **NO new enum/permission (D-#94/#17)**; the chase is a stateless READ (no follow-up rows, no audit
+  kind, no emit — the send is the Office tapping wa.me). Firewall class-test block extended (corpus ↛
+  class-test). **Gate GREEN (executed):** vocab verifier PASS, shared build + shared/server tsc clean, **jest
+  1033/1033** (61 suites; +1 new suite `classTestSummary.test.ts` [12] over the 1021 main base; firewall
+  green). **Server-only** (no app — CT-5 is the app slice; expo skipped). **Not verified live.** **Next = CT-5**
+  (the app slice — RequestClassTest / PrintQueue / Results entry / Publish / Dashboard / Reports + the
+  GuardianTestResults card; completes the Class Test Tracker).
 - **Built (Class Test Tracker CT-3 — server, prd-tracker-class-test §5/§8/J4/J7, D-#121/#122 + build rulings
   D-#160/#161) [branch `worktree-class-test-ct3`, PR #66 MERGED]:** the THIRD class-test
   slice — publish/unpublish + guardian delivery on the Message-Templates registry + the guardian read.
