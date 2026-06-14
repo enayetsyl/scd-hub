@@ -99,6 +99,7 @@ export type AuditEventKind =
   | "OBSERVATION_ESCALATION_CONFIG_SET" // an admin edited the response-escalation cadence thresholds (CO-3, observation:manage)
   | "OBSERVATION_SCHEDULE_CONFIG_SET" // an admin edited the review-scheduler cadence (base interval + per-tier multipliers + frequency cap) (CO-6, observation:manage)
   | "SESSION_RECORDING_ADDED"          // CO-2 footage linked to an observation
+  | "OBSERVATION_FAIRNESS_RATED"       // the observed teacher rated a released observation's fairness/usefulness 1–5 (CO-7, separate from agreement)
   | "PARENT_MEETING_CREATED"    // an admin created a parents' meeting in draft (CM-3, §3/§6, D-#123)
   | "PARENT_MEETING_SLOTS_GENERATED" // per-family slots (re)generated wholesale for a meeting (CM-3, J-CM3, D-#175)
   | "PARENT_MEETING_SLOTS_REORDERED" // slots reordered / a family flagged On-Call → re-timed (CM-3, J-CM4, D-#123)

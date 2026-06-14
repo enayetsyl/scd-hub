@@ -26,6 +26,7 @@ import {
   reviewObservation,
   requestReReview,
   respondToObservation,
+  rateObservationFairness,
   getObservation,
   observationsForTeacher,
   myReviewQueue,
@@ -106,6 +107,21 @@ QuranPayloadRef.implement({
   }),
 });
 
+// --- Fairness rating shape (CO-7) -----------------------------------------------
+type FairnessShape = NonNullable<ClassroomObservationShape["fairness"]>;
+
+const FairnessRef = builder.objectRef<FairnessShape>("ObservationFairnessRating");
+FairnessRef.implement({
+  description:
+    "The OBSERVED teacher's fairness/usefulness rating of a released review (CO-7): a 1–5 number + optional " +
+    "comment + when rated. SEPARATE from domain-score agreement — a teacher may disagree yet rate it fair.",
+  fields: (t) => ({
+    rating: t.exposeInt("rating"),
+    comment: t.string({ nullable: true, resolve: (r) => r.comment }),
+    ratedAt: t.exposeString("ratedAt"),
+  }),
+});
+
 const ObservationRef = builder.objectRef<ClassroomObservationShape>("ClassroomObservation");
 ObservationRef.implement({
   description:
@@ -133,6 +149,7 @@ ObservationRef.implement({
     prevObservationId: t.string({ nullable: true, resolve: (r) => r.prevObservationId }),
     priorFocusProgress: t.string({ nullable: true, resolve: (r) => r.priorFocusProgress }),
     quran: t.field({ type: QuranPayloadRef, nullable: true, resolve: (r) => r.quran }),
+    fairness: t.field({ type: FairnessRef, nullable: true, resolve: (r) => r.fairness }),
     recordingId: t.string({ nullable: true, resolve: (r) => r.recordingId }),
     teacherResponse: t.string({ nullable: true, resolve: (r) => r.teacherResponse }),
     supersededById: t.string({ nullable: true, resolve: (r) => r.supersededById }),
@@ -335,6 +352,32 @@ builder.mutationField("respondToClassroomObservation", (t) =>
       return respondToObservation({
         observationId: args.observationId,
         responseText: args.responseText,
+        actorId: actor.userId,
+      });
+    },
+  }),
+);
+
+builder.mutationField("rateClassroomObservationFairness", (t) =>
+  t.field({
+    type: ObservationRef,
+    description:
+      "The OBSERVED teacher rates a released (REVIEWED/TEACHER_RESPONDED) observation's fairness/usefulness 1–5 " +
+      "(CO-7) + an optional comment. A SEPARATE signal from agreement — a teacher may disagree with the scores yet " +
+      "rate the review fair — and INDEPENDENT of any response (does not change state). Re-rating overwrites. " +
+      "Requires observation:read AND being the observed teacher (a non-observed caller is refused). Audited.",
+    authScopes: { hasPermission: "observation:read" },
+    args: {
+      observationId: t.arg.string({ required: true }),
+      rating: t.arg.int({ required: true }),
+      comment: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return rateObservationFairness({
+        observationId: args.observationId,
+        rating: args.rating,
+        comment: args.comment ?? undefined,
         actorId: actor.userId,
       });
     },

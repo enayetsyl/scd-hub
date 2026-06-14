@@ -71,6 +71,11 @@ export interface QuranPayloadShape {
   improvements: string;
   suggestions: string;
 }
+export interface FairnessShape {
+  rating: number;
+  comment: string | null;
+  ratedAt: string;
+}
 export interface ClassroomObservationShape {
   id: string;
   form: ObservationForm;
@@ -94,6 +99,8 @@ export interface ClassroomObservationShape {
   priorFocusProgress: string | null;
   /** The Quran (ClassEcho) payload — set on a QURAN-form row at review, else null. */
   quran: QuranPayloadShape | null;
+  /** The observed teacher's fairness/usefulness rating (CO-7), set post-release, else null. */
+  fairness: FairnessShape | null;
   recordingId: string | null;
   teacherResponse: string | null;
   supersededById: string | null;
@@ -134,6 +141,13 @@ function shape(d: IClassroomObservation): ClassroomObservationShape {
           strengths: d.quran.strengths,
           improvements: d.quran.improvements,
           suggestions: d.quran.suggestions,
+        }
+      : null,
+    fairness: d.fairness
+      ? {
+          rating: d.fairness.rating,
+          comment: d.fairness.comment ?? null,
+          ratedAt: new Date(d.fairness.ratedAt).toISOString(),
         }
       : null,
     recordingId: d.recordingId ? d.recordingId.toString() : null,
@@ -500,6 +514,64 @@ async function emitObservationResponded(doc: IClassroomObservation): Promise<voi
   } catch (err) {
     console.error("OBSERVATION_RESPONDED emit failed (never blocks the response):", err);
   }
+}
+
+// ---------------------------------------------------------------------------
+// rateObservationFairness (CO-7 — the observed teacher rates the review's fairness)
+// ---------------------------------------------------------------------------
+
+export interface RateObservationFairnessInput {
+  observationId: string;
+  /** The authenticated actor — MUST be the observed teacher (obs.teacherId). */
+  actorId: string;
+  /** Fairness/usefulness rating, 1–5 (a plain number — REF-11-free, vocab-free). */
+  rating: number;
+  comment?: string | null;
+}
+
+/**
+ * The OBSERVED teacher rates a RELEASED observation's fairness/usefulness (CO-7). ONLY
+ * the observed teacher (obs.teacherId) may rate, and ONLY once the observation is
+ * REVIEWED or TEACHER_RESPONDED (the teacher has seen the review). The rating (1–5) is a
+ * SEPARATE signal from domain-score agreement — a teacher may disagree with the scores
+ * yet rate the review fair — so this is INDEPENDENT of `teacherResponse`/`state`: it does
+ * NOT change `state`, and a teacher may rate whether or not they have responded.
+ *
+ * Re-rating overwrites (stamps a fresh `ratedAt`). Validated 1–5 (Bangla reject). Audited
+ * (OBSERVATION_FAIRNESS_RATED). Mirrors the CO-3 respond observed-teacher-only write gate.
+ */
+export async function rateObservationFairness(
+  input: RateObservationFairnessInput,
+): Promise<ClassroomObservationShape> {
+  const doc = (await ClassroomObservation.findById(input.observationId)) as IClassroomObservation | null;
+  if (!doc) throw new ClassroomObservationError("Observation not found");
+  // Gate to the observed teacher — a non-observed caller is refused in Bangla.
+  if (doc.teacherId.toString() !== input.actorId) {
+    throw new ClassroomObservationError("শুধু সংশ্লিষ্ট শিক্ষকই এই পর্যবেক্ষণের ন্যায্যতা মূল্যায়ন করতে পারবেন");
+  }
+  // Only after the teacher has seen the review (REVIEWED / TEACHER_RESPONDED).
+  if (doc.state !== "REVIEWED" && doc.state !== "TEACHER_RESPONDED") {
+    throw new ClassroomObservationError("শুধু প্রকাশিত (পর্যালোচিত) পর্যবেক্ষণের ন্যায্যতা মূল্যায়ন করা যাবে");
+  }
+  const rating = input.rating;
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    throw new ClassroomObservationError("ন্যায্যতার রেটিং ১ থেকে ৫ এর মধ্যে হতে হবে");
+  }
+  const comment = typeof input.comment === "string" ? input.comment.trim() : null;
+
+  doc.fairness = { rating, comment: comment || null, ratedAt: new Date() };
+  // NOTE: state is deliberately untouched — fairness is independent of the response loop.
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "OBSERVATION_FAIRNESS_RATED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "ClassroomObservation",
+    meta: { teacherId: doc.teacherId.toString(), observerId: doc.observerId ? doc.observerId.toString() : null, rating },
+  });
+
+  return shape(doc);
 }
 
 // ---------------------------------------------------------------------------

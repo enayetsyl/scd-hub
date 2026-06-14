@@ -79,6 +79,17 @@ export interface IQuranPayload {
   suggestions: string;
 }
 
+// --- Fairness rating (CO-7) -----------------------------------------------------
+// The OBSERVED teacher rates the review's fairness/usefulness (1–5) — a SEPARATE
+// signal from domain-score agreement (a teacher may disagree yet rate it fair). The
+// rating is a plain number (REF-11-free, vocab-free); additive + optional ⇒ zero
+// migration. Nested sub-doc so all three fairness fields move together.
+export interface IFairnessRating {
+  rating: number; // 1–5
+  comment?: string | null;
+  ratedAt: Date;
+}
+
 export interface IClassroomObservation extends Document {
   _id: Types.ObjectId;
   form: ObservationForm;
@@ -112,6 +123,9 @@ export interface IClassroomObservation extends Document {
   // --- Quran (ClassEcho) payload (CO-5; set at REVIEW on a QURAN-form row, else
   //     unset). A REF-11 observation leaves this null and vice-versa. -------------
   quran?: IQuranPayload | null;
+  // --- Fairness rating (CO-7; set by the observed teacher post-release, else null).
+  //     Independent of `teacherResponse` (fairness ≠ agreement). -------------------
+  fairness?: IFairnessRating | null;
   // --- later slices (fields present now) --------------------------------------
   recordingId?: Types.ObjectId | null; // CO-2 SessionRecording
   teacherResponse?: string | null;      // CO-3
@@ -167,6 +181,15 @@ const QuranPayloadSchema = new Schema<IQuranPayload>(
   { _id: false },
 );
 
+const FairnessRatingSchema = new Schema<IFairnessRating>(
+  {
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    comment: { type: String, trim: true, default: null },
+    ratedAt: { type: Date, required: true },
+  },
+  { _id: false },
+);
+
 const ClassroomObservationSchema = new Schema<IClassroomObservation>(
   {
     form: { type: String, enum: OBSERVATION_FORMS, required: true },
@@ -189,6 +212,7 @@ const ClassroomObservationSchema = new Schema<IClassroomObservation>(
     prevObservationId: { type: Schema.Types.ObjectId, ref: "ClassroomObservation", default: null },
     priorFocusProgress: { type: String, enum: GROWTH_PROGRESS, default: null },
     quran: { type: QuranPayloadSchema, default: null },
+    fairness: { type: FairnessRatingSchema, default: null },
     recordingId: { type: Schema.Types.ObjectId, ref: "SessionRecording", default: null },
     teacherResponse: { type: String, trim: true, default: null },
     supersededById: { type: Schema.Types.ObjectId, ref: "ClassroomObservation", default: null },
