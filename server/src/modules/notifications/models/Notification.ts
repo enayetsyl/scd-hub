@@ -50,6 +50,9 @@ export interface NotificationRefs {
   classTestId?: string;
   /** Daily student-comment delivery (deep-link: GuardianComments; CM-2, D-#172). */
   studentCommentId?: string;
+  /** Parents'-meeting timing notice (deep-link: GuardianMeetingSlot; CM-4, D-#176). */
+  parentMeetingId?: string;
+  meetingSlotId?: string;
 }
 
 export interface INotification extends Document {
@@ -92,6 +95,8 @@ const RefsSchema = new Schema<NotificationRefs>(
     vocabTestId: { type: String },
     classTestId: { type: String },
     studentCommentId: { type: String },
+    parentMeetingId: { type: String },
+    meetingSlotId: { type: String },
   },
   { _id: false },
 );
