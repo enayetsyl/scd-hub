@@ -42,9 +42,26 @@ else low-cost VPS — settled; this plan implements it)
       Operator continues exhaustive per-feature detail testing (homework declare→reconcile→check,
       routine, admin import, guardian login) at their own pace; file+fix any issue on the normal
       deploy.sh lane (already exercised — the localhost API-URL bug was found and fixed live).
-- [ ] **DEP-4** Nightly backup cron running + **one executed restore drill passed**
-- [ ] **DEP-5** `dev` branch + dev environment live (`dev.` subdomain, separate dev DB with
-      seed data, never the real roster)
+- [x] **DEP-4** Nightly backup + restore drill done. `scripts/backup.sh` (`mongodump --archive
+      --gzip` of prod → upload to Drive **SCD-Hub-Backups** → tiered rotation 7d/4w/3m via
+      `scripts/drive-backup.mjs`) on a **cron** (02:30 Asia/Dhaka; failures logged to
+      `/opt/scdhub/backup.log`). **Restore drill PASSED** — pulled the latest backup from Drive
+      (`scripts/restore-fetch.mjs`) and `mongorestore`d into `scdhub_dev`: 1283 docs restored,
+      verified (students 91 / guardians 129 / staff 23 / content 239). Runbook = `scripts/restore.md`.
+      Gotcha recorded there: the restore `--uri` must be **db-less** or the `/db` path overrides
+      `--nsFrom/--nsTo` and 0 docs restore. Both backup + restore run on the VM (allow-listed).
+- [x] **DEP-5** `dev` branch + dev environment live. `dev` branch created from `main` on origin;
+      `main` protected (no force-push, no deletion; admin direct-push kept so docs go straight to
+      `main` per D-#91). VM: repo cloned to `/opt/scdhub/dev` (branch `dev`), dev `.env` (mode 600,
+      `scdhub_dev` DB + dev JWT + dev Drive folder, **PORT 4001**), built shared→server→web export,
+      `scdhub-dev.service` (systemd, Restart=always, boot-start). Caddy block for the `dev.`
+      subdomain: auto-HTTPS + reverse-proxy API to :4001 + **basic-auth scoped to the static shell
+      only** (gates browsing; API stays Bearer-JWT so the app still works). **Gate passed:** dev
+      static 401 without creds / 200 with, dev `/healthz`+`/readyz` ok (against `scdhub_dev`), prod
+      untouched. Dev basic-auth creds in the operator's password manager (never committed).
+      **D-#91 now in effect: feature/fix work pushes to `dev`; docs/planning stay on `main`.**
+      Note (deviation): `scdhub_dev` currently holds a real-data copy (operator choice, vs the
+      plan's seed-only intent) — re-seed/refresh from prod via the restore path when wanted.
 - [ ] **DEP-6** GitHub Actions wired: push→`dev` = test + auto-deploy dev; merge→`main` =
       full gate + auto-deploy production; one end-to-end rehearsal of each lane passed
 

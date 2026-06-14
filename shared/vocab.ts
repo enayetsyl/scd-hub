@@ -955,6 +955,7 @@ export const NOTIFICATION_KINDS = [
   "LIBRARY_OVERDUE",
   "CLASS_TEST_RESULT",
   "VOCAB_RESULT",
+  "STUDENT_COMMENT",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -971,6 +972,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   LIBRARY_OVERDUE: "বই ফেরত বকেয়া",
   CLASS_TEST_RESULT: "ক্লাস টেস্টের ফলাফল",
   VOCAB_RESULT: "ভোকাবুলারি টেস্টের ফলাফল",
+  STUDENT_COMMENT: "শিক্ষকের পর্যবেক্ষণ",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -985,6 +987,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   LIBRARY_OVERDUE: "Book overdue",
   CLASS_TEST_RESULT: "Class-test result",
   VOCAB_RESULT: "Vocabulary-test result",
+  STUDENT_COMMENT: "Teacher's comment",
 };
 
 
@@ -1373,6 +1376,8 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "class_test.result.excellent.body",
   "class_test.result.absent.body",
   "class_test.overdue_chase.wa",
+  "student_comment.notify.title",
+  "student_comment.notify.body",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1635,6 +1640,21 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     bnDefault:
       "আসসালামু আলাইকুম {TeacherName}। আপনার {Count}টি ক্লাস টেস্টের ফলাফল নির্ধারিত সময়ের মধ্যে জমা পড়েনি: {ExamList}। " +
       "অনুগ্রহ করে দ্রুত ফলাফল এন্ট্রি ও প্রকাশ করুন। জাযাকাল্লাহু খাইরান — অফিস।",
+    defaultLangMode: "BN",
+  },
+  // --- Daily student-comment guardian delivery (CM-2, §6/J-CM1 — the per-comment
+  // Bangla body sent to the family, mirroring the Form's per-row WhatsApp message;
+  // rendered once per comment, NEVER inside the per-guardian fan-out. D-#172. ------
+  "student_comment.notify.title": {
+    group: "comment", labelBn: "শিক্ষকের পর্যবেক্ষণ — শিরোনাম", placeholders: [],
+    bnDefault: "শিক্ষকের পর্যবেক্ষণ",
+    defaultLangMode: "BN",
+  },
+  "student_comment.notify.body": {
+    group: "comment", labelBn: "শিক্ষকের পর্যবেক্ষণ — বার্তা (ইনবক্স + হোয়াটসঅ্যাপ)",
+    placeholders: ["StudentName", "CommentType", "CommentText"],
+    bnDefault:
+      "আসসালামু আলাইকুম। {StudentName} সম্পর্কে শিক্ষকের একটি পর্যবেক্ষণ ({CommentType}): {CommentText} — জাযাকাল্লাহু খাইরান।",
     defaultLangMode: "BN",
   },
 };

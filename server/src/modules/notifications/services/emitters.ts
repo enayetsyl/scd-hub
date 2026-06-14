@@ -60,6 +60,9 @@ const dedupeKeys = {
    *  publishedVersion → a NEW key → the result RE-notifies; the same version is a no-op. */
   classTestResult: (testId: string, studentId: string, guardianId: string, publishedVersion: number) =>
     `CTR:${testId}:${studentId}:${guardianId}:v${publishedVersion}`,
+  /** Per comment+guardian (CM-2): a comment is delivered once + then immutable, so a
+   *  re-delivery is correctly a no-op (no version — unlike the class-test republish). */
+  studentComment: (commentId: string, guardianId: string) => `SCMT:${commentId}:${guardianId}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -425,4 +428,68 @@ export async function emitCoverAssigned(substitution: CoverAssignedEvent): Promi
       dedupeKey: dedupeKeys.coverAssigned(substitution._id.toString()),
     });
   });
+}
+
+// ---------------------------------------------------------------------------
+// CM-2 (§6/J-CM1, D-#172) — daily student comment DELIVER → the student's
+// login-enabled guardians, riding THIS seam (D-#72). STUDENT_COMMENT is a registered
+// kind (CM-2). Contact-only guardians have no inbox (D-#31/#72) and are reached via
+// the wa.me link the caller (CommentDeliveryService) builds for every family with a
+// phone. The title + body are PRE-RENDERED by the caller and passed in, so
+// renderTemplate/getEffectiveTemplate is NEVER called inside this per-guardian loop
+// (the recorded MT N+1 guard). GATED on the kind being registered (the §4.1/D-#94
+// safety net): if it's not yet in NOTIFICATION_KINDS the emitter is a no-op (returns
+// []) and delivery falls through to wa.me only. Returns the notified guardian ids.
+// ---------------------------------------------------------------------------
+
+export interface StudentCommentEvent {
+  commentId: IdLike;
+  studentId: IdLike;
+  sectionId: IdLike;
+  /** Pre-rendered (the student_comment.notify.title template). */
+  titleBn: string;
+  /** Pre-rendered (the student_comment.notify.body template). */
+  messageBn: string;
+}
+
+export async function emitStudentComment(ev: StudentCommentEvent): Promise<string[]> {
+  const notified: string[] = [];
+  await bestEffort("student comment deliver", async () => {
+    // §4.1 / D-#94 safety net — a no-op until the kind is registered (it is, CM-2).
+    if (!(NOTIFICATION_KINDS as readonly string[]).includes("STUDENT_COMMENT")) return;
+
+    const links = (await GuardianLink.find({
+      studentId: ev.studentId,
+      active: { $ne: false }, // missing = active (pre-GP-1 rows)
+    })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+
+    // Login-enabled only — contact-only guardians have no inbox (D-#31/#72); they are
+    // reached via the wa.me link the caller produces for every family with a phone.
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+
+    await Promise.all(
+      guardians.map(async (g) => {
+        await emit({
+          recipientGuardianId: g._id.toString(),
+          kind: "STUDENT_COMMENT",
+          titleBn: ev.titleBn,
+          bodyBn: ev.messageBn,
+          refs: {
+            studentCommentId: ev.commentId.toString(),
+            studentId: ev.studentId.toString(),
+            sectionId: ev.sectionId.toString(),
+          },
+          dedupeKey: dedupeKeys.studentComment(ev.commentId.toString(), g._id.toString()),
+        });
+        notified.push(g._id.toString());
+      }),
+    );
+  });
+  return notified;
 }
