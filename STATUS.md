@@ -1,6 +1,6 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CM-3 BUILT, PR open** — Comments CM-3 [ParentMeeting + per-family ParentMeetingSlot + generation/On-Call/reorder + admin reads, server, **VOCAB-FREE**, D-#123 + build rulings D-#174/#175] on `worktree-comments-cm3`. Gate green: **jest 1088/1088** [64 suites, +17 over the 1071 base], vocab verifier PASS [untouched], shared/server tsc. Coordinator reviews + merges. Prior: **CM-2 MERGED** [#71, daily-comment delivery wa.me+emit STUDENT_COMMENT + attachment store, D-#172/#173], CT-5 #70 [Class Test Tracker COMPLETE], CM-1 #69, CT-4 #68, VC-5 #67 [Vocab COMPLETE], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, CO PRD [D-#146–#152], MT #61, HR app #56→#60. **DEP-1..5 DONE — prod LIVE at scdhub.shafayet.me + dev env + nightly Drive backup.** Open PRs: CM-3, APP-FU1 #72 [guardian-notice full-section picker]. Parked standalone: CO-1 [vocab slot now free]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out (relax authScopes))_
+_Updated: 2026-06-14 (**CM-3 MERGED** — Comments CM-3 [#74, ParentMeeting + per-family slot generation, VOCAB-FREE, D-#174/#175]. Integrated gate green on main: **jest 1096/1096**, vocab PASS, shared/server tsc. Prior: HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70 [Class Test COMPLETE], VC-5 [Vocab COMPLETE], CM-1 #69, MT #61, HR app #56→#60. **DEP-1..6 DONE — prod LIVE at scdhub.shafayet.me; main branch-protected + GitHub Actions CI/CD (gate + auto-deploy dev/prod); dev env + `dev` branch live; nightly Drive backup.** In flight: CO-1 [Classroom Observation, sole vocab owner]. Next: CM-4 [dispatch + MEETING_SCHEDULE — vocab-toucher; serialize behind CO-1 or ship kind-gated]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out. MERGE NOTE: protected main → `gh pr merge` may need re-fetch+retry on "Base branch was modified")_
 
 ## Now / next
 - **Built (Student Comments + Parents-Meeting CM-3 — server, prd-comments-meetings §3/§6, D-#123,
@@ -32,6 +32,45 @@ _Updated: 2026-06-14 (**CM-3 BUILT, PR open** — Comments CM-3 [ParentMeeting +
   `parentMeeting.test.ts` [16] + 1 firewall check over the 1071 base; firewall green). **Server-only** (no app —
   CM-6 is the app slice; expo skipped). **Not verified live.** **Next = CM-4** (dispatch + `MEETING_SCHEDULE` +
   `setSlotAttendance` + derived present/absent — that's where the vocab lands).
+- **Built (APP-FU1 — guardian-notice full-section picker, Expo, APP-ONLY) [branch `worktree-app-fu1`,
+  PR open]:** the small app-polish pass over a deferred, server-ready surface. Closes the recorded
+  **M-5/M-6 follow-up**: `GuardianNoticeScreen` sourced its SECTION picker only from
+  `mySectionsAsClassTeacher`, so Principal/Office couldn't target an arbitrary section's notice (they
+  fell back to SCHOOL scope). Now **`chat:manage` holders get a full academic-year → all-sections
+  picker** (`AcademicYearSelect` + a `Select` of every class's sections, sourced from the existing
+  `classes` query — `authenticated:true`, P/O readable); class teachers (chat:write only) keep their
+  coordinated-sections chips unchanged. **Server already authorizes the arbitrary-section notice**
+  (`assertCanComposeNotice` bypasses `assertIsClassTeacher` when `canManage`) — this is purely the
+  missing picker UI. **APP-ONLY: NO server / shared / vocab / contract change** (`git diff origin/main
+  -- server shared` empty); 2 files touched (`GuardianNoticeScreen.tsx`, `lib/labels.ts` — 2 new BN/EN
+  keys). **Discovery scan (server-ready-but-unrendered reads):** all 110 client query ops are already
+  rendered — no further deferred reads to surface (Class-Test/Vocab excluded — owned by other sessions).
+  No new server-gaps found; the previously-known gaps (guardian attendance/leave) have no resolver and
+  stay deferred. No DECISIONS row (straightforward app surface). **Gate GREEN (executed):** app
+  `tsc --noEmit` clean + `expo export --platform web` green; vocab verifier PASS + server/shared
+  untouched + jest unchanged (server untouched). **Not verified live.**
+- **Built (HR-G1 — staff own-row self-service reads, server, prd-hr §4/§3, D-#185) [branch
+  `worktree-hr-gap-reads`, PR #73 MERGED]:** the two server gaps flagged when the HR
+  app shipped (PR-1/#56 surfaced them as "pending"). **Server-only, vocab-free, NO new permission** —
+  both reads compose existing services + the D-#103 phone-join. **`myPayslips`:** the caller's OWN
+  payslips across runs, newest month first, **`approved_locked` runs ONLY** (a staff member never sees a
+  draft/`prepared` payslip, §4.2) — new `payslipsForStaff` in `PayrollService`. **`myStaffAttendance`:**
+  the caller's OWN attendance over [fromKey, toKey], oldest day first, **reusing the AT-1 ✘=ABSENT → LEAVE
+  read-time overlay** (HR-2, `applyLeaveOverlay`) — new `staffAttendanceForRange` in
+  `TeacherAttendanceService` (the daily snapshot keys cleanly off `staffProfileId`, so the join is exact —
+  the myStaffAttendance gap is NOT blocked). Both resolve the caller's `StaffProfile` via the EXISTING
+  `resolveStaffProfileForUser` (User → phone → StaffProfile, **fail-closed on a shared phone — not
+  weakened/twinned**) and scope the read to that one id. Resolvers added inline to the existing
+  `payroll.ts` / `teacherAttendance.ts`, gated `authScopes: { authenticated: true }` (the staff-self
+  path; Principal/Office keep their `payroll:manage` / `attendance:manage` admin reads). **D-#185:** a
+  caller with no linked StaffProfile (guardian / email-only admin / ambiguous phone) gets `[]`, never
+  another person's data — these own-record app-card reads **return empty, they do NOT throw** like the
+  `myConductRecords`/`callerStaffProfileId` precedent. Identity-plane only; NO new model → firewall stays
+  green. **NOT built (recorded follow-up):** the supervisor observation-submit + teacher-readable
+  staff-directory gap (needs a scoped directory read + design — left for a later slice). **Gate GREEN
+  (executed):** vocab verifier PASS (untouched), shared build + shared/server tsc clean, **jest 1061/1061**
+  (63 suites; +1 new suite `hrSelfService.test.ts` [8] over the 1053 main base; firewall green).
+  **Server-only** (the app surface for these reads is a later app-only pass). **Not verified live.**
 - **Built (Student Comments + Parents-Meeting CM-2 — server, prd-comments-meetings §4.1/§5/§6, J-CM1,
   D-#172/#173) [branch `worktree-comments-cm2`, PR #71 MERGED]:** the SECOND CM slice —
   daily-comment DELIVERY + the comment-attachment file store. **Delivery (`CommentDeliveryService`):**
