@@ -4,11 +4,19 @@
  * overrides the clock for deterministic reads.
  *
  * RBAC — composes EXISTING permissions only (D-#94/#17, no new role/permission):
- *   - Reports Status / Class×Subject / Student Profile: `tracker:read`; a TEACHER
- *     is scoped to a section (`assertCanRead`); Principal/Office are unscoped.
+ *   - Reports Status / Class×Subject / Student Profile: Principal/Office unscoped, a
+ *     TEACHER scoped to a section they can read (`assertReportRead`/`assertCanRead`).
  *   - Principal Dashboard: Principal/Office only (the school-wide KPI view, J5).
  *   - Overdue-chase: `message:dispatch` + Principal/Office (the AS-T4 posture, D-#88
  *     — the Office chases; a teacher never chases themselves).
+ *
+ * authScopes note (D-#186): the four reads gate `{ authenticated: true }`, NOT
+ * `{ hasPermission: "tracker:read" }`. OFFICE legitimately reads the dashboard +
+ * reports (§6/§9) but does NOT hold `tracker:read` — gating the scope on it rejected
+ * Office at the Pothos scope-auth layer BEFORE the resolver's gate could run, making
+ * the intended OFFICE branch dead code. The gate helpers below (the `assertChaseAdmin`
+ * pattern) are the real authority: P/O pass unscoped, a teacher passes scoped, and
+ * GUARDIAN / any role without `tracker:read` is denied.
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
@@ -126,8 +134,8 @@ builder.queryField("classTestReportsStatus", (t) =>
     type: [ReportStatusRowRef],
     description:
       "Per-exam Reports Status (CT-4, J5): submitted/pending/overdue + school-days late + report state. " +
-      "tracker:read; a teacher must pass a section they can read (Principal/Office unscoped).",
-    authScopes: { hasPermission: "tracker:read" },
+      "Principal/Office unscoped; a teacher must pass a section they can read (assertReportRead, D-#186).",
+    authScopes: { authenticated: true },
     args: {
       academicYearId: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -174,8 +182,8 @@ DashboardRef.implement({
 builder.queryField("classTestPrincipalDashboard", (t) =>
   t.field({
     type: DashboardRef,
-    description: "Class-test KPIs + overdue-by-teacher (CT-4, J5). Principal/Office only.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "Class-test KPIs + overdue-by-teacher (CT-4, J5). Principal/Office only (assertDashboardAdmin, D-#186).",
+    authScopes: { authenticated: true },
     args: {
       academicYearId: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -223,8 +231,8 @@ ClassSubjectAnalysisRef.implement({
 builder.queryField("classTestClassSubjectAnalysis", (t) =>
   t.field({
     type: ClassSubjectAnalysisRef,
-    description: "Class×subject progression + trend (CT-4, §9). tracker:read; teacher scoped to the section.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "Class×subject progression + trend (CT-4, §9). Principal/Office unscoped; teacher scoped to the section (assertReportRead, D-#186).",
+    authScopes: { authenticated: true },
     args: {
       sectionId: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
@@ -284,8 +292,8 @@ StudentProfileRef.implement({
 builder.queryField("classTestStudentProfile", (t) =>
   t.field({
     type: StudentProfileRef,
-    description: "A student's class-test profile across subjects (CT-4, J6). tracker:read; teacher scoped to the student's section.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "A student's class-test profile across subjects (CT-4, J6). Principal/Office unscoped; teacher scoped to the student's section (D-#186).",
+    authScopes: { authenticated: true },
     args: { studentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");

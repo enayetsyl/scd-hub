@@ -1,8 +1,28 @@
 # STATUS
 
-_Updated: 2026-06-14 (**HR-G1 #73 + APP-FU1 #72 MERGED** — HR own-row reads [myPayslips/myStaffAttendance, D-#185] + guardian-notice full-section picker [app-only]; both clean. Integrated gate green on main 9ee88bf: **jest 1079/1079** [64 suites], vocab PASS, shared/server/app tsc, expo web. **DEP-1..6 DONE — prod LIVE at scdhub.shafayet.me; main now branch-protected + GitHub Actions CI/CD (gate + auto-deploy dev/prod); dev env + `dev` branch live; nightly Drive backup.** Modules COMPLETE: Vocab (VC-1..5), Class Test (CT-1..5), HR (+gap reads), Messaging, Library, Notifications, Assignment, Message Templates. In flight: CM-3 [ParentMeeting/slots, vocab-free] + CO-1 [Classroom Observation, sole vocab owner]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out (relax authScopes). MERGE NOTE: protected main → `gh pr merge` may need re-fetch+retry on "Base branch was modified")_
+_Updated: 2026-06-14 (**Built CT-4-FIX** — the carried CT-4 dashboard/reports RBAC follow-up: the four read aggregates now gate `authScopes: { authenticated: true }` and let the resolver gate helpers enforce access [`assertChaseAdmin` pattern], so OFFICE [no `tracker:read`] can read the dashboard + reports per the §6/§9 + D-#166 intent — server-only, vocab-free, NO permission change, D-#186. Branch `worktree-ct4-rbac-fix` off `dev`, PR open → `dev`. Gate green: vocab verifier PASS, shared/server tsc, **jest 1090/1090** [65 suites, +1 RBAC suite]. Prior: HR-G1 #73 + APP-FU1 #72 MERGED [D-#185]. **DEP-1..6 DONE — prod LIVE at scdhub.shafayet.me; main + dev branch-protected + GitHub Actions CI/CD; nightly Drive backup.** Modules COMPLETE: Vocab (VC-1..5), Class Test (CT-1..5 + this RBAC fix), HR (+gap reads), Messaging, Library, Notifications, Assignment, Message Templates. In flight: CM-3 [ParentMeeting/slots] + CM-4 + CO-1 [Classroom Observation]. WORKFLOW: features branch from `dev` + PR → `dev` (auto-deploy dev, CI-gated); promote `dev → main` for prod. MERGE NOTE: protected branches → `gh pr merge` may need re-fetch+retry on "Base branch was modified")_
 
 ## Now / next
+- **Built (CT-4-FIX — Class Test dashboard/reports RBAC, server, D-#186) [branch `worktree-ct4-rbac-fix`
+  off `dev`, PR open → `dev`]:** the pre-existing CT-4 RBAC bug flagged at the CT-5 app review. The four
+  CT-4 READ aggregates (`classTestPrincipalDashboard`, `classTestReportsStatus`,
+  `classTestClassSubjectAnalysis`, `classTestStudentProfile`) gated `authScopes: { hasPermission:
+  "tracker:read" }`, but **OFFICE holds NO `tracker:read`** (it holds `message:dispatch` — which is why
+  the overdue-chase already worked) while the §6/§9 + D-#166 intent is for Office to read the dashboard +
+  reports. Pothos scope-auth runs `authScopes` BEFORE the resolver, so Office was rejected at the scope
+  layer and the intended Principal/Office branch inside `assertDashboardAdmin`/`assertReportRead` was
+  unreachable dead code. **Fix (resolver-gating ONLY — NO enum/permission/vocab change):** relax the four
+  reads to `authScopes: { authenticated: true }` and let the already-correct gate helpers be the authority
+  (the `assertChaseAdmin` pattern) — `assertDashboardAdmin` keeps P/O-only (now reachable by Office);
+  `assertReportRead` keeps P/O-unscoped + teacher section-scoped (`assertCanRead`) + denies GUARDIAN/any
+  role without `tracker:read`. The chase (`message:dispatch` + P/O) is unchanged. **Non-widening, proven by
+  a new schema-execution test `classTestSummaryRbac.test.ts` (11 tests)** that runs real GraphQL queries
+  against the built schema with each role's context (exercising the scope-auth layer + the real permission
+  map): Office reads all four; a teacher reads only a section it can read and is denied the dashboard;
+  GUARDIAN + unauthenticated are denied. **Gate GREEN (executed):** vocab verifier PASS (untouched), shared
+  build + shared/server tsc clean, **jest 1090/1090** (65 suites; +1 new suite [11]; the existing
+  `classTestSummary.test.ts` stays green). **Server-only.** Not verified live. **Do NOT merge** (PR for
+  review).
 - **Built (APP-FU1 — guardian-notice full-section picker, Expo, APP-ONLY) [branch `worktree-app-fu1`,
   PR open]:** the small app-polish pass over a deferred, server-ready surface. Closes the recorded
   **M-5/M-6 follow-up**: `GuardianNoticeScreen` sourced its SECTION picker only from
