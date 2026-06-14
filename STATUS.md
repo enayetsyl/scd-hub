@@ -1,10 +1,10 @@
 # STATUS
 
-_Updated: 2026-06-14 (**VC-5 MERGING — Vocabulary Tracker COMPLETE (VC-1..VC-5)** — VC-5 [#67, 10 Expo app screens + guardian vocab card, APP-ONLY, no server/shared change] over the merged VC-1..VC-4 server. Prior: CT-3 #66 [publish + guardian delivery, D-#160/#161], VC-4 #65 + CT-2 #64 [D-#153–#155/#158/#159], VC-3 #62 + CT-1 #63 [D-#142–#145], Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. In flight: CT-4 [reports/dashboards]. Parked vocab-toucher: CM-1; planned standalone: CO-1. Vocab module remaining = live verification only)_
+_Updated: 2026-06-14 (**VC-5 MERGED — Vocabulary Tracker COMPLETE (VC-1..VC-5), server + app** — VC-5 [#67, 10 Expo app screens + guardian vocab card, APP-ONLY]. Integrated gate green on main 19500cf: **jest 1021/1021** [60 suites, unchanged], vocab PASS, shared/server/app tsc, expo web. Prior: CT-3 #66 [publish + guardian delivery, D-#160/#161], VC-4 #65 + CT-2 #64 [D-#153–#155/#158/#159], VC-3 #62 + CT-1 #63 [D-#142–#145], Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. In flight: CT-4 [reports/dashboards]. Parked vocab-toucher: CM-1; planned standalone: CO-1. Vocab module remaining = live verification only)_
 
 ## Now / next
 - **Built (Vocabulary Tracker VC-5 — Expo app, APP-ONLY, prd-vocabulary-tracker §6 VC-5 + J1–J7)
-  [branch `worktree-vocab-vc5`, PR open — coordinator reviews] — COMPLETES the Vocabulary Tracker
+  [branch `worktree-vocab-vc5`, PR #67 MERGED] — COMPLETES the Vocabulary Tracker
   (VC-1..VC-5):** the app surfaces over the merged VC-1..VC-4 resolvers. **NO server / shared / vocab /
   contract change** (proven: `git diff origin/main -- server shared` empty) — consumes existing resolvers
   + adds client ops/labels/screens only. New **🔤 Vocab tab** gated `tracker:read` OR `roster:manage`
