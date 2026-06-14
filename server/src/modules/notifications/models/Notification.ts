@@ -53,6 +53,13 @@ export interface NotificationRefs {
   /** Parents'-meeting timing notice (deep-link: GuardianMeetingSlot; CM-4, D-#176). */
   parentMeetingId?: string;
   meetingSlotId?: string;
+  /** Classroom-observation release / response / escalation (deep-link: ObservationDetail; CO-3). */
+  observationId?: string;
+  teacherId?: string;
+  /** Escalation ladder rung: REMINDER_1 | REMINDER_2 | PRINCIPAL_FLAG (CO-3). */
+  stage?: string;
+  /** Calendar days since the observation was released (CO-3 escalation). */
+  daysSince?: number;
 }
 
 export interface INotification extends Document {
@@ -97,6 +104,10 @@ const RefsSchema = new Schema<NotificationRefs>(
     studentCommentId: { type: String },
     parentMeetingId: { type: String },
     meetingSlotId: { type: String },
+    observationId: { type: String },
+    teacherId: { type: String },
+    stage: { type: String },
+    daysSince: { type: Number },
   },
   { _id: false },
 );

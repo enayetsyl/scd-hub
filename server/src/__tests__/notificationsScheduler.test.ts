@@ -57,6 +57,17 @@ jest.mock("../modules/library/services/LibraryReminderService", () => ({
 jest.mock("../modules/hr/services/OffboardingService", () => ({
   runDueOffboardingRevocations: jest.fn().mockResolvedValue(0),
 }));
+// CO-3: the ticker also runs the observation response-escalation sweep. Mock it so the
+// scheduler test stays DB-free (the sweep itself is covered in observationEscalation.test.ts).
+jest.mock("../modules/classroom-observation/services/ObservationEscalationService", () => ({
+  runObservationEscalation: jest.fn().mockResolvedValue({
+    scanned: 0,
+    reminder1: 0,
+    reminder2: 0,
+    principalFlag: 0,
+    alreadyDispatched: 0,
+  }),
+}));
 jest.mock("../modules/notifications/services/NotificationService", () => ({
   emit: (input: unknown) => mockEmit(input),
 }));
