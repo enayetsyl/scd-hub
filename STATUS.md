@@ -3,6 +3,18 @@
 _Updated: 2026-06-14 (**CM-3 MERGED** — Comments CM-3 [#74, ParentMeeting + per-family slot generation, VOCAB-FREE, D-#174/#175]. Integrated gate green on main: **jest 1096/1096**, vocab PASS, shared/server tsc. Prior: HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70 [Class Test COMPLETE], VC-5 [Vocab COMPLETE], CM-1 #69, MT #61, HR app #56→#60. **DEP-1..6 DONE — prod LIVE at scdhub.shafayet.me; main branch-protected + GitHub Actions CI/CD (gate + auto-deploy dev/prod); dev env + `dev` branch live; nightly Drive backup.** In flight: CO-1 [Classroom Observation, sole vocab owner]. Next: CM-4 [dispatch + MEETING_SCHEDULE — vocab-toucher; serialize behind CO-1 or ship kind-gated]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out. MERGE NOTE: protected main → `gh pr merge` may need re-fetch+retry on "Base branch was modified")_
 
 ## Now / next
+- **Planned (Finance/Accounting module FIN-1..FIN-6, D-#186–#192):** REQ scoped in
+  docs/finance-requirements.md — migrate the SCD Google-Sheet accounting layer (Daily,
+  Budget-vs-Actual, Qard/IOU Central, Bank & Online, Master Dashboard) into the app.
+  Eximus stays parallel (no live link); app reconciles vs bank statement AND an entered
+  Eximus control figure (FIN-4). Salary/payroll CARVED OUT — HR module owns it; FIN posts
+  the monthly net-payable total only. Staff salary-recoverable advances stay in HR; FIN
+  Qard/IOU register owns community/non-salary loans+advances. One school (no branch),
+  identity-plane only (ADR-005), reuse Office/Principal RBAC. Zakat = roster-linked,
+  effective-dated, append-only allocation + provider receivable + auto guardian/provider
+  fee-split. App-native vocab in later PRDs (NO wire sync expected, AGENTS rule 5). Plan/docs
+  only — nothing built. **Next = build FIN-1 (Ledgers & opening balances) per
+  docs/finance-requirements.md §4/§6, slice order FIN-1→FIN-6 (separate session).**
 - **Built (Student Comments + Parents-Meeting CM-3 — server, prd-comments-meetings §3/§6, D-#123,
   J-CM3/J-CM4 + build rulings D-#174/#175) [branch `worktree-comments-cm3`, PR open — coordinator reviews]:**
   the THIRD CM slice — the `ParentMeeting` + per-family `ParentMeetingSlot` models, slot generation, On-Call,
