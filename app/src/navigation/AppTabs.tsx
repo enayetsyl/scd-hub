@@ -26,6 +26,7 @@ import type {
   LibraryStackParamList,
   ChatStackParamList,
   VocabStackParamList,
+  ClassTestStackParamList,
   HrStackParamList,
   AdminStackParamList,
   GuardianHomeStackParamList,
@@ -107,6 +108,15 @@ import VocabStudentReportScreen from "../screens/vocab/VocabStudentReportScreen"
 import VocabClassReportScreen from "../screens/vocab/VocabClassReportScreen";
 import VocabMessagesScreen from "../screens/vocab/VocabMessagesScreen";
 import VocabAssignmentScreen from "../screens/vocab/VocabAssignmentScreen";
+import ClassTestHomeScreen from "../screens/classtest/ClassTestHomeScreen";
+import RequestClassTestScreen from "../screens/classtest/RequestClassTestScreen";
+import ClassTestPrintQueueScreen from "../screens/classtest/ClassTestPrintQueueScreen";
+import ClassTestResultsScreen from "../screens/classtest/ClassTestResultsScreen";
+import ClassTestPublishScreen from "../screens/classtest/ClassTestPublishScreen";
+import ClassTestDashboardScreen from "../screens/classtest/ClassTestDashboardScreen";
+import ClassTestReportsScreen from "../screens/classtest/ClassTestReportsScreen";
+import ClassTestClassSubjectScreen from "../screens/classtest/ClassTestClassSubjectScreen";
+import ClassTestStudentProfileScreen from "../screens/classtest/ClassTestStudentProfileScreen";
 import HrHomeScreen from "../screens/hr/HrHomeScreen";
 import MyLeaveScreen from "../screens/hr/MyLeaveScreen";
 import MyRecordScreen from "../screens/hr/MyRecordScreen";
@@ -465,6 +475,40 @@ function VocabNavigator(): React.ReactElement {
   );
 }
 
+const ClassTestStack = createNativeStackNavigator<ClassTestStackParamList>();
+function ClassTestNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ClassTestStack.Navigator screenOptions={stackOptions}>
+      <ClassTestStack.Screen name="ClassTestHome" component={ClassTestHomeScreen} options={{ title: STR.ctHomeTitle }} />
+      <ClassTestStack.Screen name="RequestClassTest" component={RequestClassTestScreen} options={{ title: STR.ctNewRequest }} />
+      <ClassTestStack.Screen name="ClassTestPrintQueue" component={ClassTestPrintQueueScreen} options={{ title: STR.ctPrintQueueTitle }} />
+      <ClassTestStack.Screen
+        name="ClassTestResults"
+        component={ClassTestResultsScreen}
+        options={({ route }) => ({ title: route.params.title || STR.ctResultsTitle })}
+      />
+      <ClassTestStack.Screen
+        name="ClassTestPublish"
+        component={ClassTestPublishScreen}
+        options={({ route }) => ({ title: route.params.title || STR.ctPublishTitle })}
+      />
+      <ClassTestStack.Screen name="ClassTestDashboard" component={ClassTestDashboardScreen} options={{ title: STR.ctDashboardTitle }} />
+      <ClassTestStack.Screen name="ClassTestReports" component={ClassTestReportsScreen} options={{ title: STR.ctReportsTitle }} />
+      <ClassTestStack.Screen
+        name="ClassTestClassSubject"
+        component={ClassTestClassSubjectScreen}
+        options={({ route }) => ({ title: route.params.title || STR.ctClassSubjectTitle })}
+      />
+      <ClassTestStack.Screen
+        name="ClassTestStudentProfile"
+        component={ClassTestStudentProfileScreen}
+        options={({ route }) => ({ title: route.params.studentName || STR.ctStudentProfileTitle })}
+      />
+    </ClassTestStack.Navigator>
+  );
+}
+
 const HrStack = createNativeStackNavigator<HrStackParamList>();
 function HrNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -611,6 +655,10 @@ export function AppTabs(): React.ReactElement {
   // roster:manage (the weekly tester assignment + message:dispatch generation). Every
   // action is re-gated server-side. GUARDIAN never sees this staff tab.
   const canVocab = !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
+  // Class Test (CT-5): Principal/Teacher via tracker:read (request/results/publish/
+  // reports); Office via roster:manage (print queue + dashboard + overdue-chase).
+  // Every action is re-gated server-side. GUARDIAN never sees this staff tab.
+  const canClassTest = !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
   // HR/staff tab: every logged-in staff member (Principal/Teacher/Office) — leave
   // + self-service is universal; GUARDIAN never sees it. Admin entries inside are
   // permission-gated per slice and re-checked server-side.
@@ -670,6 +718,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canVocab ? (
         <Tab.Screen name="VocabTab" component={VocabNavigator} options={{ title: STR.tabVocab, tabBarIcon: tabIcon("🔤") }} />
+      ) : null}
+      {canClassTest ? (
+        <Tab.Screen name="ClassTestTab" component={ClassTestNavigator} options={{ title: STR.tabClassTest, tabBarIcon: tabIcon("🧪") }} />
       ) : null}
       {canHr ? (
         <Tab.Screen name="HrTab" component={HrNavigator} options={{ title: STR.tabHr, tabBarIcon: tabIcon("🧑‍💼") }} />

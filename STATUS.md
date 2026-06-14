@@ -102,6 +102,26 @@ _Updated: 2026-06-14 (**CM-1 MERGED** — Comments/Parents-Meeting CM-1 [#69, St
   flag: an `Observation` model already exists in `modules/hr` [HR-4's lightweight observation w/ parked REF-11
   rubricScores] — the new module's `ClassroomObservation` is a distinct name/module, no clash, but related.)_
   **Next = build CO-1 per `docs/prd-classroom-observation.md` §5, slice order CO-1→CO-7.**
+- **Built (Class Test Tracker CT-5 — app, Expo, prd-tracker-class-test §6/J1–J7) [branch
+  `worktree-class-test-ct5`, PR open — coordinator reviews] — COMPLETES the Class Test Tracker
+  (CT-1..CT-5):** the app slice over the merged CT-1..CT-4 resolvers. **APP-ONLY: no server/shared/vocab/
+  contract change** (working tree touches only `app/`; vocab verifier PASS). New 🧪 **Class Test tab** gated
+  `tracker:read || roster:manage` (GUARDIAN never sees it); every action re-gated server-side, the Bangla deny
+  surfaces inline (D-#42/#125). New `app/src/graphql/classTest.ts` (typed ops, kept out of the 4.7k-line
+  operations.ts) + `ClassTestStackParamList` + ct* BN/EN labels + `pickAndUploadClassTestPaper`. **9 screens:**
+  ClassTestHome (role-aware hub + myClassTests), RequestClassTest (J1 — set/upload + metadata + test#
+  auto-suggest), ClassTestPrintQueue (J2 — Office /pdf/set or file download → mark printed/cancel),
+  ClassTestResults (J3 — per-student grid: marks/Absent + weakness + teacher-action[internal] + guardian-action,
+  derived %/pass shown, prefill), ClassTestPublish (J4 — per-student + bulk publish/unpublish; renders the wa.me
+  links to tap-send; re-publish re-notifies), ClassTestDashboard (J5 — KPIs + overdue-by-teacher + the Office
+  overdue-chase wa.me, message:dispatch), ClassTestReports (J5/J6 — Reports Status by section+subject → results
+  / Class×Subject), ClassTestClassSubject (J6/§9 — trend ↑/↓/→ → profile), ClassTestStudentProfile (J6 — across
+  subjects). **GuardianTestResults card** on GuardianHomeScreen (childTestResults — PUBLISHED-only, read-only;
+  **never shows teacherAction** — the query doesn't select it, J7/D-#68). **Gate GREEN (executed):** app
+  `tsc --noEmit` clean + `expo export --platform web` green (749 modules); no-drift = vocab verifier PASS +
+  working tree app-only (server/shared/contract untouched → jest unchanged at the main base). No DECISIONS row
+  (straightforward app surfaces, no new ruling). **Not verified live.** **Class Test Tracker fully built
+  server + app — remaining work is live verification only.**
 - **Built (Class Test Tracker CT-4 — server, prd-tracker-class-test §6/§9/J5/J6, D-#44 + build rulings
   D-#166/#167) [branch `worktree-class-test-ct4`, PR #68 MERGED]:** the FOURTH class-test
   slice — the read-side aggregates + the Office overdue-chase. **New `ClassTestSummaryService` (ALL DERIVED

@@ -1,0 +1,103 @@
+/**
+ * ClassTestHomeScreen (CT-5) — the Class Test tab hub. Role-aware quick links +
+ * the caller's own class tests (myClassTests). Every action is re-gated server-side;
+ * links the role can't perform are hidden (the server stays the gate — its Bangla
+ * deny still surfaces if reached).
+ */
+import React from "react";
+import { ScrollView, View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQuery } from "urql";
+import { roleHasPermission } from "@scd/shared";
+import { MY_CLASS_TESTS_QUERY } from "../../graphql/classTest";
+import { Screen, Card, Body, Muted, Button, Badge, Loader } from "../../components/ui";
+import { useAuth } from "../../auth/AuthContext";
+import { STR, hwSubjectLabel, classTestStatusLabel, bnNum } from "../../lib/labels";
+import { space } from "../../theme/tokens";
+import type { ClassTestStackParamList } from "../../navigation/types";
+
+type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
+
+export default function ClassTestHomeScreen(): React.ReactElement {
+  const nav = useNavigation<Nav>();
+  const { role } = useAuth();
+  const canWrite = !!role && roleHasPermission(role, "tracker:write");
+  const canPrint = !!role && roleHasPermission(role, "roster:manage");
+  const isAdmin = role === "PRINCIPAL" || role === "OFFICE";
+
+  const [myQ] = useQuery({ query: MY_CLASS_TESTS_QUERY, variables: {} });
+  const mine = myQ.data?.myClassTests ?? [];
+
+  return (
+    <Screen padded={false}>
+      <ScrollView contentContainerStyle={{ padding: space(4) }}>
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.ctHomeTitle}</Body>
+          <View style={{ marginTop: space(2), gap: space(2) }}>
+            {canWrite ? <Button title={STR.ctRequestNav} onPress={() => nav.navigate("RequestClassTest")} /> : null}
+            {canPrint ? (
+              <Button title={STR.ctPrintQueueNav} variant="secondary" onPress={() => nav.navigate("ClassTestPrintQueue")} />
+            ) : null}
+            <Button title={STR.ctReportsNav} variant="secondary" onPress={() => nav.navigate("ClassTestReports")} />
+            {isAdmin ? (
+              <Button title={STR.ctDashboardNav} variant="secondary" onPress={() => nav.navigate("ClassTestDashboard")} />
+            ) : null}
+          </View>
+        </Card>
+
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.ctMyTests}</Body>
+          {myQ.fetching ? (
+            <Loader label={STR.loading} />
+          ) : mine.length === 0 ? (
+            <Muted style={{ marginTop: space(2) }}>{STR.ctNoMyTests}</Muted>
+          ) : (
+            mine.map((t) => (
+              <View key={t.id} style={{ marginTop: space(3) }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View style={{ flexShrink: 1 }}>
+                    <Body style={{ fontWeight: "700" }}>
+                      {hwSubjectLabel(t.subject)} · {STR.ctTestNumber} {bnNum(t.testNumber)}
+                    </Body>
+                    <Muted>
+                      {t.ctId} · {new Date(t.examDate).toLocaleDateString()}
+                    </Muted>
+                  </View>
+                  <Badge
+                    text={classTestStatusLabel(t.status)}
+                    tone={t.status === "PRINTED" ? "ok" : t.status === "CANCELLED" ? "muted" : "brand"}
+                  />
+                </View>
+                {t.status === "PRINTED" ? (
+                  <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+                    <Button
+                      title={STR.ctResultsTitle}
+                      variant="secondary"
+                      onPress={() =>
+                        nav.navigate("ClassTestResults", {
+                          testId: t.id,
+                          title: `${hwSubjectLabel(t.subject)} · ${STR.ctTestNumber} ${bnNum(t.testNumber)}`,
+                        })
+                      }
+                    />
+                    <Button
+                      title={STR.ctPublishTitle}
+                      variant="ghost"
+                      onPress={() =>
+                        nav.navigate("ClassTestPublish", {
+                          testId: t.id,
+                          title: `${hwSubjectLabel(t.subject)} · ${STR.ctTestNumber} ${bnNum(t.testNumber)}`,
+                        })
+                      }
+                    />
+                  </View>
+                ) : null}
+              </View>
+            ))
+          )}
+        </Card>
+      </ScrollView>
+    </Screen>
+  );
+}
