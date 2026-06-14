@@ -25,6 +25,7 @@ import type {
   AttendanceStackParamList,
   LibraryStackParamList,
   ChatStackParamList,
+  VocabStackParamList,
   HrStackParamList,
   AdminStackParamList,
   GuardianHomeStackParamList,
@@ -96,6 +97,16 @@ import GroupManageScreen from "../screens/chat/GroupManageScreen";
 import ChatOversightScreen from "../screens/chat/ChatOversightScreen";
 import ChatOversightThreadScreen from "../screens/chat/ChatOversightThreadScreen";
 import GuardianNoticeScreen from "../screens/chat/GuardianNoticeScreen";
+import VocabHomeScreen from "../screens/vocab/VocabHomeScreen";
+import VocabWordBankScreen from "../screens/vocab/VocabWordBankScreen";
+import VocabTestsScreen from "../screens/vocab/VocabTestsScreen";
+import BuildVocabTestScreen from "../screens/vocab/BuildVocabTestScreen";
+import VocabMarkGridScreen from "../screens/vocab/VocabMarkGridScreen";
+import VocabReportScreen from "../screens/vocab/VocabReportScreen";
+import VocabStudentReportScreen from "../screens/vocab/VocabStudentReportScreen";
+import VocabClassReportScreen from "../screens/vocab/VocabClassReportScreen";
+import VocabMessagesScreen from "../screens/vocab/VocabMessagesScreen";
+import VocabAssignmentScreen from "../screens/vocab/VocabAssignmentScreen";
 import HrHomeScreen from "../screens/hr/HrHomeScreen";
 import MyLeaveScreen from "../screens/hr/MyLeaveScreen";
 import MyRecordScreen from "../screens/hr/MyRecordScreen";
@@ -419,6 +430,41 @@ function ChatNavigator(): React.ReactElement {
   );
 }
 
+const VocabStack = createNativeStackNavigator<VocabStackParamList>();
+function VocabNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <VocabStack.Navigator screenOptions={stackOptions}>
+      <VocabStack.Screen name="VocabHome" component={VocabHomeScreen} options={{ title: STR.vbHomeTitle }} />
+      <VocabStack.Screen name="VocabWordBank" component={VocabWordBankScreen} options={{ title: STR.vbWordBankTitle }} />
+      <VocabStack.Screen name="VocabTests" component={VocabTestsScreen} options={{ title: STR.vbTests }} />
+      <VocabStack.Screen name="BuildVocabTest" component={BuildVocabTestScreen} options={{ title: STR.vbNewTest }} />
+      <VocabStack.Screen
+        name="VocabMarkGrid"
+        component={VocabMarkGridScreen}
+        options={({ route }) => ({ title: route.params.title || STR.vbMarkTitle })}
+      />
+      <VocabStack.Screen
+        name="VocabReport"
+        component={VocabReportScreen}
+        options={({ route }) => ({ title: route.params.title || STR.vbReportTitle })}
+      />
+      <VocabStack.Screen
+        name="VocabStudentReport"
+        component={VocabStudentReportScreen}
+        options={({ route }) => ({ title: route.params.studentName || STR.vbStudentReportTitle })}
+      />
+      <VocabStack.Screen name="VocabClassReport" component={VocabClassReportScreen} options={{ title: STR.vbClassReportTitle }} />
+      <VocabStack.Screen
+        name="VocabMessages"
+        component={VocabMessagesScreen}
+        options={({ route }) => ({ title: route.params.title || STR.vbMessages })}
+      />
+      <VocabStack.Screen name="VocabAssignment" component={VocabAssignmentScreen} options={{ title: STR.vbAssignTitle }} />
+    </VocabStack.Navigator>
+  );
+}
+
 const HrStack = createNativeStackNavigator<HrStackParamList>();
 function HrNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -561,6 +607,10 @@ export function AppTabs(): React.ReactElement {
   const canLibrary = !!role && roleHasPermission(role, "library:read");
   // Chat (M-5): Principal/Teacher/Office hold chat:read; GUARDIAN never does.
   const canChat = !!role && roleHasPermission(role, "chat:read");
+  // Vocab (VC-5): Principal/Teacher via tracker:read (reports/build/mark); Office via
+  // roster:manage (the weekly tester assignment + message:dispatch generation). Every
+  // action is re-gated server-side. GUARDIAN never sees this staff tab.
+  const canVocab = !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
   // HR/staff tab: every logged-in staff member (Principal/Teacher/Office) — leave
   // + self-service is universal; GUARDIAN never sees it. Admin entries inside are
   // permission-gated per slice and re-checked server-side.
@@ -617,6 +667,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canChat ? (
         <Tab.Screen name="ChatTab" component={ChatNavigator} options={{ title: STR.tabChat, tabBarIcon: tabIcon("💬") }} />
+      ) : null}
+      {canVocab ? (
+        <Tab.Screen name="VocabTab" component={VocabNavigator} options={{ title: STR.tabVocab, tabBarIcon: tabIcon("🔤") }} />
       ) : null}
       {canHr ? (
         <Tab.Screen name="HrTab" component={HrNavigator} options={{ title: STR.tabHr, tabBarIcon: tabIcon("🧑‍💼") }} />

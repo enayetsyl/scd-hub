@@ -143,6 +143,21 @@ import {
   NOTIFICATION_KIND_LABELS_BN,
   NOTIFICATION_KIND_LABELS_EN,
   type NotificationKind,
+  VOCAB_PROGRAM_LABELS_BN,
+  VOCAB_PROGRAM_LABELS_EN,
+  VOCAB_DIRECTION_LABELS_BN,
+  VOCAB_DIRECTION_LABELS_EN,
+  VOCAB_TEST_STATUS_LABELS_BN,
+  VOCAB_TEST_STATUS_LABELS_EN,
+  VOCAB_ATTENDANCE_STATUS_LABELS_BN,
+  VOCAB_ATTENDANCE_STATUS_LABELS_EN,
+  VOCAB_ASSIGNMENT_SOURCE_LABELS_BN,
+  VOCAB_ASSIGNMENT_SOURCE_LABELS_EN,
+  type VocabProgram,
+  type VocabDirection,
+  type VocabTestStatus,
+  type VocabAttendanceStatus,
+  type VocabAssignmentSource,
 } from "@scd/shared";
 
 // --- Active language (module-level; read at render time) ---------------------
@@ -276,6 +291,41 @@ export const reconStateLabel = (v?: string | null): string =>
 
 export const trimRankLabel = (v?: string | null): string =>
   (v && pick(TRIM_RANK_LABELS_BN, TRIM_RANK_LABELS_EN)[v as TrimRank]) || v || DASH;
+
+// Vocabulary tracker (VC-1..VC-5)
+export const vocabProgramLabel = (v?: string | null): string =>
+  (v && pick(VOCAB_PROGRAM_LABELS_BN, VOCAB_PROGRAM_LABELS_EN)[v as VocabProgram]) || v || DASH;
+
+export const vocabDirectionLabel = (v?: string | null): string =>
+  (v && pick(VOCAB_DIRECTION_LABELS_BN, VOCAB_DIRECTION_LABELS_EN)[v as VocabDirection]) || v || DASH;
+
+export const vocabTestStatusLabel = (v?: string | null): string =>
+  (v && pick(VOCAB_TEST_STATUS_LABELS_BN, VOCAB_TEST_STATUS_LABELS_EN)[v as VocabTestStatus]) || v || DASH;
+
+export const vocabAttendanceLabel = (v?: string | null): string =>
+  (v && pick(VOCAB_ATTENDANCE_STATUS_LABELS_BN, VOCAB_ATTENDANCE_STATUS_LABELS_EN)[v as VocabAttendanceStatus]) || v || DASH;
+
+export const vocabAssignmentSourceLabel = (v?: string | null): string =>
+  (v && pick(VOCAB_ASSIGNMENT_SOURCE_LABELS_BN, VOCAB_ASSIGNMENT_SOURCE_LABELS_EN)[v as VocabAssignmentSource]) || v || DASH;
+
+/** Cumulative-period mode → label (VC-4 §9). */
+export const vocabCumulativeModeLabel = (v?: string | null): string => {
+  const en = _lang === "en";
+  return v === "WEEKLY" ? (en ? "Weekly" : "সাপ্তাহিক")
+    : v === "MONTHLY" ? (en ? "Monthly" : "মাসিক")
+    : v === "LAST_N" ? (en ? "Last N" : "সাম্প্রতিক N")
+    : v || DASH;
+};
+
+/** Guardian vocab message kind → label (VC-4 §8). */
+export const vocabMessageKindLabel = (v?: string | null): string => {
+  const en = _lang === "en";
+  return v === "perfect" ? (en ? "Perfect" : "পূর্ণ নম্বর")
+    : v === "regular" ? (en ? "Regular" : "সাধারণ")
+    : v === "absent" ? (en ? "Absent" : "অনুপস্থিত")
+    : v === "cumulative" ? (en ? "Cumulative" : "ক্রমপুঞ্জিত")
+    : v || DASH;
+};
 
 // Routine / timetable (R-1..R-3)
 export const routineSubjectLabel = (v?: string | null): string =>
@@ -1453,6 +1503,106 @@ const STR_BN = {
   hrCertIssuedOn: "ইস্যু তারিখ",
   hrCancelOffboarding: "অফবোর্ডিং বাতিল করুন",
   hrOffboardingCancelled: "অফবোর্ডিং বাতিল হয়েছে",
+
+  // Vocabulary tracker (VC-5)
+  tabVocab: "ভোকাবুলারি",
+  vbHomeTitle: "ভোকাবুলারি ট্র্যাকার",
+  vbMyAssignments: "আমার সাপ্তাহিক দায়িত্ব",
+  vbNoMyAssignments: "এই সপ্তাহে কোনো দায়িত্ব নেই।",
+  vbWordBank: "শব্দভাণ্ডার",
+  vbTests: "টেস্টসমূহ",
+  vbAssignmentNav: "সাপ্তাহিক দায়িত্ব নির্ধারণ",
+  vbClassReportNav: "শ্রেণি রিপোর্ট",
+  vbProgram: "প্রোগ্রাম",
+  vbPickProgram: "প্রোগ্রাম নির্বাচন করুন",
+  vbPickClass: "শ্রেণি নির্বাচন করুন",
+  vbPickSection: "শাখা নির্বাচন করুন",
+  // Word bank
+  vbWordBankTitle: "শব্দভাণ্ডার",
+  vbAddWord: "নতুন শব্দ",
+  vbHeadword: "শব্দ",
+  vbBanglaMeaning: "বাংলা অর্থ",
+  vbWordAdded: "শব্দ যোগ হয়েছে",
+  vbWordUpdated: "শব্দ হালনাগাদ হয়েছে",
+  vbDeactivate: "নিষ্ক্রিয় করুন",
+  vbReactivate: "সক্রিয় করুন",
+  vbInactiveBadge: "নিষ্ক্রিয়",
+  vbShowInactive: "নিষ্ক্রিয় দেখান",
+  vbNoWords: "এই শ্রেণি ও প্রোগ্রামে কোনো শব্দ নেই।",
+  vbEdit: "সম্পাদনা",
+  // Build test
+  vbNewTest: "নতুন টেস্ট",
+  vbLabel: "শিরোনাম (যেমন Set 1)",
+  vbTotalMarks: "মোট নম্বর",
+  vbHalfMiss: "শ্রুতিলিখনে আধা-ভুল আলাদা নম্বর কাটবে",
+  vbTestDate: "টেস্টের তারিখ",
+  vbTestDateHint: "খালি রাখলে সপ্তাহের বৃহস্পতিবার (ছুটি হলে পেছিয়ে)",
+  vbCreateTest: "টেস্ট তৈরি করুন",
+  vbTestCreated: "টেস্ট তৈরি হয়েছে",
+  vbLayPositions: "শব্দ নির্বাচন → প্রশ্ন সাজান",
+  vbSelectWordsForDir: "এই দিকের জন্য শব্দ নির্বাচন করুন",
+  vbPositionsSet: "প্রশ্ন সাজানো হয়েছে",
+  vbNoBankWords: "শব্দভাণ্ডার খালি — আগে শব্দ যোগ করুন।",
+  vbWordsSelected: "নির্বাচিত শব্দ",
+  // Tests list
+  vbNoTests: "কোনো টেস্ট নেই।",
+  vbMark: "মার্ক করুন",
+  vbReport: "রিপোর্ট",
+  vbMessages: "বার্তা",
+  vbWeekOf: "সপ্তাহ",
+  vbStatus: "অবস্থা",
+  // Assignment
+  vbAssignTitle: "সাপ্তাহিক টেস্টার দায়িত্ব",
+  vbAssignTester: "টেস্টার নির্ধারণ করুন",
+  vbCurrentTester: "বর্তমান টেস্টার",
+  vbAssigned: "দায়িত্ব নির্ধারিত হয়েছে",
+  vbNoAssignment: "এই সপ্তাহে কোনো টেস্টার নেই।",
+  vbAssignHistory: "ইতিহাস",
+  vbWeek: "সপ্তাহ (যেকোনো তারিখ)",
+  // Mark grid
+  vbMarkTitle: "মার্কিং গ্রিড",
+  vbPresent: "উপস্থিত",
+  vbAbsent: "অনুপস্থিত",
+  vbTapWrong: "ভুল ঘরগুলোতে চাপ দিন",
+  vbField1: "ক্ষেত্র ১",
+  vbField2: "ক্ষেত্র ২",
+  vbSubmitStudent: "এই শিক্ষার্থীর ফলাফল জমা দিন",
+  vbResultSaved: "ফলাফল সংরক্ষিত হয়েছে",
+  vbNoStudents: "এই শাখায় কোনো শিক্ষার্থী নেই।",
+  vbNoPositions: "এই টেস্টে কোনো প্রশ্ন সাজানো হয়নি — আগে প্রশ্ন সাজান।",
+  vbMarkedBadge: "মূল্যায়িত",
+  vbScore: "নম্বর",
+  // Reports
+  vbReportTitle: "টেস্ট রিপোর্ট",
+  vbStudentReportTitle: "শিক্ষার্থী রিপোর্ট",
+  vbClassReportTitle: "শ্রেণি রিপোর্ট",
+  vbPresentCount: "উপস্থিত",
+  vbAbsentCount: "অনুপস্থিত",
+  vbAvgScore: "গড় নম্বর",
+  vbMostMissed: "সবচেয়ে বেশি ভুল শব্দ",
+  vbPersistentWords: "বারবার ভুল শব্দ",
+  vbNoReportData: "এখনো কোনো ফলাফল নেই।",
+  vbWrongCount: "ভুল",
+  vbViewStudent: "শিক্ষার্থী বিস্তারিত",
+  vbCumulative: "ক্রমপুঞ্জিত",
+  vbCumulativeMode: "সময়কাল",
+  vbNumTests: "টেস্ট সংখ্যা",
+  vbMissedByPct: "ভুল করেছে",
+  vbFlagged: "চিহ্নিত",
+  vbStudentsHeading: "শিক্ষার্থীদের ফলাফল",
+  vbPerTest: "প্রতি টেস্ট",
+  // Guardian messages
+  vbGenMessages: "অভিভাবক বার্তা তৈরি করুন",
+  vbGenCumulative: "ক্রমপুঞ্জিত বার্তা তৈরি করুন",
+  vbRecipients: "প্রাপক",
+  vbSendWa: "হোয়াটসঅ্যাপে পাঠান",
+  vbNoPhone: "ফোন নম্বর নেই",
+  vbNotifiedCount: "অ্যাপে পাঠানো",
+  vbUnreachableCount: "ফোনহীন পরিবার",
+  vbGenerated: "বার্তা তৈরি হয়েছে",
+  // Guardian portal card
+  gpVocab: "ভোকাবুলারি ফলাফল",
+  gpNoVocab: "এখনো কোনো ফলাফল প্রকাশিত হয়নি।",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -2531,6 +2681,106 @@ const STR_EN: StrTable = {
   hrCertIssuedOn: "Issued on",
   hrCancelOffboarding: "Cancel offboarding",
   hrOffboardingCancelled: "Offboarding cancelled",
+
+  // Vocabulary tracker (VC-5)
+  tabVocab: "Vocabulary",
+  vbHomeTitle: "Vocabulary Tracker",
+  vbMyAssignments: "My weekly tester duty",
+  vbNoMyAssignments: "No tester duty this week.",
+  vbWordBank: "Word Bank",
+  vbTests: "Tests",
+  vbAssignmentNav: "Assign weekly tester",
+  vbClassReportNav: "Class report",
+  vbProgram: "Program",
+  vbPickProgram: "Select a program",
+  vbPickClass: "Select a class",
+  vbPickSection: "Select a section",
+  // Word bank
+  vbWordBankTitle: "Word Bank",
+  vbAddWord: "New word",
+  vbHeadword: "Headword",
+  vbBanglaMeaning: "Bangla meaning",
+  vbWordAdded: "Word added",
+  vbWordUpdated: "Word updated",
+  vbDeactivate: "Deactivate",
+  vbReactivate: "Reactivate",
+  vbInactiveBadge: "Inactive",
+  vbShowInactive: "Show inactive",
+  vbNoWords: "No words in this class & program yet.",
+  vbEdit: "Edit",
+  // Build test
+  vbNewTest: "New test",
+  vbLabel: "Label (e.g. Set 1)",
+  vbTotalMarks: "Total marks",
+  vbHalfMiss: "Dictation half-miss costs a separate mark",
+  vbTestDate: "Test date",
+  vbTestDateHint: "Blank = the week's Thursday (rolled back on a holiday)",
+  vbCreateTest: "Create test",
+  vbTestCreated: "Test created",
+  vbLayPositions: "Select words → lay out questions",
+  vbSelectWordsForDir: "Select words for this direction",
+  vbPositionsSet: "Questions laid out",
+  vbNoBankWords: "Word bank empty — add words first.",
+  vbWordsSelected: "Selected words",
+  // Tests list
+  vbNoTests: "No tests yet.",
+  vbMark: "Mark",
+  vbReport: "Report",
+  vbMessages: "Messages",
+  vbWeekOf: "Week",
+  vbStatus: "Status",
+  // Assignment
+  vbAssignTitle: "Weekly tester duty",
+  vbAssignTester: "Assign tester",
+  vbCurrentTester: "Current tester",
+  vbAssigned: "Tester assigned",
+  vbNoAssignment: "No tester assigned this week.",
+  vbAssignHistory: "History",
+  vbWeek: "Week (any date in it)",
+  // Mark grid
+  vbMarkTitle: "Marking grid",
+  vbPresent: "Present",
+  vbAbsent: "Absent",
+  vbTapWrong: "Tap the wrong cells",
+  vbField1: "Field 1",
+  vbField2: "Field 2",
+  vbSubmitStudent: "Submit this student's result",
+  vbResultSaved: "Result saved",
+  vbNoStudents: "No students in this section.",
+  vbNoPositions: "No questions laid out — lay them out first.",
+  vbMarkedBadge: "Marked",
+  vbScore: "Score",
+  // Reports
+  vbReportTitle: "Test report",
+  vbStudentReportTitle: "Student report",
+  vbClassReportTitle: "Class report",
+  vbPresentCount: "Present",
+  vbAbsentCount: "Absent",
+  vbAvgScore: "Average score",
+  vbMostMissed: "Most-missed words",
+  vbPersistentWords: "Persistent weak words",
+  vbNoReportData: "No results yet.",
+  vbWrongCount: "Wrong",
+  vbViewStudent: "Student detail",
+  vbCumulative: "Cumulative",
+  vbCumulativeMode: "Period",
+  vbNumTests: "Tests",
+  vbMissedByPct: "missed",
+  vbFlagged: "flagged",
+  vbStudentsHeading: "Student results",
+  vbPerTest: "Per test",
+  // Guardian messages
+  vbGenMessages: "Generate guardian messages",
+  vbGenCumulative: "Generate cumulative messages",
+  vbRecipients: "Recipients",
+  vbSendWa: "Send on WhatsApp",
+  vbNoPhone: "No phone number",
+  vbNotifiedCount: "In-app delivered",
+  vbUnreachableCount: "Families without a phone",
+  vbGenerated: "Messages generated",
+  // Guardian portal card
+  gpVocab: "Vocabulary results",
+  gpNoVocab: "No results published yet.",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

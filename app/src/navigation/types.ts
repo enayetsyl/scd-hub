@@ -147,6 +147,20 @@ export type HrStackParamList = {
   OffboardingCase: { caseId: string; name: string };
 };
 
+/** Vocabulary tracker (VC-5) — staff stack (tracker:read tab). */
+export type VocabStackParamList = {
+  VocabHome: undefined;
+  VocabWordBank: undefined;
+  VocabTests: undefined;
+  BuildVocabTest: undefined;
+  VocabMarkGrid: { testId: string; title: string };
+  VocabReport: { testId: string; title: string };
+  VocabStudentReport: { studentId: string; studentName: string; program?: string };
+  VocabClassReport: undefined;
+  VocabMessages: { testId: string; title: string };
+  VocabAssignment: undefined;
+};
+
 export type AdminStackParamList = {
   AdminHome: undefined;
   Import: undefined;
@@ -175,6 +189,7 @@ export type TabParamList = {
   AttendanceTab: NavigatorScreenParams<AttendanceStackParamList>;
   LibraryTab: NavigatorScreenParams<LibraryStackParamList>;
   ChatTab: NavigatorScreenParams<ChatStackParamList>;
+  VocabTab: NavigatorScreenParams<VocabStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;

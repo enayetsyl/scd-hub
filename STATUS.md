@@ -1,8 +1,33 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CT-3 MERGED** — Class Test CT-3 [#66, publish/unpublish + guardian delivery on the MT registry + childTestResults, D-#160/#161]; sole vocab owner, clean merge. Integrated gate green on main 55ecd6e: **jest 1021/1021** [60 suites], vocab PASS, shared/server tsc. Earlier this run: VC-4 #65 + CT-2 #64 [D-#153–#155/#158/#159], VC-3 #62 + CT-1 #63 [D-#142–#145], Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. In flight: VC-5 [app, dispatched — not yet PR'd]. Parked vocab-toucher: CM-1; planned standalone: CO-1. Next: CT-4 [reports/dashboards] + VC-5 [app] complete their chains)_
+_Updated: 2026-06-14 (**VC-5 MERGED — Vocabulary Tracker COMPLETE (VC-1..VC-5), server + app** — VC-5 [#67, 10 Expo app screens + guardian vocab card, APP-ONLY]. Integrated gate green on main 19500cf: **jest 1021/1021** [60 suites, unchanged], vocab PASS, shared/server/app tsc, expo web. Prior: CT-3 #66 [publish + guardian delivery, D-#160/#161], VC-4 #65 + CT-2 #64 [D-#153–#155/#158/#159], VC-3 #62 + CT-1 #63 [D-#142–#145], Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. In flight: CT-4 [reports/dashboards]. Parked vocab-toucher: CM-1; planned standalone: CO-1. Vocab module remaining = live verification only)_
 
 ## Now / next
+- **Built (Vocabulary Tracker VC-5 — Expo app, APP-ONLY, prd-vocabulary-tracker §6 VC-5 + J1–J7)
+  [branch `worktree-vocab-vc5`, PR #67 MERGED] — COMPLETES the Vocabulary Tracker
+  (VC-1..VC-5):** the app surfaces over the merged VC-1..VC-4 resolvers. **NO server / shared / vocab /
+  contract change** (proven: `git diff origin/main -- server shared` empty) — consumes existing resolvers
+  + adds client ops/labels/screens only. New **🔤 Vocab tab** gated `tracker:read` OR `roster:manage`
+  (Principal/Teacher read+build+mark; Office does the weekly assignment + message generation; GUARDIAN
+  never sees it). **10 screens (`VocabStack`):** VocabHome (hub + `myVocabAssignments`); **VocabWordBank**
+  (J1 — program×classLevel CRUD, the `assertCanManageClassLevel` reach gate surfaced); **VocabTests**
+  (browse a section×program's tests → mark/report/messages, + new-test); **BuildVocabTest** (J3 —
+  `createVocabTest` then per-direction word selection → `setVocabTestPositions`; operator-gated);
+  **VocabMarkGrid** (J4 — per-student PRESENT/ABSENT + tap-wrong cells, a 2-field DICTATION shows two
+  sub-fields via `VOCAB_DICTATION_FIELDS`, wholesale `submitVocabStudentResult`, prefilled from
+  `vocabTestResults`, derived score badge); **VocabReport** (J5 per-test rollup + students + most-missed);
+  **VocabStudentReport** (J5 per-student dashboard + persistent weak words + Weekly/Monthly/Last-N
+  cumulative toggle); **VocabClassReport** (J5 class dashboard + most-missed); **VocabMessages** (J6 —
+  `generateVocabTestMessages` + `generateVocabCumulativeMessages` → recipients with wa.me Send
+  [`Linking.openURL`, ADR-003] + in-app/unreachable counts); **VocabAssignment** (J2 — `assignVocabTester`
+  roster:manage + current/history). **Guardian portal lit up (J7):** a read-only Vocabulary-results card
+  on GuardianHome (`childVocab`, marked-tests-only per D-#155). New `components/vocabPickers.tsx`
+  (ProgramSelect/ClassLevelSelect/ClassSectionSelect) + vocab ops + BN/EN labels + helpers +
+  `VocabStackParamList`. Every surface gated on the SAME permission the server enforces — the server stays
+  the gate (Bangla deny surfaces inline). **No new build ruling needed** (pure app slice; no new
+  perm/vocab). **Gate GREEN (executed):** app `tsc --noEmit` clean + `expo export --platform web` green
+  (728 modules); no-drift — vocab verifier PASS + **jest 1006/1006 unchanged** (server untouched).
+  **Not verified live.** **Vocabulary Tracker is now fully built server + app (VC-1..VC-5).**
 - **Built (Vocabulary Tracker VC-4 — server, prd-vocabulary-tracker §6/§8/§9, J5/J6/J7, build rulings
   D-#153/#154/#155) [branch `worktree-vocab-vc4`, PR #65 MERGED]:** the FOURTH vocab slice —
   read aggregates + persistent weak words + guardian messages + the guardian child read. **Vocab (app-native,
