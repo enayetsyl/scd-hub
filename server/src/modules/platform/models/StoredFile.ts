@@ -32,7 +32,11 @@ export type StoredFileKind =
   | "chat_pdf"
   | "chat_video"
   | "chat_audio"
-  | "classtest_question";
+  | "classtest_question"
+  | "comment_image"
+  | "comment_pdf"
+  | "comment_video"
+  | "comment_audio";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -42,6 +46,10 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "chat_video",
   "chat_audio",
   "classtest_question",
+  "comment_image",
+  "comment_pdf",
+  "comment_video",
+  "comment_audio",
 ];
 
 /** The chat-attachment subset (M-4) — the read gate routes these to chat. */
@@ -50,6 +58,15 @@ export const CHAT_STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "chat_pdf",
   "chat_video",
   "chat_audio",
+];
+
+/** The student-comment attachment subset (CM-2) — the read gate routes these to
+ *  the comment file gate (author OR the child's guardian for a DELIVERED comment). */
+export const COMMENT_STORED_FILE_KINDS: readonly StoredFileKind[] = [
+  "comment_image",
+  "comment_pdf",
+  "comment_video",
+  "comment_audio",
 ];
 
 export interface IStoredFile extends Document {
@@ -65,6 +82,9 @@ export interface IStoredFile extends Document {
   /** Chat attachments only (M-4): the conversation the file was uploaded for —
    *  bound at upload (membership-gated) + matched at sendMessage. Unset for hw. */
   conversationId?: Types.ObjectId;
+  /** Student-comment attachments only (CM-2): the comment the file is bound to —
+   *  set at recordComment time so the read gate can resolve the child + delivery. */
+  studentCommentId?: Types.ObjectId;
 }
 
 const StoredFileSchema = new Schema<IStoredFile>(
@@ -77,6 +97,7 @@ const StoredFileSchema = new Schema<IStoredFile>(
     uploadedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     uploadedAt: { type: Date, required: true, default: () => new Date() },
     conversationId: { type: Schema.Types.ObjectId, ref: "Conversation" },
+    studentCommentId: { type: Schema.Types.ObjectId, ref: "StudentComment" },
   },
   { timestamps: false, versionKey: false },
 );

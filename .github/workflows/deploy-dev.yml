@@ -1,0 +1,26 @@
+name: Deploy dev
+
+# On push to dev: run the CI gate, then (if green) SSH to the VM and deploy the
+# dev instance via the same scripts/deploy.sh used for manual deploys.
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to dev over SSH
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
+            "$VM_USER@$VM_HOST" 'bash /opt/scdhub/dev/scripts/deploy.sh dev'

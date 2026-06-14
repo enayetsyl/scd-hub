@@ -1,3 +1,5 @@
+// Deploy: CI/CD via GitHub Actions (.github/workflows) — push to dev/main runs
+// the CI gate then scripts/deploy.sh on the VM (DEP-6).
 import "dotenv/config";
 import express from "express";
 import { createYoga } from "graphql-yoga";
@@ -50,6 +52,7 @@ import "./modules/vocab/resolvers/vocabSummary";
 import "./modules/vocab/resolvers/vocabGuardian";
 import "./modules/templates/resolvers/messageTemplates";
 import "./modules/comments/resolvers/studentComment";
+import "./modules/comments/resolvers/commentDelivery";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";

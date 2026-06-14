@@ -1,0 +1,42 @@
+name: CI
+
+# The single source-of-truth gate (ADR-012). Runs on every PR to dev/main, and
+# is called by the deploy workflows via workflow_call so deploys only proceed on
+# a green gate. Mirrors the local verifiers in AGENTS.md.
+on:
+  pull_request:
+    branches: [dev, main]
+  workflow_call:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install import-harness dep
+        run: pip install jsonschema
+      - name: Install deps
+        run: npm ci
+      - name: Build shared
+        run: npm run build --workspace=shared
+      - name: Typecheck shared
+        run: npm run typecheck --workspace=shared
+      - name: Typecheck server
+        run: npm run typecheck --workspace=server
+      - name: Vocab/RBAC verifier
+        run: npx tsx skills/_tools/verify_shared_vocab.mjs docs/import-contract.schema.json
+      - name: Server tests (jest)
+        run: npm run test --workspace=server
+      - name: Typecheck app
+        working-directory: app
+        run: npx tsc --noEmit
+      - name: Expo web export
+        working-directory: app
+        run: npx expo export --platform web
