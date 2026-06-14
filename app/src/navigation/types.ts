@@ -187,6 +187,9 @@ export type AdminStackParamList = {
   StaffCredentials: undefined;
   MessageTemplates: undefined;
   MessageTemplateEdit: { key: string; labelBn: string };
+  // Access Control (AC-2): per-user permission editor (access:manage / Principal).
+  AccessControlUsers: undefined;
+  AccessControlEdit: { userId: string; name: string; role: string };
   SectionPicker: undefined;
 };
 

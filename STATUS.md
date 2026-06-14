@@ -1,8 +1,28 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two server slices landed this cycle, integrated gate green: **jest 1198/1198 [70 suites]**, vocab verifier PASS incl. §C.17, shared/server tsc clean. **CM-5** (PR #78) — Comments: `MeetingComment` + comparison timeline + guardian `childComments`/`childMeetingSlot`, VOCAB-FREE, D-#124 governing + D-#202 ruling; coordinator 3-finder review = no fixes (comparison reads' reps-gate is intentional per PRD §8). **AC-1** (PR #79) — Per-user Access Control: role→template seam swap (`schema.ts` + ALL ~30 production `roleHasPermission(ctx.auth.role,…)` → `callerHasPermission(ctx.auth,…)`), 3 additive `User` fields ZERO-migration, `access:manage` RESERVED-locked, D-#193 + D-#210–#215; sole vocab owner; coordinator 6-finder review = no fixes (byte-identical proof = every prior RBAC test green; verifier §C.17). Merged CM-5 first, AC-1 last (highest blast radius, keep-both append-logs + index/Audit union). **Non-blocking follow-ups recorded:** (1) AC per-user changes apply on the target's NEXT login (JWT-baked, ≤8h TTL — D-#211; relevant to AC-2 UX); (2) `effectivePermissions` recomputes per gate — future per-request memo if profiling warrants; (3) CM-5 comparison timeline is wider than CM-1 section-scope (reps gate, by PRD design). Prior — **CT-4-FIX MERGED** [jest 1165, D-#196]. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), Saturday-Revision (D-#197–#201). In flight: CO-2. Next: AC-2 (app editor), CM-6 (Comments app slice). Carried follow-up: NONE outstanding)_
+_Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two server slices landed this cycle, integrated gate green: **jest 1198/1198 [70 suites]**, vocab verifier PASS incl. §C.17, shared/server tsc clean. **CM-5** (PR #78) — Comments: `MeetingComment` + comparison timeline + guardian `childComments`/`childMeetingSlot`, VOCAB-FREE, D-#124 governing + D-#202 ruling; coordinator 3-finder review = no fixes (comparison reads' reps-gate is intentional per PRD §8). **AC-1** (PR #79) — Per-user Access Control: role→template seam swap (`schema.ts` + ALL ~30 production `roleHasPermission(ctx.auth.role,…)` → `callerHasPermission(ctx.auth,…)`), 3 additive `User` fields ZERO-migration, `access:manage` RESERVED-locked, D-#193 + D-#210–#215; sole vocab owner; coordinator 6-finder review = no fixes (byte-identical proof = every prior RBAC test green; verifier §C.17). Merged CM-5 first, AC-1 last (highest blast radius, keep-both append-logs + index/Audit union). **Non-blocking follow-ups recorded:** (1) AC per-user changes apply on the target's NEXT login (JWT-baked, ≤8h TTL — D-#211; relevant to AC-2 UX); (2) `effectivePermissions` recomputes per gate — future per-request memo if profiling warrants; (3) CM-5 comparison timeline is wider than CM-1 section-scope (reps gate, by PRD design). Prior — **CT-4-FIX MERGED** [jest 1165, D-#196]. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), Saturday-Revision (D-#197–#201). In flight: CO-2. AC-2 DONE (app editor — Access Control fully built server + app). Next: CM-6 (Comments app slice), HR-G2 (server). Carried follow-up: NONE outstanding)_
 
 ## Now / next
+- **Built (Access Control AC-2 — app, Expo, prd-access-control §6 + J-AC1..J-AC3) [branch
+  `claude/open-prds-nl0az4`] — COMPLETES Access Control (AC-1 server + AC-2 app):** the Principal-only
+  per-user permission editor over the merged AC-1 resolvers. **APP-ONLY: no server/shared/vocab/contract
+  change** (`git diff origin/dev -- server shared` empty; vocab verifier PASS unchanged). New
+  `app/src/graphql/accessControl.ts` (typed ops over the 5 AC mutations + the `userEffectiveAccess` read;
+  kept out of operations.ts — the classTest.ts precedent). **Two AdminStack screens:** `AccessControlUsers`
+  (staff picker via the existing `users` query, **GUARDIAN excluded** — the J-AC4 wall; tap → editor) and
+  `AccessControlEdit` (per staff user: primary-role badge + additional-template chips [TEACHER/OFFICE, minus
+  the primary role] → `setUserAdditionalTemplates`; every live `PERMISSIONS` entry grouped by `resource:`
+  module, each row showing a **provenance badge** — টেমপ্লেট থেকে / যোগ করা হয়েছে / সরানো হয়েছে / সংরক্ষিত —
+  + an on/off toggle). **The server is the gate:** each tap fires ONE `access:manage` mutation and the screen
+  re-seeds from the returned server-derived effective set, so "a revoke always wins" + the reserved backstop
+  reflect without client guessing; the toggle resolves to add-grant / remove-grant / add-revoke / remove-revoke
+  relative to the client-computed template baseline (`permissionsForRole`); RESERVED-locked rows (non-Principal)
+  are non-toggleable; Bangla 422s surface inline. AdminHome entry gated `access:manage` (RESERVED-locked +
+  Principal-only → `roleHasPermission` exact). New BN/EN `ac*` labels + `permissionName`/`permissionDesc`/
+  `permissionModuleLabel` helpers over `PERMISSION_LABELS_BN/_EN`. No DECISIONS row (straightforward app slice —
+  the CT-5/VC-5 posture). **Gate GREEN (executed):** app `tsc --noEmit` clean + `expo export --platform web`
+  green (752 modules); no-drift = vocab verifier PASS + server/shared untouched + jest unchanged. **Not verified
+  live.** **Access Control is now fully built server + app (AC-1 + AC-2).**
 - **Planned (HR-G2 — teacher-readable staff directory, prd-hr §H8, D-#216/#217):** design ratified (docs
   only — nothing built). `staffDirectory(observableOnly: Boolean = false)` → a PII-free `StaffDirectoryEntry
   {id, name, nameBn, designation, category}` (a distinct read shape that STRUCTURALLY omits all H1.4
