@@ -97,6 +97,7 @@ export type AuditEventKind =
   | "CLASSROOM_OBSERVATION_RESPONDED"  // the observed teacher acknowledged a released observation → TEACHER_RESPONDED (CO-3)
   | "CLASSROOM_OBSERVATION_ESCALATED"  // the response ladder flagged a still-unanswered observation to the Principal (CO-3)
   | "OBSERVATION_ESCALATION_CONFIG_SET" // an admin edited the response-escalation cadence thresholds (CO-3, observation:manage)
+  | "OBSERVATION_SCHEDULE_CONFIG_SET" // an admin edited the review-scheduler cadence (base interval + per-tier multipliers + frequency cap) (CO-6, observation:manage)
   | "SESSION_RECORDING_ADDED"          // CO-2 footage linked to an observation
   | "PARENT_MEETING_CREATED"    // an admin created a parents' meeting in draft (CM-3, §3/§6, D-#123)
   | "PARENT_MEETING_SLOTS_GENERATED" // per-family slots (re)generated wholesale for a meeting (CM-3, J-CM3, D-#175)

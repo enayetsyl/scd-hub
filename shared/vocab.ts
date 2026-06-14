@@ -1733,8 +1733,8 @@ export const COMMENT_SENTIMENT_LABELS_EN: Record<CommentSentiment, string> = {
 // behind the ADR-005 firewall. Additive + disjoint from every other enum (AGENTS
 // rule 5). CO-1 ships the REF-11 FORM enums + the pipeline state + the four new
 // permissions; CO-5 adds the Quran (ClassEcho) payload enums (QURAN_REVIEW_CRITERIA /
-// QURAN_COMPLIANCE_ITEMS — below, after GROWTH_PROGRESS). The scheduler SUPPORT_TIERS
-// remain deferred to CO-6.
+// QURAN_COMPLIANCE_ITEMS — below, after GROWTH_PROGRESS). CO-6 lands the scheduler
+// SUPPORT_TIERS (below, after the Quran payload enums).
 //
 // The REF-11 rubric is curriculum-owned + LOCKED (Project 00/07, D-#146); the labels
 // below are the NON-AUTHORITATIVE §3 echo the app carries for operational structure +
@@ -1934,6 +1934,30 @@ export const QURAN_COMPLIANCE_ITEM_LABELS_EN: Record<QuranComplianceItem, string
  *  there is NO total/average (the REF-11 posture). */
 export const QURAN_REVIEW_SCORE_MIN = 1;
 export const QURAN_REVIEW_SCORE_MAX = 5;
+
+// --- A.16c REVIEW-SCHEDULER SUPPORT TIER (CO-6, prd-classroom-observation §CO-6) -
+// The review scheduler derives a support TIER per teacher from their recent released
+// reviews (REF-11 domains-at-≥3 vs 2/1 + a recent gate BREACH; Quran = avg rating +
+// compliance ratio) and maps the tier → a review interval (Strong = longest cadence,
+// Developing = base, Needs-support = shortest). App-native, NO wire twin (D-#46) —
+// the same identity/operational plane behind the ADR-005 firewall. The tier is a
+// support signal, NEVER a ranking, and is derived from review DATA only (§CO-6).
+
+/** The review-cadence support tier (CO-6, §CO-6), derived per teacher from recent
+ *  released reviews. Drives the interval: STRONG = longest cadence, DEVELOPING =
+ *  base, NEEDS_SUPPORT = shortest (most frequent). A support signal, not a ranking. */
+export const SUPPORT_TIERS = ["STRONG", "DEVELOPING", "NEEDS_SUPPORT"] as const;
+export type SupportTier = (typeof SUPPORT_TIERS)[number];
+export const SUPPORT_TIER_LABELS_BN: Record<SupportTier, string> = {
+  STRONG: "সুদৃঢ়",
+  DEVELOPING: "বিকাশমান",
+  NEEDS_SUPPORT: "সহায়তা-প্রয়োজন",
+};
+export const SUPPORT_TIER_LABELS_EN: Record<SupportTier, string> = {
+  STRONG: "Strong",
+  DEVELOPING: "Developing",
+  NEEDS_SUPPORT: "Needs support",
+};
 
 
 // =============================================================================
