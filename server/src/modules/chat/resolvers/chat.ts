@@ -7,7 +7,7 @@
  * (oversight, audited) + the guardian-notice composer below.
  */
 import { builder } from "../../../schema";
-import { POSTING_POLICIES, NOTICE_SCOPES, roleHasPermission, type PostingPolicy, type Role } from "@scd/shared";
+import { POSTING_POLICIES, NOTICE_SCOPES, callerHasPermission, type PostingPolicy } from "@scd/shared";
 import { User } from "../../foundation/models/User";
 import type { IConversation } from "../models/Conversation";
 import type { IChatMessage } from "../models/ChatMessage";
@@ -335,7 +335,7 @@ builder.mutationField("sendMessage", (t) =>
         replyToId: args.replyToId ?? undefined,
         attachmentIds: args.attachmentIds ?? undefined,
         // ANNOUNCEMENT gate (M-2, D-#78): managers may post, others are blocked.
-        canManage: roleHasPermission(ctx.auth!.role as Role, "chat:manage"),
+        canManage: callerHasPermission(ctx.auth!, "chat:manage"),
       });
       // M-7: push to the other members (best-effort, fire-and-forget — never
       // delays or blocks the send; the message is already persisted).
@@ -387,7 +387,7 @@ builder.mutationField("forwardMessage", (t) =>
         toConversationId: args.toConversationId,
         senderId: ctx.auth!.userId,
         // ANNOUNCEMENT gate on the target (M-2, D-#78) — same rule as sendMessage.
-        canManage: roleHasPermission(ctx.auth!.role as Role, "chat:manage"),
+        canManage: callerHasPermission(ctx.auth!, "chat:manage"),
       });
       // M-7: push to the target conversation's other members (best-effort).
       void pushNewChatMessage(msg);
@@ -638,7 +638,7 @@ builder.mutationField("composeGuardianNotice", (t) =>
         throw new Error("Invalid notice scope");
       }
       const scope = args.scope as "SCHOOL" | "SECTION";
-      const canManage = roleHasPermission(ctx.auth!.role as Role, "chat:manage");
+      const canManage = callerHasPermission(ctx.auth!, "chat:manage");
 
       // Authorization lands the D-#45 parent-comms duty (deny → ForbiddenError).
       await assertCanComposeNotice(ctx, { scope, sectionId: args.sectionId ?? null, canManage });

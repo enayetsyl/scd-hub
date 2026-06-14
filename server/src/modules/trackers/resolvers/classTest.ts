@@ -16,7 +16,7 @@
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
-import { roleHasPermission } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import {
   createRequest as createRequestSvc,
@@ -45,7 +45,7 @@ import type { Types } from "mongoose";
 /** Office / Principal — the print operator (mark-printed / cancel). */
 function assertPrintAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!roleHasPermission(ctx.auth.role as Role, "roster:manage")) {
+  if (!callerHasPermission(ctx.auth, "roster:manage")) {
     throw new ForbiddenError("ক্লাস টেস্ট ছাপানো/বাতিল অফিস/অধ্যক্ষের কাজ");
   }
 }
@@ -55,7 +55,7 @@ function assertStaffRead(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role as Role;
   if (role === "PRINCIPAL" || role === "OFFICE") return;
-  if (roleHasPermission(role, "tracker:read")) return;
+  if (callerHasPermission(ctx.auth, "tracker:read")) return;
   throw new ForbiddenError();
 }
 

@@ -10,15 +10,14 @@ import { Router as createRouter } from "express";
 import { ContentArtifact } from "../modules/content/models/ContentArtifact";
 import { markdownToPdf } from "./pdfRenderer";
 import { buildContext } from "../context";
-import { roleHasPermission } from "@scd/shared";
-import type { Role } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 
 export const pdfRouter: Router = createRouter();
 
 pdfRouter.get("/artifact/:id", async (req: Request, res: Response) => {
   // Auth check: require content:read
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !roleHasPermission(ctx.auth.role as Role, "content:read")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "content:read")) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }

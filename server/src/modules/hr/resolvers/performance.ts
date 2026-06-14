@@ -21,7 +21,7 @@
  */
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
-import { roleHasPermission, type Role, type AppraisalOutcome, type ConductStage, type GrievanceStatus } from "@scd/shared";
+import { callerHasPermission, type AppraisalOutcome, type ConductStage, type GrievanceStatus } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { resolveStaffProfileForUser } from "../services/staffMatch";
 import { userCanObserve } from "../services/observationScope";
@@ -59,10 +59,10 @@ import type { IDevelopmentLog } from "../models/DevelopmentLog";
 // ---------------------------------------------------------------------------
 
 function hasManage(ctx: AppContext): boolean {
-  return ctx.auth !== null && roleHasPermission(ctx.auth.role as Role, "performance:manage");
+  return ctx.auth !== null && callerHasPermission(ctx.auth, "performance:manage");
 }
 function hasSignoff(ctx: AppContext): boolean {
-  return ctx.auth !== null && roleHasPermission(ctx.auth.role as Role, "performance:signoff");
+  return ctx.auth !== null && callerHasPermission(ctx.auth, "performance:signoff");
 }
 
 /** The caller's own StaffProfile id (own-row self-service), or throw. */

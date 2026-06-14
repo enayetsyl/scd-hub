@@ -1,8 +1,37 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CM-5 BUILT, PR open** — Comments CM-5 [MeetingComment + comparison timeline + guardian childComments/childMeetingSlot reads, server, **VOCAB-FREE**, D-#124 + build ruling D-#202] on `worktree-comments-cm5`. Gate green: **jest 1180/1180** [69 suites], vocab verifier PASS [UNTOUCHED — `git diff origin/main -- shared` empty], shared/server tsc. Coordinator reviews + merges (base main, main-direct flow). Prior: **CT-4-FIX MERGED** [jest 1165, D-#196], CM-4 #76, CO-1 #75 [D-#194/#195], CM-3 #74, HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70, VC-5, MT #61, HR app. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), per-user Access-control (D-#193), Saturday-Revision (D-#197–#201). In flight: CO-2. Next CM = CM-6 (the Expo app slice over CM-1..CM-5 — completes the module). Carried follow-up: NONE outstanding)_
+_Updated: 2026-06-14 (**AC-1 BUILT** — Per-user Access Control server slice on `worktree-access-control-ac1`, PR open [base main]; coordinator reviews/merges LAST of the in-flight slices [highest blast radius — the RBAC seam]. Role→template seam swap: `schema.ts` + ALL ~30 production `roleHasPermission(ctx.auth.role,…)` call sites → `callerHasPermission(ctx.auth,…)`; **jest 1183/1183 [69 suites, +18 over the 1165 base], every prior RBAC test green = byte-identical proof at scale**; vocab verifier PASS incl. §C.17; shared/server tsc clean. Sole vocab owner this cycle. AC-2 [app editor] next. Prior — **CT-4-FIX MERGED** — the carried CT-4 dashboard/reports RBAC follow-up: the four read aggregates now gate `authScopes: { authenticated: true }` + resolver gate helpers enforce [`assertChaseAdmin` pattern], so OFFICE can read dashboard/reports per §6/§9 + D-#166 — server-only, vocab-free, NO permission change, **D-#196 [renumbered at merge from #186, which the Finance REQ D-#186–#192 took on main]**. Merged to MAIN (main-direct). Integrated gate green: **jest 1165/1165**, vocab PASS, shared/server tsc. Prior: CM-4 #76, CO-1 #75 [D-#194/#195], CM-3 #74, HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70, VC-5, MT #61, HR app. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), per-user Access-control (D-#193). In flight: CM-5; CO-2. Carried follow-up: NONE outstanding [CT-4 RBAC now fixed])_
 
 ## Now / next
+- **Built (Access Control AC-1 — server, prd-access-control §4/§5/§6, J-AC1..J-AC6, D-#193 + build rulings
+  D-#210–#215) [branch `worktree-access-control-ac1`, PR open — coordinator reviews HARD, merges AC-1 LAST of
+  the three in-flight slices, highest blast radius]:** role stops being the final word on permissions → it
+  becomes an editable-per-person **TEMPLATE**; the single RBAC resolution seam is recomputed. **The seam (the
+  only behavioural change):** a PURE pair `effectivePermissions(AccessProfile)` / `callerHasPermission` in
+  `shared/vocab.ts` (D-#210 — `eff = (∪[role,...additionalTemplates] ∪ granted) − revoked`, then `− RESERVED`
+  for any non-Principal; `roleHasPermission`/`permissionsForRole` RETAINED for templates). Swapped `schema.ts`
+  `hasPermission` + **ALL ~30 production `roleHasPermission(ctx.auth.role,…)` call sites → `callerHasPermission(ctx.auth,…)`**
+  (tests still call `roleHasPermission` — they test the retained template fn = the byte-identical proof at scale).
+  **AuthPayload threading (D-#211):** the three arrays ride the JWT (baked at staff login in `AuthService`, read
+  in `context.ts` onto `AuthPayload extends AccessProfile`; absent ⇒ empty ⇒ identical-to-today; a grant/revoke
+  change applies on next login [≤8h TTL], the READ is live; GUARDIAN token never carries them — the wall, J-AC4).
+  **Model (additive, ZERO migration — D-#215):** 3 optional `User` fields `additionalTemplates`/`grantedPermissions`/
+  `revokedPermissions` (default []; no backfill on the shared Atlas). **Vocab (app-native, NO wire sync — SOLE
+  owner this cycle):** `PERMISSIONS += access:manage` (PRINCIPAL-only, BUILD, RESERVED-locked — the `template:manage`
+  posture) + PRINCIPAL grant; new `RESERVED_PERMISSIONS` (the five) + `ASSIGNABLE_TEMPLATES` ({TEACHER, OFFICE})
+  consts; `PERMISSION_LABELS_BN/_EN` (name + desc, total over PERMISSIONS) + new verifier **§C.17** (access:manage
+  exact-holder + RESERVED exact-five-and-none-in-TEACHER/OFFICE + ASSIGNABLE excludes PRINCIPAL/GUARDIAN +
+  byte-identical seam + labels total). **New `modules/access-control/`:** `AccessControlService` (set-templates
+  [TEACHER/OFFICE only], add/remove-grant [**RESERVED + guardian:read_child REJECTED at write-time, Bangla 422 —
+  D-#213**], add/remove-revoke [revoke wins], `effectiveUserAccess` read) + resolver (5 mutations + 1 query, all
+  `access:manage`). 1 audit kind `USER_ACCESS_CHANGED` (prior+new {templates,granted,revoked} snapshot per change —
+  D-#214); new access-control firewall block (corpus ⇄ access-control, both ways). **Guardian wall (J-AC4):** staff
+  perms ungrantable to a Guardian (the model governs the staff User only). **Gate GREEN (executed):** vocab verifier
+  PASS (incl. §C.17), shared build + shared/server tsc clean, **jest 1183/1183** (69 suites; +1 new suite
+  `accessControl.test.ts` [16] + 1 firewall check over the 1165 base; **every prior RBAC test stayed green = the
+  byte-identical proof at scale**; firewall green). **Server-only** (the Principal editor screen is AC-2, app).
+  **Not verified live.** **Next = AC-2** (app: per-user editor with template chips + per-permission provenance
+  state [from-template / added / removed / locked]).
 - **Built (Student Comments + Parents-Meeting CM-5 — server, prd-comments-meetings §3/§6/§8, J-CM6/J-CM7/J-CM8,
   D-#124 + build ruling D-#202) [branch `worktree-comments-cm5`, PR open — coordinator reviews]:** the FIFTH CM
   slice — the class-teacher `MeetingComment` + the cross-meeting comparison reads + the guardian portal reads.

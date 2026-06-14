@@ -45,7 +45,7 @@ import {
   librarianHistory,
   currentLibrarianIds,
 } from "../services/LibrarianService";
-import { roleHasPermission, type Role } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 
 // ---------------------------------------------------------------------------
 // Shapes
@@ -273,7 +273,7 @@ builder.queryField("amILibrarian", (t) =>
     authScopes: { authenticated: true },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) return false;
-      if (roleHasPermission(ctx.auth.role as Role, "library:manage")) return true;
+      if (callerHasPermission(ctx.auth, "library:manage")) return true;
       return ctx.auth.role === "TEACHER" && (await isAssignedLibrarian(ctx.auth.userId));
     },
   }),

@@ -555,6 +555,38 @@ describe("Classroom-observation firewall (ADR-005 / CO-1, D-#146)", () => {
   });
 });
 
+/**
+ * Access-control firewall (AC-1, D-#193 / prd-access-control §12).
+ *
+ * The per-user access fields live on the identity-plane staff `User` (ADR-005). The
+ * access-control module reads/writes `User` + the append-only audit — strictly identity
+ * plane, NO corpus path. Fail-closed both ways: the access-control module must have NO
+ * import path into the corpus plane, and the corpus module must have NO import path into
+ * the access-control module or its service (no analytics/export join back to who can do what).
+ */
+describe("Access-control firewall (ADR-005 / AC-1, D-#193)", () => {
+  const accessDir = path.resolve(__dirname, "../modules/access-control");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("access-control module has NO import from the corpus plane", () => {
+    const files = walkDir(accessDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (AC-1 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the access-control module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/access-control"));
+      expect(content).not.toMatch(importPattern("services/AccessControlService"));
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;

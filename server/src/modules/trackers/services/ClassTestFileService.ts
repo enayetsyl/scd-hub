@@ -14,7 +14,7 @@
  * StoredFile.uploadedBy identity is the requesting teacher without a ClassTest
  * join. No new permission — composes roster:manage + ownership (D-#94/#144).
  */
-import { roleHasPermission, type Role } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import type { IStoredFile } from "../../platform/models/StoredFile";
@@ -25,7 +25,7 @@ export async function assertClassTestFileReadAccess(
 ): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("অনুমতি নেই");
   // Office / Principal — the print operator opens the paper to print it.
-  if (roleHasPermission(ctx.auth.role as Role, "roster:manage")) return;
+  if (callerHasPermission(ctx.auth, "roster:manage")) return;
   // The requesting teacher — the file's own uploader.
   if (file.uploadedBy.toString() === ctx.auth.userId) return;
   throw new ForbiddenError("এই প্রশ্নপত্র দেখার অনুমতি নেই");

@@ -10,7 +10,7 @@
  * NO fines, no money fields (D-#27). All identity-plane (ADR-005).
  */
 import { builder } from "../../../schema";
-import { roleHasPermission, type Role, BORROWER_TYPES, LOAN_STATUSES } from "@scd/shared";
+import { callerHasPermission, BORROWER_TYPES, LOAN_STATUSES } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import { LibraryError } from "../errors";
@@ -241,7 +241,7 @@ async function decorateReservations(rows: ReservationShape[]): Promise<Reservati
 // ---------------------------------------------------------------------------
 
 function requireLibraryRead(ctx: AppContext): void {
-  if (!ctx.auth || !roleHasPermission(ctx.auth.role as Role, "library:read")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "library:read")) {
     throw new ForbiddenError();
   }
 }
