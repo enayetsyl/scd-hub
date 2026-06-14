@@ -3,6 +3,20 @@
 _Updated: 2026-06-14 (**CT-4-FIX MERGED** — the carried CT-4 dashboard/reports RBAC follow-up: the four read aggregates now gate `authScopes: { authenticated: true }` + resolver gate helpers enforce [`assertChaseAdmin` pattern], so OFFICE can read dashboard/reports per §6/§9 + D-#166 — server-only, vocab-free, NO permission change, **D-#196 [renumbered at merge from #186, which the Finance REQ D-#186–#192 took on main]**. Merged to MAIN (main-direct). Integrated gate green: **jest 1165/1165**, vocab PASS, shared/server tsc. Prior: CM-4 #76, CO-1 #75 [D-#194/#195], CM-3 #74, HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70, VC-5, MT #61, HR app. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), per-user Access-control (D-#193). In flight: CM-5; CO-2. Carried follow-up: NONE outstanding [CT-4 RBAC now fixed])_
 
 ## Now / next
+- **Planned (Saturday Revision Tracker — Qur'an Hifz, module REQ written, D-#197–#201):**
+  REQ scoped in docs/saturday-revision-requirements.md — replaces the paper শিক্ষার্থীর পাঠ
+  সম্পাদন রিপোর্ট (weekly Saturday Hifz revision sheet). Per student × Saturday: present/absent +
+  the 3 revision types (Sabaq/Sabqi/Manzil) recorded **per juz** (juz 1–30 × amountJuz × তানবীহ/ফাতহ
+  × structured mistake counts হরফ/গুন্নাহ/মাদ/অন্যান্য) + teacher comment. **Reuses routine's Quran
+  `SubjectGroup` (track=quran, Hifz 1/2/3, gender-split) + `SubjectGroupMembership` roster + the
+  `QURAN_ONLY` Saturday calendar (D-#48/#56/#50) — NO new grouping/roster/calendar.** Hifz-only
+  (Qaida/Ammapara/Najera deferred — not juz-memorized). Guardian delivery on the existing rails
+  (wa.me + emit + push, MT-registry bodies): absent alert + weekly digest + consecutive-absence
+  escalation. Principal analytics ALL derived (D-#85): per-juz weakness heatmap, coverage/rotation,
+  weekly trends, level/student dashboards, charts, completeness-chase. Reuse RBAC (no new role,
+  D-#17/#94); app-native vocab, NO wire sync (AGENTS rule 5). Identity plane (ADR-005). Plan/docs
+  only — nothing built. **Next = build SR-1 (models + entry + reads, server) per
+  docs/saturday-revision-requirements.md §5, slice order SR-1→SR-4 (separate session).**
 - **Built (CT-4-FIX — Class Test dashboard/reports RBAC, server, D-#196 [renumbered from #186 at merge — Finance REQ took #186]) [branch `worktree-ct4-rbac-fix`, PR #77 MERGED]:** the pre-existing CT-4 RBAC bug flagged at the CT-5 app review. The four
   CT-4 READ aggregates (`classTestPrincipalDashboard`, `classTestReportsStatus`,
   `classTestClassSubjectAnalysis`, `classTestStudentProfile`) gated `authScopes: { hasPermission:
