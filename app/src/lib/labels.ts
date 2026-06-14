@@ -170,6 +170,12 @@ import {
   PERMISSION_LABELS_BN,
   PERMISSION_LABELS_EN,
   type Permission,
+  COMMENT_TYPE_LABELS_BN,
+  COMMENT_TYPE_LABELS_EN,
+  COMMENT_SENTIMENT_LABELS_BN,
+  COMMENT_SENTIMENT_LABELS_EN,
+  type CommentType,
+  type CommentSentiment,
 } from "@scd/shared";
 
 // --- Active language (module-level; read at render time) ---------------------
@@ -393,6 +399,30 @@ export const vocabMessageKindLabel = (v?: string | null): string => {
     : v === "absent" ? (en ? "Absent" : "অনুপস্থিত")
     : v === "cumulative" ? (en ? "Cumulative" : "ক্রমপুঞ্জিত")
     : v || DASH;
+};
+
+// Student Comments + Parents-Meeting (CM-6)
+export const commentTypeLabel = (v?: string | null): string =>
+  (v && pick(COMMENT_TYPE_LABELS_BN, COMMENT_TYPE_LABELS_EN)[v as CommentType]) || v || DASH;
+
+export const commentSentimentLabel = (v?: string | null): string =>
+  (v && pick(COMMENT_SENTIMENT_LABELS_BN, COMMENT_SENTIMENT_LABELS_EN)[v as CommentSentiment]) || v || DASH;
+
+/** Parent-meeting status (model-local literal union draft/scheduled/closed) → label. */
+export const meetingStatusLabel = (v?: string | null): string => {
+  const en = _lang === "en";
+  return v === "draft" ? (en ? "Draft" : "খসড়া")
+    : v === "scheduled" ? (en ? "Scheduled" : "নির্ধারিত")
+    : v === "closed" ? (en ? "Closed" : "সমাপ্ত")
+    : v || DASH;
+};
+
+/** Minutes-from-midnight → "HH:MM" (slotTime / dayStartMinutes), localized digits. */
+export const minutesToHHMM = (m?: number | null): string => {
+  if (m == null) return DASH;
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${bnNum(String(h).padStart(2, "0"))}:${bnNum(String(mm).padStart(2, "0"))}`;
 };
 
 // Routine / timetable (R-1..R-3)
@@ -1794,6 +1824,99 @@ const STR_BN = {
   acSaved: "সংরক্ষিত হয়েছে।",
   acOn: "চালু",
   acOff: "বন্ধ",
+
+  // Student Comments + Parents-Meeting (CM-6)
+  tabComments: "মন্তব্য",
+  cmHomeTitle: "মন্তব্য ও অভিভাবক সভা",
+  cmDailyComments: "দৈনিক মন্তব্য",
+  cmDailyCommentsSub: "শিক্ষার্থীর দৈনিক মন্তব্য লিখুন ও অভিভাবককে পাঠান",
+  cmMeetings: "অভিভাবক সভা",
+  cmMeetingsSub: "সভা তৈরি, স্লট বণ্টন ও দিনের সমন্বয়",
+  cmType: "ধরন",
+  cmSentiment: "প্রকৃতি",
+  cmText: "মন্তব্য",
+  cmTextPlaceholder: "শিক্ষার্থী সম্পর্কে মন্তব্য লিখুন…",
+  cmPickSection: "শাখা নির্বাচন করুন",
+  cmNoSection: "একটি শাখা নির্বাচন করুন।",
+  cmNoStudents: "এই শাখায় কোনো শিক্ষার্থী নেই।",
+  cmStudents: "শিক্ষার্থী",
+  cmNewComment: "নতুন মন্তব্য",
+  cmCommentsFor: "মন্তব্যসমূহ",
+  cmNoComments: "এখনো কোনো মন্তব্য নেই।",
+  cmEntryTitle: "মন্তব্য এন্ট্রি",
+  cmSave: "মন্তব্য সংরক্ষণ",
+  cmSaved: "মন্তব্য সংরক্ষিত হয়েছে",
+  cmEditComment: "মন্তব্য সম্পাদনা",
+  cmDeliver: "অভিভাবককে পাঠান",
+  cmDelivered: "পাঠানো হয়েছে",
+  cmDeliveredBadge: "পাঠানো হয়েছে",
+  cmDraftBadge: "খসড়া",
+  cmDeliveredLocked: "পাঠানোর পর মন্তব্য আর পরিবর্তন করা যায় না।",
+  cmAttach: "সংযুক্তি যোগ করুন",
+  cmAttachFirst: "সংযুক্তি যোগ করতে আগে মন্তব্যটি সংরক্ষণ করুন।",
+  cmAttachments: "সংযুক্তি",
+  cmOpenAttachment: "সংযুক্তি খুলুন",
+  cmAttachWebOnly: "সংযুক্তি এই মুহূর্তে শুধু ওয়েবে খোলা যায়।",
+  cmFileUploadFail: "এই মুহূর্তে ফাইলটি আপলোড করা যাচ্ছে না — পরে আবার চেষ্টা করুন",
+  cmUnreachable: "ফোন নেই",
+  cmNotified: "ইন-অ্যাপ পাঠানো হয়েছে",
+  cmOpenWa: "হোয়াটসঅ্যাপ",
+  // Meetings list + create
+  cmMeetingsTitle: "অভিভাবক সভা",
+  cmNewMeeting: "নতুন সভা",
+  cmInstanceLabel: "সভার শিরোনাম (যেমন ২০২৬ — ১ম)",
+  cmMeetingDate: "সভার তারিখ",
+  cmSlotMinutes: "প্রতি পরিবারের সময় (মিনিট)",
+  cmDayStartMinutes: "শুরুর সময় (মিনিট, মধ্যরাত থেকে)",
+  cmDayStartHint: "যেমন সকাল ৯টা = ৫৪০",
+  cmCreateMeeting: "সভা তৈরি করুন",
+  cmMeetingCreated: "সভা তৈরি হয়েছে",
+  cmNoMeetings: "কোনো সভা নেই।",
+  cmManage: "পরিচালনা",
+  // Meeting admin
+  cmMeetingAdminTitle: "সভা পরিচালনা",
+  cmGenerateSlots: "স্লট তৈরি করুন",
+  cmSlotsGenerated: "স্লট তৈরি হয়েছে",
+  cmFamilies: "পরিবার",
+  cmReachable: "পৌঁছানো যাবে",
+  cmSlots: "স্লট",
+  cmNoSlots: "এখনো কোনো স্লট নেই — আগে স্লট তৈরি করুন।",
+  cmOrder: "ক্রম",
+  cmSlotTime: "সময়",
+  cmOnCall: "ডাকা হলে আসবেন (On Call)",
+  cmSetOnCall: "On Call করুন",
+  cmUnsetOnCall: "সময় নির্ধারণ করুন",
+  cmMoveUp: "উপরে",
+  cmMoveDown: "নিচে",
+  cmDispatch: "সময়সূচি পাঠান",
+  cmDispatched: "সময়সূচি পাঠানো হয়েছে",
+  cmDispatchedBadge: "পাঠানো হয়েছে",
+  cmAttendance: "উপস্থিতি",
+  cmPresent: "উপস্থিত",
+  cmAbsent: "অনুপস্থিত",
+  cmAttendanceRemark: "মন্তব্য (ঐচ্ছিক)",
+  cmAttendanceSaved: "উপস্থিতি সংরক্ষিত হয়েছে",
+  cmSummary: "সারসংক্ষেপ",
+  cmTotal: "মোট",
+  cmPending: "বাকি",
+  cmComparison: "তুলনা",
+  // Comparison screen
+  cmComparisonTitle: "মন্তব্য তুলনা",
+  cmPositiveText: "ইতিবাচক দিক",
+  cmConcernText: "উদ্বেগের দিক",
+  cmPositivePlaceholder: "ভালো দিকগুলো লিখুন…",
+  cmConcernPlaceholder: "উদ্বেগের বিষয়গুলো লিখুন…",
+  cmSaveMeetingComment: "সভার মন্তব্য সংরক্ষণ",
+  cmMeetingCommentSaved: "সভার মন্তব্য সংরক্ষিত হয়েছে",
+  cmCurrentMeeting: "এই সভা",
+  cmPriorMeetings: "পূর্ববর্তী সভা",
+  cmNoPrior: "কোনো পূর্ববর্তী সভার মন্তব্য নেই।",
+  cmRollupSincePrev: "গত সভার পর দৈনিক মন্তব্য (ধরন অনুযায়ী)",
+  cmRollupSinceLast: "সাম্প্রতিক দৈনিক মন্তব্য (ধরন অনুযায়ী)",
+  cmNoRollup: "কোনো দৈনিক মন্তব্য নেই।",
+  // Guardian rider
+  gpComments: "শিক্ষকের মন্তব্য",
+  gpNoComments: "এখনো কোনো মন্তব্য পাঠানো হয়নি।",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -3095,6 +3218,99 @@ const STR_EN: StrTable = {
   acSaved: "Saved.",
   acOn: "On",
   acOff: "Off",
+
+  // Student Comments + Parents-Meeting (CM-6)
+  tabComments: "Comments",
+  cmHomeTitle: "Comments & parents' meetings",
+  cmDailyComments: "Daily comments",
+  cmDailyCommentsSub: "Record a student's daily comment and deliver to guardians",
+  cmMeetings: "Parents' meetings",
+  cmMeetingsSub: "Create a meeting, allot slots and coordinate the day",
+  cmType: "Type",
+  cmSentiment: "Tone",
+  cmText: "Comment",
+  cmTextPlaceholder: "Write a comment about the student…",
+  cmPickSection: "Select a section",
+  cmNoSection: "Select a section.",
+  cmNoStudents: "No students in this section.",
+  cmStudents: "Students",
+  cmNewComment: "New comment",
+  cmCommentsFor: "Comments",
+  cmNoComments: "No comments yet.",
+  cmEntryTitle: "Comment entry",
+  cmSave: "Save comment",
+  cmSaved: "Comment saved",
+  cmEditComment: "Edit comment",
+  cmDeliver: "Deliver to guardians",
+  cmDelivered: "Delivered",
+  cmDeliveredBadge: "Delivered",
+  cmDraftBadge: "Draft",
+  cmDeliveredLocked: "A comment can no longer be changed once delivered.",
+  cmAttach: "Add attachment",
+  cmAttachFirst: "Save the comment first to add an attachment.",
+  cmAttachments: "Attachments",
+  cmOpenAttachment: "Open attachment",
+  cmAttachWebOnly: "Attachments open on web only for now.",
+  cmFileUploadFail: "Could not upload the file right now — please try again later",
+  cmUnreachable: "No phone",
+  cmNotified: "Notified in-app",
+  cmOpenWa: "WhatsApp",
+  // Meetings list + create
+  cmMeetingsTitle: "Parents' meetings",
+  cmNewMeeting: "New meeting",
+  cmInstanceLabel: "Meeting label (e.g. 2026 — 1st)",
+  cmMeetingDate: "Meeting date",
+  cmSlotMinutes: "Minutes per family",
+  cmDayStartMinutes: "Start time (minutes from midnight)",
+  cmDayStartHint: "e.g. 9:00 AM = 540",
+  cmCreateMeeting: "Create meeting",
+  cmMeetingCreated: "Meeting created",
+  cmNoMeetings: "No meetings yet.",
+  cmManage: "Manage",
+  // Meeting admin
+  cmMeetingAdminTitle: "Manage meeting",
+  cmGenerateSlots: "Generate slots",
+  cmSlotsGenerated: "Slots generated",
+  cmFamilies: "Families",
+  cmReachable: "Reachable",
+  cmSlots: "Slots",
+  cmNoSlots: "No slots yet — generate slots first.",
+  cmOrder: "Order",
+  cmSlotTime: "Time",
+  cmOnCall: "On call",
+  cmSetOnCall: "Set On Call",
+  cmUnsetOnCall: "Set a time",
+  cmMoveUp: "Up",
+  cmMoveDown: "Down",
+  cmDispatch: "Dispatch schedule",
+  cmDispatched: "Schedule dispatched",
+  cmDispatchedBadge: "Dispatched",
+  cmAttendance: "Attendance",
+  cmPresent: "Present",
+  cmAbsent: "Absent",
+  cmAttendanceRemark: "Remark (optional)",
+  cmAttendanceSaved: "Attendance saved",
+  cmSummary: "Summary",
+  cmTotal: "Total",
+  cmPending: "Pending",
+  cmComparison: "Compare",
+  // Comparison screen
+  cmComparisonTitle: "Comment comparison",
+  cmPositiveText: "Positives",
+  cmConcernText: "Concerns",
+  cmPositivePlaceholder: "Note the positives…",
+  cmConcernPlaceholder: "Note the concerns…",
+  cmSaveMeetingComment: "Save meeting comment",
+  cmMeetingCommentSaved: "Meeting comment saved",
+  cmCurrentMeeting: "This meeting",
+  cmPriorMeetings: "Prior meetings",
+  cmNoPrior: "No prior meeting comments.",
+  cmRollupSincePrev: "Daily comments since the previous meeting (by type)",
+  cmRollupSinceLast: "Recent daily comments (by type)",
+  cmNoRollup: "No daily comments.",
+  // Guardian rider
+  gpComments: "Teacher comments",
+  gpNoComments: "No comments delivered yet.",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

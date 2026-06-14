@@ -174,6 +174,17 @@ export type ClassTestStackParamList = {
   ClassTestStudentProfile: { studentId: string; studentName: string };
 };
 
+/** Student Comments + Parents-Meeting (CM-6) — staff stack
+ *  (tracker:read || roster:manage tab). */
+export type CommentsStackParamList = {
+  CommentsHome: undefined;
+  SectionComments: undefined;
+  CommentEntry: { sectionId: string; studentId: string; studentName: string; commentId?: string };
+  MeetingsList: undefined;
+  MeetingAdmin: { meetingId: string; instanceLabel: string };
+  MeetingComparison: { meetingId: string; studentId: string; studentName: string };
+};
+
 export type AdminStackParamList = {
   AdminHome: undefined;
   Import: undefined;
@@ -207,6 +218,7 @@ export type TabParamList = {
   ChatTab: NavigatorScreenParams<ChatStackParamList>;
   VocabTab: NavigatorScreenParams<VocabStackParamList>;
   ClassTestTab: NavigatorScreenParams<ClassTestStackParamList>;
+  CommentsTab: NavigatorScreenParams<CommentsStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;
