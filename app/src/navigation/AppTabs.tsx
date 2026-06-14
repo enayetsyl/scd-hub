@@ -150,6 +150,7 @@ import GuardianCredentialsScreen from "../screens/admin/GuardianCredentialsScree
 import StaffCredentialsScreen from "../screens/admin/StaffCredentialsScreen";
 import MessageTemplatesScreen from "../screens/admin/MessageTemplatesScreen";
 import MessageTemplateEditScreen from "../screens/admin/MessageTemplateEditScreen";
+import RecordSessionScreen from "../screens/admin/RecordSessionScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
@@ -575,6 +576,7 @@ function AdminNavigator(): React.ReactElement {
         component={MessageTemplateEditScreen}
         options={({ route }) => ({ title: route.params.labelBn || STR.mtTitle })}
       />
+      <AdminStack.Screen name="RecordSession" component={RecordSessionScreen} options={{ title: STR.coRecordTitle }} />
       <AdminStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </AdminStack.Navigator>
   );

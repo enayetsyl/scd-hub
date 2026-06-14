@@ -21,6 +21,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   const canStaff = !!role && roleHasPermission(role, "staff:manage");
   const canGuardianCreds = !!role && roleHasPermission(role, "guardian:link");
   const canTemplates = !!role && roleHasPermission(role, "template:manage");
+  const canUploadObservation = !!role && roleHasPermission(role, "observation:upload");
 
   return (
     <Screen scroll>
@@ -96,7 +97,14 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {!canImport && !canManageUsers && !canRoster && !canStaff && !canGuardianCreds && !canTemplates ? (
+      {canUploadObservation ? (
+        <Card onPress={() => navigation.navigate("RecordSession")}>
+          <Body style={{ fontWeight: "700" }}>{STR.coRecordTitle}</Body>
+          <Muted>{STR.coRecordHint}</Muted>
+        </Card>
+      ) : null}
+
+      {!canImport && !canManageUsers && !canRoster && !canStaff && !canGuardianCreds && !canTemplates && !canUploadObservation ? (
         <Notice message={STR.noPermission} tone="warn" />
       ) : null}
     </Screen>

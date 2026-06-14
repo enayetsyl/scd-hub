@@ -187,6 +187,7 @@ export type AdminStackParamList = {
   StaffCredentials: undefined;
   MessageTemplates: undefined;
   MessageTemplateEdit: { key: string; labelBn: string };
+  RecordSession: undefined;
   SectionPicker: undefined;
 };
 
