@@ -414,18 +414,27 @@ describe("Class-test tracker firewall (ADR-005 / CT-1, D-#119)", () => {
 });
 
 /**
- * Comments & Parents-Meeting firewall (CM-1, D-#114 / prd-comments-meetings §3/J-CM9).
+ * Comments & Parents-Meeting firewall (CM-1/CM-2, D-#114/#172 / prd-comments-meetings
+ * §3/§5/J-CM9).
  *
  * `StudentComment` (and the later `ParentMeeting*` / `MeetingComment` rows) name
  * studentIds — strictly identity-plane (ADR-005), same posture as the homework /
- * class-test trackers. Fail-closed BOTH ways: the comments module must have NO
- * import path into the corpus plane, and the corpus module must have NO import path
- * into the comments module or its models (no analytics/export join back to who was
- * commented on).
+ * class-test trackers. CM-2 adds the delivery service + the comment-file service/route
+ * (a comment attachment is a child's file). Fail-closed BOTH ways: the comments module
+ * must have NO import path into the corpus plane, and the corpus module must have NO
+ * import path into the comments module or its models (no analytics/export join back to
+ * who was commented on, or to a comment attachment).
  */
-describe("Comments & Parents-Meeting firewall (ADR-005 / CM-1, D-#114)", () => {
+describe("Comments & Parents-Meeting firewall (ADR-005 / CM-1/CM-2, D-#114/#172)", () => {
   const commentsDir = path.resolve(__dirname, "../modules/comments");
   const corpusDir = path.resolve(__dirname, "../modules/corpus");
+  // CM-2 files must exist + stay corpus-clean (the walkDir scan covers them, but
+  // assert presence so a future move can't silently drop them from coverage).
+  const CM2_FILES = [
+    "../modules/comments/services/CommentDeliveryService.ts",
+    "../modules/comments/services/CommentFileService.ts",
+    "../modules/comments/resolvers/commentDelivery.ts",
+  ].map((p) => path.resolve(__dirname, p));
 
   test("comments module has NO import from the corpus plane", () => {
     const files = walkDir(commentsDir);
@@ -437,11 +446,22 @@ describe("Comments & Parents-Meeting firewall (ADR-005 / CM-1, D-#114)", () => {
     }
   });
 
+  test("CM-2 delivery + file-service source files exist and have no corpus import", () => {
+    for (const f of CM2_FILES) {
+      expect(fs.existsSync(f)).toBe(true); // shipped (CM-2)
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
   test("corpus module has NO import from the comments module", () => {
     for (const f of walkDir(corpusDir)) {
       const content = fs.readFileSync(f, "utf8");
       expect(content).not.toMatch(importPattern("modules/comments"));
       expect(content).not.toMatch(importPattern("models/StudentComment"));
+      expect(content).not.toMatch(importPattern("services/CommentDeliveryService"));
+      expect(content).not.toMatch(importPattern("services/CommentFileService"));
     }
   });
 });

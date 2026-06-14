@@ -3,6 +3,33 @@
 _Updated: 2026-06-14 (**CM-1 MERGED** — Comments/Parents-Meeting CM-1 [#69, StudentComment store + COMMENT_TYPES/COMMENT_SENTIMENTS vocab, server, D-#170/#171]; ran PARALLEL with CT-4 as 2nd additive+disjoint vocab owner → keep-both DECISIONS/CHANGELOG, no renumber. Integrated gate green on main 0930d25: **jest 1053/1053** [62 suites], vocab PASS, shared/server/app tsc. Prior: CT-4 #68 [read aggregates + overdue-chase, D-#166/#167], VC-5 #67 [Vocabulary Tracker COMPLETE VC-1..VC-5], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. DEP-1+DEP-2 DONE — prod LIVE at scdhub.shafayet.me (DEP-3 live golden-path next). Next: CT-5 [app — completes Class Test Tracker] + CM-2 [comment delivery]. Parked standalone: CO-1)_
 
 ## Now / next
+- **Built (Student Comments + Parents-Meeting CM-2 — server, prd-comments-meetings §4.1/§5/§6, J-CM1,
+  D-#172/#173) [branch `worktree-comments-cm2`, PR open — coordinator reviews]:** the SECOND CM slice —
+  daily-comment DELIVERY + the comment-attachment file store. **Delivery (`CommentDeliveryService`):**
+  `deliverComment` (per-comment, mirrors the Form's per-row send) stamps `deliveredAt` + `deliveryChannels`
+  — which SEALS the CM-1 immutability (editComment already refuses a delivered comment; deliveredAt stamped
+  ONCE, re-deliver keeps the original). Rails (D-#72/#31): a `wa.me` link for EVERY family with a phone
+  (`commentWaLink`, ADR-003; phone-less → `unreachableByWa`) + an in-app Notification (kind `STUDENT_COMMENT`)
+  via `emit()` → inbox + push behind the seam for login-enabled guardians; contact-only stay wa.me-only.
+  Body rendered from the MT registry (`student_comment.notify.*`, D-#131 — NOT inline). **N+1 guard:**
+  title + body rendered ONCE per comment; `emitStudentComment` takes pre-rendered text. **Kind-gated no-op
+  fallback (§4.1/D-#94):** the emitter no-ops (returns []) if the kind isn't registered → wa.me fallthrough
+  (CM-2 registers it, so it's the safety net). Resolver `deliverStudentComment` = `tracker:write` +
+  `assertCanWrite` (section resolved server-side). **Attachments (`CommentFileService` + `POST /files/comment`):**
+  REUSE the GP-A/M-4 Drive store (no twin) — `tracker:write` + the comment's section verified server-side
+  (comment-first: comment must exist + not yet delivered), MIME image/pdf/video/audio ≤ 10 MB (D-#108),
+  Drive-first ⇒ 503 (GP-J8), `<year>/comments/` subfolder; new `StoredFile` `comment_*` kinds +
+  `studentCommentId` (`$addToSet`ed onto the comment's attachmentIds). `GET /files/:id` dispatches `comment_*`
+  to `assertCommentFileReadAccess` = the AUTHOR (any state) OR a guardian of the child for a DELIVERED comment
+  (D-#68); others denied; Drive id never reaches a client. **Vocab (app-native, sole owner this cycle):**
+  `NOTIFICATION_KINDS += STUDENT_COMMENT` (+BN/EN — the deferred CM-1 kind lands; extends verifier §C.5) +
+  a `student_comment.notify.*` MT key + §C.15 extension. **`MEETING_SCHEDULE` deliberately NOT added** (CM-4
+  owns it). 1 new audit kind `STUDENT_COMMENT_DELIVERED`; `NotificationRefs += studentCommentId`. CM firewall
+  block extended (CM-2 files corpus-clean, both ways). **RBAC (D-#172): NO new role/permission** (D-#17/#94).
+  **Gate GREEN (executed):** vocab verifier PASS (incl. §C.5 + the MT key), shared build + shared/server tsc
+  clean, **jest 1071/1071** (63 suites; +1 new suite `commentDelivery.test.ts` [17] + 1 firewall check over
+  the 1053 main base; firewall green). **Server-only** (no app — CM-6 is the app slice; expo skipped). **Not
+  verified live.** **Next = CM-3** (ParentMeeting + per-family slot generation).
 - **Built (Student Comments + Parents-Meeting CM-1 — server, prd-comments-meetings §3/§4/§6, J-CM1/J-CM9,
   D-#114/#115 + build rulings D-#170/#171) [branch `worktree-comments-cm1`, PR #69 MERGED]:**
   the FIRST CM slice — the `StudentComment` daily-observation store + the COMMENT vocab. Replaces the

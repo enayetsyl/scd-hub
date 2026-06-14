@@ -29,6 +29,7 @@ import { ForbiddenError } from "../middleware/authz";
 import {
   StoredFile,
   CHAT_STORED_FILE_KINDS,
+  COMMENT_STORED_FILE_KINDS,
   type IStoredFile,
   type StoredFileKind,
 } from "../modules/platform/models/StoredFile";
@@ -46,6 +47,15 @@ import {
   CHAT_FILE_ERRORS_BN,
 } from "../modules/chat/services/ChatFileService";
 import { assertChatMember } from "../modules/chat/services/ChatService";
+import {
+  validateCommentUpload,
+  assertCommentFileReadAccess,
+  loadCommentForUpload,
+  MAX_COMMENT_ATTACHMENT_BYTES,
+  COMMENT_FILE_ERRORS_BN,
+} from "../modules/comments/services/CommentFileService";
+import { assertCanWrite } from "../middleware/authz";
+import { StudentComment } from "../modules/comments/models/StudentComment";
 import { writeAudit } from "../modules/platform/services/AuditService";
 
 export const ALLOWED_FILE_MIMES = ["image/jpeg", "image/png", "application/pdf"] as const;
@@ -77,6 +87,13 @@ const upload = multer({
 const uploadChat = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_CHAT_ATTACHMENT_BYTES + 1 },
+});
+
+// Comment attachments share the chat 10 MB cap (D-#108) — a separate limit so OUR
+// Bangla size check fires rather than a bare multer error.
+const uploadComment = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_COMMENT_ATTACHMENT_BYTES + 1 },
 });
 
 export const filesRouter: Router = createRouter();
@@ -301,6 +318,110 @@ filesRouter.post("/classtest", parseUpload, async (req: Request, res: Response) 
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/comment — teacher attaches a file to a daily student comment (CM-2,
+// prd-comments-meetings §5). tracker:write + the comment's section verified
+// server-side; MIME image/pdf/video/audio ≤ 10 MB (chat parity, D-#108); Drive-first
+// ⇒ 503 + nothing persisted (GP-J8). The comment must exist + not yet be delivered
+// (a delivered comment is immutable, §3). The file binds to the comment via
+// studentCommentId + is added to the comment's attachmentIds.
+// ---------------------------------------------------------------------------
+
+const parseCommentUpload: express.RequestHandler = (req, res, next) => {
+  uploadComment.single("file")(req, res, (err: unknown) => {
+    if (err) {
+      res.status(422).json({ error: COMMENT_FILE_ERRORS_BN.tooLarge });
+      return;
+    }
+    next();
+  });
+};
+
+filesRouter.post("/comment", parseCommentUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !roleHasPermission(ctx.auth.role as Role, "tracker:write")) {
+    res.status(403).json({ error: COMMENT_FILE_ERRORS_BN.forbidden });
+    return;
+  }
+
+  const commentId = (req.body?.commentId ?? req.query.commentId) as string | undefined;
+  if (!commentId) {
+    res.status(400).json({ error: "commentId required" });
+    return;
+  }
+
+  // Resolve the comment's REAL section + delivery state, then gate on write-scope.
+  let target: { sectionId: string; delivered: boolean };
+  try {
+    target = await loadCommentForUpload(commentId);
+  } catch (e) {
+    if (e instanceof ForbiddenError) {
+      res.status(404).json({ error: e.message || COMMENT_FILE_ERRORS_BN.notFound });
+      return;
+    }
+    throw e;
+  }
+  if (target.delivered) {
+    res.status(409).json({ error: "একটি ডেলিভার হওয়া মন্তব্যে ফাইল সংযুক্ত করা যাবে না" });
+    return;
+  }
+  try {
+    await assertCanWrite(ctx, target.sectionId);
+  } catch (e) {
+    if (e instanceof ForbiddenError) {
+      res.status(403).json({ error: e.message || COMMENT_FILE_ERRORS_BN.forbidden });
+      return;
+    }
+    throw e;
+  }
+
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const validation = validateCommentUpload(file.mimetype, file.size);
+  if (typeof validation === "string") {
+    res.status(422).json({ error: validation });
+    return;
+  }
+
+  try {
+    // Drive FIRST — only a successful upload persists metadata (the GP-J8 posture).
+    const driveFileId = await uploadToDrive({
+      name: `${Date.now()}_${file.originalname}`,
+      mime: file.mimetype,
+      data: file.buffer,
+      year: String(new Date().getFullYear()),
+      subfolder: "comments",
+    });
+    const stored = await StoredFile.create({
+      kind: validation.storedKind,
+      mime: file.mimetype,
+      sizeBytes: file.size,
+      originalName: file.originalname,
+      driveFileId, // server-internal — NOT in the response below
+      uploadedBy: ctx.auth.userId,
+      studentCommentId: commentId,
+    });
+    // Bind the file to the comment (the staff/guardian views read attachmentIds).
+    await StudentComment.updateOne({ _id: commentId }, { $addToSet: { attachmentIds: stored._id } });
+    res.json({
+      fileId: stored._id.toString(),
+      kind: validation.storedKind,
+      mime: stored.mime,
+      sizeBytes: stored.sizeBytes,
+      originalName: stored.originalName,
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      res.status(503).json({ error: FILE_ERRORS_BN.driveDown });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /files/:id — authz first, then stream from Drive (no redirect, ever)
 // ---------------------------------------------------------------------------
 
@@ -327,6 +448,8 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
     // so a chat message can never re-expose a homework file and vice-versa.
     if ((CHAT_STORED_FILE_KINDS as readonly string[]).includes(file.kind)) {
       await assertChatFileReadAccess(ctx, file);
+    } else if ((COMMENT_STORED_FILE_KINDS as readonly string[]).includes(file.kind)) {
+      await assertCommentFileReadAccess(ctx, file);
     } else if (file.kind === "classtest_question") {
       await assertClassTestFileReadAccess(ctx, file);
     } else {

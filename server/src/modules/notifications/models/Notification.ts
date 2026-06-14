@@ -48,6 +48,8 @@ export interface NotificationRefs {
   vocabTestId?: string;
   /** Class-test guardian result (deep-link: GuardianTestResults; CT-3, D-#160). */
   classTestId?: string;
+  /** Daily student-comment delivery (deep-link: GuardianComments; CM-2, D-#172). */
+  studentCommentId?: string;
 }
 
 export interface INotification extends Document {
@@ -88,6 +90,8 @@ const RefsSchema = new Schema<NotificationRefs>(
     tier: { type: String },
     hour: { type: Number },
     vocabTestId: { type: String },
+    classTestId: { type: String },
+    studentCommentId: { type: String },
   },
   { _id: false },
 );
