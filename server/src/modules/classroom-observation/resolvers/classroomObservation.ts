@@ -32,6 +32,9 @@ import {
   type ObservationActor,
   type ClassroomObservationShape,
 } from "../services/ClassroomObservationService";
+// CO-2: the linked YouTube-unlisted footage, exposed as a row-scoped nested field.
+import { SessionRecordingRef } from "./sessionRecording";
+import { getSessionRecording } from "../services/SessionRecordingService";
 
 /** Build the row-scope actor from the request context (manage = Principal/Office). */
 function actorOf(ctx: AppContext): ObservationActor {
@@ -91,6 +94,15 @@ ObservationRef.implement({
     prevObservationId: t.string({ nullable: true, resolve: (r) => r.prevObservationId }),
     priorFocusProgress: t.string({ nullable: true, resolve: (r) => r.priorFocusProgress }),
     recordingId: t.string({ nullable: true, resolve: (r) => r.recordingId }),
+    // CO-2: the linked footage. Whoever may read THIS observation (the row-scope
+    // already applied above) may see its video id — observer (own), observed teacher
+    // (at/after REVIEWED), Principal/Office (all). Playback works on web + native.
+    recording: t.field({
+      type: SessionRecordingRef,
+      nullable: true,
+      description: "The linked YouTube-unlisted session footage (CO-2), if any.",
+      resolve: (r) => (r.recordingId ? getSessionRecording(r.recordingId) : null),
+    }),
     teacherResponse: t.string({ nullable: true, resolve: (r) => r.teacherResponse }),
     supersededById: t.string({ nullable: true, resolve: (r) => r.supersededById }),
     createdAt: t.exposeString("createdAt"),

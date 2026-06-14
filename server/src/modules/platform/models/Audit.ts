@@ -94,6 +94,7 @@ export type AuditEventKind =
   | "CLASSROOM_OBSERVATION_ASSIGNED"   // a senior-teacher observer assigned to an observation (CO-1, §5/J1, D-#147)
   | "CLASSROOM_OBSERVATION_REVIEWED"   // the assigned observer scored+released the observation to the teacher (CO-1, §5/J2, D-#147)
   | "CLASSROOM_OBSERVATION_SUPERSEDED" // a re-review superseded a prior observation (CO-1, §5, D-#194)
+  | "SESSION_RECORDING_LINKED"         // Principal/Office linked a YouTube-unlisted session recording to an anchor (CO-2, §CO-2, D-#149)
   | "PARENT_MEETING_CREATED"    // an admin created a parents' meeting in draft (CM-3, §3/§6, D-#123)
   | "PARENT_MEETING_SLOTS_GENERATED" // per-family slots (re)generated wholesale for a meeting (CM-3, J-CM3, D-#175)
   | "PARENT_MEETING_SLOTS_REORDERED" // slots reordered / a family flagged On-Call → re-timed (CM-3, J-CM4, D-#123)
