@@ -155,6 +155,56 @@ export async function pickAndUploadChatFile(
   return body;
 }
 
+// ---------------------------------------------------------------------------
+// Class-test uploaded papers (CT-1 server: POST /files/classtest). jpeg/png/pdf
+// ≤ 5 MB; the teacher uploads their own paper, then files the print request with
+// the returned fileId as questionFileId.
+// ---------------------------------------------------------------------------
+
+/** Pick one jpeg/png/pdf and upload it as a class-test question paper; null if the
+ *  picker is cancelled. Throws FileUploadError with the server's Bangla message on
+ *  rejection/failure (the caller shows a notice; the request is filed after). */
+export async function pickAndUploadClassTestPaper(): Promise<UploadedFile | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: FILE_MIMES,
+    multiple: false,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  const asset = picked.assets[0];
+
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", {
+      uri: asset.uri,
+      name: asset.name,
+      type: asset.mimeType ?? "application/octet-stream",
+    } as unknown as Blob);
+  }
+
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/classtest`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const body = (await res.json()) as { fileId: string; originalName: string; mime: string };
+  return { fileId: body.fileId, originalName: body.originalName, mime: body.mime };
+}
+
 /** Fetch a stored file (with auth) and open it in a new browser tab. Web only. */
 export async function openStoredFile(fileId: string): Promise<void> {
   if (Platform.OS !== "web") {

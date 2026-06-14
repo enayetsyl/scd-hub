@@ -161,6 +161,19 @@ export type VocabStackParamList = {
   VocabAssignment: undefined;
 };
 
+/** Class Test tracker (CT-5) — staff stack (tracker:read || roster:manage tab). */
+export type ClassTestStackParamList = {
+  ClassTestHome: undefined;
+  RequestClassTest: undefined;
+  ClassTestPrintQueue: undefined;
+  ClassTestResults: { testId: string; title: string };
+  ClassTestPublish: { testId: string; title: string };
+  ClassTestDashboard: undefined;
+  ClassTestReports: undefined;
+  ClassTestClassSubject: { sectionId: string; classId: string; subject: string; title: string };
+  ClassTestStudentProfile: { studentId: string; studentName: string };
+};
+
 export type AdminStackParamList = {
   AdminHome: undefined;
   Import: undefined;
@@ -190,6 +203,7 @@ export type TabParamList = {
   LibraryTab: NavigatorScreenParams<LibraryStackParamList>;
   ChatTab: NavigatorScreenParams<ChatStackParamList>;
   VocabTab: NavigatorScreenParams<VocabStackParamList>;
+  ClassTestTab: NavigatorScreenParams<ClassTestStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;
