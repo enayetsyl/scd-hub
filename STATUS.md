@@ -3,6 +3,28 @@
 _Updated: 2026-06-14 (**CT-5 MERGED — Class Test Tracker COMPLETE (CT-1..CT-5), server + app** — CT-5 [#70, 9 Expo screens + GuardianTestResults card, APP-ONLY]. Integrated gate green on main 0e9a342: **jest 1053/1053** [62 suites], vocab PASS, shared/server/app tsc, expo web. **FOLLOW-UP recorded (pre-existing CT-4 server RBAC):** classTestPrincipalDashboard + report reads gate `authScopes: tracker:read` which OFFICE lacks → Office locked out despite P/O intent; relax to authenticated+gate-does-P/O (assertChaseAdmin pattern). Prior: CM-1 #69 [Comments store, D-#170/#171], CT-4 #68, VC-5 #67 [Vocab COMPLETE], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, CO PRD [D-#146–#152], MT #61, HR app #56→#60. DEP-1+DEP-2 DONE — prod LIVE at scdhub.shafayet.me (DEP-3 next). In flight: CM-2 [comment delivery]. Parked standalone: CO-1. Available vocab-free: HR-G1 own-row reads, APP-FU1)_
 
 ## Now / next
+- **Built (HR-G1 — staff own-row self-service reads, server, prd-hr §4/§3, D-#185) [branch
+  `worktree-hr-gap-reads`, PR open — coordinator reviews]:** the two server gaps flagged when the HR
+  app shipped (PR-1/#56 surfaced them as "pending"). **Server-only, vocab-free, NO new permission** —
+  both reads compose existing services + the D-#103 phone-join. **`myPayslips`:** the caller's OWN
+  payslips across runs, newest month first, **`approved_locked` runs ONLY** (a staff member never sees a
+  draft/`prepared` payslip, §4.2) — new `payslipsForStaff` in `PayrollService`. **`myStaffAttendance`:**
+  the caller's OWN attendance over [fromKey, toKey], oldest day first, **reusing the AT-1 ✘=ABSENT → LEAVE
+  read-time overlay** (HR-2, `applyLeaveOverlay`) — new `staffAttendanceForRange` in
+  `TeacherAttendanceService` (the daily snapshot keys cleanly off `staffProfileId`, so the join is exact —
+  the myStaffAttendance gap is NOT blocked). Both resolve the caller's `StaffProfile` via the EXISTING
+  `resolveStaffProfileForUser` (User → phone → StaffProfile, **fail-closed on a shared phone — not
+  weakened/twinned**) and scope the read to that one id. Resolvers added inline to the existing
+  `payroll.ts` / `teacherAttendance.ts`, gated `authScopes: { authenticated: true }` (the staff-self
+  path; Principal/Office keep their `payroll:manage` / `attendance:manage` admin reads). **D-#185:** a
+  caller with no linked StaffProfile (guardian / email-only admin / ambiguous phone) gets `[]`, never
+  another person's data — these own-record app-card reads **return empty, they do NOT throw** like the
+  `myConductRecords`/`callerStaffProfileId` precedent. Identity-plane only; NO new model → firewall stays
+  green. **NOT built (recorded follow-up):** the supervisor observation-submit + teacher-readable
+  staff-directory gap (needs a scoped directory read + design — left for a later slice). **Gate GREEN
+  (executed):** vocab verifier PASS (untouched), shared build + shared/server tsc clean, **jest 1061/1061**
+  (63 suites; +1 new suite `hrSelfService.test.ts` [8] over the 1053 main base; firewall green).
+  **Server-only** (the app surface for these reads is a later app-only pass). **Not verified live.**
 - **Built (Student Comments + Parents-Meeting CM-1 — server, prd-comments-meetings §3/§4/§6, J-CM1/J-CM9,
   D-#114/#115 + build rulings D-#170/#171) [branch `worktree-comments-cm1`, PR #69 MERGED]:**
   the FIRST CM slice — the `StudentComment` daily-observation store + the COMMENT vocab. Replaces the
