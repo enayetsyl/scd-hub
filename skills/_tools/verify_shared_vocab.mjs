@@ -119,7 +119,7 @@ check("attendance: PRINCIPAL+OFFICE manage (not mark), TEACHER mark (not manage)
 console.log("=== C.5 Notification kinds + own-row posture (D-#72–#75) ===");
 check("NOTIFICATION_KIND_LABELS_BN total", total(V.NOTIFICATION_KIND_LABELS_BN, V.NOTIFICATION_KINDS));
 check("NOTIFICATION_KIND_LABELS_EN total", total(V.NOTIFICATION_KIND_LABELS_EN, V.NOTIFICATION_KINDS));
-check("kinds are exactly the 8 phase-1 kinds + 2 library kinds (D-#72/#74/#84)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE"]));
+check("kinds are exactly the 8 phase-1 kinds + 2 library kinds + 1 class-test kind (D-#72/#74/#84/#122)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE","CLASS_TEST_RESULT"]));
 check("no notification:* permission added (inbox is own-row, emission server-internal, D-#72)", !V.PERMISSIONS.some((p) => p.startsWith("notification")));
 
 console.log("=== C.6 Library vocab + RBAC invariants (D-#81–#84) ===");
@@ -317,6 +317,17 @@ check("template:manage = PRINCIPAL ONLY (verifier-proven exact-holder set — th
   V.roleHasPermission("PRINCIPAL", "template:manage") &&
   !["TEACHER", "OFFICE", "GUARDIAN"].some((r) => V.roleHasPermission(r, "template:manage")));
 check("template:manage is BUILD (MT-1 active)", V.PERMISSION_BUILD_STATUS["template:manage"] === "build");
+
+console.log("=== C.14 Class-test tracker vocab (CT-1 — prd-tracker-class-test §3.1, D-#119–#122) ===");
+check("class-test statuses exact (§3.1)",        eq(V.CLASS_TEST_STATUSES, ["REQUESTED", "PRINTED", "CANCELLED"]));
+check("CLASS_TEST_STATUS_LABELS_BN total",       total(V.CLASS_TEST_STATUS_LABELS_BN, V.CLASS_TEST_STATUSES));
+check("CLASS_TEST_STATUS_LABELS_EN total",       total(V.CLASS_TEST_STATUS_LABELS_EN, V.CLASS_TEST_STATUSES));
+check("class-test sources exact (§3.1)",         eq(V.CLASS_TEST_SOURCES, ["POOL_SET", "UPLOADED_PAPER"]));
+check("CLASS_TEST_SOURCE_LABELS_BN total",       total(V.CLASS_TEST_SOURCE_LABELS_BN, V.CLASS_TEST_SOURCES));
+check("CLASS_TEST_SOURCE_LABELS_EN total",       total(V.CLASS_TEST_SOURCE_LABELS_EN, V.CLASS_TEST_SOURCES));
+check("CLASS_TEST_RESULT is a registered NotificationKind (§3.1/§8, extends §C.5)", V.NOTIFICATION_KINDS.includes("CLASS_TEST_RESULT"));
+check("class test composes existing perms — no class-test:* permission (D-#94/#17)",
+  !V.PERMISSIONS.some((p) => p.startsWith("class") || p.startsWith("classtest")));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

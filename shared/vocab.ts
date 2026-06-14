@@ -953,6 +953,7 @@ export const NOTIFICATION_KINDS = [
   "COVER_ASSIGNED",
   "LIBRARY_DUE_SOON",
   "LIBRARY_OVERDUE",
+  "CLASS_TEST_RESULT",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -967,6 +968,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   COVER_ASSIGNED: "কাভার ক্লাসের দায়িত্ব",
   LIBRARY_DUE_SOON: "বই ফেরতের স্মরণিকা",
   LIBRARY_OVERDUE: "বই ফেরত বকেয়া",
+  CLASS_TEST_RESULT: "ক্লাস টেস্টের ফলাফল",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -979,6 +981,50 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   COVER_ASSIGNED: "Cover assigned",
   LIBRARY_DUE_SOON: "Book due soon",
   LIBRARY_OVERDUE: "Book overdue",
+  CLASS_TEST_RESULT: "Class-test result",
+};
+
+
+// --- A.x CLASS-TEST TRACKER ENUMS (app-native; Class Test module — ----------
+// prd-tracker-class-test §3.1, D-#119–#122 + build rulings D-#142–#144). NO
+// wire-contract twin: a class test is a FEATURE, not import `doc_type` content
+// — no envelope-schema mirror, no two-/three-place sync; only /shared + the
+// vocab verifier run. Every row is operational/identity-plane behind the
+// ADR-005 firewall. RBAC composes existing permissions (teacher request =
+// tracker:write, Office mark-printed/cancel = roster:manage) — NO new
+// role/permission (D-#94/#17). The uploaded-paper file kind (`classtest_question`)
+// lives on the StoredFile model enum (the M-4 pattern), not here.
+
+/** Print-request → official-exam lifecycle (§3.1). The record is BORN as the
+ *  print request (REQUESTED), becomes the official exam on Office mark-printed
+ *  (PRINTED); CANCELLED for a withdrawn request. "Complete / overdue" is
+ *  DERIVED (CT-2), never a stored status. */
+export const CLASS_TEST_STATUSES = ["REQUESTED", "PRINTED", "CANCELLED"] as const;
+export type ClassTestStatus = (typeof CLASS_TEST_STATUSES)[number];
+
+export const CLASS_TEST_STATUS_LABELS_BN: Record<ClassTestStatus, string> = {
+  REQUESTED: "অনুরোধ করা হয়েছে",
+  PRINTED: "ছাপা হয়েছে",
+  CANCELLED: "বাতিল",
+};
+export const CLASS_TEST_STATUS_LABELS_EN: Record<ClassTestStatus, string> = {
+  REQUESTED: "Requested",
+  PRINTED: "Printed",
+  CANCELLED: "Cancelled",
+};
+
+/** Where the exam paper comes from (§3.1): an assembled CT-kind question-pool
+ *  set, or the teacher's own uploaded paper. */
+export const CLASS_TEST_SOURCES = ["POOL_SET", "UPLOADED_PAPER"] as const;
+export type ClassTestSource = (typeof CLASS_TEST_SOURCES)[number];
+
+export const CLASS_TEST_SOURCE_LABELS_BN: Record<ClassTestSource, string> = {
+  POOL_SET: "প্রশ্নব্যাংক সেট",
+  UPLOADED_PAPER: "আপলোড করা প্রশ্নপত্র",
+};
+export const CLASS_TEST_SOURCE_LABELS_EN: Record<ClassTestSource, string> = {
+  POOL_SET: "Question-pool set",
+  UPLOADED_PAPER: "Uploaded paper",
 };
 
 

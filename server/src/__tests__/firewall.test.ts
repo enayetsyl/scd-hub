@@ -360,6 +360,46 @@ describe("Message-templates firewall (ADR-005 / MT-1, D-#128)", () => {
   });
 });
 
+/**
+ * Class-test tracker firewall (CT-1, D-#119 / prd-tracker-class-test §10/§11).
+ *
+ * The ClassTest header + per-student results (CT-2) name students/sections —
+ * strictly identity/operational plane (ADR-005), same posture as the homework /
+ * assignment trackers. Fail-closed BOTH ways: the corpus module must have NO
+ * import path to any class-test model (no analytics/export join back to who sat
+ * which exam), and the class-test source files must have NO import into the
+ * corpus plane.
+ */
+describe("Class-test tracker firewall (ADR-005 / CT-1, D-#119)", () => {
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+  const CLASS_TEST_MODELS = ["models/ClassTest", "models/ClassTestSequence"];
+  const CLASS_TEST_FILES = [
+    "../modules/trackers/models/ClassTest.ts",
+    "../modules/trackers/models/ClassTestSequence.ts",
+    "../modules/trackers/services/ClassTestService.ts",
+    "../modules/trackers/services/ClassTestFileService.ts",
+    "../modules/trackers/resolvers/classTest.ts",
+  ].map((p) => path.resolve(__dirname, p));
+
+  test("corpus module has NO import of any class-test model", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      for (const model of CLASS_TEST_MODELS) {
+        expect(content).not.toMatch(importPattern(model));
+      }
+    }
+  });
+
+  test("class-test source files have NO import from the corpus plane", () => {
+    for (const f of CLASS_TEST_FILES) {
+      expect(fs.existsSync(f)).toBe(true); // the file shipped (CT-1)
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;

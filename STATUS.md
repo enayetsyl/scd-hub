@@ -1,10 +1,42 @@
 # STATUS
 
-_Updated: 2026-06-14 (Vocabulary Tracker VC-3 built — server, PR open [grid mistake capture + derived scoring]; VC-1 #55 + VC-2 #58 MERGED. **Message Templates MT-1..MT-3 MERGED** PR #61, D-#128–#131. HR app surfaces COMPLETE [#56→#60, D-#135]. Integrated gate on main 63f0b79: jest 910/910 [55 suites]. Vocab session continues → VC-4)_
+_Updated: 2026-06-14 (**VC-3 + CT-1 both MERGED** — Vocab VC-3 [#62, grid mistake capture + derived scoring, D-#142] then Class Test CT-1 [#63, print-request→official-exam lifecycle, D-#143/#144/#145 — renumbered from #142–#144 at merge since VC-3 took #142]. Earlier this run: MT-1..MT-3 #61 [D-#128–#131], HR app #56→#60 [D-#135]. Parked vocab-toucher behind the vocab lock: CM-1. Next: VC-4 / CT-2 continue their chains)_
 
 ## Now / next
+- **Built (Class Test Tracker CT-1 — server, prd-tracker-class-test §3/§5/§6, D-#119–#122 + build rulings
+  D-#143/#144/#145) [branch `worktree-class-test-ct1`, PR #63 MERGED]:** the FIRST class-test slice —
+  the print-request → official-exam lifecycle replacing the Exam-Log + per-class Google Forms + IMPORTRANGE sheet.
+  **Vocab (app-native, NO wire sync — a class test is a FEATURE not `doc_type` content; PARALLEL-SAFE with the
+  in-flight VC-3 per AGENTS rule 5 — purely additive, disjoint enums):** `CLASS_TEST_STATUSES`
+  (REQUESTED/PRINTED/CANCELLED) + `CLASS_TEST_SOURCES` (POOL_SET/UPLOADED_PAPER) + BN/EN labels;
+  `NOTIFICATION_KINDS += CLASS_TEST_RESULT` (+BN/EN — extends verifier §C.5 exact-list, CONSUMED at CT-3);
+  `StoredFile` kind += `classtest_question` (the M-4 model-enum pattern); new verifier **§C.14**. **The CT-kind
+  question set already existed** (`SET_TYPES` "CT" → `SET_TYPE_TO_TRACKER.classtest`) so linking a pool set needed
+  NO new set-kind enum (no STOP). **Server (`modules/trackers/`):** `ClassTest` model (the exam header / print
+  request — born REQUESTED, promoted to the official exam on Office mark-printed; `testNumber` auto-suggested +
+  editable, atomic `ctId`; `passMark` default round(0.40×total); `deadlineDays` stored default 2 — the school-day
+  deadline derivation is CT-2, not here), `ClassTestSequence` (atomic `CT-C{class}-{SUBJ}-{nnnn}`, the D-#34
+  pattern, replacing the fragile composite text key), `ClassTestService` (generateCtId / suggestTestNumber /
+  createRequest [POOL_SET set-link OR UPLOADED_PAPER; **year+level+class resolved server-side from the section**,
+  D-#143] / markPrinted [REQUESTED→PRINTED + printedAt/By] / cancelRequest [REQUESTED→CANCELLED] / reads),
+  `ClassTestFileService` (the uploaded-paper read gate), resolvers (`createClassTestRequest` /
+  `suggestClassTestNumber` / `markClassTestPrinted` / `cancelClassTest` / `classTestPrintQueue` / `myClassTests` /
+  `classTestsForSection` / `classTest`). **Files (§5.2):** `POST /files/classtest` (multipart, `tracker:write`,
+  jpeg/png/pdf ≤ 5 MB reusing `validateUpload`, Drive-first ⇒ 503 + nothing persisted — GP-J8) over the GP-A/M-4
+  `DriveStore` `subfolder` (`SCD-Hub-Files/<year>/classtest/`); `GET /files/:id` dispatches `classtest_question`
+  to a class-test gate = Office (`roster:manage`) OR the uploading teacher; the Drive id never reaches a client.
+  **RBAC (D-#144) — composes existing perms, NO new role/permission (D-#94/#17):** teacher request/results =
+  `tracker:write` + `assertCanWrite` section verify; Office mark-printed/cancel = `roster:manage`; staff reads =
+  `tracker:read`. 3 new audit kinds (CLASS_TEST_REQUESTED/_PRINTED/_CANCELLED). **Firewall:** new class-test block
+  (corpus ↛ class-test models + class-test source files ↛ corpus, both ways). **Build rulings:** D-#145 (no
+  `schoolId` — single-school convention; renumbered from #142 at merge), D-#143 (year/level/class derived from
+  the section — blocks sequence-key spoofing), D-#144 (file-store reuse + Office-or-uploader read gate). **Gate GREEN (executed):**
+  vocab verifier PASS, shared build + shared/server tsc clean, **jest 943/943** (56 suites; +1 new suite
+  `classTest.test.ts` + 2 new firewall checks over the 910 base; firewall green). **Server-only** (no app — CT-5
+  is the app slice; expo export skipped). **Not verified live.** **Next = CT-2** (per-student `ClassTestResult` +
+  derived percent/pass-fail + configurable passMark + the school-day-aware exam-date-anchored deadline/overdue).
 - **Built (Vocabulary Tracker VC-3 — server, prd-vocabulary-tracker §3.6/§4/§6, D-#142) [branch
-  `worktree-vocab-vc3`, PR open — coordinator reviews]:** the THIRD vocab slice — mistake capture + derived
+  `worktree-vocab-vc3`, PR #62 MERGED]:** the THIRD vocab slice — mistake capture + derived
   scoring. **New `modules/vocab/` models:** `VocabStudentTest` (per student × test — the ONE PRESENT/ABSENT
   attendance flag, sheet parity; the marked-roster anchor) + `VocabStudentResult` (per student × position — the
   Mistakes_Input analog; `wrongFields` = 1-based field indices marked wrong; only mistakes stored, no row =
