@@ -1,34 +1,27 @@
 /**
- * YouTube-unlisted upload — WEB adapter (CO-2). A faithful Expo port of the ClassEcho
- * Next.js Google-Identity-Services (GIS) flow (source: ClassEcho youtube_upload_demo.md
- * + dashboard/admin/videos/upload-video):
+ * YouTube-unlisted upload — WEB adapter (CO-2, D-#218). An Expo port of the ClassEcho
+ * Next.js Google-Identity-Services (GIS) flow, simplified to the minimum the browser
+ * upload actually needs:
  *
- *   1. load GIS (accounts.google.com/gsi/client) + GAPI (apis.google.com/js/api.js)
- *   2. gapi.client.init({ apiKey, discoveryDocs: [youtube v3] })
- *   3. google.accounts.oauth2.initTokenClient({ client_id, scope youtube.upload })
- *   4. requestAccessToken() → OAuth popup → access token
- *   5. multipart fetch POST to the Data API (privacyStatus "unlisted",
- *      selfDeclaredMadeForKids false) → returns the new video id
+ *   1. load GIS (accounts.google.com/gsi/client)
+ *   2. google.accounts.oauth2.initTokenClient({ client_id, scope youtube.upload })
+ *   3. requestAccessToken() → OAuth popup → access token
+ *   4. multipart fetch POST to the Data API (privacyStatus "unlisted",
+ *      selfDeclaredMadeForKids false) with the bearer token → returns the video id
  *
- * No backend involvement: the video goes straight to YouTube; the server only stores
- * the returned id (recordSessionRecording). Google credentials come from
- * EXPO_PUBLIC_GOOGLE_CLIENT_ID / EXPO_PUBLIC_GOOGLE_API_KEY (.env, NEVER committed —
- * §CO-2 acceptance). GIS is browser-only, hence this `.web.ts`.
+ * NOTE (vs the original ClassEcho demo): the upload is a raw `fetch` with the OAuth
+ * bearer token, so it needs NEITHER the GAPI client (`apis.google.com/js/api.js` +
+ * `gapi.client.init`) NOR an API key — those only powered the unused discovery doc.
+ * The ONLY credential required is the Web OAuth client id in
+ * `EXPO_PUBLIC_GOOGLE_CLIENT_ID` (.env, NEVER committed — §CO-2). A client id is not
+ * a secret; the client_secret is never used here (and must never reach the browser).
+ * GIS is browser-only, hence this `.web.ts`.
  */
 import { YouTubeUploadError, type YouTubeUploadMeta, type YouTubeUploadResult } from "./youtubeUpload.types";
 
 export * from "./youtubeUpload.types";
 
-// --- minimal subset of the Google globals we call (cf. ClassEcho google-client.d.ts) ---
-interface GapiClient {
-  init(opts: { apiKey: string; discoveryDocs: string[] }): Promise<void>;
-  setToken(token: { access_token: string } | null): void;
-  getToken(): { access_token: string } | null;
-}
-interface Gapi {
-  load(api: "client", cb: () => void): void;
-  client: GapiClient;
-}
+// --- minimal subset of the GIS global we call (cf. ClassEcho google-client.d.ts) ---
 interface TokenClient {
   requestAccessToken(params?: { prompt?: "" | "none" | "consent" }): void;
 }
@@ -41,26 +34,24 @@ interface GoogleOAuth2 {
   revoke(token: string, done: () => void): void;
 }
 interface YtWindow extends Window {
-  gapi?: Gapi;
   google?: { accounts: { oauth2: GoogleOAuth2 } };
 }
 
 const w = (): YtWindow => window as unknown as YtWindow;
 
 const CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
-const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
 const SCOPE = "https://www.googleapis.com/auth/youtube.upload";
-const DISCOVERY = "https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest";
 const UPLOAD_URL =
   "https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status&uploadType=multipart";
 
 let readyPromise: Promise<void> | null = null;
 let tokenClient: TokenClient | null = null;
+let accessToken: string | null = null;
 let pendingAuth: { resolve: () => void; reject: (e: Error) => void } | null = null;
 
-/** Web + both Google credentials present in the environment. */
+/** Web + the Google Web OAuth client id present in the environment. */
 export function isYouTubeUploadSupported(): boolean {
-  return typeof window !== "undefined" && !!CLIENT_ID && !!API_KEY;
+  return typeof window !== "undefined" && !!CLIENT_ID;
 }
 
 /** Inject a <script> once and resolve when it has loaded. */
@@ -86,23 +77,16 @@ function loadScript(src: string): Promise<void> {
   });
 }
 
-/** Idempotently load the Google scripts, init gapi discovery + the GIS token client. */
+/** Idempotently load GIS and create the token client. */
 export function ensureYouTubeReady(): Promise<void> {
   if (!isYouTubeUploadSupported()) {
     return Promise.reject(
-      new YouTubeUploadError("YouTube upload is not configured (set EXPO_PUBLIC_GOOGLE_CLIENT_ID + EXPO_PUBLIC_GOOGLE_API_KEY)"),
+      new YouTubeUploadError("YouTube upload is not configured (set EXPO_PUBLIC_GOOGLE_CLIENT_ID)"),
     );
   }
   if (readyPromise) return readyPromise;
   readyPromise = (async () => {
-    await Promise.all([
-      loadScript("https://accounts.google.com/gsi/client"),
-      loadScript("https://apis.google.com/js/api.js"),
-    ]);
-    const gapi = w().gapi;
-    if (!gapi) throw new YouTubeUploadError("Google API failed to load");
-    await new Promise<void>((resolve) => gapi.load("client", () => resolve()));
-    await gapi.client.init({ apiKey: API_KEY as string, discoveryDocs: [DISCOVERY] });
+    await loadScript("https://accounts.google.com/gsi/client");
     const oauth2 = w().google?.accounts?.oauth2;
     if (!oauth2) throw new YouTubeUploadError("Google Identity Services failed to load");
     tokenClient = oauth2.initTokenClient({
@@ -112,7 +96,7 @@ export function ensureYouTubeReady(): Promise<void> {
         if (resp.error || !resp.access_token) {
           pendingAuth?.reject(new YouTubeUploadError(`Authorization failed: ${resp.error ?? "no token"}`));
         } else {
-          w().gapi?.client.setToken({ access_token: resp.access_token });
+          accessToken = resp.access_token;
           pendingAuth?.resolve();
         }
         pendingAuth = null;
@@ -126,7 +110,7 @@ export function ensureYouTubeReady(): Promise<void> {
 }
 
 export function isYouTubeAuthorized(): boolean {
-  return !!w().gapi?.client.getToken()?.access_token;
+  return !!accessToken;
 }
 
 /** Trigger the OAuth consent popup; resolves once an access token is held. */
@@ -152,8 +136,6 @@ export function pickVideoFile(): Promise<File | null> {
       doc.body.removeChild(input);
       resolve(f);
     });
-    // If the dialog is cancelled there is no reliable event; the input is simply left
-    // detached on the next pick. Resolve(null) is driven by the caller re-picking.
     doc.body.appendChild(input);
     input.click();
   });
@@ -161,8 +143,7 @@ export function pickVideoFile(): Promise<File | null> {
 
 /** Multipart-upload the file to YouTube as unlisted; returns the new video id + url. */
 export async function uploadVideoFile(file: File, meta: YouTubeUploadMeta): Promise<YouTubeUploadResult> {
-  const token = w().gapi?.client.getToken()?.access_token;
-  if (!token) throw new YouTubeUploadError("You must authorize YouTube before uploading");
+  if (!accessToken) throw new YouTubeUploadError("You must authorize YouTube before uploading");
 
   const metadata = {
     snippet: { title: meta.title, description: meta.description ?? "" },
@@ -174,7 +155,7 @@ export async function uploadVideoFile(file: File, meta: YouTubeUploadMeta): Prom
 
   const res = await fetch(UPLOAD_URL, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${accessToken}` },
     body: form,
   });
   const data = (await res.json()) as { id?: string; error?: { message?: string } };
