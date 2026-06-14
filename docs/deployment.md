@@ -42,7 +42,14 @@ else low-cost VPS — settled; this plan implements it)
       Operator continues exhaustive per-feature detail testing (homework declare→reconcile→check,
       routine, admin import, guardian login) at their own pace; file+fix any issue on the normal
       deploy.sh lane (already exercised — the localhost API-URL bug was found and fixed live).
-- [ ] **DEP-4** Nightly backup cron running + **one executed restore drill passed**
+- [x] **DEP-4** Nightly backup + restore drill done. `scripts/backup.sh` (`mongodump --archive
+      --gzip` of prod → upload to Drive **SCD-Hub-Backups** → tiered rotation 7d/4w/3m via
+      `scripts/drive-backup.mjs`) on a **cron** (02:30 Asia/Dhaka; failures logged to
+      `/opt/scdhub/backup.log`). **Restore drill PASSED** — pulled the latest backup from Drive
+      (`scripts/restore-fetch.mjs`) and `mongorestore`d into `scdhub_dev`: 1283 docs restored,
+      verified (students 91 / guardians 129 / staff 23 / content 239). Runbook = `scripts/restore.md`.
+      Gotcha recorded there: the restore `--uri` must be **db-less** or the `/db` path overrides
+      `--nsFrom/--nsTo` and 0 docs restore. Both backup + restore run on the VM (allow-listed).
 - [ ] **DEP-5** `dev` branch + dev environment live (`dev.` subdomain, separate dev DB with
       seed data, never the real roster)
 - [ ] **DEP-6** GitHub Actions wired: push→`dev` = test + auto-deploy dev; merge→`main` =
