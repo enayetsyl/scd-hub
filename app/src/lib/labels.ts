@@ -167,6 +167,9 @@ import {
   type VocabTestStatus,
   type VocabAttendanceStatus,
   type VocabAssignmentSource,
+  PERMISSION_LABELS_BN,
+  PERMISSION_LABELS_EN,
+  type Permission,
 } from "@scd/shared";
 
 // --- Active language (module-level; read at render time) ---------------------
@@ -269,6 +272,45 @@ export const mtGroupLabel = (group: string): string => {
     case "credential": return STR.mtGrpCredential;
     case "tracker": return STR.mtGrpTracker;
     default: return group;
+  }
+};
+
+// --- Access Control (AC-2): per-permission labels + module grouping ---------
+
+/** A permission's Bangla/English display name (the chip). */
+export const permissionName = (p: string): string =>
+  (pick(PERMISSION_LABELS_BN, PERMISSION_LABELS_EN)[p as Permission]?.name) ?? p;
+
+/** A permission's one-line "what this lets the holder do". */
+export const permissionDesc = (p: string): string =>
+  (pick(PERMISSION_LABELS_BN, PERMISSION_LABELS_EN)[p as Permission]?.desc) ?? "";
+
+/** The `resource:action` resource prefix → a human module/group label. Permissions
+ *  in the AC-2 editor are grouped by this prefix (no shared grouping export). */
+export const permissionModuleLabel = (resource: string): string => {
+  const en = _lang === "en";
+  switch (resource) {
+    case "content": return en ? "Content" : "কনটেন্ট";
+    case "question": return en ? "Questions" : "প্রশ্ন";
+    case "set": return en ? "Sets" : "সেট";
+    case "tracker": return en ? "Trackers" : "ট্র্যাকার";
+    case "routine": return en ? "Routine" : "রুটিন";
+    case "attendance": return en ? "Attendance" : "হাজিরা";
+    case "library": return en ? "Library" : "লাইব্রেরি";
+    case "chat": return en ? "Chat" : "চ্যাট";
+    case "roster": return en ? "Roster" : "রোস্টার";
+    case "staff": return en ? "Staff" : "স্টাফ";
+    case "leave": return en ? "Leave" : "ছুটি";
+    case "payroll": return en ? "Payroll" : "বেতন";
+    case "performance": return en ? "Performance" : "পারফরম্যান্স";
+    case "observation": return en ? "Observation" : "অবজারভেশন";
+    case "guardian": return en ? "Guardian" : "অভিভাবক";
+    case "message": return en ? "Messaging" : "বার্তা";
+    case "user": return en ? "Users" : "ইউজার";
+    case "audit": return en ? "Audit" : "অডিট";
+    case "template": return en ? "Templates" : "টেমপ্লেট";
+    case "access": return en ? "Access control" : "অনুমতি";
+    default: return resource;
   }
 };
 
@@ -1753,6 +1795,24 @@ const STR_BN = {
   ctBySubject: "বিষয়ভিত্তিক",
   ctNoProfile: "এই শিক্ষার্থীর কোনো ফলাফল নেই।",
   ctViewProfile: "প্রোফাইল",
+
+  // Access Control (AC-2) — per-user permission editor
+  acTitle: "অনুমতি পরিচালনা",
+  acSubtitle: "প্রতিটি স্টাফের অনুমতি আলাদা করে নির্ধারণ করুন (ভূমিকা = টেমপ্লেট)।",
+  acPickUser: "একজন স্টাফ নির্বাচন করুন",
+  acNoStaff: "কোনো স্টাফ অ্যাকাউন্ট নেই।",
+  acPrimaryRole: "মূল টেমপ্লেট (ভূমিকা)",
+  acAdditionalTemplates: "অতিরিক্ত টেমপ্লেট",
+  acAdditionalHint: "টেমপ্লেট যোগ করলে সেই ভূমিকার অনুমতিগুলোও যুক্ত হয়।",
+  acPermissions: "অনুমতিসমূহ",
+  acProvFromTemplate: "টেমপ্লেট থেকে",
+  acProvAdded: "যোগ করা হয়েছে",
+  acProvRemoved: "সরানো হয়েছে",
+  acProvLocked: "সংরক্ষিত",
+  acReservedNote: "সংরক্ষিত অনুমতি — শুধু প্রিন্সিপাল; পরিবর্তন করা যায় না।",
+  acSaved: "সংরক্ষিত হয়েছে।",
+  acOn: "চালু",
+  acOff: "বন্ধ",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -3055,6 +3115,24 @@ const STR_EN: StrTable = {
   ctBySubject: "By subject",
   ctNoProfile: "No results for this student.",
   ctViewProfile: "Profile",
+
+  // Access Control (AC-2) — per-user permission editor
+  acTitle: "Access control",
+  acSubtitle: "Tune each staff member's permissions individually (role = template).",
+  acPickUser: "Pick a staff member",
+  acNoStaff: "No staff accounts.",
+  acPrimaryRole: "Primary template (role)",
+  acAdditionalTemplates: "Additional templates",
+  acAdditionalHint: "Adding a template also grants that role's permissions.",
+  acPermissions: "Permissions",
+  acProvFromTemplate: "From template",
+  acProvAdded: "Added",
+  acProvRemoved: "Removed",
+  acProvLocked: "Reserved",
+  acReservedNote: "Reserved permission — Principal only; cannot be changed.",
+  acSaved: "Saved.",
+  acOn: "On",
+  acOff: "Off",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

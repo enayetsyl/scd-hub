@@ -151,6 +151,8 @@ import StaffCredentialsScreen from "../screens/admin/StaffCredentialsScreen";
 import MessageTemplatesScreen from "../screens/admin/MessageTemplatesScreen";
 import MessageTemplateEditScreen from "../screens/admin/MessageTemplateEditScreen";
 import RecordSessionScreen from "../screens/admin/RecordSessionScreen";
+import AccessControlUsersScreen from "../screens/admin/AccessControlUsersScreen";
+import AccessControlEditScreen from "../screens/admin/AccessControlEditScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
@@ -577,6 +579,12 @@ function AdminNavigator(): React.ReactElement {
         options={({ route }) => ({ title: route.params.labelBn || STR.mtTitle })}
       />
       <AdminStack.Screen name="RecordSession" component={RecordSessionScreen} options={{ title: STR.coRecordTitle }} />
+      <AdminStack.Screen name="AccessControlUsers" component={AccessControlUsersScreen} options={{ title: STR.acTitle }} />
+      <AdminStack.Screen
+        name="AccessControlEdit"
+        component={AccessControlEditScreen}
+        options={({ route }) => ({ title: route.params.name || STR.acTitle })}
+      />
       <AdminStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </AdminStack.Navigator>
   );

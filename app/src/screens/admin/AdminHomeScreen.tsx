@@ -22,6 +22,8 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   const canGuardianCreds = !!role && roleHasPermission(role, "guardian:link");
   const canTemplates = !!role && roleHasPermission(role, "template:manage");
   const canUploadObservation = !!role && roleHasPermission(role, "observation:upload");
+  // access:manage is RESERVED-locked + Principal-only — roleHasPermission is exact here.
+  const canAccess = !!role && roleHasPermission(role, "access:manage");
 
   return (
     <Screen scroll>
@@ -104,7 +106,14 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {!canImport && !canManageUsers && !canRoster && !canStaff && !canGuardianCreds && !canTemplates && !canUploadObservation ? (
+      {canAccess ? (
+        <Card onPress={() => navigation.navigate("AccessControlUsers")}>
+          <Body style={{ fontWeight: "700" }}>{STR.acTitle}</Body>
+          <Muted>D-#193</Muted>
+        </Card>
+      ) : null}
+
+      {!canImport && !canManageUsers && !canRoster && !canStaff && !canGuardianCreds && !canTemplates && !canUploadObservation && !canAccess ? (
         <Notice message={STR.noPermission} tone="warn" />
       ) : null}
     </Screen>
