@@ -487,6 +487,38 @@ describe("Comments & Parents-Meeting firewall (ADR-005 / CM-1/CM-2, D-#114/#172)
   });
 });
 
+/**
+ * Classroom-observation firewall (CO-1, D-#146/#190 / prd-classroom-observation §3/§5).
+ *
+ * `ClassroomObservation` names teacherIds/observerIds (staff) — strictly identity/
+ * operational plane (ADR-005, §3 "no corpus/student path"). Fail-closed BOTH ways: the
+ * classroom-observation module must have NO import path into the corpus plane, and the
+ * corpus module must have NO import path into the classroom-observation module or its
+ * model (no analytics/export join back to who was observed teaching what).
+ */
+describe("Classroom-observation firewall (ADR-005 / CO-1, D-#146)", () => {
+  const observationDir = path.resolve(__dirname, "../modules/classroom-observation");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("classroom-observation module has NO import from the corpus plane", () => {
+    const files = walkDir(observationDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (CO-1 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the classroom-observation module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/classroom-observation"));
+      expect(content).not.toMatch(importPattern("models/ClassroomObservation"));
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;
