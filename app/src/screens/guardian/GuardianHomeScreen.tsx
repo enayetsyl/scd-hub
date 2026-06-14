@@ -19,11 +19,13 @@ import {
   CHILD_VOCAB_QUERY,
 } from "../../graphql/operations";
 import { CHILD_TEST_RESULTS_QUERY } from "../../graphql/classTest";
+import { CHILD_COMMENTS_QUERY } from "../../graphql/comments";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
 import type { GuardianHomeStackParamList } from "../../navigation/types";
-import { STR, bnNum, loanStatusLabel, vocabProgramLabel, hwSubjectLabel } from "../../lib/labels";
+import { STR, bnNum, loanStatusLabel, vocabProgramLabel, hwSubjectLabel, commentTypeLabel, commentSentimentLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
 type Nav = NativeStackNavigationProp<GuardianHomeStackParamList>;
@@ -81,6 +83,16 @@ export default function GuardianHomeScreen(): React.ReactElement {
     variables: { studentId: sid },
     pause: !selected,
   });
+  const [commentsQ] = useQuery({
+    query: CHILD_COMMENTS_QUERY,
+    variables: { studentId: sid },
+    pause: !selected,
+  });
+  // CM-6 follow-up: no guardian meeting-slot card is rendered. The server's
+  // childMeetingSlot(meetingId, studentId) read needs a meetingId, but there is NO
+  // guardian-facing "list my meetings" query to obtain one — so a guardian cannot
+  // reach it. Surface a slot card only once a server read yields the family's
+  // meetings (or childMeetingSlot drops the meetingId arg).
 
   if (fetching && !selected) {
     return (
@@ -339,6 +351,42 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 </View>
                 {r.weakness ? <Muted>{STR.ctWeakness}: {r.weakness}</Muted> : null}
                 {r.guardianAction ? <Muted>{STR.ctGuardianAction}: {r.guardianAction}</Muted> : null}
+              </View>
+            ))
+          )}
+        </Card>
+
+        {/* Teacher comments — read-only, DELIVERED daily comments only (CM-6 / CM-5,
+            J-CM8, D-#68). The childComments query structurally omits authorUserId /
+            sectionId / deliveryChannels. Attachments open on web via openStoredFile. */}
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.gpComments}</Body>
+          {commentsQ.fetching ? (
+            <Loader label={STR.loading} />
+          ) : (commentsQ.data?.childComments ?? []).length === 0 ? (
+            <Muted style={{ marginTop: space(2) }}>{STR.gpNoComments}</Muted>
+          ) : (
+            (commentsQ.data?.childComments ?? []).map((c) => (
+              <View key={c.id} style={{ marginTop: space(2) }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Muted>
+                    {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)}
+                  </Muted>
+                  {c.deliveredAt ? <Muted>{new Date(c.deliveredAt).toLocaleDateString()}</Muted> : null}
+                </View>
+                <Body style={{ marginTop: space(1) }}>{c.text}</Body>
+                {c.attachmentIds.length > 0 && FILE_VIEW_SUPPORTED ? (
+                  <View style={{ marginTop: space(1) }}>
+                    {c.attachmentIds.map((fid) => (
+                      <Button
+                        key={fid}
+                        title={STR.cmOpenAttachment}
+                        variant="ghost"
+                        onPress={() => void openStoredFile(fid)}
+                      />
+                    ))}
+                  </View>
+                ) : null}
               </View>
             ))
           )}

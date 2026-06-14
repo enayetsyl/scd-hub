@@ -1,8 +1,27 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two server slices landed this cycle, integrated gate green: **jest 1198/1198 [70 suites]**, vocab verifier PASS incl. §C.17, shared/server tsc clean. **CM-5** (PR #78) — Comments: `MeetingComment` + comparison timeline + guardian `childComments`/`childMeetingSlot`, VOCAB-FREE, D-#124 governing + D-#202 ruling; coordinator 3-finder review = no fixes (comparison reads' reps-gate is intentional per PRD §8). **AC-1** (PR #79) — Per-user Access Control: role→template seam swap (`schema.ts` + ALL ~30 production `roleHasPermission(ctx.auth.role,…)` → `callerHasPermission(ctx.auth,…)`), 3 additive `User` fields ZERO-migration, `access:manage` RESERVED-locked, D-#193 + D-#210–#215; sole vocab owner; coordinator 6-finder review = no fixes (byte-identical proof = every prior RBAC test green; verifier §C.17). Merged CM-5 first, AC-1 last (highest blast radius, keep-both append-logs + index/Audit union). **Non-blocking follow-ups recorded:** (1) AC per-user changes apply on the target's NEXT login (JWT-baked, ≤8h TTL — D-#211; relevant to AC-2 UX); (2) `effectivePermissions` recomputes per gate — future per-request memo if profiling warrants; (3) CM-5 comparison timeline is wider than CM-1 section-scope (reps gate, by PRD design). Prior — **CT-4-FIX MERGED** [jest 1165, D-#196]. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), Saturday-Revision (D-#197–#201). In flight: CO-2. AC-2 DONE (app editor — Access Control fully built server + app). Next: CM-6 (Comments app slice), HR-G2 (server). Carried follow-up: NONE outstanding)_
+_Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two server slices landed this cycle, integrated gate green: **jest 1198/1198 [70 suites]**, vocab verifier PASS incl. §C.17, shared/server tsc clean. **CM-5** (PR #78) — Comments: `MeetingComment` + comparison timeline + guardian `childComments`/`childMeetingSlot`, VOCAB-FREE, D-#124 governing + D-#202 ruling; coordinator 3-finder review = no fixes (comparison reads' reps-gate is intentional per PRD §8). **AC-1** (PR #79) — Per-user Access Control: role→template seam swap (`schema.ts` + ALL ~30 production `roleHasPermission(ctx.auth.role,…)` → `callerHasPermission(ctx.auth,…)`), 3 additive `User` fields ZERO-migration, `access:manage` RESERVED-locked, D-#193 + D-#210–#215; sole vocab owner; coordinator 6-finder review = no fixes (byte-identical proof = every prior RBAC test green; verifier §C.17). Merged CM-5 first, AC-1 last (highest blast radius, keep-both append-logs + index/Audit union). **Non-blocking follow-ups recorded:** (1) AC per-user changes apply on the target's NEXT login (JWT-baked, ≤8h TTL — D-#211; relevant to AC-2 UX); (2) `effectivePermissions` recomputes per gate — future per-request memo if profiling warrants; (3) CM-5 comparison timeline is wider than CM-1 section-scope (reps gate, by PRD design). Prior — **CT-4-FIX MERGED** [jest 1165, D-#196]. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), Saturday-Revision (D-#197–#201). In flight: CO-2. AC-2 + CM-6 DONE (Access Control + Comments both fully built server + app; CM guardian meeting-slot card deferred on a server gap). Next: HR-G2 (server), then CO-2. Carried follow-up: NONE outstanding)_
 
 ## Now / next
+- **Built (Student Comments + Parents-Meeting CM-6 — app, Expo, prd-comments-meetings §6 + J-CM1..J-CM8)
+  [branch `claude/open-prds-nl0az4`] — COMPLETES the module (CM-1..CM-6, server + app):** the Expo surface
+  over the merged CM-1..CM-5 resolvers. **APP-ONLY** (`git diff origin/dev -- server shared` empty). New
+  `app/src/graphql/comments.ts` + a **🗣️ Comments tab** gated `tracker:read || roster:manage` (GUARDIAN
+  excluded). **6 screens:** CommentsHome (hub), SectionComments (picker + students + section comments,
+  Delivered/Draft badges), CommentEntry (J-CM1 — type/sentiment chips + text + record-then-attach via
+  `pickAndUploadCommentFile`; deliver → wa.me link + counts; **read-only once delivered** — server seal),
+  MeetingsList (+ create), MeetingAdmin (generate slots, On-Call toggle, up/down reorder, dispatch + per-slot
+  wa.me, post-dispatch present/absent + derived `meetingAttendanceSummary`), MeetingComparison (J-CM7 —
+  editable current positive/concern → `saveMeetingComment` [class-teacher-only deny inline, J-CM6] + prior
+  comments + by-type rollup). **Guardian rider (J-CM8):** delivered-comments card via `childComments` on
+  GuardianHome. New `pickAndUploadCommentFile` + comment/meeting label helpers + `cm*`/`gpComments`/`tabComments`
+  BN+EN keys. **Deliberately skipped — recorded follow-up:** the guardian **meeting-slot** card —
+  `childMeetingSlot` needs a `meetingId` but there is **no guardian-facing "list my meetings" read**, so a
+  guardian can't obtain one (a small server slice — a guardian upcoming-meetings read — must ship first; a
+  `// CM-6 follow-up:` comment marks it in GuardianHomeScreen). No DECISIONS row (app slice; CT-5/VC-5 posture).
+  **Gate GREEN (executed):** app `tsc --noEmit` clean + `expo export --platform web` green (759 modules);
+  no-drift = server/shared untouched + jest unchanged. **Not verified live.** **CM is now built server + app
+  (CM-1..CM-6), minus the noted guardian meeting-slot server gap.**
 - **Built (Access Control AC-2 — app, Expo, prd-access-control §6 + J-AC1..J-AC3) [branch
   `claude/open-prds-nl0az4`] — COMPLETES Access Control (AC-1 server + AC-2 app):** the Principal-only
   per-user permission editor over the merged AC-1 resolvers. **APP-ONLY: no server/shared/vocab/contract
