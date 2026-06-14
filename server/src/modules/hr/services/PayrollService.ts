@@ -213,6 +213,23 @@ export async function payslipsForRun(runId: string): Promise<IPayslip[]> {
     .lean() as unknown as Promise<IPayslip[]>;
 }
 
+/**
+ * HR-G1 own-row read: a staff member's OWN payslips across runs (newest month first).
+ * LOCKED-RUNS-ONLY — a staff member must never see a draft/`prepared` (or `cancelled`)
+ * payslip; only `approved_locked` runs are issued (§4.2). The caller's StaffProfile is
+ * resolved by the resolver (phone-join, fail-closed); this read is scoped to that one id.
+ */
+export async function payslipsForStaff(staffProfileId: string): Promise<IPayslip[]> {
+  const lockedRuns = await PayrollRun.find({ status: "approved_locked" }).select("_id").lean();
+  if (lockedRuns.length === 0) return [];
+  return Payslip.find({
+    staffProfileId: new Types.ObjectId(staffProfileId),
+    payrollRunId: { $in: lockedRuns.map((r) => r._id) },
+  })
+    .sort({ monthKey: -1 })
+    .lean() as unknown as Promise<IPayslip[]>;
+}
+
 export interface PaymentExportRow {
   staffProfileId: string;
   name: string;

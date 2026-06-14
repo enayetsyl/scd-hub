@@ -17,6 +17,7 @@ import {
   previewImport,
   commitImport,
   teacherAttendanceForDate,
+  staffAttendanceForRange,
   importedDates,
   teacherAttendanceSummary,
   type ImportPreview,
@@ -26,6 +27,7 @@ import {
   type ImportedDate,
   type StaffAttendanceSummary,
 } from "../services/TeacherAttendanceService";
+import { resolveStaffProfileForUser } from "../../hr/services/staffMatch";
 
 // ---------------------------------------------------------------------------
 // Shapes
@@ -173,6 +175,29 @@ builder.queryField("teacherAttendanceForDate", (t) =>
     authScopes: { hasPermission: "attendance:manage" },
     args: { dateKey: t.arg.string({ required: true }) },
     resolve: async (_root, args) => teacherAttendanceForDate(args.dateKey),
+  }),
+);
+
+builder.queryField("myStaffAttendance", (t) =>
+  t.field({
+    type: [TeacherDayRecordRef],
+    description:
+      "The caller's OWN attendance over [fromKey, toKey], oldest day first, with the AT-1 " +
+      "✘=ABSENT → LEAVE overlay applied (HR-2). Own-row self-service: the caller's " +
+      "StaffProfile is the phone-link (staffMatch, fail-closed on a shared phone); a caller " +
+      "with no linked StaffProfile gets an empty list, never another person's days. No " +
+      "permission (the staff-self path; admins use teacherAttendance* with attendance:manage).",
+    authScopes: { authenticated: true },
+    args: {
+      fromKey: t.arg.string({ required: true }),
+      toKey: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) return [];
+      const staff = await resolveStaffProfileForUser(ctx.auth.userId);
+      if (!staff) return [];
+      return staffAttendanceForRange(staff._id.toString(), args.fromKey, args.toKey);
+    },
   }),
 );
 

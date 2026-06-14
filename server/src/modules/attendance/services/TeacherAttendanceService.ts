@@ -299,6 +299,41 @@ export async function teacherAttendanceForDate(dateKey: string): Promise<Teacher
   return records.sort((a, b) => a.staffName.localeCompare(b.staffName));
 }
 
+/**
+ * HR-G1 own-row read: ONE staff member's attendance over [fromKey, toKey], oldest day
+ * first. Reuses the SAME AT-1 ✘=ABSENT → LEAVE read-time overlay (`applyLeaveOverlay`)
+ * as the admin reads, so the staff member sees the identical split. The caller's
+ * StaffProfile is resolved by the resolver (phone-join, fail-closed); this read is
+ * scoped to that one id (own-row only — never another person's days).
+ */
+export async function staffAttendanceForRange(
+  staffProfileId: string,
+  fromKey: string,
+  toKey: string,
+): Promise<TeacherDayRecord[]> {
+  const rows = await TeacherAttendanceDay.find({
+    staffProfileId: new Types.ObjectId(staffProfileId),
+    dateKey: { $gte: fromKey, $lte: toKey },
+  }).lean();
+  if (rows.length === 0) return [];
+  const profile = await StaffProfile.findById(staffProfileId).select("name category").lean();
+  const records = rows.map((r) => ({
+    id: r._id.toString(),
+    staffProfileId: r.staffProfileId.toString(),
+    staffName: profile?.name ?? "(unknown)",
+    category: profile?.category ?? "",
+    dateKey: r.dateKey,
+    status: r.status,
+    punchIn: r.punchIn ?? null,
+    punchOut: r.punchOut ?? null,
+    shift: r.shift ?? null,
+  }));
+  // HR-2 overlay: flip ✘=ABSENT → LEAVE where an approved staff leave covers the date.
+  const leaves = await loadApprovedLeaves([staffProfileId], fromKey, toKey);
+  applyLeaveOverlay(records, leaves);
+  return records.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+}
+
 export interface ImportedDate {
   dateKey: string;
   records: number;

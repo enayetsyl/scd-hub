@@ -20,10 +20,12 @@ import {
   cancelPayrollRun,
   payrollRuns,
   payslipsForRun,
+  payslipsForStaff,
   paymentExport,
   type PaymentExportRow,
 } from "../services/PayrollService";
 import { issueAdvance, settleAdvance, advancesForStaff } from "../services/AdvanceService";
+import { resolveStaffProfileForUser } from "../services/staffMatch";
 import type { IPayrollRun } from "../models/PayrollRun";
 import type { IPayslip, IPayLine } from "../models/Payslip";
 import type { IAdvanceLoan, AdvanceRecoveryMode } from "../models/AdvanceLoan";
@@ -302,6 +304,25 @@ builder.queryField("payrollPaymentExport", (t) =>
     authScopes: { hasPermission: "payroll:manage" },
     args: { runId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => paymentExport(args.runId),
+  }),
+);
+
+builder.queryField("myPayslips", (t) =>
+  t.field({
+    type: [PayslipRef],
+    description:
+      "The caller's OWN payslips across runs, newest month first — LOCKED runs only (a " +
+      "staff member never sees a draft/prepared payslip, §4.2). Own-row self-service: the " +
+      "caller's StaffProfile is the phone-link (staffMatch, fail-closed on a shared phone); " +
+      "a caller with no linked StaffProfile gets an empty list, never another person's data. " +
+      "No permission (the myConductRecords precedent, D-#112).",
+    authScopes: { authenticated: true },
+    resolve: async (_root, _args, ctx) => {
+      if (!ctx.auth) return [];
+      const staff = await resolveStaffProfileForUser(ctx.auth.userId);
+      if (!staff) return [];
+      return payslipsForStaff(staff._id.toString());
+    },
   }),
 );
 
