@@ -1,3 +1,5 @@
+// Deploy: CI/CD via GitHub Actions (.github/workflows) — push to dev/main runs
+// the CI gate then scripts/deploy.sh on the VM (DEP-6).
 import "dotenv/config";
 import express from "express";
 import { createYoga } from "graphql-yoga";
