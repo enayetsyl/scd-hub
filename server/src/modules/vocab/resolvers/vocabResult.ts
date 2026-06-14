@@ -26,11 +26,12 @@ import { assertCanOperateVocab } from "../services/vocabGate";
 // GraphQL shapes
 // ---------------------------------------------------------------------------
 
-const WrongWordRef = builder.objectRef<WrongWord>("VocabWrongWord");
+export const WrongWordRef = builder.objectRef<WrongWord>("VocabWrongWord");
 WrongWordRef.implement({
   description: "A word a student got wrong on a test, by direction (VC-3; feeds reports + guardian messages).",
   fields: (t) => ({
     positionId: t.exposeString("positionId"),
+    wordId: t.exposeString("wordId"),
     direction: t.exposeString("direction"),
     headword: t.exposeString("headword"),
     banglaMeaning: t.exposeString("banglaMeaning"),
@@ -38,7 +39,7 @@ WrongWordRef.implement({
   }),
 });
 
-const DerivedStudentResultRef = builder.objectRef<DerivedStudentResult>("VocabStudentResult");
+export const DerivedStudentResultRef = builder.objectRef<DerivedStudentResult>("VocabStudentResult");
 DerivedStudentResultRef.implement({
   description: "A student's DERIVED result on a vocab test (VC-3; §3.6 — score/counts never stored, D-#85).",
   fields: (t) => ({

@@ -44,6 +44,8 @@ export interface NotificationRefs {
   tier?: string;
   /** Class-note ladder/escalation rung hour (12/13/14 prompt; 15/16 escalation). */
   hour?: number;
+  /** Vocab guardian result (deep-link: GuardianVocab; VC-4, D-#154). */
+  vocabTestId?: string;
 }
 
 export interface INotification extends Document {
@@ -83,6 +85,7 @@ const RefsSchema = new Schema<NotificationRefs>(
     periodNumber: { type: Number },
     tier: { type: String },
     hour: { type: Number },
+    vocabTestId: { type: String },
   },
   { _id: false },
 );

@@ -119,7 +119,7 @@ check("attendance: PRINCIPAL+OFFICE manage (not mark), TEACHER mark (not manage)
 console.log("=== C.5 Notification kinds + own-row posture (D-#72–#75) ===");
 check("NOTIFICATION_KIND_LABELS_BN total", total(V.NOTIFICATION_KIND_LABELS_BN, V.NOTIFICATION_KINDS));
 check("NOTIFICATION_KIND_LABELS_EN total", total(V.NOTIFICATION_KIND_LABELS_EN, V.NOTIFICATION_KINDS));
-check("kinds are exactly the 8 phase-1 kinds + 2 library kinds + 1 class-test kind (D-#72/#74/#84/#122)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE","CLASS_TEST_RESULT"]));
+check("kinds are exactly the 8 phase-1 kinds + 2 library kinds + 1 class-test kind + 1 vocab kind (D-#72/#74/#84/#122; VC-4 += VOCAB_RESULT, D-#154)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE","CLASS_TEST_RESULT","VOCAB_RESULT"]));
 check("no notification:* permission added (inbox is own-row, emission server-internal, D-#72)", !V.PERMISSIONS.some((p) => p.startsWith("notification")));
 
 console.log("=== C.6 Library vocab + RBAC invariants (D-#81–#84) ===");
@@ -285,6 +285,10 @@ check("vocab assignment sources exact (§3.5)",    eq(V.VOCAB_ASSIGNMENT_SOURCES
 check("VOCAB_ATTENDANCE_STATUS_LABELS_BN total",  total(V.VOCAB_ATTENDANCE_STATUS_LABELS_BN, V.VOCAB_ATTENDANCE_STATUSES));
 check("VOCAB_ATTENDANCE_STATUS_LABELS_EN total",  total(V.VOCAB_ATTENDANCE_STATUS_LABELS_EN, V.VOCAB_ATTENDANCE_STATUSES));
 check("vocab attendance statuses exact (§3.6)",   eq(V.VOCAB_ATTENDANCE_STATUSES, ["PRESENT", "ABSENT"]));
+// VC-4 — guardian-message delivery: VOCAB_RESULT notification kind + the vocab.result.* template keys (prd-vocabulary-tracker §8, D-#154)
+check("VOCAB_RESULT is a registered NotificationKind (§8, extends §C.5)", V.NOTIFICATION_KINDS.includes("VOCAB_RESULT"));
+check("vocab.result.* guardian-message template keys registered (Regular/Perfect/Absent/Cumulative + title, §8 — built on the MT registry, D-#131)",
+  ["vocab.result.title","vocab.result.regular.body","vocab.result.perfect.body","vocab.result.absent.body","vocab.result.cumulative.body"].every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k) && V.MESSAGE_TEMPLATE_REGISTRY[k]));
 
 console.log("=== C.13 Message-template vocab + code-default registry + RBAC invariants (MT-1 — prd-message-templates §3, D-#128–#131) ===");
 check("TEMPLATE_LANGUAGE_MODES exact (D-#130)",        eq(V.TEMPLATE_LANGUAGE_MODES, ["BN", "EN", "BOTH"]));

@@ -53,6 +53,9 @@ const dedupeKeys = {
   /** Per record+ladder-step+guardian (AS-T4): re-running a step can't double-notify. */
   assignmentGuardianChase: (recordId: string, stepNumber: number, guardianId: string) =>
     `ASCH:${recordId}:${stepNumber}:${guardianId}`,
+  /** Per test+student+guardian (VC-4): re-generating a test's messages is a no-op. */
+  vocabResult: (testId: string, studentId: string, guardianId: string) =>
+    `VOCR:${testId}:${studentId}:${guardianId}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -267,6 +270,60 @@ export async function emitAssignmentGuardianChase(
           ),
         });
         // The row exists after a non-throwing emit — newly written or deduped.
+        notified.push(g._id.toString());
+      }),
+    );
+  });
+  return notified;
+}
+
+// ---------------------------------------------------------------------------
+// VC-4 (§8, D-#154) — vocab result → the student's login-enabled guardians, riding
+// THIS seam (D-#72). VOCAB_RESULT is a registered kind; contact-only guardians have
+// no inbox (D-#31/#72) and are reached via the wa.me path the caller builds. The
+// title + body are PRE-RENDERED by the caller (VocabGuardianService) and passed in,
+// so renderTemplate/getEffectiveTemplate is NEVER called inside this per-guardian
+// loop (the recorded MT N+1 guard). Returns the guardian ids whose inbox rows exist.
+// ---------------------------------------------------------------------------
+
+export interface VocabGuardianResultEvent {
+  testId: IdLike;
+  studentId: IdLike;
+  sectionId: IdLike;
+  /** Pre-rendered (the vocab.result.title template). */
+  titleBn: string;
+  /** Pre-rendered per-student body (the vocab.result.{regular|perfect|absent} template). */
+  messageBn: string;
+}
+
+export async function emitVocabGuardianResult(ev: VocabGuardianResultEvent): Promise<string[]> {
+  const notified: string[] = [];
+  await bestEffort("vocab guardian result", async () => {
+    const links = (await GuardianLink.find({
+      studentId: ev.studentId,
+      active: { $ne: false }, // missing = active (pre-GP-1 rows)
+    })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+
+    // Login-enabled only — contact-only guardians have no inbox (D-#31/#72); they are
+    // reached via the wa.me link the caller produces for every family with a phone.
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+
+    await Promise.all(
+      guardians.map(async (g) => {
+        await emit({
+          recipientGuardianId: g._id.toString(),
+          kind: "VOCAB_RESULT",
+          titleBn: ev.titleBn,
+          bodyBn: ev.messageBn,
+          refs: { vocabTestId: ev.testId.toString(), studentId: ev.studentId.toString(), sectionId: ev.sectionId.toString() },
+          dedupeKey: dedupeKeys.vocabResult(ev.testId.toString(), ev.studentId.toString(), g._id.toString()),
+        });
         notified.push(g._id.toString());
       }),
     );
