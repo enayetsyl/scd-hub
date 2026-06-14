@@ -1,6 +1,6 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CM-1 MERGED** — Comments/Parents-Meeting CM-1 [#69, StudentComment store + COMMENT_TYPES/COMMENT_SENTIMENTS vocab, server, D-#170/#171]; ran PARALLEL with CT-4 as 2nd additive+disjoint vocab owner → keep-both DECISIONS/CHANGELOG, no renumber. Integrated gate green on main 0930d25: **jest 1053/1053** [62 suites], vocab PASS, shared/server/app tsc. Prior: CT-4 #68 [read aggregates + overdue-chase, D-#166/#167], VC-5 #67 [Vocabulary Tracker COMPLETE VC-1..VC-5], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. DEP-1+DEP-2 DONE — prod LIVE at scdhub.shafayet.me (DEP-3 live golden-path next). Next: CT-5 [app — completes Class Test Tracker] + CM-2 [comment delivery]. Parked standalone: CO-1)_
+_Updated: 2026-06-14 (**CT-5 MERGED — Class Test Tracker COMPLETE (CT-1..CT-5), server + app** — CT-5 [#70, 9 Expo screens + GuardianTestResults card, APP-ONLY]. Integrated gate green on main 0e9a342: **jest 1053/1053** [62 suites], vocab PASS, shared/server/app tsc, expo web. **FOLLOW-UP recorded (pre-existing CT-4 server RBAC):** classTestPrincipalDashboard + report reads gate `authScopes: tracker:read` which OFFICE lacks → Office locked out despite P/O intent; relax to authenticated+gate-does-P/O (assertChaseAdmin pattern). Prior: CM-1 #69 [Comments store, D-#170/#171], CT-4 #68, VC-5 #67 [Vocab COMPLETE], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, CO PRD [D-#146–#152], MT #61, HR app #56→#60. DEP-1+DEP-2 DONE — prod LIVE at scdhub.shafayet.me (DEP-3 next). In flight: CM-2 [comment delivery]. Parked standalone: CO-1. Available vocab-free: HR-G1 own-row reads, APP-FU1)_
 
 ## Now / next
 - **Built (Student Comments + Parents-Meeting CM-1 — server, prd-comments-meetings §3/§4/§6, J-CM1/J-CM9,
@@ -103,7 +103,7 @@ _Updated: 2026-06-14 (**CM-1 MERGED** — Comments/Parents-Meeting CM-1 [#69, St
   rubricScores] — the new module's `ClassroomObservation` is a distinct name/module, no clash, but related.)_
   **Next = build CO-1 per `docs/prd-classroom-observation.md` §5, slice order CO-1→CO-7.**
 - **Built (Class Test Tracker CT-5 — app, Expo, prd-tracker-class-test §6/J1–J7) [branch
-  `worktree-class-test-ct5`, PR open — coordinator reviews] — COMPLETES the Class Test Tracker
+  `worktree-class-test-ct5`, PR #70 MERGED] — COMPLETES the Class Test Tracker
   (CT-1..CT-5):** the app slice over the merged CT-1..CT-4 resolvers. **APP-ONLY: no server/shared/vocab/
   contract change** (working tree touches only `app/`; vocab verifier PASS). New 🧪 **Class Test tab** gated
   `tracker:read || roster:manage` (GUARDIAN never sees it); every action re-gated server-side, the Bangla deny
