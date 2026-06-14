@@ -1,6 +1,6 @@
 # STATUS
 
-_Updated: 2026-06-14 (**VC-4 + CT-2 both MERGED** — Vocab VC-4 [#65, read aggregates + persistent weak words + guardian messages on the MT registry + childVocab, D-#153/#154/#155] + Class Test CT-2 [#64, per-student results + scoring + school-day deadline/overdue, D-#158/#159]. Ran PARALLEL, disjoint bands + enums → NO renumber (VC-4 merged 1st, CT-2 keep-both rebase = DECISIONS-only). Integrated gate green on main 63a3163: **jest 1006/1006** [58 suites], vocab PASS, shared/server/app tsc. Earlier this run: VC-3 #62 + CT-1 #63 [D-#142–#145], Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. Parked vocab-toucher: CM-1; planned standalone: CO-1. Next: VC-5 [app] / CT-3 [publish+guardian] continue their chains. **This run: VC-5 built [branch worktree-vocab-vc5, APP-ONLY, app tsc + expo web export green, jest 1006/1006 unchanged] — the vocab module's 10 app screens + guardian card; COMPLETES the Vocabulary Tracker VC-1..VC-5. NO server/shared/vocab change.**)_
+_Updated: 2026-06-14 (**VC-5 MERGING — Vocabulary Tracker COMPLETE (VC-1..VC-5)** — VC-5 [#67, 10 Expo app screens + guardian vocab card, APP-ONLY, no server/shared change] over the merged VC-1..VC-4 server. Prior: CT-3 #66 [publish + guardian delivery, D-#160/#161], VC-4 #65 + CT-2 #64 [D-#153–#155/#158/#159], VC-3 #62 + CT-1 #63 [D-#142–#145], Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. In flight: CT-4 [reports/dashboards]. Parked vocab-toucher: CM-1; planned standalone: CO-1. Vocab module remaining = live verification only)_
 
 ## Now / next
 - **Built (Vocabulary Tracker VC-5 — Expo app, APP-ONLY, prd-vocabulary-tracker §6 VC-5 + J1–J7)
@@ -76,6 +76,30 @@ _Updated: 2026-06-14 (**VC-4 + CT-2 both MERGED** — Vocab VC-4 [#65, read aggr
   flag: an `Observation` model already exists in `modules/hr` [HR-4's lightweight observation w/ parked REF-11
   rubricScores] — the new module's `ClassroomObservation` is a distinct name/module, no clash, but related.)_
   **Next = build CO-1 per `docs/prd-classroom-observation.md` §5, slice order CO-1→CO-7.**
+- **Built (Class Test Tracker CT-3 — server, prd-tracker-class-test §5/§8/J4/J7, D-#121/#122 + build rulings
+  D-#160/#161) [branch `worktree-class-test-ct3`, PR #66 MERGED]:** the THIRD class-test
+  slice — publish/unpublish + guardian delivery on the Message-Templates registry + the guardian read.
+  **Publish (`ClassTestPublishService`):** `publishResult` (per-student) + `publishExam` (whole-exam bulk)
+  stamp `publishedAt = now` + `$inc publishedVersion` (the CT-2 field), then deliver; `unpublishResult`/
+  `unpublishExam` clear `publishedAt` (LEAVE publishedVersion → a re-publish bumps it again). **Guardian
+  delivery built DIRECTLY on the merged MT registry (D-#131, NOT inline):** 4 `class_test.result.*` keys
+  (`title` + `regular`/`excellent`/`absent` bodies, §8 Bangla verbatim as code defaults) render via
+  `renderTemplate`; §8 mapping = ABSENT→absent, PRESENT+weakness→regular (feedback), PRESENT+no-weakness→
+  excellent. Rails (D-#72/#31): **wa.me for EVERY family with a phone** (ADR-003) + in-app Notification
+  (kind `CLASS_TEST_RESULT`, registered at CT-1 — consumed, NOT re-added) via `emit()` for login-enabled;
+  contact-only stay wa.me-only. **N+1 guard:** title once/batch, body once/student, `renderTemplate` never in
+  the per-guardian loop. **Republish RE-notifies (D-#122):** dedupeKey `CTR:{testId}:{studentId}:{guardianId}:v{publishedVersion}`
+  — a fresh version → new key → emit re-fires (same version = no-op). **Guardian read (`childTestResults`,
+  J7/D-#68):** `guardian:read_child` + `assertGuardianOfStudent`, **PUBLISHED-only**, mapped to a dedicated
+  `GuardianClassTestResult` shape that **structurally omits `teacherAction`** (can't leak — the staff shape
+  keeps it). **RBAC (D-#160): NO new role/permission** — publish/unpublish ride `tracker:write` +
+  `assertCanWrite` (Office prints, never publishes); Office overdue-chase is CT-4. 2 audit kinds
+  `CLASS_TEST_RESULT_PUBLISHED`/`_UNPUBLISHED`; `NotificationRefs += classTestId`. Firewall class-test block
+  extended (corpus ↛ class-test). **Gate GREEN (executed):** vocab verifier PASS, shared build + shared/server
+  tsc clean, **jest 1021/1021** (60 suites; +1 new suite `classTestPublish.test.ts` [15] over the 1006 main
+  base; firewall green). **Server-only** (no app — CT-5 is the app slice; expo skipped). **Not verified live.**
+  **Next = CT-4** (read aggregates: Reports Status / Principal Dashboard [KPIs + overdue-by-teacher] /
+  Class×Subject Analysis / Student Profile + the Office overdue-chase via `message:dispatch`).
 - **Built (Class Test Tracker CT-2 — server, prd-tracker-class-test §3.3/§4/§5/§9, D-#121 + build rulings
   D-#158/#159) [branch `worktree-class-test-ct2`, PR #64 MERGED]:** the SECOND class-test
   slice — per-student results + derived scoring + the school-day-aware, exam-date-anchored deadline/overdue.

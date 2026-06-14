@@ -56,6 +56,10 @@ const dedupeKeys = {
   /** Per test+student+guardian (VC-4): re-generating a test's messages is a no-op. */
   vocabResult: (testId: string, studentId: string, guardianId: string) =>
     `VOCR:${testId}:${studentId}:${guardianId}`,
+  /** Per test+student+guardian+publishedVersion (CT-3, D-#122): a re-publish bumps
+   *  publishedVersion → a NEW key → the result RE-notifies; the same version is a no-op. */
+  classTestResult: (testId: string, studentId: string, guardianId: string, publishedVersion: number) =>
+    `CTR:${testId}:${studentId}:${guardianId}:v${publishedVersion}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -323,6 +327,69 @@ export async function emitVocabGuardianResult(ev: VocabGuardianResultEvent): Pro
           bodyBn: ev.messageBn,
           refs: { vocabTestId: ev.testId.toString(), studentId: ev.studentId.toString(), sectionId: ev.sectionId.toString() },
           dedupeKey: dedupeKeys.vocabResult(ev.testId.toString(), ev.studentId.toString(), g._id.toString()),
+        });
+        notified.push(g._id.toString());
+      }),
+    );
+  });
+  return notified;
+}
+
+// ---------------------------------------------------------------------------
+// CT-3 (§5/§8, D-#122/#160) — class-test result PUBLISH → the student's login-enabled
+// guardians, riding THIS seam (D-#72). CLASS_TEST_RESULT is a registered kind (CT-1);
+// contact-only guardians have no inbox (D-#31/#72) and are reached via the wa.me link
+// the caller builds. The title + body are PRE-RENDERED by the caller
+// (ClassTestPublishService) and passed in, so renderTemplate/getEffectiveTemplate is
+// NEVER called inside this per-guardian loop (the recorded MT N+1 guard). The
+// dedupeKey carries `publishedVersion`, so a re-publish (version bumped) RE-notifies
+// — the idempotent emit only swallows the SAME version. Returns the notified guardian ids.
+// ---------------------------------------------------------------------------
+
+export interface ClassTestGuardianResultEvent {
+  testId: IdLike;
+  studentId: IdLike;
+  sectionId: IdLike;
+  /** Bumped on each (re)publish — part of the dedupeKey so a republish re-notifies (D-#122). */
+  publishedVersion: number;
+  /** Pre-rendered (the class_test.result.title template). */
+  titleBn: string;
+  /** Pre-rendered per-student body (class_test.result.{regular|excellent|absent}). */
+  messageBn: string;
+}
+
+export async function emitClassTestGuardianResult(ev: ClassTestGuardianResultEvent): Promise<string[]> {
+  const notified: string[] = [];
+  await bestEffort("class-test guardian result", async () => {
+    const links = (await GuardianLink.find({
+      studentId: ev.studentId,
+      active: { $ne: false }, // missing = active (pre-GP-1 rows)
+    })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+
+    // Login-enabled only — contact-only guardians have no inbox (D-#31/#72); they are
+    // reached via the wa.me link the caller produces for every family with a phone.
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+
+    await Promise.all(
+      guardians.map(async (g) => {
+        await emit({
+          recipientGuardianId: g._id.toString(),
+          kind: "CLASS_TEST_RESULT",
+          titleBn: ev.titleBn,
+          bodyBn: ev.messageBn,
+          refs: { classTestId: ev.testId.toString(), studentId: ev.studentId.toString(), sectionId: ev.sectionId.toString() },
+          dedupeKey: dedupeKeys.classTestResult(
+            ev.testId.toString(),
+            ev.studentId.toString(),
+            g._id.toString(),
+            ev.publishedVersion,
+          ),
         });
         notified.push(g._id.toString());
       }),

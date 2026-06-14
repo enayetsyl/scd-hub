@@ -1368,6 +1368,10 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "vocab.result.perfect.body",
   "vocab.result.absent.body",
   "vocab.result.cumulative.body",
+  "class_test.result.title",
+  "class_test.result.regular.body",
+  "class_test.result.excellent.body",
+  "class_test.result.absent.body",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1584,6 +1588,41 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
       "গড়ে {TotalMarks} নম্বরের মধ্যে {Score} পেয়েছে।\n" +
       "বারবার ভুল হওয়া শব্দ:\n{PersistentWords}\n" +
       "অনুগ্রহ করে এই শব্দগুলোতে বিশেষ মনোযোগ দিন। জাযাকাল্লাহু খাইরান — {School}",
+    defaultLangMode: "BN",
+  },
+
+  // --- Class-test results (CT-3, prd-tracker-class-test §8 — the three Bangla
+  // templates ship VERBATIM on the registry per D-#131 [no inline-then-migrate];
+  // Islamic salutation + du'a preserved; a weak score is NEVER framed as "fail".
+  // Regular = a result WITH a teacher-entered weakness; Excellent = no weakness. ---
+  "class_test.result.title": {
+    group: "classTest", labelBn: "ক্লাস টেস্ট ফলাফল — শিরোনাম", placeholders: [],
+    bnDefault: "ক্লাস টেস্টের ফলাফল", defaultLangMode: "BN",
+  },
+  "class_test.result.regular.body": {
+    group: "classTest", labelBn: "ক্লাস টেস্ট ফলাফল — সাধারণ (ইনবক্স + হোয়াটসঅ্যাপ)",
+    placeholders: ["StudentName", "Subject", "TestNumber", "Marks", "TotalMarks", "Weakness", "GuardianAction"],
+    bnDefault:
+      "আসসালামু আলাইকুম। {StudentName}-এর {Subject} ক্লাস টেস্ট ({TestNumber}) ফলাফল — প্রাপ্ত নম্বর: {Marks}/{TotalMarks}।\n" +
+      "লক্ষণীয় দিক: {Weakness}\n" +
+      "অভিভাবকের করণীয়: {GuardianAction}\n" +
+      "আল্লাহ তাকে উত্তরোত্তর উন্নতি দান করুন, আমীন। কোনো জিজ্ঞাসা থাকলে জানাবেন। জাযাকাল্লাহু খাইরান।",
+    defaultLangMode: "BN",
+  },
+  "class_test.result.excellent.body": {
+    group: "classTest", labelBn: "ক্লাস টেস্ট ফলাফল — চমৎকার / লক্ষণীয় দিক নেই (ইনবক্স + হোয়াটসঅ্যাপ)",
+    placeholders: ["StudentName", "Subject", "TestNumber", "Marks", "TotalMarks"],
+    bnDefault:
+      "আসসালামু আলাইকুম। আলহামদুলিল্লাহ! {StudentName} {Subject} ক্লাস টেস্ট ({TestNumber})-এ চমৎকার করেছে — {Marks}/{TotalMarks}। " +
+      "আল্লাহুম্মা বারিক। এই ধারাবাহিকতা ধরে রাখতে তাকে উৎসাহ দিন। জাযাকাল্লাহু খাইরান।",
+    defaultLangMode: "BN",
+  },
+  "class_test.result.absent.body": {
+    group: "classTest", labelBn: "ক্লাস টেস্ট ফলাফল — অনুপস্থিত (ইনবক্স + হোয়াটসঅ্যাপ)",
+    placeholders: ["StudentName", "TestDate", "Subject", "TestNumber"],
+    bnDefault:
+      "আসসালামু আলাইকুম। {StudentName} {TestDate}-এর {Subject} ক্লাস টেস্টে ({TestNumber}) অনুপস্থিত ছিল। " +
+      "নিয়মিত উপস্থিতি তার জন্য জরুরি — অনুগ্রহ করে উপস্থিতি নিশ্চিত করুন। জাযাকাল্লাহু খাইরান।",
     defaultLangMode: "BN",
   },
 };
