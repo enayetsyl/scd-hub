@@ -3,6 +3,15 @@
 _Updated: 2026-06-14 (**CM-3 MERGED** — Comments CM-3 [#74, ParentMeeting + per-family slot generation, VOCAB-FREE, D-#174/#175]. Integrated gate green on main: **jest 1096/1096**, vocab PASS, shared/server tsc. Prior: HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70 [Class Test COMPLETE], VC-5 [Vocab COMPLETE], CM-1 #69, MT #61, HR app #56→#60. **DEP-1..6 DONE — prod LIVE at scdhub.shafayet.me; main branch-protected + GitHub Actions CI/CD (gate + auto-deploy dev/prod); dev env + `dev` branch live; nightly Drive backup.** In flight: CO-1 [Classroom Observation, sole vocab owner]. Next: CM-4 [dispatch + MEETING_SCHEDULE — vocab-toucher; serialize behind CO-1 or ship kind-gated]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out. MERGE NOTE: protected main → `gh pr merge` may need re-fetch+retry on "Base branch was modified")_
 
 ## Now / next
+- **Planned (Access Control — per-user permissions, build contract written, D-#193):**
+  role becomes an editable-per-person TEMPLATE; effective = (∪ templates ∪ granted) − revoked,
+  reserved-locked set {payroll:approve, performance:signoff, chat:oversee, template:manage,
+  access:manage} Principal-only. Additive 3 fields on `User` (zero migration), one resolver
+  seam swap (`effectivePermissions`/`callerHasPermission`), new `access:manage` perm +
+  `PERMISSION_LABELS_BN/EN` (app-native vocab, NO wire sync). Guardian plane untouched.
+  Slices **AC-1** (server: fields+seam+mutations+audit+`access:manage`) → **AC-2** (app: Principal
+  editor screen w/ provenance chips). **Next = build AC-1 per `docs/prd-access-control.md` §6,
+  slice order AC-1→AC-2.**
 - **Planned (Finance/Accounting module FIN-1..FIN-6, D-#186–#192):** REQ scoped in
   docs/finance-requirements.md — migrate the SCD Google-Sheet accounting layer (Daily,
   Budget-vs-Actual, Qard/IOU Central, Bank & Online, Master Dashboard) into the app.
