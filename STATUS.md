@@ -1,10 +1,10 @@
 # STATUS
 
-_Updated: 2026-06-14 (**VC-3 + CT-1 both MERGED** — Vocab VC-3 [#62, grid mistake capture + derived scoring, D-#142] then Class Test CT-1 [#63, print-request→official-exam lifecycle, D-#143/#144/#145 — renumbered from #142–#144 at merge since VC-3 took #142]; integrated gate green on main: jest **959/959** [57 suites]. **+ docs: Classroom Observation module build contract added (D-#146–#152, renumbered from the handoff's #59–#65).** Earlier this run: MT-1..MT-3 #61 [D-#128–#131], HR app #56→#60 [D-#135]. Parked vocab-toucher behind the vocab lock: CM-1. Next: VC-4 / CT-2 continue their chains. **This run: VC-4 built [branch worktree-vocab-vc4, server-only, jest 981/981, D-#153/#154/#155] — read aggregates + persistent weak words + guardian messages (wa.me + emit() via the MT registry, VOCAB_RESULT kind) + childVocab; vocab additions purely additive + parallel-safe with CT-2.**)_
+_Updated: 2026-06-14 (**VC-4 + CT-2 both MERGED** — Vocab VC-4 [#65, read aggregates + persistent weak words + guardian messages on the MT registry + childVocab, D-#153/#154/#155] + Class Test CT-2 [#64, per-student results + scoring + school-day deadline/overdue, D-#158/#159]. Ran PARALLEL, disjoint bands + enums → NO renumber (VC-4 merged 1st, CT-2 keep-both rebase = DECISIONS-only). Integrated gate green on main 63a3163: **jest 1006/1006** [58 suites], vocab PASS, shared/server/app tsc. Earlier this run: VC-3 #62 + CT-1 #63 [D-#142–#145], Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. Parked vocab-toucher: CM-1; planned standalone: CO-1. Next: VC-5 [app] / CT-3 [publish+guardian] continue their chains)_
 
 ## Now / next
 - **Built (Vocabulary Tracker VC-4 — server, prd-vocabulary-tracker §6/§8/§9, J5/J6/J7, build rulings
-  D-#153/#154/#155) [branch `worktree-vocab-vc4`, PR open — coordinator reviews]:** the FOURTH vocab slice —
+  D-#153/#154/#155) [branch `worktree-vocab-vc4`, PR #65 MERGED]:** the FOURTH vocab slice —
   read aggregates + persistent weak words + guardian messages + the guardian child read. **Vocab (app-native,
   NO wire sync; PARALLEL-SAFE with the in-flight CT-2 per AGENTS rule 5 — purely additive, disjoint
   enums/verifier sections):** `NOTIFICATION_KINDS += VOCAB_RESULT` (+BN/EN — extends verifier §C.5 exact-list) +
@@ -52,7 +52,7 @@ _Updated: 2026-06-14 (**VC-3 + CT-1 both MERGED** — Vocab VC-3 [#62, grid mist
   rubricScores] — the new module's `ClassroomObservation` is a distinct name/module, no clash, but related.)_
   **Next = build CO-1 per `docs/prd-classroom-observation.md` §5, slice order CO-1→CO-7.**
 - **Built (Class Test Tracker CT-2 — server, prd-tracker-class-test §3.3/§4/§5/§9, D-#121 + build rulings
-  D-#158/#159) [branch `worktree-class-test-ct2`, PR open — coordinator reviews]:** the SECOND class-test
+  D-#158/#159) [branch `worktree-class-test-ct2`, PR #64 MERGED]:** the SECOND class-test
   slice — per-student results + derived scoring + the school-day-aware, exam-date-anchored deadline/overdue.
   **New `modules/trackers/` model:** `ClassTestResult` (one row per student×exam, unique `(testId, studentId)`,
   freely editable, **NO retake** D-#121; `status PRESENT|ABSENT`, `marks?`, `weakness?`, internal `teacherAction?`,
