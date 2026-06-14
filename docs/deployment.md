@@ -20,8 +20,18 @@ else low-cost VPS — settled; this plan implements it)
       (the registered root stays on its existing cPanel host, untouched). Concrete host/IP/
       domain live only in the operator's password manager + a local untracked notes file —
       never committed (§0 hard rule).
-- [ ] **DEP-2** Production install green: app served over HTTPS on the domain; server under
-      systemd; Atlas allow-list = VM IP only; `/healthz` returns OK
+- [x] **DEP-2** Production install green. Node 20 (ARM) + Python3 + jsonschema + Caddy on the
+      VM; repo at `/opt/scdhub/prod` (main); prod `.env` (mode 600, scdhub_prod DB + strong
+      prod JWT + scdbd.org Drive + prod folder); built shared→server→expo web export; server
+      under **systemd** (`scdhub-prod.service`, Restart=always, boot-start); **Caddy auto-HTTPS**
+      (Let's Encrypt) serves the web export + reverse-proxies /graphql,/pdf,/files,/triggers,
+      /healthz,/readyz; same-origin dissolves the /pdf CORS follow-up. `scripts/deploy.sh` +
+      `rollback.sh` (auto-rollback on unhealthy; one procedure for SSH + Actions). **Gate
+      executed:** HTTPS login mutation OK, `/healthz`+`/readyz` OK, real Bengali-font PDF
+      renders (auth+RBAC enforced, unauth→403), `validate_import.py` runs. **Deviation: Atlas
+      allow-list NOT yet reduced to VM-only** — operator chose to keep laptop access while
+      local/dev share the cluster (per-db scoped users protect prod); reduce when local moves
+      off Atlas. A real-credential browser login rides DEP-3.
 - [ ] **DEP-3** Live golden-path verification executed and recorded (clears the standing
       "not verified live" debt across all built slices)
 - [ ] **DEP-4** Nightly backup cron running + **one executed restore drill passed**

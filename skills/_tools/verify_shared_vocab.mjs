@@ -342,5 +342,15 @@ check("class_test.overdue_chase.wa template key registered (Office overdue-chase
 check("class test composes existing perms — no class-test:* permission (D-#94/#17)",
   !V.PERMISSIONS.some((p) => p.startsWith("class") || p.startsWith("classtest")));
 
+console.log("=== C.15 Student-Comments / Parents-Meeting vocab (CM-1 — prd-comments-meetings §4, D-#114/#115) ===");
+check("comment types exact (§3/§4 — the Form's M-column taxonomy)", eq(V.COMMENT_TYPES, ["GENERAL", "ATTENDANCE", "STUDY_HOMEWORK", "BEHAVIOUR", "SERIOUS_MATTER"]));
+check("COMMENT_TYPE_LABELS_BN total", total(V.COMMENT_TYPE_LABELS_BN, V.COMMENT_TYPES));
+check("COMMENT_TYPE_LABELS_EN total", total(V.COMMENT_TYPE_LABELS_EN, V.COMMENT_TYPES));
+check("comment sentiments exact (§3/§4)", eq(V.COMMENT_SENTIMENTS, ["CONCERN", "POSITIVE"]));
+check("COMMENT_SENTIMENT_LABELS_BN total", total(V.COMMENT_SENTIMENT_LABELS_BN, V.COMMENT_SENTIMENTS));
+check("COMMENT_SENTIMENT_LABELS_EN total", total(V.COMMENT_SENTIMENT_LABELS_EN, V.COMMENT_SENTIMENTS));
+check("comments compose existing perms — no comment:*/meeting:* permission (D-#17/#94)",
+  !V.PERMISSIONS.some((p) => p.startsWith("comment") || p.startsWith("meeting")));
+
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

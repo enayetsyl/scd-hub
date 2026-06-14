@@ -1640,6 +1640,57 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
 };
 
 
+// --- A.15 STUDENT-COMMENTS / PARENTS-MEETING ENUMS (app-native; Comments & ----
+// Parents-Meeting module — prd-comments-meetings §4, D-#114/#115). NO wire-contract
+// twin: a daily comment is a feature, not import content, and every row names a
+// studentId — operational/identity-plane behind the ADR-005 firewall. Additive +
+// disjoint from every other enum (AGENTS rule 5). CM-1 ships the two enums; the
+// NOTIFICATION_KINDS += STUDENT_COMMENT/MEETING_SCHEDULE values belong to the
+// delivery slice (CM-2), not here.
+
+/** Daily-comment type (CM-1, §3/§4, D-#115). Carried VERBATIM from the live
+ *  Student-Complain Form's M-column taxonomy. Subject-free — about the whole child,
+ *  not a subject's content (no HW_SUBJECTS axis). Required (the Form's optional,
+ *  often-blank column becomes a required enum). */
+export const COMMENT_TYPES = [
+  "GENERAL",
+  "ATTENDANCE",
+  "STUDY_HOMEWORK",
+  "BEHAVIOUR",
+  "SERIOUS_MATTER",
+] as const;
+export type CommentType = (typeof COMMENT_TYPES)[number];
+
+export const COMMENT_TYPE_LABELS_BN: Record<CommentType, string> = {
+  GENERAL: "সাধারণ",
+  ATTENDANCE: "উপস্থিতি",
+  STUDY_HOMEWORK: "পড়াশোনা / বাড়ির কাজ",
+  BEHAVIOUR: "আচরণ",
+  SERIOUS_MATTER: "গুরুতর বিষয়",
+};
+export const COMMENT_TYPE_LABELS_EN: Record<CommentType, string> = {
+  GENERAL: "General",
+  ATTENDANCE: "Attendance",
+  STUDY_HOMEWORK: "Study / Homework",
+  BEHAVIOUR: "Behaviour",
+  SERIOUS_MATTER: "Serious matter",
+};
+
+/** Daily-comment sentiment (CM-1, §3/§4, D-#115). A comment frames a CONCERN to
+ *  act on, or a POSITIVE note to share — the Form's two-tone split. */
+export const COMMENT_SENTIMENTS = ["CONCERN", "POSITIVE"] as const;
+export type CommentSentiment = (typeof COMMENT_SENTIMENTS)[number];
+
+export const COMMENT_SENTIMENT_LABELS_BN: Record<CommentSentiment, string> = {
+  CONCERN: "উদ্বেগ",
+  POSITIVE: "ইতিবাচক",
+};
+export const COMMENT_SENTIMENT_LABELS_EN: Record<CommentSentiment, string> = {
+  CONCERN: "Concern",
+  POSITIVE: "Positive",
+};
+
+
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
 // =============================================================================

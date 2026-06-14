@@ -1,8 +1,34 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CT-4 MERGED** — Class Test CT-4 [#68, read aggregates Reports-Status/Dashboard/Class×Subject/Profile + Office overdue-chase, D-#166/#167]; sole vocab owner, clean merge. Integrated gate green on main 476c920: **jest 1033/1033** [61 suites], vocab PASS, shared/server/app tsc. Prior: VC-5 #67 [Vocabulary Tracker COMPLETE VC-1..VC-5], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. In flight: CM-1 [Comments store, dispatched]. Next: CT-5 [app — completes Class Test Tracker]. Parked: CO-1 standalone; DEP in progress [DEP-1 done, DEP-2 next])_
+_Updated: 2026-06-14 (**CM-1 MERGED** — Comments/Parents-Meeting CM-1 [#69, StudentComment store + COMMENT_TYPES/COMMENT_SENTIMENTS vocab, server, D-#170/#171]; ran PARALLEL with CT-4 as 2nd additive+disjoint vocab owner → keep-both DECISIONS/CHANGELOG, no renumber. Integrated gate green on main 0930d25: **jest 1053/1053** [62 suites], vocab PASS, shared/server/app tsc. Prior: CT-4 #68 [read aggregates + overdue-chase, D-#166/#167], VC-5 #67 [Vocabulary Tracker COMPLETE VC-1..VC-5], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. DEP-1+DEP-2 DONE — prod LIVE at scdhub.shafayet.me (DEP-3 live golden-path next). Next: CT-5 [app — completes Class Test Tracker] + CM-2 [comment delivery]. Parked standalone: CO-1)_
 
 ## Now / next
+- **Built (Student Comments + Parents-Meeting CM-1 — server, prd-comments-meetings §3/§4/§6, J-CM1/J-CM9,
+  D-#114/#115 + build rulings D-#170/#171) [branch `worktree-comments-cm1`, PR #69 MERGED]:**
+  the FIRST CM slice — the `StudentComment` daily-observation store + the COMMENT vocab. Replaces the
+  Student-Complain Google Form→Sheet. **New `modules/comments/` model:** `StudentComment`
+  `{studentId, sectionId, authorUserId, type ∈ COMMENT_TYPES, sentiment ∈ COMMENT_SENTIMENTS, text,
+  attachmentIds[], deliveredAt?, deliveryChannels[]}` — subject-free, permanent (never deleted — the CM-5
+  comparison timeline needs full history), no schoolId (D-#145). **`StudentCommentService`:**
+  `resolveCommentSection` (section ALWAYS derived server-side from the student, never client-supplied —
+  D-#115; rejects missing/inactive), `recordComment` (validated; author = the authenticated teacher [the
+  Form's "ustaz" field dropped]; audited `STUDENT_COMMENT_RECORDED`), `editComment` (AUTHOR-ONLY, REFUSED
+  once `deliveredAt` set — immutable, a correction is a new comment §3), `listSectionComments`/
+  `studentComments` (staff reads, newest-first). **Resolvers:** `recordStudentComment`/`editStudentComment`
+  (tracker:write + `assertCanWrite` on the resolved section — Office + Guardians denied),
+  `sectionStudentComments`/`studentComments` (tracker:read + section read-scope). **NO delivery (no
+  emit()/wa.me) + NO attachment-upload route — those are CM-2** (`deliveredAt` null, `deliveryChannels` []);
+  the guardian delivered-only read is CM-5. **Vocab (app-native, NO wire sync — additive + disjoint, ran
+  PARALLEL with the in-flight CT-4 vocab owner, AGENTS rule 5):** `COMMENT_TYPES` (GENERAL/ATTENDANCE/
+  STUDY_HOMEWORK/BEHAVIOUR/SERIOUS_MATTER — the Form's M-column taxonomy verbatim) + `COMMENT_SENTIMENTS`
+  (CONCERN/POSITIVE) + BN/EN labels + new verifier §C.15. **`NOTIFICATION_KINDS += STUDENT_COMMENT/
+  MEETING_SCHEDULE` deliberately NOT added here** (no delivery in CM-1 → CM-2 owns them; keeps the footprint
+  disjoint from CT-4 — §C.5/NOTIFICATION_KINDS untouched). 1 new audit kind; new CM firewall block (corpus ⇄
+  comments both ways). **RBAC (D-#170): NO new role/permission** (D-#17/#94). **Gate GREEN (executed):** vocab
+  verifier PASS (incl. §C.15), shared build + shared/server tsc clean, **jest 1041/1041** (61 suites; +1 new
+  suite `studentComment.test.ts` [18] + 2 firewall checks over the 1021 main base; firewall green).
+  **Server-only** (no app — CM-6 is the app slice; expo skipped). **Not verified live.** **Next = CM-2**
+  (daily delivery: emit() STUDENT_COMMENT + wa.me + the `/comments/` attachment store).
 - **Built (Vocabulary Tracker VC-5 — Expo app, APP-ONLY, prd-vocabulary-tracker §6 VC-5 + J1–J7)
   [branch `worktree-vocab-vc5`, PR #67 MERGED] — COMPLETES the Vocabulary Tracker
   (VC-1..VC-5):** the app surfaces over the merged VC-1..VC-4 resolvers. **NO server / shared / vocab /
