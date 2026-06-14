@@ -51,6 +51,30 @@ _Updated: 2026-06-14 (**VC-4 + CT-2 both MERGED** — Vocab VC-4 [#65, read aggr
   flag: an `Observation` model already exists in `modules/hr` [HR-4's lightweight observation w/ parked REF-11
   rubricScores] — the new module's `ClassroomObservation` is a distinct name/module, no clash, but related.)_
   **Next = build CO-1 per `docs/prd-classroom-observation.md` §5, slice order CO-1→CO-7.**
+- **Built (Class Test Tracker CT-3 — server, prd-tracker-class-test §5/§8/J4/J7, D-#121/#122 + build rulings
+  D-#160/#161) [branch `worktree-class-test-ct3`, PR open — coordinator reviews]:** the THIRD class-test
+  slice — publish/unpublish + guardian delivery on the Message-Templates registry + the guardian read.
+  **Publish (`ClassTestPublishService`):** `publishResult` (per-student) + `publishExam` (whole-exam bulk)
+  stamp `publishedAt = now` + `$inc publishedVersion` (the CT-2 field), then deliver; `unpublishResult`/
+  `unpublishExam` clear `publishedAt` (LEAVE publishedVersion → a re-publish bumps it again). **Guardian
+  delivery built DIRECTLY on the merged MT registry (D-#131, NOT inline):** 4 `class_test.result.*` keys
+  (`title` + `regular`/`excellent`/`absent` bodies, §8 Bangla verbatim as code defaults) render via
+  `renderTemplate`; §8 mapping = ABSENT→absent, PRESENT+weakness→regular (feedback), PRESENT+no-weakness→
+  excellent. Rails (D-#72/#31): **wa.me for EVERY family with a phone** (ADR-003) + in-app Notification
+  (kind `CLASS_TEST_RESULT`, registered at CT-1 — consumed, NOT re-added) via `emit()` for login-enabled;
+  contact-only stay wa.me-only. **N+1 guard:** title once/batch, body once/student, `renderTemplate` never in
+  the per-guardian loop. **Republish RE-notifies (D-#122):** dedupeKey `CTR:{testId}:{studentId}:{guardianId}:v{publishedVersion}`
+  — a fresh version → new key → emit re-fires (same version = no-op). **Guardian read (`childTestResults`,
+  J7/D-#68):** `guardian:read_child` + `assertGuardianOfStudent`, **PUBLISHED-only**, mapped to a dedicated
+  `GuardianClassTestResult` shape that **structurally omits `teacherAction`** (can't leak — the staff shape
+  keeps it). **RBAC (D-#160): NO new role/permission** — publish/unpublish ride `tracker:write` +
+  `assertCanWrite` (Office prints, never publishes); Office overdue-chase is CT-4. 2 audit kinds
+  `CLASS_TEST_RESULT_PUBLISHED`/`_UNPUBLISHED`; `NotificationRefs += classTestId`. Firewall class-test block
+  extended (corpus ↛ class-test). **Gate GREEN (executed):** vocab verifier PASS, shared build + shared/server
+  tsc clean, **jest 1021/1021** (60 suites; +1 new suite `classTestPublish.test.ts` [15] over the 1006 main
+  base; firewall green). **Server-only** (no app — CT-5 is the app slice; expo skipped). **Not verified live.**
+  **Next = CT-4** (read aggregates: Reports Status / Principal Dashboard [KPIs + overdue-by-teacher] /
+  Class×Subject Analysis / Student Profile + the Office overdue-chase via `message:dispatch`).
 - **Built (Class Test Tracker CT-2 — server, prd-tracker-class-test §3.3/§4/§5/§9, D-#121 + build rulings
   D-#158/#159) [branch `worktree-class-test-ct2`, PR #64 MERGED]:** the SECOND class-test
   slice — per-student results + derived scoring + the school-day-aware, exam-date-anchored deadline/overdue.

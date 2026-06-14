@@ -333,6 +333,9 @@ check("CLASS_TEST_RESULT is a registered NotificationKind (§3.1/§8, extends §
 check("class-test attendance statuses exact (CT-2 §3.3/§4)", eq(V.CLASS_TEST_ATTENDANCE_STATUSES, ["PRESENT", "ABSENT"]));
 check("CLASS_TEST_ATTENDANCE_STATUS_LABELS_BN total", total(V.CLASS_TEST_ATTENDANCE_STATUS_LABELS_BN, V.CLASS_TEST_ATTENDANCE_STATUSES));
 check("CLASS_TEST_ATTENDANCE_STATUS_LABELS_EN total", total(V.CLASS_TEST_ATTENDANCE_STATUS_LABELS_EN, V.CLASS_TEST_ATTENDANCE_STATUSES));
+// CT-3 — guardian-message delivery: CLASS_TEST_RESULT kind (above) + the class_test.result.* template keys (§8, D-#131/#160)
+check("class_test.result.* guardian-message template keys registered (Regular/Excellent/Absent + title, §8 — built on the MT registry, D-#131)",
+  ["class_test.result.title","class_test.result.regular.body","class_test.result.excellent.body","class_test.result.absent.body"].every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k) && V.MESSAGE_TEMPLATE_REGISTRY[k]));
 check("class test composes existing perms — no class-test:* permission (D-#94/#17)",
   !V.PERMISSIONS.some((p) => p.startsWith("class") || p.startsWith("classtest")));
 
