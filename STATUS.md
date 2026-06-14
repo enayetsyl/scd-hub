@@ -1,8 +1,37 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CM-2 MERGED** — Comments CM-2 [#71, daily-comment delivery wa.me+emit STUDENT_COMMENT + comment attachment store, D-#172/#173]; sole vocab owner. Integrated gate green on main 8511504: **jest 1071/1071** [63 suites], vocab PASS, shared/server tsc. Merge-reconcile: a local-only DEP-4 deploy commit had landed on main → rebased it onto origin/main (disjoint), re-gated. Prior: CT-5 #70 [Class Test Tracker COMPLETE], CM-1 #69, CT-4 #68, VC-5 #67 [Vocab COMPLETE], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, CO PRD [D-#146–#152], MT #61, HR app #56→#60. **DEP-1..4 DONE — prod LIVE at scdhub.shafayet.me + nightly Drive backup (DEP-5 dev-env next).** Open PR: APP-FU1 #72 [guardian-notice full-section picker]. In flight: CM-3 next. Parked standalone: CO-1 [vocab slot now free]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out (relax authScopes))_
+_Updated: 2026-06-14 (**CM-3 BUILT, PR open** — Comments CM-3 [ParentMeeting + per-family ParentMeetingSlot + generation/On-Call/reorder + admin reads, server, **VOCAB-FREE**, D-#123 + build rulings D-#174/#175] on `worktree-comments-cm3`. Gate green: **jest 1088/1088** [64 suites, +17 over the 1071 base], vocab verifier PASS [untouched], shared/server tsc. Coordinator reviews + merges. Prior: **CM-2 MERGED** [#71, daily-comment delivery wa.me+emit STUDENT_COMMENT + attachment store, D-#172/#173], CT-5 #70 [Class Test Tracker COMPLETE], CM-1 #69, CT-4 #68, VC-5 #67 [Vocab COMPLETE], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, CO PRD [D-#146–#152], MT #61, HR app #56→#60. **DEP-1..5 DONE — prod LIVE at scdhub.shafayet.me + dev env + nightly Drive backup.** Open PRs: CM-3, APP-FU1 #72 [guardian-notice full-section picker]. Parked standalone: CO-1 [vocab slot now free]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out (relax authScopes))_
 
 ## Now / next
+- **Built (Student Comments + Parents-Meeting CM-3 — server, prd-comments-meetings §3/§6, D-#123,
+  J-CM3/J-CM4 + build rulings D-#174/#175) [branch `worktree-comments-cm3`, PR open — coordinator reviews]:**
+  the THIRD CM slice — the `ParentMeeting` + per-family `ParentMeetingSlot` models, slot generation, On-Call,
+  reorder, and the admin reads. **VOCAB-FREE** — `ParentMeeting.status ∈ {draft, scheduled, closed}` is a
+  **model-local literal union** (NOT a shared/vocab.ts enum); shared/vocab.ts + the verifier are UNTOUCHED
+  (parallel-safe with any concurrent vocab owner, e.g. CO-1). **Models:** `ParentMeeting`
+  `{academicYearId (default current), instanceLabel "2026 — 1st", meetingDate, slotMinutes, dayStartMinutes,
+  status, includeScope{classIds[],sectionIds[]} — both empty ⇒ all active}` (no schoolId, D-#145);
+  `ParentMeetingSlot` (one per FAMILY) `{meetingId, familyKey, studentIds[], classLabels[], order, slotTime?,
+  onCall, dispatchedAt?/attended?/attendanceRemark? — CM-4 fields present but NEVER written here}`, unique
+  `(meetingId, familyKey)`. **`ParentMeetingService`:** `createParentMeeting` (born draft; validates
+  label/slotMinutes≥1/dayStart 0..1439; current-year default); `generateSlots` (active students in
+  includeScope → group by `Student.phone` digits-only → one slot per family, **siblings collapsed** [J-CM3,
+  "Asila…, Arham | KG, Two"], default order class→section→name via the family's lead child, sequential timed
+  slots from dayStart — **WHOLESALE / idempotent delete-then-relay, DRAFT-only** [D-#175]); `setSlotOnCall`
+  (flag On-Call → null time + re-time the rest, J-CM4); `reorderSlots` (membership-validated; the new order
+  drives the times); admin reads (`parentMeetings`/`parentMeeting`/`parentMeetingSlots`). **Pure helpers
+  (unit-tested):** `groupFamilies` (sibling collapse + phone-less each-own-family + ordering) + `assignSlotTimes`
+  (timed step from dayStart, On-Call skipped → null; SHARED by generate/setOnCall/reorder so "order drives the
+  times" is single-truth). **Phone-less (D-#174):** each forms its own `nophone:<id>` family, gets a timed slot,
+  counted in `unreachableCount` — the CM-2 store-and-count posture (never dropped). **Resolvers
+  (`parentMeeting.ts`):** all 7 gated `roster:manage` (the D-#94 admin gate; meetings span sections so no
+  per-section row-scope). **RBAC: NO new role/permission** (D-#17/#94). 3 new audit kinds in `Audit.ts`
+  (`PARENT_MEETING_CREATED`/`_SLOTS_GENERATED`/`_SLOTS_REORDERED`); CM firewall block extended (corpus ⇄
+  ParentMeeting/ParentMeetingSlot/ParentMeetingService, both ways). **Gate GREEN (executed):** vocab verifier
+  PASS (untouched), shared build + shared/server tsc clean, **jest 1088/1088** (64 suites; +1 new suite
+  `parentMeeting.test.ts` [16] + 1 firewall check over the 1071 base; firewall green). **Server-only** (no app —
+  CM-6 is the app slice; expo skipped). **Not verified live.** **Next = CM-4** (dispatch + `MEETING_SCHEDULE` +
+  `setSlotAttendance` + derived present/absent — that's where the vocab lands).
 - **Built (Student Comments + Parents-Meeting CM-2 — server, prd-comments-meetings §4.1/§5/§6, J-CM1,
   D-#172/#173) [branch `worktree-comments-cm2`, PR #71 MERGED]:** the SECOND CM slice —
   daily-comment DELIVERY + the comment-attachment file store. **Delivery (`CommentDeliveryService`):**
