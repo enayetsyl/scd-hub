@@ -34,6 +34,7 @@ import {
 import type { ObservationForm, ObservationState } from "@scd/shared";
 import { ClassroomObservation, type IClassroomObservation } from "../models/ClassroomObservation";
 import { validateRef11Payload, type Ref11PayloadInput } from "../ref11";
+import { validateQuranPayload, type QuranPayloadInput } from "../quran";
 import { writeAudit } from "../../platform/services/AuditService";
 import { emit } from "../../notifications/services/NotificationService";
 import { User } from "../../foundation/models/User";
@@ -53,6 +54,22 @@ export interface GateScoreShape {
   gate: string;
   result: string;
   breachNote: string | null;
+}
+export interface QuranRatingShape {
+  criterion: string;
+  score: number;
+  note: string | null;
+}
+export interface QuranComplianceShape {
+  item: string;
+  yesNo: boolean;
+}
+export interface QuranPayloadShape {
+  ratings: QuranRatingShape[];
+  compliance: QuranComplianceShape[];
+  strengths: string;
+  improvements: string;
+  suggestions: string;
 }
 export interface ClassroomObservationShape {
   id: string;
@@ -75,6 +92,8 @@ export interface ClassroomObservationShape {
   growthFocus: string | null;
   prevObservationId: string | null;
   priorFocusProgress: string | null;
+  /** The Quran (ClassEcho) payload — set on a QURAN-form row at review, else null. */
+  quran: QuranPayloadShape | null;
   recordingId: string | null;
   teacherResponse: string | null;
   supersededById: string | null;
@@ -104,6 +123,19 @@ function shape(d: IClassroomObservation): ClassroomObservationShape {
     growthFocus: d.growthFocus ?? null,
     prevObservationId: d.prevObservationId ? d.prevObservationId.toString() : null,
     priorFocusProgress: d.priorFocusProgress ?? null,
+    quran: d.quran
+      ? {
+          ratings: (d.quran.ratings ?? []).map((x) => ({
+            criterion: x.criterion,
+            score: x.score,
+            note: x.note ?? null,
+          })),
+          compliance: (d.quran.compliance ?? []).map((x) => ({ item: x.item, yesNo: x.yesNo })),
+          strengths: d.quran.strengths,
+          improvements: d.quran.improvements,
+          suggestions: d.quran.suggestions,
+        }
+      : null,
     recordingId: d.recordingId ? d.recordingId.toString() : null,
     teacherResponse: d.teacherResponse ?? null,
     supersededById: d.supersededById ? d.supersededById.toString() : null,
@@ -134,9 +166,17 @@ function assertClassDate(classDate: string): string {
   return classDate;
 }
 
+/** The Quran anchor subject (the Quran SubjectGroup track, D-#56). A QURAN observation
+ *  uses the QURAN form, a non-Quran subject uses REF-11 — enforced both ways below. */
+const QURAN_SUBJECT = "QURAN";
+
 /**
  * Validate the session anchor: EXACTLY ONE of sectionId / subjectGroupId, and the
- * subject must be a REF-11 (HW_SUBJECTS) subject when the form is REF11 (QURAN is CO-5).
+ * form ↔ subject must agree (CO-5):
+ *   - subject === "QURAN"  ⟺  form === "QURAN" (the ClassEcho Quran form);
+ *   - any other subject    ⟺  form === "REF11" (subject ∈ HW_SUBJECTS).
+ * A mismatch (a Quran session on REF-11, or a non-Quran session on the Quran form) is
+ * refused in Bangla.
  */
 function assertAnchor(input: {
   form: ObservationForm;
@@ -151,10 +191,21 @@ function assertAnchor(input: {
   }
   const subject = (input.subject ?? "").trim();
   if (!subject) throw new ClassroomObservationError("subject is required");
-  if (input.form === "REF11" && !(HW_SUBJECTS as readonly string[]).includes(subject)) {
-    throw new ClassroomObservationError(
-      `A REF-11 observation's subject must be one of: ${HW_SUBJECTS.join(", ")} (QURAN uses the Quran form — CO-5)`,
-    );
+
+  // Form ↔ subject must agree (CO-5): QURAN ⟺ Quran form; everything else ⟺ REF-11.
+  if (subject === QURAN_SUBJECT) {
+    if (input.form !== "QURAN") {
+      throw new ClassroomObservationError("কুরআন শ্রেণির পর্যবেক্ষণে অবশ্যই কুরআন ফর্ম ব্যবহার করতে হবে (REF-11 নয়)");
+    }
+  } else {
+    if (input.form === "QURAN") {
+      throw new ClassroomObservationError("শুধু কুরআন বিষয়েই কুরআন ফর্ম ব্যবহার করা যাবে");
+    }
+    if (!(HW_SUBJECTS as readonly string[]).includes(subject)) {
+      throw new ClassroomObservationError(
+        `A REF-11 observation's subject must be one of: ${HW_SUBJECTS.join(", ")} (QURAN uses the Quran form — CO-5)`,
+      );
+    }
   }
   return {
     sectionId: hasSection ? oid(input.sectionId as string, "sectionId") : null,
@@ -285,10 +336,18 @@ export async function assignObserver(input: AssignObserverInput): Promise<Classr
 // reviewObservation (J2 — the assigned observer scores + releases)
 // ---------------------------------------------------------------------------
 
+/**
+ * Review input: the observer's REF-11 payload (the default), plus an OPTIONAL `quran`
+ * payload for a QURAN-form row. The validator is chosen by the row's `form`, not by the
+ * caller — a REF-11 row is scored with `validateRef11Payload`, a QURAN row with
+ * `validateQuranPayload`. The wrong payload for the form is refused (in Bangla).
+ */
 export interface ReviewObservationInput extends Ref11PayloadInput {
   observationId: string;
   /** The authenticated observer — MUST equal the assigned observerId. */
   actorId: string;
+  /** The Quran (ClassEcho) payload — required for + only valid on a QURAN-form row. */
+  quran?: QuranPayloadInput;
 }
 
 export async function reviewObservation(input: ReviewObservationInput): Promise<ClassroomObservationShape> {
@@ -303,13 +362,23 @@ export async function reviewObservation(input: ReviewObservationInput): Promise<
     throw new ClassroomObservationError("Only the assigned observer may review this observation");
   }
 
-  const payload = validateRef11Payload(input);
-
-  doc.domains = payload.domains;
-  doc.gates = payload.gates;
-  doc.oneStrength = payload.oneStrength;
-  doc.growthFocus = payload.growthFocus;
-  doc.priorFocusProgress = payload.priorFocusProgress;
+  // The form decides the validator + the stored payload (CO-5): a QURAN row uses the
+  // Quran (ClassEcho) form; every other row uses REF-11. NEVER REF-11 for QURAN.
+  if (doc.form === "QURAN") {
+    if (!input.quran) {
+      throw new ClassroomObservationError("কুরআন ফর্মের পর্যবেক্ষণে কুরআন পেলোড প্রয়োজন");
+    }
+    const payload = validateQuranPayload(input.quran);
+    doc.quran = payload;
+    // A QURAN row never carries the REF-11 fields (left at their defaults).
+  } else {
+    const payload = validateRef11Payload(input);
+    doc.domains = payload.domains;
+    doc.gates = payload.gates;
+    doc.oneStrength = payload.oneStrength;
+    doc.growthFocus = payload.growthFocus;
+    doc.priorFocusProgress = payload.priorFocusProgress;
+  }
   doc.state = "REVIEWED"; // releases to the observed teacher — no Principal sign-off
   doc.reviewedAt = new Date();
   await doc.save();

@@ -70,6 +70,42 @@ GateScoreRef.implement({
   }),
 });
 
+// --- Quran (ClassEcho) form payload shapes (CO-5) -------------------------------
+type QuranPayloadShape = NonNullable<ClassroomObservationShape["quran"]>;
+
+const QuranRatingRef = builder.objectRef<QuranPayloadShape["ratings"][number]>("ObservationQuranRating");
+QuranRatingRef.implement({
+  description: "One Quran (ClassEcho) rating: the criterion, a score 1–5, and an optional note. No total/average.",
+  fields: (t) => ({
+    criterion: t.exposeString("criterion"),
+    score: t.exposeInt("score"),
+    note: t.string({ nullable: true, resolve: (r) => r.note }),
+  }),
+});
+
+const QuranComplianceRef = builder.objectRef<QuranPayloadShape["compliance"][number]>("ObservationQuranCompliance");
+QuranComplianceRef.implement({
+  description: "One Quran-form compliance item: the item code and its yes/no answer.",
+  fields: (t) => ({
+    item: t.exposeString("item"),
+    yesNo: t.exposeBoolean("yesNo"),
+  }),
+});
+
+const QuranPayloadRef = builder.objectRef<QuranPayloadShape>("ObservationQuranPayload");
+QuranPayloadRef.implement({
+  description:
+    "The Quran (ClassEcho) form payload (CO-5): 8 ratings (1–5) + 7 yes/no compliance items + strengths / " +
+    "improvements / suggestions. Set on a QURAN-form observation only; null on a REF-11 one.",
+  fields: (t) => ({
+    ratings: t.field({ type: [QuranRatingRef], resolve: (r) => r.ratings }),
+    compliance: t.field({ type: [QuranComplianceRef], resolve: (r) => r.compliance }),
+    strengths: t.exposeString("strengths"),
+    improvements: t.exposeString("improvements"),
+    suggestions: t.exposeString("suggestions"),
+  }),
+});
+
 const ObservationRef = builder.objectRef<ClassroomObservationShape>("ClassroomObservation");
 ObservationRef.implement({
   description:
@@ -96,6 +132,7 @@ ObservationRef.implement({
     growthFocus: t.string({ nullable: true, resolve: (r) => r.growthFocus }),
     prevObservationId: t.string({ nullable: true, resolve: (r) => r.prevObservationId }),
     priorFocusProgress: t.string({ nullable: true, resolve: (r) => r.priorFocusProgress }),
+    quran: t.field({ type: QuranPayloadRef, nullable: true, resolve: (r) => r.quran }),
     recordingId: t.string({ nullable: true, resolve: (r) => r.recordingId }),
     teacherResponse: t.string({ nullable: true, resolve: (r) => r.teacherResponse }),
     supersededById: t.string({ nullable: true, resolve: (r) => r.supersededById }),
@@ -119,6 +156,37 @@ const GateInputType = builder.inputType("Ref11GateInput", {
     gate: t.string({ required: true }),
     result: t.string({ required: true }),
     breachNote: t.string({ required: false }),
+  }),
+});
+
+// --- Quran (ClassEcho) form review input (CO-5) ---------------------------------
+const QuranRatingInputType = builder.inputType("QuranRatingInput", {
+  description: "One Quran (ClassEcho) rating: criterion code, a score 1–5, and an optional note.",
+  fields: (t) => ({
+    criterion: t.string({ required: true }),
+    score: t.int({ required: true }),
+    note: t.string({ required: false }),
+  }),
+});
+
+const QuranComplianceInputType = builder.inputType("QuranComplianceInput", {
+  description: "One Quran-form compliance item: the item code and its yes/no answer.",
+  fields: (t) => ({
+    item: t.string({ required: true }),
+    yesNo: t.boolean({ required: true }),
+  }),
+});
+
+const QuranPayloadInputType = builder.inputType("QuranReviewInput", {
+  description:
+    "The Quran (ClassEcho) form review payload (CO-5): 8 ratings + 7 yes/no compliance items + strengths / " +
+    "improvements / suggestions. Provide ONLY when reviewing a QURAN-form observation.",
+  fields: (t) => ({
+    ratings: t.field({ type: [QuranRatingInputType], required: true }),
+    compliance: t.field({ type: [QuranComplianceInputType], required: true }),
+    strengths: t.string({ required: true }),
+    improvements: t.string({ required: true }),
+    suggestions: t.string({ required: true }),
   }),
 });
 
@@ -186,27 +254,41 @@ builder.mutationField("reviewClassroomObservation", (t) =>
   t.field({
     type: ObservationRef,
     description:
-      "The assigned observer scores + comments (REF-11): exactly 5 domain levels + notes, 2 gate results, " +
-      "1 strength, 1 growth focus — no average. → REVIEWED, released to the observed teacher (no Principal " +
-      "sign-off). Requires observation:review AND being the assigned observer. Audited.",
+      "The assigned observer scores + comments. REF-11 form: exactly 5 domain levels + notes, 2 gate results, " +
+      "1 strength, 1 growth focus — no average. QURAN form (CO-5): pass `quran` (8 ratings 1–5 + 7 yes/no + " +
+      "strengths/improvements/suggestions). The form decides which payload is required. → REVIEWED, released to " +
+      "the observed teacher (no Principal sign-off). Requires observation:review AND being the assigned observer. Audited.",
     authScopes: { hasPermission: "observation:review" },
     args: {
       observationId: t.arg.string({ required: true }),
-      domains: t.arg({ type: [DomainInputType], required: true }),
-      gates: t.arg({ type: [GateInputType], required: true }),
-      oneStrength: t.arg.string({ required: true }),
-      growthFocus: t.arg.string({ required: true }),
+      // REF-11 payload (optional at the GraphQL layer; the service requires it for a
+      // REF-11 row + refuses it on a QURAN row by validating per the row's form).
+      domains: t.arg({ type: [DomainInputType], required: false }),
+      gates: t.arg({ type: [GateInputType], required: false }),
+      oneStrength: t.arg.string({ required: false }),
+      growthFocus: t.arg.string({ required: false }),
       priorFocusProgress: t.arg.string({ required: false }),
+      // Quran (ClassEcho) payload — provide ONLY for a QURAN-form observation (CO-5).
+      quran: t.arg({ type: QuranPayloadInputType, required: false }),
     },
     resolve: async (_root, args, ctx) => {
       const actor = actorOf(ctx);
       return reviewObservation({
         observationId: args.observationId,
-        domains: args.domains.map((d) => ({ domain: d.domain, level: d.level, note: d.note })),
-        gates: args.gates.map((g) => ({ gate: g.gate, result: g.result, breachNote: g.breachNote ?? null })),
-        oneStrength: args.oneStrength,
-        growthFocus: args.growthFocus,
+        domains: (args.domains ?? []).map((d) => ({ domain: d.domain, level: d.level, note: d.note })),
+        gates: (args.gates ?? []).map((g) => ({ gate: g.gate, result: g.result, breachNote: g.breachNote ?? null })),
+        oneStrength: args.oneStrength ?? "",
+        growthFocus: args.growthFocus ?? "",
         priorFocusProgress: args.priorFocusProgress ?? undefined,
+        quran: args.quran
+          ? {
+              ratings: args.quran.ratings.map((r) => ({ criterion: r.criterion, score: r.score, note: r.note ?? null })),
+              compliance: args.quran.compliance.map((c) => ({ item: c.item, yesNo: c.yesNo })),
+              strengths: args.quran.strengths,
+              improvements: args.quran.improvements,
+              suggestions: args.quran.suggestions,
+            }
+          : undefined,
         actorId: actor.userId,
       });
     },

@@ -35,6 +35,8 @@ import {
   GATE_RESULTS,
   OBSERVATION_STATES,
   GROWTH_PROGRESS,
+  QURAN_REVIEW_CRITERIA,
+  QURAN_COMPLIANCE_ITEMS,
 } from "@scd/shared";
 import type {
   ObservationForm,
@@ -44,6 +46,8 @@ import type {
   GateResult,
   ObservationState,
   GrowthProgress,
+  QuranReviewCriterion,
+  QuranComplianceItem,
 } from "@scd/shared";
 
 export interface IDomainScore {
@@ -55,6 +59,24 @@ export interface IGateScore {
   gate: ObservationGate;
   result: GateResult;
   breachNote?: string | null;
+}
+
+// --- Quran (ClassEcho) form payload (CO-5) --------------------------------------
+export interface IQuranRating {
+  criterion: QuranReviewCriterion;
+  score: number; // 1–5; NO total/average
+  note?: string | null;
+}
+export interface IQuranCompliance {
+  item: QuranComplianceItem;
+  yesNo: boolean;
+}
+export interface IQuranPayload {
+  ratings: IQuranRating[];
+  compliance: IQuranCompliance[];
+  strengths: string;
+  improvements: string;
+  suggestions: string;
 }
 
 export interface IClassroomObservation extends Document {
@@ -87,6 +109,9 @@ export interface IClassroomObservation extends Document {
   /** A re-review's link back to the superseded observation (carry-forward, §4). */
   prevObservationId?: Types.ObjectId | null;
   priorFocusProgress?: GrowthProgress | null;
+  // --- Quran (ClassEcho) payload (CO-5; set at REVIEW on a QURAN-form row, else
+  //     unset). A REF-11 observation leaves this null and vice-versa. -------------
+  quran?: IQuranPayload | null;
   // --- later slices (fields present now) --------------------------------------
   recordingId?: Types.ObjectId | null; // CO-2 SessionRecording
   teacherResponse?: string | null;      // CO-3
@@ -114,6 +139,34 @@ const GateScoreSchema = new Schema<IGateScore>(
   { _id: false },
 );
 
+const QuranRatingSchema = new Schema<IQuranRating>(
+  {
+    criterion: { type: String, enum: QURAN_REVIEW_CRITERIA, required: true },
+    score: { type: Number, required: true, min: 1, max: 5 },
+    note: { type: String, trim: true, default: null },
+  },
+  { _id: false },
+);
+
+const QuranComplianceSchema = new Schema<IQuranCompliance>(
+  {
+    item: { type: String, enum: QURAN_COMPLIANCE_ITEMS, required: true },
+    yesNo: { type: Boolean, required: true },
+  },
+  { _id: false },
+);
+
+const QuranPayloadSchema = new Schema<IQuranPayload>(
+  {
+    ratings: { type: [QuranRatingSchema], default: [] },
+    compliance: { type: [QuranComplianceSchema], default: [] },
+    strengths: { type: String, required: true, trim: true },
+    improvements: { type: String, required: true, trim: true },
+    suggestions: { type: String, required: true, trim: true },
+  },
+  { _id: false },
+);
+
 const ClassroomObservationSchema = new Schema<IClassroomObservation>(
   {
     form: { type: String, enum: OBSERVATION_FORMS, required: true },
@@ -135,6 +188,7 @@ const ClassroomObservationSchema = new Schema<IClassroomObservation>(
     growthFocus: { type: String, trim: true, default: null },
     prevObservationId: { type: Schema.Types.ObjectId, ref: "ClassroomObservation", default: null },
     priorFocusProgress: { type: String, enum: GROWTH_PROGRESS, default: null },
+    quran: { type: QuranPayloadSchema, default: null },
     recordingId: { type: Schema.Types.ObjectId, ref: "SessionRecording", default: null },
     teacherResponse: { type: String, trim: true, default: null },
     supersededById: { type: Schema.Types.ObjectId, ref: "ClassroomObservation", default: null },
