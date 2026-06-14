@@ -50,6 +50,7 @@ import "./modules/vocab/resolvers/vocabSummary";
 import "./modules/vocab/resolvers/vocabGuardian";
 import "./modules/templates/resolvers/messageTemplates";
 import "./modules/comments/resolvers/studentComment";
+import "./modules/comments/resolvers/commentDelivery";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";
