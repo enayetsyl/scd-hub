@@ -1,8 +1,37 @@
 # STATUS
 
-_Updated: 2026-06-14 (**HR-G1 #73 + APP-FU1 #72 MERGED** — HR own-row reads [myPayslips/myStaffAttendance, D-#185] + guardian-notice full-section picker [app-only]; both clean. Integrated gate green on main 9ee88bf: **jest 1079/1079** [64 suites], vocab PASS, shared/server/app tsc, expo web. **DEP-1..6 DONE — prod LIVE at scdhub.shafayet.me; main now branch-protected + GitHub Actions CI/CD (gate + auto-deploy dev/prod); dev env + `dev` branch live; nightly Drive backup.** Modules COMPLETE: Vocab (VC-1..5), Class Test (CT-1..5), HR (+gap reads), Messaging, Library, Notifications, Assignment, Message Templates. In flight: CM-3 [ParentMeeting/slots, vocab-free] + CO-1 [Classroom Observation, sole vocab owner]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out (relax authScopes). MERGE NOTE: protected main → `gh pr merge` may need re-fetch+retry on "Base branch was modified")_
+_Updated: 2026-06-14 (**CM-3 MERGED** — Comments CM-3 [#74, ParentMeeting + per-family slot generation, VOCAB-FREE, D-#174/#175]. Integrated gate green on main: **jest 1096/1096**, vocab PASS, shared/server tsc. Prior: HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70 [Class Test COMPLETE], VC-5 [Vocab COMPLETE], CM-1 #69, MT #61, HR app #56→#60. **DEP-1..6 DONE — prod LIVE at scdhub.shafayet.me; main branch-protected + GitHub Actions CI/CD (gate + auto-deploy dev/prod); dev env + `dev` branch live; nightly Drive backup.** In flight: CO-1 [Classroom Observation, sole vocab owner]. Next: CM-4 [dispatch + MEETING_SCHEDULE — vocab-toucher; serialize behind CO-1 or ship kind-gated]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out. MERGE NOTE: protected main → `gh pr merge` may need re-fetch+retry on "Base branch was modified")_
 
 ## Now / next
+- **Built (Student Comments + Parents-Meeting CM-3 — server, prd-comments-meetings §3/§6, D-#123,
+  J-CM3/J-CM4 + build rulings D-#174/#175) [branch `worktree-comments-cm3`, PR open — coordinator reviews]:**
+  the THIRD CM slice — the `ParentMeeting` + per-family `ParentMeetingSlot` models, slot generation, On-Call,
+  reorder, and the admin reads. **VOCAB-FREE** — `ParentMeeting.status ∈ {draft, scheduled, closed}` is a
+  **model-local literal union** (NOT a shared/vocab.ts enum); shared/vocab.ts + the verifier are UNTOUCHED
+  (parallel-safe with any concurrent vocab owner, e.g. CO-1). **Models:** `ParentMeeting`
+  `{academicYearId (default current), instanceLabel "2026 — 1st", meetingDate, slotMinutes, dayStartMinutes,
+  status, includeScope{classIds[],sectionIds[]} — both empty ⇒ all active}` (no schoolId, D-#145);
+  `ParentMeetingSlot` (one per FAMILY) `{meetingId, familyKey, studentIds[], classLabels[], order, slotTime?,
+  onCall, dispatchedAt?/attended?/attendanceRemark? — CM-4 fields present but NEVER written here}`, unique
+  `(meetingId, familyKey)`. **`ParentMeetingService`:** `createParentMeeting` (born draft; validates
+  label/slotMinutes≥1/dayStart 0..1439; current-year default); `generateSlots` (active students in
+  includeScope → group by `Student.phone` digits-only → one slot per family, **siblings collapsed** [J-CM3,
+  "Asila…, Arham | KG, Two"], default order class→section→name via the family's lead child, sequential timed
+  slots from dayStart — **WHOLESALE / idempotent delete-then-relay, DRAFT-only** [D-#175]); `setSlotOnCall`
+  (flag On-Call → null time + re-time the rest, J-CM4); `reorderSlots` (membership-validated; the new order
+  drives the times); admin reads (`parentMeetings`/`parentMeeting`/`parentMeetingSlots`). **Pure helpers
+  (unit-tested):** `groupFamilies` (sibling collapse + phone-less each-own-family + ordering) + `assignSlotTimes`
+  (timed step from dayStart, On-Call skipped → null; SHARED by generate/setOnCall/reorder so "order drives the
+  times" is single-truth). **Phone-less (D-#174):** each forms its own `nophone:<id>` family, gets a timed slot,
+  counted in `unreachableCount` — the CM-2 store-and-count posture (never dropped). **Resolvers
+  (`parentMeeting.ts`):** all 7 gated `roster:manage` (the D-#94 admin gate; meetings span sections so no
+  per-section row-scope). **RBAC: NO new role/permission** (D-#17/#94). 3 new audit kinds in `Audit.ts`
+  (`PARENT_MEETING_CREATED`/`_SLOTS_GENERATED`/`_SLOTS_REORDERED`); CM firewall block extended (corpus ⇄
+  ParentMeeting/ParentMeetingSlot/ParentMeetingService, both ways). **Gate GREEN (executed):** vocab verifier
+  PASS (untouched), shared build + shared/server tsc clean, **jest 1088/1088** (64 suites; +1 new suite
+  `parentMeeting.test.ts` [16] + 1 firewall check over the 1071 base; firewall green). **Server-only** (no app —
+  CM-6 is the app slice; expo skipped). **Not verified live.** **Next = CM-4** (dispatch + `MEETING_SCHEDULE` +
+  `setSlotAttendance` + derived present/absent — that's where the vocab lands).
 - **Built (APP-FU1 — guardian-notice full-section picker, Expo, APP-ONLY) [branch `worktree-app-fu1`,
   PR open]:** the small app-polish pass over a deferred, server-ready surface. Closes the recorded
   **M-5/M-6 follow-up**: `GuardianNoticeScreen` sourced its SECTION picker only from
