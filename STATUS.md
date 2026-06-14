@@ -3,6 +3,23 @@
 _Updated: 2026-06-14 (**CM-2 MERGED** — Comments CM-2 [#71, daily-comment delivery wa.me+emit STUDENT_COMMENT + comment attachment store, D-#172/#173]; sole vocab owner. Integrated gate green on main 8511504: **jest 1071/1071** [63 suites], vocab PASS, shared/server tsc. Merge-reconcile: a local-only DEP-4 deploy commit had landed on main → rebased it onto origin/main (disjoint), re-gated. Prior: CT-5 #70 [Class Test Tracker COMPLETE], CM-1 #69, CT-4 #68, VC-5 #67 [Vocab COMPLETE], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, CO PRD [D-#146–#152], MT #61, HR app #56→#60. **DEP-1..4 DONE — prod LIVE at scdhub.shafayet.me + nightly Drive backup (DEP-5 dev-env next).** Open PR: APP-FU1 #72 [guardian-notice full-section picker]. In flight: CM-3 next. Parked standalone: CO-1 [vocab slot now free]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out (relax authScopes))_
 
 ## Now / next
+- **Built (APP-FU1 — guardian-notice full-section picker, Expo, APP-ONLY) [branch `worktree-app-fu1`,
+  PR open]:** the small app-polish pass over a deferred, server-ready surface. Closes the recorded
+  **M-5/M-6 follow-up**: `GuardianNoticeScreen` sourced its SECTION picker only from
+  `mySectionsAsClassTeacher`, so Principal/Office couldn't target an arbitrary section's notice (they
+  fell back to SCHOOL scope). Now **`chat:manage` holders get a full academic-year → all-sections
+  picker** (`AcademicYearSelect` + a `Select` of every class's sections, sourced from the existing
+  `classes` query — `authenticated:true`, P/O readable); class teachers (chat:write only) keep their
+  coordinated-sections chips unchanged. **Server already authorizes the arbitrary-section notice**
+  (`assertCanComposeNotice` bypasses `assertIsClassTeacher` when `canManage`) — this is purely the
+  missing picker UI. **APP-ONLY: NO server / shared / vocab / contract change** (`git diff origin/main
+  -- server shared` empty); 2 files touched (`GuardianNoticeScreen.tsx`, `lib/labels.ts` — 2 new BN/EN
+  keys). **Discovery scan (server-ready-but-unrendered reads):** all 110 client query ops are already
+  rendered — no further deferred reads to surface (Class-Test/Vocab excluded — owned by other sessions).
+  No new server-gaps found; the previously-known gaps (guardian attendance/leave) have no resolver and
+  stay deferred. No DECISIONS row (straightforward app surface). **Gate GREEN (executed):** app
+  `tsc --noEmit` clean + `expo export --platform web` green; vocab verifier PASS + server/shared
+  untouched + jest unchanged (server untouched). **Not verified live.**
 - **Built (HR-G1 — staff own-row self-service reads, server, prd-hr §4/§3, D-#185) [branch
   `worktree-hr-gap-reads`, PR #73 MERGED]:** the two server gaps flagged when the HR
   app shipped (PR-1/#56 surfaced them as "pending"). **Server-only, vocab-free, NO new permission** —
