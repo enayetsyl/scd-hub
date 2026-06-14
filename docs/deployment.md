@@ -12,8 +12,14 @@ else low-cost VPS — settled; this plan implements it)
 
 ## 0. Operator checklist (tick in order; each box = one slice gate)
 
-- [ ] **DEP-1** Oracle account + Always-Free VM up; SSH-key-only; ports 22/80/443 only; domain
-      A records (`@` and `dev`) point at the VM
+- [x] **DEP-1** Oracle VM up (PAYG-upgraded for capacity; A1.Flex 4 OCPU/24 GB, Hyderabad);
+      SSH-key-only `deploy` user with sudo; ufw + security-list both 22/80/443 only;
+      unattended-upgrades on; prod + dev **app subdomains** resolve to the VM. Gate passed
+      (`ssh deploy@vm` by key; both subdomains resolve via authoritative + public DNS).
+      Note: plan's literal `@`/`dev` became a dedicated app subdomain + its `dev.` sibling
+      (the registered root stays on its existing cPanel host, untouched). Concrete host/IP/
+      domain live only in the operator's password manager + a local untracked notes file —
+      never committed (§0 hard rule).
 - [ ] **DEP-2** Production install green: app served over HTTPS on the domain; server under
       systemd; Atlas allow-list = VM IP only; `/healthz` returns OK
 - [ ] **DEP-3** Live golden-path verification executed and recorded (clears the standing
