@@ -954,6 +954,7 @@ export const NOTIFICATION_KINDS = [
   "LIBRARY_DUE_SOON",
   "LIBRARY_OVERDUE",
   "CLASS_TEST_RESULT",
+  "VOCAB_RESULT",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -969,6 +970,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   LIBRARY_DUE_SOON: "বই ফেরতের স্মরণিকা",
   LIBRARY_OVERDUE: "বই ফেরত বকেয়া",
   CLASS_TEST_RESULT: "ক্লাস টেস্টের ফলাফল",
+  VOCAB_RESULT: "ভোকাবুলারি টেস্টের ফলাফল",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -982,6 +984,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   LIBRARY_DUE_SOON: "Book due soon",
   LIBRARY_OVERDUE: "Book overdue",
   CLASS_TEST_RESULT: "Class-test result",
+  VOCAB_RESULT: "Vocabulary-test result",
 };
 
 
@@ -1343,6 +1346,11 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "credential.share.guardian.wa",
   "credential.share.staff.wa",
   "tracker.nonSubmitter.wa",
+  "vocab.result.title",
+  "vocab.result.regular.body",
+  "vocab.result.perfect.body",
+  "vocab.result.absent.body",
+  "vocab.result.cumulative.body",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1509,6 +1517,57 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     group: "tracker", labelBn: "জমা দেয়নি — অভিভাবক (হোয়াটসঅ্যাপ)",
     placeholders: ["studentName", "setTitle"],
     bnDefault: "প্রিয় অভিভাবক, আপনার সন্তান {studentName} \"{setTitle}\" জমা দেননি। অনুগ্রহ করে শিক্ষকের সাথে যোগাযোগ করুন।", defaultLangMode: "BN",
+  },
+  // --- Vocabulary-tracker guardian messages (VC-4, §8 — the legacy Setup-tab
+  //     Regular / Perfect / Absent / Cumulative templates, ported as editable
+  //     admin data with the Islamic salutation + du'a preserved; one body shared
+  //     by the in-app inbox AND the wa.me link). {WrongWords}/{PersistentWords}
+  //     are server-rendered per-direction lists (generalising the legacy
+  //     SecB/SecC/SecD lists). {School} is filled from the school name. ---
+  "vocab.result.title": {
+    group: "vocab", labelBn: "ভোকাবুলারি ফলাফল — শিরোনাম", placeholders: [],
+    bnDefault: "ভোকাবুলারি টেস্টের ফলাফল", defaultLangMode: "BN",
+  },
+  "vocab.result.regular.body": {
+    group: "vocab", labelBn: "ভোকাবুলারি ফলাফল — সাধারণ (ইনবক্স + হোয়াটসঅ্যাপ)",
+    placeholders: ["StudentName", "TestDate", "Score", "TotalMarks", "WrongCount", "WrongWords", "School"],
+    bnDefault:
+      "আসসালামু আলাইকুম। সম্মানিত অভিভাবক, " +
+      "আপনার সন্তান {StudentName} {TestDate} তারিখের ভোকাবুলারি টেস্টে " +
+      "{TotalMarks} নম্বরের মধ্যে {Score} পেয়েছে (ভুল: {WrongCount}টি)।\n" +
+      "যেসব শব্দ ভুল হয়েছে:\n{WrongWords}\n" +
+      "অনুগ্রহ করে শব্দগুলো বাড়িতে অনুশীলন করান। জাযাকাল্লাহু খাইরান — {School}",
+    defaultLangMode: "BN",
+  },
+  "vocab.result.perfect.body": {
+    group: "vocab", labelBn: "ভোকাবুলারি ফলাফল — পূর্ণ নম্বর (ইনবক্স + হোয়াটসঅ্যাপ)",
+    placeholders: ["StudentName", "TestDate", "Score", "TotalMarks", "School"],
+    bnDefault:
+      "আসসালামু আলাইকুম। সম্মানিত অভিভাবক, আলহামদুলিল্লাহ! " +
+      "আপনার সন্তান {StudentName} {TestDate} তারিখের ভোকাবুলারি টেস্টে " +
+      "{TotalMarks} নম্বরের মধ্যে {Score} পেয়ে সম্পূর্ণ সঠিক করেছে। " +
+      "আল্লাহ তাকে আরও উন্নতি দান করুন। জাযাকাল্লাহু খাইরান — {School}",
+    defaultLangMode: "BN",
+  },
+  "vocab.result.absent.body": {
+    group: "vocab", labelBn: "ভোকাবুলারি ফলাফল — অনুপস্থিত (ইনবক্স + হোয়াটসঅ্যাপ)",
+    placeholders: ["StudentName", "TestDate", "School"],
+    bnDefault:
+      "আসসালামু আলাইকুম। সম্মানিত অভিভাবক, " +
+      "আপনার সন্তান {StudentName} {TestDate} তারিখের ভোকাবুলারি টেস্টে অনুপস্থিত ছিল। " +
+      "পরবর্তী টেস্টে অংশগ্রহণ নিশ্চিত করুন। জাযাকাল্লাহু খাইরান — {School}",
+    defaultLangMode: "BN",
+  },
+  "vocab.result.cumulative.body": {
+    group: "vocab", labelBn: "ভোকাবুলারি ফলাফল — ক্রমপুঞ্জিত (ইনবক্স + হোয়াটসঅ্যাপ)",
+    placeholders: ["StudentName", "PeriodLabel", "NumTests", "Score", "TotalMarks", "PersistentWords", "School"],
+    bnDefault:
+      "আসসালামু আলাইকুম। সম্মানিত অভিভাবক, " +
+      "{PeriodLabel} সময়কালে আপনার সন্তান {StudentName} {NumTests}টি ভোকাবুলারি টেস্টে অংশ নিয়েছে, " +
+      "গড়ে {TotalMarks} নম্বরের মধ্যে {Score} পেয়েছে।\n" +
+      "বারবার ভুল হওয়া শব্দ:\n{PersistentWords}\n" +
+      "অনুগ্রহ করে এই শব্দগুলোতে বিশেষ মনোযোগ দিন। জাযাকাল্লাহু খাইরান — {School}",
+    defaultLangMode: "BN",
   },
 };
 

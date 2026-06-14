@@ -67,6 +67,7 @@ export type AuditEventKind =
   | "CLASS_TEST_PRINTED"          // Office marked printed → the official exam record (CT-1, §5/J2, D-#120)
   | "CLASS_TEST_CANCELLED"        // Office cancelled a withdrawn print request (CT-1, §5)
   | "VOCAB_RESULT_RECORDED"       // a student's vocab marks recorded — attendance + per-position mistakes (VC-3, §3.6, D-#142)
+  | "VOCAB_RESULT_MESSAGED"       // guardian vocab-result messages generated for a test — wa.me + emit() (VC-4, §8, D-#154)
   | "HW_FILE_ATTACHED"    // a question/answer file attached to homework (GP-A, D-#70)
   | "BOOK_ISSUED"         // library desk issued a copy to a borrower (LB-2, D-#81/#82)
   | "BOOK_RETURNED"       // copy returned at the desk (LB-2)

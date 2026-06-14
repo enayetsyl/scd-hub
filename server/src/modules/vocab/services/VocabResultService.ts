@@ -126,6 +126,8 @@ export async function submitStudentResult(input: SubmitStudentResultInput): Prom
 
 export interface WrongWord {
   positionId: string;
+  /** The bank word behind the position — the stable key for VC-4 word aggregation. */
+  wordId: string;
   direction: VocabDirection;
   headword: string;
   banglaMeaning: string;
@@ -191,6 +193,7 @@ export async function studentResult(testId: string, studentId: string): Promise<
     const word = wordById.get(info.wordId);
     return {
       positionId: pid,
+      wordId: info.wordId,
       direction: info.direction,
       headword: word?.headword ?? "",
       banglaMeaning: word?.banglaMeaning ?? "",
