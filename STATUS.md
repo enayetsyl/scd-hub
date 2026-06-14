@@ -1,8 +1,27 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CM-4 MERGED** — Comments CM-4 [#76, parents'-meeting dispatch + present/absent capture + derived aggregates, **VOCAB-FREE / kind-gated** MEETING_SCHEDULE + inline Bangla, D-#176]. Merged to MAIN (main-direct flow). Integrated gate green: **jest 1154/1154**, vocab PASS (untouched — ran parallel with CO-1's vocab lock), shared/server tsc. **ACTIVATION FOLLOW-UP:** when convenient, add NOTIFICATION_KINDS += MEETING_SCHEDULE (+BN/EN, §C.5) + migrate the inline message to a meeting_schedule.* MT key (D-#131) — no logic change. Prior: CO-1 #75 [Classroom Observation, D-#194/#195], CM-3 #74, HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70 [Class Test COMPLETE], VC-5 [Vocab COMPLETE], MT #61, HR app #56→#60. **DEP-1..6 DONE — prod LIVE + dev env + GitHub Actions CI/CD.** On main as PRDs (not built): Finance (D-#190–#192), per-user Access-control (D-#193). In flight: CT-4-FIX #77. Next: CM-5 [MeetingComment + comparison + guardian reads]; CO-2. Carried follow-up: CT-4 dashboard RBAC (being fixed by #77))_
+_Updated: 2026-06-14 (**CT-4-FIX MERGED** — the carried CT-4 dashboard/reports RBAC follow-up: the four read aggregates now gate `authScopes: { authenticated: true }` + resolver gate helpers enforce [`assertChaseAdmin` pattern], so OFFICE can read dashboard/reports per §6/§9 + D-#166 — server-only, vocab-free, NO permission change, **D-#196 [renumbered at merge from #186, which the Finance REQ D-#186–#192 took on main]**. Merged to MAIN (main-direct). Integrated gate green: **jest 1165/1165**, vocab PASS, shared/server tsc. Prior: CM-4 #76, CO-1 #75 [D-#194/#195], CM-3 #74, HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70, VC-5, MT #61, HR app. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), per-user Access-control (D-#193). In flight: CM-5; CO-2. Carried follow-up: NONE outstanding [CT-4 RBAC now fixed])_
 
 ## Now / next
+- **Built (CT-4-FIX — Class Test dashboard/reports RBAC, server, D-#196 [renumbered from #186 at merge — Finance REQ took #186]) [branch `worktree-ct4-rbac-fix`, PR #77 MERGED]:** the pre-existing CT-4 RBAC bug flagged at the CT-5 app review. The four
+  CT-4 READ aggregates (`classTestPrincipalDashboard`, `classTestReportsStatus`,
+  `classTestClassSubjectAnalysis`, `classTestStudentProfile`) gated `authScopes: { hasPermission:
+  "tracker:read" }`, but **OFFICE holds NO `tracker:read`** (it holds `message:dispatch` — which is why
+  the overdue-chase already worked) while the §6/§9 + D-#166 intent is for Office to read the dashboard +
+  reports. Pothos scope-auth runs `authScopes` BEFORE the resolver, so Office was rejected at the scope
+  layer and the intended Principal/Office branch inside `assertDashboardAdmin`/`assertReportRead` was
+  unreachable dead code. **Fix (resolver-gating ONLY — NO enum/permission/vocab change):** relax the four
+  reads to `authScopes: { authenticated: true }` and let the already-correct gate helpers be the authority
+  (the `assertChaseAdmin` pattern) — `assertDashboardAdmin` keeps P/O-only (now reachable by Office);
+  `assertReportRead` keeps P/O-unscoped + teacher section-scoped (`assertCanRead`) + denies GUARDIAN/any
+  role without `tracker:read`. The chase (`message:dispatch` + P/O) is unchanged. **Non-widening, proven by
+  a new schema-execution test `classTestSummaryRbac.test.ts` (11 tests)** that runs real GraphQL queries
+  against the built schema with each role's context (exercising the scope-auth layer + the real permission
+  map): Office reads all four; a teacher reads only a section it can read and is denied the dashboard;
+  GUARDIAN + unauthenticated are denied. **Gate GREEN (executed):** vocab verifier PASS (untouched), shared
+  build + shared/server tsc clean, **jest 1090/1090** (65 suites; +1 new suite [11]; the existing
+  `classTestSummary.test.ts` stays green). **Server-only.** Not verified live. **Do NOT merge** (PR for
+  review).
 - **Built (Student Comments + Parents-Meeting CM-4 — server, prd-comments-meetings §4.1/§6, J-CM4/J-CM5,
   D-#176) [branch `worktree-comments-cm4`, PR #76 MERGED]:** the FOURTH CM slice — the
   parents'-meeting timing DISPATCH + present/absent capture over the CM-3 `ParentMeeting`/`ParentMeetingSlot`
