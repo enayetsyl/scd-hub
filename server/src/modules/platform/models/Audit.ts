@@ -90,10 +90,13 @@ export type AuditEventKind =
   | "MESSAGE_TEMPLATE_EDITED" // Principal edited/reset a generated-message template — prior body retained here (MT-1, D-#129; ADR-008)
   | "STUDENT_COMMENT_RECORDED" // a teacher recorded/edited a daily student comment — type/sentiment/text (CM-1, §3/§6/J-CM1, D-#115)
   | "STUDENT_COMMENT_DELIVERED" // a daily comment delivered to the family — wa.me + emit() inbox/push (CM-2, §6/J-CM1, D-#172)
-  | "CLASSROOM_OBSERVATION_UPLOADED"   // Principal/Office uploaded a recorded session as an observation (CO-1, §5/J1, D-#190)
+  | "CLASSROOM_OBSERVATION_UPLOADED"   // Principal/Office uploaded a recorded session as an observation (CO-1, §5/J1, D-#194)
   | "CLASSROOM_OBSERVATION_ASSIGNED"   // a senior-teacher observer assigned to an observation (CO-1, §5/J1, D-#147)
   | "CLASSROOM_OBSERVATION_REVIEWED"   // the assigned observer scored+released the observation to the teacher (CO-1, §5/J2, D-#147)
-  | "CLASSROOM_OBSERVATION_SUPERSEDED" // a re-review superseded a prior observation (CO-1, §5, D-#190)
+  | "CLASSROOM_OBSERVATION_SUPERSEDED" // a re-review superseded a prior observation (CO-1, §5, D-#194)
+  | "PARENT_MEETING_CREATED"    // an admin created a parents' meeting in draft (CM-3, §3/§6, D-#123)
+  | "PARENT_MEETING_SLOTS_GENERATED" // per-family slots (re)generated wholesale for a meeting (CM-3, J-CM3, D-#175)
+  | "PARENT_MEETING_SLOTS_REORDERED" // slots reordered / a family flagged On-Call → re-timed (CM-3, J-CM4, D-#123)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

@@ -18,6 +18,19 @@ policy, or decisions into this repo.
 4. For a known procedure (new/changed feature, contract sync, pre-commit), load the matching skill
    under `/skills` (see Map).
 
+## Branch workflow & deploy (LIVE — DEP-1..6 done, 2026-06-14)
+The app is deployed. `main` = production (→ the prod domain); `dev` = the **default + integration
+branch** (→ a basic-auth'd dev site). GitHub Actions runs the CI gate on every push, then
+auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
+- **Feature/fix work branches from `dev` and merges into `dev`** (normal PR — base defaults to `dev`).
+  A green push to `dev` auto-deploys the dev site; test there. **Do NOT raise feature PRs against
+  `main`** (that was the pre-deploy habit).
+- **Promote to production with a deliberate PR `dev → main`.** Merging `main` auto-deploys prod
+  (CI-gated). `main` and `dev` are protected (no force-push/delete). Rollback = revert the merge on
+  `main` and push.
+- **Pure docs/planning** (STATUS / DECISIONS / CHANGELOG / `/docs`, no code) may still go **straight
+  to `main`** — they're path-ignored so they never redeploy; then sync `dev ← main` so dev doesn't drift.
+
 ## Hard rules (non-negotiable)
 - **Executed verification is the only gate.** "Done" means a validator/test printed green output in
   this session. An agent's claim that it followed the steps is never the gate. If you can't run the

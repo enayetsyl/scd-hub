@@ -1712,7 +1712,7 @@ export const COMMENT_SENTIMENT_LABELS_EN: Record<CommentSentiment, string> = {
 
 
 // --- A.16 CLASSROOM-OBSERVATION ENUMS (app-native; Classroom-Observation module --
-// — prd-classroom-observation §4, D-#146/#147, build rulings D-#190/#191). NO
+// — prd-classroom-observation §4, D-#146/#147, build rulings D-#194/#191). NO
 // wire-contract twin (D-#46/#52): an observation is a staff feature, not import
 // content, and every row names a teacherId/observerId — operational/identity plane
 // behind the ADR-005 firewall. Additive + disjoint from every other enum (AGENTS
@@ -1950,10 +1950,10 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "user:manage": "build",
   "audit:read": "build",
   "template:manage": "build", // Message Templates MT-1 (Principal-only edit/reset, D-#129)
-  "observation:upload": "build",  // Classroom-Observation CO-1 (upload + assign, D-#191)
-  "observation:review": "build",  // Classroom-Observation CO-1 (assigned-observer scoring, D-#191)
-  "observation:read": "build",    // Classroom-Observation CO-1 (row-scoped read, D-#191)
-  "observation:manage": "build",  // Classroom-Observation CO-1 (config/dashboards, D-#191)
+  "observation:upload": "build",  // Classroom-Observation CO-1 (upload + assign, D-#195)
+  "observation:review": "build",  // Classroom-Observation CO-1 (assigned-observer scoring, D-#195)
+  "observation:read": "build",    // Classroom-Observation CO-1 (row-scoped read, D-#195)
+  "observation:manage": "build",  // Classroom-Observation CO-1 (config/dashboards, D-#195)
   "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
 };
 
@@ -1976,7 +1976,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "performance:manage", "performance:signoff", "guardian:link", "message:dispatch",
     "user:manage", "audit:read",
     "template:manage",       // PRINCIPAL ONLY (D-#129) — Office/Teacher/Guardian never get it
-    "observation:upload", "observation:read", "observation:manage", // classroom observation (CO-1, D-#191) — NOT observation:review (the observer is an assigned TEACHER, D-#147)
+    "observation:upload", "observation:read", "observation:manage", // classroom observation (CO-1, D-#195) — NOT observation:review (the observer is an assigned TEACHER, D-#147)
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
   // fills trackers; authors nothing in-app (no content:import). message:dispatch
@@ -2005,7 +2005,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "attendance:manage",     // upload teacher Excel, assign markers, chase guardians (D-#64/#65; no mark)
     "library:read", "library:manage", // the default library desk (D-#81)
     "chat:read", "chat:write", "chat:manage", // staff chat + group/posting-policy admin (D-#76/#78); NO chat:oversee (Principal only, D-#77)
-    "observation:upload", "observation:read", "observation:manage", // classroom observation: upload+assign, row-scoped read, config (CO-1, D-#191); NOT observation:review (the observer is an assigned TEACHER)
+    "observation:upload", "observation:read", "observation:manage", // classroom observation: upload+assign, row-scoped read, config (CO-1, D-#195); NOT observation:review (the observer is an assigned TEACHER)
   ],
   // Guardian portal v1 (GP-1, D-#68): the single grant is ACTIVE — guardian-scoped
   // resolvers read linked children only (assertGuardianOfStudent, link-scoped).

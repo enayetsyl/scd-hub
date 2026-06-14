@@ -13,7 +13,7 @@
  *
  * REF-11 payload (set at REVIEW, null until then): 5 domain levels (1–4) + notes, 2
  * PASS/BREACH gates, one strength, one growth focus, an optional carry-forward. There
- * is NO total/average field — by design (§4, D-#190).
+ * is NO total/average field — by design (§4, D-#194).
  *
  * Lifecycle `state` ∈ OBSERVATION_STATES: UPLOADED → ASSIGNED → REVIEWED (releases to
  * the observed teacher) → TEACHER_RESPONDED (CO-3). A re-review creates a NEW row and

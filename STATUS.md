@@ -1,11 +1,11 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CO-1 BUILT — PR open, NOT merged** — Classroom Observation CO-1 [worktree-classroom-obs-co1, server: REF-11 form core + upload→assign→review→supersede pipeline + 4 new perms observation:{upload,review,read,manage}, D-#190/#191; sole vocab owner; new module distinct from HR's Observation]. Branched off `dev` per D-#91. Gate green: **jest 1113/1113** [64 suites, +1 over the 1071 base], vocab PASS incl. §C.16, shared/server/app tsc. Prior: CM-2 MERGED [#71, D-#172/#173], CT-5 #70 [Class Test Tracker COMPLETE], CM-1 #69, CT-4 #68, VC-5 #67 [Vocab COMPLETE], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, CO PRD [D-#146–#152], MT #61, HR app #56→#60. **DEP-1..6 DONE — prod LIVE scdhub.shafayet.me + dev dev.scdhub.shafayet.me + GitHub Actions CI/CD; standing workflow feature→dev→prod (D-#91).** Open PRs: CO-1 [this], APP-FU1 #72 [guardian-notice full-section picker]. In flight: CM-3. Next CO = CO-2 [SessionRecording/YouTube footage]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out (relax authScopes))_
+_Updated: 2026-06-14 (**CO-1 MERGED** — Classroom Observation CO-1 [#75, REF-11 form core + upload→assign→review→supersede pipeline + 4 new perms observation:{upload,review,read,manage}, **D-#194/#195 — renumbered at merge from #190/#191 which collided with the Finance + Access-control PRDs (#190–#193) on main**]. Merged to MAIN (main-direct flow; dev to be resynced). Integrated gate green: **jest 1138/1138**, vocab PASS incl. §C.16, shared/server tsc. Prior: CM-3 #74, HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70 [Class Test COMPLETE], VC-5 [Vocab COMPLETE], MT #61, HR app #56→#60. **DEP-1..6 DONE — prod LIVE scdhub.shafayet.me + dev env + GitHub Actions CI/CD.** On main as PRDs (not built): Finance (D-#190–#192), per-user Access-control (D-#193). In flight: CM-4 [vocab-toucher — serialize behind freed slot or kind-gated]; CO-2 next. Carried follow-up: CT-4 dashboard RBAC locks Office out)_
 
 ## Now / next
 - **Built (Classroom Observation CO-1 — server, prd-classroom-observation §4/§5/§6 + J1/J2,
-  D-#146/#147 + build rulings D-#190/#191) [branch `worktree-classroom-obs-co1`, PR OPEN — do NOT
-  merge, coordinator reviews]:** the FIRST slice of the standalone classroom-observation module —
+  D-#146/#147 + build rulings D-#194/#195 [renumbered from #190/#191 at merge — Finance/Access PRDs
+  took #190–#193 on main]) [branch `worktree-classroom-obs-co1`, PR #75 MERGED]:** the FIRST slice of the standalone classroom-observation module —
   the REF-11 form core + the upload→assign→review→supersede pipeline + the FOUR new app-native
   permissions. **New `server/src/modules/classroom-observation/`, model `ClassroomObservation`**
   (DISTINCT from HR-4's `modules/hr/models/Observation` — pre-flight clash check; no touch to HR's
@@ -37,6 +37,95 @@ _Updated: 2026-06-14 (**CO-1 BUILT — PR open, NOT merged** — Classroom Obser
   [40] + 2 firewall CO checks over the 1071 base). **Server-only** (footage upload=CO-2; teacher-response/
   notify/escalation=CO-3; Quran payload=CO-5; app later; expo skipped). **Not verified live.** **Next =
   CO-2** (SessionRecording / YouTube-unlisted footage).
+- **Planned (Access Control — per-user permissions, build contract written, D-#193):**
+  role becomes an editable-per-person TEMPLATE; effective = (∪ templates ∪ granted) − revoked,
+  reserved-locked set {payroll:approve, performance:signoff, chat:oversee, template:manage,
+  access:manage} Principal-only. Additive 3 fields on `User` (zero migration), one resolver
+  seam swap (`effectivePermissions`/`callerHasPermission`), new `access:manage` perm +
+  `PERMISSION_LABELS_BN/EN` (app-native vocab, NO wire sync). Guardian plane untouched.
+  Slices **AC-1** (server: fields+seam+mutations+audit+`access:manage`) → **AC-2** (app: Principal
+  editor screen w/ provenance chips). **Next = build AC-1 per `docs/prd-access-control.md` §6,
+  slice order AC-1→AC-2.**
+- **Planned (Finance/Accounting module FIN-1..FIN-6, D-#186–#192):** REQ scoped in
+  docs/finance-requirements.md — migrate the SCD Google-Sheet accounting layer (Daily,
+  Budget-vs-Actual, Qard/IOU Central, Bank & Online, Master Dashboard) into the app.
+  Eximus stays parallel (no live link); app reconciles vs bank statement AND an entered
+  Eximus control figure (FIN-4). Salary/payroll CARVED OUT — HR module owns it; FIN posts
+  the monthly net-payable total only. Staff salary-recoverable advances stay in HR; FIN
+  Qard/IOU register owns community/non-salary loans+advances. One school (no branch),
+  identity-plane only (ADR-005), reuse Office/Principal RBAC. Zakat = roster-linked,
+  effective-dated, append-only allocation + provider receivable + auto guardian/provider
+  fee-split. App-native vocab in later PRDs (NO wire sync expected, AGENTS rule 5). Plan/docs
+  only — nothing built. **Next = build FIN-1 (Ledgers & opening balances) per
+  docs/finance-requirements.md §4/§6, slice order FIN-1→FIN-6 (separate session).**
+- **Built (Student Comments + Parents-Meeting CM-3 — server, prd-comments-meetings §3/§6, D-#123,
+  J-CM3/J-CM4 + build rulings D-#174/#175) [branch `worktree-comments-cm3`, PR open — coordinator reviews]:**
+  the THIRD CM slice — the `ParentMeeting` + per-family `ParentMeetingSlot` models, slot generation, On-Call,
+  reorder, and the admin reads. **VOCAB-FREE** — `ParentMeeting.status ∈ {draft, scheduled, closed}` is a
+  **model-local literal union** (NOT a shared/vocab.ts enum); shared/vocab.ts + the verifier are UNTOUCHED
+  (parallel-safe with any concurrent vocab owner, e.g. CO-1). **Models:** `ParentMeeting`
+  `{academicYearId (default current), instanceLabel "2026 — 1st", meetingDate, slotMinutes, dayStartMinutes,
+  status, includeScope{classIds[],sectionIds[]} — both empty ⇒ all active}` (no schoolId, D-#145);
+  `ParentMeetingSlot` (one per FAMILY) `{meetingId, familyKey, studentIds[], classLabels[], order, slotTime?,
+  onCall, dispatchedAt?/attended?/attendanceRemark? — CM-4 fields present but NEVER written here}`, unique
+  `(meetingId, familyKey)`. **`ParentMeetingService`:** `createParentMeeting` (born draft; validates
+  label/slotMinutes≥1/dayStart 0..1439; current-year default); `generateSlots` (active students in
+  includeScope → group by `Student.phone` digits-only → one slot per family, **siblings collapsed** [J-CM3,
+  "Asila…, Arham | KG, Two"], default order class→section→name via the family's lead child, sequential timed
+  slots from dayStart — **WHOLESALE / idempotent delete-then-relay, DRAFT-only** [D-#175]); `setSlotOnCall`
+  (flag On-Call → null time + re-time the rest, J-CM4); `reorderSlots` (membership-validated; the new order
+  drives the times); admin reads (`parentMeetings`/`parentMeeting`/`parentMeetingSlots`). **Pure helpers
+  (unit-tested):** `groupFamilies` (sibling collapse + phone-less each-own-family + ordering) + `assignSlotTimes`
+  (timed step from dayStart, On-Call skipped → null; SHARED by generate/setOnCall/reorder so "order drives the
+  times" is single-truth). **Phone-less (D-#174):** each forms its own `nophone:<id>` family, gets a timed slot,
+  counted in `unreachableCount` — the CM-2 store-and-count posture (never dropped). **Resolvers
+  (`parentMeeting.ts`):** all 7 gated `roster:manage` (the D-#94 admin gate; meetings span sections so no
+  per-section row-scope). **RBAC: NO new role/permission** (D-#17/#94). 3 new audit kinds in `Audit.ts`
+  (`PARENT_MEETING_CREATED`/`_SLOTS_GENERATED`/`_SLOTS_REORDERED`); CM firewall block extended (corpus ⇄
+  ParentMeeting/ParentMeetingSlot/ParentMeetingService, both ways). **Gate GREEN (executed):** vocab verifier
+  PASS (untouched), shared build + shared/server tsc clean, **jest 1088/1088** (64 suites; +1 new suite
+  `parentMeeting.test.ts` [16] + 1 firewall check over the 1071 base; firewall green). **Server-only** (no app —
+  CM-6 is the app slice; expo skipped). **Not verified live.** **Next = CM-4** (dispatch + `MEETING_SCHEDULE` +
+  `setSlotAttendance` + derived present/absent — that's where the vocab lands).
+- **Built (APP-FU1 — guardian-notice full-section picker, Expo, APP-ONLY) [branch `worktree-app-fu1`,
+  PR open]:** the small app-polish pass over a deferred, server-ready surface. Closes the recorded
+  **M-5/M-6 follow-up**: `GuardianNoticeScreen` sourced its SECTION picker only from
+  `mySectionsAsClassTeacher`, so Principal/Office couldn't target an arbitrary section's notice (they
+  fell back to SCHOOL scope). Now **`chat:manage` holders get a full academic-year → all-sections
+  picker** (`AcademicYearSelect` + a `Select` of every class's sections, sourced from the existing
+  `classes` query — `authenticated:true`, P/O readable); class teachers (chat:write only) keep their
+  coordinated-sections chips unchanged. **Server already authorizes the arbitrary-section notice**
+  (`assertCanComposeNotice` bypasses `assertIsClassTeacher` when `canManage`) — this is purely the
+  missing picker UI. **APP-ONLY: NO server / shared / vocab / contract change** (`git diff origin/main
+  -- server shared` empty); 2 files touched (`GuardianNoticeScreen.tsx`, `lib/labels.ts` — 2 new BN/EN
+  keys). **Discovery scan (server-ready-but-unrendered reads):** all 110 client query ops are already
+  rendered — no further deferred reads to surface (Class-Test/Vocab excluded — owned by other sessions).
+  No new server-gaps found; the previously-known gaps (guardian attendance/leave) have no resolver and
+  stay deferred. No DECISIONS row (straightforward app surface). **Gate GREEN (executed):** app
+  `tsc --noEmit` clean + `expo export --platform web` green; vocab verifier PASS + server/shared
+  untouched + jest unchanged (server untouched). **Not verified live.**
+- **Built (HR-G1 — staff own-row self-service reads, server, prd-hr §4/§3, D-#185) [branch
+  `worktree-hr-gap-reads`, PR #73 MERGED]:** the two server gaps flagged when the HR
+  app shipped (PR-1/#56 surfaced them as "pending"). **Server-only, vocab-free, NO new permission** —
+  both reads compose existing services + the D-#103 phone-join. **`myPayslips`:** the caller's OWN
+  payslips across runs, newest month first, **`approved_locked` runs ONLY** (a staff member never sees a
+  draft/`prepared` payslip, §4.2) — new `payslipsForStaff` in `PayrollService`. **`myStaffAttendance`:**
+  the caller's OWN attendance over [fromKey, toKey], oldest day first, **reusing the AT-1 ✘=ABSENT → LEAVE
+  read-time overlay** (HR-2, `applyLeaveOverlay`) — new `staffAttendanceForRange` in
+  `TeacherAttendanceService` (the daily snapshot keys cleanly off `staffProfileId`, so the join is exact —
+  the myStaffAttendance gap is NOT blocked). Both resolve the caller's `StaffProfile` via the EXISTING
+  `resolveStaffProfileForUser` (User → phone → StaffProfile, **fail-closed on a shared phone — not
+  weakened/twinned**) and scope the read to that one id. Resolvers added inline to the existing
+  `payroll.ts` / `teacherAttendance.ts`, gated `authScopes: { authenticated: true }` (the staff-self
+  path; Principal/Office keep their `payroll:manage` / `attendance:manage` admin reads). **D-#185:** a
+  caller with no linked StaffProfile (guardian / email-only admin / ambiguous phone) gets `[]`, never
+  another person's data — these own-record app-card reads **return empty, they do NOT throw** like the
+  `myConductRecords`/`callerStaffProfileId` precedent. Identity-plane only; NO new model → firewall stays
+  green. **NOT built (recorded follow-up):** the supervisor observation-submit + teacher-readable
+  staff-directory gap (needs a scoped directory read + design — left for a later slice). **Gate GREEN
+  (executed):** vocab verifier PASS (untouched), shared build + shared/server tsc clean, **jest 1061/1061**
+  (63 suites; +1 new suite `hrSelfService.test.ts` [8] over the 1053 main base; firewall green).
+  **Server-only** (the app surface for these reads is a later app-only pass). **Not verified live.**
 - **Built (Student Comments + Parents-Meeting CM-2 — server, prd-comments-meetings §4.1/§5/§6, J-CM1,
   D-#172/#173) [branch `worktree-comments-cm2`, PR #71 MERGED]:** the SECOND CM slice —
   daily-comment DELIVERY + the comment-attachment file store. **Delivery (`CommentDeliveryService`):**

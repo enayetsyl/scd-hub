@@ -1,6 +1,6 @@
 /**
  * ref11 — the PURE REF-11 form validator (CO-1, prd-classroom-observation §5/§2.1,
- * D-#190). No DB, no clock, no I/O — every input is passed in, so the §5 acceptance
+ * D-#194). No DB, no clock, no I/O — every input is passed in, so the §5 acceptance
  * rules are deterministic + unit-testable (the classTestScoring/vocabScoring posture).
  *
  * The acceptance contract (§5):
