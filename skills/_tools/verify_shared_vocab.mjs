@@ -336,6 +336,9 @@ check("CLASS_TEST_ATTENDANCE_STATUS_LABELS_EN total", total(V.CLASS_TEST_ATTENDA
 // CT-3 — guardian-message delivery: CLASS_TEST_RESULT kind (above) + the class_test.result.* template keys (§8, D-#131/#160)
 check("class_test.result.* guardian-message template keys registered (Regular/Excellent/Absent + title, §8 — built on the MT registry, D-#131)",
   ["class_test.result.title","class_test.result.regular.body","class_test.result.excellent.body","class_test.result.absent.body"].every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k) && V.MESSAGE_TEMPLATE_REGISTRY[k]));
+// CT-4 — Office → teacher overdue-report chase wa.me template (§6/J6, D-#131/#167)
+check("class_test.overdue_chase.wa template key registered (Office overdue-chase, §6 — built on the MT registry, D-#131)",
+  V.MESSAGE_TEMPLATE_KEYS.includes("class_test.overdue_chase.wa") && !!V.MESSAGE_TEMPLATE_REGISTRY["class_test.overdue_chase.wa"]);
 check("class test composes existing perms — no class-test:* permission (D-#94/#17)",
   !V.PERMISSIONS.some((p) => p.startsWith("class") || p.startsWith("classtest")));
 

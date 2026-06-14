@@ -25,6 +25,7 @@ import "./modules/trackers/resolvers/assignment";
 import "./modules/trackers/resolvers/classTest";
 import "./modules/trackers/resolvers/classTestResult";
 import "./modules/trackers/resolvers/classTestGuardian";
+import "./modules/trackers/resolvers/classTestSummary";
 import "./modules/routine/resolvers/routine";
 import "./modules/routine/resolvers/routineSlots";
 import "./modules/routine/resolvers/routineTriggers";
