@@ -956,6 +956,13 @@ export const NOTIFICATION_KINDS = [
   "CLASS_TEST_RESULT",
   "VOCAB_RESULT",
   "STUDENT_COMMENT",
+  // CO-3 classroom-observation kinds (app-native, NO wire twin — D-#46/#72). The
+  // release notify, the escalation reminders (1st + 2nd), the Principal flag at the
+  // final threshold, and the teacher-responded notice. See the CO-3 build.
+  "OBSERVATION_RELEASED",
+  "OBSERVATION_RESPONSE_REMINDER",
+  "OBSERVATION_ESCALATED",
+  "OBSERVATION_RESPONDED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -973,6 +980,10 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   CLASS_TEST_RESULT: "ক্লাস টেস্টের ফলাফল",
   VOCAB_RESULT: "ভোকাবুলারি টেস্টের ফলাফল",
   STUDENT_COMMENT: "শিক্ষকের পর্যবেক্ষণ",
+  OBSERVATION_RELEASED: "শ্রেণি পর্যবেক্ষণ প্রকাশিত",
+  OBSERVATION_RESPONSE_REMINDER: "পর্যবেক্ষণে সাড়া দেওয়ার তাগিদ",
+  OBSERVATION_ESCALATED: "পর্যবেক্ষণে সাড়া বকেয়া",
+  OBSERVATION_RESPONDED: "পর্যবেক্ষণে শিক্ষকের সাড়া",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -988,6 +999,10 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   CLASS_TEST_RESULT: "Class-test result",
   VOCAB_RESULT: "Vocabulary-test result",
   STUDENT_COMMENT: "Teacher's comment",
+  OBSERVATION_RELEASED: "Observation released",
+  OBSERVATION_RESPONSE_REMINDER: "Observation response reminder",
+  OBSERVATION_ESCALATED: "Observation escalated",
+  OBSERVATION_RESPONDED: "Observation responded",
 };
 
 

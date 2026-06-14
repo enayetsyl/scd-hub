@@ -54,6 +54,7 @@ import { dateKeyOf } from "../../attendance/dates";
 import { dispatchAttendanceReminders } from "../../attendance/services/AttendanceReminderService";
 import { dispatchLibraryReminders } from "../../library/services/LibraryReminderService";
 import { runDueOffboardingRevocations } from "../../hr/services/OffboardingService";
+import { runObservationEscalation } from "../../classroom-observation/services/ObservationEscalationService";
 import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 
@@ -143,6 +144,7 @@ export interface TickSummary {
   escalationsEmitted: number;
   attendanceTiersRun: AttendanceReminderTier[];
   librarySweepRan: boolean;
+  observationEscalationRan: boolean;
 }
 
 const subjectBn = (subject: string): string =>
@@ -170,7 +172,18 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     escalationsEmitted: 0,
     attendanceTiersRun: [],
     librarySweepRan: false,
+    observationEscalationRan: false,
   };
+
+  // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
+  // on RELEASED-but-unanswered observations. CALENDAR-day cadence (no school-calendar
+  // lookup), so it runs once per CALENDAR day BEFORE the school-day gate (like
+  // offboarding); the engine is lazy + idempotent (per (observation, stage) ledger).
+  await family("observation escalation", async () => {
+    summary.observationEscalationRan = await runOnce(dateKey, "OBSESC", async () => {
+      await runObservationEscalation(now);
+    });
+  });
 
   // --- Offboarding access revocation (HR-5/H6.3, D-#117) — the SYSTEM disables the
   // login + revokes all scope grants on the last working day. Reuses THIS ticker (no
