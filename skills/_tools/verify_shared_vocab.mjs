@@ -398,6 +398,30 @@ check("observation:manage = PRINCIPAL+OFFICE only (designations/config/dashboard
 check("GUARDIAN holds NO observation:* permission (staff-internal, §7)",
   !V.PERMISSIONS.filter((p) => p.startsWith("observation")).some((p) => V.roleHasPermission("GUARDIAN", p)));
 
+console.log("=== C.16b Quran (ClassEcho) form payload enums (CO-5 — prd-classroom-observation §CO-5, D-#56; app-native, NO wire twin D-#46) ===");
+// the 8 rating criteria — exact set + label maps TOTAL (BN + EN) with NO extra keys
+check("QURAN_REVIEW_CRITERIA exact — the 8 ClassEcho rating items (§CO-5)",
+  eq(V.QURAN_REVIEW_CRITERIA, ["SUBJECT_KNOWLEDGE", "ENGAGEMENT_WITH_STUDENTS", "USE_OF_TEACHING_AIDS",
+    "INTERACTION_AND_QUESTION_HANDLING", "STUDENT_DISCIPLINE", "TEACHERS_CONTROL_OVER_CLASS",
+    "PARTICIPATION_LEVEL_OF_STUDENTS", "COMPLETION_OF_PLANNED_SYLLABUS"]));
+check("QURAN_REVIEW_CRITERIA is non-empty (8 items)", V.QURAN_REVIEW_CRITERIA.length === 8);
+check("QURAN_REVIEW_CRITERIA_LABELS_BN total",   total(V.QURAN_REVIEW_CRITERIA_LABELS_BN, V.QURAN_REVIEW_CRITERIA));
+check("QURAN_REVIEW_CRITERIA_LABELS_EN total",   total(V.QURAN_REVIEW_CRITERIA_LABELS_EN, V.QURAN_REVIEW_CRITERIA));
+check("QURAN_REVIEW_CRITERIA labels have NO extra keys (BN + EN exact over the enum)",
+  Object.keys(V.QURAN_REVIEW_CRITERIA_LABELS_BN).every((k) => V.QURAN_REVIEW_CRITERIA.includes(k)) &&
+  Object.keys(V.QURAN_REVIEW_CRITERIA_LABELS_EN).every((k) => V.QURAN_REVIEW_CRITERIA.includes(k)));
+// the 7 yes/no compliance items — exact set + label maps TOTAL (BN + EN) with NO extra keys
+check("QURAN_COMPLIANCE_ITEMS exact — the 7 PRD-final yes/no items (§CO-5)",
+  eq(V.QURAN_COMPLIANCE_ITEMS, ["CLASS_STARTED_ON_TIME", "CLASS_PERFORMED_AS_TRAINED", "MAINTAINS_DISCIPLINE",
+    "STUDENTS_UNDERSTAND_LESSON", "CLASS_IS_INTERACTIVE", "SIGNS_HOMEWORK_DIARY", "CHECKS_HOMEWORK_DIARY"]));
+check("QURAN_COMPLIANCE_ITEMS is non-empty (7 items)", V.QURAN_COMPLIANCE_ITEMS.length === 7);
+check("QURAN_COMPLIANCE_ITEM_LABELS_BN total",   total(V.QURAN_COMPLIANCE_ITEM_LABELS_BN, V.QURAN_COMPLIANCE_ITEMS));
+check("QURAN_COMPLIANCE_ITEM_LABELS_EN total",   total(V.QURAN_COMPLIANCE_ITEM_LABELS_EN, V.QURAN_COMPLIANCE_ITEMS));
+check("QURAN_COMPLIANCE_ITEM labels have NO extra keys (BN + EN exact over the enum)",
+  Object.keys(V.QURAN_COMPLIANCE_ITEM_LABELS_BN).every((k) => V.QURAN_COMPLIANCE_ITEMS.includes(k)) &&
+  Object.keys(V.QURAN_COMPLIANCE_ITEM_LABELS_EN).every((k) => V.QURAN_COMPLIANCE_ITEMS.includes(k)));
+check("Quran review scale is 1..5 (no total/average)", V.QURAN_REVIEW_SCORE_MIN === 1 && V.QURAN_REVIEW_SCORE_MAX === 5);
+
 console.log("=== C.17 Per-user access control: access:manage + RESERVED_PERMISSIONS + ASSIGNABLE_TEMPLATES + permission labels (AC-1 — prd-access-control §7/§8, D-#193/#210–#212) ===");
 // access:manage — the per-user editor gate: declared, BUILD, PRINCIPAL-exact-holder (the template:manage/payroll:approve posture)
 check("access:manage is declared + BUILD",

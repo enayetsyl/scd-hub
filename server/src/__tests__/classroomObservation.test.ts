@@ -295,8 +295,13 @@ describe("uploadObservation", () => {
     );
   });
 
-  test("a REF11 observation's subject must be a HW_SUBJECT (QURAN is CO-5)", async () => {
-    await expect(uploadObservation({ ...base, subject: "QURAN" })).rejects.toThrow(/must be one of/);
+  test("a REF11 observation cannot carry the QURAN subject (QURAN uses the Quran form — CO-5)", async () => {
+    // The form↔subject guard refuses QURAN on REF-11 in Bangla before the HW_SUBJECTS check.
+    await expect(uploadObservation({ ...base, subject: "QURAN" })).rejects.toThrow(/কুরআন ফর্ম/);
+  });
+
+  test("a REF11 observation's subject must still be a HW_SUBJECT (an unknown subject is refused)", async () => {
+    await expect(uploadObservation({ ...base, subject: "NOPE" })).rejects.toThrow(/must be one of/);
   });
 
   test("rejects a bad classDate / form", async () => {

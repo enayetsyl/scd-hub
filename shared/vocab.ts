@@ -1732,8 +1732,9 @@ export const COMMENT_SENTIMENT_LABELS_EN: Record<CommentSentiment, string> = {
 // content, and every row names a teacherId/observerId — operational/identity plane
 // behind the ADR-005 firewall. Additive + disjoint from every other enum (AGENTS
 // rule 5). CO-1 ships the REF-11 FORM enums + the pipeline state + the four new
-// permissions only; the Quran (ClassEcho) payload enums (QURAN_REVIEW_CRITERIA /
-// QURAN_COMPLIANCE_ITEMS) and the scheduler SUPPORT_TIERS are deferred to CO-5/CO-6.
+// permissions; CO-5 adds the Quran (ClassEcho) payload enums (QURAN_REVIEW_CRITERIA /
+// QURAN_COMPLIANCE_ITEMS — below, after GROWTH_PROGRESS). The scheduler SUPPORT_TIERS
+// remain deferred to CO-6.
 //
 // The REF-11 rubric is curriculum-owned + LOCKED (Project 00/07, D-#146); the labels
 // below are the NON-AUTHORITATIVE §3 echo the app carries for operational structure +
@@ -1854,6 +1855,85 @@ export const GROWTH_PROGRESS_LABELS_EN: Record<GrowthProgress, string> = {
   PARTLY: "Partly",
   NOT_YET: "Not yet",
 };
+
+// --- A.16b QURAN (ClassEcho) FORM PAYLOAD ENUMS (CO-5, prd-classroom-observation
+// §CO-5, D-#56) ----------------------------------------------------------------
+// The Quran observation uses its OWN form (NEVER REF-11): a ClassEcho-ported set of
+// rating items (1–5 each) + yes/no compliance items. App-native, NO wire twin
+// (D-#46) — same identity/operational plane behind the ADR-005 firewall. The
+// QURAN_REVIEW_CRITERIA labels echo the LIVE ClassEcho `video.model.ts` review keys
+// (pinned, not re-fetched); the QURAN_COMPLIANCE_ITEMS are FINAL per the PRD (not
+// from ClassEcho). Like the REF-11 echo above, NON-AUTHORITATIVE UI structure.
+
+/** The 8 ClassEcho rating criteria, each scored 1–5 (CO-5, §CO-5). Mirrors the
+ *  LIVE ClassEcho `video.model.ts` review keys; there is NO total/average. */
+export const QURAN_REVIEW_CRITERIA = [
+  "SUBJECT_KNOWLEDGE",
+  "ENGAGEMENT_WITH_STUDENTS",
+  "USE_OF_TEACHING_AIDS",
+  "INTERACTION_AND_QUESTION_HANDLING",
+  "STUDENT_DISCIPLINE",
+  "TEACHERS_CONTROL_OVER_CLASS",
+  "PARTICIPATION_LEVEL_OF_STUDENTS",
+  "COMPLETION_OF_PLANNED_SYLLABUS",
+] as const;
+export type QuranReviewCriterion = (typeof QURAN_REVIEW_CRITERIA)[number];
+export const QURAN_REVIEW_CRITERIA_LABELS_BN: Record<QuranReviewCriterion, string> = {
+  SUBJECT_KNOWLEDGE: "বিষয়জ্ঞান",
+  ENGAGEMENT_WITH_STUDENTS: "শিক্ষার্থীদের সাথে সম্পৃক্ততা",
+  USE_OF_TEACHING_AIDS: "শিক্ষা উপকরণের ব্যবহার",
+  INTERACTION_AND_QUESTION_HANDLING: "মিথস্ক্রিয়া ও প্রশ্ন সামলানো",
+  STUDENT_DISCIPLINE: "শিক্ষার্থী শৃঙ্খলা",
+  TEACHERS_CONTROL_OVER_CLASS: "শ্রেণির উপর শিক্ষকের নিয়ন্ত্রণ",
+  PARTICIPATION_LEVEL_OF_STUDENTS: "শিক্ষার্থীদের অংশগ্রহণের মাত্রা",
+  COMPLETION_OF_PLANNED_SYLLABUS: "পরিকল্পিত সিলেবাস সম্পন্নকরণ",
+};
+export const QURAN_REVIEW_CRITERIA_LABELS_EN: Record<QuranReviewCriterion, string> = {
+  SUBJECT_KNOWLEDGE: "Subject knowledge",
+  ENGAGEMENT_WITH_STUDENTS: "Engagement with students",
+  USE_OF_TEACHING_AIDS: "Use of teaching aids",
+  INTERACTION_AND_QUESTION_HANDLING: "Interaction & question handling",
+  STUDENT_DISCIPLINE: "Student discipline",
+  TEACHERS_CONTROL_OVER_CLASS: "Teacher's control over class",
+  PARTICIPATION_LEVEL_OF_STUDENTS: "Participation level of students",
+  COMPLETION_OF_PLANNED_SYLLABUS: "Completion of planned syllabus",
+};
+
+/** The 7 Quran-form yes/no compliance items (CO-5, §CO-5 — FINAL per the PRD, NOT
+ *  from ClassEcho). Each is answered yes/no. */
+export const QURAN_COMPLIANCE_ITEMS = [
+  "CLASS_STARTED_ON_TIME",
+  "CLASS_PERFORMED_AS_TRAINED",
+  "MAINTAINS_DISCIPLINE",
+  "STUDENTS_UNDERSTAND_LESSON",
+  "CLASS_IS_INTERACTIVE",
+  "SIGNS_HOMEWORK_DIARY",
+  "CHECKS_HOMEWORK_DIARY",
+] as const;
+export type QuranComplianceItem = (typeof QURAN_COMPLIANCE_ITEMS)[number];
+export const QURAN_COMPLIANCE_ITEM_LABELS_BN: Record<QuranComplianceItem, string> = {
+  CLASS_STARTED_ON_TIME: "ক্লাস সময়মতো শুরু হয়েছে",
+  CLASS_PERFORMED_AS_TRAINED: "প্রশিক্ষণ অনুযায়ী ক্লাস পরিচালিত হয়েছে",
+  MAINTAINS_DISCIPLINE: "শৃঙ্খলা বজায় রাখে",
+  STUDENTS_UNDERSTAND_LESSON: "শিক্ষার্থীরা পাঠ বুঝতে পারে",
+  CLASS_IS_INTERACTIVE: "ক্লাসটি মিথস্ক্রিয়ামূলক",
+  SIGNS_HOMEWORK_DIARY: "বাড়ির কাজের ডায়েরিতে স্বাক্ষর করে",
+  CHECKS_HOMEWORK_DIARY: "বাড়ির কাজের ডায়েরি পরীক্ষা করে",
+};
+export const QURAN_COMPLIANCE_ITEM_LABELS_EN: Record<QuranComplianceItem, string> = {
+  CLASS_STARTED_ON_TIME: "Class started on time",
+  CLASS_PERFORMED_AS_TRAINED: "Class performed as trained",
+  MAINTAINS_DISCIPLINE: "Maintains discipline",
+  STUDENTS_UNDERSTAND_LESSON: "Students understand the lesson",
+  CLASS_IS_INTERACTIVE: "Class is interactive",
+  SIGNS_HOMEWORK_DIARY: "Signs homework diary",
+  CHECKS_HOMEWORK_DIARY: "Checks homework diary",
+};
+
+/** Quran-form rating scale 1–5 (CO-5, §CO-5). Echoes the ClassEcho 1–5 score range;
+ *  there is NO total/average (the REF-11 posture). */
+export const QURAN_REVIEW_SCORE_MIN = 1;
+export const QURAN_REVIEW_SCORE_MAX = 5;
 
 
 // =============================================================================
