@@ -489,6 +489,23 @@ describe("Comments & Parents-Meeting firewall (ADR-005 / CM-1/CM-2, D-#114/#172)
     }
   });
 
+  // CM-5 meeting-comment model/service/resolver must exist + stay corpus-clean (the
+  // MeetingComment + the comparison/guardian reads name studentIds — identity-plane).
+  const CM5_FILES = [
+    "../modules/comments/models/MeetingComment.ts",
+    "../modules/comments/services/MeetingCommentService.ts",
+    "../modules/comments/resolvers/meetingComment.ts",
+  ].map((p) => path.resolve(__dirname, p));
+
+  test("CM-5 meeting-comment source files exist and have no corpus import", () => {
+    for (const f of CM5_FILES) {
+      expect(fs.existsSync(f)).toBe(true); // shipped (CM-5)
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
   test("corpus module has NO import from the comments module", () => {
     for (const f of walkDir(corpusDir)) {
       const content = fs.readFileSync(f, "utf8");
@@ -496,10 +513,12 @@ describe("Comments & Parents-Meeting firewall (ADR-005 / CM-1/CM-2, D-#114/#172)
       expect(content).not.toMatch(importPattern("models/StudentComment"));
       expect(content).not.toMatch(importPattern("models/ParentMeeting"));
       expect(content).not.toMatch(importPattern("models/ParentMeetingSlot"));
+      expect(content).not.toMatch(importPattern("models/MeetingComment"));
       expect(content).not.toMatch(importPattern("services/CommentDeliveryService"));
       expect(content).not.toMatch(importPattern("services/CommentFileService"));
       expect(content).not.toMatch(importPattern("services/ParentMeetingService"));
       expect(content).not.toMatch(importPattern("services/MeetingDispatchService"));
+      expect(content).not.toMatch(importPattern("services/MeetingCommentService"));
     }
   });
 });

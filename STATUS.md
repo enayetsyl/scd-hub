@@ -1,8 +1,32 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CT-4-FIX MERGED** — the carried CT-4 dashboard/reports RBAC follow-up: the four read aggregates now gate `authScopes: { authenticated: true }` + resolver gate helpers enforce [`assertChaseAdmin` pattern], so OFFICE can read dashboard/reports per §6/§9 + D-#166 — server-only, vocab-free, NO permission change, **D-#196 [renumbered at merge from #186, which the Finance REQ D-#186–#192 took on main]**. Merged to MAIN (main-direct). Integrated gate green: **jest 1165/1165**, vocab PASS, shared/server tsc. Prior: CM-4 #76, CO-1 #75 [D-#194/#195], CM-3 #74, HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70, VC-5, MT #61, HR app. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), per-user Access-control (D-#193). In flight: CM-5; CO-2. Carried follow-up: NONE outstanding [CT-4 RBAC now fixed])_
+_Updated: 2026-06-14 (**CM-5 BUILT, PR open** — Comments CM-5 [MeetingComment + comparison timeline + guardian childComments/childMeetingSlot reads, server, **VOCAB-FREE**, D-#124 + build ruling D-#202] on `worktree-comments-cm5`. Gate green: **jest 1180/1180** [69 suites], vocab verifier PASS [UNTOUCHED — `git diff origin/main -- shared` empty], shared/server tsc. Coordinator reviews + merges (base main, main-direct flow). Prior: **CT-4-FIX MERGED** [jest 1165, D-#196], CM-4 #76, CO-1 #75 [D-#194/#195], CM-3 #74, HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70, VC-5, MT #61, HR app. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), per-user Access-control (D-#193), Saturday-Revision (D-#197–#201). In flight: CO-2. Next CM = CM-6 (the Expo app slice over CM-1..CM-5 — completes the module). Carried follow-up: NONE outstanding)_
 
 ## Now / next
+- **Built (Student Comments + Parents-Meeting CM-5 — server, prd-comments-meetings §3/§6/§8, J-CM6/J-CM7/J-CM8,
+  D-#124 + build ruling D-#202) [branch `worktree-comments-cm5`, PR open — coordinator reviews]:** the FIFTH CM
+  slice — the class-teacher `MeetingComment` + the cross-meeting comparison reads + the guardian portal reads.
+  **VOCAB-FREE** — `shared/vocab.ts` + the verifier UNTOUCHED (`git diff origin/main -- shared` empty). **New
+  model `MeetingComment`** `{meetingId, studentId, authorUserId, positiveText, concernText}` (one per
+  student×meeting, unique; no schoolId, D-#145). **`MeetingCommentService`:** `saveMeetingComment` (UPSERT one
+  note per student×meeting; both-empty rejected; audited `MEETING_COMMENT_SAVED`); `studentCommentTimeline`
+  (DERIVED D-#44 — prior MeetingComments chronological + a daily-StudentComment **by-type rollup** since the most
+  recent meeting, D-#202); `meetingComparison(meetingId, studentId)` (this note + prior notes + the rollup since
+  the previous meeting); guardian `childComments` (DELIVERED daily comments ONLY, structurally omits
+  authorUserId/sectionId/deliveryChannels — J-CM8) + `childMeetingSlot` (the family's own slot, omits
+  familyKey/studentIds/attendanceRemark). Pure `rollupByType` (counts over ALL COMMENT_TYPES, zeros included)
+  unit-tested. **Resolvers (`meetingComment.ts`):** `saveMeetingComment` = `tracker:write` +
+  `assertIsClassTeacher` on the child's server-resolved section (**Office/Principal denied — J-CM6**, the
+  D-#42/#45 parent-comms duty); `studentCommentTimeline`/`meetingComparison` = the reps gate **`tracker:read` OR
+  `roster:manage`** (function-form authScopes — first OR-of-two-perms gate in the codebase);
+  `childComments`/`childMeetingSlot` = `guardian:read_child` + `assertGuardianOfStudent` (D-#68). **RBAC: NO new
+  role/permission** (D-#17). 1 new audit kind `MEETING_COMMENT_SAVED` (Audit.ts, NOT vocab). CM firewall block
+  extended (MeetingComment + MeetingCommentService corpus-clean, both ways). **Gate GREEN (executed):** vocab
+  verifier PASS (UNTOUCHED), shared build + shared/server tsc clean, **jest 1180/1180** (69 suites; +1 new suite
+  `meetingComment.test.ts` [13 — incl. the J-CM6 class-teacher deny, the J-CM7 rollup, the J-CM8
+  structural-omission guardian shapes] + 1 firewall check; firewall green). **Server-only** (no app — CM-6 is the
+  app slice; expo skipped). **Not verified live.** **Next = CM-6** (the Expo app slice over CM-1..CM-5 — completes
+  the Comments + Parents-Meeting module).
 - **Planned (Saturday Revision Tracker — Qur'an Hifz, module REQ written, D-#197–#201):**
   REQ scoped in docs/saturday-revision-requirements.md — replaces the paper শিক্ষার্থীর পাঠ
   সম্পাদন রিপোর্ট (weekly Saturday Hifz revision sheet). Per student × Saturday: present/absent +
