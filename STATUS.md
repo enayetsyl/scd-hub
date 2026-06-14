@@ -1,6 +1,6 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two server slices landed this cycle, integrated gate green: **jest 1198/1198 [70 suites]**, vocab verifier PASS incl. §C.17, shared/server tsc clean. **CM-5** (PR #78) — Comments: `MeetingComment` + comparison timeline + guardian `childComments`/`childMeetingSlot`, VOCAB-FREE, D-#124 governing + D-#202 ruling; coordinator 3-finder review = no fixes (comparison reads' reps-gate is intentional per PRD §8). **AC-1** (PR #79) — Per-user Access Control: role→template seam swap (`schema.ts` + ALL ~30 production `roleHasPermission(ctx.auth.role,…)` → `callerHasPermission(ctx.auth,…)`), 3 additive `User` fields ZERO-migration, `access:manage` RESERVED-locked, D-#193 + D-#210–#215; sole vocab owner; coordinator 6-finder review = no fixes (byte-identical proof = every prior RBAC test green; verifier §C.17). Merged CM-5 first, AC-1 last (highest blast radius, keep-both append-logs + index/Audit union). **Non-blocking follow-ups recorded:** (1) AC per-user changes apply on the target's NEXT login (JWT-baked, ≤8h TTL — D-#211; relevant to AC-2 UX); (2) `effectivePermissions` recomputes per gate — future per-request memo if profiling warrants; (3) CM-5 comparison timeline is wider than CM-1 section-scope (reps gate, by PRD design). Prior — **CT-4-FIX MERGED** [jest 1165, D-#196]. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), Saturday-Revision (D-#197–#201). In flight: CO-2. AC-2 + CM-6 DONE (Access Control + Comments both fully built server + app; CM guardian meeting-slot card deferred on a server gap). Next: HR-G2 (server), then CO-2. Carried follow-up: NONE outstanding)_
+_Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two server slices landed this cycle, integrated gate green: **jest 1198/1198 [70 suites]**, vocab verifier PASS incl. §C.17, shared/server tsc clean. **CM-5** (PR #78) — Comments: `MeetingComment` + comparison timeline + guardian `childComments`/`childMeetingSlot`, VOCAB-FREE, D-#124 governing + D-#202 ruling; coordinator 3-finder review = no fixes (comparison reads' reps-gate is intentional per PRD §8). **AC-1** (PR #79) — Per-user Access Control: role→template seam swap (`schema.ts` + ALL ~30 production `roleHasPermission(ctx.auth.role,…)` → `callerHasPermission(ctx.auth,…)`), 3 additive `User` fields ZERO-migration, `access:manage` RESERVED-locked, D-#193 + D-#210–#215; sole vocab owner; coordinator 6-finder review = no fixes (byte-identical proof = every prior RBAC test green; verifier §C.17). Merged CM-5 first, AC-1 last (highest blast radius, keep-both append-logs + index/Audit union). **Non-blocking follow-ups recorded:** (1) AC per-user changes apply on the target's NEXT login (JWT-baked, ≤8h TTL — D-#211; relevant to AC-2 UX); (2) `effectivePermissions` recomputes per gate — future per-request memo if profiling warrants; (3) CM-5 comparison timeline is wider than CM-1 section-scope (reps gate, by PRD design). Prior — **CT-4-FIX MERGED** [jest 1165, D-#196]. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), Saturday-Revision (D-#197–#201). In flight: CO-2. AC-2 + CM-6 + HR-G2 DONE (Access Control + Comments fully built server + app; HR-G2 staff directory server [jest 1207/1207]; CM guardian meeting-slot card deferred on a server gap; HR-G2 app picker = H8.4 rider later). Next: CO-2. Carried follow-up: NONE outstanding)_
 
 ## Now / next
 - **Built (Student Comments + Parents-Meeting CM-6 — app, Expo, prd-comments-meetings §6 + J-CM1..J-CM8)
@@ -42,15 +42,23 @@ _Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two
   the CT-5/VC-5 posture). **Gate GREEN (executed):** app `tsc --noEmit` clean + `expo export --platform web`
   green (752 modules); no-drift = vocab verifier PASS + server/shared untouched + jest unchanged. **Not verified
   live.** **Access Control is now fully built server + app (AC-1 + AC-2).**
-- **Planned (HR-G2 — teacher-readable staff directory, prd-hr §H8, D-#216/#217):** design ratified (docs
-  only — nothing built). `staffDirectory(observableOnly: Boolean = false)` → a PII-free `StaffDirectoryEntry
-  {id, name, nameBn, designation, category}` (a distinct read shape that STRUCTURALLY omits all H1.4
-  sensitive + personal-bio rows, the CT-3 precedent); gate `authenticated:true` + **GUARDIAN denied**; **NO
-  new permission** (discovery, not capability — the student-roster posture, D-#216). `observableOnly:true`
-  narrows to the caller's supervisory extent → the assigned teachers (assignment source = `RoutineSlot.teacherId`,
-  confirm at build), **fail-closed on the `User`→`StaffProfile` phone-join** (D-#103/#185/#217). Unblocks the
-  **H5.2 supervisor observation picker** + the chat staff-list (the M-5 derived gap). Vocab-free, server-only,
-  identity-plane (firewall green). **Next = build HR-G2 (server) per prd-hr §H8, then the app picker rider.**
+- **Built (HR-G2 — teacher-readable staff directory, server, prd-hr §H8.2/H8.3, D-#216/#217 + build ruling
+  D-#218) [branch `claude/open-prds-nl0az4`]:** the PII-free `staffDirectory(observableOnly: Boolean = false,
+  category)` read that unblocks the H5.2 supervisor observation picker + the chat staff-list. **Server-only,
+  vocab-free, NO new permission.** New dedicated `StaffDirectoryEntry {id, name, nameBn, designation, category}`
+  objectRef — STRUCTURALLY omits every H1.4 sensitive + bio row (the CT-3 precedent; the full record stays on
+  the `staff` query, `staff:manage`). Gate `authenticated:true` + **GUARDIAN rejected in-resolver** (the
+  student-roster discovery posture). `observableOnly:false` → every active staff member; `observableOnly:true`
+  → Principal/Office (`performance:manage`/`staff:manage`) all, a bounded supervisor → the teachers assigned
+  (`RoutineSlot.teacherId`) to a (class, subject) cell their SUPERVISORY scope covers
+  (`composeTeacherScope`→`supervisoryCovers`), **fail-closed on the `teacherId`→`StaffProfile` phone-join**
+  (`resolveStaffProfileForUser`, D-#103/#185). **Reverse-join build risk (D-#217) resolved (D-#218):**
+  `RoutineSlot.subject` (enum) → `Subject._id` via one `Subject.find()` for the 5 general codes; ARABIC/ISLAM/
+  QURAN + cross-grade subjectgroup slots match only class-based/whole_school extents. New `StaffDirectoryService`
+  + resolver (registered in index.ts); identity plane → firewall unchanged-green; non-mutating → no audit kind.
+  **Gate GREEN (executed):** shared build + shared/server tsc clean, vocab verifier PASS (untouched), **jest
+  1207/1207** (71 suites; +1 new suite `staffDirectory.test.ts` [9] over the 1198 base; firewall green).
+  **Server-only** (the app picker is the H8.4 rider — a later app slice). **Not verified live. Next = CO-2.**
 - **Built (Access Control AC-1 — server, prd-access-control §4/§5/§6, J-AC1..J-AC6, D-#193 + build rulings
   D-#210–#215) [branch `worktree-access-control-ac1`, PR #79 MERGED to main 2026-06-14 (main=034a444); 6-finder
   review = no fixes; merged LAST (highest blast radius)]:** role stops being the final word on permissions → it
