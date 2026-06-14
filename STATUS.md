@@ -1,8 +1,40 @@
 # STATUS
 
-_Updated: 2026-06-14 (**VC-3 + CT-1 both MERGED** — Vocab VC-3 [#62, grid mistake capture + derived scoring, D-#142] then Class Test CT-1 [#63, print-request→official-exam lifecycle, D-#143/#144/#145 — renumbered from #142–#144 at merge since VC-3 took #142]; integrated gate green on main: jest **959/959** [57 suites]. **+ docs: Classroom Observation module build contract added (D-#146–#152, renumbered from the handoff's #59–#65).** Earlier this run: MT-1..MT-3 #61 [D-#128–#131], HR app #56→#60 [D-#135]. Parked vocab-toucher behind the vocab lock: CM-1. Next: VC-4 / CT-2 continue their chains)_
+_Updated: 2026-06-14 (**VC-3 + CT-1 both MERGED** — Vocab VC-3 [#62, grid mistake capture + derived scoring, D-#142] then Class Test CT-1 [#63, print-request→official-exam lifecycle, D-#143/#144/#145 — renumbered from #142–#144 at merge since VC-3 took #142]; integrated gate green on main: jest **959/959** [57 suites]. **+ docs: Classroom Observation module build contract added (D-#146–#152, renumbered from the handoff's #59–#65).** Earlier this run: MT-1..MT-3 #61 [D-#128–#131], HR app #56→#60 [D-#135]. Parked vocab-toucher behind the vocab lock: CM-1. Next: VC-4 / CT-2 continue their chains. **This run: VC-4 built [branch worktree-vocab-vc4, server-only, jest 981/981, D-#153/#154/#155] — read aggregates + persistent weak words + guardian messages (wa.me + emit() via the MT registry, VOCAB_RESULT kind) + childVocab; vocab additions purely additive + parallel-safe with CT-2.**)_
 
 ## Now / next
+- **Built (Vocabulary Tracker VC-4 — server, prd-vocabulary-tracker §6/§8/§9, J5/J6/J7, build rulings
+  D-#153/#154/#155) [branch `worktree-vocab-vc4`, PR open — coordinator reviews]:** the FOURTH vocab slice —
+  read aggregates + persistent weak words + guardian messages + the guardian child read. **Vocab (app-native,
+  NO wire sync; PARALLEL-SAFE with the in-flight CT-2 per AGENTS rule 5 — purely additive, disjoint
+  enums/verifier sections):** `NOTIFICATION_KINDS += VOCAB_RESULT` (+BN/EN — extends verifier §C.5 exact-list) +
+  5 `vocab.result.*` MESSAGE_TEMPLATE keys (title + Regular/Perfect/Absent/Cumulative bodies; BN defaults with
+  the Islamic salutation + du'a; built DIRECTLY on the MT-1 registry per D-#131, NOT inline) + verifier §C.12
+  additions. **Server (`modules/vocab/`):** pure **`vocabAggregate`** (no DB/clock, all inputs incl. `asOf`
+  passed in — D-#153: thresholds with read-time defaults [persistent ≥2 tests / class ≥30% / Weekly N=4, no
+  seed write D-#97], `persistentWeakWords` [distinct-TEST count], `mostMissedWords` [distinct-student ÷ present
+  ≥ pct], `scoreRollup` [ABSENT excluded from denominators, §4], `selectPeriodTests` [Weekly/Monthly/Last-N],
+  `periodLabel`); **`VocabSummaryService`** (all DERIVED, never stored D-#85 — rolls up the VC-3 `vocabScoring`
+  engine via `studentResult`/`testResults`, never re-derives: `vocabTestReport` / `vocabStudentDashboard` +
+  persistent weak words / `vocabClassDashboard` + most-missed / `vocabStudentCumulative` + the guardian
+  `childVocab` [MARKED tests only — D-#155]); **`VocabGuardianService`** (`buildVocabResultMessage`
+  perfect/regular/absent + `buildVocabCumulativeMessage` via `renderTemplate`; `generateVocabTestMessages` +
+  `generateVocabCumulativeMessages` — wa.me for ALL families with a phone [ADR-003] + emit() Notification for
+  login-enabled guardians [D-#72], contact-only stay wa.me-only [D-#31]; **N+1 guard** — the title is rendered
+  ONCE per batch + each body ONCE per student, `renderTemplate`/`getEffectiveTemplate` is NEVER called inside
+  the per-guardian loop, and NO cache was added to `getEffectiveTemplate`). New emitter `emitVocabGuardianResult`
+  (takes pre-rendered text; writes the VOCAB_RESULT inbox row); `vocabTestId` ref added to `NotificationRefs`
+  (additive, disjoint from any class-test ref); `WrongWord` gains `wordId` (additive — the word-aggregation
+  key). New resolvers `vocabSummary` (reports = `tracker:read`; message generation = `message:dispatch` —
+  Principal/Teacher/Office, the AS-T4 R-T2 posture, Guardian denied) + `vocabGuardian` (`childVocab` =
+  `guardian:read_child` + `assertGuardianOfStudent`, D-#68; read-only). **RBAC (D-#154) — composes existing
+  perms, NO new role/permission (D-#94/#17).** 1 new audit kind VOCAB_RESULT_MESSAGED. **Firewall
+  unchanged-green** (VC-4 adds NO new models — the vocab-module dir scan already covers the new services).
+  **Gate GREEN (executed):** vocab verifier PASS, shared build + shared/server tsc clean, **jest 981/981**
+  (58 suites; +1 suite `vocabSummary.test.ts` [+22 over the 959 base] — pure aggregates + persistent-weak-word
+  thresholds + the template-rendered message byte-check + the childVocab marked-only guardian boundary).
+  **Server-only** (no app — VC-5 is the app slice; expo export skipped). **Not verified live.** **Next = VC-5**
+  (app screens: WordBankManage · BuildVocabTest · VocabAssignment · VocabMarkGrid · VocabReports · GuardianVocab).
 - **Planned (Classroom Observation module — REF-11 + Quran review, build contract written, D-#146–#152):**
   build contract authored, **no feature code yet**. New standalone `classroom-observation` module (identity
   plane, ADR-005). Two forms, one pipeline: **REF-11** (general+Arabic+Islam, `HW_SUBJECTS`) and the ported
