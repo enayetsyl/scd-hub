@@ -25,6 +25,7 @@ import {
   assignObserver,
   reviewObservation,
   requestReReview,
+  respondToObservation,
   getObservation,
   observationsForTeacher,
   myReviewQueue,
@@ -32,6 +33,11 @@ import {
   type ObservationActor,
   type ClassroomObservationShape,
 } from "../services/ClassroomObservationService";
+import {
+  getEscalationConfig,
+  setEscalationConfig,
+  type EffectiveEscalationConfig,
+} from "../services/ObservationEscalationService";
 
 /** Build the row-scope actor from the request context (manage = Principal/Office). */
 function actorOf(ctx: AppContext): ObservationActor {
@@ -226,6 +232,82 @@ builder.mutationField("reRequestClassroomObservation", (t) =>
         observerId: args.observerId,
         actorId: actor.userId,
       });
+    },
+  }),
+);
+
+builder.mutationField("respondToClassroomObservation", (t) =>
+  t.field({
+    type: ObservationRef,
+    description:
+      "The OBSERVED teacher acknowledges a released (REVIEWED) observation: records the response text and " +
+      "transitions REVIEWED → TEACHER_RESPONDED. Scores are NOT editable here. Notifies the observer + " +
+      "Principal. Requires observation:read AND being the observed teacher (a non-observed caller is refused). Audited.",
+    authScopes: { hasPermission: "observation:read" },
+    args: {
+      observationId: t.arg.string({ required: true }),
+      responseText: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return respondToObservation({
+        observationId: args.observationId,
+        responseText: args.responseText,
+        actorId: actor.userId,
+      });
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Escalation cadence config (observation:manage — admin-tunable, D-#97 defaults)
+// ---------------------------------------------------------------------------
+
+const EscalationConfigRef = builder.objectRef<EffectiveEscalationConfig>("ObservationEscalationConfig");
+EscalationConfigRef.implement({
+  description:
+    "The teacher-response escalation cadence (CALENDAR days since release): 1st reminder / 2nd reminder / " +
+    "Principal flag. isDefault = no admin row, the working defaults (2/4/7) apply.",
+  fields: (t) => ({
+    reminderDays1: t.exposeInt("reminderDays1"),
+    reminderDays2: t.exposeInt("reminderDays2"),
+    principalFlagDays: t.exposeInt("principalFlagDays"),
+    isDefault: t.exposeBoolean("isDefault"),
+  }),
+});
+
+builder.queryField("observationEscalationConfig", (t) =>
+  t.field({
+    type: EscalationConfigRef,
+    description:
+      "The current response-escalation cadence (the admin row, else the 2/4/7 defaults). Requires observation:manage.",
+    authScopes: { hasPermission: "observation:manage" },
+    resolve: async () => getEscalationConfig(),
+  }),
+);
+
+builder.mutationField("setObservationEscalationConfig", (t) =>
+  t.field({
+    type: EscalationConfigRef,
+    description:
+      "Set the response-escalation cadence (CALENDAR days, strictly increasing: 1st < 2nd < flag). " +
+      "Requires observation:manage (Principal/Office). Audited.",
+    authScopes: { hasPermission: "observation:manage" },
+    args: {
+      reminderDays1: t.arg.int({ required: true }),
+      reminderDays2: t.arg.int({ required: true }),
+      principalFlagDays: t.arg.int({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return setEscalationConfig(
+        {
+          reminderDays1: args.reminderDays1,
+          reminderDays2: args.reminderDays2,
+          principalFlagDays: args.principalFlagDays,
+        },
+        actor.userId,
+      );
     },
   }),
 );

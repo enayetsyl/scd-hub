@@ -35,6 +35,8 @@ import type { ObservationForm, ObservationState } from "@scd/shared";
 import { ClassroomObservation, type IClassroomObservation } from "../models/ClassroomObservation";
 import { validateRef11Payload, type Ref11PayloadInput } from "../ref11";
 import { writeAudit } from "../../platform/services/AuditService";
+import { emit } from "../../notifications/services/NotificationService";
+import { User } from "../../foundation/models/User";
 
 export class ClassroomObservationError extends Error {}
 
@@ -320,7 +322,115 @@ export async function reviewObservation(input: ReviewObservationInput): Promise<
     meta: { teacherId: doc.teacherId.toString(), observerId: input.actorId },
   });
 
+  // CO-3 release notify: tell the observed teacher their observation is out (REVIEWED).
+  // ONE emit, kind-gated; best-effort — a notification failure never rolls back the
+  // release (the D-#75 posture). N+1-safe (single recipient, single emit).
+  await emitObservationReleased(doc);
+
   return shape(doc);
+}
+
+/** Best-effort release notice to the observed teacher (CO-3). Swallows its own
+ *  failure with a log — the release transition already committed. */
+async function emitObservationReleased(doc: IClassroomObservation): Promise<void> {
+  try {
+    await emit({
+      recipientUserId: doc.teacherId.toString(),
+      kind: "OBSERVATION_RELEASED",
+      titleBn: "আপনার শ্রেণি পর্যবেক্ষণ প্রকাশিত হয়েছে",
+      bodyBn: "আপনার শ্রেণি পর্যবেক্ষণটি পর্যালোচনা সম্পন্ন হয়ে প্রকাশিত হয়েছে। অনুগ্রহ করে দেখে সাড়া দিন।",
+      refs: { observationId: doc._id.toString(), teacherId: doc.teacherId.toString() },
+      dedupeKey: `OBSREL:${doc._id.toString()}`,
+    });
+  } catch (err) {
+    console.error("OBSERVATION_RELEASED emit failed (never blocks the release):", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// respondToObservation (CO-3 — the observed teacher acknowledges the release)
+// ---------------------------------------------------------------------------
+
+export interface RespondToObservationInput {
+  observationId: string;
+  /** The authenticated actor — MUST be the observed teacher (obs.teacherId). */
+  actorId: string;
+  responseText: string;
+}
+
+/**
+ * The observed teacher responds to a RELEASED observation (CO-3). ONLY the observed
+ * teacher may respond, ONLY on a REVIEWED row; sets `teacherResponse` and transitions
+ * REVIEWED → TEACHER_RESPONDED. Scores are NOT editable via this path (only the
+ * response text is touched). Emits OBSERVATION_RESPONDED to the observer + the
+ * Principal/observation:manage holders. Audited (CLASSROOM_OBSERVATION_RESPONDED).
+ *
+ * "Acknowledging = seen & discussed, not agreement" is UI copy — no server flag.
+ */
+export async function respondToObservation(
+  input: RespondToObservationInput,
+): Promise<ClassroomObservationShape> {
+  const doc = (await ClassroomObservation.findById(input.observationId)) as IClassroomObservation | null;
+  if (!doc) throw new ClassroomObservationError("Observation not found");
+  // Gate to the observed teacher — a non-observed caller is refused in Bangla.
+  if (doc.teacherId.toString() !== input.actorId) {
+    throw new ClassroomObservationError("শুধু সংশ্লিষ্ট শিক্ষকই এই পর্যবেক্ষণে সাড়া দিতে পারবেন");
+  }
+  if (doc.state !== "REVIEWED") {
+    throw new ClassroomObservationError("শুধু প্রকাশিত (পর্যালোচিত) পর্যবেক্ষণে সাড়া দেওয়া যাবে");
+  }
+  const text = (input.responseText ?? "").trim();
+  if (!text) throw new ClassroomObservationError("সাড়ার বিবরণ প্রয়োজন");
+
+  doc.teacherResponse = text;
+  doc.state = "TEACHER_RESPONDED";
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "CLASSROOM_OBSERVATION_RESPONDED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "ClassroomObservation",
+    meta: { teacherId: doc.teacherId.toString(), observerId: doc.observerId ? doc.observerId.toString() : null },
+  });
+
+  // Notify the observer + Principal(s) that the teacher has responded — best-effort,
+  // never rolls back the transition.
+  await emitObservationResponded(doc);
+
+  return shape(doc);
+}
+
+/** Best-effort responded-notice to the observer + every Principal (CO-3). */
+async function emitObservationResponded(doc: IClassroomObservation): Promise<void> {
+  try {
+    const principals = (await User.find({ role: "PRINCIPAL", active: true }).select("_id").lean()) as Array<{
+      _id: Types.ObjectId;
+    }>;
+    // Observer + all Principals, deduped (a principal could also be the observer).
+    const recipientIds = [
+      ...new Set(
+        [doc.observerId ? doc.observerId.toString() : null, ...principals.map((p) => p._id.toString())].filter(
+          (x): x is string => !!x,
+        ),
+      ),
+    ];
+    const obsId = doc._id.toString();
+    await Promise.all(
+      recipientIds.map((userId) =>
+        emit({
+          recipientUserId: userId,
+          kind: "OBSERVATION_RESPONDED",
+          titleBn: "শিক্ষক পর্যবেক্ষণে সাড়া দিয়েছেন",
+          bodyBn: "একজন শিক্ষক তাঁর শ্রেণি পর্যবেক্ষণে সাড়া দিয়েছেন।",
+          refs: { observationId: obsId, teacherId: doc.teacherId.toString() },
+          dedupeKey: `OBSRESP:${obsId}:${userId}`,
+        }),
+      ),
+    );
+  } catch (err) {
+    console.error("OBSERVATION_RESPONDED emit failed (never blocks the response):", err);
+  }
 }
 
 // ---------------------------------------------------------------------------
