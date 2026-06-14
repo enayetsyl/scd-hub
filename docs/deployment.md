@@ -1,6 +1,7 @@
 # Deployment Plan — SCD Hub go-live + dev pipeline
 
-**Status:** PLANNED (no slice executed)
+**Status:** ✅ COMPLETE — DEP-1..6 all executed and gate-verified (2026-06-14). Prod live at the
+school subdomain over HTTPS, parallel dev environment, nightly tested backups, GitHub Actions CI/CD.
 **Owner:** Principal (operator) + Claude Code (executor of scripted steps)
 **Date:** 2026-06-12
 **Traceability:** D-#90–D-#93 · ADR-001/002 (one deployable monolith) · ADR-011/016 (daily
@@ -62,8 +63,20 @@ else low-cost VPS — settled; this plan implements it)
       **D-#91 now in effect: feature/fix work pushes to `dev`; docs/planning stay on `main`.**
       Note (deviation): `scdhub_dev` currently holds a real-data copy (operator choice, vs the
       plan's seed-only intent) — re-seed/refresh from prod via the restore path when wanted.
-- [ ] **DEP-6** GitHub Actions wired: push→`dev` = test + auto-deploy dev; merge→`main` =
-      full gate + auto-deploy production; one end-to-end rehearsal of each lane passed
+- [x] **DEP-6** GitHub Actions CI/CD wired (D-#93). `.github/workflows/ci.yml` = the gate
+      (install→shared build→typechecks shared/server/app→vocab verifier→jest→expo web export),
+      runs on PRs and is `workflow_call`-reused by the deploy lanes. `deploy-dev.yml` (push→`dev`,
+      after CI → SSH `scripts/deploy.sh dev`). `deploy-prod.yml` (push→`main` with code paths;
+      `**.md`/`docs/**`/`.github/**` path-ignored so docs commits never redeploy; after CI → SSH
+      `scripts/deploy.sh prod`). VM creds in encrypted repo secrets `VM_HOST`/`VM_USER`/`VM_SSH_KEY`.
+      **Both lanes rehearsed end-to-end GREEN:** a code change pushed to `dev` auto-deployed the dev
+      site; its `dev→main` promotion auto-deployed production; prod+dev `/healthz` ok after.
+      Gotcha fixed: the SSH-key secret must be set from raw LF bytes (PowerShell `Get-Content -Raw`
+      corrupts it → `error in libcrypto`); set via `gh secret set VM_SSH_KEY < keyfile` in bash.
+      (Optional G11 NativeWind re-enable in CI Linux: not attempted — deferred, no time spent.)
+
+**🎉 Deployment plan COMPLETE — DEP-1..6 all green. Prod live + dev environment + nightly tested
+backups + automated CI/CD.**
 
 **Hard rule (repo is public):** the domain name, VM IP, Atlas URIs, JWT secret, SSH keys, and
 any tokens appear ONLY in the VM's `.env` files, GitHub Actions **encrypted secrets**, and the
