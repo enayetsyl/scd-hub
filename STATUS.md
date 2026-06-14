@@ -1,10 +1,10 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CT-5 MERGED — Class Test Tracker COMPLETE (CT-1..CT-5), server + app** — CT-5 [#70, 9 Expo screens + GuardianTestResults card, APP-ONLY]. Integrated gate green on main 0e9a342: **jest 1053/1053** [62 suites], vocab PASS, shared/server/app tsc, expo web. **FOLLOW-UP recorded (pre-existing CT-4 server RBAC):** classTestPrincipalDashboard + report reads gate `authScopes: tracker:read` which OFFICE lacks → Office locked out despite P/O intent; relax to authenticated+gate-does-P/O (assertChaseAdmin pattern). Prior: CM-1 #69 [Comments store, D-#170/#171], CT-4 #68, VC-5 #67 [Vocab COMPLETE], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, CO PRD [D-#146–#152], MT #61, HR app #56→#60. DEP-1+DEP-2 DONE — prod LIVE at scdhub.shafayet.me (DEP-3 next). In flight: CM-2 [comment delivery]. Parked standalone: CO-1. Available vocab-free: HR-G1 own-row reads, APP-FU1)_
+_Updated: 2026-06-14 (**CM-2 MERGED** — Comments CM-2 [#71, daily-comment delivery wa.me+emit STUDENT_COMMENT + comment attachment store, D-#172/#173]; sole vocab owner. Integrated gate green on main 8511504: **jest 1071/1071** [63 suites], vocab PASS, shared/server tsc. Merge-reconcile: a local-only DEP-4 deploy commit had landed on main → rebased it onto origin/main (disjoint), re-gated. Prior: CT-5 #70 [Class Test Tracker COMPLETE], CM-1 #69, CT-4 #68, VC-5 #67 [Vocab COMPLETE], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, CO PRD [D-#146–#152], MT #61, HR app #56→#60. **DEP-1..4 DONE — prod LIVE at scdhub.shafayet.me + nightly Drive backup (DEP-5 dev-env next).** Open PR: APP-FU1 #72 [guardian-notice full-section picker]. In flight: CM-3 next. Parked standalone: CO-1 [vocab slot now free]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out (relax authScopes))_
 
 ## Now / next
 - **Built (Student Comments + Parents-Meeting CM-2 — server, prd-comments-meetings §4.1/§5/§6, J-CM1,
-  D-#172/#173) [branch `worktree-comments-cm2`, PR open — coordinator reviews]:** the SECOND CM slice —
+  D-#172/#173) [branch `worktree-comments-cm2`, PR #71 MERGED]:** the SECOND CM slice —
   daily-comment DELIVERY + the comment-attachment file store. **Delivery (`CommentDeliveryService`):**
   `deliverComment` (per-comment, mirrors the Form's per-row send) stamps `deliveredAt` + `deliveryChannels`
   — which SEALS the CM-1 immutability (editComment already refuses a delivered comment; deliveredAt stamped
