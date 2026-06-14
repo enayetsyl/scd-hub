@@ -1,6 +1,6 @@
 # STATUS
 
-_Updated: 2026-06-14 (**VC-4 + CT-2 both MERGED** — Vocab VC-4 [#65, read aggregates + persistent weak words + guardian messages on the MT registry + childVocab, D-#153/#154/#155] + Class Test CT-2 [#64, per-student results + scoring + school-day deadline/overdue, D-#158/#159]. Ran PARALLEL, disjoint bands + enums → NO renumber (VC-4 merged 1st, CT-2 keep-both rebase = DECISIONS-only). Integrated gate green on main 63a3163: **jest 1006/1006** [58 suites], vocab PASS, shared/server/app tsc. Earlier this run: VC-3 #62 + CT-1 #63 [D-#142–#145], Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. Parked vocab-toucher: CM-1; planned standalone: CO-1. Next: VC-5 [app] / CT-3 [publish+guardian] continue their chains)_
+_Updated: 2026-06-14 (**CT-3 MERGED** — Class Test CT-3 [#66, publish/unpublish + guardian delivery on the MT registry + childTestResults, D-#160/#161]; sole vocab owner, clean merge. Integrated gate green on main 55ecd6e: **jest 1021/1021** [60 suites], vocab PASS, shared/server tsc. Earlier this run: VC-4 #65 + CT-2 #64 [D-#153–#155/#158/#159], VC-3 #62 + CT-1 #63 [D-#142–#145], Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. In flight: VC-5 [app, dispatched — not yet PR'd]. Parked vocab-toucher: CM-1; planned standalone: CO-1. Next: CT-4 [reports/dashboards] + VC-5 [app] complete their chains)_
 
 ## Now / next
 - **Built (Vocabulary Tracker VC-4 — server, prd-vocabulary-tracker §6/§8/§9, J5/J6/J7, build rulings
@@ -52,7 +52,7 @@ _Updated: 2026-06-14 (**VC-4 + CT-2 both MERGED** — Vocab VC-4 [#65, read aggr
   rubricScores] — the new module's `ClassroomObservation` is a distinct name/module, no clash, but related.)_
   **Next = build CO-1 per `docs/prd-classroom-observation.md` §5, slice order CO-1→CO-7.**
 - **Built (Class Test Tracker CT-3 — server, prd-tracker-class-test §5/§8/J4/J7, D-#121/#122 + build rulings
-  D-#160/#161) [branch `worktree-class-test-ct3`, PR open — coordinator reviews]:** the THIRD class-test
+  D-#160/#161) [branch `worktree-class-test-ct3`, PR #66 MERGED]:** the THIRD class-test
   slice — publish/unpublish + guardian delivery on the Message-Templates registry + the guardian read.
   **Publish (`ClassTestPublishService`):** `publishResult` (per-student) + `publishExam` (whole-exam bulk)
   stamp `publishedAt = now` + `$inc publishedVersion` (the CT-2 field), then deliver; `unpublishResult`/
