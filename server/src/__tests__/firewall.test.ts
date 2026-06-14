@@ -384,10 +384,12 @@ describe("Class-test tracker firewall (ADR-005 / CT-1, D-#119)", () => {
     "../modules/trackers/services/ClassTestService.ts",
     "../modules/trackers/services/ClassTestFileService.ts",
     "../modules/trackers/services/ClassTestResultService.ts",
+    "../modules/trackers/services/ClassTestPublishService.ts",
     "../modules/trackers/classTestScoring.ts",
     "../modules/trackers/classTestCalendar.ts",
     "../modules/trackers/resolvers/classTest.ts",
     "../modules/trackers/resolvers/classTestResult.ts",
+    "../modules/trackers/resolvers/classTestGuardian.ts",
   ].map((p) => path.resolve(__dirname, p));
 
   test("corpus module has NO import of any class-test model", () => {

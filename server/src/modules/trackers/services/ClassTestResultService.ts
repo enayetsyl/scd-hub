@@ -258,3 +258,81 @@ export async function classTestDeadline(testId: string): Promise<string> {
   const deadline = await resolveClassTestDeadline(new Date(test.examDate), test.deadlineDays);
   return deadline.toISOString();
 }
+
+// ---------------------------------------------------------------------------
+// Guardian read rider (CT-3, §6/J7, D-#68) — the child's PUBLISHED results.
+// ---------------------------------------------------------------------------
+
+/**
+ * A class-test result as the GUARDIAN portal shows it (J7/D-#68). It carries the
+ * derived score + the parent-facing fields ONLY — `teacherAction` is the internal
+ * note and is **structurally absent from this shape**, so it can never leak to a
+ * guardian (the resolver maps to this type, not the staff `ClassTestResultShape`).
+ */
+export interface GuardianClassTestResult {
+  testId: string;
+  ctId: string;
+  subject: string;
+  testNumber: number;
+  examDate: string;
+  classLevel: number;
+  status: ClassTestAttendanceStatus;
+  marks: number | null;
+  totalMarks: number;
+  percent: number | null;
+  pass: boolean | null;
+  weakness: string | null;
+  guardianAction: string | null;
+  publishedAt: string | null;
+}
+
+/**
+ * The linked child's PUBLISHED class-test results (read-only, J7). Unpublished rows
+ * (publishedAt == null) are excluded; so are results whose exam is not PRINTED
+ * (defensive). Row-scope (`assertGuardianOfStudent`) is enforced by the resolver.
+ * NEVER returns `teacherAction` — the shape omits it (D-#68).
+ */
+export async function childTestResults(studentId: string): Promise<GuardianClassTestResult[]> {
+  const docs = (await ClassTestResult.find({
+    studentId: new Types.ObjectId(studentId),
+    publishedAt: { $ne: null },
+  })
+    .lean()) as unknown as IClassTestResult[];
+  if (docs.length === 0) return [];
+
+  const testIds = [...new Set(docs.map((d) => d.testId.toString()))].map((id) => new Types.ObjectId(id));
+  const tests = (await ClassTest.find({ _id: { $in: testIds }, status: "PRINTED" })
+    .lean()) as unknown as IClassTest[];
+  const testById = new Map(tests.map((t) => [t._id.toString(), t]));
+
+  const out: GuardianClassTestResult[] = [];
+  for (const d of docs) {
+    const test = testById.get(d.testId.toString());
+    if (!test) continue; // exam not PRINTED / missing — not guardian-visible
+    const score = deriveScore({
+      status: d.status,
+      marks: d.marks ?? null,
+      totalMarks: test.totalMarks,
+      passMark: test.passMark,
+    });
+    out.push({
+      testId: d.testId.toString(),
+      ctId: test.ctId,
+      subject: test.subject,
+      testNumber: test.testNumber,
+      examDate: new Date(test.examDate).toISOString(),
+      classLevel: test.classLevel,
+      status: score.status,
+      marks: score.marks,
+      totalMarks: score.totalMarks,
+      percent: score.percent,
+      pass: score.pass,
+      weakness: d.weakness ?? null,
+      guardianAction: d.guardianAction ?? null,
+      publishedAt: d.publishedAt ? new Date(d.publishedAt).toISOString() : null,
+    });
+  }
+  // Newest exam first.
+  out.sort((a, b) => new Date(b.examDate).getTime() - new Date(a.examDate).getTime());
+  return out;
+}

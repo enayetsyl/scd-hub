@@ -25,6 +25,15 @@ import {
   type ExamReportStatus,
 } from "../services/ClassTestResultService";
 import { getClassTest } from "../services/ClassTestService";
+import {
+  publishResult,
+  publishExam,
+  unpublishResult,
+  unpublishExam,
+  type ClassTestMessageRecipient,
+  type PublishResultOutcome,
+  type UnpublishOutcome,
+} from "../services/ClassTestPublishService";
 import { assertCanWrite, assertCanRead, ForbiddenError } from "../../../middleware/authz";
 
 /** Resolve the test's section + enforce staff read-scope on it (teachers only). */
@@ -35,6 +44,14 @@ async function assertReadTest(ctx: AppContext, testId: string): Promise<void> {
   if (ctx.auth.role !== "PRINCIPAL" && ctx.auth.role !== "OFFICE") {
     await assertCanRead(ctx, test.sectionId, test.classId);
   }
+}
+
+/** Resolve the test's section + enforce WRITE scope on it (publish/unpublish, J4). */
+async function assertWriteTest(ctx: AppContext, testId: string): Promise<void> {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  const test = await getClassTest(testId);
+  if (!test) throw new ForbiddenError("Class test not found");
+  await assertCanWrite(ctx, test.sectionId);
 }
 
 // ---------------------------------------------------------------------------
@@ -175,6 +192,111 @@ builder.queryField("classTestReportStatus", (t) =>
       const now = args.asOf ? new Date(args.asOf) : new Date();
       if (Number.isNaN(now.getTime())) throw new ForbiddenError("asOf is not a valid date");
       return examReportStatus(args.testId, now);
+    },
+  }),
+);
+
+// ===========================================================================
+// J4 — publish / unpublish (tracker:write + section verify); guardian delivery
+// ===========================================================================
+
+const ClassTestMessageRecipientRef = builder.objectRef<ClassTestMessageRecipient>("ClassTestMessageRecipient");
+ClassTestMessageRecipientRef.implement({
+  description:
+    "One published-result delivery (CT-3, J4): the rendered Bangla body, a wa.me link for the family " +
+    "(ADR-003), and the login-enabled guardians who got an in-app Notification (D-#72).",
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    studentName: t.exposeString("studentName"),
+    kind: t.exposeString("kind"),
+    messageBn: t.exposeString("messageBn"),
+    waLink: t.string({ nullable: true, resolve: (r) => r.waLink }),
+    unreachableByWa: t.exposeBoolean("unreachableByWa"),
+    notifiedGuardianIds: t.exposeStringList("notifiedGuardianIds"),
+    publishedVersion: t.exposeInt("publishedVersion"),
+  }),
+});
+
+const PublishResultOutcomeRef = builder.objectRef<PublishResultOutcome>("ClassTestPublishOutcome");
+PublishResultOutcomeRef.implement({
+  description: "The result of publishing a student / a whole exam (CT-3, J4) — per-recipient delivery + unreachable count.",
+  fields: (t) => ({
+    testId: t.exposeString("testId"),
+    recipients: t.field({ type: [ClassTestMessageRecipientRef], resolve: (r) => r.recipients }),
+    unreachableCount: t.exposeInt("unreachableCount"),
+  }),
+});
+
+const UnpublishOutcomeRef = builder.objectRef<UnpublishOutcome>("ClassTestUnpublishOutcome");
+UnpublishOutcomeRef.implement({
+  description: "The result of unpublishing a student / a whole exam (CT-3, J4) — count pulled from the guardian card.",
+  fields: (t) => ({
+    testId: t.exposeString("testId"),
+    unpublishedCount: t.exposeInt("unpublishedCount"),
+  }),
+});
+
+builder.mutationField("publishClassTestResult", (t) =>
+  t.field({
+    type: PublishResultOutcomeRef,
+    description:
+      "Publish ONE student's class-test result (J4): stamps publishedAt + bumps publishedVersion, then " +
+      "delivers (wa.me for the family + in-app Notification for login-enabled guardians). A re-publish " +
+      "RE-notifies (versioned dedupeKey, D-#122). Requires tracker:write on the section.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      testId: t.arg.string({ required: true }),
+      studentId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      await assertWriteTest(ctx, args.testId);
+      return publishResult(args.testId, args.studentId, ctx.auth!.userId as string);
+    },
+  }),
+);
+
+builder.mutationField("publishClassTestExam", (t) =>
+  t.field({
+    type: PublishResultOutcomeRef,
+    description:
+      "Publish ALL entered results for a class test in one go (J4) — same delivery + versioning as the " +
+      "per-student publish. Requires tracker:write on the section.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: { testId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      await assertWriteTest(ctx, args.testId);
+      return publishExam(args.testId, ctx.auth!.userId as string);
+    },
+  }),
+);
+
+builder.mutationField("unpublishClassTestResult", (t) =>
+  t.field({
+    type: UnpublishOutcomeRef,
+    description:
+      "Unpublish ONE student's result (J4) — clears publishedAt so it leaves the guardian card. " +
+      "publishedVersion is left as-is; a later re-publish bumps it → re-notify. Requires tracker:write.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      testId: t.arg.string({ required: true }),
+      studentId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      await assertWriteTest(ctx, args.testId);
+      return unpublishResult(args.testId, args.studentId, ctx.auth!.userId as string);
+    },
+  }),
+);
+
+builder.mutationField("unpublishClassTestExam", (t) =>
+  t.field({
+    type: UnpublishOutcomeRef,
+    description: "Unpublish ALL published results for a class test (J4). Requires tracker:write on the section.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: { testId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      await assertWriteTest(ctx, args.testId);
+      return unpublishExam(args.testId, ctx.auth!.userId as string);
     },
   }),
 );

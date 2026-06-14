@@ -46,6 +46,8 @@ export interface NotificationRefs {
   hour?: number;
   /** Vocab guardian result (deep-link: GuardianVocab; VC-4, D-#154). */
   vocabTestId?: string;
+  /** Class-test guardian result (deep-link: GuardianTestResults; CT-3, D-#160). */
+  classTestId?: string;
 }
 
 export interface INotification extends Document {
