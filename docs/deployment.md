@@ -32,8 +32,16 @@ else low-cost VPS — settled; this plan implements it)
       allow-list NOT yet reduced to VM-only** — operator chose to keep laptop access while
       local/dev share the cluster (per-db scoped users protect prod); reduce when local moves
       off Atlas. A real-credential browser login rides DEP-3.
-- [ ] **DEP-3** Live golden-path verification executed and recorded (clears the standing
-      "not verified live" debt across all built slices)
+- [x] **DEP-3** Live golden-path smoke verified on production (real PRINCIPAL login). Confirmed
+      green against the live domain: staff login, content tree + plan view + **Bengali PDF
+      export**, question-bank filter/preview/basket, set assembly, tracker open/entry/summary +
+      per-non-submitter wa.me reminder (WaLinkScreen). Content count reconciled (5 plans visible;
+      234 questions/stimuli under Questions = 239 migrated). Log-watch caught only benign
+      validation guards (TOP-tag-required on homework declare; "set already assembled"
+      idempotency). **The standing "not verified live" debt is cleared for the core flows.**
+      Operator continues exhaustive per-feature detail testing (homework declare→reconcile→check,
+      routine, admin import, guardian login) at their own pace; file+fix any issue on the normal
+      deploy.sh lane (already exercised — the localhost API-URL bug was found and fixed live).
 - [ ] **DEP-4** Nightly backup cron running + **one executed restore drill passed**
 - [ ] **DEP-5** `dev` branch + dev environment live (`dev.` subdomain, separate dev DB with
       seed data, never the real roster)

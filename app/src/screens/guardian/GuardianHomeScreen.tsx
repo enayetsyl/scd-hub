@@ -18,11 +18,12 @@ import {
   CHILD_LIBRARY_LOANS_QUERY,
   CHILD_VOCAB_QUERY,
 } from "../../graphql/operations";
+import { CHILD_TEST_RESULTS_QUERY } from "../../graphql/classTest";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import type { GuardianHomeStackParamList } from "../../navigation/types";
-import { STR, bnNum, loanStatusLabel, vocabProgramLabel } from "../../lib/labels";
+import { STR, bnNum, loanStatusLabel, vocabProgramLabel, hwSubjectLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
 type Nav = NativeStackNavigationProp<GuardianHomeStackParamList>;
@@ -72,6 +73,11 @@ export default function GuardianHomeScreen(): React.ReactElement {
   });
   const [vocabQ] = useQuery({
     query: CHILD_VOCAB_QUERY,
+    variables: { studentId: sid },
+    pause: !selected,
+  });
+  const [testResultsQ] = useQuery({
+    query: CHILD_TEST_RESULTS_QUERY,
     variables: { studentId: sid },
     pause: !selected,
   });
@@ -299,6 +305,40 @@ export default function GuardianHomeScreen(): React.ReactElement {
                   }
                   tone={v.result.status === "ABSENT" ? "muted" : "brand"}
                 />
+              </View>
+            ))
+          )}
+        </Card>
+
+        {/* Class-test results — read-only, PUBLISHED only (CT-5 / J7, D-#68). Never
+            shows teacherAction (the childTestResults query doesn't fetch it). */}
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.gpTestResults}</Body>
+          {testResultsQ.fetching ? (
+            <Loader label={STR.loading} />
+          ) : (testResultsQ.data?.childTestResults ?? []).length === 0 ? (
+            <Muted style={{ marginTop: space(2) }}>{STR.gpNoTestResults}</Muted>
+          ) : (
+            (testResultsQ.data?.childTestResults ?? []).map((r) => (
+              <View key={r.testId} style={{ marginTop: space(2) }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View style={{ flexShrink: 1 }}>
+                    <Body>
+                      {hwSubjectLabel(r.subject)} · {STR.ctTestNumber} {bnNum(r.testNumber)}
+                    </Body>
+                    <Muted>{new Date(r.examDate).toLocaleDateString()}</Muted>
+                  </View>
+                  <Badge
+                    text={
+                      r.status === "ABSENT"
+                        ? STR.ctAbsent
+                        : `${bnNum(r.marks ?? 0)}/${bnNum(r.totalMarks)}${r.percent == null ? "" : ` · ${bnNum(r.percent)}%`}`
+                    }
+                    tone={r.status === "ABSENT" ? "muted" : r.pass ? "brand" : "danger"}
+                  />
+                </View>
+                {r.weakness ? <Muted>{STR.ctWeakness}: {r.weakness}</Muted> : null}
+                {r.guardianAction ? <Muted>{STR.ctGuardianAction}: {r.guardianAction}</Muted> : null}
               </View>
             ))
           )}

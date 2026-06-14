@@ -1,0 +1,148 @@
+/**
+ * RequestClassTestScreen (CT-5 / J1, tracker:write) — file a class-test print request.
+ * Pick year → class/section → subject; choose the paper source (an assembled CT-set id,
+ * or upload own paper via POST /files/classtest → questionFileId); enter exam date /
+ * total / pass mark / test# (auto-suggested, editable) / deadline. createClassTestRequest
+ * rides tracker:write + the server section verify — the Bangla deny surfaces inline.
+ */
+import React, { useEffect, useState } from "react";
+import { ScrollView, View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQuery, useMutation } from "urql";
+import { HW_SUBJECTS } from "@scd/shared";
+import {
+  CREATE_CLASS_TEST_REQUEST,
+  SUGGEST_CLASS_TEST_NUMBER_QUERY,
+} from "../../graphql/classTest";
+import { Screen, Card, Body, Muted, Button, Field, Chip, Select, Notice } from "../../components/ui";
+import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
+import { AcademicYearSelect } from "../../components/selects";
+import { STR, hwSubjectLabel } from "../../lib/labels";
+import { friendlyError } from "../../lib/errors";
+import { pickAndUploadClassTestPaper, FileUploadError } from "../../lib/files";
+import { space } from "../../theme/tokens";
+import type { ClassTestStackParamList } from "../../navigation/types";
+
+type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
+
+export default function RequestClassTestScreen(): React.ReactElement {
+  const nav = useNavigation<Nav>();
+  const [yearId, setYearId] = useState("");
+  const [section, setSection] = useState<SectionPick | null>(null);
+  const [subject, setSubject] = useState<string | null>(null);
+  const [source, setSource] = useState<"POOL_SET" | "UPLOADED_PAPER">("POOL_SET");
+  const [setId, setSetId] = useState("");
+  const [paper, setPaper] = useState<{ fileId: string; name: string } | null>(null);
+  const [examDate, setExamDate] = useState("");
+  const [totalMarks, setTotalMarks] = useState("");
+  const [passMark, setPassMark] = useState("");
+  const [testNumber, setTestNumber] = useState("");
+  const [deadlineDays, setDeadlineDays] = useState("");
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const [, createReq] = useMutation(CREATE_CLASS_TEST_REQUEST);
+
+  // Auto-suggest the next test# once a section + subject are chosen (editable).
+  const [suggestQ] = useQuery({
+    query: SUGGEST_CLASS_TEST_NUMBER_QUERY,
+    variables: { sectionId: section?.sectionId ?? "", subject: subject ?? "" },
+    pause: !section || !subject,
+  });
+  useEffect(() => {
+    if (suggestQ.data?.suggestClassTestNumber != null && testNumber === "") {
+      setTestNumber(String(suggestQ.data.suggestClassTestNumber));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestQ.data]);
+
+  async function onUpload(): Promise<void> {
+    setError(null);
+    try {
+      const f = await pickAndUploadClassTestPaper();
+      if (f) setPaper({ fileId: f.fileId, name: f.originalName });
+    } catch (e) {
+      setError(e instanceof FileUploadError ? e.message : STR.errGeneric);
+    }
+  }
+
+  async function onSubmit(): Promise<void> {
+    setError(null);
+    setOk(null);
+    const total = Number(totalMarks);
+    if (!section || !subject || !examDate.trim() || !Number.isFinite(total) || total < 1) {
+      return setError(STR.errGeneric);
+    }
+    if (source === "POOL_SET" && !setId.trim()) return setError(STR.errGeneric);
+    if (source === "UPLOADED_PAPER" && !paper) return setError(STR.errGeneric);
+    setBusy(true);
+    const res = await createReq({
+      sectionId: section.sectionId,
+      subject,
+      examDate: examDate.trim(),
+      totalMarks: total,
+      passMark: passMark.trim() ? Number(passMark) : null,
+      source,
+      setId: source === "POOL_SET" ? setId.trim() : null,
+      questionFileId: source === "UPLOADED_PAPER" ? (paper?.fileId ?? null) : null,
+      testNumber: testNumber.trim() ? Number(testNumber) : null,
+      deadlineDays: deadlineDays.trim() ? Number(deadlineDays) : null,
+      notes: notes.trim() || null,
+    });
+    setBusy(false);
+    if (res.error) return setError(friendlyError(res.error));
+    if (res.data) {
+      setOk(STR.ctRequestFiled);
+      nav.navigate("ClassTestHome");
+    }
+  }
+
+  return (
+    <Screen padded={false}>
+      <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
+        {ok ? <Notice message={ok} tone="ok" /> : null}
+        {error ? <Notice message={error} tone="danger" /> : null}
+        <Card>
+          <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.ctNewRequest}</Body>
+          <AcademicYearSelect value={yearId} onChange={setYearId} />
+          {yearId ? <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} /> : null}
+          <Select
+            label={STR.ctSubject}
+            value={subject}
+            options={(HW_SUBJECTS as readonly string[]).map((s) => ({ label: hwSubjectLabel(s), value: s }))}
+            onChange={setSubject}
+            placeholder={STR.ctPickSubject}
+          />
+
+          <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+            <Chip label={STR.ctSourcePoolSet} selected={source === "POOL_SET"} onPress={() => setSource("POOL_SET")} />
+            <Chip label={STR.ctSourceUpload} selected={source === "UPLOADED_PAPER"} onPress={() => setSource("UPLOADED_PAPER")} />
+          </View>
+
+          {source === "POOL_SET" ? (
+            <Field label={STR.ctSetId} value={setId} onChangeText={setSetId} helper={STR.ctSetIdHint} />
+          ) : (
+            <View style={{ marginTop: space(2) }}>
+              <Button title={STR.ctUploadPaper} variant="secondary" onPress={onUpload} />
+              {paper ? <Muted style={{ marginTop: space(1) }}>{STR.ctPaperUploaded}: {paper.name}</Muted> : null}
+            </View>
+          )}
+
+          <Field label={STR.ctExamDate} value={examDate} onChangeText={setExamDate} placeholder="YYYY-MM-DD" />
+          <Field label={STR.ctTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" />
+          <Field label={STR.ctPassMark} value={passMark} onChangeText={setPassMark} keyboardType="number-pad" helper={STR.ctPassMarkHint} />
+          <Field label={STR.ctTestNumber} value={testNumber} onChangeText={setTestNumber} keyboardType="number-pad" />
+          <Field label={STR.ctDeadlineDays} value={deadlineDays} onChangeText={setDeadlineDays} keyboardType="number-pad" />
+          <Field label={STR.ctNotes} value={notes} onChangeText={setNotes} />
+
+          <View style={{ marginTop: space(2) }}>
+            <Button title={STR.ctSubmitRequest} onPress={onSubmit} loading={busy} disabled={busy} />
+          </View>
+        </Card>
+      </ScrollView>
+    </Screen>
+  );
+}
