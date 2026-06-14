@@ -205,6 +205,59 @@ export async function pickAndUploadClassTestPaper(): Promise<UploadedFile | null
   return { fileId: body.fileId, originalName: body.originalName, mime: body.mime };
 }
 
+// ---------------------------------------------------------------------------
+// Student-comment attachments (CM-2 server: POST /files/comment). image/pdf/video/
+// audio ≤ 10 MB (same CHAT_FILE_MIMES list); the comment must exist and be
+// undelivered. The fileId is $addToSet'ed onto the comment's attachmentIds.
+// ---------------------------------------------------------------------------
+
+/** Pick one allowed attachment and upload it to a (undelivered) comment; null if the
+ *  picker is cancelled. Throws FileUploadError with the server's Bangla message on
+ *  rejection/failure (the caller shows a notice). */
+export async function pickAndUploadCommentFile(
+  commentId: string,
+): Promise<UploadedChatFile | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: CHAT_FILE_MIMES,
+    multiple: false,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  const asset = picked.assets[0];
+
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", {
+      uri: asset.uri,
+      name: asset.name,
+      type: asset.mimeType ?? "application/octet-stream",
+    } as unknown as Blob);
+  }
+  form.append("commentId", commentId);
+
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/comment`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const body = (await res.json()) as UploadedChatFile;
+  return body;
+}
+
 /** Fetch a stored file (with auth) and open it in a new browser tab. Web only. */
 export async function openStoredFile(fileId: string): Promise<void> {
   if (Platform.OS !== "web") {

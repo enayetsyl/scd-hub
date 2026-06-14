@@ -27,6 +27,7 @@ import type {
   ChatStackParamList,
   VocabStackParamList,
   ClassTestStackParamList,
+  CommentsStackParamList,
   HrStackParamList,
   AdminStackParamList,
   GuardianHomeStackParamList,
@@ -117,6 +118,12 @@ import ClassTestDashboardScreen from "../screens/classtest/ClassTestDashboardScr
 import ClassTestReportsScreen from "../screens/classtest/ClassTestReportsScreen";
 import ClassTestClassSubjectScreen from "../screens/classtest/ClassTestClassSubjectScreen";
 import ClassTestStudentProfileScreen from "../screens/classtest/ClassTestStudentProfileScreen";
+import CommentsHomeScreen from "../screens/comments/CommentsHomeScreen";
+import SectionCommentsScreen from "../screens/comments/SectionCommentsScreen";
+import CommentEntryScreen from "../screens/comments/CommentEntryScreen";
+import MeetingsListScreen from "../screens/comments/MeetingsListScreen";
+import MeetingAdminScreen from "../screens/comments/MeetingAdminScreen";
+import MeetingComparisonScreen from "../screens/comments/MeetingComparisonScreen";
 import HrHomeScreen from "../screens/hr/HrHomeScreen";
 import MyLeaveScreen from "../screens/hr/MyLeaveScreen";
 import MyRecordScreen from "../screens/hr/MyRecordScreen";
@@ -511,6 +518,33 @@ function ClassTestNavigator(): React.ReactElement {
   );
 }
 
+const CommentsStack = createNativeStackNavigator<CommentsStackParamList>();
+function CommentsNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <CommentsStack.Navigator screenOptions={stackOptions}>
+      <CommentsStack.Screen name="CommentsHome" component={CommentsHomeScreen} options={{ title: STR.cmHomeTitle }} />
+      <CommentsStack.Screen name="SectionComments" component={SectionCommentsScreen} options={{ title: STR.cmDailyComments }} />
+      <CommentsStack.Screen
+        name="CommentEntry"
+        component={CommentEntryScreen}
+        options={({ route }) => ({ title: route.params.studentName || STR.cmEntryTitle })}
+      />
+      <CommentsStack.Screen name="MeetingsList" component={MeetingsListScreen} options={{ title: STR.cmMeetingsTitle }} />
+      <CommentsStack.Screen
+        name="MeetingAdmin"
+        component={MeetingAdminScreen}
+        options={({ route }) => ({ title: route.params.instanceLabel || STR.cmMeetingAdminTitle })}
+      />
+      <CommentsStack.Screen
+        name="MeetingComparison"
+        component={MeetingComparisonScreen}
+        options={({ route }) => ({ title: route.params.studentName || STR.cmComparisonTitle })}
+      />
+    </CommentsStack.Navigator>
+  );
+}
+
 const HrStack = createNativeStackNavigator<HrStackParamList>();
 function HrNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -667,6 +701,10 @@ export function AppTabs(): React.ReactElement {
   // reports); Office via roster:manage (print queue + dashboard + overdue-chase).
   // Every action is re-gated server-side. GUARDIAN never sees this staff tab.
   const canClassTest = !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
+  // Comments + Parents-Meeting (CM-6): Principal/Teacher via tracker:read (daily
+  // comments + comparison reads); Office via roster:manage (the parents'-meeting
+  // admin). Every action is re-gated server-side. GUARDIAN never sees this staff tab.
+  const canComments = !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
   // HR/staff tab: every logged-in staff member (Principal/Teacher/Office) — leave
   // + self-service is universal; GUARDIAN never sees it. Admin entries inside are
   // permission-gated per slice and re-checked server-side.
@@ -729,6 +767,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canClassTest ? (
         <Tab.Screen name="ClassTestTab" component={ClassTestNavigator} options={{ title: STR.tabClassTest, tabBarIcon: tabIcon("🧪") }} />
+      ) : null}
+      {canComments ? (
+        <Tab.Screen name="CommentsTab" component={CommentsNavigator} options={{ title: STR.tabComments, tabBarIcon: tabIcon("🗣️") }} />
       ) : null}
       {canHr ? (
         <Tab.Screen name="HrTab" component={HrNavigator} options={{ title: STR.tabHr, tabBarIcon: tabIcon("🧑‍💼") }} />
