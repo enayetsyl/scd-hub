@@ -16,12 +16,13 @@ import {
   CHILD_HOMEWORK_QUERY,
   CHILD_DAY_LOAD_QUERY,
   CHILD_LIBRARY_LOANS_QUERY,
+  CHILD_VOCAB_QUERY,
 } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import type { GuardianHomeStackParamList } from "../../navigation/types";
-import { STR, bnNum, loanStatusLabel } from "../../lib/labels";
+import { STR, bnNum, loanStatusLabel, vocabProgramLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
 type Nav = NativeStackNavigationProp<GuardianHomeStackParamList>;
@@ -66,6 +67,11 @@ export default function GuardianHomeScreen(): React.ReactElement {
   });
   const [libraryQ] = useQuery({
     query: CHILD_LIBRARY_LOANS_QUERY,
+    variables: { studentId: sid },
+    pause: !selected,
+  });
+  const [vocabQ] = useQuery({
+    query: CHILD_VOCAB_QUERY,
     variables: { studentId: sid },
     pause: !selected,
   });
@@ -261,6 +267,38 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 ) : (
                   <Badge text={loanStatusLabel(loan.status)} tone="muted" />
                 )}
+              </View>
+            ))
+          )}
+        </Card>
+
+        {/* Vocabulary results — read-only, marked tests only (VC-5 / J7, D-#155) */}
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.gpVocab}</Body>
+          {vocabQ.fetching ? (
+            <Loader label={STR.loading} />
+          ) : (vocabQ.data?.childVocab ?? []).length === 0 ? (
+            <Muted style={{ marginTop: space(2) }}>{STR.gpNoVocab}</Muted>
+          ) : (
+            (vocabQ.data?.childVocab ?? []).map((v) => (
+              <View
+                key={v.testId}
+                style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(2) }}
+              >
+                <View style={{ flexShrink: 1 }}>
+                  <Body>
+                    {vocabProgramLabel(v.program)} · {v.label}
+                  </Body>
+                  <Muted>{new Date(v.testDate).toLocaleDateString()}</Muted>
+                </View>
+                <Badge
+                  text={
+                    v.result.status === "ABSENT"
+                      ? STR.vbAbsent
+                      : `${bnNum(v.result.score ?? 0)}/${bnNum(v.result.totalMarks)}`
+                  }
+                  tone={v.result.status === "ABSENT" ? "muted" : "brand"}
+                />
               </View>
             ))
           )}
