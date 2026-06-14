@@ -51,6 +51,33 @@ _Updated: 2026-06-14 (**VC-3 + CT-1 both MERGED** — Vocab VC-3 [#62, grid mist
   flag: an `Observation` model already exists in `modules/hr` [HR-4's lightweight observation w/ parked REF-11
   rubricScores] — the new module's `ClassroomObservation` is a distinct name/module, no clash, but related.)_
   **Next = build CO-1 per `docs/prd-classroom-observation.md` §5, slice order CO-1→CO-7.**
+- **Built (Class Test Tracker CT-2 — server, prd-tracker-class-test §3.3/§4/§5/§9, D-#121 + build rulings
+  D-#158/#159) [branch `worktree-class-test-ct2`, PR open — coordinator reviews]:** the SECOND class-test
+  slice — per-student results + derived scoring + the school-day-aware, exam-date-anchored deadline/overdue.
+  **New `modules/trackers/` model:** `ClassTestResult` (one row per student×exam, unique `(testId, studentId)`,
+  freely editable, **NO retake** D-#121; `status PRESENT|ABSENT`, `marks?`, `weakness?`, internal `teacherAction?`,
+  parent-facing `guardianAction?`, `publishedAt?`/`publishedVersion` reserved for CT-3; no schoolId D-#145).
+  **Pure engines (no DB/clock, unit-tested):** `classTestScoring` (percent = marks÷total×100 [1dp], pass =
+  marks≥passMark; **ABSENT ⇒ null marks/percent/pass, excluded from denominators** §4) + `classTestCalendar`
+  (`deadlineFrom` advances N OPEN school-days after the EXAM date, skipping Fri/Sat/holiday via the injected
+  `isOpenDay`; `deriveOverdue` — clock injected; async resolvers over the ONE D-#50 `resolveDayType`, open==FULL,
+  **no second calendar truth**). **`ClassTestResultService`:** `enterResult` (marks 0..totalMarks + required
+  only when PRESENT, ABSENT `$unset`s marks; **PRINTED-only, on/after the exam date** J3; upsert + audit),
+  derived `studentResult`/`testResults` (never stored D-#85), `examReportStatus` (per-exam completion:
+  roster/entered/present/absent/pending + complete + **overdue = past-deadline AND incomplete** [D-#120 idle
+  until exam date] + schoolDaysLate). **Resolvers:** `enterClassTestResult` (`tracker:write` + `assertCanWrite`
+  on the test's section — **Office prints, never scores**), `classTestStudentResult`/`classTestResults`/
+  `classTestReportStatus` (`tracker:read` + section read-scope for teachers; `asOf` overrides the clock).
+  **Vocab (app-native, NO wire sync — class-test-namespaced + DISJOINT from the in-flight VC-4, AGENTS rule 5):**
+  `CLASS_TEST_ATTENDANCE_STATUSES = [PRESENT, ABSENT]` (+BN/EN) extends verifier **§C.14** (reuse of VC-4's
+  `VOCAB_ATTENDANCE_STATUSES` rejected — would couple CT to vocab + cross the disjoint-enum line). 1 new audit
+  kind `CLASS_TEST_RESULT_ENTERED`; firewall class-test block extended with `ClassTestResult` + the 2 pure
+  engines + the result service/resolver (corpus ↛ class-test). **RBAC (D-#158): NO new role/permission**
+  (composes existing perms, D-#94/#17). **Gate GREEN (executed):** vocab verifier PASS, shared build +
+  shared/server tsc clean, **jest 984/984** (58 suites; +1 new suite `classTestResult.test.ts` [25] over the
+  959 main base; firewall green). **Server-only** (no app — CT-5 is the app slice; expo export skipped). **Not
+  verified live.** **Next = CT-3** (publish/unpublish per-student + per-exam; guardian delivery on the MT-1
+  template registry + wa.me/emit() — republish re-notifies via versioned dedupeKey; `childTestResults` read).
 - **Built (Class Test Tracker CT-1 — server, prd-tracker-class-test §3/§5/§6, D-#119–#122 + build rulings
   D-#143/#144/#145) [branch `worktree-class-test-ct1`, PR #63 MERGED]:** the FIRST class-test slice —
   the print-request → official-exam lifecycle replacing the Exam-Log + per-class Google Forms + IMPORTRANGE sheet.

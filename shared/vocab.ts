@@ -1030,6 +1030,23 @@ export const CLASS_TEST_SOURCE_LABELS_EN: Record<ClassTestSource, string> = {
   UPLOADED_PAPER: "Uploaded paper",
 };
 
+/** Per-(student × class test) attendance status (CT-2, §3.3/§4). PRESENT carries
+ *  marks + is scored; ABSENT carries NO marks, is excluded from class denominators,
+ *  and feeds the Absent guardian template (CT-3). One flag per student per exam.
+ *  Class-test-namespaced (NOT the vocab/teacher attendance enums) — a class test is
+ *  a distinct feature, kept disjoint and additive (AGENTS rule 5). */
+export const CLASS_TEST_ATTENDANCE_STATUSES = ["PRESENT", "ABSENT"] as const;
+export type ClassTestAttendanceStatus = (typeof CLASS_TEST_ATTENDANCE_STATUSES)[number];
+
+export const CLASS_TEST_ATTENDANCE_STATUS_LABELS_BN: Record<ClassTestAttendanceStatus, string> = {
+  PRESENT: "উপস্থিত",
+  ABSENT: "অনুপস্থিত",
+};
+export const CLASS_TEST_ATTENDANCE_STATUS_LABELS_EN: Record<ClassTestAttendanceStatus, string> = {
+  PRESENT: "Present",
+  ABSENT: "Absent",
+};
+
 
 // --- A.11 LIBRARY ENUMS (app-native; Library module — prd-library, ----------
 // D-#81–#84). NO wire-contract twin: the library is a feature, not import
