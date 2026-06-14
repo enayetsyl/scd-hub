@@ -1372,6 +1372,7 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "class_test.result.regular.body",
   "class_test.result.excellent.body",
   "class_test.result.absent.body",
+  "class_test.overdue_chase.wa",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1623,6 +1624,17 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     bnDefault:
       "আসসালামু আলাইকুম। {StudentName} {TestDate}-এর {Subject} ক্লাস টেস্টে ({TestNumber}) অনুপস্থিত ছিল। " +
       "নিয়মিত উপস্থিতি তার জন্য জরুরি — অনুগ্রহ করে উপস্থিতি নিশ্চিত করুন। জাযাকাল্লাহু খাইরান।",
+    defaultLangMode: "BN",
+  },
+  // --- Office → teacher overdue-report chase (CT-4, §6/J6 — the AS-T4 chase
+  // posture; the Office nudges the teacher whose reports are overdue, never the
+  // teacher chasing themselves. wa.me body only, ADR-003 manual send. D-#167. ---
+  "class_test.overdue_chase.wa": {
+    group: "classTest", labelBn: "ক্লাস টেস্ট — শিক্ষককে অসম্পূর্ণ ফলাফলের তাগিদ (হোয়াটসঅ্যাপ)",
+    placeholders: ["TeacherName", "Count", "ExamList"],
+    bnDefault:
+      "আসসালামু আলাইকুম {TeacherName}। আপনার {Count}টি ক্লাস টেস্টের ফলাফল নির্ধারিত সময়ের মধ্যে জমা পড়েনি: {ExamList}। " +
+      "অনুগ্রহ করে দ্রুত ফলাফল এন্ট্রি ও প্রকাশ করুন। জাযাকাল্লাহু খাইরান — অফিস।",
     defaultLangMode: "BN",
   },
 };
