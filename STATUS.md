@@ -32,6 +32,30 @@ _Updated: 2026-06-14 (**AC-1 BUILT** — Per-user Access Control server slice on
   byte-identical proof at scale**; firewall green). **Server-only** (the Principal editor screen is AC-2, app).
   **Not verified live.** **Next = AC-2** (app: per-user editor with template chips + per-permission provenance
   state [from-template / added / removed / locked]).
+- **Built (Student Comments + Parents-Meeting CM-5 — server, prd-comments-meetings §3/§6/§8, J-CM6/J-CM7/J-CM8,
+  D-#124 + build ruling D-#202) [branch `worktree-comments-cm5`, PR open — coordinator reviews]:** the FIFTH CM
+  slice — the class-teacher `MeetingComment` + the cross-meeting comparison reads + the guardian portal reads.
+  **VOCAB-FREE** — `shared/vocab.ts` + the verifier UNTOUCHED (`git diff origin/main -- shared` empty). **New
+  model `MeetingComment`** `{meetingId, studentId, authorUserId, positiveText, concernText}` (one per
+  student×meeting, unique; no schoolId, D-#145). **`MeetingCommentService`:** `saveMeetingComment` (UPSERT one
+  note per student×meeting; both-empty rejected; audited `MEETING_COMMENT_SAVED`); `studentCommentTimeline`
+  (DERIVED D-#44 — prior MeetingComments chronological + a daily-StudentComment **by-type rollup** since the most
+  recent meeting, D-#202); `meetingComparison(meetingId, studentId)` (this note + prior notes + the rollup since
+  the previous meeting); guardian `childComments` (DELIVERED daily comments ONLY, structurally omits
+  authorUserId/sectionId/deliveryChannels — J-CM8) + `childMeetingSlot` (the family's own slot, omits
+  familyKey/studentIds/attendanceRemark). Pure `rollupByType` (counts over ALL COMMENT_TYPES, zeros included)
+  unit-tested. **Resolvers (`meetingComment.ts`):** `saveMeetingComment` = `tracker:write` +
+  `assertIsClassTeacher` on the child's server-resolved section (**Office/Principal denied — J-CM6**, the
+  D-#42/#45 parent-comms duty); `studentCommentTimeline`/`meetingComparison` = the reps gate **`tracker:read` OR
+  `roster:manage`** (function-form authScopes — first OR-of-two-perms gate in the codebase);
+  `childComments`/`childMeetingSlot` = `guardian:read_child` + `assertGuardianOfStudent` (D-#68). **RBAC: NO new
+  role/permission** (D-#17). 1 new audit kind `MEETING_COMMENT_SAVED` (Audit.ts, NOT vocab). CM firewall block
+  extended (MeetingComment + MeetingCommentService corpus-clean, both ways). **Gate GREEN (executed):** vocab
+  verifier PASS (UNTOUCHED), shared build + shared/server tsc clean, **jest 1180/1180** (69 suites; +1 new suite
+  `meetingComment.test.ts` [13 — incl. the J-CM6 class-teacher deny, the J-CM7 rollup, the J-CM8
+  structural-omission guardian shapes] + 1 firewall check; firewall green). **Server-only** (no app — CM-6 is the
+  app slice; expo skipped). **Not verified live.** **Next = CM-6** (the Expo app slice over CM-1..CM-5 — completes
+  the Comments + Parents-Meeting module).
 - **Planned (Saturday Revision Tracker — Qur'an Hifz, module REQ written, D-#197–#201):**
   REQ scoped in docs/saturday-revision-requirements.md — replaces the paper শিক্ষার্থীর পাঠ
   সম্পাদন রিপোর্ট (weekly Saturday Hifz revision sheet). Per student × Saturday: present/absent +
