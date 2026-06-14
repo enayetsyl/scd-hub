@@ -1,8 +1,24 @@
 # STATUS
 
-_Updated: 2026-06-14 (**VC-3 + CT-1 both MERGED** — Vocab VC-3 [#62, grid mistake capture + derived scoring, D-#142] then Class Test CT-1 [#63, print-request→official-exam lifecycle, D-#143/#144/#145 — renumbered from #142–#144 at merge since VC-3 took #142]. Earlier this run: MT-1..MT-3 #61 [D-#128–#131], HR app #56→#60 [D-#135]. Parked vocab-toucher behind the vocab lock: CM-1. Next: VC-4 / CT-2 continue their chains)_
+_Updated: 2026-06-14 (**VC-3 + CT-1 both MERGED** — Vocab VC-3 [#62, grid mistake capture + derived scoring, D-#142] then Class Test CT-1 [#63, print-request→official-exam lifecycle, D-#143/#144/#145 — renumbered from #142–#144 at merge since VC-3 took #142]; integrated gate green on main: jest **959/959** [57 suites]. **+ docs: Classroom Observation module build contract added (D-#146–#152, renumbered from the handoff's #59–#65).** Earlier this run: MT-1..MT-3 #61 [D-#128–#131], HR app #56→#60 [D-#135]. Parked vocab-toucher behind the vocab lock: CM-1. Next: VC-4 / CT-2 continue their chains)_
 
 ## Now / next
+- **Planned (Classroom Observation module — REF-11 + Quran review, build contract written, D-#146–#152):**
+  build contract authored, **no feature code yet**. New standalone `classroom-observation` module (identity
+  plane, ADR-005). Two forms, one pipeline: **REF-11** (general+Arabic+Islam, `HW_SUBJECTS`) and the ported
+  **ClassEcho form** for **Quran**. Pipeline: Office/Principal **upload + assign** a senior-teacher observer →
+  observer scores+comments → **REVIEWED releases to the observed teacher (no Principal sign-off)** → teacher
+  **responds** → in-app notify + **escalation ladder** nudges the teacher (device push deferred, D-#52).
+  Footage = **YouTube-unlisted**, ported from ClassEcho (knowing privacy trade-off, D-#149; School-Handbook check
+  pending). Plus a **review scheduler** (tiered cadence — weaker reviewed more, suggests-not-assigns) and a
+  private **reviewer-effectiveness** read (calibration double-reviews + timeliness + throughput + impact +
+  teacher fairness rating). App-native vocab only — **no wire twin / no two-place sync**. Slices **CO-1**
+  REF-11 core+pipeline → **CO-2** footage → **CO-3** release+response+notify/escalate → **CO-4** trend →
+  **CO-5** Quran form → **CO-6** scheduler → **CO-7** reviewer effectiveness.
+  _(Renumbered from the handoff's D-#59–#65 — taken on main; slotted into the free D-#146–#152 run. Pre-flight
+  flag: an `Observation` model already exists in `modules/hr` [HR-4's lightweight observation w/ parked REF-11
+  rubricScores] — the new module's `ClassroomObservation` is a distinct name/module, no clash, but related.)_
+  **Next = build CO-1 per `docs/prd-classroom-observation.md` §5, slice order CO-1→CO-7.**
 - **Built (Class Test Tracker CT-1 — server, prd-tracker-class-test §3/§5/§6, D-#119–#122 + build rulings
   D-#143/#144/#145) [branch `worktree-class-test-ct1`, PR #63 MERGED]:** the FIRST class-test slice —
   the print-request → official-exam lifecycle replacing the Exam-Log + per-class Google Forms + IMPORTRANGE sheet.
