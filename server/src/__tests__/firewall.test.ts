@@ -372,13 +372,22 @@ describe("Message-templates firewall (ADR-005 / MT-1, D-#128)", () => {
  */
 describe("Class-test tracker firewall (ADR-005 / CT-1, D-#119)", () => {
   const corpusDir = path.resolve(__dirname, "../modules/corpus");
-  const CLASS_TEST_MODELS = ["models/ClassTest", "models/ClassTestSequence"];
+  const CLASS_TEST_MODELS = [
+    "models/ClassTest",
+    "models/ClassTestSequence",
+    "models/ClassTestResult", // CT-2 per-student results (names studentIds)
+  ];
   const CLASS_TEST_FILES = [
     "../modules/trackers/models/ClassTest.ts",
     "../modules/trackers/models/ClassTestSequence.ts",
+    "../modules/trackers/models/ClassTestResult.ts",
     "../modules/trackers/services/ClassTestService.ts",
     "../modules/trackers/services/ClassTestFileService.ts",
+    "../modules/trackers/services/ClassTestResultService.ts",
+    "../modules/trackers/classTestScoring.ts",
+    "../modules/trackers/classTestCalendar.ts",
     "../modules/trackers/resolvers/classTest.ts",
+    "../modules/trackers/resolvers/classTestResult.ts",
   ].map((p) => path.resolve(__dirname, p));
 
   test("corpus module has NO import of any class-test model", () => {

@@ -326,6 +326,9 @@ check("class-test sources exact (§3.1)",         eq(V.CLASS_TEST_SOURCES, ["POO
 check("CLASS_TEST_SOURCE_LABELS_BN total",       total(V.CLASS_TEST_SOURCE_LABELS_BN, V.CLASS_TEST_SOURCES));
 check("CLASS_TEST_SOURCE_LABELS_EN total",       total(V.CLASS_TEST_SOURCE_LABELS_EN, V.CLASS_TEST_SOURCES));
 check("CLASS_TEST_RESULT is a registered NotificationKind (§3.1/§8, extends §C.5)", V.NOTIFICATION_KINDS.includes("CLASS_TEST_RESULT"));
+check("class-test attendance statuses exact (CT-2 §3.3/§4)", eq(V.CLASS_TEST_ATTENDANCE_STATUSES, ["PRESENT", "ABSENT"]));
+check("CLASS_TEST_ATTENDANCE_STATUS_LABELS_BN total", total(V.CLASS_TEST_ATTENDANCE_STATUS_LABELS_BN, V.CLASS_TEST_ATTENDANCE_STATUSES));
+check("CLASS_TEST_ATTENDANCE_STATUS_LABELS_EN total", total(V.CLASS_TEST_ATTENDANCE_STATUS_LABELS_EN, V.CLASS_TEST_ATTENDANCE_STATUSES));
 check("class test composes existing perms — no class-test:* permission (D-#94/#17)",
   !V.PERMISSIONS.some((p) => p.startsWith("class") || p.startsWith("classtest")));
 
