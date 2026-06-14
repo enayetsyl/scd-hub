@@ -1203,6 +1203,19 @@ export const VOCAB_ASSIGNMENT_SOURCE_LABELS_EN: Record<VocabAssignmentSource, st
   direct: "Direct", proxy: "Proxy (cover)",
 };
 
+/** Per-(student × test) attendance status (VC-3, §3.6/§4). PRESENT is marked +
+ *  scored; ABSENT is the whole-test absence (one flag per student per test, sheet
+ *  parity) — excluded from score denominators, feeds the Absent guardian template. */
+export const VOCAB_ATTENDANCE_STATUSES = ["PRESENT", "ABSENT"] as const;
+export type VocabAttendanceStatus = (typeof VOCAB_ATTENDANCE_STATUSES)[number];
+
+export const VOCAB_ATTENDANCE_STATUS_LABELS_BN: Record<VocabAttendanceStatus, string> = {
+  PRESENT: "উপস্থিত", ABSENT: "অনুপস্থিত",
+};
+export const VOCAB_ATTENDANCE_STATUS_LABELS_EN: Record<VocabAttendanceStatus, string> = {
+  PRESENT: "Present", ABSENT: "Absent",
+};
+
 
 // --- A.14 MESSAGE-TEMPLATE VOCAB (app-native; Message Templates module — -------
 // prd-message-templates, D-#128–#131). NO wire-contract twin: a generated-message

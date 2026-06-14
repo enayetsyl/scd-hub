@@ -63,6 +63,7 @@ export type AuditEventKind =
   | "VOCAB_TEST_UPDATED"          // a vocab test's metadata edited — label/marks/half-miss/date (VC-2)
   | "VOCAB_TEST_POSITIONS_SET"    // positions auto-laid from selected words per direction (VC-2, §3.4)
   | "VOCAB_TESTER_ASSIGNED"       // weekly tester assigned to a (section × program) (VC-2, §3.5, roster:manage)
+  | "VOCAB_RESULT_RECORDED"       // a student's vocab marks recorded — attendance + per-position mistakes (VC-3, §3.6, D-#142)
   | "HW_FILE_ATTACHED"    // a question/answer file attached to homework (GP-A, D-#70)
   | "BOOK_ISSUED"         // library desk issued a copy to a borrower (LB-2, D-#81/#82)
   | "BOOK_RETURNED"       // copy returned at the desk (LB-2)
