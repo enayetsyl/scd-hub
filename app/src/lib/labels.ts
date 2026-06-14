@@ -1281,6 +1281,9 @@ const STR_BN = {
   chatNoticeOpenWa: "WhatsApp-এ পাঠান",
   chatNoticeSent: "নোটিশ তৈরি হয়েছে",
   chatNoticeEmptyRecipients: "কোনো প্রাপক পাওয়া যায়নি।",
+  // APP-FU1 — full-section picker for chat:manage holders (Principal/Office)
+  chatNoticeManagerNote: "অফিস/প্রিন্সিপাল হিসেবে আপনি যেকোনো শ্রেণি-সেকশনের নোটিশ পাঠাতে পারেন।",
+  chatNoticePickSectionAny: "যেকোনো শ্রেণি-সেকশন নির্বাচন করুন",
 
   // --- HR / staff module (PR-1: leave + self-service) ---
   tabHr: "কর্মী",
@@ -2565,6 +2568,9 @@ const STR_EN: StrTable = {
   chatNoticeOpenWa: "Send on WhatsApp",
   chatNoticeSent: "Notice composed",
   chatNoticeEmptyRecipients: "No recipients found.",
+  // APP-FU1 — full-section picker for chat:manage holders (Principal/Office)
+  chatNoticeManagerNote: "As Office/Principal you can send a section notice to any section.",
+  chatNoticePickSectionAny: "Select any section",
 
   // --- HR / staff module (PR-1: leave + self-service) ---
   tabHr: "Staff",

@@ -9,8 +9,13 @@
  *
  * Section picker = `mySectionsAsClassTeacher` (the caller's coordinated sections,
  * the D-#45 primary author of a SECTION notice). SCHOOL scope (no section) is
- * offered only to chat:manage holders; Principal/Office reaching a section they
- * don't class-teach is out of this app pass (use SCHOOL scope) — a follow-up.
+ * offered only to chat:manage holders.
+ *
+ * APP-FU1: chat:manage holders (Principal/Office) get the FULL section picker —
+ * academic-year → every class's sections via `classes` — so they can target an
+ * arbitrary section, not just one they class-teach. The server already permits
+ * this: `assertCanComposeNotice` bypasses `assertIsClassTeacher` for canManage,
+ * so this is purely the missing picker UI. No server change.
  */
 import React, { useState } from "react";
 import { Linking, View } from "react-native";
@@ -20,11 +25,13 @@ import { roleHasPermission } from "@scd/shared";
 import {
   COMPOSE_GUARDIAN_NOTICE,
   MY_SECTIONS_AS_CLASS_TEACHER_QUERY,
+  CLASSES_QUERY,
   type GuardianNoticeResultT,
   type SectionT,
 } from "../../graphql/operations";
 import type { ChatStackParamList } from "../../navigation/types";
-import { Screen, Card, Body, Muted, Button, Chip, Field, Notice, Badge, Loader } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Chip, Field, Notice, Badge, Loader, Select } from "../../components/ui";
+import { AcademicYearSelect } from "../../components/selects";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum } from "../../lib/labels";
 import { space } from "../../theme/tokens";
@@ -39,14 +46,26 @@ export default function GuardianNoticeScreen(_props: Props): React.ReactElement 
 
   const [scope, setScope] = useState<Scope>("SECTION");
   const [sectionId, setSectionId] = useState<string | null>(null);
+  const [ayId, setAyId] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GuardianNoticeResultT | null>(null);
 
-  const [sectionsQ] = useQuery({ query: MY_SECTIONS_AS_CLASS_TEACHER_QUERY });
+  // Class teachers pick from their coordinated sections; managers (Principal/
+  // Office) get the full academic-year → all-sections picker below.
+  const [sectionsQ] = useQuery({ query: MY_SECTIONS_AS_CLASS_TEACHER_QUERY, pause: canManage });
   const sections: SectionT[] = sectionsQ.data?.mySectionsAsClassTeacher ?? [];
+
+  const [classesQ] = useQuery({
+    query: CLASSES_QUERY,
+    variables: { academicYearId: ayId || "" },
+    pause: !canManage || !ayId,
+  });
+  const sectionOptions = (classesQ.data?.classes ?? []).flatMap((c) =>
+    c.sections.map((s) => ({ label: `${c.nameBn} · ${s.nameBn} (${s.code})`, value: s.id })),
+  );
 
   const [, compose] = useMutation(COMPOSE_GUARDIAN_NOTICE);
 
@@ -103,7 +122,30 @@ export default function GuardianNoticeScreen(_props: Props): React.ReactElement 
       {scope === "SECTION" ? (
         <Card>
           <Muted>{STR.chatNoticePickSection}</Muted>
-          {sectionsQ.fetching ? (
+          {canManage ? (
+            /* APP-FU1 — managers (Principal/Office): full academic-year → all-
+               sections picker. Server authorizes the arbitrary-section notice. */
+            <>
+              <Muted style={{ marginTop: space(1) }}>{STR.chatNoticeManagerNote}</Muted>
+              <View style={{ marginTop: space(2) }}>
+                <AcademicYearSelect label={STR.academicYear} value={ayId} onChange={setAyId} />
+              </View>
+              {ayId ? (
+                classesQ.fetching ? (
+                  <Loader label={STR.loading} />
+                ) : (
+                  <Select
+                    label={STR.chatNoticeSection}
+                    value={sectionId}
+                    options={sectionOptions}
+                    onChange={setSectionId}
+                    placeholder={STR.chatNoticePickSectionAny}
+                    emptyText={STR.empty}
+                  />
+                )
+              ) : null}
+            </>
+          ) : sectionsQ.fetching ? (
             <Loader label={STR.loading} />
           ) : sections.length === 0 ? (
             <Muted style={{ marginTop: space(1) }}>{STR.chatNoticeNoSections}</Muted>
