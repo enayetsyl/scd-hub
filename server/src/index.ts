@@ -38,6 +38,7 @@ import "./modules/hr/resolvers/staffLeave";
 import "./modules/hr/resolvers/payroll";
 import "./modules/hr/resolvers/performance";
 import "./modules/hr/resolvers/offboarding";
+import "./modules/hr/resolvers/staffDirectory";
 import "./modules/guardian/resolvers/guardianPortal";
 import "./modules/notifications/resolvers/notifications";
 import "./modules/library/resolvers/library";
