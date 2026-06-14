@@ -1,6 +1,6 @@
 # STATUS
 
-_Updated: 2026-06-14 (**VC-5 MERGED — Vocabulary Tracker COMPLETE (VC-1..VC-5), server + app** — VC-5 [#67, 10 Expo app screens + guardian vocab card, APP-ONLY]. Integrated gate green on main 19500cf: **jest 1021/1021** [60 suites, unchanged], vocab PASS, shared/server/app tsc, expo web. Prior: CT-3 #66 [publish + guardian delivery, D-#160/#161], VC-4 #65 + CT-2 #64 [D-#153–#155/#158/#159], VC-3 #62 + CT-1 #63 [D-#142–#145], Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. In flight: CT-4 [reports/dashboards]. Parked vocab-toucher: CM-1; planned standalone: CO-1. Vocab module remaining = live verification only)_
+_Updated: 2026-06-14 (**CT-4 MERGED** — Class Test CT-4 [#68, read aggregates Reports-Status/Dashboard/Class×Subject/Profile + Office overdue-chase, D-#166/#167]; sole vocab owner, clean merge. Integrated gate green on main 476c920: **jest 1033/1033** [61 suites], vocab PASS, shared/server/app tsc. Prior: VC-5 #67 [Vocabulary Tracker COMPLETE VC-1..VC-5], CT-3 #66, VC-4 #65 + CT-2 #64, VC-3 #62 + CT-1 #63, Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. In flight: CM-1 [Comments store, dispatched]. Next: CT-5 [app — completes Class Test Tracker]. Parked: CO-1 standalone; DEP in progress [DEP-1 done, DEP-2 next])_
 
 ## Now / next
 - **Built (Vocabulary Tracker VC-5 — Expo app, APP-ONLY, prd-vocabulary-tracker §6 VC-5 + J1–J7)
@@ -77,7 +77,7 @@ _Updated: 2026-06-14 (**VC-5 MERGED — Vocabulary Tracker COMPLETE (VC-1..VC-5)
   rubricScores] — the new module's `ClassroomObservation` is a distinct name/module, no clash, but related.)_
   **Next = build CO-1 per `docs/prd-classroom-observation.md` §5, slice order CO-1→CO-7.**
 - **Built (Class Test Tracker CT-4 — server, prd-tracker-class-test §6/§9/J5/J6, D-#44 + build rulings
-  D-#166/#167) [branch `worktree-class-test-ct4`, PR open — coordinator reviews]:** the FOURTH class-test
+  D-#166/#167) [branch `worktree-class-test-ct4`, PR #68 MERGED]:** the FOURTH class-test
   slice — the read-side aggregates + the Office overdue-chase. **New `ClassTestSummaryService` (ALL DERIVED
   D-#85; `now`/`asOf` injected, deterministic; REUSES CT-2's `examReportStatus` — deadline/overdue NOT
   re-derived, the ONE D-#50 calendar source stays single-truth):** `reportsStatus` (per-exam submitted/
