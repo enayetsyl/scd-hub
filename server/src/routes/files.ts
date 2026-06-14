@@ -24,7 +24,7 @@ import type { Router, Request, Response } from "express";
 import express, { Router as createRouter } from "express";
 import multer from "multer";
 import { buildContext } from "../context";
-import { roleHasPermission, type Role } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../middleware/authz";
 import {
   StoredFile,
@@ -115,7 +115,7 @@ const parseUpload: express.RequestHandler = (req, res, next) => {
 
 filesRouter.post("/hw", parseUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !roleHasPermission(ctx.auth.role as Role, "tracker:write")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -186,7 +186,7 @@ const parseChatUpload: express.RequestHandler = (req, res, next) => {
 
 filesRouter.post("/chat", parseChatUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !roleHasPermission(ctx.auth.role as Role, "chat:write")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "chat:write")) {
     res.status(403).json({ error: CHAT_FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -268,7 +268,7 @@ filesRouter.post("/chat", parseChatUpload, async (req: Request, res: Response) =
 
 filesRouter.post("/classtest", parseUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !roleHasPermission(ctx.auth.role as Role, "tracker:write")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -338,7 +338,7 @@ const parseCommentUpload: express.RequestHandler = (req, res, next) => {
 
 filesRouter.post("/comment", parseCommentUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !roleHasPermission(ctx.auth.role as Role, "tracker:write")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
     res.status(403).json({ error: COMMENT_FILE_ERRORS_BN.forbidden });
     return;
   }

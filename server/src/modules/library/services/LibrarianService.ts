@@ -1,4 +1,4 @@
-import { roleHasPermission, type Role } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import { LibrarianAssignment, type ILibrarianAssignment } from "../models/LibrarianAssignment";
@@ -32,7 +32,7 @@ export async function isAssignedLibrarian(userId: string): Promise<boolean> {
  *  `library:manage`-only — this gate is for the circulation desk. */
 export async function assertIsLibrarian(ctx: AppContext): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (roleHasPermission(ctx.auth.role as Role, "library:manage")) return;
+  if (callerHasPermission(ctx.auth, "library:manage")) return;
   if (ctx.auth.role === "TEACHER" && (await isAssignedLibrarian(ctx.auth.userId))) return;
   throw new ForbiddenError("শুধুমাত্র লাইব্রেরিয়ান এই কাজটি করতে পারেন");
 }

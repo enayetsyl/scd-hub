@@ -1,6 +1,6 @@
 import { Schema, model, Document, Types } from "mongoose";
-import type { Role } from "@scd/shared";
-import { ROLES } from "@scd/shared";
+import type { Role, Permission } from "@scd/shared";
+import { ROLES, PERMISSIONS } from "@scd/shared";
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
@@ -12,6 +12,13 @@ export interface IUser extends Document {
   role: Role;
   name: string;
   active: boolean;
+  /** Per-user access control (AC-1, D-#193). All three default [] ⇒ identical-to-today
+   *  (zero migration; an absent field reads as empty). `role` is the PRIMARY template;
+   *  effective = (∪ [role, ...additionalTemplates] ∪ granted) − revoked − reserved(non-Principal).
+   *  See shared `effectivePermissions` / `callerHasPermission`. */
+  additionalTemplates: Role[];      // ASSIGNABLE_TEMPLATES only (TEACHER/OFFICE) — enforced at write
+  grantedPermissions: Permission[]; // per-user adds (reserved-locked perms rejected at write)
+  revokedPermissions: Permission[]; // per-user removes (a revoke always wins)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,6 +33,10 @@ const UserSchema = new Schema<IUser>(
     role: { type: String, enum: ROLES, required: true },
     name: { type: String, required: true, trim: true },
     active: { type: Boolean, default: true },
+    // Per-user access control (AC-1, D-#193) — additive, default [] (zero migration).
+    additionalTemplates: { type: [String], enum: ROLES, default: [] },
+    grantedPermissions: { type: [String], enum: [...PERMISSIONS], default: [] },
+    revokedPermissions: { type: [String], enum: [...PERMISSIONS], default: [] },
   },
   { timestamps: true },
 );

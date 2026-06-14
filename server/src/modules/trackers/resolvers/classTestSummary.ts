@@ -20,7 +20,7 @@
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
-import { roleHasPermission } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import {
   reportsStatus,
@@ -56,7 +56,7 @@ async function assertReportRead(ctx: AppContext, sectionId?: string | null): Pro
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role as Role;
   if (role === "PRINCIPAL" || role === "OFFICE") return;
-  if (role === "GUARDIAN" || !roleHasPermission(role, "tracker:read")) throw new ForbiddenError();
+  if (role === "GUARDIAN" || !callerHasPermission(ctx.auth, "tracker:read")) throw new ForbiddenError();
   if (!sectionId) throw new ForbiddenError("শিক্ষকের রিপোর্ট পড়তে সেকশন উল্লেখ করতে হবে");
   const section = (await Section.findById(sectionId).select("classId").lean()) as { classId: Types.ObjectId } | null;
   if (!section) throw new ForbiddenError("Section not found");
@@ -75,7 +75,7 @@ function assertDashboardAdmin(ctx: AppContext): void {
 function assertChaseAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role as Role;
-  if ((role === "PRINCIPAL" || role === "OFFICE") && roleHasPermission(role, "message:dispatch")) return;
+  if ((role === "PRINCIPAL" || role === "OFFICE") && callerHasPermission(ctx.auth, "message:dispatch")) return;
   throw new ForbiddenError("ক্লাস টেস্ট ফলো-আপ অফিস/অধ্যক্ষের কাজ");
 }
 

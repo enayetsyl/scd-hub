@@ -489,6 +489,23 @@ describe("Comments & Parents-Meeting firewall (ADR-005 / CM-1/CM-2, D-#114/#172)
     }
   });
 
+  // CM-5 meeting-comment model/service/resolver must exist + stay corpus-clean (the
+  // MeetingComment + the comparison/guardian reads name studentIds — identity-plane).
+  const CM5_FILES = [
+    "../modules/comments/models/MeetingComment.ts",
+    "../modules/comments/services/MeetingCommentService.ts",
+    "../modules/comments/resolvers/meetingComment.ts",
+  ].map((p) => path.resolve(__dirname, p));
+
+  test("CM-5 meeting-comment source files exist and have no corpus import", () => {
+    for (const f of CM5_FILES) {
+      expect(fs.existsSync(f)).toBe(true); // shipped (CM-5)
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
   test("corpus module has NO import from the comments module", () => {
     for (const f of walkDir(corpusDir)) {
       const content = fs.readFileSync(f, "utf8");
@@ -496,10 +513,12 @@ describe("Comments & Parents-Meeting firewall (ADR-005 / CM-1/CM-2, D-#114/#172)
       expect(content).not.toMatch(importPattern("models/StudentComment"));
       expect(content).not.toMatch(importPattern("models/ParentMeeting"));
       expect(content).not.toMatch(importPattern("models/ParentMeetingSlot"));
+      expect(content).not.toMatch(importPattern("models/MeetingComment"));
       expect(content).not.toMatch(importPattern("services/CommentDeliveryService"));
       expect(content).not.toMatch(importPattern("services/CommentFileService"));
       expect(content).not.toMatch(importPattern("services/ParentMeetingService"));
       expect(content).not.toMatch(importPattern("services/MeetingDispatchService"));
+      expect(content).not.toMatch(importPattern("services/MeetingCommentService"));
     }
   });
 });
@@ -532,6 +551,38 @@ describe("Classroom-observation firewall (ADR-005 / CO-1, D-#146)", () => {
       const content = fs.readFileSync(f, "utf8");
       expect(content).not.toMatch(importPattern("modules/classroom-observation"));
       expect(content).not.toMatch(importPattern("models/ClassroomObservation"));
+    }
+  });
+});
+
+/**
+ * Access-control firewall (AC-1, D-#193 / prd-access-control §12).
+ *
+ * The per-user access fields live on the identity-plane staff `User` (ADR-005). The
+ * access-control module reads/writes `User` + the append-only audit — strictly identity
+ * plane, NO corpus path. Fail-closed both ways: the access-control module must have NO
+ * import path into the corpus plane, and the corpus module must have NO import path into
+ * the access-control module or its service (no analytics/export join back to who can do what).
+ */
+describe("Access-control firewall (ADR-005 / AC-1, D-#193)", () => {
+  const accessDir = path.resolve(__dirname, "../modules/access-control");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("access-control module has NO import from the corpus plane", () => {
+    const files = walkDir(accessDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (AC-1 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the access-control module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/access-control"));
+      expect(content).not.toMatch(importPattern("services/AccessControlService"));
     }
   });
 });

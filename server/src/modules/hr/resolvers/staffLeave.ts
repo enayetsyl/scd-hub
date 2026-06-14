@@ -15,7 +15,7 @@
  */
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
-import { roleHasPermission, type Role } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import {
   applyForLeave,
@@ -40,7 +40,7 @@ import type { LeaveType } from "@scd/shared";
 // ---------------------------------------------------------------------------
 
 function hasManage(ctx: AppContext): boolean {
-  return ctx.auth !== null && roleHasPermission(ctx.auth.role as Role, "leave:manage");
+  return ctx.auth !== null && callerHasPermission(ctx.auth, "leave:manage");
 }
 
 /** The caller's own StaffProfile id (own-row self-service), or throw. */

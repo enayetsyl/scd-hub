@@ -13,7 +13,7 @@
  */
 import { builder } from "../../../schema";
 import { ForbiddenError, isClassTeacher } from "../../../middleware/authz";
-import { roleHasPermission, type Role } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
@@ -55,7 +55,7 @@ import type { IStudentLeaveApplication } from "../models/StudentLeaveApplication
 // ---------------------------------------------------------------------------
 
 function hasManage(ctx: AppContext): boolean {
-  return ctx.auth !== null && roleHasPermission(ctx.auth.role as Role, "attendance:manage");
+  return ctx.auth !== null && callerHasPermission(ctx.auth, "attendance:manage");
 }
 
 /** §8 row-scope: manage roles pass; a TEACHER passes only as the section's

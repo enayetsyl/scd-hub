@@ -57,6 +57,8 @@ Mirrors the app's slice approach; each ships its journeys' acceptance criteria a
 | **HR-4** | Performance / conduct / development (§5 design) | **H5** | Independent of payroll. Needs HR-1 + supervisory scope (D-#28). REF-11 rubric parked. |
 | **HR-5** | Offboarding (§6 design — cross-cutting) | **H6** | Stitches records + leave + payroll + conduct. Needs HR-1..HR-4. |
 | (cross-cut) | Access / identity / firewall | **H7** | Row-scope + audit + firewall assertions; verified in every slice above. |
+| **HR-G1** | Self-service reads (gap; post-HR-5) | **H8** | **Built (D-#185).** Own-row `myPayslips` / `myStaffAttendance`; fail-closed phone-join; vocab-free; no new perm. |
+| **HR-G2** | Staff directory (gap; post-HR-5) | **H8** | **Planned (D-#216/#217).** Unblocks the H5.2 observation picker + the chat staff-list. Server-only, vocab-free, no new perm; observable filter reverse-join is fail-closed. |
 
 ---
 
@@ -242,6 +244,47 @@ Mirrors the app's slice approach; each ships its journeys' acceptance criteria a
   approvals, payroll lock, advance approval, conduct steps, grievance, access revocation and final
   settlement all ride the append-only audit log.
 
+### H8 — Self-service reads & staff directory  *(gap slices; post-HR-5, NOT in the original build-step map)*
+Two server gaps surfaced when the HR app shipped (PR-1) and are tracked as **HR-G** slices. Both are
+identity-plane, vocab-free, and add **no** new permission (D-#17/#94).
+- **H8.1 Own-row self-service reads** *(HR-G1, built — **D-#185**)* — `myPayslips` (the caller's own
+  payslips, `approved_locked` runs only, §4.2) + `myStaffAttendance` (own attendance over a range, reusing
+  the H3 ✘→LEAVE overlay). Both resolve the caller's `StaffProfile` via the **fail-closed phone-join**
+  (`resolveStaffProfileForUser`, D-#103/#185); no linked profile ⇒ `[]`, never another person's data.
+- **H8.2 General staff directory** *(HR-G2, planned — **D-#216**)* — *Why:* the **H5.2 supervisor
+  observation-submit** (`submitObservation`) needs a `staffProfileId`, but every `StaffProfile` read is
+  `staff:manage` (Principal/Office) — so the HR app cannot render the observation picker, and the chat module
+  (M-5) already had to *derive* a staff list from SCHOOL-group memberships for the same reason. Fix:
+  `staffDirectory(observableOnly: Boolean = false)` → a dedicated **`StaffDirectoryEntry { id, name, nameBn,
+  designation, category }`** — a distinct read shape that **structurally omits** every H1.4 sensitive row
+  (NID/bank/salary/paymentMethod) and all personal bio/contact (dob, parents, spouse, addresses, personal
+  phone), the CT-3 `GuardianClassTestResult` precedent (a separate type that *cannot* leak). Gate =
+  `authenticated: true`, **GUARDIAN rejected in-resolver** (staff-internal; guardians are a walled login
+  plane, ADR-005). **No new permission** — the staff analog of the student roster: scoped staff *read* the
+  roster while *acting* is scope-gated; reading "who works here, by name + role" is discovery, the
+  *capability* (`submitObservation`) stays scope-gated. One directory serves both the H5.2 picker and the
+  chat staff-list.
+- **H8.3 Observable filter** *(HR-G2 — **D-#217**)* — `observableOnly: true` returns only the staff the
+  caller may observe: the teachers assigned to a `(class, subject)` cell covered by the caller's
+  **supervisory** `ScopeGrant` extent (`composeTeacherScope` → `supervisoryCovers`, the H5.2 authority);
+  Principal/Office (`performance:manage`/`staff:manage`) get everyone. **Reverse-join (build risk, flagged):**
+  resolve `(class, subject, teacherUserId)` [confirm the assignment source against live code at build —
+  likely `RoutineSlot.teacherId`, **not** the teaching `ScopeGrant` extent which is "may teach" not "is
+  assigned"] ∩ the caller's supervisory extent, then `teacherUserId → StaffProfile` via the **fail-closed
+  phone-join** (D-#103/#185): a staff member who doesn't resolve (shared phone) is **excluded from the
+  observable subset but still appears in the general list** — no masquerade, no wrong person.
+- **H8.4 App rider (later)** — a small app slice renders the picker over `staffDirectory(observableOnly:
+  true)` + the existing `submitObservation`. Server-only HR-G2 ships first.
+- **H8.5 Firewall + audit** — the directory is on the identity-plane `StaffProfile`; **no corpus path**; the
+  new resolver/shape import nothing from corpus — the NFR-11 fail-closed test stays green (H7.4). A directory
+  read is non-mutating, so no new audit kind.
+- **Noted, out of this slice:** `submitObservation` validates the `(class, subject)` extent but **not** that
+  `staffProfileId` actually teaches it (`performance.ts`) — the picker offers only valid staff, but the
+  server doesn't *enforce* `staffProfileId ∈ extent`. Optional later hardening; not folded in.
+- **Acceptance:** [ ] general list returns name+role only — no sensitive/bio field reachable; [ ] GUARDIAN
+  denied; [ ] `observableOnly:true` returns only the caller's supervisory-covered teachers, fail-closed on
+  the phone join; [ ] Principal/Office get all; [ ] firewall green; [ ] no new permission.
+
 ---
 
 ## 5. Golden-path e2e (NFR-11) — what Maestro/Supertest must cover
@@ -289,6 +332,8 @@ Final field lists come from `docs/hr-design.md`; this is the inventory.
 - `Observation` + `Appraisal` (annual cycle) + `ConductRecord` (ladder stage + hearing) + `Grievance` +
   `DevelopmentLog` — §5.
 - `OffboardingCase` (triggers → clearance checklist → settlement hold → retention) — §6.
+- `StaffDirectoryEntry` (**read-only projection over `StaffProfile`** — `{id, name, nameBn, designation,
+  category}`; no new model, no sensitive/bio field; HR-G2 §H8) — D-#216.
 
 ## 8. Reused / unchanged
 - **Proxy/cover `ScopeGrant`** (D-#20) is reused **as-is** — a filled cover slot becomes one grant; no
