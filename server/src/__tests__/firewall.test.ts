@@ -455,13 +455,83 @@ describe("Comments & Parents-Meeting firewall (ADR-005 / CM-1/CM-2, D-#114/#172)
     }
   });
 
+  // CM-3 files must exist + stay corpus-clean (the ParentMeeting* slot rows name
+  // studentIds + the family phone — strictly identity-plane).
+  const CM3_FILES = [
+    "../modules/comments/models/ParentMeeting.ts",
+    "../modules/comments/models/ParentMeetingSlot.ts",
+    "../modules/comments/services/ParentMeetingService.ts",
+    "../modules/comments/resolvers/parentMeeting.ts",
+  ].map((p) => path.resolve(__dirname, p));
+
+  test("CM-3 parent-meeting source files exist and have no corpus import", () => {
+    for (const f of CM3_FILES) {
+      expect(fs.existsSync(f)).toBe(true); // shipped (CM-3)
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  // CM-4 dispatch service must exist + stay corpus-clean (it reads slots that name
+  // studentIds + the family phone — strictly identity-plane).
+  const CM4_FILES = [
+    "../modules/comments/services/MeetingDispatchService.ts",
+    "../modules/comments/resolvers/meetingDispatch.ts",
+  ].map((p) => path.resolve(__dirname, p));
+
+  test("CM-4 meeting-dispatch source files exist and have no corpus import", () => {
+    for (const f of CM4_FILES) {
+      expect(fs.existsSync(f)).toBe(true); // shipped (CM-4)
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
   test("corpus module has NO import from the comments module", () => {
     for (const f of walkDir(corpusDir)) {
       const content = fs.readFileSync(f, "utf8");
       expect(content).not.toMatch(importPattern("modules/comments"));
       expect(content).not.toMatch(importPattern("models/StudentComment"));
+      expect(content).not.toMatch(importPattern("models/ParentMeeting"));
+      expect(content).not.toMatch(importPattern("models/ParentMeetingSlot"));
       expect(content).not.toMatch(importPattern("services/CommentDeliveryService"));
       expect(content).not.toMatch(importPattern("services/CommentFileService"));
+      expect(content).not.toMatch(importPattern("services/ParentMeetingService"));
+      expect(content).not.toMatch(importPattern("services/MeetingDispatchService"));
+    }
+  });
+});
+
+/**
+ * Classroom-observation firewall (CO-1, D-#146/#190 / prd-classroom-observation §3/§5).
+ *
+ * `ClassroomObservation` names teacherIds/observerIds (staff) — strictly identity/
+ * operational plane (ADR-005, §3 "no corpus/student path"). Fail-closed BOTH ways: the
+ * classroom-observation module must have NO import path into the corpus plane, and the
+ * corpus module must have NO import path into the classroom-observation module or its
+ * model (no analytics/export join back to who was observed teaching what).
+ */
+describe("Classroom-observation firewall (ADR-005 / CO-1, D-#146)", () => {
+  const observationDir = path.resolve(__dirname, "../modules/classroom-observation");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("classroom-observation module has NO import from the corpus plane", () => {
+    const files = walkDir(observationDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (CO-1 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the classroom-observation module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/classroom-observation"));
+      expect(content).not.toMatch(importPattern("models/ClassroomObservation"));
     }
   });
 });

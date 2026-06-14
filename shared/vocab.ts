@@ -1711,6 +1711,136 @@ export const COMMENT_SENTIMENT_LABELS_EN: Record<CommentSentiment, string> = {
 };
 
 
+// --- A.16 CLASSROOM-OBSERVATION ENUMS (app-native; Classroom-Observation module --
+// — prd-classroom-observation §4, D-#146/#147, build rulings D-#194/#191). NO
+// wire-contract twin (D-#46/#52): an observation is a staff feature, not import
+// content, and every row names a teacherId/observerId — operational/identity plane
+// behind the ADR-005 firewall. Additive + disjoint from every other enum (AGENTS
+// rule 5). CO-1 ships the REF-11 FORM enums + the pipeline state + the four new
+// permissions only; the Quran (ClassEcho) payload enums (QURAN_REVIEW_CRITERIA /
+// QURAN_COMPLIANCE_ITEMS) and the scheduler SUPPORT_TIERS are deferred to CO-5/CO-6.
+//
+// The REF-11 rubric is curriculum-owned + LOCKED (Project 00/07, D-#146); the labels
+// below are the NON-AUTHORITATIVE §3 echo the app carries for operational structure +
+// BN/EN UI — the authoritative anchors stay in REF-11 (admin-editable later, MT-1).
+
+/** Which review form a classroom observation uses (CO-1, §4). REF-11 for
+ *  general+Arabic+Islam (`HW_SUBJECTS`); the ported ClassEcho form for QURAN
+ *  (the Quran payload itself is CO-5). The form is chosen by subject. */
+export const OBSERVATION_FORMS = ["REF11", "QURAN"] as const;
+export type ObservationForm = (typeof OBSERVATION_FORMS)[number];
+export const OBSERVATION_FORM_LABELS_BN: Record<ObservationForm, string> = {
+  REF11: "REF-11 ফর্ম",
+  QURAN: "কুরআন ফর্ম",
+};
+export const OBSERVATION_FORM_LABELS_EN: Record<ObservationForm, string> = {
+  REF11: "REF-11 form",
+  QURAN: "Quran form",
+};
+
+/** The five REF-11 teaching domains, scored 1–4 each (CO-1, §4). Non-authoritative
+ *  §3 echo — the canonical domain wording lives in REF-11 v1.1 (D-#146). */
+export const OBSERVATION_DOMAINS = ["D1", "D2", "D3", "D4", "D5"] as const;
+export type ObservationDomain = (typeof OBSERVATION_DOMAINS)[number];
+export const OBSERVATION_DOMAIN_LABELS_BN: Record<ObservationDomain, string> = {
+  D1: "পরিকল্পনা ও স্পষ্টতা",
+  D2: "প্রশ্ন ও চিন্তন (ব্লুম)",
+  D3: "সম্পৃক্ততা ও অংশগ্রহণ",
+  D4: "মূল্যায়ন ও ফিডব্যাক",
+  D5: "শ্রেণিকক্ষের পরিবেশ ও ব্যবস্থাপনা",
+};
+export const OBSERVATION_DOMAIN_LABELS_EN: Record<ObservationDomain, string> = {
+  D1: "Planning & clarity",
+  D2: "Questioning & thinking (Bloom, REF-18 §4)",
+  D3: "Engagement & participation",
+  D4: "Assessment & feedback",
+  D5: "Classroom climate & management",
+};
+
+/** REF-11 domain levels 1–4 (CO-1, §4). Level 3 = the working standard; there is
+ *  NO total/average — a level is recorded per domain and never summed. */
+export const OBSERVATION_LEVELS = [1, 2, 3, 4] as const;
+export type ObservationLevel = (typeof OBSERVATION_LEVELS)[number];
+export const OBSERVATION_LEVEL_LABELS_BN: Record<ObservationLevel, string> = {
+  1: "সহায়তা প্রয়োজন",
+  2: "বিকাশমান",
+  3: "কার্যকর মান",
+  4: "শক্তিশালী",
+};
+export const OBSERVATION_LEVEL_LABELS_EN: Record<ObservationLevel, string> = {
+  1: "Needs support",
+  2: "Developing",
+  3: "Working standard",
+  4: "Strong",
+};
+
+/** The two REF-11 gates (CO-1, §4/§2.1). A gate is PASS/BREACH and stands on its
+ *  own regardless of the domain levels. Non-authoritative §3 echo. */
+export const OBSERVATION_GATES = ["G1", "G2"] as const;
+export type ObservationGate = (typeof OBSERVATION_GATES)[number];
+export const OBSERVATION_GATE_LABELS_BN: Record<ObservationGate, string> = {
+  G1: "নিরাপদ ও সম্মানজনক পরিবেশ",
+  G2: "অন্তর্ভুক্তি ও ন্যায্য আচরণ",
+};
+export const OBSERVATION_GATE_LABELS_EN: Record<ObservationGate, string> = {
+  G1: "Safe & respectful environment",
+  G2: "Inclusion & fair treatment",
+};
+
+/** A gate's outcome (CO-1, §4). A BREACH is recorded independently of the levels. */
+export const GATE_RESULTS = ["PASS", "BREACH"] as const;
+export type GateResult = (typeof GATE_RESULTS)[number];
+export const GATE_RESULT_LABELS_BN: Record<GateResult, string> = {
+  PASS: "উত্তীর্ণ",
+  BREACH: "লঙ্ঘন",
+};
+export const GATE_RESULT_LABELS_EN: Record<GateResult, string> = {
+  PASS: "Pass",
+  BREACH: "Breach",
+};
+
+/** The observation pipeline state (CO-1, §4). UPLOADED → ASSIGNED → REVIEWED
+ *  (releases to the observed teacher; no Principal sign-off) → TEACHER_RESPONDED
+ *  (CO-3). A re-review SUPERSEDES the prior observation. */
+export const OBSERVATION_STATES = [
+  "UPLOADED",
+  "ASSIGNED",
+  "REVIEWED",
+  "TEACHER_RESPONDED",
+  "SUPERSEDED",
+] as const;
+export type ObservationState = (typeof OBSERVATION_STATES)[number];
+export const OBSERVATION_STATE_LABELS_BN: Record<ObservationState, string> = {
+  UPLOADED: "আপলোডকৃত",
+  ASSIGNED: "বরাদ্দকৃত",
+  REVIEWED: "পর্যালোচিত",
+  TEACHER_RESPONDED: "শিক্ষকের জবাব",
+  SUPERSEDED: "প্রতিস্থাপিত",
+};
+export const OBSERVATION_STATE_LABELS_EN: Record<ObservationState, string> = {
+  UPLOADED: "Uploaded",
+  ASSIGNED: "Assigned",
+  REVIEWED: "Reviewed",
+  TEACHER_RESPONDED: "Teacher responded",
+  SUPERSEDED: "Superseded",
+};
+
+/** REF-11 carry-forward: on a re-review, did the prior growth-focus progress?
+ *  (CO-1, §4 — `priorFocusProgress`). */
+export const GROWTH_PROGRESS = ["YES", "PARTLY", "NOT_YET"] as const;
+export type GrowthProgress = (typeof GROWTH_PROGRESS)[number];
+export const GROWTH_PROGRESS_LABELS_BN: Record<GrowthProgress, string> = {
+  YES: "হ্যাঁ",
+  PARTLY: "আংশিক",
+  NOT_YET: "এখনও নয়",
+};
+export const GROWTH_PROGRESS_LABELS_EN: Record<GrowthProgress, string> = {
+  YES: "Yes",
+  PARTLY: "Partly",
+  NOT_YET: "Not yet",
+};
+
+
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
 // =============================================================================
@@ -1772,6 +1902,11 @@ export const PERMISSIONS = [
   "user:manage",
   "audit:read",            // Principal reads; audit is system-appended, never user-written
   "template:manage",       // PRINCIPAL ONLY — edit/reset the generated-message templates (Message Templates, D-#129; verifier-proven exact-holder set, the payroll:approve posture)
+  // classroom observation (app-native; Classroom-Observation module, D-#147/#191)
+  "observation:upload",    // upload a recorded session + ASSIGN a senior-teacher observer (Principal/Office; CO-1)
+  "observation:review",    // TEACHER base perm — the assigned senior-teacher observer scores+comments; the RESOLVER gates it to the assigned observerId (CO-1, D-#147)
+  "observation:read",      // read an observation, ROW-SCOPED in the resolver (observer own; observed teacher own at/after REVIEWED; Principal/Office all). Staff-internal — GUARDIAN none (§7)
+  "observation:manage",    // designations, cadence config, dashboards, override reads (Principal/Office; CO-1)
   // guardian portal (ACTIVE since GP-1, D-#68)
   "guardian:read_child",   // reads linked children's permitted operational slices
 ] as const;
@@ -1815,6 +1950,10 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "user:manage": "build",
   "audit:read": "build",
   "template:manage": "build", // Message Templates MT-1 (Principal-only edit/reset, D-#129)
+  "observation:upload": "build",  // Classroom-Observation CO-1 (upload + assign, D-#195)
+  "observation:review": "build",  // Classroom-Observation CO-1 (assigned-observer scoring, D-#195)
+  "observation:read": "build",    // Classroom-Observation CO-1 (row-scoped read, D-#195)
+  "observation:manage": "build",  // Classroom-Observation CO-1 (config/dashboards, D-#195)
   "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
 };
 
@@ -1837,6 +1976,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "performance:manage", "performance:signoff", "guardian:link", "message:dispatch",
     "user:manage", "audit:read",
     "template:manage",       // PRINCIPAL ONLY (D-#129) — Office/Teacher/Guardian never get it
+    "observation:upload", "observation:read", "observation:manage", // classroom observation (CO-1, D-#195) — NOT observation:review (the observer is an assigned TEACHER, D-#147)
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
   // fills trackers; authors nothing in-app (no content:import). message:dispatch
@@ -1852,6 +1992,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "library:read",          // browse the catalog + own loans/reservations; desk ops only via LibrarianAssignment (D-#81)
     "chat:read", "chat:write", // staff chat (D-#76) — 1:1 + group membership; NO chat:manage (teachers cannot create groups, D-#78)
     "message:dispatch",
+    "observation:review",    // the assigned senior-teacher observer scores+comments — gated to observerId in the resolver (CO-1, D-#147)
+    "observation:read",      // read own observations as observer + own (observed) at/after REVIEWED — row-scoped in the resolver (CO-1)
   ],
   // Roster, guardian linkage, messaging dispatch (REQ §2), plus content import (the
   // publisher seam), plan-review assignment (D-#39), and routine authoring (D-#46).
@@ -1863,6 +2005,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "attendance:manage",     // upload teacher Excel, assign markers, chase guardians (D-#64/#65; no mark)
     "library:read", "library:manage", // the default library desk (D-#81)
     "chat:read", "chat:write", "chat:manage", // staff chat + group/posting-policy admin (D-#76/#78); NO chat:oversee (Principal only, D-#77)
+    "observation:upload", "observation:read", "observation:manage", // classroom observation: upload+assign, row-scoped read, config (CO-1, D-#195); NOT observation:review (the observer is an assigned TEACHER)
   ],
   // Guardian portal v1 (GP-1, D-#68): the single grant is ACTIVE — guardian-scoped
   // resolvers read linked children only (assertGuardianOfStudent, link-scoped).

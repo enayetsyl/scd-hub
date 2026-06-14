@@ -1,5 +1,5 @@
 /**
- * CT-4 RBAC fix (D-#186) — the four class-test READ aggregates must gate
+ * CT-4 RBAC fix (D-#196) — the four class-test READ aggregates must gate
  * `{ authenticated: true }` (the gate helpers enforce access), NOT
  * `{ hasPermission: "tracker:read" }`. OFFICE reads the dashboard + reports (§6/§9)
  * but holds NO `tracker:read`, so the old scope rejected Office at the Pothos
@@ -99,7 +99,7 @@ beforeEach(() => {
 // OFFICE — the regression: previously locked out at scope-auth (no tracker:read)
 // ===========================================================================
 
-describe("OFFICE can now read the dashboard + all three reports (D-#186)", () => {
+describe("OFFICE can now read the dashboard + all three reports (D-#196)", () => {
   test("classTestPrincipalDashboard", async () => {
     const r = await run(Q.dashboard, "OFFICE");
     expect(ok(r)).toBe(true);

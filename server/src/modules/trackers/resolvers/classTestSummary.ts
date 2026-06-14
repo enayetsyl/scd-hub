@@ -10,7 +10,7 @@
  *   - Overdue-chase: `message:dispatch` + Principal/Office (the AS-T4 posture, D-#88
  *     — the Office chases; a teacher never chases themselves).
  *
- * authScopes note (D-#186): the four reads gate `{ authenticated: true }`, NOT
+ * authScopes note (D-#196): the four reads gate `{ authenticated: true }`, NOT
  * `{ hasPermission: "tracker:read" }`. OFFICE legitimately reads the dashboard +
  * reports (§6/§9) but does NOT hold `tracker:read` — gating the scope on it rejected
  * Office at the Pothos scope-auth layer BEFORE the resolver's gate could run, making
@@ -134,7 +134,7 @@ builder.queryField("classTestReportsStatus", (t) =>
     type: [ReportStatusRowRef],
     description:
       "Per-exam Reports Status (CT-4, J5): submitted/pending/overdue + school-days late + report state. " +
-      "Principal/Office unscoped; a teacher must pass a section they can read (assertReportRead, D-#186).",
+      "Principal/Office unscoped; a teacher must pass a section they can read (assertReportRead, D-#196).",
     authScopes: { authenticated: true },
     args: {
       academicYearId: t.arg.string({ required: false }),
@@ -182,7 +182,7 @@ DashboardRef.implement({
 builder.queryField("classTestPrincipalDashboard", (t) =>
   t.field({
     type: DashboardRef,
-    description: "Class-test KPIs + overdue-by-teacher (CT-4, J5). Principal/Office only (assertDashboardAdmin, D-#186).",
+    description: "Class-test KPIs + overdue-by-teacher (CT-4, J5). Principal/Office only (assertDashboardAdmin, D-#196).",
     authScopes: { authenticated: true },
     args: {
       academicYearId: t.arg.string({ required: false }),
@@ -231,7 +231,7 @@ ClassSubjectAnalysisRef.implement({
 builder.queryField("classTestClassSubjectAnalysis", (t) =>
   t.field({
     type: ClassSubjectAnalysisRef,
-    description: "Class×subject progression + trend (CT-4, §9). Principal/Office unscoped; teacher scoped to the section (assertReportRead, D-#186).",
+    description: "Class×subject progression + trend (CT-4, §9). Principal/Office unscoped; teacher scoped to the section (assertReportRead, D-#196).",
     authScopes: { authenticated: true },
     args: {
       sectionId: t.arg.string({ required: true }),
@@ -292,7 +292,7 @@ StudentProfileRef.implement({
 builder.queryField("classTestStudentProfile", (t) =>
   t.field({
     type: StudentProfileRef,
-    description: "A student's class-test profile across subjects (CT-4, J6). Principal/Office unscoped; teacher scoped to the student's section (D-#186).",
+    description: "A student's class-test profile across subjects (CT-4, J6). Principal/Office unscoped; teacher scoped to the student's section (D-#196).",
     authScopes: { authenticated: true },
     args: { studentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
