@@ -1,10 +1,10 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CM-4 BUILT, PR open** — Comments CM-4 [parents'-meeting dispatch + present/absent capture + derived aggregates, server, **VOCAB-FREE / kind-gated** MEETING_SCHEDULE + inline Bangla, D-#176] on `worktree-comments-cm4`. Gate green: **jest 1112/1112** [66 suites], vocab verifier PASS [UNTOUCHED — ran fully parallel with CO-1's vocab lock], shared/server tsc. ACTIVATION FOLLOW-UP recorded: when the vocab lock frees, add NOTIFICATION_KINDS += MEETING_SCHEDULE (+BN/EN, verifier §C.5) + migrate the inline message to a meeting_schedule.* MT key (D-#131) — no logic change. Coordinator reviews + merges. Prior: **CM-3 MERGED** [#74, ParentMeeting + per-family slot gen, D-#174/#175], HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70 [Class Test COMPLETE], VC-5 [Vocab COMPLETE], CM-1 #69, MT #61, HR app #56→#60. **DEP-1..6 DONE — prod LIVE at scdhub.shafayet.me; main branch-protected + GitHub Actions CI/CD; dev env + `dev` branch live; nightly Drive backup.** **Branch workflow CHANGED: feature work now branches from + PRs into `dev` (not main); promote to prod via a deliberate dev→main PR** — CM-4 PR raised against `dev`. In flight: CO-1 [Classroom Observation, sole vocab owner]. Next: CM-5 [MeetingComment + comparison timeline + guardian reads]. Carried follow-up: CT-4 dashboard/reports RBAC locks Office out)_
+_Updated: 2026-06-14 (**CM-4 MERGED** — Comments CM-4 [#76, parents'-meeting dispatch + present/absent capture + derived aggregates, **VOCAB-FREE / kind-gated** MEETING_SCHEDULE + inline Bangla, D-#176]. Merged to MAIN (main-direct flow). Integrated gate green: **jest 1154/1154**, vocab PASS (untouched — ran parallel with CO-1's vocab lock), shared/server tsc. **ACTIVATION FOLLOW-UP:** when convenient, add NOTIFICATION_KINDS += MEETING_SCHEDULE (+BN/EN, §C.5) + migrate the inline message to a meeting_schedule.* MT key (D-#131) — no logic change. Prior: CO-1 #75 [Classroom Observation, D-#194/#195], CM-3 #74, HR-G1 #73 + APP-FU1 #72, CM-2 #71, CT-5 #70 [Class Test COMPLETE], VC-5 [Vocab COMPLETE], MT #61, HR app #56→#60. **DEP-1..6 DONE — prod LIVE + dev env + GitHub Actions CI/CD.** On main as PRDs (not built): Finance (D-#190–#192), per-user Access-control (D-#193). In flight: CT-4-FIX #77. Next: CM-5 [MeetingComment + comparison + guardian reads]; CO-2. Carried follow-up: CT-4 dashboard RBAC (being fixed by #77))_
 
 ## Now / next
 - **Built (Student Comments + Parents-Meeting CM-4 — server, prd-comments-meetings §4.1/§6, J-CM4/J-CM5,
-  D-#176) [branch `worktree-comments-cm4`, PR open — coordinator reviews]:** the FOURTH CM slice — the
+  D-#176) [branch `worktree-comments-cm4`, PR #76 MERGED]:** the FOURTH CM slice — the
   parents'-meeting timing DISPATCH + present/absent capture over the CM-3 `ParentMeeting`/`ParentMeetingSlot`
   arrangement (no new model). **VOCAB-FREE** (CO-1 holds the vocab lock) — `shared/vocab.ts` + the verifier
   UNTOUCHED (git diff empty), so it ran fully parallel with CO-1. **`MeetingDispatchService`:**
@@ -32,6 +32,61 @@ _Updated: 2026-06-14 (**CM-4 BUILT, PR open** — Comments CM-4 [parents'-meetin
   the On-Call message, wa.me-for-all + unreachableCount, the derived aggregates] + 1 firewall check; firewall
   green). **Server-only** (no app — CM-6 is the app slice; expo skipped). **Not verified live.** **Next = CM-5**
   (`MeetingComment` class-teacher-authored + the comparison timeline + guardian `childComments`/`childMeetingSlot` reads).
+- **Built (Classroom Observation CO-1 — server, prd-classroom-observation §4/§5/§6 + J1/J2,
+  D-#146/#147 + build rulings D-#194/#195 [renumbered from #190/#191 at merge — Finance/Access PRDs
+  took #190–#193 on main]) [branch `worktree-classroom-obs-co1`, PR #75 MERGED]:** the FIRST slice of the standalone classroom-observation module —
+  the REF-11 form core + the upload→assign→review→supersede pipeline + the FOUR new app-native
+  permissions. **New `server/src/modules/classroom-observation/`, model `ClassroomObservation`**
+  (DISTINCT from HR-4's `modules/hr/models/Observation` — pre-flight clash check; no touch to HR's
+  model). **Model:** `form ∈ OBSERVATION_FORMS`; session anchor `{routineSlotId?, EXACTLY ONE of
+  sectionId|subjectGroupId, subject, teacherId, classDate, periodNumber?}` (REUSES RoutineSlot/Section/
+  SubjectGroup/HW_SUBJECTS, D-#48/#54/#56; REF11 subject ∈ HW_SUBJECTS, QURAN=CO-5); `observerId?`;
+  REF-11 payload `{domains:[{domain,level1-4,note}]×5, gates:[{gate,result,breachNote?}]×2, oneStrength,
+  growthFocus, prevObservationId?, priorFocusProgress?}` — **NO total/average**; `state ∈
+  OBSERVATION_STATES`; `recordingId?` (CO-2) + `teacherResponse?` (CO-3) present but unset; no schoolId
+  (D-#145). **Pure `ref11.ts` validator** (no DB/clock — the classTestScoring posture): exactly 5
+  distinct domains (1–4 + note), 2 distinct gates, 1 strength + 1 growth focus; **a gate BREACH stands
+  on its own regardless of levels** (§2.1). **`ClassroomObservationService`:** `uploadObservation`
+  (Principal/Office UPLOADED + assign → ASSIGNED, J1; **CONFLICT GUARD observer ≠ observed teacher,
+  refused**), `assignObserver`, `reviewObservation` (ASSIGNED-only + gated to the assigned observerId →
+  **REVIEWED releases to the observed teacher, NO Principal sign-off**, REF-11 §1.3), `requestReReview`
+  (prior REVIEWED → NEW ASSIGNED on the same anchor/recording + prior SUPERSEDED — enables CO-7
+  calibration), reads + the **pure `canReadObservation` row-scope predicate** (observer own; observed
+  teacher own ONLY at/after REVIEWED — UPLOADED/ASSIGNED hidden, never another observer's input;
+  Principal/Office all — §5/D-#28). 7 resolvers (upload/assign/review/reRequest + classroomObservation/
+  teacherClassroomObservations/myObservationReviewQueue, row-scoped). **Vocab (app-native, NO wire/
+  harness sync — SOLE owner this cycle):** OBSERVATION_FORMS/DOMAINS/LEVELS/GATES/GATE_RESULTS/STATES/
+  GROWTH_PROGRESS (+BN/EN) + the **4 NEW permissions** observation:{upload(P/O),review(TEACHER, resolver
+  gates to observerId),read(P/T/O row-scoped),manage(P/O)} (PERMISSIONS + ROLE_PERMISSIONS +
+  PERMISSION_BUILD_STATUS all "build" + OFFICE exact-list) + new verifier §C.16. 4 audit kinds
+  (CLASSROOM_OBSERVATION_UPLOADED/_ASSIGNED/_REVIEWED/_SUPERSEDED, in Audit.ts not vocab); new CO
+  firewall block (corpus ⇄ classroom-observation both ways). **GUARDIAN holds no observation:* perm**
+  (staff-internal, §7). **Gate GREEN (executed):** vocab verifier PASS (incl. §C.16), shared build +
+  shared/server/app tsc clean, **jest 1113/1113** (64 suites; +1 new suite `classroomObservation.test.ts`
+  [40] + 2 firewall CO checks over the 1071 base). **Server-only** (footage upload=CO-2; teacher-response/
+  notify/escalation=CO-3; Quran payload=CO-5; app later; expo skipped). **Not verified live.** **Next =
+  CO-2** (SessionRecording / YouTube-unlisted footage).
+- **Planned (Access Control — per-user permissions, build contract written, D-#193):**
+  role becomes an editable-per-person TEMPLATE; effective = (∪ templates ∪ granted) − revoked,
+  reserved-locked set {payroll:approve, performance:signoff, chat:oversee, template:manage,
+  access:manage} Principal-only. Additive 3 fields on `User` (zero migration), one resolver
+  seam swap (`effectivePermissions`/`callerHasPermission`), new `access:manage` perm +
+  `PERMISSION_LABELS_BN/EN` (app-native vocab, NO wire sync). Guardian plane untouched.
+  Slices **AC-1** (server: fields+seam+mutations+audit+`access:manage`) → **AC-2** (app: Principal
+  editor screen w/ provenance chips). **Next = build AC-1 per `docs/prd-access-control.md` §6,
+  slice order AC-1→AC-2.**
+- **Planned (Finance/Accounting module FIN-1..FIN-6, D-#186–#192):** REQ scoped in
+  docs/finance-requirements.md — migrate the SCD Google-Sheet accounting layer (Daily,
+  Budget-vs-Actual, Qard/IOU Central, Bank & Online, Master Dashboard) into the app.
+  Eximus stays parallel (no live link); app reconciles vs bank statement AND an entered
+  Eximus control figure (FIN-4). Salary/payroll CARVED OUT — HR module owns it; FIN posts
+  the monthly net-payable total only. Staff salary-recoverable advances stay in HR; FIN
+  Qard/IOU register owns community/non-salary loans+advances. One school (no branch),
+  identity-plane only (ADR-005), reuse Office/Principal RBAC. Zakat = roster-linked,
+  effective-dated, append-only allocation + provider receivable + auto guardian/provider
+  fee-split. App-native vocab in later PRDs (NO wire sync expected, AGENTS rule 5). Plan/docs
+  only — nothing built. **Next = build FIN-1 (Ledgers & opening balances) per
+  docs/finance-requirements.md §4/§6, slice order FIN-1→FIN-6 (separate session).**
 - **Built (Student Comments + Parents-Meeting CM-3 — server, prd-comments-meetings §3/§6, D-#123,
   J-CM3/J-CM4 + build rulings D-#174/#175) [branch `worktree-comments-cm3`, PR open — coordinator reviews]:**
   the THIRD CM slice — the `ParentMeeting` + per-family `ParentMeetingSlot` models, slot generation, On-Call,
