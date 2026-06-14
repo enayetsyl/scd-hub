@@ -1,8 +1,33 @@
 # STATUS
 
-_Updated: 2026-06-14 (**VC-4 + CT-2 both MERGED** — Vocab VC-4 [#65, read aggregates + persistent weak words + guardian messages on the MT registry + childVocab, D-#153/#154/#155] + Class Test CT-2 [#64, per-student results + scoring + school-day deadline/overdue, D-#158/#159]. Ran PARALLEL, disjoint bands + enums → NO renumber (VC-4 merged 1st, CT-2 keep-both rebase = DECISIONS-only). Integrated gate green on main 63a3163: **jest 1006/1006** [58 suites], vocab PASS, shared/server/app tsc. Earlier this run: VC-3 #62 + CT-1 #63 [D-#142–#145], Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. Parked vocab-toucher: CM-1; planned standalone: CO-1. Next: VC-5 [app] / CT-3 [publish+guardian] continue their chains)_
+_Updated: 2026-06-14 (**VC-4 + CT-2 both MERGED** — Vocab VC-4 [#65, read aggregates + persistent weak words + guardian messages on the MT registry + childVocab, D-#153/#154/#155] + Class Test CT-2 [#64, per-student results + scoring + school-day deadline/overdue, D-#158/#159]. Ran PARALLEL, disjoint bands + enums → NO renumber (VC-4 merged 1st, CT-2 keep-both rebase = DECISIONS-only). Integrated gate green on main 63a3163: **jest 1006/1006** [58 suites], vocab PASS, shared/server/app tsc. Earlier this run: VC-3 #62 + CT-1 #63 [D-#142–#145], Classroom Observation PRD [D-#146–#152], MT #61, HR app #56→#60. Parked vocab-toucher: CM-1; planned standalone: CO-1. Next: VC-5 [app] / CT-3 [publish+guardian] continue their chains. **This run: VC-5 built [branch worktree-vocab-vc5, APP-ONLY, app tsc + expo web export green, jest 1006/1006 unchanged] — the vocab module's 10 app screens + guardian card; COMPLETES the Vocabulary Tracker VC-1..VC-5. NO server/shared/vocab change.**)_
 
 ## Now / next
+- **Built (Vocabulary Tracker VC-5 — Expo app, APP-ONLY, prd-vocabulary-tracker §6 VC-5 + J1–J7)
+  [branch `worktree-vocab-vc5`, PR open — coordinator reviews] — COMPLETES the Vocabulary Tracker
+  (VC-1..VC-5):** the app surfaces over the merged VC-1..VC-4 resolvers. **NO server / shared / vocab /
+  contract change** (proven: `git diff origin/main -- server shared` empty) — consumes existing resolvers
+  + adds client ops/labels/screens only. New **🔤 Vocab tab** gated `tracker:read` OR `roster:manage`
+  (Principal/Teacher read+build+mark; Office does the weekly assignment + message generation; GUARDIAN
+  never sees it). **10 screens (`VocabStack`):** VocabHome (hub + `myVocabAssignments`); **VocabWordBank**
+  (J1 — program×classLevel CRUD, the `assertCanManageClassLevel` reach gate surfaced); **VocabTests**
+  (browse a section×program's tests → mark/report/messages, + new-test); **BuildVocabTest** (J3 —
+  `createVocabTest` then per-direction word selection → `setVocabTestPositions`; operator-gated);
+  **VocabMarkGrid** (J4 — per-student PRESENT/ABSENT + tap-wrong cells, a 2-field DICTATION shows two
+  sub-fields via `VOCAB_DICTATION_FIELDS`, wholesale `submitVocabStudentResult`, prefilled from
+  `vocabTestResults`, derived score badge); **VocabReport** (J5 per-test rollup + students + most-missed);
+  **VocabStudentReport** (J5 per-student dashboard + persistent weak words + Weekly/Monthly/Last-N
+  cumulative toggle); **VocabClassReport** (J5 class dashboard + most-missed); **VocabMessages** (J6 —
+  `generateVocabTestMessages` + `generateVocabCumulativeMessages` → recipients with wa.me Send
+  [`Linking.openURL`, ADR-003] + in-app/unreachable counts); **VocabAssignment** (J2 — `assignVocabTester`
+  roster:manage + current/history). **Guardian portal lit up (J7):** a read-only Vocabulary-results card
+  on GuardianHome (`childVocab`, marked-tests-only per D-#155). New `components/vocabPickers.tsx`
+  (ProgramSelect/ClassLevelSelect/ClassSectionSelect) + vocab ops + BN/EN labels + helpers +
+  `VocabStackParamList`. Every surface gated on the SAME permission the server enforces — the server stays
+  the gate (Bangla deny surfaces inline). **No new build ruling needed** (pure app slice; no new
+  perm/vocab). **Gate GREEN (executed):** app `tsc --noEmit` clean + `expo export --platform web` green
+  (728 modules); no-drift — vocab verifier PASS + **jest 1006/1006 unchanged** (server untouched).
+  **Not verified live.** **Vocabulary Tracker is now fully built server + app (VC-1..VC-5).**
 - **Built (Vocabulary Tracker VC-4 — server, prd-vocabulary-tracker §6/§8/§9, J5/J6/J7, build rulings
   D-#153/#154/#155) [branch `worktree-vocab-vc4`, PR #65 MERGED]:** the FOURTH vocab slice —
   read aggregates + persistent weak words + guardian messages + the guardian child read. **Vocab (app-native,

@@ -4332,3 +4332,457 @@ export const RESET_MESSAGE_TEMPLATE = gql<
     resetMessageTemplate(key: $key) { key reset }
   }
 `;
+
+// ===========================================================================
+// Vocabulary Tracker (VC-5 app surfaces over the merged VC-1..VC-4 resolvers)
+// ===========================================================================
+
+// --- VC-1 word bank --------------------------------------------------------
+
+export interface VocabWordT {
+  id: string;
+  program: string;
+  classLevel: number;
+  headword: string;
+  banglaMeaning: string;
+  active: boolean;
+}
+
+const VOCAB_WORD_FIELDS = `id program classLevel headword banglaMeaning active`;
+
+export const VOCAB_WORDS_QUERY = gql<
+  { vocabWords: VocabWordT[] },
+  { program: string; classLevel: number; includeInactive?: boolean | null }
+>`
+  query VocabWords($program: String!, $classLevel: Int!, $includeInactive: Boolean) {
+    vocabWords(program: $program, classLevel: $classLevel, includeInactive: $includeInactive) { ${VOCAB_WORD_FIELDS} }
+  }
+`;
+
+export const ADD_VOCAB_WORD = gql<
+  { addVocabWord: VocabWordT },
+  { program: string; classLevel: number; headword: string; banglaMeaning: string }
+>`
+  mutation AddVocabWord($program: String!, $classLevel: Int!, $headword: String!, $banglaMeaning: String!) {
+    addVocabWord(program: $program, classLevel: $classLevel, headword: $headword, banglaMeaning: $banglaMeaning) { ${VOCAB_WORD_FIELDS} }
+  }
+`;
+
+export const EDIT_VOCAB_WORD = gql<
+  { editVocabWord: VocabWordT },
+  { wordId: string; headword?: string | null; banglaMeaning?: string | null }
+>`
+  mutation EditVocabWord($wordId: String!, $headword: String, $banglaMeaning: String) {
+    editVocabWord(wordId: $wordId, headword: $headword, banglaMeaning: $banglaMeaning) { ${VOCAB_WORD_FIELDS} }
+  }
+`;
+
+export const SET_VOCAB_WORD_ACTIVE = gql<
+  { setVocabWordActive: VocabWordT },
+  { wordId: string; active: boolean }
+>`
+  mutation SetVocabWordActive($wordId: String!, $active: Boolean!) {
+    setVocabWordActive(wordId: $wordId, active: $active) { ${VOCAB_WORD_FIELDS} }
+  }
+`;
+
+// --- VC-2 tests + positions + weekly assignment ----------------------------
+
+export interface VocabTestT {
+  id: string;
+  program: string;
+  sectionId: string;
+  classLevel: number;
+  testDate: string;
+  weekOf: string;
+  label: string;
+  totalMarks: number;
+  dictationHalfMissCounts: boolean;
+  status: string;
+}
+
+const VOCAB_TEST_FIELDS = `id program sectionId classLevel testDate weekOf label totalMarks dictationHalfMissCounts status`;
+
+export const VOCAB_TESTS_QUERY = gql<
+  { vocabTests: VocabTestT[] },
+  { sectionId?: string | null; program?: string | null; weekOf?: string | null }
+>`
+  query VocabTests($sectionId: String, $program: String, $weekOf: String) {
+    vocabTests(sectionId: $sectionId, program: $program, weekOf: $weekOf) { ${VOCAB_TEST_FIELDS} }
+  }
+`;
+
+export const VOCAB_TEST_QUERY = gql<{ vocabTest: VocabTestT | null }, { testId: string }>`
+  query VocabTest($testId: String!) {
+    vocabTest(testId: $testId) { ${VOCAB_TEST_FIELDS} }
+  }
+`;
+
+export const CREATE_VOCAB_TEST = gql<
+  { createVocabTest: VocabTestT },
+  { program: string; sectionId: string; classLevel: number; label: string; totalMarks: number; dictationHalfMissCounts?: boolean | null; testDate?: string | null }
+>`
+  mutation CreateVocabTest($program: String!, $sectionId: String!, $classLevel: Int!, $label: String!, $totalMarks: Int!, $dictationHalfMissCounts: Boolean, $testDate: String) {
+    createVocabTest(program: $program, sectionId: $sectionId, classLevel: $classLevel, label: $label, totalMarks: $totalMarks, dictationHalfMissCounts: $dictationHalfMissCounts, testDate: $testDate) { ${VOCAB_TEST_FIELDS} }
+  }
+`;
+
+export const UPDATE_VOCAB_TEST = gql<
+  { updateVocabTest: VocabTestT },
+  { testId: string; label?: string | null; totalMarks?: number | null; dictationHalfMissCounts?: boolean | null; testDate?: string | null }
+>`
+  mutation UpdateVocabTest($testId: String!, $label: String, $totalMarks: Int, $dictationHalfMissCounts: Boolean, $testDate: String) {
+    updateVocabTest(testId: $testId, label: $label, totalMarks: $totalMarks, dictationHalfMissCounts: $dictationHalfMissCounts, testDate: $testDate) { ${VOCAB_TEST_FIELDS} }
+  }
+`;
+
+export interface VocabPositionT {
+  id: string;
+  testId: string;
+  direction: string;
+  qNumber: number;
+  wordId: string;
+}
+
+const VOCAB_POSITION_FIELDS = `id testId direction qNumber wordId`;
+
+export const VOCAB_TEST_POSITIONS_QUERY = gql<
+  { vocabTestPositions: VocabPositionT[] },
+  { testId: string }
+>`
+  query VocabTestPositions($testId: String!) {
+    vocabTestPositions(testId: $testId) { ${VOCAB_POSITION_FIELDS} }
+  }
+`;
+
+export interface VocabPositionSelectionIn {
+  direction: string;
+  wordIds: string[];
+}
+
+export const SET_VOCAB_TEST_POSITIONS = gql<
+  { setVocabTestPositions: VocabPositionT[] },
+  { testId: string; selections: VocabPositionSelectionIn[] }
+>`
+  mutation SetVocabTestPositions($testId: String!, $selections: [VocabPositionSelectionInput!]!) {
+    setVocabTestPositions(testId: $testId, selections: $selections) { ${VOCAB_POSITION_FIELDS} }
+  }
+`;
+
+export interface VocabAssignmentT {
+  id: string;
+  sectionId: string;
+  program: string;
+  weekOf: string;
+  assignedTeacherId: string;
+  assignedBy: string;
+  source: string;
+  proxyGrantId: string | null;
+  createdAt: string;
+}
+
+const VOCAB_ASSIGNMENT_FIELDS = `id sectionId program weekOf assignedTeacherId assignedBy source proxyGrantId createdAt`;
+
+export const ASSIGN_VOCAB_TESTER = gql<
+  { assignVocabTester: VocabAssignmentT },
+  { sectionId: string; program: string; weekOf: string; teacherId: string }
+>`
+  mutation AssignVocabTester($sectionId: String!, $program: String!, $weekOf: String!, $teacherId: String!) {
+    assignVocabTester(sectionId: $sectionId, program: $program, weekOf: $weekOf, teacherId: $teacherId) { ${VOCAB_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const VOCAB_TESTER_ASSIGNMENT_QUERY = gql<
+  { vocabTesterAssignment: VocabAssignmentT | null },
+  { sectionId: string; program: string; weekOf: string }
+>`
+  query VocabTesterAssignment($sectionId: String!, $program: String!, $weekOf: String!) {
+    vocabTesterAssignment(sectionId: $sectionId, program: $program, weekOf: $weekOf) { ${VOCAB_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const VOCAB_ASSIGNMENT_HISTORY_QUERY = gql<
+  { vocabAssignmentHistory: VocabAssignmentT[] },
+  { sectionId: string; program: string }
+>`
+  query VocabAssignmentHistory($sectionId: String!, $program: String!) {
+    vocabAssignmentHistory(sectionId: $sectionId, program: $program) { ${VOCAB_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const MY_VOCAB_ASSIGNMENTS_QUERY = gql<
+  { myVocabAssignments: VocabAssignmentT[] },
+  { fromWeek?: string | null }
+>`
+  query MyVocabAssignments($fromWeek: String) {
+    myVocabAssignments(fromWeek: $fromWeek) { ${VOCAB_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+// --- VC-3 marking + derived per-student result -----------------------------
+
+export interface VocabWrongWordT {
+  positionId: string;
+  wordId: string;
+  direction: string;
+  headword: string;
+  banglaMeaning: string;
+  wrongFields: number[];
+}
+
+export interface VocabStudentResultT {
+  testId: string;
+  studentId: string;
+  status: string;
+  score: number | null;
+  totalMarks: number;
+  marksLost: number | null;
+  wrongCount: number | null;
+  wrongWords: VocabWrongWordT[];
+}
+
+const VOCAB_RESULT_FIELDS = `
+  testId studentId status score totalMarks marksLost wrongCount
+  wrongWords { positionId wordId direction headword banglaMeaning wrongFields }
+`;
+
+export const VOCAB_TEST_RESULTS_QUERY = gql<
+  { vocabTestResults: VocabStudentResultT[] },
+  { testId: string }
+>`
+  query VocabTestResults($testId: String!) {
+    vocabTestResults(testId: $testId) { ${VOCAB_RESULT_FIELDS} }
+  }
+`;
+
+export interface VocabMistakeIn {
+  positionId: string;
+  wrongFields: number[];
+}
+
+export const SUBMIT_VOCAB_STUDENT_RESULT = gql<
+  { submitVocabStudentResult: VocabStudentResultT },
+  { testId: string; studentId: string; status: string; mistakes?: VocabMistakeIn[] | null }
+>`
+  mutation SubmitVocabStudentResult($testId: String!, $studentId: String!, $status: String!, $mistakes: [VocabMistakeInput!]) {
+    submitVocabStudentResult(testId: $testId, studentId: $studentId, status: $status, mistakes: $mistakes) { ${VOCAB_RESULT_FIELDS} }
+  }
+`;
+
+// --- VC-4 reports / dashboards / cumulative --------------------------------
+
+export interface VocabTestMetaT {
+  testId: string;
+  program: string;
+  sectionId: string;
+  classLevel: number;
+  label: string;
+  testDate: string;
+  totalMarks: number;
+  status: string;
+}
+
+export interface VocabScoreRollupT {
+  presentCount: number;
+  absentCount: number;
+  totalScore: number;
+  totalPossible: number;
+  averageScore: number;
+  averageTotal: number;
+}
+
+export interface VocabMissedWordT {
+  wordId: string;
+  headword: string;
+  banglaMeaning: string;
+  missedBy: number;
+  missedPct: number;
+  flagged: boolean;
+  directions: string[];
+}
+
+export interface VocabPersistentWordT {
+  wordId: string;
+  headword: string;
+  banglaMeaning: string;
+  missCount: number;
+  directions: string[];
+}
+
+const VOCAB_TEST_META_FIELDS = `testId program sectionId classLevel label testDate totalMarks status`;
+const VOCAB_ROLLUP_FIELDS = `presentCount absentCount totalScore totalPossible averageScore averageTotal`;
+const VOCAB_MISSED_FIELDS = `wordId headword banglaMeaning missedBy missedPct flagged directions`;
+const VOCAB_PERSISTENT_FIELDS = `wordId headword banglaMeaning missCount directions`;
+
+export interface VocabTestReportT {
+  test: VocabTestMetaT;
+  rollup: VocabScoreRollupT;
+  students: VocabStudentResultT[];
+  mostMissed: VocabMissedWordT[];
+}
+
+export const VOCAB_TEST_REPORT_QUERY = gql<
+  { vocabTestReport: VocabTestReportT | null },
+  { testId: string; classPersistentPct?: number | null }
+>`
+  query VocabTestReport($testId: String!, $classPersistentPct: Float) {
+    vocabTestReport(testId: $testId, classPersistentPct: $classPersistentPct) {
+      test { ${VOCAB_TEST_META_FIELDS} }
+      rollup { ${VOCAB_ROLLUP_FIELDS} }
+      students { ${VOCAB_RESULT_FIELDS} }
+      mostMissed { ${VOCAB_MISSED_FIELDS} }
+    }
+  }
+`;
+
+export interface VocabStudentTestEntryT {
+  test: VocabTestMetaT;
+  result: VocabStudentResultT;
+}
+
+export interface VocabStudentDashboardT {
+  studentId: string;
+  perTest: VocabStudentTestEntryT[];
+  rollup: VocabScoreRollupT;
+  persistentWords: VocabPersistentWordT[];
+}
+
+export const VOCAB_STUDENT_DASHBOARD_QUERY = gql<
+  { vocabStudentDashboard: VocabStudentDashboardT },
+  { studentId: string; program?: string | null; persistentMinTests?: number | null }
+>`
+  query VocabStudentDashboard($studentId: String!, $program: String, $persistentMinTests: Int) {
+    vocabStudentDashboard(studentId: $studentId, program: $program, persistentMinTests: $persistentMinTests) {
+      studentId
+      perTest { test { ${VOCAB_TEST_META_FIELDS} } result { ${VOCAB_RESULT_FIELDS} } }
+      rollup { ${VOCAB_ROLLUP_FIELDS} }
+      persistentWords { ${VOCAB_PERSISTENT_FIELDS} }
+    }
+  }
+`;
+
+export interface VocabClassTestEntryT {
+  test: VocabTestMetaT;
+  rollup: VocabScoreRollupT;
+}
+
+export interface VocabClassDashboardT {
+  sectionId: string;
+  program: string | null;
+  tests: VocabClassTestEntryT[];
+  rollup: VocabScoreRollupT;
+  mostMissed: VocabMissedWordT[];
+}
+
+export const VOCAB_CLASS_DASHBOARD_QUERY = gql<
+  { vocabClassDashboard: VocabClassDashboardT },
+  { sectionId: string; program?: string | null; classPersistentPct?: number | null }
+>`
+  query VocabClassDashboard($sectionId: String!, $program: String, $classPersistentPct: Float) {
+    vocabClassDashboard(sectionId: $sectionId, program: $program, classPersistentPct: $classPersistentPct) {
+      sectionId program
+      tests { test { ${VOCAB_TEST_META_FIELDS} } rollup { ${VOCAB_ROLLUP_FIELDS} } }
+      rollup { ${VOCAB_ROLLUP_FIELDS} }
+      mostMissed { ${VOCAB_MISSED_FIELDS} }
+    }
+  }
+`;
+
+export interface VocabCumulativeT {
+  studentId: string;
+  program: string | null;
+  mode: string;
+  periodLabel: string;
+  numTests: number;
+  rollup: VocabScoreRollupT;
+  persistentWords: VocabPersistentWordT[];
+  testIds: string[];
+}
+
+export const VOCAB_STUDENT_CUMULATIVE_QUERY = gql<
+  { vocabStudentCumulative: VocabCumulativeT },
+  { studentId: string; program?: string | null; mode?: string | null; asOf?: string | null; n?: number | null; persistentMinTests?: number | null }
+>`
+  query VocabStudentCumulative($studentId: String!, $program: String, $mode: String, $asOf: String, $n: Int, $persistentMinTests: Int) {
+    vocabStudentCumulative(studentId: $studentId, program: $program, mode: $mode, asOf: $asOf, n: $n, persistentMinTests: $persistentMinTests) {
+      studentId program mode periodLabel numTests
+      rollup { ${VOCAB_ROLLUP_FIELDS} }
+      persistentWords { ${VOCAB_PERSISTENT_FIELDS} }
+      testIds
+    }
+  }
+`;
+
+// --- VC-4 guardian message generation --------------------------------------
+
+export interface VocabMessageRecipientT {
+  studentId: string;
+  studentName: string;
+  kind: string;
+  messageBn: string;
+  waLink: string | null;
+  unreachableByWa: boolean;
+  notifiedGuardianIds: string[];
+}
+
+const VOCAB_RECIPIENT_FIELDS = `studentId studentName kind messageBn waLink unreachableByWa notifiedGuardianIds`;
+
+export interface GenerateVocabMessagesResultT {
+  testId: string;
+  recipients: VocabMessageRecipientT[];
+  unreachableCount: number;
+}
+
+export const GENERATE_VOCAB_TEST_MESSAGES = gql<
+  { generateVocabTestMessages: GenerateVocabMessagesResultT },
+  { testId: string }
+>`
+  mutation GenerateVocabTestMessages($testId: String!) {
+    generateVocabTestMessages(testId: $testId) {
+      testId unreachableCount
+      recipients { ${VOCAB_RECIPIENT_FIELDS} }
+    }
+  }
+`;
+
+export interface GenerateVocabCumulativeResultT {
+  sectionId: string;
+  program: string | null;
+  recipients: VocabMessageRecipientT[];
+  unreachableCount: number;
+}
+
+export const GENERATE_VOCAB_CUMULATIVE_MESSAGES = gql<
+  { generateVocabCumulativeMessages: GenerateVocabCumulativeResultT },
+  { sectionId: string; program?: string | null; mode?: string | null; asOf?: string | null; n?: number | null }
+>`
+  mutation GenerateVocabCumulativeMessages($sectionId: String!, $program: String, $mode: String, $asOf: String, $n: Int) {
+    generateVocabCumulativeMessages(sectionId: $sectionId, program: $program, mode: $mode, asOf: $asOf, n: $n) {
+      sectionId program unreachableCount
+      recipients { ${VOCAB_RECIPIENT_FIELDS} }
+    }
+  }
+`;
+
+// --- VC-4 guardian child read (read-only, marked-only) ---------------------
+
+export interface ChildVocabResultT {
+  testId: string;
+  program: string;
+  label: string;
+  testDate: string;
+  classLevel: number;
+  result: VocabStudentResultT;
+}
+
+export const CHILD_VOCAB_QUERY = gql<
+  { childVocab: ChildVocabResultT[] },
+  { studentId: string; program?: string | null }
+>`
+  query ChildVocab($studentId: String!, $program: String) {
+    childVocab(studentId: $studentId, program: $program) {
+      testId program label testDate classLevel
+      result { ${VOCAB_RESULT_FIELDS} }
+    }
+  }
+`;
