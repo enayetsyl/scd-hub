@@ -5,7 +5,7 @@
  * history. `roster:manage`.
  */
 import React, { useState } from "react";
-import { View, ScrollView } from "react-native";
+import { View, ScrollView, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import {
@@ -27,7 +27,7 @@ import { space } from "../../theme/tokens";
 type Props = NativeStackScreenProps<AdminStackParamList, "AssignClassTeacher">;
 
 export default function AssignClassTeacherScreen({ navigation }: Props): React.ReactElement {
-  const { selection, hasSection } = useSectionContext();
+  const { selection, hasSection, setSection } = useSectionContext();
   const [teacherId, setTeacherId] = useState("");
   const [supportId, setSupportId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -105,25 +105,42 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
         {ok ? <Notice message={ok} tone="ok" /> : null}
         {error ? <Notice message={error} tone="danger" /> : null}
 
-        {/* Overview of all sections (CT1.3/CT1.4) */}
-        <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.ctOverview}</Body>
+        {/* Overview of all sections (CT1.3/CT1.4) — tap a row to manage that section. */}
+        <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.ctOverview}</Body>
+        <Muted style={{ marginBottom: space(2) }}>{STR.ctTapToManage}</Muted>
         {classes.map((c) => (
           <Card key={c.id}>
             <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{classLevelLabel(c.level)}</Muted>
             {c.sections.map((s) => {
               const n = s.classTeacherId ? ctCount.get(s.classTeacherId) ?? 1 : 0;
+              const active = selection.sectionId === s.id;
+              const supportIds = s.supportTeacherIds ?? [];
               return (
-                <View key={s.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 2, gap: space(2) }}>
-                  <Body style={{ flex: 1 }}>
-                    {s.nameBn}
-                    {s.supportTeacherIds && s.supportTeacherIds.length > 0 ? ` · +${bnNum(s.supportTeacherIds.length)}` : ""}
-                  </Body>
+                <Pressable
+                  key={s.id}
+                  onPress={() => setSection({ classId: c.id, sectionId: s.id, classLevel: c.level, classNameBn: c.nameBn, sectionNameBn: s.nameBn })}
+                  style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingVertical: space(1), gap: space(2) }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Body style={{ fontWeight: active ? "700" : "400" }}>
+                      {s.nameBn}
+                      {active ? "  ✓" : ""}
+                    </Body>
+                    {s.classTeacherId ? (
+                      <Muted>{nameOf(s.classTeacherId)}{n > 1 ? ` · ${bnNum(n)} ${STR.ctSections}` : ""}</Muted>
+                    ) : (
+                      <Muted>{STR.ctUnassigned}</Muted>
+                    )}
+                    {supportIds.length > 0 ? (
+                      <Muted>{STR.ctSupport}: {supportIds.map(nameOf).join(", ")}</Muted>
+                    ) : null}
+                  </View>
                   {s.classTeacherId ? (
-                    <Badge text={n > 1 ? `✓ ${bnNum(n)} ${STR.ctSections}` : "✓"} tone={n > 1 ? "warn" : "ok"} />
+                    <Badge text={n > 1 ? `${bnNum(n)} ${STR.ctSections}` : "✓"} tone={n > 1 ? "warn" : "ok"} />
                   ) : (
                     <Badge text={STR.ctUnassigned} tone="muted" />
                   )}
-                </View>
+                </Pressable>
               );
             })}
           </Card>

@@ -3,6 +3,9 @@ import {
   assignProxy,
   revokeProxy,
   extendProxy,
+  grantTeaching,
+  revokeTeaching,
+  teachingGrantsForSection,
   grantView,
   type ScopeGrantView,
 } from "../services/ScopeGrantService";
@@ -15,6 +18,7 @@ ScopeGrantRef.implement({
     id: t.exposeString("id"),
     kind: t.exposeString("kind"),
     active: t.exposeBoolean("active"),
+    teacherId: t.string({ nullable: true, resolve: (g) => g.teacherId }),
     classId: t.string({ nullable: true, resolve: (g) => g.classId }),
     sectionId: t.string({ nullable: true, resolve: (g) => g.sectionId }),
     subjectId: t.string({ nullable: true, resolve: (g) => g.subjectId }),
@@ -62,6 +66,53 @@ builder.queryField("proxyGrants", (t) =>
       if (args.activeOnly !== false) filter.active = true;
       const grants = await ScopeGrant.find(filter).sort({ createdAt: -1 }).lean();
       return grants.map(grantView);
+    },
+  }),
+);
+
+builder.queryField("teachingGrants", (t) =>
+  t.field({
+    type: [ScopeGrantRef],
+    authScopes: { hasPermission: "user:manage" },
+    description: "Active teaching grants (subject-teacher assignments) for a section — D-#17.",
+    args: { sectionId: t.arg.string({ required: true }) },
+    resolve: (_root, args) => teachingGrantsForSection(args.sectionId),
+  }),
+);
+
+builder.mutationField("grantTeaching", (t) =>
+  t.field({
+    type: ProxyGrantIdResultRef,
+    authScopes: { hasPermission: "user:manage" },
+    description: "Assign a subject teacher (teaching grant) to a section — Principal/Admin only. Idempotent on (teacher, section, subject).",
+    args: {
+      teacherId: t.arg.string({ required: true }),
+      sectionId: t.arg.string({ required: true }),
+      subjectId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new Error("Unauthenticated");
+      const grantId = await grantTeaching({
+        teacherId: args.teacherId,
+        sectionId: args.sectionId,
+        subjectId: args.subjectId,
+        assignedBy: ctx.auth.userId,
+      });
+      return { grantId };
+    },
+  }),
+);
+
+builder.mutationField("revokeTeaching", (t) =>
+  t.field({
+    type: "Boolean",
+    authScopes: { hasPermission: "user:manage" },
+    description: "Revoke a subject-teacher (teaching) grant",
+    args: { grantId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new Error("Unauthenticated");
+      await revokeTeaching(args.grantId, ctx.auth.userId);
+      return true;
     },
   }),
 );
