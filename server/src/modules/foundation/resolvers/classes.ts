@@ -122,9 +122,16 @@ builder.mutationField("createAcademicYear", (t) =>
       if (!ctx.auth) throw new Error("Unauthenticated");
       const label = args.label.trim();
       if (!label) throw new Error("A label is required");
+      // The model requires a start/end span; derive a calendar year from the label
+      // (e.g. "2027" → 2027-01-01 .. 2027-12-31). Bangladesh school years run Jan–Dec.
+      const yearMatch = label.match(/\d{4}/);
+      if (!yearMatch) throw new Error("A 4-digit year is required (e.g. 2027)");
+      const y = Number(yearMatch[0]);
+      const startDate = new Date(Date.UTC(y, 0, 1));
+      const endDate = new Date(Date.UTC(y, 11, 31));
       const makeCurrent = args.makeCurrent === true;
       if (makeCurrent) await AcademicYear.updateMany({}, { current: false });
-      const year = await AcademicYear.create({ label, current: makeCurrent });
+      const year = await AcademicYear.create({ label, startDate, endDate, current: makeCurrent });
       await writeAudit({
         eventKind: "ACADEMIC_YEAR_CREATED",
         actorId: ctx.auth.userId,

@@ -89,7 +89,7 @@ export default function StaffCredentialsScreen(_props: Props): React.ReactElemen
 
       <Divider />
 
-      {fetching ? (
+      {fetching && !data ? (
         <Loader label={STR.loading} />
       ) : error ? (
         <Notice message={friendlyError(error)} tone="danger" />
