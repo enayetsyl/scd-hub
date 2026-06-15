@@ -78,6 +78,10 @@ jest.mock("../modules/finance/models/FinancePosting", () => ({
 jest.mock("../modules/finance/models/LedgerOpeningBalance", () => ({
   LedgerOpeningBalance: makeModel(mockOpenings, "ob"),
 }));
+// FIN-3 folds Qard/IOU into the seam/snapshot — these FIN-2A tests have none.
+jest.mock("../modules/finance/models/QardIouEntry", () => ({
+  QardIouEntry: { find: () => ({ lean: () => Promise.resolve([]) }) },
+}));
 jest.mock("../modules/hr/models/PayrollRun", () => ({
   PayrollRun: { findOne: (q: Record<string, unknown>) => ({ lean: () => Promise.resolve(mockRuns.find((r) => matches(r, q)) ?? null) }) },
 }));

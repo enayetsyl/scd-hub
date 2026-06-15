@@ -20,7 +20,9 @@ import {
   type ILedgerOpeningBalance,
 } from "../models/LedgerOpeningBalance";
 import { FinancePosting } from "../models/FinancePosting";
+import { QardIouEntry } from "../models/QardIouEntry";
 import { sumLedgerDelta, type PostingLike } from "../postingMath";
+import { sumQardDelta, type QardEntryLike } from "../qardIouMath";
 import { writeAudit } from "../../platform/services/AuditService";
 
 /** A write-time rejection surfaced to the caller as a Bangla message (the "422" shape). */
@@ -138,6 +140,23 @@ export async function loadPostingsAsOf(asOf: Date): Promise<PostingLike[]> {
   }));
 }
 
+/** Load Qard/IOU entries dated ≤ asOf as the pure shape (the FIN-3 seam extension). */
+export async function loadQardEntriesAsOf(asOf: Date): Promise<QardEntryLike[]> {
+  const rows = await QardIouEntry.find({ date: { $lte: asOf } }).lean<
+    Array<{ type: string; direction: string; amount: number; date: Date; mode: string; partyId?: unknown; dueDate?: Date | null; reversesEntryId?: unknown }>
+  >();
+  return rows.map((r) => ({
+    type: r.type,
+    direction: r.direction,
+    amount: r.amount,
+    date: new Date(r.date),
+    mode: r.mode,
+    partyId: r.partyId ? (r.partyId as { toString(): string }).toString() : undefined,
+    dueDate: r.dueDate ? new Date(r.dueDate) : null,
+    reversesEntryId: r.reversesEntryId ?? null,
+  }));
+}
+
 /** Load every declaration as the pure shape (newest declarations included). */
 export async function loadDeclarations(): Promise<OpeningDeclaration[]> {
   const rows = await LedgerOpeningBalance.find().lean<OpeningDeclaration[]>();
@@ -173,18 +192,33 @@ export async function ledgerBalanceAsOf(
   if (!LEDGER_SET.has(ledger)) {
     throw new FinanceError(`অজানা লেজার: ${ledger}`);
   }
-  const [declarations, postings] = await Promise.all([loadDeclarations(), loadPostingsAsOf(asOf)]);
-  return openingFor(declarations, ledger, asOf) + sumLedgerDelta(postings, ledger, asOf);
+  const [declarations, postings, qard] = await Promise.all([
+    loadDeclarations(),
+    loadPostingsAsOf(asOf),
+    loadQardEntriesAsOf(asOf),
+  ]);
+  return (
+    openingFor(declarations, ledger, asOf) +
+    sumLedgerDelta(postings, ledger, asOf) +
+    sumQardDelta(qard, ledger, asOf)
+  );
 }
 
 /**
- * The 5-ledger balance vector as of `asOf` — opening seed + Σ(postings) per ledger
- * (FIN-2A). The daily snapshot reads through here.
+ * The 5-ledger balance vector as of `asOf` — opening seed + Σ(postings) + Σ(Qard/IOU
+ * effects) per ledger (FIN-2A + FIN-3). The daily snapshot reads through here.
  */
 export async function allLedgerBalancesAsOf(asOf: Date = new Date()): Promise<LedgerBalance[]> {
-  const [declarations, postings] = await Promise.all([loadDeclarations(), loadPostingsAsOf(asOf)]);
+  const [declarations, postings, qard] = await Promise.all([
+    loadDeclarations(),
+    loadPostingsAsOf(asOf),
+    loadQardEntriesAsOf(asOf),
+  ]);
   return LEDGER_KINDS.map((ledger) => ({
     ledger,
-    amount: openingFor(declarations, ledger, asOf) + sumLedgerDelta(postings, ledger, asOf),
+    amount:
+      openingFor(declarations, ledger, asOf) +
+      sumLedgerDelta(postings, ledger, asOf) +
+      sumQardDelta(qard, ledger, asOf),
   }));
 }

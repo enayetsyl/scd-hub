@@ -2294,6 +2294,26 @@ export const FEE_SUPPORT_ALLOCATION_STATUS_LABELS_EN: Record<FeeSupportAllocatio
   ENDED: "Ended",
 };
 
+// --- A.17d QARD/IOU PARTY KINDS (FIN-3, prd-finance-fin3.md §3/§4, D-#232) ------
+// The non-staff counterparty kind on a FinanceParty (the Qard-e-Hasana / IOU register).
+// Additive, app-native, NO wire twin. (QARD_IOU_TYPES / QARD_IOU_DIRECTIONS were frozen
+// in FIN-1 — D-#223; FIN-3 consumes them and adds only the party kind.)
+
+/** The Qard/IOU counterparty kind (FIN-3 §3). A staff salary advance is NOT a party —
+ *  HR owns those (D-#188). */
+export const FINANCE_PARTY_KINDS = ["COMMUNITY", "INDIVIDUAL", "ORG"] as const;
+export type FinancePartyKind = (typeof FINANCE_PARTY_KINDS)[number];
+export const FINANCE_PARTY_KIND_LABELS_BN: Record<FinancePartyKind, string> = {
+  COMMUNITY: "কমিউনিটি",
+  INDIVIDUAL: "ব্যক্তি",
+  ORG: "সংস্থা",
+};
+export const FINANCE_PARTY_KIND_LABELS_EN: Record<FinancePartyKind, string> = {
+  COMMUNITY: "Community",
+  INDIVIDUAL: "Individual",
+  ORG: "Organization",
+};
+
 
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP

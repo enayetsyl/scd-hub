@@ -20,8 +20,10 @@ import {
   openingFor,
   loadDeclarations,
   loadPostingsAsOf,
+  loadQardEntriesAsOf,
 } from "./FinanceLedgerService";
 import { sumLedgerDelta, dayInOut, type PostingLike } from "../postingMath";
+import { sumQardDelta, qardDayInOut } from "../qardIouMath";
 import { writeAudit } from "../../platform/services/AuditService";
 
 const MODE_SET = new Set<string>(FINANCE_PAYMENT_MODES);
@@ -29,8 +31,9 @@ const FEE_HEAD_SET = new Set<string>(FINANCE_STUDENT_FEE_HEADS);
 const INCOME_HEAD_SET = new Set<string>(FINANCE_INCOME_HEADS);
 const EXPENSE_HEAD_SET = new Set<string>(FINANCE_EXPENSE_HEADS);
 const LEDGER_SET = new Set<string>(LEDGER_KINDS);
-/** The three movement-mode ledgers FIN-2A's snapshot covers (Qard/IOU control = FIN-3). */
-const SNAPSHOT_LEDGERS = ["CASH", "BANK", "ONLINE"] as const;
+/** All 5 ledgers flow into the snapshot — Cash/Bank/Online (FIN-2A) + the Qard/IOU
+ *  control ledgers (FIN-3, D-#233 — control balances flow into the same daily snapshot). */
+const SNAPSHOT_LEDGERS = LEDGER_KINDS;
 
 export interface FeeLineInput {
   head: string;
@@ -234,13 +237,20 @@ function dayBounds(dateKey: string): { dayStart: Date; dayEnd: Date; priorEnd: D
  */
 export async function dailySnapshot(dateKey: string): Promise<DailySnapshot> {
   const { dayStart, dayEnd, priorEnd } = dayBounds(dateKey);
-  const [declarations, postings] = await Promise.all([loadDeclarations(), loadPostingsAsOf(dayEnd)]);
+  const [declarations, postings, qard] = await Promise.all([
+    loadDeclarations(),
+    loadPostingsAsOf(dayEnd),
+    loadQardEntriesAsOf(dayEnd),
+  ]);
 
   const ledgers = SNAPSHOT_LEDGERS.map((ledger) => {
-    const opening = openingFor(declarations, ledger, priorEnd) + sumLedgerDelta(postings, ledger, priorEnd);
-    const closing = openingFor(declarations, ledger, dayEnd) + sumLedgerDelta(postings, ledger, dayEnd);
-    const { in: moneyIn, out: moneyOut } = dayInOut(postings, ledger, dayStart, dayEnd);
-    return { ledger, opening, in: moneyIn, out: moneyOut, closing };
+    const opening =
+      openingFor(declarations, ledger, priorEnd) + sumLedgerDelta(postings, ledger, priorEnd) + sumQardDelta(qard, ledger, priorEnd);
+    const closing =
+      openingFor(declarations, ledger, dayEnd) + sumLedgerDelta(postings, ledger, dayEnd) + sumQardDelta(qard, ledger, dayEnd);
+    const p = dayInOut(postings, ledger, dayStart, dayEnd);
+    const q = qardDayInOut(qard, ledger, dayStart, dayEnd);
+    return { ledger, opening, in: p.in + q.in, out: p.out + q.out, closing };
   });
   return { date: dateKey, ledgers };
 }

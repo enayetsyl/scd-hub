@@ -534,6 +534,10 @@ check("FEE_SUPPORT_ALLOCATION_STATUS_LABELS_EN total", total(V.FEE_SUPPORT_ALLOC
 check("FINANCE_FEE_DUE is a registered NotificationKind (FIN-2B §6/J-FIN2-7, extends §C.5)", V.NOTIFICATION_KINDS.includes("FINANCE_FEE_DUE"));
 check("finance.fee_due.chase.* guardian-message template keys registered (title + body + wa, §6 — MT registry, D-#131)",
   ["finance.fee_due.chase.title","finance.fee_due.chase.body","finance.fee_due.chase.wa"].every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k) && V.MESSAGE_TEMPLATE_REGISTRY[k]));
+// FIN-3 — Qard/IOU party kinds (additive; prd-finance-fin3 §4, D-#232)
+check("FINANCE_PARTY_KINDS exact — COMMUNITY/INDIVIDUAL/ORG (FIN-3 §4)", eq(V.FINANCE_PARTY_KINDS, ["COMMUNITY","INDIVIDUAL","ORG"]));
+check("FINANCE_PARTY_KIND_LABELS_BN total", total(V.FINANCE_PARTY_KIND_LABELS_BN, V.FINANCE_PARTY_KINDS));
+check("FINANCE_PARTY_KIND_LABELS_EN total", total(V.FINANCE_PARTY_KIND_LABELS_EN, V.FINANCE_PARTY_KINDS));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

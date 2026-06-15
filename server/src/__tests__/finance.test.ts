@@ -64,6 +64,10 @@ jest.mock("../modules/finance/models/LedgerOpeningBalance", () => ({
 jest.mock("../modules/finance/models/FinancePosting", () => ({
   FinancePosting: { find: () => ({ lean: () => Promise.resolve([]) }) },
 }));
+// FIN-3 extended the seam again to add Σ Qard/IOU entries — stub to none for FIN-1 tests.
+jest.mock("../modules/finance/models/QardIouEntry", () => ({
+  QardIouEntry: { find: () => ({ lean: () => Promise.resolve([]) }) },
+}));
 
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (params: Record<string, unknown>) => {

@@ -113,6 +113,8 @@ export type AuditEventKind =
   | "FEE_SUPPORT_ALLOCATION_SET"  // a zakat/3rd-party fee-support allocation declared/re-declared (effective-dated, append-only — Finance FIN-2B, §3.B, D-#226)
   | "PROVIDER_RECEIPT_RECORDED"   // a fee-support provider's payment against its receivable recorded (Finance FIN-2B, §3.B/J-FIN2-6)
   | "FINANCE_FEE_DUE_CHASED"      // the guardian fee-due chase run for a student/family (Finance FIN-2B, §6/J-FIN2-7, D-#227)
+  | "FINANCE_PARTY_SET"           // a Qard/IOU counterparty master created/edited (Finance FIN-3, §3, D-#232)
+  | "QARD_IOU_ENTRY_RECORDED"     // a Qard/IOU register movement (disburse/repay/adjust) appended (Finance FIN-3, §3/J-FIN3-1, D-#232)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

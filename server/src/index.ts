@@ -66,6 +66,7 @@ import "./modules/access-control/resolvers/accessControl";
 import "./modules/finance/resolvers/financeLedger";
 import "./modules/finance/resolvers/financePosting";
 import "./modules/finance/resolvers/feeSupport";
+import "./modules/finance/resolvers/qardIou";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";
