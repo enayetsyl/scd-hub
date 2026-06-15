@@ -94,6 +94,10 @@ export interface ClassroomObservationShape {
   priorFocusProgress: string | null;
   /** The Quran (ClassEcho) payload — set on a QURAN-form row at review, else null. */
   quran: QuranPayloadShape | null;
+  /** CO-7 teacher fairness rating of the review (1–5; null until rated). */
+  fairnessRating: number | null;
+  usefulnessRating: number | null;
+  fairnessRatedAt: string | null;
   recordingId: string | null;
   teacherResponse: string | null;
   supersededById: string | null;
@@ -136,6 +140,9 @@ function shape(d: IClassroomObservation): ClassroomObservationShape {
           suggestions: d.quran.suggestions,
         }
       : null,
+    fairnessRating: d.fairnessRating ?? null,
+    usefulnessRating: d.usefulnessRating ?? null,
+    fairnessRatedAt: d.fairnessRatedAt ? new Date(d.fairnessRatedAt).toISOString() : null,
     recordingId: d.recordingId ? d.recordingId.toString() : null,
     teacherResponse: d.teacherResponse ?? null,
     supersededById: d.supersededById ? d.supersededById.toString() : null,
