@@ -1,5 +1,6 @@
 import type { Types } from "mongoose";
 import { ScopeGrant } from "../models/ScopeGrant";
+import { Section } from "../models/Section";
 import { writeAudit } from "../../platform/services/AuditService";
 
 // ---------------------------------------------------------------------------
@@ -127,6 +128,7 @@ export interface ScopeGrantView {
   id: string;
   kind: string;
   active: boolean;
+  teacherId: string | null;
   classId: string | null;
   sectionId: string | null;
   subjectId: string | null;
@@ -142,6 +144,7 @@ interface LeanGrant {
   _id: { toString(): string };
   kind: string;
   active: boolean;
+  teacherId?: { toString(): string } | null;
   classId?: { toString(): string } | null;
   sectionId?: { toString(): string } | null;
   subjectId?: { toString(): string } | null;
@@ -158,6 +161,7 @@ export function grantView(g: LeanGrant): ScopeGrantView {
     id: g._id.toString(),
     kind: g.kind,
     active: g.active,
+    teacherId: g.teacherId ? g.teacherId.toString() : null,
     classId: g.classId ? g.classId.toString() : null,
     sectionId: g.sectionId ? g.sectionId.toString() : null,
     subjectId: g.subjectId ? g.subjectId.toString() : null,
@@ -301,6 +305,84 @@ export async function extendProxy(input: ExtendProxyInput): Promise<void> {
     targetKind: "ProxyGrant",
     meta: { additionalDays: input.additionalDays, newDuration },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Teaching-grant lifecycle (subject-teacher assignment) — gated user:manage.
+// A teaching grant = teacher teaches one subject in one section (ADR-017). The
+// classId is derived from the section so the caller only passes section+subject.
+// ---------------------------------------------------------------------------
+
+export interface GrantTeachingInput {
+  teacherId: string;
+  sectionId: string;
+  subjectId: string;
+  assignedBy: string;
+}
+
+/** Assign (or reactivate) a teaching grant. Idempotent on
+ *  (teacher, section, subject): a revoked grant is reactivated, never duplicated. */
+export async function grantTeaching(input: GrantTeachingInput): Promise<string> {
+  const section = await Section.findById(input.sectionId).select("classId").lean();
+  if (!section) throw new Error("Section not found");
+  const classId = section.classId.toString();
+
+  const existing = await ScopeGrant.findOne({
+    teacherId: input.teacherId,
+    kind: "teaching",
+    sectionId: input.sectionId,
+    subjectId: input.subjectId,
+  });
+
+  let grantId: string;
+  if (existing) {
+    if (!existing.active) {
+      existing.active = true;
+      await existing.save();
+    }
+    grantId = existing._id.toString();
+  } else {
+    const grant = await ScopeGrant.create({
+      teacherId: input.teacherId,
+      kind: "teaching",
+      active: true,
+      classId,
+      sectionId: input.sectionId,
+      subjectId: input.subjectId,
+      createdBy: input.assignedBy,
+    });
+    grantId = grant._id.toString();
+  }
+
+  await writeAudit({
+    eventKind: "SCOPE_GRANT_ASSIGN",
+    actorId: input.assignedBy,
+    targetId: grantId,
+    targetKind: "TeachingGrant",
+    meta: { teacherId: input.teacherId, classId, sectionId: input.sectionId, subjectId: input.subjectId, kind: "teaching" },
+  });
+
+  return grantId;
+}
+
+/** Revoke a teaching grant (sets active=false; idempotent). */
+export async function revokeTeaching(grantId: string, revokedBy: string): Promise<void> {
+  const grant = await ScopeGrant.findById(grantId);
+  if (!grant || grant.kind !== "teaching") throw new Error("Teaching grant not found");
+  await ScopeGrant.findByIdAndUpdate(grantId, { active: false });
+  await writeAudit({
+    eventKind: "SCOPE_GRANT_REVOKE",
+    actorId: revokedBy,
+    targetId: grantId,
+    targetKind: "TeachingGrant",
+    meta: { kind: "teaching" },
+  });
+}
+
+/** Active teaching grants for a section (the subject-teacher roster), newest first. */
+export async function teachingGrantsForSection(sectionId: string): Promise<ScopeGrantView[]> {
+  const grants = await ScopeGrant.find({ kind: "teaching", sectionId, active: true }).sort({ createdAt: -1 }).lean();
+  return grants.map(grantView);
 }
 
 /** Stamp an expiry audit event for a grant that was discovered expired at request time (D-#21). */

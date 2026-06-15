@@ -9,6 +9,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { Provider as UrqlProvider } from "urql";
 
 import { urqlClient } from "./src/graphql/client";
+import { getItem, setItem } from "./src/lib/storage";
 import { AuthProvider } from "./src/auth/AuthContext";
 import { BasketProvider } from "./src/state/BasketContext";
 import { SectionProvider } from "./src/state/SectionContext";
@@ -31,9 +32,32 @@ function LanguageScopedNavigator(): React.ReactElement {
   return <RootNavigator key={lang} />;
 }
 
-function ThemedNavigation(): React.ReactElement {
+// On WEB a full page reload remounts the navigator, which would otherwise reset
+// to the initial tab (Content). We persist/restore the React Navigation state so
+// a refresh keeps the user on the screen they were on. Native apps don't reload,
+// so this is web-only (the section/auth contexts already persist themselves).
+const NAV_STATE_KEY = "scd_nav_state";
+type NavState = React.ComponentProps<typeof NavigationContainer>["initialState"];
+
+function ThemedNavigation(): React.ReactElement | null {
   const navTheme = useNavigationTheme();
   const scheme = useColorScheme();
+  const [navReady, setNavReady] = React.useState(Platform.OS !== "web");
+  const [initialState, setInitialState] = React.useState<NavState>(undefined);
+
+  // Restore the persisted navigation state once, on web boot.
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    (async () => {
+      try {
+        const saved = await getItem(NAV_STATE_KEY);
+        if (saved) setInitialState(JSON.parse(saved) as NavState);
+      } catch {
+        /* ignore corrupt persisted nav state */
+      }
+      setNavReady(true);
+    })();
+  }, []);
 
   // N4.2: tapping a push opens the NotificationCenter — the role-agnostic
   // inbox; the row inside carries the same deep-link the badge path uses.
@@ -45,8 +69,18 @@ function ThemedNavigation(): React.ReactElement {
     return () => sub.remove();
   }, []);
 
+  if (!navReady) return null;
+
   return (
-    <NavigationContainer ref={navigationRef} theme={navTheme}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navTheme}
+      initialState={initialState}
+      onStateChange={(state) => {
+        if (Platform.OS !== "web") return;
+        void setItem(NAV_STATE_KEY, JSON.stringify(state));
+      }}
+    >
       <LanguageScopedNavigator />
       {/* The header is a `primary` block in both themes: light primary is deep
           green (light icons), dark primary is light green (dark icons). */}

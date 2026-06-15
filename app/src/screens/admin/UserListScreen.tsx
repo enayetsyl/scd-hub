@@ -3,7 +3,8 @@
  * `users` query (user:manage / Principal — Slice-4 follow-up; no more
  * "current user only") plus the create-staff form (createUser → user:manage).
  */
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import { ROLES, roleHasPermission } from "@scd/shared";
@@ -27,6 +28,16 @@ export default function UserListScreen(_props: Props): React.ReactElement {
     pause: !canManage,
   });
   const users = data?.users ?? [];
+
+  // Refresh on focus: logins provisioned on another screen (StaffCredentials)
+  // won't appear otherwise — urql's document cache isn't invalidated by
+  // provisionStaffLogin (it returns a ProvisionedCredential, not a User).
+  useFocusEffect(
+    useCallback(() => {
+      if (canManage) refetchUsers({ requestPolicy: "network-only" });
+    }, [canManage, refetchUsers]),
+  );
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
