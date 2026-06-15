@@ -19,6 +19,8 @@ import {
   LedgerOpeningBalance,
   type ILedgerOpeningBalance,
 } from "../models/LedgerOpeningBalance";
+import { FinancePosting } from "../models/FinancePosting";
+import { sumLedgerDelta, type PostingLike } from "../postingMath";
 import { writeAudit } from "../../platform/services/AuditService";
 
 /** A write-time rejection surfaced to the caller as a Bangla message (the "422" shape). */
@@ -121,8 +123,23 @@ export async function setOpeningBalance(
   return row;
 }
 
+/** Load postings dated ≤ asOf as the pure shape (the FIN-2 seam extension). */
+export async function loadPostingsAsOf(asOf: Date): Promise<PostingLike[]> {
+  const rows = await FinancePosting.find({ date: { $lte: asOf } }).lean<
+    Array<{ date: Date; kind: string; mode: string; amount: number; toLedger?: string | null; reversesPostingId?: unknown }>
+  >();
+  return rows.map((r) => ({
+    date: new Date(r.date),
+    kind: r.kind,
+    mode: r.mode,
+    amount: r.amount,
+    toLedger: r.toLedger ?? null,
+    reversesPostingId: r.reversesPostingId ?? null,
+  }));
+}
+
 /** Load every declaration as the pure shape (newest declarations included). */
-async function loadDeclarations(): Promise<OpeningDeclaration[]> {
+export async function loadDeclarations(): Promise<OpeningDeclaration[]> {
   const rows = await LedgerOpeningBalance.find().lean<OpeningDeclaration[]>();
   return rows.map((r) => ({
     ledger: r.ledger,
@@ -145,9 +162,9 @@ export async function openingBalances(asOf: Date = new Date()): Promise<LedgerBa
 }
 
 /**
- * THE SEAM (D-#223): one ledger's balance as of `asOf`. In FIN-1 this IS the opening
- * as-of. FIN-2 extends THIS function to `opening + Σ(postings ≤ asOf)` — every later
- * slice reads balances through here, so the extension is one place.
+ * THE SEAM (D-#223/#225): one ledger's balance as of `asOf` = the FIN-1 opening seed +
+ * Σ(FinancePosting effects ≤ asOf) (FIN-2A). Every later slice reads balances through
+ * here, so the FIN-3 Qard/IOU extension is one more term in the same place.
  */
 export async function ledgerBalanceAsOf(
   ledger: string,
@@ -156,18 +173,18 @@ export async function ledgerBalanceAsOf(
   if (!LEDGER_SET.has(ledger)) {
     throw new FinanceError(`অজানা লেজার: ${ledger}`);
   }
-  const declarations = await loadDeclarations();
-  return openingFor(declarations, ledger, asOf);
+  const [declarations, postings] = await Promise.all([loadDeclarations(), loadPostingsAsOf(asOf)]);
+  return openingFor(declarations, ledger, asOf) + sumLedgerDelta(postings, ledger, asOf);
 }
 
 /**
- * The 5-ledger balance vector as of `asOf` — the snapshot stub FIN-2 grows (it adds
- * Σ(postings) per ledger). Today every entry equals its opening-as-of.
+ * The 5-ledger balance vector as of `asOf` — opening seed + Σ(postings) per ledger
+ * (FIN-2A). The daily snapshot reads through here.
  */
 export async function allLedgerBalancesAsOf(asOf: Date = new Date()): Promise<LedgerBalance[]> {
-  const declarations = await loadDeclarations();
+  const [declarations, postings] = await Promise.all([loadDeclarations(), loadPostingsAsOf(asOf)]);
   return LEDGER_KINDS.map((ledger) => ({
     ledger,
-    amount: openingFor(declarations, ledger, asOf),
+    amount: openingFor(declarations, ledger, asOf) + sumLedgerDelta(postings, ledger, asOf),
   }));
 }

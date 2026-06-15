@@ -2211,6 +2211,29 @@ export const QARD_IOU_TYPE_LABELS_EN: Record<QardIouType, string> = {
   IOU: "IOU",
 };
 
+// --- A.17b FINANCE POSTING KINDS (FIN-2A, prd-finance-fin2.md §3.A/§4, D-#224) --
+// The kind discriminates which block a FinancePosting carries (fee=feeLines+studentId,
+// other-income=incomeHead, expense=expenseHead, transfer=mode→toLedger). Additive,
+// app-native, NO wire twin. (FEE_COVERAGE_TYPES / FEE_SUPPORT_ALLOCATION_STATUSES +
+// the FINANCE_FEE_DUE notification kind + finance.fee_due.chase.* MT keys land with
+// FIN-2B.)
+
+/** The 4 finance posting kinds (FIN-2A §3.A). Each discriminates the required block. */
+export const FINANCE_POSTING_KINDS = ["FEE_COLLECTION", "OTHER_INCOME", "EXPENSE", "TRANSFER"] as const;
+export type FinancePostingKind = (typeof FINANCE_POSTING_KINDS)[number];
+export const FINANCE_POSTING_KIND_LABELS_BN: Record<FinancePostingKind, string> = {
+  FEE_COLLECTION: "ফি আদায়",
+  OTHER_INCOME: "অন্যান্য আয়",
+  EXPENSE: "ব্যয়",
+  TRANSFER: "স্থানান্তর",
+};
+export const FINANCE_POSTING_KIND_LABELS_EN: Record<FinancePostingKind, string> = {
+  FEE_COLLECTION: "Fee Collection",
+  OTHER_INCOME: "Other Income",
+  EXPENSE: "Expense",
+  TRANSFER: "Transfer",
+};
+
 
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP

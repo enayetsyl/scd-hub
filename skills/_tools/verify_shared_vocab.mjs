@@ -519,6 +519,11 @@ check("finance:manage is NOT reserved (Office holds it — it is a delegable boo
   !V.RESERVED_PERMISSIONS.includes("finance:manage"));
 check("no finance:approve in FIN-1 (period-lock deferred to the slice that needs it, §5)",
   !V.PERMISSIONS.includes("finance:approve"));
+// FIN-2A — posting kinds (additive; prd-finance-fin2 §3.A/§4, D-#224)
+check("FINANCE_POSTING_KINDS exact — FEE_COLLECTION/OTHER_INCOME/EXPENSE/TRANSFER (FIN-2A §4)",
+  eq(V.FINANCE_POSTING_KINDS, ["FEE_COLLECTION","OTHER_INCOME","EXPENSE","TRANSFER"]));
+check("FINANCE_POSTING_KIND_LABELS_BN total", total(V.FINANCE_POSTING_KIND_LABELS_BN, V.FINANCE_POSTING_KINDS));
+check("FINANCE_POSTING_KIND_LABELS_EN total", total(V.FINANCE_POSTING_KIND_LABELS_EN, V.FINANCE_POSTING_KINDS));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

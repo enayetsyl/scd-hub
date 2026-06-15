@@ -64,6 +64,7 @@ import "./modules/comments/resolvers/meetingDispatch";
 import "./modules/comments/resolvers/meetingComment";
 import "./modules/access-control/resolvers/accessControl";
 import "./modules/finance/resolvers/financeLedger";
+import "./modules/finance/resolvers/financePosting";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";

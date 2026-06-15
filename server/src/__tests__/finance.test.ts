@@ -59,6 +59,12 @@ jest.mock("../modules/finance/models/LedgerOpeningBalance", () => ({
   },
 }));
 
+// FIN-2A extended ledgerBalanceAsOf to add Σ postings — stub the model to NO postings so
+// the FIN-1 seam still resolves to the opening-only figure these tests assert.
+jest.mock("../modules/finance/models/FinancePosting", () => ({
+  FinancePosting: { find: () => ({ lean: () => Promise.resolve([]) }) },
+}));
+
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (params: Record<string, unknown>) => {
     mockAudits.push(params);
