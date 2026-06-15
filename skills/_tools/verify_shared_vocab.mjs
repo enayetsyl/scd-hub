@@ -422,6 +422,17 @@ check("QURAN_COMPLIANCE_ITEM labels have NO extra keys (BN + EN exact over the e
   Object.keys(V.QURAN_COMPLIANCE_ITEM_LABELS_EN).every((k) => V.QURAN_COMPLIANCE_ITEMS.includes(k)));
 check("Quran review scale is 1..5 (no total/average)", V.QURAN_REVIEW_SCORE_MIN === 1 && V.QURAN_REVIEW_SCORE_MAX === 5);
 
+console.log("=== C.16c Review-scheduler support tiers (CO-6 — prd-classroom-observation §CO-6; app-native, NO wire twin D-#46) ===");
+check("SUPPORT_TIERS exact — STRONG / DEVELOPING / NEEDS_SUPPORT (§CO-6)",
+  eq(V.SUPPORT_TIERS, ["STRONG", "DEVELOPING", "NEEDS_SUPPORT"]));
+check("SUPPORT_TIER_LABELS_BN total",            total(V.SUPPORT_TIER_LABELS_BN, V.SUPPORT_TIERS));
+check("SUPPORT_TIER_LABELS_EN total",            total(V.SUPPORT_TIER_LABELS_EN, V.SUPPORT_TIERS));
+check("SUPPORT_TIER labels have NO extra keys (BN + EN exact over the enum)",
+  Object.keys(V.SUPPORT_TIER_LABELS_BN).every((k) => V.SUPPORT_TIERS.includes(k)) &&
+  Object.keys(V.SUPPORT_TIER_LABELS_EN).every((k) => V.SUPPORT_TIERS.includes(k)));
+check("CO-6 adds NO new permission (reuses observation:read / observation:manage)",
+  !V.PERMISSIONS.includes("observation:schedule"));
+
 console.log("=== C.17 Per-user access control: access:manage + RESERVED_PERMISSIONS + ASSIGNABLE_TEMPLATES + permission labels (AC-1 — prd-access-control §7/§8, D-#193/#210–#212) ===");
 // access:manage — the per-user editor gate: declared, BUILD, PRINCIPAL-exact-holder (the template:manage/payroll:approve posture)
 check("access:manage is declared + BUILD",

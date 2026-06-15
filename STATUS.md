@@ -19,6 +19,25 @@ _Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two
   shared build + verifier PASS (untouched), shared/server tsc clean, **jest 1298/1298** (76 suites; +1 new suite
   `observationEffectiveness.test.ts` [18] over the 1280 base; firewall green). **Server-only. Not verified live. PR
   pending. Next = CO app surface.**
+- **Built (Classroom Observation CO-6 — review scheduler, server, prd-classroom-observation §CO-6, build ruling
+  D-#230) [branch `slice/co6` off dev]:** the tier-driven cadence scheduler that SUGGESTS who's due for a review —
+  **never auto-assigns** (§CO-6 guardrail). **Server-only; the ONLY shared change is `shared/vocab.ts`**
+  (`SUPPORT_TIERS` [STRONG/DEVELOPING/NEEDS_SUPPORT] + BN/EN labels, app-native NO wire twin D-#46; verifier §C.16c);
+  **NO new permission** (reuses observation:read/manage). All DERIVED (D-#85): pure `deriveTier` (REF-11 breach/level-1
+  ⇒ NEEDS_SUPPORT, all ≥3 ⇒ STRONG, else DEVELOPING; Quran avg≥4+full-compliance ⇒ STRONG, avg≤2.5 or <½ ⇒
+  NEEDS_SUPPORT, else DEVELOPING — review data only) + pure `intervalForTier` (DEVELOPING base, STRONG ×mult longest,
+  NEEDS_SUPPORT ×mult shortest, clamped to the minIntervalDays frequency cap). `dueForReview(now)` — candidates =
+  teachers with REAL teaching sessions (distinct teacherId over active non-break RoutineSlots), tiered off their MOST
+  RECENT released review; only due/overdue (+ never-reviewed → soonest bucket) returned, ranked never-reviewed →
+  weakest tier → most-overdue. `ObservationScheduleConfig` singleton (read-time defaults 30 / ×2 / ×0.5 / cap 7, NO
+  seed write D-#97); `setScheduleConfig` validates + audits `OBSERVATION_SCHEDULE_CONFIG_SET`. Resolvers
+  (`observationSchedule.ts`): observationDueList + observationScheduleConfig + setObservationScheduleConfig — **all
+  gated observation:manage** (D-#230: the "Principal/Office/observers" intent narrowed to manage — no perm
+  distinguishes an observer from a plain TEACHER, and observation:read would expose every teacher's cadence to ALL
+  staff). 1 audit kind; CO firewall auto-covers. **Gate GREEN (executed):** shared build + vocab verifier PASS
+  (§C.16c), shared/server tsc clean, **jest 1305/1305** (76 suites; +1 new suite `observationScheduler.test.ts` [25]
+  over the 1280 base; firewall green). **Server-only. Not verified live. PR pending. Next = CO-7** (reviewer
+  effectiveness).
 - **Planned (Finance FIN-1 — Ledgers & opening balances, build-contract PRD authored `docs/prd-finance-fin1.md`,
   D-#221–#223):** slice 1 of 6 over the finance REQ (`finance-requirements.md`, D-#186–#192). FIN-1 = the
   FOUNDATION only (no postings — those are FIN-2): the 5 `LEDGER_KINDS` + the full **`FINANCE_*`-namespaced
@@ -35,12 +54,14 @@ _Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two
   `docs/prd-finance-fin2.md`, D-#224–#229):** slice 2 of 6, the **heaviest** — recommends building as TWO PRs
   (D-#229). **FIN-2A** = `FinancePosting` (unified append-only money event; kind-discriminated; fee=feeLines
   split, transfer=mode→toLedger; **reverse-not-edit**, D-#224) + the derived **`dailySnapshot`** extending
-  FIN-1's `ledgerBalanceAsOf` seam for Cash/Bank/Online (D-#225) + the **SALARY** line from the HR payroll
-  **PII-free aggregate** total (D-#228, no payslip crosses). **FIN-2B** = `FeeProvider` + effective-dated
+  FIN-1's `ledgerBalanceAsOf` seam for Cash/Bank/Online (D-#225) + the **SALARY** line — **pre-fill from the
+  HR `approved_locked` net-payable aggregate + manual deduction/adjustment lines** (HR base + adjustments
+  stored/audited; no payslip crosses — D-#228 **ratified**). **FIN-2B** = `FeeProvider` + effective-dated
   append-only `FeeSupportAllocation` + pure `splitFee` (provider-due/guardian-due, gross counted once) +
-  provider receivable + `ProviderReceipt` + statement (D-#226 — **⚠️ coverage granularity pinned vs the live
-  Zakat-Master sheet at build**) + the guardian **fee-due chase** (wa.me + emit `FINANCE_FEE_DUE`, MT bodies
-  `finance.fee_due.chase.*`, no guardian finance UI, D-#227). Reuses `finance:manage` (NO new perm);
+  provider receivable + `ProviderReceipt` + statement (D-#226 **ratified — coverage is PER-HEAD**
+  `[{head, type∈{FULL, AMOUNT}, amount?}]`: FULL = whole head, AMOUNT = a ৳ cap per posting, varying per
+  student per head; PERCENT deferred) + the guardian **fee-due chase** (wa.me + emit `FINANCE_FEE_DUE`, MT
+  bodies `finance.fee_due.chase.*`, no guardian finance UI, D-#227). Reuses `finance:manage` (NO new perm);
   vocab-toucher (additive). Qard/IOU stays FIN-3 (plugs into the same snapshot seam). **Next = build FIN-1,
   then FIN-2A → FIN-2B; next PRD = FIN-3.**
 - **Built (Classroom Observation CO-5 — Quran (ClassEcho) form, server, prd-classroom-observation §CO-5, D-#56
