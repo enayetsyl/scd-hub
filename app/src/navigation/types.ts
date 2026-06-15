@@ -199,6 +199,16 @@ export type ObservationStackParamList = {
   ObservationConfig: undefined;
 };
 
+/** Saturday Qur'an-Hifz Revision (SR app surfaces over SR-1..SR-4) — staff stack
+ *  (tracker:read || roster:manage tab; GUARDIAN excluded). */
+export type RevisionStackParamList = {
+  RevisionHome: undefined;
+  GroupRevisionGrid: { groupId: string; code: string; nameBn: string; date: string };
+  StudentRevisionHistory: { studentId: string; studentName: string };
+  DeliverRevision: { groupId: string; code: string; nameBn: string; date: string };
+  RevisionDashboard: { groupId?: string; code?: string; nameBn?: string; date: string };
+};
+
 /** Finance / Accounting (FIN-6B app surfaces over FIN-1..FIN-6A) — staff stack
  *  (finance:manage = Principal/Office only). */
 export type FinanceStackParamList = {
@@ -247,6 +257,7 @@ export type TabParamList = {
   ClassTestTab: NavigatorScreenParams<ClassTestStackParamList>;
   CommentsTab: NavigatorScreenParams<CommentsStackParamList>;
   ObservationTab: NavigatorScreenParams<ObservationStackParamList>;
+  RevisionTab: NavigatorScreenParams<RevisionStackParamList>;
   FinanceTab: NavigatorScreenParams<FinanceStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;

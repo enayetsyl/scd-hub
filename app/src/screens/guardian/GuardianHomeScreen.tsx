@@ -20,12 +20,13 @@ import {
 } from "../../graphql/operations";
 import { CHILD_TEST_RESULTS_QUERY } from "../../graphql/classTest";
 import { CHILD_COMMENTS_QUERY } from "../../graphql/comments";
+import { CHILD_REVISION_QUERY } from "../../graphql/revision";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
 import type { GuardianHomeStackParamList } from "../../navigation/types";
-import { STR, bnNum, loanStatusLabel, vocabProgramLabel, hwSubjectLabel, commentTypeLabel, commentSentimentLabel } from "../../lib/labels";
+import { STR, bnNum, loanStatusLabel, vocabProgramLabel, hwSubjectLabel, commentTypeLabel, commentSentimentLabel, revCategoryLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
 type Nav = NativeStackNavigationProp<GuardianHomeStackParamList>;
@@ -85,6 +86,11 @@ export default function GuardianHomeScreen(): React.ReactElement {
   });
   const [commentsQ] = useQuery({
     query: CHILD_COMMENTS_QUERY,
+    variables: { studentId: sid },
+    pause: !selected,
+  });
+  const [revisionQ] = useQuery({
+    query: CHILD_REVISION_QUERY,
     variables: { studentId: sid },
     pause: !selected,
   });
@@ -386,6 +392,41 @@ export default function GuardianHomeScreen(): React.ReactElement {
                       />
                     ))}
                   </View>
+                ) : null}
+              </View>
+            ))
+          )}
+        </Card>
+
+        {/* Saturday Hifz revision — read-only, DELIVERED Saturdays only (SR-4). The
+            childRevision query structurally omits teacherUserId / deliveryChannels;
+            portions / تنبیه / فتح / structured mistakes / the teacher's comment. */}
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.gpRevision}</Body>
+          {revisionQ.fetching ? (
+            <Loader label={STR.loading} />
+          ) : (revisionQ.data?.childRevision ?? []).length === 0 ? (
+            <Muted style={{ marginTop: space(2) }}>{STR.gpNoRevision}</Muted>
+          ) : (
+            (revisionQ.data?.childRevision ?? []).map((e) => (
+              <View key={e.id} style={{ marginTop: space(2) }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Body style={{ fontWeight: "700" }}>{bnNum(e.date)}</Body>
+                  <Badge text={e.present ? STR.revPresent : STR.revAbsent} tone={e.present ? "brand" : "muted"} />
+                </View>
+                {e.present
+                  ? e.juzRecords.map((r, i) => (
+                      <Muted key={i} style={{ marginTop: space(1) }}>
+                        {revCategoryLabel(r.category)} · {STR.revJuz} {bnNum(r.juz)} · {bnNum(r.amountJuz)} · {STR.revTanbih}{" "}
+                        {bnNum(r.tanbih)} · {STR.revFath} {bnNum(r.fath)} · {STR.revMistakes}{" "}
+                        {bnNum(r.mistakes.harf + r.mistakes.ghunnah + r.mistakes.madd + r.mistakes.other)}
+                      </Muted>
+                    ))
+                  : null}
+                {e.teacherComment ? (
+                  <Body style={{ marginTop: space(1) }}>
+                    {STR.revComment}: {e.teacherComment}
+                  </Body>
                 ) : null}
               </View>
             ))
