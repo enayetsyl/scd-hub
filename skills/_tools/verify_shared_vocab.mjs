@@ -547,5 +547,16 @@ check("BUDGET_LINE_KINDS exact — EXPENSE/INCOME (FIN-5 §4)", eq(V.BUDGET_LINE
 check("BUDGET_LINE_KIND_LABELS_BN total", total(V.BUDGET_LINE_KIND_LABELS_BN, V.BUDGET_LINE_KINDS));
 check("BUDGET_LINE_KIND_LABELS_EN total", total(V.BUDGET_LINE_KIND_LABELS_EN, V.BUDGET_LINE_KINDS));
 
+console.log("=== C.19 Saturday-Revision entry vocab (SR-1 — prd-sr1 §4, D-#241–#243; app-native, NO wire twin) ===");
+// revision categories — exactly the 3 Hifz categories (§4)
+check("REVISION_CATEGORIES exact — SABAQ/SABQI/MANZIL (§4)", eq(V.REVISION_CATEGORIES, ["SABAQ","SABQI","MANZIL"]));
+check("REVISION_CATEGORY_LABELS_BN total", total(V.REVISION_CATEGORY_LABELS_BN, V.REVISION_CATEGORIES));
+check("REVISION_CATEGORY_LABELS_EN total", total(V.REVISION_CATEGORY_LABELS_EN, V.REVISION_CATEGORIES));
+// mistake categories — the 4 structured tajweed-mistake buckets (§4)
+check("REVISION_MISTAKE_CATEGORIES exact — HARF/GHUNNAH/MADD/OTHER (§4)", eq(V.REVISION_MISTAKE_CATEGORIES, ["HARF","GHUNNAH","MADD","OTHER"]));
+check("REVISION_MISTAKE_CATEGORY_LABELS_BN total", total(V.REVISION_MISTAKE_CATEGORY_LABELS_BN, V.REVISION_MISTAKE_CATEGORIES));
+check("REVISION_MISTAKE_CATEGORY_LABELS_EN total", total(V.REVISION_MISTAKE_CATEGORY_LABELS_EN, V.REVISION_MISTAKE_CATEGORIES));
+// SR-1 does NOT touch NOTIFICATION_KINDS / MT keys (those are SR-2 — keeps the footprint to the 2 entry enums)
+
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

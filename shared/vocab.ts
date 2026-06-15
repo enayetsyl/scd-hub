@@ -1754,6 +1754,48 @@ export const COMMENT_SENTIMENT_LABELS_EN: Record<CommentSentiment, string> = {
 };
 
 
+// --- A.x SATURDAY-REVISION ENUMS (app-native; Saturday-Revision module — ---------
+// prd-sr1 §4, D-#241–#243; source REQ docs/saturday-revision-requirements.md).
+// The per-juz Qur'an Hifz revision record (replaces the paper শিক্ষার্থীর পাঠ
+// সম্পাদন রিপোর্ট). NO wire-contract twin (D-#46, AGENTS rule 5): a revision entry
+// is a FEATURE, not import `doc_type` content — every row names a studentId, so it
+// is operational/identity plane behind the ADR-005 firewall. SR-1 freezes ONLY the
+// two entry enums; the delivery NOTIFICATION_KINDS + MT keys are SR-2's (kept out of
+// SR-1's footprint). Additive + disjoint from every other enum.
+
+/** The three Hifz revision categories recorded per juz (SR-1, §3/§4). SABAQ = new
+ *  memorisation, SABQI = the most-recent lesson, MANZIL = older revision. */
+export const REVISION_CATEGORIES = ["SABAQ", "SABQI", "MANZIL"] as const;
+export type RevisionCategory = (typeof REVISION_CATEGORIES)[number];
+export const REVISION_CATEGORY_LABELS_BN: Record<RevisionCategory, string> = {
+  SABAQ: "নতুন মুখস্ত",
+  SABQI: "সর্বসাম্প্রতিক পাঠ",
+  MANZIL: "পুরনো রিভিশন",
+};
+export const REVISION_CATEGORY_LABELS_EN: Record<RevisionCategory, string> = {
+  SABAQ: "Sabaq (new)",
+  SABQI: "Sabqi (recent)",
+  MANZIL: "Manzil (old revision)",
+};
+
+/** The structured tajweed-mistake categories counted per juz record (SR-1, §3/§4).
+ *  Counts feed the SR-3 per-juz weakness analytics. */
+export const REVISION_MISTAKE_CATEGORIES = ["HARF", "GHUNNAH", "MADD", "OTHER"] as const;
+export type RevisionMistakeCategory = (typeof REVISION_MISTAKE_CATEGORIES)[number];
+export const REVISION_MISTAKE_CATEGORY_LABELS_BN: Record<RevisionMistakeCategory, string> = {
+  HARF: "হরফে সমস্যা",
+  GHUNNAH: "গুন্নাহ",
+  MADD: "মাদ",
+  OTHER: "অন্যান্য",
+};
+export const REVISION_MISTAKE_CATEGORY_LABELS_EN: Record<RevisionMistakeCategory, string> = {
+  HARF: "Harf (letter)",
+  GHUNNAH: "Ghunnah",
+  MADD: "Madd",
+  OTHER: "Other",
+};
+
+
 // --- A.16 CLASSROOM-OBSERVATION ENUMS (app-native; Classroom-Observation module --
 // — prd-classroom-observation §4, D-#146/#147, build rulings D-#194/#191). NO
 // wire-contract twin (D-#46/#52): an observation is a staff feature, not import

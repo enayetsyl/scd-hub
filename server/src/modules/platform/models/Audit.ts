@@ -117,6 +117,7 @@ export type AuditEventKind =
   | "QARD_IOU_ENTRY_RECORDED"     // a Qard/IOU register movement (disburse/repay/adjust) appended (Finance FIN-3, §3/J-FIN3-1, D-#232)
   | "RECONCILIATION_RECORDED"     // a dated bank + Eximus reconciliation check recorded (append-only — Finance FIN-4, §3/J-FIN4-1, D-#235)
   | "BUDGET_LINE_SET"             // a per-(year × head) budget/target line set or edited — prior + new retained (Finance FIN-5, §3/J-FIN5-1, D-#237)
+  | "SR_REVISION_RECORDED"        // a Saturday Hifz revision entry recorded/edited — per-juz records (Saturday-Revision SR-1, §3/J-SR1-1, D-#241/#242)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

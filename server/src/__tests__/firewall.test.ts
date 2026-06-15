@@ -620,6 +620,40 @@ describe("Finance firewall (ADR-005 / FIN-1, D-#221)", () => {
   });
 });
 
+/**
+ * Saturday-Revision firewall (SR-1, D-#241 / prd-sr1 §9).
+ *
+ * `RevisionEntry` names studentIds/groupIds (the per-juz Hifz revision record) —
+ * strictly identity/operational plane (ADR-005), same posture as the homework /
+ * class-test / vocab trackers. Fail-closed BOTH ways: the saturday-revision module
+ * must have NO import path into the corpus plane, and the corpus module must have NO
+ * import path into the saturday-revision module or its model (no analytics/export join
+ * back to who revised which juz).
+ */
+describe("Saturday-Revision firewall (ADR-005 / SR-1, D-#241)", () => {
+  const revisionDir = path.resolve(__dirname, "../modules/saturday-revision");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("saturday-revision module has NO import from the corpus plane", () => {
+    const files = walkDir(revisionDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (SR-1 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the saturday-revision module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/saturday-revision"));
+      expect(content).not.toMatch(importPattern("models/RevisionEntry"));
+      expect(content).not.toMatch(importPattern("services/RevisionService"));
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;
