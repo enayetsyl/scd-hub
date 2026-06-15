@@ -5,14 +5,15 @@
  * envelope. Pairs are matched by filename stem server-side; orphans are rejected
  * with a clear message. Requires content:import (Principal/Office).
  */
-import React, { useMemo, useState } from "react";
-import { View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { View, Platform } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation } from "urql";
 import { IMPORT_FILES, type ImportResultT, type ImportFileT } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Button, Chip, ChipRow, Field, Notice, Divider } from "../../components/ui";
+import { FileDropZone } from "../../components/FileDropZone";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -68,6 +69,18 @@ export default function ImportScreen(_props: Props): React.ReactElement {
     [files, paste],
   );
 
+  // Merge new files (from the picker OR a web drag-drop) with any already-staged,
+  // de-duped by filename — shared by pickFiles and the FileDropZone.
+  const addFiles = useCallback((picked: ImportFileT[]): void => {
+    if (picked.length === 0) return;
+    setError(null);
+    setFiles((prev) => {
+      const map = new Map(prev.map((f) => [f.filename, f]));
+      for (const p of picked) map.set(p.filename, p);
+      return Array.from(map.values());
+    });
+  }, []);
+
   async function pickFiles(): Promise<void> {
     setError(null);
     try {
@@ -79,12 +92,7 @@ export default function ImportScreen(_props: Props): React.ReactElement {
           content: await fetch(a.uri).then((r) => r.text()),
         })),
       );
-      // Merge with any already-picked files, de-duped by filename.
-      setFiles((prev) => {
-        const map = new Map(prev.map((f) => [f.filename, f]));
-        for (const p of picked) map.set(p.filename, p);
-        return Array.from(map.values());
-      });
+      addFiles(picked);
     } catch {
       setError(STR.errGeneric);
     }
@@ -133,7 +141,12 @@ export default function ImportScreen(_props: Props): React.ReactElement {
       <H2>{STR.importContent}</H2>
       <Notice message={STR.importHint} tone="warn" />
 
-      <Button title={STR.pickFiles} variant="secondary" onPress={pickFiles} />
+      <FileDropZone onFiles={addFiles}>
+        {Platform.OS === "web" ? (
+          <Muted style={{ marginBottom: space(1), textAlign: "center" }}>{STR.importDropHint}</Muted>
+        ) : null}
+        <Button title={STR.pickFiles} variant="secondary" onPress={pickFiles} />
+      </FileDropZone>
 
       {files.length > 0 ? (
         <Card>
