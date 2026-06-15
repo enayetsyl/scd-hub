@@ -2134,6 +2134,10 @@ const STR_BN = {
   obsYoutubeId: "ইউটিউব ভিডিও আইডি",
   obsYoutubeIdHint: "আনলিস্টেড ভিডিও আইডি লিখুন",
   obsAttachFootage: "ফুটেজ সংযুক্ত করুন",
+  obsAuthorizeYt: "YouTube অনুমোদন করুন",
+  obsUploadVideo: "ভিডিও আপলোড করুন",
+  obsUploadVideoHint: "ভিডিও ফাইল নির্বাচন করলে সরাসরি YouTube-এ (unlisted) আপলোড হয়ে সংযুক্ত হবে — অথবা নিচে আইডি দিন।",
+  obsUploadingVideo: "আপলোড হচ্ছে…",
   obsOpenVideo: "ভিডিও খুলুন",
   obsFootageAttached: "ফুটেজ সংযুক্ত হয়েছে",
 
@@ -3823,6 +3827,10 @@ const STR_EN: StrTable = {
   obsYoutubeId: "YouTube video ID",
   obsYoutubeIdHint: "Enter the unlisted video ID",
   obsAttachFootage: "Attach footage",
+  obsAuthorizeYt: "Authorize YouTube",
+  obsUploadVideo: "Upload video",
+  obsUploadVideoHint: "Pick a video file to upload straight to YouTube (unlisted) and attach — or paste an id below.",
+  obsUploadingVideo: "Uploading…",
   obsOpenVideo: "Open video",
   obsFootageAttached: "Footage attached",
 
