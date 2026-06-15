@@ -6,7 +6,7 @@
 import React from "react";
 import { useQuery } from "urql";
 import { Select } from "./ui";
-import { TEACHERS_QUERY, ROOMS_QUERY, ACADEMIC_YEARS_QUERY, STAFF_QUERY } from "../graphql/operations";
+import { TEACHERS_QUERY, ROOMS_QUERY, ACADEMIC_YEARS_QUERY, STAFF_QUERY, SUBJECTS_QUERY } from "../graphql/operations";
 import { STR, hrCategoryLabel } from "../lib/labels";
 
 /** Pick a staff member by name → yields the StaffProfile id (HR admin surfaces).
@@ -98,17 +98,51 @@ export function RoomSelect({
   );
 }
 
+/** Pick a subject by name → yields the subject id. */
+export function SubjectSelect({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}): React.ReactElement {
+  const [{ data }] = useQuery({ query: SUBJECTS_QUERY });
+  const options = (data?.subjects ?? []).map((s) => ({
+    label: s.nameBn,
+    value: s.id,
+    hint: s.code,
+  }));
+  return (
+    <Select
+      label={label}
+      value={value === "" ? null : value}
+      options={options}
+      onChange={onChange}
+      placeholder={placeholder ?? STR.selectSubject}
+      emptyText={STR.noSubjects}
+    />
+  );
+}
+
 /** Pick an academic year → yields the year id. Auto-selects the current year while
  *  the value is still empty, so most screens land on the right year with no tap. */
 export function AcademicYearSelect({
   label,
   value,
   onChange,
+  variant = "auto",
 }: {
   label?: string;
   value: string;
   onChange: (v: string) => void;
-}): React.ReactElement {
+  /** "auto" (default) hides the picker on operational screens once the active year
+   *  is applied (design-A); "filter" always shows it (reporting / search / history). */
+  variant?: "auto" | "filter";
+}): React.ReactElement | null {
   const [{ data }] = useQuery({ query: ACADEMIC_YEARS_QUERY });
   const years = data?.academicYears ?? [];
   React.useEffect(() => {
@@ -117,6 +151,10 @@ export function AcademicYearSelect({
       onChange(current.id);
     }
   }, [years, value, onChange]);
+  // Operational screens default to the active year silently — when there is only one
+  // year (or none yet) there is nothing to choose, so the picker is hidden (design-A).
+  // It returns only where switching matters: multiple years, or an explicit filter.
+  if (variant === "auto" && years.length <= 1) return null;
   const options = years.map((y) => ({ label: y.current ? `${y.label} ✓` : y.label, value: y.id }));
   return (
     <Select

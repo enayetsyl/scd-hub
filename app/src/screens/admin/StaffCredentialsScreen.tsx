@@ -17,7 +17,7 @@ import {
   type ProvisionedCredentialT,
 } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
-import { Screen, H2, Body, Muted, Card, Row, Badge, Button, Loader, Notice, Divider } from "../../components/ui";
+import { Screen, H2, Body, Muted, Card, Row, Badge, Button, Loader, Notice, Divider, Field } from "../../components/ui";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -30,15 +30,20 @@ export default function StaffCredentialsScreen(_props: Props): React.ReactElemen
   const [, reset] = useMutation(RESET_STAFF_PASSWORD);
 
   const [busyId, setBusyId] = useState<string | null>(null);
+  // The freshly-provisioned credential is rendered INLINE on its own card (keyed
+  // by staffId) so the list never reorders — the card stays where the user tapped.
   const [result, setResult] = useState<ProvisionedCredentialT | null>(null);
+  const [resultStaffId, setResultStaffId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [search, setSearch] = useState("");
 
   async function onGenerate(staffId: string, hasLogin: boolean, userId: string | null): Promise<void> {
     if (busyId) return;
     setBusyId(staffId);
     setErr(null);
     setResult(null);
+    setResultStaffId(null);
     setCopied(false);
     let cred: ProvisionedCredentialT | null = null;
     let resErr;
@@ -57,6 +62,7 @@ export default function StaffCredentialsScreen(_props: Props): React.ReactElemen
       return;
     }
     setResult(cred);
+    setResultStaffId(staffId);
     refetch({ requestPolicy: "network-only" });
   }
 
@@ -66,26 +72,20 @@ export default function StaffCredentialsScreen(_props: Props): React.ReactElemen
     setCopied(true);
   }
 
-  const candidates = data?.staffCredentialCandidates ?? [];
+  const allCandidates = data?.staffCredentialCandidates ?? [];
+  const q = search.trim().toLowerCase();
+  const candidates = q
+    ? allCandidates.filter((c) => c.name.toLowerCase().includes(q) || (c.phone ?? "").toLowerCase().includes(q))
+    : allCandidates;
 
   return (
     <Screen scroll>
       <H2>{STR.staffCredentials}</H2>
       <Notice message={STR.staffLoginHint} tone="warn" />
 
-      {result ? (
-        <Card>
-          <Body style={{ fontWeight: "700" }}>{result.name}</Body>
-          <Row label={STR.loginId} value={result.identifier} />
-          <Row label={STR.generatedPassword} value={result.password} />
-          <Row label={STR.role} value={result.contextLabel} />
-          <Notice message={STR.credentialOnceWarning} tone="warn" />
-          <Button title={STR.shareWhatsApp} onPress={() => Linking.openURL(result.waLink)} style={{ marginTop: space(2) }} />
-          <Button title={copied ? STR.copied : STR.copy} onPress={onCopy} variant="secondary" style={{ marginTop: space(1) }} />
-        </Card>
-      ) : null}
-
       {err ? <Notice message={err} tone="danger" /> : null}
+
+      <Field label={undefined} value={search} onChangeText={setSearch} placeholder={STR.searchStaff} />
 
       <Divider />
 
@@ -93,32 +93,46 @@ export default function StaffCredentialsScreen(_props: Props): React.ReactElemen
         <Loader label={STR.loading} />
       ) : error ? (
         <Notice message={friendlyError(error)} tone="danger" />
-      ) : candidates.length === 0 ? (
+      ) : allCandidates.length === 0 ? (
         <Muted>{STR.noProvisionableStaff}</Muted>
+      ) : candidates.length === 0 ? (
+        <Muted>{STR.noStaffMatch}</Muted>
       ) : (
-        candidates.map((c) => (
-          <Card key={c.staffId}>
-            <Body style={{ fontWeight: "700" }}>{c.name}</Body>
-            <Row label={STR.category} value={c.category} />
-            {c.phone ? <Row label={STR.loginId} value={c.phone} /> : null}
-            {c.mappedRole ? <Row label={STR.role} value={c.mappedRole} /> : null}
-            <View style={{ marginTop: space(1), flexDirection: "row" }}>
-              <Badge
-                text={c.loginExists ? STR.loginExistsLabel : c.provisionable ? STR.noLoginLabel : (c.reason ?? STR.noLoginLabel)}
-                tone={c.loginExists ? "ok" : c.provisionable ? "muted" : "warn"}
-              />
-            </View>
-            {c.provisionable ? (
-              <Button
-                title={c.loginExists ? STR.resetPassword : STR.generateLogin}
-                onPress={() => onGenerate(c.staffId, c.loginExists, c.userId)}
-                loading={busyId === c.staffId}
-                variant={c.loginExists ? "secondary" : "primary"}
-                style={{ marginTop: space(2) }}
-              />
-            ) : null}
-          </Card>
-        ))
+        candidates.map((c) => {
+          const showCred = result && resultStaffId === c.staffId;
+          return (
+            <Card key={c.staffId}>
+              <Body style={{ fontWeight: "700" }}>{c.name}</Body>
+              <Row label={STR.category} value={c.category} />
+              {c.phone ? <Row label={STR.loginId} value={c.phone} /> : null}
+              {c.mappedRole ? <Row label={STR.role} value={c.mappedRole} /> : null}
+              <View style={{ marginTop: space(1), flexDirection: "row" }}>
+                <Badge
+                  text={c.loginExists ? STR.loginExistsLabel : c.provisionable ? STR.noLoginLabel : (c.reason ?? STR.noLoginLabel)}
+                  tone={c.loginExists ? "ok" : c.provisionable ? "muted" : "warn"}
+                />
+              </View>
+              {c.provisionable ? (
+                <Button
+                  title={c.loginExists ? STR.resetPassword : STR.generateLogin}
+                  onPress={() => onGenerate(c.staffId, c.loginExists, c.userId)}
+                  loading={busyId === c.staffId}
+                  variant={c.loginExists ? "secondary" : "primary"}
+                  style={{ marginTop: space(2) }}
+                />
+              ) : null}
+
+              {showCred ? (
+                <View style={{ marginTop: space(2) }}>
+                  <Row label={STR.generatedPassword} value={result!.password} />
+                  <Notice message={STR.credentialOnceWarning} tone="warn" />
+                  <Button title={STR.shareWhatsApp} onPress={() => Linking.openURL(result!.waLink)} style={{ marginTop: space(2) }} />
+                  <Button title={copied ? STR.copied : STR.copy} onPress={onCopy} variant="secondary" style={{ marginTop: space(1) }} />
+                </View>
+              ) : null}
+            </Card>
+          );
+        })
       )}
     </Screen>
   );

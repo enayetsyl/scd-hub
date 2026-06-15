@@ -20,6 +20,14 @@ import {
   RE_REQUEST_CLASSROOM_OBSERVATION,
   RECORD_SESSION_FOOTAGE,
 } from "../../graphql/observation";
+// CO-2 footage rider: in-app YouTube-unlisted upload (web GIS). Native → paste-id fallback below.
+import {
+  isYouTubeUploadSupported,
+  authorizeYouTube,
+  pickVideoFile,
+  uploadVideoFile,
+  YouTubeUploadError,
+} from "../../lib/youtubeUpload";
 import { Screen, Card, Body, Muted, Button, Field, Select, Badge, Row, Loader, Notice, Divider } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
 import {
@@ -68,6 +76,10 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // CO-2 footage rider — in-app YouTube upload (web GIS only; native falls back to paste-id).
+  const uploadSupported = isYouTubeUploadSupported();
+  const [ytAuthed, setYtAuthed] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const isObservedTeacher = !!user && obs?.teacherId === user.id;
   const released = obs?.state === "REVIEWED" || obs?.state === "TEACHER_RESPONDED";
@@ -86,6 +98,37 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
     refetchObs({ requestPolicy: "network-only" });
     refetchRec({ requestPolicy: "network-only" });
     return res.data;
+  }
+
+  // CO-2: authorize YouTube (separate gesture from the upload, so the file dialog keeps its user gesture).
+  async function onAuthorizeYt(): Promise<void> {
+    setError(null);
+    setOk(null);
+    try {
+      await authorizeYouTube();
+      setYtAuthed(true);
+    } catch (e) {
+      setError(e instanceof YouTubeUploadError ? e.message : STR.errGeneric);
+    }
+  }
+
+  // CO-2: pick a video file → upload to YouTube unlisted (in-app) → attach the returned id.
+  async function onUploadVideo(): Promise<void> {
+    if (!obs) return;
+    setError(null);
+    setOk(null);
+    try {
+      const file = await pickVideoFile();
+      if (!file) return;
+      setUploading(true);
+      const title = `${obsFormLabel(obs.form)} · ${hwSubjectLabel(obs.subject)} · ${obs.classDate}`;
+      const { videoId } = await uploadVideoFile(file, { title });
+      setUploading(false);
+      await run(() => attachFootage({ observationId, youtubeVideoId: videoId }), STR.obsFootageAttached);
+    } catch (e) {
+      setUploading(false);
+      setError(e instanceof YouTubeUploadError ? e.message : STR.errGeneric);
+    }
   }
 
   if (obsQ.fetching) return <Screen><Loader label={STR.loading} /></Screen>;
@@ -178,6 +221,21 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
           )}
           {canUpload ? (
             <View style={{ marginTop: space(3) }}>
+              {uploadSupported ? (
+                <View style={{ marginBottom: space(3) }}>
+                  {!ytAuthed ? (
+                    <Button title={STR.obsAuthorizeYt} variant="secondary" onPress={onAuthorizeYt} disabled={busy || uploading} />
+                  ) : (
+                    <Button
+                      title={uploading ? STR.obsUploadingVideo : STR.obsUploadVideo}
+                      onPress={onUploadVideo}
+                      loading={uploading}
+                      disabled={busy || uploading}
+                    />
+                  )}
+                  <Muted style={{ marginTop: space(1) }}>{STR.obsUploadVideoHint}</Muted>
+                </View>
+              ) : null}
               <Field label={STR.obsYoutubeId} value={youtubeId} onChangeText={setYoutubeId} helper={STR.obsYoutubeIdHint} />
               <Button
                 title={STR.obsAttachFootage}

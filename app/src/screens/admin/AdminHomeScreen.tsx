@@ -49,6 +49,13 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
+      {canManageUsers ? (
+        <Card onPress={() => navigation.navigate("AssignSubjectTeacher")}>
+          <Body style={{ fontWeight: "700" }}>{STR.assignSubjectTeacher}</Body>
+          <Muted>ADR-017</Muted>
+        </Card>
+      ) : null}
+
       {canRoster ? (
         <Card onPress={() => navigation.navigate("Roster")}>
           <Body style={{ fontWeight: "700" }}>{STR.roster}</Body>
@@ -74,6 +81,13 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         <Card onPress={() => navigation.navigate("SectionConfig")}>
           <Body style={{ fontWeight: "700" }}>{STR.sectionConfig}</Body>
           <Muted>D-#62</Muted>
+        </Card>
+      ) : null}
+
+      {canRoster ? (
+        <Card onPress={() => navigation.navigate("AcademicYear")}>
+          <Body style={{ fontWeight: "700" }}>{STR.ayManage}</Body>
+          <Muted>{STR.ayHint}</Muted>
         </Card>
       ) : null}
 

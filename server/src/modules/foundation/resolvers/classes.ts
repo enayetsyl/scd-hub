@@ -12,6 +12,7 @@ import {
   mySectionsAsClassTeacher,
 } from "../services/ClassTeacherService";
 import { mergeSections, splitSections, activeSectionMerges } from "../services/SectionMergeService";
+import { writeAudit } from "../../platform/services/AuditService";
 import { DEFAULT_SECTION_CODE, DEFAULT_SECTION_LABEL_BN } from "@scd/shared";
 
 type SubjectShape = Pick<ISubject, "code" | "nameBn"> & { _id: { toString(): string } };
@@ -102,6 +103,63 @@ builder.queryField("academicYears", (t) =>
     type: [AcademicYearRef],
     authScopes: { authenticated: true },
     resolve: async () => AcademicYear.find({}).sort({ label: -1 }).lean(),
+  }),
+);
+
+/** Add a new academic year (Principal/Office). Optionally make it the active one.
+ *  Setting it current is how the school rolls over at year start — operational
+ *  screens default to the current year so users don't pick it everywhere. */
+builder.mutationField("createAcademicYear", (t) =>
+  t.field({
+    type: AcademicYearRef,
+    authScopes: { hasPermission: "roster:manage" },
+    description: "Create a new academic year; makeCurrent rolls the school over to it.",
+    args: {
+      label: t.arg.string({ required: true }),
+      makeCurrent: t.arg.boolean({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new Error("Unauthenticated");
+      const label = args.label.trim();
+      if (!label) throw new Error("A label is required");
+      const makeCurrent = args.makeCurrent === true;
+      if (makeCurrent) await AcademicYear.updateMany({}, { current: false });
+      const year = await AcademicYear.create({ label, current: makeCurrent });
+      await writeAudit({
+        eventKind: "ACADEMIC_YEAR_CREATED",
+        actorId: ctx.auth.userId,
+        targetId: year._id,
+        targetKind: "AcademicYear",
+        meta: { label, current: makeCurrent },
+      });
+      return { _id: year._id, label: year.label, current: year.current };
+    },
+  }),
+);
+
+/** Set THE active academic year (exactly one is current at a time). */
+builder.mutationField("setCurrentAcademicYear", (t) =>
+  t.field({
+    type: AcademicYearRef,
+    authScopes: { hasPermission: "roster:manage" },
+    description: "Mark one academic year current (clears the flag on all others).",
+    args: { academicYearId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new Error("Unauthenticated");
+      const target = await AcademicYear.findById(args.academicYearId);
+      if (!target) throw new Error("Academic year not found");
+      await AcademicYear.updateMany({ _id: { $ne: target._id } }, { current: false });
+      target.current = true;
+      await target.save();
+      await writeAudit({
+        eventKind: "ACADEMIC_YEAR_SET_CURRENT",
+        actorId: ctx.auth.userId,
+        targetId: target._id,
+        targetKind: "AcademicYear",
+        meta: { label: target.label },
+      });
+      return { _id: target._id, label: target.label, current: target.current };
+    },
   }),
 );
 

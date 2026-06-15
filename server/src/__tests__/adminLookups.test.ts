@@ -35,6 +35,7 @@ describe("grantView (lean grant → client view)", () => {
       id: _id.toString(),
       kind: "teaching",
       active: true,
+      teacherId: null,
       classId: classId.toString(),
       sectionId: sectionId.toString(),
       subjectId: subjectId.toString(),
@@ -44,6 +45,20 @@ describe("grantView (lean grant → client view)", () => {
       durationDays: null,
       proxyStatus: null,
     });
+  });
+
+  test("teaching grant exposes teacherId (subject-teacher roster relies on it)", () => {
+    const teacherId = oid();
+    const v = grantView({
+      _id: oid(),
+      kind: "teaching",
+      active: true,
+      teacherId,
+      classId: oid(),
+      sectionId: oid(),
+      subjectId: oid(),
+    });
+    expect(v.teacherId).toBe(teacherId.toString());
   });
 
   test("proxy grant exposes cover detail with ISO startDate", () => {

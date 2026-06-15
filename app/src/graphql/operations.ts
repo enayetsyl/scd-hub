@@ -165,6 +165,26 @@ export const ACADEMIC_YEARS_QUERY = gql<{ academicYears: AcademicYearT[] }, NoVa
   }
 `;
 
+/** Add a new academic year (roster:manage); makeCurrent rolls the school over. */
+export const CREATE_ACADEMIC_YEAR = gql<
+  { createAcademicYear: AcademicYearT },
+  { label: string; makeCurrent?: boolean | null }
+>`
+  mutation CreateAcademicYear($label: String!, $makeCurrent: Boolean) {
+    createAcademicYear(label: $label, makeCurrent: $makeCurrent) { id label current }
+  }
+`;
+
+/** Set the active academic year (roster:manage). */
+export const SET_CURRENT_ACADEMIC_YEAR = gql<
+  { setCurrentAcademicYear: AcademicYearT },
+  { academicYearId: string }
+>`
+  mutation SetCurrentAcademicYear($academicYearId: String!) {
+    setCurrentAcademicYear(academicYearId: $academicYearId) { id label current }
+  }
+`;
+
 export interface RoomT {
   id: string;
   code: string;
@@ -314,6 +334,7 @@ export interface ScopeGrantT {
   id: string;
   kind: string;
   active: boolean;
+  teacherId: string | null;
   classId: string | null;
   sectionId: string | null;
   subjectId: string | null;
@@ -324,7 +345,7 @@ export interface ScopeGrantT {
   proxyStatus: string | null;
 }
 
-const SCOPE_GRANT_FIELDS = `id kind active classId sectionId subjectId coveringTeacherId absentTeacherId startDate durationDays proxyStatus`;
+const SCOPE_GRANT_FIELDS = `id kind active teacherId classId sectionId subjectId coveringTeacherId absentTeacherId startDate durationDays proxyStatus`;
 
 export const MY_SCOPES_QUERY = gql<{ myScopes: ScopeGrantT[] }, NoVars>`
   query MyScopes {
@@ -336,6 +357,28 @@ export const MY_SCOPES_QUERY = gql<{ myScopes: ScopeGrantT[] }, NoVars>`
 export const PROXY_GRANTS_QUERY = gql<{ proxyGrants: ScopeGrantT[] }, { activeOnly?: boolean | null }>`
   query ProxyGrants($activeOnly: Boolean) {
     proxyGrants(activeOnly: $activeOnly) { ${SCOPE_GRANT_FIELDS} }
+  }
+`;
+
+/** Subject-teacher (teaching) grants for a section (user:manage). */
+export const TEACHING_GRANTS_QUERY = gql<{ teachingGrants: ScopeGrantT[] }, { sectionId: string }>`
+  query TeachingGrants($sectionId: String!) {
+    teachingGrants(sectionId: $sectionId) { ${SCOPE_GRANT_FIELDS} }
+  }
+`;
+
+export const GRANT_TEACHING = gql<
+  { grantTeaching: { grantId: string } },
+  { teacherId: string; sectionId: string; subjectId: string }
+>`
+  mutation GrantTeaching($teacherId: String!, $sectionId: String!, $subjectId: String!) {
+    grantTeaching(teacherId: $teacherId, sectionId: $sectionId, subjectId: $subjectId) { grantId }
+  }
+`;
+
+export const REVOKE_TEACHING = gql<{ revokeTeaching: boolean }, { grantId: string }>`
+  mutation RevokeTeaching($grantId: String!) {
+    revokeTeaching(grantId: $grantId)
   }
 `;
 
