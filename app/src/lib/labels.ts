@@ -176,6 +176,33 @@ import {
   COMMENT_SENTIMENT_LABELS_EN,
   type CommentType,
   type CommentSentiment,
+  OBSERVATION_FORM_LABELS_BN,
+  OBSERVATION_FORM_LABELS_EN,
+  OBSERVATION_DOMAIN_LABELS_BN,
+  OBSERVATION_DOMAIN_LABELS_EN,
+  OBSERVATION_LEVEL_LABELS_BN,
+  OBSERVATION_LEVEL_LABELS_EN,
+  OBSERVATION_GATE_LABELS_BN,
+  OBSERVATION_GATE_LABELS_EN,
+  GATE_RESULT_LABELS_BN,
+  GATE_RESULT_LABELS_EN,
+  OBSERVATION_STATE_LABELS_BN,
+  OBSERVATION_STATE_LABELS_EN,
+  GROWTH_PROGRESS_LABELS_BN,
+  GROWTH_PROGRESS_LABELS_EN,
+  QURAN_REVIEW_CRITERIA_LABELS_BN,
+  QURAN_REVIEW_CRITERIA_LABELS_EN,
+  QURAN_COMPLIANCE_ITEM_LABELS_BN,
+  QURAN_COMPLIANCE_ITEM_LABELS_EN,
+  type ObservationForm,
+  type ObservationDomain,
+  type ObservationLevel,
+  type ObservationGate,
+  type GateResult,
+  type ObservationState,
+  type GrowthProgress,
+  type QuranReviewCriterion,
+  type QuranComplianceItem,
 } from "@scd/shared";
 
 // --- Active language (module-level; read at render time) ---------------------
@@ -353,6 +380,36 @@ export const ctReportStateLabel = (v?: string | null): string => {
 /** App-derived trend (CT-4 trendOf) → arrow glyph. */
 export const ctTrendGlyph = (v?: string | null): string =>
   v === "up" ? "↑" : v === "down" ? "↓" : v === "flat" ? "→" : DASH;
+
+// Classroom Observation (CO app surfaces over CO-1..CO-7)
+export const obsFormLabel = (v?: string | null): string =>
+  (v && pick(OBSERVATION_FORM_LABELS_BN, OBSERVATION_FORM_LABELS_EN)[v as ObservationForm]) || v || DASH;
+export const obsDomainLabel = (v?: string | null): string =>
+  (v && pick(OBSERVATION_DOMAIN_LABELS_BN, OBSERVATION_DOMAIN_LABELS_EN)[v as ObservationDomain]) || v || DASH;
+export const obsLevelLabel = (v?: number | null): string =>
+  (v != null && pick(OBSERVATION_LEVEL_LABELS_BN, OBSERVATION_LEVEL_LABELS_EN)[v as ObservationLevel]) || (v != null ? bnNum(v) : DASH);
+export const obsGateLabel = (v?: string | null): string =>
+  (v && pick(OBSERVATION_GATE_LABELS_BN, OBSERVATION_GATE_LABELS_EN)[v as ObservationGate]) || v || DASH;
+export const obsGateResultLabel = (v?: string | null): string =>
+  (v && pick(GATE_RESULT_LABELS_BN, GATE_RESULT_LABELS_EN)[v as GateResult]) || v || DASH;
+export const obsStateLabel = (v?: string | null): string =>
+  (v && pick(OBSERVATION_STATE_LABELS_BN, OBSERVATION_STATE_LABELS_EN)[v as ObservationState]) || v || DASH;
+export const obsGrowthProgressLabel = (v?: string | null): string =>
+  (v && pick(GROWTH_PROGRESS_LABELS_BN, GROWTH_PROGRESS_LABELS_EN)[v as GrowthProgress]) || v || DASH;
+export const obsQuranCriterionLabel = (v?: string | null): string =>
+  (v && pick(QURAN_REVIEW_CRITERIA_LABELS_BN, QURAN_REVIEW_CRITERIA_LABELS_EN)[v as QuranReviewCriterion]) || v || DASH;
+export const obsQuranComplianceLabel = (v?: string | null): string =>
+  (v && pick(QURAN_COMPLIANCE_ITEM_LABELS_BN, QURAN_COMPLIANCE_ITEM_LABELS_EN)[v as QuranComplianceItem]) || v || DASH;
+/** Trend (CO-4) string → arrow glyph (server returns up/down/flat). */
+export const obsTrendGlyph = (v?: string | null): string =>
+  v === "up" ? "↑" : v === "down" ? "↓" : v === "flat" ? "→" : DASH;
+/** Scheduler support-tier → label. SUPPORT_TIERS is not in the built shared dist on
+ *  this branch, so the 3 tier labels are hardcoded here (per the build contract). */
+export const obsTierLabel = (v?: string | null): string => {
+  const bn: Record<string, string> = { STRONG: "শক্তিশালী", STANDARD: "স্বাভাবিক", NEEDS_SUPPORT: "সহায়তা প্রয়োজন" };
+  const en: Record<string, string> = { STRONG: "Strong", STANDARD: "Standard", NEEDS_SUPPORT: "Needs support" };
+  return (v && pick(bn, en)[v]) || v || DASH;
+};
 
 export const lifecycleStateLabel = (v?: string | null): string =>
   (v && pick(LIFECYCLE_STATE_LABELS_BN, LIFECYCLE_STATE_LABELS_EN)[v as LifecycleState]) || v || DASH;
@@ -1917,6 +1974,135 @@ const STR_BN = {
   // Guardian rider
   gpComments: "শিক্ষকের মন্তব্য",
   gpNoComments: "এখনো কোনো মন্তব্য পাঠানো হয়নি।",
+
+  // --- Classroom Observation (CO app surfaces over CO-1..CO-7) ----------------
+  tabObservation: "অবজারভেশন",
+  obsHomeTitle: "ক্লাসরুম অবজারভেশন",
+  obsUploadNav: "নতুন অবজারভেশন আপলোড",
+  obsReviewQueueNav: "আমার রিভিউ কিউ",
+  obsTrendNav: "ডোমেইন ট্রেন্ড",
+  obsDueListNav: "রিভিউ-প্রয়োজন তালিকা",
+  obsReviewerEffNav: "রিভিউয়ার কার্যকারিতা",
+  obsConfigNav: "এস্কেলেশন কনফিগ",
+  obsByTeacherNav: "শিক্ষকের অবজারভেশন",
+  obsNoAccess: "এই অংশে প্রবেশের অনুমতি নেই।",
+
+  // Upload (J1)
+  obsUploadTitle: "অবজারভেশন আপলোড",
+  obsForm: "ফর্ম",
+  obsPickForm: "ফর্ম নির্বাচন করুন",
+  obsSubject: "বিষয়",
+  obsTeacherId: "শিক্ষকের আইডি",
+  obsTeacherIdHint: "যে শিক্ষককে পর্যবেক্ষণ করা হবে তার ইউজার আইডি",
+  obsClassDate: "ক্লাসের তারিখ",
+  obsAnchor: "অ্যাঙ্কর",
+  obsAnchorSection: "শাখা",
+  obsAnchorSubjectGroup: "সাবজেক্ট-গ্রুপ",
+  obsSectionId: "শাখা আইডি",
+  obsSubjectGroupId: "সাবজেক্ট-গ্রুপ আইডি",
+  obsPeriodNumber: "পিরিয়ড নং",
+  obsRecordingId: "রেকর্ডিং আইডি (ঐচ্ছিক)",
+  obsObserverId: "পর্যবেক্ষকের আইডি (ঐচ্ছিক)",
+  obsObserverIdHint: "পর্যবেক্ষক শিক্ষকের ইউজার আইডি — পর্যবেক্ষক ও পর্যবেক্ষিত শিক্ষক একই হতে পারবে না",
+  obsSubmitUpload: "আপলোড করুন",
+  obsUploaded: "অবজারভেশন আপলোড হয়েছে",
+
+  // Review queue + review form (J2/J3)
+  obsQueueTitle: "রিভিউ কিউ",
+  obsNoQueue: "আপনার কোনো বরাদ্দকৃত রিভিউ নেই।",
+  obsReviewTitle: "অবজারভেশন রিভিউ",
+  obsReview: "রিভিউ করুন",
+  obsDomainScores: "ডোমেইন স্কোর (১–৪)",
+  obsDomainNote: "মন্তব্য",
+  obsGates: "গেট",
+  obsBreachNote: "লঙ্ঘনের নোট",
+  obsOneStrength: "একটি শক্তি",
+  obsGrowthFocus: "বৃদ্ধির ফোকাস",
+  obsPriorFocusProgress: "পূর্ববর্তী ফোকাসের অগ্রগতি",
+  obsQuranRatings: "কুরআন রেটিং (১–৫)",
+  obsQuranCompliance: "কমপ্লায়েন্স (হ্যাঁ/না)",
+  obsQuranStrengths: "শক্তিসমূহ",
+  obsQuranImprovements: "উন্নতির ক্ষেত্র",
+  obsQuranSuggestions: "পরামর্শ",
+  obsYes: "হ্যাঁ",
+  obsNo: "না",
+  obsSubmitReview: "রিভিউ জমা দিন",
+  obsReviewSaved: "রিভিউ সংরক্ষিত হয়েছে",
+
+  // Detail (J4) + respond + rate + footage
+  obsDetailTitle: "অবজারভেশন বিবরণ",
+  obsState: "অবস্থা",
+  obsTeacher: "শিক্ষক",
+  obsObserver: "পর্যবেক্ষক",
+  obsRespond: "জবাব দিন",
+  obsResponseText: "শিক্ষকের জবাব",
+  obsResponded: "জবাব রেকর্ড হয়েছে",
+  obsYourResponse: "আপনার জবাব",
+  obsRateReview: "রিভিউ রেটিং দিন",
+  obsFairness: "ন্যায্যতা (১–৫)",
+  obsUsefulness: "উপযোগিতা (১–৫, ঐচ্ছিক)",
+  obsSubmitRating: "রেটিং জমা দিন",
+  obsRated: "রেটিং জমা হয়েছে",
+  obsReReview: "পুনঃরিভিউ অনুরোধ",
+  obsReReviewObserverId: "নতুন পর্যবেক্ষকের আইডি",
+  obsReReviewed: "পুনঃরিভিউ তৈরি হয়েছে",
+  obsFootage: "সেশন ফুটেজ",
+  obsNoFootage: "কোনো ফুটেজ সংযুক্ত নেই।",
+  obsYoutubeId: "ইউটিউব ভিডিও আইডি",
+  obsYoutubeIdHint: "আনলিস্টেড ভিডিও আইডি লিখুন",
+  obsAttachFootage: "ফুটেজ সংযুক্ত করুন",
+  obsOpenVideo: "ভিডিও খুলুন",
+  obsFootageAttached: "ফুটেজ সংযুক্ত হয়েছে",
+
+  // Trend (CO-4)
+  obsTrendTitle: "ডোমেইন ট্রেন্ড",
+  obsTrendTeacherId: "শিক্ষকের আইডি",
+  obsObservationCount: "অবজারভেশন সংখ্যা",
+  obsDateRange: "তারিখ পরিসর",
+  obsLatest: "সর্বশেষ",
+  obsPrevious: "পূর্ববর্তী",
+  obsNoTrend: "ট্রেন্ড দেখানোর মতো যথেষ্ট অবজারভেশন নেই।",
+  obsSchoolPatterns: "স্কুল-ব্যাপী প্যাটার্ন (ম্যানেজার)",
+  obsWeakestDomains: "সবচেয়ে দুর্বল ডোমেইন",
+  obsMeanLevel: "গড় স্তর",
+  obsSampleCount: "নমুনা",
+
+  // Due list + schedule config (CO-6)
+  obsDueListTitle: "রিভিউ-প্রয়োজন তালিকা",
+  obsDueListNote: "এটি কেবল পরামর্শ — স্বয়ংক্রিয় বরাদ্দ নয়।",
+  obsTier: "টিয়ার",
+  obsDueDate: "নির্ধারিত তারিখ",
+  obsOverdueDays: "বিলম্ব (দিন)",
+  obsNeverReviewed: "কখনও রিভিউ হয়নি",
+  obsLastReviewed: "সর্বশেষ রিভিউ",
+  obsCandidates: "প্রার্থী",
+  obsNoDue: "এখন কোনো রিভিউ প্রয়োজন নেই।",
+  obsScheduleConfig: "শিডিউল কনফিগ",
+  obsBaseInterval: "ভিত্তি ব্যবধান (দিন)",
+  obsStrongMult: "শক্তিশালী গুণক",
+  obsNeedsSupportMult: "সহায়তা-প্রয়োজন গুণক",
+  obsMinInterval: "ন্যূনতম ব্যবধান (দিন)",
+  obsSaveConfig: "কনফিগ সংরক্ষণ",
+  obsConfigSaved: "কনফিগ সংরক্ষিত হয়েছে",
+  obsUsingDefaults: "ডিফল্ট প্রয়োগ হচ্ছে",
+
+  // Escalation config (CO-3)
+  obsEscalationTitle: "এস্কেলেশন কনফিগ",
+  obsReminder1: "১ম রিমাইন্ডার (দিন)",
+  obsReminder2: "২য় রিমাইন্ডার (দিন)",
+  obsPrincipalFlag: "প্রিন্সিপাল ফ্ল্যাগ (দিন)",
+
+  // Reviewer effectiveness (CO-7)
+  obsReviewerEffTitle: "রিভিউয়ার কার্যকারিতা",
+  obsReviewerEffNote: "ব্যক্তিগত ও উন্নয়নমূলক — মূল্যায়নের জন্য নয়।",
+  obsReviewsCompleted: "সম্পন্ন রিভিউ",
+  obsAvgTurnaround: "গড় টার্নঅ্যারাউন্ড (দিন)",
+  obsBacklog: "ব্যাকলগ",
+  obsCalibration: "ক্যালিব্রেশন মিল",
+  obsImpact: "প্রভাব (উন্নত ডোমেইন)",
+  obsAvgFairness: "গড় ন্যায্যতা",
+  obsAvgUsefulness: "গড় উপযোগিতা",
+  obsNoReviewers: "কোনো রিভিউয়ার ডেটা নেই।",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -3311,6 +3497,135 @@ const STR_EN: StrTable = {
   // Guardian rider
   gpComments: "Teacher comments",
   gpNoComments: "No comments delivered yet.",
+
+  // --- Classroom Observation (CO app surfaces over CO-1..CO-7) ----------------
+  tabObservation: "Observation",
+  obsHomeTitle: "Classroom Observation",
+  obsUploadNav: "Upload observation",
+  obsReviewQueueNav: "My review queue",
+  obsTrendNav: "Domain trend",
+  obsDueListNav: "Due-for-review list",
+  obsReviewerEffNav: "Reviewer effectiveness",
+  obsConfigNav: "Escalation config",
+  obsByTeacherNav: "Teacher observations",
+  obsNoAccess: "You don't have access to this section.",
+
+  // Upload (J1)
+  obsUploadTitle: "Upload observation",
+  obsForm: "Form",
+  obsPickForm: "Pick a form",
+  obsSubject: "Subject",
+  obsTeacherId: "Teacher ID",
+  obsTeacherIdHint: "The user ID of the observed teacher",
+  obsClassDate: "Class date",
+  obsAnchor: "Anchor",
+  obsAnchorSection: "Section",
+  obsAnchorSubjectGroup: "Subject group",
+  obsSectionId: "Section ID",
+  obsSubjectGroupId: "Subject group ID",
+  obsPeriodNumber: "Period no.",
+  obsRecordingId: "Recording ID (optional)",
+  obsObserverId: "Observer ID (optional)",
+  obsObserverIdHint: "The observer teacher's user ID — observer and observed teacher cannot be the same",
+  obsSubmitUpload: "Upload",
+  obsUploaded: "Observation uploaded",
+
+  // Review queue + review form (J2/J3)
+  obsQueueTitle: "Review queue",
+  obsNoQueue: "You have no assigned reviews.",
+  obsReviewTitle: "Review observation",
+  obsReview: "Review",
+  obsDomainScores: "Domain scores (1–4)",
+  obsDomainNote: "Note",
+  obsGates: "Gates",
+  obsBreachNote: "Breach note",
+  obsOneStrength: "One strength",
+  obsGrowthFocus: "Growth focus",
+  obsPriorFocusProgress: "Prior focus progress",
+  obsQuranRatings: "Quran ratings (1–5)",
+  obsQuranCompliance: "Compliance (yes/no)",
+  obsQuranStrengths: "Strengths",
+  obsQuranImprovements: "Improvements",
+  obsQuranSuggestions: "Suggestions",
+  obsYes: "Yes",
+  obsNo: "No",
+  obsSubmitReview: "Submit review",
+  obsReviewSaved: "Review saved",
+
+  // Detail (J4) + respond + rate + footage
+  obsDetailTitle: "Observation detail",
+  obsState: "State",
+  obsTeacher: "Teacher",
+  obsObserver: "Observer",
+  obsRespond: "Respond",
+  obsResponseText: "Your response",
+  obsResponded: "Response recorded",
+  obsYourResponse: "Your response",
+  obsRateReview: "Rate the review",
+  obsFairness: "Fairness (1–5)",
+  obsUsefulness: "Usefulness (1–5, optional)",
+  obsSubmitRating: "Submit rating",
+  obsRated: "Rating submitted",
+  obsReReview: "Request re-review",
+  obsReReviewObserverId: "New observer ID",
+  obsReReviewed: "Re-review created",
+  obsFootage: "Session footage",
+  obsNoFootage: "No footage attached.",
+  obsYoutubeId: "YouTube video ID",
+  obsYoutubeIdHint: "Enter the unlisted video ID",
+  obsAttachFootage: "Attach footage",
+  obsOpenVideo: "Open video",
+  obsFootageAttached: "Footage attached",
+
+  // Trend (CO-4)
+  obsTrendTitle: "Domain trend",
+  obsTrendTeacherId: "Teacher ID",
+  obsObservationCount: "Observations",
+  obsDateRange: "Date range",
+  obsLatest: "Latest",
+  obsPrevious: "Previous",
+  obsNoTrend: "Not enough observations to show a trend.",
+  obsSchoolPatterns: "School-wide patterns (managers)",
+  obsWeakestDomains: "Weakest domains",
+  obsMeanLevel: "Mean level",
+  obsSampleCount: "Sample",
+
+  // Due list + schedule config (CO-6)
+  obsDueListTitle: "Due-for-review list",
+  obsDueListNote: "Suggestion only — no auto-assign.",
+  obsTier: "Tier",
+  obsDueDate: "Due date",
+  obsOverdueDays: "Overdue (days)",
+  obsNeverReviewed: "Never reviewed",
+  obsLastReviewed: "Last reviewed",
+  obsCandidates: "Candidates",
+  obsNoDue: "Nothing due for review right now.",
+  obsScheduleConfig: "Schedule config",
+  obsBaseInterval: "Base interval (days)",
+  obsStrongMult: "Strong multiplier",
+  obsNeedsSupportMult: "Needs-support multiplier",
+  obsMinInterval: "Min interval (days)",
+  obsSaveConfig: "Save config",
+  obsConfigSaved: "Config saved",
+  obsUsingDefaults: "Using defaults",
+
+  // Escalation config (CO-3)
+  obsEscalationTitle: "Escalation config",
+  obsReminder1: "1st reminder (days)",
+  obsReminder2: "2nd reminder (days)",
+  obsPrincipalFlag: "Principal flag (days)",
+
+  // Reviewer effectiveness (CO-7)
+  obsReviewerEffTitle: "Reviewer effectiveness",
+  obsReviewerEffNote: "Private and developmental — not an evaluation.",
+  obsReviewsCompleted: "Reviews completed",
+  obsAvgTurnaround: "Avg turnaround (days)",
+  obsBacklog: "Backlog",
+  obsCalibration: "Calibration agreement",
+  obsImpact: "Impact (domains improved)",
+  obsAvgFairness: "Avg fairness",
+  obsAvgUsefulness: "Avg usefulness",
+  obsNoReviewers: "No reviewer data.",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use
