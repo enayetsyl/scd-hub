@@ -1962,6 +1962,256 @@ export const SUPPORT_TIER_LABELS_EN: Record<SupportTier, string> = {
 };
 
 
+// --- A.17 FINANCE / ACCOUNTING VOCAB FREEZE (FIN-1, prd-finance-fin1.md §4,
+// D-#221–#223/#247; module REQ finance-requirements.md §3) ---------------------
+// App-native, NO wire/envelope twin (REQ §9, D-#46) — finance is an operational/
+// identity-plane FEATURE (every posting names a ledger/student/party), NOT import
+// corpus content, behind the ADR-005 firewall. FIN-1 owns the WHOLE-module vocab
+// freeze in one edit (the "one vocab owner at a time" rule): ledgers, payment modes,
+// the income/student-fee/movement/expense heads, and the Qard/IOU directions+types.
+// The models that CONSUME the heads (postings) are FIN-2/FIN-3. Codes are English
+// UPPER_SNAKE; every enum gets total BN+EN label maps and a verifier section (§C.18).
+//
+// NAMESPACING: `FINANCE_*` / `LEDGER_*` / `QARD_IOU_*` deliberately dodge the HR
+// `PAYMENT_METHODS`/`PaymentMethod` enum (salary disbursement: bank/bkash/cash) —
+// finance's modes are CASH/BANK/ONLINE and must never collide with it.
+//
+// Head lists RATIFIED 2026-06-15 (D-#247): 22 expense / 11 income / 7 student-fee,
+// confirmed final. Heads are a CODE-CONTROLLED list (not an Office registry) — a new
+// head is an additive vocab edit (one line + BN/EN + verifier; NO migration; existing
+// postings keep their head); the OTHER head + a free-text note is the runtime valve.
+
+/** The 5 finance ledgers (FIN-1 §4; REQ §3). CASH/BANK/ONLINE are the movement-mode
+ *  ledgers; QARD_CONTROL/IOU_CONTROL are the control ledgers whose opening may be
+ *  negative. Exactly these five — the snapshot/dashboard always reads the 5-vector. */
+export const LEDGER_KINDS = ["CASH", "BANK", "ONLINE", "QARD_CONTROL", "IOU_CONTROL"] as const;
+export type LedgerKind = (typeof LEDGER_KINDS)[number];
+export const LEDGER_KIND_LABELS_BN: Record<LedgerKind, string> = {
+  CASH: "নগদ",
+  BANK: "ব্যাংক",
+  ONLINE: "অনলাইন পেমেন্ট",
+  QARD_CONTROL: "কর্জে হাসানা (নিয়ন্ত্রণ)",
+  IOU_CONTROL: "আইওইউ (নিয়ন্ত্রণ)",
+};
+export const LEDGER_KIND_LABELS_EN: Record<LedgerKind, string> = {
+  CASH: "Cash",
+  BANK: "Bank",
+  ONLINE: "Online Payment",
+  QARD_CONTROL: "Qard-e-Hasana (control)",
+  IOU_CONTROL: "IOU (control)",
+};
+
+/** The 3 finance movement modes (FIN-1 §4; REQ §3). DISTINCT from the HR
+ *  PAYMENT_METHODS enum (salary disbursement) — finance uses its own namespaced set. */
+export const FINANCE_PAYMENT_MODES = ["CASH", "BANK", "ONLINE"] as const;
+export type FinancePaymentMode = (typeof FINANCE_PAYMENT_MODES)[number];
+export const FINANCE_PAYMENT_MODE_LABELS_BN: Record<FinancePaymentMode, string> = {
+  CASH: "নগদ",
+  BANK: "ব্যাংক",
+  ONLINE: "অনলাইন",
+};
+export const FINANCE_PAYMENT_MODE_LABELS_EN: Record<FinancePaymentMode, string> = {
+  CASH: "Cash",
+  BANK: "Bank",
+  ONLINE: "Online",
+};
+
+/** The 11 true-income heads (FIN-1 §4; REQ §3 — RATIFIED D-#247). These are real
+ *  revenue (FIN-5 budget/actual counts them); the ledger-movement heads below are NOT. */
+export const FINANCE_INCOME_HEADS = [
+  "ADMISSION_FEE",
+  "SESSION_FEE",
+  "TUITION_FEE",
+  "BOOKS_STATIONERIES",
+  "REVISION_FEE",
+  "TRANSPORT_FEE",
+  "APPLICATION_FORM_PROSPECTUS",
+  "SADAKA",
+  "SUBSIDY",
+  "OTHER_FEE",
+  "OTHER",
+] as const;
+export type FinanceIncomeHead = (typeof FINANCE_INCOME_HEADS)[number];
+export const FINANCE_INCOME_HEAD_LABELS_BN: Record<FinanceIncomeHead, string> = {
+  ADMISSION_FEE: "ভর্তি ফি",
+  SESSION_FEE: "সেশন ফি",
+  TUITION_FEE: "টিউশন ফি",
+  BOOKS_STATIONERIES: "বই ও স্টেশনারি",
+  REVISION_FEE: "রিভিশন ফি",
+  TRANSPORT_FEE: "পরিবহন ফি",
+  APPLICATION_FORM_PROSPECTUS: "আবেদন ফরম ও প্রসপেক্টাস",
+  SADAKA: "সাদাকা",
+  SUBSIDY: "ভর্তুকি",
+  OTHER_FEE: "অন্যান্য ফি",
+  OTHER: "অন্যান্য",
+};
+export const FINANCE_INCOME_HEAD_LABELS_EN: Record<FinanceIncomeHead, string> = {
+  ADMISSION_FEE: "Admission Fee",
+  SESSION_FEE: "Session Fee",
+  TUITION_FEE: "Tuition Fee",
+  BOOKS_STATIONERIES: "Books & Stationeries",
+  REVISION_FEE: "Revision Fee",
+  TRANSPORT_FEE: "Transport Fee",
+  APPLICATION_FORM_PROSPECTUS: "Application Form & Prospectus",
+  SADAKA: "Sadaka",
+  SUBSIDY: "Subsidy",
+  OTHER_FEE: "Other Fee",
+  OTHER: "Other",
+};
+
+/** The 7 per-child student-fee heads (FIN-1 §4; REQ §3 — RATIFIED D-#247). The
+ *  per-child split at fee posting (FIN-2); OTHER carries a free-text label then. */
+export const FINANCE_STUDENT_FEE_HEADS = [
+  "ADMISSION",
+  "SESSION",
+  "TUITION",
+  "BOOKS_STATIONERIES",
+  "REVISION",
+  "TRANSPORT",
+  "OTHER",
+] as const;
+export type FinanceStudentFeeHead = (typeof FINANCE_STUDENT_FEE_HEADS)[number];
+export const FINANCE_STUDENT_FEE_HEAD_LABELS_BN: Record<FinanceStudentFeeHead, string> = {
+  ADMISSION: "ভর্তি",
+  SESSION: "সেশন",
+  TUITION: "টিউশন",
+  BOOKS_STATIONERIES: "বই ও স্টেশনারি",
+  REVISION: "রিভিশন",
+  TRANSPORT: "পরিবহন",
+  OTHER: "অন্যান্য",
+};
+export const FINANCE_STUDENT_FEE_HEAD_LABELS_EN: Record<FinanceStudentFeeHead, string> = {
+  ADMISSION: "Admission",
+  SESSION: "Session",
+  TUITION: "Tuition",
+  BOOKS_STATIONERIES: "Books & Stationeries",
+  REVISION: "Revision",
+  TRANSPORT: "Transport",
+  OTHER: "Other",
+};
+
+/** The 3 ledger-movement heads (FIN-1 §4; REQ §3). NOT income — kept a separate enum
+ *  so FIN-5 budget/actual never counts a deposit/repayment as revenue. Disjoint from
+ *  FINANCE_INCOME_HEADS (verifier-checked). */
+export const FINANCE_LEDGER_MOVEMENT_HEADS = ["BANK_DEPOSIT", "QARD_REPAYMENT", "IOU_REPAYMENT"] as const;
+export type FinanceLedgerMovementHead = (typeof FINANCE_LEDGER_MOVEMENT_HEADS)[number];
+export const FINANCE_LEDGER_MOVEMENT_HEAD_LABELS_BN: Record<FinanceLedgerMovementHead, string> = {
+  BANK_DEPOSIT: "ব্যাংক জমা",
+  QARD_REPAYMENT: "কর্জ ফেরত",
+  IOU_REPAYMENT: "আইওইউ ফেরত",
+};
+export const FINANCE_LEDGER_MOVEMENT_HEAD_LABELS_EN: Record<FinanceLedgerMovementHead, string> = {
+  BANK_DEPOSIT: "Bank Deposit",
+  QARD_REPAYMENT: "Qard Repayment",
+  IOU_REPAYMENT: "IOU Repayment",
+};
+
+/** The 22 unified expense heads (FIN-1 §4; REQ §3 — RATIFIED D-#247). SALARY is the
+ *  line HR payroll feeds (the monthly net-payable total — REQ §7); OTHER + a free-text
+ *  note is the one-off valve. */
+export const FINANCE_EXPENSE_HEADS = [
+  "SALARY",
+  "RENT",
+  "UTILITIES",
+  "GAS_BILL",
+  "MOBILE_BILLS",
+  "REPAIRING_MAINTENANCE",
+  "TRANSPORT",
+  "CONVEYANCE",
+  "CLASS_MATERIAL",
+  "OFFICE_STATIONARY",
+  "STUDENT_STATIONARY",
+  "KITCHEN_MATERIALS",
+  "CLEANING",
+  "BREAKFAST",
+  "LUNCH",
+  "AFTERNOON_MEAL",
+  "FOOD_REWARD",
+  "HALAQA",
+  "PICNIC",
+  "COMMUNITY",
+  "TRAINING",
+  "OTHER",
+] as const;
+export type FinanceExpenseHead = (typeof FINANCE_EXPENSE_HEADS)[number];
+export const FINANCE_EXPENSE_HEAD_LABELS_BN: Record<FinanceExpenseHead, string> = {
+  SALARY: "বেতন",
+  RENT: "ভাড়া",
+  UTILITIES: "ইউটিলিটি",
+  GAS_BILL: "গ্যাস বিল",
+  MOBILE_BILLS: "মোবাইল বিল",
+  REPAIRING_MAINTENANCE: "মেরামত ও রক্ষণাবেক্ষণ",
+  TRANSPORT: "পরিবহন",
+  CONVEYANCE: "যাতায়াত",
+  CLASS_MATERIAL: "ক্লাস উপকরণ",
+  OFFICE_STATIONARY: "অফিস স্টেশনারি",
+  STUDENT_STATIONARY: "শিক্ষার্থী স্টেশনারি",
+  KITCHEN_MATERIALS: "রান্নাঘরের উপকরণ",
+  CLEANING: "পরিচ্ছন্নতা",
+  BREAKFAST: "নাশতা",
+  LUNCH: "দুপুরের খাবার",
+  AFTERNOON_MEAL: "বিকেলের খাবার",
+  FOOD_REWARD: "খাদ্য পুরস্কার",
+  HALAQA: "হালাকা",
+  PICNIC: "পিকনিক",
+  COMMUNITY: "কমিউনিটি",
+  TRAINING: "প্রশিক্ষণ",
+  OTHER: "অন্যান্য",
+};
+export const FINANCE_EXPENSE_HEAD_LABELS_EN: Record<FinanceExpenseHead, string> = {
+  SALARY: "Salary",
+  RENT: "Rent",
+  UTILITIES: "Utilities",
+  GAS_BILL: "Gas Bill",
+  MOBILE_BILLS: "Mobile Bills",
+  REPAIRING_MAINTENANCE: "Repairing & Maintenance",
+  TRANSPORT: "Transport",
+  CONVEYANCE: "Conveyance",
+  CLASS_MATERIAL: "Class Material",
+  OFFICE_STATIONARY: "Office Stationary",
+  STUDENT_STATIONARY: "Student Stationary",
+  KITCHEN_MATERIALS: "Kitchen Materials",
+  CLEANING: "Cleaning",
+  BREAKFAST: "Breakfast",
+  LUNCH: "Lunch",
+  AFTERNOON_MEAL: "Afternoon Meal",
+  FOOD_REWARD: "Food Reward",
+  HALAQA: "Halaqa",
+  PICNIC: "Picnic",
+  COMMUNITY: "Community",
+  TRAINING: "Training",
+  OTHER: "Other",
+};
+
+/** Qard/IOU register directions (FIN-1 §4; REQ §3). ADJUSTMENT = opening balance.
+ *  The register itself is FIN-3; FIN-1 only freezes the dir/type enums. */
+export const QARD_IOU_DIRECTIONS = ["NEW_DISBURSEMENT", "REPAYMENT_RECEIVED", "ADJUSTMENT"] as const;
+export type QardIouDirection = (typeof QARD_IOU_DIRECTIONS)[number];
+export const QARD_IOU_DIRECTION_LABELS_BN: Record<QardIouDirection, string> = {
+  NEW_DISBURSEMENT: "নতুন প্রদান",
+  REPAYMENT_RECEIVED: "ফেরত গৃহীত",
+  ADJUSTMENT: "সমন্বয় (প্রারম্ভিক ব্যালেন্স)",
+};
+export const QARD_IOU_DIRECTION_LABELS_EN: Record<QardIouDirection, string> = {
+  NEW_DISBURSEMENT: "New Disbursement",
+  REPAYMENT_RECEIVED: "Repayment Received",
+  ADJUSTMENT: "Adjustment (opening balance)",
+};
+
+/** Qard/IOU register types (FIN-1 §4; REQ §3). QARD_E_HASANA = benevolent loan; IOU
+ *  = a non-salary office advance. Staff salary advances are HR's, not here (REQ §7). */
+export const QARD_IOU_TYPES = ["QARD_E_HASANA", "IOU"] as const;
+export type QardIouType = (typeof QARD_IOU_TYPES)[number];
+export const QARD_IOU_TYPE_LABELS_BN: Record<QardIouType, string> = {
+  QARD_E_HASANA: "কর্জে হাসানা",
+  IOU: "আইওইউ",
+};
+export const QARD_IOU_TYPE_LABELS_EN: Record<QardIouType, string> = {
+  QARD_E_HASANA: "Qard-e-Hasana",
+  IOU: "IOU",
+};
+
+
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
 // =============================================================================
@@ -2029,6 +2279,8 @@ export const PERMISSIONS = [
   "observation:review",    // TEACHER base perm — the assigned senior-teacher observer scores+comments; the RESOLVER gates it to the assigned observerId (CO-1, D-#147)
   "observation:read",      // read an observation, ROW-SCOPED in the resolver (observer own; observed teacher own at/after REVIEWED; Principal/Office all). Staff-internal — GUARDIAN none (§7)
   "observation:manage",    // designations, cadence config, dashboards, override reads (Principal/Office; CO-1)
+  // finance / accounting (app-native; Finance module, D-#221 — Principal+Office)
+  "finance:manage",        // ledgers, opening balances, postings, reconciliation, budgets, dashboard (Principal/Office; FIN-1). Distinct from roster:manage so AC-1 can grant the books to the accountant alone (D-#221)
   // guardian portal (ACTIVE since GP-1, D-#68)
   "guardian:read_child",   // reads linked children's permitted operational slices
 ] as const;
@@ -2077,6 +2329,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "observation:review": "build",  // Classroom-Observation CO-1 (assigned-observer scoring, D-#195)
   "observation:read": "build",    // Classroom-Observation CO-1 (row-scoped read, D-#195)
   "observation:manage": "build",  // Classroom-Observation CO-1 (config/dashboards, D-#195)
+  "finance:manage": "build",      // Finance FIN-1 (ledgers + opening balances, D-#221)
   "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
 };
 
@@ -2101,6 +2354,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "template:manage",       // PRINCIPAL ONLY (D-#129) — Office/Teacher/Guardian never get it
     "access:manage",         // PRINCIPAL ONLY (Access Control AC-1, D-#193/#212) — RESERVED-locked; Office/Teacher/Guardian never get it
     "observation:upload", "observation:read", "observation:manage", // classroom observation (CO-1, D-#195) — NOT observation:review (the observer is an assigned TEACHER, D-#147)
+    "finance:manage",        // finance/accounting (FIN-1, D-#221) — Principal+Office
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
   // fills trackers; authors nothing in-app (no content:import). message:dispatch
@@ -2130,6 +2384,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "library:read", "library:manage", // the default library desk (D-#81)
     "chat:read", "chat:write", "chat:manage", // staff chat + group/posting-policy admin (D-#76/#78); NO chat:oversee (Principal only, D-#77)
     "observation:upload", "observation:read", "observation:manage", // classroom observation: upload+assign, row-scoped read, config (CO-1, D-#195); NOT observation:review (the observer is an assigned TEACHER)
+    "finance:manage",        // finance/accounting (FIN-1, D-#221) — the accountant's books (Principal+Office)
   ],
   // Guardian portal v1 (GP-1, D-#68): the single grant is ACTIVE — guardian-scoped
   // resolvers read linked children only (assertGuardianOfStudent, link-scoped).
@@ -2292,6 +2547,7 @@ export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
   "observation:review": { name: "অবজারভেশন রিভিউ", desc: "বরাদ্দকৃত পর্যবেক্ষকের স্কোরিং ও মন্তব্য" },
   "observation:read": { name: "অবজারভেশন পড়া", desc: "রো-স্কোপড অবজারভেশন পড়া" },
   "observation:manage": { name: "অবজারভেশন পরিচালনা", desc: "ডেজিগনেশন, কনফিগ ও ড্যাশবোর্ড" },
+  "finance:manage": { name: "অর্থ ব্যবস্থাপনা", desc: "লেজার, ব্যালেন্স, পোস্টিং ও হিসাব" },
   "guardian:read_child": { name: "সন্তানের তথ্য দেখা (অভিভাবক প্লেন)", desc: "অভিভাবক প্লেন — স্টাফকে দেওয়া যায় না" },
 };
 
@@ -2336,5 +2592,6 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "observation:review": { name: "Review observation", desc: "Assigned observer scoring and comments" },
   "observation:read": { name: "Read observation", desc: "Row-scoped observation read" },
   "observation:manage": { name: "Manage observation", desc: "Designations, config, dashboards" },
+  "finance:manage": { name: "Manage finance", desc: "Ledgers, balances, postings, accounts" },
   "guardian:read_child": { name: "Read child (guardian plane)", desc: "Guardian plane — not grantable to staff" },
 };

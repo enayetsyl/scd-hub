@@ -107,6 +107,7 @@ export type AuditEventKind =
   | "MEETING_SLOT_ATTENDANCE_SET" // a family slot's present/absent captured at the meeting (CM-4, §6, D-#176)
   | "MEETING_COMMENT_SAVED"     // a class teacher saved a (student × meeting) positive+concern note (CM-5, §3/§6/J-CM6, D-#124)
   | "USER_ACCESS_CHANGED"   // Principal edited a staff User's per-user access — prior + new {templates, granted, revoked} retained here (Access Control AC-1, §6/J-AC6, D-#193/#214; ADR-008/D-#101 prior-state pattern)
+  | "FINANCE_OPENING_BALANCE_SET" // an opening balance declared/re-declared for a ledger (effective-dated, append-only — Finance FIN-1, §3/J-FIN1-1, D-#222)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {
