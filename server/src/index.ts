@@ -73,6 +73,7 @@ import "./modules/finance/resolvers/financeDashboard";
 import "./modules/saturday-revision/resolvers/revision";
 import "./modules/saturday-revision/resolvers/revisionDelivery";
 import "./modules/saturday-revision/resolvers/revisionSummary";
+import "./modules/saturday-revision/resolvers/revisionGuardian";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";

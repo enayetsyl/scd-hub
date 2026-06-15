@@ -101,6 +101,7 @@ import {
   editEntry,
   groupSaturday,
   studentRevisionHistory,
+  childRevision,
   myRevisionGroups,
   teacherTeachesGroup,
   teacherCanReadStudent,
@@ -340,6 +341,24 @@ describe("studentRevisionHistory", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].juzRecords[0]).toMatchObject({ juz: 3, category: "SABAQ" });
     expect(rows[0].deliveredAt).toBe(SAT.toISOString());
+  });
+});
+
+describe("childRevision (SR-4 guardian card)", () => {
+  test("returns DELIVERED entries only, structurally omitting staff fields", async () => {
+    mockEntryFind.mockReturnValue(leanChain([
+      { _id: oid(), studentId: STUDENT_OID, groupId: GROUP_OID, date: SAT, present: true,
+        juzRecords: [{ juz: 1, category: "SABAQ", amountJuz: 1, tanbih: 0, fath: 0, mistakes: { harf: 0, ghunnah: 0, madd: 0, other: 0 } }],
+        teacherUserId: new mongoose.Types.ObjectId(TEACHER_ID), teacherComment: "ভালো",
+        deliveryChannels: ["wa"], deliveredAt: SAT, createdAt: SAT, updatedAt: SAT },
+    ]));
+    const rows = await childRevision(STUDENT_OID.toString());
+    expect(rows).toHaveLength(1);
+    expect(rows[0].deliveredAt).toBe(SAT.toISOString());
+    expect(rows[0].teacherComment).toBe("ভালো");
+    // staff fields are structurally absent (D-#68)
+    expect(rows[0]).not.toHaveProperty("teacherUserId");
+    expect(rows[0]).not.toHaveProperty("deliveryChannels");
   });
 });
 

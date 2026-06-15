@@ -357,6 +357,37 @@ export async function groupSaturday(groupId: string, date: Date): Promise<Revisi
     .sort((a, b) => a.studentName.localeCompare(b.studentName, "bn"));
 }
 
+/** The guardian-facing shape — structurally OMITS the staff fields (teacherUserId,
+ *  deliveryChannels) the family must never see (the CM-5 childComments posture, D-#68). */
+export interface GuardianRevisionEntry {
+  id: string;
+  date: string;
+  present: boolean;
+  juzRecords: JuzRecordShape[];
+  teacherComment: string | null;
+  deliveredAt: string;
+}
+
+/** A linked child's DELIVERED revision entries, newest first (SR-4 guardian card, J-SR4-4).
+ *  Delivered-only — the marking/delivery is the guardian-release boundary (D-#155); the
+ *  RESOLVER gates `guardian:read_child` + `assertGuardianOfStudent` (D-#68). */
+export async function childRevision(studentId: string): Promise<GuardianRevisionEntry[]> {
+  if (!Types.ObjectId.isValid(studentId)) throw new RevisionError("Invalid student id");
+  const docs = (await RevisionEntry.find({ studentId: new Types.ObjectId(studentId), deliveredAt: { $ne: null } })
+    .sort({ date: -1 })
+    .lean()) as unknown as IRevisionEntry[];
+  return docs
+    .filter((d) => d.deliveredAt) // belt-and-braces (a lean $ne can't fully exclude missing)
+    .map((d) => ({
+      id: d._id.toString(),
+      date: new Date(d.date).toISOString(),
+      present: d.present,
+      juzRecords: (d.juzRecords ?? []).map(shapeJuz),
+      teacherComment: d.teacherComment ?? null,
+      deliveredAt: new Date(d.deliveredAt as Date).toISOString(),
+    }));
+}
+
 /** A child's revision history, newest first (J-SR1; staff timeline). */
 export async function studentRevisionHistory(studentId: string): Promise<RevisionEntryShape[]> {
   if (!Types.ObjectId.isValid(studentId)) throw new RevisionError("Invalid student id");
