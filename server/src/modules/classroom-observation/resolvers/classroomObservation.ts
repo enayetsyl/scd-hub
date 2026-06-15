@@ -133,9 +133,11 @@ ObservationRef.implement({
     prevObservationId: t.string({ nullable: true, resolve: (r) => r.prevObservationId }),
     priorFocusProgress: t.string({ nullable: true, resolve: (r) => r.priorFocusProgress }),
     quran: t.field({ type: QuranPayloadRef, nullable: true, resolve: (r) => r.quran }),
-    fairnessRating: t.int({ nullable: true, resolve: (r) => r.fairnessRating }),
-    usefulnessRating: t.int({ nullable: true, resolve: (r) => r.usefulnessRating }),
-    fairnessRatedAt: t.string({ nullable: true, resolve: (r) => r.fairnessRatedAt }),
+    // CO-7 privacy: fairnessRating/usefulnessRating/fairnessRatedAt are DELIBERATELY NOT exposed on
+    // this row-scoped observation object. The fairness rating is surfaced ONLY through the
+    // `observation:manage`-gated `reviewerEffectiveness` read (§CO-7: "surfaced to the Principal only;
+    // no observer leaderboard exposed to staff"). Exposing them here would let the rated OBSERVER read
+    // their own fairness rating off their observation, and let any reader browse it per-observation.
     recordingId: t.string({ nullable: true, resolve: (r) => r.recordingId }),
     teacherResponse: t.string({ nullable: true, resolve: (r) => r.teacherResponse }),
     supersededById: t.string({ nullable: true, resolve: (r) => r.supersededById }),
