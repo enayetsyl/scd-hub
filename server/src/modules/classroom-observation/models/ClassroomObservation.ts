@@ -112,6 +112,11 @@ export interface IClassroomObservation extends Document {
   // --- Quran (ClassEcho) payload (CO-5; set at REVIEW on a QURAN-form row, else
   //     unset). A REF-11 observation leaves this null and vice-versa. -------------
   quran?: IQuranPayload | null;
+  // --- CO-7 teacher fairness rating (the observed teacher rates the REVIEW's
+  //     fairness/usefulness — NOT agreement; feeds reviewer-effectiveness) ---------
+  fairnessRating?: number | null;   // 1–5; set by the observed teacher (CO-7)
+  usefulnessRating?: number | null; // 1–5; optional
+  fairnessRatedAt?: Date | null;
   // --- later slices (fields present now) --------------------------------------
   recordingId?: Types.ObjectId | null; // CO-2 SessionRecording
   teacherResponse?: string | null;      // CO-3
@@ -189,6 +194,9 @@ const ClassroomObservationSchema = new Schema<IClassroomObservation>(
     prevObservationId: { type: Schema.Types.ObjectId, ref: "ClassroomObservation", default: null },
     priorFocusProgress: { type: String, enum: GROWTH_PROGRESS, default: null },
     quran: { type: QuranPayloadSchema, default: null },
+    fairnessRating: { type: Number, min: 1, max: 5, default: null },
+    usefulnessRating: { type: Number, min: 1, max: 5, default: null },
+    fairnessRatedAt: { type: Date, default: null },
     recordingId: { type: Schema.Types.ObjectId, ref: "SessionRecording", default: null },
     teacherResponse: { type: String, trim: true, default: null },
     supersededById: { type: Schema.Types.ObjectId, ref: "ClassroomObservation", default: null },

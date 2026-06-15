@@ -57,6 +57,7 @@ import "./modules/comments/resolvers/commentDelivery";
 import "./modules/classroom-observation/resolvers/classroomObservation";
 import "./modules/classroom-observation/resolvers/sessionRecording";
 import "./modules/classroom-observation/resolvers/observationTrend";
+import "./modules/classroom-observation/resolvers/observationEffectiveness";
 import "./modules/classroom-observation/resolvers/observationSchedule";
 import "./modules/comments/resolvers/parentMeeting";
 import "./modules/comments/resolvers/meetingDispatch";
