@@ -562,6 +562,9 @@ check("SR_ABSENT + SR_DIGEST are registered NotificationKinds (SR-2 §4, extends
   V.NOTIFICATION_KINDS.includes("SR_ABSENT") && V.NOTIFICATION_KINDS.includes("SR_DIGEST"));
 check("sr.absent.* + sr.digest.* guardian-message template keys registered (title + body + wa each — MT registry, D-#131)",
   ["sr.absent.title","sr.absent.body","sr.absent.wa","sr.digest.title","sr.digest.body","sr.digest.wa"].every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k) && V.MESSAGE_TEMPLATE_REGISTRY[k]));
+// SR-3 — the stateless completeness-chase wa.me key (D-#246/#131)
+check("sr.completeness_chase.wa template key registered (SR-3 §4 — Office nudge to the group's teacher)",
+  V.MESSAGE_TEMPLATE_KEYS.includes("sr.completeness_chase.wa") && !!V.MESSAGE_TEMPLATE_REGISTRY["sr.completeness_chase.wa"]);
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

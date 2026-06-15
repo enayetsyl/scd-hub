@@ -1416,6 +1416,7 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "sr.digest.title",
   "sr.digest.body",
   "sr.digest.wa",
+  "sr.completeness_chase.wa",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1746,6 +1747,13 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     group: "saturdayRevision", labelBn: "সাপ্তাহিক রিভিশন রিপোর্ট — হোয়াটসঅ্যাপ",
     placeholders: ["StudentName", "Date", "Summary"],
     bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর {Date} তারিখের কুরআন রিভিশন:\n{Summary}\nজাযাকাল্লাহু খাইরান।",
+    defaultLangMode: "BN",
+  },
+  // --- Saturday Revision completeness chase (SR-3, D-#246/#131; stateless Office nudge) ---
+  "sr.completeness_chase.wa": {
+    group: "saturdayRevision", labelBn: "রিভিশন এন্ট্রি বাকি — হোয়াটসঅ্যাপ (শিক্ষককে)",
+    placeholders: ["TeacherName", "GroupName", "Date"],
+    bnDefault: "আসসালামু আলাইকুম {TeacherName}। {GroupName} গ্রুপের {Date} তারিখের শনিবারের রিভিশন এখনও এন্ট্রি করা হয়নি — অনুগ্রহ করে সম্পন্ন করুন। জাযাকাল্লাহু খাইরান।",
     defaultLangMode: "BN",
   },
 };

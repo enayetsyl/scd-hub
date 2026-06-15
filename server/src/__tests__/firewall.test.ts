@@ -652,6 +652,7 @@ describe("Saturday-Revision firewall (ADR-005 / SR-1, D-#241)", () => {
       expect(content).not.toMatch(importPattern("models/RevisionAbsenceDispatch")); // SR-2 escalation ledger (names studentIds)
       expect(content).not.toMatch(importPattern("services/RevisionService"));
       expect(content).not.toMatch(importPattern("services/RevisionDeliveryService")); // SR-2 guardian delivery
+      expect(content).not.toMatch(importPattern("services/RevisionSummaryService")); // SR-3 derived analytics
     }
   });
 
