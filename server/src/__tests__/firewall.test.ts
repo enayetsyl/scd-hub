@@ -649,7 +649,26 @@ describe("Saturday-Revision firewall (ADR-005 / SR-1, D-#241)", () => {
       const content = fs.readFileSync(f, "utf8");
       expect(content).not.toMatch(importPattern("modules/saturday-revision"));
       expect(content).not.toMatch(importPattern("models/RevisionEntry"));
+      expect(content).not.toMatch(importPattern("models/RevisionAbsenceDispatch")); // SR-2 escalation ledger (names studentIds)
       expect(content).not.toMatch(importPattern("services/RevisionService"));
+      expect(content).not.toMatch(importPattern("services/RevisionDeliveryService")); // SR-2 guardian delivery
+    }
+  });
+
+  // SR-2 delivery + escalation source files must exist + stay corpus-clean.
+  const SR2_FILES = [
+    "../modules/saturday-revision/services/RevisionDeliveryService.ts",
+    "../modules/saturday-revision/models/RevisionEscalationConfig.ts",
+    "../modules/saturday-revision/models/RevisionAbsenceDispatch.ts",
+    "../modules/saturday-revision/resolvers/revisionDelivery.ts",
+  ].map((p) => path.resolve(__dirname, p));
+
+  test("SR-2 delivery/escalation source files exist and have no corpus import", () => {
+    for (const f of SR2_FILES) {
+      expect(fs.existsSync(f)).toBe(true); // shipped (SR-2)
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
     }
   });
 });

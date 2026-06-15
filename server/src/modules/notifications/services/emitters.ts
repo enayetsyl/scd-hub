@@ -70,6 +70,13 @@ const dedupeKeys = {
    *  the inbox; a new day's chase re-notifies (the wa.me link is re-built each call). */
   financeFeeDue: (studentId: string, guardianId: string, asOfKey: string) =>
     `FFEE:${studentId}:${guardianId}:${asOfKey}`,
+  /** Per entry+guardian (SR-2): a revision entry is delivered once + then sealed, so a
+   *  re-delivery is correctly a no-op for the inbox (the wa.me link is re-built each call). */
+  revisionDelivery: (entryId: string, guardianId: string) => `SRDEL:${entryId}:${guardianId}`,
+  /** Per student+streak-length+recipient (SR-2): the consecutive-absence escalation fires
+   *  once per threshold crossing (the dispatch ledger guards re-fire; this guards re-emit). */
+  revisionEscalation: (studentId: string, streakLength: number, recipientId: string) =>
+    `SRESC:${studentId}:${streakLength}:${recipientId}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -614,6 +621,130 @@ export async function emitFinanceFeeDue(ev: FinanceFeeDueEvent): Promise<string[
         notified.push(g._id.toString());
       }),
     );
+  });
+  return notified;
+}
+
+// ---------------------------------------------------------------------------
+// SR-2 (§3, D-#244) — Saturday-revision guardian delivery → the student's
+// login-enabled guardians, riding THIS seam (D-#72). SR_ABSENT / SR_DIGEST are
+// registered kinds (SR-2). Contact-only guardians have no inbox (D-#31/#72) and are
+// reached via the wa.me link the caller (RevisionDeliveryService) builds for every
+// family with a phone. Title + body are PRE-RENDERED by the caller and passed in, so
+// renderTemplate is NEVER called inside this per-guardian loop (the MT N+1 guard).
+// Kind-gated safety net: a no-op (returns []) until the kind is registered. Returns
+// the notified guardian ids.
+// ---------------------------------------------------------------------------
+
+export interface RevisionDeliveryEvent {
+  entryId: IdLike;
+  studentId: IdLike;
+  /** SR_ABSENT (absent alert) or SR_DIGEST (present-student weekly digest). */
+  kind: "SR_ABSENT" | "SR_DIGEST";
+  /** Pre-rendered (sr.{absent,digest}.title). */
+  titleBn: string;
+  /** Pre-rendered (sr.{absent,digest}.body). */
+  messageBn: string;
+}
+
+export async function emitRevisionDelivery(ev: RevisionDeliveryEvent): Promise<string[]> {
+  const notified: string[] = [];
+  await bestEffort("saturday-revision delivery", async () => {
+    if (!(NOTIFICATION_KINDS as readonly string[]).includes(ev.kind)) return;
+
+    const links = (await GuardianLink.find({ studentId: ev.studentId, active: { $ne: false } })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+
+    await Promise.all(
+      guardians.map(async (g) => {
+        await emit({
+          recipientGuardianId: g._id.toString(),
+          kind: ev.kind,
+          titleBn: ev.titleBn,
+          bodyBn: ev.messageBn,
+          refs: { revisionEntryId: ev.entryId.toString(), studentId: ev.studentId.toString() },
+          dedupeKey: dedupeKeys.revisionDelivery(ev.entryId.toString(), g._id.toString()),
+        });
+        notified.push(g._id.toString());
+      }),
+    );
+  });
+  return notified;
+}
+
+// ---------------------------------------------------------------------------
+// SR-2 (§3, D-#245) — consecutive-absence escalation → the student's login-enabled
+// guardians AND every active Principal (reuses the SR_ABSENT kind with an escalation
+// ref). The dispatch ledger (RevisionAbsenceDispatch) guards the once-per-threshold
+// re-fire; this per-recipient dedupe guards the inbox re-emit. Title + body are
+// PRE-RENDERED by the caller. Returns the notified recipient ids (guardians + principals).
+// ---------------------------------------------------------------------------
+
+export interface RevisionEscalationEvent {
+  studentId: IdLike;
+  streakLength: number;
+  /** Active Principal user ids (resolved by the caller). */
+  principalUserIds: IdLike[];
+  /** Pre-rendered (sr.absent.title). */
+  titleBn: string;
+  /** Pre-rendered escalation body. */
+  messageBn: string;
+}
+
+export async function emitRevisionEscalation(ev: RevisionEscalationEvent): Promise<string[]> {
+  const notified: string[] = [];
+  await bestEffort("saturday-revision absence escalation", async () => {
+    if (!(NOTIFICATION_KINDS as readonly string[]).includes("SR_ABSENT")) return;
+
+    // Guardians (login-enabled) of the student.
+    const links = (await GuardianLink.find({ studentId: ev.studentId, active: { $ne: false } })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    const guardians =
+      guardianIds.length > 0
+        ? ((await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+            .select("_id")
+            .lean()) as unknown as Array<{ _id: IdLike }>)
+        : [];
+
+    const refs = {
+      studentId: ev.studentId.toString(),
+      streakLength: ev.streakLength,
+      escalation: true,
+    };
+
+    await Promise.all([
+      ...guardians.map(async (g) => {
+        await emit({
+          recipientGuardianId: g._id.toString(),
+          kind: "SR_ABSENT",
+          titleBn: ev.titleBn,
+          bodyBn: ev.messageBn,
+          refs,
+          dedupeKey: dedupeKeys.revisionEscalation(ev.studentId.toString(), ev.streakLength, g._id.toString()),
+        });
+        notified.push(g._id.toString());
+      }),
+      ...ev.principalUserIds.map(async (p) => {
+        await emit({
+          recipientUserId: p.toString(),
+          kind: "SR_ABSENT",
+          titleBn: ev.titleBn,
+          bodyBn: ev.messageBn,
+          refs,
+          dedupeKey: dedupeKeys.revisionEscalation(ev.studentId.toString(), ev.streakLength, p.toString()),
+        });
+        notified.push(p.toString());
+      }),
+    ]);
   });
   return notified;
 }

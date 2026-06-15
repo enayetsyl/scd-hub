@@ -966,6 +966,11 @@ export const NOTIFICATION_KINDS = [
   // FIN-2B finance fee-due chase (app-native, NO wire twin — D-#46/#227). The
   // guardian login-enabled inbox row for an outstanding fee due (wa.me for all).
   "FINANCE_FEE_DUE",
+  // SR-2 Saturday-Revision guardian delivery (app-native, NO wire twin — D-#46/#244).
+  // The weekly absent alert (also reused for the consecutive-absence escalation,
+  // D-#245) and the present-student revision digest (wa.me for all).
+  "SR_ABSENT",
+  "SR_DIGEST",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -988,6 +993,8 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   OBSERVATION_ESCALATED: "পর্যবেক্ষণে সাড়া বকেয়া",
   OBSERVATION_RESPONDED: "পর্যবেক্ষণে শিক্ষকের সাড়া",
   FINANCE_FEE_DUE: "ফি বকেয়ার তাগিদ",
+  SR_ABSENT: "শনিবার রিভিশনে অনুপস্থিত",
+  SR_DIGEST: "সাপ্তাহিক রিভিশন রিপোর্ট",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1008,6 +1015,8 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   OBSERVATION_ESCALATED: "Observation escalated",
   OBSERVATION_RESPONDED: "Observation responded",
   FINANCE_FEE_DUE: "Fee due reminder",
+  SR_ABSENT: "Saturday revision — absent",
+  SR_DIGEST: "Weekly revision digest",
 };
 
 
@@ -1401,6 +1410,12 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "finance.fee_due.chase.title",
   "finance.fee_due.chase.body",
   "finance.fee_due.chase.wa",
+  "sr.absent.title",
+  "sr.absent.body",
+  "sr.absent.wa",
+  "sr.digest.title",
+  "sr.digest.body",
+  "sr.digest.wa",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1698,6 +1713,39 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     group: "finance", labelBn: "ফি বকেয়ার তাগিদ — হোয়াটসঅ্যাপ",
     placeholders: ["StudentName", "AmountDue"],
     bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর ফি বাবদ {AmountDue} টাকা বকেয়া রয়েছে — অনুগ্রহ করে পরিশোধ করুন। জাযাকাল্লাহু খাইরান।",
+    defaultLangMode: "BN",
+  },
+  // --- Saturday Revision guardian delivery (SR-2, D-#244/#131) ---
+  "sr.absent.title": {
+    group: "saturdayRevision", labelBn: "শনিবার রিভিশনে অনুপস্থিত — শিরোনাম", placeholders: [],
+    bnDefault: "শনিবারের রিভিশনে অনুপস্থিত", defaultLangMode: "BN",
+  },
+  "sr.absent.body": {
+    group: "saturdayRevision", labelBn: "শনিবার রিভিশনে অনুপস্থিত — বার্তা (ইনবক্স)",
+    placeholders: ["StudentName", "Date"],
+    bnDefault: "আসসালামু আলাইকুম। {StudentName} {Date} তারিখের শনিবারের কুরআন রিভিশনে অনুপস্থিত ছিল।",
+    defaultLangMode: "BN",
+  },
+  "sr.absent.wa": {
+    group: "saturdayRevision", labelBn: "শনিবার রিভিশনে অনুপস্থিত — হোয়াটসঅ্যাপ",
+    placeholders: ["StudentName", "Date"],
+    bnDefault: "আসসালামু আলাইকুম। {StudentName} {Date} তারিখের শনিবারের কুরআন রিভিশনে অনুপস্থিত ছিল। জাযাকাল্লাহু খাইরান।",
+    defaultLangMode: "BN",
+  },
+  "sr.digest.title": {
+    group: "saturdayRevision", labelBn: "সাপ্তাহিক রিভিশন রিপোর্ট — শিরোনাম", placeholders: [],
+    bnDefault: "সাপ্তাহিক কুরআন রিভিশন রিপোর্ট", defaultLangMode: "BN",
+  },
+  "sr.digest.body": {
+    group: "saturdayRevision", labelBn: "সাপ্তাহিক রিভিশন রিপোর্ট — বার্তা (ইনবক্স)",
+    placeholders: ["StudentName", "Date", "Summary"],
+    bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর {Date} তারিখের কুরআন রিভিশন:\n{Summary}",
+    defaultLangMode: "BN",
+  },
+  "sr.digest.wa": {
+    group: "saturdayRevision", labelBn: "সাপ্তাহিক রিভিশন রিপোর্ট — হোয়াটসঅ্যাপ",
+    placeholders: ["StudentName", "Date", "Summary"],
+    bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর {Date} তারিখের কুরআন রিভিশন:\n{Summary}\nজাযাকাল্লাহু খাইরান।",
     defaultLangMode: "BN",
   },
 };

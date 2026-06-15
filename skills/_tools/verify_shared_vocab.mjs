@@ -119,7 +119,7 @@ check("attendance: PRINCIPAL+OFFICE manage (not mark), TEACHER mark (not manage)
 console.log("=== C.5 Notification kinds + own-row posture (D-#72–#75) ===");
 check("NOTIFICATION_KIND_LABELS_BN total", total(V.NOTIFICATION_KIND_LABELS_BN, V.NOTIFICATION_KINDS));
 check("NOTIFICATION_KIND_LABELS_EN total", total(V.NOTIFICATION_KIND_LABELS_EN, V.NOTIFICATION_KINDS));
-check("kinds are exactly the 8 phase-1 kinds + 2 library kinds + 1 class-test kind + 1 vocab kind + 1 student-comment kind + 4 classroom-observation kinds + 1 finance kind (D-#72/#74/#84/#122; VC-4 += VOCAB_RESULT, D-#154; CM-2 += STUDENT_COMMENT, D-#172; CO-3 += OBSERVATION_*; FIN-2B += FINANCE_FEE_DUE, D-#227)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE","CLASS_TEST_RESULT","VOCAB_RESULT","STUDENT_COMMENT","OBSERVATION_RELEASED","OBSERVATION_RESPONSE_REMINDER","OBSERVATION_ESCALATED","OBSERVATION_RESPONDED","FINANCE_FEE_DUE"]));
+check("kinds are exactly the 8 phase-1 kinds + 2 library kinds + 1 class-test kind + 1 vocab kind + 1 student-comment kind + 4 classroom-observation kinds + 1 finance kind + 2 saturday-revision kinds (D-#72/#74/#84/#122; VC-4 += VOCAB_RESULT, D-#154; CM-2 += STUDENT_COMMENT, D-#172; CO-3 += OBSERVATION_*; FIN-2B += FINANCE_FEE_DUE, D-#227; SR-2 += SR_ABSENT/SR_DIGEST, D-#244)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE","CLASS_TEST_RESULT","VOCAB_RESULT","STUDENT_COMMENT","OBSERVATION_RELEASED","OBSERVATION_RESPONSE_REMINDER","OBSERVATION_ESCALATED","OBSERVATION_RESPONDED","FINANCE_FEE_DUE","SR_ABSENT","SR_DIGEST"]));
 check("no notification:* permission added (inbox is own-row, emission server-internal, D-#72)", !V.PERMISSIONS.some((p) => p.startsWith("notification")));
 
 console.log("=== C.6 Library vocab + RBAC invariants (D-#81–#84) ===");
@@ -557,6 +557,11 @@ check("REVISION_MISTAKE_CATEGORIES exact — HARF/GHUNNAH/MADD/OTHER (§4)", eq(
 check("REVISION_MISTAKE_CATEGORY_LABELS_BN total", total(V.REVISION_MISTAKE_CATEGORY_LABELS_BN, V.REVISION_MISTAKE_CATEGORIES));
 check("REVISION_MISTAKE_CATEGORY_LABELS_EN total", total(V.REVISION_MISTAKE_CATEGORY_LABELS_EN, V.REVISION_MISTAKE_CATEGORIES));
 // SR-1 does NOT touch NOTIFICATION_KINDS / MT keys (those are SR-2 — keeps the footprint to the 2 entry enums)
+// SR-2 — guardian delivery: SR_ABSENT/SR_DIGEST kinds (extends §C.5) + the sr.{absent,digest}.* MT keys (D-#244/#131)
+check("SR_ABSENT + SR_DIGEST are registered NotificationKinds (SR-2 §4, extends §C.5)",
+  V.NOTIFICATION_KINDS.includes("SR_ABSENT") && V.NOTIFICATION_KINDS.includes("SR_DIGEST"));
+check("sr.absent.* + sr.digest.* guardian-message template keys registered (title + body + wa each — MT registry, D-#131)",
+  ["sr.absent.title","sr.absent.body","sr.absent.wa","sr.digest.title","sr.digest.body","sr.digest.wa"].every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k) && V.MESSAGE_TEMPLATE_REGISTRY[k]));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

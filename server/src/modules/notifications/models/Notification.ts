@@ -60,6 +60,11 @@ export interface NotificationRefs {
   stage?: string;
   /** Calendar days since the observation was released (CO-3 escalation). */
   daysSince?: number;
+  /** Saturday-revision delivery (deep-link: GuardianRevision; SR-2, D-#244). */
+  revisionEntryId?: string;
+  /** Consecutive-absence escalation streak length + flag (SR-2, D-#245). */
+  streakLength?: number;
+  escalation?: boolean;
 }
 
 export interface INotification extends Document {
@@ -108,6 +113,9 @@ const RefsSchema = new Schema<NotificationRefs>(
     teacherId: { type: String },
     stage: { type: String },
     daysSince: { type: Number },
+    revisionEntryId: { type: String },
+    streakLength: { type: Number },
+    escalation: { type: Boolean },
   },
   { _id: false },
 );
