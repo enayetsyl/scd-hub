@@ -1,6 +1,10 @@
 // Deploy: CI/CD via GitHub Actions (.github/workflows) — push to dev/main runs
 // the CI gate then scripts/deploy.sh on the VM (DEP-6).
 import "dotenv/config";
+// MON-2 (prd-observability.md §4): init `@sentry/node` FIRST — right after env load,
+// before express/yoga — so unhandled errors are captured and http is instrumented.
+// No-op unless SENTRY_DSN is set, so dev/jest are unchanged.
+import { sentryYogaPlugin, sentryEnabled, Sentry } from "./observability/sentry";
 import express from "express";
 import { createYoga } from "graphql-yoga";
 import { connectDb } from "./db";
@@ -94,10 +98,21 @@ app.get("/readyz", async (_req, res) => {
   else res.status(503).json({ ok: false, dbState: state });
 });
 
+// MON-2 verification aid (operator-only): set SENTRY_DEBUG_ROUTE=1 on a NON-production
+// service to force a captured server fault, confirm it lands in GlitchTip (with the
+// secrets scrubbed), then unset. Never registered on production.
+if (process.env.SENTRY_DEBUG_ROUTE === "1" && process.env.NODE_ENV !== "production") {
+  app.get("/debug/sentry", () => {
+    throw new Error("MON-2 server smoke (debug route)");
+  });
+}
+
 const schema = builder.toSchema();
 
 const yoga = createYoga({
   schema,
+  // MON-2: capture real resolver faults (role + operation) into GlitchTip.
+  plugins: [sentryYogaPlugin],
   context: ({ request }) => {
     // Yoga delivers a WHATWG Request whose headers are a Fetch `Headers` object
     // (read via .get); the raw Node req is not reliably exposed as `.raw`, so
@@ -145,6 +160,11 @@ app.use("/files", filesRouter);
 // Trigger endpoints (AT-4, D-#65): external scheduler → idempotent reminder
 // dispatch (shared-secret auth, not a browser surface → no CORS).
 app.use("/triggers", triggersRouter);
+
+// MON-2: capture faults thrown by the thin REST surface (pdf/files/triggers) + the
+// debug route into GlitchTip. Registered AFTER all routes (Express error-middleware
+// contract); a no-op unless SENTRY_DSN is set.
+if (sentryEnabled) Sentry.setupExpressErrorHandler(app);
 
 const PORT = Number(process.env.PORT ?? 4000);
 

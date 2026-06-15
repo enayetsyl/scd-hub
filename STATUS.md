@@ -27,6 +27,20 @@ _Updated: 2026-06-15 (**MON-1 — GlitchTip self-host LIVE on the prod VM (obser
   **Docs-only — nothing built.** **Next = a fresh session executes the runbook: MON-1 (operator stands up
   GlitchTip on the VM) then MON-2/3/4 (server+app SDK capture + notification monitoring) in a worktree off
   `dev`, then MON-5 (operator uptime/host alerts). The build owner here will NOT build it in this session.**
+- **Built (Observability MON-2 — server error capture `@sentry/node`, prd-observability.md §4 /
+  observability-runbook.md MON-2, D-#252/#253) [branch `claude/open-prd-xuh335-mon2` off dev]:** slice 2 of the
+  MON module (MON-1 GlitchTip self-host already LIVE at https://errors.scdhub.shafayet.me + backup folded in).
+  New `server/src/observability/sentry.ts` inits `@sentry/node` **only when `SENTRY_DSN` is set** (no-op for
+  local/dev/jest → standing gate untouched); `beforeSend` scrubs credential headers + recursively strips
+  `password`/`token`/`secret`/`jwt` keys (D-#252 §6); `tracesSampleRate:0`, `release=GIT_SHA` + `environment`;
+  auto-captures `uncaughtException`/`unhandledRejection`. **Resolver capture** = a Yoga/Envelop plugin
+  (`sentryYogaPlugin`) reporting `result.errors` with `operation` + `role`/`userId`, **skipping the app's
+  expected/business error classes** (`EXPECTED_ERROR_NAMES` + Pothos "Not authorized" text) so deliberate
+  denials don't flood the dashboard (§6 quota = hard ceiling); `setupExpressErrorHandler` covers the REST
+  surface; a `SENTRY_DEBUG_ROUTE=1` non-prod-only `/debug/sentry` aid (off by default). **No vocab/contract
+  change. Gate GREEN (executed): server tsc clean + jest 1457/1457 (88 suites; +`observability.test.ts` [7]).
+  Server-only. Not verified live** (operator triggers a fault → confirms scrubbed payload in `scdhub-server`).
+  **Next = MON-3** (app capture: web/Android/iOS + ErrorBoundary + "Report a problem").
 - **Built (Saturday Revision SR-4 — the Expo app, COMPLETES the module SR-1..SR-4, prd-sr4.md §2/§3/§4,
   D-#68/#155 + build ruling D-#251) [branch `claude/sr-4` stacked off `claude/sr-3`]:** the 🕌 Revision tab over
   the merged SR-1..SR-3 resolvers + the new SR-4 `childRevision` guardian read. **App:** `app/src/graphql/revision.ts`
