@@ -18,8 +18,8 @@
   in / out / closing per ledger — `opening + Σ(postings)`. FIN-2 covers **Cash/Bank/Online**; the
   Qard/IOU control ledgers' movements stay **FIN-3** (which extends the same seam).
 - [ ] **Zakat = a roster-linked, effective-dated, append-only allocation** + a **provider receivable** +
-  **auto fee-split** (guardian-due / provider-due) (REQ §1/§11, D-#191). ⚠️ the *coverage granularity*
-  needs confirming against the live Zakat-Master sheet at build (§3.B / D-#226).
+  **auto fee-split** (guardian-due / provider-due) (REQ §1/§11, D-#191). **Coverage is PER-HEAD** — each
+  covered head is FULL or a fixed AMOUNT (৳ cap), varying per student per head (ratified 2026-06-14; §3.B, D-#226).
 - [ ] **No new permission** — reuses `finance:manage` (FIN-1/D-#221). Guardians get **no finance UI**,
   only fee-due **chase messages** on the existing rails (REQ §5).
 - [ ] Vocab-toucher (additive): finance posting-kind / coverage / allocation-status enums + the
@@ -76,10 +76,13 @@ createdAt }`. The **`kind` discriminates** which optional block is required:
 - `studentFeeHistory(studentId)` → that child's `FEE_COLLECTION` postings, newest first (per-head).
 - Pure `applyPostings(opening, postings, asOf)` helper, unit-tested.
 
-**SALARY from HR (D-#228):** a read seam `hrPayrollNetPayableTotal(monthKey)` returns **only the
-aggregate net-payable figure** (no payslip / per-staff PII) for `finance:manage`; it pre-fills a `SALARY`
-`EXPENSE` posting the Office confirms. HR exposes the aggregate; finance never reads individual payslips
-(the PII boundary holds). *Mechanism (automated pre-fill vs manual figure entry) confirmed at build.*
+**SALARY from HR (D-#228 — ratified):** a read seam `hrPayrollNetPayableTotal(monthKey)` returns **only
+the aggregate net-payable figure** (Σ `payslip.netPay` over the **`approved_locked`** run; no payslip /
+per-staff PII) for `finance:manage`. It **pre-fills** the `SALARY` `EXPENSE` posting, then the Office may
+apply **manual deduction/adjustment lines** (e.g. exclude cash-paid staff, recover an advance, round) —
+the posting stores the **HR base + each `{label, amount(signed)}` adjustment** with `amount = base +
+Σ adjustments`, both audited, so finance still reconciles to HR. HR exposes only the aggregate; finance
+never reads an individual payslip (the PII boundary holds).
 
 ### §3.B — Zakat / 3rd-party fee-support (FIN-2B)
 **`FeeProvider`** — the sponsor / zakat fund: `{ name, nameBn?, contact?, note?, active }`.
@@ -88,14 +91,18 @@ aggregate net-payable figure** (no payslip / per-staff PII) for `finance:manage`
 FEE_SUPPORT_ALLOCATION_STATUSES, note?, enteredByUserId, createdAt }`. Adds/removes/amount-changes are
 **new dated rows**; the active allocation for a student on a date = the latest by `createdAt` with
 `effectiveDate ≤ date` and not ended.
-- **⚠️ Coverage model — confirm against the live Zakat-Master sheet (D-#226):** proposed flexible shape
-  `{ type ∈ FEE_COVERAGE_TYPES (PERCENT | FIXED | FULL), value?, heads?: FINANCE_STUDENT_FEE_HEADS[] }` —
-  e.g. "FULL of Tuition+Revision", "PERCENT 50 of all", "FIXED ৳2000/month". The build pins the exact
-  granularity (per-head vs whole-fee, percent vs amount) the sheet actually uses; the PRD's split engine
-  is written against this shape.
-- **Fee-split (pure `splitFee(feeLines, allocation)`):** at `FEE_COLLECTION` time, if the student has an
-  active allocation, compute **provider-due** (the covered portion per the coverage model) and
-  **guardian-due** (remainder). The fee posting records the gross; a linked **`ProviderReceivable`**
+- **Coverage model (ratified 2026-06-14, D-#226) — PER-HEAD:** `coverage: [{ head ∈
+  FINANCE_STUDENT_FEE_HEADS, type ∈ FEE_COVERAGE_TYPES (FULL | AMOUNT), amount? }]` — one entry per
+  covered head; **FULL** = the provider pays that head's whole posted amount, **AMOUNT** = the provider
+  pays up to ৳`amount` of it (capped at the posted amount), **per fee posting**. A head NOT listed = the
+  guardian pays it fully. Matches SCD's real pattern: some students are FULL across admission / session /
+  tuition / revision / books / transport; others get a partial ৳ figure on one-or-more heads that
+  **varies per student per head**. *(All current usage is ৳-amounts; a `PERCENT` type is a one-line add
+  if a % sponsorship ever appears.)*
+- **Fee-split (pure `splitFee(feeLines, coverage)`):** at `FEE_COLLECTION` time, if the student has an
+  active allocation, **per fee line** `{head, amount}`: FULL → provider-due += `amount`; AMOUNT `v` →
+  provider-due += `min(v, amount)` (guardian-due gets the rest); head not in coverage → guardian-due +=
+  `amount`. Summed across lines. The fee posting records the gross; a linked **`ProviderReceivable`**
   movement raises the provider-due against the provider; the guardian-due is exposed for chasing. No
   double-count: the snapshot counts the gross fee once; the receivable is a provider-ledger memo, not a
   second cash-in.
@@ -111,7 +118,7 @@ chase list.
 ## §4 — Vocabulary (app-native; additive; BN+EN; NO wire/envelope sync — REQ §9)
 FIN-1 froze the heads/modes/ledgers/dirs+types. FIN-2 adds (additive; extend the finance verifier §):
 - `FINANCE_POSTING_KINDS = [FEE_COLLECTION, OTHER_INCOME, EXPENSE, TRANSFER]` + BN/EN labels.
-- `FEE_COVERAGE_TYPES = [PERCENT, FIXED, FULL]` + labels (the coverage granularity, §3.B).
+- `FEE_COVERAGE_TYPES = [FULL, AMOUNT]` + labels (per-head coverage type, §3.B; FULL = the whole head, AMOUNT = a ৳ cap).
 - `FEE_SUPPORT_ALLOCATION_STATUSES = [ACTIVE, ENDED]` + labels.
 - `NOTIFICATION_KINDS += FINANCE_FEE_DUE` (+BN/EN) — **the verifier §C.5 exact-list must be extended by
   the same edit** (the CT-1/CM-2 posture). Guardian login-enabled inbox row; wa.me for all (D-#227).
@@ -137,9 +144,10 @@ FIN-1 froze the heads/modes/ledgers/dirs+types. FIN-2 adds (additive; extend the
   edited or deleted (J-FIN1-3 discipline).
 - **J-FIN2-3 (transfer).** *Given* cash banked, *when* the Office posts a `TRANSFER` Cash→Bank, *then*
   Cash `out` and Bank `in` both reflect it and total cash-on-hand is unchanged.
-- **J-FIN2-4 (SALARY from HR).** *Given* a locked HR payroll month, *when* the Office posts the monthly
-  `SALARY` expense, *then* the amount is the HR net-payable **total** (no payslip detail crosses), posted
-  to the chosen ledger.
+- **J-FIN2-4 (SALARY from HR + adjust).** *Given* a locked HR payroll month, *when* the Office posts the
+  monthly `SALARY` expense, *then* it **pre-fills** with the HR net-payable **total** (no payslip detail
+  crosses), the Office adds any **manual deduction/adjustment lines**, and the posting records HR base +
+  adjustments to the chosen ledger.
 - **J-FIN2-5 (zakat split).** *Given* a student with an active 50%-of-Tuition allocation, *when* the
   Office posts their tuition fee, *then* the app raises the provider's 50% as a receivable and exposes the
   guardian's remaining 50% as due; the gross is counted once in the snapshot.
@@ -198,14 +206,18 @@ aggregate only** — no payslip/per-staff path is opened.
     extends the same seam) — one balance truth, no second carry.
   - **D-#226** — zakat/3rd-party = `FeeProvider` + **effective-dated append-only `FeeSupportAllocation`**
     + a pure `splitFee` (provider-due/guardian-due, gross counted once) + provider receivable +
-    `ProviderReceipt` + statement. ⚠️ the **coverage granularity** (`FEE_COVERAGE_TYPES` × heads) is
-    **confirmed against the live Zakat-Master sheet at build**.
+    `ProviderReceipt` + statement. **Coverage is PER-HEAD (ratified 2026-06-14):** `[{head, type ∈
+    {FULL, AMOUNT}, amount?}]` — FULL = the head's whole posted amount, AMOUNT = a ৳ cap (per fee
+    posting), varying per student per head; a head not listed = guardian pays it. (PERCENT deferred —
+    all current SCD usage is ৳-amounts.)
   - **D-#227** — guardian fee-due chase rides the existing rails: wa.me for all + `emit()`
     `FINANCE_FEE_DUE` for login-enabled, bodies from the MT registry (`finance.fee_due.chase.*`, D-#131),
     `unreachableCount` for phone-less; **no finance UI for guardians** (REQ §5) — they are recipients only.
-  - **D-#228** — the `SALARY` expense is fed from the HR payroll **net-payable aggregate total** via a
-    PII-free read seam (`finance:manage`); finance never reads an individual payslip (the ADR-005 PII
-    boundary holds). Mechanism (auto pre-fill vs confirmed manual figure) pinned at build.
+  - **D-#228** — the `SALARY` expense **pre-fills from the HR payroll net-payable aggregate total**
+    (Σ `payslip.netPay` over the `approved_locked` run; PII-free read seam, `finance:manage`); the Office
+    then applies **manual deduction/adjustment lines** (`{label, amount(signed)}`), with the posting
+    storing **HR base + adjustments** (`amount = base + Σ adj`, both audited) so finance reconciles to HR.
+    Finance never reads an individual payslip (the ADR-005 PII boundary holds). **Ratified 2026-06-14.**
   - **D-#229** — FIN-2 builds as **two PRs**: FIN-2A (postings + snapshot + SALARY) then FIN-2B (zakat
     fee-support), to keep each reviewable; the vocab additions land with their owning sub-slice.
   - **D-#230** — *(reserved for a FIN-2 build ruling.)*
