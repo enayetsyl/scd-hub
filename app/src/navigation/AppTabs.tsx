@@ -29,6 +29,7 @@ import type {
   ClassTestStackParamList,
   CommentsStackParamList,
   ObservationStackParamList,
+  RevisionStackParamList,
   FinanceStackParamList,
   HrStackParamList,
   AdminStackParamList,
@@ -135,6 +136,11 @@ import ObservationTrendScreen from "../screens/observation/ObservationTrendScree
 import ObservationDueListScreen from "../screens/observation/ObservationDueListScreen";
 import ReviewerEffectivenessScreen from "../screens/observation/ReviewerEffectivenessScreen";
 import ObservationConfigScreen from "../screens/observation/ObservationConfigScreen";
+import RevisionHomeScreen from "../screens/revision/RevisionHomeScreen";
+import GroupRevisionGridScreen from "../screens/revision/GroupRevisionGridScreen";
+import StudentRevisionHistoryScreen from "../screens/revision/StudentRevisionHistoryScreen";
+import DeliverRevisionScreen from "../screens/revision/DeliverRevisionScreen";
+import RevisionDashboardScreen from "../screens/revision/RevisionDashboardScreen";
 import FinanceHomeScreen from "../screens/finance/FinanceHomeScreen";
 import DailyEntryScreen from "../screens/finance/DailyEntryScreen";
 import DailySnapshotScreen from "../screens/finance/DailySnapshotScreen";
@@ -592,6 +598,32 @@ function ObservationNavigator(): React.ReactElement {
   );
 }
 
+const RevisionStack = createNativeStackNavigator<RevisionStackParamList>();
+function RevisionNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <RevisionStack.Navigator screenOptions={stackOptions}>
+      <RevisionStack.Screen name="RevisionHome" component={RevisionHomeScreen} options={{ title: STR.revHomeTitle }} />
+      <RevisionStack.Screen
+        name="GroupRevisionGrid"
+        component={GroupRevisionGridScreen}
+        options={({ route }) => ({ title: route.params.nameBn || STR.revGridTitle })}
+      />
+      <RevisionStack.Screen
+        name="StudentRevisionHistory"
+        component={StudentRevisionHistoryScreen}
+        options={({ route }) => ({ title: route.params.studentName || STR.revHistoryTitle })}
+      />
+      <RevisionStack.Screen
+        name="DeliverRevision"
+        component={DeliverRevisionScreen}
+        options={({ route }) => ({ title: route.params.nameBn || STR.revDeliverTitle })}
+      />
+      <RevisionStack.Screen name="RevisionDashboard" component={RevisionDashboardScreen} options={{ title: STR.revDashTitle }} />
+    </RevisionStack.Navigator>
+  );
+}
+
 const FinanceStack = createNativeStackNavigator<FinanceStackParamList>();
 function FinanceNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -780,6 +812,12 @@ export function AppTabs(): React.ReactElement {
       roleHasPermission(role, "observation:upload") ||
       roleHasPermission(role, "observation:review") ||
       roleHasPermission(role, "observation:manage"));
+  // Saturday Qur'an-Hifz Revision (SR app surfaces): Hifz teachers via tracker:read
+  // (record/edit/deliver/history); Principal/Office via roster:manage (dashboards +
+  // completeness chase). Every action is re-gated + row-scoped server-side. GUARDIAN
+  // holds neither — the guardian read is a card on the guardian Home tab, not here.
+  const canRevision =
+    !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
   // Finance (FIN-6B): finance:manage is Principal+Office only (AC-1 may grant it to
   // the accountant alone). GUARDIAN never holds it, so the tab is hidden for guardians.
   // Every action is re-gated + row-scoped server-side.
@@ -852,6 +890,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canObservation ? (
         <Tab.Screen name="ObservationTab" component={ObservationNavigator} options={{ title: STR.tabObservation, tabBarIcon: tabIcon("👁️") }} />
+      ) : null}
+      {canRevision ? (
+        <Tab.Screen name="RevisionTab" component={RevisionNavigator} options={{ title: STR.tabRevision, tabBarIcon: tabIcon("🕌") }} />
       ) : null}
       {canFinance ? (
         <Tab.Screen name="FinanceTab" component={FinanceNavigator} options={{ title: STR.tabFinance, tabBarIcon: tabIcon("💰") }} />

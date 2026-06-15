@@ -620,6 +620,60 @@ describe("Finance firewall (ADR-005 / FIN-1, D-#221)", () => {
   });
 });
 
+/**
+ * Saturday-Revision firewall (SR-1, D-#241 / prd-sr1 §9).
+ *
+ * `RevisionEntry` names studentIds/groupIds (the per-juz Hifz revision record) —
+ * strictly identity/operational plane (ADR-005), same posture as the homework /
+ * class-test / vocab trackers. Fail-closed BOTH ways: the saturday-revision module
+ * must have NO import path into the corpus plane, and the corpus module must have NO
+ * import path into the saturday-revision module or its model (no analytics/export join
+ * back to who revised which juz).
+ */
+describe("Saturday-Revision firewall (ADR-005 / SR-1, D-#241)", () => {
+  const revisionDir = path.resolve(__dirname, "../modules/saturday-revision");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("saturday-revision module has NO import from the corpus plane", () => {
+    const files = walkDir(revisionDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (SR-1 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the saturday-revision module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/saturday-revision"));
+      expect(content).not.toMatch(importPattern("models/RevisionEntry"));
+      expect(content).not.toMatch(importPattern("models/RevisionAbsenceDispatch")); // SR-2 escalation ledger (names studentIds)
+      expect(content).not.toMatch(importPattern("services/RevisionService"));
+      expect(content).not.toMatch(importPattern("services/RevisionDeliveryService")); // SR-2 guardian delivery
+      expect(content).not.toMatch(importPattern("services/RevisionSummaryService")); // SR-3 derived analytics
+    }
+  });
+
+  // SR-2 delivery + escalation source files must exist + stay corpus-clean.
+  const SR2_FILES = [
+    "../modules/saturday-revision/services/RevisionDeliveryService.ts",
+    "../modules/saturday-revision/models/RevisionEscalationConfig.ts",
+    "../modules/saturday-revision/models/RevisionAbsenceDispatch.ts",
+    "../modules/saturday-revision/resolvers/revisionDelivery.ts",
+  ].map((p) => path.resolve(__dirname, p));
+
+  test("SR-2 delivery/escalation source files exist and have no corpus import", () => {
+    for (const f of SR2_FILES) {
+      expect(fs.existsSync(f)).toBe(true); // shipped (SR-2)
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;

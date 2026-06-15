@@ -966,6 +966,11 @@ export const NOTIFICATION_KINDS = [
   // FIN-2B finance fee-due chase (app-native, NO wire twin — D-#46/#227). The
   // guardian login-enabled inbox row for an outstanding fee due (wa.me for all).
   "FINANCE_FEE_DUE",
+  // SR-2 Saturday-Revision guardian delivery (app-native, NO wire twin — D-#46/#244).
+  // The weekly absent alert (also reused for the consecutive-absence escalation,
+  // D-#245) and the present-student revision digest (wa.me for all).
+  "SR_ABSENT",
+  "SR_DIGEST",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -988,6 +993,8 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   OBSERVATION_ESCALATED: "পর্যবেক্ষণে সাড়া বকেয়া",
   OBSERVATION_RESPONDED: "পর্যবেক্ষণে শিক্ষকের সাড়া",
   FINANCE_FEE_DUE: "ফি বকেয়ার তাগিদ",
+  SR_ABSENT: "শনিবার রিভিশনে অনুপস্থিত",
+  SR_DIGEST: "সাপ্তাহিক রিভিশন রিপোর্ট",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1008,6 +1015,8 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   OBSERVATION_ESCALATED: "Observation escalated",
   OBSERVATION_RESPONDED: "Observation responded",
   FINANCE_FEE_DUE: "Fee due reminder",
+  SR_ABSENT: "Saturday revision — absent",
+  SR_DIGEST: "Weekly revision digest",
 };
 
 
@@ -1401,6 +1410,13 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "finance.fee_due.chase.title",
   "finance.fee_due.chase.body",
   "finance.fee_due.chase.wa",
+  "sr.absent.title",
+  "sr.absent.body",
+  "sr.absent.wa",
+  "sr.digest.title",
+  "sr.digest.body",
+  "sr.digest.wa",
+  "sr.completeness_chase.wa",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1700,6 +1716,46 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর ফি বাবদ {AmountDue} টাকা বকেয়া রয়েছে — অনুগ্রহ করে পরিশোধ করুন। জাযাকাল্লাহু খাইরান।",
     defaultLangMode: "BN",
   },
+  // --- Saturday Revision guardian delivery (SR-2, D-#244/#131) ---
+  "sr.absent.title": {
+    group: "saturdayRevision", labelBn: "শনিবার রিভিশনে অনুপস্থিত — শিরোনাম", placeholders: [],
+    bnDefault: "শনিবারের রিভিশনে অনুপস্থিত", defaultLangMode: "BN",
+  },
+  "sr.absent.body": {
+    group: "saturdayRevision", labelBn: "শনিবার রিভিশনে অনুপস্থিত — বার্তা (ইনবক্স)",
+    placeholders: ["StudentName", "Date"],
+    bnDefault: "আসসালামু আলাইকুম। {StudentName} {Date} তারিখের শনিবারের কুরআন রিভিশনে অনুপস্থিত ছিল।",
+    defaultLangMode: "BN",
+  },
+  "sr.absent.wa": {
+    group: "saturdayRevision", labelBn: "শনিবার রিভিশনে অনুপস্থিত — হোয়াটসঅ্যাপ",
+    placeholders: ["StudentName", "Date"],
+    bnDefault: "আসসালামু আলাইকুম। {StudentName} {Date} তারিখের শনিবারের কুরআন রিভিশনে অনুপস্থিত ছিল। জাযাকাল্লাহু খাইরান।",
+    defaultLangMode: "BN",
+  },
+  "sr.digest.title": {
+    group: "saturdayRevision", labelBn: "সাপ্তাহিক রিভিশন রিপোর্ট — শিরোনাম", placeholders: [],
+    bnDefault: "সাপ্তাহিক কুরআন রিভিশন রিপোর্ট", defaultLangMode: "BN",
+  },
+  "sr.digest.body": {
+    group: "saturdayRevision", labelBn: "সাপ্তাহিক রিভিশন রিপোর্ট — বার্তা (ইনবক্স)",
+    placeholders: ["StudentName", "Date", "Summary"],
+    bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর {Date} তারিখের কুরআন রিভিশন:\n{Summary}",
+    defaultLangMode: "BN",
+  },
+  "sr.digest.wa": {
+    group: "saturdayRevision", labelBn: "সাপ্তাহিক রিভিশন রিপোর্ট — হোয়াটসঅ্যাপ",
+    placeholders: ["StudentName", "Date", "Summary"],
+    bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর {Date} তারিখের কুরআন রিভিশন:\n{Summary}\nজাযাকাল্লাহু খাইরান।",
+    defaultLangMode: "BN",
+  },
+  // --- Saturday Revision completeness chase (SR-3, D-#246/#131; stateless Office nudge) ---
+  "sr.completeness_chase.wa": {
+    group: "saturdayRevision", labelBn: "রিভিশন এন্ট্রি বাকি — হোয়াটসঅ্যাপ (শিক্ষককে)",
+    placeholders: ["TeacherName", "GroupName", "Date"],
+    bnDefault: "আসসালামু আলাইকুম {TeacherName}। {GroupName} গ্রুপের {Date} তারিখের শনিবারের রিভিশন এখনও এন্ট্রি করা হয়নি — অনুগ্রহ করে সম্পন্ন করুন। জাযাকাল্লাহু খাইরান।",
+    defaultLangMode: "BN",
+  },
 };
 
 
@@ -1751,6 +1807,48 @@ export const COMMENT_SENTIMENT_LABELS_BN: Record<CommentSentiment, string> = {
 export const COMMENT_SENTIMENT_LABELS_EN: Record<CommentSentiment, string> = {
   CONCERN: "Concern",
   POSITIVE: "Positive",
+};
+
+
+// --- A.x SATURDAY-REVISION ENUMS (app-native; Saturday-Revision module — ---------
+// prd-sr1 §4, D-#241–#243; source REQ docs/saturday-revision-requirements.md).
+// The per-juz Qur'an Hifz revision record (replaces the paper শিক্ষার্থীর পাঠ
+// সম্পাদন রিপোর্ট). NO wire-contract twin (D-#46, AGENTS rule 5): a revision entry
+// is a FEATURE, not import `doc_type` content — every row names a studentId, so it
+// is operational/identity plane behind the ADR-005 firewall. SR-1 freezes ONLY the
+// two entry enums; the delivery NOTIFICATION_KINDS + MT keys are SR-2's (kept out of
+// SR-1's footprint). Additive + disjoint from every other enum.
+
+/** The three Hifz revision categories recorded per juz (SR-1, §3/§4). SABAQ = new
+ *  memorisation, SABQI = the most-recent lesson, MANZIL = older revision. */
+export const REVISION_CATEGORIES = ["SABAQ", "SABQI", "MANZIL"] as const;
+export type RevisionCategory = (typeof REVISION_CATEGORIES)[number];
+export const REVISION_CATEGORY_LABELS_BN: Record<RevisionCategory, string> = {
+  SABAQ: "নতুন মুখস্ত",
+  SABQI: "সর্বসাম্প্রতিক পাঠ",
+  MANZIL: "পুরনো রিভিশন",
+};
+export const REVISION_CATEGORY_LABELS_EN: Record<RevisionCategory, string> = {
+  SABAQ: "Sabaq (new)",
+  SABQI: "Sabqi (recent)",
+  MANZIL: "Manzil (old revision)",
+};
+
+/** The structured tajweed-mistake categories counted per juz record (SR-1, §3/§4).
+ *  Counts feed the SR-3 per-juz weakness analytics. */
+export const REVISION_MISTAKE_CATEGORIES = ["HARF", "GHUNNAH", "MADD", "OTHER"] as const;
+export type RevisionMistakeCategory = (typeof REVISION_MISTAKE_CATEGORIES)[number];
+export const REVISION_MISTAKE_CATEGORY_LABELS_BN: Record<RevisionMistakeCategory, string> = {
+  HARF: "হরফে সমস্যা",
+  GHUNNAH: "গুন্নাহ",
+  MADD: "মাদ",
+  OTHER: "অন্যান্য",
+};
+export const REVISION_MISTAKE_CATEGORY_LABELS_EN: Record<RevisionMistakeCategory, string> = {
+  HARF: "Harf (letter)",
+  GHUNNAH: "Ghunnah",
+  MADD: "Madd",
+  OTHER: "Other",
 };
 
 
