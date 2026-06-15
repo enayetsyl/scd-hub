@@ -234,3 +234,7 @@ or contract change, so the vocab **verifier is untouched** and **jest is unaffec
 MON-2/3 are the capture core; MON-4/5 close the silent-failure + self-monitoring gaps so the launch
 version is *complete*, not crash-only. **Rough effort:** ~1 day for MON-1..3 (the core), ~half a day for
 MON-4..5. Nothing is built yet — this is the contract.
+
+> **HOW to build it:** the step-by-step execution runbook (concrete commands, file snippets, code, the
+> operator-vs-executor split, and per-slice acceptance gates) is **[docs/observability-runbook.md](observability-runbook.md)** —
+> written so a fresh Claude session can build the whole module end-to-end.

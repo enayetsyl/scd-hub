@@ -18,10 +18,15 @@ _Updated: 2026-06-15 (**SATURDAY REVISION (SR-1..SR-4) + CO-2 footage app rider 
   ADR-005; D-#253 = self-host over managed SaaS so PII stays on our infra.** Config ratified: 30-day
   retention, email alerts, GlitchTip Postgres folded into the nightly Drive backup, Android-APK-first for
   the MON-3 native acceptance. **NO `shared/vocab.ts` / wire-contract / `NOTIFICATION_KINDS` / app-RBAC
-  change** (verifier untouched, jest unaffected, parallel-safe). Suggested subdomain `errors.<prod-host>`
-  (operator-side, uncommitted). **Docs-only — nothing built.** Build order MON-1→…→MON-5 (MON-6 later);
-  ~1 day for the MON-1..3 core + ~½ day MON-4..5. **Next = build MON-1 (GlitchTip self-host) in a worktree
-  off `dev` once the operator picks the subdomain.**
+  change** (verifier untouched, jest unaffected, parallel-safe). **Subdomain `errors.<prod-host>` CREATED
+  + verified pointing at the VM 2026-06-15 (propagating across resolvers).** **Full execution runbook now
+  authored — `docs/observability-runbook.md`** (concrete compose/env/Caddy/CI snippets + code + per-slice
+  executed-acceptance + an explicit **[OP]operator / [EX]executor** split; all IP/domain/DSN/SMTP as
+  `<PLACEHOLDERS>` per §0), written so a FRESH session can build the whole module end-to-end. Build order
+  MON-1[OP]→MON-2[EX]→MON-3[EX]→MON-4[EX]→MON-5[OP] (MON-6 later); ~1 day core + ~½ day MON-4..5.
+  **Docs-only — nothing built.** **Next = a fresh session executes the runbook: MON-1 (operator stands up
+  GlitchTip on the VM) then MON-2/3/4 (server+app SDK capture + notification monitoring) in a worktree off
+  `dev`, then MON-5 (operator uptime/host alerts). The build owner here will NOT build it in this session.**
 - **Built (Saturday Revision SR-4 — the Expo app, COMPLETES the module SR-1..SR-4, prd-sr4.md §2/§3/§4,
   D-#68/#155 + build ruling D-#251) [branch `claude/sr-4` stacked off `claude/sr-3`]:** the 🕌 Revision tab over
   the merged SR-1..SR-3 resolvers + the new SR-4 `childRevision` guardian read. **App:** `app/src/graphql/revision.ts`
