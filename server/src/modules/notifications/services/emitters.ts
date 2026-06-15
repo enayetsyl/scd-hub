@@ -66,6 +66,10 @@ const dedupeKeys = {
   /** Per slot+guardian (CM-4): a re-dispatch of the same meeting slot is a no-op for the
    *  inbox (the wa.me link is re-built each call regardless). */
   meetingSchedule: (slotId: string, guardianId: string) => `MTSCH:${slotId}:${guardianId}`,
+  /** Per student+guardian+asOf (FIN-2B): a re-run of the chase the same day is a no-op for
+   *  the inbox; a new day's chase re-notifies (the wa.me link is re-built each call). */
+  financeFeeDue: (studentId: string, guardianId: string, asOfKey: string) =>
+    `FFEE:${studentId}:${guardianId}:${asOfKey}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -556,6 +560,56 @@ export async function emitStudentComment(ev: StudentCommentEvent): Promise<strin
             sectionId: ev.sectionId.toString(),
           },
           dedupeKey: dedupeKeys.studentComment(ev.commentId.toString(), g._id.toString()),
+        });
+        notified.push(g._id.toString());
+      }),
+    );
+  });
+  return notified;
+}
+
+// ---------------------------------------------------------------------------
+// FIN-2B — guardian fee-due chase → each login-enabled guardian of the student.
+// Title + body PRE-RENDERED by the caller (FeeSupportService) — renderTemplate is
+// NEVER called inside this per-guardian loop (the MT N+1 guard). Contact-only
+// guardians have no inbox; they are reached via the wa.me link the caller builds
+// for every family with a phone (D-#31/#72/#227). Returns the notified guardian ids.
+// ---------------------------------------------------------------------------
+
+export interface FinanceFeeDueEvent {
+  studentId: IdLike;
+  /** YYYY-MM-DD — the dedupe bucket (a re-run the same day is a no-op). */
+  asOfKey: string;
+  /** Pre-rendered (finance.fee_due.chase.title). */
+  titleBn: string;
+  /** Pre-rendered (finance.fee_due.chase.body). */
+  messageBn: string;
+}
+
+export async function emitFinanceFeeDue(ev: FinanceFeeDueEvent): Promise<string[]> {
+  const notified: string[] = [];
+  await bestEffort("finance fee-due chase", async () => {
+    if (!(NOTIFICATION_KINDS as readonly string[]).includes("FINANCE_FEE_DUE")) return;
+
+    const links = (await GuardianLink.find({ studentId: ev.studentId, active: { $ne: false } })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+
+    await Promise.all(
+      guardians.map(async (g) => {
+        await emit({
+          recipientGuardianId: g._id.toString(),
+          kind: "FINANCE_FEE_DUE",
+          titleBn: ev.titleBn,
+          bodyBn: ev.messageBn,
+          refs: { studentId: ev.studentId.toString() },
+          dedupeKey: dedupeKeys.financeFeeDue(ev.studentId.toString(), g._id.toString(), ev.asOfKey),
         });
         notified.push(g._id.toString());
       }),

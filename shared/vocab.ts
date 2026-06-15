@@ -963,6 +963,9 @@ export const NOTIFICATION_KINDS = [
   "OBSERVATION_RESPONSE_REMINDER",
   "OBSERVATION_ESCALATED",
   "OBSERVATION_RESPONDED",
+  // FIN-2B finance fee-due chase (app-native, NO wire twin — D-#46/#227). The
+  // guardian login-enabled inbox row for an outstanding fee due (wa.me for all).
+  "FINANCE_FEE_DUE",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -984,6 +987,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   OBSERVATION_RESPONSE_REMINDER: "পর্যবেক্ষণে সাড়া দেওয়ার তাগিদ",
   OBSERVATION_ESCALATED: "পর্যবেক্ষণে সাড়া বকেয়া",
   OBSERVATION_RESPONDED: "পর্যবেক্ষণে শিক্ষকের সাড়া",
+  FINANCE_FEE_DUE: "ফি বকেয়ার তাগিদ",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1003,6 +1007,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   OBSERVATION_RESPONSE_REMINDER: "Observation response reminder",
   OBSERVATION_ESCALATED: "Observation escalated",
   OBSERVATION_RESPONDED: "Observation responded",
+  FINANCE_FEE_DUE: "Fee due reminder",
 };
 
 
@@ -1393,6 +1398,9 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "class_test.overdue_chase.wa",
   "student_comment.notify.title",
   "student_comment.notify.body",
+  "finance.fee_due.chase.title",
+  "finance.fee_due.chase.body",
+  "finance.fee_due.chase.wa",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1670,6 +1678,26 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     placeholders: ["StudentName", "CommentType", "CommentText"],
     bnDefault:
       "আসসালামু আলাইকুম। {StudentName} সম্পর্কে শিক্ষকের একটি পর্যবেক্ষণ ({CommentType}): {CommentText} — জাযাকাল্লাহু খাইরান।",
+    defaultLangMode: "BN",
+  },
+  // --- Finance fee-due chase (FIN-2B, §6/J-FIN2-7 — the guardian fee-due reminder:
+  // an inbox row + wa.me for the family with an outstanding due, rendered once per
+  // family, never inline. D-#131/#227. ------------------------------------------
+  "finance.fee_due.chase.title": {
+    group: "finance", labelBn: "ফি বকেয়ার তাগিদ — শিরোনাম", placeholders: [],
+    bnDefault: "ফি বকেয়া",
+    defaultLangMode: "BN",
+  },
+  "finance.fee_due.chase.body": {
+    group: "finance", labelBn: "ফি বকেয়ার তাগিদ — বার্তা (ইনবক্স)",
+    placeholders: ["StudentName", "AmountDue"],
+    bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর ফি বাবদ {AmountDue} টাকা বকেয়া রয়েছে — অনুগ্রহ করে পরিশোধ করুন।",
+    defaultLangMode: "BN",
+  },
+  "finance.fee_due.chase.wa": {
+    group: "finance", labelBn: "ফি বকেয়ার তাগিদ — হোয়াটসঅ্যাপ",
+    placeholders: ["StudentName", "AmountDue"],
+    bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর ফি বাবদ {AmountDue} টাকা বকেয়া রয়েছে — অনুগ্রহ করে পরিশোধ করুন। জাযাকাল্লাহু খাইরান।",
     defaultLangMode: "BN",
   },
 };
@@ -2232,6 +2260,38 @@ export const FINANCE_POSTING_KIND_LABELS_EN: Record<FinancePostingKind, string> 
   OTHER_INCOME: "Other Income",
   EXPENSE: "Expense",
   TRANSFER: "Transfer",
+};
+
+// --- A.17c ZAKAT / 3RD-PARTY FEE-SUPPORT ENUMS (FIN-2B, prd-finance-fin2.md §3.B/§4,
+// D-#226) ----------------------------------------------------------------------
+// The per-head coverage TYPE on a FeeSupportAllocation + the allocation lifecycle
+// status. Additive, app-native, NO wire twin. (PERCENT coverage is deferred — all
+// current SCD usage is FULL or a ৳-AMOUNT cap.)
+
+/** Per-head coverage type on a fee-support allocation (FIN-2B §3.B). FULL = the
+ *  provider pays the head's whole posted amount; AMOUNT = up to a ৳ cap per posting. */
+export const FEE_COVERAGE_TYPES = ["FULL", "AMOUNT"] as const;
+export type FeeCoverageType = (typeof FEE_COVERAGE_TYPES)[number];
+export const FEE_COVERAGE_TYPE_LABELS_BN: Record<FeeCoverageType, string> = {
+  FULL: "সম্পূর্ণ",
+  AMOUNT: "নির্দিষ্ট পরিমাণ",
+};
+export const FEE_COVERAGE_TYPE_LABELS_EN: Record<FeeCoverageType, string> = {
+  FULL: "Full",
+  AMOUNT: "Fixed amount",
+};
+
+/** Fee-support allocation lifecycle (FIN-2B §3.B). Append-only effective-dated rows;
+ *  ENDED = superseded / closed (the latest active by createdAt wins). */
+export const FEE_SUPPORT_ALLOCATION_STATUSES = ["ACTIVE", "ENDED"] as const;
+export type FeeSupportAllocationStatus = (typeof FEE_SUPPORT_ALLOCATION_STATUSES)[number];
+export const FEE_SUPPORT_ALLOCATION_STATUS_LABELS_BN: Record<FeeSupportAllocationStatus, string> = {
+  ACTIVE: "সক্রিয়",
+  ENDED: "সমাপ্ত",
+};
+export const FEE_SUPPORT_ALLOCATION_STATUS_LABELS_EN: Record<FeeSupportAllocationStatus, string> = {
+  ACTIVE: "Active",
+  ENDED: "Ended",
 };
 
 

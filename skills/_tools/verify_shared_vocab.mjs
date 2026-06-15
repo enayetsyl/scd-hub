@@ -119,7 +119,7 @@ check("attendance: PRINCIPAL+OFFICE manage (not mark), TEACHER mark (not manage)
 console.log("=== C.5 Notification kinds + own-row posture (D-#72–#75) ===");
 check("NOTIFICATION_KIND_LABELS_BN total", total(V.NOTIFICATION_KIND_LABELS_BN, V.NOTIFICATION_KINDS));
 check("NOTIFICATION_KIND_LABELS_EN total", total(V.NOTIFICATION_KIND_LABELS_EN, V.NOTIFICATION_KINDS));
-check("kinds are exactly the 8 phase-1 kinds + 2 library kinds + 1 class-test kind + 1 vocab kind + 1 student-comment kind + 4 classroom-observation kinds (D-#72/#74/#84/#122; VC-4 += VOCAB_RESULT, D-#154; CM-2 += STUDENT_COMMENT, D-#172; CO-3 += OBSERVATION_RELEASED/_RESPONSE_REMINDER/_ESCALATED/_RESPONDED)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE","CLASS_TEST_RESULT","VOCAB_RESULT","STUDENT_COMMENT","OBSERVATION_RELEASED","OBSERVATION_RESPONSE_REMINDER","OBSERVATION_ESCALATED","OBSERVATION_RESPONDED"]));
+check("kinds are exactly the 8 phase-1 kinds + 2 library kinds + 1 class-test kind + 1 vocab kind + 1 student-comment kind + 4 classroom-observation kinds + 1 finance kind (D-#72/#74/#84/#122; VC-4 += VOCAB_RESULT, D-#154; CM-2 += STUDENT_COMMENT, D-#172; CO-3 += OBSERVATION_*; FIN-2B += FINANCE_FEE_DUE, D-#227)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE","CLASS_TEST_RESULT","VOCAB_RESULT","STUDENT_COMMENT","OBSERVATION_RELEASED","OBSERVATION_RESPONSE_REMINDER","OBSERVATION_ESCALATED","OBSERVATION_RESPONDED","FINANCE_FEE_DUE"]));
 check("no notification:* permission added (inbox is own-row, emission server-internal, D-#72)", !V.PERMISSIONS.some((p) => p.startsWith("notification")));
 
 console.log("=== C.6 Library vocab + RBAC invariants (D-#81–#84) ===");
@@ -524,6 +524,16 @@ check("FINANCE_POSTING_KINDS exact — FEE_COLLECTION/OTHER_INCOME/EXPENSE/TRANS
   eq(V.FINANCE_POSTING_KINDS, ["FEE_COLLECTION","OTHER_INCOME","EXPENSE","TRANSFER"]));
 check("FINANCE_POSTING_KIND_LABELS_BN total", total(V.FINANCE_POSTING_KIND_LABELS_BN, V.FINANCE_POSTING_KINDS));
 check("FINANCE_POSTING_KIND_LABELS_EN total", total(V.FINANCE_POSTING_KIND_LABELS_EN, V.FINANCE_POSTING_KINDS));
+// FIN-2B — zakat/3rd-party fee-support (coverage types + allocation status + chase, D-#226/#227)
+check("FEE_COVERAGE_TYPES exact — FULL/AMOUNT (FIN-2B §4, D-#226; PERCENT deferred)", eq(V.FEE_COVERAGE_TYPES, ["FULL","AMOUNT"]));
+check("FEE_COVERAGE_TYPE_LABELS_BN total", total(V.FEE_COVERAGE_TYPE_LABELS_BN, V.FEE_COVERAGE_TYPES));
+check("FEE_COVERAGE_TYPE_LABELS_EN total", total(V.FEE_COVERAGE_TYPE_LABELS_EN, V.FEE_COVERAGE_TYPES));
+check("FEE_SUPPORT_ALLOCATION_STATUSES exact — ACTIVE/ENDED (FIN-2B §4)", eq(V.FEE_SUPPORT_ALLOCATION_STATUSES, ["ACTIVE","ENDED"]));
+check("FEE_SUPPORT_ALLOCATION_STATUS_LABELS_BN total", total(V.FEE_SUPPORT_ALLOCATION_STATUS_LABELS_BN, V.FEE_SUPPORT_ALLOCATION_STATUSES));
+check("FEE_SUPPORT_ALLOCATION_STATUS_LABELS_EN total", total(V.FEE_SUPPORT_ALLOCATION_STATUS_LABELS_EN, V.FEE_SUPPORT_ALLOCATION_STATUSES));
+check("FINANCE_FEE_DUE is a registered NotificationKind (FIN-2B §6/J-FIN2-7, extends §C.5)", V.NOTIFICATION_KINDS.includes("FINANCE_FEE_DUE"));
+check("finance.fee_due.chase.* guardian-message template keys registered (title + body + wa, §6 — MT registry, D-#131)",
+  ["finance.fee_due.chase.title","finance.fee_due.chase.body","finance.fee_due.chase.wa"].every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k) && V.MESSAGE_TEMPLATE_REGISTRY[k]));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

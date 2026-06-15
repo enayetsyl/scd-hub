@@ -110,6 +110,9 @@ export type AuditEventKind =
   | "FINANCE_OPENING_BALANCE_SET" // an opening balance declared/re-declared for a ledger (effective-dated, append-only — Finance FIN-1, §3/J-FIN1-1, D-#222)
   | "FINANCE_POSTING_RECORDED"    // a finance money event (fee/income/expense/transfer) appended (Finance FIN-2A, §3.A/J-FIN2-1, D-#224)
   | "FINANCE_POSTING_REVERSED"    // a reversing posting appended against an original (a correction, never an edit/delete — FIN-2A, J-FIN2-2, D-#224)
+  | "FEE_SUPPORT_ALLOCATION_SET"  // a zakat/3rd-party fee-support allocation declared/re-declared (effective-dated, append-only — Finance FIN-2B, §3.B, D-#226)
+  | "PROVIDER_RECEIPT_RECORDED"   // a fee-support provider's payment against its receivable recorded (Finance FIN-2B, §3.B/J-FIN2-6)
+  | "FINANCE_FEE_DUE_CHASED"      // the guardian fee-due chase run for a student/family (Finance FIN-2B, §6/J-FIN2-7, D-#227)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {
