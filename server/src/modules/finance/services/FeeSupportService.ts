@@ -227,6 +227,28 @@ export interface ProviderStatement {
   outstanding: number;
 }
 
+/** Every provider's statement (FIN-6A dashboard rollup — zakat applied + receivables). */
+export async function providerStatements(): Promise<ProviderStatement[]> {
+  const providers = await FeeProvider.find().lean<Array<{ _id: Types.ObjectId }>>();
+  return Promise.all(providers.map((p) => providerStatement(p._id.toString())));
+}
+
+/** The school-wide outstanding guardian-due across all fee postings (FIN-6A dashboard,
+ *  derived via splitFee × the allocation active on each posting's date). */
+export async function totalGuardianDueOutstanding(asOf: Date = new Date()): Promise<number> {
+  const [postings, allocations] = await Promise.all([
+    loadFeePostings({ date: { $lte: asOf } }),
+    loadAllocations(),
+  ]);
+  let due = 0;
+  for (const p of postings) {
+    const alloc = activeAllocationFor(allocations, p.studentId, p.date);
+    const split = splitFee(p.feeLines, alloc?.coverage ?? []);
+    due += p.reversed ? -split.guardianDue : split.guardianDue;
+  }
+  return due;
+}
+
 /** Owed-vs-paid for a provider (J-FIN2-6): Σ provider-due raised − Σ receipts. */
 export async function providerStatement(providerId: string): Promise<ProviderStatement> {
   const provider = await FeeProvider.findById(providerId).lean<{ name: string }>();

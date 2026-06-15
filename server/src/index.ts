@@ -69,6 +69,7 @@ import "./modules/finance/resolvers/feeSupport";
 import "./modules/finance/resolvers/qardIou";
 import "./modules/finance/resolvers/reconciliation";
 import "./modules/finance/resolvers/budget";
+import "./modules/finance/resolvers/financeDashboard";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";

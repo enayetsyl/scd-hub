@@ -104,6 +104,11 @@ export async function latestReconciliation(dateKey: string): Promise<IReconcilia
   return ReconciliationEntry.findOne({ date: { $gte: dayStart, $lte: dayEnd } }).sort({ createdAt: -1 });
 }
 
+/** The most recent reconciliation overall (FIN-6A dashboard "last recon diffs"), or null. */
+export async function mostRecentReconciliation(): Promise<IReconciliationEntry | null> {
+  return ReconciliationEntry.findOne().sort({ date: -1, createdAt: -1 });
+}
+
 /** Reconciliation history over [from, to] (inclusive), newest first (J-FIN4-3). */
 export async function reconciliationHistory(fromKey: string, toKey: string): Promise<IReconciliationEntry[]> {
   const from = new Date(`${fromKey}T00:00:00.000Z`);
