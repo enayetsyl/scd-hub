@@ -34,7 +34,7 @@ check("default-deny: unknown role", V.roleHasPermission("GHOST", "content:read")
 check("PRINCIPAL has user:manage + audit:read", V.roleHasPermission("PRINCIPAL", "user:manage") && V.roleHasPermission("PRINCIPAL", "audit:read"));
 check("TEACHER lacks user:manage / audit:read / content:import", !["user:manage","audit:read","content:import"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("TEACHER can read content + assemble + write trackers", ["content:read","set:assemble","tracker:write"].every((p) => V.roleHasPermission("TEACHER", p)));
-check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/routine/attendance/library/chat/observation", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage"]));
+check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/routine/attendance/library/chat/observation/finance", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage","finance:manage"]));
 check("routine: PRINCIPAL+OFFICE manage, TEACHER read-only, GUARDIAN none", V.roleHasPermission("PRINCIPAL","routine:manage") && V.roleHasPermission("OFFICE","routine:manage") && V.roleHasPermission("TEACHER","routine:read") && !V.roleHasPermission("TEACHER","routine:manage") && !V.roleHasPermission("GUARDIAN","routine:read"));
 check("TEACHER has content:review (reviewer APPROVE), lacks assign/promote", V.roleHasPermission("TEACHER","content:review") && !["content:assign_review","content:promote_gold"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("GUARDIAN only has guardian:read_child", eq(V.permissionsForRole("GUARDIAN"), ["guardian:read_child"]));
@@ -119,7 +119,7 @@ check("attendance: PRINCIPAL+OFFICE manage (not mark), TEACHER mark (not manage)
 console.log("=== C.5 Notification kinds + own-row posture (D-#72–#75) ===");
 check("NOTIFICATION_KIND_LABELS_BN total", total(V.NOTIFICATION_KIND_LABELS_BN, V.NOTIFICATION_KINDS));
 check("NOTIFICATION_KIND_LABELS_EN total", total(V.NOTIFICATION_KIND_LABELS_EN, V.NOTIFICATION_KINDS));
-check("kinds are exactly the 8 phase-1 kinds + 2 library kinds + 1 class-test kind + 1 vocab kind + 1 student-comment kind + 4 classroom-observation kinds (D-#72/#74/#84/#122; VC-4 += VOCAB_RESULT, D-#154; CM-2 += STUDENT_COMMENT, D-#172; CO-3 += OBSERVATION_RELEASED/_RESPONSE_REMINDER/_ESCALATED/_RESPONDED)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE","CLASS_TEST_RESULT","VOCAB_RESULT","STUDENT_COMMENT","OBSERVATION_RELEASED","OBSERVATION_RESPONSE_REMINDER","OBSERVATION_ESCALATED","OBSERVATION_RESPONDED"]));
+check("kinds are exactly the 8 phase-1 kinds + 2 library kinds + 1 class-test kind + 1 vocab kind + 1 student-comment kind + 4 classroom-observation kinds + 1 finance kind (D-#72/#74/#84/#122; VC-4 += VOCAB_RESULT, D-#154; CM-2 += STUDENT_COMMENT, D-#172; CO-3 += OBSERVATION_*; FIN-2B += FINANCE_FEE_DUE, D-#227)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE","CLASS_TEST_RESULT","VOCAB_RESULT","STUDENT_COMMENT","OBSERVATION_RELEASED","OBSERVATION_RESPONSE_REMINDER","OBSERVATION_ESCALATED","OBSERVATION_RESPONDED","FINANCE_FEE_DUE"]));
 check("no notification:* permission added (inbox is own-row, emission server-internal, D-#72)", !V.PERMISSIONS.some((p) => p.startsWith("notification")));
 
 console.log("=== C.6 Library vocab + RBAC invariants (D-#81–#84) ===");
@@ -466,6 +466,86 @@ check("PERMISSION_LABELS_EN total over PERMISSIONS (name + desc)", totalLabelObj
 check("PERMISSION_LABELS have no key outside PERMISSIONS (BN + EN)",
   Object.keys(V.PERMISSION_LABELS_BN).every((k) => V.PERMISSIONS.includes(k)) &&
   Object.keys(V.PERMISSION_LABELS_EN).every((k) => V.PERMISSIONS.includes(k)));
+
+console.log("=== C.18 Finance/accounting vocab freeze + finance:manage RBAC (FIN-1 — prd-finance-fin1 §4/§5, D-#221–#223/#247; app-native, NO wire twin REQ §9) ===");
+// ledgers — exactly the 5 (REQ §3); CASH/BANK/ONLINE + the 2 control ledgers
+check("LEDGER_KINDS exact — the 5 ledgers (§4)", eq(V.LEDGER_KINDS, ["CASH","BANK","ONLINE","QARD_CONTROL","IOU_CONTROL"]));
+check("LEDGER_KIND_LABELS_BN total", total(V.LEDGER_KIND_LABELS_BN, V.LEDGER_KINDS));
+check("LEDGER_KIND_LABELS_EN total", total(V.LEDGER_KIND_LABELS_EN, V.LEDGER_KINDS));
+// payment modes — the 3 finance movement modes, distinct from HR PAYMENT_METHODS
+check("FINANCE_PAYMENT_MODES exact — CASH/BANK/ONLINE (§4)", eq(V.FINANCE_PAYMENT_MODES, ["CASH","BANK","ONLINE"]));
+check("FINANCE_PAYMENT_MODE_LABELS_BN total", total(V.FINANCE_PAYMENT_MODE_LABELS_BN, V.FINANCE_PAYMENT_MODES));
+check("FINANCE_PAYMENT_MODE_LABELS_EN total", total(V.FINANCE_PAYMENT_MODE_LABELS_EN, V.FINANCE_PAYMENT_MODES));
+check("FINANCE_PAYMENT_MODES distinct from HR PAYMENT_METHODS (no namespace clash, §4)",
+  !eq(V.FINANCE_PAYMENT_MODES, V.PAYMENT_METHODS) && V.PAYMENT_METHODS.includes("bkash") && !V.FINANCE_PAYMENT_MODES.includes("bkash"));
+// income heads — the 11 ratified (D-#247)
+check("FINANCE_INCOME_HEADS exact — the 11 ratified heads (§4, D-#247)",
+  eq(V.FINANCE_INCOME_HEADS, ["ADMISSION_FEE","SESSION_FEE","TUITION_FEE","BOOKS_STATIONERIES","REVISION_FEE","TRANSPORT_FEE","APPLICATION_FORM_PROSPECTUS","SADAKA","SUBSIDY","OTHER_FEE","OTHER"]));
+check("FINANCE_INCOME_HEADS is 11", V.FINANCE_INCOME_HEADS.length === 11);
+check("FINANCE_INCOME_HEAD_LABELS_BN total", total(V.FINANCE_INCOME_HEAD_LABELS_BN, V.FINANCE_INCOME_HEADS));
+check("FINANCE_INCOME_HEAD_LABELS_EN total", total(V.FINANCE_INCOME_HEAD_LABELS_EN, V.FINANCE_INCOME_HEADS));
+// student-fee heads — the 7 ratified (D-#247)
+check("FINANCE_STUDENT_FEE_HEADS exact — the 7 ratified heads (§4, D-#247)",
+  eq(V.FINANCE_STUDENT_FEE_HEADS, ["ADMISSION","SESSION","TUITION","BOOKS_STATIONERIES","REVISION","TRANSPORT","OTHER"]));
+check("FINANCE_STUDENT_FEE_HEADS is 7", V.FINANCE_STUDENT_FEE_HEADS.length === 7);
+check("FINANCE_STUDENT_FEE_HEAD_LABELS_BN total", total(V.FINANCE_STUDENT_FEE_HEAD_LABELS_BN, V.FINANCE_STUDENT_FEE_HEADS));
+check("FINANCE_STUDENT_FEE_HEAD_LABELS_EN total", total(V.FINANCE_STUDENT_FEE_HEAD_LABELS_EN, V.FINANCE_STUDENT_FEE_HEADS));
+// ledger-movement heads — the 3, DISJOINT from income (FIN-5 never counts them as revenue)
+check("FINANCE_LEDGER_MOVEMENT_HEADS exact — BANK_DEPOSIT/QARD_REPAYMENT/IOU_REPAYMENT (§4)",
+  eq(V.FINANCE_LEDGER_MOVEMENT_HEADS, ["BANK_DEPOSIT","QARD_REPAYMENT","IOU_REPAYMENT"]));
+check("FINANCE_LEDGER_MOVEMENT_HEADS disjoint from FINANCE_INCOME_HEADS (movements are NOT income, §4)",
+  !V.FINANCE_LEDGER_MOVEMENT_HEADS.some((h) => V.FINANCE_INCOME_HEADS.includes(h)));
+check("FINANCE_LEDGER_MOVEMENT_HEAD_LABELS_BN total", total(V.FINANCE_LEDGER_MOVEMENT_HEAD_LABELS_BN, V.FINANCE_LEDGER_MOVEMENT_HEADS));
+check("FINANCE_LEDGER_MOVEMENT_HEAD_LABELS_EN total", total(V.FINANCE_LEDGER_MOVEMENT_HEAD_LABELS_EN, V.FINANCE_LEDGER_MOVEMENT_HEADS));
+// expense heads — the 22 ratified (D-#247); SALARY present (HR feed)
+check("FINANCE_EXPENSE_HEADS is the 22 ratified heads incl. SALARY (§4, D-#247)",
+  V.FINANCE_EXPENSE_HEADS.length === 22 && V.FINANCE_EXPENSE_HEADS.includes("SALARY") && V.FINANCE_EXPENSE_HEADS.includes("OTHER"));
+check("FINANCE_EXPENSE_HEAD_LABELS_BN total", total(V.FINANCE_EXPENSE_HEAD_LABELS_BN, V.FINANCE_EXPENSE_HEADS));
+check("FINANCE_EXPENSE_HEAD_LABELS_EN total", total(V.FINANCE_EXPENSE_HEAD_LABELS_EN, V.FINANCE_EXPENSE_HEADS));
+// Qard/IOU dir+type enums (frozen now; register is FIN-3)
+check("QARD_IOU_DIRECTIONS exact (§4)", eq(V.QARD_IOU_DIRECTIONS, ["NEW_DISBURSEMENT","REPAYMENT_RECEIVED","ADJUSTMENT"]));
+check("QARD_IOU_DIRECTION_LABELS_BN total", total(V.QARD_IOU_DIRECTION_LABELS_BN, V.QARD_IOU_DIRECTIONS));
+check("QARD_IOU_DIRECTION_LABELS_EN total", total(V.QARD_IOU_DIRECTION_LABELS_EN, V.QARD_IOU_DIRECTIONS));
+check("QARD_IOU_TYPES exact (§4)", eq(V.QARD_IOU_TYPES, ["QARD_E_HASANA","IOU"]));
+check("QARD_IOU_TYPE_LABELS_BN total", total(V.QARD_IOU_TYPE_LABELS_BN, V.QARD_IOU_TYPES));
+check("QARD_IOU_TYPE_LABELS_EN total", total(V.QARD_IOU_TYPE_LABELS_EN, V.QARD_IOU_TYPES));
+// finance:manage — declared, BUILD, Principal+Office exact-holder; NOT reserved; TEACHER/GUARDIAN never
+check("finance:manage is declared + BUILD (§5)",
+  V.PERMISSIONS.includes("finance:manage") && V.PERMISSION_BUILD_STATUS["finance:manage"] === "build");
+check("finance:manage = PRINCIPAL+OFFICE only; TEACHER/GUARDIAN never (§5, D-#221)",
+  V.roleHasPermission("PRINCIPAL","finance:manage") && V.roleHasPermission("OFFICE","finance:manage") &&
+  !["TEACHER","GUARDIAN"].some((r) => V.roleHasPermission(r, "finance:manage")));
+check("finance:manage is NOT reserved (Office holds it — it is a delegable books perm, not Principal-only, D-#221)",
+  !V.RESERVED_PERMISSIONS.includes("finance:manage"));
+check("no finance:approve in FIN-1 (period-lock deferred to the slice that needs it, §5)",
+  !V.PERMISSIONS.includes("finance:approve"));
+// FIN-2A — posting kinds (additive; prd-finance-fin2 §3.A/§4, D-#224)
+check("FINANCE_POSTING_KINDS exact — FEE_COLLECTION/OTHER_INCOME/EXPENSE/TRANSFER (FIN-2A §4)",
+  eq(V.FINANCE_POSTING_KINDS, ["FEE_COLLECTION","OTHER_INCOME","EXPENSE","TRANSFER"]));
+check("FINANCE_POSTING_KIND_LABELS_BN total", total(V.FINANCE_POSTING_KIND_LABELS_BN, V.FINANCE_POSTING_KINDS));
+check("FINANCE_POSTING_KIND_LABELS_EN total", total(V.FINANCE_POSTING_KIND_LABELS_EN, V.FINANCE_POSTING_KINDS));
+// FIN-2B — zakat/3rd-party fee-support (coverage types + allocation status + chase, D-#226/#227)
+check("FEE_COVERAGE_TYPES exact — FULL/AMOUNT (FIN-2B §4, D-#226; PERCENT deferred)", eq(V.FEE_COVERAGE_TYPES, ["FULL","AMOUNT"]));
+check("FEE_COVERAGE_TYPE_LABELS_BN total", total(V.FEE_COVERAGE_TYPE_LABELS_BN, V.FEE_COVERAGE_TYPES));
+check("FEE_COVERAGE_TYPE_LABELS_EN total", total(V.FEE_COVERAGE_TYPE_LABELS_EN, V.FEE_COVERAGE_TYPES));
+check("FEE_SUPPORT_ALLOCATION_STATUSES exact — ACTIVE/ENDED (FIN-2B §4)", eq(V.FEE_SUPPORT_ALLOCATION_STATUSES, ["ACTIVE","ENDED"]));
+check("FEE_SUPPORT_ALLOCATION_STATUS_LABELS_BN total", total(V.FEE_SUPPORT_ALLOCATION_STATUS_LABELS_BN, V.FEE_SUPPORT_ALLOCATION_STATUSES));
+check("FEE_SUPPORT_ALLOCATION_STATUS_LABELS_EN total", total(V.FEE_SUPPORT_ALLOCATION_STATUS_LABELS_EN, V.FEE_SUPPORT_ALLOCATION_STATUSES));
+check("FINANCE_FEE_DUE is a registered NotificationKind (FIN-2B §6/J-FIN2-7, extends §C.5)", V.NOTIFICATION_KINDS.includes("FINANCE_FEE_DUE"));
+check("finance.fee_due.chase.* guardian-message template keys registered (title + body + wa, §6 — MT registry, D-#131)",
+  ["finance.fee_due.chase.title","finance.fee_due.chase.body","finance.fee_due.chase.wa"].every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k) && V.MESSAGE_TEMPLATE_REGISTRY[k]));
+// FIN-3 — Qard/IOU party kinds (additive; prd-finance-fin3 §4, D-#232)
+check("FINANCE_PARTY_KINDS exact — COMMUNITY/INDIVIDUAL/ORG (FIN-3 §4)", eq(V.FINANCE_PARTY_KINDS, ["COMMUNITY","INDIVIDUAL","ORG"]));
+check("FINANCE_PARTY_KIND_LABELS_BN total", total(V.FINANCE_PARTY_KIND_LABELS_BN, V.FINANCE_PARTY_KINDS));
+check("FINANCE_PARTY_KIND_LABELS_EN total", total(V.FINANCE_PARTY_KIND_LABELS_EN, V.FINANCE_PARTY_KINDS));
+// FIN-4 — reconciliation sources (additive; prd-finance-fin4 §4, D-#235/#236)
+check("RECON_SOURCES exact — BANK/EXIMUS (FIN-4 §4)", eq(V.RECON_SOURCES, ["BANK","EXIMUS"]));
+check("RECON_SOURCE_LABELS_BN total", total(V.RECON_SOURCE_LABELS_BN, V.RECON_SOURCES));
+check("RECON_SOURCE_LABELS_EN total", total(V.RECON_SOURCE_LABELS_EN, V.RECON_SOURCES));
+// FIN-5 — budget line kinds (additive; prd-finance-fin5 §4, D-#237)
+check("BUDGET_LINE_KINDS exact — EXPENSE/INCOME (FIN-5 §4)", eq(V.BUDGET_LINE_KINDS, ["EXPENSE","INCOME"]));
+check("BUDGET_LINE_KIND_LABELS_BN total", total(V.BUDGET_LINE_KIND_LABELS_BN, V.BUDGET_LINE_KINDS));
+check("BUDGET_LINE_KIND_LABELS_EN total", total(V.BUDGET_LINE_KIND_LABELS_EN, V.BUDGET_LINE_KINDS));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);
