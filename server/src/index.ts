@@ -85,7 +85,7 @@ import { setPdfRouter } from "./modules/assessment/routes/setPdf";
 import { filesRouter } from "./routes/files";
 import { triggersRouter } from "./routes/triggers";
 import { registerExpoPushChannel } from "./modules/notifications/services/pushChannel";
-import { startNotificationTicker } from "./modules/notifications/services/SchedulerService";
+import { startNotificationTicker, getTickerHealth } from "./modules/notifications/services/SchedulerService";
 
 const app = express();
 
@@ -97,6 +97,9 @@ app.get("/readyz", async (_req, res) => {
   if (state === 1) res.json({ ok: true });
   else res.status(503).json({ ok: false, dbState: state });
 });
+// MON-4: notification-ticker heartbeat (no PII). MON-5's off-box monitor watches
+// `ageSeconds` and alerts when the ticker stalls (past ~2× the 60s interval).
+app.get("/internal/ticker", (_req, res) => res.json(getTickerHealth()));
 
 // MON-2 verification aid (operator-only): set SENTRY_DEBUG_ROUTE=1 on a NON-production
 // service to force a captured server fault, confirm it lands in GlitchTip (with the

@@ -58,6 +58,19 @@ _Updated: 2026-06-15 (**MON-1 — GlitchTip self-host LIVE on the prod VM (obser
   **No vocab/contract change. Gate GREEN (executed): app tsc clean + expo web export green (debug-IDs injected),
   no server/shared drift.** **Not verified live** (operator forces web + Android-APK crashes → symbolicated stacks
   + feedback event). **Next = MON-4** (notification-delivery monitoring — push receipts + ticker watchdog).
+- **Built (Observability MON-4 — notification-delivery monitoring, the silent-failure path, server,
+  prd-observability.md §4 / observability-runbook.md MON-4, D-#252/#253) [branch `claude/open-prd-xuh335-mon4`
+  stacked off MON-3]:** catches delivery failures that throw NO exception. **(1) Expo push ticket errors →
+  GlitchTip:** pure `deliveryFailureCodes(tickets)` in `ExpoPush.ts` surfaces every error ticket EXCEPT the
+  routine `DeviceNotRegistered` prune (would flood); `sendExpoPush` calls `capturePushDeliveryFailure`
+  (new server sentry helper → `expo_push_delivery_failed` warning) per failure + a `transport_unreachable`
+  capture on the unreachable catch (today both silently dropped). **(2) Ticker watchdog:** `SchedulerService`
+  records `lastTickAt` (set FIRST in `runSchedulerTick`, before the school-day gate) + pure `getTickerHealth()`
+  → `{lastTickAt, ageSeconds}`, exposed at **`GET /internal/ticker`** (no PII) for MON-5's off-box monitor.
+  **No vocab/contract change. Gate GREEN (executed): server tsc clean + jest 1462/1462 (89 suites;
+  +notificationMonitoring.test.ts [3] + 2 heartbeat tests). Server-only. Not verified live** (operator: bad
+  push token → captured event; stop ticker → /internal/ticker stale + MON-5 alert). **Next = MON-5** (off-box
+  uptime + VM host-alert script; mostly operator [OP] + the `scripts/host-alert.sh` [EX] writes).
 - **Built (Saturday Revision SR-4 — the Expo app, COMPLETES the module SR-1..SR-4, prd-sr4.md §2/§3/§4,
   D-#68/#155 + build ruling D-#251) [branch `claude/sr-4` stacked off `claude/sr-3`]:** the 🕌 Revision tab over
   the merged SR-1..SR-3 resolvers + the new SR-4 `childRevision` guardian read. **App:** `app/src/graphql/revision.ts`

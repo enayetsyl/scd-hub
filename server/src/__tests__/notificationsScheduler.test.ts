@@ -79,6 +79,7 @@ import {
   minutesOfDay,
   schedulerDedupeKeys,
   STALE_MINUTES,
+  getTickerHealth,
 } from "../modules/notifications/services/SchedulerService";
 
 const oid = (s: string) => ({ toString: () => s });
@@ -115,6 +116,25 @@ describe("windowOpen / minutesOfDay", () => {
 
   it("minutesOfDay is local clock minutes", () => {
     expect(minutesOfDay(at(12, 5))).toBe(725);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MON-4 — ticker heartbeat (the off-box watchdog reads this)
+// ---------------------------------------------------------------------------
+
+describe("MON-4 — ticker heartbeat (getTickerHealth)", () => {
+  it("is null before any tick (reset in beforeEach)", () => {
+    expect(getTickerHealth()).toEqual({ lastTickAt: null, ageSeconds: null });
+  });
+
+  it("records the last tick (set first, before the school-day gate) + computes staleness", async () => {
+    mockResolveDayType.mockResolvedValue("OFF"); // even a silent day still counts as a live tick
+    const tickMoment = at(8, 0);
+    await runSchedulerTick(tickMoment);
+    const health = getTickerHealth(at(8, 2)); // 120s later
+    expect(health.lastTickAt).toBe(tickMoment.toISOString());
+    expect(health.ageSeconds).toBe(120);
   });
 });
 

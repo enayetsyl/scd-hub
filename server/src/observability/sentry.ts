@@ -111,6 +111,24 @@ function scrubSecrets(bag: unknown): void {
   }
 }
 
+/**
+ * Capture a notification-delivery failure (MON-4) — the silent-failure path. Expo push
+ * ticket errors throw no exception, so without this they are dropped unseen. A no-op
+ * when Sentry is disabled.
+ */
+export function capturePushDeliveryFailure(info: {
+  kind?: string;
+  errorCode?: string;
+  recipientCount?: number;
+}): void {
+  if (!sentryEnabled) return;
+  Sentry.captureMessage("expo_push_delivery_failed", {
+    level: "warning",
+    tags: { kind: info.kind ?? "unknown" },
+    extra: { errorCode: info.errorCode, recipientCount: info.recipientCount },
+  });
+}
+
 /** Capture a real server fault with caller context; a no-op when Sentry is disabled. */
 export function captureServerError(
   err: unknown,
