@@ -1,17 +1,21 @@
 // Upload a backup archive to the school Drive (SCD-Hub-Backups) and apply
 // tiered rotation: keep all from the last 7 days, the newest per week for the
 // last 4 weeks, and the newest per month for the last 3 months — delete the
-// rest. Only files named scdhub_prod-YYYY-MM-DD* are ever considered/deleted;
+// rest. Only files with a YYYY-MM-DD date in their name are considered/deleted;
 // anything else in the folder is left untouched. Plain fetch, no deps.
 //
-//   node scripts/drive-backup.mjs <archive-file>
+//   node scripts/drive-backup.mjs <archive-file> [folder-name]
+//
+// [folder-name] defaults to "SCD-Hub-Backups" (the prod Mongo archives). Pass a
+// distinct folder (e.g. "SCD-Hub-Backups-GlitchTip", MON-1) to keep a separate
+// rotation pool so unrelated backups never rotate against each other.
 //
 // Reads GOOGLE_OAUTH_* from /opt/scdhub/prod/.env.
 import fs from "fs";
 import path from "path";
 
 const ENVF = "/opt/scdhub/prod/.env";
-const FOLDER = "SCD-Hub-Backups";
+const FOLDER = process.argv[3] || "SCD-Hub-Backups";
 const DAY = 86400000;
 
 const FILE = process.argv[2];
