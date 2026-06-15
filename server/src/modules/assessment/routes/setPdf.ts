@@ -57,13 +57,19 @@ setPdfRouter.get("/:id", async (req: Request, res: Response) => {
     artifactsMap.set(a._id.toString(), a.envelopeJson as Record<string, unknown>);
   }
 
-  const pdfBuffer = await renderSetToPdf(set, items, artifactsMap);
-
-  const filename = `set_${req.params.id}.pdf`;
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
-  res.setHeader("Content-Length", pdfBuffer.byteLength);
-  res.send(pdfBuffer);
+  // Isolate the render: a renderer/font failure returns 500 instead of rejecting
+  // out of the async handler and crashing the Node process (Express 4 quirk).
+  try {
+    const pdfBuffer = await renderSetToPdf(set, items, artifactsMap);
+    const filename = `set_${req.params.id}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+    res.setHeader("Content-Length", pdfBuffer.byteLength);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error(`PDF render failed for set ${req.params.id}:`, err);
+    res.status(500).json({ error: "Could not generate the PDF" });
+  }
 });
 
 // ---------------------------------------------------------------------------

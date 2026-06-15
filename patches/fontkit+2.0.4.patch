@@ -1,0 +1,16 @@
+diff --git a/node_modules/fontkit/dist/main.cjs b/node_modules/fontkit/dist/main.cjs
+index 851b2d2..5f19c49 100644
+--- a/node_modules/fontkit/dist/main.cjs
++++ b/node_modules/fontkit/dist/main.cjs
+@@ -9986,6 +9986,11 @@ class $79ea6270f0a90256$export$2e2bcd8739ae039 extends (0, $7b226e6bbeadedeb$exp
+     }
+     getAnchor(anchor) {
+         // TODO: contour point, device tables
++        // Some fonts (e.g. Noto Sans Bengali reph/mark positioning) carry a null
++        // anchor in a GPOS mark record; without this guard fontkit throws
++        // "Cannot read properties of null (reading 'xCoordinate')". Treat a missing
++        // anchor as the origin so layout continues. (patched via patch-package)
++        if (!anchor) return { x: 0, y: 0 };
+         let x = anchor.xCoordinate;
+         let y = anchor.yCoordinate;
+         // Adjustments for font variations

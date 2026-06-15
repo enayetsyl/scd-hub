@@ -3,7 +3,7 @@
  * exactly as imported (ADR-006: never re-rendered from JSON) + server-side PDF
  * export. Shows the curationTag chip and reviewStatus badge.
  */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
@@ -31,6 +31,7 @@ import {
   classLevelLabel,
   curationTagLabel,
   reviewStatusLabel,
+  docTypeLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
@@ -39,7 +40,7 @@ import Markdown from "../../components/Markdown";
 
 type Props = NativeStackScreenProps<ContentStackParamList, "PlanView">;
 
-export default function PlanViewScreen({ route }: Props): React.ReactElement {
+export default function PlanViewScreen({ route, navigation }: Props): React.ReactElement {
   const { artifactId } = route.params;
   const [{ data, fetching, error }, refetch] = useQuery({
     query: ARTIFACT_QUERY,
@@ -65,6 +66,12 @@ export default function PlanViewScreen({ route }: Props): React.ReactElement {
   const [reviewMsg, setReviewMsg] = useState<{ text: string; tone: "ok" | "danger" } | null>(null);
 
   const a = data?.artifact;
+
+  // The PlanView route has a static "Session plan" title; override it per artifact
+  // so a chapter plan reads "Chapter plan" (the two doc types are otherwise identical here).
+  useEffect(() => {
+    if (a?.docType) navigation.setOptions({ title: docTypeLabel(a.docType) });
+  }, [a?.docType, navigation]);
 
   async function onAssign(): Promise<void> {
     if (assignBusy || reviewerId.trim() === "") return;
@@ -130,7 +137,8 @@ export default function PlanViewScreen({ route }: Props): React.ReactElement {
       <Muted>
         {subjectLabel(a.subject)} · {classLevelLabel(a.classLevel)}
       </Muted>
-      <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+      <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2), flexWrap: "wrap" }}>
+        <Badge text={docTypeLabel(a.docType)} tone="info" />
         <Badge text={curationTagLabel(a.curationTag)} tone="muted" />
         <Badge
           text={reviewStatusLabel(a.reviewStatus)}
