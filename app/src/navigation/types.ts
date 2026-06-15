@@ -185,6 +185,20 @@ export type CommentsStackParamList = {
   MeetingComparison: { meetingId: string; studentId: string; studentName: string };
 };
 
+/** Classroom Observation (CO app surfaces over CO-1..CO-7) — staff stack
+ *  (observation:read || observation:upload || observation:manage tab). */
+export type ObservationStackParamList = {
+  ObservationHome: undefined;
+  UploadObservation: undefined;
+  ObservationReviewQueue: undefined;
+  ReviewObservation: { observationId: string; form: string; title: string };
+  ObservationDetail: { observationId: string; title?: string };
+  ObservationTrend: undefined;
+  ObservationDueList: undefined;
+  ReviewerEffectiveness: undefined;
+  ObservationConfig: undefined;
+};
+
 export type AdminStackParamList = {
   AdminHome: undefined;
   Import: undefined;
@@ -221,6 +235,7 @@ export type TabParamList = {
   VocabTab: NavigatorScreenParams<VocabStackParamList>;
   ClassTestTab: NavigatorScreenParams<ClassTestStackParamList>;
   CommentsTab: NavigatorScreenParams<CommentsStackParamList>;
+  ObservationTab: NavigatorScreenParams<ObservationStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;

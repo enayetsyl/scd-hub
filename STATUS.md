@@ -1,9 +1,9 @@
 # STATUS
 
-_Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two server slices landed this cycle, integrated gate green: **jest 1198/1198 [70 suites]**, vocab verifier PASS incl. §C.17, shared/server tsc clean. **CM-5** (PR #78) — Comments: `MeetingComment` + comparison timeline + guardian `childComments`/`childMeetingSlot`, VOCAB-FREE, D-#124 governing + D-#202 ruling; coordinator 3-finder review = no fixes (comparison reads' reps-gate is intentional per PRD §8). **AC-1** (PR #79) — Per-user Access Control: role→template seam swap (`schema.ts` + ALL ~30 production `roleHasPermission(ctx.auth.role,…)` → `callerHasPermission(ctx.auth,…)`), 3 additive `User` fields ZERO-migration, `access:manage` RESERVED-locked, D-#193 + D-#210–#215; sole vocab owner; coordinator 6-finder review = no fixes (byte-identical proof = every prior RBAC test green; verifier §C.17). Merged CM-5 first, AC-1 last (highest blast radius, keep-both append-logs + index/Audit union). **Non-blocking follow-ups recorded:** (1) AC per-user changes apply on the target's NEXT login (JWT-baked, ≤8h TTL — D-#211; relevant to AC-2 UX); (2) `effectivePermissions` recomputes per gate — future per-request memo if profiling warrants; (3) CM-5 comparison timeline is wider than CM-1 section-scope (reps gate, by PRD design). Prior — **CT-4-FIX MERGED** [jest 1165, D-#196]. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), Saturday-Revision (D-#197–#201). **OPEN-PRD BACKLOG CLEARED — 7 slices landed PER-SLICE from the cloud-agent bundle PR #81 (hybrid approach: each cherry-picked into its own gated + finder-reviewed PR, stack order): AC-2 #82 (app editor over AC-1), CM-6 #83 (Comments app over CM-1..5), HR-G2 #84 (staff directory, D-#216/#217/#218), CO-2 #85 (SessionRecording/footage), CO-3 #86 (release+response+escalation, +4 NOTIFICATION_KINDS, D-#219), CO-4 #87 (trend), CO-5 #88 (Quran/ClassEcho form, D-#220).** Integrated gate green: **jest 1280/1280 (74 suites)**, verifier PASS (§C.16b Quran + §C.5 +4 obs kinds), shared/server tsc, app tsc + expo web export; dev synced. **PRs #80 + #81 closed** (superseded by the per-slice landing). **4 non-blocking follow-ups recorded (memory):** (1) HR-G2 N+1 in the observableOnly reverse-join; (2) CO-3 escalation sweep Promise.all not per-observation error-isolated (self-healing); (3) CO-5 reviewObservation silently drops an extraneous cross-form payload (data-safe; strict-reject = hardening); (4) **CO-2 footage-upload APP surface still missing** — #80's UI targets the old recordSessionRecording/sessionRecording API; the merged server uses recordSessionFootage/observationRecording; port needed (youtubeUpload.web.ts reusable on branch worktree-classroom-obs-co2; needs EXPO_PUBLIC Google creds + D-#149 handbook check). **Comments + Access Control now fully built server+app; Classroom Observation CO-1..CO-5 server done.** **Next: CO-6 (review scheduler) → CO-7 (reviewer effectiveness); the CO-2 footage app rider. Carried follow-up: NONE blocking.**)_
+_Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two server slices landed this cycle, integrated gate green: **jest 1198/1198 [70 suites]**, vocab verifier PASS incl. §C.17, shared/server tsc clean. **CM-5** (PR #78) — Comments: `MeetingComment` + comparison timeline + guardian `childComments`/`childMeetingSlot`, VOCAB-FREE, D-#124 governing + D-#202 ruling; coordinator 3-finder review = no fixes (comparison reads' reps-gate is intentional per PRD §8). **AC-1** (PR #79) — Per-user Access Control: role→template seam swap (`schema.ts` + ALL ~30 production `roleHasPermission(ctx.auth.role,…)` → `callerHasPermission(ctx.auth,…)`), 3 additive `User` fields ZERO-migration, `access:manage` RESERVED-locked, D-#193 + D-#210–#215; sole vocab owner; coordinator 6-finder review = no fixes (byte-identical proof = every prior RBAC test green; verifier §C.17). Merged CM-5 first, AC-1 last (highest blast radius, keep-both append-logs + index/Audit union). **Non-blocking follow-ups recorded:** (1) AC per-user changes apply on the target's NEXT login (JWT-baked, ≤8h TTL — D-#211; relevant to AC-2 UX); (2) `effectivePermissions` recomputes per gate — future per-request memo if profiling warrants; (3) CM-5 comparison timeline is wider than CM-1 section-scope (reps gate, by PRD design). Prior — **CT-4-FIX MERGED** [jest 1165, D-#196]. **DEP-1..6 DONE — prod LIVE + dev env + CI/CD.** On main as PRDs (not built): Finance (D-#186–#192), Saturday-Revision (D-#197–#201). **OPEN-PRD BACKLOG CLEARED — 7 slices landed PER-SLICE from the cloud-agent bundle PR #81 (hybrid approach: each cherry-picked into its own gated + finder-reviewed PR, stack order): AC-2 #82 (app editor over AC-1), CM-6 #83 (Comments app over CM-1..5), HR-G2 #84 (staff directory, D-#216/#217/#218), CO-2 #85 (SessionRecording/footage), CO-3 #86 (release+response+escalation, +4 NOTIFICATION_KINDS, D-#219), CO-4 #87 (trend), CO-5 #88 (Quran/ClassEcho form, D-#220).** Integrated gate green: **jest 1280/1280 (74 suites)**, verifier PASS (§C.16b Quran + §C.5 +4 obs kinds), shared/server tsc, app tsc + expo web export; dev synced. **PRs #80 + #81 closed** (superseded by the per-slice landing). **4 non-blocking follow-ups recorded (memory):** (1) HR-G2 N+1 in the observableOnly reverse-join; (2) CO-3 escalation sweep Promise.all not per-observation error-isolated (self-healing); (3) CO-5 reviewObservation silently drops an extraneous cross-form payload (data-safe; strict-reject = hardening); (4) **CO-2 footage-upload APP surface still missing** — #80's UI targets the old recordSessionRecording/sessionRecording API; the merged server uses recordSessionFootage/observationRecording; port needed (youtubeUpload.web.ts reusable on branch worktree-classroom-obs-co2; needs EXPO_PUBLIC Google creds + D-#149 handbook check). **Comments + Access Control now fully built server+app; Classroom Observation CO-1..CO-5 server done.** **CLASSROOM OBSERVATION MODULE COMPLETE server + app — CO-6 #89 + CO-7 #90 + CO-app #91 all MERGED to main 2026-06-15 (main=4ab24d7); integrated server jest 1323/1323 [77 suites], verifier PASS (§C.16c SUPPORT_TIERS), app tsc + expo export green; dev synced.** The 3 PRs from the (now-stopped) parallel CO session, landed per-slice + finder-reviewed: CO-6 review scheduler (SUPPORT_TIERS, suggests-not-assigns, D-#230), CO-7 reviewer effectiveness (calibration/timeliness/throughput/impact/fairness — PRIVATE, observation:manage-only, D-#231), CO-app (9 Expo screens over CO-1..CO-7). **Coordinator FIXED a CO-7 privacy leak pre-merge:** `fairnessRating`/`usefulnessRating` were plain-exposed on the row-scoped `ClassroomObservation` object → the rated OBSERVER could read their own rating; un-exposed (now ONLY via the `observation:manage` `reviewerEffectiveness` read + the `rateReview` mutation result, §CO-7 "surfaced to the Principal only"). CO-6 non-blocking nit: `ObservationScheduleConfig.needsSupportMultiplier` schema lacks `max:1` (service validates it). Also this session: **FIN-1 + FIN-2 build-contract PRDs authored** (finance:manage ratified D-#221; FIN-2 zakat per-head FULL/AMOUNT + SALARY pre-fill+adjust ratified D-#226/#228). **Open follow-up:** the CO-2 footage-upload APP surface (port #80's youtubeUpload.web.ts to recordSessionFootage/observationRecording). **Next: build FIN-1 (server) per docs/prd-finance-fin1.md, or FIN-2A. Carried follow-up: NONE blocking.**)_
 
 ## Now / next
-- **Built (testing-round fixes + 2 admin features) [branch `test/teacher-content` off dev → PR to dev]:** from a
+- **Built (testing-round fixes + 2 admin features) [branch `test/teacher-content` off dev → PR #93 into dev]:** from a
   live Principal testing session. App UX fixes — StaffCredentials search + inline password (no list-jump); Users
   list refetch-on-focus (provisioned logins now appear); web nav-state persistence (browser refresh keeps the
   current screen); AssignClassTeacher tappable overview rows + assigned teacher/support names. **Subject-teacher
@@ -11,9 +11,59 @@ _Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two
   Assign-subject-teacher screen) — closes the ScopeGrantScreen "teaching-grant CRUD not yet exposed" gap.
   **Academic-year set-once** (server `createAcademicYear`/`setCurrentAcademicYear`, `roster:manage`, **D-#249**; new
   Academic-Year admin screen; `AcademicYearSelect` auto-hides on operational screens when a single year exists) —
-  design-A. **No vocab/contract change** (audit kinds are server-local). **Gate GREEN (executed): jest 1281/1281,
-  server/app tsc, vocab verifier PASS, expo web export.** **Parked (design-B, decide after testing):** replace the
-  section picker with all-students-by-default + class/section/gender filters.
+  design-A. **No vocab/contract change** (audit kinds server-local). Merged origin/dev (CO module) into the branch +
+  re-verified. **Gate GREEN (executed): jest 1324/1324 (77 suites), server/app tsc, vocab verifier PASS, expo web
+  export.** **Not verified live. Parked (design-B, decide after testing):** replace the section picker with
+  all-students-by-default + class/section/gender filters.
+- **Built (Classroom Observation app surface — Expo, APP-ONLY, prd-classroom-observation §CO-1..§CO-7) [branch
+  `slice/co-app` off dev] — COMPLETES the module server + app:** the Expo surface over the CO-1..CO-7 resolvers.
+  **NO server/shared/vocab/contract change** (`git diff origin/dev -- server shared` empty). New 👁️ Observation tab
+  gated `observation:read||upload||review||manage` (GUARDIAN excluded); `app/src/graphql/observation.ts` ops module
+  + 9 screens (`ObservationStack`): Home, UploadObservation (J1), ReviewQueue, ReviewObservation (REF-11 OR Quran by
+  form), ObservationDetail (view + observed-teacher Respond + Rate-review + Principal re-request/attach-footage),
+  ObservationTrend, ObservationDueList (CO-6 + schedule config), ReviewerEffectiveness (CO-7), ObservationConfig
+  (CO-3 escalation). `obs*` BN/EN labels + helpers; `ObservationStackParamList`. Built by a delegated subagent;
+  **gate RE-VERIFIED by me (executed): app tsc clean + expo export green (769 modules), server/shared diff empty.**
+  Intentional simplifications (recorded): free-text id fields (the `users` directory is `user:manage`-gated, would
+  dead-end Office); footage = manual YouTube-id field + open-link (the GIS auto-upload stays the CO-2 app rider).
+  No DECISIONS row (app slice — CT-5/VC-5/CM-6 posture). **The CO-6/CO-7 app surfaces reference ops that ride PRs
+  #89/#90 (not yet on dev); the app build doesn't validate against the live schema so they light up once those
+  merge.** **Not verified live. Next = FIN-1.**
+- **Built (Classroom Observation CO-7 — reviewer effectiveness, server, prd-classroom-observation §CO-7, build
+  ruling D-#231) [branch `slice/co7` off dev] — COMPLETES the CO-1..CO-7 server pipeline:** a PRIVATE,
+  developmental read on how well the OBSERVERS review (Principal/Office only — NOT a public scoreboard) + the
+  observed teacher's fairness rating of a review. **VOCAB-FREE** (rating scale + audit kind server-local; verifier
+  untouched); **NO new permission** (reuses observation:read for the rating + observation:manage for the read).
+  Model: 3 additive nullable fields (fairnessRating/usefulnessRating 1–5 + fairnessRatedAt) on `ClassroomObservation`.
+  `ClassroomObservationEffectivenessService`: `rateReview` (observed-teacher + released-state gated, audited
+  OBSERVATION_REVIEW_RATED) + `reviewerEffectiveness(now)` (one-pass DERIVED): (1) calibration = per-domain
+  agreement-within-one between two observers sharing a recordingId (the re-review pipeline puts ≥2 on a recording);
+  (2) timeliness = assign→review turnaround + ASSIGNED backlog; (3) throughput; (4) developmental impact = domains
+  improved on a re-review chain, attributed to the PRIOR observer (D-#231 — overall-movement proxy since growthFocus
+  is free text); (5) teacher fairness ratings. Pure `agreementWithinOne` + `domainMovement`. Resolvers:
+  `rateObservationReview` (observation:read) + `reviewerEffectiveness` (observation:manage). **Gate GREEN (executed):**
+  shared build + verifier PASS (untouched), shared/server tsc clean, **jest 1298/1298** (76 suites; +1 new suite
+  `observationEffectiveness.test.ts` [18] over the 1280 base; firewall green). **Server-only. Not verified live. PR
+  pending. Next = CO app surface.**
+- **Built (Classroom Observation CO-6 — review scheduler, server, prd-classroom-observation §CO-6, build ruling
+  D-#230) [branch `slice/co6` off dev]:** the tier-driven cadence scheduler that SUGGESTS who's due for a review —
+  **never auto-assigns** (§CO-6 guardrail). **Server-only; the ONLY shared change is `shared/vocab.ts`**
+  (`SUPPORT_TIERS` [STRONG/DEVELOPING/NEEDS_SUPPORT] + BN/EN labels, app-native NO wire twin D-#46; verifier §C.16c);
+  **NO new permission** (reuses observation:read/manage). All DERIVED (D-#85): pure `deriveTier` (REF-11 breach/level-1
+  ⇒ NEEDS_SUPPORT, all ≥3 ⇒ STRONG, else DEVELOPING; Quran avg≥4+full-compliance ⇒ STRONG, avg≤2.5 or <½ ⇒
+  NEEDS_SUPPORT, else DEVELOPING — review data only) + pure `intervalForTier` (DEVELOPING base, STRONG ×mult longest,
+  NEEDS_SUPPORT ×mult shortest, clamped to the minIntervalDays frequency cap). `dueForReview(now)` — candidates =
+  teachers with REAL teaching sessions (distinct teacherId over active non-break RoutineSlots), tiered off their MOST
+  RECENT released review; only due/overdue (+ never-reviewed → soonest bucket) returned, ranked never-reviewed →
+  weakest tier → most-overdue. `ObservationScheduleConfig` singleton (read-time defaults 30 / ×2 / ×0.5 / cap 7, NO
+  seed write D-#97); `setScheduleConfig` validates + audits `OBSERVATION_SCHEDULE_CONFIG_SET`. Resolvers
+  (`observationSchedule.ts`): observationDueList + observationScheduleConfig + setObservationScheduleConfig — **all
+  gated observation:manage** (D-#230: the "Principal/Office/observers" intent narrowed to manage — no perm
+  distinguishes an observer from a plain TEACHER, and observation:read would expose every teacher's cadence to ALL
+  staff). 1 audit kind; CO firewall auto-covers. **Gate GREEN (executed):** shared build + vocab verifier PASS
+  (§C.16c), shared/server tsc clean, **jest 1305/1305** (76 suites; +1 new suite `observationScheduler.test.ts` [25]
+  over the 1280 base; firewall green). **Server-only. Not verified live. PR pending. Next = CO-7** (reviewer
+  effectiveness).
 - **Planned (Finance FIN-1 — Ledgers & opening balances, build-contract PRD authored `docs/prd-finance-fin1.md`,
   D-#221–#223):** slice 1 of 6 over the finance REQ (`finance-requirements.md`, D-#186–#192). FIN-1 = the
   FOUNDATION only (no postings — those are FIN-2): the 5 `LEDGER_KINDS` + the full **`FINANCE_*`-namespaced
@@ -24,8 +74,11 @@ _Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two
   **RBAC ratified: ONE new perm `finance:manage`** (Principal+Office, no new role — refines the REQ's D-#192;
   the Library/Observation/HR precedent + AC-1 per-user-grant synergy lets the Principal grant the books to the
   accountant alone, D-#221); `finance:approve` (period-lock) deferred. Server-only; identity-plane (ADR-005,
-  firewall both ways); single-school (no `schoolId`). Docs-only — nothing built. **Next = build FIN-1 (server)
-  per `docs/prd-finance-fin1.md` §3/§4/§10.**
+  firewall both ways); single-school (no `schoolId`). Docs-only — nothing built. **Data confirmations RATIFIED
+  2026-06-15:** head lists final (22 expense/11 income/7 fee) + heads are a **code-controlled list** (a dev
+  adds one additively, no migration; `OTHER` is the runtime valve; self-service registry deferred — D-#247);
+  **Eximus = per-ledger closing balance** (D-#236). **Finance planning fully locked — nothing deferred. Next =
+  build FIN-1 (server) per `docs/prd-finance-fin1.md` §3/§4/§10.**
 - **Planned (Finance FIN-2 — Daily entry & postings + zakat fee-support, build-contract PRD authored
   `docs/prd-finance-fin2.md`, D-#224–#229):** slice 2 of 6, the **heaviest** — recommends building as TWO PRs
   (D-#229). **FIN-2A** = `FinancePosting` (unified append-only money event; kind-discriminated; fee=feeLines
@@ -38,8 +91,21 @@ _Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two
   `[{head, type∈{FULL, AMOUNT}, amount?}]`: FULL = whole head, AMOUNT = a ৳ cap per posting, varying per
   student per head; PERCENT deferred) + the guardian **fee-due chase** (wa.me + emit `FINANCE_FEE_DUE`, MT
   bodies `finance.fee_due.chase.*`, no guardian finance UI, D-#227). Reuses `finance:manage` (NO new perm);
-  vocab-toucher (additive). Qard/IOU stays FIN-3 (plugs into the same snapshot seam). **Next = build FIN-1,
-  then FIN-2A → FIN-2B; next PRD = FIN-3.**
+  vocab-toucher (additive). Qard/IOU stays FIN-3 (plugs into the same snapshot seam).**
+- **Planned (Finance FIN-3..FIN-6 build-contract PRDs authored 2026-06-15 — FINANCE MODULE FULLY PLANNED,
+  D-#232–#240):** **FIN-3** (`prd-finance-fin3.md`, D-#232–#234) Qard/IOU register — saved `FinanceParty`
+  master + append-only `QardIouEntry` + per-party outstanding + **due-dates/schedules + overdue**; staff
+  salary advances EXCLUDED (HR, D-#188); extends `ledgerBalanceAsOf` for the control ledgers. **FIN-4**
+  (`prd-finance-fin4.md`, D-#235–#236) dual reconciliation — dated append-only entry, entered bank-statement
+  + Eximus control figure vs the DERIVED app balance → bankDiff/eximusDiff + history (Eximus parallel/no live
+  link; figure definition confirmed at build). **FIN-5** (`prd-finance-fin5.md`, D-#237–#238) budget-vs-actual
+  — per-head **expense AND income** budgets, **monthly-phased (default annual/12, each month overridable)**,
+  actuals auto-DERIVED from FIN-2 (movement heads excluded), monthly+cumulative variance + surplus/deficit.
+  **FIN-6** (`prd-finance-fin6.md`, D-#239–#240) rollups + Principal dashboard + the Expo finance app — ALL
+  DERIVED (no new model), builds as 2 PRs (6A server rollups, 6B the 💰 Finance app over FIN-1..6); NO guardian
+  finance UI. **All reuse `finance:manage` — NO new permission; ALWAYS-OPEN (no period-lock / `finance:approve`,
+  per the Principal).** Identity-plane; single-school. Docs-only — nothing built. **Build order = FIN-1 → 2A
+  → 2B → 3 → 4 → 5 → 6A → 6B. Next = build FIN-1 (server) per `docs/prd-finance-fin1.md`.**
 - **Built (Classroom Observation CO-5 — Quran (ClassEcho) form, server, prd-classroom-observation §CO-5, D-#56
   + build rulings D-#220) [branch `claude/open-prds-nl0az4`]:** the ported ClassEcho rating form, used when
   `subject==="QURAN"`. **Server-only; the ONLY shared change is `shared/vocab.ts`** (2 app-native enums, NO wire
@@ -217,8 +283,13 @@ _Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two
   escalation. Principal analytics ALL derived (D-#85): per-juz weakness heatmap, coverage/rotation,
   weekly trends, level/student dashboards, charts, completeness-chase. Reuse RBAC (no new role,
   D-#17/#94); app-native vocab, NO wire sync (AGENTS rule 5). Identity plane (ADR-005). Plan/docs
-  only — nothing built. **Next = build SR-1 (models + entry + reads, server) per
-  docs/saturday-revision-requirements.md §5, slice order SR-1→SR-4 (separate session).**
+  only — nothing built. **SR-1..SR-4 build-contract PRDs now AUTHORED 2026-06-15 (`docs/prd-sr1.md`..`prd-sr4.md`,
+  D-#241–#246) — SR module FULLY PLANNED:** SR-1 models+entry+reads (RevisionEntry + per-juz JuzRecords, Quran
+  SubjectGroup + QURAN_ONLY calendar, immutable-after-deliver), SR-2 guardian delivery (absent/digest rails +
+  SR_ABSENT/SR_DIGEST + consecutive-absence escalation N=2), SR-3 derived analytics (per-juz heatmap / coverage-
+  overdue / ↑↓→ trend / dashboards / completeness-chase), SR-4 the Expo app (per-juz grid + charts + guardian
+  delivered-only card). NO new role/permission; app-native vocab. **Next = build SR-1 (server) per `docs/prd-sr1.md`,
+  slice order SR-1→SR-2→SR-3→SR-4.**
 - **Built (CT-4-FIX — Class Test dashboard/reports RBAC, server, D-#196 [renumbered from #186 at merge — Finance REQ took #186]) [branch `worktree-ct4-rbac-fix`, PR #77 MERGED]:** the pre-existing CT-4 RBAC bug flagged at the CT-5 app review. The four
   CT-4 READ aggregates (`classTestPrincipalDashboard`, `classTestReportsStatus`,
   `classTestClassSubjectAnalysis`, `classTestStudentProfile`) gated `authScopes: { hasPermission:

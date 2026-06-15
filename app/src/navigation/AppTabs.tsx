@@ -28,6 +28,7 @@ import type {
   VocabStackParamList,
   ClassTestStackParamList,
   CommentsStackParamList,
+  ObservationStackParamList,
   HrStackParamList,
   AdminStackParamList,
   GuardianHomeStackParamList,
@@ -124,6 +125,15 @@ import CommentEntryScreen from "../screens/comments/CommentEntryScreen";
 import MeetingsListScreen from "../screens/comments/MeetingsListScreen";
 import MeetingAdminScreen from "../screens/comments/MeetingAdminScreen";
 import MeetingComparisonScreen from "../screens/comments/MeetingComparisonScreen";
+import ObservationHomeScreen from "../screens/observation/ObservationHomeScreen";
+import UploadObservationScreen from "../screens/observation/UploadObservationScreen";
+import ObservationReviewQueueScreen from "../screens/observation/ObservationReviewQueueScreen";
+import ReviewObservationScreen from "../screens/observation/ReviewObservationScreen";
+import ObservationDetailScreen from "../screens/observation/ObservationDetailScreen";
+import ObservationTrendScreen from "../screens/observation/ObservationTrendScreen";
+import ObservationDueListScreen from "../screens/observation/ObservationDueListScreen";
+import ReviewerEffectivenessScreen from "../screens/observation/ReviewerEffectivenessScreen";
+import ObservationConfigScreen from "../screens/observation/ObservationConfigScreen";
 import HrHomeScreen from "../screens/hr/HrHomeScreen";
 import MyLeaveScreen from "../screens/hr/MyLeaveScreen";
 import MyRecordScreen from "../screens/hr/MyRecordScreen";
@@ -547,6 +557,32 @@ function CommentsNavigator(): React.ReactElement {
   );
 }
 
+const ObservationStack = createNativeStackNavigator<ObservationStackParamList>();
+function ObservationNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ObservationStack.Navigator screenOptions={stackOptions}>
+      <ObservationStack.Screen name="ObservationHome" component={ObservationHomeScreen} options={{ title: STR.obsHomeTitle }} />
+      <ObservationStack.Screen name="UploadObservation" component={UploadObservationScreen} options={{ title: STR.obsUploadTitle }} />
+      <ObservationStack.Screen name="ObservationReviewQueue" component={ObservationReviewQueueScreen} options={{ title: STR.obsQueueTitle }} />
+      <ObservationStack.Screen
+        name="ReviewObservation"
+        component={ReviewObservationScreen}
+        options={({ route }) => ({ title: route.params.title || STR.obsReviewTitle })}
+      />
+      <ObservationStack.Screen
+        name="ObservationDetail"
+        component={ObservationDetailScreen}
+        options={({ route }) => ({ title: route.params.title || STR.obsDetailTitle })}
+      />
+      <ObservationStack.Screen name="ObservationTrend" component={ObservationTrendScreen} options={{ title: STR.obsTrendTitle }} />
+      <ObservationStack.Screen name="ObservationDueList" component={ObservationDueListScreen} options={{ title: STR.obsDueListTitle }} />
+      <ObservationStack.Screen name="ReviewerEffectiveness" component={ReviewerEffectivenessScreen} options={{ title: STR.obsReviewerEffTitle }} />
+      <ObservationStack.Screen name="ObservationConfig" component={ObservationConfigScreen} options={{ title: STR.obsEscalationTitle }} />
+    </ObservationStack.Navigator>
+  );
+}
+
 const HrStack = createNativeStackNavigator<HrStackParamList>();
 function HrNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -709,6 +745,15 @@ export function AppTabs(): React.ReactElement {
   // comments + comparison reads); Office via roster:manage (the parents'-meeting
   // admin). Every action is re-gated server-side. GUARDIAN never sees this staff tab.
   const canComments = !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
+  // Classroom Observation (CO app surfaces): any holder of an observation:* perm —
+  // Principal/Office (upload/read/manage) and the senior-teacher observer (review/read).
+  // GUARDIAN holds none. Every action is re-gated + row-scoped server-side.
+  const canObservation =
+    !!role &&
+    (roleHasPermission(role, "observation:read") ||
+      roleHasPermission(role, "observation:upload") ||
+      roleHasPermission(role, "observation:review") ||
+      roleHasPermission(role, "observation:manage"));
   // HR/staff tab: every logged-in staff member (Principal/Teacher/Office) — leave
   // + self-service is universal; GUARDIAN never sees it. Admin entries inside are
   // permission-gated per slice and re-checked server-side.
@@ -774,6 +819,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canComments ? (
         <Tab.Screen name="CommentsTab" component={CommentsNavigator} options={{ title: STR.tabComments, tabBarIcon: tabIcon("🗣️") }} />
+      ) : null}
+      {canObservation ? (
+        <Tab.Screen name="ObservationTab" component={ObservationNavigator} options={{ title: STR.tabObservation, tabBarIcon: tabIcon("👁️") }} />
       ) : null}
       {canHr ? (
         <Tab.Screen name="HrTab" component={HrNavigator} options={{ title: STR.tabHr, tabBarIcon: tabIcon("🧑‍💼") }} />

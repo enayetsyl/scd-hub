@@ -1,0 +1,447 @@
+/**
+ * Typed GraphQL operations for the Classroom Observation tracker (CO app surfaces
+ * over the CO-1..CO-7 server resolvers — server/src/modules/classroom-observation/*).
+ * Hand-authored to mirror the resolvers exactly; no server change. Kept in its own
+ * module to avoid bloating the 4.7k-line operations.ts.
+ *
+ * CO-6/CO-7 ops use the EXACT shapes from the build contract — those resolvers ride
+ * separate open PRs and may not be in this branch's server tree, but GraphQL ops are
+ * plain strings and the app build does not validate against the live schema.
+ */
+import { gql } from "urql";
+
+type NoVars = Record<string, never>;
+
+// ---------------------------------------------------------------------------
+// Core observation (CO-1) + Quran payload (CO-5) + footage link (CO-2)
+// ---------------------------------------------------------------------------
+
+export interface ObsDomainScoreT {
+  domain: string;
+  level: number;
+  note: string;
+}
+export interface ObsGateScoreT {
+  gate: string;
+  result: string;
+  breachNote: string | null;
+}
+export interface ObsQuranRatingT {
+  criterion: string;
+  score: number;
+  note: string | null;
+}
+export interface ObsQuranComplianceT {
+  item: string;
+  yesNo: boolean;
+}
+export interface ObsQuranPayloadT {
+  ratings: ObsQuranRatingT[];
+  compliance: ObsQuranComplianceT[];
+  strengths: string;
+  improvements: string;
+  suggestions: string;
+}
+export interface ClassroomObservationT {
+  id: string;
+  form: string;
+  routineSlotId: string | null;
+  sectionId: string | null;
+  subjectGroupId: string | null;
+  subject: string;
+  teacherId: string;
+  classDate: string;
+  periodNumber: number | null;
+  observerId: string | null;
+  state: string;
+  createdBy: string;
+  assignedAt: string | null;
+  reviewedAt: string | null;
+  domains: ObsDomainScoreT[];
+  gates: ObsGateScoreT[];
+  oneStrength: string | null;
+  growthFocus: string | null;
+  prevObservationId: string | null;
+  priorFocusProgress: string | null;
+  quran: ObsQuranPayloadT | null;
+  recordingId: string | null;
+  teacherResponse: string | null;
+  supersededById: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const QURAN_PAYLOAD_FIELDS = `quran { ratings { criterion score note } compliance { item yesNo } strengths improvements suggestions }`;
+const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress ${QURAN_PAYLOAD_FIELDS} recordingId teacherResponse supersededById createdAt updatedAt`;
+
+export const CLASSROOM_OBSERVATION_QUERY = gql<
+  { classroomObservation: ClassroomObservationT | null },
+  { id: string }
+>`
+  query ClassroomObservation($id: String!) {
+    classroomObservation(id: $id) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+export const TEACHER_CLASSROOM_OBSERVATIONS_QUERY = gql<
+  { teacherClassroomObservations: ClassroomObservationT[] },
+  { teacherId: string }
+>`
+  query TeacherClassroomObservations($teacherId: String!) {
+    teacherClassroomObservations(teacherId: $teacherId) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+export const MY_OBSERVATION_REVIEW_QUEUE_QUERY = gql<
+  { myObservationReviewQueue: ClassroomObservationT[] },
+  NoVars
+>`
+  query MyObservationReviewQueue { myObservationReviewQueue { ${OBSERVATION_FIELDS} } }
+`;
+
+export const UPLOAD_CLASSROOM_OBSERVATION = gql<
+  { uploadClassroomObservation: ClassroomObservationT },
+  {
+    form: string;
+    subject: string;
+    teacherId: string;
+    classDate: string;
+    sectionId?: string | null;
+    subjectGroupId?: string | null;
+    routineSlotId?: string | null;
+    periodNumber?: number | null;
+    recordingId?: string | null;
+    observerId?: string | null;
+  }
+>`
+  mutation UploadClassroomObservation(
+    $form: String!, $subject: String!, $teacherId: String!, $classDate: String!,
+    $sectionId: String, $subjectGroupId: String, $routineSlotId: String,
+    $periodNumber: Int, $recordingId: String, $observerId: String
+  ) {
+    uploadClassroomObservation(
+      form: $form, subject: $subject, teacherId: $teacherId, classDate: $classDate,
+      sectionId: $sectionId, subjectGroupId: $subjectGroupId, routineSlotId: $routineSlotId,
+      periodNumber: $periodNumber, recordingId: $recordingId, observerId: $observerId
+    ) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+export const ASSIGN_CLASSROOM_OBSERVER = gql<
+  { assignClassroomObserver: ClassroomObservationT },
+  { observationId: string; observerId: string }
+>`
+  mutation AssignClassroomObserver($observationId: String!, $observerId: String!) {
+    assignClassroomObserver(observationId: $observationId, observerId: $observerId) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+export interface Ref11DomainInput {
+  domain: string;
+  level: number;
+  note: string;
+}
+export interface Ref11GateInput {
+  gate: string;
+  result: string;
+  breachNote?: string | null;
+}
+export interface QuranReviewInput {
+  ratings: { criterion: string; score: number; note?: string | null }[];
+  compliance: { item: string; yesNo: boolean }[];
+  strengths: string;
+  improvements: string;
+  suggestions: string;
+}
+
+export const REVIEW_CLASSROOM_OBSERVATION = gql<
+  { reviewClassroomObservation: ClassroomObservationT },
+  {
+    observationId: string;
+    domains?: Ref11DomainInput[] | null;
+    gates?: Ref11GateInput[] | null;
+    oneStrength?: string | null;
+    growthFocus?: string | null;
+    priorFocusProgress?: string | null;
+    quran?: QuranReviewInput | null;
+  }
+>`
+  mutation ReviewClassroomObservation(
+    $observationId: String!, $domains: [Ref11DomainInput!], $gates: [Ref11GateInput!],
+    $oneStrength: String, $growthFocus: String, $priorFocusProgress: String,
+    $quran: QuranReviewInput
+  ) {
+    reviewClassroomObservation(
+      observationId: $observationId, domains: $domains, gates: $gates,
+      oneStrength: $oneStrength, growthFocus: $growthFocus, priorFocusProgress: $priorFocusProgress,
+      quran: $quran
+    ) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+export const RE_REQUEST_CLASSROOM_OBSERVATION = gql<
+  { reRequestClassroomObservation: ClassroomObservationT },
+  { priorObservationId: string; observerId: string }
+>`
+  mutation ReRequestClassroomObservation($priorObservationId: String!, $observerId: String!) {
+    reRequestClassroomObservation(priorObservationId: $priorObservationId, observerId: $observerId) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+export const RESPOND_TO_CLASSROOM_OBSERVATION = gql<
+  { respondToClassroomObservation: ClassroomObservationT },
+  { observationId: string; responseText: string }
+>`
+  mutation RespondToClassroomObservation($observationId: String!, $responseText: String!) {
+    respondToClassroomObservation(observationId: $observationId, responseText: $responseText) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// Session footage (CO-2)
+// ---------------------------------------------------------------------------
+
+export interface SessionRecordingT {
+  id: string;
+  observationId: string | null;
+  routineSlotId: string | null;
+  sectionId: string | null;
+  subjectGroupId: string | null;
+  subject: string;
+  teacherId: string;
+  classDate: string;
+  periodNumber: number | null;
+  youtubeVideoId: string;
+  privacyStatus: string;
+  uploadedBy: string;
+  createdAt: string;
+}
+
+const RECORDING_FIELDS = `id observationId routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber youtubeVideoId privacyStatus uploadedBy createdAt`;
+
+export const OBSERVATION_RECORDING_QUERY = gql<
+  { observationRecording: SessionRecordingT | null },
+  { observationId: string }
+>`
+  query ObservationRecording($observationId: String!) {
+    observationRecording(observationId: $observationId) { ${RECORDING_FIELDS} }
+  }
+`;
+
+export const RECORD_SESSION_FOOTAGE = gql<
+  { recordSessionFootage: SessionRecordingT },
+  { observationId: string; youtubeVideoId: string }
+>`
+  mutation RecordSessionFootage($observationId: String!, $youtubeVideoId: String!) {
+    recordSessionFootage(observationId: $observationId, youtubeVideoId: $youtubeVideoId) { ${RECORDING_FIELDS} }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// Escalation cadence config (CO-3)
+// ---------------------------------------------------------------------------
+
+export interface ObservationEscalationConfigT {
+  reminderDays1: number;
+  reminderDays2: number;
+  principalFlagDays: number;
+  isDefault: boolean;
+}
+
+const ESCALATION_FIELDS = `reminderDays1 reminderDays2 principalFlagDays isDefault`;
+
+export const OBSERVATION_ESCALATION_CONFIG_QUERY = gql<
+  { observationEscalationConfig: ObservationEscalationConfigT },
+  NoVars
+>`
+  query ObservationEscalationConfig { observationEscalationConfig { ${ESCALATION_FIELDS} } }
+`;
+
+export const SET_OBSERVATION_ESCALATION_CONFIG = gql<
+  { setObservationEscalationConfig: ObservationEscalationConfigT },
+  { reminderDays1: number; reminderDays2: number; principalFlagDays: number }
+>`
+  mutation SetObservationEscalationConfig($reminderDays1: Int!, $reminderDays2: Int!, $principalFlagDays: Int!) {
+    setObservationEscalationConfig(
+      reminderDays1: $reminderDays1, reminderDays2: $reminderDays2, principalFlagDays: $principalFlagDays
+    ) { ${ESCALATION_FIELDS} }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// Per-domain trend + school weakest-domain signal (CO-4)
+// ---------------------------------------------------------------------------
+
+export interface ObsDomainTrendPointT {
+  classDate: string;
+  level: number;
+  observationId: string;
+}
+export interface ObsDomainTrendRowT {
+  domain: string;
+  series: ObsDomainTrendPointT[];
+  latestLevel: number | null;
+  previousLevel: number | null;
+  trend: string;
+}
+export interface TeacherObservationTrendT {
+  teacherId: string;
+  observationCount: number;
+  firstClassDate: string | null;
+  lastClassDate: string | null;
+  domains: ObsDomainTrendRowT[];
+}
+
+export const TEACHER_OBSERVATION_TREND_QUERY = gql<
+  { teacherObservationTrend: TeacherObservationTrendT },
+  { teacherId: string }
+>`
+  query TeacherObservationTrend($teacherId: String!) {
+    teacherObservationTrend(teacherId: $teacherId) {
+      teacherId observationCount firstClassDate lastClassDate
+      domains { domain latestLevel previousLevel trend series { classDate level observationId } }
+    }
+  }
+`;
+
+export interface ObsDomainSignalT {
+  domain: string;
+  meanLevel: number | null;
+  sampleCount: number;
+}
+export interface SchoolObservationPatternsT {
+  observationCount: number;
+  domains: ObsDomainSignalT[];
+  weakestDomains: string[];
+}
+
+export const SCHOOL_OBSERVATION_PATTERNS_QUERY = gql<
+  { schoolObservationPatterns: SchoolObservationPatternsT },
+  NoVars
+>`
+  query SchoolObservationPatterns {
+    schoolObservationPatterns {
+      observationCount weakestDomains
+      domains { domain meanLevel sampleCount }
+    }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// Review scheduler / due-list (CO-6) — EXACT build-contract shapes
+// ---------------------------------------------------------------------------
+
+export interface ObservationScheduleConfigT {
+  baseIntervalDays: number;
+  strongMultiplier: number;
+  needsSupportMultiplier: number;
+  minIntervalDays: number;
+  isDefault: boolean;
+}
+export interface ObservationDueItemT {
+  teacherId: string;
+  tier: string;
+  lastReviewedAt: string | null;
+  lastObservationId: string | null;
+  intervalDays: number;
+  dueDate: string;
+  overdueDays: number;
+  neverReviewed: boolean;
+}
+export interface ObservationDueListT {
+  now: string;
+  config: ObservationScheduleConfigT;
+  candidateCount: number;
+  items: ObservationDueItemT[];
+}
+
+const SCHEDULE_CONFIG_FIELDS = `baseIntervalDays strongMultiplier needsSupportMultiplier minIntervalDays isDefault`;
+
+export const OBSERVATION_DUE_LIST_QUERY = gql<{ observationDueList: ObservationDueListT }, NoVars>`
+  query ObservationDueList {
+    observationDueList {
+      now candidateCount
+      config { ${SCHEDULE_CONFIG_FIELDS} }
+      items { teacherId tier lastReviewedAt lastObservationId intervalDays dueDate overdueDays neverReviewed }
+    }
+  }
+`;
+
+export const OBSERVATION_SCHEDULE_CONFIG_QUERY = gql<
+  { observationScheduleConfig: ObservationScheduleConfigT },
+  NoVars
+>`
+  query ObservationScheduleConfig { observationScheduleConfig { ${SCHEDULE_CONFIG_FIELDS} } }
+`;
+
+export const SET_OBSERVATION_SCHEDULE_CONFIG = gql<
+  { setObservationScheduleConfig: ObservationScheduleConfigT },
+  { baseIntervalDays: number; strongMultiplier: number; needsSupportMultiplier: number; minIntervalDays: number }
+>`
+  mutation SetObservationScheduleConfig(
+    $baseIntervalDays: Int!, $strongMultiplier: Float!, $needsSupportMultiplier: Float!, $minIntervalDays: Int!
+  ) {
+    setObservationScheduleConfig(
+      baseIntervalDays: $baseIntervalDays, strongMultiplier: $strongMultiplier,
+      needsSupportMultiplier: $needsSupportMultiplier, minIntervalDays: $minIntervalDays
+    ) { ${SCHEDULE_CONFIG_FIELDS} }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// Reviewer effectiveness (CO-7) — EXACT build-contract shapes
+// ---------------------------------------------------------------------------
+
+export interface ReviewerEffectivenessRowT {
+  observerId: string;
+  observerName: string;
+  reviewsCompleted: number;
+  avgTurnaroundDays: number | null;
+  backlog: number;
+  calibrationAgreement: number | null;
+  calibrationPairs: number;
+  impactAvgDomainsImproved: number | null;
+  impactReReviews: number;
+  avgFairness: number | null;
+  avgUsefulness: number | null;
+  ratingsReceived: number;
+}
+export interface ReviewerEffectivenessT {
+  now: string;
+  observers: ReviewerEffectivenessRowT[];
+}
+
+export const REVIEWER_EFFECTIVENESS_QUERY = gql<
+  { reviewerEffectiveness: ReviewerEffectivenessT },
+  NoVars
+>`
+  query ReviewerEffectiveness {
+    reviewerEffectiveness {
+      now
+      observers {
+        observerId observerName reviewsCompleted avgTurnaroundDays backlog
+        calibrationAgreement calibrationPairs impactAvgDomainsImproved impactReReviews
+        avgFairness avgUsefulness ratingsReceived
+      }
+    }
+  }
+`;
+
+export interface RateObservationReviewT {
+  observationId: string;
+  observerId: string;
+  fairnessRating: number;
+  usefulnessRating: number | null;
+  fairnessRatedAt: string;
+}
+
+export const RATE_OBSERVATION_REVIEW = gql<
+  { rateObservationReview: RateObservationReviewT },
+  { observationId: string; fairnessRating: number; usefulnessRating?: number | null }
+>`
+  mutation RateObservationReview($observationId: String!, $fairnessRating: Int!, $usefulnessRating: Int) {
+    rateObservationReview(observationId: $observationId, fairnessRating: $fairnessRating, usefulnessRating: $usefulnessRating) {
+      observationId observerId fairnessRating usefulnessRating fairnessRatedAt
+    }
+  }
+`;
