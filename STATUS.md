@@ -14,7 +14,19 @@ _Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two
   the Library/Observation/HR precedent + AC-1 per-user-grant synergy lets the Principal grant the books to the
   accountant alone, D-#221); `finance:approve` (period-lock) deferred. Server-only; identity-plane (ADR-005,
   firewall both ways); single-school (no `schoolId`). Docs-only — nothing built. **Next = build FIN-1 (server)
-  per `docs/prd-finance-fin1.md` §3/§4/§10, then author the FIN-2 PRD.**
+  per `docs/prd-finance-fin1.md` §3/§4/§10.**
+- **Planned (Finance FIN-2 — Daily entry & postings + zakat fee-support, build-contract PRD authored
+  `docs/prd-finance-fin2.md`, D-#224–#229):** slice 2 of 6, the **heaviest** — recommends building as TWO PRs
+  (D-#229). **FIN-2A** = `FinancePosting` (unified append-only money event; kind-discriminated; fee=feeLines
+  split, transfer=mode→toLedger; **reverse-not-edit**, D-#224) + the derived **`dailySnapshot`** extending
+  FIN-1's `ledgerBalanceAsOf` seam for Cash/Bank/Online (D-#225) + the **SALARY** line from the HR payroll
+  **PII-free aggregate** total (D-#228, no payslip crosses). **FIN-2B** = `FeeProvider` + effective-dated
+  append-only `FeeSupportAllocation` + pure `splitFee` (provider-due/guardian-due, gross counted once) +
+  provider receivable + `ProviderReceipt` + statement (D-#226 — **⚠️ coverage granularity pinned vs the live
+  Zakat-Master sheet at build**) + the guardian **fee-due chase** (wa.me + emit `FINANCE_FEE_DUE`, MT bodies
+  `finance.fee_due.chase.*`, no guardian finance UI, D-#227). Reuses `finance:manage` (NO new perm);
+  vocab-toucher (additive). Qard/IOU stays FIN-3 (plugs into the same snapshot seam). **Next = build FIN-1,
+  then FIN-2A → FIN-2B; next PRD = FIN-3.**
 - **Built (Classroom Observation CO-5 — Quran (ClassEcho) form, server, prd-classroom-observation §CO-5, D-#56
   + build rulings D-#220) [branch `claude/open-prds-nl0az4`]:** the ported ClassEcho rating form, used when
   `subject==="QURAN"`. **Server-only; the ONLY shared change is `shared/vocab.ts`** (2 app-native enums, NO wire
