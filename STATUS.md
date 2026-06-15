@@ -268,8 +268,13 @@ _Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two
   escalation. Principal analytics ALL derived (D-#85): per-juz weakness heatmap, coverage/rotation,
   weekly trends, level/student dashboards, charts, completeness-chase. Reuse RBAC (no new role,
   D-#17/#94); app-native vocab, NO wire sync (AGENTS rule 5). Identity plane (ADR-005). Plan/docs
-  only — nothing built. **Next = build SR-1 (models + entry + reads, server) per
-  docs/saturday-revision-requirements.md §5, slice order SR-1→SR-4 (separate session).**
+  only — nothing built. **SR-1..SR-4 build-contract PRDs now AUTHORED 2026-06-15 (`docs/prd-sr1.md`..`prd-sr4.md`,
+  D-#241–#246) — SR module FULLY PLANNED:** SR-1 models+entry+reads (RevisionEntry + per-juz JuzRecords, Quran
+  SubjectGroup + QURAN_ONLY calendar, immutable-after-deliver), SR-2 guardian delivery (absent/digest rails +
+  SR_ABSENT/SR_DIGEST + consecutive-absence escalation N=2), SR-3 derived analytics (per-juz heatmap / coverage-
+  overdue / ↑↓→ trend / dashboards / completeness-chase), SR-4 the Expo app (per-juz grid + charts + guardian
+  delivered-only card). NO new role/permission; app-native vocab. **Next = build SR-1 (server) per `docs/prd-sr1.md`,
+  slice order SR-1→SR-2→SR-3→SR-4.**
 - **Built (CT-4-FIX — Class Test dashboard/reports RBAC, server, D-#196 [renumbered from #186 at merge — Finance REQ took #186]) [branch `worktree-ct4-rbac-fix`, PR #77 MERGED]:** the pre-existing CT-4 RBAC bug flagged at the CT-5 app review. The four
   CT-4 READ aggregates (`classTestPrincipalDashboard`, `classTestReportsStatus`,
   `classTestClassSubjectAnalysis`, `classTestStudentProfile`) gated `authScopes: { hasPermission:
