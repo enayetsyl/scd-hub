@@ -2314,6 +2314,25 @@ export const FINANCE_PARTY_KIND_LABELS_EN: Record<FinancePartyKind, string> = {
   ORG: "Organization",
 };
 
+// --- A.17e RECONCILIATION SOURCES (FIN-4, prd-finance-fin4.md §4, D-#235/#236) --
+// The two figures the app's DERIVED balance is reconciled against (the bank statement
+// and the entered Eximus control figure). Additive, app-native, NO wire twin. DISTINCT
+// from the homework-tracker `RECON_STATES` enum (different domain). Drives the diff-source
+// label only. (NB: Eximus stays parallel — manual figure, no live link, D-#186.)
+
+/** The two reconciliation sources (FIN-4 §4). BANK = the bank statement balance; EXIMUS
+ *  = the entered per-ledger Eximus control figure (D-#236). */
+export const RECON_SOURCES = ["BANK", "EXIMUS"] as const;
+export type ReconSource = (typeof RECON_SOURCES)[number];
+export const RECON_SOURCE_LABELS_BN: Record<ReconSource, string> = {
+  BANK: "ব্যাংক স্টেটমেন্ট",
+  EXIMUS: "এক্সিমাস কন্ট্রোল",
+};
+export const RECON_SOURCE_LABELS_EN: Record<ReconSource, string> = {
+  BANK: "Bank statement",
+  EXIMUS: "Eximus control",
+};
+
 
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP

@@ -538,6 +538,10 @@ check("finance.fee_due.chase.* guardian-message template keys registered (title 
 check("FINANCE_PARTY_KINDS exact — COMMUNITY/INDIVIDUAL/ORG (FIN-3 §4)", eq(V.FINANCE_PARTY_KINDS, ["COMMUNITY","INDIVIDUAL","ORG"]));
 check("FINANCE_PARTY_KIND_LABELS_BN total", total(V.FINANCE_PARTY_KIND_LABELS_BN, V.FINANCE_PARTY_KINDS));
 check("FINANCE_PARTY_KIND_LABELS_EN total", total(V.FINANCE_PARTY_KIND_LABELS_EN, V.FINANCE_PARTY_KINDS));
+// FIN-4 — reconciliation sources (additive; prd-finance-fin4 §4, D-#235/#236)
+check("RECON_SOURCES exact — BANK/EXIMUS (FIN-4 §4)", eq(V.RECON_SOURCES, ["BANK","EXIMUS"]));
+check("RECON_SOURCE_LABELS_BN total", total(V.RECON_SOURCE_LABELS_BN, V.RECON_SOURCES));
+check("RECON_SOURCE_LABELS_EN total", total(V.RECON_SOURCE_LABELS_EN, V.RECON_SOURCES));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

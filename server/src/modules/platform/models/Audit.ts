@@ -115,6 +115,7 @@ export type AuditEventKind =
   | "FINANCE_FEE_DUE_CHASED"      // the guardian fee-due chase run for a student/family (Finance FIN-2B, §6/J-FIN2-7, D-#227)
   | "FINANCE_PARTY_SET"           // a Qard/IOU counterparty master created/edited (Finance FIN-3, §3, D-#232)
   | "QARD_IOU_ENTRY_RECORDED"     // a Qard/IOU register movement (disburse/repay/adjust) appended (Finance FIN-3, §3/J-FIN3-1, D-#232)
+  | "RECONCILIATION_RECORDED"     // a dated bank + Eximus reconciliation check recorded (append-only — Finance FIN-4, §3/J-FIN4-1, D-#235)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {
