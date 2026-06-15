@@ -199,6 +199,19 @@ export type ObservationStackParamList = {
   ObservationConfig: undefined;
 };
 
+/** Finance / Accounting (FIN-6B app surfaces over FIN-1..FIN-6A) — staff stack
+ *  (finance:manage = Principal/Office only). */
+export type FinanceStackParamList = {
+  FinanceHome: undefined;
+  DailyEntry: undefined;
+  DailySnapshot: undefined;
+  FeesZakat: undefined;
+  QardIou: undefined;
+  Reconciliation: undefined;
+  Budget: undefined;
+  FinanceDashboard: undefined;
+};
+
 export type AdminStackParamList = {
   AdminHome: undefined;
   Import: undefined;
@@ -236,6 +249,7 @@ export type TabParamList = {
   ClassTestTab: NavigatorScreenParams<ClassTestStackParamList>;
   CommentsTab: NavigatorScreenParams<CommentsStackParamList>;
   ObservationTab: NavigatorScreenParams<ObservationStackParamList>;
+  FinanceTab: NavigatorScreenParams<FinanceStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;

@@ -587,6 +587,39 @@ describe("Access-control firewall (ADR-005 / AC-1, D-#193)", () => {
   });
 });
 
+/**
+ * Finance firewall (FIN-1, D-#221/#190 / prd-finance-fin1.md §9, REQ §8).
+ *
+ * Finance is identity/operational plane — `LedgerOpeningBalance` (and FIN-2's postings,
+ * fees, zakat allocations) name ledgers/amounts/students/parties (ADR-005). Fail-closed
+ * BOTH ways: the finance module must have NO import path into the corpus plane, and the
+ * corpus module must have NO import path into the finance module or its models (no
+ * analytics/export join back to who paid/received what).
+ */
+describe("Finance firewall (ADR-005 / FIN-1, D-#221)", () => {
+  const financeDir = path.resolve(__dirname, "../modules/finance");
+  const corpusDir = path.resolve(__dirname, "../modules/corpus");
+
+  test("finance module has NO import from the corpus plane", () => {
+    const files = walkDir(financeDir);
+    expect(files.length).toBeGreaterThan(0); // the module exists (FIN-1 shipped)
+    for (const f of files) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/corpus"));
+      expect(content).not.toMatch(importPattern("models/CorpusEvent"));
+    }
+  });
+
+  test("corpus module has NO import from the finance module", () => {
+    for (const f of walkDir(corpusDir)) {
+      const content = fs.readFileSync(f, "utf8");
+      expect(content).not.toMatch(importPattern("modules/finance"));
+      expect(content).not.toMatch(importPattern("services/FinanceLedgerService"));
+      expect(content).not.toMatch(importPattern("models/LedgerOpeningBalance"));
+    }
+  });
+});
+
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dir)) return results;

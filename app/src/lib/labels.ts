@@ -203,6 +203,39 @@ import {
   type GrowthProgress,
   type QuranReviewCriterion,
   type QuranComplianceItem,
+  LEDGER_KIND_LABELS_BN,
+  LEDGER_KIND_LABELS_EN,
+  FINANCE_PAYMENT_MODE_LABELS_BN,
+  FINANCE_PAYMENT_MODE_LABELS_EN,
+  FINANCE_INCOME_HEAD_LABELS_BN,
+  FINANCE_INCOME_HEAD_LABELS_EN,
+  FINANCE_STUDENT_FEE_HEAD_LABELS_BN,
+  FINANCE_STUDENT_FEE_HEAD_LABELS_EN,
+  FINANCE_EXPENSE_HEAD_LABELS_BN,
+  FINANCE_EXPENSE_HEAD_LABELS_EN,
+  FINANCE_POSTING_KIND_LABELS_BN,
+  FINANCE_POSTING_KIND_LABELS_EN,
+  FINANCE_PARTY_KIND_LABELS_BN,
+  FINANCE_PARTY_KIND_LABELS_EN,
+  FEE_COVERAGE_TYPE_LABELS_BN,
+  FEE_COVERAGE_TYPE_LABELS_EN,
+  BUDGET_LINE_KIND_LABELS_BN,
+  BUDGET_LINE_KIND_LABELS_EN,
+  QARD_IOU_TYPE_LABELS_BN,
+  QARD_IOU_TYPE_LABELS_EN,
+  QARD_IOU_DIRECTION_LABELS_BN,
+  QARD_IOU_DIRECTION_LABELS_EN,
+  type LedgerKind,
+  type FinancePaymentMode,
+  type FinanceIncomeHead,
+  type FinanceStudentFeeHead,
+  type FinanceExpenseHead,
+  type FinancePostingKind,
+  type FinancePartyKind,
+  type FeeCoverageType,
+  type BudgetLineKind,
+  type QardIouType,
+  type QardIouDirection,
 } from "@scd/shared";
 
 // --- Active language (module-level; read at render time) ---------------------
@@ -410,6 +443,30 @@ export const obsTierLabel = (v?: string | null): string => {
   const en: Record<string, string> = { STRONG: "Strong", STANDARD: "Standard", NEEDS_SUPPORT: "Needs support" };
   return (v && pick(bn, en)[v]) || v || DASH;
 };
+
+// Finance / Accounting (FIN-6B app surfaces over FIN-1..FIN-6A)
+export const ledgerKindLabel = (v?: string | null): string =>
+  (v && pick(LEDGER_KIND_LABELS_BN, LEDGER_KIND_LABELS_EN)[v as LedgerKind]) || v || DASH;
+export const financeModeLabel = (v?: string | null): string =>
+  (v && pick(FINANCE_PAYMENT_MODE_LABELS_BN, FINANCE_PAYMENT_MODE_LABELS_EN)[v as FinancePaymentMode]) || v || DASH;
+export const financeIncomeHeadLabel = (v?: string | null): string =>
+  (v && pick(FINANCE_INCOME_HEAD_LABELS_BN, FINANCE_INCOME_HEAD_LABELS_EN)[v as FinanceIncomeHead]) || v || DASH;
+export const financeFeeHeadLabel = (v?: string | null): string =>
+  (v && pick(FINANCE_STUDENT_FEE_HEAD_LABELS_BN, FINANCE_STUDENT_FEE_HEAD_LABELS_EN)[v as FinanceStudentFeeHead]) || v || DASH;
+export const financeExpenseHeadLabel = (v?: string | null): string =>
+  (v && pick(FINANCE_EXPENSE_HEAD_LABELS_BN, FINANCE_EXPENSE_HEAD_LABELS_EN)[v as FinanceExpenseHead]) || v || DASH;
+export const financePostingKindLabel = (v?: string | null): string =>
+  (v && pick(FINANCE_POSTING_KIND_LABELS_BN, FINANCE_POSTING_KIND_LABELS_EN)[v as FinancePostingKind]) || v || DASH;
+export const financePartyKindLabel = (v?: string | null): string =>
+  (v && pick(FINANCE_PARTY_KIND_LABELS_BN, FINANCE_PARTY_KIND_LABELS_EN)[v as FinancePartyKind]) || v || DASH;
+export const feeCoverageTypeLabel = (v?: string | null): string =>
+  (v && pick(FEE_COVERAGE_TYPE_LABELS_BN, FEE_COVERAGE_TYPE_LABELS_EN)[v as FeeCoverageType]) || v || DASH;
+export const budgetLineKindLabel = (v?: string | null): string =>
+  (v && pick(BUDGET_LINE_KIND_LABELS_BN, BUDGET_LINE_KIND_LABELS_EN)[v as BudgetLineKind]) || v || DASH;
+export const qardIouTypeLabel = (v?: string | null): string =>
+  (v && pick(QARD_IOU_TYPE_LABELS_BN, QARD_IOU_TYPE_LABELS_EN)[v as QardIouType]) || v || DASH;
+export const qardIouDirectionLabel = (v?: string | null): string =>
+  (v && pick(QARD_IOU_DIRECTION_LABELS_BN, QARD_IOU_DIRECTION_LABELS_EN)[v as QardIouDirection]) || v || DASH;
 
 export const lifecycleStateLabel = (v?: string | null): string =>
   (v && pick(LIFECYCLE_STATE_LABELS_BN, LIFECYCLE_STATE_LABELS_EN)[v as LifecycleState]) || v || DASH;
@@ -2129,6 +2186,146 @@ const STR_BN = {
   obsAvgFairness: "গড় ন্যায্যতা",
   obsAvgUsefulness: "গড় উপযোগিতা",
   obsNoReviewers: "কোনো রিভিউয়ার ডেটা নেই।",
+
+  // --- Finance / Accounting (FIN-6B) -----------------------------------------
+  tabFinance: "অর্থ",
+  finHomeTitle: "অর্থ ও হিসাব",
+  finDailyEntryNav: "দৈনিক এন্ট্রি",
+  finSnapshotNav: "দৈনিক স্ন্যাপশট",
+  finFeesZakatNav: "ফি ও যাকাত/সহায়তা",
+  finQardIouNav: "কর্জ/আইওইউ",
+  finReconNav: "মিলকরণ",
+  finBudgetNav: "বাজেট",
+  finDashboardNav: "ড্যাশবোর্ড",
+
+  // Common
+  finDate: "তারিখ",
+  finMonth: "মাস (YYYY-MM)",
+  finAcademicYearId: "শিক্ষাবর্ষ আইডি",
+  finAsOf: "পর্যন্ত (ঐচ্ছিক)",
+  finAmount: "পরিমাণ",
+  finMode: "মাধ্যম",
+  finNote: "নোট",
+  finLedger: "লেজার",
+  finStudentId: "শিক্ষার্থী আইডি",
+  finHead: "খাত",
+  finLoad: "লোড করুন",
+  finSave: "সংরক্ষণ",
+  finSubmit: "জমা দিন",
+  finSaved: "সংরক্ষিত হয়েছে।",
+  finRecorded: "রেকর্ড হয়েছে।",
+  finNone: "কোনো তথ্য নেই।",
+  finOpening: "প্রারম্ভিক",
+  finIn: "আয়",
+  finOut: "ব্যয়",
+  finClosing: "সমাপনী",
+
+  // Daily entry
+  finDailyEntryTitle: "দৈনিক অর্থ এন্ট্রি",
+  finKind: "ধরন",
+  finPickKind: "ধরন নির্বাচন করুন",
+  finFeeLines: "ফি খাতসমূহ",
+  finAddFeeLine: "ফি লাইন যোগ করুন",
+  finIncomeHead: "আয়ের খাত",
+  finExpenseHead: "ব্যয়ের খাত",
+  finToLedger: "গন্তব্য লেজার",
+  finSalaryBase: "মূল বেতন (ঐচ্ছিক)",
+  finReverse: "বিপরীত করুন",
+  finReversed: "বিপরীত পোস্টিং রেকর্ড হয়েছে।",
+
+  // Daily snapshot
+  finSnapshotTitle: "দৈনিক স্ন্যাপশট",
+
+  // Fees / Zakat
+  finFeesZakatTitle: "ফি ও যাকাত/সহায়তা",
+  finProviders: "সহায়তাদাতা",
+  finProviderName: "নাম",
+  finProviderNameBn: "নাম (বাংলা)",
+  finContact: "যোগাযোগ",
+  finAddProvider: "সহায়তাদাতা যোগ করুন",
+  finProviderAdded: "সহায়তাদাতা যোগ হয়েছে।",
+  finProviderId: "সহায়তাদাতা আইডি",
+  finSetAllocation: "বরাদ্দ নির্ধারণ করুন",
+  finCoverageType: "কভারেজ ধরন",
+  finEffectiveDate: "কার্যকর তারিখ",
+  finAllocationSet: "বরাদ্দ নির্ধারিত হয়েছে।",
+  finProviderStatement: "সহায়তাদাতা বিবরণী",
+  finRaised: "উত্থাপিত",
+  finReceived: "গৃহীত",
+  finOutstanding: "বকেয়া",
+  finStatementLoad: "বিবরণী দেখুন",
+  finChaseFeeDue: "ফি বকেয়া তাগাদা",
+  finChase: "তাগাদা দিন",
+  finGuardianDue: "অভিভাবকের বকেয়া",
+  finWaLink: "হোয়াটসঅ্যাপ লিংক",
+  finUnreachableWa: "হোয়াটসঅ্যাপে পৌঁছানো যায়নি।",
+  finFeeHistory: "ফি ইতিহাস",
+  finFeeHistoryLoad: "ফি ইতিহাস দেখুন",
+
+  // Qard / IOU
+  finQardIouTitle: "কর্জ/আইওইউ রেজিস্টার",
+  finParties: "পক্ষসমূহ",
+  finPartyKind: "ধরন",
+  finAddParty: "পক্ষ যোগ করুন",
+  finPartyAdded: "পক্ষ যোগ হয়েছে।",
+  finPartyId: "পক্ষ আইডি",
+  finType: "ধরন",
+  finDirection: "দিক",
+  finDueDate: "নির্ধারিত তারিখ (ঐচ্ছিক)",
+  finRegisterEntry: "এন্ট্রি রেকর্ড করুন",
+  finEntryRecorded: "এন্ট্রি রেকর্ড হয়েছে।",
+  finPartyOutstanding: "বকেয়া",
+  finOverdue: "মেয়াদোত্তীর্ণ",
+  finDaysLate: "দিন বিলম্ব",
+  finOldestDue: "প্রাচীনতম নির্ধারিত",
+  finPartyEntries: "এন্ট্রিসমূহ",
+  finLoadOutstanding: "বকেয়া দেখুন",
+  finLoadOverdue: "মেয়াদোত্তীর্ণ দেখুন",
+
+  // Reconciliation
+  finReconTitle: "ব্যাংক ও এক্সিমাস মিলকরণ",
+  finBankStatement: "ব্যাংক স্টেটমেন্ট ব্যালেন্স",
+  finEximusCash: "এক্সিমাস নগদ",
+  finEximusBank: "এক্সিমাস ব্যাংক",
+  finEximusOnline: "এক্সিমাস অনলাইন",
+  finBankDiff: "ব্যাংক পার্থক্য",
+  finEximusDiff: "এক্সিমাস পার্থক্য",
+  finAppBank: "অ্যাপ ব্যাংক ব্যালেন্স",
+  finReconHistory: "মিলকরণ ইতিহাস",
+  finReconRecorded: "মিলকরণ রেকর্ড হয়েছে।",
+
+  // Budget
+  finBudgetTitle: "বাজেট ব্যবস্থাপনা",
+  finSetBudgetLine: "বাজেট লাইন নির্ধারণ",
+  finAnnualAmount: "বার্ষিক পরিমাণ",
+  finBudgetSaved: "বাজেট লাইন সংরক্ষিত হয়েছে।",
+  finBudgetVsActual: "বাজেট বনাম প্রকৃত",
+  finSurplusDeficit: "উদ্বৃত্ত/ঘাটতি",
+  finTarget: "লক্ষ্য",
+  finActual: "প্রকৃত",
+  finVariance: "পার্থক্য",
+  finCumulative: "ক্রমপুঞ্জিত",
+  finSurplus: "উদ্বৃত্ত",
+  finIncome: "আয়",
+  finExpense: "ব্যয়",
+
+  // Dashboard
+  finDashboardTitle: "অর্থ ড্যাশবোর্ড",
+  finCashPosition: "নগদ অবস্থা",
+  finYtdIncome: "চলতি বছরের আয়",
+  finYtdExpense: "চলতি বছরের ব্যয়",
+  finYtdSurplus: "চলতি বছরের উদ্বৃত্ত",
+  finQardOutstanding: "কর্জ বকেয়া",
+  finIouOutstanding: "আইওইউ বকেয়া",
+  finZakatApplied: "প্রযুক্ত যাকাত/সহায়তা",
+  finProviderReceivable: "সহায়তাদাতা প্রাপ্য",
+  finFeesDue: "ফি বকেয়া",
+  finIncomeStatement: "আয়-ব্যয় বিবরণী (YTD)",
+  finTrends: "প্রবণতা",
+  finTotalIncome: "মোট আয়",
+  finTotalExpense: "মোট ব্যয়",
+  finNet: "নিট",
+  finLastRecon: "সর্বশেষ মিলকরণ",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -3678,6 +3875,146 @@ const STR_EN: StrTable = {
   obsAvgFairness: "Avg fairness",
   obsAvgUsefulness: "Avg usefulness",
   obsNoReviewers: "No reviewer data.",
+
+  // --- Finance / Accounting (FIN-6B) -----------------------------------------
+  tabFinance: "Finance",
+  finHomeTitle: "Finance & Accounts",
+  finDailyEntryNav: "Daily entry",
+  finSnapshotNav: "Daily snapshot",
+  finFeesZakatNav: "Fees & zakat/support",
+  finQardIouNav: "Qard/IOU",
+  finReconNav: "Reconciliation",
+  finBudgetNav: "Budget",
+  finDashboardNav: "Dashboard",
+
+  // Common
+  finDate: "Date",
+  finMonth: "Month (YYYY-MM)",
+  finAcademicYearId: "Academic year ID",
+  finAsOf: "As of (optional)",
+  finAmount: "Amount",
+  finMode: "Mode",
+  finNote: "Note",
+  finLedger: "Ledger",
+  finStudentId: "Student ID",
+  finHead: "Head",
+  finLoad: "Load",
+  finSave: "Save",
+  finSubmit: "Submit",
+  finSaved: "Saved.",
+  finRecorded: "Recorded.",
+  finNone: "No data.",
+  finOpening: "Opening",
+  finIn: "In",
+  finOut: "Out",
+  finClosing: "Closing",
+
+  // Daily entry
+  finDailyEntryTitle: "Daily finance entry",
+  finKind: "Kind",
+  finPickKind: "Select kind",
+  finFeeLines: "Fee heads",
+  finAddFeeLine: "Add fee line",
+  finIncomeHead: "Income head",
+  finExpenseHead: "Expense head",
+  finToLedger: "To ledger",
+  finSalaryBase: "Salary base (optional)",
+  finReverse: "Reverse",
+  finReversed: "Reversal posting recorded.",
+
+  // Daily snapshot
+  finSnapshotTitle: "Daily snapshot",
+
+  // Fees / Zakat
+  finFeesZakatTitle: "Fees & zakat/support",
+  finProviders: "Providers",
+  finProviderName: "Name",
+  finProviderNameBn: "Name (Bangla)",
+  finContact: "Contact",
+  finAddProvider: "Add provider",
+  finProviderAdded: "Provider added.",
+  finProviderId: "Provider ID",
+  finSetAllocation: "Set allocation",
+  finCoverageType: "Coverage type",
+  finEffectiveDate: "Effective date",
+  finAllocationSet: "Allocation set.",
+  finProviderStatement: "Provider statement",
+  finRaised: "Raised",
+  finReceived: "Received",
+  finOutstanding: "Outstanding",
+  finStatementLoad: "View statement",
+  finChaseFeeDue: "Chase fee due",
+  finChase: "Chase",
+  finGuardianDue: "Guardian due",
+  finWaLink: "WhatsApp link",
+  finUnreachableWa: "Unreachable by WhatsApp.",
+  finFeeHistory: "Fee history",
+  finFeeHistoryLoad: "View fee history",
+
+  // Qard / IOU
+  finQardIouTitle: "Qard/IOU register",
+  finParties: "Parties",
+  finPartyKind: "Kind",
+  finAddParty: "Add party",
+  finPartyAdded: "Party added.",
+  finPartyId: "Party ID",
+  finType: "Type",
+  finDirection: "Direction",
+  finDueDate: "Due date (optional)",
+  finRegisterEntry: "Record entry",
+  finEntryRecorded: "Entry recorded.",
+  finPartyOutstanding: "Outstanding",
+  finOverdue: "Overdue",
+  finDaysLate: "Days late",
+  finOldestDue: "Oldest due",
+  finPartyEntries: "Entries",
+  finLoadOutstanding: "View outstanding",
+  finLoadOverdue: "View overdue",
+
+  // Reconciliation
+  finReconTitle: "Bank & Eximus reconciliation",
+  finBankStatement: "Bank statement balance",
+  finEximusCash: "Eximus cash",
+  finEximusBank: "Eximus bank",
+  finEximusOnline: "Eximus online",
+  finBankDiff: "Bank diff",
+  finEximusDiff: "Eximus diff",
+  finAppBank: "App bank balance",
+  finReconHistory: "Reconciliation history",
+  finReconRecorded: "Reconciliation recorded.",
+
+  // Budget
+  finBudgetTitle: "Budget management",
+  finSetBudgetLine: "Set budget line",
+  finAnnualAmount: "Annual amount",
+  finBudgetSaved: "Budget line saved.",
+  finBudgetVsActual: "Budget vs actual",
+  finSurplusDeficit: "Surplus/deficit",
+  finTarget: "Target",
+  finActual: "Actual",
+  finVariance: "Variance",
+  finCumulative: "Cumulative",
+  finSurplus: "Surplus",
+  finIncome: "Income",
+  finExpense: "Expense",
+
+  // Dashboard
+  finDashboardTitle: "Finance dashboard",
+  finCashPosition: "Cash position",
+  finYtdIncome: "YTD income",
+  finYtdExpense: "YTD expense",
+  finYtdSurplus: "YTD surplus",
+  finQardOutstanding: "Qard outstanding",
+  finIouOutstanding: "IOU outstanding",
+  finZakatApplied: "Zakat/support applied",
+  finProviderReceivable: "Provider receivable",
+  finFeesDue: "Fees due",
+  finIncomeStatement: "Income statement (YTD)",
+  finTrends: "Trends",
+  finTotalIncome: "Total income",
+  finTotalExpense: "Total expense",
+  finNet: "Net",
+  finLastRecon: "Last reconciliation",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

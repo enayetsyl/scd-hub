@@ -29,6 +29,7 @@ import type {
   ClassTestStackParamList,
   CommentsStackParamList,
   ObservationStackParamList,
+  FinanceStackParamList,
   HrStackParamList,
   AdminStackParamList,
   GuardianHomeStackParamList,
@@ -134,6 +135,14 @@ import ObservationTrendScreen from "../screens/observation/ObservationTrendScree
 import ObservationDueListScreen from "../screens/observation/ObservationDueListScreen";
 import ReviewerEffectivenessScreen from "../screens/observation/ReviewerEffectivenessScreen";
 import ObservationConfigScreen from "../screens/observation/ObservationConfigScreen";
+import FinanceHomeScreen from "../screens/finance/FinanceHomeScreen";
+import DailyEntryScreen from "../screens/finance/DailyEntryScreen";
+import DailySnapshotScreen from "../screens/finance/DailySnapshotScreen";
+import FeesZakatScreen from "../screens/finance/FeesZakatScreen";
+import QardIouScreen from "../screens/finance/QardIouScreen";
+import ReconciliationScreen from "../screens/finance/ReconciliationScreen";
+import BudgetScreen from "../screens/finance/BudgetScreen";
+import FinanceDashboardScreen from "../screens/finance/FinanceDashboardScreen";
 import HrHomeScreen from "../screens/hr/HrHomeScreen";
 import MyLeaveScreen from "../screens/hr/MyLeaveScreen";
 import MyRecordScreen from "../screens/hr/MyRecordScreen";
@@ -583,6 +592,23 @@ function ObservationNavigator(): React.ReactElement {
   );
 }
 
+const FinanceStack = createNativeStackNavigator<FinanceStackParamList>();
+function FinanceNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <FinanceStack.Navigator screenOptions={stackOptions}>
+      <FinanceStack.Screen name="FinanceHome" component={FinanceHomeScreen} options={{ title: STR.finHomeTitle }} />
+      <FinanceStack.Screen name="DailyEntry" component={DailyEntryScreen} options={{ title: STR.finDailyEntryTitle }} />
+      <FinanceStack.Screen name="DailySnapshot" component={DailySnapshotScreen} options={{ title: STR.finSnapshotTitle }} />
+      <FinanceStack.Screen name="FeesZakat" component={FeesZakatScreen} options={{ title: STR.finFeesZakatTitle }} />
+      <FinanceStack.Screen name="QardIou" component={QardIouScreen} options={{ title: STR.finQardIouTitle }} />
+      <FinanceStack.Screen name="Reconciliation" component={ReconciliationScreen} options={{ title: STR.finReconTitle }} />
+      <FinanceStack.Screen name="Budget" component={BudgetScreen} options={{ title: STR.finBudgetTitle }} />
+      <FinanceStack.Screen name="FinanceDashboard" component={FinanceDashboardScreen} options={{ title: STR.finDashboardTitle }} />
+    </FinanceStack.Navigator>
+  );
+}
+
 const HrStack = createNativeStackNavigator<HrStackParamList>();
 function HrNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -754,6 +780,10 @@ export function AppTabs(): React.ReactElement {
       roleHasPermission(role, "observation:upload") ||
       roleHasPermission(role, "observation:review") ||
       roleHasPermission(role, "observation:manage"));
+  // Finance (FIN-6B): finance:manage is Principal+Office only (AC-1 may grant it to
+  // the accountant alone). GUARDIAN never holds it, so the tab is hidden for guardians.
+  // Every action is re-gated + row-scoped server-side.
+  const canFinance = !!role && roleHasPermission(role, "finance:manage");
   // HR/staff tab: every logged-in staff member (Principal/Teacher/Office) — leave
   // + self-service is universal; GUARDIAN never sees it. Admin entries inside are
   // permission-gated per slice and re-checked server-side.
@@ -822,6 +852,9 @@ export function AppTabs(): React.ReactElement {
       ) : null}
       {canObservation ? (
         <Tab.Screen name="ObservationTab" component={ObservationNavigator} options={{ title: STR.tabObservation, tabBarIcon: tabIcon("👁️") }} />
+      ) : null}
+      {canFinance ? (
+        <Tab.Screen name="FinanceTab" component={FinanceNavigator} options={{ title: STR.tabFinance, tabBarIcon: tabIcon("💰") }} />
       ) : null}
       {canHr ? (
         <Tab.Screen name="HrTab" component={HrNavigator} options={{ title: STR.tabHr, tabBarIcon: tabIcon("🧑‍💼") }} />

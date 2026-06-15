@@ -220,5 +220,7 @@ aggregate only** — no payslip/per-staff path is opened.
     Finance never reads an individual payslip (the ADR-005 PII boundary holds). **Ratified 2026-06-14.**
   - **D-#229** — FIN-2 builds as **two PRs**: FIN-2A (postings + snapshot + SALARY) then FIN-2B (zakat
     fee-support), to keep each reviewable; the vocab additions land with their owning sub-slice.
-  - **D-#230** — *(reserved for a FIN-2 build ruling.)*
+  - **D-#248** — FIN-2B fee-split is a DERIVED memo (gross counted once; the provider/guardian split +
+    receivable is derived, never a second ledger movement). *(Reserved as D-#230 at authoring; renumbered to
+    #248 at merge — CO-6 had taken #230.)*
 - **Next:** FIN-3 (Qard-e-Hasana & IOU register) — authored after FIN-2 is approved/built.
