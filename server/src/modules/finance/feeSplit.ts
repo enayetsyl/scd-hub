@@ -3,7 +3,7 @@
  * D-#226). No DB, no clock — unit-tested directly. The single place that knows how a
  * gross fee divides into the provider's covered share and the guardian's remaining due,
  * per the PER-HEAD coverage model. The gross is counted ONCE upstream (the snapshot);
- * this split is the receivable/chase MEMO, never a second ledger movement (D-#230).
+ * this split is the receivable/chase MEMO, never a second ledger movement (D-#248).
  *
  * Per fee line {head, amount}, against the active allocation's coverage:
  *   head not covered → guardian-due += amount

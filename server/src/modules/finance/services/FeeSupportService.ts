@@ -1,10 +1,10 @@
 /**
  * FeeSupportService (FIN-2B, prd-finance-fin2.md §3.B/§6, J-FIN2-5..J-FIN2-7,
- * D-#226/#227/#230) — the zakat / 3rd-party fee-support sub-system: providers,
+ * D-#226/#227/#248) — the zakat / 3rd-party fee-support sub-system: providers,
  * effective-dated append-only allocations, the derived provider statement (owed-vs-paid),
  * provider receipts, and the guardian fee-due chase.
  *
- * Build ruling D-#230: the fee posting (FIN-2A) books the GROSS once; the provider/guardian
+ * Build ruling D-#248: the fee posting (FIN-2A) books the GROSS once; the provider/guardian
  * split is a DERIVED memo (via the pure `splitFee` over each FEE_COLLECTION posting × the
  * allocation active on its date) — it raises NO extra ledger movement, so cash is never
  * double-counted (§3.B "the receivable is a memo, not a second cash-in"). A ProviderReceipt

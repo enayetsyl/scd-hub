@@ -4,7 +4,7 @@
  * Σ provider-due raised − Σ receipts). Append-only history. No `schoolId` (D-#145).
  * Identity plane — no corpus path (ADR-005).
  *
- * Build ruling D-#230: a receipt does NOT auto-create a second FinancePosting cash-in —
+ * Build ruling D-#248: a receipt does NOT auto-create a second FinancePosting cash-in —
  * the fee posting already booked the GROSS once (§3.B "the receivable is a memo, not a
  * second cash-in"); double-counting cash is the one thing the snapshot must avoid. The
  * receipt settles the receivable memo; if the school wants the settlement to also move a
