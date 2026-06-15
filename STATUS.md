@@ -24,9 +24,11 @@ _Updated: 2026-06-15 (**MON-1 — GlitchTip self-host LIVE on the prod VM (obser
   executed-acceptance + an explicit **[OP]operator / [EX]executor** split; all IP/domain/DSN/SMTP as
   `<PLACEHOLDERS>` per §0), written so a FRESH session can build the whole module end-to-end. Build order
   MON-1[OP]→MON-2[EX]→MON-3[EX]→MON-4[EX]→MON-5[OP] (MON-6 later); ~1 day core + ~½ day MON-4..5.
-  **Docs-only — nothing built.** **Next = a fresh session executes the runbook: MON-1 (operator stands up
-  GlitchTip on the VM) then MON-2/3/4 (server+app SDK capture + notification monitoring) in a worktree off
-  `dev`, then MON-5 (operator uptime/host alerts). The build owner here will NOT build it in this session.**
+  **STATUS UPDATE 2026-06-15 (this session): MON-1 (GlitchTip self-host, operator) + MON-2..MON-5 are NOW
+  BUILT** — stacked PRs #102 (MON-2 server capture) → #103 (MON-3 app capture) → #104 (MON-4 notification
+  monitoring) → #105 (MON-5 host-alert script), each gated green + "not verified live" pending the operator
+  acceptance. **Only MON-6 (centralized structured logs) remains — deferred, non-launch-blocking.** See the
+  per-slice "Built (Observability MON-*)" bullets below.
 - **Built (Observability MON-2 — server error capture `@sentry/node`, prd-observability.md §4 /
   observability-runbook.md MON-2, D-#252/#253) [branch `claude/open-prd-xuh335-mon2` off dev]:** slice 2 of the
   MON module (MON-1 GlitchTip self-host already LIVE at https://errors.scdhub.shafayet.me + backup folded in).
@@ -71,6 +73,16 @@ _Updated: 2026-06-15 (**MON-1 — GlitchTip self-host LIVE on the prod VM (obser
   +notificationMonitoring.test.ts [3] + 2 heartbeat tests). Server-only. Not verified live** (operator: bad
   push token → captured event; stop ticker → /internal/ticker stale + MON-5 alert). **Next = MON-5** (off-box
   uptime + VM host-alert script; mostly operator [OP] + the `scripts/host-alert.sh` [EX] writes).
+- **Built (Observability MON-5 — host disk/RAM alert + availability runbook, prd-observability.md §4 /
+  observability-runbook.md MON-5, D-#252/#253) [branch `claude/open-prd-xuh335-mon5` stacked off MON-4]:**
+  the self-monitoring + host blind-spot fixes. **[EX]:** new `scripts/host-alert.sh` — cron disk/RAM threshold
+  check that warns before disk-full/OOM takes down prod AND GlitchTip together (shared VM disk). Env-tunable
+  (`ALERT_EMAIL`, `HOST_ALERT_DISK_PCT`=85, `HOST_ALERT_MEM_FREE_PCT`=10); mail/msmtp with stdout fallback;
+  never fails the cron. **Executed:** `bash -n` clean, forced-low threshold fired, normal silent. **[OP]
+  (documented in the PR, not committed):** UptimeRobot off-box monitors (prod/dev `/healthz`, the GlitchTip
+  URL, `/internal/ticker` keyword) + the `*/15` cron → email. **No vocab/contract change; no server/app
+  source touched. Email/uptime legs not verified live** (operator). **MON-1..5 now built; MON-6 (centralized
+  logs) deferred, non-launch-blocking — the MON launch set is complete.**
 - **Built (Saturday Revision SR-4 — the Expo app, COMPLETES the module SR-1..SR-4, prd-sr4.md §2/§3/§4,
   D-#68/#155 + build ruling D-#251) [branch `claude/sr-4` stacked off `claude/sr-3`]:** the 🕌 Revision tab over
   the merged SR-1..SR-3 resolvers + the new SR-4 `childRevision` guardian read. **App:** `app/src/graphql/revision.ts`
