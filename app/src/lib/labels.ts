@@ -1206,6 +1206,17 @@ const STR_BN = {
   errForbiddenWrite: "এই সেকশনে লেখার অনুমতি নেই।",
   errForbiddenRead: "এই কন্টেন্ট দেখার অনুমতি নেই।",
 
+  // Observability — error boundary + "Report a problem" (MON-3)
+  errBoundaryTitle: "কিছু একটা সমস্যা হয়েছে",
+  errBoundaryBody: "অ্যাপে অপ্রত্যাশিত সমস্যা হয়েছে। আবার চেষ্টা করুন।",
+  errBoundaryReload: "আবার চেষ্টা করুন",
+  reportProblem: "সমস্যা জানান",
+  reportTitle: "সমস্যা জানান",
+  reportHint: "কী সমস্যা হয়েছে সংক্ষেপে লিখুন।",
+  reportSend: "পাঠান",
+  reportSent: "ধন্যবাদ! আপনার রিপোর্ট পাঠানো হয়েছে।",
+  reportUnavailable: "রিপোর্টিং এখন চালু নেই।",
+
   // Routine / timetable (R-3)
   tabRoutine: "রুটিন",
   routineTitle: "রুটিন",
@@ -2980,6 +2991,17 @@ const STR_EN: StrTable = {
   errNetwork: "Could not connect to the server.",
   errForbiddenWrite: "You don't have write permission for this section.",
   errForbiddenRead: "You don't have permission to view this content.",
+
+  // Observability — error boundary + "Report a problem" (MON-3)
+  errBoundaryTitle: "Something went wrong",
+  errBoundaryBody: "The app hit an unexpected problem. Please try again.",
+  errBoundaryReload: "Try again",
+  reportProblem: "Report a problem",
+  reportTitle: "Report a problem",
+  reportHint: "Briefly describe what went wrong.",
+  reportSend: "Send",
+  reportSent: "Thanks! Your report was sent.",
+  reportUnavailable: "Reporting is not enabled.",
 
   // Routine / timetable (R-3)
   tabRoutine: "Routine",

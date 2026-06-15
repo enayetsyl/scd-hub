@@ -17,6 +17,7 @@
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.11.0",
     "@scd/shared": "*",
+    "@sentry/react-native": "^5.24.3",
     "@urql/core": "^5.0.5",
     "expo": "~51.0.8",
     "expo-clipboard": "~6.0.3",

@@ -41,6 +41,23 @@ _Updated: 2026-06-15 (**MON-1 — GlitchTip self-host LIVE on the prod VM (obser
   change. Gate GREEN (executed): server tsc clean + jest 1457/1457 (88 suites; +`observability.test.ts` [7]).
   Server-only. Not verified live** (operator triggers a fault → confirms scrubbed payload in `scdhub-server`).
   **Next = MON-3** (app capture: web/Android/iOS + ErrorBoundary + "Report a problem").
+- **Built (Observability MON-3 — app error capture web/Android/iOS + ErrorBoundary + "Report a problem",
+  `@sentry/react-native`, prd-observability.md §4 / observability-runbook.md MON-3, D-#252/#253) [branch
+  `claude/open-prd-xuh335-mon3` stacked off MON-2]:** JS + native crashes on all three clients land in the
+  same self-hosted GlitchTip (`scdhub-app` project), plus a user self-report path. New
+  `app/src/observability/sentry.ts` inits `@sentry/react-native@5.24.3` (Expo-51-pinned) **only when
+  `EXPO_PUBLIC_SENTRY_DSN` is set** (no-op for local/the web-export gate; sessions off, `tracesSampleRate:0`,
+  `sendDefaultPii:false`). **App.tsx:** `initSentry()` + `Sentry.wrap(App)` + a top-level `Sentry.ErrorBoundary`
+  OUTSIDE the providers with a self-contained BN/EN `AppErrorFallback` (web white-screen → reload + auto-report).
+  **urql** (`client.ts`): a `mapExchange` captures **networkError only** (transport failures MON-2 can't see;
+  graphQLErrors stay server-side to avoid flooding). **Symbolication:** `metro.config.js`→`getSentryExpoConfig`
+  (debug-IDs injected, verified in the bundle); `app.json`→`@sentry/react-native/expo` plugin; `deploy.sh` emits
+  + uploads web source maps via `sentry-cli` then deletes the `.map`s (guarded by `SENTRY_AUTH_TOKEN`, non-fatal).
+  **"Report a problem":** a 🐞 `HeaderRight` button (every authed user, staff + guardian) → root-modal
+  `ReportProblemScreen` (`captureUserFeedback`). New `report*`/`errBoundary*` BN+EN labels; `.env.example` updated.
+  **No vocab/contract change. Gate GREEN (executed): app tsc clean + expo web export green (debug-IDs injected),
+  no server/shared drift.** **Not verified live** (operator forces web + Android-APK crashes → symbolicated stacks
+  + feedback event). **Next = MON-4** (notification-delivery monitoring — push receipts + ticker watchdog).
 - **Built (Saturday Revision SR-4 — the Expo app, COMPLETES the module SR-1..SR-4, prd-sr4.md §2/§3/§4,
   D-#68/#155 + build ruling D-#251) [branch `claude/sr-4` stacked off `claude/sr-3`]:** the 🕌 Revision tab over
   the merged SR-1..SR-3 resolvers + the new SR-4 `childRevision` guardian read. **App:** `app/src/graphql/revision.ts`

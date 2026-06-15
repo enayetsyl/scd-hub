@@ -9,13 +9,16 @@
 // babel.config.js for why (Windows/Metro transform perf). Re-enable with:
 //   const { withNativeWind } = require("nativewind/metro");
 //   module.exports = withNativeWind(config, { input: "./global.css" });
-const { getDefaultConfig } = require("expo/metro-config");
+// MON-3: getSentryExpoConfig wraps getDefaultConfig and adds the Sentry serializer so
+// source maps upload at build (web in CI; native via EAS). It is a drop-in replacement
+// for getDefaultConfig — the monorepo watchFolders/resolver tweaks below still apply.
+const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 const path = require("path");
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, "..");
 
-const config = getDefaultConfig(projectRoot);
+const config = getSentryExpoConfig(projectRoot);
 
 config.watchFolders = [
   path.resolve(workspaceRoot, "node_modules"),
