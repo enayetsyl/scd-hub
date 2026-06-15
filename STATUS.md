@@ -76,8 +76,21 @@ _Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two
   `[{head, type∈{FULL, AMOUNT}, amount?}]`: FULL = whole head, AMOUNT = a ৳ cap per posting, varying per
   student per head; PERCENT deferred) + the guardian **fee-due chase** (wa.me + emit `FINANCE_FEE_DUE`, MT
   bodies `finance.fee_due.chase.*`, no guardian finance UI, D-#227). Reuses `finance:manage` (NO new perm);
-  vocab-toucher (additive). Qard/IOU stays FIN-3 (plugs into the same snapshot seam). **Next = build FIN-1,
-  then FIN-2A → FIN-2B; next PRD = FIN-3.**
+  vocab-toucher (additive). Qard/IOU stays FIN-3 (plugs into the same snapshot seam).**
+- **Planned (Finance FIN-3..FIN-6 build-contract PRDs authored 2026-06-15 — FINANCE MODULE FULLY PLANNED,
+  D-#232–#240):** **FIN-3** (`prd-finance-fin3.md`, D-#232–#234) Qard/IOU register — saved `FinanceParty`
+  master + append-only `QardIouEntry` + per-party outstanding + **due-dates/schedules + overdue**; staff
+  salary advances EXCLUDED (HR, D-#188); extends `ledgerBalanceAsOf` for the control ledgers. **FIN-4**
+  (`prd-finance-fin4.md`, D-#235–#236) dual reconciliation — dated append-only entry, entered bank-statement
+  + Eximus control figure vs the DERIVED app balance → bankDiff/eximusDiff + history (Eximus parallel/no live
+  link; figure definition confirmed at build). **FIN-5** (`prd-finance-fin5.md`, D-#237–#238) budget-vs-actual
+  — per-head **expense AND income** budgets, **monthly-phased (default annual/12, each month overridable)**,
+  actuals auto-DERIVED from FIN-2 (movement heads excluded), monthly+cumulative variance + surplus/deficit.
+  **FIN-6** (`prd-finance-fin6.md`, D-#239–#240) rollups + Principal dashboard + the Expo finance app — ALL
+  DERIVED (no new model), builds as 2 PRs (6A server rollups, 6B the 💰 Finance app over FIN-1..6); NO guardian
+  finance UI. **All reuse `finance:manage` — NO new permission; ALWAYS-OPEN (no period-lock / `finance:approve`,
+  per the Principal).** Identity-plane; single-school. Docs-only — nothing built. **Build order = FIN-1 → 2A
+  → 2B → 3 → 4 → 5 → 6A → 6B. Next = build FIN-1 (server) per `docs/prd-finance-fin1.md`.**
 - **Built (Classroom Observation CO-5 — Quran (ClassEcho) form, server, prd-classroom-observation §CO-5, D-#56
   + build rulings D-#220) [branch `claude/open-prds-nl0az4`]:** the ported ClassEcho rating form, used when
   `subject==="QURAN"`. **Server-only; the ONLY shared change is `shared/vocab.ts`** (2 app-native enums, NO wire
