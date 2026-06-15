@@ -79,7 +79,7 @@ the existing HR `PAYMENT_METHODS`/`PaymentMethod` clash (which is salary disburs
   Other (the per-child split; `OTHER` carries a free-text label at posting time, FIN-2).
 - `FINANCE_LEDGER_MOVEMENT_HEADS = [BANK_DEPOSIT, QARD_REPAYMENT, IOU_REPAYMENT]` — movements, **not
   income** (REQ §3 — kept a separate enum so FIN-5 budget/actual never counts them as revenue).
-- `FINANCE_EXPENSE_HEADS` — the **~24 unified heads frozen here** (REQ §3): Salary, Rent, Utilities,
+- `FINANCE_EXPENSE_HEADS` — the **22 unified heads, RATIFIED 2026-06-15** (REQ §3): Salary, Rent, Utilities,
   Gas Bill, Mobile Bills, Repairing & Maintenance, Transport, Conveyance, Class Material, Office
   Stationary, Student Stationary, Kitchen Materials, Cleaning, Breakfast, Lunch, Afternoon Meal, Food
   Reward, Halaqa, Picnic, Community, Training, Other. (`SALARY` is the line HR payroll feeds — REQ §3/§7.)
@@ -89,6 +89,14 @@ the existing HR `PAYMENT_METHODS`/`PaymentMethod` clash (which is salary disburs
   exactly the 5; `FINANCE_LEDGER_MOVEMENT_HEADS` disjoint from `FINANCE_INCOME_HEADS`; the OFFICE/role
   permission exact-lists updated for `finance:manage` (§5). Follow the vocab header "add an enum" +
   "add a Permission" checklists.
+- **Head lists RATIFIED 2026-06-15 + management (D-#247):** the expense (22) / income (11) / student-fee (7)
+  lists are confirmed final (income heads = Admission Fee, Session Fee, Tuition Fee, Books & Stationeries,
+  Revision Fee, Transport Fee, Application Form & Prospectus, Sadaka, Subsidy, Other Fee, Other; fee heads =
+  Admission, Session, Tuition, Books & Stationeries, Revision, Transport, Other). Heads are a **code-controlled
+  list** (NOT an Office-managed registry) — adding/renaming a head later is an **additive vocab edit** by a
+  developer (one enum line + BN/EN label + verifier; **NO migration** — existing postings keep their head);
+  the **`OTHER` head + free-text note** is the runtime escape valve for one-offs. (A self-service `FinanceHead`
+  registry was considered and DEFERRED — the chart is stable; revisit only if heads change often.)
 
 > **No mirrored/wire enum is touched.** If any *later* FIN PRD ever touches the import-contract schema
 > or a mirrored enum, that PRD writes the two-/three-place sync into itself (REQ §9). FIN-1 does not.
@@ -170,4 +178,8 @@ fail-closed firewall test (corpus ⇄ finance, both ways)** — the NFR-11 test 
   - **D-#223** — FIN-1 **freezes the full finance vocabulary** (ledgers/modes/heads/qard-iou
     dirs+types, `FINANCE_*`-namespaced, app-native, no wire sync); the single **`ledgerBalanceAsOf`
     seam** returns opening-only in FIN-1 and is *extended* (not replaced) by FIN-2 to add Σ(postings).
+  - **D-#247 (ratified 2026-06-15)** — the head lists are **confirmed final** (22 expense / 11 income / 7
+    student-fee) and heads are a **code-controlled list, NOT an Office-managed registry**: a new head is an
+    additive vocab edit by a developer (no migration; existing data safe), and the `OTHER` head + free-text
+    note is the runtime escape valve; a self-service `FinanceHead` registry was considered and deferred.
 - **Next:** FIN-2 (daily entry & postings) — authored after FIN-1 is approved/built.

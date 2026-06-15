@@ -14,8 +14,9 @@
 - [ ] The **app balance is DERIVED** (the FIN-1/2/3 `ledgerBalanceAsOf` seam) — never re-keyed.
 - [ ] `bankDiff = app − bank`, `eximusDiff = app − eximus`; both stored as **dated, append-only**
   reconciliation history.
-- [ ] ⚠️ The exact **Eximus control figure** (what number you read off Eximus) is flagged for confirmation
-  with the accountant (§3 / D-#236) — default = the day's **closing balance** Eximus reports.
+- [ ] The **Eximus control figure** = the day's **closing balance PER LEDGER** Eximus reports (Cash / Bank /
+  Online); the app compares each ledger's derived closing vs the entered figure → a per-ledger diff that
+  pinpoints which ledger drifted (ratified 2026-06-15, D-#236).
 - [ ] Reuses `finance:manage` (no new permission); always-open; server-only; identity plane.
 
 ## §1 — Goal
@@ -30,19 +31,20 @@ how its own derived ledger balance differs from each — recording every check s
 | Compares the entered bank + Eximus figures vs `ledgerBalanceAsOf` | Live Eximus API (out — manual figure only, D-#186) · budget (FIN-5) · dashboard + app (FIN-6) |
 
 ## §3 — Data model (identity plane; dated, append-only; no `schoolId`)
-**`ReconciliationEntry`** — one check for a date: `{ date, bankStatementBalance?, eximusControlFigure?,
-appBankBalance (DERIVED at save = `ledgerBalanceAsOf(BANK, date)`), appTotalBalance (DERIVED = Σ all
-ledgers, or the figure the Eximus total maps to — see below), bankDiff (= appBankBalance −
-bankStatementBalance), eximusDiff (= appTotal − eximusControlFigure), note?, enteredByUserId, createdAt }`.
+**`ReconciliationEntry`** — one check for a date: `{ date, bankStatementBalance?, appBankBalance (DERIVED at
+save = `ledgerBalanceAsOf(BANK, date)`), bankDiff (= appBankBalance − bankStatementBalance), eximusClosing?:
+{ CASH, BANK, ONLINE } (the entered Eximus per-ledger closing), appClosing: { CASH, BANK, ONLINE } (DERIVED
+at save = `ledgerBalanceAsOf(ledger, date)` each), eximusDiff: { CASH, BANK, ONLINE } (per ledger =
+appClosing − eximusClosing), note?, enteredByUserId, createdAt }`.
 - **Append-only:** a re-reconciliation for the same day is a **new dated entry** (history preserved); the
   latest by `createdAt` is the day's current reconciliation.
 - **The app balance is captured DERIVED at save** (a snapshot of the seam value) so the recorded diff is
   reproducible even if a later back-dated posting moves the live balance — the history shows what was true
   when reconciled (plus the live re-check on demand).
-- **⚠️ Eximus control figure (D-#236) — confirm exact definition:** default = the **closing balance Eximus
-  reports for the day** (e.g. closing cash/bank), compared against the app's matching derived total. The
-  build pins whether it's a single closing total or per-ledger against the accountant; the model carries
-  the entered figure + the app figure it's compared to either way.
+- **Eximus control figure (ratified 2026-06-15, D-#236) — PER LEDGER:** the accountant enters Eximus's
+  **closing balance for each movement ledger** (Cash / Bank / Online); `eximusDiff` is computed **per ledger**
+  = `ledgerBalanceAsOf(ledger, date) − eximusClosing(ledger)`, so the diff identifies **which ledger drifted**
+  (not just a net total). The Qard/IOU control ledgers are not part of the bank/Eximus check.
 
 **`ReconciliationService`:** `recordReconciliation(date, {bank?, eximus?})` (computes the diffs off the
 seam; audited); `reconciliationHistory(range)` + `latestReconciliation(date)` + `unreconciledDays(range)`
@@ -92,6 +94,7 @@ school-days) · `finance:manage` · append-only audit · identity-plane firewall
   - **D-#235** — dual reconciliation = a **dated, append-only `ReconciliationEntry`** capturing the entered
     bank-statement balance + the entered Eximus control figure vs the app's **DERIVED** ledger balance
     (snapshotted at save for reproducibility) → `bankDiff` + `eximusDiff` + history; no live Eximus link.
-  - **D-#236** — the **Eximus control figure** is entered manually; its exact definition (a single closing
-    total vs per-ledger) is **confirmed with the accountant at build** (default = Eximus's day-closing balance).
+  - **D-#236 (ratified 2026-06-15)** — the **Eximus control figure is the day's closing balance PER LEDGER**
+    (Cash / Bank / Online), entered manually (no live link); `eximusDiff` is computed per ledger
+    (`appClosing − eximusClosing`) so a drift names its ledger. The Qard/IOU control ledgers are excluded.
 - **Next:** FIN-5 (budget vs actual).

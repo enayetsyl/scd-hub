@@ -62,8 +62,11 @@ _Updated: 2026-06-14 (**CM-5 + AC-1 BOTH MERGED to main (main=034a444)** — two
   **RBAC ratified: ONE new perm `finance:manage`** (Principal+Office, no new role — refines the REQ's D-#192;
   the Library/Observation/HR precedent + AC-1 per-user-grant synergy lets the Principal grant the books to the
   accountant alone, D-#221); `finance:approve` (period-lock) deferred. Server-only; identity-plane (ADR-005,
-  firewall both ways); single-school (no `schoolId`). Docs-only — nothing built. **Next = build FIN-1 (server)
-  per `docs/prd-finance-fin1.md` §3/§4/§10.**
+  firewall both ways); single-school (no `schoolId`). Docs-only — nothing built. **Data confirmations RATIFIED
+  2026-06-15:** head lists final (22 expense/11 income/7 fee) + heads are a **code-controlled list** (a dev
+  adds one additively, no migration; `OTHER` is the runtime valve; self-service registry deferred — D-#247);
+  **Eximus = per-ledger closing balance** (D-#236). **Finance planning fully locked — nothing deferred. Next =
+  build FIN-1 (server) per `docs/prd-finance-fin1.md` §3/§4/§10.**
 - **Planned (Finance FIN-2 — Daily entry & postings + zakat fee-support, build-contract PRD authored
   `docs/prd-finance-fin2.md`, D-#224–#229):** slice 2 of 6, the **heaviest** — recommends building as TWO PRs
   (D-#229). **FIN-2A** = `FinancePosting` (unified append-only money event; kind-discriminated; fee=feeLines
