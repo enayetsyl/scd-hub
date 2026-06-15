@@ -2333,6 +2333,23 @@ export const RECON_SOURCE_LABELS_EN: Record<ReconSource, string> = {
   EXIMUS: "Eximus control",
 };
 
+// --- A.17f BUDGET LINE KINDS (FIN-5, prd-finance-fin5.md §4, D-#237) ------------
+// Whether a budget line targets an expense head or an income head. Additive, app-native,
+// NO wire twin. Drives the expense-vs-income split on the variance reads.
+
+/** A budget line's side (FIN-5 §4). EXPENSE = a spend budget per FINANCE_EXPENSE_HEADS;
+ *  INCOME = a revenue target per FINANCE_INCOME_HEADS. */
+export const BUDGET_LINE_KINDS = ["EXPENSE", "INCOME"] as const;
+export type BudgetLineKind = (typeof BUDGET_LINE_KINDS)[number];
+export const BUDGET_LINE_KIND_LABELS_BN: Record<BudgetLineKind, string> = {
+  EXPENSE: "ব্যয়",
+  INCOME: "আয়",
+};
+export const BUDGET_LINE_KIND_LABELS_EN: Record<BudgetLineKind, string> = {
+  EXPENSE: "Expense",
+  INCOME: "Income",
+};
+
 
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP

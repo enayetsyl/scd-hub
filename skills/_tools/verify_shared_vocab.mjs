@@ -542,6 +542,10 @@ check("FINANCE_PARTY_KIND_LABELS_EN total", total(V.FINANCE_PARTY_KIND_LABELS_EN
 check("RECON_SOURCES exact — BANK/EXIMUS (FIN-4 §4)", eq(V.RECON_SOURCES, ["BANK","EXIMUS"]));
 check("RECON_SOURCE_LABELS_BN total", total(V.RECON_SOURCE_LABELS_BN, V.RECON_SOURCES));
 check("RECON_SOURCE_LABELS_EN total", total(V.RECON_SOURCE_LABELS_EN, V.RECON_SOURCES));
+// FIN-5 — budget line kinds (additive; prd-finance-fin5 §4, D-#237)
+check("BUDGET_LINE_KINDS exact — EXPENSE/INCOME (FIN-5 §4)", eq(V.BUDGET_LINE_KINDS, ["EXPENSE","INCOME"]));
+check("BUDGET_LINE_KIND_LABELS_BN total", total(V.BUDGET_LINE_KIND_LABELS_BN, V.BUDGET_LINE_KINDS));
+check("BUDGET_LINE_KIND_LABELS_EN total", total(V.BUDGET_LINE_KIND_LABELS_EN, V.BUDGET_LINE_KINDS));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);
