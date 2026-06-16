@@ -666,6 +666,13 @@ const STR_BN = {
   tabTrackers: "ট্র্যাকার",
   tabAdmin: "প্রশাসন",
 
+  // Drawer navigation (D-#258) — group headers + a disambiguated leaf
+  drawerGroupAcademics: "একাডেমিক",
+  drawerGroupTrackers: "ট্র্যাকার",
+  drawerItemDailyTracker: "দৈনিক ট্র্যাকার",
+  accountMenu: "অ্যাকাউন্ট মেনু",
+  openMenu: "মেনু খুলুন",
+
   // Auth
   login: "লগইন",
   logout: "লগআউট",
@@ -2460,6 +2467,13 @@ const STR_EN: StrTable = {
   tabSets: "Sets",
   tabTrackers: "Trackers",
   tabAdmin: "Admin",
+
+  // Drawer navigation (D-#258) — group headers + a disambiguated leaf
+  drawerGroupAcademics: "Academics",
+  drawerGroupTrackers: "Trackers",
+  drawerItemDailyTracker: "Daily Tracker",
+  accountMenu: "Account menu",
+  openMenu: "Open menu",
 
   // Auth
   login: "Log in",

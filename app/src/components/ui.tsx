@@ -13,6 +13,7 @@ import {
   Pressable,
   ActivityIndicator,
   ScrollView,
+  useWindowDimensions,
   type ViewStyle,
   type TextStyle,
   type StyleProp,
@@ -20,6 +21,7 @@ import {
 } from "react-native";
 import { StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useSidebar, DRAWER_PERMANENT_MIN_WIDTH } from "../state/SidebarContext";
 import {
   makeStyles,
   resolveTextStyle,
@@ -51,6 +53,11 @@ export function Screen({
   style?: StyleProp<ViewStyle>;
 }): React.ReactElement {
   const styles = useStyles();
+  const { width } = useWindowDimensions();
+  const { collapsed } = useSidebar();
+  // When the web sidebar is collapsed (D-#258), the canvas is full-width — widen the
+  // content frame to fill it, so the body expands/contracts with the sidebar.
+  const expanded = collapsed && width >= DRAWER_PERMANENT_MIN_WIDTH;
   const inner = scroll ? (
     <ScrollView
       contentContainerStyle={[padded && styles.padded, style]}
@@ -63,7 +70,7 @@ export function Screen({
   );
   return (
     <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
-      <View style={wide ? styles.frameWide : styles.frame}>{inner}</View>
+      <View style={wide || expanded ? styles.frameWide : styles.frame}>{inner}</View>
     </SafeAreaView>
   );
 }
