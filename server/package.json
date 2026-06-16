@@ -16,6 +16,7 @@
     "@pothos/plugin-scope-auth": "^4.0.0",
     "@pothos/plugin-simple-objects": "^4.0.0",
     "@scd/shared": "*",
+    "@sentry/node": "^10.58.0",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
     "exceljs": "^4.4.0",
