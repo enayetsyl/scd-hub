@@ -11,6 +11,8 @@
  *
  * In jest this module is mocked — no live Expo in CI (§9.3 / tests).
  */
+import { capturePushDeliveryFailure } from "../../../observability/sentry";
+
 const EXPO_PUSH_ENDPOINT = "https://exp.host/--/api/v2/push/send";
 const CHUNK_SIZE = 100; // Expo accepts up to 100 messages per request.
 
@@ -49,6 +51,19 @@ export function deadTokensFromTickets(
   return dead;
 }
 
+/**
+ * Pure (MON-4): error codes worth SURFACING to GlitchTip — every error ticket EXCEPT
+ * the routine `DeviceNotRegistered` prune (already handled by `deadTokensFromTickets`,
+ * a normal stale-install signal that would only flood the dashboard). These are the
+ * genuinely silent failures (e.g. `MessageTooBig`, `MessageRateExceeded`,
+ * `InvalidCredentials`) that today are dropped with no exception and no log.
+ */
+export function deliveryFailureCodes(tickets: ExpoTicket[]): string[] {
+  return tickets
+    .filter((t) => t.status === "error" && t.details?.error !== "DeviceNotRegistered")
+    .map((t) => t.details?.error ?? t.message ?? "unknown");
+}
+
 function chunk<T>(items: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
@@ -76,9 +91,15 @@ export async function sendExpoPush(messages: ExpoPushMessage[]): Promise<ExpoPus
       result.deadTokens.push(
         ...deadTokensFromTickets(batch.map((m) => m.to), tickets),
       );
+      // MON-4: surface the silent delivery failures (non-DeviceNotRegistered errors).
+      for (const code of deliveryFailureCodes(tickets)) {
+        capturePushDeliveryFailure({ errorCode: code, recipientCount: 1 });
+      }
     } catch (err) {
       // Expo unreachable — log and move on; the reminder is best-effort (D-#65).
+      // MON-4: a transport failure is also a silent delivery gap worth surfacing.
       console.error("[ExpoPush] send failed:", err);
+      capturePushDeliveryFailure({ errorCode: "transport_unreachable", recipientCount: batch.length });
     }
   }
   return result;

@@ -14,6 +14,7 @@ import { STR } from "../lib/labels";
 import { fonts, useColors } from "../theme";
 import { AppTabs, LoginScreen } from "./AppTabs";
 import NotificationCenterScreen from "../screens/notifications/NotificationCenterScreen";
+import ReportProblemScreen from "../screens/common/ReportProblemScreen";
 
 const RootStack = createNativeStackNavigator();
 
@@ -38,6 +39,19 @@ export function RootNavigator(): React.ReactElement {
                 headerShown: true,
                 presentation: "modal",
                 title: STR.notifications,
+                headerStyle: { backgroundColor: colors.primary },
+                headerTintColor: colors.onPrimary,
+                headerTitleStyle: { fontFamily: fonts.bold },
+              }}
+            />
+            {/* MON-3: "Report a problem" — root modal reachable from every tab's header. */}
+            <RootStack.Screen
+              name="ReportProblem"
+              component={ReportProblemScreen}
+              options={{
+                headerShown: true,
+                presentation: "modal",
+                title: STR.reportTitle,
                 headerStyle: { backgroundColor: colors.primary },
                 headerTintColor: colors.onPrimary,
                 headerTitleStyle: { fontFamily: fonts.bold },
