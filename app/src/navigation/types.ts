@@ -30,7 +30,14 @@ export type TrackersStackParamList = {
 
 export type ReviewStackParamList = {
   ReviewHome: undefined;
-  ReviewSubmit: { assignmentId: string; artifactId: string };
+  ReviewSubmit: {
+    assignmentId: string;
+    artifactId: string;
+    /** Prefill when re-opening an already-decided round (R4 resubmit). */
+    initialVerdict?: string | null;
+    initialFeedback?: string | null;
+    roundStatus?: string;
+  };
   ReviewThread: { artifactId: string };
 };
 

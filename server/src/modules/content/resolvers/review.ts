@@ -13,6 +13,7 @@
  *
  * The Principal sign-off (reviewed→gold) + inbox/thread queries land in PR-2.
  */
+import { GraphQLError } from "graphql";
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
 import {
@@ -54,10 +55,23 @@ ReviewAssignmentRef.implement({
   }),
 });
 
-/** Map a ReviewError to a Forbidden when it's the row-scope denial, else rethrow as-is. */
+/**
+ * Map a ReviewError to a client-facing GraphQL error. Row-scope denials → ForbiddenError;
+ * other rule violations → a GraphQLError so the message survives Yoga's error masking
+ * (a plain thrown Error is masked to "Unexpected error"). The "round not open" case gets a
+ * friendly explanation — it fires when a reviewer tries to edit a signed-off/superseded round.
+ */
 function mapReviewError(err: unknown): never {
-  if (err instanceof ReviewError && err.message.startsWith("FORBIDDEN")) {
-    throw new ForbiddenError(err.message);
+  if (err instanceof ReviewError) {
+    if (err.message.startsWith("FORBIDDEN")) {
+      throw new ForbiddenError(err.message);
+    }
+    const closed = /not open for submission/i.test(err.message);
+    throw new GraphQLError(
+      closed
+        ? "This review round is closed — the plan was signed off or a newer version was imported."
+        : err.message,
+    );
   }
   throw err;
 }
@@ -101,8 +115,10 @@ builder.mutationField("submitPlanReview", (t) =>
   t.field({
     type: ReviewAssignmentRef,
     description:
-      "Submit a verdict (APPROVE | CHANGES_REQUESTED) + feedback on an assigned plan. Only the " +
-      "assigned reviewer may submit. APPROVE advances the plan draft→reviewed. Requires content:review.",
+      "Submit (or resubmit) a verdict (APPROVE | CHANGES_REQUESTED) + feedback on an assigned plan. " +
+      "Only the assigned reviewer may submit; they may edit their own decision until the round closes " +
+      "(version superseded / signed off). APPROVE drives draft→reviewed; a resubmitted CHANGES_REQUESTED " +
+      "reverts reviewed→draft. Requires content:review.",
     authScopes: { hasPermission: "content:review" },
     args: {
       assignmentId: t.arg.string({ required: true }),
@@ -160,7 +176,9 @@ builder.mutationField("cancelPlanReview", (t) =>
 builder.queryField("myReviewAssignments", (t) =>
   t.field({
     type: [ReviewAssignmentRef],
-    description: "The caller's open (assigned) review rounds. Requires content:review.",
+    description:
+      "The caller's review queue: assigned (awaiting verdict) + submitted (decided, still " +
+      "editable). Closed rounds drop off. Requires content:review.",
     authScopes: { hasPermission: "content:review" },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");

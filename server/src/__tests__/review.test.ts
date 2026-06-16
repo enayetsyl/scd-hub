@@ -53,6 +53,7 @@ jest.mock("../modules/notifications/services/emitters", () => ({
 import {
   isPlanDocType,
   advanceOnApprove,
+  reviewStatusForVerdict,
   addressKeyOf,
   assignPlanReview,
   submitPlanReview,
@@ -60,6 +61,7 @@ import {
   reviewerMayReadArtifact,
   approvePlan,
   supersedeOpenRoundsForAddress,
+  listMyReviewAssignments,
   planReviewInbox,
   planReviewThread,
   ReviewError,
@@ -119,6 +121,15 @@ describe("pure helpers", () => {
     expect(advanceOnApprove("draft")).toBe("reviewed");
     expect(advanceOnApprove("reviewed")).toBeNull();
     expect(advanceOnApprove("gold")).toBeNull();
+  });
+
+  test("reviewStatusForVerdict — symmetric draft↔reviewed; gold untouched (R4 resubmit)", () => {
+    expect(reviewStatusForVerdict("draft", "APPROVE")).toBe("reviewed");
+    expect(reviewStatusForVerdict("reviewed", "APPROVE")).toBeNull();
+    expect(reviewStatusForVerdict("reviewed", "CHANGES_REQUESTED")).toBe("draft");
+    expect(reviewStatusForVerdict("draft", "CHANGES_REQUESTED")).toBeNull();
+    expect(reviewStatusForVerdict("gold", "APPROVE")).toBeNull();
+    expect(reviewStatusForVerdict("gold", "CHANGES_REQUESTED")).toBeNull();
   });
 
   test("addressKeyOf — version-stable key, number stringified", () => {
@@ -292,10 +303,11 @@ describe("submitPlanReview", () => {
     expect(artifact.save).not.toHaveBeenCalled();
   });
 
-  test("CHANGES_REQUESTED records feedback, leaves reviewStatus untouched", async () => {
+  test("CHANGES_REQUESTED on a draft plan records feedback, leaves reviewStatus draft", async () => {
     const assignment = assignmentDoc();
+    const artifact = { ...planArtifact(), save: jest.fn() };
     mockReviewFindById.mockResolvedValue(assignment);
-    // artifact never loaded on a non-APPROVE verdict
+    mockArtifactFindById.mockReturnValue(artifact);
 
     const dto = await submitPlanReview({
       assignmentId: ASSIGNMENT_ID.toString(),
@@ -306,7 +318,33 @@ describe("submitPlanReview", () => {
 
     expect(dto.verdict).toBe("CHANGES_REQUESTED");
     expect(dto.feedback).toMatch(/measurable verbs/);
-    expect(mockArtifactFindById).not.toHaveBeenCalled();
+    expect(artifact.reviewStatus).toBe("draft"); // draft + CHANGES_REQUESTED ⇒ no change
+    expect(artifact.save).not.toHaveBeenCalled();
+  });
+
+  test("R4 resubmit — reviewer flips APPROVE→CHANGES on a submitted round; reverts reviewed→draft", async () => {
+    const assignment = assignmentDoc({ status: "submitted", verdict: "APPROVE" });
+    const artifact = { ...planArtifact({ reviewStatus: "reviewed" }), save: jest.fn().mockResolvedValue(true) };
+    mockReviewFindById.mockResolvedValue(assignment);
+    mockArtifactFindById.mockReturnValue(artifact);
+
+    const dto = await submitPlanReview({
+      assignmentId: ASSIGNMENT_ID.toString(),
+      reviewerId: REVIEWER_ID.toString(),
+      verdict: "CHANGES_REQUESTED",
+      feedback: "On reflection, the objectives need work.",
+    });
+
+    expect(dto.status).toBe("submitted");
+    expect(dto.verdict).toBe("CHANGES_REQUESTED");
+    expect(artifact.reviewStatus).toBe("draft"); // reviewed → draft on the flip
+    expect(artifact.save).toHaveBeenCalled();
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventKind: "REVIEW_SUBMITTED",
+        meta: expect.objectContaining({ resubmit: true, advancedTo: "draft" }),
+      }),
+    );
   });
 
   test("R4.2 a non-assigned teacher cannot submit (FORBIDDEN)", async () => {
@@ -331,8 +369,8 @@ describe("submitPlanReview", () => {
     ).rejects.toThrow(/feedback is required/i);
   });
 
-  test("cannot submit a round that is not open", async () => {
-    mockReviewFindById.mockResolvedValue(assignmentDoc({ status: "submitted" }));
+  test("cannot submit a closed (superseded) round", async () => {
+    mockReviewFindById.mockResolvedValue(assignmentDoc({ status: "superseded" }));
     await expect(
       submitPlanReview({
         assignmentId: ASSIGNMENT_ID.toString(),
@@ -500,6 +538,18 @@ describe("supersedeOpenRoundsForAddress (R2.2 re-import linkage)", () => {
     const n = await supersedeOpenRoundsForAddress(key, "superseded_by_reimport");
     expect(n).toBe(0);
     expect(mockReviewUpdateOne).not.toHaveBeenCalled();
+  });
+});
+
+describe("listMyReviewAssignments (R2.5)", () => {
+  test("returns the reviewer's assigned + submitted rounds (closed rounds drop off)", async () => {
+    mockReviewFind.mockReturnValue(query([rawRound({ status: "assigned", verdict: undefined }), rawRound({ status: "submitted" })]));
+    const list = await listMyReviewAssignments(REVIEWER_ID.toString());
+    expect(list).toHaveLength(2);
+    expect(mockReviewFind).toHaveBeenCalledWith({
+      reviewerId: REVIEWER_ID.toString(),
+      status: { $in: ["assigned", "submitted"] },
+    });
   });
 });
 
