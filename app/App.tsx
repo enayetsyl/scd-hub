@@ -5,6 +5,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
 import { Provider as UrqlProvider } from "urql";
 
@@ -16,6 +17,7 @@ import { AuthProvider } from "./src/auth/AuthContext";
 import { BasketProvider } from "./src/state/BasketContext";
 import { SectionProvider } from "./src/state/SectionContext";
 import { LanguageProvider, useLanguage } from "./src/state/LanguageContext";
+import { SidebarProvider } from "./src/state/SidebarContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { navigationRef, openNotificationCenter } from "./src/navigation/navigationRef";
 import { useNavigationTheme } from "./src/theme";
@@ -42,7 +44,10 @@ function LanguageScopedNavigator(): React.ReactElement {
 // to the initial tab (Content). We persist/restore the React Navigation state so
 // a refresh keeps the user on the screen they were on. Native apps don't reload,
 // so this is web-only (the section/auth contexts already persist themselves).
-const NAV_STATE_KEY = "scd_nav_state";
+// Bumped to _v2 when the navigator changed from bottom-tabs to a grouped drawer
+// (D-#258): a persisted v1 (tab) state tree is incompatible with the drawer
+// navigator, so a stale restore is dropped once on the first post-deploy load.
+const NAV_STATE_KEY = "scd_nav_state_v2";
 type NavState = React.ComponentProps<typeof NavigationContainer>["initialState"];
 
 function ThemedNavigation(): React.ReactElement | null {
@@ -119,19 +124,28 @@ function App(): React.ReactElement | null {
         <AppErrorFallback error={error as Error} resetError={resetError} />
       )}
     >
-      <SafeAreaProvider>
-        <UrqlProvider value={urqlClient}>
-          <LanguageProvider>
-            <AuthProvider>
-              <BasketProvider>
-                <SectionProvider>
-                  <ThemedNavigation />
-                </SectionProvider>
-              </BasketProvider>
-            </AuthProvider>
-          </LanguageProvider>
-        </UrqlProvider>
-      </SafeAreaProvider>
+      {/* GestureHandlerRootView wraps the whole app so the drawer's swipe-to-open
+          gesture works on native (D-#258). flex:1 is required. No-op on web. */}
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <UrqlProvider value={urqlClient}>
+            <LanguageProvider>
+              <AuthProvider>
+                <BasketProvider>
+                  <SectionProvider>
+                    {/* SidebarProvider sits above the navigator so the drawer
+                        (AppTabs) and every content Screen share one collapse
+                        state (D-#258). */}
+                    <SidebarProvider>
+                      <ThemedNavigation />
+                    </SidebarProvider>
+                  </SectionProvider>
+                </BasketProvider>
+              </AuthProvider>
+            </LanguageProvider>
+          </UrqlProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     </Sentry.ErrorBoundary>
   );
 }

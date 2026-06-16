@@ -10,5 +10,10 @@ module.exports = function (api) {
   api.cache(true);
   return {
     presets: ["babel-preset-expo"],
+    // react-native-reanimated/plugin powers the drawer navigator's animations and
+    // MUST be the LAST plugin in the list (its own hard requirement). This is the
+    // lightweight Babel plugin only — unrelated to the disabled NativeWind transform
+    // above, so it doesn't reintroduce the cold-bundle hang.
+    plugins: ["react-native-reanimated/plugin"],
   };
 };
