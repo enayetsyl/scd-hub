@@ -1,7 +1,7 @@
 /**
  * SlotList (R-3) — renders routine slots grouped by day, periods in order. Shared
- * by the group grid + my-routine views. Teacher/room are shown by id (a richer
- * name lookup is a later follow-up, like the other admin id forms).
+ * by the group grid + my-routine views. Each row shows the period's clock window +
+ * subject + teacher name (resolved server-side by enrichRoutineSlots).
  */
 import React from "react";
 import { View } from "react-native";
@@ -36,10 +36,15 @@ export function SlotList({
           <View style={{ gap: space(1) }}>
             {items.map((s) => (
               <View key={s.id} style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2) }}>
-                <Body style={{ flex: 1 }}>
-                  {STR.rtPeriodN} {bnNum(s.periodNumber)} · {s.isBreak ? STR.rtBreak : routineSubjectLabel(s.subject)}
-                </Body>
-                <Muted>{s.isBreak ? "" : s.teacherId ?? "—"}</Muted>
+                <View style={{ flex: 1 }}>
+                  <Body>
+                    {STR.rtPeriodN} {bnNum(s.periodNumber)} · {s.isBreak ? STR.rtBreak : routineSubjectLabel(s.subject)}
+                  </Body>
+                  {s.startTime && s.endTime ? (
+                    <Muted>{s.startTime}–{s.endTime}</Muted>
+                  ) : null}
+                </View>
+                <Muted>{s.isBreak ? "" : s.teacherName ?? s.teacherId ?? "—"}</Muted>
               </View>
             ))}
           </View>

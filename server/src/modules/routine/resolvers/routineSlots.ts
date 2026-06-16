@@ -20,6 +20,8 @@ import {
   cancelCover,
   coversForDate,
 } from "../services/RoutineCoverService";
+import { enrichRoutineSlots } from "../slotView";
+import { routineMasterGrid, routineMasterWeek, type MasterColumn, type MasterRow, type MasterConflict, type RoutineMaster } from "../routineMaster";
 import type { AvailabilityRow } from "../cover";
 
 export const RoutineSlotRef = builder.objectRef<IRoutineSlot>("RoutineSlot").implement({
@@ -43,6 +45,11 @@ export const RoutineSlotRef = builder.objectRef<IRoutineSlot>("RoutineSlot").imp
       nullable: true,
       resolve: (s) => (s as { coverTeacherId?: string | null }).coverTeacherId ?? null,
     }),
+    // View-only enrichment (R-3) — attached by enrichRoutineSlots on the read paths.
+    teacherName: t.string({ nullable: true, resolve: (s) => (s as { teacherName?: string | null }).teacherName ?? null }),
+    coverTeacherName: t.string({ nullable: true, resolve: (s) => (s as { coverTeacherName?: string | null }).coverTeacherName ?? null }),
+    startTime: t.string({ nullable: true, resolve: (s) => (s as { startTime?: string | null }).startTime ?? null }),
+    endTime: t.string({ nullable: true, resolve: (s) => (s as { endTime?: string | null }).endTime ?? null }),
   }),
 });
 
@@ -87,10 +94,12 @@ builder.queryField("routineSlots", (t) =>
       groupType: t.arg.string({ required: true }),
       groupId: t.arg.string({ required: true }),
     },
-    resolve: async (_r, args) =>
-      RoutineSlot.find({ groupType: args.groupType, groupId: args.groupId, active: true })
+    resolve: async (_r, args) => {
+      const slots = await RoutineSlot.find({ groupType: args.groupType, groupId: args.groupId, active: true })
         .sort({ dayOfWeek: 1, periodNumber: 1 })
-        .lean() as unknown as IRoutineSlot[],
+        .lean();
+      return enrichRoutineSlots(slots) as unknown as IRoutineSlot[];
+    },
   }),
 );
 
@@ -98,10 +107,12 @@ builder.queryField("myRoutineSlots", (t) =>
   t.field({
     type: [RoutineSlotRef],
     authScopes: { hasPermission: "routine:read" },
-    resolve: async (_r, _args, ctx) =>
-      RoutineSlot.find({ teacherId: ctx.auth!.userId, active: true })
+    resolve: async (_r, _args, ctx) => {
+      const slots = await RoutineSlot.find({ teacherId: ctx.auth!.userId, active: true })
         .sort({ dayOfWeek: 1, periodNumber: 1 })
-        .lean() as unknown as IRoutineSlot[],
+        .lean();
+      return enrichRoutineSlots(slots) as unknown as IRoutineSlot[];
+    },
   }),
 );
 
@@ -119,8 +130,67 @@ builder.queryField("routineForDate", (t) =>
       if (isNaN(d.getTime())) throw new Error("Invalid date");
       if (args.groupType !== "section" && args.groupType !== "subjectgroup")
         throw new Error("Invalid groupType");
-      return routineForDate(args.groupType, args.groupId, d);
+      const slots = await routineForDate(args.groupType, args.groupId, d);
+      return enrichRoutineSlots(slots) as unknown as IRoutineSlot[];
     },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Master grid (admin overview — all groups × periods for a day + conflicts, R-3)
+// ---------------------------------------------------------------------------
+
+const MasterColumnRef = builder.objectRef<MasterColumn>("RoutineMasterColumn").implement({
+  fields: (t) => ({
+    periodNumber: t.exposeInt("periodNumber"),
+    startTime: t.string({ nullable: true, resolve: (c) => c.startTime }),
+    endTime: t.string({ nullable: true, resolve: (c) => c.endTime }),
+    isBreak: t.exposeBoolean("isBreak"),
+  }),
+});
+const MasterRowRef = builder.objectRef<MasterRow>("RoutineMasterRow").implement({
+  fields: (t) => ({
+    groupType: t.exposeString("groupType"),
+    groupId: t.exposeString("groupId"),
+    label: t.exposeString("label"),
+    sublabel: t.string({ nullable: true, resolve: (r) => r.sublabel }),
+  }),
+});
+const MasterConflictRef = builder.objectRef<MasterConflict>("RoutineMasterConflict").implement({
+  fields: (t) => ({
+    periodNumber: t.exposeInt("periodNumber"),
+    teacherId: t.exposeString("teacherId"),
+    teacherName: t.string({ nullable: true, resolve: (c) => c.teacherName }),
+    labels: t.stringList({ resolve: (c) => c.labels }),
+  }),
+});
+const RoutineMasterRef = builder.objectRef<RoutineMaster>("RoutineMaster").implement({
+  fields: (t) => ({
+    day: t.exposeString("day"),
+    columns: t.field({ type: [MasterColumnRef], resolve: (m) => m.columns }),
+    rows: t.field({ type: [MasterRowRef], resolve: (m) => m.rows }),
+    slots: t.field({ type: [RoutineSlotRef], resolve: (m) => m.slots as unknown as IRoutineSlot[] }),
+    conflicts: t.field({ type: [MasterConflictRef], resolve: (m) => m.conflicts }),
+  }),
+});
+
+builder.queryField("routineMaster", (t) =>
+  t.field({
+    type: RoutineMasterRef,
+    authScopes: { hasPermission: "routine:manage" },
+    args: { day: t.arg.string({ required: true }) },
+    resolve: async (_r, args) => {
+      if (!(DAYS_OF_WEEK as readonly string[]).includes(args.day)) throw new Error("Invalid day");
+      return routineMasterGrid(args.day);
+    },
+  }),
+);
+
+builder.queryField("routineMasterWeek", (t) =>
+  t.field({
+    type: [RoutineMasterRef],
+    authScopes: { hasPermission: "routine:manage" },
+    resolve: async () => routineMasterWeek(),
   }),
 );
 

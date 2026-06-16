@@ -28,6 +28,7 @@ import {
   space,
   typeScale,
   MAX_CONTENT_WIDTH,
+  MAX_WIDE_CONTENT_WIDTH,
   type ThemeColors,
 } from "../theme";
 
@@ -39,11 +40,14 @@ export function Screen({
   children,
   scroll = false,
   padded = true,
+  wide = false,
   style,
 }: {
   children: React.ReactNode;
   scroll?: boolean;
   padded?: boolean;
+  /** Web/desktop: widen the centered frame for data-grid screens (master routine grid). */
+  wide?: boolean;
   style?: StyleProp<ViewStyle>;
 }): React.ReactElement {
   const styles = useStyles();
@@ -59,7 +63,7 @@ export function Screen({
   );
   return (
     <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
-      <View style={styles.frame}>{inner}</View>
+      <View style={wide ? styles.frameWide : styles.frame}>{inner}</View>
     </SafeAreaView>
   );
 }
@@ -490,6 +494,7 @@ const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.bg },
   // §6 web/desktop: the phone layout centered at max 720dp, bg filling the rest.
   frame: { flex: 1, width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
+  frameWide: { flex: 1, width: "100%", maxWidth: MAX_WIDE_CONTENT_WIDTH, alignSelf: "center" },
   flex: { flex: 1 },
   padded: { padding: space(4) },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: space(6) },
