@@ -6,7 +6,8 @@ import "dotenv/config";
 // No-op unless SENTRY_DSN is set, so dev/jest are unchanged.
 import { sentryYogaPlugin, sentryEnabled, Sentry } from "./observability/sentry";
 import express from "express";
-import { createYoga } from "graphql-yoga";
+import { createYoga, maskError } from "graphql-yoga";
+import { GraphQLError } from "graphql";
 import { connectDb } from "./db";
 import { buildContext } from "./context";
 
@@ -112,8 +113,39 @@ if (process.env.SENTRY_DEBUG_ROUTE === "1" && process.env.NODE_ENV !== "producti
 
 const schema = builder.toSchema();
 
+/**
+ * Errors whose message is a deliberate, user-facing validation/business message and
+ * may be shown to the client. Everything NOT listed here (DB/driver/internal errors,
+ * Mongo/JWT/TypeError, …) stays masked to a generic message — default-deny, so a new
+ * internal error can never leak. ADD a module's error class here when it should surface.
+ * (Matched by constructor.name, which is reliable even for empty-body `extends Error`.)
+ */
+const EXPOSED_DOMAIN_ERRORS = new Set<string>([
+  "ForbiddenError", "ReviewError", "AccessControlError", "ChatAttachmentError",
+  "DriveUnavailableError", "ChatError", "Ref11ValidationError", "QuranValidationError",
+  "StudentCommentError", "ParentMeetingError", "MeetingCommentError", "SectionMergeError",
+  "ClassroomObservationError", "AttendanceImportError", "AttendanceError", "PushDeviceError",
+  "AttendanceReminderError", "VocabError", "LeaveError", "PerformanceError",
+  "OffboardingError", "PayrollError", "MessageTemplateError", "AttendanceParseError",
+  "FinanceError", "LibraryError", "RevisionError", "ClassTestResultError",
+]);
+
+/**
+ * Surface intentional domain-error messages instead of the catch-all "Unexpected error"
+ * Yoga otherwise applies to every thrown Error. Anything else falls back to the default
+ * mask, so internal details never reach the client.
+ */
+function maskErrorExposingDomain(error: unknown, message: string, isDev?: boolean): Error {
+  const original = (error as { originalError?: unknown })?.originalError;
+  if (original instanceof Error && EXPOSED_DOMAIN_ERRORS.has(original.constructor.name)) {
+    return new GraphQLError(original.message);
+  }
+  return maskError(error, message, isDev);
+}
+
 const yoga = createYoga({
   schema,
+  maskedErrors: { maskError: maskErrorExposingDomain },
   // MON-2: capture real resolver faults (role + operation) into GlitchTip.
   plugins: [sentryYogaPlugin],
   context: ({ request }) => {
