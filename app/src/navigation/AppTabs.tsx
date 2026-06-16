@@ -80,6 +80,7 @@ import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
 import RoutineHomeScreen from "../screens/routine/RoutineHomeScreen";
 import MyRoutineScreen from "../screens/routine/MyRoutineScreen";
+import RoutineMasterScreen from "../screens/routine/RoutineMasterScreen";
 import GroupRoutineScreen from "../screens/routine/GroupRoutineScreen";
 import RoutineEditorScreen from "../screens/routine/RoutineEditorScreen";
 import CoverManageScreen from "../screens/routine/CoverManageScreen";
@@ -429,6 +430,7 @@ function RoutineNavigator(): React.ReactElement {
     <RoutineStack.Navigator screenOptions={stackOptions}>
       <RoutineStack.Screen name="RoutineHome" component={RoutineHomeScreen} options={{ title: STR.routineTitle }} />
       <RoutineStack.Screen name="MyRoutine" component={MyRoutineScreen} options={{ title: STR.myRoutineTitle }} />
+      <RoutineStack.Screen name="RoutineMaster" component={RoutineMasterScreen} options={{ title: STR.rtMasterTitle }} />
       <RoutineStack.Screen name="GroupRoutine" component={GroupRoutineScreen} options={{ title: STR.groupRoutineTitle }} />
       <RoutineStack.Screen name="RoutineEditor" component={RoutineEditorScreen} options={{ title: STR.editRoutineTitle }} />
       <RoutineStack.Screen name="CoverManage" component={CoverManageScreen} options={{ title: STR.coverManageTitle }} />

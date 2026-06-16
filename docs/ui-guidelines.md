@@ -139,7 +139,8 @@ Hard rules:
 - **One column.** No side-by-side panels on phone. Bottom tab bar (existing pattern) holds ≤ 5 tabs; deeper navigation stacks within a tab.
 - **Thumb zone:** the screen's primary action (submit, confirm, declare) sits in the lower half — bottom-fixed button bar preferred on forms. A destructive action is never directly adjacent to the primary action.
 - **Corner radius:** 12dp cards/buttons/inputs; 999 (pill) chips; 8dp small badges.
-- **Web/desktop:** the same layout centered, `maxWidth` 720dp, `bg` filling the rest.
+- **Web/desktop:** the same layout centered, `maxWidth` 720dp, `bg` filling the rest. Data-grid
+  screens (the admin master routine grid) opt into a wider frame via `Screen wide` — `maxWidth` 1400dp.
 
 ## 7. Components
 

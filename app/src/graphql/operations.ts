@@ -1656,11 +1656,16 @@ export interface RoutineSlotT {
   effectiveTo: string | null;
   active: boolean;
   coverTeacherId: string | null;
+  teacherName: string | null;
+  coverTeacherName: string | null;
+  startTime: string | null;
+  endTime: string | null;
 }
 
 const ROUTINE_SLOT_FIELDS = `
   id groupType groupId classId dayOfWeek periodNumber subject track
   isBreak teacherId roomId effectiveFrom effectiveTo active coverTeacherId
+  teacherName coverTeacherName startTime endTime
 `;
 
 export const ROUTINE_SLOTS_QUERY = gql<
@@ -1676,6 +1681,32 @@ export const MY_ROUTINE_QUERY = gql<{ myRoutineSlots: RoutineSlotT[] }, NoVars>`
   query MyRoutine {
     myRoutineSlots { ${ROUTINE_SLOT_FIELDS} }
   }
+`;
+
+// Master grid (admin overview): all groups × periods for one day + conflicts.
+export interface RoutineMasterColumnT { periodNumber: number; startTime: string | null; endTime: string | null; isBreak: boolean; }
+export interface RoutineMasterRowT { groupType: string; groupId: string; label: string; sublabel: string | null; }
+export interface RoutineMasterSlotT { id: string; groupType: string; groupId: string; periodNumber: number; subject: string; isBreak: boolean; teacherId: string | null; teacherName: string | null; }
+export interface RoutineMasterConflictT { periodNumber: number; teacherId: string; teacherName: string | null; labels: string[]; }
+export interface RoutineMasterT {
+  day: string;
+  columns: RoutineMasterColumnT[];
+  rows: RoutineMasterRowT[];
+  slots: RoutineMasterSlotT[];
+  conflicts: RoutineMasterConflictT[];
+}
+const ROUTINE_MASTER_FIELDS = `
+  day
+  columns { periodNumber startTime endTime isBreak }
+  rows { groupType groupId label sublabel }
+  slots { id groupType groupId periodNumber subject isBreak teacherId teacherName }
+  conflicts { periodNumber teacherId teacherName labels }
+`;
+export const ROUTINE_MASTER_QUERY = gql<{ routineMaster: RoutineMasterT }, { day: string }>`
+  query RoutineMaster($day: String!) { routineMaster(day: $day) { ${ROUTINE_MASTER_FIELDS} } }
+`;
+export const ROUTINE_MASTER_WEEK_QUERY = gql<{ routineMasterWeek: RoutineMasterT[] }, NoVars>`
+  query RoutineMasterWeek { routineMasterWeek { ${ROUTINE_MASTER_FIELDS} } }
 `;
 
 export interface SubjectGroupT {

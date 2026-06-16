@@ -52,3 +52,7 @@ export const typeScale = {
 
 /** §6 — web/desktop renders the phone layout centered at this max width. */
 export const MAX_CONTENT_WIDTH = 720;
+
+/** §6 — wide opt-out for data-grid screens (e.g. the master routine grid) that need
+ *  the full laptop width; still capped so it doesn't sprawl on very large monitors. */
+export const MAX_WIDE_CONTENT_WIDTH = 1400;

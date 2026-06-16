@@ -33,7 +33,10 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }}>
         <Button title={STR.rtMyRoutine} onPress={() => navigation.navigate("MyRoutine")} />
         {canManage ? (
-          <Button title={STR.rtBellSchedule} variant="secondary" onPress={() => navigation.navigate("BellSchedule")} />
+          <>
+            <Button title={STR.rtMasterGrid} onPress={() => navigation.navigate("RoutineMaster")} />
+            <Button title={STR.rtBellSchedule} variant="secondary" onPress={() => navigation.navigate("BellSchedule")} />
+          </>
         ) : null}
 
         <Card>
