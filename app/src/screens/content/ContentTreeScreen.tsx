@@ -5,9 +5,10 @@
  * questions/stimuli live in the Questions tab. Scope is enforced server-side,
  * so a supervisory teacher naturally sees content beyond their teaching sections.
  */
-import React, { useState, useMemo } from "react";
-import { View, ScrollView } from "react-native";
+import React, { useState, useMemo, useRef, useCallback } from "react";
+import { View, ScrollView, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "urql";
 import { SUBJECTS, CLASS_LEVELS, CURATION_TAGS, PLAN_DOC_TYPES } from "@scd/shared";
 import { CONTENT_TREE_QUERY } from "../../graphql/operations";
@@ -31,6 +32,7 @@ import {
   classLevelLabel,
   curationTagLabel,
   reviewStatusLabel,
+  docTypeLabel,
   bnNum,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -48,11 +50,42 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
   const [subject, setSubject] = useState<string | null>(null);
   const [classLevel, setClassLevel] = useState<number | null>(null);
   const [curationTag, setCurationTag] = useState<string | null>(null);
+  const [docType, setDocType] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // One-line summary of the active filters, shown in the collapsed accordion header
+  // so it's clear what's applied without expanding it.
+  const activeFilters = useMemo(
+    () =>
+      [
+        subject ? subjectLabel(subject) : null,
+        classLevel != null ? classLevelLabel(classLevel) : null,
+        docType ? docTypeLabel(docType) : null,
+        curationTag ? curationTagLabel(curationTag) : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    [subject, classLevel, docType, curationTag],
+  );
 
   const [{ data, fetching, error }, refetch] = useQuery({
     query: CONTENT_TREE_QUERY,
     variables: { subject, classLevel },
   });
+
+  // Re-fetch whenever the tab regains focus (e.g. after an Admin → Import) so a
+  // freshly imported plan appears without a full app reload. The initial mount
+  // already fetches via useQuery, so skip the first focus to avoid a double hit.
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      refetch({ requestPolicy: "network-only" });
+    }, [refetch]),
+  );
 
   const nodes = data?.contentTree ?? [];
 
@@ -67,18 +100,35 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
               artifacts: c.artifacts.filter(
                 (a) =>
                   PLAN_TYPES.has(a.docType) &&
-                  (!curationTag || a.curationTag === curationTag),
+                  (!curationTag || a.curationTag === curationTag) &&
+                  (!docType || a.docType === docType),
               ),
             }))
             .filter((c) => c.artifacts.length > 0),
         }))
         .filter((n) => n.chapters.length > 0),
-    [nodes, curationTag],
+    [nodes, curationTag, docType],
   );
 
   return (
     <Screen padded={false}>
-      <View style={{ padding: space(4), paddingBottom: 0 }}>
+      <View style={{ padding: space(4), paddingBottom: filtersOpen ? 0 : space(2) }}>
+        <Pressable
+          onPress={() => setFiltersOpen((o) => !o)}
+          accessibilityRole="button"
+          style={{ flexDirection: "row", alignItems: "center", gap: space(2), paddingVertical: space(1) }}
+        >
+          <Body style={{ fontWeight: "700" }}>{STR.filters}</Body>
+          {!filtersOpen && activeFilters ? (
+            <Muted style={{ flex: 1 }}>{activeFilters}</Muted>
+          ) : (
+            <View style={{ flex: 1 }} />
+          )}
+          <Body style={{ fontWeight: "700" }}>{filtersOpen ? "▾" : "▸"}</Body>
+        </Pressable>
+
+        {filtersOpen ? (
+        <>
         <Muted>{STR.subject}</Muted>
         <ChipRow>
           <Chip label={STR.all} selected={subject === null} onPress={() => setSubject(null)} />
@@ -105,6 +155,19 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
           ))}
         </ChipRow>
 
+        <Muted>{STR.planType}</Muted>
+        <ChipRow>
+          <Chip label={STR.all} selected={docType === null} onPress={() => setDocType(null)} />
+          {PLAN_DOC_TYPES.map((t) => (
+            <Chip
+              key={t}
+              label={docTypeLabel(t)}
+              selected={docType === t}
+              onPress={() => setDocType(docType === t ? null : t)}
+            />
+          ))}
+        </ChipRow>
+
         <Muted>{STR.curationTag}</Muted>
         <ChipRow>
           <Chip label={STR.all} selected={curationTag === null} onPress={() => setCurationTag(null)} />
@@ -117,6 +180,8 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
             />
           ))}
         </ChipRow>
+        </>
+        ) : null}
       </View>
 
       {error ? (
@@ -150,7 +215,10 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
                         </Body>
                         <Badge text={reviewStatusLabel(a.reviewStatus)} tone={reviewTone(a.reviewStatus)} />
                       </View>
-                      <Muted style={{ marginTop: 4 }}>{curationTagLabel(a.curationTag)}</Muted>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: space(1) }}>
+                        <Badge text={docTypeLabel(a.docType)} tone="info" />
+                        <Muted>{curationTagLabel(a.curationTag)}</Muted>
+                      </View>
                     </Card>
                   ))}
                 </View>

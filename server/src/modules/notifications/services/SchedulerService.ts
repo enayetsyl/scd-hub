@@ -130,6 +130,28 @@ async function runOnce(dateKey: string, key: string, fn: () => Promise<void>): P
 export function resetSchedulerMemory(): void {
   fired.clear();
   firedDateKey = "";
+  lastTickAt = null;
+}
+
+// ---------------------------------------------------------------------------
+// Ticker heartbeat (MON-4, prd-observability.md §4) — the watchdog the off-box
+// monitor checks so a STALLED ticker (a silent failure: no exception thrown, just
+// nothing firing) is caught. Updated at the START of every pass, so it reflects
+// "the ticker is alive" regardless of whether the day emitted anything.
+// ---------------------------------------------------------------------------
+let lastTickAt: Date | null = null;
+
+/** Health probe for the notification ticker: when it last ran + how stale that is.
+ *  Exposed at GET /internal/ticker; MON-5's external monitor alerts past ~2× the 60s
+ *  interval. `ageSeconds` is null before the first tick (e.g. under jest). */
+export function getTickerHealth(now = new Date()): {
+  lastTickAt: string | null;
+  ageSeconds: number | null;
+} {
+  return {
+    lastTickAt: lastTickAt ? lastTickAt.toISOString() : null,
+    ageSeconds: lastTickAt ? Math.floor((now.getTime() - lastTickAt.getTime()) / 1000) : null,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -163,6 +185,7 @@ async function family(label: string, body: () => Promise<void>): Promise<void> {
 /** One scheduler pass. Pure-in-time: `now` is injectable for tests; production
  *  ticks call it with the wall clock. Safe to run any number of times. */
 export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
+  lastTickAt = now; // MON-4 heartbeat — set first, before any early return
   const dateKey = dateKeyOf(now);
   const summary: TickSummary = {
     dateKey,

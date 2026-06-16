@@ -247,6 +247,21 @@ function HeaderBell(): React.ReactElement {
   );
 }
 
+/** MON-3: "Report a problem" — opens the root-level report modal (any authed user). */
+function ReportButton(): React.ReactElement {
+  const navigation = useNavigation();
+  return (
+    <Pressable
+      onPress={() => (navigation as unknown as { navigate: (name: string) => void }).navigate("ReportProblem")}
+      style={{ paddingHorizontal: 8 }}
+      hitSlop={12}
+      accessibilityLabel={STR.reportProblem}
+    >
+      <Text style={{ fontSize: 18 }}>🐞</Text>
+    </Pressable>
+  );
+}
+
 function LogoutButton(): React.ReactElement {
   const { logout } = useAuth();
   const colors = useColors();
@@ -288,6 +303,7 @@ function HeaderRight(): React.ReactElement {
     <View style={{ flexDirection: "row", alignItems: "center" }}>
       <HeaderName />
       <HeaderBell />
+      <ReportButton />
       <LangToggle />
       <LogoutButton />
     </View>

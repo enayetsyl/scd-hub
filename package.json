@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": ["shared", "server", "app"],
   "scripts": {
+    "postinstall": "patch-package",
     "dev:server": "npm run dev --workspace=server",
     "test": "npm run test --workspace=server",
     "test:server": "npm run test --workspace=server",
@@ -10,6 +11,7 @@
     "verify:vocab": "npx tsx skills/_tools/verify_shared_vocab.mjs docs/import-contract.schema.json"
   },
   "devDependencies": {
+    "patch-package": "^8.0.1",
     "typescript": "^5.4.5"
   }
 }

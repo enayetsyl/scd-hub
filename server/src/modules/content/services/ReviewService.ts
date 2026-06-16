@@ -47,6 +47,22 @@ export function advanceOnApprove(current: ReviewStatus): ReviewStatus | null {
   return current === "draft" ? "reviewed" : null;
 }
 
+/**
+ * The reviewStatus a (re)submitted verdict should drive the plan to, or `null` for
+ * "leave unchanged". Symmetric so a reviewer who edits their decision (R4 resubmit)
+ * stays coherent:
+ *   • APPROVE            : draft → reviewed (else no-op; reviewed stays reviewed).
+ *   • CHANGES_REQUESTED  : reviewed → draft (a previously-approved plan drops back so
+ *                          the Principal can't sign off a plan the reviewer just rejected).
+ * `gold` is never touched — once signed off the round is closed (superseded), so this
+ * guard is only a safety net.
+ */
+export function reviewStatusForVerdict(current: ReviewStatus, verdict: ReviewVerdict): ReviewStatus | null {
+  if (current === "gold") return null;
+  if (verdict === "APPROVE") return current === "draft" ? "reviewed" : null;
+  return current === "reviewed" ? "draft" : null; // CHANGES_REQUESTED
+}
+
 interface AddressKeyInput {
   docType: string;
   subject: string;
@@ -271,9 +287,13 @@ export async function submitPlanReview(input: SubmitReviewInput): Promise<Review
     // Row-scope: only the assigned reviewer may submit (R4.2).
     throw new ReviewError("FORBIDDEN: not the assigned reviewer");
   }
-  if (assignment.status !== "assigned") {
+  // Open for (re)submission while the round is still live. A reviewer may edit their
+  // own already-submitted decision (R4 resubmit) — but a superseded/cancelled round
+  // (a new version re-imported, a new round assigned, or admin sign-off) is closed.
+  if (assignment.status !== "assigned" && assignment.status !== "submitted") {
     throw new ReviewError(`Round is not open for submission (status=${assignment.status})`);
   }
+  const isResubmit = assignment.status === "submitted";
 
   assignment.verdict = verdict;
   assignment.feedback = feedback.length > 0 ? feedback : undefined;
@@ -281,17 +301,16 @@ export async function submitPlanReview(input: SubmitReviewInput): Promise<Review
   assignment.status = "submitted";
   await assignment.save();
 
-  // APPROVE advances the quality gate draft→reviewed (D-#38).
+  // Sync the quality gate to the current verdict, both directions (D-#38 + R4 resubmit):
+  // APPROVE drives draft→reviewed; a resubmitted CHANGES_REQUESTED reverts reviewed→draft.
   let advancedTo: ReviewStatus | null = null;
-  if (verdict === "APPROVE") {
-    const artifact = await ContentArtifact.findById(assignment.artifactId);
-    if (artifact) {
-      const next = advanceOnApprove(artifact.reviewStatus);
-      if (next) {
-        artifact.reviewStatus = next;
-        await artifact.save();
-        advancedTo = next;
-      }
+  const artifact = await ContentArtifact.findById(assignment.artifactId);
+  if (artifact) {
+    const next = reviewStatusForVerdict(artifact.reviewStatus, verdict);
+    if (next) {
+      artifact.reviewStatus = next;
+      await artifact.save();
+      advancedTo = next;
     }
   }
 
@@ -301,7 +320,7 @@ export async function submitPlanReview(input: SubmitReviewInput): Promise<Review
     actorRole: input.actorRole,
     targetId: assignment._id.toString(),
     targetKind: "ReviewAssignment",
-    meta: { verdict, advancedTo, artifactId: assignment.artifactId.toString() },
+    meta: { verdict, advancedTo, artifactId: assignment.artifactId.toString(), resubmit: isResubmit },
   });
 
   return toDTO(assignment as unknown as RawAssignment);
@@ -360,9 +379,16 @@ export async function reviewerMayReadArtifact(reviewerId: string, artifactId: st
 // Queries (lists for PR-1 surfaces; the richer inbox/thread land in PR-2)
 // ---------------------------------------------------------------------------
 
-/** A teacher's open review queue (R2.5). */
+/**
+ * A teacher's review queue (R2.5) — the rounds they can still act on: `assigned`
+ * (awaiting their verdict) AND `submitted` (already decided, but editable/resubmittable
+ * until the version is superseded or the Principal signs off). Closed rounds
+ * (superseded/cancelled) drop off. Submitted-first so freshly decided rounds surface.
+ */
 export async function listMyReviewAssignments(reviewerId: string): Promise<ReviewAssignmentDTO[]> {
-  const docs = await ReviewAssignment.find({ reviewerId, status: "assigned" }).sort({ assignedAt: -1 }).lean();
+  const docs = await ReviewAssignment.find({ reviewerId, status: { $in: ["assigned", "submitted"] } })
+    .sort({ status: 1, assignedAt: -1 })
+    .lean();
   return (docs as unknown as RawAssignment[]).map(toDTO);
 }
 

@@ -9,6 +9,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { Provider as UrqlProvider } from "urql";
 
 import { urqlClient } from "./src/graphql/client";
+import { initSentry, Sentry } from "./src/observability/sentry";
+import { AppErrorFallback } from "./src/observability/AppErrorFallback";
 import { getItem, setItem } from "./src/lib/storage";
 import { AuthProvider } from "./src/auth/AuthContext";
 import { BasketProvider } from "./src/state/BasketContext";
@@ -21,6 +23,10 @@ import { useNavigationTheme } from "./src/theme";
 // Splash holds until Noto Sans Bengali is loaded (ui-guidelines §13.2) — text
 // never flashes in the platform font.
 void SplashScreen.preventAutoHideAsync();
+
+// MON-3 (prd-observability.md §4): init @sentry/react-native at boot. A no-op unless
+// EXPO_PUBLIC_SENTRY_DSN is set, so local dev / the web-export gate are unaffected.
+initSentry();
 
 /**
  * Keying RootNavigator by the active language remounts the navigation subtree on a
@@ -89,7 +95,7 @@ function ThemedNavigation(): React.ReactElement | null {
   );
 }
 
-export default function App(): React.ReactElement | null {
+function App(): React.ReactElement | null {
   // Only the three faces the type scale uses (§5) — requiring the package
   // index would bundle every weight.
   const [fontsLoaded] = useFonts({
@@ -105,18 +111,30 @@ export default function App(): React.ReactElement | null {
   if (!fontsLoaded) return null;
 
   return (
-    <SafeAreaProvider>
-      <UrqlProvider value={urqlClient}>
-        <LanguageProvider>
-          <AuthProvider>
-            <BasketProvider>
-              <SectionProvider>
-                <ThemedNavigation />
-              </SectionProvider>
-            </BasketProvider>
-          </AuthProvider>
-        </LanguageProvider>
-      </UrqlProvider>
-    </SafeAreaProvider>
+    // MON-3: a top-level ErrorBoundary catches white-screen render crashes (web
+    // especially), reports them, and shows a friendly fallback. Placed OUTSIDE the
+    // providers so it survives a crash in any of them.
+    <Sentry.ErrorBoundary
+      fallback={({ error, resetError }) => (
+        <AppErrorFallback error={error as Error} resetError={resetError} />
+      )}
+    >
+      <SafeAreaProvider>
+        <UrqlProvider value={urqlClient}>
+          <LanguageProvider>
+            <AuthProvider>
+              <BasketProvider>
+                <SectionProvider>
+                  <ThemedNavigation />
+                </SectionProvider>
+              </BasketProvider>
+            </AuthProvider>
+          </LanguageProvider>
+        </UrqlProvider>
+      </SafeAreaProvider>
+    </Sentry.ErrorBoundary>
   );
 }
+
+// MON-3: `Sentry.wrap` registers native crash handlers + the routing instrumentation.
+export default Sentry.wrap(App);

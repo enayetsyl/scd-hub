@@ -29,3 +29,19 @@ say "dumped $SIZE"
 node "$DIR/scripts/drive-backup.mjs" "$ARCHIVE" >>"$LOG" 2>&1 || fail "drive upload/rotate error"
 rm -f "$ARCHIVE"
 say "done ($SIZE uploaded + rotated)"
+
+# GlitchTip (MON-1) Postgres -> gzip -> its OWN Drive subfolder + rotation pool.
+# Non-fatal by design: a GlitchTip backup hiccup must never fail the prod Mongo
+# backup above. Container name + DB are the GlitchTip compose defaults.
+GTAR="/tmp/glitchtip_prod-${STAMP}.sql.gz"
+if docker exec glitchtip-postgres-1 pg_dump -U postgres postgres 2>/dev/null | gzip >"$GTAR"; then
+  GTSIZE="$(du -h "$GTAR" | cut -f1)"
+  if node "$DIR/scripts/drive-backup.mjs" "$GTAR" "SCD-Hub-Backups-GlitchTip" >>"$LOG" 2>&1; then
+    say "glitchtip dumped + uploaded ($GTSIZE)"
+  else
+    say "WARN glitchtip drive upload failed (non-fatal)"
+  fi
+  rm -f "$GTAR"
+else
+  say "WARN glitchtip pg_dump failed (non-fatal)"; rm -f "$GTAR"
+fi

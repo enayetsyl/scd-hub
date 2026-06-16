@@ -1,8 +1,13 @@
 // Deploy: CI/CD via GitHub Actions (.github/workflows) — push to dev/main runs
 // the CI gate then scripts/deploy.sh on the VM (DEP-6).
 import "dotenv/config";
+// MON-2 (prd-observability.md §4): init `@sentry/node` FIRST — right after env load,
+// before express/yoga — so unhandled errors are captured and http is instrumented.
+// No-op unless SENTRY_DSN is set, so dev/jest are unchanged.
+import { sentryYogaPlugin, sentryEnabled, Sentry } from "./observability/sentry";
 import express from "express";
-import { createYoga } from "graphql-yoga";
+import { createYoga, maskError } from "graphql-yoga";
+import { GraphQLError } from "graphql";
 import { connectDb } from "./db";
 import { buildContext } from "./context";
 
@@ -81,7 +86,7 @@ import { setPdfRouter } from "./modules/assessment/routes/setPdf";
 import { filesRouter } from "./routes/files";
 import { triggersRouter } from "./routes/triggers";
 import { registerExpoPushChannel } from "./modules/notifications/services/pushChannel";
-import { startNotificationTicker } from "./modules/notifications/services/SchedulerService";
+import { startNotificationTicker, getTickerHealth } from "./modules/notifications/services/SchedulerService";
 
 const app = express();
 
@@ -93,11 +98,56 @@ app.get("/readyz", async (_req, res) => {
   if (state === 1) res.json({ ok: true });
   else res.status(503).json({ ok: false, dbState: state });
 });
+// MON-4: notification-ticker heartbeat (no PII). MON-5's off-box monitor watches
+// `ageSeconds` and alerts when the ticker stalls (past ~2× the 60s interval).
+app.get("/internal/ticker", (_req, res) => res.json(getTickerHealth()));
+
+// MON-2 verification aid (operator-only): set SENTRY_DEBUG_ROUTE=1 on a NON-production
+// service to force a captured server fault, confirm it lands in GlitchTip (with the
+// secrets scrubbed), then unset. Never registered on production.
+if (process.env.SENTRY_DEBUG_ROUTE === "1" && process.env.NODE_ENV !== "production") {
+  app.get("/debug/sentry", () => {
+    throw new Error("MON-2 server smoke (debug route)");
+  });
+}
 
 const schema = builder.toSchema();
 
+/**
+ * Errors whose message is a deliberate, user-facing validation/business message and
+ * may be shown to the client. Everything NOT listed here (DB/driver/internal errors,
+ * Mongo/JWT/TypeError, …) stays masked to a generic message — default-deny, so a new
+ * internal error can never leak. ADD a module's error class here when it should surface.
+ * (Matched by constructor.name, which is reliable even for empty-body `extends Error`.)
+ */
+const EXPOSED_DOMAIN_ERRORS = new Set<string>([
+  "ForbiddenError", "ReviewError", "AccessControlError", "ChatAttachmentError",
+  "DriveUnavailableError", "ChatError", "Ref11ValidationError", "QuranValidationError",
+  "StudentCommentError", "ParentMeetingError", "MeetingCommentError", "SectionMergeError",
+  "ClassroomObservationError", "AttendanceImportError", "AttendanceError", "PushDeviceError",
+  "AttendanceReminderError", "VocabError", "LeaveError", "PerformanceError",
+  "OffboardingError", "PayrollError", "MessageTemplateError", "AttendanceParseError",
+  "FinanceError", "LibraryError", "RevisionError", "ClassTestResultError",
+]);
+
+/**
+ * Surface intentional domain-error messages instead of the catch-all "Unexpected error"
+ * Yoga otherwise applies to every thrown Error. Anything else falls back to the default
+ * mask, so internal details never reach the client.
+ */
+function maskErrorExposingDomain(error: unknown, message: string, isDev?: boolean): Error {
+  const original = (error as { originalError?: unknown })?.originalError;
+  if (original instanceof Error && EXPOSED_DOMAIN_ERRORS.has(original.constructor.name)) {
+    return new GraphQLError(original.message);
+  }
+  return maskError(error, message, isDev);
+}
+
 const yoga = createYoga({
   schema,
+  maskedErrors: { maskError: maskErrorExposingDomain },
+  // MON-2: capture real resolver faults (role + operation) into GlitchTip.
+  plugins: [sentryYogaPlugin],
   context: ({ request }) => {
     // Yoga delivers a WHATWG Request whose headers are a Fetch `Headers` object
     // (read via .get); the raw Node req is not reliably exposed as `.raw`, so
@@ -145,6 +195,11 @@ app.use("/files", filesRouter);
 // Trigger endpoints (AT-4, D-#65): external scheduler → idempotent reminder
 // dispatch (shared-secret auth, not a browser surface → no CORS).
 app.use("/triggers", triggersRouter);
+
+// MON-2: capture faults thrown by the thin REST surface (pdf/files/triggers) + the
+// debug route into GlitchTip. Registered AFTER all routes (Express error-middleware
+// contract); a no-op unless SENTRY_DSN is set.
+if (sentryEnabled) Sentry.setupExpressErrorHandler(app);
 
 const PORT = Number(process.env.PORT ?? 4000);
 

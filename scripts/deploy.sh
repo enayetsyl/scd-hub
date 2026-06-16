@@ -22,7 +22,23 @@ build() {
   npm install --no-audit --no-fund
   npm run build --workspace=shared
   npm run build --workspace=server
-  ( cd app && npx expo export --platform web )
+  # MON-3 (prd-observability.md §4): web bundle + source-map upload to GlitchTip so
+  # stack traces are symbolicated. Debug-IDs (injected by the Sentry metro serializer)
+  # match the maps to the bundle, so no release coordination is needed. Guarded by
+  # SENTRY_AUTH_TOKEN (a VM-only build secret, never committed) so it's INERT until the
+  # operator provides it; the upload is NON-FATAL so a Sentry hiccup never blocks a
+  # deploy; the .map files are DELETED after upload so they are never served publicly.
+  if [ -n "${SENTRY_AUTH_TOKEN:-}" ]; then
+    ( cd app \
+        && npx expo export --platform web --source-maps \
+        && { npx sentry-cli sourcemaps upload \
+               --url https://errors.scdhub.shafayet.me --org scd --project scdhub-app \
+               --release "$(git rev-parse HEAD)" dist \
+             || say "sentry sourcemap upload failed (non-fatal)"; } \
+        ; find dist -name '*.map' -delete )
+  else
+    ( cd app && npx expo export --platform web )
+  fi
 }
 healthy() {
   for _ in $(seq 1 15); do

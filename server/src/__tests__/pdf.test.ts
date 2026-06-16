@@ -66,6 +66,29 @@ describe("PDF smoke test (J1.8 — Bangla typography)", () => {
   }, 30_000);
 });
 
+describe("PDF — Bengali reph / GPOS mark positioning (fontkit null-anchor regression)", () => {
+  // Reph conjuncts (র্ + consonant: পদার্থ, ধর্ম, নির্বাচিত, পর্যবেক্ষণ) tripped a
+  // fontkit 2.0.4 GPOS bug — getAnchor() dereferenced a null mark anchor and threw
+  // "Cannot read properties of null (reading 'xCoordinate')", which crashed the
+  // whole server (the PDF route had no try/catch). Guarded via patches/fontkit+2.0.4.patch.
+  // This text is reph-heavy on purpose; if the patch is lost this test crashes/fails.
+  const REPH_MARKDOWN = `
+# অধ্যায় ৫: পদার্থের গঠন — পঞ্চম শ্রেণি বিজ্ঞান
+
+পদার্থের ধর্ম পর্যবেক্ষণ করে নির্বাচিত বিষয় সংরক্ষণ করতে হবে।
+
+| বিষয় | মান |
+| --- | --- |
+| মোট প্রশ্ন | আবৃত্তি, শব্দার্থ মিলিয়ে নির্বাচিত |
+`;
+
+  test("renders reph-heavy Bengali to a valid PDF without throwing", async () => {
+    const buf = await markdownToPdf(REPH_MARKDOWN, { title: "পদার্থের গঠন" });
+    expect(buf.slice(0, 4).toString("ascii")).toBe("%PDF");
+    expect(buf.byteLength).toBeGreaterThan(5_000);
+  }, 30_000);
+});
+
 describe("PDF — HTML comments + tables", () => {
   test("stripHtmlComments removes single- and multi-line comments", () => {
     expect(stripHtmlComments("a <!-- x --> b")).toBe("a  b");

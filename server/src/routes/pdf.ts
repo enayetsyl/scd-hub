@@ -37,10 +37,17 @@ pdfRouter.get("/artifact/:id", async (req: Request, res: Response) => {
     ? `${artifact.subject} — ${artifact.address.anchorWord} ${artifact.address.number}: ${artifact.address.title}`
     : `${artifact.subject} — ${artifact.address?.anchorWord} ${artifact.address?.number}`;
 
-  const pdfBuffer = await markdownToPdf(artifact.renderedMarkdown, { title });
-
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `inline; filename="artifact_${req.params.id}.pdf"`);
-  res.setHeader("Content-Length", pdfBuffer.byteLength);
-  res.send(pdfBuffer);
+  // Render is isolated in try/catch: a renderer/font failure must return 500, never
+  // reject out of the async handler and crash the Node process (Express 4 does not
+  // catch async errors). Headers aren't sent until the buffer is ready, so 500 is safe.
+  try {
+    const pdfBuffer = await markdownToPdf(artifact.renderedMarkdown, { title });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="artifact_${req.params.id}.pdf"`);
+    res.setHeader("Content-Length", pdfBuffer.byteLength);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error(`PDF render failed for artifact ${req.params.id}:`, err);
+    res.status(500).json({ error: "Could not generate the PDF" });
+  }
 });
