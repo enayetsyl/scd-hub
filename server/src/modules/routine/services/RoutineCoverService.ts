@@ -9,6 +9,7 @@ import { DAYS_OF_WEEK } from "@scd/shared";
 import { RoutineSlot } from "../models/RoutineSlot";
 import { RoutineSubstitution, type IRoutineSubstitution } from "../models/RoutineSubstitution";
 import { User } from "../../foundation/models/User";
+import { Subject } from "../../foundation/models/Subject";
 import { assignProxy, revokeProxy } from "../../foundation/services/ScopeGrantService";
 import { rankAvailability, type AvailabilityRow } from "../cover";
 import { emitCoverAssigned } from "../../notifications/services/emitters";
@@ -100,11 +101,15 @@ export async function assignCover(input: AssignCoverInput): Promise<IRoutineSubs
   });
 
   if (slot.groupType === "section" && slot.classId) {
+    // A cover is per-subject (D-#257): scope the proxy's content read to the covered
+    // slot's subject only. Content subjects have a Subject doc; others resolve to none.
+    const subj = await Subject.findOne({ code: slot.subject }).select("_id").lean();
     const grantId = await assignProxy({
       coveringTeacherId: input.coverTeacherId,
       absentTeacherId: slot.teacherId ? slot.teacherId.toString() : undefined,
       classId: slot.classId.toString(),
       sectionId: slot.groupId.toString(),
+      subjectId: subj ? subj._id.toString() : undefined,
       startDate: input.date,
       durationDays: input.durationDays && input.durationDays > 0 ? input.durationDays : 1,
       assignedBy: input.actorId,

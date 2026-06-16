@@ -13,6 +13,7 @@ import {
   Pressable,
   ActivityIndicator,
   ScrollView,
+  useWindowDimensions,
   type ViewStyle,
   type TextStyle,
   type StyleProp,
@@ -20,6 +21,7 @@ import {
 } from "react-native";
 import { StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useSidebar, DRAWER_PERMANENT_MIN_WIDTH } from "../state/SidebarContext";
 import {
   makeStyles,
   resolveTextStyle,
@@ -28,6 +30,7 @@ import {
   space,
   typeScale,
   MAX_CONTENT_WIDTH,
+  MAX_WIDE_CONTENT_WIDTH,
   type ThemeColors,
 } from "../theme";
 
@@ -39,14 +42,22 @@ export function Screen({
   children,
   scroll = false,
   padded = true,
+  wide = false,
   style,
 }: {
   children: React.ReactNode;
   scroll?: boolean;
   padded?: boolean;
+  /** Web/desktop: widen the centered frame for data-grid screens (master routine grid). */
+  wide?: boolean;
   style?: StyleProp<ViewStyle>;
 }): React.ReactElement {
   const styles = useStyles();
+  const { width } = useWindowDimensions();
+  const { collapsed } = useSidebar();
+  // When the web sidebar is collapsed (D-#258), the canvas is full-width — widen the
+  // content frame to fill it, so the body expands/contracts with the sidebar.
+  const expanded = collapsed && width >= DRAWER_PERMANENT_MIN_WIDTH;
   const inner = scroll ? (
     <ScrollView
       contentContainerStyle={[padded && styles.padded, style]}
@@ -59,7 +70,7 @@ export function Screen({
   );
   return (
     <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
-      <View style={styles.frame}>{inner}</View>
+      <View style={wide || expanded ? styles.frameWide : styles.frame}>{inner}</View>
     </SafeAreaView>
   );
 }
@@ -490,6 +501,7 @@ const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.bg },
   // §6 web/desktop: the phone layout centered at max 720dp, bg filling the rest.
   frame: { flex: 1, width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
+  frameWide: { flex: 1, width: "100%", maxWidth: MAX_WIDE_CONTENT_WIDTH, alignSelf: "center" },
   flex: { flex: 1 },
   padded: { padding: space(4) },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: space(6) },

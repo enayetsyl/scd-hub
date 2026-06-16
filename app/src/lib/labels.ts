@@ -666,6 +666,13 @@ const STR_BN = {
   tabTrackers: "ট্র্যাকার",
   tabAdmin: "প্রশাসন",
 
+  // Drawer navigation (D-#258) — group headers + a disambiguated leaf
+  drawerGroupAcademics: "একাডেমিক",
+  drawerGroupTrackers: "ট্র্যাকার",
+  drawerItemDailyTracker: "দৈনিক ট্র্যাকার",
+  accountMenu: "অ্যাকাউন্ট মেনু",
+  openMenu: "মেনু খুলুন",
+
   // Auth
   login: "লগইন",
   logout: "লগআউট",
@@ -1228,6 +1235,11 @@ const STR_BN = {
   groupRoutineTitle: "ক্লাস রুটিন",
   editRoutineTitle: "রুটিন সম্পাদনা",
   rtMyRoutine: "আমার রুটিন",
+  rtMasterGrid: "সম্পূর্ণ রুটিন গ্রিড",
+  rtMasterTitle: "সম্পূর্ণ রুটিন",
+  rtAllDays: "সব",
+  rtConflicts: "দ্বন্দ্ব",
+  rtNoConflicts: "কোনো দ্বন্দ্ব নেই",
   rtSectionRoutine: "শাখার রুটিন",
   rtSubjectGroups: "কুরআন / আরবি গ্রুপ",
   rtEdit: "রুটিন সম্পাদনা",
@@ -2456,6 +2468,13 @@ const STR_EN: StrTable = {
   tabTrackers: "Trackers",
   tabAdmin: "Admin",
 
+  // Drawer navigation (D-#258) — group headers + a disambiguated leaf
+  drawerGroupAcademics: "Academics",
+  drawerGroupTrackers: "Trackers",
+  drawerItemDailyTracker: "Daily Tracker",
+  accountMenu: "Account menu",
+  openMenu: "Open menu",
+
   // Auth
   login: "Log in",
   logout: "Log out",
@@ -3018,6 +3037,11 @@ const STR_EN: StrTable = {
   groupRoutineTitle: "Class routine",
   editRoutineTitle: "Edit routine",
   rtMyRoutine: "My routine",
+  rtMasterGrid: "Full routine grid",
+  rtMasterTitle: "Full routine",
+  rtAllDays: "All",
+  rtConflicts: "Conflicts",
+  rtNoConflicts: "No conflicts",
   rtSectionRoutine: "Section routine",
   rtSubjectGroups: "Quran / Arabic groups",
   rtEdit: "Edit routine",

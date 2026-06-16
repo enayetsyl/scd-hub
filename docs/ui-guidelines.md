@@ -136,10 +136,24 @@ Hard rules:
 - **Spacing scale (dp): 4, 8, 12, 16, 24, 32.** No off-scale values. Screen edge padding 16; card internal padding 16; vertical gap between cards 12; between form fields 16.
 - **Touch targets ≥ 48×48dp**, even when the visible glyph is smaller (use `hitSlop`). Adjacent targets ≥ 8dp apart.
 - **List rows ≥ 56dp tall**; one-line title + optional one-line secondary; chevron or single trailing action only.
-- **One column.** No side-by-side panels on phone. Bottom tab bar (existing pattern) holds ≤ 5 tabs; deeper navigation stacks within a tab.
+- **One column.** No side-by-side panels on phone. **Top-level navigation is a grouped hamburger
+  drawer** (D-#258, EximusEdu-familiar): module entries live under collapsible group headers
+  (Academics, Trackers) plus flat standalone items (Attendance, Library, Finance, HR, …); deeper
+  navigation stacks within each module. The drawer is **permanent** (always-visible left sidebar)
+  at width ≥ 1024dp (laptop/desktop web) and a **slide-over** (☰ hamburger in the header) below
+  that. The **☰ is always present**: on web it **collapses/expands** the permanent sidebar (drawer
+  width goes 300↔0dp); on phone it opens the slide-over overlay. When the sidebar is collapsed the
+  content **frame widens** from the `MAX_CONTENT_WIDTH` (720dp) cap to the wide cap
+  (`MAX_WIDE_CONTENT_WIDTH`, 1400dp) so the body fills the freed space — the body expands/contracts
+  with the sidebar. This is driven by a shared `SidebarProvider` (`state/SidebarContext`) that both
+  the drawer (`AppTabs`) and the content `Screen` read. Drawer items are role-gated by the same `roleHasPermission` checks; route names are stable
+  so notification deep-links resolve unchanged. The top-right header is the 🔔 bell + a 👤 account
+  menu (name / language / report a problem / logout). Palette is unchanged — the drawer uses the
+  existing tokens (active item = `primaryContainer`).
 - **Thumb zone:** the screen's primary action (submit, confirm, declare) sits in the lower half — bottom-fixed button bar preferred on forms. A destructive action is never directly adjacent to the primary action.
 - **Corner radius:** 12dp cards/buttons/inputs; 999 (pill) chips; 8dp small badges.
-- **Web/desktop:** the same layout centered, `maxWidth` 720dp, `bg` filling the rest.
+- **Web/desktop:** the same layout centered, `maxWidth` 720dp, `bg` filling the rest. Data-grid
+  screens (the admin master routine grid) opt into a wider frame via `Screen wide` — `maxWidth` 1400dp.
 
 ## 7. Components
 
@@ -196,4 +210,7 @@ In-app manual theme toggle; icon-set migration as its own task (opportunistic on
 
 ## 14. Reused / unchanged
 
-`shared/vocab` Bangla labels and English codes (NFR-5, D-#30/#36); bottom-tab navigation structure; all screen information architecture; the PDF export font; the NativeWind re-enable plan (ADR-010/014 — it maps onto these tokens, it does not replace them).
+`shared/vocab` Bangla labels and English codes (NFR-5, D-#30/#36); the grouped hamburger-drawer
+navigation structure (D-#258, §6 — superseded the original bottom-tab structure but kept every
+route name + permission gate + screen IA); all screen information architecture; the PDF export
+font; the NativeWind re-enable plan (ADR-010/014 — it maps onto these tokens, it does not replace them).

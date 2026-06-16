@@ -54,6 +54,8 @@ export interface ProxyScope {
   kind: "proxy";
   classId: string;
   sectionId: string;
+  /** The covered subject (D-#257) — content read is scoped to this subject + class only. */
+  subjectId?: string;
   grantId: string;
 }
 
@@ -95,7 +97,7 @@ export async function composeTeacherScope(
         })),
       });
     } else if (g.kind === "proxy") {
-      const pg = g as { startDate?: Date; durationDays?: number; proxyStatus?: string; classId?: Types.ObjectId; sectionId?: Types.ObjectId };
+      const pg = g as { startDate?: Date; durationDays?: number; proxyStatus?: string; classId?: Types.ObjectId; sectionId?: Types.ObjectId; subjectId?: Types.ObjectId };
       if (pg.proxyStatus === "revoked") continue;
       if (!pg.startDate || pg.durationDays === undefined) continue;
 
@@ -104,6 +106,7 @@ export async function composeTeacherScope(
           kind: "proxy",
           classId: pg.classId!.toString(),
           sectionId: pg.sectionId!.toString(),
+          subjectId: pg.subjectId?.toString(),
           grantId: g._id.toString(),
         });
       } else {
@@ -214,6 +217,9 @@ export interface AssignProxyInput {
   absentTeacherId?: string;
   classId: string;
   sectionId: string;
+  /** The covered slot's subject (a cover is per-subject, D-#257) — scopes content read
+   *  to that subject only, not the whole class. Absent for non-content-subject covers. */
+  subjectId?: string;
   startDate: Date;
   durationDays: number;
   assignedBy: string;
@@ -228,6 +234,7 @@ export async function assignProxy(input: AssignProxyInput): Promise<string> {
     absentTeacherId: input.absentTeacherId,
     classId: input.classId,
     sectionId: input.sectionId,
+    subjectId: input.subjectId,
     startDate: input.startDate,
     durationDays: input.durationDays,
     proxyStatus: "active",

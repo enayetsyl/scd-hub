@@ -8,9 +8,10 @@
  *   Admin     content:import | user:manage  (Principal, Office)
  */
 import React from "react";
-import { Text, Pressable, View, Platform } from "react-native";
+import { Text, Pressable, View, Modal, useWindowDimensions } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createDrawerNavigator } from "@react-navigation/drawer";
+import { HeaderBackButton } from "@react-navigation/elements";
 import { roleHasPermission } from "@scd/shared";
 
 import type {
@@ -40,13 +41,13 @@ import type {
   TabParamList,
 } from "./types";
 
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, DrawerActions } from "@react-navigation/native";
 import { useAuth } from "../auth/AuthContext";
-import { useBasket } from "../state/BasketContext";
 import { useLanguage } from "../state/LanguageContext";
+import { useSidebar, DRAWER_PERMANENT_MIN_WIDTH } from "../state/SidebarContext";
 import { useNotifications } from "../state/NotificationContext";
 import { STR, bnNum } from "../lib/labels";
-import { fonts, typeScale, useColors } from "../theme";
+import { fonts, radius, space, typeScale, useColors } from "../theme";
 
 import LoginScreen from "../screens/auth/LoginScreen";
 import ContentTreeScreen from "../screens/content/ContentTreeScreen";
@@ -80,6 +81,7 @@ import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
 import RoutineHomeScreen from "../screens/routine/RoutineHomeScreen";
 import MyRoutineScreen from "../screens/routine/MyRoutineScreen";
+import RoutineMasterScreen from "../screens/routine/RoutineMasterScreen";
 import GroupRoutineScreen from "../screens/routine/GroupRoutineScreen";
 import RoutineEditorScreen from "../screens/routine/RoutineEditorScreen";
 import CoverManageScreen from "../screens/routine/CoverManageScreen";
@@ -191,18 +193,39 @@ import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
 import ChildRoutineScreen from "../screens/guardian/ChildRoutineScreen";
 import { GuardianChildProvider } from "../state/GuardianChildContext";
+import DrawerContent from "./DrawerContent";
 
 export { LoginScreen };
 
-/** Tap to switch language — the button shows the language it switches TO. */
-function LangToggle(): React.ReactElement {
-  const { lang, toggle } = useLanguage();
-  const colors = useColors();
+/** ☰ hamburger — always shown. On wide/web it collapses/expands the permanent
+ *  sidebar (the body reflows into the freed space); on phone it opens the
+ *  slide-over overlay. */
+function DrawerHamburger({ tintColor }: { tintColor?: string }): React.ReactElement {
+  const navigation = useNavigation();
+  const { width } = useWindowDimensions();
+  const { toggle } = useSidebar();
+  const wide = width >= DRAWER_PERMANENT_MIN_WIDTH;
   return (
-    <Pressable onPress={toggle} style={{ paddingHorizontal: 12 }} hitSlop={12} accessibilityLabel={STR.language}>
-      <Text style={{ ...typeScale.button, color: colors.onPrimary }}>{lang === "bn" ? "EN" : "বাং"}</Text>
+    <Pressable
+      onPress={() => (wide ? toggle() : navigation.dispatch(DrawerActions.openDrawer()))}
+      style={{ paddingHorizontal: 12 }}
+      hitSlop={12}
+      accessibilityLabel={STR.openMenu}
+    >
+      <Text style={{ fontSize: 22, color: tintColor ?? "#fff" }}>☰</Text>
     </Pressable>
   );
+}
+
+/** Shared header-left: the native back button on pushed screens, the ☰ hamburger
+ *  on a stack's root (nothing to go back to). Set once in useStackOptions so every
+ *  stack gets the drawer toggle without a per-screen edit. */
+function HeaderLeft({ canGoBack, tintColor }: { canGoBack?: boolean; tintColor?: string }): React.ReactElement {
+  const navigation = useNavigation();
+  if (canGoBack) {
+    return <HeaderBackButton tintColor={tintColor} labelVisible={false} onPress={() => navigation.goBack()} />;
+  }
+  return <DrawerHamburger tintColor={tintColor} />;
 }
 
 /** The 🔔 + unread badge (N3.1) — rendered in every stack header (staff and
@@ -247,70 +270,121 @@ function HeaderBell(): React.ReactElement {
   );
 }
 
-/** MON-3: "Report a problem" — opens the root-level report modal (any authed user). */
-function ReportButton(): React.ReactElement {
+/**
+ * 👤 account menu (EximusEdu-style top-right dropdown) — consolidates the user's
+ * name, the language toggle, "Report a problem" (MON-3), and Logout into one
+ * popover, so the header reads like the system everyone knows. The 🔔 bell stays
+ * separate (HeaderBell). Built with a transparent Modal — no menu dependency, and
+ * it overlays the native header on every platform. Palette is unchanged (D-#258).
+ */
+function AvatarMenu(): React.ReactElement {
+  const [open, setOpen] = React.useState(false);
+  const { user, logout } = useAuth();
+  const { lang, toggle } = useLanguage();
   const navigation = useNavigation();
-  return (
-    <Pressable
-      onPress={() => (navigation as unknown as { navigate: (name: string) => void }).navigate("ReportProblem")}
-      style={{ paddingHorizontal: 8 }}
-      hitSlop={12}
-      accessibilityLabel={STR.reportProblem}
-    >
-      <Text style={{ fontSize: 18 }}>🐞</Text>
-    </Pressable>
-  );
-}
-
-function LogoutButton(): React.ReactElement {
-  const { logout } = useAuth();
   const colors = useColors();
-  return (
-    <Pressable onPress={() => void logout()} style={{ paddingHorizontal: 12 }} hitSlop={12} accessibilityLabel={STR.logout}>
-      <Text style={{ ...typeScale.button, color: colors.onPrimary }}>{STR.logout}</Text>
-    </Pressable>
-  );
-}
-
-/** The logged-in user's name, shown left of the language/logout actions. The name
- *  is truncated to fit; on web a native `title` tooltip shows the full name on hover. */
-function HeaderName(): React.ReactElement | null {
-  const { user } = useAuth();
-  const colors = useColors();
-  const ref = React.useRef<Text>(null);
   const name = user?.name ?? "";
-  React.useEffect(() => {
-    if (Platform.OS === "web" && name && ref.current) {
-      (ref.current as unknown as { setAttribute?: (k: string, v: string) => void }).setAttribute?.("title", name);
-    }
-  }, [name]);
-  if (!name) return null;
-  return (
-    <Text
-      ref={ref}
-      style={{ ...typeScale.button, color: colors.onPrimary, maxWidth: 150, marginRight: 4 }}
-      numberOfLines={1}
-      ellipsizeMode="tail"
-      accessibilityLabel={name}
+  const close = () => setOpen(false);
+
+  const MenuRow = ({
+    icon,
+    label,
+    onPress,
+    danger,
+  }: {
+    icon: string;
+    label: string;
+    onPress: () => void;
+    danger?: boolean;
+  }): React.ReactElement => (
+    <Pressable
+      onPress={() => {
+        close();
+        onPress();
+      }}
+      accessibilityRole="button"
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: space(3),
+        minHeight: 48,
+        paddingVertical: space(2),
+        paddingHorizontal: space(4),
+      }}
     >
-      👤 {name}
-    </Text>
+      <Text style={{ fontSize: 18 }}>{icon}</Text>
+      <Text style={{ ...typeScale.button, color: danger ? colors.error : colors.textPrimary }}>{label}</Text>
+    </Pressable>
+  );
+
+  return (
+    <>
+      <Pressable
+        onPress={() => setOpen(true)}
+        style={{ paddingHorizontal: space(2) }}
+        hitSlop={12}
+        accessibilityLabel={STR.accountMenu}
+      >
+        <Text style={{ fontSize: 20 }}>👤</Text>
+      </Pressable>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
+        <Pressable style={{ flex: 1 }} onPress={close}>
+          <View
+            style={{
+              position: "absolute",
+              top: 56,
+              right: space(2),
+              minWidth: 220,
+              backgroundColor: colors.surface,
+              borderRadius: radius.md,
+              borderWidth: 1,
+              borderColor: colors.border,
+              paddingVertical: space(1),
+              elevation: 6,
+            }}
+          >
+            {name ? (
+              <View
+                style={{
+                  paddingVertical: space(2),
+                  paddingHorizontal: space(4),
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.border,
+                }}
+              >
+                <Text style={{ ...typeScale.bodyStrong, color: colors.textPrimary }} numberOfLines={1}>
+                  {name}
+                </Text>
+              </View>
+            ) : null}
+            {/* Row shows the language it switches TO (matches the old toggle's intent). */}
+            <MenuRow icon="🌐" label={lang === "bn" ? "English" : "বাংলা"} onPress={toggle} />
+            <MenuRow
+              icon="🐞"
+              label={STR.reportProblem}
+              onPress={() => (navigation as unknown as { navigate: (n: string) => void }).navigate("ReportProblem")}
+            />
+            <View style={{ height: 1, backgroundColor: colors.border, marginVertical: space(1) }} />
+            <MenuRow icon="🚪" label={STR.logout} onPress={() => void logout()} danger />
+          </View>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
 function HeaderRight(): React.ReactElement {
   return (
     <View style={{ flexDirection: "row", alignItems: "center" }}>
-      <HeaderName />
       <HeaderBell />
-      <ReportButton />
-      <LangToggle />
-      <LogoutButton />
+      <AvatarMenu />
     </View>
   );
 }
 
-/** Stack header/content styling from the active token set (light + dark). */
+/** Stack header/content styling from the active token set (light + dark). The
+ *  shared headerLeft gives every stack root the ☰ drawer toggle and every pushed
+ *  screen the native back button (see HeaderLeft) — one place, no per-screen edit. */
 function useStackOptions() {
   const colors = useColors();
   return {
@@ -318,12 +392,11 @@ function useStackOptions() {
     headerTintColor: colors.onPrimary,
     headerTitleStyle: { fontFamily: fonts.bold },
     contentStyle: { backgroundColor: colors.bg },
+    headerLeft: (props: { canGoBack?: boolean; tintColor?: string }) => (
+      <HeaderLeft canGoBack={props.canGoBack} tintColor={props.tintColor} />
+    ),
     headerRight: () => <HeaderRight />,
   } as const;
-}
-
-function tabIcon(emoji: string) {
-  return () => <Text style={{ fontSize: 18 }}>{emoji}</Text>;
 }
 
 // --- Stacks ----------------------------------------------------------------
@@ -429,6 +502,7 @@ function RoutineNavigator(): React.ReactElement {
     <RoutineStack.Navigator screenOptions={stackOptions}>
       <RoutineStack.Screen name="RoutineHome" component={RoutineHomeScreen} options={{ title: STR.routineTitle }} />
       <RoutineStack.Screen name="MyRoutine" component={MyRoutineScreen} options={{ title: STR.myRoutineTitle }} />
+      <RoutineStack.Screen name="RoutineMaster" component={RoutineMasterScreen} options={{ title: STR.rtMasterTitle }} />
       <RoutineStack.Screen name="GroupRoutine" component={GroupRoutineScreen} options={{ title: STR.groupRoutineTitle }} />
       <RoutineStack.Screen name="RoutineEditor" component={RoutineEditorScreen} options={{ title: STR.editRoutineTitle }} />
       <RoutineStack.Screen name="CoverManage" component={CoverManageScreen} options={{ title: STR.coverManageTitle }} />
@@ -781,14 +855,19 @@ function GuardianAssignmentsNavigator(): React.ReactElement {
   );
 }
 
-// --- Tabs ------------------------------------------------------------------
+// --- Drawer (D-#258) -------------------------------------------------------
 
-const Tab = createBottomTabNavigator<TabParamList>();
+const Drawer = createDrawerNavigator<TabParamList>();
 
 export function AppTabs(): React.ReactElement {
   const { role } = useAuth();
-  const basket = useBasket();
   const colors = useColors();
+  // Permanent left sidebar on laptop/desktop web; slide-over (☰) on phone/narrow.
+  const { width } = useWindowDimensions();
+  const wide = width >= DRAWER_PERMANENT_MIN_WIDTH;
+  // Web-only collapse (shared with the content Screen via SidebarProvider): the ☰
+  // flips `collapsed`; the drawer width goes 300↔0 and the body reflows to fill.
+  const { collapsed } = useSidebar();
 
   const canContent = !!role && roleHasPermission(role, "content:read");
   const canQuestions = !!role && roleHasPermission(role, "question:read");
@@ -849,89 +928,52 @@ export function AppTabs(): React.ReactElement {
 
   return (
     <GuardianChildProvider enabled={role === "GUARDIAN"}>
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
-        tabBarLabelStyle: { fontFamily: fonts.medium },
-      }}
-    >
-      {canContent ? (
-        <Tab.Screen name="ContentTab" component={ContentNavigator} options={{ title: STR.tabContent, tabBarIcon: tabIcon("📚") }} />
-      ) : null}
-      {canQuestions ? (
-        <Tab.Screen
-          name="QuestionsTab"
-          component={QuestionsNavigator}
-          options={{ title: STR.tabQuestions, tabBarIcon: tabIcon("❓"), tabBarBadge: basket.count > 0 ? basket.count : undefined }}
-        />
-      ) : null}
-      {canSets ? (
-        <Tab.Screen name="SetsTab" component={SetsNavigator} options={{ title: STR.tabSets, tabBarIcon: tabIcon("🗂️") }} />
-      ) : null}
-      {canTrackers ? (
-        <Tab.Screen name="TrackersTab" component={TrackersNavigator} options={{ title: STR.tabTrackers, tabBarIcon: tabIcon("✅") }} />
-      ) : null}
-      {canHomework ? (
-        <Tab.Screen name="HomeworkTab" component={HomeworkNavigator} options={{ title: STR.tabHomework, tabBarIcon: tabIcon("📒") }} />
-      ) : null}
-      {canAssignment ? (
-        <Tab.Screen name="AssignmentTab" component={AssignmentNavigator} options={{ title: STR.tabAssignment, tabBarIcon: tabIcon("📋") }} />
-      ) : null}
-      {canReview ? (
-        <Tab.Screen name="ReviewTab" component={ReviewNavigator} options={{ title: STR.tabReview, tabBarIcon: tabIcon("📝") }} />
-      ) : null}
-      {canRoutine ? (
-        <Tab.Screen name="RoutineTab" component={RoutineNavigator} options={{ title: STR.tabRoutine, tabBarIcon: tabIcon("📅") }} />
-      ) : null}
-      {canAttendance ? (
-        <Tab.Screen name="AttendanceTab" component={AttendanceNavigator} options={{ title: STR.tabAttendance, tabBarIcon: tabIcon("🙋") }} />
-      ) : null}
-      {canLibrary ? (
-        <Tab.Screen name="LibraryTab" component={LibraryNavigator} options={{ title: STR.tabLibrary, tabBarIcon: tabIcon("📖") }} />
-      ) : null}
-      {canChat ? (
-        <Tab.Screen name="ChatTab" component={ChatNavigator} options={{ title: STR.tabChat, tabBarIcon: tabIcon("💬") }} />
-      ) : null}
-      {canVocab ? (
-        <Tab.Screen name="VocabTab" component={VocabNavigator} options={{ title: STR.tabVocab, tabBarIcon: tabIcon("🔤") }} />
-      ) : null}
-      {canClassTest ? (
-        <Tab.Screen name="ClassTestTab" component={ClassTestNavigator} options={{ title: STR.tabClassTest, tabBarIcon: tabIcon("🧪") }} />
-      ) : null}
-      {canComments ? (
-        <Tab.Screen name="CommentsTab" component={CommentsNavigator} options={{ title: STR.tabComments, tabBarIcon: tabIcon("🗣️") }} />
-      ) : null}
-      {canObservation ? (
-        <Tab.Screen name="ObservationTab" component={ObservationNavigator} options={{ title: STR.tabObservation, tabBarIcon: tabIcon("👁️") }} />
-      ) : null}
-      {canRevision ? (
-        <Tab.Screen name="RevisionTab" component={RevisionNavigator} options={{ title: STR.tabRevision, tabBarIcon: tabIcon("🕌") }} />
-      ) : null}
-      {canFinance ? (
-        <Tab.Screen name="FinanceTab" component={FinanceNavigator} options={{ title: STR.tabFinance, tabBarIcon: tabIcon("💰") }} />
-      ) : null}
-      {canHr ? (
-        <Tab.Screen name="HrTab" component={HrNavigator} options={{ title: STR.tabHr, tabBarIcon: tabIcon("🧑‍💼") }} />
-      ) : null}
-      {canAdmin ? (
-        <Tab.Screen name="AdminTab" component={AdminNavigator} options={{ title: STR.tabAdmin, tabBarIcon: tabIcon("⚙️") }} />
-      ) : null}
-      {canGuardian ? (
-        <Tab.Screen name="GuardianHomeTab" component={GuardianHomeNavigator} options={{ title: STR.gpToday, tabBarIcon: tabIcon("🏠") }} />
-      ) : null}
-      {canGuardian ? (
-        <Tab.Screen name="GuardianHomeworkTab" component={GuardianHomeworkNavigator} options={{ title: STR.tabHomework, tabBarIcon: tabIcon("📒") }} />
-      ) : null}
-      {canGuardian ? (
-        <Tab.Screen name="GuardianRoutineTab" component={GuardianRoutineNavigator} options={{ title: STR.tabRoutine, tabBarIcon: tabIcon("📅") }} />
-      ) : null}
-      {canGuardian ? (
-        <Tab.Screen name="GuardianAssignmentsTab" component={GuardianAssignmentsNavigator} options={{ title: STR.tabAssignment, tabBarIcon: tabIcon("📋") }} />
-      ) : null}
-    </Tab.Navigator>
+      <Drawer.Navigator
+        // The grouped/collapsible sidebar; route names are unchanged so notification
+        // deep-links + cross-screen navigation keep working (see DrawerContent).
+        drawerContent={(props) => <DrawerContent {...props} />}
+        screenOptions={{
+          headerShown: false,
+          // Permanent push-sidebar on web (the ☰ collapses it to width 0 so the body
+          // reflows to full width); slide-over overlay on phone.
+          drawerType: wide ? "permanent" : "front",
+          drawerStyle: {
+            backgroundColor: colors.surface,
+            width: wide ? (collapsed ? 0 : 300) : 300,
+            borderRightColor: colors.border,
+            borderRightWidth: wide && !collapsed ? 1 : 0,
+            overflow: "hidden",
+          },
+          overlayColor: "rgba(0,0,0,0.4)",
+          swipeEdgeWidth: 60,
+        }}
+      >
+        {canContent ? <Drawer.Screen name="ContentTab" component={ContentNavigator} /> : null}
+        {canQuestions ? <Drawer.Screen name="QuestionsTab" component={QuestionsNavigator} /> : null}
+        {canSets ? <Drawer.Screen name="SetsTab" component={SetsNavigator} /> : null}
+        {canTrackers ? <Drawer.Screen name="TrackersTab" component={TrackersNavigator} /> : null}
+        {canHomework ? <Drawer.Screen name="HomeworkTab" component={HomeworkNavigator} /> : null}
+        {canAssignment ? <Drawer.Screen name="AssignmentTab" component={AssignmentNavigator} /> : null}
+        {canReview ? <Drawer.Screen name="ReviewTab" component={ReviewNavigator} /> : null}
+        {canRoutine ? <Drawer.Screen name="RoutineTab" component={RoutineNavigator} /> : null}
+        {canAttendance ? <Drawer.Screen name="AttendanceTab" component={AttendanceNavigator} /> : null}
+        {canLibrary ? <Drawer.Screen name="LibraryTab" component={LibraryNavigator} /> : null}
+        {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
+        {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}
+        {canClassTest ? <Drawer.Screen name="ClassTestTab" component={ClassTestNavigator} /> : null}
+        {canComments ? <Drawer.Screen name="CommentsTab" component={CommentsNavigator} /> : null}
+        {canObservation ? <Drawer.Screen name="ObservationTab" component={ObservationNavigator} /> : null}
+        {canRevision ? <Drawer.Screen name="RevisionTab" component={RevisionNavigator} /> : null}
+        {canFinance ? <Drawer.Screen name="FinanceTab" component={FinanceNavigator} /> : null}
+        {canHr ? <Drawer.Screen name="HrTab" component={HrNavigator} /> : null}
+        {canAdmin ? <Drawer.Screen name="AdminTab" component={AdminNavigator} /> : null}
+        {canGuardian ? <Drawer.Screen name="GuardianHomeTab" component={GuardianHomeNavigator} /> : null}
+        {canGuardian ? <Drawer.Screen name="GuardianHomeworkTab" component={GuardianHomeworkNavigator} /> : null}
+        {canGuardian ? <Drawer.Screen name="GuardianRoutineTab" component={GuardianRoutineNavigator} /> : null}
+        {canGuardian ? (
+          <Drawer.Screen name="GuardianAssignmentsTab" component={GuardianAssignmentsNavigator} />
+        ) : null}
+      </Drawer.Navigator>
     </GuardianChildProvider>
   );
 }

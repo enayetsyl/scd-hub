@@ -7,7 +7,7 @@ import { StyleSheet, useColorScheme, type TextStyle } from "react-native";
 import { DarkTheme, DefaultTheme, type Theme } from "@react-navigation/native";
 import { darkColors, fonts, lightColors, type ThemeColors } from "./tokens";
 
-export { darkColors, fonts, lightColors, MAX_CONTENT_WIDTH, radius, space, typeScale } from "./tokens";
+export { darkColors, fonts, lightColors, MAX_CONTENT_WIDTH, MAX_WIDE_CONTENT_WIDTH, radius, space, typeScale } from "./tokens";
 export type { ThemeColors } from "./tokens";
 
 /** The active color set for the OS scheme. */
