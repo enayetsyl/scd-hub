@@ -33,6 +33,9 @@ import { RoutineSlot } from "../src/modules/routine/models/RoutineSlot";
 import { PeriodGrid } from "../src/modules/routine/models/PeriodGrid";
 import { ScheduleWindow } from "../src/modules/routine/models/ScheduleWindow";
 import { SubjectGroup } from "../src/modules/routine/models/SubjectGroup";
+import { Subject } from "../src/modules/foundation/models/Subject";
+import { ScopeGrant } from "../src/modules/foundation/models/ScopeGrant";
+import { SUBJECTS } from "@scd/shared";
 import type { RoutineSubject, PeriodTrack, DayOfWeek, GroupGender } from "@scd/shared";
 
 const COMMIT = process.argv.includes("--commit");
@@ -246,6 +249,32 @@ async function main(): Promise<void> {
   });
   const res = await RoutineSlot.insertMany(docs, { ordered: false });
   console.log(`Inserted ${res.length} routine slots (${secSlots.length} section + ${grpSlots.length} subjectgroup).`);
+
+  // Backfill routine teaching grants (D-#49/#257) — a content-subject (BAN/ENG/MATH/SCI/BGS)
+  // section slot grants the teacher read/write on that (section, subject), exactly like the
+  // in-app createRoutineSlot binding. This is what makes the routine drive content visibility;
+  // the bulk insert above bypasses the service, so we replicate the bind here (idempotent upsert).
+  const subjectIdByCode = new Map((await Subject.find({}).select("code").lean()).map((s) => [s.code, s._id]));
+  const contentSubjects = new Set<string>(SUBJECTS as readonly string[]);
+  const seen = new Set<string>();
+  let grantCount = 0;
+  for (const s of slots) {
+    if (s.kind !== "section" || !contentSubjects.has(s.subject)) continue;
+    const tid = teacherIdOf.get(s.teacherShort);
+    const subjId = subjectIdByCode.get(s.subject);
+    const sec = sectionOf(s.classLevel, s.sectionCode!);
+    if (!tid || !subjId || !sec) continue;
+    const k = `${tid}|${sec._id}|${subjId}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    await ScopeGrant.updateOne(
+      { teacherId: new mongoose.Types.ObjectId(tid), kind: "teaching", sectionId: sec._id, subjectId: subjId, source: "routine" },
+      { $set: { teacherId: new mongoose.Types.ObjectId(tid), kind: "teaching", classId: sec.classId, sectionId: sec._id, subjectId: subjId, source: "routine", active: true, createdBy: principal._id } },
+      { upsert: true },
+    );
+    grantCount++;
+  }
+  console.log(`Backfilled ${grantCount} routine teaching grants (content subjects only — BAN/ENG/MATH/SCI/BGS).`);
 
   await disconnectDb(); process.exit(0);
 }

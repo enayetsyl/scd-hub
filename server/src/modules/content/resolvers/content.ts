@@ -10,7 +10,8 @@ import { builder } from "../../../schema";
 import { importEnvelope as importEnvelopeSvc, importContentFiles, type ImportFile } from "../services/ContentService";
 import { ContentArtifact } from "../models/ContentArtifact";
 import { User } from "../../foundation/models/User";
-import { assertCanRead, ForbiddenError } from "../../../middleware/authz";
+import { ForbiddenError } from "../../../middleware/authz";
+import { buildContentScope, contentScopeAllows } from "../contentScope";
 import { reviewerMayReadArtifact } from "../services/ReviewService";
 import type { Types, FlattenMaps } from "mongoose";
 import type { FilterQuery } from "mongoose";
@@ -226,13 +227,13 @@ builder.queryField("artifact", (t) =>
     resolve: async (_root, args, ctx) => {
       const doc = await ContentArtifact.findById(args.id).lean();
       if (!doc) return null;
-      // Row-scope: PRINCIPAL/OFFICE bypass; TEACHER must have a grant covering this content.
+      // Row-scope (D-#257): PRINCIPAL/OFFICE bypass; a TEACHER sees it iff a routine
+      // teaching/proxy or supervisory grant covers (subject, classLevel).
       // Override (D-#39): a teacher with an active review assignment for this exact version
       // may read it even outside their teaching subject (read-only, artifact-scoped).
-      try {
-        await assertCanRead(ctx, "", doc.subject, doc.subject);
-      } catch (err) {
-        if (!(ctx.auth && (await reviewerMayReadArtifact(ctx.auth.userId, doc._id)))) throw err;
+      const scope = await buildContentScope(ctx);
+      if (!contentScopeAllows(scope, doc.subject, doc.classLevel)) {
+        if (!(ctx.auth && (await reviewerMayReadArtifact(ctx.auth.userId, doc._id)))) throw new ForbiddenError();
       }
       return docToShape(doc);
     },
@@ -267,25 +268,12 @@ builder.queryField("contentArtifacts", (t) =>
       if (args.curationTag) filter.curationTag = args.curationTag;
       if (args.reviewStatus) filter.reviewStatus = args.reviewStatus;
 
-      // Supervisory scope (J1.6): PRINCIPAL/OFFICE see everything; TEACHER scope applied per-result
+      // Scope (J1.6 / D-#257): PRINCIPAL/OFFICE see everything; a TEACHER sees content
+      // covered by a routine teaching/proxy or supervisory grant (subject + class). Scope
+      // is resolved once, then each artifact is matched cheaply.
       const docs = await ContentArtifact.find(filter).lean();
-
-      if (ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE") {
-        return docs.map(docToShape);
-      }
-
-      // For TEACHER, filter to what their scope union covers (assertCanRead per-doc is expensive;
-      // we check subject-level scope here — the authz middleware handles class-level when needed)
-      const allowed: ArtifactShape[] = [];
-      for (const doc of docs) {
-        try {
-          await assertCanRead(ctx, "", doc.subject, doc.subject);
-          allowed.push(docToShape(doc));
-        } catch {
-          // skip artifacts outside the teacher's scope
-        }
-      }
-      return allowed;
+      const scope = await buildContentScope(ctx);
+      return docs.filter((d) => contentScopeAllows(scope, d.subject, d.classLevel)).map(docToShape);
     },
   }),
 );
@@ -312,20 +300,9 @@ builder.queryField("contentTree", (t) =>
 
       const docs = await ContentArtifact.find(filter).sort({ subject: 1, classLevel: 1, "address.number": 1 }).lean();
 
-      // Apply scope filter for TEACHERs
-      const visibleDocs: typeof docs = [];
-      if (ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE") {
-        visibleDocs.push(...docs);
-      } else {
-        for (const doc of docs) {
-          try {
-            await assertCanRead(ctx, "", doc.subject, doc.subject);
-            visibleDocs.push(doc);
-          } catch {
-            // outside scope — skip
-          }
-        }
-      }
+      // Scope filter (J1.6 / D-#257): routine teaching/proxy or supervisory grant by subject+class.
+      const scope = await buildContentScope(ctx);
+      const visibleDocs = docs.filter((d) => contentScopeAllows(scope, d.subject, d.classLevel));
 
       // Group: subject+classLevel → anchorWord+number → artifacts
       const nodeMap = new Map<string, ContentTreeNodeShape>();
