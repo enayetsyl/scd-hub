@@ -39,6 +39,12 @@ jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (q: unknown) => ({ select: () => ({ lean: () => mockUserFind(q) }) }) },
 }));
 
+// assignCover resolves the covered slot's subject → Subject._id for the proxy grant (D-#257).
+const mockSubjectFindOne = jest.fn();
+jest.mock("../modules/foundation/models/Subject", () => ({
+  Subject: { findOne: (q: unknown) => ({ select: () => ({ lean: () => mockSubjectFindOne(q) }) }) },
+}));
+
 const mockAssignProxy = jest.fn();
 const mockRevokeProxy = jest.fn();
 jest.mock("../modules/foundation/services/ScopeGrantService", () => ({
@@ -62,6 +68,7 @@ beforeEach(() => {
   mockSubFind.mockResolvedValue([]);
   mockSubCreate.mockResolvedValue({ _id: oid() });
   mockAssignProxy.mockResolvedValue(oid().toString());
+  mockSubjectFindOne.mockResolvedValue({ _id: oid() });
 });
 
 // ---------------------------------------------------------------------------
@@ -108,17 +115,21 @@ describe("R4.1 teacherAvailability", () => {
 // R4.2 — assignCover
 // ---------------------------------------------------------------------------
 describe("R4.2 assignCover", () => {
-  test("a Section slot backs the cover with a proxy grant", async () => {
+  test("a Section slot backs the cover with a subject-scoped proxy grant", async () => {
+    const subjId = oid();
+    mockSubjectFindOne.mockResolvedValue({ _id: subjId });
     mockSlotFindById.mockResolvedValue({
       _id: oid(),
       groupType: "section",
       classId: oid(),
       groupId: oid(),
       teacherId: oid(),
+      subject: "MATH",
     });
     await assignCover({ slotId: oid().toString(), date: DATE, coverTeacherId: oid().toString(), actorId: oid().toString() });
     expect(mockAssignProxy).toHaveBeenCalledTimes(1);
-    expect(mockAssignProxy.mock.calls[0][0]).toMatchObject({ durationDays: 1 });
+    // D-#257: the proxy carries the covered slot's subject (per-subject cover), not just the class.
+    expect(mockAssignProxy.mock.calls[0][0]).toMatchObject({ durationDays: 1, subjectId: subjId.toString() });
     expect(mockSubUpdateOne).toHaveBeenCalledTimes(1); // proxyGrantId stamped
     expect(mockEmitCoverAssigned).toHaveBeenCalledTimes(1); // N1.6 — covering teacher notified
   });
