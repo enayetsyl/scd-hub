@@ -759,6 +759,7 @@ const STR_BN = {
   durationMinutes: "সময় (মিনিট)",
   dueDate: "জমার তারিখ",
   section: "শাখা",
+  klass: "শ্রেণি",
   class: "শ্রেণি",
 
   // Trackers
@@ -2588,6 +2589,7 @@ const STR_EN: StrTable = {
   durationMinutes: "Duration (min)",
   dueDate: "Due date",
   section: "Section",
+  klass: "Class",
   class: "Class",
 
   // Trackers
