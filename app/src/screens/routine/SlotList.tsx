@@ -40,6 +40,7 @@ export function SlotList({
                   <Body>
                     {STR.rtPeriodN} {bnNum(s.periodNumber)} · {s.isBreak ? STR.rtBreak : routineSubjectLabel(s.subject)}
                   </Body>
+                  {!s.isBreak && s.groupName ? <Muted style={{ fontWeight: "600" }}>{s.groupName}</Muted> : null}
                   {s.startTime && s.endTime ? (
                     <Muted>{s.startTime}–{s.endTime}</Muted>
                   ) : null}

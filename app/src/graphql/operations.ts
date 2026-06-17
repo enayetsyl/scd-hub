@@ -1740,12 +1740,13 @@ export interface RoutineSlotT {
   coverTeacherName: string | null;
   startTime: string | null;
   endTime: string | null;
+  groupName: string | null;
 }
 
 const ROUTINE_SLOT_FIELDS = `
   id groupType groupId classId dayOfWeek periodNumber subject track
   isBreak teacherId roomId effectiveFrom effectiveTo active coverTeacherId
-  teacherName coverTeacherName startTime endTime
+  teacherName coverTeacherName startTime endTime groupName
 `;
 
 export const ROUTINE_SLOTS_QUERY = gql<
