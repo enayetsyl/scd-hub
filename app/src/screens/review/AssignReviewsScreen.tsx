@@ -117,10 +117,12 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
       ) : (
         <Card>
           {load.map((l) => (
-            <View key={l.reviewerId} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 4 }}>
-              <Body style={{ flex: 1 }}>{l.reviewerName}</Body>
-              <Muted>{`${bnNum(l.assignedCount)} + ${bnNum(l.submittedCount)} `}</Muted>
-              <Badge text={`${bnNum(l.openCount)} ${STR.rvOpen}`} tone="brand" />
+            <View key={l.reviewerId} style={{ marginVertical: space(1) }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Body style={{ flex: 1, fontWeight: "600" }}>{l.reviewerName}</Body>
+                <Badge text={`${bnNum(l.openCount)} ${STR.rvAssignedShort}`} tone="brand" />
+              </View>
+              <Muted>{`${bnNum(l.assignedCount)} ${STR.rvAwaiting} · ${bnNum(l.submittedCount)} ${STR.rvDecidedShort}`}</Muted>
             </View>
           ))}
         </Card>
