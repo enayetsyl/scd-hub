@@ -224,8 +224,16 @@ function DrawerHamburger({ tintColor }: { tintColor?: string }): React.ReactElem
  *  stack gets the drawer toggle without a per-screen edit. */
 function HeaderLeft({ canGoBack, tintColor }: { canGoBack?: boolean; tintColor?: string }): React.ReactElement {
   const navigation = useNavigation();
+  // On a pushed screen show BOTH back and the ☰ — the hamburger still toggles the
+  // permanent sidebar (web) / opens the drawer (phone), which is useful everywhere,
+  // not only on a stack's root.
   if (canGoBack) {
-    return <HeaderBackButton tintColor={tintColor} labelVisible={false} onPress={() => navigation.goBack()} />;
+    return (
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <HeaderBackButton tintColor={tintColor} labelVisible={false} onPress={() => navigation.goBack()} />
+        <DrawerHamburger tintColor={tintColor} />
+      </View>
+    );
   }
   return <DrawerHamburger tintColor={tintColor} />;
 }
