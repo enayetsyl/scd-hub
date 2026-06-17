@@ -4,9 +4,10 @@
  * list with §7.2 attention/comms badges, open resubmissions, completion health,
  * and touches-per-topic. Hub to Declare / Reconcile / Checking.
  */
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "urql";
 import { HOMEWORK_DAY_TALLY, HOMEWORK_SUMMARY } from "../../graphql/operations";
 import type { HomeworkStackParamList } from "../../navigation/types";
@@ -39,11 +40,27 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
 
   const vars = { sectionId: selection.sectionId ?? "", classId: selection.classId ?? "", date };
   const [tallyQ, refetchTally] = useQuery({ query: HOMEWORK_DAY_TALLY, variables: vars, pause: !hasSection });
-  const [sumQ] = useQuery({
+  const [sumQ, refetchSum] = useQuery({
     query: HOMEWORK_SUMMARY,
     variables: { sectionId: vars.sectionId, classId: vars.classId },
     pause: !hasSection,
   });
+
+  // Refetch the live tally + summary when the screen regains focus (e.g. after
+  // declaring an item or reconciling) so it never shows a stale day-total.
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      if (hasSection) {
+        refetchTally({ requestPolicy: "network-only" });
+        refetchSum({ requestPolicy: "network-only" });
+      }
+    }, [hasSection, refetchTally, refetchSum]),
+  );
 
   const tally = tallyQ.data?.homeworkDayTally;
   const summary = sumQ.data?.homeworkSummary;
@@ -145,6 +162,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
             <View style={{ gap: space(2), marginTop: space(2) }}>
               <Button title={STR.hwDeclare} onPress={() => navigation.navigate("DeclareHomework")} />
               <Button title={STR.hwReconcile} variant="secondary" onPress={() => navigation.navigate("HomeworkReconcile")} />
+              <Button title={STR.hwRecords} variant="secondary" onPress={() => navigation.navigate("HomeworkRecords")} />
               <Button title={STR.hwChecking} variant="secondary" onPress={() => navigation.navigate("CheckingQueue")} />
               <Button title={STR.hwRollups} variant="secondary" onPress={() => navigation.navigate("HomeworkRollups")} />
             </View>

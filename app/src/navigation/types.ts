@@ -39,12 +39,14 @@ export type ReviewStackParamList = {
     roundStatus?: string;
   };
   ReviewThread: { artifactId: string };
+  AssignReviews: undefined;
 };
 
 export type HomeworkStackParamList = {
   HomeworkHome: undefined;
   DeclareHomework: undefined;
   HomeworkReconcile: undefined;
+  HomeworkRecords: undefined;
   CheckingQueue: undefined;
   HomeworkRollups: undefined;
   SectionPicker: undefined;

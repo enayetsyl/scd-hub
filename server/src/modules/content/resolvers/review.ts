@@ -18,15 +18,21 @@ import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
 import {
   assignPlanReview as assignSvc,
+  assignPlanReviewBulk as assignBulkSvc,
   submitPlanReview as submitSvc,
   cancelPlanReview as cancelSvc,
   approvePlan as approveSvc,
   listMyReviewAssignments,
   planReviewInbox as planReviewInboxSvc,
   planReviewThread as planReviewThreadSvc,
+  reviewerAssignmentLoad as reviewerLoadSvc,
+  listAssignablePlans as assignablePlansSvc,
   ReviewError,
   type ReviewAssignmentDTO,
   type ApprovePlanResult,
+  type BulkAssignResult,
+  type ReviewerLoadDTO,
+  type AssignablePlanDTO,
 } from "../services/ReviewService";
 
 // ---------------------------------------------------------------------------
@@ -270,6 +276,102 @@ builder.queryField("planReviewThread", (t) =>
         if (!isParticipant) throw new ForbiddenError();
       }
       return thread;
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Bulk assign + Principal overviews (owner request — assign many plans to one
+// reviewer in one click; see who has how many assigned).
+// ---------------------------------------------------------------------------
+
+const BulkAssignResultRef = builder.objectRef<BulkAssignResult>("BulkAssignResult");
+BulkAssignResultRef.implement({
+  fields: (t) => ({
+    assignedCount: t.exposeInt("assignedCount"),
+    failedCount: t.exposeInt("failedCount"),
+    failures: t.field({
+      type: ["String"],
+      resolve: (r) => r.failures.map((f) => `${f.artifactId}: ${f.error}`),
+    }),
+  }),
+});
+
+builder.mutationField("assignPlanReviewBulk", (t) =>
+  t.field({
+    type: BulkAssignResultRef,
+    description:
+      "Assign MANY plans to ONE reviewer in a single call. Each plan supersedes its own open round; " +
+      "per-plan failures are collected, not fatal. Requires content:assign_review (Principal/Office).",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: {
+      artifactIds: t.arg.stringList({ required: true }),
+      reviewerId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return assignBulkSvc({
+        artifactIds: args.artifactIds,
+        reviewerId: args.reviewerId,
+        assignedBy: ctx.auth.userId,
+        actorRole: ctx.auth.role,
+      });
+    },
+  }),
+);
+
+const ReviewerLoadRef = builder.objectRef<ReviewerLoadDTO>("ReviewerLoad");
+ReviewerLoadRef.implement({
+  fields: (t) => ({
+    reviewerId: t.exposeString("reviewerId"),
+    reviewerName: t.exposeString("reviewerName"),
+    assignedCount: t.exposeInt("assignedCount"),
+    submittedCount: t.exposeInt("submittedCount"),
+    openCount: t.exposeInt("openCount"),
+  }),
+});
+
+builder.queryField("reviewerAssignmentLoad", (t) =>
+  t.field({
+    type: [ReviewerLoadRef],
+    description:
+      "Per-reviewer open review-round counts (assigned + submitted), busiest first. " +
+      "Requires content:assign_review (Principal/Office).",
+    authScopes: { hasPermission: "content:assign_review" },
+    resolve: async (_root, _args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return reviewerLoadSvc();
+    },
+  }),
+);
+
+const AssignablePlanRef = builder.objectRef<AssignablePlanDTO>("AssignablePlan");
+AssignablePlanRef.implement({
+  fields: (t) => ({
+    artifactId: t.exposeString("artifactId"),
+    docType: t.exposeString("docType"),
+    subject: t.exposeString("subject"),
+    classLevel: t.exposeInt("classLevel"),
+    anchorWord: t.exposeString("anchorWord"),
+    addressNumber: t.exposeString("addressNumber"),
+    title: t.string({ nullable: true, resolve: (r) => r.title }),
+    reviewStatus: t.exposeString("reviewStatus"),
+    currentReviewerId: t.string({ nullable: true, resolve: (r) => r.currentReviewerId }),
+    currentReviewerName: t.string({ nullable: true, resolve: (r) => r.currentReviewerName }),
+    roundStatus: t.string({ nullable: true, resolve: (r) => r.roundStatus }),
+  }),
+});
+
+builder.queryField("assignablePlans", (t) =>
+  t.field({
+    type: [AssignablePlanRef],
+    description:
+      "Current plans (chapter_plan/session_plan) with their open-round assignment state, for the " +
+      "bulk-assign picker. Requires content:assign_review (Principal/Office).",
+    authScopes: { hasPermission: "content:assign_review" },
+    resolve: async (_root, _args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return assignablePlansSvc();
     },
   }),
 );

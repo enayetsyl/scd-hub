@@ -115,6 +115,11 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
     <Screen scroll>
       {canAssign ? (
         <View style={{ marginBottom: space(4) }}>
+          <Card onPress={() => navigation.navigate("AssignReviews")}>
+            <Body style={{ fontWeight: "700" }}>{STR.rvAssignTitle}</Body>
+            <Muted style={{ marginTop: 2 }}>{STR.rvAssign}</Muted>
+          </Card>
+          <View style={{ height: space(3) }} />
           <H2>{STR.reviewInbox}</H2>
           {inboxErr ? (
             <ErrorBanner message={friendlyError(inboxErr)} onRetry={() => refetchInbox({ requestPolicy: "network-only" })} />

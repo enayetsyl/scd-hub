@@ -17,6 +17,7 @@ import { PLAN_DOC_TYPES, REVIEW_VERDICTS } from "@scd/shared";
 import type { ReviewStatus, ReviewVerdict } from "@scd/shared";
 import { ReviewAssignment } from "../models/ReviewAssignment";
 import { ContentArtifact } from "../models/ContentArtifact";
+import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
 import { emitReviewAssigned } from "../../notifications/services/emitters";
 
@@ -461,4 +462,152 @@ export async function approvePlan(input: {
   });
 
   return { artifactId: artifact._id.toString(), reviewStatus: "gold" };
+}
+
+// ---------------------------------------------------------------------------
+// Bulk assign + Principal overviews (the "assign many plans to one reviewer in one
+// click" + "who has how many" surfaces — owner request, local testing 2026-06-17)
+// ---------------------------------------------------------------------------
+
+export interface BulkAssignResult {
+  assignedCount: number;
+  failedCount: number;
+  failures: { artifactId: string; error: string }[];
+}
+
+/** Assign several plans to ONE reviewer in a single call — loops assignPlanReview
+ *  (each supersedes its own open round, audits, notifies); collects per-artifact
+ *  failures rather than aborting the batch. */
+export async function assignPlanReviewBulk(input: {
+  artifactIds: string[];
+  reviewerId: string;
+  assignedBy: string;
+  actorRole?: string;
+}): Promise<BulkAssignResult> {
+  let assignedCount = 0;
+  const failures: { artifactId: string; error: string }[] = [];
+  for (const artifactId of input.artifactIds) {
+    try {
+      await assignPlanReview({
+        artifactId,
+        reviewerId: input.reviewerId,
+        assignedBy: input.assignedBy,
+        actorRole: input.actorRole,
+      });
+      assignedCount += 1;
+    } catch (err) {
+      failures.push({ artifactId, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  return { assignedCount, failedCount: failures.length, failures };
+}
+
+export interface ReviewerLoadDTO {
+  reviewerId: string;
+  reviewerName: string;
+  assignedCount: number; // status=assigned (awaiting verdict)
+  submittedCount: number; // status=submitted (decided, awaiting admin)
+  openCount: number; // assigned + submitted
+}
+
+/** Per-reviewer open-round counts — "what has how many content assigned" (Principal overview). */
+export async function reviewerAssignmentLoad(): Promise<ReviewerLoadDTO[]> {
+  const rows = (await ReviewAssignment.aggregate([
+    { $match: { status: { $in: ["assigned", "submitted"] } } },
+    { $group: { _id: { reviewerId: "$reviewerId", status: "$status" }, n: { $sum: 1 } } },
+  ])) as { _id: { reviewerId: { toString(): string }; status: string }; n: number }[];
+
+  const byReviewer = new Map<string, { assigned: number; submitted: number }>();
+  for (const r of rows) {
+    const id = r._id.reviewerId.toString();
+    const cur = byReviewer.get(id) ?? { assigned: 0, submitted: 0 };
+    if (r._id.status === "assigned") cur.assigned += r.n;
+    else cur.submitted += r.n;
+    byReviewer.set(id, cur);
+  }
+  const ids = [...byReviewer.keys()];
+  const users = await User.find({ _id: { $in: ids } }).select({ name: 1 }).lean();
+  const nameOf = new Map(users.map((u) => [u._id.toString(), u.name]));
+  return ids
+    .map((id) => {
+      const c = byReviewer.get(id)!;
+      return {
+        reviewerId: id,
+        reviewerName: nameOf.get(id) ?? id,
+        assignedCount: c.assigned,
+        submittedCount: c.submitted,
+        openCount: c.assigned + c.submitted,
+      };
+    })
+    .sort((a, b) => b.openCount - a.openCount);
+}
+
+export interface AssignablePlanDTO {
+  artifactId: string;
+  docType: string;
+  subject: string;
+  classLevel: number;
+  anchorWord: string;
+  addressNumber: string;
+  title: string | null;
+  reviewStatus: string;
+  currentReviewerId: string | null;
+  currentReviewerName: string | null;
+  roundStatus: string | null; // assigned|submitted|null
+}
+
+/** The current plans + their open-round assignment state (for the multi-select picker). */
+export async function listAssignablePlans(): Promise<AssignablePlanDTO[]> {
+  const arts = await ContentArtifact.find({
+    docType: { $in: PLAN_DOC_TYPES },
+    current: true,
+  }).lean();
+
+  const openRounds = (await ReviewAssignment.find({
+    status: { $in: ["assigned", "submitted"] },
+  }).lean()) as unknown as RawAssignment[];
+
+  const keyStr = (k: ReviewAddressKey): string =>
+    `${k.docType}|${k.subject}|${k.classLevel}|${k.anchorWord}|${k.addressNumber}`;
+  const roundByKey = new Map<string, RawAssignment>();
+  for (const r of openRounds) {
+    roundByKey.set(
+      keyStr({
+        docType: r.docType,
+        subject: r.subject,
+        classLevel: r.classLevel,
+        anchorWord: r.anchorWord,
+        addressNumber: r.addressNumber,
+      }),
+      r,
+    );
+  }
+
+  const reviewerIds = [...new Set(openRounds.map((r) => r.reviewerId.toString()))];
+  const users = await User.find({ _id: { $in: reviewerIds } }).select({ name: 1 }).lean();
+  const nameOf = new Map(users.map((u) => [u._id.toString(), u.name]));
+
+  return arts
+    .map((a) => {
+      const key = addressKeyOf(a as unknown as AddressKeyInput);
+      const round = roundByKey.get(keyStr(key));
+      return {
+        artifactId: a._id.toString(),
+        docType: a.docType,
+        subject: a.subject,
+        classLevel: a.classLevel,
+        anchorWord: key.anchorWord,
+        addressNumber: key.addressNumber,
+        title: a.address?.title ?? null,
+        reviewStatus: a.reviewStatus,
+        currentReviewerId: round ? round.reviewerId.toString() : null,
+        currentReviewerName: round ? nameOf.get(round.reviewerId.toString()) ?? null : null,
+        roundStatus: round ? round.status : null,
+      };
+    })
+    .sort((a, b) =>
+      a.subject === b.subject
+        ? a.classLevel - b.classLevel || a.addressNumber.localeCompare(b.addressNumber)
+        : a.subject.localeCompare(b.subject),
+    );
 }

@@ -571,6 +571,65 @@ export const APPROVE_PLAN = gql<{ approvePlan: ApprovePlanResultT }, { artifactI
   }
 `;
 
+// --- Bulk reviewer-assignment + Principal overview (content:assign_review) ---
+
+export interface AssignablePlanT {
+  artifactId: string;
+  docType: string;
+  subject: string;
+  classLevel: number;
+  anchorWord: string;
+  addressNumber: string;
+  title: string | null;
+  reviewStatus: string;
+  currentReviewerId: string | null;
+  currentReviewerName: string | null;
+  roundStatus: string | null;
+}
+
+/** Current plans + their open-round assignment state, for the multi-select picker. */
+export const ASSIGNABLE_PLANS = gql<{ assignablePlans: AssignablePlanT[] }, NoVars>`
+  query AssignablePlans {
+    assignablePlans {
+      artifactId docType subject classLevel anchorWord addressNumber title
+      reviewStatus currentReviewerId currentReviewerName roundStatus
+    }
+  }
+`;
+
+export interface ReviewerLoadT {
+  reviewerId: string;
+  reviewerName: string;
+  assignedCount: number;
+  submittedCount: number;
+  openCount: number;
+}
+
+/** Per-reviewer open-round counts (Principal overview — who has how many). */
+export const REVIEWER_ASSIGNMENT_LOAD = gql<{ reviewerAssignmentLoad: ReviewerLoadT[] }, NoVars>`
+  query ReviewerAssignmentLoad {
+    reviewerAssignmentLoad { reviewerId reviewerName assignedCount submittedCount openCount }
+  }
+`;
+
+export interface BulkAssignResultT {
+  assignedCount: number;
+  failedCount: number;
+  failures: string[];
+}
+
+/** Assign many plans to one reviewer in one call. */
+export const ASSIGN_PLAN_REVIEW_BULK = gql<
+  { assignPlanReviewBulk: BulkAssignResultT },
+  { artifactIds: string[]; reviewerId: string }
+>`
+  mutation AssignPlanReviewBulk($artifactIds: [String!]!, $reviewerId: String!) {
+    assignPlanReviewBulk(artifactIds: $artifactIds, reviewerId: $reviewerId) {
+      assignedCount failedCount failures
+    }
+  }
+`;
+
 // ===========================================================================
 // Questions (J2)
 // ===========================================================================
@@ -1541,6 +1600,27 @@ export const CHECK_HOMEWORK_RECORD = gql<
   }
 `;
 
+export interface HwTransitionResultT {
+  recordId: string;
+  hwId: string;
+  state: string;
+  chaseCount: number;
+  result: string | null;
+  dueDate: string | null;
+}
+
+/** Apply one legal lifecycle transition to a per-student record (GIVEN→DUE→SUBMITTED…). */
+export const TRANSITION_HOMEWORK_RECORD = gql<
+  { transitionHomeworkRecord: HwTransitionResultT },
+  { sectionId: string; recordId: string; toState: string; result?: string | null }
+>`
+  mutation TransitionHomeworkRecord($sectionId: String!, $recordId: String!, $toState: String!, $result: String) {
+    transitionHomeworkRecord(sectionId: $sectionId, recordId: $recordId, toState: $toState, result: $result) {
+      recordId hwId state chaseCount result dueDate
+    }
+  }
+`;
+
 // --- HW-T4 roll-ups: watch-list / trim-pattern / question-usage (§7.3/§7.4/§8.4) ---
 
 export interface HwWatchEntryT {
@@ -1660,12 +1740,13 @@ export interface RoutineSlotT {
   coverTeacherName: string | null;
   startTime: string | null;
   endTime: string | null;
+  groupName: string | null;
 }
 
 const ROUTINE_SLOT_FIELDS = `
   id groupType groupId classId dayOfWeek periodNumber subject track
   isBreak teacherId roomId effectiveFrom effectiveTo active coverTeacherId
-  teacherName coverTeacherName startTime endTime
+  teacherName coverTeacherName startTime endTime groupName
 `;
 
 export const ROUTINE_SLOTS_QUERY = gql<

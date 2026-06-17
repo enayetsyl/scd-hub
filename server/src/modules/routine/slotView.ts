@@ -10,9 +10,15 @@
 import { Types } from "mongoose";
 import { User } from "../foundation/models/User";
 import { Class } from "../foundation/models/Class";
+import { Section } from "../foundation/models/Section";
 import { PeriodGrid } from "./models/PeriodGrid";
 import { ScheduleWindow } from "./models/ScheduleWindow";
+import { SubjectGroup } from "./models/SubjectGroup";
 import { computePeriodTimes } from "./schedule";
+
+/** Sections that ARE the whole class (post-merge) — their name is redundant next
+ *  to the class, so the group name shows just the class. Boys/Girls stay appended. */
+const WHOLE_CLASS_SECTIONS = ["মূল", "সম্মিলিত"];
 
 /** The view-only fields attached to each slot (read by the RoutineSlot GraphQL type). */
 export interface SlotViewFields {
@@ -20,12 +26,15 @@ export interface SlotViewFields {
   coverTeacherName: string | null;
   startTime: string | null;
   endTime: string | null;
+  /** The class/group this slot belongs to (section → class [+ Boys/Girls]; subjectgroup → its name). */
+  groupName: string | null;
 }
 
 interface Enrichable {
   groupType: string;
   periodNumber: number;
   classId?: Types.ObjectId | string | null;
+  groupId?: Types.ObjectId | string | null;
   teacherId?: Types.ObjectId | string | null;
   coverTeacherId?: Types.ObjectId | string | null;
 }
@@ -46,11 +55,36 @@ export async function enrichRoutineSlots<T extends Enrichable>(slots: T[]): Prom
   const users = await User.find({ _id: { $in: [...userIds] } }).select("name").lean();
   const nameById = new Map(users.map((u) => [u._id.toString(), u.name]));
 
-  // 2. Class levels for section slots → audience.
+  // 2. Class levels + names for section slots → audience + group name.
   const classIds = new Set<string>();
-  for (const s of slots) if (s.groupType === "section" && s.classId) classIds.add(s.classId.toString());
-  const classes = await Class.find({ _id: { $in: [...classIds] } }).select("level").lean();
+  const sectionIds = new Set<string>();
+  const groupIds = new Set<string>();
+  for (const s of slots) {
+    if (s.groupType === "section") {
+      if (s.classId) classIds.add(s.classId.toString());
+      if (s.groupId) sectionIds.add(s.groupId.toString());
+    } else if (s.groupType === "subjectgroup" && s.groupId) {
+      groupIds.add(s.groupId.toString());
+    }
+  }
+  const classes = await Class.find({ _id: { $in: [...classIds] } }).select("level nameBn").lean();
   const levelById = new Map(classes.map((c) => [c._id.toString(), c.level]));
+  const classNameById = new Map(classes.map((c) => [c._id.toString(), c.nameBn]));
+  const sections = await Section.find({ _id: { $in: [...sectionIds] } }).select("nameBn").lean();
+  const sectionNameById = new Map(sections.map((s) => [s._id.toString(), s.nameBn]));
+  const subjectGroups = await SubjectGroup.find({ _id: { $in: [...groupIds] } }).select("nameBn").lean();
+  const groupNameById = new Map(subjectGroups.map((g) => [g._id.toString(), g.nameBn]));
+
+  /** Section slot → class name (+ Boys/Girls if a real sub-section); subjectgroup → its name. */
+  const groupNameOf = (s: Enrichable): string | null => {
+    if (s.groupType === "subjectgroup") {
+      return s.groupId ? groupNameById.get(s.groupId.toString()) ?? null : null;
+    }
+    const className = s.classId ? classNameById.get(s.classId.toString()) ?? null : null;
+    const sectionName = s.groupId ? sectionNameById.get(s.groupId.toString()) ?? null : null;
+    if (!className) return sectionName;
+    return sectionName && !WHOLE_CLASS_SECTIONS.includes(sectionName) ? `${className} · ${sectionName}` : className;
+  };
 
   // 3. Period times per audience from the regular-season grids + window.
   const grids = await PeriodGrid.find({ season: "regular", active: true }).lean();
@@ -73,6 +107,7 @@ export async function enrichRoutineSlots<T extends Enrichable>(slots: T[]): Prom
       coverTeacherName: s.coverTeacherId ? nameById.get(s.coverTeacherId.toString()) ?? null : null,
       startTime: t?.start ?? null,
       endTime: t?.end ?? null,
+      groupName: groupNameOf(s),
     };
   });
 }
