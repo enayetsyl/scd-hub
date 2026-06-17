@@ -66,6 +66,7 @@ import WaLinkScreen from "../screens/trackers/WaLinkScreen";
 import HomeworkHomeScreen from "../screens/homework/HomeworkHomeScreen";
 import DeclareHomeworkScreen from "../screens/homework/DeclareHomeworkScreen";
 import HomeworkReconcileScreen from "../screens/homework/HomeworkReconcileScreen";
+import HomeworkRecordsScreen from "../screens/homework/HomeworkRecordsScreen";
 import CheckingQueueScreen from "../screens/homework/CheckingQueueScreen";
 import HomeworkRollupsScreen from "../screens/homework/HomeworkRollupsScreen";
 import AssignmentHomeScreen from "../screens/assignment/AssignmentHomeScreen";
@@ -79,6 +80,7 @@ import ChildAssignmentsScreen from "../screens/guardian/ChildAssignmentsScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
+import AssignReviewsScreen from "../screens/review/AssignReviewsScreen";
 import RoutineHomeScreen from "../screens/routine/RoutineHomeScreen";
 import MyRoutineScreen from "../screens/routine/MyRoutineScreen";
 import RoutineMasterScreen from "../screens/routine/RoutineMasterScreen";
@@ -222,8 +224,16 @@ function DrawerHamburger({ tintColor }: { tintColor?: string }): React.ReactElem
  *  stack gets the drawer toggle without a per-screen edit. */
 function HeaderLeft({ canGoBack, tintColor }: { canGoBack?: boolean; tintColor?: string }): React.ReactElement {
   const navigation = useNavigation();
+  // On a pushed screen show BOTH back and the ☰ — the hamburger still toggles the
+  // permanent sidebar (web) / opens the drawer (phone), which is useful everywhere,
+  // not only on a stack's root.
   if (canGoBack) {
-    return <HeaderBackButton tintColor={tintColor} labelVisible={false} onPress={() => navigation.goBack()} />;
+    return (
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <HeaderBackButton tintColor={tintColor} labelVisible={false} onPress={() => navigation.goBack()} />
+        <DrawerHamburger tintColor={tintColor} />
+      </View>
+    );
   }
   return <DrawerHamburger tintColor={tintColor} />;
 }
@@ -460,6 +470,7 @@ function HomeworkNavigator(): React.ReactElement {
       <HomeworkStack.Screen name="HomeworkHome" component={HomeworkHomeScreen} options={{ title: STR.tabHomework }} />
       <HomeworkStack.Screen name="DeclareHomework" component={DeclareHomeworkScreen} options={{ title: STR.hwDeclareTitle }} />
       <HomeworkStack.Screen name="HomeworkReconcile" component={HomeworkReconcileScreen} options={{ title: STR.hwReconcileTitle }} />
+      <HomeworkStack.Screen name="HomeworkRecords" component={HomeworkRecordsScreen} options={{ title: STR.hwRecordsTitle }} />
       <HomeworkStack.Screen name="CheckingQueue" component={CheckingQueueScreen} options={{ title: STR.hwCheckingTitle }} />
       <HomeworkStack.Screen name="HomeworkRollups" component={HomeworkRollupsScreen} options={{ title: STR.hwRollupsTitle }} />
       <HomeworkStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
@@ -491,6 +502,7 @@ function ReviewNavigator(): React.ReactElement {
       <ReviewStack.Screen name="ReviewHome" component={ReviewHomeScreen} options={{ title: STR.tabReview }} />
       <ReviewStack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} options={{ title: STR.submitReview }} />
       <ReviewStack.Screen name="ReviewThread" component={ReviewThreadScreen} options={{ title: STR.reviewThread }} />
+      <ReviewStack.Screen name="AssignReviews" component={AssignReviewsScreen} options={{ title: STR.rvAssignTitle }} />
     </ReviewStack.Navigator>
   );
 }

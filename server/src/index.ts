@@ -114,11 +114,21 @@ if (process.env.SENTRY_DEBUG_ROUTE === "1" && process.env.NODE_ENV !== "producti
 const schema = builder.toSchema();
 
 /**
- * Errors whose message is a deliberate, user-facing validation/business message and
- * may be shown to the client. Everything NOT listed here (DB/driver/internal errors,
- * Mongo/JWT/TypeError, …) stays masked to a generic message — default-deny, so a new
- * internal error can never leak. ADD a module's error class here when it should surface.
- * (Matched by constructor.name, which is reliable even for empty-body `extends Error`.)
+ * Error-message exposure (D-#256, broadened in D-#259 2026-06-17).
+ *
+ * Goal: every screen shows a MEANINGFUL message for a deliberate validation/business
+ * failure — never a flat "Unexpected error". So a thrown error's `.message` is surfaced
+ * to the client when it is one of OURS:
+ *   • a module domain-error class (the named set below — e.g. FinanceError, ReviewError), OR
+ *   • a *bare* `Error` (constructor.name === "Error"). Across the codebase a bare `Error`
+ *     is only ever produced by our own intentional `throw new Error("…")` in services/
+ *     resolvers (the tracker/routine/foundation modules throw these by the hundred), so
+ *     its message is safe and human-meaningful by construction.
+ *
+ * Everything else stays MASKED (fail-closed): runtime/driver/auth error TYPES carry
+ * internal detail and must never leak. They are never a bare `Error` and never in the
+ * domain set, so the default already masks them; RUNTIME_ERROR_NAMES re-asserts it
+ * explicitly (defence-in-depth) so e.g. a Mongoose `ValidationError` can't slip through.
  */
 const EXPOSED_DOMAIN_ERRORS = new Set<string>([
   "ForbiddenError", "ReviewError", "AccessControlError", "ChatAttachmentError",
@@ -131,13 +141,32 @@ const EXPOSED_DOMAIN_ERRORS = new Set<string>([
 ]);
 
 /**
+ * Runtime/driver/auth error types whose messages may carry internal detail — ALWAYS
+ * masked, even though our intentional bare `Error` messages are surfaced.
+ */
+const RUNTIME_ERROR_NAMES = new Set<string>([
+  "MongoError", "MongoServerError", "MongoNetworkError", "MongoServerSelectionError",
+  "MongoBulkWriteError", "MongooseError", "ValidationError", "CastError", "StrictModeError",
+  "MissingSchemaError", "DivergentArrayError", "JsonWebTokenError", "TokenExpiredError",
+  "NotBeforeError", "TypeError", "RangeError", "ReferenceError", "SyntaxError", "EvalError",
+  "URIError",
+]);
+
+/** True when the error is one of OURS (a domain class or a bare intentional Error). */
+function isExposableDomainError(err: Error): boolean {
+  const name = err.constructor.name;
+  if (RUNTIME_ERROR_NAMES.has(name)) return false;
+  return name === "Error" || EXPOSED_DOMAIN_ERRORS.has(name);
+}
+
+/**
  * Surface intentional domain-error messages instead of the catch-all "Unexpected error"
  * Yoga otherwise applies to every thrown Error. Anything else falls back to the default
  * mask, so internal details never reach the client.
  */
 function maskErrorExposingDomain(error: unknown, message: string, isDev?: boolean): Error {
   const original = (error as { originalError?: unknown })?.originalError;
-  if (original instanceof Error && EXPOSED_DOMAIN_ERRORS.has(original.constructor.name)) {
+  if (original instanceof Error && isExposableDomainError(original)) {
     return new GraphQLError(original.message);
   }
   return maskError(error, message, isDev);

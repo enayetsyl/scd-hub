@@ -9,7 +9,7 @@ import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { HW_RESULTS } from "@scd/shared";
-import { HOMEWORK_ITEMS, HOMEWORK_STUDENT_RECORDS, CHECK_HOMEWORK_RECORD, ATTACH_HW_ANSWER_FILE } from "../../graphql/operations";
+import { HOMEWORK_ITEMS, HOMEWORK_STUDENT_RECORDS, CHECK_HOMEWORK_RECORD, ATTACH_HW_ANSWER_FILE, STUDENTS_QUERY } from "../../graphql/operations";
 import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
@@ -50,6 +50,12 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
     variables: { ...base, itemId: itemId ?? "" },
     pause: !hasSection || !itemId,
   });
+  const [studentsQ] = useQuery({
+    query: STUDENTS_QUERY,
+    variables: { sectionId: base.sectionId },
+    pause: !hasSection,
+  });
+  const nameMap = new Map((studentsQ.data?.studentsInSection ?? []).map((s) => [s.id, s.name]));
   const [, check] = useMutation(CHECK_HOMEWORK_RECORD);
   const [, attachAnswer] = useMutation(ATTACH_HW_ANSWER_FILE);
   /** Which record's answer-file upload is in flight (GP-A). */
@@ -157,12 +163,13 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
                   return (
                     <Card key={r.id}>
                       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                        <Muted>{r.hwId}</Muted>
+                        <Body style={{ fontWeight: "700", flex: 1 }}>{nameMap.get(r.studentId) ?? r.studentId}</Body>
                         <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
                           {r.answerFileId ? <Badge text={STR.hwFileHas} tone="ok" /> : null}
                           <Badge text={lifecycleStateLabel(r.state)} tone="brand" />
                         </View>
                       </View>
+                      <Muted style={{ marginTop: 2 }}>{r.hwId}</Muted>
                       <Muted style={{ marginTop: 4 }}>{STR.hwResult}</Muted>
                       <ChipRow>
                         {HW_RESULTS.map((rv) => (

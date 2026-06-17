@@ -10,17 +10,24 @@ import { STR } from "../lib/labels";
 import { useSectionContext } from "../state/SectionContext";
 import { space } from "../theme/tokens";
 
+/** Sections that ARE the whole class (post-merge) — their name is redundant noise
+ *  next to the class, so we show just the class. Real sub-sections (Boys/Girls) stay. */
+const WHOLE_CLASS_SECTIONS = ["মূল", "সম্মিলিত"];
+
 export function SectionBar({ onChange }: { onChange: () => void }): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
+  const showSection =
+    !!selection.sectionNameBn && !WHOLE_CLASS_SECTIONS.includes(selection.sectionNameBn);
 
   return (
     <Card>
       {hasSection ? (
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space(2) }}>
           <View style={{ flex: 1 }}>
-            <Muted>{STR.section}</Muted>
+            <Muted>{STR.klass}</Muted>
             <Body style={{ fontWeight: "600" }}>
-              {selection.classNameBn} · {selection.sectionNameBn}
+              {selection.classNameBn}
+              {showSection ? ` · ${selection.sectionNameBn}` : ""}
             </Body>
           </View>
           <Button title={STR.select} variant="ghost" onPress={onChange} />

@@ -50,6 +50,7 @@ export const RoutineSlotRef = builder.objectRef<IRoutineSlot>("RoutineSlot").imp
     coverTeacherName: t.string({ nullable: true, resolve: (s) => (s as { coverTeacherName?: string | null }).coverTeacherName ?? null }),
     startTime: t.string({ nullable: true, resolve: (s) => (s as { startTime?: string | null }).startTime ?? null }),
     endTime: t.string({ nullable: true, resolve: (s) => (s as { endTime?: string | null }).endTime ?? null }),
+    groupName: t.string({ nullable: true, resolve: (s) => (s as { groupName?: string | null }).groupName ?? null }),
   }),
 });
 
