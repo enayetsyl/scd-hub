@@ -145,6 +145,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
             <View style={{ gap: space(2), marginTop: space(2) }}>
               <Button title={STR.hwDeclare} onPress={() => navigation.navigate("DeclareHomework")} />
               <Button title={STR.hwReconcile} variant="secondary" onPress={() => navigation.navigate("HomeworkReconcile")} />
+              <Button title={STR.hwRecords} variant="secondary" onPress={() => navigation.navigate("HomeworkRecords")} />
               <Button title={STR.hwChecking} variant="secondary" onPress={() => navigation.navigate("CheckingQueue")} />
               <Button title={STR.hwRollups} variant="secondary" onPress={() => navigation.navigate("HomeworkRollups")} />
             </View>

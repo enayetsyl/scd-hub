@@ -1541,6 +1541,27 @@ export const CHECK_HOMEWORK_RECORD = gql<
   }
 `;
 
+export interface HwTransitionResultT {
+  recordId: string;
+  hwId: string;
+  state: string;
+  chaseCount: number;
+  result: string | null;
+  dueDate: string | null;
+}
+
+/** Apply one legal lifecycle transition to a per-student record (GIVEN→DUE→SUBMITTED…). */
+export const TRANSITION_HOMEWORK_RECORD = gql<
+  { transitionHomeworkRecord: HwTransitionResultT },
+  { sectionId: string; recordId: string; toState: string; result?: string | null }
+>`
+  mutation TransitionHomeworkRecord($sectionId: String!, $recordId: String!, $toState: String!, $result: String) {
+    transitionHomeworkRecord(sectionId: $sectionId, recordId: $recordId, toState: $toState, result: $result) {
+      recordId hwId state chaseCount result dueDate
+    }
+  }
+`;
+
 // --- HW-T4 roll-ups: watch-list / trim-pattern / question-usage (§7.3/§7.4/§8.4) ---
 
 export interface HwWatchEntryT {
