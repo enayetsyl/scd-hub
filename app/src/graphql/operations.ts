@@ -571,6 +571,65 @@ export const APPROVE_PLAN = gql<{ approvePlan: ApprovePlanResultT }, { artifactI
   }
 `;
 
+// --- Bulk reviewer-assignment + Principal overview (content:assign_review) ---
+
+export interface AssignablePlanT {
+  artifactId: string;
+  docType: string;
+  subject: string;
+  classLevel: number;
+  anchorWord: string;
+  addressNumber: string;
+  title: string | null;
+  reviewStatus: string;
+  currentReviewerId: string | null;
+  currentReviewerName: string | null;
+  roundStatus: string | null;
+}
+
+/** Current plans + their open-round assignment state, for the multi-select picker. */
+export const ASSIGNABLE_PLANS = gql<{ assignablePlans: AssignablePlanT[] }, NoVars>`
+  query AssignablePlans {
+    assignablePlans {
+      artifactId docType subject classLevel anchorWord addressNumber title
+      reviewStatus currentReviewerId currentReviewerName roundStatus
+    }
+  }
+`;
+
+export interface ReviewerLoadT {
+  reviewerId: string;
+  reviewerName: string;
+  assignedCount: number;
+  submittedCount: number;
+  openCount: number;
+}
+
+/** Per-reviewer open-round counts (Principal overview — who has how many). */
+export const REVIEWER_ASSIGNMENT_LOAD = gql<{ reviewerAssignmentLoad: ReviewerLoadT[] }, NoVars>`
+  query ReviewerAssignmentLoad {
+    reviewerAssignmentLoad { reviewerId reviewerName assignedCount submittedCount openCount }
+  }
+`;
+
+export interface BulkAssignResultT {
+  assignedCount: number;
+  failedCount: number;
+  failures: string[];
+}
+
+/** Assign many plans to one reviewer in one call. */
+export const ASSIGN_PLAN_REVIEW_BULK = gql<
+  { assignPlanReviewBulk: BulkAssignResultT },
+  { artifactIds: string[]; reviewerId: string }
+>`
+  mutation AssignPlanReviewBulk($artifactIds: [String!]!, $reviewerId: String!) {
+    assignPlanReviewBulk(artifactIds: $artifactIds, reviewerId: $reviewerId) {
+      assignedCount failedCount failures
+    }
+  }
+`;
+
 // ===========================================================================
 // Questions (J2)
 // ===========================================================================

@@ -39,6 +39,7 @@ export type ReviewStackParamList = {
     roundStatus?: string;
   };
   ReviewThread: { artifactId: string };
+  AssignReviews: undefined;
 };
 
 export type HomeworkStackParamList = {

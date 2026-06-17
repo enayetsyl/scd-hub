@@ -80,6 +80,7 @@ import ChildAssignmentsScreen from "../screens/guardian/ChildAssignmentsScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
+import AssignReviewsScreen from "../screens/review/AssignReviewsScreen";
 import RoutineHomeScreen from "../screens/routine/RoutineHomeScreen";
 import MyRoutineScreen from "../screens/routine/MyRoutineScreen";
 import RoutineMasterScreen from "../screens/routine/RoutineMasterScreen";
@@ -493,6 +494,7 @@ function ReviewNavigator(): React.ReactElement {
       <ReviewStack.Screen name="ReviewHome" component={ReviewHomeScreen} options={{ title: STR.tabReview }} />
       <ReviewStack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} options={{ title: STR.submitReview }} />
       <ReviewStack.Screen name="ReviewThread" component={ReviewThreadScreen} options={{ title: STR.reviewThread }} />
+      <ReviewStack.Screen name="AssignReviews" component={AssignReviewsScreen} options={{ title: STR.rvAssignTitle }} />
     </ReviewStack.Navigator>
   );
 }
