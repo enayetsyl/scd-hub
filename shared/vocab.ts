@@ -949,6 +949,11 @@ export const NOTIFICATION_KINDS = [
   "CLASS_NOTE_ESCALATION",
   "CLASS_NOTE_PUBLISHED",
   "HW_PARENT_COMMS",
+  // HW per-chase guardian notify (app-native, NO wire twin — D-#46/#260): EVERY
+  // chase pushes the student's login-enabled guardians an in-app reminder (the push
+  // channel rides emit()), deduped once per student+item per day. Distinct from
+  // HW_PARENT_COMMS, which nudges the CLASS TEACHER at the 3rd chase.
+  "HW_CHASE",
   "REVIEW_ASSIGNED",
   "COVER_ASSIGNED",
   "LIBRARY_DUE_SOON",
@@ -981,6 +986,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   CLASS_NOTE_ESCALATION: "পাঠ নোট অনিষ্পন্ন",
   CLASS_NOTE_PUBLISHED: "পাঠ নোট প্রকাশিত",
   HW_PARENT_COMMS: "অভিভাবক যোগাযোগের তাগিদ",
+  HW_CHASE: "বাড়ির কাজ জমার তাগাদা",
   REVIEW_ASSIGNED: "পর্যালোচনার দায়িত্ব",
   COVER_ASSIGNED: "কাভার ক্লাসের দায়িত্ব",
   LIBRARY_DUE_SOON: "বই ফেরতের স্মরণিকা",
@@ -1003,6 +1009,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   CLASS_NOTE_ESCALATION: "Class-note escalation",
   CLASS_NOTE_PUBLISHED: "Class note published",
   HW_PARENT_COMMS: "Parent-contact prompt",
+  HW_CHASE: "Homework chase reminder",
   REVIEW_ASSIGNED: "Review assigned",
   COVER_ASSIGNED: "Cover assigned",
   LIBRARY_DUE_SOON: "Book due soon",
@@ -1373,6 +1380,8 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "classNote.escalation.body",
   "homework.parentComms.title",
   "homework.parentComms.body",
+  "homework.chase.title",
+  "homework.chase.body",
   "review.assigned.title",
   "review.assigned.body",
   "cover.assigned.title",
@@ -1458,6 +1467,15 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   "homework.parentComms.body": {
     group: "homework", labelBn: "অভিভাবক যোগাযোগের তাগিদ — বার্তা", placeholders: ["hwId", "chaseCount"],
     bnDefault: "বাড়ির কাজ {hwId}: একজন শিক্ষার্থীর তাগাদা {chaseCount} বার হয়েছে — অভিভাবককে জানান।", defaultLangMode: "BN",
+  },
+  // --- Homework per-chase guardian notify (D-#260) ---
+  "homework.chase.title": {
+    group: "homework", labelBn: "বাড়ির কাজ জমার তাগাদা — শিরোনাম", placeholders: [],
+    bnDefault: "বাড়ির কাজ জমা হয়নি", defaultLangMode: "BN",
+  },
+  "homework.chase.body": {
+    group: "homework", labelBn: "বাড়ির কাজ জমার তাগাদা — বার্তা", placeholders: ["hwId", "chaseCount"],
+    bnDefault: "আপনার সন্তানের বাড়ির কাজ {hwId} এখনও জমা হয়নি — অনুগ্রহ করে আজই জমা দিতে উৎসাহিত করুন। (তাগাদা {chaseCount} বার)", defaultLangMode: "BN",
   },
   // --- Plan review assigned (N1.5) ---
   "review.assigned.title": {

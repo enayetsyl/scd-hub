@@ -18,7 +18,7 @@ import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkSequence } from "../models/HomeworkSequence";
 import { assertTransition, isEntryState } from "../lifecycle";
 import { isSchoolDay, nextSchoolDay } from "../calendar";
-import { emitHwParentComms } from "../../notifications/services/emitters";
+import { emitHwParentComms, emitHwGuardianChase } from "../../notifications/services/emitters";
 
 // ---------------------------------------------------------------------------
 // HW_ID generation (handoff §2.1 / D-#34)
@@ -280,8 +280,22 @@ export async function transitionRecord(
   record.stateDates.push({ state: to, at });
   await record.save();
 
-  // N1.4 (§7.2, D-#34/D-#45): the 3rd chase prompts the class teacher to contact
-  // the parents. Best-effort + deduped per student+item inside the emitter.
+  // D-#260: EVERY chase pushes the student's login-enabled guardians an in-app
+  // reminder (in-app + push), deduped once per student+item per day inside the
+  // emitter. Best-effort — a notification problem never blocks the transition.
+  if (to === "CHASE") {
+    await emitHwGuardianChase({
+      hwItemId: record.hwItemId,
+      hwId: record.hwId,
+      studentId: record.studentId,
+      sectionId: record.sectionId,
+      chaseCount: record.chaseCount,
+      at,
+    });
+  }
+
+  // N1.4 (§7.2, D-#34/D-#45): the 3rd chase additionally prompts the class teacher
+  // to contact the parents. Best-effort + deduped per student+item inside the emitter.
   if (to === "CHASE" && record.chaseCount >= 3) {
     await emitHwParentComms({
       hwItemId: record.hwItemId,

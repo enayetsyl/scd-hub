@@ -56,8 +56,10 @@ jest.mock("../modules/trackers/models/HomeworkSequence", () => ({
 // Notification emitters (N-1, D-#72) — mocked: the host-side threshold logic is
 // under test here; the emitter internals are covered in notifications.test.ts.
 const mockEmitHwParentComms = jest.fn().mockResolvedValue(undefined);
+const mockEmitHwGuardianChase = jest.fn().mockResolvedValue(undefined);
 jest.mock("../modules/notifications/services/emitters", () => ({
   emitHwParentComms: (...args: unknown[]) => mockEmitHwParentComms(...args),
+  emitHwGuardianChase: (...args: unknown[]) => mockEmitHwGuardianChase(...args),
 }));
 
 // Import AFTER mocks
@@ -405,6 +407,17 @@ describe("transitionRecord — lifecycle moves (timestamped)", () => {
     mockRecordFindById.mockResolvedValue(rec);
     await transitionRecord({ recordId: REC_ID.toString(), toState: "CHASE", actorId: ACTOR_ID });
     expect(mockEmitHwParentComms).not.toHaveBeenCalled();
+  });
+
+  test("D-#260 — EVERY chase (even the 1st) notifies the student's guardians", async () => {
+    mockEmitHwGuardianChase.mockClear();
+    const rec = makeRecord({ state: "DUE", chaseCount: 0, hwItemId: ITEM_ID, studentId: "S1", sectionId: new mongoose.Types.ObjectId() });
+    mockRecordFindById.mockResolvedValue(rec);
+    await transitionRecord({ recordId: REC_ID.toString(), toState: "CHASE", actorId: ACTOR_ID });
+    expect(mockEmitHwGuardianChase).toHaveBeenCalledTimes(1);
+    expect(mockEmitHwGuardianChase).toHaveBeenCalledWith(
+      expect.objectContaining({ chaseCount: 1 }),
+    );
   });
 
   test("N1.4 — CHASE_COUNT reaching 3 emits the parent-comms prompt (§7.2)", async () => {
