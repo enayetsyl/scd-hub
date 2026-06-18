@@ -46,6 +46,10 @@ const dedupeKeys = {
     `CNPUB:${slotId}:${dateKey}:${guardianId}`,
   /** Per student+item (PRD N1.4): a 4th chase re-emits the same key → no-op. */
   hwParentComms: (hwItemId: string, studentId: string) => `HWPC:${hwItemId}:${studentId}`,
+  /** Per item+student+day+guardian (D-#260): every chase notifies the guardian, but
+   *  re-chasing the same student the same day is a no-op for the inbox (once/day). */
+  hwGuardianChase: (hwItemId: string, studentId: string, dateKey: string, guardianId: string) =>
+    `HWCG:${hwItemId}:${studentId}:${dateKey}:${guardianId}`,
   /** Per assignment: re-running the host mutation can't double-notify. */
   reviewAssigned: (assignmentId: string) => `REV:${assignmentId}`,
   /** Per substitution: one notification per recorded cover. */
@@ -183,6 +187,73 @@ export async function emitHwParentComms(record: HwParentCommsEvent): Promise<voi
       },
       dedupeKey: dedupeKeys.hwParentComms(record.hwItemId.toString(), record.studentId.toString()),
     });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// D-#260 — HW per-chase guardian notify: EVERY chase pushes the student's
+// login-enabled guardians an in-app reminder (the push channel rides emit()),
+// deduped once per student+item per day. Distinct from emitHwParentComms, which
+// nudges the CLASS TEACHER at the 3rd chase. Contact-only guardians have no inbox
+// (D-#31/#72). Best-effort: a notification problem never blocks the transition.
+// ---------------------------------------------------------------------------
+
+export interface HwGuardianChaseEvent {
+  hwItemId: IdLike;
+  hwId: string;
+  studentId: IdLike;
+  sectionId: IdLike;
+  chaseCount: number;
+  /** The chase transition timestamp — anchors the once-per-day dedupe key. */
+  at: Date;
+}
+
+export async function emitHwGuardianChase(ev: HwGuardianChaseEvent): Promise<void> {
+  return bestEffort("HW guardian chase", async () => {
+    const links = (await GuardianLink.find({
+      studentId: ev.studentId,
+      active: { $ne: false }, // missing = active (pre-GP-1 rows)
+    })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+
+    // Login-enabled only — contact-only guardians have no inbox (D-#31/#72).
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    if (guardians.length === 0) return;
+
+    // hwId + chaseCount are per-event (identical for every guardian) — render ONCE
+    // outside the loop (the recorded MT N+1 guard), then emit per guardian.
+    const dateKey = dateKeyOf(new Date(ev.at));
+    const titleBn = await renderTemplate("homework.chase.title");
+    const bodyBn = await renderTemplate("homework.chase.body", {
+      hwId: ev.hwId,
+      chaseCount: ev.chaseCount,
+    });
+    await Promise.all(
+      guardians.map((g) =>
+        emit({
+          recipientGuardianId: g._id.toString(),
+          kind: "HW_CHASE",
+          titleBn,
+          bodyBn,
+          refs: {
+            hwItemId: ev.hwItemId.toString(),
+            studentId: ev.studentId.toString(),
+            sectionId: ev.sectionId.toString(),
+          },
+          dedupeKey: dedupeKeys.hwGuardianChase(
+            ev.hwItemId.toString(),
+            ev.studentId.toString(),
+            dateKey,
+            g._id.toString(),
+          ),
+        }),
+      ),
+    );
   });
 }
 

@@ -85,6 +85,7 @@ import {
 import {
   emitClassNotePublished,
   emitHwParentComms,
+  emitHwGuardianChase,
   emitReviewAssigned,
   emitCoverAssigned,
 } from "../modules/notifications/services/emitters";
@@ -331,6 +332,50 @@ describe("N1.4 emitHwParentComms", () => {
   test("best-effort: a lookup failure never throws into the transition", async () => {
     mockSectionFindById.mockRejectedValue(new Error("db down"));
     await expect(emitHwParentComms(record())).resolves.toBeUndefined();
+  });
+});
+
+// ===========================================================================
+// D-#260 — HW per-chase guardian notify → login-enabled guardians, once per day
+// ===========================================================================
+
+describe("emitHwGuardianChase (D-#260)", () => {
+  const ITEM_ID = oid();
+  const STUDENT_ID = oid();
+  const SECTION_ID = oid();
+  const G_LOGIN = oid();
+  const AT = new Date(2026, 5, 2); // 2026-06-02
+
+  function event() {
+    return { hwItemId: ITEM_ID, hwId: "HW-C5-ENG-0042", studentId: STUDENT_ID, sectionId: SECTION_ID, chaseCount: 1, at: AT };
+  }
+
+  test("one row per LOGIN-ENABLED guardian; deduped per student+item+day; contact-only get nothing", async () => {
+    const G_CONTACT_ONLY = oid();
+    // Two sibling links to the same login guardian (dedup) + a contact-only guardian.
+    mockLinkFind.mockResolvedValue([{ guardianId: G_LOGIN }, { guardianId: G_LOGIN }, { guardianId: G_CONTACT_ONLY }]);
+    mockGuardianFind.mockResolvedValue([{ _id: G_LOGIN }]); // loginEnabled filter drops the contact-only one
+
+    await emitHwGuardianChase(event());
+
+    expect(mockGuardianFind).toHaveBeenCalledWith(expect.objectContaining({ loginEnabled: true, active: true }));
+    expect(mockNotifUpdateOne).toHaveBeenCalledTimes(1); // ONE login guardian → ONE row
+    const [filter, update] = mockNotifUpdateOne.mock.calls[0];
+    expect(filter).toEqual({ dedupeKey: `HWCG:${ITEM_ID.toString()}:${STUDENT_ID.toString()}:2026-06-02:${G_LOGIN.toString()}` });
+    expect(update.$setOnInsert).toMatchObject({ recipientGuardianId: G_LOGIN.toString(), kind: "HW_CHASE" });
+    expect(update.$setOnInsert.bodyBn).toContain("HW-C5-ENG-0042");
+  });
+
+  test("no login-enabled guardian → nothing emitted", async () => {
+    mockLinkFind.mockResolvedValue([{ guardianId: G_LOGIN }]);
+    mockGuardianFind.mockResolvedValue([]);
+    await emitHwGuardianChase(event());
+    expect(mockNotifUpdateOne).not.toHaveBeenCalled();
+  });
+
+  test("best-effort: a lookup failure never throws into the transition", async () => {
+    mockLinkFind.mockRejectedValue(new Error("db down"));
+    await expect(emitHwGuardianChase(event())).resolves.toBeUndefined();
   });
 });
 
