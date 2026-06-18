@@ -5,9 +5,10 @@
  * roster. Over-ceiling blocks confirm (server enforces too). Non-class-teachers get
  * a Forbidden error from the server.
  */
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
 import { HOMEWORK_DAY_TALLY, ROSTER_QUERY, TRIM_HOMEWORK_ITEM, CONFIRM_HOMEWORK_DAY } from "../../graphql/operations";
 import type { HomeworkStackParamList } from "../../navigation/types";
@@ -37,6 +38,20 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
   const [rosterQ] = useQuery({ query: ROSTER_QUERY, variables: { sectionId: vars.sectionId }, pause: !hasSection });
   const [, trim] = useMutation(TRIM_HOMEWORK_ITEM);
   const [, confirm] = useMutation(CONFIRM_HOMEWORK_DAY);
+
+  // Refetch the live tally when the screen regains focus (e.g. after declaring an
+  // item on the sibling screen) so it never shows a stale day-total. Mirrors
+  // HomeworkHomeScreen; skips the first focus since the query already runs then.
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      if (hasSection) refetchTally({ requestPolicy: "network-only" });
+    }, [hasSection, refetchTally]),
+  );
 
   const tally = tallyQ.data?.homeworkDayTally;
   const students = rosterQ.data?.studentsInSection ?? [];
