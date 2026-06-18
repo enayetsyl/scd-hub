@@ -94,6 +94,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   roadmap.md          ← deferred pipeline / backlog (build-later work; not the live cursor)
   import-contract.schema.json  ← the wire-contract JSON Schema (a source of truth)
   adr/                ← long-form ADRs if/when they outgrow DECISIONS.md
+  issues/             ← testing-bug backlog: BACKLOG.md (BUG-NNN sections) + README SOP + assets/ screenshots
 /shared/              ← cross-cutting source of truth; see /shared/AGENTS.md
   vocab.ts            ← controlled-vocab enums + role→permission map (mirrors the schema)
   index.ts            ← re-exports vocab.ts; built to dist/ for server type resolution
@@ -119,6 +120,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   feature-lifecycle/  ← add or change a feature, end to end
   contract-sync/      ← the two-place enum/schema sync procedure
   verify-before-commit/ ← the executed-verification gate
+  log-issue/          ← capture a pasted testing bug into docs/issues/BACKLOG.md
 ```
 
 ## Session-end ritual
