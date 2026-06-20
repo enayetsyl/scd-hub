@@ -49,6 +49,14 @@ const BUILD_QUESTION_ENVELOPES_PATH = path.resolve(__dirname, "../../../../impor
 const SCHEMA_DIR = path.resolve(__dirname, "../../../../import");
 const ENVELOPE_SCHEMA_PATH = path.join(SCHEMA_DIR, "../../docs/import-contract.schema.json");
 
+// The import harness (validate_import.py / build_envelope.py) runs via a Python
+// interpreter spawned with execFile. The command name is NOT portable: Linux/macOS
+// expose `python3` (a bare `python` is absent on the Ubuntu prod VM), while Windows
+// ships only `python`. A hardcoded "python" is why imports passed locally (Windows)
+// but FAILed in production (Ubuntu). Default by platform; PYTHON_BIN overrides for
+// non-standard environments (e.g. a venv path).
+const PYTHON_BIN = process.env.PYTHON_BIN ?? (process.platform === "win32" ? "python" : "python3");
+
 export interface GateOutput {
   verdict: "PASS" | "FAIL";
   failChecks: string[];
@@ -82,7 +90,7 @@ export async function runImportGate(envelope: Record<string, unknown>): Promise<
     // Resolve schema paths the same way the harness does (glob next to validate_import.py)
     const envelopeSchemaPath = path.join(SCHEMA_DIR, "../../docs/import-contract.schema.json");
 
-    const { stdout, stderr, code: exitCode } = await execFilePromise("python", [
+    const { stdout, stderr, code: exitCode } = await execFilePromise(PYTHON_BIN, [
       HARNESS_PATH,
       tmpFile,
       "--envelope-schema", envelopeSchemaPath,
@@ -289,7 +297,7 @@ async function buildEnvelopeFromPair(
   try {
     await fs.writeFile(jsonPath, jsonContent, "utf-8");
     await fs.writeFile(mdPath, mdContent, "utf-8");
-    const { stdout, stderr, code } = await execFilePromise("python", [
+    const { stdout, stderr, code } = await execFilePromise(PYTHON_BIN, [
       BUILD_ENVELOPE_PATH,
       "--json", jsonPath,
       "--md", mdPath,
@@ -354,7 +362,7 @@ async function buildQuestionEnvelopes(
       "--source-file", sourceFilename,
     ];
     if (unitTitle) argv.push("--unit-title", unitTitle);
-    const { stdout, stderr, code } = await execFilePromise("python", argv);
+    const { stdout, stderr, code } = await execFilePromise(PYTHON_BIN, argv);
     if (code !== 0) {
       return { ok: false, error: (stderr || stdout || "build_question_envelopes.py failed").trim() };
     }
