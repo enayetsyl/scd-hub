@@ -1063,7 +1063,7 @@ const STR_BN = {
   inactive: "নিষ্ক্রিয়",
   activeProxyGrants: "সক্রিয় প্রক্সি গ্রান্ট",
   noActiveGrants: "কোনো সক্রিয় প্রক্সি গ্রান্ট নেই।",
-  mySections: "আমার শাখা",
+  mySections: "আমার শ্রেণি",
 
   // Roster (read-only student list)
   roster: "শিক্ষার্থী তালিকা",
@@ -1076,7 +1076,7 @@ const STR_BN = {
   bloodGroup: "রক্তের গ্রুপ",
   guardians: "অভিভাবক",
   noGuardians: "কোনো অভিভাবক যুক্ত নেই।",
-  changeSection: "শাখা পরিবর্তন",
+  changeSection: "শ্রেণি পরিবর্তন",
 
   // Message templates (MT-1..MT-3, D-#128–#131) — Principal-only
   mtMessageTemplates: "বার্তা টেমপ্লেট",
@@ -1220,7 +1220,7 @@ const STR_BN = {
   ayCreated: "শিক্ষাবর্ষ যোগ হয়েছে।",
   aySetDone: "চলতি শিক্ষাবর্ষ হালনাগাদ হয়েছে।",
   ayNone: "কোনো শিক্ষাবর্ষ নেই।",
-  selectSection: "শাখা নির্বাচন করুন…",
+  selectSection: "শ্রেণি নির্বাচন করুন…",
   assignForReview: "পর্যালোচনার জন্য বরাদ্দ",
   assignNextRound: "পরবর্তী রাউন্ড বরাদ্দ",
   assigning: "বরাদ্দ হচ্ছে…",
@@ -1235,11 +1235,11 @@ const STR_BN = {
   awaitingReviewer: "পর্যালোচকের অপেক্ষায়",
 
   // Section context
-  sectionContext: "শাখা প্রসঙ্গ",
-  pickSection: "শাখা নির্বাচন করুন",
+  sectionContext: "শ্রেণি প্রসঙ্গ",
+  pickSection: "শ্রেণি নির্বাচন করুন",
   academicYearId: "শিক্ষাবর্ষ আইডি",
   academicYearHint: "সেট ও ট্র্যাকারের জন্য শাখা প্রয়োজন। শিক্ষাবর্ষ আইডি দিন।",
-  noSectionSelected: "কোনো শাখা নির্বাচিত নেই।",
+  noSectionSelected: "কোনো শ্রেণি নির্বাচিত নেই।",
 
   // Misc results / validation
   invalidDate: "তারিখ সঠিক নয় (YYYY-MM-DD)।",
@@ -2906,7 +2906,7 @@ const STR_EN: StrTable = {
   inactive: "Inactive",
   activeProxyGrants: "Active proxy grants",
   noActiveGrants: "No active proxy grants.",
-  mySections: "My sections",
+  mySections: "My classes",
 
   // Roster (read-only student list)
   roster: "Student list",
@@ -2919,7 +2919,7 @@ const STR_EN: StrTable = {
   bloodGroup: "Blood group",
   guardians: "Guardians",
   noGuardians: "No guardians linked.",
-  changeSection: "Change section",
+  changeSection: "Change class",
 
   // Message templates (MT-1..MT-3, D-#128–#131) — Principal-only
   mtMessageTemplates: "Message templates",
@@ -3063,7 +3063,7 @@ const STR_EN: StrTable = {
   ayCreated: "Academic year added.",
   aySetDone: "Active academic year updated.",
   ayNone: "No academic years yet.",
-  selectSection: "Choose a section…",
+  selectSection: "Choose a class…",
   assignForReview: "Assign for review",
   assignNextRound: "Assign next round",
   assigning: "Assigning…",
@@ -3078,11 +3078,11 @@ const STR_EN: StrTable = {
   awaitingReviewer: "Awaiting reviewer",
 
   // Section context
-  sectionContext: "Section context",
-  pickSection: "Select a section",
+  sectionContext: "Class context",
+  pickSection: "Select a class",
   academicYearId: "Academic year ID",
   academicYearHint: "Sets and trackers need a section. Enter the academic year ID.",
-  noSectionSelected: "No section selected.",
+  noSectionSelected: "No class selected.",
 
   // Misc results / validation
   invalidDate: "Date is not valid (YYYY-MM-DD).",
