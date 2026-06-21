@@ -999,6 +999,16 @@ const STR_BN = {
 
   // Admin
   admin: "প্রশাসন",
+  admSubImport: "পাঠ পরিকল্পনা ও প্রশ্ন আপলোড ও যাচাই",
+  admSubUsers: "স্টাফ লগইন, রোল ও অনুমতি",
+  admSubScope: "অস্থায়ী কভার ও প্রক্সি অ্যাক্সেস",
+  admSubAssignSubject: "কে কোন বিষয় পড়ান",
+  admSubAssignClass: "প্রতি শ্রেণির দৈনিক সমন্বয়কারী নির্ধারণ",
+  admSubSection: "ছেলে ও মেয়ে শাখা একত্র করা",
+  admSubGuardianCreds: "অভিভাবকদের অ্যাপ লগইন তৈরি",
+  admSubStaffCreds: "স্টাফ লগইন তৈরি ও রিসেট",
+  admSubTemplates: "নোটিফিকেশন বার্তার টেক্সট সম্পাদনা",
+  admSubAccess: "ব্যবহারকারী-ভিত্তিক অনুমতি নিয়ন্ত্রণ",
   importContent: "কন্টেন্ট ইম্পোর্ট",
   pickFile: "ফাইল নির্বাচন",
   pickFiles: "ফাইল নির্বাচন (JSON + Markdown)",
@@ -2832,6 +2842,16 @@ const STR_EN: StrTable = {
 
   // Admin
   admin: "Admin",
+  admSubImport: "Upload & validate lesson plans / question banks",
+  admSubUsers: "Staff logins, roles & permissions",
+  admSubScope: "Temporary cover & proxy access",
+  admSubAssignSubject: "Who teaches which subject",
+  admSubAssignClass: "Set each class's daily coordinator",
+  admSubSection: "Merge boys + girls sections",
+  admSubGuardianCreds: "Issue guardian app logins",
+  admSubStaffCreds: "Issue & reset staff logins",
+  admSubTemplates: "Edit notification message text",
+  admSubAccess: "Per-user permission overrides",
   importContent: "Import content",
   pickFile: "Pick file",
   pickFiles: "Pick files (JSON + Markdown)",
