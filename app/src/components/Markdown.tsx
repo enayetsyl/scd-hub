@@ -11,8 +11,15 @@
  * Intentionally a focused subset, not a full CommonMark engine.
  */
 import React from "react";
-import { View, Text, type TextStyle } from "react-native";
+import { View, Text, ScrollView, type TextStyle } from "react-native";
 import { makeStyles, radius, space, typeScale, fonts } from "../theme";
+
+// A table with this many columns or more can't fit a phone width without squeezing
+// each column to ~1 character (Bangla then wraps vertically). Such tables switch to
+// fixed-width columns inside a horizontal scroller; narrow key/value tables keep the
+// flexible full-width layout. (BUG-001)
+const WIDE_TABLE_MIN_COLS = 4;
+const WIDE_TABLE_COL_WIDTH = 150;
 
 /** Drop HTML comments before rendering — they are internal provenance, never shown. */
 export function stripHtmlComments(src: string): string {
@@ -188,16 +195,18 @@ function renderInline(styles: MdStyles, text: string, keyPrefix: string, base?: 
 function Table({ header, rows, k }: { header: string[]; rows: string[][]; k: string }): React.ReactElement {
   const styles = useStyles();
   const nCols = Math.max(header.length, ...rows.map((r) => r.length));
+  const wide = nCols >= WIDE_TABLE_MIN_COLS;
+  const cellStyle = wide ? styles.cellWide : styles.cell;
   const pad = (cells: string[]): string[] => {
     const out = [...cells];
     while (out.length < nCols) out.push("");
     return out;
   };
-  return (
-    <View style={styles.table}>
+  const table = (
+    <View style={[styles.table, wide ? { width: nCols * WIDE_TABLE_COL_WIDTH, marginBottom: 0 } : null]}>
       <View style={[styles.tr, styles.thead]}>
         {pad(header).map((cell, ci) => (
-          <View key={`${k}-h-${ci}`} style={styles.cell}>
+          <View key={`${k}-h-${ci}`} style={cellStyle}>
             <Text style={styles.body}>{renderInline(styles, cell, `${k}-h-${ci}`, styles.thText)}</Text>
           </View>
         ))}
@@ -205,7 +214,7 @@ function Table({ header, rows, k }: { header: string[]; rows: string[][]; k: str
       {rows.map((row, ri) => (
         <View key={`${k}-r-${ri}`} style={styles.tr}>
           {pad(row).map((cell, ci) => (
-            <View key={`${k}-r-${ri}-${ci}`} style={styles.cell}>
+            <View key={`${k}-r-${ri}-${ci}`} style={cellStyle}>
               <Text style={styles.body}>{renderInline(styles, cell, `${k}-r-${ri}-${ci}`)}</Text>
             </View>
           ))}
@@ -213,6 +222,16 @@ function Table({ header, rows, k }: { header: string[]; rows: string[][]; k: str
       ))}
     </View>
   );
+  // Wide tables overflow a phone width — let them scroll horizontally instead of
+  // crushing every column to ~1 character (BUG-001).
+  if (wide) {
+    return (
+      <ScrollView horizontal showsHorizontalScrollIndicator={true} style={styles.tableScroll}>
+        {table}
+      </ScrollView>
+    );
+  }
+  return table;
 }
 
 function renderBlock(styles: MdStyles, b: Block, k: string): React.ReactElement {
@@ -318,4 +337,14 @@ const useStyles = makeStyles((colors) => ({
     borderRightWidth: 1,
     borderRightColor: colors.border,
   },
+  // Wide-table cell: a fixed column width so Bangla wraps at word boundaries
+  // (not 1 char per line) and the table scrolls horizontally (BUG-001).
+  cellWide: {
+    width: WIDE_TABLE_COL_WIDTH,
+    paddingHorizontal: space(2),
+    paddingVertical: space(2),
+    borderRightWidth: 1,
+    borderRightColor: colors.border,
+  },
+  tableScroll: { marginBottom: space(3) },
 }));

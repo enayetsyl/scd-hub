@@ -13,7 +13,7 @@ import { CHILD_CLASS_NOTES_QUERY } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Loader, EmptyState } from "../../components/ui";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
-import { STR, bnNum, dayOfWeekLabel } from "../../lib/labels";
+import { STR, bnNum, dayOfWeekLabel, subjectLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
 const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
@@ -47,7 +47,7 @@ function DayNotes({ studentId, date }: { studentId: string; date: string }): Rea
       ) : (
         notes.map((n, i) => (
           <View key={`${n.subject}-${n.periodNumber ?? i}`} style={{ marginTop: space(2) }}>
-            <Body style={{ fontWeight: "700" }}>{n.subjectLabelBn}</Body>
+            <Body style={{ fontWeight: "700" }}>{subjectLabel(n.subject)}</Body>
             <Body>{n.taughtSummaryBn}</Body>
             {n.homework ? (
               <Muted>

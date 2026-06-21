@@ -106,6 +106,8 @@ import {
   LIFECYCLE_STATE_LABELS_EN,
   HW_RESULT_LABELS_BN,
   HW_RESULT_LABELS_EN,
+  DAY_TYPE_LABELS_BN,
+  DAY_TYPE_LABELS_EN,
   RECON_STATE_LABELS_BN,
   RECON_STATE_LABELS_EN,
   TRIM_RANK_LABELS_BN,
@@ -144,6 +146,7 @@ import {
   type HwSubject,
   type LifecycleState,
   type HwResult,
+  type DayType,
   type ReconState,
   type TrimRank,
   type RoutineSubject,
@@ -491,6 +494,9 @@ export const lifecycleStateLabel = (v?: string | null): string =>
 export const hwResultLabel = (v?: string | null): string =>
   (v && pick(HW_RESULT_LABELS_BN, HW_RESULT_LABELS_EN)[v as HwResult]) || v || DASH;
 
+export const dayTypeLabel = (v?: string | null): string =>
+  (v && pick(DAY_TYPE_LABELS_BN, DAY_TYPE_LABELS_EN)[v as DayType]) || v || DASH;
+
 export const reconStateLabel = (v?: string | null): string =>
   (v && pick(RECON_STATE_LABELS_BN, RECON_STATE_LABELS_EN)[v as ReconState]) || v || DASH;
 
@@ -660,7 +666,7 @@ const STR_BN = {
   appName: "SCD Hub",
   appSub: "School for Community Development",
   language: "ভাষা",
-  tabContent: "কন্টেন্ট",
+  tabContent: "পাঠ পরিকল্পনা",
   tabQuestions: "প্রশ্ন",
   tabSets: "সেট",
   tabTrackers: "ট্র্যাকার",
@@ -718,7 +724,7 @@ const STR_BN = {
   marksMax: "সর্বোচ্চ নম্বর",
 
   // Content
-  contentTreeTitle: "কন্টেন্ট",
+  contentTreeTitle: "পাঠ পরিকল্পনা",
   planTitle: "সেশন পরিকল্পনা",
   exportPdf: "PDF রপ্তানি",
   preparingPdf: "PDF তৈরি হচ্ছে…",
@@ -800,21 +806,21 @@ const STR_BN = {
   hwBandWarning: "৪০ মিনিটের বেশি (সতর্কতা)",
   hwDeclare: "ঘোষণা করুন",
   hwReconcile: "সমন্বয় ও ইস্যু",
-  hwChecking: "যাচাই তালিকা",
+  hwChecking: "দেখার তালিকা",
   hwDeclareTitle: "বাড়ির কাজ ঘোষণা",
   hwReconcileTitle: "দৈনিক সমন্বয়",
-  hwCheckingTitle: "যাচাই তালিকা",
+  hwCheckingTitle: "দেখার তালিকা",
   hwRecords: "শিক্ষার্থী রেকর্ড",
   hwRecordsTitle: "শিক্ষার্থী রেকর্ড",
   hwNoRecords: "এই আইটেমের জন্য কোনো রেকর্ড নেই",
   hwMarkDue: "ডিউ চিহ্নিত করুন",
   hwMarkSubmitted: "জমা চিহ্নিত করুন",
-  hwChaseAction: "তাগাদা",
-  hwChaseAgain: "আবার তাগাদা",
+  hwChaseAction: "মনে করিয়ে দিন",
+  hwChaseAgain: "আবার মনে করিয়ে দিন",
   hwRedeliver: "পুনরায় দিন",
   hwReturnAction: "ফেরত দিন",
-  hwCheckHint: "ফলাফল “যাচাই তালিকা” স্ক্রিনে লিখুন",
-  hwGoChecking: "যাচাই তালিকায় যান",
+  hwCheckHint: "ফলাফল “দেখার তালিকা” স্ক্রিনে লিখুন",
+  hwGoChecking: "দেখার তালিকায় যান",
   hwSubject: "বিষয়",
   hwTopTags: "টপিক ট্যাগ (কমা দিয়ে)",
   hwTimeDecl: "নির্ধারিত সময় (মিনিট)",
@@ -823,12 +829,12 @@ const STR_BN = {
   hwRevItem: "পুনরালোচনা আইটেম",
   hwDeclared: "ঘোষিত",
   hwIssued: "ইস্যু হয়েছে",
-  hwChaseList: "তাগাদা তালিকা",
+  hwChaseList: "স্মরণ তালিকা",
   hwAttention: "নজরে",
   hwCommsPrompt: "অভিভাবককে জানান",
   hwOpenResubmissions: "চলমান পুনঃজমা",
   hwOnTimePct: "সময়মতো জমা %",
-  hwChaseVolume: "মোট তাগাদা",
+  hwChaseVolume: "মোট স্মরণ",
   hwReturnLatency: "ফেরত গড় (দিন)",
   hwTopicTouches: "টপিক স্পর্শ",
   hwTrimPanel: "হ্রাস প্যানেল",
@@ -839,12 +845,12 @@ const STR_BN = {
   hwRosterAbsent: "অনুপস্থিত",
   hwIssuedItems: "ইস্যুকৃত আইটেম",
   hwIssuedRecords: "শিক্ষার্থী রেকর্ড",
-  hwCheck: "যাচাই",
+  hwCheck: "দেখুন",
   hwResult: "ফলাফল",
   hwResubmit: "পুনঃজমা চান",
   hwTopupQids: "টপ-আপ প্রশ্ন আইডি (কমা দিয়ে)",
   hwTopupTime: "টপ-আপ সময় (মিনিট)",
-  hwNoSubmitted: "যাচাইয়ের অপেক্ষায় কিছু নেই",
+  hwNoSubmitted: "দেখার অপেক্ষায় কিছু নেই",
   hwResubSpawned: "পুনঃজমা তৈরি হয়েছে",
   hwAttachQuestion: "প্রশ্নপত্র সংযুক্ত করুন",
   hwAttachAnswer: "উত্তরপত্র সংযুক্ত করুন",
@@ -999,6 +1005,16 @@ const STR_BN = {
 
   // Admin
   admin: "প্রশাসন",
+  admSubImport: "পাঠ পরিকল্পনা ও প্রশ্ন আপলোড ও যাচাই",
+  admSubUsers: "স্টাফ লগইন, রোল ও অনুমতি",
+  admSubScope: "অস্থায়ী কভার ও প্রক্সি অ্যাক্সেস",
+  admSubAssignSubject: "কে কোন বিষয় পড়ান",
+  admSubAssignClass: "প্রতি শ্রেণির দৈনিক সমন্বয়কারী নির্ধারণ",
+  admSubSection: "ছেলে ও মেয়ে শাখা একত্র করা",
+  admSubGuardianCreds: "অভিভাবকদের অ্যাপ লগইন তৈরি",
+  admSubStaffCreds: "স্টাফ লগইন তৈরি ও রিসেট",
+  admSubTemplates: "নোটিফিকেশন বার্তার টেক্সট সম্পাদনা",
+  admSubAccess: "ব্যবহারকারী-ভিত্তিক অনুমতি নিয়ন্ত্রণ",
   importContent: "কন্টেন্ট ইম্পোর্ট",
   pickFile: "ফাইল নির্বাচন",
   pickFiles: "ফাইল নির্বাচন (JSON + Markdown)",
@@ -1053,7 +1069,7 @@ const STR_BN = {
   inactive: "নিষ্ক্রিয়",
   activeProxyGrants: "সক্রিয় প্রক্সি গ্রান্ট",
   noActiveGrants: "কোনো সক্রিয় প্রক্সি গ্রান্ট নেই।",
-  mySections: "আমার শাখা",
+  mySections: "আমার শ্রেণি",
 
   // Roster (read-only student list)
   roster: "শিক্ষার্থী তালিকা",
@@ -1066,7 +1082,7 @@ const STR_BN = {
   bloodGroup: "রক্তের গ্রুপ",
   guardians: "অভিভাবক",
   noGuardians: "কোনো অভিভাবক যুক্ত নেই।",
-  changeSection: "শাখা পরিবর্তন",
+  changeSection: "শ্রেণি পরিবর্তন",
 
   // Message templates (MT-1..MT-3, D-#128–#131) — Principal-only
   mtMessageTemplates: "বার্তা টেমপ্লেট",
@@ -1114,6 +1130,9 @@ const STR_BN = {
   familyLoginHint: "এক ফোন = পরিবারের সব সন্তানের জন্য একটি লগইন; দুই অভিভাবকই একই তথ্য ব্যবহার করবেন।",
   staffLoginHint: "ফোন নম্বর দিয়ে শিক্ষক/স্টাফ লগইন; ক্যাটাগরি অনুযায়ী রোল নির্ধারিত হয়।",
   searchStaff: "নাম বা ফোন দিয়ে খুঁজুন",
+  searchUsers: "নাম, ইমেইল বা ফোন দিয়ে খুঁজুন",
+  searchStudents: "নাম, আইডি বা ফোন দিয়ে খুঁজুন",
+  noMatches: "কোনো ফলাফল মিলেনি।",
   noStaffMatch: "কোনো স্টাফ মেলেনি।",
   childrenLabel: "সন্তান",
   noProvisionableStaff: "লগইনযোগ্য কোনো স্টাফ নেই।",
@@ -1210,7 +1229,7 @@ const STR_BN = {
   ayCreated: "শিক্ষাবর্ষ যোগ হয়েছে।",
   aySetDone: "চলতি শিক্ষাবর্ষ হালনাগাদ হয়েছে।",
   ayNone: "কোনো শিক্ষাবর্ষ নেই।",
-  selectSection: "শাখা নির্বাচন করুন…",
+  selectSection: "শ্রেণি নির্বাচন করুন…",
   assignForReview: "পর্যালোচনার জন্য বরাদ্দ",
   assignNextRound: "পরবর্তী রাউন্ড বরাদ্দ",
   assigning: "বরাদ্দ হচ্ছে…",
@@ -1225,11 +1244,11 @@ const STR_BN = {
   awaitingReviewer: "পর্যালোচকের অপেক্ষায়",
 
   // Section context
-  sectionContext: "শাখা প্রসঙ্গ",
-  pickSection: "শাখা নির্বাচন করুন",
+  sectionContext: "শ্রেণি প্রসঙ্গ",
+  pickSection: "শ্রেণি নির্বাচন করুন",
   academicYearId: "শিক্ষাবর্ষ আইডি",
   academicYearHint: "সেট ও ট্র্যাকারের জন্য শাখা প্রয়োজন। শিক্ষাবর্ষ আইডি দিন।",
-  noSectionSelected: "কোনো শাখা নির্বাচিত নেই।",
+  noSectionSelected: "কোনো শ্রেণি নির্বাচিত নেই।",
 
   // Misc results / validation
   invalidDate: "তারিখ সঠিক নয় (YYYY-MM-DD)।",
@@ -2493,7 +2512,7 @@ const STR_EN: StrTable = {
   appName: "SCD Hub",
   appSub: "School for Community Development",
   language: "Language",
-  tabContent: "Content",
+  tabContent: "Lesson Plans",
   tabQuestions: "Questions",
   tabSets: "Sets",
   tabTrackers: "Trackers",
@@ -2551,7 +2570,7 @@ const STR_EN: StrTable = {
   marksMax: "Max marks",
 
   // Content
-  contentTreeTitle: "Content",
+  contentTreeTitle: "Lesson Plans",
   planTitle: "Session plan",
   exportPdf: "Export PDF",
   preparingPdf: "Preparing PDF…",
@@ -2832,6 +2851,16 @@ const STR_EN: StrTable = {
 
   // Admin
   admin: "Admin",
+  admSubImport: "Upload & validate lesson plans / question banks",
+  admSubUsers: "Staff logins, roles & permissions",
+  admSubScope: "Temporary cover & proxy access",
+  admSubAssignSubject: "Who teaches which subject",
+  admSubAssignClass: "Set each class's daily coordinator",
+  admSubSection: "Merge boys + girls sections",
+  admSubGuardianCreds: "Issue guardian app logins",
+  admSubStaffCreds: "Issue & reset staff logins",
+  admSubTemplates: "Edit notification message text",
+  admSubAccess: "Per-user permission overrides",
   importContent: "Import content",
   pickFile: "Pick file",
   pickFiles: "Pick files (JSON + Markdown)",
@@ -2886,7 +2915,7 @@ const STR_EN: StrTable = {
   inactive: "Inactive",
   activeProxyGrants: "Active proxy grants",
   noActiveGrants: "No active proxy grants.",
-  mySections: "My sections",
+  mySections: "My classes",
 
   // Roster (read-only student list)
   roster: "Student list",
@@ -2899,7 +2928,7 @@ const STR_EN: StrTable = {
   bloodGroup: "Blood group",
   guardians: "Guardians",
   noGuardians: "No guardians linked.",
-  changeSection: "Change section",
+  changeSection: "Change class",
 
   // Message templates (MT-1..MT-3, D-#128–#131) — Principal-only
   mtMessageTemplates: "Message templates",
@@ -2947,6 +2976,9 @@ const STR_EN: StrTable = {
   familyLoginHint: "One phone = one login for the whole family; both parents use the same credentials.",
   staffLoginHint: "Phone-number login for teachers/staff; role is mapped from the HR category.",
   searchStaff: "Search by name or phone",
+  searchUsers: "Search by name, email or phone",
+  searchStudents: "Search by name, ID or phone",
+  noMatches: "No matches.",
   noStaffMatch: "No staff match.",
   childrenLabel: "children",
   noProvisionableStaff: "No staff eligible for a login.",
@@ -3043,7 +3075,7 @@ const STR_EN: StrTable = {
   ayCreated: "Academic year added.",
   aySetDone: "Active academic year updated.",
   ayNone: "No academic years yet.",
-  selectSection: "Choose a section…",
+  selectSection: "Choose a class…",
   assignForReview: "Assign for review",
   assignNextRound: "Assign next round",
   assigning: "Assigning…",
@@ -3058,11 +3090,11 @@ const STR_EN: StrTable = {
   awaitingReviewer: "Awaiting reviewer",
 
   // Section context
-  sectionContext: "Section context",
-  pickSection: "Select a section",
+  sectionContext: "Class context",
+  pickSection: "Select a class",
   academicYearId: "Academic year ID",
   academicYearHint: "Sets and trackers need a section. Enter the academic year ID.",
-  noSectionSelected: "No section selected.",
+  noSectionSelected: "No class selected.",
 
   // Misc results / validation
   invalidDate: "Date is not valid (YYYY-MM-DD).",

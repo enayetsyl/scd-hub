@@ -13,7 +13,7 @@ import { CHILD_ROUTINE_QUERY } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Badge, Loader, EmptyState } from "../../components/ui";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
-import { STR, bnNum, dayOfWeekLabel } from "../../lib/labels";
+import { STR, bnNum, dayOfWeekLabel, subjectLabel, dayTypeLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
 const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
@@ -41,7 +41,7 @@ function DayBlock({ studentId, date, dow }: { studentId: string; date: string; d
           <Muted>{bnNum(date)}</Muted>
           {day ? (
             <Badge
-              text={day.dayType === "HOLIDAY" && day.holidayNameBn ? day.holidayNameBn : day.dayTypeLabelBn}
+              text={day.dayType === "HOLIDAY" && day.holidayNameBn ? day.holidayNameBn : dayTypeLabel(day.dayType)}
               tone={day.dayType === "FULL" ? "brand" : "warn"}
             />
           ) : null}
@@ -50,7 +50,7 @@ function DayBlock({ studentId, date, dow }: { studentId: string; date: string; d
       {q.fetching ? (
         <Loader label={STR.loading} />
       ) : !day || day.slots.length === 0 ? (
-        <Muted style={{ marginTop: space(1) }}>{day?.dayTypeLabelBn ?? ""}</Muted>
+        <Muted style={{ marginTop: space(1) }}>{day ? dayTypeLabel(day.dayType) : ""}</Muted>
       ) : (
         day.slots.map((s) => (
           <View
@@ -58,7 +58,7 @@ function DayBlock({ studentId, date, dow }: { studentId: string; date: string; d
             style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(2) }}
           >
             <Body>
-              {bnNum(s.periodNumber)}. {s.subjectLabelBn}
+              {bnNum(s.periodNumber)}. {subjectLabel(s.subject)}
             </Body>
             <Muted>{s.startHHMM && s.endHHMM ? `${s.startHHMM}–${s.endHHMM}` : ""}</Muted>
           </View>

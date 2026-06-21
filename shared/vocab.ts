@@ -605,8 +605,8 @@ export const LIFECYCLE_STATE_LABELS_BN: Record<LifecycleState, string> = {
   ABSENT_REDELIVER: "অনুপস্থিত / পুনঃপ্রদান",
   DUE: "জমার দিন",
   SUBMITTED: "জমা হয়েছে",
-  CHASE: "তাগাদা",
-  CHECKED: "যাচাই হয়েছে",
+  CHASE: "স্মরণ করানো হয়েছে",
+  CHECKED: "দেখা হয়েছে",
   RESUBMIT: "পুনঃজমা",
   RETURNED: "ফেরত দেওয়া হয়েছে",
 };
