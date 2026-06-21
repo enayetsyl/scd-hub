@@ -660,7 +660,7 @@ const STR_BN = {
   appName: "SCD Hub",
   appSub: "School for Community Development",
   language: "ভাষা",
-  tabContent: "কন্টেন্ট",
+  tabContent: "পাঠ পরিকল্পনা",
   tabQuestions: "প্রশ্ন",
   tabSets: "সেট",
   tabTrackers: "ট্র্যাকার",
@@ -718,7 +718,7 @@ const STR_BN = {
   marksMax: "সর্বোচ্চ নম্বর",
 
   // Content
-  contentTreeTitle: "কন্টেন্ট",
+  contentTreeTitle: "পাঠ পরিকল্পনা",
   planTitle: "সেশন পরিকল্পনা",
   exportPdf: "PDF রপ্তানি",
   preparingPdf: "PDF তৈরি হচ্ছে…",
@@ -2503,7 +2503,7 @@ const STR_EN: StrTable = {
   appName: "SCD Hub",
   appSub: "School for Community Development",
   language: "Language",
-  tabContent: "Content",
+  tabContent: "Lesson Plans",
   tabQuestions: "Questions",
   tabSets: "Sets",
   tabTrackers: "Trackers",
@@ -2561,7 +2561,7 @@ const STR_EN: StrTable = {
   marksMax: "Max marks",
 
   // Content
-  contentTreeTitle: "Content",
+  contentTreeTitle: "Lesson Plans",
   planTitle: "Session plan",
   exportPdf: "Export PDF",
   preparingPdf: "Preparing PDF…",
