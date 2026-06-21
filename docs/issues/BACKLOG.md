@@ -25,7 +25,7 @@ intake/fix procedures live in [README.md](README.md). To add one: paste the issu
 ---
 
 ## BUG-008 — Reword homework Bangla labels: যাচাই → দেখা, তাগাদা → মনে করানো
-- **Status:** open
+- **Status:** fixed
 - **Severity:** low
 - **Platform:** web, mobile-web, android-app, ios-app
 - **Area:** homework
@@ -57,7 +57,7 @@ consistency? — **except finance**, where তাগাদা (dunning) is argua
 reminder; likely keep তাগাদা for fees. Decide before fixing.
 **Relates:** BUG-007 — if the guardian chips switch to client-side STR mapping, their text comes from
 `labels.ts` instead of `stateLabelBn`; coordinate so the wording isn't changed in only one place.
-**Fix ref:** —
+**Fix ref:** PR #118
 
 ## BUG-007 — English mode still shows Bangla labels in many places (i18n leak)
 - **Status:** open
@@ -87,7 +87,7 @@ regardless of app language. TWO distinct root-cause classes to sweep:
 Recommend an app-wide i18n audit: grep render code for `Bn`-suffixed field usage, module-level STR
 captures, and hardcoded Bangla string literals; verify a few screens in EN mode. The account-menu
 "বাংলা" item is correct (language name, not a leak). **Related word-rename: see BUG-008.**
-**Fix ref:** —
+**Fix ref:** PR #118 — guardian-portal scope fixed; app-wide audit (module-level STR captures + non-guardian screens) remains open
 
 ## BUG-006 — Guardian portal: "Coming soon" placeholders need implementing
 - **Status:** open
@@ -122,7 +122,7 @@ ships `childRoutine` / `childHomework` / `childAssignments` / `childComments` / 
 **Fix ref:** —
 
 ## BUG-005 — Rename "Change section" → "Change class" (section→class terminology, app-wide)
-- **Status:** open
+- **Status:** fixed
 - **Severity:** low
 - **Platform:** web, mobile-web, android-app, ios-app
 - **Area:** nav
@@ -144,10 +144,10 @@ candidates (user-facing "section" that really means the class): `selectSection` 
 `sectionConfigHint`) is literally about merging boys+girls sections and must stay "section".
 Internal model / route / permission names stay unchanged — **labels only**. Extends the 2026-06-17
 section-terminology cleanup (which renamed the SectionBar display but not this button).
-**Fix ref:** —
+**Fix ref:** PR #118
 
 ## BUG-004 — List screens (Users, Student list) need a search box
-- **Status:** open
+- **Status:** fixed
 - **Severity:** medium
 - **Platform:** web, mobile-web, android-app, ios-app
 - **Area:** roster
@@ -162,10 +162,10 @@ section-terminology cleanup (which renamed the SectionBar display but not this b
 Student list = `app/src/screens/admin/RosterScreen.tsx` (title `STR.roster` = "Student list"). Suggested
 filter fields: name + email/phone (Users); name + ID + phone (students). Other long list screens
 (Staff list, guardians, etc.) likely want the same — apply consistently.
-**Fix ref:** —
+**Fix ref:** PR #118
 
 ## BUG-003 — Rename Academics → "Content" menu/screen to "Lesson Plans"
-- **Status:** open
+- **Status:** fixed
 - **Severity:** low
 - **Platform:** web, mobile-web, android-app, ios-app
 - **Area:** nav
@@ -183,10 +183,10 @@ BN line 663) and `contentTreeTitle` (EN line 2554, BN line 721): EN → "Lesson 
 depend on them); this is purely the displayed strings. Label is wired via
 `DrawerContent.tsx:46` (`labelKey: "tabContent"`) + `AppTabs.tsx:419` (`STR.contentTreeTitle`).
 Leave the admin "Import content" card alone (separate string `importContent`).
-**Fix ref:** —
+**Fix ref:** PR #118
 
 ## BUG-002 — Internal dev codes (J*, ADR-*, D-#*) shown as menu subtitles to users
-- **Status:** open
+- **Status:** fixed
 - **Severity:** low
 - **Platform:** web, mobile-web, android-app, ios-app
 - **Area:** nav
@@ -208,10 +208,10 @@ rendered JSX across `app/src` found these leaked codes **only** in AdminHomeScre
 is bounded to this one file. **Fix approach (owner-chosen): Option A** — replace each code
 subtitle with a short human-readable description (matching the already-correct cards), not just
 delete the line. Owner wants the codes gone everywhere.
-**Fix ref:** —
+**Fix ref:** PR #118
 
 ## BUG-001 — Session Map / chapter-plan content table unreadable on narrow screens
-- **Status:** open
+- **Status:** fixed
 - **Severity:** medium
 - **Platform:** mobile-web, android-app
 - **Area:** content
@@ -234,4 +234,4 @@ scroll container, render as stacked cards below a width breakpoint, or set min c
 allow word-level wrapping. Affects the content renderer on both the web build and the RN app;
 the same component likely affects other multi-column content tables. (Drop a screenshot at
 `assets/BUG-001-1.png` if a picture is wanted on record.)
-**Fix ref:** —
+**Fix ref:** PR #118
