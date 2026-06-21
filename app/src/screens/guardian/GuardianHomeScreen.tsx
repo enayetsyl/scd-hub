@@ -26,7 +26,7 @@ import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
 import type { GuardianHomeStackParamList } from "../../navigation/types";
-import { STR, bnNum, loanStatusLabel, vocabProgramLabel, hwSubjectLabel, commentTypeLabel, commentSentimentLabel, revCategoryLabel } from "../../lib/labels";
+import { STR, bnNum, loanStatusLabel, vocabProgramLabel, hwSubjectLabel, commentTypeLabel, commentSentimentLabel, revCategoryLabel, subjectLabel, lifecycleStateLabel, dayTypeLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
 type Nav = NativeStackNavigationProp<GuardianHomeStackParamList>;
@@ -157,7 +157,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
             <Body style={{ fontWeight: "700" }}>{STR.gpToday}</Body>
             {day ? (
               <Badge
-                text={day.dayType === "HOLIDAY" && day.holidayNameBn ? day.holidayNameBn : day.dayTypeLabelBn}
+                text={day.dayType === "HOLIDAY" && day.holidayNameBn ? day.holidayNameBn : dayTypeLabel(day.dayType)}
                 tone={day.dayType === "FULL" ? "brand" : "warn"}
               />
             ) : null}
@@ -165,7 +165,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
           {routineQ.fetching ? (
             <Loader label={STR.loading} />
           ) : !day || day.slots.length === 0 ? (
-            <Muted style={{ marginTop: space(2) }}>{day?.dayTypeLabelBn ?? ""}</Muted>
+            <Muted style={{ marginTop: space(2) }}>{day ? dayTypeLabel(day.dayType) : ""}</Muted>
           ) : (
             day.slots.map((s) => (
               <View
@@ -173,7 +173,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(2) }}
               >
                 <Body>
-                  {bnNum(s.periodNumber)}. {s.subjectLabelBn}
+                  {bnNum(s.periodNumber)}. {subjectLabel(s.subject)}
                 </Body>
                 <Muted>{s.startHHMM && s.endHHMM ? `${s.startHHMM}–${s.endHHMM}` : ""}</Muted>
               </View>
@@ -191,7 +191,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
           ) : (
             notes.map((n, i) => (
               <View key={`${n.subject}-${n.periodNumber ?? i}`} style={{ marginTop: space(2) }}>
-                <Body style={{ fontWeight: "700" }}>{n.subjectLabelBn}</Body>
+                <Body style={{ fontWeight: "700" }}>{subjectLabel(n.subject)}</Body>
                 <Body>{n.taughtSummaryBn}</Body>
                 {n.homework ? (
                   <Muted>
@@ -246,10 +246,10 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 }}
               >
                 <View style={{ flexShrink: 1 }}>
-                  <Body>{r.subjectLabelBn}</Body>
+                  <Body>{subjectLabel(r.subject)}</Body>
                   <Muted>{r.hwId}</Muted>
                 </View>
-                <Badge text={r.stateLabelBn} tone={r.state === "CHASE" ? "danger" : "brand"} />
+                <Badge text={lifecycleStateLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
               </View>
             ))
           )}

@@ -106,6 +106,8 @@ import {
   LIFECYCLE_STATE_LABELS_EN,
   HW_RESULT_LABELS_BN,
   HW_RESULT_LABELS_EN,
+  DAY_TYPE_LABELS_BN,
+  DAY_TYPE_LABELS_EN,
   RECON_STATE_LABELS_BN,
   RECON_STATE_LABELS_EN,
   TRIM_RANK_LABELS_BN,
@@ -144,6 +146,7 @@ import {
   type HwSubject,
   type LifecycleState,
   type HwResult,
+  type DayType,
   type ReconState,
   type TrimRank,
   type RoutineSubject,
@@ -490,6 +493,9 @@ export const lifecycleStateLabel = (v?: string | null): string =>
 
 export const hwResultLabel = (v?: string | null): string =>
   (v && pick(HW_RESULT_LABELS_BN, HW_RESULT_LABELS_EN)[v as HwResult]) || v || DASH;
+
+export const dayTypeLabel = (v?: string | null): string =>
+  (v && pick(DAY_TYPE_LABELS_BN, DAY_TYPE_LABELS_EN)[v as DayType]) || v || DASH;
 
 export const reconStateLabel = (v?: string | null): string =>
   (v && pick(RECON_STATE_LABELS_BN, RECON_STATE_LABELS_EN)[v as ReconState]) || v || DASH;
