@@ -179,10 +179,10 @@ describe("canWrite (D-#18 write scope)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Supervisory-grant request validation (D-#261)
+// Supervisory-grant request validation (D-#262)
 // ---------------------------------------------------------------------------
 
-describe("validateSupervisoryGrant (D-#261 extent args)", () => {
+describe("validateSupervisoryGrant (D-#262 extent args)", () => {
   test("whole_school needs no target", () => {
     expect(validateSupervisoryGrant({ extent: "whole_school" })).toBeNull();
   });

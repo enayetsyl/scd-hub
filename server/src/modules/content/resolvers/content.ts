@@ -90,6 +90,9 @@ interface ArtifactShape {
   current: boolean;
   priorVersionId?: Types.ObjectId | null;
   importedAt: Date;
+  approvedAt?: Date | null;
+  approvalNote?: string | null;
+  approvalOverride?: boolean | null;
 }
 
 const ArtifactRef = builder.objectRef<ArtifactShape>("ContentArtifact");
@@ -107,6 +110,9 @@ ArtifactRef.implement({
     current: t.exposeBoolean("current"),
     priorVersionId: t.string({ nullable: true, resolve: (a) => a.priorVersionId?.toString() ?? null }),
     importedAt: t.string({ resolve: (a) => a.importedAt.toISOString() }),
+    approvedAt: t.string({ nullable: true, resolve: (a) => (a.approvedAt ? a.approvedAt.toISOString() : null) }),
+    approvalNote: t.string({ nullable: true, resolve: (a) => a.approvalNote ?? null }),
+    approvalOverride: t.boolean({ nullable: true, resolve: (a) => a.approvalOverride ?? null }),
   }),
 });
 
@@ -355,5 +361,8 @@ function docToShape(doc: LeanArtifact): ArtifactShape {
     current: doc.current,
     priorVersionId: doc.priorVersionId ?? null,
     importedAt: doc.importedAt,
+    approvedAt: doc.approvedAt ?? null,
+    approvalNote: doc.approvalNote ?? null,
+    approvalOverride: doc.approvalOverride ?? null,
   };
 }

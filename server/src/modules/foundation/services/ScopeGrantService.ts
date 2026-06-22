@@ -411,7 +411,7 @@ export async function teachingGrantsForSection(sectionId: string): Promise<Scope
 // (one subject across every class), grade_class (one class level across every
 // subject), or explicit_set (a hand-picked set of (class, subject) pairs). It is
 // READ-ONLY — canWrite ignores supervisory grants (D-#17). The model + canRead +
-// contentScope already honour these extents; D-#261 just exposes the CRUD.
+// contentScope already honour these extents; D-#262 just exposes the CRUD.
 // ---------------------------------------------------------------------------
 
 export interface SupervisoryPair {

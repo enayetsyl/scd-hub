@@ -113,7 +113,7 @@ builder.queryField("supervisoryGrants", (t) =>
     type: [ScopeGrantRef],
     authScopes: { hasPermission: "user:manage" },
     description:
-      "Active supervisory (read-oversight) grants for the admin list, newest first — D-#261. " +
+      "Active supervisory (read-oversight) grants for the admin list, newest first — D-#262. " +
       "Pass teacherId to scope to one teacher; omit to list all.",
     args: { teacherId: t.arg.string({ required: false }) },
     resolve: (_root, args) => supervisoryGrants(args.teacherId ?? undefined),
@@ -162,7 +162,7 @@ builder.mutationField("grantSupervisory", (t) =>
     type: ProxyGrantIdResultRef,
     authScopes: { hasPermission: "user:manage" },
     description:
-      "Grant a teacher read-oversight at a configurable extent (D-#261) — Principal/Admin only. " +
+      "Grant a teacher read-oversight at a configurable extent (D-#262) — Principal/Admin only. " +
       "extent ∈ whole_school | subject_dept (needs subjectId) | grade_class (needs classId) | " +
       "explicit_set (needs explicitSet). Idempotent for the single-target extents.",
     args: {
@@ -191,7 +191,7 @@ builder.mutationField("revokeSupervisory", (t) =>
   t.field({
     type: "Boolean",
     authScopes: { hasPermission: "user:manage" },
-    description: "Revoke a supervisory (read-oversight) grant — D-#261",
+    description: "Revoke a supervisory (read-oversight) grant — D-#262",
     args: { grantId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new Error("Unauthenticated");

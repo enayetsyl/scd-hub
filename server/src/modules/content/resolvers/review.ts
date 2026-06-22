@@ -202,6 +202,7 @@ ApprovePlanResultRef.implement({
   fields: (t) => ({
     artifactId: t.exposeString("artifactId"),
     reviewStatus: t.exposeString("reviewStatus"),
+    override: t.exposeBoolean("override"),
   }),
 });
 
@@ -209,11 +210,14 @@ builder.mutationField("approvePlan", (t) =>
   t.field({
     type: ApprovePlanResultRef,
     description:
-      "Principal sign-off: advance a reviewed plan to gold and close its review thread. " +
-      "Requires content:promote_gold (Principal-locked).",
+      "Principal sign-off: advance a plan to gold and close its review thread. A 'reviewed' " +
+      "plan signs off directly; a non-'reviewed' plan (e.g. one a reviewer flagged " +
+      "CHANGES_REQUESTED) may be approved by override — `overrideReason` is then REQUIRED " +
+      "and recorded. Requires content:promote_gold (Principal-locked).",
     authScopes: { hasPermission: "content:promote_gold" },
     args: {
       artifactId: t.arg.string({ required: true }),
+      overrideReason: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -222,6 +226,7 @@ builder.mutationField("approvePlan", (t) =>
           artifactId: args.artifactId,
           actorId: ctx.auth.userId,
           actorRole: ctx.auth.role,
+          overrideReason: args.overrideReason ?? undefined,
         });
       } catch (err) {
         return mapReviewError(err);

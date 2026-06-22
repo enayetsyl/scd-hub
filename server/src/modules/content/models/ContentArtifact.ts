@@ -37,6 +37,14 @@ export interface IContentArtifact extends Document {
   priorVersionId?: Types.ObjectId;
   importedBy: Types.ObjectId;
   importedAt: Date;
+  /** Principal sign-off record (set when reviewStatus reaches `gold`). */
+  approvedBy?: Types.ObjectId;
+  approvedAt?: Date;
+  /** The comment/reason captured at sign-off — required when the Principal
+   *  overrides the review gate (approving a non-`reviewed` plan). */
+  approvalNote?: string;
+  /** True when the sign-off bypassed the normal `reviewed` gate (override). */
+  approvalOverride?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,6 +70,10 @@ const ContentArtifactSchema = new Schema<IContentArtifact>(
     priorVersionId: { type: Schema.Types.ObjectId },
     importedBy: { type: Schema.Types.ObjectId, required: true },
     importedAt: { type: Date, required: true, default: () => new Date() },
+    approvedBy: { type: Schema.Types.ObjectId },
+    approvedAt: { type: Date },
+    approvalNote: { type: String },
+    approvalOverride: { type: Boolean },
   },
   { timestamps: true },
 );

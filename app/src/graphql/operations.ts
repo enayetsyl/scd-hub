@@ -384,7 +384,7 @@ export const REVOKE_TEACHING = gql<{ revokeTeaching: boolean }, { grantId: strin
   }
 `;
 
-/** Supervisory (read-oversight) grants for a teacher (user:manage) — D-#261. */
+/** Supervisory (read-oversight) grants for a teacher (user:manage) — D-#262. */
 export const SUPERVISORY_GRANTS_QUERY = gql<{ supervisoryGrants: ScopeGrantT[] }, { teacherId?: string | null }>`
   query SupervisoryGrants($teacherId: String) {
     supervisoryGrants(teacherId: $teacherId) { ${SCOPE_GRANT_FIELDS} }
@@ -494,6 +494,9 @@ export const CONTENT_TREE_QUERY = gql<
 export interface ContentArtifactT extends ArtifactListItem {
   renderedMarkdown: string | null;
   priorVersionId: string | null;
+  approvedAt: string | null;
+  approvalNote: string | null;
+  approvalOverride: boolean | null;
 }
 
 export const ARTIFACT_QUERY = gql<{ artifact: ContentArtifactT | null }, { id: string }>`
@@ -510,6 +513,9 @@ export const ARTIFACT_QUERY = gql<{ artifact: ContentArtifactT | null }, { id: s
       current
       priorVersionId
       importedAt
+      approvedAt
+      approvalNote
+      approvalOverride
     }
   }
 `;
@@ -607,11 +613,19 @@ export const CANCEL_PLAN_REVIEW = gql<
 export interface ApprovePlanResultT {
   artifactId: string;
   reviewStatus: string;
+  override: boolean;
 }
 
-export const APPROVE_PLAN = gql<{ approvePlan: ApprovePlanResultT }, { artifactId: string }>`
-  mutation ApprovePlan($artifactId: String!) {
-    approvePlan(artifactId: $artifactId) { artifactId reviewStatus }
+export const APPROVE_PLAN = gql<
+  { approvePlan: ApprovePlanResultT },
+  { artifactId: string; overrideReason?: string | null }
+>`
+  mutation ApprovePlan($artifactId: String!, $overrideReason: String) {
+    approvePlan(artifactId: $artifactId, overrideReason: $overrideReason) {
+      artifactId
+      reviewStatus
+      override
+    }
   }
 `;
 

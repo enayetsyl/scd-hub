@@ -1216,7 +1216,7 @@ const STR_BN = {
   stAssign: "নিয়োগ দিন",
   stAssigned: "বিষয়শিক্ষক নিয়োগ হয়েছে।",
   stRemoved: "বিষয়শিক্ষক সরানো হয়েছে।",
-  // Supervisory (read-oversight) grants — D-#261
+  // Supervisory (read-oversight) grants — D-#262
   sgManage: "তত্ত্বাবধান অ্যাক্সেস",
   admSubSupervisory: "শিক্ষককে অন্য শ্রেণির লেসন প্ল্যান দেখার অনুমতি দিন",
   sgHint: "একজন শিক্ষককে নির্ধারিত পরিসরে কনটেন্ট (লেসন প্ল্যান) ও ট্র্যাকার পড়ার অ্যাক্সেস দেয়—শুধু পড়া, সম্পাদনা নয়।",
@@ -1259,6 +1259,17 @@ const STR_BN = {
   reviewActions: "পর্যালোচনা কার্যক্রম",
   openForReview: "পরিকল্পনা খুলুন",
   awaitingReviewer: "পর্যালোচকের অপেক্ষায়",
+  // Principal override sign-off (overrule "changes required" with a reason)
+  overrideApprove: "ওভাররাইড করে অনুমোদন",
+  overriding: "অনুমোদন হচ্ছে…",
+  overrideReason: "অনুমোদনের কারণ",
+  overrideReasonHint: "পর্যালোচকের 'পরিবর্তন প্রয়োজন' মতামত উপেক্ষা করে অনুমোদনের কারণ লিখুন।",
+  overrideReasonRequired: "ওভাররাইড করে অনুমোদনের জন্য একটি কারণ লিখুন।",
+  overrideApproved: "পরিকল্পনা অনুমোদিত (ওভাররাইড)।",
+  approvedOverrideBadge: "ওভাররাইডে অনুমোদিত",
+  approvalNoteLabel: "অনুমোদনের কারণ",
+  // Plan status filter (Principal: which plans are draft / reviewed / approved)
+  statusFilter: "অবস্থা",
 
   // Section context
   sectionContext: "শ্রেণি প্রসঙ্গ",
@@ -3079,7 +3090,7 @@ const STR_EN: StrTable = {
   stAssign: "Assign",
   stAssigned: "Subject teacher assigned.",
   stRemoved: "Subject teacher removed.",
-  // Supervisory (read-oversight) grants — D-#261
+  // Supervisory (read-oversight) grants — D-#262
   sgManage: "Oversight access",
   admSubSupervisory: "Let a teacher see other classes' lesson plans",
   sgHint: "Grants a teacher READ access to content (lesson plans) and trackers at the chosen scope — view only, not edit.",
@@ -3122,6 +3133,17 @@ const STR_EN: StrTable = {
   reviewActions: "Review actions",
   openForReview: "Open plan",
   awaitingReviewer: "Awaiting reviewer",
+  // Principal override sign-off (overrule "changes required" with a reason)
+  overrideApprove: "Override & approve",
+  overriding: "Approving…",
+  overrideReason: "Reason for approval",
+  overrideReasonHint: "Why are you approving despite the reviewer's 'changes required'?",
+  overrideReasonRequired: "Enter a reason to override and approve.",
+  overrideApproved: "Plan approved (override).",
+  approvedOverrideBadge: "Approved (override)",
+  approvalNoteLabel: "Approval reason",
+  // Plan status filter (Principal: which plans are draft / reviewed / approved)
+  statusFilter: "Status",
 
   // Section context
   sectionContext: "Class context",

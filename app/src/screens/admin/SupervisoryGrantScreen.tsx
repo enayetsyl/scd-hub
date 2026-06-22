@@ -1,5 +1,5 @@
 /**
- * SupervisoryGrantScreen (D-#261) — grant / revoke a teacher's READ-OVERSIGHT
+ * SupervisoryGrantScreen (D-#262) — grant / revoke a teacher's READ-OVERSIGHT
  * access at a configurable extent (ADR-017 / D-#17): whole_school, subject_dept
  * (one subject across all classes), grade_class (one class across all subjects),
  * or explicit_set (hand-picked class+subject pairs). Requires user:manage
