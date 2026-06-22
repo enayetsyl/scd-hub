@@ -499,9 +499,57 @@ describe("approvePlan (R2.1)", () => {
     );
   });
 
-  test("rejects sign-off on a draft plan (must be reviewed first)", async () => {
+  test("rejects sign-off on a draft plan with no override reason (must be reviewed, or give a reason)", async () => {
     mockArtifactFindById.mockReturnValue({ ...planArtifact({ reviewStatus: "draft" }), save: jest.fn() });
     await expect(approvePlan({ artifactId: ARTIFACT_ID.toString(), actorId: ADMIN_ID.toString() })).rejects.toThrow(/must be 'reviewed'/);
+  });
+
+  test("override: draft + reason → gold; stamps override + note; audits override + reason", async () => {
+    const artifact = { ...planArtifact({ reviewStatus: "draft" }), save: jest.fn().mockResolvedValue(true) };
+    mockArtifactFindById.mockReturnValue(artifact);
+    mockReviewFind.mockReturnValue(query([])); // no open rounds
+
+    const res = await approvePlan({
+      artifactId: ARTIFACT_ID.toString(),
+      actorId: ADMIN_ID.toString(),
+      actorRole: "PRINCIPAL",
+      overrideReason: "Reviewer's concern is minor; approving for this term.",
+    });
+
+    const stamped = artifact as Record<string, unknown>;
+    expect(res.reviewStatus).toBe("gold");
+    expect(res.override).toBe(true);
+    expect(artifact.reviewStatus).toBe("gold");
+    expect(stamped.approvalOverride).toBe(true);
+    expect(stamped.approvalNote).toMatch(/minor/);
+    expect(stamped.approvedAt).toBeInstanceOf(Date);
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventKind: "PLAN_APPROVED",
+        meta: expect.objectContaining({ override: true, reason: "Reviewer's concern is minor; approving for this term." }),
+      }),
+    );
+  });
+
+  test("override: a blank/whitespace reason is rejected", async () => {
+    mockArtifactFindById.mockReturnValue({ ...planArtifact({ reviewStatus: "draft" }), save: jest.fn() });
+    await expect(
+      approvePlan({ artifactId: ARTIFACT_ID.toString(), actorId: ADMIN_ID.toString(), overrideReason: "   " }),
+    ).rejects.toThrow(/override reason/i);
+  });
+
+  test("normal reviewed → gold records override=false (reason ignored)", async () => {
+    const artifact = { ...planArtifact({ reviewStatus: "reviewed" }), save: jest.fn().mockResolvedValue(true) };
+    mockArtifactFindById.mockReturnValue(artifact);
+    mockReviewFind.mockReturnValue(query([]));
+
+    const res = await approvePlan({ artifactId: ARTIFACT_ID.toString(), actorId: ADMIN_ID.toString() });
+
+    expect(res.override).toBe(false);
+    expect((artifact as Record<string, unknown>).approvalOverride).toBe(false);
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventKind: "PLAN_APPROVED", meta: expect.objectContaining({ override: false }) }),
+    );
   });
 
   test("rejects an already-gold plan", async () => {

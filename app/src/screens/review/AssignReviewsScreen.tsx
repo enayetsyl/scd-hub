@@ -10,7 +10,7 @@ import React, { useMemo, useState } from "react";
 import { View, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { SUBJECTS } from "@scd/shared";
+import { SUBJECTS, CLASS_LEVELS, REVIEW_STATUSES } from "@scd/shared";
 import {
   ASSIGNABLE_PLANS,
   REVIEWER_ASSIGNMENT_LOAD,
@@ -36,7 +36,7 @@ import {
   ErrorBanner,
   Divider,
 } from "../../components/ui";
-import { STR, subjectLabel, classLevelLabel, bnNum } from "../../lib/labels";
+import { STR, subjectLabel, classLevelLabel, reviewStatusLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
@@ -59,6 +59,8 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
 
   const [reviewerId, setReviewerId] = useState<string | null>(null);
   const [subject, setSubject] = useState<string | null>(null);
+  const [classLevel, setClassLevel] = useState<number | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -67,10 +69,17 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
   const visible = useMemo(
     () =>
       plans.filter(
-        (p) => (!subject || p.subject === subject) && (!unassignedOnly || !p.currentReviewerId),
+        (p) =>
+          (!subject || p.subject === subject) &&
+          (classLevel == null || p.classLevel === classLevel) &&
+          (!status || p.reviewStatus === status) &&
+          (!unassignedOnly || !p.currentReviewerId),
       ),
-    [plans, subject, unassignedOnly],
+    [plans, subject, classLevel, status, unassignedOnly],
   );
+
+  const statusTone = (s: string): "ok" | "brand" | "muted" =>
+    s === "gold" ? "ok" : s === "reviewed" ? "brand" : "muted";
 
   function toggle(id: string): void {
     setSelected((s) => {
@@ -149,6 +158,20 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
           <Chip key={s} label={subjectLabel(s)} selected={subject === s} onPress={() => setSubject(subject === s ? null : s)} />
         ))}
       </ChipRow>
+      <Muted style={{ marginTop: space(2) }}>{STR.classLevel}</Muted>
+      <ChipRow>
+        <Chip label={STR.all} selected={classLevel === null} onPress={() => setClassLevel(null)} />
+        {CLASS_LEVELS.map((c) => (
+          <Chip key={c} label={bnNum(c)} selected={classLevel === c} onPress={() => setClassLevel(classLevel === c ? null : c)} />
+        ))}
+      </ChipRow>
+      <Muted style={{ marginTop: space(2) }}>{STR.statusFilter}</Muted>
+      <ChipRow>
+        <Chip label={STR.all} selected={status === null} onPress={() => setStatus(null)} />
+        {REVIEW_STATUSES.map((s) => (
+          <Chip key={s} label={reviewStatusLabel(s)} selected={status === s} onPress={() => setStatus(status === s ? null : s)} />
+        ))}
+      </ChipRow>
       <ChipRow>
         <Chip label={STR.rvUnassignedOnly} selected={unassignedOnly} onPress={() => setUnassignedOnly((v) => !v)} />
       </ChipRow>
@@ -187,6 +210,7 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
               <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
                 <Badge text={isSel ? "✓" : "○"} tone={isSel ? "ok" : "muted"} />
                 <Body style={{ flex: 1, fontWeight: "700" }}>{planTitle(p)}</Body>
+                <Badge text={reviewStatusLabel(p.reviewStatus)} tone={statusTone(p.reviewStatus)} />
               </View>
               <Muted style={{ marginTop: 4 }}>
                 {p.currentReviewerName
