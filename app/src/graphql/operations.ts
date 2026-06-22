@@ -343,9 +343,11 @@ export interface ScopeGrantT {
   startDate: string | null;
   durationDays: number | null;
   proxyStatus: string | null;
+  extent: string | null;
+  explicitSet: Array<{ classId: string; subjectId: string }> | null;
 }
 
-const SCOPE_GRANT_FIELDS = `id kind active teacherId classId sectionId subjectId coveringTeacherId absentTeacherId startDate durationDays proxyStatus`;
+const SCOPE_GRANT_FIELDS = `id kind active teacherId classId sectionId subjectId coveringTeacherId absentTeacherId startDate durationDays proxyStatus extent explicitSet { classId subjectId }`;
 
 export const MY_SCOPES_QUERY = gql<{ myScopes: ScopeGrantT[] }, NoVars>`
   query MyScopes {
@@ -379,6 +381,48 @@ export const GRANT_TEACHING = gql<
 export const REVOKE_TEACHING = gql<{ revokeTeaching: boolean }, { grantId: string }>`
   mutation RevokeTeaching($grantId: String!) {
     revokeTeaching(grantId: $grantId)
+  }
+`;
+
+/** Supervisory (read-oversight) grants for a teacher (user:manage) — D-#261. */
+export const SUPERVISORY_GRANTS_QUERY = gql<{ supervisoryGrants: ScopeGrantT[] }, { teacherId?: string | null }>`
+  query SupervisoryGrants($teacherId: String) {
+    supervisoryGrants(teacherId: $teacherId) { ${SCOPE_GRANT_FIELDS} }
+  }
+`;
+
+export const GRANT_SUPERVISORY = gql<
+  { grantSupervisory: { grantId: string } },
+  {
+    teacherId: string;
+    extent: string;
+    subjectId?: string | null;
+    classId?: string | null;
+    explicitSet?: Array<{ classId: string; subjectId: string }> | null;
+  }
+>`
+  mutation GrantSupervisory(
+    $teacherId: String!
+    $extent: String!
+    $subjectId: String
+    $classId: String
+    $explicitSet: [SupervisoryPairInput!]
+  ) {
+    grantSupervisory(
+      teacherId: $teacherId
+      extent: $extent
+      subjectId: $subjectId
+      classId: $classId
+      explicitSet: $explicitSet
+    ) {
+      grantId
+    }
+  }
+`;
+
+export const REVOKE_SUPERVISORY = gql<{ revokeSupervisory: boolean }, { grantId: string }>`
+  mutation RevokeSupervisory($grantId: String!) {
+    revokeSupervisory(grantId: $grantId)
   }
 `;
 

@@ -178,6 +178,7 @@ import AdminHomeScreen from "../screens/admin/AdminHomeScreen";
 import ImportScreen from "../screens/admin/ImportScreen";
 import UserListScreen from "../screens/admin/UserListScreen";
 import ScopeGrantScreen from "../screens/admin/ScopeGrantScreen";
+import SupervisoryGrantScreen from "../screens/admin/SupervisoryGrantScreen";
 import RosterScreen from "../screens/admin/RosterScreen";
 import StaffListScreen from "../screens/admin/StaffListScreen";
 import AssignClassTeacherScreen from "../screens/admin/AssignClassTeacherScreen";
@@ -797,6 +798,7 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="Import" component={ImportScreen} options={{ title: STR.importContent }} />
       <AdminStack.Screen name="UserList" component={UserListScreen} options={{ title: STR.users }} />
       <AdminStack.Screen name="ScopeGrant" component={ScopeGrantScreen} options={{ title: STR.scopeGrants }} />
+      <AdminStack.Screen name="SupervisoryGrant" component={SupervisoryGrantScreen} options={{ title: STR.sgManage }} />
       <AdminStack.Screen name="Roster" component={RosterScreen} options={{ title: STR.roster }} />
       <AdminStack.Screen name="Staff" component={StaffListScreen} options={{ title: STR.staff }} />
       <AdminStack.Screen name="AssignClassTeacher" component={AssignClassTeacherScreen} options={{ title: STR.assignClassTeacher }} />
