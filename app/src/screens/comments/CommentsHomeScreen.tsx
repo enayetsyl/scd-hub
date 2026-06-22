@@ -27,6 +27,8 @@ export default function CommentsHomeScreen(): React.ReactElement {
   const { role } = useAuth();
   const canComments = !!role && roleHasPermission(role, "tracker:read");
   const canMeetings = !!role && roleHasPermission(role, "roster:manage");
+  // Principal/Office review + release comments to guardians (D-#264).
+  const canReview = !!role && roleHasPermission(role, "roster:manage");
 
   const [mineQ, refetchMine] = useQuery({ query: MY_STUDENT_COMMENTS_QUERY, variables: {}, pause: !canComments });
   const mine = mineQ.data?.myStudentComments ?? [];
@@ -52,6 +54,16 @@ export default function CommentsHomeScreen(): React.ReactElement {
             <Muted style={{ marginTop: space(1) }}>{STR.cmDailyCommentsSub}</Muted>
             <View style={{ marginTop: space(2) }}>
               <Button title={STR.cmDailyComments} variant="secondary" onPress={() => nav.navigate("SectionComments")} />
+            </View>
+          </Card>
+        ) : null}
+
+        {canReview ? (
+          <Card onPress={() => nav.navigate("CommentReview")}>
+            <Body style={{ fontWeight: "700" }}>{STR.cmReview}</Body>
+            <Muted style={{ marginTop: space(1) }}>{STR.cmReviewSub}</Muted>
+            <View style={{ marginTop: space(2) }}>
+              <Button title={STR.cmReview} variant="secondary" onPress={() => nav.navigate("CommentReview")} />
             </View>
           </Card>
         ) : null}

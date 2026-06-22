@@ -26,6 +26,7 @@ import { COMMENT_TYPES, COMMENT_SENTIMENTS } from "@scd/shared";
 import type { CommentType, CommentSentiment } from "@scd/shared";
 import { StudentComment, type IStudentComment } from "../models/StudentComment";
 import { Student } from "../../foundation/models/Student";
+import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
 
 /** A surfaced service error (Bangla-friendly message), mirroring the tracker pattern. */
@@ -166,8 +167,11 @@ export interface EditCommentInput {
   sentiment?: string;
   text?: string;
   attachmentIds?: string[];
-  /** The authenticated teacher (ctx.auth.userId). */
+  /** The authenticated user (ctx.auth.userId). */
   actorId: string;
+  /** True when the actor is a reviewer (Principal/Office) who may edit ANY undelivered
+   *  comment before releasing it (D-#264); otherwise edit is author-only (D-#115). */
+  actorIsReviewer?: boolean;
 }
 
 export async function editComment(input: EditCommentInput): Promise<StudentCommentShape> {
@@ -175,8 +179,9 @@ export async function editComment(input: EditCommentInput): Promise<StudentComme
   const doc = (await StudentComment.findById(input.commentId)) as IStudentComment | null;
   if (!doc) throw new StudentCommentError("Comment not found");
 
-  // Author-only (§6, D-#115). Even another write-scoped teacher cannot edit it.
-  if (doc.authorUserId.toString() !== input.actorId) {
+  // Author-only (§6, D-#115) — UNLESS the actor is a Principal/Office reviewer, who
+  // may revise any comment before releasing it to the guardian (D-#264).
+  if (!input.actorIsReviewer && doc.authorUserId.toString() !== input.actorId) {
     throw new StudentCommentError("Only the comment's author may edit it");
   }
   // Immutable once delivered — a correction is a NEW comment (§3).
@@ -249,4 +254,33 @@ export async function myComments(actorId: string, studentId?: string): Promise<A
   const nameOf = new Map(students.map((s) => [s._id.toString(), s.name]));
 
   return docs.map((d) => ({ ...shape(d), studentName: nameOf.get(d.studentId.toString()) ?? d.studentId.toString() }));
+}
+
+/** A review-inbox row — the child's + author's names joined for the Principal/Office
+ *  dashboard (which spans students + teachers). */
+export interface CommentReviewRow extends AuthoredCommentShape {
+  authorName: string;
+}
+
+/**
+ * Every UNDELIVERED comment, newest first, enriched with the child's + author's names —
+ * the Principal/Office review dashboard (D-#264): they decide what reaches the guardian.
+ * School-wide (no section scope); gated `roster:manage` (Principal/Office) by the resolver.
+ */
+export async function reviewInbox(): Promise<CommentReviewRow[]> {
+  const docs = (await StudentComment.find({ deliveredAt: null }).sort({ createdAt: -1 }).lean()) as unknown as IStudentComment[];
+  if (docs.length === 0) return [];
+
+  const studentIds = [...new Set(docs.map((d) => d.studentId.toString()))];
+  const authorIds = [...new Set(docs.map((d) => d.authorUserId.toString()))];
+  const students = await Student.find({ _id: { $in: studentIds } }).select({ name: 1 }).lean();
+  const authors = await User.find({ _id: { $in: authorIds } }).select({ name: 1 }).lean();
+  const sName = new Map(students.map((s) => [s._id.toString(), s.name]));
+  const aName = new Map(authors.map((u) => [u._id.toString(), u.name]));
+
+  return docs.map((d) => ({
+    ...shape(d),
+    studentName: sName.get(d.studentId.toString()) ?? d.studentId.toString(),
+    authorName: aName.get(d.authorUserId.toString()) ?? d.authorUserId.toString(),
+  }));
 }

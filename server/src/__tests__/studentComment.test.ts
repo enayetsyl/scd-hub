@@ -52,6 +52,11 @@ jest.mock("../modules/foundation/models/Student", () => ({
   Student: { findById: (id: unknown) => mockStudentFindById(id), find: (q: unknown) => mockStudentFind(q) },
 }));
 
+const mockUserFind = jest.fn();
+jest.mock("../modules/foundation/models/User", () => ({
+  User: { find: (q: unknown) => mockUserFind(q) },
+}));
+
 const mockWriteAudit = jest.fn();
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (e: unknown) => mockWriteAudit(e),
@@ -64,6 +69,7 @@ import {
   editComment,
   studentComments,
   myComments,
+  reviewInbox,
   StudentCommentError,
 } from "../modules/comments/services/StudentCommentService";
 import { assertCanWrite, assertCanRead, ForbiddenError } from "../middleware/authz";
@@ -269,6 +275,26 @@ describe("editComment", () => {
     ).rejects.toThrow(/only the comment's author/i);
   });
 
+  test("a reviewer (Principal/Office) may edit a NON-author's undelivered comment (D-#264)", async () => {
+    const doc = makeDoc();
+    mockFindById.mockResolvedValue(doc);
+    const res = await editComment({
+      commentId: STUDENT_OID.toString(),
+      text: "Reviewer tidy-up.",
+      actorId: oid().toString(), // not the author
+      actorIsReviewer: true,
+    });
+    expect(res.text).toBe("Reviewer tidy-up.");
+    expect((doc.save as jest.Mock)).toHaveBeenCalled();
+  });
+
+  test("a reviewer still cannot edit a DELIVERED comment (sealed)", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ deliveredAt: new Date("2026-06-14T01:00:00Z") }));
+    await expect(
+      editComment({ commentId: STUDENT_OID.toString(), text: "Too late.", actorId: oid().toString(), actorIsReviewer: true }),
+    ).rejects.toThrow(/immutable/);
+  });
+
   test("a DELIVERED comment is immutable (§3)", async () => {
     mockFindById.mockResolvedValue(makeDoc({ deliveredAt: new Date("2026-06-14T01:00:00Z") }));
     await expect(
@@ -281,6 +307,39 @@ describe("editComment", () => {
     await expect(
       editComment({ commentId: STUDENT_OID.toString(), text: "x", actorId: TEACHER_ID }),
     ).rejects.toBeInstanceOf(StudentCommentError);
+  });
+});
+
+// ===========================================================================
+// reviewInbox — the Principal/Office review dashboard (D-#264)
+// ===========================================================================
+
+describe("reviewInbox (Principal/Office dashboard)", () => {
+  test("returns undelivered comments newest-first, with student + author names joined", async () => {
+    const stu = oid();
+    const author = oid();
+    mockFind.mockReturnValue(
+      leanChain([
+        { _id: oid(), studentId: stu, sectionId: SECTION_OID, authorUserId: author, type: "GENERAL", sentiment: "CONCERN", text: "asfd", attachmentIds: [], deliveryChannels: [], createdAt: new Date(2), updatedAt: new Date(2) },
+      ]),
+    );
+    mockStudentFind.mockReturnValue(leanChain([{ _id: stu, name: "Abdullah Al Anas" }]));
+    mockUserFind.mockReturnValue(leanChain([{ _id: author, name: "Md Teacher" }]));
+
+    const rows = await reviewInbox();
+    expect(mockFind).toHaveBeenCalledWith({ deliveredAt: null });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].studentName).toBe("Abdullah Al Anas");
+    expect(rows[0].authorName).toBe("Md Teacher");
+    expect(rows[0].text).toBe("asfd");
+  });
+
+  test("no undelivered comments → [] (no name lookups)", async () => {
+    mockFind.mockReturnValue(leanChain([]));
+    const rows = await reviewInbox();
+    expect(rows).toEqual([]);
+    expect(mockStudentFind).not.toHaveBeenCalled();
+    expect(mockUserFind).not.toHaveBeenCalled();
   });
 });
 

@@ -15,7 +15,7 @@
 import { builder } from "../../../schema";
 import { deliverComment, type CommentDeliveryOutcome } from "../services/CommentDeliveryService";
 import { StudentComment } from "../models/StudentComment";
-import { assertCanWrite, ForbiddenError } from "../../../middleware/authz";
+import { ForbiddenError } from "../../../middleware/authz";
 
 const CommentDeliveryOutcomeRef = builder.objectRef<CommentDeliveryOutcome>("CommentDeliveryOutcome");
 CommentDeliveryOutcomeRef.implement({
@@ -42,19 +42,14 @@ builder.mutationField("deliverStudentComment", (t) =>
     description:
       "Deliver one daily student comment to the family (J-CM1): stamps deliveredAt (sealing immutability) " +
       "+ deliveryChannels, returns a wa.me link for the family phone, and emits an in-app Notification for " +
-      "login-enabled guardians. Per-comment (mirrors the Form's per-row send). Requires tracker:write on " +
-      "the comment's section. Audited.",
-    authScopes: { hasPermission: "tracker:write" },
+      "login-enabled guardians. Per-comment. Delivery authority = Principal/Office only (`roster:manage`) — " +
+      "the authoring teacher cannot deliver; comments are reviewed + released from the admin dashboard (D-#264). Audited.",
+    authScopes: { hasPermission: "roster:manage" },
     args: { commentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const comment = await StudentComment.findById(args.commentId).select("sectionId authorUserId").lean();
+      const comment = await StudentComment.findById(args.commentId).select("_id").lean();
       if (!comment) throw new ForbiddenError("Comment not found");
-      // The author may always deliver their OWN comment (D-#263); a non-author still
-      // needs section write-scope (Principal/Office + scoped teachers deliver others').
-      if (comment.authorUserId.toString() !== (ctx.auth.userId as string)) {
-        await assertCanWrite(ctx, comment.sectionId.toString());
-      }
       return deliverComment(args.commentId, ctx.auth.userId as string);
     },
   }),

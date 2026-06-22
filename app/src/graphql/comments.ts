@@ -63,6 +63,29 @@ export const MY_STUDENT_COMMENTS_QUERY = gql<
   }
 `;
 
+// The Principal/Office review dashboard (D-#264): every undelivered comment to triage.
+export interface CommentReviewItemT {
+  id: string;
+  studentId: string;
+  studentName: string;
+  sectionId: string;
+  authorUserId: string;
+  authorName: string;
+  type: string;
+  sentiment: string;
+  text: string;
+  attachmentIds: string[];
+  createdAt: string;
+}
+
+export const COMMENT_REVIEW_INBOX_QUERY = gql<{ commentReviewInbox: CommentReviewItemT[] }, NoVars>`
+  query CommentReviewInbox {
+    commentReviewInbox {
+      id studentId studentName sectionId authorUserId authorName type sentiment text attachmentIds createdAt
+    }
+  }
+`;
+
 export const RECORD_STUDENT_COMMENT = gql<
   { recordStudentComment: StudentCommentT },
   {

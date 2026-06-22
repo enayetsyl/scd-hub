@@ -127,6 +127,7 @@ import ClassTestClassSubjectScreen from "../screens/classtest/ClassTestClassSubj
 import ClassTestStudentProfileScreen from "../screens/classtest/ClassTestStudentProfileScreen";
 import CommentsHomeScreen from "../screens/comments/CommentsHomeScreen";
 import SectionCommentsScreen from "../screens/comments/SectionCommentsScreen";
+import CommentReviewScreen from "../screens/comments/CommentReviewScreen";
 import CommentEntryScreen from "../screens/comments/CommentEntryScreen";
 import MeetingsListScreen from "../screens/comments/MeetingsListScreen";
 import MeetingAdminScreen from "../screens/comments/MeetingAdminScreen";
@@ -655,6 +656,7 @@ function CommentsNavigator(): React.ReactElement {
     <CommentsStack.Navigator screenOptions={stackOptions}>
       <CommentsStack.Screen name="CommentsHome" component={CommentsHomeScreen} options={{ title: STR.cmHomeTitle }} />
       <CommentsStack.Screen name="SectionComments" component={SectionCommentsScreen} options={{ title: STR.cmDailyComments }} />
+      <CommentsStack.Screen name="CommentReview" component={CommentReviewScreen} options={{ title: STR.cmReview }} />
       <CommentsStack.Screen
         name="CommentEntry"
         component={CommentEntryScreen}

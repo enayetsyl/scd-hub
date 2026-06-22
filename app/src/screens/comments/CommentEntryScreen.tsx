@@ -14,7 +14,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Linking, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { COMMENT_TYPES, COMMENT_SENTIMENTS } from "@scd/shared";
+import { COMMENT_TYPES, COMMENT_SENTIMENTS, roleHasPermission } from "@scd/shared";
+import { useAuth } from "../../auth/AuthContext";
 import {
   STUDENT_COMMENTS_QUERY,
   MY_STUDENT_COMMENTS_QUERY,
@@ -35,6 +36,10 @@ type Props = NativeStackScreenProps<CommentsStackParamList, "CommentEntry">;
 
 export default function CommentEntryScreen({ route }: Props): React.ReactElement {
   const { studentId, studentName, commentId: initialCommentId } = route.params;
+  // Delivery to guardians is a Principal/Office action (D-#264); teachers author + edit
+  // only — comments are released from the review dashboard.
+  const { role } = useAuth();
+  const canDeliver = !!role && roleHasPermission(role, "roster:manage");
 
   // The edit/deliver path needs the live comment row. Load it from BOTH the section
   // timeline (`studentComments` — scoped; serves Principal/Office + section-scoped
@@ -246,11 +251,18 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
           ) : null}
         </Card>
 
-        {/* Deliver — only for an undelivered, saved comment. */}
+        {/* Deliver — Principal/Office only (D-#264), for an undelivered, saved comment.
+            Teachers see a note that delivery is handled by the review dashboard. */}
         {commentId && !delivered ? (
-          <Card>
-            <Button title={STR.cmDeliver} onPress={onDeliver} loading={busy} disabled={busy} />
-          </Card>
+          canDeliver ? (
+            <Card>
+              <Button title={STR.cmDeliver} onPress={onDeliver} loading={busy} disabled={busy} />
+            </Card>
+          ) : (
+            <Card>
+              <Muted>{STR.cmDeliverByAdmin}</Muted>
+            </Card>
+          )
         ) : null}
 
         {outcome ? (

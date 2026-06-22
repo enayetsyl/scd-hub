@@ -189,6 +189,7 @@ export type ClassTestStackParamList = {
 export type CommentsStackParamList = {
   CommentsHome: undefined;
   SectionComments: undefined;
+  CommentReview: undefined;
   CommentEntry: { sectionId: string; studentId: string; studentName: string; commentId?: string };
   MeetingsList: undefined;
   MeetingAdmin: { meetingId: string; instanceLabel: string };
