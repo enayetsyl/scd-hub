@@ -27,6 +27,7 @@ import type { CommentType, CommentSentiment } from "@scd/shared";
 import { StudentComment, type IStudentComment } from "../models/StudentComment";
 import { Student } from "../../foundation/models/Student";
 import { User } from "../../foundation/models/User";
+import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
 
 /** A surfaced service error (Bangla-friendly message), mirroring the tracker pattern. */
@@ -202,6 +203,48 @@ export async function editComment(input: EditCommentInput): Promise<StudentComme
     targetId: doc._id,
     targetKind: "StudentComment",
     meta: { studentId: doc.studentId.toString(), sectionId: doc.sectionId.toString(), edited: true },
+  });
+
+  return shape(doc);
+}
+
+// ---------------------------------------------------------------------------
+// removeCommentAttachment (author OR Principal/Office reviewer; pre-delivery — D-#264)
+// ---------------------------------------------------------------------------
+
+export interface RemoveAttachmentInput {
+  commentId: string;
+  fileId: string;
+  actorId: string;
+  /** True for a Principal/Office reviewer (may manage any undelivered comment's files). */
+  actorIsReviewer?: boolean;
+}
+
+export async function removeCommentAttachment(input: RemoveAttachmentInput): Promise<StudentCommentShape> {
+  if (!Types.ObjectId.isValid(input.commentId) || !Types.ObjectId.isValid(input.fileId)) {
+    throw new StudentCommentError("Invalid id");
+  }
+  const doc = (await StudentComment.findById(input.commentId)) as IStudentComment | null;
+  if (!doc) throw new StudentCommentError("Comment not found");
+  if (!input.actorIsReviewer && doc.authorUserId.toString() !== input.actorId) {
+    throw new StudentCommentError("Only the comment's author may edit it");
+  }
+  if (doc.deliveredAt) {
+    throw new StudentCommentError("A delivered comment is immutable — record a new comment to correct it");
+  }
+
+  doc.attachmentIds = (doc.attachmentIds ?? []).filter((a) => a.toString() !== input.fileId);
+  await doc.save();
+  // Unbind + drop the StoredFile metadata so the file is no longer reachable (the GET
+  // gate needs the StoredFile + its studentCommentId binding); the Drive blob orphans.
+  await StoredFile.deleteOne({ _id: new Types.ObjectId(input.fileId), studentCommentId: doc._id });
+
+  await writeAudit({
+    eventKind: "STUDENT_COMMENT_RECORDED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "StudentComment",
+    meta: { studentId: doc.studentId.toString(), attachmentRemoved: input.fileId },
   });
 
   return shape(doc);

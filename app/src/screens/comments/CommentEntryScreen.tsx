@@ -21,6 +21,7 @@ import {
   MY_STUDENT_COMMENTS_QUERY,
   RECORD_STUDENT_COMMENT,
   EDIT_STUDENT_COMMENT,
+  REMOVE_COMMENT_ATTACHMENT,
   DELIVER_STUDENT_COMMENT,
   type StudentCommentT,
   type CommentDeliveryOutcomeT,
@@ -73,6 +74,8 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [attachBusy, setAttachBusy] = useState(false);
+  const [removeBusyId, setRemoveBusyId] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<CommentDeliveryOutcomeT | null>(null);
 
   // Seed the form from the loaded comment (once it resolves).
@@ -114,6 +117,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
     setError(null);
     setOk(null);
     if (!commentId) return setError(STR.cmAttachFirst);
+    setAttachBusy(true);
     try {
       const f = await pickAndUploadCommentFile(commentId);
       if (f) {
@@ -122,7 +126,21 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
       }
     } catch (e) {
       setError(e instanceof FileUploadError ? e.message : STR.cmFileUploadFail);
+    } finally {
+      setAttachBusy(false);
     }
+  }
+
+  async function onRemoveAttachment(fileId: string): Promise<void> {
+    if (removeBusyId) return;
+    setError(null);
+    setOk(null);
+    setRemoveBusyId(fileId);
+    const res = await removeAttachment({ commentId: commentId as string, fileId });
+    setRemoveBusyId(null);
+    if (res.error) return setError(friendlyError(res.error));
+    setOk(STR.cmAttachRemoved);
+    refetchComment();
   }
 
   async function onOpenAttachment(fileId: string): Promise<void> {
@@ -153,6 +171,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
 
   const [, recordComment] = useMutation(RECORD_STUDENT_COMMENT);
   const [, editComment] = useMutation(EDIT_STUDENT_COMMENT);
+  const [, removeAttachment] = useMutation(REMOVE_COMMENT_ATTACHMENT);
   const [, deliver] = useMutation(DELIVER_STUDENT_COMMENT);
 
   // Loading the existing comment row (edit/deliver path).
@@ -226,25 +245,41 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
           ) : null}
         </Card>
 
-        {/* Attachments — need a saved comment id; record first for a new comment. */}
+        {/* Attachments — need a saved comment id; record first for a new comment.
+            Multiple files allowed; each can be opened (and removed before delivery). */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.cmAttachments}</Body>
           {attachmentIds.length === 0 ? (
             <Muted style={{ marginTop: space(1) }}>—</Muted>
           ) : (
-            attachmentIds.map((fid) => (
-              <View key={fid} style={{ marginTop: space(2) }}>
+            attachmentIds.map((fid, i) => (
+              <View
+                key={fid}
+                style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: space(2) }}
+              >
+                <Muted>{`${STR.cmAttachmentN} ${bnNum(i + 1)}`}</Muted>
+                <View style={{ flex: 1 }} />
                 <Button title={STR.cmOpenAttachment} variant="ghost" onPress={() => void onOpenAttachment(fid)} />
+                {!delivered ? (
+                  <Button
+                    title={STR.cmRemove}
+                    variant="danger"
+                    onPress={() => void onRemoveAttachment(fid)}
+                    loading={removeBusyId === fid}
+                    disabled={removeBusyId !== null}
+                  />
+                ) : null}
               </View>
             ))
           )}
           {!delivered ? (
             <View style={{ marginTop: space(2) }}>
               <Button
-                title={STR.cmAttach}
+                title={attachBusy ? STR.cmUploading : STR.cmAttach}
                 variant="secondary"
                 onPress={onAttach}
-                disabled={busy}
+                loading={attachBusy}
+                disabled={busy || attachBusy || removeBusyId !== null}
               />
               {!commentId ? <Muted style={{ marginTop: space(1) }}>{STR.cmAttachFirst}</Muted> : null}
             </View>

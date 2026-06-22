@@ -124,6 +124,15 @@ export const EDIT_STUDENT_COMMENT = gql<
   }
 `;
 
+export const REMOVE_COMMENT_ATTACHMENT = gql<
+  { removeCommentAttachment: StudentCommentT },
+  { commentId: string; fileId: string }
+>`
+  mutation RemoveCommentAttachment($commentId: String!, $fileId: String!) {
+    removeCommentAttachment(commentId: $commentId, fileId: $fileId) { ${STUDENT_COMMENT_FIELDS} }
+  }
+`;
+
 // ---------------------------------------------------------------------------
 // Comment delivery (CM-2)
 // ---------------------------------------------------------------------------

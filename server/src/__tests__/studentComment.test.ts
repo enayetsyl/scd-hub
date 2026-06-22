@@ -57,6 +57,11 @@ jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (q: unknown) => mockUserFind(q) },
 }));
 
+const mockStoredFileDelete = jest.fn();
+jest.mock("../modules/platform/models/StoredFile", () => ({
+  StoredFile: { deleteOne: (q: unknown) => mockStoredFileDelete(q) },
+}));
+
 const mockWriteAudit = jest.fn();
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (e: unknown) => mockWriteAudit(e),
@@ -67,6 +72,7 @@ import {
   resolveCommentSection,
   recordComment,
   editComment,
+  removeCommentAttachment,
   studentComments,
   myComments,
   reviewInbox,
@@ -307,6 +313,64 @@ describe("editComment", () => {
     await expect(
       editComment({ commentId: STUDENT_OID.toString(), text: "x", actorId: TEACHER_ID }),
     ).rejects.toBeInstanceOf(StudentCommentError);
+  });
+});
+
+// ===========================================================================
+// removeCommentAttachment (author OR reviewer; pre-delivery — D-#264)
+// ===========================================================================
+
+describe("removeCommentAttachment", () => {
+  const FILE = oid();
+  const makeDoc = (over: Record<string, unknown> = {}) => {
+    const doc: Record<string, unknown> = {
+      _id: STUDENT_OID,
+      studentId: STUDENT_OID,
+      sectionId: SECTION_OID,
+      authorUserId: new mongoose.Types.ObjectId(TEACHER_ID),
+      type: "GENERAL",
+      sentiment: "POSITIVE",
+      text: "x",
+      attachmentIds: [FILE, oid()],
+      deliveryChannels: [],
+      deliveredAt: undefined,
+      createdAt: new Date("2026-06-14T00:00:00Z"),
+      updatedAt: new Date("2026-06-14T00:00:00Z"),
+      ...over,
+    };
+    doc.save = jest.fn(async () => doc);
+    return doc;
+  };
+
+  test("the author removes a file → pulled from attachmentIds + StoredFile dropped", async () => {
+    const doc = makeDoc();
+    mockFindById.mockResolvedValue(doc);
+    mockStoredFileDelete.mockResolvedValue({ deletedCount: 1 });
+    await removeCommentAttachment({ commentId: STUDENT_OID.toString(), fileId: FILE.toString(), actorId: TEACHER_ID });
+    expect((doc.attachmentIds as unknown[]).map((a) => String(a))).not.toContain(FILE.toString());
+    expect((doc.save as jest.Mock)).toHaveBeenCalled();
+    expect(mockStoredFileDelete).toHaveBeenCalledWith(expect.objectContaining({ studentCommentId: STUDENT_OID }));
+  });
+
+  test("a reviewer (Principal/Office) removes a NON-author's file", async () => {
+    const doc = makeDoc({ authorUserId: oid() }); // someone else's comment
+    mockFindById.mockResolvedValue(doc);
+    mockStoredFileDelete.mockResolvedValue({ deletedCount: 1 });
+    await expect(
+      removeCommentAttachment({ commentId: STUDENT_OID.toString(), fileId: FILE.toString(), actorId: oid().toString(), actorIsReviewer: true }),
+    ).resolves.toBeDefined();
+  });
+
+  test("a non-author non-reviewer is refused; a delivered comment is immutable", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ authorUserId: oid() }));
+    await expect(
+      removeCommentAttachment({ commentId: STUDENT_OID.toString(), fileId: FILE.toString(), actorId: oid().toString() }),
+    ).rejects.toThrow(/only the comment's author/i);
+
+    mockFindById.mockResolvedValue(makeDoc({ deliveredAt: new Date() }));
+    await expect(
+      removeCommentAttachment({ commentId: STUDENT_OID.toString(), fileId: FILE.toString(), actorId: TEACHER_ID }),
+    ).rejects.toThrow(/immutable/);
   });
 });
 

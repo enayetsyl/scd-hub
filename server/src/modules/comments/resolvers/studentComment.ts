@@ -19,6 +19,7 @@ import {
   resolveCommentSection,
   recordComment,
   editComment,
+  removeCommentAttachment,
   listSectionComments,
   studentComments,
   myComments,
@@ -139,8 +140,31 @@ builder.mutationField("editStudentComment", (t) =>
   }),
 );
 
+builder.mutationField("removeCommentAttachment", (t) =>
+  t.field({
+    type: StudentCommentRef,
+    description:
+      "Remove a file from an UNDELIVERED comment. Author (own) or Principal/Office reviewer (any); " +
+      "refused once delivered (sealed, §3). Unbinds + drops the StoredFile. Audited (D-#264).",
+    authScopes: { authenticated: true },
+    args: {
+      commentId: t.arg.string({ required: true }),
+      fileId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return removeCommentAttachment({
+        commentId: args.commentId,
+        fileId: args.fileId,
+        actorId: ctx.auth.userId as string,
+        actorIsReviewer: isReviewer(ctx),
+      });
+    },
+  }),
+);
+
 // ---------------------------------------------------------------------------
-// Queries (tracker:read + section read-scope for teachers)
+// Queries (read-scope via assertReadSection; reviewers via roster:manage)
 // ---------------------------------------------------------------------------
 
 builder.queryField("sectionStudentComments", (t) =>
