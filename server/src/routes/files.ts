@@ -338,7 +338,7 @@ const parseCommentUpload: express.RequestHandler = (req, res, next) => {
 
 filesRouter.post("/comment", parseCommentUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
+  if (!ctx.auth) {
     res.status(403).json({ error: COMMENT_FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -349,8 +349,9 @@ filesRouter.post("/comment", parseCommentUpload, async (req: Request, res: Respo
     return;
   }
 
-  // Resolve the comment's REAL section + delivery state, then gate on write-scope.
-  let target: { sectionId: string; delivered: boolean };
+  // Resolve the comment's author + delivery state, then gate: the comment AUTHOR or a
+  // Principal/Office reviewer may attach, pre-delivery (mirrors editComment, D-#263/#264).
+  let target: { sectionId: string; authorUserId: string; delivered: boolean };
   try {
     target = await loadCommentForUpload(commentId);
   } catch (e) {
@@ -364,14 +365,11 @@ filesRouter.post("/comment", parseCommentUpload, async (req: Request, res: Respo
     res.status(409).json({ error: "একটি ডেলিভার হওয়া মন্তব্যে ফাইল সংযুক্ত করা যাবে না" });
     return;
   }
-  try {
-    await assertCanWrite(ctx, target.sectionId);
-  } catch (e) {
-    if (e instanceof ForbiddenError) {
-      res.status(403).json({ error: e.message || COMMENT_FILE_ERRORS_BN.forbidden });
-      return;
-    }
-    throw e;
+  const isAuthor = target.authorUserId === ctx.auth.userId;
+  const isReviewer = callerHasPermission(ctx.auth, "roster:manage"); // Principal/Office
+  if (!isAuthor && !isReviewer) {
+    res.status(403).json({ error: COMMENT_FILE_ERRORS_BN.forbidden });
+    return;
   }
 
   const file = req.file;
