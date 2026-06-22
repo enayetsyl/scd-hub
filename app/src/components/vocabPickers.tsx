@@ -73,6 +73,22 @@ export function ClassSectionSelect({
   const classes = (data?.classes ?? []).filter((c) => c.active);
   const [classId, setClassId] = React.useState<string | null>(value?.classId ?? null);
   const selectedClass = classes.find((c) => c.id === classId) ?? null;
+  const activeSections = selectedClass ? selectedClass.sections.filter((s) => s.active) : [];
+  // A class with exactly one section → auto-select it; the dropdown is hidden (no
+  // point making the user pick from a single option). Multi-section classes still pick.
+  const soleSection = activeSections.length === 1 ? activeSections[0] : null;
+
+  React.useEffect(() => {
+    if (selectedClass && soleSection && value?.sectionId !== soleSection.id) {
+      onChange({
+        classId: selectedClass.id,
+        sectionId: soleSection.id,
+        classLevel: selectedClass.level,
+        sectionName: `${selectedClass.nameBn} ${soleSection.nameBn}`.trim(),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClass?.id, soleSection?.id, value?.sectionId]);
 
   return (
     <>
@@ -86,11 +102,11 @@ export function ClassSectionSelect({
         }}
         placeholder={STR.vbPickClass}
       />
-      {selectedClass ? (
+      {selectedClass && activeSections.length > 1 ? (
         <Select
           label={STR.section}
           value={value?.sectionId ?? null}
-          options={selectedClass.sections.filter((s) => s.active).map((s) => ({ label: s.nameBn, value: s.id }))}
+          options={activeSections.map((s) => ({ label: s.nameBn, value: s.id }))}
           onChange={(sid) => {
             const sec = selectedClass.sections.find((s) => s.id === sid);
             onChange({
