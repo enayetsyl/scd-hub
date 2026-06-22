@@ -19,6 +19,7 @@
  * Time inputs are passed in as epoch millis so callers (resolvers) supply "now"
  * and the math stays deterministic/testable.
  */
+import { HW_DAILY_CEILING_MIN } from "@scd/shared";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkReconciliation } from "../models/HomeworkReconciliation";
@@ -61,6 +62,8 @@ export interface HomeworkSummaryResult {
   attentionCount: number;
   commsPromptCount: number;
   openResubmissions: number;
+  /** Records sitting in SUBMITTED, awaiting the teacher's check (SUBMITTED→CHECKED). */
+  pendingChecking: number;
   /** % of records that reached SUBMITTED with no chase (on time). null if none yet. */
   submittedOnTimePct: number | null;
   chaseVolume: number;
@@ -86,6 +89,7 @@ export async function homeworkSummary(classId: string): Promise<HomeworkSummaryR
     .sort((a, b) => b.chaseCount - a.chaseCount);
 
   const openResubmissions = records.filter((r) => r.resubOf && !isTerminalState(r.state)).length;
+  const pendingChecking = records.filter((r) => r.state === "SUBMITTED").length;
 
   // Completion health.
   const reachedSubmitted = records.filter((r) => (r.stateDates ?? []).some((s) => s.state === "SUBMITTED"));
@@ -118,11 +122,81 @@ export async function homeworkSummary(classId: string): Promise<HomeworkSummaryR
     attentionCount: chaseList.filter((c) => c.attention).length,
     commsPromptCount: chaseList.filter((c) => c.commsPrompt).length,
     openResubmissions,
+    pendingChecking,
     submittedOnTimePct,
     chaseVolume,
     avgReturnLatencyDays,
     topicTouches,
   };
+}
+
+// ---------------------------------------------------------------------------
+// homeworkClassOverview — per-class cumulative counts for the dashboard badges
+// (point 4: pending checking / chases / resubmissions / on-time% / over-ceiling).
+// classIds are pre-authorized by the resolver (assertCanRead per class).
+// ---------------------------------------------------------------------------
+
+export interface ClassOverviewResult {
+  classId: string;
+  pendingChecking: number;
+  openResubmissions: number;
+  activeChases: number;
+  /** % of records that reached SUBMITTED with no chase. null if none yet. */
+  onTimePct: number | null;
+  /** Days in the current (Sun-start) week where Σ issued time > the 240 ceiling. */
+  overCeilingDaysThisWeek: number;
+}
+
+/** Sun-00:00 → Sat-23:59:59 (UTC) window containing `asOfMillis`. */
+function weekRange(asOfMillis: number): { start: Date; end: Date } {
+  const d = new Date(asOfMillis);
+  const startMs = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - d.getUTCDay(), 0, 0, 0, 0);
+  return { start: new Date(startMs), end: new Date(startMs + 7 * DAY_MS - 1) };
+}
+
+export async function homeworkClassOverview(
+  classIds: string[],
+  asOfMillis: number,
+): Promise<ClassOverviewResult[]> {
+  if (classIds.length === 0) return [];
+
+  const records = await HomeworkStudentRecord.find({ classId: { $in: classIds } }).lean();
+  const { start, end } = weekRange(asOfMillis);
+  const items = await HomeworkItem.find({
+    classId: { $in: classIds },
+    status: "issued",
+    dateGiven: { $gte: start, $lte: end },
+  }).lean();
+
+  // Bucket records + this-week issued items by classId.
+  const recByClass = new Map<string, typeof records>();
+  for (const r of records) {
+    const k = r.classId.toString();
+    (recByClass.get(k) ?? recByClass.set(k, []).get(k)!).push(r);
+  }
+  // class → dayKey → summed declared minutes (for the over-ceiling-days count).
+  const minsByClassDay = new Map<string, Map<string, number>>();
+  for (const it of items) {
+    const k = it.classId.toString();
+    const dayKey = new Date(it.dateGiven as unknown as Date).toISOString().slice(0, 10);
+    const days = minsByClassDay.get(k) ?? minsByClassDay.set(k, new Map()).get(k)!;
+    days.set(dayKey, (days.get(dayKey) ?? 0) + (it.timeDecl ?? 0));
+  }
+
+  return classIds.map((classId) => {
+    const recs = recByClass.get(classId) ?? [];
+    const pendingChecking = recs.filter((r) => r.state === "SUBMITTED").length;
+    const activeChases = recs.filter((r) => r.state === "CHASE").length;
+    const openResubmissions = recs.filter((r) => r.resubOf && !isTerminalState(r.state)).length;
+    const reachedSubmitted = recs.filter((r) => (r.stateDates ?? []).some((s) => s.state === "SUBMITTED"));
+    const onTime = reachedSubmitted.filter((r) => r.chaseCount === 0).length;
+    const onTimePct = reachedSubmitted.length ? Math.round((onTime / reachedSubmitted.length) * 100) : null;
+    const days = minsByClassDay.get(classId);
+    const overCeilingDaysThisWeek = days
+      ? [...days.values()].filter((m) => m > HW_DAILY_CEILING_MIN).length
+      : 0;
+    return { classId, pendingChecking, activeChases, openResubmissions, onTimePct, overCeilingDaysThisWeek };
+  });
 }
 
 // ---------------------------------------------------------------------------

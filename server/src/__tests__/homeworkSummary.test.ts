@@ -27,6 +27,7 @@ jest.mock("../modules/trackers/models/HomeworkReconciliation", () => ({
 
 import {
   homeworkSummary,
+  homeworkClassOverview,
   resubmissionWatchList,
   trimPatternFlags,
   questionUsageFeed,
@@ -63,6 +64,7 @@ describe("T4.1/T4.2 — homeworkSummary", () => {
     expect(s.attentionCount).toBe(2); // both ≥2
     expect(s.commsPromptCount).toBe(1); // only the ≥3
     expect(s.openResubmissions).toBe(1);
+    expect(s.pendingChecking).toBe(1); // the one SUBMITTED record awaiting check
     expect(s.submittedOnTimePct).toBe(100); // 1 reached SUBMITTED, chaseCount 0
     expect(s.chaseVolume).toBe(5); // 3+2
     expect(s.avgReturnLatencyDays).toBe(2);
@@ -80,6 +82,52 @@ describe("T4.1/T4.2 — homeworkSummary", () => {
     expect(s.submittedOnTimePct).toBeNull();
     expect(s.avgReturnLatencyDays).toBeNull();
     expect(s.chaseVolume).toBe(0);
+  });
+});
+
+// ===========================================================================
+// homeworkClassOverview — per-class dashboard badges (point 4)
+// ===========================================================================
+
+describe("homeworkClassOverview (per-class cumulative counts)", () => {
+  test("aggregates pending checking / chases / resubmissions / on-time% / over-ceiling per class", async () => {
+    const C1 = "class-1";
+    const C2 = "class-2";
+    const day0 = new Date(2026, 5, 1, 9);
+    mockRecordFind.mockResolvedValue([
+      { classId: C1, state: "SUBMITTED", chaseCount: 0, stateDates: [{ state: "GIVEN", at: day0 }, { state: "SUBMITTED", at: day0 }] },
+      { classId: C1, state: "SUBMITTED", chaseCount: 1, stateDates: [{ state: "GIVEN", at: day0 }, { state: "SUBMITTED", at: day0 }] }, // chased → not on-time
+      { classId: C1, state: "CHASE", chaseCount: 2, stateDates: [{ state: "GIVEN", at: day0 }] },
+      { classId: C1, state: "DUE", chaseCount: 0, resubOf: oid(), stateDates: [{ state: "GIVEN", at: day0 }] }, // open resubmission
+      // C2 has no records
+    ]);
+    mockItemFind.mockResolvedValue([
+      { classId: C1, dateGiven: new Date(2026, 5, 1), timeDecl: 200 }, // day A …
+      { classId: C1, dateGiven: new Date(2026, 5, 1), timeDecl: 50 }, // … = 250 > 240 → over
+      { classId: C1, dateGiven: new Date(2026, 5, 2), timeDecl: 100 }, // day B = 100, under
+    ]);
+
+    const res = await homeworkClassOverview([C1, C2], new Date(2026, 5, 3).getTime());
+    const c1 = res.find((r) => r.classId === C1)!;
+    const c2 = res.find((r) => r.classId === C2)!;
+
+    expect(c1.pendingChecking).toBe(2);
+    expect(c1.activeChases).toBe(1);
+    expect(c1.openResubmissions).toBe(1);
+    expect(c1.onTimePct).toBe(50); // 2 reached SUBMITTED, 1 with no chase
+    expect(c1.overCeilingDaysThisWeek).toBe(1); // only day A (250) over the 240 ceiling
+
+    // every requested class is returned, zeroed when it has no data
+    expect(c2.pendingChecking).toBe(0);
+    expect(c2.activeChases).toBe(0);
+    expect(c2.openResubmissions).toBe(0);
+    expect(c2.onTimePct).toBeNull();
+    expect(c2.overCeilingDaysThisWeek).toBe(0);
+  });
+
+  test("no classIds → [] (no DB hit)", async () => {
+    const res = await homeworkClassOverview([], Date.now());
+    expect(res).toEqual([]);
   });
 });
 

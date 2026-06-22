@@ -33,9 +33,11 @@ import {
 } from "../services/HomeworkResubmissionService";
 import {
   homeworkSummary as homeworkSummarySvc,
+  homeworkClassOverview as classOverviewSvc,
   resubmissionWatchList as watchListSvc,
   trimPatternFlags as trimPatternSvc,
   questionUsageFeed as usageFeedSvc,
+  type ClassOverviewResult,
 } from "../services/HomeworkSummaryService";
 import {
   assertCanWrite,
@@ -724,6 +726,7 @@ interface HomeworkSummaryShape {
   attentionCount: number;
   commsPromptCount: number;
   openResubmissions: number;
+  pendingChecking: number;
   submittedOnTimePct: number | null;
   chaseVolume: number;
   avgReturnLatencyDays: number | null;
@@ -738,6 +741,7 @@ HomeworkSummaryRef.implement({
     attentionCount: t.exposeInt("attentionCount"),
     commsPromptCount: t.exposeInt("commsPromptCount"),
     openResubmissions: t.exposeInt("openResubmissions"),
+    pendingChecking: t.exposeInt("pendingChecking"),
     submittedOnTimePct: t.int({ nullable: true, resolve: (r) => r.submittedOnTimePct }),
     chaseVolume: t.exposeInt("chaseVolume"),
     avgReturnLatencyDays: t.float({ nullable: true, resolve: (r) => r.avgReturnLatencyDays }),
@@ -848,6 +852,53 @@ builder.queryField("homeworkSummary", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
       return homeworkSummarySvc(args.classId);
+    },
+  }),
+);
+
+// Query: homeworkClassOverview (per-class cumulative dashboard badges) -------
+const HomeworkClassRefInput = builder.inputType("HomeworkClassRefInput", {
+  fields: (t) => ({
+    classId: t.string({ required: true }),
+    sectionId: t.string({ required: true }),
+  }),
+});
+
+const ClassOverviewRef = builder.objectRef<ClassOverviewResult>("HomeworkClassOverview");
+ClassOverviewRef.implement({
+  description: "Per-class cumulative homework counts for the dashboard badges (pending checking / chases / resubmissions / on-time% / over-ceiling days this week).",
+  fields: (t) => ({
+    classId: t.exposeString("classId"),
+    pendingChecking: t.exposeInt("pendingChecking"),
+    openResubmissions: t.exposeInt("openResubmissions"),
+    activeChases: t.exposeInt("activeChases"),
+    onTimePct: t.int({ nullable: true, resolve: (r) => r.onTimePct }),
+    overCeilingDaysThisWeek: t.exposeInt("overCeilingDaysThisWeek"),
+  }),
+});
+
+builder.queryField("homeworkClassOverview", (t) =>
+  t.field({
+    type: [ClassOverviewRef],
+    description:
+      "Per-class cumulative homework counts for the dashboard. Each (classId, sectionId) ref is " +
+      "authorized via read-scope; refs the caller cannot read are silently skipped. Requires tracker:read.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      refs: t.arg({ type: [HomeworkClassRefInput], required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const authorized: string[] = [];
+      for (const ref of args.refs) {
+        try {
+          await assertCanRead(ctx, ref.sectionId, ref.classId);
+          authorized.push(ref.classId);
+        } catch {
+          // A stale/over-broad ref must not break the whole dashboard — skip it.
+        }
+      }
+      return classOverviewSvc(authorized, Date.now());
     },
   }),
 );
