@@ -1485,6 +1485,32 @@ export const HOMEWORK_STUDENT_RECORDS = gql<
   }
 `;
 
+// All open records across dates (no item drill-in) → the date-grouped Checking queue /
+// Records screens. `states` selects which lifecycle states count as "pending".
+export interface HwOpenRecordT {
+  id: string;
+  hwId: string;
+  subject: string;
+  dateGiven: string;
+  studentId: string;
+  studentName: string;
+  state: string;
+  chaseCount: number;
+  hasAnswerFile: boolean;
+  dueDate: string | null;
+}
+
+export const HOMEWORK_OPEN_RECORDS = gql<
+  { homeworkOpenRecords: HwOpenRecordT[] },
+  { sectionId: string; classId: string; states: string[] }
+>`
+  query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
+    homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
+      id hwId subject dateGiven studentId studentName state chaseCount hasAnswerFile dueDate
+    }
+  }
+`;
+
 export interface HwItemT {
   id: string;
   hwId: string;
