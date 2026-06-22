@@ -12,7 +12,7 @@
  * Pure helpers (advanceOnApprove, isPlanDocType, addressKeyOf) are exported for the
  * DB-free unit tests; the DB functions are exercised with mocked Mongoose models.
  */
-import type { Types } from "mongoose";
+import { Types } from "mongoose";
 import { PLAN_DOC_TYPES, REVIEW_VERDICTS } from "@scd/shared";
 import type { ReviewStatus, ReviewVerdict } from "@scd/shared";
 import { ReviewAssignment } from "../models/ReviewAssignment";
@@ -425,12 +425,25 @@ export async function planReviewThread(artifactId: string): Promise<ReviewAssign
 export interface ApprovePlanResult {
   artifactId: string;
   reviewStatus: string;
+  override: boolean;
 }
 
+/**
+ * Principal sign-off → `gold` (R2.1, content:promote_gold). Two paths:
+ *   • Normal: the plan is already `reviewed` (a teacher's APPROVE passed it). No reason
+ *     needed; `overrideReason` is ignored.
+ *   • Override: the plan is still `draft` — e.g. a reviewer asked for CHANGES_REQUESTED.
+ *     The Principal may approve it anyway, but MUST supply `overrideReason` (the
+ *     comment/reason). The reason is stored on the artifact (`approvalNote`) + audited.
+ * Either way the plan advances to `gold`, the sign-off is stamped (approvedBy/approvedAt),
+ * and any open review round for the address is superseded (the thread closes). A `gold`
+ * plan is already approved; a non-plan docType is rejected.
+ */
 export async function approvePlan(input: {
   artifactId: string;
   actorId: string;
   actorRole?: string;
+  overrideReason?: string;
 }): Promise<ApprovePlanResult> {
   const artifact = await ContentArtifact.findById(input.artifactId);
   if (!artifact) throw new ReviewError("Artifact not found");
@@ -440,17 +453,33 @@ export async function approvePlan(input: {
   if (artifact.reviewStatus === "gold") {
     throw new ReviewError("Plan is already approved (gold)");
   }
-  if (artifact.reviewStatus !== "reviewed") {
-    // Must pass a teacher's APPROVE (draft→reviewed) before the Principal signs off (R2.1).
-    throw new ReviewError(`Plan must be 'reviewed' before sign-off (is '${artifact.reviewStatus}')`);
+
+  // An override is any sign-off that bypasses the normal `reviewed` gate. It requires a
+  // reason so the decision to overrule the reviewer is documented (R2.1; owner request).
+  const isOverride = artifact.reviewStatus !== "reviewed";
+  const reason = input.overrideReason?.trim() ?? "";
+  if (isOverride && reason.length === 0) {
+    throw new ReviewError(
+      `Plan must be 'reviewed' before sign-off (is '${artifact.reviewStatus}'). ` +
+        "To approve it anyway, provide an override reason.",
+    );
   }
 
   artifact.reviewStatus = "gold";
+  artifact.approvedBy = new Types.ObjectId(input.actorId);
+  artifact.approvedAt = new Date();
+  artifact.approvalOverride = isOverride;
+  if (reason.length > 0) artifact.approvalNote = reason;
   await artifact.save();
 
   // Close the thread: no open round should remain after sign-off (R2.1).
   const key = addressKeyOf(artifact);
-  await supersedeOpenRoundsForAddress(key, "approved_signed_off", input.actorId, input.actorRole);
+  await supersedeOpenRoundsForAddress(
+    key,
+    isOverride ? "approved_override_signed_off" : "approved_signed_off",
+    input.actorId,
+    input.actorRole,
+  );
 
   await writeAudit({
     eventKind: "PLAN_APPROVED",
@@ -458,10 +487,16 @@ export async function approvePlan(input: {
     actorRole: input.actorRole,
     targetId: artifact._id.toString(),
     targetKind: "ContentArtifact",
-    meta: { subject: key.subject, classLevel: key.classLevel, addressNumber: key.addressNumber },
+    meta: {
+      subject: key.subject,
+      classLevel: key.classLevel,
+      addressNumber: key.addressNumber,
+      override: isOverride,
+      ...(reason.length > 0 ? { reason } : {}),
+    },
   });
 
-  return { artifactId: artifact._id.toString(), reviewStatus: "gold" };
+  return { artifactId: artifact._id.toString(), reviewStatus: "gold", override: isOverride };
 }
 
 // ---------------------------------------------------------------------------
