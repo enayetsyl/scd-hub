@@ -92,20 +92,28 @@ export async function assertCommentFileReadAccess(
   // The author may always read their own attachment (any delivery state).
   if (comment.authorUserId.toString() === ctx.auth.userId) return;
 
+  // The Principal/Office reviewers (the comment-delivery authority, D-#264) may view
+  // any comment attachment (so they can review what's attached before releasing it).
+  if (ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE") return;
+
   // Otherwise: a guardian of the child, and only once the comment is DELIVERED.
   if (!comment.deliveredAt) throw new ForbiddenError(COMMENT_FILE_ERRORS_BN.notReadable);
   await assertGuardianOfStudent(ctx, comment.studentId.toString());
 }
 
 /** Resolve the comment a file is being uploaded against (the upload-route gate input):
- *  loads the comment, returns its section + delivery state; throws if missing. */
+ *  loads the comment, returns its section + author + delivery state; throws if missing. */
 export async function loadCommentForUpload(
   commentId: string,
-): Promise<{ sectionId: string; delivered: boolean }> {
+): Promise<{ sectionId: string; authorUserId: string; delivered: boolean }> {
   if (!Types.ObjectId.isValid(commentId)) throw new ForbiddenError(COMMENT_FILE_ERRORS_BN.notFound);
   const comment = (await StudentComment.findById(commentId)
-    .select("sectionId deliveredAt")
-    .lean()) as unknown as { sectionId: Types.ObjectId; deliveredAt?: Date } | null;
+    .select("sectionId authorUserId deliveredAt")
+    .lean()) as unknown as { sectionId: Types.ObjectId; authorUserId: Types.ObjectId; deliveredAt?: Date } | null;
   if (!comment) throw new ForbiddenError(COMMENT_FILE_ERRORS_BN.notFound);
-  return { sectionId: comment.sectionId.toString(), delivered: !!comment.deliveredAt };
+  return {
+    sectionId: comment.sectionId.toString(),
+    authorUserId: comment.authorUserId.toString(),
+    delivered: !!comment.deliveredAt,
+  };
 }

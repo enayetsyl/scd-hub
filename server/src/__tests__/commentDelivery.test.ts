@@ -354,14 +354,24 @@ describe("assertCommentFileReadAccess (GET /files/:id gate)", () => {
 });
 
 describe("loadCommentForUpload", () => {
-  test("returns the comment's section + delivery state", async () => {
-    mockSCFindById.mockReturnValue(leanChain({ sectionId: SECTION_OID, deliveredAt: undefined }));
-    expect(await loadCommentForUpload(oid().toString())).toEqual({ sectionId: SECTION_OID.toString(), delivered: false });
+  const author = new mongoose.Types.ObjectId(TEACHER_ID);
+
+  test("returns the comment's section + author + delivery state", async () => {
+    mockSCFindById.mockReturnValue(leanChain({ sectionId: SECTION_OID, authorUserId: author, deliveredAt: undefined }));
+    expect(await loadCommentForUpload(oid().toString())).toEqual({
+      sectionId: SECTION_OID.toString(),
+      authorUserId: TEACHER_ID,
+      delivered: false,
+    });
   });
 
   test("flags a delivered comment + rejects a missing one", async () => {
-    mockSCFindById.mockReturnValue(leanChain({ sectionId: SECTION_OID, deliveredAt: new Date() }));
-    expect(await loadCommentForUpload(oid().toString())).toEqual({ sectionId: SECTION_OID.toString(), delivered: true });
+    mockSCFindById.mockReturnValue(leanChain({ sectionId: SECTION_OID, authorUserId: author, deliveredAt: new Date() }));
+    expect(await loadCommentForUpload(oid().toString())).toEqual({
+      sectionId: SECTION_OID.toString(),
+      authorUserId: TEACHER_ID,
+      delivered: true,
+    });
     mockSCFindById.mockReturnValue(leanChain(null));
     await expect(loadCommentForUpload(oid().toString())).rejects.toThrow(ForbiddenError);
   });

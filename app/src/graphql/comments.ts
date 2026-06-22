@@ -49,6 +49,43 @@ export const STUDENT_COMMENTS_QUERY = gql<
   }
 `;
 
+// The caller's OWN comments (D-#263) — spans students, so the child's name is joined in.
+export interface AuthoredCommentT extends StudentCommentT {
+  studentName: string;
+}
+
+export const MY_STUDENT_COMMENTS_QUERY = gql<
+  { myStudentComments: AuthoredCommentT[] },
+  { studentId?: string | null }
+>`
+  query MyStudentComments($studentId: String) {
+    myStudentComments(studentId: $studentId) { ${STUDENT_COMMENT_FIELDS} studentName }
+  }
+`;
+
+// The Principal/Office review dashboard (D-#264): every undelivered comment to triage.
+export interface CommentReviewItemT {
+  id: string;
+  studentId: string;
+  studentName: string;
+  sectionId: string;
+  authorUserId: string;
+  authorName: string;
+  type: string;
+  sentiment: string;
+  text: string;
+  attachmentIds: string[];
+  createdAt: string;
+}
+
+export const COMMENT_REVIEW_INBOX_QUERY = gql<{ commentReviewInbox: CommentReviewItemT[] }, NoVars>`
+  query CommentReviewInbox {
+    commentReviewInbox {
+      id studentId studentName sectionId authorUserId authorName type sentiment text attachmentIds createdAt
+    }
+  }
+`;
+
 export const RECORD_STUDENT_COMMENT = gql<
   { recordStudentComment: StudentCommentT },
   {
@@ -84,6 +121,15 @@ export const EDIT_STUDENT_COMMENT = gql<
     editStudentComment(
       commentId: $commentId, type: $type, sentiment: $sentiment, text: $text, attachmentIds: $attachmentIds
     ) { ${STUDENT_COMMENT_FIELDS} }
+  }
+`;
+
+export const REMOVE_COMMENT_ATTACHMENT = gql<
+  { removeCommentAttachment: StudentCommentT },
+  { commentId: string; fileId: string }
+>`
+  mutation RemoveCommentAttachment($commentId: String!, $fileId: String!) {
+    removeCommentAttachment(commentId: $commentId, fileId: $fileId) { ${STUDENT_COMMENT_FIELDS} }
   }
 `;
 

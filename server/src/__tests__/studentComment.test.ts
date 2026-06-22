@@ -47,8 +47,19 @@ jest.mock("../modules/comments/models/StudentComment", () => ({
 }));
 
 const mockStudentFindById = jest.fn();
+const mockStudentFind = jest.fn();
 jest.mock("../modules/foundation/models/Student", () => ({
-  Student: { findById: (id: unknown) => mockStudentFindById(id) },
+  Student: { findById: (id: unknown) => mockStudentFindById(id), find: (q: unknown) => mockStudentFind(q) },
+}));
+
+const mockUserFind = jest.fn();
+jest.mock("../modules/foundation/models/User", () => ({
+  User: { find: (q: unknown) => mockUserFind(q) },
+}));
+
+const mockStoredFileDelete = jest.fn();
+jest.mock("../modules/platform/models/StoredFile", () => ({
+  StoredFile: { deleteOne: (q: unknown) => mockStoredFileDelete(q) },
 }));
 
 const mockWriteAudit = jest.fn();
@@ -61,7 +72,10 @@ import {
   resolveCommentSection,
   recordComment,
   editComment,
+  removeCommentAttachment,
   studentComments,
+  myComments,
+  reviewInbox,
   StudentCommentError,
 } from "../modules/comments/services/StudentCommentService";
 import { assertCanWrite, assertCanRead, ForbiddenError } from "../middleware/authz";
@@ -97,6 +111,42 @@ describe("COMMENT_TYPES / COMMENT_SENTIMENTS vocab", () => {
     }
     expect(Object.keys(COMMENT_SENTIMENT_LABELS_BN).sort()).toEqual([...COMMENT_SENTIMENTS].sort());
     expect(Object.keys(COMMENT_SENTIMENT_LABELS_EN).sort()).toEqual([...COMMENT_SENTIMENTS].sort());
+  });
+});
+
+// ===========================================================================
+// myComments — the caller's OWN comments, enriched with the child's name (D-#263)
+// ===========================================================================
+
+describe("myComments (see the comments they made)", () => {
+  test("returns only the caller's comments, newest first, with student names joined", async () => {
+    const author = oid();
+    const stuA = oid();
+    const stuB = oid();
+    mockFind.mockReturnValue(
+      leanChain([
+        { _id: oid(), studentId: stuA, sectionId: SECTION_OID, authorUserId: author, type: COMMENT_TYPES[0], sentiment: COMMENT_SENTIMENTS[0], text: "c1", attachmentIds: [], deliveryChannels: [], createdAt: new Date(2), updatedAt: new Date(2) },
+        { _id: oid(), studentId: stuB, sectionId: SECTION_OID, authorUserId: author, type: COMMENT_TYPES[0], sentiment: COMMENT_SENTIMENTS[0], text: "c2", attachmentIds: [], deliveryChannels: [], createdAt: new Date(1), updatedAt: new Date(1) },
+      ]),
+    );
+    mockStudentFind.mockReturnValue(leanChain([{ _id: stuA, name: "Abdullah" }, { _id: stuB, name: "Unaisha" }]));
+
+    const res = await myComments(author.toString());
+
+    expect(mockFind).toHaveBeenCalledWith(expect.objectContaining({ authorUserId: expect.anything() }));
+    expect(mockFind.mock.calls[0][0]).not.toHaveProperty("studentId"); // no student filter
+    expect(res).toHaveLength(2);
+    expect(res[0].studentName).toBe("Abdullah");
+    expect(res[1].studentName).toBe("Unaisha");
+  });
+
+  test("filters to one student when studentId is given; no DB hit when none authored", async () => {
+    const author = oid();
+    mockFind.mockReturnValue(leanChain([]));
+    const res = await myComments(author.toString(), STUDENT_OID.toString());
+    expect(mockFind.mock.calls[0][0]).toHaveProperty("studentId");
+    expect(res).toEqual([]);
+    expect(mockStudentFind).not.toHaveBeenCalled(); // no names looked up for an empty set
   });
 });
 
@@ -231,6 +281,26 @@ describe("editComment", () => {
     ).rejects.toThrow(/only the comment's author/i);
   });
 
+  test("a reviewer (Principal/Office) may edit a NON-author's undelivered comment (D-#264)", async () => {
+    const doc = makeDoc();
+    mockFindById.mockResolvedValue(doc);
+    const res = await editComment({
+      commentId: STUDENT_OID.toString(),
+      text: "Reviewer tidy-up.",
+      actorId: oid().toString(), // not the author
+      actorIsReviewer: true,
+    });
+    expect(res.text).toBe("Reviewer tidy-up.");
+    expect((doc.save as jest.Mock)).toHaveBeenCalled();
+  });
+
+  test("a reviewer still cannot edit a DELIVERED comment (sealed)", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ deliveredAt: new Date("2026-06-14T01:00:00Z") }));
+    await expect(
+      editComment({ commentId: STUDENT_OID.toString(), text: "Too late.", actorId: oid().toString(), actorIsReviewer: true }),
+    ).rejects.toThrow(/immutable/);
+  });
+
   test("a DELIVERED comment is immutable (§3)", async () => {
     mockFindById.mockResolvedValue(makeDoc({ deliveredAt: new Date("2026-06-14T01:00:00Z") }));
     await expect(
@@ -243,6 +313,97 @@ describe("editComment", () => {
     await expect(
       editComment({ commentId: STUDENT_OID.toString(), text: "x", actorId: TEACHER_ID }),
     ).rejects.toBeInstanceOf(StudentCommentError);
+  });
+});
+
+// ===========================================================================
+// removeCommentAttachment (author OR reviewer; pre-delivery — D-#264)
+// ===========================================================================
+
+describe("removeCommentAttachment", () => {
+  const FILE = oid();
+  const makeDoc = (over: Record<string, unknown> = {}) => {
+    const doc: Record<string, unknown> = {
+      _id: STUDENT_OID,
+      studentId: STUDENT_OID,
+      sectionId: SECTION_OID,
+      authorUserId: new mongoose.Types.ObjectId(TEACHER_ID),
+      type: "GENERAL",
+      sentiment: "POSITIVE",
+      text: "x",
+      attachmentIds: [FILE, oid()],
+      deliveryChannels: [],
+      deliveredAt: undefined,
+      createdAt: new Date("2026-06-14T00:00:00Z"),
+      updatedAt: new Date("2026-06-14T00:00:00Z"),
+      ...over,
+    };
+    doc.save = jest.fn(async () => doc);
+    return doc;
+  };
+
+  test("the author removes a file → pulled from attachmentIds + StoredFile dropped", async () => {
+    const doc = makeDoc();
+    mockFindById.mockResolvedValue(doc);
+    mockStoredFileDelete.mockResolvedValue({ deletedCount: 1 });
+    await removeCommentAttachment({ commentId: STUDENT_OID.toString(), fileId: FILE.toString(), actorId: TEACHER_ID });
+    expect((doc.attachmentIds as unknown[]).map((a) => String(a))).not.toContain(FILE.toString());
+    expect((doc.save as jest.Mock)).toHaveBeenCalled();
+    expect(mockStoredFileDelete).toHaveBeenCalledWith(expect.objectContaining({ studentCommentId: STUDENT_OID }));
+  });
+
+  test("a reviewer (Principal/Office) removes a NON-author's file", async () => {
+    const doc = makeDoc({ authorUserId: oid() }); // someone else's comment
+    mockFindById.mockResolvedValue(doc);
+    mockStoredFileDelete.mockResolvedValue({ deletedCount: 1 });
+    await expect(
+      removeCommentAttachment({ commentId: STUDENT_OID.toString(), fileId: FILE.toString(), actorId: oid().toString(), actorIsReviewer: true }),
+    ).resolves.toBeDefined();
+  });
+
+  test("a non-author non-reviewer is refused; a delivered comment is immutable", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ authorUserId: oid() }));
+    await expect(
+      removeCommentAttachment({ commentId: STUDENT_OID.toString(), fileId: FILE.toString(), actorId: oid().toString() }),
+    ).rejects.toThrow(/only the comment's author/i);
+
+    mockFindById.mockResolvedValue(makeDoc({ deliveredAt: new Date() }));
+    await expect(
+      removeCommentAttachment({ commentId: STUDENT_OID.toString(), fileId: FILE.toString(), actorId: TEACHER_ID }),
+    ).rejects.toThrow(/immutable/);
+  });
+});
+
+// ===========================================================================
+// reviewInbox — the Principal/Office review dashboard (D-#264)
+// ===========================================================================
+
+describe("reviewInbox (Principal/Office dashboard)", () => {
+  test("returns undelivered comments newest-first, with student + author names joined", async () => {
+    const stu = oid();
+    const author = oid();
+    mockFind.mockReturnValue(
+      leanChain([
+        { _id: oid(), studentId: stu, sectionId: SECTION_OID, authorUserId: author, type: "GENERAL", sentiment: "CONCERN", text: "asfd", attachmentIds: [], deliveryChannels: [], createdAt: new Date(2), updatedAt: new Date(2) },
+      ]),
+    );
+    mockStudentFind.mockReturnValue(leanChain([{ _id: stu, name: "Abdullah Al Anas" }]));
+    mockUserFind.mockReturnValue(leanChain([{ _id: author, name: "Md Teacher" }]));
+
+    const rows = await reviewInbox();
+    expect(mockFind).toHaveBeenCalledWith({ deliveredAt: null });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].studentName).toBe("Abdullah Al Anas");
+    expect(rows[0].authorName).toBe("Md Teacher");
+    expect(rows[0].text).toBe("asfd");
+  });
+
+  test("no undelivered comments → [] (no name lookups)", async () => {
+    mockFind.mockReturnValue(leanChain([]));
+    const rows = await reviewInbox();
+    expect(rows).toEqual([]);
+    expect(mockStudentFind).not.toHaveBeenCalled();
+    expect(mockUserFind).not.toHaveBeenCalled();
   });
 });
 

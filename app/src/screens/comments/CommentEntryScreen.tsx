@@ -14,11 +14,14 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Linking, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { COMMENT_TYPES, COMMENT_SENTIMENTS } from "@scd/shared";
+import { COMMENT_TYPES, COMMENT_SENTIMENTS, roleHasPermission } from "@scd/shared";
+import { useAuth } from "../../auth/AuthContext";
 import {
   STUDENT_COMMENTS_QUERY,
+  MY_STUDENT_COMMENTS_QUERY,
   RECORD_STUDENT_COMMENT,
   EDIT_STUDENT_COMMENT,
+  REMOVE_COMMENT_ATTACHMENT,
   DELIVER_STUDENT_COMMENT,
   type StudentCommentT,
   type CommentDeliveryOutcomeT,
@@ -34,19 +37,35 @@ type Props = NativeStackScreenProps<CommentsStackParamList, "CommentEntry">;
 
 export default function CommentEntryScreen({ route }: Props): React.ReactElement {
   const { studentId, studentName, commentId: initialCommentId } = route.params;
+  // Delivery to guardians is a Principal/Office action (D-#264); teachers author + edit
+  // only — comments are released from the review dashboard.
+  const { role } = useAuth();
+  const canDeliver = !!role && roleHasPermission(role, "roster:manage");
 
-  // The edit/deliver path needs the live comment row; load the student's comments
-  // and locate this one (the section list passed only the id).
+  // The edit/deliver path needs the live comment row. Load it from BOTH the section
+  // timeline (`studentComments` — scoped; serves Principal/Office + section-scoped
+  // teachers) AND the caller's own comments (`myStudentComments` — author path, allowed
+  // regardless of section scope, D-#263). Either source locates the row.
   const [studentQ, refetchStudent] = useQuery({
     query: STUDENT_COMMENTS_QUERY,
     variables: { studentId },
     pause: !studentId,
   });
+  const [mineQ, refetchMine] = useQuery({
+    query: MY_STUDENT_COMMENTS_QUERY,
+    variables: { studentId },
+    pause: !studentId,
+  });
+  function refetchComment(): void {
+    refetchStudent({ requestPolicy: "network-only" });
+    refetchMine({ requestPolicy: "network-only" });
+  }
   const [commentId, setCommentId] = useState<string | null>(initialCommentId ?? null);
-  const existing: StudentCommentT | null = useMemo(
-    () => (commentId ? (studentQ.data?.studentComments ?? []).find((c) => c.id === commentId) ?? null : null),
-    [studentQ.data, commentId],
-  );
+  const existing: StudentCommentT | null = useMemo(() => {
+    if (!commentId) return null;
+    const all: StudentCommentT[] = [...(mineQ.data?.myStudentComments ?? []), ...(studentQ.data?.studentComments ?? [])];
+    return all.find((c) => c.id === commentId) ?? null;
+  }, [mineQ.data, studentQ.data, commentId]);
   const delivered = !!existing?.deliveredAt;
 
   const [type, setType] = useState<string>(COMMENT_TYPES[0]);
@@ -55,6 +74,8 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [attachBusy, setAttachBusy] = useState(false);
+  const [removeBusyId, setRemoveBusyId] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<CommentDeliveryOutcomeT | null>(null);
 
   // Seed the form from the loaded comment (once it resolves).
@@ -78,7 +99,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
       setBusy(false);
       if (res.error) return setError(friendlyError(res.error));
       setOk(STR.cmSaved);
-      refetchStudent({ requestPolicy: "network-only" });
+      refetchComment();
     } else {
       const res = await recordComment({ studentId, type, sentiment, text: text.trim() });
       setBusy(false);
@@ -87,7 +108,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
       if (created) {
         setCommentId(created.id);
         setOk(STR.cmSaved);
-        refetchStudent({ requestPolicy: "network-only" });
+        refetchComment();
       }
     }
   }
@@ -96,15 +117,30 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
     setError(null);
     setOk(null);
     if (!commentId) return setError(STR.cmAttachFirst);
+    setAttachBusy(true);
     try {
       const f = await pickAndUploadCommentFile(commentId);
       if (f) {
         setOk(STR.cmSaved);
-        refetchStudent({ requestPolicy: "network-only" });
+        refetchComment();
       }
     } catch (e) {
       setError(e instanceof FileUploadError ? e.message : STR.cmFileUploadFail);
+    } finally {
+      setAttachBusy(false);
     }
+  }
+
+  async function onRemoveAttachment(fileId: string): Promise<void> {
+    if (removeBusyId) return;
+    setError(null);
+    setOk(null);
+    setRemoveBusyId(fileId);
+    const res = await removeAttachment({ commentId: commentId as string, fileId });
+    setRemoveBusyId(null);
+    if (res.error) return setError(friendlyError(res.error));
+    setOk(STR.cmAttachRemoved);
+    refetchComment();
   }
 
   async function onOpenAttachment(fileId: string): Promise<void> {
@@ -129,16 +165,17 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
     if (o) {
       setOutcome(o);
       setOk(STR.cmDelivered);
-      refetchStudent({ requestPolicy: "network-only" });
+      refetchComment();
     }
   }
 
   const [, recordComment] = useMutation(RECORD_STUDENT_COMMENT);
   const [, editComment] = useMutation(EDIT_STUDENT_COMMENT);
+  const [, removeAttachment] = useMutation(REMOVE_COMMENT_ATTACHMENT);
   const [, deliver] = useMutation(DELIVER_STUDENT_COMMENT);
 
   // Loading the existing comment row (edit/deliver path).
-  if (commentId && studentQ.fetching && !existing) {
+  if (commentId && (studentQ.fetching || mineQ.fetching) && !existing) {
     return (
       <Screen>
         <Loader label={STR.loading} />
@@ -208,36 +245,59 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
           ) : null}
         </Card>
 
-        {/* Attachments — need a saved comment id; record first for a new comment. */}
+        {/* Attachments — need a saved comment id; record first for a new comment.
+            Multiple files allowed; each can be opened (and removed before delivery). */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.cmAttachments}</Body>
           {attachmentIds.length === 0 ? (
             <Muted style={{ marginTop: space(1) }}>—</Muted>
           ) : (
-            attachmentIds.map((fid) => (
-              <View key={fid} style={{ marginTop: space(2) }}>
+            attachmentIds.map((fid, i) => (
+              <View
+                key={fid}
+                style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: space(2) }}
+              >
+                <Muted>{`${STR.cmAttachmentN} ${bnNum(i + 1)}`}</Muted>
+                <View style={{ flex: 1 }} />
                 <Button title={STR.cmOpenAttachment} variant="ghost" onPress={() => void onOpenAttachment(fid)} />
+                {!delivered ? (
+                  <Button
+                    title={STR.cmRemove}
+                    variant="danger"
+                    onPress={() => void onRemoveAttachment(fid)}
+                    loading={removeBusyId === fid}
+                    disabled={removeBusyId !== null}
+                  />
+                ) : null}
               </View>
             ))
           )}
           {!delivered ? (
             <View style={{ marginTop: space(2) }}>
               <Button
-                title={STR.cmAttach}
+                title={attachBusy ? STR.cmUploading : STR.cmAttach}
                 variant="secondary"
                 onPress={onAttach}
-                disabled={busy}
+                loading={attachBusy}
+                disabled={busy || attachBusy || removeBusyId !== null}
               />
               {!commentId ? <Muted style={{ marginTop: space(1) }}>{STR.cmAttachFirst}</Muted> : null}
             </View>
           ) : null}
         </Card>
 
-        {/* Deliver — only for an undelivered, saved comment. */}
+        {/* Deliver — Principal/Office only (D-#264), for an undelivered, saved comment.
+            Teachers see a note that delivery is handled by the review dashboard. */}
         {commentId && !delivered ? (
-          <Card>
-            <Button title={STR.cmDeliver} onPress={onDeliver} loading={busy} disabled={busy} />
-          </Card>
+          canDeliver ? (
+            <Card>
+              <Button title={STR.cmDeliver} onPress={onDeliver} loading={busy} disabled={busy} />
+            </Card>
+          ) : (
+            <Card>
+              <Muted>{STR.cmDeliverByAdmin}</Muted>
+            </Card>
+          )
         ) : null}
 
         {outcome ? (
