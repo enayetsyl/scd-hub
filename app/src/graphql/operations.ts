@@ -1432,6 +1432,7 @@ export interface HwSummaryT {
   attentionCount: number;
   commsPromptCount: number;
   openResubmissions: number;
+  pendingChecking: number;
   submittedOnTimePct: number | null;
   chaseVolume: number;
   avgReturnLatencyDays: number | null;
@@ -1449,10 +1450,41 @@ export const HOMEWORK_SUMMARY = gql<
       attentionCount
       commsPromptCount
       openResubmissions
+      pendingChecking
       submittedOnTimePct
       chaseVolume
       avgReturnLatencyDays
       topicTouches { topTag count }
+    }
+  }
+`;
+
+// Per-class cumulative dashboard counts (badges on the class buttons).
+export interface HwClassOverviewT {
+  classId: string;
+  pendingChecking: number;
+  openResubmissions: number;
+  activeChases: number;
+  onTimePct: number | null;
+  overCeilingDaysThisWeek: number;
+}
+export interface HwClassRefInput {
+  classId: string;
+  sectionId: string;
+}
+
+export const HOMEWORK_CLASS_OVERVIEW = gql<
+  { homeworkClassOverview: HwClassOverviewT[] },
+  { refs: HwClassRefInput[] }
+>`
+  query HomeworkClassOverview($refs: [HomeworkClassRefInput!]!) {
+    homeworkClassOverview(refs: $refs) {
+      classId
+      pendingChecking
+      openResubmissions
+      activeChases
+      onTimePct
+      overCeilingDaysThisWeek
     }
   }
 `;
@@ -1481,6 +1513,32 @@ export const HOMEWORK_STUDENT_RECORDS = gql<
   query HomeworkStudentRecords($sectionId: String!, $classId: String!, $itemId: String!) {
     homeworkStudentRecords(sectionId: $sectionId, classId: $classId, itemId: $itemId) {
       id hwId studentId state stateDates { state at } dueDate chaseCount result answerFileId
+    }
+  }
+`;
+
+// All open records across dates (no item drill-in) → the date-grouped Checking queue /
+// Records screens. `states` selects which lifecycle states count as "pending".
+export interface HwOpenRecordT {
+  id: string;
+  hwId: string;
+  subject: string;
+  dateGiven: string;
+  studentId: string;
+  studentName: string;
+  state: string;
+  chaseCount: number;
+  hasAnswerFile: boolean;
+  dueDate: string | null;
+}
+
+export const HOMEWORK_OPEN_RECORDS = gql<
+  { homeworkOpenRecords: HwOpenRecordT[] },
+  { sectionId: string; classId: string; states: string[] }
+>`
+  query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
+    homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
+      id hwId subject dateGiven studentId studentName state chaseCount hasAnswerFile dueDate
     }
   }
 `;

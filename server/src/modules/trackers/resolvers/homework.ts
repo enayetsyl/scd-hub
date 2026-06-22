@@ -13,6 +13,8 @@
  * RBAC: rides the existing tracker:read / tracker:write permissions (D-#33 — no
  * new permission). The class-teacher-only reconcile/confirm action-scope is HW-T2.
  */
+import { LIFECYCLE_STATES } from "@scd/shared";
+import type { LifecycleState } from "@scd/shared";
 import { builder } from "../../../schema";
 import {
   declareHomeworkItem as declareSvc,
@@ -20,6 +22,8 @@ import {
   transitionRecord as transitionSvc,
   listDailyItems,
   listStudentRecords,
+  listOpenRecords,
+  type OpenRecordDTO,
 } from "../services/HomeworkService";
 import {
   tallyDay as tallyDaySvc,
@@ -33,9 +37,11 @@ import {
 } from "../services/HomeworkResubmissionService";
 import {
   homeworkSummary as homeworkSummarySvc,
+  homeworkClassOverview as classOverviewSvc,
   resubmissionWatchList as watchListSvc,
   trimPatternFlags as trimPatternSvc,
   questionUsageFeed as usageFeedSvc,
+  type ClassOverviewResult,
 } from "../services/HomeworkSummaryService";
 import {
   assertCanWrite,
@@ -344,6 +350,52 @@ builder.queryField("homeworkStudentRecords", (t) =>
         result: d.result ?? null,
         answerFileId: d.answerFileId ? d.answerFileId.toString() : null,
       }));
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Query: homeworkOpenRecords (auto-listed pending work, grouped by date client-side)
+// ---------------------------------------------------------------------------
+
+const OpenRecordRef = builder.objectRef<OpenRecordDTO>("HomeworkOpenRecord");
+OpenRecordRef.implement({
+  description:
+    "A section's open lifecycle record across all dates, enriched with the item's subject + given-date " +
+    "and the student's name — the row the date-grouped Checking queue / Records screens render.",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    hwId: t.exposeString("hwId"),
+    subject: t.exposeString("subject"),
+    dateGiven: t.exposeString("dateGiven"),
+    studentId: t.exposeString("studentId"),
+    studentName: t.exposeString("studentName"),
+    state: t.exposeString("state"),
+    chaseCount: t.exposeInt("chaseCount"),
+    hasAnswerFile: t.exposeBoolean("hasAnswerFile"),
+    dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),
+  }),
+});
+
+builder.queryField("homeworkOpenRecords", (t) =>
+  t.field({
+    type: [OpenRecordRef],
+    description:
+      "All of a section's lifecycle records in the given states, across all dates (newest given-date first), " +
+      "for the auto-listed date-grouped Checking queue (states [SUBMITTED]) / Records screens. Read-scope enforced.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+      states: t.arg.stringList({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      const states = args.states.filter((s): s is LifecycleState =>
+        (LIFECYCLE_STATES as readonly string[]).includes(s),
+      );
+      return listOpenRecords(args.sectionId, states);
     },
   }),
 );
@@ -724,6 +776,7 @@ interface HomeworkSummaryShape {
   attentionCount: number;
   commsPromptCount: number;
   openResubmissions: number;
+  pendingChecking: number;
   submittedOnTimePct: number | null;
   chaseVolume: number;
   avgReturnLatencyDays: number | null;
@@ -738,6 +791,7 @@ HomeworkSummaryRef.implement({
     attentionCount: t.exposeInt("attentionCount"),
     commsPromptCount: t.exposeInt("commsPromptCount"),
     openResubmissions: t.exposeInt("openResubmissions"),
+    pendingChecking: t.exposeInt("pendingChecking"),
     submittedOnTimePct: t.int({ nullable: true, resolve: (r) => r.submittedOnTimePct }),
     chaseVolume: t.exposeInt("chaseVolume"),
     avgReturnLatencyDays: t.float({ nullable: true, resolve: (r) => r.avgReturnLatencyDays }),
@@ -848,6 +902,53 @@ builder.queryField("homeworkSummary", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
       return homeworkSummarySvc(args.classId);
+    },
+  }),
+);
+
+// Query: homeworkClassOverview (per-class cumulative dashboard badges) -------
+const HomeworkClassRefInput = builder.inputType("HomeworkClassRefInput", {
+  fields: (t) => ({
+    classId: t.string({ required: true }),
+    sectionId: t.string({ required: true }),
+  }),
+});
+
+const ClassOverviewRef = builder.objectRef<ClassOverviewResult>("HomeworkClassOverview");
+ClassOverviewRef.implement({
+  description: "Per-class cumulative homework counts for the dashboard badges (pending checking / chases / resubmissions / on-time% / over-ceiling days this week).",
+  fields: (t) => ({
+    classId: t.exposeString("classId"),
+    pendingChecking: t.exposeInt("pendingChecking"),
+    openResubmissions: t.exposeInt("openResubmissions"),
+    activeChases: t.exposeInt("activeChases"),
+    onTimePct: t.int({ nullable: true, resolve: (r) => r.onTimePct }),
+    overCeilingDaysThisWeek: t.exposeInt("overCeilingDaysThisWeek"),
+  }),
+});
+
+builder.queryField("homeworkClassOverview", (t) =>
+  t.field({
+    type: [ClassOverviewRef],
+    description:
+      "Per-class cumulative homework counts for the dashboard. Each (classId, sectionId) ref is " +
+      "authorized via read-scope; refs the caller cannot read are silently skipped. Requires tracker:read.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      refs: t.arg({ type: [HomeworkClassRefInput], required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const authorized: string[] = [];
+      for (const ref of args.refs) {
+        try {
+          await assertCanRead(ctx, ref.sectionId, ref.classId);
+          authorized.push(ref.classId);
+        } catch {
+          // A stale/over-broad ref must not break the whole dashboard — skip it.
+        }
+      }
+      return classOverviewSvc(authorized, Date.now());
     },
   }),
 );

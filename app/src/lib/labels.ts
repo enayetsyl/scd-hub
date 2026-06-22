@@ -116,6 +116,7 @@ import {
   ROUTINE_SUBJECT_LABELS_EN,
   DAY_OF_WEEK_LABELS_BN,
   DAY_OF_WEEK_LABELS_EN,
+  DAYS_OF_WEEK,
   PERIOD_TRACK_LABELS_BN,
   PERIOD_TRACK_LABELS_EN,
   TEACHER_ATTENDANCE_STATUS_LABELS_BN,
@@ -277,6 +278,17 @@ export function bnNum(n: number | string): string {
 }
 
 const DASH = "—";
+
+/** A date-group header for the pending-work lists: weekday + localized-digit date,
+ *  e.g. "শনিবার · ২০২৬-০৬-১৬" (bn) / "Saturday · 2026-06-16" (en). */
+export function dateHeaderLabel(key: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!m) return bnNum(key);
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const dow = DAYS_OF_WEEK[d.getDay()];
+  const wk = dow ? pick(DAY_OF_WEEK_LABELS_BN, DAY_OF_WEEK_LABELS_EN)[dow] : "";
+  return wk ? `${wk} · ${bnNum(key)}` : bnNum(key);
+}
 
 export const subjectLabel = (code?: string | null): string =>
   (code && pick(SUBJECT_LABELS_BN, SUBJECT_LABELS_EN)[code as Subject]) || code || DASH;
@@ -797,6 +809,12 @@ const STR_BN = {
   tabHomework: "বাড়ির কাজ",
   hwDate: "তারিখ",
   hwToday: "আজকের বাড়ির কাজ",
+  hwPickClass: "একটি শ্রেণি নির্বাচন করুন",
+  hwClassLabel: "শ্রেণি",
+  hwSectionLabel: "শাখা",
+  hwPendingChecking: "দেখা বাকি",
+  hwActiveChases: "চলমান তাগাদা",
+  hwOverCeilingDays: "সীমা-অতিক্রম দিন (এ সপ্তাহে)",
   hwDayTotal: "দিনের মোট সময়",
   hwCeiling: "সর্বোচ্চ সীমা",
   hwWithinCeiling: "সীমার মধ্যে",
@@ -2671,6 +2689,12 @@ const STR_EN: StrTable = {
   tabHomework: "Homework",
   hwDate: "Date",
   hwToday: "Today's homework",
+  hwPickClass: "Select a class",
+  hwClassLabel: "Class",
+  hwSectionLabel: "Section",
+  hwPendingChecking: "Pending checking",
+  hwActiveChases: "Active chases",
+  hwOverCeilingDays: "Over-ceiling days (this week)",
   hwDayTotal: "Day total",
   hwCeiling: "Ceiling",
   hwWithinCeiling: "Within limit",
