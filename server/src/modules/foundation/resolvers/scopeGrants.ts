@@ -6,10 +6,23 @@ import {
   grantTeaching,
   revokeTeaching,
   teachingGrantsForSection,
+  grantSupervisory,
+  revokeSupervisory,
+  supervisoryGrants,
   grantView,
   type ScopeGrantView,
 } from "../services/ScopeGrantService";
+import type { SupervisoryExtent } from "../models/ScopeGrant";
 import { ScopeGrant } from "../models/ScopeGrant";
+
+const SupervisoryPairRef = builder.objectRef<{ classId: string; subjectId: string }>("SupervisoryPair");
+SupervisoryPairRef.implement({
+  description: "An explicit_set supervisory pair: one (class, subject) the grant covers.",
+  fields: (t) => ({
+    classId: t.exposeString("classId"),
+    subjectId: t.exposeString("subjectId"),
+  }),
+});
 
 const ScopeGrantRef = builder.objectRef<ScopeGrantView>("ScopeGrant");
 ScopeGrantRef.implement({
@@ -28,6 +41,21 @@ ScopeGrantRef.implement({
     startDate: t.string({ nullable: true, resolve: (g) => g.startDate }),
     durationDays: t.int({ nullable: true, resolve: (g) => g.durationDays }),
     proxyStatus: t.string({ nullable: true, resolve: (g) => g.proxyStatus }),
+    // supervisory-only detail (null on teaching/proxy grants)
+    extent: t.string({ nullable: true, resolve: (g) => g.extent }),
+    explicitSet: t.field({
+      type: [SupervisoryPairRef],
+      nullable: true,
+      resolve: (g) => g.explicitSet,
+    }),
+  }),
+});
+
+const SupervisoryPairInput = builder.inputType("SupervisoryPairInput", {
+  description: "An explicit_set pair: the class and subject this supervisory grant covers.",
+  fields: (t) => ({
+    classId: t.string({ required: true }),
+    subjectId: t.string({ required: true }),
   }),
 });
 
@@ -80,6 +108,18 @@ builder.queryField("teachingGrants", (t) =>
   }),
 );
 
+builder.queryField("supervisoryGrants", (t) =>
+  t.field({
+    type: [ScopeGrantRef],
+    authScopes: { hasPermission: "user:manage" },
+    description:
+      "Active supervisory (read-oversight) grants for the admin list, newest first — D-#262. " +
+      "Pass teacherId to scope to one teacher; omit to list all.",
+    args: { teacherId: t.arg.string({ required: false }) },
+    resolve: (_root, args) => supervisoryGrants(args.teacherId ?? undefined),
+  }),
+);
+
 builder.mutationField("grantTeaching", (t) =>
   t.field({
     type: ProxyGrantIdResultRef,
@@ -112,6 +152,50 @@ builder.mutationField("revokeTeaching", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new Error("Unauthenticated");
       await revokeTeaching(args.grantId, ctx.auth.userId);
+      return true;
+    },
+  }),
+);
+
+builder.mutationField("grantSupervisory", (t) =>
+  t.field({
+    type: ProxyGrantIdResultRef,
+    authScopes: { hasPermission: "user:manage" },
+    description:
+      "Grant a teacher read-oversight at a configurable extent (D-#262) — Principal/Admin only. " +
+      "extent ∈ whole_school | subject_dept (needs subjectId) | grade_class (needs classId) | " +
+      "explicit_set (needs explicitSet). Idempotent for the single-target extents.",
+    args: {
+      teacherId: t.arg.string({ required: true }),
+      extent: t.arg.string({ required: true }),
+      subjectId: t.arg.string({ required: false }),
+      classId: t.arg.string({ required: false }),
+      explicitSet: t.arg({ type: [SupervisoryPairInput], required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new Error("Unauthenticated");
+      const grantId = await grantSupervisory({
+        teacherId: args.teacherId,
+        extent: args.extent as SupervisoryExtent,
+        subjectId: args.subjectId ?? undefined,
+        classId: args.classId ?? undefined,
+        explicitSet: args.explicitSet?.map((p) => ({ classId: p.classId, subjectId: p.subjectId })),
+        assignedBy: ctx.auth.userId,
+      });
+      return { grantId };
+    },
+  }),
+);
+
+builder.mutationField("revokeSupervisory", (t) =>
+  t.field({
+    type: "Boolean",
+    authScopes: { hasPermission: "user:manage" },
+    description: "Revoke a supervisory (read-oversight) grant — D-#262",
+    args: { grantId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new Error("Unauthenticated");
+      await revokeSupervisory(args.grantId, ctx.auth.userId);
       return true;
     },
   }),

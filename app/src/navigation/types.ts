@@ -237,6 +237,7 @@ export type AdminStackParamList = {
   Import: undefined;
   UserList: undefined;
   ScopeGrant: undefined;
+  SupervisoryGrant: undefined;
   Roster: undefined;
   Staff: undefined;
   AssignClassTeacher: undefined;

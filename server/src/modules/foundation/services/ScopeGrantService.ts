@@ -1,5 +1,5 @@
 import type { Types } from "mongoose";
-import { ScopeGrant } from "../models/ScopeGrant";
+import { ScopeGrant, type SupervisoryExtent } from "../models/ScopeGrant";
 import { Section } from "../models/Section";
 import { writeAudit } from "../../platform/services/AuditService";
 
@@ -140,6 +140,9 @@ export interface ScopeGrantView {
   startDate: string | null;
   durationDays: number | null;
   proxyStatus: string | null;
+  // supervisory-only detail (null on teaching/proxy grants)
+  extent: string | null;
+  explicitSet: Array<{ classId: string; subjectId: string }> | null;
 }
 
 /** A lean ScopeGrant doc, loosely typed (the union hides optional fields). */
@@ -156,6 +159,8 @@ interface LeanGrant {
   startDate?: Date | null;
   durationDays?: number | null;
   proxyStatus?: string | null;
+  extent?: string | null;
+  explicitSet?: Array<{ classId?: { toString(): string }; subjectId?: { toString(): string } }> | null;
 }
 
 /** Pure mapper: lean grant doc → ScopeGrantView. */
@@ -173,6 +178,13 @@ export function grantView(g: LeanGrant): ScopeGrantView {
     startDate: g.startDate ? new Date(g.startDate).toISOString() : null,
     durationDays: g.durationDays ?? null,
     proxyStatus: g.proxyStatus ?? null,
+    extent: g.extent ?? null,
+    explicitSet: g.explicitSet
+      ? g.explicitSet.map((e) => ({
+          classId: e.classId ? e.classId.toString() : "",
+          subjectId: e.subjectId ? e.subjectId.toString() : "",
+        }))
+      : null,
   };
 }
 
@@ -389,6 +401,140 @@ export async function revokeTeaching(grantId: string, revokedBy: string): Promis
 /** Active teaching grants for a section (the subject-teacher roster), newest first. */
 export async function teachingGrantsForSection(sectionId: string): Promise<ScopeGrantView[]> {
   const grants = await ScopeGrant.find({ kind: "teaching", sectionId, active: true }).sort({ createdAt: -1 }).lean();
+  return grants.map(grantView);
+}
+
+// ---------------------------------------------------------------------------
+// Supervisory-grant lifecycle (read-oversight extents) — gated user:manage.
+// A supervisory grant gives a teacher READ visibility (content + section trackers)
+// at a configurable extent (ADR-017 / D-#17): whole_school (all), subject_dept
+// (one subject across every class), grade_class (one class level across every
+// subject), or explicit_set (a hand-picked set of (class, subject) pairs). It is
+// READ-ONLY — canWrite ignores supervisory grants (D-#17). The model + canRead +
+// contentScope already honour these extents; D-#262 just exposes the CRUD.
+// ---------------------------------------------------------------------------
+
+export interface SupervisoryPair {
+  classId: string;
+  subjectId: string;
+}
+
+export interface GrantSupervisoryInput {
+  teacherId: string;
+  extent: SupervisoryExtent;
+  /** Required for subject_dept. */
+  subjectId?: string;
+  /** Required for grade_class. */
+  classId?: string;
+  /** Required (non-empty) for explicit_set. */
+  explicitSet?: SupervisoryPair[];
+  assignedBy: string;
+}
+
+/** Pure validation of a supervisory-grant request — each extent's required args.
+ *  Returns an English error string, or null when valid (testable without a DB). */
+export function validateSupervisoryGrant(input: {
+  extent: string;
+  subjectId?: string | null;
+  classId?: string | null;
+  explicitSet?: SupervisoryPair[] | null;
+}): string | null {
+  switch (input.extent) {
+    case "whole_school":
+      return null;
+    case "subject_dept":
+      return input.subjectId ? null : "subject_dept extent requires a subject";
+    case "grade_class":
+      return input.classId ? null : "grade_class extent requires a class";
+    case "explicit_set":
+      if (!input.explicitSet || input.explicitSet.length === 0)
+        return "explicit_set extent requires at least one (class, subject) pair";
+      if (input.explicitSet.some((e) => !e.classId || !e.subjectId))
+        return "each explicit_set pair needs both a class and a subject";
+      return null;
+    default:
+      return `unknown supervisory extent: ${input.extent}`;
+  }
+}
+
+/** Assign (or reactivate) a supervisory grant. The single-target extents
+ *  (whole_school / subject_dept / grade_class) are idempotent on
+ *  (teacher, extent, target) — a revoked grant is reactivated, never duplicated;
+ *  explicit_set always creates (the set may legitimately differ each time). */
+export async function grantSupervisory(input: GrantSupervisoryInput): Promise<string> {
+  const err = validateSupervisoryGrant(input);
+  if (err) throw new Error(err);
+
+  let grantId: string;
+  const existing =
+    input.extent === "explicit_set"
+      ? null
+      : await ScopeGrant.findOne({
+          teacherId: input.teacherId,
+          kind: "supervisory",
+          extent: input.extent,
+          ...(input.extent === "subject_dept" ? { subjectId: input.subjectId } : {}),
+          ...(input.extent === "grade_class" ? { classId: input.classId } : {}),
+        });
+
+  if (existing) {
+    if (!existing.active) {
+      existing.active = true;
+      await existing.save();
+    }
+    grantId = existing._id.toString();
+  } else {
+    const grant = await ScopeGrant.create({
+      teacherId: input.teacherId,
+      kind: "supervisory",
+      active: true,
+      extent: input.extent,
+      subjectId: input.extent === "subject_dept" ? input.subjectId : undefined,
+      classId: input.extent === "grade_class" ? input.classId : undefined,
+      explicitSet: input.extent === "explicit_set" ? input.explicitSet : undefined,
+      createdBy: input.assignedBy,
+    });
+    grantId = grant._id.toString();
+  }
+
+  await writeAudit({
+    eventKind: "SCOPE_GRANT_ASSIGN",
+    actorId: input.assignedBy,
+    targetId: grantId,
+    targetKind: "SupervisoryGrant",
+    meta: {
+      teacherId: input.teacherId,
+      extent: input.extent,
+      subjectId: input.subjectId,
+      classId: input.classId,
+      pairCount: input.explicitSet?.length,
+      kind: "supervisory",
+    },
+  });
+
+  return grantId;
+}
+
+/** Revoke a supervisory grant (sets active=false; idempotent). */
+export async function revokeSupervisory(grantId: string, revokedBy: string): Promise<void> {
+  const grant = await ScopeGrant.findById(grantId);
+  if (!grant || grant.kind !== "supervisory") throw new Error("Supervisory grant not found");
+  await ScopeGrant.findByIdAndUpdate(grantId, { active: false });
+  await writeAudit({
+    eventKind: "SCOPE_GRANT_REVOKE",
+    actorId: revokedBy,
+    targetId: grantId,
+    targetKind: "SupervisoryGrant",
+    meta: { kind: "supervisory" },
+  });
+}
+
+/** Active supervisory grants (the admin oversight list), newest first.
+ *  Pass a teacherId to scope to one teacher; omit to list all. */
+export async function supervisoryGrants(teacherId?: string): Promise<ScopeGrantView[]> {
+  const filter: Record<string, unknown> = { kind: "supervisory", active: true };
+  if (teacherId) filter.teacherId = teacherId;
+  const grants = await ScopeGrant.find(filter).sort({ createdAt: -1 }).lean();
   return grants.map(grantView);
 }
 

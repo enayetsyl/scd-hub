@@ -44,7 +44,26 @@ describe("grantView (lean grant → client view)", () => {
       startDate: null,
       durationDays: null,
       proxyStatus: null,
+      extent: null,
+      explicitSet: null,
     });
+  });
+
+  test("supervisory grant exposes extent + explicitSet, proxy/teaching detail null", () => {
+    const classId = oid();
+    const subjectId = oid();
+    const v = grantView({
+      _id: oid(),
+      kind: "supervisory",
+      active: true,
+      extent: "explicit_set",
+      explicitSet: [{ classId, subjectId }],
+    });
+    expect(v.kind).toBe("supervisory");
+    expect(v.extent).toBe("explicit_set");
+    expect(v.explicitSet).toEqual([{ classId: classId.toString(), subjectId: subjectId.toString() }]);
+    expect(v.coveringTeacherId).toBeNull();
+    expect(v.proxyStatus).toBeNull();
   });
 
   test("teaching grant exposes teacherId (subject-teacher roster relies on it)", () => {

@@ -13,6 +13,7 @@ import {
   proxyWindowEnd,
   canRead,
   canWrite,
+  validateSupervisoryGrant,
 } from "../modules/foundation/services/ScopeGrantService";
 import type { ScopeItem } from "../modules/foundation/services/ScopeGrantService";
 
@@ -174,5 +175,39 @@ describe("canWrite (D-#18 write scope)", () => {
     ];
     expect(canWrite(scopes, SECTION_A)).toBe(true);
     expect(canWrite(scopes, SECTION_B)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Supervisory-grant request validation (D-#262)
+// ---------------------------------------------------------------------------
+
+describe("validateSupervisoryGrant (D-#262 extent args)", () => {
+  test("whole_school needs no target", () => {
+    expect(validateSupervisoryGrant({ extent: "whole_school" })).toBeNull();
+  });
+
+  test("subject_dept requires a subject", () => {
+    expect(validateSupervisoryGrant({ extent: "subject_dept", subjectId: SUBJ_BAN })).toBeNull();
+    expect(validateSupervisoryGrant({ extent: "subject_dept" })).toMatch(/subject/);
+  });
+
+  test("grade_class requires a class", () => {
+    expect(validateSupervisoryGrant({ extent: "grade_class", classId: CLASS_1 })).toBeNull();
+    expect(validateSupervisoryGrant({ extent: "grade_class" })).toMatch(/class/);
+  });
+
+  test("explicit_set requires at least one complete pair", () => {
+    expect(
+      validateSupervisoryGrant({ extent: "explicit_set", explicitSet: [{ classId: CLASS_1, subjectId: SUBJ_BAN }] }),
+    ).toBeNull();
+    expect(validateSupervisoryGrant({ extent: "explicit_set", explicitSet: [] })).toMatch(/at least one/);
+    expect(
+      validateSupervisoryGrant({ extent: "explicit_set", explicitSet: [{ classId: CLASS_1, subjectId: "" }] }),
+    ).toMatch(/class and a subject/);
+  });
+
+  test("an unknown extent is rejected", () => {
+    expect(validateSupervisoryGrant({ extent: "galaxy" })).toMatch(/unknown supervisory extent/);
   });
 });
