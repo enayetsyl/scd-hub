@@ -116,6 +116,7 @@ import {
   ROUTINE_SUBJECT_LABELS_EN,
   DAY_OF_WEEK_LABELS_BN,
   DAY_OF_WEEK_LABELS_EN,
+  DAYS_OF_WEEK,
   PERIOD_TRACK_LABELS_BN,
   PERIOD_TRACK_LABELS_EN,
   TEACHER_ATTENDANCE_STATUS_LABELS_BN,
@@ -277,6 +278,17 @@ export function bnNum(n: number | string): string {
 }
 
 const DASH = "—";
+
+/** A date-group header for the pending-work lists: weekday + localized-digit date,
+ *  e.g. "শনিবার · ২০২৬-০৬-১৬" (bn) / "Saturday · 2026-06-16" (en). */
+export function dateHeaderLabel(key: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!m) return bnNum(key);
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const dow = DAYS_OF_WEEK[d.getDay()];
+  const wk = dow ? pick(DAY_OF_WEEK_LABELS_BN, DAY_OF_WEEK_LABELS_EN)[dow] : "";
+  return wk ? `${wk} · ${bnNum(key)}` : bnNum(key);
+}
 
 export const subjectLabel = (code?: string | null): string =>
   (code && pick(SUBJECT_LABELS_BN, SUBJECT_LABELS_EN)[code as Subject]) || code || DASH;

@@ -16,6 +16,7 @@ import type { HwSubject, LifecycleState, HwResult } from "@scd/shared";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkSequence } from "../models/HomeworkSequence";
+import { Student } from "../../foundation/models/Student";
 import { assertTransition, isEntryState } from "../lifecycle";
 import { isSchoolDay, nextSchoolDay } from "../calendar";
 import { emitHwParentComms, emitHwGuardianChase } from "../../notifications/services/emitters";
@@ -334,4 +335,59 @@ export async function listDailyItems(classId: string, dateGiven?: Date) {
 
 export async function listStudentRecords(hwItemId: string) {
   return HomeworkStudentRecord.find({ hwItemId }).lean();
+}
+
+/** One open lifecycle record, enriched with its item's subject + given-date and the
+ *  student's name — the row the date-grouped Checking queue / Records screens render. */
+export interface OpenRecordDTO {
+  id: string;
+  hwId: string;
+  subject: string;
+  dateGiven: string; // ISO (the item's given date — the grouping key)
+  studentId: string;
+  studentName: string;
+  state: string;
+  chaseCount: number;
+  hasAnswerFile: boolean;
+  dueDate: string | null;
+}
+
+/**
+ * All of a section's lifecycle records in the given `states`, across ALL dates,
+ * enriched with the item's subject + date and the student's name, newest-given-date
+ * first. Powers the auto-listed, date-grouped Checking queue (states ["SUBMITTED"])
+ * and Student-records screens (the open, non-terminal state set) — no manual date pick.
+ * Read-scope is enforced by the resolver (assertCanRead) before this runs.
+ */
+export async function listOpenRecords(sectionId: string, states: LifecycleState[]): Promise<OpenRecordDTO[]> {
+  if (states.length === 0) return [];
+  const recs = await HomeworkStudentRecord.find({ sectionId, state: { $in: states } }).lean();
+  if (recs.length === 0) return [];
+
+  const itemIds = [...new Set(recs.map((r) => r.hwItemId.toString()))];
+  const studentIds = [...new Set(recs.map((r) => r.studentId.toString()))];
+  const items = await HomeworkItem.find({ _id: { $in: itemIds } }).select({ subject: 1, dateGiven: 1 }).lean();
+  const students = await Student.find({ _id: { $in: studentIds } }).select({ name: 1 }).lean();
+  const itemMap = new Map(items.map((i) => [i._id.toString(), i]));
+  const nameMap = new Map(students.map((s) => [s._id.toString(), s.name]));
+
+  return recs
+    .map((r) => {
+      const it = itemMap.get(r.hwItemId.toString());
+      return {
+        id: r._id.toString(),
+        hwId: r.hwId,
+        subject: it?.subject ?? "?",
+        dateGiven: it ? new Date(it.dateGiven as unknown as Date).toISOString() : new Date(0).toISOString(),
+        studentId: r.studentId.toString(),
+        studentName: nameMap.get(r.studentId.toString()) ?? r.studentId.toString(),
+        state: r.state,
+        chaseCount: r.chaseCount ?? 0,
+        hasAnswerFile: !!r.answerFileId,
+        dueDate: r.dueDate ? new Date(r.dueDate as unknown as Date).toISOString() : null,
+      };
+    })
+    .sort((a, b) =>
+      a.dateGiven < b.dateGiven ? 1 : a.dateGiven > b.dateGiven ? -1 : a.studentName.localeCompare(b.studentName),
+    );
 }
