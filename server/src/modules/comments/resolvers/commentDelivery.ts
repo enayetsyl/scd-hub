@@ -48,9 +48,13 @@ builder.mutationField("deliverStudentComment", (t) =>
     args: { commentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const comment = await StudentComment.findById(args.commentId).select("sectionId").lean();
+      const comment = await StudentComment.findById(args.commentId).select("sectionId authorUserId").lean();
       if (!comment) throw new ForbiddenError("Comment not found");
-      await assertCanWrite(ctx, comment.sectionId.toString());
+      // The author may always deliver their OWN comment (D-#263); a non-author still
+      // needs section write-scope (Principal/Office + scoped teachers deliver others').
+      if (comment.authorUserId.toString() !== (ctx.auth.userId as string)) {
+        await assertCanWrite(ctx, comment.sectionId.toString());
+      }
       return deliverComment(args.commentId, ctx.auth.userId as string);
     },
   }),

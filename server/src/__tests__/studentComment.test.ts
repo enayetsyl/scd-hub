@@ -47,8 +47,9 @@ jest.mock("../modules/comments/models/StudentComment", () => ({
 }));
 
 const mockStudentFindById = jest.fn();
+const mockStudentFind = jest.fn();
 jest.mock("../modules/foundation/models/Student", () => ({
-  Student: { findById: (id: unknown) => mockStudentFindById(id) },
+  Student: { findById: (id: unknown) => mockStudentFindById(id), find: (q: unknown) => mockStudentFind(q) },
 }));
 
 const mockWriteAudit = jest.fn();
@@ -62,6 +63,7 @@ import {
   recordComment,
   editComment,
   studentComments,
+  myComments,
   StudentCommentError,
 } from "../modules/comments/services/StudentCommentService";
 import { assertCanWrite, assertCanRead, ForbiddenError } from "../middleware/authz";
@@ -97,6 +99,42 @@ describe("COMMENT_TYPES / COMMENT_SENTIMENTS vocab", () => {
     }
     expect(Object.keys(COMMENT_SENTIMENT_LABELS_BN).sort()).toEqual([...COMMENT_SENTIMENTS].sort());
     expect(Object.keys(COMMENT_SENTIMENT_LABELS_EN).sort()).toEqual([...COMMENT_SENTIMENTS].sort());
+  });
+});
+
+// ===========================================================================
+// myComments — the caller's OWN comments, enriched with the child's name (D-#263)
+// ===========================================================================
+
+describe("myComments (see the comments they made)", () => {
+  test("returns only the caller's comments, newest first, with student names joined", async () => {
+    const author = oid();
+    const stuA = oid();
+    const stuB = oid();
+    mockFind.mockReturnValue(
+      leanChain([
+        { _id: oid(), studentId: stuA, sectionId: SECTION_OID, authorUserId: author, type: COMMENT_TYPES[0], sentiment: COMMENT_SENTIMENTS[0], text: "c1", attachmentIds: [], deliveryChannels: [], createdAt: new Date(2), updatedAt: new Date(2) },
+        { _id: oid(), studentId: stuB, sectionId: SECTION_OID, authorUserId: author, type: COMMENT_TYPES[0], sentiment: COMMENT_SENTIMENTS[0], text: "c2", attachmentIds: [], deliveryChannels: [], createdAt: new Date(1), updatedAt: new Date(1) },
+      ]),
+    );
+    mockStudentFind.mockReturnValue(leanChain([{ _id: stuA, name: "Abdullah" }, { _id: stuB, name: "Unaisha" }]));
+
+    const res = await myComments(author.toString());
+
+    expect(mockFind).toHaveBeenCalledWith(expect.objectContaining({ authorUserId: expect.anything() }));
+    expect(mockFind.mock.calls[0][0]).not.toHaveProperty("studentId"); // no student filter
+    expect(res).toHaveLength(2);
+    expect(res[0].studentName).toBe("Abdullah");
+    expect(res[1].studentName).toBe("Unaisha");
+  });
+
+  test("filters to one student when studentId is given; no DB hit when none authored", async () => {
+    const author = oid();
+    mockFind.mockReturnValue(leanChain([]));
+    const res = await myComments(author.toString(), STUDENT_OID.toString());
+    expect(mockFind.mock.calls[0][0]).toHaveProperty("studentId");
+    expect(res).toEqual([]);
+    expect(mockStudentFind).not.toHaveBeenCalled(); // no names looked up for an empty set
   });
 });
 

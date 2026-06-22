@@ -49,6 +49,20 @@ export const STUDENT_COMMENTS_QUERY = gql<
   }
 `;
 
+// The caller's OWN comments (D-#263) — spans students, so the child's name is joined in.
+export interface AuthoredCommentT extends StudentCommentT {
+  studentName: string;
+}
+
+export const MY_STUDENT_COMMENTS_QUERY = gql<
+  { myStudentComments: AuthoredCommentT[] },
+  { studentId?: string | null }
+>`
+  query MyStudentComments($studentId: String) {
+    myStudentComments(studentId: $studentId) { ${STUDENT_COMMENT_FIELDS} studentName }
+  }
+`;
+
 export const RECORD_STUDENT_COMMENT = gql<
   { recordStudentComment: StudentCommentT },
   {

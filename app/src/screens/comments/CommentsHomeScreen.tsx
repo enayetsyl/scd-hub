@@ -2,16 +2,21 @@
  * CommentsHomeScreen (CM-6) — the Comments tab hub. Role-aware quick links:
  * "Daily comments" for tracker:read holders (Principal/Teacher), "Parents'
  * meetings" for roster:manage holders (Principal/Office). Both visible to
- * Principal. Every action is re-gated server-side (the server stays the gate).
+ * Principal. Below them, a teacher's OWN recent comments (D-#263) — "see the
+ * comments they made" — across any student, tap to re-open/edit/deliver. Every
+ * action is re-gated server-side (the server stays the gate).
  */
 import React from "react";
 import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQuery } from "urql";
 import { roleHasPermission } from "@scd/shared";
-import { Screen, Card, Body, Muted, Button } from "../../components/ui";
+import { MY_STUDENT_COMMENTS_QUERY } from "../../graphql/comments";
+import { Screen, Card, Body, Muted, Button, Badge, Loader } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
-import { STR } from "../../lib/labels";
+import { STR, commentTypeLabel, commentSentimentLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
 
@@ -22,6 +27,17 @@ export default function CommentsHomeScreen(): React.ReactElement {
   const { role } = useAuth();
   const canComments = !!role && roleHasPermission(role, "tracker:read");
   const canMeetings = !!role && roleHasPermission(role, "roster:manage");
+
+  const [mineQ, refetchMine] = useQuery({ query: MY_STUDENT_COMMENTS_QUERY, variables: {}, pause: !canComments });
+  const mine = mineQ.data?.myStudentComments ?? [];
+
+  // Refresh the "my comments" list whenever the hub regains focus (e.g. after
+  // recording/editing one on the entry screen).
+  useFocusEffect(
+    React.useCallback(() => {
+      if (canComments) refetchMine({ requestPolicy: "network-only" });
+    }, [canComments, refetchMine]),
+  );
 
   return (
     <Screen padded={false}>
@@ -47,6 +63,45 @@ export default function CommentsHomeScreen(): React.ReactElement {
             <View style={{ marginTop: space(2) }}>
               <Button title={STR.cmMeetings} variant="secondary" onPress={() => nav.navigate("MeetingsList")} />
             </View>
+          </Card>
+        ) : null}
+
+        {/* The caller's own comments (D-#263) — see + re-open what they made. */}
+        {canComments ? (
+          <Card>
+            <Body style={{ fontWeight: "700" }}>{STR.cmMyComments}</Body>
+            <Muted style={{ marginTop: space(1) }}>{STR.cmMyCommentsSub}</Muted>
+            {mineQ.fetching && mine.length === 0 ? (
+              <Loader label={STR.loading} />
+            ) : mine.length === 0 ? (
+              <Muted style={{ marginTop: space(2) }}>{STR.cmNoMyComments}</Muted>
+            ) : (
+              mine.map((c) => (
+                <Card
+                  key={c.id}
+                  onPress={() =>
+                    nav.navigate("CommentEntry", {
+                      sectionId: c.sectionId,
+                      studentId: c.studentId,
+                      studentName: c.studentName,
+                      commentId: c.id,
+                    })
+                  }
+                >
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Body style={{ fontWeight: "700", flexShrink: 1 }}>{c.studentName}</Body>
+                    <Badge
+                      text={c.deliveredAt ? STR.cmDeliveredBadge : STR.cmDraftBadge}
+                      tone={c.deliveredAt ? "ok" : "muted"}
+                    />
+                  </View>
+                  <Muted style={{ marginTop: 2 }}>
+                    {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)}
+                  </Muted>
+                  <Body style={{ marginTop: space(1) }}>{c.text}</Body>
+                </Card>
+              ))
+            )}
           </Card>
         ) : null}
       </ScrollView>

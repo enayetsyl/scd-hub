@@ -222,3 +222,31 @@ export async function studentComments(studentId: string): Promise<StudentComment
     .lean()) as unknown as IStudentComment[];
   return docs.map(shape);
 }
+
+/** A comment row enriched with the child's name — for the author's "my comments"
+ *  list (where comments span students, so the name is shown inline). */
+export interface AuthoredCommentShape extends StudentCommentShape {
+  studentName: string;
+}
+
+/**
+ * The caller's OWN authored comments, newest first (optionally one student) — "see the
+ * comments they made" (D-#263). Needs NO section read-scope: you authored them, so you
+ * may always read your own (privacy: it never returns another teacher's comments). The
+ * child's name is joined in (the list spans students). Identity plane; no corpus path.
+ */
+export async function myComments(actorId: string, studentId?: string): Promise<AuthoredCommentShape[]> {
+  const filter: Record<string, unknown> = { authorUserId: new Types.ObjectId(actorId) };
+  if (studentId) {
+    if (!Types.ObjectId.isValid(studentId)) throw new StudentCommentError("Invalid student id");
+    filter.studentId = new Types.ObjectId(studentId);
+  }
+  const docs = (await StudentComment.find(filter).sort({ createdAt: -1 }).lean()) as unknown as IStudentComment[];
+  if (docs.length === 0) return [];
+
+  const studentIds = [...new Set(docs.map((d) => d.studentId.toString()))];
+  const students = await Student.find({ _id: { $in: studentIds } }).select({ name: 1 }).lean();
+  const nameOf = new Map(students.map((s) => [s._id.toString(), s.name]));
+
+  return docs.map((d) => ({ ...shape(d), studentName: nameOf.get(d.studentId.toString()) ?? d.studentId.toString() }));
+}

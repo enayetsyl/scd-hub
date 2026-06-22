@@ -17,6 +17,7 @@ import { useQuery, useMutation } from "urql";
 import { COMMENT_TYPES, COMMENT_SENTIMENTS } from "@scd/shared";
 import {
   STUDENT_COMMENTS_QUERY,
+  MY_STUDENT_COMMENTS_QUERY,
   RECORD_STUDENT_COMMENT,
   EDIT_STUDENT_COMMENT,
   DELIVER_STUDENT_COMMENT,
@@ -35,18 +36,30 @@ type Props = NativeStackScreenProps<CommentsStackParamList, "CommentEntry">;
 export default function CommentEntryScreen({ route }: Props): React.ReactElement {
   const { studentId, studentName, commentId: initialCommentId } = route.params;
 
-  // The edit/deliver path needs the live comment row; load the student's comments
-  // and locate this one (the section list passed only the id).
+  // The edit/deliver path needs the live comment row. Load it from BOTH the section
+  // timeline (`studentComments` — scoped; serves Principal/Office + section-scoped
+  // teachers) AND the caller's own comments (`myStudentComments` — author path, allowed
+  // regardless of section scope, D-#263). Either source locates the row.
   const [studentQ, refetchStudent] = useQuery({
     query: STUDENT_COMMENTS_QUERY,
     variables: { studentId },
     pause: !studentId,
   });
+  const [mineQ, refetchMine] = useQuery({
+    query: MY_STUDENT_COMMENTS_QUERY,
+    variables: { studentId },
+    pause: !studentId,
+  });
+  function refetchComment(): void {
+    refetchStudent({ requestPolicy: "network-only" });
+    refetchMine({ requestPolicy: "network-only" });
+  }
   const [commentId, setCommentId] = useState<string | null>(initialCommentId ?? null);
-  const existing: StudentCommentT | null = useMemo(
-    () => (commentId ? (studentQ.data?.studentComments ?? []).find((c) => c.id === commentId) ?? null : null),
-    [studentQ.data, commentId],
-  );
+  const existing: StudentCommentT | null = useMemo(() => {
+    if (!commentId) return null;
+    const all: StudentCommentT[] = [...(mineQ.data?.myStudentComments ?? []), ...(studentQ.data?.studentComments ?? [])];
+    return all.find((c) => c.id === commentId) ?? null;
+  }, [mineQ.data, studentQ.data, commentId]);
   const delivered = !!existing?.deliveredAt;
 
   const [type, setType] = useState<string>(COMMENT_TYPES[0]);
@@ -78,7 +91,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
       setBusy(false);
       if (res.error) return setError(friendlyError(res.error));
       setOk(STR.cmSaved);
-      refetchStudent({ requestPolicy: "network-only" });
+      refetchComment();
     } else {
       const res = await recordComment({ studentId, type, sentiment, text: text.trim() });
       setBusy(false);
@@ -87,7 +100,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
       if (created) {
         setCommentId(created.id);
         setOk(STR.cmSaved);
-        refetchStudent({ requestPolicy: "network-only" });
+        refetchComment();
       }
     }
   }
@@ -100,7 +113,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
       const f = await pickAndUploadCommentFile(commentId);
       if (f) {
         setOk(STR.cmSaved);
-        refetchStudent({ requestPolicy: "network-only" });
+        refetchComment();
       }
     } catch (e) {
       setError(e instanceof FileUploadError ? e.message : STR.cmFileUploadFail);
@@ -129,7 +142,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
     if (o) {
       setOutcome(o);
       setOk(STR.cmDelivered);
-      refetchStudent({ requestPolicy: "network-only" });
+      refetchComment();
     }
   }
 
@@ -138,7 +151,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
   const [, deliver] = useMutation(DELIVER_STUDENT_COMMENT);
 
   // Loading the existing comment row (edit/deliver path).
-  if (commentId && studentQ.fetching && !existing) {
+  if (commentId && (studentQ.fetching || mineQ.fetching) && !existing) {
     return (
       <Screen>
         <Loader label={STR.loading} />

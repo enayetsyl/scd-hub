@@ -21,11 +21,12 @@ import {
   editComment,
   listSectionComments,
   studentComments,
+  myComments,
   type StudentCommentShape,
+  type AuthoredCommentShape,
 } from "../services/StudentCommentService";
-import { StudentComment } from "../models/StudentComment";
 import { Section } from "../../foundation/models/Section";
-import { assertCanWrite, assertCanRead, ForbiddenError } from "../../../middleware/authz";
+import { assertCanRead, ForbiddenError } from "../../../middleware/authz";
 
 /** Enforce staff read-scope on a section (teachers only; Principal/Office unscoped). */
 async function assertReadSection(ctx: AppContext, sectionId: string): Promise<void> {
@@ -82,8 +83,11 @@ builder.mutationField("recordStudentComment", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      // Any teacher may comment on any student (D-#263): the role perm `tracker:write`
+      // gates staff-vs-guardian; section write-scope no longer gates comment AUTHORING
+      // (it still governs the tracker proper). The section is still resolved + stored
+      // server-side. The author is recorded; edit stays author-only (below).
       const sectionId = await resolveCommentSection(args.studentId);
-      await assertCanWrite(ctx, sectionId);
       return recordComment({
         studentId: args.studentId,
         sectionId,
@@ -113,9 +117,8 @@ builder.mutationField("editStudentComment", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const comment = await StudentComment.findById(args.commentId).select("sectionId").lean();
-      if (!comment) throw new ForbiddenError("Comment not found");
-      await assertCanWrite(ctx, comment.sectionId.toString());
+      // Author-only edit (enforced in the service) — no section write-scope gate (D-#263):
+      // a teacher edits their own undelivered comment regardless of section scope.
       return editComment({
         commentId: args.commentId,
         type: args.type ?? undefined,
@@ -157,6 +160,46 @@ builder.queryField("studentComments", (t) =>
       const sectionId = await resolveCommentSection(args.studentId);
       await assertReadSection(ctx, sectionId);
       return studentComments(args.studentId);
+    },
+  }),
+);
+
+// A comment enriched with the child's name — for the author's own-comments list,
+// which spans students (so the name is shown inline). Superset of StudentComment.
+const AuthoredCommentRef = builder.objectRef<AuthoredCommentShape>("AuthoredComment");
+AuthoredCommentRef.implement({
+  description:
+    "One of the CALLER'S OWN daily comments (D-#263), enriched with the child's name. " +
+    "Spans students/sections; returns only comments the caller authored. Identity plane.",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    studentId: t.exposeString("studentId"),
+    studentName: t.exposeString("studentName"),
+    sectionId: t.exposeString("sectionId"),
+    authorUserId: t.exposeString("authorUserId"),
+    type: t.exposeString("type"),
+    sentiment: t.exposeString("sentiment"),
+    text: t.exposeString("text"),
+    attachmentIds: t.exposeStringList("attachmentIds"),
+    deliveredAt: t.string({ nullable: true, resolve: (r) => r.deliveredAt }),
+    deliveryChannels: t.exposeStringList("deliveryChannels"),
+    createdAt: t.exposeString("createdAt"),
+    updatedAt: t.exposeString("updatedAt"),
+  }),
+});
+
+builder.queryField("myStudentComments", (t) =>
+  t.field({
+    type: [AuthoredCommentRef],
+    description:
+      "The CALLER'S OWN daily comments, newest first (optionally one student) — 'see the comments they " +
+      "made' (D-#263). No section read-scope (you authored them); never returns another teacher's comments. " +
+      "Requires tracker:read.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: { studentId: t.arg.string({ required: false }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return myComments(ctx.auth.userId as string, args.studentId ?? undefined);
     },
   }),
 );
