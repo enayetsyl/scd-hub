@@ -56,6 +56,13 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
+      {canManageUsers ? (
+        <Card onPress={() => navigation.navigate("SupervisoryGrant")}>
+          <Body style={{ fontWeight: "700" }}>{STR.sgManage}</Body>
+          <Muted>{STR.admSubSupervisory}</Muted>
+        </Card>
+      ) : null}
+
       {canRoster ? (
         <Card onPress={() => navigation.navigate("Roster")}>
           <Body style={{ fontWeight: "700" }}>{STR.roster}</Body>
