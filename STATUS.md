@@ -12,8 +12,20 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
   Records = open non-terminal set; existing check/transition/attach actions unchanged. New pure
   `lib/groupByDate.ts` + `dateHeaderLabel`. **No vocab/contract/RBAC change.** **Gate GREEN (executed):**
   verifier PASS, shared build + server tsc + app tsc clean, **jest 1488/1488 (91 suites)**, expo web export
-  green. No new D-#. Not verified live. **Remaining phases (same recipe, per-module PRs): Assignments →
-  Class Test → Vocabulary → Saturday Revision.**
+  green. No new D-#. Not verified live. **Remaining phases (same recipe, per-module PRs, owner deferred):
+  Assignments → Class Test → Vocabulary → Saturday Revision.**
+- **Built (Per-class Homework dashboard — server + app) [branch `feat/homework-class-dashboard` off dev → PR
+  into dev]:** from live testing of the Homework screen. The landing replaces the SectionPicker with inline
+  **class buttons** (the teacher's assigned classes — `myScopes` ∪ class-teacher sections; Principal/Office
+  see all), each with a cumulative **badge** (pending-checking count; red when chases open). Tapping a class
+  loads that class+date's detail inline — one accessible section auto-selects, several show a **section row**;
+  selection still flows through `SectionContext` so Declare/Reconcile/Records/Checking are unchanged. Date is
+  a real **calendar** on web (`<input type=date>`) + phone (new `@react-native-community/datetimepicker`) via a
+  platform-split `DateField`. Server: `homeworkSummary` += `pendingChecking`; new `homeworkClassOverview(refs)`
+  batch query (pending checking / open resubmissions / active chases / on-time% / over-ceiling-days-this-week
+  per class; each ref `assertCanRead`-gated, unreadable refs skipped). **No vocab/contract/enum/RBAC change**
+  (reuses `tracker:read`). **Gate GREEN (executed against dev base):** verifier PASS, shared build + server tsc
+  clean, app tsc clean, **jest 1487/1487 (90 suites)**, expo web export green. No new D-#. Not verified live.
 - **Built (Supervisory read-oversight grant CRUD — server + app, D-#262) [branch `feat/supervisory-grants`
   off dev]:** answers the owner question "can a teacher see all classes' lesson plans?" — yes, via the
   ADR-017 **supervisory** grant, whose kind + four extents + read-scoping (`canRead` + `contentScope`,
