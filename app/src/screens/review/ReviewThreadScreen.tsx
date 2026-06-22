@@ -37,6 +37,7 @@ import {
   Badge,
   Button,
   Select,
+  Field,
   Loader,
   EmptyState,
   ErrorBanner,
@@ -111,6 +112,8 @@ export default function ReviewThreadScreen({ route }: Props): React.ReactElement
   const [reviewerId, setReviewerId] = useState("");
   const [assignBusy, setAssignBusy] = useState(false);
   const [approveBusy, setApproveBusy] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overrideBusy, setOverrideBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; tone: "ok" | "danger" } | null>(null);
 
   const thread = tData?.planReviewThread ?? [];
@@ -150,6 +153,27 @@ export default function ReviewThreadScreen({ route }: Props): React.ReactElement
     refresh();
   }
 
+  // Override sign-off: approve a plan the reviewer flagged CHANGES_REQUESTED (still draft).
+  // A reason is required — it overrules the reviewer, so the decision is documented.
+  async function onOverride(): Promise<void> {
+    if (overrideBusy) return;
+    setMsg(null);
+    if (overrideReason.trim() === "") {
+      setMsg({ text: STR.overrideReasonRequired, tone: "danger" });
+      return;
+    }
+    setOverrideBusy(true);
+    const res = await approvePlan({ artifactId, overrideReason: overrideReason.trim() });
+    setOverrideBusy(false);
+    if (res.error) {
+      setMsg({ text: friendlyError(res.error), tone: "danger" });
+      return;
+    }
+    setOverrideReason("");
+    setMsg({ text: STR.overrideApproved, tone: "ok" });
+    refresh();
+  }
+
   if (fetching) return <Loader label={STR.loading} />;
   if (error) {
     return (
@@ -163,6 +187,11 @@ export default function ReviewThreadScreen({ route }: Props): React.ReactElement
     ? artifact.address.title || `${artifact.address.anchorWord} ${artifact.address.number}`
     : STR.reviewThread;
   const isReviewed = artifact?.reviewStatus === "reviewed";
+  const isGold = artifact?.reviewStatus === "gold";
+  // Override path: any current, not-yet-approved plan that isn't already `reviewed`
+  // (e.g. a draft a reviewer flagged CHANGES_REQUESTED). The Principal can approve it
+  // anyway with a documented reason.
+  const canOverride = !!artifact && !isReviewed && !isGold;
 
   return (
     <Screen scroll>
@@ -185,17 +214,48 @@ export default function ReviewThreadScreen({ route }: Props): React.ReactElement
       <H2>{STR.reviewThread}</H2>
       {thread.length === 0 ? <EmptyState message={STR.noInbox} /> : thread.map((r) => <RoundCard key={r.id} r={r} />)}
 
-      {canApprove ? (
+      {/* Already approved: show the sign-off note (and "override" marker if it overruled a reviewer). */}
+      {isGold && artifact?.approvalNote ? (
+        <Notice
+          message={`${artifact.approvalOverride ? `${STR.approvedOverrideBadge} · ` : ""}${artifact.approvalNote}`}
+          tone="ok"
+        />
+      ) : null}
+
+      {/* Normal sign-off — the plan passed a teacher's APPROVE (reviewed → gold). */}
+      {canApprove && isReviewed ? (
         <View style={{ marginTop: space(3) }}>
           <Button
             title={approveBusy ? STR.approving : STR.approveSignOff}
             onPress={onApprove}
             loading={approveBusy}
-            disabled={!isReviewed}
             variant="primary"
           />
-          {!isReviewed ? <Muted style={{ marginTop: 4 }}>{STR.approveNeedsReviewed}</Muted> : null}
         </View>
+      ) : null}
+
+      {/* Override sign-off — approve a not-yet-reviewed plan (e.g. one flagged "changes
+          required") with a documented reason. Principal-only (content:promote_gold). */}
+      {canApprove && canOverride ? (
+        <Card style={{ marginTop: space(3) }}>
+          <H2>{STR.overrideApprove}</H2>
+          <Muted style={{ marginTop: 2 }}>{STR.approveNeedsReviewed}</Muted>
+          <Field
+            label={STR.overrideReason}
+            value={overrideReason}
+            onChangeText={setOverrideReason}
+            multiline
+            placeholder={STR.overrideReasonHint}
+          />
+          <Button
+            title={overrideBusy ? STR.overriding : STR.overrideApprove}
+            onPress={onOverride}
+            loading={overrideBusy}
+            disabled={overrideReason.trim() === ""}
+            variant="primary"
+            style={{ marginTop: space(2) }}
+          />
+        </Card>
       ) : null}
 
       {canAssign ? (

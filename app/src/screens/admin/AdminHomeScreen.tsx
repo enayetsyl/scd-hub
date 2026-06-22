@@ -31,28 +31,28 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
       {canImport ? (
         <Card onPress={() => navigation.navigate("Import")}>
           <Body style={{ fontWeight: "700" }}>{STR.importContent}</Body>
-          <Muted>J1.1</Muted>
+          <Muted>{STR.admSubImport}</Muted>
         </Card>
       ) : null}
 
       {canManageUsers ? (
         <Card onPress={() => navigation.navigate("UserList")}>
           <Body style={{ fontWeight: "700" }}>{STR.users}</Body>
-          <Muted>J5.1</Muted>
+          <Muted>{STR.admSubUsers}</Muted>
         </Card>
       ) : null}
 
       {canManageUsers ? (
         <Card onPress={() => navigation.navigate("ScopeGrant")}>
           <Body style={{ fontWeight: "700" }}>{STR.scopeGrants}</Body>
-          <Muted>J5.4 / J5.7</Muted>
+          <Muted>{STR.admSubScope}</Muted>
         </Card>
       ) : null}
 
       {canManageUsers ? (
         <Card onPress={() => navigation.navigate("AssignSubjectTeacher")}>
           <Body style={{ fontWeight: "700" }}>{STR.assignSubjectTeacher}</Body>
-          <Muted>ADR-017</Muted>
+          <Muted>{STR.admSubAssignSubject}</Muted>
         </Card>
       ) : null}
 
@@ -73,14 +73,14 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
       {canRoster ? (
         <Card onPress={() => navigation.navigate("AssignClassTeacher")}>
           <Body style={{ fontWeight: "700" }}>{STR.assignClassTeacher}</Body>
-          <Muted>D-#42</Muted>
+          <Muted>{STR.admSubAssignClass}</Muted>
         </Card>
       ) : null}
 
       {canRoster ? (
         <Card onPress={() => navigation.navigate("SectionConfig")}>
           <Body style={{ fontWeight: "700" }}>{STR.sectionConfig}</Body>
-          <Muted>D-#62</Muted>
+          <Muted>{STR.admSubSection}</Muted>
         </Card>
       ) : null}
 
@@ -94,28 +94,28 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
       {canGuardianCreds ? (
         <Card onPress={() => navigation.navigate("GuardianCredentials")}>
           <Body style={{ fontWeight: "700" }}>{STR.guardianCredentials}</Body>
-          <Muted>D-#59</Muted>
+          <Muted>{STR.admSubGuardianCreds}</Muted>
         </Card>
       ) : null}
 
       {canManageUsers ? (
         <Card onPress={() => navigation.navigate("StaffCredentials")}>
           <Body style={{ fontWeight: "700" }}>{STR.staffCredentials}</Body>
-          <Muted>D-#60</Muted>
+          <Muted>{STR.admSubStaffCreds}</Muted>
         </Card>
       ) : null}
 
       {canTemplates ? (
         <Card onPress={() => navigation.navigate("MessageTemplates")}>
           <Body style={{ fontWeight: "700" }}>{STR.mtMessageTemplates}</Body>
-          <Muted>D-#128</Muted>
+          <Muted>{STR.admSubTemplates}</Muted>
         </Card>
       ) : null}
 
       {canAccess ? (
         <Card onPress={() => navigation.navigate("AccessControlUsers")}>
           <Body style={{ fontWeight: "700" }}>{STR.acTitle}</Body>
-          <Muted>D-#193</Muted>
+          <Muted>{STR.admSubAccess}</Muted>
         </Card>
       ) : null}
 

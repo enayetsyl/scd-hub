@@ -4,7 +4,7 @@
  * import (D-#31): Bangla/English name, ID, gender, DOB, phone, address, blood
  * group, and linked guardian contacts. Reuses the shared SectionContext picker.
  */
-import React from "react";
+import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
@@ -18,6 +18,7 @@ import {
   Card,
   Row,
   Button,
+  Field,
   Divider,
   Loader,
   EmptyState,
@@ -81,6 +82,18 @@ export default function RosterScreen(): React.ReactElement {
 
   const students = data?.studentsInSection ?? [];
 
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
+  const shown = q
+    ? students.filter(
+        (s) =>
+          (s.nameBn ?? "").toLowerCase().includes(q) ||
+          s.name.toLowerCase().includes(q) ||
+          (s.schoolId ?? "").toLowerCase().includes(q) ||
+          (s.phone ?? "").toLowerCase().includes(q),
+      )
+    : students;
+
   return (
     <Screen scroll>
       <H2>{STR.roster}</H2>
@@ -114,7 +127,14 @@ export default function RosterScreen(): React.ReactElement {
         ) : students.length === 0 ? (
           <EmptyState message={STR.empty} />
         ) : (
-          students.map((s) => <StudentCard key={s.id} s={s} />)
+          <>
+            <Field label={undefined} value={search} onChangeText={setSearch} placeholder={STR.searchStudents} />
+            {shown.length === 0 ? (
+              <EmptyState message={STR.noMatches} />
+            ) : (
+              shown.map((s) => <StudentCard key={s.id} s={s} />)
+            )}
+          </>
         )
       ) : null}
     </Screen>

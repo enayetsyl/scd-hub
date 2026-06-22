@@ -29,6 +29,17 @@ export default function UserListScreen(_props: Props): React.ReactElement {
   });
   const users = data?.users ?? [];
 
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
+  const shown = q
+    ? users.filter(
+        (u) =>
+          u.name.toLowerCase().includes(q) ||
+          (u.email ?? "").toLowerCase().includes(q) ||
+          (u.phone ?? "").toLowerCase().includes(q),
+      )
+    : users;
+
   // Refresh on focus: logins provisioned on another screen (StaffCredentials)
   // won't appear otherwise — urql's document cache isn't invalidated by
   // provisionStaffLogin (it returns a ProvisionedCredential, not a User).
@@ -78,16 +89,23 @@ export default function UserListScreen(_props: Props): React.ReactElement {
           ) : users.length === 0 ? (
             <EmptyState message={STR.noUsers} />
           ) : (
-            users.map((u) => (
-              <Card key={u.id}>
-                <Body style={{ fontWeight: "700" }}>
-                  {u.name}
-                  {u.active ? "" : ` — ${STR.inactive}`}
-                </Body>
-                <Row label={STR.role} value={u.role} />
-                <Row label={STR.emailOrPhone} value={u.email ?? u.phone ?? "—"} />
-              </Card>
-            ))
+            <>
+              <Field label={undefined} value={search} onChangeText={setSearch} placeholder={STR.searchUsers} />
+              {shown.length === 0 ? (
+                <EmptyState message={STR.noMatches} />
+              ) : (
+                shown.map((u) => (
+                  <Card key={u.id}>
+                    <Body style={{ fontWeight: "700" }}>
+                      {u.name}
+                      {u.active ? "" : ` — ${STR.inactive}`}
+                    </Body>
+                    <Row label={STR.role} value={u.role} />
+                    <Row label={STR.emailOrPhone} value={u.email ?? u.phone ?? "—"} />
+                  </Card>
+                ))
+              )}
+            </>
           )}
         </>
       ) : user ? (

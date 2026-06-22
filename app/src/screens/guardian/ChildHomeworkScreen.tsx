@@ -12,7 +12,7 @@ import { CHILD_HOMEWORK_QUERY, type GuardianHwRecordT } from "../../graphql/oper
 import { Screen, Body, Muted, Card, Badge, Button, Field, Notice, Loader, EmptyState } from "../../components/ui";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
-import { STR, bnNum, lifecycleStateLabel } from "../../lib/labels";
+import { STR, bnNum, lifecycleStateLabel, subjectLabel, hwResultLabel } from "../../lib/labels";
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { space } from "../../theme/tokens";
 
@@ -45,12 +45,12 @@ function RecordCard({
     <Card>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <View style={{ flexShrink: 1 }}>
-          <Body style={{ fontWeight: "700" }}>{r.subjectLabelBn}</Body>
+          <Body style={{ fontWeight: "700" }}>{subjectLabel(r.subject)}</Body>
           <Muted>{r.hwId}</Muted>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
           {r.resubOf ? <Badge text={lifecycleStateLabel("RESUBMIT")} tone="warn" /> : null}
-          <Badge text={r.stateLabelBn} tone={r.state === "CHASE" ? "danger" : "brand"} />
+          <Badge text={lifecycleStateLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
         </View>
       </View>
 
@@ -67,8 +67,8 @@ function RecordCard({
         {r.chaseCount > 0 ? (
           <Badge text={`${lifecycleStateLabel("CHASE")} ×${bnNum(r.chaseCount)}`} tone="danger" />
         ) : null}
-        {r.resultLabelBn ? (
-          <Badge text={r.resultLabelBn} tone={r.result === "CORRECT" ? "ok" : r.result === "WRONG" ? "danger" : "warn"} />
+        {r.result ? (
+          <Badge text={hwResultLabel(r.result)} tone={r.result === "CORRECT" ? "ok" : r.result === "WRONG" ? "danger" : "warn"} />
         ) : null}
         {r.topupFlag ? (
           <Badge
