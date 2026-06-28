@@ -7,6 +7,7 @@ import { AcademicYear, type IAcademicYear } from "../models/AcademicYear";
 import { type IClassTeacherAssignment } from "../models/ClassTeacherAssignment";
 import {
   assignClassTeacher as svcAssignClassTeacher,
+  assignHomeworkConfirmer as svcAssignHomeworkConfirmer,
   setSupportTeacher,
   classTeacherHistory,
   mySectionsAsClassTeacher,
@@ -20,6 +21,7 @@ type SectionShape = Pick<ISection, "code" | "nameBn" | "active"> & {
   _id: { toString(): string };
   classTeacherId?: { toString(): string } | null;
   supportTeacherIds?: Array<{ toString(): string }> | null;
+  homeworkConfirmerId?: { toString(): string } | null;
 };
 type ClassShape = Pick<IClass, "level" | "nameBn" | "active"> & { _id: { toString(): string } };
 
@@ -45,6 +47,10 @@ SectionRef.implement({
     }),
     supportTeacherIds: t.stringList({
       resolve: (s) => (s.supportTeacherIds ?? []).map((id) => id.toString()),
+    }),
+    homeworkConfirmerId: t.string({
+      nullable: true,
+      resolve: (s) => (s.homeworkConfirmerId ? s.homeworkConfirmerId.toString() : null),
     }),
     studentCount: t.int({
       description: "Active students currently in this section.",
@@ -286,6 +292,25 @@ builder.mutationField("assignClassTeacher", (t) =>
  * class teacher stays the single coordinator gate; support is a recorded helper.
  * Admin action (roster:manage); the assignee must be a TEACHER. Logged (CT1.6).
  */
+/**
+ * Assign (or clear) a section's HOMEWORK-CONFIRM DELEGATE — a teacher who may ALSO
+ * reconcile/confirm the section's daily homework, in addition to the class teacher and
+ * the Principal (assertCanConfirmHomework). Admin action (roster:manage); the assignee
+ * must be a TEACHER. Pass `userId: null` to clear. Logged to the assignment history.
+ */
+builder.mutationField("assignHomeworkConfirmer", (t) =>
+  t.field({
+    type: SectionRef,
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      userId: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) =>
+      svcAssignHomeworkConfirmer(args.sectionId, args.userId ?? null, ctx.auth!.userId) as unknown as Promise<SectionShape>,
+  }),
+);
+
 builder.mutationField("setSupportTeacher", (t) =>
   t.field({
     type: SectionRef,

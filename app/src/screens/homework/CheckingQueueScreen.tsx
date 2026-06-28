@@ -156,7 +156,7 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
                           <Badge text={hwSubjectLabel(r.subject)} tone="brand" />
                         </View>
                       </View>
-                      <Muted style={{ marginTop: 2 }}>{r.hwId}</Muted>
+                      <Muted style={{ marginTop: 2 }}>{r.hwId}{r.topicLabelBn ? ` · 📘 ${r.topicLabelBn}` : ""}</Muted>
                       <Muted style={{ marginTop: 4 }}>{STR.hwResult}</Muted>
                       <ChipRow>
                         {HW_RESULTS.map((rv) => (

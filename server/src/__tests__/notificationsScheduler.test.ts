@@ -25,6 +25,7 @@ const mockSectionFind = jest.fn();
 const mockUserFind = jest.fn();
 const mockDispatchAttendance = jest.fn();
 const mockDispatchLibrary = jest.fn();
+const mockPendingHomework = jest.fn();
 const mockEmit = jest.fn();
 
 jest.mock("../modules/routine/calendar", () => ({
@@ -68,6 +69,11 @@ jest.mock("../modules/classroom-observation/services/ObservationEscalationServic
     alreadyDispatched: 0,
   }),
 }));
+// The homework pending-confirm ladder reads pending sections from the reconciliation
+// service. Mock it so the scheduler test stays DB-free (the query is covered separately).
+jest.mock("../modules/trackers/services/HomeworkReconciliationService", () => ({
+  pendingHomeworkSections: (d: unknown) => mockPendingHomework(d),
+}));
 jest.mock("../modules/notifications/services/NotificationService", () => ({
   emit: (input: unknown) => mockEmit(input),
 }));
@@ -99,7 +105,81 @@ beforeEach(() => {
   mockUserFind.mockResolvedValue([]);
   mockDispatchAttendance.mockResolvedValue({});
   mockDispatchLibrary.mockResolvedValue({ dueSoonEmitted: 0, overdueEmitted: 0 });
+  mockPendingHomework.mockResolvedValue([]);
   mockEmit.mockResolvedValue({ created: true, dedupeKey: "x" });
+});
+
+// ---------------------------------------------------------------------------
+// Homework pending-confirm ladder (13:00/13:30/14:00 confirmer, 14:00 Office, 16:00 Principal)
+// ---------------------------------------------------------------------------
+
+describe("homework pending-confirm ladder", () => {
+  const pendingSection = (over: Record<string, unknown> = {}) => ({
+    sectionId: "secA",
+    classId: "clsA",
+    nameBn: "ক্লাস ১",
+    classTeacherId: "ct1",
+    homeworkConfirmerId: null,
+    ...over,
+  });
+
+  it("13:00 — reminds the class teacher of each still-pending section", async () => {
+    mockPendingHomework.mockResolvedValue([pendingSection()]);
+    const s = await runSchedulerTick(at(13, 0));
+    expect(s.hwPendingEmitted).toBe(1);
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: "ct1", kind: "HW_PENDING_REMINDER" }),
+    );
+  });
+
+  it("prefers the delegate (homeworkConfirmerId) over the class teacher", async () => {
+    mockPendingHomework.mockResolvedValue([pendingSection({ homeworkConfirmerId: "deleg1" })]);
+    await runSchedulerTick(at(13, 30));
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: "deleg1", kind: "HW_PENDING_REMINDER" }),
+    );
+    expect(mockEmit).not.toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: "ct1" }),
+    );
+  });
+
+  it("14:00 — confirmer gets a reminder AND Office gets the escalation (per section)", async () => {
+    mockPendingHomework.mockResolvedValue([pendingSection()]);
+    mockUserFind.mockResolvedValue([{ _id: oid("office1") }]); // OFFICE recipients + name lookup
+    const s = await runSchedulerTick(at(14, 0));
+    expect(s.hwPendingEmitted).toBe(2);
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: "ct1", kind: "HW_PENDING_REMINDER" }),
+    );
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: "office1", kind: "HW_PENDING_ESCALATION" }),
+    );
+  });
+
+  it("16:00 — only the Principal is escalated (no more confirmer reminder)", async () => {
+    mockPendingHomework.mockResolvedValue([pendingSection()]);
+    mockUserFind.mockResolvedValue([{ _id: oid("prin1") }]);
+    const s = await runSchedulerTick(at(16, 0));
+    expect(s.hwPendingEmitted).toBe(1);
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: "prin1", kind: "HW_PENDING_ESCALATION" }),
+    );
+    expect(mockEmit).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "HW_PENDING_REMINDER" }),
+    );
+  });
+
+  it("nothing pending ⇒ no homework emits", async () => {
+    mockPendingHomework.mockResolvedValue([]);
+    const s = await runSchedulerTick(at(13, 0));
+    expect(s.hwPendingEmitted).toBe(0);
+  });
+
+  it("a section with no class teacher AND no delegate is skipped (nobody to nudge)", async () => {
+    mockPendingHomework.mockResolvedValue([pendingSection({ classTeacherId: null })]);
+    const s = await runSchedulerTick(at(13, 0));
+    expect(s.hwPendingEmitted).toBe(0);
+  });
 });
 
 // ---------------------------------------------------------------------------
