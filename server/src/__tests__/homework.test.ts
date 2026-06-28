@@ -32,6 +32,7 @@ const mockItemFindById = jest.fn();
 const mockSeqUpdate = jest.fn();
 const mockRecordInsertMany = jest.fn();
 const mockRecordFindById = jest.fn();
+const mockTopicFind = jest.fn();
 
 jest.mock("../modules/trackers/models/HomeworkItem", () => ({
   HomeworkItem: {
@@ -50,6 +51,12 @@ jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
 jest.mock("../modules/trackers/models/HomeworkSequence", () => ({
   HomeworkSequence: {
     findOneAndUpdate: (...args: unknown[]) => mockSeqUpdate(...args),
+  },
+}));
+
+jest.mock("../modules/trackers/models/HomeworkTopic", () => ({
+  HomeworkTopic: {
+    find: (q: unknown) => ({ select: () => ({ lean: () => mockTopicFind(q) }) }),
   },
 }));
 
@@ -113,6 +120,13 @@ beforeEach(() => {
   mockItemCreate.mockImplementation((arg: Record<string, unknown>) =>
     Promise.resolve({ _id: ITEM_ID, ...arg }),
   );
+  // Topic-catalog stand-in: a code is "in the catalog" iff it is well-formed for the
+  // queried (subject, class). Mirrors a seeded catalog without a DB — so a code for a
+  // different subject/class comes back empty (→ "Unknown topic").
+  mockTopicFind.mockImplementation((q: { subject: string; classLevel: number; code: { $in: string[] } }) => {
+    const prefix = `TOP-${q.subject}-C${q.classLevel}-`;
+    return Promise.resolve((q.code?.$in ?? []).filter((c) => c.startsWith(prefix)).map((c) => ({ code: c })));
+  });
 });
 
 // ===========================================================================
@@ -235,17 +249,17 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
     await expect(declareHomeworkItem(validDeclareInput({ classLevel: 6 }))).rejects.toThrow(/C1–C5/);
   });
 
-  test("rejects empty topTags (≥1 TOP tag required)", async () => {
-    await expect(declareHomeworkItem(validDeclareInput({ topTags: [] }))).rejects.toThrow(/TOP-… tag/);
+  test("rejects empty topTags (≥1 topic required)", async () => {
+    await expect(declareHomeworkItem(validDeclareInput({ topTags: [] }))).rejects.toThrow(/at least one topic/i);
   });
 
-  test("rejects a malformed / mismatched TOP tag", async () => {
+  test("rejects a topic not in the (subject, class) catalog", async () => {
     await expect(
       declareHomeworkItem(validDeclareInput({ topTags: ["TOP-ENG-C1-01"] })), // wrong subject
-    ).rejects.toThrow(/Malformed TOP tag/);
+    ).rejects.toThrow(/Unknown topic/i);
     await expect(
       declareHomeworkItem(validDeclareInput({ topTags: ["TOP-MATH-C2-01"] })), // wrong class
-    ).rejects.toThrow(/Malformed TOP tag/);
+    ).rejects.toThrow(/Unknown topic/i);
   });
 
   test("TIME_DECL: 0 is valid; >40 is allowed (band warns, never blocks — §2.1/T2.5); negative rejected", async () => {

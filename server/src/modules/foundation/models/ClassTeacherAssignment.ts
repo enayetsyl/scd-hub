@@ -10,7 +10,7 @@ import { Schema, model, Document, Types } from "mongoose";
 export interface IClassTeacherAssignment extends Document {
   _id: Types.ObjectId;
   sectionId: Types.ObjectId;
-  role: "class_teacher" | "support";
+  role: "class_teacher" | "support" | "homework_confirmer";
   /** The affected teacher (null when a class teacher is cleared). */
   teacherId?: Types.ObjectId;
   op: "assigned" | "cleared" | "removed";
@@ -23,7 +23,7 @@ export interface IClassTeacherAssignment extends Document {
 const ClassTeacherAssignmentSchema = new Schema<IClassTeacherAssignment>(
   {
     sectionId: { type: Schema.Types.ObjectId, ref: "Section", required: true },
-    role: { type: String, enum: ["class_teacher", "support"], required: true },
+    role: { type: String, enum: ["class_teacher", "support", "homework_confirmer"], required: true },
     teacherId: { type: Schema.Types.ObjectId, ref: "User" },
     op: { type: String, enum: ["assigned", "cleared", "removed"], required: true },
     actorId: { type: Schema.Types.ObjectId, ref: "User", required: true },

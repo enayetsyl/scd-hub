@@ -23,6 +23,7 @@ import {
   listDailyItems,
   listStudentRecords,
   listOpenRecords,
+  listHomeworkTopics,
   type OpenRecordDTO,
 } from "../services/HomeworkService";
 import {
@@ -46,7 +47,7 @@ import {
 import {
   assertCanWrite,
   assertCanRead,
-  assertIsClassTeacher,
+  assertCanConfirmHomework,
   ForbiddenError,
 } from "../../../middleware/authz";
 
@@ -84,6 +85,42 @@ HomeworkItemRef.implement({
     revItem: t.exposeBoolean("revItem"),
     status: t.exposeString("status"),
     questionFileId: t.string({ nullable: true, resolve: (r) => r.questionFileId ?? null }),
+  }),
+});
+
+interface HomeworkTopicChapterShape {
+  num: number;
+  titleBn: string;
+}
+interface HomeworkTopicShape {
+  id: string;
+  code: string;
+  labelBn: string;
+  classLevel: number;
+  subject: string;
+  chapters: HomeworkTopicChapterShape[];
+  order: number;
+}
+
+const HomeworkTopicChapterRef = builder.objectRef<HomeworkTopicChapterShape>("HomeworkTopicChapter");
+HomeworkTopicChapterRef.implement({
+  fields: (t) => ({
+    num: t.exposeInt("num"),
+    titleBn: t.exposeString("titleBn"),
+  }),
+});
+
+const HomeworkTopicRef = builder.objectRef<HomeworkTopicShape>("HomeworkTopic");
+HomeworkTopicRef.implement({
+  description: "A pickable homework topic for one (subject, class) — groups curriculum chapters under one tag.",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    code: t.exposeString("code"),
+    labelBn: t.exposeString("labelBn"),
+    classLevel: t.exposeInt("classLevel"),
+    subject: t.exposeString("subject"),
+    chapters: t.field({ type: [HomeworkTopicChapterRef], resolve: (r) => r.chapters }),
+    order: t.exposeInt("order"),
   }),
 });
 
@@ -319,6 +356,26 @@ builder.queryField("homeworkItems", (t) =>
 );
 
 // ---------------------------------------------------------------------------
+// Query: homeworkTopics (the per-subject+class topic picker for declaration)
+// ---------------------------------------------------------------------------
+
+builder.queryField("homeworkTopics", (t) =>
+  t.field({
+    type: [HomeworkTopicRef],
+    description: "Pickable topics for a (subject, class) — the catalog a teacher chooses topTags from.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      subject: t.arg.string({ required: true }),
+      classLevel: t.arg.int({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return listHomeworkTopics(args.subject, args.classLevel);
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // Query: homeworkStudentRecords (Layer-B for an item — handoff §8.2)
 // ---------------------------------------------------------------------------
 
@@ -367,6 +424,7 @@ OpenRecordRef.implement({
     id: t.exposeString("id"),
     hwId: t.exposeString("hwId"),
     subject: t.exposeString("subject"),
+    topicLabelBn: t.exposeString("topicLabelBn"),
     dateGiven: t.exposeString("dateGiven"),
     studentId: t.exposeString("studentId"),
     studentName: t.exposeString("studentName"),
@@ -413,6 +471,7 @@ interface DayItemShape {
   revItem: boolean;
   status: string;
   bandWarning: boolean;
+  topicLabelBn: string;
 }
 
 const DayItemRef = builder.objectRef<DayItemShape>("HomeworkDayItem");
@@ -426,6 +485,7 @@ DayItemRef.implement({
     revItem: t.exposeBoolean("revItem"),
     status: t.exposeString("status"),
     bandWarning: t.exposeBoolean("bandWarning"),
+    topicLabelBn: t.exposeString("topicLabelBn"),
   }),
 });
 
@@ -568,7 +628,7 @@ builder.mutationField("trimHomeworkItem", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertIsClassTeacher(ctx, args.sectionId); // class-teacher-only (handoff §9 / D-#42)
+      await assertCanConfirmHomework(ctx, args.sectionId); // class teacher, delegate, or Principal
       return applyTrimSvc({
         classId: args.classId,
         date: new Date(args.date),
@@ -597,7 +657,7 @@ builder.mutationField("confirmHomeworkDay", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertIsClassTeacher(ctx, args.sectionId); // class-teacher-only (handoff §9 / D-#42)
+      await assertCanConfirmHomework(ctx, args.sectionId); // class teacher, delegate, or Principal
       return confirmDaySvc({
         classId: args.classId,
         date: new Date(args.date),

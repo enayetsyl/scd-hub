@@ -135,3 +135,22 @@ export async function assertIsClassTeacher(ctx: AppContext, sectionId: string): 
     );
   }
 }
+
+/**
+ * Homework reconcile/confirm gate (broader than `assertIsClassTeacher`): permits the
+ * PRINCIPAL (any section), the section's class teacher, OR a Principal-assigned
+ * homework-confirm delegate (`Section.homeworkConfirmerId`). Used by confirmHomeworkDay
+ * + trimHomeworkItem so the day can be issued when the class teacher is unavailable.
+ */
+export async function assertCanConfirmHomework(ctx: AppContext, sectionId: string): Promise<void> {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  if (ctx.auth.role === "PRINCIPAL") return; // Principal may confirm any section
+  const section = await Section.findById(sectionId).lean();
+  if (!section) throw new ForbiddenError("Section not found");
+  const ctId = section.classTeacherId ? section.classTeacherId.toString() : null;
+  const delegateId = section.homeworkConfirmerId ? section.homeworkConfirmerId.toString() : null;
+  if (ctx.auth.userId === ctId || ctx.auth.userId === delegateId) return;
+  throw new ForbiddenError(
+    "Only the class teacher, the assigned homework delegate, or the Principal may confirm homework",
+  );
+}
