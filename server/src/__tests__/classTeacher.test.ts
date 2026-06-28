@@ -7,9 +7,13 @@
 import mongoose from "mongoose";
 
 const mockSectionFindById = jest.fn();
+const mockUserFindById = jest.fn();
 
 jest.mock("../modules/foundation/models/Section", () => ({
   Section: { findById: (id: unknown) => ({ lean: () => mockSectionFindById(id) }) },
+}));
+jest.mock("../modules/foundation/models/User", () => ({
+  User: { findById: (id: unknown) => ({ select: () => ({ lean: () => mockUserFindById(id) }) }) },
 }));
 
 import { isClassTeacher, assertIsClassTeacher, assertCanConfirmHomework, ForbiddenError } from "../middleware/authz";
@@ -23,7 +27,10 @@ function ctx(userId: string, role = "TEACHER"): AppContext {
   return { auth: { userId, role } } as unknown as AppContext;
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockUserFindById.mockResolvedValue({ homeworkSupervisor: false }); // not a supervisor by default
+});
 
 describe("isClassTeacher (pure predicate)", () => {
   test("true only when the ids match", () => {
@@ -91,8 +98,15 @@ describe("assertCanConfirmHomework (Principal / class teacher / delegate)", () =
     await expect(assertCanConfirmHomework(ctx(DELEGATE_ID.toString()), SECTION_ID)).resolves.toBeUndefined();
   });
 
-  test("denies a teacher who is neither class teacher nor delegate", async () => {
+  test("passes for a school-wide homework supervisor (any section)", async () => {
     mockSectionFindById.mockResolvedValue({ _id: SECTION_ID, classTeacherId: CT_ID, homeworkConfirmerId: DELEGATE_ID });
+    mockUserFindById.mockResolvedValue({ homeworkSupervisor: true });
+    await expect(assertCanConfirmHomework(ctx(OTHER_ID), SECTION_ID)).resolves.toBeUndefined();
+  });
+
+  test("denies a teacher who is neither class teacher, delegate, nor supervisor", async () => {
+    mockSectionFindById.mockResolvedValue({ _id: SECTION_ID, classTeacherId: CT_ID, homeworkConfirmerId: DELEGATE_ID });
+    mockUserFindById.mockResolvedValue({ homeworkSupervisor: false });
     await expect(assertCanConfirmHomework(ctx(OTHER_ID), SECTION_ID)).rejects.toThrow(ForbiddenError);
   });
 

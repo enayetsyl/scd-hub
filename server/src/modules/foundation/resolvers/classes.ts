@@ -8,6 +8,8 @@ import { type IClassTeacherAssignment } from "../models/ClassTeacherAssignment";
 import {
   assignClassTeacher as svcAssignClassTeacher,
   assignHomeworkConfirmer as svcAssignHomeworkConfirmer,
+  setHomeworkSupervisor as svcSetHomeworkSupervisor,
+  homeworkSupervisors as svcHomeworkSupervisors,
   setSupportTeacher,
   classTeacherHistory,
   mySectionsAsClassTeacher,
@@ -308,6 +310,49 @@ builder.mutationField("assignHomeworkConfirmer", (t) =>
     },
     resolve: async (_root, args, ctx) =>
       svcAssignHomeworkConfirmer(args.sectionId, args.userId ?? null, ctx.auth!.userId) as unknown as Promise<SectionShape>,
+  }),
+);
+
+// --- School-wide homework supervisor (reconcile any section) -----------------
+interface SupervisorShape {
+  _id: { toString(): string };
+  name: string;
+}
+const HomeworkSupervisorRef = builder.objectRef<SupervisorShape>("HomeworkSupervisor");
+HomeworkSupervisorRef.implement({
+  fields: (t) => ({
+    id: t.string({ resolve: (u) => u._id.toString() }),
+    name: t.exposeString("name"),
+  }),
+});
+
+builder.queryField("homeworkSupervisors", (t) =>
+  t.field({
+    type: [HomeworkSupervisorRef],
+    description: "Active school-wide homework supervisors (may reconcile any section).",
+    authScopes: { hasPermission: "roster:manage" },
+    resolve: async () => svcHomeworkSupervisors() as unknown as Promise<SupervisorShape[]>,
+  }),
+);
+
+/**
+ * Toggle a teacher's SCHOOL-WIDE homework-supervisor flag. A supervisor may reconcile/
+ * confirm ANY section's daily homework, in addition to the class teacher + per-section
+ * delegate + Principal. Admin action (roster:manage); the target must be a TEACHER.
+ * Takes effect immediately (read live, not JWT-baked). Returns the updated supervisor list.
+ */
+builder.mutationField("setHomeworkSupervisor", (t) =>
+  t.field({
+    type: [HomeworkSupervisorRef],
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      userId: t.arg.string({ required: true }),
+      on: t.arg.boolean({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      await svcSetHomeworkSupervisor(args.userId, args.on, ctx.auth!.userId);
+      return svcHomeworkSupervisors() as unknown as Promise<SupervisorShape[]>;
+    },
   }),
 );
 

@@ -19,6 +19,10 @@ export interface IUser extends Document {
   additionalTemplates: Role[];      // ASSIGNABLE_TEMPLATES only (TEACHER/OFFICE) — enforced at write
   grantedPermissions: Permission[]; // per-user adds (reserved-locked perms rejected at write)
   revokedPermissions: Permission[]; // per-user removes (a revoke always wins)
+  /** School-wide HOMEWORK SUPERVISOR (additive, read live): may reconcile/confirm ANY
+   *  section's daily homework, on top of the class teacher + per-section delegate +
+   *  Principal. Set by a Principal/Office admin; takes effect immediately (not JWT-baked). */
+  homeworkSupervisor?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +41,7 @@ const UserSchema = new Schema<IUser>(
     additionalTemplates: { type: [String], enum: ROLES, default: [] },
     grantedPermissions: { type: [String], enum: [...PERMISSIONS], default: [] },
     revokedPermissions: { type: [String], enum: [...PERMISSIONS], default: [] },
+    homeworkSupervisor: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
