@@ -1361,6 +1361,10 @@ const STR_BN = {
   rtManageHint: "শাখা বা গ্রুপ নির্বাচন করে স্লট যোগ/মুছুন।",
   rtExisting: "বিদ্যমান স্লট",
   rtToday: "আজ",
+  rtTapToEdit: "সম্পাদনা করতে গ্রিডের যেকোনো পিরিয়ডে চাপুন।",
+  rtEditSlot: "পিরিয়ড সম্পাদনা",
+  rtSaved: "সংরক্ষণ হয়েছে।",
+  rtEmptyCell: "খালি — যোগ করতে চাপুন",
 
   // Routine cover / proxy-manage (R-4)
   coverManageTitle: "কভার ব্যবস্থাপনা",
@@ -3252,6 +3256,10 @@ const STR_EN: StrTable = {
   rtManageHint: "Pick a section or group, then add/remove slots.",
   rtExisting: "Existing slots",
   rtToday: "Today",
+  rtTapToEdit: "Tap any period in the grid to edit it.",
+  rtEditSlot: "Edit period",
+  rtSaved: "Saved.",
+  rtEmptyCell: "Empty — tap to add",
 
   // Routine cover / proxy-manage (R-4)
   coverManageTitle: "Cover management",

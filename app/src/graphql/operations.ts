@@ -1883,7 +1883,7 @@ export const MY_ROUTINE_QUERY = gql<{ myRoutineSlots: RoutineSlotT[] }, NoVars>`
 // Master grid (admin overview): all groups × periods for one day + conflicts.
 export interface RoutineMasterColumnT { periodNumber: number; startTime: string | null; endTime: string | null; isBreak: boolean; }
 export interface RoutineMasterRowT { groupType: string; groupId: string; label: string; sublabel: string | null; }
-export interface RoutineMasterSlotT { id: string; groupType: string; groupId: string; periodNumber: number; subject: string; isBreak: boolean; teacherId: string | null; teacherName: string | null; }
+export interface RoutineMasterSlotT { id: string; groupType: string; groupId: string; periodNumber: number; subject: string; track: string; isBreak: boolean; teacherId: string | null; teacherName: string | null; roomId: string | null; }
 export interface RoutineMasterConflictT { periodNumber: number; teacherId: string; teacherName: string | null; labels: string[]; }
 export interface RoutineMasterT {
   day: string;
@@ -1896,7 +1896,7 @@ const ROUTINE_MASTER_FIELDS = `
   day
   columns { periodNumber startTime endTime isBreak }
   rows { groupType groupId label sublabel }
-  slots { id groupType groupId periodNumber subject isBreak teacherId teacherName }
+  slots { id groupType groupId periodNumber subject track isBreak teacherId teacherName roomId }
   conflicts { periodNumber teacherId teacherName labels }
 `;
 export const ROUTINE_MASTER_QUERY = gql<{ routineMaster: RoutineMasterT }, { day: string }>`
@@ -1956,6 +1956,18 @@ export const CREATE_ROUTINE_SLOT = gql<
       subject: $subject, track: $track, isBreak: $isBreak, teacherId: $teacherId,
       roomId: $roomId, effectiveFrom: $effectiveFrom, effectiveTo: $effectiveTo
     ) {
+      warnings
+      slot { ${ROUTINE_SLOT_FIELDS} }
+    }
+  }
+`;
+
+export const UPDATE_ROUTINE_SLOT = gql<
+  { updateRoutineSlot: CreateSlotResultT },
+  { id: string; subject: string; track: string; teacherId?: string | null; roomId?: string | null }
+>`
+  mutation UpdateRoutineSlot($id: String!, $subject: String!, $track: String!, $teacherId: String, $roomId: String) {
+    updateRoutineSlot(id: $id, subject: $subject, track: $track, teacherId: $teacherId, roomId: $roomId) {
       warnings
       slot { ${ROUTINE_SLOT_FIELDS} }
     }

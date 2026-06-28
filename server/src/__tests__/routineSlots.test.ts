@@ -28,6 +28,7 @@ const mockSlotCreate = jest.fn();
 const mockSlotFindById = jest.fn();
 const mockSlotFindOne = jest.fn();
 const mockSlotDeleteOne = jest.fn();
+const mockSlotUpdateOne = jest.fn();
 jest.mock("../modules/routine/models/RoutineSlot", () => ({
   RoutineSlot: {
     find: (q: unknown) => ({ lean: () => mockSlotFind(q) }),
@@ -35,6 +36,7 @@ jest.mock("../modules/routine/models/RoutineSlot", () => ({
     findById: (id: unknown) => ({ lean: () => mockSlotFindById(id) }),
     findOne: (q: unknown) => ({ lean: () => mockSlotFindOne(q) }),
     deleteOne: (q: unknown) => mockSlotDeleteOne(q),
+    updateOne: (f: unknown, u: unknown) => mockSlotUpdateOne(f, u),
   },
 }));
 
@@ -72,7 +74,7 @@ jest.mock("../modules/chat/services/ChatGroupService", () => ({
   onRoutineSlotChangedSync: jest.fn().mockResolvedValue(undefined),
 }));
 
-import { createRoutineSlot, deleteRoutineSlot } from "../modules/routine/services/RoutineSlotService";
+import { createRoutineSlot, updateRoutineSlot, deleteRoutineSlot } from "../modules/routine/services/RoutineSlotService";
 
 // ---------------------------------------------------------------------------
 const ACTOR = new mongoose.Types.ObjectId().toString();
@@ -103,6 +105,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSlotFind.mockResolvedValue([]); // no conflicts by default
   mockSlotCreate.mockImplementation(async (d) => ({ _id: new mongoose.Types.ObjectId(), ...d }));
+  mockSlotUpdateOne.mockResolvedValue({ acknowledged: true, modifiedCount: 1 });
   mockSectionFindById.mockResolvedValue({ _id: SECTION, classId: CLASS });
   mockGroupFindById.mockResolvedValue({ _id: GROUP, track: "quran" });
   mockSubjectFindOne.mockResolvedValue({ _id: SUBJ, code: "BAN" });
@@ -298,5 +301,61 @@ describe("R2.5 deleteRoutineSlot unbinds only when orphaned", () => {
     mockSlotFindOne.mockResolvedValue({ _id: new mongoose.Types.ObjectId() }); // a remaining slot
     await deleteRoutineSlot(slotDoc._id.toString(), ACTOR);
     expect(mockGrantUpdateOne).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// R-3 (master-grid cell edit) — updateRoutineSlot
+// ---------------------------------------------------------------------------
+describe("updateRoutineSlot (edit a slot in place)", () => {
+  const TEACHER_B = new mongoose.Types.ObjectId().toString();
+  const SLOT_ID = new mongoose.Types.ObjectId();
+  const sectionSlot = {
+    _id: SLOT_ID,
+    groupType: "section",
+    groupId: new mongoose.Types.ObjectId(SECTION),
+    dayOfWeek: "TUE",
+    periodNumber: 5,
+    subject: "BAN",
+    track: "general",
+    isBreak: false,
+    teacherId: new mongoose.Types.ObjectId(TEACHER_A),
+    effectiveFrom: D("2026-01-01"),
+    effectiveTo: null,
+  };
+
+  test("rejects when the new teacher is already booked at that (day, period)", async () => {
+    mockSlotFindById.mockResolvedValue(sectionSlot);
+    mockSlotFind.mockResolvedValue([
+      { _id: new mongoose.Types.ObjectId(), dayOfWeek: "TUE", periodNumber: 5, groupType: "section", groupId: "other", teacherId: new mongoose.Types.ObjectId(TEACHER_B), roomId: null, effectiveFrom: D("2026-01-01"), effectiveTo: null },
+    ]);
+    await expect(
+      updateRoutineSlot({ slotId: SLOT_ID.toString(), subject: "BAN", track: "general", teacherId: TEACHER_B, roomId: null, actorId: ACTOR }),
+    ).rejects.toThrow(/already booked/i);
+    expect(mockSlotUpdateOne).not.toHaveBeenCalled();
+  });
+
+  test("persists the change and binds the new teacher's routine grant", async () => {
+    mockSlotFindById.mockResolvedValue(sectionSlot);
+    mockSlotFind.mockResolvedValue([]); // no conflict
+    const res = await updateRoutineSlot({ slotId: SLOT_ID.toString(), subject: "BAN", track: "general", teacherId: TEACHER_B, roomId: null, actorId: ACTOR });
+    // field write: subject/track $set, teacher set to B, room cleared
+    expect(mockSlotUpdateOne).toHaveBeenCalledTimes(1);
+    const [, update] = mockSlotUpdateOne.mock.calls[0];
+    expect(update.$set).toMatchObject({ subject: "BAN", track: "general" });
+    expect(update.$unset).toMatchObject({ roomId: "" });
+    // grant rebind: the new teacher (B) gets a routine teaching grant + an authority warning
+    expect(mockGrantCreate).toHaveBeenCalledTimes(1);
+    expect(String(mockGrantCreate.mock.calls[0][0].teacherId)).toBe(TEACHER_B);
+    expect(res.warnings).toHaveLength(1);
+  });
+
+  test("clearing the teacher $unsets it and binds no new grant", async () => {
+    mockSlotFindById.mockResolvedValue(sectionSlot);
+    mockSlotFind.mockResolvedValue([]);
+    await updateRoutineSlot({ slotId: SLOT_ID.toString(), subject: "BAN", track: "general", teacherId: null, roomId: null, actorId: ACTOR });
+    const [, update] = mockSlotUpdateOne.mock.calls[0];
+    expect(update.$unset).toMatchObject({ teacherId: "" });
+    expect(mockGrantCreate).not.toHaveBeenCalled();
   });
 });
