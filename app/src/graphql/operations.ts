@@ -24,11 +24,12 @@ export interface MeUser {
   role: Role;
   name: string;
   active: boolean;
+  homeworkSupervisor: boolean;
 }
 
 export const ME_QUERY = gql<{ me: MeUser | null }, NoVars>`
   query Me {
-    me { id email phone role name active }
+    me { id email phone role name active homeworkSupervisor }
   }
 `;
 
@@ -1865,6 +1866,25 @@ export const ASSIGN_HOMEWORK_CONFIRMER = gql<
       id
       homeworkConfirmerId
     }
+  }
+`;
+
+// School-wide homework supervisors — may reconcile ANY section's daily homework.
+export interface HwSupervisorT {
+  id: string;
+  name: string;
+}
+export const HOMEWORK_SUPERVISORS_QUERY = gql<{ homeworkSupervisors: HwSupervisorT[] }, NoVars>`
+  query HomeworkSupervisors {
+    homeworkSupervisors { id name }
+  }
+`;
+export const SET_HOMEWORK_SUPERVISOR = gql<
+  { setHomeworkSupervisor: HwSupervisorT[] },
+  { userId: string; on: boolean }
+>`
+  mutation SetHomeworkSupervisor($userId: String!, $on: Boolean!) {
+    setHomeworkSupervisor(userId: $userId, on: $on) { id name }
   }
 `;
 

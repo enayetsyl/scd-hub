@@ -62,10 +62,12 @@ interface MyClass {
 
 export default function HomeworkHomeScreen({ navigation }: Props): React.ReactElement {
   const colors = useColors();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { selection, setSection } = useSectionContext();
   const ayId = selection.academicYearId;
-  const isAdmin = !!role && roleHasPermission(role, "roster:manage"); // Principal/Office see all classes
+  // Principal/Office (roster:manage) AND school-wide homework supervisors see ALL classes —
+  // a supervisor must be able to reach (and reconcile) any class, not just their own.
+  const isAdmin = (!!role && roleHasPermission(role, "roster:manage")) || !!user?.homeworkSupervisor;
 
   const [date, setDate] = useState(today());
   // The class whose buttons are in focus (so a multi-section class can show its section
