@@ -201,6 +201,8 @@ export type CommentsStackParamList = {
 export type ObservationStackParamList = {
   ObservationHome: undefined;
   UploadObservation: undefined;
+  MyObservations: undefined;
+  AllObservations: undefined;
   ObservationReviewQueue: undefined;
   ReviewObservation: { observationId: string; form: string; title: string };
   ObservationDetail: { observationId: string; title?: string };

@@ -14,7 +14,7 @@ import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useMutation } from "urql";
+import { useMutation, useQuery } from "urql";
 import {
   OBSERVATION_DOMAINS,
   OBSERVATION_LEVELS,
@@ -24,7 +24,8 @@ import {
   QURAN_REVIEW_CRITERIA,
   QURAN_COMPLIANCE_ITEMS,
 } from "@scd/shared";
-import { REVIEW_CLASSROOM_OBSERVATION } from "../../graphql/observation";
+import { REVIEW_CLASSROOM_OBSERVATION, OBSERVATION_RECORDING_QUERY } from "../../graphql/observation";
+import { YouTubeEmbed } from "../../components/YouTubeEmbed";
 import { Screen, Card, Body, Muted, Button, Field, Select, Chip, Notice } from "../../components/ui";
 import {
   STR,
@@ -73,6 +74,9 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [, review] = useMutation(REVIEW_CLASSROOM_OBSERVATION);
+
+  const [recQ] = useQuery({ query: OBSERVATION_RECORDING_QUERY, variables: { observationId } });
+  const recording = recQ.data?.observationRecording ?? null;
 
   async function onSubmit(): Promise<void> {
     setError(null);
@@ -142,6 +146,11 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
         {error ? <Notice message={error} tone="danger" /> : null}
         <Card>
           <Body style={{ fontWeight: "700" }}>{title}</Body>
+          {recording ? (
+            <YouTubeEmbed videoId={recording.youtubeVideoId} />
+          ) : (
+            <Muted style={{ marginTop: space(1) }}>{STR.obsNoFootage}</Muted>
+          )}
         </Card>
 
         {isQuran ? (

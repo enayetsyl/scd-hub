@@ -28,6 +28,7 @@ import {
   respondToObservation,
   getObservation,
   observationsForTeacher,
+  allObservations,
   myReviewQueue,
   canReadObservation,
   type ObservationActor,
@@ -133,11 +134,25 @@ ObservationRef.implement({
     prevObservationId: t.string({ nullable: true, resolve: (r) => r.prevObservationId }),
     priorFocusProgress: t.string({ nullable: true, resolve: (r) => r.priorFocusProgress }),
     quran: t.field({ type: QuranPayloadRef, nullable: true, resolve: (r) => r.quran }),
-    // CO-7 privacy: fairnessRating/usefulnessRating/fairnessRatedAt are DELIBERATELY NOT exposed on
-    // this row-scoped observation object. The fairness rating is surfaced ONLY through the
-    // `observation:manage`-gated `reviewerEffectiveness` read (§CO-7: "surfaced to the Principal only;
-    // no observer leaderboard exposed to staff"). Exposing them here would let the rated OBSERVER read
-    // their own fairness rating off their observation, and let any reader browse it per-observation.
+    // CO-7 privacy: the actual scores are visible only to observation:manage (Principal/Office) so the
+    // rated OBSERVER never sees their per-observation fairness score. hasFairnessRating is a safe
+    // boolean flag for all readers — lets the observed teacher confirm their rating was recorded without
+    // revealing the score, and lets the Principal see whether a rating exists.
+    hasFairnessRating: t.boolean({ resolve: (r) => r.fairnessRating !== null }),
+    fairnessRating: t.int({
+      nullable: true,
+      resolve: (r, _args, ctx: AppContext) => {
+        const role = ctx.auth?.role;
+        return role === "PRINCIPAL" || role === "OFFICE" ? r.fairnessRating : null;
+      },
+    }),
+    usefulnessRating: t.int({
+      nullable: true,
+      resolve: (r, _args, ctx: AppContext) => {
+        const role = ctx.auth?.role;
+        return role === "PRINCIPAL" || role === "OFFICE" ? r.usefulnessRating : null;
+      },
+    }),
     recordingId: t.string({ nullable: true, resolve: (r) => r.recordingId }),
     teacherResponse: t.string({ nullable: true, resolve: (r) => r.teacherResponse }),
     supersededById: t.string({ nullable: true, resolve: (r) => r.supersededById }),
@@ -451,5 +466,15 @@ builder.queryField("myObservationReviewQueue", (t) =>
       const actor = actorOf(ctx);
       return myReviewQueue(actor.userId);
     },
+  }),
+);
+
+builder.queryField("allClassroomObservations", (t) =>
+  t.field({
+    type: [ObservationRef],
+    description:
+      "All observations, newest first — Principal/Office oversight view. Requires observation:upload.",
+    authScopes: { hasPermission: "observation:upload" },
+    resolve: async () => allObservations(),
   }),
 );

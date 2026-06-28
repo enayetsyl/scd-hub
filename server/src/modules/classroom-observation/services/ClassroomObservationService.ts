@@ -525,7 +525,7 @@ export interface RequestReReviewInput {
 export async function requestReReview(input: RequestReReviewInput): Promise<ClassroomObservationShape> {
   const prior = (await ClassroomObservation.findById(input.priorObservationId)) as IClassroomObservation | null;
   if (!prior) throw new ClassroomObservationError("Observation not found");
-  if (prior.state !== "REVIEWED") {
+  if (prior.state !== "REVIEWED" && prior.state !== "TEACHER_RESPONDED") {
     throw new ClassroomObservationError("Only a reviewed observation can be re-reviewed");
   }
   const observerId = oid(input.observerId, "observerId");
@@ -617,6 +617,14 @@ export async function getObservation(observationId: string): Promise<ClassroomOb
 /** Every observation about a teacher, newest first (the resolver row-scopes the result). */
 export async function observationsForTeacher(teacherId: string): Promise<ClassroomObservationShape[]> {
   const docs = (await ClassroomObservation.find({ teacherId: oid(teacherId, "teacherId") })
+    .sort({ classDate: -1, createdAt: -1 })
+    .lean()) as unknown as IClassroomObservation[];
+  return docs.map(shape);
+}
+
+/** All observations, newest first — for Principal/Office oversight. */
+export async function allObservations(): Promise<ClassroomObservationShape[]> {
+  const docs = (await ClassroomObservation.find({})
     .sort({ classDate: -1, createdAt: -1 })
     .lean()) as unknown as IClassroomObservation[];
   return docs.map(shape);

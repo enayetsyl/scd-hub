@@ -32,6 +32,12 @@ export default function ObservationHomeScreen(): React.ReactElement {
           <Body style={{ fontWeight: "700" }}>{STR.obsHomeTitle}</Body>
           <View style={{ marginTop: space(2), gap: space(2) }}>
             {canUpload ? <Button title={STR.obsUploadNav} onPress={() => nav.navigate("UploadObservation")} /> : null}
+            {canUpload ? (
+              <Button title={STR.obsAllObservationsNav} variant="secondary" onPress={() => nav.navigate("AllObservations")} />
+            ) : null}
+            {canRead ? (
+              <Button title={STR.obsMyObservationsNav} variant="secondary" onPress={() => nav.navigate("MyObservations")} />
+            ) : null}
             {canReview ? (
               <Button title={STR.obsReviewQueueNav} variant="secondary" onPress={() => nav.navigate("ObservationReviewQueue")} />
             ) : null}
