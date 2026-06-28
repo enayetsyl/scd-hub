@@ -10,6 +10,7 @@ import { RoutineSlot, type IRoutineSlot } from "../models/RoutineSlot";
 import { type IRoutineSubstitution } from "../models/RoutineSubstitution";
 import {
   createRoutineSlot,
+  updateRoutineSlot,
   deleteRoutineSlot,
   routineForDate,
   type CreateSlotResult,
@@ -246,6 +247,34 @@ builder.mutationField("createRoutineSlot", (t) =>
         effectiveFrom: from,
         effectiveTo: to,
         createdBy: ctx.auth!.userId,
+      });
+    },
+  }),
+);
+
+builder.mutationField("updateRoutineSlot", (t) =>
+  t.field({
+    type: CreateSlotResultRef,
+    authScopes: { hasPermission: "routine:manage" },
+    args: {
+      id: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: true }),
+      track: t.arg.string({ required: true }),
+      teacherId: t.arg.string({ required: false }),
+      roomId: t.arg.string({ required: false }),
+    },
+    resolve: async (_r, args, ctx) => {
+      if (!(PERIOD_TRACKS as readonly string[]).includes(args.track))
+        throw new Error("Invalid track");
+      if (!(ROUTINE_SUBJECTS as readonly string[]).includes(args.subject))
+        throw new Error("Invalid subject");
+      return updateRoutineSlot({
+        slotId: args.id,
+        subject: args.subject as (typeof ROUTINE_SUBJECTS)[number],
+        track: args.track as (typeof PERIOD_TRACKS)[number],
+        teacherId: args.teacherId ?? null,
+        roomId: args.roomId ?? null,
+        actorId: ctx.auth!.userId,
       });
     },
   }),

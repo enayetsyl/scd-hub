@@ -146,6 +146,103 @@ export async function createRoutineSlot(input: CreateSlotInput): Promise<CreateS
   return { slot, warnings };
 }
 
+export interface UpdateSlotInput {
+  slotId: string;
+  subject: RoutineSubject;
+  track: PeriodTrack;
+  teacherId?: string | null;
+  roomId?: string | null;
+  actorId: string;
+}
+
+/** Edit an existing slot in place (R-3 master-grid cell edit): change the subject,
+ *  track, teacher or room of one slot WITHOUT moving its (group, day, period) or
+ *  effective window. Runs the same conflict engine as create (excluding the slot
+ *  itself) and re-syncs the routine teaching grant — unbinding the old (teacher,
+ *  subject) if it is now orphaned, binding the new one (+ authority warning). */
+export async function updateRoutineSlot(input: UpdateSlotInput): Promise<CreateSlotResult> {
+  const existing = await RoutineSlot.findById(input.slotId).lean();
+  if (!existing) throw new Error("Routine slot not found");
+
+  // R2.1 — the weekday must admit the new track; a break takes no teacher.
+  const idx = DAYS_OF_WEEK.indexOf(existing.dayOfWeek as DayOfWeek);
+  if (idx < 0) throw new Error("Invalid dayOfWeek");
+  if (!dayTypeAdmitsTrack(weekdayBaseDayType(idx), input.track))
+    throw new Error(`A ${input.track} slot cannot be scheduled on ${existing.dayOfWeek}`);
+  if (existing.isBreak && input.teacherId)
+    throw new Error("A break period takes no teacher");
+
+  // Resolve the section's classId the scope binding needs.
+  let classId: Types.ObjectId | undefined;
+  if (existing.groupType === "section") {
+    const section = await Section.findById(existing.groupId).lean();
+    if (!section) throw new Error("Section not found");
+    classId = section.classId as Types.ObjectId;
+  }
+
+  // R2.2–R2.4 — conflict engine against the other active slots at this (day, period).
+  const candidate: SlotLite = {
+    id: existing._id.toString(),
+    dayOfWeek: existing.dayOfWeek,
+    periodNumber: existing.periodNumber,
+    groupType: existing.groupType,
+    groupId: existing.groupId.toString(),
+    teacherId: input.teacherId ?? null,
+    roomId: input.roomId ?? null,
+    effectiveFrom: existing.effectiveFrom,
+    effectiveTo: existing.effectiveTo ?? null,
+  };
+  const otherDocs = await RoutineSlot.find({
+    dayOfWeek: existing.dayOfWeek,
+    periodNumber: existing.periodNumber,
+    active: true,
+    _id: { $ne: existing._id },
+  }).lean();
+  const conflicts = detectConflicts(candidate, otherDocs.map(toLite));
+  if (conflicts.teacher) throw new Error(`Teacher already booked at ${existing.dayOfWeek} P${existing.periodNumber}`);
+  if (conflicts.group) throw new Error(`Group already booked at ${existing.dayOfWeek} P${existing.periodNumber}`);
+  if (conflicts.room) throw new Error(`Room already booked at ${existing.dayOfWeek} P${existing.periodNumber}`);
+
+  const oldTeacherId = existing.teacherId ? existing.teacherId.toString() : null;
+  const oldSubject = existing.subject;
+  const newTeacherId = input.teacherId ?? null;
+
+  // Persist the field changes ($unset clears a removed teacher/room).
+  const set: Record<string, unknown> = { subject: input.subject, track: input.track };
+  const unset: Record<string, ""> = {};
+  if (newTeacherId) set.teacherId = new Types.ObjectId(newTeacherId);
+  else unset.teacherId = "";
+  if (input.roomId) set.roomId = new Types.ObjectId(input.roomId);
+  else unset.roomId = "";
+  const update: Record<string, unknown> = { $set: set };
+  if (Object.keys(unset).length) update.$unset = unset;
+  await RoutineSlot.updateOne({ _id: existing._id }, update);
+
+  // Re-sync the routine teaching grant: unbind the old (teacher, subject) if it is
+  // now orphaned, then bind the new one. unbind runs AFTER the write so its
+  // "still justified?" check sees the new state.
+  const warnings: string[] = [];
+  const oldPlan = routineGrantPlan(
+    { groupType: existing.groupType, isBreak: existing.isBreak, teacherId: oldTeacherId ?? undefined, subject: oldSubject },
+    SUBJECTS,
+  );
+  if (oldPlan.bind && oldTeacherId && (oldTeacherId !== newTeacherId || oldSubject !== input.subject)) {
+    await unbindIfOrphaned(oldTeacherId, existing.groupId.toString(), oldSubject, input.actorId);
+  }
+  const newPlan = routineGrantPlan(
+    { groupType: existing.groupType, isBreak: existing.isBreak, teacherId: newTeacherId ?? undefined, subject: input.subject },
+    SUBJECTS,
+  );
+  if (newPlan.bind && newTeacherId && classId) {
+    const warn = await bindRoutineGrant(newTeacherId, classId.toString(), existing.groupId.toString(), input.subject, input.actorId);
+    if (warn) warnings.push(warn);
+  }
+
+  const slot = await RoutineSlot.findById(existing._id).lean();
+  await onRoutineSlotChangedSync(slot as unknown as IRoutineSlot);
+  return { slot: slot as unknown as IRoutineSlot, warnings };
+}
+
 /** Idempotent upsert of a routine teaching grant; returns an R2.6 warning if the
  *  teacher had no prior teaching authority for this section+subject. */
 async function bindRoutineGrant(
