@@ -8,7 +8,7 @@
  * Every action is re-gated server-side; the Bangla deny surfaces inline.
  */
 import React, { useState } from "react";
-import { Linking, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation, type CombinedError } from "urql";
 import { roleHasPermission } from "@scd/shared";
@@ -20,6 +20,7 @@ import {
   RE_REQUEST_CLASSROOM_OBSERVATION,
   RECORD_SESSION_FOOTAGE,
 } from "../../graphql/observation";
+import { TEACHERS_QUERY } from "../../graphql/operations";
 // CO-2 footage rider: in-app YouTube-unlisted upload (web GIS). Native → paste-id fallback below.
 import {
   isYouTubeUploadSupported,
@@ -28,6 +29,7 @@ import {
   uploadVideoFile,
   YouTubeUploadError,
 } from "../../lib/youtubeUpload";
+import { YouTubeEmbed } from "../../components/YouTubeEmbed";
 import { Screen, Card, Body, Muted, Button, Field, Select, Badge, Row, Loader, Notice, Divider } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
 import {
@@ -51,7 +53,6 @@ import type { ObservationStackParamList } from "../../navigation/types";
 type Props = NativeStackScreenProps<ObservationStackParamList, "ObservationDetail">;
 
 const RATE_OPTS = [1, 2, 3, 4, 5].map((n) => ({ label: String(n), value: String(n) }));
-const YT_WATCH = "https://www.youtube.com/watch?v=";
 
 export default function ObservationDetailScreen({ route }: Props): React.ReactElement {
   const { observationId } = route.params;
@@ -62,6 +63,12 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
   const obs = obsQ.data?.classroomObservation ?? null;
   const [recQ, refetchRec] = useQuery({ query: OBSERVATION_RECORDING_QUERY, variables: { observationId } });
   const recording = recQ.data?.observationRecording ?? null;
+  const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
+  const nameById = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const t of teachersQ.data?.teachers ?? []) map[t.id] = t.name;
+    return map;
+  }, [teachersQ.data]);
 
   const [, respond] = useMutation(RESPOND_TO_CLASSROOM_OBSERVATION);
   const [, rate] = useMutation(RATE_OBSERVATION_REVIEW);
@@ -71,18 +78,22 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
   const [responseText, setResponseText] = useState("");
   const [fairness, setFairness] = useState<string | null>(null);
   const [usefulness, setUsefulness] = useState<string | null>(null);
-  const [reObserverId, setReObserverId] = useState("");
+  const [reObserverId, setReObserverId] = useState<string | null>(null);
   const [youtubeId, setYoutubeId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [ratingDone, setRatingDone] = useState(false);
   // CO-2 footage rider — in-app YouTube upload (web GIS only; native falls back to paste-id).
   const uploadSupported = isYouTubeUploadSupported();
   const [ytAuthed, setYtAuthed] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   const isObservedTeacher = !!user && obs?.teacherId === user.id;
-  const released = obs?.state === "REVIEWED" || obs?.state === "TEACHER_RESPONDED";
+  // released = visible to teacher + Principal (includes SUPERSEDED so historical response shows)
+  const released = obs?.state === "REVIEWED" || obs?.state === "TEACHER_RESPONDED" || obs?.state === "SUPERSEDED";
+  // teacher may only submit a new response while still in REVIEWED (not yet responded, not superseded)
+  const canRespond = obs?.state === "REVIEWED";
 
   async function run(fn: () => Promise<{ error?: CombinedError; data?: unknown }>, okMsg: string): Promise<unknown> {
     setError(null);
@@ -155,8 +166,10 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
             </Body>
             <Badge text={obsStateLabel(obs.state)} tone={obs.state === "SUPERSEDED" ? "muted" : "brand"} />
           </View>
-          <Row label={STR.obsTeacher} value={obs.teacherId} />
-          {obs.observerId ? <Row label={STR.obsObserver} value={obs.observerId} /> : null}
+          <Row label={STR.obsTeacher} value={nameById[obs.teacherId] ?? obs.teacherId} />
+          {canUpload && obs.observerId ? (
+            <Row label={STR.obsObserver} value={nameById[obs.observerId] ?? obs.observerId} />
+          ) : null}
           <Row label={STR.obsClassDate} value={new Date(obs.classDate).toLocaleDateString()} />
         </Card>
 
@@ -215,7 +228,7 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsFootage}</Body>
           {recording ? (
-            <Button title={STR.obsOpenVideo} variant="secondary" onPress={() => void Linking.openURL(YT_WATCH + recording.youtubeVideoId)} />
+            <YouTubeEmbed videoId={recording.youtubeVideoId} />
           ) : (
             <Muted>{STR.obsNoFootage}</Muted>
           )}
@@ -249,12 +262,33 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
           ) : null}
         </Card>
 
-        {/* Observed-teacher: respond + rate review (state REVIEWED) */}
+        {/* Principal/Office: teacher response + rating — always visible once observation is released */}
+        {canUpload && released ? (
+          <Card>
+            <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsTeacherResponseLabel}</Body>
+            {obs.teacherResponse ? (
+              <Body>{obs.teacherResponse}</Body>
+            ) : (
+              <Muted>{STR.obsAwaitingResponse}</Muted>
+            )}
+            {obs.fairnessRating != null ? (
+              <>
+                <Divider />
+                <Row label={STR.obsFairness} value={`${obs.fairnessRating}/5`} />
+                {obs.usefulnessRating != null ? (
+                  <Row label={STR.obsUsefulness} value={`${obs.usefulnessRating}/5`} />
+                ) : null}
+              </>
+            ) : null}
+          </Card>
+        ) : null}
+
+        {/* Observed-teacher: write response + rate review */}
         {isObservedTeacher && released ? (
           <Card>
             {obs.teacherResponse ? (
               <Row label={STR.obsYourResponse} value={obs.teacherResponse} />
-            ) : (
+            ) : canRespond ? (
               <>
                 <Field label={STR.obsResponseText} value={responseText} onChangeText={setResponseText} multiline />
                 <Button
@@ -266,43 +300,61 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
                   disabled={busy}
                 />
               </>
-            )}
+            ) : null}
             <Divider />
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsRateReview}</Body>
-            <Select label={STR.obsFairness} value={fairness} options={RATE_OPTS} onChange={setFairness} placeholder="1–5" />
-            <Select label={STR.obsUsefulness} value={usefulness} options={RATE_OPTS} onChange={setUsefulness} placeholder="1–5" />
-            <Button
-              title={STR.obsSubmitRating}
-              variant="secondary"
-              onPress={() => {
-                if (!fairness) return setError(STR.errGeneric);
-                void run(
-                  () =>
-                    rate({
-                      observationId,
-                      fairnessRating: Number(fairness),
-                      usefulnessRating: usefulness ? Number(usefulness) : null,
-                    }),
-                  STR.obsRated,
-                );
-              }}
-              disabled={busy}
-            />
+            {ratingDone || obs.hasFairnessRating ? (
+              <Muted>
+                {ratingDone
+                  ? `${STR.obsRated} — ${STR.obsFairness}: ${fairness}/5${usefulness ? `, ${STR.obsUsefulness}: ${usefulness}/5` : ""}`
+                  : STR.obsRatingAlreadySubmitted}
+              </Muted>
+            ) : (
+              <>
+                <Select label={STR.obsFairness} value={fairness} options={RATE_OPTS} onChange={setFairness} placeholder="1–5" />
+                <Select label={STR.obsUsefulness} value={usefulness} options={RATE_OPTS} onChange={setUsefulness} placeholder="1–5" />
+                <Button
+                  title={STR.obsSubmitRating}
+                  variant="secondary"
+                  onPress={() => {
+                    if (!fairness) return setError(STR.errGeneric);
+                    void run(
+                      () =>
+                        rate({
+                          observationId,
+                          fairnessRating: Number(fairness),
+                          usefulnessRating: usefulness ? Number(usefulness) : null,
+                        }).then((res) => { if (!res.error) setRatingDone(true); return res; }),
+                      STR.obsRated,
+                    );
+                  }}
+                  disabled={busy}
+                />
+              </>
+            )}
           </Card>
         ) : null}
 
-        {/* Principal/Office: re-request a re-review */}
+        {/* Principal/Office: re-request a re-review — observer dropdown excludes observed teacher */}
         {canUpload && released ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsReReview}</Body>
-            <Field label={STR.obsReReviewObserverId} value={reObserverId} onChangeText={setReObserverId} helper={STR.obsObserverIdHint} />
+            <Select
+              label={STR.obsReReviewObserverId}
+              value={reObserverId}
+              options={(teachersQ.data?.teachers ?? [])
+                .filter((t) => t.id !== obs.teacherId)
+                .map((t) => ({ label: t.name, value: t.id }))}
+              onChange={setReObserverId}
+              placeholder={STR.obsPickObserver}
+            />
             <Button
               title={STR.obsReReview}
               variant="ghost"
               onPress={() => {
-                if (!reObserverId.trim()) return setError(STR.errGeneric);
+                if (!reObserverId) return setError(STR.errGeneric);
                 void run(
-                  () => reRequest({ priorObservationId: observationId, observerId: reObserverId.trim() }),
+                  () => reRequest({ priorObservationId: observationId, observerId: reObserverId }),
                   STR.obsReReviewed,
                 );
               }}

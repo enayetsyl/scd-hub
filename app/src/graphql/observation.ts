@@ -65,6 +65,9 @@ export interface ClassroomObservationT {
   priorFocusProgress: string | null;
   quran: ObsQuranPayloadT | null;
   recordingId: string | null;
+  hasFairnessRating: boolean;
+  fairnessRating: number | null;
+  usefulnessRating: number | null;
   teacherResponse: string | null;
   supersededById: string | null;
   createdAt: string;
@@ -72,7 +75,7 @@ export interface ClassroomObservationT {
 }
 
 const QURAN_PAYLOAD_FIELDS = `quran { ratings { criterion score note } compliance { item yesNo } strengths improvements suggestions }`;
-const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress ${QURAN_PAYLOAD_FIELDS} recordingId teacherResponse supersededById createdAt updatedAt`;
+const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
 
 export const CLASSROOM_OBSERVATION_QUERY = gql<
   { classroomObservation: ClassroomObservationT | null },
@@ -97,6 +100,13 @@ export const MY_OBSERVATION_REVIEW_QUEUE_QUERY = gql<
   NoVars
 >`
   query MyObservationReviewQueue { myObservationReviewQueue { ${OBSERVATION_FIELDS} } }
+`;
+
+export const ALL_CLASSROOM_OBSERVATIONS_QUERY = gql<
+  { allClassroomObservations: ClassroomObservationT[] },
+  NoVars
+>`
+  query AllClassroomObservations { allClassroomObservations { ${OBSERVATION_FIELDS} } }
 `;
 
 export const UPLOAD_CLASSROOM_OBSERVATION = gql<

@@ -133,6 +133,8 @@ import MeetingsListScreen from "../screens/comments/MeetingsListScreen";
 import MeetingAdminScreen from "../screens/comments/MeetingAdminScreen";
 import MeetingComparisonScreen from "../screens/comments/MeetingComparisonScreen";
 import ObservationHomeScreen from "../screens/observation/ObservationHomeScreen";
+import MyObservationsScreen from "../screens/observation/MyObservationsScreen";
+import AllObservationsScreen from "../screens/observation/AllObservationsScreen";
 import UploadObservationScreen from "../screens/observation/UploadObservationScreen";
 import ObservationReviewQueueScreen from "../screens/observation/ObservationReviewQueueScreen";
 import ReviewObservationScreen from "../screens/observation/ReviewObservationScreen";
@@ -683,6 +685,8 @@ function ObservationNavigator(): React.ReactElement {
   return (
     <ObservationStack.Navigator screenOptions={stackOptions}>
       <ObservationStack.Screen name="ObservationHome" component={ObservationHomeScreen} options={{ title: STR.obsHomeTitle }} />
+      <ObservationStack.Screen name="MyObservations" component={MyObservationsScreen} options={{ title: STR.obsMyObservationsTitle }} />
+      <ObservationStack.Screen name="AllObservations" component={AllObservationsScreen} options={{ title: STR.obsAllObservationsTitle }} />
       <ObservationStack.Screen name="UploadObservation" component={UploadObservationScreen} options={{ title: STR.obsUploadTitle }} />
       <ObservationStack.Screen name="ObservationReviewQueue" component={ObservationReviewQueueScreen} options={{ title: STR.obsQueueTitle }} />
       <ObservationStack.Screen
