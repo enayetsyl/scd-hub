@@ -12,6 +12,8 @@ import {
   CLASSES_QUERY,
   ASSIGN_CLASS_TEACHER,
   ASSIGN_HOMEWORK_CONFIRMER,
+  HOMEWORK_SUPERVISORS_QUERY,
+  SET_HOMEWORK_SUPERVISOR,
   SET_SUPPORT_TEACHER,
   CLASS_TEACHER_HISTORY_QUERY,
   TEACHERS_QUERY,
@@ -32,12 +34,16 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
   const [teacherId, setTeacherId] = useState("");
   const [supportId, setSupportId] = useState("");
   const [confirmerId, setConfirmerId] = useState("");
+  const [supervisorId, setSupervisorId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [, assign] = useMutation(ASSIGN_CLASS_TEACHER);
   const [, assignConfirmer] = useMutation(ASSIGN_HOMEWORK_CONFIRMER);
+  const [, setSupervisor] = useMutation(SET_HOMEWORK_SUPERVISOR);
   const [, setSupport] = useMutation(SET_SUPPORT_TEACHER);
+  const [supervisorsQ, refetchSupervisors] = useQuery({ query: HOMEWORK_SUPERVISORS_QUERY });
+  const supervisors = supervisorsQ.data?.homeworkSupervisors ?? [];
 
   const [classesQ, refetchClasses] = useQuery({
     query: CLASSES_QUERY,
@@ -100,6 +106,22 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
     refresh();
   }
 
+  async function runSetSupervisor(userId: string, on: boolean): Promise<void> {
+    if (userId.trim() === "") return;
+    setBusy(true);
+    setError(null);
+    setOk(null);
+    const res = await setSupervisor({ userId: userId.trim(), on });
+    setBusy(false);
+    if (res.error || !res.data?.setHomeworkSupervisor) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    setOk(on ? STR.ctSupervisorAdded : STR.ctSupervisorRemoved);
+    setSupervisorId("");
+    refetchSupervisors({ requestPolicy: "network-only" });
+  }
+
   async function runSupport(userId: string, add: boolean): Promise<void> {
     if (!selection.sectionId || userId.trim() === "") return;
     setBusy(true);
@@ -124,6 +146,21 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: space(4) }}>
         {ok ? <Notice message={ok} tone="ok" /> : null}
         {error ? <Notice message={error} tone="danger" /> : null}
+
+        {/* School-wide homework supervisors — may reconcile ANY section (not section-scoped). */}
+        <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.ctSupervisor}</Body>
+        <Muted style={{ marginBottom: space(2) }}>{STR.ctSupervisorHint}</Muted>
+        {supervisors.length === 0 ? <Muted>{STR.ctNone}</Muted> : null}
+        {supervisors.map((sv) => (
+          <Card key={sv.id}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Muted style={{ flex: 1 }}>{sv.name}</Muted>
+              <Button title={STR.remove} variant="danger" onPress={() => runSetSupervisor(sv.id, false)} disabled={busy} />
+            </View>
+          </Card>
+        ))}
+        <TeacherSelect label={STR.ctSupervisor} value={supervisorId} onChange={setSupervisorId} />
+        <Button title={STR.ctSupervisorAdd} variant="secondary" onPress={() => runSetSupervisor(supervisorId, true)} disabled={busy || supervisorId.trim() === ""} style={{ marginTop: space(2), marginBottom: space(3) }} />
 
         {/* Overview of all sections (CT1.3/CT1.4) — tap a row to manage that section. */}
         <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.ctOverview}</Body>

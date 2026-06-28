@@ -5,7 +5,9 @@ import { hashPassword } from "../services/AuthService";
 import type { Role } from "@scd/shared";
 import { ROLES } from "@scd/shared";
 
-type UserShape = Pick<IUser, "email" | "phone" | "role" | "name" | "active"> & { _id: { toString(): string } };
+type UserShape = Pick<IUser, "email" | "phone" | "role" | "name" | "active" | "homeworkSupervisor"> & {
+  _id: { toString(): string };
+};
 
 const UserRef = builder.objectRef<UserShape>("User");
 UserRef.implement({
@@ -17,6 +19,9 @@ UserRef.implement({
     role: t.exposeString("role"),
     name: t.exposeString("name"),
     active: t.exposeBoolean("active"),
+    // School-wide homework supervisor — lets the app surface ALL classes on the homework
+    // screens (so a supervisor can reconcile any class, not just their own).
+    homeworkSupervisor: t.boolean({ resolve: (u) => !!u.homeworkSupervisor }),
   }),
 });
 
@@ -41,6 +46,7 @@ builder.queryField("me", (t) =>
           role: "GUARDIAN" as IUser["role"],
           name: g.name,
           active: g.active,
+          homeworkSupervisor: false,
         };
       }
       return User.findById(ctx.auth.userId).lean();

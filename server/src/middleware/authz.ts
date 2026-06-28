@@ -21,6 +21,7 @@ import {
 } from "../modules/foundation/services/ScopeGrantService";
 import { ScopeGrant } from "../modules/foundation/models/ScopeGrant";
 import { Section } from "../modules/foundation/models/Section";
+import { User } from "../modules/foundation/models/User";
 import { Guardian } from "../modules/foundation/models/Guardian";
 import { GuardianLink } from "../modules/foundation/models/GuardianLink";
 
@@ -150,7 +151,10 @@ export async function assertCanConfirmHomework(ctx: AppContext, sectionId: strin
   const ctId = section.classTeacherId ? section.classTeacherId.toString() : null;
   const delegateId = section.homeworkConfirmerId ? section.homeworkConfirmerId.toString() : null;
   if (ctx.auth.userId === ctId || ctx.auth.userId === delegateId) return;
+  // School-wide homework supervisor (read live — immediate, not JWT-baked) may confirm any section.
+  const me = await User.findById(ctx.auth.userId).select("homeworkSupervisor").lean();
+  if (me?.homeworkSupervisor) return;
   throw new ForbiddenError(
-    "Only the class teacher, the assigned homework delegate, or the Principal may confirm homework",
+    "Only the class teacher, the assigned homework delegate, a homework supervisor, or the Principal may confirm homework",
   );
 }

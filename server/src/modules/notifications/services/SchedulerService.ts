@@ -350,10 +350,11 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
   });
 
   // --- Homework pending-confirm ladder — a section's homework is declared but not yet
-  // confirmed/issued. Reminders nudge the confirmer (delegate ?? class teacher) at
-  // 13:00/13:30/14:00; escalations alert Office at 14:00 and the Principal at 16:00,
-  // ONE row per still-pending section. Recomputed per rung (a section confirmed between
-  // rungs drops off), idempotent via per-(rung, section, recipient) dedupe keys.
+  // confirmed/issued. Reminders nudge everyone who can confirm it — the class teacher,
+  // the per-section delegate, AND every school-wide homework supervisor — at 13:00/13:30/
+  // 14:00; escalations alert Office at 14:00 and the Principal at 16:00, ONE row per
+  // still-pending section. Recomputed per rung (a section confirmed between rungs drops
+  // off), idempotent via per-(rung, section, recipient) dedupe keys.
   await family("homework pending confirm", async () => {
     const reminderMin = latestOpenMinute(nowMin, HW_CONFIRM_REMINDER_MINUTES);
     const escRung = HW_CONFIRM_ESCALATION_RUNGS.find((r) => windowOpen(nowMin, r.min));
@@ -363,18 +364,26 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     if (pending.length === 0) return;
 
     if (reminderMin !== undefined) {
+      // School-wide homework supervisors get reminded about every still-pending section too.
+      const supervisorIds = ((await User.find({ homeworkSupervisor: true, active: true })
+        .select("_id")
+        .lean()) as unknown as Array<{ _id: IdLike }>).map((u) => u._id.toString());
       for (const sec of pending) {
-        const confirmerId = sec.homeworkConfirmerId ?? sec.classTeacherId;
-        if (!confirmerId) continue; // no class teacher / delegate assigned — nobody to nudge
-        const res = await emit({
-          recipientUserId: confirmerId,
-          kind: "HW_PENDING_REMINDER",
-          titleBn: "বাড়ির কাজ নিশ্চিত করা বাকি",
-          bodyBn: `${sec.nameBn} — আজকের বাড়ির কাজ এখনো নিশ্চিত/ইস্যু করা হয়নি। অনুগ্রহ করে রিকনসাইল করে নিশ্চিত করুন।`,
-          refs: { date: dateKey, sectionId: sec.sectionId },
-          dedupeKey: schedulerDedupeKeys.homeworkPendingReminder(dateKey, reminderMin, sec.sectionId, confirmerId),
-        });
-        if (res.created) summary.hwPendingEmitted += 1;
+        // The class teacher AND the per-section delegate AND every supervisor — deduped.
+        const recipients = [
+          ...new Set([sec.classTeacherId, sec.homeworkConfirmerId, ...supervisorIds].filter(Boolean) as string[]),
+        ];
+        for (const recipientId of recipients) {
+          const res = await emit({
+            recipientUserId: recipientId,
+            kind: "HW_PENDING_REMINDER",
+            titleBn: "বাড়ির কাজ নিশ্চিত করা বাকি",
+            bodyBn: `${sec.nameBn} — আজকের বাড়ির কাজ এখনো নিশ্চিত/ইস্যু করা হয়নি। অনুগ্রহ করে রিকনসাইল করে নিশ্চিত করুন।`,
+            refs: { date: dateKey, sectionId: sec.sectionId },
+            dedupeKey: schedulerDedupeKeys.homeworkPendingReminder(dateKey, reminderMin, sec.sectionId, recipientId),
+          });
+          if (res.created) summary.hwPendingEmitted += 1;
+        }
       }
     }
 

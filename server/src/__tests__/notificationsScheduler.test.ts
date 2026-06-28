@@ -123,6 +123,20 @@ describe("homework pending-confirm ladder", () => {
     ...over,
   });
 
+  // User.find is hit for THREE distinct queries in this family — branch by query so a
+  // test can set supervisors and escalation recipients independently.
+  let supervisors: Array<{ _id: { toString(): string } }> = [];
+  let escalationRecipients: Array<{ _id: { toString(): string } }> = [];
+  beforeEach(() => {
+    supervisors = [];
+    escalationRecipients = [];
+    mockUserFind.mockImplementation((f: { homeworkSupervisor?: boolean; role?: string } | undefined) => {
+      if (f && f.homeworkSupervisor) return Promise.resolve(supervisors);
+      if (f && f.role) return Promise.resolve(escalationRecipients);
+      return Promise.resolve([]); // _id → name lookups
+    });
+  });
+
   it("13:00 — reminds the class teacher of each still-pending section", async () => {
     mockPendingHomework.mockResolvedValue([pendingSection()]);
     const s = await runSchedulerTick(at(13, 0));
@@ -132,20 +146,31 @@ describe("homework pending-confirm ladder", () => {
     );
   });
 
-  it("prefers the delegate (homeworkConfirmerId) over the class teacher", async () => {
+  it("reminds BOTH the class teacher AND the delegate (delegate is additive)", async () => {
     mockPendingHomework.mockResolvedValue([pendingSection({ homeworkConfirmerId: "deleg1" })]);
-    await runSchedulerTick(at(13, 30));
+    const s = await runSchedulerTick(at(13, 30));
+    expect(s.hwPendingEmitted).toBe(2);
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: "ct1", kind: "HW_PENDING_REMINDER" }),
+    );
     expect(mockEmit).toHaveBeenCalledWith(
       expect.objectContaining({ recipientUserId: "deleg1", kind: "HW_PENDING_REMINDER" }),
     );
-    expect(mockEmit).not.toHaveBeenCalledWith(
-      expect.objectContaining({ recipientUserId: "ct1" }),
+  });
+
+  it("also reminds every school-wide homework supervisor", async () => {
+    mockPendingHomework.mockResolvedValue([pendingSection()]);
+    supervisors = [{ _id: oid("sv1") }];
+    const s = await runSchedulerTick(at(13, 0));
+    expect(s.hwPendingEmitted).toBe(2); // class teacher + supervisor
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: "sv1", kind: "HW_PENDING_REMINDER" }),
     );
   });
 
   it("14:00 — confirmer gets a reminder AND Office gets the escalation (per section)", async () => {
     mockPendingHomework.mockResolvedValue([pendingSection()]);
-    mockUserFind.mockResolvedValue([{ _id: oid("office1") }]); // OFFICE recipients + name lookup
+    escalationRecipients = [{ _id: oid("office1") }]; // supervisors stays empty
     const s = await runSchedulerTick(at(14, 0));
     expect(s.hwPendingEmitted).toBe(2);
     expect(mockEmit).toHaveBeenCalledWith(
@@ -158,7 +183,7 @@ describe("homework pending-confirm ladder", () => {
 
   it("16:00 — only the Principal is escalated (no more confirmer reminder)", async () => {
     mockPendingHomework.mockResolvedValue([pendingSection()]);
-    mockUserFind.mockResolvedValue([{ _id: oid("prin1") }]);
+    escalationRecipients = [{ _id: oid("prin1") }];
     const s = await runSchedulerTick(at(16, 0));
     expect(s.hwPendingEmitted).toBe(1);
     expect(mockEmit).toHaveBeenCalledWith(
@@ -175,7 +200,7 @@ describe("homework pending-confirm ladder", () => {
     expect(s.hwPendingEmitted).toBe(0);
   });
 
-  it("a section with no class teacher AND no delegate is skipped (nobody to nudge)", async () => {
+  it("a section with no class teacher AND no delegate (and no supervisor) is skipped", async () => {
     mockPendingHomework.mockResolvedValue([pendingSection({ classTeacherId: null })]);
     const s = await runSchedulerTick(at(13, 0));
     expect(s.hwPendingEmitted).toBe(0);

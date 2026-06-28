@@ -576,10 +576,28 @@ ConfirmResultRef.implement({
 });
 
 // Query: homeworkDayTally (live DAY_TOTAL + trim candidates) ------------------
+// Read access for the reconcile screen: anyone authorized to CONFIRM the day (class
+// teacher, per-section delegate, school-wide supervisor, Principal) may also view it —
+// they don't necessarily hold ordinary teaching read-scope for that section. Falls back
+// to normal read-scope for everyone else (subject teachers viewing their own class).
+async function assertCanViewHomeworkDay(
+  ctx: Parameters<typeof assertCanConfirmHomework>[0],
+  sectionId: string,
+  classId: string,
+): Promise<void> {
+  try {
+    await assertCanConfirmHomework(ctx, sectionId);
+    return;
+  } catch {
+    /* not a confirmer — fall back to ordinary read scope below */
+  }
+  await assertCanRead(ctx, sectionId, classId);
+}
+
 builder.queryField("homeworkDayTally", (t) =>
   t.field({
     type: DayTallyRef,
-    description: "Live daily budget for a class+day (DAY_TOTAL vs 240). Read-scope enforced.",
+    description: "Live daily budget for a class+day (DAY_TOTAL vs 240). Read- or confirm-scope enforced.",
     authScopes: { hasPermission: "tracker:read" },
     args: {
       sectionId: t.arg.string({ required: true }),
@@ -588,7 +606,7 @@ builder.queryField("homeworkDayTally", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanViewHomeworkDay(ctx, args.sectionId, args.classId);
       return tallyDaySvc(args.classId, new Date(args.date));
     },
   }),
@@ -597,7 +615,7 @@ builder.queryField("homeworkDayTally", (t) =>
 builder.queryField("homeworkTrimCandidates", (t) =>
   t.field({
     type: TrimCandidatesRef,
-    description: "Trim candidates for an over-ceiling day, pre-ranked ক→খ→গ. Read-scope enforced.",
+    description: "Trim candidates for an over-ceiling day, pre-ranked ক→খ→গ. Read- or confirm-scope enforced.",
     authScopes: { hasPermission: "tracker:read" },
     args: {
       sectionId: t.arg.string({ required: true }),
@@ -606,7 +624,7 @@ builder.queryField("homeworkTrimCandidates", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanViewHomeworkDay(ctx, args.sectionId, args.classId);
       return trimCandidatesSvc(args.classId, new Date(args.date));
     },
   }),
@@ -960,7 +978,7 @@ builder.queryField("homeworkSummary", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanViewHomeworkDay(ctx, args.sectionId, args.classId);
       return homeworkSummarySvc(args.classId);
     },
   }),
@@ -1002,7 +1020,7 @@ builder.queryField("homeworkClassOverview", (t) =>
       const authorized: string[] = [];
       for (const ref of args.refs) {
         try {
-          await assertCanRead(ctx, ref.sectionId, ref.classId);
+          await assertCanViewHomeworkDay(ctx, ref.sectionId, ref.classId);
           authorized.push(ref.classId);
         } catch {
           // A stale/over-broad ref must not break the whole dashboard — skip it.

@@ -9,6 +9,7 @@ import { Section, type ISection } from "../models/Section";
 import { User } from "../models/User";
 import { ClassTeacherAssignment, type IClassTeacherAssignment } from "../models/ClassTeacherAssignment";
 import { onSectionTeachersChangedSync } from "../../chat/services/ChatGroupService";
+import { writeAudit } from "../../platform/services/AuditService";
 
 async function assertTeacher(userId: string): Promise<void> {
   const user = await User.findById(userId).lean();
@@ -99,6 +100,28 @@ export async function setSupportTeacher(
   // M-2 (D-#78): support teachers are SECTION chat-group members too.
   await onSectionTeachersChangedSync(sectionId);
   return Section.findById(sectionId).lean() as unknown as ISection;
+}
+
+/** Toggle a teacher's SCHOOL-WIDE homework-supervisor flag. A supervisor may
+ *  reconcile/confirm ANY section's daily homework (assertCanConfirmHomework), on top of
+ *  the per-section class teacher + delegate + Principal. Read live (immediate). Audited. */
+export async function setHomeworkSupervisor(userId: string, on: boolean, actorId: string): Promise<void> {
+  await assertTeacher(userId);
+  await User.updateOne({ _id: new Types.ObjectId(userId) }, { $set: { homeworkSupervisor: on } });
+  await writeAudit({
+    eventKind: "HOMEWORK_SUPERVISOR_SET",
+    actorId,
+    targetId: new Types.ObjectId(userId),
+    targetKind: "User",
+    meta: { on },
+  });
+}
+
+/** Active school-wide homework supervisors (for the admin list + the reminder ladder). */
+export async function homeworkSupervisors(): Promise<Array<{ _id: Types.ObjectId; name: string }>> {
+  return User.find({ homeworkSupervisor: true, active: true })
+    .select("name")
+    .lean() as unknown as Promise<Array<{ _id: Types.ObjectId; name: string }>>;
 }
 
 /** The append-only assignment history for a section, newest first (CT1.6). */
