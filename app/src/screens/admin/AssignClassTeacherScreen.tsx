@@ -11,6 +11,7 @@ import { useQuery, useMutation } from "urql";
 import {
   CLASSES_QUERY,
   ASSIGN_CLASS_TEACHER,
+  ASSIGN_HOMEWORK_CONFIRMER,
   SET_SUPPORT_TEACHER,
   CLASS_TEACHER_HISTORY_QUERY,
   TEACHERS_QUERY,
@@ -30,10 +31,12 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
   const { selection, hasSection, setSection } = useSectionContext();
   const [teacherId, setTeacherId] = useState("");
   const [supportId, setSupportId] = useState("");
+  const [confirmerId, setConfirmerId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [, assign] = useMutation(ASSIGN_CLASS_TEACHER);
+  const [, assignConfirmer] = useMutation(ASSIGN_HOMEWORK_CONFIRMER);
   const [, setSupport] = useMutation(SET_SUPPORT_TEACHER);
 
   const [classesQ, refetchClasses] = useQuery({
@@ -53,6 +56,7 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
   const classes = classesQ.data?.classes ?? [];
   const section = classes.find((c) => c.id === selection.classId)?.sections.find((s) => s.id === selection.sectionId);
   const currentCt = section?.classTeacherId ?? null;
+  const currentConfirmer = section?.homeworkConfirmerId ?? null;
   const support = section?.supportTeacherIds ?? [];
 
   // Per-teacher class-teacher load (CT1.4 — over-loading visible).
@@ -77,6 +81,22 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
     }
     setOk(userId ? STR.ctAssigned : STR.ctCleared);
     setTeacherId("");
+    refresh();
+  }
+
+  async function runAssignConfirmer(userId: string | null): Promise<void> {
+    if (!selection.sectionId) return;
+    setBusy(true);
+    setError(null);
+    setOk(null);
+    const res = await assignConfirmer({ sectionId: selection.sectionId, userId });
+    setBusy(false);
+    if (res.error || !res.data?.assignHomeworkConfirmer) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    setOk(userId ? STR.ctConfirmerAssigned : STR.ctConfirmerCleared);
+    setConfirmerId("");
     refresh();
   }
 
@@ -164,6 +184,21 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
             <View style={{ gap: space(2), marginTop: space(2) }}>
               <Button title={STR.ctAssign} onPress={() => runAssign(teacherId.trim())} loading={busy} disabled={busy || teacherId.trim() === ""} />
               {currentCt ? <Button title={STR.ctClear} variant="danger" onPress={() => runAssign(null)} disabled={busy} /> : null}
+            </View>
+
+            {/* Homework confirm delegate — may also reconcile/confirm the daily homework */}
+            <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(1) }}>{STR.ctConfirmer}</Body>
+            <Muted style={{ marginBottom: space(2) }}>{STR.ctConfirmerHint}</Muted>
+            <Card>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Muted style={{ flex: 1 }}>{currentConfirmer ? nameOf(currentConfirmer) : STR.ctNone}</Muted>
+                <Badge text={currentConfirmer ? "✓" : STR.ctNone} tone={currentConfirmer ? "ok" : "muted"} />
+              </View>
+            </Card>
+            <TeacherSelect label={STR.ctConfirmer} value={confirmerId} onChange={setConfirmerId} />
+            <View style={{ gap: space(2), marginTop: space(2) }}>
+              <Button title={STR.ctAssign} onPress={() => runAssignConfirmer(confirmerId.trim())} loading={busy} disabled={busy || confirmerId.trim() === ""} />
+              {currentConfirmer ? <Button title={STR.ctClear} variant="danger" onPress={() => runAssignConfirmer(null)} disabled={busy} /> : null}
             </View>
 
             {/* Support teachers (CT1.5) */}

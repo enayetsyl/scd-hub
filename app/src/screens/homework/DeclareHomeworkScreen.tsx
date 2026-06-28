@@ -8,7 +8,7 @@ import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { HW_SUBJECTS } from "@scd/shared";
-import { CLASSES_QUERY, DECLARE_HOMEWORK_ITEM, ATTACH_HW_QUESTION_FILE } from "../../graphql/operations";
+import { CLASSES_QUERY, DECLARE_HOMEWORK_ITEM, ATTACH_HW_QUESTION_FILE, HOMEWORK_TOPICS_QUERY } from "../../graphql/operations";
 import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, Notice, EmptyState } from "../../components/ui";
@@ -26,7 +26,7 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
   const { selection, hasSection } = useSectionContext();
   const [subject, setSubject] = useState<string | null>(null);
   const [date, setDate] = useState(today());
-  const [topTags, setTopTags] = useState("");
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [timeDecl, setTimeDecl] = useState("20");
   const [qCount, setQCount] = useState("");
   const [poolRef, setPoolRef] = useState("");
@@ -48,12 +48,29 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
   });
   const classLevel = classesQ.data?.classes.find((c) => c.id === selection.classId)?.level ?? null;
 
+  // Topic picker — load the catalog for the chosen (subject, class); a topic code is
+  // subject-specific, so clear the selection whenever the subject changes.
+  const [topicsQ] = useQuery({
+    query: HOMEWORK_TOPICS_QUERY,
+    variables: { subject: subject ?? "", classLevel: classLevel ?? 0 },
+    pause: !subject || classLevel == null,
+  });
+  const topics = topicsQ.data?.homeworkTopics ?? [];
+  function chooseSubject(s: string): void {
+    setSubject(s);
+    setSelectedTopics([]);
+  }
+  function toggleTopic(code: string): void {
+    setSelectedTopics((cur) => (cur.includes(code) ? cur.filter((c) => c !== code) : [...cur, code]));
+  }
+
   async function onSubmit(): Promise<void> {
     setError(null);
     setOk(null);
     if (!subject) return setError(STR.hwSubject);
     if (classLevel == null) return setError(STR.hwNoClassLevel);
-    const tags = topTags.split(",").map((t) => t.trim()).filter(Boolean);
+    const tags = selectedTopics;
+    if (tags.length === 0) return setError(STR.hwTopicRequired);
     const q = parseInt(qCount, 10);
     if (!Number.isFinite(q)) return setError(STR.hwQCount);
     const td = timeDecl.trim() === "" ? undefined : parseInt(timeDecl, 10);
@@ -80,7 +97,7 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
     setOk(`${res.data.declareHomeworkItem.hwId} ${STR.hwDeclared}`);
     setLastItem({ id: res.data.declareHomeworkItem.id, hwId: res.data.declareHomeworkItem.hwId });
     setFileNote(null);
-    setTopTags("");
+    setSelectedTopics([]);
     setQCount("");
     setPoolRef("");
     setRevItem(false);
@@ -143,13 +160,32 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
           <Body style={{ fontWeight: "700", marginBottom: 8 }}>{STR.hwSubject}</Body>
           <ChipRow>
             {HW_SUBJECTS.map((s) => (
-              <Chip key={s} label={hwSubjectLabel(s)} selected={subject === s} onPress={() => setSubject(s)} />
+              <Chip key={s} label={hwSubjectLabel(s)} selected={subject === s} onPress={() => chooseSubject(s)} />
             ))}
           </ChipRow>
           {classLevel != null ? <Muted style={{ marginTop: 4 }}>C{bnNum(classLevel)}</Muted> : null}
         </Card>
         <Field label={STR.hwDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
-        <Field label={STR.hwTopTags} value={topTags} onChangeText={setTopTags} placeholder={`TOP-${subject ?? "MATH"}-C${classLevel ?? 1}-01`} />
+        <Card>
+          <Body style={{ fontWeight: "700", marginBottom: 4 }}>{STR.hwTopTags}</Body>
+          <Muted style={{ marginBottom: space(2) }}>{STR.hwTopicHint}</Muted>
+          {!subject || classLevel == null ? (
+            <Muted>{STR.hwPickSubjectFirst}</Muted>
+          ) : topicsQ.fetching ? (
+            <Muted>{STR.hwTopicsLoading}</Muted>
+          ) : (
+            <ChipRow>
+              {topics.map((tp) => (
+                <Chip
+                  key={tp.code}
+                  label={tp.labelBn}
+                  selected={selectedTopics.includes(tp.code)}
+                  onPress={() => toggleTopic(tp.code)}
+                />
+              ))}
+            </ChipRow>
+          )}
+        </Card>
         <Field label={STR.hwTimeDecl} value={timeDecl} onChangeText={setTimeDecl} keyboardType="number-pad" />
         <Field label={STR.hwQCount} value={qCount} onChangeText={setQCount} keyboardType="number-pad" />
         <Field label={STR.hwPoolRef} value={poolRef} onChangeText={setPoolRef} placeholder={`QP-${subject ?? "MATH"}-C${classLevel ?? 1}-U01`} />

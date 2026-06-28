@@ -92,6 +92,7 @@ export interface SectionT {
   active: boolean;
   classTeacherId?: string | null;
   supportTeacherIds?: string[];
+  homeworkConfirmerId?: string | null;
   studentCount?: number;
 }
 
@@ -110,7 +111,7 @@ export const CLASSES_QUERY = gql<{ classes: ClassT[] }, { academicYearId: string
       level
       nameBn
       active
-      sections { id code nameBn active classTeacherId supportTeacherIds studentCount }
+      sections { id code nameBn active classTeacherId supportTeacherIds homeworkConfirmerId studentCount }
     }
   }
 `;
@@ -1359,6 +1360,7 @@ export interface HwDayItemT {
   itemId: string;
   hwId: string;
   subject: string;
+  topicLabelBn: string;
   timeDecl: number;
   qCount: number;
   revItem: boolean;
@@ -1389,7 +1391,7 @@ export const HOMEWORK_DAY_TALLY = gql<
       overBy
       withinCeiling
       state
-      items { itemId hwId subject timeDecl qCount revItem status bandWarning }
+      items { itemId hwId subject topicLabelBn timeDecl qCount revItem status bandWarning }
       bandWarnings
     }
   }
@@ -1407,9 +1409,9 @@ export const HOMEWORK_TRIM_CANDIDATES = gql<
 >`
   query HomeworkTrimCandidates($sectionId: String!, $classId: String!, $date: String!) {
     homeworkTrimCandidates(sectionId: $sectionId, classId: $classId, date: $date) {
-      rankA { itemId hwId subject timeDecl qCount revItem status bandWarning }
-      rankB { itemId hwId subject timeDecl qCount revItem status bandWarning }
-      rankC { itemId hwId subject timeDecl qCount revItem status bandWarning }
+      rankA { itemId hwId subject topicLabelBn timeDecl qCount revItem status bandWarning }
+      rankB { itemId hwId subject topicLabelBn timeDecl qCount revItem status bandWarning }
+      rankC { itemId hwId subject topicLabelBn timeDecl qCount revItem status bandWarning }
     }
   }
 `;
@@ -1523,6 +1525,7 @@ export interface HwOpenRecordT {
   id: string;
   hwId: string;
   subject: string;
+  topicLabelBn: string;
   dateGiven: string;
   studentId: string;
   studentName: string;
@@ -1538,7 +1541,7 @@ export const HOMEWORK_OPEN_RECORDS = gql<
 >`
   query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
     homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
-      id hwId subject dateGiven studentId studentName state chaseCount hasAnswerFile dueDate
+      id hwId subject topicLabelBn dateGiven studentId studentName state chaseCount hasAnswerFile dueDate
     }
   }
 `;
@@ -1565,6 +1568,27 @@ export const HOMEWORK_ITEMS = gql<
   query HomeworkItems($sectionId: String!, $classId: String!, $dateGiven: String) {
     homeworkItems(sectionId: $sectionId, classId: $classId, dateGiven: $dateGiven) {
       id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId
+    }
+  }
+`;
+
+// Topic picker — the per-(subject, class) catalog a teacher chooses topTags from.
+export interface HwTopicT {
+  id: string;
+  code: string;
+  labelBn: string;
+  classLevel: number;
+  subject: string;
+  chapters: { num: number; titleBn: string }[];
+  order: number;
+}
+export const HOMEWORK_TOPICS_QUERY = gql<
+  { homeworkTopics: HwTopicT[] },
+  { subject: string; classLevel: number }
+>`
+  query HomeworkTopics($subject: String!, $classLevel: Int!) {
+    homeworkTopics(subject: $subject, classLevel: $classLevel) {
+      id code labelBn classLevel subject order chapters { num titleBn }
     }
   }
 `;
@@ -1654,7 +1678,7 @@ export const TRIM_HOMEWORK_ITEM = gql<
       hwId rank trimFrom trimTo trimMin
       tally {
         classId dayTotal ceiling overBy withinCeiling state
-        items { itemId hwId subject timeDecl qCount revItem status bandWarning }
+        items { itemId hwId subject topicLabelBn timeDecl qCount revItem status bandWarning }
         bandWarnings
       }
     }
@@ -1828,6 +1852,18 @@ export const ASSIGN_CLASS_TEACHER = gql<
     assignClassTeacher(sectionId: $sectionId, userId: $userId) {
       id
       classTeacherId
+    }
+  }
+`;
+
+export const ASSIGN_HOMEWORK_CONFIRMER = gql<
+  { assignHomeworkConfirmer: { id: string; homeworkConfirmerId: string | null } },
+  { sectionId: string; userId?: string | null }
+>`
+  mutation AssignHomeworkConfirmer($sectionId: String!, $userId: String) {
+    assignHomeworkConfirmer(sectionId: $sectionId, userId: $userId) {
+      id
+      homeworkConfirmerId
     }
   }
 `;

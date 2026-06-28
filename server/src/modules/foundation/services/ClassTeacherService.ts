@@ -18,7 +18,7 @@ async function assertTeacher(userId: string): Promise<void> {
 
 async function appendLog(
   sectionId: string,
-  role: "class_teacher" | "support",
+  role: "class_teacher" | "support" | "homework_confirmer",
   teacherId: string | null,
   op: "assigned" | "cleared" | "removed",
   actorId: string,
@@ -51,6 +51,27 @@ export async function assignClassTeacher(
   await appendLog(sectionId, "class_teacher", userId, userId ? "assigned" : "cleared", actorId);
   // M-2 (D-#78): the SECTION chat group's membership follows the class teacher.
   await onSectionTeachersChangedSync(sectionId);
+  return Section.findById(sectionId).lean() as unknown as ISection;
+}
+
+/** Assign or clear (userId=null) the section's HOMEWORK-CONFIRM DELEGATE + log it.
+ *  Additive: the class teacher and Principal keep their confirm rights; this grants a
+ *  third teacher the same daily reconcile/confirm gate (assertCanConfirmHomework). */
+export async function assignHomeworkConfirmer(
+  sectionId: string,
+  userId: string | null,
+  actorId: string,
+): Promise<ISection> {
+  const section = await Section.findById(sectionId);
+  if (!section) throw new Error("Section not found");
+  if (userId) {
+    await assertTeacher(userId);
+    section.homeworkConfirmerId = new Types.ObjectId(userId);
+  } else {
+    section.homeworkConfirmerId = undefined;
+  }
+  await section.save();
+  await appendLog(sectionId, "homework_confirmer", userId, userId ? "assigned" : "cleared", actorId);
   return Section.findById(sectionId).lean() as unknown as ISection;
 }
 

@@ -12,7 +12,7 @@ jest.mock("../modules/foundation/models/Section", () => ({
   Section: { findById: (id: unknown) => ({ lean: () => mockSectionFindById(id) }) },
 }));
 
-import { isClassTeacher, assertIsClassTeacher, ForbiddenError } from "../middleware/authz";
+import { isClassTeacher, assertIsClassTeacher, assertCanConfirmHomework, ForbiddenError } from "../middleware/authz";
 import type { AppContext } from "../context";
 
 const CT_ID = new mongoose.Types.ObjectId();
@@ -69,6 +69,36 @@ describe("assertIsClassTeacher (handoff §9 / D-#42)", () => {
   test("throws when unauthenticated", async () => {
     await expect(
       assertIsClassTeacher({ auth: undefined } as unknown as AppContext, SECTION_ID),
+    ).rejects.toThrow(/Unauthenticated/);
+  });
+});
+
+describe("assertCanConfirmHomework (Principal / class teacher / delegate)", () => {
+  const DELEGATE_ID = new mongoose.Types.ObjectId();
+
+  test("passes for the assigned class teacher", async () => {
+    mockSectionFindById.mockResolvedValue({ _id: SECTION_ID, classTeacherId: CT_ID });
+    await expect(assertCanConfirmHomework(ctx(CT_ID.toString()), SECTION_ID)).resolves.toBeUndefined();
+  });
+
+  test("passes for the Principal of ANY section (no section read needed)", async () => {
+    await expect(assertCanConfirmHomework(ctx(OTHER_ID, "PRINCIPAL"), SECTION_ID)).resolves.toBeUndefined();
+    expect(mockSectionFindById).not.toHaveBeenCalled();
+  });
+
+  test("passes for the assigned homework-confirm delegate", async () => {
+    mockSectionFindById.mockResolvedValue({ _id: SECTION_ID, classTeacherId: CT_ID, homeworkConfirmerId: DELEGATE_ID });
+    await expect(assertCanConfirmHomework(ctx(DELEGATE_ID.toString()), SECTION_ID)).resolves.toBeUndefined();
+  });
+
+  test("denies a teacher who is neither class teacher nor delegate", async () => {
+    mockSectionFindById.mockResolvedValue({ _id: SECTION_ID, classTeacherId: CT_ID, homeworkConfirmerId: DELEGATE_ID });
+    await expect(assertCanConfirmHomework(ctx(OTHER_ID), SECTION_ID)).rejects.toThrow(ForbiddenError);
+  });
+
+  test("throws when unauthenticated", async () => {
+    await expect(
+      assertCanConfirmHomework({ auth: undefined } as unknown as AppContext, SECTION_ID),
     ).rejects.toThrow(/Unauthenticated/);
   });
 });

@@ -130,7 +130,7 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
                           <Badge text={lifecycleStateLabel(r.state)} tone="brand" />
                         </View>
                       </View>
-                      <Muted style={{ marginTop: 2 }}>{r.hwId}</Muted>
+                      <Muted style={{ marginTop: 2 }}>{r.hwId}{r.topicLabelBn ? ` · 📘 ${r.topicLabelBn}` : ""}</Muted>
                       {moves.length > 0 ? (
                         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: 8 }}>
                           {moves.map((to) => (

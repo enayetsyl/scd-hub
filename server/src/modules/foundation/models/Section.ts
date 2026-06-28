@@ -16,6 +16,10 @@ export interface ISection extends Document {
    *  (Nursery has one; KG/others may later). NOT the coordinator gate: a support
    *  teacher does not inherit `assertIsClassTeacher` rights. A list of TEACHER Users. */
   supportTeacherIds?: Types.ObjectId[];
+  /** Optional HOMEWORK-CONFIRM DELEGATE — a Principal-assigned teacher who may ALSO
+   *  reconcile/confirm this section's daily homework (in addition to the class teacher
+   *  and the Principal). Standing, additive; cleared by setting null. A TEACHER User. */
+  homeworkConfirmerId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +32,7 @@ const SectionSchema = new Schema<ISection>(
     active: { type: Boolean, default: true },
     classTeacherId: { type: Schema.Types.ObjectId, ref: "User" },
     supportTeacherIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    homeworkConfirmerId: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true },
 );

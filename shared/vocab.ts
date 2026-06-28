@@ -976,6 +976,12 @@ export const NOTIFICATION_KINDS = [
   // D-#245) and the present-student revision digest (wa.me for all).
   "SR_ABSENT",
   "SR_DIGEST",
+  // Homework daily-confirm pending ladder (app-native, NO wire twin). A section's
+  // homework is declared but not yet confirmed/issued: REMINDER nudges the confirmer
+  // (class teacher / delegate) at 13:00/13:30/14:00; ESCALATION alerts Office at 14:00
+  // and the Principal at 16:00 (one row per pending section).
+  "HW_PENDING_REMINDER",
+  "HW_PENDING_ESCALATION",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1001,6 +1007,8 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   FINANCE_FEE_DUE: "ফি বকেয়ার তাগিদ",
   SR_ABSENT: "শনিবার রিভিশনে অনুপস্থিত",
   SR_DIGEST: "সাপ্তাহিক রিভিশন রিপোর্ট",
+  HW_PENDING_REMINDER: "বাড়ির কাজ নিশ্চিত করা বাকি",
+  HW_PENDING_ESCALATION: "বাড়ির কাজ নিশ্চিত হয়নি (এসকেলেশন)",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1024,6 +1032,8 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   FINANCE_FEE_DUE: "Fee due reminder",
   SR_ABSENT: "Saturday revision — absent",
   SR_DIGEST: "Weekly revision digest",
+  HW_PENDING_REMINDER: "Homework confirm pending",
+  HW_PENDING_ESCALATION: "Homework not confirmed (escalation)",
 };
 
 

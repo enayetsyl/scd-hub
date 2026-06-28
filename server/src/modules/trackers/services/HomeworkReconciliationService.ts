@@ -25,7 +25,8 @@ import {
 import type { HwSubject, TrimRank, ReconState } from "@scd/shared";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconciliation";
-import { issueHomeworkItem, listDailyItems, type IssueRosterEntry } from "./HomeworkService";
+import { Section } from "../../foundation/models/Section";
+import { issueHomeworkItem, listDailyItems, topicLabelByCode, joinTopicLabels, type IssueRosterEntry } from "./HomeworkService";
 import { isWeekend } from "../calendar";
 
 // ---------------------------------------------------------------------------
@@ -42,6 +43,8 @@ export interface DayItemView {
   status: string;
   /** TIME_DECL exceeds the 40-min band (warn only, never blocks — T2.5). */
   bandWarning: boolean;
+  /** The item's topic(s), resolved to Bangla catalog labels (joined). "" if none. */
+  topicLabelBn: string;
 }
 
 export interface DayTallyResult {
@@ -69,12 +72,14 @@ function toItemView(d: LeanItem): DayItemView {
     revItem: d.revItem,
     status: d.status,
     bandWarning: d.timeDecl > HW_SUBJECT_BAND_MAX_MIN,
+    topicLabelBn: "",
   };
 }
 
 export async function tallyDay(classId: string, date: Date): Promise<DayTallyResult> {
   const docs = await listDailyItems(classId, date);
-  const items = docs.map(toItemView);
+  const labelByCode = await topicLabelByCode(docs.flatMap((d) => d.topTags ?? []));
+  const items = docs.map((d) => ({ ...toItemView(d), topicLabelBn: joinTopicLabels(d.topTags ?? [], labelByCode) }));
   const dayTotal = items.reduce((sum, it) => sum + it.timeDecl, 0);
   const overBy = Math.max(0, dayTotal - HW_DAILY_CEILING_MIN);
   const withinCeiling = dayTotal <= HW_DAILY_CEILING_MIN;
@@ -320,4 +325,65 @@ export async function confirmHomeworkDay(
     issuedItems,
     issuedRecords,
   };
+}
+
+// ---------------------------------------------------------------------------
+// pendingHomeworkSections (the pending-confirm reminder ladder source)
+// ---------------------------------------------------------------------------
+
+export interface PendingHomeworkSection {
+  sectionId: string;
+  classId: string;
+  nameBn: string;
+  classTeacherId: string | null;
+  homeworkConfirmerId: string | null;
+}
+
+/**
+ * Sections whose homework is DECLARED today but not yet confirmed/issued — i.e. there
+ * is ≥1 still-`declared` item and the class's reconciliation is not `reconciled`. The
+ * confirmer (delegate ?? class teacher) still owes a reconcile/confirm. Drives the
+ * pending-confirm notification ladder (13:00/13:30/14:00 confirmer, 14:00 Office,
+ * 16:00 Principal). Active sections only.
+ */
+export async function pendingHomeworkSections(date: Date): Promise<PendingHomeworkSection[]> {
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+
+  const items = await HomeworkItem.find({
+    dateGiven: { $gte: dayStart, $lt: dayEnd },
+    status: "declared",
+  })
+    .select("sectionId classId")
+    .lean();
+  if (items.length === 0) return [];
+
+  const sectionClass = new Map<string, string>();
+  for (const i of items) sectionClass.set(i.sectionId.toString(), i.classId.toString());
+
+  const reconciled = await HomeworkReconciliation.find({
+    reconDate: reconDayKey(date),
+    reconState: "reconciled",
+  })
+    .select("classId")
+    .lean();
+  const reconciledClassIds = new Set(reconciled.map((r) => r.classId.toString()));
+
+  const pendingSectionIds = [...sectionClass.entries()]
+    .filter(([, classId]) => !reconciledClassIds.has(classId))
+    .map(([sectionId]) => sectionId);
+  if (pendingSectionIds.length === 0) return [];
+
+  const sections = await Section.find({ _id: { $in: pendingSectionIds }, active: true })
+    .select("nameBn classId classTeacherId homeworkConfirmerId")
+    .lean();
+  return sections.map((s) => ({
+    sectionId: s._id.toString(),
+    classId: s.classId.toString(),
+    nameBn: s.nameBn,
+    classTeacherId: s.classTeacherId ? s.classTeacherId.toString() : null,
+    homeworkConfirmerId: s.homeworkConfirmerId ? s.homeworkConfirmerId.toString() : null,
+  }));
 }

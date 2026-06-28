@@ -55,6 +55,7 @@ import { dispatchAttendanceReminders } from "../../attendance/services/Attendanc
 import { dispatchLibraryReminders } from "../../library/services/LibraryReminderService";
 import { runDueOffboardingRevocations } from "../../hr/services/OffboardingService";
 import { runObservationEscalation } from "../../classroom-observation/services/ObservationEscalationService";
+import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconciliationService";
 import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 
@@ -83,6 +84,20 @@ export const ATTENDANCE_TIER_MINUTES: Record<AttendanceReminderTier, number> = {
 };
 /** Library sweep fire-points — hourly through the school day (idempotent). */
 export const LIBRARY_SWEEP_HOURS = [9, 10, 11, 12, 13, 14, 15, 16] as const;
+/** Homework pending-confirm reminder rungs (minutes) to the confirmer: 13:00/13:30/14:00. */
+export const HW_CONFIRM_REMINDER_MINUTES = [13 * 60, 13 * 60 + 30, 14 * 60] as const;
+/** Homework pending-confirm escalation rungs: 14:00 → Office, 16:00 → Principal. */
+export const HW_CONFIRM_ESCALATION_RUNGS = [
+  { min: 14 * 60, role: "OFFICE" },
+  { min: 16 * 60, role: "PRINCIPAL" },
+] as const;
+
+/** Latest currently-open rung from a list of due-minutes (rungs <30 min apart can
+ *  overlap the stale window; pick the most recent so its own dedupeKey fires). */
+function latestOpenMinute(nowMin: number, dueMins: readonly number[]): number | undefined {
+  const open = dueMins.filter((m) => windowOpen(nowMin, m));
+  return open.length ? open[open.length - 1] : undefined;
+}
 
 /** Minutes from local midnight. */
 export function minutesOfDay(date: Date): number {
@@ -102,6 +117,10 @@ export const schedulerDedupeKeys = {
     `CNP:${dateKey}:${hour}:${teacherId}`,
   classNoteEscalation: (dateKey: string, hour: number, recipientId: string) =>
     `CNE:${dateKey}:${hour}:${recipientId}`,
+  homeworkPendingReminder: (dateKey: string, rungMin: number, sectionId: string, recipientId: string) =>
+    `HWPR:${dateKey}:${rungMin}:${sectionId}:${recipientId}`,
+  homeworkPendingEscalation: (dateKey: string, rungMin: number, sectionId: string, recipientId: string) =>
+    `HWPE:${dateKey}:${rungMin}:${sectionId}:${recipientId}`,
   // ATT:{date}:{tier}:{section}:{recipient} lives in AttendanceReminderService;
   // LIBDS/LIBOD live in LibraryReminderService — one registry per emitting module.
 } as const;
@@ -167,6 +186,7 @@ export interface TickSummary {
   attendanceTiersRun: AttendanceReminderTier[];
   librarySweepRan: boolean;
   observationEscalationRan: boolean;
+  hwPendingEmitted: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -196,6 +216,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     attendanceTiersRun: [],
     librarySweepRan: false,
     observationEscalationRan: false,
+    hwPendingEmitted: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -325,6 +346,61 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
         dedupeKey: schedulerDedupeKeys.classNoteEscalation(dateKey, rung.hour, recipient._id.toString()),
       });
       if (res.created) summary.escalationsEmitted += 1;
+    }
+  });
+
+  // --- Homework pending-confirm ladder — a section's homework is declared but not yet
+  // confirmed/issued. Reminders nudge the confirmer (delegate ?? class teacher) at
+  // 13:00/13:30/14:00; escalations alert Office at 14:00 and the Principal at 16:00,
+  // ONE row per still-pending section. Recomputed per rung (a section confirmed between
+  // rungs drops off), idempotent via per-(rung, section, recipient) dedupe keys.
+  await family("homework pending confirm", async () => {
+    const reminderMin = latestOpenMinute(nowMin, HW_CONFIRM_REMINDER_MINUTES);
+    const escRung = HW_CONFIRM_ESCALATION_RUNGS.find((r) => windowOpen(nowMin, r.min));
+    if (reminderMin === undefined && !escRung) return;
+
+    const pending = await pendingHomeworkSections(now);
+    if (pending.length === 0) return;
+
+    if (reminderMin !== undefined) {
+      for (const sec of pending) {
+        const confirmerId = sec.homeworkConfirmerId ?? sec.classTeacherId;
+        if (!confirmerId) continue; // no class teacher / delegate assigned — nobody to nudge
+        const res = await emit({
+          recipientUserId: confirmerId,
+          kind: "HW_PENDING_REMINDER",
+          titleBn: "বাড়ির কাজ নিশ্চিত করা বাকি",
+          bodyBn: `${sec.nameBn} — আজকের বাড়ির কাজ এখনো নিশ্চিত/ইস্যু করা হয়নি। অনুগ্রহ করে রিকনসাইল করে নিশ্চিত করুন।`,
+          refs: { date: dateKey, sectionId: sec.sectionId },
+          dedupeKey: schedulerDedupeKeys.homeworkPendingReminder(dateKey, reminderMin, sec.sectionId, confirmerId),
+        });
+        if (res.created) summary.hwPendingEmitted += 1;
+      }
+    }
+
+    if (escRung) {
+      const recipients = (await User.find({ role: escRung.role, active: true })
+        .select("_id")
+        .lean()) as unknown as Array<{ _id: IdLike }>;
+      const ctIds = [...new Set(pending.map((s) => s.classTeacherId).filter(Boolean))] as string[];
+      const teachers = (await User.find({ _id: { $in: ctIds } })
+        .select("name")
+        .lean()) as unknown as Array<{ _id: IdLike; name: string }>;
+      const teacherName = new Map(teachers.map((t) => [t._id.toString(), t.name]));
+      for (const sec of pending) {
+        const ctLabel = sec.classTeacherId ? teacherName.get(sec.classTeacherId) ?? "—" : "—";
+        for (const r of recipients) {
+          const res = await emit({
+            recipientUserId: r._id.toString(),
+            kind: "HW_PENDING_ESCALATION",
+            titleBn: "বাড়ির কাজ নিশ্চিত হয়নি",
+            bodyBn: `${sec.nameBn} (ক্লাস টিচার: ${ctLabel}) — আজকের বাড়ির কাজ এখনো নিশ্চিত করা হয়নি।`,
+            refs: { date: dateKey, sectionId: sec.sectionId },
+            dedupeKey: schedulerDedupeKeys.homeworkPendingEscalation(dateKey, escRung.min, sec.sectionId, r._id.toString()),
+          });
+          if (res.created) summary.hwPendingEmitted += 1;
+        }
+      }
     }
   });
 

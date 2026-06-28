@@ -21,6 +21,9 @@ const mockReconUpdate = jest.fn();
 jest.mock("../modules/trackers/services/HomeworkService", () => ({
   listDailyItems: (...a: unknown[]) => mockList(...a),
   issueHomeworkItem: (...a: unknown[]) => mockIssue(...a),
+  // Topic-label enrichment used by tallyDay — stub to a no-op (label tested elsewhere).
+  topicLabelByCode: async () => new Map<string, string>(),
+  joinTopicLabels: (tags: string[]) => (tags ?? []).join(" · "),
 }));
 
 jest.mock("../modules/trackers/models/HomeworkItem", () => ({

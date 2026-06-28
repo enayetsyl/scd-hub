@@ -294,6 +294,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
                   <Muted style={{ marginTop: 4 }}>
                     {it.hwId} · {bnNum(it.timeDecl)} {STR.hwMinutes} · {bnNum(it.qCount)} {STR.questionsWord}
                   </Muted>
+                  {it.topicLabelBn ? <Muted style={{ marginTop: 2 }}>📘 {it.topicLabelBn}</Muted> : null}
                   {it.bandWarning ? <Muted style={{ color: colors.warning, marginTop: 4 }}>{STR.hwBandWarning}</Muted> : null}
                 </Card>
               ))

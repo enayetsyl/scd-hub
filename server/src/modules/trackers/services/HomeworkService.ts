@@ -16,6 +16,7 @@ import type { HwSubject, LifecycleState, HwResult } from "@scd/shared";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkSequence } from "../models/HomeworkSequence";
+import { HomeworkTopic } from "../models/HomeworkTopic";
 import { Student } from "../../foundation/models/Student";
 import { assertTransition, isEntryState } from "../lifecycle";
 import { isSchoolDay, nextSchoolDay } from "../calendar";
@@ -101,13 +102,24 @@ export async function declareHomeworkItem(
   }
 
   if (!Array.isArray(input.topTags) || input.topTags.length === 0) {
-    throw new Error("At least one TOP-… tag is required (handoff §2.1 / REF-07 §3.5)");
+    throw new Error("At least one topic is required (handoff §2.1 / REF-07 §3.5)");
   }
-  const topTagPattern = new RegExp(`^TOP-${subject}-C${input.classLevel}-\\d{2,}$`);
-  for (const tag of input.topTags) {
-    if (!topTagPattern.test(tag)) {
-      throw new Error(`Malformed TOP tag "${tag}" — expected TOP-${subject}-C${input.classLevel}-{nn}`);
-    }
+  // Topics are PICKED from the per-(subject, class) catalog (HomeworkTopic), not typed
+  // free-hand — so every code must exist + be active for this subject+class. This keeps
+  // the topic-touch roll-up grouping on a controlled set of codes.
+  const wantedTags = [...new Set(input.topTags)];
+  const knownTopics = await HomeworkTopic.find({
+    subject,
+    classLevel: input.classLevel,
+    code: { $in: wantedTags },
+    active: true,
+  })
+    .select("code")
+    .lean();
+  const knownCodes = new Set(knownTopics.map((t) => t.code));
+  const unknownTags = wantedTags.filter((c) => !knownCodes.has(c));
+  if (unknownTags.length > 0) {
+    throw new Error(`Unknown topic(s) for ${subject} C${input.classLevel}: ${unknownTags.join(", ")}`);
   }
 
   // TIME_DECL: 0–40 is the working band but a subject MAY exceed 40 on reduced-roster
@@ -160,6 +172,54 @@ export async function declareHomeworkItem(
     revItem: doc.revItem,
     status: doc.status,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Topic catalog (the picker the teacher chooses topTags from)
+// ---------------------------------------------------------------------------
+
+export interface HomeworkTopicDTO {
+  id: string;
+  code: string;
+  labelBn: string;
+  classLevel: number;
+  subject: HwSubject;
+  chapters: { num: number; titleBn: string }[];
+  order: number;
+}
+
+/** Active topics for (subject, class), ordered for the declare-screen picker. */
+export async function listHomeworkTopics(
+  subject: string,
+  classLevel: number,
+): Promise<HomeworkTopicDTO[]> {
+  assertSubject(subject);
+  const docs = await HomeworkTopic.find({ subject, classLevel, active: true })
+    .sort({ order: 1, code: 1 })
+    .lean();
+  return docs.map((d) => ({
+    id: d._id.toString(),
+    code: d.code,
+    labelBn: d.labelBn,
+    classLevel: d.classLevel,
+    subject: d.subject,
+    chapters: (d.chapters ?? []).map((c) => ({ num: c.num, titleBn: c.titleBn })),
+    order: d.order,
+  }));
+}
+
+/** code -> Bangla label for a set of topic codes (batched — one query). Unknown
+ *  codes are omitted; callers fall back to the raw code. */
+export async function topicLabelByCode(codes: string[]): Promise<Map<string, string>> {
+  const uniq = [...new Set(codes)];
+  if (uniq.length === 0) return new Map();
+  const topics = await HomeworkTopic.find({ code: { $in: uniq } }).select("code labelBn").lean();
+  return new Map(topics.map((t) => [t.code, t.labelBn]));
+}
+
+/** Join an item's topTag codes into a single display label (catalog label, else code). */
+export function joinTopicLabels(topTags: string[], labelByCode: Map<string, string>): string {
+  return topTags.map((c) => labelByCode.get(c) ?? c).join(" · ");
 }
 
 // ---------------------------------------------------------------------------
@@ -343,6 +403,8 @@ export interface OpenRecordDTO {
   id: string;
   hwId: string;
   subject: string;
+  /** The item's topic(s), resolved to Bangla catalog labels (joined). "" if none. */
+  topicLabelBn: string;
   dateGiven: string; // ISO (the item's given date — the grouping key)
   studentId: string;
   studentName: string;
@@ -366,10 +428,11 @@ export async function listOpenRecords(sectionId: string, states: LifecycleState[
 
   const itemIds = [...new Set(recs.map((r) => r.hwItemId.toString()))];
   const studentIds = [...new Set(recs.map((r) => r.studentId.toString()))];
-  const items = await HomeworkItem.find({ _id: { $in: itemIds } }).select({ subject: 1, dateGiven: 1 }).lean();
+  const items = await HomeworkItem.find({ _id: { $in: itemIds } }).select({ subject: 1, dateGiven: 1, topTags: 1 }).lean();
   const students = await Student.find({ _id: { $in: studentIds } }).select({ name: 1 }).lean();
   const itemMap = new Map(items.map((i) => [i._id.toString(), i]));
   const nameMap = new Map(students.map((s) => [s._id.toString(), s.name]));
+  const labelByCode = await topicLabelByCode(items.flatMap((i) => i.topTags ?? []));
 
   return recs
     .map((r) => {
@@ -378,6 +441,7 @@ export async function listOpenRecords(sectionId: string, states: LifecycleState[
         id: r._id.toString(),
         hwId: r.hwId,
         subject: it?.subject ?? "?",
+        topicLabelBn: it ? joinTopicLabels(it.topTags ?? [], labelByCode) : "",
         dateGiven: it ? new Date(it.dateGiven as unknown as Date).toISOString() : new Date(0).toISOString(),
         studentId: r.studentId.toString(),
         studentName: nameMap.get(r.studentId.toString()) ?? r.studentId.toString(),
