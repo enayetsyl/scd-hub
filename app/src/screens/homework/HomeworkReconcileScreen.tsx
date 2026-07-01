@@ -1,6 +1,6 @@
 /**
  * HomeworkReconcileScreen (§4 / §8.1) — CLASS-TEACHER daily reconciliation.
- * Shows DAY_TOTAL vs 240, lets the teacher trim a subject's Q_COUNT (time follows
+ * Shows DAY_TOTAL vs 120, lets the teacher trim a subject's Q_COUNT (time follows
  * proportionally; rank auto-chosen ক/খ/গ), then confirm-issue with a present/absent
  * roster. Over-ceiling blocks confirm (server enforces too). Non-class-teachers get
  * a Forbidden error from the server.
@@ -10,6 +10,7 @@ import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
+import { HW_DAILY_CEILING_MIN } from "@scd/shared";
 import { HOMEWORK_DAY_TALLY, ROSTER_QUERY, TRIM_HOMEWORK_ITEM, CONFIRM_HOMEWORK_DAY } from "../../graphql/operations";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState, ErrorBanner } from "../../components/ui";
@@ -115,7 +116,7 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Body style={{ fontWeight: "700" }}>{STR.hwDayTotal}</Body>
-                <Badge text={`${bnNum(tally?.dayTotal ?? 0)} / ${bnNum(tally?.ceiling ?? 240)}`} tone={over ? "danger" : "ok"} />
+                <Badge text={`${bnNum(tally?.dayTotal ?? 0)} / ${bnNum(tally?.ceiling ?? HW_DAILY_CEILING_MIN)}`} tone={over ? "danger" : "ok"} />
               </View>
               {over ? <Muted style={{ color: colors.error, marginTop: 4 }}>{STR.hwOverCeiling} · {STR.hwTrimPanel}</Muted> : null}
             </Card>

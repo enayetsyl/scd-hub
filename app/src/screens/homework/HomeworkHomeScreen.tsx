@@ -13,7 +13,7 @@ import { View, Pressable, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
+import { roleHasPermission, HW_DAILY_CEILING_MIN } from "@scd/shared";
 import {
   HOMEWORK_DAY_TALLY,
   HOMEWORK_SUMMARY,
@@ -274,7 +274,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Body style={{ fontWeight: "700" }}>{STR.hwDayTotal}</Body>
                 <Badge
-                  text={`${bnNum(tally?.dayTotal ?? 0)} / ${bnNum(tally?.ceiling ?? 240)} ${STR.hwMinutes}`}
+                  text={`${bnNum(tally?.dayTotal ?? 0)} / ${bnNum(tally?.ceiling ?? HW_DAILY_CEILING_MIN)} ${STR.hwMinutes}`}
                   tone={over ? "danger" : "ok"}
                 />
               </View>
