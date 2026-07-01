@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-07-01: Homework ceiling now uses 120 minutes everywhere it is surfaced or enforced: the shared constant, guardian day-load, reconciliation badge/gate, and homework summary/reconcile strings all align. Verified green with server/app `tsc` and focused homework/guardian Jest tests.
 - 2026-07-01: Homework declare now accepts KG/Nursery roster levels end-to-end: generic fallback topics work for pre-primary classes, Nursery HW IDs are parsed safely, and the declare screen shows the roster class name instead of raw `C0`/`C-1`. Verified green with server/app `tsc` and focused homework Jest tests.
 - 2026-07-01: English-mode label sweep completed for the shared section chooser/bar plus routine, roster, assignment-marker, attendance-marker, and class-note report screens; homework reminder wording updated in shared vocab. Verified green with `verify_shared_vocab.mjs` and app/server `tsc`.
 

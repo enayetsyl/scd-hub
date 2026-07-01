@@ -483,7 +483,7 @@ export async function childHomework(
 }
 
 // ---------------------------------------------------------------------------
-// childDayLoad (GP-1 §4.4) — base + top-up vs the LOCKED 240 (guardian-gated
+// childDayLoad (GP-1 §4.4) — base + top-up vs the LOCKED 120 (guardian-gated
 // wrapper over getStudentDayLoad; NOT the staff tracker:read query)
 // ---------------------------------------------------------------------------
 

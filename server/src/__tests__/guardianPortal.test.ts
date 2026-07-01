@@ -597,7 +597,7 @@ describe("childHomework", () => {
 });
 
 // ===========================================================================
-// childDayLoad — guardian-gated wrapper (vs the LOCKED 240)
+// childDayLoad — guardian-gated wrapper (vs the LOCKED 120)
 // ===========================================================================
 
 describe("childDayLoad", () => {

@@ -1,7 +1,7 @@
 ﻿/**
  * GuardianHomeScreen ("à¦†à¦œ", GP-2) â€” the selected child's today: routine
  * (day-type aware â€” a holiday shows its label), class notes, open homework with
- * state chips, and the personal day-load vs the LOCKED 240. The bottom cards
+ * state chips, and the personal day-load vs the LOCKED 120. The bottom cards
  * now open the live guardian surfaces for attendance, fees, notices, leave,
  * and notifications.
  */
@@ -230,7 +230,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
           </View>
         </Card>
 
-        {/* Open homework + day-load vs 240 */}
+        {/* Open homework + day-load vs 120 */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpHomeworkOpen}</Body>
           {load ? (

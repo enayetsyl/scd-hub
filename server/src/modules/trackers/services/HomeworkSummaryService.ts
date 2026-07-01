@@ -145,7 +145,7 @@ export interface ClassOverviewResult {
   activeChases: number;
   /** % of records that reached SUBMITTED with no chase. null if none yet. */
   onTimePct: number | null;
-  /** Days in the current (Sun-start) week where Σ issued time > the 240 ceiling. */
+  /** Days in the current (Sun-start) week where Σ issued time > the 120 ceiling. */
   overCeilingDaysThisWeek: number;
 }
 

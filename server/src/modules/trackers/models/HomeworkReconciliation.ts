@@ -7,7 +7,7 @@
  *
  * `reconState`:
  *   open       — being worked (trims may be applied)
- *   reconciled — class teacher confirmed; DAY_TOTAL ≤ 240; per-student records
+ *   reconciled — class teacher confirmed; DAY_TOTAL ≤ 120; per-student records
  *                issued. TERMINAL — trims are immutable from here (handoff §4.5).
  * (within_ceiling / over_ceiling are DERIVED live from DAY_TOTAL vs the ceiling at
  *  read time — see the service — and are not persisted.)
@@ -47,7 +47,7 @@ export interface IHomeworkReconciliation extends Document {
   academicYearId: Types.ObjectId;
   /** DAY_TOTAL — snapshot of summed TIME_DECL at confirm (minutes). */
   dayTotal: number;
-  /** CEILING — 240, uniform C1–5 (handoff §2.3). */
+  /** CEILING — 120, uniform C1–5 (handoff §2.3). */
   ceiling: number;
   reconState: ReconDocState;
   trimLog: TrimLogRow[];

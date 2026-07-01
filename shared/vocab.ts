@@ -625,7 +625,7 @@ export const HW_RESULT_LABELS_BN: Record<HwResult, string> = {
 // Daily-budget LOCKED figures (handoff §0/§2.3/§4, D-024/D-030; restated verbatim,
 // NOT open — see handoff §11). The day-SUM ceiling is law; the per-subject band is
 // advisory (warn, never block). Floor is informational only (not enforced).
-export const HW_DAILY_CEILING_MIN = 240; // uniform C1–5 day-sum ceiling — the §4 gate
+export const HW_DAILY_CEILING_MIN = 120; // uniform C1–5 day-sum ceiling — the §4 gate
 export const HW_DAILY_FLOOR_MIN = 120; // informational only
 export const HW_SUBJECT_BAND_MAX_MIN = 40; // single-subject band; >40 WARNS, never blocks (§4 close / T2.5)
 export const HW_DEFAULT_TIME_DECL_MIN = 20; // Class-1 working default for TIME_DECL

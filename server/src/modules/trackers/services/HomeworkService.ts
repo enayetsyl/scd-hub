@@ -8,7 +8,7 @@
  *   transitionRecord    — apply ONE legal lifecycle transition, timestamped (rejects illegal)
  *
  * Write-scope is enforced by the resolver (assertCanWrite), not here. HW-T2 will
- * gate `issueHomeworkItem` behind the daily 240-min reconciliation/confirm; the
+ * gate `issueHomeworkItem` behind the daily 120-min reconciliation/confirm; the
  * spawn mechanism itself lives here.
  */
 import {
@@ -153,7 +153,7 @@ export async function declareHomeworkItem(
 
   // TIME_DECL: 0–40 is the working band but a subject MAY exceed 40 on reduced-roster
   // days (handoff §2.1). >40 is NOT rejected here — it surfaces as a band warning at
-  // reconciliation (T2.5); only the §4 day-sum (240) blocks. So just require int ≥ 0.
+  // reconciliation (T2.5); only the §4 day-sum (120) blocks. So just require int ≥ 0.
   const timeDecl = input.timeDecl ?? HW_DEFAULT_TIME_DECL_MIN;
   if (!Number.isInteger(timeDecl) || timeDecl < 0) {
     throw new Error("TIME_DECL must be a non-negative integer (minutes)");

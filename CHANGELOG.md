@@ -5,6 +5,7 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
 
+- fix(homework): lower the homework daily ceiling to 120 minutes everywhere it is surfaced or enforced (shared constant, guardian day-load, reconciliation, summary, and resolver text) so the UI and server agree. Verified with server/app `tsc` and focused homework/guardian Jest tests in this session. [uncommitted]
 - fix(homework): accept KG/Nursery roster levels in homework declare, allow generic fallback topics for pre-primary classes, parse signed Nursery HW IDs safely, and show the roster class name on the declare screen. Verified with server/app `tsc` and focused homework Jest tests in this session. [uncommitted]
 
 - fix(i18n/homework): make English mode render the shared section chooser/bar, routine landing, roster, assignment marker, attendance marker, and class-note report with section codes / class-level labels; rename the homework reminder wording in shared vocab. Verified with `verify_shared_vocab.mjs` and app/server `tsc` in this session. [uncommitted]

@@ -14,7 +14,7 @@
  *
  * `status`: declared → issued. Issuing (spawning Layer-B per-student records)
  * happens here in HW-T1 via the service; HW-T2 will gate it behind the daily
- * 240-min reconciliation/confirm.
+ * 120-min reconciliation/confirm.
  */
 import { Schema, model, Document, Types } from "mongoose";
 import { HW_SUBJECTS, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
@@ -76,7 +76,7 @@ const HomeworkItemSchema = new Schema<IHomeworkItem>(
     },
     // 0–40 is the working band, but a subject MAY exceed 40 on reduced-roster days
     // (handoff §2.1 / §4 close): >40 WARNS at reconciliation, never hard-blocks here.
-    // The only hard limit is the §4 day-SUM (240), enforced in the reconciliation service.
+    // The only hard limit is the §4 day-SUM (120), enforced in the reconciliation service.
     timeDecl: { type: Number, required: true, min: 0, default: 20 },
     qCount: { type: Number, required: true, min: 0 },
     poolRef: { type: String },
