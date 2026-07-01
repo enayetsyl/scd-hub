@@ -93,6 +93,7 @@ interface ArtifactShape {
   approvedAt?: Date | null;
   approvalNote?: string | null;
   approvalOverride?: boolean | null;
+  sessionIndex: number | null;
 }
 
 const ArtifactRef = builder.objectRef<ArtifactShape>("ContentArtifact");
@@ -113,6 +114,7 @@ ArtifactRef.implement({
     approvedAt: t.string({ nullable: true, resolve: (a) => (a.approvedAt ? a.approvedAt.toISOString() : null) }),
     approvalNote: t.string({ nullable: true, resolve: (a) => a.approvalNote ?? null }),
     approvalOverride: t.boolean({ nullable: true, resolve: (a) => a.approvalOverride ?? null }),
+    sessionIndex: t.int({ nullable: true, resolve: (a) => a.sessionIndex }),
   }),
 });
 
@@ -356,6 +358,10 @@ builder.queryField("contentTree", (t) =>
 // ---------------------------------------------------------------------------
 
 function docToShape(doc: LeanArtifact): ArtifactShape {
+  const payload = doc.envelopeJson?.payload as Record<string, unknown> | undefined;
+  const sessionPlan = payload?.session_plan as Record<string, unknown> | undefined;
+  const sessionIndex = typeof sessionPlan?.period_index === "number" ? sessionPlan.period_index : null;
+
   return {
     _id: doc._id,
     docType: doc.docType,
@@ -375,5 +381,6 @@ function docToShape(doc: LeanArtifact): ArtifactShape {
     approvedAt: doc.approvedAt ?? null,
     approvalNote: doc.approvalNote ?? null,
     approvalOverride: doc.approvalOverride ?? null,
+    sessionIndex,
   };
 }

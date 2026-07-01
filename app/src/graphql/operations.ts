@@ -449,6 +449,7 @@ export interface ArtifactListItem {
   reviewStatus: string;
   current: boolean;
   importedAt: string;
+  sessionIndex: number | null;
 }
 
 export interface ContentTreeChapter {
@@ -486,6 +487,7 @@ export const CONTENT_TREE_QUERY = gql<
           reviewStatus
           current
           importedAt
+          sessionIndex
         }
       }
     }
