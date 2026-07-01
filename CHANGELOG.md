@@ -610,3 +610,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-01 — feat(routine): class-note submission report UI switched to a tabular admin-report layout with row-limit selector, Print/PDF/Excel/Columns/Reset controls, teacher school ID, and posted/pending subject columns. Gate: server Jest `routineClassNoteReport` passed, server tsc clean, app tsc clean. [uncommitted]
 - 2026-07-01 — fix(homework+routine): generic homework-topic fallback for missing subject/class catalogs, routine-slot fallback in Homework home, and calendar/class-header polish on class-note screens. Gate: server homework Jest, server tsc, app tsc. [uncommitted]
 
+- 2026-07-01 â€” fix(homework ui): hide `Reconcile & issue` unless the selected section belongs to the logged-in class teacher or an existing admin/supervisor path, and block the reconcile screen's trim/confirm controls for other sections. Gate: app tsc clean. [uncommitted]

@@ -180,6 +180,9 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
 
   const activeClass = myClasses.find((m) => m.cls.id === activeClassId) ?? null;
   const showSectionRow = !!activeClass && activeClass.sections.length > 1;
+  const selectedSection = activeClass?.sections.find((s) => s.id === selection.sectionId) ?? null;
+  const canReconcileHomework =
+    isAdmin || (!!selectedSection && (selectedSection.classTeacherId === user?.id || selectedSection.homeworkConfirmerId === user?.id));
 
   const tally = tallyQ.data?.homeworkDayTally;
   const summary = sumQ.data?.homeworkSummary;
@@ -360,10 +363,13 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
             {/* Actions */}
             <View style={{ gap: space(2), marginTop: space(2) }}>
               <Button title={STR.hwDeclare} onPress={() => navigation.navigate("DeclareHomework")} />
-              <Button title={STR.hwReconcile} variant="secondary" onPress={() => navigation.navigate("HomeworkReconcile")} />
+              {canReconcileHomework ? (
+                <Button title={STR.hwReconcile} variant="secondary" onPress={() => navigation.navigate("HomeworkReconcile")} />
+              ) : null}
               <Button title={STR.hwRecords} variant="secondary" onPress={() => navigation.navigate("HomeworkRecords")} />
               <Button title={STR.hwChecking} variant="secondary" onPress={() => navigation.navigate("CheckingQueue")} />
               <Button title={STR.hwRollups} variant="secondary" onPress={() => navigation.navigate("HomeworkRollups")} />
+              {!canReconcileHomework && hasSection ? <Muted>{STR.hwClassTeacherOnly}</Muted> : null}
             </View>
           </>
         )}

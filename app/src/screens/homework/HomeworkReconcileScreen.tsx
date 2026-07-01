@@ -10,13 +10,20 @@ import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
-import { HW_DAILY_CEILING_MIN } from "@scd/shared";
-import { HOMEWORK_DAY_TALLY, ROSTER_QUERY, TRIM_HOMEWORK_ITEM, CONFIRM_HOMEWORK_DAY } from "../../graphql/operations";
+import { HW_DAILY_CEILING_MIN, roleHasPermission } from "@scd/shared";
+import {
+  CLASSES_QUERY,
+  HOMEWORK_DAY_TALLY,
+  ROSTER_QUERY,
+  TRIM_HOMEWORK_ITEM,
+  CONFIRM_HOMEWORK_DAY,
+} from "../../graphql/operations";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState, ErrorBanner } from "../../components/ui";
 import { SectionBar } from "../../components/SectionBar";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useAuth } from "../../auth/AuthContext";
 import { useSectionContext } from "../../state/SectionContext";
 import { space, useColors } from "../../theme";
 
@@ -26,7 +33,9 @@ const today = (): string => new Date().toISOString().slice(0, 10);
 
 export default function HomeworkReconcileScreen({ navigation }: Props): React.ReactElement {
   const colors = useColors();
+  const { role, user } = useAuth();
   const { selection, hasSection } = useSectionContext();
+  const isAdmin = (!!role && roleHasPermission(role, "roster:manage")) || !!user?.homeworkSupervisor;
   const [date, setDate] = useState(today());
   const [trimTo, setTrimTo] = useState<Record<string, string>>({});
   const [absent, setAbsent] = useState<Set<string>>(new Set());
@@ -35,6 +44,11 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
   const [busy, setBusy] = useState(false);
 
   const vars = { sectionId: selection.sectionId ?? "", classId: selection.classId ?? "", date };
+  const [{ data: classesData }] = useQuery({
+    query: CLASSES_QUERY,
+    variables: { academicYearId: selection.academicYearId ?? "" },
+    pause: !selection.academicYearId,
+  });
   const [tallyQ, refetchTally] = useQuery({ query: HOMEWORK_DAY_TALLY, variables: vars, pause: !hasSection });
   const [rosterQ] = useQuery({ query: ROSTER_QUERY, variables: { sectionId: vars.sectionId }, pause: !hasSection });
   const [, trim] = useMutation(TRIM_HOMEWORK_ITEM);
@@ -57,6 +71,12 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
   const tally = tallyQ.data?.homeworkDayTally;
   const students = rosterQ.data?.studentsInSection ?? [];
   const over = tally ? !tally.withinCeiling : false;
+  const selectedSection =
+    classesData?.classes
+      .find((c) => c.id === selection.classId)
+      ?.sections.find((s) => s.id === selection.sectionId) ?? null;
+  const canReconcileHomework =
+    isAdmin || (!!selectedSection && (selectedSection.classTeacherId === user?.id || selectedSection.homeworkConfirmerId === user?.id));
 
   async function onTrim(itemId: string, qCount: number, revItem: boolean): Promise<void> {
     setError(null);
@@ -121,7 +141,9 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
               {over ? <Muted style={{ color: colors.error, marginTop: 4 }}>{STR.hwOverCeiling} · {STR.hwTrimPanel}</Muted> : null}
             </Card>
 
-            {/* Trim panel — one row per declared item */}
+            {canReconcileHomework ? (
+              <>
+                {/* Trim panel — one row per declared item */}
             {(tally?.items ?? []).filter((it) => it.status === "declared").map((it) => (
               <Card key={it.itemId}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -167,6 +189,10 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
               {over ? <Muted style={{ color: colors.error, marginBottom: 8 }}>{STR.hwOverCeiling}</Muted> : null}
               <Button title={STR.hwConfirmIssue} onPress={onConfirm} loading={busy} disabled={busy || over} />
             </View>
+              </>
+            ) : (
+              <Notice message={STR.hwClassTeacherOnly} tone="danger" />
+            )}
           </>
         )}
       </ScrollView>
