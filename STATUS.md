@@ -2265,5 +2265,5 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
 - 2026-07-01: Lesson Plans filter controls are now laid out in a compact responsive grid, so the filter block fits higher on wide screens instead of taking most of the viewport. Server + app typechecks passed in this session.
 - 2026-07-01: session-plan cards now show the session number beside the chapter name, sourced from `payload.session_plan.period_index`. Server + app typechecks passed in this session.
 - 2026-07-01: homework topic selection now falls back to a synthetic generic tag when a subject/class has no seeded rows, Homework home also falls back to routine slots when listing accessible classes, and class-note screens now use the shared calendar field plus a class/group header. Server homework test and app/server typechecks passed in this session.
-
+- 2026-07-01: the shared-vocab CI verifier was still checking the old homework tuple `240/120/40/20`; it now matches the current `120/120/40/20` values so the gate can reflect the lowered ceiling. Local verifier rerun passed in this session.
 
