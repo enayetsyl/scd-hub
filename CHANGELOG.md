@@ -611,3 +611,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-01 — fix(homework+routine): generic homework-topic fallback for missing subject/class catalogs, routine-slot fallback in Homework home, and calendar/class-header polish on class-note screens. Gate: server homework Jest, server tsc, app tsc. [uncommitted]
 
 - 2026-07-01 â€” fix(homework ui): hide `Reconcile & issue` unless the selected section belongs to the logged-in class teacher or an existing admin/supervisor path, and block the reconcile screen's trim/confirm controls for other sections. Gate: app tsc clean. [uncommitted]
+- 2026-07-01 â€” fix(ci): align the shared-vocab verifier with the lowered homework ceiling so it checks `120/120/40/20` instead of the stale `240/120/40/20` tuple. Gate: local vocab verifier green in this session. [uncommitted]
