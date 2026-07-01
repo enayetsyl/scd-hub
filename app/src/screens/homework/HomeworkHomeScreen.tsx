@@ -19,6 +19,7 @@ import {
   HOMEWORK_SUMMARY,
   HOMEWORK_CLASS_OVERVIEW,
   CLASSES_QUERY,
+  MY_ROUTINE_QUERY,
   MY_SCOPES_QUERY,
   MY_SECTIONS_AS_CLASS_TEACHER_QUERY,
   type ClassT,
@@ -81,6 +82,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
     variables: { academicYearId: ayId ?? "" },
     pause: !ayId,
   });
+  const [{ data: routineData }] = useQuery({ query: MY_ROUTINE_QUERY, pause: isAdmin });
   const [{ data: scopeData }] = useQuery({ query: MY_SCOPES_QUERY, pause: isAdmin });
   const [{ data: ctData }] = useQuery({ query: MY_SECTIONS_AS_CLASS_TEACHER_QUERY, pause: isAdmin });
 
@@ -97,11 +99,14 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
     const ids = new Set<string>();
     for (const g of scopeData?.myScopes ?? []) if (g.active && g.sectionId) ids.add(g.sectionId);
     for (const s of ctData?.mySectionsAsClassTeacher ?? []) ids.add(s.id);
+    for (const slot of routineData?.myRoutineSlots ?? []) {
+      if (slot.groupType === "section" && slot.groupId) ids.add(slot.groupId);
+    }
     return classes
       .map((cls) => ({ cls, sections: cls.sections.filter((s) => ids.has(s.id)) }))
       .filter((x) => x.sections.length > 0)
       .sort((a, b) => a.cls.level - b.cls.level);
-  }, [classes, isAdmin, scopeData, ctData]);
+  }, [classes, isAdmin, routineData, scopeData, ctData]);
 
   // Per-class cumulative badges (one ref per class, any accessible section authorizes).
   const refs = useMemo<HwClassRefInput[]>(

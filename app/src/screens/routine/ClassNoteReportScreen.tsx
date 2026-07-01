@@ -9,7 +9,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { CLASS_NOTE_SUBMISSION_REPORT_QUERY, type ClassNoteSubmissionRowT } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
-import { Screen, Body, Muted, Card, Badge, Field, Notice, Loader, Button, Select } from "../../components/ui";
+import { Screen, Body, Muted, Card, Badge, Notice, Loader, Button, Select } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { STR, bnNum, routineSubjectLabel, getActiveLang, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -158,7 +159,7 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.rtNoteReportTitle}</Body>
           <Muted>{STR.rtNoteReportHint}</Muted>
-          <Field label={STR.attDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+          <DateField label={STR.attDate} value={date} onChange={setDate} />
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
             <Badge text={`${STR.rtPostedSubjects}: ${bnNum(postedTotal)}`} tone="ok" />

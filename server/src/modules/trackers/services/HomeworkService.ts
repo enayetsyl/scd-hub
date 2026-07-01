@@ -22,6 +22,24 @@ import { assertTransition, isEntryState } from "../lifecycle";
 import { isSchoolDay, nextSchoolDay } from "../calendar";
 import { emitHwParentComms, emitHwGuardianChase } from "../../notifications/services/emitters";
 
+const GENERIC_TOPIC_LABEL_BN = "সাধারণ (নির্দিষ্ট অধ্যায় নয়)";
+
+function genericTopicCode(subject: string, classLevel: number): string {
+  return `TOP-${subject}-C${classLevel}-GEN`;
+}
+
+function genericTopicDTO(subject: string, classLevel: number): HomeworkTopicDTO {
+  return {
+    id: `synthetic:${genericTopicCode(subject, classLevel)}`,
+    code: genericTopicCode(subject, classLevel),
+    labelBn: GENERIC_TOPIC_LABEL_BN,
+    classLevel,
+    subject: subject as HwSubject,
+    chapters: [],
+    order: 9999,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // HW_ID generation (handoff §2.1 / D-#34)
 // ---------------------------------------------------------------------------
@@ -117,6 +135,7 @@ export async function declareHomeworkItem(
     .select("code")
     .lean();
   const knownCodes = new Set(knownTopics.map((t) => t.code));
+  knownCodes.add(genericTopicCode(subject, input.classLevel));
   const unknownTags = wantedTags.filter((c) => !knownCodes.has(c));
   if (unknownTags.length > 0) {
     throw new Error(`Unknown topic(s) for ${subject} C${input.classLevel}: ${unknownTags.join(", ")}`);
@@ -197,6 +216,7 @@ export async function listHomeworkTopics(
   const docs = await HomeworkTopic.find({ subject, classLevel, active: true })
     .sort({ order: 1, code: 1 })
     .lean();
+  if (docs.length === 0) return [genericTopicDTO(subject, classLevel)];
   return docs.map((d) => ({
     id: d._id.toString(),
     code: d.code,
@@ -214,7 +234,12 @@ export async function topicLabelByCode(codes: string[]): Promise<Map<string, str
   const uniq = [...new Set(codes)];
   if (uniq.length === 0) return new Map();
   const topics = await HomeworkTopic.find({ code: { $in: uniq } }).select("code labelBn").lean();
-  return new Map(topics.map((t) => [t.code, t.labelBn]));
+  const byCode = new Map(topics.map((t) => [t.code, t.labelBn]));
+  for (const code of uniq) {
+    if (byCode.has(code)) continue;
+    if (/^TOP-[A-Z]+-C[1-5]-GEN$/.test(code)) byCode.set(code, GENERIC_TOPIC_LABEL_BN);
+  }
+  return byCode;
 }
 
 /** Join an item's topTag codes into a single display label (catalog label, else code). */

@@ -11,6 +11,7 @@ import { useQuery, useMutation } from "urql";
 import { ROUTINE_FOR_DATE_QUERY, CLASS_NOTES_FOR_DATE_QUERY, PUBLISH_CLASS_NOTE } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Badge, Notice, Loader } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { STR, routineSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -35,6 +36,7 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
 
   const notesBySlot = new Map((notesQ.data?.classNotesForDate ?? []).map((n) => [n.slotId, n]));
   const slots = (slotsQ.data?.routineForDate ?? []).filter((s) => !s.isBreak);
+  const groupLabel = slots[0]?.groupName ?? title;
 
   async function submit(slotId: string): Promise<void> {
     setBusy(true);
@@ -57,8 +59,11 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }}>
-        <Muted style={{ fontWeight: "700" }}>{title}</Muted>
-        <Field label={STR.rtDate} value={date} onChangeText={setDate} />
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{groupLabel}</Body>
+          {title && title !== groupLabel ? <Muted style={{ marginTop: 2 }}>{title}</Muted> : null}
+        </Card>
+        <DateField label={STR.rtDate} value={date} onChange={setDate} />
         {ok ? <Notice message={ok} tone="ok" /> : null}
         {error ? <Notice message={error} tone="danger" /> : null}
 

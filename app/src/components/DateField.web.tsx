@@ -19,22 +19,37 @@ export function DateField({ label, value, onChange }: DateFieldProps): React.Rea
   return (
     <View style={{ marginBottom: space(3) }}>
       {label ? <Text style={{ color: c.textSecondary, fontSize: 13, marginBottom: space(1) }}>{label}</Text> : null}
-      <input
-        type="date"
-        value={value}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.currentTarget.value)}
+      <View
         style={{
-          padding: 12,
+          flexDirection: "row",
+          alignItems: "center",
+          borderWidth: 1,
+          borderColor: c.border,
           borderRadius: radius.md,
-          border: `1px solid ${c.border}`,
           backgroundColor: c.surface,
-          color: c.textPrimary,
-          fontSize: 16,
-          width: "100%",
-          boxSizing: "border-box",
-          fontFamily: "inherit",
+          paddingHorizontal: space(3),
+          gap: space(2),
         }}
-      />
+      >
+        <Text style={{ color: c.textSecondary, fontSize: 16 }}>📅</Text>
+        <input
+          type="date"
+          value={value}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.currentTarget.value)}
+          style={{
+            padding: 12,
+            border: "none",
+            outline: "none",
+            backgroundColor: "transparent",
+            color: c.textPrimary,
+            fontSize: 16,
+            boxSizing: "border-box",
+            fontFamily: "inherit",
+            flex: 1,
+            minWidth: 0,
+          }}
+        />
+      </View>
     </View>
   );
 }
