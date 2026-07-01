@@ -17,7 +17,9 @@ import {
   bellDutyForDate,
   publishClassNote,
   classNotesForDate,
+  classNoteSubmissionReport,
   myClassNotePrompts,
+  type ClassNoteSubmissionRow,
 } from "../services/RoutineTriggerService";
 
 const BellTriggerRef = builder.objectRef<BellTrigger>("BellTrigger").implement({
@@ -51,6 +53,25 @@ const ClassNoteRef = builder.objectRef<IClassNote>("ClassNote").implement({
     homeworkItemId: t.string({ nullable: true, resolve: (n) => (n.homeworkItemId ? n.homeworkItemId.toString() : null) }),
     publishedBy: t.string({ resolve: (n) => n.publishedBy.toString() }),
     publishedAt: t.string({ resolve: (n) => new Date(n.publishedAt).toISOString() }),
+  }),
+});
+
+const ClassNoteSubmissionRowRef = builder.objectRef<ClassNoteSubmissionRow>("ClassNoteSubmissionRow").implement({
+  fields: (t) => ({
+    groupType: t.exposeString("groupType"),
+    groupId: t.exposeString("groupId"),
+    classLevel: t.int({ nullable: true, resolve: (r) => r.classLevel ?? null }),
+    classNameBn: t.string({ nullable: true, resolve: (r) => r.classNameBn }),
+    sectionNameBn: t.string({ nullable: true, resolve: (r) => r.sectionNameBn }),
+    subjectGroupNameBn: t.string({ nullable: true, resolve: (r) => r.subjectGroupNameBn }),
+    teacherId: t.string({ nullable: true, resolve: (r) => r.teacherId }),
+    teacherName: t.string({ nullable: true, resolve: (r) => r.teacherName }),
+    teacherPhone: t.string({ nullable: true, resolve: (r) => r.teacherPhone }),
+    teacherSchoolId: t.string({ nullable: true, resolve: (r) => r.teacherSchoolId }),
+    publishedSubjects: t.stringList({ resolve: (r) => r.publishedSubjects }),
+    pendingSubjects: t.stringList({ resolve: (r) => r.pendingSubjects }),
+    publishedCount: t.exposeInt("publishedCount"),
+    pendingCount: t.exposeInt("pendingCount"),
   }),
 });
 
@@ -102,6 +123,15 @@ builder.queryField("myClassNotePrompts", (t) =>
     authScopes: { hasPermission: "routine:read" },
     args: { date: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => myClassNotePrompts(parseDate(args.date), ctx.auth!.userId),
+  }),
+);
+
+builder.queryField("classNoteSubmissionReport", (t) =>
+  t.field({
+    type: [ClassNoteSubmissionRowRef],
+    authScopes: { hasPermission: "routine:manage" },
+    args: { date: t.arg.string({ required: true }) },
+    resolve: async (_r, args) => classNoteSubmissionReport(parseDate(args.date)),
   }),
 );
 

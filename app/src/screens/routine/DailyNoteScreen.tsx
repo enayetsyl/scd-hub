@@ -20,8 +20,8 @@ const todayISO = (): string => new Date().toISOString().slice(0, 10);
 type Props = NativeStackScreenProps<RoutineStackParamList, "DailyNote">;
 
 export default function DailyNoteScreen({ route }: Props): React.ReactElement {
-  const { groupType, groupId, title } = route.params;
-  const [date, setDate] = useState(todayISO());
+  const { groupType, groupId, title, date: initialDate } = route.params;
+  const [date, setDate] = useState(initialDate ?? todayISO());
   const [sel, setSel] = useState<string | null>(null);
   const [taught, setTaught] = useState("");
   const [hwId, setHwId] = useState("");

@@ -2299,6 +2299,35 @@ export const PUBLISH_CLASS_NOTE = gql<
   }
 `;
 
+export interface ClassNoteSubmissionRowT {
+  groupType: string;
+  groupId: string;
+  classLevel: number | null;
+  classNameBn: string | null;
+  sectionNameBn: string | null;
+  subjectGroupNameBn: string | null;
+  teacherId: string | null;
+  teacherName: string | null;
+  teacherPhone: string | null;
+  teacherSchoolId: string | null;
+  publishedSubjects: string[];
+  pendingSubjects: string[];
+  publishedCount: number;
+  pendingCount: number;
+}
+
+export const CLASS_NOTE_SUBMISSION_REPORT_QUERY = gql<
+  { classNoteSubmissionReport: ClassNoteSubmissionRowT[] },
+  { date: string }
+>`
+  query ClassNoteSubmissionReport($date: String!) {
+    classNoteSubmissionReport(date: $date) {
+      groupType groupId classLevel classNameBn sectionNameBn subjectGroupNameBn teacherId teacherName teacherPhone teacherSchoolId
+      publishedSubjects pendingSubjects publishedCount pendingCount
+    }
+  }
+`;
+
 export interface BellTriggerT {
   periodNumber: number;
   endHHMM: string;
