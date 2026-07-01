@@ -22,7 +22,7 @@ import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Badge, Notice, EmptyState } from "../../components/ui";
 import { TeacherSelect } from "../../components/selects";
 import { SectionBar } from "../../components/SectionBar";
-import { STR, classLevelLabel, bnNum } from "../../lib/labels";
+import { STR, classLevelLabel, bnNum, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
 import { space } from "../../theme/tokens";
@@ -31,6 +31,7 @@ type Props = NativeStackScreenProps<AdminStackParamList, "AssignClassTeacher">;
 
 export default function AssignClassTeacherScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection, setSection } = useSectionContext();
+  const lang = getActiveLang();
   const [teacherId, setTeacherId] = useState("");
   const [supportId, setSupportId] = useState("");
   const [confirmerId, setConfirmerId] = useState("");
@@ -172,15 +173,25 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
               const n = s.classTeacherId ? ctCount.get(s.classTeacherId) ?? 1 : 0;
               const active = selection.sectionId === s.id;
               const supportIds = s.supportTeacherIds ?? [];
+              const sectionLabel = lang === "en" ? s.code : s.nameBn;
               return (
-                <Pressable
+                  <Pressable
                   key={s.id}
-                  onPress={() => setSection({ classId: c.id, sectionId: s.id, classLevel: c.level, classNameBn: c.nameBn, sectionNameBn: s.nameBn })}
+                  onPress={() =>
+                    setSection({
+                      classId: c.id,
+                      sectionId: s.id,
+                      classLevel: c.level,
+                      classNameBn: c.nameBn,
+                      sectionCode: s.code,
+                      sectionNameBn: s.nameBn,
+                    })
+                  }
                   style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingVertical: space(1), gap: space(2) }}
                 >
                   <View style={{ flex: 1 }}>
                     <Body style={{ fontWeight: active ? "700" : "400" }}>
-                      {s.nameBn}
+                      {sectionLabel}
                       {active ? "  ✓" : ""}
                     </Body>
                     {s.classTeacherId ? (

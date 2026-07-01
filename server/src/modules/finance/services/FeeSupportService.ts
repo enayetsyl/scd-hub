@@ -274,7 +274,7 @@ export interface GuardianDue {
 }
 
 /** The guardian's remaining due across a student's fee postings (derived via splitFee). */
-async function guardianDueFor(studentId: string): Promise<number> {
+export async function guardianDueFor(studentId: string): Promise<number> {
   const [postings, allocations] = await Promise.all([
     loadFeePostings({ studentId: new Types.ObjectId(studentId) }),
     loadAllocations({ studentId: new Types.ObjectId(studentId) }),

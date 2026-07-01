@@ -34,8 +34,10 @@ export const TRIM_PATTERN_RATIO = 0.3;
 
 const DAY_MS = 86_400_000;
 
-/** Subject is encoded in HW_ID = HW-C{class}-{SUBJECT}-{nnnn}. */
+/** Subject is encoded in HW_ID = HW-C{class}-{SUBJECT}-{nnnn}, where class may be signed. */
 function subjectOfHwId(hwId: string): string {
+  const match = hwId.match(/^HW-C(-?\d+)-([A-Z]+)-(\d{4})$/);
+  if (match) return match[2] ?? "?";
   return hwId.split("-")[2] ?? "?";
 }
 
@@ -143,7 +145,7 @@ export interface ClassOverviewResult {
   activeChases: number;
   /** % of records that reached SUBMITTED with no chase. null if none yet. */
   onTimePct: number | null;
-  /** Days in the current (Sun-start) week where Σ issued time > the 240 ceiling. */
+  /** Days in the current (Sun-start) week where Σ issued time > the 120 ceiling. */
   overCeilingDaysThisWeek: number;
 }
 

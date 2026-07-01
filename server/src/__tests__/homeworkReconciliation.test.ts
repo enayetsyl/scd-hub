@@ -1,7 +1,7 @@
 /**
  * HW-T2 tests — daily budget reconciliation + trim log + cadence (handoff §4/§6).
  *
- * T2.1 — tallyDay: live DAY_TOTAL vs 240; over/under state; band warning (>40)
+ * T2.1 — tallyDay: live DAY_TOTAL vs 120; over/under state; band warning (>40)
  * T2.2 — confirmHomeworkDay: over-ceiling BLOCKS issue; within-ceiling issues + reconciles
  * T2.3 — applyTrim: by question count (time follows proportionally), ranks ক/খ/গ
  * T2.4 — trim log row recorded; reconciled day rejects further trims (immutable)
@@ -101,24 +101,24 @@ beforeEach(() => {
 // T2.1 / T2.5 — tallyDay
 // ===========================================================================
 
-describe("T2.1/T2.5 — tallyDay (live DAY_TOTAL vs 240)", () => {
-  test("sums TIME_DECL; under 240 → within_ceiling", async () => {
+describe("T2.1/T2.5 — tallyDay (live DAY_TOTAL vs 120)", () => {
+  test("sums TIME_DECL; under 120 → within_ceiling", async () => {
     mockList.mockResolvedValue([leanItem({ timeDecl: 20 }), leanItem({ timeDecl: 30 })]);
     const r = await tallyDay(CLASS_ID, A_TUESDAY);
     expect(r.dayTotal).toBe(50);
-    expect(r.ceiling).toBe(240);
+    expect(r.ceiling).toBe(120);
     expect(r.withinCeiling).toBe(true);
     expect(r.state).toBe("within_ceiling");
     expect(r.overBy).toBe(0);
   });
 
-  test("over 240 → over_ceiling with overBy", async () => {
+  test("over 120 → over_ceiling with overBy", async () => {
     mockList.mockResolvedValue([leanItem({ timeDecl: 200 }), leanItem({ timeDecl: 60 })]);
     const r = await tallyDay(CLASS_ID, A_TUESDAY);
     expect(r.dayTotal).toBe(260);
     expect(r.withinCeiling).toBe(false);
     expect(r.state).toBe("over_ceiling");
-    expect(r.overBy).toBe(20);
+    expect(r.overBy).toBe(140);
   });
 
   test("a >40 subject raises a band warning but does NOT change the block decision", async () => {
@@ -126,7 +126,7 @@ describe("T2.1/T2.5 — tallyDay (live DAY_TOTAL vs 240)", () => {
     const r = await tallyDay(CLASS_ID, A_TUESDAY);
     expect(r.bandWarnings).toContain("HW-C1-MATH-0009");
     expect(r.items[0].bandWarning).toBe(true);
-    expect(r.withinCeiling).toBe(true); // 45 ≤ 240 day-sum → not blocked
+    expect(r.withinCeiling).toBe(true); // 45 ≤ 120 day-sum → not blocked
   });
 
   test("a reconciled day reports state=reconciled", async () => {
@@ -282,7 +282,7 @@ describe("T2.3/T2.4 — applyTrim", () => {
 describe("T2.2/T2.6 — confirmHomeworkDay (ceiling gate + cadence)", () => {
   test("within ceiling → issues every declared item with q>0 and reconciles", async () => {
     mockList.mockResolvedValue([
-      leanItem({ timeDecl: 100 }),
+      leanItem({ timeDecl: 50 }),
       leanItem({ timeDecl: 60 }),
       leanItem({ qCount: 0, timeDecl: 0 }), // zeroed → not issued
     ]);
@@ -292,7 +292,7 @@ describe("T2.2/T2.6 — confirmHomeworkDay (ceiling gate + cadence)", () => {
       roster: [{ studentId: "s1", present: true }],
       actorId: ACTOR_ID,
     });
-    expect(r.dayTotal).toBe(160);
+    expect(r.dayTotal).toBe(110);
     expect(r.reconState).toBe("reconciled");
     expect(r.issuedItems).toBe(2); // the zeroed one skipped
     expect(r.issuedRecords).toBe(6); // 2 items × 3 each (mockIssue)
@@ -305,7 +305,7 @@ describe("T2.2/T2.6 — confirmHomeworkDay (ceiling gate + cadence)", () => {
     mockList.mockResolvedValue([leanItem({ timeDecl: 200 }), leanItem({ timeDecl: 60 })]);
     await expect(
       confirmHomeworkDay({ classId: CLASS_ID, date: A_TUESDAY, roster: [], actorId: ACTOR_ID }),
-    ).rejects.toThrow(/exceeds the 240-min ceiling/);
+    ).rejects.toThrow(/exceeds the 120-min ceiling/);
     expect(mockIssue).not.toHaveBeenCalled();
     expect(mockReconUpdate).not.toHaveBeenCalled();
   });

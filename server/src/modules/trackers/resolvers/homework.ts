@@ -270,7 +270,7 @@ builder.mutationField("issueHomeworkItem", (t) =>
     type: IssueResultRef,
     description:
       "Issue an item: spawn per-student records (present→GIVEN, absent→ABSENT_REDELIVER). " +
-      "Write-scope enforced. HW-T2 will gate this behind the daily 240-min reconciliation.",
+      "Write-scope enforced. HW-T2 will gate this behind the daily 120-min reconciliation.",
     authScopes: { hasPermission: "tracker:write" },
     args: {
       sectionId: t.arg.string({ required: true }),
@@ -502,7 +502,7 @@ interface DayTallyShape {
 
 const DayTallyRef = builder.objectRef<DayTallyShape>("HomeworkDayTally");
 DayTallyRef.implement({
-  description: "Live daily budget: DAY_TOTAL vs the 240 ceiling + band warnings (handoff §4.2).",
+  description: "Live daily budget: DAY_TOTAL vs the 120 ceiling + band warnings (handoff §4.2).",
   fields: (t) => ({
     classId: t.exposeString("classId"),
     dayTotal: t.exposeInt("dayTotal"),
@@ -597,7 +597,7 @@ async function assertCanViewHomeworkDay(
 builder.queryField("homeworkDayTally", (t) =>
   t.field({
     type: DayTallyRef,
-    description: "Live daily budget for a class+day (DAY_TOTAL vs 240). Read- or confirm-scope enforced.",
+    description: "Live daily budget for a class+day (DAY_TOTAL vs 120). Read- or confirm-scope enforced.",
     authScopes: { hasPermission: "tracker:read" },
     args: {
       sectionId: t.arg.string({ required: true }),
@@ -664,7 +664,7 @@ builder.mutationField("confirmHomeworkDay", (t) =>
   t.field({
     type: ConfirmResultRef,
     description:
-      "Reconcile + issue the day: blocked if DAY_TOTAL > 240 (trim first), else spawns per-student " +
+      "Reconcile + issue the day: blocked if DAY_TOTAL > 120 (trim first), else spawns per-student " +
       "records for every declared item. CLASS-TEACHER only (handoff §9 / D-#42).",
     authScopes: { hasPermission: "tracker:write" },
     args: {

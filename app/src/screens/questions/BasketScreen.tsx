@@ -28,6 +28,7 @@ import {
   Row,
 } from "../../components/ui";
 import { STR, setTypeLabel, bnNum, classLevelLabel } from "../../lib/labels";
+import { getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useBasket } from "../../state/BasketContext";
 import { useSectionContext } from "../../state/SectionContext";
@@ -38,6 +39,7 @@ type Props = NativeStackScreenProps<QuestionsStackParamList, "Basket">;
 export default function BasketScreen(_props: Props): React.ReactElement {
   const basket = useBasket();
   const { selection, hasSection } = useSectionContext();
+  const lang = getActiveLang();
   const tabNav = useNavigation<NavigationProp<TabParamList>>();
   const [setType, setSetType] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -117,7 +119,8 @@ export default function BasketScreen(_props: Props): React.ReactElement {
 
           {hasSection ? (
             <Muted style={{ marginBottom: space(2) }}>
-              {STR.section}: {selection.classNameBn} · {selection.sectionNameBn}
+              {STR.section}: {lang === "en" ? classLevelLabel(selection.classLevel ?? 0) : selection.classNameBn} ·{" "}
+              {lang === "en" ? selection.sectionCode ?? selection.sectionNameBn : selection.sectionNameBn}
             </Muted>
           ) : (
             <View>

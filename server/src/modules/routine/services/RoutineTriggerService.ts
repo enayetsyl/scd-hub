@@ -155,6 +155,7 @@ export interface ClassNoteSubmissionRow {
   groupId: string;
   classLevel: number | null;
   classNameBn: string | null;
+  sectionCode: string | null;
   sectionNameBn: string | null;
   subjectGroupNameBn: string | null;
   teacherId: string | null;
@@ -251,6 +252,7 @@ export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSu
 
     let classLevel: number | null = null;
     let classNameBn: string | null = null;
+    let sectionCode: string | null = null;
     let sectionNameBn: string | null = null;
     let subjectGroupNameBn: string | null = null;
     let sortRank = "zzzz";
@@ -260,6 +262,7 @@ export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSu
       const cls = section?.classId ? classById.get(section.classId.toString()) : null;
       classLevel = cls ? cls.level : null;
       classNameBn = cls?.nameBn ?? null;
+      sectionCode = section?.code ?? null;
       sectionNameBn = section?.nameBn ?? null;
       sortRank = `${String(classLevel ?? 999).padStart(4, "0")}|${classNameBn ?? ""}|${sectionNameBn ?? ""}|${teacher?.name ?? ""}`;
     } else {
@@ -274,6 +277,7 @@ export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSu
       groupId: s.groupId.toString(),
       classLevel,
       classNameBn,
+      sectionCode,
       sectionNameBn,
       subjectGroupNameBn,
       teacherId,

@@ -13,12 +13,13 @@ import { View, Pressable, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
+import { roleHasPermission, HW_DAILY_CEILING_MIN } from "@scd/shared";
 import {
   HOMEWORK_DAY_TALLY,
   HOMEWORK_SUMMARY,
   HOMEWORK_CLASS_OVERVIEW,
   CLASSES_QUERY,
+  MY_ROUTINE_QUERY,
   MY_SCOPES_QUERY,
   MY_SECTIONS_AS_CLASS_TEACHER_QUERY,
   type ClassT,
@@ -37,7 +38,7 @@ import {
   ErrorBanner,
 } from "../../components/ui";
 import { DateField } from "../../components/DateField";
-import { STR, bnNum, hwSubjectLabel, classLevelLabel } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, classLevelLabel, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useSectionContext } from "../../state/SectionContext";
@@ -64,6 +65,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
   const colors = useColors();
   const { role, user } = useAuth();
   const { selection, setSection } = useSectionContext();
+  const lang = getActiveLang();
   const ayId = selection.academicYearId;
   // Principal/Office (roster:manage) AND school-wide homework supervisors see ALL classes —
   // a supervisor must be able to reach (and reconcile) any class, not just their own.
@@ -80,6 +82,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
     variables: { academicYearId: ayId ?? "" },
     pause: !ayId,
   });
+  const [{ data: routineData }] = useQuery({ query: MY_ROUTINE_QUERY, pause: isAdmin });
   const [{ data: scopeData }] = useQuery({ query: MY_SCOPES_QUERY, pause: isAdmin });
   const [{ data: ctData }] = useQuery({ query: MY_SECTIONS_AS_CLASS_TEACHER_QUERY, pause: isAdmin });
 
@@ -96,11 +99,14 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
     const ids = new Set<string>();
     for (const g of scopeData?.myScopes ?? []) if (g.active && g.sectionId) ids.add(g.sectionId);
     for (const s of ctData?.mySectionsAsClassTeacher ?? []) ids.add(s.id);
+    for (const slot of routineData?.myRoutineSlots ?? []) {
+      if (slot.groupType === "section" && slot.groupId) ids.add(slot.groupId);
+    }
     return classes
       .map((cls) => ({ cls, sections: cls.sections.filter((s) => ids.has(s.id)) }))
       .filter((x) => x.sections.length > 0)
       .sort((a, b) => a.cls.level - b.cls.level);
-  }, [classes, isAdmin, scopeData, ctData]);
+  }, [classes, isAdmin, routineData, scopeData, ctData]);
 
   // Per-class cumulative badges (one ref per class, any accessible section authorizes).
   const refs = useMemo<HwClassRefInput[]>(
@@ -150,6 +156,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
       sectionId: s.id,
       classLevel: m.cls.level,
       classNameBn: m.cls.nameBn,
+      sectionCode: s.code,
       sectionNameBn: s.nameBn,
     });
   }
@@ -165,6 +172,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
         sectionId: null,
         classLevel: m.cls.level,
         classNameBn: m.cls.nameBn,
+        sectionCode: null,
         sectionNameBn: null,
       });
     }
@@ -172,6 +180,9 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
 
   const activeClass = myClasses.find((m) => m.cls.id === activeClassId) ?? null;
   const showSectionRow = !!activeClass && activeClass.sections.length > 1;
+  const selectedSection = activeClass?.sections.find((s) => s.id === selection.sectionId) ?? null;
+  const canReconcileHomework =
+    isAdmin || (!!selectedSection && (selectedSection.classTeacherId === user?.id || selectedSection.homeworkConfirmerId === user?.id));
 
   const tally = tallyQ.data?.homeworkDayTally;
   const summary = sumQ.data?.homeworkSummary;
@@ -233,6 +244,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
             <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: space(1) }}>
               {activeClass!.sections.map((s) => {
                 const selected = selection.sectionId === s.id;
+                const sectionLabel = lang === "en" ? s.code : s.nameBn;
                 return (
                   <Pressable
                     key={s.id}
@@ -250,7 +262,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
                     }}
                   >
                     <Body style={{ color: selected ? colors.onPrimaryContainer : colors.textPrimary }}>
-                      {s.nameBn} ({s.code})
+                      {sectionLabel} {lang === "en" ? "" : `(${s.code})`}
                     </Body>
                   </Pressable>
                 );
@@ -274,7 +286,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Body style={{ fontWeight: "700" }}>{STR.hwDayTotal}</Body>
                 <Badge
-                  text={`${bnNum(tally?.dayTotal ?? 0)} / ${bnNum(tally?.ceiling ?? 240)} ${STR.hwMinutes}`}
+                  text={`${bnNum(tally?.dayTotal ?? 0)} / ${bnNum(tally?.ceiling ?? HW_DAILY_CEILING_MIN)} ${STR.hwMinutes}`}
                   tone={over ? "danger" : "ok"}
                 />
               </View>
@@ -351,10 +363,13 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
             {/* Actions */}
             <View style={{ gap: space(2), marginTop: space(2) }}>
               <Button title={STR.hwDeclare} onPress={() => navigation.navigate("DeclareHomework")} />
-              <Button title={STR.hwReconcile} variant="secondary" onPress={() => navigation.navigate("HomeworkReconcile")} />
+              {canReconcileHomework ? (
+                <Button title={STR.hwReconcile} variant="secondary" onPress={() => navigation.navigate("HomeworkReconcile")} />
+              ) : null}
               <Button title={STR.hwRecords} variant="secondary" onPress={() => navigation.navigate("HomeworkRecords")} />
               <Button title={STR.hwChecking} variant="secondary" onPress={() => navigation.navigate("CheckingQueue")} />
               <Button title={STR.hwRollups} variant="secondary" onPress={() => navigation.navigate("HomeworkRollups")} />
+              {!canReconcileHomework && hasSection ? <Muted>{STR.hwClassTeacherOnly}</Muted> : null}
             </View>
           </>
         )}

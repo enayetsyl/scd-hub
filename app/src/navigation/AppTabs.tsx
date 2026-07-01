@@ -197,6 +197,9 @@ import AccessControlUsersScreen from "../screens/admin/AccessControlUsersScreen"
 import AccessControlEditScreen from "../screens/admin/AccessControlEditScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
+import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
+import ChildFeesScreen from "../screens/guardian/ChildFeesScreen";
+import ChildLeaveScreen from "../screens/guardian/ChildLeaveScreen";
 import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
 import ChildRoutineScreen from "../screens/guardian/ChildRoutineScreen";
 import { GuardianChildProvider } from "../state/GuardianChildContext";
@@ -840,12 +843,15 @@ const GuardianHomeStack = createNativeStackNavigator<GuardianHomeStackParamList>
 function GuardianHomeNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
   return (
-    <GuardianHomeStack.Navigator screenOptions={stackOptions}>
-      <GuardianHomeStack.Screen name="GuardianHome" component={GuardianHomeScreen} options={{ title: STR.gpToday }} />
-      <GuardianHomeStack.Screen name="ChildClassNotes" component={ChildClassNotesScreen} options={{ title: STR.gpClassNotesHistory }} />
-    </GuardianHomeStack.Navigator>
-  );
-}
+      <GuardianHomeStack.Navigator screenOptions={stackOptions}>
+        <GuardianHomeStack.Screen name="GuardianHome" component={GuardianHomeScreen} options={{ title: STR.gpToday }} />
+        <GuardianHomeStack.Screen name="ChildClassNotes" component={ChildClassNotesScreen} options={{ title: STR.gpClassNotesHistory }} />
+        <GuardianHomeStack.Screen name="ChildAttendance" component={ChildAttendanceScreen} options={{ title: STR.gpAttendance }} />
+        <GuardianHomeStack.Screen name="ChildFees" component={ChildFeesScreen} options={{ title: STR.gpFees }} />
+        <GuardianHomeStack.Screen name="ChildLeave" component={ChildLeaveScreen} options={{ title: STR.gpLeave }} />
+      </GuardianHomeStack.Navigator>
+    );
+  }
 
 const GuardianHomeworkStack = createNativeStackNavigator<GuardianHomeworkStackParamList>();
 function GuardianHomeworkNavigator(): React.ReactElement {

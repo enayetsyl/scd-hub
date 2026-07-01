@@ -597,7 +597,7 @@ describe("childHomework", () => {
 });
 
 // ===========================================================================
-// childDayLoad — guardian-gated wrapper (vs the LOCKED 240)
+// childDayLoad — guardian-gated wrapper (vs the LOCKED 120)
 // ===========================================================================
 
 describe("childDayLoad", () => {
@@ -608,7 +608,7 @@ describe("childDayLoad", () => {
       baseMinutes: 60,
       topupMinutes: 15,
       totalMinutes: 75,
-      ceiling: 240,
+      ceiling: 120,
       overCeiling: false,
     };
     mockGetStudentDayLoad.mockResolvedValue(load);

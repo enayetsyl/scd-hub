@@ -138,6 +138,7 @@ type AssignmentShape = Pick<ISectionAttendanceAssignment, "fromKey" | "toKey" | 
 interface MarkerAssignmentView {
   assignment: AssignmentShape;
   teacherName: string | null;
+  classLevel: number | null;
   sectionCode: string | null;
   sectionNameBn: string | null;
   classNameBn: string | null;
@@ -151,6 +152,7 @@ MarkerAssignmentRef.implement({
     sectionId: t.string({ resolve: (v) => v.assignment.sectionId.toString() }),
     teacherId: t.string({ resolve: (v) => v.assignment.teacherId.toString() }),
     teacherName: t.string({ nullable: true, resolve: (v) => v.teacherName }),
+    classLevel: t.int({ nullable: true, resolve: (v) => v.classLevel }),
     sectionCode: t.string({ nullable: true, resolve: (v) => v.sectionCode }),
     sectionNameBn: t.string({ nullable: true, resolve: (v) => v.sectionNameBn }),
     classNameBn: t.string({ nullable: true, resolve: (v) => v.classNameBn }),
@@ -314,10 +316,11 @@ async function decorateAssignment(assignment: AssignmentShape): Promise<MarkerAs
     User.findById(assignment.teacherId.toString()).select("name").lean(),
     Section.findById(assignment.sectionId.toString()).select("code nameBn classId").lean(),
   ]);
-  const cls = section ? await Class.findById(section.classId).select("nameBn").lean() : null;
+  const cls = section ? await Class.findById(section.classId).select("level nameBn").lean() : null;
   return {
     assignment,
     teacherName: teacher?.name ?? null,
+    classLevel: cls?.level ?? null,
     sectionCode: section?.code ?? null,
     sectionNameBn: section?.nameBn ?? null,
     classNameBn: cls?.nameBn ?? null,

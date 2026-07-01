@@ -35,6 +35,7 @@ export function DateField({ label, value, onChange }: DateFieldProps): React.Rea
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
+        accessibilityLabel={label ?? "Date picker"}
         style={{
           borderWidth: 1,
           borderColor: c.border,
@@ -42,9 +43,13 @@ export function DateField({ label, value, onChange }: DateFieldProps): React.Rea
           paddingVertical: space(3),
           paddingHorizontal: space(3),
           backgroundColor: c.surface,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: space(2),
         }}
       >
-        <Text style={{ color: c.textPrimary, fontSize: 16 }}>{value || "—"}</Text>
+        <Text style={{ color: c.textSecondary, fontSize: 16 }}>📅</Text>
+        <Text style={{ color: c.textPrimary, fontSize: 16, flex: 1 }}>{value || "—"}</Text>
       </Pressable>
       {open ? (
         <DateTimePicker

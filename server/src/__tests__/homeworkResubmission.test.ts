@@ -209,7 +209,7 @@ describe("T3.4 — student day-load includes top-up minutes", () => {
     expect(load.baseMinutes).toBe(230); // 200 + 30
     expect(load.topupMinutes).toBe(25); // 15 + 10
     expect(load.totalMinutes).toBe(255);
-    expect(load.ceiling).toBe(240);
+    expect(load.ceiling).toBe(120);
     expect(load.overCeiling).toBe(true); // a top-up day MAY push a child over — visible choice
   });
 

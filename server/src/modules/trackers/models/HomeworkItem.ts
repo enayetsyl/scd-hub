@@ -14,10 +14,10 @@
  *
  * `status`: declared → issued. Issuing (spawning Layer-B per-student records)
  * happens here in HW-T1 via the service; HW-T2 will gate it behind the daily
- * 240-min reconciliation/confirm.
+ * 120-min reconciliation/confirm.
  */
 import { Schema, model, Document, Types } from "mongoose";
-import { HW_SUBJECTS } from "@scd/shared";
+import { HW_SUBJECTS, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
 import type { HwSubject } from "@scd/shared";
 
 export const HOMEWORK_ITEM_STATUSES = ["declared", "issued"] as const;
@@ -29,7 +29,7 @@ export interface IHomeworkItem extends Document {
   hwId: string;
   academicYearId: Types.ObjectId;
   classId: Types.ObjectId;
-  /** Content class level 1..5 (homework is C1–C5 only, handoff §2.1). */
+  /** Roster class level (Nursery/KG/C1–C5); homework uses the selected class's roster axis. */
   classLevel: number;
   sectionId: Types.ObjectId;
   subject: HwSubject;
@@ -65,7 +65,7 @@ const HomeworkItemSchema = new Schema<IHomeworkItem>(
     hwId: { type: String, required: true, unique: true },
     academicYearId: { type: Schema.Types.ObjectId, required: true },
     classId: { type: Schema.Types.ObjectId, required: true },
-    classLevel: { type: Number, required: true, min: 1, max: 5 },
+    classLevel: { type: Number, required: true, min: ROSTER_CLASS_LEVEL_MIN, max: ROSTER_CLASS_LEVEL_MAX },
     sectionId: { type: Schema.Types.ObjectId, required: true },
     subject: { type: String, enum: HW_SUBJECTS, required: true },
     dateGiven: { type: Date, required: true },
@@ -76,7 +76,7 @@ const HomeworkItemSchema = new Schema<IHomeworkItem>(
     },
     // 0–40 is the working band, but a subject MAY exceed 40 on reduced-roster days
     // (handoff §2.1 / §4 close): >40 WARNS at reconciliation, never hard-blocks here.
-    // The only hard limit is the §4 day-SUM (240), enforced in the reconciliation service.
+    // The only hard limit is the §4 day-SUM (120), enforced in the reconciliation service.
     timeDecl: { type: Number, required: true, min: 0, default: 20 },
     qCount: { type: Number, required: true, min: 0 },
     poolRef: { type: String },

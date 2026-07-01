@@ -15,6 +15,7 @@ export interface SectionSelection {
   sectionId: string | null;
   classLevel: number | null;
   classNameBn: string | null;
+  sectionCode: string | null;
   sectionNameBn: string | null;
 }
 
@@ -24,6 +25,7 @@ const EMPTY: SectionSelection = {
   sectionId: null,
   classLevel: null,
   classNameBn: null,
+  sectionCode: null,
   sectionNameBn: null,
 };
 
@@ -81,7 +83,15 @@ export function SectionProvider({ children }: { children: React.ReactNode }): Re
 
   const clearSection = useCallback(() => {
     setSelection((prev) => {
-      const next = { ...prev, classId: null, sectionId: null, classLevel: null, classNameBn: null, sectionNameBn: null };
+      const next = {
+        ...prev,
+        classId: null,
+        sectionId: null,
+        classLevel: null,
+        classNameBn: null,
+        sectionCode: null,
+        sectionNameBn: null,
+      };
       void setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });

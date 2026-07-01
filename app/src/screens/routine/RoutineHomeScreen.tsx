@@ -12,7 +12,7 @@ import { SUBJECT_GROUPS_QUERY } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Badge, Loader } from "../../components/ui";
 import { SectionBar } from "../../components/SectionBar";
-import { STR, periodTrackLabel } from "../../lib/labels";
+import { STR, periodTrackLabel, getActiveLang } from "../../lib/labels";
 import { useSectionContext } from "../../state/SectionContext";
 import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
@@ -22,8 +22,11 @@ type Props = NativeStackScreenProps<RoutineStackParamList, "RoutineHome">;
 export default function RoutineHomeScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
   const { role } = useAuth();
+  const lang = getActiveLang();
   const canManage = !!role && roleHasPermission(role, "routine:manage");
   const [groupsQ] = useQuery({ query: SUBJECT_GROUPS_QUERY, variables: { track: null } });
+  const sectionLabel = lang === "en" ? selection.sectionCode ?? selection.sectionNameBn : selection.sectionNameBn;
+  const routineTitle = sectionLabel ?? STR.rtSectionRoutine;
 
   return (
     <Screen padded={false}>
@@ -44,7 +47,7 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.rtSectionRoutine}</Body>
           {hasSection && selection.sectionId ? (
             <View style={{ gap: space(2) }}>
-              <Muted>{selection.sectionNameBn ?? selection.sectionId}</Muted>
+              <Muted>{sectionLabel ?? selection.sectionId}</Muted>
               <Button
                 title={STR.rtView}
                 variant="secondary"
@@ -52,7 +55,7 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
                   navigation.navigate("GroupRoutine", {
                     groupType: "section",
                     groupId: selection.sectionId!,
-                    title: selection.sectionNameBn ?? STR.rtSectionRoutine,
+                    title: routineTitle,
                   })
                 }
               />
@@ -63,7 +66,7 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
                   navigation.navigate("DailyNote", {
                     groupType: "section",
                     groupId: selection.sectionId!,
-                    title: selection.sectionNameBn ?? STR.rtSectionRoutine,
+                    title: routineTitle,
                   })
                 }
               />
@@ -76,7 +79,7 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
                       navigation.navigate("RoutineEditor", {
                         groupType: "section",
                         groupId: selection.sectionId!,
-                        title: selection.sectionNameBn ?? STR.rtSectionRoutine,
+                        title: routineTitle,
                       })
                     }
                   />
@@ -87,7 +90,7 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
                       navigation.navigate("CoverManage", {
                         groupType: "section",
                         groupId: selection.sectionId!,
-                        title: selection.sectionNameBn ?? STR.rtSectionRoutine,
+                        title: routineTitle,
                       })
                     }
                   />

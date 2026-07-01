@@ -3,16 +3,16 @@
  *
  * "The Homework Tracker is the only place the daily ceiling becomes real" (§5.3).
  *
- *   tallyDay           — live DAY_TOTAL vs the 240 ceiling + band warnings (§4.2, T2.1/T2.5)
+ *   tallyDay           — live DAY_TOTAL vs the 120 ceiling + band warnings (§4.2, T2.1/T2.5)
  *   getTrimCandidates  — the §4.4 candidates, pre-ranked ক→খ→গ (T2.3)
  *   applyTrim          — one logged cut: by question count, never time; appends an
  *                        immutable trim-log row (§4.4/§4.5, T2.3/T2.4)
- *   confirmHomeworkDay — the gate: block if DAY_TOTAL > 240, else issue all the day's
+ *   confirmHomeworkDay — the gate: block if DAY_TOTAL > 120, else issue all the day's
  *                        items + finalise the reconciliation (§4.3/§4.5, T2.2/T2.6)
  *
  * Trim reduces Q_COUNT; TIME_DECL follows PROPORTIONALLY (count is the lever, time
  * is the target it is tuned to — D-030). No path extends time. The per-subject band
- * (>40 min) only WARNS; only the day-SUM (240) blocks.
+ * (>40 min) only WARNS; only the day-SUM (120) blocks.
  *
  * Write-scope is enforced by the resolver. The class-teacher-only narrowing of who
  * may reconcile/confirm (handoff §9 / T5.1) is deferred — see D-#38.

@@ -26,6 +26,7 @@ import {
   type LifecycleState,
   type HwResult,
 } from "@scd/shared";
+import { parseDateKey } from "../../attendance/dates";
 import { Guardian } from "../../foundation/models/Guardian";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { Student, type IStudent } from "../../foundation/models/Student";
@@ -41,12 +42,21 @@ import { dayTypeFor } from "../../routine/calendar";
 import { computePeriodTimes, windowFor } from "../../routine/schedule";
 import { slotsForDate } from "../../routine/services/RoutineSlotService";
 import { classNotesForDate } from "../../routine/services/RoutineTriggerService";
+import {
+  studentAttendanceHistory,
+  type StudentHistory,
+} from "../../attendance/services/AttendanceReportService";
+import {
+  leaveApplicationsForStudent,
+  submitLeaveApplication,
+} from "../../attendance/services/LeaveApplicationService";
 import { HomeworkItem, type IHomeworkItem } from "../../trackers/models/HomeworkItem";
 import { HomeworkStudentRecord } from "../../trackers/models/HomeworkStudentRecord";
 import {
   getStudentDayLoad,
   type StudentDayLoadResult,
 } from "../../trackers/services/HomeworkResubmissionService";
+import { guardianDueFor } from "../../finance/services/FeeSupportService";
 import { ForbiddenError } from "../../../middleware/authz";
 
 // ---------------------------------------------------------------------------
@@ -60,10 +70,13 @@ export interface GuardianChildGroup {
 
 export interface GuardianChild {
   studentId: string;
+  name: string;
   nameBn: string;
   gender: string | null;
+  classLevel: number;
   rosterClassLabel: string;
   sectionId: string;
+  sectionCode: string;
   sectionName: string;
   quranGroup: GuardianChildGroup | null;
   arabicGroup: GuardianChildGroup | null;
@@ -127,6 +140,36 @@ export interface GuardianHomeworkRecord {
   /** StoredFile ids — populated by GP-A; null when no file is attached. */
   questionFileId: string | null;
   answerFileId: string | null;
+}
+
+export interface GuardianAttendanceDay {
+  dateKey: string;
+  absent: boolean;
+  leaveCovered: boolean;
+}
+
+export interface GuardianAttendanceHistory {
+  studentId: string;
+  sectionId: string;
+  days: GuardianAttendanceDay[];
+  markedDays: number;
+  absentDays: number;
+  presentPct: number;
+}
+
+export interface GuardianFeeDue {
+  studentId: string;
+  studentName: string;
+  guardianDue: number;
+}
+
+export interface GuardianLeaveApplication {
+  id: string;
+  studentId: string;
+  fromKey: string;
+  toKey: string;
+  reason: string;
+  submittedAt: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -259,12 +302,15 @@ export async function myChildren(guardianId: string): Promise<GuardianChild[]> {
     const arabic = myGroups.find((g) => g.track === "arabic") ?? null;
     return {
       studentId: idStr(s._id),
+      name: s.name,
       nameBn: s.nameBn ?? s.name,
       gender: s.gender ?? null,
+      classLevel: cls?.level ?? 0,
       rosterClassLabel: cls
         ? ROSTER_CLASS_LABELS_BN[cls.level as RosterClassLevel] ?? String(cls.level)
         : "",
       sectionId: idStr(s.sectionId),
+      sectionCode: section ? section.code : "",
       sectionName: section ? section.nameBn : "",
       quranGroup: quran ? { id: idStr(quran._id), name: quran.nameBn } : null,
       arabicGroup: arabic ? { id: idStr(arabic._id), name: arabic.nameBn } : null,
@@ -437,11 +483,71 @@ export async function childHomework(
 }
 
 // ---------------------------------------------------------------------------
-// childDayLoad (GP-1 §4.4) — base + top-up vs the LOCKED 240 (guardian-gated
+// childDayLoad (GP-1 §4.4) — base + top-up vs the LOCKED 120 (guardian-gated
 // wrapper over getStudentDayLoad; NOT the staff tracker:read query)
 // ---------------------------------------------------------------------------
 
 export async function childDayLoad(studentId: string, date: Date): Promise<StudentDayLoadResult> {
   const student = await requireStudent(studentId);
   return getStudentDayLoad(student.classId.toString(), studentId, date);
+}
+
+// ---------------------------------------------------------------------------
+// Guardian riders for attendance / fees / leave (GP-3+)
+// ---------------------------------------------------------------------------
+
+export async function childAttendanceHistory(
+  studentId: string,
+  fromKey: string,
+  toKey: string,
+): Promise<GuardianAttendanceHistory> {
+  parseDateKey(fromKey);
+  parseDateKey(toKey);
+  const history = await studentAttendanceHistory(studentId, fromKey, toKey);
+  return history;
+}
+
+export async function childFeeDue(studentId: string): Promise<GuardianFeeDue> {
+  const student = await requireStudent(studentId);
+  return {
+    studentId,
+    studentName: student.nameBn ?? student.name,
+    guardianDue: await guardianDueFor(studentId),
+  };
+}
+
+export async function childLeaveApplications(
+  studentId: string,
+  fromKey: string,
+  toKey: string,
+): Promise<GuardianLeaveApplication[]> {
+  parseDateKey(fromKey);
+  parseDateKey(toKey);
+  const rows = await leaveApplicationsForStudent(studentId, fromKey, toKey);
+  return rows.map((r) => ({
+    id: r._id.toString(),
+    studentId: r.studentId.toString(),
+    fromKey: r.fromKey,
+    toKey: r.toKey,
+    reason: r.reason,
+    submittedAt: new Date(r.submittedAt).toISOString(),
+  }));
+}
+
+export async function submitGuardianLeaveApplication(
+  studentId: string,
+  fromKey: string,
+  toKey: string,
+  reason: string,
+  actorId: string,
+): Promise<GuardianLeaveApplication> {
+  const app = await submitLeaveApplication(studentId, fromKey, toKey, reason, actorId);
+  return {
+    id: app._id.toString(),
+    studentId: app.studentId.toString(),
+    fromKey: app.fromKey,
+    toKey: app.toKey,
+    reason: app.reason,
+    submittedAt: new Date(app.submittedAt).toISOString(),
+  };
 }
