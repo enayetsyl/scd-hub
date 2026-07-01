@@ -593,10 +593,18 @@ export interface AssignablePlanDTO {
 
 /** The current plans + their open-round assignment state (for the multi-select picker). */
 export async function listAssignablePlans(): Promise<AssignablePlanDTO[]> {
-  const arts = await ContentArtifact.find({
+  const arts = (await ContentArtifact.find({
     docType: { $in: PLAN_DOC_TYPES },
     current: true,
-  }).lean();
+  }).lean()) as unknown as Array<{
+    _id: Types.ObjectId;
+    docType: string;
+    subject: string;
+    classLevel: number;
+    address: { anchorWord: string; number: number | string; title?: string | null };
+    reviewStatus: string;
+    envelopeJson?: Record<string, unknown>;
+  }>;
 
   const openRounds = (await ReviewAssignment.find({
     status: { $in: ["assigned", "submitted"] },
@@ -622,7 +630,28 @@ export async function listAssignablePlans(): Promise<AssignablePlanDTO[]> {
   const users = await User.find({ _id: { $in: reviewerIds } }).select({ name: 1 }).lean();
   const nameOf = new Map(users.map((u) => [u._id.toString(), u.name]));
 
+  const sessionIndexOf = (a: { envelopeJson?: Record<string, unknown> }): number => {
+    const periodIndex = (a.envelopeJson?.payload as Record<string, unknown> | undefined)?.session_plan as
+      | Record<string, unknown>
+      | undefined;
+    const idx = periodIndex && typeof periodIndex.period_index === "number" ? periodIndex.period_index : Number.MAX_SAFE_INTEGER;
+    return idx;
+  };
+
   return arts
+    .sort((a, b) => {
+      if (a.subject !== b.subject) return a.subject.localeCompare(b.subject);
+      if (a.classLevel !== b.classLevel) return a.classLevel - b.classLevel;
+      const aAddr = Number(a.address.number);
+      const bAddr = Number(b.address.number);
+      if (aAddr !== bAddr) return aAddr - bAddr;
+      const aSession = sessionIndexOf(a);
+      const bSession = sessionIndexOf(b);
+      if (aSession !== bSession) return aSession - bSession;
+      const aTitle = a.address.title ?? "";
+      const bTitle = b.address.title ?? "";
+      return aTitle.localeCompare(bTitle);
+    })
     .map((a) => {
       const key = addressKeyOf(a as unknown as AddressKeyInput);
       const round = roundByKey.get(keyStr(key));

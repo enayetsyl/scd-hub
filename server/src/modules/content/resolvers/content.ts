@@ -296,15 +296,26 @@ builder.queryField("contentTree", (t) =>
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
+      currentOnly: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
 
-      const filter: FilterQuery<IContentArtifact> = { current: true };
+      const filter: FilterQuery<IContentArtifact> = {};
+      if (args.currentOnly !== false) filter.current = true;
       if (args.subject) filter.subject = args.subject;
       if (args.classLevel != null) filter.classLevel = args.classLevel;
 
-      const docs = await ContentArtifact.find(filter).sort({ subject: 1, classLevel: 1, "address.number": 1 }).lean();
+      const docs = await ContentArtifact.find(filter)
+        .sort({
+          docType: 1,
+          subject: 1,
+          classLevel: 1,
+          "address.number": 1,
+          "envelopeJson.payload.session_plan.period_index": 1,
+          importedAt: 1,
+        })
+        .lean();
 
       // Scope filter (J1.6 / D-#257): routine teaching/proxy or supervisory grant by subject+class.
       const scope = await buildContentScope(ctx);

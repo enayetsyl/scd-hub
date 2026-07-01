@@ -51,6 +51,7 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
   const [classLevel, setClassLevel] = useState<number | null>(null);
   const [curationTag, setCurationTag] = useState<string | null>(null);
   const [docType, setDocType] = useState<string | null>(null);
+  const [currentOnly, setCurrentOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // One-line summary of the active filters, shown in the collapsed accordion header
@@ -62,15 +63,16 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
         classLevel != null ? classLevelLabel(classLevel) : null,
         docType ? docTypeLabel(docType) : null,
         curationTag ? curationTagLabel(curationTag) : null,
+        currentOnly ? "Current only" : null,
       ]
         .filter(Boolean)
         .join(" · "),
-    [subject, classLevel, docType, curationTag],
+    [subject, classLevel, docType, curationTag, currentOnly],
   );
 
   const [{ data, fetching, error }, refetch] = useQuery({
     query: CONTENT_TREE_QUERY,
-    variables: { subject, classLevel },
+    variables: { subject, classLevel, currentOnly },
   });
 
   // Re-fetch whenever the tab regains focus (e.g. after an Admin → Import) so a
@@ -166,6 +168,12 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
               onPress={() => setDocType(docType === t ? null : t)}
             />
           ))}
+        </ChipRow>
+
+        <Muted>Version view</Muted>
+        <ChipRow>
+          <Chip label="Current only" selected={currentOnly} onPress={() => setCurrentOnly(true)} />
+          <Chip label="All versions" selected={!currentOnly} onPress={() => setCurrentOnly(false)} />
         </ChipRow>
 
         <Muted>{STR.curationTag}</Muted>

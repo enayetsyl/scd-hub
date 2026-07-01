@@ -2251,3 +2251,6 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
 ## Backlog
 - Deferred pipeline (guardian portal, analytics, AI/LLM export, messaging automation, ops modules)
   lives in `docs/roadmap.md`.
+- 2026-07-01: content browsing now has a `currentOnly` toggle on `contentTree`, so Principal can switch from current versions to all versions when older session plans need to be reviewed. Server + app typechecks passed in this session.
+- 2026-07-01: session-plan ordering now uses the stored `payload.session_plan.period_index`, so Session 1 appears before Session 2 in both the Lesson Plans tree and the Principal review list. Server + app typechecks passed in this session.
+- 2026-07-01: Lesson Plans now open on the `All versions` tab by default for Principal, with session plans still sorted ascending by `payload.session_plan.period_index`. Server + app typechecks passed in this session.
