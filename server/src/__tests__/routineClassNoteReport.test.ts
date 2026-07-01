@@ -57,6 +57,13 @@ jest.mock("../modules/foundation/models/User", () => ({
   },
 }));
 
+const mockStaffFind = jest.fn();
+jest.mock("../modules/foundation/models/StaffProfile", () => ({
+  StaffProfile: {
+    find: () => ({ select: () => ({ lean: () => mockStaffFind() }) }),
+  },
+}));
+
 import { classNoteSubmissionReport } from "../modules/routine/services/RoutineTriggerService";
 
 const DATE = new Date(2026, 6, 1, 9, 0, 0);
@@ -70,6 +77,7 @@ beforeEach(() => {
   mockClassFind.mockResolvedValue([]);
   mockSubjectGroupFind.mockResolvedValue([]);
   mockUserFind.mockResolvedValue([]);
+  mockStaffFind.mockResolvedValue([]);
 });
 
 describe("classNoteSubmissionReport", () => {
@@ -137,6 +145,10 @@ describe("classNoteSubmissionReport", () => {
       { _id: coverTeacherId, name: "Cover Teacher", phone: "+880222" },
       { _id: otherTeacherId, name: "Other Teacher", phone: null },
     ]);
+    mockStaffFind.mockResolvedValue([
+      { phone: "+880111", schoolId: "20199" },
+      { phone: "+880222", schoolId: "20159" },
+    ]);
 
     const rows = await classNoteSubmissionReport(DATE);
 
@@ -145,6 +157,7 @@ describe("classNoteSubmissionReport", () => {
       groupType: "section",
       classNameBn: "Class 4",
       sectionNameBn: "A",
+      teacherSchoolId: "20159",
       teacherPhone: "+880222",
       publishedSubjects: ["BAN"],
       pendingSubjects: [],
@@ -153,6 +166,7 @@ describe("classNoteSubmissionReport", () => {
     });
     expect(rows[1]).toMatchObject({
       teacherName: "Main Teacher",
+      teacherSchoolId: "20199",
       publishedSubjects: [],
       pendingSubjects: ["ENG"],
       publishedCount: 0,

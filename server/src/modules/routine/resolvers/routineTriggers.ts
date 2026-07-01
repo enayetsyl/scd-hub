@@ -67,6 +67,7 @@ const ClassNoteSubmissionRowRef = builder.objectRef<ClassNoteSubmissionRow>("Cla
     teacherId: t.string({ nullable: true, resolve: (r) => r.teacherId }),
     teacherName: t.string({ nullable: true, resolve: (r) => r.teacherName }),
     teacherPhone: t.string({ nullable: true, resolve: (r) => r.teacherPhone }),
+    teacherSchoolId: t.string({ nullable: true, resolve: (r) => r.teacherSchoolId }),
     publishedSubjects: t.stringList({ resolve: (r) => r.publishedSubjects }),
     pendingSubjects: t.stringList({ resolve: (r) => r.pendingSubjects }),
     publishedCount: t.exposeInt("publishedCount"),

@@ -9,6 +9,7 @@ import { DAYS_OF_WEEK } from "@scd/shared";
 import type { RoutineSubject } from "@scd/shared";
 import { Class } from "../../foundation/models/Class";
 import { Section } from "../../foundation/models/Section";
+import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { SubjectGroup } from "../models/SubjectGroup";
 import { User } from "../../foundation/models/User";
 import { ScheduleWindow, type IScheduleWindow } from "../models/ScheduleWindow";
@@ -159,6 +160,7 @@ export interface ClassNoteSubmissionRow {
   teacherId: string | null;
   teacherName: string | null;
   teacherPhone: string | null;
+  teacherSchoolId: string | null;
   publishedSubjects: RoutineSubject[];
   pendingSubjects: RoutineSubject[];
   publishedCount: number;
@@ -221,6 +223,12 @@ export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSu
   const classById = new Map(classes.map((c) => [c._id.toString(), c]));
   const subjectGroupById = new Map(subjectGroups.map((g) => [g._id.toString(), g]));
   const userById = new Map(users.map((u) => [u._id.toString(), u]));
+  const phones = [...new Set(users.map((u) => u.phone).filter((phone): phone is string => !!phone))];
+  const staffProfiles =
+    phones.length > 0
+      ? await StaffProfile.find({ active: true, phone: { $in: phones } }).select("phone schoolId").lean()
+      : [];
+  const schoolIdByPhone = new Map(staffProfiles.map((s) => [s.phone ?? "", s.schoolId]));
 
   type RowState = ClassNoteSubmissionRow & { sortRank: string };
   const rows = new Map<string, RowState>();
@@ -231,6 +239,7 @@ export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSu
     const rowKey = `${s.groupType}|${s.groupId.toString()}|${teacherId ?? "none"}`;
     const published = noteBySlot.has(slotId);
     const teacher = teacherId ? userById.get(teacherId) : null;
+    const teacherSchoolId = teacher?.phone ? schoolIdByPhone.get(teacher.phone) ?? null : null;
 
     const existing = rows.get(rowKey);
     if (existing) {
@@ -270,6 +279,7 @@ export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSu
       teacherId,
       teacherName: teacher?.name ?? null,
       teacherPhone: teacher?.phone ?? null,
+      teacherSchoolId,
       publishedSubjects: published ? [s.subject] : [],
       pendingSubjects: published ? [] : [s.subject],
       publishedCount: published ? 1 : 0,

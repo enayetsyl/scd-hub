@@ -2309,6 +2309,7 @@ export interface ClassNoteSubmissionRowT {
   teacherId: string | null;
   teacherName: string | null;
   teacherPhone: string | null;
+  teacherSchoolId: string | null;
   publishedSubjects: string[];
   pendingSubjects: string[];
   publishedCount: number;
@@ -2321,7 +2322,7 @@ export const CLASS_NOTE_SUBMISSION_REPORT_QUERY = gql<
 >`
   query ClassNoteSubmissionReport($date: String!) {
     classNoteSubmissionReport(date: $date) {
-      groupType groupId classLevel classNameBn sectionNameBn subjectGroupNameBn teacherId teacherName teacherPhone
+      groupType groupId classLevel classNameBn sectionNameBn subjectGroupNameBn teacherId teacherName teacherPhone teacherSchoolId
       publishedSubjects pendingSubjects publishedCount pendingCount
     }
   }
