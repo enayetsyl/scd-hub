@@ -37,7 +37,7 @@ import {
   ErrorBanner,
 } from "../../components/ui";
 import { DateField } from "../../components/DateField";
-import { STR, bnNum, hwSubjectLabel, classLevelLabel } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, classLevelLabel, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useSectionContext } from "../../state/SectionContext";
@@ -64,6 +64,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
   const colors = useColors();
   const { role, user } = useAuth();
   const { selection, setSection } = useSectionContext();
+  const lang = getActiveLang();
   const ayId = selection.academicYearId;
   // Principal/Office (roster:manage) AND school-wide homework supervisors see ALL classes —
   // a supervisor must be able to reach (and reconcile) any class, not just their own.
@@ -150,6 +151,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
       sectionId: s.id,
       classLevel: m.cls.level,
       classNameBn: m.cls.nameBn,
+      sectionCode: s.code,
       sectionNameBn: s.nameBn,
     });
   }
@@ -165,6 +167,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
         sectionId: null,
         classLevel: m.cls.level,
         classNameBn: m.cls.nameBn,
+        sectionCode: null,
         sectionNameBn: null,
       });
     }
@@ -233,6 +236,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
             <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: space(1) }}>
               {activeClass!.sections.map((s) => {
                 const selected = selection.sectionId === s.id;
+                const sectionLabel = lang === "en" ? s.code : s.nameBn;
                 return (
                   <Pressable
                     key={s.id}
@@ -250,7 +254,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
                     }}
                   >
                     <Body style={{ color: selected ? colors.onPrimaryContainer : colors.textPrimary }}>
-                      {s.nameBn} ({s.code})
+                      {sectionLabel} {lang === "en" ? "" : `(${s.code})`}
                     </Body>
                   </Pressable>
                 );

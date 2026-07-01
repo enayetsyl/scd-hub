@@ -1,11 +1,11 @@
-/**
- * GuardianHomeScreen ("আজ", GP-2) — the selected child's today: routine
- * (day-type aware — a holiday shows its label), class notes, open homework with
- * state chips, and the personal day-load vs the LOCKED 240. Plus the inert
- * "শীঘ্রই আসছে" placeholder cards (GP-3+ riders) — tap shows a one-line notice,
- * no navigation, no dead queries (GP-J11).
+﻿/**
+ * GuardianHomeScreen ("à¦†à¦œ", GP-2) â€” the selected child's today: routine
+ * (day-type aware â€” a holiday shows its label), class notes, open homework with
+ * state chips, and the personal day-load vs the LOCKED 240. The bottom cards
+ * now open the live guardian surfaces for attendance, fees, notices, leave,
+ * and notifications.
  */
-import React, { useState } from "react";
+import React from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -25,8 +25,22 @@ import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } 
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
+import { openNotificationCenter } from "../../navigation/navigationRef";
 import type { GuardianHomeStackParamList } from "../../navigation/types";
-import { STR, bnNum, loanStatusLabel, vocabProgramLabel, hwSubjectLabel, commentTypeLabel, commentSentimentLabel, revCategoryLabel, subjectLabel, lifecycleStateLabel, dayTypeLabel } from "../../lib/labels";
+import {
+  STR,
+  bnNum,
+  loanStatusLabel,
+  vocabProgramLabel,
+  hwSubjectLabel,
+  commentTypeLabel,
+  commentSentimentLabel,
+  revCategoryLabel,
+  subjectLabel,
+  lifecycleStateLabel,
+  dayTypeLabel,
+  getActiveLang,
+} from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
 type Nav = NativeStackNavigationProp<GuardianHomeStackParamList>;
@@ -45,7 +59,7 @@ const OPEN_STATES = new Set(["GIVEN", "ABSENT_REDELIVER", "DUE", "SUBMITTED", "C
 export default function GuardianHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { selected, fetching } = useGuardianChild();
-  const [placeholderNote, setPlaceholderNote] = useState<string | null>(null);
+  const lang = getActiveLang();
   const sid = selected?.studentId ?? "";
   const date = today();
 
@@ -96,7 +110,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
   });
   // CM-6 follow-up: no guardian meeting-slot card is rendered. The server's
   // childMeetingSlot(meetingId, studentId) read needs a meetingId, but there is NO
-  // guardian-facing "list my meetings" query to obtain one — so a guardian cannot
+  // guardian-facing "list my meetings" query to obtain one â€” so a guardian cannot
   // reach it. Surface a slot card only once a server read yields the family's
   // meetings (or childMeetingSlot drops the meetingId arg).
 
@@ -121,21 +135,26 @@ export default function GuardianHomeScreen(): React.ReactElement {
     (r) => OPEN_STATES.has(r.state) || r.dateGiven.slice(0, 10) === date,
   );
   const load = loadQ.data?.childDayLoad;
-
-  const placeholders = [STR.gpAttendance, STR.gpFees, STR.gpNotices, STR.gpLeave, STR.gpPush];
+  const shortcuts = [
+    { key: "attendance", title: STR.gpAttendance, onPress: () => nav.navigate("ChildAttendance") },
+    { key: "fees", title: STR.gpFees, onPress: () => nav.navigate("ChildFees") },
+    { key: "notices", title: STR.gpNotices, onPress: () => nav.navigate("ChildClassNotes") },
+    { key: "leave", title: STR.gpLeave, onPress: () => nav.navigate("ChildLeave") },
+    { key: "notifications", title: STR.gpPush, onPress: () => openNotificationCenter() },
+  ];
 
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
         <ChildSwitcher />
 
-        {/* Child info — section + Quran/Arabic group memberships (myChildren,
+        {/* Child info â€” section + Quran/Arabic group memberships (myChildren,
             already loaded by the provider; cross-grade groups per D-#48/#56). */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpChildInfo}</Body>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(2) }}>
             <Muted>{STR.gpSection}</Muted>
-            <Body>{selected.sectionName}</Body>
+            <Body>{lang === "en" ? selected.sectionCode || selected.sectionName : selected.sectionName}</Body>
           </View>
           {selected.quranGroup ? (
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(1) }}>
@@ -175,13 +194,13 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 <Body>
                   {bnNum(s.periodNumber)}. {subjectLabel(s.subject)}
                 </Body>
-                <Muted>{s.startHHMM && s.endHHMM ? `${s.startHHMM}–${s.endHHMM}` : ""}</Muted>
+                <Muted>{s.startHHMM && s.endHHMM ? `${s.startHHMM}â€“${s.endHHMM}` : ""}</Muted>
               </View>
             ))
           )}
         </Card>
 
-        {/* Class notes — what was taught today */}
+        {/* Class notes â€” what was taught today */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpClassNotes}</Body>
           {notesQ.fetching ? (
@@ -195,7 +214,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 <Body>{n.taughtSummaryBn}</Body>
                 {n.homework ? (
                   <Muted>
-                    {STR.gpHomeworkOpen}: {n.homework.hwId} · {bnNum(n.homework.qCount)} ·{" "}
+                    {STR.gpHomeworkOpen}: {n.homework.hwId} Â· {bnNum(n.homework.qCount)} Â·{" "}
                     {bnNum(n.homework.timeDecl)} {STR.gpMinutes}
                   </Muted>
                 ) : null}
@@ -255,7 +274,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
           )}
         </Card>
 
-        {/* Library loans — read-only child-loans card (LB-5 rider, J-L9; D-#68:
+        {/* Library loans â€” read-only child-loans card (LB-5 rider, J-L9; D-#68:
             no reserve/renew control exists for guardians) */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpLibraryLoans}</Body>
@@ -275,7 +294,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 }}
               >
                 <View style={{ flexShrink: 1 }}>
-                  <Body>{loan.titleBn ?? loan.accessionNo ?? "—"}</Body>
+                  <Body>{loan.titleBn ?? loan.accessionNo ?? "â€”"}</Body>
                   <Muted>
                     {loan.status === "ACTIVE"
                       ? `${STR.libDue}: ${new Date(loan.dueDate).toLocaleDateString()}`
@@ -296,7 +315,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
           )}
         </Card>
 
-        {/* Vocabulary results — read-only, marked tests only (VC-5 / J7, D-#155) */}
+        {/* Vocabulary results â€” read-only, marked tests only (VC-5 / J7, D-#155) */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpVocab}</Body>
           {vocabQ.fetching ? (
@@ -311,7 +330,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
               >
                 <View style={{ flexShrink: 1 }}>
                   <Body>
-                    {vocabProgramLabel(v.program)} · {v.label}
+                    {vocabProgramLabel(v.program)} Â· {v.label}
                   </Body>
                   <Muted>{new Date(v.testDate).toLocaleDateString()}</Muted>
                 </View>
@@ -328,7 +347,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
           )}
         </Card>
 
-        {/* Class-test results — read-only, PUBLISHED only (CT-5 / J7, D-#68). Never
+        {/* Class-test results â€” read-only, PUBLISHED only (CT-5 / J7, D-#68). Never
             shows teacherAction (the childTestResults query doesn't fetch it). */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpTestResults}</Body>
@@ -342,7 +361,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View style={{ flexShrink: 1 }}>
                     <Body>
-                      {hwSubjectLabel(r.subject)} · {STR.ctTestNumber} {bnNum(r.testNumber)}
+                      {hwSubjectLabel(r.subject)} Â· {STR.ctTestNumber} {bnNum(r.testNumber)}
                     </Body>
                     <Muted>{new Date(r.examDate).toLocaleDateString()}</Muted>
                   </View>
@@ -350,7 +369,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                     text={
                       r.status === "ABSENT"
                         ? STR.ctAbsent
-                        : `${bnNum(r.marks ?? 0)}/${bnNum(r.totalMarks)}${r.percent == null ? "" : ` · ${bnNum(r.percent)}%`}`
+                        : `${bnNum(r.marks ?? 0)}/${bnNum(r.totalMarks)}${r.percent == null ? "" : ` Â· ${bnNum(r.percent)}%`}`
                     }
                     tone={r.status === "ABSENT" ? "muted" : r.pass ? "brand" : "danger"}
                   />
@@ -362,7 +381,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
           )}
         </Card>
 
-        {/* Teacher comments — read-only, DELIVERED daily comments only (CM-6 / CM-5,
+        {/* Teacher comments â€” read-only, DELIVERED daily comments only (CM-6 / CM-5,
             J-CM8, D-#68). The childComments query structurally omits authorUserId /
             sectionId / deliveryChannels. Attachments open on web via openStoredFile. */}
         <Card>
@@ -376,7 +395,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
               <View key={c.id} style={{ marginTop: space(2) }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <Muted>
-                    {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)}
+                    {commentTypeLabel(c.type)} Â· {commentSentimentLabel(c.sentiment)}
                   </Muted>
                   {c.deliveredAt ? <Muted>{new Date(c.deliveredAt).toLocaleDateString()}</Muted> : null}
                 </View>
@@ -398,9 +417,9 @@ export default function GuardianHomeScreen(): React.ReactElement {
           )}
         </Card>
 
-        {/* Saturday Hifz revision — read-only, DELIVERED Saturdays only (SR-4). The
+        {/* Saturday Hifz revision â€” read-only, DELIVERED Saturdays only (SR-4). The
             childRevision query structurally omits teacherUserId / deliveryChannels;
-            portions / تنبیه / فتح / structured mistakes / the teacher's comment. */}
+            portions / ØªÙ†Ø¨ÛŒÙ‡ / ÙØªØ­ / structured mistakes / the teacher's comment. */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpRevision}</Body>
           {revisionQ.fetching ? (
@@ -417,8 +436,8 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 {e.present
                   ? e.juzRecords.map((r, i) => (
                       <Muted key={i} style={{ marginTop: space(1) }}>
-                        {revCategoryLabel(r.category)} · {STR.revJuz} {bnNum(r.juz)} · {bnNum(r.amountJuz)} · {STR.revTanbih}{" "}
-                        {bnNum(r.tanbih)} · {STR.revFath} {bnNum(r.fath)} · {STR.revMistakes}{" "}
+                        {revCategoryLabel(r.category)} Â· {STR.revJuz} {bnNum(r.juz)} Â· {bnNum(r.amountJuz)} Â· {STR.revTanbih}{" "}
+                        {bnNum(r.tanbih)} Â· {STR.revFath} {bnNum(r.fath)} Â· {STR.revMistakes}{" "}
                         {bnNum(r.mistakes.harf + r.mistakes.ghunnah + r.mistakes.madd + r.mistakes.other)}
                       </Muted>
                     ))
@@ -433,18 +452,12 @@ export default function GuardianHomeScreen(): React.ReactElement {
           )}
         </Card>
 
-        {/* GP-3+ placeholders — inert by contract (GP-J11) */}
-        {placeholderNote ? <Notice message={placeholderNote} tone="info" /> : null}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
-          {placeholders.map((label) => (
-            <Pressable
-              key={label}
-              onPress={() => setPlaceholderNote(`${label} — ${STR.gpComingSoonNote}`)}
-              style={{ flexGrow: 1, minWidth: 140 }}
-            >
+          {shortcuts.map((item) => (
+            <Pressable key={item.key} onPress={item.onPress} style={{ flexGrow: 1, minWidth: 140 }}>
               <Card>
-                <Body style={{ fontWeight: "700" }}>{label}</Body>
-                <Muted>{STR.gpComingSoon}</Muted>
+                <Body style={{ fontWeight: "700" }}>{item.title}</Body>
+                <Muted>{STR.open}</Muted>
               </Card>
             </Pressable>
           ))}
@@ -453,3 +466,4 @@ export default function GuardianHomeScreen(): React.ReactElement {
     </Screen>
   );
 }
+

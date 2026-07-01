@@ -23,7 +23,7 @@ import {
   Divider,
 } from "../../components/ui";
 import { AcademicYearSelect } from "../../components/selects";
-import { STR, classLevelLabel } from "../../lib/labels";
+import { STR, classLevelLabel, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
 import { space } from "../../theme/tokens";
@@ -31,6 +31,7 @@ import { space } from "../../theme/tokens";
 export default function SectionPickerScreen(): React.ReactElement {
   const nav = useNavigation();
   const { selection, setAcademicYearId, setSection } = useSectionContext();
+  const lang = getActiveLang();
   const ayId = selection.academicYearId;
 
   const [{ data, fetching, error }, refetch] = useQuery({
@@ -56,6 +57,7 @@ export default function SectionPickerScreen(): React.ReactElement {
       sectionId: s.id,
       classLevel: c.level,
       classNameBn: c.nameBn,
+      sectionCode: s.code,
       sectionNameBn: s.nameBn,
     });
     nav.goBack();
@@ -84,10 +86,12 @@ export default function SectionPickerScreen(): React.ReactElement {
                   <View style={{ marginTop: space(2) }}>
                     {mySections.map(({ cls, sec }) => {
                       const active = selection.sectionId === sec.id;
+                      const classLabel = lang === "en" ? classLevelLabel(cls.level) : cls.nameBn;
+                      const sectionLabel = lang === "en" ? sec.code : sec.nameBn;
                       return (
                         <Button
                           key={sec.id}
-                          title={`${cls.nameBn} · ${sec.nameBn} (${sec.code})${active ? "  ✓" : ""}`}
+                          title={`${classLabel} · ${sectionLabel}${lang === "en" ? "" : ` (${sec.code})`}${active ? "  ✓" : ""}`}
                           variant={active ? "primary" : "secondary"}
                           style={{ marginBottom: space(2) }}
                           onPress={() => pick(cls, sec)}
@@ -100,15 +104,16 @@ export default function SectionPickerScreen(): React.ReactElement {
               {classes.map((c) => (
                 <Card key={c.id}>
                   <Body style={{ fontWeight: "700" }}>
-                    {c.nameBn} · {classLevelLabel(c.level)}
+                    {lang === "en" ? classLevelLabel(c.level) : c.nameBn}
                   </Body>
                   <View style={{ marginTop: space(2) }}>
                     {c.sections.map((s) => {
                       const active = selection.sectionId === s.id;
+                      const sectionLabel = lang === "en" ? s.code : s.nameBn;
                       return (
                         <Button
                           key={s.id}
-                          title={`${s.nameBn} (${s.code})${active ? "  ✓" : ""}`}
+                          title={`${sectionLabel}${lang === "en" ? "" : ` (${s.code})`}${active ? "  ✓" : ""}`}
                           variant={active ? "primary" : "secondary"}
                           style={{ marginBottom: space(2) }}
                           onPress={() => pick(c, s)}

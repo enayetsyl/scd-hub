@@ -26,6 +26,7 @@ import {
   Notice,
 } from "../../components/ui";
 import { STR, classLevelLabel, genderLabel, relationLabel, bnNum } from "../../lib/labels";
+import { getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
 import { space } from "../../theme/tokens";
@@ -72,6 +73,7 @@ function StudentCard({ s }: { s: RosterStudentT }): React.ReactElement {
 export default function RosterScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { selection } = useSectionContext();
+  const lang = getActiveLang();
   const sectionId = selection.sectionId;
 
   const [{ data, fetching, error }, refetch] = useQuery({
@@ -101,8 +103,10 @@ export default function RosterScreen(): React.ReactElement {
       {sectionId ? (
         <Card>
           <Body style={{ fontWeight: "700" }}>
-            {selection.classNameBn ?? classLevelLabel(selection.classLevel ?? 0)}
-            {selection.sectionNameBn ? ` · ${selection.sectionNameBn}` : ""}
+            {lang === "en" ? classLevelLabel(selection.classLevel ?? 0) : selection.classNameBn ?? classLevelLabel(selection.classLevel ?? 0)}
+            {selection.sectionId
+              ? ` · ${lang === "en" ? selection.sectionCode ?? selection.sectionNameBn : selection.sectionNameBn ?? ""}`
+              : ""}
           </Body>
           <Muted>{`${bnNum(students.length)} ${STR.rosterCount}`}</Muted>
           <Button

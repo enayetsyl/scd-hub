@@ -62,6 +62,7 @@ const ClassNoteSubmissionRowRef = builder.objectRef<ClassNoteSubmissionRow>("Cla
     groupId: t.exposeString("groupId"),
     classLevel: t.int({ nullable: true, resolve: (r) => r.classLevel ?? null }),
     classNameBn: t.string({ nullable: true, resolve: (r) => r.classNameBn }),
+    sectionCode: t.string({ nullable: true, resolve: (r) => r.sectionCode }),
     sectionNameBn: t.string({ nullable: true, resolve: (r) => r.sectionNameBn }),
     subjectGroupNameBn: t.string({ nullable: true, resolve: (r) => r.subjectGroupNameBn }),
     teacherId: t.string({ nullable: true, resolve: (r) => r.teacherId }),

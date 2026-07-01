@@ -98,6 +98,9 @@ export type AttendanceStackParamList = {
 export type GuardianHomeStackParamList = {
   GuardianHome: undefined;
   ChildClassNotes: undefined;
+  ChildAttendance: undefined;
+  ChildFees: undefined;
+  ChildLeave: undefined;
 };
 export type GuardianHomeworkStackParamList = {
   ChildHomework: undefined;

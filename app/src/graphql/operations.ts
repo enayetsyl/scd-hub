@@ -2082,10 +2082,13 @@ export interface GuardianChildGroupT {
 
 export interface GuardianChildT {
   studentId: string;
+  name: string;
   nameBn: string;
   gender: string | null;
+  classLevel: number;
   rosterClassLabel: string;
   sectionId: string;
+  sectionCode: string;
   sectionName: string;
   quranGroup: GuardianChildGroupT | null;
   arabicGroup: GuardianChildGroupT | null;
@@ -2094,7 +2097,7 @@ export interface GuardianChildT {
 export const MY_CHILDREN_QUERY = gql<{ myChildren: GuardianChildT[] }, NoVars>`
   query MyChildren {
     myChildren {
-      studentId nameBn gender rosterClassLabel sectionId sectionName
+      studentId name nameBn gender classLevel rosterClassLabel sectionId sectionCode sectionName
       quranGroup { id name }
       arabicGroup { id name }
     }
@@ -2299,11 +2302,87 @@ export const PUBLISH_CLASS_NOTE = gql<
   }
 `;
 
+export interface GuardianAttendanceDayT {
+  dateKey: string;
+  absent: boolean;
+  leaveCovered: boolean;
+}
+
+export interface GuardianAttendanceHistoryT {
+  studentId: string;
+  sectionId: string;
+  days: GuardianAttendanceDayT[];
+  markedDays: number;
+  absentDays: number;
+  presentPct: number;
+}
+
+export const CHILD_ATTENDANCE_HISTORY_QUERY = gql<
+  { childAttendanceHistory: GuardianAttendanceHistoryT },
+  { studentId: string; fromKey: string; toKey: string }
+>`
+  query ChildAttendanceHistory($studentId: String!, $fromKey: String!, $toKey: String!) {
+    childAttendanceHistory(studentId: $studentId, fromKey: $fromKey, toKey: $toKey) {
+      studentId sectionId markedDays absentDays presentPct
+      days { dateKey absent leaveCovered }
+    }
+  }
+`;
+
+export interface GuardianFeeDueT {
+  studentId: string;
+  studentName: string;
+  guardianDue: number;
+}
+
+export const CHILD_FEE_DUE_QUERY = gql<
+  { childFeeDue: GuardianFeeDueT },
+  { studentId: string }
+>`
+  query ChildFeeDue($studentId: String!) {
+    childFeeDue(studentId: $studentId) {
+      studentId studentName guardianDue
+    }
+  }
+`;
+
+export interface GuardianLeaveApplicationT {
+  id: string;
+  studentId: string;
+  fromKey: string;
+  toKey: string;
+  reason: string;
+  submittedAt: string;
+}
+
+export const CHILD_LEAVE_APPLICATIONS_QUERY = gql<
+  { childLeaveApplications: GuardianLeaveApplicationT[] },
+  { studentId: string; fromKey: string; toKey: string }
+>`
+  query ChildLeaveApplications($studentId: String!, $fromKey: String!, $toKey: String!) {
+    childLeaveApplications(studentId: $studentId, fromKey: $fromKey, toKey: $toKey) {
+      id studentId fromKey toKey reason submittedAt
+    }
+  }
+`;
+
+export const SUBMIT_CHILD_LEAVE_APPLICATION = gql<
+  { submitChildLeaveApplication: GuardianLeaveApplicationT },
+  { studentId: string; fromKey: string; toKey: string; reason: string }
+>`
+  mutation SubmitChildLeaveApplication($studentId: String!, $fromKey: String!, $toKey: String!, $reason: String!) {
+    submitChildLeaveApplication(studentId: $studentId, fromKey: $fromKey, toKey: $toKey, reason: $reason) {
+      id studentId fromKey toKey reason submittedAt
+    }
+  }
+`;
+
 export interface ClassNoteSubmissionRowT {
   groupType: string;
   groupId: string;
   classLevel: number | null;
   classNameBn: string | null;
+  sectionCode: string | null;
   sectionNameBn: string | null;
   subjectGroupNameBn: string | null;
   teacherId: string | null;
@@ -2322,11 +2401,11 @@ export const CLASS_NOTE_SUBMISSION_REPORT_QUERY = gql<
 >`
   query ClassNoteSubmissionReport($date: String!) {
     classNoteSubmissionReport(date: $date) {
-      groupType groupId classLevel classNameBn sectionNameBn subjectGroupNameBn teacherId teacherName teacherPhone teacherSchoolId
+      groupType groupId classLevel classNameBn sectionCode sectionNameBn subjectGroupNameBn teacherId teacherName teacherPhone teacherSchoolId
       publishedSubjects pendingSubjects publishedCount pendingCount
     }
   }
-`;
+`; 
 
 export interface BellTriggerT {
   periodNumber: number;
@@ -2580,6 +2659,7 @@ export interface MarkerAssignmentT {
   sectionId: string;
   teacherId: string;
   teacherName: string | null;
+  classLevel: number | null;
   sectionCode: string | null;
   sectionNameBn: string | null;
   classNameBn: string | null;
@@ -2589,7 +2669,7 @@ export interface MarkerAssignmentT {
 }
 
 const MARKER_ASSIGNMENT_FIELDS =
-  "id sectionId teacherId teacherName sectionCode sectionNameBn classNameBn fromKey toKey active";
+  "id sectionId teacherId teacherName classLevel sectionCode sectionNameBn classNameBn fromKey toKey active";
 
 export const ASSIGN_SECTION_MARKER = gql<
   { assignSectionMarker: MarkerAssignmentT },

@@ -18,6 +18,10 @@ import {
   childClassNotes,
   childHomework,
   childDayLoad,
+  childAttendanceHistory,
+  childFeeDue,
+  childLeaveApplications,
+  submitGuardianLeaveApplication,
   type GuardianChild,
   type GuardianChildGroup,
   type GuardianDay,
@@ -25,6 +29,10 @@ import {
   type GuardianClassNote,
   type GuardianClassNoteHomework,
   type GuardianHomeworkRecord,
+  type GuardianAttendanceHistory,
+  type GuardianAttendanceDay,
+  type GuardianFeeDue,
+  type GuardianLeaveApplication,
 } from "../services/GuardianPortalService";
 import type { StudentDayLoadResult } from "../../trackers/services/HomeworkResubmissionService";
 
@@ -50,10 +58,13 @@ const GuardianChildGroupRef = builder
 const GuardianChildRef = builder.objectRef<GuardianChild>("GuardianChild").implement({
   fields: (t) => ({
     studentId: t.exposeString("studentId"),
+    name: t.exposeString("name"),
     nameBn: t.exposeString("nameBn"),
     gender: t.string({ nullable: true, resolve: (c) => c.gender }),
+    classLevel: t.exposeInt("classLevel"),
     rosterClassLabel: t.exposeString("rosterClassLabel"),
     sectionId: t.exposeString("sectionId"),
+    sectionCode: t.exposeString("sectionCode"),
     sectionName: t.exposeString("sectionName"),
     quranGroup: t.field({
       type: GuardianChildGroupRef,
@@ -156,6 +167,48 @@ const GuardianDayLoadRef = builder
     }),
   });
 
+const GuardianAttendanceDayRef = builder.objectRef<GuardianAttendanceDay>("GuardianAttendanceDay").implement({
+  fields: (t) => ({
+    dateKey: t.exposeString("dateKey"),
+    absent: t.exposeBoolean("absent"),
+    leaveCovered: t.exposeBoolean("leaveCovered"),
+  }),
+});
+
+const GuardianAttendanceHistoryRef = builder
+  .objectRef<GuardianAttendanceHistory>("GuardianAttendanceHistory")
+  .implement({
+    fields: (t) => ({
+      studentId: t.exposeString("studentId"),
+      sectionId: t.exposeString("sectionId"),
+      days: t.field({ type: [GuardianAttendanceDayRef], resolve: (h) => h.days }),
+      markedDays: t.exposeInt("markedDays"),
+      absentDays: t.exposeInt("absentDays"),
+      presentPct: t.exposeInt("presentPct"),
+    }),
+  });
+
+const GuardianFeeDueRef = builder.objectRef<GuardianFeeDue>("GuardianFeeDue").implement({
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    studentName: t.exposeString("studentName"),
+    guardianDue: t.exposeFloat("guardianDue"),
+  }),
+});
+
+const GuardianLeaveApplicationRef = builder
+  .objectRef<GuardianLeaveApplication>("GuardianLeaveApplication")
+  .implement({
+    fields: (t) => ({
+      id: t.exposeString("id"),
+      studentId: t.exposeString("studentId"),
+      fromKey: t.exposeString("fromKey"),
+      toKey: t.exposeString("toKey"),
+      reason: t.exposeString("reason"),
+      submittedAt: t.exposeString("submittedAt"),
+    }),
+  });
+
 // ---------------------------------------------------------------------------
 // Queries (guardian:read_child + assertGuardianOfStudent; reads only — no
 // guardian-facing mutation exists in v1)
@@ -226,6 +279,69 @@ builder.queryField("childDayLoad", (t) =>
     resolve: async (_r, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
       return childDayLoad(args.studentId, parseDate(args.date));
+    },
+  }),
+);
+
+builder.queryField("childAttendanceHistory", (t) =>
+  t.field({
+    type: GuardianAttendanceHistoryRef,
+    authScopes: { hasPermission: "guardian:read_child" },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      fromKey: t.arg.string({ required: true }),
+      toKey: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => {
+      await assertGuardianOfStudent(ctx, args.studentId);
+      return childAttendanceHistory(args.studentId, args.fromKey, args.toKey);
+    },
+  }),
+);
+
+builder.queryField("childFeeDue", (t) =>
+  t.field({
+    type: GuardianFeeDueRef,
+    authScopes: { hasPermission: "guardian:read_child" },
+    args: {
+      studentId: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => {
+      await assertGuardianOfStudent(ctx, args.studentId);
+      return childFeeDue(args.studentId);
+    },
+  }),
+);
+
+builder.queryField("childLeaveApplications", (t) =>
+  t.field({
+    type: [GuardianLeaveApplicationRef],
+    authScopes: { hasPermission: "guardian:read_child" },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      fromKey: t.arg.string({ required: true }),
+      toKey: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => {
+      await assertGuardianOfStudent(ctx, args.studentId);
+      return childLeaveApplications(args.studentId, args.fromKey, args.toKey);
+    },
+  }),
+);
+
+builder.mutationField("submitChildLeaveApplication", (t) =>
+  t.field({
+    type: GuardianLeaveApplicationRef,
+    authScopes: { hasPermission: "guardian:read_child" },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      fromKey: t.arg.string({ required: true }),
+      toKey: t.arg.string({ required: true }),
+      reason: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => {
+      await assertGuardianOfStudent(ctx, args.studentId);
+      return submitGuardianLeaveApplication(args.studentId, args.fromKey, args.toKey, args.reason, ctx.auth!.userId);
     },
   }),
 );

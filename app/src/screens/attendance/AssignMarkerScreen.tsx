@@ -18,7 +18,7 @@ import type { AttendanceStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Button, Field, Notice, Divider, EmptyState } from "../../components/ui";
 import { TeacherSelect } from "../../components/selects";
 import { SectionBar } from "../../components/SectionBar";
-import { STR } from "../../lib/labels";
+import { STR, classLevelLabel, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
 import { space } from "../../theme/tokens";
@@ -32,6 +32,7 @@ const todayKey = (): string => {
 
 export default function AssignMarkerScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
+  const lang = getActiveLang();
   const [teacherId, setTeacherId] = useState("");
   const [fromKey, setFromKey] = useState(todayKey());
   const [toKey, setToKey] = useState(todayKey());
@@ -105,7 +106,8 @@ export default function AssignMarkerScreen({ navigation }: Props): React.ReactEl
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <Body style={{ fontWeight: "700" }}>
-                  {a.classNameBn ?? ""} {a.sectionNameBn ?? a.sectionCode ?? ""}
+                  {lang === "en" ? classLevelLabel(a.classLevel ?? 0) : a.classNameBn ?? ""}{" "}
+                  {lang === "en" ? a.sectionCode ?? a.sectionNameBn ?? "" : a.sectionNameBn ?? a.sectionCode ?? ""}
                 </Body>
                 <Muted>
                   {a.teacherName ?? a.teacherId} · {a.fromKey} → {a.toKey}

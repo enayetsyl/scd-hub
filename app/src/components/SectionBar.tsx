@@ -6,18 +6,20 @@
 import React from "react";
 import { View } from "react-native";
 import { Card, Body, Muted, Button } from "./ui";
-import { STR } from "../lib/labels";
+import { STR, classLevelLabel, getActiveLang } from "../lib/labels";
 import { useSectionContext } from "../state/SectionContext";
 import { space } from "../theme/tokens";
 
-/** Sections that ARE the whole class (post-merge) — their name is redundant noise
- *  next to the class, so we show just the class. Real sub-sections (Boys/Girls) stay. */
-const WHOLE_CLASS_SECTIONS = ["মূল", "সম্মিলিত"];
+/** Sections that ARE the whole class (post-merge) - their name is redundant noise
+ * next to the class, so we show just the class. Real sub-sections (Boys/Girls) stay. */
+const WHOLE_CLASS_SECTIONS = new Set(["মূল", "সম্মিলিত"]);
 
 export function SectionBar({ onChange }: { onChange: () => void }): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
-  const showSection =
-    !!selection.sectionNameBn && !WHOLE_CLASS_SECTIONS.includes(selection.sectionNameBn);
+  const lang = getActiveLang();
+  const classLabel = lang === "en" ? classLevelLabel(selection.classLevel ?? 0) : selection.classNameBn;
+  const sectionLabel = lang === "en" ? selection.sectionCode ?? selection.sectionNameBn : selection.sectionNameBn;
+  const showSection = !!sectionLabel && !WHOLE_CLASS_SECTIONS.has(sectionLabel);
 
   return (
     <Card>
@@ -26,8 +28,8 @@ export function SectionBar({ onChange }: { onChange: () => void }): React.ReactE
           <View style={{ flex: 1 }}>
             <Muted>{STR.klass}</Muted>
             <Body style={{ fontWeight: "600" }}>
-              {selection.classNameBn}
-              {showSection ? ` · ${selection.sectionNameBn}` : ""}
+              {classLabel}
+              {showSection ? ` · ${sectionLabel}` : ""}
             </Body>
           </View>
           <Button title={STR.select} variant="ghost" onPress={onChange} />

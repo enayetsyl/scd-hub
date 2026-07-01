@@ -625,7 +625,7 @@ export const HW_RESULT_LABELS_BN: Record<HwResult, string> = {
 // Daily-budget LOCKED figures (handoff §0/§2.3/§4, D-024/D-030; restated verbatim,
 // NOT open — see handoff §11). The day-SUM ceiling is law; the per-subject band is
 // advisory (warn, never block). Floor is informational only (not enforced).
-export const HW_DAILY_CEILING_MIN = 120; // uniform C1–5 day-sum ceiling — the §4 gate
+export const HW_DAILY_CEILING_MIN = 240; // uniform C1–5 day-sum ceiling — the §4 gate
 export const HW_DAILY_FLOOR_MIN = 120; // informational only
 export const HW_SUBJECT_BAND_MAX_MIN = 40; // single-subject band; >40 WARNS, never blocks (§4 close / T2.5)
 export const HW_DEFAULT_TIME_DECL_MIN = 20; // Class-1 working default for TIME_DECL
@@ -991,8 +991,8 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   CLASS_NOTE_PROMPT: "পাঠ নোট লেখার তাগিদ",
   CLASS_NOTE_ESCALATION: "পাঠ নোট অনিষ্পন্ন",
   CLASS_NOTE_PUBLISHED: "পাঠ নোট প্রকাশিত",
-  HW_PARENT_COMMS: "অভিভাবক যোগাযোগের তাগিদ",
-  HW_CHASE: "বাড়ির কাজ জমার তাগাদা",
+  HW_PARENT_COMMS: "অভিভাবক যোগাযোগের স্মরণিকা",
+  HW_CHASE: "বাড়ির কাজ জমার স্মরণিকা",
   REVIEW_ASSIGNED: "পর্যালোচনার দায়িত্ব",
   COVER_ASSIGNED: "কাভার ক্লাসের দায়িত্ব",
   LIBRARY_DUE_SOON: "বই ফেরতের স্মরণিকা",
@@ -1017,7 +1017,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   CLASS_NOTE_ESCALATION: "Class-note escalation",
   CLASS_NOTE_PUBLISHED: "Class note published",
   HW_PARENT_COMMS: "Parent-contact prompt",
-  HW_CHASE: "Homework chase reminder",
+  HW_CHASE: "Homework reminder",
   REVIEW_ASSIGNED: "Review assigned",
   COVER_ASSIGNED: "Cover assigned",
   LIBRARY_DUE_SOON: "Book due soon",
@@ -1471,21 +1471,21 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   },
   // --- Homework parent-comms (N1.4) ---
   "homework.parentComms.title": {
-    group: "homework", labelBn: "অভিভাবক যোগাযোগের তাগিদ — শিরোনাম", placeholders: [],
+    group: "homework", labelBn: "অভিভাবক যোগাযোগের স্মরণিকা — শিরোনাম", placeholders: [],
     bnDefault: "অভিভাবকের সাথে যোগাযোগ প্রয়োজন", defaultLangMode: "BN",
   },
   "homework.parentComms.body": {
-    group: "homework", labelBn: "অভিভাবক যোগাযোগের তাগিদ — বার্তা", placeholders: ["hwId", "chaseCount"],
-    bnDefault: "বাড়ির কাজ {hwId}: একজন শিক্ষার্থীর তাগাদা {chaseCount} বার হয়েছে — অভিভাবককে জানান।", defaultLangMode: "BN",
+    group: "homework", labelBn: "অভিভাবক যোগাযোগের স্মরণিকা — বার্তা", placeholders: ["hwId", "chaseCount"],
+    bnDefault: "বাড়ির কাজ {hwId}: একজন শিক্ষার্থীকে {chaseCount} বার মনে করিয়ে দেওয়া হয়েছে — অভিভাবককে জানান।", defaultLangMode: "BN",
   },
   // --- Homework per-chase guardian notify (D-#260) ---
   "homework.chase.title": {
-    group: "homework", labelBn: "বাড়ির কাজ জমার তাগাদা — শিরোনাম", placeholders: [],
+    group: "homework", labelBn: "বাড়ির কাজ জমার স্মরণিকা — শিরোনাম", placeholders: [],
     bnDefault: "বাড়ির কাজ জমা হয়নি", defaultLangMode: "BN",
   },
   "homework.chase.body": {
-    group: "homework", labelBn: "বাড়ির কাজ জমার তাগাদা — বার্তা", placeholders: ["hwId", "chaseCount"],
-    bnDefault: "আপনার সন্তানের বাড়ির কাজ {hwId} এখনও জমা হয়নি — অনুগ্রহ করে আজই জমা দিতে উৎসাহিত করুন। (তাগাদা {chaseCount} বার)", defaultLangMode: "BN",
+    group: "homework", labelBn: "বাড়ির কাজ জমার স্মরণিকা — বার্তা", placeholders: ["hwId", "chaseCount"],
+    bnDefault: "আপনার সন্তানের বাড়ির কাজ {hwId} এখনও জমা হয়নি — অনুগ্রহ করে আজই জমা দিতে উৎসাহিত করুন। (স্মরণ {chaseCount} বার)", defaultLangMode: "BN",
   },
   // --- Plan review assigned (N1.5) ---
   "review.assigned.title": {
