@@ -11,7 +11,13 @@
  * gate `issueHomeworkItem` behind the daily 240-min reconciliation/confirm; the
  * spawn mechanism itself lives here.
  */
-import { HW_SUBJECTS, HW_RESULTS, HW_DEFAULT_TIME_DECL_MIN } from "@scd/shared";
+import {
+  HW_SUBJECTS,
+  HW_RESULTS,
+  HW_DEFAULT_TIME_DECL_MIN,
+  ROSTER_CLASS_LEVEL_MIN,
+  ROSTER_CLASS_LEVEL_MAX,
+} from "@scd/shared";
 import type { HwSubject, LifecycleState, HwResult } from "@scd/shared";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
@@ -109,8 +115,12 @@ export async function declareHomeworkItem(
   const { subject } = input;
   assertSubject(subject);
 
-  if (!Number.isInteger(input.classLevel) || input.classLevel < 1 || input.classLevel > 5) {
-    throw new Error("Homework is for classes C1–C5 only (classLevel must be 1..5)");
+  if (
+    !Number.isInteger(input.classLevel) ||
+    input.classLevel < ROSTER_CLASS_LEVEL_MIN ||
+    input.classLevel > ROSTER_CLASS_LEVEL_MAX
+  ) {
+    throw new Error("Homework is for roster classes Nursery/KG/C1–C5 only (classLevel must be -1..5)");
   }
 
   const dateGiven = new Date(input.dateGiven);
@@ -237,7 +247,7 @@ export async function topicLabelByCode(codes: string[]): Promise<Map<string, str
   const byCode = new Map(topics.map((t) => [t.code, t.labelBn]));
   for (const code of uniq) {
     if (byCode.has(code)) continue;
-    if (/^TOP-[A-Z]+-C[1-5]-GEN$/.test(code)) byCode.set(code, GENERIC_TOPIC_LABEL_BN);
+    if (/^TOP-[A-Z]+-C-?\d+-GEN$/.test(code)) byCode.set(code, GENERIC_TOPIC_LABEL_BN);
   }
   return byCode;
 }

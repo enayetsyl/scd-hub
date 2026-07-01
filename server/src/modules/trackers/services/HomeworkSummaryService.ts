@@ -34,8 +34,10 @@ export const TRIM_PATTERN_RATIO = 0.3;
 
 const DAY_MS = 86_400_000;
 
-/** Subject is encoded in HW_ID = HW-C{class}-{SUBJECT}-{nnnn}. */
+/** Subject is encoded in HW_ID = HW-C{class}-{SUBJECT}-{nnnn}, where class may be signed. */
 function subjectOfHwId(hwId: string): string {
+  const match = hwId.match(/^HW-C(-?\d+)-([A-Z]+)-(\d{4})$/);
+  if (match) return match[2] ?? "?";
   return hwId.split("-")[2] ?? "?";
 }
 

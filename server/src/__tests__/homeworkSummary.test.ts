@@ -161,7 +161,7 @@ describe("T4.3 — resubmissionWatchList (≥3 open/recent per rolling 2 weeks)"
 describe("T4.4 — trimPatternFlags (>30% of school days)", () => {
   test("flags a subject trimmed on >30% of the month's reconciled days", async () => {
     mockReconFind.mockResolvedValue([
-      { reconDate: new Date(2026, 5, 1), trimLog: [{ hwId: "HW-C1-MATH-0001" }] },
+      { reconDate: new Date(2026, 5, 1), trimLog: [{ hwId: "HW-C-1-MATH-0001" }] },
       { reconDate: new Date(2026, 5, 2), trimLog: [{ hwId: "HW-C1-MATH-0002" }, { hwId: "HW-C1-ENG-0001" }] },
       { reconDate: new Date(2026, 5, 3), trimLog: [{ hwId: "HW-C1-MATH-0003" }] },
       { reconDate: new Date(2026, 5, 4), trimLog: [] },

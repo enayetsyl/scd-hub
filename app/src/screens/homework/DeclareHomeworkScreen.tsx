@@ -13,7 +13,7 @@ import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, Notice, EmptyState } from "../../components/ui";
 import { SectionBar } from "../../components/SectionBar";
-import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
+import { STR, hwSubjectLabel, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
 import { space } from "../../theme/tokens";
@@ -163,7 +163,7 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
               <Chip key={s} label={hwSubjectLabel(s)} selected={subject === s} onPress={() => chooseSubject(s)} />
             ))}
           </ChipRow>
-          {classLevel != null ? <Muted style={{ marginTop: 4 }}>C{bnNum(classLevel)}</Muted> : null}
+          {classLevel != null ? <Muted style={{ marginTop: 4 }}>{classLevelLabel(classLevel)}</Muted> : null}
         </Card>
         <Field label={STR.hwDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
         <Card>

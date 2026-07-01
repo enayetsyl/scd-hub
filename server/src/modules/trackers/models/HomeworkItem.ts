@@ -17,7 +17,7 @@
  * 240-min reconciliation/confirm.
  */
 import { Schema, model, Document, Types } from "mongoose";
-import { HW_SUBJECTS } from "@scd/shared";
+import { HW_SUBJECTS, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
 import type { HwSubject } from "@scd/shared";
 
 export const HOMEWORK_ITEM_STATUSES = ["declared", "issued"] as const;
@@ -29,7 +29,7 @@ export interface IHomeworkItem extends Document {
   hwId: string;
   academicYearId: Types.ObjectId;
   classId: Types.ObjectId;
-  /** Content class level 1..5 (homework is C1–C5 only, handoff §2.1). */
+  /** Roster class level (Nursery/KG/C1–C5); homework uses the selected class's roster axis. */
   classLevel: number;
   sectionId: Types.ObjectId;
   subject: HwSubject;
@@ -65,7 +65,7 @@ const HomeworkItemSchema = new Schema<IHomeworkItem>(
     hwId: { type: String, required: true, unique: true },
     academicYearId: { type: Schema.Types.ObjectId, required: true },
     classId: { type: Schema.Types.ObjectId, required: true },
-    classLevel: { type: Number, required: true, min: 1, max: 5 },
+    classLevel: { type: Number, required: true, min: ROSTER_CLASS_LEVEL_MIN, max: ROSTER_CLASS_LEVEL_MAX },
     sectionId: { type: Schema.Types.ObjectId, required: true },
     subject: { type: String, enum: HW_SUBJECTS, required: true },
     dateGiven: { type: Date, required: true },

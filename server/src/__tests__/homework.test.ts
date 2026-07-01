@@ -249,9 +249,9 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
     expect(mockItemCreate).not.toHaveBeenCalled();
   });
 
-  test("rejects classLevel outside 1..5 (homework is C1–C5 only)", async () => {
-    await expect(declareHomeworkItem(validDeclareInput({ classLevel: 0 }))).rejects.toThrow(/C1–C5/);
-    await expect(declareHomeworkItem(validDeclareInput({ classLevel: 6 }))).rejects.toThrow(/C1–C5/);
+  test("rejects classLevel outside the roster homework range (-1..5)", async () => {
+    await expect(declareHomeworkItem(validDeclareInput({ classLevel: -2 }))).rejects.toThrow(/-1..5/);
+    await expect(declareHomeworkItem(validDeclareInput({ classLevel: 6 }))).rejects.toThrow(/-1..5/);
   });
 
   test("rejects empty topTags (≥1 topic required)", async () => {
@@ -270,22 +270,58 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
   test("falls back to a generic topic when a subject/class has no catalog rows", async () => {
     mockTopicFind.mockResolvedValue([]);
 
-    const topics = await listHomeworkTopics("ISLAM", 1);
+    const topics = await listHomeworkTopics("ISLAM", -1);
     expect(topics).toHaveLength(1);
     expect(topics[0]).toEqual(
       expect.objectContaining({
-        code: "TOP-ISLAM-C1-GEN",
+        code: "TOP-ISLAM-C-1-GEN",
         labelBn: expect.stringContaining("সাধারণ"),
-        classLevel: 1,
+        classLevel: -1,
         subject: "ISLAM",
       }),
     );
 
-    const labels = await topicLabelByCode(["TOP-ISLAM-C1-GEN"]);
-    expect(labels.get("TOP-ISLAM-C1-GEN")).toContain("সাধারণ");
+    const labels = await topicLabelByCode(["TOP-ISLAM-C-1-GEN"]);
+    expect(labels.get("TOP-ISLAM-C-1-GEN")).toContain("সাধারণ");
 
-    const res = await declareHomeworkItem(validDeclareInput({ subject: "ISLAM", topTags: ["TOP-ISLAM-C1-GEN"] }));
-    expect(res.topTags).toEqual(["TOP-ISLAM-C1-GEN"]);
+    const res = await declareHomeworkItem(
+      validDeclareInput({ subject: "ISLAM", classLevel: -1, topTags: ["TOP-ISLAM-C-1-GEN"] }),
+    );
+    expect(res.topTags).toEqual(["TOP-ISLAM-C-1-GEN"]);
+  });
+
+  test("accepts KG classLevel 0 with a generic topic fallback", async () => {
+    mockTopicFind.mockResolvedValue([]);
+
+    const topics = await listHomeworkTopics("ISLAM", 0);
+    expect(topics[0]).toEqual(
+      expect.objectContaining({
+        code: "TOP-ISLAM-C0-GEN",
+        classLevel: 0,
+      }),
+    );
+
+    const res = await declareHomeworkItem(
+      validDeclareInput({ subject: "ISLAM", classLevel: 0, topTags: ["TOP-ISLAM-C0-GEN"] }),
+    );
+    expect(res.hwId).toBe("HW-C0-ISLAM-0001");
+  });
+
+  test("accepts Nursery classLevel -1 with a generic topic fallback and signed HW IDs", async () => {
+    mockTopicFind.mockResolvedValue([]);
+
+    const topics = await listHomeworkTopics("ISLAM", -1);
+    expect(topics[0]).toEqual(
+      expect.objectContaining({
+        code: "TOP-ISLAM-C-1-GEN",
+        classLevel: -1,
+      }),
+    );
+
+    const res = await declareHomeworkItem(
+      validDeclareInput({ subject: "ISLAM", classLevel: -1, topTags: ["TOP-ISLAM-C-1-GEN"] }),
+    );
+    expect(res.hwId).toBe("HW-C-1-ISLAM-0001");
   });
 
   test("TIME_DECL: 0 is valid; >40 is allowed (band warns, never blocks — §2.1/T2.5); negative rejected", async () => {
