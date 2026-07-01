@@ -6,6 +6,11 @@
  */
 import { Types } from "mongoose";
 import { DAYS_OF_WEEK } from "@scd/shared";
+import type { RoutineSubject } from "@scd/shared";
+import { Class } from "../../foundation/models/Class";
+import { Section } from "../../foundation/models/Section";
+import { SubjectGroup } from "../models/SubjectGroup";
+import { User } from "../../foundation/models/User";
 import { ScheduleWindow, type IScheduleWindow } from "../models/ScheduleWindow";
 import { PeriodGrid, type IPeriodGrid } from "../models/PeriodGrid";
 import { BellDutyAssignment, type IBellDutyAssignment } from "../models/BellDutyAssignment";
@@ -144,6 +149,140 @@ export async function classNotesForDate(
  * (the N-2 ladder/escalation work-list, D-#74). One truth: the scheduler and
  * `myClassNotePrompts` both read this.
  */
+export interface ClassNoteSubmissionRow {
+  groupType: "section" | "subjectgroup";
+  groupId: string;
+  classLevel: number | null;
+  classNameBn: string | null;
+  sectionNameBn: string | null;
+  subjectGroupNameBn: string | null;
+  teacherId: string | null;
+  teacherName: string | null;
+  teacherPhone: string | null;
+  publishedSubjects: RoutineSubject[];
+  pendingSubjects: RoutineSubject[];
+  publishedCount: number;
+  pendingCount: number;
+}
+
+/** Principal/Office view: class-note submissions for a date grouped by section or
+ *  subject-group + teacher. One row collects the subjects that are already posted
+ *  and the subjects still pending for that teacher's date work-list. */
+export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSubmissionRow[]> {
+  const dayOfWeek = DAYS_OF_WEEK[date.getDay()];
+  const { start, end } = dayBounds(date);
+  const slots = (await RoutineSlot.find({
+    dayOfWeek,
+    active: true,
+    isBreak: false,
+    effectiveFrom: { $lte: date },
+    $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: date } }],
+  })
+    .sort({ groupType: 1, groupId: 1, periodNumber: 1 })
+    .lean()) as unknown as IRoutineSlot[];
+  if (slots.length === 0) return [];
+
+  const slotIds = slots.map((s) => s._id);
+  const [subs, notes] = await Promise.all([
+    RoutineSubstitution.find({
+      slotId: { $in: slotIds },
+      active: true,
+      date: { $gte: start, $lte: end },
+    }).lean(),
+    ClassNote.find({ slotId: { $in: slotIds }, date: { $gte: start, $lte: end } }).select("slotId").lean(),
+  ]);
+
+  const coverBySlot = new Map(subs.map((su) => [su.slotId.toString(), su.coverTeacherId.toString()]));
+  const noteBySlot = new Set(notes.map((n) => n.slotId.toString()));
+
+  const sectionIds = new Set<string>();
+  const classIds = new Set<string>();
+  const subjectGroupIds = new Set<string>();
+  const teacherIds = new Set<string>();
+  for (const s of slots) {
+    const teacherId = coverBySlot.get(s._id.toString()) ?? (s.teacherId ? s.teacherId.toString() : null);
+    if (teacherId) teacherIds.add(teacherId);
+    if (s.groupType === "section") {
+      sectionIds.add(s.groupId.toString());
+      if (s.classId) classIds.add(s.classId.toString());
+    } else {
+      subjectGroupIds.add(s.groupId.toString());
+    }
+  }
+
+  const [sections, classes, subjectGroups, users] = await Promise.all([
+    sectionIds.size > 0 ? Section.find({ _id: { $in: [...sectionIds] } }).select("classId code nameBn").lean() : Promise.resolve([]),
+    classIds.size > 0 ? Class.find({ _id: { $in: [...classIds] } }).select("level nameBn").lean() : Promise.resolve([]),
+    subjectGroupIds.size > 0 ? SubjectGroup.find({ _id: { $in: [...subjectGroupIds] } }).select("track level nameBn code").lean() : Promise.resolve([]),
+    teacherIds.size > 0 ? User.find({ _id: { $in: [...teacherIds] } }).select("name phone").lean() : Promise.resolve([]),
+  ]);
+
+  const sectionById = new Map(sections.map((s) => [s._id.toString(), s]));
+  const classById = new Map(classes.map((c) => [c._id.toString(), c]));
+  const subjectGroupById = new Map(subjectGroups.map((g) => [g._id.toString(), g]));
+  const userById = new Map(users.map((u) => [u._id.toString(), u]));
+
+  type RowState = ClassNoteSubmissionRow & { sortRank: string };
+  const rows = new Map<string, RowState>();
+
+  for (const s of slots) {
+    const slotId = s._id.toString();
+    const teacherId = coverBySlot.get(slotId) ?? (s.teacherId ? s.teacherId.toString() : null);
+    const rowKey = `${s.groupType}|${s.groupId.toString()}|${teacherId ?? "none"}`;
+    const published = noteBySlot.has(slotId);
+    const teacher = teacherId ? userById.get(teacherId) : null;
+
+    const existing = rows.get(rowKey);
+    if (existing) {
+      (published ? existing.publishedSubjects : existing.pendingSubjects).push(s.subject);
+      existing.publishedCount = existing.publishedSubjects.length;
+      existing.pendingCount = existing.pendingSubjects.length;
+      continue;
+    }
+
+    let classLevel: number | null = null;
+    let classNameBn: string | null = null;
+    let sectionNameBn: string | null = null;
+    let subjectGroupNameBn: string | null = null;
+    let sortRank = "zzzz";
+
+    if (s.groupType === "section") {
+      const section = sectionById.get(s.groupId.toString());
+      const cls = section?.classId ? classById.get(section.classId.toString()) : null;
+      classLevel = cls ? cls.level : null;
+      classNameBn = cls?.nameBn ?? null;
+      sectionNameBn = section?.nameBn ?? null;
+      sortRank = `${String(classLevel ?? 999).padStart(4, "0")}|${classNameBn ?? ""}|${sectionNameBn ?? ""}|${teacher?.name ?? ""}`;
+    } else {
+      const group = subjectGroupById.get(s.groupId.toString());
+      subjectGroupNameBn = group?.nameBn ?? null;
+      const trackRank = group?.track === "quran" ? "1" : group?.track === "arabic" ? "2" : "9";
+      sortRank = `9${trackRank}|${subjectGroupNameBn ?? ""}|${teacher?.name ?? ""}`;
+    }
+
+    rows.set(rowKey, {
+      groupType: s.groupType,
+      groupId: s.groupId.toString(),
+      classLevel,
+      classNameBn,
+      sectionNameBn,
+      subjectGroupNameBn,
+      teacherId,
+      teacherName: teacher?.name ?? null,
+      teacherPhone: teacher?.phone ?? null,
+      publishedSubjects: published ? [s.subject] : [],
+      pendingSubjects: published ? [] : [s.subject],
+      publishedCount: published ? 1 : 0,
+      pendingCount: published ? 0 : 1,
+      sortRank,
+    });
+  }
+
+  return [...rows.values()]
+    .sort((a, b) => a.sortRank.localeCompare(b.sortRank))
+    .map(({ sortRank: _sortRank, ...row }) => row);
+}
+
 export async function unwrittenClassNoteSlots(date: Date, teacherId?: string): Promise<IRoutineSlot[]> {
   const dayOfWeek = DAYS_OF_WEEK[date.getDay()];
   const slots = (await RoutineSlot.find({
