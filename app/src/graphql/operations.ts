@@ -466,10 +466,10 @@ export interface ContentTreeNode {
 
 export const CONTENT_TREE_QUERY = gql<
   { contentTree: ContentTreeNode[] },
-  { subject?: string | null; classLevel?: number | null }
+  { subject?: string | null; classLevel?: number | null; currentOnly?: boolean | null }
 >`
-  query ContentTree($subject: String, $classLevel: Int) {
-    contentTree(subject: $subject, classLevel: $classLevel) {
+  query ContentTree($subject: String, $classLevel: Int, $currentOnly: Boolean) {
+    contentTree(subject: $subject, classLevel: $classLevel, currentOnly: $currentOnly) {
       subject
       classLevel
       chapters {
