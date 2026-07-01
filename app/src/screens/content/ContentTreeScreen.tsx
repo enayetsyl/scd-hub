@@ -6,7 +6,8 @@
  * so a supervisory teacher naturally sees content beyond their teaching sections.
  */
 import React, { useState, useMemo, useRef, useCallback } from "react";
-import { View, ScrollView, Pressable } from "react-native";
+import { View, ScrollView, Pressable, useWindowDimensions } from "react-native";
+import type { ViewStyle } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "urql";
@@ -20,7 +21,6 @@ import {
   Muted,
   Card,
   Chip,
-  ChipRow,
   Badge,
   Loader,
   EmptyState,
@@ -46,7 +46,28 @@ function reviewTone(status: string): "ok" | "brand" | "muted" {
   return status === "gold" ? "ok" : status === "reviewed" ? "brand" : "muted";
 }
 
+function FilterGroup({
+  title,
+  children,
+  width,
+}: {
+  title: string;
+  children: React.ReactNode;
+  width: ViewStyle["width"];
+}): React.ReactElement {
+  return (
+    <View style={{ width, marginBottom: space(2) }}>
+      <Muted style={{ marginBottom: space(1) }}>{title}</Muted>
+      <View style={{ flexDirection: "row", flexWrap: "wrap" }}>{children}</View>
+    </View>
+  );
+}
+
 export default function ContentTreeScreen({ navigation }: Props): React.ReactElement {
+  const { width } = useWindowDimensions();
+  const columnCount = width >= 1280 ? 3 : width >= 960 ? 2 : 1;
+  const groupWidth = columnCount === 1 ? "100%" : columnCount === 2 ? "48%" : "31%";
+
   const [subject, setSubject] = useState<string | null>(null);
   const [classLevel, setClassLevel] = useState<number | null>(null);
   const [curationTag, setCurationTag] = useState<string | null>(null);
@@ -130,65 +151,60 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
         </Pressable>
 
         {filtersOpen ? (
-        <>
-        <Muted>{STR.subject}</Muted>
-        <ChipRow>
-          <Chip label={STR.all} selected={subject === null} onPress={() => setSubject(null)} />
-          {SUBJECTS.map((s) => (
-            <Chip
-              key={s}
-              label={subjectLabel(s)}
-              selected={subject === s}
-              onPress={() => setSubject(subject === s ? null : s)}
-            />
-          ))}
-        </ChipRow>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginTop: space(2) }}>
+          <FilterGroup title={STR.subject} width={groupWidth}>
+            <Chip label={STR.all} selected={subject === null} onPress={() => setSubject(null)} />
+            {SUBJECTS.map((s) => (
+              <Chip
+                key={s}
+                label={subjectLabel(s)}
+                selected={subject === s}
+                onPress={() => setSubject(subject === s ? null : s)}
+              />
+            ))}
+          </FilterGroup>
 
-        <Muted>{STR.classLevel}</Muted>
-        <ChipRow>
-          <Chip label={STR.all} selected={classLevel === null} onPress={() => setClassLevel(null)} />
-          {CLASS_LEVELS.map((c) => (
-            <Chip
-              key={c}
-              label={bnNum(c)}
-              selected={classLevel === c}
-              onPress={() => setClassLevel(classLevel === c ? null : c)}
-            />
-          ))}
-        </ChipRow>
+          <FilterGroup title={STR.classLevel} width={groupWidth}>
+            <Chip label={STR.all} selected={classLevel === null} onPress={() => setClassLevel(null)} />
+            {CLASS_LEVELS.map((c) => (
+              <Chip
+                key={c}
+                label={bnNum(c)}
+                selected={classLevel === c}
+                onPress={() => setClassLevel(classLevel === c ? null : c)}
+              />
+            ))}
+          </FilterGroup>
 
-        <Muted>{STR.planType}</Muted>
-        <ChipRow>
-          <Chip label={STR.all} selected={docType === null} onPress={() => setDocType(null)} />
-          {PLAN_DOC_TYPES.map((t) => (
-            <Chip
-              key={t}
-              label={docTypeLabel(t)}
-              selected={docType === t}
-              onPress={() => setDocType(docType === t ? null : t)}
-            />
-          ))}
-        </ChipRow>
+          <FilterGroup title={STR.planType} width={groupWidth}>
+            <Chip label={STR.all} selected={docType === null} onPress={() => setDocType(null)} />
+            {PLAN_DOC_TYPES.map((t) => (
+              <Chip
+                key={t}
+                label={docTypeLabel(t)}
+                selected={docType === t}
+                onPress={() => setDocType(docType === t ? null : t)}
+              />
+            ))}
+          </FilterGroup>
 
-        <Muted>Version view</Muted>
-        <ChipRow>
-          <Chip label="Current only" selected={currentOnly} onPress={() => setCurrentOnly(true)} />
-          <Chip label="All versions" selected={!currentOnly} onPress={() => setCurrentOnly(false)} />
-        </ChipRow>
+          <FilterGroup title="Version view" width={groupWidth}>
+            <Chip label="Current only" selected={currentOnly} onPress={() => setCurrentOnly(true)} />
+            <Chip label="All versions" selected={!currentOnly} onPress={() => setCurrentOnly(false)} />
+          </FilterGroup>
 
-        <Muted>{STR.curationTag}</Muted>
-        <ChipRow>
-          <Chip label={STR.all} selected={curationTag === null} onPress={() => setCurationTag(null)} />
-          {CURATION_TAGS.map((t) => (
-            <Chip
-              key={t}
-              label={curationTagLabel(t)}
-              selected={curationTag === t}
-              onPress={() => setCurationTag(curationTag === t ? null : t)}
-            />
-          ))}
-        </ChipRow>
-        </>
+          <FilterGroup title={STR.curationTag} width={groupWidth}>
+            <Chip label={STR.all} selected={curationTag === null} onPress={() => setCurationTag(null)} />
+            {CURATION_TAGS.map((t) => (
+              <Chip
+                key={t}
+                label={curationTagLabel(t)}
+                selected={curationTag === t}
+                onPress={() => setCurationTag(curationTag === t ? null : t)}
+              />
+            ))}
+          </FilterGroup>
+        </View>
         ) : null}
       </View>
 
@@ -218,9 +234,12 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
                   {ch.artifacts.map((a) => (
                     <Card key={a.id} onPress={() => navigation.navigate("PlanView", { artifactId: a.id })}>
                       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
-                        <Body style={{ flex: 1, fontWeight: "600" }}>
-                          {a.address.title || `${a.address.anchorWord} ${a.address.number}`}
-                        </Body>
+                        <View style={{ flex: 1, flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: space(2) }}>
+                          <Body style={{ fontWeight: "600" }}>{a.address.title || `${a.address.anchorWord} ${a.address.number}`}</Body>
+                          {a.docType === "session_plan" && a.sessionIndex != null ? (
+                            <Muted>সেশন {bnNum(a.sessionIndex)}</Muted>
+                          ) : null}
+                        </View>
                         <Badge text={reviewStatusLabel(a.reviewStatus)} tone={reviewTone(a.reviewStatus)} />
                       </View>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: space(1) }}>
