@@ -80,9 +80,9 @@ function supervisoryScope(
   return { kind: "supervisory", extent, ...opts };
 }
 
-function proxyScope(sectionId: string, classId: string): ScopeItem {
-  return { kind: "proxy", sectionId, classId, grantId: "g1" };
-}
+  function proxyScope(sectionId: string, classId: string, subjectId?: string): ScopeItem {
+    return { kind: "proxy", sectionId, classId, subjectId, grantId: "g1" };
+  }
 
 describe("canRead (D-#17 read scope)", () => {
   test("teaching grant allows read on own section", () => {
@@ -128,6 +128,12 @@ describe("canRead (D-#17 read scope)", () => {
     expect(canRead(scopes, SECTION_B, CLASS_2)).toBe(true);
   });
 
+  test("proxy grant with a subject binding only reads that subject when provided", () => {
+    const scopes = [proxyScope(SECTION_B, CLASS_2, SUBJ_BAN)];
+    expect(canRead(scopes, SECTION_B, CLASS_2, SUBJ_BAN)).toBe(true);
+    expect(canRead(scopes, SECTION_B, CLASS_2, SUBJ_ENG)).toBe(false);
+  });
+
   test("empty scopes denies everything", () => {
     expect(canRead([], SECTION_A, CLASS_1)).toBe(false);
   });
@@ -152,6 +158,12 @@ describe("canWrite (D-#18 write scope)", () => {
   test("proxy grant allows write on covered section", () => {
     const scopes = [proxyScope(SECTION_B, CLASS_2)];
     expect(canWrite(scopes, SECTION_B)).toBe(true);
+  });
+
+  test("proxy grant with a subject binding only writes for that subject when provided", () => {
+    const scopes = [proxyScope(SECTION_B, CLASS_2, SUBJ_BAN)];
+    expect(canWrite(scopes, SECTION_B, SUBJ_BAN)).toBe(true);
+    expect(canWrite(scopes, SECTION_B, SUBJ_ENG)).toBe(false);
   });
 
   test("proxy grant does NOT allow write outside covered section", () => {

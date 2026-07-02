@@ -25,6 +25,7 @@ import {
   getTrackerSummary,
   buildNonSubmitterLink,
 } from "../services/TrackerService";
+import { AssessmentSet } from "../../assessment/models/AssessmentSet";
 import { TrackerRecord } from "../models/TrackerRecord";
 import { assertCanWrite, assertCanRead, ForbiddenError } from "../../../middleware/authz";
 import type { Types, FlattenMaps } from "mongoose";
@@ -197,7 +198,12 @@ builder.mutationField("openTracker", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      const setDoc = await AssessmentSet.findById(args.setId).select("subjectId").lean();
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        setDoc?.subjectId ? setDoc.subjectId.toString() : undefined,
+      );
       return openTrackerSvc(args.setId, args.sectionId, ctx.auth.userId as string);
     },
   }),
@@ -227,7 +233,11 @@ builder.mutationField("recordEntry", (t) =>
 
       const trackerDoc = await TrackerRecord.findById(args.trackerId).lean() as LeanTracker | null;
       if (!trackerDoc) throw new Error("TrackerRecord not found");
-      await assertCanWrite(ctx, trackerDoc.sectionId.toString());
+      await assertCanWrite(
+        ctx,
+        trackerDoc.sectionId.toString(),
+        trackerDoc.subjectId ? trackerDoc.subjectId.toString() : undefined,
+      );
 
       return recordEntrySvc({
         trackerId: args.trackerId,
@@ -258,7 +268,11 @@ builder.mutationField("closeTracker", (t) =>
 
       const trackerDoc = await TrackerRecord.findById(args.trackerId).lean() as LeanTracker | null;
       if (!trackerDoc) throw new Error("TrackerRecord not found");
-      await assertCanWrite(ctx, trackerDoc.sectionId.toString());
+      await assertCanWrite(
+        ctx,
+        trackerDoc.sectionId.toString(),
+        trackerDoc.subjectId ? trackerDoc.subjectId.toString() : undefined,
+      );
 
       return closeTrackerSvc(args.trackerId);
     },

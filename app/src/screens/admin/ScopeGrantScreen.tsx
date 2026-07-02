@@ -11,11 +11,12 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import { roleHasPermission } from "@scd/shared";
 import type { Role } from "@scd/shared";
-import { ASSIGN_PROXY, REVOKE_PROXY, EXTEND_PROXY, CLASSES_QUERY, PROXY_GRANTS_QUERY, TEACHERS_QUERY } from "../../graphql/operations";
+import { ASSIGN_PROXY, REVOKE_PROXY, EXTEND_PROXY, ACADEMIC_YEARS_QUERY, CLASSES_QUERY, PROXY_GRANTS_QUERY, TEACHERS_QUERY, SUBJECTS_QUERY } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Button, Field, Select, Notice, Divider, EmptyState, Loader } from "../../components/ui";
-import { TeacherSelect, AcademicYearSelect } from "../../components/selects";
-import { STR } from "../../lib/labels";
+import { DateField } from "../../components/DateField";
+import { TeacherSelect, SubjectSelect } from "../../components/selects";
+import { STR, subjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
@@ -26,9 +27,9 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
   // Assign
   const [covering, setCovering] = useState("");
   const [absent, setAbsent] = useState("");
-  const [yearId, setYearId] = useState("");
   const [classId, setClassId] = useState("");
   const [sectionId, setSectionId] = useState("");
+  const [subjectId, setSubjectId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [duration, setDuration] = useState("");
   const [assignBusy, setAssignBusy] = useState(false);
@@ -62,17 +63,25 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
   const grants = grantData?.proxyGrants ?? [];
   const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY, pause: !canManage });
   const teacherById = new Map((teacherData?.teachers ?? []).map((t) => [t.id, t.name]));
+  const [{ data: yearsData }] = useQuery({ query: ACADEMIC_YEARS_QUERY, pause: !canManage });
+  const currentYearId = yearsData?.academicYears.find((y) => y.current)?.id ?? yearsData?.academicYears[0]?.id ?? "";
+  const [{ data: subjectData }] = useQuery({ query: SUBJECTS_QUERY, pause: !canManage });
+  const subjectById = new Map((subjectData?.subjects ?? []).map((s) => [s.id, subjectLabel(s.code)]));
   const teacherName = (id: string | null): string => {
     if (!id) return "—";
     return teacherById.get(id) ?? id;
   };
+  const subjectName = (id: string | null): string => {
+    if (!id) return "—";
+    return subjectById.get(id) ?? id;
+  };
   const reloadGrants = (): void => refetchGrants({ requestPolicy: "network-only" });
 
-  // Class/section cascade: pick year → class → section (no pasting ids).
+  // Class/section cascade defaults to the current academic year set centrally.
   const [{ data: classData }] = useQuery({
     query: CLASSES_QUERY,
-    variables: { academicYearId: yearId },
-    pause: yearId === "",
+    variables: { academicYearId: currentYearId },
+    pause: currentYearId === "",
   });
   const classes = classData?.classes ?? [];
   const classOptions = classes.map((c) => ({ label: c.nameBn, value: c.id }));
@@ -81,18 +90,13 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
     value: s.id,
     hint: s.code,
   }));
-  function onYear(v: string): void {
-    setYearId(v);
-    setClassId("");
-    setSectionId("");
-  }
   function onClass(v: string): void {
     setClassId(v);
     setSectionId("");
   }
 
   async function onAssign(): Promise<void> {
-    if (!covering.trim() || !classId.trim() || !sectionId.trim() || !duration.trim() || assignBusy) return;
+    if (!covering.trim() || !classId.trim() || !sectionId.trim() || !subjectId.trim() || !duration.trim() || assignBusy) return;
     const days = Number(duration);
     if (Number.isNaN(days) || days < 1) {
       setAssignErr(STR.errGeneric);
@@ -117,6 +121,7 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
       absentTeacherId: absent.trim() || null,
       classId: classId.trim(),
       sectionId: sectionId.trim(),
+      subjectId: subjectId.trim(),
       startDate: startIso,
       durationDays: days,
     });
@@ -167,11 +172,10 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
       <H2>{STR.scopeGrants}</H2>
 
       {/* Assign proxy */}
-      <Card>
+        <Card>
         <Muted style={{ fontWeight: "700", marginBottom: 8 }}>{STR.assignProxy}</Muted>
         <TeacherSelect label={STR.coveringTeacher} value={covering} onChange={setCovering} />
         <TeacherSelect label={STR.absentTeacher} value={absent} onChange={setAbsent} />
-        <AcademicYearSelect label={STR.academicYear} value={yearId} onChange={onYear} />
         <Select
           label={STR.class}
           value={classId === "" ? null : classId}
@@ -186,7 +190,8 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
           onChange={setSectionId}
           placeholder={STR.selectSection}
         />
-        <Field label={`${STR.startDate} (YYYY-MM-DD)`} value={startDate} onChangeText={setStartDate} placeholder="2026-06-10" />
+        <SubjectSelect label={STR.subject} value={subjectId} onChange={setSubjectId} />
+        <DateField label={STR.startDate} value={startDate} onChange={setStartDate} />
         <Field label={STR.durationDays} value={duration} onChangeText={setDuration} keyboardType="numeric" placeholder="5" />
         {assignErr ? <Notice message={assignErr} tone="danger" /> : null}
         {assignMsg ? <Notice message={assignMsg} tone="ok" /> : null}
@@ -207,6 +212,9 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
         grants.map((g) => (
           <Card key={g.id}>
             <Body style={{ fontWeight: "700" }}>{teacherName(g.coveringTeacherId)}</Body>
+            <Muted>
+              {STR.subject}: {subjectName(g.subjectId)}
+            </Muted>
             {g.absentTeacherId ? (
               <Muted>
                 {STR.absentTeacher}: {teacherName(g.absentTeacherId)}

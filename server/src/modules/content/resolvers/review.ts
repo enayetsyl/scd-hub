@@ -363,6 +363,7 @@ AssignablePlanRef.implement({
     reviewStatus: t.exposeString("reviewStatus"),
     currentReviewerId: t.string({ nullable: true, resolve: (r) => r.currentReviewerId }),
     currentReviewerName: t.string({ nullable: true, resolve: (r) => r.currentReviewerName }),
+    currentAssignmentId: t.string({ nullable: true, resolve: (r) => r.currentAssignmentId }),
     roundStatus: t.string({ nullable: true, resolve: (r) => r.roundStatus }),
   }),
 });

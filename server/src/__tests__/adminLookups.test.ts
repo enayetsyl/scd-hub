@@ -83,6 +83,7 @@ describe("grantView (lean grant → client view)", () => {
   test("proxy grant exposes cover detail with ISO startDate", () => {
     const covering = oid();
     const absent = oid();
+    const subjectId = oid();
     const start = new Date("2026-06-09T00:00:00+06:00");
     const v = grantView({
       _id: oid(),
@@ -90,6 +91,7 @@ describe("grantView (lean grant → client view)", () => {
       active: true,
       classId: oid(),
       sectionId: oid(),
+      subjectId,
       coveringTeacherId: covering,
       absentTeacherId: absent,
       startDate: start,
@@ -102,7 +104,7 @@ describe("grantView (lean grant → client view)", () => {
     expect(v.startDate).toBe(start.toISOString());
     expect(v.durationDays).toBe(3);
     expect(v.proxyStatus).toBe("active");
-    expect(v.subjectId).toBeNull(); // a proxy grant has no subject binding
+    expect(v.subjectId).toBe(subjectId.toString());
   });
 
   test("supervisory whole-school grant maps with all id fields null", () => {

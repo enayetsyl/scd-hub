@@ -196,7 +196,10 @@ export function grantView(g: LeanGrant): ScopeGrantView {
 export function canRead(scopes: ScopeItem[], sectionId: string, classId: string, subjectId?: string): boolean {
   for (const s of scopes) {
     if (s.kind === "teaching" && s.sectionId === sectionId) return true;
-    if (s.kind === "proxy" && s.sectionId === sectionId) return true;
+    if (s.kind === "proxy" && s.sectionId === sectionId) {
+      if (!subjectId) return true;
+      if (!s.subjectId || s.subjectId === subjectId) return true;
+    }
     if (s.kind === "supervisory") {
       switch (s.extent) {
         case "whole_school": return true;
@@ -213,11 +216,19 @@ export function canRead(scopes: ScopeItem[], sectionId: string, classId: string,
 
 /** Can a teacher WRITE (assemble sets / fill tracker) for the given section?
  *  Supervisory is read-only — write = teaching or active proxy only (D-#17/#18). */
-export function canWrite(scopes: ScopeItem[], sectionId: string): boolean {
-  return scopes.some(
-    (s) =>
-      (s.kind === "teaching" || s.kind === "proxy") && s.sectionId === sectionId,
-  );
+export function canWrite(scopes: ScopeItem[], sectionId: string, subjectId?: string): boolean {
+  return scopes.some((s) => {
+    if (s.kind === "teaching") {
+      return s.sectionId === sectionId;
+    }
+    if (s.kind !== "proxy" || s.sectionId !== sectionId) {
+      return false;
+    }
+    if (!subjectId) {
+      return true;
+    }
+    return !s.subjectId || s.subjectId === subjectId;
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -1,10 +1,10 @@
 /**
- * DateField (web) — a labelled native browser calendar (`<input type="date">`).
+ * DateField (web) - a labelled browser calendar.
  * Value is round-tripped as "YYYY-MM-DD" (the same shape the homework queries use).
  * Web-only; the native variant (DateField.tsx) uses @react-native-community/datetimepicker.
  */
-import React from "react";
-import { View, Text } from "react-native";
+import React, { useRef } from "react";
+import { View, Text, Pressable } from "react-native";
 import { useColors } from "../theme";
 import { radius, space } from "../theme/tokens";
 
@@ -16,10 +16,22 @@ export interface DateFieldProps {
 
 export function DateField({ label, value, onChange }: DateFieldProps): React.ReactElement {
   const c = useColors();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const openPicker = (): void => {
+    const input = inputRef.current as (HTMLInputElement & { showPicker?: () => void }) | null;
+    input?.showPicker?.();
+    input?.click();
+    input?.focus();
+  };
+
   return (
     <View style={{ marginBottom: space(3) }}>
       {label ? <Text style={{ color: c.textSecondary, fontSize: 13, marginBottom: space(1) }}>{label}</Text> : null}
-      <View
+      <Pressable
+        onPress={openPicker}
+        accessibilityRole="button"
+        accessibilityLabel={label ?? "Date picker"}
         style={{
           flexDirection: "row",
           alignItems: "center",
@@ -28,28 +40,36 @@ export function DateField({ label, value, onChange }: DateFieldProps): React.Rea
           borderRadius: radius.md,
           backgroundColor: c.surface,
           paddingHorizontal: space(3),
+          paddingVertical: space(3),
           gap: space(2),
         }}
       >
         <Text style={{ color: c.textSecondary, fontSize: 16 }}>📅</Text>
+        <Text style={{ color: value ? c.textPrimary : c.textSecondary, fontSize: 16, flex: 1 }}>
+          {value || "Choose a date"}
+        </Text>
         <input
+          ref={inputRef}
           type="date"
           value={value}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.currentTarget.value)}
+          aria-label={label ?? "Date picker"}
+          tabIndex={-1}
           style={{
-            padding: 12,
+            position: "absolute",
+            opacity: 0,
+            width: 1,
+            height: 1,
+            left: 0,
+            top: 0,
             border: "none",
             outline: "none",
-            backgroundColor: "transparent",
-            color: c.textPrimary,
-            fontSize: 16,
-            boxSizing: "border-box",
-            fontFamily: "inherit",
-            flex: 1,
-            minWidth: 0,
+            margin: 0,
+            padding: 0,
+            pointerEvents: "none",
           }}
         />
-      </View>
+      </Pressable>
     </View>
   );
 }

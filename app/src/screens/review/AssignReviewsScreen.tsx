@@ -13,6 +13,7 @@ import { useQuery, useMutation } from "urql";
 import { SUBJECTS, CLASS_LEVELS, REVIEW_STATUSES } from "@scd/shared";
 import {
   ASSIGNABLE_PLANS,
+  CANCEL_PLAN_REVIEW,
   REVIEWER_ASSIGNMENT_LOAD,
   ASSIGN_PLAN_REVIEW_BULK,
   TEACHERS_QUERY,
@@ -52,6 +53,7 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
   const [{ data: loadData, fetching: loadFetching }, refetchLoad] = useQuery({ query: REVIEWER_ASSIGNMENT_LOAD });
   const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY });
   const [, assignBulk] = useMutation(ASSIGN_PLAN_REVIEW_BULK);
+  const [, cancelReview] = useMutation(CANCEL_PLAN_REVIEW);
 
   const plans = plansData?.assignablePlans ?? [];
   const load = loadData?.reviewerAssignmentLoad ?? [];
@@ -64,6 +66,8 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
   const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [unassignBusy, setUnassignBusy] = useState(false);
+  const [unassignId, setUnassignId] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; tone: "ok" | "danger" } | null>(null);
 
   const visible = useMemo(
@@ -76,6 +80,10 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
           (!unassignedOnly || !p.currentReviewerId),
       ),
     [plans, subject, classLevel, status, unassignedOnly],
+  );
+  const reviewerPlans = useMemo(
+    () => plans.filter((p) => Boolean(reviewerId && p.currentReviewerId === reviewerId && p.currentAssignmentId)),
+    [plans, reviewerId],
   );
 
   const statusTone = (s: string): "ok" | "brand" | "muted" =>
@@ -115,6 +123,23 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
     refetchLoad({ requestPolicy: "network-only" });
   }
 
+  async function onUnassign(assignmentId: string): Promise<void> {
+    if (unassignBusy) return;
+    setUnassignBusy(true);
+    setUnassignId(assignmentId);
+    setMsg(null);
+    const res = await cancelReview({ assignmentId });
+    setUnassignBusy(false);
+    if (res.error || !res.data?.cancelPlanReview) {
+      setMsg({ text: friendlyError(res.error), tone: "danger" });
+      return;
+    }
+    setMsg({ text: STR.rvUnassignedDone, tone: "ok" });
+    setUnassignId(null);
+    refetchPlans({ requestPolicy: "network-only" });
+    refetchLoad({ requestPolicy: "network-only" });
+  }
+
   return (
     <Screen scroll>
       {/* Per-reviewer load overview */}
@@ -124,17 +149,44 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
       ) : load.length === 0 ? (
         <EmptyState message={STR.rvNoLoad} />
       ) : (
-        <Card>
-          {load.map((l) => (
-            <View key={l.reviewerId} style={{ marginVertical: space(1) }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Body style={{ flex: 1, fontWeight: "600" }}>{l.reviewerName}</Body>
-                <Badge text={`${bnNum(l.openCount)} ${STR.rvAssignedShort}`} tone="brand" />
-              </View>
-              <Muted>{`${bnNum(l.assignedCount)} ${STR.rvAwaiting} · ${bnNum(l.submittedCount)} ${STR.rvDecidedShort}`}</Muted>
+        load.map((l) => (
+          <Card key={l.reviewerId} onPress={() => setReviewerId(l.reviewerId)} style={{ marginBottom: space(2) }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Body style={{ flex: 1, fontWeight: "600" }}>{l.reviewerName}</Body>
+              <Badge text={`${bnNum(l.openCount)} ${STR.rvAssignedShort}`} tone="brand" />
             </View>
-          ))}
-        </Card>
+            <Muted>{`${bnNum(l.assignedCount)} ${STR.rvAwaiting} · ${bnNum(l.submittedCount)} ${STR.rvDecidedShort}`}</Muted>
+          </Card>
+        ))
+      )}
+
+      <Divider />
+
+      <H2>{STR.rvReviewerAssignments}</H2>
+      {!reviewerId ? (
+        <Muted>{STR.rvPickReviewer}</Muted>
+      ) : reviewerPlans.length === 0 ? (
+        <EmptyState message={STR.rvNoLoad} />
+      ) : (
+        reviewerPlans.map((p) => (
+          <Card key={p.currentAssignmentId ?? p.artifactId}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+              <Body style={{ flex: 1, fontWeight: "700" }}>{planTitle(p)}</Body>
+              <Badge text={reviewStatusLabel(p.reviewStatus)} tone={statusTone(p.reviewStatus)} />
+            </View>
+            <Muted style={{ marginTop: 4 }}>
+              {p.roundStatus ? `${p.roundStatus} · ${STR.rvAssignedTo}: ${p.currentReviewerName ?? STR.rvReviewer}` : STR.rvAssignedTo}
+            </Muted>
+            <Button
+              title={unassignBusy && unassignId === p.currentAssignmentId ? STR.saving : STR.rvUnassign}
+              onPress={() => p.currentAssignmentId && onUnassign(p.currentAssignmentId)}
+              loading={unassignBusy && unassignId === p.currentAssignmentId}
+              variant="secondary"
+              style={{ marginTop: space(2) }}
+              disabled={unassignBusy || !p.currentAssignmentId}
+            />
+          </Card>
+        ))
       )}
 
       <Divider />

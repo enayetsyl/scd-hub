@@ -77,12 +77,18 @@ export async function assertCanRead(
   if (!canRead(scopes, sectionId, classId, subjectId)) throw new ForbiddenError();
 }
 
-/** Assert the caller can write (assemble/tracker) for the given section. */
-export async function assertCanWrite(ctx: AppContext, sectionId: string): Promise<void> {
+/** Assert the caller can write (assemble/tracker) for the given section.
+ *  `subjectId` narrows proxy grants for subject-specific actions.
+ */
+export async function assertCanWrite(
+  ctx: AppContext,
+  sectionId: string,
+  subjectId?: string,
+): Promise<void> {
   if (ctx.auth?.role === "PRINCIPAL") return;
   if (ctx.auth?.role === "OFFICE" || ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
   const scopes = await resolveTeacherScopes(ctx);
-  if (!canWrite(scopes, sectionId)) throw new ForbiddenError();
+  if (!canWrite(scopes, sectionId, subjectId)) throw new ForbiddenError();
 }
 
 /**

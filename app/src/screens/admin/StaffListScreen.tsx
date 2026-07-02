@@ -18,6 +18,7 @@ import {
   Card,
   Row,
   Button,
+  Field,
   Divider,
   Loader,
   EmptyState,
@@ -76,6 +77,7 @@ function StaffCard({ s }: { s: StaffT }): React.ReactElement {
 
 export default function StaffListScreen(): React.ReactElement {
   const [category, setCategory] = React.useState<string | null>(null);
+  const [search, setSearch] = React.useState("");
 
   const [{ data, fetching, error }, refetch] = useQuery({
     query: STAFF_QUERY,
@@ -83,10 +85,25 @@ export default function StaffListScreen(): React.ReactElement {
   });
 
   const staff = data?.staff ?? [];
+  const q = search.trim().toLowerCase();
+  const shown = q
+    ? staff.filter((s) => {
+        const categoryLabel = hrCategoryLabel(s.category).toLowerCase();
+        return (
+          (s.nameBn ?? "").toLowerCase().includes(q) ||
+          s.name.toLowerCase().includes(q) ||
+          (s.schoolId ?? "").toLowerCase().includes(q) ||
+          (s.phone ?? "").toLowerCase().includes(q) ||
+          categoryLabel.includes(q)
+        );
+      })
+    : staff;
 
   return (
     <Screen scroll>
       <H2>{STR.staff}</H2>
+
+      <Field label={undefined} value={search} onChangeText={setSearch} placeholder={STR.searchStaff} />
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1), marginBottom: space(2) }}>
         <Button
@@ -114,8 +131,10 @@ export default function StaffListScreen(): React.ReactElement {
         <Loader label={STR.loading} />
       ) : staff.length === 0 ? (
         <EmptyState message={STR.empty} />
+      ) : shown.length === 0 ? (
+        <EmptyState message={STR.noMatches} />
       ) : (
-        staff.map((s) => <StaffCard key={s.id} s={s} />)
+        shown.map((s) => <StaffCard key={s.id} s={s} />)
       )}
     </Screen>
   );
