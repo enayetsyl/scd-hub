@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-07-02: ENH-003 is now built: the Principal staff list has a client-side search field that filters by name, ID, phone, and category, matching the roster search pattern. Verified green with app `tsc --noEmit` in this session.
 - 2026-07-02: Proxy-grant start date now uses the same Pressable-to-datepicker interaction as the other app calendars, so clicking the field/icon opens the picker on web. Verified green with app `tsc --noEmit` in this session.
 - 2026-07-02: Proxy-grant placeholders were cleaned up for teacher/class/section/subject/year/reviewer selects, and the web date field now shows an app-owned "Choose a date" prompt while still opening the calendar picker. Verified green with app `tsc --noEmit` in this session.
 - 2026-07-02: Foundation subjects now include Islamic Studies in the operational `Subject` collection and seed path, and the current database was backfilled so proxy subject dropdowns can surface it. Verified green with direct shared/server/app TypeScript compilers in this session.
@@ -2272,3 +2273,4 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
 - 2026-07-01: session-plan cards now show the session number beside the chapter name, sourced from `payload.session_plan.period_index`. Server + app typechecks passed in this session.
 - 2026-07-01: homework topic selection now falls back to a synthetic generic tag when a subject/class has no seeded rows, Homework home also falls back to routine slots when listing accessible classes, and class-note screens now use the shared calendar field plus a class/group header. Server homework test and app/server typechecks passed in this session.
 - 2026-07-01: the shared-vocab CI verifier was still checking the old homework tuple `240/120/40/20`; it now matches the current `120/120/40/20` values so the gate can reflect the lowered ceiling. Local verifier rerun passed in this session.
+- 2026-07-02 - feat(admin/review/guardian): rename the Supervisory grant card, add manual guardian/student link + relink tooling on Guardian logins, and expose reviewer-centric plan unassign. Gate: app + server tsc --noEmit green in this session. [uncommitted]

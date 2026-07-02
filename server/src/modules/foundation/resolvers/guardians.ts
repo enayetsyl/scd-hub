@@ -4,7 +4,9 @@ import { GuardianLink } from "../models/GuardianLink";
 import { hashPassword } from "../services/AuthService";
 import { writeAudit } from "../../platform/services/AuditService";
 
-type GuardianShape = Pick<IGuardian, "name" | "identifierKind" | "active"> & { _id: { toString(): string } };
+type GuardianShape = Pick<IGuardian, "name" | "identifierKind" | "active" | "phone" | "loginEnabled"> & {
+  _id: { toString(): string };
+};
 
 const GuardianRef = builder.objectRef<GuardianShape>("Guardian");
 GuardianRef.implement({
@@ -14,8 +16,19 @@ GuardianRef.implement({
     name: t.exposeString("name"),
     identifierKind: t.exposeString("identifierKind"),
     active: t.exposeBoolean("active"),
+    phone: t.string({ nullable: true, resolve: (g) => g.phone ?? null }),
+    loginEnabled: t.exposeBoolean("loginEnabled"),
   }),
 });
+
+builder.queryField("guardians", (t) =>
+  t.field({
+    type: [GuardianRef],
+    authScopes: { hasPermission: "guardian:link" },
+    description: "All guardians in the directory (principal/office).",
+    resolve: async () => Guardian.find().sort({ name: 1 }).lean(),
+  }),
+);
 
 builder.mutationField("createGuardian", (t) =>
   t.field({
@@ -55,18 +68,50 @@ builder.mutationField("linkGuardianToStudent", (t) =>
       relation: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      await GuardianLink.create({
-        guardianId: args.guardianId,
-        studentId: args.studentId,
-        relation: args.relation,
-      });
+      const relation = args.relation.trim();
+      if (!relation) throw new Error("Relation is required");
+      await GuardianLink.updateOne(
+        { guardianId: args.guardianId, studentId: args.studentId },
+        {
+          $set: { relation, active: true },
+          $setOnInsert: { guardianId: args.guardianId, studentId: args.studentId },
+        },
+        { upsert: true },
+      );
       await writeAudit({
         eventKind: "GUARDIAN_LINK",
         actorId: ctx.auth?.userId,
         actorRole: ctx.auth?.role,
-        meta: { guardianId: args.guardianId, studentId: args.studentId, relation: args.relation },
+        meta: { guardianId: args.guardianId, studentId: args.studentId, relation },
       });
       return true;
+    },
+  }),
+);
+
+builder.mutationField("unlinkGuardianFromStudent", (t) =>
+  t.field({
+    type: "Boolean",
+    authScopes: { hasPermission: "guardian:link" },
+    description: "Deactivate a guardian↔student link so the portal no longer reaches that child.",
+    args: {
+      guardianId: t.arg.string({ required: true }),
+      studentId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const res = await GuardianLink.updateOne(
+        { guardianId: args.guardianId, studentId: args.studentId },
+        { $set: { active: false } },
+      );
+      if (res.matchedCount > 0) {
+        await writeAudit({
+          eventKind: "GUARDIAN_LINK",
+          actorId: ctx.auth?.userId,
+          actorRole: ctx.auth?.role,
+          meta: { guardianId: args.guardianId, studentId: args.studentId, active: false },
+        });
+      }
+      return res.matchedCount > 0;
     },
   }),
 );

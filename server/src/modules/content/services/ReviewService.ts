@@ -588,6 +588,7 @@ export interface AssignablePlanDTO {
   reviewStatus: string;
   currentReviewerId: string | null;
   currentReviewerName: string | null;
+  currentAssignmentId: string | null;
   roundStatus: string | null; // assigned|submitted|null
 }
 
@@ -666,6 +667,7 @@ export async function listAssignablePlans(): Promise<AssignablePlanDTO[]> {
         reviewStatus: a.reviewStatus,
         currentReviewerId: round ? round.reviewerId.toString() : null,
         currentReviewerName: round ? nameOf.get(round.reviewerId.toString()) ?? null : null,
+        currentAssignmentId: round ? round._id.toString() : null,
         roundStatus: round ? round.status : null,
       };
     })
