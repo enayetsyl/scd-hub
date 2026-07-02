@@ -36,7 +36,14 @@ import {
   assertCanRead,
   ForbiddenError,
 } from "../../../middleware/authz";
+import { Subject } from "../../foundation/models/Subject";
 import type { Types } from "mongoose";
+
+async function resolveSubjectId(subject: string): Promise<string> {
+  const doc = await Subject.findOne({ code: subject }).select("_id").lean();
+  if (!doc) throw new Error(`Subject not found: ${subject}`);
+  return doc._id.toString();
+}
 
 // ---------------------------------------------------------------------------
 // Gate helpers
@@ -118,7 +125,7 @@ builder.mutationField("createClassTestRequest", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
       return createRequestSvc({
         sectionId: args.sectionId,
         subject: args.subject,
@@ -149,7 +156,7 @@ builder.queryField("suggestClassTestNumber", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
       const section = (await Section.findById(args.sectionId).select("classId").lean()) as {
         classId: Types.ObjectId;
       } | null;

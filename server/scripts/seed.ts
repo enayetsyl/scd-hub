@@ -15,7 +15,7 @@ import { connectDb, disconnectDb } from "../src/db";
 import { hashPassword } from "../src/modules/foundation/services/AuthService";
 import { User } from "../src/modules/foundation/models/User";
 import { AcademicYear } from "../src/modules/foundation/models/AcademicYear";
-import { Subject } from "../src/modules/foundation/models/Subject";
+import { Subject, FOUNDATION_SUBJECTS } from "../src/modules/foundation/models/Subject";
 import { Class } from "../src/modules/foundation/models/Class";
 import { Section } from "../src/modules/foundation/models/Section";
 import { Student } from "../src/modules/foundation/models/Student";
@@ -23,7 +23,7 @@ import { ScopeGrant } from "../src/modules/foundation/models/ScopeGrant";
 import { ContentArtifact } from "../src/modules/content/models/ContentArtifact";
 import { AssessmentSet } from "../src/modules/assessment/models/AssessmentSet";
 import { TrackerRecord } from "../src/modules/trackers/models/TrackerRecord";
-import { SUBJECT_LABELS_BN, SUBJECTS, DEFAULT_SECTION_CODE, DEFAULT_SECTION_LABEL_BN } from "@scd/shared";
+import { SUBJECT_LABELS_BN, DEFAULT_SECTION_CODE, DEFAULT_SECTION_LABEL_BN } from "@scd/shared";
 
 const CREDS = [
   { email: "enayetflweb@gmail.com", password: "Principal@123", role: "PRINCIPAL", name: "Md. Enayet (Principal)" },
@@ -109,7 +109,7 @@ async function main(): Promise<void> {
   });
 
   const subjectIds: Record<string, import("mongoose").Types.ObjectId> = {};
-  for (const code of SUBJECTS) {
+  for (const code of FOUNDATION_SUBJECTS) {
     const s = await Subject.create({ code, nameBn: SUBJECT_LABELS_BN[code], active: true });
     subjectIds[code] = s._id;
   }
@@ -199,7 +199,7 @@ async function main(): Promise<void> {
   console.log("\nFor the Sets/Trackers tabs, paste this Academic Year _id into the");
   console.log("app's Section picker, then choose a class + section:");
   console.log(`  ACADEMIC_YEAR_ID = ${year._id.toString()}`);
-  console.log("\nSeeded: 3 users, 1 academic year, 5 subjects, 2 classes");
+  console.log("\nSeeded: 3 users, 1 academic year, 6 subjects, 2 classes");
   console.log(`  Class 3 "তৃতীয় শ্রেণি"  sections: Main(${c3Main._id})  B(${c3B._id})  — 6 students in Main`);
   console.log("  Class 5 \"পঞ্চম শ্রেণি\"  section: Main");
   console.log("  Content: 2 SCI session plans (with markdown) + 6 SCI questions (class 3)");

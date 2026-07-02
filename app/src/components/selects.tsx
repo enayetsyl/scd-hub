@@ -7,7 +7,7 @@ import React from "react";
 import { useQuery } from "urql";
 import { Select } from "./ui";
 import { TEACHERS_QUERY, ROOMS_QUERY, ACADEMIC_YEARS_QUERY, STAFF_QUERY, SUBJECTS_QUERY } from "../graphql/operations";
-import { STR, hrCategoryLabel } from "../lib/labels";
+import { STR, hrCategoryLabel, subjectLabel } from "../lib/labels";
 
 /** Pick a staff member by name → yields the StaffProfile id (HR admin surfaces).
  *  Reads the manager-gated staff roster; the hint shows the HR category. */
@@ -112,9 +112,8 @@ export function SubjectSelect({
 }): React.ReactElement {
   const [{ data }] = useQuery({ query: SUBJECTS_QUERY });
   const options = (data?.subjects ?? []).map((s) => ({
-    label: s.nameBn,
+    label: subjectLabel(s.code),
     value: s.id,
-    hint: s.code,
   }));
   return (
     <Select

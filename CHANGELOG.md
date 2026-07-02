@@ -5,6 +5,11 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 ## Unreleased
 
+- fix(foundation): add Islamic Studies to the operational `Subject` collection, seed it in fresh DBs, and provide a backfill script for existing DBs so subject pickers can surface it. Verified with direct shared/server/app TypeScript compilers in this session. [uncommitted]
+- fix(foundation): backfill the current database with the missing Islamic Studies subject row so proxy subject pickers now receive it from `subjects`. Verified by rereading the live collection in this session. [uncommitted]
+- fix(proxy): make the web start-date field open the calendar picker on click and match the other app date controls' Pressable interaction model. Verified with app `tsc --noEmit` in this session. [uncommitted]
+- fix(proxy): remove the manual academic-year picker from proxy assignment, default the class list from the centrally current year, and switch the start-date input to the shared calendar field. Verified with app `tsc` in this session. [uncommitted]
+- fix(proxy): ENH-002 now requires a subject on manual proxy assignment and threads that subject through proxy read/write scope plus subject-bearing tracker and assessment writes, so a cover teacher is limited to the covered subject's lesson plan, homework tracker, attendance, and assignment flows. Verified with direct server/app `tsc` in this session. [uncommitted]
 - fix(homework): lower the homework daily ceiling to 120 minutes everywhere it is surfaced or enforced (shared constant, guardian day-load, reconciliation, summary, and resolver text) so the UI and server agree. Verified with server/app `tsc` and focused homework/guardian Jest tests in this session. [uncommitted]
 - fix(homework): accept KG/Nursery roster levels in homework declare, allow generic fallback topics for pre-primary classes, parse signed Nursery HW IDs safely, and show the roster class name on the declare screen. Verified with server/app `tsc` and focused homework Jest tests in this session. [uncommitted]
 
@@ -613,3 +618,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-01 â€” fix(homework ui): hide `Reconcile & issue` unless the selected section belongs to the logged-in class teacher or an existing admin/supervisor path, and block the reconcile screen's trim/confirm controls for other sections. Gate: app tsc clean. [uncommitted]
 - 2026-07-01 â€” fix(ci): align the shared-vocab verifier with the lowered homework ceiling so it checks `120/120/40/20` instead of the stale `240/120/40/20` tuple. Gate: local vocab verifier green in this session. [uncommitted]
 - 2026-07-02 - fix(app): restore the three guardian screen modules imported by `AppTabs.tsx` so the app typecheck passes and dev can redeploy. Gate: `npm.cmd run typecheck --workspace=app` green in this session. [uncommitted]
+- 2026-07-02 - fix(app): clean up the proxy-grant select placeholders and replace the web date input hint with an app-owned calendar field prompt. Gate: app `tsc --noEmit` green in this session. [uncommitted]

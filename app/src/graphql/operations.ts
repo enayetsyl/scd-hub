@@ -1315,6 +1315,7 @@ export const ASSIGN_PROXY = gql<
     absentTeacherId?: string | null;
     classId: string;
     sectionId: string;
+    subjectId: string;
     startDate: string;
     durationDays: number;
   }
@@ -1324,6 +1325,7 @@ export const ASSIGN_PROXY = gql<
     $absentTeacherId: String
     $classId: String!
     $sectionId: String!
+    $subjectId: String!
     $startDate: String!
     $durationDays: Int!
   ) {
@@ -1332,6 +1334,7 @@ export const ASSIGN_PROXY = gql<
       absentTeacherId: $absentTeacherId
       classId: $classId
       sectionId: $sectionId
+      subjectId: $subjectId
       startDate: $startDate
       durationDays: $durationDays
     ) {

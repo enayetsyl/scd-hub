@@ -62,6 +62,10 @@
 export const SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS"] as const;
 export type Subject = (typeof SUBJECTS)[number];
 
+/** Foundation-only subject codes. These live on the operational plane (Subject
+ *  collection) and may exceed the locked content-envelope subject enum. */
+type FoundationSubjectCode = Subject | "ISLAM";
+
 /** Class levels C1–C5 (one evolving plan schema spans all, R-IMP2). Range, not enum.
  *  CONTENT axis: curriculum content is authored for C1–C5 only. MIRROR of the LOCKED
  *  envelope `class_level` (1..5) — do NOT widen these to fit roster pre-primary classes
@@ -188,12 +192,13 @@ export const SUBJECT_ANCHORS: Partial<Record<Subject, readonly AnchorWord[]>> = 
 // the English code; if a Bangla Bloom label is needed on screen, source it from the
 // curriculum reference, do not hardcode it here.
 
-export const SUBJECT_LABELS_BN: Record<Subject, string> = {
+export const SUBJECT_LABELS_BN: Record<FoundationSubjectCode, string> = {
   BAN: "বাংলা",
   ENG: "ইংরেজি",
   MATH: "গণিত",
   SCI: "বিজ্ঞান",
   BGS: "বাংলাদেশ ও বিশ্বপরিচয়",
+  ISLAM: "ইসলাম শিক্ষা",
 };
 
 export const DOC_TYPE_LABELS_BN: Record<DocType, string> = {
@@ -670,12 +675,13 @@ export const ROSTER_CLASS_LABELS_EN: Record<RosterClassLevel, string> = {
   [5]: "Class 5",
 };
 
-export const SUBJECT_LABELS_EN: Record<Subject, string> = {
+export const SUBJECT_LABELS_EN: Record<FoundationSubjectCode, string> = {
   BAN: "Bangla",
   ENG: "English",
   MATH: "Mathematics",
   SCI: "Science",
   BGS: "Bangladesh & Global Studies",
+  ISLAM: "Islamic Studies",
 };
 
 export const DOC_TYPE_LABELS_EN: Record<DocType, string> = {

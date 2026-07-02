@@ -96,7 +96,8 @@ export async function listStaffDirectory(opts: StaffDirectoryOptions): Promise<S
   const supervisory: ScopeItem[] = scopes.filter((s) => s.kind === "supervisory");
   if (supervisory.length === 0) return []; // fail-closed: no supervisory extent ⇒ nothing observable
 
-  // subject code → Subject._id (only the 5 general subjects have a Subject row).
+  // subject code → Subject._id (foundation subject rows now include Islamic Studies
+  // as well as the 5 general subjects; ARABIC/QURAN still remain non-Subject codes).
   const subjects = (await Subject.find({}).lean()) as unknown as { _id: { toString(): string }; code: string }[];
   const codeToSubjectId = new Map<string, string>(subjects.map((s) => [s.code, s._id.toString()]));
 

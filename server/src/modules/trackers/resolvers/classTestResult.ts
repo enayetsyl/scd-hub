@@ -34,7 +34,14 @@ import {
   type PublishResultOutcome,
   type UnpublishOutcome,
 } from "../services/ClassTestPublishService";
+import { Subject } from "../../foundation/models/Subject";
 import { assertCanWrite, assertCanRead, ForbiddenError } from "../../../middleware/authz";
+
+async function resolveSubjectId(subject: string): Promise<string> {
+  const doc = await Subject.findOne({ code: subject }).select("_id").lean();
+  if (!doc) throw new Error(`Subject not found: ${subject}`);
+  return doc._id.toString();
+}
 
 /** Resolve the test's section + enforce staff read-scope on it (teachers only). */
 async function assertReadTest(ctx: AppContext, testId: string): Promise<void> {
@@ -51,7 +58,7 @@ async function assertWriteTest(ctx: AppContext, testId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const test = await getClassTest(testId);
   if (!test) throw new ForbiddenError("Class test not found");
-  await assertCanWrite(ctx, test.sectionId);
+  await assertCanWrite(ctx, test.sectionId, await resolveSubjectId(test.subject));
 }
 
 // ---------------------------------------------------------------------------
@@ -127,7 +134,7 @@ builder.mutationField("enterClassTestResult", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const test = await getClassTest(args.testId);
       if (!test) throw new ForbiddenError("Class test not found");
-      await assertCanWrite(ctx, test.sectionId);
+      await assertCanWrite(ctx, test.sectionId, await resolveSubjectId(test.subject));
       return enterResult({
         testId: args.testId,
         studentId: args.studentId,

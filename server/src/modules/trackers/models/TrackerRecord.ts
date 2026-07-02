@@ -30,6 +30,7 @@ export interface ITrackerRecord extends Document {
   setId: Types.ObjectId;
   sectionId: Types.ObjectId;
   classId: Types.ObjectId;
+  subjectId?: Types.ObjectId;
   entries: TrackerEntry[];
   status: "open" | "closed";
   createdBy: Types.ObjectId;
@@ -54,6 +55,7 @@ const TrackerRecordSchema = new Schema<ITrackerRecord>(
     setId: { type: Schema.Types.ObjectId, required: true },
     sectionId: { type: Schema.Types.ObjectId, required: true },
     classId: { type: Schema.Types.ObjectId, required: true },
+    subjectId: { type: Schema.Types.ObjectId, ref: "Subject" },
     entries: { type: [TrackerEntrySchema], default: [] },
     status: { type: String, enum: ["open", "closed"], required: true, default: "open" },
     createdBy: { type: Schema.Types.ObjectId, required: true },

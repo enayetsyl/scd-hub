@@ -9,6 +9,8 @@
  */
 import { builder } from "../../../schema";
 import { assertCanWrite, ForbiddenError } from "../../../middleware/authz";
+import { Subject } from "../../foundation/models/Subject";
+import { HomeworkItem } from "../models/HomeworkItem";
 import {
   attachQuestionFile,
   attachAnswerFile,
@@ -16,6 +18,12 @@ import {
   requireRecord,
   type AttachResult,
 } from "../services/HomeworkFileService";
+
+async function resolveSubjectId(subject: string): Promise<string> {
+  const doc = await Subject.findOne({ code: subject }).select("_id").lean();
+  if (!doc) throw new Error(`Subject not found: ${subject}`);
+  return doc._id.toString();
+}
 
 const AttachResultRef = builder.objectRef<AttachResult>("HomeworkFileAttachResult");
 AttachResultRef.implement({
@@ -40,7 +48,7 @@ builder.mutationField("attachHomeworkQuestionFile", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const item = await requireItem(args.hwItemId);
-      await assertCanWrite(ctx, item.sectionId.toString());
+      await assertCanWrite(ctx, item.sectionId.toString(), await resolveSubjectId(item.subject));
       return attachQuestionFile(args.hwItemId, args.fileId, ctx.auth.userId);
     },
   }),
@@ -60,7 +68,8 @@ builder.mutationField("attachHomeworkAnswerFile", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const rec = await requireRecord(args.recordId);
-      await assertCanWrite(ctx, rec.sectionId.toString());
+      const item = await HomeworkItem.findById(rec.hwItemId).select("subject").lean();
+      await assertCanWrite(ctx, rec.sectionId.toString(), item?.subject ? await resolveSubjectId(item.subject) : undefined);
       return attachAnswerFile(args.recordId, args.fileId, ctx.auth.userId);
     },
   }),
