@@ -612,3 +612,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 
 - 2026-07-01 â€” fix(homework ui): hide `Reconcile & issue` unless the selected section belongs to the logged-in class teacher or an existing admin/supervisor path, and block the reconcile screen's trim/confirm controls for other sections. Gate: app tsc clean. [uncommitted]
 - 2026-07-01 â€” fix(ci): align the shared-vocab verifier with the lowered homework ceiling so it checks `120/120/40/20` instead of the stale `240/120/40/20` tuple. Gate: local vocab verifier green in this session. [uncommitted]
+- 2026-07-02 - fix(app): restore the three guardian screen modules imported by `AppTabs.tsx` so the app typecheck passes and dev can redeploy. Gate: `npm.cmd run typecheck --workspace=app` green in this session. [uncommitted]

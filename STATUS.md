@@ -2217,6 +2217,7 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
 - **graphql-codegen client-preset** to replace the hand-typed operations (PRD §8 step 8).
 
 ## In flight
+- 2026-07-02: dev deploy repair in progress - three guardian screen modules were present locally but missing from the branch; app typecheck is green after confirming them.
 - (none — Slice 4 shipped)
 
 ## Blocked / waiting
@@ -2266,4 +2267,3 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
 - 2026-07-01: session-plan cards now show the session number beside the chapter name, sourced from `payload.session_plan.period_index`. Server + app typechecks passed in this session.
 - 2026-07-01: homework topic selection now falls back to a synthetic generic tag when a subject/class has no seeded rows, Homework home also falls back to routine slots when listing accessible classes, and class-note screens now use the shared calendar field plus a class/group header. Server homework test and app/server typechecks passed in this session.
 - 2026-07-01: the shared-vocab CI verifier was still checking the old homework tuple `240/120/40/20`; it now matches the current `120/120/40/20` values so the gate can reflect the lowered ceiling. Local verifier rerun passed in this session.
-
