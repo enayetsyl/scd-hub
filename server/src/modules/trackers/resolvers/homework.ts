@@ -50,6 +50,15 @@ import {
   assertCanConfirmHomework,
   ForbiddenError,
 } from "../../../middleware/authz";
+import { Subject } from "../../foundation/models/Subject";
+import { HomeworkItem } from "../models/HomeworkItem";
+import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
+
+async function resolveSubjectId(subject: string): Promise<string> {
+  const doc = await Subject.findOne({ code: subject }).select("_id").lean();
+  if (!doc) throw new Error(`Subject not found: ${subject}`);
+  return doc._id.toString();
+}
 
 // ---------------------------------------------------------------------------
 // Object shapes for Pothos
@@ -239,7 +248,7 @@ builder.mutationField("declareHomeworkItem", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
       const res = await declareSvc({
         academicYearId: args.academicYearId,
         classId: args.classId,
@@ -279,7 +288,8 @@ builder.mutationField("issueHomeworkItem", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      const item = await HomeworkItem.findById(args.itemId).select("subject").lean();
+      await assertCanWrite(ctx, args.sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
       return issueSvc(
         args.itemId,
         args.roster.map((r) => ({ studentId: r.studentId, present: r.present })),
@@ -306,7 +316,9 @@ builder.mutationField("transitionHomeworkRecord", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId").lean();
+      const item = record ? await HomeworkItem.findById(record.hwItemId).select("subject").lean() : null;
+      await assertCanWrite(ctx, args.sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
       return transitionSvc({
         recordId: args.recordId,
         toState: args.toState,
@@ -776,7 +788,9 @@ builder.mutationField("checkHomeworkRecord", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId").lean();
+      const item = record ? await HomeworkItem.findById(record.hwItemId).select("subject").lean() : null;
+      await assertCanWrite(ctx, args.sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
       const topup =
         args.topupQids && args.topupQids.length > 0
           ? { qids: [...args.topupQids], time: args.topupTime ?? 0 }

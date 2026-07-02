@@ -52,6 +52,7 @@ export async function openTracker(
     setId,
     sectionId,
     classId,
+    subjectId: set.subjectId ?? undefined,
     entries: [],
     status: "open",
     createdBy: actorId,

@@ -646,6 +646,7 @@ export interface AssignablePlanT {
   reviewStatus: string;
   currentReviewerId: string | null;
   currentReviewerName: string | null;
+  currentAssignmentId: string | null;
   roundStatus: string | null;
 }
 
@@ -654,7 +655,7 @@ export const ASSIGNABLE_PLANS = gql<{ assignablePlans: AssignablePlanT[] }, NoVa
   query AssignablePlans {
     assignablePlans {
       artifactId docType subject classLevel anchorWord addressNumber title
-      reviewStatus currentReviewerId currentReviewerName roundStatus
+      reviewStatus currentReviewerId currentReviewerName currentAssignmentId roundStatus
     }
   }
 `;
@@ -1241,6 +1242,46 @@ export const GUARDIAN_CREDENTIAL_CANDIDATES = gql<
   }
 `;
 
+export interface GuardianDirectoryT {
+  id: string;
+  name: string;
+  phone: string | null;
+  identifierKind: string;
+  loginEnabled: boolean;
+  active: boolean;
+}
+
+export const GUARDIANS_QUERY = gql<{ guardians: GuardianDirectoryT[] }, NoVars>`
+  query Guardians {
+    guardians {
+      id
+      name
+      phone
+      identifierKind
+      loginEnabled
+      active
+    }
+  }
+`;
+
+export const LINK_GUARDIAN_TO_STUDENT = gql<
+  { linkGuardianToStudent: boolean },
+  { guardianId: string; studentId: string; relation: string }
+>`
+  mutation LinkGuardianToStudent($guardianId: String!, $studentId: String!, $relation: String!) {
+    linkGuardianToStudent(guardianId: $guardianId, studentId: $studentId, relation: $relation)
+  }
+`;
+
+export const UNLINK_GUARDIAN_FROM_STUDENT = gql<
+  { unlinkGuardianFromStudent: boolean },
+  { guardianId: string; studentId: string }
+>`
+  mutation UnlinkGuardianFromStudent($guardianId: String!, $studentId: String!) {
+    unlinkGuardianFromStudent(guardianId: $guardianId, studentId: $studentId)
+  }
+`;
+
 export const PROVISION_GUARDIAN_LOGIN = gql<
   { provisionGuardianLogin: ProvisionedCredentialT },
   { phone: string }
@@ -1315,6 +1356,7 @@ export const ASSIGN_PROXY = gql<
     absentTeacherId?: string | null;
     classId: string;
     sectionId: string;
+    subjectId: string;
     startDate: string;
     durationDays: number;
   }
@@ -1324,6 +1366,7 @@ export const ASSIGN_PROXY = gql<
     $absentTeacherId: String
     $classId: String!
     $sectionId: String!
+    $subjectId: String!
     $startDate: String!
     $durationDays: Int!
   ) {
@@ -1332,6 +1375,7 @@ export const ASSIGN_PROXY = gql<
       absentTeacherId: $absentTeacherId
       classId: $classId
       sectionId: $sectionId
+      subjectId: $subjectId
       startDate: $startDate
       durationDays: $durationDays
     ) {

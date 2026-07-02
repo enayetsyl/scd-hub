@@ -57,14 +57,32 @@ import {
   assignmentSummary as summarySvc,
   childAssignments as childAssignmentsSvc,
 } from "../services/AssignmentSummaryService";
+import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { AssignmentItem } from "../models/AssignmentItem";
+import { Subject } from "../../foundation/models/Subject";
 import {
   assertCanWrite,
   assertCanRead,
   assertGuardianOfStudent,
   ForbiddenError,
 } from "../../../middleware/authz";
+
+async function resolveSubjectId(subject: string): Promise<string> {
+  const doc = await Subject.findOne({ code: subject }).select("_id").lean();
+  if (!doc) throw new Error(`Subject not found: ${subject}`);
+  return doc._id.toString();
+}
+
+async function assignmentItemSubjectId(itemId: string): Promise<string | undefined> {
+  const item = await AssignmentItem.findById(itemId).select("subject").lean();
+  return item?.subject ? resolveSubjectId(item.subject) : undefined;
+}
+
+async function assignmentRecordSubjectId(recordId: string): Promise<string | undefined> {
+  const rec = await AssignmentStudentRecord.findById(recordId).select("asItemId").lean();
+  return rec ? assignmentItemSubjectId(rec.asItemId.toString()) : undefined;
+}
 
 // ---------------------------------------------------------------------------
 // Gate helpers (see the header note)
@@ -821,7 +839,13 @@ builder.mutationField("deliverAssignment", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      const schedule = await AssignmentSchedule.findOne({ academicYearId: args.academicYearId });
+      const entry = schedule?.entries.id(args.entryId);
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        entry?.subject ? await resolveSubjectId(entry.subject) : undefined,
+      );
       return deliverSvc({
         academicYearId: args.academicYearId,
         weekNumber: args.weekNumber,
@@ -847,7 +871,7 @@ builder.mutationField("redeliverAssignmentRecord", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
       await assertRecordInSection(args.recordId, args.sectionId);
       return redeliverSvc(args.recordId, ctx.auth.userId as string);
     },
@@ -868,7 +892,7 @@ builder.mutationField("collectAssignment", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      await assertCanWrite(ctx, args.sectionId, await assignmentItemSubjectId(args.itemId));
       await assertItemInSection(args.itemId, args.sectionId);
       return collectSvc(
         args.itemId,
@@ -891,7 +915,7 @@ builder.mutationField("transitionAssignmentRecord", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
       await assertRecordInSection(args.recordId, args.sectionId);
       return transitionSvc(args.recordId, args.toState, ctx.auth.userId as string);
     },
@@ -1021,7 +1045,7 @@ builder.mutationField("checkAssignmentRecord", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
       await assertRecordInSection(args.recordId, args.sectionId);
       return checkSvc({
         recordId: args.recordId,
@@ -1047,7 +1071,7 @@ builder.mutationField("issueAssignmentResubmission", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
       await assertRecordInSection(args.recordId, args.sectionId);
       return resubSvc(args.recordId, ctx.auth.userId as string);
     },

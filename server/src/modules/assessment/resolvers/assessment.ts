@@ -150,7 +150,7 @@ builder.mutationField("createSet", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       // J3.5 — only teaching or proxy grant permits assembly (supervisory is read-only)
-      await assertCanWrite(ctx, args.sectionId);
+      await assertCanWrite(ctx, args.sectionId, args.subjectId ?? undefined);
 
       const result = await createSetSvc({
         setType: args.setType as import("@scd/shared").SetType,
@@ -185,7 +185,7 @@ builder.mutationField("addQuestionToSet", (t) =>
       // Resolve the set's sectionId for the write-scope check
       const setDoc = await AssessmentSet.findById(args.setId).lean() as LeanSet | null;
       if (!setDoc) throw new Error("AssessmentSet not found");
-      await assertCanWrite(ctx, setDoc.sectionId.toString());
+      await assertCanWrite(ctx, setDoc.sectionId.toString(), setDoc.subjectId ? setDoc.subjectId.toString() : undefined);
 
       await addQuestionSvc(
         args.setId,
@@ -220,7 +220,7 @@ builder.mutationField("assembleSet", (t) =>
 
       const setDoc = await AssessmentSet.findById(args.setId).lean() as LeanSet | null;
       if (!setDoc) throw new Error("AssessmentSet not found");
-      await assertCanWrite(ctx, setDoc.sectionId.toString());
+      await assertCanWrite(ctx, setDoc.sectionId.toString(), setDoc.subjectId ? setDoc.subjectId.toString() : undefined);
 
       const result = await assembleSetSvc({
         setId: args.setId,

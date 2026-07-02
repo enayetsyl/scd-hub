@@ -57,6 +57,8 @@ interface ProxyGrant extends BaseGrant {
   absentTeacherId?: Types.ObjectId;
   classId: Types.ObjectId;
   sectionId: Types.ObjectId;
+  /** Optional subject binding for the covered subject. */
+  subjectId?: Types.ObjectId;
   /** Asia/Dhaka day-start. */
   startDate: Date;
   /** Window = [startDate, startDate + durationDays). Enforced at request time — no cron. */
