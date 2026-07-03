@@ -49,8 +49,9 @@ export type ReviewStackParamList = {
 
 export type HomeworkStackParamList = {
   HomeworkHome: undefined;
-  DeclareHomework: undefined;
-  HomeworkReconcile: undefined;
+  /** `date` carries Homework home's calendar pick downstream (UX-5 R-Context). */
+  DeclareHomework: { date?: string } | undefined;
+  HomeworkReconcile: { date?: string } | undefined;
   HomeworkRecords: undefined;
   CheckingQueue: undefined;
   HomeworkRollups: undefined;

@@ -26,10 +26,11 @@ type Props = NativeStackScreenProps<HomeworkStackParamList, "DeclareHomework">;
 
 const today = (): string => new Date().toISOString().slice(0, 10);
 
-export default function DeclareHomeworkScreen({ navigation }: Props): React.ReactElement {
+export default function DeclareHomeworkScreen({ navigation, route }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
   const [subject, setSubject] = useState<string | null>(null);
-  const [date, setDate] = useState(today());
+  // R-Context (UX-5): inherit the date picked on Homework home; still editable here.
+  const [date, setDate] = useState(route.params?.date ?? today());
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [timeDecl, setTimeDecl] = useState("20");
   const [qCount, setQCount] = useState("");

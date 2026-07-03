@@ -33,12 +33,13 @@ type Props = NativeStackScreenProps<HomeworkStackParamList, "HomeworkReconcile">
 
 const today = (): string => new Date().toISOString().slice(0, 10);
 
-export default function HomeworkReconcileScreen({ navigation }: Props): React.ReactElement {
+export default function HomeworkReconcileScreen({ navigation, route }: Props): React.ReactElement {
   const colors = useColors();
   const { role, user } = useAuth();
   const { selection, hasSection } = useSectionContext();
   const isAdmin = (!!role && roleHasPermission(role, "roster:manage")) || !!user?.homeworkSupervisor;
-  const [date, setDate] = useState(today());
+  // R-Context (UX-5): inherit the date picked on Homework home; still editable here.
+  const [date, setDate] = useState(route.params?.date ?? today());
   const [trimTo, setTrimTo] = useState<Record<string, string>>({});
   const [absent, setAbsent] = useState<Set<string>>(new Set());
   // R-Validate (UX-1): per-item trim errors, keyed by itemId.
