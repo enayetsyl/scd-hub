@@ -193,6 +193,7 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
                     options={teachers.map((t) => ({ label: t.name, value: t.id }))}
                     onChange={setTeacherId}
                     placeholder={STR.asTeacher}
+                    searchable
                   />
                   <View style={{ marginTop: 8 }}>
                     <Button title={STR.asAddEntry} onPress={onAddEntry} loading={busy} disabled={busy} />

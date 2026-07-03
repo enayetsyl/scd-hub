@@ -240,6 +240,7 @@ export default function UploadObservationScreen(): React.ReactElement {
               options={teacherOptions}
               onChange={setTeacherId}
               placeholder={STR.obsPickTeacher}
+              searchable
             />
 
             {/* Reviewer (observer) */}
@@ -249,6 +250,7 @@ export default function UploadObservationScreen(): React.ReactElement {
               options={observerOptions}
               onChange={setObserverId}
               placeholder={STR.obsPickObserver}
+              searchable
             />
 
             {/* Class date */}

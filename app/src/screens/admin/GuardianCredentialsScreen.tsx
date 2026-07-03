@@ -246,6 +246,7 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
         onChange={setManualGuardianId}
         placeholder={STR.guardianSelect}
         emptyText={STR.noGuardianCandidates}
+        searchable
       />
       <Select
         label={STR.studentSelect}
@@ -254,6 +255,7 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
         onChange={setManualStudentId}
         placeholder={STR.studentSelect}
         emptyText={STR.noStudents}
+        searchable
       />
       <Field
         label={STR.relationField}

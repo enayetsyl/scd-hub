@@ -342,8 +342,13 @@ export function Field({
   );
 }
 
+/** Case/whitespace-insensitive match text (works for Bangla as a plain substring). */
+const normalizeSearch = (s: string): string => s.toLowerCase().replace(/\s+/g, "");
+
 /** A tap-to-expand dropdown styled like Field. Options list inline below the
- *  trigger (scrolls past ~6 rows); picking one closes the menu. */
+ *  trigger (scrolls past ~6 rows); picking one closes the menu. `searchable`
+ *  (UX-1 house rule R-Search — required beyond ~10 options) pins a filter input
+ *  above the list that narrows by label + hint as the user types. */
 export function Select<T extends string>({
   label,
   value,
@@ -352,6 +357,8 @@ export function Select<T extends string>({
   placeholder,
   emptyText,
   helper,
+  error,
+  searchable = false,
 }: {
   label?: string;
   value: T | null;
@@ -360,18 +367,32 @@ export function Select<T extends string>({
   placeholder?: string;
   emptyText?: string;
   helper?: string;
+  error?: string;
+  searchable?: boolean;
 }): React.ReactElement {
   const styles = useStyles();
   const colors = useColors();
   const [open, setOpen] = React.useState(false);
+  const [filter, setFilter] = React.useState("");
   const selected = options.find((o) => o.value === value) ?? null;
+  const q = normalizeSearch(filter);
+  const shown =
+    searchable && q !== ""
+      ? options.filter(
+          (o) => normalizeSearch(o.label).includes(q) || (o.hint ? normalizeSearch(o.hint).includes(q) : false),
+        )
+      : options;
+  function toggle(): void {
+    setFilter("");
+    setOpen((o) => !o);
+  }
   return (
     <View style={styles.fieldWrap}>
       {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
       <Pressable
-        onPress={() => setOpen((o) => !o)}
+        onPress={toggle}
         hitSlop={4}
-        style={({ pressed }) => [styles.select, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.select, !!error && styles.inputError, pressed && styles.pressed]}
       >
         <Text style={[styles.selectText, !selected && { color: colors.textSecondary }]} numberOfLines={1}>
           {selected ? selected.label : placeholder ?? ""}
@@ -379,42 +400,58 @@ export function Select<T extends string>({
         <Text style={styles.selectChevron}>{open ? "▴" : "▾"}</Text>
       </Pressable>
       {open ? (
-        options.length === 0 ? (
-          <View style={styles.selectMenu}>
+        <View style={styles.selectMenu}>
+          {searchable && options.length > 0 ? (
+            <TextInput
+              style={styles.selectSearch}
+              value={filter}
+              onChangeText={setFilter}
+              placeholder="🔍"
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          ) : null}
+          {shown.length === 0 ? (
             <Text style={styles.selectEmpty}>{emptyText ?? placeholder ?? ""}</Text>
-          </View>
-        ) : (
-          <ScrollView style={styles.selectMenu} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-            {options.map((o) => {
-              const isSel = o.value === value;
-              return (
-                <Pressable
-                  key={o.value}
-                  onPress={() => {
-                    onChange(o.value);
-                    setOpen(false);
-                  }}
-                  style={({ pressed }) => [
-                    styles.selectOption,
-                    isSel && styles.selectOptionOn,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text style={[styles.selectOptionText, isSel && styles.selectOptionTextOn]} numberOfLines={1}>
-                    {o.label}
-                  </Text>
-                  {o.hint ? (
-                    <Text style={styles.selectOptionHint} numberOfLines={1}>
-                      {o.hint}
+          ) : (
+            <ScrollView style={styles.selectScroll} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+              {shown.map((o) => {
+                const isSel = o.value === value;
+                return (
+                  <Pressable
+                    key={o.value}
+                    onPress={() => {
+                      onChange(o.value);
+                      setFilter("");
+                      setOpen(false);
+                    }}
+                    style={({ pressed }) => [
+                      styles.selectOption,
+                      isSel && styles.selectOptionOn,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={[styles.selectOptionText, isSel && styles.selectOptionTextOn]} numberOfLines={1}>
+                      {o.label}
                     </Text>
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        )
+                    {o.hint ? (
+                      <Text style={styles.selectOptionHint} numberOfLines={1}>
+                        {o.hint}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
       ) : null}
-      {helper ? <Text style={styles.fieldHelper}>{helper}</Text> : null}
+      {error ? (
+        <Text style={styles.fieldError}>⚠ {error}</Text>
+      ) : helper ? (
+        <Text style={styles.fieldHelper}>{helper}</Text>
+      ) : null}
     </View>
   );
 }
@@ -611,13 +648,23 @@ const useStyles = makeStyles((colors) => ({
   selectChevron: { ...typeScale.body, color: colors.textSecondary },
   selectMenu: {
     marginTop: space(1),
-    maxHeight: 260,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
+    overflow: "hidden",
   },
+  selectScroll: { maxHeight: 260 },
   selectEmpty: { ...typeScale.secondary, color: colors.textSecondary, padding: space(3) },
+  selectSearch: {
+    minHeight: 44,
+    paddingHorizontal: space(3),
+    paddingVertical: space(2),
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    ...typeScale.body,
+    color: colors.textPrimary,
+  },
   selectOption: {
     minHeight: 44,
     justifyContent: "center",

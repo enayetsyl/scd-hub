@@ -64,6 +64,9 @@ export default function BuildVocabTestScreen(): React.ReactElement {
 
   // Selected wordIds per direction.
   const [selByDir, setSelByDir] = useState<Record<string, string[]>>({});
+  // UX-3: per-direction chip filter — narrows the RENDERED chips only; selections
+  // made before filtering survive (they live in selByDir, not in the render set).
+  const [filterByDir, setFilterByDir] = useState<Record<string, string>>({});
   const toggle = (dir: string, wordId: string): void =>
     setSelByDir((prev) => {
       const cur = prev[dir] ?? [];
@@ -165,14 +168,22 @@ export default function BuildVocabTestScreen(): React.ReactElement {
             ) : (
               directions.map((dir) => {
                 const sel = selByDir[dir] ?? [];
+                const filter = (filterByDir[dir] ?? "").trim().toLowerCase();
+                const shown = filter === "" ? bank : bank.filter((w) => w.headword.toLowerCase().includes(filter));
                 return (
                   <Card key={dir}>
                     <Body style={{ fontWeight: "700" }}>{vocabDirectionLabel(dir)}</Body>
                     <Muted style={{ marginBottom: space(1) }}>
-                      {STR.vbSelectWordsForDir} · {STR.vbWordsSelected}: {bnNum(sel.length)}
+                      {STR.vbSelectWordsForDir} · {STR.vbWordsSelected}: {bnNum(sel.length)} · {STR.vbWordsShown}:{" "}
+                      {bnNum(shown.length)}
                     </Muted>
+                    <Field
+                      value={filterByDir[dir] ?? ""}
+                      onChangeText={(t) => setFilterByDir((m) => ({ ...m, [dir]: t }))}
+                      placeholder={STR.vbFilterWords}
+                    />
                     <ChipRow>
-                      {bank.map((w) => (
+                      {shown.map((w) => (
                         <Chip
                           key={w.id}
                           label={w.headword}

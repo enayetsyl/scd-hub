@@ -151,7 +151,7 @@ export default function QardIouScreen(): React.ReactElement {
         {/* Register entry */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.finRegisterEntry}</Body>
-          <Select label={STR.finPartyId} value={partyId} options={partyOptions} onChange={setPartyId} />
+          <Select label={STR.finPartyId} value={partyId} options={partyOptions} onChange={setPartyId} searchable />
           <Select
             label={STR.finType}
             value={type}
@@ -180,7 +180,7 @@ export default function QardIouScreen(): React.ReactElement {
         {/* Party outstanding */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.finPartyOutstanding}</Body>
-          <Select label={STR.finPartyId} value={outstandingPartyId || null} options={partyOptions} onChange={setOutstandingPartyId} />
+          <Select label={STR.finPartyId} value={outstandingPartyId || null} options={partyOptions} onChange={setOutstandingPartyId} searchable />
           {outstandingQ.fetching ? (
             <Loader label={STR.loading} />
           ) : outstandingPartyId && outstanding.length === 0 ? (

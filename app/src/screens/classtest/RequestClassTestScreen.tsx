@@ -15,11 +15,12 @@ import {
   CREATE_CLASS_TEST_REQUEST,
   SUGGEST_CLASS_TEST_NUMBER_QUERY,
 } from "../../graphql/classTest";
+import { ASSESSMENT_SETS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Field, Chip, Select } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
-import { STR, hwSubjectLabel } from "../../lib/labels";
+import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { required } from "../../lib/validate";
 import { useToast } from "../../state/ToastContext";
@@ -36,6 +37,9 @@ export default function RequestClassTestScreen(): React.ReactElement {
   const [subject, setSubject] = useState<string | null>(null);
   const [source, setSource] = useState<"POOL_SET" | "UPLOADED_PAPER">("POOL_SET");
   const [setId, setSetId] = useState("");
+  // UX-3: the happy path picks an assembled set from a list; the typed-ID field is
+  // an advanced escape hatch for a set the list doesn't surface.
+  const [manualSetEntry, setManualSetEntry] = useState(false);
   const [paper, setPaper] = useState<{ fileId: string; name: string } | null>(null);
   const [examDate, setExamDate] = useState("");
   const [totalMarks, setTotalMarks] = useState("");
@@ -49,6 +53,21 @@ export default function RequestClassTestScreen(): React.ReactElement {
   const toast = useToast();
 
   const [, createReq] = useMutation(CREATE_CLASS_TEST_REQUEST);
+
+  // The caller's assembled sets for the chosen section — the pool-set picker source
+  // (UX-3, R-Search). Filtered client-side to CT sets; a set is picked by id, never pasted.
+  const [setsQ] = useQuery({
+    query: ASSESSMENT_SETS_QUERY,
+    variables: { sectionId: section?.sectionId ?? "", classId: section?.classId ?? "", status: "assembled" },
+    pause: !section || source !== "POOL_SET",
+  });
+  const ctSetOptions = (setsQ.data?.assessmentSets ?? [])
+    .filter((s) => s.setType === "CT")
+    .map((s) => ({
+      label: s.id,
+      value: s.id,
+      hint: `${bnNum(s.basketItems.length)} ${STR.questionsWord} · ${bnNum(s.totalMarks ?? 0)} ${STR.marks}`,
+    }));
 
   // Auto-suggest the next test# once a section + subject are chosen (editable).
   const [suggestQ] = useQuery({
@@ -138,7 +157,23 @@ export default function RequestClassTestScreen(): React.ReactElement {
           </View>
 
           {source === "POOL_SET" ? (
-            <Field label={STR.ctSetId} value={setId} onChangeText={setSetId} helper={STR.ctSetIdHint} error={fieldErrors.setId} />
+            <>
+              <Select
+                label={STR.ctSetId}
+                value={setId === "" ? null : setId}
+                options={ctSetOptions}
+                onChange={setSetId}
+                placeholder={STR.ctPickSet}
+                emptyText={STR.pickSetFirst}
+                error={fieldErrors.setId}
+                searchable
+              />
+              {!manualSetEntry ? (
+                <Button title={STR.ctManualSetId} variant="ghost" onPress={() => setManualSetEntry(true)} />
+              ) : (
+                <Field label={STR.ctSetId} value={setId} onChangeText={setSetId} helper={STR.ctSetIdHint} error={fieldErrors.setId} />
+              )}
+            </>
           ) : (
             <View style={{ marginTop: space(2) }}>
               <Button title={STR.ctUploadPaper} variant="secondary" onPress={onUpload} />
