@@ -692,6 +692,8 @@ const STR_BN = {
   myPeriods: "আমার ক্লাস",
   pendingWork: "বাকি কাজ",
   quickActions: "দ্রুত কাজ",
+  moreOptions: "আরও অপশন",
+  stepWord: "ধাপ",
   accountMenu: "à¦…à§à¦¯à¦¾à¦•à¦¾à¦‰à¦¨à§à¦Ÿ à¦®à§‡à¦¨à§",
   openMenu: "à¦®à§‡à¦¨à§ à¦–à§à¦²à§à¦¨",
 
@@ -2659,6 +2661,8 @@ const STR_EN: StrTable = {
   myPeriods: "My periods",
   pendingWork: "Pending work",
   quickActions: "Quick actions",
+  moreOptions: "More options",
+  stepWord: "Step",
   accountMenu: "Account menu",
   openMenu: "Open menu",
 

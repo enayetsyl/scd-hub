@@ -18,6 +18,7 @@ import {
 import { ASSESSMENT_SETS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Field, Chip, Select } from "../../components/ui";
 import { DateField } from "../../components/DateField";
+import { MoreOptions } from "../../components/MoreOptions";
 import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
 import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
@@ -81,6 +82,17 @@ export default function RequestClassTestScreen(): React.ReactElement {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suggestQ.data]);
+
+  // UX-6 default: pass mark tracks ⌈total × 0.33⌉ until the teacher edits it
+  // themselves (then their value wins — the field stays fully editable).
+  const [passMarkTouched, setPassMarkTouched] = useState(false);
+  useEffect(() => {
+    const total = Number(totalMarks);
+    if (!passMarkTouched && totalMarks.trim() !== "" && Number.isFinite(total) && total >= 1) {
+      setPassMark(String(Math.ceil(total * 0.33)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalMarks, passMarkTouched]);
 
   async function onUpload(): Promise<void> {
     try {
@@ -183,10 +195,25 @@ export default function RequestClassTestScreen(): React.ReactElement {
 
           <DateField label={STR.ctExamDate} value={examDate} onChange={setExamDate} error={fieldErrors.examDate} />
           <Field label={STR.ctTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" error={fieldErrors.totalMarks} />
-          <Field label={STR.ctPassMark} value={passMark} onChangeText={setPassMark} keyboardType="number-pad" helper={STR.ctPassMarkHint} />
-          <Field label={STR.ctTestNumber} value={testNumber} onChangeText={setTestNumber} keyboardType="number-pad" />
-          <Field label={STR.ctDeadlineDays} value={deadlineDays} onChangeText={setDeadlineDays} keyboardType="number-pad" />
-          <Field label={STR.ctNotes} value={notes} onChangeText={setNotes} />
+
+          {/* UX-6: rarely-changed inputs fold away — pass mark (auto ⌈total×0.33⌉),
+              test number (auto-suggested), deadline (server default 2 open days), notes.
+              The happy path never opens this. */}
+          <MoreOptions>
+            <Field
+              label={STR.ctPassMark}
+              value={passMark}
+              onChangeText={(t) => {
+                setPassMarkTouched(true);
+                setPassMark(t);
+              }}
+              keyboardType="number-pad"
+              helper={STR.ctPassMarkHint}
+            />
+            <Field label={STR.ctTestNumber} value={testNumber} onChangeText={setTestNumber} keyboardType="number-pad" />
+            <Field label={STR.ctDeadlineDays} value={deadlineDays} onChangeText={setDeadlineDays} keyboardType="number-pad" />
+            <Field label={STR.ctNotes} value={notes} onChangeText={setNotes} />
+          </MoreOptions>
 
           <View style={{ marginTop: space(2) }}>
             <Button title={STR.ctSubmitRequest} onPress={onSubmit} loading={busy} disabled={busy} />

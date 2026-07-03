@@ -35,10 +35,13 @@ import { space } from "../../theme/tokens";
 
 type FeeLineRow = { head: string | null; amount: string };
 
+const todayISO = (): string => new Date().toISOString().slice(0, 10);
+
 export default function DailyEntryScreen(): React.ReactElement {
   const [, record] = useMutation(RECORD_FINANCE_POSTING);
 
-  const [date, setDate] = useState("");
+  // UX-6 default: the entry date is today (editable) — most postings are same-day.
+  const [date, setDate] = useState(todayISO());
   const [kind, setKind] = useState<string | null>(null);
   const [mode, setMode] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
@@ -93,7 +96,13 @@ export default function DailyEntryScreen(): React.ReactElement {
       toast.show(friendlyError(res.error), "danger");
       return;
     }
-    if (res.data) toast.show(STR.finRecorded, "ok");
+    if (res.data) {
+      toast.show(STR.finRecorded, "ok");
+      // UX-6 repeat-entry flow: keep the date (and kind/mode/heads) for the next
+      // posting of the same batch; clear only the per-entry amount + description.
+      setAmount("");
+      setNote("");
+    }
   }
 
   return (

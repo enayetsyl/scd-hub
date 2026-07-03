@@ -23,6 +23,7 @@ import {
 } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Field, Chip, ChipRow, Loader, Notice } from "../../components/ui";
 import { DateField } from "../../components/DateField";
+import { MoreOptions } from "../../components/MoreOptions";
 import { ProgramSelect, ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
 import { STR, vocabProgramLabel, vocabDirectionLabel, bnNum } from "../../lib/labels";
@@ -130,26 +131,40 @@ export default function BuildVocabTestScreen(): React.ReactElement {
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
         {!created ? (
-          <Card>
-            <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.vbNewTest}</Body>
-            <AcademicYearSelect value={yearId} onChange={setYearId} />
-            <ProgramSelect value={program} onChange={setProgram} />
-            {yearId ? <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} /> : null}
-            <Field label={STR.vbLabel} value={label} onChangeText={setLabel} error={fieldErrors.label} />
-            <Field label={STR.vbTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" error={fieldErrors.totalMarks} />
-            <View style={{ marginTop: space(1) }}>
-              <Chip label={STR.vbHalfMiss} selected={halfMiss} onPress={() => setHalfMiss((h) => !h)} />
-            </View>
-            <DateField label={STR.vbTestDate} value={testDate} onChange={setTestDate} helper={STR.vbTestDateHint} />
-            <View style={{ marginTop: space(2) }}>
-              <Button title={STR.vbCreateTest} onPress={onCreate} loading={busy} disabled={busy} />
-            </View>
-          </Card>
+          <>
+            {/* UX-6: explicit numbered steps — step ২ stays visibly locked until created. */}
+            <Card>
+              <Body style={{ fontWeight: "700", marginBottom: space(2) }}>
+                {STR.stepWord} {bnNum(1)} · {STR.vbNewTest}
+              </Body>
+              <AcademicYearSelect value={yearId} onChange={setYearId} />
+              <ProgramSelect value={program} onChange={setProgram} />
+              {yearId ? <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} /> : null}
+              <Field label={STR.vbLabel} value={label} onChangeText={setLabel} error={fieldErrors.label} />
+              <Field label={STR.vbTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" error={fieldErrors.totalMarks} />
+              {/* Rarely changed — folded (UX-6): the happy path never opens this. */}
+              <MoreOptions>
+                <View style={{ marginBottom: space(2) }}>
+                  <Chip label={STR.vbHalfMiss} selected={halfMiss} onPress={() => setHalfMiss((h) => !h)} />
+                </View>
+                <DateField label={STR.vbTestDate} value={testDate} onChange={setTestDate} helper={STR.vbTestDateHint} />
+              </MoreOptions>
+              <View style={{ marginTop: space(2) }}>
+                <Button title={STR.vbCreateTest} onPress={onCreate} loading={busy} disabled={busy} />
+              </View>
+            </Card>
+            <Card>
+              <Muted style={{ fontWeight: "700" }}>
+                {STR.stepWord} {bnNum(2)} · {STR.vbLayPositions}
+              </Muted>
+              <Muted style={{ marginTop: space(1) }}>{STR.vbSelectWordsForDir}</Muted>
+            </Card>
+          </>
         ) : (
           <>
             <Card>
               <Body style={{ fontWeight: "700" }}>
-                {vocabProgramLabel(created.program)} · {created.label}
+                {STR.stepWord} {bnNum(2)} · {vocabProgramLabel(created.program)} · {created.label}
               </Body>
               <Muted>
                 {STR.vbTotalMarks}: {bnNum(created.totalMarks)} · {STR.vbLayPositions}

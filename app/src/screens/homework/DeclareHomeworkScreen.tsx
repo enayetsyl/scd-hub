@@ -13,6 +13,7 @@ import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, EmptyState } from "../../components/ui";
 import { DateField } from "../../components/DateField";
+import { MoreOptions } from "../../components/MoreOptions";
 import { SectionBar } from "../../components/SectionBar";
 import { STR, hwSubjectLabel, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -198,10 +199,14 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
         </Card>
         <Field label={STR.hwTimeDecl} value={timeDecl} onChangeText={setTimeDecl} keyboardType="number-pad" />
         <Field label={STR.hwQCount} value={qCount} onChangeText={setQCount} keyboardType="number-pad" error={fieldErrors.qCount} />
-        <Field label={STR.hwPoolRef} value={poolRef} onChangeText={setPoolRef} placeholder={`QP-${subject ?? "MATH"}-C${classLevel ?? 1}-U01`} />
-        <ChipRow>
-          <Chip label={STR.hwRevItem} selected={revItem} onPress={() => setRevItem((v) => !v)} />
-        </ChipRow>
+        {/* Rarely changed — folded (UX-6): pool ref + revision flag. Time (default 20)
+            stays visible above per the PRD. */}
+        <MoreOptions>
+          <Field label={STR.hwPoolRef} value={poolRef} onChangeText={setPoolRef} placeholder={`QP-${subject ?? "MATH"}-C${classLevel ?? 1}-U01`} />
+          <ChipRow>
+            <Chip label={STR.hwRevItem} selected={revItem} onPress={() => setRevItem((v) => !v)} />
+          </ChipRow>
+        </MoreOptions>
         <View style={{ marginTop: space(3) }}>
           <Button title={STR.hwDeclare} onPress={onSubmit} loading={busy} disabled={busy} />
         </View>
