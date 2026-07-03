@@ -4,12 +4,13 @@
 **Owner:** Principal (SCD)
 **Scope:** App layer (Expo/React Native) + ONE new server read (`myDay`, UX-4). No schema/vocab/enum changes.
 **Traceability:** D-#265 (this program). Builds on: D-#61 (ui-guidelines), D-#258 (drawer nav), the per-class Homework dashboard pattern (STATUS 2026-07, no D-#), D-#63 (absent-only attendance — unchanged).
+**Revision 1 (2026-07-03):** adds UX-8 (Class Notes teacher-first entry). Approved by Principal.
 
 ---
 
 ## 0. Quick checklist (read this first)
 
-- [ ] Seven slices, built strictly in order **UX-1 → UX-7**. One PR per slice, off `dev`.
+- [ ] Eight slices, built strictly in order **UX-1 → UX-8**. One PR per slice, off `dev`.
 - [ ] UX-1..UX-3 create **shared primitives first**, then sweep call sites. Never fork a per-screen variant.
 - [ ] UX-4 is the only slice with server work (one gated read, no new permission, no vocab change).
 - [ ] Every slice ends GREEN on: app `tsc --noEmit`, `expo export --platform web`, server `tsc` + jest (UX-4 only), plus the slice's **manual test checklist** (§4.x.5) executed on BOTH web ≥1024px and a phone-width viewport.
@@ -32,6 +33,7 @@ Shorten and simplify every daily task in the app — especially on phones — by
 | G6 | **Three** section-selection patterns coexist (SectionBar→picker screen; inline dropdown pair; class-button dashboard) and context doesn't carry (Homework Home picks a date on a calendar, Declare asks it typed again). | Inconsistent mental model, repeated data entry | UX-5 |
 | G7 | Long single-screen forms with rarely-changed inputs always visible (Request Class Test = 9 inputs; Build Vocab Test = 2 phases on one screen). | Perceived complexity, abandonment | UX-6 |
 | G8 | No `KeyboardAvoidingView` (0 uses); no pull-to-refresh (0 `RefreshControl`); all lists are `.map` in `ScrollView` (no `FlatList`); login lacks a show-password toggle. | Keyboard hides Submit on Android; stale screens; future jank | UX-7 |
+| G9 | Class-note publishing is buried: Drawer → Routine → 16-button hub → find the group card → DailyNote → find your slot among the whole day's periods. The teacher searches through groups/slots that mostly aren't theirs, and the note form has a typed "Homework ID" field. | Daily task for every teacher takes 5–6 steps; ID-paste remnant | UX-8 |
 
 ## 3. Shared design rules this PRD establishes (house rules after landing)
 
@@ -163,6 +165,35 @@ Shorten and simplify every daily task in the app — especially on phones — by
 
 **Manual test checklist (Android web-view/phone-width emphasis):** focus the last field on Declare Homework — Submit reachable; pull-to-refresh on Notifications; scroll a 200-item word bank without jank; login with password visible toggle.
 
+---
+
+### 4.8 UX-8 — Class Notes: teacher-first drawer entry
+
+**Principle:** the routine already knows which periods this teacher taught — never ask them to pick class/subject for their own notes. (D-#266)
+
+**App work (no server change):**
+1. New `screens/classnotes/MyClassNotesScreen.tsx` — root of a new `ClassNotesTab` stack, gated `routine:read` (same gate as DailyNote; reuse the exact `roleHasPermission` convention from AppTabs).
+   - Header: `DateField` prefilled today (catch-up allowed by changing it).
+   - Body: the caller's own slots for that date via the existing `myRoutineSlots`/enriched routine read (`teacherName`, `startTime`–`endTime`, subject, group) — non-break slots only, one Card per period the teacher taught: `Period n · time · subject · group`.
+   - Per card: "Published ✓" badge when a note exists (reuse the `classNotesForDate` read per slot's group, or the slot-keyed note map exactly as DailyNote builds it), else an inline note box: multiline taught-summary `Field` + publish `Button` (`publishClassNote`, unchanged mutation). UX-1 rules apply: toast on success, field-level error when the summary is empty.
+   - Empty states: holiday → existing day-type label; no slots that date → `STR.rtNoSlots`.
+2. **Homework link picker:** replace the typed `Homework ID` field with a `Select` of that day's declared homework items for the slot's section+subject, reusing the same day-items read `HomeworkReconcileScreen` uses; auto-link silently when exactly one item exists; show the Select only when >1. If no existing app-side read exposes the day's items for (section, subject, date), keep the typed field inside a collapsed "আরও অপশন" fold and record the gap in STATUS as a follow-up — do NOT add a server read in this slice.
+3. **Drawer:** new top-level flat item between Attendance and Comments in `DrawerContent` STAFF_NAV: `{ type: "item", route: "ClassNotesTab", labelKey: "drawerItemClassNotes", icon: "📓" }`. New STR keys: `drawerItemClassNotes` (ক্লাস নোট/Class Notes), `cnMyPeriods` (আমার পিরিয়ড/My periods). Additive drawer screen — no nav-state key bump.
+4. **Untouched:** the group-based `DailyNoteScreen` and its Routine Home entry stay as the admin/cover/Principal path; `ClassNoteReportScreen` unchanged; guardian reads unchanged.
+5. **After UX-4 lands:** add a Today quick-action chip "ক্লাস নোট" deep-linking to `ClassNotesTab` (one-line follow-up inside the UX-4 or UX-8 PR, whichever lands second).
+
+**Acceptance (Given/When/Then):**
+- Given a teacher who taught 3 periods today, When they open Class Notes from the drawer, Then exactly their 3 periods render with published/pending status, And publishing a note takes tap-period → type → publish with no class/subject selection.
+- Given a period whose section+subject has exactly one declared homework that day, When the note is published, Then it links automatically; given several, Then a name-based Select offers them.
+- Given the Principal, When they need to publish for another group, Then the existing Routine → DailyNote path works unchanged.
+
+**Manual test checklist (phone + web):**
+1. Teacher with multi-period day: only own periods listed; publish one → toast + badge; re-open → badge persists.
+2. Change the date to yesterday → publish a catch-up note; holiday date → day-type empty state.
+3. Homework auto-link: declare one HW for the section+subject, publish a note, verify the guardian class-note view shows the link; with two declared items, the picker appears.
+4. Cover teacher on an active proxy day sees the covered period; Principal path via Routine Home unchanged.
+5. Bangla/English toggle + dark mode on the new screen.
+
 ## 5. Out of scope
 
 - Any RBAC/permission change, route renames, or server contract changes beyond §4.4's `myDay`.
@@ -179,6 +210,6 @@ No mirrored enum, no `shared/vocab.ts` change, no import-envelope change. UX-4 a
 
 ## 8. Build order & PR shape
 
-`feat/ux-1-feedback` → `feat/ux-2-dates` → `feat/ux-3-search` → `feat/ux-4-today` → `feat/ux-5-sections` → `feat/ux-6-forms` → `feat/ux-7-hygiene`, each off `dev`, sequential (each assumes the previous landed). Gate per slice: app `tsc --noEmit` + `expo export --platform web`; UX-4 adds server `tsc` + jest; every slice executes its §4.x.5 manual checklist on phone-width and ≥1024px web before merge.
+`feat/ux-1-feedback` → `feat/ux-2-dates` → `feat/ux-3-search` → `feat/ux-4-today` → `feat/ux-5-sections` → `feat/ux-6-forms` → `feat/ux-7-hygiene` → `feat/ux-8-classnotes`, each off `dev`, sequential (each assumes the previous landed). UX-8 depends only on UX-1 primitives and may be pulled earlier by the Principal. Gate per slice: app `tsc --noEmit` + `expo export --platform web`; UX-4 adds server `tsc` + jest; every slice executes its §4.x.5 manual checklist on phone-width and ≥1024px web before merge.
 
 **Next = build UX-1 per docs/prd-ux-improvements.md §4.1, slice order UX-1→UX-7.**

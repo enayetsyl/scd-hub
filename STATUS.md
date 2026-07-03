@@ -51,7 +51,7 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
   **Gate GREEN (executed):** app `tsc --noEmit` clean + `expo export --platform web` green (1901 modules);
   vocab verifier PASS untouched; `git diff -- server shared` empty. **Not verified live** — next: dev
   deploy + the §4.1.5 manual checklist (phone-width + ≥1024px web, dark mode, BN/EN), then UX-2.
-- **Planned (App-wide UX Improvement Program UX-1…UX-7 — docs/prd-ux-improvements.md, D-#265):**
+- **Planned (App-wide UX Improvement Program UX-1…UX-8 — docs/prd-ux-improvements.md, D-#265):**
   full app-code audit (2026-07-02) found 8 cross-cutting UX gaps; PRD defines 7 sequential
   slices — UX-1 toast/confirm/field-validation layer, UX-2 DateField sweep (21 typed-date
   screens), UX-3 searchable Select + class-test set picker, UX-4 staff "Today" dashboard +
@@ -59,7 +59,14 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
   UX-5 unified class-button section pattern + context carry, UX-6 form shortening with
   advanced folds, UX-7 keyboard/refresh/FlatList/login hygiene. Each slice = one PR off dev
   with its own manual test checklist (§4.x.5). Docs-only this session.
-  Next = build UX-1 per docs/prd-ux-improvements.md §4.1, slice order UX-1→UX-7.
+  Revision 1 (2026-07-03, D-#266) adds UX-8: a teacher-first Class Notes drawer
+  entry — new top-level flat drawer item opening the caller's OWN periods for a
+  date via the existing myRoutineSlots read (zero class/subject selection),
+  inline publish per period, homework link via a day-items picker (auto-link when
+  exactly one) replacing the typed Homework ID field; the group-based DailyNote
+  stays as the admin/cover path. App-only, no server change.
+  Next = build UX-1 per docs/prd-ux-improvements.md §4.1, slice order UX-1→UX-8
+  (UX-8 depends only on UX-1 and may be pulled earlier).
   (Renumbered from the handoff's D-#264 — that number is already claimed by the comments
   delivery-workflow ruling referenced across `main`/`dev` code and commit 8126f7c.)
 - **Built (Homework ceiling lowered to 120 min, server + app):** shared `HW_DAILY_CEILING_MIN` now 120, so the daily reconciliation badge, confirm gate, and related homework rollups all use the lower cap. The homework reconciliation / resubmission / guardian portal tests were updated and the focused homework Jest sweep passed. **Gate GREEN (executed):** server tsc clean, app tsc clean, focused homework Jest sweep passed. Not verified live.
