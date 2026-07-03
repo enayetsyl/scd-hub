@@ -6,7 +6,7 @@
  * both may carry a Pool top-up (qids + minutes). CORRECT just advances.
  */
 import React, { useState, useRef, useCallback, useMemo } from "react";
-import { ScrollView, View } from "react-native";
+import { ScrollView, View, RefreshControl } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
@@ -19,6 +19,7 @@ import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice,
 import { SectionBar } from "../../components/SectionBar";
 import { STR, bnNum, hwSubjectLabel, hwResultLabel, dateHeaderLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { usePullRefresh } from "../../lib/useRefresh";
 import { useSectionContext } from "../../state/SectionContext";
 import { space } from "../../theme/tokens";
 
@@ -124,12 +125,20 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
     }
   }
 
+  // UX-7: pull-to-refresh.
+  const { refreshing, onRefresh } = usePullRefresh(recsQ.fetching, () =>
+    refetchRecs({ requestPolicy: "network-only" }),
+  );
+
   return (
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
         <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
       </View>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, padding: space(4) }}>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, padding: space(4) }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         {!hasSection ? (
           <EmptyState message={STR.pickSection} />
         ) : recsQ.fetching && records.length === 0 ? (

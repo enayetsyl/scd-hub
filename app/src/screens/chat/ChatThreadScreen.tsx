@@ -7,7 +7,7 @@
  * existing M-1..M-4 server APIs — no server change.
  */
 import React, { useCallback, useEffect, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { FlatList, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useClient, useMutation } from "urql";
 import { useFocusEffect } from "@react-navigation/native";
@@ -224,69 +224,71 @@ export default function ChatThreadScreen({ route, navigation }: Props): React.Re
     );
   }
 
-  // Render oldest → newest (server returns newest-first).
-  const ordered = [...messages].reverse();
-
   return (
     <Screen padded={false}>
-      <ScrollView contentContainerStyle={{ padding: space(4) }}>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1) }}>
-          {canManage && conv && conv.kind !== "DIRECT" ? (
-            <Button
-              title={`⚙ ${STR.chatManageGroup}`}
-              variant="ghost"
-              onPress={() => navigation.navigate("GroupManage", { conversationId })}
-            />
-          ) : null}
-          {/* M-7: per-user push mute for this conversation (own-row toggle). */}
-          {conv ? (
-            <Button
-              title={myMuted ? `🔔 ${STR.chatUnmute}` : `🔕 ${STR.chatMute}`}
-              variant="ghost"
-              onPress={() => void onToggleMute()}
-            />
-          ) : null}
-        </View>
-        {!exhausted && messages.length > 0 ? (
-          <Button
-            title={STR.chatLoadOlder}
-            variant="ghost"
-            loading={loadingOlder}
-            onPress={() => void loadOlder()}
+      {/* UX-7: FlatList (chat threads grow unbounded). Inverted — data stays
+          newest-first, newest renders at the visual bottom; the header controls +
+          "load older" live at the visual TOP, which for an inverted list is the
+          ListFooterComponent. Non-inverted while empty so the empty state isn't
+          flipped (the known inverted-list quirk). */}
+      <FlatList
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: space(4) }}
+        data={messages}
+        inverted={messages.length > 0}
+        keyExtractor={(m) => m.id}
+        keyboardShouldPersistTaps="handled"
+        ListEmptyComponent={<EmptyState message={STR.chatNoMessages} />}
+        ListFooterComponent={
+          <>
+            {!exhausted && messages.length > 0 ? (
+              <Button title={STR.chatLoadOlder} variant="ghost" loading={loadingOlder} onPress={() => void loadOlder()} />
+            ) : null}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1) }}>
+              {canManage && conv && conv.kind !== "DIRECT" ? (
+                <Button
+                  title={`⚙ ${STR.chatManageGroup}`}
+                  variant="ghost"
+                  onPress={() => navigation.navigate("GroupManage", { conversationId })}
+                />
+              ) : null}
+              {/* M-7: per-user push mute for this conversation (own-row toggle). */}
+              {conv ? (
+                <Button
+                  title={myMuted ? `🔔 ${STR.chatUnmute}` : `🔕 ${STR.chatMute}`}
+                  variant="ghost"
+                  onPress={() => void onToggleMute()}
+                />
+              ) : null}
+            </View>
+          </>
+        }
+        renderItem={({ item: m }) => (
+          <MessageBubble
+            message={m}
+            mine={m.senderId === myUserId}
+            senderName={nameById.get(m.senderId) ?? ""}
+            isGroup={conv?.kind !== "DIRECT"}
+            composerLocked={announcementLocked}
+            parent={m.replyToId ? messages.find((x) => x.id === m.replyToId) ?? null : null}
+            myUserId={myUserId}
+            active={activeAction}
+            otherConvs={otherConvs}
+            onReply={() => {
+              setReplyTo(m);
+              setEditing(null);
+            }}
+            onStartEdit={() => startEdit(m)}
+            onDelete={() => void onDelete(m.id)}
+            onToggleAction={(type) =>
+              setActiveAction((cur) => (cur && cur.id === m.id && cur.type === type ? null : { id: m.id, type }))
+            }
+            onReact={(emoji) => void onReact(m.id, emoji)}
+            onForward={(toId) => void onForward(m.id, toId)}
+            onOpenFile={onOpenFile}
           />
-        ) : null}
-
-        {ordered.length === 0 ? (
-          <EmptyState message={STR.chatNoMessages} />
-        ) : (
-          ordered.map((m) => (
-            <MessageBubble
-              key={m.id}
-              message={m}
-              mine={m.senderId === myUserId}
-              senderName={nameById.get(m.senderId) ?? ""}
-              isGroup={conv?.kind !== "DIRECT"}
-              composerLocked={announcementLocked}
-              parent={m.replyToId ? messages.find((x) => x.id === m.replyToId) ?? null : null}
-              myUserId={myUserId}
-              active={activeAction}
-              otherConvs={otherConvs}
-              onReply={() => {
-                setReplyTo(m);
-                setEditing(null);
-              }}
-              onStartEdit={() => startEdit(m)}
-              onDelete={() => void onDelete(m.id)}
-              onToggleAction={(type) =>
-                setActiveAction((cur) => (cur && cur.id === m.id && cur.type === type ? null : { id: m.id, type }))
-              }
-              onReact={(emoji) => void onReact(m.id, emoji)}
-              onForward={(toId) => void onForward(m.id, toId)}
-              onOpenFile={onOpenFile}
-            />
-          ))
         )}
-      </ScrollView>
+      />
 
       {error ? <Notice message={error} tone="danger" /> : null}
 

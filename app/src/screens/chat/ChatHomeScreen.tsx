@@ -6,7 +6,7 @@
  * as-is — no server change.
  */
 import React from "react";
-import { View } from "react-native";
+import { View, RefreshControl } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { useFocusEffect } from "@react-navigation/native";
@@ -17,6 +17,7 @@ import { Screen, Card, Body, Muted, Button, Badge, EmptyState, Loader } from "..
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum } from "../../lib/labels";
 import { conversationTitle, conversationKindLabel } from "../../lib/chat";
+import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ChatStackParamList, "ChatHome">;
@@ -74,8 +75,13 @@ export default function ChatHomeScreen({ navigation }: Props): React.ReactElemen
 
   const conversations = convQ.data?.myConversations ?? [];
 
+  // UX-7: pull-to-refresh.
+  const { refreshing, onRefresh } = usePullRefresh(convQ.fetching, () =>
+    refetch({ requestPolicy: "network-only" }),
+  );
+
   return (
-    <Screen>
+    <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginBottom: space(2) }}>
         <Button title={STR.chatNewChat} onPress={() => navigation.navigate("NewChat")} style={{ flexGrow: 1 }} />
         {canManage ? (

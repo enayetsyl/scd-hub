@@ -48,8 +48,16 @@ export default function LoginScreen(): React.ReactElement {
         value={email}
         onChangeText={setEmail}
         placeholder="you@school.edu / 01XXXXXXXXX"
+        keyboardType="email-address"
+        autoComplete="username"
       />
-      <Field label={STR.password} value={password} onChangeText={setPassword} secureTextEntry />
+      <Field
+        label={STR.password}
+        value={password}
+        onChangeText={setPassword}
+        secureToggle
+        autoComplete="current-password"
+      />
 
       <Button
         title={busy ? STR.loggingIn : STR.login}

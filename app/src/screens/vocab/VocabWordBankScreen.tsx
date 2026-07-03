@@ -5,7 +5,7 @@
  * the controls and surfaces the Bangla deny if the role/scope can't perform it.
  */
 import React, { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { FlatList, RefreshControl, View } from "react-native";
 import { useQuery, useMutation } from "urql";
 import {
   VOCAB_WORDS_QUERY,
@@ -17,7 +17,8 @@ import { Screen, Card, Body, Muted, Button, Field, Badge, Chip, Loader, Notice }
 import { ProgramSelect, ClassLevelSelect } from "../../components/vocabPickers";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
-import { space } from "../../theme/tokens";
+import { usePullRefresh } from "../../lib/useRefresh";
+import { space, useColors } from "../../theme";
 
 export default function VocabWordBankScreen(): React.ReactElement {
   const [program, setProgram] = useState<string | null>(null);
@@ -73,78 +74,98 @@ export default function VocabWordBankScreen(): React.ReactElement {
     refetch({ requestPolicy: "network-only" });
   }
 
+  // UX-7: FlatList (word banks keep growing) + pull-to-refresh.
+  const colors = useColors();
+  const { refreshing, onRefresh } = usePullRefresh(wordsQ.fetching, () =>
+    refetch({ requestPolicy: "network-only" }),
+  );
+
+  const header = (
+    <>
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.vbWordBankTitle}</Body>
+        <ProgramSelect value={program} onChange={(v) => setProgram(v)} />
+        <ClassLevelSelect value={classLevelStr} onChange={(v) => setClassLevelStr(v)} />
+      </Card>
+
+      {ok ? <Notice message={ok} tone="ok" /> : null}
+      {error ? <Notice message={error} tone="danger" /> : null}
+
+      {ready ? (
+        <>
+          <Card>
+            <Body style={{ fontWeight: "700", marginBottom: space(2) }}>
+              {editId ? STR.vbEdit : STR.vbAddWord}
+            </Body>
+            <Field label={STR.vbHeadword} value={headword} onChangeText={setHeadword} autoCapitalize="none" />
+            <Field label={STR.vbBanglaMeaning} value={meaning} onChangeText={setMeaning} />
+            <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+              <Button title={editId ? STR.save : STR.add} onPress={onSubmit} loading={busy} disabled={busy} />
+              {editId ? <Button title={STR.cancel} variant="ghost" onPress={resetForm} /> : null}
+            </View>
+          </Card>
+
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: space(2),
+            }}
+          >
+            <Body style={{ fontWeight: "700" }}>{STR.vbWordBank}</Body>
+            <Chip label={STR.vbShowInactive} selected={showInactive} onPress={() => setShowInactive((s) => !s)} />
+          </View>
+        </>
+      ) : null}
+    </>
+  );
+
   return (
     <Screen padded={false}>
-      <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
-        <Card>
-          <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.vbWordBankTitle}</Body>
-          <ProgramSelect value={program} onChange={(v) => setProgram(v)} />
-          <ClassLevelSelect value={classLevelStr} onChange={(v) => setClassLevelStr(v)} />
-        </Card>
-
-        {ok ? <Notice message={ok} tone="ok" /> : null}
-        {error ? <Notice message={error} tone="danger" /> : null}
-
-        {ready ? (
-          <>
-            <Card>
-              <Body style={{ fontWeight: "700", marginBottom: space(2) }}>
-                {editId ? STR.vbEdit : STR.vbAddWord}
-              </Body>
-              <Field label={STR.vbHeadword} value={headword} onChangeText={setHeadword} autoCapitalize="none" />
-              <Field label={STR.vbBanglaMeaning} value={meaning} onChangeText={setMeaning} />
-              <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
-                <Button title={editId ? STR.save : STR.add} onPress={onSubmit} loading={busy} disabled={busy} />
-                {editId ? <Button title={STR.cancel} variant="ghost" onPress={resetForm} /> : null}
+      <FlatList
+        data={ready ? words : []}
+        keyExtractor={(w) => w.id}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ padding: space(4) }}
+        refreshControl={
+          ready ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} /> : undefined
+        }
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          !ready ? null : wordsQ.fetching ? (
+            <Loader label={STR.loading} />
+          ) : (
+            <Muted style={{ marginTop: space(2) }}>{STR.vbNoWords}</Muted>
+          )
+        }
+        renderItem={({ item: w }) => (
+          <Card>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <View style={{ flexShrink: 1 }}>
+                <Body>
+                  {w.headword} — {w.banglaMeaning}
+                </Body>
+                {!w.active ? <Badge text={STR.vbInactiveBadge} tone="muted" /> : null}
               </View>
-            </Card>
-
-            <Card>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Body style={{ fontWeight: "700" }}>{STR.vbWordBank}</Body>
+              <View style={{ flexDirection: "row", gap: space(2) }}>
                 <Chip
-                  label={STR.vbShowInactive}
-                  selected={showInactive}
-                  onPress={() => setShowInactive((s) => !s)}
+                  label={STR.vbEdit}
+                  onPress={() => {
+                    setEditId(w.id);
+                    setHeadword(w.headword);
+                    setMeaning(w.banglaMeaning);
+                  }}
+                />
+                <Chip
+                  label={w.active ? STR.vbDeactivate : STR.vbReactivate}
+                  onPress={() => void onToggleActive(w.id, !w.active)}
                 />
               </View>
-              {wordsQ.fetching ? (
-                <Loader label={STR.loading} />
-              ) : words.length === 0 ? (
-                <Muted style={{ marginTop: space(2) }}>{STR.vbNoWords}</Muted>
-              ) : (
-                words.map((w) => (
-                  <View
-                    key={w.id}
-                    style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(2) }}
-                  >
-                    <View style={{ flexShrink: 1 }}>
-                      <Body>
-                        {w.headword} — {w.banglaMeaning}
-                      </Body>
-                      {!w.active ? <Badge text={STR.vbInactiveBadge} tone="muted" /> : null}
-                    </View>
-                    <View style={{ flexDirection: "row", gap: space(2) }}>
-                      <Chip
-                        label={STR.vbEdit}
-                        onPress={() => {
-                          setEditId(w.id);
-                          setHeadword(w.headword);
-                          setMeaning(w.banglaMeaning);
-                        }}
-                      />
-                      <Chip
-                        label={w.active ? STR.vbDeactivate : STR.vbReactivate}
-                        onPress={() => void onToggleActive(w.id, !w.active)}
-                      />
-                    </View>
-                  </View>
-                ))
-              )}
-            </Card>
-          </>
-        ) : null}
-      </ScrollView>
+            </View>
+          </Card>
+        )}
+      />
     </Screen>
   );
 }

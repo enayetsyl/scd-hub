@@ -13,11 +13,14 @@ import {
   Pressable,
   ActivityIndicator,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
   useWindowDimensions,
   type ViewStyle,
   type TextStyle,
   type StyleProp,
   type KeyboardTypeOptions,
+  type TextInputProps,
 } from "react-native";
 import { StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -44,6 +47,7 @@ export function Screen({
   padded = true,
   wide = false,
   style,
+  refreshControl,
 }: {
   children: React.ReactNode;
   scroll?: boolean;
@@ -51,6 +55,8 @@ export function Screen({
   /** Web/desktop: widen the centered frame for data-grid screens (master routine grid). */
   wide?: boolean;
   style?: StyleProp<ViewStyle>;
+  /** UX-7: pull-to-refresh for scroll screens — passed through to the ScrollView. */
+  refreshControl?: React.ReactElement;
 }): React.ReactElement {
   const styles = useStyles();
   const { width } = useWindowDimensions();
@@ -62,6 +68,7 @@ export function Screen({
     <ScrollView
       contentContainerStyle={[padded && styles.padded, style]}
       keyboardShouldPersistTaps="handled"
+      refreshControl={refreshControl}
     >
       {children}
     </ScrollView>
@@ -70,7 +77,15 @@ export function Screen({
   );
   return (
     <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
-      <View style={wide || expanded ? styles.frameWide : styles.frame}>{inner}</View>
+      {/* UX-7: bottom fields + Submit stay visible above the keyboard — one wrap,
+          app-wide effect. No-op on web (the browser handles its own viewport). */}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        enabled={Platform.OS !== "web"}
+      >
+        <View style={wide || expanded ? styles.frameWide : styles.frame}>{inner}</View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -292,7 +307,9 @@ export function Field({
   onChangeText,
   placeholder,
   secureTextEntry,
+  secureToggle = false,
   keyboardType,
+  autoComplete,
   multiline,
   autoCapitalize = "none",
   editable = true,
@@ -304,7 +321,10 @@ export function Field({
   onChangeText: (t: string) => void;
   placeholder?: string;
   secureTextEntry?: boolean;
+  /** UX-7: render a 👁 show/hide toggle on a secure field (password entry). */
+  secureToggle?: boolean;
   keyboardType?: KeyboardTypeOptions;
+  autoComplete?: TextInputProps["autoComplete"];
   multiline?: boolean;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   editable?: boolean;
@@ -313,26 +333,43 @@ export function Field({
 }): React.ReactElement {
   const styles = useStyles();
   const colors = useColors();
+  const [hidden, setHidden] = React.useState(true);
+  const secure = secureToggle ? hidden : secureTextEntry;
   return (
     <View style={styles.fieldWrap}>
       {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
-      <TextInput
-        style={[
-          styles.input,
-          multiline && styles.inputMultiline,
-          !editable && styles.inputDisabled,
-          !!error && styles.inputError,
-        ]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textSecondary}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
-        multiline={multiline}
-        autoCapitalize={autoCapitalize}
-        editable={editable}
-      />
+      <View>
+        <TextInput
+          style={[
+            styles.input,
+            multiline && styles.inputMultiline,
+            !editable && styles.inputDisabled,
+            !!error && styles.inputError,
+            secureToggle && { paddingRight: space(10) },
+          ]}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textSecondary}
+          secureTextEntry={secure}
+          keyboardType={keyboardType}
+          autoComplete={autoComplete}
+          multiline={multiline}
+          autoCapitalize={autoCapitalize}
+          editable={editable}
+        />
+        {secureToggle ? (
+          <Pressable
+            onPress={() => setHidden((h) => !h)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={hidden ? "Show password" : "Hide password"}
+            style={styles.secureToggle}
+          >
+            <Text style={{ fontSize: 18 }}>{hidden ? "👁️" : "🙈"}</Text>
+          </Pressable>
+        ) : null}
+      </View>
       {error ? (
         <Text style={styles.fieldError}>⚠ {error}</Text>
       ) : helper ? (
@@ -630,6 +667,15 @@ const useStyles = makeStyles((colors) => ({
   inputMultiline: { minHeight: 120, textAlignVertical: "top" },
   inputDisabled: { backgroundColor: colors.surfaceAlt, color: colors.textSecondary },
   inputError: { borderColor: colors.error },
+  secureToggle: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   select: {
     minHeight: 48,

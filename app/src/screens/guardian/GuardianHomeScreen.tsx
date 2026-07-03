@@ -6,7 +6,7 @@
  * and notifications.
  */
 import React from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View, RefreshControl } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
@@ -25,6 +25,7 @@ import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } 
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
+import { usePullRefresh } from "../../lib/useRefresh";
 import { openNotificationCenter } from "../../navigation/navigationRef";
 import type { GuardianHomeStackParamList } from "../../navigation/types";
 import {
@@ -63,50 +64,67 @@ export default function GuardianHomeScreen(): React.ReactElement {
   const sid = selected?.studentId ?? "";
   const date = today();
 
-  const [routineQ] = useQuery({
+  const [routineQ, refetchRoutine] = useQuery({
     query: CHILD_ROUTINE_QUERY,
     variables: { studentId: sid, date },
     pause: !selected,
   });
-  const [notesQ] = useQuery({
+  const [notesQ, refetchNotes] = useQuery({
     query: CHILD_CLASS_NOTES_QUERY,
     variables: { studentId: sid, date },
     pause: !selected,
   });
-  const [hwQ] = useQuery({
+  const [hwQ, refetchHw] = useQuery({
     query: CHILD_HOMEWORK_QUERY,
     variables: { studentId: sid, from: daysAgo(7), to: date },
     pause: !selected,
   });
-  const [loadQ] = useQuery({
+  const [loadQ, refetchLoad] = useQuery({
     query: CHILD_DAY_LOAD_QUERY,
     variables: { studentId: sid, date },
     pause: !selected,
   });
-  const [libraryQ] = useQuery({
+  const [libraryQ, refetchLibrary] = useQuery({
     query: CHILD_LIBRARY_LOANS_QUERY,
     variables: { studentId: sid },
     pause: !selected,
   });
-  const [vocabQ] = useQuery({
+  const [vocabQ, refetchVocab] = useQuery({
     query: CHILD_VOCAB_QUERY,
     variables: { studentId: sid },
     pause: !selected,
   });
-  const [testResultsQ] = useQuery({
+  const [testResultsQ, refetchTests] = useQuery({
     query: CHILD_TEST_RESULTS_QUERY,
     variables: { studentId: sid },
     pause: !selected,
   });
-  const [commentsQ] = useQuery({
+  const [commentsQ, refetchComments] = useQuery({
     query: CHILD_COMMENTS_QUERY,
     variables: { studentId: sid },
     pause: !selected,
   });
-  const [revisionQ] = useQuery({
+  const [revisionQ, refetchRevision] = useQuery({
     query: CHILD_REVISION_QUERY,
     variables: { studentId: sid },
     pause: !selected,
+  });
+
+  // UX-7: pull-to-refresh — one gesture refreshes every card on the guardian home.
+  const anyFetching =
+    routineQ.fetching || notesQ.fetching || hwQ.fetching || loadQ.fetching || libraryQ.fetching ||
+    vocabQ.fetching || testResultsQ.fetching || commentsQ.fetching || revisionQ.fetching;
+  const { refreshing, onRefresh } = usePullRefresh(anyFetching, () => {
+    const opts = { requestPolicy: "network-only" as const };
+    refetchRoutine(opts);
+    refetchNotes(opts);
+    refetchHw(opts);
+    refetchLoad(opts);
+    refetchLibrary(opts);
+    refetchVocab(opts);
+    refetchTests(opts);
+    refetchComments(opts);
+    refetchRevision(opts);
   });
   // CM-6 follow-up: no guardian meeting-slot card is rendered. The server's
   // childMeetingSlot(meetingId, studentId) read needs a meetingId, but there is NO
@@ -145,7 +163,10 @@ export default function GuardianHomeScreen(): React.ReactElement {
 
   return (
     <Screen padded={false}>
-      <ScrollView contentContainerStyle={{ padding: space(4) }}>
+      <ScrollView
+        contentContainerStyle={{ padding: space(4) }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         <ChildSwitcher />
 
         {/* Child info â€” section + Quran/Arabic group memberships (myChildren,
