@@ -7,7 +7,8 @@ import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
 import { FINANCE_DAILY_SNAPSHOT_QUERY } from "../../graphql/finance";
-import { Screen, Card, Body, Muted, Button, Field, Row, Divider, Loader } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Row, Divider, Loader } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { STR, ledgerKindLabel, money } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -27,7 +28,7 @@ export default function DailySnapshotScreen(): React.ReactElement {
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
         <Card>
-          <Field label={STR.finDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+          <DateField label={STR.finDate} value={date} onChange={setDate} />
           <Button title={STR.finLoad} variant="secondary" onPress={() => setActive(date.trim())} />
         </Card>
 

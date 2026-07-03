@@ -18,6 +18,7 @@ import {
   type FeeCoverageInput,
 } from "../../graphql/finance";
 import { Screen, Card, Body, Muted, Button, Field, Select, Row, Notice, Divider, Loader } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import {
   STR,
   financeFeeHeadLabel,
@@ -160,7 +161,7 @@ export default function FeesZakatScreen(): React.ReactElement {
           <Body style={{ fontWeight: "700" }}>{STR.finSetAllocation}</Body>
           <Field label={STR.finStudentId} value={allocStudentId} onChangeText={setAllocStudentId} />
           <Select label={STR.finProviderId} value={allocProviderId} options={providerOptions} onChange={setAllocProviderId} />
-          <Field label={STR.finEffectiveDate} value={effectiveDate} onChangeText={setEffectiveDate} placeholder="YYYY-MM-DD" />
+          <DateField label={STR.finEffectiveDate} value={effectiveDate} onChange={setEffectiveDate} />
           {coverage.map((r, i) => (
             <View key={i} style={{ marginBottom: space(2) }}>
               <Select

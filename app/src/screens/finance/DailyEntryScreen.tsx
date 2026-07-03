@@ -18,6 +18,7 @@ import {
 } from "@scd/shared";
 import { RECORD_FINANCE_POSTING, type FeeLineInput } from "../../graphql/finance";
 import { Screen, Card, Body, Button, Field, Select, Divider } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import {
   STR,
   financePostingKindLabel,
@@ -100,7 +101,7 @@ export default function DailyEntryScreen(): React.ReactElement {
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.finDailyEntryTitle}</Body>
-          <Field label={STR.finDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" error={fieldErrors.date} />
+          <DateField label={STR.finDate} value={date} onChange={setDate} error={fieldErrors.date} />
           <Select
             label={STR.finKind}
             value={kind}

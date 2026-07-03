@@ -21,6 +21,7 @@ import {
   QARD_IOU_OVERDUE_QUERY,
 } from "../../graphql/finance";
 import { Screen, Card, Body, Muted, Button, Field, Select, Row, Notice, Divider, Loader } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import {
   STR,
   financePartyKindLabel,
@@ -164,14 +165,14 @@ export default function QardIouScreen(): React.ReactElement {
             onChange={setDirection}
           />
           <Field label={STR.finAmount} value={amount} onChangeText={setAmount} keyboardType="number-pad" />
-          <Field label={STR.finDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+          <DateField label={STR.finDate} value={date} onChange={setDate} />
           <Select
             label={STR.finMode}
             value={mode}
             options={(FINANCE_PAYMENT_MODES as readonly string[]).map((m) => ({ label: financeModeLabel(m), value: m }))}
             onChange={setMode}
           />
-          <Field label={STR.finDueDate} value={dueDate} onChangeText={setDueDate} placeholder="YYYY-MM-DD" />
+          <DateField label={STR.finDueDate} value={dueDate} onChange={setDueDate} min={date || undefined} />
           <Field label={STR.finNote} value={note} onChangeText={setNote} multiline />
           <Button title={STR.finRegisterEntry} onPress={onRecordEntry} loading={busy} disabled={busy} />
         </Card>
