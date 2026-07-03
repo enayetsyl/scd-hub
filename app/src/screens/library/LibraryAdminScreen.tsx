@@ -19,6 +19,7 @@ import { Screen, Body, Muted, Card, Button, Badge, Field, Notice } from "../../c
 import { TeacherSelect } from "../../components/selects";
 import { STR, borrowerTypeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 function PolicyCard({
@@ -72,6 +73,7 @@ function PolicyCard({
 }
 
 export default function LibraryAdminScreen(): React.ReactElement {
+  const { confirmAction } = useConfirm();
   const [teacherId, setTeacherId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +142,10 @@ export default function LibraryAdminScreen(): React.ReactElement {
             <Button
               title={STR.libRevokeLibrarian}
               variant="danger"
-              onPress={() => void run(() => revoke({ teacherUserId: l.userId }), STR.libLibrarianRevoked)}
+              onPress={async () => {
+                if (!(await confirmAction({ confirmLabel: STR.libRevokeLibrarian }))) return;
+                void run(() => revoke({ teacherUserId: l.userId }), STR.libLibrarianRevoked);
+              }}
               disabled={busy}
             />
           </View>

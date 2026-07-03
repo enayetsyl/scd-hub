@@ -39,6 +39,7 @@ import {
 } from "../../components/ui";
 import { STR, bnNum, leaveTypeLabel, leaveStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HrStackParamList, "MyLeave">;
@@ -54,6 +55,7 @@ function fmtDate(iso: string | null): string {
 }
 
 export default function MyLeaveScreen({ navigation }: Props): React.ReactElement {
+  const { confirmAction } = useConfirm();
   const [leaveType, setLeaveType] = React.useState<string | null>(null);
   const [fromKey, setFromKey] = React.useState("");
   const [toKey, setToKey] = React.useState("");
@@ -102,6 +104,7 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
   }
 
   async function cancel(app: StaffLeaveT): Promise<void> {
+    if (!(await confirmAction({ confirmLabel: STR.hrLeaveCancel }))) return;
     setBusy(true);
     setError(null);
     setOk(null);

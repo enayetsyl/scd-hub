@@ -28,6 +28,7 @@ import {
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useLanguage } from "../../state/LanguageContext";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "MessageTemplateEdit">;
@@ -74,6 +75,7 @@ export default function MessageTemplateEditScreen({ route, navigation }: Props):
   const [historyQ, refetchHistory] = useQuery({ query: MESSAGE_TEMPLATE_HISTORY_QUERY, variables: { key } });
   const [, edit] = useMutation(EDIT_MESSAGE_TEMPLATE);
   const [, reset] = useMutation(RESET_MESSAGE_TEMPLATE);
+  const { confirmAction } = useConfirm();
 
   const tpl = data?.messageTemplate ?? null;
 
@@ -129,6 +131,7 @@ export default function MessageTemplateEditScreen({ route, navigation }: Props):
   }
 
   async function doReset(): Promise<void> {
+    if (!(await confirmAction({ confirmLabel: STR.mtReset }))) return;
     setBusy(true);
     setErr(null);
     setOk(null);

@@ -18,9 +18,11 @@ import {
 import { Screen, Body, Muted, Card, Button, Badge, Chip, ChipRow, Field, Notice, Loader } from "../../components/ui";
 import { STR, bnNum, bookLanguageLabel, copyStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 export default function CatalogManageScreen(): React.ReactElement {
+  const { confirmAction } = useConfirm();
   // New-title form
   const [titleBn, setTitleBn] = useState("");
   const [titleEn, setTitleEn] = useState("");
@@ -154,7 +156,10 @@ export default function CatalogManageScreen(): React.ReactElement {
                     <Button
                       title={STR.libWithdraw}
                       variant="danger"
-                      onPress={() => void run(() => setCopyStatus({ copyId: c.id, status: "WITHDRAWN" }), STR.libCopyUpdated)}
+                      onPress={async () => {
+                        if (!(await confirmAction({ confirmLabel: STR.libWithdraw }))) return;
+                        void run(() => setCopyStatus({ copyId: c.id, status: "WITHDRAWN" }), STR.libCopyUpdated);
+                      }}
                       disabled={busy}
                     />
                   ) : c.status === "WITHDRAWN" || c.status === "LOST" || c.status === "DAMAGED" ? (

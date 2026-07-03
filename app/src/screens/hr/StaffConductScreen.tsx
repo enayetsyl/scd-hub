@@ -40,6 +40,7 @@ import {
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, conductStageLabel, conductRecordStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HrStackParamList, "StaffConduct">;
@@ -50,6 +51,7 @@ function statusTone(s: string): "info" | "ok" | "muted" | "danger" {
 
 export default function StaffConductScreen({ route }: Props): React.ReactElement {
   const { staffProfileId } = route.params;
+  const { confirmAction } = useConfirm();
   const { role } = useAuth();
   const canFinalize = !!role && roleHasPermission(role, "performance:signoff");
 
@@ -122,6 +124,7 @@ export default function StaffConductScreen({ route }: Props): React.ReactElement
   }
 
   async function runFinalize(recordId: string): Promise<void> {
+    if (!(await confirmAction({ confirmLabel: STR.hrFinalize }))) return;
     setBusy(true);
     reset();
     const res = await finalize({

@@ -31,9 +31,11 @@ import {
   reservationStatusLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 export default function LibraryDeskScreen(): React.ReactElement {
+  const { confirmAction } = useConfirm();
   const [borrowerType, setBorrowerType] = useState<string>("STUDENT");
   const [search, setSearch] = useState("");
   const [borrower, setBorrower] = useState<LibraryBorrowerHitT | null>(null);
@@ -189,11 +191,11 @@ export default function LibraryDeskScreen(): React.ReactElement {
                   <Button
                     title={STR.libMarkLost}
                     variant="danger"
-                    onPress={() =>
-                      void run(() => markLost({ loanId: loan.id, note: lostNote.trim() }), STR.libMarkedLost).then(
-                        (done) => done && setLostNoteFor(null),
-                      )
-                    }
+                    onPress={async () => {
+                      if (!(await confirmAction({ confirmLabel: STR.libMarkLost }))) return;
+                      const done = await run(() => markLost({ loanId: loan.id, note: lostNote.trim() }), STR.libMarkedLost);
+                      if (done) setLostNoteFor(null);
+                    }}
                     disabled={busy || lostNote.trim() === ""}
                   />
                 </View>
@@ -216,7 +218,16 @@ export default function LibraryDeskScreen(): React.ReactElement {
                   {r.heldAccessionNo ? ` · ${r.heldAccessionNo}` : ""}
                 </Muted>
               ) : null}
-              <Button title={STR.libCancelReservation} variant="danger" onPress={() => void run(() => cancelResv({ reservationId: r.id }), STR.libReservationCancelled)} disabled={busy} style={{ marginTop: space(2) }} />
+              <Button
+                title={STR.libCancelReservation}
+                variant="danger"
+                onPress={async () => {
+                  if (!(await confirmAction({ confirmLabel: STR.libCancelReservation }))) return;
+                  void run(() => cancelResv({ reservationId: r.id }), STR.libReservationCancelled);
+                }}
+                disabled={busy}
+                style={{ marginTop: space(2) }}
+              />
             </Card>
           ))}
 

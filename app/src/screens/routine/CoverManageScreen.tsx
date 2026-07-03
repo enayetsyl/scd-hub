@@ -20,6 +20,7 @@ import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Badge, Notice, Loader } from "../../components/ui";
 import { STR, routineSubjectLabel, dayOfWeekLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 const todayISO = (): string => new Date().toISOString().slice(0, 10);
@@ -28,6 +29,7 @@ type Props = NativeStackScreenProps<RoutineStackParamList, "CoverManage">;
 
 export default function CoverManageScreen({ route }: Props): React.ReactElement {
   const { groupType, groupId, title } = route.params;
+  const { confirmAction } = useConfirm();
   const [date, setDate] = useState(todayISO());
   const [sel, setSel] = useState<{ slotId: string; period: number } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -66,6 +68,7 @@ export default function CoverManageScreen({ route }: Props): React.ReactElement 
   }
 
   async function doCancel(id: string): Promise<void> {
+    if (!(await confirmAction({ confirmLabel: STR.cancel }))) return;
     setBusy(true);
     setError(null);
     const res = await cancel({ id });

@@ -15,11 +15,13 @@ import {
   CREATE_CLASS_TEST_REQUEST,
   SUGGEST_CLASS_TEST_NUMBER_QUERY,
 } from "../../graphql/classTest";
-import { Screen, Card, Body, Muted, Button, Field, Chip, Select, Notice } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Field, Chip, Select } from "../../components/ui";
 import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
 import { STR, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { required } from "../../lib/validate";
+import { useToast } from "../../state/ToastContext";
 import { pickAndUploadClassTestPaper, FileUploadError } from "../../lib/files";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
@@ -40,9 +42,10 @@ export default function RequestClassTestScreen(): React.ReactElement {
   const [testNumber, setTestNumber] = useState("");
   const [deadlineDays, setDeadlineDays] = useState("");
   const [notes, setNotes] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
+  // R-Validate (UX-1): per-field errors; the toast names the first offending field.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
 
   const [, createReq] = useMutation(CREATE_CLASS_TEST_REQUEST);
 
@@ -60,28 +63,38 @@ export default function RequestClassTestScreen(): React.ReactElement {
   }, [suggestQ.data]);
 
   async function onUpload(): Promise<void> {
-    setError(null);
     try {
       const f = await pickAndUploadClassTestPaper();
       if (f) setPaper({ fileId: f.fileId, name: f.originalName });
     } catch (e) {
-      setError(e instanceof FileUploadError ? e.message : STR.errGeneric);
+      toast.show(e instanceof FileUploadError ? e.message : STR.errGeneric, "danger");
     }
   }
 
   async function onSubmit(): Promise<void> {
-    setError(null);
-    setOk(null);
+    setFieldErrors({});
     const total = Number(totalMarks);
-    if (!section || !subject || !examDate.trim() || !Number.isFinite(total) || total < 1) {
-      return setError(STR.errGeneric);
+    const { firstErrorKey, errors } = required({
+      section: { value: section, message: `${STR.section} — ${STR.fieldRequired}` },
+      subject: { value: subject, message: `${STR.ctSubject} — ${STR.fieldRequired}` },
+      examDate: { value: examDate.trim(), message: `${STR.ctExamDate} — ${STR.fieldRequired}` },
+      totalMarks: {
+        value: Number.isFinite(total) && total >= 1 ? total : null,
+        message: `${STR.ctTotalMarks} — ${STR.fieldRequired}`,
+      },
+      ...(source === "POOL_SET"
+        ? { setId: { value: setId.trim(), message: `${STR.ctSetId} — ${STR.fieldRequired}` } }
+        : { paper: { value: paper, message: `${STR.ctUploadPaper} — ${STR.fieldRequired}` } }),
+    });
+    if (firstErrorKey) {
+      setFieldErrors(errors);
+      toast.show(errors[firstErrorKey], "danger");
+      return;
     }
-    if (source === "POOL_SET" && !setId.trim()) return setError(STR.errGeneric);
-    if (source === "UPLOADED_PAPER" && !paper) return setError(STR.errGeneric);
     setBusy(true);
     const res = await createReq({
-      sectionId: section.sectionId,
-      subject,
+      sectionId: section!.sectionId,
+      subject: subject!,
       examDate: examDate.trim(),
       totalMarks: total,
       passMark: passMark.trim() ? Number(passMark) : null,
@@ -93,9 +106,12 @@ export default function RequestClassTestScreen(): React.ReactElement {
       notes: notes.trim() || null,
     });
     setBusy(false);
-    if (res.error) return setError(friendlyError(res.error));
+    if (res.error) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
     if (res.data) {
-      setOk(STR.ctRequestFiled);
+      toast.show(STR.ctRequestFiled, "ok");
       nav.navigate("ClassTestHome");
     }
   }
@@ -103,8 +119,6 @@ export default function RequestClassTestScreen(): React.ReactElement {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
-        {ok ? <Notice message={ok} tone="ok" /> : null}
-        {error ? <Notice message={error} tone="danger" /> : null}
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.ctNewRequest}</Body>
           <AcademicYearSelect value={yearId} onChange={setYearId} />
@@ -123,7 +137,7 @@ export default function RequestClassTestScreen(): React.ReactElement {
           </View>
 
           {source === "POOL_SET" ? (
-            <Field label={STR.ctSetId} value={setId} onChangeText={setSetId} helper={STR.ctSetIdHint} />
+            <Field label={STR.ctSetId} value={setId} onChangeText={setSetId} helper={STR.ctSetIdHint} error={fieldErrors.setId} />
           ) : (
             <View style={{ marginTop: space(2) }}>
               <Button title={STR.ctUploadPaper} variant="secondary" onPress={onUpload} />
@@ -131,8 +145,8 @@ export default function RequestClassTestScreen(): React.ReactElement {
             </View>
           )}
 
-          <Field label={STR.ctExamDate} value={examDate} onChangeText={setExamDate} placeholder="YYYY-MM-DD" />
-          <Field label={STR.ctTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" />
+          <Field label={STR.ctExamDate} value={examDate} onChangeText={setExamDate} placeholder="YYYY-MM-DD" error={fieldErrors.examDate} />
+          <Field label={STR.ctTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" error={fieldErrors.totalMarks} />
           <Field label={STR.ctPassMark} value={passMark} onChangeText={setPassMark} keyboardType="number-pad" helper={STR.ctPassMarkHint} />
           <Field label={STR.ctTestNumber} value={testNumber} onChangeText={setTestNumber} keyboardType="number-pad" />
           <Field label={STR.ctDeadlineDays} value={deadlineDays} onChangeText={setDeadlineDays} keyboardType="number-pad" />

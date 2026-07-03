@@ -26,6 +26,8 @@ import { ProgramSelect, ClassSectionSelect, type SectionPick } from "../../compo
 import { AcademicYearSelect } from "../../components/selects";
 import { STR, vocabProgramLabel, vocabDirectionLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { required } from "../../lib/validate";
+import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 import type { VocabStackParamList } from "../../navigation/types";
 
@@ -43,9 +45,10 @@ export default function BuildVocabTestScreen(): React.ReactElement {
   const [testDate, setTestDate] = useState("");
 
   const [created, setCreated] = useState<VocabTestT | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
+  // R-Validate (UX-1): per-field errors; the toast names the first offending field.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
 
   const [, createTest] = useMutation(CREATE_VOCAB_TEST);
   const [, setPositions] = useMutation(SET_VOCAB_TEST_POSITIONS);
@@ -67,43 +70,54 @@ export default function BuildVocabTestScreen(): React.ReactElement {
     });
 
   async function onCreate(): Promise<void> {
-    setError(null);
-    setOk(null);
+    setFieldErrors({});
     const marks = Number(totalMarks);
-    if (!program || !section || !label.trim() || !Number.isFinite(marks) || marks < 0) {
-      return setError(STR.errGeneric);
+    const { firstErrorKey, errors } = required({
+      program: { value: program, message: `${STR.vbProgram} — ${STR.fieldRequired}` },
+      section: { value: section, message: `${STR.section} — ${STR.fieldRequired}` },
+      label: { value: label.trim(), message: `${STR.vbLabel} — ${STR.fieldRequired}` },
+      totalMarks: {
+        value: Number.isFinite(marks) && marks >= 0 && totalMarks.trim() !== "" ? marks : null,
+        message: `${STR.vbTotalMarks} — ${STR.fieldRequired}`,
+      },
+    });
+    if (firstErrorKey) {
+      setFieldErrors(errors);
+      toast.show(errors[firstErrorKey], "danger");
+      return;
     }
     setBusy(true);
     const res = await createTest({
-      program,
-      sectionId: section.sectionId,
-      classLevel: section.classLevel,
+      program: program!,
+      sectionId: section!.sectionId,
+      classLevel: section!.classLevel,
       label: label.trim(),
       totalMarks: marks,
       dictationHalfMissCounts: halfMiss,
       testDate: testDate.trim() || null,
     });
     setBusy(false);
-    if (res.error) return setError(friendlyError(res.error));
+    if (res.error) return toast.show(friendlyError(res.error), "danger");
     if (res.data) {
       setCreated(res.data.createVocabTest);
-      setOk(STR.vbTestCreated);
+      toast.show(STR.vbTestCreated, "ok");
     }
   }
 
   async function onLayPositions(): Promise<void> {
     if (!created) return;
-    setError(null);
-    setOk(null);
     const selections: VocabPositionSelectionIn[] = Object.entries(selByDir)
       .filter(([, ids]) => ids.length > 0)
       .map(([direction, wordIds]) => ({ direction, wordIds }));
-    if (selections.length === 0) return setError(STR.errGeneric);
+    if (selections.length === 0) {
+      toast.show(`${STR.vbSelectWordsForDir} — ${STR.fieldRequired}`, "danger");
+      return;
+    }
     setBusy(true);
     const res = await setPositions({ testId: created.id, selections });
     setBusy(false);
-    if (res.error) return setError(friendlyError(res.error));
-    setOk(STR.vbPositionsSet);
+    if (res.error) return toast.show(friendlyError(res.error), "danger");
+    toast.show(STR.vbPositionsSet, "ok");
   }
 
   const directions = created ? VOCAB_PROGRAM_DIRECTIONS[created.program as VocabProgram] : [];
@@ -111,17 +125,14 @@ export default function BuildVocabTestScreen(): React.ReactElement {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
-        {ok ? <Notice message={ok} tone="ok" /> : null}
-        {error ? <Notice message={error} tone="danger" /> : null}
-
         {!created ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.vbNewTest}</Body>
             <AcademicYearSelect value={yearId} onChange={setYearId} />
             <ProgramSelect value={program} onChange={setProgram} />
             {yearId ? <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} /> : null}
-            <Field label={STR.vbLabel} value={label} onChangeText={setLabel} />
-            <Field label={STR.vbTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" />
+            <Field label={STR.vbLabel} value={label} onChangeText={setLabel} error={fieldErrors.label} />
+            <Field label={STR.vbTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" error={fieldErrors.totalMarks} />
             <View style={{ marginTop: space(1) }}>
               <Chip label={STR.vbHalfMiss} selected={halfMiss} onPress={() => setHalfMiss((h) => !h)} />
             </View>

@@ -37,6 +37,7 @@ import {
 import { TeacherSelect } from "../../components/selects";
 import { STR, coverSlotStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HrStackParamList, "LeaveCover">;
@@ -47,6 +48,7 @@ function statusTone(s: string): "info" | "ok" | "muted" {
 
 export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
   const { leaveApplicationId, manage } = route.params;
+  const { confirmAction } = useConfirm();
   const [proposals, setProposals] = React.useState<Record<string, string>>({});
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -81,6 +83,7 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
   }
 
   async function runDecide(slotId: string, approve: boolean): Promise<void> {
+    if (!approve && !(await confirmAction({ confirmLabel: STR.hrCoverReject }))) return;
     setBusy(true);
     setError(null);
     setOk(null);

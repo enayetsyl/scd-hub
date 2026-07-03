@@ -26,11 +26,13 @@ import { Screen, H2, Body, Muted, Card, Row, Badge, Button, Loader, Notice, Divi
 import { AcademicYearSelect } from "../../components/selects";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "GuardianCredentials">;
 
 export default function GuardianCredentialsScreen(_props: Props): React.ReactElement {
+  const { confirmAction } = useConfirm();
   const [{ data, fetching, error }, refetch] = useQuery({ query: GUARDIAN_CREDENTIAL_CANDIDATES });
   const [{ data: guardiansData }, refetchGuardians] = useQuery({ query: GUARDIANS_QUERY });
   const [, linkGuardian] = useMutation(LINK_GUARDIAN_TO_STUDENT);
@@ -137,6 +139,7 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
 
   async function onUnlink(studentId: string, guardianId: string): Promise<void> {
     if (unlinkBusyId) return;
+    if (!(await confirmAction({ confirmLabel: STR.unlinkGuardian }))) return;
     setUnlinkBusyId(`${guardianId}:${studentId}`);
     setLinkErr(null);
     setLinkMsg(null);

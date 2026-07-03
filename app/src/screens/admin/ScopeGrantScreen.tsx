@@ -19,6 +19,7 @@ import { TeacherSelect, SubjectSelect } from "../../components/selects";
 import { STR, subjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "ScopeGrant">;
@@ -52,6 +53,7 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
   const [, extendProxy] = useMutation(EXTEND_PROXY);
 
   const { user } = useAuth();
+  const { confirmAction } = useConfirm();
   const canManage = !!user && roleHasPermission(user.role as Role, "user:manage");
 
   // Active grants list (Slice-4 follow-up): pick a grant to extend/revoke.
@@ -136,6 +138,7 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
 
   async function onRevoke(grantId: string): Promise<void> {
     if (revokeBusy) return;
+    if (!(await confirmAction({ confirmLabel: STR.revoke }))) return;
     setRevokeId(grantId);
     setRevokeBusy(true);
     setRevokeMsg(null);

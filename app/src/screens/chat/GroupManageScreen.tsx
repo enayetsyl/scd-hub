@@ -25,6 +25,7 @@ import { Screen, Card, Body, Muted, Button, Chip, ChipRow, Field, Notice, Badge,
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum } from "../../lib/labels";
 import { staffDirectoryFrom } from "../../lib/chat";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ChatStackParamList, "GroupManage">;
@@ -33,6 +34,7 @@ export default function GroupManageScreen({ route, navigation }: Props): React.R
   const conversationId = route.params?.conversationId;
   const isCreate = !conversationId;
   const { user } = useAuth();
+  const { confirmAction } = useConfirm();
   const myUserId = user?.id ?? "";
 
   const [convListQ] = useQuery({ query: MY_CONVERSATIONS_QUERY });
@@ -106,6 +108,7 @@ export default function GroupManageScreen({ route, navigation }: Props): React.R
     else refetchConv({ requestPolicy: "network-only" });
   }
   async function onArchive(): Promise<void> {
+    if (!(await confirmAction({ confirmLabel: STR.chatArchive }))) return;
     setError(null);
     const res = await archive({ conversationId: conversationId! });
     if (res.error) setError(clean(res.error));

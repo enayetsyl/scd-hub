@@ -11,11 +11,14 @@ import { HW_SUBJECTS } from "@scd/shared";
 import { CLASSES_QUERY, DECLARE_HOMEWORK_ITEM, ATTACH_HW_QUESTION_FILE, HOMEWORK_TOPICS_QUERY } from "../../graphql/operations";
 import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
 import type { HomeworkStackParamList } from "../../navigation/types";
-import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, Notice, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, EmptyState } from "../../components/ui";
 import { SectionBar } from "../../components/SectionBar";
 import { STR, hwSubjectLabel, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { required } from "../../lib/validate";
 import { useSectionContext } from "../../state/SectionContext";
+import { useToast } from "../../state/ToastContext";
+import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HomeworkStackParamList, "DeclareHomework">;
@@ -31,13 +34,14 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
   const [qCount, setQCount] = useState("");
   const [poolRef, setPoolRef] = useState("");
   const [revItem, setRevItem] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
+  // R-Validate (UX-1): per-field errors; the toast names the first offending field.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
+  const colors = useColors();
   /** The just-declared item — target for the optional question-file attach (GP-A). */
   const [lastItem, setLastItem] = useState<{ id: string; hwId: string } | null>(null);
   const [fileBusy, setFileBusy] = useState(false);
-  const [fileNote, setFileNote] = useState<string | null>(null);
   const [, declare] = useMutation(DECLARE_HOMEWORK_ITEM);
   const [, attachQuestion] = useMutation(ATTACH_HW_QUESTION_FILE);
 
@@ -65,14 +69,23 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
   }
 
   async function onSubmit(): Promise<void> {
-    setError(null);
-    setOk(null);
-    if (!subject) return setError(STR.hwSubject);
-    if (classLevel == null) return setError(STR.hwNoClassLevel);
-    const tags = selectedTopics;
-    if (tags.length === 0) return setError(STR.hwTopicRequired);
+    setFieldErrors({});
     const q = parseInt(qCount, 10);
-    if (!Number.isFinite(q)) return setError(STR.hwQCount);
+    const { firstErrorKey, errors } = required({
+      subject: { value: subject, message: `${STR.hwSubject} — ${STR.fieldRequired}` },
+      topics: { value: selectedTopics, message: `${STR.hwTopTags} — ${STR.fieldRequired}` },
+      qCount: { value: Number.isFinite(q) ? q : null, message: `${STR.hwQCount} — ${STR.fieldRequired}` },
+    });
+    if (firstErrorKey) {
+      setFieldErrors(errors);
+      toast.show(errors[firstErrorKey], "danger");
+      return;
+    }
+    if (classLevel == null) {
+      toast.show(STR.hwNoClassLevel, "danger");
+      return;
+    }
+    const tags = selectedTopics;
     const td = timeDecl.trim() === "" ? undefined : parseInt(timeDecl, 10);
 
     setBusy(true);
@@ -81,7 +94,7 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
       classId: selection.classId!,
       classLevel,
       sectionId: selection.sectionId!,
-      subject,
+      subject: subject!,
       dateGiven: date,
       topTags: tags,
       timeDecl: td,
@@ -91,35 +104,33 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
     });
     setBusy(false);
     if (res.error || !res.data?.declareHomeworkItem) {
-      setError(friendlyError(res.error));
+      toast.show(friendlyError(res.error), "danger");
       return;
     }
-    setOk(`${res.data.declareHomeworkItem.hwId} ${STR.hwDeclared}`);
+    toast.show(`${res.data.declareHomeworkItem.hwId} ${STR.hwDeclared}`, "ok");
     setLastItem({ id: res.data.declareHomeworkItem.id, hwId: res.data.declareHomeworkItem.hwId });
-    setFileNote(null);
     setSelectedTopics([]);
     setQCount("");
     setPoolRef("");
     setRevItem(false);
   }
 
-  /** Optional question-file attach (GP-A, D-#70) — failure shows a Bangla
-   *  notice and never blocks the declaration (GP-J8). */
+  /** Optional question-file attach (GP-A, D-#70) — failure toasts a Bangla
+   *  message and never blocks the declaration (GP-J8). */
   async function onAttachQuestion(): Promise<void> {
     if (!lastItem || fileBusy) return;
-    setFileNote(null);
     setFileBusy(true);
     try {
       const uploaded = await pickAndUploadHomeworkFile("question");
       if (!uploaded) return; // picker cancelled
       const res = await attachQuestion({ hwItemId: lastItem.id, fileId: uploaded.fileId });
       if (res.error || !res.data?.attachHomeworkQuestionFile) {
-        setFileNote(friendlyError(res.error));
+        toast.show(friendlyError(res.error), "danger");
         return;
       }
-      setFileNote(`${lastItem.hwId} — ${STR.hwFileAttached}`);
+      toast.show(`${lastItem.hwId} — ${STR.hwFileAttached}`, "ok");
     } catch (e) {
-      setFileNote(e instanceof FileUploadError ? e.message : STR.hwFileUploadFail);
+      toast.show(e instanceof FileUploadError ? e.message : STR.hwFileUploadFail, "danger");
     } finally {
       setFileBusy(false);
     }
@@ -140,11 +151,6 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
         <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
       </View>
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
-        {ok ? <Notice message={ok} tone="ok" /> : null}
-        {error ? <Notice message={error} tone="danger" /> : null}
-        {fileNote ? (
-          <Notice message={fileNote} tone={fileNote.endsWith(STR.hwFileAttached) ? "ok" : "danger"} />
-        ) : null}
         {lastItem ? (
           <View style={{ marginBottom: space(3) }}>
             <Button
@@ -163,6 +169,7 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
               <Chip key={s} label={hwSubjectLabel(s)} selected={subject === s} onPress={() => chooseSubject(s)} />
             ))}
           </ChipRow>
+          {fieldErrors.subject ? <Body style={{ color: colors.error, marginTop: 4 }}>⚠ {fieldErrors.subject}</Body> : null}
           {classLevel != null ? <Muted style={{ marginTop: 4 }}>{classLevelLabel(classLevel)}</Muted> : null}
         </Card>
         <Field label={STR.hwDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
@@ -185,9 +192,10 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
               ))}
             </ChipRow>
           )}
+          {fieldErrors.topics ? <Body style={{ color: colors.error, marginTop: 4 }}>⚠ {fieldErrors.topics}</Body> : null}
         </Card>
         <Field label={STR.hwTimeDecl} value={timeDecl} onChangeText={setTimeDecl} keyboardType="number-pad" />
-        <Field label={STR.hwQCount} value={qCount} onChangeText={setQCount} keyboardType="number-pad" />
+        <Field label={STR.hwQCount} value={qCount} onChangeText={setQCount} keyboardType="number-pad" error={fieldErrors.qCount} />
         <Field label={STR.hwPoolRef} value={poolRef} onChangeText={setPoolRef} placeholder={`QP-${subject ?? "MATH"}-C${classLevel ?? 1}-U01`} />
         <ChipRow>
           <Chip label={STR.hwRevItem} selected={revItem} onPress={() => setRevItem((v) => !v)} />

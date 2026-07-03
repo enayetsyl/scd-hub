@@ -705,6 +705,7 @@ const STR_BN = {
   save: "à¦¸à¦‚à¦°à¦•à§à¦·à¦£",
   saving: "à¦¸à¦‚à¦°à¦•à§à¦·à¦£ à¦¹à¦šà§à¦›à§‡â€¦",
   cancel: "à¦¬à¦¾à¦¤à¦¿à¦²",
+  confirmTitle: "নিশ্চিত করুন",
   close: "à¦¬à¦¨à§à¦§",
   open: "à¦–à§à¦²à§à¦¨",
   apply: "à¦ªà§à¦°à¦¯à¦¼à§‹à¦—",
@@ -1324,6 +1325,7 @@ const STR_BN = {
   // Misc results / validation
   invalidDate: "à¦¤à¦¾à¦°à¦¿à¦– à¦¸à¦ à¦¿à¦• à¦¨à¦¯à¦¼ (YYYY-MM-DD)à¥¤",
   saved: "à¦¸à¦‚à¦°à¦•à§à¦·à¦¿à¦¤ à¦¹à¦¯à¦¼à§‡à¦›à§‡à¥¤",
+  fieldRequired: "এই ঘরটি পূরণ করুন।",
   noStudents: "à¦à¦‡ à¦¶à¦¾à¦–à¦¾à¦¯à¦¼ à¦•à§‹à¦¨à§‹ à¦¶à¦¿à¦•à§à¦·à¦¾à¦°à§à¦¥à§€ à¦¨à§‡à¦‡à¥¤",
   noPermission: "à¦à¦‡ à¦•à¦¾à¦œà§‡à¦° à¦…à¦¨à§à¦®à¦¤à¦¿ à¦¨à§‡à¦‡à¥¤",
   userCreated: "à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦°à¦•à¦¾à¦°à§€ à¦¤à§ˆà¦°à¦¿ à¦¹à¦¯à¦¼à§‡à¦›à§‡à¥¤",
@@ -2662,6 +2664,7 @@ const STR_EN: StrTable = {
   save: "Save",
   saving: "Savingâ€¦",
   cancel: "Cancel",
+  confirmTitle: "Confirm",
   close: "Close",
   open: "Open",
   apply: "Apply",
@@ -3281,6 +3284,7 @@ const STR_EN: StrTable = {
   // Misc results / validation
   invalidDate: "Date is not valid (YYYY-MM-DD).",
   saved: "Saved.",
+  fieldRequired: "This field is required.",
   noStudents: "There are no students in this section.",
   noPermission: "You don't have permission for this action.",
   userCreated: "User created.",

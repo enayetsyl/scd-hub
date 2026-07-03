@@ -35,6 +35,7 @@ import {
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, money, payrollRunStatusLabel, payDeductionTypeLabel, payAdditionTypeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HrStackParamList, "PayrollRunDetail">;
@@ -50,6 +51,7 @@ function PayLineRow({ label, line }: { label: string; line: PayLineT }): React.R
 
 export default function PayrollRunDetailScreen({ route, navigation }: Props): React.ReactElement {
   const { runId, monthKey } = route.params;
+  const { confirmAction } = useConfirm();
   const { role } = useAuth();
   const canApprove = !!role && roleHasPermission(role, "payroll:approve");
 
@@ -80,6 +82,7 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
   }
 
   async function runCancel(): Promise<void> {
+    if (!(await confirmAction({ confirmLabel: STR.hrCancelRun }))) return;
     setBusy(true);
     setError(null);
     setOk(null);

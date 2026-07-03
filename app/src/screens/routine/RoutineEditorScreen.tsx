@@ -18,6 +18,7 @@ import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, Notice } from 
 import { TeacherSelect, RoomSelect } from "../../components/selects";
 import { STR, routineSubjectLabel, periodTrackLabel, dayOfWeekLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 const EDITOR_DAYS = DAYS_OF_WEEK.filter((d) => d !== "FRI");
@@ -27,6 +28,7 @@ type Props = NativeStackScreenProps<RoutineStackParamList, "RoutineEditor">;
 
 export default function RoutineEditorScreen({ route }: Props): React.ReactElement {
   const { groupType, groupId, title } = route.params;
+  const { confirmAction } = useConfirm();
   const [day, setDay] = useState<string>("SUN");
   const [period, setPeriod] = useState("1");
   const [subject, setSubject] = useState<string>(ROUTINE_SUBJECTS[0]);
@@ -80,6 +82,7 @@ export default function RoutineEditorScreen({ route }: Props): React.ReactElemen
   }
 
   async function remove(id: string): Promise<void> {
+    if (!(await confirmAction({ confirmLabel: STR.remove }))) return;
     setBusy(true);
     setError(null);
     const res = await deleteSlot({ id });

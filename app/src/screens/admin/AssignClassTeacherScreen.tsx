@@ -25,12 +25,14 @@ import { SectionBar } from "../../components/SectionBar";
 import { STR, classLevelLabel, bnNum, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "AssignClassTeacher">;
 
 export default function AssignClassTeacherScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection, setSection } = useSectionContext();
+  const { confirmAction } = useConfirm();
   const lang = getActiveLang();
   const [teacherId, setTeacherId] = useState("");
   const [supportId, setSupportId] = useState("");
@@ -77,6 +79,7 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
 
   async function runAssign(userId: string | null): Promise<void> {
     if (!selection.sectionId) return;
+    if (userId === null && !(await confirmAction({ confirmLabel: STR.ctClear }))) return;
     setBusy(true);
     setError(null);
     setOk(null);
@@ -93,6 +96,7 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
 
   async function runAssignConfirmer(userId: string | null): Promise<void> {
     if (!selection.sectionId) return;
+    if (userId === null && !(await confirmAction({ confirmLabel: STR.ctClear }))) return;
     setBusy(true);
     setError(null);
     setOk(null);
@@ -109,6 +113,7 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
 
   async function runSetSupervisor(userId: string, on: boolean): Promise<void> {
     if (userId.trim() === "") return;
+    if (!on && !(await confirmAction({ confirmLabel: STR.remove }))) return;
     setBusy(true);
     setError(null);
     setOk(null);
@@ -125,6 +130,7 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
 
   async function runSupport(userId: string, add: boolean): Promise<void> {
     if (!selection.sectionId || userId.trim() === "") return;
+    if (!add && !(await confirmAction({ confirmLabel: STR.remove }))) return;
     setBusy(true);
     setError(null);
     setOk(null);

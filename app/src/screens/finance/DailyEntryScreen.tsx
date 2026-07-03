@@ -17,7 +17,7 @@ import {
   LEDGER_KINDS,
 } from "@scd/shared";
 import { RECORD_FINANCE_POSTING, type FeeLineInput } from "../../graphql/finance";
-import { Screen, Card, Body, Button, Field, Select, Notice, Divider } from "../../components/ui";
+import { Screen, Card, Body, Button, Field, Select, Divider } from "../../components/ui";
 import {
   STR,
   financePostingKindLabel,
@@ -28,6 +28,8 @@ import {
   ledgerKindLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { required } from "../../lib/validate";
+import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 
 type FeeLineRow = { head: string | null; amount: string };
@@ -47,25 +49,33 @@ export default function DailyEntryScreen(): React.ReactElement {
   const [toLedger, setToLedger] = useState<string | null>(null);
   const [salaryBase, setSalaryBase] = useState("");
 
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
+  // R-Validate (UX-1): per-field errors; the toast names the first offending field.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
 
   function setFeeRow(i: number, patch: Partial<FeeLineRow>): void {
     setFeeLines((rows) => rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   }
 
   async function onSubmit(): Promise<void> {
-    setError(null);
-    setOk(null);
-    if (!date.trim() || !kind) return setError(STR.errGeneric);
+    setFieldErrors({});
+    const { firstErrorKey, errors } = required({
+      date: { value: date.trim(), message: `${STR.finDate} — ${STR.fieldRequired}` },
+      kind: { value: kind, message: `${STR.finKind} — ${STR.fieldRequired}` },
+    });
+    if (firstErrorKey) {
+      setFieldErrors(errors);
+      toast.show(errors[firstErrorKey], "danger");
+      return;
+    }
     setBusy(true);
     const lines: FeeLineInput[] = feeLines
       .filter((r) => r.head && r.amount.trim())
       .map((r) => ({ head: r.head as string, amount: Number(r.amount) }));
     const res = await record({
       date: date.trim(),
-      kind,
+      kind: kind!,
       mode: mode ?? null,
       amount: amount.trim() ? Number(amount) : null,
       note: note.trim() || null,
@@ -78,18 +88,19 @@ export default function DailyEntryScreen(): React.ReactElement {
       salaryAdjustments: null,
     });
     setBusy(false);
-    if (res.error) return setError(friendlyError(res.error));
-    if (res.data) setOk(STR.finRecorded);
+    if (res.error) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
+    if (res.data) toast.show(STR.finRecorded, "ok");
   }
 
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
-        {ok ? <Notice message={ok} tone="ok" /> : null}
-        {error ? <Notice message={error} tone="danger" /> : null}
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.finDailyEntryTitle}</Body>
-          <Field label={STR.finDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+          <Field label={STR.finDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" error={fieldErrors.date} />
           <Select
             label={STR.finKind}
             value={kind}
