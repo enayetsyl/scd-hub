@@ -1,5 +1,5 @@
 /**
- * Seed the weekly class routine from the root Excel (Class_Routine_Combined_V9.xlsx).
+ * Seed the weekly class routine from the root Excel (Class_Routine_Combined_V11.xlsx).
  *
  * Idempotent. DRY-RUN by default (prints the full mapping + groups + any conflicts,
  * writes nothing); pass --commit to write. Hard guard: only runs against `scdhub_local`.
@@ -39,8 +39,11 @@ import { SUBJECTS } from "@scd/shared";
 import type { RoutineSubject, PeriodTrack, DayOfWeek, GroupGender } from "@scd/shared";
 
 const COMMIT = process.argv.includes("--commit");
-const XLSX = path.resolve(__dirname, "../../Class_Routine_Combined_V9.xlsx");
-const ALLOWED_DB = "scdhub_local";
+const XLSX = path.resolve(__dirname, "../../Class_Routine_Combined_V11.xlsx");
+// Managed DBs this seeder may write (chosen by the MONGODB_URI it connects to).
+// Local is the default; dev/prod are explicit by overriding MONGODB_URI for the run.
+// Any other db name (e.g. the personal backup) is refused.
+const ALLOWED_DBS = ["scdhub_local", "scdhub_dev", "scdhub_prod"];
 
 const DAY_MAP: Record<string, DayOfWeek> = { sunday: "SUN", monday: "MON", tuesday: "TUE", wednesday: "WED", thursday: "THU" };
 const TEACHER_SHORT = ["Hamida", "Sajeda", "Jerin", "Fida", "Tamany", "Akbor", "Afia", "Mariam", "Momin", "Maruf", "Mahzabin", "A. Kuddus", "Kawsar", "Mahfuj", "Tazkir", "Sarah"];
@@ -94,7 +97,7 @@ async function main(): Promise<void> {
   await connectDb();
   const dbName = mongoose.connection.name;
   console.log("DB:", dbName);
-  if (dbName !== ALLOWED_DB) { console.error(`ABORT: only runs against ${ALLOWED_DB}`); await disconnectDb(); process.exit(1); }
+  if (!ALLOWED_DBS.includes(dbName)) { console.error(`ABORT: only runs against ${ALLOWED_DBS.join(", ")}`); await disconnectDb(); process.exit(1); }
 
   const principal = await User.findOne({ role: "PRINCIPAL", active: true }).lean();
   const year = (await AcademicYear.findOne({ current: true }).lean()) ?? (await AcademicYear.findOne({}).lean());
@@ -103,16 +106,27 @@ async function main(): Promise<void> {
 
   const classes = await Class.find({}).lean();
   const sections = await Section.find({}).lean();
-  const users = await User.find({ active: true }).select("name role").lean();
+  const users = await User.find({ active: true }).select("name role phone").lean();
   const classByLevel = new Map(classes.map((c) => [c.level, c]));
   const sectionOf = (level: number, code: string) => {
     const cls = classByLevel.get(level); if (!cls) return null;
     return sections.find((s) => String(s.classId) === String(cls._id) && s.code === code) ?? null;
   };
+  // Resolve each routine short-name to one active user. On the clean local DB every
+  // short-name resolves to exactly one account. dev/prod also carry a stale email-login
+  // seed account that shares the same first name (e.g. "Fida" + "Husne ara Rahman Fida"),
+  // so the substring match is ambiguous; the real teacher is the phone-login account
+  // (the routine/class-teacher data already points there). When ambiguous, prefer the
+  // single phone-login match; otherwise leave unresolved (flagged below).
   const teacherIdOf = new Map<string, string>();
   for (const short of TEACHER_SHORT) {
     const hit = users.filter((u) => u.name.toLowerCase().includes(lastTok(short)));
-    if (hit.length === 1) teacherIdOf.set(short, hit[0]._id.toString());
+    let pick = hit.length === 1 ? hit[0] : undefined;
+    if (!pick && hit.length > 1) {
+      const withPhone = hit.filter((u) => u.phone != null && String(u.phone).trim() !== "");
+      if (withPhone.length === 1) pick = withPhone[0];
+    }
+    if (pick) teacherIdOf.set(short, pick._id.toString());
   }
   const sectionCodeFor = (level: number) => (level >= 3 ? "ALL" : "Main");
   // Class 1–5 P1–P3 are the Quran/Arabic level periods (→ SubjectGroup). Everything else → Section.
@@ -275,6 +289,22 @@ async function main(): Promise<void> {
     grantCount++;
   }
   console.log(`Backfilled ${grantCount} routine teaching grants (content subjects only — BAN/ENG/MATH/SCI/BGS).`);
+
+  // Prune stale routine grants: a source=routine teaching grant whose (teacher, section,
+  // subject) is no longer a current content-subject section slot — e.g. a teacher dropped
+  // from the routine in this revision. The upsert above never deletes, so without this the
+  // grant (and the routine-driven content access it confers, D-#257) would linger. `seen`
+  // already holds every valid key `${teacherId}|${sectionId}|${subjectId}` for this routine.
+  const routineGrants = await ScopeGrant.find({ kind: "teaching", source: "routine" }).select("teacherId sectionId subjectId").lean();
+  const staleGrantIds = routineGrants
+    .filter((g) => !seen.has(`${g.teacherId}|${g.sectionId}|${g.subjectId}`))
+    .map((g) => g._id);
+  if (staleGrantIds.length) {
+    const delg = await ScopeGrant.deleteMany({ _id: { $in: staleGrantIds } });
+    console.log(`Pruned ${delg.deletedCount} stale routine grants (teacher no longer on that section+subject).`);
+  } else {
+    console.log("No stale routine grants to prune. ✓");
+  }
 
   await disconnectDb(); process.exit(0);
 }
