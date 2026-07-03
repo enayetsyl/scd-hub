@@ -17,7 +17,8 @@ import {
   CANCEL_COVER,
 } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
-import { Screen, Body, Muted, Card, Field, Button, Badge, Notice, Loader } from "../../components/ui";
+import { Screen, Body, Muted, Card, Button, Badge, Notice, Loader } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { STR, routineSubjectLabel, dayOfWeekLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -88,7 +89,7 @@ export default function CoverManageScreen({ route }: Props): React.ReactElement 
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }}>
         <Muted style={{ fontWeight: "700" }}>{title}</Muted>
-        <Field label={STR.rtDate} value={date} onChangeText={setDate} />
+        <DateField label={STR.rtDate} value={date} onChange={setDate} />
         {ok ? <Notice message={ok} tone="ok" /> : null}
         {error ? <Notice message={error} tone="danger" /> : null}
 
