@@ -22,6 +22,7 @@ import {
   type VocabPositionSelectionIn,
 } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Field, Chip, ChipRow, Loader, Notice } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { ProgramSelect, ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
 import { STR, vocabProgramLabel, vocabDirectionLabel, bnNum } from "../../lib/labels";
@@ -136,7 +137,7 @@ export default function BuildVocabTestScreen(): React.ReactElement {
             <View style={{ marginTop: space(1) }}>
               <Chip label={STR.vbHalfMiss} selected={halfMiss} onPress={() => setHalfMiss((h) => !h)} />
             </View>
-            <Field label={STR.vbTestDate} value={testDate} onChangeText={setTestDate} placeholder="YYYY-MM-DD" helper={STR.vbTestDateHint} />
+            <DateField label={STR.vbTestDate} value={testDate} onChange={setTestDate} helper={STR.vbTestDateHint} />
             <View style={{ marginTop: space(2) }}>
               <Button title={STR.vbCreateTest} onPress={onCreate} loading={busy} disabled={busy} />
             </View>

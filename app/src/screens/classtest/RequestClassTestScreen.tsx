@@ -16,6 +16,7 @@ import {
   SUGGEST_CLASS_TEST_NUMBER_QUERY,
 } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Field, Chip, Select } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
 import { STR, hwSubjectLabel } from "../../lib/labels";
@@ -145,7 +146,7 @@ export default function RequestClassTestScreen(): React.ReactElement {
             </View>
           )}
 
-          <Field label={STR.ctExamDate} value={examDate} onChangeText={setExamDate} placeholder="YYYY-MM-DD" error={fieldErrors.examDate} />
+          <DateField label={STR.ctExamDate} value={examDate} onChange={setExamDate} error={fieldErrors.examDate} />
           <Field label={STR.ctTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" error={fieldErrors.totalMarks} />
           <Field label={STR.ctPassMark} value={passMark} onChangeText={setPassMark} keyboardType="number-pad" helper={STR.ctPassMarkHint} />
           <Field label={STR.ctTestNumber} value={testNumber} onChangeText={setTestNumber} keyboardType="number-pad" />

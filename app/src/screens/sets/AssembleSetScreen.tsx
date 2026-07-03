@@ -23,6 +23,7 @@ import {
   Notice,
   Divider,
 } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { STR, setTypeLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -105,7 +106,7 @@ export default function AssembleSetScreen({ route, navigation }: Props): React.R
       {isCt ? (
         <Field label="DURATION_MINUTES" value={duration} onChangeText={setDuration} keyboardType="numeric" placeholder="60" />
       ) : (
-        <Field label="DUE_DATE (YYYY-MM-DD)" value={dueDate} onChangeText={setDueDate} placeholder="2026-06-30" />
+        <DateField label="DUE_DATE" value={dueDate} onChange={setDueDate} />
       )}
 
       {formError ? <Notice message={formError} tone="danger" /> : null}

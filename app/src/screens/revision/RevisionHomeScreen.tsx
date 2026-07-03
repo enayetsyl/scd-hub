@@ -1,7 +1,7 @@
 /**
  * RevisionHomeScreen (SR app surfaces) — the Saturday Qur'an-Hifz Revision tab hub.
- * Lists the teacher's `myRevisionGroups` and a Saturday date picker (a plain
- * YYYY-MM-DD text field, defaulted to the most recent Saturday). Tapping a group
+ * Lists the teacher's `myRevisionGroups` and a Saturday date picker (a calendar
+ * DateField, defaulted to the most recent Saturday). Tapping a group
  * opens its Saturday grid. Principal/Office also get a dashboard entry. Every action
  * is re-gated + row-scoped server-side — the server stays the gate.
  */
@@ -12,7 +12,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { roleHasPermission } from "@scd/shared";
 import { useQuery } from "urql";
 import { MY_REVISION_GROUPS_QUERY } from "../../graphql/revision";
-import { Screen, Card, Body, Muted, Button, Field, Badge, Loader, EmptyState } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge, Loader, EmptyState } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, classLevelLabel, genderLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
@@ -20,7 +21,7 @@ import type { RevisionStackParamList } from "../../navigation/types";
 
 type Nav = NativeStackNavigationProp<RevisionStackParamList>;
 
-/** The most recent Saturday on/before today, as YYYY-MM-DD. JS getDay(): Sat = 6. */
+/** The most recent Saturday on/before today, as an ISO day key. JS getDay(): Sat = 6. */
 export function mostRecentSaturday(from: Date = new Date()): string {
   const d = new Date(from);
   const delta = (d.getDay() - 6 + 7) % 7; // days back to the last Saturday
@@ -42,7 +43,7 @@ export default function RevisionHomeScreen(): React.ReactElement {
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.revHomeTitle}</Body>
-          <Field label={STR.revSaturdayDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+          <DateField label={STR.revSaturdayDate} value={date} onChange={setDate} />
           {canManage ? (
             <View style={{ marginTop: space(2) }}>
               <Button

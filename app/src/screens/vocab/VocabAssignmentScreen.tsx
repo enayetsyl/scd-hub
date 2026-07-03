@@ -13,7 +13,8 @@ import {
   VOCAB_ASSIGNMENT_HISTORY_QUERY,
   TEACHERS_QUERY,
 } from "../../graphql/operations";
-import { Screen, Card, Body, Muted, Button, Field, Badge, Loader, Notice } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge, Loader, Notice } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { ProgramSelect, ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { TeacherSelect } from "../../components/selects";
 import { AcademicYearSelect } from "../../components/selects";
@@ -72,7 +73,7 @@ export default function VocabAssignmentScreen(): React.ReactElement {
           <AcademicYearSelect value={yearId} onChange={setYearId} />
           <ProgramSelect value={program} onChange={setProgram} />
           {yearId ? <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} /> : null}
-          <Field label={STR.vbWeek} value={week} onChangeText={setWeek} placeholder="YYYY-MM-DD" />
+          <DateField label={STR.vbWeek} value={week} onChange={setWeek} />
           <TeacherSelect label={STR.vbAssignTester} value={teacherId} onChange={setTeacherId} />
           <View style={{ marginTop: space(2) }}>
             <Button title={STR.vbAssignTester} onPress={onAssign} loading={busy} disabled={busy} />
