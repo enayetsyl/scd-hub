@@ -60,6 +60,7 @@ export default function TodayScreen(): React.ReactElement {
     (roleHasPermission(role as Role, "attendance:mark") || roleHasPermission(role as Role, "attendance:manage"));
   const canClassTest =
     !!role && (roleHasPermission(role as Role, "tracker:read") || roleHasPermission(role as Role, "roster:manage"));
+  const canClassNotes = !!role && roleHasPermission(role as Role, "routine:read");
 
   const PendingRow = ({
     label,
@@ -169,6 +170,13 @@ export default function TodayScreen(): React.ReactElement {
               ) : null}
               {canAttendance ? (
                 <Chip label={`🙋 ${STR.tabAttendance}`} onPress={() => nav.navigate("AttendanceTab", { screen: "AttendanceHome" })} />
+              ) : null}
+              {/* UX-8 §4.8 note 5: the Class Notes deep link (same routine:read gate). */}
+              {canClassNotes ? (
+                <Chip
+                  label={`📓 ${STR.drawerItemClassNotes}`}
+                  onPress={() => nav.navigate("ClassNotesTab", { screen: "MyClassNotes" })}
+                />
               ) : null}
               {canClassTest ? (
                 <Chip

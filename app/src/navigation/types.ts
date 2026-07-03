@@ -6,6 +6,11 @@ export type HomeStackParamList = {
   Today: undefined;
 };
 
+/** Teacher-first Class Notes entry (UX-8, D-#266) — own periods, zero selection. */
+export type ClassNotesStackParamList = {
+  MyClassNotes: undefined;
+};
+
 export type ContentStackParamList = {
   ContentTree: undefined;
   PlanView: { artifactId: string };
@@ -278,6 +283,7 @@ export type TabParamList = {
   ReviewTab: NavigatorScreenParams<ReviewStackParamList>;
   RoutineTab: NavigatorScreenParams<RoutineStackParamList>;
   AttendanceTab: NavigatorScreenParams<AttendanceStackParamList>;
+  ClassNotesTab: NavigatorScreenParams<ClassNotesStackParamList>;
   LibraryTab: NavigatorScreenParams<LibraryStackParamList>;
   ChatTab: NavigatorScreenParams<ChatStackParamList>;
   VocabTab: NavigatorScreenParams<VocabStackParamList>;

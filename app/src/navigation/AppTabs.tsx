@@ -16,6 +16,7 @@ import { roleHasPermission } from "@scd/shared";
 
 import type {
   HomeStackParamList,
+  ClassNotesStackParamList,
   ContentStackParamList,
   QuestionsStackParamList,
   SetsStackParamList,
@@ -52,6 +53,7 @@ import { fonts, radius, space, typeScale, useColors } from "../theme";
 
 import LoginScreen from "../screens/auth/LoginScreen";
 import TodayScreen from "../screens/home/TodayScreen";
+import MyClassNotesScreen from "../screens/classnotes/MyClassNotesScreen";
 import ContentTreeScreen from "../screens/content/ContentTreeScreen";
 import PlanViewScreen from "../screens/content/PlanViewScreen";
 import QuestionBankScreen from "../screens/questions/QuestionBankScreen";
@@ -430,6 +432,18 @@ function HomeNavigator(): React.ReactElement {
     <HomeStack.Navigator screenOptions={stackOptions}>
       <HomeStack.Screen name="Today" component={TodayScreen} options={{ title: STR.drawerItemToday }} />
     </HomeStack.Navigator>
+  );
+}
+
+// Teacher-first Class Notes (UX-8, D-#266): the routine answers class/subject —
+// the caller's own periods only. DailyNote (Routine tab) stays the admin/cover path.
+const ClassNotesStack = createNativeStackNavigator<ClassNotesStackParamList>();
+function ClassNotesNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ClassNotesStack.Navigator screenOptions={stackOptions}>
+      <ClassNotesStack.Screen name="MyClassNotes" component={MyClassNotesScreen} options={{ title: STR.drawerItemClassNotes }} />
+    </ClassNotesStack.Navigator>
   );
 }
 
@@ -1004,6 +1018,8 @@ export function AppTabs(): React.ReactElement {
         {canReview ? <Drawer.Screen name="ReviewTab" component={ReviewNavigator} /> : null}
         {canRoutine ? <Drawer.Screen name="RoutineTab" component={RoutineNavigator} /> : null}
         {canAttendance ? <Drawer.Screen name="AttendanceTab" component={AttendanceNavigator} /> : null}
+        {/* UX-8: same gate as the DailyNote path (routine:read). */}
+        {canRoutine ? <Drawer.Screen name="ClassNotesTab" component={ClassNotesNavigator} /> : null}
         {canLibrary ? <Drawer.Screen name="LibraryTab" component={LibraryNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
         {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}
