@@ -9,7 +9,8 @@ import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
 import { CHILD_HOMEWORK_QUERY, type GuardianHwRecordT } from "../../graphql/operations";
-import { Screen, Body, Muted, Card, Badge, Button, Field, Notice, Loader, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { STR, bnNum, lifecycleStateLabel, subjectLabel, hwResultLabel } from "../../lib/labels";
@@ -155,10 +156,10 @@ export default function ChildHomeworkScreen(): React.ReactElement {
         <ChildSwitcher />
         <View style={{ flexDirection: "row", gap: space(2) }}>
           <View style={{ flex: 1 }}>
-            <Field label={STR.gpFromDate} value={from} onChangeText={setFrom} placeholder="YYYY-MM-DD" />
+            <DateField label={STR.gpFromDate} value={from} onChange={setFrom} />
           </View>
           <View style={{ flex: 1 }}>
-            <Field label={STR.gpToDate} value={to} onChangeText={setTo} placeholder="YYYY-MM-DD" />
+            <DateField label={STR.gpToDate} value={to} onChange={setTo} min={from || undefined} />
           </View>
         </View>
         {fileError ? <Notice message={fileError} tone="danger" /> : null}

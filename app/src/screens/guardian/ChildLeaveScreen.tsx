@@ -6,6 +6,7 @@ import { ScrollView, View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import { CHILD_LEAVE_APPLICATIONS_QUERY, SUBMIT_CHILD_LEAVE_APPLICATION, type GuardianLeaveApplicationT } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Field, Button, Loader, EmptyState, Notice, ErrorBanner } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { STR, dateHeaderLabel } from "../../lib/labels";
@@ -93,8 +94,8 @@ export default function ChildLeaveScreen(): React.ReactElement {
           <Body style={{ fontWeight: "700" }}>{STR.gpLeave}</Body>
           <Muted style={{ marginTop: space(1) }}>{STR.attRecordLeave}</Muted>
           <View style={{ marginTop: space(2) }}>
-            <Field label={STR.attLeaveFrom} value={fromKey} onChangeText={setFromKey} placeholder="YYYY-MM-DD" />
-            <Field label={STR.attLeaveTo} value={toKey} onChangeText={setToKey} placeholder="YYYY-MM-DD" />
+            <DateField label={STR.attLeaveFrom} value={fromKey} onChange={setFromKey} />
+            <DateField label={STR.attLeaveTo} value={toKey} onChange={setToKey} min={fromKey || undefined} />
             <Field label={STR.attLeaveReason} value={reason} onChangeText={setReason} multiline autoCapitalize="sentences" />
             <Button
               title={STR.attRecordLeave}
