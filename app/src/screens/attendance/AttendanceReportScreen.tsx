@@ -22,6 +22,7 @@ import {
 } from "../../graphql/operations";
 import type { AttendanceStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Button, Field, Notice, Divider, Loader } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -107,7 +108,7 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
 
   return (
     <Screen scroll>
-      <Field label={STR.attDate} value={dateKey} onChangeText={setDateKey} placeholder="YYYY-MM-DD" />
+      <DateField label={STR.attDate} value={dateKey} onChange={setDateKey} />
       {error ? <Notice message={error} tone="danger" /> : null}
       {ok ? <Notice message={ok} tone="ok" /> : null}
       {reportQ.error ? <Notice message={friendlyError(reportQ.error)} tone="danger" /> : null}
@@ -161,7 +162,7 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
       {/* Absent & no application (range) + inline leave recording */}
       <Divider />
       <H2>{STR.attAbsentNoApp}</H2>
-      <Field label={STR.attFrom} value={fromKey} onChangeText={setFromKey} placeholder="YYYY-MM-DD" />
+      <DateField label={STR.attFrom} value={fromKey} onChange={setFromKey} />
       {noApp.length === 0 && !noAppQ.fetching ? <Muted>{STR.attNoneNoApp}</Muted> : null}
       {noApp.map((s) => (
         <Card key={s.studentId}>
@@ -174,8 +175,8 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
           <Muted style={{ marginTop: 2 }}>{s.dateKeys.map(bnNum).join(" · ")}</Muted>
           {leaveFor === s.studentId ? (
             <View style={{ marginTop: space(2) }}>
-              <Field label={STR.attLeaveFrom} value={leaveFrom} onChangeText={setLeaveFrom} placeholder="YYYY-MM-DD" />
-              <Field label={STR.attLeaveTo} value={leaveTo} onChangeText={setLeaveTo} placeholder="YYYY-MM-DD" />
+              <DateField label={STR.attLeaveFrom} value={leaveFrom} onChange={setLeaveFrom} />
+              <DateField label={STR.attLeaveTo} value={leaveTo} onChange={setLeaveTo} min={leaveFrom || undefined} />
               <Field label={STR.attLeaveReason} value={leaveReason} onChangeText={setLeaveReason} multiline />
               <Button title={STR.attRecordLeave} onPress={() => onRecordLeave(s.studentId)} loading={busy} disabled={!leaveReason.trim()} />
             </View>
