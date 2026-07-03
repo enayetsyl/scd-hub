@@ -24,6 +24,7 @@ import {
   ErrorBanner,
   Notice,
 } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -84,7 +85,7 @@ export default function StaffObservationsScreen({ route }: Props): React.ReactEl
 
       <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.hrAddObservation}</Body>
       <Card>
-        <Field label={STR.hrObsDate} value={dateKey} onChangeText={setDateKey} placeholder="2026-06-15" helper={STR.hrDateHint} />
+        <DateField label={STR.hrObsDate} value={dateKey} onChange={setDateKey} helper={STR.hrDateHint} />
         <Select
           label={STR.hrObsSubject}
           value={subjectId}

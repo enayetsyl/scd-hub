@@ -40,6 +40,7 @@ import {
 import { STR, bnNum, leaveTypeLabel, leaveStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
+import { DateField } from "../../components/DateField";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HrStackParamList, "MyLeave">;
@@ -166,8 +167,8 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
           onChange={setLeaveType}
           placeholder={STR.hrLeaveType}
         />
-        <Field label={STR.hrLeaveFrom} value={fromKey} onChangeText={setFromKey} placeholder="2026-06-15" helper={STR.hrDateHint} />
-        <Field label={STR.hrLeaveTo} value={toKey} onChangeText={setToKey} placeholder="2026-06-16" helper={STR.hrDateHint} />
+        <DateField label={STR.hrLeaveFrom} value={fromKey} onChange={setFromKey} helper={STR.hrDateHint} />
+        <DateField label={STR.hrLeaveTo} value={toKey} onChange={setToKey} min={fromKey || undefined} helper={STR.hrDateHint} />
         <Field
           label={STR.hrLeaveReason}
           value={reason}

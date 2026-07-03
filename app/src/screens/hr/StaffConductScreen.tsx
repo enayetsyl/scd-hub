@@ -38,6 +38,7 @@ import {
   Notice,
 } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
+import { DateField } from "../../components/DateField";
 import { STR, bnNum, conductStageLabel, conductRecordStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -208,11 +209,10 @@ export default function StaffConductScreen({ route }: Props): React.ReactElement
                 <Divider />
                 {canFinalize ? (
                   <>
-                    <Field
+                    <DateField
                       label={STR.hrFinalizeLiveUntil}
                       value={liveUntil[c.id] ?? ""}
-                      onChangeText={(v) => setLiveUntil((p) => ({ ...p, [c.id]: v }))}
-                      placeholder="2026-12-31"
+                      onChange={(v) => setLiveUntil((p) => ({ ...p, [c.id]: v }))}
                       helper={STR.hrDateHint}
                     />
                     <Field

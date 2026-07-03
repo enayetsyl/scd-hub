@@ -36,7 +36,7 @@ interface RootNav {
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-/** Local short timestamp (YYYY-MM-DD HH:mm), Bangla digits in Bangla mode. */
+/** Local short timestamp (ISO date + HH:mm), Bangla digits in Bangla mode. */
 function shortTime(iso: string): string {
   const d = new Date(iso);
   return bnNum(
