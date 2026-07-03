@@ -1,6 +1,11 @@
 /** React Navigation param lists. One native-stack per tab; tabs gated by role. */
 import type { NavigatorScreenParams } from "@react-navigation/native";
 
+/** Staff landing dashboard (UX-4, D-#265) — registered FIRST so staff land here. */
+export type HomeStackParamList = {
+  Today: undefined;
+};
+
 export type ContentStackParamList = {
   ContentTree: undefined;
   PlanView: { artifactId: string };
@@ -262,6 +267,7 @@ export type AdminStackParamList = {
 };
 
 export type TabParamList = {
+  HomeTab: NavigatorScreenParams<HomeStackParamList>;
   ContentTab: NavigatorScreenParams<ContentStackParamList>;
   QuestionsTab: NavigatorScreenParams<QuestionsStackParamList>;
   SetsTab: NavigatorScreenParams<SetsStackParamList>;

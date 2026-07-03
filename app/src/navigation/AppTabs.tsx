@@ -15,6 +15,7 @@ import { HeaderBackButton } from "@react-navigation/elements";
 import { roleHasPermission } from "@scd/shared";
 
 import type {
+  HomeStackParamList,
   ContentStackParamList,
   QuestionsStackParamList,
   SetsStackParamList,
@@ -50,6 +51,7 @@ import { STR, bnNum } from "../lib/labels";
 import { fonts, radius, space, typeScale, useColors } from "../theme";
 
 import LoginScreen from "../screens/auth/LoginScreen";
+import TodayScreen from "../screens/home/TodayScreen";
 import ContentTreeScreen from "../screens/content/ContentTreeScreen";
 import PlanViewScreen from "../screens/content/PlanViewScreen";
 import QuestionBankScreen from "../screens/questions/QuestionBankScreen";
@@ -418,6 +420,18 @@ function useStackOptions() {
 }
 
 // --- Stacks ----------------------------------------------------------------
+
+// Staff landing dashboard (UX-4, D-#265) — registered FIRST in the drawer so a
+// staff login opens on Today; guardians keep their own Home (gpToday) unchanged.
+const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+function HomeNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <HomeStack.Navigator screenOptions={stackOptions}>
+      <HomeStack.Screen name="Today" component={TodayScreen} options={{ title: STR.drawerItemToday }} />
+    </HomeStack.Navigator>
+  );
+}
 
 const ContentStack = createNativeStackNavigator<ContentStackParamList>();
 function ContentNavigator(): React.ReactElement {
@@ -949,6 +963,9 @@ export function AppTabs(): React.ReactElement {
   // + self-service is universal; GUARDIAN never sees it. Admin entries inside are
   // permission-gated per slice and re-checked server-side.
   const canHr = !!role && role !== "GUARDIAN";
+  // Today dashboard (UX-4): every staff login lands here; each card inside degrades
+  // to empty/zero server-side when the caller lacks the underlying permission.
+  const canHome = !!role && role !== "GUARDIAN";
   const canAdmin = !!role && (roleHasPermission(role, "content:import") || roleHasPermission(role, "user:manage"));
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
@@ -976,6 +993,8 @@ export function AppTabs(): React.ReactElement {
           swipeEdgeWidth: 60,
         }}
       >
+        {/* Registered FIRST → the drawer's initial route: staff land on Today (UX-4). */}
+        {canHome ? <Drawer.Screen name="HomeTab" component={HomeNavigator} /> : null}
         {canContent ? <Drawer.Screen name="ContentTab" component={ContentNavigator} /> : null}
         {canQuestions ? <Drawer.Screen name="QuestionsTab" component={QuestionsNavigator} /> : null}
         {canSets ? <Drawer.Screen name="SetsTab" component={SetsNavigator} /> : null}

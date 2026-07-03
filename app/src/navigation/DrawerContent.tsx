@@ -38,6 +38,7 @@ type NavSection =
  * from the "Trackers" group header.
  */
 const STAFF_NAV: NavSection[] = [
+  { type: "item", route: "HomeTab", labelKey: "drawerItemToday", icon: "🏠" },
   {
     type: "group",
     titleKey: "drawerGroupAcademics",

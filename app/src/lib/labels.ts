@@ -688,6 +688,10 @@ const STR_BN = {
   drawerGroupAcademics: "à¦à¦•à¦¾à¦¡à§‡à¦®à¦¿à¦•",
   drawerGroupTrackers: "à¦Ÿà§à¦°à§à¦¯à¦¾à¦•à¦¾à¦°",
   drawerItemDailyTracker: "à¦¦à§ˆà¦¨à¦¿à¦• à¦Ÿà§à¦°à§à¦¯à¦¾à¦•à¦¾à¦°",
+  drawerItemToday: "আজ",
+  myPeriods: "আমার ক্লাস",
+  pendingWork: "বাকি কাজ",
+  quickActions: "দ্রুত কাজ",
   accountMenu: "à¦…à§à¦¯à¦¾à¦•à¦¾à¦‰à¦¨à§à¦Ÿ à¦®à§‡à¦¨à§",
   openMenu: "à¦®à§‡à¦¨à§ à¦–à§à¦²à§à¦¨",
 
@@ -2651,6 +2655,10 @@ const STR_EN: StrTable = {
   drawerGroupAcademics: "Academics",
   drawerGroupTrackers: "Trackers",
   drawerItemDailyTracker: "Daily Tracker",
+  drawerItemToday: "Today",
+  myPeriods: "My periods",
+  pendingWork: "Pending work",
+  quickActions: "Quick actions",
   accountMenu: "Account menu",
   openMenu: "Open menu",
 
