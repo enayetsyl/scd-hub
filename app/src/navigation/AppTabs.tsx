@@ -15,6 +15,8 @@ import { HeaderBackButton } from "@react-navigation/elements";
 import { roleHasPermission } from "@scd/shared";
 
 import type {
+  HomeStackParamList,
+  ClassNotesStackParamList,
   ContentStackParamList,
   QuestionsStackParamList,
   SetsStackParamList,
@@ -50,6 +52,8 @@ import { STR, bnNum } from "../lib/labels";
 import { fonts, radius, space, typeScale, useColors } from "../theme";
 
 import LoginScreen from "../screens/auth/LoginScreen";
+import TodayScreen from "../screens/home/TodayScreen";
+import MyClassNotesScreen from "../screens/classnotes/MyClassNotesScreen";
 import ContentTreeScreen from "../screens/content/ContentTreeScreen";
 import PlanViewScreen from "../screens/content/PlanViewScreen";
 import QuestionBankScreen from "../screens/questions/QuestionBankScreen";
@@ -418,6 +422,30 @@ function useStackOptions() {
 }
 
 // --- Stacks ----------------------------------------------------------------
+
+// Staff landing dashboard (UX-4, D-#265) — registered FIRST in the drawer so a
+// staff login opens on Today; guardians keep their own Home (gpToday) unchanged.
+const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+function HomeNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <HomeStack.Navigator screenOptions={stackOptions}>
+      <HomeStack.Screen name="Today" component={TodayScreen} options={{ title: STR.drawerItemToday }} />
+    </HomeStack.Navigator>
+  );
+}
+
+// Teacher-first Class Notes (UX-8, D-#266): the routine answers class/subject —
+// the caller's own periods only. DailyNote (Routine tab) stays the admin/cover path.
+const ClassNotesStack = createNativeStackNavigator<ClassNotesStackParamList>();
+function ClassNotesNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ClassNotesStack.Navigator screenOptions={stackOptions}>
+      <ClassNotesStack.Screen name="MyClassNotes" component={MyClassNotesScreen} options={{ title: STR.drawerItemClassNotes }} />
+    </ClassNotesStack.Navigator>
+  );
+}
 
 const ContentStack = createNativeStackNavigator<ContentStackParamList>();
 function ContentNavigator(): React.ReactElement {
@@ -949,6 +977,9 @@ export function AppTabs(): React.ReactElement {
   // + self-service is universal; GUARDIAN never sees it. Admin entries inside are
   // permission-gated per slice and re-checked server-side.
   const canHr = !!role && role !== "GUARDIAN";
+  // Today dashboard (UX-4): every staff login lands here; each card inside degrades
+  // to empty/zero server-side when the caller lacks the underlying permission.
+  const canHome = !!role && role !== "GUARDIAN";
   const canAdmin = !!role && (roleHasPermission(role, "content:import") || roleHasPermission(role, "user:manage"));
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
@@ -976,6 +1007,8 @@ export function AppTabs(): React.ReactElement {
           swipeEdgeWidth: 60,
         }}
       >
+        {/* Registered FIRST → the drawer's initial route: staff land on Today (UX-4). */}
+        {canHome ? <Drawer.Screen name="HomeTab" component={HomeNavigator} /> : null}
         {canContent ? <Drawer.Screen name="ContentTab" component={ContentNavigator} /> : null}
         {canQuestions ? <Drawer.Screen name="QuestionsTab" component={QuestionsNavigator} /> : null}
         {canSets ? <Drawer.Screen name="SetsTab" component={SetsNavigator} /> : null}
@@ -985,6 +1018,8 @@ export function AppTabs(): React.ReactElement {
         {canReview ? <Drawer.Screen name="ReviewTab" component={ReviewNavigator} /> : null}
         {canRoutine ? <Drawer.Screen name="RoutineTab" component={RoutineNavigator} /> : null}
         {canAttendance ? <Drawer.Screen name="AttendanceTab" component={AttendanceNavigator} /> : null}
+        {/* UX-8: same gate as the DailyNote path (routine:read). */}
+        {canRoutine ? <Drawer.Screen name="ClassNotesTab" component={ClassNotesNavigator} /> : null}
         {canLibrary ? <Drawer.Screen name="LibraryTab" component={LibraryNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
         {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}

@@ -34,6 +34,7 @@ export function StaffSelect({
       onChange={onChange}
       placeholder={STR.hrSelectStaff}
       emptyText={STR.hrNoStaff}
+      searchable
     />
   );
 }
@@ -64,6 +65,7 @@ export function TeacherSelect({
       onChange={onChange}
       placeholder={placeholder ?? STR.selectTeacher}
       emptyText={STR.noTeachers}
+      searchable
     />
   );
 }

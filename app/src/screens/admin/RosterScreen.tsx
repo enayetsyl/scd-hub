@@ -5,6 +5,7 @@
  * group, and linked guardian contacts. Reuses the shared SectionContext picker.
  */
 import React, { useState } from "react";
+import { FlatList, RefreshControl } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
@@ -28,8 +29,9 @@ import {
 import { STR, classLevelLabel, genderLabel, relationLabel, bnNum } from "../../lib/labels";
 import { getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { usePullRefresh } from "../../lib/useRefresh";
 import { useSectionContext } from "../../state/SectionContext";
-import { space } from "../../theme/tokens";
+import { space, useColors } from "../../theme";
 
 type Nav = NativeStackNavigationProp<AdminStackParamList>;
 
@@ -96,8 +98,13 @@ export default function RosterScreen(): React.ReactElement {
       )
     : students;
 
-  return (
-    <Screen scroll>
+  // UX-7: FlatList (91 students × guardian rows is the app's densest screen)
+  // + pull-to-refresh.
+  const colors = useColors();
+  const { refreshing, onRefresh } = usePullRefresh(fetching, () => refetch({ requestPolicy: "network-only" }));
+
+  const header = (
+    <>
       <H2>{STR.roster}</H2>
 
       {sectionId ? (
@@ -123,24 +130,36 @@ export default function RosterScreen(): React.ReactElement {
         </>
       )}
 
-      {sectionId ? (
-        error ? (
-          <ErrorBanner message={friendlyError(error)} onRetry={() => refetch({ requestPolicy: "network-only" })} />
-        ) : fetching ? (
-          <Loader label={STR.loading} />
-        ) : students.length === 0 ? (
-          <EmptyState message={STR.empty} />
-        ) : (
-          <>
-            <Field label={undefined} value={search} onChangeText={setSearch} placeholder={STR.searchStudents} />
-            {shown.length === 0 ? (
-              <EmptyState message={STR.noMatches} />
-            ) : (
-              shown.map((s) => <StudentCard key={s.id} s={s} />)
-            )}
-          </>
-        )
+      {sectionId && !error && !fetching && students.length > 0 ? (
+        <Field label={undefined} value={search} onChangeText={setSearch} placeholder={STR.searchStudents} />
       ) : null}
+    </>
+  );
+
+  return (
+    <Screen padded={false}>
+      <FlatList
+        data={sectionId && !error && !fetching ? shown : []}
+        keyExtractor={(s) => s.id}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ padding: space(4) }}
+        refreshControl={
+          sectionId ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} /> : undefined
+        }
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          !sectionId ? null : error ? (
+            <ErrorBanner message={friendlyError(error)} onRetry={() => refetch({ requestPolicy: "network-only" })} />
+          ) : fetching ? (
+            <Loader label={STR.loading} />
+          ) : students.length === 0 ? (
+            <EmptyState message={STR.empty} />
+          ) : (
+            <EmptyState message={STR.noMatches} />
+          )
+        }
+        renderItem={({ item: s }) => <StudentCard s={s} />}
+      />
     </Screen>
   );
 }

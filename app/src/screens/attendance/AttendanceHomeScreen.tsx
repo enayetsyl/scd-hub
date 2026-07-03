@@ -12,7 +12,8 @@ import { useQuery } from "urql";
 import { roleHasPermission } from "@scd/shared";
 import { MY_MARKING_SECTIONS } from "../../graphql/operations";
 import type { AttendanceStackParamList } from "../../navigation/types";
-import { Screen, H2, Body, Muted, Card, Badge, Field, Loader, EmptyState, ErrorBanner } from "../../components/ui";
+import { Screen, H2, Body, Muted, Card, Badge, Loader, EmptyState, ErrorBanner } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
@@ -60,7 +61,7 @@ export default function AttendanceHomeScreen({ navigation }: Props): React.React
       {canMark ? (
         <>
           <H2>{STR.attMySections}</H2>
-          <Field label={STR.attDate} value={dateKey} onChangeText={setDateKey} placeholder="YYYY-MM-DD" />
+          <DateField label={STR.attDate} value={dateKey} onChange={setDateKey} />
           {sectionsQ.error ? (
             <ErrorBanner message={friendlyError(sectionsQ.error)} onRetry={() => refetch({ requestPolicy: "network-only" })} />
           ) : sectionsQ.fetching && sections.length === 0 ? (

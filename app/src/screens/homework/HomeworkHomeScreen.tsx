@@ -9,20 +9,15 @@
  * Checking keep working unchanged. The date is a real calendar (DateField, web + phone).
  */
 import React, { useMemo, useState, useRef, useCallback } from "react";
-import { View, Pressable, ScrollView } from "react-native";
+import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "urql";
-import { roleHasPermission, HW_DAILY_CEILING_MIN } from "@scd/shared";
+import { HW_DAILY_CEILING_MIN } from "@scd/shared";
 import {
   HOMEWORK_DAY_TALLY,
   HOMEWORK_SUMMARY,
   HOMEWORK_CLASS_OVERVIEW,
-  CLASSES_QUERY,
-  MY_ROUTINE_QUERY,
-  MY_SCOPES_QUERY,
-  MY_SECTIONS_AS_CLASS_TEACHER_QUERY,
-  type ClassT,
   type HwClassRefInput,
 } from "../../graphql/operations";
 import type { HomeworkStackParamList } from "../../navigation/types";
@@ -38,7 +33,12 @@ import {
   ErrorBanner,
 } from "../../components/ui";
 import { DateField } from "../../components/DateField";
-import { STR, bnNum, hwSubjectLabel, classLevelLabel, getActiveLang } from "../../lib/labels";
+import {
+  ClassSectionDashboard,
+  useAccessibleClasses,
+  type ClassBadge,
+} from "../../components/ClassSectionDashboard";
+import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useSectionContext } from "../../state/SectionContext";
@@ -48,65 +48,16 @@ type Props = NativeStackScreenProps<HomeworkStackParamList, "HomeworkHome">;
 
 const today = (): string => new Date().toISOString().slice(0, 10);
 
-/** Compact class label for the buttons: N / K / Bengali digit. */
-function shortClassLabel(level: number): string {
-  if (level === -1) return "N";
-  if (level === 0) return "K";
-  return bnNum(level);
-}
-
-type Section = ClassT["sections"][number];
-interface MyClass {
-  cls: ClassT;
-  sections: Section[];
-}
-
 export default function HomeworkHomeScreen({ navigation }: Props): React.ReactElement {
   const colors = useColors();
-  const { role, user } = useAuth();
-  const { selection, setSection } = useSectionContext();
-  const lang = getActiveLang();
-  const ayId = selection.academicYearId;
-  // Principal/Office (roster:manage) AND school-wide homework supervisors see ALL classes —
-  // a supervisor must be able to reach (and reconcile) any class, not just their own.
-  const isAdmin = (!!role && roleHasPermission(role, "roster:manage")) || !!user?.homeworkSupervisor;
+  const { user } = useAuth();
+  const { selection } = useSectionContext();
 
   const [date, setDate] = useState(today());
-  // The class whose buttons are in focus (so a multi-section class can show its section
-  // row before a section is chosen). Falls back to the persisted selection.
-  const [activeClassId, setActiveClassId] = useState<string | null>(selection.classId);
 
-  // Sources for "which classes" — mirrors SectionPickerScreen's recipe.
-  const [{ data: classesData, fetching: classesFetching, error: classesError }] = useQuery({
-    query: CLASSES_QUERY,
-    variables: { academicYearId: ayId ?? "" },
-    pause: !ayId,
-  });
-  const [{ data: routineData }] = useQuery({ query: MY_ROUTINE_QUERY, pause: isAdmin });
-  const [{ data: scopeData }] = useQuery({ query: MY_SCOPES_QUERY, pause: isAdmin });
-  const [{ data: ctData }] = useQuery({ query: MY_SECTIONS_AS_CLASS_TEACHER_QUERY, pause: isAdmin });
-
-  const classes = classesData?.classes ?? [];
-
-  // The caller's accessible classes (grouped with their accessible sections).
-  const myClasses = useMemo<MyClass[]>(() => {
-    if (isAdmin) {
-      return classes
-        .map((cls) => ({ cls, sections: cls.sections.filter((s) => s.active) }))
-        .filter((x) => x.sections.length > 0)
-        .sort((a, b) => a.cls.level - b.cls.level);
-    }
-    const ids = new Set<string>();
-    for (const g of scopeData?.myScopes ?? []) if (g.active && g.sectionId) ids.add(g.sectionId);
-    for (const s of ctData?.mySectionsAsClassTeacher ?? []) ids.add(s.id);
-    for (const slot of routineData?.myRoutineSlots ?? []) {
-      if (slot.groupType === "section" && slot.groupId) ids.add(slot.groupId);
-    }
-    return classes
-      .map((cls) => ({ cls, sections: cls.sections.filter((s) => ids.has(s.id)) }))
-      .filter((x) => x.sections.length > 0)
-      .sort((a, b) => a.cls.level - b.cls.level);
-  }, [classes, isAdmin, routineData, scopeData, ctData]);
+  // The caller's accessible classes — the shared UX-5 hook (also feeds the badge refs).
+  const accessible = useAccessibleClasses();
+  const { myClasses, isAdmin } = accessible;
 
   // Per-class cumulative badges (one ref per class, any accessible section authorizes).
   const refs = useMemo<HwClassRefInput[]>(
@@ -123,6 +74,18 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
     for (const o of overviewQ.data?.homeworkClassOverview ?? []) m.set(o.classId, o);
     return m;
   }, [overviewQ.data]);
+  // Per-class badge for the dashboard buttons: pending-checking count; red when
+  // chases are open, amber when resubmissions are.
+  const badges = useMemo(() => {
+    const m = new Map<string, ClassBadge>();
+    for (const [classId, ov] of overviewByClass) {
+      m.set(classId, {
+        count: ov.pendingChecking,
+        tone: ov.activeChases > 0 ? "danger" : ov.openResubmissions > 0 ? "warn" : "muted",
+      });
+    }
+    return m;
+  }, [overviewByClass]);
 
   // The selected class+section detail (existing day-tally + summary).
   const hasSection = !!(selection.classId && selection.sectionId);
@@ -150,37 +113,8 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
     }, [refs.length, hasSection, refetchOverview, refetchTally, refetchSum]),
   );
 
-  function pickSection(m: MyClass, s: Section): void {
-    setSection({
-      classId: m.cls.id,
-      sectionId: s.id,
-      classLevel: m.cls.level,
-      classNameBn: m.cls.nameBn,
-      sectionCode: s.code,
-      sectionNameBn: s.nameBn,
-    });
-  }
-
-  function onClassPress(m: MyClass): void {
-    setActiveClassId(m.cls.id);
-    if (m.sections.length === 1) {
-      pickSection(m, m.sections[0]); // single section → auto-select, no section row
-    } else {
-      // multi-section → require a section pick; clear any stale section so the detail hides
-      setSection({
-        classId: m.cls.id,
-        sectionId: null,
-        classLevel: m.cls.level,
-        classNameBn: m.cls.nameBn,
-        sectionCode: null,
-        sectionNameBn: null,
-      });
-    }
-  }
-
-  const activeClass = myClasses.find((m) => m.cls.id === activeClassId) ?? null;
-  const showSectionRow = !!activeClass && activeClass.sections.length > 1;
-  const selectedSection = activeClass?.sections.find((s) => s.id === selection.sectionId) ?? null;
+  const selectedSection =
+    myClasses.find((m) => m.cls.id === selection.classId)?.sections.find((s) => s.id === selection.sectionId) ?? null;
   const canReconcileHomework =
     isAdmin || (!!selectedSection && (selectedSection.classTeacherId === user?.id || selectedSection.homeworkConfirmerId === user?.id));
 
@@ -193,83 +127,8 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
         <DateField label={STR.hwDate} value={date} onChange={setDate} />
-
-        {/* Class buttons (the caller's assigned classes) with cumulative badges */}
-        <Muted>{STR.hwClassLabel}</Muted>
-        {classesError ? (
-          <ErrorBanner message={friendlyError(classesError)} />
-        ) : classesFetching && classes.length === 0 ? (
-          <Loader label={STR.loading} />
-        ) : myClasses.length === 0 ? (
-          <EmptyState message={STR.empty} />
-        ) : (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: space(1) }}>
-            {myClasses.map((m) => {
-              const ov = overviewByClass.get(m.cls.id);
-              const selected = selection.classId === m.cls.id || activeClassId === m.cls.id;
-              const tone = ov && ov.activeChases > 0 ? "danger" : ov && ov.openResubmissions > 0 ? "warn" : "muted";
-              return (
-                <Pressable
-                  key={m.cls.id}
-                  onPress={() => onClassPress(m)}
-                  accessibilityRole="button"
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
-                    paddingVertical: space(2),
-                    paddingHorizontal: space(3),
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: selected ? colors.primary : colors.border,
-                    backgroundColor: selected ? colors.primaryContainer : colors.surface,
-                    marginRight: space(2),
-                    marginBottom: space(2),
-                  }}
-                >
-                  <Body style={{ fontWeight: "700", color: selected ? colors.onPrimaryContainer : colors.textPrimary }}>
-                    {shortClassLabel(m.cls.level)}
-                  </Body>
-                  {ov && ov.pendingChecking > 0 ? <Badge text={bnNum(ov.pendingChecking)} tone={tone} /> : null}
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Section row — only when the active class has more than one accessible section */}
-        {showSectionRow ? (
-          <>
-            <Muted style={{ marginTop: space(1) }}>{STR.hwSectionLabel}</Muted>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: space(1) }}>
-              {activeClass!.sections.map((s) => {
-                const selected = selection.sectionId === s.id;
-                const sectionLabel = lang === "en" ? s.code : s.nameBn;
-                return (
-                  <Pressable
-                    key={s.id}
-                    onPress={() => pickSection(activeClass!, s)}
-                    accessibilityRole="button"
-                    style={{
-                      paddingVertical: space(2),
-                      paddingHorizontal: space(3),
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: selected ? colors.primary : colors.border,
-                      backgroundColor: selected ? colors.primaryContainer : colors.surface,
-                      marginRight: space(2),
-                      marginBottom: space(2),
-                    }}
-                  >
-                    <Body style={{ color: selected ? colors.onPrimaryContainer : colors.textPrimary }}>
-                      {sectionLabel} {lang === "en" ? "" : `(${s.code})`}
-                    </Body>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </>
-        ) : null}
+        {/* The house class-button dashboard (UX-5) with the homework badge counts. */}
+        <ClassSectionDashboard myClasses={accessible} badges={badges} />
       </View>
 
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: space(4), paddingTop: space(2) }}>
@@ -360,11 +219,11 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
               </Card>
             ) : null}
 
-            {/* Actions */}
+            {/* Actions — the chosen date rides along (R-Context: never re-ask). */}
             <View style={{ gap: space(2), marginTop: space(2) }}>
-              <Button title={STR.hwDeclare} onPress={() => navigation.navigate("DeclareHomework")} />
+              <Button title={STR.hwDeclare} onPress={() => navigation.navigate("DeclareHomework", { date })} />
               {canReconcileHomework ? (
-                <Button title={STR.hwReconcile} variant="secondary" onPress={() => navigation.navigate("HomeworkReconcile")} />
+                <Button title={STR.hwReconcile} variant="secondary" onPress={() => navigation.navigate("HomeworkReconcile", { date })} />
               ) : null}
               <Button title={STR.hwRecords} variant="secondary" onPress={() => navigation.navigate("HomeworkRecords")} />
               <Button title={STR.hwChecking} variant="secondary" onPress={() => navigation.navigate("CheckingQueue")} />

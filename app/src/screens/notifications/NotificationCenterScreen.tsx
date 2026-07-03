@@ -11,7 +11,7 @@
  *     count snaps without waiting for the next poll
  */
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, FlatList, RefreshControl } from "react-native";
 import { useMutation, useQuery } from "urql";
 import {
   MY_NOTIFICATIONS_QUERY,
@@ -25,6 +25,7 @@ import { notificationTarget } from "../../lib/notificationNav";
 import { Screen, Card, Body, Muted, Badge, Button, Loader, EmptyState, ErrorBanner } from "../../components/ui";
 import { STR, notificationKindLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { usePullRefresh } from "../../lib/useRefresh";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
 
@@ -36,7 +37,7 @@ interface RootNav {
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-/** Local short timestamp (YYYY-MM-DD HH:mm), Bangla digits in Bangla mode. */
+/** Local short timestamp (ISO date + HH:mm), Bangla digits in Bangla mode. */
 function shortTime(iso: string): string {
   const d = new Date(iso);
   return bnNum(
@@ -83,31 +84,44 @@ export default function NotificationCenterScreen({ navigation }: { navigation: R
     refetch({ requestPolicy: "network-only" });
   };
 
-  return (
-    <Screen scroll>
-      {unread > 0 ? (
-        <View style={{ marginBottom: space(3) }}>
-          <Button
-            title={STR.notifMarkAllRead}
-            variant="secondary"
-            onPress={() => void onMarkAll()}
-            disabled={markAllState.fetching}
-          />
-        </View>
-      ) : null}
+  // UX-7: pull-to-refresh + FlatList (this inbox is the app's fastest-growing list).
+  const { refreshing, onRefresh } = usePullRefresh(fetching, () => {
+    refresh();
+    refetch({ requestPolicy: "network-only" });
+  });
 
-      {error ? (
-        <ErrorBanner message={friendlyError(error)} onRetry={() => refetch({ requestPolicy: "network-only" })} />
-      ) : fetching && rows.length === 0 ? (
-        <Loader label={STR.loading} />
-      ) : sorted.length === 0 ? (
-        <EmptyState message={STR.notifEmpty} />
-      ) : (
-        sorted.map((row) => {
+  return (
+    <Screen padded={false}>
+      <FlatList
+        data={sorted}
+        keyExtractor={(row) => row.id}
+        contentContainerStyle={{ flexGrow: 1, padding: space(4) }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        ListHeaderComponent={
+          unread > 0 ? (
+            <View style={{ marginBottom: space(3) }}>
+              <Button
+                title={STR.notifMarkAllRead}
+                variant="secondary"
+                onPress={() => void onMarkAll()}
+                disabled={markAllState.fetching}
+              />
+            </View>
+          ) : null
+        }
+        ListEmptyComponent={
+          error ? (
+            <ErrorBanner message={friendlyError(error)} onRetry={() => refetch({ requestPolicy: "network-only" })} />
+          ) : fetching && rows.length === 0 ? (
+            <Loader label={STR.loading} />
+          ) : (
+            <EmptyState message={STR.notifEmpty} />
+          )
+        }
+        renderItem={({ item: row }) => {
           const isUnread = !row.readAt;
           return (
             <Card
-              key={row.id}
               onPress={() => void onRowPress(row)}
               style={isUnread ? { borderColor: colors.primary, borderWidth: 1 } : undefined}
             >
@@ -122,8 +136,8 @@ export default function NotificationCenterScreen({ navigation }: { navigation: R
               </View>
             </Card>
           );
-        })
-      )}
+        }}
+      />
     </Screen>
   );
 }

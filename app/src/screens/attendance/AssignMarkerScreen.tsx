@@ -15,12 +15,14 @@ import {
   SECTION_MARKER_ASSIGNMENTS,
 } from "../../graphql/operations";
 import type { AttendanceStackParamList } from "../../navigation/types";
-import { Screen, H2, Body, Muted, Card, Button, Field, Notice, Divider, EmptyState } from "../../components/ui";
+import { Screen, H2, Body, Muted, Card, Button, Notice, Divider, EmptyState } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { TeacherSelect } from "../../components/selects";
 import { SectionBar } from "../../components/SectionBar";
 import { STR, classLevelLabel, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AttendanceStackParamList, "AssignMarker">;
@@ -32,6 +34,7 @@ const todayKey = (): string => {
 
 export default function AssignMarkerScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
+  const { confirmAction } = useConfirm();
   const lang = getActiveLang();
   const [teacherId, setTeacherId] = useState("");
   const [fromKey, setFromKey] = useState(todayKey());
@@ -66,6 +69,7 @@ export default function AssignMarkerScreen({ navigation }: Props): React.ReactEl
   }
 
   async function onRevoke(assignmentId: string): Promise<void> {
+    if (!(await confirmAction({ confirmLabel: STR.attRevoke }))) return;
     setBusy(true);
     setError(null);
     setOk(null);
@@ -85,8 +89,8 @@ export default function AssignMarkerScreen({ navigation }: Props): React.ReactEl
       {hasSection ? (
         <Card>
           <TeacherSelect label={STR.attMarkerWord} value={teacherId} onChange={setTeacherId} />
-          <Field label={STR.attLeaveFrom} value={fromKey} onChangeText={setFromKey} placeholder="YYYY-MM-DD" />
-          <Field label={STR.attLeaveTo} value={toKey} onChangeText={setToKey} placeholder="YYYY-MM-DD" />
+          <DateField label={STR.attLeaveFrom} value={fromKey} onChange={setFromKey} />
+          <DateField label={STR.attLeaveTo} value={toKey} onChange={setToKey} min={fromKey || undefined} />
           <Button title={STR.attAssign} onPress={onAssign} loading={busy} disabled={!teacherId} />
         </Card>
       ) : (

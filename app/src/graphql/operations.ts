@@ -1982,6 +1982,32 @@ export const MY_ROUTINE_QUERY = gql<{ myRoutineSlots: RoutineSlotT[] }, NoVars>`
   }
 `;
 
+// UX-4 (D-#265): the staff Today dashboard — ONE read composing the caller's own
+// periods for the date, summed homework work counts, and the attendance-pending flag.
+export interface MyDayHomeworkT {
+  pendingChecking: number;
+  openResubmissions: number;
+  activeChases: number;
+}
+export interface MyDayT {
+  date: string;
+  dayType: string;
+  slots: RoutineSlotT[];
+  homework: MyDayHomeworkT;
+  attendancePending: boolean;
+}
+export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
+  query MyDay($date: String!) {
+    myDay(date: $date) {
+      date
+      dayType
+      slots { ${ROUTINE_SLOT_FIELDS} }
+      homework { pendingChecking openResubmissions activeChases }
+      attendancePending
+    }
+  }
+`;
+
 // Master grid (admin overview): all groups × periods for one day + conflicts.
 export interface RoutineMasterColumnT { periodNumber: number; startTime: string | null; endTime: string | null; isBreak: boolean; }
 export interface RoutineMasterRowT { groupType: string; groupId: string; label: string; sublabel: string | null; }

@@ -20,6 +20,7 @@ import {
 } from "../../graphql/operations";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Field, Chip, ChipRow, Select, Loader, Notice } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { STR, bnNum, hwSubjectLabel, dayOfWeekLabel, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -133,7 +134,7 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
 
             <Card>
               <Body style={{ fontWeight: "700", marginBottom: 8 }}>{STR.asScheduleTitle}</Body>
-              <Field label={STR.asTermStart} value={termStartValue} onChangeText={setTermStart} placeholder="YYYY-MM-DD" />
+              <DateField label={STR.asTermStart} value={termStartValue} onChange={setTermStart} />
               <Muted style={{ marginTop: 4 }}>{STR.asDeliveryDay}</Muted>
               <ChipRow>
                 {ANCHOR_DAYS.map((d) => (
@@ -192,6 +193,7 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
                     options={teachers.map((t) => ({ label: t.name, value: t.id }))}
                     onChange={setTeacherId}
                     placeholder={STR.asTeacher}
+                    searchable
                   />
                   <View style={{ marginTop: 8 }}>
                     <Button title={STR.asAddEntry} onPress={onAddEntry} loading={busy} disabled={busy} />

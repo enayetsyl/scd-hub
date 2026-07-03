@@ -13,11 +13,14 @@ import {
   Pressable,
   ActivityIndicator,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
   useWindowDimensions,
   type ViewStyle,
   type TextStyle,
   type StyleProp,
   type KeyboardTypeOptions,
+  type TextInputProps,
 } from "react-native";
 import { StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -44,6 +47,7 @@ export function Screen({
   padded = true,
   wide = false,
   style,
+  refreshControl,
 }: {
   children: React.ReactNode;
   scroll?: boolean;
@@ -51,6 +55,8 @@ export function Screen({
   /** Web/desktop: widen the centered frame for data-grid screens (master routine grid). */
   wide?: boolean;
   style?: StyleProp<ViewStyle>;
+  /** UX-7: pull-to-refresh for scroll screens — passed through to the ScrollView. */
+  refreshControl?: React.ReactElement;
 }): React.ReactElement {
   const styles = useStyles();
   const { width } = useWindowDimensions();
@@ -62,6 +68,7 @@ export function Screen({
     <ScrollView
       contentContainerStyle={[padded && styles.padded, style]}
       keyboardShouldPersistTaps="handled"
+      refreshControl={refreshControl}
     >
       {children}
     </ScrollView>
@@ -70,7 +77,15 @@ export function Screen({
   );
   return (
     <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
-      <View style={wide || expanded ? styles.frameWide : styles.frame}>{inner}</View>
+      {/* UX-7: bottom fields + Submit stay visible above the keyboard — one wrap,
+          app-wide effect. No-op on web (the browser handles its own viewport). */}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        enabled={Platform.OS !== "web"}
+      >
+        <View style={wide || expanded ? styles.frameWide : styles.frame}>{inner}</View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -292,7 +307,9 @@ export function Field({
   onChangeText,
   placeholder,
   secureTextEntry,
+  secureToggle = false,
   keyboardType,
+  autoComplete,
   multiline,
   autoCapitalize = "none",
   editable = true,
@@ -304,7 +321,10 @@ export function Field({
   onChangeText: (t: string) => void;
   placeholder?: string;
   secureTextEntry?: boolean;
+  /** UX-7: render a 👁 show/hide toggle on a secure field (password entry). */
+  secureToggle?: boolean;
   keyboardType?: KeyboardTypeOptions;
+  autoComplete?: TextInputProps["autoComplete"];
   multiline?: boolean;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   editable?: boolean;
@@ -313,26 +333,43 @@ export function Field({
 }): React.ReactElement {
   const styles = useStyles();
   const colors = useColors();
+  const [hidden, setHidden] = React.useState(true);
+  const secure = secureToggle ? hidden : secureTextEntry;
   return (
     <View style={styles.fieldWrap}>
       {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
-      <TextInput
-        style={[
-          styles.input,
-          multiline && styles.inputMultiline,
-          !editable && styles.inputDisabled,
-          !!error && styles.inputError,
-        ]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textSecondary}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
-        multiline={multiline}
-        autoCapitalize={autoCapitalize}
-        editable={editable}
-      />
+      <View>
+        <TextInput
+          style={[
+            styles.input,
+            multiline && styles.inputMultiline,
+            !editable && styles.inputDisabled,
+            !!error && styles.inputError,
+            secureToggle && { paddingRight: space(10) },
+          ]}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textSecondary}
+          secureTextEntry={secure}
+          keyboardType={keyboardType}
+          autoComplete={autoComplete}
+          multiline={multiline}
+          autoCapitalize={autoCapitalize}
+          editable={editable}
+        />
+        {secureToggle ? (
+          <Pressable
+            onPress={() => setHidden((h) => !h)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={hidden ? "Show password" : "Hide password"}
+            style={styles.secureToggle}
+          >
+            <Text style={{ fontSize: 18 }}>{hidden ? "👁️" : "🙈"}</Text>
+          </Pressable>
+        ) : null}
+      </View>
       {error ? (
         <Text style={styles.fieldError}>⚠ {error}</Text>
       ) : helper ? (
@@ -342,8 +379,13 @@ export function Field({
   );
 }
 
+/** Case/whitespace-insensitive match text (works for Bangla as a plain substring). */
+const normalizeSearch = (s: string): string => s.toLowerCase().replace(/\s+/g, "");
+
 /** A tap-to-expand dropdown styled like Field. Options list inline below the
- *  trigger (scrolls past ~6 rows); picking one closes the menu. */
+ *  trigger (scrolls past ~6 rows); picking one closes the menu. `searchable`
+ *  (UX-1 house rule R-Search — required beyond ~10 options) pins a filter input
+ *  above the list that narrows by label + hint as the user types. */
 export function Select<T extends string>({
   label,
   value,
@@ -352,6 +394,8 @@ export function Select<T extends string>({
   placeholder,
   emptyText,
   helper,
+  error,
+  searchable = false,
 }: {
   label?: string;
   value: T | null;
@@ -360,18 +404,32 @@ export function Select<T extends string>({
   placeholder?: string;
   emptyText?: string;
   helper?: string;
+  error?: string;
+  searchable?: boolean;
 }): React.ReactElement {
   const styles = useStyles();
   const colors = useColors();
   const [open, setOpen] = React.useState(false);
+  const [filter, setFilter] = React.useState("");
   const selected = options.find((o) => o.value === value) ?? null;
+  const q = normalizeSearch(filter);
+  const shown =
+    searchable && q !== ""
+      ? options.filter(
+          (o) => normalizeSearch(o.label).includes(q) || (o.hint ? normalizeSearch(o.hint).includes(q) : false),
+        )
+      : options;
+  function toggle(): void {
+    setFilter("");
+    setOpen((o) => !o);
+  }
   return (
     <View style={styles.fieldWrap}>
       {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
       <Pressable
-        onPress={() => setOpen((o) => !o)}
+        onPress={toggle}
         hitSlop={4}
-        style={({ pressed }) => [styles.select, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.select, !!error && styles.inputError, pressed && styles.pressed]}
       >
         <Text style={[styles.selectText, !selected && { color: colors.textSecondary }]} numberOfLines={1}>
           {selected ? selected.label : placeholder ?? ""}
@@ -379,42 +437,58 @@ export function Select<T extends string>({
         <Text style={styles.selectChevron}>{open ? "▴" : "▾"}</Text>
       </Pressable>
       {open ? (
-        options.length === 0 ? (
-          <View style={styles.selectMenu}>
+        <View style={styles.selectMenu}>
+          {searchable && options.length > 0 ? (
+            <TextInput
+              style={styles.selectSearch}
+              value={filter}
+              onChangeText={setFilter}
+              placeholder="🔍"
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          ) : null}
+          {shown.length === 0 ? (
             <Text style={styles.selectEmpty}>{emptyText ?? placeholder ?? ""}</Text>
-          </View>
-        ) : (
-          <ScrollView style={styles.selectMenu} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-            {options.map((o) => {
-              const isSel = o.value === value;
-              return (
-                <Pressable
-                  key={o.value}
-                  onPress={() => {
-                    onChange(o.value);
-                    setOpen(false);
-                  }}
-                  style={({ pressed }) => [
-                    styles.selectOption,
-                    isSel && styles.selectOptionOn,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text style={[styles.selectOptionText, isSel && styles.selectOptionTextOn]} numberOfLines={1}>
-                    {o.label}
-                  </Text>
-                  {o.hint ? (
-                    <Text style={styles.selectOptionHint} numberOfLines={1}>
-                      {o.hint}
+          ) : (
+            <ScrollView style={styles.selectScroll} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+              {shown.map((o) => {
+                const isSel = o.value === value;
+                return (
+                  <Pressable
+                    key={o.value}
+                    onPress={() => {
+                      onChange(o.value);
+                      setFilter("");
+                      setOpen(false);
+                    }}
+                    style={({ pressed }) => [
+                      styles.selectOption,
+                      isSel && styles.selectOptionOn,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={[styles.selectOptionText, isSel && styles.selectOptionTextOn]} numberOfLines={1}>
+                      {o.label}
                     </Text>
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        )
+                    {o.hint ? (
+                      <Text style={styles.selectOptionHint} numberOfLines={1}>
+                        {o.hint}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
       ) : null}
-      {helper ? <Text style={styles.fieldHelper}>{helper}</Text> : null}
+      {error ? (
+        <Text style={styles.fieldError}>⚠ {error}</Text>
+      ) : helper ? (
+        <Text style={styles.fieldHelper}>{helper}</Text>
+      ) : null}
     </View>
   );
 }
@@ -593,6 +667,15 @@ const useStyles = makeStyles((colors) => ({
   inputMultiline: { minHeight: 120, textAlignVertical: "top" },
   inputDisabled: { backgroundColor: colors.surfaceAlt, color: colors.textSecondary },
   inputError: { borderColor: colors.error },
+  secureToggle: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   select: {
     minHeight: 48,
@@ -611,13 +694,23 @@ const useStyles = makeStyles((colors) => ({
   selectChevron: { ...typeScale.body, color: colors.textSecondary },
   selectMenu: {
     marginTop: space(1),
-    maxHeight: 260,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
+    overflow: "hidden",
   },
+  selectScroll: { maxHeight: 260 },
   selectEmpty: { ...typeScale.secondary, color: colors.textSecondary, padding: space(3) },
+  selectSearch: {
+    minHeight: 44,
+    paddingHorizontal: space(3),
+    paddingVertical: space(2),
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    ...typeScale.body,
+    color: colors.textPrimary,
+  },
   selectOption: {
     minHeight: 44,
     justifyContent: "center",

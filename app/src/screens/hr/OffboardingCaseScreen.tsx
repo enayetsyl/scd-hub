@@ -52,6 +52,7 @@ import {
   payAdditionTypeLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HrStackParamList, "OffboardingCase">;
@@ -64,6 +65,7 @@ function SettlementLineRow({ label, line }: { label: string; line: SettlementLin
 
 export default function OffboardingCaseScreen({ route }: Props): React.ReactElement {
   const { caseId } = route.params;
+  const { confirmAction } = useConfirm();
   const { role } = useAuth();
   const canCompute = !!role && roleHasPermission(role, "payroll:manage");
   const canRelease = !!role && roleHasPermission(role, "payroll:approve");
@@ -221,9 +223,10 @@ export default function OffboardingCaseScreen({ route }: Props): React.ReactElem
             <Button
               title={STR.hrRevokeAccess}
               variant="danger"
-              onPress={() =>
-                run(() => revoke({ caseId }), (d) => (d as { revokeOffboardingAccess?: unknown }).revokeOffboardingAccess, STR.hrAccessRevokedMsg)
-              }
+              onPress={async () => {
+                if (!(await confirmAction({ confirmLabel: STR.hrRevokeAccess }))) return;
+                void run(() => revoke({ caseId }), (d) => (d as { revokeOffboardingAccess?: unknown }).revokeOffboardingAccess, STR.hrAccessRevokedMsg);
+              }}
               disabled={busy}
             />
           </View>
@@ -360,9 +363,10 @@ export default function OffboardingCaseScreen({ route }: Props): React.ReactElem
           <Button
             title={STR.hrCancelOffboarding}
             variant="danger"
-            onPress={() =>
-              run(() => cancel({ caseId }), (d) => (d as { cancelOffboarding?: unknown }).cancelOffboarding, STR.hrOffboardingCancelled)
-            }
+            onPress={async () => {
+              if (!(await confirmAction({ confirmLabel: STR.hrCancelOffboarding }))) return;
+              void run(() => cancel({ caseId }), (d) => (d as { cancelOffboarding?: unknown }).cancelOffboarding, STR.hrOffboardingCancelled);
+            }}
             disabled={busy}
           />
         </View>

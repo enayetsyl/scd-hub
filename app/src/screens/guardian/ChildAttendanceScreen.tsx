@@ -6,7 +6,8 @@ import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
 import { CHILD_ATTENDANCE_HISTORY_QUERY } from "../../graphql/operations";
-import { Screen, Body, Muted, Card, Badge, Field, Loader, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Badge, Loader, EmptyState } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { STR, bnNum, dateHeaderLabel, getActiveLang } from "../../lib/labels";
@@ -80,10 +81,10 @@ export default function ChildAttendanceScreen(): React.ReactElement {
           <Muted style={{ marginTop: space(1) }}>{STR.open}</Muted>
           <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
             <View style={{ flex: 1 }}>
-              <Field label={STR.attFrom} value={fromKey} onChangeText={setFromKey} placeholder="YYYY-MM-DD" />
+              <DateField label={STR.attFrom} value={fromKey} onChange={setFromKey} />
             </View>
             <View style={{ flex: 1 }}>
-              <Field label={STR.attTo} value={toKey} onChangeText={setToKey} placeholder="YYYY-MM-DD" />
+              <DateField label={STR.attTo} value={toKey} onChange={setToKey} min={fromKey || undefined} />
             </View>
           </View>
         </Card>

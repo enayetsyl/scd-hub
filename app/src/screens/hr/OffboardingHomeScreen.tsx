@@ -33,6 +33,7 @@ import {
   Notice,
 } from "../../components/ui";
 import { StaffSelect } from "../../components/selects";
+import { DateField } from "../../components/DateField";
 import { STR, bnNum, offboardingTriggerLabel, offboardingStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -107,8 +108,8 @@ export default function OffboardingHomeScreen({ navigation }: Props): React.Reac
           onChange={setTrigger}
           placeholder={STR.hrTrigger}
         />
-        <Field label={STR.hrLastWorkingDay} value={lastDay} onChangeText={setLastDay} placeholder="2026-07-31" helper={STR.hrDateHint} />
-        <Field label={STR.hrNoticeDate} value={noticeDate} onChangeText={setNoticeDate} placeholder="2026-06-30" helper={STR.hrDateHint} />
+        <DateField label={STR.hrLastWorkingDay} value={lastDay} onChange={setLastDay} helper={STR.hrDateHint} />
+        <DateField label={STR.hrNoticeDate} value={noticeDate} onChange={setNoticeDate} helper={STR.hrDateHint} />
         <Button title={STR.hrInitiate} onPress={runInitiate} loading={busy} disabled={busy || !valid} />
       </Card>
 

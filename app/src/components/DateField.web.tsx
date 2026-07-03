@@ -10,11 +10,15 @@ import { radius, space } from "../theme/tokens";
 
 export interface DateFieldProps {
   label?: string;
-  value: string; // YYYY-MM-DD
+  value: string; // YYYY-MM-DD ("" = unset)
   onChange: (v: string) => void;
+  min?: string; // YYYY-MM-DD
+  max?: string; // YYYY-MM-DD
+  helper?: string;
+  error?: string;
 }
 
-export function DateField({ label, value, onChange }: DateFieldProps): React.ReactElement {
+export function DateField({ label, value, onChange, min, max, helper, error }: DateFieldProps): React.ReactElement {
   const c = useColors();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -36,7 +40,7 @@ export function DateField({ label, value, onChange }: DateFieldProps): React.Rea
           flexDirection: "row",
           alignItems: "center",
           borderWidth: 1,
-          borderColor: c.border,
+          borderColor: error ? c.error : c.border,
           borderRadius: radius.md,
           backgroundColor: c.surface,
           paddingHorizontal: space(3),
@@ -52,6 +56,8 @@ export function DateField({ label, value, onChange }: DateFieldProps): React.Rea
           ref={inputRef}
           type="date"
           value={value}
+          min={min}
+          max={max}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.currentTarget.value)}
           aria-label={label ?? "Date picker"}
           tabIndex={-1}
@@ -70,6 +76,11 @@ export function DateField({ label, value, onChange }: DateFieldProps): React.Rea
           }}
         />
       </Pressable>
+      {error ? (
+        <Text style={{ color: c.error, fontSize: 13, marginTop: space(1) }}>⚠ {error}</Text>
+      ) : helper ? (
+        <Text style={{ color: c.textSecondary, fontSize: 13, marginTop: space(1) }}>{helper}</Text>
+      ) : null}
     </View>
   );
 }

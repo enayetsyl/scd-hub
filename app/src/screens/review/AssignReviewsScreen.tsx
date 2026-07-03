@@ -201,6 +201,7 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
         options={teacherOptions}
         onChange={setReviewerId}
         placeholder={STR.rvPickReviewer}
+        searchable
       />
 
       <Muted style={{ marginTop: space(2) }}>{STR.subject}</Muted>

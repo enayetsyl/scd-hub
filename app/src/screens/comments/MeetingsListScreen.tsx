@@ -11,6 +11,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { PARENT_MEETINGS_QUERY, CREATE_PARENT_MEETING } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Button, Badge, Field, Loader, Notice } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { STR, meetingStatusLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -74,7 +75,7 @@ export default function MeetingsListScreen(): React.ReactElement {
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.cmNewMeeting}</Body>
           <Field label={STR.cmInstanceLabel} value={instanceLabel} onChangeText={setInstanceLabel} />
-          <Field label={STR.cmMeetingDate} value={meetingDate} onChangeText={setMeetingDate} placeholder="YYYY-MM-DD" />
+          <DateField label={STR.cmMeetingDate} value={meetingDate} onChange={setMeetingDate} />
           <Field label={STR.cmSlotMinutes} value={slotMinutes} onChangeText={setSlotMinutes} keyboardType="number-pad" />
           <Field
             label={STR.cmDayStartMinutes}

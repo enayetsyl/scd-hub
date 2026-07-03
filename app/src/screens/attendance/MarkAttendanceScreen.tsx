@@ -10,9 +10,10 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { ROSTER_QUERY, SECTION_ATTENDANCE, MARK_SECTION_ATTENDANCE } from "../../graphql/operations";
 import type { AttendanceStackParamList } from "../../navigation/types";
-import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Button, Notice, Loader, EmptyState, ErrorBanner } from "../../components/ui";
+import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Button, Loader, EmptyState, ErrorBanner } from "../../components/ui";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AttendanceStackParamList, "MarkAttendance">;
@@ -20,9 +21,8 @@ type Props = NativeStackScreenProps<AttendanceStackParamList, "MarkAttendance">;
 export default function MarkAttendanceScreen({ route }: Props): React.ReactElement {
   const { sectionId, title, dateKey } = route.params;
   const [absent, setAbsent] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
 
   const [rosterQ] = useQuery({ query: ROSTER_QUERY, variables: { sectionId } });
   const [dayQ, refetchDay] = useQuery({
@@ -41,7 +41,6 @@ export default function MarkAttendanceScreen({ route }: Props): React.ReactEleme
   }, [existing?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggle(studentId: string): void {
-    setOk(null);
     setAbsent((prev) => {
       const next = new Set(prev);
       if (next.has(studentId)) next.delete(studentId);
@@ -51,16 +50,14 @@ export default function MarkAttendanceScreen({ route }: Props): React.ReactEleme
   }
 
   async function onSubmit(): Promise<void> {
-    setError(null);
-    setOk(null);
     setBusy(true);
     const res = await mark({ sectionId, dateKey, absentStudentIds: [...absent] });
     setBusy(false);
     if (res.error || !res.data?.markSectionAttendance) {
-      setError(friendlyError(res.error));
+      toast.show(friendlyError(res.error), "danger");
       return;
     }
-    setOk(STR.attSubmitted);
+    toast.show(STR.attSubmitted, "ok");
     refetchDay({ requestPolicy: "network-only" });
   }
 
@@ -104,8 +101,6 @@ export default function MarkAttendanceScreen({ route }: Props): React.ReactEleme
             </ChipRow>
           </Card>
 
-          {ok ? <Notice message={ok} tone="ok" /> : null}
-          {error ? <Notice message={error} tone="danger" /> : null}
           <Button title={STR.attSubmit} onPress={onSubmit} loading={busy} />
           <View style={{ height: space(4) }} />
         </>

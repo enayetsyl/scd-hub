@@ -12,8 +12,12 @@ import { radius, space } from "../theme/tokens";
 
 export interface DateFieldProps {
   label?: string;
-  value: string; // YYYY-MM-DD
+  value: string; // YYYY-MM-DD ("" = unset)
   onChange: (v: string) => void;
+  min?: string; // YYYY-MM-DD
+  max?: string; // YYYY-MM-DD
+  helper?: string;
+  error?: string;
 }
 
 function parseYMD(s: string): Date {
@@ -26,7 +30,7 @@ function toYMD(d: Date): string {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
-export function DateField({ label, value, onChange }: DateFieldProps): React.ReactElement {
+export function DateField({ label, value, onChange, min, max, helper, error }: DateFieldProps): React.ReactElement {
   const c = useColors();
   const [open, setOpen] = useState(false);
   return (
@@ -38,7 +42,7 @@ export function DateField({ label, value, onChange }: DateFieldProps): React.Rea
         accessibilityLabel={label ?? "Date picker"}
         style={{
           borderWidth: 1,
-          borderColor: c.border,
+          borderColor: error ? c.error : c.border,
           borderRadius: radius.md,
           paddingVertical: space(3),
           paddingHorizontal: space(3),
@@ -56,11 +60,18 @@ export function DateField({ label, value, onChange }: DateFieldProps): React.Rea
           value={parseYMD(value)}
           mode="date"
           display={Platform.OS === "ios" ? "inline" : "default"}
+          minimumDate={min ? parseYMD(min) : undefined}
+          maximumDate={max ? parseYMD(max) : undefined}
           onChange={(event: { type?: string }, selected?: Date) => {
             setOpen(false);
             if (selected && event.type !== "dismissed") onChange(toYMD(selected));
           }}
         />
+      ) : null}
+      {error ? (
+        <Text style={{ color: c.error, fontSize: 13, marginTop: space(1) }}>⚠ {error}</Text>
+      ) : helper ? (
+        <Text style={{ color: c.textSecondary, fontSize: 13, marginTop: space(1) }}>{helper}</Text>
       ) : null}
     </View>
   );

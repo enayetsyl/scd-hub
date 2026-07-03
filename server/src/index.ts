@@ -36,6 +36,7 @@ import "./modules/trackers/resolvers/classTestSummary";
 import "./modules/routine/resolvers/routine";
 import "./modules/routine/resolvers/routineSlots";
 import "./modules/routine/resolvers/routineTriggers";
+import "./modules/routine/resolvers/myDay";
 import "./modules/attendance/resolvers/teacherAttendance";
 import "./modules/attendance/resolvers/studentAttendance";
 import "./modules/attendance/resolvers/push";

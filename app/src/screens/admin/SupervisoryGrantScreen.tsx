@@ -26,6 +26,7 @@ import { TeacherSelect, SubjectSelect, AcademicYearSelect } from "../../componen
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "SupervisoryGrant">;
@@ -35,6 +36,7 @@ type Pair = { classId: string; subjectId: string };
 
 export default function SupervisoryGrantScreen(_props: Props): React.ReactElement {
   const { user } = useAuth();
+  const { confirmAction } = useConfirm();
   const canManage = !!user && roleHasPermission(user.role as Role, "user:manage");
 
   // Assign form
@@ -108,8 +110,9 @@ export default function SupervisoryGrantScreen(_props: Props): React.ReactElemen
     setPairSubjectId("");
   }
 
-  function removePair(i: number): void {
-    setPairs(pairs.filter((_, idx) => idx !== i));
+  async function removePair(i: number): Promise<void> {
+    if (!(await confirmAction({ confirmLabel: STR.remove }))) return;
+    setPairs((cur) => cur.filter((_, idx) => idx !== i));
   }
 
   /** Human label for a saved grant's extent + target. */
@@ -177,6 +180,7 @@ export default function SupervisoryGrantScreen(_props: Props): React.ReactElemen
 
   async function onRevoke(grantId: string): Promise<void> {
     if (revokeBusy) return;
+    if (!(await confirmAction({ confirmLabel: STR.remove }))) return;
     setRevokeId(grantId);
     setRevokeBusy(true);
     setOk(null);
