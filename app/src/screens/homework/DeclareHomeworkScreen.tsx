@@ -12,6 +12,7 @@ import { CLASSES_QUERY, DECLARE_HOMEWORK_ITEM, ATTACH_HW_QUESTION_FILE, HOMEWORK
 import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, EmptyState } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { SectionBar } from "../../components/SectionBar";
 import { STR, hwSubjectLabel, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -172,7 +173,7 @@ export default function DeclareHomeworkScreen({ navigation }: Props): React.Reac
           {fieldErrors.subject ? <Body style={{ color: colors.error, marginTop: 4 }}>⚠ {fieldErrors.subject}</Body> : null}
           {classLevel != null ? <Muted style={{ marginTop: 4 }}>{classLevelLabel(classLevel)}</Muted> : null}
         </Card>
-        <Field label={STR.hwDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+        <DateField label={STR.hwDate} value={date} onChange={setDate} />
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: 4 }}>{STR.hwTopTags}</Body>
           <Muted style={{ marginBottom: space(2) }}>{STR.hwTopicHint}</Muted>

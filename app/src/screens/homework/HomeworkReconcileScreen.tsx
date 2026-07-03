@@ -20,6 +20,7 @@ import {
 } from "../../graphql/operations";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState, ErrorBanner } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { SectionBar } from "../../components/SectionBar";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -129,7 +130,7 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
         <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
-        {hasSection ? <Field label={STR.hwDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" /> : null}
+        {hasSection ? <DateField label={STR.hwDate} value={date} onChange={setDate} /> : null}
       </View>
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: space(4) }}>
         {!hasSection ? (
