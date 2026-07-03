@@ -184,6 +184,20 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
   **Gate GREEN (executed):** app `tsc --noEmit` clean + `expo export --platform web` green (1901 modules);
   vocab verifier PASS untouched; `git diff -- server shared` empty. **Not verified live** — next: dev
   deploy + the §4.1.5 manual checklist (phone-width + ≥1024px web, dark mode, BN/EN), then UX-2.
+- **Planned (Homework Check Grid HWG-1..HWG-2 — docs/prd-homework-check-grid.md,
+  D-#267):** collapses the 3-interaction, 2-screen homework outcome entry into ONE
+  tap per student on an attendance-style roster grid (ঠিক/আংশিক/ভুল/দেয়নি). HWG-1 =
+  one atomic composite server mutation `recordHomeworkOutcome` that legally
+  fast-forwards GIVEN→DUE→SUBMITTED→check (or →CHASE for not-submitted) reusing the
+  existing lifecycle + check services with an audit row per edge — outcome is a
+  server-validated String arg (no enum/vocab/contract change, no new permission,
+  existing transition/check mutations untouched). HWG-2 = CheckingQueueScreen
+  rebuilt as the grid (route name kept): all-state rows grouped date→item, one-tap
+  chips for actionable states, inline expander for PARTIAL/WRONG extras,
+  CHECKED/ABSENT rows read-only with a Records hint; Records screen stays as the
+  exception drill-down. Follow-on noted in PRD §5: the deferred pending-by-date
+  phases (Assignments→CT→Vocab→SR) should adopt this grid recipe later.
+  Next = build HWG-1 per docs/prd-homework-check-grid.md §3.1, then HWG-2 per §3.2.
 - **Planned (App-wide UX Improvement Program UX-1…UX-8 — docs/prd-ux-improvements.md, D-#265):**
   full app-code audit (2026-07-02) found 8 cross-cutting UX gaps; PRD defines 7 sequential
   slices — UX-1 toast/confirm/field-validation layer, UX-2 DateField sweep (21 typed-date
