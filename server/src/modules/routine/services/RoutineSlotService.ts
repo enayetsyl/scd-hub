@@ -386,6 +386,26 @@ export async function slotsForDate(
     .lean() as unknown as Promise<IRoutineSlot[]>;
 }
 
+/** A teacher's own effective `section`-type slots on a date (PXG-1) — mirrors
+ *  `slotsForDate`'s effective-window logic but keyed by `teacherId` across ALL their
+ *  sections instead of one group, so a leave's per-meeting cover fan-out can find
+ *  every class period a teacher actually teaches that day. `subjectgroup` slots
+ *  (cross-section combined groups) are excluded — they have no single section to
+ *  fan a cover slot to (a documented PXG-1 limitation). */
+export async function slotsForTeacherOnDate(teacherId: string, date: Date): Promise<IRoutineSlot[]> {
+  const dayOfWeek = DAYS_OF_WEEK[date.getDay()];
+  return RoutineSlot.find({
+    groupType: "section",
+    teacherId,
+    dayOfWeek,
+    active: true,
+    effectiveFrom: { $lte: date },
+    $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: date } }],
+  })
+    .sort({ periodNumber: 1 })
+    .lean() as unknown as Promise<IRoutineSlot[]>;
+}
+
 /** Resolve the effective slots for a group on a date (R2.7) with any active
  *  cover for that date overlaid (R4.4). Staff-facing only. */
 export async function routineForDate(

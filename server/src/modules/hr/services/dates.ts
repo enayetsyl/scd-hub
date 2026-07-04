@@ -34,3 +34,17 @@ export function countLeaveDays(fromKey: string, toKey: string): number {
 export function rangeCovers(fromKey: string, toKey: string, dateKey: string): boolean {
   return fromKey <= dateKey && dateKey <= toKey;
 }
+
+/** Every calendar day in [fromKey, toKey] inclusive — UTC-midnight Date + its own
+ *  YYYY-MM-DD key (PXG-1 — the per-meeting cover fan-out walks each day of a leave
+ *  to find that day's actual routine slots). Not a school-day filter itself — the
+ *  caller checks each date. */
+export function datesInRange(fromKey: string, toKey: string): Array<{ date: Date; dateKey: string }> {
+  const from = parseDateKey(fromKey);
+  const to = parseDateKey(toKey);
+  const out: Array<{ date: Date; dateKey: string }> = [];
+  for (let d = from; d <= to; d = new Date(d.getTime() + 86_400_000)) {
+    out.push({ date: d, dateKey: d.toISOString().slice(0, 10) });
+  }
+  return out;
+}
