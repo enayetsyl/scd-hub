@@ -166,6 +166,7 @@ import MyLeaveScreen from "../screens/hr/MyLeaveScreen";
 import MyRecordScreen from "../screens/hr/MyRecordScreen";
 import LeaveCoverScreen from "../screens/hr/LeaveCoverScreen";
 import LeaveAdminScreen from "../screens/hr/LeaveAdminScreen";
+import NeedsCoverInboxScreen from "../screens/hr/NeedsCoverInboxScreen";
 import PayrollHomeScreen from "../screens/hr/PayrollHomeScreen";
 import PreparePayrollScreen from "../screens/hr/PreparePayrollScreen";
 import PayrollRunDetailScreen from "../screens/hr/PayrollRunDetailScreen";
@@ -797,6 +798,7 @@ function HrNavigator(): React.ReactElement {
         options={({ route }) => ({ title: route.params.title || STR.hrCoverTitle })}
       />
       <HrStack.Screen name="LeaveAdmin" component={LeaveAdminScreen} options={{ title: STR.hrLeaveAdmin }} />
+      <HrStack.Screen name="NeedsCoverInbox" component={NeedsCoverInboxScreen} options={{ title: STR.hrNeedsCoverTitle }} />
       <HrStack.Screen name="PayrollHome" component={PayrollHomeScreen} options={{ title: STR.hrPayroll }} />
       <HrStack.Screen name="PreparePayroll" component={PreparePayrollScreen} options={{ title: STR.hrPrepareRun }} />
       <HrStack.Screen

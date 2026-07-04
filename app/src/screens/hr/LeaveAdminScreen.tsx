@@ -122,7 +122,14 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
 
   return (
     <Screen scroll>
-      <H2>{STR.hrLeaveAdmin}</H2>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <H2>{STR.hrLeaveAdmin}</H2>
+        <Button
+          title={STR.hrNeedsCoverTitle}
+          variant="secondary"
+          onPress={() => navigation.navigate("NeedsCoverInbox")}
+        />
+      </View>
 
       {ok ? <Notice message={ok} tone="ok" /> : null}
       {error ? <Notice message={error} tone="danger" /> : null}

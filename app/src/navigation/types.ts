@@ -152,6 +152,8 @@ export type HrStackParamList = {
   MyRecord: undefined;
   LeaveCover: { leaveApplicationId: string; title: string; manage: boolean };
   LeaveAdmin: undefined;
+  /** Cross-leave needs-cover inbox (PXG-2, D-#268). */
+  NeedsCoverInbox: undefined;
   // PR-2: payroll
   PayrollHome: undefined;
   PreparePayroll: undefined;

@@ -4188,14 +4188,18 @@ export interface StaffCoverSlotT {
   sectionId: string;
   subjectId: string | null;
   absentTeacherUserId: string | null;
+  dateKey: string;
+  periodNumber: number;
   proposedCoverTeacherId: string | null;
+  finalCoverTeacherUserId: string | null;
   status: string;
   proxyGrantId: string | null;
 }
 
 const STAFF_COVER_SLOT_FIELDS = `
   id leaveApplicationId classId sectionId subjectId
-  absentTeacherUserId proposedCoverTeacherId status proxyGrantId
+  absentTeacherUserId dateKey periodNumber
+  proposedCoverTeacherId finalCoverTeacherUserId status proxyGrantId
 `;
 
 export const STAFF_COVER_SLOTS_QUERY = gql<
@@ -4216,12 +4220,45 @@ export const PROPOSE_STAFF_COVER = gql<
   }
 `;
 
+/** overrideCoverTeacherUserId (PXG-1, D-#268) is optional — omitted, behavior is
+ *  unchanged; supplied, mints for the override teacher (proposed slot) or
+ *  direct-assigns (needs_cover slot, no proposal required). */
 export const DECIDE_STAFF_COVER_SLOT = gql<
   { decideStaffCoverSlot: StaffCoverSlotT },
-  { slotId: string; approve: boolean }
+  { slotId: string; approve: boolean; overrideCoverTeacherUserId?: string | null }
 >`
-  mutation DecideStaffCoverSlot($slotId: String!, $approve: Boolean!) {
-    decideStaffCoverSlot(slotId: $slotId, approve: $approve) { ${STAFF_COVER_SLOT_FIELDS} }
+  mutation DecideStaffCoverSlot($slotId: String!, $approve: Boolean!, $overrideCoverTeacherUserId: String) {
+    decideStaffCoverSlot(slotId: $slotId, approve: $approve, overrideCoverTeacherUserId: $overrideCoverTeacherUserId) { ${STAFF_COVER_SLOT_FIELDS} }
+  }
+`;
+
+export interface NeedsCoverRowT {
+  slotId: string;
+  leaveApplicationId: string;
+  absentTeacherUserId: string | null;
+  absentTeacherName: string | null;
+  classId: string;
+  className: string;
+  sectionId: string;
+  sectionName: string;
+  subjectId: string | null;
+  subjectName: string | null;
+  dateKey: string;
+  periodNumber: number;
+}
+
+/** Cross-leave needs-cover inbox (PXG-1, D-#268) — every uncovered class meeting
+ *  across every approved leave overlapping [from, to]. */
+export const NEEDS_COVER_SLOTS_QUERY = gql<
+  { needsCoverSlots: NeedsCoverRowT[] },
+  { from: string; to: string }
+>`
+  query NeedsCoverSlots($from: String!, $to: String!) {
+    needsCoverSlots(from: $from, to: $to) {
+      slotId leaveApplicationId absentTeacherUserId absentTeacherName
+      classId className sectionId sectionName subjectId subjectName
+      dateKey periodNumber
+    }
   }
 `;
 
