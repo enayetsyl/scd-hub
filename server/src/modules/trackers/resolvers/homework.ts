@@ -445,6 +445,7 @@ OpenRecordRef.implement({
     chaseCount: t.exposeInt("chaseCount"),
     hasAnswerFile: t.exposeBoolean("hasAnswerFile"),
     dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),
+    result: t.string({ nullable: true, resolve: (r) => r.result }),
   }),
 });
 

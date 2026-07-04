@@ -447,6 +447,8 @@ export interface OpenRecordDTO {
   chaseCount: number;
   hasAnswerFile: boolean;
   dueDate: string | null;
+  /** The recorded RESULT (CORRECT/PARTIAL/WRONG) once checked — null before then. */
+  result: string | null;
 }
 
 /**
@@ -484,6 +486,7 @@ export async function listOpenRecords(sectionId: string, states: LifecycleState[
         chaseCount: r.chaseCount ?? 0,
         hasAnswerFile: !!r.answerFileId,
         dueDate: r.dueDate ? new Date(r.dueDate as unknown as Date).toISOString() : null,
+        result: r.result ?? null,
       };
     })
     .sort((a, b) =>
