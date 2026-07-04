@@ -1580,6 +1580,7 @@ export interface HwOpenRecordT {
   chaseCount: number;
   hasAnswerFile: boolean;
   dueDate: string | null;
+  result: string | null;
 }
 
 export const HOMEWORK_OPEN_RECORDS = gql<
@@ -1588,7 +1589,7 @@ export const HOMEWORK_OPEN_RECORDS = gql<
 >`
   query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
     homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
-      id hwId subject topicLabelBn dateGiven studentId studentName state chaseCount hasAnswerFile dueDate
+      id hwId subject topicLabelBn dateGiven studentId studentName state chaseCount hasAnswerFile dueDate result
     }
   }
 `;
@@ -1782,6 +1783,49 @@ export const CHECK_HOMEWORK_RECORD = gql<
       sectionId: $sectionId, recordId: $recordId, result: $result, resubmit: $resubmit, topupQids: $topupQids, topupTime: $topupTime
     ) {
       recordId hwId state result
+      resubmission { recordId hwId state topupFlag topupQids topupTime dueDate }
+    }
+  }
+`;
+
+export interface HwOutcomeResultT {
+  recordId: string;
+  hwId: string;
+  state: string;
+  result: string | null;
+  chaseCount: number;
+  dueDate: string | null;
+  resubmission: {
+    recordId: string;
+    hwId: string;
+    state: string;
+    topupFlag: boolean;
+    topupQids: string[];
+    topupTime: number | null;
+    dueDate: string | null;
+  } | null;
+}
+
+/** One-tap outcome recording (HWG-1, D-#267) — fast-forwards the lifecycle then applies
+ *  the check logic (CORRECT/PARTIAL/WRONG) or the chase logic (NOT_SUBMITTED). */
+export const RECORD_HOMEWORK_OUTCOME = gql<
+  { recordHomeworkOutcome: HwOutcomeResultT },
+  {
+    sectionId: string;
+    recordId: string;
+    outcome: string;
+    resubmit?: boolean | null;
+    topupQids?: string[] | null;
+    topupTime?: number | null;
+  }
+>`
+  mutation RecordHomeworkOutcome(
+    $sectionId: String!, $recordId: String!, $outcome: String!, $resubmit: Boolean, $topupQids: [String!], $topupTime: Int
+  ) {
+    recordHomeworkOutcome(
+      sectionId: $sectionId, recordId: $recordId, outcome: $outcome, resubmit: $resubmit, topupQids: $topupQids, topupTime: $topupTime
+    ) {
+      recordId hwId state result chaseCount dueDate
       resubmission { recordId hwId state topupFlag topupQids topupTime dueDate }
     }
   }

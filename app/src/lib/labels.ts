@@ -889,6 +889,14 @@ const STR_BN = {
   hwFileHas: "📎 সংযুক্তি আছে",
   hwFileUploadFail: "এই মুহূর্তে ফাইলটি আপলোড করা যাচ্ছে না — পরে আবার চেষ্টা করুন",
   hwFileOpenFail: "এই মুহূর্তে ফাইলটি খোলা যাচ্ছে না",
+  // Check Grid (HWG-2, D-#267) — one-tap outcome chips
+  hwOutcomeCorrect: "ঠিক",
+  hwOutcomePartial: "আংশিক",
+  hwOutcomeWrong: "ভুল",
+  hwOutcomeNotSubmitted: "দেয়নি",
+  hwConfirm: "নিশ্চিত",
+  hwSeeRecords: "রেকর্ডস",
+  hwNoOpenRecords: "কোনো মুলতুবি কাজ নেই",
   // Guardian portal (GP-2, D-#68)
   gpToday: "আজ",
   gpChildren: "সন্তান",
@@ -2860,6 +2868,14 @@ const STR_EN: StrTable = {
   hwFileHas: "📎 Attachment",
   hwFileUploadFail: "Can't upload the file right now — try again later",
   hwFileOpenFail: "Can't open the file right now",
+  // Check Grid (HWG-2, D-#267) — one-tap outcome chips
+  hwOutcomeCorrect: "Correct",
+  hwOutcomePartial: "Partial",
+  hwOutcomeWrong: "Wrong",
+  hwOutcomeNotSubmitted: "Not submitted",
+  hwConfirm: "Confirm",
+  hwSeeRecords: "Records",
+  hwNoOpenRecords: "Nothing pending",
   // Guardian portal (GP-2, D-#68)
   gpToday: "Today",
   gpChildren: "Children",
