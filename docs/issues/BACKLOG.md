@@ -24,6 +24,44 @@ intake/fix procedures live in [README.md](README.md). To add one: paste the issu
 
 ---
 
+## BUG-014 — "View paper" opens the PDF with no loading feedback
+- **Status:** open
+- **Severity:** low
+- **Platform:** web
+- **Area:** class-test
+- **Reported:** 2026-07-03
+- **Screenshot:** —
+
+**Repro:** Class Test → Print queue → a request card with an uploaded paper → tap "View paper".
+**Expected:** Immediate feedback that the paper is being fetched, then the PDF opens.
+**Actual:** Nothing visible happens for several seconds (the server streams the bytes from Drive
+before the blob URL opens in a new tab), so the button feels dead until the tab suddenly appears.
+**Notes:** `ClassTestPrintQueueScreen.tsx` → `openStoredFile(questionFileId)` — no busy state on
+the button. Fix shape = the BUG-013 recipe (busy spinner + double-tap guard while the fetch runs).
+The same unguarded `openStoredFile` pattern exists on `ChatThreadScreen.tsx` (attachment open) and
+`CommentEntryScreen.tsx` — sweep them in the same pass.
+**Fix ref:** —
+
+## BUG-015 — Exam date on New print request shows a typed YYYY-MM-DD field, not the calendar
+- **Status:** open (likely invalid — wrong build under test)
+- **Severity:** low
+- **Platform:** web
+- **Area:** class-test
+- **Reported:** 2026-07-03
+- **Screenshot:** —
+
+**Repro:** Class Test → New print request → Exam date renders as a free-text field with a
+`YYYY-MM-DD` placeholder instead of the calendar `DateField`.
+**Expected:** UX-2 (D-#265) replaced every typed date with the calendar `DateField`, including this
+screen.
+**Actual:** Typed text field.
+**Notes:** At report time the local repo was checked out on **`main`**, which predates the whole
+UX-1..8 stack — the screenshot also shows the pre-UX-3 typed "Set id" field and the pre-UX-6
+"Blank = 40% of total" hint, all long since replaced on `dev`. The UX-2 `DateField` IS live on this
+screen on `dev`/`fix/ux-testing-bugs`. **Retest on the dev build (or the fix branch) before treating
+this as a code bug**; close as invalid if the calendar shows there.
+**Fix ref:** —
+
 ## BUG-008 â€” Reword homework Bangla labels: à¦¯à¦¾à¦šà¦¾à¦‡ â†’ à¦¦à§‡à¦–à¦¾, à¦¤à¦¾à¦—à¦¾à¦¦à¦¾ â†’ à¦®à¦¨à§‡ à¦•à¦°à¦¾à¦¨à§‹
 - **Status:** fixed
 - **Severity:** low
