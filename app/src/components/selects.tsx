@@ -6,8 +6,16 @@
 import React from "react";
 import { useQuery } from "urql";
 import { Select } from "./ui";
-import { TEACHERS_QUERY, ROOMS_QUERY, ACADEMIC_YEARS_QUERY, STAFF_QUERY, SUBJECTS_QUERY } from "../graphql/operations";
-import { STR, hrCategoryLabel, subjectLabel } from "../lib/labels";
+import {
+  TEACHERS_QUERY,
+  ROOMS_QUERY,
+  ACADEMIC_YEARS_QUERY,
+  STAFF_QUERY,
+  SUBJECTS_QUERY,
+  TEACHER_AVAILABILITY_QUERY,
+} from "../graphql/operations";
+import { STR, hrCategoryLabel, subjectLabel, bnNum } from "../lib/labels";
+import { useAuth } from "../auth/AuthContext";
 
 /** Pick a staff member by name → yields the StaffProfile id (HR admin surfaces).
  *  Reads the manager-gated staff roster; the hint shows the HR category. */
@@ -64,6 +72,52 @@ export function TeacherSelect({
       options={options}
       onChange={onChange}
       placeholder={placeholder ?? STR.selectTeacher}
+      emptyText={STR.noTeachers}
+      searchable
+    />
+  );
+}
+
+/** Pick a covering teacher, free-first, for a SPECIFIC (date, period) meeting —
+ *  PXG-1 (D-#268). Wraps the widened `teacherAvailability` read the same way
+ *  `CoverManageScreen` already consumes it, so both the applicant's propose picker
+ *  and the admin's override/direct-assign picker share one component. Excludes the
+ *  caller themself and the absent teacher. */
+export function AvailableTeacherSelect({
+  label,
+  date,
+  periodNumber,
+  absentTeacherUserId,
+  value,
+  onChange,
+}: {
+  label?: string;
+  date: string;
+  periodNumber: number;
+  absentTeacherUserId?: string | null;
+  value: string;
+  onChange: (v: string) => void;
+}): React.ReactElement {
+  const { user } = useAuth();
+  const [{ data }] = useQuery({
+    query: TEACHER_AVAILABILITY_QUERY,
+    variables: { date, periodNumber },
+    pause: !date || !periodNumber,
+  });
+  const options = (data?.teacherAvailability ?? [])
+    .filter((a) => a.teacherId !== user?.id && a.teacherId !== absentTeacherUserId)
+    .map((a) => ({
+      label: a.name,
+      value: a.teacherId,
+      hint: a.free ? STR.hrCoverFree : `${STR.hrCoverBusy} · ${bnNum(a.classCount)} ${STR.rtClassesToday}`,
+    }));
+  return (
+    <Select
+      label={label}
+      value={value === "" ? null : value}
+      options={options}
+      onChange={onChange}
+      placeholder={STR.selectTeacher}
       emptyText={STR.noTeachers}
       searchable
     />

@@ -14,6 +14,7 @@ import mongoose from "mongoose";
 import type { AppContext } from "../context";
 
 const mockSlotFind = jest.fn();
+const mockCoveredSlotFind = jest.fn();
 const mockSubFind = jest.fn();
 const mockSectionFind = jest.fn();
 const mockResolveDayType = jest.fn();
@@ -21,9 +22,21 @@ const mockConfirm = jest.fn();
 const mockRead = jest.fn();
 const mockOverview = jest.fn();
 const mockMarking = jest.fn();
+const mockCoverSlotFind = jest.fn();
 
+// RoutineSlot.find is called two different ways in MyDayService: the own-periods
+// query (…sort().lean()) and the covering-periods query (…sort().lean(), same
+// shape since MyDayService now sorts both) — route by whether the query has an
+// `_id` filter (the covering lookup) vs `teacherId` (the own-periods lookup).
 jest.mock("../modules/routine/models/RoutineSlot", () => ({
-  RoutineSlot: { find: (q: unknown) => ({ sort: () => ({ lean: () => mockSlotFind(q) }) }) },
+  RoutineSlot: {
+    find: (q: { _id?: unknown }) => ({
+      sort: () => ({ lean: () => (q._id ? mockCoveredSlotFind(q) : mockSlotFind(q)) }),
+    }),
+  },
+}));
+jest.mock("../modules/hr/models/StaffCoverSlot", () => ({
+  StaffCoverSlot: { find: (q: unknown) => ({ select: () => ({ lean: () => mockCoverSlotFind(q) }) }) },
 }));
 jest.mock("../modules/routine/models/RoutineSubstitution", () => ({
   RoutineSubstitution: { find: (q: unknown) => ({ lean: () => mockSubFind(q) }) },
@@ -67,10 +80,12 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockResolveDayType.mockResolvedValue("FULL");
   mockSlotFind.mockResolvedValue([]);
+  mockCoveredSlotFind.mockResolvedValue([]);
   mockSubFind.mockResolvedValue([]);
   mockSectionFind.mockResolvedValue([]);
   mockOverview.mockResolvedValue([]);
   mockMarking.mockResolvedValue([]);
+  mockCoverSlotFind.mockResolvedValue([]);
 });
 
 describe("myDay — own periods (slots)", () => {
@@ -113,6 +128,46 @@ describe("myDay — own periods (slots)", () => {
 
   test("invalid date rejects", async () => {
     await expect(myDayFor(ctxFor("TEACHER"), "not-a-date")).rejects.toThrow("Invalid date");
+  });
+});
+
+describe("myDay — covering periods (PXG-1 gap fix, D-#268)", () => {
+  test("no approved HR cover slots today → no covering rows added", async () => {
+    mockCoverSlotFind.mockResolvedValue([]);
+    const r = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
+    expect(r.slots).toHaveLength(0);
+    expect(mockCoveredSlotFind).not.toHaveBeenCalled();
+  });
+
+  test("an approved HR cover slot surfaces the absent teacher's period, marked isCovering", async () => {
+    const own = { _id: oid(), track: "general", periodNumber: 1, teacherId: "user-1" };
+    const routineSlotId = oid();
+    mockSlotFind.mockResolvedValue([own]);
+    mockCoverSlotFind.mockResolvedValue([{ routineSlotId }]);
+    mockCoveredSlotFind.mockResolvedValue([
+      { _id: routineSlotId, track: "general", periodNumber: 3, teacherId: "hamida-1", active: true },
+    ]);
+
+    const r = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
+    expect(mockCoverSlotFind).toHaveBeenCalledWith(
+      expect.objectContaining({ finalCoverTeacherUserId: "user-1", dateKey: "2026-07-01", status: "approved" }),
+    );
+    expect(mockCoveredSlotFind).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: { $in: [routineSlotId] }, active: true }),
+    );
+    expect(r.slots).toHaveLength(2);
+    // Merged + sorted by periodNumber: own period 1, then the covered period 3.
+    expect(r.slots[0].isCovering).toBeFalsy();
+    expect(r.slots[1].isCovering).toBe(true);
+    expect(r.slots[1].periodNumber).toBe(3);
+    expect(r.slots[1].teacherName).toBe("T"); // enriched — the ABSENT teacher's name
+  });
+
+  test("a cover slot referencing a since-deactivated RoutineSlot is silently skipped", async () => {
+    mockCoverSlotFind.mockResolvedValue([{ routineSlotId: oid() }]);
+    mockCoveredSlotFind.mockResolvedValue([]); // active:true filter excluded it
+    const r = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
+    expect(r.slots).toHaveLength(0);
   });
 });
 

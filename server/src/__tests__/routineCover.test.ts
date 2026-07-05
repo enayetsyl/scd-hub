@@ -39,6 +39,19 @@ jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (q: unknown) => ({ select: () => ({ lean: () => mockUserFind(q) }) }) },
 }));
 
+// HR leave-cover slots (PXG-1) — teacherAvailability must also treat an already
+// APPROVED cover assignment as busy at that period (D-#268 live-testing find).
+const mockCoverSlotFind = jest.fn();
+jest.mock("../modules/hr/models/StaffCoverSlot", () => ({
+  StaffCoverSlot: { find: (q: unknown) => ({ select: () => ({ lean: () => mockCoverSlotFind(q) }) }) },
+}));
+
+// A teacher on leave that day must be excluded from availability entirely (D-#268).
+const mockUserIdsOnLeave = jest.fn();
+jest.mock("../modules/hr/services/CoverService", () => ({
+  userIdsOnLeave: (dateKey: unknown) => mockUserIdsOnLeave(dateKey),
+}));
+
 // assignCover resolves the covered slot's subject → Subject._id for the proxy grant (D-#257).
 const mockSubjectFindOne = jest.fn();
 jest.mock("../modules/foundation/models/Subject", () => ({
@@ -69,6 +82,8 @@ beforeEach(() => {
   mockSubCreate.mockResolvedValue({ _id: oid() });
   mockAssignProxy.mockResolvedValue(oid().toString());
   mockSubjectFindOne.mockResolvedValue({ _id: oid() });
+  mockCoverSlotFind.mockResolvedValue([]);
+  mockUserIdsOnLeave.mockResolvedValue(new Set()); // nobody on leave by default
 });
 
 // ---------------------------------------------------------------------------
@@ -108,6 +123,57 @@ describe("R4.1 teacherAvailability", () => {
     expect(rows.map((r) => r.teacherId)).toEqual([TC.toString(), TB.toString(), TA.toString()]);
     expect(rows[0]).toMatchObject({ free: true, classCount: 0 });
     expect(rows.find((r) => r.teacherId === TA.toString())).toMatchObject({ free: false, classCount: 2 });
+  });
+
+  test("an approved HR leave-cover slot (PXG-1) also marks its teacher busy at that period (D-#268)", async () => {
+    const TA = oid(), TB = oid();
+    mockSlotFind.mockResolvedValue([]); // no substantive teaching that day
+    mockUserFind.mockResolvedValue([
+      { _id: TA, name: "A" },
+      { _id: TB, name: "B" },
+    ]);
+    mockCoverSlotFind.mockResolvedValue([{ finalCoverTeacherUserId: TA, proposedCoverTeacherId: null, periodNumber: 1 }]);
+
+    const rows = await teacherAvailability(DATE, 1);
+    expect(mockCoverSlotFind).toHaveBeenCalledWith(
+      expect.objectContaining({ status: { $in: ["proposed", "approved"] } }),
+    );
+    expect(rows.find((r) => r.teacherId === TA.toString())).toMatchObject({ free: false, classCount: 1 });
+    expect(rows.find((r) => r.teacherId === TB.toString())).toMatchObject({ free: true, classCount: 0 });
+  });
+
+  test("an approved HR cover at a DIFFERENT period only adds day-load, doesn't mark busy at the target period", async () => {
+    const TA = oid();
+    mockSlotFind.mockResolvedValue([]);
+    mockUserFind.mockResolvedValue([{ _id: TA, name: "A" }]);
+    mockCoverSlotFind.mockResolvedValue([{ finalCoverTeacherUserId: TA, proposedCoverTeacherId: null, periodNumber: 5 }]);
+
+    const rows = await teacherAvailability(DATE, 1);
+    expect(rows.find((r) => r.teacherId === TA.toString())).toMatchObject({ free: true, classCount: 1 });
+  });
+
+  test("a teacher merely PROPOSED (not yet approved) for a cover also reads as busy at that period (D-#268)", async () => {
+    const TA = oid();
+    mockSlotFind.mockResolvedValue([]);
+    mockUserFind.mockResolvedValue([{ _id: TA, name: "A" }]);
+    mockCoverSlotFind.mockResolvedValue([{ finalCoverTeacherUserId: null, proposedCoverTeacherId: TA, periodNumber: 1 }]);
+
+    const rows = await teacherAvailability(DATE, 1);
+    expect(rows.find((r) => r.teacherId === TA.toString())).toMatchObject({ free: false, classCount: 1 });
+  });
+
+  test("a teacher who is THEMSELVES on leave that day is excluded from the list entirely (D-#268)", async () => {
+    const TA = oid(), TB = oid();
+    mockSlotFind.mockResolvedValue([]); // neither teaches that day
+    mockUserFind.mockResolvedValue([
+      { _id: TA, name: "A" },
+      { _id: TB, name: "B" },
+    ]);
+    mockUserIdsOnLeave.mockResolvedValue(new Set([TA.toString()])); // A is on leave
+
+    const rows = await teacherAvailability(DATE, 1);
+    expect(rows.find((r) => r.teacherId === TA.toString())).toBeUndefined(); // gone, not merely "busy"
+    expect(rows.find((r) => r.teacherId === TB.toString())).toMatchObject({ free: true });
   });
 });
 

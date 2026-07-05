@@ -113,14 +113,18 @@ export default function TodayScreen(): React.ReactElement {
           ) : null}
           {slots.map((s) => (
             <View key={s.id} style={{ paddingVertical: space(2) }}>
-              <Body style={{ fontWeight: "600" }}>
-                {STR.rtPeriodN} {bnNum(s.periodNumber)}
-                {s.startTime && s.endTime ? ` · ${bnNum(s.startTime)}–${bnNum(s.endTime)}` : ""}
-              </Body>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+                <Body style={{ fontWeight: "600", flex: 1 }}>
+                  {STR.rtPeriodN} {bnNum(s.periodNumber)}
+                  {s.startTime && s.endTime ? ` · ${bnNum(s.startTime)}–${bnNum(s.endTime)}` : ""}
+                </Body>
+                {s.isCovering ? <Badge text={STR.rtCoveringFor} tone="warn" /> : null}
+              </View>
               <Muted>
                 {routineSubjectLabel(s.subject)}
                 {s.groupName ? ` · ${s.groupName}` : ""}
-                {s.coverTeacherName ? ` · ${STR.rtCovered}: ${s.coverTeacherName}` : ""}
+                {s.isCovering && s.teacherName ? ` · ${STR.rtCoveringFor} ${s.teacherName}` : ""}
+                {!s.isCovering && s.coverTeacherName ? ` · ${STR.rtCovered}: ${s.coverTeacherName}` : ""}
               </Muted>
             </View>
           ))}

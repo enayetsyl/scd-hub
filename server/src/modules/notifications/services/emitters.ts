@@ -81,6 +81,10 @@ const dedupeKeys = {
    *  once per threshold crossing (the dispatch ledger guards re-fire; this guards re-emit). */
   revisionEscalation: (studentId: string, streakLength: number, recipientId: string) =>
     `SRESC:${studentId}:${streakLength}:${recipientId}`,
+  /** Per slot+grant (PXG-1): idempotent on the (slotId, grantId) pair rather than
+   *  slotId alone, since a revoke-then-reapprove cycle mints a NEW grant that should
+   *  re-notify — but a retried call for the SAME grant is a no-op. */
+  hrCoverAssigned: (slotId: string, grantId: string) => `HRCOV:${slotId}:${grantId}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -578,6 +582,35 @@ export async function emitCoverAssigned(substitution: CoverAssignedEvent): Promi
         date: dateKey,
       },
       dedupeKey: dedupeKeys.coverAssigned(substitution._id.toString()),
+    });
+  });
+}
+
+/** HR leave-cover approval (PXG-1, D-#268) — a SEPARATE flow from the routine
+ *  module's R-4 direct-assign above, but reuses the SAME `COVER_ASSIGNED` kind +
+ *  message templates (both already registered; no vocab/verifier change). No
+ *  `substitutionId` here (the HR flow has no RoutineSubstitution doc) — dedupes on
+ *  (slotId, grantId) instead. */
+export interface HrCoverAssignedEvent {
+  slotId: IdLike;
+  grantId: IdLike;
+  coverTeacherUserId: IdLike;
+  /** YYYY-MM-DD — the one date this grant covers (per-meeting grants, PXG-1). */
+  dateKey: string;
+}
+
+export async function emitHrCoverAssigned(event: HrCoverAssignedEvent): Promise<void> {
+  return bestEffort("hr cover assigned", async () => {
+    await emit({
+      recipientUserId: event.coverTeacherUserId.toString(),
+      kind: "COVER_ASSIGNED",
+      titleBn: await renderTemplate("cover.assigned.title"),
+      bodyBn: await renderTemplate("cover.assigned.body", { dateKey: event.dateKey }),
+      refs: {
+        slotId: event.slotId.toString(),
+        date: event.dateKey,
+      },
+      dedupeKey: dedupeKeys.hrCoverAssigned(event.slotId.toString(), event.grantId.toString()),
     });
   });
 }

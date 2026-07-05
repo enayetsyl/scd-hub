@@ -31,6 +31,14 @@ export function isProxyActive(startDate: Date, durationDays: number, now: Date =
   return now >= start && now < end;
 }
 
+/** True iff the window has actually ELAPSED (`now >= end`) — distinct from merely
+ *  "not active", which is also true before the window has even started. Conflating
+ *  the two (bug, fixed here) permanently killed a future-dated grant the instant
+ *  anyone resolved that teacher's scope, before it ever got a chance to activate. */
+export function isProxyExpired(startDate: Date, durationDays: number, now: Date = new Date()): boolean {
+  return now >= proxyWindowEnd(startDate, durationDays);
+}
+
 // ---------------------------------------------------------------------------
 // Grant composition — resolver middleware reads this (ADR-017)
 // ---------------------------------------------------------------------------
@@ -109,10 +117,12 @@ export async function composeTeacherScope(
           subjectId: pg.subjectId?.toString(),
           grantId: g._id.toString(),
         });
-      } else {
+      } else if (isProxyExpired(pg.startDate, pg.durationDays, now)) {
         // Window has elapsed — record for audit stamping (D-#21)
         expiredProxyGrantIds.push(g._id.toString());
       }
+      // else: not yet started (now < startDate) — correctly withheld from today's
+      // scope, but NOT expired; leave the grant alone so it activates on schedule.
     }
   }
 

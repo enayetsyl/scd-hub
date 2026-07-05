@@ -31,7 +31,11 @@ const mockSlotDeleteOne = jest.fn();
 const mockSlotUpdateOne = jest.fn();
 jest.mock("../modules/routine/models/RoutineSlot", () => ({
   RoutineSlot: {
-    find: (q: unknown) => ({ lean: () => mockSlotFind(q) }),
+    // Supports both `.find().lean()` and `.find().sort().lean()` chains.
+    find: (q: unknown) => {
+      const chain = { lean: () => mockSlotFind(q), sort: () => chain };
+      return chain;
+    },
     create: (d: unknown) => mockSlotCreate(d),
     findById: (id: unknown) => ({ lean: () => mockSlotFindById(id) }),
     findOne: (q: unknown) => ({ lean: () => mockSlotFindOne(q) }),
@@ -74,7 +78,7 @@ jest.mock("../modules/chat/services/ChatGroupService", () => ({
   onRoutineSlotChangedSync: jest.fn().mockResolvedValue(undefined),
 }));
 
-import { createRoutineSlot, updateRoutineSlot, deleteRoutineSlot } from "../modules/routine/services/RoutineSlotService";
+import { createRoutineSlot, updateRoutineSlot, deleteRoutineSlot, slotsForTeacherOnDate } from "../modules/routine/services/RoutineSlotService";
 
 // ---------------------------------------------------------------------------
 const ACTOR = new mongoose.Types.ObjectId().toString();
@@ -357,5 +361,30 @@ describe("updateRoutineSlot (edit a slot in place)", () => {
     const [, update] = mockSlotUpdateOne.mock.calls[0];
     expect(update.$unset).toMatchObject({ teacherId: "" });
     expect(mockGrantCreate).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// slotsForTeacherOnDate — the leave-cover fan-out source (PXG-1 + Quran/Arabic)
+// ---------------------------------------------------------------------------
+describe("slotsForTeacherOnDate (leave-cover fan-out source)", () => {
+  test("queries by teacher+weekday+active WITHOUT a groupType filter (returns section AND subjectgroup)", async () => {
+    // Regression (D-#268 Quran/Arabic follow-up): an earlier `groupType: "section"`
+    // filter here meant Quran/Arabic periods never reached fan-out, so an absent
+    // Quran/Arabic teacher's classes silently went uncovered. This must NOT filter
+    // by groupType — fanOutCoverSlots branches on each slot's type itself.
+    mockSlotFind.mockResolvedValue([]);
+    await slotsForTeacherOnDate(TEACHER_A, D("2026-07-06")); // a Monday
+    const q = mockSlotFind.mock.calls[0][0] as Record<string, unknown>;
+    expect(q).toMatchObject({ teacherId: TEACHER_A, dayOfWeek: "MON", active: true });
+    expect(q).not.toHaveProperty("groupType");
+  });
+
+  test("returns both a section and a subjectgroup slot for the teacher that day", async () => {
+    const section = { _id: new mongoose.Types.ObjectId(), groupType: "section", periodNumber: 6, subject: "ARABIC" };
+    const group = { _id: new mongoose.Types.ObjectId(), groupType: "subjectgroup", periodNumber: 2, subject: "QURAN" };
+    mockSlotFind.mockResolvedValue([group, section]);
+    const rows = await slotsForTeacherOnDate(TEACHER_A, D("2026-07-06"));
+    expect(rows.map((r) => r.groupType).sort()).toEqual(["section", "subjectgroup"]);
   });
 });

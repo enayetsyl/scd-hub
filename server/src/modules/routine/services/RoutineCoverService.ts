@@ -13,6 +13,8 @@ import { Subject } from "../../foundation/models/Subject";
 import { assignProxy, revokeProxy } from "../../foundation/services/ScopeGrantService";
 import { rankAvailability, type AvailabilityRow } from "../cover";
 import { emitCoverAssigned } from "../../notifications/services/emitters";
+import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
+import { userIdsOnLeave } from "../../hr/services/CoverService";
 
 /** Local-day bounds for date-range queries. */
 function dayBounds(date: Date): { start: Date; end: Date } {
@@ -65,12 +67,36 @@ export async function teacherAvailability(date: Date, periodNumber: number): Pro
     if (slotPeriod.get(su.slotId.toString()) === periodNumber) busy.add(cover);
   }
 
+  // A teacher already approved to cover an HR leave-cover slot (PXG-1), OR already
+  // PROPOSED for one and awaiting a decision (a proposal reserves the period until
+  // an admin rejects it — D-#268 live-testing find), is ALSO busy for that period.
+  // Without this, a teacher double-booked (or double-proposed) across two absent
+  // teachers' same-period slots read as fully free.
+  const dateKey = date.toISOString().slice(0, 10);
+  const hrCovers = await StaffCoverSlot.find({ dateKey, status: { $in: ["proposed", "approved"] } })
+    .select("finalCoverTeacherUserId proposedCoverTeacherId periodNumber")
+    .lean();
+  for (const c of hrCovers) {
+    const teacherId = c.finalCoverTeacherUserId ?? c.proposedCoverTeacherId;
+    if (!teacherId) continue;
+    const cover = teacherId.toString();
+    loadMap[cover] = (loadMap[cover] ?? 0) + 1;
+    if (c.periodNumber === periodNumber) busy.add(cover);
+  }
+
+  // A teacher who is THEMSELVES on leave that day can't cover anyone — drop them from
+  // the pick list entirely (not merely "busy": they aren't in the building at all).
+  // Found live-testing: without this, a teacher on leave still appeared as "free" for
+  // any period they don't personally teach, so another absent teacher's class could be
+  // assigned to someone who is also out that day.
+  const onLeave = await userIdsOnLeave(dateKey);
+
   const teachers = (await User.find({ role: "TEACHER", active: true }).select("_id name").lean()) as unknown as Array<{
     _id: Types.ObjectId;
     name: string;
   }>;
   return rankAvailability(
-    teachers.map((t) => ({ id: t._id.toString(), name: t.name })),
+    teachers.filter((t) => !onLeave.has(t._id.toString())).map((t) => ({ id: t._id.toString(), name: t.name })),
     busy,
     loadMap,
   );

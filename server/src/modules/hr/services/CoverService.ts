@@ -1,26 +1,42 @@
 /**
- * CoverService (HR-2; prd-hr §3.5, D-#20/#22) — the leave→proxy seam.
+ * CoverService (HR-2; prd-hr §3.5, D-#20/#22 — per-meeting redesign PXG-1/D-#268) —
+ * the leave→proxy seam.
  *
- * A leave fans out ONE cover slot per class/section the absent teacher teaches
- * (from their active teaching ScopeGrants — the same "who teaches what" source the
- * routine binds, D-#49). Each slot is a PROPOSAL: a covering teacher is proposed,
- * but write access begins ONLY when Principal/Office APPROVE the slot (D-#22). On
- * approval the slot mints a D-#20 proxy grant (assignProxy, model unchanged — N
- * classes → N grants); cancelling/rejecting the leave revokes those grants.
+ * A leave fans out ONE cover slot per actual (date, period) class meeting the absent
+ * teacher teaches during the leave span, derived from `RoutineSlot.teacherId` (the
+ * routine IS the accurate per-meeting source — `ScopeGrant` has no day/period data,
+ * so the old section+subject-for-the-whole-leave fan-out couldn't distinguish a
+ * Sunday meeting from a Tuesday one). Each slot is a PROPOSAL: a covering teacher is
+ * proposed (or an admin overrides/direct-assigns), but write access begins ONLY when
+ * Principal/Office APPROVE the slot (D-#22/#268). On approval the slot mints a D-#20
+ * proxy grant scoped to JUST that one date (assignProxy, durationDays: 1 — a
+ * deliberate deviation from the original whole-leave-span grant, per the PXG-1 build
+ * ruling); cancelling/rejecting the leave revokes every live grant across all slots.
  *
  * Identity/operational plane; the corpus-plane boundary still overrides (ADR-005).
  */
 import { Types } from "mongoose";
 import { StaffCoverSlot, type IStaffCoverSlot } from "../models/StaffCoverSlot";
 import { StaffLeaveApplication } from "../models/StaffLeaveApplication";
-import { ScopeGrant } from "../../foundation/models/ScopeGrant";
+import { Subject } from "../../foundation/models/Subject";
+import { User } from "../../foundation/models/User";
+import { Class } from "../../foundation/models/Class";
+import { Section } from "../../foundation/models/Section";
+import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { assignProxy, revokeProxy } from "../../foundation/services/ScopeGrantService";
+import { slotsForTeacherOnDate } from "../../routine/services/RoutineSlotService";
+import { resolveDayType } from "../../routine/calendar";
 import { resolveUserIdForStaff } from "./staffMatch";
-import { parseDateKey, LeaveError } from "./dates";
+import { parseDateKey, datesInRange, LeaveError } from "./dates";
 import { writeAudit } from "../../platform/services/AuditService";
+import { emitHrCoverAssigned } from "../../notifications/services/emitters";
 
-/** Fan out one needs-cover slot per class the absent staff teaches. No-op (zero
- *  slots) when the staff has no login/teaching grants (support staff don't teach). */
+/** Fan out one needs-cover slot per actual class meeting (date × period) the absent
+ *  staff teaches during the leave span. No-op (zero slots) when the staff has no
+ *  login/routine slots (support staff don't teach). Handles BOTH general "section"
+ *  meetings (approval mints a subject-scoped proxy grant) AND Quran/Arabic
+ *  "subjectgroup" meetings (D-#48/#56 — approval records the cover only, no scope;
+ *  see the model doc + decideCoverSlot). Only breaks are skipped. */
 export async function fanOutCoverSlots(
   leaveApplicationId: string,
   absentStaffProfileId: string,
@@ -28,39 +44,102 @@ export async function fanOutCoverSlots(
   const absentUserId = await resolveUserIdForStaff(absentStaffProfileId);
   if (!absentUserId) return [];
 
-  // The teaching variant carries classId/sectionId/subjectId; the discriminated
-  // union hides them, so read through a narrow shape (the composeTeacherScope idiom).
-  const grants = (await ScopeGrant.find({
-    teacherId: new Types.ObjectId(absentUserId),
-    kind: "teaching",
-    active: true,
-  })
-    .select("classId sectionId subjectId")
-    .lean()) as Array<{ classId?: Types.ObjectId; sectionId?: Types.ObjectId; subjectId?: Types.ObjectId }>;
+  const leave = await StaffLeaveApplication.findById(leaveApplicationId).lean();
+  if (!leave) return [];
 
-  // Dedupe by section+subject so two grants for the same cell make one slot.
-  const seen = new Set<string>();
   const created: IStaffCoverSlot[] = [];
-  for (const g of grants) {
-    if (!g.classId || !g.sectionId) continue;
-    const key = `${g.sectionId.toString()}:${g.subjectId?.toString() ?? ""}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const slot = await StaffCoverSlot.create({
-      leaveApplicationId: new Types.ObjectId(leaveApplicationId),
-      classId: g.classId,
-      sectionId: g.sectionId,
-      subjectId: g.subjectId ?? null,
-      absentTeacherUserId: new Types.ObjectId(absentUserId),
-      status: "needs_cover",
-    });
-    created.push(slot);
+  for (const { date, dateKey } of datesInRange(leave.fromKey, leave.toKey)) {
+    const dayType = await resolveDayType(date);
+    if (dayType === "OFF" || dayType === "HOLIDAY") continue;
+
+    const daySlots = await slotsForTeacherOnDate(absentUserId, date);
+    for (const rs of daySlots) {
+      if (rs.isBreak) continue;
+      const isSubjectGroup = rs.groupType === "subjectgroup";
+      // A section slot must have a classId; a subjectgroup slot must have its group.
+      if (!isSubjectGroup && !rs.classId) continue;
+
+      const exists = await StaffCoverSlot.findOne({
+        leaveApplicationId: new Types.ObjectId(leaveApplicationId),
+        routineSlotId: rs._id,
+        dateKey,
+      })
+        .select("_id")
+        .lean();
+      if (exists) continue;
+
+      // A section cover is per-subject (D-#257): resolve the meeting's subject code to
+      // a Subject doc when one exists. Quran/Arabic subjectgroup meetings have no
+      // foundation Subject (and no content/tracker scope) — recorded, not scoped.
+      const subj = isSubjectGroup ? null : await Subject.findOne({ code: rs.subject }).select("_id").lean();
+      const slot = await StaffCoverSlot.create({
+        leaveApplicationId: new Types.ObjectId(leaveApplicationId),
+        groupType: isSubjectGroup ? "subjectgroup" : "section",
+        classId: isSubjectGroup ? null : rs.classId,
+        sectionId: isSubjectGroup ? null : rs.groupId,
+        subjectId: subj ? subj._id : null,
+        subjectGroupId: isSubjectGroup ? rs.groupId : null,
+        absentTeacherUserId: new Types.ObjectId(absentUserId),
+        dateKey,
+        periodNumber: rs.periodNumber,
+        routineSlotId: rs._id,
+        status: "needs_cover",
+      });
+      created.push(slot);
+    }
   }
   return created;
 }
 
+/** User ids of staff who are themselves on leave (applied OR approved) overlapping
+ *  `dateKey` — a teacher who is out can't cover anyone, so the cover pickers exclude
+ *  them and decideCoverSlot refuses to assign them (D-#268 live-testing find).
+ *  "applied" is included (not just "approved") deliberately: don't propose someone
+ *  whose leave is likely to be granted. Batched staffProfile→User resolution — small
+ *  scale, the loop is fine (matches the N+1 note already accepted for this module). */
+export async function userIdsOnLeave(dateKey: string): Promise<Set<string>> {
+  const leaves = await StaffLeaveApplication.find({
+    status: { $in: ["applied", "approved"] },
+    fromKey: { $lte: dateKey },
+    toKey: { $gte: dateKey },
+  })
+    .select("staffProfileId")
+    .lean();
+  const ids = new Set<string>();
+  for (const l of leaves) {
+    const userId = await resolveUserIdForStaff(l.staffProfileId.toString());
+    if (userId) ids.add(userId);
+  }
+  return ids;
+}
+
+/** Is `teacherId` already reserved (proposed OR approved — either holds the period
+ *  until an admin rejects it) for some OTHER slot at this exact (date, period)?
+ *  Shared by proposeCover and decideCoverSlot so a pending proposal blocks a
+ *  second teacher from proposing/assigning the SAME colleague for the SAME
+ *  meeting until the first proposal is rejected (D-#268 live-testing find). */
+async function findConflictingCoverSlot(
+  excludeSlotId: Types.ObjectId,
+  teacherId: string,
+  dateKey: string,
+  periodNumber: number,
+): Promise<boolean> {
+  const conflict = await StaffCoverSlot.findOne({
+    _id: { $ne: excludeSlotId },
+    $or: [{ proposedCoverTeacherId: new Types.ObjectId(teacherId) }, { finalCoverTeacherUserId: new Types.ObjectId(teacherId) }],
+    dateKey,
+    periodNumber,
+    status: { $in: ["proposed", "approved"] },
+  })
+    .select("_id")
+    .lean();
+  return !!conflict;
+}
+
 /** Propose a covering teacher for a slot (the legwork — D-#22). Does NOT grant
- *  write access; the slot moves to `proposed` and awaits approval. */
+ *  write access; the slot moves to `proposed` and awaits approval. Rejected if the
+ *  proposed teacher already holds another proposed/approved slot at this exact
+ *  (date, period) elsewhere — reserved until that one is rejected/revoked. */
 export async function proposeCover(
   slotId: string,
   coverTeacherUserId: string,
@@ -69,6 +148,12 @@ export async function proposeCover(
   const slot = await StaffCoverSlot.findById(slotId);
   if (!slot) throw new LeaveError("Cover slot not found");
   if (slot.status === "approved") throw new LeaveError("Slot already approved — revoke before re-proposing");
+  if (await findConflictingCoverSlot(slot._id, coverTeacherUserId, slot.dateKey, slot.periodNumber)) {
+    throw new LeaveError(
+      `This teacher is already proposed/assigned to cover another class at ${slot.dateKey} period ${slot.periodNumber} — ` +
+        "pick someone else, or wait until that proposal is rejected",
+    );
+  }
   slot.proposedCoverTeacherId = new Types.ObjectId(coverTeacherUserId);
   slot.status = "proposed";
   await slot.save();
@@ -77,20 +162,30 @@ export async function proposeCover(
     actorId,
     targetId: slot._id,
     targetKind: "StaffCoverSlot",
-    meta: { coverTeacherUserId, sectionId: slot.sectionId.toString() },
+    meta: { coverTeacherUserId, sectionId: slot.sectionId?.toString() ?? null, groupType: slot.groupType },
   });
   return slot;
 }
 
 /**
- * Approve a proposed slot → mint the D-#20 proxy grant (write access begins), or
- * reject it → back to needs_cover (revoking any prior grant). Principal/Office only
- * (gated at the resolver). The grant window = the leave's [fromKey, fromKey+days).
+ * Approve a proposed (or needs-cover, via override) slot → mint a D-#20 proxy grant
+ * scoped to just that one meeting date (write access begins), or reject it → back
+ * to needs_cover (revoking any prior grant). Principal/Office only (gated at the
+ * resolver).
+ *
+ * `overrideCoverTeacherUserId` (PXG-1, D-#268) is additive: omitted, this is
+ * byte-identical to the original approve-the-proposal behavior. Supplied, it mints
+ * for the OVERRIDE teacher instead of the proposer's pick (recording both — the slot
+ * keeps `proposedCoverTeacherId` as the historical proposal and sets
+ * `finalCoverTeacherUserId` to who actually ends up covering) — and it also lets an
+ * admin approve a slot with NO proposal at all (direct-assign from the needs-cover
+ * inbox).
  */
 export async function decideCoverSlot(
   slotId: string,
   approve: boolean,
   actorId: string,
+  overrideCoverTeacherUserId?: string,
 ): Promise<IStaffCoverSlot> {
   const slot = await StaffCoverSlot.findById(slotId);
   if (!slot) throw new LeaveError("Cover slot not found");
@@ -103,35 +198,87 @@ export async function decideCoverSlot(
     await writeAudit({
       eventKind: "STAFF_COVER_DECIDED",
       actorId, targetId: slot._id, targetKind: "StaffCoverSlot",
-      meta: { decision: "rejected", sectionId: slot.sectionId.toString() },
+      meta: { decision: "rejected", sectionId: slot.sectionId?.toString() ?? null, groupType: slot.groupType },
     });
     return slot;
   }
 
-  if (!slot.proposedCoverTeacherId) {
-    throw new LeaveError("Propose a covering teacher before approving the slot (D-#22)");
+  const finalTeacherId =
+    overrideCoverTeacherUserId ?? (slot.proposedCoverTeacherId ? slot.proposedCoverTeacherId.toString() : undefined);
+  if (!finalTeacherId) {
+    throw new LeaveError(
+      "Propose a covering teacher, or assign someone directly, before approving the slot (D-#22/D-#268)",
+    );
   }
-  if (slot.status === "approved") return slot; // idempotent
+  // Re-approving/re-overriding an already-approved slot is out of scope this build
+  // (D-#268) — reject-then-reassign is the existing path for swapping an approved cover.
+  if (slot.status === "approved") return slot;
 
-  const leave = await StaffLeaveApplication.findById(slot.leaveApplicationId).lean();
-  if (!leave) throw new LeaveError("Parent leave application not found");
+  // A teacher can only physically be in one place at a given (date, period) — reject
+  // approving this slot for them if they already hold an approved cover OR a pending
+  // proposal at the exact same meeting elsewhere (found live-testing: nothing
+  // previously stopped the same teacher being double-booked across two different
+  // absent teachers' same-period slots, and an override/direct-assign could race
+  // past a still-pending proposal on another leave). Own-teaching-vs-cover conflicts
+  // stay advisory-only via teacherAvailability (unchanged, pre-existing design) —
+  // this guard is scoped to cover-vs-cover only.
+  if (await findConflictingCoverSlot(slot._id, finalTeacherId, slot.dateKey, slot.periodNumber)) {
+    throw new LeaveError(
+      `This teacher already covers (or is proposed for) another class at ${slot.dateKey} period ${slot.periodNumber} — ` +
+        "pick someone else, or reject/resolve that cover first",
+    );
+  }
+  // A teacher who is THEMSELVES on leave that day can't cover anyone — hard backstop
+  // behind the picker's exclusion (the picker won't offer them, but a stale client or
+  // a direct call must still be refused).
+  if ((await userIdsOnLeave(slot.dateKey)).has(finalTeacherId)) {
+    throw new LeaveError(
+      `This teacher is on leave on ${slot.dateKey} and cannot cover a class that day — pick someone else`,
+    );
+  }
 
-  const grantId = await assignProxy({
-    coveringTeacherId: slot.proposedCoverTeacherId.toString(),
-    absentTeacherId: slot.absentTeacherUserId ? slot.absentTeacherUserId.toString() : undefined,
-    classId: slot.classId.toString(),
-    sectionId: slot.sectionId.toString(),
-    startDate: parseDateKey(leave.fromKey),
-    durationDays: leave.days,
-    assignedBy: actorId,
-  });
-  slot.proxyGrantId = new Types.ObjectId(grantId);
+  // A section cover mints a subject-scoped, one-day proxy grant (write access). A
+  // Quran/Arabic subjectgroup cover has NO content/tracker scope to grant (mirrors
+  // the routine R-4 precedent) — it is recorded + notified only, proxyGrantId stays
+  // null. Both still record the final teacher, audit, and notify the covering teacher.
+  let grantId: string | null = null;
+  if (slot.groupType === "section" && slot.classId && slot.sectionId) {
+    grantId = await assignProxy({
+      coveringTeacherId: finalTeacherId,
+      absentTeacherId: slot.absentTeacherUserId ? slot.absentTeacherUserId.toString() : undefined,
+      classId: slot.classId.toString(),
+      sectionId: slot.sectionId.toString(),
+      subjectId: slot.subjectId ? slot.subjectId.toString() : undefined,
+      startDate: parseDateKey(slot.dateKey),
+      durationDays: 1,
+      assignedBy: actorId,
+    });
+    slot.proxyGrantId = new Types.ObjectId(grantId);
+  }
+  slot.finalCoverTeacherUserId = new Types.ObjectId(finalTeacherId);
   slot.status = "approved";
   await slot.save();
   await writeAudit({
     eventKind: "STAFF_COVER_DECIDED",
     actorId, targetId: slot._id, targetKind: "StaffCoverSlot",
-    meta: { decision: "approved", proxyGrantId: grantId, sectionId: slot.sectionId.toString() },
+    meta: {
+      decision: "approved",
+      groupType: slot.groupType,
+      proxyGrantId: grantId,
+      sectionId: slot.sectionId?.toString() ?? null,
+      subjectGroupId: slot.subjectGroupId?.toString() ?? null,
+      override: !!overrideCoverTeacherUserId,
+      proposedCoverTeacherId: slot.proposedCoverTeacherId ? slot.proposedCoverTeacherId.toString() : null,
+      finalCoverTeacherUserId: finalTeacherId,
+    },
+  });
+  // The notification's dedupe key is (slotId, grantId) — for a grantless subjectgroup
+  // cover, key on the slot id so a retry is still idempotent.
+  await emitHrCoverAssigned({
+    slotId: slot._id.toString(),
+    grantId: grantId ?? slot._id.toString(),
+    coverTeacherUserId: finalTeacherId,
+    dateKey: slot.dateKey,
   });
   return slot;
 }
@@ -159,4 +306,85 @@ export async function coverSlotsForLeave(leaveApplicationId: string): Promise<IS
   return StaffCoverSlot.find({ leaveApplicationId: new Types.ObjectId(leaveApplicationId) })
     .sort({ createdAt: 1 })
     .lean() as unknown as Promise<IStaffCoverSlot[]>;
+}
+
+/** A cross-leave needs-cover row (PXG-1) — one per uncovered class meeting, with
+ *  display labels resolved server-side (the inbox has no single academicYearId
+ *  anchor to join names client-side the way a single-leave screen does). For a
+ *  subjectgroup (Quran/Arabic) meeting, class/section/subject are null and
+ *  `subjectGroupName` carries the group's name instead. */
+export interface NeedsCoverRow {
+  slotId: string;
+  leaveApplicationId: string;
+  groupType: string;
+  absentTeacherUserId: string | null;
+  absentTeacherName: string | null;
+  classId: string | null;
+  className: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
+  subjectId: string | null;
+  subjectName: string | null;
+  subjectGroupId: string | null;
+  subjectGroupName: string | null;
+  dateKey: string;
+  periodNumber: number;
+}
+
+/** Every uncovered class meeting (status `needs_cover` — covers both "never
+ *  proposed" and "rejected-back", since decideCoverSlot's reject branch already
+ *  flips a slot back to this status) belonging to an APPROVED leave overlapping
+ *  [from, to]. Same gate as decideStaffCoverSlot today (leave:manage). */
+export async function needsCoverSlots(fromKey: string, toKey: string): Promise<NeedsCoverRow[]> {
+  const leaves = await StaffLeaveApplication.find({
+    status: "approved",
+    fromKey: { $lte: toKey },
+    toKey: { $gte: fromKey },
+  })
+    .select("_id")
+    .lean();
+  const leaveIds = leaves.map((l) => l._id);
+  if (leaveIds.length === 0) return [];
+
+  const slots = await StaffCoverSlot.find({ leaveApplicationId: { $in: leaveIds }, status: "needs_cover" })
+    .sort({ dateKey: 1, periodNumber: 1 })
+    .lean();
+  if (slots.length === 0) return [];
+
+  const teacherIds = [...new Set(slots.map((s) => s.absentTeacherUserId?.toString()).filter((id): id is string => !!id))];
+  const classIds = [...new Set(slots.map((s) => s.classId?.toString()).filter((id): id is string => !!id))];
+  const sectionIds = [...new Set(slots.map((s) => s.sectionId?.toString()).filter((id): id is string => !!id))];
+  const subjectIds = [...new Set(slots.map((s) => s.subjectId?.toString()).filter((id): id is string => !!id))];
+  const groupIds = [...new Set(slots.map((s) => s.subjectGroupId?.toString()).filter((id): id is string => !!id))];
+
+  const [teachers, classes, sections, subjects, groups] = await Promise.all([
+    User.find({ _id: { $in: teacherIds } }).select("name").lean(),
+    Class.find({ _id: { $in: classIds } }).select("nameBn").lean(),
+    Section.find({ _id: { $in: sectionIds } }).select("nameBn").lean(),
+    Subject.find({ _id: { $in: subjectIds } }).select("nameBn").lean(),
+    SubjectGroup.find({ _id: { $in: groupIds } }).select("nameBn").lean(),
+  ]);
+  const teacherName = new Map(teachers.map((t) => [t._id.toString(), t.name]));
+  const className = new Map(classes.map((c) => [c._id.toString(), c.nameBn]));
+  const sectionName = new Map(sections.map((s) => [s._id.toString(), s.nameBn]));
+  const subjectName = new Map(subjects.map((s) => [s._id.toString(), s.nameBn]));
+  const groupName = new Map(groups.map((g) => [g._id.toString(), g.nameBn]));
+
+  return slots.map((s) => ({
+    slotId: s._id.toString(),
+    leaveApplicationId: s.leaveApplicationId.toString(),
+    groupType: s.groupType ?? "section",
+    absentTeacherUserId: s.absentTeacherUserId ? s.absentTeacherUserId.toString() : null,
+    absentTeacherName: s.absentTeacherUserId ? teacherName.get(s.absentTeacherUserId.toString()) ?? null : null,
+    classId: s.classId ? s.classId.toString() : null,
+    className: s.classId ? className.get(s.classId.toString()) ?? "?" : null,
+    sectionId: s.sectionId ? s.sectionId.toString() : null,
+    sectionName: s.sectionId ? sectionName.get(s.sectionId.toString()) ?? "?" : null,
+    subjectId: s.subjectId ? s.subjectId.toString() : null,
+    subjectName: s.subjectId ? subjectName.get(s.subjectId.toString()) ?? null : null,
+    subjectGroupId: s.subjectGroupId ? s.subjectGroupId.toString() : null,
+    subjectGroupName: s.subjectGroupId ? groupName.get(s.subjectGroupId.toString()) ?? null : null,
+    dateKey: s.dateKey,
+    periodNumber: s.periodNumber,
+  }));
 }

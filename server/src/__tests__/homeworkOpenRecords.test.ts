@@ -39,7 +39,7 @@ describe("listOpenRecords (date-grouped pending queue source)", () => {
     const stuA = oid();
     const stuB = oid();
     mockRecordFind.mockResolvedValue([
-      { _id: oid(), hwItemId: item1, hwId: "HW-C5-SCI-0001", studentId: stuA, state: "SUBMITTED", chaseCount: 0, answerFileId: oid(), dueDate: new Date("2026-06-17") },
+      { _id: oid(), hwItemId: item1, hwId: "HW-C5-SCI-0001", studentId: stuA, state: "CHECKED", chaseCount: 0, answerFileId: oid(), dueDate: new Date("2026-06-17"), result: "CORRECT" },
       { _id: oid(), hwItemId: item2, hwId: "HW-C5-BAN-0002", studentId: stuB, state: "SUBMITTED", chaseCount: 1 },
     ]);
     mockItemFind.mockResolvedValue([
@@ -64,6 +64,8 @@ describe("listOpenRecords (date-grouped pending queue source)", () => {
     expect(res[1].studentName).toBe("Rehana");
     expect(res[1].hasAnswerFile).toBe(true);
     expect(res[1].dueDate).toMatch(/^2026-06-17/);
+    expect(res[1].result).toBe("CORRECT");
+    expect(res[0].result).toBeNull(); // not yet checked
   });
 
   test("missing item/student → '?' subject + the id as a safe fallback", async () => {

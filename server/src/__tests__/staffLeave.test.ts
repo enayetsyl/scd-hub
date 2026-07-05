@@ -21,10 +21,15 @@ const mockEntFind = jest.fn();
 const mockSlotCreate = jest.fn();
 const mockSlotFindById = jest.fn();
 const mockSlotFind = jest.fn();
+const mockSlotFindOne = jest.fn();
 const mockGrantFind = jest.fn();
 const mockAssignProxy = jest.fn();
 const mockRevokeProxy = jest.fn().mockResolvedValue(undefined);
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
+const mockSlotsForTeacherOnDate = jest.fn();
+const mockResolveDayType = jest.fn();
+const mockSubjectFindOne = jest.fn();
+const mockEmitHrCoverAssigned = jest.fn().mockResolvedValue(undefined);
 
 /** A find()-chain stub: .select()/.sort() return self, .lean() resolves the value. */
 const leanChain = (val: unknown) => {
@@ -69,6 +74,7 @@ jest.mock("../modules/hr/models/StaffCoverSlot", () => ({
     create: (d: unknown) => mockSlotCreate(d),
     findById: (id: unknown) => mockSlotFindById(id),
     find: (q: unknown) => mockSlotFind(q),
+    findOne: (q: unknown) => ({ select: () => ({ lean: () => mockSlotFindOne(q) }) }),
   },
 }));
 jest.mock("../modules/foundation/models/ScopeGrant", () => ({
@@ -77,6 +83,18 @@ jest.mock("../modules/foundation/models/ScopeGrant", () => ({
 jest.mock("../modules/foundation/services/ScopeGrantService", () => ({
   assignProxy: (i: unknown) => mockAssignProxy(i),
   revokeProxy: (id: unknown, by: unknown) => mockRevokeProxy(id, by),
+}));
+jest.mock("../modules/foundation/models/Subject", () => ({
+  Subject: { findOne: (q: unknown) => ({ select: () => ({ lean: () => mockSubjectFindOne(q) }) }) },
+}));
+jest.mock("../modules/routine/services/RoutineSlotService", () => ({
+  slotsForTeacherOnDate: (t: unknown, d: unknown) => mockSlotsForTeacherOnDate(t, d),
+}));
+jest.mock("../modules/routine/calendar", () => ({
+  resolveDayType: (d: unknown) => mockResolveDayType(d),
+}));
+jest.mock("../modules/notifications/services/emitters", () => ({
+  emitHrCoverAssigned: (e: unknown) => mockEmitHrCoverAssigned(e),
 }));
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
@@ -270,49 +288,105 @@ describe("decideLeave", () => {
 
 // ===========================================================================
 describe("cover fan-out + proxy seam (D-#20/#22)", () => {
-  test("fanOutCoverSlots: one slot per (section,subject), deduped; none when no login", async () => {
+  test("fanOutCoverSlots: one slot per actual (date,period) meeting; none when no login", async () => {
     const staffId = oid().toString();
     // no phone → no user → no slots
     mockStaffFindById.mockResolvedValueOnce(null);
     expect(await fanOutCoverSlots(oid().toString(), staffId)).toEqual([]);
 
-    // with a resolvable user + 2 teaching grants (one dup) → 2 slots
+    // with a resolvable user + a one-day leave with 2 real meetings that day → 2 slots
     const userId = oid();
     mockStaffFindById.mockResolvedValueOnce({ phone: "01700000000" });
     mockUserFindOne.mockResolvedValueOnce({ _id: userId });
-    const sec1 = oid(), sec2 = oid(), subj = oid();
-    mockGrantFind.mockResolvedValueOnce([
-      { classId: oid(), sectionId: sec1, subjectId: subj },
-      { classId: oid(), sectionId: sec1, subjectId: subj }, // dup → collapsed
-      { classId: oid(), sectionId: sec2, subjectId: subj },
+    mockLeaveFindById.mockReturnValue({ lean: async () => ({ fromKey: "2026-06-14", toKey: "2026-06-14" }) });
+    mockResolveDayType.mockResolvedValue("FULL");
+    const cls = oid(), sec = oid();
+    mockSlotsForTeacherOnDate.mockResolvedValue([
+      { _id: oid(), classId: cls, groupId: sec, subject: "MATH", periodNumber: 2, isBreak: false },
+      { _id: oid(), classId: cls, groupId: sec, subject: "BAN", periodNumber: 4, isBreak: false },
     ]);
+    mockSlotFindOne.mockResolvedValue(null); // no existing slot for either meeting yet
+    mockSubjectFindOne.mockResolvedValue({ _id: oid() });
     mockSlotCreate.mockImplementation(async (d) => ({ _id: oid(), ...d }));
+
     const slots = await fanOutCoverSlots(oid().toString(), staffId);
     expect(slots).toHaveLength(2);
     expect(mockSlotCreate).toHaveBeenCalledTimes(2);
-    expect(mockSlotCreate.mock.calls[0][0]).toMatchObject({ status: "needs_cover" });
+    expect(mockSlotCreate.mock.calls[0][0]).toMatchObject({ status: "needs_cover", dateKey: "2026-06-14", periodNumber: 2 });
   });
 
-  test("decideCoverSlot approve → mints a proxy grant over the leave window + stores it", async () => {
-    const cover = oid(), absent = oid();
+  test("fanOutCoverSlots skips OFF/HOLIDAY days and breaks, and never re-creates an existing slot", async () => {
+    const staffId = oid().toString();
+    mockStaffFindById.mockResolvedValueOnce({ phone: "01700000000" });
+    mockUserFindOne.mockResolvedValueOnce({ _id: oid() });
+    mockLeaveFindById.mockReturnValue({ lean: async () => ({ fromKey: "2026-06-12", toKey: "2026-06-13" }) }); // Fri+Sat-ish window
+    mockResolveDayType.mockResolvedValueOnce("OFF").mockResolvedValueOnce("FULL");
+    mockSlotsForTeacherOnDate.mockResolvedValue([
+      { _id: oid(), classId: oid(), groupId: oid(), subject: "MATH", periodNumber: 1, isBreak: true }, // break → skipped
+    ]);
+    const slots = await fanOutCoverSlots(oid().toString(), staffId);
+    expect(slots).toEqual([]);
+    expect(mockSlotCreate).not.toHaveBeenCalled();
+  });
+
+  test("fanOutCoverSlots creates a subjectgroup slot for a Quran/Arabic meeting (no classId, no subject)", async () => {
+    const staffId = oid().toString();
+    mockStaffFindById.mockResolvedValueOnce({ phone: "01700000000" });
+    mockUserFindOne.mockResolvedValueOnce({ _id: oid() });
+    mockLeaveFindById.mockReturnValue({ lean: async () => ({ fromKey: "2026-06-14", toKey: "2026-06-14" }) });
+    mockResolveDayType.mockResolvedValue("FULL");
+    const grp = oid();
+    mockSlotsForTeacherOnDate.mockResolvedValue([
+      { _id: oid(), groupType: "subjectgroup", classId: null, groupId: grp, subject: "QURAN", periodNumber: 1, isBreak: false },
+    ]);
+    mockSlotFindOne.mockResolvedValue(null);
+    mockSlotCreate.mockImplementation(async (d) => ({ _id: oid(), ...d }));
+
+    const slots = await fanOutCoverSlots(oid().toString(), staffId);
+    expect(slots).toHaveLength(1);
+    // Subject.findOne is NOT consulted for a subjectgroup meeting (no foundation subject).
+    expect(mockSubjectFindOne).not.toHaveBeenCalled();
+    expect(mockSlotCreate.mock.calls[0][0]).toMatchObject({
+      groupType: "subjectgroup",
+      classId: null,
+      sectionId: null,
+      subjectId: null,
+      subjectGroupId: grp,
+      status: "needs_cover",
+    });
+  });
+
+  test("decideCoverSlot approve (no override) → mints a one-day proxy grant for the slot's own date", async () => {
+    const cover = oid(), absent = oid(), subj = oid();
     const slot: any = {
-      _id: oid(), leaveApplicationId: oid(), classId: oid(), sectionId: oid(),
+      _id: oid(), leaveApplicationId: oid(), groupType: "section", classId: oid(), sectionId: oid(), subjectId: subj,
       proposedCoverTeacherId: cover, absentTeacherUserId: absent, status: "proposed", proxyGrantId: null,
+      dateKey: "2026-06-14", periodNumber: 2,
     };
     slot.save = jest.fn().mockResolvedValue(slot);
     mockSlotFindById.mockResolvedValue(slot);
-    mockLeaveFindById.mockReturnValue({ lean: async () => ({ fromKey: "2026-06-10", days: 2 }) });
     const grantId = oid().toString();
     mockAssignProxy.mockResolvedValue(grantId);
 
     const res = await decideCoverSlot(slot._id.toString(), true, ACTOR);
     expect(res.status).toBe("approved");
     expect(res.proxyGrantId!.toString()).toBe(grantId);
+    expect(res.finalCoverTeacherUserId!.toString()).toBe(cover.toString());
     expect(mockAssignProxy).toHaveBeenCalledWith(
-      expect.objectContaining({ coveringTeacherId: cover.toString(), durationDays: 2 }),
+      expect.objectContaining({
+        coveringTeacherId: cover.toString(),
+        durationDays: 1,
+        subjectId: subj.toString(),
+      }),
+    );
+    expect(mockEmitHrCoverAssigned).toHaveBeenCalledWith(
+      expect.objectContaining({ coverTeacherUserId: cover.toString(), dateKey: "2026-06-14" }),
     );
     expect(mockWriteAudit).toHaveBeenCalledWith(
-      expect.objectContaining({ eventKind: "STAFF_COVER_DECIDED", meta: expect.objectContaining({ decision: "approved" }) }),
+      expect.objectContaining({
+        eventKind: "STAFF_COVER_DECIDED",
+        meta: expect.objectContaining({ decision: "approved", override: false }),
+      }),
     );
   });
 

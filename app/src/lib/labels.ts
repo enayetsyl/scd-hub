@@ -889,6 +889,14 @@ const STR_BN = {
   hwFileHas: "📎 সংযুক্তি আছে",
   hwFileUploadFail: "এই মুহূর্তে ফাইলটি আপলোড করা যাচ্ছে না — পরে আবার চেষ্টা করুন",
   hwFileOpenFail: "এই মুহূর্তে ফাইলটি খোলা যাচ্ছে না",
+  // Check Grid (HWG-2, D-#267) — one-tap outcome chips
+  hwOutcomeCorrect: "ঠিক",
+  hwOutcomePartial: "আংশিক",
+  hwOutcomeWrong: "ভুল",
+  hwOutcomeNotSubmitted: "দেয়নি",
+  hwConfirm: "নিশ্চিত",
+  hwSeeRecords: "রেকর্ডস",
+  hwNoOpenRecords: "কোনো মুলতুবি কাজ নেই",
   // Guardian portal (GP-2, D-#68)
   gpToday: "আজ",
   gpChildren: "সন্তান",
@@ -1416,6 +1424,7 @@ const STR_BN = {
   rtActiveCovers: "আজকের কভার",
   rtCovered: "কভার করা হয়েছে",
   rtNoCovers: "কোনো কভার নেই।",
+  rtCoveringFor: "কভার করছেন",
 
   // Routine triggers + class-note / daily-diary (R-5)
   dailyNoteTitle: "ক্লাস নোট",
@@ -1749,6 +1758,12 @@ const STR_BN = {
   hrCoverRejected: "কভার প্রত্যাখ্যাত",
   hrCoverEmpty: "এই ছুটির কোনো কভার স্লট নেই।",
   hrCoverProxyActive: "প্রক্সি সক্রিয়",
+  // Proxy Cover UX (PXG-1/PXG-2, D-#268)
+  hrCoverAssignOther: "অন্য কাউকে দিন",
+  hrCoverFree: "ফ্রি",
+  hrCoverBusy: "ব্যস্ত",
+  hrNeedsCoverTitle: "কভার প্রয়োজন",
+  hrAllCovered: "সব ক্লাস কভার হয়েছে",
   // My record
   hrMyConduct: "আচরণ রেকর্ড",
   hrMyAppraisals: "বার্ষিক মূল্যায়ন",
@@ -2860,6 +2875,14 @@ const STR_EN: StrTable = {
   hwFileHas: "📎 Attachment",
   hwFileUploadFail: "Can't upload the file right now — try again later",
   hwFileOpenFail: "Can't open the file right now",
+  // Check Grid (HWG-2, D-#267) — one-tap outcome chips
+  hwOutcomeCorrect: "Correct",
+  hwOutcomePartial: "Partial",
+  hwOutcomeWrong: "Wrong",
+  hwOutcomeNotSubmitted: "Not submitted",
+  hwConfirm: "Confirm",
+  hwSeeRecords: "Records",
+  hwNoOpenRecords: "Nothing pending",
   // Guardian portal (GP-2, D-#68)
   gpToday: "Today",
   gpChildren: "Children",
@@ -3387,6 +3410,7 @@ const STR_EN: StrTable = {
   rtActiveCovers: "Today's covers",
   rtCovered: "Covered",
   rtNoCovers: "No covers.",
+  rtCoveringFor: "Covering for",
 
   // Routine triggers + class-note / daily-diary (R-5)
   dailyNoteTitle: "Class note",
@@ -3718,6 +3742,11 @@ const STR_EN: StrTable = {
   hrCoverRejected: "Cover rejected",
   hrCoverEmpty: "No cover slots for this leave.",
   hrCoverProxyActive: "Proxy active",
+  hrCoverAssignOther: "Assign someone else",
+  hrCoverFree: "Free",
+  hrCoverBusy: "Busy",
+  hrNeedsCoverTitle: "Needs cover",
+  hrAllCovered: "All classes covered",
   hrMyConduct: "Conduct records",
   hrMyAppraisals: "Annual appraisals",
   hrMyGrievances: "My grievances",
