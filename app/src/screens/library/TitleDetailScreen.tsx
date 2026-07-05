@@ -27,6 +27,7 @@ import {
   reservationStatusLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<LibraryStackParamList, "TitleDetail">;
@@ -43,6 +44,7 @@ const COPY_TONE: Record<string, "ok" | "warn" | "danger" | "muted" | "info"> = {
 export default function TitleDetailScreen({ route }: Props): React.ReactElement {
   const { titleId } = route.params;
   const { role } = useAuth();
+  const { confirmAction } = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
@@ -80,6 +82,7 @@ export default function TitleDetailScreen({ route }: Props): React.ReactElement 
   }
 
   async function runCancel(reservationId: string): Promise<void> {
+    if (!(await confirmAction({ confirmLabel: STR.libCancelReservation }))) return;
     setError(null);
     setOk(null);
     const res = await cancelResv({ reservationId });

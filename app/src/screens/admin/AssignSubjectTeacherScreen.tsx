@@ -21,12 +21,14 @@ import { SectionBar } from "../../components/SectionBar";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "AssignSubjectTeacher">;
 
 export default function AssignSubjectTeacherScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
+  const { confirmAction } = useConfirm();
   const [subjectId, setSubjectId] = useState("");
   const [teacherId, setTeacherId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -65,6 +67,7 @@ export default function AssignSubjectTeacherScreen({ navigation }: Props): React
   }
 
   async function runRevoke(grantId: string): Promise<void> {
+    if (!(await confirmAction({ confirmLabel: STR.remove }))) return;
     setBusy(true);
     setError(null);
     setOk(null);

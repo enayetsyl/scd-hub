@@ -18,6 +18,8 @@ import { BasketProvider } from "./src/state/BasketContext";
 import { SectionProvider } from "./src/state/SectionContext";
 import { LanguageProvider, useLanguage } from "./src/state/LanguageContext";
 import { SidebarProvider } from "./src/state/SidebarContext";
+import { ToastProvider } from "./src/state/ToastContext";
+import { ConfirmProvider } from "./src/state/ConfirmContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { navigationRef, openNotificationCenter } from "./src/navigation/navigationRef";
 import { useNavigationTheme } from "./src/theme";
@@ -137,7 +139,14 @@ function App(): React.ReactElement | null {
                         (AppTabs) and every content Screen share one collapse
                         state (D-#258). */}
                     <SidebarProvider>
-                      <ThemedNavigation />
+                      {/* UX-1 (D-#265): global toast + confirm sheet sit above the
+                          navigator so every screen can toast a mutation outcome and
+                          gate destructive actions behind one confirm sheet. */}
+                      <ToastProvider>
+                        <ConfirmProvider>
+                          <ThemedNavigation />
+                        </ConfirmProvider>
+                      </ToastProvider>
                     </SidebarProvider>
                   </SectionProvider>
                 </BasketProvider>

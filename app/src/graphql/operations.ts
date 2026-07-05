@@ -1580,6 +1580,7 @@ export interface HwOpenRecordT {
   chaseCount: number;
   hasAnswerFile: boolean;
   dueDate: string | null;
+  result: string | null;
 }
 
 export const HOMEWORK_OPEN_RECORDS = gql<
@@ -1588,7 +1589,7 @@ export const HOMEWORK_OPEN_RECORDS = gql<
 >`
   query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
     homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
-      id hwId subject topicLabelBn dateGiven studentId studentName state chaseCount hasAnswerFile dueDate
+      id hwId subject topicLabelBn dateGiven studentId studentName state chaseCount hasAnswerFile dueDate result
     }
   }
 `;
@@ -1787,6 +1788,49 @@ export const CHECK_HOMEWORK_RECORD = gql<
   }
 `;
 
+export interface HwOutcomeResultT {
+  recordId: string;
+  hwId: string;
+  state: string;
+  result: string | null;
+  chaseCount: number;
+  dueDate: string | null;
+  resubmission: {
+    recordId: string;
+    hwId: string;
+    state: string;
+    topupFlag: boolean;
+    topupQids: string[];
+    topupTime: number | null;
+    dueDate: string | null;
+  } | null;
+}
+
+/** One-tap outcome recording (HWG-1, D-#267) — fast-forwards the lifecycle then applies
+ *  the check logic (CORRECT/PARTIAL/WRONG) or the chase logic (NOT_SUBMITTED). */
+export const RECORD_HOMEWORK_OUTCOME = gql<
+  { recordHomeworkOutcome: HwOutcomeResultT },
+  {
+    sectionId: string;
+    recordId: string;
+    outcome: string;
+    resubmit?: boolean | null;
+    topupQids?: string[] | null;
+    topupTime?: number | null;
+  }
+>`
+  mutation RecordHomeworkOutcome(
+    $sectionId: String!, $recordId: String!, $outcome: String!, $resubmit: Boolean, $topupQids: [String!], $topupTime: Int
+  ) {
+    recordHomeworkOutcome(
+      sectionId: $sectionId, recordId: $recordId, outcome: $outcome, resubmit: $resubmit, topupQids: $topupQids, topupTime: $topupTime
+    ) {
+      recordId hwId state result chaseCount dueDate
+      resubmission { recordId hwId state topupFlag topupQids topupTime dueDate }
+    }
+  }
+`;
+
 export interface HwTransitionResultT {
   recordId: string;
   hwId: string;
@@ -1959,12 +2003,16 @@ export interface RoutineSlotT {
   startTime: string | null;
   endTime: string | null;
   groupName: string | null;
+  /** True only on myDay's synthesized rows (PXG-1 gap fix, D-#268): this period
+   *  belongs to another (absent) teacher and the caller is covering it under an
+   *  approved HR leave-cover slot — teacherName is the ABSENT teacher's name. */
+  isCovering: boolean;
 }
 
 const ROUTINE_SLOT_FIELDS = `
   id groupType groupId classId dayOfWeek periodNumber subject track
   isBreak teacherId roomId effectiveFrom effectiveTo active coverTeacherId
-  teacherName coverTeacherName startTime endTime groupName
+  teacherName coverTeacherName startTime endTime groupName isCovering
 `;
 
 export const ROUTINE_SLOTS_QUERY = gql<
@@ -1979,6 +2027,32 @@ export const ROUTINE_SLOTS_QUERY = gql<
 export const MY_ROUTINE_QUERY = gql<{ myRoutineSlots: RoutineSlotT[] }, NoVars>`
   query MyRoutine {
     myRoutineSlots { ${ROUTINE_SLOT_FIELDS} }
+  }
+`;
+
+// UX-4 (D-#265): the staff Today dashboard — ONE read composing the caller's own
+// periods for the date, summed homework work counts, and the attendance-pending flag.
+export interface MyDayHomeworkT {
+  pendingChecking: number;
+  openResubmissions: number;
+  activeChases: number;
+}
+export interface MyDayT {
+  date: string;
+  dayType: string;
+  slots: RoutineSlotT[];
+  homework: MyDayHomeworkT;
+  attendancePending: boolean;
+}
+export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
+  query MyDay($date: String!) {
+    myDay(date: $date) {
+      date
+      dayType
+      slots { ${ROUTINE_SLOT_FIELDS} }
+      homework { pendingChecking openResubmissions activeChases }
+      attendancePending
+    }
   }
 `;
 
@@ -4114,18 +4188,25 @@ export const DECIDE_STAFF_LEAVE = gql<
 export interface StaffCoverSlotT {
   id: string;
   leaveApplicationId: string;
-  classId: string;
-  sectionId: string;
+  /** "section" | "subjectgroup" — subjectgroup (Quran/Arabic) has no class/section/subject. */
+  groupType: string;
+  classId: string | null;
+  sectionId: string | null;
   subjectId: string | null;
+  subjectGroupId: string | null;
   absentTeacherUserId: string | null;
+  dateKey: string;
+  periodNumber: number;
   proposedCoverTeacherId: string | null;
+  finalCoverTeacherUserId: string | null;
   status: string;
   proxyGrantId: string | null;
 }
 
 const STAFF_COVER_SLOT_FIELDS = `
-  id leaveApplicationId classId sectionId subjectId
-  absentTeacherUserId proposedCoverTeacherId status proxyGrantId
+  id leaveApplicationId groupType classId sectionId subjectId subjectGroupId
+  absentTeacherUserId dateKey periodNumber
+  proposedCoverTeacherId finalCoverTeacherUserId status proxyGrantId
 `;
 
 export const STAFF_COVER_SLOTS_QUERY = gql<
@@ -4146,12 +4227,48 @@ export const PROPOSE_STAFF_COVER = gql<
   }
 `;
 
+/** overrideCoverTeacherUserId (PXG-1, D-#268) is optional — omitted, behavior is
+ *  unchanged; supplied, mints for the override teacher (proposed slot) or
+ *  direct-assigns (needs_cover slot, no proposal required). */
 export const DECIDE_STAFF_COVER_SLOT = gql<
   { decideStaffCoverSlot: StaffCoverSlotT },
-  { slotId: string; approve: boolean }
+  { slotId: string; approve: boolean; overrideCoverTeacherUserId?: string | null }
 >`
-  mutation DecideStaffCoverSlot($slotId: String!, $approve: Boolean!) {
-    decideStaffCoverSlot(slotId: $slotId, approve: $approve) { ${STAFF_COVER_SLOT_FIELDS} }
+  mutation DecideStaffCoverSlot($slotId: String!, $approve: Boolean!, $overrideCoverTeacherUserId: String) {
+    decideStaffCoverSlot(slotId: $slotId, approve: $approve, overrideCoverTeacherUserId: $overrideCoverTeacherUserId) { ${STAFF_COVER_SLOT_FIELDS} }
+  }
+`;
+
+export interface NeedsCoverRowT {
+  slotId: string;
+  leaveApplicationId: string;
+  groupType: string;
+  absentTeacherUserId: string | null;
+  absentTeacherName: string | null;
+  classId: string | null;
+  className: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
+  subjectId: string | null;
+  subjectName: string | null;
+  subjectGroupId: string | null;
+  subjectGroupName: string | null;
+  dateKey: string;
+  periodNumber: number;
+}
+
+/** Cross-leave needs-cover inbox (PXG-1, D-#268) — every uncovered class meeting
+ *  across every approved leave overlapping [from, to]. */
+export const NEEDS_COVER_SLOTS_QUERY = gql<
+  { needsCoverSlots: NeedsCoverRowT[] },
+  { from: string; to: string }
+>`
+  query NeedsCoverSlots($from: String!, $to: String!) {
+    needsCoverSlots(from: $from, to: $to) {
+      slotId leaveApplicationId groupType absentTeacherUserId absentTeacherName
+      classId className sectionId sectionName subjectId subjectName
+      subjectGroupId subjectGroupName dateKey periodNumber
+    }
   }
 `;
 

@@ -20,28 +20,32 @@ import {
 } from "../../graphql/operations";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState, ErrorBanner } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { SectionBar } from "../../components/SectionBar";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useSectionContext } from "../../state/SectionContext";
+import { useToast } from "../../state/ToastContext";
 import { space, useColors } from "../../theme";
 
 type Props = NativeStackScreenProps<HomeworkStackParamList, "HomeworkReconcile">;
 
 const today = (): string => new Date().toISOString().slice(0, 10);
 
-export default function HomeworkReconcileScreen({ navigation }: Props): React.ReactElement {
+export default function HomeworkReconcileScreen({ navigation, route }: Props): React.ReactElement {
   const colors = useColors();
   const { role, user } = useAuth();
   const { selection, hasSection } = useSectionContext();
   const isAdmin = (!!role && roleHasPermission(role, "roster:manage")) || !!user?.homeworkSupervisor;
-  const [date, setDate] = useState(today());
+  // R-Context (UX-5): inherit the date picked on Homework home; still editable here.
+  const [date, setDate] = useState(route.params?.date ?? today());
   const [trimTo, setTrimTo] = useState<Record<string, string>>({});
   const [absent, setAbsent] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
+  // R-Validate (UX-1): per-item trim errors, keyed by itemId.
+  const [trimErrors, setTrimErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
 
   const vars = { sectionId: selection.sectionId ?? "", classId: selection.classId ?? "", date };
   const [{ data: classesData }] = useQuery({
@@ -79,16 +83,23 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
     isAdmin || (!!selectedSection && (selectedSection.classTeacherId === user?.id || selectedSection.homeworkConfirmerId === user?.id));
 
   async function onTrim(itemId: string, qCount: number, revItem: boolean): Promise<void> {
-    setError(null);
-    setOk(null);
+    setTrimErrors({});
     const raw = trimTo[itemId];
     const newQ = parseInt(raw ?? "", 10);
-    if (!Number.isFinite(newQ) || newQ < 0 || newQ >= qCount) return setError(STR.hwTrimTo);
+    if (!Number.isFinite(newQ) || newQ < 0 || newQ >= qCount) {
+      setTrimErrors({ [itemId]: `${STR.hwTrimTo} — ${STR.fieldRequired}` });
+      toast.show(`${STR.hwTrimTo} — ${STR.fieldRequired}`, "danger");
+      return;
+    }
     const rank = newQ === 0 ? "c" : revItem ? "a" : "b";
     setBusy(true);
     const res = await trim({ ...vars, itemId, newQCount: newQ, rank });
     setBusy(false);
-    if (res.error) return setError(friendlyError(res.error));
+    if (res.error) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
+    toast.show(STR.saved, "ok");
     setTrimTo((m) => ({ ...m, [itemId]: "" }));
     refetchTally({ requestPolicy: "network-only" });
   }
@@ -103,15 +114,16 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
   }
 
   async function onConfirm(): Promise<void> {
-    setError(null);
-    setOk(null);
     const roster = students.map((s) => ({ studentId: s.id, present: !absent.has(s.id) }));
     setBusy(true);
     const res = await confirm({ ...vars, roster });
     setBusy(false);
-    if (res.error || !res.data?.confirmHomeworkDay) return setError(friendlyError(res.error));
+    if (res.error || !res.data?.confirmHomeworkDay) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
     const r = res.data.confirmHomeworkDay;
-    setOk(`${STR.hwIssuedItems}: ${bnNum(r.issuedItems)} · ${STR.hwIssuedRecords}: ${bnNum(r.issuedRecords)}`);
+    toast.show(`${STR.hwIssuedItems}: ${bnNum(r.issuedItems)} · ${STR.hwIssuedRecords}: ${bnNum(r.issuedRecords)}`, "ok");
     refetchTally({ requestPolicy: "network-only" });
   }
 
@@ -119,7 +131,7 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
         <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
-        {hasSection ? <Field label={STR.hwDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" /> : null}
+        {hasSection ? <DateField label={STR.hwDate} value={date} onChange={setDate} /> : null}
       </View>
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: space(4) }}>
         {!hasSection ? (
@@ -130,9 +142,6 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
           <Loader label={STR.loading} />
         ) : (
           <>
-            {ok ? <Notice message={ok} tone="ok" /> : null}
-            {error ? <Notice message={error} tone="danger" /> : null}
-
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Body style={{ fontWeight: "700" }}>{STR.hwDayTotal}</Body>
@@ -157,6 +166,7 @@ export default function HomeworkReconcileScreen({ navigation }: Props): React.Re
                       value={trimTo[it.itemId] ?? ""}
                       onChangeText={(t) => setTrimTo((m) => ({ ...m, [it.itemId]: t }))}
                       keyboardType="number-pad"
+                      error={trimErrors[it.itemId]}
                     />
                   </View>
                   <View style={{ marginBottom: 12 }}>

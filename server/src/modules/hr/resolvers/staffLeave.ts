@@ -29,6 +29,8 @@ import {
   proposeCover,
   decideCoverSlot,
   coverSlotsForLeave,
+  needsCoverSlots,
+  type NeedsCoverRow,
 } from "../services/CoverService";
 import { resolveStaffProfileForUser } from "../services/staffMatch";
 import { StaffLeaveApplication, type IStaffLeaveApplication } from "../models/StaffLeaveApplication";
@@ -81,17 +83,47 @@ StaffLeaveRef.implement({
 
 const StaffCoverSlotRef = builder.objectRef<IStaffCoverSlot>("StaffCoverSlot");
 StaffCoverSlotRef.implement({
-  description: "A leave's cover slot (prd-hr §3.5, D-#22): proposed → approved mints a proxy grant.",
+  description:
+    "One leave's cover slot for ONE class meeting (date × period). A `section` slot's approval mints a " +
+    "one-day proxy grant; a `subjectgroup` (Quran/Arabic) slot is recorded only, no grant (prd-hr §3.5, " +
+    "D-#22; per-meeting redesign PXG-1, D-#268; Quran/Arabic support follow-up).",
   fields: (t) => ({
     id: t.string({ resolve: (s) => s._id.toString() }),
     leaveApplicationId: t.string({ resolve: (s) => s.leaveApplicationId.toString() }),
-    classId: t.string({ resolve: (s) => s.classId.toString() }),
-    sectionId: t.string({ resolve: (s) => s.sectionId.toString() }),
+    groupType: t.string({ resolve: (s) => s.groupType ?? "section" }),
+    classId: t.string({ nullable: true, resolve: (s) => s.classId?.toString() ?? null }),
+    sectionId: t.string({ nullable: true, resolve: (s) => s.sectionId?.toString() ?? null }),
     subjectId: t.string({ nullable: true, resolve: (s) => s.subjectId?.toString() ?? null }),
+    subjectGroupId: t.string({ nullable: true, resolve: (s) => s.subjectGroupId?.toString() ?? null }),
     absentTeacherUserId: t.string({ nullable: true, resolve: (s) => s.absentTeacherUserId?.toString() ?? null }),
+    dateKey: t.exposeString("dateKey"),
+    periodNumber: t.exposeInt("periodNumber"),
     proposedCoverTeacherId: t.string({ nullable: true, resolve: (s) => s.proposedCoverTeacherId?.toString() ?? null }),
+    finalCoverTeacherUserId: t.string({ nullable: true, resolve: (s) => s.finalCoverTeacherUserId?.toString() ?? null }),
     status: t.exposeString("status"),
     proxyGrantId: t.string({ nullable: true, resolve: (s) => s.proxyGrantId?.toString() ?? null }),
+  }),
+});
+
+const NeedsCoverRowRef = builder.objectRef<NeedsCoverRow>("NeedsCoverRow");
+NeedsCoverRowRef.implement({
+  description: "One uncovered class meeting across every approved leave in a date range (PXG-1 inbox).",
+  fields: (t) => ({
+    slotId: t.exposeString("slotId"),
+    leaveApplicationId: t.exposeString("leaveApplicationId"),
+    groupType: t.exposeString("groupType"),
+    absentTeacherUserId: t.string({ nullable: true, resolve: (r) => r.absentTeacherUserId }),
+    absentTeacherName: t.string({ nullable: true, resolve: (r) => r.absentTeacherName }),
+    classId: t.string({ nullable: true, resolve: (r) => r.classId }),
+    className: t.string({ nullable: true, resolve: (r) => r.className }),
+    sectionId: t.string({ nullable: true, resolve: (r) => r.sectionId }),
+    sectionName: t.string({ nullable: true, resolve: (r) => r.sectionName }),
+    subjectId: t.string({ nullable: true, resolve: (r) => r.subjectId }),
+    subjectName: t.string({ nullable: true, resolve: (r) => r.subjectName }),
+    subjectGroupId: t.string({ nullable: true, resolve: (r) => r.subjectGroupId }),
+    subjectGroupName: t.string({ nullable: true, resolve: (r) => r.subjectGroupName }),
+    dateKey: t.exposeString("dateKey"),
+    periodNumber: t.exposeInt("periodNumber"),
   }),
 });
 
@@ -248,15 +280,24 @@ builder.mutationField("decideStaffCoverSlot", (t) =>
   t.field({
     type: StaffCoverSlotRef,
     description:
-      "Approve a proposed cover slot → mint the D-#20 proxy grant (write access begins), or reject " +
-      "it → back to needs-cover (D-#22). Requires leave:manage. Audited.",
+      "Approve a proposed (or, with an override, a needs-cover) slot → mint a one-day D-#20 proxy " +
+      "grant (write access begins), or reject it → back to needs-cover (D-#22). `overrideCoverTeacherUserId` " +
+      "(PXG-1, D-#268) is optional/additive: omitted, behavior is unchanged; supplied, it mints for the " +
+      "override teacher instead of the proposer's pick, and lets a proposal-less slot be direct-assigned. " +
+      "Requires leave:manage. Audited.",
     authScopes: { hasPermission: "leave:manage" },
     args: {
       slotId: t.arg.string({ required: true }),
       approve: t.arg.boolean({ required: true }),
+      overrideCoverTeacherUserId: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) =>
-      decideCoverSlot(args.slotId, args.approve, ctx.auth!.userId) as unknown as Promise<IStaffCoverSlot>,
+      decideCoverSlot(
+        args.slotId,
+        args.approve,
+        ctx.auth!.userId,
+        args.overrideCoverTeacherUserId ?? undefined,
+      ) as unknown as Promise<IStaffCoverSlot>,
   }),
 );
 
@@ -320,6 +361,21 @@ builder.queryField("staffCoverSlots", (t) =>
       }
       return coverSlotsForLeave(args.leaveApplicationId) as unknown as Promise<IStaffCoverSlot[]>;
     },
+  }),
+);
+
+builder.queryField("needsCoverSlots", (t) =>
+  t.field({
+    type: [NeedsCoverRowRef],
+    description:
+      "Every uncovered class meeting (across all approved leaves overlapping the range) — the " +
+      "cross-leave inbox (PXG-1, D-#268). Same gate as decideStaffCoverSlot.",
+    authScopes: { hasPermission: "leave:manage" },
+    args: {
+      from: t.arg.string({ required: true }),
+      to: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args) => needsCoverSlots(args.from, args.to),
   }),
 );
 

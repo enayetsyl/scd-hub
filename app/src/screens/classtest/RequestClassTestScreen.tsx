@@ -15,11 +15,16 @@ import {
   CREATE_CLASS_TEST_REQUEST,
   SUGGEST_CLASS_TEST_NUMBER_QUERY,
 } from "../../graphql/classTest";
-import { Screen, Card, Body, Muted, Button, Field, Chip, Select, Notice } from "../../components/ui";
+import { ASSESSMENT_SETS_QUERY } from "../../graphql/operations";
+import { Screen, Card, Body, Muted, Button, Field, Chip, Select } from "../../components/ui";
+import { DateField } from "../../components/DateField";
+import { MoreOptions } from "../../components/MoreOptions";
 import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
-import { STR, hwSubjectLabel } from "../../lib/labels";
+import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { required } from "../../lib/validate";
+import { useToast } from "../../state/ToastContext";
 import { pickAndUploadClassTestPaper, FileUploadError } from "../../lib/files";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
@@ -33,6 +38,9 @@ export default function RequestClassTestScreen(): React.ReactElement {
   const [subject, setSubject] = useState<string | null>(null);
   const [source, setSource] = useState<"POOL_SET" | "UPLOADED_PAPER">("POOL_SET");
   const [setId, setSetId] = useState("");
+  // UX-3: the happy path picks an assembled set from a list; the typed-ID field is
+  // an advanced escape hatch for a set the list doesn't surface.
+  const [manualSetEntry, setManualSetEntry] = useState(false);
   const [paper, setPaper] = useState<{ fileId: string; name: string } | null>(null);
   const [examDate, setExamDate] = useState("");
   const [totalMarks, setTotalMarks] = useState("");
@@ -40,11 +48,27 @@ export default function RequestClassTestScreen(): React.ReactElement {
   const [testNumber, setTestNumber] = useState("");
   const [deadlineDays, setDeadlineDays] = useState("");
   const [notes, setNotes] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
+  // R-Validate (UX-1): per-field errors; the toast names the first offending field.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
 
   const [, createReq] = useMutation(CREATE_CLASS_TEST_REQUEST);
+
+  // The caller's assembled sets for the chosen section — the pool-set picker source
+  // (UX-3, R-Search). Filtered client-side to CT sets; a set is picked by id, never pasted.
+  const [setsQ] = useQuery({
+    query: ASSESSMENT_SETS_QUERY,
+    variables: { sectionId: section?.sectionId ?? "", classId: section?.classId ?? "", status: "assembled" },
+    pause: !section || source !== "POOL_SET",
+  });
+  const ctSetOptions = (setsQ.data?.assessmentSets ?? [])
+    .filter((s) => s.setType === "CT")
+    .map((s) => ({
+      label: s.id,
+      value: s.id,
+      hint: `${bnNum(s.basketItems.length)} ${STR.questionsWord} · ${bnNum(s.totalMarks ?? 0)} ${STR.marks}`,
+    }));
 
   // Auto-suggest the next test# once a section + subject are chosen (editable).
   const [suggestQ] = useQuery({
@@ -59,29 +83,60 @@ export default function RequestClassTestScreen(): React.ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suggestQ.data]);
 
+  // UX-6 default: pass mark tracks ⌈total × 0.33⌉ until the teacher edits it
+  // themselves (then their value wins — the field stays fully editable).
+  const [passMarkTouched, setPassMarkTouched] = useState(false);
+  useEffect(() => {
+    const total = Number(totalMarks);
+    if (!passMarkTouched && totalMarks.trim() !== "" && Number.isFinite(total) && total >= 1) {
+      setPassMark(String(Math.ceil(total * 0.33)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalMarks, passMarkTouched]);
+
+  // BUG-013: the Drive round-trip takes seconds — without a busy state and a
+  // success toast the upload read as "nothing happened".
+  const [uploadBusy, setUploadBusy] = useState(false);
   async function onUpload(): Promise<void> {
-    setError(null);
+    if (uploadBusy) return;
+    setUploadBusy(true);
     try {
       const f = await pickAndUploadClassTestPaper();
-      if (f) setPaper({ fileId: f.fileId, name: f.originalName });
+      if (f) {
+        setPaper({ fileId: f.fileId, name: f.originalName });
+        toast.show(`${STR.ctPaperUploaded}: ${f.originalName}`, "ok");
+      }
     } catch (e) {
-      setError(e instanceof FileUploadError ? e.message : STR.errGeneric);
+      toast.show(e instanceof FileUploadError ? e.message : STR.errGeneric, "danger");
+    } finally {
+      setUploadBusy(false);
     }
   }
 
   async function onSubmit(): Promise<void> {
-    setError(null);
-    setOk(null);
+    setFieldErrors({});
     const total = Number(totalMarks);
-    if (!section || !subject || !examDate.trim() || !Number.isFinite(total) || total < 1) {
-      return setError(STR.errGeneric);
+    const { firstErrorKey, errors } = required({
+      section: { value: section, message: `${STR.section} — ${STR.fieldRequired}` },
+      subject: { value: subject, message: `${STR.ctSubject} — ${STR.fieldRequired}` },
+      examDate: { value: examDate.trim(), message: `${STR.ctExamDate} — ${STR.fieldRequired}` },
+      totalMarks: {
+        value: Number.isFinite(total) && total >= 1 ? total : null,
+        message: `${STR.ctTotalMarks} — ${STR.fieldRequired}`,
+      },
+      ...(source === "POOL_SET"
+        ? { setId: { value: setId.trim(), message: `${STR.ctSetId} — ${STR.fieldRequired}` } }
+        : { paper: { value: paper, message: `${STR.ctUploadPaper} — ${STR.fieldRequired}` } }),
+    });
+    if (firstErrorKey) {
+      setFieldErrors(errors);
+      toast.show(errors[firstErrorKey], "danger");
+      return;
     }
-    if (source === "POOL_SET" && !setId.trim()) return setError(STR.errGeneric);
-    if (source === "UPLOADED_PAPER" && !paper) return setError(STR.errGeneric);
     setBusy(true);
     const res = await createReq({
-      sectionId: section.sectionId,
-      subject,
+      sectionId: section!.sectionId,
+      subject: subject!,
       examDate: examDate.trim(),
       totalMarks: total,
       passMark: passMark.trim() ? Number(passMark) : null,
@@ -93,9 +148,12 @@ export default function RequestClassTestScreen(): React.ReactElement {
       notes: notes.trim() || null,
     });
     setBusy(false);
-    if (res.error) return setError(friendlyError(res.error));
+    if (res.error) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
     if (res.data) {
-      setOk(STR.ctRequestFiled);
+      toast.show(STR.ctRequestFiled, "ok");
       nav.navigate("ClassTestHome");
     }
   }
@@ -103,8 +161,6 @@ export default function RequestClassTestScreen(): React.ReactElement {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
-        {ok ? <Notice message={ok} tone="ok" /> : null}
-        {error ? <Notice message={error} tone="danger" /> : null}
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.ctNewRequest}</Body>
           <AcademicYearSelect value={yearId} onChange={setYearId} />
@@ -123,20 +179,56 @@ export default function RequestClassTestScreen(): React.ReactElement {
           </View>
 
           {source === "POOL_SET" ? (
-            <Field label={STR.ctSetId} value={setId} onChangeText={setSetId} helper={STR.ctSetIdHint} />
+            <>
+              <Select
+                label={STR.ctSetId}
+                value={setId === "" ? null : setId}
+                options={ctSetOptions}
+                onChange={setSetId}
+                placeholder={STR.ctPickSet}
+                emptyText={STR.pickSetFirst}
+                error={fieldErrors.setId}
+                searchable
+              />
+              {!manualSetEntry ? (
+                <Button title={STR.ctManualSetId} variant="ghost" onPress={() => setManualSetEntry(true)} />
+              ) : (
+                <Field label={STR.ctSetId} value={setId} onChangeText={setSetId} helper={STR.ctSetIdHint} error={fieldErrors.setId} />
+              )}
+            </>
           ) : (
             <View style={{ marginTop: space(2) }}>
-              <Button title={STR.ctUploadPaper} variant="secondary" onPress={onUpload} />
+              <Button
+                title={uploadBusy ? STR.saving : STR.ctUploadPaper}
+                variant="secondary"
+                onPress={onUpload}
+                loading={uploadBusy}
+              />
               {paper ? <Muted style={{ marginTop: space(1) }}>{STR.ctPaperUploaded}: {paper.name}</Muted> : null}
             </View>
           )}
 
-          <Field label={STR.ctExamDate} value={examDate} onChangeText={setExamDate} placeholder="YYYY-MM-DD" />
-          <Field label={STR.ctTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" />
-          <Field label={STR.ctPassMark} value={passMark} onChangeText={setPassMark} keyboardType="number-pad" helper={STR.ctPassMarkHint} />
-          <Field label={STR.ctTestNumber} value={testNumber} onChangeText={setTestNumber} keyboardType="number-pad" />
-          <Field label={STR.ctDeadlineDays} value={deadlineDays} onChangeText={setDeadlineDays} keyboardType="number-pad" />
-          <Field label={STR.ctNotes} value={notes} onChangeText={setNotes} />
+          <DateField label={STR.ctExamDate} value={examDate} onChange={setExamDate} error={fieldErrors.examDate} />
+          <Field label={STR.ctTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" error={fieldErrors.totalMarks} />
+
+          {/* UX-6: rarely-changed inputs fold away — pass mark (auto ⌈total×0.33⌉),
+              test number (auto-suggested), deadline (server default 2 open days), notes.
+              The happy path never opens this. */}
+          <MoreOptions>
+            <Field
+              label={STR.ctPassMark}
+              value={passMark}
+              onChangeText={(t) => {
+                setPassMarkTouched(true);
+                setPassMark(t);
+              }}
+              keyboardType="number-pad"
+              helper={STR.ctPassMarkHint}
+            />
+            <Field label={STR.ctTestNumber} value={testNumber} onChangeText={setTestNumber} keyboardType="number-pad" />
+            <Field label={STR.ctDeadlineDays} value={deadlineDays} onChangeText={setDeadlineDays} keyboardType="number-pad" />
+            <Field label={STR.ctNotes} value={notes} onChangeText={setNotes} />
+          </MoreOptions>
 
           <View style={{ marginTop: space(2) }}>
             <Button title={STR.ctSubmitRequest} onPress={onSubmit} loading={busy} disabled={busy} />

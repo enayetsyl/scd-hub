@@ -15,9 +15,11 @@ import { DAYS_OF_WEEK, ROUTINE_SUBJECTS, PERIOD_TRACKS } from "@scd/shared";
 import { ROUTINE_SLOTS_QUERY, CREATE_ROUTINE_SLOT, DELETE_ROUTINE_SLOT, TEACHERS_QUERY } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, Notice } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { TeacherSelect, RoomSelect } from "../../components/selects";
 import { STR, routineSubjectLabel, periodTrackLabel, dayOfWeekLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 const EDITOR_DAYS = DAYS_OF_WEEK.filter((d) => d !== "FRI");
@@ -27,6 +29,7 @@ type Props = NativeStackScreenProps<RoutineStackParamList, "RoutineEditor">;
 
 export default function RoutineEditorScreen({ route }: Props): React.ReactElement {
   const { groupType, groupId, title } = route.params;
+  const { confirmAction } = useConfirm();
   const [day, setDay] = useState<string>("SUN");
   const [period, setPeriod] = useState("1");
   const [subject, setSubject] = useState<string>(ROUTINE_SUBJECTS[0]);
@@ -80,6 +83,7 @@ export default function RoutineEditorScreen({ route }: Props): React.ReactElemen
   }
 
   async function remove(id: string): Promise<void> {
+    if (!(await confirmAction({ confirmLabel: STR.remove }))) return;
     setBusy(true);
     setError(null);
     const res = await deleteSlot({ id });
@@ -126,7 +130,7 @@ export default function RoutineEditorScreen({ route }: Props): React.ReactElemen
           </ChipRow>
           <TeacherSelect label={STR.rtTeacherId} value={teacherId} onChange={setTeacherId} />
           <RoomSelect label={STR.rtRoomId} value={roomId} onChange={setRoomId} />
-          <Field label={STR.rtFrom} value={from} onChangeText={setFrom} />
+          <DateField label={STR.rtFrom} value={from} onChange={setFrom} />
           <Button title={STR.rtCreate} onPress={submit} loading={busy} disabled={busy} style={{ marginTop: space(2) }} />
         </Card>
 

@@ -196,6 +196,7 @@ export default function PlanViewScreen({ route, navigation }: Props): React.Reac
                   onChange={setReviewerId}
                   placeholder={STR.selectTeacher}
                   emptyText={STR.noTeachers}
+                  searchable
                 />
                 <Button
                   title={assignBusy ? STR.assigning : STR.assignForReview}

@@ -36,6 +36,7 @@ import {
   checkRecord as checkRecordSvc,
   getStudentDayLoad as studentDayLoadSvc,
 } from "../services/HomeworkResubmissionService";
+import { recordHomeworkOutcome as recordHomeworkOutcomeSvc } from "../services/HomeworkOutcomeService";
 import {
   homeworkSummary as homeworkSummarySvc,
   homeworkClassOverview as classOverviewSvc,
@@ -444,6 +445,7 @@ OpenRecordRef.implement({
     chaseCount: t.exposeInt("chaseCount"),
     hasAnswerFile: t.exposeBoolean("hasAnswerFile"),
     dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),
+    result: t.string({ nullable: true, resolve: (r) => r.result }),
   }),
 });
 
@@ -802,6 +804,90 @@ builder.mutationField("checkHomeworkRecord", (t) =>
         topup,
         actorId: ctx.auth.userId as string,
       });
+    },
+  }),
+);
+
+// Mutation: recordHomeworkOutcome (one-tap grid: fast-forward + check/chase, HWG-1) --
+
+interface OutcomeResultShape {
+  recordId: string;
+  hwId: string;
+  state: string;
+  result: string | null;
+  chaseCount: number;
+  dueDate: string | null;
+  resubmission: ResubSpawnShape | null;
+}
+
+const HwOutcomeResultRef = builder.objectRef<OutcomeResultShape>("HwOutcomeResult");
+HwOutcomeResultRef.implement({
+  description:
+    "Result of recordHomeworkOutcome — flattened like HomeworkCheckResult. `chaseCount`/`dueDate` are " +
+    "only meaningful for a NOT_SUBMITTED (chase) outcome; `result`/`resubmission` for a checked outcome.",
+  fields: (t) => ({
+    recordId: t.exposeString("recordId"),
+    hwId: t.exposeString("hwId"),
+    state: t.exposeString("state"),
+    result: t.string({ nullable: true, resolve: (r) => r.result }),
+    chaseCount: t.exposeInt("chaseCount"),
+    dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),
+    resubmission: t.field({ type: ResubSpawnRef, nullable: true, resolve: (r) => r.resubmission }),
+  }),
+});
+
+builder.mutationField("recordHomeworkOutcome", (t) =>
+  t.field({
+    type: HwOutcomeResultRef,
+    description:
+      "One-tap outcome recording (HWG-1, D-#267): fast-forwards the lifecycle from its current state " +
+      "then applies the existing check logic (CORRECT/PARTIAL/WRONG) or chase logic (NOT_SUBMITTED) — " +
+      "reuses transitionHomeworkRecord/checkHomeworkRecord's underlying services verbatim, no new edge " +
+      "logic. Subject-teacher write-scope (ENH-002); illegal starting states / bad outcome rejected.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      recordId: t.arg.string({ required: true }),
+      outcome: t.arg.string({ required: true }),
+      resubmit: t.arg.boolean({ required: false }),
+      topupQids: t.arg({ type: ["String"], required: false }),
+      topupTime: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId").lean();
+      const item = record ? await HomeworkItem.findById(record.hwItemId).select("subject").lean() : null;
+      await assertCanWrite(ctx, args.sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
+      const topup =
+        args.topupQids && args.topupQids.length > 0
+          ? { qids: [...args.topupQids], time: args.topupTime ?? 0 }
+          : undefined;
+      const outcome = await recordHomeworkOutcomeSvc({
+        recordId: args.recordId,
+        outcome: args.outcome,
+        resubmit: args.resubmit ?? undefined,
+        topup,
+        actorId: ctx.auth.userId as string,
+      });
+      return outcome.kind === "checked"
+        ? {
+            recordId: outcome.result.recordId,
+            hwId: outcome.result.hwId,
+            state: outcome.result.state,
+            result: outcome.result.result,
+            chaseCount: 0,
+            dueDate: null,
+            resubmission: outcome.result.resubmission,
+          }
+        : {
+            recordId: outcome.result.recordId,
+            hwId: outcome.result.hwId,
+            state: outcome.result.state,
+            result: outcome.result.result,
+            chaseCount: outcome.result.chaseCount,
+            dueDate: outcome.result.dueDate,
+            resubmission: null,
+          };
     },
   }),
 );

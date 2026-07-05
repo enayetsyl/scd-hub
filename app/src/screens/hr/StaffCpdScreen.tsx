@@ -21,6 +21,7 @@ import {
   ErrorBanner,
   Notice,
 } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -76,7 +77,7 @@ export default function StaffCpdScreen({ route }: Props): React.ReactElement {
       <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.hrAddCpd}</Body>
       <Card>
         <Field label={STR.hrCpdActivity} value={activity} onChangeText={setActivity} multiline autoCapitalize="sentences" />
-        <Field label={STR.hrCpdDate} value={dateKey} onChangeText={setDateKey} placeholder="2026-06-15" helper={STR.hrDateHint} />
+        <DateField label={STR.hrCpdDate} value={dateKey} onChange={setDateKey} helper={STR.hrDateHint} />
         <Field label={STR.hrCpdOutcome} value={outcome} onChangeText={setOutcome} autoCapitalize="sentences" />
         <Button title={STR.hrObsSubmit} onPress={runAdd} loading={busy} disabled={busy || !valid} />
       </Card>

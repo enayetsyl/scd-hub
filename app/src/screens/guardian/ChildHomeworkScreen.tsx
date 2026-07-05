@@ -6,14 +6,16 @@
  * GET /files/:id — web-only viewing, mirroring the PDF path).
  */
 import React, { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { ScrollView, View, RefreshControl } from "react-native";
 import { useQuery } from "urql";
 import { CHILD_HOMEWORK_QUERY, type GuardianHwRecordT } from "../../graphql/operations";
-import { Screen, Body, Muted, Card, Badge, Button, Field, Notice, Loader, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { STR, bnNum, lifecycleStateLabel, subjectLabel, hwResultLabel } from "../../lib/labels";
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
+import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
 
 const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
@@ -109,11 +111,16 @@ export default function ChildHomeworkScreen(): React.ReactElement {
   const [to, setTo] = useState(isoDay(new Date()));
   const [fileError, setFileError] = useState<string | null>(null);
 
-  const [hwQ] = useQuery({
+  const [hwQ, refetchHw] = useQuery({
     query: CHILD_HOMEWORK_QUERY,
     variables: { studentId: selected?.studentId ?? "", from, to },
     pause: !selected,
   });
+
+  // UX-7: pull-to-refresh.
+  const { refreshing, onRefresh } = usePullRefresh(hwQ.fetching, () =>
+    refetchHw({ requestPolicy: "network-only" }),
+  );
 
   async function onOpenFile(fileId: string): Promise<void> {
     setFileError(null);
@@ -151,14 +158,17 @@ export default function ChildHomeworkScreen(): React.ReactElement {
 
   return (
     <Screen padded={false}>
-      <ScrollView contentContainerStyle={{ padding: space(4) }}>
+      <ScrollView
+        contentContainerStyle={{ padding: space(4) }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         <ChildSwitcher />
         <View style={{ flexDirection: "row", gap: space(2) }}>
           <View style={{ flex: 1 }}>
-            <Field label={STR.gpFromDate} value={from} onChangeText={setFrom} placeholder="YYYY-MM-DD" />
+            <DateField label={STR.gpFromDate} value={from} onChange={setFrom} />
           </View>
           <View style={{ flex: 1 }}>
-            <Field label={STR.gpToDate} value={to} onChangeText={setTo} placeholder="YYYY-MM-DD" />
+            <DateField label={STR.gpToDate} value={to} onChange={setTo} min={from || undefined} />
           </View>
         </View>
         {fileError ? <Notice message={fileError} tone="danger" /> : null}

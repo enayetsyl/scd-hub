@@ -38,6 +38,7 @@ import {
 } from "../../components/ui";
 import { STR, trackerKindLabel, setTypeLabel, bnNum, markRangeMsg } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<TrackersStackParamList, "TrackerEntry">;
@@ -151,6 +152,7 @@ function StudentRow({
 
 export default function TrackerEntryScreen({ route, navigation }: Props): React.ReactElement {
   const { trackerId } = route.params;
+  const { confirmAction } = useConfirm();
   const [{ data: tData, fetching: tFetching, error: tErr }, refetchT] = useQuery({
     query: TRACKER_QUERY,
     variables: { id: trackerId },
@@ -186,6 +188,7 @@ export default function TrackerEntryScreen({ route, navigation }: Props): React.
 
   async function onClose(): Promise<void> {
     if (closing) return;
+    if (!(await confirmAction({ confirmLabel: STR.closeTracker }))) return;
     setClosing(true);
     setCloseError(null);
     const res = await closeTracker({ trackerId });

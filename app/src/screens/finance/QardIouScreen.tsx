@@ -21,6 +21,7 @@ import {
   QARD_IOU_OVERDUE_QUERY,
 } from "../../graphql/finance";
 import { Screen, Card, Body, Muted, Button, Field, Select, Row, Notice, Divider, Loader } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import {
   STR,
   financePartyKindLabel,
@@ -150,7 +151,7 @@ export default function QardIouScreen(): React.ReactElement {
         {/* Register entry */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.finRegisterEntry}</Body>
-          <Select label={STR.finPartyId} value={partyId} options={partyOptions} onChange={setPartyId} />
+          <Select label={STR.finPartyId} value={partyId} options={partyOptions} onChange={setPartyId} searchable />
           <Select
             label={STR.finType}
             value={type}
@@ -164,14 +165,14 @@ export default function QardIouScreen(): React.ReactElement {
             onChange={setDirection}
           />
           <Field label={STR.finAmount} value={amount} onChangeText={setAmount} keyboardType="number-pad" />
-          <Field label={STR.finDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+          <DateField label={STR.finDate} value={date} onChange={setDate} />
           <Select
             label={STR.finMode}
             value={mode}
             options={(FINANCE_PAYMENT_MODES as readonly string[]).map((m) => ({ label: financeModeLabel(m), value: m }))}
             onChange={setMode}
           />
-          <Field label={STR.finDueDate} value={dueDate} onChangeText={setDueDate} placeholder="YYYY-MM-DD" />
+          <DateField label={STR.finDueDate} value={dueDate} onChange={setDueDate} min={date || undefined} />
           <Field label={STR.finNote} value={note} onChangeText={setNote} multiline />
           <Button title={STR.finRegisterEntry} onPress={onRecordEntry} loading={busy} disabled={busy} />
         </Card>
@@ -179,7 +180,7 @@ export default function QardIouScreen(): React.ReactElement {
         {/* Party outstanding */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.finPartyOutstanding}</Body>
-          <Select label={STR.finPartyId} value={outstandingPartyId || null} options={partyOptions} onChange={setOutstandingPartyId} />
+          <Select label={STR.finPartyId} value={outstandingPartyId || null} options={partyOptions} onChange={setOutstandingPartyId} searchable />
           {outstandingQ.fetching ? (
             <Loader label={STR.loading} />
           ) : outstandingPartyId && outstanding.length === 0 ? (

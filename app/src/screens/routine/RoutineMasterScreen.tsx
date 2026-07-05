@@ -26,6 +26,7 @@ import { Screen, Body, Muted, Card, Chip, ChipRow, Badge, Button, Loader, Notice
 import { TeacherSelect, RoomSelect } from "../../components/selects";
 import { STR, dayOfWeekLabel, routineSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { useColors, type ThemeColors } from "../../theme";
 import { space } from "../../theme/tokens";
 
@@ -175,6 +176,7 @@ function EditSlotModal({
   const [roomId, setRoomId] = useState<string>(target.slot?.roomId ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { confirmAction } = useConfirm();
 
   const [, createSlot] = useMutation(CREATE_ROUTINE_SLOT);
   const [, updateSlot] = useMutation(UPDATE_ROUTINE_SLOT);
@@ -223,6 +225,7 @@ function EditSlotModal({
 
   async function remove(): Promise<void> {
     if (!target.slot) return;
+    if (!(await confirmAction({ confirmLabel: STR.remove }))) return;
     setBusy(true);
     setError(null);
     const res = await deleteSlot({ id: target.slot.id });

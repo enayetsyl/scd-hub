@@ -12,6 +12,7 @@ import { roleHasPermission } from "@scd/shared";
 import { BELL_SCHEDULE_QUERY, ASSIGN_BELL_DUTY, TEACHERS_QUERY } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Badge, Notice, Loader } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { TeacherSelect } from "../../components/selects";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -57,7 +58,7 @@ export default function BellScheduleScreen(_props: Props): React.ReactElement {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }}>
-        <Field label={STR.rtDate} value={date} onChangeText={setDate} />
+        <DateField label={STR.rtDate} value={date} onChange={setDate} />
         <Field label={STR.rtAudienceKey} value={audienceKey} onChangeText={setAudienceKey} />
         {ok ? <Notice message={ok} tone="ok" /> : null}
         {error ? <Notice message={error} tone="danger" /> : null}

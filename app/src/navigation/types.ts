@@ -1,6 +1,16 @@
 /** React Navigation param lists. One native-stack per tab; tabs gated by role. */
 import type { NavigatorScreenParams } from "@react-navigation/native";
 
+/** Staff landing dashboard (UX-4, D-#265) — registered FIRST so staff land here. */
+export type HomeStackParamList = {
+  Today: undefined;
+};
+
+/** Teacher-first Class Notes entry (UX-8, D-#266) — own periods, zero selection. */
+export type ClassNotesStackParamList = {
+  MyClassNotes: undefined;
+};
+
 export type ContentStackParamList = {
   ContentTree: undefined;
   PlanView: { artifactId: string };
@@ -44,8 +54,9 @@ export type ReviewStackParamList = {
 
 export type HomeworkStackParamList = {
   HomeworkHome: undefined;
-  DeclareHomework: undefined;
-  HomeworkReconcile: undefined;
+  /** `date` carries Homework home's calendar pick downstream (UX-5 R-Context). */
+  DeclareHomework: { date?: string } | undefined;
+  HomeworkReconcile: { date?: string } | undefined;
   HomeworkRecords: undefined;
   CheckingQueue: undefined;
   HomeworkRollups: undefined;
@@ -141,6 +152,8 @@ export type HrStackParamList = {
   MyRecord: undefined;
   LeaveCover: { leaveApplicationId: string; title: string; manage: boolean };
   LeaveAdmin: undefined;
+  /** Cross-leave needs-cover inbox (PXG-2, D-#268). */
+  NeedsCoverInbox: undefined;
   // PR-2: payroll
   PayrollHome: undefined;
   PreparePayroll: undefined;
@@ -262,6 +275,7 @@ export type AdminStackParamList = {
 };
 
 export type TabParamList = {
+  HomeTab: NavigatorScreenParams<HomeStackParamList>;
   ContentTab: NavigatorScreenParams<ContentStackParamList>;
   QuestionsTab: NavigatorScreenParams<QuestionsStackParamList>;
   SetsTab: NavigatorScreenParams<SetsStackParamList>;
@@ -271,6 +285,7 @@ export type TabParamList = {
   ReviewTab: NavigatorScreenParams<ReviewStackParamList>;
   RoutineTab: NavigatorScreenParams<RoutineStackParamList>;
   AttendanceTab: NavigatorScreenParams<AttendanceStackParamList>;
+  ClassNotesTab: NavigatorScreenParams<ClassNotesStackParamList>;
   LibraryTab: NavigatorScreenParams<LibraryStackParamList>;
   ChatTab: NavigatorScreenParams<ChatStackParamList>;
   VocabTab: NavigatorScreenParams<VocabStackParamList>;

@@ -347,6 +347,7 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
                 .map((t) => ({ label: t.name, value: t.id }))}
               onChange={setReObserverId}
               placeholder={STR.obsPickObserver}
+              searchable
             />
             <Button
               title={STR.obsReReview}

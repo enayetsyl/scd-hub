@@ -38,6 +38,7 @@ type NavSection =
  * from the "Trackers" group header.
  */
 const STAFF_NAV: NavSection[] = [
+  { type: "item", route: "HomeTab", labelKey: "drawerItemToday", icon: "🏠" },
   {
     type: "group",
     titleKey: "drawerGroupAcademics",
@@ -64,6 +65,7 @@ const STAFF_NAV: NavSection[] = [
     ],
   },
   { type: "item", route: "AttendanceTab", labelKey: "tabAttendance", icon: "🙋" },
+  { type: "item", route: "ClassNotesTab", labelKey: "drawerItemClassNotes", icon: "📓" },
   { type: "item", route: "CommentsTab", labelKey: "tabComments", icon: "🗣️" },
   { type: "item", route: "ObservationTab", labelKey: "tabObservation", icon: "👁️" },
   { type: "item", route: "LibraryTab", labelKey: "tabLibrary", icon: "📖" },

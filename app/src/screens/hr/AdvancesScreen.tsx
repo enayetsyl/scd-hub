@@ -33,12 +33,15 @@ import { StaffSelect } from "../../components/selects";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, money, advanceStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
+import { DateField } from "../../components/DateField";
 import { space } from "../../theme/tokens";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function AdvancesScreen(): React.ReactElement {
   const { role } = useAuth();
+  const { confirmAction } = useConfirm();
   const canApprove = !!role && roleHasPermission(role, "payroll:approve");
 
   const [staffId, setStaffId] = React.useState("");
@@ -91,6 +94,7 @@ export default function AdvancesScreen(): React.ReactElement {
   }
 
   async function runSettle(advanceId: string, writeOff: boolean): Promise<void> {
+    if (writeOff && !(await confirmAction({ confirmLabel: STR.hrAdvanceWriteOff }))) return;
     setBusy(true);
     setError(null);
     setOk(null);
@@ -153,7 +157,7 @@ export default function AdvancesScreen(): React.ReactElement {
               <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrIssueAdvance}</Body>
               <Card>
                 <Field label={STR.hrAdvancePrincipal} value={principal} onChangeText={setPrincipal} keyboardType="decimal-pad" placeholder="0" />
-                <Field label={STR.hrAdvanceIssueDate} value={issueDate} onChangeText={setIssueDate} placeholder="2026-06-15" helper={STR.hrDateHint} />
+                <DateField label={STR.hrAdvanceIssueDate} value={issueDate} onChange={setIssueDate} helper={STR.hrDateHint} />
                 <Select
                   label={STR.hrAdvanceRecovery}
                   value={recovery}

@@ -22,7 +22,7 @@ import {
   EmptyState,
   ErrorBanner,
 } from "../../components/ui";
-import { SectionBar } from "../../components/SectionBar";
+import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
 import { STR, setTypeLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
@@ -46,7 +46,8 @@ export default function SetListScreen({ navigation }: Props): React.ReactElement
   return (
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
-        <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
+        {/* The house class-button dashboard (UX-5) replaces the SectionBar→picker flow. */}
+        <ClassSectionDashboard />
         {hasSection ? (
           <>
             <Muted>{STR.status}</Muted>

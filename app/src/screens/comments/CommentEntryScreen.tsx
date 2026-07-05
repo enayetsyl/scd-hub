@@ -29,6 +29,8 @@ import {
 import { Screen, Card, Body, Muted, Button, Chip, ChipRow, Field, Badge, Notice, Loader } from "../../components/ui";
 import { STR, commentTypeLabel, commentSentimentLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
+import { useToast } from "../../state/ToastContext";
 import { pickAndUploadCommentFile, openStoredFile, FileUploadError, FILE_VIEW_SUPPORTED } from "../../lib/files";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
@@ -40,6 +42,8 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
   // Delivery to guardians is a Principal/Office action (D-#264); teachers author + edit
   // only — comments are released from the review dashboard.
   const { role } = useAuth();
+  const { confirmAction } = useConfirm();
+  const toast = useToast();
   const canDeliver = !!role && roleHasPermission(role, "roster:manage");
 
   // The edit/deliver path needs the live comment row. Load it from BOTH the section
@@ -71,8 +75,8 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
   const [type, setType] = useState<string>(COMMENT_TYPES[0]);
   const [sentiment, setSentiment] = useState<string>(COMMENT_SENTIMENTS[0]);
   const [text, setText] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
+  // R-Validate (UX-1): the text field carries its own error; outcomes toast.
+  const [textError, setTextError] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [attachBusy, setAttachBusy] = useState(false);
   const [removeBusyId, setRemoveBusyId] = useState<string | null>(null);
@@ -90,42 +94,44 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
   const attachmentIds = existing?.attachmentIds ?? [];
 
   async function onSave(): Promise<void> {
-    setError(null);
-    setOk(null);
-    if (!text.trim()) return setError(STR.errGeneric);
+    setTextError(undefined);
+    if (!text.trim()) {
+      const msg = `${STR.cmText} — ${STR.fieldRequired}`;
+      setTextError(msg);
+      toast.show(msg, "danger");
+      return;
+    }
     setBusy(true);
     if (commentId) {
       const res = await editComment({ commentId, type, sentiment, text: text.trim() });
       setBusy(false);
-      if (res.error) return setError(friendlyError(res.error));
-      setOk(STR.cmSaved);
+      if (res.error) return toast.show(friendlyError(res.error), "danger");
+      toast.show(STR.cmSaved, "ok");
       refetchComment();
     } else {
       const res = await recordComment({ studentId, type, sentiment, text: text.trim() });
       setBusy(false);
-      if (res.error) return setError(friendlyError(res.error));
+      if (res.error) return toast.show(friendlyError(res.error), "danger");
       const created = res.data?.recordStudentComment;
       if (created) {
         setCommentId(created.id);
-        setOk(STR.cmSaved);
+        toast.show(STR.cmSaved, "ok");
         refetchComment();
       }
     }
   }
 
   async function onAttach(): Promise<void> {
-    setError(null);
-    setOk(null);
-    if (!commentId) return setError(STR.cmAttachFirst);
+    if (!commentId) return toast.show(STR.cmAttachFirst, "danger");
     setAttachBusy(true);
     try {
       const f = await pickAndUploadCommentFile(commentId);
       if (f) {
-        setOk(STR.cmSaved);
+        toast.show(STR.cmSaved, "ok");
         refetchComment();
       }
     } catch (e) {
-      setError(e instanceof FileUploadError ? e.message : STR.cmFileUploadFail);
+      toast.show(e instanceof FileUploadError ? e.message : STR.cmFileUploadFail, "danger");
     } finally {
       setAttachBusy(false);
     }
@@ -133,38 +139,34 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
 
   async function onRemoveAttachment(fileId: string): Promise<void> {
     if (removeBusyId) return;
-    setError(null);
-    setOk(null);
+    if (!(await confirmAction({ confirmLabel: STR.cmRemove }))) return;
     setRemoveBusyId(fileId);
     const res = await removeAttachment({ commentId: commentId as string, fileId });
     setRemoveBusyId(null);
-    if (res.error) return setError(friendlyError(res.error));
-    setOk(STR.cmAttachRemoved);
+    if (res.error) return toast.show(friendlyError(res.error), "danger");
+    toast.show(STR.cmAttachRemoved, "ok");
     refetchComment();
   }
 
   async function onOpenAttachment(fileId: string): Promise<void> {
-    setError(null);
-    if (!FILE_VIEW_SUPPORTED) return setError(STR.cmAttachWebOnly);
+    if (!FILE_VIEW_SUPPORTED) return toast.show(STR.cmAttachWebOnly, "danger");
     try {
       await openStoredFile(fileId);
     } catch (e) {
-      setError(e instanceof FileUploadError ? e.message : STR.cmFileUploadFail);
+      toast.show(e instanceof FileUploadError ? e.message : STR.cmFileUploadFail, "danger");
     }
   }
 
   async function onDeliver(): Promise<void> {
-    setError(null);
-    setOk(null);
     if (!commentId) return;
     setBusy(true);
     const res = await deliver({ commentId });
     setBusy(false);
-    if (res.error) return setError(friendlyError(res.error));
+    if (res.error) return toast.show(friendlyError(res.error), "danger");
     const o = res.data?.deliverStudentComment;
     if (o) {
       setOutcome(o);
-      setOk(STR.cmDelivered);
+      toast.show(STR.cmDelivered, "ok");
       refetchComment();
     }
   }
@@ -195,8 +197,6 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
           </View>
         </Card>
 
-        {ok ? <Notice message={ok} tone="ok" /> : null}
-        {error ? <Notice message={error} tone="danger" /> : null}
         {delivered ? <Notice message={STR.cmDeliveredLocked} tone="info" /> : null}
 
         <Card>
@@ -231,6 +231,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
               onChangeText={setText}
               placeholder={STR.cmTextPlaceholder}
               multiline
+              error={textError}
               editable={!delivered}
             />
           </View>

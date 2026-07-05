@@ -39,6 +39,7 @@ import {
 import { StaffSelect, AcademicYearSelect } from "../../components/selects";
 import { STR, bnNum, leaveTypeLabel, leaveStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HrStackParamList, "LeaveAdmin">;
@@ -52,6 +53,7 @@ function fmtDate(iso: string | null): string {
 }
 
 export default function LeaveAdminScreen({ navigation }: Props): React.ReactElement {
+  const { confirmAction } = useConfirm();
   const [status, setStatus] = React.useState<string | null>("applied");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -78,6 +80,7 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
   const staffName = new Map((staffQ.data?.staff ?? []).map((s) => [s.id, s.nameBn || s.name]));
 
   async function runDecide(applicationId: string, decision: "approve" | "reject"): Promise<void> {
+    if (decision === "reject" && !(await confirmAction({ confirmLabel: STR.hrLeaveReject }))) return;
     setBusy(true);
     setError(null);
     setOk(null);
@@ -119,7 +122,14 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
 
   return (
     <Screen scroll>
-      <H2>{STR.hrLeaveAdmin}</H2>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <H2>{STR.hrLeaveAdmin}</H2>
+        <Button
+          title={STR.hrNeedsCoverTitle}
+          variant="secondary"
+          onPress={() => navigation.navigate("NeedsCoverInbox")}
+        />
+      </View>
 
       {ok ? <Notice message={ok} tone="ok" /> : null}
       {error ? <Notice message={error} tone="danger" /> : null}

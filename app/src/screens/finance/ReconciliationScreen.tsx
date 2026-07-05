@@ -9,6 +9,7 @@ import { ScrollView, View } from "react-native";
 import { useQuery, useMutation } from "urql";
 import { RECORD_RECONCILIATION, RECONCILIATION_HISTORY_QUERY } from "../../graphql/finance";
 import { Screen, Card, Body, Muted, Button, Field, Row, Notice, Divider, Loader } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { STR, money } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -68,7 +69,7 @@ export default function ReconciliationScreen(): React.ReactElement {
 
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.finReconTitle}</Body>
-          <Field label={STR.finDate} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+          <DateField label={STR.finDate} value={date} onChange={setDate} />
           <Field label={STR.finBankStatement} value={bankBal} onChangeText={setBankBal} keyboardType="number-pad" />
           <Field label={STR.finEximusCash} value={eximusCash} onChangeText={setEximusCash} keyboardType="number-pad" />
           <Field label={STR.finEximusBank} value={eximusBank} onChangeText={setEximusBank} keyboardType="number-pad" />

@@ -5,6 +5,7 @@
  * scope binding (D-#49), and effective-dating live in RoutineSlotService.
  */
 import { builder } from "../../../schema";
+import { ForbiddenError } from "../../../middleware/authz";
 import { DAYS_OF_WEEK, PERIOD_TRACKS, ROUTINE_SUBJECTS } from "@scd/shared";
 import { RoutineSlot, type IRoutineSlot } from "../models/RoutineSlot";
 import { type IRoutineSubstitution } from "../models/RoutineSubstitution";
@@ -52,6 +53,10 @@ export const RoutineSlotRef = builder.objectRef<IRoutineSlot>("RoutineSlot").imp
     startTime: t.string({ nullable: true, resolve: (s) => (s as { startTime?: string | null }).startTime ?? null }),
     endTime: t.string({ nullable: true, resolve: (s) => (s as { endTime?: string | null }).endTime ?? null }),
     groupName: t.string({ nullable: true, resolve: (s) => (s as { groupName?: string | null }).groupName ?? null }),
+    // True only on myDay's synthesized rows (PXG-1 gap fix): this period belongs to
+    // another (absent) teacher and the caller is covering it under an approved HR
+    // leave-cover slot for this date — teacherName above is the ABSENT teacher's name.
+    isCovering: t.boolean({ resolve: (s) => (s as { isCovering?: boolean }).isCovering ?? false }),
   }),
 });
 
@@ -299,12 +304,17 @@ builder.mutationField("deleteRoutineSlot", (t) =>
 builder.queryField("teacherAvailability", (t) =>
   t.field({
     type: [AvailabilityRowRef],
-    authScopes: { hasPermission: "routine:manage" },
+    description:
+      "Free/busy + day class-count per teacher for a (date, period) — widened from routine:manage to " +
+      "any authenticated staff (D-#268 ruling, PXG-1): the applicant proposing a cover needs this too. " +
+      "Guardians remain excluded (plane isolation).",
+    authScopes: { authenticated: true },
     args: {
       date: t.arg.string({ required: true }),
       periodNumber: t.arg.int({ required: true }),
     },
-    resolve: async (_r, args) => {
+    resolve: async (_r, args, ctx) => {
+      if (ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
       const d = new Date(args.date);
       if (isNaN(d.getTime())) throw new Error("Invalid date");
       return teacherAvailability(d, args.periodNumber);

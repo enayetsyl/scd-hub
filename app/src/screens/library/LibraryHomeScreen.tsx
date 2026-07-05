@@ -23,12 +23,14 @@ import { Screen, Body, Muted, Card, Button, Badge, Chip, ChipRow, Field, Notice,
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, bookLanguageLabel, reservationStatusLabel, borrowerTypeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<LibraryStackParamList, "LibraryHome">;
 
 export default function LibraryHomeScreen({ navigation }: Props): React.ReactElement {
   const { role } = useAuth();
+  const { confirmAction } = useConfirm();
   const [search, setSearch] = useState("");
   const [language, setLanguage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +54,7 @@ export default function LibraryHomeScreen({ navigation }: Props): React.ReactEle
   const titles = titlesQ.data?.bookTitles ?? [];
 
   async function runCancel(reservationId: string): Promise<void> {
+    if (!(await confirmAction({ confirmLabel: STR.libCancelReservation }))) return;
     setError(null);
     setOk(null);
     const res = await cancelResv({ reservationId });
