@@ -217,6 +217,24 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
   **Gate GREEN (executed):** app `tsc --noEmit` clean + `expo export --platform web` green (1901 modules);
   vocab verifier PASS untouched; `git diff -- server shared` empty. **Not verified live** — next: dev
   deploy + the §4.1.5 manual checklist (phone-width + ≥1024px web, dark mode, BN/EN), then UX-2.
+- **Planned (Proxy Cover UX PXG-1..PXG-2 — docs/prd-proxy-cover-ux.md, D-#268):**
+  matches the app to the physical cover flow over the existing D-#20/D-#22 spine
+  (applicant proposes per slot → admin decision mints the subject-scoped proxy
+  grant — spine unchanged). PXG-1 (server): `decideStaffCoverSlot` gains optional
+  `overrideCoverTeacherUserId` (approve-with-someone-else on proposed slots +
+  direct-assign on needs_cover slots, append-only audit of proposal vs final);
+  new `needsCoverSlots(from,to)` cross-leave inbox read (same gate as decide);
+  `StaffCoverSlot` exposes dateKey/periodNumber; `teacherAvailability` gate
+  WIDENS routine:manage → any authenticated staff (D-#268 ruling, guardian plane
+  still denied); ONE contract sync — NOTIFICATION_KINDS += COVER_ASSIGNED
+  (shared vocab + verifier §C.5 exact-list + emit site move together in the
+  PXG-1 PR; vocab added only in the build session). PXG-2 (app): per-slot
+  availability-aware propose picker (free-first + day load) in LeaveCover
+  applicant mode; অন্য-কাউকে-দিন override + direct-assign in manage mode; new
+  NeedsCoverInbox screen in the HR stack off LeaveAdmin (Today-dashboard count
+  row follows whichever of UX-4/PXG-2 lands second). No new permission; no
+  model change; CoverManage/ScopeGrant bypasses untouched.
+  Next = build PXG-1 per docs/prd-proxy-cover-ux.md §3, then PXG-2 per §4.
 - **Planned (Homework Check Grid HWG-1..HWG-2 — docs/prd-homework-check-grid.md,
   D-#267):** collapses the 3-interaction, 2-screen homework outcome entry into ONE
   tap per student on an attendance-style roster grid (ঠিক/আংশিক/ভুল/দেয়নি). HWG-1 =
