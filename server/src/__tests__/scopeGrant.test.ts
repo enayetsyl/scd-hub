@@ -10,6 +10,7 @@
 
 import {
   isProxyActive,
+  isProxyExpired,
   proxyWindowEnd,
   canRead,
   canWrite,
@@ -55,6 +56,39 @@ describe("isProxyActive (D-#20 window logic)", () => {
     // Should be 2026-06-12 00:00 Dhaka = 2026-06-11 18:00 UTC
     const endDhaka = end.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
     expect(endDhaka).toBe("2026-06-12");
+  });
+});
+
+describe("isProxyExpired (D-#20, regression — PXG-1 live-testing find)", () => {
+  const START = new Date("2026-06-09T00:00:00+06:00"); // Dhaka day start
+  const DURATION = 3; // active on Jun 9, 10, 11 (Dhaka)
+
+  test("a future-dated grant (not yet started) is NOT expired", () => {
+    // The bug: composeTeacherScope's `else` branch treated "not active" as
+    // "expired" for ANY non-active grant, including one whose window hasn't
+    // started — permanently killing a next-day proxy grant (per-meeting cover,
+    // PXG-1) the instant the covering teacher's own scope was resolved, before
+    // it ever got a chance to activate. isProxyActive is correctly false here;
+    // isProxyExpired must ALSO be false — only the true "elapsed" case expires.
+    const now = new Date("2026-06-08T23:59:00+06:00"); // one minute before start
+    expect(isProxyActive(START, DURATION, now)).toBe(false);
+    expect(isProxyExpired(START, DURATION, now)).toBe(false);
+  });
+
+  test("a grant mid-window is not expired", () => {
+    const now = new Date("2026-06-10T12:00:00+06:00");
+    expect(isProxyExpired(START, DURATION, now)).toBe(false);
+  });
+
+  test("a grant past its window IS expired", () => {
+    const now = new Date("2026-06-12T00:01:00+06:00");
+    expect(isProxyExpired(START, DURATION, now)).toBe(true);
+  });
+
+  test("expiry is exclusive at exactly the window end instant", () => {
+    const end = proxyWindowEnd(START, DURATION);
+    expect(isProxyExpired(START, DURATION, end)).toBe(true);
+    expect(isProxyExpired(START, DURATION, new Date(end.getTime() - 1))).toBe(false);
   });
 });
 
