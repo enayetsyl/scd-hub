@@ -46,6 +46,12 @@ jest.mock("../modules/hr/models/StaffCoverSlot", () => ({
   StaffCoverSlot: { find: (q: unknown) => ({ select: () => ({ lean: () => mockCoverSlotFind(q) }) }) },
 }));
 
+// A teacher on leave that day must be excluded from availability entirely (D-#268).
+const mockUserIdsOnLeave = jest.fn();
+jest.mock("../modules/hr/services/CoverService", () => ({
+  userIdsOnLeave: (dateKey: unknown) => mockUserIdsOnLeave(dateKey),
+}));
+
 // assignCover resolves the covered slot's subject → Subject._id for the proxy grant (D-#257).
 const mockSubjectFindOne = jest.fn();
 jest.mock("../modules/foundation/models/Subject", () => ({
@@ -77,6 +83,7 @@ beforeEach(() => {
   mockAssignProxy.mockResolvedValue(oid().toString());
   mockSubjectFindOne.mockResolvedValue({ _id: oid() });
   mockCoverSlotFind.mockResolvedValue([]);
+  mockUserIdsOnLeave.mockResolvedValue(new Set()); // nobody on leave by default
 });
 
 // ---------------------------------------------------------------------------
@@ -153,6 +160,20 @@ describe("R4.1 teacherAvailability", () => {
 
     const rows = await teacherAvailability(DATE, 1);
     expect(rows.find((r) => r.teacherId === TA.toString())).toMatchObject({ free: false, classCount: 1 });
+  });
+
+  test("a teacher who is THEMSELVES on leave that day is excluded from the list entirely (D-#268)", async () => {
+    const TA = oid(), TB = oid();
+    mockSlotFind.mockResolvedValue([]); // neither teaches that day
+    mockUserFind.mockResolvedValue([
+      { _id: TA, name: "A" },
+      { _id: TB, name: "B" },
+    ]);
+    mockUserIdsOnLeave.mockResolvedValue(new Set([TA.toString()])); // A is on leave
+
+    const rows = await teacherAvailability(DATE, 1);
+    expect(rows.find((r) => r.teacherId === TA.toString())).toBeUndefined(); // gone, not merely "busy"
+    expect(rows.find((r) => r.teacherId === TB.toString())).toMatchObject({ free: true });
   });
 });
 

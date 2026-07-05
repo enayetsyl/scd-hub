@@ -91,6 +91,28 @@ export async function fanOutCoverSlots(
   return created;
 }
 
+/** User ids of staff who are themselves on leave (applied OR approved) overlapping
+ *  `dateKey` — a teacher who is out can't cover anyone, so the cover pickers exclude
+ *  them and decideCoverSlot refuses to assign them (D-#268 live-testing find).
+ *  "applied" is included (not just "approved") deliberately: don't propose someone
+ *  whose leave is likely to be granted. Batched staffProfile→User resolution — small
+ *  scale, the loop is fine (matches the N+1 note already accepted for this module). */
+export async function userIdsOnLeave(dateKey: string): Promise<Set<string>> {
+  const leaves = await StaffLeaveApplication.find({
+    status: { $in: ["applied", "approved"] },
+    fromKey: { $lte: dateKey },
+    toKey: { $gte: dateKey },
+  })
+    .select("staffProfileId")
+    .lean();
+  const ids = new Set<string>();
+  for (const l of leaves) {
+    const userId = await resolveUserIdForStaff(l.staffProfileId.toString());
+    if (userId) ids.add(userId);
+  }
+  return ids;
+}
+
 /** Is `teacherId` already reserved (proposed OR approved — either holds the period
  *  until an admin rejects it) for some OTHER slot at this exact (date, period)?
  *  Shared by proposeCover and decideCoverSlot so a pending proposal blocks a
@@ -204,6 +226,14 @@ export async function decideCoverSlot(
     throw new LeaveError(
       `This teacher already covers (or is proposed for) another class at ${slot.dateKey} period ${slot.periodNumber} — ` +
         "pick someone else, or reject/resolve that cover first",
+    );
+  }
+  // A teacher who is THEMSELVES on leave that day can't cover anyone — hard backstop
+  // behind the picker's exclusion (the picker won't offer them, but a stale client or
+  // a direct call must still be refused).
+  if ((await userIdsOnLeave(slot.dateKey)).has(finalTeacherId)) {
+    throw new LeaveError(
+      `This teacher is on leave on ${slot.dateKey} and cannot cover a class that day — pick someone else`,
     );
   }
 

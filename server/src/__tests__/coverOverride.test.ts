@@ -20,6 +20,7 @@ const mockAssignProxy = jest.fn();
 const mockRevokeProxy = jest.fn().mockResolvedValue(undefined);
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
 const mockEmitHrCoverAssigned = jest.fn().mockResolvedValue(undefined);
+const mockResolveUserForStaff = jest.fn();
 
 /** A find()-chain stub: .select()/.sort() return self, .lean() resolves the value
  *  (mirrors staffLeave.test.ts's leanChain convention). */
@@ -61,6 +62,9 @@ jest.mock("../modules/routine/models/SubjectGroup", () => ({
 jest.mock("../modules/routine/services/RoutineSlotService", () => ({
   slotsForTeacherOnDate: jest.fn(async () => []),
 }));
+jest.mock("../modules/hr/services/staffMatch", () => ({
+  resolveUserIdForStaff: (id: unknown) => mockResolveUserForStaff(id),
+}));
 jest.mock("../modules/routine/calendar", () => ({
   resolveDayType: jest.fn(async () => "FULL"),
 }));
@@ -75,7 +79,7 @@ jest.mock("../modules/notifications/services/emitters", () => ({
   emitHrCoverAssigned: (e: unknown) => mockEmitHrCoverAssigned(e),
 }));
 
-import { decideCoverSlot, needsCoverSlots, proposeCover } from "../modules/hr/services/CoverService";
+import { decideCoverSlot, needsCoverSlots, proposeCover, userIdsOnLeave } from "../modules/hr/services/CoverService";
 import { LeaveError } from "../modules/hr/services/dates";
 
 const ACTOR = oid().toString();
@@ -84,6 +88,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSlotFindOne.mockResolvedValue(null); // no conflicting cover by default
   mockGroupFind.mockResolvedValue([]);
+  mockLeaveFind.mockResolvedValue([]); // userIdsOnLeave → nobody on leave by default
+  mockResolveUserForStaff.mockResolvedValue(null);
 });
 
 function baseSlot(over: Record<string, unknown> = {}) {
@@ -249,6 +255,18 @@ describe("decideCoverSlot — override + direct-assign (D-#268)", () => {
     );
   });
 
+  test("rejects approving a cover for a teacher who is THEMSELVES on leave that day", async () => {
+    const cover = oid();
+    const slot = baseSlot({ proposedCoverTeacherId: cover, status: "proposed", dateKey: "2026-06-14" });
+    mockSlotFindById.mockResolvedValue(slot);
+    // userIdsOnLeave("2026-06-14") → { cover }: an approved/applied leave resolves to this teacher.
+    mockLeaveFind.mockResolvedValue([{ staffProfileId: oid() }]);
+    mockResolveUserForStaff.mockResolvedValue(cover.toString());
+
+    await expect(decideCoverSlot(slot._id.toString(), true, ACTOR)).rejects.toThrow(/on leave/i);
+    expect(mockAssignProxy).not.toHaveBeenCalled();
+  });
+
   test("a subjectgroup (Quran/Arabic) slot is RECORDED on approval but mints NO proxy grant", async () => {
     const cover = oid();
     const slot = baseSlot({
@@ -317,5 +335,31 @@ describe("needsCoverSlots — cross-leave inbox range/status filtering", () => {
     });
     // needs_cover alone covers both "never proposed" and "rejected-back" — confirm the filter used.
     expect(mockSlotFind.mock.calls[0][0]).toMatchObject({ status: "needs_cover" });
+  });
+});
+
+describe("userIdsOnLeave — who is out that day (D-#268)", () => {
+  test("resolves applied|approved leaves overlapping the date to their User ids", async () => {
+    const p1 = oid(), p2 = oid(), u1 = oid(), u2 = oid();
+    mockLeaveFind.mockResolvedValue([{ staffProfileId: p1 }, { staffProfileId: p2 }]);
+    mockResolveUserForStaff.mockImplementation(async (id: string) =>
+      id === p1.toString() ? u1.toString() : u2.toString(),
+    );
+
+    const ids = await userIdsOnLeave("2026-06-14");
+    expect([...ids].sort()).toEqual([u1.toString(), u2.toString()].sort());
+    // both "applied" and "approved" count as out (conservative — user's choice).
+    expect(mockLeaveFind.mock.calls[0][0]).toMatchObject({ status: { $in: ["applied", "approved"] } });
+  });
+
+  test("skips a leave whose staff has no linked login (resolve → null)", async () => {
+    mockLeaveFind.mockResolvedValue([{ staffProfileId: oid() }]);
+    mockResolveUserForStaff.mockResolvedValue(null);
+    expect((await userIdsOnLeave("2026-06-14")).size).toBe(0);
+  });
+
+  test("empty when nobody is on leave", async () => {
+    mockLeaveFind.mockResolvedValue([]);
+    expect((await userIdsOnLeave("2026-06-14")).size).toBe(0);
   });
 });
