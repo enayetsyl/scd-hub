@@ -386,16 +386,16 @@ export async function slotsForDate(
     .lean() as unknown as Promise<IRoutineSlot[]>;
 }
 
-/** A teacher's own effective `section`-type slots on a date (PXG-1) — mirrors
- *  `slotsForDate`'s effective-window logic but keyed by `teacherId` across ALL their
- *  sections instead of one group, so a leave's per-meeting cover fan-out can find
- *  every class period a teacher actually teaches that day. `subjectgroup` slots
- *  (cross-section combined groups) are excluded — they have no single section to
- *  fan a cover slot to (a documented PXG-1 limitation). */
+/** A teacher's own effective slots on a date (PXG-1) — mirrors `slotsForDate`'s
+ *  effective-window logic but keyed by `teacherId` across ALL their groups instead
+ *  of one, so a leave's per-meeting cover fan-out can find every period a teacher
+ *  actually teaches that day. Returns BOTH `section` and `subjectgroup` (Quran/
+ *  Arabic) meetings — the caller (`fanOutCoverSlots`) branches on each slot's
+ *  `groupType` (D-#268 Quran/Arabic follow-up; the earlier section-only filter is
+ *  why Quran/Arabic periods never fanned out). */
 export async function slotsForTeacherOnDate(teacherId: string, date: Date): Promise<IRoutineSlot[]> {
   const dayOfWeek = DAYS_OF_WEEK[date.getDay()];
   return RoutineSlot.find({
-    groupType: "section",
     teacherId,
     dayOfWeek,
     active: true,
