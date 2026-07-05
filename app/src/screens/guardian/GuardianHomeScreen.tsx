@@ -1,6 +1,6 @@
 ﻿/**
- * GuardianHomeScreen ("à¦†à¦œ", GP-2) â€” the selected child's today: routine
- * (day-type aware â€” a holiday shows its label), class notes, open homework with
+ * GuardianHomeScreen ("আজ", GP-2) — the selected child's today: routine
+ * (day-type aware — a holiday shows its label), class notes, open homework with
  * state chips, and the personal day-load vs the LOCKED 120. The bottom cards
  * now open the live guardian surfaces for attendance, fees, notices, leave,
  * and notifications.
@@ -128,7 +128,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
   });
   // CM-6 follow-up: no guardian meeting-slot card is rendered. The server's
   // childMeetingSlot(meetingId, studentId) read needs a meetingId, but there is NO
-  // guardian-facing "list my meetings" query to obtain one â€” so a guardian cannot
+  // guardian-facing "list my meetings" query to obtain one — so a guardian cannot
   // reach it. Surface a slot card only once a server read yields the family's
   // meetings (or childMeetingSlot drops the meetingId arg).
 
@@ -169,7 +169,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
       >
         <ChildSwitcher />
 
-        {/* Child info â€” section + Quran/Arabic group memberships (myChildren,
+        {/* Child info — section + Quran/Arabic group memberships (myChildren,
             already loaded by the provider; cross-grade groups per D-#48/#56). */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpChildInfo}</Body>
@@ -215,13 +215,13 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 <Body>
                   {bnNum(s.periodNumber)}. {subjectLabel(s.subject)}
                 </Body>
-                <Muted>{s.startHHMM && s.endHHMM ? `${s.startHHMM}â€“${s.endHHMM}` : ""}</Muted>
+                <Muted>{s.startHHMM && s.endHHMM ? `${s.startHHMM}–${s.endHHMM}` : ""}</Muted>
               </View>
             ))
           )}
         </Card>
 
-        {/* Class notes â€” what was taught today */}
+        {/* Class notes — what was taught today */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpClassNotes}</Body>
           {notesQ.fetching ? (
@@ -235,7 +235,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 <Body>{n.taughtSummaryBn}</Body>
                 {n.homework ? (
                   <Muted>
-                    {STR.gpHomeworkOpen}: {n.homework.hwId} Â· {bnNum(n.homework.qCount)} Â·{" "}
+                    {STR.gpHomeworkOpen}: {n.homework.hwId} · {bnNum(n.homework.qCount)} ·{" "}
                     {bnNum(n.homework.timeDecl)} {STR.gpMinutes}
                   </Muted>
                 ) : null}
@@ -295,7 +295,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
           )}
         </Card>
 
-        {/* Library loans â€” read-only child-loans card (LB-5 rider, J-L9; D-#68:
+        {/* Library loans — read-only child-loans card (LB-5 rider, J-L9; D-#68:
             no reserve/renew control exists for guardians) */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpLibraryLoans}</Body>
@@ -315,7 +315,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 }}
               >
                 <View style={{ flexShrink: 1 }}>
-                  <Body>{loan.titleBn ?? loan.accessionNo ?? "â€”"}</Body>
+                  <Body>{loan.titleBn ?? loan.accessionNo ?? "—"}</Body>
                   <Muted>
                     {loan.status === "ACTIVE"
                       ? `${STR.libDue}: ${new Date(loan.dueDate).toLocaleDateString()}`
@@ -336,7 +336,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
           )}
         </Card>
 
-        {/* Vocabulary results â€” read-only, marked tests only (VC-5 / J7, D-#155) */}
+        {/* Vocabulary results — read-only, marked tests only (VC-5 / J7, D-#155) */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpVocab}</Body>
           {vocabQ.fetching ? (
@@ -351,7 +351,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
               >
                 <View style={{ flexShrink: 1 }}>
                   <Body>
-                    {vocabProgramLabel(v.program)} Â· {v.label}
+                    {vocabProgramLabel(v.program)} · {v.label}
                   </Body>
                   <Muted>{new Date(v.testDate).toLocaleDateString()}</Muted>
                 </View>
@@ -368,7 +368,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
           )}
         </Card>
 
-        {/* Class-test results â€” read-only, PUBLISHED only (CT-5 / J7, D-#68). Never
+        {/* Class-test results — read-only, PUBLISHED only (CT-5 / J7, D-#68). Never
             shows teacherAction (the childTestResults query doesn't fetch it). */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpTestResults}</Body>
@@ -382,7 +382,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View style={{ flexShrink: 1 }}>
                     <Body>
-                      {hwSubjectLabel(r.subject)} Â· {STR.ctTestNumber} {bnNum(r.testNumber)}
+                      {hwSubjectLabel(r.subject)} · {STR.ctTestNumber} {bnNum(r.testNumber)}
                     </Body>
                     <Muted>{new Date(r.examDate).toLocaleDateString()}</Muted>
                   </View>
@@ -390,7 +390,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                     text={
                       r.status === "ABSENT"
                         ? STR.ctAbsent
-                        : `${bnNum(r.marks ?? 0)}/${bnNum(r.totalMarks)}${r.percent == null ? "" : ` Â· ${bnNum(r.percent)}%`}`
+                        : `${bnNum(r.marks ?? 0)}/${bnNum(r.totalMarks)}${r.percent == null ? "" : ` · ${bnNum(r.percent)}%`}`
                     }
                     tone={r.status === "ABSENT" ? "muted" : r.pass ? "brand" : "danger"}
                   />
@@ -402,7 +402,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
           )}
         </Card>
 
-        {/* Teacher comments â€” read-only, DELIVERED daily comments only (CM-6 / CM-5,
+        {/* Teacher comments — read-only, DELIVERED daily comments only (CM-6 / CM-5,
             J-CM8, D-#68). The childComments query structurally omits authorUserId /
             sectionId / deliveryChannels. Attachments open on web via openStoredFile. */}
         <Card>
@@ -416,7 +416,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
               <View key={c.id} style={{ marginTop: space(2) }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <Muted>
-                    {commentTypeLabel(c.type)} Â· {commentSentimentLabel(c.sentiment)}
+                    {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)}
                   </Muted>
                   {c.deliveredAt ? <Muted>{new Date(c.deliveredAt).toLocaleDateString()}</Muted> : null}
                 </View>
@@ -438,7 +438,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
           )}
         </Card>
 
-        {/* Saturday Hifz revision â€” read-only, DELIVERED Saturdays only (SR-4). The
+        {/* Saturday Hifz revision — read-only, DELIVERED Saturdays only (SR-4). The
             childRevision query structurally omits teacherUserId / deliveryChannels;
             portions / ØªÙ†Ø¨ÛŒÙ‡ / ÙØªØ­ / structured mistakes / the teacher's comment. */}
         <Card>
@@ -457,8 +457,8 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 {e.present
                   ? e.juzRecords.map((r, i) => (
                       <Muted key={i} style={{ marginTop: space(1) }}>
-                        {revCategoryLabel(r.category)} Â· {STR.revJuz} {bnNum(r.juz)} Â· {bnNum(r.amountJuz)} Â· {STR.revTanbih}{" "}
-                        {bnNum(r.tanbih)} Â· {STR.revFath} {bnNum(r.fath)} Â· {STR.revMistakes}{" "}
+                        {revCategoryLabel(r.category)} · {STR.revJuz} {bnNum(r.juz)} · {bnNum(r.amountJuz)} · {STR.revTanbih}{" "}
+                        {bnNum(r.tanbih)} · {STR.revFath} {bnNum(r.fath)} · {STR.revMistakes}{" "}
                         {bnNum(r.mistakes.harf + r.mistakes.ghunnah + r.mistakes.madd + r.mistakes.other)}
                       </Muted>
                     ))

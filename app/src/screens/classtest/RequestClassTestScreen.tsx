@@ -94,12 +94,22 @@ export default function RequestClassTestScreen(): React.ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalMarks, passMarkTouched]);
 
+  // BUG-013: the Drive round-trip takes seconds — without a busy state and a
+  // success toast the upload read as "nothing happened".
+  const [uploadBusy, setUploadBusy] = useState(false);
   async function onUpload(): Promise<void> {
+    if (uploadBusy) return;
+    setUploadBusy(true);
     try {
       const f = await pickAndUploadClassTestPaper();
-      if (f) setPaper({ fileId: f.fileId, name: f.originalName });
+      if (f) {
+        setPaper({ fileId: f.fileId, name: f.originalName });
+        toast.show(`${STR.ctPaperUploaded}: ${f.originalName}`, "ok");
+      }
     } catch (e) {
       toast.show(e instanceof FileUploadError ? e.message : STR.errGeneric, "danger");
+    } finally {
+      setUploadBusy(false);
     }
   }
 
@@ -188,7 +198,12 @@ export default function RequestClassTestScreen(): React.ReactElement {
             </>
           ) : (
             <View style={{ marginTop: space(2) }}>
-              <Button title={STR.ctUploadPaper} variant="secondary" onPress={onUpload} />
+              <Button
+                title={uploadBusy ? STR.saving : STR.ctUploadPaper}
+                variant="secondary"
+                onPress={onUpload}
+                loading={uploadBusy}
+              />
               {paper ? <Muted style={{ marginTop: space(1) }}>{STR.ctPaperUploaded}: {paper.name}</Muted> : null}
             </View>
           )}
