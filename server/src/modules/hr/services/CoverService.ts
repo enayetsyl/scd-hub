@@ -151,6 +151,27 @@ export async function decideCoverSlot(
   // (D-#268) — reject-then-reassign is the existing path for swapping an approved cover.
   if (slot.status === "approved") return slot;
 
+  // A teacher can only physically be in one place at a given (date, period) — reject
+  // approving this slot for them if they already hold an approved cover at the exact
+  // same meeting elsewhere (found live-testing: nothing previously stopped the same
+  // teacher being double-booked across two different absent teachers' same-period
+  // slots). Own-teaching-vs-cover conflicts stay advisory-only via teacherAvailability
+  // (unchanged, pre-existing design) — this guard is scoped to cover-vs-cover only.
+  const conflict = await StaffCoverSlot.findOne({
+    _id: { $ne: slot._id },
+    finalCoverTeacherUserId: new Types.ObjectId(finalTeacherId),
+    dateKey: slot.dateKey,
+    periodNumber: slot.periodNumber,
+    status: "approved",
+  })
+    .select("_id")
+    .lean();
+  if (conflict) {
+    throw new LeaveError(
+      `This teacher already covers another class at ${slot.dateKey} period ${slot.periodNumber} — pick someone else or reject that cover first`,
+    );
+  }
+
   const grantId = await assignProxy({
     coveringTeacherId: finalTeacherId,
     absentTeacherId: slot.absentTeacherUserId ? slot.absentTeacherUserId.toString() : undefined,

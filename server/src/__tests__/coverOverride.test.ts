@@ -9,6 +9,7 @@ const oid = () => new mongoose.Types.ObjectId();
 
 const mockSlotFindById = jest.fn();
 const mockSlotFind = jest.fn();
+const mockSlotFindOne = jest.fn();
 const mockLeaveFind = jest.fn();
 const mockUserFind = jest.fn();
 const mockClassFind = jest.fn();
@@ -33,6 +34,7 @@ jest.mock("../modules/hr/models/StaffCoverSlot", () => ({
   StaffCoverSlot: {
     findById: (id: unknown) => mockSlotFindById(id),
     find: (q: unknown) => findChain(mockSlotFind(q)),
+    findOne: (q: unknown) => findChain(mockSlotFindOne(q)),
   },
 }));
 jest.mock("../modules/hr/models/StaffLeaveApplication", () => ({
@@ -74,7 +76,10 @@ import { LeaveError } from "../modules/hr/services/dates";
 
 const ACTOR = oid().toString();
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockSlotFindOne.mockResolvedValue(null); // no conflicting cover by default
+});
 
 function baseSlot(over: Record<string, unknown> = {}) {
   const slot: any = {
@@ -153,6 +158,19 @@ describe("decideCoverSlot — override + direct-assign (D-#268)", () => {
     mockSlotFindById.mockResolvedValue(slot);
     const res = await decideCoverSlot(slot._id.toString(), true, ACTOR, oid().toString());
     expect(res).toBe(slot);
+    expect(mockAssignProxy).not.toHaveBeenCalled();
+  });
+
+  test("rejects approving when the teacher already covers another slot at the same (date, period)", async () => {
+    const cover = oid();
+    const slot = baseSlot({ proposedCoverTeacherId: cover, status: "proposed", dateKey: "2026-06-14", periodNumber: 2 });
+    mockSlotFindById.mockResolvedValue(slot);
+    mockSlotFindOne.mockResolvedValue({ _id: oid() }); // a conflicting approved cover exists
+
+    await expect(decideCoverSlot(slot._id.toString(), true, ACTOR)).rejects.toThrow(LeaveError);
+    const queryArg = mockSlotFindOne.mock.calls[0][0] as Record<string, unknown>;
+    expect((queryArg.finalCoverTeacherUserId as { toString(): string }).toString()).toBe(cover.toString());
+    expect(queryArg).toMatchObject({ dateKey: "2026-06-14", periodNumber: 2, status: "approved" });
     expect(mockAssignProxy).not.toHaveBeenCalled();
   });
 
