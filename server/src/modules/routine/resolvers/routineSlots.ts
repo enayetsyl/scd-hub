@@ -53,6 +53,10 @@ export const RoutineSlotRef = builder.objectRef<IRoutineSlot>("RoutineSlot").imp
     startTime: t.string({ nullable: true, resolve: (s) => (s as { startTime?: string | null }).startTime ?? null }),
     endTime: t.string({ nullable: true, resolve: (s) => (s as { endTime?: string | null }).endTime ?? null }),
     groupName: t.string({ nullable: true, resolve: (s) => (s as { groupName?: string | null }).groupName ?? null }),
+    // True only on myDay's synthesized rows (PXG-1 gap fix): this period belongs to
+    // another (absent) teacher and the caller is covering it under an approved HR
+    // leave-cover slot for this date — teacherName above is the ABSENT teacher's name.
+    isCovering: t.boolean({ resolve: (s) => (s as { isCovering?: boolean }).isCovering ?? false }),
   }),
 });
 

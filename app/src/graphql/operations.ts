@@ -2003,12 +2003,16 @@ export interface RoutineSlotT {
   startTime: string | null;
   endTime: string | null;
   groupName: string | null;
+  /** True only on myDay's synthesized rows (PXG-1 gap fix, D-#268): this period
+   *  belongs to another (absent) teacher and the caller is covering it under an
+   *  approved HR leave-cover slot — teacherName is the ABSENT teacher's name. */
+  isCovering: boolean;
 }
 
 const ROUTINE_SLOT_FIELDS = `
   id groupType groupId classId dayOfWeek periodNumber subject track
   isBreak teacherId roomId effectiveFrom effectiveTo active coverTeacherId
-  teacherName coverTeacherName startTime endTime groupName
+  teacherName coverTeacherName startTime endTime groupName isCovering
 `;
 
 export const ROUTINE_SLOTS_QUERY = gql<

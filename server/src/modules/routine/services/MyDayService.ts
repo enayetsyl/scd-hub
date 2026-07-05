@@ -5,7 +5,18 @@
  *   slots             — the caller's own routine periods for the date (the
  *                       myRoutineSlots filter narrowed to the date's weekday +
  *                       effective range, cover-overlaid like routineForDate,
- *                       day-type-filtered per R2.1, view-enriched per R-3)
+ *                       day-type-filtered per R2.1, view-enriched per R-3), PLUS
+ *                       any period the caller is covering under an APPROVED HR
+ *                       leave-cover slot for this exact date (PXG-1/#268
+ *                       live-testing find — a proxy ScopeGrant only ever scoped
+ *                       tracker/content ACCESS; it never surfaced on the covering
+ *                       teacher's own schedule, so a teacher had no in-app way to
+ *                       see what they're covering beyond the one-time COVER_ASSIGNED
+ *                       notification). Marked `isCovering: true`, `teacherName` is
+ *                       the ABSENT teacher's real name (the slot is still theirs).
+ *                       The older routine-module R-4 direct-assign cover (a
+ *                       RoutineSubstitution, no StaffCoverSlot) has the same gap but
+ *                       is NOT covered here — out of scope for this fix.
  *   homework          — pendingChecking / openResubmissions / activeChases summed
  *                       over the caller's ACCESSIBLE refs — authorized per section
  *                       exactly like homeworkClassOverview (confirm-scope OR read-
@@ -25,6 +36,7 @@ import { enrichRoutineSlots, type SlotViewFields } from "../slotView";
 import { resolveDayType, dayTypeAdmitsTrack } from "../calendar";
 import { homeworkClassOverview } from "../../trackers/services/HomeworkSummaryService";
 import { myMarkingSections } from "../../attendance/services/StudentAttendanceService";
+import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
 
 export interface MyDayHomeworkCounts {
   pendingChecking: number;
@@ -32,7 +44,7 @@ export interface MyDayHomeworkCounts {
   activeChases: number;
 }
 
-export type MyDaySlot = IRoutineSlot & SlotViewFields & { coverTeacherId?: string | null };
+export type MyDaySlot = IRoutineSlot & SlotViewFields & { coverTeacherId?: string | null; isCovering?: boolean };
 
 export interface MyDayResult {
   date: string;
@@ -81,6 +93,31 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
         coverTeacherId: coverMap.get(s._id.toString()) ?? null,
       }));
       slots = (await enrichRoutineSlots(withCover)) as MyDaySlot[];
+    }
+
+    // 1b. Periods the caller is COVERING today under an approved HR leave-cover
+    //     slot (PXG-1 gap fix) — the routine slot is still named for the absent
+    //     teacher, so it's fetched by routineSlotId and marked isCovering for the
+    //     app to badge distinctly; teacherName resolves to the ABSENT teacher.
+    const coverSlots = await StaffCoverSlot.find({
+      finalCoverTeacherUserId: auth.userId,
+      dateKey,
+      status: "approved",
+    })
+      .select("routineSlotId")
+      .lean();
+    if (coverSlots.length > 0) {
+      const routineSlotIds = coverSlots.map((c) => c.routineSlotId);
+      const coveredRaw = (await RoutineSlot.find({ _id: { $in: routineSlotIds }, active: true })
+        .sort({ periodNumber: 1 })
+        .lean()) as unknown as IRoutineSlot[];
+      if (coveredRaw.length > 0) {
+        const enrichedCovered = (await enrichRoutineSlots(
+          coveredRaw.map((s) => ({ ...s, coverTeacherId: null })),
+        )) as MyDaySlot[];
+        for (const s of enrichedCovered) s.isCovering = true;
+        slots = [...slots, ...enrichedCovered].sort((a, b) => a.periodNumber - b.periodNumber);
+      }
     }
   }
 

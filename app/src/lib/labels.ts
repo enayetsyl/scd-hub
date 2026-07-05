@@ -1424,6 +1424,7 @@ const STR_BN = {
   rtActiveCovers: "আজকের কভার",
   rtCovered: "কভার করা হয়েছে",
   rtNoCovers: "কোনো কভার নেই।",
+  rtCoveringFor: "কভার করছেন",
 
   // Routine triggers + class-note / daily-diary (R-5)
   dailyNoteTitle: "ক্লাস নোট",
@@ -3409,6 +3410,7 @@ const STR_EN: StrTable = {
   rtActiveCovers: "Today's covers",
   rtCovered: "Covered",
   rtNoCovers: "No covers.",
+  rtCoveringFor: "Covering for",
 
   // Routine triggers + class-note / daily-diary (R-5)
   dailyNoteTitle: "Class note",
