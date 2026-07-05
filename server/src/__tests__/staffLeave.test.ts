@@ -329,10 +329,37 @@ describe("cover fan-out + proxy seam (D-#20/#22)", () => {
     expect(mockSlotCreate).not.toHaveBeenCalled();
   });
 
+  test("fanOutCoverSlots creates a subjectgroup slot for a Quran/Arabic meeting (no classId, no subject)", async () => {
+    const staffId = oid().toString();
+    mockStaffFindById.mockResolvedValueOnce({ phone: "01700000000" });
+    mockUserFindOne.mockResolvedValueOnce({ _id: oid() });
+    mockLeaveFindById.mockReturnValue({ lean: async () => ({ fromKey: "2026-06-14", toKey: "2026-06-14" }) });
+    mockResolveDayType.mockResolvedValue("FULL");
+    const grp = oid();
+    mockSlotsForTeacherOnDate.mockResolvedValue([
+      { _id: oid(), groupType: "subjectgroup", classId: null, groupId: grp, subject: "QURAN", periodNumber: 1, isBreak: false },
+    ]);
+    mockSlotFindOne.mockResolvedValue(null);
+    mockSlotCreate.mockImplementation(async (d) => ({ _id: oid(), ...d }));
+
+    const slots = await fanOutCoverSlots(oid().toString(), staffId);
+    expect(slots).toHaveLength(1);
+    // Subject.findOne is NOT consulted for a subjectgroup meeting (no foundation subject).
+    expect(mockSubjectFindOne).not.toHaveBeenCalled();
+    expect(mockSlotCreate.mock.calls[0][0]).toMatchObject({
+      groupType: "subjectgroup",
+      classId: null,
+      sectionId: null,
+      subjectId: null,
+      subjectGroupId: grp,
+      status: "needs_cover",
+    });
+  });
+
   test("decideCoverSlot approve (no override) → mints a one-day proxy grant for the slot's own date", async () => {
     const cover = oid(), absent = oid(), subj = oid();
     const slot: any = {
-      _id: oid(), leaveApplicationId: oid(), classId: oid(), sectionId: oid(), subjectId: subj,
+      _id: oid(), leaveApplicationId: oid(), groupType: "section", classId: oid(), sectionId: oid(), subjectId: subj,
       proposedCoverTeacherId: cover, absentTeacherUserId: absent, status: "proposed", proxyGrantId: null,
       dateKey: "2026-06-14", periodNumber: 2,
     };

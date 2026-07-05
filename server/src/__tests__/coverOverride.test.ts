@@ -15,6 +15,7 @@ const mockUserFind = jest.fn();
 const mockClassFind = jest.fn();
 const mockSectionFind = jest.fn();
 const mockSubjectFind = jest.fn();
+const mockGroupFind = jest.fn();
 const mockAssignProxy = jest.fn();
 const mockRevokeProxy = jest.fn().mockResolvedValue(undefined);
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
@@ -54,6 +55,9 @@ jest.mock("../modules/foundation/models/Section", () => ({
 jest.mock("../modules/foundation/models/Subject", () => ({
   Subject: { find: (q: unknown) => findChain(mockSubjectFind(q)) },
 }));
+jest.mock("../modules/routine/models/SubjectGroup", () => ({
+  SubjectGroup: { find: (q: unknown) => findChain(mockGroupFind(q)) },
+}));
 jest.mock("../modules/routine/services/RoutineSlotService", () => ({
   slotsForTeacherOnDate: jest.fn(async () => []),
 }));
@@ -79,15 +83,18 @@ const ACTOR = oid().toString();
 beforeEach(() => {
   jest.clearAllMocks();
   mockSlotFindOne.mockResolvedValue(null); // no conflicting cover by default
+  mockGroupFind.mockResolvedValue([]);
 });
 
 function baseSlot(over: Record<string, unknown> = {}) {
   const slot: any = {
     _id: oid(),
     leaveApplicationId: oid(),
+    groupType: "section",
     classId: oid(),
     sectionId: oid(),
     subjectId: oid(),
+    subjectGroupId: null,
     absentTeacherUserId: oid(),
     proposedCoverTeacherId: null,
     finalCoverTeacherUserId: null,
@@ -241,6 +248,33 @@ describe("decideCoverSlot — override + direct-assign (D-#268)", () => {
       expect.objectContaining({ slotId: slot._id.toString(), grantId, coverTeacherUserId: cover.toString(), dateKey: "2026-06-14" }),
     );
   });
+
+  test("a subjectgroup (Quran/Arabic) slot is RECORDED on approval but mints NO proxy grant", async () => {
+    const cover = oid();
+    const slot = baseSlot({
+      groupType: "subjectgroup",
+      classId: null,
+      sectionId: null,
+      subjectId: null,
+      subjectGroupId: oid(),
+      proposedCoverTeacherId: cover,
+      status: "proposed",
+    });
+    mockSlotFindById.mockResolvedValue(slot);
+
+    const res = await decideCoverSlot(slot._id.toString(), true, ACTOR);
+    expect(res.status).toBe("approved");
+    expect(res.finalCoverTeacherUserId!.toString()).toBe(cover.toString());
+    expect(res.proxyGrantId).toBeNull(); // record-only, no scope granted
+    expect(mockAssignProxy).not.toHaveBeenCalled();
+    // still notified — dedupe key falls back to slotId when there's no grant.
+    expect(mockEmitHrCoverAssigned).toHaveBeenCalledWith(
+      expect.objectContaining({ coverTeacherUserId: cover.toString(), grantId: slot._id.toString() }),
+    );
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ meta: expect.objectContaining({ groupType: "subjectgroup", proxyGrantId: null }) }),
+    );
+  });
 });
 
 describe("needsCoverSlots — cross-leave inbox range/status filtering", () => {
@@ -251,26 +285,35 @@ describe("needsCoverSlots — cross-leave inbox range/status filtering", () => {
     expect(mockSlotFind).not.toHaveBeenCalled();
   });
 
-  test("only needs_cover slots from approved, overlapping leaves are returned, with resolved labels", async () => {
+  test("resolves labels for a section row AND a subjectgroup (Quran/Arabic) row", async () => {
     const leaveId = oid();
     mockLeaveFind.mockResolvedValue([{ _id: leaveId }]);
-    const absent = oid(), cls = oid(), sec = oid(), subj = oid();
+    const absent = oid(), cls = oid(), sec = oid(), subj = oid(), grp = oid();
     mockSlotFind.mockResolvedValue([
       {
-        _id: oid(), leaveApplicationId: leaveId, absentTeacherUserId: absent,
-        classId: cls, sectionId: sec, subjectId: subj, dateKey: "2026-06-14", periodNumber: 2,
+        _id: oid(), leaveApplicationId: leaveId, groupType: "section", absentTeacherUserId: absent,
+        classId: cls, sectionId: sec, subjectId: subj, subjectGroupId: null, dateKey: "2026-06-14", periodNumber: 2,
+      },
+      {
+        _id: oid(), leaveApplicationId: leaveId, groupType: "subjectgroup", absentTeacherUserId: absent,
+        classId: null, sectionId: null, subjectId: null, subjectGroupId: grp, dateKey: "2026-06-14", periodNumber: 3,
       },
     ]);
     mockUserFind.mockResolvedValue([{ _id: absent, name: "করিম" }]);
     mockClassFind.mockResolvedValue([{ _id: cls, nameBn: "৫ম শ্রেণি" }]);
     mockSectionFind.mockResolvedValue([{ _id: sec, nameBn: "ক" }]);
     mockSubjectFind.mockResolvedValue([{ _id: subj, nameBn: "গণিত" }]);
+    mockGroupFind.mockResolvedValue([{ _id: grp, nameBn: "কায়দা" }]);
 
     const rows = await needsCoverSlots("2026-06-10", "2026-06-17");
-    expect(rows).toHaveLength(1);
+    expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({
-      absentTeacherName: "করিম", className: "৫ম শ্রেণি", sectionName: "ক", subjectName: "গণিত",
-      dateKey: "2026-06-14", periodNumber: 2,
+      groupType: "section", absentTeacherName: "করিম", className: "৫ম শ্রেণি", sectionName: "ক",
+      subjectName: "গণিত", subjectGroupName: null,
+    });
+    expect(rows[1]).toMatchObject({
+      groupType: "subjectgroup", className: null, sectionName: null, subjectName: null,
+      subjectGroupName: "কায়দা", periodNumber: 3,
     });
     // needs_cover alone covers both "never proposed" and "rejected-back" — confirm the filter used.
     expect(mockSlotFind.mock.calls[0][0]).toMatchObject({ status: "needs_cover" });

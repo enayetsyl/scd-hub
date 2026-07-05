@@ -16,18 +16,32 @@ import { COVER_SLOT_STATUSES, type CoverSlotStatus } from "@scd/shared";
  * PXG-1 build session): the original grant model minted ONE grant spanning the whole
  * leave per (section, subject). This redesign mints one grant PER MEETING INSTANCE
  * instead, so a different colleague can genuinely cover a Tuesday differently than a
- * Thursday. `groupType: "subjectgroup"` routine slots (cross-section combined groups)
- * have no single section to fan a slot to — excluded from fan-out for this build.
+ * Thursday.
+ *
+ * A slot is one of two `groupType`s (D-#268 follow-up — Quran/Arabic support):
+ *   - "section"      — a general-subject class meeting; `classId`/`sectionId`/
+ *                      `subjectId` set; approval mints a subject-scoped proxy grant.
+ *   - "subjectgroup" — a cross-grade Quran/Arabic group meeting (D-#48/#56);
+ *                      `subjectGroupId` set, `classId`/`sectionId`/`subjectId` null.
+ *                      There is NO content/tracker scope to grant (Quran/Arabic run
+ *                      no homework tracker and have no foundation Subject), so
+ *                      approval RECORDS the cover + notifies but mints no grant —
+ *                      mirroring the routine-module R-4 `assignCover` precedent
+ *                      ("a Quran/Arabic group cover is just recorded, no scope").
  *
  * Identity/operational plane, behind the ADR-005 firewall (NO corpus path).
  */
 export interface IStaffCoverSlot extends Document {
   _id: Types.ObjectId;
   leaveApplicationId: Types.ObjectId;
-  /** The covered class/section + subject (from the matching RoutineSlot). */
-  classId: Types.ObjectId;
-  sectionId: Types.ObjectId;
+  /** Which routine plane this slot came from — drives whether approval mints a grant. */
+  groupType: "section" | "subjectgroup";
+  /** The covered class/section + subject (section slots only; null for subjectgroup). */
+  classId?: Types.ObjectId | null;
+  sectionId?: Types.ObjectId | null;
   subjectId?: Types.ObjectId | null;
+  /** The covered Quran/Arabic group (subjectgroup slots only; null for section). */
+  subjectGroupId?: Types.ObjectId | null;
   /** The absent teacher's User id (proxy `absentTeacherId`). */
   absentTeacherUserId?: Types.ObjectId | null;
   /** The specific class meeting this slot covers (PXG-1 — one slot per instance). */
@@ -42,7 +56,8 @@ export interface IStaffCoverSlot extends Document {
    *  proposal even when an override picks someone else. */
   finalCoverTeacherUserId?: Types.ObjectId | null;
   status: CoverSlotStatus;
-  /** Set when status flips to `approved` — the live D-#20 proxy grant backing it. */
+  /** Set when status flips to `approved` for a SECTION slot — the live D-#20 proxy
+   *  grant backing it. Always null for a subjectgroup slot (record-only cover). */
   proxyGrantId?: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
@@ -51,9 +66,11 @@ export interface IStaffCoverSlot extends Document {
 const StaffCoverSlotSchema = new Schema<IStaffCoverSlot>(
   {
     leaveApplicationId: { type: Schema.Types.ObjectId, ref: "StaffLeaveApplication", required: true },
-    classId: { type: Schema.Types.ObjectId, required: true },
-    sectionId: { type: Schema.Types.ObjectId, required: true },
+    groupType: { type: String, enum: ["section", "subjectgroup"], required: true, default: "section" },
+    classId: { type: Schema.Types.ObjectId, default: null },
+    sectionId: { type: Schema.Types.ObjectId, default: null },
     subjectId: { type: Schema.Types.ObjectId, default: null },
+    subjectGroupId: { type: Schema.Types.ObjectId, ref: "SubjectGroup", default: null },
     absentTeacherUserId: { type: Schema.Types.ObjectId, default: null },
     dateKey: { type: String, required: true },
     periodNumber: { type: Number, required: true },

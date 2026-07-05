@@ -84,14 +84,17 @@ StaffLeaveRef.implement({
 const StaffCoverSlotRef = builder.objectRef<IStaffCoverSlot>("StaffCoverSlot");
 StaffCoverSlotRef.implement({
   description:
-    "One leave's cover slot for ONE class meeting (date × period) — proposed → approved mints a " +
-    "one-day proxy grant (prd-hr §3.5, D-#22; per-meeting redesign PXG-1, D-#268).",
+    "One leave's cover slot for ONE class meeting (date × period). A `section` slot's approval mints a " +
+    "one-day proxy grant; a `subjectgroup` (Quran/Arabic) slot is recorded only, no grant (prd-hr §3.5, " +
+    "D-#22; per-meeting redesign PXG-1, D-#268; Quran/Arabic support follow-up).",
   fields: (t) => ({
     id: t.string({ resolve: (s) => s._id.toString() }),
     leaveApplicationId: t.string({ resolve: (s) => s.leaveApplicationId.toString() }),
-    classId: t.string({ resolve: (s) => s.classId.toString() }),
-    sectionId: t.string({ resolve: (s) => s.sectionId.toString() }),
+    groupType: t.string({ resolve: (s) => s.groupType ?? "section" }),
+    classId: t.string({ nullable: true, resolve: (s) => s.classId?.toString() ?? null }),
+    sectionId: t.string({ nullable: true, resolve: (s) => s.sectionId?.toString() ?? null }),
     subjectId: t.string({ nullable: true, resolve: (s) => s.subjectId?.toString() ?? null }),
+    subjectGroupId: t.string({ nullable: true, resolve: (s) => s.subjectGroupId?.toString() ?? null }),
     absentTeacherUserId: t.string({ nullable: true, resolve: (s) => s.absentTeacherUserId?.toString() ?? null }),
     dateKey: t.exposeString("dateKey"),
     periodNumber: t.exposeInt("periodNumber"),
@@ -108,14 +111,17 @@ NeedsCoverRowRef.implement({
   fields: (t) => ({
     slotId: t.exposeString("slotId"),
     leaveApplicationId: t.exposeString("leaveApplicationId"),
+    groupType: t.exposeString("groupType"),
     absentTeacherUserId: t.string({ nullable: true, resolve: (r) => r.absentTeacherUserId }),
     absentTeacherName: t.string({ nullable: true, resolve: (r) => r.absentTeacherName }),
-    classId: t.exposeString("classId"),
-    className: t.exposeString("className"),
-    sectionId: t.exposeString("sectionId"),
-    sectionName: t.exposeString("sectionName"),
+    classId: t.string({ nullable: true, resolve: (r) => r.classId }),
+    className: t.string({ nullable: true, resolve: (r) => r.className }),
+    sectionId: t.string({ nullable: true, resolve: (r) => r.sectionId }),
+    sectionName: t.string({ nullable: true, resolve: (r) => r.sectionName }),
     subjectId: t.string({ nullable: true, resolve: (r) => r.subjectId }),
     subjectName: t.string({ nullable: true, resolve: (r) => r.subjectName }),
+    subjectGroupId: t.string({ nullable: true, resolve: (r) => r.subjectGroupId }),
+    subjectGroupName: t.string({ nullable: true, resolve: (r) => r.subjectGroupName }),
     dateKey: t.exposeString("dateKey"),
     periodNumber: t.exposeInt("periodNumber"),
   }),

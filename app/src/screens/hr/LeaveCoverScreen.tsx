@@ -20,6 +20,7 @@ import {
   PROPOSE_STAFF_COVER,
   DECIDE_STAFF_COVER_SLOT,
   SUBJECTS_QUERY,
+  SUBJECT_GROUPS_QUERY,
   TEACHERS_QUERY,
 } from "../../graphql/operations";
 import type { HrStackParamList } from "../../navigation/types";
@@ -62,6 +63,7 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
 
   const [slotsQ, refetch] = useQuery({ query: STAFF_COVER_SLOTS_QUERY, variables: { leaveApplicationId } });
   const [subjectsQ] = useQuery({ query: SUBJECTS_QUERY });
+  const [groupsQ] = useQuery({ query: SUBJECT_GROUPS_QUERY, variables: {} });
   const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
 
   const [, propose] = useMutation(PROPOSE_STAFF_COVER);
@@ -69,7 +71,16 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
 
   const slots = slotsQ.data?.staffCoverSlots ?? [];
   const subjectName = new Map((subjectsQ.data?.subjects ?? []).map((s) => [s.id, s.nameBn]));
+  const groupName = new Map((groupsQ.data?.subjectGroups ?? []).map((g) => [g.id, g.nameBn]));
   const teacherName = new Map((teachersQ.data?.teachers ?? []).map((t) => [t.id, t.name]));
+
+  /** The human name of what this slot covers: the Quran/Arabic group, else the
+   *  general subject, else a generic class fallback. */
+  function slotLabel(slot: (typeof slots)[number]): string {
+    if (slot.subjectGroupId) return groupName.get(slot.subjectGroupId) ?? STR.hrCoverClass;
+    if (slot.subjectId) return subjectName.get(slot.subjectId) ?? STR.hrCoverSubject;
+    return STR.hrCoverClass;
+  }
 
   async function runPropose(slotId: string): Promise<void> {
     const teacherId = proposals[slotId];
@@ -130,9 +141,7 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
         slots.map((slot) => (
           <Card key={slot.id}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Body style={{ fontWeight: "700", flex: 1 }}>
-                {slot.subjectId ? subjectName.get(slot.subjectId) ?? STR.hrCoverSubject : STR.hrCoverClass}
-              </Body>
+              <Body style={{ fontWeight: "700", flex: 1 }}>{slotLabel(slot)}</Body>
               <Badge text={coverSlotStatusLabel(slot.status)} tone={statusTone(slot.status)} />
             </View>
             <Muted style={{ marginTop: 2 }}>

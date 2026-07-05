@@ -94,7 +94,10 @@ export default function NeedsCoverInboxScreen(_props: Props): React.ReactElement
             {g.items.map((r) => (
               <Card key={r.slotId}>
                 <Body style={{ fontWeight: "700" }}>
-                  {STR.rtPeriodN} {bnNum(r.periodNumber)} · {r.subjectName ?? STR.hrCoverSubject} · {r.className} {r.sectionName}
+                  {STR.rtPeriodN} {bnNum(r.periodNumber)} ·{" "}
+                  {r.subjectGroupName
+                    ? r.subjectGroupName
+                    : `${r.subjectName ?? STR.hrCoverSubject} · ${r.className ?? ""} ${r.sectionName ?? ""}`.trim()}
                 </Body>
                 <Muted>{r.absentTeacherName ?? "—"}</Muted>
                 <AvailableTeacherSelect

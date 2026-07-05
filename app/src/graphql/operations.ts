@@ -4188,9 +4188,12 @@ export const DECIDE_STAFF_LEAVE = gql<
 export interface StaffCoverSlotT {
   id: string;
   leaveApplicationId: string;
-  classId: string;
-  sectionId: string;
+  /** "section" | "subjectgroup" — subjectgroup (Quran/Arabic) has no class/section/subject. */
+  groupType: string;
+  classId: string | null;
+  sectionId: string | null;
   subjectId: string | null;
+  subjectGroupId: string | null;
   absentTeacherUserId: string | null;
   dateKey: string;
   periodNumber: number;
@@ -4201,7 +4204,7 @@ export interface StaffCoverSlotT {
 }
 
 const STAFF_COVER_SLOT_FIELDS = `
-  id leaveApplicationId classId sectionId subjectId
+  id leaveApplicationId groupType classId sectionId subjectId subjectGroupId
   absentTeacherUserId dateKey periodNumber
   proposedCoverTeacherId finalCoverTeacherUserId status proxyGrantId
 `;
@@ -4239,14 +4242,17 @@ export const DECIDE_STAFF_COVER_SLOT = gql<
 export interface NeedsCoverRowT {
   slotId: string;
   leaveApplicationId: string;
+  groupType: string;
   absentTeacherUserId: string | null;
   absentTeacherName: string | null;
-  classId: string;
-  className: string;
-  sectionId: string;
-  sectionName: string;
+  classId: string | null;
+  className: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
   subjectId: string | null;
   subjectName: string | null;
+  subjectGroupId: string | null;
+  subjectGroupName: string | null;
   dateKey: string;
   periodNumber: number;
 }
@@ -4259,9 +4265,9 @@ export const NEEDS_COVER_SLOTS_QUERY = gql<
 >`
   query NeedsCoverSlots($from: String!, $to: String!) {
     needsCoverSlots(from: $from, to: $to) {
-      slotId leaveApplicationId absentTeacherUserId absentTeacherName
+      slotId leaveApplicationId groupType absentTeacherUserId absentTeacherName
       classId className sectionId sectionName subjectId subjectName
-      dateKey periodNumber
+      subjectGroupId subjectGroupName dateKey periodNumber
     }
   }
 `;

@@ -22,6 +22,7 @@ import { Subject } from "../../foundation/models/Subject";
 import { User } from "../../foundation/models/User";
 import { Class } from "../../foundation/models/Class";
 import { Section } from "../../foundation/models/Section";
+import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { assignProxy, revokeProxy } from "../../foundation/services/ScopeGrantService";
 import { slotsForTeacherOnDate } from "../../routine/services/RoutineSlotService";
 import { resolveDayType } from "../../routine/calendar";
@@ -32,8 +33,10 @@ import { emitHrCoverAssigned } from "../../notifications/services/emitters";
 
 /** Fan out one needs-cover slot per actual class meeting (date × period) the absent
  *  staff teaches during the leave span. No-op (zero slots) when the staff has no
- *  login/routine slots (support staff don't teach). `subjectgroup` routine slots
- *  (cross-section combined groups) are excluded — no single section to fan to. */
+ *  login/routine slots (support staff don't teach). Handles BOTH general "section"
+ *  meetings (approval mints a subject-scoped proxy grant) AND Quran/Arabic
+ *  "subjectgroup" meetings (D-#48/#56 — approval records the cover only, no scope;
+ *  see the model doc + decideCoverSlot). Only breaks are skipped. */
 export async function fanOutCoverSlots(
   leaveApplicationId: string,
   absentStaffProfileId: string,
@@ -51,7 +54,11 @@ export async function fanOutCoverSlots(
 
     const daySlots = await slotsForTeacherOnDate(absentUserId, date);
     for (const rs of daySlots) {
-      if (rs.isBreak || !rs.classId) continue;
+      if (rs.isBreak) continue;
+      const isSubjectGroup = rs.groupType === "subjectgroup";
+      // A section slot must have a classId; a subjectgroup slot must have its group.
+      if (!isSubjectGroup && !rs.classId) continue;
+
       const exists = await StaffCoverSlot.findOne({
         leaveApplicationId: new Types.ObjectId(leaveApplicationId),
         routineSlotId: rs._id,
@@ -61,14 +68,17 @@ export async function fanOutCoverSlots(
         .lean();
       if (exists) continue;
 
-      // A cover is per-subject (D-#257): resolve the meeting's subject code to a
-      // Subject doc when one exists (content subjects only; others resolve to none).
-      const subj = await Subject.findOne({ code: rs.subject }).select("_id").lean();
+      // A section cover is per-subject (D-#257): resolve the meeting's subject code to
+      // a Subject doc when one exists. Quran/Arabic subjectgroup meetings have no
+      // foundation Subject (and no content/tracker scope) — recorded, not scoped.
+      const subj = isSubjectGroup ? null : await Subject.findOne({ code: rs.subject }).select("_id").lean();
       const slot = await StaffCoverSlot.create({
         leaveApplicationId: new Types.ObjectId(leaveApplicationId),
-        classId: rs.classId,
-        sectionId: rs.groupId,
+        groupType: isSubjectGroup ? "subjectgroup" : "section",
+        classId: isSubjectGroup ? null : rs.classId,
+        sectionId: isSubjectGroup ? null : rs.groupId,
         subjectId: subj ? subj._id : null,
+        subjectGroupId: isSubjectGroup ? rs.groupId : null,
         absentTeacherUserId: new Types.ObjectId(absentUserId),
         dateKey,
         periodNumber: rs.periodNumber,
@@ -130,7 +140,7 @@ export async function proposeCover(
     actorId,
     targetId: slot._id,
     targetKind: "StaffCoverSlot",
-    meta: { coverTeacherUserId, sectionId: slot.sectionId.toString() },
+    meta: { coverTeacherUserId, sectionId: slot.sectionId?.toString() ?? null, groupType: slot.groupType },
   });
   return slot;
 }
@@ -166,7 +176,7 @@ export async function decideCoverSlot(
     await writeAudit({
       eventKind: "STAFF_COVER_DECIDED",
       actorId, targetId: slot._id, targetKind: "StaffCoverSlot",
-      meta: { decision: "rejected", sectionId: slot.sectionId.toString() },
+      meta: { decision: "rejected", sectionId: slot.sectionId?.toString() ?? null, groupType: slot.groupType },
     });
     return slot;
   }
@@ -197,17 +207,24 @@ export async function decideCoverSlot(
     );
   }
 
-  const grantId = await assignProxy({
-    coveringTeacherId: finalTeacherId,
-    absentTeacherId: slot.absentTeacherUserId ? slot.absentTeacherUserId.toString() : undefined,
-    classId: slot.classId.toString(),
-    sectionId: slot.sectionId.toString(),
-    subjectId: slot.subjectId ? slot.subjectId.toString() : undefined,
-    startDate: parseDateKey(slot.dateKey),
-    durationDays: 1,
-    assignedBy: actorId,
-  });
-  slot.proxyGrantId = new Types.ObjectId(grantId);
+  // A section cover mints a subject-scoped, one-day proxy grant (write access). A
+  // Quran/Arabic subjectgroup cover has NO content/tracker scope to grant (mirrors
+  // the routine R-4 precedent) — it is recorded + notified only, proxyGrantId stays
+  // null. Both still record the final teacher, audit, and notify the covering teacher.
+  let grantId: string | null = null;
+  if (slot.groupType === "section" && slot.classId && slot.sectionId) {
+    grantId = await assignProxy({
+      coveringTeacherId: finalTeacherId,
+      absentTeacherId: slot.absentTeacherUserId ? slot.absentTeacherUserId.toString() : undefined,
+      classId: slot.classId.toString(),
+      sectionId: slot.sectionId.toString(),
+      subjectId: slot.subjectId ? slot.subjectId.toString() : undefined,
+      startDate: parseDateKey(slot.dateKey),
+      durationDays: 1,
+      assignedBy: actorId,
+    });
+    slot.proxyGrantId = new Types.ObjectId(grantId);
+  }
   slot.finalCoverTeacherUserId = new Types.ObjectId(finalTeacherId);
   slot.status = "approved";
   await slot.save();
@@ -216,16 +233,20 @@ export async function decideCoverSlot(
     actorId, targetId: slot._id, targetKind: "StaffCoverSlot",
     meta: {
       decision: "approved",
+      groupType: slot.groupType,
       proxyGrantId: grantId,
-      sectionId: slot.sectionId.toString(),
+      sectionId: slot.sectionId?.toString() ?? null,
+      subjectGroupId: slot.subjectGroupId?.toString() ?? null,
       override: !!overrideCoverTeacherUserId,
       proposedCoverTeacherId: slot.proposedCoverTeacherId ? slot.proposedCoverTeacherId.toString() : null,
       finalCoverTeacherUserId: finalTeacherId,
     },
   });
+  // The notification's dedupe key is (slotId, grantId) — for a grantless subjectgroup
+  // cover, key on the slot id so a retry is still idempotent.
   await emitHrCoverAssigned({
     slotId: slot._id.toString(),
-    grantId,
+    grantId: grantId ?? slot._id.toString(),
     coverTeacherUserId: finalTeacherId,
     dateKey: slot.dateKey,
   });
@@ -259,18 +280,23 @@ export async function coverSlotsForLeave(leaveApplicationId: string): Promise<IS
 
 /** A cross-leave needs-cover row (PXG-1) — one per uncovered class meeting, with
  *  display labels resolved server-side (the inbox has no single academicYearId
- *  anchor to join names client-side the way a single-leave screen does). */
+ *  anchor to join names client-side the way a single-leave screen does). For a
+ *  subjectgroup (Quran/Arabic) meeting, class/section/subject are null and
+ *  `subjectGroupName` carries the group's name instead. */
 export interface NeedsCoverRow {
   slotId: string;
   leaveApplicationId: string;
+  groupType: string;
   absentTeacherUserId: string | null;
   absentTeacherName: string | null;
-  classId: string;
-  className: string;
-  sectionId: string;
-  sectionName: string;
+  classId: string | null;
+  className: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
   subjectId: string | null;
   subjectName: string | null;
+  subjectGroupId: string | null;
+  subjectGroupName: string | null;
   dateKey: string;
   periodNumber: number;
 }
@@ -296,32 +322,38 @@ export async function needsCoverSlots(fromKey: string, toKey: string): Promise<N
   if (slots.length === 0) return [];
 
   const teacherIds = [...new Set(slots.map((s) => s.absentTeacherUserId?.toString()).filter((id): id is string => !!id))];
-  const classIds = [...new Set(slots.map((s) => s.classId.toString()))];
-  const sectionIds = [...new Set(slots.map((s) => s.sectionId.toString()))];
+  const classIds = [...new Set(slots.map((s) => s.classId?.toString()).filter((id): id is string => !!id))];
+  const sectionIds = [...new Set(slots.map((s) => s.sectionId?.toString()).filter((id): id is string => !!id))];
   const subjectIds = [...new Set(slots.map((s) => s.subjectId?.toString()).filter((id): id is string => !!id))];
+  const groupIds = [...new Set(slots.map((s) => s.subjectGroupId?.toString()).filter((id): id is string => !!id))];
 
-  const [teachers, classes, sections, subjects] = await Promise.all([
+  const [teachers, classes, sections, subjects, groups] = await Promise.all([
     User.find({ _id: { $in: teacherIds } }).select("name").lean(),
     Class.find({ _id: { $in: classIds } }).select("nameBn").lean(),
     Section.find({ _id: { $in: sectionIds } }).select("nameBn").lean(),
     Subject.find({ _id: { $in: subjectIds } }).select("nameBn").lean(),
+    SubjectGroup.find({ _id: { $in: groupIds } }).select("nameBn").lean(),
   ]);
   const teacherName = new Map(teachers.map((t) => [t._id.toString(), t.name]));
   const className = new Map(classes.map((c) => [c._id.toString(), c.nameBn]));
   const sectionName = new Map(sections.map((s) => [s._id.toString(), s.nameBn]));
   const subjectName = new Map(subjects.map((s) => [s._id.toString(), s.nameBn]));
+  const groupName = new Map(groups.map((g) => [g._id.toString(), g.nameBn]));
 
   return slots.map((s) => ({
     slotId: s._id.toString(),
     leaveApplicationId: s.leaveApplicationId.toString(),
+    groupType: s.groupType ?? "section",
     absentTeacherUserId: s.absentTeacherUserId ? s.absentTeacherUserId.toString() : null,
     absentTeacherName: s.absentTeacherUserId ? teacherName.get(s.absentTeacherUserId.toString()) ?? null : null,
-    classId: s.classId.toString(),
-    className: className.get(s.classId.toString()) ?? "?",
-    sectionId: s.sectionId.toString(),
-    sectionName: sectionName.get(s.sectionId.toString()) ?? "?",
+    classId: s.classId ? s.classId.toString() : null,
+    className: s.classId ? className.get(s.classId.toString()) ?? "?" : null,
+    sectionId: s.sectionId ? s.sectionId.toString() : null,
+    sectionName: s.sectionId ? sectionName.get(s.sectionId.toString()) ?? "?" : null,
     subjectId: s.subjectId ? s.subjectId.toString() : null,
     subjectName: s.subjectId ? subjectName.get(s.subjectId.toString()) ?? null : null,
+    subjectGroupId: s.subjectGroupId ? s.subjectGroupId.toString() : null,
+    subjectGroupName: s.subjectGroupId ? groupName.get(s.subjectGroupId.toString()) ?? null : null,
     dateKey: s.dateKey,
     periodNumber: s.periodNumber,
   }));
