@@ -125,11 +125,11 @@ describe("R4.1 teacherAvailability", () => {
       { _id: TA, name: "A" },
       { _id: TB, name: "B" },
     ]);
-    mockCoverSlotFind.mockResolvedValue([{ finalCoverTeacherUserId: TA, periodNumber: 1 }]);
+    mockCoverSlotFind.mockResolvedValue([{ finalCoverTeacherUserId: TA, proposedCoverTeacherId: null, periodNumber: 1 }]);
 
     const rows = await teacherAvailability(DATE, 1);
     expect(mockCoverSlotFind).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "approved" }),
+      expect.objectContaining({ status: { $in: ["proposed", "approved"] } }),
     );
     expect(rows.find((r) => r.teacherId === TA.toString())).toMatchObject({ free: false, classCount: 1 });
     expect(rows.find((r) => r.teacherId === TB.toString())).toMatchObject({ free: true, classCount: 0 });
@@ -139,10 +139,20 @@ describe("R4.1 teacherAvailability", () => {
     const TA = oid();
     mockSlotFind.mockResolvedValue([]);
     mockUserFind.mockResolvedValue([{ _id: TA, name: "A" }]);
-    mockCoverSlotFind.mockResolvedValue([{ finalCoverTeacherUserId: TA, periodNumber: 5 }]);
+    mockCoverSlotFind.mockResolvedValue([{ finalCoverTeacherUserId: TA, proposedCoverTeacherId: null, periodNumber: 5 }]);
 
     const rows = await teacherAvailability(DATE, 1);
     expect(rows.find((r) => r.teacherId === TA.toString())).toMatchObject({ free: true, classCount: 1 });
+  });
+
+  test("a teacher merely PROPOSED (not yet approved) for a cover also reads as busy at that period (D-#268)", async () => {
+    const TA = oid();
+    mockSlotFind.mockResolvedValue([]);
+    mockUserFind.mockResolvedValue([{ _id: TA, name: "A" }]);
+    mockCoverSlotFind.mockResolvedValue([{ finalCoverTeacherUserId: null, proposedCoverTeacherId: TA, periodNumber: 1 }]);
+
+    const rows = await teacherAvailability(DATE, 1);
+    expect(rows.find((r) => r.teacherId === TA.toString())).toMatchObject({ free: false, classCount: 1 });
   });
 });
 

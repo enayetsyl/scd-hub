@@ -66,16 +66,19 @@ export async function teacherAvailability(date: Date, periodNumber: number): Pro
     if (slotPeriod.get(su.slotId.toString()) === periodNumber) busy.add(cover);
   }
 
-  // A teacher already approved to cover an HR leave-cover slot (PXG-1) this same
-  // date is ALSO busy for that period — found live-testing: without this, a teacher
-  // double-booked across two absent teachers' same-period slots read as fully free.
+  // A teacher already approved to cover an HR leave-cover slot (PXG-1), OR already
+  // PROPOSED for one and awaiting a decision (a proposal reserves the period until
+  // an admin rejects it — D-#268 live-testing find), is ALSO busy for that period.
+  // Without this, a teacher double-booked (or double-proposed) across two absent
+  // teachers' same-period slots read as fully free.
   const dateKey = date.toISOString().slice(0, 10);
-  const hrCovers = await StaffCoverSlot.find({ dateKey, status: "approved" })
-    .select("finalCoverTeacherUserId periodNumber")
+  const hrCovers = await StaffCoverSlot.find({ dateKey, status: { $in: ["proposed", "approved"] } })
+    .select("finalCoverTeacherUserId proposedCoverTeacherId periodNumber")
     .lean();
   for (const c of hrCovers) {
-    if (!c.finalCoverTeacherUserId) continue;
-    const cover = c.finalCoverTeacherUserId.toString();
+    const teacherId = c.finalCoverTeacherUserId ?? c.proposedCoverTeacherId;
+    if (!teacherId) continue;
+    const cover = teacherId.toString();
     loadMap[cover] = (loadMap[cover] ?? 0) + 1;
     if (c.periodNumber === periodNumber) busy.add(cover);
   }

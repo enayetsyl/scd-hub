@@ -71,7 +71,7 @@ jest.mock("../modules/notifications/services/emitters", () => ({
   emitHrCoverAssigned: (e: unknown) => mockEmitHrCoverAssigned(e),
 }));
 
-import { decideCoverSlot, needsCoverSlots } from "../modules/hr/services/CoverService";
+import { decideCoverSlot, needsCoverSlots, proposeCover } from "../modules/hr/services/CoverService";
 import { LeaveError } from "../modules/hr/services/dates";
 
 const ACTOR = oid().toString();
@@ -100,6 +100,45 @@ function baseSlot(over: Record<string, unknown> = {}) {
   slot.save = jest.fn().mockResolvedValue(slot);
   return slot;
 }
+
+describe("proposeCover — blocks proposing an already-reserved teacher (D-#268)", () => {
+  test("succeeds and records the proposal when no conflict exists", async () => {
+    const teacher = oid();
+    const slot = baseSlot({ status: "needs_cover" });
+    mockSlotFindById.mockResolvedValue(slot);
+
+    const res = await proposeCover(slot._id.toString(), teacher.toString(), ACTOR);
+    expect(res.status).toBe("proposed");
+    expect(res.proposedCoverTeacherId!.toString()).toBe(teacher.toString());
+    expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "STAFF_COVER_PROPOSED" }));
+  });
+
+  test("rejects proposing a teacher already proposed/approved elsewhere at the same (date, period)", async () => {
+    const teacher = oid();
+    const slot = baseSlot({ status: "needs_cover", dateKey: "2026-06-14", periodNumber: 2 });
+    mockSlotFindById.mockResolvedValue(slot);
+    mockSlotFindOne.mockResolvedValue({ _id: oid() }); // a conflicting proposed/approved slot exists
+
+    await expect(proposeCover(slot._id.toString(), teacher.toString(), ACTOR)).rejects.toThrow(LeaveError);
+    const queryArg = mockSlotFindOne.mock.calls[0][0] as Record<string, unknown>;
+    expect(queryArg).toMatchObject({
+      dateKey: "2026-06-14",
+      periodNumber: 2,
+      status: { $in: ["proposed", "approved"] },
+    });
+    expect(slot.status).toBe("needs_cover"); // unchanged — the proposal never took
+  });
+
+  test("frees up once the earlier conflicting slot is rejected (no conflict found afterward)", async () => {
+    const teacher = oid();
+    const slot = baseSlot({ status: "needs_cover" });
+    mockSlotFindById.mockResolvedValue(slot);
+    mockSlotFindOne.mockResolvedValue(null); // the earlier slot has since been rejected
+
+    const res = await proposeCover(slot._id.toString(), teacher.toString(), ACTOR);
+    expect(res.status).toBe("proposed");
+  });
+});
 
 describe("decideCoverSlot — override + direct-assign (D-#268)", () => {
   test("override on a proposed slot mints for the OVERRIDE teacher, not the proposer's pick", async () => {
@@ -169,8 +208,23 @@ describe("decideCoverSlot — override + direct-assign (D-#268)", () => {
 
     await expect(decideCoverSlot(slot._id.toString(), true, ACTOR)).rejects.toThrow(LeaveError);
     const queryArg = mockSlotFindOne.mock.calls[0][0] as Record<string, unknown>;
-    expect((queryArg.finalCoverTeacherUserId as { toString(): string }).toString()).toBe(cover.toString());
-    expect(queryArg).toMatchObject({ dateKey: "2026-06-14", periodNumber: 2, status: "approved" });
+    expect(queryArg).toMatchObject({
+      dateKey: "2026-06-14",
+      periodNumber: 2,
+      status: { $in: ["proposed", "approved"] },
+    });
+    expect(mockAssignProxy).not.toHaveBeenCalled();
+  });
+
+  test("rejects approving when the teacher is only PROPOSED (not yet approved) elsewhere at the same (date, period)", async () => {
+    const cover = oid();
+    const slot = baseSlot({ proposedCoverTeacherId: cover, status: "proposed", dateKey: "2026-06-14", periodNumber: 2 });
+    mockSlotFindById.mockResolvedValue(slot);
+    mockSlotFindOne.mockResolvedValue({ _id: oid() }); // another leave's slot still has this teacher pending
+
+    await expect(decideCoverSlot(slot._id.toString(), true, ACTOR)).rejects.toThrow(
+      /already covers \(or is proposed for\)/,
+    );
     expect(mockAssignProxy).not.toHaveBeenCalled();
   });
 

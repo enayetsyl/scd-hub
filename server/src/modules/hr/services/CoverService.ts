@@ -81,8 +81,33 @@ export async function fanOutCoverSlots(
   return created;
 }
 
+/** Is `teacherId` already reserved (proposed OR approved — either holds the period
+ *  until an admin rejects it) for some OTHER slot at this exact (date, period)?
+ *  Shared by proposeCover and decideCoverSlot so a pending proposal blocks a
+ *  second teacher from proposing/assigning the SAME colleague for the SAME
+ *  meeting until the first proposal is rejected (D-#268 live-testing find). */
+async function findConflictingCoverSlot(
+  excludeSlotId: Types.ObjectId,
+  teacherId: string,
+  dateKey: string,
+  periodNumber: number,
+): Promise<boolean> {
+  const conflict = await StaffCoverSlot.findOne({
+    _id: { $ne: excludeSlotId },
+    $or: [{ proposedCoverTeacherId: new Types.ObjectId(teacherId) }, { finalCoverTeacherUserId: new Types.ObjectId(teacherId) }],
+    dateKey,
+    periodNumber,
+    status: { $in: ["proposed", "approved"] },
+  })
+    .select("_id")
+    .lean();
+  return !!conflict;
+}
+
 /** Propose a covering teacher for a slot (the legwork — D-#22). Does NOT grant
- *  write access; the slot moves to `proposed` and awaits approval. */
+ *  write access; the slot moves to `proposed` and awaits approval. Rejected if the
+ *  proposed teacher already holds another proposed/approved slot at this exact
+ *  (date, period) elsewhere — reserved until that one is rejected/revoked. */
 export async function proposeCover(
   slotId: string,
   coverTeacherUserId: string,
@@ -91,6 +116,12 @@ export async function proposeCover(
   const slot = await StaffCoverSlot.findById(slotId);
   if (!slot) throw new LeaveError("Cover slot not found");
   if (slot.status === "approved") throw new LeaveError("Slot already approved — revoke before re-proposing");
+  if (await findConflictingCoverSlot(slot._id, coverTeacherUserId, slot.dateKey, slot.periodNumber)) {
+    throw new LeaveError(
+      `This teacher is already proposed/assigned to cover another class at ${slot.dateKey} period ${slot.periodNumber} — ` +
+        "pick someone else, or wait until that proposal is rejected",
+    );
+  }
   slot.proposedCoverTeacherId = new Types.ObjectId(coverTeacherUserId);
   slot.status = "proposed";
   await slot.save();
@@ -152,23 +183,17 @@ export async function decideCoverSlot(
   if (slot.status === "approved") return slot;
 
   // A teacher can only physically be in one place at a given (date, period) — reject
-  // approving this slot for them if they already hold an approved cover at the exact
-  // same meeting elsewhere (found live-testing: nothing previously stopped the same
-  // teacher being double-booked across two different absent teachers' same-period
-  // slots). Own-teaching-vs-cover conflicts stay advisory-only via teacherAvailability
-  // (unchanged, pre-existing design) — this guard is scoped to cover-vs-cover only.
-  const conflict = await StaffCoverSlot.findOne({
-    _id: { $ne: slot._id },
-    finalCoverTeacherUserId: new Types.ObjectId(finalTeacherId),
-    dateKey: slot.dateKey,
-    periodNumber: slot.periodNumber,
-    status: "approved",
-  })
-    .select("_id")
-    .lean();
-  if (conflict) {
+  // approving this slot for them if they already hold an approved cover OR a pending
+  // proposal at the exact same meeting elsewhere (found live-testing: nothing
+  // previously stopped the same teacher being double-booked across two different
+  // absent teachers' same-period slots, and an override/direct-assign could race
+  // past a still-pending proposal on another leave). Own-teaching-vs-cover conflicts
+  // stay advisory-only via teacherAvailability (unchanged, pre-existing design) —
+  // this guard is scoped to cover-vs-cover only.
+  if (await findConflictingCoverSlot(slot._id, finalTeacherId, slot.dateKey, slot.periodNumber)) {
     throw new LeaveError(
-      `This teacher already covers another class at ${slot.dateKey} period ${slot.periodNumber} — pick someone else or reject that cover first`,
+      `This teacher already covers (or is proposed for) another class at ${slot.dateKey} period ${slot.periodNumber} — ` +
+        "pick someone else, or reject/resolve that cover first",
     );
   }
 
