@@ -26,9 +26,11 @@ import {
   reviewObservation,
   publishObservation,
   requestReReview,
+  requestCoReview,
   respondToObservation,
   getObservation,
   observationsForTeacher,
+  observationsForRecording,
   allObservationsPaged,
   myReviewQueue,
   canReadObservation,
@@ -354,6 +356,30 @@ builder.mutationField("reRequestClassroomObservation", (t) =>
   }),
 );
 
+builder.mutationField("requestCoReviewObservation", (t) =>
+  t.field({
+    type: ObservationRef,
+    description:
+      "Add a PARALLEL co-reviewer to a recording (CO-9, D-#272): creates a NEW independent ASSIGNED observation on " +
+      "the same recording/anchor as the source WITHOUT superseding it (unlike re-review). The source must have a " +
+      "recording; the co-observer ≠ observed teacher and must not already be reviewing this recording. Requires " +
+      "observation:upload (Principal/Office). Audited.",
+    authScopes: { hasPermission: "observation:upload" },
+    args: {
+      sourceObservationId: t.arg.string({ required: true }),
+      observerId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return requestCoReview({
+        sourceObservationId: args.sourceObservationId,
+        observerId: args.observerId,
+        actorId: actor.userId,
+      });
+    },
+  }),
+);
+
 builder.mutationField("respondToClassroomObservation", (t) =>
   t.field({
     type: ObservationRef,
@@ -534,5 +560,17 @@ builder.queryField("allClassroomObservations", (t) =>
         limit: args.limit ?? undefined,
         offset: args.offset ?? undefined,
       }),
+  }),
+);
+
+builder.queryField("classroomObservationsForRecording", (t) =>
+  t.field({
+    type: [ObservationRef],
+    description:
+      "Every observation on a recording — the CO-9 co-review group for the Principal compare view (each reviewer's " +
+      "row, oldest first). Requires observation:upload (Principal/Office).",
+    authScopes: { hasPermission: "observation:upload" },
+    args: { recordingId: t.arg.string({ required: true }) },
+    resolve: async (_root, args) => observationsForRecording(args.recordingId),
   }),
 );

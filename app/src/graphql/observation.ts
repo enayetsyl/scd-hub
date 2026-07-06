@@ -241,6 +241,24 @@ export const RE_REQUEST_CLASSROOM_OBSERVATION = gql<
   }
 `;
 
+export const REQUEST_CO_REVIEW_OBSERVATION = gql<
+  { requestCoReviewObservation: ClassroomObservationT },
+  { sourceObservationId: string; observerId: string }
+>`
+  mutation RequestCoReviewObservation($sourceObservationId: String!, $observerId: String!) {
+    requestCoReviewObservation(sourceObservationId: $sourceObservationId, observerId: $observerId) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+export const OBSERVATIONS_FOR_RECORDING_QUERY = gql<
+  { classroomObservationsForRecording: ClassroomObservationT[] },
+  { recordingId: string }
+>`
+  query ClassroomObservationsForRecording($recordingId: String!) {
+    classroomObservationsForRecording(recordingId: $recordingId) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
 export const RESPOND_TO_CLASSROOM_OBSERVATION = gql<
   { respondToClassroomObservation: ClassroomObservationT },
   { observationId: string; responseText: string }

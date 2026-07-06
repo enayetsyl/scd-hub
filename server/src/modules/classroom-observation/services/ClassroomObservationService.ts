@@ -664,6 +664,81 @@ export async function requestReReview(input: RequestReReviewInput): Promise<Clas
 }
 
 // ---------------------------------------------------------------------------
+// requestCoReview — parallel co-review (new independent row; NO supersession, CO-9)
+// ---------------------------------------------------------------------------
+
+export interface RequestCoReviewInput {
+  /** An existing observation on the recording to add a parallel reviewer to. */
+  sourceObservationId: string;
+  /** The additional observer (≠ observed teacher, ≠ an existing reviewer of this recording). */
+  observerId: string;
+  /** The authenticated requester (Principal/Office). */
+  actorId: string;
+}
+
+/**
+ * Add a PARALLEL co-reviewer to a recording (CO-9, D-#272). Creates a NEW independent
+ * ASSIGNED observation on the SAME recording/anchor as `source`, WITHOUT superseding it
+ * and WITHOUT prevObservationId — the opposite of requestReReview (which REPLACES). The
+ * two rows are siblings grouped by the shared recordingId, each scored + published on its
+ * own (CO-8). Guards: the source must have a recording; the co-observer ≠ the observed
+ * teacher; and an observer already reviewing this recording is refused (no duplicate
+ * reviewer rows). Audited.
+ */
+export async function requestCoReview(input: RequestCoReviewInput): Promise<ClassroomObservationShape> {
+  const source = (await ClassroomObservation.findById(input.sourceObservationId)) as IClassroomObservation | null;
+  if (!source) throw new ClassroomObservationError("Observation not found");
+  if (!source.recordingId) {
+    throw new ClassroomObservationError("সহ-পর্যালোচনার আগে সেশনের ভিডিও সংযুক্ত করতে হবে");
+  }
+  const observerId = oid(input.observerId, "observerId");
+  if (observerId.equals(source.teacherId)) {
+    throw new ClassroomObservationError("An observer cannot be assigned their own teaching");
+  }
+  // No duplicate reviewer rows on one recording (an active row by this observer).
+  const dup = await ClassroomObservation.findOne({
+    recordingId: source.recordingId,
+    observerId,
+    state: { $ne: "SUPERSEDED" },
+  }).lean();
+  if (dup) {
+    throw new ClassroomObservationError("এই পর্যবেক্ষক ইতিমধ্যে এই সেশনটি পর্যালোচনা করছেন");
+  }
+
+  const fresh = await ClassroomObservation.create({
+    form: source.form,
+    subject: source.subject,
+    teacherId: source.teacherId,
+    classDate: source.classDate,
+    sectionId: source.sectionId ?? null,
+    subjectGroupId: source.subjectGroupId ?? null,
+    routineSlotId: source.routineSlotId ?? null,
+    periodNumber: source.periodNumber ?? null,
+    recordingId: source.recordingId,
+    observerId,
+    state: "ASSIGNED",
+    assignedAt: new Date(),
+    createdBy: oid(input.actorId, "actorId"),
+    // NO prevObservationId / supersededById — a sibling, not a replacement.
+  });
+
+  await writeAudit({
+    eventKind: "CLASSROOM_OBSERVATION_ASSIGNED",
+    actorId: input.actorId,
+    targetId: fresh._id,
+    targetKind: "ClassroomObservation",
+    meta: {
+      observerId: observerId.toString(),
+      teacherId: source.teacherId.toString(),
+      coReviewOf: source._id.toString(),
+      recordingId: source.recordingId.toString(),
+    },
+  });
+
+  return shape(fresh);
+}
+
+// ---------------------------------------------------------------------------
 // Reads + the PURE row-scope predicate
 // ---------------------------------------------------------------------------
 
@@ -708,6 +783,15 @@ export async function getObservation(observationId: string): Promise<ClassroomOb
 export async function observationsForTeacher(teacherId: string): Promise<ClassroomObservationShape[]> {
   const docs = (await ClassroomObservation.find({ teacherId: oid(teacherId, "teacherId") })
     .sort({ classDate: -1, createdAt: -1 })
+    .lean()) as unknown as IClassroomObservation[];
+  return docs.map(shape);
+}
+
+/** Every observation on a recording, oldest first — the CO-9 co-review group (the
+ *  resolver gates this to Principal/Office oversight). */
+export async function observationsForRecording(recordingId: string): Promise<ClassroomObservationShape[]> {
+  const docs = (await ClassroomObservation.find({ recordingId: oid(recordingId, "recordingId") })
+    .sort({ createdAt: 1 })
     .lean()) as unknown as IClassroomObservation[];
   return docs.map(shape);
 }

@@ -58,11 +58,13 @@ const leanChain = (val: unknown) => {
 const mockCreate = jest.fn();
 const mockFindById = jest.fn();
 const mockFind = jest.fn();
+const mockFindOne = jest.fn();
 jest.mock("../modules/classroom-observation/models/ClassroomObservation", () => ({
   ClassroomObservation: {
     create: (doc: unknown) => mockCreate(doc),
     findById: (id: unknown) => mockFindById(id),
     find: (q: unknown) => mockFind(q),
+    findOne: (q: unknown) => mockFindOne(q),
   },
 }));
 
@@ -91,6 +93,8 @@ import {
   publishObservation,
   respondToObservation,
   requestReReview,
+  requestCoReview,
+  observationsForRecording,
   canReadObservation,
   ClassroomObservationError,
 } from "../modules/classroom-observation/services/ClassroomObservationService";
@@ -99,6 +103,7 @@ const TEACHER = oid();      // the observed teacher
 const OBSERVER = oid();     // the assigned senior teacher
 const OFFICE = oid();       // the uploader (Principal/Office)
 const SECTION = oid();
+const RECORDING = oid();     // a shared SessionRecording (CO-9 co-review group key)
 
 // A valid REF-11 review payload (5 domains 1–4 + note, 2 gates, 1 strength, 1 growth).
 const validPayload = (): Ref11PayloadInput => ({
@@ -114,6 +119,7 @@ beforeEach(() => {
   mockEmit.mockResolvedValue(undefined);
   // find().select().lean() → one manager/principal recipient by default.
   mockUserFind.mockReturnValue({ select: () => ({ lean: async () => [{ _id: oid() }] }) });
+  mockFindOne.mockReturnValue(leanChain(null)); // no duplicate co-reviewer by default
   mockCreate.mockImplementation(async (doc: Record<string, unknown>) => ({
     _id: oid(),
     ...doc,
@@ -551,5 +557,66 @@ describe("respondToObservation requires publish (CO-8)", () => {
     });
     expect(res.state).toBe("TEACHER_RESPONDED");
     expect(res.teacherResponse).toBe("seen & discussed");
+  });
+});
+
+// ===========================================================================
+// CO-9 parallel co-review (D-#272) — a sibling row, NOT a supersession
+// ===========================================================================
+
+describe("requestCoReview (CO-9)", () => {
+  const withRec = (over: Record<string, unknown> = {}) =>
+    makeDoc({ state: "REVIEWED", observerId: OBSERVER, recordingId: RECORDING, ...over });
+
+  test("creates a NEW ASSIGNED sibling on the same recording; source NOT superseded, no prevObservationId", async () => {
+    const source = withRec();
+    mockFindById.mockResolvedValue(source);
+    const newObs = oid();
+    const res = await requestCoReview({
+      sourceObservationId: String(source._id),
+      observerId: newObs.toString(),
+      actorId: OFFICE.toString(),
+    });
+    expect(res.state).toBe("ASSIGNED");
+    expect(res.observerId).toBe(newObs.toString());
+    expect(res.recordingId).toBe(RECORDING.toString());
+    expect(res.prevObservationId).toBeNull();
+    expect(source.state).toBe("REVIEWED"); // the source is untouched (not superseded)
+    const kinds = mockWriteAudit.mock.calls.map((c) => (c[0] as { eventKind: string }).eventKind);
+    expect(kinds).toContain("CLASSROOM_OBSERVATION_ASSIGNED");
+    expect(kinds).not.toContain("CLASSROOM_OBSERVATION_SUPERSEDED");
+  });
+
+  test("refuses when the source has no recording (attach footage first)", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "REVIEWED", recordingId: null }));
+    await expect(
+      requestCoReview({ sourceObservationId: oid().toString(), observerId: oid().toString(), actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/ভিডিও সংযুক্ত/);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("CONFLICT GUARD: refuses the observed teacher as co-observer", async () => {
+    mockFindById.mockResolvedValue(withRec());
+    await expect(
+      requestCoReview({ sourceObservationId: oid().toString(), observerId: TEACHER.toString(), actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/cannot be assigned their own teaching/);
+  });
+
+  test("refuses a duplicate reviewer already on this recording", async () => {
+    mockFindById.mockResolvedValue(withRec());
+    mockFindOne.mockReturnValue(leanChain({ _id: oid() })); // an existing active reviewer row
+    await expect(
+      requestCoReview({ sourceObservationId: oid().toString(), observerId: oid().toString(), actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/ইতিমধ্যে এই সেশনটি/);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe("observationsForRecording (CO-9 group read)", () => {
+  test("returns every row on the recording", async () => {
+    mockFind.mockReturnValue(leanChain([makeDoc({ state: "REVIEWED" }), makeDoc({ state: "ASSIGNED" })]));
+    const res = await observationsForRecording(RECORDING.toString());
+    expect(res).toHaveLength(2);
+    expect(mockFind).toHaveBeenCalledWith(expect.objectContaining({ recordingId: expect.anything() }));
   });
 });

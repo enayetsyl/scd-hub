@@ -17,7 +17,7 @@
 - **Anchor:** a session = a `RoutineSlot` + date → teacher, subject, period, and the **Section** (general/Islam) or **SubjectGroup** (Arabic groups; Quran groups Qaida/Ammapara/Najera/Hifz, D-#56/#48).
 - **Plane:** identity/operational **staff** data; **no corpus/student path** — ADR-005 firewall unaffected.
 - **Contract surface:** app-native `/shared/vocab.ts` additions only — **no wire twin, no two-/three-place sync** (D-#46/#52). Vocab verifier stays green.
-- **Build order:** **CO-1** REF-11 form core + pipeline + roles → **CO-2** footage upload → **CO-3** release + teacher response + notify/escalate (in-app) → **CO-4** trend → **CO-5** Quran (ClassEcho) form → **CO-6** review scheduler → **CO-7** reviewer effectiveness → **CO-8** publish gate (D-#271).
+- **Build order:** **CO-1** REF-11 form core + pipeline + roles → **CO-2** footage upload → **CO-3** release + teacher response + notify/escalate (in-app) → **CO-4** trend → **CO-5** Quran (ClassEcho) form → **CO-6** review scheduler → **CO-7** reviewer effectiveness → **CO-8** publish gate (D-#271) → **CO-9** parallel multi-reviewer co-review + compare (D-#272).
 
 ---
 
@@ -98,6 +98,14 @@ A **Principal/Office publish checkpoint** now sits between the observer's review
 - [ ] Teacher respond + fairness-rating are refused until published; allowed after.
 - [ ] The response-escalation ladder measures days since **publish**, not review, and does not fire on an unpublished row.
 - [ ] Principal/Office receive `OBSERVATION_READY_TO_PUBLISH` at review; no Principal sign-off is added to the appraisal sense (still developmental). Vocab verifier + server tsc + tests green.
+
+### CO-9 — Parallel multi-reviewer co-review + compare (D-#272)
+A single recording can be reviewed by **several observers in parallel**. `requestCoReviewObservation(sourceObservationId, observerId)` (`observation:upload`) creates a NEW independent ASSIGNED observation on the **same recording/anchor** as the source, **without** superseding it and **without** `prevObservationId` — distinct from **re-review** (D-#194), which REPLACES and supersedes. Each co-review row is scored, and **published, independently** (per-row `publishedAt`, CO-8). The group key is the shared `recordingId` (footage is always attached). A new manager read `classroomObservationsForRecording(recordingId)` powers a Principal **compare view**: each reviewer's REF-11 domain/gate scores laid out side-by-side, with a **within-one-level divergence** highlight (REF-11 §1.2) — the same agreement signal CO-7 calibration scores. **Guards:** co-observer ≠ observed teacher; a co-observer already reviewing that recording is refused (no duplicate reviewer rows); the source must have a recording attached. Additive — no new state, no new permission.
+**Acceptance:**
+- [ ] Adding a co-reviewer creates a NEW ASSIGNED row on the same recording; the source row is NOT superseded and keeps its own state.
+- [ ] The same observer cannot be added twice to one recording; the observed teacher cannot be a co-observer; a source with no recording is refused.
+- [ ] `classroomObservationsForRecording` returns every reviewer's row for a recording (Principal/Office); the compare view highlights domains where reviewers differ by >1 level.
+- [ ] Each reviewer's row publishes on its own `publishedAt` (CO-8); server tsc + tests green.
 
 ## §6 — Given/When/Then journeys
 
