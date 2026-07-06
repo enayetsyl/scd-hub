@@ -17,7 +17,7 @@ import {
 import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Notice, EmptyState } from "../../components/ui";
 import { TeacherSelect, SubjectSelect } from "../../components/selects";
-import { SectionBar } from "../../components/SectionBar";
+import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
@@ -84,7 +84,7 @@ export default function AssignSubjectTeacherScreen({ navigation }: Props): React
   return (
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
-        <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
+        <ClassSectionDashboard />
       </View>
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: space(4) }}>
         {ok ? <Notice message={ok} tone="ok" /> : null}

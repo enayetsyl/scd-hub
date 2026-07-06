@@ -25,7 +25,7 @@ import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
 import { groupByDate } from "../../lib/groupByDate";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
-import { SectionBar } from "../../components/SectionBar";
+import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
 import { STR, hwSubjectLabel, hwResultLabel, lifecycleStateLabel, dateHeaderLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -192,7 +192,7 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
   return (
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
-        <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
+        <ClassSectionDashboard />
       </View>
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, padding: space(4) }}
