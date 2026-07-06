@@ -24,6 +24,7 @@ import {
   uploadObservation,
   assignObserver,
   reviewObservation,
+  publishObservation,
   requestReReview,
   respondToObservation,
   getObservation,
@@ -111,8 +112,9 @@ QuranPayloadRef.implement({
 const ObservationRef = builder.objectRef<ClassroomObservationShape>("ClassroomObservation");
 ObservationRef.implement({
   description:
-    "A classroom observation on the REF-11 form (CO-1): session anchor + the assigned observer's scoring, " +
-    "released to the observed teacher at REVIEWED (no Principal sign-off). Identity plane (ADR-005).",
+    "A classroom observation on the REF-11 form (CO-1): session anchor + the assigned observer's scoring. " +
+    "Since CO-8 (D-#271) REVIEWED is observer/Principal-only; a Principal/Office PUBLISH (publishedAt) releases " +
+    "it to the observed teacher. Identity plane (ADR-005).",
   fields: (t) => ({
     id: t.exposeString("id"),
     form: t.exposeString("form"),
@@ -128,6 +130,8 @@ ObservationRef.implement({
     createdBy: t.exposeString("createdBy"),
     assignedAt: t.string({ nullable: true, resolve: (r) => r.assignedAt }),
     reviewedAt: t.string({ nullable: true, resolve: (r) => r.reviewedAt }),
+    publishedAt: t.string({ nullable: true, resolve: (r) => r.publishedAt }),
+    publishedBy: t.string({ nullable: true, resolve: (r) => r.publishedBy }),
     domains: t.field({ type: [DomainScoreRef], resolve: (r) => r.domains }),
     gates: t.field({ type: [GateScoreRef], resolve: (r) => r.gates }),
     oneStrength: t.string({ nullable: true, resolve: (r) => r.oneStrength }),
@@ -369,6 +373,22 @@ builder.mutationField("respondToClassroomObservation", (t) =>
         responseText: args.responseText,
         actorId: actor.userId,
       });
+    },
+  }),
+);
+
+builder.mutationField("publishClassroomObservation", (t) =>
+  t.field({
+    type: ObservationRef,
+    description:
+      "Publish a REVIEWED observation to the observed teacher (CO-8, D-#271): stamps publishedAt/publishedBy and " +
+      "releases + notifies the teacher. Only a REVIEWED, not-yet-published row (an already-published row is refused). " +
+      "Requires observation:manage (Principal/Office). Audited.",
+    authScopes: { hasPermission: "observation:manage" },
+    args: { observationId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return publishObservation({ observationId: args.observationId, actorId: actor.userId });
     },
   }),
 );

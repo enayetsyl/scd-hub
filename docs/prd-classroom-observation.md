@@ -13,11 +13,11 @@
 
 - **What:** an in-app pipeline to record a class, have a senior teacher review it, release it to the observed teacher, let that teacher respond, nudge them if they don't, and track the trend — plus a scheduler that suggests who's due and a reviewer-effectiveness read.
 - **Two forms, one pipeline:** **REF-11 form** for general subjects + Arabic + Islam (`HW_SUBJECTS`); **ClassEcho form** for **Quran**. The form is chosen by subject.
-- **No Principal sign-off** — developmental, not appraisal (REF-11 §1.3). The observer's submission releases straight to the observed teacher.
+- **No Principal sign-off** — developmental, not appraisal (REF-11 §1.3). The observer's submission releases straight to the observed teacher. **↳ SUPERSEDED by D-#271 / CO-8:** a Principal/Office **publish gate** now sits between REVIEWED and teacher visibility — the observer's submission is REVIEWED (observer/Principal-only) and a separate `publishClassroomObservation` releases it. Still developmental once published (no appraisal sign-off semantics).
 - **Anchor:** a session = a `RoutineSlot` + date → teacher, subject, period, and the **Section** (general/Islam) or **SubjectGroup** (Arabic groups; Quran groups Qaida/Ammapara/Najera/Hifz, D-#56/#48).
 - **Plane:** identity/operational **staff** data; **no corpus/student path** — ADR-005 firewall unaffected.
 - **Contract surface:** app-native `/shared/vocab.ts` additions only — **no wire twin, no two-/three-place sync** (D-#46/#52). Vocab verifier stays green.
-- **Build order:** **CO-1** REF-11 form core + pipeline + roles → **CO-2** footage upload → **CO-3** release + teacher response + notify/escalate (in-app) → **CO-4** trend → **CO-5** Quran (ClassEcho) form → **CO-6** review scheduler → **CO-7** reviewer effectiveness.
+- **Build order:** **CO-1** REF-11 form core + pipeline + roles → **CO-2** footage upload → **CO-3** release + teacher response + notify/escalate (in-app) → **CO-4** trend → **CO-5** Quran (ClassEcho) form → **CO-6** review scheduler → **CO-7** reviewer effectiveness → **CO-8** publish gate (D-#271).
 
 ---
 
@@ -89,6 +89,15 @@ Per teacher: `lastReviewedAt` + a `SUPPORT_TIERS` tier read from recent reviews 
 ### CO-7 — Reviewer effectiveness (private/developmental — not a public scoreboard)
 Per observer: **(1) Calibration** — a recording assigned to two observers; measure domain-score agreement within one level (REF-11 §1.2); **(2) Timeliness** — assign→review completion time; backlog; **(3) Throughput** — reviews completed per period; **(4) Developmental impact** — on a teacher's re-review, did the prior growth-focus domain improve (gentle, low-weight, attributed to the prior observer); **(5) Teacher fairness rating** — the observed teacher rates the review's fairness/usefulness (not agreement). Surfaced to Principal (`observation:manage`) only.
 **Acceptance:** [ ] double-review computes within-one-level agreement; [ ] timeliness/throughput per observer; [ ] impact links re-review domain movement to the prior focus; [ ] fairness rating captured separately from agreement; [ ] no observer leaderboard exposed to staff.
+
+### CO-8 — Publish gate (D-#271; reverses §1.3 "releases straight to the observed teacher")
+A **Principal/Office publish checkpoint** now sits between the observer's review and the observed teacher's visibility. `reviewClassroomObservation` still transitions ASSIGNED → REVIEWED, but REVIEWED is now **observer + Principal/Office only** — NOT visible to the observed teacher. A new `publishClassroomObservation(observationId)` (`observation:manage`) stamps `publishedAt` + `publishedBy` and **that** releases it (fires `OBSERVATION_RELEASED` to the teacher). Modelled as an **additive `publishedAt` flag, NOT a new `OBSERVATION_STATES` value** (Option A) — CO-4/6/7 aggregates that key off REVIEWED are unchanged. Every read/act gate that was `≥ REVIEWED` for the observed teacher moves to `publishedAt != null`: `canReadObservation` (teacher branch), `respondToClassroomObservation`, CO-7 `rateReview`, and the CO-3 **escalation clock** (calendar-days-since-**publish**, scanning published-but-unanswered rows). At review time a `OBSERVATION_READY_TO_PUBLISH` notice goes to Principal/Office (app-native kind, no wire twin). **Migration:** existing REVIEWED/TEACHER_RESPONDED/SUPERSEDED rows are backfilled `publishedAt = reviewedAt` at deploy (one-time script) so teachers keep access to feedback they have already seen. Re-review supersession semantics are unchanged.
+**Acceptance:**
+- [ ] The observed teacher CANNOT read a REVIEWED-but-unpublished observation (or its footage); the observer + Principal/Office still can.
+- [ ] `publishClassroomObservation` (`observation:manage`) sets `publishedAt`/`publishedBy`, is audited, and fires `OBSERVATION_RELEASED` to the teacher exactly once.
+- [ ] Teacher respond + fairness-rating are refused until published; allowed after.
+- [ ] The response-escalation ladder measures days since **publish**, not review, and does not fire on an unpublished row.
+- [ ] Principal/Office receive `OBSERVATION_READY_TO_PUBLISH` at review; no Principal sign-off is added to the appraisal sense (still developmental). Vocab verifier + server tsc + tests green.
 
 ## §6 — Given/When/Then journeys
 

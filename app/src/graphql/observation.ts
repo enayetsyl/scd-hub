@@ -57,6 +57,8 @@ export interface ClassroomObservationT {
   createdBy: string;
   assignedAt: string | null;
   reviewedAt: string | null;
+  publishedAt: string | null;
+  publishedBy: string | null;
   domains: ObsDomainScoreT[];
   gates: ObsGateScoreT[];
   oneStrength: string | null;
@@ -75,7 +77,7 @@ export interface ClassroomObservationT {
 }
 
 const QURAN_PAYLOAD_FIELDS = `quran { ratings { criterion score note } compliance { item yesNo } strengths improvements suggestions }`;
-const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
+const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt publishedAt publishedBy domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
 
 export const CLASSROOM_OBSERVATION_QUERY = gql<
   { classroomObservation: ClassroomObservationT | null },
@@ -218,6 +220,15 @@ export const REVIEW_CLASSROOM_OBSERVATION = gql<
       oneStrength: $oneStrength, growthFocus: $growthFocus, priorFocusProgress: $priorFocusProgress,
       quran: $quran
     ) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+export const PUBLISH_CLASSROOM_OBSERVATION = gql<
+  { publishClassroomObservation: ClassroomObservationT },
+  { observationId: string }
+>`
+  mutation PublishClassroomObservation($observationId: String!) {
+    publishClassroomObservation(observationId: $observationId) { ${OBSERVATION_FIELDS} }
   }
 `;
 

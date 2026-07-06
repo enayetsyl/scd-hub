@@ -19,6 +19,7 @@ import {
   RATE_OBSERVATION_REVIEW,
   RE_REQUEST_CLASSROOM_OBSERVATION,
   RECORD_SESSION_FOOTAGE,
+  PUBLISH_CLASSROOM_OBSERVATION,
 } from "../../graphql/observation";
 import { TEACHERS_QUERY } from "../../graphql/operations";
 // CO-2 footage rider: in-app YouTube-unlisted upload (web GIS). Native → paste-id fallback below.
@@ -58,6 +59,7 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
   const { observationId } = route.params;
   const { user, role } = useAuth();
   const canUpload = !!role && roleHasPermission(role, "observation:upload");
+  const canManage = !!role && roleHasPermission(role, "observation:manage");
 
   const [obsQ, refetchObs] = useQuery({ query: CLASSROOM_OBSERVATION_QUERY, variables: { id: observationId } });
   const obs = obsQ.data?.classroomObservation ?? null;
@@ -74,6 +76,7 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
   const [, rate] = useMutation(RATE_OBSERVATION_REVIEW);
   const [, reRequest] = useMutation(RE_REQUEST_CLASSROOM_OBSERVATION);
   const [, attachFootage] = useMutation(RECORD_SESSION_FOOTAGE);
+  const [, publish] = useMutation(PUBLISH_CLASSROOM_OBSERVATION);
 
   const [responseText, setResponseText] = useState("");
   const [fairness, setFairness] = useState<string | null>(null);
@@ -172,6 +175,26 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
           ) : null}
           <Row label={STR.obsClassDate} value={new Date(obs.classDate).toLocaleDateString()} />
         </Card>
+
+        {/* CO-8 (D-#271): Principal/Office publish gate — REVIEWED is not visible to the
+            teacher until published. Show status + a Publish action to managers. */}
+        {canManage && (obs.state === "REVIEWED" || obs.publishedAt) ? (
+          <Card>
+            <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsPublishTitle}</Body>
+            {obs.publishedAt ? (
+              <Row label={STR.obsPublishedOn} value={new Date(obs.publishedAt).toLocaleString()} />
+            ) : (
+              <>
+                <Muted style={{ marginBottom: space(2) }}>{STR.obsPublishHint}</Muted>
+                <Button
+                  title={STR.obsPublish}
+                  onPress={() => void run(() => publish({ observationId }), STR.obsPublished)}
+                  disabled={busy}
+                />
+              </>
+            )}
+          </Card>
+        ) : null}
 
         {/* REF-11 scores */}
         {obs.domains.length > 0 ? (

@@ -71,12 +71,25 @@ jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (e: unknown) => mockWriteAudit(e),
 }));
 
+// Notifications + User are mocked so the best-effort emits (release / ready-to-publish)
+// don't buffer against an absent DB (keeps these DB-free tests fast + deterministic).
+const mockEmit = jest.fn();
+jest.mock("../modules/notifications/services/NotificationService", () => ({
+  emit: (e: unknown) => mockEmit(e),
+}));
+const mockUserFind = jest.fn();
+jest.mock("../modules/foundation/models/User", () => ({
+  User: { find: (q: unknown) => mockUserFind(q) },
+}));
+
 // Import AFTER mocks
 import { validateRef11Payload, Ref11ValidationError, type Ref11PayloadInput } from "../modules/classroom-observation/ref11";
 import {
   uploadObservation,
   assignObserver,
   reviewObservation,
+  publishObservation,
+  respondToObservation,
   requestReReview,
   canReadObservation,
   ClassroomObservationError,
@@ -98,6 +111,9 @@ const validPayload = (): Ref11PayloadInput => ({
 beforeEach(() => {
   jest.clearAllMocks();
   mockWriteAudit.mockResolvedValue(undefined);
+  mockEmit.mockResolvedValue(undefined);
+  // find().select().lean() → one manager/principal recipient by default.
+  mockUserFind.mockReturnValue({ select: () => ({ lean: async () => [{ _id: oid() }] }) });
   mockCreate.mockImplementation(async (doc: Record<string, unknown>) => ({
     _id: oid(),
     ...doc,
@@ -125,6 +141,8 @@ const makeDoc = (over: Record<string, unknown> = {}) => {
     createdBy: OFFICE,
     assignedAt: new Date("2026-06-14T00:00:00Z"),
     reviewedAt: null,
+    publishedAt: null,
+    publishedBy: null,
     domains: [],
     gates: [],
     oneStrength: null,
@@ -432,33 +450,106 @@ describe("canReadObservation row-scope", () => {
   const teacher = TEACHER.toString();
   const observer = OBSERVER.toString();
   const otherObserver = oid().toString();
-  const row = (state: string, obs = observer) => ({ teacherId: teacher, observerId: obs, state: state as never });
+  const row = (state: string, obs: string | null = observer, publishedAt: string | null = null) =>
+    ({ teacherId: teacher, observerId: obs, state: state as never, publishedAt });
 
   test("a manager (Principal/Office) sees ALL states", () => {
     const mgr = { userId: oid().toString(), canManage: true };
     for (const s of OBSERVATION_STATES) expect(canReadObservation(mgr, row(s))).toBe(true);
   });
 
-  test("the assigned observer sees their own row in ANY state", () => {
+  test("the assigned observer sees their own row in ANY state (published or not)", () => {
     const o = { userId: observer, canManage: false };
     for (const s of OBSERVATION_STATES) expect(canReadObservation(o, row(s))).toBe(true);
   });
 
-  test("the observed teacher is BLOCKED before REVIEWED (UPLOADED/ASSIGNED hidden)", () => {
+  test("the observed teacher is BLOCKED on any UNPUBLISHED row incl. REVIEWED-but-unpublished (CO-8)", () => {
     const tch = { userId: teacher, canManage: false };
     expect(canReadObservation(tch, row("UPLOADED"))).toBe(false);
     expect(canReadObservation(tch, row("ASSIGNED"))).toBe(false);
+    expect(canReadObservation(tch, row("REVIEWED"))).toBe(false); // reviewed but publishedAt null → hidden
   });
 
-  test("the observed teacher sees their own row AT/AFTER REVIEWED", () => {
+  test("the observed teacher sees their own row ONLY once PUBLISHED (CO-8)", () => {
     const tch = { userId: teacher, canManage: false };
-    expect(canReadObservation(tch, row("REVIEWED"))).toBe(true);
-    expect(canReadObservation(tch, row("TEACHER_RESPONDED"))).toBe(true);
-    expect(canReadObservation(tch, row("SUPERSEDED"))).toBe(true);
+    const PUB = "2026-06-15T00:00:00Z";
+    expect(canReadObservation(tch, row("REVIEWED", observer, PUB))).toBe(true);
+    expect(canReadObservation(tch, row("TEACHER_RESPONDED", observer, PUB))).toBe(true);
+    expect(canReadObservation(tch, row("SUPERSEDED", observer, PUB))).toBe(true);
   });
 
   test("a teacher never sees ANOTHER observer's input (not observer, not observed)", () => {
     const stranger = { userId: otherObserver, canManage: false };
     for (const s of OBSERVATION_STATES) expect(canReadObservation(stranger, row(s))).toBe(false);
+    // even a published row stays hidden from a stranger.
+    expect(canReadObservation(stranger, row("REVIEWED", observer, "2026-06-15T00:00:00Z"))).toBe(false);
+  });
+});
+
+// ===========================================================================
+// CO-8 publish gate (D-#271) — review no longer releases; a Principal/Office publish does
+// ===========================================================================
+
+describe("reviewObservation release semantics (CO-8)", () => {
+  test("REVIEWED nudges Principal/Office to publish, does NOT release to the teacher", async () => {
+    const doc = makeDoc({ state: "ASSIGNED", observerId: OBSERVER });
+    mockFindById.mockResolvedValue(doc);
+    await reviewObservation({ observationId: String(doc._id), ...validPayload(), actorId: OBSERVER.toString() });
+    expect(mockEmit).toHaveBeenCalledWith(expect.objectContaining({ kind: "OBSERVATION_READY_TO_PUBLISH" }));
+    expect(mockEmit).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "OBSERVATION_RELEASED" }));
+  });
+});
+
+describe("publishObservation (CO-8)", () => {
+  test("publishes a REVIEWED row → publishedAt/publishedBy set, audited, releases to the teacher", async () => {
+    const doc = makeDoc({ state: "REVIEWED", publishedAt: null });
+    mockFindById.mockResolvedValue(doc);
+    const res = await publishObservation({ observationId: String(doc._id), actorId: OFFICE.toString() });
+    expect(res.publishedAt).toBeTruthy();
+    expect(res.publishedBy).toBe(OFFICE.toString());
+    expect(res.state).toBe("REVIEWED"); // publish is an additive flag, not a new state
+    expect(doc.save as jest.Mock).toHaveBeenCalled();
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventKind: "CLASSROOM_OBSERVATION_PUBLISHED" }),
+    );
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "OBSERVATION_RELEASED", recipientUserId: TEACHER.toString() }),
+    );
+  });
+
+  test("refuses a non-REVIEWED row", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "ASSIGNED", publishedAt: null }));
+    await expect(
+      publishObservation({ observationId: oid().toString(), actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/পর্যালোচিত/);
+  });
+
+  test("refuses an already-published row (no re-notify)", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "REVIEWED", publishedAt: new Date("2026-06-15T00:00:00Z") }));
+    await expect(
+      publishObservation({ observationId: oid().toString(), actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/ইতিমধ্যে প্রকাশিত/);
+    expect(mockEmit).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "OBSERVATION_RELEASED" }));
+  });
+});
+
+describe("respondToObservation requires publish (CO-8)", () => {
+  test("refuses a response on a REVIEWED-but-unpublished row", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "REVIEWED", publishedAt: null }));
+    await expect(
+      respondToObservation({ observationId: oid().toString(), actorId: TEACHER.toString(), responseText: "seen" }),
+    ).rejects.toThrow(/প্রকাশিত হয়নি/);
+  });
+
+  test("accepts a response once published → TEACHER_RESPONDED", async () => {
+    const doc = makeDoc({ state: "REVIEWED", publishedAt: new Date("2026-06-15T00:00:00Z") });
+    mockFindById.mockResolvedValue(doc);
+    const res = await respondToObservation({
+      observationId: String(doc._id),
+      actorId: TEACHER.toString(),
+      responseText: "seen & discussed",
+    });
+    expect(res.state).toBe("TEACHER_RESPONDED");
+    expect(res.teacherResponse).toBe("seen & discussed");
   });
 });

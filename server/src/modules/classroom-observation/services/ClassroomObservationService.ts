@@ -9,9 +9,13 @@
  *                         subjectGroup. Audited.
  *   assignObserver      — (re)assign the observer on an UPLOADED/ASSIGNED row (same
  *                         conflict guard); → ASSIGNED. Audited.
- *   reviewObservation   — the ASSIGNED observer scores+comments → REVIEWED (releases
- *                         to the observed teacher; NO Principal sign-off). The actor
- *                         MUST be the assigned observerId. Audited.
+ *   reviewObservation   — the ASSIGNED observer scores+comments → REVIEWED. Since CO-8
+ *                         (D-#271) this is observer/Principal-only — NOT released to the
+ *                         teacher; it nudges Principal/Office to publish. The actor MUST
+ *                         be the assigned observerId. Audited.
+ *   publishObservation  — Principal/Office PUBLISH a REVIEWED row (CO-8) → stamps
+ *                         `publishedAt`/`publishedBy`, releases + notifies the teacher.
+ *                         Audited.
  *   requestReReview     — re-review: create a NEW ASSIGNED observation on the same
  *                         anchor/recording, mark the prior REVIEWED row SUPERSEDED
  *                         (`supersededById`/`prevObservationId`). Enables CO-7
@@ -86,6 +90,9 @@ export interface ClassroomObservationShape {
   createdBy: string;
   assignedAt: string | null;
   reviewedAt: string | null;
+  /** CO-8 (D-#271): publish stamp — teacher visibility gate. null = unpublished. */
+  publishedAt: string | null;
+  publishedBy: string | null;
   domains: DomainScoreShape[];
   gates: GateScoreShape[];
   oneStrength: string | null;
@@ -121,6 +128,8 @@ function shape(d: IClassroomObservation): ClassroomObservationShape {
     createdBy: d.createdBy.toString(),
     assignedAt: d.assignedAt ? new Date(d.assignedAt).toISOString() : null,
     reviewedAt: d.reviewedAt ? new Date(d.reviewedAt).toISOString() : null,
+    publishedAt: d.publishedAt ? new Date(d.publishedAt).toISOString() : null,
+    publishedBy: d.publishedBy ? d.publishedBy.toString() : null,
     domains: (d.domains ?? []).map((x) => ({ domain: x.domain, level: x.level, note: x.note })),
     gates: (d.gates ?? []).map((x) => ({ gate: x.gate, result: x.result, breachNote: x.breachNote ?? null })),
     oneStrength: d.oneStrength ?? null,
@@ -386,7 +395,7 @@ export async function reviewObservation(input: ReviewObservationInput): Promise<
     doc.growthFocus = payload.growthFocus;
     doc.priorFocusProgress = payload.priorFocusProgress;
   }
-  doc.state = "REVIEWED"; // releases to the observed teacher — no Principal sign-off
+  doc.state = "REVIEWED"; // observer/Principal-only until PUBLISHED (CO-8, D-#271)
   doc.reviewedAt = new Date();
   await doc.save();
 
@@ -398,16 +407,16 @@ export async function reviewObservation(input: ReviewObservationInput): Promise<
     meta: { teacherId: doc.teacherId.toString(), observerId: input.actorId },
   });
 
-  // CO-3 release notify: tell the observed teacher their observation is out (REVIEWED).
-  // ONE emit, kind-gated; best-effort — a notification failure never rolls back the
-  // release (the D-#75 posture). N+1-safe (single recipient, single emit).
-  await emitObservationReleased(doc);
+  // CO-8 (D-#271): REVIEWED no longer releases to the teacher — nudge Principal/Office
+  // that a review is waiting to be PUBLISHED. Best-effort; never rolls back the review.
+  await emitReadyToPublish(doc);
 
   return shape(doc);
 }
 
-/** Best-effort release notice to the observed teacher (CO-3). Swallows its own
- *  failure with a log — the release transition already committed. */
+/** Best-effort release notice to the observed teacher. Since CO-8 (D-#271) this fires
+ *  at PUBLISH (not review). Swallows its own failure with a log — the publish already
+ *  committed. */
 async function emitObservationReleased(doc: IClassroomObservation): Promise<void> {
   try {
     await emit({
@@ -421,6 +430,81 @@ async function emitObservationReleased(doc: IClassroomObservation): Promise<void
   } catch (err) {
     console.error("OBSERVATION_RELEASED emit failed (never blocks the release):", err);
   }
+}
+
+/** Best-effort "ready to publish" nudge to Principal/Office at REVIEWED (CO-8). One
+ *  inbox row per manager; never blocks the review. */
+async function emitReadyToPublish(doc: IClassroomObservation): Promise<void> {
+  try {
+    const managerIds = await managerRecipientIds();
+    const obsId = doc._id.toString();
+    await Promise.all(
+      managerIds.map((userId) =>
+        emit({
+          recipientUserId: userId,
+          kind: "OBSERVATION_READY_TO_PUBLISH",
+          titleBn: "একটি পর্যবেক্ষণ প্রকাশের অপেক্ষায়",
+          bodyBn: "একটি শ্রেণি পর্যবেক্ষণের পর্যালোচনা সম্পন্ন হয়েছে এবং শিক্ষকের কাছে প্রকাশের অপেক্ষায় আছে।",
+          refs: { observationId: obsId, teacherId: doc.teacherId.toString() },
+          dedupeKey: `OBSPUBREADY:${obsId}:${userId}`,
+        }),
+      ),
+    );
+  } catch (err) {
+    console.error("OBSERVATION_READY_TO_PUBLISH emit failed (never blocks the review):", err);
+  }
+}
+
+/** Principal + Office — the observation:manage holders who may publish. */
+async function managerRecipientIds(): Promise<string[]> {
+  const users = (await User.find({ role: { $in: ["PRINCIPAL", "OFFICE"] }, active: true })
+    .select("_id")
+    .lean()) as Array<{ _id: Types.ObjectId }>;
+  return users.map((u) => u._id.toString());
+}
+
+// ---------------------------------------------------------------------------
+// publishObservation (CO-8, D-#271 — Principal/Office release to the teacher)
+// ---------------------------------------------------------------------------
+
+export interface PublishObservationInput {
+  observationId: string;
+  /** The authenticated publisher (Principal/Office — observation:manage). */
+  actorId: string;
+}
+
+/**
+ * Publish a REVIEWED observation to the observed teacher (CO-8). Stamps `publishedAt` +
+ * `publishedBy` and fires OBSERVATION_RELEASED to the teacher (the release moved here
+ * from reviewObservation). Only a REVIEWED, not-yet-published row can be published — an
+ * already-published row is refused so the teacher is not re-notified. Audited. RBAC
+ * (observation:manage) is enforced by the resolver.
+ */
+export async function publishObservation(input: PublishObservationInput): Promise<ClassroomObservationShape> {
+  const doc = (await ClassroomObservation.findById(input.observationId)) as IClassroomObservation | null;
+  if (!doc) throw new ClassroomObservationError("Observation not found");
+  if (doc.state !== "REVIEWED") {
+    throw new ClassroomObservationError("শুধু পর্যালোচিত পর্যবেক্ষণই প্রকাশ করা যাবে");
+  }
+  if (doc.publishedAt) {
+    throw new ClassroomObservationError("এই পর্যবেক্ষণ ইতিমধ্যে প্রকাশিত হয়েছে");
+  }
+  doc.publishedAt = new Date();
+  doc.publishedBy = oid(input.actorId, "actorId");
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "CLASSROOM_OBSERVATION_PUBLISHED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "ClassroomObservation",
+    meta: { teacherId: doc.teacherId.toString(), observerId: doc.observerId ? doc.observerId.toString() : null },
+  });
+
+  // The release notice to the teacher now fires at PUBLISH (moved from review).
+  await emitObservationReleased(doc);
+
+  return shape(doc);
 }
 
 // ---------------------------------------------------------------------------
@@ -454,6 +538,10 @@ export async function respondToObservation(
   }
   if (doc.state !== "REVIEWED") {
     throw new ClassroomObservationError("শুধু প্রকাশিত (পর্যালোচিত) পর্যবেক্ষণে সাড়া দেওয়া যাবে");
+  }
+  // CO-8 (D-#271): the teacher can only respond once the review is PUBLISHED.
+  if (!doc.publishedAt) {
+    throw new ClassroomObservationError("এই পর্যবেক্ষণ এখনো প্রকাশিত হয়নি");
   }
   const text = (input.responseText ?? "").trim();
   if (!text) throw new ClassroomObservationError("সাড়ার বিবরণ প্রয়োজন");
@@ -591,19 +679,21 @@ export interface ObservationActor {
  * `obs`:
  *   - a manager (Principal/Office, observation:manage) sees ALL;
  *   - the assigned OBSERVER sees their own row (any state);
- *   - the OBSERVED teacher sees their own row ONLY at/after REVIEWED (REVIEWED /
- *     TEACHER_RESPONDED / SUPERSEDED) — never an UPLOADED/ASSIGNED row, and never
- *     another observer's in-progress input;
+ *   - the OBSERVED teacher sees their own row ONLY once PUBLISHED (CO-8, D-#271) —
+ *     `publishedAt` set; never a REVIEWED-but-unpublished row, never an UPLOADED/
+ *     ASSIGNED row, and never another observer's in-progress input;
  *   - everyone else: denied.
+ * (`publishedAt` is only ever stamped at/after REVIEWED, so the teacher branch need
+ * not re-check `state`.)
  */
 export function canReadObservation(
   actor: ObservationActor,
-  obs: { teacherId: string; observerId: string | null; state: ObservationState },
+  obs: { teacherId: string; observerId: string | null; state: ObservationState; publishedAt: string | null },
 ): boolean {
   if (actor.canManage) return true;
   if (obs.observerId && obs.observerId === actor.userId) return true;
   if (obs.teacherId === actor.userId) {
-    return obs.state === "REVIEWED" || obs.state === "TEACHER_RESPONDED" || obs.state === "SUPERSEDED";
+    return !!obs.publishedAt;
   }
   return false;
 }

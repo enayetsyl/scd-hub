@@ -70,6 +70,7 @@ import {
   uploadObservation,
   assignObserver,
   reviewObservation,
+  publishObservation,
   respondToObservation,
   ClassroomObservationError,
 } from "../modules/classroom-observation/services/ClassroomObservationService";
@@ -93,7 +94,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockWriteAudit.mockResolvedValue(undefined);
   mockEmit.mockResolvedValue(undefined);
-  mockUserFind.mockReturnValue({ select: () => ({ lean: async () => [] }) });
+  mockUserFind.mockReturnValue({ select: () => ({ lean: async () => [{ _id: oid() }] }) });
   mockCreate.mockImplementation(async (doc: Record<string, unknown>) => ({
     _id: oid(),
     ...doc,
@@ -339,7 +340,7 @@ describe("reviewObservation (QURAN form, CO-5)", () => {
 // ===========================================================================
 
 describe("QURAN observation shares the REF-11 pipeline", () => {
-  test("assign → review → respond drives UPLOADED→ASSIGNED→REVIEWED→TEACHER_RESPONDED", async () => {
+  test("assign → review → publish → respond drives UPLOADED→ASSIGNED→REVIEWED→(published)→TEACHER_RESPONDED", async () => {
     // assign (UPLOADED → ASSIGNED)
     const assignedDoc = makeDoc({ state: "UPLOADED", form: "QURAN", observerId: null, assignedAt: null });
     mockFindById.mockResolvedValueOnce(assignedDoc);
@@ -363,10 +364,19 @@ describe("QURAN observation shares the REF-11 pipeline", () => {
       actorId: OBSERVER.toString(),
     });
     expect(reviewed.state).toBe("REVIEWED");
+    // CO-8 (D-#271): review nudges managers to publish; it does NOT release to the teacher yet.
+    expect(mockEmit).toHaveBeenCalledWith(expect.objectContaining({ kind: "OBSERVATION_READY_TO_PUBLISH" }));
+    expect(mockEmit).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "OBSERVATION_RELEASED" }));
+
+    // publish (Principal/Office) → releases to the teacher (OBSERVATION_RELEASED fires here now)
+    const publishDoc = makeDoc({ state: "REVIEWED", form: "QURAN", observerId: OBSERVER, publishedAt: null, quran: reviewed.quran });
+    mockFindById.mockResolvedValueOnce(publishDoc);
+    const published = await publishObservation({ observationId: String(publishDoc._id), actorId: OFFICE.toString() });
+    expect(published.publishedAt).toBeTruthy();
     expect(mockEmit).toHaveBeenCalledWith(expect.objectContaining({ kind: "OBSERVATION_RELEASED" }));
 
-    // respond (REVIEWED → TEACHER_RESPONDED) by the observed teacher
-    const respondDoc = makeDoc({ state: "REVIEWED", form: "QURAN", observerId: OBSERVER, quran: reviewed.quran });
+    // respond (REVIEWED + published → TEACHER_RESPONDED) by the observed teacher
+    const respondDoc = makeDoc({ state: "REVIEWED", form: "QURAN", observerId: OBSERVER, publishedAt: new Date(), quran: reviewed.quran });
     mockFindById.mockResolvedValueOnce(respondDoc);
     const responded = await respondToObservation({
       observationId: String(respondDoc._id),
