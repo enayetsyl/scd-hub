@@ -26,7 +26,7 @@
  *
  * Identity/operational plane (names teacherId/observerId); NO corpus path (ADR-005).
  */
-import { Types } from "mongoose";
+import { Types, type FilterQuery } from "mongoose";
 import {
   OBSERVATION_FORMS,
   HW_SUBJECTS,
@@ -622,12 +622,81 @@ export async function observationsForTeacher(teacherId: string): Promise<Classro
   return docs.map(shape);
 }
 
-/** All observations, newest first — for Principal/Office oversight. */
-export async function allObservations(): Promise<ClassroomObservationShape[]> {
-  const docs = (await ClassroomObservation.find({})
+// ---------------------------------------------------------------------------
+// allObservationsPaged — the filtered + paginated oversight read (WS1)
+// ---------------------------------------------------------------------------
+
+/** Escape user text for a safe case-insensitive name regex. */
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export interface AllObservationsFilterInput {
+  teacherId?: string | null;
+  observerId?: string | null;
+  state?: string | null;
+  form?: string | null;
+  subject?: string | null;
+  /** classDate >= dateFrom (YYYY-MM-DD, inclusive). */
+  dateFrom?: string | null;
+  /** classDate <= dateTo (YYYY-MM-DD, inclusive). */
+  dateTo?: string | null;
+  /** Free text matched against the observed-teacher / observer NAME (User lookup). */
+  search?: string | null;
+  limit?: number | null;
+  offset?: number | null;
+}
+
+export interface ObservationPageShape {
+  items: ClassroomObservationShape[];
+  total: number;
+  hasMore: boolean;
+}
+
+const OBS_PAGE_DEFAULT = 20;
+const OBS_PAGE_MAX = 100;
+
+/**
+ * All observations for the Principal/Office oversight view, filtered + paginated (WS1).
+ * Filters are AND-combined; `search` resolves to matching User ids and matches either
+ * the observed teacher OR the observer. Sorted newest-first (classDate desc). Returns
+ * the page plus the unpaged `total` so the UI can show counts / page bounds. classDate
+ * is a "YYYY-MM-DD" string, so lexical range bounds are chronological.
+ */
+export async function allObservationsPaged(
+  input: AllObservationsFilterInput,
+): Promise<ObservationPageShape> {
+  const q: FilterQuery<IClassroomObservation> = {};
+  if (input.teacherId) q.teacherId = oid(input.teacherId, "teacherId");
+  if (input.observerId) q.observerId = oid(input.observerId, "observerId");
+  if (input.state) q.state = input.state;
+  if (input.form) q.form = input.form;
+  if (input.subject) q.subject = input.subject;
+  if (input.dateFrom || input.dateTo) {
+    const range: Record<string, string> = {};
+    if (input.dateFrom) range.$gte = input.dateFrom;
+    if (input.dateTo) range.$lte = input.dateTo;
+    q.classDate = range;
+  }
+  if (input.search && input.search.trim()) {
+    const re = new RegExp(escapeRegex(input.search.trim()), "i");
+    const users = (await User.find({ name: re }).select("_id").lean()) as Array<{ _id: Types.ObjectId }>;
+    if (users.length === 0) return { items: [], total: 0, hasMore: false };
+    const ids = users.map((u) => u._id);
+    q.$or = [{ teacherId: { $in: ids } }, { observerId: { $in: ids } }];
+  }
+
+  const limit = Math.min(Math.max(input.limit ?? OBS_PAGE_DEFAULT, 1), OBS_PAGE_MAX);
+  const offset = Math.max(input.offset ?? 0, 0);
+
+  const total = await ClassroomObservation.countDocuments(q);
+  const docs = (await ClassroomObservation.find(q)
     .sort({ classDate: -1, createdAt: -1 })
+    .skip(offset)
+    .limit(limit)
     .lean()) as unknown as IClassroomObservation[];
-  return docs.map(shape);
+
+  return { items: docs.map(shape), total, hasMore: offset + docs.length < total };
 }
 
 /** The observer's open review queue (ASSIGNED rows assigned to them). */

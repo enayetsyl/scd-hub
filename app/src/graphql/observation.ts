@@ -102,11 +102,43 @@ export const MY_OBSERVATION_REVIEW_QUEUE_QUERY = gql<
   query MyObservationReviewQueue { myObservationReviewQueue { ${OBSERVATION_FIELDS} } }
 `;
 
+export interface ObservationFilterVars {
+  teacherId?: string | null;
+  observerId?: string | null;
+  state?: string | null;
+  form?: string | null;
+  subject?: string | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  search?: string | null;
+  limit?: number | null;
+  offset?: number | null;
+}
+export interface ClassroomObservationPageT {
+  items: ClassroomObservationT[];
+  total: number;
+  hasMore: boolean;
+}
+
 export const ALL_CLASSROOM_OBSERVATIONS_QUERY = gql<
-  { allClassroomObservations: ClassroomObservationT[] },
-  NoVars
+  { allClassroomObservations: ClassroomObservationPageT },
+  ObservationFilterVars
 >`
-  query AllClassroomObservations { allClassroomObservations { ${OBSERVATION_FIELDS} } }
+  query AllClassroomObservations(
+    $teacherId: String, $observerId: String, $state: String, $form: String,
+    $subject: String, $dateFrom: String, $dateTo: String, $search: String,
+    $limit: Int, $offset: Int
+  ) {
+    allClassroomObservations(
+      teacherId: $teacherId, observerId: $observerId, state: $state, form: $form,
+      subject: $subject, dateFrom: $dateFrom, dateTo: $dateTo, search: $search,
+      limit: $limit, offset: $offset
+    ) {
+      items { ${OBSERVATION_FIELDS} }
+      total
+      hasMore
+    }
+  }
 `;
 
 export const UPLOAD_CLASSROOM_OBSERVATION = gql<

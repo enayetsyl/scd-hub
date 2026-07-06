@@ -2359,6 +2359,16 @@ const STR_BN = {
   // Detail (J4) + respond + rate + footage
   obsDetailTitle: "অবজারভেশন বিবরণ",
   obsState: "অবস্থা",
+  // Oversight filters + pagination (WS1)
+  obsFilters: "ফিল্টার",
+  obsSearchPlaceholder: "শিক্ষক বা পর্যবেক্ষকের নাম",
+  obsFilterForm: "ফর্ম",
+  obsFilterSubject: "বিষয়",
+  obsDateFrom: "শুরুর তারিখ",
+  obsDateTo: "শেষ তারিখ",
+  obsClearFilters: "ফিল্টার মুছুন",
+  obsPrev: "পূর্ববর্তী",
+  obsNext: "পরবর্তী",
   obsTeacher: "শিক্ষক",
   obsObserver: "পর্যবেক্ষক",
   obsRespond: "জবাব দিন",
@@ -4340,6 +4350,16 @@ const STR_EN: StrTable = {
   // Detail (J4) + respond + rate + footage
   obsDetailTitle: "Observation detail",
   obsState: "State",
+  // Oversight filters + pagination (WS1)
+  obsFilters: "Filters",
+  obsSearchPlaceholder: "Teacher or observer name",
+  obsFilterForm: "Form",
+  obsFilterSubject: "Subject",
+  obsDateFrom: "From date",
+  obsDateTo: "To date",
+  obsClearFilters: "Clear filters",
+  obsPrev: "Previous",
+  obsNext: "Next",
   obsTeacher: "Teacher",
   obsObserver: "Observer",
   obsRespond: "Respond",

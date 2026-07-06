@@ -28,11 +28,12 @@ import {
   respondToObservation,
   getObservation,
   observationsForTeacher,
-  allObservations,
+  allObservationsPaged,
   myReviewQueue,
   canReadObservation,
   type ObservationActor,
   type ClassroomObservationShape,
+  type ObservationPageShape,
 } from "../services/ClassroomObservationService";
 import {
   getEscalationConfig,
@@ -158,6 +159,17 @@ ObservationRef.implement({
     supersededById: t.string({ nullable: true, resolve: (r) => r.supersededById }),
     createdAt: t.exposeString("createdAt"),
     updatedAt: t.exposeString("updatedAt"),
+  }),
+});
+
+const ObservationPageRef = builder.objectRef<ObservationPageShape>("ClassroomObservationPage");
+ObservationPageRef.implement({
+  description:
+    "A page of classroom observations (oversight view): the items plus the UNPAGED total and a hasMore flag (WS1).",
+  fields: (t) => ({
+    items: t.field({ type: [ObservationRef], resolve: (r) => r.items }),
+    total: t.exposeInt("total"),
+    hasMore: t.exposeBoolean("hasMore"),
   }),
 });
 
@@ -471,10 +483,36 @@ builder.queryField("myObservationReviewQueue", (t) =>
 
 builder.queryField("allClassroomObservations", (t) =>
   t.field({
-    type: [ObservationRef],
+    type: ObservationPageRef,
     description:
-      "All observations, newest first — Principal/Office oversight view. Requires observation:upload.",
+      "All observations, newest first — Principal/Office oversight view, filtered + paginated (WS1). Filters " +
+      "AND-combine; `search` matches the observed-teacher OR observer name. limit defaults 20 (max 100). " +
+      "Requires observation:upload.",
     authScopes: { hasPermission: "observation:upload" },
-    resolve: async () => allObservations(),
+    args: {
+      teacherId: t.arg.string({ required: false }),
+      observerId: t.arg.string({ required: false }),
+      state: t.arg.string({ required: false }),
+      form: t.arg.string({ required: false }),
+      subject: t.arg.string({ required: false }),
+      dateFrom: t.arg.string({ required: false }),
+      dateTo: t.arg.string({ required: false }),
+      search: t.arg.string({ required: false }),
+      limit: t.arg.int({ required: false }),
+      offset: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) =>
+      allObservationsPaged({
+        teacherId: args.teacherId ?? undefined,
+        observerId: args.observerId ?? undefined,
+        state: args.state ?? undefined,
+        form: args.form ?? undefined,
+        subject: args.subject ?? undefined,
+        dateFrom: args.dateFrom ?? undefined,
+        dateTo: args.dateTo ?? undefined,
+        search: args.search ?? undefined,
+        limit: args.limit ?? undefined,
+        offset: args.offset ?? undefined,
+      }),
   }),
 );
