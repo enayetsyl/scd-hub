@@ -188,6 +188,20 @@ describe("schedule CRUD validation", () => {
     await expect(addScheduleEntry({ ...base, cycleWeek: 5, subject: "BAN" })).rejects.toThrow(/cycleWeek/);
     await expect(addScheduleEntry({ ...base, cycleWeek: 1, subject: "QURAN" })).rejects.toThrow(/Unknown assignment subject/);
   });
+
+  test("Nursery (-1) and KG (0) are accepted; classLevel outside the roster range is rejected", async () => {
+    mockScheduleFindOne.mockResolvedValue({ ...schedule(), save: jest.fn() });
+    const base = {
+      academicYearId: YEAR, cycleWeek: 1, classId: oid().toString(),
+      subject: "BAN", teacherId: oid().toString(),
+    };
+    // Distinct sections so the (cycleWeek × section × subject) dup guard doesn't fire.
+    await expect(addScheduleEntry({ ...base, sectionId: oid().toString(), classLevel: 0 })).resolves.toBeDefined(); // KG
+    await expect(addScheduleEntry({ ...base, sectionId: oid().toString(), classLevel: -1 })).resolves.toBeDefined(); // Nursery
+    // classLevel is validated before the schedule/dup lookup, so section reuse is irrelevant here.
+    await expect(addScheduleEntry({ ...base, sectionId: oid().toString(), classLevel: -2 })).rejects.toThrow(/roster classes/);
+    await expect(addScheduleEntry({ ...base, sectionId: oid().toString(), classLevel: 6 })).rejects.toThrow(/roster classes/);
+  });
 });
 
 // ===========================================================================
@@ -202,7 +216,7 @@ describe("AJ-1 — expectedItemsForWeek", () => {
     mockScheduleFindOne.mockResolvedValue(schedule([e3a, e3b, e1]));
     const itemId = oid();
     mockItemFind.mockResolvedValue([
-      { _id: itemId, asId: "AS-C2-BAN-0001", scheduleEntryId: e3a._id },
+      { _id: itemId, asId: "AS-C2-BAN-0001", sectionId: e3a.sectionId, subject: e3a.subject },
     ]);
 
     const week = await expectedItemsForWeek(YEAR, 15);
@@ -218,6 +232,27 @@ describe("AJ-1 — expectedItemsForWeek", () => {
     expect(ban.asId).toBe("AS-C2-BAN-0001");
     expect(math.delivered).toBe(false);
     expect(math.asItemId).toBeNull();
+  });
+
+  test("delivered join keys on (section × subject), not the entry _id — survives a re-added entry", async () => {
+    // BUG-017: the rotation entry was removed + re-added, so its subdocument _id
+    // changed, but the delivered AssignmentItem still carries the same section+
+    // subject. The home grid must still read `delivered: true`.
+    const e3 = entry({ cycleWeek: 3 });
+    mockScheduleFindOne.mockResolvedValue(schedule([e3]));
+    mockItemFind.mockResolvedValue([
+      {
+        _id: oid(),
+        asId: "AS-C2-BAN-0001",
+        sectionId: e3.sectionId,
+        subject: e3.subject,
+        scheduleEntryId: oid(), // STALE — a different id than e3._id
+      },
+    ]);
+    const week = await expectedItemsForWeek(YEAR, 15);
+    const ban = week.items.find((i) => i.subject === "BAN")!;
+    expect(ban.delivered).toBe(true);
+    expect(ban.asId).toBe("AS-C2-BAN-0001");
   });
 
   test("a vacation week yields suspended items (excluded from rate denominators)", async () => {
@@ -261,7 +296,7 @@ describe("AJ-2 — myAssignmentPrepPrompts", () => {
   test("the prompt disappears once the item is delivered (AJ-2)", async () => {
     mockScheduleFindOne.mockResolvedValue(schedule([e]));
     mockItemFind.mockResolvedValue([
-      { _id: oid(), asId: "AS-C2-BAN-0007", scheduleEntryId: e._id },
+      { _id: oid(), asId: "AS-C2-BAN-0007", sectionId: e.sectionId, subject: e.subject },
     ]);
     const prompts = await myAssignmentPrepPrompts(YEAR, TEACHER, new Date(2026, 5, 14, 9));
     expect(prompts).toHaveLength(0);
