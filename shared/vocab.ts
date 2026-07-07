@@ -635,6 +635,13 @@ export const HW_DAILY_FLOOR_MIN = 120; // informational only
 export const HW_SUBJECT_BAND_MAX_MIN = 40; // single-subject band; >40 WARNS, never blocks (§4 close / T2.5)
 export const HW_DEFAULT_TIME_DECL_MIN = 20; // Class-1 working default for TIME_DECL
 
+// Assignment weekly load ceiling (AS-T6, D-#274). School policy: ≤ 3 hours of
+// assignment work per section per week. The WEEK-SUM of the delivered items'
+// estMinutes is law — confirmAssignmentWeek hard-blocks over this (the homework
+// day-sum gate's weekly analog). No per-subject advisory band for assignments.
+export const AS_WEEKLY_CEILING_MIN = 180; // 3-hour per-section weekly cap — the AS-T6 gate
+export const AS_DEFAULT_EST_MIN = 20; // per-assignment working default for estMinutes
+
 /** Daily reconciliation state (handoff §2.3 RECON_STATE). within/over are derived
  *  live from DAY_TOTAL vs the ceiling; `reconciled` is the persisted terminal state
  *  once the class teacher confirms + issues (HW-T2). */

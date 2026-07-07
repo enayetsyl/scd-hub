@@ -29,6 +29,7 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
   const [, deliver] = useMutation(DELIVER_ASSIGNMENT);
   const [absent, setAbsent] = useState<Record<string, boolean>>({});
   const [totalMarks, setTotalMarks] = useState("");
+  const [estMinutes, setEstMinutes] = useState("");
   const [setId, setSetId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -37,6 +38,7 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
     setError(null);
     setBusy(true);
     const marks = totalMarks.trim() === "" ? undefined : parseInt(totalMarks, 10);
+    const mins = estMinutes.trim() === "" ? undefined : parseInt(estMinutes, 10);
     const res = await deliver({
       academicYearId,
       weekNumber,
@@ -45,6 +47,7 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
       roster: students.map((s) => ({ studentId: s.id, present: !absent[s.id] })),
       setId: setId.trim() === "" ? undefined : setId.trim(),
       totalMarks: marks,
+      estMinutes: mins,
     });
     setBusy(false);
     if (res.error || !res.data?.deliverAssignment) return setError(friendlyError(res.error));
@@ -63,6 +66,7 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
           <Muted style={{ marginTop: 2 }}>
             {STR.asDeliverBy} {day(deliveryDate)} · {STR.asDueBy} {day(dueDate)}
           </Muted>
+          <Field label={STR.asEstMinutes} value={estMinutes} onChangeText={setEstMinutes} keyboardType="number-pad" placeholder="20" />
           <Field label={STR.asTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" />
           <Field label={STR.asSetId} value={setId} onChangeText={setSetId} />
         </Card>

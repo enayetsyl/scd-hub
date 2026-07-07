@@ -17,6 +17,7 @@ import {
   CHILD_DAY_LOAD_QUERY,
   CHILD_LIBRARY_LOANS_QUERY,
   CHILD_VOCAB_QUERY,
+  CHILD_ASSIGNMENTS,
 } from "../../graphql/operations";
 import { CHILD_TEST_RESULTS_QUERY } from "../../graphql/classTest";
 import { CHILD_COMMENTS_QUERY } from "../../graphql/comments";
@@ -111,11 +112,16 @@ export default function GuardianHomeScreen(): React.ReactElement {
     variables: { studentId: sid },
     pause: !selected,
   });
+  const [asgnQ, refetchAsgn] = useQuery({
+    query: CHILD_ASSIGNMENTS,
+    variables: { studentId: sid },
+    pause: !selected,
+  });
 
   // UX-7: pull-to-refresh — one gesture refreshes every card on the guardian home.
   const anyFetching =
     routineQ.fetching || notesQ.fetching || hwQ.fetching || loadQ.fetching || libraryQ.fetching ||
-    vocabQ.fetching || testResultsQ.fetching || commentsQ.fetching || revisionQ.fetching;
+    vocabQ.fetching || testResultsQ.fetching || commentsQ.fetching || revisionQ.fetching || asgnQ.fetching;
   const { refreshing, onRefresh } = usePullRefresh(anyFetching, () => {
     const opts = { requestPolicy: "network-only" as const };
     refetchRoutine(opts);
@@ -127,6 +133,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
     refetchTests(opts);
     refetchComments(opts);
     refetchRevision(opts);
+    refetchAsgn(opts);
   });
   // CM-6 follow-up: no guardian meeting-slot card is rendered. The server's
   // childMeetingSlot(meetingId, studentId) read needs a meetingId, but there is NO
@@ -292,6 +299,41 @@ export default function GuardianHomeScreen(): React.ReactElement {
                   <Muted>{r.hwId}</Muted>
                 </View>
                 <Badge text={lifecycleStateLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
+              </View>
+            ))
+          )}
+        </Card>
+
+        {/* Assignments — the child's weekly AS-… items (AS-T5 childAssignments,
+            read-only; issued items only — a DRAFT week has no student record yet) */}
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.gpAssignments}</Body>
+          {asgnQ.fetching ? (
+            <Loader label={STR.loading} />
+          ) : (asgnQ.data?.childAssignments ?? []).length === 0 ? (
+            <Muted style={{ marginTop: space(2) }}>{STR.gpNoAssignments}</Muted>
+          ) : (
+            (asgnQ.data?.childAssignments ?? []).map((a) => (
+              <View
+                key={a.recordId}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: space(2),
+                }}
+              >
+                <View style={{ flexShrink: 1 }}>
+                  <Body>{hwSubjectLabel(a.subject)}</Body>
+                  <Muted>
+                    {a.asId}
+                    {a.daysLate > 0 ? ` · ${bnNum(a.daysLate)} ${STR.asDaysOverdue}` : ""}
+                    {a.marks !== null
+                      ? ` · ${bnNum(a.marks)}${a.totalMarks !== null ? `/${bnNum(a.totalMarks)}` : ""}`
+                      : ""}
+                  </Muted>
+                </View>
+                <Badge text={lifecycleStateLabel(a.state)} tone={a.state === "CHASE" ? "danger" : "brand"} />
               </View>
             ))
           )}

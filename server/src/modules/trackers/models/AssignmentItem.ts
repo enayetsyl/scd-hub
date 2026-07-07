@@ -41,6 +41,17 @@ export interface IAssignmentItem extends Document {
   setId?: Types.ObjectId;
   /** Teacher-set marks ceiling; checking validates 0 ≤ marks ≤ totalMarks (D-#87). */
   totalMarks?: number;
+  /** AS-T6 (D-#274): declared minutes for the weekly load ceiling. Summed per
+   *  (section × week); confirmAssignmentWeek blocks the week over AS_WEEKLY_CEILING_MIN. */
+  estMinutes: number;
+  /** AS-T6: DRAFT after deliver (no student records yet), ISSUED after the week
+   *  is confirmed under the ceiling (records spawned). */
+  status: "DRAFT" | "ISSUED";
+  /** AS-T6: the present/absent roster captured at deliver, consumed at confirm
+   *  to spawn the per-student records. Cleared once ISSUED. */
+  draftRoster?: { studentId: Types.ObjectId; present: boolean }[];
+  issuedAt?: Date;
+  issuedBy?: Types.ObjectId;
   deliveredBy: Types.ObjectId;
   deliveredAt: Date;
   createdAt: Date;
@@ -63,6 +74,14 @@ const AssignmentItemSchema = new Schema<IAssignmentItem>(
     dueDate: { type: Date, required: true },
     setId: { type: Schema.Types.ObjectId },
     totalMarks: { type: Number, min: 1 },
+    estMinutes: { type: Number, required: true, min: 0, default: 20 },
+    status: { type: String, enum: ["DRAFT", "ISSUED"], required: true, default: "DRAFT" },
+    draftRoster: {
+      type: [{ studentId: { type: Schema.Types.ObjectId, required: true }, present: { type: Boolean, required: true } }],
+      default: undefined,
+    },
+    issuedAt: { type: Date },
+    issuedBy: { type: Schema.Types.ObjectId },
     deliveredBy: { type: Schema.Types.ObjectId, required: true },
     deliveredAt: { type: Date, required: true },
   },
