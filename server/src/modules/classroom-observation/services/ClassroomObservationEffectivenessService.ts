@@ -83,6 +83,10 @@ export async function rateReview(input: RateReviewInput): Promise<RateReviewResu
   if (doc.state !== "REVIEWED" && doc.state !== "TEACHER_RESPONDED") {
     throw new ClassroomObservationError("শুধু প্রকাশিত পর্যবেক্ষণের পর্যালোচনাই মূল্যায়ন করা যাবে");
   }
+  // CO-8 (D-#271): only a PUBLISHED review is visible to the teacher, so only that is ratable.
+  if (!doc.publishedAt) {
+    throw new ClassroomObservationError("এই পর্যবেক্ষণ এখনো প্রকাশিত হয়নি");
+  }
 
   const now = new Date();
   doc.fairnessRating = fairness;

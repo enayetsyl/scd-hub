@@ -162,9 +162,9 @@ async function principalRecipientIds(): Promise<string[]> {
 }
 
 /**
- * One escalation pass (`now` injected for determinism). Scans REVIEWED observations
- * with no `teacherResponse`, computes calendar-days-since-release, and for each
- * crossed rung emits the right kind ONCE (idempotent via the dispatch ledger).
+ * One escalation pass (`now` injected for determinism). Scans REVIEWED + PUBLISHED
+ * observations with no `teacherResponse`, computes calendar-days-since-PUBLISH (CO-8,
+ * D-#271), and for each crossed rung emits the right kind ONCE (idempotent ledger).
  * TEACHER_RESPONDED rows never appear in the scan, so they receive nothing further.
  */
 export async function runObservationEscalation(now: Date = new Date()): Promise<EscalationRunSummary> {
@@ -178,12 +178,14 @@ export async function runObservationEscalation(now: Date = new Date()): Promise<
 
   const cfg = await getEscalationConfig();
 
-  // Only RELEASED-but-unanswered rows. A TEACHER_RESPONDED / SUPERSEDED row is excluded
-  // by the state filter, so the ladder stops the moment the teacher responds.
+  // Only PUBLISHED-but-unanswered rows (CO-8, D-#271: the response clock starts at
+  // PUBLISH, not review — an unpublished review is invisible to the teacher, so we must
+  // not nag). A TEACHER_RESPONDED / SUPERSEDED row is excluded by the state filter, so
+  // the ladder stops the moment the teacher responds.
   const docs = (await ClassroomObservation.find({
     state: "REVIEWED",
     teacherResponse: null,
-    reviewedAt: { $ne: null },
+    publishedAt: { $ne: null },
   }).lean()) as unknown as IClassroomObservation[];
   summary.scanned = docs.length;
   if (docs.length === 0) return summary;
@@ -199,8 +201,8 @@ export async function runObservationEscalation(now: Date = new Date()): Promise<
   let principals: string[] | null = null;
 
   for (const doc of docs) {
-    if (!doc.reviewedAt) continue;
-    const daysSince = calendarDaysBetween(new Date(doc.reviewedAt), now);
+    if (!doc.publishedAt) continue;
+    const daysSince = calendarDaysBetween(new Date(doc.publishedAt), now);
     const stage = stageForDays(daysSince, cfg);
     if (!stage) continue;
 

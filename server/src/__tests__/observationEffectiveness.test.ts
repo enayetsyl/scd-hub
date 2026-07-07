@@ -96,6 +96,7 @@ describe("rateReview", () => {
     teacherId: T,
     observerId: O,
     state: "REVIEWED",
+    publishedAt: new Date("2026-06-15T00:00:00Z"), // CO-8: only a published review is ratable
     fairnessRating: null,
     usefulnessRating: null,
     fairnessRatedAt: null,
@@ -254,6 +255,7 @@ describe("rateObservationReview — observation:read", () => {
       teacherId: T,
       observerId: oid(),
       state: "REVIEWED",
+      publishedAt: new Date("2026-06-15T00:00:00Z"),
       fairnessRating: null,
       usefulnessRating: null,
       fairnessRatedAt: null,

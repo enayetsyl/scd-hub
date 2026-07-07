@@ -172,8 +172,8 @@ describe("calendarDaysBetween / stageForDays", () => {
 // Release notify
 // ===========================================================================
 
-describe("reviewObservation release notify (CO-3)", () => {
-  it("emits OBSERVATION_RELEASED to the observed teacher on REVIEWED", async () => {
+describe("reviewObservation notify (CO-8, D-#271 — review no longer releases)", () => {
+  it("nudges Principal/Office (OBSERVATION_READY_TO_PUBLISH) on REVIEWED, does NOT release to the teacher", async () => {
     const doc = makeDoc({ state: "ASSIGNED", observerId: OBSERVER });
     mockFindById.mockResolvedValue(doc);
     const res = await reviewObservation({
@@ -183,14 +183,12 @@ describe("reviewObservation release notify (CO-3)", () => {
     });
     expect(res.state).toBe("REVIEWED");
     expect(mockEmit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        recipientUserId: TEACHER.toString(),
-        kind: "OBSERVATION_RELEASED",
-        dedupeKey: `OBSREL:${String(doc._id)}`,
-      }),
+      expect.objectContaining({ kind: "OBSERVATION_READY_TO_PUBLISH" }),
     );
-    // single emit (N+1-safe) to the observed teacher
-    expect(mockEmit).toHaveBeenCalledTimes(1);
+    // the teacher release moved to publishObservation — NOT emitted at review
+    expect(mockEmit).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "OBSERVATION_RELEASED" }),
+    );
   });
 });
 
@@ -200,7 +198,7 @@ describe("reviewObservation release notify (CO-3)", () => {
 
 describe("respondToObservation (CO-3)", () => {
   it("the observed teacher responds → TEACHER_RESPONDED, teacherResponse set, OBSERVATION_RESPONDED emitted", async () => {
-    const doc = makeDoc({ state: "REVIEWED", observerId: OBSERVER, reviewedAt: new Date() });
+    const doc = makeDoc({ state: "REVIEWED", observerId: OBSERVER, reviewedAt: new Date(), publishedAt: new Date() });
     mockFindById.mockResolvedValue(doc);
     const res = await respondToObservation({
       observationId: String(doc._id),
@@ -237,7 +235,7 @@ describe("respondToObservation (CO-3)", () => {
   });
 
   it("requires response text", async () => {
-    mockFindById.mockResolvedValue(makeDoc({ state: "REVIEWED", reviewedAt: new Date() }));
+    mockFindById.mockResolvedValue(makeDoc({ state: "REVIEWED", reviewedAt: new Date(), publishedAt: new Date() }));
     await expect(
       respondToObservation({ observationId: oid().toString(), actorId: TEACHER.toString(), responseText: "   " }),
     ).rejects.toThrow(/সাড়ার বিবরণ/);
@@ -258,6 +256,7 @@ describe("runObservationEscalation (CO-3)", () => {
     state: "REVIEWED",
     teacherResponse: null,
     reviewedAt: released,
+    publishedAt: released, // CO-8 (D-#271): the escalation clock keys off publish
     ...over,
   });
 

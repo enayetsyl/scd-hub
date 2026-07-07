@@ -57,6 +57,8 @@ export interface ClassroomObservationT {
   createdBy: string;
   assignedAt: string | null;
   reviewedAt: string | null;
+  publishedAt: string | null;
+  publishedBy: string | null;
   domains: ObsDomainScoreT[];
   gates: ObsGateScoreT[];
   oneStrength: string | null;
@@ -75,7 +77,7 @@ export interface ClassroomObservationT {
 }
 
 const QURAN_PAYLOAD_FIELDS = `quran { ratings { criterion score note } compliance { item yesNo } strengths improvements suggestions }`;
-const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
+const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt publishedAt publishedBy domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
 
 export const CLASSROOM_OBSERVATION_QUERY = gql<
   { classroomObservation: ClassroomObservationT | null },
@@ -102,11 +104,43 @@ export const MY_OBSERVATION_REVIEW_QUEUE_QUERY = gql<
   query MyObservationReviewQueue { myObservationReviewQueue { ${OBSERVATION_FIELDS} } }
 `;
 
+export interface ObservationFilterVars {
+  teacherId?: string | null;
+  observerId?: string | null;
+  state?: string | null;
+  form?: string | null;
+  subject?: string | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  search?: string | null;
+  limit?: number | null;
+  offset?: number | null;
+}
+export interface ClassroomObservationPageT {
+  items: ClassroomObservationT[];
+  total: number;
+  hasMore: boolean;
+}
+
 export const ALL_CLASSROOM_OBSERVATIONS_QUERY = gql<
-  { allClassroomObservations: ClassroomObservationT[] },
-  NoVars
+  { allClassroomObservations: ClassroomObservationPageT },
+  ObservationFilterVars
 >`
-  query AllClassroomObservations { allClassroomObservations { ${OBSERVATION_FIELDS} } }
+  query AllClassroomObservations(
+    $teacherId: String, $observerId: String, $state: String, $form: String,
+    $subject: String, $dateFrom: String, $dateTo: String, $search: String,
+    $limit: Int, $offset: Int
+  ) {
+    allClassroomObservations(
+      teacherId: $teacherId, observerId: $observerId, state: $state, form: $form,
+      subject: $subject, dateFrom: $dateFrom, dateTo: $dateTo, search: $search,
+      limit: $limit, offset: $offset
+    ) {
+      items { ${OBSERVATION_FIELDS} }
+      total
+      hasMore
+    }
+  }
 `;
 
 export const UPLOAD_CLASSROOM_OBSERVATION = gql<
@@ -189,12 +223,39 @@ export const REVIEW_CLASSROOM_OBSERVATION = gql<
   }
 `;
 
+export const PUBLISH_CLASSROOM_OBSERVATION = gql<
+  { publishClassroomObservation: ClassroomObservationT },
+  { observationId: string }
+>`
+  mutation PublishClassroomObservation($observationId: String!) {
+    publishClassroomObservation(observationId: $observationId) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
 export const RE_REQUEST_CLASSROOM_OBSERVATION = gql<
   { reRequestClassroomObservation: ClassroomObservationT },
   { priorObservationId: string; observerId: string }
 >`
   mutation ReRequestClassroomObservation($priorObservationId: String!, $observerId: String!) {
     reRequestClassroomObservation(priorObservationId: $priorObservationId, observerId: $observerId) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+export const REQUEST_CO_REVIEW_OBSERVATION = gql<
+  { requestCoReviewObservation: ClassroomObservationT },
+  { sourceObservationId: string; observerId: string }
+>`
+  mutation RequestCoReviewObservation($sourceObservationId: String!, $observerId: String!) {
+    requestCoReviewObservation(sourceObservationId: $sourceObservationId, observerId: $observerId) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+export const OBSERVATIONS_FOR_RECORDING_QUERY = gql<
+  { classroomObservationsForRecording: ClassroomObservationT[] },
+  { recordingId: string }
+>`
+  query ClassroomObservationsForRecording($recordingId: String!) {
+    classroomObservationsForRecording(recordingId: $recordingId) { ${OBSERVATION_FIELDS} }
   }
 `;
 

@@ -15,9 +15,13 @@
  * PASS/BREACH gates, one strength, one growth focus, an optional carry-forward. There
  * is NO total/average field — by design (§4, D-#194).
  *
- * Lifecycle `state` ∈ OBSERVATION_STATES: UPLOADED → ASSIGNED → REVIEWED (releases to
- * the observed teacher) → TEACHER_RESPONDED (CO-3). A re-review creates a NEW row and
- * marks the prior SUPERSEDED (`supersededById` / `prevObservationId`).
+ * Lifecycle `state` ∈ OBSERVATION_STATES: UPLOADED → ASSIGNED → REVIEWED → (published) →
+ * TEACHER_RESPONDED (CO-3). Since CO-8 (D-#271) REVIEWED no longer releases to the
+ * observed teacher — a Principal/Office PUBLISH (`publishedAt`/`publishedBy`) does. The
+ * observed teacher can read the row ONLY once `publishedAt` is set. Modelled as an
+ * additive flag, NOT a new state, so CO-4/6/7 (keyed off REVIEWED) are unaffected. A
+ * re-review creates a NEW row and marks the prior SUPERSEDED (`supersededById` /
+ * `prevObservationId`).
  *
  * `recordingId?` (the YouTube SessionRecording) is CO-2; `teacherResponse?` is CO-3 —
  * the fields exist now, set by later slices.
@@ -101,6 +105,11 @@ export interface IClassroomObservation extends Document {
   createdBy: Types.ObjectId;
   assignedAt?: Date | null;
   reviewedAt?: Date | null;
+  /** CO-8 (D-#271): Principal/Office publish stamp — the observed teacher can read the
+   *  row ONLY once this is set (publishing releases + notifies). null = REVIEWED-but-
+   *  unpublished (observer/Principal-only). */
+  publishedAt?: Date | null;
+  publishedBy?: Types.ObjectId | null;
   // --- REF-11 payload (set at REVIEW; empty until then) — NO total/average -----
   domains: IDomainScore[];
   gates: IGateScore[];
@@ -187,6 +196,8 @@ const ClassroomObservationSchema = new Schema<IClassroomObservation>(
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     assignedAt: { type: Date, default: null },
     reviewedAt: { type: Date, default: null },
+    publishedAt: { type: Date, default: null },
+    publishedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     domains: { type: [DomainScoreSchema], default: [] },
     gates: { type: [GateScoreSchema], default: [] },
     oneStrength: { type: String, trim: true, default: null },

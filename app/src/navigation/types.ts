@@ -223,6 +223,7 @@ export type ObservationStackParamList = {
   ObservationReviewQueue: undefined;
   ReviewObservation: { observationId: string; form: string; title: string };
   ObservationDetail: { observationId: string; title?: string };
+  CompareObservations: { recordingId: string; title?: string };
   ObservationTrend: undefined;
   ObservationDueList: undefined;
   ReviewerEffectiveness: undefined;

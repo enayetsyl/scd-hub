@@ -333,8 +333,19 @@ describe("observationRecording — observation:read + row-scope", () => {
     expect(denied(r)).toBe(true);
   });
 
-  test("the observed teacher GETS it at/after REVIEWED", async () => {
-    const { obs } = wireRead({ state: "REVIEWED" });
+  test("the observed teacher is DENIED on a REVIEWED-but-unpublished row (CO-8, D-#271)", async () => {
+    const { obs } = wireRead({ state: "REVIEWED", publishedAt: null });
+    const r = await graphql({
+      schema,
+      source: Q,
+      contextValue: ctxOf("TEACHER", TEACHER.toString()),
+      variableValues: { o: String(obs._id) },
+    });
+    expect(denied(r)).toBe(true);
+  });
+
+  test("the observed teacher GETS it once PUBLISHED (CO-8, D-#271)", async () => {
+    const { obs } = wireRead({ state: "REVIEWED", publishedAt: new Date("2026-06-15T00:00:00Z") });
     const r = await graphql({
       schema,
       source: Q,

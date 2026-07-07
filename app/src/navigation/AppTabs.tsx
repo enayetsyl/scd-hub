@@ -144,6 +144,7 @@ import UploadObservationScreen from "../screens/observation/UploadObservationScr
 import ObservationReviewQueueScreen from "../screens/observation/ObservationReviewQueueScreen";
 import ReviewObservationScreen from "../screens/observation/ReviewObservationScreen";
 import ObservationDetailScreen from "../screens/observation/ObservationDetailScreen";
+import CompareObservationsScreen from "../screens/observation/CompareObservationsScreen";
 import ObservationTrendScreen from "../screens/observation/ObservationTrendScreen";
 import ObservationDueListScreen from "../screens/observation/ObservationDueListScreen";
 import ReviewerEffectivenessScreen from "../screens/observation/ReviewerEffectivenessScreen";
@@ -732,6 +733,11 @@ function ObservationNavigator(): React.ReactElement {
         name="ObservationDetail"
         component={ObservationDetailScreen}
         options={({ route }) => ({ title: route.params.title || STR.obsDetailTitle })}
+      />
+      <ObservationStack.Screen
+        name="CompareObservations"
+        component={CompareObservationsScreen}
+        options={({ route }) => ({ title: route.params.title || STR.obsCompareTitle })}
       />
       <ObservationStack.Screen name="ObservationTrend" component={ObservationTrendScreen} options={{ title: STR.obsTrendTitle }} />
       <ObservationStack.Screen name="ObservationDueList" component={ObservationDueListScreen} options={{ title: STR.obsDueListTitle }} />

@@ -19,6 +19,9 @@ import {
   RATE_OBSERVATION_REVIEW,
   RE_REQUEST_CLASSROOM_OBSERVATION,
   RECORD_SESSION_FOOTAGE,
+  PUBLISH_CLASSROOM_OBSERVATION,
+  REQUEST_CO_REVIEW_OBSERVATION,
+  OBSERVATIONS_FOR_RECORDING_QUERY,
 } from "../../graphql/observation";
 import { TEACHERS_QUERY } from "../../graphql/operations";
 // CO-2 footage rider: in-app YouTube-unlisted upload (web GIS). Native → paste-id fallback below.
@@ -54,10 +57,11 @@ type Props = NativeStackScreenProps<ObservationStackParamList, "ObservationDetai
 
 const RATE_OPTS = [1, 2, 3, 4, 5].map((n) => ({ label: String(n), value: String(n) }));
 
-export default function ObservationDetailScreen({ route }: Props): React.ReactElement {
+export default function ObservationDetailScreen({ route, navigation }: Props): React.ReactElement {
   const { observationId } = route.params;
   const { user, role } = useAuth();
   const canUpload = !!role && roleHasPermission(role, "observation:upload");
+  const canManage = !!role && roleHasPermission(role, "observation:manage");
 
   const [obsQ, refetchObs] = useQuery({ query: CLASSROOM_OBSERVATION_QUERY, variables: { id: observationId } });
   const obs = obsQ.data?.classroomObservation ?? null;
@@ -74,8 +78,20 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
   const [, rate] = useMutation(RATE_OBSERVATION_REVIEW);
   const [, reRequest] = useMutation(RE_REQUEST_CLASSROOM_OBSERVATION);
   const [, attachFootage] = useMutation(RECORD_SESSION_FOOTAGE);
+  const [, publish] = useMutation(PUBLISH_CLASSROOM_OBSERVATION);
+  const [, coReview] = useMutation(REQUEST_CO_REVIEW_OBSERVATION);
+
+  // CO-9 co-review group — every observation on this recording (manager oversight).
+  const [groupQ, refetchGroup] = useQuery({
+    query: OBSERVATIONS_FOR_RECORDING_QUERY,
+    variables: { recordingId: obs?.recordingId ?? "" },
+    pause: !canUpload || !obs?.recordingId,
+  });
+  const group = groupQ.data?.classroomObservationsForRecording ?? [];
+  const activeReviewers = group.filter((g) => g.state !== "SUPERSEDED");
 
   const [responseText, setResponseText] = useState("");
+  const [coObserverId, setCoObserverId] = useState<string | null>(null);
   const [fairness, setFairness] = useState<string | null>(null);
   const [usefulness, setUsefulness] = useState<string | null>(null);
   const [reObserverId, setReObserverId] = useState<string | null>(null);
@@ -172,6 +188,26 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
           ) : null}
           <Row label={STR.obsClassDate} value={new Date(obs.classDate).toLocaleDateString()} />
         </Card>
+
+        {/* CO-8 (D-#271): Principal/Office publish gate — REVIEWED is not visible to the
+            teacher until published. Show status + a Publish action to managers. */}
+        {canManage && (obs.state === "REVIEWED" || obs.publishedAt) ? (
+          <Card>
+            <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsPublishTitle}</Body>
+            {obs.publishedAt ? (
+              <Row label={STR.obsPublishedOn} value={new Date(obs.publishedAt).toLocaleString()} />
+            ) : (
+              <>
+                <Muted style={{ marginBottom: space(2) }}>{STR.obsPublishHint}</Muted>
+                <Button
+                  title={STR.obsPublish}
+                  onPress={() => void run(() => publish({ observationId }), STR.obsPublished)}
+                  disabled={busy}
+                />
+              </>
+            )}
+          </Card>
+        ) : null}
 
         {/* REF-11 scores */}
         {obs.domains.length > 0 ? (
@@ -363,6 +399,52 @@ export default function ObservationDetailScreen({ route }: Props): React.ReactEl
             />
           </Card>
         ) : null}
+        {/* CO-9 (D-#272): Principal/Office add a PARALLEL co-reviewer to this recording +
+            open the side-by-side compare when >1 reviewer exists. */}
+        {canUpload && obs.recordingId ? (
+          <Card>
+            <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsCoReviewTitle}</Body>
+            <Muted style={{ marginBottom: space(2) }}>{STR.obsCoReviewHint}</Muted>
+            {activeReviewers.length > 1 ? (
+              <Button
+                title={`${STR.obsCompareTitle} (${bnNum(activeReviewers.length)})`}
+                variant="secondary"
+                onPress={() => navigation.navigate("CompareObservations", { recordingId: obs.recordingId as string })}
+                style={{ marginBottom: space(2) }}
+              />
+            ) : null}
+            <Select
+              label={STR.obsCoReviewObserver}
+              value={coObserverId}
+              options={(teachersQ.data?.teachers ?? [])
+                .filter((t) => t.id !== obs.teacherId && !activeReviewers.some((g) => g.observerId === t.id))
+                .map((t) => ({ label: t.name, value: t.id }))}
+              onChange={setCoObserverId}
+              placeholder={STR.obsPickObserver}
+              searchable
+            />
+            <Button
+              title={STR.obsAddCoReviewer}
+              variant="ghost"
+              onPress={() => {
+                if (!coObserverId) return setError(STR.errGeneric);
+                void run(
+                  () =>
+                    coReview({ sourceObservationId: observationId, observerId: coObserverId }).then((res) => {
+                      if (!res.error) {
+                        setCoObserverId(null);
+                        refetchGroup({ requestPolicy: "network-only" });
+                      }
+                      return res;
+                    }),
+                  STR.obsCoReviewAdded,
+                );
+              }}
+              disabled={busy}
+            />
+          </Card>
+        ) : null}
+
         <View style={{ height: space(6) }} />
       </ScrollView>
     </Screen>
