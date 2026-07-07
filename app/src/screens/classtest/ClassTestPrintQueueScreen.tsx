@@ -18,6 +18,7 @@ import { STR, hwSubjectLabel, classTestSourceLabel, bnNum } from "../../lib/labe
 import { friendlyError } from "../../lib/errors";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
+import { useFileOpen } from "../../lib/useFileOpen";
 import { space } from "../../theme/tokens";
 
 export default function ClassTestPrintQueueScreen(): React.ReactElement {
@@ -28,6 +29,7 @@ export default function ClassTestPrintQueueScreen(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const { openingId, runOpen } = useFileOpen();
 
   async function openPaper(setId: string | null, questionFileId: string | null): Promise<void> {
     setError(null);
@@ -90,7 +92,9 @@ export default function ClassTestPrintQueueScreen(): React.ReactElement {
                     <Button
                       title={t.setId ? STR.ctExportSetPdf : STR.ctViewPaper}
                       variant="secondary"
-                      onPress={() => openPaper(t.setId, t.questionFileId)}
+                      loading={openingId === t.id}
+                      disabled={!!openingId}
+                      onPress={() => runOpen(t.id, () => openPaper(t.setId, t.questionFileId))}
                     />
                   ) : null}
                   <Button title={STR.ctMarkPrinted} onPress={() => onMark(t.id)} loading={busyId === t.id} disabled={busyId === t.id} />

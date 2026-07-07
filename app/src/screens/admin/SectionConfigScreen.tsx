@@ -81,7 +81,7 @@ export default function SectionConfigScreen(_props: Props): React.ReactElement {
 
       <View style={{ marginTop: space(3) }}>
         <AcademicYearSelect label={STR.academicYear} value={yearId} onChange={setYearId} />
-        <Field label={STR.scCombinedName} value={combinedName} onChangeText={setCombinedName} placeholder="সম্মিলিত" />
+        <Field label={STR.scCombinedName} value={combinedName} onChangeText={setCombinedName} placeholder={STR.scCombinedNamePlaceholder} />
       </View>
 
       <Divider />

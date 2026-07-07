@@ -32,6 +32,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum } from "../../lib/labels";
 import { aggregateReactions, conversationTitle, REACTION_PALETTE } from "../../lib/chat";
 import { pickAndUploadChatFile, openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError, type UploadedChatFile } from "../../lib/files";
+import { useFileOpen } from "../../lib/useFileOpen";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ChatStackParamList, "ChatThread">;
@@ -411,6 +412,7 @@ function MessageBubble({
 }): React.ReactElement {
   const deleted = !!m.deletedAt;
   const reactions = aggregateReactions(m.reactions, myUserId);
+  const { openingId, runOpen } = useFileOpen();
 
   return (
     <Card style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "92%", minWidth: "55%" }}>
@@ -437,7 +439,9 @@ function MessageBubble({
                 key={a.fileId}
                 title={`📎 ${a.originalName}`}
                 variant="secondary"
-                onPress={() => onOpenFile(a.fileId)}
+                loading={openingId === a.fileId}
+                disabled={!!openingId}
+                onPress={() => runOpen(a.fileId, () => onOpenFile(a.fileId))}
               />
             ) : (
               <Muted key={a.fileId}>📎 {a.originalName}</Muted>
