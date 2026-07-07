@@ -209,3 +209,11 @@ English codes (AS-ID, status codes) on forms per house rule.
 >    `ASSIGNMENT_CHASE` is not yet in NOTIFICATION_KINDS — steps log SKIPPED and
 >    Office proceeds to WhatsApp until the kind (+ labels + verifier §C.5 update)
 >    lands in a vocab-owning session. No assignment code changes at activation.
+>
+> **Activation (2026-07-07 — D-#273):** the kind is now live. `ASSIGNMENT_CHASE`
+> was added to `NOTIFICATION_KINDS` + BN/EN labels + the verifier §C.5 exact-set,
+> exactly as note 2 predicted — **no assignment/emitter code changed**. In-app
+> ladder steps 1–2 now write a real guardian inbox row (→ `RECORDED`) when the
+> student has a login-enabled guardian; they still fall to `SKIPPED` for
+> contact-only guardians (→ WhatsApp at step 3). Push transport remains the
+> separate deferred pipeline; the in-app inbox row shows in the guardian portal now.

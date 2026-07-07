@@ -960,6 +960,11 @@ export const NOTIFICATION_KINDS = [
   // channel rides emit()), deduped once per student+item per day. Distinct from
   // HW_PARENT_COMMS, which nudges the CLASS TEACHER at the 3rd chase.
   "HW_CHASE",
+  // Assignment-tracker per-chase guardian notify (app-native, NO wire twin — the
+  // AS-T4 twin of HW_CHASE, D-#88/#94). Ladder steps 1–2 push the student's
+  // login-enabled guardians an in-app reminder (via emit()); contact-only
+  // guardians are reached at step 3 by the manual wa.me path.
+  "ASSIGNMENT_CHASE",
   "REVIEW_ASSIGNED",
   "COVER_ASSIGNED",
   "LIBRARY_DUE_SOON",
@@ -1002,6 +1007,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   CLASS_NOTE_PUBLISHED: "পাঠ নোট প্রকাশিত",
   HW_PARENT_COMMS: "অভিভাবক যোগাযোগের স্মরণিকা",
   HW_CHASE: "বাড়ির কাজ জমার স্মরণিকা",
+  ASSIGNMENT_CHASE: "অ্যাসাইনমেন্ট জমার স্মরণিকা",
   REVIEW_ASSIGNED: "পর্যালোচনার দায়িত্ব",
   COVER_ASSIGNED: "কাভার ক্লাসের দায়িত্ব",
   LIBRARY_DUE_SOON: "বই ফেরতের স্মরণিকা",
@@ -1028,6 +1034,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   CLASS_NOTE_PUBLISHED: "Class note published",
   HW_PARENT_COMMS: "Parent-contact prompt",
   HW_CHASE: "Homework reminder",
+  ASSIGNMENT_CHASE: "Assignment reminder",
   REVIEW_ASSIGNED: "Review assigned",
   COVER_ASSIGNED: "Cover assigned",
   LIBRARY_DUE_SOON: "Book due soon",
