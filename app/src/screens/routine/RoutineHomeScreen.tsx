@@ -11,7 +11,7 @@ import { roleHasPermission } from "@scd/shared";
 import { SUBJECT_GROUPS_QUERY } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Badge, Loader } from "../../components/ui";
-import { SectionBar } from "../../components/SectionBar";
+import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
 import { STR, periodTrackLabel, getActiveLang } from "../../lib/labels";
 import { useSectionContext } from "../../state/SectionContext";
 import { useAuth } from "../../auth/AuthContext";
@@ -31,7 +31,7 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
   return (
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
-        <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
+        <ClassSectionDashboard />
       </View>
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }}>
         <Button title={STR.rtMyRoutine} onPress={() => navigation.navigate("MyRoutine")} />

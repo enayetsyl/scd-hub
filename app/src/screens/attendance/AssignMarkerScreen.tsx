@@ -18,7 +18,7 @@ import type { AttendanceStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Button, Notice, Divider, EmptyState } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { TeacherSelect } from "../../components/selects";
-import { SectionBar } from "../../components/SectionBar";
+import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
 import { STR, classLevelLabel, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
@@ -85,7 +85,7 @@ export default function AssignMarkerScreen({ navigation }: Props): React.ReactEl
 
   return (
     <Screen scroll>
-      <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
+      <ClassSectionDashboard />
       {hasSection ? (
         <Card>
           <TeacherSelect label={STR.attMarkerWord} value={teacherId} onChange={setTeacherId} />

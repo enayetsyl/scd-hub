@@ -20,7 +20,7 @@ import {
   ErrorBanner,
   Notice,
 } from "../../components/ui";
-import { SectionBar } from "../../components/SectionBar";
+import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
 import { STR, setTypeLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
@@ -62,7 +62,7 @@ export default function OpenTrackerScreen({ navigation }: Props): React.ReactEle
   return (
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
-        <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
+        <ClassSectionDashboard />
         {hasSection ? <Muted>{STR.pickSet}</Muted> : null}
         {error ? <Notice message={error} tone="danger" /> : null}
       </View>

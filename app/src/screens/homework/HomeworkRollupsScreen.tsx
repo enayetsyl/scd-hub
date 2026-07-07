@@ -11,7 +11,7 @@ import { useQuery } from "urql";
 import { HOMEWORK_WATCHLIST, HOMEWORK_TRIM_PATTERN, QUESTION_USAGE_FEED } from "../../graphql/operations";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Field, Loader, EmptyState, ErrorBanner } from "../../components/ui";
-import { SectionBar } from "../../components/SectionBar";
+import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
@@ -53,7 +53,7 @@ export default function HomeworkRollupsScreen({ navigation }: Props): React.Reac
   return (
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
-        <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
+        <ClassSectionDashboard />
         {hasSection ? <Field label={STR.hwMonth} value={month} onChangeText={setMonth} placeholder="YYYY-MM" /> : null}
       </View>
 

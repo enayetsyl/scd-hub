@@ -21,7 +21,7 @@ import {
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState, ErrorBanner } from "../../components/ui";
 import { DateField } from "../../components/DateField";
-import { SectionBar } from "../../components/SectionBar";
+import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
@@ -130,7 +130,7 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
   return (
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
-        <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
+        <ClassSectionDashboard />
         {hasSection ? <DateField label={STR.hwDate} value={date} onChange={setDate} /> : null}
       </View>
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: space(4) }}>
