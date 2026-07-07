@@ -14,7 +14,7 @@
  * The open-day predicate comes from the ONE calendar source (D-#50): routine
  * `dayTypeFor` + `HolidayException` ranges — no second calendar truth.
  */
-import { HW_SUBJECTS } from "@scd/shared";
+import { HW_SUBJECTS, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
 import type { HwSubject } from "@scd/shared";
 import { AssignmentSchedule, type IAssignmentSchedule } from "../models/AssignmentSchedule";
 import { AssignmentItem } from "../models/AssignmentItem";
@@ -113,8 +113,14 @@ export async function addScheduleEntry(input: AddEntryInput): Promise<IAssignmen
   if (!Number.isInteger(input.cycleWeek) || input.cycleWeek < 1 || input.cycleWeek > 4) {
     throw new Error("cycleWeek must be 1..4 (the 4-week rotation, D-#86)");
   }
-  if (!Number.isInteger(input.classLevel) || input.classLevel < 1 || input.classLevel > 5) {
-    throw new Error("Assignments are for classes C1–C5 (classLevel must be 1..5)");
+  if (
+    !Number.isInteger(input.classLevel) ||
+    input.classLevel < ROSTER_CLASS_LEVEL_MIN ||
+    input.classLevel > ROSTER_CLASS_LEVEL_MAX
+  ) {
+    throw new Error(
+      `Assignments cover the roster classes Nursery–C5 (classLevel must be ${ROSTER_CLASS_LEVEL_MIN}..${ROSTER_CLASS_LEVEL_MAX})`,
+    );
   }
   const schedule = await AssignmentSchedule.findOne({ academicYearId: input.academicYearId });
   if (!schedule) {
@@ -224,15 +230,23 @@ export async function expectedItemsForWeek(
   const resolved = await resolveScheduleWeek(schedule, weekNumber);
   const entries = schedule.entries.filter((e) => e.cycleWeek === resolved.cycleWeek);
 
+  // An AssignmentItem is delivered once one exists for (week × section × subject)
+  // — the same key the delivery pass enforces uniqueness on. We deliberately do
+  // NOT key on scheduleEntryId: rotation entries are subdocuments, so editing an
+  // entry (remove + re-add) mints a new _id and would orphan the delivered item,
+  // making the home card read "Not delivered" while the deliver screen (keyed on
+  // section+subject) correctly reports "already delivered".
   const existing = (await AssignmentItem.find({
     academicYearId,
     weekNumber,
   }).lean()) as unknown as Array<{
     _id: { toString(): string };
     asId: string;
-    scheduleEntryId: { toString(): string };
+    sectionId: { toString(): string };
+    subject: string;
   }>;
-  const byEntry = new Map(existing.map((i) => [i.scheduleEntryId.toString(), i]));
+  const itemKey = (sectionId: string, subject: string): string => `${sectionId}|${subject}`;
+  const byEntry = new Map(existing.map((i) => [itemKey(i.sectionId.toString(), i.subject), i]));
 
   return {
     academicYearId,
@@ -243,7 +257,7 @@ export async function expectedItemsForWeek(
     deliveryDate: resolved.deliveryDate ? resolved.deliveryDate.toISOString() : null,
     dueDate: resolved.dueDate ? resolved.dueDate.toISOString() : null,
     items: entries.map((e) => {
-      const item = byEntry.get(e._id.toString());
+      const item = byEntry.get(itemKey(e.sectionId.toString(), e.subject));
       return {
         entryId: e._id.toString(),
         cycleWeek: e.cycleWeek,

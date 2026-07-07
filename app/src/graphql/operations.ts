@@ -2101,6 +2101,39 @@ export const SUBJECT_GROUPS_QUERY = gql<
   }
 `;
 
+export interface GroupMemberT {
+  id: string;
+  name: string;
+  schoolId: string;
+}
+
+export const SUBJECT_GROUP_MEMBER_PROFILES = gql<
+  { subjectGroupMemberProfiles: GroupMemberT[] },
+  { groupId: string }
+>`
+  query SubjectGroupMemberProfiles($groupId: String!) {
+    subjectGroupMemberProfiles(groupId: $groupId) { id name schoolId }
+  }
+`;
+
+export const ADD_GROUP_MEMBER = gql<
+  { addGroupMember: boolean },
+  { groupId: string; studentId: string }
+>`
+  mutation AddGroupMember($groupId: String!, $studentId: String!) {
+    addGroupMember(groupId: $groupId, studentId: $studentId)
+  }
+`;
+
+export const REMOVE_GROUP_MEMBER = gql<
+  { removeGroupMember: boolean },
+  { groupId: string; studentId: string }
+>`
+  mutation RemoveGroupMember($groupId: String!, $studentId: String!) {
+    removeGroupMember(groupId: $groupId, studentId: $studentId)
+  }
+`;
+
 export interface CreateSlotResultT {
   warnings: string[];
   slot: RoutineSlotT;

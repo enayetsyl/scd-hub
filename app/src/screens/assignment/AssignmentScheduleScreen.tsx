@@ -8,7 +8,7 @@ import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { HW_SUBJECTS, DAYS_OF_WEEK } from "@scd/shared";
+import { HW_SUBJECTS, DAYS_OF_WEEK, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
 import {
   ACADEMIC_YEARS_QUERY,
   CLASSES_QUERY,
@@ -43,7 +43,9 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
   const schedule = scheduleQ.data?.assignmentSchedule ?? null;
 
   const [classesQ] = useQuery({ query: CLASSES_QUERY, variables: { academicYearId: yearId }, pause: !yearId });
-  const classes = (classesQ.data?.classes ?? []).filter((c) => c.active && c.level >= 1 && c.level <= 5);
+  const classes = (classesQ.data?.classes ?? []).filter(
+    (c) => c.active && c.level >= ROSTER_CLASS_LEVEL_MIN && c.level <= ROSTER_CLASS_LEVEL_MAX,
+  );
   const [usersQ] = useQuery({ query: USERS_QUERY });
   const teachers = (usersQ.data?.users ?? []).filter((u) => u.active && u.role === "TEACHER");
 
