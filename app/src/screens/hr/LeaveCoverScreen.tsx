@@ -22,6 +22,7 @@ import {
   SUBJECTS_QUERY,
   SUBJECT_GROUPS_QUERY,
   TEACHERS_QUERY,
+  CLASSES_QUERY,
 } from "../../graphql/operations";
 import type { HrStackParamList } from "../../navigation/types";
 import {
@@ -43,6 +44,7 @@ import { AvailableTeacherSelect } from "../../components/selects";
 import { STR, coverSlotStatusLabel, dateHeaderLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
+import { useSectionContext } from "../../state/SectionContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HrStackParamList, "LeaveCover">;
@@ -50,6 +52,10 @@ type Props = NativeStackScreenProps<HrStackParamList, "LeaveCover">;
 function statusTone(s: string): "info" | "ok" | "muted" {
   return s === "approved" ? "ok" : s === "proposed" ? "info" : "muted";
 }
+
+/** Post-merge sections that ARE the whole class — their name is redundant next to
+ *  the class, so we show just the class (mirrors SectionBar). */
+const WHOLE_CLASS_SECTIONS = new Set(["মূল", "সম্মিলিত"]);
 
 export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
   const { leaveApplicationId, manage } = route.params;
@@ -61,10 +67,17 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
   const [error, setError] = React.useState<string | null>(null);
   const [ok, setOk] = React.useState<string | null>(null);
 
+  const { selection } = useSectionContext();
+
   const [slotsQ, refetch] = useQuery({ query: STAFF_COVER_SLOTS_QUERY, variables: { leaveApplicationId } });
   const [subjectsQ] = useQuery({ query: SUBJECTS_QUERY });
   const [groupsQ] = useQuery({ query: SUBJECT_GROUPS_QUERY, variables: {} });
   const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
+  const [classesQ] = useQuery({
+    query: CLASSES_QUERY,
+    variables: { academicYearId: selection.academicYearId ?? "" },
+    pause: !selection.academicYearId,
+  });
 
   const [, propose] = useMutation(PROPOSE_STAFF_COVER);
   const [, decide] = useMutation(DECIDE_STAFF_COVER_SLOT);
@@ -73,6 +86,10 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
   const subjectName = new Map((subjectsQ.data?.subjects ?? []).map((s) => [s.id, s.nameBn]));
   const groupName = new Map((groupsQ.data?.subjectGroups ?? []).map((g) => [g.id, g.nameBn]));
   const teacherName = new Map((teachersQ.data?.teachers ?? []).map((t) => [t.id, t.name]));
+  const className = new Map((classesQ.data?.classes ?? []).map((c) => [c.id, c.nameBn]));
+  const sectionName = new Map(
+    (classesQ.data?.classes ?? []).flatMap((c) => c.sections.map((s) => [s.id, s.nameBn] as const)),
+  );
 
   /** The human name of what this slot covers: the Quran/Arabic group, else the
    *  general subject, else a generic class fallback. */
@@ -80,6 +97,17 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
     if (slot.subjectGroupId) return groupName.get(slot.subjectGroupId) ?? STR.hrCoverClass;
     if (slot.subjectId) return subjectName.get(slot.subjectId) ?? STR.hrCoverSubject;
     return STR.hrCoverClass;
+  }
+
+  /** The class (+ section) a general-subject slot covers, e.g. "পঞ্চম শ্রেণি · A".
+   *  Quran/Arabic groups are cross-grade (no class) → null; the group name shows the level. */
+  function slotClassLine(slot: (typeof slots)[number]): string | null {
+    if (slot.groupType !== "section" || !slot.classId) return null;
+    const cls = className.get(slot.classId);
+    if (!cls) return null;
+    const sec = slot.sectionId ? sectionName.get(slot.sectionId) : null;
+    const secPart = sec && !WHOLE_CLASS_SECTIONS.has(sec) ? ` · ${sec}` : "";
+    return `${cls}${secPart}`;
   }
 
   async function runPropose(slotId: string): Promise<void> {
@@ -144,6 +172,7 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
               <Body style={{ fontWeight: "700", flex: 1 }}>{slotLabel(slot)}</Body>
               <Badge text={coverSlotStatusLabel(slot.status)} tone={statusTone(slot.status)} />
             </View>
+            {slotClassLine(slot) ? <Muted style={{ marginTop: 2 }}>{slotClassLine(slot)}</Muted> : null}
             <Muted style={{ marginTop: 2 }}>
               {dateHeaderLabel(slot.dateKey)} · {STR.rtPeriodN} {bnNum(slot.periodNumber)}
             </Muted>
