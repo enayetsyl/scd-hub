@@ -18,6 +18,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   const canImport = !!role && roleHasPermission(role, "content:import");
   const canManageUsers = !!role && roleHasPermission(role, "user:manage");
   const canRoster = !!role && roleHasPermission(role, "roster:manage");
+  const canRoutine = !!role && roleHasPermission(role, "routine:manage");
   const canStaff = !!role && roleHasPermission(role, "staff:manage");
   const canGuardianCreds = !!role && roleHasPermission(role, "guardian:link");
   const canTemplates = !!role && roleHasPermission(role, "template:manage");
@@ -84,6 +85,13 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
+      {canRoutine ? (
+        <Card onPress={() => navigation.navigate("GroupMembers")}>
+          <Body style={{ fontWeight: "700" }}>{STR.gmTitle}</Body>
+          <Muted>{STR.admSubGroupMembers}</Muted>
+        </Card>
+      ) : null}
+
       {canRoster ? (
         <Card onPress={() => navigation.navigate("SectionConfig")}>
           <Body style={{ fontWeight: "700" }}>{STR.sectionConfig}</Body>
@@ -126,7 +134,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {!canImport && !canManageUsers && !canRoster && !canStaff && !canGuardianCreds && !canTemplates && !canAccess ? (
+      {!canImport && !canManageUsers && !canRoster && !canStaff && !canGuardianCreds && !canTemplates && !canAccess && !canRoutine ? (
         <Notice message={STR.noPermission} tone="warn" />
       ) : null}
     </Screen>

@@ -24,8 +24,95 @@ intake/fix procedures live in [README.md](README.md). To add one: paste the issu
 
 ---
 
+## BUG-018 — Guardian weekly routine omits Quran/Arabic (no group memberships + no admin UI to create them)
+- **Status:** fixed (2026-07-07) — screen shipped; **data entry still required by the school**
+- **Severity:** high
+- **Platform:** web
+- **Area:** routine / guardian-portal
+- **Reported:** 2026-07-07
+- **Screenshot:** —
+
+**Repro:** Guardian portal → a child's **Weekly routine** shows only the general subjects (periods
+5–8: Islamic Studies, Bangla, Mathematics, English). The Quran (periods 1–2) and Arabic (period 3)
+morning block is missing on every day.
+**Expected:** The child's Quran/Arabic periods appear alongside the section subjects.
+**Actual:** Only the section (general) periods render.
+**Root cause (verified on prod AND local, read-only diagnostic):** **zero `SubjectGroupMembership`
+rows exist for any of the 91 students.** The routine seeder created the 10 Quran/Arabic `SubjectGroup`s
+and their 75 subject-group `RoutineSlot`s but never assigned any student to a group. The guardian
+`childRoutine` resolver correctly merges section + subject-group slots
+([GuardianPortalService.ts:340-352](../../server/src/modules/guardian/services/GuardianPortalService.ts#L340))
+— but with no membership rows there is nothing to merge. Compounding: the `addGroupMember` /
+`removeGroupMember` mutations existed (`routine:manage`) but **no app screen** called them, so the
+school had no in-app way to create the memberships.
+**Fix:** built a **Group members** admin screen (Admin → Group members, `routine:manage`,
+`app/src/screens/admin/GroupMembersScreen.tsx`): pick a Quran/Arabic group, see its current members,
+and add/remove students from a chosen section. Added a backend `subjectGroupMemberProfiles(groupId)`
+query (returns members WITH names — the section-scoped student read can't resolve a cross-section
+group) and app ops `ADD_GROUP_MEMBER`/`REMOVE_GROUP_MEMBER`. **End-to-end verified** with a
+self-cleaning script (`server/scripts/verify-group-routine.ts`): before = P5–8 only; after assigning
+the student to a Quran + Arabic group = P1 QURAN, P2 QURAN, P3 ARABIC appear on the guardian routine;
+membership removed after (net-zero DB). **Remaining work is DATA, not code:** the school must place all
+91 students into their correct Quran (Qaida/Najera/Ammapara/Hifz) + Arabic (book/gender) groups via the
+new screen — placement is pedagogical and cannot be auto-derived from class level.
+**Fix ref:** this branch (server resolver + app screen/nav/ops/labels)
+
+## BUG-017 — Assignment home card shows "Not delivered" for an already-delivered item
+- **Status:** fixed (2026-07-07)
+- **Severity:** medium
+- **Platform:** web
+- **Area:** assignment
+- **Reported:** 2026-07-07
+- **Screenshot:** —
+
+**Repro:** Assignment tab → an item's outer card shows a **Not delivered** badge + **Deliver** button,
+but opening **Deliver** for the same item shows the banner *"Week N ENG for this section is already
+delivered"* and refuses. The two views disagree.
+**Expected:** Once an item is delivered, the home card shows **Delivered** with Collect/Check chips.
+**Actual:** Home card stayed **Not delivered** while the deliver screen knew it was delivered.
+**Notes:** Root cause = the two code paths used different join keys. The delivery pass enforces
+uniqueness on `(academicYearId, weekNumber, sectionId, subject)`
+([AssignmentService.ts:117](../../server/src/modules/trackers/services/AssignmentService.ts#L117)),
+but the home "delivered" flag joined `AssignmentItem` by **`scheduleEntryId`**
+([AssignmentScheduleService.ts:235](../../server/src/modules/trackers/services/AssignmentScheduleService.ts#L235)).
+Rotation entries are Mongo subdocuments, so editing an entry (remove + re-add) mints a new `_id`; the
+delivered item still pointed at the old id → the join missed → "Not delivered", while the deliver
+screen (keyed on section+subject) correctly said "already delivered." The service doc comment already
+stated the intended key was "(week × section × subject)" — the code just didn't match it.
+**Fix:** join now keys on `(sectionId, subject)`, consistent with the uniqueness rule + the doc
+comment. Regression test added (`assignmentSchedule.test.ts` — "delivered join keys on (section ×
+subject), not the entry _id"). Full server suite green (1603).
+**Fix ref:** this branch
+
+## BUG-016 — Assignment schedule "Add entry" Class dropdown omits Nursery & KG
+- **Status:** fixed (2026-07-07)
+- **Severity:** medium
+- **Platform:** web
+- **Area:** assignment
+- **Reported:** 2026-07-07
+- **Screenshot:** —
+
+**Repro:** Assignment tab → ⚙️ Schedule → **Add entry** → open the **Class** dropdown. It lists only
+পঞ্চম / দ্বিতীয় / তৃতীয় / চতুর্থ / প্রথম শ্রেণি (classes One–Five). নার্সারি (Nursery) and কেজি (KG)
+are missing.
+**Expected:** The dropdown should include Nursery and KG so assignment schedule entries can be created
+for the pre-primary classes.
+**Actual:** Only levels 1–5 appeared; Nursery and KG could not be selected.
+**Notes:** Root cause was a hard-coded level filter in
+[AssignmentScheduleScreen.tsx:46](../../app/src/screens/assignment/AssignmentScheduleScreen.tsx#L46)
+(`c.level >= 1 && c.level <= 5`) **and** a matching backend guard in
+[AssignmentScheduleService.ts:116](../../server/src/modules/trackers/services/AssignmentScheduleService.ts#L116)
+(`classLevel must be 1..5`). The roster axis (`ROSTER_CLASS_LEVELS = [-1,0,1,2,3,4,5]`,
+[shared/vocab.ts:82](../../shared/vocab.ts#L82)) puts **KG = 0** and **Nursery = -1** below that floor.
+The reporter (Principal domain) confirmed Nursery/KG **will** have assignments.
+**Fix:** both the screen filter and the backend validation now use
+`ROSTER_CLASS_LEVEL_MIN..ROSTER_CLASS_LEVEL_MAX` (-1..5). `classLevelLabel` already renders নার্সারি/কেজি
+and `generateAsId` accepts any level (KG → `AS-C0-…`, Nursery → `AS-C-1-…`), so no downstream change was
+needed. Test added ("Nursery (-1) and KG (0) are accepted…"). Typecheck + full suite green.
+**Fix ref:** this branch
+
 ## BUG-015 — Exam date on New print request shows a typed YYYY-MM-DD field, not the calendar
-- **Status:** open (likely invalid — wrong build under test)
+- **Status:** closed — INVALID (verified 2026-07-07)
 - **Severity:** low
 - **Platform:** web
 - **Area:** class-test
@@ -42,10 +129,11 @@ UX-1..8 stack — the screenshot also shows the pre-UX-3 typed "Set id" field an
 "Blank = 40% of total" hint, all long since replaced on `dev`. The UX-2 `DateField` IS live on this
 screen on `dev`/`fix/ux-testing-bugs`. **Retest on the dev build (or the fix branch) before treating
 this as a code bug**; close as invalid if the calendar shows there.
-**Fix ref:** —
+**Resolution (2026-07-07):** verified on `dev` — [RequestClassTestScreen.tsx:211](app/src/screens/classtest/RequestClassTestScreen.tsx#L211) uses the calendar `DateField` (`<DateField label={STR.ctExamDate} …/>`), not a typed field. Reported against a stale `main` checkout. **Closed as invalid** (no code change).
+**Fix ref:** — (invalid)
 
 ## BUG-014 — "View paper" opens the PDF with no loading feedback
-- **Status:** open
+- **Status:** fixed (2026-07-07)
 - **Severity:** low
 - **Platform:** web
 - **Area:** class-test
@@ -60,7 +148,7 @@ before the blob URL opens in a new tab), so the button feels dead until the tab 
 the button. Fix shape = the BUG-013 recipe (busy spinner + double-tap guard while the fetch runs).
 The same unguarded `openStoredFile` pattern exists on `ChatThreadScreen.tsx` (attachment open) and
 `CommentEntryScreen.tsx` — sweep them in the same pass.
-**Fix ref:** —
+**Fix ref (2026-07-07):** new `app/src/lib/useFileOpen.ts` hook (tracks the opening id → button spinner + double-tap guard). Applied to all five `openStoredFile` call sites: `ClassTestPrintQueueScreen`, `ChatThreadScreen`, `CommentEntryScreen`, `ChildHomeworkScreen`, `GuardianHomeScreen`. (Sweep found 2 more than the original note.) Branch `fix/bug-002-014-doc-updates`.
 
 ## BUG-013 — Upload paper button does not attach the selected file
 - **Status:** fixed

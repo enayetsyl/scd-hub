@@ -4,8 +4,8 @@
  * AJ-6 — steps 1–2 create guardian in-app notification records (skippable);
  *        step 3 generates the Bangla WhatsApp message + wa.me link, logged
  *        PENDING with an outcome stamp; every step an append-only row.
- * Plus: §7 template placeholders; the emit()-seam gate (kind unregistered →
- *       recorded no-op); ladder ordering guards.
+ * Plus: §7 template placeholders; the emit()-seam gate (ASSIGNMENT_CHASE now
+ *       registered → active; empty when no guardian to reach); ladder ordering guards.
  *
  * DB-free: models + the emitter mocked (the real emitter's vocab gate is
  * tested separately at the bottom with the real function).
@@ -23,6 +23,7 @@ const mockFuFind = jest.fn();
 const mockRecFind = jest.fn();
 const mockItemFind = jest.fn();
 const mockEmitChase = jest.fn();
+const mockGuardianLinkFind = jest.fn();
 
 jest.mock("../modules/trackers/models/AssignmentStudentRecord", () => ({
   AssignmentStudentRecord: {
@@ -61,6 +62,9 @@ jest.mock("../modules/notifications/services/emitters", () => {
   const actual = jest.requireActual("../modules/notifications/services/emitters");
   return { ...actual, emitAssignmentGuardianChase: (...a: unknown[]) => mockEmitChase(...a) };
 });
+jest.mock("../modules/foundation/models/GuardianLink", () => ({
+  GuardianLink: { find: (q: unknown) => ({ select: () => ({ lean: () => mockGuardianLinkFind(q) }) }) },
+}));
 
 import {
   assignmentChaseList,
@@ -254,14 +258,19 @@ describe("recordFollowUpOutcome", () => {
 // ===========================================================================
 
 describe("emitAssignmentGuardianChase (real) — vocab gate", () => {
-  test("recorded no-op while ASSIGNMENT_CHASE is not in NOTIFICATION_KINDS (vocab frozen this session)", async () => {
+  test("ASSIGNMENT_CHASE is now a registered NotificationKind — the emit() seam is active (D-#94 activation)", () => {
     const real = jest.requireActual("../modules/notifications/services/emitters");
     const { NOTIFICATION_KINDS } = jest.requireActual("@scd/shared");
-    expect(NOTIFICATION_KINDS).not.toContain(real.ASSIGNMENT_CHASE_KIND); // the precondition this session builds under
+    expect(NOTIFICATION_KINDS).toContain(real.ASSIGNMENT_CHASE_KIND);
+  });
+
+  test("no guardian link → records nothing (contact-only path), no throw", async () => {
+    const real = jest.requireActual("../modules/notifications/services/emitters");
+    mockGuardianLinkFind.mockResolvedValue([]); // student has no login-enabled guardian to notify
     const notified = await real.emitAssignmentGuardianChase({
       recordId: oid(), asItemId: oid(), asId: "AS-C1-BAN-0001",
       studentId: oid(), sectionId: oid(), stepNumber: 1, messageBn: "x",
     });
-    expect(notified).toEqual([]); // no throw, no DB touch — activates when the kind lands
+    expect(notified).toEqual([]); // kind is registered now; empty because there is no guardian to reach
   });
 });

@@ -193,6 +193,7 @@ import RosterScreen from "../screens/admin/RosterScreen";
 import StaffListScreen from "../screens/admin/StaffListScreen";
 import AssignClassTeacherScreen from "../screens/admin/AssignClassTeacherScreen";
 import AssignSubjectTeacherScreen from "../screens/admin/AssignSubjectTeacherScreen";
+import GroupMembersScreen from "../screens/admin/GroupMembersScreen";
 import AcademicYearScreen from "../screens/admin/AcademicYearScreen";
 import SectionConfigScreen from "../screens/admin/SectionConfigScreen";
 import GuardianCredentialsScreen from "../screens/admin/GuardianCredentialsScreen";
@@ -850,6 +851,7 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="Staff" component={StaffListScreen} options={{ title: STR.staff }} />
       <AdminStack.Screen name="AssignClassTeacher" component={AssignClassTeacherScreen} options={{ title: STR.assignClassTeacher }} />
       <AdminStack.Screen name="AssignSubjectTeacher" component={AssignSubjectTeacherScreen} options={{ title: STR.assignSubjectTeacher }} />
+      <AdminStack.Screen name="GroupMembers" component={GroupMembersScreen} options={{ title: STR.gmTitle }} />
       <AdminStack.Screen name="AcademicYear" component={AcademicYearScreen} options={{ title: STR.ayManage }} />
       <AdminStack.Screen name="SectionConfig" component={SectionConfigScreen} options={{ title: STR.sectionConfig }} />
       <AdminStack.Screen name="GuardianCredentials" component={GuardianCredentialsScreen} options={{ title: STR.guardianCredentials }} />

@@ -263,6 +263,7 @@ export type AdminStackParamList = {
   Staff: undefined;
   AssignClassTeacher: undefined;
   AssignSubjectTeacher: undefined;
+  GroupMembers: undefined;
   AcademicYear: undefined;
   SectionConfig: undefined;
   GuardianCredentials: undefined;

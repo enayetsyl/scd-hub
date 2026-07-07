@@ -15,6 +15,7 @@ import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { STR, bnNum, lifecycleStateLabel, subjectLabel, hwResultLabel } from "../../lib/labels";
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
+import { useFileOpen } from "../../lib/useFileOpen";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
 
@@ -43,6 +44,7 @@ function RecordCard({
   onOpenFile: (fileId: string) => void;
 }): React.ReactElement {
   const r = record;
+  const { openingId, runOpen } = useFileOpen();
   return (
     <Card>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -87,7 +89,9 @@ function RecordCard({
             <Button
               title={STR.gpQuestionFile}
               variant="secondary"
-              onPress={() => onOpenFile(r.questionFileId!)}
+              loading={openingId === r.questionFileId}
+              disabled={!!openingId}
+              onPress={() => runOpen(r.questionFileId!, () => onOpenFile(r.questionFileId!))}
               style={{ flexGrow: 1 }}
             />
           ) : null}
@@ -95,7 +99,9 @@ function RecordCard({
             <Button
               title={STR.gpAnswerFile}
               variant="secondary"
-              onPress={() => onOpenFile(r.answerFileId!)}
+              loading={openingId === r.answerFileId}
+              disabled={!!openingId}
+              onPress={() => runOpen(r.answerFileId!, () => onOpenFile(r.answerFileId!))}
               style={{ flexGrow: 1 }}
             />
           ) : null}

@@ -18,6 +18,7 @@ import {
 import { Room, type IRoom } from "../models/Room";
 import { SubjectGroup, type ISubjectGroup } from "../models/SubjectGroup";
 import { SubjectGroupMembership } from "../models/SubjectGroupMembership";
+import { Student } from "../../foundation/models/Student";
 import { PeriodGrid, type IPeriodGrid, type IGridPeriod } from "../models/PeriodGrid";
 import { ScheduleWindow, type IScheduleWindow } from "../models/ScheduleWindow";
 import { HolidayException, type IHolidayException } from "../models/HolidayException";
@@ -175,6 +176,37 @@ builder.queryField("subjectGroupMembers", (t) =>
     resolve: async (_r, args) => {
       const rows = await SubjectGroupMembership.find({ groupId: args.groupId }).lean();
       return rows.map((m) => m.studentId.toString());
+    },
+  }),
+);
+
+// The members of a group WITH names — the admin "Group members" screen (R1.4)
+// needs student names, and a Quran/Arabic group spans sections, so a section-scoped
+// student read can't resolve them. Identity plane (studentId is already the join
+// key on SubjectGroupMembership); no corpus path (ADR-005).
+const GroupMemberRef = builder
+  .objectRef<{ id: string; name: string; schoolId: string }>("SubjectGroupMemberProfile")
+  .implement({
+    fields: (t) => ({
+      id: t.exposeString("id"),
+      name: t.exposeString("name"),
+      schoolId: t.exposeString("schoolId"),
+    }),
+  });
+
+builder.queryField("subjectGroupMemberProfiles", (t) =>
+  t.field({
+    type: [GroupMemberRef],
+    authScopes: { hasPermission: "routine:read" },
+    args: { groupId: t.arg.string({ required: true }) },
+    resolve: async (_r, args) => {
+      const rows = await SubjectGroupMembership.find({ groupId: args.groupId }).lean();
+      if (rows.length === 0) return [];
+      const students = (await Student.find({ _id: { $in: rows.map((m) => m.studentId) } })
+        .select("name schoolId")
+        .sort({ name: 1 })
+        .lean()) as unknown as Array<{ _id: { toString(): string }; name: string; schoolId: string }>;
+      return students.map((s) => ({ id: s._id.toString(), name: s.name, schoolId: s.schoolId }));
     },
   }),
 );
@@ -347,9 +379,17 @@ builder.mutationField("addGroupMember", (t) =>
       }).lean();
       if (existing && existing.groupId.toString() !== args.groupId)
         throw new Error(`Student is already in a ${group.track} group`);
+      // `track` is denormalized so the unique (studentId, track) index is the hard
+      // backstop if the check above is ever bypassed (race / direct write).
       await SubjectGroupMembership.updateOne(
         { groupId: args.groupId, studentId: args.studentId },
-        { $setOnInsert: { groupId: new Types.ObjectId(args.groupId), studentId: new Types.ObjectId(args.studentId) } },
+        {
+          $setOnInsert: {
+            groupId: new Types.ObjectId(args.groupId),
+            studentId: new Types.ObjectId(args.studentId),
+            track: group.track,
+          },
+        },
         { upsert: true },
       );
       return true;
