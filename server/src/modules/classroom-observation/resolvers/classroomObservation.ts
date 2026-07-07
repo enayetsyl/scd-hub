@@ -24,15 +24,19 @@ import {
   uploadObservation,
   assignObserver,
   reviewObservation,
+  publishObservation,
   requestReReview,
+  requestCoReview,
   respondToObservation,
   getObservation,
   observationsForTeacher,
-  allObservations,
+  observationsForRecording,
+  allObservationsPaged,
   myReviewQueue,
   canReadObservation,
   type ObservationActor,
   type ClassroomObservationShape,
+  type ObservationPageShape,
 } from "../services/ClassroomObservationService";
 import {
   getEscalationConfig,
@@ -110,8 +114,9 @@ QuranPayloadRef.implement({
 const ObservationRef = builder.objectRef<ClassroomObservationShape>("ClassroomObservation");
 ObservationRef.implement({
   description:
-    "A classroom observation on the REF-11 form (CO-1): session anchor + the assigned observer's scoring, " +
-    "released to the observed teacher at REVIEWED (no Principal sign-off). Identity plane (ADR-005).",
+    "A classroom observation on the REF-11 form (CO-1): session anchor + the assigned observer's scoring. " +
+    "Since CO-8 (D-#271) REVIEWED is observer/Principal-only; a Principal/Office PUBLISH (publishedAt) releases " +
+    "it to the observed teacher. Identity plane (ADR-005).",
   fields: (t) => ({
     id: t.exposeString("id"),
     form: t.exposeString("form"),
@@ -127,6 +132,8 @@ ObservationRef.implement({
     createdBy: t.exposeString("createdBy"),
     assignedAt: t.string({ nullable: true, resolve: (r) => r.assignedAt }),
     reviewedAt: t.string({ nullable: true, resolve: (r) => r.reviewedAt }),
+    publishedAt: t.string({ nullable: true, resolve: (r) => r.publishedAt }),
+    publishedBy: t.string({ nullable: true, resolve: (r) => r.publishedBy }),
     domains: t.field({ type: [DomainScoreRef], resolve: (r) => r.domains }),
     gates: t.field({ type: [GateScoreRef], resolve: (r) => r.gates }),
     oneStrength: t.string({ nullable: true, resolve: (r) => r.oneStrength }),
@@ -158,6 +165,17 @@ ObservationRef.implement({
     supersededById: t.string({ nullable: true, resolve: (r) => r.supersededById }),
     createdAt: t.exposeString("createdAt"),
     updatedAt: t.exposeString("updatedAt"),
+  }),
+});
+
+const ObservationPageRef = builder.objectRef<ObservationPageShape>("ClassroomObservationPage");
+ObservationPageRef.implement({
+  description:
+    "A page of classroom observations (oversight view): the items plus the UNPAGED total and a hasMore flag (WS1).",
+  fields: (t) => ({
+    items: t.field({ type: [ObservationRef], resolve: (r) => r.items }),
+    total: t.exposeInt("total"),
+    hasMore: t.exposeBoolean("hasMore"),
   }),
 });
 
@@ -338,6 +356,30 @@ builder.mutationField("reRequestClassroomObservation", (t) =>
   }),
 );
 
+builder.mutationField("requestCoReviewObservation", (t) =>
+  t.field({
+    type: ObservationRef,
+    description:
+      "Add a PARALLEL co-reviewer to a recording (CO-9, D-#272): creates a NEW independent ASSIGNED observation on " +
+      "the same recording/anchor as the source WITHOUT superseding it (unlike re-review). The source must have a " +
+      "recording; the co-observer ≠ observed teacher and must not already be reviewing this recording. Requires " +
+      "observation:upload (Principal/Office). Audited.",
+    authScopes: { hasPermission: "observation:upload" },
+    args: {
+      sourceObservationId: t.arg.string({ required: true }),
+      observerId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return requestCoReview({
+        sourceObservationId: args.sourceObservationId,
+        observerId: args.observerId,
+        actorId: actor.userId,
+      });
+    },
+  }),
+);
+
 builder.mutationField("respondToClassroomObservation", (t) =>
   t.field({
     type: ObservationRef,
@@ -357,6 +399,22 @@ builder.mutationField("respondToClassroomObservation", (t) =>
         responseText: args.responseText,
         actorId: actor.userId,
       });
+    },
+  }),
+);
+
+builder.mutationField("publishClassroomObservation", (t) =>
+  t.field({
+    type: ObservationRef,
+    description:
+      "Publish a REVIEWED observation to the observed teacher (CO-8, D-#271): stamps publishedAt/publishedBy and " +
+      "releases + notifies the teacher. Only a REVIEWED, not-yet-published row (an already-published row is refused). " +
+      "Requires observation:manage (Principal/Office). Audited.",
+    authScopes: { hasPermission: "observation:manage" },
+    args: { observationId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return publishObservation({ observationId: args.observationId, actorId: actor.userId });
     },
   }),
 );
@@ -471,10 +529,48 @@ builder.queryField("myObservationReviewQueue", (t) =>
 
 builder.queryField("allClassroomObservations", (t) =>
   t.field({
+    type: ObservationPageRef,
+    description:
+      "All observations, newest first — Principal/Office oversight view, filtered + paginated (WS1). Filters " +
+      "AND-combine; `search` matches the observed-teacher OR observer name. limit defaults 20 (max 100). " +
+      "Requires observation:upload.",
+    authScopes: { hasPermission: "observation:upload" },
+    args: {
+      teacherId: t.arg.string({ required: false }),
+      observerId: t.arg.string({ required: false }),
+      state: t.arg.string({ required: false }),
+      form: t.arg.string({ required: false }),
+      subject: t.arg.string({ required: false }),
+      dateFrom: t.arg.string({ required: false }),
+      dateTo: t.arg.string({ required: false }),
+      search: t.arg.string({ required: false }),
+      limit: t.arg.int({ required: false }),
+      offset: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) =>
+      allObservationsPaged({
+        teacherId: args.teacherId ?? undefined,
+        observerId: args.observerId ?? undefined,
+        state: args.state ?? undefined,
+        form: args.form ?? undefined,
+        subject: args.subject ?? undefined,
+        dateFrom: args.dateFrom ?? undefined,
+        dateTo: args.dateTo ?? undefined,
+        search: args.search ?? undefined,
+        limit: args.limit ?? undefined,
+        offset: args.offset ?? undefined,
+      }),
+  }),
+);
+
+builder.queryField("classroomObservationsForRecording", (t) =>
+  t.field({
     type: [ObservationRef],
     description:
-      "All observations, newest first — Principal/Office oversight view. Requires observation:upload.",
+      "Every observation on a recording — the CO-9 co-review group for the Principal compare view (each reviewer's " +
+      "row, oldest first). Requires observation:upload (Principal/Office).",
     authScopes: { hasPermission: "observation:upload" },
-    resolve: async () => allObservations(),
+    args: { recordingId: t.arg.string({ required: true }) },
+    resolve: async (_root, args) => observationsForRecording(args.recordingId),
   }),
 );

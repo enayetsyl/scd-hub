@@ -974,6 +974,9 @@ export const NOTIFICATION_KINDS = [
   "OBSERVATION_RESPONSE_REMINDER",
   "OBSERVATION_ESCALATED",
   "OBSERVATION_RESPONDED",
+  // CO-8 publish gate (D-#271): the manager nudge fired at REVIEWED — a review is
+  // waiting for Principal/Office to publish it to the observed teacher. App-native.
+  "OBSERVATION_READY_TO_PUBLISH",
   // FIN-2B finance fee-due chase (app-native, NO wire twin — D-#46/#227). The
   // guardian login-enabled inbox row for an outstanding fee due (wa.me for all).
   "FINANCE_FEE_DUE",
@@ -1010,6 +1013,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   OBSERVATION_RESPONSE_REMINDER: "পর্যবেক্ষণে সাড়া দেওয়ার তাগিদ",
   OBSERVATION_ESCALATED: "পর্যবেক্ষণে সাড়া বকেয়া",
   OBSERVATION_RESPONDED: "পর্যবেক্ষণে শিক্ষকের সাড়া",
+  OBSERVATION_READY_TO_PUBLISH: "পর্যবেক্ষণ প্রকাশের অপেক্ষায়",
   FINANCE_FEE_DUE: "ফি বকেয়ার তাগিদ",
   SR_ABSENT: "শনিবার রিভিশনে অনুপস্থিত",
   SR_DIGEST: "সাপ্তাহিক রিভিশন রিপোর্ট",
@@ -1035,6 +1039,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   OBSERVATION_RESPONSE_REMINDER: "Observation response reminder",
   OBSERVATION_ESCALATED: "Observation escalated",
   OBSERVATION_RESPONDED: "Observation responded",
+  OBSERVATION_READY_TO_PUBLISH: "Observation ready to publish",
   FINANCE_FEE_DUE: "Fee due reminder",
   SR_ABSENT: "Saturday revision — absent",
   SR_DIGEST: "Weekly revision digest",

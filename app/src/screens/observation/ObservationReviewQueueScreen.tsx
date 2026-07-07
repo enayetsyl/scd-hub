@@ -9,6 +9,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { MY_OBSERVATION_REVIEW_QUEUE_QUERY } from "../../graphql/observation";
+import { TEACHERS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Badge, Loader } from "../../components/ui";
 import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
@@ -19,6 +20,12 @@ type Nav = NativeStackNavigationProp<ObservationStackParamList>;
 export default function ObservationReviewQueueScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const [q] = useQuery({ query: MY_OBSERVATION_REVIEW_QUEUE_QUERY, variables: {} });
+  const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
+  const nameById = React.useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const t of teachersQ.data?.teachers ?? []) m[t.id] = t.name;
+    return m;
+  }, [teachersQ.data]);
   const rows = q.data?.myObservationReviewQueue ?? [];
 
   return (
@@ -39,7 +46,7 @@ export default function ObservationReviewQueueScreen(): React.ReactElement {
                     {obsFormLabel(o.form)} · {hwSubjectLabel(o.subject)}
                   </Body>
                   <Muted>
-                    {o.teacherId} · {new Date(o.classDate).toLocaleDateString()}
+                    {STR.obsTeacher}: {nameById[o.teacherId] ?? o.teacherId} · {new Date(o.classDate).toLocaleDateString()}
                   </Muted>
                 </View>
                 <Badge text={obsStateLabel(o.state)} tone="brand" />

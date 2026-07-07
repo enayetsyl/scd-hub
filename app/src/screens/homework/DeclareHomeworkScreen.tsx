@@ -14,7 +14,7 @@ import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, EmptyState } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { MoreOptions } from "../../components/MoreOptions";
-import { SectionBar } from "../../components/SectionBar";
+import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
 import { STR, hwSubjectLabel, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { required } from "../../lib/validate";
@@ -142,7 +142,7 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
   if (!hasSection) {
     return (
       <Screen>
-        <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
+        <ClassSectionDashboard />
         <EmptyState message={STR.pickSection} />
       </Screen>
     );
@@ -151,7 +151,7 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
   return (
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
-        <SectionBar onChange={() => navigation.navigate("SectionPicker")} />
+        <ClassSectionDashboard />
       </View>
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
         {lastItem ? (
