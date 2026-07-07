@@ -183,6 +183,8 @@ export interface ExpectedItem {
   teacherId: string;
   /** True once an AssignmentItem exists for (week × section × subject). */
   delivered: boolean;
+  /** AS-T6: null (no item) | "DRAFT" (awaiting weekly confirm) | "ISSUED". */
+  status: string | null;
   asItemId: string | null;
   asId: string | null;
 }
@@ -244,6 +246,7 @@ export async function expectedItemsForWeek(
     asId: string;
     sectionId: { toString(): string };
     subject: string;
+    status: string;
   }>;
   const itemKey = (sectionId: string, subject: string): string => `${sectionId}|${subject}`;
   const byEntry = new Map(existing.map((i) => [itemKey(i.sectionId.toString(), i.subject), i]));
@@ -267,6 +270,7 @@ export async function expectedItemsForWeek(
         subject: e.subject,
         teacherId: e.teacherId.toString(),
         delivered: !!item,
+        status: item ? item.status : null,
         asItemId: item ? item._id.toString() : null,
         asId: item ? item.asId : null,
       };

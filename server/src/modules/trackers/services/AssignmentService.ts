@@ -21,6 +21,7 @@
  * Write-scope (assertCanWrite) is enforced by the resolver, not here.
  */
 import type { LifecycleState, HwSubject } from "@scd/shared";
+import { AS_WEEKLY_CEILING_MIN } from "@scd/shared";
 import { AssignmentItem, type IAssignmentItem } from "../models/AssignmentItem";
 import {
   AssignmentStudentRecord,
@@ -74,6 +75,8 @@ export interface DeliverAssignmentInput {
   setId?: string;
   /** Teacher-set marks ceiling for checking (D-#87). */
   totalMarks?: number;
+  /** AS-T6 (D-#274): declared minutes for the weekly load ceiling. Default 20. */
+  estMinutes?: number;
   actorId: string;
   at?: Date;
 }
@@ -85,7 +88,11 @@ export interface DeliverAssignmentResult {
   subject: HwSubject;
   deliveryDate: string;
   dueDate: string;
-  deliveredCount: number;
+  /** AS-T6: the item is DRAFT until the section's week is confirmed under the cap. */
+  status: "DRAFT" | "ISSUED";
+  estMinutes: number;
+  /** Roster tallies (from draftRoster — records spawn only at confirmAssignmentWeek). */
+  presentCount: number;
   absentCount: number;
 }
 
@@ -130,10 +137,17 @@ export async function deliverAssignmentItem(
   if (input.totalMarks !== undefined && (!Number.isInteger(input.totalMarks) || input.totalMarks < 1)) {
     throw new Error("totalMarks must be a positive integer");
   }
+  const estMinutes = input.estMinutes ?? 20;
+  if (!Number.isInteger(estMinutes) || estMinutes < 0) {
+    throw new Error("estMinutes must be a non-negative integer");
+  }
 
   const at = input.at ?? new Date();
   const asId = await generateAsId(input.academicYearId, entry.classLevel, entry.subject);
 
+  // AS-T6 (D-#274): deliver DRAFTS the item — the present/absent roster is stored on
+  // the item; per-student records are NOT spawned here. confirmAssignmentWeek issues
+  // them once the section's weekly estMinutes sum is confirmed under the ceiling.
   const item = await AssignmentItem.create({
     asId,
     academicYearId: input.academicYearId,
@@ -149,27 +163,12 @@ export async function deliverAssignmentItem(
     dueDate: resolved.dueDate,
     setId: input.setId,
     totalMarks: input.totalMarks,
+    estMinutes,
+    status: "DRAFT",
+    draftRoster: input.roster.map((r) => ({ studentId: r.studentId, present: r.present })),
     deliveredBy: input.actorId,
     deliveredAt: at,
   });
-
-  const records = input.roster.map((r) => {
-    const state: LifecycleState = r.present ? "GIVEN" : "ABSENT_REDELIVER";
-    return {
-      asItemId: item._id,
-      asId,
-      studentId: r.studentId,
-      sectionId: entry.sectionId,
-      classId: entry.classId,
-      state,
-      stateDates: [{ state, at }],
-      // The assignment due date is item-wide; an absent record gets it on redelivery.
-      dueDate: r.present ? item.dueDate : undefined,
-      chaseCount: 0,
-      issuedBy: input.actorId,
-    };
-  });
-  await AssignmentStudentRecord.insertMany(records);
 
   return {
     itemId: item._id.toString(),
@@ -178,8 +177,169 @@ export async function deliverAssignmentItem(
     subject: entry.subject,
     deliveryDate: item.deliveryDate.toISOString(),
     dueDate: item.dueDate.toISOString(),
-    deliveredCount: records.filter((r) => r.state === "GIVEN").length,
-    absentCount: records.filter((r) => r.state === "ABSENT_REDELIVER").length,
+    status: "DRAFT",
+    estMinutes,
+    presentCount: input.roster.filter((r) => r.present).length,
+    absentCount: input.roster.filter((r) => !r.present).length,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// AS-T6 (D-#274) — weekly load ceiling: reconcile + confirm
+// ---------------------------------------------------------------------------
+
+export interface WeekLoadItem {
+  itemId: string;
+  asId: string;
+  subject: HwSubject;
+  estMinutes: number;
+  status: "DRAFT" | "ISSUED";
+}
+export interface WeekLoadResult {
+  academicYearId: string;
+  sectionId: string;
+  weekNumber: number;
+  ceiling: number;
+  /** Σ estMinutes over ALL items this week (DRAFT + ISSUED) — the section's weekly load. */
+  totalMinutes: number;
+  draftMinutes: number;
+  overBy: number;
+  withinCeiling: boolean;
+  hasDrafts: boolean;
+  items: WeekLoadItem[];
+}
+
+/** The reconcile read: every assignment item for (section × week) with its minutes,
+ *  the weekly total vs the 180 ceiling, and per-item DRAFT/ISSUED status. */
+export async function assignmentWeekLoad(
+  academicYearId: string,
+  sectionId: string,
+  weekNumber: number,
+): Promise<WeekLoadResult> {
+  const items = (await AssignmentItem.find({ academicYearId, sectionId, weekNumber })
+    .sort({ subject: 1 })
+    .lean()) as unknown as IAssignmentItem[];
+  const totalMinutes = items.reduce((s, it) => s + (it.estMinutes ?? 0), 0);
+  const draftMinutes = items.filter((it) => it.status === "DRAFT").reduce((s, it) => s + (it.estMinutes ?? 0), 0);
+  return {
+    academicYearId,
+    sectionId,
+    weekNumber,
+    ceiling: AS_WEEKLY_CEILING_MIN,
+    totalMinutes,
+    draftMinutes,
+    overBy: Math.max(0, totalMinutes - AS_WEEKLY_CEILING_MIN),
+    withinCeiling: totalMinutes <= AS_WEEKLY_CEILING_MIN,
+    hasDrafts: items.some((it) => it.status === "DRAFT"),
+    items: items.map((it) => ({
+      itemId: it._id.toString(),
+      asId: it.asId,
+      subject: it.subject,
+      estMinutes: it.estMinutes ?? 0,
+      status: it.status,
+    })),
+  };
+}
+
+/** Trim a DRAFT item's declared minutes (to bring the week under the ceiling before
+ *  confirm). ISSUED items are frozen — records already exist. */
+export async function setAssignmentItemMinutes(
+  itemId: string,
+  estMinutes: number,
+): Promise<{ itemId: string; estMinutes: number }> {
+  if (!Number.isInteger(estMinutes) || estMinutes < 0) {
+    throw new Error("estMinutes must be a non-negative integer");
+  }
+  const item = await AssignmentItem.findById(itemId);
+  if (!item) throw new Error("AssignmentItem not found");
+  if (item.status !== "DRAFT") {
+    throw new Error("Only a DRAFT assignment's minutes can be changed (the week is already issued)");
+  }
+  item.estMinutes = estMinutes;
+  await item.save();
+  return { itemId: item._id.toString(), estMinutes };
+}
+
+export interface ConfirmWeekResult {
+  academicYearId: string;
+  sectionId: string;
+  weekNumber: number;
+  ceiling: number;
+  totalMinutes: number;
+  itemsIssued: number;
+  recordsIssued: number;
+}
+
+/** The AS-T6 gate: confirm a section's week. Sums the week's estMinutes (DRAFT +
+ *  already-ISSUED); HARD-BLOCKS over AS_WEEKLY_CEILING_MIN (trim required). Otherwise
+ *  spawns the per-student records for every DRAFT item from its stored roster and
+ *  flips it to ISSUED. Records exist only after this — the homework confirmDay mirror. */
+export async function confirmAssignmentWeek(input: {
+  academicYearId: string;
+  sectionId: string;
+  weekNumber: number;
+  actorId: string;
+  at?: Date;
+}): Promise<ConfirmWeekResult> {
+  const items = await AssignmentItem.find({
+    academicYearId: input.academicYearId,
+    sectionId: input.sectionId,
+    weekNumber: input.weekNumber,
+  });
+  if (items.length === 0) {
+    throw new Error(`No assignments delivered for week ${input.weekNumber} in this section yet`);
+  }
+  const drafts = items.filter((it) => it.status === "DRAFT");
+  if (drafts.length === 0) {
+    throw new Error(`Week ${input.weekNumber} is already confirmed for this section`);
+  }
+
+  const totalMinutes = items.reduce((s, it) => s + (it.estMinutes ?? 0), 0);
+  if (totalMinutes > AS_WEEKLY_CEILING_MIN) {
+    throw new Error(
+      `Week ${input.weekNumber} total ${totalMinutes} min exceeds the ${AS_WEEKLY_CEILING_MIN}-min weekly ceiling — ` +
+        `trim a subject before confirming (AS-T6)`,
+    );
+  }
+
+  const at = input.at ?? new Date();
+  let recordsIssued = 0;
+  for (const item of drafts) {
+    const roster = item.draftRoster ?? [];
+    const records = roster.map((r) => {
+      const state: LifecycleState = r.present ? "GIVEN" : "ABSENT_REDELIVER";
+      return {
+        asItemId: item._id,
+        asId: item.asId,
+        studentId: r.studentId,
+        sectionId: item.sectionId,
+        classId: item.classId,
+        state,
+        stateDates: [{ state, at }],
+        dueDate: r.present ? item.dueDate : undefined,
+        chaseCount: 0,
+        issuedBy: input.actorId,
+      };
+    });
+    if (records.length > 0) {
+      await AssignmentStudentRecord.insertMany(records);
+      recordsIssued += records.length;
+    }
+    item.status = "ISSUED";
+    item.issuedAt = at;
+    item.issuedBy = input.actorId as unknown as IAssignmentItem["issuedBy"];
+    item.draftRoster = undefined;
+    await item.save();
+  }
+
+  return {
+    academicYearId: input.academicYearId,
+    sectionId: input.sectionId,
+    weekNumber: input.weekNumber,
+    ceiling: AS_WEEKLY_CEILING_MIN,
+    totalMinutes,
+    itemsIssued: drafts.length,
+    recordsIssued,
   };
 }
 

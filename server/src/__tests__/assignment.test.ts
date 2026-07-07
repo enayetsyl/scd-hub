@@ -16,6 +16,7 @@ const mockScheduleFindOne = jest.fn();
 const mockItemCreate = jest.fn();
 const mockItemFindOne = jest.fn();
 const mockItemFindById = jest.fn();
+const mockItemFind = jest.fn();
 const mockRecInsertMany = jest.fn();
 const mockRecFindById = jest.fn();
 const mockRecFind = jest.fn();
@@ -29,7 +30,21 @@ jest.mock("../modules/trackers/models/AssignmentItem", () => ({
   AssignmentItem: {
     create: (a: unknown) => mockItemCreate(a),
     findOne: (q: unknown) => ({ lean: () => mockItemFindOne(q) }),
-    findById: (id: unknown) => ({ lean: () => mockItemFindById(id) }),
+    // findById() supports both `await findById(id)` (trim — a savable doc) and
+    // `findById(id).lean()` (scope checks — a plain row).
+    findById: (id: unknown) => {
+      const result = mockItemFindById(id);
+      return Object.assign(Promise.resolve(result), { lean: () => Promise.resolve(result) });
+    },
+    // find() supports both `await find(q)` (confirm — docs with .save()) and
+    // `find(q).sort().lean()` (weekLoad — plain rows).
+    find: (q: unknown) => {
+      const result = mockItemFind(q);
+      return Object.assign(Promise.resolve(result), {
+        sort: () => ({ lean: () => Promise.resolve(result) }),
+        lean: () => Promise.resolve(result),
+      });
+    },
   },
 }));
 jest.mock("../modules/trackers/models/AssignmentStudentRecord", () => ({
@@ -57,6 +72,9 @@ import {
   sweepAssignmentChases,
   transitionAssignmentRecord,
   assignmentItemCounts,
+  confirmAssignmentWeek,
+  assignmentWeekLoad,
+  setAssignmentItemMinutes,
 } from "../modules/trackers/services/AssignmentService";
 
 const oid = () => new mongoose.Types.ObjectId();
@@ -144,7 +162,7 @@ describe("AJ-3 — deliverAssignmentItem", () => {
     { studentId: oid().toString(), present: false },
   ];
 
-  test("Thursday holiday → item carries the PREVIOUS open day; roster spawns GIVEN/ABSENT_REDELIVER; counts derived", async () => {
+  test("AS-T6: deliver DRAFTS the item — previous-open date, roster stored, estMinutes set, NO records spawned", async () => {
     mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
     // Week 1 THU = Jan 8 — a holiday; expect delivery Wed Jan 7
     mockHolidayFind.mockResolvedValue([
@@ -157,21 +175,32 @@ describe("AJ-3 — deliverAssignmentItem", () => {
       entryId: ENTRY_ID.toString(),
       roster,
       totalMarks: 10,
+      estMinutes: 45,
       actorId: ACTOR,
     });
 
     expect(new Date(res.deliveryDate)).toEqual(new Date(2026, 0, 7)); // rolled back
     expect(new Date(res.dueDate)).toEqual(new Date(2026, 0, 11)); // Sun unchanged
     expect(res.asId).toBe("AS-C2-BAN-0001");
-    expect(res.deliveredCount).toBe(2); // derived from the roster, never typed
+    expect(res.status).toBe("DRAFT");
+    expect(res.estMinutes).toBe(45);
+    expect(res.presentCount).toBe(2); // from the roster, never typed
     expect(res.absentCount).toBe(1);
 
-    const docs = mockRecInsertMany.mock.calls[0][0] as Array<Record<string, unknown>>;
-    expect(docs).toHaveLength(3);
-    expect(docs.filter((d) => d.state === "GIVEN")).toHaveLength(2);
-    const absent = docs.find((d) => d.state === "ABSENT_REDELIVER")!;
-    expect(absent.dueDate).toBeUndefined(); // no due until redelivered
-    expect(docs[0].dueDate).toEqual(new Date(2026, 0, 11));
+    // No student records at deliver — the item is a DRAFT carrying the roster.
+    expect(mockRecInsertMany).not.toHaveBeenCalled();
+    const created = mockItemCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(created.status).toBe("DRAFT");
+    expect(created.estMinutes).toBe(45);
+    expect(created.draftRoster).toHaveLength(3);
+  });
+
+  test("estMinutes defaults to 20 when omitted", async () => {
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
+    const res = await deliverAssignmentItem({
+      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, actorId: ACTOR,
+    });
+    expect(res.estMinutes).toBe(20);
   });
 
   test("double delivery of the same (week × section × subject) is rejected", async () => {
@@ -204,6 +233,96 @@ describe("AJ-3 — deliverAssignmentItem", () => {
     await expect(
       deliverAssignmentItem({ academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster: [], actorId: ACTOR }),
     ).rejects.toThrow(/roster/);
+  });
+});
+
+// ===========================================================================
+// AS-T6 — weekly ceiling: confirm gate + reconcile load + trim (AJ-9 / AJ-10)
+// ===========================================================================
+
+function draftItem(over: Record<string, unknown> = {}) {
+  return {
+    _id: oid(),
+    asId: "AS-C2-BAN-0001",
+    subject: "BAN",
+    sectionId: SECTION,
+    classId: CLASS,
+    dueDate: new Date(2026, 0, 11),
+    status: "DRAFT",
+    estMinutes: 60,
+    draftRoster: [
+      { studentId: oid(), present: true },
+      { studentId: oid(), present: false },
+    ],
+    save: jest.fn().mockResolvedValue(true),
+    ...over,
+  };
+}
+
+describe("AJ-9 — confirmAssignmentWeek (180-min weekly gate)", () => {
+  const args = { academicYearId: YEAR, sectionId: SECTION.toString(), weekNumber: 1, actorId: ACTOR };
+
+  test("over 180 → HARD-BLOCKED (trim required); no records issued, nothing flipped", async () => {
+    const items = [draftItem({ estMinutes: 60 }), draftItem({ estMinutes: 75 }), draftItem({ estMinutes: 60 })]; // 195
+    mockItemFind.mockReturnValue(items);
+    await expect(confirmAssignmentWeek(args)).rejects.toThrow(/exceeds the 180-min weekly ceiling/);
+    expect(mockRecInsertMany).not.toHaveBeenCalled();
+    expect(items[0].save).not.toHaveBeenCalled();
+  });
+
+  test("≤180 → issues each DRAFT's per-student records (GIVEN/ABSENT_REDELIVER) + flips ISSUED", async () => {
+    const a = draftItem({ estMinutes: 60 });
+    const b = draftItem({ estMinutes: 60 });
+    mockItemFind.mockReturnValue([a, b]); // 120
+    const res = await confirmAssignmentWeek(args);
+    expect(res.totalMinutes).toBe(120);
+    expect(res.itemsIssued).toBe(2);
+    expect(res.recordsIssued).toBe(4); // 2 roster rows each
+    expect(a.status).toBe("ISSUED");
+    expect(a.save).toHaveBeenCalled();
+    const docs = mockRecInsertMany.mock.calls[0][0] as Array<Record<string, unknown>>;
+    expect(docs.some((d) => d.state === "GIVEN")).toBe(true);
+    expect(docs.some((d) => d.state === "ABSENT_REDELIVER")).toBe(true);
+  });
+
+  test("the cap counts DRAFT + already-ISSUED — it can't be split across confirm batches", async () => {
+    mockItemFind.mockReturnValue([draftItem({ status: "ISSUED", estMinutes: 120 }), draftItem({ status: "DRAFT", estMinutes: 75 })]); // 195
+    await expect(confirmAssignmentWeek(args)).rejects.toThrow(/exceeds/);
+  });
+
+  test("no drafts (already confirmed) and no items (nothing delivered) are rejected clearly", async () => {
+    mockItemFind.mockReturnValue([draftItem({ status: "ISSUED" })]);
+    await expect(confirmAssignmentWeek(args)).rejects.toThrow(/already confirmed/);
+    mockItemFind.mockReturnValue([]);
+    await expect(confirmAssignmentWeek(args)).rejects.toThrow(/No assignments delivered/);
+  });
+});
+
+describe("AS-T6 — assignmentWeekLoad + setAssignmentItemMinutes (reconcile + trim)", () => {
+  test("weekLoad sums estMinutes vs the 180 ceiling and flags over-by", async () => {
+    mockItemFind.mockReturnValue([
+      { _id: oid(), asId: "a", subject: "BAN", estMinutes: 120, status: "ISSUED" },
+      { _id: oid(), asId: "b", subject: "MATH", estMinutes: 75, status: "DRAFT" },
+    ]);
+    const load = await assignmentWeekLoad(YEAR, SECTION.toString(), 1);
+    expect(load.totalMinutes).toBe(195);
+    expect(load.draftMinutes).toBe(75);
+    expect(load.overBy).toBe(15);
+    expect(load.withinCeiling).toBe(false);
+    expect(load.hasDrafts).toBe(true);
+    expect(load.items).toHaveLength(2);
+  });
+
+  test("trim lowers a DRAFT item's minutes; an ISSUED item is frozen", async () => {
+    const draft = draftItem({ estMinutes: 75 });
+    mockItemFindById.mockResolvedValue(draft);
+    const r = await setAssignmentItemMinutes(draft._id.toString(), 45);
+    expect(r.estMinutes).toBe(45);
+    expect(draft.estMinutes).toBe(45);
+    expect(draft.save).toHaveBeenCalled();
+
+    mockItemFindById.mockResolvedValue(draftItem({ status: "ISSUED" }));
+    await expect(setAssignmentItemMinutes(oid().toString(), 30)).rejects.toThrow(/already issued/);
   });
 });
 

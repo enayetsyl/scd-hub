@@ -40,6 +40,9 @@ import {
   sweepAssignmentChases as sweepSvc,
   transitionAssignmentRecord as transitionSvc,
   assignmentItemCounts as countsSvc,
+  assignmentWeekLoad as weekLoadSvc,
+  setAssignmentItemMinutes as setMinutesSvc,
+  confirmAssignmentWeek as confirmWeekSvc,
   listAssignmentItems,
   listAssignmentRecords,
 } from "../services/AssignmentService";
@@ -61,10 +64,12 @@ import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { Subject } from "../../foundation/models/Subject";
+import { Section } from "../../foundation/models/Section";
 import {
   assertCanWrite,
   assertCanRead,
   assertGuardianOfStudent,
+  isClassTeacher,
   ForbiddenError,
 } from "../../../middleware/authz";
 
@@ -121,6 +126,18 @@ async function assertItemInSection(itemId: string, sectionId: string): Promise<v
   if (!item) throw new Error("AssignmentItem not found");
   if (item.sectionId.toString() !== sectionId) {
     throw new ForbiddenError("Item is not in the given section");
+  }
+}
+
+/** AS-T6 weekly reconcile/confirm owner (D-#274): the section's class teacher
+ *  (daily coordinator, D-#42/#45) OR a `roster:manage` holder (Principal/Office). */
+async function assertCanConfirmAssignmentWeek(ctx: AppContext, sectionId: string): Promise<void> {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  if (callerHasPermission(ctx.auth, "roster:manage")) return;
+  const section = await Section.findById(sectionId).select("classTeacherId").lean();
+  const ctId = section?.classTeacherId ? section.classTeacherId.toString() : null;
+  if (!isClassTeacher(ctId, ctx.auth.userId as string)) {
+    throw new ForbiddenError("Only the section's class teacher or an admin may reconcile the week (AS-T6)");
   }
 }
 
@@ -214,6 +231,8 @@ interface ExpectedItemShape {
   subject: string;
   teacherId: string;
   delivered: boolean;
+  /** AS-T6: null (no item) | "DRAFT" (delivered, awaiting weekly confirm) | "ISSUED". */
+  status: string | null;
   asItemId: string | null;
   asId: string | null;
 }
@@ -228,6 +247,7 @@ ExpectedItemRef.implement({
     subject: t.exposeString("subject"),
     teacherId: t.exposeString("teacherId"),
     delivered: t.exposeBoolean("delivered"),
+    status: t.string({ nullable: true, resolve: (r) => r.status }),
     asItemId: t.string({ nullable: true, resolve: (r) => r.asItemId }),
     asId: t.string({ nullable: true, resolve: (r) => r.asId }),
   }),
@@ -290,7 +310,9 @@ interface DeliverResultShape {
   subject: string;
   deliveryDate: string;
   dueDate: string;
-  deliveredCount: number;
+  status: string;
+  estMinutes: number;
+  presentCount: number;
   absentCount: number;
 }
 const DeliverResultRef = builder.objectRef<DeliverResultShape>("DeliverAssignmentResult");
@@ -302,7 +324,9 @@ DeliverResultRef.implement({
     subject: t.exposeString("subject"),
     deliveryDate: t.exposeString("deliveryDate"),
     dueDate: t.exposeString("dueDate"),
-    deliveredCount: t.exposeInt("deliveredCount"),
+    status: t.exposeString("status"),
+    estMinutes: t.exposeInt("estMinutes"),
+    presentCount: t.exposeInt("presentCount"),
     absentCount: t.exposeInt("absentCount"),
   }),
 });
@@ -825,8 +849,9 @@ builder.mutationField("deliverAssignment", (t) =>
   t.field({
     type: DeliverResultRef,
     description:
-      "The delivery pass (AJ-3): materialize the expected item (dates §4-resolved server-side) + " +
-      "spawn per-student records (present→GIVEN, absent→ABSENT_REDELIVER). Write-scope enforced.",
+      "The delivery pass (AJ-3, AS-T6): DRAFT the item (dates §4-resolved server-side) + store the " +
+      "present/absent roster + estMinutes. Per-student records are issued later by confirmAssignmentWeek. " +
+      "Write-scope enforced.",
     authScopes: { hasPermission: "tracker:write" },
     args: {
       academicYearId: t.arg.string({ required: true }),
@@ -836,6 +861,7 @@ builder.mutationField("deliverAssignment", (t) =>
       roster: t.arg({ type: [DeliveryRosterInput], required: true }),
       setId: t.arg.string({ required: false }),
       totalMarks: t.arg.int({ required: false }),
+      estMinutes: t.arg.int({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -854,6 +880,154 @@ builder.mutationField("deliverAssignment", (t) =>
         roster: args.roster.map((r) => ({ studentId: r.studentId, present: r.present })),
         setId: args.setId ?? undefined,
         totalMarks: args.totalMarks ?? undefined,
+        estMinutes: args.estMinutes ?? undefined,
+        actorId: ctx.auth.userId as string,
+      });
+    },
+  }),
+);
+
+// ===========================================================================
+// AS-T6 — weekly load ceiling: reconcile read + trim + confirm gate (D-#274)
+// ===========================================================================
+
+interface WeekLoadItemShape {
+  itemId: string;
+  asId: string;
+  subject: string;
+  estMinutes: number;
+  status: string;
+}
+const WeekLoadItemRef = builder.objectRef<WeekLoadItemShape>("AssignmentWeekLoadItem");
+WeekLoadItemRef.implement({
+  fields: (t) => ({
+    itemId: t.exposeString("itemId"),
+    asId: t.exposeString("asId"),
+    subject: t.exposeString("subject"),
+    estMinutes: t.exposeInt("estMinutes"),
+    status: t.exposeString("status"),
+  }),
+});
+
+interface WeekLoadShape {
+  academicYearId: string;
+  sectionId: string;
+  weekNumber: number;
+  ceiling: number;
+  totalMinutes: number;
+  draftMinutes: number;
+  overBy: number;
+  withinCeiling: boolean;
+  hasDrafts: boolean;
+  items: WeekLoadItemShape[];
+}
+const WeekLoadRef = builder.objectRef<WeekLoadShape>("AssignmentWeekLoad");
+WeekLoadRef.implement({
+  description: "AS-T6 reconcile read: the section's week, per-subject minutes vs the 180 ceiling.",
+  fields: (t) => ({
+    academicYearId: t.exposeString("academicYearId"),
+    sectionId: t.exposeString("sectionId"),
+    weekNumber: t.exposeInt("weekNumber"),
+    ceiling: t.exposeInt("ceiling"),
+    totalMinutes: t.exposeInt("totalMinutes"),
+    draftMinutes: t.exposeInt("draftMinutes"),
+    overBy: t.exposeInt("overBy"),
+    withinCeiling: t.exposeBoolean("withinCeiling"),
+    hasDrafts: t.exposeBoolean("hasDrafts"),
+    items: t.field({ type: [WeekLoadItemRef], resolve: (r) => r.items }),
+  }),
+});
+
+builder.queryField("assignmentWeekLoad", (t) =>
+  t.field({
+    type: WeekLoadRef,
+    description: "AS-T6: the section's weekly assignment load vs the 180-min ceiling (reconcile view).",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      academicYearId: t.arg.string({ required: true }),
+      sectionId: t.arg.string({ required: true }),
+      weekNumber: t.arg.int({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const section = await Section.findById(args.sectionId).select("classId").lean();
+      if (!section) throw new Error("Section not found");
+      await assertCanRead(ctx, args.sectionId, section.classId.toString());
+      return weekLoadSvc(args.academicYearId, args.sectionId, args.weekNumber);
+    },
+  }),
+);
+
+interface SetMinutesShape {
+  itemId: string;
+  estMinutes: number;
+}
+const SetMinutesRef = builder.objectRef<SetMinutesShape>("AssignmentItemMinutesResult");
+SetMinutesRef.implement({
+  fields: (t) => ({
+    itemId: t.exposeString("itemId"),
+    estMinutes: t.exposeInt("estMinutes"),
+  }),
+});
+
+builder.mutationField("setAssignmentItemMinutes", (t) =>
+  t.field({
+    type: SetMinutesRef,
+    description: "AS-T6: trim a DRAFT assignment's declared minutes (class teacher / roster:manage).",
+    authScopes: { authenticated: true },
+    args: {
+      itemId: t.arg.string({ required: true }),
+      estMinutes: t.arg.int({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const item = await AssignmentItem.findById(args.itemId).select("sectionId").lean();
+      if (!item) throw new Error("AssignmentItem not found");
+      await assertCanConfirmAssignmentWeek(ctx, item.sectionId.toString());
+      return setMinutesSvc(args.itemId, args.estMinutes);
+    },
+  }),
+);
+
+const ConfirmWeekRef = builder
+  .objectRef<{
+    academicYearId: string;
+    sectionId: string;
+    weekNumber: number;
+    ceiling: number;
+    totalMinutes: number;
+    itemsIssued: number;
+    recordsIssued: number;
+  }>("ConfirmAssignmentWeekResult")
+  .implement({
+    fields: (t) => ({
+      academicYearId: t.exposeString("academicYearId"),
+      sectionId: t.exposeString("sectionId"),
+      weekNumber: t.exposeInt("weekNumber"),
+      ceiling: t.exposeInt("ceiling"),
+      totalMinutes: t.exposeInt("totalMinutes"),
+      itemsIssued: t.exposeInt("itemsIssued"),
+      recordsIssued: t.exposeInt("recordsIssued"),
+    }),
+  });
+
+builder.mutationField("confirmAssignmentWeek", (t) =>
+  t.field({
+    type: ConfirmWeekRef,
+    description:
+      "AS-T6 gate: confirm a section's week — HARD-BLOCKS if Σ estMinutes > 180, else issues every " +
+      "DRAFT item's per-student records and flips them ISSUED. Class teacher / roster:manage.",
+    authScopes: { authenticated: true },
+    args: {
+      academicYearId: t.arg.string({ required: true }),
+      sectionId: t.arg.string({ required: true }),
+      weekNumber: t.arg.int({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanConfirmAssignmentWeek(ctx, args.sectionId);
+      return confirmWeekSvc({
+        academicYearId: args.academicYearId,
+        sectionId: args.sectionId,
+        weekNumber: args.weekNumber,
         actorId: ctx.auth.userId as string,
       });
     },
