@@ -155,13 +155,13 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                       {classLevelLabel(item.classLevel)} — {hwSubjectLabel(item.subject)}
                     </Body>
                     <Badge
-                      text={item.delivered ? STR.asDelivered : STR.asNotDelivered}
-                      tone={item.delivered ? "ok" : "warn"}
+                      text={item.status === "ISSUED" ? STR.asDelivered : item.delivered ? STR.asDraft : STR.asNotDelivered}
+                      tone={item.status === "ISSUED" ? "ok" : item.delivered ? "brand" : "warn"}
                     />
                   </View>
                   {item.asId ? <Muted style={{ marginTop: 2 }}>{item.asId}</Muted> : null}
                   <View style={{ marginTop: 8 }}>
-                    {item.delivered && item.asItemId ? (
+                    {item.status === "ISSUED" && item.asItemId ? (
                       <ChipRow>
                         <Chip
                           label={STR.asCollectTitle}
@@ -186,6 +186,22 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                           }
                         />
                       </ChipRow>
+                    ) : item.delivered ? (
+                      // DRAFT — awaiting the weekly confirm (AS-T6)
+                      <View>
+                        <Muted style={{ marginBottom: 6 }}>{STR.asAwaitingConfirm}</Muted>
+                        <Chip
+                          label={`⚖️ ${STR.asReconcileTitle}`}
+                          onPress={() =>
+                            navigation.navigate("AssignmentReconcile", {
+                              academicYearId: yearId,
+                              sectionId: item.sectionId,
+                              classId: item.classId,
+                              weekNumber,
+                            })
+                          }
+                        />
+                      </View>
                     ) : canTrackerRead ? (
                       <Button title={STR.asDeliver} onPress={() => openDeliver(item)} />
                     ) : null}

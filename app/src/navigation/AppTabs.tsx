@@ -78,6 +78,7 @@ import AssignmentScheduleScreen from "../screens/assignment/AssignmentScheduleSc
 import DeliverAssignmentScreen from "../screens/assignment/DeliverAssignmentScreen";
 import CollectAssignmentScreen from "../screens/assignment/CollectAssignmentScreen";
 import AssignmentCheckingScreen from "../screens/assignment/AssignmentCheckingScreen";
+import AssignmentReconcileScreen from "../screens/assignment/AssignmentReconcileScreen";
 import AssignmentChaseScreen from "../screens/assignment/AssignmentChaseScreen";
 import AssignmentRollupsScreen from "../screens/assignment/AssignmentRollupsScreen";
 import ChildAssignmentsScreen from "../screens/guardian/ChildAssignmentsScreen";
@@ -527,6 +528,7 @@ function AssignmentNavigator(): React.ReactElement {
       <AssignmentStack.Screen name="DeliverAssignment" component={DeliverAssignmentScreen} options={{ title: STR.asDeliverTitle }} />
       <AssignmentStack.Screen name="CollectAssignment" component={CollectAssignmentScreen} options={{ title: STR.asCollectTitle }} />
       <AssignmentStack.Screen name="AssignmentChecking" component={AssignmentCheckingScreen} options={{ title: STR.asCheckTitle }} />
+      <AssignmentStack.Screen name="AssignmentReconcile" component={AssignmentReconcileScreen} options={{ title: STR.asReconcileTitle }} />
       <AssignmentStack.Screen name="AssignmentChase" component={AssignmentChaseScreen} options={{ title: STR.asChaseTitle }} />
       <AssignmentStack.Screen name="AssignmentRollups" component={AssignmentRollupsScreen} options={{ title: STR.asRollupsTitle }} />
     </AssignmentStack.Navigator>
