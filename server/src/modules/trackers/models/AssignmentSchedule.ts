@@ -16,7 +16,7 @@
  * `assignment` tracker-kind: no new vocab, no wire-contract sync (PRD header).
  */
 import { Schema, model, Document, Types } from "mongoose";
-import { HW_SUBJECTS } from "@scd/shared";
+import { HW_SUBJECTS, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
 import type { HwSubject } from "@scd/shared";
 
 export interface IAssignmentScheduleEntry {
@@ -49,7 +49,8 @@ export interface IAssignmentSchedule extends Document {
 const AssignmentScheduleEntrySchema = new Schema<IAssignmentScheduleEntry>({
   cycleWeek: { type: Number, required: true, min: 1, max: 4 },
   classId: { type: Schema.Types.ObjectId, required: true },
-  classLevel: { type: Number, required: true, min: 1, max: 5 },
+  // Roster range −1..5 (Nursery/KG included, BUG-016) — the addScheduleEntry service also validates this.
+  classLevel: { type: Number, required: true, min: ROSTER_CLASS_LEVEL_MIN, max: ROSTER_CLASS_LEVEL_MAX },
   sectionId: { type: Schema.Types.ObjectId, required: true },
   subject: { type: String, enum: HW_SUBJECTS, required: true },
   teacherId: { type: Schema.Types.ObjectId, required: true },
