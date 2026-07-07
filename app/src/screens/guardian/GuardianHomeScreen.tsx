@@ -25,6 +25,7 @@ import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } 
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
+import { useFileOpen } from "../../lib/useFileOpen";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { openNotificationCenter } from "../../navigation/navigationRef";
 import type { GuardianHomeStackParamList } from "../../navigation/types";
@@ -63,6 +64,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
   const lang = getActiveLang();
   const sid = selected?.studentId ?? "";
   const date = today();
+  const { openingId, runOpen } = useFileOpen();
 
   const [routineQ, refetchRoutine] = useQuery({
     query: CHILD_ROUTINE_QUERY,
@@ -428,7 +430,9 @@ export default function GuardianHomeScreen(): React.ReactElement {
                         key={fid}
                         title={STR.cmOpenAttachment}
                         variant="ghost"
-                        onPress={() => void openStoredFile(fid)}
+                        loading={openingId === fid}
+                        disabled={!!openingId}
+                        onPress={() => runOpen(fid, () => openStoredFile(fid).catch(() => {}))}
                       />
                     ))}
                   </View>

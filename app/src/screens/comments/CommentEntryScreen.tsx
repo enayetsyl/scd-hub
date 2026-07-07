@@ -32,6 +32,7 @@ import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { useToast } from "../../state/ToastContext";
 import { pickAndUploadCommentFile, openStoredFile, FileUploadError, FILE_VIEW_SUPPORTED } from "../../lib/files";
+import { useFileOpen } from "../../lib/useFileOpen";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
 
@@ -156,6 +157,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
       toast.show(e instanceof FileUploadError ? e.message : STR.cmFileUploadFail, "danger");
     }
   }
+  const { openingId, runOpen } = useFileOpen();
 
   async function onDeliver(): Promise<void> {
     if (!commentId) return;
@@ -260,7 +262,13 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
               >
                 <Muted>{`${STR.cmAttachmentN} ${bnNum(i + 1)}`}</Muted>
                 <View style={{ flex: 1 }} />
-                <Button title={STR.cmOpenAttachment} variant="ghost" onPress={() => void onOpenAttachment(fid)} />
+                <Button
+                  title={STR.cmOpenAttachment}
+                  variant="ghost"
+                  loading={openingId === fid}
+                  disabled={!!openingId}
+                  onPress={() => runOpen(fid, () => onOpenAttachment(fid))}
+                />
                 {!delivered ? (
                   <Button
                     title={STR.cmRemove}

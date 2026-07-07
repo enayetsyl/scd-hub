@@ -25,7 +25,7 @@ intake/fix procedures live in [README.md](README.md). To add one: paste the issu
 ---
 
 ## BUG-015 — Exam date on New print request shows a typed YYYY-MM-DD field, not the calendar
-- **Status:** open (likely invalid — wrong build under test)
+- **Status:** closed — INVALID (verified 2026-07-07)
 - **Severity:** low
 - **Platform:** web
 - **Area:** class-test
@@ -42,10 +42,11 @@ UX-1..8 stack — the screenshot also shows the pre-UX-3 typed "Set id" field an
 "Blank = 40% of total" hint, all long since replaced on `dev`. The UX-2 `DateField` IS live on this
 screen on `dev`/`fix/ux-testing-bugs`. **Retest on the dev build (or the fix branch) before treating
 this as a code bug**; close as invalid if the calendar shows there.
-**Fix ref:** —
+**Resolution (2026-07-07):** verified on `dev` — [RequestClassTestScreen.tsx:211](app/src/screens/classtest/RequestClassTestScreen.tsx#L211) uses the calendar `DateField` (`<DateField label={STR.ctExamDate} …/>`), not a typed field. Reported against a stale `main` checkout. **Closed as invalid** (no code change).
+**Fix ref:** — (invalid)
 
 ## BUG-014 — "View paper" opens the PDF with no loading feedback
-- **Status:** open
+- **Status:** fixed (2026-07-07)
 - **Severity:** low
 - **Platform:** web
 - **Area:** class-test
@@ -60,7 +61,7 @@ before the blob URL opens in a new tab), so the button feels dead until the tab 
 the button. Fix shape = the BUG-013 recipe (busy spinner + double-tap guard while the fetch runs).
 The same unguarded `openStoredFile` pattern exists on `ChatThreadScreen.tsx` (attachment open) and
 `CommentEntryScreen.tsx` — sweep them in the same pass.
-**Fix ref:** —
+**Fix ref (2026-07-07):** new `app/src/lib/useFileOpen.ts` hook (tracks the opening id → button spinner + double-tap guard). Applied to all five `openStoredFile` call sites: `ClassTestPrintQueueScreen`, `ChatThreadScreen`, `CommentEntryScreen`, `ChildHomeworkScreen`, `GuardianHomeScreen`. (Sweep found 2 more than the original note.) Branch `fix/bug-002-014-doc-updates`.
 
 ## BUG-013 — Upload paper button does not attach the selected file
 - **Status:** fixed
