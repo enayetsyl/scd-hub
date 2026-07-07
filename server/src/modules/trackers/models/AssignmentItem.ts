@@ -14,7 +14,7 @@
  * no envelope/harness sync. Operational/identity plane behind ADR-005.
  */
 import { Schema, model, Document, Types } from "mongoose";
-import { HW_SUBJECTS } from "@scd/shared";
+import { HW_SUBJECTS, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
 import type { HwSubject } from "@scd/shared";
 
 export interface IAssignmentItem extends Document {
@@ -55,7 +55,7 @@ const AssignmentItemSchema = new Schema<IAssignmentItem>(
     weekNumber: { type: Number, required: true, min: 1 },
     cycleWeek: { type: Number, required: true, min: 1, max: 4 },
     classId: { type: Schema.Types.ObjectId, required: true },
-    classLevel: { type: Number, required: true, min: 1, max: 5 },
+    classLevel: { type: Number, required: true, min: ROSTER_CLASS_LEVEL_MIN, max: ROSTER_CLASS_LEVEL_MAX },
     sectionId: { type: Schema.Types.ObjectId, required: true },
     subject: { type: String, enum: HW_SUBJECTS, required: true },
     teacherId: { type: Schema.Types.ObjectId, required: true },
