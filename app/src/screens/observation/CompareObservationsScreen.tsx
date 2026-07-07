@@ -17,7 +17,7 @@ import {
   type ClassroomObservationT,
 } from "../../graphql/observation";
 import { TEACHERS_QUERY } from "../../graphql/operations";
-import { Screen, Card, Body, Muted, Button, Badge, Loader, EmptyState, Divider } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge, Loader, EmptyState, Divider, Row } from "../../components/ui";
 import {
   STR,
   obsStateLabel,
@@ -185,28 +185,56 @@ export default function CompareObservationsScreen({ route, navigation }: Props):
           {!isQuran ? <Muted style={{ marginTop: space(2), fontSize: 11 }}>{STR.obsCompareLevelHint}</Muted> : null}
         </Card>
 
-        {/* Per-reviewer actions: publish (CO-8) + open the full review */}
-        {reviewers.map((r) => (
-          <Card key={r.id}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <View style={{ flexShrink: 1 }}>
-                <Body style={{ fontWeight: "700" }}>{r.observerId ? (nameById[r.observerId] ?? r.observerId) : "—"}</Body>
-                <Muted>{r.publishedAt ? STR.obsPublished : obsStateLabel(r.state)}</Muted>
-                {r.growthFocus ? <Muted>{r.growthFocus}</Muted> : null}
-              </View>
-            </View>
-            <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
-              <Button
-                title={STR.obsDetailTitle}
-                variant="secondary"
-                onPress={() => navigation.navigate("ObservationDetail", { observationId: r.id })}
-              />
-              {r.state === "REVIEWED" && !r.publishedAt ? (
-                <Button title={STR.obsPublish} onPress={() => void onPublish(r.id)} />
+        {/* Per-reviewer comments + actions: publish (CO-8) + open the full review */}
+        {reviewers.map((r) => {
+          const domainNotes = r.domains.filter((d) => d.note);
+          const breaches = r.gates.filter((g) => g.result === "BREACH" && g.breachNote);
+          return (
+            <Card key={r.id}>
+              <Body style={{ fontWeight: "700" }}>{r.observerId ? (nameById[r.observerId] ?? r.observerId) : "—"}</Body>
+              <Muted style={{ marginBottom: space(1) }}>{r.publishedAt ? STR.obsPublished : obsStateLabel(r.state)}</Muted>
+
+              {/* REF-11 qualitative comments */}
+              {r.oneStrength ? <Row label={STR.obsOneStrength} value={r.oneStrength} /> : null}
+              {r.growthFocus ? <Row label={STR.obsGrowthFocus} value={r.growthFocus} /> : null}
+              {domainNotes.length > 0 ? (
+                <>
+                  <Muted style={{ fontWeight: "700", marginTop: space(1) }}>{STR.obsDomainNotes}</Muted>
+                  {domainNotes.map((d) => (
+                    <Muted key={d.domain}>
+                      • {obsDomainLabel(d.domain)}: {d.note}
+                    </Muted>
+                  ))}
+                </>
               ) : null}
-            </View>
-          </Card>
-        ))}
+              {breaches.map((g) => (
+                <Muted key={g.gate} style={{ color: colors.error, marginTop: space(1) }}>
+                  ⚠ {obsGateLabel(g.gate)}: {g.breachNote}
+                </Muted>
+              ))}
+
+              {/* Quran narrative */}
+              {r.quran ? (
+                <>
+                  <Row label={STR.obsQuranStrengths} value={r.quran.strengths} />
+                  <Row label={STR.obsQuranImprovements} value={r.quran.improvements} />
+                  <Row label={STR.obsQuranSuggestions} value={r.quran.suggestions} />
+                </>
+              ) : null}
+
+              <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+                <Button
+                  title={STR.obsDetailTitle}
+                  variant="secondary"
+                  onPress={() => navigation.navigate("ObservationDetail", { observationId: r.id })}
+                />
+                {r.state === "REVIEWED" && !r.publishedAt ? (
+                  <Button title={STR.obsPublish} onPress={() => void onPublish(r.id)} />
+                ) : null}
+              </View>
+            </Card>
+          );
+        })}
         <Divider />
         <Muted style={{ fontSize: 11 }}>{STR.obsCompareSupersededNote}</Muted>
       </ScrollView>
