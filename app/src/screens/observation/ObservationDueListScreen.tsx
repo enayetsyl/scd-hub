@@ -16,6 +16,7 @@ import {
   OBSERVATION_SCHEDULE_CONFIG_QUERY,
   SET_OBSERVATION_SCHEDULE_CONFIG,
 } from "../../graphql/observation";
+import { TEACHERS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Field, Row, Badge, Loader, Notice } from "../../components/ui";
 import { STR, obsTierLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -28,6 +29,12 @@ export default function ObservationDueListScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const [dueQ] = useQuery({ query: OBSERVATION_DUE_LIST_QUERY, variables: {} });
   const due = dueQ.data?.observationDueList ?? null;
+  const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
+  const nameById = React.useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const t of teachersQ.data?.teachers ?? []) m[t.id] = t.name;
+    return m;
+  }, [teachersQ.data]);
   const [cfgQ, refetchCfg] = useQuery({ query: OBSERVATION_SCHEDULE_CONFIG_QUERY, variables: {} });
   const cfg = cfgQ.data?.observationScheduleConfig ?? null;
 
@@ -109,7 +116,7 @@ export default function ObservationDueListScreen(): React.ReactElement {
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <View style={{ flexShrink: 1 }}>
-                  <Body style={{ fontWeight: "700" }}>{it.teacherId}</Body>
+                  <Body style={{ fontWeight: "700" }}>{nameById[it.teacherId] ?? it.teacherId}</Body>
                   <Muted>
                     {it.neverReviewed ? STR.obsNeverReviewed : `${STR.obsDueDate}: ${new Date(it.dueDate).toLocaleDateString()}`}
                   </Muted>
