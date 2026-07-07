@@ -79,6 +79,7 @@ export type AssignmentStackParamList = {
   };
   CollectAssignment: { itemId: string; sectionId: string; classId: string; asId: string };
   AssignmentChecking: { itemId: string; sectionId: string; classId: string; asId: string };
+  AssignmentReconcile: { academicYearId: string; sectionId: string; classId: string; weekNumber: number };
   AssignmentChase: undefined;
   AssignmentRollups: { academicYearId: string };
 };

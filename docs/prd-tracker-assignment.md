@@ -217,3 +217,67 @@ English codes (AS-ID, status codes) on forms per house rule.
 > student has a login-enabled guardian; they still fall to `SKIPPED` for
 > contact-only guardians (→ WhatsApp at step 3). Push transport remains the
 > separate deferred pipeline; the in-app inbox row shows in the guardian portal now.
+
+---
+
+## 11. AS-T6 — Weekly load ceiling (3-hour cap) [build contract, D-#274, 2026-07-07]
+
+**Goal.** Enforce the school policy **≤ 3 hours (180 min) of assignment work per
+section per week**, mirroring the homework daily-ceiling gate (HW-T2,
+`HW_DAILY_CEILING_MIN = 120`) — but **weekly** and on the **delivered** week.
+
+**Decisions (D-#274, from the owner Q&A 2026-07-07):**
+1. **Placement — on the delivered week** (per `section × real week N`), NOT the
+   4-week rotation plan.
+2. **Model — reconcile + confirm.** Delivery splits from one phase into two
+   (deliver → *draft*; a weekly *confirm* issues the student records) — the
+   faithful homework `declare → confirmHomeworkDay` mirror. This restructures AS-T2.
+3. **Owner — the section class teacher (D-#42/#45 coordinator) OR `roster:manage`**
+   (Principal/Office) may trim + confirm a section's week.
+4. **Cap — `AS_WEEKLY_CEILING_MIN = 180`**, a hard block. No per-subject advisory
+   band for now (homework's warn-only band is out of scope here).
+
+**Model changes.**
+- `AssignmentItem` gains: `estMinutes` (int ≥ 0, teacher-declared at deliver),
+  `status ∈ {DRAFT, ISSUED}` (default DRAFT), `issuedAt?`/`issuedBy?`, and
+  `draftRoster?: [{ studentId, present }]` — the present/absent roster captured at
+  deliver and consumed at confirm. The `(week × section × subject)` uniqueness is
+  unchanged.
+- `/shared/vocab.ts`: `AS_WEEKLY_CEILING_MIN = 180` (app-native; no wire twin).
+
+**Flow (replaces the AS-T2 delivery pass).**
+1. **`deliverAssignment`** (teacher, `tracker:write` + `assertCanWrite`): materializes
+   the item as **DRAFT** with `estMinutes` + stores the roster on `draftRoster`.
+   **No `AssignmentStudentRecord` is spawned yet.** Idempotent per (week×section×subject).
+2. **`assignmentWeekLoad(sectionId, weekNumber)`** (read; teacher own-section /
+   class-teacher / `roster:manage`): per-subject `estMinutes`, weekly total vs 180,
+   `overBy`, `state` (within/over), and each item's `status`.
+3. **`setAssignmentItemMinutes(itemId, estMinutes)`** (trim; class-teacher OR
+   `roster:manage`; **DRAFT only**): adjust a subject's minutes to get under the cap.
+4. **`confirmAssignmentWeek(sectionId, weekNumber)`** (class-teacher OR
+   `roster:manage`): sum the DRAFT items' `estMinutes`; **if > 180 throw** (trim
+   required, mirrors `confirmHomeworkDay`); else spawn per-student records from each
+   item's `draftRoster` (present→GIVEN, absent→ABSENT_REDELIVER, item due date), set
+   `status = ISSUED` + `issuedAt/By`, and clear `draftRoster`. **This is the gate.**
+
+**Downstream (mostly unchanged — records only exist after confirm).**
+- `collectAssignment` / `checkAssignmentRecord` / chase / guardian read operate on
+  **ISSUED** items' records; a DRAFT item has no student surface until confirmed.
+- Home / `expectedAssignmentsForWeek`: an item now reads Not delivered → *(deliver)*
+  → **DRAFT** "awaiting weekly confirm" → *(confirm)* → **ISSUED** with Collect/Check.
+  The grid exposes `status`; Collect/Check chips gate on ISSUED.
+- `assignmentSummary` delivery rate counts **ISSUED** items (a draft isn't issued yet).
+
+**Journeys.**
+- **AJ-9 (cap gate).** Given a section's week drafted as Bangla 60 + Maths 75 +
+  Science 60 = 195, When `confirmAssignmentWeek` runs, Then it throws (195 > 180);
+  After trimming Maths → 45 (total 180), confirm issues all three subjects' student
+  records And each item becomes ISSUED.
+- **AJ-10 (draft has no student surface).** Given a DRAFT item, When collect/check/
+  guardian reads run, Then no student records exist for it until the week is confirmed.
+
+**Acceptance gate.**
+1. `AS_WEEKLY_CEILING_MIN = 180`; confirm hard-blocks > cap; vocab verifier green.
+2. Deliver creates a DRAFT (no records); confirm issues records; trim adjusts a DRAFT's minutes.
+3. Confirm/trim gated `assertCanConfirmAssignmentWeek` = section class-teacher OR `roster:manage`.
+4. AJ-1…AJ-8 still pass, updated for the two-phase flow; counts remain derived (no typed count).

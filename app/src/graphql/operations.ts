@@ -3041,6 +3041,7 @@ export interface ExpectedAsItemT {
   subject: string;
   teacherId: string;
   delivered: boolean;
+  status: string | null;
   asItemId: string | null;
   asId: string | null;
 }
@@ -3063,7 +3064,7 @@ export const EXPECTED_AS_WEEK = gql<
   query ExpectedAssignmentsForWeek($academicYearId: String!, $weekNumber: Int!) {
     expectedAssignmentsForWeek(academicYearId: $academicYearId, weekNumber: $weekNumber) {
       academicYearId weekNumber cycleWeek weekStart suspended deliveryDate dueDate
-      items { entryId cycleWeek classId classLevel sectionId subject teacherId delivered asItemId asId }
+      items { entryId cycleWeek classId classLevel sectionId subject teacherId delivered status asItemId asId }
     }
   }
 `;
@@ -3096,12 +3097,65 @@ export interface AsRosterEntryIn {
 }
 
 export const DELIVER_ASSIGNMENT = gql<
-  { deliverAssignment: { itemId: string; asId: string; deliveryDate: string; dueDate: string; deliveredCount: number; absentCount: number } },
-  { academicYearId: string; weekNumber: number; entryId: string; sectionId: string; roster: AsRosterEntryIn[]; setId?: string | null; totalMarks?: number | null }
+  { deliverAssignment: { itemId: string; asId: string; deliveryDate: string; dueDate: string; status: string; estMinutes: number; presentCount: number; absentCount: number } },
+  { academicYearId: string; weekNumber: number; entryId: string; sectionId: string; roster: AsRosterEntryIn[]; setId?: string | null; totalMarks?: number | null; estMinutes?: number | null }
 >`
-  mutation DeliverAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!, $roster: [AssignmentRosterEntryInput!]!, $setId: String, $totalMarks: Int) {
-    deliverAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId, roster: $roster, setId: $setId, totalMarks: $totalMarks) {
-      itemId asId deliveryDate dueDate deliveredCount absentCount
+  mutation DeliverAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!, $roster: [AssignmentRosterEntryInput!]!, $setId: String, $totalMarks: Int, $estMinutes: Int) {
+    deliverAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId, roster: $roster, setId: $setId, totalMarks: $totalMarks, estMinutes: $estMinutes) {
+      itemId asId deliveryDate dueDate status estMinutes presentCount absentCount
+    }
+  }
+`;
+
+// AS-T6 — weekly load ceiling (reconcile + confirm + trim, D-#274)
+export interface AsWeekLoadItemT {
+  itemId: string;
+  asId: string;
+  subject: string;
+  estMinutes: number;
+  status: string;
+}
+export interface AsWeekLoadT {
+  academicYearId: string;
+  sectionId: string;
+  weekNumber: number;
+  ceiling: number;
+  totalMinutes: number;
+  draftMinutes: number;
+  overBy: number;
+  withinCeiling: boolean;
+  hasDrafts: boolean;
+  items: AsWeekLoadItemT[];
+}
+
+export const AS_WEEK_LOAD = gql<
+  { assignmentWeekLoad: AsWeekLoadT },
+  { academicYearId: string; sectionId: string; weekNumber: number }
+>`
+  query AssignmentWeekLoad($academicYearId: String!, $sectionId: String!, $weekNumber: Int!) {
+    assignmentWeekLoad(academicYearId: $academicYearId, sectionId: $sectionId, weekNumber: $weekNumber) {
+      academicYearId sectionId weekNumber ceiling totalMinutes draftMinutes overBy withinCeiling hasDrafts
+      items { itemId asId subject estMinutes status }
+    }
+  }
+`;
+
+export const SET_AS_ITEM_MINUTES = gql<
+  { setAssignmentItemMinutes: { itemId: string; estMinutes: number } },
+  { itemId: string; estMinutes: number }
+>`
+  mutation SetAssignmentItemMinutes($itemId: String!, $estMinutes: Int!) {
+    setAssignmentItemMinutes(itemId: $itemId, estMinutes: $estMinutes) { itemId estMinutes }
+  }
+`;
+
+export const CONFIRM_AS_WEEK = gql<
+  { confirmAssignmentWeek: { weekNumber: number; ceiling: number; totalMinutes: number; itemsIssued: number; recordsIssued: number } },
+  { academicYearId: string; sectionId: string; weekNumber: number }
+>`
+  mutation ConfirmAssignmentWeek($academicYearId: String!, $sectionId: String!, $weekNumber: Int!) {
+    confirmAssignmentWeek(academicYearId: $academicYearId, sectionId: $sectionId, weekNumber: $weekNumber) {
+      weekNumber ceiling totalMinutes itemsIssued recordsIssued
     }
   }
 `;

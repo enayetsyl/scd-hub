@@ -7,9 +7,10 @@
  * - admin entries: schedule editor (roster:manage), Office chase list
  *   (Principal/Office, D-#88), roll-ups (tracker:read)
  */
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "urql";
 import { roleHasPermission } from "@scd/shared";
 import {
@@ -56,12 +57,21 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
   const [week, setWeek] = useState<number | null>(null);
   const weekNumber = week ?? (schedule ? currentWeekNumber(schedule.termStartDate) : 1);
 
-  const [expectedQ] = useQuery({
+  const [expectedQ, refetchExpected] = useQuery({
     query: EXPECTED_AS_WEEK,
     variables: { academicYearId: yearId, weekNumber },
     pause: !yearId || !schedule,
   });
   const expected = expectedQ.data?.expectedAssignmentsForWeek ?? null;
+
+  // Refresh when the screen regains focus (returning from Deliver / Reconcile /
+  // Collect / Check) so a just-delivered DRAFT or just-confirmed ISSUED item shows
+  // immediately instead of stale cache.
+  useFocusEffect(
+    useCallback(() => {
+      if (yearId && schedule) refetchExpected({ requestPolicy: "network-only" });
+    }, [yearId, schedule, weekNumber, refetchExpected]),
+  );
 
   const [promptsQ] = useQuery({
     query: MY_AS_PREP_PROMPTS,
@@ -155,13 +165,13 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                       {classLevelLabel(item.classLevel)} — {hwSubjectLabel(item.subject)}
                     </Body>
                     <Badge
-                      text={item.delivered ? STR.asDelivered : STR.asNotDelivered}
-                      tone={item.delivered ? "ok" : "warn"}
+                      text={item.status === "ISSUED" ? STR.asDelivered : item.delivered ? STR.asDraft : STR.asNotDelivered}
+                      tone={item.status === "ISSUED" ? "ok" : item.delivered ? "brand" : "warn"}
                     />
                   </View>
                   {item.asId ? <Muted style={{ marginTop: 2 }}>{item.asId}</Muted> : null}
                   <View style={{ marginTop: 8 }}>
-                    {item.delivered && item.asItemId ? (
+                    {item.status === "ISSUED" && item.asItemId ? (
                       <ChipRow>
                         <Chip
                           label={STR.asCollectTitle}
@@ -186,6 +196,22 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                           }
                         />
                       </ChipRow>
+                    ) : item.delivered ? (
+                      // DRAFT — awaiting the weekly confirm (AS-T6)
+                      <View>
+                        <Muted style={{ marginBottom: 6 }}>{STR.asAwaitingConfirm}</Muted>
+                        <Chip
+                          label={`⚖️ ${STR.asReconcileTitle}`}
+                          onPress={() =>
+                            navigation.navigate("AssignmentReconcile", {
+                              academicYearId: yearId,
+                              sectionId: item.sectionId,
+                              classId: item.classId,
+                              weekNumber,
+                            })
+                          }
+                        />
+                      </View>
                     ) : canTrackerRead ? (
                       <Button title={STR.asDeliver} onPress={() => openDeliver(item)} />
                     ) : null}

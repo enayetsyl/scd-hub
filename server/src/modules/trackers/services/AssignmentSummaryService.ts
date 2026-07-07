@@ -129,10 +129,12 @@ export async function assignmentSummary(filter: SummaryFilter): Promise<Assignme
     }
   }
 
-  // Delivered items in range.
+  // Delivered = ISSUED items in range (AS-T6, D-#274): a DRAFT item is delivered but
+  // not yet issued (no student records), so it does not count toward the delivery rate.
   const itemFilter: Record<string, unknown> = {
     academicYearId: filter.academicYearId,
     weekNumber: { $gte: weekFrom, $lte: weekTo },
+    status: "ISSUED",
   };
   if (filter.teacherId) itemFilter.teacherId = filter.teacherId;
   const items = (await AssignmentItem.find(itemFilter).lean()) as unknown as IAssignmentItem[];
