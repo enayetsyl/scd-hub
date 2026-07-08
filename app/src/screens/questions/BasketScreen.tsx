@@ -22,6 +22,7 @@ import {
   Chip,
   ChipRow,
   Button,
+  Field,
   Notice,
   EmptyState,
   Divider,
@@ -36,12 +37,13 @@ import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<QuestionsStackParamList, "Basket">;
 
-export default function BasketScreen(_props: Props): React.ReactElement {
+export default function BasketScreen({ navigation }: Props): React.ReactElement {
   const basket = useBasket();
   const { selection, hasSection } = useSectionContext();
   const lang = getActiveLang();
   const tabNav = useNavigation<NavigationProp<TabParamList>>();
   const [setType, setSetType] = useState<string | null>(null);
+  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [, createSet] = useMutation(CREATE_SET);
@@ -65,6 +67,7 @@ export default function BasketScreen(_props: Props): React.ReactElement {
       setType,
       sectionId: selection.sectionId!,
       classId: selection.classId!,
+      name: name.trim() || null,
     });
     if (created.error || !created.data?.createSet) {
       setError(friendlyError(created.error));
@@ -84,7 +87,9 @@ export default function BasketScreen(_props: Props): React.ReactElement {
 
     basket.clear();
     setBusy(false);
-    tabNav.navigate("SetsTab", { screen: "AssembleSet", params: { setId, setType } });
+    // initial: false puts SetList beneath AssembleSet in the Sets stack, so the back
+    // button returns to the set list rather than escaping to the drawer (Today).
+    tabNav.navigate("SetsTab", { screen: "AssembleSet", params: { setId, setType }, initial: false });
   }
 
   return (
@@ -117,6 +122,8 @@ export default function BasketScreen(_props: Props): React.ReactElement {
             ))}
           </ChipRow>
 
+          <Field label={STR.setName} value={name} onChangeText={setName} placeholder={STR.setNamePlaceholder} />
+
           {hasSection ? (
             <Muted style={{ marginBottom: space(2) }}>
               {STR.section}: {lang === "en" ? classLevelLabel(selection.classLevel ?? 0) : selection.classNameBn} ·{" "}
@@ -128,7 +135,7 @@ export default function BasketScreen(_props: Props): React.ReactElement {
               <Button
                 title={STR.pickSection}
                 variant="secondary"
-                onPress={() => tabNav.navigate("SetsTab", { screen: "SectionPicker" })}
+                onPress={() => navigation.navigate("SectionPicker")}
               />
             </View>
           )}
@@ -142,7 +149,7 @@ export default function BasketScreen(_props: Props): React.ReactElement {
               <Button
                 title={STR.changeSection}
                 variant="secondary"
-                onPress={() => tabNav.navigate("SetsTab", { screen: "SectionPicker" })}
+                onPress={() => navigation.navigate("SectionPicker")}
               />
             </View>
           ) : null}

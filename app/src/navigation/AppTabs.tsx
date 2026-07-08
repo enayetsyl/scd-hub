@@ -470,6 +470,7 @@ function QuestionsNavigator(): React.ReactElement {
       <QuestionsStack.Screen name="QuestionBank" component={QuestionBankScreen} options={{ title: STR.questionBank }} />
       <QuestionsStack.Screen name="QuestionPreview" component={QuestionPreviewScreen} options={{ title: STR.preview }} />
       <QuestionsStack.Screen name="Basket" component={BasketScreen} options={{ title: STR.basket }} />
+      <QuestionsStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </QuestionsStack.Navigator>
   );
 }

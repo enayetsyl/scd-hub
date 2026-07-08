@@ -57,10 +57,18 @@ setPdfRouter.get("/:id", async (req: Request, res: Response) => {
     artifactsMap.set(a._id.toString(), a.envelopeJson as Record<string, unknown>);
   }
 
+  // Answer-key vs student-copy toggles (J3.4, default OFF = student copy). The client
+  // sends answers=1 / marks=1 from the Set-detail switches; absent params → student paper.
+  const truthy = (v: unknown): boolean => v === "1" || v === "true";
+  const opts: RenderOptions = {
+    showAnswers: truthy(req.query.answers),
+    showMarks: truthy(req.query.marks),
+  };
+
   // Isolate the render: a renderer/font failure returns 500 instead of rejecting
   // out of the async handler and crashing the Node process (Express 4 quirk).
   try {
-    const pdfBuffer = await renderSetToPdf(set, items, artifactsMap);
+    const pdfBuffer = await renderSetToPdf(set, items, artifactsMap, opts);
     const filename = `set_${req.params.id}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
@@ -76,10 +84,18 @@ setPdfRouter.get("/:id", async (req: Request, res: Response) => {
 // PDF renderer
 // ---------------------------------------------------------------------------
 
+interface RenderOptions {
+  /** Render answer carriers (MCQ ✓, T/F answer, accepted blanks, matched pairs, keys). */
+  showAnswers: boolean;
+  /** Render per-question [marks] and the total-marks meta line. */
+  showMarks: boolean;
+}
+
 async function renderSetToPdf(
   set: LeanSet,
   items: BasketItem[],
   artifactsMap: Map<string, Record<string, unknown>>,
+  opts: RenderOptions,
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -93,7 +109,7 @@ async function renderSetToPdf(
       margin: 50,
       size: "A4",
       info: {
-        Title: `${setTypeName} — ${totalMarks} marks`,
+        Title: opts.showMarks ? `${setTypeName} — ${totalMarks} marks` : setTypeName,
         Creator: "SCD Hub",
       },
     });
@@ -112,7 +128,7 @@ async function renderSetToPdf(
 
     const metaLine: string[] = [];
     if (set.setType === "CT") {
-      if (totalMarks) metaLine.push(`মোট নম্বর: ${totalMarks}`);
+      if (totalMarks && opts.showMarks) metaLine.push(`মোট নম্বর: ${totalMarks}`);
       if (set.durationMinutes) metaLine.push(`সময়: ${set.durationMinutes} মিনিট`);
     } else {
       if (set.dueDate) {
@@ -135,7 +151,7 @@ async function renderSetToPdf(
       const env = artifactsMap.get(item.artifactId.toString());
       if (!env) continue;
       const payload = (env.payload ?? {}) as Record<string, unknown>;
-      renderQuestion(doc, i + 1, item.marks, payload);
+      renderQuestion(doc, i + 1, item.marks, payload, opts);
     }
 
     doc.end();
@@ -147,41 +163,45 @@ function renderQuestion(
   num: number,
   marks: number,
   payload: Record<string, unknown>,
+  opts: RenderOptions,
 ): void {
   const questionText = String(payload.question_text ?? "");
   const questionType = String(payload.question_type ?? "");
 
   // Question stem line (mixed Bengali/Latin via the shared fallback renderer)
   doc.fontSize(11);
-  mixedText(doc, `${num}. ${questionText}   [${marks} marks]`, { lineGap: 2 });
+  const marksSuffix = opts.showMarks ? `   [${marks} marks]` : "";
+  mixedText(doc, `${num}. ${questionText}${marksSuffix}`, { lineGap: 2 });
   doc.moveDown(0.2);
 
-  // Answer-carrier rendering per question type
+  // MCQ options are part of the QUESTION (students need them), so they always render;
+  // the ✓ on the correct option is the ANSWER, gated by showAnswers. Every other
+  // carrier IS the answer, so the whole block is gated.
   if (questionType === "mcq") {
     const options = (payload.options as Array<Record<string, unknown>>) ?? [];
     for (const opt of options) {
-      const isCorrect = opt.is_correct ? " ✓" : "";
+      const isCorrect = opts.showAnswers && opt.is_correct ? " ✓" : "";
       doc.fontSize(10);
       mixedText(doc, `    ${String(opt.option_id ?? "")}. ${String(opt.text ?? "")}${isCorrect}`, { lineGap: 1 });
     }
-  } else if (questionType === "true_false") {
+  } else if (opts.showAnswers && questionType === "true_false") {
     const answer = payload.tf_answer === true ? "সত্য (True)" : "মিথ্যা (False)";
     doc.fontSize(10);
     mixedText(doc, `    উত্তর: ${answer}`, { lineGap: 1 });
-  } else if (questionType === "fill_blank") {
+  } else if (opts.showAnswers && questionType === "fill_blank") {
     const blanks = (payload.blanks as Array<Record<string, unknown>>) ?? [];
     for (const b of blanks) {
       const accepted = Array.isArray(b.accepted) ? (b.accepted as string[]).join(" / ") : "";
       doc.fontSize(10);
       mixedText(doc, `    শূন্যস্থান ${String(b.blank_no ?? "")}: ${accepted}`, { lineGap: 1 });
     }
-  } else if (questionType === "matching") {
+  } else if (opts.showAnswers && questionType === "matching") {
     const pairs = (payload.pairs as Array<Record<string, unknown>>) ?? [];
     for (const p of pairs) {
       doc.fontSize(10);
       mixedText(doc, `    ${String(p.left ?? "")}  →  ${String(p.right ?? "")}`, { lineGap: 1 });
     }
-  } else if (questionType === "short_answer") {
+  } else if (opts.showAnswers && questionType === "short_answer") {
     const ak = (payload.answer_key ?? {}) as Record<string, unknown>;
     const accepted = Array.isArray(ak.accepted) ? (ak.accepted as string[]).join(" / ") : "";
     doc.fontSize(10);
@@ -191,7 +211,7 @@ function renderQuestion(
       mixedText(doc, `    নোট: ${String(ak.model_note)}`, { lineGap: 1 });
       doc.fillColor("#000000");
     }
-  } else if (questionType === "descriptive") {
+  } else if (opts.showAnswers && questionType === "descriptive") {
     doc.fontSize(10).fillColor("#444444");
     mixedText(doc, "    [বর্ণনামূলক — রুব্রিক দেখুন]", { lineGap: 1 });
     doc.fillColor("#000000");

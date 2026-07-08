@@ -22,6 +22,8 @@ export interface CreateSetInput {
   sectionId: string;
   classId: string;
   subjectId?: string;
+  /** Optional teacher-given label (trimmed; blank → unset). */
+  name?: string;
   actorId: string;
 }
 
@@ -57,8 +59,10 @@ export interface AssembleResult {
 
 /** Create a new draft AssessmentSet. Write-scope is enforced by the resolver (assertCanWrite). */
 export async function createSet(input: CreateSetInput): Promise<CreateSetResult> {
+  const trimmedName = input.name?.trim();
   const doc = await AssessmentSet.create({
     setType: input.setType,
+    name: trimmedName ? trimmedName : undefined,
     sectionId: input.sectionId,
     classId: input.classId,
     subjectId: input.subjectId,
@@ -124,6 +128,41 @@ export async function addQuestionToSet(
     },
   });
 
+  return { setId: set._id.toString(), itemCount: set.basketItems.length };
+}
+
+/** Set (or clear) a set's display name. Write-scope enforced by the resolver.
+ *  Allowed in ANY status — a name is just a label, not question content, so an
+ *  already-assembled set can still be named/renamed for later identification. */
+export async function renameSet(setId: string, name: string): Promise<void> {
+  const set = await AssessmentSet.findById(setId);
+  if (!set) throw new Error("AssessmentSet not found");
+  const trimmed = name.trim();
+  set.name = trimmed ? trimmed : undefined;
+  await set.save();
+}
+
+export interface RemoveQuestionResult {
+  setId: string;
+  itemCount: number;
+}
+
+/** Remove a question from a DRAFT set's basket (J3 edit). Write-scope enforced by the
+ *  resolver. Draft-only: an assembled set is locked (D-#set-edit), so editing it throws.
+ *  Idempotent — removing an artifact not in the basket is a no-op. */
+export async function removeQuestionFromSet(
+  setId: string,
+  artifactId: string,
+): Promise<RemoveQuestionResult> {
+  const set = await AssessmentSet.findById(setId);
+  if (!set) throw new Error("AssessmentSet not found");
+  if (set.status !== "draft") throw new Error("Cannot remove questions from an assembled set");
+
+  const idx = set.basketItems.findIndex((item) => item.artifactId.toString() === artifactId);
+  if (idx >= 0) {
+    set.basketItems.splice(idx, 1);
+    await set.save();
+  }
   return { setId: set._id.toString(), itemCount: set.basketItems.length };
 }
 

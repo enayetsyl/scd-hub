@@ -17,9 +17,12 @@ import { builder } from "../../../schema";
 import {
   createSet as createSetSvc,
   addQuestionToSet as addQuestionSvc,
+  removeQuestionFromSet as removeQuestionSvc,
+  renameSet as renameSetSvc,
   assembleSet as assembleSetSvc,
 } from "../services/AssessmentService";
 import { AssessmentSet } from "../models/AssessmentSet";
+import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { assertCanWrite, assertCanRead, ForbiddenError } from "../../../middleware/authz";
 import type { Types, FlattenMaps } from "mongoose";
 import type { IAssessmentSet, BasketItem } from "../models/AssessmentSet";
@@ -34,6 +37,10 @@ interface BasketItemShape {
   artifactId: string;
   qid: string;
   marks: number;
+  /** Full question payload (envelopeJson.payload) as JSON — populated only by the
+   *  single-set query so the detail screen can render the question + answer. Null on
+   *  list/mutation responses (they don't fetch artifacts). */
+  payloadJson?: string | null;
 }
 
 const BasketItemRef = builder.objectRef<BasketItemShape>("BasketItem");
@@ -42,6 +49,7 @@ BasketItemRef.implement({
     artifactId: t.exposeString("artifactId"),
     qid: t.exposeString("qid"),
     marks: t.exposeFloat("marks"),
+    payloadJson: t.string({ nullable: true, resolve: (b) => b.payloadJson ?? null }),
   }),
 });
 
@@ -49,6 +57,7 @@ interface AssessmentSetShape {
   _id: Types.ObjectId;
   id: string;
   setType: string;
+  name?: string | null;
   sectionId: string;
   classId: string;
   subjectId?: string | null;
@@ -69,6 +78,7 @@ AssessmentSetRef.implement({
   fields: (t) => ({
     id: t.exposeString("id"),
     setType: t.exposeString("setType"),
+    name: t.string({ nullable: true, resolve: (s) => s.name ?? null }),
     sectionId: t.exposeString("sectionId"),
     classId: t.exposeString("classId"),
     subjectId: t.string({ nullable: true, resolve: (s) => s.subjectId ?? null }),
@@ -107,12 +117,13 @@ AssembleResultRef.implement({
 // Helper: lean doc → shape
 // ---------------------------------------------------------------------------
 
-function setToShape(doc: LeanSet): AssessmentSetShape {
+function setToShape(doc: LeanSet, payloadById?: Map<string, string>): AssessmentSetShape {
   const items = (doc.basketItems ?? []) as unknown as BasketItem[];
   return {
     _id: doc._id,
     id: doc._id.toString(),
     setType: doc.setType,
+    name: doc.name ?? null,
     sectionId: doc.sectionId.toString(),
     classId: doc.classId.toString(),
     subjectId: doc.subjectId?.toString() ?? null,
@@ -121,6 +132,7 @@ function setToShape(doc: LeanSet): AssessmentSetShape {
       artifactId: item.artifactId.toString(),
       qid: item.qid,
       marks: item.marks,
+      payloadJson: payloadById?.get(item.artifactId.toString()) ?? null,
     })),
     totalMarks: typeof doc.totalMarks === "number" ? doc.totalMarks : null,
     durationMinutes: typeof doc.durationMinutes === "number" ? doc.durationMinutes : null,
@@ -146,6 +158,7 @@ builder.mutationField("createSet", (t) =>
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
       subjectId: t.arg.string({ required: false }),
+      name: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -157,6 +170,7 @@ builder.mutationField("createSet", (t) =>
         sectionId: args.sectionId,
         classId: args.classId,
         subjectId: args.subjectId ?? undefined,
+        name: args.name ?? undefined,
         actorId: ctx.auth.userId as string,
       });
 
@@ -192,6 +206,62 @@ builder.mutationField("addQuestionToSet", (t) =>
         args.artifactId,
         ctx.auth.userId as string,
       );
+
+      const updated = await AssessmentSet.findById(args.setId).lean() as LeanSet;
+      return setToShape(updated);
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Mutation: renameSet — set/clear the display name (any status)
+// ---------------------------------------------------------------------------
+
+builder.mutationField("renameSet", (t) =>
+  t.field({
+    type: AssessmentSetRef,
+    description: "Set or clear a set's display name. Any status; write-scope enforced (J3.5).",
+    authScopes: { hasPermission: "set:assemble" },
+    args: {
+      setId: t.arg.string({ required: true }),
+      name: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+
+      const setDoc = await AssessmentSet.findById(args.setId).lean() as LeanSet | null;
+      if (!setDoc) throw new Error("AssessmentSet not found");
+      await assertCanWrite(ctx, setDoc.sectionId.toString(), setDoc.subjectId ? setDoc.subjectId.toString() : undefined);
+
+      await renameSetSvc(args.setId, args.name);
+
+      const updated = await AssessmentSet.findById(args.setId).lean() as LeanSet;
+      return setToShape(updated);
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Mutation: removeQuestionFromSet — J3 draft edit
+// ---------------------------------------------------------------------------
+
+builder.mutationField("removeQuestionFromSet", (t) =>
+  t.field({
+    type: AssessmentSetRef,
+    description: "Remove a question from a draft set. Draft-only; write-scope enforced (J3.5).",
+    authScopes: { hasPermission: "question:select" },
+    args: {
+      setId: t.arg.string({ required: true }),
+      artifactId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+
+      const setDoc = await AssessmentSet.findById(args.setId).lean() as LeanSet | null;
+      if (!setDoc) throw new Error("AssessmentSet not found");
+      await assertCanWrite(ctx, setDoc.sectionId.toString(), setDoc.subjectId ? setDoc.subjectId.toString() : undefined);
+
+      await removeQuestionSvc(args.setId, args.artifactId);
 
       const updated = await AssessmentSet.findById(args.setId).lean() as LeanSet;
       return setToShape(updated);
@@ -253,7 +323,20 @@ builder.queryField("assessmentSet", (t) =>
       if (!doc) return null;
       // Read-scope: sectionId-level check (classId as second param serves as classId)
       await assertCanRead(ctx, doc.sectionId.toString(), doc.classId.toString());
-      return setToShape(doc);
+
+      // Enrich each basket item with its question payload so the detail screen can
+      // render the full question + answer (J3 view). Batched in one query.
+      const items = (doc.basketItems ?? []) as unknown as BasketItem[];
+      const artifactIds = items.map((i) => i.artifactId.toString());
+      const artifacts = await ContentArtifact.find({ _id: { $in: artifactIds } })
+        .select("envelopeJson")
+        .lean();
+      const payloadById = new Map<string, string>();
+      for (const a of artifacts) {
+        const env = a.envelopeJson as Record<string, unknown>;
+        payloadById.set(a._id.toString(), JSON.stringify(env.payload ?? {}));
+      }
+      return setToShape(doc, payloadById);
     },
   }),
 );
@@ -280,7 +363,7 @@ builder.queryField("assessmentSets", (t) =>
       if (args.status) filter.status = args.status;
 
       const docs = await AssessmentSet.find(filter).sort({ createdAt: -1 }).lean() as LeanSet[];
-      return docs.map(setToShape);
+      return docs.map((d) => setToShape(d));
     },
   }),
 );

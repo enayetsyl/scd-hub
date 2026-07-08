@@ -1,14 +1,16 @@
 /**
- * SetDetailScreen (S8 / J3.4) — set metadata, question list (qid + marks) and
- * server-side PDF export (assembled sets only). A draft set offers a shortcut to
- * AssembleSet to finalise it.
+ * SetDetailScreen (S8 / J3.4) — set metadata, the full question list with answers,
+ * and server-side PDF export. A DRAFT set can be edited here (add / remove questions)
+ * and offers a shortcut to AssembleSet; an ASSEMBLED set is locked (D-#set-edit) and
+ * exposes the PDF answers/marks toggles.
  */
 import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useQuery } from "urql";
-import { ASSESSMENT_SET_QUERY } from "../../graphql/operations";
-import type { SetsStackParamList } from "../../navigation/types";
+import { useNavigation, type NavigationProp } from "@react-navigation/native";
+import { useQuery, useMutation } from "urql";
+import { ASSESSMENT_SET_QUERY, REMOVE_QUESTION_FROM_SET, RENAME_SET } from "../../graphql/operations";
+import type { SetsStackParamList, TabParamList } from "../../navigation/types";
 import {
   Screen,
   H1,
@@ -17,7 +19,10 @@ import {
   Card,
   Row,
   Badge,
+  Chip,
+  ChipRow,
   Button,
+  Field,
   Loader,
   ErrorBanner,
   Notice,
@@ -26,18 +31,34 @@ import {
 import { STR, setTypeLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
-import { space } from "../../theme/tokens";
+import { parsePayload, prettyCode, type QuestionPayload } from "../../lib/question";
+import { AnswerCarrier } from "../../components/QuestionAnswer";
+import { space, useColors } from "../../theme";
 
 type Props = NativeStackScreenProps<SetsStackParamList, "SetDetail">;
 
 export default function SetDetailScreen({ route, navigation }: Props): React.ReactElement {
   const { setId } = route.params;
+  const tabNav = useNavigation<NavigationProp<TabParamList>>();
+  // cache-and-network: assembleSet returns an AssembleResult (a different __typename
+  // than AssessmentSet), so urql's document cache never invalidates this query on
+  // finalise. Revalidating on mount keeps a re-opened set from showing a stale draft.
   const [{ data, fetching, error }, refetch] = useQuery({
     query: ASSESSMENT_SET_QUERY,
     variables: { id: setId },
+    requestPolicy: "cache-and-network",
   });
+  const [, removeQuestion] = useMutation(REMOVE_QUESTION_FROM_SET);
+  const [, renameSetMut] = useMutation(RENAME_SET);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [nameBusy, setNameBusy] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  // PDF options — default OFF = a clean student paper; toggle on for the answer key.
+  const [showAnswers, setShowAnswers] = useState(false);
+  const [showMarks, setShowMarks] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const s = data?.assessmentSet;
 
@@ -45,7 +66,8 @@ export default function SetDetailScreen({ route, navigation }: Props): React.Rea
     setPdfBusy(true);
     setPdfError(null);
     try {
-      await openPdf(`/pdf/set/${setId}`);
+      const q = `?answers=${showAnswers ? 1 : 0}&marks=${showMarks ? 1 : 0}`;
+      await openPdf(`/pdf/set/${setId}${q}`);
     } catch {
       setPdfError(STR.pdfError);
     } finally {
@@ -53,7 +75,31 @@ export default function SetDetailScreen({ route, navigation }: Props): React.Rea
     }
   }
 
-  if (fetching) return <Loader label={STR.loading} />;
+  async function onRemove(artifactId: string): Promise<void> {
+    setBusyId(artifactId);
+    await removeQuestion({ setId, artifactId });
+    setBusyId(null);
+  }
+
+  function startRename(): void {
+    setNameInput(s?.name ?? "");
+    setEditingName(true);
+  }
+
+  async function onSaveName(): Promise<void> {
+    setNameBusy(true);
+    await renameSetMut({ setId, name: nameInput.trim() });
+    setNameBusy(false);
+    setEditingName(false);
+  }
+
+  function onAddQuestions(): void {
+    // QuestionBank is the Questions-tab root; navigating with the param flips it into
+    // add-to-this-set mode (it clears the param on blur — see QuestionBankScreen).
+    tabNav.navigate("QuestionsTab", { screen: "QuestionBank", params: { addToSetId: setId } });
+  }
+
+  if (fetching && !s) return <Loader label={STR.loading} />;
   if (error) {
     return (
       <Screen>
@@ -74,29 +120,56 @@ export default function SetDetailScreen({ route, navigation }: Props): React.Rea
   return (
     <Screen scroll>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <H1>{setTypeLabel(s.setType)}</H1>
+        <H1>{s.name || setTypeLabel(s.setType)}</H1>
         <Badge text={assembled ? STR.statusAssembled : STR.statusDraft} tone={assembled ? "ok" : "warn"} />
       </View>
+
+      {editingName ? (
+        <Card>
+          <Field label={STR.setName} value={nameInput} onChangeText={setNameInput} placeholder={STR.setNamePlaceholder} />
+          <View style={{ flexDirection: "row", gap: space(2) }}>
+            <View style={{ flex: 1 }}>
+              <Button title={STR.cancel} variant="ghost" onPress={() => setEditingName(false)} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button title={nameBusy ? STR.saving : STR.save} onPress={onSaveName} loading={nameBusy} />
+            </View>
+          </View>
+        </Card>
+      ) : (
+        <Button title={STR.rename} variant="ghost" onPress={startRename} />
+      )}
 
       <Card>
         <Row label={STR.setType} value={setTypeLabel(s.setType)} />
         <Row label={STR.status} value={assembled ? STR.statusAssembled : STR.statusDraft} />
-        <Row label={STR.totalMarks} value={bnNum(s.totalMarks ?? 0)} />
+        <Row label={STR.totalMarks} value={bnNum(s.totalMarks ?? s.basketItems.reduce((a, b) => a + b.marks, 0))} />
         {s.durationMinutes != null ? <Row label={STR.durationMinutes} value={bnNum(s.durationMinutes)} /> : null}
         {s.dueDate ? <Row label={STR.dueDate} value={s.dueDate.slice(0, 10)} /> : null}
       </Card>
 
       {assembled ? (
         PDF_SUPPORTED ? (
-          <Button title={pdfBusy ? STR.preparingPdf : STR.exportPdf} onPress={onExport} loading={pdfBusy} variant="secondary" />
+          <>
+            <Muted>{STR.exportPdf}</Muted>
+            <ChipRow>
+              <Chip label={STR.showAnswers} selected={showAnswers} onPress={() => setShowAnswers((v) => !v)} />
+              <Chip label={STR.showMarks} selected={showMarks} onPress={() => setShowMarks((v) => !v)} />
+            </ChipRow>
+            <Button title={pdfBusy ? STR.preparingPdf : STR.exportPdf} onPress={onExport} loading={pdfBusy} variant="secondary" />
+          </>
         ) : (
           <Notice message={STR.pdfWebOnly} tone="warn" />
         )
       ) : (
-        <Button
-          title={STR.assemble}
-          onPress={() => navigation.navigate("AssembleSet", { setId: s.id, setType: s.setType })}
-        />
+        <>
+          <Button title={STR.addQuestions} onPress={onAddQuestions} variant="secondary" />
+          <Button
+            title={STR.assemble}
+            onPress={() => navigation.navigate("AssembleSet", { setId: s.id, setType: s.setType })}
+            style={{ marginTop: space(2) }}
+          />
+        </>
       )}
       {pdfError ? <Notice message={pdfError} tone="danger" /> : null}
 
@@ -105,17 +178,61 @@ export default function SetDetailScreen({ route, navigation }: Props): React.Rea
         {STR.questionsWord} ({bnNum(s.basketItems.length)})
       </Muted>
       {s.basketItems.map((item, i) => (
-        <Card key={item.artifactId}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Body style={{ flex: 1 }}>
-              {bnNum(i + 1)}. {item.qid}
-            </Body>
-            <Muted>
-              {bnNum(item.marks)} {STR.marks}
-            </Muted>
-          </View>
-        </Card>
+        <QuestionCard
+          key={item.artifactId}
+          num={i + 1}
+          marks={item.marks}
+          qid={item.qid}
+          payload={parsePayload(item.payloadJson)}
+          removable={!assembled}
+          removing={busyId === item.artifactId}
+          onRemove={() => void onRemove(item.artifactId)}
+        />
       ))}
     </Screen>
+  );
+}
+
+/** One question with its answer carrier — the teacher's answer view (J3). */
+function QuestionCard({
+  num,
+  marks,
+  qid,
+  payload,
+  removable,
+  removing,
+  onRemove,
+}: {
+  num: number;
+  marks: number;
+  qid: string;
+  payload: QuestionPayload;
+  removable: boolean;
+  removing: boolean;
+  onRemove: () => void;
+}): React.ReactElement {
+  const colors = useColors();
+  const text = payload.question_text ?? "";
+  const type = payload.question_type ?? "";
+
+  return (
+    <Card>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+        <Muted style={{ fontWeight: "700" }}>{qid}</Muted>
+        <Badge text={`${bnNum(marks)} ${STR.marks}`} tone="brand" />
+      </View>
+      <Body style={{ marginTop: 4 }}>
+        {bnNum(num)}. {text || "—"}
+      </Body>
+      {type ? <View style={{ marginTop: space(1) }}><Badge text={prettyCode(type)} tone="muted" /></View> : null}
+
+      <View style={{ marginTop: space(2) }}>
+        <AnswerCarrier payload={payload} correctColor={colors.primary} />
+      </View>
+
+      {removable ? (
+        <Button title={removing ? STR.saving : STR.remove} variant="ghost" onPress={onRemove} loading={removing} />
+      ) : null}
+    </Card>
   );
 }

@@ -17,9 +17,12 @@ export type ContentStackParamList = {
 };
 
 export type QuestionsStackParamList = {
-  QuestionBank: undefined;
+  /** addToSetId present → "add to this draft set" mode (rows call addQuestionToSet
+   *  instead of the basket); absent → normal browse-into-basket. */
+  QuestionBank: { addToSetId?: string } | undefined;
   QuestionPreview: { id: string };
   Basket: undefined;
+  SectionPicker: undefined;
 };
 
 export type SetsStackParamList = {

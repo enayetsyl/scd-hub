@@ -35,10 +35,13 @@ export default function SetListScreen({ navigation }: Props): React.ReactElement
   const [status, setStatus] = useState<string | null>(null);
   const [type, setType] = useState<string | null>(null);
 
+  // cache-and-network so a set assembled elsewhere (assembleSet doesn't invalidate
+  // this list's cache — different __typename) shows its fresh status on return.
   const [{ data, fetching, error }, refetch] = useQuery({
     query: ASSESSMENT_SETS_QUERY,
     variables: { sectionId: selection.sectionId ?? "", classId: selection.classId ?? "", status },
     pause: !hasSection,
+    requestPolicy: "cache-and-network",
   });
 
   const sets = (data?.assessmentSets ?? []).filter((s) => !type || s.setType === type);
@@ -80,14 +83,14 @@ export default function SetListScreen({ navigation }: Props): React.ReactElement
           sets.map((s) => (
             <Card key={s.id} onPress={() => navigation.navigate("SetDetail", { setId: s.id })}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Body style={{ fontWeight: "700" }}>{setTypeLabel(s.setType)}</Body>
+                <Body style={{ fontWeight: "700" }}>{s.name || setTypeLabel(s.setType)}</Body>
                 <Badge
                   text={s.status === "assembled" ? STR.statusAssembled : STR.statusDraft}
                   tone={s.status === "assembled" ? "ok" : "warn"}
                 />
               </View>
               <Muted style={{ marginTop: 4 }}>
-                {bnNum(s.basketItems.length)} {STR.questionsWord} · {bnNum(s.totalMarks ?? 0)} {STR.marks}
+                {s.name ? `${setTypeLabel(s.setType)} · ` : ""}{bnNum(s.basketItems.length)} {STR.questionsWord} · {bnNum(s.totalMarks ?? 0)} {STR.marks}
               </Muted>
             </Card>
           ))

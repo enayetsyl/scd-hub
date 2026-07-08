@@ -52,6 +52,32 @@ function LanguageScopedNavigator(): React.ReactElement {
 const NAV_STATE_KEY = "scd_nav_state_v2";
 type NavState = React.ComponentProps<typeof NavigationContainer>["initialState"];
 
+// Screens that are transient pickers — pushed on demand, then popped. They are never
+// a valid screen to RESTORE onto: their whole purpose is to hand control back to the
+// screen that opened them, so a restored picker has no back-target and strands the user
+// (e.g. an old build persisted Sets→SectionPicker as the tab's active route; restoring it
+// dropped the user on a bare picker that bounced to Today). Strip any such route from the
+// restored tree so every navigator falls back to a real screen. Additive + safe: a tree
+// without these routes is unchanged.
+const TRANSIENT_SCREENS = new Set(["SectionPicker"]);
+
+function sanitizeNavState(state: unknown): unknown {
+  if (!state || typeof state !== "object") return state;
+  const s = state as { index?: number; routes?: Array<{ name?: string; state?: unknown }> };
+  if (!Array.isArray(s.routes)) return state;
+
+  const routes = s.routes
+    .filter((r) => !(r.name && TRANSIENT_SCREENS.has(r.name)))
+    .map((r) => (r.state ? { ...r, state: sanitizeNavState(r.state) } : r));
+
+  // Every route here was transient — drop this nested tree so the navigator boots on
+  // its own initialRouteName instead of an empty (crash-y) routes array.
+  if (routes.length === 0) return undefined;
+
+  const index = Math.min(s.index ?? routes.length - 1, routes.length - 1);
+  return { ...s, index, routes };
+}
+
 function ThemedNavigation(): React.ReactElement | null {
   const navTheme = useNavigationTheme();
   const scheme = useColorScheme();
@@ -64,7 +90,7 @@ function ThemedNavigation(): React.ReactElement | null {
     (async () => {
       try {
         const saved = await getItem(NAV_STATE_KEY);
-        if (saved) setInitialState(JSON.parse(saved) as NavState);
+        if (saved) setInitialState(sanitizeNavState(JSON.parse(saved)) as NavState);
       } catch {
         /* ignore corrupt persisted nav state */
       }

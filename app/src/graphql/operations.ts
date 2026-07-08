@@ -805,11 +805,14 @@ export interface BasketItemT {
   artifactId: string;
   qid: string;
   marks: number;
+  /** Full question payload JSON — present on the single-set detail query only. */
+  payloadJson?: string | null;
 }
 
 export interface AssessmentSetT {
   id: string;
   setType: string;
+  name: string | null;
   sectionId: string;
   classId: string;
   subjectId: string | null;
@@ -826,12 +829,13 @@ export interface AssessmentSetT {
 
 export const CREATE_SET = gql<
   { createSet: AssessmentSetT },
-  { setType: string; sectionId: string; classId: string; subjectId?: string | null }
+  { setType: string; sectionId: string; classId: string; subjectId?: string | null; name?: string | null }
 >`
-  mutation CreateSet($setType: String!, $sectionId: String!, $classId: String!, $subjectId: String) {
-    createSet(setType: $setType, sectionId: $sectionId, classId: $classId, subjectId: $subjectId) {
+  mutation CreateSet($setType: String!, $sectionId: String!, $classId: String!, $subjectId: String, $name: String) {
+    createSet(setType: $setType, sectionId: $sectionId, classId: $classId, subjectId: $subjectId, name: $name) {
       id
       setType
+      name
       sectionId
       classId
       subjectId
@@ -856,11 +860,62 @@ export const ADD_QUESTION_TO_SET = gql<
     addQuestionToSet(setId: $setId, artifactId: $artifactId) {
       id
       setType
+      name
       sectionId
       classId
       subjectId
       status
       basketItems { artifactId qid marks }
+      totalMarks
+      durationMinutes
+      dueDate
+      createdBy
+      assembledBy
+      assembledAt
+      createdAt
+    }
+  }
+`;
+
+export const RENAME_SET = gql<
+  { renameSet: AssessmentSetT },
+  { setId: string; name: string }
+>`
+  mutation RenameSet($setId: String!, $name: String!) {
+    renameSet(setId: $setId, name: $name) {
+      id
+      setType
+      name
+      sectionId
+      classId
+      subjectId
+      status
+      basketItems { artifactId qid marks }
+      totalMarks
+      durationMinutes
+      dueDate
+      createdBy
+      assembledBy
+      assembledAt
+      createdAt
+    }
+  }
+`;
+
+export const REMOVE_QUESTION_FROM_SET = gql<
+  { removeQuestionFromSet: AssessmentSetT },
+  { setId: string; artifactId: string }
+>`
+  mutation RemoveQuestionFromSet($setId: String!, $artifactId: String!) {
+    removeQuestionFromSet(setId: $setId, artifactId: $artifactId) {
+      id
+      setType
+      name
+      sectionId
+      classId
+      subjectId
+      status
+      basketItems { artifactId qid marks payloadJson }
       totalMarks
       durationMinutes
       dueDate
@@ -900,11 +955,12 @@ export const ASSESSMENT_SET_QUERY = gql<{ assessmentSet: AssessmentSetT | null }
     assessmentSet(id: $id) {
       id
       setType
+      name
       sectionId
       classId
       subjectId
       status
-      basketItems { artifactId qid marks }
+      basketItems { artifactId qid marks payloadJson }
       totalMarks
       durationMinutes
       dueDate
@@ -924,6 +980,7 @@ export const ASSESSMENT_SETS_QUERY = gql<
     assessmentSets(sectionId: $sectionId, classId: $classId, status: $status) {
       id
       setType
+      name
       sectionId
       classId
       subjectId

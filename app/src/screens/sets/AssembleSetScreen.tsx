@@ -95,7 +95,7 @@ export default function AssembleSetScreen({ route, navigation }: Props): React.R
   return (
     <Screen scroll>
       <H1>
-        {STR.assemble}: {setTypeLabel(setType)}
+        {STR.assemble}: {s.name || setTypeLabel(setType)}
       </H1>
 
       <Card>
