@@ -18,6 +18,7 @@ import {
   AS_SCHEDULE_QUERY,
   EXPECTED_AS_WEEK,
   MY_AS_PREP_PROMPTS,
+  MY_SECTIONS_AS_CLASS_TEACHER_QUERY,
   type ExpectedAsItemT,
 } from "../../graphql/operations";
 import type { AssignmentStackParamList } from "../../navigation/types";
@@ -85,12 +86,23 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
   });
   const prompts = promptsQ.data?.myAssignmentPrepPrompts ?? [];
 
-  // A teacher sees their own rotation rows; Principal/Office see all.
+  // Sections where this teacher is the class teacher — they own the weekly reconcile
+  // for those sections even when they don't personally teach the subjects (AS-T6).
+  const [ctQ] = useQuery({ query: MY_SECTIONS_AS_CLASS_TEACHER_QUERY, pause: role !== "TEACHER" });
+  const myCtSectionIds = useMemo(
+    () => new Set((ctQ.data?.mySectionsAsClassTeacher ?? []).map((s) => s.id)),
+    [ctQ.data],
+  );
+
+  // A teacher sees their own rotation rows PLUS every subject in the sections they
+  // class-teach (so they can reconcile the week); Principal/Office see all.
   const visibleItems = useMemo(() => {
     const items = expected?.items ?? [];
-    if (role === "TEACHER" && user) return items.filter((i) => i.teacherId === user.id);
+    if (role === "TEACHER" && user) {
+      return items.filter((i) => i.teacherId === user.id || myCtSectionIds.has(i.sectionId));
+    }
     return items;
-  }, [expected, role, user]);
+  }, [expected, role, user, myCtSectionIds]);
 
   function openDeliver(item: ExpectedAsItemT): void {
     if (!expected?.deliveryDate || !expected.dueDate) return;
@@ -219,7 +231,9 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                           }
                         />
                       </View>
-                    ) : canTrackerRead ? (
+                    ) : canTrackerRead && (item.teacherId === user?.id || role !== "TEACHER") ? (
+                      // Only the subject teacher (or an unscoped admin) delivers; a
+                      // class teacher reconciles but doesn't deliver others' subjects.
                       <Button title={STR.asDeliver} onPress={() => openDeliver(item)} />
                     ) : null}
                   </View>
