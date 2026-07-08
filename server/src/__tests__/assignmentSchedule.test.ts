@@ -32,6 +32,7 @@ import {
   cycleWeekOf,
   anchorInWeek,
   resolveWeekDates,
+  monthWeekOf,
 } from "../modules/trackers/assignmentCalendar";
 import {
   addScheduleEntry,
@@ -97,8 +98,15 @@ describe("§4 cadence calendar (pure)", () => {
     expect(weekNumberFor(TERM_START, new Date(2026, 0, 10))).toBe(1);
     expect(weekNumberFor(TERM_START, new Date(2026, 0, 11))).toBe(2);
     expect(weekNumberFor(TERM_START, new Date(2026, 0, 1))).toBe(0); // before term
-    // week 15 → cycleWeek 3 (AJ-1's example)
-    expect(cycleWeekOf(15)).toBe(3);
+  });
+
+  test("calendar-month week model: week-of-month + rotation wrap (D-#275)", () => {
+    // Sun–Sat week containing the 1st = week 1 of that month. July 2026: the 1st is
+    // a Wednesday, so the week starting Sun Jun 28 (contains Jul 1) is July week 1.
+    expect(monthWeekOf(new Date(2026, 5, 28))).toEqual({ year: 2026, month: 6, weekOfMonth: 1 });
+    expect(monthWeekOf(new Date(2026, 6, 5)).weekOfMonth).toBe(2); // Sun Jul 5 → July wk2
+    expect(monthWeekOf(new Date(2026, 6, 12)).weekOfMonth).toBe(3); // Sun Jul 12 → July wk3
+    // cycleWeek is derived from week-of-month; a 5th week wraps back to slot 1.
     expect(cycleWeekOf(1)).toBe(1);
     expect(cycleWeekOf(4)).toBe(4);
     expect(cycleWeekOf(5)).toBe(1);
@@ -273,11 +281,12 @@ describe("AJ-1 — expectedItemsForWeek", () => {
 // ===========================================================================
 
 describe("AJ-2 — myAssignmentPrepPrompts", () => {
-  // Week 24 = Jun 14–20, 2026. Sun Jun 14 / Mon Jun 15. cycleWeek = ((24-1)%4)+1 = 4.
-  const e = entry({ cycleWeek: 4, teacherId: TEACHER, subject: "BAN", classLevel: 2 });
+  // Week 24 = Jun 14–20, 2026 (Sun Jun 14 / Mon Jun 15). It is the 3rd calendar
+  // week of June → weekOfMonth 3 → cycleWeek 3 (D-#275).
+  const e = entry({ cycleWeek: 3, teacherId: TEACHER, subject: "BAN", classLevel: 2 });
 
   test("Sunday + Monday surface the teacher's undelivered items; other days are silent", async () => {
-    mockScheduleFindOne.mockResolvedValue(schedule([e, entry({ cycleWeek: 4 })])); // 2nd entry: other teacher
+    mockScheduleFindOne.mockResolvedValue(schedule([e, entry({ cycleWeek: 3 })])); // 2nd entry: other teacher
     const sunday = new Date(2026, 5, 14, 9);
     const monday = new Date(2026, 5, 15, 9);
     const tuesday = new Date(2026, 5, 16, 9);

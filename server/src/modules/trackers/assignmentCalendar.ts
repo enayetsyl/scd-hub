@@ -17,8 +17,10 @@
  *      Quran-only and Quran is excluded here (D-#36), so Saturday never hosts
  *      an assignment anchor.
  *
- * Week N covers [termStart + (N−1)·7d, +7d) — the window starts on whatever
- * weekday the term anchor falls on. Week N maps to cycleWeek ((N−1) mod 4)+1.
+ * Weeks are CALENDAR weeks (Sun–Sat), continuously indexed from the term's first
+ * week for storage/navigation. The user-facing label + the rotation slot use the
+ * calendar WEEK-OF-MONTH (week containing the 1st = week 1, resetting each month;
+ * a 5th week wraps to cycleWeek 1) — D-#275.
  */
 
 /** True iff `date` is a FULL school day (Sun–Thu, no holiday override). */
@@ -37,23 +39,51 @@ function addDays(date: Date, days: number): Date {
   return d;
 }
 
-/** 1-based week number of `date` relative to the term anchor; 0 when `date`
- *  precedes the term. */
+/** Sunday (getDay 0) that starts the calendar week containing `date` (D-#275 —
+ *  weeks are calendar Sun–Sat weeks, the Sun–Thu school week). */
+export function weekStartSunday(date: Date): Date {
+  const d = atMidnight(date);
+  return addDays(d, -d.getDay());
+}
+
+/** The schedule's first calendar-week Sunday — the Sunday of the week containing
+ *  the term anchor. Week N's window = firstWeekSunday + (N−1)·7d. */
+export function firstWeekSunday(termStartDate: Date): Date {
+  return weekStartSunday(termStartDate);
+}
+
+/** 1-based CONTINUOUS calendar-week index of `date` (for storage + navigation);
+ *  0 when `date`'s week precedes the term's first week. The month-week LABEL is
+ *  derived separately (monthWeekOf) — D-#275. */
 export function weekNumberFor(termStartDate: Date, date: Date): number {
-  const start = atMidnight(termStartDate).getTime();
-  const day = atMidnight(date).getTime();
-  if (day < start) return 0;
-  return Math.floor(Math.round((day - start) / 86_400_000) / 7) + 1;
+  const first = firstWeekSunday(termStartDate).getTime();
+  const wk = weekStartSunday(date).getTime();
+  if (wk < first) return 0;
+  return Math.round((wk - first) / (7 * 86_400_000)) + 1;
 }
 
-/** Week N of the year maps to cycleWeek ((N−1) mod 4)+1 (PRD §3). */
-export function cycleWeekOf(weekNumber: number): number {
-  return ((weekNumber - 1) % CYCLE_WEEKS) + 1;
-}
-
-/** The first day of week N's window: termStart + (N−1)·7d. */
+/** The Sunday that starts continuous week N's window. */
 export function weekStartOf(termStartDate: Date, weekNumber: number): Date {
-  return addDays(atMidnight(termStartDate), (weekNumber - 1) * 7);
+  return addDays(firstWeekSunday(termStartDate), (weekNumber - 1) * 7);
+}
+
+/** Calendar month + 1-based week-OF-MONTH of a week (D-#275): the Sun–Sat week
+ *  containing the 1st = week 1, resetting each month. Assigned by the week's
+ *  Saturday (end of week), so a week straddling a month boundary belongs to the
+ *  month whose 1st it contains. */
+export function monthWeekOf(weekStart: Date): { year: number; month: number; weekOfMonth: number } {
+  const sat = addDays(weekStart, 6);
+  const year = sat.getFullYear();
+  const month = sat.getMonth();
+  const firstDow = new Date(year, month, 1).getDay();
+  const weekOfMonth = Math.floor((sat.getDate() - 1 + firstDow) / 7) + 1;
+  return { year, month, weekOfMonth };
+}
+
+/** Rotation slot for a week-of-month: ((weekOfMonth−1) mod 4)+1 — a month's 5th
+ *  week wraps back to cycleWeek 1 (D-#275). */
+export function cycleWeekOf(weekOfMonth: number): number {
+  return ((weekOfMonth - 1) % CYCLE_WEEKS) + 1;
 }
 
 /** The unique date inside [weekStart, +7d) whose getDay() == dayOfWeek. */
@@ -117,6 +147,10 @@ export interface ResolvedWeekDates {
   weekNumber: number;
   cycleWeek: number;
   weekStart: Date;
+  /** Calendar-month label parts for the week (D-#275). */
+  year: number;
+  month: number;
+  weekOfMonth: number;
   /** Vacation week — no open day in the window; expected items suspended (rule 3). */
   suspended: boolean;
   deliveryDate: Date | null;
@@ -132,10 +166,14 @@ export function resolveWeekDates(
   isOpenDay: IsOpenDay,
 ): ResolvedWeekDates {
   const weekStart = weekStartOf(termStartDate, weekNumber);
+  const mw = monthWeekOf(weekStart);
   const base = {
     weekNumber,
-    cycleWeek: cycleWeekOf(weekNumber),
+    cycleWeek: cycleWeekOf(mw.weekOfMonth),
     weekStart,
+    year: mw.year,
+    month: mw.month,
+    weekOfMonth: mw.weekOfMonth,
   };
   if (!weekHasOpenDay(weekStart, isOpenDay)) {
     return { ...base, suspended: true, deliveryDate: null, dueDate: null };

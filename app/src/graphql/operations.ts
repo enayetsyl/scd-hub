@@ -3051,6 +3051,9 @@ export interface ExpectedAsWeekT {
   weekNumber: number;
   cycleWeek: number;
   weekStart: string;
+  year: number;
+  month: number;
+  weekOfMonth: number;
   suspended: boolean;
   deliveryDate: string | null;
   dueDate: string | null;
@@ -3063,7 +3066,7 @@ export const EXPECTED_AS_WEEK = gql<
 >`
   query ExpectedAssignmentsForWeek($academicYearId: String!, $weekNumber: Int!) {
     expectedAssignmentsForWeek(academicYearId: $academicYearId, weekNumber: $weekNumber) {
-      academicYearId weekNumber cycleWeek weekStart suspended deliveryDate dueDate
+      academicYearId weekNumber cycleWeek weekStart year month weekOfMonth suspended deliveryDate dueDate
       items { entryId cycleWeek classId classLevel sectionId subject teacherId delivered status asItemId asId }
     }
   }
