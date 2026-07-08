@@ -194,6 +194,10 @@ export interface ExpectedWeek {
   weekNumber: number;
   cycleWeek: number;
   weekStart: string;
+  /** Calendar-month label parts (D-#275): week-of-month resets each month. */
+  year: number;
+  month: number;
+  weekOfMonth: number;
   suspended: boolean;
   deliveryDate: string | null;
   dueDate: string | null;
@@ -256,6 +260,9 @@ export async function expectedItemsForWeek(
     weekNumber: resolved.weekNumber,
     cycleWeek: resolved.cycleWeek,
     weekStart: resolved.weekStart.toISOString(),
+    year: resolved.year,
+    month: resolved.month,
+    weekOfMonth: resolved.weekOfMonth,
     suspended: resolved.suspended,
     deliveryDate: resolved.deliveryDate ? resolved.deliveryDate.toISOString() : null,
     dueDate: resolved.dueDate ? resolved.dueDate.toISOString() : null,

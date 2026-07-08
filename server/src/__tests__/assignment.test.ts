@@ -90,7 +90,9 @@ const TEACHER = oid();
 function scheduleWithEntry(over: Record<string, unknown> = {}) {
   const entry = {
     _id: ENTRY_ID,
-    cycleWeek: 1,
+    // TERM_START is Sun 2026-01-04; week 1 (Jan 4–10) is the 2nd calendar week of
+    // January → weekOfMonth 2 → cycleWeek 2 (D-#275).
+    cycleWeek: 2,
     classId: CLASS,
     classLevel: 2,
     sectionId: SECTION,
@@ -222,7 +224,8 @@ describe("AJ-3 — deliverAssignmentItem", () => {
   });
 
   test("week whose cycle week doesn't match the entry is rejected", async () => {
-    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry({ cycleWeek: 2 }));
+    // week 1 resolves to cycleWeek 2; an entry on cycleWeek 1 must not match.
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry({ cycleWeek: 1 }));
     await expect(
       deliverAssignmentItem({ academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, actorId: ACTOR }),
     ).rejects.toThrow(/cycle week/);

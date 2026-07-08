@@ -60,6 +60,15 @@ typed.**
 
 ## 4. Cadence + calendar rules (D-#86)
 
+> **Superseded numbering (D-#275, 2026-07-07):** weeks are now CALENDAR weeks
+> (Sun–Sat). The user-facing week = the **week-of-month** (Week 1 = the Sun–Sat
+> week containing the 1st, resetting each month; a month has Weeks 1–4/5). The
+> 4-week rotation slot follows week-of-month (`cycleWeek = ((weekOfMonth−1) mod
+> 4)+1`; a 5th week wraps to slot 1). The stored `weekNumber` stays a continuous
+> calendar-week index for uniqueness/roll-ups; only the label + rotation use
+> week-of-month. The §4 delivery/due-roll rules below are unchanged (they operate
+> within each calendar week).
+
 1. Delivery anchor: weekly on `deliveryDayOfWeek` (default Thursday). If that day is
    not open (D-#50 day-type or `HolidayException`): roll to the **previous open day**.
 2. Due anchor: `dueDayOfWeek` (default Sunday). If not open: roll to the **next open day**.

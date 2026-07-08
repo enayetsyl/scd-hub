@@ -22,21 +22,26 @@ import {
 } from "../../graphql/operations";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Chip, ChipRow, Loader, EmptyState, Notice } from "../../components/ui";
-import { STR, bnNum, hwSubjectLabel, classLevelLabel } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, classLevelLabel, monthLabel } from "../../lib/labels";
 import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AssignmentStackParamList, "AssignmentHome">;
 
-/** Client-side mirror of the server's week numbering (week 1 starts on the
- *  term anchor; 7-day windows). Only used to INITIALIZE the week selector —
- *  every date shown comes from the server resolver. */
+/** Client-side mirror of the server's CONTINUOUS calendar-week index (D-#275):
+ *  weeks are Sun–Sat; week 1 = the calendar week containing the term anchor.
+ *  Only used to INITIALIZE the selector — the month-week label + every date come
+ *  from the server resolver. */
 function currentWeekNumber(termStartDate: string, today = new Date()): number {
-  const start = new Date(termStartDate);
-  const s = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
-  const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  if (d < s) return 1;
-  return Math.floor(Math.round((d - s) / 86_400_000) / 7) + 1;
+  const sunday = (dt: Date): number => {
+    const m = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+    m.setDate(m.getDate() - m.getDay());
+    return m.getTime();
+  };
+  const first = sunday(new Date(termStartDate));
+  const wk = sunday(today);
+  if (wk < first) return 1;
+  return Math.round((wk - first) / (7 * 86_400_000)) + 1;
 }
 
 const day = (iso?: string | null): string => (iso ? iso.slice(0, 10) : "—");
@@ -139,14 +144,16 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                 <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
                   <Chip label="◀" onPress={() => setWeek(Math.max(1, weekNumber - 1))} />
                   <Body>
-                    {STR.asWeek} {bnNum(weekNumber)}
+                    {expected
+                      ? `${monthLabel(expected.month)} · ${STR.asWeek} ${bnNum(expected.weekOfMonth)}`
+                      : `${STR.asWeek} ${bnNum(weekNumber)}`}
                   </Body>
                   <Chip label="▶" onPress={() => setWeek(Math.min(53, weekNumber + 1))} />
                 </View>
               </View>
               {expected ? (
                 <Muted style={{ marginTop: 4 }}>
-                  {STR.asCycleWeek} {bnNum(expected.cycleWeek)} · {STR.asDeliverBy} {day(expected.deliveryDate)} · {STR.asDueBy} {day(expected.dueDate)}
+                  {STR.asDeliverBy} {day(expected.deliveryDate)} · {STR.asDueBy} {day(expected.dueDate)}
                 </Muted>
               ) : null}
             </Card>

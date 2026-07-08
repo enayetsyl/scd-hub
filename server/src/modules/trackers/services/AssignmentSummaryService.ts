@@ -22,7 +22,6 @@ import {
   resolveWeekDates,
   weekNumberFor,
   weekStartOf,
-  cycleWeekOf,
 } from "../assignmentCalendar";
 import { isTerminalState } from "../lifecycle";
 
@@ -116,7 +115,7 @@ export async function assignmentSummary(filter: SummaryFilter): Promise<Assignme
       suspendedWeeks.push(w);
       continue;
     }
-    const cw = cycleWeekOf(w);
+    const cw = resolved.cycleWeek; // week-of-month rotation slot (D-#275)
     for (const e of schedule.entries) {
       if (e.cycleWeek !== cw) continue;
       const teacherKey = e.teacherId.toString();
