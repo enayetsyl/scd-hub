@@ -79,7 +79,7 @@ jest.mock("child_process");
 // Import AFTER mocks
 import { readFileSync } from "fs";
 import { importEnvelope, importContentFiles } from "../modules/content/services/ContentService";
-import { addQuestionToSet, assembleSet, createSet } from "../modules/assessment/services/AssessmentService";
+import { addQuestionToSet, assembleSet, createSet, removeQuestionFromSet, renameSet } from "../modules/assessment/services/AssessmentService";
 
 const execFileMock = cp.execFile as jest.MockedFunction<typeof cp.execFile>;
 
@@ -629,6 +629,119 @@ describe("J3.2 — assemble set", () => {
     await expect(
       assembleSet({ setId: SET_ID.toString(), actorId: ACTOR_ID.toString() }),
     ).rejects.toThrow("Cannot assemble an empty set");
+  });
+});
+
+// ===========================================================================
+// J3 — Draft edit: removeQuestionFromSet (drafts only, D-#set-edit)
+// ===========================================================================
+
+describe("J3 — removeQuestionFromSet (draft-only edit)", () => {
+  const ART_A = new mongoose.Types.ObjectId();
+  const ART_B = new mongoose.Types.ObjectId();
+
+  function makeSetDoc(extra: Record<string, unknown> = {}) {
+    return {
+      _id: SET_ID,
+      sectionId: SECTION_ID,
+      classId: CLASS_ID,
+      setType: "AS",
+      status: "draft",
+      basketItems: [
+        { artifactId: ART_A, qid: "QP-A", marks: 1 },
+        { artifactId: ART_B, qid: "QP-B", marks: 2 },
+      ],
+      save: jest.fn().mockResolvedValue(true),
+      ...extra,
+    };
+  }
+
+  test("removes the matching item from a draft basket and saves", async () => {
+    const setDoc = makeSetDoc();
+    mockSetFindById.mockReturnValue(setDoc);
+
+    const result = await removeQuestionFromSet(SET_ID.toString(), ART_A.toString());
+
+    expect(setDoc.basketItems).toHaveLength(1);
+    expect(setDoc.basketItems[0].qid).toBe("QP-B");
+    expect(setDoc.save).toHaveBeenCalledTimes(1);
+    expect(result.itemCount).toBe(1);
+  });
+
+  test("draft-only: throws when the set is already assembled", async () => {
+    const setDoc = makeSetDoc({ status: "assembled" });
+    mockSetFindById.mockReturnValue(setDoc);
+
+    await expect(
+      removeQuestionFromSet(SET_ID.toString(), ART_A.toString()),
+    ).rejects.toThrow("Cannot remove questions from an assembled set");
+    expect(setDoc.save).not.toHaveBeenCalled();
+  });
+
+  test("idempotent: removing an artifact not in the basket is a no-op (no save)", async () => {
+    const setDoc = makeSetDoc();
+    mockSetFindById.mockReturnValue(setDoc);
+
+    const missing = new mongoose.Types.ObjectId().toString();
+    const result = await removeQuestionFromSet(SET_ID.toString(), missing);
+
+    expect(setDoc.basketItems).toHaveLength(2);
+    expect(setDoc.save).not.toHaveBeenCalled();
+    expect(result.itemCount).toBe(2);
+  });
+
+  test("throws when the set is not found", async () => {
+    mockSetFindById.mockReturnValue(null);
+
+    await expect(
+      removeQuestionFromSet(SET_ID.toString(), ART_A.toString()),
+    ).rejects.toThrow("AssessmentSet not found");
+  });
+});
+
+// ===========================================================================
+// J3 — Set naming: renameSet (any status, D-#set-name)
+// ===========================================================================
+
+describe("J3 — renameSet (set display name)", () => {
+  function makeSetDoc(extra: Record<string, unknown> = {}) {
+    return {
+      _id: SET_ID,
+      sectionId: SECTION_ID,
+      classId: CLASS_ID,
+      setType: "AS",
+      status: "assembled",
+      name: undefined as string | undefined,
+      basketItems: [],
+      save: jest.fn().mockResolvedValue(true),
+      ...extra,
+    };
+  }
+
+  test("sets a trimmed name and saves (works on an assembled set)", async () => {
+    const setDoc = makeSetDoc();
+    mockSetFindById.mockReturnValue(setDoc);
+
+    await renameSet(SET_ID.toString(), "  Unit 4 revision  ");
+
+    expect(setDoc.name).toBe("Unit 4 revision");
+    expect(setDoc.save).toHaveBeenCalledTimes(1);
+  });
+
+  test("a blank name clears the label (name → undefined)", async () => {
+    const setDoc = makeSetDoc({ name: "Old name" });
+    mockSetFindById.mockReturnValue(setDoc);
+
+    await renameSet(SET_ID.toString(), "   ");
+
+    expect(setDoc.name).toBeUndefined();
+    expect(setDoc.save).toHaveBeenCalledTimes(1);
+  });
+
+  test("throws when the set is not found", async () => {
+    mockSetFindById.mockReturnValue(null);
+
+    await expect(renameSet(SET_ID.toString(), "X")).rejects.toThrow("AssessmentSet not found");
   });
 });
 

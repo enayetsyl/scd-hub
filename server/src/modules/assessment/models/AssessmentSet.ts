@@ -25,6 +25,9 @@ export interface BasketItem {
 export interface IAssessmentSet extends Document {
   _id: Types.ObjectId;
   setType: SetType;
+  /** Optional teacher-given label so a set is identifiable later (else falls back to
+   *  the set-type name in the UI). Free text; not unique. */
+  name?: string;
   sectionId: Types.ObjectId;
   classId: Types.ObjectId;
   /** Optional; set if the set is subject-scoped. */
@@ -56,6 +59,7 @@ const BasketItemSchema = new Schema<BasketItem>(
 const AssessmentSetSchema = new Schema<IAssessmentSet>(
   {
     setType: { type: String, enum: SET_TYPES, required: true },
+    name: { type: String },
     sectionId: { type: Schema.Types.ObjectId, required: true },
     classId: { type: Schema.Types.ObjectId, required: true },
     subjectId: { type: Schema.Types.ObjectId },

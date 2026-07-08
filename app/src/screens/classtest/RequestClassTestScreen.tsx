@@ -65,7 +65,7 @@ export default function RequestClassTestScreen(): React.ReactElement {
   const ctSetOptions = (setsQ.data?.assessmentSets ?? [])
     .filter((s) => s.setType === "CT")
     .map((s) => ({
-      label: s.id,
+      label: s.name || s.id,
       value: s.id,
       hint: `${bnNum(s.basketItems.length)} ${STR.questionsWord} · ${bnNum(s.totalMarks ?? 0)} ${STR.marks}`,
     }));

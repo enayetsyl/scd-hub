@@ -957,7 +957,14 @@ builder.queryField("assignmentWeekLoad", (t) =>
     resolve: async (_root, args, ctx) => {
       const section = await Section.findById(args.sectionId).select("classId").lean();
       if (!section) throw new Error("Section not found");
-      await assertCanRead(ctx, args.sectionId, section.classId.toString());
+      // The reconcile owner (section class teacher / roster:manage) may read the
+      // week load even without a teaching scope on its subjects; otherwise fall
+      // back to the section teaching-scope read (the delivering subject teachers).
+      try {
+        await assertCanConfirmAssignmentWeek(ctx, args.sectionId);
+      } catch {
+        await assertCanRead(ctx, args.sectionId, section.classId.toString());
+      }
       return weekLoadSvc(args.academicYearId, args.sectionId, args.weekNumber);
     },
   }),

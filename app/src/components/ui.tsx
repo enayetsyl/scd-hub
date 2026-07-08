@@ -46,6 +46,7 @@ export function Screen({
   scroll = false,
   padded = true,
   wide = false,
+  bleed = false,
   style,
   refreshControl,
 }: {
@@ -54,6 +55,9 @@ export function Screen({
   padded?: boolean;
   /** Web/desktop: widen the centered frame for data-grid screens (master routine grid). */
   wide?: boolean;
+  /** Full-bleed (no width cap) — for a screen with its OWN ScrollView that wants the
+   *  scrollbar at the viewport's far edge. Content should cap its own width if needed. */
+  bleed?: boolean;
   style?: StyleProp<ViewStyle>;
   /** UX-7: pull-to-refresh for scroll screens — passed through to the ScrollView. */
   refreshControl?: React.ReactElement;
@@ -84,7 +88,7 @@ export function Screen({
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         enabled={Platform.OS !== "web"}
       >
-        <View style={wide || expanded ? styles.frameWide : styles.frame}>{inner}</View>
+        <View style={bleed ? styles.frameBleed : wide || expanded ? styles.frameWide : styles.frame}>{inner}</View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -576,6 +580,9 @@ const useStyles = makeStyles((colors) => ({
   // §6 web/desktop: the phone layout centered at max 720dp, bg filling the rest.
   frame: { flex: 1, width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
   frameWide: { flex: 1, width: "100%", maxWidth: MAX_WIDE_CONTENT_WIDTH, alignSelf: "center" },
+  // Full-bleed: no width cap, so a self-scrolling screen's scrollbar sits at the
+  // viewport's far edge (not inset at the centered frame's edge).
+  frameBleed: { flex: 1, width: "100%" },
   flex: { flex: 1 },
   padded: { padding: space(4) },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: space(6) },
