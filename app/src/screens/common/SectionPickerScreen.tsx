@@ -60,7 +60,11 @@ export default function SectionPickerScreen(): React.ReactElement {
       sectionCode: s.code,
       sectionNameBn: s.nameBn,
     });
-    nav.goBack();
+    // Only pop when there IS a screen beneath us. If this picker was opened as the
+    // first screen of its stack (e.g. a cross-tab deep-link), goBack() would escape
+    // to the drawer and dump the user on Today. The selection is already saved to the
+    // shared SectionContext, so staying here is the safe no-op in that edge case.
+    if (nav.canGoBack()) nav.goBack();
   }
 
   return (

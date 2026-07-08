@@ -15,7 +15,8 @@
  */
 import { builder } from "../../../schema";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
-import { assertCanRead, ForbiddenError } from "../../../middleware/authz";
+import { ForbiddenError } from "../../../middleware/authz";
+import { buildContentScope, contentScopeAllows } from "../../content/contentScope";
 import type { Types, FlattenMaps, FilterQuery } from "mongoose";
 import type { IContentArtifact } from "../../content/models/ContentArtifact";
 
@@ -106,24 +107,18 @@ function docToShape(doc: LeanArtifact): QuestionArtifactShape {
   };
 }
 
-/** Apply TEACHER row-scope filter to a list of lean artifacts. */
+/** Apply TEACHER row-scope filter to a list of lean artifacts.
+ *  Questions are (subject, classLevel) content — scoped via buildContentScope
+ *  (teaching/proxy/supervisory grants), same as the content module (D-#257).
+ *  Built once per request, then checked per artifact — no per-doc DB hit. */
 async function applyScope(
   docs: LeanArtifact[],
   ctx: import("../../../context").AppContext,
 ): Promise<QuestionArtifactShape[]> {
-  if (ctx.auth?.role === "PRINCIPAL" || ctx.auth?.role === "OFFICE") {
-    return docs.map(docToShape);
-  }
-  const allowed: QuestionArtifactShape[] = [];
-  for (const doc of docs) {
-    try {
-      await assertCanRead(ctx, "", doc.subject, doc.subject);
-      allowed.push(docToShape(doc));
-    } catch {
-      // outside scope — skip
-    }
-  }
-  return allowed;
+  const scope = await buildContentScope(ctx);
+  return docs
+    .filter((doc) => contentScopeAllows(scope, doc.subject, doc.classLevel))
+    .map(docToShape);
 }
 
 // ---------------------------------------------------------------------------
@@ -196,7 +191,8 @@ builder.queryField("question", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const doc = await ContentArtifact.findById(args.id).lean() as LeanArtifact | null;
       if (!doc || doc.docType !== "question") return null;
-      await assertCanRead(ctx, "", doc.subject, doc.subject);
+      const scope = await buildContentScope(ctx);
+      if (!contentScopeAllows(scope, doc.subject, doc.classLevel)) throw new ForbiddenError();
       return docToShape(doc);
     },
   }),
