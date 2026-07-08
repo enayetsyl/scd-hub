@@ -258,6 +258,9 @@ interface ExpectedWeekShape {
   weekNumber: number;
   cycleWeek: number;
   weekStart: string;
+  year: number;
+  month: number;
+  weekOfMonth: number;
   suspended: boolean;
   deliveryDate: string | null;
   dueDate: string | null;
@@ -265,12 +268,15 @@ interface ExpectedWeekShape {
 }
 const ExpectedWeekRef = builder.objectRef<ExpectedWeekShape>("ExpectedAssignmentWeek");
 ExpectedWeekRef.implement({
-  description: "Week N of the computed 52-week grid: §4-rolled dates + the delivered join.",
+  description: "Week N of the computed grid: calendar-month week label + §4-rolled dates + delivered join (D-#275).",
   fields: (t) => ({
     academicYearId: t.exposeString("academicYearId"),
     weekNumber: t.exposeInt("weekNumber"),
     cycleWeek: t.exposeInt("cycleWeek"),
     weekStart: t.exposeString("weekStart"),
+    year: t.exposeInt("year"),
+    month: t.exposeInt("month"),
+    weekOfMonth: t.exposeInt("weekOfMonth"),
     suspended: t.exposeBoolean("suspended"),
     deliveryDate: t.string({ nullable: true, resolve: (r) => r.deliveryDate }),
     dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),

@@ -337,6 +337,11 @@ export const classLevelLabel = (level: number): string => {
   return _lang === "en" ? `Class ${bnNum(level)}` : `শ্রেণি ${bnNum(level)}`;
 };
 
+const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTHS_BN = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
+/** Calendar month name (0-based) in the active language (D-#275). */
+export const monthLabel = (month: number): string => (_lang === "en" ? MONTHS_EN : MONTHS_BN)[month] ?? "";
+
 export const genderLabel = (v?: string | null): string => {
   const en = _lang === "en";
   return v === "male" ? (en ? "Male" : "ছেলে")
