@@ -32,8 +32,6 @@ import {
   radius,
   space,
   typeScale,
-  MAX_CONTENT_WIDTH,
-  MAX_WIDE_CONTENT_WIDTH,
   type ThemeColors,
 } from "../theme";
 
@@ -578,8 +576,11 @@ export function Notice({
 const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.bg },
   // §6 web/desktop: the phone layout centered at max 720dp, bg filling the rest.
-  frame: { flex: 1, width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center" },
-  frameWide: { flex: 1, width: "100%", maxWidth: MAX_WIDE_CONTENT_WIDTH, alignSelf: "center" },
+  // Every screen now fills the available width on large screens (like the Question
+  // bank) — the old 720/1400 centered caps are gone. `wide`/`bleed`/`expanded` all
+  // resolve to full-width; the props stay for source compatibility.
+  frame: { flex: 1, width: "100%" },
+  frameWide: { flex: 1, width: "100%" },
   // Full-bleed: no width cap, so a self-scrolling screen's scrollbar sits at the
   // viewport's far edge (not inset at the centered frame's edge).
   frameBleed: { flex: 1, width: "100%" },
