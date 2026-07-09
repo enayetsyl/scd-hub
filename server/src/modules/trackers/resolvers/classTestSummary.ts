@@ -36,6 +36,8 @@ import {
   type StudentProfile,
   type StudentProfileResult,
   type StudentProfileSubjectRow,
+  type StudentProfileAnalytics,
+  type WeaknessTally,
   type OverdueChaseList,
   type OverdueChaseEntry,
   type OverdueChaseExam,
@@ -262,6 +264,9 @@ StudentProfileResultRef.implement({
     totalMarks: t.exposeInt("totalMarks"),
     percent: t.float({ nullable: true, resolve: (r) => r.percent }),
     pass: t.boolean({ nullable: true, resolve: (r) => r.pass }),
+    weakness: t.string({ nullable: true, resolve: (r) => r.weakness }),
+    teacherAction: t.string({ nullable: true, resolve: (r) => r.teacherAction }),
+    guardianAction: t.string({ nullable: true, resolve: (r) => r.guardianAction }),
   }),
 });
 
@@ -278,14 +283,44 @@ StudentProfileSubjectRef.implement({
   }),
 });
 
+const WeaknessTallyRef = builder.objectRef<WeaknessTally>("ClassTestWeaknessTally");
+WeaknessTallyRef.implement({
+  description: "A recurring weakness note + how many times it appeared (CT-10).",
+  fields: (t) => ({
+    tag: t.exposeString("tag"),
+    count: t.exposeInt("count"),
+  }),
+});
+
+const StudentAnalyticsRef = builder.objectRef<StudentProfileAnalytics>("ClassTestStudentAnalytics");
+StudentAnalyticsRef.implement({
+  description: "CT-10 derived per-student analytics — trajectory, consistency, at-risk, streaks, rank. Never stored (D-#85).",
+  fields: (t) => ({
+    examsPresent: t.exposeInt("examsPresent"),
+    avgPercent: t.float({ nullable: true, resolve: (r) => r.avgPercent }),
+    consistency: t.float({ nullable: true, resolve: (r) => r.consistency }),
+    slope: t.float({ nullable: true, resolve: (r) => r.slope }),
+    trajectory: t.exposeString("trajectory"),
+    atRisk: t.exposeBoolean("atRisk"),
+    streakKind: t.string({ nullable: true, resolve: (r) => r.streakKind }),
+    streakLength: t.exposeInt("streakLength"),
+    bestSubject: t.string({ nullable: true, resolve: (r) => r.bestSubject }),
+    weakestSubject: t.string({ nullable: true, resolve: (r) => r.weakestSubject }),
+    recurringWeaknesses: t.field({ type: [WeaknessTallyRef], resolve: (r) => r.recurringWeaknesses }),
+    latestRank: t.int({ nullable: true, resolve: (r) => r.latestRank }),
+    latestRankOf: t.int({ nullable: true, resolve: (r) => r.latestRankOf }),
+  }),
+});
+
 const StudentProfileRef = builder.objectRef<StudentProfile>("ClassTestStudentProfile");
 StudentProfileRef.implement({
-  description: "One student across subjects (CT-4) — per-result list (newest first) + per-subject roll-up.",
+  description: "One student across subjects (CT-4) — per-result list (newest first) + per-subject roll-up + CT-10 analytics.",
   fields: (t) => ({
     studentId: t.exposeString("studentId"),
     studentName: t.exposeString("studentName"),
     results: t.field({ type: [StudentProfileResultRef], resolve: (r) => r.results }),
     bySubject: t.field({ type: [StudentProfileSubjectRef], resolve: (r) => r.bySubject }),
+    analytics: t.field({ type: StudentAnalyticsRef, resolve: (r) => r.analytics }),
   }),
 });
 

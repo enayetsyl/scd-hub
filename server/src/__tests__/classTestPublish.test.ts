@@ -44,12 +44,14 @@ const mockResFindOneUpdate = jest.fn();
 const mockResFindByIdUpdate = jest.fn();
 const mockResFind = jest.fn();
 const mockResUpdateMany = jest.fn();
+const mockResCount = jest.fn();
 jest.mock("../modules/trackers/models/ClassTestResult", () => ({
   ClassTestResult: {
     findOneAndUpdate: (...a: unknown[]) => mockResFindOneUpdate(...a),
     findByIdAndUpdate: (...a: unknown[]) => mockResFindByIdUpdate(...a),
     find: (q: unknown) => mockResFind(q),
     updateMany: (...a: unknown[]) => mockResUpdateMany(...a),
+    countDocuments: (q: unknown) => mockResCount(q),
   },
 }));
 
@@ -85,6 +87,10 @@ import {
   publishExam,
   unpublishResult,
   unpublishExam,
+  submitExam,
+  recallExam,
+  sendBackExam,
+  approveExam,
   classTestMessageKind,
   buildClassTestResultMessage,
 } from "../modules/trackers/services/ClassTestPublishService";
@@ -282,7 +288,8 @@ describe("unpublish", () => {
     expect(out.unpublishedCount).toBe(1);
     expect(mockResFindOneUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ publishedAt: { $ne: null } }),
-      { $set: { publishedAt: null } },
+      // CT-8: unpublish retracts to DRAFT — clears the release AND the submission.
+      { $set: { publishedAt: null }, $unset: { submittedAt: "", submittedBy: "" } },
       expect.objectContaining({ new: true }),
     );
     // NO $inc on publishedVersion (kept so the next publish bumps it → re-notify)
@@ -302,6 +309,78 @@ describe("unpublish", () => {
     const out = await unpublishExam(TEST_OID.toString(), ACTOR);
     expect(out.unpublishedCount).toBe(3);
     expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "CLASS_TEST_RESULT_UNPUBLISHED" }));
+  });
+});
+
+// ===========================================================================
+// CT-8 approval gate — submit / recall / send-back / approve
+// ===========================================================================
+
+describe("CT-8 approval gate", () => {
+  test("submitExam marks DRAFT rows submitted (clears send-back) + audits SUBMITTED", async () => {
+    mockResCount.mockResolvedValue(3); // entered rows exist
+    mockResUpdateMany.mockResolvedValue({ modifiedCount: 3 });
+    const out = await submitExam(TEST_OID.toString(), ACTOR);
+    expect(out.count).toBe(3);
+    expect(mockResUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ publishedAt: null }),
+      expect.objectContaining({
+        $set: expect.objectContaining({ submittedAt: expect.any(Date) }),
+        $unset: expect.objectContaining({ sendBackReason: "" }),
+      }),
+    );
+    expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "CLASS_TEST_RESULT_SUBMITTED" }));
+  });
+
+  test("submitExam throws when no results are entered", async () => {
+    mockResCount.mockResolvedValue(0);
+    await expect(submitExam(TEST_OID.toString(), ACTOR)).rejects.toBeInstanceOf(ClassTestResultError);
+    expect(mockResUpdateMany).not.toHaveBeenCalled();
+  });
+
+  test("recallExam clears the submission back to draft + audits RECALLED", async () => {
+    mockResUpdateMany.mockResolvedValue({ modifiedCount: 2 });
+    const out = await recallExam(TEST_OID.toString(), ACTOR);
+    expect(out.count).toBe(2);
+    expect(mockResUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ submittedAt: { $ne: null }, publishedAt: null }),
+      expect.objectContaining({ $unset: expect.objectContaining({ submittedAt: "" }) }),
+    );
+    expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "CLASS_TEST_RESULT_RECALLED" }));
+  });
+
+  test("sendBackExam stamps the reason, clears submission, audits SENT_BACK", async () => {
+    mockResUpdateMany.mockResolvedValue({ modifiedCount: 2 });
+    const out = await sendBackExam(TEST_OID.toString(), ACTOR, "  marks look off  ");
+    expect(out.count).toBe(2);
+    expect(mockResUpdateMany).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ $set: expect.objectContaining({ sendBackReason: "marks look off" }) }),
+    );
+    expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "CLASS_TEST_RESULT_SENT_BACK" }));
+  });
+
+  test("sendBackExam requires a reason", async () => {
+    await expect(sendBackExam(TEST_OID.toString(), ACTOR, "   ")).rejects.toBeInstanceOf(ClassTestResultError);
+  });
+
+  test("sendBackExam throws when nothing is submitted", async () => {
+    mockResUpdateMany.mockResolvedValue({ modifiedCount: 0 });
+    await expect(sendBackExam(TEST_OID.toString(), ACTOR, "reason")).rejects.toBeInstanceOf(ClassTestResultError);
+  });
+
+  test("approveExam refuses when nothing was submitted (gate direction)", async () => {
+    mockResCount.mockResolvedValue(0); // no submitted rows
+    await expect(approveExam(TEST_OID.toString(), ACTOR)).rejects.toBeInstanceOf(ClassTestResultError);
+  });
+
+  test("approveExam releases + delivers when the teacher has submitted", async () => {
+    mockResCount.mockResolvedValue(1); // one submitted row
+    mockResFind.mockReturnValue(leanChain([{ _id: oid(), studentId: STUDENT_OID }]));
+    mockResFindByIdUpdate.mockResolvedValue(resultDoc({ studentId: STUDENT_OID, publishedVersion: 1 }));
+    const out = await approveExam(TEST_OID.toString(), ACTOR);
+    expect(out.recipients).toHaveLength(1);
+    expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "CLASS_TEST_RESULT_PUBLISHED" }));
   });
 });
 

@@ -27,12 +27,16 @@ import {
 import { getClassTest } from "../services/ClassTestService";
 import {
   publishResult,
-  publishExam,
   unpublishResult,
   unpublishExam,
+  submitExam,
+  recallExam,
+  sendBackExam,
+  approveExam,
   type ClassTestMessageRecipient,
   type PublishResultOutcome,
   type UnpublishOutcome,
+  type SubmitOutcome,
 } from "../services/ClassTestPublishService";
 import { Subject } from "../../foundation/models/Subject";
 import { assertCanWrite, assertCanRead, ForbiddenError } from "../../../middleware/authz";
@@ -82,6 +86,8 @@ ClassTestResultRef.implement({
     weakness: t.string({ nullable: true, resolve: (r) => r.weakness }),
     teacherAction: t.string({ nullable: true, resolve: (r) => r.teacherAction }),
     guardianAction: t.string({ nullable: true, resolve: (r) => r.guardianAction }),
+    submittedAt: t.string({ nullable: true, resolve: (r) => r.submittedAt }),
+    sendBackReason: t.string({ nullable: true, resolve: (r) => r.sendBackReason }),
     publishedAt: t.string({ nullable: true, resolve: (r) => r.publishedAt }),
     publishedVersion: t.exposeInt("publishedVersion"),
   }),
@@ -243,36 +249,94 @@ UnpublishOutcomeRef.implement({
   }),
 });
 
-builder.mutationField("publishClassTestResult", (t) =>
+const SubmitOutcomeRef = builder.objectRef<SubmitOutcome>("ClassTestSubmitOutcome");
+SubmitOutcomeRef.implement({
+  description: "CT-8 approval-gate transition result — the number of result rows affected.",
+  fields: (t) => ({
+    testId: t.exposeString("testId"),
+    count: t.exposeInt("count"),
+  }),
+});
+
+// --- CT-8 approval gate: teacher SUBMIT / RECALL (tracker:write + section verify) ---
+
+builder.mutationField("submitClassTestExam", (t) =>
   t.field({
-    type: PublishResultOutcomeRef,
+    type: SubmitOutcomeRef,
     description:
-      "Publish ONE student's class-test result (J4): stamps publishedAt + bumps publishedVersion, then " +
-      "delivers (wa.me for the family + in-app Notification for login-enabled guardians). A re-publish " +
-      "RE-notifies (versioned dedupeKey, D-#122). Requires tracker:write on the section.",
+      "CT-8: teacher submits an exam's results for Office/Principal approval. Marks rows SUBMITTED " +
+      "(guardians do NOT see yet) and clears any prior send-back. Requires tracker:write on the section.",
     authScopes: { hasPermission: "tracker:write" },
-    args: {
-      testId: t.arg.string({ required: true }),
-      studentId: t.arg.string({ required: true }),
-    },
+    args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       await assertWriteTest(ctx, args.testId);
-      return publishResult(args.testId, args.studentId, ctx.auth!.userId as string);
+      return submitExam(args.testId, ctx.auth!.userId as string);
     },
   }),
 );
+
+builder.mutationField("recallClassTestExam", (t) =>
+  t.field({
+    type: SubmitOutcomeRef,
+    description: "CT-8: teacher recalls a pending submission back to draft so it can be edited. Requires tracker:write.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: { testId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      await assertWriteTest(ctx, args.testId);
+      return recallExam(args.testId, ctx.auth!.userId as string);
+    },
+  }),
+);
+
+// --- CT-8 approval gate: Office/Principal APPROVE / SEND-BACK / UNPUBLISH (roster:manage).
+// assertReadTest only enforces existence for admins (it skips the teacher section check for
+// PRINCIPAL/OFFICE) — NOT assertWriteTest, which denies OFFICE. ---
 
 builder.mutationField("publishClassTestExam", (t) =>
   t.field({
     type: PublishResultOutcomeRef,
     description:
-      "Publish ALL entered results for a class test in one go (J4) — same delivery + versioning as the " +
-      "per-student publish. Requires tracker:write on the section.",
-    authScopes: { hasPermission: "tracker:write" },
+      "CT-8 APPROVE: Office/Principal releases a SUBMITTED exam's results → guardian delivery (wa.me + " +
+      "in-app). Requires the teacher to have submitted first. roster:manage.",
+    authScopes: { hasPermission: "roster:manage" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      await assertWriteTest(ctx, args.testId);
-      return publishExam(args.testId, ctx.auth!.userId as string);
+      await assertReadTest(ctx, args.testId);
+      return approveExam(args.testId, ctx.auth!.userId as string);
+    },
+  }),
+);
+
+builder.mutationField("publishClassTestResult", (t) =>
+  t.field({
+    type: PublishResultOutcomeRef,
+    description:
+      "CT-8: Office/Principal releases ONE student's result (per-student override of the per-exam approve). " +
+      "Stamps publishedAt + delivers; re-publish RE-notifies. roster:manage.",
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      testId: t.arg.string({ required: true }),
+      studentId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      await assertReadTest(ctx, args.testId);
+      return publishResult(args.testId, args.studentId, ctx.auth!.userId as string);
+    },
+  }),
+);
+
+builder.mutationField("sendBackClassTestExam", (t) =>
+  t.field({
+    type: SubmitOutcomeRef,
+    description: "CT-8: Office/Principal sends a submitted exam back to the teacher (→ draft) with a reason. roster:manage.",
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      testId: t.arg.string({ required: true }),
+      reason: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      await assertReadTest(ctx, args.testId);
+      return sendBackExam(args.testId, ctx.auth!.userId as string, args.reason);
     },
   }),
 );
@@ -281,15 +345,15 @@ builder.mutationField("unpublishClassTestResult", (t) =>
   t.field({
     type: UnpublishOutcomeRef,
     description:
-      "Unpublish ONE student's result (J4) — clears publishedAt so it leaves the guardian card. " +
-      "publishedVersion is left as-is; a later re-publish bumps it → re-notify. Requires tracker:write.",
-    authScopes: { hasPermission: "tracker:write" },
+      "CT-8: Office/Principal unpublishes ONE student's result — clears publishedAt (leaves the guardian card) " +
+      "and the submission, back to draft. roster:manage.",
+    authScopes: { hasPermission: "roster:manage" },
     args: {
       testId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertWriteTest(ctx, args.testId);
+      await assertReadTest(ctx, args.testId);
       return unpublishResult(args.testId, args.studentId, ctx.auth!.userId as string);
     },
   }),
@@ -298,11 +362,11 @@ builder.mutationField("unpublishClassTestResult", (t) =>
 builder.mutationField("unpublishClassTestExam", (t) =>
   t.field({
     type: UnpublishOutcomeRef,
-    description: "Unpublish ALL published results for a class test (J4). Requires tracker:write on the section.",
-    authScopes: { hasPermission: "tracker:write" },
+    description: "CT-8: Office/Principal unpublishes ALL released results for a class test (→ draft). roster:manage.",
+    authScopes: { hasPermission: "roster:manage" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      await assertWriteTest(ctx, args.testId);
+      await assertReadTest(ctx, args.testId);
       return unpublishExam(args.testId, ctx.auth!.userId as string);
     },
   }),

@@ -121,11 +121,13 @@ export interface ClassTestResultT {
   weakness: string | null;
   teacherAction: string | null;
   guardianAction: string | null;
+  submittedAt: string | null;
+  sendBackReason: string | null;
   publishedAt: string | null;
   publishedVersion: number;
 }
 
-const CLASS_TEST_RESULT_FIELDS = `id testId studentId status marks totalMarks percent pass weakness teacherAction guardianAction publishedAt publishedVersion`;
+const CLASS_TEST_RESULT_FIELDS = `id testId studentId status marks totalMarks percent pass weakness teacherAction guardianAction submittedAt sendBackReason publishedAt publishedVersion`;
 
 export const CLASS_TEST_RESULTS_QUERY = gql<{ classTestResults: ClassTestResultT[] }, { testId: string }>`
   query ClassTestResults($testId: String!) { classTestResults(testId: $testId) { ${CLASS_TEST_RESULT_FIELDS} } }
@@ -229,6 +231,26 @@ export const UNPUBLISH_CLASS_TEST_RESULT = gql<
 `;
 export const UNPUBLISH_CLASS_TEST_EXAM = gql<{ unpublishClassTestExam: ClassTestUnpublishOutcomeT }, { testId: string }>`
   mutation UnpublishClassTestExam($testId: String!) { unpublishClassTestExam(testId: $testId) { testId unpublishedCount } }
+`;
+
+// CT-8 approval gate
+export interface ClassTestSubmitOutcomeT {
+  testId: string;
+  count: number;
+}
+export const SUBMIT_CLASS_TEST_EXAM = gql<{ submitClassTestExam: ClassTestSubmitOutcomeT }, { testId: string }>`
+  mutation SubmitClassTestExam($testId: String!) { submitClassTestExam(testId: $testId) { testId count } }
+`;
+export const RECALL_CLASS_TEST_EXAM = gql<{ recallClassTestExam: ClassTestSubmitOutcomeT }, { testId: string }>`
+  mutation RecallClassTestExam($testId: String!) { recallClassTestExam(testId: $testId) { testId count } }
+`;
+export const SEND_BACK_CLASS_TEST_EXAM = gql<
+  { sendBackClassTestExam: ClassTestSubmitOutcomeT },
+  { testId: string; reason: string }
+>`
+  mutation SendBackClassTestExam($testId: String!, $reason: String!) {
+    sendBackClassTestExam(testId: $testId, reason: $reason) { testId count }
+  }
 `;
 
 // ---------------------------------------------------------------------------
@@ -347,6 +369,9 @@ export interface ClassTestProfileResultT {
   totalMarks: number;
   percent: number | null;
   pass: boolean | null;
+  weakness: string | null;
+  teacherAction: string | null;
+  guardianAction: string | null;
 }
 export interface ClassTestProfileSubjectT {
   subject: string;
@@ -356,11 +381,31 @@ export interface ClassTestProfileSubjectT {
   previousPercent: number | null;
   trend: string;
 }
+export interface ClassTestWeaknessTallyT {
+  tag: string;
+  count: number;
+}
+export interface ClassTestStudentAnalyticsT {
+  examsPresent: number;
+  avgPercent: number | null;
+  consistency: number | null;
+  slope: number | null;
+  trajectory: string;
+  atRisk: boolean;
+  streakKind: string | null;
+  streakLength: number;
+  bestSubject: string | null;
+  weakestSubject: string | null;
+  recurringWeaknesses: ClassTestWeaknessTallyT[];
+  latestRank: number | null;
+  latestRankOf: number | null;
+}
 export interface ClassTestStudentProfileT {
   studentId: string;
   studentName: string;
   results: ClassTestProfileResultT[];
   bySubject: ClassTestProfileSubjectT[];
+  analytics: ClassTestStudentAnalyticsT;
 }
 
 export const CLASS_TEST_STUDENT_PROFILE_QUERY = gql<
@@ -370,7 +415,12 @@ export const CLASS_TEST_STUDENT_PROFILE_QUERY = gql<
   query ClassTestStudentProfile($studentId: String!) {
     classTestStudentProfile(studentId: $studentId) {
       studentId studentName
-      results { testId ctId subject testNumber examDate status marks totalMarks percent pass }
+      results { testId ctId subject testNumber examDate status marks totalMarks percent pass weakness teacherAction guardianAction }
+      analytics {
+        examsPresent avgPercent consistency slope trajectory atRisk streakKind streakLength
+        bestSubject weakestSubject latestRank latestRankOf
+        recurringWeaknesses { tag count }
+      }
       bySubject { subject examsTaken avgPercent latestPercent previousPercent trend }
     }
   }

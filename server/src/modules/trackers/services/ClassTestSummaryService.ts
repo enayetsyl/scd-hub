@@ -287,6 +287,10 @@ export interface StudentProfileResult {
   totalMarks: number;
   percent: number | null;
   pass: boolean | null;
+  /** CT-7: the teacher's per-test comments, so the profile is a comment history. */
+  weakness: string | null;
+  teacherAction: string | null;
+  guardianAction: string | null;
 }
 
 export interface StudentProfileSubjectRow {
@@ -299,21 +303,71 @@ export interface StudentProfileSubjectRow {
   trend: Trend;
 }
 
+/** CT-10: derived, never-stored per-student analytics (identity plane; NO corpus). */
+export interface WeaknessTally {
+  tag: string;
+  count: number;
+}
+export interface StudentProfileAnalytics {
+  examsPresent: number;
+  avgPercent: number | null;
+  /** Std dev of PRESENT percents — lower = steadier. */
+  consistency: number | null;
+  /** Regression slope of percent vs exam index (>0 improving, <0 declining). */
+  slope: number | null;
+  /** "up" | "steady" | "down" | "na" from the slope. */
+  trajectory: string;
+  /** Declining slope AND the most recent PRESENT result is a fail. */
+  atRisk: boolean;
+  /** Current run from the newest PRESENT results: "pass" | "fail" | null. */
+  streakKind: string | null;
+  streakLength: number;
+  bestSubject: string | null;
+  weakestSubject: string | null;
+  /** Weakness notes seen ≥ 2 times (normalized), most frequent first. */
+  recurringWeaknesses: WeaknessTally[];
+  /** Rank in the most recent PRESENT exam (by marks) among present students. */
+  latestRank: number | null;
+  latestRankOf: number | null;
+}
+
 export interface StudentProfile {
   studentId: string;
   studentName: string;
   results: StudentProfileResult[];
   bySubject: StudentProfileSubjectRow[];
+  analytics: StudentProfileAnalytics;
 }
 
 /** One student across every subject — per-result list (newest first) + a per-subject
  *  roll-up (avg/latest/previous/trend over PRESENT results). */
+const EMPTY_ANALYTICS: StudentProfileAnalytics = {
+  examsPresent: 0, avgPercent: null, consistency: null, slope: null, trajectory: "na",
+  atRisk: false, streakKind: null, streakLength: 0, bestSubject: null, weakestSubject: null,
+  recurringWeaknesses: [], latestRank: null, latestRankOf: null,
+};
+
+/** Least-squares slope of ys against their index (0..n-1); null when < 2 points. */
+function regressionSlope(ys: number[]): number | null {
+  const n = ys.length;
+  if (n < 2) return null;
+  const mx = (n - 1) / 2;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < n; i++) {
+    num += (i - mx) * (ys[i] - my);
+    den += (i - mx) ** 2;
+  }
+  return den === 0 ? 0 : Math.round((num / den) * 100) / 100;
+}
+
 export async function studentProfile(studentId: string): Promise<StudentProfile> {
   const studentOid = new Types.ObjectId(studentId);
   const docs = (await ClassTestResult.find({ studentId: studentOid }).lean()) as unknown as IClassTestResult[];
   const names = await loadStudentNames([studentId]);
   const studentName = names.get(studentId) ?? "শিক্ষার্থী";
-  if (docs.length === 0) return { studentId, studentName, results: [], bySubject: [] };
+  if (docs.length === 0) return { studentId, studentName, results: [], bySubject: [], analytics: EMPTY_ANALYTICS };
 
   const testIds = [...new Set(docs.map((d) => d.testId.toString()))].map((id) => new Types.ObjectId(id));
   const exams = (await ClassTest.find({ _id: { $in: testIds }, status: "PRINTED" })
@@ -336,6 +390,9 @@ export async function studentProfile(studentId: string): Promise<StudentProfile>
       totalMarks: score.totalMarks,
       percent: score.percent,
       pass: score.pass,
+      weakness: d.weakness ?? null,
+      teacherAction: d.teacherAction ?? null,
+      guardianAction: d.guardianAction ?? null,
     });
   }
   results.sort((a, b) => new Date(b.examDate).getTime() - new Date(a.examDate).getTime());
@@ -359,7 +416,66 @@ export async function studentProfile(studentId: string): Promise<StudentProfile>
     })
     .sort((a, b) => a.subject.localeCompare(b.subject));
 
-  return { studentId, studentName, results, bySubject };
+  // ---- CT-10 analytics (all DERIVED, never stored — D-#85; identity-plane) ----
+  const presentOldest = [...results]
+    .filter((r) => r.status === "PRESENT" && r.percent !== null)
+    .sort((a, b) => new Date(a.examDate).getTime() - new Date(b.examDate).getTime());
+  const percents = presentOldest.map((r) => r.percent as number);
+  const avgPercent = percents.length ? Math.round((percents.reduce((a, b) => a + b, 0) / percents.length) * 10) / 10 : null;
+  const consistency =
+    percents.length > 1
+      ? Math.round(Math.sqrt(percents.reduce((s, p) => s + (p - (avgPercent as number)) ** 2, 0) / percents.length) * 10) / 10
+      : percents.length === 1 ? 0 : null;
+  const slope = regressionSlope(percents);
+  const trajectory = slope === null ? "na" : slope > 2 ? "up" : slope < -2 ? "down" : "steady";
+  const newestPresent = presentOldest.length ? presentOldest[presentOldest.length - 1] : null;
+  const atRisk = slope !== null && slope < 0 && newestPresent?.pass === false;
+
+  // Pass/fail streak from the newest PRESENT results backward.
+  let streakKind: string | null = null;
+  let streakLength = 0;
+  for (let i = presentOldest.length - 1; i >= 0; i--) {
+    const kind = presentOldest[i].pass ? "pass" : "fail";
+    if (streakKind === null) { streakKind = kind; streakLength = 1; }
+    else if (kind === streakKind) streakLength++;
+    else break;
+  }
+
+  const rankedSubjects = bySubject.filter((s) => s.avgPercent !== null).sort((a, b) => (b.avgPercent as number) - (a.avgPercent as number));
+  const bestSubject = rankedSubjects.length ? rankedSubjects[0].subject : null;
+  const weakestSubject = rankedSubjects.length ? rankedSubjects[rankedSubjects.length - 1].subject : null;
+
+  // Recurring weakness notes (case-insensitive tally, keep first original spelling).
+  const wm = new Map<string, WeaknessTally>();
+  for (const d of docs) {
+    const orig = (d.weakness ?? "").trim();
+    if (!orig) continue;
+    const key = orig.toLowerCase();
+    const e = wm.get(key) ?? { tag: orig, count: 0 };
+    e.count++;
+    wm.set(key, e);
+  }
+  const recurringWeaknesses = [...wm.values()].filter((e) => e.count >= 2).sort((a, b) => b.count - a.count);
+
+  // Rank in the most recent PRESENT exam, by marks, among present students (one query).
+  let latestRank: number | null = null;
+  let latestRankOf: number | null = null;
+  if (newestPresent) {
+    const cohort = (await ClassTestResult.find({ testId: new Types.ObjectId(newestPresent.testId), status: "PRESENT" })
+      .select("marks")
+      .lean()) as unknown as Array<{ marks?: number }>;
+    const myMarks = newestPresent.marks ?? 0;
+    latestRankOf = cohort.length;
+    latestRank = 1 + cohort.filter((c) => (c.marks ?? 0) > myMarks).length;
+  }
+
+  const analytics: StudentProfileAnalytics = {
+    examsPresent: percents.length, avgPercent, consistency, slope, trajectory,
+    atRisk: !!atRisk, streakKind, streakLength, bestSubject, weakestSubject,
+    recurringWeaknesses, latestRank, latestRankOf,
+  };
+
+  return { studentId, studentName, results, bySubject, analytics };
 }
 
 // ---------------------------------------------------------------------------

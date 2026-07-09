@@ -36,7 +36,14 @@ export interface IClassTestResult extends Document {
   teacherAction?: string;
   /** Parent-facing "what the guardian should do". */
   guardianAction?: string;
-  /** Set by the CT-3 publish flow (not CT-2). */
+  /** CT-8 approval gate: teacher proposes for release (guardian does NOT see yet). */
+  submittedAt?: Date;
+  submittedBy?: Types.ObjectId;
+  /** CT-8: Office/Principal "send back" — reason returned to the teacher; row → DRAFT. */
+  sendBackReason?: string;
+  sendBackAt?: Date;
+  sendBackBy?: Types.ObjectId;
+  /** Set on APPROVE (CT-8) — the guardian-visible flag (was: CT-3 teacher publish). */
   publishedAt?: Date;
   /** Bumped on each (re)publish so CT-3's dedupeKey re-notifies (default 0 = unpublished). */
   publishedVersion: number;
@@ -54,6 +61,11 @@ const ClassTestResultSchema = new Schema<IClassTestResult>(
     weakness: { type: String, trim: true },
     teacherAction: { type: String, trim: true },
     guardianAction: { type: String, trim: true },
+    submittedAt: { type: Date },
+    submittedBy: { type: Schema.Types.ObjectId },
+    sendBackReason: { type: String, trim: true },
+    sendBackAt: { type: Date },
+    sendBackBy: { type: Schema.Types.ObjectId },
     publishedAt: { type: Date },
     publishedVersion: { type: Number, required: true, default: 0, min: 0 },
     enteredBy: { type: Schema.Types.ObjectId, required: true },

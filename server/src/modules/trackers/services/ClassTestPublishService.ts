@@ -280,9 +280,11 @@ export async function unpublishResult(testId: string, studentId: string, actorId
   const test = (await ClassTest.findById(testId).lean()) as IClassTest | null;
   if (!test) throw new ClassTestResultError("Class test not found");
 
+  // Retract to DRAFT (CT-8): clear the release AND the submission, so a corrected row
+  // must be re-submitted → re-approved (no silent re-appearance on the guardian card).
   const doc = (await ClassTestResult.findOneAndUpdate(
     { testId: new Types.ObjectId(testId), studentId: new Types.ObjectId(studentId), publishedAt: { $ne: null } },
-    { $set: { publishedAt: null } },
+    { $set: { publishedAt: null }, $unset: { submittedAt: "", submittedBy: "" } },
     { new: true },
   )) as IClassTestResult | null;
   if (!doc) throw new ClassTestResultError("This student's result is not published");
@@ -304,7 +306,7 @@ export async function unpublishExam(testId: string, actorId: string): Promise<Un
 
   const res = await ClassTestResult.updateMany(
     { testId: new Types.ObjectId(testId), publishedAt: { $ne: null } },
-    { $set: { publishedAt: null } },
+    { $set: { publishedAt: null }, $unset: { submittedAt: "", submittedBy: "" } },
   );
   const unpublishedCount = (res as { modifiedCount?: number }).modifiedCount ?? 0;
 
@@ -317,4 +319,93 @@ export async function unpublishExam(testId: string, actorId: string): Promise<Un
   });
 
   return { testId, unpublishedCount };
+}
+
+// ---------------------------------------------------------------------------
+// CT-8 approval gate — teacher SUBMITS, Office/Principal APPROVES / SENDS BACK.
+// Guardian visibility stays `publishedAt != null`, set only by approve (= publishExam).
+// ---------------------------------------------------------------------------
+
+export interface SubmitOutcome {
+  testId: string;
+  count: number;
+}
+
+/** Teacher: propose the exam's DRAFT results for release. Sets submittedAt (guardian
+ *  does NOT see yet) and clears any prior send-back. PRINTED-only; needs entered rows. */
+export async function submitExam(testId: string, actorId: string): Promise<SubmitOutcome> {
+  await loadPrintedTest(testId);
+  const oid = new Types.ObjectId(testId);
+  if ((await ClassTestResult.countDocuments({ testId: oid })) === 0) {
+    throw new ClassTestResultError("No results entered for this exam — nothing to submit");
+  }
+  const res = await ClassTestResult.updateMany(
+    { testId: oid, publishedAt: null },
+    {
+      $set: { submittedAt: new Date(), submittedBy: new Types.ObjectId(actorId) },
+      $unset: { sendBackReason: "", sendBackAt: "", sendBackBy: "" },
+    },
+  );
+  const count = (res as { modifiedCount?: number }).modifiedCount ?? 0;
+  await writeAudit({
+    eventKind: "CLASS_TEST_RESULT_SUBMITTED",
+    actorId,
+    targetId: oid,
+    targetKind: "ClassTest",
+    meta: { testId, count },
+  });
+  return { testId, count };
+}
+
+/** Teacher: recall a pending submission back to DRAFT so it can be edited. */
+export async function recallExam(testId: string, actorId: string): Promise<SubmitOutcome> {
+  const oid = new Types.ObjectId(testId);
+  const res = await ClassTestResult.updateMany(
+    { testId: oid, submittedAt: { $ne: null }, publishedAt: null },
+    { $unset: { submittedAt: "", submittedBy: "" } },
+  );
+  const count = (res as { modifiedCount?: number }).modifiedCount ?? 0;
+  await writeAudit({
+    eventKind: "CLASS_TEST_RESULT_RECALLED",
+    actorId,
+    targetId: oid,
+    targetKind: "ClassTest",
+    meta: { testId, count },
+  });
+  return { testId, count };
+}
+
+/** Office/Principal: send a submission back to the teacher (→ DRAFT) with a reason. */
+export async function sendBackExam(testId: string, actorId: string, reason: string): Promise<SubmitOutcome> {
+  const trimmed = reason.trim();
+  if (!trimmed) throw new ClassTestResultError("A send-back reason is required");
+  const oid = new Types.ObjectId(testId);
+  const res = await ClassTestResult.updateMany(
+    { testId: oid, submittedAt: { $ne: null }, publishedAt: null },
+    {
+      $unset: { submittedAt: "", submittedBy: "" },
+      $set: { sendBackReason: trimmed, sendBackAt: new Date(), sendBackBy: new Types.ObjectId(actorId) },
+    },
+  );
+  const count = (res as { modifiedCount?: number }).modifiedCount ?? 0;
+  if (count === 0) throw new ClassTestResultError("No submitted results to send back");
+  await writeAudit({
+    eventKind: "CLASS_TEST_RESULT_SENT_BACK",
+    actorId,
+    targetId: oid,
+    targetKind: "ClassTest",
+    meta: { testId, count, reason: trimmed },
+  });
+  return { testId, count };
+}
+
+/** Office/Principal: APPROVE = release + guardian delivery. Requires the teacher to
+ *  have submitted (the gate direction); reuses publishExam for stamping + delivery. */
+export async function approveExam(testId: string, actorId: string): Promise<PublishResultOutcome> {
+  const oid = new Types.ObjectId(testId);
+  const submitted = await ClassTestResult.countDocuments({ testId: oid, submittedAt: { $ne: null }, publishedAt: null });
+  if (submitted === 0) {
+    throw new ClassTestResultError("No submitted results to approve — the teacher must submit first");
+  }
+  return publishExam(testId, actorId);
 }
