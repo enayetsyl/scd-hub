@@ -33,6 +33,8 @@ export interface NotificationRefs {
   artifactId?: string;
   /** Cover assigned (deep-link: MyRoutine). */
   substitutionId?: string;
+  /** Print job delivered (deep-link: PrintHome; PQ-5, D-#281). */
+  printRequestId?: string;
   /** Library due-soon/overdue reminders (deep-link: LibraryHome; LB-5, D-#84). */
   loanId?: string;
   /** Overdue ladder rung (1 = first school day after due, then every 3rd). */

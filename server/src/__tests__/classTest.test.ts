@@ -53,9 +53,16 @@ jest.mock("../modules/trackers/models/ClassTest", () => ({
     findById: (id: unknown) => mockCtFindById(id),
     findOne: (q: unknown) => mockCtFindOne(q),
     find: (q: unknown) => mockCtFind(q),
+    updateOne: (q: unknown, u: unknown) => mockCtUpdateOne(q, u),
   },
 }));
+// PQ-5 (D-#281): a class test's printing now rides the unified PrintRequest queue.
+const mockCreatePrintRequest = jest.fn();
+jest.mock("../modules/printing/services/PrintRequestService", () => ({
+  createPrintRequest: (i: unknown) => mockCreatePrintRequest(i),
+}));
 
+const mockCtUpdateOne = jest.fn().mockResolvedValue({});
 const mockSectionFindById = jest.fn();
 jest.mock("../modules/foundation/models/Section", () => ({
   Section: { findById: (id: unknown) => mockSectionFindById(id) },
@@ -144,6 +151,8 @@ const classtestFile = {
 };
 
 beforeEach(() => {
+  mockCtUpdateOne.mockResolvedValue({});
+  mockCreatePrintRequest.mockResolvedValue({ _id: "print-req-1" });
   jest.clearAllMocks();
   mockSeqUpdate.mockResolvedValue({ seq: 1 });
   mockSectionFindById.mockReturnValue(leanChain({ classId: CLASS_OID }));
