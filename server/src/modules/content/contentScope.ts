@@ -95,3 +95,25 @@ export function contentScopeAllows(scope: ContentScope, subjectCode: string, cla
     scope.pairs.has(key(subjectCode, classLevel))
   );
 }
+
+/**
+ * Push the content scope INTO a Mongo query as an `$or` on ContentArtifact's
+ * `(subject, classLevel)` — so a paginated/large read can be scoped in the DB
+ * (skip/limit works, no per-doc post-filter loop). Returns:
+ *   • `undefined` — unrestricted (PRINCIPAL/OFFICE/whole_school): add nothing.
+ *   • `null`      — the caller sees NOTHING: the query should return [].
+ *   • `{ $or }`   — merge into the filter (`filter.$or = result.$or`).
+ */
+export function contentScopeMongo(
+  scope: ContentScope,
+): { $or: Record<string, unknown>[] } | null | undefined {
+  if (scope.all) return undefined;
+  const or: Record<string, unknown>[] = [];
+  if (scope.subjects.size > 0) or.push({ subject: { $in: [...scope.subjects] } });
+  if (scope.classLevels.size > 0) or.push({ classLevel: { $in: [...scope.classLevels] } });
+  for (const p of scope.pairs) {
+    const [code, lvl] = p.split("|");
+    or.push({ subject: code, classLevel: Number(lvl) });
+  }
+  return or.length > 0 ? { $or: or } : null;
+}

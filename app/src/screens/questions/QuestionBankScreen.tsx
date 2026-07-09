@@ -5,7 +5,7 @@
  * add-to-basket toggle (basket count badges the tab). Scope is enforced
  * server-side so a supervisor sees banks beyond their teaching classes.
  */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
@@ -100,6 +100,13 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
   const [bloomLevel, setBloomLevel] = useState<string | null>(null);
   const [marksMin, setMarksMin] = useState("");
   const [marksMax, setMarksMax] = useState("");
+  // Server-side pagination: fetch the first `limit`, "Load more" grows it by a page.
+  const PAGE = 40;
+  const [limit, setLimit] = useState(PAGE);
+  // Any filter change resets back to the first page.
+  useEffect(() => {
+    setLimit(PAGE);
+  }, [subject, classLevel, questionType, paperRole, difficulty, bloomLevel, marksMin, marksMax]);
 
   const [{ data, fetching, error }, refetch] = useQuery({
     query: QUESTIONS_QUERY,
@@ -112,14 +119,21 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
       bloomLevel,
       marksMin: num(marksMin),
       marksMax: num(marksMax),
+      limit,
+      offset: 0,
     },
   });
 
   const questions = data?.questions ?? [];
+  const canLoadMore = questions.length >= limit;
 
   function toggle<T>(current: T | null, value: T, set: (v: T | null) => void): void {
     set(current === value ? null : value);
   }
+
+  // One filter group's cell — grows to fill, ~3 per row on wide screens (2×3 grid),
+  // wrapping to fewer columns when the viewport is narrow.
+  const filterCell = { flexGrow: 1, flexBasis: "30%" as const, minWidth: 260 };
 
   return (
     <Screen padded={false} bleed>
@@ -140,54 +154,68 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
           </Card>
         )}
 
-        {/* Filters */}
-        <Muted>{STR.subject}</Muted>
-        <ChipRow>
-          <Chip label={STR.all} selected={subject === null} onPress={() => setSubject(null)} />
-          {SUBJECTS.map((s) => (
-            <Chip key={s} label={subjectLabel(s)} selected={subject === s} onPress={() => toggle(subject, s, setSubject)} />
-          ))}
-        </ChipRow>
+        {/* Filters — a 2-row × 3-column grid on wide screens (wraps to fewer columns when narrow). */}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(3) }}>
+          <View style={filterCell}>
+            <Muted>{STR.subject}</Muted>
+            <ChipRow>
+              <Chip label={STR.all} selected={subject === null} onPress={() => setSubject(null)} />
+              {SUBJECTS.map((s) => (
+                <Chip key={s} label={subjectLabel(s)} selected={subject === s} onPress={() => toggle(subject, s, setSubject)} />
+              ))}
+            </ChipRow>
+          </View>
 
-        <Muted>{STR.classLevel}</Muted>
-        <ChipRow>
-          <Chip label={STR.all} selected={classLevel === null} onPress={() => setClassLevel(null)} />
-          {CLASS_LEVELS.map((c) => (
-            <Chip key={c} label={bnNum(c)} selected={classLevel === c} onPress={() => toggle(classLevel, c, setClassLevel)} />
-          ))}
-        </ChipRow>
+          <View style={filterCell}>
+            <Muted>{STR.classLevel}</Muted>
+            <ChipRow>
+              <Chip label={STR.all} selected={classLevel === null} onPress={() => setClassLevel(null)} />
+              {CLASS_LEVELS.map((c) => (
+                <Chip key={c} label={bnNum(c)} selected={classLevel === c} onPress={() => toggle(classLevel, c, setClassLevel)} />
+              ))}
+            </ChipRow>
+          </View>
 
-        <Muted>{STR.questionType}</Muted>
-        <ChipRow>
-          <Chip label={STR.all} selected={questionType === null} onPress={() => setQuestionType(null)} />
-          {QUESTION_TYPES.map((q) => (
-            <Chip key={q} label={prettyCode(q)} selected={questionType === q} onPress={() => toggle(questionType, q, setQuestionType)} />
-          ))}
-        </ChipRow>
+          <View style={filterCell}>
+            <Muted>{STR.questionType}</Muted>
+            <ChipRow>
+              <Chip label={STR.all} selected={questionType === null} onPress={() => setQuestionType(null)} />
+              {QUESTION_TYPES.map((q) => (
+                <Chip key={q} label={prettyCode(q)} selected={questionType === q} onPress={() => toggle(questionType, q, setQuestionType)} />
+              ))}
+            </ChipRow>
+          </View>
 
-        <Muted>{STR.paperRole}</Muted>
-        <ChipRow>
-          <Chip label={STR.all} selected={paperRole === null} onPress={() => setPaperRole(null)} />
-          {PAPER_ROLES.map((p) => (
-            <Chip key={p} label={paperRoleLabel(p)} selected={paperRole === p} onPress={() => toggle(paperRole, p, setPaperRole)} />
-          ))}
-        </ChipRow>
+          <View style={filterCell}>
+            <Muted>{STR.paperRole}</Muted>
+            <ChipRow>
+              <Chip label={STR.all} selected={paperRole === null} onPress={() => setPaperRole(null)} />
+              {PAPER_ROLES.map((p) => (
+                <Chip key={p} label={paperRoleLabel(p)} selected={paperRole === p} onPress={() => toggle(paperRole, p, setPaperRole)} />
+              ))}
+            </ChipRow>
+          </View>
 
-        <Muted>{STR.difficulty}</Muted>
-        <ChipRow>
-          <Chip label={STR.all} selected={difficulty === null} onPress={() => setDifficulty(null)} />
-          {DIFFICULTIES.map((d) => (
-            <Chip key={d} label={difficultyLabel(d)} selected={difficulty === d} onPress={() => toggle(difficulty, d, setDifficulty)} />
-          ))}
-        </ChipRow>
+          <View style={filterCell}>
+            <Muted>{STR.difficulty}</Muted>
+            <ChipRow>
+              <Chip label={STR.all} selected={difficulty === null} onPress={() => setDifficulty(null)} />
+              {DIFFICULTIES.map((d) => (
+                <Chip key={d} label={difficultyLabel(d)} selected={difficulty === d} onPress={() => toggle(difficulty, d, setDifficulty)} />
+              ))}
+            </ChipRow>
+          </View>
 
-        <Muted>{STR.bloom}</Muted>
-        <ChipRow>
-          <Chip label={STR.all} selected={bloomLevel === null} onPress={() => setBloomLevel(null)} />
-          {BLOOM_LEVELS.map((b) => (
-            <Chip key={b} label={b} selected={bloomLevel === b} onPress={() => toggle(bloomLevel, b, setBloomLevel)} />
-          ))}
-        </ChipRow>
+          <View style={filterCell}>
+            <Muted>{STR.bloom}</Muted>
+            <ChipRow>
+              <Chip label={STR.all} selected={bloomLevel === null} onPress={() => setBloomLevel(null)} />
+              {BLOOM_LEVELS.map((b) => (
+                <Chip key={b} label={b} selected={bloomLevel === b} onPress={() => toggle(bloomLevel, b, setBloomLevel)} />
+              ))}
+            </ChipRow>
+          </View>
+        </View>
 
         <View style={{ flexDirection: "row", gap: space(3) }}>
           <View style={{ flex: 1 }}>
@@ -271,6 +299,11 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
             );
           })
         )}
+
+        {/* Server pagination: grow the page until the server returns a short page. */}
+        {!fetching && canLoadMore ? (
+          <Button title={STR.loadMore} variant="secondary" onPress={() => setLimit((l) => l + PAGE)} style={{ marginTop: space(2) }} />
+        ) : null}
       </ScrollView>
     </Screen>
   );
