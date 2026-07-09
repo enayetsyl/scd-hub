@@ -11,6 +11,7 @@ import { useQuery, useMutation } from "urql";
 import { ROUTINE_FOR_DATE_QUERY, CLASS_NOTES_FOR_DATE_QUERY, PUBLISH_CLASS_NOTE } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Badge, Notice, Loader } from "../../components/ui";
+import { ClassNoteAttachments, type AttachmentRef } from "../../components/ClassNoteAttachments";
 import { DateField } from "../../components/DateField";
 import { STR, routineSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -26,6 +27,7 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
   const [sel, setSel] = useState<string | null>(null);
   const [taught, setTaught] = useState("");
   const [hwId, setHwId] = useState("");
+  const [files, setFiles] = useState<AttachmentRef[]>([]);
   const [busy, setBusy] = useState(false);
   const [ok, setOk] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +44,13 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
     setBusy(true);
     setError(null);
     setOk(null);
-    const res = await publish({ slotId, date, taughtSummaryBn: taught.trim(), homeworkItemId: hwId.trim() || null });
+    const res = await publish({
+      slotId,
+      date,
+      taughtSummaryBn: taught.trim(),
+      homeworkItemId: hwId.trim() || null,
+      attachmentIds: files.map((f) => f.fileId),
+    });
     setBusy(false);
     if (res.error || !res.data?.publishClassNote) {
       setError(friendlyError(res.error));
@@ -52,6 +60,7 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
     setSel(null);
     setTaught("");
     setHwId("");
+    setFiles([]);
     refetchSlots({ requestPolicy: "network-only" });
     refetchNotes({ requestPolicy: "network-only" });
   }
@@ -87,6 +96,7 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
                 <View style={{ marginTop: space(2), gap: space(1) }}>
                   <Field label={STR.rtTaughtSummary} value={taught} onChangeText={setTaught} multiline />
                   <Field label={STR.rtHomeworkId} value={hwId} onChangeText={setHwId} />
+                  <ClassNoteAttachments value={files} onChange={setFiles} />
                   <Button title={STR.rtPublish} onPress={() => submit(s.id)} loading={busy} disabled={busy || taught.trim() === ""} />
                 </View>
               ) : (

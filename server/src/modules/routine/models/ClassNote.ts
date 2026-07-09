@@ -20,6 +20,8 @@ export interface IClassNote extends Document {
   taughtSummaryBn: string;
   /** Link to the day's HW-T1 declaration (reused, not duplicated). */
   homeworkItemId?: Types.ObjectId;
+  /** Optional StoredFile attachments (≤5, classnote_attachment kind). */
+  attachmentIds?: Types.ObjectId[];
   publishedBy: Types.ObjectId;
   publishedAt: Date;
   createdAt: Date;
@@ -35,6 +37,7 @@ const ClassNoteSchema = new Schema<IClassNote>(
     subject: { type: String, required: true },
     taughtSummaryBn: { type: String, required: true, trim: true },
     homeworkItemId: { type: Schema.Types.ObjectId, ref: "HomeworkItem" },
+    attachmentIds: { type: [Schema.Types.ObjectId], ref: "StoredFile", default: undefined },
     publishedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     publishedAt: { type: Date, required: true },
   },

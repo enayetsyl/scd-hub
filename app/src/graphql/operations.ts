@@ -2473,12 +2473,13 @@ export interface ClassNoteT {
   subject: string;
   taughtSummaryBn: string;
   homeworkItemId: string | null;
+  attachmentIds: string[];
   publishedBy: string;
   publishedAt: string;
 }
 
 const CLASS_NOTE_FIELDS = `
-  id slotId groupType groupId date subject taughtSummaryBn homeworkItemId publishedBy publishedAt
+  id slotId groupType groupId date subject taughtSummaryBn homeworkItemId attachmentIds publishedBy publishedAt
 `;
 
 export const CLASS_NOTES_FOR_DATE_QUERY = gql<
@@ -2501,13 +2502,56 @@ export const MY_CLASS_NOTE_PROMPTS_QUERY = gql<
 
 export const PUBLISH_CLASS_NOTE = gql<
   { publishClassNote: ClassNoteT },
-  { slotId: string; date: string; taughtSummaryBn: string; homeworkItemId?: string | null }
+  { slotId: string; date: string; taughtSummaryBn: string; homeworkItemId?: string | null; attachmentIds?: string[] | null }
 >`
-  mutation PublishClassNote($slotId: String!, $date: String!, $taughtSummaryBn: String!, $homeworkItemId: String) {
-    publishClassNote(slotId: $slotId, date: $date, taughtSummaryBn: $taughtSummaryBn, homeworkItemId: $homeworkItemId) {
+  mutation PublishClassNote($slotId: String!, $date: String!, $taughtSummaryBn: String!, $homeworkItemId: String, $attachmentIds: [String!]) {
+    publishClassNote(slotId: $slotId, date: $date, taughtSummaryBn: $taughtSummaryBn, homeworkItemId: $homeworkItemId, attachmentIds: $attachmentIds) {
       ${CLASS_NOTE_FIELDS}
     }
   }
+`;
+
+// Class-note admin (Principal/Office): list-all-for-date + edit + delete
+export interface ClassNoteAttachmentT {
+  id: string;
+  name: string;
+  mime: string;
+}
+export interface ClassNoteAdminRowT {
+  id: string;
+  date: string;
+  subject: string;
+  taughtSummaryBn: string;
+  classLevel: number | null;
+  classNameBn: string | null;
+  sectionCode: string | null;
+  sectionNameBn: string | null;
+  subjectGroupNameBn: string | null;
+  authorName: string | null;
+  publishedAt: string;
+  attachments: ClassNoteAttachmentT[];
+}
+export const CLASS_NOTES_ADMIN_QUERY = gql<{ classNotesAdmin: ClassNoteAdminRowT[] }, { date: string }>`
+  query ClassNotesAdmin($date: String!) {
+    classNotesAdmin(date: $date) {
+      id date subject taughtSummaryBn classLevel classNameBn sectionCode sectionNameBn
+      subjectGroupNameBn authorName publishedAt
+      attachments { id name mime }
+    }
+  }
+`;
+export const UPDATE_CLASS_NOTE = gql<
+  { updateClassNote: ClassNoteT },
+  { id: string; taughtSummaryBn?: string | null; attachmentIds?: string[] | null }
+>`
+  mutation UpdateClassNote($id: String!, $taughtSummaryBn: String, $attachmentIds: [String!]) {
+    updateClassNote(id: $id, taughtSummaryBn: $taughtSummaryBn, attachmentIds: $attachmentIds) {
+      ${CLASS_NOTE_FIELDS}
+    }
+  }
+`;
+export const DELETE_CLASS_NOTE = gql<{ deleteClassNote: { id: string } }, { id: string }>`
+  mutation DeleteClassNote($id: String!) { deleteClassNote(id: $id) { id } }
 `;
 
 export interface GuardianAttendanceDayT {

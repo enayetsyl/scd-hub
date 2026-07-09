@@ -84,6 +84,17 @@ export function validateUpload(mime: string, sizeBytes: number): string | null {
   return null;
 }
 
+// Class-note attachments (Feature: class notes get attachments) — jpeg/png/pdf ≤ 10 MB,
+// up to 5 per note (the 5-file cap is enforced where attachmentIds are bound).
+export const MAX_CLASSNOTE_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+export const MAX_CLASSNOTE_ATTACHMENTS = 5;
+export function validateClassNoteUpload(mime: string, sizeBytes: number): string | null {
+  if (!(ALLOWED_FILE_MIMES as readonly string[]).includes(mime)) return FILE_ERRORS_BN.badMime;
+  if (sizeBytes > MAX_CLASSNOTE_ATTACHMENT_BYTES) return FILE_ERRORS_BN.tooLarge;
+  if (sizeBytes <= 0) return FILE_ERRORS_BN.badMime;
+  return null;
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_BYTES + 1 }, // +1 so OUR size check produces the Bangla message
@@ -101,6 +112,12 @@ const uploadChat = multer({
 const uploadComment = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_COMMENT_ATTACHMENT_BYTES + 1 },
+});
+
+// Class-note attachments — 10 MB cap so OUR Bangla size check fires (not a bare multer error).
+const uploadClassNote = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_CLASSNOTE_ATTACHMENT_BYTES + 1 },
 });
 
 export const filesRouter: Router = createRouter();
@@ -325,6 +342,70 @@ filesRouter.post("/classtest", parseUpload, async (req: Request, res: Response) 
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/classnote — staff attach a file to a class note (≤ 10 MB, jpeg/png/pdf).
+// The 5-per-note cap is enforced when attachmentIds are bound (publish/update). Read
+// gate = staff routine:read. tracker/routine publisher then carries the fileId along.
+// ---------------------------------------------------------------------------
+
+const parseClassNoteUpload: express.RequestHandler = (req, res, next) => {
+  uploadClassNote.single("file")(req, res, (err: unknown) => {
+    if (err) {
+      res.status(422).json({ error: FILE_ERRORS_BN.tooLarge });
+      return;
+    }
+    next();
+  });
+};
+
+filesRouter.post("/classnote", parseClassNoteUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "routine:read")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const rejection = validateClassNoteUpload(file.mimetype, file.size);
+  if (rejection) {
+    res.status(422).json({ error: rejection });
+    return;
+  }
+  try {
+    const driveFileId = await uploadToDrive({
+      name: `${Date.now()}_${decodeUploadName(file.originalname)}`,
+      mime: file.mimetype,
+      data: file.buffer,
+      year: String(new Date().getFullYear()),
+      subfolder: "classnote",
+    });
+    const stored = await StoredFile.create({
+      kind: "classnote_attachment" as StoredFileKind,
+      mime: file.mimetype,
+      sizeBytes: file.size,
+      originalName: decodeUploadName(file.originalname),
+      driveFileId,
+      uploadedBy: ctx.auth.userId,
+    });
+    res.json({
+      fileId: stored._id.toString(),
+      kind: "classnote_attachment",
+      mime: stored.mime,
+      sizeBytes: stored.sizeBytes,
+      originalName: stored.originalName,
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      res.status(503).json({ error: FILE_ERRORS_BN.driveDown });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /files/comment — teacher attaches a file to a daily student comment (CM-2,
 // prd-comments-meetings §5). tracker:write + the comment's section verified
 // server-side; MIME image/pdf/video/audio ≤ 10 MB (chat parity, D-#108); Drive-first
@@ -457,6 +538,11 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       await assertCommentFileReadAccess(ctx, file);
     } else if (file.kind === "classtest_question") {
       await assertClassTestFileReadAccess(ctx, file);
+    } else if (file.kind === "classnote_attachment") {
+      // Class-note attachments are staff-readable (routine:read); guardian viewing is a follow-up.
+      if (!callerHasPermission(ctx.auth, "routine:read")) {
+        throw new ForbiddenError(FILE_ERRORS_BN.forbidden);
+      }
     } else {
       await assertFileReadAccess(ctx, file);
     }
