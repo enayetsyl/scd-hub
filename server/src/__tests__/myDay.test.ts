@@ -78,7 +78,7 @@ jest.mock("../modules/trackers/services/HomeworkSummaryService", () => ({
 // D-#279: the Today dashboard's backlog alerts + the manager presence snapshot are
 // exercised in pendingAlerts.test.ts / attendanceRollup.test.ts; seams here.
 jest.mock("../modules/routine/services/PendingAlertService", () => ({
-  pendingAlertsFor: (...a: unknown[]) => mockPendingAlerts(...a),
+  pendingWorkFor: (...a: unknown[]) => mockPendingAlerts(...a),
 }));
 jest.mock("../modules/attendance/services/AttendanceReportService", () => ({
   classPresenceForDate: (...a: unknown[]) => mockClassPresence(...a),
@@ -105,7 +105,7 @@ beforeEach(() => {
   mockMarking.mockResolvedValue([]);
   mockCoverSlotFind.mockResolvedValue([]);
   mockMySubFind.mockResolvedValue([]);
-  mockPendingAlerts.mockResolvedValue([]);
+  mockPendingAlerts.mockResolvedValue({ alerts: [], assignmentPrep: null });
   mockClassPresence.mockResolvedValue([]);
 });
 
@@ -310,10 +310,15 @@ describe("myDay — permission degradation (guardian/office render, never error)
     expect(mockClassPresence).toHaveBeenCalledWith("2026-07-01");
   });
 
-  test("alerts pass through for every authenticated caller (each kind self-gates)", async () => {
-    mockPendingAlerts.mockResolvedValue([{ kind: "attendance", count: 2, oldestDateKey: "2026-06-29" }]);
+  test("alerts + the assignment-prep countdown pass through (each kind self-gates)", async () => {
+    const prep = { dueAt: "2026-07-02T01:00:00.000Z", deliveryDateKey: "2026-07-02", weekNumber: 3, items: 1 };
+    mockPendingAlerts.mockResolvedValue({
+      alerts: [{ kind: "attendance", count: 2, oldestDateKey: "2026-06-29" }],
+      assignmentPrep: prep,
+    });
     const r = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
     expect(r.alerts).toEqual([{ kind: "attendance", count: 2, oldestDateKey: "2026-06-29" }]);
+    expect(r.assignmentPrep).toEqual(prep);
   });
 
   test("unauthenticated rejects", async () => {

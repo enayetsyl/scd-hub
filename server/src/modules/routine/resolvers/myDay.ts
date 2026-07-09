@@ -11,8 +11,22 @@ import { ForbiddenError } from "../../../middleware/authz";
 import type { IRoutineSlot } from "../models/RoutineSlot";
 import { RoutineSlotRef } from "./routineSlots";
 import { myDayFor, type MyDayHomeworkCounts, type MyDayResult } from "../services/MyDayService";
-import type { PendingAlert } from "../services/PendingAlertService";
+import type { PendingAlert, AssignmentPrep } from "../services/PendingAlertService";
 import type { ClassPresence } from "../../attendance/services/AttendanceReportService";
+
+const AssignmentPrepRef = builder.objectRef<AssignmentPrep>("AssignmentPrep").implement({
+  description:
+    "The countdown to having the assignment question ready (D-#280). `dueAt` is the school " +
+    "day's START on the RESOLVED delivery date — the instant the paper must be in students' " +
+    "hands — so a holiday roll carries it. Null once the caller's items are delivered; once " +
+    "`dueAt` passes it becomes the red `assignment_entry` alert instead.",
+  fields: (t) => ({
+    dueAt: t.exposeString("dueAt"),
+    deliveryDateKey: t.exposeString("deliveryDateKey"),
+    weekNumber: t.exposeInt("weekNumber"),
+    items: t.exposeInt("items"),
+  }),
+});
 
 const MyDayHomeworkRef = builder.objectRef<MyDayHomeworkCounts>("MyDayHomework").implement({
   description: "Cumulative homework counts over the caller's accessible classes (UX-4 Today dashboard).",
@@ -67,6 +81,11 @@ const MyDayRef = builder.objectRef<MyDayResult>("MyDay").implement({
     homework: t.field({ type: MyDayHomeworkRef, resolve: (r) => r.homework }),
     attendancePending: t.exposeBoolean("attendancePending"),
     alerts: t.field({ type: [PendingAlertRef], resolve: (r) => r.alerts }),
+    assignmentPrep: t.field({
+      type: AssignmentPrepRef,
+      nullable: true,
+      resolve: (r) => r.assignmentPrep,
+    }),
     classPresence: t.field({ type: [ClassPresenceRef], resolve: (r) => r.classPresence }),
   }),
 });

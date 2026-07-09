@@ -9,8 +9,9 @@
  *   3. class_note  — a period with no note owes a note, but only on a day whose
  *      day-type admits that period's track; slots outside their effective window and
  *      days on the wrong weekday never count
- *   4. assignment_entry — items past their delivery date and NOT delivered (owner
- *      ruling: "not delivered", not "not checked"); a future delivery date is silent
+ *   4. assignment — undelivered items split at the DEADLINE INSTANT (07:00 on the
+ *      resolved delivery date): before it a countdown (D-#280), at/after it the red
+ *      overdue alert (D-#279). Delivering clears both.
  *   5. permission degradation — a caller lacking a permission contributes no alert
  *
  * DB-free: models + the two delegated services are mocked; the composition is real.
@@ -23,6 +24,7 @@ const mockYearFindOne = jest.fn();
 const mockScheduleFindOne = jest.fn();
 const mockExpectedItemsForWeek = jest.fn();
 const mockWeekNumberFor = jest.fn();
+const mockWindowFindOne = jest.fn();
 
 jest.mock("../modules/routine/models/HolidayException", () => ({
   HolidayException: { find: (f: unknown) => ({ select: () => ({ lean: () => mockHolidayFind(f) }) }) },
@@ -48,8 +50,13 @@ jest.mock("../modules/trackers/services/AssignmentScheduleService", () => ({
 jest.mock("../modules/trackers/assignmentCalendar", () => ({
   weekNumberFor: (...a: unknown[]) => mockWeekNumberFor(...a),
 }));
+jest.mock("../modules/routine/models/ScheduleWindow", () => ({
+  ScheduleWindow: {
+    findOne: (f: unknown) => ({ sort: () => ({ select: () => ({ lean: () => mockWindowFindOne(f) }) }) }),
+  },
+}));
 
-import { pendingAlertsFor, BACKLOG_DAYS } from "../modules/routine/services/PendingAlertService";
+import { pendingAlertsFor, pendingWorkFor, BACKLOG_DAYS } from "../modules/routine/services/PendingAlertService";
 import type { AppContext } from "../context";
 
 // Thu 2026-06-11. The 7-day window is 2026-06-05 (Fri) .. 2026-06-11 (Thu).
@@ -77,6 +84,7 @@ beforeEach(() => {
   mockScheduleFindOne.mockResolvedValue(null);
   mockExpectedItemsForWeek.mockResolvedValue({ suspended: false, deliveryDate: null, items: [] });
   mockWeekNumberFor.mockReturnValue(5);
+  mockWindowFindOne.mockResolvedValue({ dayStartMinutes: 420 }); // 07:00
 });
 
 describe("window + day-types", () => {
@@ -155,61 +163,121 @@ describe("class_note alert", () => {
   });
 });
 
-describe("assignment_entry alert (owner ruling: NOT DELIVERED)", () => {
+describe("assignment: countdown then overdue, split at the 07:00 deadline (D-#279/#280)", () => {
   const withSchedule = (): void => {
     mockYearFindOne.mockResolvedValue({ _id: "yr-1" });
     mockScheduleFindOne.mockResolvedValue({ termStartDate: new Date(2026, 3, 1) });
-    mockWeekNumberFor.mockReturnValue(2);
+    // Week 1 by default → weeks == [1], so one mockResolvedValue is unambiguous.
+    // Tests that need a previous week bump this to 2 and use mockImplementation.
+    mockWeekNumberFor.mockReturnValue(1);
   };
+  const week = (deliveryDate: string | null, items: unknown[], suspended = false) =>
+    Promise.resolve({ suspended, deliveryDate, items });
 
-  test("an undelivered item past its delivery date is reported as an ITEM count", async () => {
+  test("an undelivered item PAST its deadline is the red overdue alert, counted as ITEMS", async () => {
     withSchedule();
-    mockExpectedItemsForWeek.mockImplementation((_yr: string, week: number) =>
-      Promise.resolve(
-        week === 2
-          ? {
-              suspended: false,
-              deliveryDate: "2026-06-09",
-              items: [
-                { teacherId: USER, delivered: false },
-                { teacherId: USER, delivered: true },
-                { teacherId: "other", delivered: false },
-              ],
-            }
-          : { suspended: false, deliveryDate: "2026-06-02", items: [] },
-      ),
+    mockWeekNumberFor.mockReturnValue(2);
+    mockExpectedItemsForWeek.mockImplementation((_yr: string, w: number) =>
+      w === 2
+        ? week("2026-06-09", [
+            { teacherId: USER, delivered: false },
+            { teacherId: USER, delivered: true },
+            { teacherId: "other", delivered: false },
+          ])
+        : week("2026-06-02", []),
     );
-    const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
+    const { alerts, assignmentPrep } = await pendingWorkFor(ctxFor("TEACHER"), TODAY);
     const a = alerts.find((x) => x.kind === "assignment_entry")!;
     expect(a.count).toBe(1); // only MY undelivered item
     expect(a.oldestDateKey).toBe("2026-06-09");
+    expect(assignmentPrep).toBeNull(); // past the deadline → no countdown
   });
 
-  test("a delivery date still in the future is silent (not yet owed)", async () => {
+  test("a FUTURE delivery is a countdown, not an alert — dueAt is 07:00 local on that date", async () => {
     withSchedule();
-    mockExpectedItemsForWeek.mockResolvedValue({
-      suspended: false,
-      deliveryDate: "2026-06-18",
-      items: [{ teacherId: USER, delivered: false }],
-    });
-    const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
+    mockExpectedItemsForWeek.mockResolvedValue(
+      await week("2026-06-18", [{ teacherId: USER, delivered: false }]),
+    );
+    const { alerts, assignmentPrep } = await pendingWorkFor(ctxFor("TEACHER"), TODAY);
     expect(alerts.find((x) => x.kind === "assignment_entry")).toBeUndefined();
+    expect(assignmentPrep).toEqual(
+      expect.objectContaining({ deliveryDateKey: "2026-06-18", items: 1, weekNumber: 1 }),
+    );
+    expect(new Date(assignmentPrep!.dueAt)).toEqual(new Date(2026, 5, 18, 7, 0, 0, 0));
+  });
+
+  test("on delivery-day MORNING (before 07:00) it is still a countdown, not overdue", async () => {
+    // The whole point of D-#280: the split is on the deadline INSTANT, not the date.
+    withSchedule();
+    mockExpectedItemsForWeek.mockResolvedValue(
+      await week(TODAY_KEY, [{ teacherId: USER, delivered: false }]),
+    );
+    const sixAm = new Date(2026, 5, 11, 6, 0);
+    const { alerts, assignmentPrep } = await pendingWorkFor(ctxFor("TEACHER"), sixAm);
+    expect(alerts.find((x) => x.kind === "assignment_entry")).toBeUndefined();
+    expect(assignmentPrep?.deliveryDateKey).toBe(TODAY_KEY);
+  });
+
+  test("at 07:00 exactly it flips to overdue — no dead zone", async () => {
+    withSchedule();
+    mockExpectedItemsForWeek.mockResolvedValue(
+      await week(TODAY_KEY, [{ teacherId: USER, delivered: false }]),
+    );
+    const sevenAm = new Date(2026, 5, 11, 7, 0);
+    const { alerts, assignmentPrep } = await pendingWorkFor(ctxFor("TEACHER"), sevenAm);
+    expect(alerts.find((x) => x.kind === "assignment_entry")?.count).toBe(1);
+    expect(assignmentPrep).toBeNull();
+  });
+
+  test("the school's own day-start is honoured (not a hard-coded 07:00)", async () => {
+    withSchedule();
+    mockWindowFindOne.mockResolvedValue({ dayStartMinutes: 480 }); // 08:00
+    mockExpectedItemsForWeek.mockResolvedValue(
+      await week(TODAY_KEY, [{ teacherId: USER, delivered: false }]),
+    );
+    const sevenThirty = new Date(2026, 5, 11, 7, 30);
+    const { alerts, assignmentPrep } = await pendingWorkFor(ctxFor("TEACHER"), sevenThirty);
+    expect(alerts.find((x) => x.kind === "assignment_entry")).toBeUndefined(); // not 08:00 yet
+    expect(new Date(assignmentPrep!.dueAt)).toEqual(new Date(2026, 5, 11, 8, 0, 0, 0));
+  });
+
+  test("delivering the item clears BOTH the countdown and the alert at once", async () => {
+    withSchedule();
+    mockExpectedItemsForWeek.mockResolvedValue(
+      await week("2026-06-18", [{ teacherId: USER, delivered: true }]),
+    );
+    const { alerts, assignmentPrep } = await pendingWorkFor(ctxFor("TEACHER"), TODAY);
+    expect(alerts.find((x) => x.kind === "assignment_entry")).toBeUndefined();
+    expect(assignmentPrep).toBeNull();
+  });
+
+  test("last week overdue + this week counting down can coexist", async () => {
+    withSchedule();
+    mockWeekNumberFor.mockReturnValue(2);
+    mockExpectedItemsForWeek.mockImplementation((_yr: string, w: number) =>
+      w === 1
+        ? week("2026-06-04", [{ teacherId: USER, delivered: false }]) // past → overdue
+        : week("2026-06-18", [{ teacherId: USER, delivered: false }]), // future → countdown
+    );
+    const { alerts, assignmentPrep } = await pendingWorkFor(ctxFor("TEACHER"), TODAY);
+    expect(alerts.find((x) => x.kind === "assignment_entry")?.oldestDateKey).toBe("2026-06-04");
+    expect(assignmentPrep?.deliveryDateKey).toBe("2026-06-18");
   });
 
   test("a suspended week owes nothing", async () => {
     withSchedule();
-    mockExpectedItemsForWeek.mockResolvedValue({
-      suspended: true,
-      deliveryDate: "2026-06-09",
-      items: [{ teacherId: USER, delivered: false }],
-    });
-    const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
+    mockExpectedItemsForWeek.mockResolvedValue(
+      await week("2026-06-09", [{ teacherId: USER, delivered: false }], true),
+    );
+    const { alerts, assignmentPrep } = await pendingWorkFor(ctxFor("TEACHER"), TODAY);
     expect(alerts.find((x) => x.kind === "assignment_entry")).toBeUndefined();
+    expect(assignmentPrep).toBeNull();
   });
 
   test("no academic year / no schedule → silent, never an error", async () => {
-    const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
+    const { alerts, assignmentPrep } = await pendingWorkFor(ctxFor("TEACHER"), TODAY);
     expect(alerts.find((x) => x.kind === "assignment_entry")).toBeUndefined();
+    expect(assignmentPrep).toBeNull();
     expect(mockExpectedItemsForWeek).not.toHaveBeenCalled();
   });
 });

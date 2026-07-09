@@ -4,7 +4,10 @@
  *   date header      — today + the Bangla day name
  *   Pending (red)    — backlog alerts (D-#279): attendance / class notes / assignment
  *                      entry owed TODAY or on a previous school day (7-day look-back).
- *                      Each row deep-links into the screen that clears it.
+ *                      Each row deep-links into the screen that clears it. Above them
+ *                      sits the AMBER assignment-prep countdown (D-#280) — the work that
+ *                      has not slipped yet; it ticks locally off the server's absolute
+ *                      `dueAt`, vanishes on delivery, and becomes a red row once overdue.
  *   Class presence   — Principal/Office only: per-class present/absent for today,
  *                      followed by the sections nobody has marked yet (D-#279)
  *   My periods       — the caller's own routine slots (time · subject · class),
@@ -16,7 +19,7 @@
  *                      same roleHasPermission checks AppTabs uses — no new gating)
  * Refetches on focus (the HomeworkHome pattern) so counts never go stale.
  */
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useQuery } from "urql";
@@ -72,6 +75,30 @@ export default function TodayScreen(): React.ReactElement {
   // Manager-only: who still hasn't marked today (reuses the existing §8 query).
   const [unmarkedQ] = useQuery({ query: UNMARKED_SECTIONS, variables: { dateKey: date }, pause: !canManage });
   const unmarked = unmarkedQ.data?.unmarkedSections ?? [];
+
+  // The countdown ticks locally (the server sends an absolute `dueAt` instant), so the
+  // remaining time stays truthful without re-querying. One tick a minute is enough —
+  // the row is rendered to minute precision.
+  const prep = day?.assignmentPrep ?? null;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!prep) return;
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [prep?.dueAt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** "3d 4h" / "4h 20m" / "20m" — coarsest two units, minute precision at the end. */
+  const timeLeft = (dueAt: string): string => {
+    const ms = new Date(dueAt).getTime() - now;
+    if (ms <= 0) return STR.prepDueNow;
+    const totalMinutes = Math.floor(ms / 60_000);
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+    if (days > 0) return `${bnNum(days)}${STR.prepDays} ${bnNum(hours)}${STR.prepHours}`;
+    if (hours > 0) return `${bnNum(hours)}${STR.prepHours} ${bnNum(minutes)}${STR.prepMinutes}`;
+    return `${bnNum(minutes)}${STR.prepMinutes}`;
+  };
 
   const alertLabel = (kind: string): string =>
     kind === "attendance"
@@ -135,11 +162,31 @@ export default function TodayScreen(): React.ReactElement {
 
         {/* Red backlog alerts (D-#279) — anything owed TODAY or on a previous school day.
             Each row deep-links into the screen that clears it. Empty ⇒ nothing renders. */}
-        {alerts.length > 0 ? (
+        {alerts.length > 0 || prep ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(1), color: colors.error }}>
               ⚠ {STR.alertsTitle}
             </Body>
+
+            {/* Amber countdown (D-#280) — sits above the red rows: it is the thing that
+                has NOT slipped yet. Vanishes the moment the item is delivered, and turns
+                into the red `assignment_entry` row once the deadline passes. */}
+            {prep ? (
+              <Pressable
+                onPress={() => nav.navigate("AssignmentTab", { screen: "AssignmentHome" })}
+                accessibilityRole="button"
+                accessibilityLabel={STR.prepAssignment}
+                style={({ pressed }) => [{ paddingVertical: space(2) }, pressed && { opacity: 0.7 }]}
+              >
+                <Body style={{ fontWeight: "600", color: colors.warning }}>
+                  ⏳ {STR.prepAssignment} · {timeLeft(prep.dueAt)} {STR.prepLeft}
+                </Body>
+                <Muted>
+                  {STR.prepDeadline}: {bnNum(prep.deliveryDateKey)} · {bnNum(prep.items)} {STR.alertItems}
+                </Muted>
+              </Pressable>
+            ) : null}
+
             {alerts.map((a) => (
               <Pressable
                 key={a.kind}
