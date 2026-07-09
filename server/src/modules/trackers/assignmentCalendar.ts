@@ -33,6 +33,17 @@ export function atMidnight(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+/**
+ * Serialize a date-only value (delivery/due anchors — always local midnight) as
+ * UTC-midnight ISO of its LOCAL calendar day, so the day never rolls back on a +tz
+ * server. `.toISOString()` on a local-midnight date on an Asia/Dhaka (UTC+6) server
+ * yields the previous UTC day — that made THU delivery read as WED and SUN due as SAT.
+ * Idempotent + tz-agnostic: the wire value's date part is always the intended day.
+ */
+export function dateOnlyISO(d: Date): string {
+  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString();
+}
+
 function addDays(date: Date, days: number): Date {
   const d = new Date(date.getTime());
   d.setDate(d.getDate() + days);

@@ -24,7 +24,7 @@ import { AssignmentItem, type IAssignmentItem } from "../models/AssignmentItem";
 import { Student } from "../../foundation/models/Student";
 import { emitAssignmentGuardianChase } from "../../notifications/services/emitters";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
-import { atMidnight } from "../assignmentCalendar";
+import { atMidnight, dateOnlyISO } from "../assignmentCalendar";
 
 // ---------------------------------------------------------------------------
 // The §7 guardian message (Bangla, generated; template reviewed by the
@@ -148,7 +148,7 @@ export async function assignmentChaseList(asOf: Date = new Date()): Promise<Chas
         guardianPhone: student?.phone ?? null,
         sectionId: r.sectionId.toString(),
         classId: r.classId.toString(),
-        dueDate: r.dueDate ? new Date(r.dueDate).toISOString() : null,
+        dueDate: r.dueDate ? dateOnlyISO(new Date(r.dueDate)) : null,
         daysOverdue: due === null ? 0 : Math.max(0, Math.round((today - due) / 86_400_000)),
         chaseCount: r.chaseCount,
         followUpCount,
