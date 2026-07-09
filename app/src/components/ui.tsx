@@ -317,6 +317,8 @@ export function Field({
   editable = true,
   error,
   helper,
+  onSubmitEditing,
+  returnKeyType,
 }: {
   label?: string;
   value: string;
@@ -332,6 +334,9 @@ export function Field({
   editable?: boolean;
   error?: string;
   helper?: string;
+  /** Fires on Enter (web) / keyboard submit (native) — e.g. submit a login form. */
+  onSubmitEditing?: () => void;
+  returnKeyType?: TextInputProps["returnKeyType"];
 }): React.ReactElement {
   const styles = useStyles();
   const colors = useColors();
@@ -359,6 +364,8 @@ export function Field({
           multiline={multiline}
           autoCapitalize={autoCapitalize}
           editable={editable}
+          onSubmitEditing={onSubmitEditing}
+          returnKeyType={returnKeyType}
         />
         {secureToggle ? (
           <Pressable

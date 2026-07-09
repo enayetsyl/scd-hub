@@ -50,6 +50,8 @@ export default function LoginScreen(): React.ReactElement {
         placeholder="you@school.edu / 01XXXXXXXXX"
         keyboardType="email-address"
         autoComplete="username"
+        returnKeyType="next"
+        onSubmitEditing={onSubmit}
       />
       <Field
         label={STR.password}
@@ -57,6 +59,8 @@ export default function LoginScreen(): React.ReactElement {
         onChangeText={setPassword}
         secureToggle
         autoComplete="current-password"
+        returnKeyType="go"
+        onSubmitEditing={onSubmit}
       />
 
       <Button

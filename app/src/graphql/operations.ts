@@ -2438,6 +2438,12 @@ export interface SubstitutionT {
   absentTeacherId: string | null;
   reason: string | null;
   active: boolean;
+  coverTeacherName: string | null;
+  absentTeacherName: string | null;
+  subject: string | null;
+  periodNumber: number | null;
+  dayOfWeek: string | null;
+  groupName: string | null;
 }
 
 export const COVERS_FOR_DATE_QUERY = gql<
@@ -2447,6 +2453,7 @@ export const COVERS_FOR_DATE_QUERY = gql<
   query CoversForDate($date: String!) {
     coversForDate(date: $date) {
       id slotId date coverTeacherId absentTeacherId reason active
+      coverTeacherName absentTeacherName subject periodNumber dayOfWeek groupName
     }
   }
 `;

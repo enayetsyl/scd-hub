@@ -101,7 +101,7 @@ export default function CoverManageScreen({ route }: Props): React.ReactElement 
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <Body style={{ fontWeight: "700" }}>
-                  {dayOfWeekLabel(s.dayOfWeek)} · {STR.rtPeriodN} {bnNum(s.periodNumber)} · {routineSubjectLabel(s.subject)}
+                  {s.groupName ? `${s.groupName} · ` : ""}{dayOfWeekLabel(s.dayOfWeek)} · {STR.rtPeriodN} {bnNum(s.periodNumber)} · {routineSubjectLabel(s.subject)}
                 </Body>
                 <Muted>{s.coverTeacherId ? `${STR.rtCovered}: ${s.coverTeacherName ?? s.coverTeacherId}` : (s.teacherName ?? s.teacherId ?? "—")}</Muted>
               </View>
@@ -143,8 +143,18 @@ export default function CoverManageScreen({ route }: Props): React.ReactElement 
           <Card key={c.id}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
               <View style={{ flex: 1 }}>
-                <Body>{c.coverTeacherId}</Body>
-                <Muted>{c.reason ?? ""}</Muted>
+                <Body style={{ fontWeight: "700" }}>{c.coverTeacherName ?? c.coverTeacherId}</Body>
+                <Muted>
+                  {[
+                    c.groupName,
+                    c.periodNumber != null ? `${STR.rtPeriodN} ${bnNum(c.periodNumber)}` : null,
+                    c.subject ? routineSubjectLabel(c.subject) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </Muted>
+                {c.absentTeacherName ? <Muted>{STR.rtCoveringFor}: {c.absentTeacherName}</Muted> : null}
+                {c.reason ? <Muted>{c.reason}</Muted> : null}
               </View>
               <Button title={STR.cancel} variant="danger" onPress={() => doCancel(c.id)} disabled={busy} />
             </View>

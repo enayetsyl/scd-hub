@@ -12,6 +12,7 @@ import { User } from "../../foundation/models/User";
 import { Subject } from "../../foundation/models/Subject";
 import { assignProxy, revokeProxy } from "../../foundation/services/ScopeGrantService";
 import { rankAvailability, type AvailabilityRow } from "../cover";
+import { enrichRoutineSlots } from "../slotView";
 import { emitCoverAssigned } from "../../notifications/services/emitters";
 import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
 import { userIdsOnLeave } from "../../hr/services/CoverService";
@@ -163,10 +164,59 @@ export async function cancelCover(subId: string, actorId: string): Promise<void>
   if (sub.proxyGrantId) await revokeProxy(sub.proxyGrantId.toString(), actorId);
 }
 
-/** Active covers on a date (R4.1/R4.4 list). */
-export async function coversForDate(date: Date): Promise<IRoutineSubstitution[]> {
+/** A cover row enriched with human-readable names + the covered slot's context
+ *  (subject / period / class-group), so the "Today's covers" list reads as
+ *  "Md Abdul Momin · Class 5 · Period 6 · Islamic Studies" instead of a raw id. */
+export interface EnrichedSubstitution extends IRoutineSubstitution {
+  coverTeacherName: string | null;
+  absentTeacherName: string | null;
+  subject: string | null;
+  periodNumber: number | null;
+  dayOfWeek: string | null;
+  groupName: string | null;
+}
+
+/** Active covers on a date (R4.1/R4.4 list), enriched with names + slot context. */
+export async function coversForDate(date: Date): Promise<EnrichedSubstitution[]> {
   const { start, end } = dayBounds(date);
-  return RoutineSubstitution.find({ active: true, date: { $gte: start, $lte: end } })
+  const subs = (await RoutineSubstitution.find({ active: true, date: { $gte: start, $lte: end } })
     .sort({ createdAt: 1 })
-    .lean() as unknown as IRoutineSubstitution[];
+    .lean()) as unknown as IRoutineSubstitution[];
+  if (subs.length === 0) return [];
+
+  // Names (cover + absent teacher), one batched load.
+  const userIds = new Set<string>();
+  for (const s of subs) {
+    userIds.add(s.coverTeacherId.toString());
+    if (s.absentTeacherId) userIds.add(s.absentTeacherId.toString());
+  }
+  const users = await User.find({ _id: { $in: [...userIds] } }).select("name").lean();
+  const nameById = new Map(users.map((u) => [u._id.toString(), u.name]));
+
+  // Slot context (subject / period / group name) via the shared enrichment.
+  const slots = (await RoutineSlot.find({ _id: { $in: subs.map((s) => s.slotId) } }).lean()) as unknown as Array<{
+    _id: Types.ObjectId;
+    groupType: string;
+    periodNumber: number;
+    subject: string;
+    dayOfWeek: string;
+    classId?: Types.ObjectId | null;
+    groupId?: Types.ObjectId | null;
+    teacherId?: Types.ObjectId | null;
+  }>;
+  const enriched = await enrichRoutineSlots(slots);
+  const slotById = new Map(enriched.map((s) => [s._id.toString(), s]));
+
+  return subs.map((s) => {
+    const slot = slotById.get(s.slotId.toString());
+    return {
+      ...s,
+      coverTeacherName: nameById.get(s.coverTeacherId.toString()) ?? null,
+      absentTeacherName: s.absentTeacherId ? nameById.get(s.absentTeacherId.toString()) ?? null : null,
+      subject: slot?.subject ?? null,
+      periodNumber: slot?.periodNumber ?? null,
+      dayOfWeek: slot?.dayOfWeek ?? null,
+      groupName: slot?.groupName ?? null,
+    } as EnrichedSubstitution;
+  });
 }

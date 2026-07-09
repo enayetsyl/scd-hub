@@ -23,6 +23,7 @@ const mockRead = jest.fn();
 const mockOverview = jest.fn();
 const mockMarking = jest.fn();
 const mockCoverSlotFind = jest.fn();
+const mockMySubFind = jest.fn();
 
 // RoutineSlot.find is called two different ways in MyDayService: the own-periods
 // query (…sort().lean()) and the covering-periods query (…sort().lean(), same
@@ -38,8 +39,15 @@ jest.mock("../modules/routine/models/RoutineSlot", () => ({
 jest.mock("../modules/hr/models/StaffCoverSlot", () => ({
   StaffCoverSlot: { find: (q: unknown) => ({ select: () => ({ lean: () => mockCoverSlotFind(q) }) }) },
 }));
+// RoutineSubstitution.find is used two ways: the step-1 own-slot overlay (…lean())
+// and the step-1c "periods I'm covering" lookup (…select().lean()) — support both.
 jest.mock("../modules/routine/models/RoutineSubstitution", () => ({
-  RoutineSubstitution: { find: (q: unknown) => ({ lean: () => mockSubFind(q) }) },
+  RoutineSubstitution: {
+    find: (q: { coverTeacherId?: unknown }) => ({
+      lean: () => mockSubFind(q),
+      select: () => ({ lean: () => (q.coverTeacherId ? mockMySubFind(q) : mockSubFind(q)) }),
+    }),
+  },
 }));
 jest.mock("../modules/foundation/models/Section", () => ({
   Section: { find: (q: unknown) => ({ select: () => ({ lean: () => mockSectionFind(q) }) }) },
@@ -86,6 +94,7 @@ beforeEach(() => {
   mockOverview.mockResolvedValue([]);
   mockMarking.mockResolvedValue([]);
   mockCoverSlotFind.mockResolvedValue([]);
+  mockMySubFind.mockResolvedValue([]);
 });
 
 describe("myDay — own periods (slots)", () => {
@@ -166,6 +175,43 @@ describe("myDay — covering periods (PXG-1 gap fix, D-#268)", () => {
   test("a cover slot referencing a since-deactivated RoutineSlot is silently skipped", async () => {
     mockCoverSlotFind.mockResolvedValue([{ routineSlotId: oid() }]);
     mockCoveredSlotFind.mockResolvedValue([]); // active:true filter excluded it
+    const r = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
+    expect(r.slots).toHaveLength(0);
+  });
+
+  test("a routine-module direct-assign cover (RoutineSubstitution) surfaces on Today, marked isCovering", async () => {
+    const routineSlotId = oid();
+    // No own periods, no HR cover — only a Cover-management substitution names me.
+    mockSlotFind.mockResolvedValue([]);
+    mockMySubFind.mockResolvedValue([{ slotId: routineSlotId }]);
+    mockCoveredSlotFind.mockResolvedValue([
+      { _id: routineSlotId, track: "general", periodNumber: 4, teacherId: "absent-1", active: true },
+    ]);
+
+    const r = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
+    expect(mockMySubFind).toHaveBeenCalledWith(
+      expect.objectContaining({ coverTeacherId: "user-1", active: true }),
+    );
+    expect(r.slots).toHaveLength(1);
+    expect(r.slots[0].isCovering).toBe(true);
+    expect(r.slots[0].periodNumber).toBe(4);
+  });
+
+  test("a substitution for a period I already teach is not duplicated", async () => {
+    const own = { _id: oid(), track: "general", periodNumber: 2, teacherId: "user-1" };
+    mockSlotFind.mockResolvedValue([own]);
+    mockMySubFind.mockResolvedValue([{ slotId: own._id }]); // same slot I own
+    const r = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
+    expect(r.slots).toHaveLength(1); // deduped, not doubled
+    expect(mockCoveredSlotFind).not.toHaveBeenCalled();
+  });
+
+  test("a substitution on a holiday/off day admits nothing (day-type filtered)", async () => {
+    mockResolveDayType.mockResolvedValue("HOLIDAY");
+    mockMySubFind.mockResolvedValue([{ slotId: oid() }]);
+    mockCoveredSlotFind.mockResolvedValue([
+      { _id: oid(), track: "general", periodNumber: 1, teacherId: "absent-1", active: true },
+    ]);
     const r = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
     expect(r.slots).toHaveLength(0);
   });
