@@ -54,7 +54,7 @@ resolveAttendanceUnit(student, date):
 | cover | a `RoutineSubstitution` on that first slot → the **cover teacher** is the marker (reuses existing overlay) |
 | fallback | if the routine yields no first-period teacher → **`Section.classTeacherId`** (D-#278 decision 3) |
 
-**Storage:** generalize the capture record — `StudentAttendanceDay` gains `unitType:"section"|"subjectgroup"` + `unitId`; keep `sectionId` populated for `section` units so historical reads/indexes are unchanged. One record per (unit, date).
+**Storage (as built):** `StudentAttendanceDay` **already** modelled this — `sectionId` XOR `subjectGroupId` with partial-unique indexes on each (the "§7 shaping" the model was written for). So **no new fields were needed**: a Quran-group day sets `subjectGroupId`, a Nursery/KG day sets `sectionId`. One record per (unit, date). The earlier draft's `unitType/unitId` columns were unnecessary — the live model won (AGENTS.md rule 3). `SectionAttendanceAssignment` was generalized the same way (optional `sectionId` XOR `subjectGroupId`) so an admin can override either unit's marker.
 
 **Display is always class/section.** No view exposes "group". Section reports **aggregate**: a section's
 absentees for a date = its active students who are absent **in their own unit's** day record. Even the
@@ -104,9 +104,11 @@ Quran teacher's marking roster is **grouped under class/section headers** (their
 - **Class teacher = fallback + reports** — the class teacher stays the automatic marker when the routine has no first-period teacher, and keeps all §8 section report/history access; they are no longer the *default* marker on a normal day.
 - **Display stays class/section** — the Quran group is a capture/marker unit only; it never appears as a report or navigation axis.
 
-## 7. Open items (default unless overridden)
-- **Historical data / cutover** — pre-change 1–5 section records stay as history; new capture goes to unit records. **Default: a cutover date, no backfill** (reports read section-records before it, unit-records after). Alternative: one-time backfill — heavier, not recommended.
-- **1–5 student with no Quran membership** — **Default:** their unit is the **section**; marker = the section's first-period teacher (class-teacher fallback if none). Edge case; flagged for the roster team.
+## 7. Open items — resolved during the build
+- **Historical data / cutover** — **no cutover date and no backfill were needed.** `studentAttendanceHistory` queries **both** the student's current unit **and** their section, then de-duplicates per day preferring the current unit. A range spanning the change reads continuously: pre-change 1–5 rows (section-keyed) and post-change rows (group-keyed) both resolve.
+- **1–5 student with no Quran membership** — implemented as planned: their unit is the **section**, so they are never unmarkable. The Class 1–5 **section unit therefore holds only these leftovers**, and its marker stays the **class teacher** (a 1–5 section's own first slot is a P5 general period, whose teacher has no attendance relationship — the class teacher is the right fallback). "First-period teacher" applies to **Nursery/KG only**, exactly as worded by the owner.
+- **Quran group with no routine teacher** — resolves to **no marker** (there is no class teacher for a cross-section group); the unit shows as unmarked until an admin assigns one via `assignUnitMarker`.
+- **Reminders** — `AttendanceReminderService` reuses `unmarkedSections`, so the nag automatically follows the new marker with no change.
 
 ## 8. Out of scope (this feature)
 - **Arabic (P3) or any non-first class as a capture unit** — attendance is the **first** class only; Arabic groups are not marked.
