@@ -17,6 +17,7 @@ import { roleHasPermission } from "@scd/shared";
 import type {
   HomeStackParamList,
   ClassNotesStackParamList,
+  PrintStackParamList,
   ContentStackParamList,
   QuestionsStackParamList,
   SetsStackParamList,
@@ -54,6 +55,8 @@ import { fonts, radius, space, typeScale, useColors } from "../theme";
 import LoginScreen from "../screens/auth/LoginScreen";
 import TodayScreen from "../screens/home/TodayScreen";
 import MyClassNotesScreen from "../screens/classnotes/MyClassNotesScreen";
+import PrintHomeScreen from "../screens/printing/PrintHomeScreen";
+import NewPrintRequestScreen from "../screens/printing/NewPrintRequestScreen";
 import ContentTreeScreen from "../screens/content/ContentTreeScreen";
 import PlanViewScreen from "../screens/content/PlanViewScreen";
 import QuestionBankScreen from "../screens/questions/QuestionBankScreen";
@@ -450,6 +453,19 @@ function ClassNotesNavigator(): React.ReactElement {
     <ClassNotesStack.Navigator screenOptions={stackOptions}>
       <ClassNotesStack.Screen name="MyClassNotes" component={MyClassNotesScreen} options={{ title: STR.drawerItemClassNotes }} />
     </ClassNotesStack.Navigator>
+  );
+}
+
+/** Print queue (PQ-3/PQ-4, D-#281) — teachers file requests (tracker:write), the
+ *  Office works the queue (roster:manage). One tab, role-aware inside. */
+const PrintStack = createNativeStackNavigator<PrintStackParamList>();
+function PrintNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <PrintStack.Navigator screenOptions={stackOptions}>
+      <PrintStack.Screen name="PrintHome" component={PrintHomeScreen} options={{ title: STR.prQueueTitle }} />
+      <PrintStack.Screen name="NewPrintRequest" component={NewPrintRequestScreen} options={{ title: STR.prNew }} />
+    </PrintStack.Navigator>
   );
 }
 
@@ -961,6 +977,10 @@ export function AppTabs(): React.ReactElement {
   const canAttendance =
     !!role && (roleHasPermission(role, "attendance:mark") || roleHasPermission(role, "attendance:manage"));
   const canLibrary = !!role && roleHasPermission(role, "library:read");
+  // PQ-4: teachers file print requests (tracker:write); Office/Principal work the
+  // queue (roster:manage). Same gates as the class-test print flow — no new permission.
+  const canPrint =
+    !!role && (roleHasPermission(role, "tracker:write") || roleHasPermission(role, "roster:manage"));
   // Chat (M-5): Principal/Teacher/Office hold chat:read; GUARDIAN never does.
   const canChat = !!role && roleHasPermission(role, "chat:read");
   // Vocab (VC-5): Principal/Teacher via tracker:read (reports/build/mark); Office via
@@ -1041,6 +1061,7 @@ export function AppTabs(): React.ReactElement {
         {canAttendance ? <Drawer.Screen name="AttendanceTab" component={AttendanceNavigator} /> : null}
         {/* UX-8: same gate as the DailyNote path (routine:read). */}
         {canRoutine ? <Drawer.Screen name="ClassNotesTab" component={ClassNotesNavigator} /> : null}
+        {canPrint ? <Drawer.Screen name="PrintTab" component={PrintNavigator} /> : null}
         {canLibrary ? <Drawer.Screen name="LibraryTab" component={LibraryNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
         {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}

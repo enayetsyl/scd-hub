@@ -157,6 +157,18 @@ export default function SetDetailScreen({ route, navigation }: Props): React.Rea
               <Chip label={STR.showMarks} selected={showMarks} onPress={() => setShowMarks((v) => !v)} />
             </ChipRow>
             <Button title={pdfBusy ? STR.preparingPdf : STR.exportPdf} onPress={onExport} loading={pdfBusy} variant="secondary" />
+            {/* PQ-3 (D-#281): send this assembled set to the Office print queue. No PDF
+                snapshot — an assembled set is locked, so the setId alone is immutable. */}
+            <Button
+              title={`🖨️ ${STR.prSend}`}
+              variant="secondary"
+              onPress={() =>
+                tabNav.navigate("PrintTab", {
+                  screen: "NewPrintRequest",
+                  params: { setId, title: s.name ?? STR.prTitle },
+                })
+              }
+            />
           </>
         ) : (
           <Notice message={STR.pdfWebOnly} tone="warn" />
