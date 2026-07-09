@@ -82,8 +82,10 @@ builder.queryField("classes", (t) =>
     args: {
       academicYearId: t.arg.string({ required: true }),
     },
+    // Ordered by roster level so every picker reads Nursery (−1) → KG (0) → One … Five,
+    // never insertion order. Sorted at the source: all `classes` callers inherit it.
     resolve: async (_root, args) =>
-      Class.find({ academicYearId: args.academicYearId, active: true }).lean(),
+      Class.find({ academicYearId: args.academicYearId, active: true }).sort({ level: 1 }).lean(),
   }),
 );
 
