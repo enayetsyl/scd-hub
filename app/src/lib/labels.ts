@@ -740,6 +740,7 @@ const STR_BN = {
   select: "নির্বাচন করুন",
   done: "সম্পন্ন",
   loading: "লোড হচ্ছে…",
+  loadMore: "আরও দেখুন",
 
   // Filters / fields
   filters: "ফিল্টার",
@@ -2831,6 +2832,7 @@ const STR_EN: StrTable = {
   select: "Select",
   done: "Done",
   loading: "Loading…",
+  loadMore: "Load more",
 
   // Filters / fields
   filters: "Filters",

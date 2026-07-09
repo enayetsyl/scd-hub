@@ -724,6 +724,8 @@ export interface QuestionsVars {
   marksMin?: number | null;
   marksMax?: number | null;
   reviewStatus?: string | null;
+  limit?: number | null;
+  offset?: number | null;
 }
 
 export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsVars>`
@@ -738,6 +740,8 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
     $marksMin: Float
     $marksMax: Float
     $reviewStatus: String
+    $limit: Int
+    $offset: Int
   ) {
     questions(
       subject: $subject
@@ -750,6 +754,8 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       marksMin: $marksMin
       marksMax: $marksMax
       reviewStatus: $reviewStatus
+      limit: $limit
+      offset: $offset
     ) {
       id
       subject
