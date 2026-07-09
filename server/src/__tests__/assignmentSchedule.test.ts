@@ -230,9 +230,9 @@ describe("AJ-1 — expectedItemsForWeek", () => {
     const week = await expectedItemsForWeek(YEAR, 15);
     expect(week.cycleWeek).toBe(3);
     expect(week.suspended).toBe(false);
-    // week 15 = Apr 12–18, 2026; THU = Apr 16, due SUN = Apr 19
-    expect(new Date(week.deliveryDate!)).toEqual(new Date(2026, 3, 16));
-    expect(new Date(week.dueDate!)).toEqual(new Date(2026, 3, 19));
+    // week 15 = Apr 12–18, 2026; THU = Apr 16, due SUN = Apr 19 (date-only, tz-agnostic)
+    expect(week.deliveryDate!.slice(0, 10)).toBe("2026-04-16");
+    expect(week.dueDate!.slice(0, 10)).toBe("2026-04-19");
     expect(week.items).toHaveLength(2);
     const ban = week.items.find((i) => i.subject === "BAN")!;
     const math = week.items.find((i) => i.subject === "MATH")!;
@@ -295,8 +295,8 @@ describe("AJ-2 — myAssignmentPrepPrompts", () => {
     expect(sunPrompts).toHaveLength(1);
     expect(sunPrompts[0].subject).toBe("BAN");
     expect(sunPrompts[0].weekNumber).toBe(24);
-    // deliver Thursday (AJ-2's wording): Thu Jun 18
-    expect(new Date(sunPrompts[0].deliveryDate)).toEqual(new Date(2026, 5, 18));
+    // deliver Thursday (AJ-2's wording): Thu Jun 18 (date-only, tz-agnostic)
+    expect(sunPrompts[0].deliveryDate.slice(0, 10)).toBe("2026-06-18");
 
     expect(await myAssignmentPrepPrompts(YEAR, TEACHER, monday)).toHaveLength(1);
     expect(await myAssignmentPrepPrompts(YEAR, TEACHER, tuesday)).toHaveLength(0);

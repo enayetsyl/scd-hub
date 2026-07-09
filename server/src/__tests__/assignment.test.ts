@@ -181,8 +181,8 @@ describe("AJ-3 — deliverAssignmentItem", () => {
       actorId: ACTOR,
     });
 
-    expect(new Date(res.deliveryDate)).toEqual(new Date(2026, 0, 7)); // rolled back
-    expect(new Date(res.dueDate)).toEqual(new Date(2026, 0, 11)); // Sun unchanged
+    expect(res.deliveryDate.slice(0, 10)).toBe("2026-01-07"); // rolled back
+    expect(res.dueDate.slice(0, 10)).toBe("2026-01-11"); // Sun unchanged
     expect(res.asId).toBe("AS-C2-BAN-0001");
     expect(res.status).toBe("DRAFT");
     expect(res.estMinutes).toBe(45);
@@ -340,7 +340,7 @@ describe("redeliverAssignmentRecord", () => {
     mockItemFindById.mockResolvedValue({ _id: r.asItemId, dueDate: new Date(2026, 0, 11) });
     const res = await redeliverAssignmentRecord(r._id.toString(), ACTOR, new Date(2026, 0, 9));
     expect(res.state).toBe("GIVEN");
-    expect(new Date(res.dueDate!)).toEqual(new Date(2026, 0, 11)); // NOT next-school-day
+    expect(res.dueDate!.slice(0, 10)).toBe("2026-01-11"); // NOT next-school-day
   });
 
   test("redelivering a GIVEN record is rejected (illegal edge)", async () => {

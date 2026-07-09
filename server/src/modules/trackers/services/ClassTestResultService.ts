@@ -58,6 +58,9 @@ export interface ClassTestResultShape extends DerivedScore {
   /** INTERNAL — the resolver/guardian read must NOT expose this to a guardian (J7). */
   teacherAction: string | null;
   guardianAction: string | null;
+  /** CT-8 approval state: submittedAt set + publishedAt null = pending approval. */
+  submittedAt: string | null;
+  sendBackReason: string | null;
   publishedAt: string | null;
   publishedVersion: number;
 }
@@ -77,6 +80,8 @@ function resultShape(d: IClassTestResult, test: { totalMarks: number; passMark: 
     weakness: d.weakness ?? null,
     teacherAction: d.teacherAction ?? null,
     guardianAction: d.guardianAction ?? null,
+    submittedAt: d.submittedAt ? new Date(d.submittedAt).toISOString() : null,
+    sendBackReason: d.sendBackReason ?? null,
     publishedAt: d.publishedAt ? new Date(d.publishedAt).toISOString() : null,
     publishedVersion: d.publishedVersion,
   };
@@ -130,6 +135,25 @@ export async function enterResult(input: EnterResultInput): Promise<ClassTestRes
 
   const testOid = new Types.ObjectId(input.testId);
   const studentOid = new Types.ObjectId(input.studentId);
+
+  // A PUBLISHED result is locked (owner ruling): guardians have already been notified,
+  // so a silent edit would change what they see with no re-notify/version bump. The
+  // teacher must Unpublish first, then edit, then Re-publish. Pre-publish stays open.
+  const existing = (await ClassTestResult.findOne({ testId: testOid, studentId: studentOid })
+    .select("publishedAt submittedAt")
+    .lean()) as { publishedAt?: Date | null; submittedAt?: Date | null } | null;
+  if (existing?.publishedAt) {
+    throw new ClassTestResultError(
+      "This result is published — unpublish it before editing (guardians have already been notified)",
+    );
+  }
+  if (existing?.submittedAt) {
+    // CT-8: submitted for approval — recall (teacher) or send-back (office) returns it to
+    // draft before it can be edited, so the approvals queue never shows a moving target.
+    throw new ClassTestResultError(
+      "This result is submitted for approval — recall it (or ask the office to send it back) before editing",
+    );
+  }
 
   // Upsert one row per (student × exam). $unset marks on ABSENT so an edit
   // PRESENT→ABSENT does not leave a stale score behind. publishedVersion stays

@@ -19,7 +19,12 @@ import {
   classNotesForDate,
   classNoteSubmissionReport,
   myClassNotePrompts,
+  updateClassNote,
+  deleteClassNote,
+  classNotesAdmin,
   type ClassNoteSubmissionRow,
+  type ClassNoteAdminRow,
+  type ClassNoteAttachmentView,
 } from "../services/RoutineTriggerService";
 
 const BellTriggerRef = builder.objectRef<BellTrigger>("BellTrigger").implement({
@@ -51,8 +56,34 @@ const ClassNoteRef = builder.objectRef<IClassNote>("ClassNote").implement({
     subject: t.exposeString("subject"),
     taughtSummaryBn: t.exposeString("taughtSummaryBn"),
     homeworkItemId: t.string({ nullable: true, resolve: (n) => (n.homeworkItemId ? n.homeworkItemId.toString() : null) }),
+    attachmentIds: t.stringList({ resolve: (n) => (n.attachmentIds ?? []).map((a) => a.toString()) }),
     publishedBy: t.string({ resolve: (n) => n.publishedBy.toString() }),
     publishedAt: t.string({ resolve: (n) => new Date(n.publishedAt).toISOString() }),
+  }),
+});
+
+const ClassNoteAttachmentRef = builder.objectRef<ClassNoteAttachmentView>("ClassNoteAttachment").implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    name: t.exposeString("name"),
+    mime: t.exposeString("mime"),
+  }),
+});
+
+const ClassNoteAdminRowRef = builder.objectRef<ClassNoteAdminRow>("ClassNoteAdminRow").implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    date: t.exposeString("date"),
+    subject: t.exposeString("subject"),
+    taughtSummaryBn: t.exposeString("taughtSummaryBn"),
+    classLevel: t.int({ nullable: true, resolve: (r) => r.classLevel ?? null }),
+    classNameBn: t.string({ nullable: true, resolve: (r) => r.classNameBn }),
+    sectionCode: t.string({ nullable: true, resolve: (r) => r.sectionCode }),
+    sectionNameBn: t.string({ nullable: true, resolve: (r) => r.sectionNameBn }),
+    subjectGroupNameBn: t.string({ nullable: true, resolve: (r) => r.subjectGroupNameBn }),
+    authorName: t.string({ nullable: true, resolve: (r) => r.authorName }),
+    publishedAt: t.exposeString("publishedAt"),
+    attachments: t.field({ type: [ClassNoteAttachmentRef], resolve: (r) => r.attachments }),
   }),
 });
 
@@ -166,6 +197,7 @@ builder.mutationField("publishClassNote", (t) =>
       date: t.arg.string({ required: true }),
       taughtSummaryBn: t.arg.string({ required: true }),
       homeworkItemId: t.arg.string({ required: false }),
+      attachmentIds: t.arg.stringList({ required: false }),
     },
     resolve: async (_r, args, ctx) =>
       publishClassNote({
@@ -173,8 +205,51 @@ builder.mutationField("publishClassNote", (t) =>
         date: parseDate(args.date),
         taughtSummaryBn: args.taughtSummaryBn,
         homeworkItemId: args.homeworkItemId ?? null,
+        attachmentIds: args.attachmentIds ?? null,
         actorId: ctx.auth!.userId,
         canManage: ctx.auth!.role === "PRINCIPAL" || ctx.auth!.role === "OFFICE",
       }),
+  }),
+);
+
+// --- Class-note admin (Principal/Office): list / edit / delete -------------
+
+builder.queryField("classNotesAdmin", (t) =>
+  t.field({
+    type: [ClassNoteAdminRowRef],
+    authScopes: { hasPermission: "routine:manage" },
+    args: { date: t.arg.string({ required: true }) },
+    resolve: async (_r, args) => classNotesAdmin(parseDate(args.date)),
+  }),
+);
+
+builder.mutationField("updateClassNote", (t) =>
+  t.field({
+    type: ClassNoteRef,
+    authScopes: { hasPermission: "routine:manage" },
+    args: {
+      id: t.arg.string({ required: true }),
+      taughtSummaryBn: t.arg.string({ required: false }),
+      attachmentIds: t.arg.stringList({ required: false }),
+    },
+    resolve: async (_r, args) =>
+      updateClassNote({
+        id: args.id,
+        taughtSummaryBn: args.taughtSummaryBn ?? undefined,
+        attachmentIds: args.attachmentIds ?? undefined,
+      }),
+  }),
+);
+
+const DeleteResultRef = builder.objectRef<{ id: string }>("ClassNoteDeleteResult").implement({
+  fields: (t) => ({ id: t.exposeString("id") }),
+});
+
+builder.mutationField("deleteClassNote", (t) =>
+  t.field({
+    type: DeleteResultRef,
+    authScopes: { hasPermission: "routine:manage" },
+    args: { id: t.arg.string({ required: true }) },
+    resolve: async (_r, args) => deleteClassNote(args.id),
   }),
 );

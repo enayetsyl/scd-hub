@@ -16,7 +16,7 @@
 import { builder } from "../../../schema";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { ForbiddenError } from "../../../middleware/authz";
-import { buildContentScope, contentScopeAllows } from "../../content/contentScope";
+import { buildContentScope, contentScopeAllows, contentScopeMongo } from "../../content/contentScope";
 import type { Types, FlattenMaps, FilterQuery } from "mongoose";
 import type { IContentArtifact } from "../../content/models/ContentArtifact";
 
@@ -141,6 +141,9 @@ builder.queryField("questions", (t) =>
       marksMin: t.arg.float({ required: false }),
       marksMax: t.arg.float({ required: false }),
       reviewStatus: t.arg.string({ required: false }),
+      /** Server-side pagination (default 40, cap 200) — the bank can be large. */
+      limit: t.arg.int({ required: false }),
+      offset: t.arg.int({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -168,8 +171,21 @@ builder.queryField("questions", (t) =>
         filter["envelopeJson.payload.marks"] = marksFilter;
       }
 
-      const docs = await ContentArtifact.find(filter).lean() as LeanArtifact[];
-      return applyScope(docs, ctx);
+      // Push TEACHER content-scope INTO the DB query so pagination is correct and we
+      // don't load-then-filter every artifact (J2.4). PRINCIPAL/OFFICE → unrestricted.
+      const scope = await buildContentScope(ctx);
+      const scopeFilter = contentScopeMongo(scope);
+      if (scopeFilter === null) return []; // caller has no readable content
+      if (scopeFilter) filter.$or = scopeFilter.$or;
+
+      const limit = Math.min(Math.max(args.limit ?? 40, 1), 200);
+      const offset = Math.max(args.offset ?? 0, 0);
+      const docs = (await ContentArtifact.find(filter)
+        .sort({ importedAt: -1, _id: -1 })
+        .skip(offset)
+        .limit(limit)
+        .lean()) as LeanArtifact[];
+      return docs.map(docToShape);
     },
   }),
 );

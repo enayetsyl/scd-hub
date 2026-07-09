@@ -4,12 +4,13 @@
  * first). Staff read (tracker:read; teacher scoped to the student's section
  * server-side). %/pass-fail are derived server-side (D-#85).
  */
-import React from "react";
+import React, { useMemo } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { CLASS_TEST_STUDENT_PROFILE_QUERY } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Badge, Loader, Notice } from "../../components/ui";
+import { MiniBarChart, type BarDatum } from "../../components/MiniBarChart";
 import { STR, hwSubjectLabel, ctTrendGlyph, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -21,6 +22,20 @@ export default function ClassTestStudentProfileScreen({ route }: Props): React.R
   const { studentId, studentName } = route.params;
   const [q] = useQuery({ query: CLASS_TEST_STUDENT_PROFILE_QUERY, variables: { studentId } });
   const p = q.data?.classTestStudentProfile ?? null;
+
+  // CT-9: per-subject % trajectory (oldest → newest) for the bar chart.
+  const seriesBySubject = useMemo(() => {
+    const m = new Map<string, BarDatum[]>();
+    const oldestFirst = [...(p?.results ?? [])].sort(
+      (a, b) => new Date(a.examDate).getTime() - new Date(b.examDate).getTime(),
+    );
+    for (const r of oldestFirst) {
+      const arr = m.get(r.subject) ?? [];
+      arr.push({ label: bnNum(r.testNumber), value: r.percent, pass: r.pass });
+      m.set(r.subject, arr);
+    }
+    return m;
+  }, [p]);
 
   return (
     <Screen padded={false}>
@@ -39,24 +54,54 @@ export default function ClassTestStudentProfileScreen({ route }: Props): React.R
           </Card>
         ) : (
           <>
+            {/* CT-10 analytics — derived, staff-facing. */}
+            <Card>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Body style={{ fontWeight: "700" }}>{STR.ctAnalytics}</Body>
+                <View style={{ flexDirection: "row", gap: space(2) }}>
+                  <Badge
+                    text={`${ctTrendGlyph(p.analytics.trajectory)} ${STR.ctTrajectory}`}
+                    tone={p.analytics.trajectory === "up" ? "ok" : p.analytics.trajectory === "down" ? "danger" : "muted"}
+                  />
+                  {p.analytics.atRisk ? <Badge text={STR.ctAtRisk} tone="danger" /> : null}
+                </View>
+              </View>
+              <View style={{ marginTop: space(2), gap: 2 }}>
+                <Muted>{STR.ctAvgPercent}: {p.analytics.avgPercent == null ? "—" : `${bnNum(p.analytics.avgPercent)}%`} · {STR.ctExamsTaken} {bnNum(p.analytics.examsPresent)}</Muted>
+                {p.analytics.consistency != null ? <Muted>{STR.ctConsistency}: {bnNum(p.analytics.consistency)}%</Muted> : null}
+                {p.analytics.streakKind ? <Muted>{STR.ctStreak}: {bnNum(p.analytics.streakLength)} {p.analytics.streakKind === "pass" ? STR.ctPass : STR.ctFail}</Muted> : null}
+                {p.analytics.latestRank != null ? <Muted>{STR.ctRank}: {bnNum(p.analytics.latestRank)}/{bnNum(p.analytics.latestRankOf ?? 0)}</Muted> : null}
+                {p.analytics.bestSubject ? <Muted>{STR.ctStrongest}: {hwSubjectLabel(p.analytics.bestSubject)}</Muted> : null}
+                {p.analytics.weakestSubject ? <Muted>{STR.ctWeakest}: {hwSubjectLabel(p.analytics.weakestSubject)}</Muted> : null}
+                {p.analytics.recurringWeaknesses.length > 0 ? (
+                  <Muted>
+                    {STR.ctRecurringWeakness}: {p.analytics.recurringWeaknesses.map((w) => `${w.tag} ×${bnNum(w.count)}`).join(", ")}
+                  </Muted>
+                ) : null}
+              </View>
+            </Card>
+
             <Card>
               <Body style={{ fontWeight: "700" }}>{STR.ctBySubject}</Body>
               {p.bySubject.map((b) => (
-                <View
-                  key={b.subject}
-                  style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(2) }}
-                >
-                  <View style={{ flexShrink: 1 }}>
-                    <Body>{hwSubjectLabel(b.subject)}</Body>
-                    <Muted>
-                      {STR.ctAvgPercent} {b.avgPercent == null ? "—" : `${bnNum(b.avgPercent)}%`} · {STR.ctExamsTaken}{" "}
-                      {bnNum(b.examsTaken)}
-                    </Muted>
+                <View key={b.subject} style={{ marginTop: space(3) }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <View style={{ flexShrink: 1 }}>
+                      <Body>{hwSubjectLabel(b.subject)}</Body>
+                      <Muted>
+                        {STR.ctAvgPercent} {b.avgPercent == null ? "—" : `${bnNum(b.avgPercent)}%`} · {STR.ctExamsTaken}{" "}
+                        {bnNum(b.examsTaken)}
+                      </Muted>
+                    </View>
+                    <Badge
+                      text={`${ctTrendGlyph(b.trend)} ${b.latestPercent == null ? "" : bnNum(b.latestPercent) + "%"}`}
+                      tone={b.trend === "up" ? "ok" : b.trend === "down" ? "danger" : "muted"}
+                    />
                   </View>
-                  <Badge
-                    text={`${ctTrendGlyph(b.trend)} ${b.latestPercent == null ? "" : bnNum(b.latestPercent) + "%"}`}
-                    tone={b.trend === "up" ? "ok" : b.trend === "down" ? "danger" : "muted"}
-                  />
+                  {/* CT-9: % trajectory across this subject's tests (bar height = %, color = pass/fail). */}
+                  <View style={{ marginTop: space(2) }}>
+                    <MiniBarChart data={seriesBySubject.get(b.subject) ?? []} />
+                  </View>
                 </View>
               ))}
             </Card>
@@ -81,6 +126,14 @@ export default function ClassTestStudentProfileScreen({ route }: Props): React.R
                     />
                   )}
                 </View>
+                {/* CT-7: the teacher's per-test comment history, read in one place. */}
+                {r.weakness || r.teacherAction || r.guardianAction ? (
+                  <View style={{ marginTop: space(2), gap: 2 }}>
+                    {r.weakness ? <Muted>{STR.ctWeakness}: {r.weakness}</Muted> : null}
+                    {r.teacherAction ? <Muted>{STR.ctTeacherAction}: {r.teacherAction}</Muted> : null}
+                    {r.guardianAction ? <Muted>{STR.ctGuardianAction}: {r.guardianAction}</Muted> : null}
+                  </View>
+                ) : null}
               </Card>
             ))}
           </>

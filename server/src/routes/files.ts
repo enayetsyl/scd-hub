@@ -69,10 +69,28 @@ export const FILE_ERRORS_BN = {
   forbidden: "অনুমতি নেই",
 } as const;
 
+/** multer/busboy decode the multipart filename header as latin1, so a UTF-8 Bangla
+ *  filename (e.g. অধ্যায় ০৪ - পদার্থ.pdf) arrives as mojibake. Re-interpret the bytes
+ *  as UTF-8. Pure ASCII round-trips unchanged, so this is safe for every filename. */
+export function decodeUploadName(name: string): string {
+  return Buffer.from(name, "latin1").toString("utf8");
+}
+
 /** Pure upload validation — null when OK, else the Bangla rejection. */
 export function validateUpload(mime: string, sizeBytes: number): string | null {
   if (!(ALLOWED_FILE_MIMES as readonly string[]).includes(mime)) return FILE_ERRORS_BN.badMime;
   if (sizeBytes > MAX_FILE_BYTES) return FILE_ERRORS_BN.tooLarge;
+  if (sizeBytes <= 0) return FILE_ERRORS_BN.badMime;
+  return null;
+}
+
+// Class-note attachments (Feature: class notes get attachments) — jpeg/png/pdf ≤ 10 MB,
+// up to 5 per note (the 5-file cap is enforced where attachmentIds are bound).
+export const MAX_CLASSNOTE_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+export const MAX_CLASSNOTE_ATTACHMENTS = 5;
+export function validateClassNoteUpload(mime: string, sizeBytes: number): string | null {
+  if (!(ALLOWED_FILE_MIMES as readonly string[]).includes(mime)) return FILE_ERRORS_BN.badMime;
+  if (sizeBytes > MAX_CLASSNOTE_ATTACHMENT_BYTES) return FILE_ERRORS_BN.tooLarge;
   if (sizeBytes <= 0) return FILE_ERRORS_BN.badMime;
   return null;
 }
@@ -94,6 +112,12 @@ const uploadChat = multer({
 const uploadComment = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_COMMENT_ATTACHMENT_BYTES + 1 },
+});
+
+// Class-note attachments — 10 MB cap so OUR Bangla size check fires (not a bare multer error).
+const uploadClassNote = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_CLASSNOTE_ATTACHMENT_BYTES + 1 },
 });
 
 export const filesRouter: Router = createRouter();
@@ -141,7 +165,7 @@ filesRouter.post("/hw", parseUpload, async (req: Request, res: Response) => {
   try {
     // Drive FIRST — only a successful upload persists metadata (GP-J8).
     const driveFileId = await uploadToDrive({
-      name: `${Date.now()}_${file.originalname}`,
+      name: `${Date.now()}_${decodeUploadName(file.originalname)}`,
       mime: file.mimetype,
       data: file.buffer,
       year: String(new Date().getFullYear()),
@@ -150,7 +174,7 @@ filesRouter.post("/hw", parseUpload, async (req: Request, res: Response) => {
       kind,
       mime: file.mimetype,
       sizeBytes: file.size,
-      originalName: file.originalname,
+      originalName: decodeUploadName(file.originalname),
       driveFileId, // server-internal — NOT in the response below
       uploadedBy: ctx.auth.userId,
     });
@@ -221,7 +245,7 @@ filesRouter.post("/chat", parseChatUpload, async (req: Request, res: Response) =
   try {
     // Drive FIRST — only a successful upload persists metadata (the GP-J8 posture).
     const driveFileId = await uploadToDrive({
-      name: `${Date.now()}_${file.originalname}`,
+      name: `${Date.now()}_${decodeUploadName(file.originalname)}`,
       mime: file.mimetype,
       data: file.buffer,
       year: String(new Date().getFullYear()),
@@ -231,7 +255,7 @@ filesRouter.post("/chat", parseChatUpload, async (req: Request, res: Response) =
       kind: validation.storedKind,
       mime: file.mimetype,
       sizeBytes: file.size,
-      originalName: file.originalname,
+      originalName: decodeUploadName(file.originalname),
       driveFileId, // server-internal — NOT in the response below
       uploadedBy: ctx.auth.userId,
       conversationId,
@@ -287,7 +311,7 @@ filesRouter.post("/classtest", parseUpload, async (req: Request, res: Response) 
   try {
     // Drive FIRST — only a successful upload persists metadata (GP-J8 posture).
     const driveFileId = await uploadToDrive({
-      name: `${Date.now()}_${file.originalname}`,
+      name: `${Date.now()}_${decodeUploadName(file.originalname)}`,
       mime: file.mimetype,
       data: file.buffer,
       year: String(new Date().getFullYear()),
@@ -297,13 +321,77 @@ filesRouter.post("/classtest", parseUpload, async (req: Request, res: Response) 
       kind: "classtest_question" as StoredFileKind,
       mime: file.mimetype,
       sizeBytes: file.size,
-      originalName: file.originalname,
+      originalName: decodeUploadName(file.originalname),
       driveFileId, // server-internal — NOT in the response below
       uploadedBy: ctx.auth.userId,
     });
     res.json({
       fileId: stored._id.toString(),
       kind: "classtest_question",
+      mime: stored.mime,
+      sizeBytes: stored.sizeBytes,
+      originalName: stored.originalName,
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      res.status(503).json({ error: FILE_ERRORS_BN.driveDown });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /files/classnote — staff attach a file to a class note (≤ 10 MB, jpeg/png/pdf).
+// The 5-per-note cap is enforced when attachmentIds are bound (publish/update). Read
+// gate = staff routine:read. tracker/routine publisher then carries the fileId along.
+// ---------------------------------------------------------------------------
+
+const parseClassNoteUpload: express.RequestHandler = (req, res, next) => {
+  uploadClassNote.single("file")(req, res, (err: unknown) => {
+    if (err) {
+      res.status(422).json({ error: FILE_ERRORS_BN.tooLarge });
+      return;
+    }
+    next();
+  });
+};
+
+filesRouter.post("/classnote", parseClassNoteUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "routine:read")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const rejection = validateClassNoteUpload(file.mimetype, file.size);
+  if (rejection) {
+    res.status(422).json({ error: rejection });
+    return;
+  }
+  try {
+    const driveFileId = await uploadToDrive({
+      name: `${Date.now()}_${decodeUploadName(file.originalname)}`,
+      mime: file.mimetype,
+      data: file.buffer,
+      year: String(new Date().getFullYear()),
+      subfolder: "classnote",
+    });
+    const stored = await StoredFile.create({
+      kind: "classnote_attachment" as StoredFileKind,
+      mime: file.mimetype,
+      sizeBytes: file.size,
+      originalName: decodeUploadName(file.originalname),
+      driveFileId,
+      uploadedBy: ctx.auth.userId,
+    });
+    res.json({
+      fileId: stored._id.toString(),
+      kind: "classnote_attachment",
       mime: stored.mime,
       sizeBytes: stored.sizeBytes,
       originalName: stored.originalName,
@@ -386,7 +474,7 @@ filesRouter.post("/comment", parseCommentUpload, async (req: Request, res: Respo
   try {
     // Drive FIRST — only a successful upload persists metadata (the GP-J8 posture).
     const driveFileId = await uploadToDrive({
-      name: `${Date.now()}_${file.originalname}`,
+      name: `${Date.now()}_${decodeUploadName(file.originalname)}`,
       mime: file.mimetype,
       data: file.buffer,
       year: String(new Date().getFullYear()),
@@ -396,7 +484,7 @@ filesRouter.post("/comment", parseCommentUpload, async (req: Request, res: Respo
       kind: validation.storedKind,
       mime: file.mimetype,
       sizeBytes: file.size,
-      originalName: file.originalname,
+      originalName: decodeUploadName(file.originalname),
       driveFileId, // server-internal — NOT in the response below
       uploadedBy: ctx.auth.userId,
       studentCommentId: commentId,
@@ -450,6 +538,11 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       await assertCommentFileReadAccess(ctx, file);
     } else if (file.kind === "classtest_question") {
       await assertClassTestFileReadAccess(ctx, file);
+    } else if (file.kind === "classnote_attachment") {
+      // Class-note attachments are staff-readable (routine:read); guardian viewing is a follow-up.
+      if (!callerHasPermission(ctx.auth, "routine:read")) {
+        throw new ForbiddenError(FILE_ERRORS_BN.forbidden);
+      }
     } else {
       await assertFileReadAccess(ctx, file);
     }

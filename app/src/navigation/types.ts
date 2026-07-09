@@ -96,6 +96,7 @@ export type RoutineStackParamList = {
   CoverManage: { groupType: string; groupId: string; title: string };
   DailyNote: { groupType: string; groupId: string; title: string; date?: string };
   ClassNoteReport: { date?: string } | undefined;
+  ClassNotesAdmin: undefined;
   BellSchedule: undefined;
   SectionPicker: undefined;
 };
@@ -198,6 +199,7 @@ export type ClassTestStackParamList = {
   RequestClassTest: undefined;
   ClassTestPrintQueue: undefined;
   ClassTestResults: { testId: string; title: string };
+  ClassTestResultsView: { testId: string; title: string };
   ClassTestPublish: { testId: string; title: string };
   ClassTestDashboard: undefined;
   ClassTestReports: undefined;

@@ -24,6 +24,7 @@ import {
   type RoutineSlotT,
 } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Field, Button, Badge, Select, Loader, ErrorBanner, EmptyState } from "../../components/ui";
+import { ClassNoteAttachments, type AttachmentRef } from "../../components/ClassNoteAttachments";
 import { DateField } from "../../components/DateField";
 import { STR, bnNum, dayTypeLabel, routineSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -42,6 +43,7 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
   const [taught, setTaught] = useState("");
   const [taughtError, setTaughtError] = useState<string | undefined>(undefined);
   const [hwItemId, setHwItemId] = useState<string | null>(null);
+  const [files, setFiles] = useState<AttachmentRef[]>([]);
   const [busy, setBusy] = useState(false);
 
   const [notesQ, refetchNotes] = useQuery({
@@ -77,7 +79,13 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
       return;
     }
     setBusy(true);
-    const res = await publish({ slotId: slot.id, date, taughtSummaryBn: taught.trim(), homeworkItemId: hwItemId });
+    const res = await publish({
+      slotId: slot.id,
+      date,
+      taughtSummaryBn: taught.trim(),
+      homeworkItemId: hwItemId,
+      attachmentIds: files.map((f) => f.fileId),
+    });
     setBusy(false);
     if (res.error || !res.data?.publishClassNote) {
       toast.show(friendlyError(res.error), "danger");
@@ -87,6 +95,7 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
     setOpen(false);
     setTaught("");
     setHwItemId(null);
+    setFiles([]);
     refetchNotes({ requestPolicy: "network-only" });
   }
 
@@ -127,6 +136,7 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
           {isSection && dayItems.length === 1 ? (
             <Muted>🔗 {dayItems[0].hwId}</Muted>
           ) : null}
+          <ClassNoteAttachments value={files} onChange={setFiles} />
           <Button title={STR.rtPublish} onPress={() => void submit()} loading={busy} disabled={busy} />
         </View>
       ) : (

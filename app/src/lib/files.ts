@@ -206,6 +206,57 @@ export async function pickAndUploadClassTestPaper(): Promise<UploadedFile | null
 }
 
 // ---------------------------------------------------------------------------
+// Class-note attachments (server: POST /files/classnote). jpeg/png/pdf ≤ 10 MB,
+// up to 5 per note (the cap is enforced when the fileIds are bound to the note).
+// ---------------------------------------------------------------------------
+
+export const CLASSNOTE_FILE_MAX_BYTES = 10 * 1024 * 1024;
+export const CLASSNOTE_MAX_FILES = 5;
+
+/** Pick one jpeg/png/pdf and upload it as a class-note attachment; null if cancelled.
+ *  Throws FileUploadError with the server's Bangla message on rejection/failure. */
+export async function pickAndUploadClassNoteAttachment(): Promise<UploadedFile | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: FILE_MIMES,
+    multiple: false,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  const asset = picked.assets[0];
+
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", {
+      uri: asset.uri,
+      name: asset.name,
+      type: asset.mimeType ?? "application/octet-stream",
+    } as unknown as Blob);
+  }
+
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/classnote`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const body = (await res.json()) as { fileId: string; originalName: string; mime: string };
+  return { fileId: body.fileId, originalName: body.originalName, mime: body.mime };
+}
+
+// ---------------------------------------------------------------------------
 // Student-comment attachments (CM-2 server: POST /files/comment). image/pdf/video/
 // audio ≤ 10 MB (same CHAT_FILE_MIMES list); the comment must exist and be
 // undelivered. The fileId is $addToSet'ed onto the comment's attachmentIds.

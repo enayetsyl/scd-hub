@@ -31,7 +31,7 @@ import { AssignmentSequence } from "../models/AssignmentSequence";
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { resolveScheduleWeek } from "./AssignmentScheduleService";
 import { assertTransition } from "../lifecycle";
-import { atMidnight } from "../assignmentCalendar";
+import { atMidnight, dateOnlyISO } from "../assignmentCalendar";
 
 // ---------------------------------------------------------------------------
 // AS_ID generation (D-#34 numbering pattern)
@@ -175,8 +175,8 @@ export async function deliverAssignmentItem(
     asId,
     weekNumber: input.weekNumber,
     subject: entry.subject,
-    deliveryDate: item.deliveryDate.toISOString(),
-    dueDate: item.dueDate.toISOString(),
+    deliveryDate: dateOnlyISO(item.deliveryDate),
+    dueDate: dateOnlyISO(item.dueDate),
     status: "DRAFT",
     estMinutes,
     presentCount: input.roster.filter((r) => r.present).length,
@@ -361,7 +361,7 @@ function transitionShape(rec: IAssignmentStudentRecord): TransitionResult {
     asId: rec.asId,
     state: rec.state,
     chaseCount: rec.chaseCount,
-    dueDate: rec.dueDate ? rec.dueDate.toISOString() : null,
+    dueDate: rec.dueDate ? dateOnlyISO(rec.dueDate) : null,
   };
 }
 

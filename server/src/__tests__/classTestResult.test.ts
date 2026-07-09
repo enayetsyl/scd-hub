@@ -194,6 +194,7 @@ describe("enterResult", () => {
 
   beforeEach(() => {
     mockCtFindById.mockReturnValue(leanChain(printedTest()));
+    mockResFindOne.mockReturnValue(leanChain(null)); // default: no existing (unpublished) row
     mockResUpsert.mockImplementation(async (filter: Record<string, unknown>, update: Record<string, unknown>) => {
       const set = (update.$set ?? {}) as Record<string, unknown>;
       return {
@@ -309,6 +310,23 @@ describe("enterResult", () => {
     await expect(
       enterResult({ testId: TEST_OID.toString(), studentId: oid().toString(), status: "ABSENT", actorId: TEACHER_ID, now: onExamDay }),
     ).rejects.toBeInstanceOf(ClassTestResultError);
+  });
+
+  test("rejects editing a PUBLISHED result — must unpublish first (owner ruling)", async () => {
+    mockResFindOne.mockReturnValue(leanChain({ publishedAt: new Date("2026-07-11") }));
+    await expect(
+      enterResult({ testId: TEST_OID.toString(), studentId: oid().toString(), status: "PRESENT", marks: 12, actorId: TEACHER_ID, now: onExamDay }),
+    ).rejects.toThrow(/unpublish/i);
+    expect(mockResUpsert).not.toHaveBeenCalled();
+  });
+
+  test("allows editing an entered-but-UNPUBLISHED result (publishedAt null)", async () => {
+    mockResFindOne.mockReturnValue(leanChain({ publishedAt: null }));
+    const res = await enterResult({
+      testId: TEST_OID.toString(), studentId: oid().toString(), status: "PRESENT", marks: 14, actorId: TEACHER_ID, now: onExamDay,
+    });
+    expect(res.status).toBe("PRESENT");
+    expect(mockResUpsert).toHaveBeenCalled();
   });
 });
 

@@ -18,6 +18,7 @@ import { BellDutyAssignment, type IBellDutyAssignment } from "../models/BellDuty
 import { RoutineSlot, type IRoutineSlot } from "../models/RoutineSlot";
 import { RoutineSubstitution } from "../models/RoutineSubstitution";
 import { ClassNote, type IClassNote } from "../models/ClassNote";
+import { StoredFile } from "../../platform/models/StoredFile";
 import { computePeriodTimes, windowFor } from "../schedule";
 import { buildBellSchedule, type BellTrigger } from "../trigger";
 import { ForbiddenError } from "../../../middleware/authz";
@@ -84,11 +85,19 @@ export async function bellDutyForDate(date: Date): Promise<IBellDutyAssignment[]
 
 /** Publish (or update) the class-note for a slot on a date (R5.3). Authorized to the
  *  slot's teacher, its active cover for that date, or an admin (`canManage`). */
+/** Normalize + cap class-note attachment ids (≤5, valid ObjectIds). */
+function normalizeAttachmentIds(ids: string[] | null | undefined): Types.ObjectId[] {
+  const valid = (ids ?? []).filter((id) => Types.ObjectId.isValid(id));
+  if (valid.length > 5) throw new Error("A class note can carry at most 5 attachments");
+  return valid.map((id) => new Types.ObjectId(id));
+}
+
 export async function publishClassNote(input: {
   slotId: string;
   date: Date;
   taughtSummaryBn: string;
   homeworkItemId?: string | null;
+  attachmentIds?: string[] | null;
   actorId: string;
   canManage: boolean;
 }): Promise<IClassNote> {
@@ -118,6 +127,7 @@ export async function publishClassNote(input: {
         subject: slot.subject,
         taughtSummaryBn: input.taughtSummaryBn,
         homeworkItemId: input.homeworkItemId ? new Types.ObjectId(input.homeworkItemId) : undefined,
+        attachmentIds: normalizeAttachmentIds(input.attachmentIds),
         publishedBy: new Types.ObjectId(input.actorId),
         publishedAt,
       },
@@ -142,6 +152,126 @@ export async function classNotesForDate(
   return ClassNote.find({ groupType, groupId, date: { $gte: start, $lte: end } })
     .sort({ subject: 1 })
     .lean() as unknown as IClassNote[];
+}
+
+// ---------------------------------------------------------------------------
+// Class-note admin (Principal/Office): edit / delete / enriched list of all notes.
+// ---------------------------------------------------------------------------
+
+/** Edit an existing note's summary and/or attachments (Principal/Office). */
+export async function updateClassNote(input: {
+  id: string;
+  taughtSummaryBn?: string | null;
+  attachmentIds?: string[] | null;
+}): Promise<IClassNote> {
+  const set: Record<string, unknown> = {};
+  if (input.taughtSummaryBn != null && input.taughtSummaryBn.trim() !== "") set.taughtSummaryBn = input.taughtSummaryBn.trim();
+  if (input.attachmentIds !== undefined) set.attachmentIds = normalizeAttachmentIds(input.attachmentIds);
+  if (Object.keys(set).length === 0) throw new Error("Nothing to update");
+  const updated = (await ClassNote.findByIdAndUpdate(input.id, { $set: set }, { new: true }).lean()) as unknown as IClassNote | null;
+  if (!updated) throw new Error("Class note not found");
+  return updated;
+}
+
+/** Delete a class note (Principal/Office). Attachments' StoredFile rows are left intact. */
+export async function deleteClassNote(id: string): Promise<{ id: string }> {
+  const res = await ClassNote.findByIdAndDelete(id).lean();
+  if (!res) throw new Error("Class note not found");
+  return { id };
+}
+
+export interface ClassNoteAttachmentView {
+  id: string;
+  name: string;
+  mime: string;
+}
+export interface ClassNoteAdminRow {
+  id: string;
+  date: string;
+  subject: RoutineSubject;
+  taughtSummaryBn: string;
+  classLevel: number | null;
+  classNameBn: string | null;
+  sectionCode: string | null;
+  sectionNameBn: string | null;
+  subjectGroupNameBn: string | null;
+  authorName: string | null;
+  publishedAt: string;
+  attachments: ClassNoteAttachmentView[];
+}
+
+/** Principal/Office: every class note for a date, enriched with class/section names,
+ *  author name and attachment file names. Newest first. */
+export async function classNotesAdmin(date: Date): Promise<ClassNoteAdminRow[]> {
+  const { start, end } = dayBounds(date);
+  const notes = (await ClassNote.find({ date: { $gte: start, $lte: end } })
+    .sort({ publishedAt: -1 })
+    .lean()) as unknown as IClassNote[];
+  if (notes.length === 0) return [];
+
+  const sectionIds = new Set<string>();
+  const subjectGroupIds = new Set<string>();
+  const userIds = new Set<string>();
+  const fileIds = new Set<string>();
+  for (const n of notes) {
+    if (n.groupType === "section") sectionIds.add(n.groupId.toString());
+    else subjectGroupIds.add(n.groupId.toString());
+    userIds.add(n.publishedBy.toString());
+    for (const a of n.attachmentIds ?? []) fileIds.add(a.toString());
+  }
+
+  const [sections, subjectGroups, users, files] = await Promise.all([
+    sectionIds.size ? Section.find({ _id: { $in: [...sectionIds] } }).select("classId code nameBn").lean() : Promise.resolve([]),
+    subjectGroupIds.size ? SubjectGroup.find({ _id: { $in: [...subjectGroupIds] } }).select("nameBn").lean() : Promise.resolve([]),
+    userIds.size ? User.find({ _id: { $in: [...userIds] } }).select("name").lean() : Promise.resolve([]),
+    fileIds.size ? StoredFile.find({ _id: { $in: [...fileIds] } }).select("originalName mime").lean() : Promise.resolve([]),
+  ]);
+  const sectionById = new Map(sections.map((s) => [s._id.toString(), s]));
+  const classIds = new Set(sections.map((s) => s.classId?.toString()).filter((x): x is string => !!x));
+  const classes = classIds.size ? await Class.find({ _id: { $in: [...classIds] } }).select("level nameBn").lean() : [];
+  const classById = new Map(classes.map((c) => [c._id.toString(), c]));
+  const sgById = new Map(subjectGroups.map((g) => [g._id.toString(), g]));
+  const userById = new Map(users.map((u) => [u._id.toString(), u]));
+  const fileById = new Map(files.map((f) => [f._id.toString(), f]));
+
+  return notes.map((n) => {
+    let classLevel: number | null = null;
+    let classNameBn: string | null = null;
+    let sectionCode: string | null = null;
+    let sectionNameBn: string | null = null;
+    let subjectGroupNameBn: string | null = null;
+    if (n.groupType === "section") {
+      const sec = sectionById.get(n.groupId.toString());
+      if (sec) {
+        sectionCode = sec.code ?? null;
+        sectionNameBn = sec.nameBn ?? null;
+        const cls = sec.classId ? classById.get(sec.classId.toString()) : null;
+        if (cls) {
+          classLevel = cls.level ?? null;
+          classNameBn = cls.nameBn ?? null;
+        }
+      }
+    } else {
+      subjectGroupNameBn = sgById.get(n.groupId.toString())?.nameBn ?? null;
+    }
+    return {
+      id: n._id.toString(),
+      date: new Date(n.date).toISOString(),
+      subject: n.subject,
+      taughtSummaryBn: n.taughtSummaryBn,
+      classLevel,
+      classNameBn,
+      sectionCode,
+      sectionNameBn,
+      subjectGroupNameBn,
+      authorName: userById.get(n.publishedBy.toString())?.name ?? null,
+      publishedAt: new Date(n.publishedAt).toISOString(),
+      attachments: (n.attachmentIds ?? []).map((a) => {
+        const f = fileById.get(a.toString());
+        return { id: a.toString(), name: f?.originalName ?? "file", mime: f?.mime ?? "" };
+      }),
+    };
+  });
 }
 
 /**
