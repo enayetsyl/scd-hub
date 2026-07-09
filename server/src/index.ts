@@ -29,6 +29,7 @@ import "./modules/trackers/resolvers/trackers";
 import "./modules/trackers/resolvers/homework";
 import "./modules/trackers/resolvers/homeworkFiles";
 import "./modules/trackers/resolvers/assignment";
+import "./modules/printing/resolvers/printRequest";
 import "./modules/trackers/resolvers/classTest";
 import "./modules/trackers/resolvers/classTestResult";
 import "./modules/trackers/resolvers/classTestGuardian";
