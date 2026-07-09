@@ -25,6 +25,7 @@ import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
 import type { Role } from "@scd/shared";
+import { dateOnlyISO } from "../assignmentCalendar";
 import {
   upsertAssignmentSchedule as upsertScheduleSvc,
   addScheduleEntry as addEntrySvc,
@@ -1151,8 +1152,8 @@ builder.queryField("assignmentItems", (t) =>
         sectionId: d.sectionId.toString(),
         subject: d.subject,
         teacherId: d.teacherId.toString(),
-        deliveryDate: new Date(d.deliveryDate).toISOString(),
-        dueDate: new Date(d.dueDate).toISOString(),
+        deliveryDate: dateOnlyISO(new Date(d.deliveryDate)),
+        dueDate: dateOnlyISO(new Date(d.dueDate)),
         setId: d.setId ? d.setId.toString() : null,
         totalMarks: d.totalMarks ?? null,
       }));
@@ -1183,7 +1184,7 @@ builder.queryField("assignmentRecords", (t) =>
           state: s.state,
           at: new Date(s.at).toISOString(),
         })),
-        dueDate: d.dueDate ? new Date(d.dueDate).toISOString() : null,
+        dueDate: d.dueDate ? dateOnlyISO(new Date(d.dueDate)) : null,
         chaseCount: d.chaseCount,
         result: d.result ?? null,
         marks: d.marks ?? null,

@@ -22,6 +22,7 @@ import {
   resolveWeekDates,
   weekNumberFor,
   weekStartOf,
+  dateOnlyISO,
 } from "../assignmentCalendar";
 import { isTerminalState } from "../lifecycle";
 
@@ -273,8 +274,8 @@ export async function childAssignments(
       state: r.state,
       pending: open && overdueDays === 0,
       daysLate: overdueDays,
-      deliveryDate: item ? new Date(item.deliveryDate).toISOString() : "",
-      dueDate: r.dueDate ? new Date(r.dueDate).toISOString() : null,
+      deliveryDate: item ? dateOnlyISO(new Date(item.deliveryDate)) : "",
+      dueDate: r.dueDate ? dateOnlyISO(new Date(r.dueDate)) : null,
       marks: r.marks ?? null,
       totalMarks: item?.totalMarks ?? null,
       result: r.result ?? null,

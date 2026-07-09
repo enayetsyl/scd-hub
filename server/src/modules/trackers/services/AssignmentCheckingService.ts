@@ -18,6 +18,7 @@
 import { HW_RESULTS } from "@scd/shared";
 import type { HwResult } from "@scd/shared";
 import { AssignmentItem } from "../models/AssignmentItem";
+import { dateOnlyISO } from "../assignmentCalendar";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { assertTransition } from "../lifecycle";
 import { nextSchoolDay } from "../calendar";
@@ -138,6 +139,6 @@ export async function issueAssignmentResubmission(
     asId: created.asId,
     state: created.state,
     resubOf: rec._id.toString(),
-    dueDate: created.dueDate ? created.dueDate.toISOString() : null,
+    dueDate: created.dueDate ? dateOnlyISO(created.dueDate) : null,
   };
 }

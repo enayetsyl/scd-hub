@@ -134,7 +134,7 @@ describe("AJ-5 — issueAssignmentResubmission (teacher-optional, any result)", 
     expect(createArg.resubOf).toBe(r._id);
     expect(createArg.state).toBe("GIVEN"); // fresh pass
     expect(res.recordId).not.toBe(res.originalRecordId);
-    expect(new Date(res.dueDate!)).toEqual(new Date(2026, 0, 13)); // next school day (Tue)
+    expect(res.dueDate!.slice(0, 10)).toBe("2026-01-13"); // next school day (Tue)
   });
 
   test("rejected unless the record is CHECKED", async () => {

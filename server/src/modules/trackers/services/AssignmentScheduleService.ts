@@ -25,6 +25,7 @@ import {
   weekNumberFor,
   weekStartOf,
   resolveWeekDates,
+  dateOnlyISO,
   type IsOpenDay,
   type ResolvedWeekDates,
 } from "../assignmentCalendar";
@@ -259,13 +260,13 @@ export async function expectedItemsForWeek(
     academicYearId,
     weekNumber: resolved.weekNumber,
     cycleWeek: resolved.cycleWeek,
-    weekStart: resolved.weekStart.toISOString(),
+    weekStart: dateOnlyISO(resolved.weekStart),
     year: resolved.year,
     month: resolved.month,
     weekOfMonth: resolved.weekOfMonth,
     suspended: resolved.suspended,
-    deliveryDate: resolved.deliveryDate ? resolved.deliveryDate.toISOString() : null,
-    dueDate: resolved.dueDate ? resolved.dueDate.toISOString() : null,
+    deliveryDate: resolved.deliveryDate ? dateOnlyISO(resolved.deliveryDate) : null,
+    dueDate: resolved.dueDate ? dateOnlyISO(resolved.dueDate) : null,
     items: entries.map((e) => {
       const item = byEntry.get(itemKey(e.sectionId.toString(), e.subject));
       return {
