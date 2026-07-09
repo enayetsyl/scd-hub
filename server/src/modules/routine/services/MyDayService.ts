@@ -15,8 +15,9 @@
  *                       notification). Marked `isCovering: true`, `teacherName` is
  *                       the ABSENT teacher's real name (the slot is still theirs).
  *                       The older routine-module R-4 direct-assign cover (a
- *                       RoutineSubstitution, no StaffCoverSlot) has the same gap but
- *                       is NOT covered here — out of scope for this fix.
+ *                       RoutineSubstitution from Cover management, no StaffCoverSlot)
+ *                       is now surfaced the same way (step 1c) — a cover set from
+ *                       Routine → Cover management appears on the proxy's Today page.
  *   homework          — pendingChecking / openResubmissions / activeChases summed
  *                       over the caller's ACCESSIBLE refs — authorized per section
  *                       exactly like homeworkClassOverview (confirm-scope OR read-
@@ -117,6 +118,40 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
         )) as MyDaySlot[];
         for (const s of enrichedCovered) s.isCovering = true;
         slots = [...slots, ...enrichedCovered].sort((a, b) => a.periodNumber - b.periodNumber);
+      }
+    }
+
+    // 1c. Periods the caller is COVERING today via the routine-module direct-assign
+    //     cover (a RoutineSubstitution from Routine → Cover management, R-4) — the
+    //     same gap as 1b but for the older mechanism (no StaffCoverSlot). Previously
+    //     such a cover only granted the proxy content/tracker ACCESS + a one-time
+    //     COVER_ASSIGNED notification; it never surfaced on the covering teacher's
+    //     own Today page. Fetched by the substitution's slotId, day-type-filtered
+    //     like own slots, and marked isCovering (teacherName = the ABSENT teacher).
+    const covStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+    const covEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+    const mySubs = await RoutineSubstitution.find({
+      coverTeacherId: auth.userId,
+      active: true,
+      date: { $gte: covStart, $lte: covEnd },
+    })
+      .select("slotId")
+      .lean();
+    if (mySubs.length > 0) {
+      const already = new Set(slots.map((s) => s._id.toString()));
+      const subSlotIds = mySubs.map((su) => su.slotId).filter((id) => !already.has(id.toString()));
+      if (subSlotIds.length > 0) {
+        const coveredRaw = (await RoutineSlot.find({ _id: { $in: subSlotIds }, active: true })
+          .sort({ periodNumber: 1 })
+          .lean()) as unknown as IRoutineSlot[];
+        const admittedCovered = coveredRaw.filter((s) => dayTypeAdmitsTrack(dayType, s.track as PeriodTrack));
+        if (admittedCovered.length > 0) {
+          const enrichedCovered = (await enrichRoutineSlots(
+            admittedCovered.map((s) => ({ ...s, coverTeacherId: null })),
+          )) as MyDaySlot[];
+          for (const s of enrichedCovered) s.isCovering = true;
+          slots = [...slots, ...enrichedCovered].sort((a, b) => a.periodNumber - b.periodNumber);
+        }
       }
     }
   }
