@@ -36,7 +36,8 @@ export type StoredFileKind =
   | "comment_image"
   | "comment_pdf"
   | "comment_video"
-  | "comment_audio";
+  | "comment_audio"
+  | "classnote_attachment";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -50,6 +51,7 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "comment_pdf",
   "comment_video",
   "comment_audio",
+  "classnote_attachment",
 ];
 
 /** The chat-attachment subset (M-4) — the read gate routes these to chat. */

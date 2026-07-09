@@ -94,6 +94,7 @@ import RoutineEditorScreen from "../screens/routine/RoutineEditorScreen";
 import CoverManageScreen from "../screens/routine/CoverManageScreen";
 import DailyNoteScreen from "../screens/routine/DailyNoteScreen";
 import ClassNoteReportScreen from "../screens/routine/ClassNoteReportScreen";
+import ClassNotesAdminScreen from "../screens/routine/ClassNotesAdminScreen";
 import BellScheduleScreen from "../screens/routine/BellScheduleScreen";
 import AttendanceHomeScreen from "../screens/attendance/AttendanceHomeScreen";
 import MarkAttendanceScreen from "../screens/attendance/MarkAttendanceScreen";
@@ -563,6 +564,7 @@ function RoutineNavigator(): React.ReactElement {
       <RoutineStack.Screen name="CoverManage" component={CoverManageScreen} options={{ title: STR.coverManageTitle }} />
       <RoutineStack.Screen name="DailyNote" component={DailyNoteScreen} options={{ title: STR.dailyNoteTitle }} />
       <RoutineStack.Screen name="ClassNoteReport" component={ClassNoteReportScreen} options={{ title: STR.rtNoteReportTitle }} />
+      <RoutineStack.Screen name="ClassNotesAdmin" component={ClassNotesAdminScreen} options={{ title: STR.cnClassNotesAdmin }} />
       <RoutineStack.Screen name="BellSchedule" component={BellScheduleScreen} options={{ title: STR.bellScheduleTitle }} />
       <RoutineStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </RoutineStack.Navigator>
