@@ -17,6 +17,9 @@ import mongoose from "mongoose";
 const mockCreate = jest.fn();
 const mockFindById = jest.fn();
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
+const mockSetFindById = jest.fn();
+const mockArtifactFindById = jest.fn();
+const mockStoredFileFind = jest.fn();
 
 jest.mock("../modules/printing/models/PrintRequest", () => ({
   PrintRequest: {
@@ -26,6 +29,16 @@ jest.mock("../modules/printing/models/PrintRequest", () => ({
 }));
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
+}));
+// PQ-2: the referenced document must exist and be printable.
+jest.mock("../modules/assessment/models/AssessmentSet", () => ({
+  AssessmentSet: { findById: (id: unknown) => ({ select: () => ({ lean: () => mockSetFindById(id) }) }) },
+}));
+jest.mock("../modules/content/models/ContentArtifact", () => ({
+  ContentArtifact: { findById: (id: unknown) => ({ select: () => ({ lean: () => mockArtifactFindById(id) }) }) },
+}));
+jest.mock("../modules/platform/models/StoredFile", () => ({
+  StoredFile: { find: (f: unknown) => ({ select: () => ({ lean: () => mockStoredFileFind(f) }) }) },
 }));
 
 import {
@@ -72,6 +85,9 @@ const baseInput = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockCreate.mockImplementation((d) => Promise.resolve({ _id: oid(), ...d }));
+  mockSetFindById.mockResolvedValue({ status: "assembled" });
+  mockArtifactFindById.mockResolvedValue({ docType: "session_plan" });
+  mockStoredFileFind.mockResolvedValue([]);
 });
 
 describe("isPrintableUrl", () => {
@@ -138,6 +154,51 @@ describe("createPrintRequest", () => {
     await expect(createPrintRequest({ ...baseInput, purpose: "VIBES" })).rejects.toThrow(/purpose/);
     await expect(createPrintRequest({ ...baseInput, copies: 0 })).rejects.toThrow(/copies/);
     await expect(createPrintRequest({ ...baseInput, neededByKey: "09-07-2026" })).rejects.toThrow(/YYYY-MM-DD/);
+  });
+});
+
+describe("PQ-2 — the referenced document must exist and be printable", () => {
+  test("SET: a DRAFT set cannot be sent for printing (only assembled ⇒ locked ⇒ immutable)", async () => {
+    mockSetFindById.mockResolvedValue({ status: "draft" });
+    await expect(createPrintRequest(baseInput)).rejects.toThrow(/ASSEMBLED/);
+  });
+
+  test("SET: a missing set rejects", async () => {
+    mockSetFindById.mockResolvedValue(null);
+    await expect(createPrintRequest(baseInput)).rejects.toThrow(/not found/);
+  });
+
+  test("CONTENT_ARTIFACT: only a chapter/session plan may be printed", async () => {
+    const input = { ...baseInput, sourceType: "CONTENT_ARTIFACT", contentArtifactId: oid().toString() };
+    mockArtifactFindById.mockResolvedValue({ docType: "question" }); // not a plan
+    await expect(createPrintRequest(input)).rejects.toThrow(/chapter or session plan/);
+
+    mockArtifactFindById.mockResolvedValue({ docType: "chapter_plan" });
+    await expect(createPrintRequest(input)).resolves.toBeDefined();
+  });
+
+  test("UPLOAD: every file must exist, be a print_upload, and belong to the requester", async () => {
+    const f1 = oid().toString();
+    const input = { ...baseInput, sourceType: "UPLOAD", fileIds: [f1] };
+
+    mockStoredFileFind.mockResolvedValue([]); // missing
+    await expect(createPrintRequest(input)).rejects.toThrow(/was not found/);
+
+    mockStoredFileFind.mockResolvedValue([{ kind: "hw_question", uploadedBy: TEACHER }]); // wrong kind
+    await expect(createPrintRequest(input)).rejects.toThrow(/not a print upload/);
+
+    mockStoredFileFind.mockResolvedValue([{ kind: "print_upload", uploadedBy: oid().toString() }]); // someone else's
+    await expect(createPrintRequest(input)).rejects.toThrow(/files you uploaded/);
+
+    mockStoredFileFind.mockResolvedValue([{ kind: "print_upload", uploadedBy: TEACHER }]);
+    await expect(createPrintRequest(input)).resolves.toBeDefined();
+  });
+
+  test("LINK: nothing is looked up — an external URL cannot be verified", async () => {
+    await createPrintRequest({ ...baseInput, sourceType: "LINK", linkUrl: "https://forms.google.com/x", setId: null });
+    expect(mockSetFindById).not.toHaveBeenCalled();
+    expect(mockArtifactFindById).not.toHaveBeenCalled();
+    expect(mockStoredFileFind).not.toHaveBeenCalled();
   });
 });
 

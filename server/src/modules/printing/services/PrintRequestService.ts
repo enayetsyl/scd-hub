@@ -13,9 +13,12 @@
  * Sources are references by id, never PDF snapshots (see the model's header).
  */
 import { Types } from "mongoose";
-import { MAX_PRINT_UPLOADS, PRINT_PURPOSES, PRINT_SOURCES } from "@scd/shared";
+import { MAX_PRINT_UPLOADS, PLAN_DOC_TYPES, PRINT_PURPOSES, PRINT_SOURCES } from "@scd/shared";
 import type { PrintPurpose, PrintRequestStatus, PrintSource } from "@scd/shared";
 import { PrintRequest, type IPrintRequest } from "../models/PrintRequest";
+import { AssessmentSet } from "../../assessment/models/AssessmentSet";
+import { ContentArtifact } from "../../content/models/ContentArtifact";
+import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
 
 export class PrintRequestError extends Error {
@@ -83,12 +86,56 @@ export function validateSource(input: CreatePrintRequestInput): void {
   }
 }
 
+/**
+ * The referenced document must EXIST and be printable (PQ2.2–PQ2.4). Checked at
+ * request time so the Office never opens a queue row onto a 404:
+ *   SET              → the set exists and is ASSEMBLED (`/pdf/set/:id` refuses a draft,
+ *                      and assembled ⇒ locked ⇒ immutable in content, so no snapshot)
+ *   CONTENT_ARTIFACT → the artifact exists and is a chapter/session plan
+ *   UPLOAD           → every fileId exists and is a `print_upload` the caller uploaded
+ */
+async function assertSourceResolves(input: CreatePrintRequestInput): Promise<void> {
+  switch (input.sourceType as PrintSource) {
+    case "SET": {
+      const set = await AssessmentSet.findById(input.setId).select("status").lean();
+      if (!set) throw new PrintRequestError("Question set not found");
+      if (set.status !== "assembled") {
+        throw new PrintRequestError("Only an ASSEMBLED set can be sent for printing");
+      }
+      break;
+    }
+    case "CONTENT_ARTIFACT": {
+      const artifact = await ContentArtifact.findById(input.contentArtifactId).select("docType").lean();
+      if (!artifact) throw new PrintRequestError("Plan not found");
+      if (!(PLAN_DOC_TYPES as readonly string[]).includes(artifact.docType)) {
+        throw new PrintRequestError("Only a chapter or session plan can be sent for printing");
+      }
+      break;
+    }
+    case "UPLOAD": {
+      const ids = input.fileIds!;
+      const files = await StoredFile.find({ _id: { $in: ids } }).select("kind uploadedBy").lean();
+      if (files.length !== ids.length) throw new PrintRequestError("An uploaded file was not found");
+      for (const f of files) {
+        if (f.kind !== "print_upload") throw new PrintRequestError("File is not a print upload");
+        if (f.uploadedBy?.toString() !== input.requestedBy) {
+          throw new PrintRequestError("You may only attach files you uploaded");
+        }
+      }
+      break;
+    }
+    case "LINK":
+      break; // an external link cannot be verified — validated syntactically above
+  }
+}
+
 export async function createPrintRequest(input: CreatePrintRequestInput): Promise<IPrintRequest> {
   if (!input.title?.trim()) throw new PrintRequestError("A print request needs a title");
   if (!(PRINT_PURPOSES as readonly string[]).includes(input.purpose)) {
     throw new PrintRequestError("Invalid purpose");
   }
   validateSource(input);
+  await assertSourceResolves(input);
 
   const copies = input.copies ?? 1;
   if (!Number.isInteger(copies) || copies < 1) throw new PrintRequestError("copies must be a positive integer");

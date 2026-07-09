@@ -37,7 +37,9 @@ export type StoredFileKind =
   | "comment_pdf"
   | "comment_video"
   | "comment_audio"
-  | "classnote_attachment";
+  | "classnote_attachment"
+  /** A document a teacher sent to the Office for printing (PQ-2, D-#281). */
+  | "print_upload";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -52,6 +54,7 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "comment_video",
   "comment_audio",
   "classnote_attachment",
+  "print_upload",
 ];
 
 /** The chat-attachment subset (M-4) — the read gate routes these to chat. */
