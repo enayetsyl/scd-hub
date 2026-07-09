@@ -1,7 +1,9 @@
 /**
  * AttendanceHomeScreen (AT-2 entry) — role-aware landing.
- *   TEACHER (attendance:mark): today's marking worklist (myMarkingSections) —
- *     tap a section to mark its absentees (CT-2: only the marker-of-the-day).
+ *   TEACHER (attendance:mark): today's marking worklist (myMarkingUnits, D-#278) —
+ *     tap an attendance UNIT to mark its absentees. A unit is the caller's Quran
+ *     group (Class 1–5, whose first class is the cross-section Quran double) or
+ *     their Nursery/KG section. Only the unit's marker-of-the-day sees it (CT-2).
  *   PRINCIPAL/OFFICE (attendance:manage): entries to the teacher-Excel upload,
  *     the absentee report surface, and marker assignment.
  */
@@ -10,11 +12,11 @@ import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { roleHasPermission } from "@scd/shared";
-import { MY_MARKING_SECTIONS } from "../../graphql/operations";
+import { MY_MARKING_UNITS } from "../../graphql/operations";
 import type { AttendanceStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Loader, EmptyState, ErrorBanner } from "../../components/ui";
 import { DateField } from "../../components/DateField";
-import { STR, bnNum, classLevelLabel } from "../../lib/labels";
+import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
@@ -32,12 +34,12 @@ export default function AttendanceHomeScreen({ navigation }: Props): React.React
   const canManage = !!role && roleHasPermission(role, "attendance:manage");
   const [dateKey, setDateKey] = useState(todayKey());
 
-  const [sectionsQ, refetch] = useQuery({
-    query: MY_MARKING_SECTIONS,
+  const [unitsQ, refetch] = useQuery({
+    query: MY_MARKING_UNITS,
     variables: { dateKey },
     pause: !canMark,
   });
-  const sections = sectionsQ.data?.myMarkingSections ?? [];
+  const units = unitsQ.data?.myMarkingUnits ?? [];
 
   return (
     <Screen scroll>
@@ -62,35 +64,34 @@ export default function AttendanceHomeScreen({ navigation }: Props): React.React
         <>
           <H2>{STR.attMySections}</H2>
           <DateField label={STR.attDate} value={dateKey} onChange={setDateKey} />
-          {sectionsQ.error ? (
-            <ErrorBanner message={friendlyError(sectionsQ.error)} onRetry={() => refetch({ requestPolicy: "network-only" })} />
-          ) : sectionsQ.fetching && sections.length === 0 ? (
+          {unitsQ.error ? (
+            <ErrorBanner message={friendlyError(unitsQ.error)} onRetry={() => refetch({ requestPolicy: "network-only" })} />
+          ) : unitsQ.fetching && units.length === 0 ? (
             <Loader label={STR.loading} />
-          ) : sections.length === 0 ? (
+          ) : units.length === 0 ? (
             <EmptyState message={STR.attNoSections} />
           ) : (
-            sections.map((s) => (
+            units.map((u) => (
               <Card
-                key={s.sectionId}
+                key={`${u.unitType}:${u.unitId}`}
                 onPress={() =>
                   navigation.navigate("MarkAttendance", {
-                    sectionId: s.sectionId,
-                    title: `${classLevelLabel(s.classLevel)} — ${s.sectionNameBn || s.sectionCode}`,
+                    unitType: u.unitType,
+                    unitId: u.unitId,
+                    title: u.label,
                     dateKey,
                   })
                 }
               >
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View style={{ flex: 1 }}>
-                    <Body style={{ fontWeight: "700" }}>
-                      {classLevelLabel(s.classLevel)} — {s.sectionNameBn || s.sectionCode}
-                    </Body>
+                    <Body style={{ fontWeight: "700" }}>{u.label}</Body>
                     <Muted>
-                      {bnNum(s.studentCount)} {STR.attStudentsWord}
-                      {s.viaAssignment ? ` · ${STR.attViaAssignment}` : ""}
+                      {bnNum(u.studentCount)} {STR.attStudentsWord}
+                      {u.viaAssignment ? ` · ${STR.attViaAssignment}` : ""}
                     </Muted>
                   </View>
-                  <Badge text={s.marked ? STR.attMarked : STR.attPending} tone={s.marked ? "ok" : "warn"} />
+                  <Badge text={u.marked ? STR.attMarked : STR.attPending} tone={u.marked ? "ok" : "warn"} />
                 </View>
               </Card>
             ))

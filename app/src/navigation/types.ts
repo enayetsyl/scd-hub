@@ -103,7 +103,8 @@ export type RoutineStackParamList = {
 
 export type AttendanceStackParamList = {
   AttendanceHome: undefined;
-  MarkAttendance: { sectionId: string; title: string; dateKey: string };
+  /** An attendance UNIT (D-#278): a Quran group (Class 1–5) or a Nursery/KG section. */
+  MarkAttendance: { unitType: string; unitId: string; title: string; dateKey: string };
   TeacherAttendanceImport: undefined;
   AttendanceReport: undefined;
   AssignMarker: undefined;

@@ -1,5 +1,5 @@
 /**
- * AttendanceReportService (AT-5, D-#67) — the §8 reporting surface.
+ * AttendanceReportService (AT-5, D-#67; rolled up by D-#278) — the §8 reporting surface.
  *
  *   absenteeReport          — per class → per section: count + names + ROLL +
  *                             ID numbers (the external SMS sheet's replacement,
@@ -9,8 +9,13 @@
  *                             state (AT3.2): absent dates with no covering
  *                             StudentLeaveApplication.
  *   unmarkedSections        — sections expected to be marked that aren't
- *                             (AT4.2's detection, surfaced as the §8 log; the
- *                             escalation tier column lands with AT-4).
+ *                             (AT4.2's detection, surfaced as the §8 log).
+ *
+ * ROLL-UP (D-#278): capture happens per **attendance unit** — a Class 1–5 student's
+ * Quran group, or a Nursery/KG student's section. Every read here resolves each
+ * student to their unit and reads that unit's day record, then presents the result
+ * in the SAME class → section shape callers have always received. The Quran group is
+ * never a display axis; no caller sees a "group" concept.
  *
  * Identity-plane reads, RBAC'd at the resolver (manage = all; class teacher =
  * own section, §8/§11). NO corpus path (ADR-005).
@@ -24,7 +29,36 @@ import { Class } from "../../foundation/models/Class";
 import { Student } from "../../foundation/models/Student";
 import { User } from "../../foundation/models/User";
 import { applicationCovers } from "./LeaveApplicationService";
-import { markerForDate, AttendanceError } from "./StudentAttendanceService";
+import { markerForUnit, AttendanceError } from "./StudentAttendanceService";
+import { resolveUnits, unitKey, type AttendanceUnit, type StudentLite } from "../attendanceUnit";
+
+// ---------------------------------------------------------------------------
+// Shared: day-record ⇄ unit plumbing
+// ---------------------------------------------------------------------------
+
+type DayLike = Pick<IStudentAttendanceDay, "dateKey"> & {
+  sectionId?: { toString(): string } | null;
+  subjectGroupId?: { toString(): string } | null;
+  absentStudentIds: Array<{ toString(): string }>;
+};
+
+/** The unit a stored day record belongs to (§7 shaping: exactly one id is set). */
+const unitKeyOfDay = (d: DayLike): string =>
+  d.sectionId ? `section:${d.sectionId.toString()}` : `subjectgroup:${d.subjectGroupId!.toString()}`;
+
+const toLite = (s: {
+  _id: { toString(): string };
+  sectionId: { toString(): string };
+  classId: { toString(): string };
+}): StudentLite => ({
+  id: s._id.toString(),
+  sectionId: s.sectionId.toString(),
+  classId: s.classId.toString(),
+});
+
+/** Mongo `$or` selecting every day record belonging to any of `units`. */
+const unitsQuery = (units: AttendanceUnit[]): Record<string, unknown>[] =>
+  units.map((u) => (u.unitType === "section" ? { sectionId: u.unitId } : { subjectGroupId: u.unitId }));
 
 // ---------------------------------------------------------------------------
 // Absentee report (AT2.5 / §8 rows 1–2)
@@ -55,65 +89,79 @@ export interface ClassAbsentees {
   sections: SectionAbsentees[];
 }
 
+/**
+ * Class → section absentee report for a date. Reads EVERY unit's day record for the
+ * date, then attributes each absent student to their own class/section — so a Class 3
+ * student marked absent by their Qaida Quran teacher lands in "Class 3 · ALL".
+ * A section is listed once at least one of its students' units has been marked.
+ */
 export async function absenteeReport(dateKey: string): Promise<ClassAbsentees[]> {
   parseDateKey(dateKey);
-  const days = await StudentAttendanceDay.find({ dateKey, sectionId: { $exists: true } }).lean();
+  const days = (await StudentAttendanceDay.find({ dateKey }).lean()) as unknown as DayLike[];
   if (days.length === 0) return [];
 
-  const sectionIds = days.map((d) => d.sectionId!);
-  const sections = await Section.find({ _id: { $in: sectionIds } }).lean();
-  const classes = await Class.find({ _id: { $in: sections.map((s) => s.classId) } }).lean();
-  const absentIds = days.flatMap((d) => d.absentStudentIds);
-  const students = await Student.find({ _id: { $in: absentIds } })
-    .select("name nameBn rollNumber schoolId")
-    .lean();
-  const apps = absentIds.length
+  const markedUnits = new Set(days.map(unitKeyOfDay));
+  const absentIds = new Set(days.flatMap((d) => d.absentStudentIds.map((id) => id.toString())));
+
+  const students = await Student.find({ active: true }).select("_id name nameBn rollNumber schoolId sectionId classId").lean();
+  const lites = students.map(toLite);
+  const units = await resolveUnits(lites);
+
+  // Only students whose OWN unit was marked count as covered by this date's capture.
+  const covered = students.filter((s) => {
+    const u = units.get(s._id.toString());
+    return u !== undefined && markedUnits.has(unitKey(u));
+  });
+  if (covered.length === 0) return [];
+
+  const coveredAbsent = covered.filter((s) => absentIds.has(s._id.toString()));
+  const apps = coveredAbsent.length
     ? await StudentLeaveApplication.find({
-        studentId: { $in: absentIds },
+        studentId: { $in: coveredAbsent.map((s) => s._id) },
         fromKey: { $lte: dateKey },
         toKey: { $gte: dateKey },
       }).lean()
     : [];
 
+  const sectionIds = [...new Set(covered.map((s) => s.sectionId.toString()))];
+  const sections = await Section.find({ _id: { $in: sectionIds } }).lean();
+  const classes = await Class.find({ _id: { $in: sections.map((s) => s.classId) } }).lean();
   const sectionById = new Map(sections.map((s) => [s._id.toString(), s]));
   const classById = new Map(classes.map((c) => [c._id.toString(), c]));
-  const studentById = new Map(students.map((s) => [s._id.toString(), s]));
+
+  // section → its covered absentees
+  const absenteesBySection = new Map<string, AbsenteeEntry[]>();
+  for (const sectionId of sectionIds) absenteesBySection.set(sectionId, []);
+  for (const student of coveredAbsent) {
+    const list = absenteesBySection.get(student.sectionId.toString());
+    if (!list) continue;
+    list.push({
+      studentId: student._id.toString(),
+      name: student.name,
+      nameBn: student.nameBn ?? null,
+      rollNumber: student.rollNumber ?? student.schoolId, // roll = ID (D-#80)
+      schoolId: student.schoolId,
+      leaveCovered: applicationCovers(apps, student._id.toString(), dateKey),
+    });
+  }
 
   const byClass = new Map<string, ClassAbsentees>();
-  for (const day of days) {
-    const section = sectionById.get(day.sectionId!.toString());
+  for (const sectionId of sectionIds) {
+    const section = sectionById.get(sectionId);
     if (!section) continue;
     const cls = classById.get(section.classId.toString());
     if (!cls) continue;
     const classKey = cls._id.toString();
     let entry = byClass.get(classKey);
     if (!entry) {
-      entry = {
-        classId: classKey,
-        classLevel: cls.level,
-        classNameBn: cls.nameBn,
-        absentCount: 0,
-        sections: [],
-      };
+      entry = { classId: classKey, classLevel: cls.level, classNameBn: cls.nameBn, absentCount: 0, sections: [] };
       byClass.set(classKey, entry);
     }
-    const absentees: AbsenteeEntry[] = day.absentStudentIds
-      .map((id): AbsenteeEntry | null => {
-        const student = studentById.get(id.toString());
-        if (!student) return null;
-        return {
-          studentId: student._id.toString(),
-          name: student.name,
-          nameBn: student.nameBn ?? null,
-          rollNumber: student.rollNumber ?? student.schoolId, // roll = ID (D-#80)
-          schoolId: student.schoolId,
-          leaveCovered: applicationCovers(apps, student._id.toString(), dateKey),
-        };
-      })
-      .filter((e): e is AbsenteeEntry => e !== null)
-      .sort((a, b) => (a.rollNumber ?? a.schoolId).localeCompare(b.rollNumber ?? b.schoolId, undefined, { numeric: true }));
+    const absentees = (absenteesBySection.get(sectionId) ?? []).sort((a, b) =>
+      (a.rollNumber ?? a.schoolId).localeCompare(b.rollNumber ?? b.schoolId, undefined, { numeric: true }),
+    );
     entry.sections.push({
-      sectionId: section._id.toString(),
+      sectionId,
       sectionCode: section.code,
       sectionNameBn: section.nameBn,
       absentCount: absentees.length,
@@ -125,6 +173,79 @@ export async function absenteeReport(dateKey: string): Promise<ClassAbsentees[]>
   return [...byClass.values()]
     .map((c) => ({ ...c, sections: c.sections.sort((a, b) => a.sectionCode.localeCompare(b.sectionCode)) }))
     .sort((a, b) => a.classLevel - b.classLevel);
+}
+
+// ---------------------------------------------------------------------------
+// Class presence snapshot (D-#279) — the Principal/Office Today dashboard row
+// ---------------------------------------------------------------------------
+
+export interface ClassPresence {
+  classId: string;
+  classLevel: number;
+  classNameBn: string;
+  /** Active students of the class whose attendance UNIT has been marked. */
+  markedCount: number;
+  presentCount: number;
+  absentCount: number;
+  /** Active students on the roster, marked or not. */
+  totalCount: number;
+  /** True once every student of the class has been captured (all their units marked). */
+  complete: boolean;
+}
+
+/**
+ * Per-class present/absent counts for a date, rolled up from every attendance unit
+ * (D-#278/#279). `presentCount` counts only students whose unit was actually marked —
+ * an unmarked Quran group is *pending*, never silently "present".
+ */
+export async function classPresenceForDate(dateKey: string): Promise<ClassPresence[]> {
+  parseDateKey(dateKey);
+  const [days, students] = await Promise.all([
+    StudentAttendanceDay.find({ dateKey }).select("sectionId subjectGroupId absentStudentIds").lean() as unknown as Promise<DayLike[]>,
+    Student.find({ active: true }).select("_id sectionId classId").lean(),
+  ]);
+  if (students.length === 0) return [];
+
+  const markedUnits = new Set(days.map(unitKeyOfDay));
+  const absentIds = new Set(days.flatMap((d) => d.absentStudentIds.map((id) => id.toString())));
+  const units = await resolveUnits(students.map(toLite));
+
+  const classes = await Class.find({ _id: { $in: [...new Set(students.map((s) => s.classId.toString()))] } })
+    .select("level nameBn")
+    .lean();
+  const classById = new Map(classes.map((c) => [c._id.toString(), c]));
+
+  const rows = new Map<string, ClassPresence>();
+  for (const s of students) {
+    const classId = s.classId.toString();
+    const cls = classById.get(classId);
+    if (!cls) continue;
+    let row = rows.get(classId);
+    if (!row) {
+      row = {
+        classId,
+        classLevel: cls.level,
+        classNameBn: cls.nameBn,
+        markedCount: 0,
+        presentCount: 0,
+        absentCount: 0,
+        totalCount: 0,
+        complete: true,
+      };
+      rows.set(classId, row);
+    }
+    row.totalCount += 1;
+    const unit = units.get(s._id.toString());
+    if (!unit || !markedUnits.has(unitKey(unit))) {
+      row.complete = false; // this child's first class hasn't reported yet
+      continue;
+    }
+    row.markedCount += 1;
+    if (absentIds.has(s._id.toString())) row.absentCount += 1;
+    else row.presentCount += 1;
+  }
+
+  return [...rows.values()].sort((a, b) => a.classLevel - b.classLevel);
 }
 
 // ---------------------------------------------------------------------------
@@ -147,7 +268,7 @@ export interface StudentHistory {
   presentPct: number;
 }
 
-/** Pure roll-up over the section's marked days (unit-tested directly). */
+/** Pure roll-up over the student's marked days (unit-tested directly). */
 export function buildStudentHistory(
   studentId: string,
   sectionId: string,
@@ -176,8 +297,13 @@ export function buildStudentHistory(
   };
 }
 
-/** Per-day present/absent + % over a date range (against the student's CURRENT
- *  section's marked days — a mid-range section move only counts the current one). */
+/**
+ * Per-day present/absent + % over a date range, read through the student's attendance
+ * unit. Both the unit's records AND the student's section records are considered, then
+ * de-duplicated per day preferring the CURRENT unit — so a range spanning the D-#278
+ * cutover (Class 1–5 was section-captured before, Quran-group-captured after) reads
+ * continuously with no backfill.
+ */
 export async function studentAttendanceHistory(
   studentId: string,
   fromKey: string,
@@ -187,16 +313,31 @@ export async function studentAttendanceHistory(
   parseDateKey(toKey);
   const student = await Student.findById(studentId).lean();
   if (!student) throw new AttendanceError("Student not found");
-  const days = await StudentAttendanceDay.find({
-    sectionId: student.sectionId,
+
+  const units = await resolveUnits([toLite(student)]);
+  const unit = units.get(studentId) ?? { unitType: "section" as const, unitId: student.sectionId.toString() };
+  const sectionUnitRef: AttendanceUnit = { unitType: "section", unitId: student.sectionId.toString() };
+  const lookup = unitKey(unit) === unitKey(sectionUnitRef) ? [unit] : [unit, sectionUnitRef];
+
+  const days = (await StudentAttendanceDay.find({
+    $or: unitsQuery(lookup),
     dateKey: { $gte: fromKey, $lte: toKey },
-  }).lean();
+  }).lean()) as unknown as DayLike[];
+
+  // Prefer the current unit's record when both eras have a row for the same day.
+  const currentKey = unitKey(unit);
+  const byDate = new Map<string, DayLike>();
+  for (const d of days) {
+    const existing = byDate.get(d.dateKey);
+    if (!existing || unitKeyOfDay(d) === currentKey) byDate.set(d.dateKey, d);
+  }
+
   const apps = await StudentLeaveApplication.find({
     studentId,
     fromKey: { $lte: toKey },
     toKey: { $gte: fromKey },
   }).lean();
-  return buildStudentHistory(studentId, student.sectionId.toString(), days, apps);
+  return buildStudentHistory(studentId, student.sectionId.toString(), [...byDate.values()], apps);
 }
 
 // ---------------------------------------------------------------------------
@@ -214,7 +355,8 @@ export interface AbsentNoApplicationEntry {
 }
 
 /** Absent dates with NO covering leave application, per student. Scope to one
- *  section (class teacher) or all (manage) via `sectionId`. */
+ *  section (class teacher) or all (manage) via `sectionId`. Reads each student
+ *  through their attendance unit; the payload stays section-shaped. */
 export async function absentNoApplication(
   sectionId: string | null,
   fromKey: string,
@@ -222,13 +364,29 @@ export async function absentNoApplication(
 ): Promise<AbsentNoApplicationEntry[]> {
   parseDateKey(fromKey);
   parseDateKey(toKey);
-  const dayFilter: Record<string, unknown> = {
+
+  const students = await Student.find({ active: true, ...(sectionId ? { sectionId } : {}) })
+    .select("_id name nameBn rollNumber schoolId sectionId classId")
+    .lean();
+  if (students.length === 0) return [];
+
+  const units = await resolveUnits(students.map(toLite));
+  const inScope = new Set(students.map((s) => s._id.toString()));
+  const distinctUnits = [...new Map([...units.values()].map((u) => [unitKey(u), u])).values()];
+
+  const days = (await StudentAttendanceDay.find({
+    $or: unitsQuery(distinctUnits),
     dateKey: { $gte: fromKey, $lte: toKey },
-    sectionId: sectionId ?? { $exists: true },
-  };
-  const days = await StudentAttendanceDay.find(dayFilter).lean();
-  const absentIds = [...new Set(days.flatMap((d) => d.absentStudentIds.map((id) => id.toString())))];
+  }).lean()) as unknown as DayLike[];
+  if (days.length === 0) return [];
+
+  const absentIds = [
+    ...new Set(
+      days.flatMap((d) => d.absentStudentIds.map((id) => id.toString())).filter((id) => inScope.has(id)),
+    ),
+  ];
   if (absentIds.length === 0) return [];
+
   const apps = await StudentLeaveApplication.find({
     studentId: { $in: absentIds },
     fromKey: { $lte: toKey },
@@ -237,20 +395,23 @@ export async function absentNoApplication(
 
   const datesByStudent = new Map<string, string[]>();
   for (const day of days) {
+    const dayUnit = unitKeyOfDay(day);
     for (const id of day.absentStudentIds) {
-      const studentId = id.toString();
-      if (applicationCovers(apps, studentId, day.dateKey)) continue;
-      const list = datesByStudent.get(studentId);
+      const sid = id.toString();
+      if (!inScope.has(sid)) continue;
+      // Only count a student in the record of their OWN unit.
+      const own = units.get(sid);
+      if (!own || unitKey(own) !== dayUnit) continue;
+      if (applicationCovers(apps, sid, day.dateKey)) continue;
+      const list = datesByStudent.get(sid);
       if (list) list.push(day.dateKey);
-      else datesByStudent.set(studentId, [day.dateKey]);
+      else datesByStudent.set(sid, [day.dateKey]);
     }
   }
   if (datesByStudent.size === 0) return [];
 
-  const students = await Student.find({ _id: { $in: [...datesByStudent.keys()] } })
-    .select("name nameBn rollNumber schoolId sectionId")
-    .lean();
   return students
+    .filter((s) => datesByStudent.has(s._id.toString()))
     .map((s) => ({
       studentId: s._id.toString(),
       name: s.name,
@@ -275,38 +436,72 @@ export interface UnmarkedSection {
   classNameBn: string;
   markerTeacherId: string | null;
   markerName: string | null;
+  /** Every still-unmarked unit's marker for this section (D-#278) — a Class 1–5
+   *  section is complete only when ALL Quran groups holding its students are marked,
+   *  so the chase list may name several teachers. */
+  pendingMarkerNames: string[];
 }
 
-/** Active sections still unmarked for the date. Empty on non-FULL days —
- *  attendance isn't expected (AT4.1, D-#50). */
+/**
+ * Active sections still unmarked for the date — a section counts as unmarked while ANY
+ * unit holding its students lacks a day record (D-#278). Empty on non-FULL days:
+ * attendance isn't expected (AT4.1, D-#50).
+ */
 export async function unmarkedSections(dateKey: string): Promise<UnmarkedSection[]> {
   const dayType = await resolveDayType(parseDateKey(dateKey));
   if (dayType !== "FULL") return [];
 
-  const [sections, marked] = await Promise.all([
+  const [sections, marked, students] = await Promise.all([
     Section.find({ active: true }).lean(),
-    StudentAttendanceDay.find({ dateKey, sectionId: { $exists: true } }).select("sectionId").lean(),
+    StudentAttendanceDay.find({ dateKey }).select("sectionId subjectGroupId").lean(),
+    Student.find({ active: true }).select("_id sectionId classId").lean(),
   ]);
-  const markedIds = new Set(marked.map((d) => d.sectionId!.toString()));
-  const unmarked = sections.filter((s) => !markedIds.has(s._id.toString()));
-  if (unmarked.length === 0) return [];
+  const markedUnits = new Set((marked as unknown as DayLike[]).map(unitKeyOfDay));
+  const units = await resolveUnits(students.map(toLite));
 
-  const classes = await Class.find({ _id: { $in: unmarked.map((s) => s.classId) } }).lean();
+  // section → the distinct units its students are captured in
+  const unitsBySection = new Map<string, Map<string, AttendanceUnit>>();
+  for (const s of students) {
+    const sid = s.sectionId.toString();
+    const unit = units.get(s._id.toString());
+    if (!unit) continue;
+    let m = unitsBySection.get(sid);
+    if (!m) {
+      m = new Map();
+      unitsBySection.set(sid, m);
+    }
+    m.set(unitKey(unit), unit);
+  }
+
+  const classes = await Class.find({ _id: { $in: sections.map((s) => s.classId) } }).lean();
   const classById = new Map(classes.map((c) => [c._id.toString(), c]));
 
   const out: UnmarkedSection[] = [];
-  for (const section of unmarked) {
+  for (const section of sections) {
+    const sid = section._id.toString();
+    const sectionUnits = unitsBySection.get(sid);
+    // A section with no active students has nothing to mark — never flag it, or it
+    // would sit in the chase list forever with no way to clear it.
+    if (!sectionUnits || sectionUnits.size === 0) continue;
+    const pendingUnits = [...sectionUnits.values()].filter((u) => !markedUnits.has(unitKey(u)));
+    if (pendingUnits.length === 0) continue;
+
     const cls = classById.get(section.classId.toString());
-    const marker = await markerForDate(section._id.toString(), dateKey);
-    const teacher = marker.teacherId ? await User.findById(marker.teacherId).select("name").lean() : null;
+    const markers: Array<{ teacherId: string | null; name: string | null }> = [];
+    for (const unit of pendingUnits) {
+      const marker = await markerForUnit(unit, dateKey);
+      const teacher = marker.teacherId ? await User.findById(marker.teacherId).select("name").lean() : null;
+      markers.push({ teacherId: marker.teacherId, name: teacher?.name ?? null });
+    }
     out.push({
-      sectionId: section._id.toString(),
+      sectionId: sid,
       sectionCode: section.code,
       sectionNameBn: section.nameBn,
       classLevel: cls?.level ?? 0,
       classNameBn: cls?.nameBn ?? "",
-      markerTeacherId: marker.teacherId,
-      markerName: teacher?.name ?? null,
+      markerTeacherId: markers[0]?.teacherId ?? null,
+      markerName: markers[0]?.name ?? null,
+      pendingMarkerNames: markers.map((m) => m.name).filter((n): n is string => n !== null),
     });
   }
   return out.sort((a, b) => a.classLevel - b.classLevel || a.sectionCode.localeCompare(b.sectionCode));

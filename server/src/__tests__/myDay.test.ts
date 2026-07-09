@@ -6,7 +6,7 @@
  *   2. homework counts equal the homeworkClassOverview sums over exactly the refs the
  *      caller can read (unreadable refs silently skipped)
  *   3. GUARDIAN / OFFICE callers get empty slots + zero counts WITHOUT error
- *   4. attendancePending mirrors myMarkingSections' unmarked state
+ *   4. attendancePending mirrors myMarkingUnits' unmarked state (D-#278 units)
  *
  * DB-free: models + the reused seams are mocked; the composition logic is real.
  */
@@ -24,6 +24,8 @@ const mockOverview = jest.fn();
 const mockMarking = jest.fn();
 const mockCoverSlotFind = jest.fn();
 const mockMySubFind = jest.fn();
+const mockPendingAlerts = jest.fn();
+const mockClassPresence = jest.fn();
 
 // RoutineSlot.find is called two different ways in MyDayService: the own-periods
 // query (…sort().lean()) and the covering-periods query (…sort().lean(), same
@@ -73,8 +75,16 @@ jest.mock("../middleware/authz", () => ({
 jest.mock("../modules/trackers/services/HomeworkSummaryService", () => ({
   homeworkClassOverview: (...a: unknown[]) => mockOverview(...a),
 }));
+// D-#279: the Today dashboard's backlog alerts + the manager presence snapshot are
+// exercised in pendingAlerts.test.ts / attendanceRollup.test.ts; seams here.
+jest.mock("../modules/routine/services/PendingAlertService", () => ({
+  pendingAlertsFor: (...a: unknown[]) => mockPendingAlerts(...a),
+}));
+jest.mock("../modules/attendance/services/AttendanceReportService", () => ({
+  classPresenceForDate: (...a: unknown[]) => mockClassPresence(...a),
+}));
 jest.mock("../modules/attendance/services/StudentAttendanceService", () => ({
-  myMarkingSections: (...a: unknown[]) => mockMarking(...a),
+  myMarkingUnits: (...a: unknown[]) => mockMarking(...a),
 }));
 
 import { myDayFor } from "../modules/routine/services/MyDayService";
@@ -95,6 +105,8 @@ beforeEach(() => {
   mockMarking.mockResolvedValue([]);
   mockCoverSlotFind.mockResolvedValue([]);
   mockMySubFind.mockResolvedValue([]);
+  mockPendingAlerts.mockResolvedValue([]);
+  mockClassPresence.mockResolvedValue([]);
 });
 
 describe("myDay — own periods (slots)", () => {
@@ -250,16 +262,16 @@ describe("myDay — homework counts (homeworkClassOverview parity)", () => {
 });
 
 describe("myDay — attendancePending", () => {
-  test("true when a marking section is unmarked; false when all marked", async () => {
+  test("true when a marking unit is unmarked; false when all marked", async () => {
     mockMarking.mockResolvedValue([
-      { sectionId: "s1", marked: true },
-      { sectionId: "s2", marked: false },
+      { unitType: "section", unitId: "s1", marked: true },
+      { unitType: "subjectgroup", unitId: "q1", marked: false },
     ]);
     const r1 = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
     expect(r1.attendancePending).toBe(true);
     expect(mockMarking).toHaveBeenCalledWith("user-1", "2026-07-01");
 
-    mockMarking.mockResolvedValue([{ sectionId: "s1", marked: true }]);
+    mockMarking.mockResolvedValue([{ unitType: "section", unitId: "s1", marked: true }]);
     const r2 = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
     expect(r2.attendancePending).toBe(false);
   });
@@ -284,6 +296,24 @@ describe("myDay — permission degradation (guardian/office render, never error)
     expect(mockMarking).not.toHaveBeenCalled(); // no attendance:mark
     expect(r.homework).toEqual({ pendingChecking: 0, openResubmissions: 0, activeChases: 0 });
     expect(r.attendancePending).toBe(false);
+  });
+
+  test("classPresence is Principal/Office only (D-#279) — a TEACHER never loads it", async () => {
+    mockClassPresence.mockResolvedValue([{ classId: "c1", classLevel: 3, presentCount: 20 }]);
+
+    const teacher = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
+    expect(teacher.classPresence).toEqual([]);
+    expect(mockClassPresence).not.toHaveBeenCalled(); // no attendance:manage
+
+    const office = await myDayFor(ctxFor("OFFICE"), "2026-07-01");
+    expect(office.classPresence).toHaveLength(1);
+    expect(mockClassPresence).toHaveBeenCalledWith("2026-07-01");
+  });
+
+  test("alerts pass through for every authenticated caller (each kind self-gates)", async () => {
+    mockPendingAlerts.mockResolvedValue([{ kind: "attendance", count: 2, oldestDateKey: "2026-06-29" }]);
+    const r = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
+    expect(r.alerts).toEqual([{ kind: "attendance", count: 2, oldestDateKey: "2026-06-29" }]);
   });
 
   test("unauthenticated rejects", async () => {

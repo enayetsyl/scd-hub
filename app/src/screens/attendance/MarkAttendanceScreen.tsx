@@ -1,17 +1,21 @@
 /**
- * MarkAttendanceScreen (AT2.3, D-#63) — ABSENT-ONLY capture: the marker taps the
- * absent students; everyone else counts present. One record per section per day;
- * re-submitting the same day overwrites it (editable until end of day, O2).
- * The server enforces the CT-2 marker gate + the FULL-day calendar.
+ * MarkAttendanceScreen (AT2.3, D-#63; unit-shaped by D-#278) — ABSENT-ONLY capture:
+ * the marker taps the absent students; everyone else counts present. One record per
+ * attendance UNIT per day; re-submitting the same day overwrites it (editable until
+ * end of day, O2). The server enforces the marker gate + the FULL-day calendar.
+ *
+ * The unit is the caller's Quran group (Class 1–5) or their Nursery/KG section — but
+ * the roster is always rendered under CLASS/SECTION headings, because a Quran group
+ * mixes sections and the school reads attendance class-wise (D-#278).
  */
 import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { ROSTER_QUERY, SECTION_ATTENDANCE, MARK_SECTION_ATTENDANCE } from "../../graphql/operations";
+import { ATTENDANCE_UNIT_ROSTER, ATTENDANCE_UNIT_DAY, MARK_ATTENDANCE_UNIT } from "../../graphql/operations";
 import type { AttendanceStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Button, Loader, EmptyState, ErrorBanner } from "../../components/ui";
-import { STR, bnNum } from "../../lib/labels";
+import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
@@ -19,21 +23,22 @@ import { space } from "../../theme/tokens";
 type Props = NativeStackScreenProps<AttendanceStackParamList, "MarkAttendance">;
 
 export default function MarkAttendanceScreen({ route }: Props): React.ReactElement {
-  const { sectionId, title, dateKey } = route.params;
+  const { unitType, unitId, title, dateKey } = route.params;
   const [absent, setAbsent] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const toast = useToast();
 
-  const [rosterQ] = useQuery({ query: ROSTER_QUERY, variables: { sectionId } });
+  const [rosterQ] = useQuery({ query: ATTENDANCE_UNIT_ROSTER, variables: { unitType, unitId, dateKey } });
   const [dayQ, refetchDay] = useQuery({
-    query: SECTION_ATTENDANCE,
-    variables: { sectionId, dateKey },
+    query: ATTENDANCE_UNIT_DAY,
+    variables: { unitType, unitId, dateKey },
     requestPolicy: "network-only",
   });
-  const [, mark] = useMutation(MARK_SECTION_ATTENDANCE);
+  const [, mark] = useMutation(MARK_ATTENDANCE_UNIT);
 
-  const students = rosterQ.data?.studentsInSection ?? [];
-  const existing = dayQ.data?.sectionAttendance ?? null;
+  const sections = rosterQ.data?.attendanceUnitRoster ?? [];
+  const existing = dayQ.data?.attendanceUnitDay ?? null;
+  const totalStudents = sections.reduce((n, s) => n + s.students.length, 0);
 
   // Prefill from the already-marked day (same-day edit, O2).
   useEffect(() => {
@@ -51,9 +56,9 @@ export default function MarkAttendanceScreen({ route }: Props): React.ReactEleme
 
   async function onSubmit(): Promise<void> {
     setBusy(true);
-    const res = await mark({ sectionId, dateKey, absentStudentIds: [...absent] });
+    const res = await mark({ unitType, unitId, dateKey, absentStudentIds: [...absent] });
     setBusy(false);
-    if (res.error || !res.data?.markSectionAttendance) {
+    if (res.error || !res.data?.markAttendanceUnit) {
       toast.show(friendlyError(res.error), "danger");
       return;
     }
@@ -61,7 +66,7 @@ export default function MarkAttendanceScreen({ route }: Props): React.ReactEleme
     refetchDay({ requestPolicy: "network-only" });
   }
 
-  const presentCount = students.length - absent.size;
+  const presentCount = totalStudents - absent.size;
 
   return (
     <Screen scroll>
@@ -72,7 +77,7 @@ export default function MarkAttendanceScreen({ route }: Props): React.ReactEleme
         <ErrorBanner message={friendlyError(rosterQ.error)} />
       ) : rosterQ.fetching ? (
         <Loader label={STR.loading} />
-      ) : students.length === 0 ? (
+      ) : totalStudents === 0 ? (
         <EmptyState message={STR.empty} />
       ) : (
         <>
@@ -88,18 +93,27 @@ export default function MarkAttendanceScreen({ route }: Props): React.ReactEleme
             {existing ? <Muted style={{ marginTop: space(1) }}>✓ {STR.attMarked}</Muted> : null}
           </Card>
 
-          <Card>
-            <ChipRow>
-              {students.map((s) => (
-                <Chip
-                  key={s.id}
-                  label={`${s.nameBn || s.name}${absent.has(s.id) ? " ✗" : ""}`}
-                  selected={!absent.has(s.id)}
-                  onPress={() => toggle(s.id)}
-                />
-              ))}
-            </ChipRow>
-          </Card>
+          {/* One card per class/section — a Quran group's roster still reads class-wise. */}
+          {sections.map((section) => (
+            <Card key={section.sectionId}>
+              <Body style={{ fontWeight: "700", marginBottom: space(2) }}>
+                {classLevelLabel(section.classLevel)}
+                {section.sectionNameBn ? ` — ${section.sectionNameBn}` : ""}
+                {" · "}
+                {bnNum(section.students.length)} {STR.attStudentsWord}
+              </Body>
+              <ChipRow>
+                {section.students.map((s) => (
+                  <Chip
+                    key={s.studentId}
+                    label={`${s.nameBn || s.name}${absent.has(s.studentId) ? " ✗" : ""}`}
+                    selected={!absent.has(s.studentId)}
+                    onPress={() => toggle(s.studentId)}
+                  />
+                ))}
+              </ChipRow>
+            </Card>
+          ))}
 
           <Button title={STR.attSubmit} onPress={onSubmit} loading={busy} />
           <View style={{ height: space(4) }} />

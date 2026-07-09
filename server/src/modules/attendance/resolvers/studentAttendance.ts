@@ -21,14 +21,21 @@ import { Student } from "../../foundation/models/Student";
 import { User } from "../../foundation/models/User";
 import {
   assignSectionMarker,
+  assignUnitMarker,
   revokeSectionMarker,
   markSectionAttendance,
+  markAttendanceUnit,
   amendStudentAttendance,
+  amendAttendanceUnit,
   sectionAttendanceForDate,
-  myMarkingSections,
+  attendanceDayForUnit,
+  myMarkingUnits,
   assignmentsForDate,
   markerForDate,
+  markerForUnit,
 } from "../services/StudentAttendanceService";
+import { rosterForUnit, type AttendanceUnit } from "../attendanceUnit";
+import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import {
   submitLeaveApplication,
   leaveApplicationsForSection,
@@ -56,6 +63,28 @@ import type { IStudentLeaveApplication } from "../models/StudentLeaveApplication
 
 function hasManage(ctx: AppContext): boolean {
   return ctx.auth !== null && callerHasPermission(ctx.auth, "attendance:manage");
+}
+
+/** Validate + build an attendance unit from GraphQL args (D-#278). */
+function parseUnit(unitType: string, unitId: string): AttendanceUnit {
+  if (unitType !== "section" && unitType !== "subjectgroup") {
+    throw new ForbiddenError("Invalid unitType — expected 'section' or 'subjectgroup'");
+  }
+  return { unitType, unitId };
+}
+
+/** The caller must be the unit's marker-of-the-day (or hold attendance:manage). */
+async function assertUnitMarkerOrManage(
+  ctx: AppContext,
+  unit: AttendanceUnit,
+  dateKey: string,
+): Promise<void> {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  if (hasManage(ctx)) return;
+  const marker = await markerForUnit(unit, dateKey);
+  if (marker.teacherId !== ctx.auth.userId) {
+    throw new ForbiddenError("Only this unit's marker for the date may read it");
+  }
 }
 
 /** §8 row-scope: manage roles pass; a TEACHER passes only as the section's
@@ -103,35 +132,84 @@ StudentAttendanceDayRef.implement({
   }),
 });
 
-interface MarkingSectionShape {
+interface MarkingUnitShape {
+  unitType: string;
+  unitId: string;
+  /** Human label: the Quran group's name (1–5) or "Class · Section" (Nursery/KG). */
+  label: string;
+  marked: boolean;
+  viaAssignment: boolean;
+  source: string | null;
+  studentCount: number;
+  /** Lowest class level in the roster — sorts the worklist like the old section list. */
+  classLevel: number;
+}
+
+const MarkingUnitRef = builder.objectRef<MarkingUnitShape>("MarkingUnit");
+MarkingUnitRef.implement({
+  description:
+    "An attendance unit the caller must mark for the date (D-#278) — their Quran group " +
+    "(Class 1–5) or their Nursery/KG section. The teacher's daily worklist.",
+  fields: (t) => ({
+    unitType: t.exposeString("unitType"),
+    unitId: t.exposeString("unitId"),
+    label: t.exposeString("label"),
+    marked: t.exposeBoolean("marked"),
+    viaAssignment: t.exposeBoolean("viaAssignment"),
+    source: t.string({ nullable: true, resolve: (u) => u.source }),
+    studentCount: t.exposeInt("studentCount"),
+    classLevel: t.exposeInt("classLevel"),
+  }),
+});
+
+/** One student on a marking roster. */
+interface RosterStudentShape {
+  studentId: string;
+  name: string;
+  nameBn: string | null;
+  rollNumber: string | null;
+  schoolId: string;
+}
+
+const RosterStudentRef = builder.objectRef<RosterStudentShape>("AttendanceRosterStudent");
+RosterStudentRef.implement({
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    name: t.exposeString("name"),
+    nameBn: t.string({ nullable: true, resolve: (s) => s.nameBn }),
+    rollNumber: t.string({ nullable: true, resolve: (s) => s.rollNumber }),
+    schoolId: t.exposeString("schoolId"),
+  }),
+});
+
+/** A unit's roster, GROUPED BY CLASS/SECTION — display stays class/section even for a
+ *  cross-section Quran group (D-#278). */
+interface RosterSectionShape {
   sectionId: string;
   sectionCode: string;
   sectionNameBn: string;
   classLevel: number;
   classNameBn: string;
-  marked: boolean;
-  viaAssignment: boolean;
-  studentCount: number;
+  students: RosterStudentShape[];
 }
 
-const MarkingSectionRef = builder.objectRef<MarkingSectionShape>("MarkingSection");
-MarkingSectionRef.implement({
-  description: "A section the caller must mark for the date — the teacher's daily worklist.",
+const RosterSectionRef = builder.objectRef<RosterSectionShape>("AttendanceRosterSection");
+RosterSectionRef.implement({
+  description: "The unit's students under their own class/section heading.",
   fields: (t) => ({
     sectionId: t.exposeString("sectionId"),
     sectionCode: t.exposeString("sectionCode"),
     sectionNameBn: t.exposeString("sectionNameBn"),
     classLevel: t.exposeInt("classLevel"),
     classNameBn: t.exposeString("classNameBn"),
-    marked: t.exposeBoolean("marked"),
-    viaAssignment: t.exposeBoolean("viaAssignment"),
-    studentCount: t.exposeInt("studentCount"),
+    students: t.field({ type: [RosterStudentRef], resolve: (s) => s.students }),
   }),
 });
 
 type AssignmentShape = Pick<ISectionAttendanceAssignment, "fromKey" | "toKey" | "active"> & {
   _id: { toString(): string };
-  sectionId: { toString(): string };
+  sectionId?: { toString(): string } | null;
+  subjectGroupId?: { toString(): string } | null;
   teacherId: { toString(): string };
 };
 
@@ -142,14 +220,22 @@ interface MarkerAssignmentView {
   sectionCode: string | null;
   sectionNameBn: string | null;
   classNameBn: string | null;
+  subjectGroupNameBn: string | null;
 }
 
 const MarkerAssignmentRef = builder.objectRef<MarkerAssignmentView>("SectionMarkerAssignment");
 MarkerAssignmentRef.implement({
-  description: "An active marker override on a section for a date range (AT2.1, D-#64).",
+  description:
+    "An active marker override on an attendance unit for a date range (AT2.1, D-#64/#278) — " +
+    "either a section or a Class 1–5 Quran group.",
   fields: (t) => ({
     id: t.string({ resolve: (v) => v.assignment._id.toString() }),
-    sectionId: t.string({ resolve: (v) => v.assignment.sectionId.toString() }),
+    sectionId: t.string({ nullable: true, resolve: (v) => v.assignment.sectionId?.toString() ?? null }),
+    subjectGroupId: t.string({
+      nullable: true,
+      resolve: (v) => v.assignment.subjectGroupId?.toString() ?? null,
+    }),
+    subjectGroupNameBn: t.string({ nullable: true, resolve: (v) => v.subjectGroupNameBn }),
     teacherId: t.string({ resolve: (v) => v.assignment.teacherId.toString() }),
     teacherName: t.string({ nullable: true, resolve: (v) => v.teacherName }),
     classLevel: t.int({ nullable: true, resolve: (v) => v.classLevel }),
@@ -265,6 +351,9 @@ UnmarkedSectionRef.implement({
     classNameBn: t.exposeString("classNameBn"),
     markerTeacherId: t.string({ nullable: true, resolve: (u) => u.markerTeacherId }),
     markerName: t.string({ nullable: true, resolve: (u) => u.markerName }),
+    /** Every still-unmarked unit's marker (D-#278) — a Class 1–5 section can be
+     *  pending on several Quran teachers at once. */
+    pendingMarkerNames: t.exposeStringList("pendingMarkerNames"),
   }),
 });
 
@@ -298,6 +387,34 @@ builder.mutationField("assignSectionMarker", (t) =>
   }),
 );
 
+builder.mutationField("assignUnitMarker", (t) =>
+  t.field({
+    type: MarkerAssignmentRef,
+    description:
+      "Assign a teacher to mark an attendance UNIT — a section or a Class 1–5 Quran group — " +
+      "for a date range (AT2.1, D-#278). The override wins over the routine-derived " +
+      "first-class teacher. Requires attendance:manage.",
+    authScopes: { hasPermission: "attendance:manage" },
+    args: {
+      unitType: t.arg.string({ required: true }),
+      unitId: t.arg.string({ required: true }),
+      teacherId: t.arg.string({ required: true }),
+      fromKey: t.arg.string({ required: true }),
+      toKey: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const assignment = await assignUnitMarker(
+        parseUnit(args.unitType, args.unitId),
+        args.teacherId,
+        args.fromKey,
+        args.toKey,
+        ctx.auth!.userId,
+      );
+      return decorateAssignment(assignment as unknown as AssignmentShape);
+    },
+  }),
+);
+
 builder.mutationField("revokeSectionMarker", (t) =>
   t.field({
     type: MarkerAssignmentRef,
@@ -312,11 +429,14 @@ builder.mutationField("revokeSectionMarker", (t) =>
 );
 
 async function decorateAssignment(assignment: AssignmentShape): Promise<MarkerAssignmentView> {
-  const [teacher, section] = await Promise.all([
-    User.findById(assignment.teacherId.toString()).select("name").lean(),
-    Section.findById(assignment.sectionId.toString()).select("code nameBn classId").lean(),
-  ]);
+  const teacher = await User.findById(assignment.teacherId.toString()).select("name").lean();
+  const section = assignment.sectionId
+    ? await Section.findById(assignment.sectionId.toString()).select("code nameBn classId").lean()
+    : null;
   const cls = section ? await Class.findById(section.classId).select("level nameBn").lean() : null;
+  const group = assignment.subjectGroupId
+    ? await SubjectGroup.findById(assignment.subjectGroupId.toString()).select("nameBn").lean()
+    : null;
   return {
     assignment,
     teacherName: teacher?.name ?? null,
@@ -324,7 +444,88 @@ async function decorateAssignment(assignment: AssignmentShape): Promise<MarkerAs
     sectionCode: section?.code ?? null,
     sectionNameBn: section?.nameBn ?? null,
     classNameBn: cls?.nameBn ?? null,
+    subjectGroupNameBn: group?.nameBn ?? null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Unit labelling + roster shaping (display stays class/section — D-#278)
+// ---------------------------------------------------------------------------
+
+/** Sections that ARE the whole class — their name is redundant next to the class. */
+const WHOLE_CLASS_SECTIONS = ["মূল", "সম্মিলিত"];
+
+async function unitLabel(unit: AttendanceUnit): Promise<string> {
+  if (unit.unitType === "subjectgroup") {
+    const group = await SubjectGroup.findById(unit.unitId).select("nameBn code").lean();
+    return group?.nameBn ?? group?.code ?? "";
+  }
+  const section = await Section.findById(unit.unitId).select("nameBn classId").lean();
+  if (!section) return "";
+  const cls = await Class.findById(section.classId).select("nameBn").lean();
+  if (!cls) return section.nameBn;
+  return WHOLE_CLASS_SECTIONS.includes(section.nameBn) ? cls.nameBn : `${cls.nameBn} · ${section.nameBn}`;
+}
+
+/** Lowest class level among a roster's classes — sorts the worklist. */
+async function lowestClassLevel(classIds: string[]): Promise<number> {
+  if (classIds.length === 0) return 0;
+  const classes = await Class.find({ _id: { $in: [...new Set(classIds)] } }).select("level").lean();
+  if (classes.length === 0) return 0;
+  return classes.reduce<number>((min, c) => Math.min(min, c.level), classes[0].level);
+}
+
+/** The unit's roster, bucketed under each student's own class/section. */
+async function rosterGroupedBySection(unit: AttendanceUnit): Promise<RosterSectionShape[]> {
+  const roster = await rosterForUnit(unit);
+  if (roster.length === 0) return [];
+  const students = await Student.find({ _id: { $in: roster.map((s) => s.id) } })
+    .select("_id name nameBn rollNumber schoolId sectionId classId")
+    .lean();
+  const sections = await Section.find({ _id: { $in: [...new Set(students.map((s) => s.sectionId.toString()))] } })
+    .select("code nameBn classId")
+    .lean();
+  const classes = await Class.find({ _id: { $in: sections.map((s) => s.classId) } })
+    .select("level nameBn")
+    .lean();
+  const sectionById = new Map(sections.map((s) => [s._id.toString(), s]));
+  const classById = new Map(classes.map((c) => [c._id.toString(), c]));
+
+  const bySection = new Map<string, RosterSectionShape>();
+  for (const student of students) {
+    const sectionId = student.sectionId.toString();
+    const section = sectionById.get(sectionId);
+    if (!section) continue;
+    const cls = classById.get(section.classId.toString());
+    let bucket = bySection.get(sectionId);
+    if (!bucket) {
+      bucket = {
+        sectionId,
+        sectionCode: section.code,
+        sectionNameBn: section.nameBn,
+        classLevel: cls?.level ?? 0,
+        classNameBn: cls?.nameBn ?? "",
+        students: [],
+      };
+      bySection.set(sectionId, bucket);
+    }
+    bucket.students.push({
+      studentId: student._id.toString(),
+      name: student.name,
+      nameBn: student.nameBn ?? null,
+      rollNumber: student.rollNumber ?? student.schoolId, // roll = ID (D-#80)
+      schoolId: student.schoolId,
+    });
+  }
+
+  return [...bySection.values()]
+    .map((s) => ({
+      ...s,
+      students: s.students.sort((a, b) =>
+        (a.rollNumber ?? a.schoolId).localeCompare(b.rollNumber ?? b.schoolId, undefined, { numeric: true }),
+      ),
+    }))
+    .sort((a, b) => a.classLevel - b.classLevel || a.sectionCode.localeCompare(b.sectionCode));
 }
 
 // ---------------------------------------------------------------------------
@@ -346,6 +547,54 @@ builder.mutationField("markSectionAttendance", (t) =>
     },
     resolve: async (_root, args, ctx) =>
       markSectionAttendance(ctx, args.sectionId, args.dateKey, args.absentStudentIds) as unknown as Promise<DayShape>,
+  }),
+);
+
+builder.mutationField("markAttendanceUnit", (t) =>
+  t.field({
+    type: StudentAttendanceDayRef,
+    description:
+      "Mark TODAY's absentees for an attendance unit (D-#278) — a Quran group (Class 1–5) or a " +
+      "Nursery/KG section. Absent-only capture (AT2.3): everyone not listed is present. Only the " +
+      "unit's marker-of-the-day (its first-class teacher, or a cover/override) may write; editable " +
+      "until end of day (O2). Audited as ATTENDANCE_MARKED.",
+    authScopes: { hasPermission: "attendance:mark" },
+    args: {
+      unitType: t.arg.string({ required: true }),
+      unitId: t.arg.string({ required: true }),
+      dateKey: t.arg.string({ required: true }),
+      absentStudentIds: t.arg.stringList({ required: true }),
+    },
+    resolve: async (_root, args, ctx) =>
+      markAttendanceUnit(
+        ctx,
+        parseUnit(args.unitType, args.unitId),
+        args.dateKey,
+        args.absentStudentIds,
+      ) as unknown as Promise<DayShape>,
+  }),
+);
+
+builder.mutationField("amendAttendanceUnit", (t) =>
+  t.field({
+    type: StudentAttendanceDayRef,
+    description:
+      "Principal/Office unlock-amend of a past (or missed) attendance unit's day (O2, D-#278) — " +
+      "audited with the amender stamped. Requires attendance:manage.",
+    authScopes: { hasPermission: "attendance:manage" },
+    args: {
+      unitType: t.arg.string({ required: true }),
+      unitId: t.arg.string({ required: true }),
+      dateKey: t.arg.string({ required: true }),
+      absentStudentIds: t.arg.stringList({ required: true }),
+    },
+    resolve: async (_root, args, ctx) =>
+      amendAttendanceUnit(
+        parseUnit(args.unitType, args.unitId),
+        args.dateKey,
+        args.absentStudentIds,
+        ctx.auth!.userId,
+      ) as unknown as Promise<DayShape>,
   }),
 );
 
@@ -400,34 +649,76 @@ builder.mutationField("submitLeaveApplication", (t) =>
 // Queries
 // ---------------------------------------------------------------------------
 
-builder.queryField("myMarkingSections", (t) =>
+builder.queryField("myMarkingUnits", (t) =>
   t.field({
-    type: [MarkingSectionRef],
+    type: [MarkingUnitRef],
     description:
-      "The sections the caller must mark for the date (override assignment ∪ own class-teacher " +
-      "sections, minus those overridden away), with marked state (AT2.3 worklist).",
+      "The attendance units the caller must mark for the date (D-#278): their Quran groups " +
+      "(Class 1–5) and Nursery/KG sections, plus admin overrides — with marked state (AT2.3 worklist).",
     authScopes: { hasPermission: "attendance:mark" },
     args: { dateKey: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      const list = await myMarkingSections(ctx.auth!.userId, args.dateKey);
-      const out: MarkingSectionShape[] = [];
+      const list = await myMarkingUnits(ctx.auth!.userId, args.dateKey);
+      const out: MarkingUnitShape[] = [];
       for (const item of list) {
-        const section = await Section.findById(item.sectionId).select("code nameBn classId").lean();
-        if (!section) continue;
-        const cls = await Class.findById(section.classId).select("level nameBn").lean();
-        const studentCount = await Student.countDocuments({ sectionId: item.sectionId, active: true });
+        const unit: AttendanceUnit = { unitType: item.unitType, unitId: item.unitId };
+        const roster = await rosterForUnit(unit);
+        // A unit with NO students has nothing to mark. Skipping it here (for BOTH unit
+        // shapes) keeps the worklist in step with the backlog alert, which also drops
+        // empty units — a Class 1–5 section unit is usually empty, since its students
+        // are captured in their Quran groups.
+        if (roster.length === 0) continue;
         out.push({
-          sectionId: item.sectionId,
-          sectionCode: section.code,
-          sectionNameBn: section.nameBn,
-          classLevel: cls?.level ?? 0,
-          classNameBn: cls?.nameBn ?? "",
+          unitType: item.unitType,
+          unitId: item.unitId,
+          label: await unitLabel(unit),
           marked: item.marked,
-          viaAssignment: item.viaAssignment,
-          studentCount,
+          viaAssignment: item.source === "assignment",
+          source: item.source,
+          studentCount: roster.length,
+          classLevel: await lowestClassLevel(roster.map((s) => s.classId)),
         });
       }
-      return out.sort((a, b) => a.classLevel - b.classLevel || a.sectionCode.localeCompare(b.sectionCode));
+      return out.sort((a, b) => a.classLevel - b.classLevel || a.label.localeCompare(b.label));
+    },
+  }),
+);
+
+builder.queryField("attendanceUnitRoster", (t) =>
+  t.field({
+    type: [RosterSectionRef],
+    description:
+      "The unit's students grouped under their own class/section heading (D-#278) — a Quran " +
+      "group's roster still READS as class/section. Marker of the date, or attendance:manage.",
+    authScopes: { authenticated: true },
+    args: {
+      unitType: t.arg.string({ required: true }),
+      unitId: t.arg.string({ required: true }),
+      dateKey: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const unit = parseUnit(args.unitType, args.unitId);
+      await assertUnitMarkerOrManage(ctx, unit, args.dateKey);
+      return rosterGroupedBySection(unit);
+    },
+  }),
+);
+
+builder.queryField("attendanceUnitDay", (t) =>
+  t.field({
+    type: StudentAttendanceDayRef,
+    nullable: true,
+    description: "A unit's day record, or null when unmarked. Marker of the date, or attendance:manage.",
+    authScopes: { authenticated: true },
+    args: {
+      unitType: t.arg.string({ required: true }),
+      unitId: t.arg.string({ required: true }),
+      dateKey: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const unit = parseUnit(args.unitType, args.unitId);
+      await assertUnitMarkerOrManage(ctx, unit, args.dateKey);
+      return attendanceDayForUnit(unit, args.dateKey) as unknown as Promise<DayShape | null>;
     },
   }),
 );

@@ -110,8 +110,15 @@ export default function AssignMarkerScreen({ navigation }: Props): React.ReactEl
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <Body style={{ fontWeight: "700" }}>
-                  {lang === "en" ? classLevelLabel(a.classLevel ?? 0) : a.classNameBn ?? ""}{" "}
-                  {lang === "en" ? a.sectionCode ?? a.sectionNameBn ?? "" : a.sectionNameBn ?? a.sectionCode ?? ""}
+                  {a.subjectGroupId ? (
+                    // A Quran-group override (D-#278) has no class/section to name.
+                    a.subjectGroupNameBn ?? ""
+                  ) : (
+                    <>
+                      {lang === "en" ? classLevelLabel(a.classLevel ?? 0) : a.classNameBn ?? ""}{" "}
+                      {lang === "en" ? a.sectionCode ?? a.sectionNameBn ?? "" : a.sectionNameBn ?? a.sectionCode ?? ""}
+                    </>
+                  )}
                 </Body>
                 <Muted>
                   {a.teacherName ?? a.teacherId} · {a.fromKey} → {a.toKey}
