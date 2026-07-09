@@ -3,7 +3,7 @@
  * table-style submission grid with posted vs pending subjects, matching the
  * school admin reports feel from the reference screenshot.
  */
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
@@ -97,11 +97,59 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
   const [reportQ] = useQuery({ query: CLASS_NOTE_SUBMISSION_REPORT_QUERY, variables: { date } });
   const [entryLimit, setEntryLimit] = useState<EntryLimit>("10");
   const [showTeacherMeta, setShowTeacherMeta] = useState(true);
+  // Filters (all "" = no filter). Built client-side from the loaded rows.
+  const [filterClass, setFilterClass] = useState<string>("");
+  const [filterTeacher, setFilterTeacher] = useState<string>("");
+  const [filterPosted, setFilterPosted] = useState<string>("");
+  const [filterPending, setFilterPending] = useState<string>("");
 
   const rows = reportQ.data?.classNoteSubmissionReport ?? [];
-  const pendingTotal = rows.reduce((sum, row) => sum + row.pendingCount, 0);
-  const postedTotal = rows.reduce((sum, row) => sum + row.publishedCount, 0);
-  const visibleRows = entryLimit === "all" ? rows : rows.slice(0, Number(entryLimit));
+
+  const allLabel = STR.all;
+  const uniqSorted = (xs: string[]): string[] => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+  // Option lists derived from every loaded row (not the filtered subset).
+  const classOptions = useMemo(
+    () => [{ label: allLabel, value: "" }, ...uniqSorted(rows.map(rowTitle)).map((c) => ({ label: c, value: c }))],
+    [rows, allLabel],
+  );
+  const teacherOptions = useMemo(
+    () => [
+      { label: allLabel, value: "" },
+      ...uniqSorted(rows.map((r) => r.teacherName ?? "")).map((t) => ({ label: t, value: t })),
+    ],
+    [rows, allLabel],
+  );
+  const postedOptions = useMemo(
+    () => [
+      { label: allLabel, value: "" },
+      ...uniqSorted(rows.flatMap((r) => r.publishedSubjects)).map((s) => ({ label: routineSubjectLabel(s), value: s })),
+    ],
+    [rows, allLabel],
+  );
+  const pendingOptions = useMemo(
+    () => [
+      { label: allLabel, value: "" },
+      ...uniqSorted(rows.flatMap((r) => r.pendingSubjects)).map((s) => ({ label: routineSubjectLabel(s), value: s })),
+    ],
+    [rows, allLabel],
+  );
+
+  const filteredRows = useMemo(
+    () =>
+      rows.filter(
+        (r) =>
+          (filterClass === "" || rowTitle(r) === filterClass) &&
+          (filterTeacher === "" || (r.teacherName ?? "") === filterTeacher) &&
+          (filterPosted === "" || r.publishedSubjects.includes(filterPosted)) &&
+          (filterPending === "" || r.pendingSubjects.includes(filterPending)),
+      ),
+    [rows, filterClass, filterTeacher, filterPosted, filterPending],
+  );
+
+  const pendingTotal = filteredRows.reduce((sum, row) => sum + row.pendingCount, 0);
+  const postedTotal = filteredRows.reduce((sum, row) => sum + row.publishedCount, 0);
+  const visibleRows = entryLimit === "all" ? filteredRows : filteredRows.slice(0, Number(entryLimit));
   const canExport = Platform.OS === "web";
   const showTeacherColumns = showTeacherMeta;
 
@@ -136,7 +184,7 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
       STR.rtPostedSubjects,
       STR.rtPendingSubjects,
     ];
-    const data = rows.map((row, index) => [
+    const data = filteredRows.map((row, index) => [
       bnNum(index + 1),
       rowTitle(row),
       row.sectionCode ?? row.sectionNameBn ?? "—",
@@ -151,6 +199,10 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
     setDate(todayISO());
     setEntryLimit("10");
     setShowTeacherMeta(true);
+    setFilterClass("");
+    setFilterTeacher("");
+    setFilterPosted("");
+    setFilterPending("");
   }
 
   return (
@@ -164,7 +216,7 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
             <Badge text={`${STR.rtPostedSubjects}: ${bnNum(postedTotal)}`} tone="ok" />
             <Badge text={`${STR.rtPendingSubjects}: ${bnNum(pendingTotal)}`} tone={pendingTotal > 0 ? "warn" : "ok"} />
-            <Badge text={`${STR.rtTableShowing} ${bnNum(visibleRows.length)} ${STR.rtTableOf} ${bnNum(rows.length)}`} tone="muted" />
+            <Badge text={`${STR.rtTableShowing} ${bnNum(visibleRows.length)} ${STR.rtTableOf} ${bnNum(filteredRows.length)}`} tone="muted" />
           </View>
 
           <View
@@ -189,13 +241,31 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
               <Button title={STR.rtTableReset} variant="ghost" onPress={onReset} />
             </View>
           </View>
+
+          {/* Filters — class / teacher / posted subject / pending subject (client-side). */}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(3) }}>
+            <View style={{ minWidth: 180, flexGrow: 1 }}>
+              <Select label={STR.rtClassGroup} value={filterClass} options={classOptions} onChange={setFilterClass} />
+            </View>
+            <View style={{ minWidth: 180, flexGrow: 1 }}>
+              <Select label={STR.rtNoteTeacher} value={filterTeacher} options={teacherOptions} onChange={setFilterTeacher} />
+            </View>
+            <View style={{ minWidth: 180, flexGrow: 1 }}>
+              <Select label={STR.rtPostedSubjects} value={filterPosted} options={postedOptions} onChange={setFilterPosted} />
+            </View>
+            <View style={{ minWidth: 180, flexGrow: 1 }}>
+              <Select label={STR.rtPendingSubjects} value={filterPending} options={pendingOptions} onChange={setFilterPending} />
+            </View>
+          </View>
         </Card>
 
         {reportQ.error ? <Notice message={friendlyError(reportQ.error)} tone="danger" /> : null}
         {reportQ.fetching ? <Loader label={STR.loading} /> : null}
-        {rows.length === 0 && !reportQ.fetching ? <Notice message={STR.rtNoteReportEmpty} tone="ok" /> : null}
+        {filteredRows.length === 0 && !reportQ.fetching ? (
+          <Notice message={rows.length === 0 ? STR.rtNoteReportEmpty : STR.empty} tone="ok" />
+        ) : null}
 
-        {rows.length > 0 ? (
+        {filteredRows.length > 0 ? (
           <Card style={{ padding: 0, overflow: "hidden" }}>
             <ScrollView horizontal showsHorizontalScrollIndicator>
               <View style={{ minWidth: tableWidth }}>

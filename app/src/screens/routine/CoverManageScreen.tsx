@@ -103,7 +103,7 @@ export default function CoverManageScreen({ route }: Props): React.ReactElement 
                 <Body style={{ fontWeight: "700" }}>
                   {dayOfWeekLabel(s.dayOfWeek)} · {STR.rtPeriodN} {bnNum(s.periodNumber)} · {routineSubjectLabel(s.subject)}
                 </Body>
-                <Muted>{s.coverTeacherId ? `${STR.rtCovered}: ${s.coverTeacherId}` : (s.teacherId ?? "—")}</Muted>
+                <Muted>{s.coverTeacherId ? `${STR.rtCovered}: ${s.coverTeacherName ?? s.coverTeacherId}` : (s.teacherName ?? s.teacherId ?? "—")}</Muted>
               </View>
               {s.coverTeacherId ? (
                 <Badge text={STR.rtCovered} tone="warn" />
