@@ -126,6 +126,7 @@ import ClassTestHomeScreen from "../screens/classtest/ClassTestHomeScreen";
 import RequestClassTestScreen from "../screens/classtest/RequestClassTestScreen";
 import ClassTestPrintQueueScreen from "../screens/classtest/ClassTestPrintQueueScreen";
 import ClassTestResultsScreen from "../screens/classtest/ClassTestResultsScreen";
+import ClassTestResultsViewScreen from "../screens/classtest/ClassTestResultsViewScreen";
 import ClassTestPublishScreen from "../screens/classtest/ClassTestPublishScreen";
 import ClassTestDashboardScreen from "../screens/classtest/ClassTestDashboardScreen";
 import ClassTestReportsScreen from "../screens/classtest/ClassTestReportsScreen";
@@ -668,6 +669,11 @@ function ClassTestNavigator(): React.ReactElement {
         name="ClassTestResults"
         component={ClassTestResultsScreen}
         options={({ route }) => ({ title: route.params.title || STR.ctResultsTitle })}
+      />
+      <ClassTestStack.Screen
+        name="ClassTestResultsView"
+        component={ClassTestResultsViewScreen}
+        options={({ route }) => ({ title: route.params.title || STR.ctViewResults })}
       />
       <ClassTestStack.Screen
         name="ClassTestPublish"

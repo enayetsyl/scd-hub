@@ -192,10 +192,15 @@ export async function createRequest(
   if (source === "POOL_SET") {
     if (!input.setId) throw new Error("A POOL_SET class test needs a setId");
     if (input.questionFileId) throw new Error("A POOL_SET class test cannot also carry an uploaded paper");
+    // Guard the id shape first: a bad value (e.g. "1") makes findById throw a Mongoose
+    // CastError that the error-mask hides as "Unexpected error." Surface a helpful message.
+    if (!Types.ObjectId.isValid(input.setId)) {
+      throw new Error("That set id is not valid — pick an assembled Class Test set from the list.");
+    }
     const set = (await AssessmentSet.findById(input.setId)
       .select("setType")
       .lean()) as { setType: string } | null;
-    if (!set) throw new Error("AssessmentSet not found");
+    if (!set) throw new Error("No assembled set found for that id — pick one from the list.");
     if (set.setType !== "CT") throw new Error("The linked set is not a CT-kind (class-test) set");
     setId = new Types.ObjectId(input.setId);
   } else {

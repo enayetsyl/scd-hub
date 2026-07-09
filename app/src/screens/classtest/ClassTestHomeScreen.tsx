@@ -70,27 +70,41 @@ export default function ClassTestHomeScreen(): React.ReactElement {
                   />
                 </View>
                 {t.status === "PRINTED" ? (
-                  <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
                     <Button
-                      title={STR.ctResultsTitle}
+                      title={STR.ctViewResults}
                       variant="secondary"
                       onPress={() =>
-                        nav.navigate("ClassTestResults", {
+                        nav.navigate("ClassTestResultsView", {
                           testId: t.id,
                           title: `${hwSubjectLabel(t.subject)} · ${STR.ctTestNumber} ${bnNum(t.testNumber)}`,
                         })
                       }
                     />
-                    <Button
-                      title={STR.ctPublishTitle}
-                      variant="ghost"
-                      onPress={() =>
-                        nav.navigate("ClassTestPublish", {
-                          testId: t.id,
-                          title: `${hwSubjectLabel(t.subject)} · ${STR.ctTestNumber} ${bnNum(t.testNumber)}`,
-                        })
-                      }
-                    />
+                    {canWrite ? (
+                      <Button
+                        title={STR.ctResultsTitle}
+                        variant="secondary"
+                        onPress={() =>
+                          nav.navigate("ClassTestResults", {
+                            testId: t.id,
+                            title: `${hwSubjectLabel(t.subject)} · ${STR.ctTestNumber} ${bnNum(t.testNumber)}`,
+                          })
+                        }
+                      />
+                    ) : null}
+                    {canWrite ? (
+                      <Button
+                        title={STR.ctPublishTitle}
+                        variant="ghost"
+                        onPress={() =>
+                          nav.navigate("ClassTestPublish", {
+                            testId: t.id,
+                            title: `${hwSubjectLabel(t.subject)} · ${STR.ctTestNumber} ${bnNum(t.testNumber)}`,
+                          })
+                        }
+                      />
+                    ) : null}
                   </View>
                 ) : null}
               </View>

@@ -198,6 +198,7 @@ export type ClassTestStackParamList = {
   RequestClassTest: undefined;
   ClassTestPrintQueue: undefined;
   ClassTestResults: { testId: string; title: string };
+  ClassTestResultsView: { testId: string; title: string };
   ClassTestPublish: { testId: string; title: string };
   ClassTestDashboard: undefined;
   ClassTestReports: undefined;

@@ -20,6 +20,7 @@ import {
 import { Screen, Card, Body, Muted, Button, Badge, Chip, Field, Loader, Notice } from "../../components/ui";
 import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
 
@@ -29,6 +30,7 @@ type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
 export default function ClassTestResultsScreen({ route }: Props): React.ReactElement {
   const { testId, title } = route.params;
   const nav = useNavigation<Nav>();
+  const toast = useToast();
 
   const [testQ] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
   const test = testQ.data?.classTest ?? null;
@@ -51,12 +53,10 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   const [teacherAction, setTeacherAction] = useState("");
   const [guardianAction, setGuardianAction] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   function openStudent(studentId: string): void {
     setError(null);
-    setOk(null);
     const existing = byStudent.get(studentId);
     setOpenId(studentId);
     setStatus((existing?.status as "PRESENT" | "ABSENT") ?? "PRESENT");
@@ -69,7 +69,6 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   async function onSave(): Promise<void> {
     if (!openId) return;
     setError(null);
-    setOk(null);
     setBusy(true);
     const res = await enter({
       testId,
@@ -81,8 +80,15 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
       guardianAction: guardianAction.trim() || null,
     });
     setBusy(false);
-    if (res.error) return setError(friendlyError(res.error));
-    setOk(STR.ctResultSaved);
+    if (res.error) {
+      // Surface both inline (in the open form, next to Save) and as a toast — the
+      // form can be scrolled far from a top-of-screen banner (UX-1 R-Feedback).
+      const msg = friendlyError(res.error);
+      setError(msg);
+      toast.show(msg, "danger");
+      return;
+    }
+    toast.show(STR.ctResultSaved, "ok");
     setOpenId(null);
     refetch({ requestPolicy: "network-only" });
   }
@@ -127,9 +133,6 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
           </View>
         </Card>
 
-        {ok ? <Notice message={ok} tone="ok" /> : null}
-        {error ? <Notice message={error} tone="danger" /> : null}
-
         {studentsQ.fetching ? (
           <Loader label={STR.loading} />
         ) : students.length === 0 ? (
@@ -159,7 +162,19 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                   ) : null}
                 </View>
 
-                {!isOpen ? (
+                {existing?.publishedAt ? (
+                  // Published results are locked (owner ruling) — unpublish first (via the
+                  // Result-publish screen above) before editing. Keeps guardians from seeing
+                  // a silent change with no re-notify.
+                  <View style={{ marginTop: space(2) }}>
+                    <Muted>{STR.ctPublishedLocked}</Muted>
+                  </View>
+                ) : existing?.submittedAt ? (
+                  // CT-8: submitted for approval — recall (Result publish screen) to edit.
+                  <View style={{ marginTop: space(2) }}>
+                    <Muted>{STR.ctSubmittedLocked}</Muted>
+                  </View>
+                ) : !isOpen ? (
                   <View style={{ marginTop: space(2) }}>
                     <Button title={STR.ctMark} variant="secondary" onPress={() => openStudent(s.id)} />
                   </View>
@@ -175,6 +190,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                     <Field label={STR.ctWeakness} value={weakness} onChangeText={setWeakness} />
                     <Field label={STR.ctTeacherAction} value={teacherAction} onChangeText={setTeacherAction} helper={STR.ctTeacherActionHint} />
                     <Field label={STR.ctGuardianAction} value={guardianAction} onChangeText={setGuardianAction} />
+                    {error ? <Notice message={error} tone="danger" /> : null}
                     <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
                       <Button title={STR.ctSaveResult} onPress={onSave} loading={busy} disabled={busy} />
                       <Button title={STR.cancel} variant="ghost" onPress={() => setOpenId(null)} />
