@@ -79,6 +79,14 @@ const RoutineSubstitutionRef = builder.objectRef<IRoutineSubstitution>("RoutineS
     reason: t.string({ nullable: true, resolve: (s) => s.reason ?? null }),
     proxyGrantId: t.string({ nullable: true, resolve: (s) => (s.proxyGrantId ? s.proxyGrantId.toString() : null) }),
     active: t.exposeBoolean("active"),
+    // View-only enrichment (coversForDate): names + covered-slot context so the list
+    // shows readable text instead of raw ObjectIds.
+    coverTeacherName: t.string({ nullable: true, resolve: (s) => (s as { coverTeacherName?: string | null }).coverTeacherName ?? null }),
+    absentTeacherName: t.string({ nullable: true, resolve: (s) => (s as { absentTeacherName?: string | null }).absentTeacherName ?? null }),
+    subject: t.string({ nullable: true, resolve: (s) => (s as { subject?: string | null }).subject ?? null }),
+    periodNumber: t.int({ nullable: true, resolve: (s) => (s as { periodNumber?: number | null }).periodNumber ?? null }),
+    dayOfWeek: t.string({ nullable: true, resolve: (s) => (s as { dayOfWeek?: string | null }).dayOfWeek ?? null }),
+    groupName: t.string({ nullable: true, resolve: (s) => (s as { groupName?: string | null }).groupName ?? null }),
   }),
 });
 
