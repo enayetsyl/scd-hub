@@ -128,7 +128,6 @@ import VocabMessagesScreen from "../screens/vocab/VocabMessagesScreen";
 import VocabAssignmentScreen from "../screens/vocab/VocabAssignmentScreen";
 import ClassTestHomeScreen from "../screens/classtest/ClassTestHomeScreen";
 import RequestClassTestScreen from "../screens/classtest/RequestClassTestScreen";
-import ClassTestPrintQueueScreen from "../screens/classtest/ClassTestPrintQueueScreen";
 import ClassTestResultsScreen from "../screens/classtest/ClassTestResultsScreen";
 import ClassTestResultsViewScreen from "../screens/classtest/ClassTestResultsViewScreen";
 import ClassTestPublishScreen from "../screens/classtest/ClassTestPublishScreen";
@@ -682,7 +681,6 @@ function ClassTestNavigator(): React.ReactElement {
     <ClassTestStack.Navigator screenOptions={stackOptions}>
       <ClassTestStack.Screen name="ClassTestHome" component={ClassTestHomeScreen} options={{ title: STR.ctHomeTitle }} />
       <ClassTestStack.Screen name="RequestClassTest" component={RequestClassTestScreen} options={{ title: STR.ctNewRequest }} />
-      <ClassTestStack.Screen name="ClassTestPrintQueue" component={ClassTestPrintQueueScreen} options={{ title: STR.ctPrintQueueTitle }} />
       <ClassTestStack.Screen
         name="ClassTestResults"
         component={ClassTestResultsScreen}

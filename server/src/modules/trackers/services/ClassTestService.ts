@@ -33,6 +33,7 @@ import { AssessmentSet } from "../../assessment/models/AssessmentSet";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
 import { createPrintRequest } from "../../printing/services/PrintRequestService";
+import { PrintRequest } from "../../printing/models/PrintRequest";
 
 // ---------------------------------------------------------------------------
 // CT_ID generation (D-#34 numbering pattern) + Test# auto-suggest
@@ -311,6 +312,14 @@ export async function markPrinted(id: string, actorId: string): Promise<ClassTes
     meta: { ctId: doc.ctId },
   });
 
+  // PQ-5: keep the unified queue row in step. The Office normally advances the job FROM
+  // the queue (which mirrors this way), but this legacy entry point must not let the two
+  // drift. Guarded on REQUESTED so a mirrored write can never double-apply.
+  await PrintRequest.updateOne(
+    { classTestId: doc._id, status: "REQUESTED" },
+    { $set: { status: "PRINTED", printedBy: new Types.ObjectId(actorId), printedAt: new Date() } },
+  );
+
   return classTestShape(doc as unknown as IClassTest);
 }
 
@@ -330,6 +339,12 @@ export async function cancelRequest(id: string, actorId: string): Promise<ClassT
     targetKind: "ClassTest",
     meta: { ctId: doc.ctId },
   });
+
+  // PQ-5: withdraw the unified queue row too (see markPrinted).
+  await PrintRequest.updateOne(
+    { classTestId: doc._id, status: "REQUESTED" },
+    { $set: { status: "CANCELLED", cancelledBy: new Types.ObjectId(actorId), cancelledAt: new Date() } },
+  );
 
   return classTestShape(doc as unknown as IClassTest);
 }
