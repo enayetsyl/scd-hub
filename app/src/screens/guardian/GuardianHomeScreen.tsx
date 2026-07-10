@@ -25,6 +25,7 @@ import { CHILD_REVISION_QUERY } from "../../graphql/revision";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { CHILD_TRAJECTORY_QUERY } from "../../graphql/wholePicture";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -66,6 +67,11 @@ export default function GuardianHomeScreen(): React.ReactElement {
   const sid = selected?.studentId ?? "";
   const date = today();
   const { openingId, runOpen } = useFileOpen();
+
+  // The guardian trajectory summary (D-#277 follow-up): direction of travel and the
+  // child's OWN numbers. No rank, no class comparison — the server never sends them.
+  const [trajQ] = useQuery({ query: CHILD_TRAJECTORY_QUERY, variables: { studentId: sid }, pause: !selected });
+  const traj = trajQ.data?.childTrajectory ?? null;
 
   const [routineQ, refetchRoutine] = useQuery({
     query: CHILD_ROUTINE_QUERY,
@@ -177,6 +183,33 @@ export default function GuardianHomeScreen(): React.ReactElement {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <ChildSwitcher />
+
+        {/* Trajectory summary — how the child is doing, in plain Bangla. The server
+            sends direction + their own numbers only; there is no rank to leak here. */}
+        {traj ? (
+          <Card>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Body style={{ fontWeight: "700" }}>{STR.wpTrajectoryChild}</Body>
+              <Badge
+                text={
+                  traj.overall === "improving"
+                    ? STR.wpImproving
+                    : traj.overall === "declining"
+                      ? STR.wpDeclining
+                      : traj.overall === "steady"
+                        ? STR.wpSteady
+                        : STR.wpNa
+                }
+                tone={traj.overall === "improving" ? "ok" : traj.overall === "declining" ? "danger" : "warn"}
+              />
+            </View>
+            {traj.linesBn.map((line, i) => (
+              <Muted key={i} style={{ marginTop: space(1) }}>
+                {line}
+              </Muted>
+            ))}
+          </Card>
+        ) : null}
 
         {/* Child info — section + Quran/Arabic group memberships (myChildren,
             already loaded by the provider; cross-grade groups per D-#48/#56). */}

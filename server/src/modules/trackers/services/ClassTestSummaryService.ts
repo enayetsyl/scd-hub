@@ -347,8 +347,9 @@ const EMPTY_ANALYTICS: StudentProfileAnalytics = {
   recurringWeaknesses: [], latestRank: null, latestRankOf: null,
 };
 
-/** Least-squares slope of ys against their index (0..n-1); null when < 2 points. */
-function regressionSlope(ys: number[]): number | null {
+/** Least-squares slope of ys against their index (0..n-1); null when < 2 points.
+ *  Exported so the cross-tracker whole-picture reuses ONE trajectory primitive. */
+export function regressionSlope(ys: number[]): number | null {
   const n = ys.length;
   if (n < 2) return null;
   const mx = (n - 1) / 2;

@@ -54,7 +54,8 @@ import type { Types } from "mongoose";
 
 /** Reports read: Principal/Office unscoped; a TEACHER must scope to a section they
  *  can read (classId resolved server-side); Guardians denied. */
-async function assertReportRead(ctx: AppContext, sectionId?: string | null): Promise<void> {
+/** Exported so the cross-tracker whole-picture reuses the SAME report-read scope rule. */
+export async function assertReportRead(ctx: AppContext, sectionId?: string | null): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role as Role;
   if (role === "PRINCIPAL" || role === "OFFICE") return;
@@ -292,7 +293,7 @@ WeaknessTallyRef.implement({
   }),
 });
 
-const StudentAnalyticsRef = builder.objectRef<StudentProfileAnalytics>("ClassTestStudentAnalytics");
+export const StudentAnalyticsRef = builder.objectRef<StudentProfileAnalytics>("ClassTestStudentAnalytics");
 StudentAnalyticsRef.implement({
   description: "CT-10 derived per-student analytics — trajectory, consistency, at-risk, streaks, rank. Never stored (D-#85).",
   fields: (t) => ({
