@@ -406,6 +406,62 @@ filesRouter.post("/classnote", parseClassNoteUpload, async (req: Request, res: R
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/print — a teacher uploads a document to send to the Office for
+// printing (PQ-2, D-#281). Same envelope as /files/classnote: ≤ 10 MB, jpeg/png/pdf,
+// Drive-first (a Drive failure persists nothing). The ≤5-files-per-request cap is
+// enforced when the ids are bound to a PrintRequest (`validateSource`). Upload gate =
+// `tracker:write`, matching who may file a request at all.
+// ---------------------------------------------------------------------------
+
+filesRouter.post("/print", parseClassNoteUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const rejection = validateClassNoteUpload(file.mimetype, file.size); // same 10 MB / jpeg-png-pdf envelope
+  if (rejection) {
+    res.status(422).json({ error: rejection });
+    return;
+  }
+  try {
+    const driveFileId = await uploadToDrive({
+      name: `${Date.now()}_${decodeUploadName(file.originalname)}`,
+      mime: file.mimetype,
+      data: file.buffer,
+      year: String(new Date().getFullYear()),
+      subfolder: "print",
+    });
+    const stored = await StoredFile.create({
+      kind: "print_upload" as StoredFileKind,
+      mime: file.mimetype,
+      sizeBytes: file.size,
+      originalName: decodeUploadName(file.originalname),
+      driveFileId,
+      uploadedBy: ctx.auth.userId,
+    });
+    res.json({
+      fileId: stored._id.toString(),
+      kind: "print_upload",
+      mime: stored.mime,
+      sizeBytes: stored.sizeBytes,
+      originalName: stored.originalName,
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      res.status(503).json({ error: FILE_ERRORS_BN.driveDown });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /files/comment — teacher attaches a file to a daily student comment (CM-2,
 // prd-comments-meetings §5). tracker:write + the comment's section verified
 // server-side; MIME image/pdf/video/audio ≤ 10 MB (chat parity, D-#108); Drive-first
@@ -541,6 +597,13 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
     } else if (file.kind === "classnote_attachment") {
       // Class-note attachments are staff-readable (routine:read); guardian viewing is a follow-up.
       if (!callerHasPermission(ctx.auth, "routine:read")) {
+        throw new ForbiddenError(FILE_ERRORS_BN.forbidden);
+      }
+    } else if (file.kind === "print_upload") {
+      // A print upload is readable by the teacher who sent it and by the Office/Principal
+      // who has to print it (PQ-2, D-#281) — nobody else.
+      const isUploader = file.uploadedBy?.toString() === ctx.auth.userId;
+      if (!isUploader && !callerHasPermission(ctx.auth, "roster:manage")) {
         throw new ForbiddenError(FILE_ERRORS_BN.forbidden);
       }
     } else {

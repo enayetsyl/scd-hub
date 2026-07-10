@@ -1104,6 +1104,79 @@ export const CLASS_TEST_SOURCE_LABELS_EN: Record<ClassTestSource, string> = {
   UPLOADED_PAPER: "Uploaded paper",
 };
 
+// --- Print request queue (PQ-1, D-#281) ------------------------------------
+/** The Office's print lifecycle. Three live statuses matching the three buckets
+ *  the Office actually tracks — "yet to print", "printing done", "delivered to the
+ *  teacher" — with NO separate in-progress state. `CANCELLED` is a withdrawn
+ *  request (by the requester while still REQUESTED, or by the Office).
+ *  Generalizes CLASS_TEST_STATUSES, which stops at PRINTED. */
+export const PRINT_REQUEST_STATUSES = ["REQUESTED", "PRINTED", "DELIVERED", "CANCELLED"] as const;
+export type PrintRequestStatus = (typeof PRINT_REQUEST_STATUSES)[number];
+
+export const PRINT_REQUEST_STATUS_LABELS_BN: Record<PrintRequestStatus, string> = {
+  REQUESTED: "ছাপার অপেক্ষায়",
+  PRINTED: "ছাপা হয়েছে",
+  DELIVERED: "শিক্ষককে দেওয়া হয়েছে",
+  CANCELLED: "বাতিল",
+};
+export const PRINT_REQUEST_STATUS_LABELS_EN: Record<PrintRequestStatus, string> = {
+  REQUESTED: "Yet to print",
+  PRINTED: "Printing done",
+  DELIVERED: "Delivered",
+  CANCELLED: "Cancelled",
+};
+
+/** What the print job is FOR — the Office sorts and batches by this. */
+export const PRINT_PURPOSES = [
+  "CLASSWORK",
+  "HOMEWORK",
+  "ASSIGNMENT",
+  "CLASS_TEST",
+  "LESSON_PLAN",
+  "OTHER",
+] as const;
+export type PrintPurpose = (typeof PRINT_PURPOSES)[number];
+
+export const PRINT_PURPOSE_LABELS_BN: Record<PrintPurpose, string> = {
+  CLASSWORK: "শ্রেণিকর্ম",
+  HOMEWORK: "বাড়ির কাজ",
+  ASSIGNMENT: "অ্যাসাইনমেন্ট",
+  CLASS_TEST: "ক্লাস টেস্ট",
+  LESSON_PLAN: "পাঠ পরিকল্পনা",
+  OTHER: "অন্যান্য",
+};
+export const PRINT_PURPOSE_LABELS_EN: Record<PrintPurpose, string> = {
+  CLASSWORK: "Classwork",
+  HOMEWORK: "Homework",
+  ASSIGNMENT: "Assignment",
+  CLASS_TEST: "Class test",
+  LESSON_PLAN: "Lesson plan",
+  OTHER: "Other",
+};
+
+/** Where the document comes from. EXACTLY ONE source field is set on a request
+ *  (the `StudentAttendanceDay` XOR pattern). No PDF snapshot is taken: an
+ *  assembled `AssessmentSet` is LOCKED, so `SET` is already immutable in content;
+ *  an `UPLOAD` is self-snapshotting; a `LINK` is external by nature (D-#281). */
+export const PRINT_SOURCES = ["SET", "CONTENT_ARTIFACT", "UPLOAD", "LINK"] as const;
+export type PrintSource = (typeof PRINT_SOURCES)[number];
+
+export const PRINT_SOURCE_LABELS_BN: Record<PrintSource, string> = {
+  SET: "প্রশ্ন সেট",
+  CONTENT_ARTIFACT: "পাঠ/অধ্যায় পরিকল্পনা",
+  UPLOAD: "আপলোড করা ফাইল",
+  LINK: "লিংক",
+};
+export const PRINT_SOURCE_LABELS_EN: Record<PrintSource, string> = {
+  SET: "Question set",
+  CONTENT_ARTIFACT: "Chapter / session plan",
+  UPLOAD: "Uploaded file",
+  LINK: "Link",
+};
+
+/** Uploads per print request (PQ-2) — the class-note attachment ceiling. */
+export const MAX_PRINT_UPLOADS = 5;
+
 /** Per-(student × class test) attendance status (CT-2, §3.3/§4). PRESENT carries
  *  marks + is scored; ABSENT carries NO marks, is excluded from class denominators,
  *  and feeds the Absent guardian template (CT-3). One flag per student per exam.
