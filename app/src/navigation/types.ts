@@ -205,7 +205,6 @@ export type VocabStackParamList = {
 export type ClassTestStackParamList = {
   ClassTestHome: undefined;
   RequestClassTest: undefined;
-  ClassTestPrintQueue: undefined;
   ClassTestResults: { testId: string; title: string };
   ClassTestResultsView: { testId: string; title: string };
   ClassTestPublish: { testId: string; title: string };

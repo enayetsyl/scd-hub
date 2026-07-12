@@ -6,7 +6,7 @@
  */
 import React from "react";
 import { ScrollView, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { roleHasPermission } from "@scd/shared";
@@ -15,12 +15,14 @@ import { Screen, Card, Body, Muted, Button, Badge, Loader } from "../../componen
 import { useAuth } from "../../auth/AuthContext";
 import { STR, hwSubjectLabel, classTestStatusLabel, bnNum } from "../../lib/labels";
 import { space } from "../../theme/tokens";
-import type { ClassTestStackParamList } from "../../navigation/types";
+import type { ClassTestStackParamList, TabParamList } from "../../navigation/types";
 
 type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
 
 export default function ClassTestHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
+  // PQ-5: the print queue is a sibling TAB now, not a screen in this stack.
+  const tabNav = useNavigation<NavigationProp<TabParamList>>();
   const { role } = useAuth();
   const canWrite = !!role && roleHasPermission(role, "tracker:write");
   const canPrint = !!role && roleHasPermission(role, "roster:manage");
@@ -36,8 +38,13 @@ export default function ClassTestHomeScreen(): React.ReactElement {
           <Body style={{ fontWeight: "700" }}>{STR.ctHomeTitle}</Body>
           <View style={{ marginTop: space(2), gap: space(2) }}>
             {canWrite ? <Button title={STR.ctRequestNav} onPress={() => nav.navigate("RequestClassTest")} /> : null}
+            {/* PQ-5 (D-#281): class-test printing lives on the ONE print queue now. */}
             {canPrint ? (
-              <Button title={STR.ctPrintQueueNav} variant="secondary" onPress={() => nav.navigate("ClassTestPrintQueue")} />
+              <Button
+                title={STR.ctPrintQueueNav}
+                variant="secondary"
+                onPress={() => tabNav.navigate("PrintTab", { screen: "PrintHome" })}
+              />
             ) : null}
             <Button title={STR.ctReportsNav} variant="secondary" onPress={() => nav.navigate("ClassTestReports")} />
             {isAdmin ? (
