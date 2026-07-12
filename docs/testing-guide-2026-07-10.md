@@ -1,9 +1,29 @@
 # Testing guide — 2026-07-10 release candidate
 
-**Round 4.** Rounds 1–3 are done. **Everything passes except the print forms**, whose five
-gaps are fixed in **PR #189** — that is the only thing left to test.
+## ✅ SIGNED OFF — all four rounds pass (2026-07-12)
 
-Production (`main`) is still at **PR #182**. Nothing in this release is live yet.
+Every part of this release has been tested and passed: Parts **A**, **B**, **C**, **D**
+(rounds 1–3) and Part **E** (the print-form fixes, PR #189, merged). Nothing here is
+outstanding.
+
+**The release is not in production yet.** `main` is ~35 commits behind `dev`. Promotion is
+a deliberate `dev → main` PR.
+
+> ### ⚠️ Before/at the production deploy — the migration must be run AGAINST PROD
+>
+> ```bash
+> npx tsx server/scripts/migrate-classtest-print-requests.ts            # dry-run first
+> npx tsx server/scripts/migrate-classtest-print-requests.ts --commit
+> ```
+>
+> You ran this on dev. **Production has its own database and has NOT been migrated.**
+> PQ-5 makes the print queue the one home for class-test printing; without the back-fill,
+> **every class test created before PQ-5 disappears from the Office's prod queue.**
+> Idempotent — a re-run is safe.
+
+The rest of this file is kept as the record of what was tested.
+
+---
 
 ---
 
@@ -36,16 +56,14 @@ bites, that is the real fix.
 
 | PR | Contains | State |
 |---|---|---|
-| #186 · #187 · #188 | the whole release candidate (features 1–6, PQ-1…5, the three deferred items, rounds 1–2 fixes) | **merged on `dev`, deployed** |
-| **#189** | **the five print-form fixes** | **open — test this** |
+| #186 · #187 · #188 | the whole release candidate (features 1–6, PQ-1…5, the three deferred items, rounds 1–2 fixes) | **merged on `dev`, deployed** ✅ |
+| #189 | the five print-form fixes | **merged on `dev`, deployed** ✅ |
 
-> #189 is **not on `dev` yet.** Merge it (or check out `fix/print-forms-round3`) to test.
+> Everything is on `dev`. Production (`main`) has **none** of it.
 
 ---
 
-## Part E — the print-form fixes (PR #189)
-
-These are the five gaps from round 3. Nothing else in this round.
+## Part E — the print-form fixes (PR #189) — ✅ ALL PASSED
 
 ### E1 · You can back out of a print request
 
@@ -102,17 +120,16 @@ back-filled default. It must not have been broken by this change.
 
 ---
 
-## Sign-off
+## Sign-off — complete
 
-- [ ] E1 · Cancel returns you, and queues nothing
-- [ ] E2 · Open spins; a double-tap opens one tab
-- [ ] E3 · the uploaded paper can be removed
-- [ ] E4 · no year dropdown; the test files against the current year
-- [ ] E5 · **your colour/sides choice reaches the Office's queue row**
-- [ ] E5 · a migrated class test still reads `Black & white · Single side`
+- [x] E1 · Cancel returns you, and queues nothing
+- [x] E2 · Open spins; a double-tap opens one tab
+- [x] E3 · the uploaded paper can be removed
+- [x] E4 · no year dropdown; the test files against the current year
+- [x] E5 · colour/sides reach the Office's queue row
 
-**Then this release is done.** The last step is the deliberate **`dev → main` promotion PR**
-— `dev` is ~20 commits ahead of production. Say the word and I'll raise it.
+**This release is tested and done.** The only step left is the deliberate **`dev → main`
+promotion PR** — and **the prod migration** (see the box at the top).
 
 ---
 
