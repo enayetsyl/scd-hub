@@ -20,6 +20,8 @@ import { AssessmentSet } from "../../assessment/models/AssessmentSet";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
+import { emitPrintDelivered } from "../../notifications/services/emitters";
+import { ClassTest } from "../../trackers/models/ClassTest";
 
 export class PrintRequestError extends Error {
   constructor(msg: string) {
@@ -46,6 +48,15 @@ export interface CreatePrintRequestInput {
   subject?: string | null;
   notes?: string | null;
   requestedBy: string;
+  /** PQ-5: this job IS a class-test paper — links the two records. */
+  classTestId?: string | null;
+  /**
+   * PQ-5 internal caller (`ClassTestService`) that has ALREADY validated its source.
+   * Skips `assertSourceResolves`, because a class test's uploaded paper is a
+   * `classtest_question` StoredFile, not a `print_upload` — it was uploaded through
+   * the class-test route and gated there. Never set from a GraphQL arg.
+   */
+  trusted?: boolean;
 }
 
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -138,7 +149,7 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
     throw new PrintRequestError("Invalid purpose");
   }
   validateSource(input);
-  await assertSourceResolves(input);
+  if (!input.trusted) await assertSourceResolves(input);
 
   const copies = input.copies ?? 1;
   if (!Number.isInteger(copies) || copies < 1) throw new PrintRequestError("copies must be a positive integer");
@@ -174,6 +185,7 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
     ...(input.sectionId ? { sectionId: new Types.ObjectId(input.sectionId) } : {}),
     ...(input.subject ? { subject: input.subject } : {}),
     ...(input.notes ? { notes: input.notes } : {}),
+    ...(input.classTestId ? { classTestId: new Types.ObjectId(input.classTestId) } : {}),
     status: "REQUESTED" as PrintRequestStatus,
     requestedBy: new Types.ObjectId(input.requestedBy),
     requestedAt: new Date(),
@@ -196,6 +208,31 @@ async function require_(id: string): Promise<IPrintRequest> {
   return doc;
 }
 
+/**
+ * Mirror a transition onto the linked ClassTest (PQ-5). The class test keeps its own
+ * lifecycle — its `PRINTED` status is what makes it the official exam (CT-1) — but the
+ * Office now advances it from the unified queue, so the two must not drift.
+ */
+async function mirrorToClassTest(
+  doc: IPrintRequest,
+  status: "PRINTED" | "CANCELLED",
+  actorId: string,
+): Promise<void> {
+  if (!doc.classTestId) return;
+  const stamps =
+    status === "PRINTED"
+      ? { status, printedBy: new Types.ObjectId(actorId), printedAt: new Date() }
+      : { status };
+  await ClassTest.updateOne({ _id: doc.classTestId, status: "REQUESTED" }, { $set: stamps });
+  await writeAudit({
+    eventKind: status === "PRINTED" ? "CLASS_TEST_PRINTED" : "CLASS_TEST_CANCELLED",
+    actorId,
+    targetId: doc.classTestId,
+    targetKind: "ClassTest",
+    meta: { viaPrintRequestId: doc._id.toString() },
+  });
+}
+
 /** REQUESTED → PRINTED (Office/Principal). */
 export async function markPrinted(id: string, actorId: string): Promise<IPrintRequest> {
   const doc = await require_(id);
@@ -213,10 +250,15 @@ export async function markPrinted(id: string, actorId: string): Promise<IPrintRe
     targetKind: "PrintRequest",
     meta: { requestedBy: doc.requestedBy.toString() },
   });
+  await mirrorToClassTest(doc, "PRINTED", actorId);
   return doc;
 }
 
-/** PRINTED → DELIVERED (Office/Principal). The requester is notified in PQ-5. */
+/**
+ * PRINTED → DELIVERED (Office/Principal), then tell the requesting teacher. The Office
+ * is the single actor — the teacher does NOT confirm receipt (owner ruling, D-#281).
+ * The notify is best-effort and never blocks the transition (D-#72).
+ */
 export async function markDelivered(id: string, actorId: string): Promise<IPrintRequest> {
   const doc = await require_(id);
   if (doc.status !== "PRINTED") {
@@ -232,6 +274,11 @@ export async function markDelivered(id: string, actorId: string): Promise<IPrint
     targetId: doc._id,
     targetKind: "PrintRequest",
     meta: { requestedBy: doc.requestedBy.toString() },
+  });
+  await emitPrintDelivered({
+    printRequestId: doc._id.toString(),
+    requestedBy: doc.requestedBy.toString(),
+    title: doc.title,
   });
   return doc;
 }
@@ -265,6 +312,7 @@ export async function cancelPrintRequest(
     targetKind: "PrintRequest",
     meta: { byOffice: opts.isOffice, reason: opts.reason ?? null },
   });
+  await mirrorToClassTest(doc, "CANCELLED", actorId);
   return doc;
 }
 

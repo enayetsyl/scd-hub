@@ -997,6 +997,9 @@ export const NOTIFICATION_KINDS = [
   // D-#245) and the present-student revision digest (wa.me for all).
   "SR_ABSENT",
   "SR_DIGEST",
+  // PQ-5 (D-#281): the Office handed a finished print job back to the teacher who
+  // requested it. Staff-facing (recipientUserId), app-native, NO wire twin.
+  "PRINT_DELIVERED",
   // Homework daily-confirm pending ladder (app-native, NO wire twin). A section's
   // homework is declared but not yet confirmed/issued: REMINDER nudges the confirmer
   // (class teacher / delegate) at 13:00/13:30/14:00; ESCALATION alerts Office at 14:00
@@ -1032,6 +1035,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   SR_DIGEST: "সাপ্তাহিক রিভিশন রিপোর্ট",
   HW_PENDING_REMINDER: "বাড়ির কাজ নিশ্চিত করা বাকি",
   HW_PENDING_ESCALATION: "বাড়ির কাজ নিশ্চিত হয়নি (এসকেলেশন)",
+  PRINT_DELIVERED: "প্রিন্ট ডেলিভারি হয়েছে",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1059,6 +1063,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   SR_DIGEST: "Weekly revision digest",
   HW_PENDING_REMINDER: "Homework confirm pending",
   HW_PENDING_ESCALATION: "Homework not confirmed (escalation)",
+  PRINT_DELIVERED: "Print job delivered",
 };
 
 
@@ -1558,6 +1563,8 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "sr.digest.body",
   "sr.digest.wa",
   "sr.completeness_chase.wa",
+  "print.delivered.title",
+  "print.delivered.body",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1627,6 +1634,15 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   "cover.assigned.body": {
     group: "cover", labelBn: "কাভার ক্লাসের দায়িত্ব — বার্তা", placeholders: ["dateKey"],
     bnDefault: "{dateKey} তারিখে একটি ক্লাস কাভারের দায়িত্ব আপনাকে দেওয়া হয়েছে — আমার রুটিন দেখুন।", defaultLangMode: "BN",
+  },
+  // --- Print job delivered (PQ-5, D-#281) ---
+  "print.delivered.title": {
+    group: "print", labelBn: "প্রিন্ট ডেলিভারি — শিরোনাম", placeholders: [],
+    bnDefault: "আপনার প্রিন্ট প্রস্তুত", defaultLangMode: "BN",
+  },
+  "print.delivered.body": {
+    group: "print", labelBn: "প্রিন্ট ডেলিভারি — বার্তা", placeholders: ["title"],
+    bnDefault: "“{title}” ছাপা হয়ে আপনাকে দেওয়া হয়েছে।", defaultLangMode: "BN",
   },
   // --- Bell reminder (N2.1) ---
   "bell.reminder.title": {

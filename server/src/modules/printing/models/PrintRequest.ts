@@ -41,6 +41,9 @@ export interface IPrintRequest extends Document {
    *  without them); defaulted for the internal class-test path and back-filled rows. */
   colour: PrintColour;
   sides: PrintSides;
+  /** Set when this job IS a class-test paper (PQ-5) — the ClassTest keeps its own
+   *  lifecycle (results, publish), but its PRINTING lives here. Not a `sourceType`. */
+  classTestId?: Types.ObjectId;
 
   copies: number;
   /** Local date the teacher needs it by, `YYYY-MM-DD`. Mandatory on a teacher's request. */
@@ -80,6 +83,7 @@ const PrintRequestSchema = new Schema<IPrintRequest>(
     // the SERVICE enforces them as mandatory on a teacher-submitted request.
     colour: { type: String, required: true, default: "BW" },
     sides: { type: String, required: true, default: "SINGLE" },
+    classTestId: { type: Schema.Types.ObjectId, ref: "ClassTest" },
 
     copies: { type: Number, required: true, min: 1, max: 1000, default: 1 },
     neededByKey: { type: String, match: /^\d{4}-\d{2}-\d{2}$/ },

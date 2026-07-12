@@ -9,6 +9,8 @@ import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { CLASS_TEST_STUDENT_PROFILE_QUERY } from "../../graphql/classTest";
+import { STUDENT_WHOLE_PICTURE_QUERY } from "../../graphql/wholePicture";
+import { WholePictureCard } from "../../components/WholePictureCard";
 import { Screen, Card, Body, Muted, Badge, Loader, Notice } from "../../components/ui";
 import { MiniBarChart, type BarDatum } from "../../components/MiniBarChart";
 import { STR, hwSubjectLabel, ctTrendGlyph, bnNum } from "../../lib/labels";
@@ -21,6 +23,10 @@ type Props = NativeStackScreenProps<ClassTestStackParamList, "ClassTestStudentPr
 export default function ClassTestStudentProfileScreen({ route }: Props): React.ReactElement {
   const { studentId, studentName } = route.params;
   const [q] = useQuery({ query: CLASS_TEST_STUDENT_PROFILE_QUERY, variables: { studentId } });
+  // The cross-tracker view (D-#277 follow-up) — class-test marks alone spot a problem a
+  // term late; homework/assignment behaviour moves first.
+  const [wpQ] = useQuery({ query: STUDENT_WHOLE_PICTURE_QUERY, variables: { studentId } });
+  const wp = wpQ.data?.studentWholePicture ?? null;
   const p = q.data?.classTestStudentProfile ?? null;
 
   // CT-9: per-subject % trajectory (oldest → newest) for the bar chart.
@@ -43,6 +49,10 @@ export default function ClassTestStudentProfileScreen({ route }: Props): React.R
         <Card>
           <Body style={{ fontWeight: "700" }}>{p?.studentName || studentName}</Body>
         </Card>
+
+        {/* Cross-tracker roll-up sits ABOVE the class-test detail: it is the answer to
+            "how is this child doing", of which marks are only one quarter. */}
+        {wp ? <WholePictureCard wp={wp} /> : null}
 
         {q.error ? (
           <Notice message={friendlyError(q.error)} tone="danger" />

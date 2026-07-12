@@ -87,6 +87,8 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
    *  a teacher attached a PDF + an image and only the image could be opened). */
   async function openSource(r: PrintRequestT): Promise<void> {
     if (r.sourceType === "SET" && r.setId) return openPdf(`/pdf/set/${r.setId}`);
+    // A plan is stored as markdown; `/pdf/artifact/:id` renders it through the same
+    // pdfkit + NotoSansBengali pipeline the question sets use.
     if (r.sourceType === "CONTENT_ARTIFACT" && r.contentArtifactId) {
       return openPdf(`/pdf/artifact/${r.contentArtifactId}`);
     }

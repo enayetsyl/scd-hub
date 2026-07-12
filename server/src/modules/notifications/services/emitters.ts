@@ -54,6 +54,8 @@ const dedupeKeys = {
   reviewAssigned: (assignmentId: string) => `REV:${assignmentId}`,
   /** Per substitution: one notification per recorded cover. */
   coverAssigned: (substitutionId: string) => `COV:${substitutionId}`,
+  /** One delivered-notice per print job (PQ-5, D-#281). */
+  printDelivered: (printRequestId: string) => `PRD:${printRequestId}`,
   /** Per record+ladder-step+guardian (AS-T4): re-running a step can't double-notify. */
   assignmentGuardianChase: (recordId: string, stepNumber: number, guardianId: string) =>
     `ASCH:${recordId}:${stepNumber}:${guardianId}`,
@@ -851,4 +853,33 @@ export async function emitRevisionEscalation(ev: RevisionEscalationEvent): Promi
     ]);
   });
   return notified;
+}
+
+// ---------------------------------------------------------------------------
+// Print job delivered (PQ-5, D-#281)
+// ---------------------------------------------------------------------------
+
+export interface PrintDeliveredEvent {
+  printRequestId: string;
+  /** The teacher who filed the request — the only recipient. */
+  requestedBy: string;
+  title: string;
+}
+
+/**
+ * Tell the requesting teacher their print job has been handed back. Best-effort:
+ * a notification failure must never block `markDelivered` (D-#72). The Office is
+ * the single actor — the teacher does NOT confirm receipt (owner ruling, D-#281).
+ */
+export async function emitPrintDelivered(event: PrintDeliveredEvent): Promise<void> {
+  return bestEffort("print delivered", async () => {
+    await emit({
+      recipientUserId: event.requestedBy,
+      kind: "PRINT_DELIVERED",
+      titleBn: await renderTemplate("print.delivered.title"),
+      bodyBn: await renderTemplate("print.delivered.body", { title: event.title }),
+      refs: { printRequestId: event.printRequestId },
+      dedupeKey: dedupeKeys.printDelivered(event.printRequestId),
+    });
+  });
 }

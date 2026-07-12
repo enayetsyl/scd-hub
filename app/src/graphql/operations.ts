@@ -2379,6 +2379,14 @@ export const CHILD_ROUTINE_QUERY = gql<
   }
 `;
 
+/** A worksheet/handout the teacher attached to the note. Bytes stream through
+ *  GET /files/:id; the gate checks the guardian has a child in the note's group. */
+export interface GuardianClassNoteAttachmentT {
+  id: string;
+  name: string;
+  mime: string;
+}
+
 export interface GuardianClassNoteT {
   subject: string;
   subjectLabelBn: string;
@@ -2391,6 +2399,7 @@ export interface GuardianClassNoteT {
     qCount: number;
     timeDecl: number;
   } | null;
+  attachments: GuardianClassNoteAttachmentT[];
 }
 
 export const CHILD_CLASS_NOTES_QUERY = gql<
@@ -2401,6 +2410,7 @@ export const CHILD_CLASS_NOTES_QUERY = gql<
     childClassNotes(studentId: $studentId, date: $date) {
       subject subjectLabelBn periodNumber taughtSummaryBn
       homework { hwId subject subjectLabelBn qCount timeDecl }
+      attachments { id name mime }
     }
   }
 `;
