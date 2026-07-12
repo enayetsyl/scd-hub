@@ -827,6 +827,7 @@ const STR_BN = {
   done: "সম্পন্ন",
   loading: "লোড হচ্ছে…",
   loadMore: "আরও দেখুন",
+  noCurrentYear: "কোনো চলতি শিক্ষাবর্ষ নির্ধারণ করা নেই — অ্যাডমিনকে জানান।",
 
   // Filters / fields
   filters: "ফিল্টার",
@@ -3000,6 +3001,7 @@ const STR_EN: StrTable = {
   done: "Done",
   loading: "Loading…",
   loadMore: "Load more",
+  noCurrentYear: "No academic year is marked current — ask an admin to set one.",
 
   // Filters / fields
   filters: "Filters",

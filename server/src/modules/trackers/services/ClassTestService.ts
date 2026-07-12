@@ -89,6 +89,10 @@ export interface CreateClassTestRequestInput {
   setId?: string;
   /** When UPLOADED_PAPER — the StoredFile (classtest_question) the actor uploaded. */
   questionFileId?: string;
+  /** How to print the paper — carried onto the queue row. Defaults BW/SINGLE when the
+   *  caller omits them (validated in `createPrintRequest`, never silently coerced). */
+  colour?: string;
+  sides?: string;
   /** Optional; default = suggestTestNumber(...). Editable. */
   testNumber?: number;
   /** Optional; default 2 (admin-configurable). */
@@ -276,6 +280,8 @@ export async function createRequest(
     sourceType: source === "POOL_SET" ? "SET" : "UPLOAD",
     setId: setId ? setId.toString() : null,
     fileIds: questionFileId ? [questionFileId.toString()] : null,
+    colour: input.colour ?? null,
+    sides: input.sides ?? null,
     classId: doc.classId?.toString() ?? null,
     sectionId: input.sectionId,
     subject,

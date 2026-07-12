@@ -119,6 +119,11 @@ builder.mutationField("createClassTestRequest", (t) =>
       source: t.arg.string({ required: true }),
       setId: t.arg.string({ required: false }),
       questionFileId: t.arg.string({ required: false }),
+      // A class test IS a print job (PQ-5), so it carries the same two answers every
+      // other job must: how to print it. Optional here ONLY so a pre-PQ-5 caller keeps
+      // working — the schema defaults BW/SINGLE, which is what the migration back-filled.
+      colour: t.arg.string({ required: false }),
+      sides: t.arg.string({ required: false }),
       testNumber: t.arg.int({ required: false }),
       deadlineDays: t.arg.int({ required: false }),
       notes: t.arg.string({ required: false }),
@@ -135,6 +140,8 @@ builder.mutationField("createClassTestRequest", (t) =>
         source: args.source,
         setId: args.setId ?? undefined,
         questionFileId: args.questionFileId ?? undefined,
+        colour: args.colour ?? undefined,
+        sides: args.sides ?? undefined,
         testNumber: args.testNumber ?? undefined,
         deadlineDays: args.deadlineDays ?? undefined,
         notes: args.notes ?? undefined,

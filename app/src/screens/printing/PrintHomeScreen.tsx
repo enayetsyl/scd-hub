@@ -30,6 +30,7 @@ import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Button, Badge, Loader, Em
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { openStoredFile } from "../../lib/files";
+import { useFileOpen } from "../../lib/useFileOpen";
 import { openPdf } from "../../lib/pdf";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
@@ -81,6 +82,11 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
     if (isOffice) refetchQueue({ requestPolicy: "network-only" });
     if (canRequest) refetchMine({ requestPolicy: "network-only" });
   };
+
+  // A set/plan PDF is RENDERED on demand and an upload streams through the server, so an
+  // Open can take seconds. Without this the button looked dead and a double-tap opened
+  // duplicate tabs (the BUG-014 pattern, applied here).
+  const { openingId, runOpen } = useFileOpen();
 
   /** Open the job's SINGLE-document sources. Uploads get one button PER FILE (below) —
    *  opening only fileIds[0] left every other attachment unreachable (live-testing find:
@@ -146,7 +152,13 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
               style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}
             >
               <Muted style={{ flex: 1 }}>📄 {f.name}</Muted>
-              <Button title={STR.prOpen} variant="secondary" onPress={() => openStoredFile(f.id)} />
+              <Button
+                title={STR.prOpen}
+                variant="secondary"
+                loading={openingId === f.id}
+                disabled={!!openingId}
+                onPress={() => runOpen(f.id, () => openStoredFile(f.id))}
+              />
             </View>
           ))}
         </View>
@@ -154,7 +166,13 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
         {r.sourceType !== "UPLOAD" ? (
-          <Button title={STR.prOpen} variant="secondary" onPress={() => openSource(r)} />
+          <Button
+            title={STR.prOpen}
+            variant="secondary"
+            loading={openingId === r.id}
+            disabled={!!openingId}
+            onPress={() => runOpen(r.id, () => openSource(r))}
+          />
         ) : null}
 
         {office && r.status === "REQUESTED" ? (
