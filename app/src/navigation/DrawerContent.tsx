@@ -65,6 +65,7 @@ const STAFF_NAV: NavSection[] = [
     ],
   },
   { type: "item", route: "AttendanceTab", labelKey: "tabAttendance", icon: "🙋" },
+  { type: "item", route: "PrintTab", labelKey: "tabPrint", icon: "🖨️" },
   { type: "item", route: "ClassNotesTab", labelKey: "drawerItemClassNotes", icon: "📓" },
   { type: "item", route: "CommentsTab", labelKey: "tabComments", icon: "🗣️" },
   { type: "item", route: "ObservationTab", labelKey: "tabObservation", icon: "👁️" },

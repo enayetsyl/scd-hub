@@ -2,22 +2,42 @@
  * PDF export route — GET /pdf/artifact/:id (ADR-003, ADR-009, J1.8).
  *
  * Server-side Markdown→PDF via pdfkit + NotoSansBengali font.
- * Requires content:read permission (JWT in Authorization header or query param).
- * Returns application/pdf binary.
+ * Returns application/pdf binary. JWT in Authorization header or query param.
+ *
+ * GATE — `content:read`, PLUS one print-scoped exception (D-#281): the Office holds
+ * `roster:manage` but NOT `content:read`, yet it must open the plan a teacher sent to
+ * the print queue. So a `roster:manage` caller may render an artifact **iff a live
+ * PrintRequest references it**. That is the narrowest possible widening — it opens
+ * exactly the plans submitted for printing and nothing else in the content plane.
+ * Mirrors the `print_upload` branch of `GET /files/:id`.
  */
 import type { Router, Request, Response } from "express";
 import { Router as createRouter } from "express";
 import { ContentArtifact } from "../modules/content/models/ContentArtifact";
+import { PrintRequest } from "../modules/printing/models/PrintRequest";
 import { markdownToPdf } from "./pdfRenderer";
-import { buildContext } from "../context";
+import { buildContext, type AppContext } from "../context";
 import { callerHasPermission } from "@scd/shared";
+
+/** True when the caller may render this artifact (see the gate note above). */
+export async function mayRenderArtifact(ctx: AppContext, artifactId: string): Promise<boolean> {
+  if (!ctx.auth) return false;
+  if (callerHasPermission(ctx.auth, "content:read")) return true;
+  if (!callerHasPermission(ctx.auth, "roster:manage")) return false;
+  // Print operator: ONLY artifacts actually queued for printing. Cancelling the job
+  // withdraws the access again.
+  const queued = await PrintRequest.exists({
+    contentArtifactId: artifactId,
+    status: { $ne: "CANCELLED" },
+  });
+  return queued !== null;
+}
 
 export const pdfRouter: Router = createRouter();
 
 pdfRouter.get("/artifact/:id", async (req: Request, res: Response) => {
-  // Auth check: require content:read
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "content:read")) {
+  if (!(await mayRenderArtifact(ctx, req.params.id))) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }

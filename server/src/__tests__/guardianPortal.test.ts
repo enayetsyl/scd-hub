@@ -114,6 +114,11 @@ const mockHwItemFind = jest.fn();
 jest.mock("../modules/trackers/models/HomeworkItem", () => ({
   HomeworkItem: { find: (q: unknown) => ({ lean: () => mockHwItemFind(q) }) },
 }));
+// Class-note attachments are resolved for name/mime in one batched load.
+const mockStoredFileFind = jest.fn();
+jest.mock("../modules/platform/models/StoredFile", () => ({
+  StoredFile: { find: (q: unknown) => ({ select: () => ({ lean: () => mockStoredFileFind(q) }) }) },
+}));
 
 const mockHwRecordFind = jest.fn();
 jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
@@ -209,6 +214,7 @@ function staffSlot(periodNumber: number, subject: string, extra: Record<string, 
 }
 
 beforeEach(() => {
+  mockStoredFileFind.mockResolvedValue([]);
   jest.clearAllMocks();
   mockGuardianFindById.mockResolvedValue({ _id: GUARDIAN_ID, name: "Guardian", active: true });
   mockLinkFindOne.mockResolvedValue({ guardianId: GUARDIAN_ID, studentId: STUDENT_ID });
@@ -484,7 +490,45 @@ describe("childClassNotes", () => {
         qCount: 3,
         timeDecl: 20,
       },
+      attachments: [], // a note with no files carries an empty list, never undefined
     });
+  });
+
+  test("a note's attachments surface with name + mime, resolved in one batched load", async () => {
+    const slotId = oid();
+    const fileA = oid();
+    const fileB = oid();
+    mockClassNotesForDate.mockImplementation(async (groupType: string) =>
+      groupType === "section"
+        ? [
+            {
+              _id: oid(),
+              slotId,
+              groupType: "section",
+              groupId: SECTION_ID,
+              date: TUESDAY,
+              subject: "BAN",
+              taughtSummaryBn: "পাঠ ৩",
+              attachmentIds: [fileA, fileB],
+              publishedBy: TEACHER_ID,
+              publishedAt: TUESDAY,
+            },
+          ]
+        : [],
+    );
+    mockRoutineSlotFind.mockResolvedValue([{ _id: slotId, periodNumber: 1 }]);
+    mockHwItemFind.mockResolvedValue([]);
+    mockStoredFileFind.mockResolvedValue([
+      { _id: fileA, originalName: "worksheet.pdf", mime: "application/pdf" },
+    ]);
+
+    const notes = await childClassNotes(STUDENT_ID.toString(), TUESDAY);
+    expect(mockStoredFileFind).toHaveBeenCalledTimes(1); // batched, not per-file
+    expect(notes[0].attachments).toEqual([
+      { id: fileA.toString(), name: "worksheet.pdf", mime: "application/pdf" },
+      // A file row that vanished still lists, so the guardian sees the note is incomplete.
+      { id: fileB.toString(), name: "file", mime: "" },
+    ]);
   });
 
   test("no notes → empty list", async () => {

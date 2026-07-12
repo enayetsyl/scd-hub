@@ -32,6 +32,8 @@ import { Class } from "../../foundation/models/Class";
 import { AssessmentSet } from "../../assessment/models/AssessmentSet";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
+import { createPrintRequest } from "../../printing/services/PrintRequestService";
+import { PrintRequest } from "../../printing/models/PrintRequest";
 
 // ---------------------------------------------------------------------------
 // CT_ID generation (D-#34 numbering pattern) + Test# auto-suggest
@@ -87,6 +89,10 @@ export interface CreateClassTestRequestInput {
   setId?: string;
   /** When UPLOADED_PAPER — the StoredFile (classtest_question) the actor uploaded. */
   questionFileId?: string;
+  /** How to print the paper — carried onto the queue row. Defaults BW/SINGLE when the
+   *  caller omits them (validated in `createPrintRequest`, never silently coerced). */
+  colour?: string;
+  sides?: string;
   /** Optional; default = suggestTestNumber(...). Editable. */
   testNumber?: number;
   /** Optional; default 2 (admin-configurable). */
@@ -263,6 +269,29 @@ export async function createRequest(
     meta: { ctId, subject, source, sectionId: input.sectionId, testNumber },
   });
 
+  // PQ-5 (D-#281): the printing concern moves to the unified queue. The ClassTest keeps
+  // its own lifecycle (results, publish); the Office advances BOTH from one screen, and
+  // `mirrorToClassTest` keeps this record's status in step. `trusted` because the source
+  // was validated above — a class test's uploaded paper is a `classtest_question` file,
+  // not a `print_upload`.
+  const printRequest = await createPrintRequest({
+    title: `${ctId} · ${subject}`,
+    purpose: "CLASS_TEST",
+    sourceType: source === "POOL_SET" ? "SET" : "UPLOAD",
+    setId: setId ? setId.toString() : null,
+    fileIds: questionFileId ? [questionFileId.toString()] : null,
+    colour: input.colour ?? null,
+    sides: input.sides ?? null,
+    classId: doc.classId?.toString() ?? null,
+    sectionId: input.sectionId,
+    subject,
+    notes: input.notes ?? null,
+    requestedBy: input.actorId,
+    classTestId: doc._id.toString(),
+    trusted: true,
+  });
+  await ClassTest.updateOne({ _id: doc._id }, { $set: { printRequestId: printRequest._id } });
+
   return classTestShape(doc as unknown as IClassTest);
 }
 
@@ -289,6 +318,14 @@ export async function markPrinted(id: string, actorId: string): Promise<ClassTes
     meta: { ctId: doc.ctId },
   });
 
+  // PQ-5: keep the unified queue row in step. The Office normally advances the job FROM
+  // the queue (which mirrors this way), but this legacy entry point must not let the two
+  // drift. Guarded on REQUESTED so a mirrored write can never double-apply.
+  await PrintRequest.updateOne(
+    { classTestId: doc._id, status: "REQUESTED" },
+    { $set: { status: "PRINTED", printedBy: new Types.ObjectId(actorId), printedAt: new Date() } },
+  );
+
   return classTestShape(doc as unknown as IClassTest);
 }
 
@@ -308,6 +345,12 @@ export async function cancelRequest(id: string, actorId: string): Promise<ClassT
     targetKind: "ClassTest",
     meta: { ctId: doc.ctId },
   });
+
+  // PQ-5: withdraw the unified queue row too (see markPrinted).
+  await PrintRequest.updateOne(
+    { classTestId: doc._id, status: "REQUESTED" },
+    { $set: { status: "CANCELLED", cancelledBy: new Types.ObjectId(actorId), cancelledAt: new Date() } },
+  );
 
   return classTestShape(doc as unknown as IClassTest);
 }

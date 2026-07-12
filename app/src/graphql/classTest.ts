@@ -38,9 +38,9 @@ export interface ClassTestT {
 
 const CLASS_TEST_FIELDS = `id ctId academicYearId classLevel classId sectionId subject testNumber examDate totalMarks passMark source setId questionFileId status deadlineDays requestedBy requestedAt printedBy printedAt notes`;
 
-export const CLASS_TEST_PRINT_QUEUE_QUERY = gql<{ classTestPrintQueue: ClassTestT[] }, NoVars>`
-  query ClassTestPrintQueue { classTestPrintQueue { ${CLASS_TEST_FIELDS} } }
-`;
+// PQ-5 (D-#281): the class-test print queue was absorbed into the unified PrintRequest
+// queue (`app/src/graphql/printing.ts`). The server resolvers remain for back-compat and
+// mirror onto the queue row, but the app drives everything through the one queue.
 
 export const MY_CLASS_TESTS_QUERY = gql<{ myClassTests: ClassTestT[] }, NoVars>`
   query MyClassTests { myClassTests { ${CLASS_TEST_FIELDS} } }
@@ -79,6 +79,8 @@ export const CREATE_CLASS_TEST_REQUEST = gql<
     source: string;
     setId?: string | null;
     questionFileId?: string | null;
+    colour?: string | null;
+    sides?: string | null;
     testNumber?: number | null;
     deadlineDays?: number | null;
     notes?: string | null;
@@ -87,22 +89,16 @@ export const CREATE_CLASS_TEST_REQUEST = gql<
   mutation CreateClassTestRequest(
     $sectionId: String!, $subject: String!, $examDate: String!, $totalMarks: Int!,
     $passMark: Int, $source: String!, $setId: String, $questionFileId: String,
+    $colour: String, $sides: String,
     $testNumber: Int, $deadlineDays: Int, $notes: String
   ) {
     createClassTestRequest(
       sectionId: $sectionId, subject: $subject, examDate: $examDate, totalMarks: $totalMarks,
       passMark: $passMark, source: $source, setId: $setId, questionFileId: $questionFileId,
+      colour: $colour, sides: $sides,
       testNumber: $testNumber, deadlineDays: $deadlineDays, notes: $notes
     ) { ${CLASS_TEST_FIELDS} }
   }
-`;
-
-export const MARK_CLASS_TEST_PRINTED = gql<{ markClassTestPrinted: ClassTestT }, { id: string }>`
-  mutation MarkClassTestPrinted($id: String!) { markClassTestPrinted(id: $id) { ${CLASS_TEST_FIELDS} } }
-`;
-
-export const CANCEL_CLASS_TEST = gql<{ cancelClassTest: ClassTestT }, { id: string }>`
-  mutation CancelClassTest($id: String!) { cancelClassTest(id: $id) { ${CLASS_TEST_FIELDS} } }
 `;
 
 // ---------------------------------------------------------------------------

@@ -37,11 +37,15 @@ import { friendlyError } from "../../lib/errors";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { space } from "../../theme/tokens";
 import Markdown from "../../components/Markdown";
+import { useNavigation, type NavigationProp } from "@react-navigation/native";
+import type { TabParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<ContentStackParamList, "PlanView">;
 
 export default function PlanViewScreen({ route, navigation }: Props): React.ReactElement {
   const { artifactId } = route.params;
+  // "Send to print" crosses to the Print tab (PQ-3, D-#281).
+  const tabNav = useNavigation<NavigationProp<TabParamList>>();
   const [{ data, fetching, error }, refetch] = useQuery({
     query: ARTIFACT_QUERY,
     variables: { id: artifactId },
@@ -52,6 +56,7 @@ export default function PlanViewScreen({ route, navigation }: Props): React.Reac
   const { role } = useAuth();
   const canAssign = !!role && roleHasPermission(role, "content:assign_review");
   const canApprove = !!role && roleHasPermission(role, "content:promote_gold");
+  const canRequestPrint = !!role && roleHasPermission(role, "tracker:write");
   const [, assignReview] = useMutation(ASSIGN_PLAN_REVIEW);
   const [, approvePlan] = useMutation(APPROVE_PLAN);
   const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY, pause: !canAssign });
@@ -145,6 +150,22 @@ export default function PlanViewScreen({ route, navigation }: Props): React.Reac
           tone={a.reviewStatus === "gold" ? "ok" : a.reviewStatus === "reviewed" ? "brand" : "muted"}
         />
       </View>
+
+      {/* PQ-3 (D-#281): send this plan to the Office print queue. No snapshot — the
+          queue row references the artifact and renders it through /pdf/artifact/:id. */}
+      {canRequestPrint ? (
+        <Button
+          title={`🖨️ ${STR.prSend}`}
+          variant="secondary"
+          style={{ marginTop: space(3) }}
+          onPress={() =>
+            tabNav.navigate("PrintTab", {
+              screen: "NewPrintRequest",
+              params: { contentArtifactId: artifactId, title: a.address?.title ?? STR.prTitle },
+            })
+          }
+        />
+      ) : null}
 
       {PDF_SUPPORTED ? (
         <Button

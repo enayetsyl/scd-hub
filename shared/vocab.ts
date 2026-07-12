@@ -997,6 +997,9 @@ export const NOTIFICATION_KINDS = [
   // D-#245) and the present-student revision digest (wa.me for all).
   "SR_ABSENT",
   "SR_DIGEST",
+  // PQ-5 (D-#281): the Office handed a finished print job back to the teacher who
+  // requested it. Staff-facing (recipientUserId), app-native, NO wire twin.
+  "PRINT_DELIVERED",
   // Homework daily-confirm pending ladder (app-native, NO wire twin). A section's
   // homework is declared but not yet confirmed/issued: REMINDER nudges the confirmer
   // (class teacher / delegate) at 13:00/13:30/14:00; ESCALATION alerts Office at 14:00
@@ -1032,6 +1035,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   SR_DIGEST: "সাপ্তাহিক রিভিশন রিপোর্ট",
   HW_PENDING_REMINDER: "বাড়ির কাজ নিশ্চিত করা বাকি",
   HW_PENDING_ESCALATION: "বাড়ির কাজ নিশ্চিত হয়নি (এসকেলেশন)",
+  PRINT_DELIVERED: "প্রিন্ট ডেলিভারি হয়েছে",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1059,6 +1063,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   SR_DIGEST: "Weekly revision digest",
   HW_PENDING_REMINDER: "Homework confirm pending",
   HW_PENDING_ESCALATION: "Homework not confirmed (escalation)",
+  PRINT_DELIVERED: "Print job delivered",
 };
 
 
@@ -1103,6 +1108,103 @@ export const CLASS_TEST_SOURCE_LABELS_EN: Record<ClassTestSource, string> = {
   POOL_SET: "Question-pool set",
   UPLOADED_PAPER: "Uploaded paper",
 };
+
+// --- Print request queue (PQ-1, D-#281) ------------------------------------
+/** The Office's print lifecycle. Three live statuses matching the three buckets
+ *  the Office actually tracks — "yet to print", "printing done", "delivered to the
+ *  teacher" — with NO separate in-progress state. `CANCELLED` is a withdrawn
+ *  request (by the requester while still REQUESTED, or by the Office).
+ *  Generalizes CLASS_TEST_STATUSES, which stops at PRINTED. */
+export const PRINT_REQUEST_STATUSES = ["REQUESTED", "PRINTED", "DELIVERED", "CANCELLED"] as const;
+export type PrintRequestStatus = (typeof PRINT_REQUEST_STATUSES)[number];
+
+export const PRINT_REQUEST_STATUS_LABELS_BN: Record<PrintRequestStatus, string> = {
+  REQUESTED: "ছাপার অপেক্ষায়",
+  PRINTED: "ছাপা হয়েছে",
+  DELIVERED: "শিক্ষককে দেওয়া হয়েছে",
+  CANCELLED: "বাতিল",
+};
+export const PRINT_REQUEST_STATUS_LABELS_EN: Record<PrintRequestStatus, string> = {
+  REQUESTED: "Yet to print",
+  PRINTED: "Printing done",
+  DELIVERED: "Delivered",
+  CANCELLED: "Cancelled",
+};
+
+/** What the print job is FOR — the Office sorts and batches by this. */
+export const PRINT_PURPOSES = [
+  "CLASSWORK",
+  "HOMEWORK",
+  "ASSIGNMENT",
+  "CLASS_TEST",
+  "LESSON_PLAN",
+  "OTHER",
+] as const;
+export type PrintPurpose = (typeof PRINT_PURPOSES)[number];
+
+export const PRINT_PURPOSE_LABELS_BN: Record<PrintPurpose, string> = {
+  CLASSWORK: "শ্রেণিকর্ম",
+  HOMEWORK: "বাড়ির কাজ",
+  ASSIGNMENT: "অ্যাসাইনমেন্ট",
+  CLASS_TEST: "ক্লাস টেস্ট",
+  LESSON_PLAN: "পাঠ পরিকল্পনা",
+  OTHER: "অন্যান্য",
+};
+export const PRINT_PURPOSE_LABELS_EN: Record<PrintPurpose, string> = {
+  CLASSWORK: "Classwork",
+  HOMEWORK: "Homework",
+  ASSIGNMENT: "Assignment",
+  CLASS_TEST: "Class test",
+  LESSON_PLAN: "Lesson plan",
+  OTHER: "Other",
+};
+
+/** Where the document comes from. EXACTLY ONE source field is set on a request
+ *  (the `StudentAttendanceDay` XOR pattern). No PDF snapshot is taken: an
+ *  assembled `AssessmentSet` is LOCKED, so `SET` is already immutable in content;
+ *  an `UPLOAD` is self-snapshotting; a `LINK` is external by nature (D-#281). */
+export const PRINT_SOURCES = ["SET", "CONTENT_ARTIFACT", "UPLOAD", "LINK"] as const;
+export type PrintSource = (typeof PRINT_SOURCES)[number];
+
+export const PRINT_SOURCE_LABELS_BN: Record<PrintSource, string> = {
+  SET: "প্রশ্ন সেট",
+  CONTENT_ARTIFACT: "পাঠ/অধ্যায় পরিকল্পনা",
+  UPLOAD: "আপলোড করা ফাইল",
+  LINK: "লিংক",
+};
+export const PRINT_SOURCE_LABELS_EN: Record<PrintSource, string> = {
+  SET: "Question set",
+  CONTENT_ARTIFACT: "Chapter / session plan",
+  UPLOAD: "Uploaded file",
+  LINK: "Link",
+};
+
+/** How the job is printed (live-testing requirement): both are MANDATORY on a request —
+ *  the Office cannot start a job without knowing them. */
+export const PRINT_COLOURS = ["BW", "COLOR"] as const;
+export type PrintColour = (typeof PRINT_COLOURS)[number];
+export const PRINT_COLOUR_LABELS_BN: Record<PrintColour, string> = {
+  BW: "সাদা-কালো",
+  COLOR: "রঙিন",
+};
+export const PRINT_COLOUR_LABELS_EN: Record<PrintColour, string> = {
+  BW: "Black & white",
+  COLOR: "Colour",
+};
+
+export const PRINT_SIDES = ["SINGLE", "DOUBLE"] as const;
+export type PrintSides = (typeof PRINT_SIDES)[number];
+export const PRINT_SIDES_LABELS_BN: Record<PrintSides, string> = {
+  SINGLE: "এক পৃষ্ঠায়",
+  DOUBLE: "দুই পৃষ্ঠায়",
+};
+export const PRINT_SIDES_LABELS_EN: Record<PrintSides, string> = {
+  SINGLE: "Single side",
+  DOUBLE: "Both sides",
+};
+
+/** Uploads per print request (PQ-2) — the class-note attachment ceiling. */
+export const MAX_PRINT_UPLOADS = 5;
 
 /** Per-(student × class test) attendance status (CT-2, §3.3/§4). PRESENT carries
  *  marks + is scored; ABSENT carries NO marks, is excluded from class denominators,
@@ -1461,6 +1563,8 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "sr.digest.body",
   "sr.digest.wa",
   "sr.completeness_chase.wa",
+  "print.delivered.title",
+  "print.delivered.body",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1530,6 +1634,15 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   "cover.assigned.body": {
     group: "cover", labelBn: "কাভার ক্লাসের দায়িত্ব — বার্তা", placeholders: ["dateKey"],
     bnDefault: "{dateKey} তারিখে একটি ক্লাস কাভারের দায়িত্ব আপনাকে দেওয়া হয়েছে — আমার রুটিন দেখুন।", defaultLangMode: "BN",
+  },
+  // --- Print job delivered (PQ-5, D-#281) ---
+  "print.delivered.title": {
+    group: "print", labelBn: "প্রিন্ট ডেলিভারি — শিরোনাম", placeholders: [],
+    bnDefault: "আপনার প্রিন্ট প্রস্তুত", defaultLangMode: "BN",
+  },
+  "print.delivered.body": {
+    group: "print", labelBn: "প্রিন্ট ডেলিভারি — বার্তা", placeholders: ["title"],
+    bnDefault: "“{title}” ছাপা হয়ে আপনাকে দেওয়া হয়েছে।", defaultLangMode: "BN",
   },
   // --- Bell reminder (N2.1) ---
   "bell.reminder.title": {

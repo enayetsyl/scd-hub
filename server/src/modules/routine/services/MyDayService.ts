@@ -22,8 +22,9 @@
  *                       over the caller's ACCESSIBLE refs — authorized per section
  *                       exactly like homeworkClassOverview (confirm-scope OR read-
  *                       scope; unreadable refs silently skipped)
- *   attendancePending — the caller marks ≥1 section for the date (class-teacher /
- *                       marker path via myMarkingSections) and a record is missing
+ *   attendancePending — the caller marks ≥1 attendance UNIT for the date — their Quran
+ *                       group (Class 1–5) or Nursery/KG section, via myMarkingUnits
+ *                       (D-#278) — and that unit's record is still missing
  * Callers without the underlying permission get empty/zero fields, never an error
  * (a guardian or office login lands here too — the dashboard must render).
  */
@@ -36,7 +37,9 @@ import { RoutineSubstitution } from "../models/RoutineSubstitution";
 import { enrichRoutineSlots, type SlotViewFields } from "../slotView";
 import { resolveDayType, dayTypeAdmitsTrack } from "../calendar";
 import { homeworkClassOverview } from "../../trackers/services/HomeworkSummaryService";
-import { myMarkingSections } from "../../attendance/services/StudentAttendanceService";
+import { myMarkingUnits } from "../../attendance/services/StudentAttendanceService";
+import { classPresenceForDate, type ClassPresence } from "../../attendance/services/AttendanceReportService";
+import { pendingWorkFor, type PendingAlert, type AssignmentPrep } from "./PendingAlertService";
 import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
 
 export interface MyDayHomeworkCounts {
@@ -53,6 +56,12 @@ export interface MyDayResult {
   slots: MyDaySlot[];
   homework: MyDayHomeworkCounts;
   attendancePending: boolean;
+  /** Red backlog alerts — work owed today OR on a previous school day (D-#279). */
+  alerts: PendingAlert[];
+  /** Amber countdown to the assignment-prep deadline, or null (D-#280). */
+  assignmentPrep: AssignmentPrep | null;
+  /** Principal/Office only: per-class present/absent snapshot for the date (D-#279). */
+  classPresence: ClassPresence[];
 }
 
 export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayResult> {
@@ -190,13 +199,26 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
     }
   }
 
-  // 3. Attendance pending — the caller marks ≥1 section for the date and that
-  //    section's day record is still absent (marker/class-teacher path, AT2.3).
+  // 3. Attendance pending — the caller marks ≥1 attendance UNIT for the date (their
+  //    Quran group or Nursery/KG section, D-#278) and its day record is still absent
+  //    (first-class-teacher / cover / override / class-teacher-fallback path, AT2.3).
   let attendancePending = false;
   if (callerHasPermission(auth, "attendance:mark")) {
-    const marking = await myMarkingSections(auth.userId, dateKey);
+    const marking = await myMarkingUnits(auth.userId, dateKey);
     attendancePending = marking.some((m) => !m.marked);
   }
 
-  return { date: dateKey, dayType, slots, homework, attendancePending };
+  // 4. Backlog alerts (D-#279) + the assignment-prep countdown (D-#280) — anything the
+  //    caller owes today OR on a previous school day, and how long is left before the
+  //    next assignment must be ready. Each kind self-gates on its own permission and
+  //    yields nothing when absent, so this stays safe for guardian/office logins.
+  const { alerts, assignmentPrep } = await pendingWorkFor(ctx, d);
+
+  // 5. Principal/Office: the per-class present/absent snapshot for the date (D-#279).
+  //    Teachers get an empty list — they read their own worklist instead.
+  const classPresence = callerHasPermission(auth, "attendance:manage")
+    ? await classPresenceForDate(dateKey)
+    : [];
+
+  return { date: dateKey, dayType, slots, homework, attendancePending, alerts, assignmentPrep, classPresence };
 }

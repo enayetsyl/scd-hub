@@ -19,7 +19,8 @@ import { Router as createRouter } from "express";
 import { mixedText } from "../../../routes/pdfRenderer";
 import { AssessmentSet } from "../models/AssessmentSet";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
-import { buildContext } from "../../../context";
+import { buildContext, type AppContext } from "../../../context";
+import { PrintRequest } from "../../printing/models/PrintRequest";
 import { callerHasPermission } from "@scd/shared";
 import type { IAssessmentSet, BasketItem } from "../models/AssessmentSet";
 import type { FlattenMaps, Types } from "mongoose";
@@ -30,9 +31,25 @@ const FONT_PATH = path.resolve(__dirname, "../../../../assets/fonts/NotoSansBeng
 
 export const setPdfRouter: Router = createRouter();
 
+/**
+ * GATE — `set:read`, PLUS the print-scoped exception (D-#281): the Office holds
+ * `roster:manage` but NOT `set:read`, yet it must open the paper a teacher sent to the
+ * print queue. So a `roster:manage` caller may render a set **iff a live PrintRequest
+ * references it** — the narrowest widening, and cancelling the job withdraws it again.
+ * Identical to the `/pdf/artifact/:id` rule; found in live testing (the Office's "Open"
+ * button 403'd on every question-set job).
+ */
+export async function mayRenderSet(ctx: AppContext, setId: string): Promise<boolean> {
+  if (!ctx.auth) return false;
+  if (callerHasPermission(ctx.auth, "set:read")) return true;
+  if (!callerHasPermission(ctx.auth, "roster:manage")) return false;
+  const queued = await PrintRequest.exists({ setId, status: { $ne: "CANCELLED" } });
+  return queued !== null;
+}
+
 setPdfRouter.get("/:id", async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "set:read")) {
+  if (!(await mayRenderSet(ctx, req.params.id))) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }

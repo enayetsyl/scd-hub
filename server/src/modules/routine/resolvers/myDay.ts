@@ -11,6 +11,22 @@ import { ForbiddenError } from "../../../middleware/authz";
 import type { IRoutineSlot } from "../models/RoutineSlot";
 import { RoutineSlotRef } from "./routineSlots";
 import { myDayFor, type MyDayHomeworkCounts, type MyDayResult } from "../services/MyDayService";
+import type { PendingAlert, AssignmentPrep } from "../services/PendingAlertService";
+import type { ClassPresence } from "../../attendance/services/AttendanceReportService";
+
+const AssignmentPrepRef = builder.objectRef<AssignmentPrep>("AssignmentPrep").implement({
+  description:
+    "The countdown to having the assignment question ready (D-#280). `dueAt` is the school " +
+    "day's START on the RESOLVED delivery date — the instant the paper must be in students' " +
+    "hands — so a holiday roll carries it. Null once the caller's items are delivered; once " +
+    "`dueAt` passes it becomes the red `assignment_entry` alert instead.",
+  fields: (t) => ({
+    dueAt: t.exposeString("dueAt"),
+    deliveryDateKey: t.exposeString("deliveryDateKey"),
+    weekNumber: t.exposeInt("weekNumber"),
+    items: t.exposeInt("items"),
+  }),
+});
 
 const MyDayHomeworkRef = builder.objectRef<MyDayHomeworkCounts>("MyDayHomework").implement({
   description: "Cumulative homework counts over the caller's accessible classes (UX-4 Today dashboard).",
@@ -21,10 +37,40 @@ const MyDayHomeworkRef = builder.objectRef<MyDayHomeworkCounts>("MyDayHomework")
   }),
 });
 
+const PendingAlertRef = builder.objectRef<PendingAlert>("PendingAlert").implement({
+  description:
+    "A red backlog alert on the Today dashboard (D-#279): work the caller owes today OR on a " +
+    "previous school day inside the 7-day look-back. kind = attendance | class_note | assignment_entry.",
+  fields: (t) => ({
+    kind: t.exposeString("kind"),
+    /** Pending DAYS for attendance/class_note; pending ITEMS for assignment_entry. */
+    count: t.exposeInt("count"),
+    oldestDateKey: t.string({ nullable: true, resolve: (a) => a.oldestDateKey }),
+  }),
+});
+
+const ClassPresenceRef = builder.objectRef<ClassPresence>("ClassPresence").implement({
+  description:
+    "Per-class present/absent snapshot for a date (D-#279), rolled up from every attendance unit. " +
+    "Only students whose unit was marked are counted — an unmarked Quran group is PENDING, never " +
+    "silently 'present'. Populated for attendance:manage callers only.",
+  fields: (t) => ({
+    classId: t.exposeString("classId"),
+    classLevel: t.exposeInt("classLevel"),
+    classNameBn: t.exposeString("classNameBn"),
+    markedCount: t.exposeInt("markedCount"),
+    presentCount: t.exposeInt("presentCount"),
+    absentCount: t.exposeInt("absentCount"),
+    totalCount: t.exposeInt("totalCount"),
+    complete: t.exposeBoolean("complete"),
+  }),
+});
+
 const MyDayRef = builder.objectRef<MyDayResult>("MyDay").implement({
   description:
     "The caller's day at a glance (UX-4): own routine periods for the date (cover-overlaid, " +
-    "view-enriched), summed homework work counts, and whether attendance marking is pending.",
+    "view-enriched), summed homework work counts, whether attendance marking is pending, the " +
+    "red backlog alerts (D-#279), and — for Principal/Office — the per-class presence snapshot.",
   fields: (t) => ({
     date: t.exposeString("date"),
     dayType: t.exposeString("dayType"),
@@ -34,6 +80,13 @@ const MyDayRef = builder.objectRef<MyDayResult>("MyDay").implement({
     }),
     homework: t.field({ type: MyDayHomeworkRef, resolve: (r) => r.homework }),
     attendancePending: t.exposeBoolean("attendancePending"),
+    alerts: t.field({ type: [PendingAlertRef], resolve: (r) => r.alerts }),
+    assignmentPrep: t.field({
+      type: AssignmentPrepRef,
+      nullable: true,
+      resolve: (r) => r.assignmentPrep,
+    }),
+    classPresence: t.field({ type: [ClassPresenceRef], resolve: (r) => r.classPresence }),
   }),
 });
 

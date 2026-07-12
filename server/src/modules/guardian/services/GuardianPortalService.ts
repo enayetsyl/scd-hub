@@ -26,6 +26,7 @@ import {
   type LifecycleState,
   type HwResult,
 } from "@scd/shared";
+import { StoredFile } from "../../platform/models/StoredFile";
 import { parseDateKey } from "../../attendance/dates";
 import { Guardian } from "../../foundation/models/Guardian";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
@@ -108,12 +109,21 @@ export interface GuardianClassNoteHomework {
   timeDecl: number;
 }
 
+/** A file the teacher attached to the note — the guardian taps to open it. */
+export interface GuardianClassNoteAttachment {
+  id: string;
+  name: string;
+  mime: string;
+}
+
 export interface GuardianClassNote {
   subject: RoutineSubject;
   subjectLabelBn: string;
   periodNumber: number | null;
   taughtSummaryBn: string;
   homework: GuardianClassNoteHomework | null;
+  /** Worksheets/handouts the teacher attached (guardian-readable follow-up). */
+  attachments: GuardianClassNoteAttachment[];
 }
 
 export interface GuardianHomeworkRecord {
@@ -388,6 +398,14 @@ export async function childClassNotes(studentId: string, date: Date): Promise<Gu
   const slots = await RoutineSlot.find({ _id: { $in: slotIds } }).lean();
   const periodBySlot = new Map(slots.map((s) => [s._id.toString(), s.periodNumber]));
 
+  // Attachment names/mimes in ONE batched load (the admin list uses the same shape).
+  const fileIds = [...new Set(notes.flatMap((n) => (n.attachmentIds ?? []).map((a) => a.toString())))];
+  const files =
+    fileIds.length > 0
+      ? await StoredFile.find({ _id: { $in: fileIds } }).select("originalName mime").lean()
+      : [];
+  const fileById = new Map(files.map((f) => [f._id.toString(), f]));
+
   const hwIds = [
     ...new Set(notes.filter((n) => n.homeworkItemId).map((n) => n.homeworkItemId!.toString())),
   ];
@@ -414,6 +432,10 @@ export async function childClassNotes(studentId: string, date: Date): Promise<Gu
             timeDecl: item.timeDecl,
           }
         : null,
+      attachments: (n.attachmentIds ?? []).map((a) => {
+        const f = fileById.get(a.toString());
+        return { id: a.toString(), name: f?.originalName ?? "file", mime: f?.mime ?? "" };
+      }),
     };
   });
 }

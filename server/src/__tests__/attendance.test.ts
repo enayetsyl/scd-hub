@@ -16,6 +16,10 @@ const mockDayCreate = jest.fn();
 const mockLeaveCreate = jest.fn();
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
 const mockResolveDayType = jest.fn();
+const mockClassFindById = jest.fn();
+const mockFirstPeriodTeacher = jest.fn();
+const mockFirstQuranSlotTeacher = jest.fn();
+const mockRosterForUnit = jest.fn();
 
 jest.mock("../modules/foundation/models/Section", () => ({
   Section: { findById: (id: unknown) => ({ lean: () => mockSectionFindById(id) }) },
@@ -47,16 +51,31 @@ jest.mock("../modules/attendance/models/StudentLeaveApplication", () => ({
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
 }));
+jest.mock("../modules/foundation/models/Class", () => ({
+  Class: { findById: (id: unknown) => ({ select: () => ({ lean: () => mockClassFindById(id) }) }) },
+}));
 jest.mock("../modules/routine/calendar", () => ({
   resolveDayType: (d: Date) => mockResolveDayType(d),
+}));
+// The routine-derived halves of D-#278 are exercised in attendanceUnit.test.ts; here
+// they are seams so the marker precedence + roster gate can be tested in isolation.
+jest.mock("../modules/attendance/attendanceUnit", () => ({
+  isNurseryKg: (level: number) => level <= 0,
+  unitKey: (u: { unitType: string; unitId: string }) => `${u.unitType}:${u.unitId}`,
+  firstPeriodTeacher: (...a: unknown[]) => mockFirstPeriodTeacher(...a),
+  firstQuranSlotTeacher: (...a: unknown[]) => mockFirstQuranSlotTeacher(...a),
+  rosterForUnit: (...a: unknown[]) => mockRosterForUnit(...a),
 }));
 
 import {
   pickCoveringAssignment,
   markerForDate,
+  markerForUnit,
   assignSectionMarker,
   markSectionAttendance,
+  markAttendanceUnit,
   amendStudentAttendance,
+  myMarkingUnits,
   AttendanceError,
 } from "../modules/attendance/services/StudentAttendanceService";
 import {
@@ -72,6 +91,7 @@ const TEACHER = new mongoose.Types.ObjectId();
 const OTHER = new mongoose.Types.ObjectId();
 const STUDENT_A = new mongoose.Types.ObjectId();
 const STUDENT_B = new mongoose.Types.ObjectId();
+const QURAN_GROUP = new mongoose.Types.ObjectId();
 const ACTOR = new mongoose.Types.ObjectId().toString();
 
 const teacherCtx = (userId: string): AppContext =>
@@ -83,9 +103,18 @@ const selectLean = (v: unknown) => ({
   lean: () => Promise.resolve(v),
 });
 
+/** A roster entry as `rosterForUnit` returns it. */
+const rosterOf = (...ids: mongoose.Types.ObjectId[]) =>
+  ids.map((id) => ({ id: id.toString(), sectionId: SECTION.toString(), classId: "class-3" }));
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockResolveDayType.mockResolvedValue("FULL");
+  // Default world: a Class 1–5 section (level 3) → class-teacher fallback marker.
+  mockClassFindById.mockResolvedValue({ level: 3 });
+  mockFirstPeriodTeacher.mockResolvedValue(null);
+  mockFirstQuranSlotTeacher.mockResolvedValue(null);
+  mockRosterForUnit.mockResolvedValue([]);
 });
 
 // ---------------------------------------------------------------------------
@@ -138,6 +167,147 @@ describe("markerForDate — override else class teacher (AT2.2)", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// D-#278 — the marker is the FIRST-CLASS teacher (routine-derived, cover-aware)
+// ---------------------------------------------------------------------------
+
+describe("markerForUnit — first class of the day (D-#278)", () => {
+  test("Nursery/KG section: the first-period teacher marks, beating the class teacher", async () => {
+    mockAssignFind.mockReturnValue(lean([]));
+    mockSectionFindById.mockResolvedValue({ _id: SECTION, classId: "class-kg", classTeacherId: TEACHER });
+    mockClassFindById.mockResolvedValue({ level: 0 }); // KG
+    mockFirstPeriodTeacher.mockResolvedValue(OTHER.toString());
+
+    expect(await markerForUnit({ unitType: "section", unitId: SECTION.toString() }, "2026-06-11")).toEqual({
+      teacherId: OTHER.toString(),
+      source: "routine",
+    });
+  });
+
+  test("Nursery/KG section: falls back to the class teacher when the routine names nobody", async () => {
+    mockAssignFind.mockReturnValue(lean([]));
+    mockSectionFindById.mockResolvedValue({ _id: SECTION, classId: "class-nursery", classTeacherId: TEACHER });
+    mockClassFindById.mockResolvedValue({ level: -1 }); // Nursery
+    mockFirstPeriodTeacher.mockResolvedValue(null);
+
+    expect(await markerForUnit({ unitType: "section", unitId: SECTION.toString() }, "2026-06-11")).toEqual({
+      teacherId: TEACHER.toString(),
+      source: "class_teacher",
+    });
+  });
+
+  test("Class 1–5 section unit keeps the class teacher (it holds only Quran-group-less leftovers)", async () => {
+    mockAssignFind.mockReturnValue(lean([]));
+    mockSectionFindById.mockResolvedValue({ _id: SECTION, classId: "class-3", classTeacherId: TEACHER });
+    mockClassFindById.mockResolvedValue({ level: 3 });
+
+    expect(await markerForUnit({ unitType: "section", unitId: SECTION.toString() }, "2026-06-11")).toEqual({
+      teacherId: TEACHER.toString(),
+      source: "class_teacher",
+    });
+    expect(mockFirstPeriodTeacher).not.toHaveBeenCalled(); // 1–5 never uses first-period
+  });
+
+  test("Quran group: the first Quran period's teacher marks", async () => {
+    mockAssignFind.mockReturnValue(lean([]));
+    mockFirstQuranSlotTeacher.mockResolvedValue(TEACHER.toString());
+
+    expect(await markerForUnit({ unitType: "subjectgroup", unitId: QURAN_GROUP.toString() }, "2026-06-11")).toEqual({
+      teacherId: TEACHER.toString(),
+      source: "routine",
+    });
+  });
+
+  test("Quran group: null when the routine names nobody — no class-teacher fallback exists", async () => {
+    mockAssignFind.mockReturnValue(lean([]));
+    mockFirstQuranSlotTeacher.mockResolvedValue(null);
+
+    expect(await markerForUnit({ unitType: "subjectgroup", unitId: QURAN_GROUP.toString() }, "2026-06-11")).toEqual({
+      teacherId: null,
+      source: null,
+    });
+    expect(mockSectionFindById).not.toHaveBeenCalled();
+  });
+
+  test("an admin override beats the routine on either unit shape", async () => {
+    mockAssignFind.mockReturnValue(
+      lean([{ teacherId: OTHER, fromKey: "2026-06-11", toKey: "2026-06-11", createdAt: new Date() }]),
+    );
+    expect(await markerForUnit({ unitType: "subjectgroup", unitId: QURAN_GROUP.toString() }, "2026-06-11")).toEqual({
+      teacherId: OTHER.toString(),
+      source: "assignment",
+    });
+    expect(mockFirstQuranSlotTeacher).not.toHaveBeenCalled();
+  });
+});
+
+describe("myMarkingUnits — calendar guard (AT4.1)", () => {
+  test.each(["HOLIDAY", "OFF", "QURAN_ONLY"])(
+    "a %s day yields an empty worklist — no nag for a mark the write path would reject",
+    async (dayType) => {
+      mockResolveDayType.mockResolvedValue(dayType);
+      expect(await myMarkingUnits(TEACHER.toString(), "2026-06-11")).toEqual([]);
+      // Short-circuits before touching assignments/sections at all.
+      expect(mockAssignFind).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("markAttendanceUnit — Quran-group capture (D-#278)", () => {
+  const NOW = new Date(2026, 5, 11, 8, 0); // Thu 2026-06-11, a FULL day
+  const asGroupMarker = (): void => {
+    mockAssignFind.mockReturnValue(lean([]));
+    mockFirstQuranSlotTeacher.mockResolvedValue(TEACHER.toString());
+  };
+
+  test("the group's first-Quran teacher writes its absentees", async () => {
+    asGroupMarker();
+    mockRosterForUnit.mockResolvedValue(rosterOf(STUDENT_A, STUDENT_B));
+    mockDayFindOne.mockResolvedValue(null);
+    mockDayCreate.mockImplementation((d) => Promise.resolve({ _id: new mongoose.Types.ObjectId(), ...d }));
+
+    const day = await markAttendanceUnit(
+      teacherCtx(TEACHER.toString()),
+      { unitType: "subjectgroup", unitId: QURAN_GROUP.toString() },
+      "2026-06-11",
+      [STUDENT_A.toString()],
+      NOW,
+    );
+    expect(day.absentStudentIds).toHaveLength(1);
+    // Stored against the GROUP, never a section (§7 shaping).
+    const created = mockDayCreate.mock.calls[0][0] as { subjectGroupId?: unknown; sectionId?: unknown };
+    expect(created.subjectGroupId).toBeDefined();
+    expect(created.sectionId).toBeUndefined();
+  });
+
+  test("an absentee outside the group's roster is rejected", async () => {
+    asGroupMarker();
+    mockRosterForUnit.mockResolvedValue(rosterOf(STUDENT_A)); // B is not a member
+    await expect(
+      markAttendanceUnit(
+        teacherCtx(TEACHER.toString()),
+        { unitType: "subjectgroup", unitId: QURAN_GROUP.toString() },
+        "2026-06-11",
+        [STUDENT_B.toString()],
+        NOW,
+      ),
+    ).rejects.toThrow(AttendanceError);
+  });
+
+  test("a teacher who does not open the group's first Quran period is denied", async () => {
+    asGroupMarker();
+    await expect(
+      markAttendanceUnit(
+        teacherCtx(OTHER.toString()),
+        { unitType: "subjectgroup", unitId: QURAN_GROUP.toString() },
+        "2026-06-11",
+        [],
+        NOW,
+      ),
+    ).rejects.toThrow(ForbiddenError);
+  });
+});
+
 describe("assignSectionMarker (AT2.1)", () => {
   test("validates the assignee is a TEACHER and audits the assignment", async () => {
     mockSectionFindById.mockResolvedValue({ _id: SECTION });
@@ -178,7 +348,7 @@ describe("markSectionAttendance", () => {
 
   test("the marker writes today's absent-only record (everyone else present)", async () => {
     asMarker();
-    mockStudentFind.mockReturnValue(selectLean([{ _id: STUDENT_A }]));
+    mockRosterForUnit.mockResolvedValue(rosterOf(STUDENT_A));
     mockDayFindOne.mockResolvedValue(null);
     mockDayCreate.mockImplementation((d) => Promise.resolve({ _id: new mongoose.Types.ObjectId(), ...d }));
 
@@ -204,7 +374,7 @@ describe("markSectionAttendance", () => {
 
   test("same-day re-mark overwrites (editable until end of day, O2)", async () => {
     asMarker();
-    mockStudentFind.mockReturnValue(selectLean([{ _id: STUDENT_B }]));
+    mockRosterForUnit.mockResolvedValue(rosterOf(STUDENT_B));
     const existing = {
       absentStudentIds: [STUDENT_A],
       markedBy: TEACHER,
@@ -263,7 +433,7 @@ describe("markSectionAttendance", () => {
 describe("amendStudentAttendance — Principal/Office unlock (O2)", () => {
   test("amends a past day with the amender stamped + audited", async () => {
     mockSectionFindById.mockResolvedValue({ _id: SECTION, classTeacherId: TEACHER });
-    mockStudentFind.mockReturnValue(selectLean([{ _id: STUDENT_A }]));
+    mockRosterForUnit.mockResolvedValue(rosterOf(STUDENT_A));
     mockDayFindOne.mockResolvedValue(null);
     mockDayCreate.mockImplementation((d) => Promise.resolve({ _id: new mongoose.Types.ObjectId(), ...d }));
 

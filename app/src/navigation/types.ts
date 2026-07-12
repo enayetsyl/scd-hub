@@ -101,9 +101,17 @@ export type RoutineStackParamList = {
   SectionPicker: undefined;
 };
 
+/** Print queue (PQ-3/PQ-4, D-#281) — role-aware: teachers see their own requests,
+ *  the Office works the queue. */
+export type PrintStackParamList = {
+  PrintHome: undefined;
+  NewPrintRequest: { setId?: string; contentArtifactId?: string; title?: string } | undefined;
+};
+
 export type AttendanceStackParamList = {
   AttendanceHome: undefined;
-  MarkAttendance: { sectionId: string; title: string; dateKey: string };
+  /** An attendance UNIT (D-#278): a Quran group (Class 1–5) or a Nursery/KG section. */
+  MarkAttendance: { unitType: string; unitId: string; title: string; dateKey: string };
   TeacherAttendanceImport: undefined;
   AttendanceReport: undefined;
   AssignMarker: undefined;
@@ -197,7 +205,6 @@ export type VocabStackParamList = {
 export type ClassTestStackParamList = {
   ClassTestHome: undefined;
   RequestClassTest: undefined;
-  ClassTestPrintQueue: undefined;
   ClassTestResults: { testId: string; title: string };
   ClassTestResultsView: { testId: string; title: string };
   ClassTestPublish: { testId: string; title: string };
@@ -293,6 +300,8 @@ export type TabParamList = {
   ReviewTab: NavigatorScreenParams<ReviewStackParamList>;
   RoutineTab: NavigatorScreenParams<RoutineStackParamList>;
   AttendanceTab: NavigatorScreenParams<AttendanceStackParamList>;
+  /** PQ-4 (D-#281) — the one print queue. */
+  PrintTab: NavigatorScreenParams<PrintStackParamList>;
   ClassNotesTab: NavigatorScreenParams<ClassNotesStackParamList>;
   LibraryTab: NavigatorScreenParams<LibraryStackParamList>;
   ChatTab: NavigatorScreenParams<ChatStackParamList>;

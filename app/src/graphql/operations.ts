@@ -2100,12 +2100,41 @@ export interface MyDayHomeworkT {
   openResubmissions: number;
   activeChases: number;
 }
+/** A red backlog alert (D-#279): work owed today OR on a previous school day.
+ *  `count` = pending DAYS for attendance/class_note, pending ITEMS for assignment_entry. */
+export interface PendingAlertT {
+  kind: string;
+  count: number;
+  oldestDateKey: string | null;
+}
+/** Principal/Office: per-class presence snapshot, rolled up from every attendance unit. */
+export interface ClassPresenceT {
+  classId: string;
+  classLevel: number;
+  classNameBn: string;
+  markedCount: number;
+  presentCount: number;
+  absentCount: number;
+  totalCount: number;
+  complete: boolean;
+}
+/** Countdown to having the assignment question ready (D-#280). `dueAt` is the school
+ *  day's start on the resolved delivery date; null once delivered or once overdue. */
+export interface AssignmentPrepT {
+  dueAt: string;
+  deliveryDateKey: string;
+  weekNumber: number;
+  items: number;
+}
 export interface MyDayT {
   date: string;
   dayType: string;
   slots: RoutineSlotT[];
   homework: MyDayHomeworkT;
   attendancePending: boolean;
+  alerts: PendingAlertT[];
+  assignmentPrep: AssignmentPrepT | null;
+  classPresence: ClassPresenceT[];
 }
 export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
   query MyDay($date: String!) {
@@ -2115,6 +2144,11 @@ export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
       slots { ${ROUTINE_SLOT_FIELDS} }
       homework { pendingChecking openResubmissions activeChases }
       attendancePending
+      alerts { kind count oldestDateKey }
+      assignmentPrep { dueAt deliveryDateKey weekNumber items }
+      classPresence {
+        classId classLevel classNameBn markedCount presentCount absentCount totalCount complete
+      }
     }
   }
 `;
@@ -2345,6 +2379,14 @@ export const CHILD_ROUTINE_QUERY = gql<
   }
 `;
 
+/** A worksheet/handout the teacher attached to the note. Bytes stream through
+ *  GET /files/:id; the gate checks the guardian has a child in the note's group. */
+export interface GuardianClassNoteAttachmentT {
+  id: string;
+  name: string;
+  mime: string;
+}
+
 export interface GuardianClassNoteT {
   subject: string;
   subjectLabelBn: string;
@@ -2357,6 +2399,7 @@ export interface GuardianClassNoteT {
     qCount: number;
     timeDecl: number;
   } | null;
+  attachments: GuardianClassNoteAttachmentT[];
 }
 
 export const CHILD_CLASS_NOTES_QUERY = gql<
@@ -2367,6 +2410,7 @@ export const CHILD_CLASS_NOTES_QUERY = gql<
     childClassNotes(studentId: $studentId, date: $date) {
       subject subjectLabelBn periodNumber taughtSummaryBn
       homework { hwId subject subjectLabelBn qCount timeDecl }
+      attachments { id name mime }
     }
   }
 `;
@@ -2864,24 +2908,57 @@ export const TEACHER_ATTENDANCE_SUMMARY = gql<
   }
 `;
 
-export interface MarkingSectionT {
+/** An attendance UNIT the caller must mark (D-#278): their Quran group (Class 1–5)
+ *  or their Nursery/KG section. The label already reads class/section-style. */
+export interface MarkingUnitT {
+  unitType: string;
+  unitId: string;
+  label: string;
+  marked: boolean;
+  viaAssignment: boolean;
+  source: string | null;
+  studentCount: number;
+  classLevel: number;
+}
+
+export const MY_MARKING_UNITS = gql<
+  { myMarkingUnits: MarkingUnitT[] },
+  { dateKey: string }
+>`
+  query MyMarkingUnits($dateKey: String!) {
+    myMarkingUnits(dateKey: $dateKey) {
+      unitType unitId label marked viaAssignment source studentCount classLevel
+    }
+  }
+`;
+
+export interface RosterStudentT {
+  studentId: string;
+  name: string;
+  nameBn: string | null;
+  rollNumber: string | null;
+  schoolId: string;
+}
+
+/** The unit's roster, bucketed under each student's own class/section — display
+ *  stays class/section even for a cross-section Quran group (D-#278). */
+export interface RosterSectionT {
   sectionId: string;
   sectionCode: string;
   sectionNameBn: string;
   classLevel: number;
   classNameBn: string;
-  marked: boolean;
-  viaAssignment: boolean;
-  studentCount: number;
+  students: RosterStudentT[];
 }
 
-export const MY_MARKING_SECTIONS = gql<
-  { myMarkingSections: MarkingSectionT[] },
-  { dateKey: string }
+export const ATTENDANCE_UNIT_ROSTER = gql<
+  { attendanceUnitRoster: RosterSectionT[] },
+  { unitType: string; unitId: string; dateKey: string }
 >`
-  query MyMarkingSections($dateKey: String!) {
-    myMarkingSections(dateKey: $dateKey) {
-      sectionId sectionCode sectionNameBn classLevel classNameBn marked viaAssignment studentCount
+  query AttendanceUnitRoster($unitType: String!, $unitId: String!, $dateKey: String!) {
+    attendanceUnitRoster(unitType: $unitType, unitId: $unitId, dateKey: $dateKey) {
+      sectionId sectionCode sectionNameBn classLevel classNameBn
+      students { studentId name nameBn rollNumber schoolId }
     }
   }
 `;
@@ -2919,9 +2996,34 @@ export const MARK_SECTION_ATTENDANCE = gql<
   }
 `;
 
+export const ATTENDANCE_UNIT_DAY = gql<
+  { attendanceUnitDay: StudentAttendanceDayT | null },
+  { unitType: string; unitId: string; dateKey: string }
+>`
+  query AttendanceUnitDay($unitType: String!, $unitId: String!, $dateKey: String!) {
+    attendanceUnitDay(unitType: $unitType, unitId: $unitId, dateKey: $dateKey) {
+      id sectionId dateKey absentStudentIds markedBy markedAt amendedBy amendedAt
+    }
+  }
+`;
+
+export const MARK_ATTENDANCE_UNIT = gql<
+  { markAttendanceUnit: StudentAttendanceDayT },
+  { unitType: string; unitId: string; dateKey: string; absentStudentIds: string[] }
+>`
+  mutation MarkAttendanceUnit($unitType: String!, $unitId: String!, $dateKey: String!, $absentStudentIds: [String!]!) {
+    markAttendanceUnit(unitType: $unitType, unitId: $unitId, dateKey: $dateKey, absentStudentIds: $absentStudentIds) {
+      id sectionId dateKey absentStudentIds markedBy markedAt amendedBy amendedAt
+    }
+  }
+`;
+
 export interface MarkerAssignmentT {
   id: string;
-  sectionId: string;
+  /** Null when the override targets a Quran group instead of a section (D-#278). */
+  sectionId: string | null;
+  subjectGroupId: string | null;
+  subjectGroupNameBn: string | null;
   teacherId: string;
   teacherName: string | null;
   classLevel: number | null;
@@ -2934,7 +3036,7 @@ export interface MarkerAssignmentT {
 }
 
 const MARKER_ASSIGNMENT_FIELDS =
-  "id sectionId teacherId teacherName classLevel sectionCode sectionNameBn classNameBn fromKey toKey active";
+  "id sectionId subjectGroupId subjectGroupNameBn teacherId teacherName classLevel sectionCode sectionNameBn classNameBn fromKey toKey active";
 
 export const ASSIGN_SECTION_MARKER = gql<
   { assignSectionMarker: MarkerAssignmentT },
@@ -3002,6 +3104,15 @@ export const ABSENTEE_REPORT = gql<{ absenteeReport: ClassAbsenteesT[] }, { date
   }
 `;
 
+/** A still-unmarked unit — for a Class 1–5 section these are its Quran GROUPS. */
+export interface PendingAttendanceUnitT {
+  unitType: string;
+  unitId: string;
+  label: string;
+  markerTeacherId: string | null;
+  markerName: string | null;
+}
+
 export interface UnmarkedSectionT {
   sectionId: string;
   sectionCode: string;
@@ -3010,12 +3121,14 @@ export interface UnmarkedSectionT {
   classNameBn: string;
   markerTeacherId: string | null;
   markerName: string | null;
+  pendingUnits: PendingAttendanceUnitT[];
 }
 
 export const UNMARKED_SECTIONS = gql<{ unmarkedSections: UnmarkedSectionT[] }, { dateKey: string }>`
   query UnmarkedSections($dateKey: String!) {
     unmarkedSections(dateKey: $dateKey) {
       sectionId sectionCode sectionNameBn classLevel classNameBn markerTeacherId markerName
+      pendingUnits { unitType unitId label markerTeacherId markerName }
     }
   }
 `;

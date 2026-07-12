@@ -10,17 +10,22 @@ import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { HW_SUBJECTS } from "@scd/shared";
+import {
+  HW_SUBJECTS,
+  PRINT_COLOURS,
+  PRINT_COLOUR_LABELS_EN,
+  PRINT_SIDES,
+  PRINT_SIDES_LABELS_EN,
+} from "@scd/shared";
 import {
   CREATE_CLASS_TEST_REQUEST,
   SUGGEST_CLASS_TEST_NUMBER_QUERY,
 } from "../../graphql/classTest";
-import { ASSESSMENT_SETS_QUERY } from "../../graphql/operations";
+import { ASSESSMENT_SETS_QUERY, ACADEMIC_YEARS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Field, Chip, Select } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { MoreOptions } from "../../components/MoreOptions";
 import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
-import { AcademicYearSelect } from "../../components/selects";
 import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { required } from "../../lib/validate";
@@ -33,11 +38,21 @@ type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
 
 export default function RequestClassTestScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
-  const [yearId, setYearId] = useState("");
+  // The academic year is NOT a question we ask the teacher — the admin already marked one
+  // current, and a class test can only ever be filed against it. Picking it by hand was a
+  // way to file against the wrong year, not a feature (live-testing find).
+  const [yearsQ] = useQuery({ query: ACADEMIC_YEARS_QUERY });
+  const years = yearsQ.data?.academicYears ?? [];
+  const yearId = (years.find((y) => y.current) ?? years[0])?.id ?? "";
+
   const [section, setSection] = useState<SectionPick | null>(null);
   const [subject, setSubject] = useState<string | null>(null);
   const [source, setSource] = useState<"POOL_SET" | "UPLOADED_PAPER">("POOL_SET");
   const [setId, setSetId] = useState("");
+  // A class test IS a print job, so the Office needs the same two answers here as on any
+  // other request: how to print it. Mandatory, nothing pre-selected.
+  const [colour, setColour] = useState<string | null>(null);
+  const [sides, setSides] = useState<string | null>(null);
   // UX-3: the happy path picks an assembled set from a list; the typed-ID field is
   // an advanced escape hatch for a set the list doesn't surface.
   const [manualSetEntry, setManualSetEntry] = useState(false);
@@ -124,6 +139,8 @@ export default function RequestClassTestScreen(): React.ReactElement {
         value: Number.isFinite(total) && total >= 1 ? total : null,
         message: `${STR.ctTotalMarks} — ${STR.fieldRequired}`,
       },
+      colour: { value: colour, message: `${STR.prColour} — ${STR.fieldRequired}` },
+      sides: { value: sides, message: `${STR.prSides} — ${STR.fieldRequired}` },
       ...(source === "POOL_SET"
         ? { setId: { value: setId.trim(), message: `${STR.ctSetId} — ${STR.fieldRequired}` } }
         : { paper: { value: paper, message: `${STR.ctUploadPaper} — ${STR.fieldRequired}` } }),
@@ -143,6 +160,8 @@ export default function RequestClassTestScreen(): React.ReactElement {
       source,
       setId: source === "POOL_SET" ? setId.trim() : null,
       questionFileId: source === "UPLOADED_PAPER" ? (paper?.fileId ?? null) : null,
+      colour,
+      sides,
       testNumber: testNumber.trim() ? Number(testNumber) : null,
       deadlineDays: deadlineDays.trim() ? Number(deadlineDays) : null,
       notes: notes.trim() || null,
@@ -163,8 +182,13 @@ export default function RequestClassTestScreen(): React.ReactElement {
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.ctNewRequest}</Body>
-          <AcademicYearSelect value={yearId} onChange={setYearId} />
-          {yearId ? <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} /> : null}
+          {yearId ? (
+            <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} />
+          ) : (
+            // No current year = nothing can be filed. SAY so — a blank form with no
+            // explanation is how this codebase has hidden config gaps before.
+            <Muted>{yearsQ.fetching ? STR.loading : STR.noCurrentYear}</Muted>
+          )}
           <Select
             label={STR.ctSubject}
             value={subject}
@@ -204,9 +228,39 @@ export default function RequestClassTestScreen(): React.ReactElement {
                 onPress={onUpload}
                 loading={uploadBusy}
               />
-              {paper ? <Muted style={{ marginTop: space(1) }}>{STR.ctPaperUploaded}: {paper.name}</Muted> : null}
+              {/* Attaching the wrong paper was previously unrecoverable — the only way out
+                  was to abandon the form. */}
+              {paper ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: space(2) }}>
+                  <Muted style={{ flex: 1 }}>
+                    {STR.ctPaperUploaded}: {paper.name}
+                  </Muted>
+                  <Button title={STR.prRemove} variant="danger" onPress={() => setPaper(null)} />
+                </View>
+              ) : null}
             </View>
           )}
+
+          {/* How to print it — the same two answers every other print job carries. */}
+          <View style={{ marginTop: space(3) }}>
+            <Body style={{ fontWeight: "700" }}>{STR.prColour} *</Body>
+            <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+              {PRINT_COLOURS.map((c) => (
+                <Chip key={c} label={PRINT_COLOUR_LABELS_EN[c]} selected={colour === c} onPress={() => setColour(c)} />
+              ))}
+            </View>
+            {fieldErrors.colour ? <Muted style={{ marginTop: space(1) }}>{fieldErrors.colour}</Muted> : null}
+          </View>
+
+          <View style={{ marginTop: space(3) }}>
+            <Body style={{ fontWeight: "700" }}>{STR.prSides} *</Body>
+            <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+              {PRINT_SIDES.map((sd) => (
+                <Chip key={sd} label={PRINT_SIDES_LABELS_EN[sd]} selected={sides === sd} onPress={() => setSides(sd)} />
+              ))}
+            </View>
+            {fieldErrors.sides ? <Muted style={{ marginTop: space(1) }}>{fieldErrors.sides}</Muted> : null}
+          </View>
 
           <DateField label={STR.ctExamDate} value={examDate} onChange={setExamDate} error={fieldErrors.examDate} />
           <Field label={STR.ctTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" error={fieldErrors.totalMarks} />
