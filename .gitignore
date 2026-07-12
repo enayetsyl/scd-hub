@@ -60,3 +60,6 @@ Thumbs.db
 # must be present in worktree checkouts); local overrides + worktrees stay out.
 .claude/*
 !.claude/settings.json
+
+# ---- Local-only operator notes (VM access etc. — IP/creds never commit, deployment §0) ----
+*.local.md
