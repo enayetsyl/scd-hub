@@ -20,6 +20,8 @@ const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
 const mockSetFindById = jest.fn();
 const mockArtifactFindById = jest.fn();
 const mockStoredFileFind = jest.fn();
+const mockEmitDelivered = jest.fn().mockResolvedValue(undefined);
+const mockClassTestUpdateOne = jest.fn().mockResolvedValue({});
 
 jest.mock("../modules/printing/models/PrintRequest", () => ({
   PrintRequest: {
@@ -39,6 +41,14 @@ jest.mock("../modules/content/models/ContentArtifact", () => ({
 }));
 jest.mock("../modules/platform/models/StoredFile", () => ({
   StoredFile: { find: (f: unknown) => ({ select: () => ({ lean: () => mockStoredFileFind(f) }) }) },
+}));
+// PQ-5: delivering notifies the requester (best-effort; must never block the transition).
+jest.mock("../modules/notifications/services/emitters", () => ({
+  emitPrintDelivered: (e: unknown) => mockEmitDelivered(e),
+}));
+// PQ-5: advancing a class-test queue row mirrors onto the linked ClassTest.
+jest.mock("../modules/trackers/models/ClassTest", () => ({
+  ClassTest: { updateOne: (q: unknown, u: unknown) => mockClassTestUpdateOne(q, u) },
 }));
 
 import {
@@ -62,6 +72,8 @@ interface DocStub {
   status: string;
   requestedBy: mongoose.Types.ObjectId;
   save: jest.Mock;
+  title?: string;
+  classTestId?: mongoose.Types.ObjectId;
   cancelReason?: string;
   printedAt?: Date;
   deliveredAt?: Date;
@@ -88,6 +100,8 @@ beforeEach(() => {
   mockSetFindById.mockResolvedValue({ status: "assembled" });
   mockArtifactFindById.mockResolvedValue({ docType: "session_plan" });
   mockStoredFileFind.mockResolvedValue([]);
+  mockEmitDelivered.mockResolvedValue(undefined);
+  mockClassTestUpdateOne.mockResolvedValue({});
 });
 
 describe("isPrintableUrl", () => {
@@ -214,14 +228,24 @@ describe("the status machine: REQUESTED → PRINTED → DELIVERED", () => {
     );
   });
 
-  test("markDelivered advances a PRINTED job", async () => {
-    const doc = docStub({ status: "PRINTED" });
+  test("markDelivered advances a PRINTED job and notifies the requester (PQ-5)", async () => {
+    const doc = docStub({ status: "PRINTED", title: "Class 3 Math worksheet" });
     mockFindById.mockResolvedValue(doc);
     await markDelivered(doc._id.toString(), OFFICE);
     expect(doc.status).toBe("DELIVERED");
     expect(mockWriteAudit).toHaveBeenCalledWith(
       expect.objectContaining({ eventKind: "PRINT_REQUEST_DELIVERED" }),
     );
+    // The requesting teacher is told — the Office is the single actor, no receipt step.
+    expect(mockEmitDelivered).toHaveBeenCalledWith(
+      expect.objectContaining({ requestedBy: TEACHER, title: "Class 3 Math worksheet" }),
+    );
+  });
+
+  test("only DELIVERED notifies — printing does not", async () => {
+    mockFindById.mockResolvedValue(docStub());
+    await markPrinted("id", OFFICE);
+    expect(mockEmitDelivered).not.toHaveBeenCalled();
   });
 
   test("a REQUESTED job cannot skip straight to DELIVERED", async () => {
@@ -239,6 +263,57 @@ describe("the status machine: REQUESTED → PRINTED → DELIVERED", () => {
   test("a missing job rejects", async () => {
     mockFindById.mockResolvedValue(null);
     await expect(markPrinted("nope", OFFICE)).rejects.toThrow(/not found/);
+  });
+});
+
+describe("PQ-5 — a class-test job mirrors onto its ClassTest", () => {
+  const CT = oid();
+
+  test("marking the queue row PRINTED advances the linked ClassTest + audits it", async () => {
+    const doc = docStub({ classTestId: CT });
+    mockFindById.mockResolvedValue(doc);
+    await markPrinted(doc._id.toString(), OFFICE);
+
+    expect(mockClassTestUpdateOne).toHaveBeenCalledWith(
+      { _id: CT, status: "REQUESTED" }, // guarded, so a mirrored write cannot double-apply
+      expect.objectContaining({ $set: expect.objectContaining({ status: "PRINTED" }) }),
+    );
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventKind: "CLASS_TEST_PRINTED", targetKind: "ClassTest" }),
+    );
+  });
+
+  test("cancelling the queue row cancels the linked ClassTest", async () => {
+    const doc = docStub({ classTestId: CT });
+    mockFindById.mockResolvedValue(doc);
+    await cancelPrintRequest(doc._id.toString(), OFFICE, { isOffice: true });
+    expect(mockClassTestUpdateOne).toHaveBeenCalledWith(
+      { _id: CT, status: "REQUESTED" },
+      expect.objectContaining({ $set: expect.objectContaining({ status: "CANCELLED" }) }),
+    );
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventKind: "CLASS_TEST_CANCELLED", targetKind: "ClassTest" }),
+    );
+  });
+
+  test("an ordinary job (no classTestId) never touches ClassTest", async () => {
+    mockFindById.mockResolvedValue(docStub());
+    await markPrinted("id", OFFICE);
+    expect(mockClassTestUpdateOne).not.toHaveBeenCalled();
+  });
+
+  test("a trusted internal create skips source resolution (a class-test paper is not a print_upload)", async () => {
+    await createPrintRequest({
+      ...baseInput,
+      sourceType: "UPLOAD",
+      setId: null,
+      fileIds: [oid().toString()],
+      classTestId: CT.toString(),
+      trusted: true,
+    });
+    expect(mockStoredFileFind).not.toHaveBeenCalled();
+    const created = mockCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(created.classTestId).toBeDefined();
   });
 });
 

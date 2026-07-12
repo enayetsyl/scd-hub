@@ -53,6 +53,9 @@ export interface IClassTest extends Document {
   status: ClassTestStatus;
   /** School-days after examDate before the report is due (CT-2 derives it). */
   deadlineDays: number;
+  /** The queue row this test's PRINTING is tracked on (PQ-5, D-#281). The Office
+   *  works the unified PrintRequest queue; this test's status mirrors it. */
+  printRequestId?: Types.ObjectId;
   requestedBy: Types.ObjectId;
   requestedAt: Date;
   printedBy?: Types.ObjectId;

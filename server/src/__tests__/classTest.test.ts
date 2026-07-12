@@ -53,9 +53,21 @@ jest.mock("../modules/trackers/models/ClassTest", () => ({
     findById: (id: unknown) => mockCtFindById(id),
     findOne: (q: unknown) => mockCtFindOne(q),
     find: (q: unknown) => mockCtFind(q),
+    updateOne: (q: unknown, u: unknown) => mockCtUpdateOne(q, u),
   },
 }));
+// PQ-5 (D-#281): a class test's printing now rides the unified PrintRequest queue, and
+// this legacy entry point mirrors its transitions onto the queue row.
+const mockCreatePrintRequest = jest.fn();
+const mockPrUpdateOne = jest.fn().mockResolvedValue({});
+jest.mock("../modules/printing/services/PrintRequestService", () => ({
+  createPrintRequest: (i: unknown) => mockCreatePrintRequest(i),
+}));
+jest.mock("../modules/printing/models/PrintRequest", () => ({
+  PrintRequest: { updateOne: (q: unknown, u: unknown) => mockPrUpdateOne(q, u) },
+}));
 
+const mockCtUpdateOne = jest.fn().mockResolvedValue({});
 const mockSectionFindById = jest.fn();
 jest.mock("../modules/foundation/models/Section", () => ({
   Section: { findById: (id: unknown) => mockSectionFindById(id) },
@@ -144,6 +156,9 @@ const classtestFile = {
 };
 
 beforeEach(() => {
+  mockCtUpdateOne.mockResolvedValue({});
+  mockCreatePrintRequest.mockResolvedValue({ _id: "print-req-1" });
+  mockPrUpdateOne.mockResolvedValue({});
   jest.clearAllMocks();
   mockSeqUpdate.mockResolvedValue({ seq: 1 });
   mockSectionFindById.mockReturnValue(leanChain({ classId: CLASS_OID }));
@@ -325,6 +340,11 @@ describe("markPrinted / cancelRequest", () => {
     expect(doc.save).toHaveBeenCalled();
     expect(mockWriteAudit).toHaveBeenCalledWith(
       expect.objectContaining({ eventKind: "CLASS_TEST_PRINTED" }),
+    );
+    // PQ-5: this legacy entry point must not let the unified queue row drift.
+    expect(mockPrUpdateOne).toHaveBeenCalledWith(
+      { classTestId: doc._id, status: "REQUESTED" },
+      expect.objectContaining({ $set: expect.objectContaining({ status: "PRINTED" }) }),
     );
   });
 
