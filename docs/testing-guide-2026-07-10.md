@@ -5,15 +5,22 @@ deployed to the dev site. Nothing is in production yet (`main` is still at PR #1
 
 **Test on the dev site.** Run §0.1 (the migration) first — it is now due.
 
-## What round 1 settled
+## What rounds 1 and 2 already settled
 
-**Passed — do not retest:** 1 (class ordering) · 2c (cover hands over marking) ·
-2d (non-school days) · 2e (Office unmarked view) · 3a (teacher red card) ·
-5b (send an assembled set).
+**Passed — do not retest.**
 
-**Fixed in PR #188 — retest these (Part A):** 3b · 4 · 5a · 5c.
+| From | Passed |
+|---|---|
+| Round 1 | 1 (class ordering) · 2c (cover hands over marking) · 2d (non-school days) · 2e (Office unmarked view) · 3a (teacher red card) · 5b (send an assembled set) |
+| Round 2 | **A1** (Nursery/KG first-period teacher marks) · **A2** (assignment countdown) · **A3** (unmarked list names the Quran groups) · **A5** (mark-printed moves the job with no refresh) |
+| Round 2 · §0.3 | **Bug 2 is closed.** You ran the diagnostic and it passed — the legacy overrides were not defeating the routine after all. **§0.3 is done; do not run it again.** |
 
-**Still open — needs one command from you (Part 0.3):** 2 (Nursery/KG marker).
+**Still to confirm — that is what this round is for:**
+
+- **Part A** — only **A4** and **A6** are left (never reported either way).
+- **Part B** — the class-test absorption. **Never tested** (it wasn't on `dev`). **Run §0.1 first.**
+- **Part C** — the three deferred features. **Never tested** (also wasn't on `dev`).
+- **Part D** — the five fixes from your round-2 report. **New.**
 
 **Dropped by decision:** the Quran option in Admin → Proxy grants. A `ScopeGrant` is
 keyed `class + section + subject`, and a Quran group is cross-section with **no
@@ -58,78 +65,29 @@ Problems: 0`. **Problems > 0** → read the WARN lines (a class test with a miss
 | **Class 1–5 attendance** — Quran memberships (`subjectgroupmemberships`, `track:"quran"`) | 1–5 students fall back to their **section**, marked by the class teacher. *Designed fallback, not a bug* — but you won't be exercising the Quran path. |
 | **Assignment countdown** — an `AssignmentSchedule` | Stays silent by design. **The academic-year half of this is now fixed** — see A2. |
 
-### 0.3 🔴 Run this first — it decides bug 2
+### 0.3 ✅ Bug 2 — closed, nothing to run
 
-Round 1 found: *"in Nursery and KG only the assigned teacher can give attendance, not the
-first-period teacher."*
+Round 1 found *"in Nursery and KG only the assigned teacher can mark, not the first-period
+teacher."* The theory was that legacy `SectionAttendanceAssignment` overrides were beating
+the routine (marker resolution is **override → routine → class-teacher**, and an override
+always wins). **You ran the diagnostic and it passed** — so that was not it, and **A1
+passed** on the next round. Nothing here needs running.
 
-Marker resolution is **override → routine → class-teacher**. Before D-#278, *an admin
-assigning a marker was the normal path* — and **an override always wins**. Those legacy
-rows are almost certainly defeating the new rule.
-
-```bash
-npx tsx server/scripts/diag-attendance-markers.ts     # READ-ONLY, writes nothing
-```
-
-Read the `=> MARKER:` line for each Nursery/KG section:
-
-| Output | Meaning | Do this |
-|---|---|---|
-| `=> MARKER: OVERRIDE -> <name>` | **Confirmed.** Legacy rows are winning. | run the revoke below, then retest **A1** |
-| `=> MARKER: ROUTINE -> <name>` | The routine already wins — bug 2 is something else | **send me the output**; do not run the revoke |
-| `=> MARKER: CLASSTCHR -> …` and `routine P1 teacher: (none)` | N/KG has no routine slot with a teacher | **send me the output** — the fix is a different one |
-
-If and only if it says **OVERRIDE**:
+The two scripts remain if this ever resurfaces:
 
 ```bash
-npx tsx server/scripts/revoke-legacy-attendance-markers.ts            # dry-run
-npx tsx server/scripts/revoke-legacy-attendance-markers.ts --commit
+npx tsx server/scripts/diag-attendance-markers.ts        # READ-ONLY, writes nothing
+npx tsx server/scripts/revoke-legacy-attendance-markers.ts --commit   # only if diag says OVERRIDE
 ```
 
-It **deactivates, never deletes** (history preserved, ADR-008). Marking then falls to the
-routine's first-class teacher. Assignments you make *from now on* are untouched — the
-override remains a deliberate escape hatch.
+The revoke **deactivates, never deletes** (ADR-008). An admin-assigned marker stays a
+deliberate escape hatch — the fallback order is by design, not a bug.
 
 ---
 
-## Part A — the round-1 fixes (PR #188)
+## Part A — what's left of the round-1 fixes
 
-### A1 · Nursery/KG: the first-period teacher marks *(after §0.3)*
-
-1. Find who teaches **KG period 1** today (Routine → Master grid).
-2. Log in as that teacher → **Attendance**.
-
-✅ The KG section is in their worklist; they can mark it.
-✅ KG's **class teacher** does **not** see it in their worklist (they are the *fallback*),
-but **can** still open Attendance → Report for the section.
-
-> If this still fails after the revoke, §0.3 mis-diagnosed it — send me the diag output.
-
-### A2 · The assignment countdown appears *(was: silent)*
-
-**Root cause:** `AcademicYear.current` **defaults to `false`**. With no year flagged, the
-countdown *and* the overdue alert went silent. It now falls back to the year whose date
-range **covers today**.
-
-1. Log in as a teacher with an **undelivered** scheduled item this week → **Today**.
-
-✅ An **amber** row: `⏳ Prepare assignment question · 3d 4h left`, with `due: <date>`.
-✅ It **ticks** — leave it a minute; the time updates with no reload.
-✅ **Before 07:00 on delivery day** it is *still counting down*, **not** overdue.
-✅ At/after 07:00 still undelivered → it turns into the **red** "Assignment entry pending".
-✅ **Deliver the item** → the amber row disappears at once.
-
-> Still silent? Then you have no `AssignmentSchedule` at all (§0.2) — that is a separate,
-> deliberate silence, not this bug.
-
-### A3 · Unmarked list names the Quran group *(was: only the class)*
-
-**Office → Attendance → Report → Unmarked sections**, on a FULL day before marking.
-
-✅ A Class 1–5 row now lists its **🕌 Quran groups by name** (e.g. `হিফজ ৩`), each with
-its own marker — so you can see **which Quran teacher to chase**.
-✅ Nursery/KG rows name the section and its first-period teacher.
-✅ A section is complete only when **every** unit holding its students is marked.
+**A1 · A2 · A3 · A5 passed in round 2 — skip them.** Two remain.
 
 ### A4 · The Office can open a question set *(was: 403, nothing happened)*
 
@@ -143,15 +101,8 @@ references**.
 
 ✅ The question-set **PDF opens** (Bangla renders).
 ✅ **Cancel** that job → the Office can **no longer** open that set. Access is withdrawn
-with the job — the assessment plane stays shut.
-
-### A5 · "Mark printed" moves the job without a refresh *(was: needed F5)*
-
-**Office → Print.**
-
-✅ **Mark printed** → the job **immediately** appears under **Printing done** (no manual
-refresh).
-✅ **Mark delivered** → it moves to **Delivered** the same way.
+with the job — the assessment plane stays shut. *This is the half that matters; a working
+Open button with no withdrawal would be a permission leak.*
 
 ### A6 · The print request form *(new fields)*
 
@@ -290,16 +241,14 @@ the top of a long form — off-screen, so submitting looked like it silently did
 
 ## Sign-off
 
+This is the **last round before production.** Every box below is something no one has
+confirmed yet.
+
 **Part 0**
-- [ ] §0.3 diagnostic run; output understood (revoke run **only** if it said `OVERRIDE`)
 - [ ] §0.1 migration `--commit` run — **required before Part B**
 
-**Part A — the fixes**
-- [ ] A1 · N/KG first-period teacher can mark
-- [ ] A2 · countdown appears, ticks, and flips to red at 07:00
-- [ ] A3 · unmarked list names the 🕌 Quran groups
+**Part A — the two that are left**
 - [ ] A4 · Office opens a queued set; **cancel → access withdrawn**
-- [ ] A5 · Mark printed moves the job with **no manual refresh**
 - [ ] A6 · colour/sides refuse to submit unselected; spinner + Remove work
 
 **Part B — the class-test absorption**
@@ -315,7 +264,11 @@ the top of a long form — off-screen, so submitting looked like it silently did
 - [ ] D1 · a PDF **and** an image both open (one button per file)
 - [ ] D2 · Today and Attendance agree on what's unmarked
 - [ ] D3 · 🖨️ Send to print works from the plan page
+- [ ] D4 · the set's print title carries your name
 - [ ] D5 · a blank required field **toasts**
+
+**Then:** if this round is clean, the next step is the deliberate `dev → main` promotion
+PR. `dev` is ~18 commits ahead of production — say the word and I'll raise it.
 
 ---
 
@@ -328,3 +281,10 @@ the top of a long form — off-screen, so submitting looked like it silently did
 3. **Hard-refresh.** The web app persists navigation state; a stale bundle misleads.
 4. Report the **account + date + screen**, and the **network response** for the query
    involved. That triple is almost always enough.
+
+> A pattern worth knowing, because it explains three of the bugs you found: **this codebase
+> tends to go quiet rather than complain.** The countdown was silent because no
+> `AcademicYear` was flagged current; the Office's Open button did nothing because it was
+> 403'd; a submit looked like a no-op because the error was off-screen. If a feature does
+> *nothing*, that is a finding — report it exactly as "I clicked X and nothing happened."
+> That phrasing has been right every time.
