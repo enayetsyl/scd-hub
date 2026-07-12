@@ -27,6 +27,7 @@ import {
   type GuardianDay,
   type GuardianSlot,
   type GuardianClassNote,
+  type GuardianClassNoteAttachment,
   type GuardianClassNoteHomework,
   type GuardianHomeworkRecord,
   type GuardianAttendanceHistory,
@@ -112,6 +113,18 @@ const GuardianClassNoteHomeworkRef = builder
     }),
   });
 
+/** A guardian-readable class-note attachment. The bytes stream through GET /files/:id,
+ *  whose gate checks the guardian has a child in the note's group. */
+const GuardianClassNoteAttachmentRef = builder
+  .objectRef<GuardianClassNoteAttachment>("GuardianClassNoteAttachment")
+  .implement({
+    fields: (t) => ({
+      id: t.exposeString("id"),
+      name: t.exposeString("name"),
+      mime: t.exposeString("mime"),
+    }),
+  });
+
 const GuardianClassNoteRef = builder.objectRef<GuardianClassNote>("GuardianClassNote").implement({
   fields: (t) => ({
     subject: t.exposeString("subject"),
@@ -123,6 +136,7 @@ const GuardianClassNoteRef = builder.objectRef<GuardianClassNote>("GuardianClass
       nullable: true,
       resolve: (n) => n.homework,
     }),
+    attachments: t.field({ type: [GuardianClassNoteAttachmentRef], resolve: (n) => n.attachments }),
   }),
 });
 

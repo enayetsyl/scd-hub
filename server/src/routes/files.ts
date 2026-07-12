@@ -24,6 +24,7 @@ import type { Router, Request, Response } from "express";
 import express, { Router as createRouter } from "express";
 import multer from "multer";
 import { buildContext } from "../context";
+import { assertClassNoteFileReadAccess } from "../modules/routine/services/ClassNoteFileService";
 import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../middleware/authz";
 import {
@@ -595,9 +596,11 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
     } else if (file.kind === "classtest_question") {
       await assertClassTestFileReadAccess(ctx, file);
     } else if (file.kind === "classnote_attachment") {
-      // Class-note attachments are staff-readable (routine:read); guardian viewing is a follow-up.
+      // Staff read under routine:read. A GUARDIAN may read one too, but only an
+      // attachment on a note for a group their own child sits in — the file carries no
+      // back-reference, so the gate reverse-resolves the owning ClassNote.
       if (!callerHasPermission(ctx.auth, "routine:read")) {
-        throw new ForbiddenError(FILE_ERRORS_BN.forbidden);
+        await assertClassNoteFileReadAccess(ctx, file._id.toString());
       }
     } else if (file.kind === "print_upload") {
       // A print upload is readable by the teacher who sent it and by the Office/Principal

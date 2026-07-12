@@ -6,10 +6,11 @@
  * server-side (guardian:read_child + assertGuardianOfStudent).
  */
 import React from "react";
-import { ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useQuery } from "urql";
 import { DAYS_OF_WEEK } from "@scd/shared";
 import { CHILD_CLASS_NOTES_QUERY } from "../../graphql/operations";
+import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
 import { Screen, Body, Muted, Card, Loader, EmptyState } from "../../components/ui";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
@@ -55,6 +56,19 @@ function DayNotes({ studentId, date }: { studentId: string; date: string }): Rea
                 {bnNum(n.homework.timeDecl)} {STR.gpMinutes}
               </Muted>
             ) : null}
+            {/* Worksheets/handouts the teacher attached. FILE_VIEW_SUPPORTED is web-only;
+                elsewhere we still list them so the guardian knows they exist. */}
+            {n.attachments.map((a) => (
+              <Pressable
+                key={a.id}
+                onPress={() => (FILE_VIEW_SUPPORTED ? openStoredFile(a.id) : undefined)}
+                accessibilityRole={FILE_VIEW_SUPPORTED ? "button" : undefined}
+                accessibilityLabel={a.name}
+                style={({ pressed }) => [{ paddingVertical: space(1) }, pressed && { opacity: 0.7 }]}
+              >
+                <Muted>📎 {a.name}</Muted>
+              </Pressable>
+            ))}
           </View>
         ))
       )}

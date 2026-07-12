@@ -73,15 +73,19 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
     if (canRequest) refetchMine({ requestPolicy: "network-only" });
   };
 
-  /** Open the job's document the way its source demands. */
+  /** Open the job's document the way its source demands — every source is printable. */
   async function openSource(r: PrintRequestT): Promise<void> {
     if (r.sourceType === "SET" && r.setId) return openPdf(`/pdf/set/${r.setId}`);
+    // A plan is stored as markdown; `/pdf/artifact/:id` renders it through the same
+    // pdfkit + NotoSansBengali pipeline the question sets use.
+    if (r.sourceType === "CONTENT_ARTIFACT" && r.contentArtifactId) {
+      return openPdf(`/pdf/artifact/${r.contentArtifactId}`);
+    }
     if (r.sourceType === "UPLOAD" && r.fileIds.length > 0) return openStoredFile(r.fileIds[0]);
     if (r.sourceType === "LINK" && r.linkUrl) {
       await Linking.openURL(r.linkUrl);
       return;
     }
-    // A plan renders from markdown, not through the PDF route — send them to the viewer.
     toast.show(STR.prOpenPlanHint, "info");
   }
 
