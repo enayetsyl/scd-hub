@@ -15,7 +15,7 @@ import React, { useState } from "react";
 import { Linking, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission } from "@scd/shared";
+import { roleHasPermission, PRINT_COLOUR_LABELS_EN, PRINT_SIDES_LABELS_EN } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import {
   PRINT_QUEUE_QUERY,
@@ -57,12 +57,21 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
   const [bucket, setBucket] = useState<string>("REQUESTED");
   const [busy, setBusy] = useState(false);
 
+  // cache-and-network: advancing a job moves it BETWEEN buckets, so the destination
+  // tab's cached list is stale the moment we act. Without this, "Mark printed" left the
+  // Printing-done tab empty until a manual refresh (live-testing find).
   const [queueQ, refetchQueue] = useQuery({
     query: PRINT_QUEUE_QUERY,
     variables: { status: bucket },
     pause: !isOffice,
+    requestPolicy: "cache-and-network",
   });
-  const [mineQ, refetchMine] = useQuery({ query: MY_PRINT_REQUESTS_QUERY, variables: {}, pause: !canRequest });
+  const [mineQ, refetchMine] = useQuery({
+    query: MY_PRINT_REQUESTS_QUERY,
+    variables: {},
+    pause: !canRequest,
+    requestPolicy: "cache-and-network",
+  });
 
   const [, markPrinted] = useMutation(MARK_PRINT_REQUEST_PRINTED);
   const [, markDelivered] = useMutation(MARK_PRINT_REQUEST_DELIVERED);
@@ -105,6 +114,12 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
           <Muted>
             {r.purpose} · {bnNum(r.copies)} {STR.prCopiesShort}
             {r.neededByKey ? ` · ${STR.prNeededBy}: ${bnNum(r.neededByKey)}` : ""}
+          </Muted>
+          {/* The Office cannot start a job without knowing how to print it. */}
+          <Muted>
+            {r.colour === "COLOR" ? PRINT_COLOUR_LABELS_EN.COLOR : PRINT_COLOUR_LABELS_EN.BW}
+            {" · "}
+            {r.sides === "DOUBLE" ? PRINT_SIDES_LABELS_EN.DOUBLE : PRINT_SIDES_LABELS_EN.SINGLE}
           </Muted>
           {office && r.requesterName ? (
             <Muted>

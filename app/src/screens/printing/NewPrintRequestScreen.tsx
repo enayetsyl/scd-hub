@@ -14,7 +14,15 @@ import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation } from "urql";
-import { PRINT_PURPOSES, PRINT_PURPOSE_LABELS_EN, MAX_PRINT_UPLOADS } from "@scd/shared";
+import {
+  PRINT_PURPOSES,
+  PRINT_PURPOSE_LABELS_EN,
+  PRINT_COLOURS,
+  PRINT_COLOUR_LABELS_EN,
+  PRINT_SIDES,
+  PRINT_SIDES_LABELS_EN,
+  MAX_PRINT_UPLOADS,
+} from "@scd/shared";
 import { CREATE_PRINT_REQUEST } from "../../graphql/printing";
 import type { PrintStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Field, Chip, ChipRow, Button, Notice } from "../../components/ui";
@@ -23,6 +31,7 @@ import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { pickAndUploadPrintFile, FileUploadError } from "../../lib/files";
 import { useToast } from "../../state/ToastContext";
+import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<PrintStackParamList, "NewPrintRequest">;
@@ -39,8 +48,15 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
   // A set / plan arrives pre-selected from its own screen; otherwise the teacher picks.
   const presetSource = preset.setId ? "SET" : preset.contentArtifactId ? "CONTENT_ARTIFACT" : null;
 
-  const [title, setTitle] = useState(preset.title ?? "");
+  const { user } = useAuth();
+  // Autofill the title from the requesting teacher (live-testing ask) — still editable.
+  const [title, setTitle] = useState(
+    preset.title ?? (user?.name ? `${STR.prTitleFor} ${user.name}` : ""),
+  );
   const [purpose, setPurpose] = useState<string>("CLASSWORK");
+  const [colour, setColour] = useState<string | null>(null);
+  const [sides, setSides] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [sourceType, setSourceType] = useState<string>(presetSource ?? "UPLOAD");
   const [files, setFiles] = useState<Attached[]>([]);
   const [linkUrl, setLinkUrl] = useState("");
@@ -58,19 +74,30 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
       return;
     }
     setError(null);
+    setUploading(true);
     try {
       const uploaded = await pickAndUploadPrintFile();
       if (uploaded) setFiles((prev) => [...prev, { fileId: uploaded.fileId, originalName: uploaded.originalName }]);
     } catch (e) {
       setError(e instanceof FileUploadError ? e.message : String(e));
+    } finally {
+      setUploading(false);
     }
+  }
+
+  /** Drop an attached file before submitting (it stays uploaded but is not bound). */
+  function removeFile(fileId: string): void {
+    setFiles((prev) => prev.filter((f) => f.fileId !== fileId));
   }
 
   async function onSubmit(): Promise<void> {
     setError(null);
     const n = Number(copies);
     if (!title.trim()) return setError(STR.prDocTitle);
+    if (!colour) return setError(STR.prNeedColour);
+    if (!sides) return setError(STR.prNeedSides);
     if (!Number.isInteger(n) || n < 1) return setError(STR.prCopies);
+    if (!neededByKey) return setError(STR.prNeedNeededBy);
     if (sourceType === "UPLOAD" && files.length === 0) return setError(STR.prPickFile);
     if (sourceType === "LINK" && !linkUrl.trim()) return setError(STR.prLinkUrl);
 
@@ -83,8 +110,10 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
       contentArtifactId: sourceType === "CONTENT_ARTIFACT" ? preset.contentArtifactId ?? null : null,
       fileIds: sourceType === "UPLOAD" ? files.map((f) => f.fileId) : null,
       linkUrl: sourceType === "LINK" ? linkUrl.trim() : null,
+      colour,
+      sides,
       copies: n,
-      neededByKey: neededByKey || null,
+      neededByKey,
       notes: notes.trim() || null,
     });
     setBusy(false);
@@ -129,9 +158,26 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
             {sourceType === "UPLOAD" ? (
               <View style={{ marginTop: space(2), gap: space(1) }}>
                 {files.map((f) => (
-                  <Muted key={f.fileId}>📄 {f.originalName}</Muted>
+                  <View
+                    key={f.fileId}
+                    style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}
+                  >
+                    <Muted style={{ flex: 1 }}>📄 {f.originalName}</Muted>
+                    <Button
+                      title={STR.prRemove}
+                      variant="danger"
+                      onPress={() => removeFile(f.fileId)}
+                      disabled={busy || uploading}
+                    />
+                  </View>
                 ))}
-                <Button title={STR.prPickFile} variant="secondary" onPress={onPickFile} disabled={busy} />
+                <Button
+                  title={uploading ? STR.prUploading : STR.prPickFile}
+                  variant="secondary"
+                  onPress={onPickFile}
+                  loading={uploading}
+                  disabled={busy || uploading || files.length >= MAX_PRINT_UPLOADS}
+                />
               </View>
             ) : (
               <View style={{ marginTop: space(2) }}>
@@ -147,8 +193,28 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
         )}
       </Card>
 
-      <Field label={STR.prCopies} value={copies} onChangeText={setCopies} keyboardType="number-pad" />
-      <DateField label={STR.prNeededBy} value={neededByKey} onChange={setNeededByKey} />
+      {/* Colour + sides are MANDATORY (live-testing requirement) — the Office cannot start
+          a job without them, so nothing is pre-selected: the teacher must choose. */}
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.prColour} *</Body>
+        <ChipRow>
+          {PRINT_COLOURS.map((c) => (
+            <Chip key={c} label={PRINT_COLOUR_LABELS_EN[c]} selected={colour === c} onPress={() => setColour(c)} />
+          ))}
+        </ChipRow>
+      </Card>
+
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.prSides} *</Body>
+        <ChipRow>
+          {PRINT_SIDES.map((sd) => (
+            <Chip key={sd} label={PRINT_SIDES_LABELS_EN[sd]} selected={sides === sd} onPress={() => setSides(sd)} />
+          ))}
+        </ChipRow>
+      </Card>
+
+      <Field label={`${STR.prCopies} *`} value={copies} onChangeText={setCopies} keyboardType="number-pad" />
+      <DateField label={`${STR.prNeededBy} *`} value={neededByKey} onChange={setNeededByKey} />
       <Field label={STR.prNotes} value={notes} onChangeText={setNotes} multiline />
 
       <Button title={STR.prSend} onPress={onSubmit} loading={busy} />

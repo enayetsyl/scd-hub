@@ -31,6 +31,7 @@ import { User } from "../../foundation/models/User";
 import { applicationCovers } from "./LeaveApplicationService";
 import { markerForUnit, AttendanceError } from "./StudentAttendanceService";
 import { resolveUnits, unitKey, type AttendanceUnit, type StudentLite } from "../attendanceUnit";
+import { SubjectGroup } from "../../routine/models/SubjectGroup";
 
 // ---------------------------------------------------------------------------
 // Shared: day-record ⇄ unit plumbing
@@ -440,6 +441,20 @@ export interface UnmarkedSection {
    *  section is complete only when ALL Quran groups holding its students are marked,
    *  so the chase list may name several teachers. */
   pendingMarkerNames: string[];
+  /** WHICH units are still missing — named. For a Class 1–5 section these are its Quran
+   *  GROUPS (the thing the Office actually has to chase); for Nursery/KG it is the
+   *  section itself. Naming only the class was useless: the Office could not tell which
+   *  Quran teacher to chase (live-testing find). */
+  pendingUnits: PendingUnit[];
+}
+
+export interface PendingUnit {
+  unitType: string;
+  unitId: string;
+  /** The Quran group's name, or the section's class·section label. */
+  label: string;
+  markerTeacherId: string | null;
+  markerName: string | null;
 }
 
 /**
@@ -476,6 +491,20 @@ export async function unmarkedSections(dateKey: string): Promise<UnmarkedSection
   const classes = await Class.find({ _id: { $in: sections.map((s) => s.classId) } }).lean();
   const classById = new Map(classes.map((c) => [c._id.toString(), c]));
 
+  // Quran-group names, so the chase list can say WHICH group is missing — naming only
+  // the class left the Office unable to tell which Quran teacher to chase.
+  const groupIds = [
+    ...new Set(
+      [...unitsBySection.values()].flatMap((m) =>
+        [...m.values()].filter((u) => u.unitType === "subjectgroup").map((u) => u.unitId),
+      ),
+    ),
+  ];
+  const groups = groupIds.length
+    ? await SubjectGroup.find({ _id: { $in: groupIds } }).select("nameBn code").lean()
+    : [];
+  const groupNameById = new Map(groups.map((g) => [g._id.toString(), g.nameBn || g.code]));
+
   const out: UnmarkedSection[] = [];
   for (const section of sections) {
     const sid = section._id.toString();
@@ -483,25 +512,38 @@ export async function unmarkedSections(dateKey: string): Promise<UnmarkedSection
     // A section with no active students has nothing to mark — never flag it, or it
     // would sit in the chase list forever with no way to clear it.
     if (!sectionUnits || sectionUnits.size === 0) continue;
-    const pendingUnits = [...sectionUnits.values()].filter((u) => !markedUnits.has(unitKey(u)));
-    if (pendingUnits.length === 0) continue;
+    const stillPending = [...sectionUnits.values()].filter((u) => !markedUnits.has(unitKey(u)));
+    if (stillPending.length === 0) continue;
 
     const cls = classById.get(section.classId.toString());
-    const markers: Array<{ teacherId: string | null; name: string | null }> = [];
-    for (const unit of pendingUnits) {
+    const sectionLabel = cls?.nameBn ? `${cls.nameBn} — ${section.nameBn}` : section.nameBn;
+
+    const pendingUnits: PendingUnit[] = [];
+    for (const unit of stillPending) {
       const marker = await markerForUnit(unit, dateKey);
       const teacher = marker.teacherId ? await User.findById(marker.teacherId).select("name").lean() : null;
-      markers.push({ teacherId: marker.teacherId, name: teacher?.name ?? null });
+      pendingUnits.push({
+        unitType: unit.unitType,
+        unitId: unit.unitId,
+        label:
+          unit.unitType === "subjectgroup"
+            ? groupNameById.get(unit.unitId) ?? unit.unitId
+            : sectionLabel,
+        markerTeacherId: marker.teacherId,
+        markerName: teacher?.name ?? null,
+      });
     }
+
     out.push({
       sectionId: sid,
       sectionCode: section.code,
       sectionNameBn: section.nameBn,
       classLevel: cls?.level ?? 0,
       classNameBn: cls?.nameBn ?? "",
-      markerTeacherId: markers[0]?.teacherId ?? null,
-      markerName: markers[0]?.name ?? null,
-      pendingMarkerNames: markers.map((m) => m.name).filter((n): n is string => n !== null),
+      markerTeacherId: pendingUnits[0]?.markerTeacherId ?? null,
+      markerName: pendingUnits[0]?.markerName ?? null,
+      pendingMarkerNames: pendingUnits.map((u) => u.markerName).filter((n): n is string => n !== null),
+      pendingUnits,
     });
   }
   return out.sort((a, b) => a.classLevel - b.classLevel || a.sectionCode.localeCompare(b.sectionCode));

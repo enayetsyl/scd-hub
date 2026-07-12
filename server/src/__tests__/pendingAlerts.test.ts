@@ -274,7 +274,26 @@ describe("assignment: countdown then overdue, split at the 07:00 deadline (D-#27
     expect(assignmentPrep).toBeNull();
   });
 
-  test("no academic year / no schedule → silent, never an error", async () => {
+  test("falls back to the year COVERING today when none is flagged current (live-testing bug)", async () => {
+    // AcademicYear.current defaults to FALSE, so a roster where nobody flipped the flag
+    // had no current year — and the countdown/alert vanished silently.
+    mockYearFindOne.mockImplementation((f: { current?: boolean }) =>
+      Promise.resolve(f.current ? null : { _id: "yr-covering" }),
+    );
+    mockScheduleFindOne.mockResolvedValue({ termStartDate: new Date(2026, 3, 1) });
+    mockWeekNumberFor.mockReturnValue(1);
+    mockExpectedItemsForWeek.mockResolvedValue({
+      suspended: false,
+      deliveryDate: "2026-06-18",
+      items: [{ teacherId: USER, delivered: false }],
+    });
+
+    const { assignmentPrep } = await pendingWorkFor(ctxFor("TEACHER"), TODAY);
+    expect(assignmentPrep?.deliveryDateKey).toBe("2026-06-18");
+    expect(mockExpectedItemsForWeek).toHaveBeenCalledWith("yr-covering", 1);
+  });
+
+  test("no academic year at all → silent, never an error", async () => {
     const { alerts, assignmentPrep } = await pendingWorkFor(ctxFor("TEACHER"), TODAY);
     expect(alerts.find((x) => x.kind === "assignment_entry")).toBeUndefined();
     expect(assignmentPrep).toBeNull();

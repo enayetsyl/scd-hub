@@ -65,6 +65,8 @@ PrintRequestRef.implement({
     }),
     fileIds: t.stringList({ resolve: (v) => (v.doc.fileIds ?? []).map((f) => f.toString()) }),
     linkUrl: t.string({ nullable: true, resolve: (v) => v.doc.linkUrl ?? null }),
+    colour: t.string({ resolve: (v) => v.doc.colour }),
+    sides: t.string({ resolve: (v) => v.doc.sides }),
     copies: t.int({ resolve: (v) => v.doc.copies }),
     neededByKey: t.string({ nullable: true, resolve: (v) => v.doc.neededByKey ?? null }),
     subject: t.string({ nullable: true, resolve: (v) => v.doc.subject ?? null }),
@@ -112,8 +114,12 @@ builder.mutationField("createPrintRequest", (t) =>
       contentArtifactId: t.arg.string({ required: false }),
       fileIds: t.arg.stringList({ required: false }),
       linkUrl: t.arg.string({ required: false }),
-      copies: t.arg.int({ required: false }),
-      neededByKey: t.arg.string({ required: false }),
+      // MANDATORY on a teacher's request (live-testing requirement) — the Office cannot
+      // start a job without knowing how to print it, how many, and by when.
+      colour: t.arg.string({ required: true }),
+      sides: t.arg.string({ required: true }),
+      copies: t.arg.int({ required: true }),
+      neededByKey: t.arg.string({ required: true }),
       classId: t.arg.string({ required: false }),
       sectionId: t.arg.string({ required: false }),
       subject: t.arg.string({ required: false }),

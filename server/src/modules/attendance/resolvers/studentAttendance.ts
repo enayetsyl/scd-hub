@@ -52,6 +52,7 @@ import {
   type StudentHistory,
   type AbsentNoApplicationEntry,
   type UnmarkedSection,
+  type PendingUnit,
 } from "../services/AttendanceReportService";
 import type { IStudentAttendanceDay } from "../models/StudentAttendanceDay";
 import type { ISectionAttendanceAssignment } from "../models/SectionAttendanceAssignment";
@@ -340,6 +341,20 @@ AbsentNoApplicationRef.implement({
   }),
 });
 
+const PendingUnitRef = builder.objectRef<PendingUnit>("PendingAttendanceUnit");
+PendingUnitRef.implement({
+  description:
+    "A still-unmarked attendance unit. For a Class 1–5 section these are its Quran GROUPS " +
+    "— the thing the Office actually has to chase; naming only the class was useless.",
+  fields: (t) => ({
+    unitType: t.exposeString("unitType"),
+    unitId: t.exposeString("unitId"),
+    label: t.exposeString("label"),
+    markerTeacherId: t.string({ nullable: true, resolve: (u) => u.markerTeacherId }),
+    markerName: t.string({ nullable: true, resolve: (u) => u.markerName }),
+  }),
+});
+
 const UnmarkedSectionRef = builder.objectRef<UnmarkedSection>("UnmarkedSection");
 UnmarkedSectionRef.implement({
   description: "A section still unmarked for the date (§8 unmarked-section log; AT4.2 detection).",
@@ -354,6 +369,8 @@ UnmarkedSectionRef.implement({
     /** Every still-unmarked unit's marker (D-#278) — a Class 1–5 section can be
      *  pending on several Quran teachers at once. */
     pendingMarkerNames: t.exposeStringList("pendingMarkerNames"),
+    /** WHICH units are missing, named — the Quran GROUPS for a Class 1–5 section. */
+    pendingUnits: t.field({ type: [PendingUnitRef], resolve: (u) => u.pendingUnits }),
   }),
 });
 

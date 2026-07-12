@@ -14,6 +14,8 @@ export interface PrintRequestT {
   contentArtifactId: string | null;
   fileIds: string[];
   linkUrl: string | null;
+  colour: string;
+  sides: string;
   copies: number;
   neededByKey: string | null;
   subject: string | null;
@@ -29,7 +31,7 @@ export interface PrintRequestT {
 
 const PRINT_REQUEST_FIELDS = `
   id title purpose sourceType setId contentArtifactId fileIds linkUrl
-  copies neededByKey subject notes status
+  colour sides copies neededByKey subject notes status
   requestedBy requesterName requestedAt printedAt deliveredAt cancelReason
 `;
 
@@ -58,8 +60,11 @@ export interface CreatePrintRequestVars {
   contentArtifactId?: string | null;
   fileIds?: string[] | null;
   linkUrl?: string | null;
-  copies?: number | null;
-  neededByKey?: string | null;
+  /** Mandatory — the Office cannot start a job without these. */
+  colour: string;
+  sides: string;
+  copies: number;
+  neededByKey: string;
   classId?: string | null;
   sectionId?: string | null;
   subject?: string | null;
@@ -70,14 +75,14 @@ export const CREATE_PRINT_REQUEST = gql<{ createPrintRequest: PrintRequestT }, C
   mutation CreatePrintRequest(
     $title: String!, $purpose: String!, $sourceType: String!,
     $setId: String, $contentArtifactId: String, $fileIds: [String!], $linkUrl: String,
-    $copies: Int, $neededByKey: String, $classId: String, $sectionId: String,
-    $subject: String, $notes: String
+    $colour: String!, $sides: String!, $copies: Int!, $neededByKey: String!,
+    $classId: String, $sectionId: String, $subject: String, $notes: String
   ) {
     createPrintRequest(
       title: $title, purpose: $purpose, sourceType: $sourceType,
       setId: $setId, contentArtifactId: $contentArtifactId, fileIds: $fileIds, linkUrl: $linkUrl,
-      copies: $copies, neededByKey: $neededByKey, classId: $classId, sectionId: $sectionId,
-      subject: $subject, notes: $notes
+      colour: $colour, sides: $sides, copies: $copies, neededByKey: $neededByKey,
+      classId: $classId, sectionId: $sectionId, subject: $subject, notes: $notes
     ) { ${PRINT_REQUEST_FIELDS} }
   }
 `;

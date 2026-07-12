@@ -1,5 +1,5 @@
 import { Schema, model, Document, Types } from "mongoose";
-import type { PrintPurpose, PrintRequestStatus, PrintSource } from "@scd/shared";
+import type { PrintColour, PrintPurpose, PrintRequestStatus, PrintSides, PrintSource } from "@scd/shared";
 
 /**
  * PrintRequest (PQ-1, D-#281) — ONE queue for everything the Office prints.
@@ -37,8 +37,13 @@ export interface IPrintRequest extends Document {
   fileIds?: Types.ObjectId[];
   linkUrl?: string;
 
+  /** How to print it. MANDATORY on a teacher's request (the Office cannot start a job
+   *  without them); defaulted for the internal class-test path and back-filled rows. */
+  colour: PrintColour;
+  sides: PrintSides;
+
   copies: number;
-  /** Local date the teacher needs it by, `YYYY-MM-DD`. */
+  /** Local date the teacher needs it by, `YYYY-MM-DD`. Mandatory on a teacher's request. */
   neededByKey?: string;
   classId?: Types.ObjectId;
   sectionId?: Types.ObjectId;
@@ -70,6 +75,11 @@ const PrintRequestSchema = new Schema<IPrintRequest>(
     contentArtifactId: { type: Schema.Types.ObjectId, ref: "ContentArtifact" },
     fileIds: [{ type: Schema.Types.ObjectId, ref: "StoredFile" }],
     linkUrl: { type: String, trim: true },
+
+    // Defaults keep the internal class-test path and migration-backfilled rows valid;
+    // the SERVICE enforces them as mandatory on a teacher-submitted request.
+    colour: { type: String, required: true, default: "BW" },
+    sides: { type: String, required: true, default: "SINGLE" },
 
     copies: { type: Number, required: true, min: 1, max: 1000, default: 1 },
     neededByKey: { type: String, match: /^\d{4}-\d{2}-\d{2}$/ },
