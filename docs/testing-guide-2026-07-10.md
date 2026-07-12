@@ -1,427 +1,271 @@
 # Testing guide — 2026-07-10 release candidate
 
-Everything below is **on `dev` or in an open PR. None of it is in production.**
-Production (`main`) is still at PR #182.
+**Round 2.** Updated after your first pass. Nothing here is in production yet
+(`main` is still at PR #182).
 
-| # | Feature | Decision | Where it is |
-|---|---|---|---|
-| 1 | Class pickers ordered Nursery → KG → One… | — | merged on `dev` |
-| 2 | Attendance marked by the **first-class teacher** | D-#278 | merged on `dev` |
-| 3 | Today **red backlog board** + admin class presence | D-#279 | merged on `dev` |
-| 4 | **Assignment-prep countdown** | D-#280 | merged on `dev` |
-| 5 | **Print queue** PQ-1…PQ-4 | D-#281 | merged on `dev` |
-| 6 | Marker-determinism + empty-unit bug fixes | D-#278 | merged on `dev` |
-| 7 | Print queue **PQ-5** (class-test absorption, delivered notify, migration) | D-#281 | **PR #186** |
-| 8 | Guardian attachments · cross-tracker profile · plan→PDF | D-#282 | **PR #187** |
+## What round 1 settled
 
-> Items **7 and 8 are not on `dev` yet.** To test them you must either merge those PRs
-> into `dev`, or check the branch out locally (`feat/print-queue-absorb`,
-> `feat/cross-tracker-profile`) and run the app against your local server.
+**Passed — do not retest:** 1 (class ordering) · 2c (cover hands over marking) ·
+2d (non-school days) · 2e (Office unmarked view) · 3a (teacher red card) ·
+5b (send an assembled set).
+
+**Fixed in PR #188 — retest these (Part A):** 3b · 4 · 5a · 5c.
+
+**Still open — needs one command from you (Part 0.3):** 2 (Nursery/KG marker).
+
+**Dropped by decision:** the Quran option in Admin → Proxy grants. A `ScopeGrant` is
+keyed `class + section + subject`, and a Quran group is cross-section with **no
+classId** — that form structurally cannot name one. Cover management already hands over
+the Quran *marking* duty (2c passed). What a group cover does **not** get is *content
+access*; if that ever bites, that is the real fix.
+
+## Where the code is
+
+| PR | Contains | State |
+|---|---|---|
+| — | features 1–6 (attendance, Today board, countdown, print queue PQ-1…4) | merged on `dev` |
+| **#188** | **the round-1 fixes** | open — **test this** |
+| **#186** | print queue PQ-5 (class-test absorption, delivered notify, migration) | open, untested |
+| **#187** | guardian attachments · cross-tracker profile · plan→PDF | open, untested |
+
+> #186/#187 are **not on `dev`**. To test them, merge them or check out
+> `feat/print-queue-absorb` / `feat/cross-tracker-profile` locally.
 
 ---
 
-## 0. Before you start — read this first
+## Part 0 — before you start
 
-### 0.1 ⚠️ The migration (only needed for PR #186)
+### 0.1 ⚠️ The migration (only for PR #186)
 
-A `ClassTest` has **always been** a print request. PQ-5 moves printing onto the unified
-queue. **Without the back-fill, every class test created before PQ-5 vanishes from the
-Office's print queue.**
-
-Run it against the environment's DB **before** a PQ-5 server serves traffic:
+A `ClassTest` has **always been** a print request. Without the back-fill, **every class
+test created before PQ-5 vanishes from the Office's queue.**
 
 ```bash
-# 1. DRY-RUN first — writes nothing, prints what it would do
-npx tsx server/scripts/migrate-classtest-print-requests.ts
-
-# 2. Then commit
+npx tsx server/scripts/migrate-classtest-print-requests.ts            # dry-run
 npx tsx server/scripts/migrate-classtest-print-requests.ts --commit
 ```
 
-It is **idempotent** (safe to re-run) and repairs a half-run. Status carries across 1:1
-(`REQUESTED` / `PRINTED` / `CANCELLED`). Nothing is back-filled as `DELIVERED` — that
-state never existed, so a printed-but-uncollected job correctly lands in **"Printing
-done"**.
+Idempotent; repairs a half-run. Expect `Create: <N>  Repair-link: 0  Already migrated: 0
+Problems: 0`. **Problems > 0** → read the WARN lines (a class test with a missing
+`setId`/`questionFileId` is skipped, never mangled).
 
-**Expected dry-run output:** `Create: <N>  Repair-link: 0  Already migrated: 0  Problems: 0`
-where `N` = your current ClassTest count. If **Problems > 0**, read the WARN lines — a
-class test with a missing `setId`/`questionFileId` is skipped, not silently mangled.
+### 0.2 Data prerequisites
 
-### 0.2 Data prerequisites — two features do nothing without these
-
-Check these **first**, or you will chase phantom bugs.
-
-| Needed for | Check | If missing |
-|---|---|---|
-| **Class 1–5 attendance** (feature 2) | `db.subjectgroupmemberships.countDocuments({track:"quran"})` > 0 | Class 1–5 students fall back to their **section**, marked by the class teacher. That is the *designed fallback*, not a bug — but you won't be testing the Quran-group path. |
-| **Assignment countdown + alert** (features 3, 4) | `db.academicyears.findOne({current:true})` **and** `db.assignmentschedules.findOne()` exist | Both stay **silent** by design (never error). You'll see no countdown and no assignment alert. |
-
-### 0.3 Accounts you need
-
-Log in as each of these at least once. Note **who** you're logged in as before judging a
-result — several "bugs" reported during development turned out to be different teachers.
-
-| Role | Why |
+| Needed for | If missing |
 |---|---|
-| **Teacher who opens a Quran group's period 1** (Class 1–5) | the new attendance marker |
-| **Teacher who opens a Nursery/KG section's period 1** | the other new marker |
-| **Class teacher of a Class 1–5 section** | must *not* be nagged (regression check) |
-| **Office** | print queue, class presence, unmarked sections, amend |
-| **Principal** | same as Office, plus `content:read` |
-| **Guardian** with a linked child | class-note attachments, trajectory |
+| **Class 1–5 attendance** — Quran memberships (`subjectgroupmemberships`, `track:"quran"`) | 1–5 students fall back to their **section**, marked by the class teacher. *Designed fallback, not a bug* — but you won't be exercising the Quran path. |
+| **Assignment countdown** — an `AssignmentSchedule` | Stays silent by design. **The academic-year half of this is now fixed** — see A2. |
 
----
+### 0.3 🔴 Run this first — it decides bug 2
 
-## Part A — merged on `dev`
+Round 1 found: *"in Nursery and KG only the assigned teacher can give attendance, not the
+first-period teacher."*
 
-### 1. Class pickers are ordered (2 min)
+Marker resolution is **override → routine → class-teacher**. Before D-#278, *an admin
+assigning a marker was the normal path* — and **an override always wins**. Those legacy
+rows are almost certainly defeating the new rule.
 
-1. Log in as **Principal/Office**.
-2. **Assignments → Assignment schedule → Add entry → Class** dropdown.
+```bash
+npx tsx server/scripts/diag-attendance-markers.ts     # READ-ONLY, writes nothing
+```
 
-✅ **Expect:** `নার্সারি, কেজি, প্রথম শ্রেণি, দ্বিতীয়, তৃতীয়, চতুর্থ, পঞ্চম`
-❌ **Was:** insertion order (`পঞ্চম, দ্বিতীয়, তৃতীয়, চতুর্থ, কেজি, নার্সারি`)
+Read the `=> MARKER:` line for each Nursery/KG section:
 
-The fix is at the source (`classes` resolver), so **every** class picker in the app should
-now be ordered. Spot-check one other (e.g. Assignment rollups).
-
----
-
-### 2. Attendance is marked by the first-class teacher (D-#278)
-
-The big one. Attendance is now captured where the students physically are at day-start.
-
-| Level | Captured in | Marked by |
+| Output | Meaning | Do this |
 |---|---|---|
-| **Class 1–5** | their cross-section **Quran group** | teacher of the group's **first Quran period** |
-| **Nursery/KG** | their **section** | teacher of the section's **first period** |
+| `=> MARKER: OVERRIDE -> <name>` | **Confirmed.** Legacy rows are winning. | run the revoke below, then retest **A1** |
+| `=> MARKER: ROUTINE -> <name>` | The routine already wins — bug 2 is something else | **send me the output**; do not run the revoke |
+| `=> MARKER: CLASSTCHR -> …` and `routine P1 teacher: (none)` | N/KG has no routine slot with a teacher | **send me the output** — the fix is a different one |
 
-Resolution order: **admin override → routine (cover-aware) → class-teacher fallback.**
+If and only if it says **OVERRIDE**:
 
-#### 2a. Nursery/KG — the first-period teacher marks (no data prereq)
+```bash
+npx tsx server/scripts/revoke-legacy-attendance-markers.ts            # dry-run
+npx tsx server/scripts/revoke-legacy-attendance-markers.ts --commit
+```
 
-1. Look up who teaches **KG's period 1** today (Routine → Master grid).
-2. Log in as that teacher → **Attendance** tab.
-
-✅ The KG section appears in their worklist.
-✅ Tap it → the roster renders under a **class/section heading**.
-✅ Mark an absentee → submit → toast confirms.
-
-3. Log in as KG's **class teacher** (if a different person).
-
-✅ They do **not** see KG in their worklist (they're the fallback, not the marker).
-✅ They **can** still open **Attendance → Report** for their section.
-
-#### 2b. Class 1–5 — the Quran teacher marks (needs §0.2 memberships)
-
-1. Log in as a teacher who opens a **Quran group's period 1**.
-
-✅ Their worklist lists **the Quran group by name** (e.g. `হিফজ ৩`), not a section.
-✅ Tap it → the roster is **grouped under class/section headings** — a Quran group mixes
-sections, and the school reads attendance class-wise.
-
-2. Mark one student absent → submit.
-3. Log in as **Office → Attendance → Report** for today.
-
-✅ That student appears under **their own class → section** (e.g. "Class 3 · ALL").
-✅ **Nowhere** does the word "group" or the Quran group's name appear in the report.
-
-> This roll-up is the whole design: capture is per Quran group, **display is always
-> class/section.**
-
-#### 2c. A cover hands over the marking duty
-
-1. **Routine → Cover management** → find the Quran group's (or KG's) **period 1**.
-2. Assign a cover teacher.
-3. Log in as the **cover teacher** → **Attendance**.
-
-✅ The unit now appears in the **cover teacher's** worklist.
-✅ It has **disappeared** from the substantive teacher's worklist.
-
-#### 2d. Non-school days
-
-1. Set the date picker to a **Friday** (OFF) or a **holiday**.
-
-✅ The worklist is **empty**. (Attendance isn't expected; the write path would reject it.)
-
-#### 2e. Office view — unmarked sections
-
-**Attendance → Report → Unmarked sections**, on a FULL day before marking.
-
-✅ A **Class 1–5 section stays "unmarked" until *every* Quran group holding its students
-is marked.** The row names the responsible marker(s).
-✅ Nursery/KG rows name their first-period teacher.
+It **deactivates, never deletes** (history preserved, ADR-008). Marking then falls to the
+routine's first-class teacher. Assignments you make *from now on* are untouched — the
+override remains a deliberate escape hatch.
 
 ---
 
-### 3. Today = a red backlog board (D-#279)
+## Part A — the round-1 fixes (PR #188)
 
-#### 3a. Teacher — red "Pending" card
+### A1 · Nursery/KG: the first-period teacher marks *(after §0.3)*
 
-Log in as a teacher who owes work. The card sits **directly under the date**.
+1. Find who teaches **KG period 1** today (Routine → Master grid).
+2. Log in as that teacher → **Attendance**.
 
-✅ Rows appear only when something is pending; the card is absent when nothing is.
-✅ Each row is **tappable** and lands on the screen that clears it.
+✅ The KG section is in their worklist; they can mark it.
+✅ KG's **class teacher** does **not** see it in their worklist (they are the *fallback*),
+but **can** still open Attendance → Report for the section.
 
-| Row | Fires when | Count means |
-|---|---|---|
-| Attendance not submitted | a marking unit of theirs has no record on a FULL day | pending **days** |
-| Class notes not written | a routine period has no class note | pending **days** |
-| Assignment entry pending | a scheduled item is past its delivery **deadline**, undelivered | pending **items** |
+> If this still fails after the revoke, §0.3 mis-diagnosed it — send me the diag output.
 
-✅ When the backlog reaches past today, the row shows `oldest: YYYY-MM-DD`.
-✅ The look-back is **7 days**, school days only (Fri and holidays skipped).
+### A2 · The assignment countdown appears *(was: silent)*
 
-**Falsify it:** mark today's attendance → the attendance row disappears on refresh.
+**Root cause:** `AcademicYear.current` **defaults to `false`**. With no year flagged, the
+countdown *and* the overdue alert went silent. It now falls back to the year whose date
+range **covers today**.
 
-#### 3b. Principal/Office — class presence + unmarked
+1. Log in as a teacher with an **undelivered** scheduled item this week → **Today**.
 
-Log in as **Office → Today**.
+✅ An **amber** row: `⏳ Prepare assignment question · 3d 4h left`, with `due: <date>`.
+✅ It **ticks** — leave it a minute; the time updates with no reload.
+✅ **Before 07:00 on delivery day** it is *still counting down*, **not** overdue.
+✅ At/after 07:00 still undelivered → it turns into the **red** "Assignment entry pending".
+✅ **Deliver the item** → the amber row disappears at once.
 
-✅ Below the date: **"Today's attendance by class"** — `Present: N · Absent: M / Total`.
-✅ A class shows an **"Incomplete"** badge while *any* of its units hasn't reported.
+> Still silent? Then you have no `AssignmentSchedule` at all (§0.2) — that is a separate,
+> deliberate silence, not this bug.
 
-> **Critical:** an unmarked Quran group must read **pending**, never silently "present".
-> Verify by marking only *one* of a class's Quran groups and confirming the class is
-> still `Incomplete`, and that `Present` counts only the marked students.
+### A3 · Unmarked list names the Quran group *(was: only the class)*
 
-✅ Below that: the **unmarked-sections** list with each responsible marker.
+**Office → Attendance → Report → Unmarked sections**, on a FULL day before marking.
 
----
+✅ A Class 1–5 row now lists its **🕌 Quran groups by name** (e.g. `হিফজ ৩`), each with
+its own marker — so you can see **which Quran teacher to chase**.
+✅ Nursery/KG rows name the section and its first-period teacher.
+✅ A section is complete only when **every** unit holding its students is marked.
 
-### 4. Assignment-prep countdown (D-#280) — needs §0.2 schedule
+### A4 · The Office can open a question set *(was: 403, nothing happened)*
 
-An **amber** row inside the same Pending card, **above** the red rows (it hasn't slipped
-yet).
+**Root cause:** `OFFICE` holds `roster:manage` but **not** `set:read`, so `/pdf/set/:id`
+refused every question-set job. Rather than opening the whole assessment plane to the
+Office, the route now admits `roster:manage` **only for a set a live PrintRequest
+references**.
 
-1. Log in as a teacher with an **undelivered** scheduled assignment item this week.
+1. Teacher: **Sets → an assembled set → 🖨️ Send to print**.
+2. **Office → Print → Yet to print → Open**.
 
-✅ `⏳ Prepare assignment question · 3d 4h left`, with `due: <delivery date>` beneath.
-✅ It **ticks** — leave the screen open a minute; the remaining time updates without a
-reload.
+✅ The question-set **PDF opens** (Bangla renders).
+✅ **Cancel** that job → the Office can **no longer** open that set. Access is withdrawn
+with the job — the assessment plane stays shut.
 
-2. **The deadline is the school day's START on the delivery date** (07:00, read from
-   `ScheduleWindow.dayStartMinutes` — not hard-coded).
+### A5 · "Mark printed" moves the job without a refresh *(was: needed F5)*
 
-✅ On **delivery-day morning before 07:00** it is *still counting down*, **not** overdue.
-✅ At/after 07:00, still undelivered → it becomes the **red** "Assignment entry pending".
-✅ **Deliver the item** → the amber row disappears immediately.
+**Office → Print.**
 
-3. **Holiday roll:** if the delivery date lands on a holiday, the schedule rolls delivery
-   to the day before — the countdown must follow it, not stay on the original Thursday.
+✅ **Mark printed** → the job **immediately** appears under **Printing done** (no manual
+refresh).
+✅ **Mark delivered** → it moves to **Delivered** the same way.
 
----
-
-### 5. Print queue PQ-1…PQ-4 (D-#281)
-
-A new **🖨️ Print** drawer tab. Role-aware inside.
-
-#### 5a. Teacher files a request
+### A6 · The print request form *(new fields)*
 
 **Print → ➕ New request.**
 
-| Source | Steps | Expect |
-|---|---|---|
-| **Upload** | Add up to **5** files (jpeg/png/pdf, ≤10 MB each) | a 6th file is refused; an over-size file shows the Bangla error |
-| **Link** | paste `https://forms.gle/…` | a relative path or `javascript:` URL is **rejected** |
+✅ **Title autofills** from your name (still editable).
+✅ **Colour** (B&W / Colour) — **mandatory, nothing pre-selected**. Submitting without it
+is refused.
+✅ **Sides** (Single / Both) — same.
+✅ **Copies** and **Needed by** — mandatory (marked `*`). **Notes** optional.
+✅ **Upload**: the button shows a **spinner** while uploading; each attached file has a
+**Remove** button; a 6th file is refused.
 
-✅ Fill title, purpose, copies, needed-by → **Send to print** → toast, and it appears
-under **My requests** as **"Yet to print"**.
-
-#### 5b. Send an assembled set to print
-
-1. **Sets → open an ASSEMBLED set → 🖨️ Send to print.**
-
-✅ The form opens with the set **pre-selected and the source picker locked**.
-✅ A **DRAFT** set has no such button (and the server refuses a draft anyway).
-
-#### 5c. Office works the queue
-
-**Office → Print.** Three tabs: **Yet to print → Printing done → Delivered.**
-
-✅ Each row shows requester, purpose, copies, needed-by.
-✅ **Open** does the right thing per source: a set renders a PDF; an upload streams; a
-link opens externally.
-✅ **Mark printed** moves it to *Printing done*; **Mark delivered** moves it to
-*Delivered*.
-✅ **Cancel** exists only while **Yet to print**. A *printed* job **cannot** be
-cancelled — the paper already exists.
-
-#### 5d. Ownership
-
-✅ A teacher may cancel **their own** job while REQUESTED, never someone else's.
-✅ A teacher's **My requests** shows only their own.
+**Office → Print → Yet to print:**
+✅ Each row **displays colour + sides** — the Office cannot start a job without them.
 
 ---
 
-### 6. Regression checks — bugs fixed this cycle
+## Part B — PR #186 (PQ-5) · **run §0.1 first**
 
-These are the exact defects found during development. Confirm they're gone.
-
-#### 6a. The "flaky" attendance alert (marker determinism)
-
-`routineForDate` sorted only by period number, so two live slots on one period let Mongo
-pick the marker **arbitrarily** — the alert appeared and vanished between refreshes.
-
-1. Log in as **one** teacher (write the username down).
-2. **Hard-refresh Today 5 times.**
-
-✅ The Pending card is **identical** every time.
-
-> Your earlier report of flakiness was two *different* teachers (Period-5 Bangla vs Quran
-> P1–P2). Confirm you're on a single login before judging.
-
-#### 6b. Class 1–5 class teachers are no longer nagged forever
-
-A Class 1–5 **section** unit holds only students *without* a Quran group. When there are
-none, its roster is empty, nobody can ever mark it, and its class teacher used to get an
-**unclearable** red alert.
-
-1. Log in as a **Class 1–5 class teacher** whose students all have Quran groups.
-
-✅ **No** "Attendance not submitted" alert.
-✅ Their Attendance worklist does **not** show a 0-student section row.
-
-#### 6c. A Nursery/KG child in a Quran group
-
-`rosterForUnit` used to return *every* group member. A N/KG child placed in a Quran group
-would appear on that teacher's roster and be markable — but the roll-up reads them via
-their **section**, so the absence was **silently dropped**.
-
-✅ If any N/KG child sits in a Quran group, they must **not** appear on that Quran
-teacher's marking roster.
-
----
-
-## Part B — PR #186 (PQ-5) · **run §0.1 migration first**
-
-### 7a. Nothing is lost
-
-After the migration, log in as **Office → Print → Yet to print**.
-
-✅ **Every pre-existing `REQUESTED` class test appears as a queue row** (title
-`CT-… · SUBJECT`, purpose `CLASS_TEST`).
+### B1 · Nothing is lost
+**Office → Print → Yet to print.**
+✅ Every pre-existing `REQUESTED` class test is there (`CT-… · SUBJECT`, purpose
+`CLASS_TEST`).
 ✅ Previously-PRINTED class tests sit under **Printing done**, not Delivered.
 
-### 7b. The class-test print queue is gone
-
+### B2 · The class-test queue is gone
 **Class Test → home.**
+✅ No separate class-test print queue; its print button **crosses to the 🖨️ Print tab**.
 
-✅ There is **no** separate class-test print queue screen.
-✅ The print button now **crosses to the 🖨️ Print tab**.
+### B3 · Filing a class test files a queue row
+Teacher: **Class Test → Request class test** → Office: **Print → Yet to print**.
+✅ It's there. **Open** renders the paper (set PDF or the uploaded file).
 
-### 7c. Filing a class test files a queue row
-
-1. Teacher: **Class Test → Request class test** (pool set or uploaded paper).
-2. Office: **Print → Yet to print.**
-
-✅ The job is there, purpose `CLASS_TEST`.
-✅ **Open** renders the paper (set PDF, or the uploaded file).
-
-### 7d. Advancing the queue advances the class test
-
-1. Office: **Mark printed** on that row.
-2. Teacher: **Class Test → home.**
-
-✅ The class test's own status is now **PRINTED** (it is the official exam — results can
-be entered).
+### B4 · Advancing the queue advances the class test
+Office: **Mark printed** → Teacher: **Class Test → home**.
+✅ The class test now reads **PRINTED** (it is the official exam — results can be entered).
 ✅ Cancelling the row instead → the class test reads **CANCELLED**.
 
-### 7e. Delivery notifies the teacher
-
-1. Office: **Mark delivered**.
-2. Log in as the **requesting teacher** → notification bell.
-
-✅ A **"Your print is ready"** notification.
-✅ If push/notifications are down, the delivery **still succeeds** (best-effort by design).
+### B5 · Delivery notifies the teacher
+Office: **Mark delivered** → the requesting teacher's bell.
+✅ *"আপনার প্রিন্ট প্রস্তুত"*.
+✅ If notifications are down, the **delivery still succeeds** (best-effort by design).
 
 ---
 
-## Part C — PR #187 (three deferred features, D-#282)
+## Part C — PR #187 (three deferred features)
 
-### 8a. Guardians can open class-note attachments
+### C1 · Guardians can open class-note attachments
+Teacher posts a class note **with an attachment** → guardian of a child in that
+section/group → **Class notes**.
+✅ A `📎 filename` row appears; tapping opens it (web).
 
-1. **Teacher** posts a class note with an attachment (Routine → Daily note).
-2. **Guardian** of a child in that section/group → **Class notes**.
+**The security checks matter more than the happy path:**
+✅ A guardian whose child is **not** in that group **cannot** open it — try the direct
+`/files/<id>` URL.
+✅ **Revoke the GuardianLink** → access is withdrawn immediately.
+✅ An **orphan** upload (uploaded, never attached to a note) is unreadable by any guardian.
 
-✅ A `📎 filename` row appears under the note; tapping opens it (web).
-
-**Now the security checks — these matter more than the happy path:**
-
-✅ A guardian whose child is **not** in that section/group **cannot** open the file
-(even with the direct `/files/<id>` URL).
-✅ **Revoke** the `GuardianLink` → access is withdrawn immediately.
-✅ An **orphan** upload (a file uploaded but never attached to a note) is unreadable by
-any guardian.
-
-### 8b. Cross-tracker whole picture (staff)
-
+### C2 · Cross-tracker whole picture (staff)
 **Class Test → Reports → a student's profile.**
-
-✅ A **"Whole picture"** card sits **above** the class-test detail, showing four rows:
-class test · homework · assignment · attendance.
-✅ Attendance shows a **recent-vs-earlier split** (`92% → 71%`) — this moves *before* the
+✅ A **"Whole picture"** card above the class-test detail: class test · homework ·
+assignment · attendance.
+✅ Attendance shows a **recent-vs-earlier split** (`92% → 71%`) — it moves *before* the
 term average does.
-✅ The **Overall** badge is conservative: one weak signal ≠ "declining". It reads
-declining only when the academic trajectory is down, **or** two behaviour signals fire.
 
-**Falsify it:** find a student with (say) low homework completion but a steady trajectory
-→ overall should read **Steady**, not Declining. Add a second weak signal (low attendance)
-→ now it reads **Declining**.
+**Falsify it:** a student with low homework but a steady trajectory → **Steady**, not
+Declining. Add a second weak signal (low attendance) → **Declining**. One weak signal is
+an off fortnight, not a decline.
 
-### 8c. Guardian trajectory summary
+### C3 · Guardian trajectory summary
+**Guardian → Home**, card at the top.
+✅ Plain Bangla: direction, the child's own average, attendance %, any behaviour concern.
+✅ **It must never show a rank or class comparison.** Check the `childTrajectory` network
+response — no `latestRank`, no class size.
+✅ No data → *"মূল্যায়নের জন্য যথেষ্ট তথ্য নেই"*, not `0%`.
 
-**Guardian → Home.** A card at the top, above child info.
-
-✅ Plain Bangla lines: overall direction, the child's own average, attendance %, and any
-behaviour concern.
-✅ **It must never show a rank or any class comparison.** Check the network response for
-`childTrajectory` — there should be no `latestRank`, no class size, no peer data.
-✅ A child with no data reads *"মূল্যায়নের জন্য যথেষ্ট তথ্য নেই"*, not `0%`.
-
-### 8d. Plan → PDF from the print queue
-
-1. **Teacher → Lesson Plans → open a plan → 🖨️ Send to print.**
-2. **Office → Print → Yet to print → Open.**
-
-✅ A real **paginated PDF** opens (Bangla renders correctly), not a "go look at the
-viewer" toast.
-
-**The gate check** — the Office holds `roster:manage` but **not** `content:read`:
-
-✅ The Office **can** open a plan **that is queued**.
-✅ The Office **cannot** open an arbitrary plan PDF (`/pdf/artifact/<some-other-id>` →
-403). The content plane stays shut.
-✅ **Cancel** the print job → the Office can no longer open that plan.
+### C4 · Plan → PDF from the queue
+Teacher: **Lesson Plans → a plan → 🖨️ Send to print** → Office: **Print → Open**.
+✅ A real **paginated PDF** opens (Bangla renders).
+✅ The Office **cannot** open an arbitrary plan (`/pdf/artifact/<other-id>` → 403).
+✅ **Cancel** the job → the Office can no longer open that plan.
 
 ---
 
-## Sign-off checklist
+## Sign-off
 
-- [ ] §0.1 migration dry-run showed `Problems: 0`, then `--commit` run
-- [ ] §0.2 data prerequisites confirmed (or their absence understood)
-- [ ] 1 · class pickers ordered Nursery → Five
-- [ ] 2 · N/KG first-period teacher marks; Quran teacher marks Class 1–5; report reads class/section
-- [ ] 2c · a cover hands over the marking duty
-- [ ] 3 · red backlog rows appear, deep-link, and clear when the work is done
-- [ ] 3b · an unmarked Quran group reads **Incomplete**, never "present"
-- [ ] 4 · countdown ticks; still counting at 06:59 on delivery day; red at 07:00; clears on delivery
-- [ ] 5 · teacher files upload/link/set; Office advances through all three buckets
-- [ ] 6a · same login, 5 hard refreshes, identical Pending card
-- [ ] 6b · Class 1–5 class teacher has **no** unclearable alert
-- [ ] 7a · **no pre-existing class test lost** from the queue after migration
-- [ ] 7d · marking the queue row advances the linked class test
-- [ ] 8a · a guardian of another child **cannot** open the attachment
-- [ ] 8c · `childTrajectory` response contains **no rank**
-- [ ] 8d · Office can open a **queued** plan, and **only** a queued plan
+**Part 0**
+- [ ] §0.3 diagnostic run; output understood (revoke run **only** if it said `OVERRIDE`)
+- [ ] §0.1 migration `--commit` run *(only if testing #186)*
+
+**Part A — the fixes**
+- [ ] A1 · N/KG first-period teacher can mark
+- [ ] A2 · countdown appears, ticks, and flips to red at 07:00
+- [ ] A3 · unmarked list names the 🕌 Quran groups
+- [ ] A4 · Office opens a queued set; **cancel → access withdrawn**
+- [ ] A5 · Mark printed moves the job with **no manual refresh**
+- [ ] A6 · colour/sides refuse to submit unselected; spinner + Remove work
+
+**Part B — #186**
+- [ ] B1 · **no pre-existing class test lost**
+- [ ] B4 · the queue row advances the linked class test
+
+**Part C — #187**
+- [ ] C1 · a guardian of another child **cannot** open the attachment
+- [ ] C3 · `childTrajectory` response contains **no rank**
+- [ ] C4 · Office can open a **queued** plan, and **only** a queued plan
 
 ---
 
 ## If something looks wrong
 
-1. **Check who you're logged in as.** Two "bugs" this cycle were two different teachers.
-2. **Check §0.2.** A missing Quran membership or academic year makes features silently
-   inert — by design, not by fault.
-3. **Hard-refresh.** The web app persists navigation state; a stale bundle can mislead.
-4. Note the **exact account, date, and screen**, and the **network response** for the
-   query involved. That triple is usually enough to find it immediately.
+1. **Check who you're logged in as.** Both "bugs" in round 1's first report were two
+   *different* teachers.
+2. **Check §0.2.** A missing Quran membership or `AssignmentSchedule` makes a feature
+   silently inert — by design, not by fault.
+3. **Hard-refresh.** The web app persists navigation state; a stale bundle misleads.
+4. Report the **account + date + screen**, and the **network response** for the query
+   involved. That triple is almost always enough.
