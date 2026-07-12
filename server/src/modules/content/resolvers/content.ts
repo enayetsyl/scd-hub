@@ -279,12 +279,85 @@ builder.queryField("contentArtifacts", (t) =>
       // Scope (J1.6 / D-#257): PRINCIPAL/OFFICE see everything; a TEACHER sees content
       // covered by a routine teaching/proxy or supervisory grant (subject + class). Scope
       // is resolved once, then each artifact is matched cheaply.
-      const docs = await ContentArtifact.find(filter).lean();
+      // Projected for the same reason as the tree: the list never renders a plan's markdown
+      // or its envelope, so hauling them for every artifact is pure waste. `artifact(id:)`
+      // still reads the full document for the plan view (ADR-006).
+      const docs = (await ContentArtifact.find(filter)
+        .select(TREE_PROJECTION)
+        .lean()) as unknown as LeanArtifact[];
       const scope = await buildContentScope(ctx);
       return docs.filter((d) => contentScopeAllows(scope, d.subject, d.classLevel)).map(docToShape);
     },
   }),
 );
+
+// ---------------------------------------------------------------------------
+// Bulk-read projection + ordering (the contentTree / contentArtifacts fix)
+// ---------------------------------------------------------------------------
+
+/**
+ * The ONLY fields the list + tree reads need. Deliberately EXCLUDES `renderedMarkdown`
+ * and the bulk of `envelopeJson`: a plan's markdown is several KB and the envelope is the
+ * whole import payload, and NEITHER is requested by the list or the tree — only by the
+ * single-artifact `artifact(id:)` query, which still reads the full document. Pulling them
+ * for every artifact cost ~24 MB per Lesson-Plans load at 6.5k artifacts.
+ *
+ * `envelopeJson.payload.session_plan.period_index` is projected on its own because
+ * `sessionIndex` is derived from it — a few bytes, not the whole envelope.
+ */
+const TREE_PROJECTION = [
+  "docType",
+  "subject",
+  "classLevel",
+  "address",
+  "curationTag",
+  "reviewStatus",
+  "current",
+  "priorVersionId",
+  "importedAt",
+  "approvedAt",
+  "approvalNote",
+  "approvalOverride",
+  "envelopeJson.payload.session_plan.period_index",
+].join(" ");
+
+/** Chapter numbers are Mixed (`"3"`, `3`, `"3ক"`), so compare numerically when both sides
+ *  are numeric and fall back to a locale compare otherwise — mirrors Mongo's old ordering
+ *  closely enough for a navigation tree, and is stable for equal keys. */
+function compareMixed(a: unknown, b: unknown): number {
+  const na = Number(a);
+  const nb = Number(b);
+  if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+  return String(a ?? "").localeCompare(String(b ?? ""));
+}
+
+/** Reproduces the ordering the Mongo `.sort()` used to give:
+ *  docType → subject → classLevel → address.number → session period_index → importedAt. */
+export function compareForTree(a: LeanArtifact, b: LeanArtifact): number {
+  const byDocType = String(a.docType).localeCompare(String(b.docType));
+  if (byDocType !== 0) return byDocType;
+  const bySubject = String(a.subject).localeCompare(String(b.subject));
+  if (bySubject !== 0) return bySubject;
+  if (a.classLevel !== b.classLevel) return a.classLevel - b.classLevel;
+  const byNumber = compareMixed(a.address?.number, b.address?.number);
+  if (byNumber !== 0) return byNumber;
+  const pa = sessionIndexOf(a);
+  const pb = sessionIndexOf(b);
+  if (pa !== pb) {
+    // A plan with no period index sorts first, as it did in Mongo (missing < number).
+    if (pa === null) return -1;
+    if (pb === null) return 1;
+    return pa - pb;
+  }
+  return new Date(a.importedAt).getTime() - new Date(b.importedAt).getTime();
+}
+
+/** The session's period index, or null — the one value we still need from the envelope. */
+function sessionIndexOf(doc: LeanArtifact): number | null {
+  const payload = doc.envelopeJson?.payload as Record<string, unknown> | undefined;
+  const sessionPlan = payload?.session_plan as Record<string, unknown> | undefined;
+  return typeof sessionPlan?.period_index === "number" ? sessionPlan.period_index : null;
+}
 
 // ---------------------------------------------------------------------------
 // Query: contentTree (Subject×Class→Chapter→Lesson navigation — J1.5)
@@ -308,16 +381,17 @@ builder.queryField("contentTree", (t) =>
       if (args.subject) filter.subject = args.subject;
       if (args.classLevel != null) filter.classLevel = args.classLevel;
 
-      const docs = await ContentArtifact.find(filter)
-        .sort({
-          docType: 1,
-          subject: 1,
-          classLevel: 1,
-          "address.number": 1,
-          "envelopeJson.payload.session_plan.period_index": 1,
-          importedAt: 1,
-        })
-        .lean();
+      // The sort is done in JS, NOT in Mongo — deliberately. Sorting in the database on
+      // `envelopeJson.payload.session_plan.period_index` (a path inside a Mixed blob) can
+      // use no index, so Mongo had to sort the FULL documents in memory and blew its 32 MB
+      // ceiling once the collection grew: "Sort exceeded memory limit of 33554432 bytes"
+      // — which took Lesson Plans down in production for everyone (prod: 6591 artifacts,
+      // ~29 MB). The projection below is what makes sorting here cheap: the rows are small,
+      // and `compareForTree` reproduces the old ordering exactly.
+      const docs = (await ContentArtifact.find(filter)
+        .select(TREE_PROJECTION)
+        .lean()) as unknown as LeanArtifact[];
+      docs.sort(compareForTree);
 
       // Scope filter (J1.6 / D-#257): routine teaching/proxy or supervisory grant by subject+class.
       const scope = await buildContentScope(ctx);
@@ -358,9 +432,9 @@ builder.queryField("contentTree", (t) =>
 // ---------------------------------------------------------------------------
 
 function docToShape(doc: LeanArtifact): ArtifactShape {
-  const payload = doc.envelopeJson?.payload as Record<string, unknown> | undefined;
-  const sessionPlan = payload?.session_plan as Record<string, unknown> | undefined;
-  const sessionIndex = typeof sessionPlan?.period_index === "number" ? sessionPlan.period_index : null;
+  // NOTE: on the projected bulk reads (list + tree) `renderedMarkdown` is absent and so
+  // resolves to null — by design; only `artifact(id:)` reads the full document.
+  const sessionIndex = sessionIndexOf(doc);
 
   return {
     _id: doc._id,
