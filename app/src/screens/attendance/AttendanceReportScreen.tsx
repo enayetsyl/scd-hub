@@ -148,14 +148,25 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
       {unmarked.length === 0 && !unmarkedQ.fetching ? <Notice message={STR.attAllMarked} tone="ok" /> : null}
       {unmarked.map((u) => (
         <Card key={u.sectionId}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Body style={{ fontWeight: "700" }}>
-              {classLevelLabel(u.classLevel)} — {u.sectionNameBn || u.sectionCode}
-            </Body>
-            <Muted>
-              {STR.attMarkerWord}: {u.markerName ?? STR.attNoMarker}
-            </Muted>
-          </View>
+          <Body style={{ fontWeight: "700" }}>
+            {classLevelLabel(u.classLevel)} — {u.sectionNameBn || u.sectionCode}
+          </Body>
+          {/* WHICH unit is missing — for Class 1–5 these are the Quran GROUPS, so the
+              Office can see exactly which Quran teacher to chase. */}
+          {u.pendingUnits.map((p) => (
+            <View
+              key={`${p.unitType}:${p.unitId}`}
+              style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: space(1) }}
+            >
+              <Body style={{ flex: 1 }}>
+                {p.unitType === "subjectgroup" ? "🕌 " : ""}
+                {p.label}
+              </Body>
+              <Muted>
+                {STR.attMarkerWord}: {p.markerName ?? STR.attNoMarker}
+              </Muted>
+            </View>
+          ))}
         </Card>
       ))}
 

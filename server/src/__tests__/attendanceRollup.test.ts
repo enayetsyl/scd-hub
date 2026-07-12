@@ -23,6 +23,7 @@ const mockUserFindById = jest.fn();
 const mockResolveDayType = jest.fn();
 const mockResolveUnits = jest.fn();
 const mockMarkerForUnit = jest.fn();
+const mockGroupFind = jest.fn();
 
 jest.mock("../modules/attendance/models/StudentAttendanceDay", () => ({
   StudentAttendanceDay: { find: (f: unknown) => ({ select: () => ({ lean: () => mockDayFind(f) }), lean: () => mockDayFind(f) }) },
@@ -51,6 +52,10 @@ jest.mock("../modules/routine/calendar", () => ({
 jest.mock("../modules/attendance/attendanceUnit", () => ({
   resolveUnits: (...a: unknown[]) => mockResolveUnits(...a),
   unitKey: (u: { unitType: string; unitId: string }) => `${u.unitType}:${u.unitId}`,
+}));
+// The chase list names the QURAN GROUP, not just the class (live-testing find).
+jest.mock("../modules/routine/models/SubjectGroup", () => ({
+  SubjectGroup: { find: (f: unknown) => ({ select: () => ({ lean: () => mockGroupFind(f) }) }) },
 }));
 jest.mock("../modules/attendance/services/StudentAttendanceService", () => ({
   markerForUnit: (...a: unknown[]) => mockMarkerForUnit(...a),
@@ -111,6 +116,10 @@ beforeEach(() => {
   mockStudentFind.mockResolvedValue(ALL_STUDENTS);
   mockResolveUnits.mockResolvedValue(UNITS);
   mockUserFindById.mockResolvedValue({ name: "T" });
+  mockGroupFind.mockResolvedValue([
+    { _id: QAIDA, nameBn: "কায়দা" },
+    { _id: NAJERA, nameBn: "নাজেরা" },
+  ]);
 });
 
 describe("absenteeReport — group capture rolls up to class/section", () => {
@@ -175,6 +184,17 @@ describe("unmarkedSections — pending while ANY covering unit is unmarked", () 
     expect(rows[0].sectionId).toBe(SEC_3);
     expect(rows[0].markerName).toBe("Najera Teacher");
     expect(rows[0].pendingMarkerNames).toEqual(["Najera Teacher"]);
+
+    // The Office must see WHICH Quran group is missing — naming only the class left them
+    // unable to tell which Quran teacher to chase (live-testing find).
+    expect(rows[0].pendingUnits).toEqual([
+      expect.objectContaining({
+        unitType: "subjectgroup",
+        unitId: NAJERA,
+        label: "নাজেরা",
+        markerName: "Najera Teacher",
+      }),
+    ]);
   });
 
   test("all units marked → nothing pending", async () => {

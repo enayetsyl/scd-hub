@@ -32,8 +32,13 @@ const ANCHOR_DAYS = [0, 1, 2, 3, 4] as const;
 
 export default function AssignmentScheduleScreen(_props: Props): React.ReactElement {
   const [yearsQ] = useQuery({ query: ACADEMIC_YEARS_QUERY });
-  const year = (yearsQ.data?.academicYears ?? []).find((y) => y.current) ?? yearsQ.data?.academicYears?.[0];
-  const yearId = year?.id ?? "";
+  const years = yearsQ.data?.academicYears ?? [];
+  // The year was picked SILENTLY (current, else the first) — so an admin editing the
+  // schedule could not see, let alone change, which year they were editing. Now it is an
+  // explicit choice, defaulting to the current year (live-testing find).
+  const [pickedYearId, setPickedYearId] = useState<string | null>(null);
+  const defaultYear = years.find((y) => y.current) ?? years[0];
+  const yearId = pickedYearId ?? defaultYear?.id ?? "";
 
   const [scheduleQ, refetchSchedule] = useQuery({
     query: AS_SCHEDULE_QUERY,
@@ -136,6 +141,17 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
 
             <Card>
               <Body style={{ fontWeight: "700", marginBottom: 8 }}>{STR.asScheduleTitle}</Body>
+              <Select
+                label={STR.asAcademicYear}
+                value={yearId || null}
+                options={years.map((y) => ({
+                  label: y.current ? `${y.label} (${STR.asCurrentYear})` : y.label,
+                  value: y.id,
+                }))}
+                onChange={(v) => setPickedYearId(v)}
+                placeholder={STR.asAcademicYear}
+              />
+              {years.length === 0 ? <Notice message={STR.asNoAcademicYear} tone="warn" /> : null}
               <DateField label={STR.asTermStart} value={termStartValue} onChange={setTermStart} />
               <Muted style={{ marginTop: 4 }}>{STR.asDeliveryDay}</Muted>
               <ChipRow>

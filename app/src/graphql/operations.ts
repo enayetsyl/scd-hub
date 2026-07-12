@@ -3104,6 +3104,15 @@ export const ABSENTEE_REPORT = gql<{ absenteeReport: ClassAbsenteesT[] }, { date
   }
 `;
 
+/** A still-unmarked unit — for a Class 1–5 section these are its Quran GROUPS. */
+export interface PendingAttendanceUnitT {
+  unitType: string;
+  unitId: string;
+  label: string;
+  markerTeacherId: string | null;
+  markerName: string | null;
+}
+
 export interface UnmarkedSectionT {
   sectionId: string;
   sectionCode: string;
@@ -3112,12 +3121,14 @@ export interface UnmarkedSectionT {
   classNameBn: string;
   markerTeacherId: string | null;
   markerName: string | null;
+  pendingUnits: PendingAttendanceUnitT[];
 }
 
 export const UNMARKED_SECTIONS = gql<{ unmarkedSections: UnmarkedSectionT[] }, { dateKey: string }>`
   query UnmarkedSections($dateKey: String!) {
     unmarkedSections(dateKey: $dateKey) {
       sectionId sectionCode sectionNameBn classLevel classNameBn markerTeacherId markerName
+      pendingUnits { unitType unitId label markerTeacherId markerName }
     }
   }
 `;

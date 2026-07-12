@@ -15,7 +15,7 @@ import React, { useState } from "react";
 import { Linking, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission } from "@scd/shared";
+import { roleHasPermission, PRINT_COLOUR_LABELS_EN, PRINT_SIDES_LABELS_EN } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import {
   PRINT_QUEUE_QUERY,
@@ -57,12 +57,21 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
   const [bucket, setBucket] = useState<string>("REQUESTED");
   const [busy, setBusy] = useState(false);
 
+  // cache-and-network: advancing a job moves it BETWEEN buckets, so the destination
+  // tab's cached list is stale the moment we act. Without this, "Mark printed" left the
+  // Printing-done tab empty until a manual refresh (live-testing find).
   const [queueQ, refetchQueue] = useQuery({
     query: PRINT_QUEUE_QUERY,
     variables: { status: bucket },
     pause: !isOffice,
+    requestPolicy: "cache-and-network",
   });
-  const [mineQ, refetchMine] = useQuery({ query: MY_PRINT_REQUESTS_QUERY, variables: {}, pause: !canRequest });
+  const [mineQ, refetchMine] = useQuery({
+    query: MY_PRINT_REQUESTS_QUERY,
+    variables: {},
+    pause: !canRequest,
+    requestPolicy: "cache-and-network",
+  });
 
   const [, markPrinted] = useMutation(MARK_PRINT_REQUEST_PRINTED);
   const [, markDelivered] = useMutation(MARK_PRINT_REQUEST_DELIVERED);
@@ -73,7 +82,9 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
     if (canRequest) refetchMine({ requestPolicy: "network-only" });
   };
 
-  /** Open the job's document the way its source demands — every source is printable. */
+  /** Open the job's SINGLE-document sources. Uploads get one button PER FILE (below) —
+   *  opening only fileIds[0] left every other attachment unreachable (live-testing find:
+   *  a teacher attached a PDF + an image and only the image could be opened). */
   async function openSource(r: PrintRequestT): Promise<void> {
     if (r.sourceType === "SET" && r.setId) return openPdf(`/pdf/set/${r.setId}`);
     // A plan is stored as markdown; `/pdf/artifact/:id` renders it through the same
@@ -81,7 +92,6 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
     if (r.sourceType === "CONTENT_ARTIFACT" && r.contentArtifactId) {
       return openPdf(`/pdf/artifact/${r.contentArtifactId}`);
     }
-    if (r.sourceType === "UPLOAD" && r.fileIds.length > 0) return openStoredFile(r.fileIds[0]);
     if (r.sourceType === "LINK" && r.linkUrl) {
       await Linking.openURL(r.linkUrl);
       return;
@@ -110,6 +120,12 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
             {r.purpose} · {bnNum(r.copies)} {STR.prCopiesShort}
             {r.neededByKey ? ` · ${STR.prNeededBy}: ${bnNum(r.neededByKey)}` : ""}
           </Muted>
+          {/* The Office cannot start a job without knowing how to print it. */}
+          <Muted>
+            {r.colour === "COLOR" ? PRINT_COLOUR_LABELS_EN.COLOR : PRINT_COLOUR_LABELS_EN.BW}
+            {" · "}
+            {r.sides === "DOUBLE" ? PRINT_SIDES_LABELS_EN.DOUBLE : PRINT_SIDES_LABELS_EN.SINGLE}
+          </Muted>
           {office && r.requesterName ? (
             <Muted>
               {STR.prRequester}: {r.requesterName}
@@ -120,8 +136,26 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
         <Badge text={bucketLabel(r.status)} tone={statusTone(r.status)} />
       </View>
 
+      {/* An UPLOAD job can carry up to 5 files — the Office must be able to open EVERY
+          one, so each gets its own named button. */}
+      {r.sourceType === "UPLOAD" ? (
+        <View style={{ gap: space(1), marginTop: space(2) }}>
+          {r.files.map((f) => (
+            <View
+              key={f.id}
+              style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}
+            >
+              <Muted style={{ flex: 1 }}>📄 {f.name}</Muted>
+              <Button title={STR.prOpen} variant="secondary" onPress={() => openStoredFile(f.id)} />
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
-        <Button title={STR.prOpen} variant="secondary" onPress={() => openSource(r)} />
+        {r.sourceType !== "UPLOAD" ? (
+          <Button title={STR.prOpen} variant="secondary" onPress={() => openSource(r)} />
+        ) : null}
 
         {office && r.status === "REQUESTED" ? (
           <Button

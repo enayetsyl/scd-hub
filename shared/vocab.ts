@@ -1179,6 +1179,30 @@ export const PRINT_SOURCE_LABELS_EN: Record<PrintSource, string> = {
   LINK: "Link",
 };
 
+/** How the job is printed (live-testing requirement): both are MANDATORY on a request —
+ *  the Office cannot start a job without knowing them. */
+export const PRINT_COLOURS = ["BW", "COLOR"] as const;
+export type PrintColour = (typeof PRINT_COLOURS)[number];
+export const PRINT_COLOUR_LABELS_BN: Record<PrintColour, string> = {
+  BW: "সাদা-কালো",
+  COLOR: "রঙিন",
+};
+export const PRINT_COLOUR_LABELS_EN: Record<PrintColour, string> = {
+  BW: "Black & white",
+  COLOR: "Colour",
+};
+
+export const PRINT_SIDES = ["SINGLE", "DOUBLE"] as const;
+export type PrintSides = (typeof PRINT_SIDES)[number];
+export const PRINT_SIDES_LABELS_BN: Record<PrintSides, string> = {
+  SINGLE: "এক পৃষ্ঠায়",
+  DOUBLE: "দুই পৃষ্ঠায়",
+};
+export const PRINT_SIDES_LABELS_EN: Record<PrintSides, string> = {
+  SINGLE: "Single side",
+  DOUBLE: "Both sides",
+};
+
 /** Uploads per print request (PQ-2) — the class-note attachment ceiling. */
 export const MAX_PRINT_UPLOADS = 5;
 

@@ -13,8 +13,8 @@
  * Sources are references by id, never PDF snapshots (see the model's header).
  */
 import { Types } from "mongoose";
-import { MAX_PRINT_UPLOADS, PLAN_DOC_TYPES, PRINT_PURPOSES, PRINT_SOURCES } from "@scd/shared";
-import type { PrintPurpose, PrintRequestStatus, PrintSource } from "@scd/shared";
+import { MAX_PRINT_UPLOADS, PLAN_DOC_TYPES, PRINT_COLOURS, PRINT_PURPOSES, PRINT_SIDES, PRINT_SOURCES } from "@scd/shared";
+import type { PrintColour, PrintPurpose, PrintRequestStatus, PrintSides, PrintSource } from "@scd/shared";
 import { PrintRequest, type IPrintRequest } from "../models/PrintRequest";
 import { AssessmentSet } from "../../assessment/models/AssessmentSet";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
@@ -38,6 +38,9 @@ export interface CreatePrintRequestInput {
   contentArtifactId?: string | null;
   fileIds?: string[] | null;
   linkUrl?: string | null;
+  /** Mandatory on a teacher's request; defaulted on the internal (trusted) path. */
+  colour?: string | null;
+  sides?: string | null;
   copies?: number | null;
   neededByKey?: string | null;
   classId?: string | null;
@@ -154,6 +157,15 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
     throw new PrintRequestError("neededByKey must be YYYY-MM-DD");
   }
 
+  // Colour + sides are MANDATORY on a teacher's request — enforced at the RESOLVER, the
+  // teacher-facing seam (live-testing requirement: the Office cannot start a job without
+  // them). Here we only validate the VALUE, so internal callers and migration-backfilled
+  // rows keep the schema defaults without a special-case flag.
+  const colour = (input.colour ?? "BW") as PrintColour;
+  const sides = (input.sides ?? "SINGLE") as PrintSides;
+  if (!(PRINT_COLOURS as readonly string[]).includes(colour)) throw new PrintRequestError("Invalid colour");
+  if (!(PRINT_SIDES as readonly string[]).includes(sides)) throw new PrintRequestError("Invalid sides");
+
   const source = input.sourceType as PrintSource;
   const doc = await PrintRequest.create({
     title: input.title.trim(),
@@ -165,6 +177,8 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
       : {}),
     ...(source === "UPLOAD" ? { fileIds: input.fileIds!.map((id) => new Types.ObjectId(id)) } : {}),
     ...(source === "LINK" ? { linkUrl: input.linkUrl! } : {}),
+    colour,
+    sides,
     copies,
     ...(input.neededByKey ? { neededByKey: input.neededByKey } : {}),
     ...(input.classId ? { classId: new Types.ObjectId(input.classId) } : {}),

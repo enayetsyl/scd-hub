@@ -13,6 +13,7 @@ import { ForbiddenError } from "../../../middleware/authz";
 import { callerHasPermission } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { User } from "../../foundation/models/User";
+import { StoredFile } from "../../platform/models/StoredFile";
 import {
   createPrintRequest,
   markPrinted,
@@ -43,10 +44,29 @@ const isOffice = (ctx: AppContext): boolean =>
 // Shape
 // ---------------------------------------------------------------------------
 
+/** An attached file, NAMED — the Office must be able to open EVERY file on a job, not
+ *  just the first (live-testing find: a teacher attached a PDF + an image and only the
+ *  image was reachable). */
+interface PrintFileView {
+  id: string;
+  name: string;
+  mime: string;
+}
+
 interface PrintRequestView {
   doc: IPrintRequest;
   requesterName: string | null;
+  files: PrintFileView[];
 }
+
+const PrintFileRef = builder.objectRef<PrintFileView>("PrintFile");
+PrintFileRef.implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    name: t.exposeString("name"),
+    mime: t.exposeString("mime"),
+  }),
+});
 
 const PrintRequestRef = builder.objectRef<PrintRequestView>("PrintRequest");
 PrintRequestRef.implement({
@@ -64,7 +84,11 @@ PrintRequestRef.implement({
       resolve: (v) => v.doc.contentArtifactId?.toString() ?? null,
     }),
     fileIds: t.stringList({ resolve: (v) => (v.doc.fileIds ?? []).map((f) => f.toString()) }),
+    /** Every attached file, named — the Office opens each one individually. */
+    files: t.field({ type: [PrintFileRef], resolve: (v) => v.files }),
     linkUrl: t.string({ nullable: true, resolve: (v) => v.doc.linkUrl ?? null }),
+    colour: t.string({ resolve: (v) => v.doc.colour }),
+    sides: t.string({ resolve: (v) => v.doc.sides }),
     copies: t.int({ resolve: (v) => v.doc.copies }),
     neededByKey: t.string({ nullable: true, resolve: (v) => v.doc.neededByKey ?? null }),
     subject: t.string({ nullable: true, resolve: (v) => v.doc.subject ?? null }),
@@ -82,13 +106,29 @@ PrintRequestRef.implement({
   }),
 });
 
-/** Attach requester names in ONE batched load — the queue is a list view. */
+/** Attach requester + file names in ONE batched load each — the queue is a list view. */
 async function decorate(docs: IPrintRequest[]): Promise<PrintRequestView[]> {
   if (docs.length === 0) return [];
   const ids = [...new Set(docs.map((d) => d.requestedBy.toString()))];
   const users = await User.find({ _id: { $in: ids } }).select("name").lean();
   const nameById = new Map(users.map((u) => [u._id.toString(), u.name]));
-  return docs.map((doc) => ({ doc, requesterName: nameById.get(doc.requestedBy.toString()) ?? null }));
+
+  const fileIds = [...new Set(docs.flatMap((d) => (d.fileIds ?? []).map((f) => f.toString())))];
+  const files = fileIds.length
+    ? await StoredFile.find({ _id: { $in: fileIds } }).select("originalName mime").lean()
+    : [];
+  const fileById = new Map(files.map((f) => [f._id.toString(), f]));
+
+  return docs.map((doc) => ({
+    doc,
+    requesterName: nameById.get(doc.requestedBy.toString()) ?? null,
+    files: (doc.fileIds ?? []).map((f) => {
+      const id = f.toString();
+      const found = fileById.get(id);
+      // A vanished file still lists, so the Office sees the job is incomplete.
+      return { id, name: found?.originalName ?? "file", mime: found?.mime ?? "" };
+    }),
+  }));
 }
 
 const decorateOne = async (doc: IPrintRequest): Promise<PrintRequestView> => (await decorate([doc]))[0];
@@ -112,8 +152,12 @@ builder.mutationField("createPrintRequest", (t) =>
       contentArtifactId: t.arg.string({ required: false }),
       fileIds: t.arg.stringList({ required: false }),
       linkUrl: t.arg.string({ required: false }),
-      copies: t.arg.int({ required: false }),
-      neededByKey: t.arg.string({ required: false }),
+      // MANDATORY on a teacher's request (live-testing requirement) — the Office cannot
+      // start a job without knowing how to print it, how many, and by when.
+      colour: t.arg.string({ required: true }),
+      sides: t.arg.string({ required: true }),
+      copies: t.arg.int({ required: true }),
+      neededByKey: t.arg.string({ required: true }),
       classId: t.arg.string({ required: false }),
       sectionId: t.arg.string({ required: false }),
       subject: t.arg.string({ required: false }),

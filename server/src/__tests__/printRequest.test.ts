@@ -163,6 +163,25 @@ describe("createPrintRequest", () => {
     expect(created.setId).toBeUndefined();
   });
 
+  test("colour/sides default when absent (internal path) and reject an unknown value", async () => {
+    // The RESOLVER makes them mandatory for a teacher; the service defaults so the
+    // internal class-test path and migration-backfilled rows stay valid.
+    await createPrintRequest(baseInput);
+    const created = mockCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(created.colour).toBe("BW");
+    expect(created.sides).toBe("SINGLE");
+
+    await expect(createPrintRequest({ ...baseInput, colour: "RAINBOW" })).rejects.toThrow(/colour/i);
+    await expect(createPrintRequest({ ...baseInput, sides: "TRIPLE" })).rejects.toThrow(/sides/i);
+  });
+
+  test("a chosen colour + sides are persisted", async () => {
+    await createPrintRequest({ ...baseInput, colour: "COLOR", sides: "DOUBLE" });
+    const created = mockCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(created.colour).toBe("COLOR");
+    expect(created.sides).toBe("DOUBLE");
+  });
+
   test("rejects a blank title, an unknown purpose, bad copies and a bad date key", async () => {
     await expect(createPrintRequest({ ...baseInput, title: "  " })).rejects.toThrow(/title/);
     await expect(createPrintRequest({ ...baseInput, purpose: "VIBES" })).rejects.toThrow(/purpose/);

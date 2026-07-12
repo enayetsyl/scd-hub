@@ -190,11 +190,28 @@ const NO_OVERDUE: PendingAlert = { kind: "assignment_entry", count: 0, oldestDat
  * INSTANT, not the date: on delivery-day morning before 07:00 the teacher is still
  * counting down, not yet overdue.
  */
+/**
+ * The academic year to read assignments against. `AcademicYear.current` defaults to
+ * FALSE, so a roster where nobody ever flipped the flag has no `current:true` year — and
+ * the countdown/alert then vanished silently (live-testing find). Fall back to the year
+ * whose date range COVERS today, the same rule `StaffLeaveService` uses.
+ */
+async function resolveAcademicYearId(today: Date): Promise<string | null> {
+  const current = await AcademicYear.findOne({ current: true }).select("_id").lean();
+  if (current) return current._id.toString();
+  const covering = await AcademicYear.findOne({
+    startDate: { $lte: today },
+    endDate: { $gte: today },
+  })
+    .select("_id")
+    .lean();
+  return covering ? covering._id.toString() : null;
+}
+
 async function assignmentWork(userId: string, today: Date): Promise<AssignmentWork> {
   const none: AssignmentWork = { overdue: NO_OVERDUE, prep: null };
-  const year = await AcademicYear.findOne({ current: true }).select("_id").lean();
-  if (!year) return none;
-  const academicYearId = year._id.toString();
+  const academicYearId = await resolveAcademicYearId(today);
+  if (!academicYearId) return none;
   const schedule = await AssignmentSchedule.findOne({ academicYearId }).select("termStartDate").lean();
   if (!schedule) return none;
 
