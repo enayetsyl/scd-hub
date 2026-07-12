@@ -1,7 +1,9 @@
 # Testing guide — 2026-07-10 release candidate
 
-**Round 2.** Updated after your first pass. Nothing here is in production yet
-(`main` is still at PR #182).
+**Round 3.** Updated after your second pass. Everything is now merged on `dev` and
+deployed to the dev site. Nothing is in production yet (`main` is still at PR #182).
+
+**Test on the dev site.** Run §0.1 (the migration) first — it is now due.
 
 ## What round 1 settled
 
@@ -24,18 +26,18 @@ access*; if that ever bites, that is the real fix.
 | PR | Contains | State |
 |---|---|---|
 | — | features 1–6 (attendance, Today board, countdown, print queue PQ-1…4) | merged on `dev` |
-| **#188** | **the round-1 fixes** | open — **test this** |
-| **#186** | print queue PQ-5 (class-test absorption, delivered notify, migration) | open, untested |
-| **#187** | guardian attachments · cross-tracker profile · plan→PDF | open, untested |
+| **#188** | the round-1 + round-2 fixes | **merged on `dev`** |
+| **#186** | print queue PQ-5 (class-test absorption, delivered notify, migration) | **merged on `dev`** |
+| **#187** | guardian attachments · cross-tracker profile · plan→PDF | **merged on `dev`** |
 
-> #186/#187 are **not on `dev`**. To test them, merge them or check out
-> `feat/print-queue-absorb` / `feat/cross-tracker-profile` locally.
+> **Everything below is now on `dev` and deployed to the dev site** — no local
+> checkout needed. Production (`main`) is still at PR #182; nothing here is live.
 
 ---
 
 ## Part 0 — before you start
 
-### 0.1 ⚠️ The migration (only for PR #186)
+### 0.1 ⚠️ The migration — **now due** (PQ-5 is on `dev`)
 
 A `ClassTest` has **always been** a print request. Without the back-fill, **every class
 test created before PQ-5 vanishes from the Office's queue.**
@@ -168,7 +170,7 @@ is refused.
 
 ---
 
-## Part B — PR #186 (PQ-5) · **run §0.1 first**
+## Part B — the print queue absorbs class tests (PQ-5) · **run §0.1 first**
 
 ### B1 · Nothing is lost
 **Office → Print → Yet to print.**
@@ -196,7 +198,7 @@ Office: **Mark delivered** → the requesting teacher's bell.
 
 ---
 
-## Part C — PR #187 (three deferred features)
+## Part C — the three deferred features
 
 ### C1 · Guardians can open class-note attachments
 Teacher posts a class note **with an attachment** → guardian of a child in that
@@ -235,11 +237,62 @@ Teacher: **Lesson Plans → a plan → 🖨️ Send to print** → Office: **Pri
 
 ---
 
+## Part D — the round-2 fixes
+
+These came out of your second pass. All are on `dev`.
+
+### D1 · Every attachment opens *(was: only the image, never the PDF)*
+
+**Root cause:** the Office's **Open** button only ever opened `fileIds[0]`. With a PDF and
+an image attached, whichever was second was **unreachable** — nothing was wrong with the
+PDF itself.
+
+Teacher: **Print → ➕ New request → attach a PDF *and* an image** → Office: **Print**.
+
+✅ The row lists **one `📄 <name>` line per file, each with its own Open button**.
+✅ **Both** open — the PDF *and* the image.
+
+### D2 · Today's unmarked list matches the Attendance one
+
+Round 2: *"Office login — Today and Attendance disagree about what's unmarked."*
+Today was still listing **classes**; Attendance had already moved to **units**.
+
+**Office/Principal → Today**, then **→ Attendance → Report**, same date.
+
+✅ The two lists now **name the same things** — 🕌 Quran groups by name for Class 1–5,
+section + first-period teacher for Nursery/KG.
+✅ Nothing appears as unmarked on one screen and marked on the other.
+
+### D3 · Send to print, from the plan page
+
+**Lesson Plans → open a chapter/lesson plan.**
+
+✅ A **🖨️ Send to print** button on the plan itself (you no longer have to start from the
+Print tab and hunt for the plan).
+✅ It lands in **Office → Print → Yet to print**, and **Open** renders the plan PDF.
+
+### D4 · The set's print title carries the teacher name
+
+**Sets → an assembled set → 🖨️ Send to print.**
+
+✅ The queued row's title includes **your name** — the Office can tell whose paper it is
+without opening it. (This already worked from the Print tab; the *Set screen* path was
+the one missing it.)
+
+### D5 · Validation errors are impossible to miss
+
+**Print → ➕ New request → submit with a required field blank.**
+
+✅ The error shows **inline at the top** *and* as a **toast**. Previously it only sat at
+the top of a long form — off-screen, so submitting looked like it silently did nothing.
+
+---
+
 ## Sign-off
 
 **Part 0**
 - [ ] §0.3 diagnostic run; output understood (revoke run **only** if it said `OVERRIDE`)
-- [ ] §0.1 migration `--commit` run *(only if testing #186)*
+- [ ] §0.1 migration `--commit` run — **required before Part B**
 
 **Part A — the fixes**
 - [ ] A1 · N/KG first-period teacher can mark
@@ -249,14 +302,20 @@ Teacher: **Lesson Plans → a plan → 🖨️ Send to print** → Office: **Pri
 - [ ] A5 · Mark printed moves the job with **no manual refresh**
 - [ ] A6 · colour/sides refuse to submit unselected; spinner + Remove work
 
-**Part B — #186**
+**Part B — the class-test absorption**
 - [ ] B1 · **no pre-existing class test lost**
 - [ ] B4 · the queue row advances the linked class test
 
-**Part C — #187**
+**Part C — the deferred features**
 - [ ] C1 · a guardian of another child **cannot** open the attachment
 - [ ] C3 · `childTrajectory` response contains **no rank**
 - [ ] C4 · Office can open a **queued** plan, and **only** a queued plan
+
+**Part D — the round-2 fixes**
+- [ ] D1 · a PDF **and** an image both open (one button per file)
+- [ ] D2 · Today and Attendance agree on what's unmarked
+- [ ] D3 · 🖨️ Send to print works from the plan page
+- [ ] D5 · a blank required field **toasts**
 
 ---
 
