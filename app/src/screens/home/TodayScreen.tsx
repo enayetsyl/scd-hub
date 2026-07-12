@@ -240,16 +240,27 @@ export default function TodayScreen(): React.ReactElement {
             <Body style={{ fontWeight: "700", marginBottom: space(1), color: colors.error }}>
               ⚠ {STR.attUnmarkedSections} · {bnNum(unmarked.length)}
             </Body>
+            {/* Same shape as Attendance → Report: name the still-missing UNITS (the Quran
+                GROUPS for Class 1–5), so the Office can see which teacher to chase from
+                here too — the two screens must not disagree. */}
             {unmarked.map((u) => (
-              <View
-                key={u.sectionId}
-                style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: space(2) }}
-              >
-                <Body style={{ flex: 1 }}>
+              <View key={u.sectionId} style={{ paddingVertical: space(2) }}>
+                <Body style={{ fontWeight: "600" }}>
                   {classLevelLabel(u.classLevel)}
                   {u.sectionNameBn ? ` — ${u.sectionNameBn}` : ""}
                 </Body>
-                <Muted>{u.markerName ?? "—"}</Muted>
+                {u.pendingUnits.map((p) => (
+                  <View
+                    key={`${p.unitType}:${p.unitId}`}
+                    style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: space(1) }}
+                  >
+                    <Muted style={{ flex: 1 }}>
+                      {p.unitType === "subjectgroup" ? "🕌 " : ""}
+                      {p.label}
+                    </Muted>
+                    <Muted>{p.markerName ?? "—"}</Muted>
+                  </View>
+                ))}
               </View>
             ))}
           </Card>

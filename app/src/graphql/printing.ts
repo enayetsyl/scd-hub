@@ -5,6 +5,12 @@
  */
 import { gql } from "urql";
 
+export interface PrintFileT {
+  id: string;
+  name: string;
+  mime: string;
+}
+
 export interface PrintRequestT {
   id: string;
   title: string;
@@ -13,6 +19,7 @@ export interface PrintRequestT {
   setId: string | null;
   contentArtifactId: string | null;
   fileIds: string[];
+  files: PrintFileT[];
   linkUrl: string | null;
   colour: string;
   sides: string;
@@ -31,6 +38,7 @@ export interface PrintRequestT {
 
 const PRINT_REQUEST_FIELDS = `
   id title purpose sourceType setId contentArtifactId fileIds linkUrl
+  files { id name mime }
   colour sides copies neededByKey subject notes status
   requestedBy requesterName requestedAt printedAt deliveredAt cancelReason
 `;

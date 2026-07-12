@@ -82,15 +82,18 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
     if (canRequest) refetchMine({ requestPolicy: "network-only" });
   };
 
-  /** Open the job's document the way its source demands. */
+  /** Open the job's SINGLE-document sources. Uploads get one button PER FILE (below) —
+   *  opening only fileIds[0] left every other attachment unreachable (live-testing find:
+   *  a teacher attached a PDF + an image and only the image could be opened). */
   async function openSource(r: PrintRequestT): Promise<void> {
     if (r.sourceType === "SET" && r.setId) return openPdf(`/pdf/set/${r.setId}`);
-    if (r.sourceType === "UPLOAD" && r.fileIds.length > 0) return openStoredFile(r.fileIds[0]);
+    if (r.sourceType === "CONTENT_ARTIFACT" && r.contentArtifactId) {
+      return openPdf(`/pdf/artifact/${r.contentArtifactId}`);
+    }
     if (r.sourceType === "LINK" && r.linkUrl) {
       await Linking.openURL(r.linkUrl);
       return;
     }
-    // A plan renders from markdown, not through the PDF route — send them to the viewer.
     toast.show(STR.prOpenPlanHint, "info");
   }
 
@@ -131,8 +134,26 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
         <Badge text={bucketLabel(r.status)} tone={statusTone(r.status)} />
       </View>
 
+      {/* An UPLOAD job can carry up to 5 files — the Office must be able to open EVERY
+          one, so each gets its own named button. */}
+      {r.sourceType === "UPLOAD" ? (
+        <View style={{ gap: space(1), marginTop: space(2) }}>
+          {r.files.map((f) => (
+            <View
+              key={f.id}
+              style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}
+            >
+              <Muted style={{ flex: 1 }}>📄 {f.name}</Muted>
+              <Button title={STR.prOpen} variant="secondary" onPress={() => openStoredFile(f.id)} />
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
-        <Button title={STR.prOpen} variant="secondary" onPress={() => openSource(r)} />
+        {r.sourceType !== "UPLOAD" ? (
+          <Button title={STR.prOpen} variant="secondary" onPress={() => openSource(r)} />
+        ) : null}
 
         {office && r.status === "REQUESTED" ? (
           <Button

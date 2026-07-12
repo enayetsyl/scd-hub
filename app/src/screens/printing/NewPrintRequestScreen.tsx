@@ -49,10 +49,15 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
   const presetSource = preset.setId ? "SET" : preset.contentArtifactId ? "CONTENT_ARTIFACT" : null;
 
   const { user } = useAuth();
-  // Autofill the title from the requesting teacher (live-testing ask) — still editable.
-  const [title, setTitle] = useState(
-    preset.title ?? (user?.name ? `${STR.prTitleFor} ${user.name}` : ""),
-  );
+  // The title ALWAYS carries the requesting teacher's name — including when a set or plan
+  // supplies its own title, which previously dropped the name entirely (live-testing find).
+  // Still editable.
+  const [title, setTitle] = useState(() => {
+    const who = user?.name;
+    if (preset.title && who) return `${preset.title} — ${who}`;
+    if (preset.title) return preset.title;
+    return who ? `${STR.prTitleFor} ${who}` : "";
+  });
   const [purpose, setPurpose] = useState<string>("CLASSWORK");
   const [colour, setColour] = useState<string | null>(null);
   const [sides, setSides] = useState<string | null>(null);
@@ -90,16 +95,23 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
     setFiles((prev) => prev.filter((f) => f.fileId !== fileId));
   }
 
+  /** Surface a validation failure BOTH inline and as a toast — the form scrolls, so a
+   *  banner pinned to the top is invisible when you press Send at the bottom. */
+  function fail(msg: string): void {
+    setError(msg);
+    toast.show(msg, "danger");
+  }
+
   async function onSubmit(): Promise<void> {
     setError(null);
     const n = Number(copies);
-    if (!title.trim()) return setError(STR.prDocTitle);
-    if (!colour) return setError(STR.prNeedColour);
-    if (!sides) return setError(STR.prNeedSides);
-    if (!Number.isInteger(n) || n < 1) return setError(STR.prCopies);
-    if (!neededByKey) return setError(STR.prNeedNeededBy);
-    if (sourceType === "UPLOAD" && files.length === 0) return setError(STR.prPickFile);
-    if (sourceType === "LINK" && !linkUrl.trim()) return setError(STR.prLinkUrl);
+    if (!title.trim()) return fail(STR.prDocTitle);
+    if (!colour) return fail(STR.prNeedColour);
+    if (!sides) return fail(STR.prNeedSides);
+    if (!Number.isInteger(n) || n < 1) return fail(STR.prCopies);
+    if (!neededByKey) return fail(STR.prNeedNeededBy);
+    if (sourceType === "UPLOAD" && files.length === 0) return fail(STR.prPickFile);
+    if (sourceType === "LINK" && !linkUrl.trim()) return fail(STR.prLinkUrl);
 
     setBusy(true);
     const res = await create({
@@ -118,7 +130,7 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
     });
     setBusy(false);
     if (res.error || !res.data?.createPrintRequest) {
-      setError(friendlyError(res.error));
+      fail(friendlyError(res.error));
       return;
     }
     toast.show(STR.prCreated, "ok");
