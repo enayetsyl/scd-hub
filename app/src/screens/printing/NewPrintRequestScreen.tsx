@@ -230,6 +230,9 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
       <Field label={STR.prNotes} value={notes} onChangeText={setNotes} multiline />
 
       <Button title={STR.prSend} onPress={onSubmit} loading={busy} />
+      {/* Reached from "Send to print" on a Set/plan, this screen is a dead end on web —
+          there is no header back arrow to change your mind with. */}
+      <Button title={STR.cancel} variant="ghost" onPress={() => navigation.goBack()} disabled={busy} />
       <View style={{ height: space(4) }} />
     </Screen>
   );

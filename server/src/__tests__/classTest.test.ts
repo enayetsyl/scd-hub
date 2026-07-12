@@ -247,6 +247,22 @@ describe("createRequest", () => {
     );
   });
 
+  // A class test IS a print job (PQ-5), so the Office must learn HOW to print it from the
+  // same queue row as any other job — the teacher's choice has to survive the hand-off.
+  test("carries colour + sides onto the queue row", async () => {
+    await createRequest({ ...baseInput, colour: "COLOR", sides: "DOUBLE" });
+    expect(mockCreatePrintRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ colour: "COLOR", sides: "DOUBLE", purpose: "CLASS_TEST" }),
+    );
+  });
+
+  test("omitting colour/sides leaves the queue row on its schema defaults (pre-PQ-5 caller)", async () => {
+    await createRequest(baseInput);
+    expect(mockCreatePrintRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ colour: null, sides: null }),
+    );
+  });
+
   test("POOL_SET rejects a non-CT set", async () => {
     mockSetFindById.mockReturnValue(leanChain({ setType: "HW" }));
     await expect(createRequest(baseInput)).rejects.toThrow(/not a CT-kind/);
