@@ -293,6 +293,74 @@ export async function pickAndUploadClassNoteAttachment(): Promise<UploadedFile |
 }
 
 // ---------------------------------------------------------------------------
+// Assignment attachments (D-#298 server: POST /files/assignment). jpeg/png/pdf
+// ≤ 10 MB, ≤5 per item (cap enforced when the ids are bound at deliver).
+// ---------------------------------------------------------------------------
+
+export const AS_MAX_ATTACHMENTS = 5;
+
+/** Upload ONE picked asset to POST /files/assignment. */
+async function uploadAssignmentAsset(asset: DocumentPicker.DocumentPickerAsset): Promise<UploadedFile> {
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", {
+      uri: asset.uri,
+      name: asset.name,
+      type: asset.mimeType ?? "application/octet-stream",
+    } as unknown as Blob);
+  }
+
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/assignment`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const body = (await res.json()) as { fileId: string; originalName: string; mime: string };
+  return { fileId: body.fileId, originalName: body.originalName, mime: body.mime };
+}
+
+/**
+ * Pick SEVERAL jpeg/png/pdf files at once and upload each as an assignment
+ * attachment (the print multi-pick pattern). At most `maxFiles` are taken —
+ * extras are reported as skipped, never silently dropped. Empty when cancelled.
+ */
+export async function pickAndUploadAssignmentFiles(maxFiles: number): Promise<MultiUploadResult> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: FILE_MIMES,
+    multiple: true,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.length) return { uploaded: [], failures: [] };
+
+  const take = picked.assets.slice(0, Math.max(0, maxFiles));
+  const skipped = picked.assets.slice(Math.max(0, maxFiles));
+  const uploaded: UploadedFile[] = [];
+  const failures: string[] = skipped.map((a) => `${a.name}: limit`);
+  for (const asset of take) {
+    try {
+      uploaded.push(await uploadAssignmentAsset(asset));
+    } catch (e) {
+      failures.push(`${asset.name}: ${e instanceof FileUploadError ? e.message : String(e)}`);
+    }
+  }
+  return { uploaded, failures };
+}
+
+// ---------------------------------------------------------------------------
 // Print-request uploads (PQ-2 server: POST /files/print). jpeg/png/pdf ≤ 10 MB,
 // ≤5 per request. Afterwards readable by the uploader and the Office only.
 // ---------------------------------------------------------------------------

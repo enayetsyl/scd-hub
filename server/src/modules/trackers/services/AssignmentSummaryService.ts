@@ -242,6 +242,8 @@ export interface ChildAssignmentEntry {
   result: string | null;
   feedback: string | null;
   isResubmission: boolean;
+  /** Delivery-pass attachments on the item (≤5, D-#298) — empty when none. */
+  attachmentIds: string[];
 }
 
 export async function childAssignments(
@@ -281,6 +283,7 @@ export async function childAssignments(
       result: r.result ?? null,
       feedback: r.feedback ?? null,
       isResubmission: !!r.resubOf,
+      attachmentIds: (item?.attachmentIds ?? []).map((id) => id.toString()),
     };
   });
 }

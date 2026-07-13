@@ -3449,10 +3449,10 @@ export interface AsRosterEntryIn {
 
 export const DELIVER_ASSIGNMENT = gql<
   { deliverAssignment: { itemId: string; asId: string; deliveryDate: string; dueDate: string; status: string; estMinutes: number; presentCount: number; absentCount: number } },
-  { academicYearId: string; weekNumber: number; entryId: string; sectionId: string; roster: AsRosterEntryIn[]; setId?: string | null; totalMarks?: number | null; estMinutes?: number | null }
+  { academicYearId: string; weekNumber: number; entryId: string; sectionId: string; roster: AsRosterEntryIn[]; setId?: string | null; totalMarks?: number | null; estMinutes?: number | null; attachmentIds?: string[] | null }
 >`
-  mutation DeliverAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!, $roster: [AssignmentRosterEntryInput!]!, $setId: String, $totalMarks: Int, $estMinutes: Int) {
-    deliverAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId, roster: $roster, setId: $setId, totalMarks: $totalMarks, estMinutes: $estMinutes) {
+  mutation DeliverAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!, $roster: [AssignmentRosterEntryInput!]!, $setId: String, $totalMarks: Int, $estMinutes: Int, $attachmentIds: [String!]) {
+    deliverAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId, roster: $roster, setId: $setId, totalMarks: $totalMarks, estMinutes: $estMinutes, attachmentIds: $attachmentIds) {
       itemId asId deliveryDate dueDate status estMinutes presentCount absentCount
     }
   }
@@ -4132,13 +4132,14 @@ export interface ChildAssignmentT {
   result: string | null;
   feedback: string | null;
   isResubmission: boolean;
+  attachmentIds: string[];
 }
 
 export const CHILD_ASSIGNMENTS = gql<{ childAssignments: ChildAssignmentT[] }, { studentId: string }>`
   query ChildAssignments($studentId: String!) {
     childAssignments(studentId: $studentId) {
       recordId asId subject weekNumber state pending daysLate deliveryDate dueDate
-      marks totalMarks result feedback isResubmission
+      marks totalMarks result feedback isResubmission attachmentIds
     }
   }
 `;

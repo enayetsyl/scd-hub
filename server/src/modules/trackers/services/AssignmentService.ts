@@ -22,6 +22,8 @@
  */
 import type { LifecycleState, HwSubject } from "@scd/shared";
 import { AS_WEEKLY_CEILING_MIN } from "@scd/shared";
+import { Types } from "mongoose";
+import { StoredFile } from "../../platform/models/StoredFile";
 import { AssignmentItem, type IAssignmentItem } from "../models/AssignmentItem";
 import {
   AssignmentStudentRecord,
@@ -77,8 +79,32 @@ export interface DeliverAssignmentInput {
   totalMarks?: number;
   /** AS-T6 (D-#274): declared minutes for the weekly load ceiling. Default 20. */
   estMinutes?: number;
+  /** Assignment sheet/instruction StoredFile ids (≤5, assignment_attachment, D-#298). */
+  attachmentIds?: string[];
   actorId: string;
   at?: Date;
+}
+
+export const AS_MAX_ATTACHMENTS = 5;
+
+/** Validate delivery-pass attachments: ≤5 valid ObjectIds, every one an existing
+ *  StoredFile of kind assignment_attachment — anything else (an hw_answer, a chat
+ *  file) must never become class-readable through the item's read gate (D-#298). */
+async function normalizeAttachmentIds(ids: string[] | undefined): Promise<Types.ObjectId[] | undefined> {
+  if (!ids || ids.length === 0) return undefined;
+  if (ids.length > AS_MAX_ATTACHMENTS) {
+    throw new Error(`At most ${AS_MAX_ATTACHMENTS} attachments per assignment`);
+  }
+  if (ids.some((id) => !Types.ObjectId.isValid(id))) {
+    throw new Error("Invalid attachment file id");
+  }
+  const found = await StoredFile.find({ _id: { $in: ids }, kind: "assignment_attachment" })
+    .select("_id")
+    .lean();
+  if (found.length !== new Set(ids.map(String)).size) {
+    throw new Error("Every attachment must be an uploaded assignment file");
+  }
+  return ids.map((id) => new Types.ObjectId(id));
 }
 
 export interface DeliverAssignmentResult {
@@ -142,6 +168,8 @@ export async function deliverAssignmentItem(
     throw new Error("estMinutes must be a non-negative integer");
   }
 
+  const attachmentIds = await normalizeAttachmentIds(input.attachmentIds);
+
   const at = input.at ?? new Date();
   const asId = await generateAsId(input.academicYearId, entry.classLevel, entry.subject);
 
@@ -168,6 +196,7 @@ export async function deliverAssignmentItem(
     draftRoster: input.roster.map((r) => ({ studentId: r.studentId, present: r.present })),
     deliveredBy: input.actorId,
     deliveredAt: at,
+    attachmentIds,
   });
 
   return {

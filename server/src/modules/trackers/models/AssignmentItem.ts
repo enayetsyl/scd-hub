@@ -54,6 +54,9 @@ export interface IAssignmentItem extends Document {
   issuedBy?: Types.ObjectId;
   deliveredBy: Types.ObjectId;
   deliveredAt: Date;
+  /** Assignment sheet/instruction files attached at the delivery pass (≤5,
+   *  `assignment_attachment` kind, D-#298) — the homework D-#297 pattern. */
+  attachmentIds?: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -84,6 +87,7 @@ const AssignmentItemSchema = new Schema<IAssignmentItem>(
     issuedBy: { type: Schema.Types.ObjectId },
     deliveredBy: { type: Schema.Types.ObjectId, required: true },
     deliveredAt: { type: Date, required: true },
+    attachmentIds: { type: [Schema.Types.ObjectId], ref: "StoredFile", default: undefined },
   },
   { timestamps: true },
 );
@@ -98,5 +102,7 @@ AssignmentItemSchema.index(
 // this week" and per-class summaries.
 AssignmentItemSchema.index({ academicYearId: 1, weekNumber: 1, teacherId: 1 });
 AssignmentItemSchema.index({ academicYearId: 1, classId: 1, weekNumber: 1 });
+// Reverse lookup for the GET /files/:id read gate (which item owns this file?).
+AssignmentItemSchema.index({ attachmentIds: 1 }, { sparse: true });
 
 export const AssignmentItem = model<IAssignmentItem>("AssignmentItem", AssignmentItemSchema);
