@@ -1670,6 +1670,8 @@ export interface HwItemT {
   status: string;
   /** StoredFile id of the attached question file (GP-A) — null when none. */
   questionFileId: string | null;
+  /** Declare-form multi-attachments (≤5) — empty when none. */
+  attachmentIds: string[];
 }
 
 export const HOMEWORK_ITEMS = gql<
@@ -1678,7 +1680,7 @@ export const HOMEWORK_ITEMS = gql<
 >`
   query HomeworkItems($sectionId: String!, $classId: String!, $dateGiven: String) {
     homeworkItems(sectionId: $sectionId, classId: $classId, dateGiven: $dateGiven) {
-      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId
+      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId attachmentIds
     }
   }
 `;
@@ -1718,19 +1720,20 @@ export const DECLARE_HOMEWORK_ITEM = gql<
     qCount: number;
     poolRef?: string | null;
     revItem?: boolean | null;
+    attachmentIds?: string[] | null;
   }
 >`
   mutation DeclareHomeworkItem(
     $academicYearId: String!, $classId: String!, $classLevel: Int!, $sectionId: String!,
     $subject: String!, $dateGiven: String!, $topTags: [String!]!, $timeDecl: Int,
-    $qCount: Int!, $poolRef: String, $revItem: Boolean
+    $qCount: Int!, $poolRef: String, $revItem: Boolean, $attachmentIds: [String!]
   ) {
     declareHomeworkItem(
       academicYearId: $academicYearId, classId: $classId, classLevel: $classLevel, sectionId: $sectionId,
       subject: $subject, dateGiven: $dateGiven, topTags: $topTags, timeDecl: $timeDecl,
-      qCount: $qCount, poolRef: $poolRef, revItem: $revItem
+      qCount: $qCount, poolRef: $poolRef, revItem: $revItem, attachmentIds: $attachmentIds
     ) {
-      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId
+      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId attachmentIds
     }
   }
 `;
@@ -2520,6 +2523,7 @@ export interface GuardianHwRecordT {
   topupTimeMin: number | null;
   questionFileId: string | null;
   answerFileId: string | null;
+  attachmentIds: string[];
 }
 
 export const CHILD_HOMEWORK_QUERY = gql<
@@ -2532,7 +2536,7 @@ export const CHILD_HOMEWORK_QUERY = gql<
       givenAt dueDate submittedAt checkedAt returnedAt
       chaseCount result resultLabelBn resubOf
       topupFlag topupQCount topupTimeMin
-      questionFileId answerFileId
+      questionFileId answerFileId attachmentIds
     }
   }
 `;
@@ -3445,10 +3449,10 @@ export interface AsRosterEntryIn {
 
 export const DELIVER_ASSIGNMENT = gql<
   { deliverAssignment: { itemId: string; asId: string; deliveryDate: string; dueDate: string; status: string; estMinutes: number; presentCount: number; absentCount: number } },
-  { academicYearId: string; weekNumber: number; entryId: string; sectionId: string; roster: AsRosterEntryIn[]; setId?: string | null; totalMarks?: number | null; estMinutes?: number | null }
+  { academicYearId: string; weekNumber: number; entryId: string; sectionId: string; roster: AsRosterEntryIn[]; setId?: string | null; totalMarks?: number | null; estMinutes?: number | null; attachmentIds?: string[] | null }
 >`
-  mutation DeliverAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!, $roster: [AssignmentRosterEntryInput!]!, $setId: String, $totalMarks: Int, $estMinutes: Int) {
-    deliverAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId, roster: $roster, setId: $setId, totalMarks: $totalMarks, estMinutes: $estMinutes) {
+  mutation DeliverAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!, $roster: [AssignmentRosterEntryInput!]!, $setId: String, $totalMarks: Int, $estMinutes: Int, $attachmentIds: [String!]) {
+    deliverAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId, roster: $roster, setId: $setId, totalMarks: $totalMarks, estMinutes: $estMinutes, attachmentIds: $attachmentIds) {
       itemId asId deliveryDate dueDate status estMinutes presentCount absentCount
     }
   }
@@ -4128,13 +4132,14 @@ export interface ChildAssignmentT {
   result: string | null;
   feedback: string | null;
   isResubmission: boolean;
+  attachmentIds: string[];
 }
 
 export const CHILD_ASSIGNMENTS = gql<{ childAssignments: ChildAssignmentT[] }, { studentId: string }>`
   query ChildAssignments($studentId: String!) {
     childAssignments(studentId: $studentId) {
       recordId asId subject weekNumber state pending daysLate deliveryDate dueDate
-      marks totalMarks result feedback isResubmission
+      marks totalMarks result feedback isResubmission attachmentIds
     }
   }
 `;

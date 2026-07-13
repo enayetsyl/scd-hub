@@ -19,6 +19,8 @@ import {
   ROSTER_CLASS_LEVEL_MAX,
 } from "@scd/shared";
 import type { HwSubject, LifecycleState, HwResult } from "@scd/shared";
+import { Types } from "mongoose";
+import { StoredFile } from "../../platform/models/StoredFile";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkSequence } from "../models/HomeworkSequence";
@@ -87,6 +89,8 @@ export interface DeclareHomeworkItemInput {
   selectedQids?: string[];
   revItem?: boolean;
   sessionRef?: string;
+  /** StoredFile ids (kind hw_question, ≤5) picked in the declare form. */
+  attachmentIds?: string[];
   actorId: string;
 }
 
@@ -101,6 +105,29 @@ export interface HomeworkItemResult {
   qCount: number;
   revItem: boolean;
   status: string;
+  attachmentIds: string[];
+}
+
+export const HW_MAX_ATTACHMENTS = 5;
+
+/** Validate declare-form attachments: ≤5 valid ObjectIds, every one an existing
+ *  StoredFile of kind hw_question — anything else (an hw_answer, a chat file)
+ *  must never become class-readable through the item's read gate. */
+async function normalizeAttachmentIds(ids: string[] | undefined): Promise<Types.ObjectId[] | undefined> {
+  if (!ids || ids.length === 0) return undefined;
+  if (ids.length > HW_MAX_ATTACHMENTS) {
+    throw new Error(`At most ${HW_MAX_ATTACHMENTS} attachments per homework item`);
+  }
+  if (ids.some((id) => !Types.ObjectId.isValid(id))) {
+    throw new Error("Invalid attachment file id");
+  }
+  const found = await StoredFile.find({ _id: { $in: ids }, kind: "hw_question" })
+    .select("_id")
+    .lean();
+  if (found.length !== new Set(ids.map(String)).size) {
+    throw new Error("Every attachment must be an uploaded homework question file");
+  }
+  return ids.map((id) => new Types.ObjectId(id));
 }
 
 function assertSubject(s: string): asserts s is HwSubject {
@@ -168,6 +195,8 @@ export async function declareHomeworkItem(
     }
   }
 
+  const attachmentIds = await normalizeAttachmentIds(input.attachmentIds);
+
   const hwId = await generateHwId(input.academicYearId, input.classLevel, subject);
 
   const doc = await HomeworkItem.create({
@@ -187,6 +216,7 @@ export async function declareHomeworkItem(
     sessionRef: input.sessionRef,
     status: "declared",
     declaredBy: input.actorId,
+    attachmentIds,
   });
 
   return {
@@ -200,6 +230,7 @@ export async function declareHomeworkItem(
     qCount: doc.qCount,
     revItem: doc.revItem,
     status: doc.status,
+    attachmentIds: (doc.attachmentIds ?? []).map((id) => id.toString()),
   };
 }
 

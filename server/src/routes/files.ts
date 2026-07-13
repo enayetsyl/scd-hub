@@ -41,6 +41,7 @@ import {
 } from "../modules/platform/services/DriveStore";
 import { assertFileReadAccess } from "../modules/trackers/services/HomeworkFileService";
 import { assertClassTestFileReadAccess } from "../modules/trackers/services/ClassTestFileService";
+import { assertAssignmentFileReadAccess } from "../modules/trackers/services/AssignmentFileService";
 import {
   validateChatUpload,
   assertChatFileReadAccess,
@@ -407,6 +408,61 @@ filesRouter.post("/classnote", parseClassNoteUpload, async (req: Request, res: R
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/assignment — a teacher uploads an assignment sheet/instruction file
+// for the delivery pass (D-#298). Same envelope as /files/classnote: ≤ 10 MB,
+// jpeg/png/pdf, Drive-first. The ≤5-per-item cap is enforced when the ids are
+// bound at deliverAssignment. Upload gate = tracker:write (who may deliver).
+// ---------------------------------------------------------------------------
+
+filesRouter.post("/assignment", parseClassNoteUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const rejection = validateClassNoteUpload(file.mimetype, file.size); // same 10 MB / jpeg-png-pdf envelope
+  if (rejection) {
+    res.status(422).json({ error: rejection });
+    return;
+  }
+  try {
+    const driveFileId = await uploadToDrive({
+      name: `${Date.now()}_${decodeUploadName(file.originalname)}`,
+      mime: file.mimetype,
+      data: file.buffer,
+      year: String(new Date().getFullYear()),
+      subfolder: "assignment",
+    });
+    const stored = await StoredFile.create({
+      kind: "assignment_attachment" as StoredFileKind,
+      mime: file.mimetype,
+      sizeBytes: file.size,
+      originalName: decodeUploadName(file.originalname),
+      driveFileId,
+      uploadedBy: ctx.auth.userId,
+    });
+    res.json({
+      fileId: stored._id.toString(),
+      kind: "assignment_attachment",
+      mime: stored.mime,
+      sizeBytes: stored.sizeBytes,
+      originalName: stored.originalName,
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      res.status(503).json({ error: FILE_ERRORS_BN.driveDown });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /files/print — a teacher uploads a document to send to the Office for
 // printing (PQ-2, D-#281). Same envelope as /files/classnote: ≤ 10 MB, jpeg/png/pdf,
 // Drive-first (a Drive failure persists nothing). The ≤5-files-per-request cap is
@@ -602,6 +658,8 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       if (!callerHasPermission(ctx.auth, "routine:read")) {
         await assertClassNoteFileReadAccess(ctx, file._id.toString());
       }
+    } else if (file.kind === "assignment_attachment") {
+      await assertAssignmentFileReadAccess(ctx, file);
     } else if (file.kind === "print_upload") {
       // A print upload is readable by the teacher who sent it and by the Office/Principal
       // who has to print it (PQ-2, D-#281) — nobody else.

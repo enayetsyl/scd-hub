@@ -702,6 +702,8 @@ interface ChildAssignmentShape {
   result: string | null;
   feedback: string | null;
   isResubmission: boolean;
+  /** Delivery-pass attachments on the item (≤5, D-#298) — empty when none. */
+  attachmentIds?: string[];
 }
 const ChildAssignmentRef = builder.objectRef<ChildAssignmentShape>("ChildAssignment");
 ChildAssignmentRef.implement({
@@ -721,6 +723,7 @@ ChildAssignmentRef.implement({
     result: t.string({ nullable: true, resolve: (r) => r.result }),
     feedback: t.string({ nullable: true, resolve: (r) => r.feedback }),
     isResubmission: t.exposeBoolean("isResubmission"),
+    attachmentIds: t.field({ type: ["String"], resolve: (r) => r.attachmentIds ?? [] }),
   }),
 });
 
@@ -885,6 +888,7 @@ builder.mutationField("deliverAssignment", (t) =>
       setId: t.arg.string({ required: false }),
       totalMarks: t.arg.int({ required: false }),
       estMinutes: t.arg.int({ required: false }),
+      attachmentIds: t.arg.stringList({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -904,6 +908,7 @@ builder.mutationField("deliverAssignment", (t) =>
         setId: args.setId ?? undefined,
         totalMarks: args.totalMarks ?? undefined,
         estMinutes: args.estMinutes ?? undefined,
+        attachmentIds: args.attachmentIds ? [...args.attachmentIds] : undefined,
         actorId: ctx.auth.userId as string,
       });
     },

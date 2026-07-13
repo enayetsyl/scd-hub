@@ -64,6 +64,14 @@ jest.mock("../modules/routine/models/HolidayException", () => ({
   HolidayException: { find: (q: unknown) => ({ lean: () => mockHolidayFind(q) }) },
 }));
 
+// Delivery-pass attachments (D-#298): the kind check queries StoredFile.
+const mockStoredFind = jest.fn();
+jest.mock("../modules/platform/models/StoredFile", () => ({
+  StoredFile: {
+    find: (q: unknown) => ({ select: () => ({ lean: () => mockStoredFind(q) }) }),
+  },
+}));
+
 import {
   generateAsId,
   deliverAssignmentItem,
@@ -203,6 +211,52 @@ describe("AJ-3 — deliverAssignmentItem", () => {
       academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, actorId: ACTOR,
     });
     expect(res.estMinutes).toBe(20);
+  });
+
+  // --- D-#298: delivery-pass attachments (≤5, assignment_attachment kind) ----
+
+  test("D-#298: binds ≤5 assignment_attachment files on the created item", async () => {
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
+    const ids = [oid().toString(), oid().toString()];
+    mockStoredFind.mockResolvedValue(ids.map((id) => ({ _id: id })));
+    await deliverAssignmentItem({
+      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+      attachmentIds: ids, actorId: ACTOR,
+    });
+    expect(mockStoredFind).toHaveBeenCalledWith({ _id: { $in: ids }, kind: "assignment_attachment" });
+    const created = mockItemCreate.mock.calls[0][0] as { attachmentIds: mongoose.Types.ObjectId[] };
+    expect(created.attachmentIds.map(String)).toEqual(ids);
+  });
+
+  test("D-#298: no attachments → StoredFile never queried", async () => {
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
+    await deliverAssignmentItem({
+      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, actorId: ACTOR,
+    });
+    expect(mockStoredFind).not.toHaveBeenCalled();
+  });
+
+  test("D-#298: rejects more than 5 attachments", async () => {
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
+    const ids = Array.from({ length: 6 }, () => oid().toString());
+    await expect(
+      deliverAssignmentItem({
+        academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+        attachmentIds: ids, actorId: ACTOR,
+      }),
+    ).rejects.toThrow(/At most 5 attachments/);
+  });
+
+  test("D-#298: rejects when any id is not an existing assignment_attachment file", async () => {
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
+    const ids = [oid().toString(), oid().toString()];
+    mockStoredFind.mockResolvedValue([{ _id: ids[0] }]); // the 2nd is some other kind
+    await expect(
+      deliverAssignmentItem({
+        academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+        attachmentIds: ids, actorId: ACTOR,
+      }),
+    ).rejects.toThrow(/uploaded assignment file/);
   });
 
   test("double delivery of the same (week × section × subject) is rejected", async () => {

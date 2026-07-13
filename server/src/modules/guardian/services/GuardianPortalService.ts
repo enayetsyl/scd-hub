@@ -150,6 +150,8 @@ export interface GuardianHomeworkRecord {
   /** StoredFile ids — populated by GP-A; null when no file is attached. */
   questionFileId: string | null;
   answerFileId: string | null;
+  /** Declare-form multi-attachments on the item (≤5) — empty when none. */
+  attachmentIds: string[];
 }
 
 export interface GuardianAttendanceDay {
@@ -490,6 +492,7 @@ export async function childHomework(
       // GP-A StoredFile refs — null when no file is attached.
       questionFileId: item.questionFileId ? item.questionFileId.toString() : null,
       answerFileId: r.answerFileId ? r.answerFileId.toString() : null,
+      attachmentIds: (item.attachmentIds ?? []).map((id) => id.toString()),
     });
   }
 

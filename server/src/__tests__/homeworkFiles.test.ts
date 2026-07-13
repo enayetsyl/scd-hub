@@ -72,6 +72,14 @@ jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
   },
 }));
 
+// D-#298 — the assignment-attachment gate reverse-resolves AssignmentItem.
+const mockAsItemFindOne = jest.fn();
+jest.mock("../modules/trackers/models/AssignmentItem", () => ({
+  AssignmentItem: {
+    findOne: (q: unknown) => ({ lean: () => mockAsItemFindOne(q) }),
+  },
+}));
+
 const mockGuardianFindById = jest.fn();
 jest.mock("../modules/foundation/models/Guardian", () => ({
   Guardian: { findById: (id: unknown) => ({ lean: () => mockGuardianFindById(id) }) },
@@ -319,6 +327,77 @@ describe("GET /files/:id", () => {
     const res = await get(guardianTok);
     expect(res.status).toBe(403);
     expect(mockDownload).not.toHaveBeenCalled();
+  });
+
+  test("D-#297: the owning item resolves via questionFileId OR attachmentIds ($or)", async () => {
+    mockStoredFindById.mockResolvedValue(questionFile);
+    await get(guardianTok);
+    expect(mockItemFindOne).toHaveBeenCalledWith({
+      $or: [{ questionFileId: FILE_ID }, { attachmentIds: FILE_ID }],
+    });
+  });
+
+  test("D-#297: the uploader reads their own (even unbound) question file → 200", async () => {
+    mockStoredFindById.mockResolvedValue({
+      ...questionFile,
+      uploadedBy: new mongoose.Types.ObjectId(TEACHER_ID),
+    });
+    mockItemFindOne.mockResolvedValue(null); // picked in the declare form, not bound yet
+    const res = await get(teacherTok);
+    expect(res.status).toBe(200);
+  });
+
+  test("D-#297: an unbound question file stays 403 for a NON-uploader", async () => {
+    mockStoredFindById.mockResolvedValue(questionFile);
+    mockItemFindOne.mockResolvedValue(null);
+    const res = await get(guardianTok);
+    expect(res.status).toBe(403);
+    expect(mockDownload).not.toHaveBeenCalled();
+  });
+
+  // --- D-#298: assignment_attachment gate (the hw_question pattern) ----------
+
+  const assignmentFile = { ...questionFile, kind: "assignment_attachment", originalName: "sheet.pdf" };
+
+  test("D-#298: guardian downloads an assignment attachment with an enrolled child → 200", async () => {
+    mockStoredFindById.mockResolvedValue(assignmentFile);
+    mockAsItemFindOne.mockResolvedValue(itemDoc);
+    const res = await get(guardianTok);
+    expect(res.status).toBe(200);
+    expect(mockAsItemFindOne).toHaveBeenCalledWith({ attachmentIds: FILE_ID });
+  });
+
+  test("D-#298: guardian with the child in ANOTHER class → 403", async () => {
+    mockStoredFindById.mockResolvedValue(assignmentFile);
+    mockAsItemFindOne.mockResolvedValue(itemDoc);
+    mockStudentFindOne.mockResolvedValue(null);
+    const res = await get(guardianTok);
+    expect(res.status).toBe(403);
+    expect(mockDownload).not.toHaveBeenCalled();
+  });
+
+  test("D-#298: the uploader reads their own (even unbound) assignment file → 200", async () => {
+    mockStoredFindById.mockResolvedValue({
+      ...assignmentFile,
+      uploadedBy: new mongoose.Types.ObjectId(TEACHER_ID),
+    });
+    mockAsItemFindOne.mockResolvedValue(null);
+    const res = await get(teacherTok);
+    expect(res.status).toBe(200);
+  });
+
+  test("D-#298: an unbound assignment file stays 403 for a NON-uploader", async () => {
+    mockStoredFindById.mockResolvedValue(assignmentFile);
+    mockAsItemFindOne.mockResolvedValue(null);
+    const res = await get(guardianTok);
+    expect(res.status).toBe(403);
+  });
+
+  test("D-#298: PRINCIPAL reads a bound assignment attachment → 200 (unscoped read)", async () => {
+    mockStoredFindById.mockResolvedValue(assignmentFile);
+    mockAsItemFindOne.mockResolvedValue(itemDoc);
+    const res = await get(principalTok);
+    expect(res.status).toBe(200);
   });
 
   test("teacher WITHOUT read scope on the section → 403", async () => {
