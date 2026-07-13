@@ -17,6 +17,8 @@ import {
   childRoutine,
   childClassNotes,
   childHomework,
+  childHomeworkNilDays,
+  type GuardianHwNilDay,
   childDayLoad,
   childAttendanceHistory,
   childFeeDue,
@@ -279,6 +281,33 @@ builder.queryField("childHomework", (t) =>
     resolve: async (_r, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
       return childHomework(args.studentId, parseDate(args.from), parseDate(args.to));
+    },
+  }),
+);
+
+const GuardianHwNilDayRef = builder.objectRef<GuardianHwNilDay>("GuardianHwNilDay").implement({
+  description: "One explicit 'no homework today' declaration visible to the guardian (D-#299).",
+  fields: (t) => ({
+    dateKey: t.exposeString("dateKey"),
+    subject: t.exposeString("subject"),
+    subjectLabelBn: t.exposeString("subjectLabelBn"),
+    reason: t.exposeString("reason"),
+  }),
+});
+
+builder.queryField("childHomeworkNilDays", (t) =>
+  t.field({
+    type: [GuardianHwNilDayRef],
+    description: "The child's class-level 'no homework' declarations in a date range. Link-gated.",
+    authScopes: { hasPermission: "guardian:read_child" },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      from: t.arg.string({ required: true }),
+      to: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => {
+      await assertGuardianOfStudent(ctx, args.studentId);
+      return childHomeworkNilDays(args.studentId, args.from, args.to);
     },
   }),
 );

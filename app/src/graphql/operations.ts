@@ -1738,6 +1738,66 @@ export const DECLARE_HOMEWORK_ITEM = gql<
   }
 `;
 
+// --- "No homework today" nil declarations (D-#299) ---------------------------
+
+export interface HwNilDeclT {
+  id: string;
+  classId: string;
+  sectionId: string;
+  subject: string;
+  dateKey: string;
+  reason: string;
+}
+
+export const HW_NIL_DECLARATIONS = gql<
+  { homeworkNilDeclarations: HwNilDeclT[] },
+  { sectionId: string; classId: string; date: string }
+>`
+  query HomeworkNilDeclarations($sectionId: String!, $classId: String!, $date: String!) {
+    homeworkNilDeclarations(sectionId: $sectionId, classId: $classId, date: $date) {
+      id classId sectionId subject dateKey reason
+    }
+  }
+`;
+
+export const DECLARE_NO_HOMEWORK = gql<
+  { declareNoHomework: HwNilDeclT },
+  { classId: string; sectionId: string; subject: string; date: string; reason: string }
+>`
+  mutation DeclareNoHomework($classId: String!, $sectionId: String!, $subject: String!, $date: String!, $reason: String!) {
+    declareNoHomework(classId: $classId, sectionId: $sectionId, subject: $subject, date: $date, reason: $reason) {
+      id classId sectionId subject dateKey reason
+    }
+  }
+`;
+
+export const REMOVE_NO_HOMEWORK = gql<
+  { removeNoHomework: boolean },
+  { classId: string; sectionId: string; subject: string; date: string }
+>`
+  mutation RemoveNoHomework($classId: String!, $sectionId: String!, $subject: String!, $date: String!) {
+    removeNoHomework(classId: $classId, sectionId: $sectionId, subject: $subject, date: $date)
+  }
+`;
+
+export interface GuardianHwNilDayT {
+  dateKey: string;
+  subject: string;
+  subjectLabelBn: string;
+  reason: string;
+}
+
+export const CHILD_HW_NIL_DAYS = gql<
+  { childHomeworkNilDays: GuardianHwNilDayT[] },
+  { studentId: string; from: string; to: string }
+>`
+  query ChildHomeworkNilDays($studentId: String!, $from: String!, $to: String!) {
+    childHomeworkNilDays(studentId: $studentId, from: $from, to: $to) {
+      dateKey subject subjectLabelBn reason
+    }
+  }
+`;
+
 // --- GP-A homework file attachments (D-#70) ---------------------------------
 // Upload itself is REST (POST /files/hw, see lib/files.ts); these bind the
 // uploaded StoredFile to its homework doc. Teachers attach; guardians only view.
@@ -2191,12 +2251,22 @@ export interface HwNotDeclaredT {
   subject: string;
   teacherName: string | null;
 }
+export interface HwNilDeclaredT {
+  dateKey: string;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  subject: string;
+  teacherName: string | null;
+  reason: string;
+}
 export interface ReconReportT {
   fromKey: string;
   toKey: string;
   hwMisses: HwReconMissT[];
   asMisses: AsReconMissT[];
   hwNotDeclared: HwNotDeclaredT[];
+  hwNilDeclared: HwNilDeclaredT[];
 }
 export const RECON_REPORT_QUERY = gql<
   { reconciliationReport: ReconReportT },
@@ -2209,6 +2279,7 @@ export const RECON_REPORT_QUERY = gql<
       hwMisses { dateKey sectionId sectionNameBn classLevel confirmerName declaredItems declaredMinutes }
       asMisses { weekNumber deliveryDateKey sectionId sectionNameBn classLevel confirmerName draftItems draftMinutes }
       hwNotDeclared { dateKey sectionId sectionNameBn classLevel subject teacherName }
+      hwNilDeclared { dateKey sectionId sectionNameBn classLevel subject teacherName reason }
     }
   }
 `;

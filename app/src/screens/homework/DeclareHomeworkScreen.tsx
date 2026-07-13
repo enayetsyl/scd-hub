@@ -8,7 +8,15 @@ import { Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { HW_SUBJECTS } from "@scd/shared";
-import { CLASSES_QUERY, DECLARE_HOMEWORK_ITEM, ATTACH_HW_QUESTION_FILE, HOMEWORK_TOPICS_QUERY } from "../../graphql/operations";
+import {
+  CLASSES_QUERY,
+  DECLARE_HOMEWORK_ITEM,
+  ATTACH_HW_QUESTION_FILE,
+  HOMEWORK_TOPICS_QUERY,
+  HW_NIL_DECLARATIONS,
+  DECLARE_NO_HOMEWORK,
+  REMOVE_NO_HOMEWORK,
+} from "../../graphql/operations";
 import {
   pickAndUploadHomeworkFile,
   pickAndUploadHomeworkFiles,
@@ -22,7 +30,7 @@ import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, EmptyState } f
 import { DateField } from "../../components/DateField";
 import { MoreOptions } from "../../components/MoreOptions";
 import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
-import { STR, hwSubjectLabel, classLevelLabel } from "../../lib/labels";
+import { STR, hwSubjectLabel, classLevelLabel, hwNilReasonLabel, HW_NIL_REASONS } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { required } from "../../lib/validate";
 import { useSectionContext } from "../../state/SectionContext";
@@ -55,6 +63,61 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
   /** Declare-form attachments (≤5) — uploaded on pick, bound at declare time. */
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [pickBusy, setPickBusy] = useState(false);
+  /** "No homework today" (D-#299): reason chip + declare/remove. */
+  const [nilReason, setNilReason] = useState<string | null>(null);
+  const [nilBusy, setNilBusy] = useState(false);
+  const [, declareNil] = useMutation(DECLARE_NO_HOMEWORK);
+  const [, removeNil] = useMutation(REMOVE_NO_HOMEWORK);
+  const [nilQ, refetchNil] = useQuery({
+    query: HW_NIL_DECLARATIONS,
+    variables: { sectionId: selection.sectionId ?? "", classId: selection.classId ?? "", date },
+    pause: !selection.sectionId || !selection.classId,
+  });
+  const nilForSubject = subject
+    ? (nilQ.data?.homeworkNilDeclarations ?? []).find((n) => n.subject === subject) ?? null
+    : null;
+
+  async function onDeclareNil(): Promise<void> {
+    if (!subject || nilBusy) return;
+    if (!nilReason) {
+      toast.show(STR.hwNilPickReason, "danger");
+      return;
+    }
+    setNilBusy(true);
+    const res = await declareNil({
+      classId: selection.classId!,
+      sectionId: selection.sectionId!,
+      subject,
+      date,
+      reason: nilReason,
+    });
+    setNilBusy(false);
+    if (res.error || !res.data?.declareNoHomework) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
+    toast.show(STR.hwNilDeclaredOk, "ok");
+    setNilReason(null);
+    refetchNil({ requestPolicy: "network-only" });
+  }
+
+  async function onRemoveNil(): Promise<void> {
+    if (!subject || nilBusy) return;
+    setNilBusy(true);
+    const res = await removeNil({
+      classId: selection.classId!,
+      sectionId: selection.sectionId!,
+      subject,
+      date,
+    });
+    setNilBusy(false);
+    if (res.error) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
+    toast.show(STR.hwNilRemovedOk, "ok");
+    refetchNil({ requestPolicy: "network-only" });
+  }
   const [, declare] = useMutation(DECLARE_HOMEWORK_ITEM);
   const [, attachQuestion] = useMutation(ATTACH_HW_QUESTION_FILE);
 
@@ -128,6 +191,7 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
     setPoolRef("");
     setRevItem(false);
     setFiles([]);
+    refetchNil({ requestPolicy: "network-only" }); // a real declaration auto-clears a nil
   }
 
   /** Multi-pick question attachments (≤5) — each uploads immediately; partial
@@ -204,6 +268,47 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
           {classLevel != null ? <Muted style={{ marginTop: 4 }}>{classLevelLabel(classLevel)}</Muted> : null}
         </Card>
         <DateField label={STR.hwDate} value={date} onChange={setDate} />
+        {subject ? (
+          <Card>
+            <Body style={{ fontWeight: "700", marginBottom: 4 }}>{STR.hwNilTitle}</Body>
+            {nilForSubject ? (
+              <>
+                <Muted>
+                  ✓ {STR.hwNilDeclaredNotice} — {hwNilReasonLabel(nilForSubject.reason)}
+                </Muted>
+                <Button
+                  title={STR.hwNilRemove}
+                  variant="ghost"
+                  onPress={() => void onRemoveNil()}
+                  loading={nilBusy}
+                  disabled={nilBusy}
+                  style={{ marginTop: space(1) }}
+                />
+              </>
+            ) : (
+              <>
+                <ChipRow>
+                  {HW_NIL_REASONS.map((r) => (
+                    <Chip
+                      key={r}
+                      label={hwNilReasonLabel(r)}
+                      selected={nilReason === r}
+                      onPress={() => setNilReason((cur) => (cur === r ? null : r))}
+                    />
+                  ))}
+                </ChipRow>
+                <Button
+                  title={STR.hwNilButton}
+                  variant="secondary"
+                  onPress={() => void onDeclareNil()}
+                  loading={nilBusy}
+                  disabled={nilBusy || !nilReason}
+                  style={{ marginTop: space(1) }}
+                />
+              </>
+            )}
+          </Card>
+        ) : null}
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: 4 }}>{STR.hwTopTags}</Body>
           <Muted style={{ marginBottom: space(2) }}>{STR.hwTopicHint}</Muted>

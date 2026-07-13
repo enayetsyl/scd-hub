@@ -10,7 +10,7 @@ import { View } from "react-native";
 import { useQuery } from "urql";
 import { RECON_REPORT_QUERY, type HwReconMissT, type HwNotDeclaredT } from "../../graphql/operations";
 import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Badge, Loader, ErrorBanner } from "../../components/ui";
-import { STR, bnNum, classLevelLabel, hwSubjectLabel } from "../../lib/labels";
+import { STR, bnNum, classLevelLabel, hwSubjectLabel, hwNilReasonLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
@@ -180,6 +180,31 @@ export default function ReconciliationReportScreen(): React.ReactElement {
                   <Badge text={STR.rrNotDeclared} tone="danger" />
                 </View>
               ))}
+            </View>
+          ))}
+        </Card>
+      ) : null}
+
+      {/* D-#299: explicit "no homework today" declarations — the NEUTRAL list.
+          These cells are excluded from the red not-declared list above. */}
+      {(report?.hwNilDeclared.length ?? 0) > 0 ? (
+        <Card>
+          <Body style={{ fontWeight: "700", marginBottom: space(1) }}>📗 {STR.hwNilReportTitle}</Body>
+          {report!.hwNilDeclared.map((m) => (
+            <View
+              key={`${m.sectionId}-${m.subject}-${m.dateKey}`}
+              style={{ flexDirection: "row", alignItems: "center", paddingVertical: space(1), gap: space(2) }}
+            >
+              <View style={{ flex: 1 }}>
+                <Body style={{ fontWeight: "600" }}>
+                  {classLevelLabel(m.classLevel)}
+                  {m.sectionNameBn ? ` — ${m.sectionNameBn}` : ""} · {hwSubjectLabel(m.subject)}
+                </Body>
+                <Muted>
+                  {bnNum(m.dateKey)} · {m.teacherName ?? "—"}
+                </Muted>
+              </View>
+              <Badge text={hwNilReasonLabel(m.reason)} tone="brand" />
             </View>
           ))}
         </Card>
