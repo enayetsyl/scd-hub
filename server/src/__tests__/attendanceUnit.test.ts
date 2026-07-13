@@ -36,6 +36,7 @@ jest.mock("../modules/routine/models/SubjectGroupMembership", () => ({
 
 import {
   isNurseryKg,
+  isLegacyAttendanceDate,
   resolveUnits,
   rosterForUnit,
   firstQuranSlotTeacher,
@@ -111,6 +112,18 @@ describe("resolveUnits — where each student is captured", () => {
 
   test("empty input short-circuits without hitting the DB", async () => {
     expect((await resolveUnits([])).size).toBe(0);
+    expect(mockClassFind).not.toHaveBeenCalled();
+    expect(mockMembershipFind).not.toHaveBeenCalled();
+  });
+
+  // D-#292: pre-cutover dates resolve with the LEGACY shape — everyone in their SECTION.
+  test("a pre-cutover date resolves EVERYONE to their section, no group lookup", async () => {
+    expect(isLegacyAttendanceDate("2026-07-12")).toBe(true);
+    expect(isLegacyAttendanceDate("2026-07-13")).toBe(false);
+
+    const units = await resolveUnits(students, "2026-07-10");
+    expect(units.get("kid-3")).toEqual({ unitType: "section", unitId: "sec-3" });
+    expect(units.get("kid-kg")).toEqual({ unitType: "section", unitId: "sec-kg" });
     expect(mockClassFind).not.toHaveBeenCalled();
     expect(mockMembershipFind).not.toHaveBeenCalled();
   });
@@ -253,6 +266,22 @@ describe("rosterForUnit", () => {
 
     const roster = await rosterForUnit({ unitType: "section", unitId: "sec-3" });
     expect(roster.map((s) => s.id)).toEqual(["kid-3-leftover"]);
+  });
+
+  // D-#292: a pre-cutover section day rosters the FULL section (backfill can name
+  // any of its students), and a Quran group has nothing to mark on those days.
+  test("a pre-cutover date rosters the FULL Class 1–5 section, no group narrowing", async () => {
+    mockStudentFind.mockResolvedValue([
+      { _id: "kid-3", sectionId: "sec-3", classId: "cls-3" },
+      { _id: "kid-3-leftover", sectionId: "sec-3", classId: "cls-3" },
+    ]);
+    const roster = await rosterForUnit({ unitType: "section", unitId: "sec-3" }, "2026-07-10");
+    expect(roster.map((s) => s.id).sort()).toEqual(["kid-3", "kid-3-leftover"]);
+  });
+
+  test("a Quran group has an EMPTY roster on a pre-cutover date", async () => {
+    expect(await rosterForUnit({ unitType: "subjectgroup", unitId: "quran-najera" }, "2026-07-10")).toEqual([]);
+    expect(mockMembershipFind).not.toHaveBeenCalled();
   });
 
   test("a Nursery/KG section yields all its active students", async () => {

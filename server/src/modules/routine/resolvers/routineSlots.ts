@@ -14,7 +14,11 @@ import {
   updateRoutineSlot,
   deleteRoutineSlot,
   routineForDate,
+  sectionSubjectRoutineTeachers,
+  reassignRoutineSubjectTeacher,
   type CreateSlotResult,
+  type SubjectRoutineTeachers,
+  type ReassignSubjectTeacherResult,
 } from "../services/RoutineSlotService";
 import {
   teacherAvailability,
@@ -206,6 +210,65 @@ builder.queryField("routineMasterWeek", (t) =>
     type: [RoutineMasterRef],
     authScopes: { hasPermission: "routine:manage" },
     resolve: async () => routineMasterWeek(),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Subject-teacher ⇄ routine visibility + sync (D-#291)
+// ---------------------------------------------------------------------------
+
+const SubjectRoutineTeachersRef = builder
+  .objectRef<SubjectRoutineTeachers>("SubjectRoutineTeachers")
+  .implement({
+    description:
+      "The ROUTINE's teacher(s) for one subject in a section (live slots) — shown beside the " +
+      "teaching grants so a grant/timetable mismatch is visible (D-#291).",
+    fields: (t) => ({
+      subject: t.exposeString("subject"),
+      teacherIds: t.field({ type: ["String"], resolve: (r) => r.teacherIds }),
+      teacherNames: t.field({ type: ["String"], resolve: (r) => r.teacherNames }),
+    }),
+  });
+
+builder.queryField("sectionSubjectRoutineTeachers", (t) =>
+  t.field({
+    type: [SubjectRoutineTeachersRef],
+    description: "Per-subject routine teachers for a section's live slots (Assign-subject-teacher view).",
+    authScopes: { hasPermission: "user:manage" },
+    args: { sectionId: t.arg.string({ required: true }) },
+    resolve: (_r, args) => sectionSubjectRoutineTeachers(args.sectionId),
+  }),
+);
+
+const ReassignResultRef = builder
+  .objectRef<ReassignSubjectTeacherResult>("ReassignSubjectTeacherResult")
+  .implement({
+    fields: (t) => ({
+      updatedSlots: t.exposeInt("updatedSlots"),
+      warnings: t.field({ type: ["String"], resolve: (r) => r.warnings }),
+    }),
+  });
+
+builder.mutationField("reassignRoutineSubjectTeacher", (t) =>
+  t.field({
+    type: ReassignResultRef,
+    description:
+      "Point every live routine slot of (section, subject) at a new teacher (D-#291) — the optional " +
+      "'also update the routine' step after a subject-teacher assignment. Whole-or-nothing: pre-checks " +
+      "the teacher's availability across all affected periods, then reuses the master-grid cell-edit " +
+      "path per slot (conflict engine + grant re-binding + chat re-sync).",
+    authScopes: { hasPermission: "routine:manage" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: true }),
+      teacherId: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      if (!(ROUTINE_SUBJECTS as readonly string[]).includes(args.subject))
+        throw new Error("Invalid subject");
+      return reassignRoutineSubjectTeacher(args.sectionId, args.subject, args.teacherId, ctx.auth.userId);
+    },
   }),
 );
 

@@ -35,14 +35,23 @@ import { ScheduleWindow } from "../models/ScheduleWindow";
 import { dateKeyOf, parseDateKey } from "../../attendance/dates";
 import { unmarkedMarkingDays } from "../../attendance/attendanceBacklog";
 import { AcademicYear } from "../../foundation/models/AcademicYear";
+import { Section } from "../../foundation/models/Section";
 import { AssignmentSchedule } from "../../trackers/models/AssignmentSchedule";
+import { AssignmentItem } from "../../trackers/models/AssignmentItem";
+import { HomeworkItem } from "../../trackers/models/HomeworkItem";
+import { HomeworkReconciliation, reconDayKey } from "../../trackers/models/HomeworkReconciliation";
 import { expectedItemsForWeek } from "../../trackers/services/AssignmentScheduleService";
 import { weekNumberFor } from "../../trackers/assignmentCalendar";
 
 /** Owner ruling (D-#279): look back one week, school days only. */
 export const BACKLOG_DAYS = 7;
 
-export type AlertKind = "attendance" | "class_note" | "assignment_entry";
+export type AlertKind =
+  | "attendance"
+  | "class_note"
+  | "assignment_entry"
+  | "hw_reconcile"
+  | "as_reconcile";
 
 export interface PendingAlert {
   kind: AlertKind;
@@ -255,6 +264,77 @@ async function assignmentWork(userId: string, today: Date): Promise<AssignmentWo
 }
 
 // ---------------------------------------------------------------------------
+// reconcile alerts — the CONFIRMER's side of the two-step trackers (prod finding
+// 2026-07-13: Nursery homework sat declared-but-never-confirmed for days, so no
+// per-student records ever existed and nobody saw a nudge on Today).
+// ---------------------------------------------------------------------------
+
+/** The sections the caller must confirm for: class teacher or homework delegate. */
+async function confirmerSections(userId: string): Promise<Array<{ sectionId: string; classId: string }>> {
+  const sections = await Section.find({
+    active: true,
+    $or: [{ classTeacherId: userId }, { homeworkConfirmerId: userId }],
+  })
+    .select("_id classId")
+    .lean();
+  return sections.map((s) => ({ sectionId: s._id.toString(), classId: s.classId.toString() }));
+}
+
+/** Window days on which one of the caller's classes has declared-but-unconfirmed
+ *  homework (same rule as the pendingHomeworkSections reminder ladder). */
+async function hwReconcileBacklog(classIds: string[], keys: string[]): Promise<string[]> {
+  if (classIds.length === 0) return [];
+  const start = parseDateKey(keys[0]);
+  const lastDate = parseDateKey(keys[keys.length - 1]);
+  const end = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate(), 23, 59, 59, 999);
+
+  const declared = await HomeworkItem.find({
+    classId: { $in: classIds },
+    status: "declared",
+    dateGiven: { $gte: start, $lte: end },
+  })
+    .select("classId dateGiven")
+    .lean();
+  if (declared.length === 0) return [];
+
+  const recons = await HomeworkReconciliation.find({
+    classId: { $in: classIds },
+    reconDate: { $gte: reconDayKey(start), $lte: reconDayKey(end) },
+    reconState: "reconciled",
+  })
+    .select("classId reconDate")
+    .lean();
+  const reconciled = new Set(recons.map((r) => `${r.classId.toString()}|${dateKeyOf(new Date(r.reconDate))}`));
+
+  const pendingKeys = new Set<string>();
+  for (const it of declared) {
+    const key = dateKeyOf(new Date(it.dateGiven));
+    if (!reconciled.has(`${it.classId.toString()}|${key}`)) pendingKeys.add(key);
+  }
+  return [...pendingKeys].sort();
+}
+
+/** Still-DRAFT assignment items in the caller's sections whose §4-resolved
+ *  delivery day has arrived — the weekly confirmAssignmentWeek is owed (AS-T6). */
+async function asReconcileBacklog(
+  sectionIds: string[],
+  today: Date,
+): Promise<{ count: number; oldestDateKey: string | null }> {
+  if (sectionIds.length === 0) return { count: 0, oldestDateKey: null };
+  const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+  const drafts = await AssignmentItem.find({
+    sectionId: { $in: sectionIds },
+    status: "DRAFT",
+    deliveryDate: { $lte: endOfToday },
+  })
+    .select("deliveryDate")
+    .lean();
+  if (drafts.length === 0) return { count: 0, oldestDateKey: null };
+  const oldest = drafts.map((d) => dateKeyOf(new Date(d.deliveryDate))).sort()[0];
+  return { count: drafts.length, oldestDateKey: oldest };
+}
+
+// ---------------------------------------------------------------------------
 
 export interface PendingWork {
   alerts: PendingAlert[];
@@ -292,6 +372,27 @@ export async function pendingWorkFor(ctx: AppContext, today: Date): Promise<Pend
     const work = await assignmentWork(auth.userId, today);
     if (work.overdue.count > 0) out.push(work.overdue);
     assignmentPrep = work.prep;
+  }
+
+  // Reconcile alerts — for whoever a section holds accountable (class teacher /
+  // homework delegate). tracker:write guards the seam like the other kinds, so
+  // guardian/office logins never even query for sections.
+  const mySections = callerHasPermission(auth, "tracker:write")
+    ? await confirmerSections(auth.userId)
+    : [];
+  if (mySections.length > 0) {
+    const hwPending = await hwReconcileBacklog(
+      [...new Set(mySections.map((s) => s.classId))],
+      keys,
+    );
+    if (hwPending.length > 0) out.push(alert("hw_reconcile", hwPending));
+
+    const asPending = await asReconcileBacklog(
+      mySections.map((s) => s.sectionId),
+      today,
+    );
+    if (asPending.count > 0)
+      out.push({ kind: "as_reconcile", count: asPending.count, oldestDateKey: asPending.oldestDateKey });
   }
 
   return { alerts: out, assignmentPrep };

@@ -10,7 +10,7 @@ import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
 import type { IRoutineSlot } from "../models/RoutineSlot";
 import { RoutineSlotRef } from "./routineSlots";
-import { myDayFor, type MyDayHomeworkCounts, type MyDayResult } from "../services/MyDayService";
+import { myDayFor, type MyDayHomeworkCounts, type MyDayResult, type ClassTeacherSection } from "../services/MyDayService";
 import type { PendingAlert, AssignmentPrep } from "../services/PendingAlertService";
 import type { ClassPresence } from "../../attendance/services/AttendanceReportService";
 
@@ -66,6 +66,15 @@ const ClassPresenceRef = builder.objectRef<ClassPresence>("ClassPresence").imple
   }),
 });
 
+const ClassTeacherSectionRef = builder.objectRef<ClassTeacherSection>("ClassTeacherSection").implement({
+  description: "A section the caller is CLASS TEACHER of (D-#42) — named on the Today dashboard.",
+  fields: (t) => ({
+    sectionId: t.exposeString("sectionId"),
+    nameBn: t.exposeString("nameBn"),
+    classLevel: t.exposeInt("classLevel"),
+  }),
+});
+
 const MyDayRef = builder.objectRef<MyDayResult>("MyDay").implement({
   description:
     "The caller's day at a glance (UX-4): own routine periods for the date (cover-overlaid, " +
@@ -87,6 +96,7 @@ const MyDayRef = builder.objectRef<MyDayResult>("MyDay").implement({
       resolve: (r) => r.assignmentPrep,
     }),
     classPresence: t.field({ type: [ClassPresenceRef], resolve: (r) => r.classPresence }),
+    classTeacherOf: t.field({ type: [ClassTeacherSectionRef], resolve: (r) => r.classTeacherOf }),
   }),
 });
 

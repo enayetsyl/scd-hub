@@ -47,6 +47,7 @@ import { slotsForTeacherOnDate } from "../../routine/services/RoutineSlotService
 import { writeAudit } from "../../platform/services/AuditService";
 import {
   isNurseryKg,
+  isLegacyAttendanceDate,
   firstPeriodTeacher,
   firstQuranSlotTeacher,
   rosterForUnit,
@@ -102,8 +103,9 @@ export interface MarkerResolution {
  *  the unit then shows as unmarked until an admin assigns a marker. */
 export async function markerForUnit(unit: AttendanceUnit, dateKey: string): Promise<MarkerResolution> {
   const date = parseDateKey(dateKey);
+  const legacy = isLegacyAttendanceDate(dateKey);
 
-  // 1. Admin override wins.
+  // 1. Admin override wins (any date — assignments were the pre-D-#278 system too).
   const assignments = await SectionAttendanceAssignment.find({
     ...unitFilter(unit),
     active: true,
@@ -114,24 +116,29 @@ export async function markerForUnit(unit: AttendanceUnit, dateKey: string): Prom
   if (winner) return { teacherId: winner.teacherId.toString(), source: "assignment" };
 
   // 2a. Quran group → its first Quran period's teacher (cover-aware). No class-teacher
-  //     fallback exists for a cross-section group.
+  //     fallback exists for a cross-section group. Pre-cutover dates (D-#292) had no
+  //     group capture at all — nobody is retroactively made responsible.
   if (unit.unitType === "subjectgroup") {
+    if (legacy) return { teacherId: null, source: null };
     const teacherId = await firstQuranSlotTeacher(unit.unitId, date);
     return teacherId ? { teacherId, source: "routine" } : { teacherId: null, source: null };
   }
 
   // 2b. Section unit. Nursery/KG → its first period's teacher (their Quran period is
-  //     P3/P5, so "first period", not "first Quran period" — the owner's rule).
+  //     P3/P5, so "first period", not "first Quran period" — the owner's rule). The
+  //     routine step did not exist pre-cutover (D-#292) — legacy dates skip it.
   const section = await Section.findById(unit.unitId).lean();
   if (!section) throw new AttendanceError("Section not found");
-  const cls = await Class.findById(section.classId).select("level").lean();
-  if (cls && isNurseryKg(cls.level)) {
-    const teacherId = await firstPeriodTeacher(unit.unitId, date);
-    if (teacherId) return { teacherId, source: "routine" };
+  if (!legacy) {
+    const cls = await Class.findById(section.classId).select("level").lean();
+    if (cls && isNurseryKg(cls.level)) {
+      const teacherId = await firstPeriodTeacher(unit.unitId, date);
+      if (teacherId) return { teacherId, source: "routine" };
+    }
   }
 
   // 3. Class-teacher fallback (and the standing marker for a Class 1–5 section unit,
-  //    which holds only students without a Quran group).
+  //    which holds only students without a Quran group; pre-cutover it is THE rule).
   return section.classTeacherId
     ? { teacherId: section.classTeacherId.toString(), source: "class_teacher" }
     : { teacherId: null, source: null };
@@ -241,11 +248,16 @@ export async function revokeSectionMarker(
 // Marking (AT2.3/AT2.4) + the O2 amend path
 // ---------------------------------------------------------------------------
 
-/** Every absentee must belong to the unit's roster (its first-class students). */
-async function validateAbsentees(unit: AttendanceUnit, absentStudentIds: string[]): Promise<Types.ObjectId[]> {
+/** Every absentee must belong to the unit's roster for that DATE (D-#292: a
+ *  pre-cutover section day validates against the full section, no group split). */
+async function validateAbsentees(
+  unit: AttendanceUnit,
+  absentStudentIds: string[],
+  dateKey: string,
+): Promise<Types.ObjectId[]> {
   const unique = [...new Set(absentStudentIds)];
   if (unique.length === 0) return [];
-  const roster = new Set((await rosterForUnit(unit)).map((s) => s.id));
+  const roster = new Set((await rosterForUnit(unit, dateKey)).map((s) => s.id));
   for (const id of unique) {
     if (!roster.has(id)) {
       throw new AttendanceError("Every absentee must be an active student of this attendance unit");
@@ -331,7 +343,7 @@ export async function markAttendanceUnit(
     );
   }
   await assertFullDay(dateKey);
-  const absentIds = await validateAbsentees(unit, absentStudentIds);
+  const absentIds = await validateAbsentees(unit, absentStudentIds, dateKey);
   return upsertDay(unit, dateKey, absentIds, ctx.auth!.userId, false);
 }
 
@@ -361,7 +373,7 @@ export async function amendAttendanceUnit(
     if (!section) throw new AttendanceError("Section not found");
   }
   await assertFullDay(dateKey);
-  const absentIds = await validateAbsentees(unit, absentStudentIds);
+  const absentIds = await validateAbsentees(unit, absentStudentIds, dateKey);
   return upsertDay(unit, dateKey, absentIds, actorId, true);
 }
 

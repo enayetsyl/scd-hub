@@ -106,7 +106,7 @@ export async function absenteeReport(dateKey: string): Promise<ClassAbsentees[]>
 
   const students = await Student.find({ active: true }).select("_id name nameBn rollNumber schoolId sectionId classId").lean();
   const lites = students.map(toLite);
-  const units = await resolveUnits(lites);
+  const units = await resolveUnits(lites, dateKey); // D-#292: legacy dates are section-shaped
 
   // Only students whose OWN unit was marked count as covered by this date's capture.
   const covered = students.filter((s) => {
@@ -209,7 +209,7 @@ export async function classPresenceForDate(dateKey: string): Promise<ClassPresen
 
   const markedUnits = new Set(days.map(unitKeyOfDay));
   const absentIds = new Set(days.flatMap((d) => d.absentStudentIds.map((id) => id.toString())));
-  const units = await resolveUnits(students.map(toLite));
+  const units = await resolveUnits(students.map(toLite), dateKey); // D-#292
 
   const classes = await Class.find({ _id: { $in: [...new Set(students.map((s) => s.classId.toString()))] } })
     .select("level nameBn")
@@ -373,7 +373,14 @@ export async function absentNoApplication(
 
   const units = await resolveUnits(students.map(toLite));
   const inScope = new Set(students.map((s) => s._id.toString()));
-  const distinctUnits = [...new Map([...units.values()].map((u) => [unitKey(u), u])).values()];
+  // Query BOTH shapes (the history approach): a range straddling the D-#292 cutover
+  // has pre-cutover days stored under the students' SECTIONS, not their Quran groups.
+  const legacySectionUnits: AttendanceUnit[] = [
+    ...new Set(students.map((s) => s.sectionId.toString())),
+  ].map((id) => ({ unitType: "section", unitId: id }));
+  const distinctUnits = [
+    ...new Map([...units.values(), ...legacySectionUnits].map((u) => [unitKey(u), u])).values(),
+  ];
 
   const days = (await StudentAttendanceDay.find({
     $or: unitsQuery(distinctUnits),
@@ -472,7 +479,7 @@ export async function unmarkedSections(dateKey: string): Promise<UnmarkedSection
     Student.find({ active: true }).select("_id sectionId classId").lean(),
   ]);
   const markedUnits = new Set((marked as unknown as DayLike[]).map(unitKeyOfDay));
-  const units = await resolveUnits(students.map(toLite));
+  const units = await resolveUnits(students.map(toLite), dateKey); // D-#292: legacy dates are section-shaped
 
   // section → the distinct units its students are captured in
   const unitsBySection = new Map<string, Map<string, AttendanceUnit>>();
@@ -547,4 +554,92 @@ export async function unmarkedSections(dateKey: string): Promise<UnmarkedSection
     });
   }
   return out.sort((a, b) => a.classLevel - b.classLevel || a.sectionCode.localeCompare(b.sectionCode));
+}
+
+// ---------------------------------------------------------------------------
+// Admin unit list for a date (D-#292) — the Principal/Office mark/amend surface
+// ---------------------------------------------------------------------------
+
+export interface AdminUnitDay {
+  unitType: string;
+  unitId: string;
+  /** The Quran group's name, or the class·section label (D-#292 legacy dates are all sections). */
+  label: string;
+  /** Class·section context line for group units (which sections its students span). */
+  sublabel: string | null;
+  marked: boolean;
+  markerTeacherId: string | null;
+  markerName: string | null;
+  studentCount: number;
+}
+
+/**
+ * EVERY populated attendance unit for a date with its marked state + marker —
+ * the Principal/Office mark-any-class/any-day surface (D-#292). Date-aware: a
+ * pre-cutover date lists SECTIONS (the shape attendance had then); marked units
+ * are included (tap → amend), unlike `unmarkedSections` which chases gaps only.
+ */
+export async function attendanceUnitsForDate(dateKey: string): Promise<AdminUnitDay[]> {
+  const dayType = await resolveDayType(parseDateKey(dateKey));
+  if (dayType !== "FULL") return [];
+
+  const [sections, marked, students] = await Promise.all([
+    Section.find({ active: true }).lean(),
+    StudentAttendanceDay.find({ dateKey }).select("sectionId subjectGroupId").lean(),
+    Student.find({ active: true }).select("_id sectionId classId").lean(),
+  ]);
+  const markedUnits = new Set((marked as unknown as DayLike[]).map(unitKeyOfDay));
+  const units = await resolveUnits(students.map(toLite), dateKey);
+
+  // Distinct populated units + which class·sections each spans + student counts.
+  const byUnit = new Map<string, { unit: AttendanceUnit; sectionIds: Set<string>; count: number }>();
+  for (const s of students) {
+    const unit = units.get(s._id.toString());
+    if (!unit) continue;
+    const k = unitKey(unit);
+    const entry = byUnit.get(k) ?? byUnit.set(k, { unit, sectionIds: new Set(), count: 0 }).get(k)!;
+    entry.sectionIds.add(s.sectionId.toString());
+    entry.count += 1;
+  }
+
+  const classes = await Class.find({ _id: { $in: sections.map((s) => s.classId) } }).lean();
+  const classById = new Map(classes.map((c) => [c._id.toString(), c]));
+  const sectionById = new Map(sections.map((s) => [s._id.toString(), s]));
+  const sectionLabel = (sid: string): string => {
+    const section = sectionById.get(sid);
+    if (!section) return sid;
+    const cls = classById.get(section.classId.toString());
+    return cls?.nameBn ? `${cls.nameBn} — ${section.nameBn}` : section.nameBn;
+  };
+
+  const groupIds = [...byUnit.values()]
+    .filter((e) => e.unit.unitType === "subjectgroup")
+    .map((e) => e.unit.unitId);
+  const groups = groupIds.length
+    ? await SubjectGroup.find({ _id: { $in: groupIds } }).select("nameBn code").lean()
+    : [];
+  const groupNameById = new Map(groups.map((g) => [g._id.toString(), g.nameBn || g.code]));
+
+  const out: AdminUnitDay[] = [];
+  for (const { unit, sectionIds, count } of byUnit.values()) {
+    const marker = await markerForUnit(unit, dateKey);
+    const teacher = marker.teacherId
+      ? await User.findById(marker.teacherId).select("name").lean()
+      : null;
+    const spanned = [...sectionIds].map(sectionLabel).sort();
+    out.push({
+      unitType: unit.unitType,
+      unitId: unit.unitId,
+      label:
+        unit.unitType === "subjectgroup"
+          ? groupNameById.get(unit.unitId) ?? unit.unitId
+          : sectionLabel(unit.unitId),
+      sublabel: unit.unitType === "subjectgroup" ? spanned.join(" · ") : null,
+      marked: markedUnits.has(unitKey(unit)),
+      markerTeacherId: marker.teacherId,
+      markerName: teacher?.name ?? null,
+      studentCount: count,
+    });
+  }
+  return out.sort((a, b) => a.label.localeCompare(b.label));
 }

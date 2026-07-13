@@ -25,6 +25,10 @@ const mockScheduleFindOne = jest.fn();
 const mockExpectedItemsForWeek = jest.fn();
 const mockWeekNumberFor = jest.fn();
 const mockWindowFindOne = jest.fn();
+const mockSectionFind = jest.fn();
+const mockAsItemFind = jest.fn();
+const mockHwItemFind = jest.fn();
+const mockHwReconFind = jest.fn();
 
 jest.mock("../modules/routine/models/HolidayException", () => ({
   HolidayException: { find: (f: unknown) => ({ select: () => ({ lean: () => mockHolidayFind(f) }) }) },
@@ -53,6 +57,24 @@ jest.mock("../modules/trackers/assignmentCalendar", () => ({
 jest.mock("../modules/routine/models/ScheduleWindow", () => ({
   ScheduleWindow: {
     findOne: (f: unknown) => ({ sort: () => ({ select: () => ({ lean: () => mockWindowFindOne(f) }) }) }),
+  },
+}));
+// D-#290 reconcile alerts — the confirmer-side sources.
+jest.mock("../modules/foundation/models/Section", () => ({
+  Section: { find: (f: unknown) => ({ select: () => ({ lean: () => mockSectionFind(f) }) }) },
+}));
+jest.mock("../modules/trackers/models/AssignmentItem", () => ({
+  AssignmentItem: { find: (f: unknown) => ({ select: () => ({ lean: () => mockAsItemFind(f) }) }) },
+}));
+jest.mock("../modules/trackers/models/HomeworkItem", () => ({
+  HomeworkItem: { find: (f: unknown) => ({ select: () => ({ lean: () => mockHwItemFind(f) }) }) },
+}));
+jest.mock("../modules/trackers/models/HomeworkReconciliation", () => ({
+  HomeworkReconciliation: { find: (f: unknown) => ({ select: () => ({ lean: () => mockHwReconFind(f) }) }) },
+  reconDayKey: (date: Date) => {
+    const d = new Date(date.getTime());
+    d.setHours(0, 0, 0, 0);
+    return d;
   },
 }));
 
@@ -85,6 +107,10 @@ beforeEach(() => {
   mockExpectedItemsForWeek.mockResolvedValue({ suspended: false, deliveryDate: null, items: [] });
   mockWeekNumberFor.mockReturnValue(5);
   mockWindowFindOne.mockResolvedValue({ dayStartMinutes: 420 }); // 07:00
+  mockSectionFind.mockResolvedValue([]);
+  mockAsItemFind.mockResolvedValue([]);
+  mockHwItemFind.mockResolvedValue([]);
+  mockHwReconFind.mockResolvedValue([]);
 });
 
 describe("window + day-types", () => {
@@ -320,5 +346,67 @@ describe("permission degradation", () => {
     await pendingAlertsFor(ctxFor("OFFICE"), TODAY);
     expect(mockUnmarkedMarkingDays).not.toHaveBeenCalled(); // no attendance:mark
     expect(mockSlotFind).toHaveBeenCalled(); // routine:read
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-#290 — the confirmer's reconcile alerts (class teacher / homework delegate)
+// ---------------------------------------------------------------------------
+
+describe("hw_reconcile / as_reconcile alerts (D-#290)", () => {
+  const SECTION = { _id: "sec-1", classId: "cls-1" };
+
+  test("declared-but-unconfirmed homework days raise hw_reconcile with the oldest date", async () => {
+    mockSectionFind.mockResolvedValue([SECTION]);
+    mockHwItemFind.mockResolvedValue([
+      { classId: "cls-1", dateGiven: new Date(2026, 5, 9) },
+      { classId: "cls-1", dateGiven: new Date(2026, 5, 11) },
+    ]);
+    const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
+    const a = alerts.find((x) => x.kind === "hw_reconcile")!;
+    expect(a.count).toBe(2);
+    expect(a.oldestDateKey).toBe("2026-06-09");
+  });
+
+  test("a RECONCILED day drops out of hw_reconcile", async () => {
+    mockSectionFind.mockResolvedValue([SECTION]);
+    mockHwItemFind.mockResolvedValue([
+      { classId: "cls-1", dateGiven: new Date(2026, 5, 9) },
+      { classId: "cls-1", dateGiven: new Date(2026, 5, 11) },
+    ]);
+    mockHwReconFind.mockResolvedValue([{ classId: "cls-1", reconDate: new Date(2026, 5, 9) }]);
+    const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
+    const a = alerts.find((x) => x.kind === "hw_reconcile")!;
+    expect(a.count).toBe(1);
+    expect(a.oldestDateKey).toBe("2026-06-11");
+  });
+
+  test("still-DRAFT assignment items whose delivery day arrived raise as_reconcile", async () => {
+    mockSectionFind.mockResolvedValue([SECTION]);
+    mockAsItemFind.mockResolvedValue([
+      { deliveryDate: new Date(2026, 5, 8) },
+      { deliveryDate: new Date(2026, 5, 11) },
+    ]);
+    const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
+    const a = alerts.find((x) => x.kind === "as_reconcile")!;
+    expect(a.count).toBe(2);
+    expect(a.oldestDateKey).toBe("2026-06-08");
+    // The query itself bounds deliveryDate to the end of today (future drafts excluded).
+    const filter = mockAsItemFind.mock.calls[0][0] as { deliveryDate: { $lte: Date }; status: string };
+    expect(filter.status).toBe("DRAFT");
+    expect(filter.deliveryDate.$lte.getTime()).toBe(new Date(2026, 5, 11, 23, 59, 59, 999).getTime());
+  });
+
+  test("a caller who is NOT a confirmer for any section gets neither alert (and no tracker queries)", async () => {
+    const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
+    expect(alerts.find((x) => x.kind === "hw_reconcile")).toBeUndefined();
+    expect(alerts.find((x) => x.kind === "as_reconcile")).toBeUndefined();
+    expect(mockHwItemFind).not.toHaveBeenCalled();
+    expect(mockAsItemFind).not.toHaveBeenCalled();
+  });
+
+  test("GUARDIAN never queries for confirmer sections", async () => {
+    await pendingAlertsFor(ctxFor("GUARDIAN"), TODAY);
+    expect(mockSectionFind).not.toHaveBeenCalled();
   });
 });

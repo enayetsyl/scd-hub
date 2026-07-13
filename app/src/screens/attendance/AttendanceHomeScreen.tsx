@@ -45,6 +45,11 @@ export default function AttendanceHomeScreen({ navigation }: Props): React.React
     <Screen scroll>
       {canManage ? (
         <>
+          {/* D-#292: mark/amend ANY class for ANY (past) day — the admin escape hatch. */}
+          <Card onPress={() => navigation.navigate("AttendanceAdmin")}>
+            <Body style={{ fontWeight: "700" }}>🗓️ {STR.attAdminTitle}</Body>
+            <Muted>{STR.attAdminHint}</Muted>
+          </Card>
           <Card onPress={() => navigation.navigate("TeacherAttendanceImport")}>
             <Body style={{ fontWeight: "700" }}>📥 {STR.attUploadTitle}</Body>
             <Muted>{STR.attUploadHint}</Muted>

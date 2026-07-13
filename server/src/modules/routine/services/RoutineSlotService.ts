@@ -10,6 +10,7 @@ import { RoutineSubstitution } from "../models/RoutineSubstitution";
 import { Section } from "../../foundation/models/Section";
 import { SubjectGroup } from "../models/SubjectGroup";
 import { Subject } from "../../foundation/models/Subject";
+import { User } from "../../foundation/models/User";
 import { ScopeGrant } from "../../foundation/models/ScopeGrant";
 import { writeAudit } from "../../platform/services/AuditService";
 import { weekdayBaseDayType, dayTypeAdmitsTrack } from "../calendar";
@@ -404,6 +405,123 @@ export async function slotsForTeacherOnDate(teacherId: string, date: Date): Prom
   })
     .sort({ periodNumber: 1 })
     .lean() as unknown as Promise<IRoutineSlot[]>;
+}
+
+// ---------------------------------------------------------------------------
+// Subject-teacher ⇄ routine visibility + sync (D-#291)
+// ---------------------------------------------------------------------------
+
+/** LIVE (effective-now) section slots for a section, optionally one subject. */
+async function liveSectionSlots(sectionId: string, subject?: string, now = new Date()) {
+  const filter: Record<string, unknown> = {
+    groupType: "section",
+    groupId: sectionId,
+    active: true,
+    isBreak: false,
+    effectiveFrom: { $lte: now },
+    $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: now } }],
+  };
+  if (subject) filter.subject = subject;
+  return RoutineSlot.find(filter).lean();
+}
+
+export interface SubjectRoutineTeachers {
+  subject: string;
+  teacherIds: string[];
+  teacherNames: string[];
+}
+
+/**
+ * Per-subject ROUTINE teachers for a section's live slots — the Assign-subject-teacher
+ * screen shows these beside the teaching grants so a grant/timetable mismatch is
+ * visible instead of silently drifting (the routine drives attendance markers,
+ * class-note prompts and Today; grants drive tracker access, D-#287).
+ */
+export async function sectionSubjectRoutineTeachers(
+  sectionId: string,
+  now = new Date(),
+): Promise<SubjectRoutineTeachers[]> {
+  const slots = await liveSectionSlots(sectionId, undefined, now);
+  const bySubject = new Map<string, Set<string>>();
+  for (const s of slots) {
+    if (!s.teacherId) continue;
+    const set = bySubject.get(s.subject) ?? bySubject.set(s.subject, new Set()).get(s.subject)!;
+    set.add(s.teacherId.toString());
+  }
+  const allIds = [...new Set([...bySubject.values()].flatMap((set) => [...set]))];
+  const users = allIds.length
+    ? await User.find({ _id: { $in: allIds } }).select("name").lean()
+    : [];
+  const nameOf = new Map(users.map((u) => [u._id.toString(), u.name]));
+  return [...bySubject.entries()]
+    .map(([subject, ids]) => ({
+      subject,
+      teacherIds: [...ids],
+      teacherNames: [...ids].map((id) => nameOf.get(id) ?? id),
+    }))
+    .sort((a, b) => a.subject.localeCompare(b.subject));
+}
+
+export interface ReassignSubjectTeacherResult {
+  updatedSlots: number;
+  warnings: string[];
+}
+
+/**
+ * Point every live routine slot of (section, subject) at a new teacher — the
+ * optional "also update the routine" step after assigning a subject teacher
+ * (D-#291). Pre-checks the new teacher's availability across ALL affected
+ * (day, period) cells so the change applies whole-or-not-at-all, then reuses
+ * `updateRoutineSlot` per slot (same conflict engine, grant re-binding and chat
+ * re-sync as a master-grid cell edit — no new edge logic).
+ */
+export async function reassignRoutineSubjectTeacher(
+  sectionId: string,
+  subject: string,
+  teacherId: string,
+  actorId: string,
+  now = new Date(),
+): Promise<ReassignSubjectTeacherResult> {
+  const slots = await liveSectionSlots(sectionId, subject, now);
+  if (slots.length === 0) {
+    throw new Error(`No live routine slots for ${subject} in this section — nothing to update`);
+  }
+
+  // Whole-or-nothing pre-check: the new teacher must be free at every affected
+  // (day, period) outside the slots being reassigned.
+  const targetIds = slots.map((s) => s._id);
+  const clashes = await RoutineSlot.find({
+    _id: { $nin: targetIds },
+    teacherId,
+    active: true,
+    effectiveFrom: { $lte: now },
+    $and: [
+      { $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: now } }] },
+      { $or: slots.map((s) => ({ dayOfWeek: s.dayOfWeek, periodNumber: s.periodNumber })) },
+    ],
+  })
+    .select("dayOfWeek periodNumber")
+    .lean();
+  if (clashes.length > 0) {
+    const where = clashes.map((c) => `${c.dayOfWeek} P${c.periodNumber}`).join(", ");
+    throw new Error(`Teacher already booked at ${where} — resolve those periods first`);
+  }
+
+  const warnings = new Set<string>();
+  let updatedSlots = 0;
+  for (const s of slots) {
+    const res = await updateRoutineSlot({
+      slotId: s._id.toString(),
+      subject: s.subject as RoutineSubject,
+      track: s.track as PeriodTrack,
+      teacherId,
+      roomId: s.roomId ? s.roomId.toString() : null,
+      actorId,
+    });
+    for (const w of res.warnings) warnings.add(w);
+    updatedSlots += 1;
+  }
+  return { updatedSlots, warnings: [...warnings] };
 }
 
 /** Resolve the effective slots for a group on a date (R2.7) with any active

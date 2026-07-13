@@ -26,6 +26,7 @@ import { parseDateKey } from "./dates";
 import {
   compareSlotOrder,
   isNurseryKg,
+  isLegacyAttendanceDate,
   resolveUnits,
   unitKey,
   type AttendanceUnit,
@@ -130,9 +131,11 @@ export async function unmarkedMarkingDays(userId: string, fullDayKeys: string[])
   if (candidates.size === 0) return [];
 
   // A unit with NO students has nothing to mark, so it can never receive a day record —
-  // keeping it here would raise a red "attendance pending" alert the teacher is unable
-  // to clear. This bites the Class 1–5 SECTION unit in particular: it holds only the
-  // Quran-group-less leftovers, so it is usually empty.
+  // keeping it would raise a red "attendance pending" alert the teacher is unable to
+  // clear. This bites the Class 1–5 SECTION unit in particular: it holds only the
+  // Quran-group-less leftovers, so it is usually empty. The check is PER DAY (D-#292):
+  // a pre-cutover day is section-shaped, so there the section counts as populated
+  // whenever it has ANY active student (and subjectgroup units did not exist at all).
   const allStudents = await Student.find({ active: true }).select("_id sectionId classId").lean();
   const unitByStudent = await resolveUnits(
     allStudents.map((s) => ({
@@ -142,8 +145,18 @@ export async function unmarkedMarkingDays(userId: string, fullDayKeys: string[])
     })),
   );
   const populated = new Set([...unitByStudent.values()].map(unitKey));
-  for (const key of [...candidates.keys()]) {
-    if (!populated.has(key)) candidates.delete(key);
+  const legacyPopulatedSections = new Set(
+    allStudents.map((s) => unitKey({ unitType: "section", unitId: s.sectionId.toString() })),
+  );
+  const populatedOn = (unit: AttendanceUnit, dateKey: string): boolean =>
+    isLegacyAttendanceDate(dateKey)
+      ? unit.unitType === "section" && legacyPopulatedSections.has(unitKey(unit))
+      : populated.has(unitKey(unit));
+  // Drop units empty under BOTH shapes — they can never owe anything.
+  for (const [key, unit] of [...candidates.entries()]) {
+    if (!populated.has(key) && !(unit.unitType === "section" && legacyPopulatedSections.has(key))) {
+      candidates.delete(key);
+    }
   }
   if (candidates.size === 0) return [];
 
@@ -253,6 +266,7 @@ export async function unmarkedMarkingDays(userId: string, fullDayKeys: string[])
 
   const markerOf = (unit: AttendanceUnit, dateKey: string, date: Date): string | null => {
     const k = unitKey(unit);
+    const legacy = isLegacyAttendanceDate(dateKey); // D-#292: pre-cutover has no routine rule
     const winner = pickCoveringAssignment(
       (assignmentsByUnit.get(k) ?? []) as unknown as Array<{
         teacherId: { toString(): string };
@@ -268,6 +282,7 @@ export async function unmarkedMarkingDays(userId: string, fullDayKeys: string[])
     const slots = (slotsByUnit.get(k) ?? []).filter((s) => s.dayOfWeek === dayOfWeek && liveOn(s, date));
 
     if (unit.unitType === "subjectgroup") {
+      if (legacy) return null; // group capture did not exist pre-cutover
       for (const s of slots) {
         if (s.track !== "quran") continue;
         const t = effectiveTeacher(s, dateKey);
@@ -279,7 +294,7 @@ export async function unmarkedMarkingDays(userId: string, fullDayKeys: string[])
     const section = sectionById.get(unit.unitId);
     if (!section) return null;
     const level = levelByClassId.get(section.classId.toString());
-    if (level !== undefined && isNurseryKg(level)) {
+    if (!legacy && level !== undefined && isNurseryKg(level)) {
       for (const s of slots) {
         const t = effectiveTeacher(s, dateKey);
         if (t) return t;
@@ -292,7 +307,10 @@ export async function unmarkedMarkingDays(userId: string, fullDayKeys: string[])
   for (const dateKey of keys) {
     const date = dates.get(dateKey)!;
     const anyPending = [...candidates.values()].some(
-      (unit) => markerOf(unit, dateKey, date) === userId && !marked.has(`${unitKey(unit)}|${dateKey}`),
+      (unit) =>
+        populatedOn(unit, dateKey) &&
+        markerOf(unit, dateKey, date) === userId &&
+        !marked.has(`${unitKey(unit)}|${dateKey}`),
     );
     if (anyPending) pendingDays.push(dateKey);
   }
