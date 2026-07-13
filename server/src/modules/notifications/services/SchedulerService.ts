@@ -56,6 +56,7 @@ import { dispatchLibraryReminders } from "../../library/services/LibraryReminder
 import { runDueOffboardingRevocations } from "../../hr/services/OffboardingService";
 import { runObservationEscalation } from "../../classroom-observation/services/ObservationEscalationService";
 import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconciliationService";
+import { sweepHomeworkDue } from "../../trackers/services/HomeworkDueSweepService";
 import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 
@@ -187,6 +188,7 @@ export interface TickSummary {
   librarySweepRan: boolean;
   observationEscalationRan: boolean;
   hwPendingEmitted: number;
+  hwDueFlipped: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -217,6 +219,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     librarySweepRan: false,
     observationEscalationRan: false,
     hwPendingEmitted: 0,
+    hwDueFlipped: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -243,6 +246,20 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
   summary.dayType = dayType;
   if (dayType === "OFF" || dayType === "HOLIDAY") return summary; // N2.5 — silent
   const nowMin = minutesOfDay(now);
+
+  // --- Homework auto-DUE — every GIVEN record whose due morning has arrived flips
+  // to DUE, once per school day (the manual "Mark due" stays valid; the sweep's
+  // state filter makes the overlap harmless). Runs behind the school-day gate so
+  // OFF/HOLIDAY days flip nothing; a holiday-straddled due date is caught by the
+  // first school-day sweep after it.
+  await family("homework auto-due", async () => {
+    await runOnce(dateKey, "HWDUE", async () => {
+      summary.hwDueFlipped = await sweepHomeworkDue(now);
+      if (summary.hwDueFlipped > 0) {
+        console.log(`[scheduler] homework auto-due: ${summary.hwDueFlipped} record(s) → DUE`);
+      }
+    });
+  });
 
   // --- BELL_REMINDER (N2.1) — per active grid, ~5 min before each period end.
   await family("bell", async () => {
