@@ -23,6 +23,7 @@ const keyOf = (d: Date): string => {
 };
 
 const RANGES = [
+  { labelKey: "rrToday", days: 1 },
   { labelKey: "rrLast7", days: 7 },
   { labelKey: "rrLast14", days: 14 },
   { labelKey: "rrLast30", days: 30 },
