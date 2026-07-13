@@ -5,14 +5,15 @@
  * assertGuardianOfStudent); shipped now because the guardian portal is BUILT
  * (the PRD pre-flight note's GP-rider posture).
  */
-import React from "react";
+import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
 import { CHILD_ASSIGNMENTS } from "../../graphql/operations";
-import { Screen, Body, Muted, Card, Badge, Loader, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Badge, Button, Loader, EmptyState, Notice } from "../../components/ui";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { STR, bnNum, hwSubjectLabel, hwResultLabel, lifecycleStateLabel } from "../../lib/labels";
+import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { space } from "../../theme/tokens";
 
 const day = (iso?: string | null): string => (iso ? iso.slice(0, 10) : "—");
@@ -25,6 +26,20 @@ export default function ChildAssignmentsScreen(): React.ReactElement {
     pause: !selected,
   });
   const list = q.data?.childAssignments ?? [];
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  async function onOpenFile(fileId: string): Promise<void> {
+    setFileError(null);
+    setOpeningId(fileId);
+    try {
+      await openStoredFile(fileId);
+    } catch (e) {
+      setFileError(e instanceof FileUploadError ? e.message : STR.errGeneric);
+    } finally {
+      setOpeningId(null);
+    }
+  }
 
   return (
     <Screen padded={false}>
@@ -68,9 +83,25 @@ export default function ChildAssignmentsScreen(): React.ReactElement {
                 </Muted>
               ) : null}
               {a.feedback ? <Body style={{ marginTop: 4 }}>{a.feedback}</Body> : null}
+              {FILE_VIEW_SUPPORTED && a.attachmentIds.length > 0 ? (
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
+                  {a.attachmentIds.map((fid, i) => (
+                    <Button
+                      key={fid}
+                      title={`📎 ${STR.cnAttachments} ${bnNum(i + 1)}`}
+                      variant="secondary"
+                      loading={openingId === fid}
+                      disabled={!!openingId}
+                      onPress={() => void onOpenFile(fid)}
+                      style={{ flexGrow: 1 }}
+                    />
+                  ))}
+                </View>
+              ) : null}
             </Card>
           ))
         )}
+        {fileError ? <Notice message={fileError} tone="danger" /> : null}
       </ScrollView>
     </Screen>
   );

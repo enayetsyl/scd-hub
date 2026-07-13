@@ -9,6 +9,13 @@ import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { STUDENTS_QUERY, DELIVER_ASSIGNMENT } from "../../graphql/operations";
+import {
+  pickAndUploadAssignmentFiles,
+  openStoredFile,
+  AS_MAX_ATTACHMENTS,
+  FileUploadError,
+  type UploadedFile,
+} from "../../lib/files";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Loader, EmptyState, Notice } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel, classLevelLabel } from "../../lib/labels";
@@ -33,6 +40,23 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
   const [setId, setSetId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Delivery-pass attachments (≤5, D-#298) — uploaded on pick, bound at deliver. */
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [pickBusy, setPickBusy] = useState(false);
+
+  async function onPickFiles(): Promise<void> {
+    if (pickBusy || files.length >= AS_MAX_ATTACHMENTS) return;
+    setPickBusy(true);
+    try {
+      const res = await pickAndUploadAssignmentFiles(AS_MAX_ATTACHMENTS - files.length);
+      if (res.uploaded.length > 0) setFiles((cur) => [...cur, ...res.uploaded]);
+      if (res.failures.length > 0) setError(res.failures.join("\n"));
+    } catch (e) {
+      setError(e instanceof FileUploadError ? e.message : STR.errGeneric);
+    } finally {
+      setPickBusy(false);
+    }
+  }
 
   async function onDeliver(): Promise<void> {
     setError(null);
@@ -48,6 +72,7 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
       setId: setId.trim() === "" ? undefined : setId.trim(),
       totalMarks: marks,
       estMinutes: mins,
+      attachmentIds: files.length > 0 ? files.map((f) => f.fileId) : undefined,
     });
     setBusy(false);
     if (res.error || !res.data?.deliverAssignment) return setError(friendlyError(res.error));
@@ -69,6 +94,34 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
           <Field label={STR.asEstMinutes} value={estMinutes} onChangeText={setEstMinutes} keyboardType="number-pad" placeholder="20" />
           <Field label={STR.asTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" />
           <Field label={STR.asSetId} value={setId} onChangeText={setSetId} />
+        </Card>
+
+        <Card>
+          <Body style={{ fontWeight: "700", marginBottom: 4 }}>
+            📎 {STR.cnAttachments} ({files.length}/{AS_MAX_ATTACHMENTS})
+          </Body>
+          {files.map((f, i) => (
+            <View key={f.fileId} style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+              <Pressable
+                style={{ flex: 1 }}
+                onPress={() => void openStoredFile(f.fileId).catch(() => setError(STR.errGeneric))}
+              >
+                <Body>📎 {f.originalName}</Body>
+              </Pressable>
+              <Button
+                title={STR.remove}
+                variant="ghost"
+                onPress={() => setFiles((cur) => cur.filter((_, j) => j !== i))}
+              />
+            </View>
+          ))}
+          <Button
+            title={pickBusy ? STR.saving : STR.cnAttachFile}
+            variant="secondary"
+            onPress={() => void onPickFiles()}
+            loading={pickBusy}
+            disabled={pickBusy || files.length >= AS_MAX_ATTACHMENTS}
+          />
         </Card>
 
         {error ? <Notice message={error} tone="danger" /> : null}
