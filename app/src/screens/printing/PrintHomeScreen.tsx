@@ -11,7 +11,7 @@
  * an upload streams through `GET /files/:id`, a link opens externally, a plan opens
  * in the plan viewer.
  */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Linking, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
@@ -30,6 +30,7 @@ import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Button, Badge, Loader, Em
 import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { openStoredFile } from "../../lib/files";
+import { subscribeLiveEvents } from "../../lib/liveEvents";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { openPdf } from "../../lib/pdf";
 import { useAuth } from "../../auth/AuthContext";
@@ -86,6 +87,15 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
     if (isOffice) refetchQueue({ requestPolicy: "network-only" });
     if (canRequest) refetchMine({ requestPolicy: "network-only" });
   };
+
+  // D-#295: the Office's open queue refreshes the instant a job is filed or
+  // advanced on ANY device (SSE push; web only — native relies on focus refetch).
+  useEffect(() => {
+    if (!isOffice) return;
+    return subscribeLiveEvents(["print_queue"], () => {
+      refetchQueue({ requestPolicy: "network-only" });
+    });
+  }, [isOffice, refetchQueue]);
 
   // A set/plan PDF is RENDERED on demand and an upload streams through the server, so an
   // Open can take seconds. Without this the button looked dead and a double-tap opened
