@@ -52,6 +52,7 @@ import {
   submitLeaveApplication,
 } from "../../attendance/services/LeaveApplicationService";
 import { HomeworkItem, type IHomeworkItem } from "../../trackers/models/HomeworkItem";
+import { HomeworkNilDeclaration } from "../../trackers/models/HomeworkNilDeclaration";
 import { HomeworkStudentRecord } from "../../trackers/models/HomeworkStudentRecord";
 import {
   getStudentDayLoad,
@@ -505,6 +506,42 @@ export async function childHomework(
       (a.resubOf ? 1 : 0) - (b.resubOf ? 1 : 0),
   );
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// childHomeworkNilDays (D-#299) — the class's explicit "no homework today"
+// declarations in a range, so a parent sees "deliberately none" instead of
+// wondering whether the child is hiding something.
+// ---------------------------------------------------------------------------
+
+export interface GuardianHwNilDay {
+  dateKey: string;
+  subject: string;
+  subjectLabelBn: string;
+  reason: string;
+}
+
+export async function childHomeworkNilDays(
+  studentId: string,
+  fromKey: string,
+  toKey: string,
+): Promise<GuardianHwNilDay[]> {
+  const student = (await Student.findById(studentId).select("classId").lean()) as {
+    classId?: { toString(): string };
+  } | null;
+  if (!student?.classId) return [];
+  const rows = await HomeworkNilDeclaration.find({
+    classId: student.classId,
+    dateKey: { $gte: fromKey, $lte: toKey },
+  }).lean();
+  return rows
+    .map((r) => ({
+      dateKey: r.dateKey,
+      subject: r.subject,
+      subjectLabelBn: HW_SUBJECT_LABELS_BN[r.subject] ?? r.subject,
+      reason: r.reason,
+    }))
+    .sort((a, b) => b.dateKey.localeCompare(a.dateKey) || a.subject.localeCompare(b.subject));
 }
 
 // ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@
  */
 import { DAYS_OF_WEEK, HW_SUBJECTS } from "@scd/shared";
 import { HomeworkItem } from "../models/HomeworkItem";
+import { HomeworkNilDeclaration } from "../models/HomeworkNilDeclaration";
 import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconciliation";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { Section } from "../../foundation/models/Section";
@@ -65,6 +66,17 @@ export interface HwNotDeclared {
   teacherName: string | null;
 }
 
+export interface HwNilDeclared {
+  dateKey: string;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  subject: string;
+  /** The teacher who tapped "no homework today". */
+  teacherName: string | null;
+  reason: string;
+}
+
 export interface ReconReport {
   fromKey: string;
   toKey: string;
@@ -73,6 +85,9 @@ export interface ReconReport {
   /** (class, subject, day) cells where the subject HAS routine periods that day but
    *  declared NO homework at all — the step before hwMisses' declared-not-confirmed. */
   hwNotDeclared: HwNotDeclared[];
+  /** Explicit "no homework today" declarations in the range (D-#299) — the neutral
+   *  list; these cells are EXCLUDED from hwNotDeclared. */
+  hwNilDeclared: HwNilDeclared[];
 }
 
 interface SectionInfo {
@@ -137,6 +152,9 @@ async function hwNotDeclaredRows(
   fromKey: string,
   toKey: string,
   now: Date,
+  /** D-#299: (section|subject|dateKey) cells with an explicit nil declaration —
+   *  deliberately none, so they never enter the red list. */
+  nilKeys: Set<string>,
 ): Promise<Array<Omit<HwNotDeclared, "sectionNameBn" | "classLevel"> & { teacherId: string | null }>> {
   const { start, end } = rangeBounds(fromKey, toKey);
   const todayKey = dateKeyOf(now);
@@ -193,6 +211,7 @@ async function hwNotDeclaredRows(
     for (const [key, cell] of bySectionSubject) {
       const [sectionId, subject] = key.split("|");
       if (declaredKeys.has(`${sectionId}|${subject}|${dateKey}`)) continue;
+      if (nilKeys.has(`${sectionId}|${subject}|${dateKey}`)) continue; // deliberately none (D-#299)
       out.push({ dateKey, sectionId, subject, teacherId: cell.teacherId, teacherName: null });
     }
   }
@@ -206,8 +225,16 @@ export async function reconciliationReport(
 ): Promise<ReconReport> {
   const { start, end } = rangeBounds(fromKey, toKey);
 
+  // --- Explicit "no homework today" markers in the range (D-#299) ----------------
+  const nilRows = await HomeworkNilDeclaration.find({
+    dateKey: { $gte: fromKey, $lte: toKey },
+  }).lean();
+  const nilKeys = new Set(
+    nilRows.map((r) => `${r.sectionId.toString()}|${r.subject}|${r.dateKey}`),
+  );
+
   // --- Homework never declared at all (routine-expected, per class × subject × day) --
-  const notDeclRaw = await hwNotDeclaredRows(fromKey, toKey, now);
+  const notDeclRaw = await hwNotDeclaredRows(fromKey, toKey, now, nilKeys);
 
   // --- Homework: (class, day) buckets of still-declared items in the range ------
   const hwItems = await HomeworkItem.find({
@@ -291,14 +318,41 @@ export async function reconciliationReport(
       ...hwPending.map((b) => b.sectionId),
       ...asPending.map((b) => b.sectionId),
       ...notDeclRaw.map((r) => r.sectionId),
+      ...nilRows.map((r) => r.sectionId.toString()),
     ]),
   ]);
 
-  const notDeclTeacherIds = [...new Set(notDeclRaw.map((r) => r.teacherId).filter(Boolean))] as string[];
+  const notDeclTeacherIds = [
+    ...new Set([
+      ...(notDeclRaw.map((r) => r.teacherId).filter(Boolean) as string[]),
+      ...nilRows.map((r) => r.declaredBy.toString()),
+    ]),
+  ];
   const notDeclTeachers = notDeclTeacherIds.length
     ? await User.find({ _id: { $in: notDeclTeacherIds } }).select("name").lean()
     : [];
   const teacherNameOf = new Map(notDeclTeachers.map((u) => [u._id.toString(), u.name]));
+
+  const hwNilDeclared: HwNilDeclared[] = nilRows
+    .map((r) => {
+      const s = info.get(r.sectionId.toString());
+      return {
+        dateKey: r.dateKey,
+        sectionId: r.sectionId.toString(),
+        sectionNameBn: s?.nameBn ?? r.sectionId.toString(),
+        classLevel: s?.classLevel ?? 0,
+        subject: r.subject,
+        teacherName: teacherNameOf.get(r.declaredBy.toString()) ?? null,
+        reason: r.reason,
+      };
+    })
+    .sort((a, b) =>
+      a.dateKey === b.dateKey
+        ? a.classLevel - b.classLevel || a.subject.localeCompare(b.subject)
+        : a.dateKey < b.dateKey
+          ? 1
+          : -1,
+    );
 
   const hwNotDeclared: HwNotDeclared[] = notDeclRaw
     .map((r) => {
@@ -353,5 +407,5 @@ export async function reconciliationReport(
       a.deliveryDateKey === b.deliveryDateKey ? a.classLevel - b.classLevel : a.deliveryDateKey < b.deliveryDateKey ? 1 : -1,
     );
 
-  return { fromKey, toKey, hwMisses, asMisses, hwNotDeclared };
+  return { fromKey, toKey, hwMisses, asMisses, hwNotDeclared, hwNilDeclared };
 }

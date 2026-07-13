@@ -50,6 +50,11 @@ jest.mock("../modules/routine/models/RoutineSlot", () => ({
 jest.mock("../modules/routine/models/HolidayException", () => ({
   HolidayException: { find: (f: unknown) => chain(mockHolidayFind)(f) },
 }));
+// D-#299 — explicit "no homework today" markers.
+const mockNilFind = jest.fn();
+jest.mock("../modules/trackers/models/HomeworkNilDeclaration", () => ({
+  HomeworkNilDeclaration: { find: (f: unknown) => chain(mockNilFind)(f) },
+}));
 
 import { reconciliationReport } from "../modules/trackers/services/ReconReportService";
 
@@ -66,6 +71,7 @@ beforeEach(() => {
   mockUserFind.mockResolvedValue([]);
   mockSlotFind.mockResolvedValue([]);
   mockHolidayFind.mockResolvedValue([]);
+  mockNilFind.mockResolvedValue([]);
 });
 
 const seedSection = (over: Record<string, unknown> = {}): void => {
@@ -88,6 +94,7 @@ describe("reconciliationReport (D-#290)", () => {
       hwMisses: [],
       asMisses: [],
       hwNotDeclared: [],
+      hwNilDeclared: [],
     });
   });
 
@@ -197,6 +204,33 @@ describe("hwNotDeclared (D-#293)", () => {
       dateKey: "2026-07-09",
       sectionId: SEC,
       subject: "SCI",
+      teacherName: "Husne ara Rahman Fida",
+      classLevel: -1,
+    });
+  });
+
+  test("D-#299: an explicit nil declaration moves the cell out of the red list into hwNilDeclared", async () => {
+    seedSection();
+    mockSlotFind.mockResolvedValue([sciSlot()]);
+    mockUserFind.mockResolvedValue([{ _id: "u-sci", name: "Husne ara Rahman Fida" }]);
+    mockNilFind.mockResolvedValue([
+      {
+        sectionId: SEC,
+        classId: CLS,
+        subject: "SCI",
+        dateKey: "2026-07-09",
+        reason: "EXAM",
+        declaredBy: "u-sci",
+      },
+    ]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.hwNotDeclared).toEqual([]); // deliberately none — never red
+    expect(r.hwNilDeclared).toHaveLength(1);
+    expect(r.hwNilDeclared[0]).toMatchObject({
+      dateKey: "2026-07-09",
+      sectionId: SEC,
+      subject: "SCI",
+      reason: "EXAM",
       teacherName: "Husne ara Rahman Fida",
       classLevel: -1,
     });

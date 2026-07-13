@@ -25,6 +25,12 @@ import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkSequence } from "../models/HomeworkSequence";
 import { HomeworkTopic } from "../models/HomeworkTopic";
+import {
+  HomeworkNilDeclaration,
+  HW_NIL_REASONS,
+  type HwNilReason,
+} from "../models/HomeworkNilDeclaration";
+import { dateKeyOf } from "../../attendance/dates";
 import { Student } from "../../foundation/models/Student";
 import { assertTransition, isEntryState } from "../lifecycle";
 import { isSchoolDay, nextSchoolDay } from "../calendar";
@@ -219,6 +225,14 @@ export async function declareHomeworkItem(
     attachmentIds,
   });
 
+  // D-#299: a real declaration supersedes a "no homework today" marker for the
+  // same (class, subject, day) — the teacher changed their mind.
+  await HomeworkNilDeclaration.deleteOne({
+    classId: input.classId,
+    subject,
+    dateKey: dateKeyOf(dateGiven),
+  });
+
   return {
     itemId: doc._id.toString(),
     hwId: doc.hwId,
@@ -232,6 +246,122 @@ export async function declareHomeworkItem(
     status: doc.status,
     attachmentIds: (doc.attachmentIds ?? []).map((id) => id.toString()),
   };
+}
+
+// ---------------------------------------------------------------------------
+// "No homework today" nil declarations (D-#299)
+// ---------------------------------------------------------------------------
+
+export interface NilDeclarationDTO {
+  id: string;
+  classId: string;
+  sectionId: string;
+  subject: string;
+  dateKey: string;
+  reason: HwNilReason;
+  declaredBy: string;
+}
+
+function toNilDTO(d: {
+  _id: { toString(): string };
+  classId: { toString(): string };
+  sectionId: { toString(): string };
+  subject: string;
+  dateKey: string;
+  reason: HwNilReason;
+  declaredBy: { toString(): string };
+}): NilDeclarationDTO {
+  return {
+    id: d._id.toString(),
+    classId: d.classId.toString(),
+    sectionId: d.sectionId.toString(),
+    subject: d.subject,
+    dateKey: d.dateKey,
+    reason: d.reason,
+    declaredBy: d.declaredBy.toString(),
+  };
+}
+
+/** Local-day bounds for an item-exists check against HomeworkItem.dateGiven. */
+function dayBoundsOf(d: Date): { start: Date; end: Date } {
+  return {
+    start: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0),
+    end: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999),
+  };
+}
+
+/** Declare "no homework today" for one (class, subject, day). Upsert — tapping
+ *  again updates the reason. Rejected while a REAL item exists for the cell. */
+export async function declareNoHomework(input: {
+  classId: string;
+  sectionId: string;
+  subject: string;
+  /** "YYYY-MM-DD" or ISO date. */
+  date: string;
+  reason: string;
+  actorId: string;
+}): Promise<NilDeclarationDTO> {
+  const { subject } = input;
+  assertSubject(subject);
+  if (!(HW_NIL_REASONS as readonly string[]).includes(input.reason)) {
+    throw new Error(`Unknown reason: ${input.reason} (allowed: ${HW_NIL_REASONS.join(", ")})`);
+  }
+  const d = new Date(input.date.length === 10 ? `${input.date}T00:00:00` : input.date);
+  if (Number.isNaN(d.getTime())) throw new Error("Invalid date");
+  if (!isSchoolDay(d)) {
+    throw new Error("Fri/Sat are not homework nights — nothing to declare (handoff §6.1)");
+  }
+  const { start, end } = dayBoundsOf(d);
+  const real = await HomeworkItem.findOne({
+    classId: input.classId,
+    subject,
+    dateGiven: { $gte: start, $lte: end },
+  })
+    .select("_id")
+    .lean();
+  if (real) {
+    throw new Error("Homework IS declared for this subject today — remove is not possible via nil");
+  }
+  const doc = await HomeworkNilDeclaration.findOneAndUpdate(
+    { classId: input.classId, subject, dateKey: dateKeyOf(d) },
+    {
+      $set: {
+        sectionId: input.sectionId,
+        reason: input.reason as HwNilReason,
+        declaredBy: input.actorId,
+      },
+    },
+    { new: true, upsert: true },
+  );
+  return toNilDTO(doc as unknown as Parameters<typeof toNilDTO>[0]);
+}
+
+/** Remove a mistaken nil declaration (same write-scope as declaring it). */
+export async function removeNoHomework(input: {
+  classId: string;
+  subject: string;
+  date: string;
+}): Promise<boolean> {
+  assertSubject(input.subject);
+  const d = new Date(input.date.length === 10 ? `${input.date}T00:00:00` : input.date);
+  if (Number.isNaN(d.getTime())) throw new Error("Invalid date");
+  const res = await HomeworkNilDeclaration.deleteOne({
+    classId: input.classId,
+    subject: input.subject,
+    dateKey: dateKeyOf(d),
+  });
+  return (res.deletedCount ?? 0) > 0;
+}
+
+/** The day's nil declarations for a class (the declare screen's state read). */
+export async function listNilDeclarations(
+  classId: string,
+  date: string,
+): Promise<NilDeclarationDTO[]> {
+  const d = new Date(date.length === 10 ? `${date}T00:00:00` : date);
+  if (Number.isNaN(d.getTime())) throw new Error("Invalid date");
+  const docs = await HomeworkNilDeclaration.find({ classId, dateKey: dateKeyOf(d) }).lean();
+  return (docs as unknown as Parameters<typeof toNilDTO>[0][]).map(toNilDTO);
 }
 
 // ---------------------------------------------------------------------------

@@ -34,10 +34,25 @@ const mockRecordInsertMany = jest.fn();
 const mockRecordFindById = jest.fn();
 const mockTopicFind = jest.fn();
 
+const mockItemFindOne = jest.fn();
 jest.mock("../modules/trackers/models/HomeworkItem", () => ({
   HomeworkItem: {
     create: (a: unknown) => mockItemCreate(a),
     findById: (id: unknown) => mockItemFindById(id),
+    findOne: (q: unknown) => ({ select: () => ({ lean: () => mockItemFindOne(q) }) }),
+  },
+}));
+
+// D-#299 — "no homework today" nil markers.
+const mockNilDelete = jest.fn();
+const mockNilUpsert = jest.fn();
+const mockNilFind = jest.fn();
+jest.mock("../modules/trackers/models/HomeworkNilDeclaration", () => ({
+  HW_NIL_REASONS: ["EXAM", "REVISION", "CHAPTER_DONE", "OTHER"],
+  HomeworkNilDeclaration: {
+    deleteOne: (q: unknown) => mockNilDelete(q),
+    findOneAndUpdate: (...a: unknown[]) => mockNilUpsert(...a),
+    find: (q: unknown) => ({ lean: () => mockNilFind(q) }),
   },
 }));
 
@@ -88,6 +103,8 @@ import {
   listHomeworkTopics,
   topicLabelByCode,
   transitionRecord,
+  declareNoHomework,
+  removeNoHomework,
 } from "../modules/trackers/services/HomeworkService";
 
 // ---------------------------------------------------------------------------
@@ -131,6 +148,12 @@ function validDeclareInput(over: Record<string, unknown> = {}) {
 beforeEach(() => {
   jest.clearAllMocks();
   mockSeqUpdate.mockResolvedValue({ seq: 1 });
+  mockItemFindOne.mockResolvedValue(null);
+  mockNilDelete.mockResolvedValue({ deletedCount: 0 });
+  mockNilUpsert.mockImplementation((q: Record<string, unknown>, u: { $set: Record<string, unknown> }) =>
+    Promise.resolve({ _id: ITEM_ID, ...q, ...u.$set }),
+  );
+  mockNilFind.mockResolvedValue([]);
   mockItemCreate.mockImplementation((arg: Record<string, unknown>) =>
     Promise.resolve({ _id: ITEM_ID, ...arg }),
   );
@@ -400,6 +423,51 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
     await expect(
       declareHomeworkItem(validDeclareInput({ attachmentIds: ["not-an-oid"] })),
     ).rejects.toThrow(/Invalid attachment file id/);
+  });
+});
+
+// ===========================================================================
+// D-#299 — "no homework today" nil declarations
+// ===========================================================================
+
+describe("D-#299 — declareNoHomework / removeNoHomework", () => {
+  const NIL = { classId: CLASS_ID, sectionId: SECTION_ID, subject: "MATH", date: "2026-06-02", reason: "EXAM", actorId: ACTOR_ID };
+
+  test("happy path: upserts one (class, subject, day) marker with the reason", async () => {
+    const res = await declareNoHomework(NIL);
+    expect(res).toMatchObject({ subject: "MATH", dateKey: "2026-06-02", reason: "EXAM" });
+    expect(mockNilUpsert).toHaveBeenCalledWith(
+      { classId: CLASS_ID, subject: "MATH", dateKey: "2026-06-02" },
+      { $set: { sectionId: SECTION_ID, reason: "EXAM", declaredBy: ACTOR_ID } },
+      { new: true, upsert: true },
+    );
+  });
+
+  test("rejected while a REAL item exists for the cell (mutual exclusion)", async () => {
+    mockItemFindOne.mockResolvedValue({ _id: ITEM_ID });
+    await expect(declareNoHomework(NIL)).rejects.toThrow(/IS declared/);
+    expect(mockNilUpsert).not.toHaveBeenCalled();
+  });
+
+  test("weekend and unknown reason are rejected", async () => {
+    await expect(declareNoHomework({ ...NIL, date: "2026-06-05" })).rejects.toThrow(/Fri\/Sat/); // a Friday
+    await expect(declareNoHomework({ ...NIL, reason: "HOLIDAY" })).rejects.toThrow(/Unknown reason/);
+  });
+
+  test("a real declaration auto-clears the nil for the same cell", async () => {
+    await declareHomeworkItem(validDeclareInput());
+    expect(mockNilDelete).toHaveBeenCalledWith({
+      classId: CLASS_ID,
+      subject: "MATH",
+      dateKey: "2026-06-02",
+    });
+  });
+
+  test("removeNoHomework reports whether a marker existed", async () => {
+    mockNilDelete.mockResolvedValue({ deletedCount: 1 });
+    await expect(removeNoHomework({ classId: CLASS_ID, subject: "MATH", date: "2026-06-02" })).resolves.toBe(true);
+    mockNilDelete.mockResolvedValue({ deletedCount: 0 });
+    await expect(removeNoHomework({ classId: CLASS_ID, subject: "MATH", date: "2026-06-02" })).resolves.toBe(false);
   });
 });
 

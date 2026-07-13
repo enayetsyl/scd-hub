@@ -423,6 +423,23 @@ export const hrCategoryLabel = (v?: string | null): string =>
 export const hwSubjectLabel = (v?: string | null): string =>
   (v && pick(HW_SUBJECT_LABELS_BN, HW_SUBJECT_LABELS_EN)[v as HwSubject]) || v || DASH;
 
+// "No homework today" reason chips (D-#299) — codes live on the server model.
+export const HW_NIL_REASONS = ["EXAM", "REVISION", "CHAPTER_DONE", "OTHER"] as const;
+const HW_NIL_REASON_BN: Record<string, string> = {
+  EXAM: "পরীক্ষা",
+  REVISION: "রিভিশন",
+  CHAPTER_DONE: "অধ্যায় শেষ",
+  OTHER: "অন্যান্য",
+};
+const HW_NIL_REASON_EN: Record<string, string> = {
+  EXAM: "Exam",
+  REVISION: "Revision",
+  CHAPTER_DONE: "Chapter done",
+  OTHER: "Other",
+};
+export const hwNilReasonLabel = (v?: string | null): string =>
+  (v && pick(HW_NIL_REASON_BN, HW_NIL_REASON_EN)[v]) || v || DASH;
+
 // Class Test tracker (CT-5)
 export const classTestStatusLabel = (v?: string | null): string =>
   (v && pick(CLASS_TEST_STATUS_LABELS_BN, CLASS_TEST_STATUS_LABELS_EN)[v as ClassTestStatus]) || v || DASH;
@@ -1059,6 +1076,17 @@ const STR_BN = {
   hwFileHas: "📎 সংযুক্তি আছে",
   hwFileUploadFail: "এই মুহূর্তে ফাইলটি আপলোড করা যাচ্ছে না — পরে আবার চেষ্টা করুন",
   hwFileOpenFail: "এই মুহূর্তে ফাইলটি খোলা যাচ্ছে না",
+  // "No homework today" nil declaration (D-#299)
+  hwNilTitle: "আজ হোমওয়ার্ক নেই?",
+  hwNilButton: "হোমওয়ার্ক নেই — ঘোষণা করুন",
+  hwNilPickReason: "প্রথমে কারণ নির্বাচন করুন",
+  hwNilDeclaredNotice: "এই বিষয়ে হোমওয়ার্ক নেই ঘোষণা করা হয়েছে",
+  hwNilDeclaredOk: "হোমওয়ার্ক নেই ঘোষণা হয়েছে",
+  hwNilRemove: "ঘোষণা সরান",
+  hwNilRemovedOk: "ঘোষণা সরানো হয়েছে",
+  hwNilGuardian: "হোমওয়ার্ক নেই",
+  hwNilReportTitle: "হোমওয়ার্ক নেই ঘোষণা (কারণসহ)",
+  hwNilReportEmpty: "এই সীমায় কোনো 'হোমওয়ার্ক নেই' ঘোষণা নেই",
   // Check Grid (HWG-2, D-#267) — one-tap outcome chips
   hwOutcomeCorrect: "ঠিক",
   hwOutcomePartial: "আংশিক",
@@ -3290,6 +3318,17 @@ const STR_EN: StrTable = {
   hwFileHas: "📎 Attachment",
   hwFileUploadFail: "Can't upload the file right now — try again later",
   hwFileOpenFail: "Can't open the file right now",
+  // "No homework today" nil declaration (D-#299)
+  hwNilTitle: "No homework today?",
+  hwNilButton: "Declare: no homework",
+  hwNilPickReason: "Pick a reason first",
+  hwNilDeclaredNotice: "'No homework' is declared for this subject",
+  hwNilDeclaredOk: "'No homework' declared",
+  hwNilRemove: "Remove declaration",
+  hwNilRemovedOk: "Declaration removed",
+  hwNilGuardian: "No homework",
+  hwNilReportTitle: "'No homework' declarations (with reason)",
+  hwNilReportEmpty: "No 'no homework' declarations in this range",
   // Check Grid (HWG-2, D-#267) — one-tap outcome chips
   hwOutcomeCorrect: "Correct",
   hwOutcomePartial: "Partial",
