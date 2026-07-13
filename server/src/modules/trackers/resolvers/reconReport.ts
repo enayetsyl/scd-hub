@@ -16,6 +16,7 @@ import {
   type ReconReport,
   type HwReconMiss,
   type AsReconMiss,
+  type HwNotDeclared,
 } from "../services/ReconReportService";
 
 function assertReconReportAdmin(ctx: AppContext): void {
@@ -52,15 +53,31 @@ const AsReconMissRef = builder.objectRef<AsReconMiss>("AsReconMiss").implement({
   }),
 });
 
+const HwNotDeclaredRef = builder.objectRef<HwNotDeclared>("HwNotDeclared").implement({
+  description:
+    "One (class, subject, day) where the subject had routine periods but declared NO homework " +
+    "at all (D-#293) — named with the routine's subject teacher, who owes the declaration.",
+  fields: (t) => ({
+    dateKey: t.exposeString("dateKey"),
+    sectionId: t.exposeString("sectionId"),
+    sectionNameBn: t.exposeString("sectionNameBn"),
+    classLevel: t.exposeInt("classLevel"),
+    subject: t.exposeString("subject"),
+    teacherName: t.string({ nullable: true, resolve: (r) => r.teacherName }),
+  }),
+});
+
 const ReconReportRef = builder.objectRef<ReconReport>("ReconciliationReport").implement({
   description:
     "Who didn't submit reconciliation (D-#290): homework per day, assignments per week, " +
-    "each naming the accountable confirmer. Principal/Office only.",
+    "each naming the accountable confirmer — plus homework never declared per class × subject " +
+    "(D-#293). Principal/Office only.",
   fields: (t) => ({
     fromKey: t.exposeString("fromKey"),
     toKey: t.exposeString("toKey"),
     hwMisses: t.field({ type: [HwReconMissRef], resolve: (r) => r.hwMisses }),
     asMisses: t.field({ type: [AsReconMissRef], resolve: (r) => r.asMisses }),
+    hwNotDeclared: t.field({ type: [HwNotDeclaredRef], resolve: (r) => r.hwNotDeclared }),
   }),
 });
 
