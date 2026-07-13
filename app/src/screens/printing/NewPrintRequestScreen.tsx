@@ -30,7 +30,7 @@ import { Screen, H2, Body, Muted, Card, Field, Chip, ChipRow, Button, Notice } f
 import { DateField } from "../../components/DateField";
 import { STR, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
-import { pickAndUploadPrintFile, FileUploadError } from "../../lib/files";
+import { pickAndUploadPrintFiles, FileUploadError } from "../../lib/files";
 import { useToast } from "../../state/ToastContext";
 import { useAuth } from "../../auth/AuthContext";
 import { useSectionContext } from "../../state/SectionContext";
@@ -99,8 +99,16 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
     setError(null);
     setUploading(true);
     try {
-      const uploaded = await pickAndUploadPrintFile();
-      if (uploaded) setFiles((prev) => [...prev, { fileId: uploaded.fileId, originalName: uploaded.originalName }]);
+      // D-#294 follow-up: pick SEVERAL files in one go (capped at the remaining
+      // slots); partial failures keep the successful uploads and are reported.
+      const { uploaded, failures } = await pickAndUploadPrintFiles(MAX_PRINT_UPLOADS - files.length);
+      if (uploaded.length > 0) {
+        setFiles((prev) => [
+          ...prev,
+          ...uploaded.map((u) => ({ fileId: u.fileId, originalName: u.originalName })),
+        ]);
+      }
+      if (failures.length > 0) setError(failures.join(" · "));
     } catch (e) {
       setError(e instanceof FileUploadError ? e.message : String(e));
     } finally {
