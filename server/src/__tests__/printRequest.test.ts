@@ -24,6 +24,7 @@ const mockEmitDelivered = jest.fn().mockResolvedValue(undefined);
 const mockClassTestUpdateOne = jest.fn().mockResolvedValue({});
 const mockClassPresence = jest.fn();
 const mockCountDocuments = jest.fn();
+const mockPublishRealtime = jest.fn();
 
 jest.mock("../modules/printing/models/PrintRequest", () => ({
   PrintRequest: {
@@ -35,6 +36,10 @@ jest.mock("../modules/printing/models/PrintRequest", () => ({
 // D-#294: CLASS_PRESENT copies resolve from the use day's attendance roll-up.
 jest.mock("../modules/attendance/services/AttendanceReportService", () => ({
   classPresenceForDate: (k: unknown) => mockClassPresence(k),
+}));
+// D-#295: every queue transition nudges the realtime bus (badges/queue push).
+jest.mock("../modules/realtime/bus", () => ({
+  publishRealtime: (...a: unknown[]) => mockPublishRealtime(...a),
 }));
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
@@ -484,5 +489,38 @@ describe("printQueueCounts (D-#294 badges)", () => {
       f.status === "REQUESTED" ? 3 : 2,
     );
     expect(await printQueueCounts()).toEqual({ requested: 3, printed: 2 });
+  });
+});
+
+describe("realtime nudges (D-#295)", () => {
+  test("create / printed / delivered / cancelled each publish a print_queue event", async () => {
+    await createPrintRequest(baseInput);
+    expect(mockPublishRealtime).toHaveBeenLastCalledWith(
+      "print_queue",
+      expect.objectContaining({ op: "created" }),
+    );
+
+    const doc = docStub();
+    mockFindById.mockResolvedValue(doc);
+    await markPrinted(doc._id.toString(), OFFICE);
+    expect(mockPublishRealtime).toHaveBeenLastCalledWith(
+      "print_queue",
+      expect.objectContaining({ op: "printed" }),
+    );
+
+    doc.status = "PRINTED";
+    await markDelivered(doc._id.toString(), OFFICE);
+    expect(mockPublishRealtime).toHaveBeenLastCalledWith(
+      "print_queue",
+      expect.objectContaining({ op: "delivered" }),
+    );
+
+    const doc2 = docStub();
+    mockFindById.mockResolvedValue(doc2);
+    await cancelPrintRequest(doc2._id.toString(), OFFICE, { isOffice: true });
+    expect(mockPublishRealtime).toHaveBeenLastCalledWith(
+      "print_queue",
+      expect.objectContaining({ op: "cancelled" }),
+    );
   });
 });

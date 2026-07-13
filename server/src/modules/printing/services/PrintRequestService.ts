@@ -24,6 +24,7 @@ import { emitPrintDelivered } from "../../notifications/services/emitters";
 import { ClassTest } from "../../trackers/models/ClassTest";
 import { classPresenceForDate } from "../../attendance/services/AttendanceReportService";
 import { dateKeyOf } from "../../attendance/dates";
+import { publishRealtime } from "../../realtime/bus";
 
 export class PrintRequestError extends Error {
   constructor(msg: string) {
@@ -218,6 +219,7 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
     targetKind: "PrintRequest",
     meta: { purpose: input.purpose, sourceType: source, copies },
   });
+  publishRealtime("print_queue", { op: "created", id: doc._id.toString() });
   return doc;
 }
 
@@ -331,6 +333,7 @@ export async function markPrinted(
     meta: { requestedBy: doc.requestedBy.toString(), copies: doc.copies, copiesSource },
   });
   await mirrorToClassTest(doc, "PRINTED", actorId);
+  publishRealtime("print_queue", { op: "printed", id: doc._id.toString() });
   return doc;
 }
 
@@ -360,6 +363,7 @@ export async function markDelivered(id: string, actorId: string): Promise<IPrint
     requestedBy: doc.requestedBy.toString(),
     title: doc.title,
   });
+  publishRealtime("print_queue", { op: "delivered", id: doc._id.toString() });
   return doc;
 }
 
@@ -393,6 +397,7 @@ export async function cancelPrintRequest(
     meta: { byOffice: opts.isOffice, reason: opts.reason ?? null },
   });
   await mirrorToClassTest(doc, "CANCELLED", actorId);
+  publishRealtime("print_queue", { op: "cancelled", id: doc._id.toString() });
   return doc;
 }
 

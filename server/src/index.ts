@@ -89,6 +89,7 @@ import { pdfRouter } from "./routes/pdf";
 import { setPdfRouter } from "./modules/assessment/routes/setPdf";
 import { filesRouter } from "./routes/files";
 import { triggersRouter } from "./routes/triggers";
+import { eventsRouter } from "./routes/events";
 import { registerExpoPushChannel } from "./modules/notifications/services/pushChannel";
 import { startNotificationTicker, getTickerHealth } from "./modules/notifications/services/SchedulerService";
 
@@ -231,6 +232,7 @@ const corsForRest: express.RequestHandler = (req, res, next) => {
 };
 app.use("/pdf", corsForRest);
 app.use("/files", corsForRest);
+app.use("/events", corsForRest);
 
 // Thin HTTP surface — PDF export (ADR-003, ADR-009)
 app.use("/pdf", pdfRouter);
@@ -243,6 +245,10 @@ app.use("/files", filesRouter);
 // Trigger endpoints (AT-4, D-#65): external scheduler → idempotent reminder
 // dispatch (shared-secret auth, not a browser surface → no CORS).
 app.use("/triggers", triggersRouter);
+
+// Realtime push (D-#295): the authenticated SSE stream the app subscribes to —
+// "something changed, refetch" nudges from the in-process bus (single-node, D-#73).
+app.use("/events", eventsRouter);
 
 // MON-2: capture faults thrown by the thin REST surface (pdf/files/triggers) + the
 // debug route into GlitchTip. Registered AFTER all routes (Express error-middleware

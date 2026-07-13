@@ -23,6 +23,7 @@ import type { Role } from "@scd/shared";
 import { STR } from "../lib/labels";
 import { bnNum } from "../lib/labels";
 import { PRINT_QUEUE_COUNTS } from "../graphql/printing";
+import { subscribeLiveEvents } from "../lib/liveEvents";
 import { useAuth } from "../auth/AuthContext";
 import { useBasket } from "../state/BasketContext";
 import { fonts, radius, space, typeScale, useColors } from "../theme";
@@ -125,6 +126,14 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     if (!isPrintOperator) return;
     const id = setInterval(() => refetchCounts({ requestPolicy: "network-only" }), 60_000);
     return () => clearInterval(id);
+  }, [isPrintOperator, refetchCounts]);
+  // D-#295: cross-device push — the SSE stream nudges the instant ANY device
+  // creates/advances a print job (web; native keeps the poll above).
+  React.useEffect(() => {
+    if (!isPrintOperator) return;
+    return subscribeLiveEvents(["print_queue"], () =>
+      refetchCounts({ requestPolicy: "network-only" }),
+    );
   }, [isPrintOperator, refetchCounts]);
   const printCounts = countsQ.data?.printQueueCounts;
 
