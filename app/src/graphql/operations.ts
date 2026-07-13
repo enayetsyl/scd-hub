@@ -2126,6 +2126,11 @@ export interface AssignmentPrepT {
   weekNumber: number;
   items: number;
 }
+export interface ClassTeacherSectionT {
+  sectionId: string;
+  nameBn: string;
+  classLevel: number;
+}
 export interface MyDayT {
   date: string;
   dayType: string;
@@ -2135,6 +2140,7 @@ export interface MyDayT {
   alerts: PendingAlertT[];
   assignmentPrep: AssignmentPrepT | null;
   classPresence: ClassPresenceT[];
+  classTeacherOf: ClassTeacherSectionT[];
 }
 export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
   query MyDay($date: String!) {
@@ -2149,6 +2155,47 @@ export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
       classPresence {
         classId classLevel classNameBn markedCount presentCount absentCount totalCount complete
       }
+      classTeacherOf { sectionId nameBn classLevel }
+    }
+  }
+`;
+
+/** D-#290 — the Principal/Office "who didn't reconcile?" report. */
+export interface HwReconMissT {
+  dateKey: string;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  confirmerName: string | null;
+  declaredItems: number;
+  declaredMinutes: number;
+}
+export interface AsReconMissT {
+  weekNumber: number;
+  deliveryDateKey: string;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  confirmerName: string | null;
+  draftItems: number;
+  draftMinutes: number;
+}
+export interface ReconReportT {
+  fromKey: string;
+  toKey: string;
+  hwMisses: HwReconMissT[];
+  asMisses: AsReconMissT[];
+}
+export const RECON_REPORT_QUERY = gql<
+  { reconciliationReport: ReconReportT },
+  { from: string; to: string }
+>`
+  query ReconciliationReport($from: String!, $to: String!) {
+    reconciliationReport(from: $from, to: $to) {
+      fromKey
+      toKey
+      hwMisses { dateKey sectionId sectionNameBn classLevel confirmerName declaredItems declaredMinutes }
+      asMisses { weekNumber deliveryDateKey sectionId sectionNameBn classLevel confirmerName draftItems draftMinutes }
     }
   }
 `;
@@ -2174,6 +2221,32 @@ const ROUTINE_MASTER_FIELDS = `
 `;
 export const ROUTINE_MASTER_QUERY = gql<{ routineMaster: RoutineMasterT }, { day: string }>`
   query RoutineMaster($day: String!) { routineMaster(day: $day) { ${ROUTINE_MASTER_FIELDS} } }
+`;
+
+/** D-#291 — the routine's teacher(s) per subject in a section (grant/timetable mismatch view). */
+export interface SubjectRoutineTeachersT {
+  subject: string;
+  teacherIds: string[];
+  teacherNames: string[];
+}
+export const SECTION_SUBJECT_ROUTINE_TEACHERS = gql<
+  { sectionSubjectRoutineTeachers: SubjectRoutineTeachersT[] },
+  { sectionId: string }
+>`
+  query SectionSubjectRoutineTeachers($sectionId: String!) {
+    sectionSubjectRoutineTeachers(sectionId: $sectionId) { subject teacherIds teacherNames }
+  }
+`;
+export const REASSIGN_ROUTINE_SUBJECT_TEACHER = gql<
+  { reassignRoutineSubjectTeacher: { updatedSlots: number; warnings: string[] } },
+  { sectionId: string; subject: string; teacherId: string }
+>`
+  mutation ReassignRoutineSubjectTeacher($sectionId: String!, $subject: String!, $teacherId: String!) {
+    reassignRoutineSubjectTeacher(sectionId: $sectionId, subject: $subject, teacherId: $teacherId) {
+      updatedSlots
+      warnings
+    }
+  }
 `;
 export const ROUTINE_MASTER_WEEK_QUERY = gql<{ routineMasterWeek: RoutineMasterT[] }, NoVars>`
   query RoutineMasterWeek { routineMasterWeek { ${ROUTINE_MASTER_FIELDS} } }
@@ -3014,6 +3087,40 @@ export const MARK_ATTENDANCE_UNIT = gql<
   mutation MarkAttendanceUnit($unitType: String!, $unitId: String!, $dateKey: String!, $absentStudentIds: [String!]!) {
     markAttendanceUnit(unitType: $unitType, unitId: $unitId, dateKey: $dateKey, absentStudentIds: $absentStudentIds) {
       id sectionId dateKey absentStudentIds markedBy markedAt amendedBy amendedAt
+    }
+  }
+`;
+
+/** D-#292: Principal/Office unlock-amend of any unit's day (past or today) — audited. */
+export const AMEND_ATTENDANCE_UNIT = gql<
+  { amendAttendanceUnit: StudentAttendanceDayT },
+  { unitType: string; unitId: string; dateKey: string; absentStudentIds: string[] }
+>`
+  mutation AmendAttendanceUnit($unitType: String!, $unitId: String!, $dateKey: String!, $absentStudentIds: [String!]!) {
+    amendAttendanceUnit(unitType: $unitType, unitId: $unitId, dateKey: $dateKey, absentStudentIds: $absentStudentIds) {
+      id sectionId dateKey absentStudentIds markedBy markedAt amendedBy amendedAt
+    }
+  }
+`;
+
+/** D-#292: every populated unit for a date + marked state (the admin mark/amend list). */
+export interface AdminUnitDayT {
+  unitType: string;
+  unitId: string;
+  label: string;
+  sublabel: string | null;
+  marked: boolean;
+  markerTeacherId: string | null;
+  markerName: string | null;
+  studentCount: number;
+}
+export const ATTENDANCE_UNITS_FOR_DATE = gql<
+  { attendanceUnitsForDate: AdminUnitDayT[] },
+  { dateKey: string }
+>`
+  query AttendanceUnitsForDate($dateKey: String!) {
+    attendanceUnitsForDate(dateKey: $dateKey) {
+      unitType unitId label sublabel marked markerTeacherId markerName studentCount
     }
   }
 `;

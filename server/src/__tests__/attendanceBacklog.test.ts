@@ -62,6 +62,7 @@ jest.mock("../modules/attendance/attendanceUnit", () => {
   return {
     compareSlotOrder: actual.compareSlotOrder,
     isNurseryKg: actual.isNurseryKg,
+    isLegacyAttendanceDate: actual.isLegacyAttendanceDate,
     unitKey: actual.unitKey,
     resolveUnits: (...a: unknown[]) => mockResolveUnits(...a),
   };
@@ -71,9 +72,10 @@ import { unmarkedMarkingDays } from "../modules/attendance/attendanceBacklog";
 
 const ME = "me-1";
 const OTHER = "other-1";
-// 2026-06-10 Wed, 2026-06-11 Thu.
-const WED = "2026-06-10";
-const THU = "2026-06-11";
+// 2026-07-15 Wed, 2026-07-16 Thu — POST-cutover (D-#292), so the current
+// first-class marker rule applies; the legacy rule has its own describe below.
+const WED = "2026-07-15";
+const THU = "2026-07-16";
 const QURAN = "grp-qaida";
 const SEC_KG = "sec-kg";
 
@@ -132,7 +134,7 @@ describe("marker rule parity", () => {
       Promise.resolve(
         f.coverTeacherId === ME
           ? [{ slotId: "slot-1" }]
-          : [{ slotId: "slot-1", date: new Date(2026, 5, 11), coverTeacherId: ME }],
+          : [{ slotId: "slot-1", date: new Date(2026, 6, 16), coverTeacherId: ME }],
       ),
     );
     mockSlotFind.mockResolvedValue([slot({ teacherId: OTHER })]);
@@ -211,6 +213,34 @@ describe("determinism — the 'sometimes shows, sometimes not' bug", () => {
     mockHrCoverFind.mockResolvedValue([]);
     populate({ unitType: "subjectgroup", unitId: QURAN });
   }
+});
+
+// ---------------------------------------------------------------------------
+// D-#292 — pre-cutover days use the LEGACY rule (assigned/class teacher, no routine)
+// ---------------------------------------------------------------------------
+
+describe("pre-cutover days (D-#292 legacy rule)", () => {
+  const OLD_THU = "2026-07-09"; // before the 2026-07-13 cutover
+
+  test("a pre-cutover unmarked day attributes to the CLASS TEACHER of the full section, not the Quran teacher", async () => {
+    // I class-teach sec-3; its only student is (today) in a Quran group, so the
+    // section unit is empty under the CURRENT rule — but the pre-cutover day is
+    // section-shaped, so it still owes ME the mark.
+    mockStudentFind.mockResolvedValue([{ _id: "kid-1", sectionId: "sec-3", classId: "cls-3" }]);
+    mockResolveUnits.mockResolvedValue(new Map([["kid-1", { unitType: "subjectgroup", unitId: QURAN }]]));
+    mockSectionFind.mockResolvedValue([{ _id: "sec-3", classId: "cls-3", classTeacherId: ME }]);
+    mockClassFind.mockResolvedValue([{ _id: "cls-3", level: 3 }]);
+    mockSlotFind.mockResolvedValue([]); // I teach nothing — class teacher only
+
+    expect(await unmarkedMarkingDays(ME, [OLD_THU])).toEqual([OLD_THU]);
+  });
+
+  test("a pre-cutover day never nags the first-Quran teacher for their group", async () => {
+    // I open the group's first Quran period — post-cutover that makes me the
+    // marker, but the pre-cutover day predates group capture entirely.
+    mockSlotFind.mockResolvedValue([slot({ dayOfWeek: "THU" })]);
+    expect(await unmarkedMarkingDays(ME, [OLD_THU])).toEqual([]);
+  });
 });
 
 describe("empty units are dropped — no unclearable alert", () => {

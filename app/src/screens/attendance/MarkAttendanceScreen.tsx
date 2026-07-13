@@ -12,7 +12,12 @@ import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { ATTENDANCE_UNIT_ROSTER, ATTENDANCE_UNIT_DAY, MARK_ATTENDANCE_UNIT } from "../../graphql/operations";
+import {
+  ATTENDANCE_UNIT_ROSTER,
+  ATTENDANCE_UNIT_DAY,
+  MARK_ATTENDANCE_UNIT,
+  AMEND_ATTENDANCE_UNIT,
+} from "../../graphql/operations";
 import type { AttendanceStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Button, Loader, EmptyState, ErrorBanner } from "../../components/ui";
 import { STR, bnNum, classLevelLabel } from "../../lib/labels";
@@ -23,7 +28,7 @@ import { space } from "../../theme/tokens";
 type Props = NativeStackScreenProps<AttendanceStackParamList, "MarkAttendance">;
 
 export default function MarkAttendanceScreen({ route }: Props): React.ReactElement {
-  const { unitType, unitId, title, dateKey } = route.params;
+  const { unitType, unitId, title, dateKey, amend } = route.params;
   const [absent, setAbsent] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const toast = useToast();
@@ -35,6 +40,8 @@ export default function MarkAttendanceScreen({ route }: Props): React.ReactEleme
     requestPolicy: "network-only",
   });
   const [, mark] = useMutation(MARK_ATTENDANCE_UNIT);
+  // D-#292: the Principal/Office path — any unit, today or a locked past day (audited).
+  const [, amendMark] = useMutation(AMEND_ATTENDANCE_UNIT);
 
   const sections = rosterQ.data?.attendanceUnitRoster ?? [];
   const existing = dayQ.data?.attendanceUnitDay ?? null;
@@ -56,9 +63,13 @@ export default function MarkAttendanceScreen({ route }: Props): React.ReactEleme
 
   async function onSubmit(): Promise<void> {
     setBusy(true);
-    const res = await mark({ unitType, unitId, dateKey, absentStudentIds: [...absent] });
+    const vars = { unitType, unitId, dateKey, absentStudentIds: [...absent] };
+    const res = amend ? await amendMark(vars) : await mark(vars);
     setBusy(false);
-    if (res.error || !res.data?.markAttendanceUnit) {
+    const day = amend
+      ? (res.data as { amendAttendanceUnit?: unknown } | undefined)?.amendAttendanceUnit
+      : (res.data as { markAttendanceUnit?: unknown } | undefined)?.markAttendanceUnit;
+    if (res.error || !day) {
       toast.show(friendlyError(res.error), "danger");
       return;
     }

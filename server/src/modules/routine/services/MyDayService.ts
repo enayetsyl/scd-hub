@@ -32,6 +32,7 @@ import { DAYS_OF_WEEK, callerHasPermission, type PeriodTrack } from "@scd/shared
 import type { AppContext } from "../../../context";
 import { ForbiddenError, assertCanConfirmHomework, assertCanRead } from "../../../middleware/authz";
 import { Section } from "../../foundation/models/Section";
+import { Class as ClassModel } from "../../foundation/models/Class";
 import { RoutineSlot, type IRoutineSlot } from "../models/RoutineSlot";
 import { RoutineSubstitution } from "../models/RoutineSubstitution";
 import { enrichRoutineSlots, type SlotViewFields } from "../slotView";
@@ -42,6 +43,8 @@ import { classPresenceForDate, type ClassPresence } from "../../attendance/servi
 import { pendingWorkFor, type PendingAlert, type AssignmentPrep } from "./PendingAlertService";
 import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
 
+type IdLike = { toString(): string };
+
 export interface MyDayHomeworkCounts {
   pendingChecking: number;
   openResubmissions: number;
@@ -49,6 +52,12 @@ export interface MyDayHomeworkCounts {
 }
 
 export type MyDaySlot = IRoutineSlot & SlotViewFields & { coverTeacherId?: string | null; isCovering?: boolean };
+
+export interface ClassTeacherSection {
+  sectionId: string;
+  nameBn: string;
+  classLevel: number;
+}
 
 export interface MyDayResult {
   date: string;
@@ -62,6 +71,9 @@ export interface MyDayResult {
   assignmentPrep: AssignmentPrep | null;
   /** Principal/Office only: per-class present/absent snapshot for the date (D-#279). */
   classPresence: ClassPresence[];
+  /** The sections the caller is CLASS TEACHER of (D-#42 daily coordinator) — the
+   *  Today dashboard names the duty so the reconcile alerts have a face. */
+  classTeacherOf: ClassTeacherSection[];
 }
 
 export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayResult> {
@@ -214,11 +226,31 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
   //    yields nothing when absent, so this stays safe for guardian/office logins.
   const { alerts, assignmentPrep } = await pendingWorkFor(ctx, d);
 
+  // 4b. The sections the caller class-teaches (daily coordinator, D-#42) — named on
+  //     Today so the hw/as reconcile duty (and its red alerts) has a visible owner.
+  let classTeacherOf: ClassTeacherSection[] = [];
+  if (auth.role === "TEACHER") {
+    const mySections = (await Section.find({ classTeacherId: auth.userId, active: true })
+      .select("nameBn classId")
+      .lean()) as unknown as Array<{ _id: IdLike; nameBn: string; classId: IdLike }>;
+    if (mySections.length > 0) {
+      const classes = (await ClassModel.find({ _id: { $in: mySections.map((s) => s.classId) } })
+        .select("level")
+        .lean()) as unknown as Array<{ _id: IdLike; level: number }>;
+      const levelOf = new Map(classes.map((c) => [c._id.toString(), c.level]));
+      classTeacherOf = mySections.map((s) => ({
+        sectionId: s._id.toString(),
+        nameBn: s.nameBn,
+        classLevel: levelOf.get(s.classId.toString()) ?? 0,
+      }));
+    }
+  }
+
   // 5. Principal/Office: the per-class present/absent snapshot for the date (D-#279).
   //    Teachers get an empty list — they read their own worklist instead.
   const classPresence = callerHasPermission(auth, "attendance:manage")
     ? await classPresenceForDate(dateKey)
     : [];
 
-  return { date: dateKey, dayType, slots, homework, attendancePending, alerts, assignmentPrep, classPresence };
+  return { date: dateKey, dayType, slots, homework, attendancePending, alerts, assignmentPrep, classPresence, classTeacherOf };
 }

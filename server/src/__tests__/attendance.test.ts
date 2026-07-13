@@ -61,6 +61,8 @@ jest.mock("../modules/routine/calendar", () => ({
 // they are seams so the marker precedence + roster gate can be tested in isolation.
 jest.mock("../modules/attendance/attendanceUnit", () => ({
   isNurseryKg: (level: number) => level <= 0,
+  // The real D-#292 cutover predicate — dates before 2026-07-13 are legacy-shaped.
+  isLegacyAttendanceDate: (dateKey: string) => dateKey < "2026-07-13",
   unitKey: (u: { unitType: string; unitId: string }) => `${u.unitType}:${u.unitId}`,
   firstPeriodTeacher: (...a: unknown[]) => mockFirstPeriodTeacher(...a),
   firstQuranSlotTeacher: (...a: unknown[]) => mockFirstQuranSlotTeacher(...a),
@@ -178,10 +180,37 @@ describe("markerForUnit — first class of the day (D-#278)", () => {
     mockClassFindById.mockResolvedValue({ level: 0 }); // KG
     mockFirstPeriodTeacher.mockResolvedValue(OTHER.toString());
 
-    expect(await markerForUnit({ unitType: "section", unitId: SECTION.toString() }, "2026-06-11")).toEqual({
+    // Post-cutover date (D-#292) — the routine rule applies.
+    expect(await markerForUnit({ unitType: "section", unitId: SECTION.toString() }, "2026-07-16")).toEqual({
       teacherId: OTHER.toString(),
       source: "routine",
     });
+  });
+
+  // D-#292: PRE-cutover dates resolve with the legacy rule — the routine step did
+  // not exist, so old unmarked days attribute to the assigned/class teacher.
+  test("pre-cutover Nursery/KG section: class teacher, routine NOT consulted", async () => {
+    mockAssignFind.mockReturnValue(lean([]));
+    mockSectionFindById.mockResolvedValue({ _id: SECTION, classId: "class-kg", classTeacherId: TEACHER });
+    mockClassFindById.mockResolvedValue({ level: 0 });
+    mockFirstPeriodTeacher.mockResolvedValue(OTHER.toString()); // would win post-cutover
+
+    expect(await markerForUnit({ unitType: "section", unitId: SECTION.toString() }, "2026-07-10")).toEqual({
+      teacherId: TEACHER.toString(),
+      source: "class_teacher",
+    });
+    expect(mockFirstPeriodTeacher).not.toHaveBeenCalled();
+  });
+
+  test("pre-cutover Quran group: null — group capture did not exist then", async () => {
+    mockAssignFind.mockReturnValue(lean([]));
+    mockFirstQuranSlotTeacher.mockResolvedValue(TEACHER.toString());
+
+    expect(await markerForUnit({ unitType: "subjectgroup", unitId: QURAN_GROUP.toString() }, "2026-07-10")).toEqual({
+      teacherId: null,
+      source: null,
+    });
+    expect(mockFirstQuranSlotTeacher).not.toHaveBeenCalled();
   });
 
   test("Nursery/KG section: falls back to the class teacher when the routine names nobody", async () => {
@@ -212,7 +241,7 @@ describe("markerForUnit — first class of the day (D-#278)", () => {
     mockAssignFind.mockReturnValue(lean([]));
     mockFirstQuranSlotTeacher.mockResolvedValue(TEACHER.toString());
 
-    expect(await markerForUnit({ unitType: "subjectgroup", unitId: QURAN_GROUP.toString() }, "2026-06-11")).toEqual({
+    expect(await markerForUnit({ unitType: "subjectgroup", unitId: QURAN_GROUP.toString() }, "2026-07-16")).toEqual({
       teacherId: TEACHER.toString(),
       source: "routine",
     });
@@ -254,7 +283,7 @@ describe("myMarkingUnits — calendar guard (AT4.1)", () => {
 });
 
 describe("markAttendanceUnit — Quran-group capture (D-#278)", () => {
-  const NOW = new Date(2026, 5, 11, 8, 0); // Thu 2026-06-11, a FULL day
+  const NOW = new Date(2026, 6, 16, 8, 0); // Thu 2026-07-16, a FULL day (post-cutover, D-#292)
   const asGroupMarker = (): void => {
     mockAssignFind.mockReturnValue(lean([]));
     mockFirstQuranSlotTeacher.mockResolvedValue(TEACHER.toString());
@@ -269,7 +298,7 @@ describe("markAttendanceUnit — Quran-group capture (D-#278)", () => {
     const day = await markAttendanceUnit(
       teacherCtx(TEACHER.toString()),
       { unitType: "subjectgroup", unitId: QURAN_GROUP.toString() },
-      "2026-06-11",
+      "2026-07-16",
       [STUDENT_A.toString()],
       NOW,
     );
@@ -287,7 +316,7 @@ describe("markAttendanceUnit — Quran-group capture (D-#278)", () => {
       markAttendanceUnit(
         teacherCtx(TEACHER.toString()),
         { unitType: "subjectgroup", unitId: QURAN_GROUP.toString() },
-        "2026-06-11",
+        "2026-07-16",
         [STUDENT_B.toString()],
         NOW,
       ),
@@ -300,7 +329,7 @@ describe("markAttendanceUnit — Quran-group capture (D-#278)", () => {
       markAttendanceUnit(
         teacherCtx(OTHER.toString()),
         { unitType: "subjectgroup", unitId: QURAN_GROUP.toString() },
-        "2026-06-11",
+        "2026-07-16",
         [],
         NOW,
       ),

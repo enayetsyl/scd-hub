@@ -101,6 +101,7 @@ import ClassNotesAdminScreen from "../screens/routine/ClassNotesAdminScreen";
 import BellScheduleScreen from "../screens/routine/BellScheduleScreen";
 import AttendanceHomeScreen from "../screens/attendance/AttendanceHomeScreen";
 import MarkAttendanceScreen from "../screens/attendance/MarkAttendanceScreen";
+import AttendanceAdminScreen from "../screens/attendance/AttendanceAdminScreen";
 import TeacherAttendanceImportScreen from "../screens/attendance/TeacherAttendanceImportScreen";
 import AttendanceReportScreen from "../screens/attendance/AttendanceReportScreen";
 import AssignMarkerScreen from "../screens/attendance/AssignMarkerScreen";
@@ -207,6 +208,7 @@ import MessageTemplatesScreen from "../screens/admin/MessageTemplatesScreen";
 import MessageTemplateEditScreen from "../screens/admin/MessageTemplateEditScreen";
 import AccessControlUsersScreen from "../screens/admin/AccessControlUsersScreen";
 import AccessControlEditScreen from "../screens/admin/AccessControlEditScreen";
+import ReconciliationReportScreen from "../screens/admin/ReconciliationReportScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
@@ -593,6 +595,7 @@ function AttendanceNavigator(): React.ReactElement {
     <AttendanceStack.Navigator screenOptions={stackOptions}>
       <AttendanceStack.Screen name="AttendanceHome" component={AttendanceHomeScreen} options={{ title: STR.tabAttendance }} />
       <AttendanceStack.Screen name="MarkAttendance" component={MarkAttendanceScreen} options={{ title: STR.attMarkTitle }} />
+      <AttendanceStack.Screen name="AttendanceAdmin" component={AttendanceAdminScreen} options={{ title: STR.attAdminTitle }} />
       <AttendanceStack.Screen name="TeacherAttendanceImport" component={TeacherAttendanceImportScreen} options={{ title: STR.attUploadTitle }} />
       <AttendanceStack.Screen name="AttendanceReport" component={AttendanceReportScreen} options={{ title: STR.attReportTitle }} />
       <AttendanceStack.Screen name="AssignMarker" component={AssignMarkerScreen} options={{ title: STR.attAssignMarkerTitle }} />
@@ -893,6 +896,7 @@ function AdminNavigator(): React.ReactElement {
         component={AccessControlEditScreen}
         options={({ route }) => ({ title: route.params.name || STR.acTitle })}
       />
+      <AdminStack.Screen name="ReconciliationReport" component={ReconciliationReportScreen} options={{ title: STR.rrTitle }} />
       <AdminStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </AdminStack.Navigator>
   );
