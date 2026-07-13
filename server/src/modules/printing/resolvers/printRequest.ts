@@ -14,6 +14,9 @@ import { callerHasPermission } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { User } from "../../foundation/models/User";
 import { StoredFile } from "../../platform/models/StoredFile";
+import { Class } from "../../foundation/models/Class";
+import { classPresenceForDate } from "../../attendance/services/AttendanceReportService";
+import { dateKeyOf } from "../../attendance/dates";
 import {
   createPrintRequest,
   markPrinted,
@@ -22,6 +25,7 @@ import {
   printQueue,
   myPrintRequests,
   printRequestById,
+  printQueueCounts,
 } from "../services/PrintRequestService";
 import type { IPrintRequest } from "../models/PrintRequest";
 
@@ -57,6 +61,11 @@ interface PrintRequestView {
   doc: IPrintRequest;
   requesterName: string | null;
   files: PrintFileView[];
+  /** D-#294 (CLASS_PRESENT jobs): the resolved copy count for the USE day, or null
+   *  while that day's attendance is pending; the class level for display. */
+  effectiveCopies: number | null;
+  copiesPending: boolean;
+  copiesClassLevel: number | null;
 }
 
 const PrintFileRef = builder.objectRef<PrintFileView>("PrintFile");
@@ -90,6 +99,13 @@ PrintRequestRef.implement({
     colour: t.string({ resolve: (v) => v.doc.colour }),
     sides: t.string({ resolve: (v) => v.doc.sides }),
     copies: t.int({ resolve: (v) => v.doc.copies }),
+    copiesMode: t.string({ resolve: (v) => v.doc.copiesMode ?? "FIXED" }),
+    copiesClassId: t.string({ nullable: true, resolve: (v) => v.doc.copiesClassId?.toString() ?? null }),
+    copiesClassLevel: t.int({ nullable: true, resolve: (v) => v.copiesClassLevel }),
+    /** Resolved count for CLASS_PRESENT jobs (use-day attendance); equals `copies` otherwise. */
+    effectiveCopies: t.int({ nullable: true, resolve: (v) => v.effectiveCopies }),
+    /** True while the use day's attendance is pending — the Office may print with a manual count. */
+    copiesPending: t.boolean({ resolve: (v) => v.copiesPending }),
     neededByKey: t.string({ nullable: true, resolve: (v) => v.doc.neededByKey ?? null }),
     subject: t.string({ nullable: true, resolve: (v) => v.doc.subject ?? null }),
     notes: t.string({ nullable: true, resolve: (v) => v.doc.notes ?? null }),
@@ -106,7 +122,9 @@ PrintRequestRef.implement({
   }),
 });
 
-/** Attach requester + file names in ONE batched load each — the queue is a list view. */
+/** Attach requester + file names in ONE batched load each — the queue is a list view.
+ *  D-#294: CLASS_PRESENT rows additionally resolve their copy count from the USE day's
+ *  attendance — one `classPresenceForDate` call per DISTINCT use day in the list. */
 async function decorate(docs: IPrintRequest[]): Promise<PrintRequestView[]> {
   if (docs.length === 0) return [];
   const ids = [...new Set(docs.map((d) => d.requestedBy.toString()))];
@@ -119,16 +137,54 @@ async function decorate(docs: IPrintRequest[]): Promise<PrintRequestView[]> {
     : [];
   const fileById = new Map(files.map((f) => [f._id.toString(), f]));
 
-  return docs.map((doc) => ({
-    doc,
-    requesterName: nameById.get(doc.requestedBy.toString()) ?? null,
-    files: (doc.fileIds ?? []).map((f) => {
-      const id = f.toString();
-      const found = fileById.get(id);
-      // A vanished file still lists, so the Office sees the job is incomplete.
-      return { id, name: found?.originalName ?? "file", mime: found?.mime ?? "" };
-    }),
-  }));
+  // D-#294: per-class-present copy resolution, batched per distinct use day.
+  const cpDocs = docs.filter((d) => d.copiesMode === "CLASS_PRESENT");
+  const classIds = [...new Set(cpDocs.map((d) => d.copiesClassId?.toString()).filter(Boolean))] as string[];
+  const classes = classIds.length
+    ? await Class.find({ _id: { $in: classIds } }).select("level").lean()
+    : [];
+  const levelOf = new Map(classes.map((c) => [c._id.toString(), c.level]));
+  const todayKey = dateKeyOf(new Date());
+  const useKeys = [
+    ...new Set(
+      cpDocs
+        .filter((d) => d.status === "REQUESTED" && d.neededByKey && d.neededByKey <= todayKey)
+        .map((d) => d.neededByKey!),
+    ),
+  ];
+  const presenceByDay = new Map(
+    await Promise.all(
+      useKeys.map(async (key) => [key, await classPresenceForDate(key)] as const),
+    ),
+  );
+
+  return docs.map((doc) => {
+    let effectiveCopies: number | null = doc.copies;
+    let copiesPending = false;
+    if (doc.copiesMode === "CLASS_PRESENT" && doc.status === "REQUESTED") {
+      const presence = doc.neededByKey ? presenceByDay.get(doc.neededByKey) : undefined;
+      const row = presence?.find((p) => p.classId === doc.copiesClassId?.toString());
+      if (row && row.complete) {
+        effectiveCopies = row.presentCount;
+      } else {
+        effectiveCopies = null;
+        copiesPending = true; // future use day, or attendance not (fully) marked yet
+      }
+    }
+    return {
+      doc,
+      requesterName: nameById.get(doc.requestedBy.toString()) ?? null,
+      files: (doc.fileIds ?? []).map((f) => {
+        const id = f.toString();
+        const found = fileById.get(id);
+        // A vanished file still lists, so the Office sees the job is incomplete.
+        return { id, name: found?.originalName ?? "file", mime: found?.mime ?? "" };
+      }),
+      effectiveCopies,
+      copiesPending,
+      copiesClassLevel: doc.copiesClassId ? (levelOf.get(doc.copiesClassId.toString()) ?? null) : null,
+    };
+  });
 }
 
 const decorateOne = async (doc: IPrintRequest): Promise<PrintRequestView> => (await decorate([doc]))[0];
@@ -157,6 +213,9 @@ builder.mutationField("createPrintRequest", (t) =>
       colour: t.arg.string({ required: true }),
       sides: t.arg.string({ required: true }),
       copies: t.arg.int({ required: true }),
+      // D-#294: FIXED (default) | CLASS_PRESENT (+ the class whose present count prints).
+      copiesMode: t.arg.string({ required: false }),
+      copiesClassId: t.arg.string({ required: false }),
       neededByKey: t.arg.string({ required: true }),
       classId: t.arg.string({ required: false }),
       sectionId: t.arg.string({ required: false }),
@@ -173,12 +232,19 @@ builder.mutationField("createPrintRequest", (t) =>
 builder.mutationField("markPrintRequestPrinted", (t) =>
   t.field({
     type: PrintRequestRef,
-    description: "REQUESTED → PRINTED. Office/Principal (roster:manage). Audited.",
+    description:
+      "REQUESTED → PRINTED. Office/Principal (roster:manage). Audited. For a CLASS_PRESENT " +
+      "job the count finalizes from the use day's attendance — or from `copies` (manual) " +
+      "while that attendance is pending (D-#294).",
     authScopes: { authenticated: true },
-    args: { id: t.arg.string({ required: true }) },
+    args: {
+      id: t.arg.string({ required: true }),
+      /** Manual count for a CLASS_PRESENT job whose use-day attendance is pending. */
+      copies: t.arg.int({ required: false }),
+    },
     resolve: async (_root, args, ctx) => {
       assertPrintAdmin(ctx);
-      return decorateOne(await markPrinted(args.id, ctx.auth!.userId));
+      return decorateOne(await markPrinted(args.id, ctx.auth!.userId, args.copies));
     },
   }),
 );
@@ -239,6 +305,28 @@ builder.queryField("printQueue", (t) =>
     resolve: async (_root, args, ctx) => {
       assertPrintAdmin(ctx);
       return decorate(await printQueue(args.status, args.limit ?? 100));
+    },
+  }),
+);
+
+const PrintQueueCountsRef = builder
+  .objectRef<{ requested: number; printed: number }>("PrintQueueCounts")
+  .implement({
+    description: "Sidebar badge counts (D-#294): jobs awaiting printing / awaiting delivery.",
+    fields: (t) => ({
+      requested: t.exposeInt("requested"),
+      printed: t.exposeInt("printed"),
+    }),
+  });
+
+builder.queryField("printQueueCounts", (t) =>
+  t.field({
+    type: PrintQueueCountsRef,
+    description: "How many jobs await printing (REQUESTED) and delivery (PRINTED). roster:manage.",
+    authScopes: { authenticated: true },
+    resolve: async (_root, _args, ctx) => {
+      assertPrintAdmin(ctx);
+      return printQueueCounts();
     },
   }),
 );

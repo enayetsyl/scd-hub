@@ -13,6 +13,8 @@ const mockAsItemFind = jest.fn();
 const mockSectionFind = jest.fn();
 const mockClassFind = jest.fn();
 const mockUserFind = jest.fn();
+const mockSlotFind = jest.fn();
+const mockHolidayFind = jest.fn();
 
 const chain = (fn: jest.Mock) => (f: unknown) => ({
   lean: () => fn(f),
@@ -42,6 +44,12 @@ jest.mock("../modules/foundation/models/Class", () => ({
 jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (f: unknown) => chain(mockUserFind)(f) },
 }));
+jest.mock("../modules/routine/models/RoutineSlot", () => ({
+  RoutineSlot: { find: (f: unknown) => chain(mockSlotFind)(f) },
+}));
+jest.mock("../modules/routine/models/HolidayException", () => ({
+  HolidayException: { find: (f: unknown) => chain(mockHolidayFind)(f) },
+}));
 
 import { reconciliationReport } from "../modules/trackers/services/ReconReportService";
 
@@ -56,6 +64,8 @@ beforeEach(() => {
   mockSectionFind.mockResolvedValue([]);
   mockClassFind.mockResolvedValue([]);
   mockUserFind.mockResolvedValue([]);
+  mockSlotFind.mockResolvedValue([]);
+  mockHolidayFind.mockResolvedValue([]);
 });
 
 const seedSection = (over: Record<string, unknown> = {}): void => {
@@ -72,7 +82,13 @@ const seedSection = (over: Record<string, unknown> = {}): void => {
 describe("reconciliationReport (D-#290)", () => {
   test("empty world → empty report, range echoed back", async () => {
     const r = await reconciliationReport("2026-07-07", "2026-07-13");
-    expect(r).toEqual({ fromKey: "2026-07-07", toKey: "2026-07-13", hwMisses: [], asMisses: [] });
+    expect(r).toEqual({
+      fromKey: "2026-07-07",
+      toKey: "2026-07-13",
+      hwMisses: [],
+      asMisses: [],
+      hwNotDeclared: [],
+    });
   });
 
   test("from after to is rejected", async () => {
@@ -149,5 +165,73 @@ describe("reconciliationReport (D-#290)", () => {
     ]);
     const r = await reconciliationReport("2026-07-07", "2026-07-13");
     expect(r.hwMisses[0].confirmerName).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-#293 — homework never DECLARED (routine-expected, per class × subject × day)
+// ---------------------------------------------------------------------------
+
+describe("hwNotDeclared (D-#293)", () => {
+  const NOW = new Date(2026, 6, 13); // Mon 2026-07-13
+  const sciSlot = (over: Record<string, unknown> = {}) => ({
+    groupId: SEC,
+    dayOfWeek: "THU",
+    periodNumber: 5,
+    subject: "SCI",
+    teacherId: "u-sci",
+    effectiveFrom: new Date(2026, 0, 1),
+    effectiveTo: null,
+    ...over,
+  });
+
+  test("a routine-expected subject with NO declaration that day is reported with its teacher", async () => {
+    seedSection();
+    mockSlotFind.mockResolvedValue([sciSlot()]);
+    mockUserFind.mockResolvedValue([{ _id: "u-sci", name: "Husne ara Rahman Fida" }]);
+
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    // Thu 2026-07-09 is the only FULL day in range with a SCI period and no declaration.
+    expect(r.hwNotDeclared).toHaveLength(1);
+    expect(r.hwNotDeclared[0]).toMatchObject({
+      dateKey: "2026-07-09",
+      sectionId: SEC,
+      subject: "SCI",
+      teacherName: "Husne ara Rahman Fida",
+      classLevel: -1,
+    });
+  });
+
+  test("a declaration that day clears the cell (any status)", async () => {
+    seedSection();
+    mockSlotFind.mockResolvedValue([sciSlot()]);
+    mockHwItemFind.mockResolvedValue([
+      { classId: CLS, sectionId: SEC, subject: "SCI", dateGiven: new Date(2026, 6, 9), timeDecl: 30 },
+    ]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.hwNotDeclared).toEqual([]);
+  });
+
+  test("non-FULL days owe nothing (a Friday period never reports)", async () => {
+    seedSection();
+    mockSlotFind.mockResolvedValue([sciSlot({ dayOfWeek: "FRI" })]); // 2026-07-10 is a Friday
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.hwNotDeclared).toEqual([]);
+  });
+
+  test("future days are never reported", async () => {
+    seedSection();
+    mockSlotFind.mockResolvedValue([sciSlot()]);
+    // "Today" is Wed 07-08 — the Thu 07-09 period is still in the future.
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", new Date(2026, 6, 8));
+    expect(r.hwNotDeclared).toEqual([]);
+  });
+
+  test("a teacherless slot reports the cell with a null teacher", async () => {
+    seedSection();
+    mockSlotFind.mockResolvedValue([sciSlot({ teacherId: null })]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.hwNotDeclared).toHaveLength(1);
+    expect(r.hwNotDeclared[0].teacherName).toBeNull();
   });
 });

@@ -264,17 +264,8 @@ export async function pickAndUploadClassNoteAttachment(): Promise<UploadedFile |
 export const PRINT_FILE_MAX_BYTES = 10 * 1024 * 1024;
 export const PRINT_MAX_FILES = 5;
 
-/** Pick one jpeg/png/pdf and upload it as a print-request document; null if cancelled.
- *  Throws FileUploadError with the server's Bangla message on rejection/failure. */
-export async function pickAndUploadPrintFile(): Promise<UploadedFile | null> {
-  const picked = await DocumentPicker.getDocumentAsync({
-    type: FILE_MIMES,
-    multiple: false,
-    copyToCacheDirectory: true,
-  });
-  if (picked.canceled || !picked.assets?.[0]) return null;
-  const asset = picked.assets[0];
-
+/** Upload ONE picked asset to POST /files/print. */
+async function uploadPrintAsset(asset: DocumentPicker.DocumentPickerAsset): Promise<UploadedFile> {
   const form = new FormData();
   if (Platform.OS === "web") {
     const blob = await fetch(asset.uri).then((r) => r.blob());
@@ -305,6 +296,52 @@ export async function pickAndUploadPrintFile(): Promise<UploadedFile | null> {
   }
   const body = (await res.json()) as { fileId: string; originalName: string; mime: string };
   return { fileId: body.fileId, originalName: body.originalName, mime: body.mime };
+}
+
+/** Pick one jpeg/png/pdf and upload it as a print-request document; null if cancelled.
+ *  Throws FileUploadError with the server's Bangla message on rejection/failure. */
+export async function pickAndUploadPrintFile(): Promise<UploadedFile | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: FILE_MIMES,
+    multiple: false,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  return uploadPrintAsset(picked.assets[0]);
+}
+
+export interface MultiUploadResult {
+  uploaded: UploadedFile[];
+  /** Per-file failures ("name: reason") — partial success keeps the good ones. */
+  failures: string[];
+}
+
+/**
+ * Pick SEVERAL jpeg/png/pdf files at once (D-#294 follow-up: one-at-a-time picking
+ * was a chore) and upload each to /files/print. At most `maxFiles` are taken —
+ * extras are reported as skipped, never silently dropped. Empty result when the
+ * picker is cancelled.
+ */
+export async function pickAndUploadPrintFiles(maxFiles: number): Promise<MultiUploadResult> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: FILE_MIMES,
+    multiple: true,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.length) return { uploaded: [], failures: [] };
+
+  const take = picked.assets.slice(0, Math.max(0, maxFiles));
+  const skipped = picked.assets.slice(Math.max(0, maxFiles));
+  const uploaded: UploadedFile[] = [];
+  const failures: string[] = skipped.map((a) => `${a.name}: limit`);
+  for (const asset of take) {
+    try {
+      uploaded.push(await uploadPrintAsset(asset));
+    } catch (e) {
+      failures.push(`${asset.name}: ${e instanceof FileUploadError ? e.message : String(e)}`);
+    }
+  }
+  return { uploaded, failures };
 }
 
 // ---------------------------------------------------------------------------
