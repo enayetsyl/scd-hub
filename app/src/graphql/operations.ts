@@ -2268,6 +2268,82 @@ export interface ReconReportT {
   hwNotDeclared: HwNotDeclaredT[];
   hwNilDeclared: HwNilDeclaredT[];
 }
+// D-#300 — homework lifecycle report (Principal/Office).
+export interface HwFunnelRowT {
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  subject: string;
+  declaredItems: number;
+  issuedItems: number;
+  given: number;
+  submitted: number;
+  checked: number;
+  returned: number;
+  onTimePct: number | null;
+  stuckSubmitted: number;
+  chasedRecords: number;
+  chases: number;
+  chaseRatePct: number | null;
+}
+export interface HwBacklogRowT {
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  subject: string;
+  teacherName: string | null;
+  count: number;
+  oldestDays: number;
+}
+export interface HwConsistencyRowT {
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  subject: string;
+  routineDays: number;
+  declaredDays: number;
+  nilDays: number;
+  missedDays: number;
+  respondedPct: number | null;
+}
+export interface HwTeacherScoreRowT {
+  teacherId: string;
+  teacherName: string;
+  declaredItems: number;
+  nilDays: number;
+  missedDeclarations: number;
+  onTimePct: number | null;
+  avgCheckLatencyDays: number | null;
+  avgReturnLatencyDays: number | null;
+  chases: number;
+  wrongRatePct: number | null;
+}
+export interface HwLifecycleReportT {
+  fromKey: string;
+  toKey: string;
+  backlogThresholdDays: number;
+  funnel: HwFunnelRowT[];
+  backlog: HwBacklogRowT[];
+  consistency: HwConsistencyRowT[];
+  scorecard: HwTeacherScoreRowT[];
+}
+export const HW_LIFECYCLE_REPORT_QUERY = gql<
+  { homeworkLifecycleReport: HwLifecycleReportT },
+  { from: string; to: string }
+>`
+  query HomeworkLifecycleReport($from: String!, $to: String!) {
+    homeworkLifecycleReport(from: $from, to: $to) {
+      fromKey
+      toKey
+      backlogThresholdDays
+      funnel { sectionId sectionNameBn classLevel subject declaredItems issuedItems given submitted checked returned onTimePct stuckSubmitted chasedRecords chases chaseRatePct }
+      backlog { sectionId sectionNameBn classLevel subject teacherName count oldestDays }
+      consistency { sectionId sectionNameBn classLevel subject routineDays declaredDays nilDays missedDays respondedPct }
+      scorecard { teacherId teacherName declaredItems nilDays missedDeclarations onTimePct avgCheckLatencyDays avgReturnLatencyDays chases wrongRatePct }
+    }
+  }
+`;
+
 export const RECON_REPORT_QUERY = gql<
   { reconciliationReport: ReconReportT },
   { from: string; to: string }

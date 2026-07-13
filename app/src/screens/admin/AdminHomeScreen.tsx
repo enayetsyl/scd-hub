@@ -78,6 +78,13 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
+      {canRoster ? (
+        <Card onPress={() => navigation.navigate("HwLifecycleReport")}>
+          <Body style={{ fontWeight: "700" }}>{STR.hlrTitle}</Body>
+          <Muted>{STR.admSubHwLifecycle}</Muted>
+        </Card>
+      ) : null}
+
       {canStaff ? (
         <Card onPress={() => navigation.navigate("Staff")}>
           <Body style={{ fontWeight: "700" }}>{STR.staff}</Body>
