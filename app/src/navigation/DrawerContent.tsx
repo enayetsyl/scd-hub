@@ -108,13 +108,18 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({});
 
   // D-#294: the print operator's queue counters — red = awaiting printing, yellow =
-  // awaiting delivery. Refetched every 60s so the badges track the queue without a
-  // manual refresh; teachers (no roster:manage) never even ask.
+  // awaiting delivery. `additionalTypenames: ["PrintRequest"]` makes urql's document
+  // cache invalidate (and refetch) this query the INSTANT any print mutation on this
+  // device completes — create / mark printed / mark delivered / cancel — even though
+  // the counts payload itself carries no PrintRequest object. The 60s poll remains
+  // only for jobs arriving from OTHER devices; teachers (no roster:manage) never ask.
   const isPrintOperator = !!role && roleHasPermission(role as Role, "roster:manage");
+  const countsContext = React.useMemo(() => ({ additionalTypenames: ["PrintRequest"] }), []);
   const [countsQ, refetchCounts] = useQuery({
     query: PRINT_QUEUE_COUNTS,
     pause: !isPrintOperator,
     requestPolicy: "cache-and-network",
+    context: countsContext,
   });
   React.useEffect(() => {
     if (!isPrintOperator) return;
