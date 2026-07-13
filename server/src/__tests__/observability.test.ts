@@ -49,8 +49,34 @@ describe("observability / sentry seam (MON-2)", () => {
 
     it("CAPTURES real faults (programmer errors / runtime)", () => {
       expect(isExpectedError(new TypeError("cannot read 'x' of undefined"))).toBe(false);
-      expect(isExpectedError(new Error("unexpected null in posting fold"))).toBe(false);
       expect(isExpectedError(new RangeError("out of range"))).toBe(false);
+    });
+
+    /**
+     * CONTRACT CHANGE (D-#287). This block previously asserted the OPPOSITE — that a plain
+     * `new Error(...)` is a real fault worth capturing. That contradicted D-#259, which
+     * (two days later) made `isExposableDomainError` show a plain Error's message straight
+     * to the user. The contradiction was invisible while capture was disconnected (D-#285);
+     * the moment it was wired up, ordinary business denials started paging the maintainer:
+     * an Office user hitting a routine conflict — "Teacher already booked at SUN P2" — sent
+     * an alert email, and there are 263 such throws across the modules.
+     *
+     * One rule, applied twice: if we SHOW the message to a teacher, it is not a fault.
+     */
+    it("skips a plain Error — this codebase's convention for a business denial", () => {
+      expect(isExpectedError(new Error("Teacher already booked at SUN P2"))).toBe(true);
+      expect(isExpectedError(new Error("Section not found"))).toBe(true);
+      expect(isExpectedError(new Error("A break period takes no teacher"))).toBe(true);
+    });
+
+    it("STILL captures the fault classes — a subclass is never swallowed", () => {
+      // The regression that matters: these are what a genuine outage looks like.
+      class MongoServerError extends Error {}
+      class CastError extends Error {}
+      expect(isExpectedError(new MongoServerError("Sort exceeded memory limit"))).toBe(false);
+      expect(isExpectedError(new CastError("Cast to ObjectId failed"))).toBe(false);
+      expect(isExpectedError(new SyntaxError("bad json"))).toBe(false);
+      expect(isExpectedError(new ReferenceError("x is not defined"))).toBe(false);
     });
 
     it("handles non-error inputs without throwing", () => {
