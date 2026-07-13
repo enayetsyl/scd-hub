@@ -735,6 +735,10 @@ const STR_BN = {
   rrLast7: "৭ দিন",
   rrLast14: "১৪ দিন",
   rrLast30: "৩০ দিন",
+  /** D-#293 — homework never declared, per class × subject. */
+  rrHwNdTitle: "বাড়ির কাজ ঘোষণা হয়নি — শ্রেণি × বিষয়",
+  rrHwNdSub: "রুটিনে পিরিয়ড ছিল কিন্তু সেদিন ওই বিষয়ের কোনো বাড়ির কাজ ঘোষণা করা হয়নি",
+  rrNotDeclared: "ঘোষণা হয়নি",
   admSubReconReport: "কে কোন দিন বাড়ির কাজ/অ্যাসাইনমেন্ট নিশ্চিত করেনি",
   /** D-#291 — subject-teacher assignment ⇄ routine sync. */
   stOnRoutine: "রুটিনে",
@@ -2947,6 +2951,9 @@ const STR_EN: StrTable = {
   rrLast7: "7 days",
   rrLast14: "14 days",
   rrLast30: "30 days",
+  rrHwNdTitle: "Homework never declared — class × subject",
+  rrHwNdSub: "The subject had routine periods that day but declared no homework at all",
+  rrNotDeclared: "Not declared",
   admSubReconReport: "Who didn't confirm homework/assignments, per day",
   stOnRoutine: "On routine",
   stNotOnRoutine: "No routine periods for this subject",

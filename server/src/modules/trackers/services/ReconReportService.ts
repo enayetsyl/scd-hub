@@ -18,12 +18,16 @@
  * report answers "WHO didn't submit", not just "what's missing".
  * Identity/operational plane — no corpus path (ADR-005).
  */
+import { DAYS_OF_WEEK, HW_SUBJECTS } from "@scd/shared";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconciliation";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
+import { RoutineSlot } from "../../routine/models/RoutineSlot";
+import { HolidayException } from "../../routine/models/HolidayException";
+import { dayTypeFor } from "../../routine/calendar";
 import { dateKeyOf, parseDateKey } from "../../attendance/dates";
 
 export interface HwReconMiss {
@@ -49,11 +53,26 @@ export interface AsReconMiss {
   draftMinutes: number;
 }
 
+export interface HwNotDeclared {
+  dateKey: string;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  /** The HW subject code (BAN/ENG/…) whose declaration never happened that day. */
+  subject: string;
+  /** The routine's subject teacher for that (section, subject, weekday) — who owes
+   *  the declaration. Null when the slot names nobody. */
+  teacherName: string | null;
+}
+
 export interface ReconReport {
   fromKey: string;
   toKey: string;
   hwMisses: HwReconMiss[];
   asMisses: AsReconMiss[];
+  /** (class, subject, day) cells where the subject HAS routine periods that day but
+   *  declared NO homework at all — the step before hwMisses' declared-not-confirmed. */
+  hwNotDeclared: HwNotDeclared[];
 }
 
 interface SectionInfo {
@@ -106,8 +125,89 @@ function rangeBounds(fromKey: string, toKey: string): { start: Date; end: Date }
   return { start, end };
 }
 
-export async function reconciliationReport(fromKey: string, toKey: string): Promise<ReconReport> {
+/**
+ * The (class, subject, day) cells where homework was NEVER DECLARED although the
+ * subject had live routine periods in that section that day. Expectation source =
+ * the ROUTINE (a subject with no period that day owes nothing); only FULL school
+ * days count (Fri OFF, Sat QURAN_ONLY, holidays skipped — handoff §6.1), and only
+ * days up to today. The named teacher is the routine's subject teacher — the
+ * declaration is theirs to make (handoff §2.1).
+ */
+async function hwNotDeclaredRows(
+  fromKey: string,
+  toKey: string,
+  now: Date,
+): Promise<Array<Omit<HwNotDeclared, "sectionNameBn" | "classLevel"> & { teacherId: string | null }>> {
   const { start, end } = rangeBounds(fromKey, toKey);
+  const todayKey = dateKeyOf(now);
+
+  const [slots, declared, holidays] = await Promise.all([
+    RoutineSlot.find({
+      groupType: "section",
+      active: true,
+      isBreak: false,
+      subject: { $in: HW_SUBJECTS as readonly string[] },
+    })
+      .select("groupId dayOfWeek periodNumber subject teacherId effectiveFrom effectiveTo")
+      .lean(),
+    HomeworkItem.find({ dateGiven: { $gte: start, $lte: end } })
+      .select("sectionId subject dateGiven")
+      .lean(),
+    HolidayException.find({ active: true, fromDate: { $lte: end }, toDate: { $gte: start } })
+      .select("fromDate toDate")
+      .lean(),
+  ]);
+  if (slots.length === 0) return [];
+
+  const declaredKeys = new Set(
+    declared.map((d) => `${d.sectionId.toString()}|${d.subject}|${dateKeyOf(new Date(d.dateGiven))}`),
+  );
+
+  const out: Array<Omit<HwNotDeclared, "sectionNameBn" | "classLevel"> & { teacherId: string | null }> = [];
+  for (let d = new Date(start); d.getTime() <= end.getTime(); d.setDate(d.getDate() + 1)) {
+    const dateKey = dateKeyOf(d);
+    if (dateKey > todayKey) break; // never report the future
+    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+    const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+    const isHoliday = holidays.some(
+      (h) => new Date(h.fromDate).getTime() <= dayEnd.getTime() && new Date(h.toDate).getTime() >= dayStart.getTime(),
+    );
+    if (dayTypeFor(d, isHoliday) !== "FULL") continue;
+
+    const dayOfWeek = DAYS_OF_WEEK[d.getDay()];
+    // Earliest live slot per (section, subject) that day names the accountable teacher.
+    const bySectionSubject = new Map<string, { teacherId: string | null; periodNumber: number }>();
+    for (const s of slots) {
+      if (s.dayOfWeek !== dayOfWeek) continue;
+      if (new Date(s.effectiveFrom).getTime() > d.getTime()) continue;
+      if (s.effectiveTo && new Date(s.effectiveTo).getTime() < d.getTime()) continue;
+      const key = `${s.groupId.toString()}|${s.subject}`;
+      const prev = bySectionSubject.get(key);
+      if (!prev || s.periodNumber < prev.periodNumber) {
+        bySectionSubject.set(key, {
+          teacherId: s.teacherId ? s.teacherId.toString() : null,
+          periodNumber: s.periodNumber,
+        });
+      }
+    }
+    for (const [key, cell] of bySectionSubject) {
+      const [sectionId, subject] = key.split("|");
+      if (declaredKeys.has(`${sectionId}|${subject}|${dateKey}`)) continue;
+      out.push({ dateKey, sectionId, subject, teacherId: cell.teacherId, teacherName: null });
+    }
+  }
+  return out;
+}
+
+export async function reconciliationReport(
+  fromKey: string,
+  toKey: string,
+  now: Date = new Date(),
+): Promise<ReconReport> {
+  const { start, end } = rangeBounds(fromKey, toKey);
+
+  // --- Homework never declared at all (routine-expected, per class × subject × day) --
+  const notDeclRaw = await hwNotDeclaredRows(fromKey, toKey, now);
 
   // --- Homework: (class, day) buckets of still-declared items in the range ------
   const hwItems = await HomeworkItem.find({
@@ -187,8 +287,38 @@ export async function reconciliationReport(fromKey: string, toKey: string): Prom
 
   // --- Enrich with section/class/confirmer names (one batched pass) -------------
   const info = await sectionInfoMap([
-    ...new Set([...hwPending.map((b) => b.sectionId), ...asPending.map((b) => b.sectionId)]),
+    ...new Set([
+      ...hwPending.map((b) => b.sectionId),
+      ...asPending.map((b) => b.sectionId),
+      ...notDeclRaw.map((r) => r.sectionId),
+    ]),
   ]);
+
+  const notDeclTeacherIds = [...new Set(notDeclRaw.map((r) => r.teacherId).filter(Boolean))] as string[];
+  const notDeclTeachers = notDeclTeacherIds.length
+    ? await User.find({ _id: { $in: notDeclTeacherIds } }).select("name").lean()
+    : [];
+  const teacherNameOf = new Map(notDeclTeachers.map((u) => [u._id.toString(), u.name]));
+
+  const hwNotDeclared: HwNotDeclared[] = notDeclRaw
+    .map((r) => {
+      const s = info.get(r.sectionId);
+      return {
+        dateKey: r.dateKey,
+        sectionId: r.sectionId,
+        sectionNameBn: s?.nameBn ?? r.sectionId,
+        classLevel: s?.classLevel ?? 0,
+        subject: r.subject,
+        teacherName: r.teacherId ? (teacherNameOf.get(r.teacherId) ?? null) : null,
+      };
+    })
+    .sort((a, b) =>
+      a.dateKey === b.dateKey
+        ? a.classLevel - b.classLevel || a.subject.localeCompare(b.subject)
+        : a.dateKey < b.dateKey
+          ? 1
+          : -1,
+    );
 
   const hwMisses: HwReconMiss[] = hwPending
     .map((b) => {
@@ -223,5 +353,5 @@ export async function reconciliationReport(fromKey: string, toKey: string): Prom
       a.deliveryDateKey === b.deliveryDateKey ? a.classLevel - b.classLevel : a.deliveryDateKey < b.deliveryDateKey ? 1 : -1,
     );
 
-  return { fromKey, toKey, hwMisses, asMisses };
+  return { fromKey, toKey, hwMisses, asMisses, hwNotDeclared };
 }

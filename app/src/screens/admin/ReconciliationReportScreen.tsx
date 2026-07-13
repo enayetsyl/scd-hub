@@ -8,9 +8,9 @@
 import React, { useMemo, useState } from "react";
 import { View } from "react-native";
 import { useQuery } from "urql";
-import { RECON_REPORT_QUERY, type HwReconMissT } from "../../graphql/operations";
+import { RECON_REPORT_QUERY, type HwReconMissT, type HwNotDeclaredT } from "../../graphql/operations";
 import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Badge, Loader, ErrorBanner } from "../../components/ui";
-import { STR, bnNum, classLevelLabel } from "../../lib/labels";
+import { STR, bnNum, classLevelLabel, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
@@ -53,6 +53,16 @@ export default function ReconciliationReportScreen(): React.ReactElement {
     }
     return [...map.entries()];
   }, [report]);
+  // D-#293: homework never declared at all, grouped per day.
+  const hwNdByDay = useMemo(() => {
+    const map = new Map<string, HwNotDeclaredT[]>();
+    for (const m of report?.hwNotDeclared ?? []) {
+      const list = map.get(m.dateKey);
+      if (list) list.push(m);
+      else map.set(m.dateKey, [m]);
+    }
+    return [...map.entries()];
+  }, [report]);
 
   return (
     <Screen scroll>
@@ -70,7 +80,10 @@ export default function ReconciliationReportScreen(): React.ReactElement {
       ) : null}
       {q.fetching && !report ? <Loader label={STR.loading} /> : null}
 
-      {report && report.hwMisses.length === 0 && report.asMisses.length === 0 ? (
+      {report &&
+      report.hwMisses.length === 0 &&
+      report.asMisses.length === 0 &&
+      report.hwNotDeclared.length === 0 ? (
         <Card>
           <Body style={{ fontWeight: "600" }}>{STR.rrNoMisses}</Body>
         </Card>
@@ -132,6 +145,40 @@ export default function ReconciliationReportScreen(): React.ReactElement {
                 </Muted>
               </View>
               <Badge text={bnNum(m.draftItems)} tone="danger" />
+            </View>
+          ))}
+        </Card>
+      ) : null}
+
+      {/* D-#293: homework never DECLARED — per class × subject, grouped by day.
+          The routine defines what was expected; the named teacher owes the declaration. */}
+      {hwNdByDay.length > 0 ? (
+        <Card>
+          <Body style={{ fontWeight: "700", marginBottom: space(1) }}>📕 {STR.rrHwNdTitle}</Body>
+          <Muted style={{ marginBottom: space(1) }}>{STR.rrHwNdSub}</Muted>
+          {hwNdByDay.map(([dateKey, rows]) => (
+            <View key={dateKey} style={{ marginBottom: space(2) }}>
+              <Muted style={{ fontWeight: "700" }}>{bnNum(dateKey)}</Muted>
+              {rows.map((m) => (
+                <View
+                  key={`${m.sectionId}-${m.subject}-${m.dateKey}`}
+                  style={{ flexDirection: "row", alignItems: "center", paddingVertical: space(1), gap: space(2) }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Body style={{ fontWeight: "600" }}>
+                      {classLevelLabel(m.classLevel)}
+                      {m.sectionNameBn ? ` — ${m.sectionNameBn}` : ""} · {hwSubjectLabel(m.subject)}
+                    </Body>
+                    <Muted>
+                      {STR.rrConfirmer}:{" "}
+                      <Muted style={{ color: m.teacherName ? undefined : colors.error }}>
+                        {m.teacherName ?? STR.rrNoConfirmer}
+                      </Muted>
+                    </Muted>
+                  </View>
+                  <Badge text={STR.rrNotDeclared} tone="danger" />
+                </View>
+              ))}
             </View>
           ))}
         </Card>
