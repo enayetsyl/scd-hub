@@ -25,6 +25,7 @@ const mockDayFind = jest.fn();
 const mockClassFind = jest.fn();
 const mockStudentFind = jest.fn();
 const mockResolveUnits = jest.fn();
+const mockHrCoverFind = jest.fn();
 
 /** These collections are queried BOTH as `.lean()` and `.select().lean()` — support both. */
 const chain = (fn: jest.Mock) => (f: unknown) => ({
@@ -52,6 +53,9 @@ jest.mock("../modules/attendance/models/SectionAttendanceAssignment", () => ({
 }));
 jest.mock("../modules/attendance/models/StudentAttendanceDay", () => ({
   StudentAttendanceDay: { find: (f: unknown) => chain(mockDayFind)(f) },
+}));
+jest.mock("../modules/hr/models/StaffCoverSlot", () => ({
+  StaffCoverSlot: { find: (f: unknown) => chain(mockHrCoverFind)(f) },
 }));
 jest.mock("../modules/attendance/attendanceUnit", () => {
   const actual = jest.requireActual("../modules/attendance/attendanceUnit");
@@ -101,6 +105,7 @@ beforeEach(() => {
   mockAssignFind.mockResolvedValue([]);
   mockDayFind.mockResolvedValue([]);
   mockClassFind.mockResolvedValue([]);
+  mockHrCoverFind.mockResolvedValue([]);
   populate({ unitType: "subjectgroup", unitId: QURAN });
 });
 
@@ -131,6 +136,17 @@ describe("marker rule parity", () => {
       ),
     );
     mockSlotFind.mockResolvedValue([slot({ teacherId: OTHER })]);
+    expect(await unmarkedMarkingDays(ME, [THU])).toEqual([THU]);
+  });
+
+  test("an approved HR leave-cover moves the duty to the covering teacher (PXG-1)", async () => {
+    // Prod finding 2026-07-13: the HR leave flow writes a StaffCoverSlot, not a
+    // RoutineSubstitution — the backlog (and marker) must honour it too. The
+    // substantive teacher is OTHER; I hold the approved cover for THU.
+    mockSlotFind.mockResolvedValue([slot({ teacherId: OTHER })]);
+    mockHrCoverFind.mockResolvedValue([
+      { routineSlotId: "slot-1", dateKey: THU, finalCoverTeacherUserId: ME },
+    ]);
     expect(await unmarkedMarkingDays(ME, [THU])).toEqual([THU]);
   });
 
@@ -192,6 +208,7 @@ describe("determinism — the 'sometimes shows, sometimes not' bug", () => {
     mockAssignFind.mockResolvedValue([]);
     mockDayFind.mockResolvedValue([]);
     mockClassFind.mockResolvedValue([]);
+    mockHrCoverFind.mockResolvedValue([]);
     populate({ unitType: "subjectgroup", unitId: QURAN });
   }
 });

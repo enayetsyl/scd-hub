@@ -16,6 +16,7 @@ import type { Types } from "mongoose";
 import { DAYS_OF_WEEK } from "@scd/shared";
 import { RoutineSlot } from "../routine/models/RoutineSlot";
 import { RoutineSubstitution } from "../routine/models/RoutineSubstitution";
+import { StaffCoverSlot } from "../hr/models/StaffCoverSlot";
 import { Section } from "../foundation/models/Section";
 import { Class } from "../foundation/models/Class";
 import { Student } from "../foundation/models/Student";
@@ -87,10 +88,15 @@ export async function unmarkedMarkingDays(userId: string, fullDayKeys: string[])
   windowEnd.setHours(23, 59, 59, 999);
 
   // ---- 1. Candidate units: the four ways a teacher becomes responsible ----------
-  const [ownSlotsRaw, myCovers, ctSections, myAssignments] = await Promise.all([
+  const [ownSlotsRaw, myCovers, myHrCovers, ctSections, myAssignments] = await Promise.all([
     RoutineSlot.find({ teacherId: userId, active: true, isBreak: false }).lean(),
     RoutineSubstitution.find({ coverTeacherId: userId, active: true, date: { $gte: windowStart, $lte: windowEnd } })
       .select("slotId")
+      .lean(),
+    // Approved HR leave-covers in the window (StaffCoverSlot, PXG-1) — the leave
+    // flow writes no RoutineSubstitution, so it is its own candidate source.
+    StaffCoverSlot.find({ finalCoverTeacherUserId: userId, status: "approved", dateKey: { $in: keys } })
+      .select("routineSlotId")
       .lean(),
     Section.find({ classTeacherId: userId, active: true }).select("_id").lean(),
     SectionAttendanceAssignment.find({
@@ -106,8 +112,9 @@ export async function unmarkedMarkingDays(userId: string, fullDayKeys: string[])
   const candidates = new Map<string, AttendanceUnit>();
   const add = (u: AttendanceUnit): void => void candidates.set(unitKey(u), u);
   for (const s of ownSlotsRaw.map(toSlotLite)) add({ unitType: s.groupType, unitId: s.groupId });
-  if (myCovers.length > 0) {
-    const coveredSlots = await RoutineSlot.find({ _id: { $in: myCovers.map((c) => c.slotId) }, active: true })
+  const coveredSlotIds = [...myCovers.map((c) => c.slotId), ...myHrCovers.map((c) => c.routineSlotId)];
+  if (coveredSlotIds.length > 0) {
+    const coveredSlots = await RoutineSlot.find({ _id: { $in: coveredSlotIds }, active: true })
       .select("groupType groupId isBreak")
       .lean();
     for (const s of coveredSlots) {
@@ -169,15 +176,25 @@ export async function unmarkedMarkingDays(userId: string, fullDayKeys: string[])
   ]);
 
   const unitSlots = unitSlotsRaw.map(toSlotLite);
-  const covers = unitSlots.length
-    ? await RoutineSubstitution.find({
-        slotId: { $in: unitSlots.map((s) => s.id) },
-        active: true,
-        date: { $gte: windowStart, $lte: windowEnd },
-      })
-        .select("slotId date coverTeacherId")
-        .lean()
-    : [];
+  const [covers, hrCovers] = unitSlots.length
+    ? await Promise.all([
+        RoutineSubstitution.find({
+          slotId: { $in: unitSlots.map((s) => s.id) },
+          active: true,
+          date: { $gte: windowStart, $lte: windowEnd },
+        })
+          .select("slotId date coverTeacherId")
+          .lean(),
+        StaffCoverSlot.find({
+          routineSlotId: { $in: unitSlots.map((s) => s.id) },
+          dateKey: { $in: keys },
+          status: "approved",
+          finalCoverTeacherUserId: { $ne: null },
+        })
+          .select("routineSlotId dateKey finalCoverTeacherUserId")
+          .lean(),
+      ])
+    : [[], []];
 
   const classes = sections.length
     ? await Class.find({ _id: { $in: sections.map((s) => s.classId) } }).select("_id level").lean()
@@ -185,8 +202,13 @@ export async function unmarkedMarkingDays(userId: string, fullDayKeys: string[])
   const levelByClassId = new Map(classes.map((c) => [c._id.toString(), c.level]));
   const sectionById = new Map(sections.map((s) => [s._id.toString(), s]));
 
-  // slotId|dateKey → cover teacher
+  // slotId|dateKey → cover teacher. HR leave-covers fill first so a
+  // RoutineSubstitution on the same (slot, day) overwrites — same precedence as
+  // `attendanceUnit.effectiveTeacher` (substitution → HR cover → own teacher).
   const coverBySlotDay = new Map<string, string>();
+  for (const c of hrCovers) {
+    coverBySlotDay.set(`${c.routineSlotId.toString()}|${c.dateKey}`, c.finalCoverTeacherUserId!.toString());
+  }
   for (const c of covers) {
     const d = new Date(c.date);
     const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

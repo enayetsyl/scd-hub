@@ -26,6 +26,8 @@ import { Class } from "../foundation/models/Class";
 import { Student } from "../foundation/models/Student";
 import { SubjectGroupMembership } from "../routine/models/SubjectGroupMembership";
 import { routineForDate } from "../routine/services/RoutineSlotService";
+import { StaffCoverSlot } from "../hr/models/StaffCoverSlot";
+import { dateKeyOf } from "./dates";
 
 export type UnitType = "section" | "subjectgroup";
 
@@ -157,11 +159,39 @@ export async function rosterForUnit(unit: AttendanceUnit): Promise<StudentLite[]
 // Routine-derived first-class teacher (cover-aware)
 // ---------------------------------------------------------------------------
 
-/** The covering teacher wins over the substantive one for that date (R4.4). */
-const effectiveTeacher = (s: {
-  coverTeacherId: string | null;
-  teacherId?: { toString(): string } | null;
-}): string | null => s.coverTeacherId ?? (s.teacherId ? s.teacherId.toString() : null);
+/** The covering teacher wins over the substantive one for that date (R4.4).
+ *  Precedence: RoutineSubstitution (routine-module cover, already overlaid by
+ *  routineForDate) → approved HR leave-cover (StaffCoverSlot) → the slot's own
+ *  teacher. */
+const effectiveTeacher = (
+  s: {
+    coverTeacherId: string | null;
+    teacherId?: { toString(): string } | null;
+  },
+  hrCoverTeacherId: string | null,
+): string | null =>
+  s.coverTeacherId ?? hrCoverTeacherId ?? (s.teacherId ? s.teacherId.toString() : null);
+
+/**
+ * slotId → approved HR leave-cover teacher for `date` (StaffCoverSlot, PXG-1).
+ * The HR leave flow records covers per (date, period) meeting WITHOUT writing a
+ * RoutineSubstitution, so the marker must consult it too — otherwise a teacher
+ * covering the first period never inherits the attendance duty and nobody can
+ * mark the unit that day (prod finding, 2026-07-13). A Quran-group cover is
+ * record-only (no proxy grant, D-#268) but still names the covering teacher.
+ */
+async function hrCoverTeacherBySlot(slotIds: string[], date: Date): Promise<Map<string, string>> {
+  if (slotIds.length === 0) return new Map();
+  const rows = await StaffCoverSlot.find({
+    routineSlotId: { $in: slotIds },
+    dateKey: dateKeyOf(date),
+    status: "approved",
+    finalCoverTeacherUserId: { $ne: null },
+  })
+    .select("routineSlotId finalCoverTeacherUserId")
+    .lean();
+  return new Map(rows.map((r) => [r.routineSlotId.toString(), r.finalCoverTeacherUserId!.toString()]));
+}
 
 interface OrderableSlot {
   _id: { toString(): string };
@@ -191,9 +221,10 @@ export function compareSlotOrder(a: OrderableSlot, b: OrderableSlot): number {
  */
 export async function firstQuranSlotTeacher(groupId: string, date: Date): Promise<string | null> {
   const slots = (await routineForDate("subjectgroup", groupId, date)).slice().sort(compareSlotOrder);
+  const hrCovers = await hrCoverTeacherBySlot(slots.map((s) => s._id.toString()), date);
   for (const s of slots) {
     if (s.isBreak || s.track !== "quran") continue;
-    const teacher = effectiveTeacher(s);
+    const teacher = effectiveTeacher(s, hrCovers.get(s._id.toString()) ?? null);
     if (teacher) return teacher;
   }
   return null;
@@ -206,9 +237,10 @@ export async function firstQuranSlotTeacher(groupId: string, date: Date): Promis
  */
 export async function firstPeriodTeacher(sectionId: string, date: Date): Promise<string | null> {
   const slots = (await routineForDate("section", sectionId, date)).slice().sort(compareSlotOrder);
+  const hrCovers = await hrCoverTeacherBySlot(slots.map((s) => s._id.toString()), date);
   for (const s of slots) {
     if (s.isBreak) continue;
-    const teacher = effectiveTeacher(s);
+    const teacher = effectiveTeacher(s, hrCovers.get(s._id.toString()) ?? null);
     if (teacher) return teacher;
   }
   return null;

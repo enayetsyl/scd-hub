@@ -70,6 +70,7 @@ import {
   assertCanWrite,
   assertCanRead,
   assertGuardianOfStudent,
+  allowedSubjectCodesForSection,
   isClassTeacher,
   ForbiddenError,
 } from "../../../middleware/authz";
@@ -128,6 +129,21 @@ async function assertItemInSection(itemId: string, sectionId: string): Promise<v
   if (item.sectionId.toString() !== sectionId) {
     throw new ForbiddenError("Item is not in the given section");
   }
+}
+
+/** Item-level read gate: the item's subject must be within the caller's allowed
+ *  subject codes for the section (null = unrestricted) — a subject teacher may
+ *  not open another subject's per-student records/counts. */
+async function assertItemSubjectReadable(
+  ctx: AppContext,
+  sectionId: string,
+  classId: string,
+  itemId: string,
+): Promise<void> {
+  const allowed = await allowedSubjectCodesForSection(ctx, sectionId, classId);
+  if (!allowed) return;
+  const item = await AssignmentItem.findById(itemId).select("subject").lean();
+  if (!item || !allowed.has(item.subject)) throw new ForbiddenError();
 }
 
 /** AS-T6 weekly reconcile/confirm owner (D-#274): the section's class teacher
@@ -1137,11 +1153,13 @@ builder.queryField("assignmentItems", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
-      const docs = await listAssignmentItems({
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      const all = await listAssignmentItems({
         academicYearId: args.academicYearId ?? undefined,
         sectionId: args.sectionId,
         weekNumber: args.weekNumber ?? undefined,
       });
+      const docs = allowed ? all.filter((d) => allowed.has(d.subject)) : all;
       return docs.map((d) => ({
         id: d._id.toString(),
         asId: d.asId,
@@ -1174,6 +1192,7 @@ builder.queryField("assignmentRecords", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertItemSubjectReadable(ctx, args.sectionId, args.classId, args.itemId);
       const docs = await listAssignmentRecords(args.itemId);
       return docs.map((d) => ({
         id: d._id.toString(),
@@ -1208,6 +1227,7 @@ builder.queryField("assignmentItemCounts", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertItemSubjectReadable(ctx, args.sectionId, args.classId, args.itemId);
       return countsSvc(args.itemId);
     },
   }),

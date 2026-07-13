@@ -222,6 +222,29 @@ describe("canWrite (D-#18 write scope)", () => {
     expect(canWrite(scopes, SECTION_A)).toBe(true);
     expect(canWrite(scopes, SECTION_B)).toBe(true);
   });
+
+  // A teaching grant is per-(section, subject) — a Science teacher must not be
+  // able to check/transition English homework (prod finding, 2026-07-13).
+  test("teaching grant writes only ITS subject when the action names one", () => {
+    const scopes = [teachingScope(SECTION_A, CLASS_1, SUBJ_BAN)];
+    expect(canWrite(scopes, SECTION_A, SUBJ_BAN)).toBe(true);
+    expect(canWrite(scopes, SECTION_A, SUBJ_ENG)).toBe(false);
+  });
+
+  test("teaching grant still writes subject-less actions on its section", () => {
+    const scopes = [teachingScope(SECTION_A, CLASS_1, SUBJ_BAN)];
+    expect(canWrite(scopes, SECTION_A)).toBe(true);
+  });
+
+  test("two teaching grants on one section — each subject writable, others not", () => {
+    const scopes = [
+      teachingScope(SECTION_A, CLASS_1, SUBJ_BAN),
+      teachingScope(SECTION_A, CLASS_1, SUBJ_ENG),
+    ];
+    expect(canWrite(scopes, SECTION_A, SUBJ_BAN)).toBe(true);
+    expect(canWrite(scopes, SECTION_A, SUBJ_ENG)).toBe(true);
+    expect(canWrite(scopes, SECTION_A, "subjMATH")).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

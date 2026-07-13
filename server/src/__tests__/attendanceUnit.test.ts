@@ -16,9 +16,13 @@ const mockRoutineForDate = jest.fn();
 const mockClassFind = jest.fn();
 const mockStudentFind = jest.fn();
 const mockMembershipFind = jest.fn();
+const mockCoverSlotFind = jest.fn();
 
 jest.mock("../modules/routine/services/RoutineSlotService", () => ({
   routineForDate: (...a: unknown[]) => mockRoutineForDate(...a),
+}));
+jest.mock("../modules/hr/models/StaffCoverSlot", () => ({
+  StaffCoverSlot: { find: (f: unknown) => ({ select: () => ({ lean: () => mockCoverSlotFind(f) }) }) },
 }));
 jest.mock("../modules/foundation/models/Class", () => ({
   Class: { find: (f: unknown) => ({ select: () => ({ lean: () => mockClassFind(f) }) }) },
@@ -48,7 +52,15 @@ const slot = (
   teacherId: string | null,
   coverTeacherId: string | null = null,
   isBreak = false,
-) => ({ periodNumber, track, isBreak, teacherId, coverTeacherId });
+) => ({
+  _id: `slot-p${periodNumber}-${track}${isBreak ? "-brk" : ""}`,
+  periodNumber,
+  track,
+  isBreak,
+  teacherId,
+  coverTeacherId,
+  effectiveFrom: DATE,
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -56,6 +68,7 @@ beforeEach(() => {
   mockClassFind.mockResolvedValue([]);
   mockStudentFind.mockResolvedValue([]);
   mockMembershipFind.mockResolvedValue([]);
+  mockCoverSlotFind.mockResolvedValue([]);
 });
 
 describe("isNurseryKg", () => {
@@ -115,6 +128,28 @@ describe("firstQuranSlotTeacher — the Class 1–5 marker", () => {
     expect(await firstQuranSlotTeacher("grp", DATE)).toBe("t-cover");
   });
 
+  test("an APPROVED HR leave-cover hands the marking duty to the covering teacher", async () => {
+    // Prod finding 2026-07-13: Mahfuj covered Mumin's P1 Quran group via the HR
+    // leave flow (StaffCoverSlot, no RoutineSubstitution) but got no attendance
+    // option — the marker never consulted the HR cover.
+    mockRoutineForDate.mockResolvedValue([slot(1, "quran", "t-mumin")]);
+    mockCoverSlotFind.mockResolvedValue([
+      { routineSlotId: "slot-p1-quran", finalCoverTeacherUserId: "t-mahfuj" },
+    ]);
+    expect(await firstQuranSlotTeacher("grp", DATE)).toBe("t-mahfuj");
+    expect(mockCoverSlotFind).toHaveBeenCalledWith(
+      expect.objectContaining({ dateKey: "2026-06-11", status: "approved" }),
+    );
+  });
+
+  test("a RoutineSubstitution beats an HR leave-cover on the same slot", async () => {
+    mockRoutineForDate.mockResolvedValue([slot(1, "quran", "t-mumin", "t-sub")]);
+    mockCoverSlotFind.mockResolvedValue([
+      { routineSlotId: "slot-p1-quran", finalCoverTeacherUserId: "t-mahfuj" },
+    ]);
+    expect(await firstQuranSlotTeacher("grp", DATE)).toBe("t-sub");
+  });
+
   test("skips breaks, non-quran tracks, and teacherless slots", async () => {
     mockRoutineForDate.mockResolvedValue([
       slot(1, "quran", null, null, true), // break
@@ -145,6 +180,14 @@ describe("firstPeriodTeacher — the Nursery/KG marker", () => {
   test("a cover on the first period wins", async () => {
     mockRoutineForDate.mockResolvedValue([slot(1, "general", "t-absent", "t-cover")]);
     expect(await firstPeriodTeacher("sec", DATE)).toBe("t-cover");
+  });
+
+  test("an APPROVED HR leave-cover on the first period wins too", async () => {
+    mockRoutineForDate.mockResolvedValue([slot(1, "general", "t-absent")]);
+    mockCoverSlotFind.mockResolvedValue([
+      { routineSlotId: "slot-p1-general", finalCoverTeacherUserId: "t-hr-cover" },
+    ]);
+    expect(await firstPeriodTeacher("sec", DATE)).toBe("t-hr-cover");
   });
 
   test("null on an empty routine", async () => {

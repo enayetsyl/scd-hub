@@ -12,7 +12,8 @@
  * this order:
  *   1. a covering `SectionAttendanceAssignment` override (admin escape hatch);
  *   2. ROUTINE — the unit's first-class teacher for that date, cover-aware
- *      (a `RoutineSubstitution` on that slot hands marking to the cover teacher):
+ *      (a `RoutineSubstitution` on that slot OR an approved HR leave-cover
+ *      `StaffCoverSlot` for that meeting hands marking to the cover teacher):
  *        • Quran group  → teacher of its earliest `track:"quran"` slot
  *        • Nursery/KG section → teacher of its earliest period
  *   3. FALLBACK — the section's `classTeacherId` (also the standing marker for a
@@ -41,6 +42,7 @@ import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { RoutineSubstitution } from "../../routine/models/RoutineSubstitution";
+import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
 import { slotsForTeacherOnDate } from "../../routine/services/RoutineSlotService";
 import { writeAudit } from "../../platform/services/AuditService";
 import {
@@ -422,10 +424,15 @@ export async function myMarkingUnits(userId: string, dateKey: string): Promise<M
   if ((await resolveDayType(date)) !== "FULL") return [];
   const { start, end } = dayBounds(date);
 
-  const [ownSlots, subs, ctSections, assignments] = await Promise.all([
+  const [ownSlots, subs, hrCovers, ctSections, assignments] = await Promise.all([
     slotsForTeacherOnDate(userId, date),
     RoutineSubstitution.find({ coverTeacherId: userId, active: true, date: { $gte: start, $lte: end } })
       .select("slotId")
+      .lean(),
+    // Approved HR leave-covers held today (StaffCoverSlot, PXG-1) — the leave flow
+    // writes no RoutineSubstitution, so it must be its own candidate source.
+    StaffCoverSlot.find({ finalCoverTeacherUserId: userId, dateKey, status: "approved" })
+      .select("routineSlotId")
       .lean(),
     Section.find({ classTeacherId: userId, active: true }).select("_id").lean(),
     SectionAttendanceAssignment.find({
@@ -448,8 +455,11 @@ export async function myMarkingUnits(userId: string, dateKey: string): Promise<M
     add({ unitType: s.groupType, unitId: s.groupId.toString() });
   }
   // Periods the caller COVERS today — the cover teacher inherits the marking duty.
-  if (subs.length > 0) {
-    const coveredSlots = await RoutineSlot.find({ _id: { $in: subs.map((s) => s.slotId) }, active: true })
+  // Both cover mechanisms count: RoutineSubstitution (routine module) AND an
+  // approved HR leave-cover slot (StaffCoverSlot).
+  const coveredSlotIds = [...subs.map((s) => s.slotId), ...hrCovers.map((c) => c.routineSlotId)];
+  if (coveredSlotIds.length > 0) {
+    const coveredSlots = await RoutineSlot.find({ _id: { $in: coveredSlotIds }, active: true })
       .select("groupType groupId isBreak")
       .lean();
     for (const s of coveredSlots) {
