@@ -8,12 +8,12 @@
 import React, { useState } from "react";
 import { ScrollView, View, RefreshControl } from "react-native";
 import { useQuery } from "urql";
-import { CHILD_HOMEWORK_QUERY, type GuardianHwRecordT } from "../../graphql/operations";
+import { CHILD_HOMEWORK_QUERY, CHILD_HW_NIL_DAYS, type GuardianHwRecordT } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
-import { STR, bnNum, lifecycleStateLabel, subjectLabel, hwResultLabel } from "../../lib/labels";
+import { STR, bnNum, lifecycleStateLabel, subjectLabel, hwResultLabel, hwNilReasonLabel } from "../../lib/labels";
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -133,6 +133,13 @@ export default function ChildHomeworkScreen(): React.ReactElement {
     variables: { studentId: selected?.studentId ?? "", from, to },
     pause: !selected,
   });
+  // D-#299: the class's explicit "no homework" days in the same range.
+  const [nilQ] = useQuery({
+    query: CHILD_HW_NIL_DAYS,
+    variables: { studentId: selected?.studentId ?? "", from, to },
+    pause: !selected,
+  });
+  const nilDays = nilQ.data?.childHomeworkNilDays ?? [];
 
   // UX-7: pull-to-refresh.
   const { refreshing, onRefresh } = usePullRefresh(hwQ.fetching, () =>
@@ -189,6 +196,15 @@ export default function ChildHomeworkScreen(): React.ReactElement {
           </View>
         </View>
         {fileError ? <Notice message={fileError} tone="danger" /> : null}
+        {nilDays.length > 0 ? (
+          <Card>
+            {nilDays.map((n) => (
+              <Muted key={`${n.dateKey}|${n.subject}`}>
+                {bnNum(n.dateKey)} · {n.subjectLabelBn} — {STR.hwNilGuardian} ({hwNilReasonLabel(n.reason)})
+              </Muted>
+            ))}
+          </Card>
+        ) : null}
         {hwQ.fetching && records.length === 0 ? (
           <Loader label={STR.loading} />
         ) : byDay.length === 0 ? (

@@ -209,6 +209,7 @@ import MessageTemplateEditScreen from "../screens/admin/MessageTemplateEditScree
 import AccessControlUsersScreen from "../screens/admin/AccessControlUsersScreen";
 import AccessControlEditScreen from "../screens/admin/AccessControlEditScreen";
 import ReconciliationReportScreen from "../screens/admin/ReconciliationReportScreen";
+import HwLifecycleReportScreen from "../screens/admin/HwLifecycleReportScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
@@ -897,6 +898,7 @@ function AdminNavigator(): React.ReactElement {
         options={({ route }) => ({ title: route.params.name || STR.acTitle })}
       />
       <AdminStack.Screen name="ReconciliationReport" component={ReconciliationReportScreen} options={{ title: STR.rrTitle }} />
+      <AdminStack.Screen name="HwLifecycleReport" component={HwLifecycleReportScreen} options={{ title: STR.hlrTitle }} />
       <AdminStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </AdminStack.Navigator>
   );

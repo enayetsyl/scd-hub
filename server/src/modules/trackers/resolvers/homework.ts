@@ -24,7 +24,11 @@ import {
   listStudentRecords,
   listOpenRecords,
   listHomeworkTopics,
+  declareNoHomework as declareNilSvc,
+  removeNoHomework as removeNilSvc,
+  listNilDeclarations,
   type OpenRecordDTO,
+  type NilDeclarationDTO,
 } from "../services/HomeworkService";
 import {
   tallyDay as tallyDaySvc,
@@ -273,6 +277,93 @@ builder.mutationField("declareHomeworkItem", (t) =>
         actorId: ctx.auth.userId as string,
       });
       return { ...res, id: res.itemId };
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// "No homework today" nil declarations (D-#299)
+// ---------------------------------------------------------------------------
+
+const NilDeclarationRef = builder.objectRef<NilDeclarationDTO>("HomeworkNilDeclaration");
+NilDeclarationRef.implement({
+  description:
+    "An explicit 'no homework today' marker for one (class, subject, day) with a reason — " +
+    "moves the cell out of the not-declared red list (D-#299).",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    classId: t.exposeString("classId"),
+    sectionId: t.exposeString("sectionId"),
+    subject: t.exposeString("subject"),
+    dateKey: t.exposeString("dateKey"),
+    reason: t.exposeString("reason"),
+  }),
+});
+
+builder.mutationField("declareNoHomework", (t) =>
+  t.field({
+    type: NilDeclarationRef,
+    description:
+      "Declare 'no homework today' for a class+subject+day with a reason chip. Upsert (re-tap " +
+      "updates the reason); rejected while a real item exists. Write-scope enforced.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      classId: t.arg.string({ required: true }),
+      sectionId: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: true }),
+      date: t.arg.string({ required: true }),
+      reason: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
+      return declareNilSvc({
+        classId: args.classId,
+        sectionId: args.sectionId,
+        subject: args.subject,
+        date: args.date,
+        reason: args.reason,
+        actorId: ctx.auth.userId as string,
+      });
+    },
+  }),
+);
+
+builder.mutationField("removeNoHomework", (t) =>
+  t.field({
+    type: "Boolean",
+    description: "Remove a mistaken 'no homework today' marker. Write-scope enforced.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      classId: t.arg.string({ required: true }),
+      sectionId: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: true }),
+      date: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
+      return removeNilSvc({ classId: args.classId, subject: args.subject, date: args.date });
+    },
+  }),
+);
+
+builder.queryField("homeworkNilDeclarations", (t) =>
+  t.field({
+    type: [NilDeclarationRef],
+    description: "The day's 'no homework' markers for a class. Read-scope enforced.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+      date: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      const rows = await listNilDeclarations(args.classId, args.date);
+      return allowed ? rows.filter((r) => allowed.has(r.subject)) : rows;
     },
   }),
 );
