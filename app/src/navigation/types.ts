@@ -291,6 +291,8 @@ export type AdminStackParamList = {
   AccessControlEdit: { userId: string; name: string; role: string };
   // D-#290: who didn't submit reconciliation (Principal/Office).
   ReconciliationReport: undefined;
+  // D-#300: per subject × class homework lifecycle report (Principal/Office).
+  HwLifecycleReport: undefined;
   SectionPicker: undefined;
 };
 
