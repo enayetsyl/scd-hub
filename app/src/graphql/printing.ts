@@ -24,6 +24,13 @@ export interface PrintRequestT {
   colour: string;
   sides: string;
   copies: number;
+  /** D-#294: FIXED (typed number) | CLASS_PRESENT (per student present on the use day). */
+  copiesMode: string;
+  copiesClassId: string | null;
+  copiesClassLevel: number | null;
+  /** Resolved count for CLASS_PRESENT jobs; null while the use day's attendance is pending. */
+  effectiveCopies: number | null;
+  copiesPending: boolean;
   neededByKey: string | null;
   subject: string | null;
   notes: string | null;
@@ -39,7 +46,8 @@ export interface PrintRequestT {
 const PRINT_REQUEST_FIELDS = `
   id title purpose sourceType setId contentArtifactId fileIds linkUrl
   files { id name mime }
-  colour sides copies neededByKey subject notes status
+  colour sides copies copiesMode copiesClassId copiesClassLevel effectiveCopies copiesPending
+  neededByKey subject notes status
   requestedBy requesterName requestedAt printedAt deliveredAt cancelReason
 `;
 
@@ -72,6 +80,9 @@ export interface CreatePrintRequestVars {
   colour: string;
   sides: string;
   copies: number;
+  /** D-#294: FIXED (default) | CLASS_PRESENT (+ copiesClassId). */
+  copiesMode?: string | null;
+  copiesClassId?: string | null;
   neededByKey: string;
   classId?: string | null;
   sectionId?: string | null;
@@ -83,21 +94,33 @@ export const CREATE_PRINT_REQUEST = gql<{ createPrintRequest: PrintRequestT }, C
   mutation CreatePrintRequest(
     $title: String!, $purpose: String!, $sourceType: String!,
     $setId: String, $contentArtifactId: String, $fileIds: [String!], $linkUrl: String,
-    $colour: String!, $sides: String!, $copies: Int!, $neededByKey: String!,
+    $colour: String!, $sides: String!, $copies: Int!, $copiesMode: String, $copiesClassId: String,
+    $neededByKey: String!,
     $classId: String, $sectionId: String, $subject: String, $notes: String
   ) {
     createPrintRequest(
       title: $title, purpose: $purpose, sourceType: $sourceType,
       setId: $setId, contentArtifactId: $contentArtifactId, fileIds: $fileIds, linkUrl: $linkUrl,
-      colour: $colour, sides: $sides, copies: $copies, neededByKey: $neededByKey,
+      colour: $colour, sides: $sides, copies: $copies, copiesMode: $copiesMode, copiesClassId: $copiesClassId,
+      neededByKey: $neededByKey,
       classId: $classId, sectionId: $sectionId, subject: $subject, notes: $notes
     ) { ${PRINT_REQUEST_FIELDS} }
   }
 `;
 
-export const MARK_PRINT_REQUEST_PRINTED = gql<{ markPrintRequestPrinted: PrintRequestT }, { id: string }>`
-  mutation MarkPrintRequestPrinted($id: String!) {
-    markPrintRequestPrinted(id: $id) { ${PRINT_REQUEST_FIELDS} }
+export const MARK_PRINT_REQUEST_PRINTED = gql<
+  { markPrintRequestPrinted: PrintRequestT },
+  { id: string; copies?: number | null }
+>`
+  mutation MarkPrintRequestPrinted($id: String!, $copies: Int) {
+    markPrintRequestPrinted(id: $id, copies: $copies) { ${PRINT_REQUEST_FIELDS} }
+  }
+`;
+
+/** D-#294: the sidebar badge counts — pending printing / pending delivery. */
+export const PRINT_QUEUE_COUNTS = gql<{ printQueueCounts: { requested: number; printed: number } }, Record<string, never>>`
+  query PrintQueueCounts {
+    printQueueCounts { requested printed }
   }
 `;
 

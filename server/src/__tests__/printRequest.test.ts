@@ -22,12 +22,19 @@ const mockArtifactFindById = jest.fn();
 const mockStoredFileFind = jest.fn();
 const mockEmitDelivered = jest.fn().mockResolvedValue(undefined);
 const mockClassTestUpdateOne = jest.fn().mockResolvedValue({});
+const mockClassPresence = jest.fn();
+const mockCountDocuments = jest.fn();
 
 jest.mock("../modules/printing/models/PrintRequest", () => ({
   PrintRequest: {
     create: (d: unknown) => mockCreate(d),
     findById: (id: unknown) => mockFindById(id),
+    countDocuments: (f: unknown) => Promise.resolve(mockCountDocuments(f)),
   },
+}));
+// D-#294: CLASS_PRESENT copies resolve from the use day's attendance roll-up.
+jest.mock("../modules/attendance/services/AttendanceReportService", () => ({
+  classPresenceForDate: (k: unknown) => mockClassPresence(k),
 }));
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
@@ -58,6 +65,8 @@ import {
   cancelPrintRequest,
   validateSource,
   isPrintableUrl,
+  effectiveCopiesFor,
+  printQueueCounts,
   PrintRequestError,
 } from "../modules/printing/services/PrintRequestService";
 
@@ -365,5 +374,115 @@ describe("cancel", () => {
   test("a PRINTED job cannot be cancelled — the paper already exists", async () => {
     mockFindById.mockResolvedValue(docStub({ status: "PRINTED" }));
     await expect(cancelPrintRequest("id", OFFICE, { isOffice: true })).rejects.toThrow(/Only a REQUESTED job/);
+  });
+});
+// ---------------------------------------------------------------------------
+// D-#294 — copies from the USE day's present students
+// ---------------------------------------------------------------------------
+
+describe("CLASS_PRESENT copies (D-#294)", () => {
+  const CLS = oid();
+  const cpInput = {
+    ...baseInput,
+    copiesMode: "CLASS_PRESENT",
+    copiesClassId: CLS.toString(),
+    neededByKey: "2026-07-13",
+  };
+  const cpDoc = (over: Record<string, unknown> = {}) =>
+    docStub({
+      copiesMode: "CLASS_PRESENT",
+      copiesClassId: CLS,
+      neededByKey: "2026-07-13",
+      copies: 1,
+      ...over,
+    } as Partial<DocStub>);
+
+  test("create requires the class AND the use date", async () => {
+    await expect(
+      createPrintRequest({ ...cpInput, copiesClassId: null }),
+    ).rejects.toThrow(/needs the class/);
+    await expect(
+      createPrintRequest({ ...cpInput, neededByKey: null }),
+    ).rejects.toThrow(/date the print will be used/);
+    await createPrintRequest(cpInput);
+    const created = mockCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(created.copiesMode).toBe("CLASS_PRESENT");
+    expect(created.copiesClassId).toBeDefined();
+  });
+
+  test("effectiveCopiesFor: complete attendance on the use day → the present count", async () => {
+    mockClassPresence.mockResolvedValue([
+      { classId: CLS.toString(), presentCount: 32, complete: true },
+    ]);
+    const r = await effectiveCopiesFor(cpDoc() as never, new Date(2026, 6, 13));
+    expect(r).toEqual({ copies: 32, pending: false });
+    expect(mockClassPresence).toHaveBeenCalledWith("2026-07-13");
+  });
+
+  test("effectiveCopiesFor: incomplete attendance → pending", async () => {
+    mockClassPresence.mockResolvedValue([
+      { classId: CLS.toString(), presentCount: 10, complete: false },
+    ]);
+    const r = await effectiveCopiesFor(cpDoc() as never, new Date(2026, 6, 13));
+    expect(r).toEqual({ copies: null, pending: true });
+  });
+
+  test("effectiveCopiesFor: a FUTURE use day is always pending (attendance can't exist)", async () => {
+    const r = await effectiveCopiesFor(cpDoc() as never, new Date(2026, 6, 12));
+    expect(r).toEqual({ copies: null, pending: true });
+    expect(mockClassPresence).not.toHaveBeenCalled();
+  });
+
+  test("effectiveCopiesFor: FIXED jobs just echo their copies", async () => {
+    const r = await effectiveCopiesFor(docStub({ copiesMode: "FIXED", copies: 7 } as Partial<DocStub>) as never);
+    expect(r).toEqual({ copies: 7, pending: false });
+    expect(mockClassPresence).not.toHaveBeenCalled();
+  });
+
+  test("markPrinted finalizes the LIVE count onto copies", async () => {
+    const doc = cpDoc();
+    mockFindById.mockResolvedValue(doc);
+    mockClassPresence.mockResolvedValue([
+      { classId: CLS.toString(), presentCount: 28, complete: true },
+    ]);
+    await markPrinted(doc._id.toString(), OFFICE);
+    expect((doc as unknown as { copies: number }).copies).toBe(28);
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ meta: expect.objectContaining({ copies: 28, copiesSource: "attendance" }) }),
+    );
+  });
+
+  test("markPrinted with attendance pending and NO manual count → rejects with guidance", async () => {
+    const doc = cpDoc();
+    mockFindById.mockResolvedValue(doc);
+    mockClassPresence.mockResolvedValue([]);
+    await expect(markPrinted(doc._id.toString(), OFFICE)).rejects.toThrow(/attendance for the use day is pending/);
+    expect(doc.save).not.toHaveBeenCalled();
+  });
+
+  test("markPrinted with a MANUAL count uses it (attendance pending path)", async () => {
+    const doc = cpDoc();
+    mockFindById.mockResolvedValue(doc);
+    await markPrinted(doc._id.toString(), OFFICE, 30);
+    expect((doc as unknown as { copies: number }).copies).toBe(30);
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ meta: expect.objectContaining({ copies: 30, copiesSource: "manual" }) }),
+    );
+    expect(mockClassPresence).not.toHaveBeenCalled();
+  });
+
+  test("a non-positive manual count rejects", async () => {
+    const doc = cpDoc();
+    mockFindById.mockResolvedValue(doc);
+    await expect(markPrinted(doc._id.toString(), OFFICE, 0)).rejects.toThrow(/positive integer/);
+  });
+});
+
+describe("printQueueCounts (D-#294 badges)", () => {
+  test("returns the REQUESTED and PRINTED counts", async () => {
+    mockCountDocuments.mockImplementation((f: { status: string }) =>
+      f.status === "REQUESTED" ? 3 : 2,
+    );
+    expect(await printQueueCounts()).toEqual({ requested: 3, printed: 2 });
   });
 });

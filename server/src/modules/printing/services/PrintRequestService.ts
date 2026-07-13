@@ -22,6 +22,8 @@ import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
 import { emitPrintDelivered } from "../../notifications/services/emitters";
 import { ClassTest } from "../../trackers/models/ClassTest";
+import { classPresenceForDate } from "../../attendance/services/AttendanceReportService";
+import { dateKeyOf } from "../../attendance/dates";
 
 export class PrintRequestError extends Error {
   constructor(msg: string) {
@@ -42,6 +44,9 @@ export interface CreatePrintRequestInput {
   colour?: string | null;
   sides?: string | null;
   copies?: number | null;
+  /** D-#294: FIXED (typed number, default) | CLASS_PRESENT (per student present on the use day). */
+  copiesMode?: string | null;
+  copiesClassId?: string | null;
   neededByKey?: string | null;
   classId?: string | null;
   sectionId?: string | null;
@@ -157,6 +162,19 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
     throw new PrintRequestError("neededByKey must be YYYY-MM-DD");
   }
 
+  // D-#294: a per-class-present job needs the CLASS and the USE DATE — the count
+  // resolves from that day's attendance when the Office prints.
+  const copiesMode = (input.copiesMode ?? "FIXED") as "FIXED" | "CLASS_PRESENT";
+  if (copiesMode !== "FIXED" && copiesMode !== "CLASS_PRESENT") {
+    throw new PrintRequestError("Invalid copiesMode");
+  }
+  if (copiesMode === "CLASS_PRESENT") {
+    if (!input.copiesClassId) throw new PrintRequestError("A per-class-present job needs the class");
+    if (!input.neededByKey) {
+      throw new PrintRequestError("A per-class-present job needs the date the print will be used");
+    }
+  }
+
   // Colour + sides are MANDATORY on a teacher's request — enforced at the RESOLVER, the
   // teacher-facing seam (live-testing requirement: the Office cannot start a job without
   // them). Here we only validate the VALUE, so internal callers and migration-backfilled
@@ -180,6 +198,8 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
     colour,
     sides,
     copies,
+    copiesMode,
+    ...(copiesMode === "CLASS_PRESENT" ? { copiesClassId: new Types.ObjectId(input.copiesClassId!) } : {}),
     ...(input.neededByKey ? { neededByKey: input.neededByKey } : {}),
     ...(input.classId ? { classId: new Types.ObjectId(input.classId) } : {}),
     ...(input.sectionId ? { sectionId: new Types.ObjectId(input.sectionId) } : {}),
@@ -233,12 +253,72 @@ async function mirrorToClassTest(
   });
 }
 
-/** REQUESTED → PRINTED (Office/Principal). */
-export async function markPrinted(id: string, actorId: string): Promise<IPrintRequest> {
+// ---------------------------------------------------------------------------
+// D-#294 — per-class-present copies, resolved from the USE day's attendance
+// ---------------------------------------------------------------------------
+
+export interface EffectiveCopies {
+  /** The resolved count, or null while attendance for the use day is pending. */
+  copies: number | null;
+  /** True when the use day's attendance is not (yet) complete for the class. */
+  pending: boolean;
+}
+
+/**
+ * Resolve a CLASS_PRESENT job's copy count from the USE day's attendance
+ * (`neededByKey`): the class's PRESENT students once every attendance unit
+ * holding them is marked. A future use day, an incomplete day, or a class with
+ * no marked units → pending (the Office may print with a manual count instead).
+ */
+export async function effectiveCopiesFor(
+  doc: Pick<IPrintRequest, "copiesMode" | "copiesClassId" | "neededByKey" | "copies" | "status">,
+  now: Date = new Date(),
+): Promise<EffectiveCopies> {
+  if (doc.copiesMode !== "CLASS_PRESENT") return { copies: doc.copies, pending: false };
+  // Once printed, the finalized number on the row IS the answer.
+  if (doc.status !== "REQUESTED") return { copies: doc.copies, pending: false };
+  const useKey = doc.neededByKey;
+  if (!useKey || !doc.copiesClassId) return { copies: null, pending: true };
+  if (useKey > dateKeyOf(now)) return { copies: null, pending: true }; // attendance can't exist yet
+  const presence = await classPresenceForDate(useKey);
+  const row = presence.find((p) => p.classId === doc.copiesClassId!.toString());
+  if (!row || !row.complete) return { copies: null, pending: true };
+  return { copies: row.presentCount, pending: false };
+}
+
+/** REQUESTED → PRINTED (Office/Principal). For a CLASS_PRESENT job the count is
+ *  FINALIZED onto `copies` here — the live attendance count of the use day, or
+ *  `manualCopies` while that attendance is pending (D-#294). */
+export async function markPrinted(
+  id: string,
+  actorId: string,
+  manualCopies?: number | null,
+): Promise<IPrintRequest> {
   const doc = await require_(id);
   if (doc.status !== "REQUESTED") {
     throw new PrintRequestError(`Only a REQUESTED job can be marked printed (it is ${doc.status})`);
   }
+
+  let copiesSource: "fixed" | "attendance" | "manual" = "fixed";
+  if (doc.copiesMode === "CLASS_PRESENT") {
+    if (manualCopies != null) {
+      if (!Number.isInteger(manualCopies) || manualCopies < 1) {
+        throw new PrintRequestError("Manual copy count must be a positive integer");
+      }
+      doc.copies = manualCopies;
+      copiesSource = "manual";
+    } else {
+      const resolved = await effectiveCopiesFor(doc);
+      if (resolved.pending || resolved.copies === null) {
+        throw new PrintRequestError(
+          "Copy count not available — attendance for the use day is pending. Enter a manual count to print now.",
+        );
+      }
+      doc.copies = resolved.copies;
+      copiesSource = "attendance";
+    }
+  }
+
   doc.status = "PRINTED";
   doc.printedBy = new Types.ObjectId(actorId);
   doc.printedAt = new Date();
@@ -248,7 +328,7 @@ export async function markPrinted(id: string, actorId: string): Promise<IPrintRe
     actorId,
     targetId: doc._id,
     targetKind: "PrintRequest",
-    meta: { requestedBy: doc.requestedBy.toString() },
+    meta: { requestedBy: doc.requestedBy.toString(), copies: doc.copies, copiesSource },
   });
   await mirrorToClassTest(doc, "PRINTED", actorId);
   return doc;
@@ -341,4 +421,13 @@ export async function myPrintRequests(userId: string, limit = 50): Promise<IPrin
 
 export async function printRequestById(id: string): Promise<IPrintRequest | null> {
   return PrintRequest.findById(id).lean() as unknown as Promise<IPrintRequest | null>;
+}
+
+/** The sidebar badge counts (D-#294): jobs awaiting printing / awaiting delivery. */
+export async function printQueueCounts(): Promise<{ requested: number; printed: number }> {
+  const [requested, printed] = await Promise.all([
+    PrintRequest.countDocuments({ status: "REQUESTED" }),
+    PrintRequest.countDocuments({ status: "PRINTED" }),
+  ]);
+  return { requested, printed };
 }
