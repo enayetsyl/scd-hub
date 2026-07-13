@@ -788,6 +788,16 @@ const STR_BN = {
   prCopiesPending: "সংখ্যা পাওয়া যায়নি — হাজিরা বাকি",
   prCopiesFromPresent: "উপস্থিত অনুযায়ী",
   prManualCount: "কত কপি ছাপছেন? (হাজিরা বাকি — নিজে লিখুন)",
+  /** D-#296 — the browser-push permission wall (owner ruling: mandatory for all). */
+  pushWallTitle: "নোটিফিকেশন চালু করুন",
+  pushWallBody:
+    "SCD Hub ব্যবহার করতে ব্রাউজার নোটিফিকেশন চালু করা আবশ্যক — নতুন প্রিন্ট অনুরোধ, বাড়ির কাজ ও জরুরি বার্তা সাথে সাথে পৌঁছাবে। নিচের বোতাম চেপে ব্রাউজারের অনুমতি দিন।",
+  pushEnable: "নোটিফিকেশন চালু করুন",
+  pushBlocked: "নোটিফিকেশন ব্লক করা আছে — অ্যাপ ব্যবহারের আগে ব্রাউজার সেটিংস থেকে অনুমতি দিন।",
+  pushBlockedHelp:
+    "ঠিকানা বারের 🔒/সেটিংস আইকনে ক্লিক করুন → Notifications → Allow করুন, তারপর নিচের বোতাম চাপুন।",
+  pushRecheck: "আবার পরীক্ষা করুন",
+  pushIosHint: "iPhone/iPad-এ Safari থেকে প্রথমে ওয়েবসাইটটি Home Screen-এ যোগ করুন, তারপর নোটিফিকেশন চালু করা যাবে।",
   prNotes: "মন্তব্য",
   prLinkUrl: "লিংক",
   prPickFile: "ফাইল যোগ করুন",
@@ -3023,6 +3033,14 @@ const STR_EN: StrTable = {
   prCreated: "Print request sent",
   prRequester: "Requested by",
   prCopiesShort: "copies",
+  pushWallTitle: "Enable notifications",
+  pushWallBody:
+    "Browser notifications are required to use SCD Hub — new print requests, homework and urgent messages arrive instantly. Tap the button below and allow the browser prompt.",
+  pushEnable: "Enable notifications",
+  pushBlocked: "Notifications are blocked — allow them in your browser settings before using the app.",
+  pushBlockedHelp: "Click the 🔒/settings icon in the address bar → Notifications → Allow, then press the button below.",
+  pushRecheck: "Check again",
+  pushIosHint: "On iPhone/iPad, first add this website to your Home Screen from Safari; notifications can be enabled after that.",
   wpTitle: "Whole picture",
   wpOverall: "Overall",
   wpClassTest: "Class test",

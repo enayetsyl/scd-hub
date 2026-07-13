@@ -20,7 +20,8 @@ import { AssessmentSet } from "../../assessment/models/AssessmentSet";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
-import { emitPrintDelivered } from "../../notifications/services/emitters";
+import { emitPrintDelivered, emitPrintRequested } from "../../notifications/services/emitters";
+import { User } from "../../foundation/models/User";
 import { ClassTest } from "../../trackers/models/ClassTest";
 import { classPresenceForDate } from "../../attendance/services/AttendanceReportService";
 import { dateKeyOf } from "../../attendance/dates";
@@ -220,6 +221,16 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
     meta: { purpose: input.purpose, sourceType: source, copies },
   });
   publishRealtime("print_queue", { op: "created", id: doc._id.toString() });
+  // D-#296: nudge the queue's operators (bell + native push + browser push).
+  // Skipped for the trusted internal class-test path — CT-1 has its own flow.
+  if (!input.trusted) {
+    const requester = await User.findById(input.requestedBy).select("name").lean();
+    await emitPrintRequested({
+      printRequestId: doc._id.toString(),
+      title: doc.title,
+      requesterName: requester?.name ?? "",
+    });
+  }
   return doc;
 }
 

@@ -21,6 +21,8 @@ const mockSetFindById = jest.fn();
 const mockArtifactFindById = jest.fn();
 const mockStoredFileFind = jest.fn();
 const mockEmitDelivered = jest.fn().mockResolvedValue(undefined);
+const mockEmitRequested = jest.fn().mockResolvedValue(undefined);
+const mockUserFindById = jest.fn().mockResolvedValue({ name: "Teacher T" });
 const mockClassTestUpdateOne = jest.fn().mockResolvedValue({});
 const mockClassPresence = jest.fn();
 const mockCountDocuments = jest.fn();
@@ -57,6 +59,13 @@ jest.mock("../modules/platform/models/StoredFile", () => ({
 // PQ-5: delivering notifies the requester (best-effort; must never block the transition).
 jest.mock("../modules/notifications/services/emitters", () => ({
   emitPrintDelivered: (e: unknown) => mockEmitDelivered(e),
+  // D-#296: filing a request nudges the queue's operators.
+  emitPrintRequested: (e: unknown) => mockEmitRequested(e),
+}));
+jest.mock("../modules/foundation/models/User", () => ({
+  User: {
+    findById: (id: unknown) => ({ select: () => ({ lean: () => mockUserFindById(id) }) }),
+  },
 }));
 // PQ-5: advancing a class-test queue row mirrors onto the linked ClassTest.
 jest.mock("../modules/trackers/models/ClassTest", () => ({

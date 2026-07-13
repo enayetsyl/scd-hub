@@ -50,6 +50,7 @@ import "./modules/hr/resolvers/offboarding";
 import "./modules/hr/resolvers/staffDirectory";
 import "./modules/guardian/resolvers/guardianPortal";
 import "./modules/notifications/resolvers/notifications";
+import "./modules/notifications/resolvers/webPush";
 import "./modules/library/resolvers/library";
 import "./modules/library/resolvers/circulation";
 import "./modules/library/resolvers/chase";
@@ -91,6 +92,7 @@ import { filesRouter } from "./routes/files";
 import { triggersRouter } from "./routes/triggers";
 import { eventsRouter } from "./routes/events";
 import { registerExpoPushChannel } from "./modules/notifications/services/pushChannel";
+import { registerWebPushChannel } from "./modules/notifications/services/webPushChannel";
 import { startNotificationTicker, getTickerHealth } from "./modules/notifications/services/SchedulerService";
 
 const app = express();
@@ -262,6 +264,8 @@ async function start() {
   // N-4 (D-#75): Expo push fans out behind emit(). Registered here — not at
   // import time — so jest suites never touch a live transport.
   registerExpoPushChannel();
+  // D-#296: the BROWSER half of push — no-op unless VAPID keys are set.
+  registerWebPushChannel();
   // N-2 (D-#73): the 60s in-process trigger ticker (single-instance).
   startNotificationTicker();
   app.listen(PORT, () => {
