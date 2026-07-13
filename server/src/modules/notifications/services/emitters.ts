@@ -19,6 +19,7 @@ import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { Student } from "../../foundation/models/Student";
 import { Guardian } from "../../foundation/models/Guardian";
+import { User } from "../../foundation/models/User";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { Section } from "../../foundation/models/Section";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
@@ -56,6 +57,9 @@ const dedupeKeys = {
   coverAssigned: (substitutionId: string) => `COV:${substitutionId}`,
   /** One delivered-notice per print job (PQ-5, D-#281). */
   printDelivered: (printRequestId: string) => `PRD:${printRequestId}`,
+  /** One new-request notice per print job per operator (D-#296). */
+  printRequested: (printRequestId: string, recipientId: string) =>
+    `PRQ:${printRequestId}:${recipientId}`,
   /** Per record+ladder-step+guardian (AS-T4): re-running a step can't double-notify. */
   assignmentGuardianChase: (recordId: string, stepNumber: number, guardianId: string) =>
     `ASCH:${recordId}:${stepNumber}:${guardianId}`,
@@ -881,5 +885,39 @@ export async function emitPrintDelivered(event: PrintDeliveredEvent): Promise<vo
       refs: { printRequestId: event.printRequestId },
       dedupeKey: dedupeKeys.printDelivered(event.printRequestId),
     });
+  });
+}
+
+export interface PrintRequestedEvent {
+  printRequestId: string;
+  title: string;
+  requesterName: string;
+}
+
+/**
+ * Tell every queue OPERATOR (active Principal/Office user) a new print request
+ * was filed (D-#296) — the row rides every channel: the bell, native push, and
+ * browser web-push. Best-effort; deduped per (job, operator).
+ */
+export async function emitPrintRequested(event: PrintRequestedEvent): Promise<void> {
+  return bestEffort("print requested", async () => {
+    const operators = (await User.find({ role: { $in: ["PRINCIPAL", "OFFICE"] }, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    const titleBn = await renderTemplate("print.requested.title");
+    const bodyBn = await renderTemplate("print.requested.body", {
+      title: event.title,
+      requesterName: event.requesterName,
+    });
+    for (const op of operators) {
+      await emit({
+        recipientUserId: op._id.toString(),
+        kind: "PRINT_REQUESTED",
+        titleBn,
+        bodyBn,
+        refs: { printRequestId: event.printRequestId },
+        dedupeKey: dedupeKeys.printRequested(event.printRequestId, op._id.toString()),
+      });
+    }
   });
 }

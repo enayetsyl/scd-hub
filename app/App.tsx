@@ -21,6 +21,7 @@ import { SidebarProvider } from "./src/state/SidebarContext";
 import { ToastProvider } from "./src/state/ToastContext";
 import { ConfirmProvider } from "./src/state/ConfirmContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
+import { WebPushGate } from "./src/components/WebPushGate";
 import { navigationRef, openNotificationCenter } from "./src/navigation/navigationRef";
 import { useNavigationTheme } from "./src/theme";
 
@@ -170,7 +171,11 @@ function App(): React.ReactElement | null {
                           gate destructive actions behind one confirm sheet. */}
                       <ToastProvider>
                         <ConfirmProvider>
-                          <ThemedNavigation />
+                          {/* D-#296 owner ruling: no notification permission → no app
+                              (web; native has its own Expo-push prompt). */}
+                          <WebPushGate>
+                            <ThemedNavigation />
+                          </WebPushGate>
                         </ConfirmProvider>
                       </ToastProvider>
                     </SidebarProvider>
