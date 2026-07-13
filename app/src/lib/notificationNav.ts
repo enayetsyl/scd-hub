@@ -55,6 +55,10 @@ export function notificationTarget(
       return guardian
         ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
         : { tab: "LibraryTab", screen: "LibraryHome" };
+    // D-#296: a filed/finished print job lands the operator/teacher on the queue.
+    case "PRINT_REQUESTED":
+    case "PRINT_DELIVERED":
+      return { tab: "PrintTab", screen: "PrintHome" };
     default:
       return null;
   }

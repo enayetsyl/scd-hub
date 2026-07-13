@@ -1000,6 +1000,9 @@ export const NOTIFICATION_KINDS = [
   // PQ-5 (D-#281): the Office handed a finished print job back to the teacher who
   // requested it. Staff-facing (recipientUserId), app-native, NO wire twin.
   "PRINT_DELIVERED",
+  // D-#296: a teacher filed a print request — nudges every Office/Principal user
+  // (the queue's operators). Staff-facing (recipientUserId), app-native, NO wire twin.
+  "PRINT_REQUESTED",
   // Homework daily-confirm pending ladder (app-native, NO wire twin). A section's
   // homework is declared but not yet confirmed/issued: REMINDER nudges the confirmer
   // (class teacher / delegate) at 13:00/13:30/14:00; ESCALATION alerts Office at 14:00
@@ -1036,6 +1039,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   HW_PENDING_REMINDER: "বাড়ির কাজ নিশ্চিত করা বাকি",
   HW_PENDING_ESCALATION: "বাড়ির কাজ নিশ্চিত হয়নি (এসকেলেশন)",
   PRINT_DELIVERED: "প্রিন্ট ডেলিভারি হয়েছে",
+  PRINT_REQUESTED: "নতুন প্রিন্ট অনুরোধ",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1064,6 +1068,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   HW_PENDING_REMINDER: "Homework confirm pending",
   HW_PENDING_ESCALATION: "Homework not confirmed (escalation)",
   PRINT_DELIVERED: "Print job delivered",
+  PRINT_REQUESTED: "New print request",
 };
 
 
@@ -1565,6 +1570,8 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "sr.completeness_chase.wa",
   "print.delivered.title",
   "print.delivered.body",
+  "print.requested.title",
+  "print.requested.body",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1643,6 +1650,15 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   "print.delivered.body": {
     group: "print", labelBn: "প্রিন্ট ডেলিভারি — বার্তা", placeholders: ["title"],
     bnDefault: "“{title}” ছাপা হয়ে আপনাকে দেওয়া হয়েছে।", defaultLangMode: "BN",
+  },
+  // --- New print request → the queue's operators (D-#296) ---
+  "print.requested.title": {
+    group: "print", labelBn: "নতুন প্রিন্ট অনুরোধ — শিরোনাম", placeholders: [],
+    bnDefault: "নতুন প্রিন্ট অনুরোধ", defaultLangMode: "BN",
+  },
+  "print.requested.body": {
+    group: "print", labelBn: "নতুন প্রিন্ট অনুরোধ — বার্তা", placeholders: ["title", "requesterName"],
+    bnDefault: "{requesterName} “{title}” ছাপানোর অনুরোধ করেছেন — প্রিন্ট কিউ দেখুন।", defaultLangMode: "BN",
   },
   // --- Bell reminder (N2.1) ---
   "bell.reminder.title": {
