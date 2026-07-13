@@ -68,6 +68,25 @@ export function isExpectedError(err: unknown): boolean {
   const e = err as { name?: string; message?: string };
   if (e.name && EXPECTED_ERROR_NAMES.has(e.name)) return true;
   if (e.message && EXPECTED_MESSAGE_RE.test(e.message)) return true;
+
+  // A PLAIN `new Error("...")` is this codebase's convention for a deliberate business
+  // denial — "Teacher already booked at SUN P2", "Section not found", "A break period
+  // takes no teacher" (263 of them across the modules). D-#259 ALREADY trusts them enough
+  // to show the message straight to the user: `isExposableDomainError` (index.ts) exposes
+  // an error iff `constructor.name === "Error"`. So the rule is one rule, applied twice:
+  //
+  //     if we are willing to SHOW the message to a teacher, it is NOT a server fault.
+  //
+  // Without this, an Office user hitting a routine conflict — routine business as usual —
+  // pages the maintainer. A dashboard full of "Teacher already booked" is worse than
+  // useless: it trains people to ignore the alert that matters (see D-#285: an unread
+  // channel is the same as no channel).
+  //
+  // Real faults arrive as SUBCLASSES and still report: TypeError, RangeError, CastError,
+  // MongoServerError (the one that took Lesson Plans down, D-#284) — all keep their own
+  // constructor.name, so none of them are swallowed here.
+  if (Object.getPrototypeOf(err)?.constructor?.name === "Error") return true;
+
   return false;
 }
 
