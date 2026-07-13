@@ -21,6 +21,7 @@ import {
 } from "../modules/foundation/services/ScopeGrantService";
 import { ScopeGrant } from "../modules/foundation/models/ScopeGrant";
 import { Section } from "../modules/foundation/models/Section";
+import { Subject } from "../modules/foundation/models/Subject";
 import { User } from "../modules/foundation/models/User";
 import { Guardian } from "../modules/foundation/models/Guardian";
 import { GuardianLink } from "../modules/foundation/models/GuardianLink";
@@ -75,6 +76,76 @@ export async function assertCanRead(
   if (ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
   const scopes = await resolveTeacherScopes(ctx);
   if (!canRead(scopes, sectionId, classId, subjectId)) throw new ForbiddenError();
+}
+
+/**
+ * The subject CODES the caller may see on a section's tracker lists (homework /
+ * assignment records), or `null` for unrestricted (all subjects). Called AFTER
+ * assertCanRead — this narrows a permitted section read down to the subjects the
+ * caller actually teaches, so a Science teacher no longer sees English homework.
+ *
+ * Unrestricted (`null`): Principal/Office; the section's class teacher (daily
+ * coordinator, D-#42/#45) + homework-confirm delegate + school-wide homework
+ * supervisor (they reconcile the whole day); whole-school / matching grade_class
+ * supervisory scopes; a legacy subject-less proxy grant on the section.
+ *
+ * Otherwise: the union of the caller's teaching / proxy / subject-scoped
+ * supervisory grants on this section, mapped to Subject codes. An empty set is
+ * possible (read reached the section some other way) — callers then show nothing.
+ */
+export async function allowedSubjectCodesForSection(
+  ctx: AppContext,
+  sectionId: string,
+  classId: string,
+): Promise<Set<string> | null> {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  if (ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE") return null;
+  if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
+
+  const userId = ctx.auth.userId as string;
+  const section = await Section.findById(sectionId)
+    .select("classTeacherId homeworkConfirmerId")
+    .lean();
+  if (section) {
+    const ctId = section.classTeacherId ? section.classTeacherId.toString() : null;
+    const delegateId = section.homeworkConfirmerId ? section.homeworkConfirmerId.toString() : null;
+    if (userId === ctId || userId === delegateId) return null;
+  }
+  const me = await User.findById(userId).select("homeworkSupervisor").lean();
+  if (me?.homeworkSupervisor) return null;
+
+  const scopes = await resolveTeacherScopes(ctx);
+  const subjectIds = new Set<string>();
+  for (const s of scopes) {
+    if (s.kind === "teaching" && s.sectionId === sectionId) {
+      subjectIds.add(s.subjectId);
+    } else if (s.kind === "proxy" && s.sectionId === sectionId) {
+      if (!s.subjectId) return null; // pre-D-#257 subject-less proxy = whole section
+      subjectIds.add(s.subjectId);
+    } else if (s.kind === "supervisory") {
+      switch (s.extent) {
+        case "whole_school":
+          return null;
+        case "grade_class":
+          if (s.classId === classId) return null;
+          break;
+        case "subject_dept":
+          if (s.subjectId) subjectIds.add(s.subjectId);
+          break;
+        case "explicit_set":
+          for (const e of s.explicitSet ?? []) {
+            if (e.classId === classId) subjectIds.add(e.subjectId);
+          }
+          break;
+      }
+    }
+  }
+
+  if (subjectIds.size === 0) return new Set();
+  const subjects = await Subject.find({ _id: { $in: [...subjectIds] } })
+    .select("code")
+    .lean();
+  return new Set(subjects.map((s) => s.code));
 }
 
 /** Assert the caller can write (assemble/tracker) for the given section.
