@@ -2180,11 +2180,20 @@ export interface AsReconMissT {
   draftItems: number;
   draftMinutes: number;
 }
+export interface HwNotDeclaredT {
+  dateKey: string;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  subject: string;
+  teacherName: string | null;
+}
 export interface ReconReportT {
   fromKey: string;
   toKey: string;
   hwMisses: HwReconMissT[];
   asMisses: AsReconMissT[];
+  hwNotDeclared: HwNotDeclaredT[];
 }
 export const RECON_REPORT_QUERY = gql<
   { reconciliationReport: ReconReportT },
@@ -2196,6 +2205,7 @@ export const RECON_REPORT_QUERY = gql<
       toKey
       hwMisses { dateKey sectionId sectionNameBn classLevel confirmerName declaredItems declaredMinutes }
       asMisses { weekNumber deliveryDateKey sectionId sectionNameBn classLevel confirmerName draftItems draftMinutes }
+      hwNotDeclared { dateKey sectionId sectionNameBn classLevel subject teacherName }
     }
   }
 `;
