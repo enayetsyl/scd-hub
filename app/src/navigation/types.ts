@@ -110,8 +110,11 @@ export type PrintStackParamList = {
 
 export type AttendanceStackParamList = {
   AttendanceHome: undefined;
-  /** An attendance UNIT (D-#278): a Quran group (Class 1–5) or a Nursery/KG section. */
-  MarkAttendance: { unitType: string; unitId: string; title: string; dateKey: string };
+  /** An attendance UNIT (D-#278): a Quran group (Class 1–5) or a Nursery/KG section.
+   *  `amend` (D-#292): Principal/Office write path — any unit, today or a past day. */
+  MarkAttendance: { unitType: string; unitId: string; title: string; dateKey: string; amend?: boolean };
+  /** D-#292: Principal/Office mark/amend any class for any (past) day. */
+  AttendanceAdmin: undefined;
   TeacherAttendanceImport: undefined;
   AttendanceReport: undefined;
   AssignMarker: undefined;

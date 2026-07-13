@@ -3091,6 +3091,40 @@ export const MARK_ATTENDANCE_UNIT = gql<
   }
 `;
 
+/** D-#292: Principal/Office unlock-amend of any unit's day (past or today) — audited. */
+export const AMEND_ATTENDANCE_UNIT = gql<
+  { amendAttendanceUnit: StudentAttendanceDayT },
+  { unitType: string; unitId: string; dateKey: string; absentStudentIds: string[] }
+>`
+  mutation AmendAttendanceUnit($unitType: String!, $unitId: String!, $dateKey: String!, $absentStudentIds: [String!]!) {
+    amendAttendanceUnit(unitType: $unitType, unitId: $unitId, dateKey: $dateKey, absentStudentIds: $absentStudentIds) {
+      id sectionId dateKey absentStudentIds markedBy markedAt amendedBy amendedAt
+    }
+  }
+`;
+
+/** D-#292: every populated unit for a date + marked state (the admin mark/amend list). */
+export interface AdminUnitDayT {
+  unitType: string;
+  unitId: string;
+  label: string;
+  sublabel: string | null;
+  marked: boolean;
+  markerTeacherId: string | null;
+  markerName: string | null;
+  studentCount: number;
+}
+export const ATTENDANCE_UNITS_FOR_DATE = gql<
+  { attendanceUnitsForDate: AdminUnitDayT[] },
+  { dateKey: string }
+>`
+  query AttendanceUnitsForDate($dateKey: String!) {
+    attendanceUnitsForDate(dateKey: $dateKey) {
+      unitType unitId label sublabel marked markerTeacherId markerName studentCount
+    }
+  }
+`;
+
 export interface MarkerAssignmentT {
   id: string;
   /** Null when the override targets a Quran group instead of a section (D-#278). */

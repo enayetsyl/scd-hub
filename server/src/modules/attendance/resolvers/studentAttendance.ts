@@ -45,6 +45,7 @@ import {
   studentAttendanceHistory,
   absentNoApplication,
   unmarkedSections,
+  attendanceUnitsForDate,
   type AbsenteeEntry,
   type SectionAbsentees,
   type ClassAbsentees,
@@ -53,6 +54,7 @@ import {
   type AbsentNoApplicationEntry,
   type UnmarkedSection,
   type PendingUnit,
+  type AdminUnitDay,
 } from "../services/AttendanceReportService";
 import type { IStudentAttendanceDay } from "../models/StudentAttendanceDay";
 import type { ISectionAttendanceAssignment } from "../models/SectionAttendanceAssignment";
@@ -492,9 +494,10 @@ async function lowestClassLevel(classIds: string[]): Promise<number> {
   return classes.reduce<number>((min, c) => Math.min(min, c.level), classes[0].level);
 }
 
-/** The unit's roster, bucketed under each student's own class/section. */
-async function rosterGroupedBySection(unit: AttendanceUnit): Promise<RosterSectionShape[]> {
-  const roster = await rosterForUnit(unit);
+/** The unit's roster, bucketed under each student's own class/section. Date-aware
+ *  (D-#292): a pre-cutover section day rosters the FULL section, no group split. */
+async function rosterGroupedBySection(unit: AttendanceUnit, dateKey?: string): Promise<RosterSectionShape[]> {
+  const roster = await rosterForUnit(unit, dateKey);
   if (roster.length === 0) return [];
   const students = await Student.find({ _id: { $in: roster.map((s) => s.id) } })
     .select("_id name nameBn rollNumber schoolId sectionId classId")
@@ -716,8 +719,39 @@ builder.queryField("attendanceUnitRoster", (t) =>
     resolve: async (_root, args, ctx) => {
       const unit = parseUnit(args.unitType, args.unitId);
       await assertUnitMarkerOrManage(ctx, unit, args.dateKey);
-      return rosterGroupedBySection(unit);
+      return rosterGroupedBySection(unit, args.dateKey);
     },
+  }),
+);
+
+// --- Admin unit list for a date (D-#292) — mark/amend any class, any day -----
+
+const AdminUnitDayRef = builder.objectRef<AdminUnitDay>("AdminUnitDay");
+AdminUnitDayRef.implement({
+  description:
+    "One populated attendance unit for a date with its marked state + marker (D-#292) — the " +
+    "Principal/Office mark-any-class/any-day surface. Pre-cutover dates list sections.",
+  fields: (t) => ({
+    unitType: t.exposeString("unitType"),
+    unitId: t.exposeString("unitId"),
+    label: t.exposeString("label"),
+    sublabel: t.string({ nullable: true, resolve: (r) => r.sublabel }),
+    marked: t.exposeBoolean("marked"),
+    markerTeacherId: t.string({ nullable: true, resolve: (r) => r.markerTeacherId }),
+    markerName: t.string({ nullable: true, resolve: (r) => r.markerName }),
+    studentCount: t.exposeInt("studentCount"),
+  }),
+});
+
+builder.queryField("attendanceUnitsForDate", (t) =>
+  t.field({
+    type: [AdminUnitDayRef],
+    description:
+      "Every populated attendance unit for a date with marked state + marker (D-#292). " +
+      "attendance:manage — the Principal/Office mark/amend-any-day surface.",
+    authScopes: { hasPermission: "attendance:manage" },
+    args: { dateKey: t.arg.string({ required: true }) },
+    resolve: (_root, args) => attendanceUnitsForDate(args.dateKey),
   }),
 );
 

@@ -36,6 +36,20 @@ export interface AttendanceUnit {
   unitId: string;
 }
 
+/**
+ * D-#292 — the first-class capture system (D-#278) went LIVE on prod 2026-07-13.
+ * Dates BEFORE this resolve with the LEGACY shape: capture per SECTION (full
+ * roster, no Quran-group split) and marker = admin assignment → class teacher
+ * (no routine step) — so backdated attendance reads/writes/alerts attribute to
+ * the teacher who was actually responsible back then, not retroactively to
+ * today's first-period teacher.
+ */
+export const ATTENDANCE_UNIT_CUTOVER_KEY = "2026-07-13";
+
+/** True for dates before the D-#278 go-live — resolve with the legacy shape. */
+export const isLegacyAttendanceDate = (dateKey: string): boolean =>
+  dateKey < ATTENDANCE_UNIT_CUTOVER_KEY;
+
 /** Nursery = −1, KG = 0 (ROSTER_CLASS_LEVELS); Class 1–5 are ≥ 1. */
 export const isNurseryKg = (level: number): boolean => level <= 0;
 
@@ -82,10 +96,20 @@ async function levelsByClassId(classIds: string[]): Promise<Map<string, number>>
  * Resolve each student's attendance unit (AF2.1) — ONE batched pass, no per-student
  * DB hit. A 1–5 student with no Quran membership falls back to their section (D-#278
  * open-item default), so they are never unmarkable.
+ *
+ * `dateKey` (optional) makes the shape DATE-AWARE (D-#292): a pre-cutover date
+ * resolves everyone to their SECTION — the shape attendance actually had then.
  */
-export async function resolveUnits(students: StudentLite[]): Promise<Map<string, AttendanceUnit>> {
+export async function resolveUnits(
+  students: StudentLite[],
+  dateKey?: string,
+): Promise<Map<string, AttendanceUnit>> {
   const out = new Map<string, AttendanceUnit>();
   if (students.length === 0) return out;
+  if (dateKey && isLegacyAttendanceDate(dateKey)) {
+    for (const s of students) out.set(s.id, { unitType: "section", unitId: s.sectionId });
+    return out;
+  }
   const [levelById, quranByStudent] = await Promise.all([
     levelsByClassId([...new Set(students.map((s) => s.classId))]),
     quranGroupByStudent(students.map((s) => s.id)),
@@ -130,7 +154,12 @@ export async function unitForStudent(studentId: string): Promise<AttendanceUnit 
  *     the group's marker could record an absence the roll-up would silently drop;
  *   • a Class 1–5 section's roster is only its Quran-group-less leftovers.
  */
-export async function rosterForUnit(unit: AttendanceUnit): Promise<StudentLite[]> {
+export async function rosterForUnit(unit: AttendanceUnit, dateKey?: string): Promise<StudentLite[]> {
+  // D-#292: a pre-cutover date is section-shaped — the section's FULL roster (no
+  // Quran-group narrowing, so backfilled days can name any of its students);
+  // a subjectgroup unit did not exist then and has nothing to mark.
+  if (dateKey && isLegacyAttendanceDate(dateKey) && unit.unitType === "subjectgroup") return [];
+
   let lites: StudentLite[];
   if (unit.unitType === "subjectgroup") {
     const rows = await SubjectGroupMembership.find({ groupId: unit.unitId, track: "quran" })
@@ -148,7 +177,7 @@ export async function rosterForUnit(unit: AttendanceUnit): Promise<StudentLite[]
       .lean();
     lites = students.map(toLite);
   }
-  const units = await resolveUnits(lites);
+  const units = await resolveUnits(lites, dateKey);
   return lites.filter((s) => {
     const u = units.get(s.id);
     return u !== undefined && sameUnit(u, unit);
