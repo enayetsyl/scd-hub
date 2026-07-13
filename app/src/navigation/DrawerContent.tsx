@@ -16,9 +16,14 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { DrawerContentScrollView, type DrawerContentComponentProps } from "@react-navigation/drawer";
+import { useQuery } from "urql";
+import { roleHasPermission } from "@scd/shared";
+import type { Role } from "@scd/shared";
 
 import { STR } from "../lib/labels";
 import { bnNum } from "../lib/labels";
+import { PRINT_QUEUE_COUNTS } from "../graphql/printing";
+import { useAuth } from "../auth/AuthContext";
 import { useBasket } from "../state/BasketContext";
 import { fonts, radius, space, typeScale, useColors } from "../theme";
 import type { TabParamList } from "./types";
@@ -95,14 +100,40 @@ const NAV: NavSection[] = [...STAFF_NAV, ...GUARDIAN_NAV];
 export default function DrawerContent(props: DrawerContentComponentProps): React.ReactElement {
   const colors = useColors();
   const basket = useBasket();
+  const { role } = useAuth();
   const present = React.useMemo(() => new Set(props.state.routeNames), [props.state.routeNames]);
   const activeRoute = props.state.routes[props.state.index]?.name as RouteName | undefined;
 
   // Groups default to expanded (only two of them); a tap collapses/expands.
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({});
 
+  // D-#294: the print operator's queue counters — red = awaiting printing, yellow =
+  // awaiting delivery. Refetched every 60s so the badges track the queue without a
+  // manual refresh; teachers (no roster:manage) never even ask.
+  const isPrintOperator = !!role && roleHasPermission(role as Role, "roster:manage");
+  const [countsQ, refetchCounts] = useQuery({
+    query: PRINT_QUEUE_COUNTS,
+    pause: !isPrintOperator,
+    requestPolicy: "cache-and-network",
+  });
+  React.useEffect(() => {
+    if (!isPrintOperator) return;
+    const id = setInterval(() => refetchCounts({ requestPolicy: "network-only" }), 60_000);
+    return () => clearInterval(id);
+  }, [isPrintOperator, refetchCounts]);
+  const printCounts = countsQ.data?.printQueueCounts;
+
   const badgeFor = (route: RouteName): number | undefined =>
     route === "QuestionsTab" && basket.count > 0 ? basket.count : undefined;
+
+  /** Extra tinted badges (D-#294): [count, background] pairs, rendered when > 0. */
+  const tintedBadgesFor = (route: RouteName): Array<{ count: number; bg: string }> => {
+    if (route !== "PrintTab" || !isPrintOperator || !printCounts) return [];
+    const out: Array<{ count: number; bg: string }> = [];
+    if (printCounts.requested > 0) out.push({ count: printCounts.requested, bg: colors.error });
+    if (printCounts.printed > 0) out.push({ count: printCounts.printed, bg: colors.warning });
+    return out;
+  };
 
   const go = (route: RouteName): void => {
     // navigate bubbles to the drawer and (in slide-over mode) closes it.
@@ -113,6 +144,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     if (!present.has(leaf.route)) return null;
     const active = leaf.route === activeRoute;
     const badge = badgeFor(leaf.route);
+    const tinted = tintedBadgesFor(leaf.route);
     return (
       <Pressable
         onPress={() => go(leaf.route)}
@@ -160,6 +192,26 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
             </Text>
           </View>
         ) : null}
+        {/* D-#294: the print operator's red (to print) + yellow (to deliver) counters. */}
+        {tinted.map((b, i) => (
+          <View
+            key={i}
+            style={{
+              backgroundColor: b.bg,
+              borderRadius: radius.pill,
+              minWidth: 20,
+              height: 20,
+              alignItems: "center",
+              justifyContent: "center",
+              paddingHorizontal: 6,
+              marginLeft: i > 0 || badge !== undefined ? 4 : 0,
+            }}
+          >
+            <Text style={{ color: colors.onPrimary, ...typeScale.caption, fontFamily: fonts.bold }}>
+              {bnNum(b.count)}
+            </Text>
+          </View>
+        ))}
       </Pressable>
     );
   };

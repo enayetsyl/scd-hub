@@ -46,7 +46,15 @@ export interface IPrintRequest extends Document {
   classTestId?: Types.ObjectId;
 
   copies: number;
-  /** Local date the teacher needs it by, `YYYY-MM-DD`. Mandatory on a teacher's request. */
+  /** D-#294: how `copies` is determined. FIXED = the teacher typed a number (default,
+   *  all pre-existing rows). CLASS_PRESENT = print one per student PRESENT in
+   *  `copiesClassId` on the day the print is USED (`neededByKey`) — resolved live
+   *  from attendance when the Office views/prints, finalized onto `copies` at
+   *  markPrinted (live count, or a manual count while attendance is pending). */
+  copiesMode: "FIXED" | "CLASS_PRESENT";
+  copiesClassId?: Types.ObjectId;
+  /** Local date the print will be USED, `YYYY-MM-DD`. Mandatory on a teacher's
+   *  request; drives the CLASS_PRESENT attendance lookup (D-#294). */
   neededByKey?: string;
   classId?: Types.ObjectId;
   sectionId?: Types.ObjectId;
@@ -86,6 +94,8 @@ const PrintRequestSchema = new Schema<IPrintRequest>(
     classTestId: { type: Schema.Types.ObjectId, ref: "ClassTest" },
 
     copies: { type: Number, required: true, min: 1, max: 1000, default: 1 },
+    copiesMode: { type: String, enum: ["FIXED", "CLASS_PRESENT"], required: true, default: "FIXED" },
+    copiesClassId: { type: Schema.Types.ObjectId, ref: "Class" },
     neededByKey: { type: String, match: /^\d{4}-\d{2}-\d{2}$/ },
     classId: { type: Schema.Types.ObjectId, ref: "Class" },
     sectionId: { type: Schema.Types.ObjectId, ref: "Section" },

@@ -26,8 +26,8 @@ import {
   type PrintRequestT,
 } from "../../graphql/printing";
 import type { PrintStackParamList } from "../../navigation/types";
-import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Button, Badge, Loader, EmptyState, ErrorBanner } from "../../components/ui";
-import { STR, bnNum } from "../../lib/labels";
+import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Button, Badge, Loader, EmptyState, ErrorBanner, Field } from "../../components/ui";
+import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { openStoredFile } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
@@ -57,6 +57,10 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
 
   const [bucket, setBucket] = useState<string>("REQUESTED");
   const [busy, setBusy] = useState(false);
+  // D-#294: manual copy count entry for a CLASS_PRESENT job whose use-day attendance
+  // is still pending — expands inline under that row's Mark-printed action.
+  const [manualFor, setManualFor] = useState<string | null>(null);
+  const [manualCount, setManualCount] = useState("");
 
   // cache-and-network: advancing a job moves it BETWEEN buckets, so the destination
   // tab's cached list is stale the moment we act. Without this, "Mark printed" left the
@@ -122,9 +126,30 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
         <View style={{ flex: 1 }}>
           <Body style={{ fontWeight: "700" }}>{r.title}</Body>
+          {/* D-#294: a CLASS_PRESENT job's count resolves from the USE day's attendance. */}
+          {r.copiesMode === "CLASS_PRESENT" && r.status === "REQUESTED" ? (
+            r.copiesPending ? (
+              <Muted style={{ fontWeight: "600" }}>
+                ⚠ {STR.prCopiesPending}
+                {r.copiesClassLevel !== null ? ` (${classLevelLabel(r.copiesClassLevel)})` : ""}
+              </Muted>
+            ) : (
+              <Muted>
+                {bnNum(r.effectiveCopies ?? 0)} {STR.prCopiesShort} · {STR.prCopiesFromPresent}
+                {r.copiesClassLevel !== null ? ` (${classLevelLabel(r.copiesClassLevel)})` : ""}
+              </Muted>
+            )
+          ) : (
+            <Muted>
+              {bnNum(r.copies)} {STR.prCopiesShort}
+              {r.copiesMode === "CLASS_PRESENT" && r.copiesClassLevel !== null
+                ? ` · ${STR.prCopiesFromPresent} (${classLevelLabel(r.copiesClassLevel)})`
+                : ""}
+            </Muted>
+          )}
           <Muted>
-            {r.purpose} · {bnNum(r.copies)} {STR.prCopiesShort}
-            {r.neededByKey ? ` · ${STR.prNeededBy}: ${bnNum(r.neededByKey)}` : ""}
+            {r.purpose}
+            {r.neededByKey ? ` · ${STR.prUseDate}: ${bnNum(r.neededByKey)}` : ""}
           </Muted>
           {/* The Office cannot start a job without knowing how to print it. */}
           <Muted>
@@ -178,7 +203,15 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
         {office && r.status === "REQUESTED" ? (
           <Button
             title={STR.prMarkPrinted}
-            onPress={() => run(() => markPrinted({ id: r.id }), STR.prPrintedOk)}
+            onPress={() => {
+              // D-#294: no live count yet → collect a manual count inline instead.
+              if (r.copiesMode === "CLASS_PRESENT" && r.copiesPending) {
+                setManualCount("");
+                setManualFor(manualFor === r.id ? null : r.id);
+                return;
+              }
+              void run(() => markPrinted({ id: r.id }), STR.prPrintedOk);
+            }}
             disabled={busy}
           />
         ) : null}
@@ -202,6 +235,30 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
           />
         ) : null}
       </View>
+
+      {/* D-#294: manual count for a pending CLASS_PRESENT job — attendance for the
+          use day isn't in yet, so the Office types the number it printed. */}
+      {office && manualFor === r.id && r.status === "REQUESTED" ? (
+        <View style={{ marginTop: space(2) }}>
+          <Field
+            label={STR.prManualCount}
+            value={manualCount}
+            onChangeText={setManualCount}
+            keyboardType="number-pad"
+          />
+          <Button
+            title={STR.prMarkPrinted}
+            disabled={busy || !Number.isInteger(Number(manualCount)) || Number(manualCount) < 1}
+            onPress={async () => {
+              await run(
+                () => markPrinted({ id: r.id, copies: Number(manualCount) }),
+                STR.prPrintedOk,
+              );
+              setManualFor(null);
+            }}
+          />
+        </View>
+      ) : null}
     </Card>
   );
 

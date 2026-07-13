@@ -13,7 +13,7 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useMutation } from "urql";
+import { useMutation, useQuery } from "urql";
 import {
   PRINT_PURPOSES,
   PRINT_PURPOSE_LABELS_EN,
@@ -24,14 +24,16 @@ import {
   MAX_PRINT_UPLOADS,
 } from "@scd/shared";
 import { CREATE_PRINT_REQUEST } from "../../graphql/printing";
+import { ACADEMIC_YEARS_QUERY, CLASSES_QUERY } from "../../graphql/operations";
 import type { PrintStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Field, Chip, ChipRow, Button, Notice } from "../../components/ui";
 import { DateField } from "../../components/DateField";
-import { STR } from "../../lib/labels";
+import { STR, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
-import { pickAndUploadPrintFile, FileUploadError } from "../../lib/files";
+import { pickAndUploadPrintFiles, FileUploadError } from "../../lib/files";
 import { useToast } from "../../state/ToastContext";
 import { useAuth } from "../../auth/AuthContext";
+import { useSectionContext } from "../../state/SectionContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<PrintStackParamList, "NewPrintRequest">;
@@ -66,12 +68,28 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
   const [files, setFiles] = useState<Attached[]>([]);
   const [linkUrl, setLinkUrl] = useState("");
   const [copies, setCopies] = useState("1");
+  // D-#294: FIXED = type the number; CLASS_PRESENT = one per student present in the
+  // chosen class on the USE day (resolved from that day's attendance by the Office).
+  const [copiesMode, setCopiesMode] = useState<"FIXED" | "CLASS_PRESENT">("FIXED");
+  const [copiesClassId, setCopiesClassId] = useState<string | null>(null);
   const [neededByKey, setNeededByKey] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [, create] = useMutation(CREATE_PRINT_REQUEST);
+
+  // The class chips (N, K, 1…5) for CLASS_PRESENT mode — current academic year.
+  const { selection } = useSectionContext();
+  const [{ data: yearsData }] = useQuery({ query: ACADEMIC_YEARS_QUERY });
+  const academicYearId =
+    selection.academicYearId ?? yearsData?.academicYears.find((y) => y.current)?.id ?? null;
+  const [{ data: classData }] = useQuery({
+    query: CLASSES_QUERY,
+    variables: { academicYearId: academicYearId ?? "" },
+    pause: !academicYearId,
+  });
+  const classes = (classData?.classes ?? []).filter((c) => c.active);
 
   async function onPickFile(): Promise<void> {
     if (files.length >= MAX_PRINT_UPLOADS) {
@@ -81,8 +99,16 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
     setError(null);
     setUploading(true);
     try {
-      const uploaded = await pickAndUploadPrintFile();
-      if (uploaded) setFiles((prev) => [...prev, { fileId: uploaded.fileId, originalName: uploaded.originalName }]);
+      // D-#294 follow-up: pick SEVERAL files in one go (capped at the remaining
+      // slots); partial failures keep the successful uploads and are reported.
+      const { uploaded, failures } = await pickAndUploadPrintFiles(MAX_PRINT_UPLOADS - files.length);
+      if (uploaded.length > 0) {
+        setFiles((prev) => [
+          ...prev,
+          ...uploaded.map((u) => ({ fileId: u.fileId, originalName: u.originalName })),
+        ]);
+      }
+      if (failures.length > 0) setError(failures.join(" · "));
     } catch (e) {
       setError(e instanceof FileUploadError ? e.message : String(e));
     } finally {
@@ -108,7 +134,8 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
     if (!title.trim()) return fail(STR.prDocTitle);
     if (!colour) return fail(STR.prNeedColour);
     if (!sides) return fail(STR.prNeedSides);
-    if (!Number.isInteger(n) || n < 1) return fail(STR.prCopies);
+    if (copiesMode === "FIXED" && (!Number.isInteger(n) || n < 1)) return fail(STR.prCopies);
+    if (copiesMode === "CLASS_PRESENT" && !copiesClassId) return fail(STR.prPickClass);
     if (!neededByKey) return fail(STR.prNeedNeededBy);
     if (sourceType === "UPLOAD" && files.length === 0) return fail(STR.prPickFile);
     if (sourceType === "LINK" && !linkUrl.trim()) return fail(STR.prLinkUrl);
@@ -124,7 +151,9 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
       linkUrl: sourceType === "LINK" ? linkUrl.trim() : null,
       colour,
       sides,
-      copies: n,
+      copies: copiesMode === "FIXED" ? n : 1, // finalized from attendance at print time
+      copiesMode,
+      copiesClassId: copiesMode === "CLASS_PRESENT" ? copiesClassId : null,
       neededByKey,
       notes: notes.trim() || null,
     });
@@ -225,8 +254,46 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
         </ChipRow>
       </Card>
 
-      <Field label={`${STR.prCopies} *`} value={copies} onChangeText={setCopies} keyboardType="number-pad" />
-      <DateField label={`${STR.prNeededBy} *`} value={neededByKey} onChange={setNeededByKey} />
+      {/* D-#294: copies — a typed number, OR one per student present in a class on the
+          use day (the Office resolves the count from that day's attendance). */}
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.prCopies} *</Body>
+        <ChipRow>
+          <Chip
+            label={STR.prCopiesFixed}
+            selected={copiesMode === "FIXED"}
+            onPress={() => setCopiesMode("FIXED")}
+          />
+          <Chip
+            label={STR.prCopiesClass}
+            selected={copiesMode === "CLASS_PRESENT"}
+            onPress={() => setCopiesMode("CLASS_PRESENT")}
+          />
+        </ChipRow>
+        {copiesMode === "FIXED" ? (
+          <View style={{ marginTop: space(2) }}>
+            <Field label={STR.prCopies} value={copies} onChangeText={setCopies} keyboardType="number-pad" />
+          </View>
+        ) : (
+          <View style={{ marginTop: space(2) }}>
+            <Muted style={{ marginBottom: space(1) }}>{STR.prCopiesClassHint}</Muted>
+            <ChipRow>
+              {classes.map((c) => (
+                <Chip
+                  key={c.id}
+                  label={classLevelLabel(c.level)}
+                  selected={copiesClassId === c.id}
+                  onPress={() => setCopiesClassId(c.id)}
+                />
+              ))}
+            </ChipRow>
+          </View>
+        )}
+      </Card>
+
+      {/* The date the print will be USED — for CLASS_PRESENT jobs it also picks WHICH
+          day's attendance determines the copy count (D-#294). */}
+      <DateField label={`${STR.prUseDate} *`} value={neededByKey} onChange={setNeededByKey} />
       <Field label={STR.prNotes} value={notes} onChangeText={setNotes} multiline />
 
       <Button title={STR.prSend} onPress={onSubmit} loading={busy} />
