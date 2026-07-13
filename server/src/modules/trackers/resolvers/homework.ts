@@ -49,6 +49,7 @@ import {
   assertCanWrite,
   assertCanRead,
   assertCanConfirmHomework,
+  allowedSubjectCodesForSection,
   ForbiddenError,
 } from "../../../middleware/authz";
 import { Subject } from "../../foundation/models/Subject";
@@ -347,10 +348,12 @@ builder.queryField("homeworkItems", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
-      const docs = await listDailyItems(
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      const all = await listDailyItems(
         args.classId,
         args.dateGiven ? new Date(args.dateGiven) : undefined,
       );
+      const docs = allowed ? all.filter((d) => allowed.has(d.subject)) : all;
       return docs.map((d) => ({
         id: d._id.toString(),
         hwId: d.hwId,
@@ -405,6 +408,11 @@ builder.queryField("homeworkStudentRecords", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      if (allowed) {
+        const item = await HomeworkItem.findById(args.itemId).select("subject").lean();
+        if (!item || !allowed.has(item.subject)) throw new ForbiddenError();
+      }
       const docs = await listStudentRecords(args.itemId);
       return docs.map((d) => ({
         id: d._id.toString(),
@@ -464,10 +472,12 @@ builder.queryField("homeworkOpenRecords", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
       const states = args.states.filter((s): s is LifecycleState =>
         (LIFECYCLE_STATES as readonly string[]).includes(s),
       );
-      return listOpenRecords(args.sectionId, states);
+      const rows = await listOpenRecords(args.sectionId, states);
+      return allowed ? rows.filter((r) => allowed.has(r.subject)) : rows;
     },
   }),
 );

@@ -225,11 +225,15 @@ export function canRead(scopes: ScopeItem[], sectionId: string, classId: string,
 }
 
 /** Can a teacher WRITE (assemble sets / fill tracker) for the given section?
- *  Supervisory is read-only — write = teaching or active proxy only (D-#17/#18). */
+ *  Supervisory is read-only — write = teaching or active proxy only (D-#17/#18).
+ *  A teaching grant is per-(section, subject) (ADR-017), so when the action names
+ *  a subject the grant must match it — a Science teacher cannot check/transition
+ *  English homework. Subject-less calls keep the section-wide behaviour. */
 export function canWrite(scopes: ScopeItem[], sectionId: string, subjectId?: string): boolean {
   return scopes.some((s) => {
     if (s.kind === "teaching") {
-      return s.sectionId === sectionId;
+      if (s.sectionId !== sectionId) return false;
+      return !subjectId || s.subjectId === subjectId;
     }
     if (s.kind !== "proxy" || s.sectionId !== sectionId) {
       return false;

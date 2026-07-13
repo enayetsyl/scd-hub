@@ -26,6 +26,7 @@ const mockUserFind = jest.fn();
 const mockDispatchAttendance = jest.fn();
 const mockDispatchLibrary = jest.fn();
 const mockPendingHomework = jest.fn();
+const mockSweepHomeworkDue = jest.fn();
 const mockEmit = jest.fn();
 
 jest.mock("../modules/routine/calendar", () => ({
@@ -74,6 +75,11 @@ jest.mock("../modules/classroom-observation/services/ObservationEscalationServic
 jest.mock("../modules/trackers/services/HomeworkReconciliationService", () => ({
   pendingHomeworkSections: (d: unknown) => mockPendingHomework(d),
 }));
+// The ticker also runs the homework auto-DUE sweep (GIVEN → DUE on the due morning).
+// Mock it so the scheduler test stays DB-free (the sweep is covered in homeworkDueSweep.test.ts).
+jest.mock("../modules/trackers/services/HomeworkDueSweepService", () => ({
+  sweepHomeworkDue: (d: unknown) => mockSweepHomeworkDue(d),
+}));
 jest.mock("../modules/notifications/services/NotificationService", () => ({
   emit: (input: unknown) => mockEmit(input),
 }));
@@ -106,6 +112,7 @@ beforeEach(() => {
   mockDispatchAttendance.mockResolvedValue({});
   mockDispatchLibrary.mockResolvedValue({ dueSoonEmitted: 0, overdueEmitted: 0 });
   mockPendingHomework.mockResolvedValue([]);
+  mockSweepHomeworkDue.mockResolvedValue(0);
   mockEmit.mockResolvedValue({ created: true, dedupeKey: "x" });
 });
 
@@ -204,6 +211,30 @@ describe("homework pending-confirm ladder", () => {
     mockPendingHomework.mockResolvedValue([pendingSection({ classTeacherId: null })]);
     const s = await runSchedulerTick(at(13, 0));
     expect(s.hwPendingEmitted).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Homework auto-DUE sweep (GIVEN → DUE on the due morning, once per school day)
+// ---------------------------------------------------------------------------
+
+describe("homework auto-DUE sweep", () => {
+  it("runs once per school day and reports the flip count", async () => {
+    mockSweepHomeworkDue.mockResolvedValue(4);
+    const s1 = await runSchedulerTick(at(8, 0));
+    expect(mockSweepHomeworkDue).toHaveBeenCalledTimes(1);
+    expect(s1.hwDueFlipped).toBe(4);
+
+    // Second tick, same day → the once-per-day guard skips the sweep.
+    const s2 = await runSchedulerTick(at(8, 1));
+    expect(mockSweepHomeworkDue).toHaveBeenCalledTimes(1);
+    expect(s2.hwDueFlipped).toBe(0);
+  });
+
+  it.each(["OFF", "HOLIDAY"] as const)("does NOT run on a %s day", async (dayType) => {
+    mockResolveDayType.mockResolvedValue(dayType);
+    await runSchedulerTick(at(8, 0));
+    expect(mockSweepHomeworkDue).not.toHaveBeenCalled();
   });
 });
 
