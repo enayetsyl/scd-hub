@@ -83,8 +83,8 @@ function RecordCard({
       </View>
 
       {/* প্রশ্নপত্র / উত্তরপত্র viewers (GP-J6) — only when a file exists */}
-      {FILE_VIEW_SUPPORTED && (r.questionFileId || r.answerFileId) ? (
-        <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+      {FILE_VIEW_SUPPORTED && (r.questionFileId || r.answerFileId || r.attachmentIds.length > 0) ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
           {r.questionFileId ? (
             <Button
               title={STR.gpQuestionFile}
@@ -95,6 +95,17 @@ function RecordCard({
               style={{ flexGrow: 1 }}
             />
           ) : null}
+          {r.attachmentIds.map((fid, i) => (
+            <Button
+              key={fid}
+              title={`${STR.gpQuestionFile} ${bnNum(i + 1)}`}
+              variant="secondary"
+              loading={openingId === fid}
+              disabled={!!openingId}
+              onPress={() => runOpen(fid, () => onOpenFile(fid))}
+              style={{ flexGrow: 1 }}
+            />
+          ))}
           {r.answerFileId ? (
             <Button
               title={STR.gpAnswerFile}

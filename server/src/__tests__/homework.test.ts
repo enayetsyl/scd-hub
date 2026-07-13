@@ -63,6 +63,14 @@ jest.mock("../modules/trackers/models/HomeworkTopic", () => ({
   },
 }));
 
+// Declare-form attachments (D-#297): the kind check queries StoredFile.
+const mockStoredFind = jest.fn();
+jest.mock("../modules/platform/models/StoredFile", () => ({
+  StoredFile: {
+    find: (q: unknown) => ({ select: () => ({ lean: () => mockStoredFind(q) }) }),
+  },
+}));
+
 // Notification emitters (N-1, D-#72) — mocked: the host-side threshold logic is
 // under test here; the emitter internals are covered in notifications.test.ts.
 const mockEmitHwParentComms = jest.fn().mockResolvedValue(undefined);
@@ -86,6 +94,7 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
+const oidStr = () => new mongoose.Types.ObjectId().toString();
 const ACTOR_ID = new mongoose.Types.ObjectId().toString();
 const ITEM_ID = new mongoose.Types.ObjectId();
 const REC_ID = new mongoose.Types.ObjectId();
@@ -352,6 +361,45 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
     await expect(
       declareHomeworkItem(validDeclareInput({ poolRef: "QP-WRONG" })),
     ).rejects.toThrow(/Malformed POOL_REF/);
+  });
+
+  // --- D-#297: declare-form attachments (≤5, hw_question kind) ---------------
+
+  test("D-#297: binds ≤5 hw_question attachments and returns their ids", async () => {
+    const ids = [oidStr(), oidStr(), oidStr()];
+    mockStoredFind.mockResolvedValue(ids.map((id) => ({ _id: id })));
+    const res = await declareHomeworkItem(validDeclareInput({ attachmentIds: ids }));
+    expect(mockStoredFind).toHaveBeenCalledWith({ _id: { $in: ids }, kind: "hw_question" });
+    expect(res.attachmentIds).toEqual(ids);
+    const created = mockItemCreate.mock.calls[0][0] as { attachmentIds: mongoose.Types.ObjectId[] };
+    expect(created.attachmentIds.map(String)).toEqual(ids);
+  });
+
+  test("D-#297: no attachments → StoredFile never queried, field stays unset", async () => {
+    const res = await declareHomeworkItem(validDeclareInput());
+    expect(mockStoredFind).not.toHaveBeenCalled();
+    expect(res.attachmentIds).toEqual([]);
+  });
+
+  test("D-#297: rejects more than 5 attachments", async () => {
+    const ids = Array.from({ length: 6 }, () => oidStr());
+    await expect(
+      declareHomeworkItem(validDeclareInput({ attachmentIds: ids })),
+    ).rejects.toThrow(/At most 5 attachments/);
+  });
+
+  test("D-#297: rejects when any id is not an existing hw_question file", async () => {
+    const ids = [oidStr(), oidStr()];
+    mockStoredFind.mockResolvedValue([{ _id: ids[0] }]); // the 2nd is an hw_answer/chat file
+    await expect(
+      declareHomeworkItem(validDeclareInput({ attachmentIds: ids })),
+    ).rejects.toThrow(/uploaded homework question file/);
+  });
+
+  test("D-#297: rejects a malformed attachment id outright", async () => {
+    await expect(
+      declareHomeworkItem(validDeclareInput({ attachmentIds: ["not-an-oid"] })),
+    ).rejects.toThrow(/Invalid attachment file id/);
   });
 });
 
