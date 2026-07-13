@@ -26,6 +26,8 @@ const mockCoverSlotFind = jest.fn();
 const mockMySubFind = jest.fn();
 const mockPendingAlerts = jest.fn();
 const mockClassPresence = jest.fn();
+const mockCtSectionFind = jest.fn();
+const mockClassFind = jest.fn();
 
 // RoutineSlot.find is called two different ways in MyDayService: the own-periods
 // query (…sort().lean()) and the covering-periods query (…sort().lean(), same
@@ -51,8 +53,17 @@ jest.mock("../modules/routine/models/RoutineSubstitution", () => ({
     }),
   },
 }));
+// Section.find is used two ways: the homework-counts sweep ({active:true}) and the
+// D-#290 classTeacherOf lookup ({classTeacherId}) — route by the filter.
 jest.mock("../modules/foundation/models/Section", () => ({
-  Section: { find: (q: unknown) => ({ select: () => ({ lean: () => mockSectionFind(q) }) }) },
+  Section: {
+    find: (q: { classTeacherId?: unknown }) => ({
+      select: () => ({ lean: () => (q.classTeacherId ? mockCtSectionFind(q) : mockSectionFind(q)) }),
+    }),
+  },
+}));
+jest.mock("../modules/foundation/models/Class", () => ({
+  Class: { find: (q: unknown) => ({ select: () => ({ lean: () => mockClassFind(q) }) }) },
 }));
 // Real R2.1 admit rule inline; the DB-backed holiday resolution is mocked.
 jest.mock("../modules/routine/calendar", () => ({
@@ -107,6 +118,26 @@ beforeEach(() => {
   mockMySubFind.mockResolvedValue([]);
   mockPendingAlerts.mockResolvedValue({ alerts: [], assignmentPrep: null });
   mockClassPresence.mockResolvedValue([]);
+  mockCtSectionFind.mockResolvedValue([]);
+  mockClassFind.mockResolvedValue([]);
+});
+
+describe("myDay — classTeacherOf (D-#290)", () => {
+  test("a TEACHER's class-teacher sections are named with their class level", async () => {
+    mockCtSectionFind.mockResolvedValue([{ _id: "sec-1", nameBn: "মূল", classId: "cls-1" }]);
+    mockClassFind.mockResolvedValue([{ _id: "cls-1", level: -1 }]);
+    const r = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
+    expect(r.classTeacherOf).toEqual([{ sectionId: "sec-1", nameBn: "মূল", classLevel: -1 }]);
+    expect(mockCtSectionFind).toHaveBeenCalledWith(
+      expect.objectContaining({ classTeacherId: "user-1", active: true }),
+    );
+  });
+
+  test("non-teacher roles never query for class-teacher sections", async () => {
+    const r = await myDayFor(ctxFor("OFFICE"), "2026-07-01");
+    expect(r.classTeacherOf).toEqual([]);
+    expect(mockCtSectionFind).not.toHaveBeenCalled();
+  });
 });
 
 describe("myDay — own periods (slots)", () => {

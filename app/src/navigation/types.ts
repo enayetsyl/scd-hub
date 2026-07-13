@@ -286,6 +286,8 @@ export type AdminStackParamList = {
   // Access Control (AC-2): per-user permission editor (access:manage / Principal).
   AccessControlUsers: undefined;
   AccessControlEdit: { userId: string; name: string; role: string };
+  // D-#290: who didn't submit reconciliation (Principal/Office).
+  ReconciliationReport: undefined;
   SectionPicker: undefined;
 };
 

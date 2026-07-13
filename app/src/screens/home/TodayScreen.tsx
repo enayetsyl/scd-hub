@@ -64,6 +64,7 @@ export default function TodayScreen(): React.ReactElement {
   const hw = day?.homework;
   const alerts = day?.alerts ?? [];
   const presence = day?.classPresence ?? [];
+  const ctOf = day?.classTeacherOf ?? [];
 
   // The SAME gates AppTabs uses for the target tabs (no new gating logic).
   const canDeclare = !!role && roleHasPermission(role as Role, "tracker:read");
@@ -105,12 +106,17 @@ export default function TodayScreen(): React.ReactElement {
       ? STR.alertAttendance
       : kind === "class_note"
         ? STR.alertClassNote
-        : STR.alertAssignmentEntry;
+        : kind === "hw_reconcile"
+          ? STR.alertHwReconcile
+          : kind === "as_reconcile"
+            ? STR.alertAsReconcile
+            : STR.alertAssignmentEntry;
 
   /** Each alert deep-links into the screen that clears it. */
   const alertTarget = (kind: string): void => {
     if (kind === "attendance") nav.navigate("AttendanceTab", { screen: "AttendanceHome" });
     else if (kind === "class_note") nav.navigate("ClassNotesTab", { screen: "MyClassNotes" });
+    else if (kind === "hw_reconcile") nav.navigate("HomeworkTab", { screen: "HomeworkHome" });
     else nav.navigate("AssignmentTab", { screen: "AssignmentHome" });
   };
   const canClassTest =
@@ -154,6 +160,16 @@ export default function TodayScreen(): React.ReactElement {
         <H2>
           {bnNum(date)} · {dayOfWeekLabel(DAYS_OF_WEEK[new Date().getDay()])}
         </H2>
+
+        {/* D-#290: name the class-teacher duty — the reconcile alerts have an owner. */}
+        {ctOf.length > 0 ? (
+          <Muted style={{ marginBottom: space(2) }}>
+            🎓 {STR.ctOfTitle}:{" "}
+            {ctOf
+              .map((s) => `${classLevelLabel(s.classLevel)}${s.nameBn ? ` — ${s.nameBn}` : ""}`)
+              .join(", ")}
+          </Muted>
+        ) : null}
 
         {q.error ? (
           <ErrorBanner message={friendlyError(q.error)} onRetry={() => refetch({ requestPolicy: "network-only" })} />

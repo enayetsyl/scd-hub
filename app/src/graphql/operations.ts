@@ -2126,6 +2126,11 @@ export interface AssignmentPrepT {
   weekNumber: number;
   items: number;
 }
+export interface ClassTeacherSectionT {
+  sectionId: string;
+  nameBn: string;
+  classLevel: number;
+}
 export interface MyDayT {
   date: string;
   dayType: string;
@@ -2135,6 +2140,7 @@ export interface MyDayT {
   alerts: PendingAlertT[];
   assignmentPrep: AssignmentPrepT | null;
   classPresence: ClassPresenceT[];
+  classTeacherOf: ClassTeacherSectionT[];
 }
 export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
   query MyDay($date: String!) {
@@ -2149,6 +2155,47 @@ export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
       classPresence {
         classId classLevel classNameBn markedCount presentCount absentCount totalCount complete
       }
+      classTeacherOf { sectionId nameBn classLevel }
+    }
+  }
+`;
+
+/** D-#290 — the Principal/Office "who didn't reconcile?" report. */
+export interface HwReconMissT {
+  dateKey: string;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  confirmerName: string | null;
+  declaredItems: number;
+  declaredMinutes: number;
+}
+export interface AsReconMissT {
+  weekNumber: number;
+  deliveryDateKey: string;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  confirmerName: string | null;
+  draftItems: number;
+  draftMinutes: number;
+}
+export interface ReconReportT {
+  fromKey: string;
+  toKey: string;
+  hwMisses: HwReconMissT[];
+  asMisses: AsReconMissT[];
+}
+export const RECON_REPORT_QUERY = gql<
+  { reconciliationReport: ReconReportT },
+  { from: string; to: string }
+>`
+  query ReconciliationReport($from: String!, $to: String!) {
+    reconciliationReport(from: $from, to: $to) {
+      fromKey
+      toKey
+      hwMisses { dateKey sectionId sectionNameBn classLevel confirmerName declaredItems declaredMinutes }
+      asMisses { weekNumber deliveryDateKey sectionId sectionNameBn classLevel confirmerName draftItems draftMinutes }
     }
   }
 `;
