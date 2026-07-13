@@ -69,6 +69,14 @@ describe("observability / sentry seam (MON-2)", () => {
       expect(isExpectedError(new Error("A break period takes no teacher"))).toBe(true);
     });
 
+    it("the MON-2 smoke error is a FAULT — the tool must not silently prove nothing", () => {
+      // D-#287 skips a plain Error. The /debug/sentry route used to throw exactly that,
+      // so it would have reported NOTHING and the next operator would have concluded that
+      // error tracking was broken. It is its own class now, precisely so it reports.
+      class SentrySmokeError extends Error {}
+      expect(isExpectedError(new SentrySmokeError("MON-2 server smoke (debug route)"))).toBe(false);
+    });
+
     it("STILL captures the fault classes — a subclass is never swallowed", () => {
       // The regression that matters: these are what a genuine outage looks like.
       class MongoServerError extends Error {}

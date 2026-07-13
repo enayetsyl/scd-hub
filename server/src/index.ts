@@ -105,12 +105,27 @@ app.get("/readyz", async (_req, res) => {
 // `ageSeconds` and alerts when the ticker stalls (past ~2× the 60s interval).
 app.get("/internal/ticker", (_req, res) => res.json(getTickerHealth()));
 
+/**
+ * The smoke test must throw a FAULT, not a plain `Error`.
+ *
+ * D-#287 made a plain `throw new Error(...)` an expected business denial — it is not
+ * captured and never alerts. This route used to throw exactly that, so after D-#287 it
+ * would have gone through the whole pipeline and reported NOTHING — and the next operator
+ * would have concluded that error tracking was broken when it was working perfectly.
+ *
+ * A verification tool that fails silently is worse than no tool at all: it is how
+ * D-#285 (the DSN was never set) went unnoticed for a month. So the smoke error is its
+ * OWN CLASS — a subclass, exactly like the real faults it stands in for
+ * (TypeError / CastError / MongoServerError).
+ */
+export class SentrySmokeError extends Error {}
+
 // MON-2 verification aid (operator-only): set SENTRY_DEBUG_ROUTE=1 on a NON-production
 // service to force a captured server fault, confirm it lands in GlitchTip (with the
 // secrets scrubbed), then unset. Never registered on production.
 if (process.env.SENTRY_DEBUG_ROUTE === "1" && process.env.NODE_ENV !== "production") {
   app.get("/debug/sentry", () => {
-    throw new Error("MON-2 server smoke (debug route)");
+    throw new SentrySmokeError("MON-2 server smoke (debug route)");
   });
 }
 
