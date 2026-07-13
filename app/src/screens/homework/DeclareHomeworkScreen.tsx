@@ -4,12 +4,19 @@
  * Pool ref + revision flag. classLevel is derived from the selected class.
  */
 import React, { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { HW_SUBJECTS } from "@scd/shared";
 import { CLASSES_QUERY, DECLARE_HOMEWORK_ITEM, ATTACH_HW_QUESTION_FILE, HOMEWORK_TOPICS_QUERY } from "../../graphql/operations";
-import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
+import {
+  pickAndUploadHomeworkFile,
+  pickAndUploadHomeworkFiles,
+  openStoredFile,
+  HW_MAX_ATTACHMENTS,
+  FileUploadError,
+  type UploadedFile,
+} from "../../lib/files";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, EmptyState } from "../../components/ui";
 import { DateField } from "../../components/DateField";
@@ -45,6 +52,9 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
   /** The just-declared item — target for the optional question-file attach (GP-A). */
   const [lastItem, setLastItem] = useState<{ id: string; hwId: string } | null>(null);
   const [fileBusy, setFileBusy] = useState(false);
+  /** Declare-form attachments (≤5) — uploaded on pick, bound at declare time. */
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [pickBusy, setPickBusy] = useState(false);
   const [, declare] = useMutation(DECLARE_HOMEWORK_ITEM);
   const [, attachQuestion] = useMutation(ATTACH_HW_QUESTION_FILE);
 
@@ -104,6 +114,7 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
       qCount: q,
       poolRef: poolRef.trim() || undefined,
       revItem,
+      attachmentIds: files.length > 0 ? files.map((f) => f.fileId) : undefined,
     });
     setBusy(false);
     if (res.error || !res.data?.declareHomeworkItem) {
@@ -116,6 +127,23 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
     setQCount("");
     setPoolRef("");
     setRevItem(false);
+    setFiles([]);
+  }
+
+  /** Multi-pick question attachments (≤5) — each uploads immediately; partial
+   *  failures toast but the good ones stay (the print-form pattern). */
+  async function onPickFiles(): Promise<void> {
+    if (pickBusy || files.length >= HW_MAX_ATTACHMENTS) return;
+    setPickBusy(true);
+    try {
+      const res = await pickAndUploadHomeworkFiles(HW_MAX_ATTACHMENTS - files.length);
+      if (res.uploaded.length > 0) setFiles((cur) => [...cur, ...res.uploaded]);
+      if (res.failures.length > 0) toast.show(res.failures.join("\n"), "danger");
+    } catch (e) {
+      toast.show(e instanceof FileUploadError ? e.message : STR.hwFileUploadFail, "danger");
+    } finally {
+      setPickBusy(false);
+    }
   }
 
   /** Optional question-file attach (GP-A, D-#70) — failure toasts a Bangla
@@ -201,6 +229,33 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
         <Field label={STR.hwQCount} value={qCount} onChangeText={setQCount} keyboardType="number-pad" error={fieldErrors.qCount} />
         {/* Rarely changed — folded (UX-6): pool ref + revision flag. Time (default 20)
             stays visible above per the PRD. */}
+        <Card>
+          <Body style={{ fontWeight: "700", marginBottom: 4 }}>
+            📎 {STR.cnAttachments} ({files.length}/{HW_MAX_ATTACHMENTS})
+          </Body>
+          {files.map((f, i) => (
+            <View key={f.fileId} style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+              <Pressable
+                style={{ flex: 1 }}
+                onPress={() => void openStoredFile(f.fileId).catch(() => toast.show(STR.errGeneric, "danger"))}
+              >
+                <Body>📎 {f.originalName}</Body>
+              </Pressable>
+              <Button
+                title={STR.remove}
+                variant="ghost"
+                onPress={() => setFiles((cur) => cur.filter((_, j) => j !== i))}
+              />
+            </View>
+          ))}
+          <Button
+            title={pickBusy ? STR.saving : STR.cnAttachFile}
+            variant="secondary"
+            onPress={() => void onPickFiles()}
+            loading={pickBusy}
+            disabled={pickBusy || files.length >= HW_MAX_ATTACHMENTS}
+          />
+        </Card>
         <MoreOptions>
           <Field label={STR.hwPoolRef} value={poolRef} onChangeText={setPoolRef} placeholder={`QP-${subject ?? "MATH"}-C${classLevel ?? 1}-U01`} />
           <ChipRow>

@@ -56,6 +56,10 @@ export interface IHomeworkItem extends Document {
    *  by the class. A `StoredFile` ref; re-attach replaces the reference (the old
    *  Drive file stays under the year's retention). */
   questionFileId?: Types.ObjectId;
+  /** Multi-file question attachments picked in the declare form (≤5, `hw_question`
+   *  kind) — the class-note pattern. `questionFileId` stays as the legacy single
+   *  post-declare slot; readers surface both. */
+  attachmentIds?: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -87,12 +91,15 @@ const HomeworkItemSchema = new Schema<IHomeworkItem>(
     declaredBy: { type: Schema.Types.ObjectId, required: true },
     issuedAt: { type: Date },
     questionFileId: { type: Schema.Types.ObjectId, ref: "StoredFile" },
+    attachmentIds: { type: [Schema.Types.ObjectId], ref: "StoredFile", default: undefined },
   },
   { timestamps: true },
 );
 
 // Daily declaration view (handoff §8.1): items for a class on a day.
 HomeworkItemSchema.index({ classId: 1, dateGiven: 1 });
+// Reverse lookup for the GET /files/:id read gate (which item owns this file?).
+HomeworkItemSchema.index({ attachmentIds: 1 }, { sparse: true });
 HomeworkItemSchema.index({ academicYearId: 1, classLevel: 1, subject: 1 });
 
 export const HomeworkItem = model<IHomeworkItem>("HomeworkItem", HomeworkItemSchema);

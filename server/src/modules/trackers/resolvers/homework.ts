@@ -79,6 +79,8 @@ interface HomeworkItemShape {
   status: string;
   /** StoredFile id of the attached question file (GP-A) — null when none. */
   questionFileId?: string | null;
+  /** Declare-form multi-attachments (≤5, hw_question kind) — empty when none. */
+  attachmentIds?: string[];
 }
 
 const HomeworkItemRef = builder.objectRef<HomeworkItemShape>("HomeworkItem");
@@ -96,6 +98,7 @@ HomeworkItemRef.implement({
     revItem: t.exposeBoolean("revItem"),
     status: t.exposeString("status"),
     questionFileId: t.string({ nullable: true, resolve: (r) => r.questionFileId ?? null }),
+    attachmentIds: t.field({ type: ["String"], resolve: (r) => r.attachmentIds ?? [] }),
   }),
 });
 
@@ -247,6 +250,7 @@ builder.mutationField("declareHomeworkItem", (t) =>
       selectedQids: t.arg({ type: ["String"], required: false }),
       revItem: t.arg.boolean({ required: false }),
       sessionRef: t.arg.string({ required: false }),
+      attachmentIds: t.arg.stringList({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -265,6 +269,7 @@ builder.mutationField("declareHomeworkItem", (t) =>
         selectedQids: args.selectedQids ? [...args.selectedQids] : undefined,
         revItem: args.revItem ?? undefined,
         sessionRef: args.sessionRef ?? undefined,
+        attachmentIds: args.attachmentIds ? [...args.attachmentIds] : undefined,
         actorId: ctx.auth.userId as string,
       });
       return { ...res, id: res.itemId };
@@ -366,6 +371,7 @@ builder.queryField("homeworkItems", (t) =>
         revItem: d.revItem,
         status: d.status,
         questionFileId: d.questionFileId ? d.questionFileId.toString() : null,
+        attachmentIds: (d.attachmentIds ?? []).map((id) => id.toString()),
       }));
     },
   }),

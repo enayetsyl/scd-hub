@@ -129,9 +129,12 @@ export async function assertFileReadAccess(ctx: AppContext, file: IStoredFile): 
     return;
   }
 
-  // hw_question
+  // hw_question — owned either as the legacy single slot or a declare-form attachment.
+  // The uploader may always read their own file (it exists BEFORE the item does,
+  // while the declare form previews the picked list — the print_upload rule).
+  if (file.uploadedBy?.toString() === ctx.auth.userId) return;
   const item = (await HomeworkItem.findOne({
-    questionFileId: file._id,
+    $or: [{ questionFileId: file._id }, { attachmentIds: file._id }],
   }).lean()) as unknown as IHomeworkItem | null;
   if (!item) throw new ForbiddenError("ফাইলটি কোনো বাড়ির কাজের সাথে যুক্ত নয়");
   if (ctx.auth.role === "GUARDIAN") {

@@ -321,6 +321,32 @@ describe("GET /files/:id", () => {
     expect(mockDownload).not.toHaveBeenCalled();
   });
 
+  test("D-#297: the owning item resolves via questionFileId OR attachmentIds ($or)", async () => {
+    mockStoredFindById.mockResolvedValue(questionFile);
+    await get(guardianTok);
+    expect(mockItemFindOne).toHaveBeenCalledWith({
+      $or: [{ questionFileId: FILE_ID }, { attachmentIds: FILE_ID }],
+    });
+  });
+
+  test("D-#297: the uploader reads their own (even unbound) question file → 200", async () => {
+    mockStoredFindById.mockResolvedValue({
+      ...questionFile,
+      uploadedBy: new mongoose.Types.ObjectId(TEACHER_ID),
+    });
+    mockItemFindOne.mockResolvedValue(null); // picked in the declare form, not bound yet
+    const res = await get(teacherTok);
+    expect(res.status).toBe(200);
+  });
+
+  test("D-#297: an unbound question file stays 403 for a NON-uploader", async () => {
+    mockStoredFindById.mockResolvedValue(questionFile);
+    mockItemFindOne.mockResolvedValue(null);
+    const res = await get(guardianTok);
+    expect(res.status).toBe(403);
+    expect(mockDownload).not.toHaveBeenCalled();
+  });
+
   test("teacher WITHOUT read scope on the section → 403", async () => {
     const res = await get(teacherTok); // composeTeacherScope → empty scopes
     expect(res.status).toBe(403);

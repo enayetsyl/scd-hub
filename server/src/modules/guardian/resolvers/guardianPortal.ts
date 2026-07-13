@@ -165,6 +165,7 @@ const GuardianHomeworkRecordRef = builder
       topupTimeMin: t.int({ nullable: true, resolve: (r) => r.topupTimeMin }),
       questionFileId: t.string({ nullable: true, resolve: (r) => r.questionFileId }),
       answerFileId: t.string({ nullable: true, resolve: (r) => r.answerFileId }),
+      attachmentIds: t.field({ type: ["String"], resolve: (r) => r.attachmentIds ?? [] }),
     }),
   });
 

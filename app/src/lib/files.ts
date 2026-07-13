@@ -27,6 +27,9 @@ export interface UploadedFile {
   mime: string;
 }
 
+/** Maximum declare-form attachments per homework item (mirrors the server cap). */
+export const HW_MAX_ATTACHMENTS = 5;
+
 /** Pick one allowed file and upload it; null when the picker is cancelled.
  *  Throws FileUploadError with a server Bangla message on rejection/failure. */
 export async function pickAndUploadHomeworkFile(
@@ -38,8 +41,41 @@ export async function pickAndUploadHomeworkFile(
     copyToCacheDirectory: true,
   });
   if (picked.canceled || !picked.assets?.[0]) return null;
-  const asset = picked.assets[0];
+  return uploadHomeworkAsset(picked.assets[0], kind);
+}
 
+/**
+ * Pick SEVERAL jpeg/png/pdf files at once and upload each as a homework QUESTION
+ * file (the print multi-pick pattern). At most `maxFiles` are taken — extras are
+ * reported as skipped, never silently dropped. Empty result when cancelled.
+ */
+export async function pickAndUploadHomeworkFiles(maxFiles: number): Promise<MultiUploadResult> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: FILE_MIMES,
+    multiple: true,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.length) return { uploaded: [], failures: [] };
+
+  const take = picked.assets.slice(0, Math.max(0, maxFiles));
+  const skipped = picked.assets.slice(Math.max(0, maxFiles));
+  const uploaded: UploadedFile[] = [];
+  const failures: string[] = skipped.map((a) => `${a.name}: limit`);
+  for (const asset of take) {
+    try {
+      uploaded.push(await uploadHomeworkAsset(asset, "question"));
+    } catch (e) {
+      failures.push(`${asset.name}: ${e instanceof FileUploadError ? e.message : String(e)}`);
+    }
+  }
+  return { uploaded, failures };
+}
+
+/** Upload ONE picked asset to POST /files/hw. */
+async function uploadHomeworkAsset(
+  asset: DocumentPicker.DocumentPickerAsset,
+  kind: "question" | "answer",
+): Promise<UploadedFile> {
   const form = new FormData();
   if (Platform.OS === "web") {
     const blob = await fetch(asset.uri).then((r) => r.blob());

@@ -1670,6 +1670,8 @@ export interface HwItemT {
   status: string;
   /** StoredFile id of the attached question file (GP-A) — null when none. */
   questionFileId: string | null;
+  /** Declare-form multi-attachments (≤5) — empty when none. */
+  attachmentIds: string[];
 }
 
 export const HOMEWORK_ITEMS = gql<
@@ -1678,7 +1680,7 @@ export const HOMEWORK_ITEMS = gql<
 >`
   query HomeworkItems($sectionId: String!, $classId: String!, $dateGiven: String) {
     homeworkItems(sectionId: $sectionId, classId: $classId, dateGiven: $dateGiven) {
-      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId
+      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId attachmentIds
     }
   }
 `;
@@ -1718,19 +1720,20 @@ export const DECLARE_HOMEWORK_ITEM = gql<
     qCount: number;
     poolRef?: string | null;
     revItem?: boolean | null;
+    attachmentIds?: string[] | null;
   }
 >`
   mutation DeclareHomeworkItem(
     $academicYearId: String!, $classId: String!, $classLevel: Int!, $sectionId: String!,
     $subject: String!, $dateGiven: String!, $topTags: [String!]!, $timeDecl: Int,
-    $qCount: Int!, $poolRef: String, $revItem: Boolean
+    $qCount: Int!, $poolRef: String, $revItem: Boolean, $attachmentIds: [String!]
   ) {
     declareHomeworkItem(
       academicYearId: $academicYearId, classId: $classId, classLevel: $classLevel, sectionId: $sectionId,
       subject: $subject, dateGiven: $dateGiven, topTags: $topTags, timeDecl: $timeDecl,
-      qCount: $qCount, poolRef: $poolRef, revItem: $revItem
+      qCount: $qCount, poolRef: $poolRef, revItem: $revItem, attachmentIds: $attachmentIds
     ) {
-      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId
+      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId attachmentIds
     }
   }
 `;
@@ -2520,6 +2523,7 @@ export interface GuardianHwRecordT {
   topupTimeMin: number | null;
   questionFileId: string | null;
   answerFileId: string | null;
+  attachmentIds: string[];
 }
 
 export const CHILD_HOMEWORK_QUERY = gql<
@@ -2532,7 +2536,7 @@ export const CHILD_HOMEWORK_QUERY = gql<
       givenAt dueDate submittedAt checkedAt returnedAt
       chaseCount result resultLabelBn resubOf
       topupFlag topupQCount topupTimeMin
-      questionFileId answerFileId
+      questionFileId answerFileId attachmentIds
     }
   }
 `;
