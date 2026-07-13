@@ -2222,6 +2222,32 @@ const ROUTINE_MASTER_FIELDS = `
 export const ROUTINE_MASTER_QUERY = gql<{ routineMaster: RoutineMasterT }, { day: string }>`
   query RoutineMaster($day: String!) { routineMaster(day: $day) { ${ROUTINE_MASTER_FIELDS} } }
 `;
+
+/** D-#291 — the routine's teacher(s) per subject in a section (grant/timetable mismatch view). */
+export interface SubjectRoutineTeachersT {
+  subject: string;
+  teacherIds: string[];
+  teacherNames: string[];
+}
+export const SECTION_SUBJECT_ROUTINE_TEACHERS = gql<
+  { sectionSubjectRoutineTeachers: SubjectRoutineTeachersT[] },
+  { sectionId: string }
+>`
+  query SectionSubjectRoutineTeachers($sectionId: String!) {
+    sectionSubjectRoutineTeachers(sectionId: $sectionId) { subject teacherIds teacherNames }
+  }
+`;
+export const REASSIGN_ROUTINE_SUBJECT_TEACHER = gql<
+  { reassignRoutineSubjectTeacher: { updatedSlots: number; warnings: string[] } },
+  { sectionId: string; subject: string; teacherId: string }
+>`
+  mutation ReassignRoutineSubjectTeacher($sectionId: String!, $subject: String!, $teacherId: String!) {
+    reassignRoutineSubjectTeacher(sectionId: $sectionId, subject: $subject, teacherId: $teacherId) {
+      updatedSlots
+      warnings
+    }
+  }
+`;
 export const ROUTINE_MASTER_WEEK_QUERY = gql<{ routineMasterWeek: RoutineMasterT[] }, NoVars>`
   query RoutineMasterWeek { routineMasterWeek { ${ROUTINE_MASTER_FIELDS} } }
 `;
