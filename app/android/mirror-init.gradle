@@ -1,0 +1,36 @@
+// Build-scoped repository mirror (passed via --init-script, NOT installed globally).
+// This laptop's ISP resets large transfers from dl.google.com / repo1.maven.org,
+// but the Aliyun mirrors stream fine. Rewrite those repo URLs at build time so
+// dependency resolution uses the reachable mirrors. Local file:// repos (the RN
+// android artifacts shipped in node_modules) and jitpack are left untouched.
+
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+
+def GOOGLE = 'https://maven.aliyun.com/repository/google'
+def CENTRAL = 'https://maven.aliyun.com/repository/public'
+def PLUGINS = 'https://maven.aliyun.com/repository/gradle-plugin'
+
+def rewrite = { repos ->
+    repos.all { repo ->
+        if (repo instanceof MavenArtifactRepository) {
+            def u = repo.url?.toString() ?: ''
+            if (u.startsWith('https://dl.google.com/dl/android/maven2') || u.startsWith('https://maven.google.com')) {
+                repo.url = uri(GOOGLE)
+            } else if (u.startsWith('https://repo1.maven.org/maven2') || u.startsWith('https://repo.maven.apache.org/maven2')) {
+                repo.url = uri(CENTRAL)
+            } else if (u.startsWith('https://plugins.gradle.org/m2')) {
+                repo.url = uri(PLUGINS)
+            }
+        }
+    }
+}
+
+settingsEvaluated { settings ->
+    rewrite(settings.pluginManagement.repositories)
+    try { rewrite(settings.dependencyResolutionManagement.repositories) } catch (ignored) {}
+}
+
+allprojects {
+    buildscript { rewrite(repositories) }
+    rewrite(repositories)
+}
