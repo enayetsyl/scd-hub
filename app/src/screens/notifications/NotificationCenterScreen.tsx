@@ -96,9 +96,14 @@ export default function NotificationCenterScreen({ navigation }: { navigation: R
     }
     const target = notificationTarget(row.kind, row.refs, role);
     if (target) {
+      // `initial: false` keeps the tab's home screen beneath the deep-linked
+      // screen — without it the target becomes the stack's FIRST screen and
+      // loses its back button (owner report: Reconciliation report).
       navigation.navigate("App", {
         screen: target.tab,
-        params: target.params ? { screen: target.screen, params: target.params } : { screen: target.screen },
+        params: target.params
+          ? { screen: target.screen, params: target.params, initial: false }
+          : { screen: target.screen, initial: false },
       });
     }
   };
