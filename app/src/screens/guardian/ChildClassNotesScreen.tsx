@@ -16,8 +16,9 @@ import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { STR, bnNum, dayOfWeekLabel, subjectLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
+import { dateKey } from "../../lib/dates";
 
-const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
+const isoDay = (d: Date): string => dateKey(d);
 
 /** The last `count` calendar dates, most-recent first (today included). */
 function recentDates(count: number): string[] {

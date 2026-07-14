@@ -18,8 +18,9 @@ import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/
 import { useFileOpen } from "../../lib/useFileOpen";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
+import { dateKey } from "../../lib/dates";
 
-const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
+const isoDay = (d: Date): string => dateKey(d);
 const daysAgo = (n: number): string => {
   const d = new Date();
   d.setDate(d.getDate() - n);

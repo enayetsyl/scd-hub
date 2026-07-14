@@ -18,6 +18,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, classLevelLabel, genderLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { RevisionStackParamList } from "../../navigation/types";
+import { dateKey } from "../../lib/dates";
 
 type Nav = NativeStackNavigationProp<RevisionStackParamList>;
 
@@ -26,7 +27,7 @@ export function mostRecentSaturday(from: Date = new Date()): string {
   const d = new Date(from);
   const delta = (d.getDay() - 6 + 7) % 7; // days back to the last Saturday
   d.setDate(d.getDate() - delta);
-  return d.toISOString().slice(0, 10);
+  return dateKey(d);
 }
 
 export default function RevisionHomeScreen(): React.ReactElement {

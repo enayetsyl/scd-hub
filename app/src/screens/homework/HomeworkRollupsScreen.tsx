@@ -16,6 +16,7 @@ import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
 import { space } from "../../theme/tokens";
+import { dateKey } from "../../lib/dates";
 
 type Props = NativeStackScreenProps<HomeworkStackParamList, "HomeworkRollups">;
 
@@ -31,7 +32,7 @@ function monthRange(ym: string): { from: string; to: string } {
   const month = m ? Number(m[2]) - 1 : now.getMonth();
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
-  return { from: first.toISOString().slice(0, 10), to: last.toISOString().slice(0, 10) };
+  return { from: dateKey(first), to: dateKey(last) };
 }
 
 export default function HomeworkRollupsScreen({ navigation }: Props): React.ReactElement {

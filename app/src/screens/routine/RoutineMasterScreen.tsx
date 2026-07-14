@@ -29,11 +29,12 @@ import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { useColors, type ThemeColors } from "../../theme";
 import { space } from "../../theme/tokens";
+import { dateKey } from "../../lib/dates";
 
 const DAYS = ["SUN", "MON", "TUE", "WED", "THU"] as const;
 const GROUP_W = 150;
 const PERIOD_W = 132;
-const todayISO = (): string => new Date().toISOString().slice(0, 10);
+const todayISO = (): string => dateKey();
 /** A slot's period track follows its subject (matches the seeder + binding). */
 const trackForSubject = (s: string): string => (s === "QURAN" ? "quran" : s === "ARABIC" ? "arabic" : "general");
 

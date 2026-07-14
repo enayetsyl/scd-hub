@@ -12,8 +12,9 @@ import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { STR, bnNum, dateHeaderLabel, getActiveLang } from "../../lib/labels";
 import { space } from "../../theme/tokens";
+import { dateKey } from "../../lib/dates";
 
-const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
+const isoDay = (d: Date): string => dateKey(d);
 const daysAgo = (n: number): string => {
   const d = new Date();
   d.setDate(d.getDate() - n);
