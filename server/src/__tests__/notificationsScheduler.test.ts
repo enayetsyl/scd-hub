@@ -80,6 +80,13 @@ jest.mock("../modules/trackers/services/HomeworkReconciliationService", () => ({
 jest.mock("../modules/trackers/services/HomeworkDueSweepService", () => ({
   sweepHomeworkDue: (d: unknown) => mockSweepHomeworkDue(d),
 }));
+// D-#314: the auto-ISSUE sweep (covered in homeworkAutoIssue.test.ts) — mocked
+// as a quiet no-op so 12:00–17:00 ticks stay DB-free here.
+jest.mock("../modules/trackers/services/HomeworkAutoIssueService", () => ({
+  sweepHomeworkAutoIssue: () => Promise.resolve({ issued: 0, deferred: 0 }),
+  HW_AUTO_ISSUE_START_HOUR: 12,
+  HW_AUTO_ISSUE_END_HOUR: 17,
+}));
 jest.mock("../modules/notifications/services/NotificationService", () => ({
   emit: (input: unknown) => mockEmit(input),
 }));

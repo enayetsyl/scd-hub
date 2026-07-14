@@ -1020,6 +1020,9 @@ export const NOTIFICATION_KINDS = [
   // and the Principal at 16:00 (one row per pending section).
   "HW_PENDING_REMINDER",
   "HW_PENDING_ESCALATION",
+  // D-#314: the auto-issue sweep confirmed+issued a within-ceiling, fully-covered
+  // day (attendance-backed roster) — the confirmer is informed, not asked.
+  "HW_AUTO_ISSUED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1049,6 +1052,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   SR_DIGEST: "সাপ্তাহিক রিভিশন রিপোর্ট",
   HW_PENDING_REMINDER: "বাড়ির কাজ নিশ্চিত করা বাকি",
   HW_PENDING_ESCALATION: "বাড়ির কাজ নিশ্চিত হয়নি (এসকেলেশন)",
+  HW_AUTO_ISSUED: "বাড়ির কাজ স্বয়ংক্রিয়ভাবে ইস্যু হয়েছে",
   PRINT_DELIVERED: "প্রিন্ট ডেলিভারি হয়েছে",
   PRINT_REQUESTED: "নতুন প্রিন্ট অনুরোধ",
 };
@@ -1078,6 +1082,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   SR_DIGEST: "Weekly revision digest",
   HW_PENDING_REMINDER: "Homework confirm pending",
   HW_PENDING_ESCALATION: "Homework not confirmed (escalation)",
+  HW_AUTO_ISSUED: "Homework auto-issued",
   PRINT_DELIVERED: "Print job delivered",
   PRINT_REQUESTED: "New print request",
 };
@@ -1535,6 +1540,8 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "homework.parentComms.body",
   "homework.chase.title",
   "homework.chase.body",
+  "homework.autoIssued.title",
+  "homework.autoIssued.body",
   "review.assigned.title",
   "review.assigned.body",
   "cover.assigned.title",
@@ -1633,6 +1640,15 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   "homework.chase.body": {
     group: "homework", labelBn: "বাড়ির কাজ জমার স্মরণিকা — বার্তা", placeholders: ["hwId", "chaseCount"],
     bnDefault: "আপনার সন্তানের বাড়ির কাজ {hwId} এখনও জমা হয়নি — অনুগ্রহ করে আজই জমা দিতে উৎসাহিত করুন। (স্মরণ {chaseCount} বার)", defaultLangMode: "BN",
+  },
+  // --- Homework auto-issue (D-#314) ---
+  "homework.autoIssued.title": {
+    group: "homework", labelBn: "স্বয়ংক্রিয় ইস্যু — শিরোনাম", placeholders: [],
+    bnDefault: "বাড়ির কাজ স্বয়ংক্রিয়ভাবে ইস্যু হয়েছে", defaultLangMode: "BN",
+  },
+  "homework.autoIssued.body": {
+    group: "homework", labelBn: "স্বয়ংক্রিয় ইস্যু — বার্তা", placeholders: ["issuedItems", "dayTotal"],
+    bnDefault: "আজকের সব বিষয় ঘোষিত ও সীমার মধ্যে থাকায় দিনটি স্বয়ংক্রিয়ভাবে নিশ্চিত হয়েছে — {issuedItems}টি আইটেম, মোট {dayTotal} মিনিট। ট্রিম দরকার হলে আগের মতোই আপনি করবেন।", defaultLangMode: "BN",
   },
   // --- Plan review assigned (N1.5) ---
   "review.assigned.title": {
