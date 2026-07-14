@@ -10,7 +10,7 @@
  * read-only with a hint back to the Records screen, which keeps the exception drill-down
  * (redeliver, returns, manual moves).
  */
-import React, { useState, useRef, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { ScrollView, View, RefreshControl } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
@@ -23,6 +23,8 @@ import {
 } from "../../graphql/operations";
 import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
 import { groupByDate } from "../../lib/groupByDate";
+import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
+import { SubjectFold } from "../../components/SubjectFold";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
 import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
@@ -104,7 +106,8 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
   const [, attachAnswer] = useMutation(ATTACH_HW_ANSWER_FILE);
 
   const records = recsQ.data?.homeworkOpenRecords ?? [];
-  const groups = useMemo(() => groupByDate(records, (r) => r.dateGiven), [records]);
+  // D-#306: fold subjects the caller doesn't actively teach on this section.
+  const taught = useTaughtSubjects(selection.sectionId ?? null);
 
   // Refresh on focus (e.g. after marking a record submitted on Records) so newly
   // pending items appear without a reload.
@@ -189,6 +192,105 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
     refetchRecs({ requestPolicy: "network-only" }),
   );
 
+  const renderDateGroups = (recs: HwOpenRecordT[]): React.ReactNode =>
+    groupByDate(recs, (r) => r.dateGiven).map((g) => (
+      <View key={g.dateKey} style={{ marginBottom: space(2) }}>
+        <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{dateHeaderLabel(g.dateKey)}</Muted>
+        {groupByItem(g.items).map((ig) => (
+          <View key={ig.hwId} style={{ marginBottom: space(2) }}>
+            <Muted style={{ marginBottom: 4 }}>
+              {hwSubjectLabel(ig.subject)} · {ig.hwId}
+              {ig.topicLabelBn ? ` · 📘 ${ig.topicLabelBn}` : ""}
+            </Muted>
+            {ig.rows.map((r) => {
+              const actionable = ACTIONABLE_STATES.has(r.state);
+              const p = pending[r.id];
+              return (
+                <Card key={r.id}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Body style={{ fontWeight: "700", flex: 1 }}>{r.studentName}</Body>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+                      {r.hasAnswerFile ? <Badge text={STR.hwFileHas} tone="ok" /> : null}
+                      <Badge text={lifecycleStateLabel(r.state)} tone={actionable ? "info" : "muted"} />
+                    </View>
+                  </View>
+
+                  {actionable ? (
+                    <>
+                      <ChipRow>
+                        <Chip
+                          label={STR.hwOutcomeCorrect}
+                          selected={busyId === r.id}
+                          onPress={() => onChipPress(r.id, "CORRECT")}
+                        />
+                        <Chip
+                          label={STR.hwOutcomePartial}
+                          selected={!!p?.expanded && p?.outcome === "PARTIAL"}
+                          onPress={() => onChipPress(r.id, "PARTIAL")}
+                        />
+                        <Chip
+                          label={STR.hwOutcomeWrong}
+                          selected={!!p?.expanded && p?.outcome === "WRONG"}
+                          onPress={() => onChipPress(r.id, "WRONG")}
+                        />
+                        <Chip
+                          label={STR.hwOutcomeNotSubmitted}
+                          selected={busyId === r.id}
+                          onPress={() => onChipPress(r.id, "NOT_SUBMITTED")}
+                        />
+                      </ChipRow>
+                      {p?.expanded ? (
+                        <View style={{ marginTop: 8 }}>
+                          {p.outcome === "PARTIAL" ? (
+                            <ChipRow>
+                              <Chip
+                                label={STR.hwResubmit}
+                                selected={!!p.resubmit}
+                                onPress={() => setPend(r.id, { resubmit: !p.resubmit })}
+                              />
+                            </ChipRow>
+                          ) : null}
+                          <Field label={STR.hwTopupQids} value={p.topupQids} onChangeText={(t) => setPend(r.id, { topupQids: t })} />
+                          <Field
+                            label={STR.hwTopupTime}
+                            value={p.topupTime}
+                            onChangeText={(t) => setPend(r.id, { topupTime: t })}
+                            keyboardType="number-pad"
+                          />
+                          <View style={{ marginTop: 8 }}>
+                            <Button
+                              title={STR.hwConfirm}
+                              onPress={() => onOutcome(r.id, p.outcome, p)}
+                              loading={busyId === r.id}
+                              disabled={busyId !== null}
+                            />
+                          </View>
+                        </View>
+                      ) : null}
+                      <View style={{ marginTop: 8 }}>
+                        <Button
+                          title={STR.hwAttachAnswer}
+                          variant="secondary"
+                          onPress={() => onAttachAnswer(r.id)}
+                          loading={fileBusyId === r.id}
+                          disabled={fileBusyId !== null}
+                        />
+                      </View>
+                    </>
+                  ) : (
+                    <View style={{ marginTop: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      {r.result ? <Muted>{hwResultLabel(r.result)}</Muted> : <View />}
+                      <Button title={STR.hwSeeRecords} variant="ghost" onPress={() => navigation.navigate("HomeworkRecords")} />
+                    </View>
+                  )}
+                </Card>
+              );
+            })}
+          </View>
+        ))}
+      </View>
+    ));
+
   return (
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
@@ -209,103 +311,12 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
             {ok ? <Notice message={ok} tone="ok" /> : null}
             {error ? <Notice message={error} tone="danger" /> : null}
 
-            {groups.map((g) => (
-              <View key={g.dateKey} style={{ marginBottom: space(2) }}>
-                <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{dateHeaderLabel(g.dateKey)}</Muted>
-                {groupByItem(g.items).map((ig) => (
-                  <View key={ig.hwId} style={{ marginBottom: space(2) }}>
-                    <Muted style={{ marginBottom: 4 }}>
-                      {hwSubjectLabel(ig.subject)} · {ig.hwId}
-                      {ig.topicLabelBn ? ` · 📘 ${ig.topicLabelBn}` : ""}
-                    </Muted>
-                    {ig.rows.map((r) => {
-                      const actionable = ACTIONABLE_STATES.has(r.state);
-                      const p = pending[r.id];
-                      return (
-                        <Card key={r.id}>
-                          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                            <Body style={{ fontWeight: "700", flex: 1 }}>{r.studentName}</Body>
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
-                              {r.hasAnswerFile ? <Badge text={STR.hwFileHas} tone="ok" /> : null}
-                              <Badge text={lifecycleStateLabel(r.state)} tone={actionable ? "info" : "muted"} />
-                            </View>
-                          </View>
-
-                          {actionable ? (
-                            <>
-                              <ChipRow>
-                                <Chip
-                                  label={STR.hwOutcomeCorrect}
-                                  selected={busyId === r.id}
-                                  onPress={() => onChipPress(r.id, "CORRECT")}
-                                />
-                                <Chip
-                                  label={STR.hwOutcomePartial}
-                                  selected={!!p?.expanded && p?.outcome === "PARTIAL"}
-                                  onPress={() => onChipPress(r.id, "PARTIAL")}
-                                />
-                                <Chip
-                                  label={STR.hwOutcomeWrong}
-                                  selected={!!p?.expanded && p?.outcome === "WRONG"}
-                                  onPress={() => onChipPress(r.id, "WRONG")}
-                                />
-                                <Chip
-                                  label={STR.hwOutcomeNotSubmitted}
-                                  selected={busyId === r.id}
-                                  onPress={() => onChipPress(r.id, "NOT_SUBMITTED")}
-                                />
-                              </ChipRow>
-                              {p?.expanded ? (
-                                <View style={{ marginTop: 8 }}>
-                                  {p.outcome === "PARTIAL" ? (
-                                    <ChipRow>
-                                      <Chip
-                                        label={STR.hwResubmit}
-                                        selected={!!p.resubmit}
-                                        onPress={() => setPend(r.id, { resubmit: !p.resubmit })}
-                                      />
-                                    </ChipRow>
-                                  ) : null}
-                                  <Field label={STR.hwTopupQids} value={p.topupQids} onChangeText={(t) => setPend(r.id, { topupQids: t })} />
-                                  <Field
-                                    label={STR.hwTopupTime}
-                                    value={p.topupTime}
-                                    onChangeText={(t) => setPend(r.id, { topupTime: t })}
-                                    keyboardType="number-pad"
-                                  />
-                                  <View style={{ marginTop: 8 }}>
-                                    <Button
-                                      title={STR.hwConfirm}
-                                      onPress={() => onOutcome(r.id, p.outcome, p)}
-                                      loading={busyId === r.id}
-                                      disabled={busyId !== null}
-                                    />
-                                  </View>
-                                </View>
-                              ) : null}
-                              <View style={{ marginTop: 8 }}>
-                                <Button
-                                  title={STR.hwAttachAnswer}
-                                  variant="secondary"
-                                  onPress={() => onAttachAnswer(r.id)}
-                                  loading={fileBusyId === r.id}
-                                  disabled={fileBusyId !== null}
-                                />
-                              </View>
-                            </>
-                          ) : (
-                            <View style={{ marginTop: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                              {r.result ? <Muted>{hwResultLabel(r.result)}</Muted> : <View />}
-                              <Button title={STR.hwSeeRecords} variant="ghost" onPress={() => navigation.navigate("HomeworkRecords")} />
-                            </View>
-                          )}
-                        </Card>
-                      );
-                    })}
-                  </View>
-                ))}
-              </View>
-            ))}
+            <SubjectFold
+              key={selection.sectionId ?? ""}
+              records={records}
+              taught={taught}
+              render={renderDateGroups}
+            />
           </>
         )}
       </ScrollView>
