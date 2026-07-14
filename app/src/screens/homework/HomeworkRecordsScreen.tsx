@@ -5,23 +5,33 @@
  * transition per record (GIVEN→DUE→SUBMITTED/CHASE, ABSENT_REDELIVER→GIVEN,
  * CHECKED→RETURNED). The DUE/CHASE rows here are the "chase" worklist. Once a record
  * reaches SUBMITTED, the result is recorded in the Checking queue.
+ *
+ * D-#313: GIVEN rows carry a checkbox — pick some and "mark selected due", or
+ * flip a whole day with one tap. Records also auto-flip to DUE on their due
+ * morning (the scheduler sweep); these buttons are only the EARLY path.
  */
 import React, { useState, useRef, useCallback } from "react";
-import { ScrollView, View, RefreshControl } from "react-native";
+import { ScrollView, View, Text, Pressable, RefreshControl } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
-import { HOMEWORK_OPEN_RECORDS, TRANSITION_HOMEWORK_RECORD, type HwOpenRecordT } from "../../graphql/operations";
+import {
+  HOMEWORK_OPEN_RECORDS,
+  TRANSITION_HOMEWORK_RECORD,
+  MARK_HOMEWORK_RECORDS_DUE,
+  type HwOpenRecordT,
+} from "../../graphql/operations";
 import { groupByDate } from "../../lib/groupByDate";
 import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
 import { SubjectFold } from "../../components/SubjectFold";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
-import { STR, hwSubjectLabel, lifecycleStateLabel, dateHeaderLabel } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, lifecycleStateLabel, dateHeaderLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { useSectionContext } from "../../state/SectionContext";
+import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HomeworkStackParamList, "HomeworkRecords">;
@@ -61,9 +71,13 @@ function moveLabel(from: string, to: string): string {
 
 export default function HomeworkRecordsScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
+  const colors = useColors();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  // D-#313: the picked GIVEN records (bulk early mark-due).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const base = { sectionId: selection.sectionId ?? "", classId: selection.classId ?? "" };
   const [recsQ, refetchRecs] = useQuery({
@@ -72,10 +86,36 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
     pause: !hasSection,
   });
   const [, transition] = useMutation(TRANSITION_HOMEWORK_RECORD);
+  const [, markManyDue] = useMutation(MARK_HOMEWORK_RECORDS_DUE);
 
   const records = recsQ.data?.homeworkOpenRecords ?? [];
   // D-#306: fold subjects the caller doesn't actively teach on this section.
   const taught = useTaughtSubjects(selection.sectionId ?? null);
+
+  const toggleSelect = (id: string): void => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  async function onMarkDue(recordIds: string[]): Promise<void> {
+    if (recordIds.length === 0 || bulkBusy) return;
+    setError(null);
+    setOk(null);
+    setBulkBusy(true);
+    const res = await markManyDue({ sectionId: base.sectionId, recordIds });
+    setBulkBusy(false);
+    if (res.error) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    setOk(`${lifecycleStateLabel("DUE")} · ${bnNum(res.data?.markHomeworkRecordsDue ?? 0)}`);
+    setSelected(new Set());
+    refetchRecs({ requestPolicy: "network-only" });
+  }
 
   const firstFocus = useRef(true);
   useFocusEffect(
@@ -108,14 +148,39 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
   );
 
   const renderDateGroups = (recs: HwOpenRecordT[]): React.ReactNode =>
-    groupByDate(recs, (r) => r.dateGiven).map((g) => (
+    groupByDate(recs, (r) => r.dateGiven).map((g) => {
+      const givenIds = g.items.filter((r) => r.state === "GIVEN").map((r) => r.id);
+      return (
       <View key={g.dateKey} style={{ marginBottom: space(2) }}>
-        <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{dateHeaderLabel(g.dateKey)}</Muted>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: space(1) }}>
+          <Muted style={{ fontWeight: "700", flex: 1 }}>{dateHeaderLabel(g.dateKey)}</Muted>
+          {/* D-#313: one tap flips the whole day's GIVEN records to DUE. */}
+          {givenIds.length > 0 ? (
+            <Button
+              title={`${STR.hwMarkDayDue} (${bnNum(givenIds.length)})`}
+              variant="ghost"
+              onPress={() => void onMarkDue(givenIds)}
+              disabled={bulkBusy}
+            />
+          ) : null}
+        </View>
         {g.items.map((r) => {
           const moves = NEXT_STATES[r.state] ?? [];
+          const isSelected = selected.has(r.id);
           return (
             <Card key={r.id}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                {r.state === "GIVEN" ? (
+                  <Pressable
+                    onPress={() => toggleSelect(r.id)}
+                    hitSlop={10}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: isSelected }}
+                    style={{ marginRight: space(2) }}
+                  >
+                    <Text style={{ fontSize: 20, color: colors.primary }}>{isSelected ? "☑" : "☐"}</Text>
+                  </Pressable>
+                ) : null}
                 <Body style={{ fontWeight: "700", flexShrink: 1 }}>{r.studentName}</Body>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
                   <Badge text={hwSubjectLabel(r.subject)} tone="info" />
@@ -148,7 +213,8 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
           );
         })}
       </View>
-    ));
+      );
+    });
 
   return (
     <Screen padded={false}>
@@ -169,6 +235,18 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
           <>
             {ok ? <Notice message={ok} tone="ok" /> : null}
             {error ? <Notice message={error} tone="danger" /> : null}
+
+            {/* D-#313: bulk early mark-due for the picked GIVEN records. */}
+            {selected.size > 0 ? (
+              <View style={{ marginBottom: space(2) }}>
+                <Button
+                  title={`${STR.hwMarkSelectedDue} (${bnNum(selected.size)})`}
+                  onPress={() => void onMarkDue([...selected])}
+                  loading={bulkBusy}
+                  disabled={bulkBusy}
+                />
+              </View>
+            ) : null}
 
             <SubjectFold
               key={selection.sectionId ?? ""}
