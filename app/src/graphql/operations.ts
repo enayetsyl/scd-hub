@@ -2215,6 +2215,35 @@ export interface MyDayT {
   classPresence: ClassPresenceT[];
   classTeacherOf: ClassTeacherSectionT[];
 }
+// D-#316 — the Principal/Office Today dashboard (generic cards).
+export interface AdminCardBadgeT {
+  key: string;
+  value: number;
+  tone: string;
+}
+export interface AdminCardRowT {
+  title: string;
+  subtitle: string | null;
+  value: string | null;
+  tone: string;
+}
+export interface AdminTodayCardT {
+  key: string;
+  badges: AdminCardBadgeT[];
+  rows: AdminCardRowT[];
+  moreCount: number;
+}
+export const ADMIN_TODAY_QUERY = gql<{ adminToday: AdminTodayCardT[] }, { date: string }>`
+  query AdminToday($date: String!) {
+    adminToday(date: $date) {
+      key
+      badges { key value tone }
+      rows { title subtitle value tone }
+      moreCount
+    }
+  }
+`;
+
 export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
   query MyDay($date: String!) {
     myDay(date: $date) {
