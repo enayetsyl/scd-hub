@@ -4398,6 +4398,16 @@ export const MARK_ALL_NOTIFICATIONS_READ = gql<
   }
 `;
 
+/** D-#307: inbox multi-select — mark a picked set of own rows read. */
+export const MARK_NOTIFICATIONS_READ = gql<
+  { markNotificationsRead: number },
+  { ids: string[] }
+>`
+  mutation MarkNotificationsRead($ids: [String!]!) {
+    markNotificationsRead(ids: $ids)
+  }
+`;
+
 // N-4 (D-#75): deactivate this device's token at logout (own-row).
 export const UNREGISTER_PUSH_DEVICE = gql<
   { unregisterPushDevice: boolean },

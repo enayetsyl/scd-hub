@@ -690,3 +690,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-14 | Fix | Academic-year default self-heals to the current year (empty Class row on fresh devices) + all 25 UTC "today" defaults now local-time (pre-6am dates were yesterday). App-only. | D-#304
 - 2026-07-14 | Data | Guardian↔student links reconciled to the owner roster in local+dev+prod (D-#305): 91/91 verified per env, one-guardian-per-child, backups taken. No code deploy. | D-#305
 - 2026-07-14 | UX | Homework Records + Checking queue subject fold (D-#306): subjects the caller actively teaches stay expanded; other subjects collapse to a "(▸) subject (n)" toggle for class teachers/supervisors. App-only. | D-#306
+- 2026-07-14 | Feature | Notification inbox multi-select (D-#307): checkbox per unread row + "mark selected read" bulk button; new own-row markNotificationsRead(ids) mutation. jest 1901/1901 (114 suites). | D-#307
