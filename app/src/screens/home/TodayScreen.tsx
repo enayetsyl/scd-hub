@@ -229,7 +229,16 @@ export default function TodayScreen(): React.ReactElement {
         {/* Principal/Office: per-class presence for today, then who still hasn't marked. */}
         {canManage && presence.length > 0 ? (
           <Card>
-            <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.classPresenceTitle}</Body>
+            <View
+              style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: space(2) }}
+            >
+              <Body style={{ fontWeight: "700", flex: 1 }}>{STR.classPresenceTitle}</Body>
+              {/* D-#312: the school-wide present total at a glance. */}
+              <Badge
+                text={`${STR.presentWord}: ${bnNum(presence.reduce((s, c) => s + c.presentCount, 0))}`}
+                tone="ok"
+              />
+            </View>
             {presence.map((c) => (
               <View
                 key={c.classId}
