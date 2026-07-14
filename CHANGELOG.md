@@ -701,3 +701,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-14 | UX | Attendance totals (D-#312): Today card shows the school-wide present total; absentee report shows the absent total and folds each class to name+count, expanding on tap. App-only. | D-#312
 - 2026-07-14 | Fix | Phone login format-tolerant (D-#315): 01…/+8801…/8801… spellings all match for staff + guardian phone identifiers. Server-only. | D-#315
 - 2026-07-14 | Feature | Homework auto-issue (D-#314): scheduler sweep confirms+issues within-ceiling fully-covered days off the real attendance roster and notifies the confirmer (HW_AUTO_ISSUED); trim days stay manual. | D-#314
+- 2026-07-14 | Feature | Admin Today dashboard (D-#316): Principal/Office land on collapsible summary cards (attendance, homework cycle+backlog, assignments, leave, observations, comments, class tests, print, reports) off one adminToday aggregate; tap expands inline, rows deep-link. | D-#316

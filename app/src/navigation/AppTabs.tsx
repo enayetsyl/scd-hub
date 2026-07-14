@@ -55,6 +55,7 @@ import { fonts, radius, space, typeScale, useColors } from "../theme";
 
 import LoginScreen from "../screens/auth/LoginScreen";
 import TodayScreen from "../screens/home/TodayScreen";
+import AdminTodayScreen from "../screens/home/AdminTodayScreen";
 import MyClassNotesScreen from "../screens/classnotes/MyClassNotesScreen";
 import PrintHomeScreen from "../screens/printing/PrintHomeScreen";
 import NewPrintRequestScreen from "../screens/printing/NewPrintRequestScreen";
@@ -442,9 +443,16 @@ function useStackOptions() {
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 function HomeNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
+  // D-#316: Principal/Office land on the card dashboard; teachers keep TodayScreen.
+  const { role } = useAuth();
+  const adminDash = role === "PRINCIPAL" || role === "OFFICE";
   return (
     <HomeStack.Navigator screenOptions={stackOptions}>
-      <HomeStack.Screen name="Today" component={TodayScreen} options={{ title: STR.drawerItemToday }} />
+      <HomeStack.Screen
+        name="Today"
+        component={adminDash ? AdminTodayScreen : TodayScreen}
+        options={{ title: STR.drawerItemToday }}
+      />
     </HomeStack.Navigator>
   );
 }
