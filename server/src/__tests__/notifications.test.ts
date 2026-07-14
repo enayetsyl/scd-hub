@@ -80,6 +80,7 @@ import {
   myNotifications,
   myUnreadCount,
   markRead,
+  markManyRead,
   markAllRead,
 } from "../modules/notifications/services/NotificationService";
 import {
@@ -228,6 +229,22 @@ describe("N1.7 markRead", () => {
     const [filter, update] = mockNotifUpdateMany.mock.calls[0];
     expect(filter).toEqual({ recipientGuardianId: GUARDIAN_ID, readAt: null });
     expect(update.$set.readAt).toBeInstanceOf(Date);
+  });
+
+  test("markManyRead flips only the recipient's picked unread rows (D-#307)", async () => {
+    const ids = [oid().toString(), oid().toString()];
+    mockNotifUpdateMany.mockResolvedValue({ modifiedCount: 2 });
+    const n = await markManyRead(ids, { userId: USER_ID });
+    expect(n).toBe(2);
+    const [filter, update] = mockNotifUpdateMany.mock.calls[0];
+    expect(filter).toEqual({ _id: { $in: ids }, recipientUserId: USER_ID, readAt: null });
+    expect(update.$set.readAt).toBeInstanceOf(Date);
+  });
+
+  test("markManyRead with an empty pick is a no-op that never hits the DB", async () => {
+    const n = await markManyRead([], { userId: USER_ID });
+    expect(n).toBe(0);
+    expect(mockNotifUpdateMany).not.toHaveBeenCalled();
   });
 });
 

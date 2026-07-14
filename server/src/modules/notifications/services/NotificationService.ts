@@ -172,6 +172,19 @@ export async function markRead(notificationId: string, recipient: RecipientRef):
   throw new ForbiddenError("এই নোটিফিকেশনটি আপনার নয়");
 }
 
+/** Mark a PICKED set of the recipient's own unread rows read (D-#307 inbox
+ *  multi-select); returns how many flipped. Ids that are read already or not
+ *  this recipient's rows simply don't match — never an error (same posture as
+ *  markAllRead, which is just this with no id filter). */
+export async function markManyRead(notificationIds: string[], recipient: RecipientRef): Promise<number> {
+  if (notificationIds.length === 0) return 0;
+  const res = await Notification.updateMany(
+    { _id: { $in: notificationIds }, ...ownRowFilter(recipient), readAt: null },
+    { $set: { readAt: new Date() } },
+  );
+  return res.modifiedCount ?? 0;
+}
+
 /** Mark every unread own-row read; returns how many flipped. */
 export async function markAllRead(recipient: RecipientRef): Promise<number> {
   const res = await Notification.updateMany(
