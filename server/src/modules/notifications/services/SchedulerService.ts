@@ -57,6 +57,11 @@ import { runDueOffboardingRevocations } from "../../hr/services/OffboardingServi
 import { runObservationEscalation } from "../../classroom-observation/services/ObservationEscalationService";
 import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconciliationService";
 import { sweepHomeworkDue } from "../../trackers/services/HomeworkDueSweepService";
+import {
+  sweepHomeworkAutoIssue,
+  HW_AUTO_ISSUE_START_HOUR,
+  HW_AUTO_ISSUE_END_HOUR,
+} from "../../trackers/services/HomeworkAutoIssueService";
 import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 
@@ -189,6 +194,7 @@ export interface TickSummary {
   observationEscalationRan: boolean;
   hwPendingEmitted: number;
   hwDueFlipped: number;
+  hwAutoIssued: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -220,6 +226,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     observationEscalationRan: false,
     hwPendingEmitted: 0,
     hwDueFlipped: 0,
+    hwAutoIssued: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -259,6 +266,21 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
         console.log(`[scheduler] homework auto-due: ${summary.hwDueFlipped} record(s) → DUE`);
       }
     });
+  });
+
+  // --- Homework auto-ISSUE (D-#314) — every tick inside the 12:00–17:00 window,
+  // NOT runOnce: a class becomes ready whenever its last declaration/nil or its
+  // attendance lands, so the sweep keeps retrying. Each pass is idempotent (a
+  // reconciled day is filtered out; a raced confirm throws and defers) and each
+  // success notifies the confirmer once (dedupeKey per class+day).
+  await family("homework auto-issue", async () => {
+    const hour = now.getHours();
+    if (hour < HW_AUTO_ISSUE_START_HOUR || hour >= HW_AUTO_ISSUE_END_HOUR) return;
+    const res = await sweepHomeworkAutoIssue(now);
+    summary.hwAutoIssued = res.issued;
+    if (res.issued > 0) {
+      console.log(`[scheduler] homework auto-issue: ${res.issued} class-day(s) confirmed+issued`);
+    }
   });
 
   // --- BELL_REMINDER (N2.1) — per active grid, ~5 min before each period end.

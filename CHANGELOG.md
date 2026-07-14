@@ -700,3 +700,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-14 | Feature | Homework bulk mark-due (D-#313): checkboxes on GIVEN records + mark-selected-due + whole-day mark-due via new markHomeworkRecordsDue bulk mutation; auto-due sweep unchanged. | D-#313
 - 2026-07-14 | UX | Attendance totals (D-#312): Today card shows the school-wide present total; absentee report shows the absent total and folds each class to name+count, expanding on tap. App-only. | D-#312
 - 2026-07-14 | Fix | Phone login format-tolerant (D-#315): 01…/+8801…/8801… spellings all match for staff + guardian phone identifiers. Server-only. | D-#315
+- 2026-07-14 | Feature | Homework auto-issue (D-#314): scheduler sweep confirms+issues within-ceiling fully-covered days off the real attendance roster and notifies the confirmer (HW_AUTO_ISSUED); trim days stay manual. | D-#314

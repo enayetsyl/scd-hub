@@ -47,6 +47,8 @@ const dedupeKeys = {
     `CNPUB:${slotId}:${dateKey}:${guardianId}`,
   /** Per student+item (PRD N1.4): a 4th chase re-emits the same key → no-op. */
   hwParentComms: (hwItemId: string, studentId: string) => `HWPC:${hwItemId}:${studentId}`,
+  /** One auto-issue notice per class per day (D-#314). */
+  hwAutoIssued: (classId: string, dateKey: string) => `HWAI:${classId}:${dateKey}`,
   /** Per item+student+day+guardian (D-#260): every chase notifies the guardian, but
    *  re-chasing the same student the same day is a no-op for the inbox (once/day). */
   hwGuardianChase: (hwItemId: string, studentId: string, dateKey: string, guardianId: string) =>
@@ -196,6 +198,42 @@ export async function emitHwParentComms(record: HwParentCommsEvent): Promise<voi
         sectionId: record.sectionId.toString(),
       },
       dedupeKey: dedupeKeys.hwParentComms(record.hwItemId.toString(), record.studentId.toString()),
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// D-#314 — auto-issue notice: the sweep confirmed+issued a class's day; the
+// confirmer (homework delegate ?? class teacher) is INFORMED, not asked.
+// ---------------------------------------------------------------------------
+
+export interface HwAutoIssuedEvent {
+  classId: IdLike;
+  sectionId: IdLike;
+  dateKey: string;
+  issuedItems: number;
+  dayTotal: number;
+}
+
+export async function emitHwAutoIssued(event: HwAutoIssuedEvent): Promise<void> {
+  return bestEffort("HW auto-issued", async () => {
+    const section = (await Section.findById(event.sectionId).lean()) as unknown as {
+      classTeacherId?: IdLike;
+      homeworkConfirmerId?: IdLike;
+    } | null;
+    const recipient = section?.homeworkConfirmerId ?? section?.classTeacherId;
+    if (!recipient) return; // unassigned section — nobody to inform; skip, never throw
+
+    await emit({
+      recipientUserId: recipient.toString(),
+      kind: "HW_AUTO_ISSUED",
+      titleBn: await renderTemplate("homework.autoIssued.title"),
+      bodyBn: await renderTemplate("homework.autoIssued.body", {
+        issuedItems: event.issuedItems,
+        dayTotal: event.dayTotal,
+      }),
+      refs: { sectionId: event.sectionId.toString(), date: event.dateKey },
+      dedupeKey: dedupeKeys.hwAutoIssued(event.classId.toString(), event.dateKey),
     });
   });
 }
