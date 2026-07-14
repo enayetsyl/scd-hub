@@ -2260,6 +2260,17 @@ export interface HwNilDeclaredT {
   teacherName: string | null;
   reason: string;
 }
+/** D-#309: rotation-expected assignment nobody declared — per section × subject × week. */
+export interface AsNotDeclaredT {
+  weekNumber: number;
+  weekStartKey: string;
+  deliveryDateKey: string | null;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  subject: string;
+  teacherName: string | null;
+}
 export interface ReconReportT {
   fromKey: string;
   toKey: string;
@@ -2267,6 +2278,7 @@ export interface ReconReportT {
   asMisses: AsReconMissT[];
   hwNotDeclared: HwNotDeclaredT[];
   hwNilDeclared: HwNilDeclaredT[];
+  asNotDeclared: AsNotDeclaredT[];
 }
 // D-#300 — homework lifecycle report (Principal/Office).
 export interface HwFunnelRowT {
@@ -2356,6 +2368,7 @@ export const RECON_REPORT_QUERY = gql<
       asMisses { weekNumber deliveryDateKey sectionId sectionNameBn classLevel confirmerName draftItems draftMinutes }
       hwNotDeclared { dateKey sectionId sectionNameBn classLevel subject teacherName }
       hwNilDeclared { dateKey sectionId sectionNameBn classLevel subject teacherName reason }
+      asNotDeclared { weekNumber weekStartKey deliveryDateKey sectionId sectionNameBn classLevel subject teacherName }
     }
   }
 `;
