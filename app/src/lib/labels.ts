@@ -1887,6 +1887,7 @@ const STR_BN = {
   // Notifications (N-3, D-#72–#75)
   notifications: "নোটিফিকেশন",
   notifMarkAllRead: "সব পঠিত করুন",
+  notifMarkSelectedRead: "নির্বাচিতগুলো পঠিত করুন",
   notifEmpty: "কোনো নোটিফিকেশন নেই।",
   notifUnreadBadge: "অপঠিত",
 
@@ -4161,6 +4162,7 @@ const STR_EN: StrTable = {
   // Notifications (N-3, D-#72–#75)
   notifications: "Notifications",
   notifMarkAllRead: "Mark all read",
+  notifMarkSelectedRead: "Mark selected read",
   notifEmpty: "No notifications.",
   notifUnreadBadge: "Unread",
 

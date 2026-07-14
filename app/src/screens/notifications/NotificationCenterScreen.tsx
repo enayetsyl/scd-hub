@@ -7,15 +7,18 @@
  *   • Bangla title/body + the kind label chip; unread rows highlighted
  *   • tap = markRead + deep-link to the row's surface (lib/notificationNav);
  *     mark-all-read button on top
+ *   • D-#307: each unread row carries a checkbox — pick some, then the
+ *     "mark selected read" button on top flips just those (one bulk call)
  *   • the shared badge context is refreshed after every mutation so the 🔔
  *     count snaps without waiting for the next poll
  */
-import React from "react";
-import { View, Text, FlatList, RefreshControl } from "react-native";
+import React, { useState } from "react";
+import { View, Text, FlatList, RefreshControl, Pressable } from "react-native";
 import { useMutation, useQuery } from "urql";
 import {
   MY_NOTIFICATIONS_QUERY,
   MARK_NOTIFICATION_READ,
+  MARK_NOTIFICATIONS_READ,
   MARK_ALL_NOTIFICATIONS_READ,
   type NotificationT,
 } from "../../graphql/operations";
@@ -56,24 +59,51 @@ export default function NotificationCenterScreen({ navigation }: { navigation: R
     requestPolicy: "cache-and-network",
   });
   const [, markRead] = useMutation(MARK_NOTIFICATION_READ);
+  const [markManyState, markManyRead] = useMutation(MARK_NOTIFICATIONS_READ);
   const [markAllState, markAllRead] = useMutation(MARK_ALL_NOTIFICATIONS_READ);
+
+  // D-#307: the picked unread rows (checkbox multi-select).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const rows = data?.myNotifications ?? [];
   // Server is newest-first; partition unread-first without losing that order.
   const sorted = [...rows.filter((r) => !r.readAt), ...rows.filter((r) => !!r.readAt)];
   const unread = rows.filter((r) => !r.readAt).length;
 
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const onMarkSelected = async () => {
+    if (selected.size === 0) return;
+    await markManyRead({ ids: [...selected] });
+    setSelected(new Set());
+    refresh();
+    refetch({ requestPolicy: "network-only" });
+  };
+
   const onRowPress = async (row: NotificationT) => {
     if (!row.readAt) {
       await markRead({ id: row.id });
+      if (selected.has(row.id)) toggleSelect(row.id);
       refresh();
       refetch({ requestPolicy: "network-only" });
     }
     const target = notificationTarget(row.kind, row.refs, role);
     if (target) {
+      // `initial: false` keeps the tab's home screen beneath the deep-linked
+      // screen — without it the target becomes the stack's FIRST screen and
+      // loses its back button (owner report: Reconciliation report).
       navigation.navigate("App", {
         screen: target.tab,
-        params: target.params ? { screen: target.screen, params: target.params } : { screen: target.screen },
+        params: target.params
+          ? { screen: target.screen, params: target.params, initial: false }
+          : { screen: target.screen, initial: false },
       });
     }
   };
@@ -99,7 +129,14 @@ export default function NotificationCenterScreen({ navigation }: { navigation: R
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         ListHeaderComponent={
           unread > 0 ? (
-            <View style={{ marginBottom: space(3) }}>
+            <View style={{ marginBottom: space(3), gap: space(2) }}>
+              {selected.size > 0 ? (
+                <Button
+                  title={`${STR.notifMarkSelectedRead} (${bnNum(selected.size)})`}
+                  onPress={() => void onMarkSelected()}
+                  disabled={markManyState.fetching}
+                />
+              ) : null}
               <Button
                 title={STR.notifMarkAllRead}
                 variant="secondary"
@@ -120,12 +157,24 @@ export default function NotificationCenterScreen({ navigation }: { navigation: R
         }
         renderItem={({ item: row }) => {
           const isUnread = !row.readAt;
+          const isSelected = selected.has(row.id);
           return (
             <Card
               onPress={() => void onRowPress(row)}
               style={isUnread ? { borderColor: colors.primary, borderWidth: 1 } : undefined}
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                {isUnread ? (
+                  <Pressable
+                    onPress={() => toggleSelect(row.id)}
+                    hitSlop={10}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: isSelected }}
+                    style={{ marginRight: space(2) }}
+                  >
+                    <Text style={{ fontSize: 20, color: colors.primary }}>{isSelected ? "☑" : "☐"}</Text>
+                  </Pressable>
+                ) : null}
                 <Body style={{ flex: 1, fontWeight: isUnread ? "700" : "400" }}>{row.titleBn}</Body>
                 <Badge text={notificationKindLabel(row.kind)} tone={isUnread ? "brand" : "muted"} />
               </View>
