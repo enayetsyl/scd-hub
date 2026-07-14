@@ -22,6 +22,7 @@ import { ToastProvider } from "./src/state/ToastContext";
 import { ConfirmProvider } from "./src/state/ConfirmContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { WebPushGate } from "./src/components/WebPushGate";
+import { UpdateGate } from "./src/components/UpdateGate";
 import { navigationRef, openNotificationCenter } from "./src/navigation/navigationRef";
 import { useNavigationTheme } from "./src/theme";
 
@@ -171,11 +172,16 @@ function App(): React.ReactElement | null {
                           gate destructive actions behind one confirm sheet. */}
                       <ToastProvider>
                         <ConfirmProvider>
-                          {/* D-#296 owner ruling: no notification permission → no app
-                              (web; native has its own Expo-push prompt). */}
-                          <WebPushGate>
-                            <ThemedNavigation />
-                          </WebPushGate>
+                          {/* Self-hosted Android updates: a newer APK on the server
+                              walls the app until installed; otherwise pending EAS
+                              (OTA) updates apply immediately. Web/iOS pass through. */}
+                          <UpdateGate>
+                            {/* D-#296 owner ruling: no notification permission → no app
+                                (web; native has its own Expo-push prompt). */}
+                            <WebPushGate>
+                              <ThemedNavigation />
+                            </WebPushGate>
+                          </UpdateGate>
                         </ConfirmProvider>
                       </ToastProvider>
                     </SidebarProvider>
