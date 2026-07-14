@@ -42,6 +42,21 @@ jest.mock("../modules/trackers/models/HomeworkReconciliation", () => ({
   },
 }));
 
+// D-#310 — the subject-coverage gate's expectation sources. Defaults (no slots,
+// no holiday, no nils) keep the gate silent for the pre-existing tests.
+const mockSlotFind = jest.fn();
+jest.mock("../modules/routine/models/RoutineSlot", () => ({
+  RoutineSlot: { find: (f: unknown) => ({ select: () => ({ lean: () => mockSlotFind(f) }) }) },
+}));
+const mockHolidayFindOne = jest.fn();
+jest.mock("../modules/routine/models/HolidayException", () => ({
+  HolidayException: { findOne: (f: unknown) => ({ lean: () => mockHolidayFindOne(f) }) },
+}));
+const mockNilFind = jest.fn();
+jest.mock("../modules/trackers/models/HomeworkNilDeclaration", () => ({
+  HomeworkNilDeclaration: { find: (f: unknown) => ({ select: () => ({ lean: () => mockNilFind(f) }) }) },
+}));
+
 // Import AFTER mocks
 import {
   tallyDay,
@@ -95,6 +110,9 @@ beforeEach(() => {
   mockReconFindOne.mockReturnValue(leanNull);
   mockReconUpdate.mockResolvedValue({});
   mockIssue.mockResolvedValue({ issuedCount: 3 });
+  mockSlotFind.mockResolvedValue([]);
+  mockHolidayFindOne.mockResolvedValue(null);
+  mockNilFind.mockResolvedValue([]);
 });
 
 // ===========================================================================
@@ -322,5 +340,100 @@ describe("T2.2/T2.6 — confirmHomeworkDay (ceiling gate + cadence)", () => {
     await expect(
       confirmHomeworkDay({ classId: CLASS_ID, date: A_TUESDAY, roster: [], actorId: ACTOR_ID }),
     ).rejects.toThrow(/No homework declared/);
+  });
+
+  test("an already-reconciled day cannot be confirmed/issued a second time", async () => {
+    mockReconFindOne.mockReturnValue(leanRecon({ reconState: "reconciled" }));
+    mockList.mockResolvedValue([leanItem()]);
+    await expect(
+      confirmHomeworkDay({ classId: CLASS_ID, date: A_TUESDAY, roster: [], actorId: ACTOR_ID }),
+    ).rejects.toThrow(/already reconciled/);
+    expect(mockIssue).not.toHaveBeenCalled();
+  });
+});
+
+// ===========================================================================
+// D-#310 — subject-coverage gate (declare-or-nil for every routine-expected subject)
+// ===========================================================================
+
+describe("D-#310 — confirmHomeworkDay subject-coverage gate", () => {
+  // A_TUESDAY routine: MATH + BAN periods (both declaration-expected subjects).
+  const tueSlot = (subject: string, over: Record<string, unknown> = {}) => ({
+    subject,
+    effectiveFrom: new Date(2026, 0, 1),
+    effectiveTo: null,
+    ...over,
+  });
+
+  test("a routine-expected subject with neither homework nor nil BLOCKS the confirm", async () => {
+    mockSlotFind.mockResolvedValue([tueSlot("MATH"), tueSlot("BAN")]);
+    mockList.mockResolvedValue([leanItem({ subject: "MATH" })]); // BAN missing
+    await expect(
+      confirmHomeworkDay({ classId: CLASS_ID, date: A_TUESDAY, roster: [], actorId: ACTOR_ID }),
+    ).rejects.toThrow(/BAN still owe a declaration/);
+    expect(mockIssue).not.toHaveBeenCalled();
+    expect(mockReconUpdate).not.toHaveBeenCalled();
+  });
+
+  test("an explicit 'no homework today' (D-#299) satisfies the missing subject", async () => {
+    mockSlotFind.mockResolvedValue([tueSlot("MATH"), tueSlot("BAN")]);
+    mockList.mockResolvedValue([leanItem({ subject: "MATH" })]);
+    mockNilFind.mockResolvedValue([{ subject: "BAN" }]);
+    const r = await confirmHomeworkDay({
+      classId: CLASS_ID,
+      date: A_TUESDAY,
+      roster: [{ studentId: "s1", present: true }],
+      actorId: ACTOR_ID,
+    });
+    expect(r.reconState).toBe("reconciled");
+    expect(mockIssue).toHaveBeenCalledTimes(1);
+  });
+
+  test("every expected subject declared → confirm proceeds", async () => {
+    mockSlotFind.mockResolvedValue([tueSlot("MATH"), tueSlot("BAN")]);
+    mockList.mockResolvedValue([leanItem({ subject: "MATH" }), leanItem({ subject: "BAN" })]);
+    const r = await confirmHomeworkDay({
+      classId: CLASS_ID,
+      date: A_TUESDAY,
+      roster: [{ studentId: "s1", present: true }],
+      actorId: ACTOR_ID,
+    });
+    expect(r.reconState).toBe("reconciled");
+  });
+
+  test("a slot outside its effective window owes nothing", async () => {
+    mockSlotFind.mockResolvedValue([
+      tueSlot("MATH"),
+      tueSlot("BAN", { effectiveFrom: new Date(2027, 0, 1) }), // not live yet
+    ]);
+    mockList.mockResolvedValue([leanItem({ subject: "MATH" })]);
+    const r = await confirmHomeworkDay({
+      classId: CLASS_ID,
+      date: A_TUESDAY,
+      roster: [],
+      actorId: ACTOR_ID,
+    });
+    expect(r.reconState).toBe("reconciled");
+  });
+
+  test("a holiday-overridden day owes nothing (gate skipped)", async () => {
+    mockHolidayFindOne.mockResolvedValue({ _id: "h1" });
+    mockSlotFind.mockResolvedValue([tueSlot("MATH"), tueSlot("BAN")]);
+    mockList.mockResolvedValue([leanItem({ subject: "MATH" })]);
+    const r = await confirmHomeworkDay({
+      classId: CLASS_ID,
+      date: A_TUESDAY,
+      roster: [],
+      actorId: ACTOR_ID,
+    });
+    expect(r.reconState).toBe("reconciled");
+  });
+
+  test("the slot query only asks for declaration-EXPECTED subjects (ARABIC excluded, D-#308)", async () => {
+    mockList.mockResolvedValue([leanItem({ subject: "MATH" })]);
+    await confirmHomeworkDay({ classId: CLASS_ID, date: A_TUESDAY, roster: [], actorId: ACTOR_ID });
+    const [filter] = mockSlotFind.mock.calls[0] as [{ subject: { $in: string[] }; dayOfWeek: string }];
+    expect(filter.subject.$in).not.toContain("ARABIC");
+    expect(filter.dayOfWeek).toBe("TUE");
   });
 });
