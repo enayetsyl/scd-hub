@@ -18,7 +18,7 @@
  * report answers "WHO didn't submit", not just "what's missing".
  * Identity/operational plane — no corpus path (ADR-005).
  */
-import { DAYS_OF_WEEK, HW_SUBJECTS } from "@scd/shared";
+import { DAYS_OF_WEEK, HW_DECLARATION_EXPECTED_SUBJECTS } from "@scd/shared";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkNilDeclaration } from "../models/HomeworkNilDeclaration";
 import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconciliation";
@@ -164,7 +164,8 @@ async function hwNotDeclaredRows(
       groupType: "section",
       active: true,
       isBreak: false,
-      subject: { $in: HW_SUBJECTS as readonly string[] },
+      // D-#308: ARABIC is declarable but never EXPECTED — no red row when absent.
+      subject: { $in: HW_DECLARATION_EXPECTED_SUBJECTS as readonly string[] },
     })
       .select("groupId dayOfWeek periodNumber subject teacherId effectiveFrom effectiveTo")
       .lean(),

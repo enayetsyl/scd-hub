@@ -268,4 +268,13 @@ describe("hwNotDeclared (D-#293)", () => {
     expect(r.hwNotDeclared).toHaveLength(1);
     expect(r.hwNotDeclared[0].teacherName).toBeNull();
   });
+
+  test("D-#308: ARABIC is never routine-EXPECTED — the slot query excludes it", async () => {
+    seedSection();
+    await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    const [filter] = mockSlotFind.mock.calls[0] as [{ subject: { $in: string[] } }];
+    expect(filter.subject.$in).not.toContain("ARABIC");
+    // Every other HW subject stays expected.
+    expect(filter.subject.$in).toEqual(expect.arrayContaining(["BAN", "ENG", "MATH", "SCI", "BGS", "ISLAM"]));
+  });
 });

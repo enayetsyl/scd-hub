@@ -17,7 +17,7 @@
  * Pure read over existing data (stateDates is a full timestamped audit trail) —
  * no schema change. Identity/operational plane; no corpus path (ADR-005).
  */
-import { DAYS_OF_WEEK, HW_SUBJECTS } from "@scd/shared";
+import { DAYS_OF_WEEK, HW_DECLARATION_EXPECTED_SUBJECTS } from "@scd/shared";
 import type { LifecycleState } from "@scd/shared";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
@@ -147,7 +147,8 @@ export async function homeworkLifecycleReport(
       groupType: "section",
       active: true,
       isBreak: false,
-      subject: { $in: HW_SUBJECTS as readonly string[] },
+      // D-#308: ARABIC is declarable but never EXPECTED — no missed-declaration rows.
+      subject: { $in: HW_DECLARATION_EXPECTED_SUBJECTS as readonly string[] },
     })
       .select("groupId dayOfWeek periodNumber subject teacherId effectiveFrom effectiveTo")
       .lean(),

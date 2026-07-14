@@ -578,6 +578,17 @@ export const CLEARANCE_ITEM_STATUS_LABELS_EN: Record<ClearanceItemStatus, string
 export const HW_SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS", "ARABIC", "ISLAM"] as const;
 export type HwSubject = (typeof HW_SUBJECTS)[number];
 
+/** The HW subjects EXPECTED to declare daily whenever the routine gives them
+ *  periods — the axis the recon-report / lifecycle "never declared" red lists
+ *  check against. **ARABIC is excluded** by owner ruling (D-#308): the Arabic
+ *  teacher declares homework when there is any — declaring stays fully possible
+ *  (HW_SUBJECTS is unchanged), only the red not-declared expectation goes. One
+ *  step softer than the D-#36 Quran posture (out of the channel entirely).
+ *  Operational axis only — never mirrored into the envelope. */
+export const HW_DECLARATION_EXPECTED_SUBJECTS: readonly HwSubject[] = HW_SUBJECTS.filter(
+  (s) => s !== "ARABIC",
+);
+
 export const HW_SUBJECT_LABELS_BN: Record<HwSubject, string> = {
   BAN: "বাংলা",
   ENG: "ইংরেজি",
