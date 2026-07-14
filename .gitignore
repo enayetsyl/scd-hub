@@ -24,6 +24,9 @@ coverage/
 .expo-shared/
 web-build/
 dist-web/
+# Built APKs and Android signing material (keystore lives only on the build machine + backup)
+*.apk
+keystore.properties
 *.jks
 *.p8
 *.p12

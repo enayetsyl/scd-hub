@@ -36,6 +36,7 @@ import type {
   RevisionStackParamList,
   FinanceStackParamList,
   HrStackParamList,
+  ReportsStackParamList,
   AdminStackParamList,
   GuardianHomeStackParamList,
   GuardianHomeworkStackParamList,
@@ -210,6 +211,8 @@ import AccessControlUsersScreen from "../screens/admin/AccessControlUsersScreen"
 import AccessControlEditScreen from "../screens/admin/AccessControlEditScreen";
 import ReconciliationReportScreen from "../screens/admin/ReconciliationReportScreen";
 import HwLifecycleReportScreen from "../screens/admin/HwLifecycleReportScreen";
+import ReportsHomeScreen from "../screens/reports/ReportsHomeScreen";
+import PendingReportScreen from "../screens/reports/PendingReportScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
@@ -866,6 +869,22 @@ function HrNavigator(): React.ReactElement {
   );
 }
 
+// D-#309: the Principal/Office Reports hub — launcher + the four pending-work
+// reports (each a filtered slice of the reconciliationReport read).
+const ReportsStack = createNativeStackNavigator<ReportsStackParamList>();
+function ReportsNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ReportsStack.Navigator screenOptions={stackOptions}>
+      <ReportsStack.Screen name="ReportsHome" component={ReportsHomeScreen} options={{ title: STR.tabReports }} />
+      <ReportsStack.Screen name="HwDeclarePending" component={PendingReportScreen} options={{ title: STR.rptHwDeclarePending }} />
+      <ReportsStack.Screen name="HwIssuePending" component={PendingReportScreen} options={{ title: STR.rptHwIssuePending }} />
+      <ReportsStack.Screen name="AsDeclarePending" component={PendingReportScreen} options={{ title: STR.rptAsDeclarePending }} />
+      <ReportsStack.Screen name="AsDeliverPending" component={PendingReportScreen} options={{ title: STR.rptAsDeliverPending }} />
+    </ReportsStack.Navigator>
+  );
+}
+
 const AdminStack = createNativeStackNavigator<AdminStackParamList>();
 function AdminNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -1026,6 +1045,9 @@ export function AppTabs(): React.ReactElement {
   // to empty/zero server-side when the caller lacks the underlying permission.
   const canHome = !!role && role !== "GUARDIAN";
   const canAdmin = !!role && (roleHasPermission(role, "content:import") || roleHasPermission(role, "user:manage"));
+  // D-#309: the Reports hub — school-wide oversight reads, Principal/Office by
+  // ROLE (the reconciliationReport resolver's own gate; OFFICE holds no tracker:read).
+  const canReports = role === "PRINCIPAL" || role === "OFFICE";
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
   const canGuardian = !!role && roleHasPermission(role, "guardian:read_child");
@@ -1075,6 +1097,7 @@ export function AppTabs(): React.ReactElement {
         {canRevision ? <Drawer.Screen name="RevisionTab" component={RevisionNavigator} /> : null}
         {canFinance ? <Drawer.Screen name="FinanceTab" component={FinanceNavigator} /> : null}
         {canHr ? <Drawer.Screen name="HrTab" component={HrNavigator} /> : null}
+        {canReports ? <Drawer.Screen name="ReportsTab" component={ReportsNavigator} /> : null}
         {canAdmin ? <Drawer.Screen name="AdminTab" component={AdminNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianHomeTab" component={GuardianHomeNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianHomeworkTab" component={GuardianHomeworkNavigator} /> : null}

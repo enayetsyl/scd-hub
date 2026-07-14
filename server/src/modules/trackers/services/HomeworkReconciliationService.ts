@@ -20,12 +20,19 @@
 import {
   HW_DAILY_CEILING_MIN,
   HW_SUBJECT_BAND_MAX_MIN,
+  HW_DECLARATION_EXPECTED_SUBJECTS,
+  DAYS_OF_WEEK,
   TRIM_RANKS,
 } from "@scd/shared";
 import type { HwSubject, TrimRank, ReconState } from "@scd/shared";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconciliation";
+import { HomeworkNilDeclaration } from "../models/HomeworkNilDeclaration";
 import { Section } from "../../foundation/models/Section";
+import { RoutineSlot } from "../../routine/models/RoutineSlot";
+import { HolidayException } from "../../routine/models/HolidayException";
+import { dayTypeFor } from "../../routine/calendar";
+import { dateKeyOf } from "../../attendance/dates";
 import { issueHomeworkItem, listDailyItems, topicLabelByCode, joinTopicLabels, type IssueRosterEntry } from "./HomeworkService";
 import { isWeekend } from "../calendar";
 
@@ -275,6 +282,54 @@ export async function confirmHomeworkDay(
 
   const docs = await listDailyItems(input.classId, input.date);
   if (docs.length === 0) throw new Error("No homework declared for this day");
+
+  // D-#310: subject-coverage gate — every routine-expected subject that day
+  // must carry a declaration or an explicit "no homework today" (D-#299)
+  // before the class teacher can issue. Expectation mirrors the recon report
+  // (D-#293/D-#308: FULL days only; ARABIC never expected); weekends are
+  // already hard-blocked above, holiday-overridden days owe nothing.
+  const sectionId = docs[0].sectionId;
+  const dayStart = new Date(input.date);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setHours(23, 59, 59, 999);
+  const holiday = await HolidayException.findOne({
+    active: true,
+    fromDate: { $lte: dayEnd },
+    toDate: { $gte: dayStart },
+  }).lean();
+  if (dayTypeFor(input.date, !!holiday) === "FULL") {
+    const slots = (await RoutineSlot.find({
+      groupType: "section",
+      groupId: sectionId,
+      active: true,
+      isBreak: false,
+      subject: { $in: HW_DECLARATION_EXPECTED_SUBJECTS as readonly string[] },
+      dayOfWeek: DAYS_OF_WEEK[input.date.getDay()],
+    })
+      .select("subject effectiveFrom effectiveTo")
+      .lean()) as unknown as Array<{ subject: string; effectiveFrom: Date; effectiveTo?: Date | null }>;
+    const expected = new Set<string>();
+    for (const s of slots) {
+      if (new Date(s.effectiveFrom).getTime() > dayEnd.getTime()) continue;
+      if (s.effectiveTo && new Date(s.effectiveTo).getTime() < dayStart.getTime()) continue;
+      expected.add(s.subject);
+    }
+    if (expected.size > 0) {
+      const covered = new Set<string>(docs.map((d) => d.subject));
+      const nils = (await HomeworkNilDeclaration.find({ sectionId, dateKey: dateKeyOf(input.date) })
+        .select("subject")
+        .lean()) as unknown as Array<{ subject: string }>;
+      for (const n of nils) covered.add(n.subject);
+      const missing = [...expected].filter((s) => !covered.has(s)).sort();
+      if (missing.length > 0) {
+        throw new Error(
+          `Cannot confirm: ${missing.join(", ")} still owe a declaration — every routine-expected ` +
+            `subject needs homework or an explicit "no homework today" before the day is issued (D-#310)`,
+        );
+      }
+    }
+  }
 
   const dayTotal = docs.reduce((sum, d) => sum + d.timeDecl, 0);
 
