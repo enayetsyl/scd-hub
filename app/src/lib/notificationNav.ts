@@ -59,6 +59,65 @@ export function notificationTarget(
     case "PRINT_REQUESTED":
     case "PRINT_DELIVERED":
       return { tab: "PrintTab", screen: "PrintHome" };
+
+    // --- D-#301: the 15 previously unmapped kinds ---------------------------
+
+    // CO-3 observation kinds all carry refs.observationId → the detail screen;
+    // without it, fall back to the recipient's natural list.
+    case "OBSERVATION_RELEASED":
+    case "OBSERVATION_RESPONSE_REMINDER":
+      // Teacher-facing: respond to their own observation.
+      return refs?.observationId
+        ? { tab: "ObservationTab", screen: "ObservationDetail", params: { observationId: refs.observationId } }
+        : { tab: "ObservationTab", screen: "MyObservations" };
+    case "OBSERVATION_RESPONDED":
+    case "OBSERVATION_ESCALATED":
+    case "OBSERVATION_READY_TO_PUBLISH":
+      // Manager-facing (Principal/Office).
+      return refs?.observationId
+        ? { tab: "ObservationTab", screen: "ObservationDetail", params: { observationId: refs.observationId } }
+        : { tab: "ObservationTab", screen: "ObservationHome" };
+
+    // Homework daily-confirm ladder: the confirmer reconciles; Office/Principal
+    // oversee via the reconciliation report (their surface regardless of tabs).
+    case "HW_PENDING_REMINDER":
+      return { tab: "HomeworkTab", screen: "HomeworkReconcile", params: refs?.date ? { date: refs.date } : undefined };
+    case "HW_PENDING_ESCALATION":
+      return { tab: "AdminTab", screen: "ReconciliationReport" };
+
+    // Guardian chase/result/delivery kinds → the child's screen; the staff
+    // fallbacks are defensive (these kinds are guardian-addressed today).
+    case "HW_CHASE":
+      return guardian
+        ? { tab: "GuardianHomeworkTab", screen: "ChildHomework" }
+        : { tab: "HomeworkTab", screen: "HomeworkHome" };
+    case "ASSIGNMENT_CHASE":
+      return guardian
+        ? { tab: "GuardianAssignmentsTab", screen: "ChildAssignments" }
+        : { tab: "AssignmentTab", screen: "AssignmentHome" };
+    case "FINANCE_FEE_DUE":
+      return guardian
+        ? { tab: "GuardianHomeTab", screen: "ChildFees" }
+        : { tab: "FinanceTab", screen: "FinanceHome" };
+    case "CLASS_TEST_RESULT":
+      // Guardian results render on the আজ home cards (N3.3 pattern).
+      return guardian
+        ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
+        : { tab: "ClassTestTab", screen: "ClassTestHome" };
+    case "VOCAB_RESULT":
+      return guardian
+        ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
+        : { tab: "VocabTab", screen: "VocabHome" };
+    case "STUDENT_COMMENT":
+      return guardian
+        ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
+        : { tab: "CommentsTab", screen: "CommentsHome" };
+    case "SR_ABSENT":
+    case "SR_DIGEST":
+      return guardian
+        ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
+        : { tab: "RevisionTab", screen: "RevisionHome" };
+
     default:
       return null;
   }

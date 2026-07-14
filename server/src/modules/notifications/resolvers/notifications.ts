@@ -40,6 +40,9 @@ const NotificationRefsRef = builder.objectRef<NotificationRefs>("NotificationRef
     periodNumber: t.int({ nullable: true, resolve: (r) => r.periodNumber ?? null }),
     tier: t.string({ nullable: true, resolve: (r) => r.tier ?? null }),
     hour: t.int({ nullable: true, resolve: (r) => r.hour ?? null }),
+    // D-#301: observation deep-link — the CO-3 kinds carry it; the app opens
+    // ObservationDetail directly instead of a list screen.
+    observationId: t.string({ nullable: true, resolve: (r) => r.observationId ?? null }),
   }),
 });
 
