@@ -111,6 +111,12 @@ jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (e: unknown) => mockWriteAudit(e),
 }));
 
+// D-#303: the queue row's title names the requesting teacher.
+const mockUserFindById = jest.fn();
+jest.mock("../modules/foundation/models/User", () => ({
+  User: { findById: (id: unknown) => ({ select: () => ({ lean: () => mockUserFindById(id) }) }) },
+}));
+
 // Import AFTER mocks
 import {
   generateCtId,
@@ -171,6 +177,7 @@ beforeEach(() => {
   mockStoredCreate.mockImplementation(async (a: Record<string, unknown>) => ({ _id: FILE_ID, ...a }));
   mockStoredFindById.mockResolvedValue(classtestFile);
   mockWriteAudit.mockResolvedValue(undefined);
+  mockUserFindById.mockResolvedValue({ name: "Kawsar Hossain" });
 });
 
 // ===========================================================================
@@ -253,6 +260,52 @@ describe("createRequest", () => {
     await createRequest({ ...baseInput, colour: "COLOR", sides: "DOUBLE" });
     expect(mockCreatePrintRequest).toHaveBeenCalledWith(
       expect.objectContaining({ colour: "COLOR", sides: "DOUBLE", purpose: "CLASS_TEST" }),
+    );
+  });
+
+  // --- D-#303: teacher name in the title + copies onto the queue row ---------
+
+  test("D-#303: the queue row's title names the requesting teacher; exam day rides as neededByKey", async () => {
+    await createRequest(baseInput);
+    expect(mockCreatePrintRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "CT-C3-MATH-0001 · MATH — Kawsar Hossain",
+        neededByKey: "2026-07-10",
+      }),
+    );
+  });
+
+  test("D-#303: a vanished requester still files — the title just omits the name", async () => {
+    mockUserFindById.mockResolvedValue(null);
+    await createRequest(baseInput);
+    expect(mockCreatePrintRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "CT-C3-MATH-0001 · MATH" }),
+    );
+  });
+
+  test("D-#303: FIXED copies pass through (default 1); invalid rejected", async () => {
+    await createRequest({ ...baseInput, copies: 25 });
+    expect(mockCreatePrintRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ copies: 25, copiesMode: "FIXED" }),
+    );
+    mockCreatePrintRequest.mockClear();
+    await createRequest(baseInput);
+    expect(mockCreatePrintRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ copies: 1, copiesMode: "FIXED" }),
+    );
+    await expect(createRequest({ ...baseInput, copies: 0 })).rejects.toThrow(/positive integer/);
+    await expect(createRequest({ ...baseInput, copiesMode: "SOMETHING" })).rejects.toThrow(/Invalid copiesMode/);
+  });
+
+  test("D-#303: CLASS_PRESENT derives the class + exam-day use date server-side", async () => {
+    await createRequest({ ...baseInput, copiesMode: "CLASS_PRESENT" });
+    expect(mockCreatePrintRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        copiesMode: "CLASS_PRESENT",
+        copiesClassId: CLASS_OID.toString(),
+        copies: null,
+        neededByKey: "2026-07-10",
+      }),
     );
   });
 

@@ -53,6 +53,10 @@ export default function RequestClassTestScreen(): React.ReactElement {
   // other request: how to print it. Mandatory, nothing pre-selected.
   const [colour, setColour] = useState<string | null>(null);
   const [sides, setSides] = useState<string | null>(null);
+  // D-#303: copies — a typed number, or one per student present on the EXAM day
+  // (the class and use day are the test's own; the server derives both).
+  const [copiesMode, setCopiesMode] = useState<"FIXED" | "CLASS_PRESENT">("FIXED");
+  const [copies, setCopies] = useState("1");
   // UX-3: the happy path picks an assembled set from a list; the typed-ID field is
   // an advanced escape hatch for a set the list doesn't surface.
   const [manualSetEntry, setManualSetEntry] = useState(false);
@@ -141,6 +145,14 @@ export default function RequestClassTestScreen(): React.ReactElement {
       },
       colour: { value: colour, message: `${STR.prColour} — ${STR.fieldRequired}` },
       sides: { value: sides, message: `${STR.prSides} — ${STR.fieldRequired}` },
+      ...(copiesMode === "FIXED"
+        ? {
+            copies: {
+              value: Number.isInteger(Number(copies)) && Number(copies) >= 1 ? copies : null,
+              message: `${STR.prCopies} — ${STR.fieldRequired}`,
+            },
+          }
+        : {}),
       ...(source === "POOL_SET"
         ? { setId: { value: setId.trim(), message: `${STR.ctSetId} — ${STR.fieldRequired}` } }
         : { paper: { value: paper, message: `${STR.ctUploadPaper} — ${STR.fieldRequired}` } }),
@@ -162,6 +174,8 @@ export default function RequestClassTestScreen(): React.ReactElement {
       questionFileId: source === "UPLOADED_PAPER" ? (paper?.fileId ?? null) : null,
       colour,
       sides,
+      copies: copiesMode === "FIXED" ? Number(copies) : null,
+      copiesMode,
       testNumber: testNumber.trim() ? Number(testNumber) : null,
       deadlineDays: deadlineDays.trim() ? Number(deadlineDays) : null,
       notes: notes.trim() || null,
@@ -260,6 +274,31 @@ export default function RequestClassTestScreen(): React.ReactElement {
               ))}
             </View>
             {fieldErrors.sides ? <Muted style={{ marginTop: space(1) }}>{fieldErrors.sides}</Muted> : null}
+          </View>
+
+          {/* D-#303: copies — the same choice the print form offers; CLASS_PRESENT
+              resolves from the EXAM day's attendance of this test's own class. */}
+          <View style={{ marginTop: space(3) }}>
+            <Body style={{ fontWeight: "700" }}>{STR.prCopies} *</Body>
+            <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+              <Chip label={STR.prCopiesFixed} selected={copiesMode === "FIXED"} onPress={() => setCopiesMode("FIXED")} />
+              <Chip
+                label={STR.prCopiesClass}
+                selected={copiesMode === "CLASS_PRESENT"}
+                onPress={() => setCopiesMode("CLASS_PRESENT")}
+              />
+            </View>
+            {copiesMode === "FIXED" ? (
+              <Field
+                label={STR.prCopies}
+                value={copies}
+                onChangeText={setCopies}
+                keyboardType="number-pad"
+                error={fieldErrors.copies}
+              />
+            ) : (
+              <Muted style={{ marginTop: space(1) }}>{STR.ctCopiesClassHint}</Muted>
+            )}
           </View>
 
           <DateField label={STR.ctExamDate} value={examDate} onChange={setExamDate} error={fieldErrors.examDate} />
