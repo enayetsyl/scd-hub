@@ -2,4 +2,6 @@
   <string name="app_name">SCD Hub</string>
   <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
   <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
+  <!-- Must match expo.runtimeVersion in app.json; bump both only on native changes. -->
+  <string name="expo_runtime_version" translatable="false">1.0.0</string>
 </resources>
