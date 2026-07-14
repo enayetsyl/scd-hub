@@ -254,6 +254,9 @@ export interface ConfirmHomeworkDayInput {
   date: Date;
   roster: IssueRosterEntry[];
   actorId: string;
+  /** D-#314: set by the auto-issue sweep so the reconciliation row records a
+   *  SYSTEM confirm (never sent by the manual resolver path). */
+  autoIssued?: boolean;
 }
 
 export interface ConfirmHomeworkDayResult {
@@ -366,6 +369,7 @@ export async function confirmHomeworkDay(
         ceiling: HW_DAILY_CEILING_MIN,
         reconBy: input.actorId,
         confirmedAt: now,
+        autoIssued: input.autoIssued ?? false,
       },
     },
     { upsert: true, new: true },

@@ -699,3 +699,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-14 | Fix | Reports hub back button (D-#309 rider): attendance + class-note reports (and the class-note drill-down) now mount IN the Reports stack — back returns to the hub instead of the host tab's home. App-only. | D-#309 rider
 - 2026-07-14 | Feature | Homework bulk mark-due (D-#313): checkboxes on GIVEN records + mark-selected-due + whole-day mark-due via new markHomeworkRecordsDue bulk mutation; auto-due sweep unchanged. | D-#313
 - 2026-07-14 | UX | Attendance totals (D-#312): Today card shows the school-wide present total; absentee report shows the absent total and folds each class to name+count, expanding on tap. App-only. | D-#312
+- 2026-07-14 | Feature | Homework auto-issue (D-#314): scheduler sweep confirms+issues within-ceiling fully-covered days off the real attendance roster and notifies the confirmer (HW_AUTO_ISSUED); trim days stay manual. | D-#314
