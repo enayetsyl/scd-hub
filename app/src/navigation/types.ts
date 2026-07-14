@@ -296,6 +296,16 @@ export type AdminStackParamList = {
   SectionPicker: undefined;
 };
 
+// D-#309: the Principal/Office Reports hub — a launcher plus the four
+// pending-work reports (each a filtered slice of the reconciliation read).
+export type ReportsStackParamList = {
+  ReportsHome: undefined;
+  HwDeclarePending: undefined;
+  HwIssuePending: undefined;
+  AsDeclarePending: undefined;
+  AsDeliverPending: undefined;
+};
+
 export type TabParamList = {
   HomeTab: NavigatorScreenParams<HomeStackParamList>;
   ContentTab: NavigatorScreenParams<ContentStackParamList>;
@@ -319,6 +329,7 @@ export type TabParamList = {
   RevisionTab: NavigatorScreenParams<RevisionStackParamList>;
   FinanceTab: NavigatorScreenParams<FinanceStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;
+  ReportsTab: NavigatorScreenParams<ReportsStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;
   GuardianHomeworkTab: NavigatorScreenParams<GuardianHomeworkStackParamList>;
