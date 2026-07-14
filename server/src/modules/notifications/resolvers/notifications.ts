@@ -12,6 +12,7 @@ import {
   myNotifications,
   myUnreadCount,
   markRead,
+  markManyRead,
   markAllRead,
   type RecipientRef,
 } from "../services/NotificationService";
@@ -92,6 +93,18 @@ builder.mutationField("markNotificationRead", (t) =>
     authScopes: { authenticated: true },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => markRead(args.id, recipientOf(ctx)),
+  }),
+);
+
+builder.mutationField("markNotificationsRead", (t) =>
+  t.field({
+    type: "Int",
+    authScopes: { authenticated: true },
+    description:
+      "Mark a picked set of the caller's own unread notifications read (D-#307 inbox " +
+      "multi-select); returns how many flipped. Foreign/read ids just don't match.",
+    args: { ids: t.arg.stringList({ required: true }) },
+    resolve: async (_r, args, ctx) => markManyRead(args.ids, recipientOf(ctx)),
   }),
 );
 

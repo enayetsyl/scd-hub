@@ -166,6 +166,7 @@ export default function SetDetailScreen({ route, navigation }: Props): React.Rea
                 tabNav.navigate("PrintTab", {
                   screen: "NewPrintRequest",
                   params: { setId, title: s.name ?? STR.prTitle },
+                  initial: false,
                 })
               }
             />

@@ -162,6 +162,7 @@ export default function PlanViewScreen({ route, navigation }: Props): React.Reac
             tabNav.navigate("PrintTab", {
               screen: "NewPrintRequest",
               params: { contentArtifactId: artifactId, title: a.address?.title ?? STR.prTitle },
+              initial: false,
             })
           }
         />

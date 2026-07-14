@@ -315,7 +315,7 @@ export default function TodayScreen(): React.ReactElement {
             <PendingRow
               label={STR.hwCheckingTitle}
               count={hw?.pendingChecking ?? 0}
-              onPress={() => nav.navigate("HomeworkTab", { screen: "CheckingQueue" })}
+              onPress={() => nav.navigate("HomeworkTab", { screen: "CheckingQueue", initial: false })}
             />
             <PendingRow
               label={STR.hwChaseList}
@@ -326,7 +326,7 @@ export default function TodayScreen(): React.ReactElement {
             <PendingRow
               label={STR.hwOpenResubmissions}
               count={hw?.openResubmissions ?? 0}
-              onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkRecords" })}
+              onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkRecords", initial: false })}
             />
             {canAttendance ? (
               <PendingRow
@@ -347,7 +347,7 @@ export default function TodayScreen(): React.ReactElement {
               {canDeclare ? (
                 <Chip
                   label={`📒 ${STR.hwDeclareTitle}`}
-                  onPress={() => nav.navigate("HomeworkTab", { screen: "DeclareHomework" })}
+                  onPress={() => nav.navigate("HomeworkTab", { screen: "DeclareHomework", initial: false })}
                 />
               ) : null}
               {canAttendance ? (
@@ -363,7 +363,7 @@ export default function TodayScreen(): React.ReactElement {
               {canClassTest ? (
                 <Chip
                   label={`🧪 ${STR.tabClassTest}`}
-                  onPress={() => nav.navigate("ClassTestTab", { screen: "RequestClassTest" })}
+                  onPress={() => nav.navigate("ClassTestTab", { screen: "RequestClassTest", initial: false })}
                 />
               ) : null}
             </ChipRow>
