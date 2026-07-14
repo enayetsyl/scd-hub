@@ -15,8 +15,9 @@ import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { STR, bnNum, dayOfWeekLabel, subjectLabel, dayTypeLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
+import { dateKey } from "../../lib/dates";
 
-const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
+const isoDay = (d: Date): string => dateKey(d);
 
 /** The current week's dates, Sunday-first (index-aligned to DAYS_OF_WEEK). */
 function weekDates(): string[] {

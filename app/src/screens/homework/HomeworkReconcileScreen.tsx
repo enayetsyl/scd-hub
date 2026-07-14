@@ -28,10 +28,11 @@ import { useAuth } from "../../auth/AuthContext";
 import { useSectionContext } from "../../state/SectionContext";
 import { useToast } from "../../state/ToastContext";
 import { space, useColors } from "../../theme";
+import { dateKey } from "../../lib/dates";
 
 type Props = NativeStackScreenProps<HomeworkStackParamList, "HomeworkReconcile">;
 
-const today = (): string => new Date().toISOString().slice(0, 10);
+const today = (): string => dateKey();
 
 export default function HomeworkReconcileScreen({ navigation, route }: Props): React.ReactElement {
   const colors = useColors();

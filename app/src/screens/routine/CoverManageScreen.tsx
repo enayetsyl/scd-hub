@@ -23,8 +23,9 @@ import { STR, routineSubjectLabel, dayOfWeekLabel, bnNum } from "../../lib/label
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
+import { dateKey } from "../../lib/dates";
 
-const todayISO = (): string => new Date().toISOString().slice(0, 10);
+const todayISO = (): string => dateKey();
 
 type Props = NativeStackScreenProps<RoutineStackParamList, "CoverManage">;
 

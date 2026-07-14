@@ -21,9 +21,10 @@ import { STR, routineSubjectLabel, periodTrackLabel, dayOfWeekLabel, bnNum } fro
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
+import { dateKey } from "../../lib/dates";
 
 const EDITOR_DAYS = DAYS_OF_WEEK.filter((d) => d !== "FRI");
-const todayISO = (): string => new Date().toISOString().slice(0, 10);
+const todayISO = (): string => dateKey();
 
 type Props = NativeStackScreenProps<RoutineStackParamList, "RoutineEditor">;
 

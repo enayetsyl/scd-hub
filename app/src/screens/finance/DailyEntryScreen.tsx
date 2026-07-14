@@ -32,10 +32,11 @@ import { friendlyError } from "../../lib/errors";
 import { required } from "../../lib/validate";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
+import { dateKey } from "../../lib/dates";
 
 type FeeLineRow = { head: string | null; amount: string };
 
-const todayISO = (): string => new Date().toISOString().slice(0, 10);
+const todayISO = (): string => dateKey();
 
 export default function DailyEntryScreen(): React.ReactElement {
   const [, record] = useMutation(RECORD_FINANCE_POSTING);

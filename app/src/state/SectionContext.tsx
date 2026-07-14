@@ -5,8 +5,17 @@
  * `classes(academicYearId)`, with the teacher's own `myScopes` sections as
  * shortcuts (Slice-4 follow-up — no pasted ids). The selection is persisted so
  * it survives reloads.
+ *
+ * D-#304 self-heal: the year is NOT a question we ask the teacher (the class-test
+ * form precedent). Once authed, a missing or VANISHED persisted year silently
+ * becomes the school's CURRENT year — a fresh phone shows the homework class
+ * buttons without anyone ever opening the section picker. A deliberately picked
+ * year that still exists is always respected.
  */
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
+import { useQuery } from "urql";
+import { ACADEMIC_YEARS_QUERY } from "../graphql/operations";
+import { useAuth } from "../auth/AuthContext";
 import { getItem, setItem } from "../lib/storage";
 
 export interface SectionSelection {
@@ -43,6 +52,8 @@ const SectionContext = createContext<SectionContextValue | null>(null);
 
 export function SectionProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const [selection, setSelection] = useState<SectionSelection>(EMPTY);
+  const [loaded, setLoaded] = useState(false);
+  const { status, role } = useAuth();
 
   useEffect(() => {
     (async () => {
@@ -55,8 +66,28 @@ export function SectionProvider({ children }: { children: React.ReactNode }): Re
           /* ignore corrupt persisted value */
         }
       }
+      setLoaded(true);
     })();
   }, []);
+
+  // D-#304: default/repair the year once the persisted value is known and the
+  // caller is a staff login (guardians never use this context).
+  const [yearsQ] = useQuery({
+    query: ACADEMIC_YEARS_QUERY,
+    pause: !loaded || status !== "authed" || role === "GUARDIAN",
+  });
+  useEffect(() => {
+    const years = yearsQ.data?.academicYears;
+    if (!loaded || !years || years.length === 0) return;
+    const current = years.find((y) => y.current) ?? years[0];
+    setSelection((prev) => {
+      // A real, still-existing pick wins — heal only null/vanished years.
+      if (prev.academicYearId && years.some((y) => y.id === prev.academicYearId)) return prev;
+      const next = { ...EMPTY, academicYearId: current.id };
+      void setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, [yearsQ.data, loaded]);
 
   const persist = useCallback((next: SectionSelection) => {
     setSelection(next);
