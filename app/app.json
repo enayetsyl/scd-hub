@@ -2,7 +2,14 @@
   "expo": {
     "name": "SCD Hub",
     "slug": "scd-hub",
-    "version": "0.1.0",
+    "version": "1.0.0",
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/ef69db4d-e518-4334-955f-d0abf69ec8d9",
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -11,7 +18,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.scd.hub"
@@ -21,7 +30,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.scd.hub"
+      "package": "com.scd.hub",
+      "versionCode": 2,
+      "permissions": [
+        "android.permission.REQUEST_INSTALL_PACKAGES"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -36,6 +49,12 @@
           "project": "scdhub-app"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ef69db4d-e518-4334-955f-d0abf69ec8d9"
+      }
+    },
+    "owner": "rahman365"
   }
 }

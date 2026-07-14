@@ -38,4 +38,14 @@ allprojects {
         mavenCentral()
         maven { url 'https://www.jitpack.io' }
     }
+
+    // Room's annotation processor (kapt inside expo-updates) loads sqlite-jdbc, which
+    // extracts a native lib into the kapt worker JVM's java.io.tmpdir. On Windows that
+    // worker can resolve tmpdir to C:\Windows (unwritable) and kaptReleaseKotlin dies
+    // with AccessDeniedException — pin the worker tmpdir to a writable build dir.
+    tasks.withType(org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask).configureEach {
+        def kaptTmpDir = new File(rootProject.projectDir, 'build/kapt-tmp')
+        doFirst { kaptTmpDir.mkdirs() }
+        kaptProcessJvmArgs.add("-Djava.io.tmpdir=${kaptTmpDir.absolutePath}")
+    }
 }
