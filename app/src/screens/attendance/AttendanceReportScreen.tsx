@@ -40,6 +40,8 @@ const daysAgoKey = (n: number): string => {
 
 export default function AttendanceReportScreen(_props: Props): React.ReactElement {
   const [dateKey, setDateKey] = useState(todayKey());
+  // D-#312: class cards start folded (name + count); a tap expands the names.
+  const [openClasses, setOpenClasses] = useState<Record<string, boolean>>({});
   const [fromKey, setFromKey] = useState(daysAgoKey(14));
   const [leaveFor, setLeaveFor] = useState<string | null>(null); // studentId
   const [leaveReason, setLeaveReason] = useState("");
@@ -114,33 +116,51 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
       {reportQ.error ? <Notice message={friendlyError(reportQ.error)} tone="danger" /> : null}
       {loading ? <Loader label={STR.loading} /> : null}
 
-      {/* Absentee report (the external sheet's replacement) */}
-      <H2>{STR.attReportTitle}</H2>
+      {/* Absentee report (the external sheet's replacement). D-#312: the header
+          carries the school-wide absent total; class cards fold to name + count
+          and expand to the section/name detail on tap. */}
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <H2>{STR.attReportTitle}</H2>
+        <Badge
+          text={`${STR.attAbsentWord}: ${bnNum(report.reduce((s, c) => s + c.absentCount, 0))}`}
+          tone={report.some((c) => c.absentCount > 0) ? "warn" : "ok"}
+        />
+      </View>
       {report.length === 0 && !loading ? <Muted>{STR.attNoAbsentees}</Muted> : null}
-      {report.map((cls) => (
-        <Card key={cls.classId}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Body style={{ fontWeight: "700" }}>{classLevelLabel(cls.classLevel)}</Body>
-            <Badge text={`${STR.attAbsentWord}: ${bnNum(cls.absentCount)}`} tone={cls.absentCount > 0 ? "warn" : "ok"} />
-          </View>
-          {cls.sections.map((sec) => (
-            <View key={sec.sectionId} style={{ marginTop: space(2) }}>
-              <Muted style={{ fontWeight: "700" }}>
-                {sec.sectionNameBn || sec.sectionCode} · {bnNum(sec.absentCount)}
-              </Muted>
-              {sec.absentees.map((a) => (
-                <View key={a.studentId} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 }}>
-                  <Body style={{ flex: 1 }}>{a.nameBn || a.name}</Body>
-                  <Muted>
-                    {STR.attRoll}: {a.rollNumber ? bnNum(a.rollNumber) : "—"} · {STR.attIdNo}: {bnNum(a.schoolId)}
-                    {a.leaveCovered ? " · ✓" : ""}
-                  </Muted>
-                </View>
-              ))}
+      {report.map((cls) => {
+        const open = !!openClasses[cls.classId];
+        return (
+          <Card key={cls.classId} onPress={() => setOpenClasses((m) => ({ ...m, [cls.classId]: !open }))}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Body style={{ fontWeight: "700" }}>
+                {open ? "▾" : "▸"} {classLevelLabel(cls.classLevel)}
+              </Body>
+              <Badge text={`${STR.attAbsentWord}: ${bnNum(cls.absentCount)}`} tone={cls.absentCount > 0 ? "warn" : "ok"} />
             </View>
-          ))}
-        </Card>
-      ))}
+            {open
+              ? cls.sections.map((sec) => (
+                  <View key={sec.sectionId} style={{ marginTop: space(2) }}>
+                    <Muted style={{ fontWeight: "700" }}>
+                      {sec.sectionNameBn || sec.sectionCode} · {bnNum(sec.absentCount)}
+                    </Muted>
+                    {sec.absentees.map((a) => (
+                      <View
+                        key={a.studentId}
+                        style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 }}
+                      >
+                        <Body style={{ flex: 1 }}>{a.nameBn || a.name}</Body>
+                        <Muted>
+                          {STR.attRoll}: {a.rollNumber ? bnNum(a.rollNumber) : "—"} · {STR.attIdNo}: {bnNum(a.schoolId)}
+                          {a.leaveCovered ? " · ✓" : ""}
+                        </Muted>
+                      </View>
+                    ))}
+                  </View>
+                ))
+              : null}
+          </Card>
+        );
+      })}
 
       {/* Unmarked sections */}
       <Divider />
