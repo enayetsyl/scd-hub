@@ -51,6 +51,7 @@ import { useLanguage } from "../state/LanguageContext";
 import { useSidebar, DRAWER_PERMANENT_MIN_WIDTH } from "../state/SidebarContext";
 import { useNotifications } from "../state/NotificationContext";
 import { STR, bnNum } from "../lib/labels";
+import { appVersionLabel } from "../lib/appUpdate";
 import { fonts, radius, space, typeScale, useColors } from "../theme";
 
 import LoginScreen from "../screens/auth/LoginScreen";
@@ -403,6 +404,12 @@ function AvatarMenu(): React.ReactElement {
             />
             <View style={{ height: 1, backgroundColor: colors.border, marginVertical: space(1) }} />
             <MenuRow icon="🚪" label={STR.logout} onPress={() => void logout()} danger />
+            {/* Support aid for the self-hosted APK flow: "which version are you on?" */}
+            <View style={{ paddingVertical: space(1), paddingHorizontal: space(4) }}>
+              <Text style={{ ...typeScale.caption, color: colors.textSecondary }}>
+                {STR.appVersion}: {appVersionLabel()}
+              </Text>
+            </View>
           </View>
         </Pressable>
       </Modal>

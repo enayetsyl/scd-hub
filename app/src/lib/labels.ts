@@ -868,6 +868,19 @@ const STR_BN = {
     "ঠিকানা বারের 🔒/সেটিংস আইকনে ক্লিক করুন → Notifications → Allow করুন, তারপর নিচের বোতাম চাপুন।",
   pushRecheck: "আবার পরীক্ষা করুন",
   pushIosHint: "iPhone/iPad-এ Safari থেকে প্রথমে ওয়েবসাইটটি Home Screen-এ যোগ করুন, তারপর নোটিফিকেশন চালু করা যাবে।",
+  /** Android self-hosted distribution — mandatory APK-update wall + login-page download. */
+  updateWallTitle: "নতুন ভার্সন এসেছে",
+  updateWallBody:
+    "অ্যাপ ব্যবহার চালিয়ে যেতে নতুন ভার্সনটি ইনস্টল করা আবশ্যক। নিচের বোতাম চেপে ডাউনলোড করুন — ডাউনলোড শেষে ইনস্টল স্ক্রিন খুলবে।",
+  updateDownload: "ডাউনলোড ও ইনস্টল করুন",
+  updateDownloading: "ডাউনলোড হচ্ছে…",
+  updateInstallHint:
+    "প্রথমবার ফোন “অজানা অ্যাপ ইনস্টল” অনুমতি চাইতে পারে — Allow করে ফিরে এসে আবার বোতামটি চাপুন।",
+  updateFailed: "ডাউনলোড ব্যর্থ হয়েছে — ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।",
+  updateCurrentVersion: "বর্তমান ভার্সন",
+  updateNewVersion: "নতুন ভার্সন",
+  downloadAndroidApp: "Android অ্যাপ ডাউনলোড করুন",
+  appVersion: "অ্যাপ ভার্সন",
   prNotes: "মন্তব্য",
   prLinkUrl: "লিংক",
   prPickFile: "ফাইল যোগ করুন",
@@ -3210,6 +3223,18 @@ const STR_EN: StrTable = {
   pushBlockedHelp: "Click the 🔒/settings icon in the address bar → Notifications → Allow, then press the button below.",
   pushRecheck: "Check again",
   pushIosHint: "On iPhone/iPad, first add this website to your Home Screen from Safari; notifications can be enabled after that.",
+  updateWallTitle: "Update required",
+  updateWallBody:
+    "A new version must be installed before you can keep using the app. Tap the button below to download — the install screen opens when the download finishes.",
+  updateDownload: "Download & install",
+  updateDownloading: "Downloading…",
+  updateInstallHint:
+    "The first time, your phone may ask to allow installing unknown apps — tap Allow, come back, and press the button again.",
+  updateFailed: "Download failed — check your internet connection and try again.",
+  updateCurrentVersion: "Current version",
+  updateNewVersion: "New version",
+  downloadAndroidApp: "Download the Android app",
+  appVersion: "App version",
   wpTitle: "Whole picture",
   wpOverall: "Overall",
   wpClassTest: "Class test",

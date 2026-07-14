@@ -4,7 +4,7 @@
  * credentials surface a Bangla error.
  */
 import React, { useState } from "react";
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, Platform, Linking } from "react-native";
 import { Screen, H1, Muted, Field, Button, Notice } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
 import { useLanguage } from "../../state/LanguageContext";
@@ -69,6 +69,24 @@ export default function LoginScreen(): React.ReactElement {
         loading={busy}
         style={{ marginTop: space(2) }}
       />
+
+      {/* Self-hosted Android distribution: the APK is downloaded from here, not a
+          store. Same-origin /downloads/* is served by Caddy on the VM. Web only —
+          inside the installed app this link is meaningless (UpdateGate handles
+          updates there). */}
+      {Platform.OS === "web" ? (
+        <View style={{ alignItems: "center", marginTop: space(6) }}>
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => Linking.openURL("/downloads/scd-hub-latest.apk")}
+            hitSlop={12}
+          >
+            <Text style={{ ...typeScale.button, color: colors.primary }}>
+              🤖 {STR.downloadAndroidApp}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </Screen>
   );
 }
