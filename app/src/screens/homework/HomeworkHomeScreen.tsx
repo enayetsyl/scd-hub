@@ -43,10 +43,11 @@ import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useSectionContext } from "../../state/SectionContext";
 import { space, useColors } from "../../theme";
+import { dateKey } from "../../lib/dates";
 
 type Props = NativeStackScreenProps<HomeworkStackParamList, "HomeworkHome">;
 
-const today = (): string => new Date().toISOString().slice(0, 10);
+const today = (): string => dateKey();
 
 export default function HomeworkHomeScreen({ navigation }: Props): React.ReactElement {
   const colors = useColors();

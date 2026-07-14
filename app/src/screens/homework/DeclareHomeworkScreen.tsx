@@ -37,10 +37,11 @@ import { useSectionContext } from "../../state/SectionContext";
 import { useToast } from "../../state/ToastContext";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
+import { dateKey } from "../../lib/dates";
 
 type Props = NativeStackScreenProps<HomeworkStackParamList, "DeclareHomework">;
 
-const today = (): string => new Date().toISOString().slice(0, 10);
+const today = (): string => dateKey();
 
 export default function DeclareHomeworkScreen({ navigation, route }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();

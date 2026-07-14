@@ -32,8 +32,9 @@ import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
+import { dateKey } from "../../lib/dates";
 
-const todayISO = (): string => new Date().toISOString().slice(0, 10);
+const todayISO = (): string => dateKey();
 
 /** Cross-tab navigation (the Basket→Sets convention): navigate bubbles up to the drawer. */
 type CrossNav = { navigate: (name: string, params?: object) => void };

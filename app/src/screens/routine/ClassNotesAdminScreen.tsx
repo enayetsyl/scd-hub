@@ -22,8 +22,9 @@ import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
+import { dateKey } from "../../lib/dates";
 
-const todayISO = (): string => new Date().toISOString().slice(0, 10);
+const todayISO = (): string => dateKey();
 
 function rowClass(r: ClassNoteAdminRowT): string {
   const lang = getActiveLang();

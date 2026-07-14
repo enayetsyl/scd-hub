@@ -18,16 +18,17 @@ import { STR, dateHeaderLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { groupByDate } from "../../lib/groupByDate";
 import { space } from "../../theme/tokens";
+import { dateKey } from "../../lib/dates";
 
 type Props = NativeStackScreenProps<HrStackParamList, "NeedsCoverInbox">;
 
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+  return dateKey();
 }
 function plusDaysKey(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return dateKey(d);
 }
 
 export default function NeedsCoverInboxScreen(_props: Props): React.ReactElement {
