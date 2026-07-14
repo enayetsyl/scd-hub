@@ -1978,6 +1978,16 @@ export const TRANSITION_HOMEWORK_RECORD = gql<
   }
 `;
 
+/** D-#313: bulk early GIVEN → DUE for a picked set of the section's records. */
+export const MARK_HOMEWORK_RECORDS_DUE = gql<
+  { markHomeworkRecordsDue: number },
+  { sectionId: string; recordIds: string[] }
+>`
+  mutation MarkHomeworkRecordsDue($sectionId: String!, $recordIds: [String!]!) {
+    markHomeworkRecordsDue(sectionId: $sectionId, recordIds: $recordIds)
+  }
+`;
+
 // --- HW-T4 roll-ups: watch-list / trim-pattern / question-usage (§7.3/§7.4/§8.4) ---
 
 export interface HwWatchEntryT {
@@ -2205,6 +2215,35 @@ export interface MyDayT {
   classPresence: ClassPresenceT[];
   classTeacherOf: ClassTeacherSectionT[];
 }
+// D-#316 — the Principal/Office Today dashboard (generic cards).
+export interface AdminCardBadgeT {
+  key: string;
+  value: number;
+  tone: string;
+}
+export interface AdminCardRowT {
+  title: string;
+  subtitle: string | null;
+  value: string | null;
+  tone: string;
+}
+export interface AdminTodayCardT {
+  key: string;
+  badges: AdminCardBadgeT[];
+  rows: AdminCardRowT[];
+  moreCount: number;
+}
+export const ADMIN_TODAY_QUERY = gql<{ adminToday: AdminTodayCardT[] }, { date: string }>`
+  query AdminToday($date: String!) {
+    adminToday(date: $date) {
+      key
+      badges { key value tone }
+      rows { title subtitle value tone }
+      moreCount
+    }
+  }
+`;
+
 export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
   query MyDay($date: String!) {
     myDay(date: $date) {
@@ -2260,6 +2299,17 @@ export interface HwNilDeclaredT {
   teacherName: string | null;
   reason: string;
 }
+/** D-#309: rotation-expected assignment nobody declared — per section × subject × week. */
+export interface AsNotDeclaredT {
+  weekNumber: number;
+  weekStartKey: string;
+  deliveryDateKey: string | null;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  subject: string;
+  teacherName: string | null;
+}
 export interface ReconReportT {
   fromKey: string;
   toKey: string;
@@ -2267,6 +2317,7 @@ export interface ReconReportT {
   asMisses: AsReconMissT[];
   hwNotDeclared: HwNotDeclaredT[];
   hwNilDeclared: HwNilDeclaredT[];
+  asNotDeclared: AsNotDeclaredT[];
 }
 // D-#300 — homework lifecycle report (Principal/Office).
 export interface HwFunnelRowT {
@@ -2356,6 +2407,7 @@ export const RECON_REPORT_QUERY = gql<
       asMisses { weekNumber deliveryDateKey sectionId sectionNameBn classLevel confirmerName draftItems draftMinutes }
       hwNotDeclared { dateKey sectionId sectionNameBn classLevel subject teacherName }
       hwNilDeclared { dateKey sectionId sectionNameBn classLevel subject teacherName reason }
+      asNotDeclared { weekNumber weekStartKey deliveryDateKey sectionId sectionNameBn classLevel subject teacherName }
     }
   }
 `;

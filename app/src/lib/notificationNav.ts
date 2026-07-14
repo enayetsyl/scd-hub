@@ -84,6 +84,10 @@ export function notificationTarget(
       return { tab: "HomeworkTab", screen: "HomeworkReconcile", params: refs?.date ? { date: refs.date } : undefined };
     case "HW_PENDING_ESCALATION":
       return { tab: "AdminTab", screen: "ReconciliationReport" };
+    // D-#314: the auto-issue notice — land the confirmer on the day's reconcile
+    // view (read-only once reconciled) so they can see what the system issued.
+    case "HW_AUTO_ISSUED":
+      return { tab: "HomeworkTab", screen: "HomeworkReconcile", params: refs?.date ? { date: refs.date } : undefined };
 
     // Guardian chase/result/delivery kinds → the child's screen; the staff
     // fallbacks are defensive (these kinds are guardian-addressed today).

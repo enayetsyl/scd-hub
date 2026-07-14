@@ -79,6 +79,7 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },
   { type: "item", route: "FinanceTab", labelKey: "tabFinance", icon: "💰" },
   { type: "item", route: "HrTab", labelKey: "tabHr", icon: "🧑‍💼" },
+  { type: "item", route: "ReportsTab", labelKey: "tabReports", icon: "📊" },
   { type: "item", route: "AdminTab", labelKey: "tabAdmin", icon: "⚙️" },
 ];
 

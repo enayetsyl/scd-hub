@@ -54,6 +54,9 @@ export interface IHomeworkReconciliation extends Document {
   /** RECON_BY — the class teacher who confirmed (daily coordinator, handoff §9). */
   reconBy?: Types.ObjectId;
   confirmedAt?: Date;
+  /** D-#314: true when the auto-issue sweep confirmed the day (reconBy = the
+   *  all-zero system sentinel) — reports can tell system confirms from human ones. */
+  autoIssued?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -84,6 +87,7 @@ const HomeworkReconciliationSchema = new Schema<IHomeworkReconciliation>(
     trimLog: { type: [TrimLogRowSchema], default: [] },
     reconBy: { type: Schema.Types.ObjectId },
     confirmedAt: { type: Date },
+    autoIssued: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

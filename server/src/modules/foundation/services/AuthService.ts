@@ -32,6 +32,27 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
 }
 
 // ---------------------------------------------------------------------------
+// Phone-format tolerance (D-#315)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every equivalent spelling of one Bangladeshi mobile number: `01…`, `+8801…`,
+ * `8801…` (spaces/dashes stripped). Stored phones are a mix of these formats
+ * (roster imports vs app-created), so login matches ANY spelling of the same
+ * number. A non-BD-mobile-shaped input returns just its trimmed self —
+ * behavior for emails/foreign numbers is unchanged.
+ */
+export function phoneCandidates(raw: string): string[] {
+  const id = raw.trim().replace(/[\s-]/g, "");
+  let local: string | null = null;
+  if (/^\+8801\d{9}$/.test(id)) local = id.slice(3);
+  else if (/^8801\d{9}$/.test(id)) local = id.slice(2);
+  else if (/^01\d{9}$/.test(id)) local = id;
+  if (!local) return [raw.trim()];
+  return [local, `+88${local}`, `88${local}`];
+}
+
+// ---------------------------------------------------------------------------
 // Staff login (identifier = email OR phone, + password, D-#5/#60)
 // ---------------------------------------------------------------------------
 
@@ -49,10 +70,11 @@ export interface AuthResult {
 }
 
 export async function staffLogin(input: StaffLoginInput): Promise<AuthResult | null> {
-  // Accept either an email (case-insensitive) or a phone number as the identifier (D-#60).
+  // Accept either an email (case-insensitive) or a phone number as the identifier
+  // (D-#60); any equivalent phone spelling matches (01…/+8801…/8801…, D-#315).
   const id = input.email.trim();
   const user = await User.findOne({
-    $or: [{ email: id.toLowerCase() }, { phone: id }],
+    $or: [{ email: id.toLowerCase() }, { phone: { $in: phoneCandidates(id) } }],
     active: true,
   });
   if (!user) {
@@ -94,9 +116,11 @@ export interface GuardianLoginInput {
 }
 
 export async function guardianLogin(input: GuardianLoginInput): Promise<AuthResult | null> {
+  const id = input.identifier.trim();
   const guardian = await Guardian.findOne({
     identifierKind: input.identifierKind,
-    identifier: input.identifier.trim(),
+    // Phone identifiers match any equivalent spelling (01…/+8801…/8801…, D-#315).
+    identifier: input.identifierKind === "phone" ? { $in: phoneCandidates(id) } : id,
     active: true,
   });
 

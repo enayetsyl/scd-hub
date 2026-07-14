@@ -296,6 +296,23 @@ export type AdminStackParamList = {
   SectionPicker: undefined;
 };
 
+// D-#309: the Principal/Office Reports hub — a launcher plus the four
+// pending-work reports (each a filtered slice of the reconciliation read).
+// The attendance/class-note report screens are ALSO registered here (D-#311)
+// so the hub opens them IN-STACK and back returns to the hub, not to the
+// host tab's home. Param shapes mirror their home stacks exactly.
+export type ReportsStackParamList = {
+  ReportsHome: undefined;
+  HwDeclarePending: undefined;
+  HwIssuePending: undefined;
+  AsDeclarePending: undefined;
+  AsDeliverPending: undefined;
+  AttendanceReport: undefined;
+  ClassNoteReport: { date?: string } | undefined;
+  /** ClassNoteReport's drill-down target — must exist wherever it is mounted. */
+  DailyNote: { groupType: string; groupId: string; title: string; date?: string };
+};
+
 export type TabParamList = {
   HomeTab: NavigatorScreenParams<HomeStackParamList>;
   ContentTab: NavigatorScreenParams<ContentStackParamList>;
@@ -319,6 +336,7 @@ export type TabParamList = {
   RevisionTab: NavigatorScreenParams<RevisionStackParamList>;
   FinanceTab: NavigatorScreenParams<FinanceStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;
+  ReportsTab: NavigatorScreenParams<ReportsStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;
   GuardianHomeworkTab: NavigatorScreenParams<GuardianHomeworkStackParamList>;

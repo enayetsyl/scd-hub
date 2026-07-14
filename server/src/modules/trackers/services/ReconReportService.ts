@@ -23,6 +23,7 @@ import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkNilDeclaration } from "../models/HomeworkNilDeclaration";
 import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconciliation";
 import { AssignmentItem } from "../models/AssignmentItem";
+import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
@@ -30,6 +31,8 @@ import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { HolidayException } from "../../routine/models/HolidayException";
 import { dayTypeFor } from "../../routine/calendar";
 import { dateKeyOf, parseDateKey } from "../../attendance/dates";
+import { expectedItemsForWeek } from "./AssignmentScheduleService";
+import { weekNumberFor } from "../assignmentCalendar";
 
 export interface HwReconMiss {
   dateKey: string;
@@ -77,6 +80,23 @@ export interface HwNilDeclared {
   reason: string;
 }
 
+/** D-#309: a rotation-expected assignment nobody DECLARED — the (section × subject
+ *  × week) cell exists in the AssignmentSchedule cycle but no AssignmentItem was
+ *  ever created. The step before asMisses' delivered-but-DRAFT. */
+export interface AsNotDeclared {
+  weekNumber: number;
+  weekStartKey: string;
+  /** The §4-rolled delivery date the declaration was due by (null never happens
+   *  for non-suspended weeks; kept nullable to mirror the resolver shape). */
+  deliveryDateKey: string | null;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  subject: string;
+  /** The rotation entry's teacher — who owes the declaration. */
+  teacherName: string | null;
+}
+
 export interface ReconReport {
   fromKey: string;
   toKey: string;
@@ -88,6 +108,8 @@ export interface ReconReport {
   /** Explicit "no homework today" declarations in the range (D-#299) — the neutral
    *  list; these cells are EXCLUDED from hwNotDeclared. */
   hwNilDeclared: HwNilDeclared[];
+  /** D-#309: rotation-expected assignments never declared, per (section × subject × week). */
+  asNotDeclared: AsNotDeclared[];
 }
 
 interface SectionInfo {
@@ -138,6 +160,58 @@ function rangeBounds(fromKey: string, toKey: string): { start: Date; end: Date }
   const end = new Date(last.getFullYear(), last.getMonth(), last.getDate(), 23, 59, 59, 999);
   if (start.getTime() > end.getTime()) throw new Error("from must not be after to");
   return { start, end };
+}
+
+/**
+ * D-#309: the (section × subject × week) cells where an assignment was NEVER
+ * DECLARED although the AssignmentSchedule rotation expects one that cycle week.
+ * Expectation source = the rotation (the same authority the teacher prep prompts
+ * use, D-#89) — suspended weeks owe nothing, and a week only reports once its
+ * §4-rolled delivery date has passed (before that the declaration isn't late).
+ */
+async function asNotDeclaredRows(
+  fromKey: string,
+  toKey: string,
+  now: Date,
+): Promise<Array<Omit<AsNotDeclared, "sectionNameBn"> & { teacherId: string | null }>> {
+  const { start, end } = rangeBounds(fromKey, toKey);
+  const todayKey = dateKeyOf(now);
+
+  const schedules = (await AssignmentSchedule.find({}).select("academicYearId termStartDate").lean()) as unknown as Array<{
+    academicYearId: { toString(): string };
+    termStartDate: Date;
+  }>;
+
+  const out: Array<Omit<AsNotDeclared, "sectionNameBn"> & { teacherId: string | null }> = [];
+  for (const sched of schedules) {
+    const term = new Date(sched.termStartDate);
+    const wFrom = Math.max(1, weekNumberFor(term, start));
+    const wTo = Math.min(weekNumberFor(term, end), weekNumberFor(term, now), 53);
+    for (let w = wFrom; w <= wTo; w++) {
+      let week;
+      try {
+        week = await expectedItemsForWeek(sched.academicYearId.toString(), w);
+      } catch {
+        continue; // schedule vanished between reads — nothing owed
+      }
+      if (week.suspended || !week.deliveryDate) continue;
+      if (week.deliveryDate > todayKey) continue; // not late yet
+      for (const item of week.items) {
+        if (item.delivered) continue;
+        out.push({
+          weekNumber: week.weekNumber,
+          weekStartKey: week.weekStart,
+          deliveryDateKey: week.deliveryDate,
+          sectionId: item.sectionId,
+          classLevel: item.classLevel,
+          subject: item.subject,
+          teacherId: item.teacherId || null,
+          teacherName: null,
+        });
+      }
+    }
+  }
+  return out;
 }
 
 /**
@@ -313,6 +387,9 @@ export async function reconciliationReport(
   }
   const asPending = [...asBuckets.values()];
 
+  // --- D-#309: rotation-expected assignments never declared ----------------------
+  const asNotDeclRaw = await asNotDeclaredRows(fromKey, toKey, now);
+
   // --- Enrich with section/class/confirmer names (one batched pass) -------------
   const info = await sectionInfoMap([
     ...new Set([
@@ -320,6 +397,7 @@ export async function reconciliationReport(
       ...asPending.map((b) => b.sectionId),
       ...notDeclRaw.map((r) => r.sectionId),
       ...nilRows.map((r) => r.sectionId.toString()),
+      ...asNotDeclRaw.map((r) => r.sectionId),
     ]),
   ]);
 
@@ -327,6 +405,7 @@ export async function reconciliationReport(
     ...new Set([
       ...(notDeclRaw.map((r) => r.teacherId).filter(Boolean) as string[]),
       ...nilRows.map((r) => r.declaredBy.toString()),
+      ...(asNotDeclRaw.map((r) => r.teacherId).filter(Boolean) as string[]),
     ]),
   ];
   const notDeclTeachers = notDeclTeacherIds.length
@@ -408,5 +487,25 @@ export async function reconciliationReport(
       a.deliveryDateKey === b.deliveryDateKey ? a.classLevel - b.classLevel : a.deliveryDateKey < b.deliveryDateKey ? 1 : -1,
     );
 
-  return { fromKey, toKey, hwMisses, asMisses, hwNotDeclared, hwNilDeclared };
+  const asNotDeclared: AsNotDeclared[] = asNotDeclRaw
+    .map((r) => {
+      const s = info.get(r.sectionId);
+      return {
+        weekNumber: r.weekNumber,
+        weekStartKey: r.weekStartKey,
+        deliveryDateKey: r.deliveryDateKey,
+        sectionId: r.sectionId,
+        sectionNameBn: s?.nameBn ?? r.sectionId,
+        classLevel: r.classLevel,
+        subject: r.subject,
+        teacherName: r.teacherId ? (teacherNameOf.get(r.teacherId) ?? null) : null,
+      };
+    })
+    .sort((a, b) =>
+      a.weekNumber === b.weekNumber
+        ? a.classLevel - b.classLevel || a.subject.localeCompare(b.subject)
+        : b.weekNumber - a.weekNumber,
+    );
+
+  return { fromKey, toKey, hwMisses, asMisses, hwNotDeclared, hwNilDeclared, asNotDeclared };
 }
