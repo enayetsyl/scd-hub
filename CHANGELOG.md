@@ -686,3 +686,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-13 | Feature | Homework lifecycle report (D-#300): funnel + checking backlog + chase rate + declaration consistency + teacher scorecard per subject × class, Principal/Office. jest 1895/1895 (114 suites). | D-#300
 - 2026-07-14 | Fix | Notification deep-links (D-#301): the 15 unmapped kinds (all observation kinds, HW pending ladder, guardian chase/result/fee/revision) now navigate on tap; refs.observationId exposed through GraphQL for the ObservationDetail link. jest 1895/1895 (114 suites). | D-#301
 - 2026-07-14 | UX | Print My-requests fold (D-#302): active jobs on top; delivered/cancelled behind a toggle; CANCELLED badge mislabel fixed. App-only. | D-#302
+- 2026-07-14 | Fix | Class-test print rows (D-#303): teacher name in the queue title; copies choice (typed / per-present-on-exam-day) on the class-test form — was silently 1 copy. jest 1899/1899 (114 suites). | D-#303

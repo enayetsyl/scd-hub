@@ -124,6 +124,9 @@ builder.mutationField("createClassTestRequest", (t) =>
       // working — the schema defaults BW/SINGLE, which is what the migration back-filled.
       colour: t.arg.string({ required: false }),
       sides: t.arg.string({ required: false }),
+      // D-#303: copies — a typed number (default 1) or CLASS_PRESENT on the exam day.
+      copies: t.arg.int({ required: false }),
+      copiesMode: t.arg.string({ required: false }),
       testNumber: t.arg.int({ required: false }),
       deadlineDays: t.arg.int({ required: false }),
       notes: t.arg.string({ required: false }),
@@ -142,6 +145,8 @@ builder.mutationField("createClassTestRequest", (t) =>
         questionFileId: args.questionFileId ?? undefined,
         colour: args.colour ?? undefined,
         sides: args.sides ?? undefined,
+        copies: args.copies ?? undefined,
+        copiesMode: args.copiesMode ?? undefined,
         testNumber: args.testNumber ?? undefined,
         deadlineDays: args.deadlineDays ?? undefined,
         notes: args.notes ?? undefined,

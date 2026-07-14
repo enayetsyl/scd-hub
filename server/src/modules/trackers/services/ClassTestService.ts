@@ -29,6 +29,8 @@ import { ClassTest, type IClassTest } from "../models/ClassTest";
 import { ClassTestSequence } from "../models/ClassTestSequence";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
+import { User } from "../../foundation/models/User";
+import { dateKeyOf } from "../../attendance/dates";
 import { AssessmentSet } from "../../assessment/models/AssessmentSet";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -93,6 +95,11 @@ export interface CreateClassTestRequestInput {
    *  caller omits them (validated in `createPrintRequest`, never silently coerced). */
   colour?: string;
   sides?: string;
+  /** D-#303: how many copies — a typed number (default 1) or one per student present
+   *  on the EXAM day (`CLASS_PRESENT`; the class is the section's own, the use day
+   *  is the exam date — both derived server-side). */
+  copies?: number;
+  copiesMode?: string;
   /** Optional; default = suggestTestNumber(...). Editable. */
   testNumber?: number;
   /** Optional; default 2 (admin-configurable). */
@@ -238,6 +245,16 @@ export async function createRequest(
     throw new Error("deadlineDays must be a non-negative integer");
   }
 
+  // --- copies (D-#303): a typed number (default 1) or per-present on the EXAM day.
+  const copiesMode = input.copiesMode ?? "FIXED";
+  if (copiesMode !== "FIXED" && copiesMode !== "CLASS_PRESENT") {
+    throw new Error("Invalid copiesMode");
+  }
+  const copies = input.copies ?? 1;
+  if (copiesMode === "FIXED" && (!Number.isInteger(copies) || copies < 1)) {
+    throw new Error("copies must be a positive integer");
+  }
+
   const ctId = await generateCtId(klass.academicYearId.toString(), klass.level, subject);
 
   const doc = await ClassTest.create({
@@ -274,14 +291,24 @@ export async function createRequest(
   // `mirrorToClassTest` keeps this record's status in step. `trusted` because the source
   // was validated above — a class test's uploaded paper is a `classtest_question` file,
   // not a `print_upload`.
+  // D-#303: the queue row's title names the requesting teacher (the Office scans titles),
+  // and the copies choice + exam-day use date ride along so CLASS_PRESENT resolves
+  // against the exam day's attendance.
+  const requester = (await User.findById(input.actorId).select("name").lean()) as {
+    name?: string;
+  } | null;
   const printRequest = await createPrintRequest({
-    title: `${ctId} · ${subject}`,
+    title: `${ctId} · ${subject}${requester?.name ? ` — ${requester.name}` : ""}`,
     purpose: "CLASS_TEST",
     sourceType: source === "POOL_SET" ? "SET" : "UPLOAD",
     setId: setId ? setId.toString() : null,
     fileIds: questionFileId ? [questionFileId.toString()] : null,
     colour: input.colour ?? null,
     sides: input.sides ?? null,
+    copies: copiesMode === "FIXED" ? copies : null,
+    copiesMode,
+    copiesClassId: copiesMode === "CLASS_PRESENT" ? doc.classId.toString() : null,
+    neededByKey: dateKeyOf(examDate),
     classId: doc.classId?.toString() ?? null,
     sectionId: input.sectionId,
     subject,

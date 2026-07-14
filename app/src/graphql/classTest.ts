@@ -81,6 +81,8 @@ export const CREATE_CLASS_TEST_REQUEST = gql<
     questionFileId?: string | null;
     colour?: string | null;
     sides?: string | null;
+    copies?: number | null;
+    copiesMode?: string | null;
     testNumber?: number | null;
     deadlineDays?: number | null;
     notes?: string | null;
@@ -89,13 +91,13 @@ export const CREATE_CLASS_TEST_REQUEST = gql<
   mutation CreateClassTestRequest(
     $sectionId: String!, $subject: String!, $examDate: String!, $totalMarks: Int!,
     $passMark: Int, $source: String!, $setId: String, $questionFileId: String,
-    $colour: String, $sides: String,
+    $colour: String, $sides: String, $copies: Int, $copiesMode: String,
     $testNumber: Int, $deadlineDays: Int, $notes: String
   ) {
     createClassTestRequest(
       sectionId: $sectionId, subject: $subject, examDate: $examDate, totalMarks: $totalMarks,
       passMark: $passMark, source: $source, setId: $setId, questionFileId: $questionFileId,
-      colour: $colour, sides: $sides,
+      colour: $colour, sides: $sides, copies: $copies, copiesMode: $copiesMode,
       testNumber: $testNumber, deadlineDays: $deadlineDays, notes: $notes
     ) { ${CLASS_TEST_FIELDS} }
   }
