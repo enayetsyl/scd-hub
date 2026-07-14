@@ -574,6 +574,24 @@ export async function transitionRecord(
 }
 
 // ---------------------------------------------------------------------------
+// markRecordsDue (D-#313 — bulk early GIVEN → DUE)
+// ---------------------------------------------------------------------------
+
+/** Bulk GIVEN → DUE for a picked set of a section's records — the manual
+ *  early-flip counterpart of the overnight auto-due sweep (same no-side-effect
+ *  edge, same bulk shape). Ids outside the section or not currently GIVEN
+ *  simply don't match — never an error. Returns how many flipped. */
+export async function markRecordsDue(sectionId: string, recordIds: string[]): Promise<number> {
+  if (recordIds.length === 0) return 0;
+  const now = new Date();
+  const res = await HomeworkStudentRecord.updateMany(
+    { _id: { $in: recordIds }, sectionId, state: "GIVEN" },
+    { $set: { state: "DUE" }, $push: { stateDates: { state: "DUE", at: now } } },
+  );
+  return res.modifiedCount ?? 0;
+}
+
+// ---------------------------------------------------------------------------
 // Read helpers (daily declaration view + lifecycle queues — handoff §8)
 // ---------------------------------------------------------------------------
 

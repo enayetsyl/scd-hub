@@ -1978,6 +1978,16 @@ export const TRANSITION_HOMEWORK_RECORD = gql<
   }
 `;
 
+/** D-#313: bulk early GIVEN → DUE for a picked set of the section's records. */
+export const MARK_HOMEWORK_RECORDS_DUE = gql<
+  { markHomeworkRecordsDue: number },
+  { sectionId: string; recordIds: string[] }
+>`
+  mutation MarkHomeworkRecordsDue($sectionId: String!, $recordIds: [String!]!) {
+    markHomeworkRecordsDue(sectionId: $sectionId, recordIds: $recordIds)
+  }
+`;
+
 // --- HW-T4 roll-ups: watch-list / trim-pattern / question-usage (§7.3/§7.4/§8.4) ---
 
 export interface HwWatchEntryT {
