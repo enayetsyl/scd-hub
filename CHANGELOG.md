@@ -688,3 +688,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-14 | UX | Print My-requests fold (D-#302): active jobs on top; delivered/cancelled behind a toggle; CANCELLED badge mislabel fixed. App-only. | D-#302
 - 2026-07-14 | Fix | Class-test print rows (D-#303): teacher name in the queue title; copies choice (typed / per-present-on-exam-day) on the class-test form — was silently 1 copy. jest 1899/1899 (114 suites). | D-#303
 - 2026-07-14 | Fix | Academic-year default self-heals to the current year (empty Class row on fresh devices) + all 25 UTC "today" defaults now local-time (pre-6am dates were yesterday). App-only. | D-#304
+- 2026-07-14 | Data | Guardian↔student links reconciled to the owner roster in local+dev+prod (D-#305): 91/91 verified per env, one-guardian-per-child, backups taken. No code deploy. | D-#305
