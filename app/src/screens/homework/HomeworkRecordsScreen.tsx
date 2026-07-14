@@ -6,13 +6,15 @@
  * CHECKED→RETURNED). The DUE/CHASE rows here are the "chase" worklist. Once a record
  * reaches SUBMITTED, the result is recorded in the Checking queue.
  */
-import React, { useState, useRef, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { ScrollView, View, RefreshControl } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
-import { HOMEWORK_OPEN_RECORDS, TRANSITION_HOMEWORK_RECORD } from "../../graphql/operations";
+import { HOMEWORK_OPEN_RECORDS, TRANSITION_HOMEWORK_RECORD, type HwOpenRecordT } from "../../graphql/operations";
 import { groupByDate } from "../../lib/groupByDate";
+import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
+import { SubjectFold } from "../../components/SubjectFold";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
@@ -72,7 +74,8 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
   const [, transition] = useMutation(TRANSITION_HOMEWORK_RECORD);
 
   const records = recsQ.data?.homeworkOpenRecords ?? [];
-  const groups = useMemo(() => groupByDate(records, (r) => r.dateGiven), [records]);
+  // D-#306: fold subjects the caller doesn't actively teach on this section.
+  const taught = useTaughtSubjects(selection.sectionId ?? null);
 
   const firstFocus = useRef(true);
   useFocusEffect(
@@ -104,6 +107,49 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
     refetchRecs({ requestPolicy: "network-only" }),
   );
 
+  const renderDateGroups = (recs: HwOpenRecordT[]): React.ReactNode =>
+    groupByDate(recs, (r) => r.dateGiven).map((g) => (
+      <View key={g.dateKey} style={{ marginBottom: space(2) }}>
+        <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{dateHeaderLabel(g.dateKey)}</Muted>
+        {g.items.map((r) => {
+          const moves = NEXT_STATES[r.state] ?? [];
+          return (
+            <Card key={r.id}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Body style={{ fontWeight: "700", flexShrink: 1 }}>{r.studentName}</Body>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+                  <Badge text={hwSubjectLabel(r.subject)} tone="info" />
+                  {r.chaseCount > 0 ? <Badge text={`${STR.hwChaseAction} ${r.chaseCount}`} tone="warn" /> : null}
+                  <Badge text={lifecycleStateLabel(r.state)} tone="brand" />
+                </View>
+              </View>
+              <Muted style={{ marginTop: 2 }}>{r.hwId}{r.topicLabelBn ? ` · 📘 ${r.topicLabelBn}` : ""}</Muted>
+              {moves.length > 0 ? (
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: 8 }}>
+                  {moves.map((to) => (
+                    <View key={to} style={{ flexGrow: 1 }}>
+                      <Button
+                        title={moveLabel(r.state, to)}
+                        variant="secondary"
+                        onPress={() => onMove(r.id, to)}
+                        loading={busyId === r.id}
+                        disabled={busyId !== null}
+                      />
+                    </View>
+                  ))}
+                </View>
+              ) : r.state === "SUBMITTED" ? (
+                <View style={{ marginTop: 8 }}>
+                  <Muted style={{ marginBottom: 6 }}>{STR.hwCheckHint}</Muted>
+                  <Button title={STR.hwGoChecking} onPress={() => navigation.navigate("CheckingQueue")} />
+                </View>
+              ) : null}
+            </Card>
+          );
+        })}
+      </View>
+    ));
+
   return (
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
@@ -124,47 +170,12 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
             {ok ? <Notice message={ok} tone="ok" /> : null}
             {error ? <Notice message={error} tone="danger" /> : null}
 
-            {groups.map((g) => (
-              <View key={g.dateKey} style={{ marginBottom: space(2) }}>
-                <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{dateHeaderLabel(g.dateKey)}</Muted>
-                {g.items.map((r) => {
-                  const moves = NEXT_STATES[r.state] ?? [];
-                  return (
-                    <Card key={r.id}>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                        <Body style={{ fontWeight: "700", flexShrink: 1 }}>{r.studentName}</Body>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
-                          <Badge text={hwSubjectLabel(r.subject)} tone="info" />
-                          {r.chaseCount > 0 ? <Badge text={`${STR.hwChaseAction} ${r.chaseCount}`} tone="warn" /> : null}
-                          <Badge text={lifecycleStateLabel(r.state)} tone="brand" />
-                        </View>
-                      </View>
-                      <Muted style={{ marginTop: 2 }}>{r.hwId}{r.topicLabelBn ? ` · 📘 ${r.topicLabelBn}` : ""}</Muted>
-                      {moves.length > 0 ? (
-                        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: 8 }}>
-                          {moves.map((to) => (
-                            <View key={to} style={{ flexGrow: 1 }}>
-                              <Button
-                                title={moveLabel(r.state, to)}
-                                variant="secondary"
-                                onPress={() => onMove(r.id, to)}
-                                loading={busyId === r.id}
-                                disabled={busyId !== null}
-                              />
-                            </View>
-                          ))}
-                        </View>
-                      ) : r.state === "SUBMITTED" ? (
-                        <View style={{ marginTop: 8 }}>
-                          <Muted style={{ marginBottom: 6 }}>{STR.hwCheckHint}</Muted>
-                          <Button title={STR.hwGoChecking} onPress={() => navigation.navigate("CheckingQueue")} />
-                        </View>
-                      ) : null}
-                    </Card>
-                  );
-                })}
-              </View>
-            ))}
+            <SubjectFold
+              key={selection.sectionId ?? ""}
+              records={records}
+              taught={taught}
+              render={renderDateGroups}
+            />
           </>
         )}
       </ScrollView>
