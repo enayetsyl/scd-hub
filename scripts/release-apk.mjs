@@ -64,7 +64,7 @@ if (!env.SENTRY_AUTH_TOKEN) {
   console.warn("WARN: SENTRY_AUTH_TOKEN not set — skipping Sentry source-map upload for this build.");
   env.SENTRY_DISABLE_AUTO_UPLOAD = "true";
 }
-const gradlew = process.platform === "win32" ? "gradlew.bat" : "./gradlew";
+const gradlew = path.join(ANDROID, process.platform === "win32" ? "gradlew.bat" : "gradlew");
 const build = spawnSync(gradlew, ["assembleRelease"], { cwd: ANDROID, stdio: "inherit", shell: true, env });
 if (build.status !== 0) { console.error("gradlew assembleRelease failed"); process.exit(1); }
 if (!fs.existsSync(APK_OUT)) { console.error(`expected APK not found: ${APK_OUT}`); process.exit(1); }
