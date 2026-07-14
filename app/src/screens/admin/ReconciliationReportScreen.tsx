@@ -5,39 +5,21 @@
  * assignment misses per WEEK (delivered items still DRAFT, confirmAssignmentWeek
  * owed). Each row names the accountable confirmer. Range chips: 7/14/30 days.
  */
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { View } from "react-native";
 import { useQuery } from "urql";
 import { RECON_REPORT_QUERY, type HwReconMissT, type HwNotDeclaredT } from "../../graphql/operations";
-import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Badge, Loader, ErrorBanner } from "../../components/ui";
+import { Screen, H2, Body, Muted, Card, Badge, Loader, ErrorBanner } from "../../components/ui";
+import { useReportRange, useReportFilterState } from "../../components/ReportFilters";
 import { STR, bnNum, classLevelLabel, hwSubjectLabel, hwNilReasonLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
 
-const keyOf = (d: Date): string => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-};
-
-const RANGES = [
-  { labelKey: "rrToday", days: 1 },
-  { labelKey: "rrLast7", days: 7 },
-  { labelKey: "rrLast14", days: 14 },
-  { labelKey: "rrLast30", days: 30 },
-] as const;
-
 export default function ReconciliationReportScreen(): React.ReactElement {
   const colors = useColors();
-  const [days, setDays] = useState<number>(7);
-
-  const { from, to } = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
-    return { from: keyOf(start), to: keyOf(now) };
-  }, [days]);
+  // D-#309: range chips + custom from–to, shared with the Reports hub screens.
+  const { fromKey: from, toKey: to, node: rangeNode } = useReportRange(7);
 
   const [q, refetch] = useQuery({
     query: RECON_REPORT_QUERY,
@@ -45,46 +27,64 @@ export default function ReconciliationReportScreen(): React.ReactElement {
     requestPolicy: "cache-and-network",
   });
   const report = q.data?.reconciliationReport;
+
+  // D-#309: one Class/Teacher/Subject filter over every section — option sets
+  // are the union of what the fetched report actually contains.
+  const filterSets = useMemo(() => {
+    const r = report;
+    const all = [
+      ...(r?.hwMisses ?? []).map((m) => ({ cls: m.classLevel, t: m.confirmerName, s: undefined as string | undefined })),
+      ...(r?.asMisses ?? []).map((m) => ({ cls: m.classLevel, t: m.confirmerName, s: undefined as string | undefined })),
+      ...(r?.hwNotDeclared ?? []).map((m) => ({ cls: m.classLevel, t: m.teacherName, s: m.subject })),
+      ...(r?.hwNilDeclared ?? []).map((m) => ({ cls: m.classLevel, t: m.teacherName, s: m.subject })),
+    ];
+    return {
+      classLevels: all.map((x) => x.cls),
+      teachers: all.map((x) => x.t).filter(Boolean) as string[],
+      subjects: all.map((x) => x.s).filter(Boolean) as string[],
+    };
+  }, [report]);
+  const { node: filterNode, match } = useReportFilterState(filterSets);
+
+  const hwMisses = (report?.hwMisses ?? []).filter((m) => match(m.classLevel, m.confirmerName));
+  const asMisses = (report?.asMisses ?? []).filter((m) => match(m.classLevel, m.confirmerName));
+  const hwNotDeclared = (report?.hwNotDeclared ?? []).filter((m) => match(m.classLevel, m.teacherName, m.subject));
+  const hwNilDeclared = (report?.hwNilDeclared ?? []).filter((m) => match(m.classLevel, m.teacherName, m.subject));
+
   const hwByDay = useMemo(() => {
     const map = new Map<string, HwReconMissT[]>();
-    for (const m of report?.hwMisses ?? []) {
+    for (const m of hwMisses) {
       const list = map.get(m.dateKey);
       if (list) list.push(m);
       else map.set(m.dateKey, [m]);
     }
     return [...map.entries()];
-  }, [report]);
+  }, [hwMisses]);
   // D-#293: homework never declared at all, grouped per day.
   const hwNdByDay = useMemo(() => {
     const map = new Map<string, HwNotDeclaredT[]>();
-    for (const m of report?.hwNotDeclared ?? []) {
+    for (const m of hwNotDeclared) {
       const list = map.get(m.dateKey);
       if (list) list.push(m);
       else map.set(m.dateKey, [m]);
     }
     return [...map.entries()];
-  }, [report]);
+  }, [hwNotDeclared]);
 
   return (
     <Screen scroll>
       <H2>{STR.rrTitle}</H2>
       <Muted style={{ marginBottom: space(2) }}>{STR.rrSub}</Muted>
 
-      <ChipRow>
-        {RANGES.map((r) => (
-          <Chip key={r.days} label={STR[r.labelKey]} selected={days === r.days} onPress={() => setDays(r.days)} />
-        ))}
-      </ChipRow>
+      {rangeNode}
+      <View style={{ marginBottom: space(2) }}>{filterNode}</View>
 
       {q.error ? (
         <ErrorBanner message={friendlyError(q.error)} onRetry={() => refetch({ requestPolicy: "network-only" })} />
       ) : null}
       {q.fetching && !report ? <Loader label={STR.loading} /> : null}
 
-      {report &&
-      report.hwMisses.length === 0 &&
-      report.asMisses.length === 0 &&
-      report.hwNotDeclared.length === 0 ? (
+      {report && hwMisses.length === 0 && asMisses.length === 0 && hwNotDeclared.length === 0 ? (
         <Card>
           <Body style={{ fontWeight: "600" }}>{STR.rrNoMisses}</Body>
         </Card>
@@ -124,10 +124,10 @@ export default function ReconciliationReportScreen(): React.ReactElement {
       ) : null}
 
       {/* Assignments — per week (the AS-T6 confirm cadence). */}
-      {(report?.asMisses.length ?? 0) > 0 ? (
+      {asMisses.length > 0 ? (
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(1) }}>📋 {STR.rrAsTitle}</Body>
-          {report!.asMisses.map((m) => (
+          {asMisses.map((m) => (
             <View
               key={`${m.sectionId}-${m.weekNumber}`}
               style={{ flexDirection: "row", alignItems: "center", paddingVertical: space(1), gap: space(2) }}
@@ -187,10 +187,10 @@ export default function ReconciliationReportScreen(): React.ReactElement {
 
       {/* D-#299: explicit "no homework today" declarations — the NEUTRAL list.
           These cells are excluded from the red not-declared list above. */}
-      {(report?.hwNilDeclared.length ?? 0) > 0 ? (
+      {hwNilDeclared.length > 0 ? (
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(1) }}>📗 {STR.hwNilReportTitle}</Body>
-          {report!.hwNilDeclared.map((m) => (
+          {hwNilDeclared.map((m) => (
             <View
               key={`${m.sectionId}-${m.subject}-${m.dateKey}`}
               style={{ flexDirection: "row", alignItems: "center", paddingVertical: space(1), gap: space(2) }}

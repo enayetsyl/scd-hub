@@ -55,6 +55,16 @@ const mockNilFind = jest.fn();
 jest.mock("../modules/trackers/models/HomeworkNilDeclaration", () => ({
   HomeworkNilDeclaration: { find: (f: unknown) => chain(mockNilFind)(f) },
 }));
+// D-#309 — assignment declare-pending: schedules enumerate weeks; the expected
+// grid itself is the AssignmentScheduleService's (already covered there).
+const mockScheduleFind = jest.fn();
+jest.mock("../modules/trackers/models/AssignmentSchedule", () => ({
+  AssignmentSchedule: { find: (f: unknown) => chain(mockScheduleFind)(f) },
+}));
+const mockExpectedWeek = jest.fn();
+jest.mock("../modules/trackers/services/AssignmentScheduleService", () => ({
+  expectedItemsForWeek: (ay: string, w: number) => mockExpectedWeek(ay, w),
+}));
 
 import { reconciliationReport } from "../modules/trackers/services/ReconReportService";
 
@@ -72,6 +82,8 @@ beforeEach(() => {
   mockSlotFind.mockResolvedValue([]);
   mockHolidayFind.mockResolvedValue([]);
   mockNilFind.mockResolvedValue([]);
+  mockScheduleFind.mockResolvedValue([]);
+  mockExpectedWeek.mockResolvedValue({ suspended: true, deliveryDate: null, items: [] });
 });
 
 const seedSection = (over: Record<string, unknown> = {}): void => {
@@ -95,6 +107,7 @@ describe("reconciliationReport (D-#290)", () => {
       asMisses: [],
       hwNotDeclared: [],
       hwNilDeclared: [],
+      asNotDeclared: [],
     });
   });
 
@@ -276,5 +289,75 @@ describe("hwNotDeclared (D-#293)", () => {
     expect(filter.subject.$in).not.toContain("ARABIC");
     // Every other HW subject stays expected.
     expect(filter.subject.$in).toEqual(expect.arrayContaining(["BAN", "ENG", "MATH", "SCI", "BGS", "ISLAM"]));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-#309 — assignment declare-pending (rotation-expected, per section × subject × week)
+// ---------------------------------------------------------------------------
+
+describe("asNotDeclared (D-#309)", () => {
+  const NOW = new Date(2026, 6, 13); // Mon 2026-07-13
+  const TERM = new Date(2026, 6, 5); // Sun 2026-07-05 → week 1 = Jul 5–11, week 2 = Jul 12–18
+
+  const expectedWeek = (weekNumber: number, over: Record<string, unknown> = {}) => ({
+    weekNumber,
+    weekStart: weekNumber === 1 ? "2026-07-05" : "2026-07-12",
+    suspended: false,
+    deliveryDate: weekNumber === 1 ? "2026-07-09" : "2026-07-16",
+    items: [] as unknown[],
+    ...over,
+  });
+
+  test("a rotation cell with no item reports once the week's delivery date passed", async () => {
+    seedSection();
+    mockUserFind.mockResolvedValue([{ _id: "u-as", name: "Tanjila Akter Jerin" }]);
+    mockScheduleFind.mockResolvedValue([{ academicYearId: "ay-1", termStartDate: TERM }]);
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(
+        expectedWeek(w, {
+          items: [
+            { delivered: false, sectionId: SEC, classLevel: -1, subject: "ENG", teacherId: "u-as" },
+            { delivered: true, sectionId: SEC, classLevel: -1, subject: "MATH", teacherId: "u-as" },
+          ],
+        }),
+      ),
+    );
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    // Week 1 (delivery 07-09, past) reports the undeclared ENG cell; the delivered
+    // MATH cell and week 2 (delivery 07-16, not late yet) stay silent.
+    expect(r.asNotDeclared).toHaveLength(1);
+    expect(r.asNotDeclared[0]).toMatchObject({
+      weekNumber: 1,
+      weekStartKey: "2026-07-05",
+      deliveryDateKey: "2026-07-09",
+      sectionId: SEC,
+      sectionNameBn: "মূল",
+      classLevel: -1,
+      subject: "ENG",
+      teacherName: "Tanjila Akter Jerin",
+    });
+  });
+
+  test("suspended weeks owe nothing", async () => {
+    seedSection();
+    mockScheduleFind.mockResolvedValue([{ academicYearId: "ay-1", termStartDate: TERM }]);
+    mockExpectedWeek.mockResolvedValue(
+      expectedWeek(1, {
+        suspended: true,
+        deliveryDate: null,
+        items: [{ delivered: false, sectionId: SEC, classLevel: -1, subject: "ENG", teacherId: "u-as" }],
+      }),
+    );
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotDeclared).toEqual([]);
+  });
+
+  test("no schedule → no expectation (never throws)", async () => {
+    seedSection();
+    mockScheduleFind.mockResolvedValue([]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotDeclared).toEqual([]);
+    expect(mockExpectedWeek).not.toHaveBeenCalled();
   });
 });

@@ -96,7 +96,8 @@ function SubjectCell({
 export default function ClassNoteReportScreen({ navigation, route }: Props): React.ReactElement {
   const [date, setDate] = useState(route.params?.date ?? todayISO());
   const [reportQ] = useQuery({ query: CLASS_NOTE_SUBMISSION_REPORT_QUERY, variables: { date } });
-  const [entryLimit, setEntryLimit] = useState<EntryLimit>("10");
+  // D-#309: default to ALL rows — the owner reads the whole school at a glance.
+  const [entryLimit, setEntryLimit] = useState<EntryLimit>("all");
   const [showTeacherMeta, setShowTeacherMeta] = useState(true);
   // Filters (all "" = no filter). Built client-side from the loaded rows.
   const [filterClass, setFilterClass] = useState<string>("");
