@@ -4335,6 +4335,8 @@ export interface NotificationRefsT {
   periodNumber: number | null;
   tier: string | null;
   hour: number | null;
+  /** D-#301: CO-3 observation kinds carry the id for the detail deep-link. */
+  observationId: string | null;
 }
 
 export interface NotificationT {
@@ -4352,7 +4354,7 @@ const NOTIFICATION_FIELDS = `
   refs {
     classNoteId slotId date groupType groupId hwItemId studentId sectionId
     reviewAssignmentId artifactId substitutionId loanId rung
-    audienceKey periodNumber tier hour
+    audienceKey periodNumber tier hour observationId
   }
 `;
 
