@@ -44,10 +44,20 @@ type Props = NativeStackScreenProps<PrintStackParamList, "PrintHome">;
 const BUCKETS = ["REQUESTED", "PRINTED", "DELIVERED"] as const;
 
 const bucketLabel = (s: string): string =>
-  s === "REQUESTED" ? STR.prsRequested : s === "PRINTED" ? STR.prsPrinted : STR.prsDelivered;
+  s === "REQUESTED"
+    ? STR.prsRequested
+    : s === "PRINTED"
+      ? STR.prsPrinted
+      : s === "CANCELLED"
+        ? STR.prsCancelled
+        : STR.prsDelivered;
 
 const statusTone = (s: string): "ok" | "warn" | "muted" =>
   s === "DELIVERED" ? "ok" : s === "PRINTED" ? "warn" : "muted";
+
+/** D-#302: a request the teacher still cares about day-to-day — filed but not yet
+ *  printed, or printed but not yet handed over. Delivered/cancelled are history. */
+const isActiveRequest = (s: string): boolean => s === "REQUESTED" || s === "PRINTED";
 
 export default function PrintHomeScreen({ navigation }: Props): React.ReactElement {
   const { role } = useAuth();
@@ -58,6 +68,9 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
 
   const [bucket, setBucket] = useState<string>("REQUESTED");
   const [busy, setBusy] = useState(false);
+  // D-#302: past requests (delivered/cancelled) fold away by default — the top of
+  // "My requests" carries only the jobs still in flight.
+  const [showPast, setShowPast] = useState(false);
   // D-#294: manual copy count entry for a CLASS_PRESENT job whose use-day attendance
   // is still pending — expands inline under that row's Mark-printed action.
   const [manualFor, setManualFor] = useState<string | null>(null);
@@ -274,6 +287,9 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
 
   const queue = queueQ.data?.printQueue ?? [];
   const mine = mineQ.data?.myPrintRequests ?? [];
+  // D-#302: in-flight jobs on top; delivered/cancelled behind the fold.
+  const mineActive = mine.filter((r) => isActiveRequest(r.status));
+  const minePast = mine.filter((r) => !isActiveRequest(r.status));
 
   return (
     <Screen scroll>
@@ -313,7 +329,24 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
           ) : mine.length === 0 ? (
             <EmptyState message={STR.prNoJobs} />
           ) : (
-            mine.map((r) => <Row key={r.id} r={r} office={false} />)
+            <>
+              {mineActive.length === 0 ? (
+                <EmptyState message={STR.prNoJobs} />
+              ) : (
+                mineActive.map((r) => <Row key={r.id} r={r} office={false} />)
+              )}
+              {/* D-#302: delivered/cancelled history folds behind one toggle. */}
+              {minePast.length > 0 ? (
+                <>
+                  <Button
+                    title={`${showPast ? "▾" : "▸"} ${STR.prPastRequests} (${bnNum(minePast.length)})`}
+                    variant="secondary"
+                    onPress={() => setShowPast((v) => !v)}
+                  />
+                  {showPast ? minePast.map((r) => <Row key={r.id} r={r} office={false} />) : null}
+                </>
+              ) : null}
+            </>
           )}
         </>
       ) : null}
