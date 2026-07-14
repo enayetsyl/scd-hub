@@ -81,13 +81,16 @@ jest.mock("../modules/foundation/models/User", () => ({
       return mockLean(rows);
     },
     findOne: (q: any) => {
+      // D-#315: staffLogin's phone clause is now { $in: [candidates] }.
+      const phoneMatches = (u: any, c: any) =>
+        c.phone && (c.phone.$in ? c.phone.$in.includes(u.phone) : u.phone === c.phone);
       let found;
       if (q.$or) {
         found = mockStore.users.find((u) =>
-          q.$or.some((c: any) => (c.email && u.email === c.email) || (c.phone && u.phone === c.phone)),
+          q.$or.some((c: any) => (c.email && u.email === c.email) || phoneMatches(u, c)),
         );
       } else if (q.phone) {
-        found = mockStore.users.find((u) => u.phone === q.phone);
+        found = mockStore.users.find((u) => phoneMatches(u, q));
       }
       if (found && q.active !== undefined && found.active !== q.active) found = undefined;
       return Promise.resolve(found || null);
@@ -120,7 +123,7 @@ import {
   provisionStaffLogin,
 } from "../modules/foundation/services/ProvisioningService";
 import { generatePassword, normalizePhone, buildCredentialShareLink } from "../modules/foundation/services/credentials";
-import { verifyPassword, staffLogin } from "../modules/foundation/services/AuthService";
+import { verifyPassword, staffLogin, phoneCandidates } from "../modules/foundation/services/AuthService";
 
 const ACTOR = { userId: "actor1", role: "PRINCIPAL" };
 
@@ -305,6 +308,25 @@ describe("staff provisioning (D-#60)", () => {
     const res = await staffLogin({ email: "01811111111", password: cred.password });
     expect(res).not.toBeNull();
     expect(res!.role).toBe("TEACHER");
+  });
+
+  // D-#315: any equivalent spelling of the same number logs in.
+  test("staffLogin accepts +88/88-prefixed spellings of the stored phone", async () => {
+    seedStaff();
+    const cred = await provisionStaffLogin("t1", ACTOR);
+    for (const spelling of ["+8801811111111", "8801811111111", "01811111111"]) {
+      const res = await staffLogin({ email: spelling, password: cred.password });
+      expect(res).not.toBeNull();
+    }
+  });
+
+  test("phoneCandidates expands every BD-mobile spelling; leaves other inputs alone (D-#315)", () => {
+    const all = ["01811111111", "+8801811111111", "8801811111111"];
+    expect(phoneCandidates("01811111111").sort()).toEqual([...all].sort());
+    expect(phoneCandidates("+8801811111111").sort()).toEqual([...all].sort());
+    expect(phoneCandidates("880 1811-111111").sort()).toEqual([...all].sort());
+    expect(phoneCandidates("someone@school.org")).toEqual(["someone@school.org"]);
+    expect(phoneCandidates("12345")).toEqual(["12345"]);
   });
 
   test("office_accounts → OFFICE role", async () => {

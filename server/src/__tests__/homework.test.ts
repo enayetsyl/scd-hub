@@ -56,10 +56,12 @@ jest.mock("../modules/trackers/models/HomeworkNilDeclaration", () => ({
   },
 }));
 
+const mockRecordUpdateMany = jest.fn();
 jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
   HomeworkStudentRecord: {
     insertMany: (a: unknown) => mockRecordInsertMany(a),
     findById: (id: unknown) => mockRecordFindById(id),
+    updateMany: (f: unknown, u: unknown) => mockRecordUpdateMany(f, u),
   },
 }));
 
@@ -103,6 +105,7 @@ import {
   listHomeworkTopics,
   topicLabelByCode,
   transitionRecord,
+  markRecordsDue,
   declareNoHomework,
   removeNoHomework,
 } from "../modules/trackers/services/HomeworkService";
@@ -643,5 +646,29 @@ describe("transitionRecord — lifecycle moves (timestamped)", () => {
     await expect(
       transitionRecord({ recordId: REC_ID.toString(), toState: "DUE", actorId: ACTOR_ID }),
     ).rejects.toThrow("HomeworkStudentRecord not found");
+  });
+});
+
+// ===========================================================================
+// D-#313 — markRecordsDue (bulk early GIVEN → DUE)
+// ===========================================================================
+
+describe("D-#313 markRecordsDue", () => {
+  test("flips only the section's GIVEN records among the picked ids", async () => {
+    const ids = [oidStr(), oidStr()];
+    mockRecordUpdateMany.mockResolvedValue({ modifiedCount: 2 });
+    const n = await markRecordsDue(SECTION_ID, ids);
+    expect(n).toBe(2);
+    const [filter, update] = mockRecordUpdateMany.mock.calls[0];
+    expect(filter).toEqual({ _id: { $in: ids }, sectionId: SECTION_ID, state: "GIVEN" });
+    expect(update.$set.state).toBe("DUE");
+    expect(update.$push.stateDates.state).toBe("DUE");
+    expect(update.$push.stateDates.at).toBeInstanceOf(Date);
+  });
+
+  test("an empty pick is a no-op that never hits the DB", async () => {
+    const n = await markRecordsDue(SECTION_ID, []);
+    expect(n).toBe(0);
+    expect(mockRecordUpdateMany).not.toHaveBeenCalled();
   });
 });

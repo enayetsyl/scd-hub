@@ -20,6 +20,7 @@ import {
   declareHomeworkItem as declareSvc,
   issueHomeworkItem as issueSvc,
   transitionRecord as transitionSvc,
+  markRecordsDue as markRecordsDueSvc,
   listDailyItems,
   listStudentRecords,
   listOpenRecords,
@@ -423,6 +424,30 @@ builder.mutationField("transitionHomeworkRecord", (t) =>
         result: args.result ?? undefined,
         actorId: ctx.auth.userId as string,
       });
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Mutation: markHomeworkRecordsDue (D-#313 — bulk early GIVEN → DUE)
+// ---------------------------------------------------------------------------
+
+builder.mutationField("markHomeworkRecordsDue", (t) =>
+  t.field({
+    type: "Int",
+    description:
+      "Flip a picked set of the section's GIVEN records to DUE in one call (D-#313) — the manual " +
+      "early counterpart of the overnight auto-due sweep. Ids outside the section or not GIVEN " +
+      "don't match. Returns how many flipped. Write-scope enforced.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      recordIds: t.arg.stringList({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanWrite(ctx, args.sectionId);
+      return markRecordsDueSvc(args.sectionId, [...args.recordIds]);
     },
   }),
 );
