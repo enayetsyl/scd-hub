@@ -255,6 +255,8 @@ builder.mutationField("declareHomeworkItem", (t) =>
       selectedQids: t.arg({ type: ["String"], required: false }),
       revItem: t.arg.boolean({ required: false }),
       sessionRef: t.arg.string({ required: false }),
+      // D-#317: the mandatory brief "what is the homework" (card-visible).
+      description: t.arg.string({ required: true }),
       attachmentIds: t.arg.stringList({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
@@ -274,6 +276,7 @@ builder.mutationField("declareHomeworkItem", (t) =>
         selectedQids: args.selectedQids ? [...args.selectedQids] : undefined,
         revItem: args.revItem ?? undefined,
         sessionRef: args.sessionRef ?? undefined,
+        description: args.description,
         attachmentIds: args.attachmentIds ? [...args.attachmentIds] : undefined,
         actorId: ctx.auth.userId as string,
       });
@@ -576,6 +579,8 @@ OpenRecordRef.implement({
     hasAnswerFile: t.exposeBoolean("hasAnswerFile"),
     dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),
     result: t.string({ nullable: true, resolve: (r) => r.result }),
+    // D-#317: the teacher's brief "what is the homework" (null pre-D-#317).
+    description: t.string({ nullable: true, resolve: (r) => r.description }),
   }),
 });
 
@@ -618,6 +623,7 @@ interface DayItemShape {
   status: string;
   bandWarning: boolean;
   topicLabelBn: string;
+  description: string | null;
 }
 
 const DayItemRef = builder.objectRef<DayItemShape>("HomeworkDayItem");
@@ -632,6 +638,8 @@ DayItemRef.implement({
     status: t.exposeString("status"),
     bandWarning: t.exposeBoolean("bandWarning"),
     topicLabelBn: t.exposeString("topicLabelBn"),
+    // D-#317: the teacher's brief "what is the homework" (null pre-D-#317).
+    description: t.string({ nullable: true, resolve: (r) => r.description }),
   }),
 });
 
