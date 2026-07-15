@@ -706,3 +706,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-14 | Feature | Teacher own-section attendance (D-#318): mySectionAttendance read + Today brief card + SectionAttendance detail screen (counts + absentee names, scope-derived). | D-#318
 - 2026-07-14 | UX | Absentee report shows present counts (D-#318 rider): class rows and the header carry a Present badge beside Absent. | D-#318
 - 2026-07-14 | Feature | Homework description (D-#317): mandatory brief on declare, shown on records/checking/reconcile cards. | D-#317
+- 2026-07-15 | Fix | Late top-up confirm (D-#319): a reconciled day with still-declared items can confirm again — only those items issue, ceiling re-checked across all; fully-issued days still refuse; auto-issue sweep picks top-ups up too. Server-only. | D-#319

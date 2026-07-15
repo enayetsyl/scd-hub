@@ -282,18 +282,29 @@ export async function confirmHomeworkDay(
 
   const dayKey = reconDayKey(input.date);
   const existing = await HomeworkReconciliation.findOne({ classId: input.classId, reconDate: dayKey }).lean();
-  if (existing && existing.reconState === "reconciled") {
-    throw new Error("Day already reconciled");
-  }
+  const alreadyReconciled = !!existing && existing.reconState === "reconciled";
 
   const docs = await listDailyItems(input.classId, input.date);
   if (docs.length === 0) throw new Error("No homework declared for this day");
+
+  // D-#319: a LATE TOP-UP confirm — items declared AFTER the day was confirmed
+  // were stranded (`declared` forever: re-confirm refused, the sweep skipped
+  // reconciled days). A reconciled day may now confirm again ONLY while it has
+  // still-declared items: the ceiling re-checks across ALL items, the issue
+  // loop below issues only the still-declared ones (nothing double-issues),
+  // and a fully-issued day still refuses exactly as before.
+  const pendingItems = docs.filter((d) => d.status === "declared" && d.qCount > 0);
+  if (alreadyReconciled && pendingItems.length === 0) {
+    throw new Error("Day already reconciled");
+  }
 
   // D-#310: subject-coverage gate — every routine-expected subject that day
   // must carry a declaration or an explicit "no homework today" (D-#299)
   // before the class teacher can issue. Expectation mirrors the recon report
   // (D-#293/D-#308: FULL days only; ARABIC never expected); weekends are
   // already hard-blocked above, holiday-overridden days owe nothing.
+  // A D-#319 top-up SKIPS the gate — the day already passed a human confirm
+  // once; blocking the stranded items on coverage would re-strand them.
   const sectionId = docs[0].sectionId;
   const dayStart = new Date(input.date);
   dayStart.setHours(0, 0, 0, 0);
@@ -304,7 +315,7 @@ export async function confirmHomeworkDay(
     fromDate: { $lte: dayEnd },
     toDate: { $gte: dayStart },
   }).lean();
-  if (dayTypeFor(input.date, !!holiday) === "FULL") {
+  if (!alreadyReconciled && dayTypeFor(input.date, !!holiday) === "FULL") {
     const slots = (await RoutineSlot.find({
       groupType: "section",
       groupId: sectionId,
