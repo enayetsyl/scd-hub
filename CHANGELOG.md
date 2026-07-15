@@ -709,3 +709,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-15 | Fix | Late top-up confirm (D-#319): a reconciled day with still-declared items can confirm again — only those items issue, ceiling re-checked across all; fully-issued days still refuse; auto-issue sweep picks top-ups up too. Server-only. | D-#319
 - 2026-07-15 | UX | Reconcile roster prefill (D-#320): absentees pre-crossed from the day's attendance (new homeworkIssueRoster read); manual toggles win; hints for prefilled/incomplete attendance. | D-#320
 - 2026-07-15 | UX | Assignment-schedule filters (D-#321): class/teacher/subject selects (shared D-#309 filters) over the 4-week rotation entry lists. App-only. | D-#321
+- 2026-07-15 | UX | Drawer Reports group (D-#322): sidebar Reports is a collapsible group of the six report screens (deep-links keep the back button; nested-aware active highlight). App-only. | D-#322
