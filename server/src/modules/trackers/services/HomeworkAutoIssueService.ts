@@ -18,9 +18,7 @@
  * throws inside confirm and is treated as "not ready — skip silently". The
  * scheduler runs this every tick inside the 12:00–17:00 window on school days.
  */
-import { Types } from "mongoose";
 import { HomeworkItem } from "../models/HomeworkItem";
-import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconciliation";
 import { Student } from "../../foundation/models/Student";
 import { StudentAttendanceDay } from "../../attendance/models/StudentAttendanceDay";
 import { resolveUnits, unitKey, type StudentLite } from "../../attendance/attendanceUnit";
@@ -110,14 +108,10 @@ export async function sweepHomeworkAutoIssue(now = new Date()): Promise<AutoIssu
   const sectionOfClass = new Map<string, string>();
   for (const it of items) sectionOfClass.set(it.classId.toString(), it.sectionId.toString());
 
-  const recons = (await HomeworkReconciliation.find({
-    classId: { $in: [...sectionOfClass.keys()].map((id) => new Types.ObjectId(id)) },
-    reconDate: reconDayKey(now),
-    reconState: "reconciled",
-  })
-    .select("classId")
-    .lean()) as unknown as Array<{ classId: { toString(): string } }>;
-  for (const r of recons) sectionOfClass.delete(r.classId.toString());
+  // D-#319: reconciled classes are NOT filtered out any more — every class in
+  // the map has ≥1 still-`declared` item today (the query above), so a
+  // reconciled one is a LATE TOP-UP candidate and confirm handles it (issuing
+  // only the still-declared items). A fully-issued day never enters the map.
 
   for (const [classId, sectionId] of sectionOfClass) {
     const roster = await buildIssueRoster(sectionId, dateKey);
