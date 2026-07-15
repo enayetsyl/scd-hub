@@ -2,8 +2,8 @@
  * Custom drawer content (D-#258) — the EximusEdu-familiar grouped sidebar.
  *
  * Replaces React Navigation's default flat drawer-item list with collapsible
- * module GROUPS (Academics, Trackers) plus flat standalone items (Attendance,
- * Library, Finance, HR, …). It renders ONLY the routes the role actually holds:
+ * module GROUPS (Academics, Trackers, Reports) plus flat standalone items
+ * (Attendance, Library, Finance, HR, …). It renders ONLY the routes the role actually holds:
  * the Drawer.Navigator registers a Drawer.Screen for a module only when its
  * permission gate passes (unchanged from the old bottom-tab gating), so
  * `state.routeNames` already reflects the role — we filter the config against it
@@ -32,7 +32,12 @@ import type { TabParamList } from "./types";
 type RouteName = keyof TabParamList;
 type LabelKey = keyof typeof STR;
 
-type NavLeaf = { route: RouteName; labelKey: LabelKey; icon: string };
+/**
+ * `screen` (optional) deep-links to a screen INSIDE the route's stack (with
+ * `initial: false`, so back returns to the stack's home — the D-#311 lesson).
+ * Used by the Reports group, whose leaves all live in the one ReportsTab stack.
+ */
+type NavLeaf = { route: RouteName; labelKey: LabelKey; icon: string; screen?: string };
 type NavSection =
   | ({ type: "item" } & NavLeaf)
   | { type: "group"; titleKey: LabelKey; icon: string; items: NavLeaf[] };
@@ -79,7 +84,19 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },
   { type: "item", route: "FinanceTab", labelKey: "tabFinance", icon: "💰" },
   { type: "item", route: "HrTab", labelKey: "tabHr", icon: "🧑‍💼" },
-  { type: "item", route: "ReportsTab", labelKey: "tabReports", icon: "📊" },
+  {
+    type: "group",
+    titleKey: "tabReports",
+    icon: "📊",
+    items: [
+      { route: "ReportsTab", labelKey: "attReportTitle", icon: "🙋", screen: "AttendanceReport" },
+      { route: "ReportsTab", labelKey: "rtNoteReportTitle", icon: "📓", screen: "ClassNoteReport" },
+      { route: "ReportsTab", labelKey: "rptHwDeclarePending", icon: "📕", screen: "HwDeclarePending" },
+      { route: "ReportsTab", labelKey: "rptHwIssuePending", icon: "📒", screen: "HwIssuePending" },
+      { route: "ReportsTab", labelKey: "rptAsDeclarePending", icon: "📋", screen: "AsDeclarePending" },
+      { route: "ReportsTab", labelKey: "rptAsDeliverPending", icon: "📦", screen: "AsDeliverPending" },
+    ],
+  },
   { type: "item", route: "AdminTab", labelKey: "tabAdmin", icon: "⚙️" },
 ];
 
@@ -104,7 +121,12 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   const basket = useBasket();
   const { role } = useAuth();
   const present = React.useMemo(() => new Set(props.state.routeNames), [props.state.routeNames]);
-  const activeRoute = props.state.routes[props.state.index]?.name as RouteName | undefined;
+  const focusedTab = props.state.routes[props.state.index];
+  const activeRoute = focusedTab?.name as RouteName | undefined;
+  // The focused screen INSIDE the active tab's stack (undefined until the stack
+  // has navigated) — lets a deep-link leaf highlight only its own report.
+  const nestedState = focusedTab?.state;
+  const activeNested = nestedState?.routes?.[nestedState.index ?? nestedState.routes.length - 1]?.name;
 
   // Groups default to expanded (only two of them); a tap collapses/expands.
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({});
@@ -150,19 +172,24 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     return out;
   };
 
-  const go = (route: RouteName): void => {
+  const go = (leaf: NavLeaf): void => {
     // navigate bubbles to the drawer and (in slide-over mode) closes it.
-    props.navigation.navigate(route as never);
+    // Deep-link leaves keep the stack's back button via `initial: false` (D-#311).
+    // The route name is dynamic, so it can't satisfy the per-literal tuple
+    // overloads of the drawer helpers' navigate — hence the unknown-cast.
+    const navigate = props.navigation.navigate as unknown as (name: string, params?: object) => void;
+    if (leaf.screen) navigate(leaf.route, { screen: leaf.screen, initial: false });
+    else navigate(leaf.route);
   };
 
   const Leaf = ({ leaf, indent }: { leaf: NavLeaf; indent?: boolean }): React.ReactElement | null => {
     if (!present.has(leaf.route)) return null;
-    const active = leaf.route === activeRoute;
+    const active = leaf.route === activeRoute && (!leaf.screen || leaf.screen === activeNested);
     const badge = badgeFor(leaf.route);
     const tinted = tintedBadgesFor(leaf.route);
     return (
       <Pressable
-        onPress={() => go(leaf.route)}
+        onPress={() => go(leaf)}
         accessibilityRole="button"
         accessibilityState={{ selected: active }}
         style={{
@@ -259,7 +286,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{isCollapsed ? "▸" : "▾"}</Text>
         </Pressable>
-        {isCollapsed ? null : visible.map((it) => <Leaf key={it.route} leaf={it} indent />)}
+        {isCollapsed ? null : visible.map((it) => <Leaf key={`${it.route}:${it.screen ?? ""}`} leaf={it} indent />)}
       </View>
     );
   };
