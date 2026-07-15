@@ -58,6 +58,8 @@ interface ItemGroup {
   hwId: string;
   subject: string;
   topicLabelBn: string;
+  /** D-#317: the teacher's brief "what is the homework". */
+  description: string | null;
   rows: HwOpenRecordT[];
 }
 
@@ -69,7 +71,7 @@ function groupByItem(items: readonly HwOpenRecordT[]): ItemGroup[] {
   for (const r of items) {
     let g = map.get(r.hwId);
     if (!g) {
-      g = { hwId: r.hwId, subject: r.subject, topicLabelBn: r.topicLabelBn, rows: [] };
+      g = { hwId: r.hwId, subject: r.subject, topicLabelBn: r.topicLabelBn, description: r.description, rows: [] };
       map.set(r.hwId, g);
       order.push(r.hwId);
     }
@@ -202,6 +204,8 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
               {hwSubjectLabel(ig.subject)} · {ig.hwId}
               {ig.topicLabelBn ? ` · 📘 ${ig.topicLabelBn}` : ""}
             </Muted>
+            {/* D-#317: the teacher's brief "what is the homework". */}
+            {ig.description ? <Body style={{ marginBottom: 4 }}>📝 {ig.description}</Body> : null}
             {ig.rows.map((r) => {
               const actionable = ACTIONABLE_STATES.has(r.state);
               const p = pending[r.id];

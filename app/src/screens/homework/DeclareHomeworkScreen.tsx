@@ -51,6 +51,8 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [timeDecl, setTimeDecl] = useState("20");
   const [qCount, setQCount] = useState("");
+  // D-#317: the mandatory brief "what is the homework".
+  const [description, setDescription] = useState("");
   const [poolRef, setPoolRef] = useState("");
   const [revItem, setRevItem] = useState(false);
   // R-Validate (UX-1): per-field errors; the toast names the first offending field.
@@ -152,6 +154,8 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
       subject: { value: subject, message: `${STR.hwSubject} — ${STR.fieldRequired}` },
       topics: { value: selectedTopics, message: `${STR.hwTopTags} — ${STR.fieldRequired}` },
       qCount: { value: Number.isFinite(q) ? q : null, message: `${STR.hwQCount} — ${STR.fieldRequired}` },
+      // D-#317: the brief description is mandatory — it labels the item on every card.
+      description: { value: description.trim() || null, message: STR.hwDescRequired },
     });
     if (firstErrorKey) {
       setFieldErrors(errors);
@@ -178,6 +182,7 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
       qCount: q,
       poolRef: poolRef.trim() || undefined,
       revItem,
+      description: description.trim(),
       attachmentIds: files.length > 0 ? files.map((f) => f.fileId) : undefined,
     });
     setBusy(false);
@@ -191,6 +196,7 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
     setQCount("");
     setPoolRef("");
     setRevItem(false);
+    setDescription("");
     setFiles([]);
     refetchNil({ requestPolicy: "network-only" }); // a real declaration auto-clears a nil
   }
@@ -333,6 +339,14 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
         </Card>
         <Field label={STR.hwTimeDecl} value={timeDecl} onChangeText={setTimeDecl} keyboardType="number-pad" />
         <Field label={STR.hwQCount} value={qCount} onChangeText={setQCount} keyboardType="number-pad" error={fieldErrors.qCount} />
+        {/* D-#317: the mandatory brief "what is the homework" — every later card shows it. */}
+        <Field
+          label={STR.hwDescLabel}
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          error={fieldErrors.description}
+        />
         {/* Rarely changed — folded (UX-6): pool ref + revision flag. Time (default 20)
             stays visible above per the PRD. */}
         <Card>

@@ -189,6 +189,8 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
                 </View>
               </View>
               <Muted style={{ marginTop: 2 }}>{r.hwId}{r.topicLabelBn ? ` · 📘 ${r.topicLabelBn}` : ""}</Muted>
+              {/* D-#317: the teacher's brief "what is the homework". */}
+              {r.description ? <Body style={{ marginTop: 2 }}>📝 {r.description}</Body> : null}
               {moves.length > 0 ? (
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: 8 }}>
                   {moves.map((to) => (

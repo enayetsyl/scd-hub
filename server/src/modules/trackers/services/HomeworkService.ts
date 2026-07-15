@@ -95,6 +95,8 @@ export interface DeclareHomeworkItemInput {
   selectedQids?: string[];
   revItem?: boolean;
   sessionRef?: string;
+  /** D-#317: the teacher's brief "what is the homework" — required, card-visible. */
+  description: string;
   /** StoredFile ids (kind hw_question, ≤5) picked in the declare form. */
   attachmentIds?: string[];
   actorId: string;
@@ -201,6 +203,13 @@ export async function declareHomeworkItem(
     }
   }
 
+  // D-#317: the brief "what is the homework" is MANDATORY — it is the label every
+  // later step (collection, marking, checking) tells items apart by.
+  const description = (input.description ?? "").trim();
+  if (!description) {
+    throw new Error("A brief homework description is required (D-#317)");
+  }
+
   const attachmentIds = await normalizeAttachmentIds(input.attachmentIds);
 
   const hwId = await generateHwId(input.academicYearId, input.classLevel, subject);
@@ -220,6 +229,7 @@ export async function declareHomeworkItem(
     selectedQids: input.selectedQids ?? [],
     revItem: input.revItem ?? false,
     sessionRef: input.sessionRef,
+    description,
     status: "declared",
     declaredBy: input.actorId,
     attachmentIds,
@@ -619,6 +629,8 @@ export interface OpenRecordDTO {
   subject: string;
   /** The item's topic(s), resolved to Bangla catalog labels (joined). "" if none. */
   topicLabelBn: string;
+  /** D-#317: the teacher's brief "what is the homework" — null on pre-D-#317 items. */
+  description: string | null;
   dateGiven: string; // ISO (the item's given date — the grouping key)
   studentId: string;
   studentName: string;
@@ -644,7 +656,9 @@ export async function listOpenRecords(sectionId: string, states: LifecycleState[
 
   const itemIds = [...new Set(recs.map((r) => r.hwItemId.toString()))];
   const studentIds = [...new Set(recs.map((r) => r.studentId.toString()))];
-  const items = await HomeworkItem.find({ _id: { $in: itemIds } }).select({ subject: 1, dateGiven: 1, topTags: 1 }).lean();
+  const items = await HomeworkItem.find({ _id: { $in: itemIds } })
+    .select({ subject: 1, dateGiven: 1, topTags: 1, description: 1 })
+    .lean();
   const students = await Student.find({ _id: { $in: studentIds } }).select({ name: 1 }).lean();
   const itemMap = new Map(items.map((i) => [i._id.toString(), i]));
   const nameMap = new Map(students.map((s) => [s._id.toString(), s.name]));
@@ -658,6 +672,7 @@ export async function listOpenRecords(sectionId: string, states: LifecycleState[
         hwId: r.hwId,
         subject: it?.subject ?? "?",
         topicLabelBn: it ? joinTopicLabels(it.topTags ?? [], labelByCode) : "",
+        description: it?.description ?? null,
         dateGiven: it ? new Date(it.dateGiven as unknown as Date).toISOString() : new Date(0).toISOString(),
         studentId: r.studentId.toString(),
         studentName: nameMap.get(r.studentId.toString()) ?? r.studentId.toString(),
