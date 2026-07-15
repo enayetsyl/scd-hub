@@ -2244,6 +2244,37 @@ export const ADMIN_TODAY_QUERY = gql<{ adminToday: AdminTodayCardT[] }, { date: 
   }
 `;
 
+// D-#318 — the teacher's OWN sections' attendance for a date (counts + absentees).
+export interface SectionAttendanceAbsenteeT {
+  studentId: string;
+  name: string;
+  nameBn: string | null;
+  rollNumber: string | null;
+  schoolId: string;
+  leaveCovered: boolean;
+}
+export interface SectionAttendanceT {
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  presentCount: number;
+  absentCount: number;
+  totalCount: number;
+  complete: boolean;
+  absentees: SectionAttendanceAbsenteeT[];
+}
+export const MY_SECTION_ATTENDANCE = gql<
+  { mySectionAttendance: SectionAttendanceT[] },
+  { dateKey: string }
+>`
+  query MySectionAttendance($dateKey: String!) {
+    mySectionAttendance(dateKey: $dateKey) {
+      sectionId sectionNameBn classLevel presentCount absentCount totalCount complete
+      absentees { studentId name nameBn rollNumber schoolId leaveCovered }
+    }
+  }
+`;
+
 export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
   query MyDay($date: String!) {
     myDay(date: $date) {
@@ -3409,13 +3440,15 @@ export interface ClassAbsenteesT {
   classLevel: number;
   classNameBn: string;
   absentCount: number;
+  /** D-#318: covered-and-present count beside the absent badge. */
+  presentCount: number;
   sections: SectionAbsenteesT[];
 }
 
 export const ABSENTEE_REPORT = gql<{ absenteeReport: ClassAbsenteesT[] }, { dateKey: string }>`
   query AbsenteeReport($dateKey: String!) {
     absenteeReport(dateKey: $dateKey) {
-      classId classLevel classNameBn absentCount
+      classId classLevel classNameBn absentCount presentCount
       sections {
         sectionId sectionCode sectionNameBn absentCount
         absentees { studentId name nameBn rollNumber schoolId leaveCovered }

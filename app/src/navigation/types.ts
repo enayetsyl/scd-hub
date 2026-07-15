@@ -117,6 +117,8 @@ export type AttendanceStackParamList = {
   AttendanceAdmin: undefined;
   TeacherAttendanceImport: undefined;
   AttendanceReport: undefined;
+  /** D-#318: the teacher's own sections' attendance detail (counts + absentees). */
+  SectionAttendance: undefined;
   AssignMarker: undefined;
   SectionPicker: undefined;
 };

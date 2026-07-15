@@ -107,6 +107,7 @@ import MarkAttendanceScreen from "../screens/attendance/MarkAttendanceScreen";
 import AttendanceAdminScreen from "../screens/attendance/AttendanceAdminScreen";
 import TeacherAttendanceImportScreen from "../screens/attendance/TeacherAttendanceImportScreen";
 import AttendanceReportScreen from "../screens/attendance/AttendanceReportScreen";
+import SectionAttendanceScreen from "../screens/attendance/SectionAttendanceScreen";
 import AssignMarkerScreen from "../screens/attendance/AssignMarkerScreen";
 import LibraryHomeScreen from "../screens/library/LibraryHomeScreen";
 import TitleDetailScreen from "../screens/library/TitleDetailScreen";
@@ -617,6 +618,7 @@ function AttendanceNavigator(): React.ReactElement {
       <AttendanceStack.Screen name="AttendanceAdmin" component={AttendanceAdminScreen} options={{ title: STR.attAdminTitle }} />
       <AttendanceStack.Screen name="TeacherAttendanceImport" component={TeacherAttendanceImportScreen} options={{ title: STR.attUploadTitle }} />
       <AttendanceStack.Screen name="AttendanceReport" component={AttendanceReportScreen} options={{ title: STR.attReportTitle }} />
+      <AttendanceStack.Screen name="SectionAttendance" component={SectionAttendanceScreen} options={{ title: STR.attMySectionsToday }} />
       <AttendanceStack.Screen name="AssignMarker" component={AssignMarkerScreen} options={{ title: STR.attAssignMarkerTitle }} />
       <AttendanceStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </AttendanceStack.Navigator>

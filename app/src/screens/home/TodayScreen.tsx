@@ -25,7 +25,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useQuery } from "urql";
 import { DAYS_OF_WEEK, roleHasPermission } from "@scd/shared";
 import type { Role } from "@scd/shared";
-import { MY_DAY_QUERY, UNMARKED_SECTIONS } from "../../graphql/operations";
+import { MY_DAY_QUERY, UNMARKED_SECTIONS, MY_SECTION_ATTENDANCE } from "../../graphql/operations";
 import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Badge, Loader, ErrorBanner } from "../../components/ui";
 import { STR, bnNum, classLevelLabel, dayOfWeekLabel, dayTypeLabel, routineSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -77,6 +77,11 @@ export default function TodayScreen(): React.ReactElement {
   // Manager-only: who still hasn't marked today (reuses the existing §8 query).
   const [unmarkedQ] = useQuery({ query: UNMARKED_SECTIONS, variables: { dateKey: date }, pause: !canManage });
   const unmarked = unmarkedQ.data?.unmarkedSections ?? [];
+
+  // D-#318: the teacher's OWN sections' attendance at a glance (admins land on
+  // the card dashboard instead, so no pause needed beyond the guardian gate).
+  const [mySectionsQ] = useQuery({ query: MY_SECTION_ATTENDANCE, variables: { dateKey: date }, pause: canManage });
+  const mySections = mySectionsQ.data?.mySectionAttendance ?? [];
 
   // The countdown ticks locally (the server sends an absolute `dueAt` instant), so the
   // remaining time stays truthful without re-querying. One tick a minute is enough —
@@ -316,6 +321,32 @@ export default function TodayScreen(): React.ReactElement {
             </View>
           ))}
         </Card>
+
+        {/* D-#318: the teacher's OWN sections' attendance at a glance — tap for names. */}
+        {!canManage && mySections.length > 0 ? (
+          <Card onPress={() => nav.navigate("AttendanceTab", { screen: "SectionAttendance", initial: false })}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: space(1) }}>
+              <Body style={{ fontWeight: "700", flex: 1 }}>🙋 {STR.attMySectionsToday}</Body>
+              <Muted>→</Muted>
+            </View>
+            {mySections.map((sec) => (
+              <View
+                key={sec.sectionId}
+                style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: space(1) }}
+              >
+                <Body style={{ flex: 1 }}>
+                  {classLevelLabel(sec.classLevel)}
+                  {sec.sectionNameBn ? ` — ${sec.sectionNameBn}` : ""}
+                  {!sec.complete ? " ⚠" : ""}
+                </Body>
+                <Muted>
+                  {STR.presentWord}: {bnNum(sec.presentCount)} · {STR.absentWord}: {bnNum(sec.absentCount)} /{" "}
+                  {bnNum(sec.totalCount)}
+                </Muted>
+              </View>
+            ))}
+          </Card>
+        ) : null}
 
         {/* Pending work — each count opens the exact queue in one tap */}
         {day ? (

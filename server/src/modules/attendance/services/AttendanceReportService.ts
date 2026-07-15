@@ -87,6 +87,8 @@ export interface ClassAbsentees {
   classLevel: number;
   classNameBn: string;
   absentCount: number;
+  /** D-#318: covered-and-present count — shown beside the absent badge. */
+  presentCount: number;
   sections: SectionAbsentees[];
 }
 
@@ -146,6 +148,14 @@ export async function absenteeReport(dateKey: string): Promise<ClassAbsentees[]>
     });
   }
 
+  // D-#318: covered-and-present per class — the badge next to "Absent".
+  const presentByClass = new Map<string, number>();
+  for (const s of covered) {
+    if (absentIds.has(s._id.toString())) continue;
+    const key = s.classId.toString();
+    presentByClass.set(key, (presentByClass.get(key) ?? 0) + 1);
+  }
+
   const byClass = new Map<string, ClassAbsentees>();
   for (const sectionId of sectionIds) {
     const section = sectionById.get(sectionId);
@@ -155,7 +165,14 @@ export async function absenteeReport(dateKey: string): Promise<ClassAbsentees[]>
     const classKey = cls._id.toString();
     let entry = byClass.get(classKey);
     if (!entry) {
-      entry = { classId: classKey, classLevel: cls.level, classNameBn: cls.nameBn, absentCount: 0, sections: [] };
+      entry = {
+        classId: classKey,
+        classLevel: cls.level,
+        classNameBn: cls.nameBn,
+        absentCount: 0,
+        presentCount: presentByClass.get(classKey) ?? 0,
+        sections: [],
+      };
       byClass.set(classKey, entry);
     }
     const absentees = (absenteesBySection.get(sectionId) ?? []).sort((a, b) =>
@@ -247,6 +264,108 @@ export async function classPresenceForDate(dateKey: string): Promise<ClassPresen
   }
 
   return [...rows.values()].sort((a, b) => a.classLevel - b.classLevel);
+}
+
+// ---------------------------------------------------------------------------
+// D-#318 — a TEACHER's own sections for a date (brief counts + absentee names)
+// ---------------------------------------------------------------------------
+
+export interface SectionAttendance {
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  presentCount: number;
+  absentCount: number;
+  totalCount: number;
+  /** True once every student of the section has been captured (all units marked). */
+  complete: boolean;
+  absentees: AbsenteeEntry[];
+}
+
+/**
+ * Per-SECTION counts + absentee names for a date, restricted to the given
+ * sections — the teacher-facing read (D-#318). The caller derives the section
+ * set from the teacher's OWN scopes (resolver) — this never widens access:
+ * a teacher sees exactly the sections they already read elsewhere.
+ */
+export async function sectionsAttendanceForDate(
+  sectionIds: string[],
+  dateKey: string,
+): Promise<SectionAttendance[]> {
+  parseDateKey(dateKey);
+  if (sectionIds.length === 0) return [];
+  const [days, students, sections] = await Promise.all([
+    StudentAttendanceDay.find({ dateKey }).select("sectionId subjectGroupId absentStudentIds").lean() as unknown as Promise<DayLike[]>,
+    Student.find({ sectionId: { $in: sectionIds }, active: true })
+      .select("_id name nameBn rollNumber schoolId sectionId classId")
+      .lean(),
+    Section.find({ _id: { $in: sectionIds } }).select("nameBn classId").lean(),
+  ]);
+  if (students.length === 0) return [];
+
+  const markedUnits = new Set(days.map(unitKeyOfDay));
+  const absentIds = new Set(days.flatMap((d) => d.absentStudentIds.map((id) => id.toString())));
+  const units = await resolveUnits(students.map(toLite), dateKey);
+
+  const classes = await Class.find({ _id: { $in: sections.map((s) => s.classId) } })
+    .select("level")
+    .lean();
+  const levelOf = new Map(classes.map((c) => [c._id.toString(), c.level]));
+
+  const coveredAbsent = students.filter((s) => {
+    const u = units.get(s._id.toString());
+    return u !== undefined && markedUnits.has(unitKey(u)) && absentIds.has(s._id.toString());
+  });
+  const apps = coveredAbsent.length
+    ? await StudentLeaveApplication.find({
+        studentId: { $in: coveredAbsent.map((s) => s._id) },
+        fromKey: { $lte: dateKey },
+        toKey: { $gte: dateKey },
+      }).lean()
+    : [];
+
+  const rows = new Map<string, SectionAttendance>();
+  for (const sec of sections) {
+    rows.set(sec._id.toString(), {
+      sectionId: sec._id.toString(),
+      sectionNameBn: sec.nameBn,
+      classLevel: levelOf.get(sec.classId.toString()) ?? 0,
+      presentCount: 0,
+      absentCount: 0,
+      totalCount: 0,
+      complete: true,
+      absentees: [],
+    });
+  }
+  for (const s of students) {
+    const row = rows.get(s.sectionId.toString());
+    if (!row) continue;
+    row.totalCount += 1;
+    const unit = units.get(s._id.toString());
+    if (!unit || !markedUnits.has(unitKey(unit))) {
+      row.complete = false;
+      continue;
+    }
+    if (absentIds.has(s._id.toString())) {
+      row.absentCount += 1;
+      row.absentees.push({
+        studentId: s._id.toString(),
+        name: s.name,
+        nameBn: s.nameBn ?? null,
+        rollNumber: s.rollNumber ?? s.schoolId,
+        schoolId: s.schoolId,
+        leaveCovered: applicationCovers(apps, s._id.toString(), dateKey),
+      });
+    } else {
+      row.presentCount += 1;
+    }
+  }
+  for (const row of rows.values()) {
+    row.absentees.sort((a, b) =>
+      (a.rollNumber ?? a.schoolId).localeCompare(b.rollNumber ?? b.schoolId, undefined, { numeric: true }),
+    );
+  }
+  return [...rows.values()].filter((r) => r.totalCount > 0).sort((a, b) => a.classLevel - b.classLevel);
 }
 
 // ---------------------------------------------------------------------------
