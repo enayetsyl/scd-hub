@@ -135,11 +135,14 @@ describe("D-#314 sweepHomeworkAutoIssue", () => {
     expect(mockEmitAutoIssued).not.toHaveBeenCalled();
   });
 
-  test("an already-reconciled class is filtered before any confirm attempt", async () => {
+  test("D-#319: a reconciled class with still-declared items gets a top-up confirm attempt", async () => {
+    // The class map is built FROM still-declared items, so a reconciled class in
+    // it is by definition a late top-up candidate — the sweep no longer filters
+    // it out; confirm itself refuses fully-issued days.
     mockReconFind.mockResolvedValue([{ classId: CLASS_ID }]);
     const res = await sweepHomeworkAutoIssue(NOW);
-    expect(res).toEqual({ issued: 0, deferred: 0 });
-    expect(mockConfirm).not.toHaveBeenCalled();
+    expect(res).toEqual({ issued: 1, deferred: 0 });
+    expect(mockConfirm).toHaveBeenCalledTimes(1);
   });
 
   test("no declared items today → nothing to do", async () => {

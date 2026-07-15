@@ -342,12 +342,46 @@ describe("T2.2/T2.6 — confirmHomeworkDay (ceiling gate + cadence)", () => {
     ).rejects.toThrow(/No homework declared/);
   });
 
-  test("an already-reconciled day cannot be confirmed/issued a second time", async () => {
+  test("a fully-issued reconciled day cannot be confirmed/issued a second time", async () => {
     mockReconFindOne.mockReturnValue(leanRecon({ reconState: "reconciled" }));
-    mockList.mockResolvedValue([leanItem()]);
+    mockList.mockResolvedValue([leanItem({ status: "issued" })]);
     await expect(
       confirmHomeworkDay({ classId: CLASS_ID, date: A_TUESDAY, roster: [], actorId: ACTOR_ID }),
     ).rejects.toThrow(/already reconciled/);
+    expect(mockIssue).not.toHaveBeenCalled();
+  });
+
+  test("D-#319: a reconciled day with LATE declared items confirms as a top-up (coverage gate skipped)", async () => {
+    mockReconFindOne.mockReturnValue(leanRecon({ reconState: "reconciled" }));
+    // An expected-but-uncovered subject exists — a first confirm would block on
+    // D-#310; the top-up must NOT (the day already passed a human confirm).
+    mockSlotFind.mockResolvedValue([
+      { subject: "ENG", effectiveFrom: new Date(2026, 0, 1), effectiveTo: null },
+    ]);
+    mockList.mockResolvedValue([
+      leanItem({ status: "issued", timeDecl: 20 }), // the original confirm's item
+      leanItem({ status: "declared", timeDecl: 30 }), // declared AFTER the confirm
+    ]);
+    const r = await confirmHomeworkDay({
+      classId: CLASS_ID,
+      date: A_TUESDAY,
+      roster: [{ studentId: "s1", present: true }],
+      actorId: ACTOR_ID,
+    });
+    expect(mockIssue).toHaveBeenCalledTimes(1); // only the still-declared item
+    expect(r.issuedItems).toBe(1);
+    expect(r.dayTotal).toBe(50); // ceiling re-checked across ALL items
+  });
+
+  test("D-#319: a top-up over the ceiling still blocks (all items counted)", async () => {
+    mockReconFindOne.mockReturnValue(leanRecon({ reconState: "reconciled" }));
+    mockList.mockResolvedValue([
+      leanItem({ status: "issued", timeDecl: 100 }),
+      leanItem({ status: "declared", timeDecl: 30 }),
+    ]);
+    await expect(
+      confirmHomeworkDay({ classId: CLASS_ID, date: A_TUESDAY, roster: [], actorId: ACTOR_ID }),
+    ).rejects.toThrow(/exceeds the 120-min ceiling/);
     expect(mockIssue).not.toHaveBeenCalled();
   });
 });
