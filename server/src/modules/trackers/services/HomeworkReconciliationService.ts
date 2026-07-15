@@ -52,6 +52,8 @@ export interface DayItemView {
   bandWarning: boolean;
   /** The item's topic(s), resolved to Bangla catalog labels (joined). "" if none. */
   topicLabelBn: string;
+  /** D-#317: the teacher's brief "what is the homework" — null on pre-D-#317 items. */
+  description: string | null;
 }
 
 export interface DayTallyResult {
@@ -80,6 +82,7 @@ function toItemView(d: LeanItem): DayItemView {
     status: d.status,
     bandWarning: d.timeDecl > HW_SUBJECT_BAND_MAX_MIN,
     topicLabelBn: "",
+    description: d.description ?? null,
   };
 }
 

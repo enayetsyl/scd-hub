@@ -1471,6 +1471,8 @@ export interface HwDayItemT {
   hwId: string;
   subject: string;
   topicLabelBn: string;
+  /** D-#317: the teacher's brief "what is the homework" (null pre-D-#317). */
+  description: string | null;
   timeDecl: number;
   qCount: number;
   revItem: boolean;
@@ -1501,7 +1503,7 @@ export const HOMEWORK_DAY_TALLY = gql<
       overBy
       withinCeiling
       state
-      items { itemId hwId subject topicLabelBn timeDecl qCount revItem status bandWarning }
+      items { itemId hwId subject topicLabelBn description timeDecl qCount revItem status bandWarning }
       bandWarnings
     }
   }
@@ -1634,6 +1636,8 @@ export const HOMEWORK_STUDENT_RECORDS = gql<
 export interface HwOpenRecordT {
   id: string;
   hwId: string;
+  /** D-#317: the teacher's brief "what is the homework" (null pre-D-#317). */
+  description: string | null;
   subject: string;
   topicLabelBn: string;
   dateGiven: string;
@@ -1652,7 +1656,7 @@ export const HOMEWORK_OPEN_RECORDS = gql<
 >`
   query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
     homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
-      id hwId subject topicLabelBn dateGiven studentId studentName state chaseCount hasAnswerFile dueDate result
+      id hwId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile dueDate result
     }
   }
 `;
@@ -1720,18 +1724,19 @@ export const DECLARE_HOMEWORK_ITEM = gql<
     qCount: number;
     poolRef?: string | null;
     revItem?: boolean | null;
+    description: string;
     attachmentIds?: string[] | null;
   }
 >`
   mutation DeclareHomeworkItem(
     $academicYearId: String!, $classId: String!, $classLevel: Int!, $sectionId: String!,
     $subject: String!, $dateGiven: String!, $topTags: [String!]!, $timeDecl: Int,
-    $qCount: Int!, $poolRef: String, $revItem: Boolean, $attachmentIds: [String!]
+    $qCount: Int!, $poolRef: String, $revItem: Boolean, $description: String!, $attachmentIds: [String!]
   ) {
     declareHomeworkItem(
       academicYearId: $academicYearId, classId: $classId, classLevel: $classLevel, sectionId: $sectionId,
       subject: $subject, dateGiven: $dateGiven, topTags: $topTags, timeDecl: $timeDecl,
-      qCount: $qCount, poolRef: $poolRef, revItem: $revItem, attachmentIds: $attachmentIds
+      qCount: $qCount, poolRef: $poolRef, revItem: $revItem, description: $description, attachmentIds: $attachmentIds
     ) {
       id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId attachmentIds
     }
@@ -2240,6 +2245,37 @@ export const ADMIN_TODAY_QUERY = gql<{ adminToday: AdminTodayCardT[] }, { date: 
       badges { key value tone }
       rows { title subtitle value tone }
       moreCount
+    }
+  }
+`;
+
+// D-#318 — the teacher's OWN sections' attendance for a date (counts + absentees).
+export interface SectionAttendanceAbsenteeT {
+  studentId: string;
+  name: string;
+  nameBn: string | null;
+  rollNumber: string | null;
+  schoolId: string;
+  leaveCovered: boolean;
+}
+export interface SectionAttendanceT {
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  presentCount: number;
+  absentCount: number;
+  totalCount: number;
+  complete: boolean;
+  absentees: SectionAttendanceAbsenteeT[];
+}
+export const MY_SECTION_ATTENDANCE = gql<
+  { mySectionAttendance: SectionAttendanceT[] },
+  { dateKey: string }
+>`
+  query MySectionAttendance($dateKey: String!) {
+    mySectionAttendance(dateKey: $dateKey) {
+      sectionId sectionNameBn classLevel presentCount absentCount totalCount complete
+      absentees { studentId name nameBn rollNumber schoolId leaveCovered }
     }
   }
 `;
@@ -3409,13 +3445,15 @@ export interface ClassAbsenteesT {
   classLevel: number;
   classNameBn: string;
   absentCount: number;
+  /** D-#318: covered-and-present count beside the absent badge. */
+  presentCount: number;
   sections: SectionAbsenteesT[];
 }
 
 export const ABSENTEE_REPORT = gql<{ absenteeReport: ClassAbsenteesT[] }, { dateKey: string }>`
   query AbsenteeReport($dateKey: String!) {
     absenteeReport(dateKey: $dateKey) {
-      classId classLevel classNameBn absentCount
+      classId classLevel classNameBn absentCount presentCount
       sections {
         sectionId sectionCode sectionNameBn absentCount
         absentees { studentId name nameBn rollNumber schoolId leaveCovered }

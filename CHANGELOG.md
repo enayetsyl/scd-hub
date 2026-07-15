@@ -703,3 +703,6 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-14 | Fix | Phone login format-tolerant (D-#315): 01…/+8801…/8801… spellings all match for staff + guardian phone identifiers. Server-only. | D-#315
 - 2026-07-14 | Feature | Homework auto-issue (D-#314): scheduler sweep confirms+issues within-ceiling fully-covered days off the real attendance roster and notifies the confirmer (HW_AUTO_ISSUED); trim days stay manual. | D-#314
 - 2026-07-14 | Feature | Admin Today dashboard (D-#316): Principal/Office land on collapsible summary cards (attendance, homework cycle+backlog, assignments, leave, observations, comments, class tests, print, reports) off one adminToday aggregate; tap expands inline, rows deep-link. | D-#316
+- 2026-07-14 | Feature | Teacher own-section attendance (D-#318): mySectionAttendance read + Today brief card + SectionAttendance detail screen (counts + absentee names, scope-derived). | D-#318
+- 2026-07-14 | UX | Absentee report shows present counts (D-#318 rider): class rows and the header carry a Present badge beside Absent. | D-#318
+- 2026-07-14 | Feature | Homework description (D-#317): mandatory brief on declare, shown on records/checking/reconcile cards. | D-#317

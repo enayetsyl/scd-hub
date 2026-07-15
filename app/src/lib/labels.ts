@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Bilingual display labels (NFR-5). The app renders Bangla **or** English per the
  * user's chosen language (see state/LanguageContext). Operational vocabulary is
  * looked up from the shared *_LABELS_BN / *_LABELS_EN maps (single source of
@@ -1090,6 +1090,8 @@ const STR_BN = {
   hwReconcile: "সমন্বয় ও ইস্যু",
   hwChecking: "দেখার তালিকা",
   hwDeclareTitle: "বাড়ির কাজ ঘোষণা",
+  hwDescLabel: "হোমওয়ার্কের সংক্ষিপ্ত বিবরণ",
+  hwDescRequired: "হোমওয়ার্কের বিবরণ লিখুন",
   hwReconcileTitle: "দৈনিক সমন্বয়",
   hwCheckingTitle: "দেখার তালিকা",
   hwRecords: "শিক্ষার্থী রেকর্ড",
@@ -1839,6 +1841,10 @@ const STR_BN = {
   attRecordsWord: "রেকর্ড",
   attDayRoster: "দিনের তালিকা",
   attReportTitle: "অনুপস্থিতির প্রতিবেদন",
+  /** D-#318 — teacher's own-section attendance. */
+  attMySectionsToday: "আমার সেকশনের উপস্থিতি",
+  attMySectionsTodayEmpty: "আপনার কোনো সেকশন নেই।",
+  attNotFullyMarked: "সম্পূর্ণ মার্ক হয়নি",
   attRoll: "রোল",
   attIdNo: "আইডি",
   attLeaveCovered: "ছুটির আবেদন আছে",
@@ -3432,6 +3438,8 @@ const STR_EN: StrTable = {
   hwReconcile: "Reconcile & issue",
   hwChecking: "Checking queue",
   hwDeclareTitle: "Declare homework",
+  hwDescLabel: "Homework description (brief)",
+  hwDescRequired: "Write a brief homework description",
   hwReconcileTitle: "Daily reconciliation",
   hwCheckingTitle: "Checking queue",
   hwRecords: "Student records",
@@ -4180,6 +4188,10 @@ const STR_EN: StrTable = {
   attRecordsWord: "records",
   attDayRoster: "Day roster",
   attReportTitle: "Absentee report",
+  /** D-#318 — teacher's own-section attendance. */
+  attMySectionsToday: "My sections' attendance",
+  attMySectionsTodayEmpty: "You have no sections.",
+  attNotFullyMarked: "Not fully marked",
   attRoll: "Roll",
   attIdNo: "ID",
   attLeaveCovered: "Leave application on file",
