@@ -316,18 +316,18 @@ function draftItem(over: Record<string, unknown> = {}) {
   };
 }
 
-describe("AJ-9 — confirmAssignmentWeek (180-min weekly gate)", () => {
+describe("AJ-9 — confirmAssignmentWeek (360-min weekly gate)", () => {
   const args = { academicYearId: YEAR, sectionId: SECTION.toString(), weekNumber: 1, actorId: ACTOR };
 
-  test("over 180 → HARD-BLOCKED (trim required); no records issued, nothing flipped", async () => {
-    const items = [draftItem({ estMinutes: 60 }), draftItem({ estMinutes: 75 }), draftItem({ estMinutes: 60 })]; // 195
+  test("over 360 → HARD-BLOCKED (trim required); no records issued, nothing flipped", async () => {
+    const items = [draftItem({ estMinutes: 150 }), draftItem({ estMinutes: 150 }), draftItem({ estMinutes: 90 })]; // 390
     mockItemFind.mockReturnValue(items);
-    await expect(confirmAssignmentWeek(args)).rejects.toThrow(/exceeds the 180-min weekly ceiling/);
+    await expect(confirmAssignmentWeek(args)).rejects.toThrow(/exceeds the 360-min weekly ceiling/);
     expect(mockRecInsertMany).not.toHaveBeenCalled();
     expect(items[0].save).not.toHaveBeenCalled();
   });
 
-  test("≤180 → issues each DRAFT's per-student records (GIVEN/ABSENT_REDELIVER) + flips ISSUED", async () => {
+  test("≤360 → issues each DRAFT's per-student records (GIVEN/ABSENT_REDELIVER) + flips ISSUED", async () => {
     const a = draftItem({ estMinutes: 60 });
     const b = draftItem({ estMinutes: 60 });
     mockItemFind.mockReturnValue([a, b]); // 120
@@ -343,7 +343,7 @@ describe("AJ-9 — confirmAssignmentWeek (180-min weekly gate)", () => {
   });
 
   test("the cap counts DRAFT + already-ISSUED — it can't be split across confirm batches", async () => {
-    mockItemFind.mockReturnValue([draftItem({ status: "ISSUED", estMinutes: 120 }), draftItem({ status: "DRAFT", estMinutes: 75 })]); // 195
+    mockItemFind.mockReturnValue([draftItem({ status: "ISSUED", estMinutes: 300 }), draftItem({ status: "DRAFT", estMinutes: 75 })]); // 375
     await expect(confirmAssignmentWeek(args)).rejects.toThrow(/exceeds/);
   });
 
@@ -356,13 +356,13 @@ describe("AJ-9 — confirmAssignmentWeek (180-min weekly gate)", () => {
 });
 
 describe("AS-T6 — assignmentWeekLoad + setAssignmentItemMinutes (reconcile + trim)", () => {
-  test("weekLoad sums estMinutes vs the 180 ceiling and flags over-by", async () => {
+  test("weekLoad sums estMinutes vs the 360 ceiling and flags over-by", async () => {
     mockItemFind.mockReturnValue([
-      { _id: oid(), asId: "a", subject: "BAN", estMinutes: 120, status: "ISSUED" },
+      { _id: oid(), asId: "a", subject: "BAN", estMinutes: 300, status: "ISSUED" },
       { _id: oid(), asId: "b", subject: "MATH", estMinutes: 75, status: "DRAFT" },
     ]);
     const load = await assignmentWeekLoad(YEAR, SECTION.toString(), 1);
-    expect(load.totalMinutes).toBe(195);
+    expect(load.totalMinutes).toBe(375);
     expect(load.draftMinutes).toBe(75);
     expect(load.overBy).toBe(15);
     expect(load.withinCeiling).toBe(false);

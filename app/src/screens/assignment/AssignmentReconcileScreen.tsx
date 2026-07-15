@@ -1,6 +1,6 @@
 /**
  * AssignmentReconcileScreen (AS-T6, D-#274) — the weekly load ceiling reconcile.
- * Shows a section's week: per-subject estMinutes, the running total vs the 180-min
+ * Shows a section's week: per-subject estMinutes, the running total vs the 360-min
  * ceiling, and a Confirm that HARD-BLOCKS while over. Trim a DRAFT subject's minutes
  * to get under the cap. Confirm issues every DRAFT item's per-student records.
  * Owner: the section class teacher OR roster:manage (the server gates).
