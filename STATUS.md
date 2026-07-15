@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-07-15 (cont. 4): **BUILT — drawer Reports group (D-#322), branch `feat/drawer-reports-group` → PR into dev.** The sidebar Reports item is now a collapsible group (like Trackers) listing all six reports; leaves deep-link with `initial:false`; active highlight is nested-route aware. App-only. Gate GREEN (executed): app tsc + expo web export.
 - 2026-07-15 (shipped 4): **D-#321 PROMOTED TO PROD** via promotion PR #246 (build PR #245, deploys green) - prod deploy green + /healthz 200. Assignment schedule: Class/Teacher/Subject filter selects over the 4-week rotation entry lists. **Next:** owner filters by a teacher to review who has what subjects.
 - 2026-07-15 (cont. 3): **BUILT — assignment-schedule filters (D-#321), branch `feat/assignment-schedule-filters` → PR into dev.** The rotation editor's cycle-week entry lists filter by Class / Teacher / Subject via the shared D-#309 report filters (options from the entries themselves). App-only. Gate GREEN (executed): app tsc + expo web export.
 - 2026-07-15 (shipped 3): **D-#320 PROMOTED TO PROD** via promotion PR #244 (build PR #243, deploys green) - prod deploy green + /healthz ok. Reconcile Present/Absent prefills from the day attendance (absentees pre-crossed; manual toggles win; prefilled/incomplete hints). **Next:** owner marks attendance then opens reconcile - absentees come pre-crossed.
