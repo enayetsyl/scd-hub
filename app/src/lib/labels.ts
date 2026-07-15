@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Bilingual display labels (NFR-5). The app renders Bangla **or** English per the
  * user's chosen language (see state/LanguageContext). Operational vocabulary is
  * looked up from the shared *_LABELS_BN / *_LABELS_EN maps (single source of
@@ -1841,6 +1841,10 @@ const STR_BN = {
   attRecordsWord: "রেকর্ড",
   attDayRoster: "দিনের তালিকা",
   attReportTitle: "অনুপস্থিতির প্রতিবেদন",
+  /** D-#318 — teacher's own-section attendance. */
+  attMySectionsToday: "আমার সেকশনের উপস্থিতি",
+  attMySectionsTodayEmpty: "আপনার কোনো সেকশন নেই।",
+  attNotFullyMarked: "সম্পূর্ণ মার্ক হয়নি",
   attRoll: "রোল",
   attIdNo: "আইডি",
   attLeaveCovered: "ছুটির আবেদন আছে",
@@ -4184,6 +4188,10 @@ const STR_EN: StrTable = {
   attRecordsWord: "records",
   attDayRoster: "Day roster",
   attReportTitle: "Absentee report",
+  /** D-#318 — teacher's own-section attendance. */
+  attMySectionsToday: "My sections' attendance",
+  attMySectionsTodayEmpty: "You have no sections.",
+  attNotFullyMarked: "Not fully marked",
   attRoll: "Roll",
   attIdNo: "ID",
   attLeaveCovered: "Leave application on file",

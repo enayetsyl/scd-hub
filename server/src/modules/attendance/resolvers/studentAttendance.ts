@@ -12,7 +12,7 @@
  * All identity-plane; NO corpus path (ADR-005).
  */
 import { builder } from "../../../schema";
-import { ForbiddenError, isClassTeacher } from "../../../middleware/authz";
+import { ForbiddenError, isClassTeacher, resolveTeacherScopes } from "../../../middleware/authz";
 import { callerHasPermission } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { Section } from "../../foundation/models/Section";
@@ -46,6 +46,8 @@ import {
   absentNoApplication,
   unmarkedSections,
   attendanceUnitsForDate,
+  sectionsAttendanceForDate,
+  type SectionAttendance,
   type AbsenteeEntry,
   type SectionAbsentees,
   type ClassAbsentees,
@@ -303,6 +305,8 @@ ClassAbsenteesRef.implement({
     classLevel: t.exposeInt("classLevel"),
     classNameBn: t.exposeString("classNameBn"),
     absentCount: t.exposeInt("absentCount"),
+    // D-#318: covered-and-present count beside the absent badge.
+    presentCount: t.exposeInt("presentCount"),
     sections: t.field({ type: [SectionAbsenteesRef], resolve: (c) => c.sections }),
   }),
 });
@@ -824,6 +828,50 @@ builder.queryField("absenteeReport", (t) =>
     authScopes: { hasPermission: "attendance:manage" },
     args: { dateKey: t.arg.string({ required: true }) },
     resolve: async (_root, args) => absenteeReport(args.dateKey),
+  }),
+);
+
+// D-#318 — the TEACHER's own sections at a glance (Today brief + details screen).
+const SectionAttendanceRef = builder.objectRef<SectionAttendance>("SectionAttendance");
+SectionAttendanceRef.implement({
+  description:
+    "One of the caller's OWN sections for a date: present/absent/total counts + the absentee " +
+    "names (D-#318). Sections come from the caller's teaching/proxy scopes + class-teacher " +
+    "assignments — never wider than what they already read.",
+  fields: (t) => ({
+    sectionId: t.exposeString("sectionId"),
+    sectionNameBn: t.exposeString("sectionNameBn"),
+    classLevel: t.exposeInt("classLevel"),
+    presentCount: t.exposeInt("presentCount"),
+    absentCount: t.exposeInt("absentCount"),
+    totalCount: t.exposeInt("totalCount"),
+    complete: t.exposeBoolean("complete"),
+    absentees: t.field({ type: [AbsenteeEntryRef], resolve: (s) => s.absentees }),
+  }),
+});
+
+builder.queryField("mySectionAttendance", (t) =>
+  t.field({
+    type: [SectionAttendanceRef],
+    description:
+      "Attendance for the caller's OWN sections on a date (D-#318): counts + absentee names. " +
+      "Section set = teaching/proxy scopes ∪ class-teacher sections, derived server-side.",
+    authScopes: { authenticated: true },
+    args: { dateKey: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
+      const ids = new Set<string>();
+      const scopes = await resolveTeacherScopes(ctx);
+      for (const s of scopes) {
+        if ((s.kind === "teaching" || s.kind === "proxy") && s.sectionId) ids.add(s.sectionId);
+      }
+      const ctSections = await Section.find({ classTeacherId: ctx.auth.userId, active: true })
+        .select("_id")
+        .lean();
+      for (const s of ctSections) ids.add(s._id.toString());
+      return sectionsAttendanceForDate([...ids], args.dateKey);
+    },
   }),
 );
 

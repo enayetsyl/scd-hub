@@ -121,10 +121,14 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
           and expand to the section/name detail on tap. */}
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <H2>{STR.attReportTitle}</H2>
-        <Badge
-          text={`${STR.attAbsentWord}: ${bnNum(report.reduce((s, c) => s + c.absentCount, 0))}`}
-          tone={report.some((c) => c.absentCount > 0) ? "warn" : "ok"}
-        />
+        <View style={{ flexDirection: "row", gap: space(1) }}>
+          {/* D-#318: the present total beside the absent total. */}
+          <Badge text={`${STR.presentWord}: ${bnNum(report.reduce((s, c) => s + c.presentCount, 0))}`} tone="ok" />
+          <Badge
+            text={`${STR.attAbsentWord}: ${bnNum(report.reduce((s, c) => s + c.absentCount, 0))}`}
+            tone={report.some((c) => c.absentCount > 0) ? "warn" : "ok"}
+          />
+        </View>
       </View>
       {report.length === 0 && !loading ? <Muted>{STR.attNoAbsentees}</Muted> : null}
       {report.map((cls) => {
@@ -135,7 +139,11 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
               <Body style={{ fontWeight: "700" }}>
                 {open ? "▾" : "▸"} {classLevelLabel(cls.classLevel)}
               </Body>
-              <Badge text={`${STR.attAbsentWord}: ${bnNum(cls.absentCount)}`} tone={cls.absentCount > 0 ? "warn" : "ok"} />
+              <View style={{ flexDirection: "row", gap: space(1) }}>
+                {/* D-#318: present beside absent. */}
+                <Badge text={`${STR.presentWord}: ${bnNum(cls.presentCount)}`} tone="ok" />
+                <Badge text={`${STR.attAbsentWord}: ${bnNum(cls.absentCount)}`} tone={cls.absentCount > 0 ? "warn" : "ok"} />
+              </View>
             </View>
             {open
               ? cls.sections.map((sec) => (
