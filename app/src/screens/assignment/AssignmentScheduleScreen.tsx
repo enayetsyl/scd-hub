@@ -21,6 +21,7 @@ import {
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Field, Chip, ChipRow, Select, Loader, Notice } from "../../components/ui";
 import { DateField } from "../../components/DateField";
+import { useReportFilterState } from "../../components/ReportFilters";
 import { STR, bnNum, hwSubjectLabel, dayOfWeekLabel, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -129,6 +130,17 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
     return cls && sec ? `${cls.nameBn} ${sec.nameBn}` : sId;
   };
 
+  // Owner request: filter the rotation list by class / teacher / subject so it's
+  // easy to see who teaches what. Reuses the shared report filters (D-#309);
+  // options come from the entries themselves.
+  const allEntries = schedule?.entries ?? [];
+  const { node: filterNode, match } = useReportFilterState({
+    classLevels: allEntries.map((e) => e.classLevel),
+    teachers: allEntries.map((e) => teacherName(e.teacherId)),
+    subjects: allEntries.map((e) => e.subject),
+  });
+  const visibleEntries = allEntries.filter((e) => match(e.classLevel, teacherName(e.teacherId), e.subject));
+
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: space(4) }}>
@@ -218,8 +230,10 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
                   </View>
                 </Card>
 
+                {allEntries.length > 0 ? <Card>{filterNode}</Card> : null}
+
                 {[1, 2, 3, 4].map((w) => {
-                  const entries = schedule.entries.filter((e) => e.cycleWeek === w);
+                  const entries = visibleEntries.filter((e) => e.cycleWeek === w);
                   return (
                     <Card key={w}>
                       <Body style={{ fontWeight: "700", marginBottom: 4 }}>
