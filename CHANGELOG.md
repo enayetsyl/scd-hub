@@ -710,3 +710,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-15 | UX | Reconcile roster prefill (D-#320): absentees pre-crossed from the day's attendance (new homeworkIssueRoster read); manual toggles win; hints for prefilled/incomplete attendance. | D-#320
 - 2026-07-15 | UX | Assignment-schedule filters (D-#321): class/teacher/subject selects (shared D-#309 filters) over the 4-week rotation entry lists. App-only. | D-#321
 - 2026-07-15 | UX | Drawer Reports group (D-#322): sidebar Reports is a collapsible group of the six report screens (deep-links keep the back button; nested-aware active highlight). App-only. | D-#322
+- 2026-07-15 | Change | Assignment weekly ceiling 180→360 min (D-#323): AS_WEEKLY_CEILING_MIN doubled; AS-T6 confirm gate + reconcile over-by follow the constant. | D-#323
