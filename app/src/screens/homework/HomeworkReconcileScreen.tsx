@@ -160,6 +160,8 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
                   <Body style={{ fontWeight: "700" }}>{hwSubjectLabel(it.subject)}</Body>
                   <Muted>{bnNum(it.timeDecl)} {STR.hwMinutes} · {bnNum(it.qCount)} {STR.questionsWord}</Muted>
                 </View>
+                {/* D-#317: the teacher's brief "what is the homework". */}
+                {it.description ? <Muted style={{ marginTop: 2 }}>📝 {it.description}</Muted> : null}
                 <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-end", marginTop: 8 }}>
                   <View style={{ flex: 1 }}>
                     <Field

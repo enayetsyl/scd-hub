@@ -143,6 +143,7 @@ function validDeclareInput(over: Record<string, unknown> = {}) {
     dateGiven: A_TUESDAY,
     topTags: ["TOP-MATH-C1-01"],
     qCount: 5,
+    description: "অনুশীলনী ২ক — যোগ ও বিয়োগ", // D-#317: mandatory brief
     actorId: ACTOR_ID,
     ...over,
   };
@@ -291,6 +292,14 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
 
   test("rejects empty topTags (≥1 topic required)", async () => {
     await expect(declareHomeworkItem(validDeclareInput({ topTags: [] }))).rejects.toThrow(/at least one topic/i);
+  });
+
+  test("D-#317: rejects a missing/blank description; a declared item carries it", async () => {
+    await expect(declareHomeworkItem(validDeclareInput({ description: "" }))).rejects.toThrow(/description is required/i);
+    await expect(declareHomeworkItem(validDeclareInput({ description: "   " }))).rejects.toThrow(/description is required/i);
+    await declareHomeworkItem(validDeclareInput({ description: "  পৃষ্ঠা ১২ — ৫টি প্রশ্ন  " }));
+    const created = mockItemCreate.mock.calls[0][0] as { description: string };
+    expect(created.description).toBe("পৃষ্ঠা ১২ — ৫টি প্রশ্ন");
   });
 
   test("rejects a topic not in the (subject, class) catalog", async () => {

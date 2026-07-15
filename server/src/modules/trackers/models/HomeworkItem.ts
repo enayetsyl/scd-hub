@@ -49,6 +49,10 @@ export interface IHomeworkItem extends Document {
   revItem: boolean;
   /** SESSION_REF — the Session Plan / lesson this reinforces (§2.7 traceability). */
   sessionRef?: string;
+  /** D-#317: the teacher's brief "what is the homework" — REQUIRED at declare
+   *  (optional on the schema only for pre-D-#317 rows); shown on every card so
+   *  collection/marking/checking can tell items apart. */
+  description?: string;
   status: HomeworkItemStatus;
   declaredBy: Types.ObjectId;
   issuedAt?: Date;
@@ -87,6 +91,7 @@ const HomeworkItemSchema = new Schema<IHomeworkItem>(
     selectedQids: { type: [String], default: [] },
     revItem: { type: Boolean, required: true, default: false },
     sessionRef: { type: String },
+    description: { type: String, trim: true },
     status: { type: String, enum: HOMEWORK_ITEM_STATUSES, required: true, default: "declared" },
     declaredBy: { type: Schema.Types.ObjectId, required: true },
     issuedAt: { type: Date },
