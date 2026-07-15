@@ -37,6 +37,7 @@ import {
   applyTrim as applyTrimSvc,
   confirmHomeworkDay as confirmDaySvc,
 } from "../services/HomeworkReconciliationService";
+import { buildIssueRoster } from "../services/HomeworkAutoIssueService";
 import {
   checkRecord as checkRecordSvc,
   getStudentDayLoad as studentDayLoadSvc,
@@ -762,6 +763,60 @@ builder.queryField("homeworkDayTally", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanViewHomeworkDay(ctx, args.sectionId, args.classId);
       return tallyDaySvc(args.classId, new Date(args.date));
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Query: homeworkIssueRoster (D-#320 — attendance-backed present/absent prefill)
+// ---------------------------------------------------------------------------
+
+interface IssueRosterEntryShape {
+  studentId: string;
+  present: boolean;
+}
+interface IssueRosterShape {
+  /** True when EVERY active student's attendance unit is marked for the day —
+   *  only then are the entries a trustworthy prefill. */
+  complete: boolean;
+  entries: IssueRosterEntryShape[];
+}
+
+const IssueRosterEntryRef = builder.objectRef<IssueRosterEntryShape>("HomeworkIssueRosterEntry");
+IssueRosterEntryRef.implement({
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    present: t.exposeBoolean("present"),
+  }),
+});
+
+const IssueRosterRef = builder.objectRef<IssueRosterShape>("HomeworkIssueRoster");
+IssueRosterRef.implement({
+  description:
+    "The day's attendance-backed present/absent roster for a section (D-#320) — the reconcile " +
+    "screen's prefill (the same builder the D-#314 auto-issue sweep uses). complete=false when " +
+    "any student's attendance unit is unmarked; the teacher then marks absentees manually.",
+  fields: (t) => ({
+    complete: t.exposeBoolean("complete"),
+    entries: t.field({ type: [IssueRosterEntryRef], resolve: (r) => r.entries }),
+  }),
+});
+
+builder.queryField("homeworkIssueRoster", (t) =>
+  t.field({
+    type: IssueRosterRef,
+    description: "Attendance-backed present/absent prefill for the reconcile screen (D-#320). Read-scope enforced.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+      date: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanViewHomeworkDay(ctx, args.sectionId, args.classId);
+      const entries = await buildIssueRoster(args.sectionId, args.date);
+      return entries ? { complete: true, entries } : { complete: false, entries: [] };
     },
   }),
 );
