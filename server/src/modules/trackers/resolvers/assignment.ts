@@ -951,7 +951,7 @@ interface WeekLoadShape {
 }
 const WeekLoadRef = builder.objectRef<WeekLoadShape>("AssignmentWeekLoad");
 WeekLoadRef.implement({
-  description: "AS-T6 reconcile read: the section's week, per-subject minutes vs the 180 ceiling.",
+  description: "AS-T6 reconcile read: the section's week, per-subject minutes vs the 360 ceiling.",
   fields: (t) => ({
     academicYearId: t.exposeString("academicYearId"),
     sectionId: t.exposeString("sectionId"),
@@ -969,7 +969,7 @@ WeekLoadRef.implement({
 builder.queryField("assignmentWeekLoad", (t) =>
   t.field({
     type: WeekLoadRef,
-    description: "AS-T6: the section's weekly assignment load vs the 180-min ceiling (reconcile view).",
+    description: "AS-T6: the section's weekly assignment load vs the 360-min ceiling (reconcile view).",
     authScopes: { hasPermission: "tracker:read" },
     args: {
       academicYearId: t.arg.string({ required: true }),
@@ -1048,7 +1048,7 @@ builder.mutationField("confirmAssignmentWeek", (t) =>
   t.field({
     type: ConfirmWeekRef,
     description:
-      "AS-T6 gate: confirm a section's week — HARD-BLOCKS if Σ estMinutes > 180, else issues every " +
+      "AS-T6 gate: confirm a section's week — HARD-BLOCKS if Σ estMinutes > 360, else issues every " +
       "DRAFT item's per-student records and flips them ISSUED. Class teacher / roster:manage.",
     authScopes: { authenticated: true },
     args: {

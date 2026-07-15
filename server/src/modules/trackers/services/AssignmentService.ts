@@ -239,7 +239,7 @@ export interface WeekLoadResult {
 }
 
 /** The reconcile read: every assignment item for (section × week) with its minutes,
- *  the weekly total vs the 180 ceiling, and per-item DRAFT/ISSUED status. */
+ *  the weekly total vs the 360 ceiling, and per-item DRAFT/ISSUED status. */
 export async function assignmentWeekLoad(
   academicYearId: string,
   sectionId: string,
