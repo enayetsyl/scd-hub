@@ -1491,6 +1491,23 @@ export interface HwDayTallyT {
   bandWarnings: string[];
 }
 
+/** D-#320: attendance-backed present/absent prefill for the reconcile screen. */
+export interface HwIssueRosterT {
+  complete: boolean;
+  entries: Array<{ studentId: string; present: boolean }>;
+}
+export const HOMEWORK_ISSUE_ROSTER = gql<
+  { homeworkIssueRoster: HwIssueRosterT },
+  { sectionId: string; classId: string; date: string }
+>`
+  query HomeworkIssueRoster($sectionId: String!, $classId: String!, $date: String!) {
+    homeworkIssueRoster(sectionId: $sectionId, classId: $classId, date: $date) {
+      complete
+      entries { studentId present }
+    }
+  }
+`;
+
 export const HOMEWORK_DAY_TALLY = gql<
   { homeworkDayTally: HwDayTallyT },
   { sectionId: string; classId: string; date: string }
