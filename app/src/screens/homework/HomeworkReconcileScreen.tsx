@@ -5,7 +5,7 @@
  * roster. Over-ceiling blocks confirm (server enforces too). Non-class-teachers get
  * a Forbidden error from the server.
  */
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
@@ -14,6 +14,7 @@ import { HW_DAILY_CEILING_MIN, roleHasPermission } from "@scd/shared";
 import {
   CLASSES_QUERY,
   HOMEWORK_DAY_TALLY,
+  HOMEWORK_ISSUE_ROSTER,
   ROSTER_QUERY,
   TRIM_HOMEWORK_ITEM,
   CONFIRM_HOMEWORK_DAY,
@@ -56,6 +57,20 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
   });
   const [tallyQ, refetchTally] = useQuery({ query: HOMEWORK_DAY_TALLY, variables: vars, pause: !hasSection });
   const [rosterQ] = useQuery({ query: ROSTER_QUERY, variables: { sectionId: vars.sectionId }, pause: !hasSection });
+  // D-#320: attendance-backed prefill — absentees come pre-crossed; the teacher
+  // can still toggle. A manual touch stops further auto-fills for this day.
+  const [attRosterQ] = useQuery({ query: HOMEWORK_ISSUE_ROSTER, variables: vars, pause: !hasSection });
+  const rosterTouched = useRef(false);
+  useEffect(() => {
+    rosterTouched.current = false;
+    setAbsent(new Set());
+  }, [vars.sectionId, date]);
+  const attRoster = attRosterQ.data?.homeworkIssueRoster;
+  useEffect(() => {
+    if (!attRoster?.complete || rosterTouched.current) return;
+    setAbsent(new Set(attRoster.entries.filter((e) => !e.present).map((e) => e.studentId)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attRoster]);
   const [, trim] = useMutation(TRIM_HOMEWORK_ITEM);
   const [, confirm] = useMutation(CONFIRM_HOMEWORK_DAY);
 
@@ -106,6 +121,7 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
   }
 
   function toggleAbsent(studentId: string): void {
+    rosterTouched.current = true; // D-#320: manual edits win over the prefill
     setAbsent((prev) => {
       const next = new Set(prev);
       if (next.has(studentId)) next.delete(studentId);
@@ -179,9 +195,14 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
               </Card>
             ))}
 
-            {/* Roster present/absent */}
+            {/* Roster present/absent — D-#320: prefilled from the day's attendance. */}
             <Card>
               <Body style={{ fontWeight: "700", marginBottom: 8 }}>{STR.hwRosterPresent} / {STR.hwRosterAbsent}</Body>
+              {attRoster?.complete ? (
+                <Muted style={{ marginBottom: 6 }}>✓ {STR.hwRosterFromAttendance}</Muted>
+              ) : hasSection && attRosterQ.data && !attRoster?.complete ? (
+                <Muted style={{ marginBottom: 6 }}>{STR.hwRosterAttendanceIncomplete}</Muted>
+              ) : null}
               {students.length === 0 ? (
                 <Muted>{STR.empty}</Muted>
               ) : (
