@@ -90,6 +90,7 @@ const STAFF_NAV: NavSection[] = [
     icon: "📊",
     items: [
       { route: "ReportsTab", labelKey: "clTitle", icon: "🧑‍🏫", screen: "TeacherClassLoad" },
+      { route: "ReportsTab", labelKey: "alReportTitle", icon: "📋", screen: "AssignmentLoadReport" },
       { route: "ReportsTab", labelKey: "attReportTitle", icon: "🙋", screen: "AttendanceReport" },
       { route: "ReportsTab", labelKey: "rtNoteReportTitle", icon: "📓", screen: "ClassNoteReport" },
       { route: "ReportsTab", labelKey: "rptHwDeclarePending", icon: "📕", screen: "HwDeclarePending" },
