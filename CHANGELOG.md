@@ -712,3 +712,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-15 | UX | Drawer Reports group (D-#322): sidebar Reports is a collapsible group of the six report screens (deep-links keep the back button; nested-aware active highlight). App-only. | D-#322
 - 2026-07-15 | Change | Assignment weekly ceiling 180→360 min (D-#323): AS_WEEKLY_CEILING_MIN doubled; AS-T6 confirm gate + reconcile over-by follow the constant. | D-#323
 - 2026-07-16 | UX | Observation Published/Unpublished filter (D-#324): publish-status chip filter + per-row badge on the All-observations oversight screen; new nullable `published` arg through resolver + service. | D-#324
+- 2026-07-16 | UX | Assignment delivery attendance prefill (D-#325): the deliver screen pre-crosses absentees from the delivery-date attendance (reuses homeworkIssueRoster); manual toggles win; ✓/incomplete hints. App-only. | D-#325
