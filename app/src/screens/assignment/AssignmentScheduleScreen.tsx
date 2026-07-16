@@ -23,7 +23,7 @@ import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Field, Chip, ChipRow, Select, Loader, Notice } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { useReportFilterState } from "../../components/ReportFilters";
-import { STR, bnNum, hwSubjectLabel, dayOfWeekLabel, classLevelLabel } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, dayOfWeekLabel, classLevelLabel, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
@@ -32,10 +32,17 @@ type Props = NativeStackScreenProps<AssignmentStackParamList, "AssignmentSchedul
 /** Anchors may sit on school weekdays only (Sun–Thu, D-#86). */
 const ANCHOR_DAYS = [0, 1, 2, 3, 4] as const;
 
-/** D-#330: the calendar weeks a cycle week repeats on (4-week wrap, D-#275) —
- *  cycle week w → weeks w, w+4, w+8, … Shown so admins see week 5 inherits week 1. */
-const calendarWeeksFor = (cycleWeek: number, count = 6): string =>
-  Array.from({ length: count }, (_, i) => bnNum(cycleWeek + i * 4)).join(", ") + "…";
+/** D-#331: a cycle week = the Nth DELIVERY WEEK of each month (by the delivery
+ *  Thursday); a month's 5th week wraps back to cycle 1 (D-#275). Shown so admins
+ *  see cycle 1 also covers a 5th week and each month restarts at week 1. */
+const cycleWeekMeaning = (w: number): string => {
+  const base =
+    getActiveLang() === "en"
+      ? `Week ${w} of each month`
+      : `প্রতি মাসের ${bnNum(w)} নম্বর সপ্তাহ`;
+  const fifth = getActiveLang() === "en" ? " (and a 5th week)" : " (এবং ৫ম সপ্তাহ)";
+  return w === 1 ? base + fifth : base;
+};
 
 export default function AssignmentScheduleScreen(_props: Props): React.ReactElement {
   const [yearsQ] = useQuery({ query: ACADEMIC_YEARS_QUERY });
@@ -270,9 +277,7 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
                       <Body style={{ fontWeight: "700" }}>
                         {STR.asCycleWeek} {bnNum(w)}
                       </Body>
-                      <Muted style={{ marginBottom: 4 }}>
-                        {STR.asCycleAppliesTo}: {calendarWeeksFor(w)}
-                      </Muted>
+                      <Muted style={{ marginBottom: 4 }}>= {cycleWeekMeaning(w)}</Muted>
                       {entries.length === 0 ? (
                         <Muted>{STR.empty}</Muted>
                       ) : (
