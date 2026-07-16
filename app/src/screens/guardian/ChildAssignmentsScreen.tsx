@@ -10,6 +10,7 @@ import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
 import { CHILD_ASSIGNMENTS } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Badge, Button, Loader, EmptyState, Notice } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { STR, bnNum, hwSubjectLabel, hwResultLabel, lifecycleStateLabel } from "../../lib/labels";
@@ -20,7 +21,7 @@ const day = (iso?: string | null): string => (iso ? iso.slice(0, 10) : "—");
 
 export default function ChildAssignmentsScreen(): React.ReactElement {
   const { selected } = useGuardianChild();
-  const [q] = useQuery({
+  const [q, refetchQ] = useQuery({
     query: CHILD_ASSIGNMENTS,
     variables: { studentId: selected?.studentId ?? "" },
     pause: !selected,
@@ -47,9 +48,15 @@ export default function ChildAssignmentsScreen(): React.ReactElement {
         <ChildSwitcher />
       </View>
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: space(4) }}>
-        {!selected || (q.fetching && list.length === 0) ? (
+        {!selected ? (
           <Loader label={STR.loading} />
-        ) : list.length === 0 ? (
+        ) : (
+        <QueryGate
+          result={q}
+          onRetry={() => refetchQ({ requestPolicy: "network-only" })}
+          loaderLabel={STR.loading}
+        >
+        {list.length === 0 ? (
           <EmptyState message={STR.asNoItems} />
         ) : (
           list.map((a) => (
@@ -100,6 +107,8 @@ export default function ChildAssignmentsScreen(): React.ReactElement {
               ) : null}
             </Card>
           ))
+        )}
+        </QueryGate>
         )}
         {fileError ? <Notice message={fileError} tone="danger" /> : null}
       </ScrollView>

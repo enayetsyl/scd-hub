@@ -16,6 +16,7 @@ import React from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { HrStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { StaffSelect } from "../../components/selects";
 import { STAFF_QUERY } from "../../graphql/operations";
 import { useQuery } from "urql";
@@ -26,25 +27,27 @@ type Props = NativeStackScreenProps<HrStackParamList, "PerformanceHome">;
 
 export default function PerformanceHomeScreen({ navigation }: Props): React.ReactElement {
   const [staffId, setStaffId] = React.useState("");
-  const [{ data }] = useQuery({ query: STAFF_QUERY, variables: {} });
-  const name = (data?.staff ?? []).find((s) => s.id === staffId);
+  const [staffQ, refetchStaff] = useQuery({ query: STAFF_QUERY, variables: {} });
+  const name = (staffQ.data?.staff ?? []).find((s) => s.id === staffId);
 
   return (
     <Screen scroll>
       <H2>{STR.hrPerformance}</H2>
 
       <Muted style={{ marginBottom: space(2) }}>{STR.hrStaffPerformance}</Muted>
-      <Card>
-        <StaffSelect label={STR.hrStaffMember} value={staffId} onChange={setStaffId} />
-      </Card>
-      {staffId !== "" ? (
-        <Card
-          onPress={() => navigation.navigate("StaffPerformance", { staffProfileId: staffId, name: name ? name.nameBn || name.name : STR.hrStaffMember })}
-        >
-          <Body style={{ fontWeight: "700" }}>{name ? name.nameBn || name.name : STR.hrStaffMember}</Body>
-          <Muted>{STR.hrPerformanceSub}</Muted>
+      <QueryGate result={staffQ} onRetry={() => refetchStaff({ requestPolicy: "network-only" })}>
+        <Card>
+          <StaffSelect label={STR.hrStaffMember} value={staffId} onChange={setStaffId} />
         </Card>
-      ) : null}
+        {staffId !== "" ? (
+          <Card
+            onPress={() => navigation.navigate("StaffPerformance", { staffProfileId: staffId, name: name ? name.nameBn || name.name : STR.hrStaffMember })}
+          >
+            <Body style={{ fontWeight: "700" }}>{name ? name.nameBn || name.name : STR.hrStaffMember}</Body>
+            <Muted>{STR.hrPerformanceSub}</Muted>
+          </Card>
+        ) : null}
+      </QueryGate>
 
       <Card onPress={() => navigation.navigate("GrievanceInbox")} style={{ marginTop: space(4) }}>
         <Body style={{ fontWeight: "700" }}>{STR.hrGrievances}</Body>

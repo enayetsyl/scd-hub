@@ -13,7 +13,8 @@ import { useQuery } from "urql";
 import { useFocusEffect } from "@react-navigation/native";
 import { OVERSIGHT_CONVERSATIONS_QUERY, type ConversationT } from "../../graphql/operations";
 import type { ChatStackParamList } from "../../navigation/types";
-import { Screen, Card, Body, Muted, Badge, Notice, EmptyState, Loader } from "../../components/ui";
+import { Screen, Card, Body, Muted, Badge, Notice, EmptyState } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum } from "../../lib/labels";
 import { conversationTitle, conversationKindLabel } from "../../lib/chat";
@@ -37,9 +38,12 @@ export default function ChatOversightScreen({ navigation }: Props): React.ReactE
   return (
     <Screen>
       <Notice message={STR.chatOversightReadOnly} tone="info" />
-      {q.fetching && conversations.length === 0 ? (
-        <Loader label={STR.loading} />
-      ) : conversations.length === 0 ? (
+      <QueryGate
+        result={q}
+        onRetry={() => refetch({ requestPolicy: "network-only" })}
+        loaderLabel={STR.loading}
+      >
+      {conversations.length === 0 ? (
         <EmptyState message={STR.chatNoConversations} />
       ) : (
         conversations.map((c) => {
@@ -69,6 +73,7 @@ export default function ChatOversightScreen({ navigation }: Props): React.ReactE
           );
         })
       )}
+      </QueryGate>
     </Screen>
   );
 }

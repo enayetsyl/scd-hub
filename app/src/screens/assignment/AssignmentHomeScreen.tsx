@@ -22,7 +22,8 @@ import {
   type ExpectedAsItemT,
 } from "../../graphql/operations";
 import type { AssignmentStackParamList } from "../../navigation/types";
-import { Screen, Body, Muted, Card, Badge, Button, Chip, ChipRow, Loader, EmptyState, Notice } from "../../components/ui";
+import { Screen, Body, Muted, Card, Badge, Button, Chip, ChipRow, EmptyState, Notice } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum, hwSubjectLabel, classLevelLabel, monthLabel } from "../../lib/labels";
 import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
@@ -53,11 +54,11 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
   const canSchedule = !!role && roleHasPermission(role, "roster:manage");
   const isFollowUpAdmin = role === "PRINCIPAL" || role === "OFFICE";
 
-  const [yearsQ] = useQuery({ query: ACADEMIC_YEARS_QUERY });
+  const [yearsQ, refetchYears] = useQuery({ query: ACADEMIC_YEARS_QUERY });
   const year = (yearsQ.data?.academicYears ?? []).find((y) => y.current) ?? yearsQ.data?.academicYears?.[0];
   const yearId = year?.id ?? "";
 
-  const [scheduleQ] = useQuery({ query: AS_SCHEDULE_QUERY, variables: { academicYearId: yearId }, pause: !yearId });
+  const [scheduleQ, refetchSchedule] = useQuery({ query: AS_SCHEDULE_QUERY, variables: { academicYearId: yearId }, pause: !yearId });
   const schedule = scheduleQ.data?.assignmentSchedule ?? null;
 
   const [week, setWeek] = useState<number | null>(null);
@@ -79,7 +80,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
     }, [yearId, schedule, weekNumber, refetchExpected]),
   );
 
-  const [promptsQ] = useQuery({
+  const [promptsQ, refetchPrompts] = useQuery({
     query: MY_AS_PREP_PROMPTS,
     variables: { academicYearId: yearId },
     pause: !yearId || !canTrackerRead,
@@ -88,7 +89,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
 
   // Sections where this teacher is the class teacher — they own the weekly reconcile
   // for those sections even when they don't personally teach the subjects (AS-T6).
-  const [ctQ] = useQuery({ query: MY_SECTIONS_AS_CLASS_TEACHER_QUERY, pause: role !== "TEACHER" });
+  const [ctQ, refetchCt] = useQuery({ query: MY_SECTIONS_AS_CLASS_TEACHER_QUERY, pause: role !== "TEACHER" });
   const myCtSectionIds = useMemo(
     () => new Set((ctQ.data?.mySectionsAsClassTeacher ?? []).map((s) => s.id)),
     [ctQ.data],
@@ -122,9 +123,18 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: space(4) }}>
-        {yearsQ.fetching || scheduleQ.fetching ? (
-          <Loader label={STR.loading} />
-        ) : !schedule ? (
+        <QueryGate
+          results={[yearsQ, scheduleQ, expectedQ, promptsQ, ctQ]}
+          onRetry={() => {
+            refetchYears({ requestPolicy: "network-only" });
+            refetchSchedule({ requestPolicy: "network-only" });
+            refetchExpected({ requestPolicy: "network-only" });
+            refetchPrompts({ requestPolicy: "network-only" });
+            refetchCt({ requestPolicy: "network-only" });
+          }}
+          loaderLabel={STR.loading}
+        >
+        {!schedule ? (
           <>
             <EmptyState message={STR.asNoSchedule} />
             {canSchedule ? (
@@ -178,9 +188,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
               ) : null}
             </Card>
 
-            {expectedQ.fetching ? (
-              <Loader label={STR.loading} />
-            ) : expected?.suspended ? (
+            {expected?.suspended ? (
               <Notice message={STR.asSuspendedWeek} tone="info" />
             ) : visibleItems.length === 0 ? (
               <EmptyState message={STR.asNoItems} />
@@ -267,6 +275,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
             </Card>
           </>
         )}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );

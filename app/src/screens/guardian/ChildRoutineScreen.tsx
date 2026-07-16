@@ -11,6 +11,7 @@ import { useQuery } from "urql";
 import { DAYS_OF_WEEK } from "@scd/shared";
 import { CHILD_ROUTINE_QUERY } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Badge, Loader, EmptyState } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { STR, bnNum, dayOfWeekLabel, subjectLabel, dayTypeLabel } from "../../lib/labels";
@@ -32,7 +33,7 @@ function weekDates(): string[] {
 }
 
 function DayBlock({ studentId, date, dow }: { studentId: string; date: string; dow: string }): React.ReactElement {
-  const [q] = useQuery({ query: CHILD_ROUTINE_QUERY, variables: { studentId, date } });
+  const [q, refetchQ] = useQuery({ query: CHILD_ROUTINE_QUERY, variables: { studentId, date } });
   const day = q.data?.childRoutine;
   return (
     <Card>
@@ -48,9 +49,12 @@ function DayBlock({ studentId, date, dow }: { studentId: string; date: string; d
           ) : null}
         </View>
       </View>
-      {q.fetching ? (
-        <Loader label={STR.loading} />
-      ) : !day || day.slots.length === 0 ? (
+      <QueryGate
+        result={q}
+        onRetry={() => refetchQ({ requestPolicy: "network-only" })}
+        loaderLabel={STR.loading}
+      >
+      {!day || day.slots.length === 0 ? (
         <Muted style={{ marginTop: space(1) }}>{day ? dayTypeLabel(day.dayType) : ""}</Muted>
       ) : (
         day.slots.map((s) => (
@@ -65,6 +69,7 @@ function DayBlock({ studentId, date, dow }: { studentId: string; date: string; d
           </View>
         ))
       )}
+      </QueryGate>
     </Card>
   );
 }

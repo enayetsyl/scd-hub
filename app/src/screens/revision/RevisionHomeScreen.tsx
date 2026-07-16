@@ -12,7 +12,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { roleHasPermission } from "@scd/shared";
 import { useQuery } from "urql";
 import { MY_REVISION_GROUPS_QUERY } from "../../graphql/revision";
-import { Screen, Card, Body, Muted, Button, Badge, Loader, EmptyState } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge, EmptyState } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { DateField } from "../../components/DateField";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, classLevelLabel, genderLabel } from "../../lib/labels";
@@ -36,7 +37,7 @@ export default function RevisionHomeScreen(): React.ReactElement {
   const canManage = !!role && roleHasPermission(role, "roster:manage");
   const [date, setDate] = useState(mostRecentSaturday());
 
-  const [groupsQ] = useQuery({ query: MY_REVISION_GROUPS_QUERY });
+  const [groupsQ, refetchGroups] = useQuery({ query: MY_REVISION_GROUPS_QUERY });
   const groups = groupsQ.data?.myRevisionGroups ?? [];
 
   return (
@@ -58,9 +59,12 @@ export default function RevisionHomeScreen(): React.ReactElement {
 
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.revGroups}</Body>
-          {groupsQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : groups.length === 0 ? (
+          <QueryGate
+            result={groupsQ}
+            onRetry={() => refetchGroups({ requestPolicy: "network-only" })}
+            loaderLabel={STR.loading}
+          >
+          {groups.length === 0 ? (
             <EmptyState message={STR.revNoGroups} />
           ) : (
             groups.map((g) => (
@@ -94,6 +98,7 @@ export default function RevisionHomeScreen(): React.ReactElement {
               </View>
             ))
           )}
+          </QueryGate>
         </Card>
       </ScrollView>
     </Screen>

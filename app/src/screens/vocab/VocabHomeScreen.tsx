@@ -12,7 +12,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { roleHasPermission } from "@scd/shared";
 import { MY_VOCAB_ASSIGNMENTS_QUERY } from "../../graphql/operations";
-import { Screen, Card, Body, Muted, Button, Loader } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, vocabProgramLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
@@ -24,7 +25,7 @@ export default function VocabHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { role } = useAuth();
   const canAssign = !!role && roleHasPermission(role, "roster:manage");
-  const [myQ] = useQuery({ query: MY_VOCAB_ASSIGNMENTS_QUERY, variables: {} });
+  const [myQ, refetchMy] = useQuery({ query: MY_VOCAB_ASSIGNMENTS_QUERY, variables: {} });
   const mine = myQ.data?.myVocabAssignments ?? [];
 
   return (
@@ -44,20 +45,24 @@ export default function VocabHomeScreen(): React.ReactElement {
 
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.vbMyAssignments}</Body>
-          {myQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : mine.length === 0 ? (
-            <Muted style={{ marginTop: space(2) }}>{STR.vbNoMyAssignments}</Muted>
-          ) : (
-            mine.map((a) => (
-              <View key={a.id} style={{ marginTop: space(2) }}>
-                <Body>{vocabProgramLabel(a.program)}</Body>
-                <Muted>
-                  {STR.vbWeekOf}: {new Date(a.weekOf).toLocaleDateString()}
-                </Muted>
-              </View>
-            ))
-          )}
+          <QueryGate
+            result={myQ}
+            onRetry={() => refetchMy({ requestPolicy: "network-only" })}
+            loaderLabel={STR.loading}
+          >
+            {mine.length === 0 ? (
+              <Muted style={{ marginTop: space(2) }}>{STR.vbNoMyAssignments}</Muted>
+            ) : (
+              mine.map((a) => (
+                <View key={a.id} style={{ marginTop: space(2) }}>
+                  <Body>{vocabProgramLabel(a.program)}</Body>
+                  <Muted>
+                    {STR.vbWeekOf}: {new Date(a.weekOf).toLocaleDateString()}
+                  </Muted>
+                </View>
+              ))
+            )}
+          </QueryGate>
         </Card>
       </ScrollView>
     </Screen>

@@ -10,7 +10,8 @@ import { useRoute, type RouteProp } from "@react-navigation/native";
 import { useQuery } from "urql";
 import { DAYS_OF_WEEK } from "@scd/shared";
 import { TEACHER_CLASS_LOAD } from "../../graphql/classLoad";
-import { Screen, Body, Muted, Card, Badge, Chip, Loader, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Badge, Chip, EmptyState } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum, dayOfWeekLabel, routineSubjectLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
@@ -27,7 +28,7 @@ export default function TeacherClassLoadDetailScreen(): React.ReactElement {
   const { teacherId, teacherName } = route.params;
   const [month, setMonth] = useState(route.params.month ?? monthKeyOf(new Date()));
 
-  const [q] = useQuery({ query: TEACHER_CLASS_LOAD, variables: { month, teacherId } });
+  const [q, refetch] = useQuery({ query: TEACHER_CLASS_LOAD, variables: { month, teacherId } });
   const load = q.data?.teacherClassLoad?.[0] ?? null;
 
   return (
@@ -49,9 +50,12 @@ export default function TeacherClassLoadDetailScreen(): React.ReactElement {
           ) : null}
         </Card>
 
-        {q.fetching && !load ? (
-          <Loader label={STR.loading} />
-        ) : !load || load.slots.length === 0 ? (
+        <QueryGate
+          result={q}
+          onRetry={() => refetch({ requestPolicy: "network-only" })}
+          loaderLabel={STR.loading}
+        >
+        {!load || load.slots.length === 0 ? (
           <EmptyState message={STR.clNoLoad} />
         ) : (
           DAYS_OF_WEEK.map((dow) => {
@@ -83,6 +87,7 @@ export default function TeacherClassLoadDetailScreen(): React.ReactElement {
             );
           })
         )}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );

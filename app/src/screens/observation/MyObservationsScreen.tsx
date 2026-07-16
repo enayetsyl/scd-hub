@@ -11,7 +11,8 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { TEACHER_CLASSROOM_OBSERVATIONS_QUERY } from "../../graphql/observation";
-import { Screen, Card, Body, Muted, Button, Badge, Loader } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
@@ -23,7 +24,7 @@ export default function MyObservationsScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { user } = useAuth();
 
-  const [obsQ] = useQuery({
+  const [obsQ, refetchObs] = useQuery({
     query: TEACHER_CLASSROOM_OBSERVATIONS_QUERY,
     variables: { teacherId: user?.id ?? "" },
     pause: !user?.id,
@@ -41,9 +42,12 @@ export default function MyObservationsScreen(): React.ReactElement {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
-        {obsQ.fetching ? (
-          <Loader label={STR.loading} />
-        ) : rows.length === 0 ? (
+        <QueryGate
+          result={obsQ}
+          onRetry={() => refetchObs({ requestPolicy: "network-only" })}
+          loaderLabel={STR.loading}
+        >
+        {rows.length === 0 ? (
           <Card>
             <Muted>{STR.obsNoMyObservations}</Muted>
           </Card>
@@ -73,6 +77,7 @@ export default function MyObservationsScreen(): React.ReactElement {
             );
           })
         )}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );

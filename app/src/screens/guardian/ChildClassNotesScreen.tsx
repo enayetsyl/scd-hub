@@ -12,6 +12,7 @@ import { DAYS_OF_WEEK } from "@scd/shared";
 import { CHILD_CLASS_NOTES_QUERY } from "../../graphql/operations";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
 import { Screen, Body, Muted, Card, Loader, EmptyState } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { STR, bnNum, dayOfWeekLabel, subjectLabel } from "../../lib/labels";
@@ -33,7 +34,7 @@ function recentDates(count: number): string[] {
 }
 
 function DayNotes({ studentId, date }: { studentId: string; date: string }): React.ReactElement {
-  const [q] = useQuery({ query: CHILD_CLASS_NOTES_QUERY, variables: { studentId, date } });
+  const [q, refetchQ] = useQuery({ query: CHILD_CLASS_NOTES_QUERY, variables: { studentId, date } });
   const notes = q.data?.childClassNotes ?? [];
   const dow = dayOfWeekLabel(DAYS_OF_WEEK[new Date(date).getDay()]);
   return (
@@ -42,9 +43,12 @@ function DayNotes({ studentId, date }: { studentId: string; date: string }): Rea
         <Body style={{ fontWeight: "700" }}>{dow}</Body>
         <Muted>{bnNum(date)}</Muted>
       </View>
-      {q.fetching ? (
-        <Loader label={STR.loading} />
-      ) : notes.length === 0 ? (
+      <QueryGate
+        result={q}
+        onRetry={() => refetchQ({ requestPolicy: "network-only" })}
+        loaderLabel={STR.loading}
+      >
+      {notes.length === 0 ? (
         <Muted style={{ marginTop: space(1) }}>{STR.gpNoNotesDay}</Muted>
       ) : (
         notes.map((n, i) => (
@@ -73,6 +77,7 @@ function DayNotes({ studentId, date }: { studentId: string; date: string }): Rea
           </View>
         ))
       )}
+      </QueryGate>
     </Card>
   );
 }
