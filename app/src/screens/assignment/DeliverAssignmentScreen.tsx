@@ -4,11 +4,11 @@
  * totalMarks + AS-set link. Dates shown come from the §4 server resolution;
  * "# delivered" is computed from the records — never typed.
  */
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { STUDENTS_QUERY, DELIVER_ASSIGNMENT } from "../../graphql/operations";
+import { STUDENTS_QUERY, DELIVER_ASSIGNMENT, HOMEWORK_ISSUE_ROSTER } from "../../graphql/operations";
 import {
   pickAndUploadAssignmentFiles,
   openStoredFile,
@@ -35,6 +35,28 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
 
   const [, deliver] = useMutation(DELIVER_ASSIGNMENT);
   const [absent, setAbsent] = useState<Record<string, boolean>>({});
+
+  // D-#325: attendance-backed prefill (mirrors the homework reconcile, D-#320) —
+  // the delivery-date's absentees come pre-crossed off the same section roster
+  // read. A manual toggle wins and stops further auto-fills for this date.
+  const deliveryKey = day(deliveryDate);
+  const [attRosterQ] = useQuery({
+    query: HOMEWORK_ISSUE_ROSTER,
+    variables: { sectionId, classId, date: deliveryKey },
+  });
+  const rosterTouched = useRef(false);
+  useEffect(() => {
+    rosterTouched.current = false;
+    setAbsent({});
+  }, [sectionId, deliveryKey]);
+  const attRoster = attRosterQ.data?.homeworkIssueRoster;
+  useEffect(() => {
+    if (!attRoster?.complete || rosterTouched.current) return;
+    const next: Record<string, boolean> = {};
+    for (const e of attRoster.entries) if (!e.present) next[e.studentId] = true;
+    setAbsent(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attRoster]);
   const [totalMarks, setTotalMarks] = useState("");
   const [estMinutes, setEstMinutes] = useState("");
   const [setId, setSetId] = useState("");
@@ -135,12 +157,20 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
             <Body style={{ fontWeight: "700", marginBottom: 4 }}>
               {STR.asPresent} {bnNum(students.length - absentCount)} · {STR.asAbsent} {bnNum(absentCount)}
             </Body>
+            {attRoster?.complete ? (
+              <Muted style={{ marginBottom: 6 }}>✓ {STR.hwRosterFromAttendance}</Muted>
+            ) : attRosterQ.data && !attRoster?.complete ? (
+              <Muted style={{ marginBottom: 6 }}>{STR.hwRosterAttendanceIncomplete}</Muted>
+            ) : null}
             {students.map((s) => {
               const isAbsent = !!absent[s.id];
               return (
                 <Pressable
                   key={s.id}
-                  onPress={() => setAbsent((m) => ({ ...m, [s.id]: !m[s.id] }))}
+                  onPress={() => {
+                    rosterTouched.current = true; // D-#325: manual edits win over the prefill
+                    setAbsent((m) => ({ ...m, [s.id]: !m[s.id] }));
+                  }}
                   style={{
                     flexDirection: "row",
                     justifyContent: "space-between",
