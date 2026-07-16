@@ -236,6 +236,38 @@ describe("AJ-3 — deliverAssignmentItem", () => {
     expect(mockStoredFind).not.toHaveBeenCalled();
   });
 
+  test("rejects a non-id setId with a clear message (prod BSONError guard)", async () => {
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
+    await expect(
+      deliverAssignmentItem({
+        academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+        setId: "ঐচ্ছিক", actorId: ACTOR,
+      }),
+    ).rejects.toThrow(/valid id/);
+    expect(mockItemCreate).not.toHaveBeenCalled();
+  });
+
+  test("a blank setId is treated as no link (never reaches create as a string)", async () => {
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
+    await deliverAssignmentItem({
+      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+      setId: "   ", actorId: ACTOR,
+    });
+    const created = mockItemCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(created.setId).toBeUndefined();
+  });
+
+  test("a valid setId is passed through to the created item", async () => {
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
+    const valid = oid().toString();
+    await deliverAssignmentItem({
+      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+      setId: valid, actorId: ACTOR,
+    });
+    const created = mockItemCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(created.setId).toBe(valid);
+  });
+
   test("D-#298: rejects more than 5 attachments", async () => {
     mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
     const ids = Array.from({ length: 6 }, () => oid().toString());

@@ -19,6 +19,7 @@ import {
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Loader, EmptyState, Notice } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel, classLevelLabel } from "../../lib/labels";
+import { isLikelyObjectId } from "../../lib/validate";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import { Pressable } from "react-native";
@@ -60,6 +61,7 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
   const [totalMarks, setTotalMarks] = useState("");
   const [estMinutes, setEstMinutes] = useState("");
   const [setId, setSetId] = useState("");
+  const [setIdError, setSetIdError] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   /** Delivery-pass attachments (≤5, D-#298) — uploaded on pick, bound at deliver. */
@@ -82,6 +84,15 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
 
   async function onDeliver(): Promise<void> {
     setError(null);
+    setSetIdError(undefined);
+    // The set-id link is optional, but a non-blank value must be a real id —
+    // else the server rejects it. Catch it here so the teacher gets a clear
+    // inline message instead of a failed delivery.
+    const trimmedSetId = setId.trim();
+    if (trimmedSetId !== "" && !isLikelyObjectId(trimmedSetId)) {
+      setSetIdError(STR.invalidIdField);
+      return;
+    }
     setBusy(true);
     const marks = totalMarks.trim() === "" ? undefined : parseInt(totalMarks, 10);
     const mins = estMinutes.trim() === "" ? undefined : parseInt(estMinutes, 10);
@@ -115,7 +126,7 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
           </Muted>
           <Field label={STR.asEstMinutes} value={estMinutes} onChangeText={setEstMinutes} keyboardType="number-pad" placeholder="20" />
           <Field label={STR.asTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" />
-          <Field label={STR.asSetId} value={setId} onChangeText={setSetId} />
+          <Field label={STR.asSetId} value={setId} onChangeText={setSetId} helper={STR.asSetIdHint} error={setIdError} />
         </Card>
 
         <Card>
