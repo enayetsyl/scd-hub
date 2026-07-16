@@ -168,6 +168,16 @@ export async function deliverAssignmentItem(
     throw new Error("estMinutes must be a non-negative integer");
   }
 
+  // Guard the optional question-set link. setId is free-text on the delivery
+  // form; a non-id value (prod incident: a teacher typed the label word into
+  // the box) must be rejected here, else AssignmentItem.create below casts it
+  // to an ObjectId and throws a raw BSONError. Empty → no link.
+  const setIdRaw = input.setId?.trim();
+  const setId = setIdRaw === undefined || setIdRaw === "" ? undefined : setIdRaw;
+  if (setId !== undefined && !Types.ObjectId.isValid(setId)) {
+    throw new Error("Question-set id must be a valid id — leave it blank if there is no set");
+  }
+
   const attachmentIds = await normalizeAttachmentIds(input.attachmentIds);
 
   const at = input.at ?? new Date();
@@ -189,7 +199,7 @@ export async function deliverAssignmentItem(
     teacherId: entry.teacherId,
     deliveryDate: resolved.deliveryDate,
     dueDate: resolved.dueDate,
-    setId: input.setId,
+    setId,
     totalMarks: input.totalMarks,
     estMinutes,
     status: "DRAFT",

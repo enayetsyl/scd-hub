@@ -150,6 +150,28 @@ describe("R5.3 publishClassNote", () => {
     await publishClassNote({ slotId: oid().toString(), date: DATE, taughtSummaryBn: "x", actorId: oid().toString(), canManage: true });
     expect(mockNoteUpdateOne).toHaveBeenCalledTimes(1);
   });
+
+  test("rejects a non-id homeworkItemId with a clear message (prod BSONError guard)", async () => {
+    mockSlotFindById.mockResolvedValue(section);
+    await expect(
+      publishClassNote({
+        slotId: oid().toString(), date: DATE, taughtSummaryBn: "x",
+        homeworkItemId: "ঐচ্ছিক", actorId: TEACHER.toString(), canManage: true,
+      }),
+    ).rejects.toThrow(/valid id/);
+    expect(mockNoteUpdateOne).not.toHaveBeenCalled();
+  });
+
+  test("a valid homeworkItemId is written as an ObjectId on the note", async () => {
+    mockSlotFindById.mockResolvedValue(section);
+    const hw = oid().toString();
+    await publishClassNote({
+      slotId: oid().toString(), date: DATE, taughtSummaryBn: "x",
+      homeworkItemId: hw, actorId: TEACHER.toString(), canManage: true,
+    });
+    const set = (mockNoteUpdateOne.mock.calls[0][1] as { $set: Record<string, unknown> }).$set;
+    expect(String(set.homeworkItemId)).toBe(hw);
+  });
 });
 
 describe("R5.3 myClassNotePrompts", () => {

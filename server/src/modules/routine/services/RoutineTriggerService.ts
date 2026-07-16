@@ -117,6 +117,16 @@ export async function publishClassNote(input: {
   }
   if (!allowed) throw new ForbiddenError("Only the slot's teacher (or cover) may publish its class note");
 
+  // Guard the optional homework link. homeworkItemId is free-text on the daily
+  // note form; a non-id value (prod incident: non-id text crashed the ObjectId
+  // cast) must be rejected here rather than thrown raw from the cast. Empty → no link.
+  const hwIdRaw = input.homeworkItemId?.trim();
+  const hwId = hwIdRaw === undefined || hwIdRaw === "" ? undefined : hwIdRaw;
+  if (hwId !== undefined && !Types.ObjectId.isValid(hwId)) {
+    throw new Error("Homework id must be a valid id — leave it blank if there is no linked homework");
+  }
+  const homeworkItemId = hwId ? new Types.ObjectId(hwId) : undefined;
+
   const publishedAt = new Date();
   await ClassNote.updateOne(
     { slotId: input.slotId, date: input.date },
@@ -126,7 +136,7 @@ export async function publishClassNote(input: {
         groupId: slot.groupId,
         subject: slot.subject,
         taughtSummaryBn: input.taughtSummaryBn,
-        homeworkItemId: input.homeworkItemId ? new Types.ObjectId(input.homeworkItemId) : undefined,
+        homeworkItemId,
         attachmentIds: normalizeAttachmentIds(input.attachmentIds),
         publishedBy: new Types.ObjectId(input.actorId),
         publishedAt,

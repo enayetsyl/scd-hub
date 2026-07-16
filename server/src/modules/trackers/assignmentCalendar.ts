@@ -19,8 +19,10 @@
  *
  * Weeks are CALENDAR weeks (Sun–Sat), continuously indexed from the term's first
  * week for storage/navigation. The user-facing label + the rotation slot use the
- * calendar WEEK-OF-MONTH (week containing the 1st = week 1, resetting each month;
- * a 5th week wraps to cycleWeek 1) — D-#275.
+ * DELIVERY DAY'S month + ordinal: the Nth <delivery-day> (Thursday) of its month =
+ * week N, resetting each month; a 5th week wraps to cycleWeek 1 (D-#275, refined
+ * D-#331 to anchor on the delivery day so a 5th Thursday is week 5 of its OWN
+ * month, not week 1 of the next — the school delivers on the Thursday).
  */
 
 /** True iff `date` is a FULL school day (Sun–Thu, no holiday override). */
@@ -95,6 +97,19 @@ export function monthWeekOf(weekStart: Date): { year: number; month: number; wee
  *  week wraps back to cycleWeek 1 (D-#275). */
 export function cycleWeekOf(weekOfMonth: number): number {
   return ((weekOfMonth - 1) % CYCLE_WEEKS) + 1;
+}
+
+/**
+ * Month + 1-based ORDINAL of the delivery day within its own month (D-#331): the
+ * Nth <delivery-day> (default Thursday) of the month = week N, resetting each
+ * month. Attributed by the delivery DAY itself — so a 5th Thursday is week 5 of
+ * its month, and the next month's first Thursday restarts at week 1. Supersedes
+ * the Saturday-based `monthWeekOf` as the cadence/label source (that stays a pure
+ * calendar-week helper). `deliveryDate` is the week's delivery anchor (Thursday).
+ */
+export function deliveryMonthWeek(deliveryDate: Date): { year: number; month: number; weekOfMonth: number } {
+  const d = atMidnight(deliveryDate);
+  return { year: d.getFullYear(), month: d.getMonth(), weekOfMonth: Math.floor((d.getDate() - 1) / 7) + 1 };
 }
 
 /** The unique date inside [weekStart, +7d) whose getDay() == dayOfWeek. */
@@ -177,7 +192,10 @@ export function resolveWeekDates(
   isOpenDay: IsOpenDay,
 ): ResolvedWeekDates {
   const weekStart = weekStartOf(termStartDate, weekNumber);
-  const mw = monthWeekOf(weekStart);
+  // D-#331: the label + rotation slot key off the DELIVERY DAY (Thursday), not the
+  // week's Saturday — so a 5th Thursday is week 5 of its own month.
+  const anchor = anchorInWeek(weekStart, deliveryDayOfWeek);
+  const mw = deliveryMonthWeek(anchor);
   const base = {
     weekNumber,
     cycleWeek: cycleWeekOf(mw.weekOfMonth),
@@ -189,7 +207,6 @@ export function resolveWeekDates(
   if (!weekHasOpenDay(weekStart, isOpenDay)) {
     return { ...base, suspended: true, deliveryDate: null, dueDate: null };
   }
-  const anchor = anchorInWeek(weekStart, deliveryDayOfWeek);
   const deliveryDate = rollDeliveryDate(anchor, weekStart, isOpenDay);
   if (!deliveryDate) {
     return { ...base, suspended: true, deliveryDate: null, dueDate: null };

@@ -35,3 +35,13 @@ export function required(fields: RequiredFieldsMap): {
   }
   return { firstErrorKey, errors };
 }
+
+/**
+ * True when `s` looks like a MongoDB ObjectId (24 hex chars). Optional id links
+ * (question-set id, homework id) are entered as free text; guard them client-side
+ * so a stray word never reaches the server and crashes the ObjectId cast. A blank
+ * value is allowed — callers treat empty as "no link" before checking this.
+ */
+export function isLikelyObjectId(s: string): boolean {
+  return /^[a-f\d]{24}$/i.test(s.trim());
+}
