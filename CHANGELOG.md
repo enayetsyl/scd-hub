@@ -716,4 +716,5 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-16 | UX | Assignment rotation edit-teacher (D-#328): per-entry Edit chip + inline teacher picker; new updateAssignmentScheduleEntryTeacher mutation. | D-#328
 - 2026-07-16 | Feature | Teacher class-load report (D-#327): teacherClassLoad query/service (weekly + calendar-accurate monthly, holiday/Saturday-aware) + Reports oversight list + per-teacher detail + teacher self-view on Routine home. | D-#327
 - 2026-07-16 | UX | Class-note submissions status filter (D-#326): All / Has pending / Fully posted select on the report; client-side row-status filter. App-only. | D-#326
+- 2026-07-16 | UX | Expose 4-week rotation cycle (D-#330): cycle-week cards show the calendar weeks they repeat on; Assignment home shows the cycle week for the current week. App-only. | D-#330
 - 2026-07-16 | Feature | Assignment load report (D-#329): assignmentLoadReport query/service (planned vs given, by subject & teacher) + Reports screen. | D-#329
