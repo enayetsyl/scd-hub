@@ -318,6 +318,8 @@ export type ReportsStackParamList = {
   /** D-#327: teacher class-load oversight + its per-teacher drill-down. */
   TeacherClassLoad: undefined;
   TeacherClassLoadDetail: { teacherId: string; teacherName?: string; month?: string };
+  /** D-#329: assignment load (planned vs given, by subject & teacher). */
+  AssignmentLoadReport: undefined;
 };
 
 export type TabParamList = {

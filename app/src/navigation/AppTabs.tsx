@@ -218,6 +218,7 @@ import ReportsHomeScreen from "../screens/reports/ReportsHomeScreen";
 import PendingReportScreen from "../screens/reports/PendingReportScreen";
 import TeacherClassLoadScreen from "../screens/reports/TeacherClassLoadScreen";
 import TeacherClassLoadDetailScreen from "../screens/reports/TeacherClassLoadDetailScreen";
+import AssignmentLoadReportScreen from "../screens/reports/AssignmentLoadReportScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
@@ -908,6 +909,7 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="DailyNote" component={DailyNoteScreen} options={{ title: STR.dailyNoteTitle }} />
       <ReportsStack.Screen name="TeacherClassLoad" component={TeacherClassLoadScreen} options={{ title: STR.clTitle }} />
       <ReportsStack.Screen name="TeacherClassLoadDetail" component={TeacherClassLoadDetailScreen} options={{ title: STR.clTitle }} />
+      <ReportsStack.Screen name="AssignmentLoadReport" component={AssignmentLoadReportScreen} options={{ title: STR.alReportTitle }} />
     </ReportsStack.Navigator>
   );
 }

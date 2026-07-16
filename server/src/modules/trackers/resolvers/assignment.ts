@@ -62,6 +62,11 @@ import {
   assignmentSummary as summarySvc,
   childAssignments as childAssignmentsSvc,
 } from "../services/AssignmentSummaryService";
+import {
+  assignmentLoadReport as loadReportSvc,
+  type AssignmentLoadRow,
+  type AssignmentLoadReport,
+} from "../services/AssignmentLoadReportService";
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { AssignmentItem } from "../models/AssignmentItem";
@@ -831,6 +836,40 @@ builder.mutationField("updateAssignmentScheduleEntryTeacher", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const doc = await updateEntryTeacherSvc(args.academicYearId, args.entryId, args.teacherId);
       return scheduleShape(doc as never);
+    },
+  }),
+);
+
+const AssignmentLoadRowRef = builder.objectRef<AssignmentLoadRow>("AssignmentLoadRow").implement({
+  description: "Planned (rotation) vs delivered/issued assignments for one subject or teacher (D-#329).",
+  fields: (t) => ({
+    key: t.exposeString("key"),
+    label: t.exposeString("label"),
+    planned: t.exposeInt("planned"),
+    delivered: t.exposeInt("delivered"),
+    issued: t.exposeInt("issued"),
+  }),
+});
+
+const AssignmentLoadReportRef = builder.objectRef<AssignmentLoadReport>("AssignmentLoadReport").implement({
+  description: "Assignment load: planned vs given, broken down by subject and by teacher (Principal/Office).",
+  fields: (t) => ({
+    bySubject: t.field({ type: [AssignmentLoadRowRef], resolve: (r) => r.bySubject }),
+    byTeacher: t.field({ type: [AssignmentLoadRowRef], resolve: (r) => r.byTeacher }),
+  }),
+});
+
+builder.queryField("assignmentLoadReport", (t) =>
+  t.field({
+    type: AssignmentLoadReportRef,
+    description:
+      "D-#329: assignments PLANNED (rotation cells) vs GIVEN (delivered items, all weeks; issued of those), " +
+      "by subject and by teacher. Principal/Office (roster:manage).",
+    authScopes: { hasPermission: "roster:manage" },
+    args: { academicYearId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return loadReportSvc(args.academicYearId);
     },
   }),
 );
