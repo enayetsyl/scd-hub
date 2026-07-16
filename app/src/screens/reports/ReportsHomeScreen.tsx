@@ -16,6 +16,7 @@ type Props = NativeStackScreenProps<ReportsStackParamList, "ReportsHome">;
 
 export default function ReportsHomeScreen({ navigation }: Props): React.ReactElement {
   const cards: Array<{ icon: string; title: string; sub?: string; onPress: () => void }> = [
+    { icon: "🧑‍🏫", title: STR.clTitle, sub: STR.clSub, onPress: () => navigation.navigate("TeacherClassLoad") },
     { icon: "🙋", title: STR.attReportTitle, onPress: () => navigation.navigate("AttendanceReport") },
     { icon: "📓", title: STR.rtNoteReportTitle, onPress: () => navigation.navigate("ClassNoteReport") },
     { icon: "📕", title: STR.rptHwDeclarePending, sub: STR.rrHwNdSub, onPress: () => navigation.navigate("HwDeclarePending") },
