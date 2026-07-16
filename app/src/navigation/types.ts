@@ -99,6 +99,8 @@ export type RoutineStackParamList = {
   ClassNotesAdmin: undefined;
   BellSchedule: undefined;
   SectionPicker: undefined;
+  /** D-#327: a teacher's own class-load detail (shared screen, self-scoped). */
+  TeacherClassLoadDetail: { teacherId: string; teacherName?: string; month?: string };
 };
 
 /** Print queue (PQ-3/PQ-4, D-#281) — role-aware: teachers see their own requests,
@@ -313,6 +315,9 @@ export type ReportsStackParamList = {
   ClassNoteReport: { date?: string } | undefined;
   /** ClassNoteReport's drill-down target — must exist wherever it is mounted. */
   DailyNote: { groupType: string; groupId: string; title: string; date?: string };
+  /** D-#327: teacher class-load oversight + its per-teacher drill-down. */
+  TeacherClassLoad: undefined;
+  TeacherClassLoadDetail: { teacherId: string; teacherName?: string; month?: string };
 };
 
 export type TabParamList = {

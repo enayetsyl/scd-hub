@@ -21,7 +21,7 @@ type Props = NativeStackScreenProps<RoutineStackParamList, "RoutineHome">;
 
 export default function RoutineHomeScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const lang = getActiveLang();
   const canManage = !!role && roleHasPermission(role, "routine:manage");
   const [groupsQ] = useQuery({ query: SUBJECT_GROUPS_QUERY, variables: { track: null } });
@@ -35,6 +35,15 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
       </View>
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }}>
         <Button title={STR.rtMyRoutine} onPress={() => navigation.navigate("MyRoutine")} />
+        {user?.id ? (
+          <Button
+            title={STR.clMyLoad}
+            variant="secondary"
+            onPress={() =>
+              navigation.navigate("TeacherClassLoadDetail", { teacherId: user.id, teacherName: user.name ?? undefined })
+            }
+          />
+        ) : null}
         {canManage ? (
           <>
             <Button title={STR.rtMasterGrid} onPress={() => navigation.navigate("RoutineMaster")} />
