@@ -3643,6 +3643,29 @@ export const UPDATE_AS_SCHEDULE_ENTRY_TEACHER = gql<
   }
 `;
 
+export interface AssignmentLoadRowT {
+  key: string;
+  label: string;
+  planned: number;
+  delivered: number;
+  issued: number;
+}
+export interface AssignmentLoadReportT {
+  bySubject: AssignmentLoadRowT[];
+  byTeacher: AssignmentLoadRowT[];
+}
+export const ASSIGNMENT_LOAD_REPORT = gql<
+  { assignmentLoadReport: AssignmentLoadReportT },
+  { academicYearId: string }
+>`
+  query AssignmentLoadReport($academicYearId: String!) {
+    assignmentLoadReport(academicYearId: $academicYearId) {
+      bySubject { key label planned delivered issued }
+      byTeacher { key label planned delivered issued }
+    }
+  }
+`;
+
 export interface ExpectedAsItemT {
   entryId: string;
   cycleWeek: number;
