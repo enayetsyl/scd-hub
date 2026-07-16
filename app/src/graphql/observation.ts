@@ -110,6 +110,8 @@ export interface ObservationFilterVars {
   state?: string | null;
   form?: string | null;
   subject?: string | null;
+  /** D-#324: CO-8 publish gate — true=published, false=unpublished, null=either. */
+  published?: boolean | null;
   dateFrom?: string | null;
   dateTo?: string | null;
   search?: string | null;
@@ -128,12 +130,12 @@ export const ALL_CLASSROOM_OBSERVATIONS_QUERY = gql<
 >`
   query AllClassroomObservations(
     $teacherId: String, $observerId: String, $state: String, $form: String,
-    $subject: String, $dateFrom: String, $dateTo: String, $search: String,
+    $subject: String, $published: Boolean, $dateFrom: String, $dateTo: String, $search: String,
     $limit: Int, $offset: Int
   ) {
     allClassroomObservations(
       teacherId: $teacherId, observerId: $observerId, state: $state, form: $form,
-      subject: $subject, dateFrom: $dateFrom, dateTo: $dateTo, search: $search,
+      subject: $subject, published: $published, dateFrom: $dateFrom, dateTo: $dateTo, search: $search,
       limit: $limit, offset: $offset
     ) {
       items { ${OBSERVATION_FIELDS} }

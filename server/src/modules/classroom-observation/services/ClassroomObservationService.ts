@@ -811,6 +811,9 @@ export interface AllObservationsFilterInput {
   state?: string | null;
   form?: string | null;
   subject?: string | null;
+  /** CO-8 publish gate (D-#324): true = released to the teacher (publishedAt set);
+   *  false = not yet published (publishedAt null); undefined = either. */
+  published?: boolean | null;
   /** classDate >= dateFrom (YYYY-MM-DD, inclusive). */
   dateFrom?: string | null;
   /** classDate <= dateTo (YYYY-MM-DD, inclusive). */
@@ -846,6 +849,9 @@ export async function allObservationsPaged(
   if (input.state) q.state = input.state;
   if (input.form) q.form = input.form;
   if (input.subject) q.subject = input.subject;
+  // CO-8 publish gate (D-#324): publishedAt set = released to the teacher.
+  if (input.published === true) q.publishedAt = { $ne: null };
+  else if (input.published === false) q.publishedAt = null;
   if (input.dateFrom || input.dateTo) {
     const range: Record<string, string> = {};
     if (input.dateFrom) range.$gte = input.dateFrom;
