@@ -532,8 +532,8 @@ builder.queryField("allClassroomObservations", (t) =>
     type: ObservationPageRef,
     description:
       "All observations, newest first — Principal/Office oversight view, filtered + paginated (WS1). Filters " +
-      "AND-combine; `search` matches the observed-teacher OR observer name. limit defaults 20 (max 100). " +
-      "Requires observation:upload.",
+      "AND-combine; `search` matches the observed-teacher OR observer name. `published` true/false filters on the " +
+      "CO-8 publish gate (D-#324); omit for either. limit defaults 20 (max 100). Requires observation:upload.",
     authScopes: { hasPermission: "observation:upload" },
     args: {
       teacherId: t.arg.string({ required: false }),
@@ -541,6 +541,7 @@ builder.queryField("allClassroomObservations", (t) =>
       state: t.arg.string({ required: false }),
       form: t.arg.string({ required: false }),
       subject: t.arg.string({ required: false }),
+      published: t.arg.boolean({ required: false }),
       dateFrom: t.arg.string({ required: false }),
       dateTo: t.arg.string({ required: false }),
       search: t.arg.string({ required: false }),
@@ -554,6 +555,7 @@ builder.queryField("allClassroomObservations", (t) =>
         state: args.state ?? undefined,
         form: args.form ?? undefined,
         subject: args.subject ?? undefined,
+        published: args.published ?? undefined,
         dateFrom: args.dateFrom ?? undefined,
         dateTo: args.dateTo ?? undefined,
         search: args.search ?? undefined,

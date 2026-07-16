@@ -39,6 +39,8 @@ interface Filters {
   form: string | null;
   state: string | null;
   subject: string | null;
+  /** CO-8 publish gate (D-#324): true=published, false=unpublished, null=either. */
+  published: boolean | null;
   teacherId: string | null;
   observerId: string | null;
   dateFrom: string;
@@ -49,6 +51,7 @@ const EMPTY: Filters = {
   form: null,
   state: null,
   subject: null,
+  published: null,
   teacherId: null,
   observerId: null,
   dateFrom: "",
@@ -92,6 +95,7 @@ export default function AllObservationsScreen(): React.ReactElement {
       form: filters.form,
       state: filters.state,
       subject: filters.subject,
+      published: filters.published,
       teacherId: filters.teacherId,
       observerId: filters.observerId,
       dateFrom: filters.dateFrom || null,
@@ -113,6 +117,7 @@ export default function AllObservationsScreen(): React.ReactElement {
     filters.form !== null ||
     filters.state !== null ||
     filters.subject !== null ||
+    filters.published !== null ||
     filters.teacherId !== null ||
     filters.observerId !== null ||
     filters.dateFrom !== "" ||
@@ -173,6 +178,22 @@ export default function AllObservationsScreen(): React.ReactElement {
                 onPress={() => patch({ state: filters.state === s ? null : s })}
               />
             ))}
+          </ChipRow>
+
+          {/* CO-8 publish gate (D-#324): a released-to-teacher / awaiting-publish split. */}
+          <Muted style={{ marginTop: space(2) }}>{STR.obsFilterPublished}</Muted>
+          <ChipRow>
+            <Chip label={STR.all} selected={filters.published === null} onPress={() => patch({ published: null })} />
+            <Chip
+              label={STR.obsPublished}
+              selected={filters.published === true}
+              onPress={() => patch({ published: filters.published === true ? null : true })}
+            />
+            <Chip
+              label={STR.obsUnpublished}
+              selected={filters.published === false}
+              onPress={() => patch({ published: filters.published === false ? null : false })}
+            />
           </ChipRow>
 
           <Select
@@ -239,7 +260,13 @@ export default function AllObservationsScreen(): React.ReactElement {
                     <Muted>{STR.obsTeacher}: {teacherName}</Muted>
                     <Muted>{STR.obsObserver}: {reviewerName}</Muted>
                   </View>
-                  <Badge text={obsStateLabel(o.state)} tone={stateTone(o.state)} />
+                  <View style={{ alignItems: "flex-end", gap: space(1) }}>
+                    <Badge text={obsStateLabel(o.state)} tone={stateTone(o.state)} />
+                    <Badge
+                      text={o.publishedAt ? STR.obsPublished : STR.obsUnpublished}
+                      tone={o.publishedAt ? "ok" : "muted"}
+                    />
+                  </View>
                 </View>
                 <View style={{ marginTop: space(2) }}>
                   <Button
