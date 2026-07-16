@@ -3634,6 +3634,15 @@ export const REMOVE_AS_SCHEDULE_ENTRY = gql<
   }
 `;
 
+export const UPDATE_AS_SCHEDULE_ENTRY_TEACHER = gql<
+  { updateAssignmentScheduleEntryTeacher: AsScheduleT },
+  { academicYearId: string; entryId: string; teacherId: string }
+>`
+  mutation UpdateAssignmentScheduleEntryTeacher($academicYearId: String!, $entryId: String!, $teacherId: String!) {
+    updateAssignmentScheduleEntryTeacher(academicYearId: $academicYearId, entryId: $entryId, teacherId: $teacherId) { ${AS_SCHEDULE_FIELDS} }
+  }
+`;
+
 export interface ExpectedAsItemT {
   entryId: string;
   cycleWeek: number;
