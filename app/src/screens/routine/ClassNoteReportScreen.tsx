@@ -104,6 +104,9 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
   const [filterTeacher, setFilterTeacher] = useState<string>("");
   const [filterPosted, setFilterPosted] = useState<string>("");
   const [filterPending, setFilterPending] = useState<string>("");
+  // Row-status filter (owner request): "" = all, "pending" = rows that still owe a
+  // subject, "posted" = rows with nothing pending (fully posted).
+  const [filterStatus, setFilterStatus] = useState<string>("");
 
   const rows = reportQ.data?.classNoteSubmissionReport ?? [];
 
@@ -136,6 +139,14 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
     ],
     [rows, allLabel],
   );
+  const statusOptions = useMemo(
+    () => [
+      { label: allLabel, value: "" },
+      { label: STR.rtStatusHasPending, value: "pending" },
+      { label: STR.rtStatusFullyPosted, value: "posted" },
+    ],
+    [allLabel],
+  );
 
   const filteredRows = useMemo(
     () =>
@@ -144,9 +155,11 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
           (filterClass === "" || rowTitle(r) === filterClass) &&
           (filterTeacher === "" || (r.teacherName ?? "") === filterTeacher) &&
           (filterPosted === "" || r.publishedSubjects.includes(filterPosted)) &&
-          (filterPending === "" || r.pendingSubjects.includes(filterPending)),
+          (filterPending === "" || r.pendingSubjects.includes(filterPending)) &&
+          (filterStatus === "" ||
+            (filterStatus === "pending" ? r.pendingCount > 0 : r.pendingCount === 0)),
       ),
-    [rows, filterClass, filterTeacher, filterPosted, filterPending],
+    [rows, filterClass, filterTeacher, filterPosted, filterPending, filterStatus],
   );
 
   const pendingTotal = filteredRows.reduce((sum, row) => sum + row.pendingCount, 0);
@@ -205,6 +218,7 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
     setFilterTeacher("");
     setFilterPosted("");
     setFilterPending("");
+    setFilterStatus("");
   }
 
   return (
@@ -257,6 +271,9 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
             </View>
             <View style={{ minWidth: 180, flexGrow: 1 }}>
               <Select label={STR.rtPendingSubjects} value={filterPending} options={pendingOptions} onChange={setFilterPending} />
+            </View>
+            <View style={{ minWidth: 180, flexGrow: 1 }}>
+              <Select label={STR.rtStatusFilter} value={filterStatus} options={statusOptions} onChange={setFilterStatus} />
             </View>
           </View>
         </Card>
