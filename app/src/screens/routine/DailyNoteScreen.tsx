@@ -14,6 +14,7 @@ import { Screen, Body, Muted, Card, Field, Button, Badge, Notice, Loader } from 
 import { ClassNoteAttachments, type AttachmentRef } from "../../components/ClassNoteAttachments";
 import { DateField } from "../../components/DateField";
 import { STR, routineSubjectLabel, bnNum } from "../../lib/labels";
+import { isLikelyObjectId } from "../../lib/validate";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
@@ -28,6 +29,7 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
   const [sel, setSel] = useState<string | null>(null);
   const [taught, setTaught] = useState("");
   const [hwId, setHwId] = useState("");
+  const [hwIdError, setHwIdError] = useState<string | undefined>(undefined);
   const [files, setFiles] = useState<AttachmentRef[]>([]);
   const [busy, setBusy] = useState(false);
   const [ok, setOk] = useState<string | null>(null);
@@ -42,9 +44,17 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
   const groupLabel = slots[0]?.groupName ?? title;
 
   async function submit(slotId: string): Promise<void> {
-    setBusy(true);
     setError(null);
     setOk(null);
+    setHwIdError(undefined);
+    // The homework link is optional, but a non-blank value must be a real id —
+    // else the server rejects it. Catch it here for a clear inline message.
+    const trimmedHwId = hwId.trim();
+    if (trimmedHwId !== "" && !isLikelyObjectId(trimmedHwId)) {
+      setHwIdError(STR.invalidIdField);
+      return;
+    }
+    setBusy(true);
     const res = await publish({
       slotId,
       date,
@@ -96,7 +106,7 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
               ) : sel === s.id ? (
                 <View style={{ marginTop: space(2), gap: space(1) }}>
                   <Field label={STR.rtTaughtSummary} value={taught} onChangeText={setTaught} multiline />
-                  <Field label={STR.rtHomeworkId} value={hwId} onChangeText={setHwId} />
+                  <Field label={STR.rtHomeworkId} value={hwId} onChangeText={setHwId} helper={STR.rtHomeworkIdHint} error={hwIdError} />
                   <ClassNoteAttachments value={files} onChange={setFiles} />
                   <Button title={STR.rtPublish} onPress={() => submit(s.id)} loading={busy} disabled={busy || taught.trim() === ""} />
                 </View>
