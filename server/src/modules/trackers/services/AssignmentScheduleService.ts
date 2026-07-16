@@ -163,6 +163,23 @@ export async function removeScheduleEntry(
   return schedule;
 }
 
+/** Reassign the teacher on one rotation entry (D-#328) — the per-entry edit the
+ *  admin does inline; only the teacherId changes, subject/section/week are fixed. */
+export async function updateScheduleEntryTeacher(
+  academicYearId: string,
+  entryId: string,
+  teacherId: string,
+): Promise<IAssignmentSchedule> {
+  if (!teacherId) throw new Error("teacherId is required");
+  const schedule = await AssignmentSchedule.findOne({ academicYearId });
+  if (!schedule) throw new Error("No AssignmentSchedule for this academic year");
+  const entry = schedule.entries.id(entryId);
+  if (!entry) throw new Error("Schedule entry not found");
+  entry.teacherId = teacherId as never;
+  await schedule.save();
+  return schedule;
+}
+
 export async function getAssignmentSchedule(
   academicYearId: string,
 ): Promise<IAssignmentSchedule | null> {

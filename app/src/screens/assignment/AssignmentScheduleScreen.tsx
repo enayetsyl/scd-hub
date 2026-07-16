@@ -17,6 +17,7 @@ import {
   UPSERT_AS_SCHEDULE,
   ADD_AS_SCHEDULE_ENTRY,
   REMOVE_AS_SCHEDULE_ENTRY,
+  UPDATE_AS_SCHEDULE_ENTRY_TEACHER,
 } from "../../graphql/operations";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Field, Chip, ChipRow, Select, Loader, Notice } from "../../components/ui";
@@ -58,6 +59,10 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
   const [, upsert] = useMutation(UPSERT_AS_SCHEDULE);
   const [, addEntry] = useMutation(ADD_AS_SCHEDULE_ENTRY);
   const [, removeEntry] = useMutation(REMOVE_AS_SCHEDULE_ENTRY);
+  const [, updateEntryTeacher] = useMutation(UPDATE_AS_SCHEDULE_ENTRY_TEACHER);
+  // D-#328: per-entry teacher edit — the entry being edited + its picked teacher.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTeacherId, setEditTeacherId] = useState<string | null>(null);
 
   const [termStart, setTermStart] = useState<string | null>(null);
   const [deliveryDow, setDeliveryDow] = useState<number | null>(null);
@@ -120,6 +125,27 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
     setOk(null);
     const res = await removeEntry({ academicYearId: yearId, entryId });
     if (res.error) return setError(friendlyError(res.error));
+    refetchSchedule({ requestPolicy: "network-only" });
+  }
+
+  function startEdit(entryId: string, currentTeacherId: string): void {
+    setError(null);
+    setOk(null);
+    setEditingId(entryId);
+    setEditTeacherId(currentTeacherId);
+  }
+
+  async function onEditSave(entryId: string): Promise<void> {
+    if (!editTeacherId) return;
+    setError(null);
+    setOk(null);
+    setBusy(true);
+    const res = await updateEntryTeacher({ academicYearId: yearId, entryId, teacherId: editTeacherId });
+    setBusy(false);
+    if (res.error) return setError(friendlyError(res.error));
+    setOk(STR.asTeacherChanged);
+    setEditingId(null);
+    setEditTeacherId(null);
     refetchSchedule({ requestPolicy: "network-only" });
   }
 
@@ -243,19 +269,37 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
                         <Muted>{STR.empty}</Muted>
                       ) : (
                         entries.map((e) => (
-                          <View
-                            key={e.id}
-                            style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}
-                          >
-                            <View style={{ flexShrink: 1 }}>
-                              <Body>
-                                {sectionName(e.classId, e.sectionId)} — {hwSubjectLabel(e.subject)}
-                              </Body>
-                              <Muted>
-                                {classLevelLabel(e.classLevel)} · {teacherName(e.teacherId)}
-                              </Muted>
+                          <View key={e.id} style={{ marginTop: 6 }}>
+                            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                              <View style={{ flexShrink: 1 }}>
+                                <Body>
+                                  {sectionName(e.classId, e.sectionId)} — {hwSubjectLabel(e.subject)}
+                                </Body>
+                                <Muted>
+                                  {classLevelLabel(e.classLevel)} · {teacherName(e.teacherId)}
+                                </Muted>
+                              </View>
+                              <ChipRow>
+                                <Chip label={STR.asEditEntry} onPress={() => startEdit(e.id, e.teacherId)} />
+                                <Chip label={STR.asRemoveEntry} onPress={() => void onRemove(e.id)} />
+                              </ChipRow>
                             </View>
-                            <Chip label={STR.asRemoveEntry} onPress={() => void onRemove(e.id)} />
+                            {editingId === e.id ? (
+                              <View style={{ marginTop: 6 }}>
+                                <Select
+                                  label={STR.asTeacher}
+                                  value={editTeacherId}
+                                  options={teachers.map((t) => ({ label: t.name, value: t.id }))}
+                                  onChange={setEditTeacherId}
+                                  placeholder={STR.asTeacher}
+                                  searchable
+                                />
+                                <ChipRow>
+                                  <Chip label={STR.save} onPress={() => void onEditSave(e.id)} />
+                                  <Chip label={STR.cancel} onPress={() => { setEditingId(null); setEditTeacherId(null); }} />
+                                </ChipRow>
+                              </View>
+                            ) : null}
                           </View>
                         ))
                       )}
