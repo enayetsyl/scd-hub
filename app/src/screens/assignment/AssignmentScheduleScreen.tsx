@@ -32,6 +32,11 @@ type Props = NativeStackScreenProps<AssignmentStackParamList, "AssignmentSchedul
 /** Anchors may sit on school weekdays only (Sun–Thu, D-#86). */
 const ANCHOR_DAYS = [0, 1, 2, 3, 4] as const;
 
+/** D-#330: the calendar weeks a cycle week repeats on (4-week wrap, D-#275) —
+ *  cycle week w → weeks w, w+4, w+8, … Shown so admins see week 5 inherits week 1. */
+const calendarWeeksFor = (cycleWeek: number, count = 6): string =>
+  Array.from({ length: count }, (_, i) => bnNum(cycleWeek + i * 4)).join(", ") + "…";
+
 export default function AssignmentScheduleScreen(_props: Props): React.ReactElement {
   const [yearsQ] = useQuery({ query: ACADEMIC_YEARS_QUERY });
   const years = yearsQ.data?.academicYears ?? [];
@@ -262,9 +267,12 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
                   const entries = visibleEntries.filter((e) => e.cycleWeek === w);
                   return (
                     <Card key={w}>
-                      <Body style={{ fontWeight: "700", marginBottom: 4 }}>
+                      <Body style={{ fontWeight: "700" }}>
                         {STR.asCycleWeek} {bnNum(w)}
                       </Body>
+                      <Muted style={{ marginBottom: 4 }}>
+                        {STR.asCycleAppliesTo}: {calendarWeeksFor(w)}
+                      </Muted>
                       {entries.length === 0 ? (
                         <Muted>{STR.empty}</Muted>
                       ) : (
