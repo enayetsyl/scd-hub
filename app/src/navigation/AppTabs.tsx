@@ -216,6 +216,8 @@ import ReconciliationReportScreen from "../screens/admin/ReconciliationReportScr
 import HwLifecycleReportScreen from "../screens/admin/HwLifecycleReportScreen";
 import ReportsHomeScreen from "../screens/reports/ReportsHomeScreen";
 import PendingReportScreen from "../screens/reports/PendingReportScreen";
+import TeacherClassLoadScreen from "../screens/reports/TeacherClassLoadScreen";
+import TeacherClassLoadDetailScreen from "../screens/reports/TeacherClassLoadDetailScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
@@ -595,6 +597,7 @@ function RoutineNavigator(): React.ReactElement {
     <RoutineStack.Navigator screenOptions={stackOptions}>
       <RoutineStack.Screen name="RoutineHome" component={RoutineHomeScreen} options={{ title: STR.routineTitle }} />
       <RoutineStack.Screen name="MyRoutine" component={MyRoutineScreen} options={{ title: STR.myRoutineTitle }} />
+      <RoutineStack.Screen name="TeacherClassLoadDetail" component={TeacherClassLoadDetailScreen} options={{ title: STR.clMyLoad }} />
       <RoutineStack.Screen name="RoutineMaster" component={RoutineMasterScreen} options={{ title: STR.rtMasterTitle }} />
       <RoutineStack.Screen name="GroupRoutine" component={GroupRoutineScreen} options={{ title: STR.groupRoutineTitle }} />
       <RoutineStack.Screen name="RoutineEditor" component={RoutineEditorScreen} options={{ title: STR.editRoutineTitle }} />
@@ -903,6 +906,8 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="AttendanceReport" component={AttendanceReportScreen} options={{ title: STR.attReportTitle }} />
       <ReportsStack.Screen name="ClassNoteReport" component={ClassNoteReportScreen} options={{ title: STR.rtNoteReportTitle }} />
       <ReportsStack.Screen name="DailyNote" component={DailyNoteScreen} options={{ title: STR.dailyNoteTitle }} />
+      <ReportsStack.Screen name="TeacherClassLoad" component={TeacherClassLoadScreen} options={{ title: STR.clTitle }} />
+      <ReportsStack.Screen name="TeacherClassLoadDetail" component={TeacherClassLoadDetailScreen} options={{ title: STR.clTitle }} />
     </ReportsStack.Navigator>
   );
 }

@@ -30,6 +30,7 @@ import {
   upsertAssignmentSchedule as upsertScheduleSvc,
   addScheduleEntry as addEntrySvc,
   removeScheduleEntry as removeEntrySvc,
+  updateScheduleEntryTeacher as updateEntryTeacherSvc,
   getAssignmentSchedule as getScheduleSvc,
   expectedItemsForWeek as expectedWeekSvc,
   myAssignmentPrepPrompts as prepPromptsSvc,
@@ -811,6 +812,24 @@ builder.mutationField("removeAssignmentScheduleEntry", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const doc = await removeEntrySvc(args.academicYearId, args.entryId);
+      return scheduleShape(doc as never);
+    },
+  }),
+);
+
+builder.mutationField("updateAssignmentScheduleEntryTeacher", (t) =>
+  t.field({
+    type: ScheduleRef,
+    description: "Reassign the teacher on one rotation cell (D-#328) — only the teacher changes.",
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      academicYearId: t.arg.string({ required: true }),
+      entryId: t.arg.string({ required: true }),
+      teacherId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const doc = await updateEntryTeacherSvc(args.academicYearId, args.entryId, args.teacherId);
       return scheduleShape(doc as never);
     },
   }),
