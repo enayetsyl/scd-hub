@@ -163,15 +163,18 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                   <Chip label="▶" onPress={() => setWeek(Math.min(53, weekNumber + 1))} />
                 </View>
               </View>
-              {/* D-#330: the 4-week rotation wraps (D-#275) — surface which cycle week
-                  this calendar week uses, so e.g. week 5 visibly inherits week 1. */}
-              <Muted style={{ marginTop: 4 }}>
-                {STR.asWeek} {bnNum(weekNumber)} · {STR.asCycleWeekShort} {bnNum(((weekNumber - 1) % 4) + 1)}
-              </Muted>
+              {/* D-#330/#331: the rotation keys off the delivery Thursday's week-of-month,
+                  wrapping every 4 (D-#275) — surface the real cycle week (from the server)
+                  so e.g. a 5th Thursday visibly uses week 1's subjects. */}
               {expected ? (
-                <Muted style={{ marginTop: 4 }}>
-                  {STR.asDeliverBy} {day(expected.deliveryDate)} · {STR.asDueBy} {day(expected.dueDate)}
-                </Muted>
+                <>
+                  <Muted style={{ marginTop: 4 }}>
+                    {STR.asCycleWeekShort} {bnNum(expected.cycleWeek)}
+                  </Muted>
+                  <Muted style={{ marginTop: 4 }}>
+                    {STR.asDeliverBy} {day(expected.deliveryDate)} · {STR.asDueBy} {day(expected.dueDate)}
+                  </Muted>
+                </>
               ) : null}
             </Card>
 

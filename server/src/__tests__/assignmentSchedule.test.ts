@@ -119,6 +119,24 @@ describe("§4 cadence calendar (pure)", () => {
     expect(r.dueDate).toEqual(new Date(2026, 0, 11)); // Sun Jan 11
   });
 
+  test("D-#331: month + week + cycle key off the delivery THURSDAY, not the week's Saturday", () => {
+    // Week 30 (Sun Jul 26–Sat Aug 1): the delivery Thursday is Jul 30 — the 5th
+    // Thursday of JULY → July · week 5 → cycle 1 (wraps to week-1's subjects), NOT
+    // "August week 1" as the old Saturday rule labelled it.
+    const w30 = resolveWeekDates(TERM_START, 30, 4, 0, isOpenFactory());
+    expect(w30.deliveryDate).toEqual(new Date(2026, 6, 30)); // Thu Jul 30
+    expect(w30.month).toBe(6); // July
+    expect(w30.weekOfMonth).toBe(5);
+    expect(w30.cycleWeek).toBe(1);
+    // Week 31 (Sun Aug 2–Sat Aug 8): the 1st Thursday of AUGUST → August · week 1 →
+    // cycle 1. So the 5th week AND the next month's 1st week both deliver week 1's set.
+    const w31 = resolveWeekDates(TERM_START, 31, 4, 0, isOpenFactory());
+    expect(w31.deliveryDate).toEqual(new Date(2026, 7, 6)); // Thu Aug 6
+    expect(w31.month).toBe(7); // August
+    expect(w31.weekOfMonth).toBe(1);
+    expect(w31.cycleWeek).toBe(1);
+  });
+
   test("rule 1 (AJ-3 premise): Thursday holiday rolls delivery to the PREVIOUS open day", () => {
     const r = resolveWeekDates(TERM_START, 1, 4, 0, isOpenFactory([new Date(2026, 0, 8)]));
     expect(r.deliveryDate).toEqual(new Date(2026, 0, 7)); // Wed Jan 7
