@@ -23,6 +23,7 @@ import { CHILD_TEST_RESULTS_QUERY } from "../../graphql/classTest";
 import { CHILD_COMMENTS_QUERY } from "../../graphql/comments";
 import { CHILD_REVISION_QUERY } from "../../graphql/revision";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { CHILD_TRAJECTORY_QUERY } from "../../graphql/wholePicture";
@@ -71,7 +72,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
 
   // The guardian trajectory summary (D-#277 follow-up): direction of travel and the
   // child's OWN numbers. No rank, no class comparison — the server never sends them.
-  const [trajQ] = useQuery({ query: CHILD_TRAJECTORY_QUERY, variables: { studentId: sid }, pause: !selected });
+  const [trajQ, refetchTraj] = useQuery({ query: CHILD_TRAJECTORY_QUERY, variables: { studentId: sid }, pause: !selected });
   const traj = trajQ.data?.childTrajectory ?? null;
 
   const [routineQ, refetchRoutine] = useQuery({
@@ -185,6 +186,24 @@ export default function GuardianHomeScreen(): React.ReactElement {
       >
         <ChildSwitcher />
 
+        <QueryGate
+          results={[trajQ, routineQ, notesQ, hwQ, loadQ, libraryQ, vocabQ, testResultsQ, commentsQ, revisionQ, asgnQ]}
+          onRetry={() => {
+            const opts = { requestPolicy: "network-only" as const };
+            refetchTraj(opts);
+            refetchRoutine(opts);
+            refetchNotes(opts);
+            refetchHw(opts);
+            refetchLoad(opts);
+            refetchLibrary(opts);
+            refetchVocab(opts);
+            refetchTests(opts);
+            refetchComments(opts);
+            refetchRevision(opts);
+            refetchAsgn(opts);
+          }}
+          loaderLabel={STR.loading}
+        >
         {/* Trajectory summary — how the child is doing, in plain Bangla. The server
             sends direction + their own numbers only; there is no rank to leak here. */}
         {traj ? (
@@ -245,9 +264,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
               />
             ) : null}
           </View>
-          {routineQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : !day || day.slots.length === 0 ? (
+          {!day || day.slots.length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{day ? dayTypeLabel(day.dayType) : ""}</Muted>
           ) : (
             day.slots.map((s) => (
@@ -267,9 +284,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
         {/* Class notes — what was taught today */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpClassNotes}</Body>
-          {notesQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : notes.length === 0 ? (
+          {notes.length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.gpNoNotes}</Muted>
           ) : (
             notes.map((n, i) => (
@@ -313,9 +328,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
               tone="warn"
             />
           ) : null}
-          {hwQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : openHomework.length === 0 ? (
+          {openHomework.length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.gpNoHomework}</Muted>
           ) : (
             openHomework.map((r) => (
@@ -342,9 +355,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
             read-only; issued items only — a DRAFT week has no student record yet) */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpAssignments}</Body>
-          {asgnQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : (asgnQ.data?.childAssignments ?? []).length === 0 ? (
+          {(asgnQ.data?.childAssignments ?? []).length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.gpNoAssignments}</Muted>
           ) : (
             (asgnQ.data?.childAssignments ?? []).map((a) => (
@@ -377,9 +388,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
             no reserve/renew control exists for guardians) */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpLibraryLoans}</Body>
-          {libraryQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : (libraryQ.data?.childLibraryLoans ?? []).length === 0 ? (
+          {(libraryQ.data?.childLibraryLoans ?? []).length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.gpNoLibraryLoans}</Muted>
           ) : (
             (libraryQ.data?.childLibraryLoans ?? []).map((loan) => (
@@ -417,9 +426,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
         {/* Vocabulary results — read-only, marked tests only (VC-5 / J7, D-#155) */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpVocab}</Body>
-          {vocabQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : (vocabQ.data?.childVocab ?? []).length === 0 ? (
+          {(vocabQ.data?.childVocab ?? []).length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.gpNoVocab}</Muted>
           ) : (
             (vocabQ.data?.childVocab ?? []).map((v) => (
@@ -450,9 +457,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
             shows teacherAction (the childTestResults query doesn't fetch it). */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpTestResults}</Body>
-          {testResultsQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : (testResultsQ.data?.childTestResults ?? []).length === 0 ? (
+          {(testResultsQ.data?.childTestResults ?? []).length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.gpNoTestResults}</Muted>
           ) : (
             (testResultsQ.data?.childTestResults ?? []).map((r) => (
@@ -485,9 +490,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
             sectionId / deliveryChannels. Attachments open on web via openStoredFile. */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpComments}</Body>
-          {commentsQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : (commentsQ.data?.childComments ?? []).length === 0 ? (
+          {(commentsQ.data?.childComments ?? []).length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.gpNoComments}</Muted>
           ) : (
             (commentsQ.data?.childComments ?? []).map((c) => (
@@ -523,9 +526,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
             portions / ØªÙ†Ø¨ÛŒÙ‡ / ÙØªØ­ / structured mistakes / the teacher's comment. */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpRevision}</Body>
-          {revisionQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : (revisionQ.data?.childRevision ?? []).length === 0 ? (
+          {(revisionQ.data?.childRevision ?? []).length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.gpNoRevision}</Muted>
           ) : (
             (revisionQ.data?.childRevision ?? []).map((e) => (
@@ -552,6 +553,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
             ))
           )}
         </Card>
+        </QueryGate>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
           {shortcuts.map((item) => (

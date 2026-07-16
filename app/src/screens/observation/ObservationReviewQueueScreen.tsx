@@ -10,7 +10,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { MY_OBSERVATION_REVIEW_QUEUE_QUERY } from "../../graphql/observation";
 import { TEACHERS_QUERY } from "../../graphql/operations";
-import { Screen, Card, Body, Muted, Button, Badge, Loader } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { ObservationStackParamList } from "../../navigation/types";
@@ -19,8 +20,8 @@ type Nav = NativeStackNavigationProp<ObservationStackParamList>;
 
 export default function ObservationReviewQueueScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
-  const [q] = useQuery({ query: MY_OBSERVATION_REVIEW_QUEUE_QUERY, variables: {} });
-  const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
+  const [q, refetchQueue] = useQuery({ query: MY_OBSERVATION_REVIEW_QUEUE_QUERY, variables: {} });
+  const [teachersQ, refetchTeachers] = useQuery({ query: TEACHERS_QUERY });
   const nameById = React.useMemo(() => {
     const m: Record<string, string> = {};
     for (const t of teachersQ.data?.teachers ?? []) m[t.id] = t.name;
@@ -31,9 +32,15 @@ export default function ObservationReviewQueueScreen(): React.ReactElement {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
-        {q.fetching ? (
-          <Loader label={STR.loading} />
-        ) : rows.length === 0 ? (
+        <QueryGate
+          results={[q, teachersQ]}
+          onRetry={() => {
+            refetchQueue({ requestPolicy: "network-only" });
+            refetchTeachers({ requestPolicy: "network-only" });
+          }}
+          loaderLabel={STR.loading}
+        >
+        {rows.length === 0 ? (
           <Card>
             <Muted>{STR.obsNoQueue}</Muted>
           </Card>
@@ -67,6 +74,7 @@ export default function ObservationReviewQueueScreen(): React.ReactElement {
             </Card>
           ))
         )}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );

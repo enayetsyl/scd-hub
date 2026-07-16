@@ -33,7 +33,7 @@ type Props = NativeStackScreenProps<SetsStackParamList, "AssembleSet">;
 export default function AssembleSetScreen({ route, navigation }: Props): React.ReactElement {
   const { setId, setType } = route.params;
   const isCt = setType === "CT";
-  const [{ data, fetching, error }] = useQuery({ query: ASSESSMENT_SET_QUERY, variables: { id: setId } });
+  const [{ data, fetching, error }, refetchSet] = useQuery({ query: ASSESSMENT_SET_QUERY, variables: { id: setId } });
   const [duration, setDuration] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [busy, setBusy] = useState(false);
@@ -78,7 +78,10 @@ export default function AssembleSetScreen({ route, navigation }: Props): React.R
   if (error) {
     return (
       <Screen>
-        <ErrorBanner message={friendlyError(error)} />
+        <ErrorBanner
+          message={friendlyError(error)}
+          onRetry={() => refetchSet({ requestPolicy: "network-only" })}
+        />
       </Screen>
     );
   }

@@ -110,7 +110,10 @@ export default function ChildLeaveScreen(): React.ReactElement {
 
         {saved ? <Notice message={saved} tone={saved === STR.attLeaveSaved ? "ok" : "danger"} /> : null}
         {q.error ? (
-          <ErrorBanner message={friendlyError(q.error)} />
+          <ErrorBanner
+            message={friendlyError(q.error)}
+            onRetry={() => refetch({ requestPolicy: "network-only" })}
+          />
         ) : q.fetching && items.length === 0 ? (
           <Loader label={STR.loading} />
         ) : items.length === 0 ? (

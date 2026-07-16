@@ -25,6 +25,8 @@ import { DateField } from "../../components/DateField";
 import { useReportFilterState } from "../../components/ReportFilters";
 import { STR, bnNum, hwSubjectLabel, dayOfWeekLabel, classLevelLabel, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
+import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AssignmentStackParamList, "AssignmentSchedule">;
@@ -45,6 +47,8 @@ const cycleWeekMeaning = (w: number): string => {
 };
 
 export default function AssignmentScheduleScreen(_props: Props): React.ReactElement {
+  const { confirmAction } = useConfirm();
+  const toast = useToast();
   const [yearsQ] = useQuery({ query: ACADEMIC_YEARS_QUERY });
   const years = yearsQ.data?.academicYears ?? [];
   // The year was picked SILENTLY (current, else the first) — so an admin editing the
@@ -133,10 +137,12 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
   }
 
   async function onRemove(entryId: string): Promise<void> {
+    if (!(await confirmAction({ message: STR.asRemoveEntryConfirm, confirmLabel: STR.asRemoveEntry }))) return;
     setError(null);
     setOk(null);
     const res = await removeEntry({ academicYearId: yearId, entryId });
     if (res.error) return setError(friendlyError(res.error));
+    toast.show(STR.asEntryRemoved, "ok");
     refetchSchedule({ requestPolicy: "network-only" });
   }
 

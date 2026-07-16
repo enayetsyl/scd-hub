@@ -11,7 +11,8 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { COMMENT_REVIEW_INBOX_QUERY } from "../../graphql/comments";
-import { Screen, Card, Body, Muted, Badge, Loader, EmptyState } from "../../components/ui";
+import { Screen, Card, Body, Muted, Badge, EmptyState } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { STR, commentTypeLabel, commentSentimentLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
@@ -20,8 +21,8 @@ type Nav = NativeStackNavigationProp<CommentsStackParamList>;
 
 export default function CommentReviewScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
-  const [{ data, fetching }, refetch] = useQuery({ query: COMMENT_REVIEW_INBOX_QUERY });
-  const items = data?.commentReviewInbox ?? [];
+  const [q, refetch] = useQuery({ query: COMMENT_REVIEW_INBOX_QUERY });
+  const items = q.data?.commentReviewInbox ?? [];
 
   useFocusEffect(
     React.useCallback(() => {
@@ -37,9 +38,12 @@ export default function CommentReviewScreen(): React.ReactElement {
           <Muted style={{ marginTop: space(1) }}>{STR.cmReviewSub}</Muted>
         </Card>
 
-        {fetching && items.length === 0 ? (
-          <Loader label={STR.loading} />
-        ) : items.length === 0 ? (
+        <QueryGate
+          result={q}
+          onRetry={() => refetch({ requestPolicy: "network-only" })}
+          loaderLabel={STR.loading}
+        >
+        {items.length === 0 ? (
           <EmptyState message={STR.cmNoPending} />
         ) : (
           items.map((c) => (
@@ -65,6 +69,7 @@ export default function CommentReviewScreen(): React.ReactElement {
             </Card>
           ))
         )}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );

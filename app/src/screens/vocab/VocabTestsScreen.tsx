@@ -10,7 +10,8 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { VOCAB_TESTS_QUERY } from "../../graphql/operations";
-import { Screen, Card, Body, Muted, Button, Badge, Chip, Loader } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge, Chip } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { ProgramSelect, ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
 import { STR, vocabProgramLabel, vocabTestStatusLabel } from "../../lib/labels";
@@ -25,7 +26,7 @@ export default function VocabTestsScreen(): React.ReactElement {
   const [program, setProgram] = useState<string | null>(null);
   const [section, setSection] = useState<SectionPick | null>(null);
 
-  const [testsQ] = useQuery({
+  const [testsQ, refetchTests] = useQuery({
     query: VOCAB_TESTS_QUERY,
     variables: { sectionId: section?.sectionId ?? null, program: program ?? null },
     pause: !section,
@@ -47,31 +48,35 @@ export default function VocabTestsScreen(): React.ReactElement {
 
         {section ? (
           <Card>
-            {testsQ.fetching ? (
-              <Loader label={STR.loading} />
-            ) : tests.length === 0 ? (
-              <Muted>{STR.vbNoTests}</Muted>
-            ) : (
-              tests.map((tst) => {
-                const title = `${vocabProgramLabel(tst.program)} · ${tst.label}`;
-                return (
-                  <View key={tst.id} style={{ marginTop: space(3) }}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                      <View style={{ flexShrink: 1 }}>
-                        <Body style={{ fontWeight: "700" }}>{title}</Body>
-                        <Muted>{new Date(tst.testDate).toLocaleDateString()}</Muted>
+            <QueryGate
+              result={testsQ}
+              onRetry={() => refetchTests({ requestPolicy: "network-only" })}
+              loaderLabel={STR.loading}
+            >
+              {tests.length === 0 ? (
+                <Muted>{STR.vbNoTests}</Muted>
+              ) : (
+                tests.map((tst) => {
+                  const title = `${vocabProgramLabel(tst.program)} · ${tst.label}`;
+                  return (
+                    <View key={tst.id} style={{ marginTop: space(3) }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                        <View style={{ flexShrink: 1 }}>
+                          <Body style={{ fontWeight: "700" }}>{title}</Body>
+                          <Muted>{new Date(tst.testDate).toLocaleDateString()}</Muted>
+                        </View>
+                        <Badge text={vocabTestStatusLabel(tst.status)} tone={tst.status === "marked" ? "ok" : "muted"} />
                       </View>
-                      <Badge text={vocabTestStatusLabel(tst.status)} tone={tst.status === "marked" ? "ok" : "muted"} />
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
+                        <Chip label={STR.vbMark} onPress={() => nav.navigate("VocabMarkGrid", { testId: tst.id, title })} />
+                        <Chip label={STR.vbReport} onPress={() => nav.navigate("VocabReport", { testId: tst.id, title })} />
+                        <Chip label={STR.vbMessages} onPress={() => nav.navigate("VocabMessages", { testId: tst.id, title })} />
+                      </View>
                     </View>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
-                      <Chip label={STR.vbMark} onPress={() => nav.navigate("VocabMarkGrid", { testId: tst.id, title })} />
-                      <Chip label={STR.vbReport} onPress={() => nav.navigate("VocabReport", { testId: tst.id, title })} />
-                      <Chip label={STR.vbMessages} onPress={() => nav.navigate("VocabMessages", { testId: tst.id, title })} />
-                    </View>
-                  </View>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </QueryGate>
           </Card>
         ) : null}
       </ScrollView>

@@ -11,7 +11,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { STUDENTS_QUERY } from "../../graphql/operations";
 import { CLASS_TEST_QUERY, CLASS_TEST_RESULTS_QUERY } from "../../graphql/classTest";
-import { Screen, Card, Body, Muted, Badge, Loader, Notice } from "../../components/ui";
+import { Screen, Card, Body, Muted, Badge, Notice } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
@@ -21,35 +22,33 @@ type Props = NativeStackScreenProps<ClassTestStackParamList, "ClassTestResultsVi
 export default function ClassTestResultsViewScreen({ route }: Props): React.ReactElement {
   const { testId, title } = route.params;
 
-  const [testQ] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
+  const [testQ, refetchTest] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
   const test = testQ.data?.classTest ?? null;
-  const [studentsQ] = useQuery({ query: STUDENTS_QUERY, variables: { sectionId: test?.sectionId ?? "" }, pause: !test });
+  const [studentsQ, refetchStudents] = useQuery({ query: STUDENTS_QUERY, variables: { sectionId: test?.sectionId ?? "" }, pause: !test });
   const students = (studentsQ.data?.studentsInSection ?? []).filter((s) => s.active);
-  const [resultsQ] = useQuery({ query: CLASS_TEST_RESULTS_QUERY, variables: { testId } });
+  const [resultsQ, refetchResults] = useQuery({ query: CLASS_TEST_RESULTS_QUERY, variables: { testId } });
   const byStudent = useMemo(() => {
     const m = new Map<string, NonNullable<typeof resultsQ.data>["classTestResults"][number]>();
     for (const r of resultsQ.data?.classTestResults ?? []) m.set(r.studentId, r);
     return m;
   }, [resultsQ.data]);
 
-  if (testQ.fetching) {
-    return (
-      <Screen>
-        <Loader label={STR.loading} />
-      </Screen>
-    );
-  }
-  if (!test) {
-    return (
-      <Screen>
-        <Notice message={STR.errGeneric} tone="danger" />
-      </Screen>
-    );
-  }
-
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
+        <QueryGate
+          results={[testQ, studentsQ, resultsQ]}
+          onRetry={() => {
+            refetchTest({ requestPolicy: "network-only" });
+            refetchStudents({ requestPolicy: "network-only" });
+            refetchResults({ requestPolicy: "network-only" });
+          }}
+          loaderLabel={STR.loading}
+        >
+        {!test ? (
+          <Notice message={STR.errGeneric} tone="danger" />
+        ) : (
+          <>
         <Card>
           <Body style={{ fontWeight: "700" }}>{title}</Body>
           <Muted>
@@ -58,9 +57,7 @@ export default function ClassTestResultsViewScreen({ route }: Props): React.Reac
           </Muted>
         </Card>
 
-        {studentsQ.fetching || resultsQ.fetching ? (
-          <Loader label={STR.loading} />
-        ) : students.length === 0 ? (
+        {students.length === 0 ? (
           <Card>
             <Muted>{STR.ctNoStudents}</Muted>
           </Card>
@@ -104,6 +101,9 @@ export default function ClassTestResultsViewScreen({ route }: Props): React.Reac
             );
           })
         )}
+          </>
+        )}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );

@@ -11,7 +11,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { TEACHER_CLASS_LOAD } from "../../graphql/classLoad";
 import type { ReportsStackParamList } from "../../navigation/types";
-import { Screen, Body, Muted, Card, Badge, Chip, Field, Loader, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Badge, Chip, Field, EmptyState } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum, dayOfWeekLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
@@ -28,7 +29,7 @@ export default function TeacherClassLoadScreen(): React.ReactElement {
   const [month, setMonth] = useState(monthKeyOf(new Date()));
   const [search, setSearch] = useState("");
 
-  const [q] = useQuery({ query: TEACHER_CLASS_LOAD, variables: { month } });
+  const [q, refetch] = useQuery({ query: TEACHER_CLASS_LOAD, variables: { month } });
   const rows = q.data?.teacherClassLoad ?? [];
 
   const filtered = useMemo(() => {
@@ -50,9 +51,12 @@ export default function TeacherClassLoadScreen(): React.ReactElement {
           <Field label={undefined} value={search} onChangeText={setSearch} placeholder={STR.clSearchTeacher} />
         </Card>
 
-        {q.fetching && rows.length === 0 ? (
-          <Loader label={STR.loading} />
-        ) : filtered.length === 0 ? (
+        <QueryGate
+          result={q}
+          onRetry={() => refetch({ requestPolicy: "network-only" })}
+          loaderLabel={STR.loading}
+        >
+        {filtered.length === 0 ? (
           <EmptyState message={STR.clNoLoad} />
         ) : (
           filtered.map((r) => (
@@ -75,6 +79,7 @@ export default function TeacherClassLoadScreen(): React.ReactElement {
             </Card>
           ))
         )}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );

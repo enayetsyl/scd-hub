@@ -29,6 +29,9 @@ import {
 import type { ChatStackParamList } from "../../navigation/types";
 import { Screen, Card, Body, Muted, Button, Badge, Chip, Field, Notice, Loader, EmptyState } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
+import { useConfirm } from "../../state/ConfirmContext";
+import { useToast } from "../../state/ToastContext";
+import { friendlyError } from "../../lib/errors";
 import { STR, bnNum } from "../../lib/labels";
 import { aggregateReactions, conversationTitle, REACTION_PALETTE } from "../../lib/chat";
 import { pickAndUploadChatFile, openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError, type UploadedChatFile } from "../../lib/files";
@@ -46,6 +49,8 @@ export default function ChatThreadScreen({ route, navigation }: Props): React.Re
   const { conversationId } = route.params;
   const client = useClient();
   const { user, role } = useAuth();
+  const { confirmAction } = useConfirm();
+  const toast = useToast();
   const myUserId = user?.id ?? "";
   const canManage = !!role && roleHasPermission(role, "chat:manage");
 
@@ -174,8 +179,14 @@ export default function ChatThreadScreen({ route, navigation }: Props): React.Re
   }
 
   async function onDelete(messageId: string): Promise<void> {
+    if (!(await confirmAction({ message: STR.chatDeleteConfirm, confirmLabel: STR.chatDelete }))) return;
     const res = await deleteMessage({ messageId });
-    if (res.data?.deleteMessage) upsert(res.data.deleteMessage);
+    if (res.error || !res.data?.deleteMessage) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
+    upsert(res.data.deleteMessage);
+    toast.show(STR.chatDeleted, "ok");
   }
 
   async function onForward(messageId: string, toConversationId: string): Promise<void> {
