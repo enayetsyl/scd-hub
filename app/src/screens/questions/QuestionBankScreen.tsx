@@ -1,85 +1,81 @@
 /**
- * QuestionBankScreen (S4 / J2.2, J2.4) — filter questions by any combination of
- * subject / classLevel / questionType / paperRole / difficulty / bloom / marks
- * range. Each row shows qid + truncated question_text + tag chips, with an
- * add-to-basket toggle (basket count badges the tab). Scope is enforced
- * server-side so a supervisor sees banks beyond their teaching classes.
+ * QuestionBankScreen — "প্রশ্ন খুঁজুন ও বাছাই করুন" (ux-audit F4/F5/F6/F15/F16).
+ *
+ * Sticky SearchField (text + qid, Bangla digits match) and FilterBar of active
+ * chips + FilterSheet with EVERY server filter group (incl. টপিক ট্যাগ + review
+ * status). Filters/search/pagination live in QuestionBankContext (survive
+ * navigation; filters+search survive restarts). Cards are SelectableCards —
+ * checkbox = select into the basket, card tap = preview — with a grapheme-safe
+ * 2-line clamp (numberOfLines, never substring). A sticky SelectionTray opens
+ * the one-step CreateSetSheet. Cursor pagination appends pages ("আরও দেখুন").
+ *
+ * Add-to-set mode (route.params.addToSetId, from SetDetail's draft edit) keeps
+ * the old per-row add button and skips selection/tray entirely.
  */
 import React, { useEffect, useState } from "react";
-import { View, ScrollView } from "react-native";
+import { FlatList, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
-import {
-  SUBJECTS,
-  CLASS_LEVELS,
-  QUESTION_TYPES,
-  PAPER_ROLES,
-  DIFFICULTIES,
-  BLOOM_LEVELS,
-} from "@scd/shared";
-import { QUESTIONS_QUERY, ADD_QUESTION_TO_SET } from "../../graphql/operations";
-import type { QuestionsStackParamList } from "../../navigation/types";
-import {
-  Screen,
-  Body,
-  Muted,
-  Card,
-  Chip,
-  ChipRow,
-  Badge,
-  Button,
-  Field,
-  Loader,
-  EmptyState,
-  ErrorBanner,
-} from "../../components/ui";
+import { QUESTIONS_QUERY, ADD_QUESTION_TO_SET, type QuestionListItem } from "../../graphql/operations";
+import type { QuestionsStackParamList, TabParamList } from "../../navigation/types";
+import { Screen, Body, Muted, Card, Badge, Button, EmptyState } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
+import { SearchField } from "../../components/SearchField";
+import { FilterBar, type FilterChip } from "../../components/FilterBar";
+import { FilterSheet } from "../../components/FilterSheet";
+import { SelectableCard } from "../../components/SelectableCard";
+import { SelectionTray } from "../../components/SelectionTray";
+import { CreateSetSheet } from "./CreateSetSheet";
 import {
   STR,
   subjectLabel,
   difficultyLabel,
   paperRoleLabel,
+  reviewStatusLabel,
+  classLevelLabel,
   bnNum,
 } from "../../lib/labels";
-import { friendlyError } from "../../lib/errors";
 import { useBasket } from "../../state/BasketContext";
-import { questionText, truncate, prettyCode, parsePayload } from "../../lib/question";
-import { AnswerCarrier } from "../../components/QuestionAnswer";
+import { useQuestionBank, type QbFilters } from "../../state/QuestionBankContext";
+import { questionText, prettyCode } from "../../lib/question";
 import { space } from "../../theme/tokens";
-import { useColors } from "../../theme";
 
 type Props = NativeStackScreenProps<QuestionsStackParamList, "QuestionBank">;
+
+const PAGE = 40;
 
 function num(s: string): number | null {
   const n = Number(s);
   return s.trim() !== "" && !Number.isNaN(n) ? n : null;
 }
 
+/** Review-status badge tone: gold → gold, reviewed → ok, draft → muted. */
+function reviewTone(status: string): "gold" | "ok" | "muted" {
+  if (status === "gold") return "gold";
+  if (status === "reviewed") return "ok";
+  return "muted";
+}
+
 export default function QuestionBankScreen({ navigation, route }: Props): React.ReactElement {
   const basket = useBasket();
+  const qb = useQuestionBank();
+  const tabNav = useNavigation<NavigationProp<TabParamList>>();
+
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+
   // Add-to-set mode: rows push straight into the given draft set (addQuestionToSet)
   // rather than the basket. `addedIds` tracks what this session already added so the
   // row flips to "Added" (server dedupes too). See SetDetail's "Add questions".
   const addToSetId = route.params?.addToSetId;
   const [, addToSetMut] = useMutation(ADD_QUESTION_TO_SET);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
-  // Inline preview: details (full text + answer) show by DEFAULT; "Hide" collapses a
-  // card. We track the collapsed set so the default (nothing collapsed) is fully open.
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
-  const colors = useColors();
-
-  function toggleCollapse(id: string): void {
-    setCollapsedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   // Clear the add-mode param when leaving the screen so a later drawer visit to
   // Questions opens the normal basket mode (route params otherwise persist, incl. in
   // the restored web nav state).
-  React.useEffect(() => {
+  useEffect(() => {
     const unsub = navigation.addListener("blur", () => {
       if (route.params?.addToSetId) navigation.setParams({ addToSetId: undefined });
     });
@@ -92,219 +88,208 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
     if (!res.error) setAddedIds((prev) => new Set(prev).add(artifactId));
   }
 
-  const [subject, setSubject] = useState<string | null>(null);
-  const [classLevel, setClassLevel] = useState<number | null>(null);
-  const [questionType, setQuestionType] = useState<string | null>(null);
-  const [paperRole, setPaperRole] = useState<string | null>(null);
-  const [difficulty, setDifficulty] = useState<string | null>(null);
-  const [bloomLevel, setBloomLevel] = useState<string | null>(null);
-  const [marksMin, setMarksMin] = useState("");
-  const [marksMax, setMarksMax] = useState("");
-  // Server-side pagination: fetch the first `limit`, "Load more" grows it by a page.
-  const PAGE = 40;
-  const [limit, setLimit] = useState(PAGE);
-  // Any filter change resets back to the first page.
-  useEffect(() => {
-    setLimit(PAGE);
-  }, [subject, classLevel, questionType, paperRole, difficulty, bloomLevel, marksMin, marksMax]);
-
-  const [{ data, fetching, error }, refetch] = useQuery({
+  // One query per (filters, search, cursor) triple. `pause` until the persisted
+  // filters hydrate — otherwise the first render fires a default-filter query
+  // that immediately gets replaced (F5). Each distinct `after` is its own cache
+  // key, so "আরও দেখুন" fetches ONLY the new page (F16) and back-navigation
+  // replays earlier pages from the document cache.
+  const [{ data, fetching, error }, reexecute] = useQuery({
     query: QUESTIONS_QUERY,
     variables: {
-      subject,
-      classLevel,
-      questionType,
-      paperRole,
-      difficulty,
-      bloomLevel,
-      marksMin: num(marksMin),
-      marksMax: num(marksMax),
-      limit,
-      offset: 0,
+      subject: qb.filters.subject,
+      classLevel: qb.filters.classLevel,
+      topicTag: qb.filters.topicTag,
+      questionType: qb.filters.questionType,
+      paperRole: qb.filters.paperRole,
+      difficulty: qb.filters.difficulty,
+      bloomLevel: qb.filters.bloomLevel,
+      reviewStatus: qb.filters.reviewStatus,
+      marksMin: num(qb.filters.marksMin),
+      marksMax: num(qb.filters.marksMax),
+      search: qb.search.trim() || null,
+      limit: PAGE,
+      after: qb.after,
     },
+    pause: !qb.loaded,
   });
 
-  const questions = data?.questions ?? [];
-  const canLoadMore = questions.length >= limit;
+  const { appendPage, after: currentAfter } = qb;
+  useEffect(() => {
+    if (data?.questions) appendPage(data.questions, currentAfter, PAGE);
+    // `currentAfter` is read, not depended on: appendPage dedupes by id, so a
+    // transient data/cursor mismatch is a harmless no-op append.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, appendPage]);
 
-  function toggle<T>(current: T | null, value: T, set: (v: T | null) => void): void {
-    set(current === value ? null : value);
+  // Active-filter chips for the FilterBar.
+  const chips: FilterChip[] = [];
+  const f = qb.filters;
+  if (f.subject) chips.push({ key: "subject", label: subjectLabel(f.subject) });
+  if (f.classLevel != null) chips.push({ key: "classLevel", label: classLevelLabel(f.classLevel) });
+  if (f.topicTag) chips.push({ key: "topicTag", label: f.topicTag });
+  if (f.reviewStatus) chips.push({ key: "reviewStatus", label: reviewStatusLabel(f.reviewStatus) });
+  if (f.questionType) chips.push({ key: "questionType", label: prettyCode(f.questionType) });
+  if (f.paperRole) chips.push({ key: "paperRole", label: paperRoleLabel(f.paperRole) });
+  if (f.difficulty) chips.push({ key: "difficulty", label: difficultyLabel(f.difficulty) });
+  if (f.bloomLevel) chips.push({ key: "bloomLevel", label: f.bloomLevel });
+  if (f.marksMin.trim()) chips.push({ key: "marksMin", label: `${STR.marks} ≥ ${bnNum(f.marksMin)}` });
+  if (f.marksMax.trim()) chips.push({ key: "marksMax", label: `${STR.marks} ≤ ${bnNum(f.marksMax)}` });
+
+  const isEmpty =
+    !fetching && !error && qb.items.length === 0 && (data?.questions?.length ?? 0) === 0;
+  const loadingMore = fetching && qb.after !== null;
+
+  function renderCardBody(q: QuestionListItem): React.ReactElement {
+    const text = questionText(q.payloadJson);
+    return (
+      <>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+          <Muted style={{ fontWeight: "700" }}>
+            {q.qid ?? q.id.slice(-6)} · {bnNum(q.marks ?? 0)} {STR.marks}
+          </Muted>
+          <Badge text={reviewStatusLabel(q.reviewStatus)} tone={reviewTone(q.reviewStatus)} />
+        </View>
+        {/* Grapheme-safe clamp (F15): numberOfLines, NEVER a substring — a
+            code-unit slice can cut a Bangla conjunct mid-cluster. */}
+        <Body style={{ marginTop: space(1) }} numberOfLines={2}>
+          {text || "—"}
+        </Body>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
+          {q.topicTag ? <Badge text={q.topicTag} tone="muted" /> : null}
+          {q.questionType ? <Badge text={prettyCode(q.questionType)} tone="muted" /> : null}
+          {q.paperRole ? <Badge text={paperRoleLabel(q.paperRole)} tone="muted" /> : null}
+          {q.difficulty ? <Badge text={difficultyLabel(q.difficulty)} tone="muted" /> : null}
+        </View>
+      </>
+    );
   }
 
-  // One filter group's cell — grows to fill, ~3 per row on wide screens (2×3 grid),
-  // wrapping to fewer columns when the viewport is narrow.
-  const filterCell = { flexGrow: 1, flexBasis: "30%" as const, minWidth: 260 };
+  function renderItem({ item: q }: { item: QuestionListItem }): React.ReactElement {
+    if (addToSetId) {
+      return (
+        <Card>
+          {renderCardBody(q)}
+          <Button
+            title={addedIds.has(q.id) ? STR.addedToSet : STR.addToSet}
+            variant={addedIds.has(q.id) ? "secondary" : "primary"}
+            disabled={addedIds.has(q.id)}
+            onPress={() => void onAddToSet(q.id)}
+            style={{ marginTop: space(2) }}
+          />
+        </Card>
+      );
+    }
+    const text = questionText(q.payloadJson);
+    return (
+      <SelectableCard
+        selected={basket.has(q.id)}
+        onToggle={() =>
+          basket.has(q.id)
+            ? basket.remove(q.id)
+            : basket.add({
+                artifactId: q.id,
+                qid: q.qid ?? q.id,
+                marks: q.marks ?? 0,
+                label: text || q.qid || q.id,
+                subject: q.subject,
+                classLevel: q.classLevel,
+              })
+        }
+        onPress={() => navigation.navigate("QuestionPreview", { id: q.id })}
+      >
+        {renderCardBody(q)}
+      </SelectableCard>
+    );
+  }
 
   return (
     <Screen padded={false} bleed>
-      <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
-        {/* Add-to-set banner, or the basket summary in normal browse mode */}
+      {/* Sticky header — a SIBLING of the list, so it never scrolls away. */}
+      <View style={{ paddingHorizontal: space(4), paddingTop: space(3), paddingBottom: space(2), gap: space(2) }}>
         {addToSetId ? (
           <Card>
             <Muted>{STR.addingToSet}</Muted>
           </Card>
-        ) : (
-          <Card>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Muted>
-                {STR.basket}: {bnNum(basket.count)} · {STR.totalMarks} {bnNum(basket.totalMarks)}
-              </Muted>
-              <Button title={STR.basket} variant="ghost" onPress={() => navigation.navigate("Basket")} />
-            </View>
-          </Card>
-        )}
-
-        {/* Filters — a 2-row × 3-column grid on wide screens (wraps to fewer columns when narrow). */}
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(3) }}>
-          <View style={filterCell}>
-            <Muted>{STR.subject}</Muted>
-            <ChipRow>
-              <Chip label={STR.all} selected={subject === null} onPress={() => setSubject(null)} />
-              {SUBJECTS.map((s) => (
-                <Chip key={s} label={subjectLabel(s)} selected={subject === s} onPress={() => toggle(subject, s, setSubject)} />
-              ))}
-            </ChipRow>
-          </View>
-
-          <View style={filterCell}>
-            <Muted>{STR.classLevel}</Muted>
-            <ChipRow>
-              <Chip label={STR.all} selected={classLevel === null} onPress={() => setClassLevel(null)} />
-              {CLASS_LEVELS.map((c) => (
-                <Chip key={c} label={bnNum(c)} selected={classLevel === c} onPress={() => toggle(classLevel, c, setClassLevel)} />
-              ))}
-            </ChipRow>
-          </View>
-
-          <View style={filterCell}>
-            <Muted>{STR.questionType}</Muted>
-            <ChipRow>
-              <Chip label={STR.all} selected={questionType === null} onPress={() => setQuestionType(null)} />
-              {QUESTION_TYPES.map((q) => (
-                <Chip key={q} label={prettyCode(q)} selected={questionType === q} onPress={() => toggle(questionType, q, setQuestionType)} />
-              ))}
-            </ChipRow>
-          </View>
-
-          <View style={filterCell}>
-            <Muted>{STR.paperRole}</Muted>
-            <ChipRow>
-              <Chip label={STR.all} selected={paperRole === null} onPress={() => setPaperRole(null)} />
-              {PAPER_ROLES.map((p) => (
-                <Chip key={p} label={paperRoleLabel(p)} selected={paperRole === p} onPress={() => toggle(paperRole, p, setPaperRole)} />
-              ))}
-            </ChipRow>
-          </View>
-
-          <View style={filterCell}>
-            <Muted>{STR.difficulty}</Muted>
-            <ChipRow>
-              <Chip label={STR.all} selected={difficulty === null} onPress={() => setDifficulty(null)} />
-              {DIFFICULTIES.map((d) => (
-                <Chip key={d} label={difficultyLabel(d)} selected={difficulty === d} onPress={() => toggle(difficulty, d, setDifficulty)} />
-              ))}
-            </ChipRow>
-          </View>
-
-          <View style={filterCell}>
-            <Muted>{STR.bloom}</Muted>
-            <ChipRow>
-              <Chip label={STR.all} selected={bloomLevel === null} onPress={() => setBloomLevel(null)} />
-              {BLOOM_LEVELS.map((b) => (
-                <Chip key={b} label={b} selected={bloomLevel === b} onPress={() => toggle(bloomLevel, b, setBloomLevel)} />
-              ))}
-            </ChipRow>
-          </View>
-        </View>
-
-        <View style={{ flexDirection: "row", gap: space(3) }}>
-          <View style={{ flex: 1 }}>
-            <Field label={STR.marksMin} value={marksMin} onChangeText={setMarksMin} keyboardType="numeric" placeholder="0" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Field label={STR.marksMax} value={marksMax} onChangeText={setMarksMax} keyboardType="numeric" placeholder="100" />
-          </View>
-        </View>
-
-        {error ? <ErrorBanner message={friendlyError(error)} onRetry={() => refetch({ requestPolicy: "network-only" })} /> : null}
-
-        {fetching ? (
-          <Loader label={STR.loading} />
-        ) : questions.length === 0 ? (
-          <EmptyState message={STR.empty} />
-        ) : (
-          questions.map((q) => {
-            const inBasket = basket.has(q.id);
-            const text = questionText(q.payloadJson);
-            const expanded = !collapsedIds.has(q.id);
-            return (
-              <Card key={q.id}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
-                  <Muted style={{ fontWeight: "700" }}>{q.qid ?? q.id.slice(-6)}</Muted>
-                  <Badge text={`${bnNum(q.marks ?? 0)} ${STR.marks}`} tone="brand" />
-                </View>
-                <Body style={{ marginTop: 4 }}>{text ? (expanded ? text : truncate(text)) : "—"}</Body>
-                <ChipRow>
-                  {q.questionType ? <Badge text={prettyCode(q.questionType)} tone="muted" /> : null}
-                  {q.paperRole ? <View style={{ marginLeft: space(2) }}><Badge text={paperRoleLabel(q.paperRole)} tone="muted" /></View> : null}
-                  {q.difficulty ? <View style={{ marginLeft: space(2) }}><Badge text={difficultyLabel(q.difficulty)} tone="muted" /></View> : null}
-                  {q.bloomLevel ? <View style={{ marginLeft: space(2) }}><Badge text={q.bloomLevel} tone="muted" /></View> : null}
-                </ChipRow>
-
-                {/* Inline details — full text is already shown above when expanded; here
-                    we add the answer carrier (options with the correct one marked, etc.). */}
-                {expanded ? (
-                  <View style={{ marginTop: space(2) }}>
-                    <AnswerCarrier payload={parsePayload(q.payloadJson)} correctColor={colors.primary} />
-                  </View>
-                ) : null}
-
-                <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
-                  <View style={{ flex: 1 }}>
-                    <Button
-                      title={expanded ? STR.hideDetails : STR.details}
-                      variant="ghost"
-                      onPress={() => toggleCollapse(q.id)}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    {addToSetId ? (
-                      <Button
-                        title={addedIds.has(q.id) ? STR.addedToSet : STR.addToSet}
-                        variant={addedIds.has(q.id) ? "secondary" : "primary"}
-                        disabled={addedIds.has(q.id)}
-                        onPress={() => void onAddToSet(q.id)}
-                      />
-                    ) : (
-                      <Button
-                        title={inBasket ? STR.inBasket : STR.addToBasket}
-                        variant={inBasket ? "secondary" : "primary"}
-                        onPress={() =>
-                          inBasket
-                            ? basket.remove(q.id)
-                            : basket.add({
-                                artifactId: q.id,
-                                qid: q.qid ?? q.id,
-                                marks: q.marks ?? 0,
-                                label: text || q.qid || q.id,
-                                subject: q.subject,
-                                classLevel: q.classLevel,
-                              })
-                        }
-                      />
-                    )}
-                  </View>
-                </View>
-              </Card>
-            );
-          })
-        )}
-
-        {/* Server pagination: grow the page until the server returns a short page. */}
-        {!fetching && canLoadMore ? (
-          <Button title={STR.loadMore} variant="secondary" onPress={() => setLimit((l) => l + PAGE)} style={{ marginTop: space(2) }} />
         ) : null}
-      </ScrollView>
+        <SearchField value={qb.search} onSearch={qb.setSearch} />
+        <FilterBar
+          chips={chips}
+          count={qb.activeCount}
+          onRemove={(key) => qb.clearFilter(key as keyof QbFilters)}
+          onOpen={() => setFilterOpen(true)}
+        />
+      </View>
+
+      <QueryGate
+        // While the accumulated window is empty and a fetch is in flight, force
+        // the loader: urql keeps the PREVIOUS operation's data during the next
+        // fetch, which would otherwise suppress the loader and render a blank
+        // list for the whole flight after a search/filter reset.
+        result={{
+          data: qb.items.length > 0 ? qb.items : fetching ? undefined : data,
+          fetching,
+          error,
+        }}
+        onRetry={() => reexecute({ requestPolicy: "network-only" })}
+        isEmpty={isEmpty}
+        empty={
+          <EmptyState
+            message={STR.qbEmptyFiltered}
+            action={<Button title={STR.qbClearFilters} variant="secondary" onPress={qb.clearAll} />}
+          />
+        }
+        loaderLabel={STR.loading}
+      >
+        <FlatList
+          data={qb.items}
+          keyExtractor={(q) => q.id}
+          renderItem={renderItem}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: space(4), paddingTop: space(2) }}
+          ListFooterComponent={
+            !qb.exhausted && qb.items.length > 0 ? (
+              <Button
+                title={STR.loadMore}
+                variant="secondary"
+                loading={loadingMore}
+                onPress={qb.requestNextPage}
+                style={{ marginTop: space(2) }}
+              />
+            ) : null
+          }
+        />
+      </QueryGate>
+
+      {!addToSetId ? (
+        <SelectionTray
+          count={basket.count}
+          totalMarks={basket.totalMarks}
+          onCreate={() => setCreateOpen(true)}
+          onClear={basket.clear}
+        />
+      ) : null}
+
+      <FilterSheet
+        visible={filterOpen}
+        filters={qb.filters}
+        onApply={qb.setFilters}
+        onClose={() => setFilterOpen(false)}
+      />
+
+      <CreateSetSheet
+        visible={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onPickSection={() => {
+          setCreateOpen(false);
+          navigation.navigate("SectionPicker");
+        }}
+        onCreated={(setId) => {
+          setCreateOpen(false);
+          // initial: false puts SetList beneath SetDetail in the Sets stack, so
+          // back returns to the list rather than escaping to the drawer.
+          tabNav.navigate("SetsTab", { screen: "SetDetail", params: { setId }, initial: false });
+        }}
+      />
     </Screen>
   );
 }

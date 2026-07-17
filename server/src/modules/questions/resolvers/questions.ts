@@ -17,6 +17,7 @@ import { builder } from "../../../schema";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { ForbiddenError } from "../../../middleware/authz";
 import { buildContentScope, contentScopeAllows, contentScopeMongo } from "../../content/contentScope";
+import { normalizeBanglaDigits, escapeRegex } from "../search";
 import type { Types, FlattenMaps, FilterQuery } from "mongoose";
 import type { IContentArtifact } from "../../content/models/ContentArtifact";
 
@@ -141,9 +142,17 @@ builder.queryField("questions", (t) =>
       marksMin: t.arg.float({ required: false }),
       marksMax: t.arg.float({ required: false }),
       reviewStatus: t.arg.string({ required: false }),
+      /** Free-text search over question_text + qid. Bangla digits in the term
+       *  are normalised to Latin for the qid match ("৪২" → matches HW-0042). */
+      search: t.arg.string({ required: false }),
       /** Server-side pagination (default 40, cap 200) — the bank can be large. */
       limit: t.arg.int({ required: false }),
       offset: t.arg.int({ required: false }),
+      /** Cursor: id of the last item of the previous page (sorted by
+       *  importedAt desc, _id desc). When given, `offset` is ignored. An
+       *  unknown/vanished id is silently ignored (falls back to page 1 —
+       *  the client dedupes appended pages by id). */
+      after: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -171,15 +180,49 @@ builder.queryField("questions", (t) =>
         filter["envelopeJson.payload.marks"] = marksFilter;
       }
 
+      // Multiple $or clauses (content scope / search / cursor) must be ANDed —
+      // a bare filter.$or would let a later clause clobber an earlier one.
+      const ands: FilterQuery<IContentArtifact>[] = [];
+
+      // Free-text search: question body as typed + digit-normalised qid.
+      const rawSearch = args.search?.trim();
+      if (rawSearch) {
+        const textRe = new RegExp(escapeRegex(rawSearch), "i");
+        const qidRe = new RegExp(escapeRegex(normalizeBanglaDigits(rawSearch)), "i");
+        ands.push({
+          $or: [
+            { "envelopeJson.payload.question_text": textRe },
+            { "envelopeJson.payload.qid": qidRe },
+          ],
+        });
+      }
+
+      // Cursor: strictly-before tuple matching the {importedAt:-1,_id:-1} sort.
+      if (args.after) {
+        const anchor = await ContentArtifact.findById(args.after)
+          .select("importedAt")
+          .lean();
+        if (anchor) {
+          ands.push({
+            $or: [
+              { importedAt: { $lt: anchor.importedAt } },
+              { importedAt: anchor.importedAt, _id: { $lt: anchor._id } },
+            ],
+          });
+        }
+      }
+
       // Push TEACHER content-scope INTO the DB query so pagination is correct and we
       // don't load-then-filter every artifact (J2.4). PRINCIPAL/OFFICE → unrestricted.
       const scope = await buildContentScope(ctx);
       const scopeFilter = contentScopeMongo(scope);
       if (scopeFilter === null) return []; // caller has no readable content
-      if (scopeFilter) filter.$or = scopeFilter.$or;
+      if (scopeFilter) ands.push({ $or: scopeFilter.$or });
+
+      if (ands.length) filter.$and = ands;
 
       const limit = Math.min(Math.max(args.limit ?? 40, 1), 200);
-      const offset = Math.max(args.offset ?? 0, 0);
+      const offset = args.after ? 0 : Math.max(args.offset ?? 0, 0);
       const docs = (await ContentArtifact.find(filter)
         .sort({ importedAt: -1, _id: -1 })
         .skip(offset)
@@ -210,6 +253,44 @@ builder.queryField("question", (t) =>
       const scope = await buildContentScope(ctx);
       if (!contentScopeAllows(scope, doc.subject, doc.classLevel)) throw new ForbiddenError();
       return docToShape(doc);
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Query: questionTopicTags — distinct topic tags for the FilterSheet (F4)
+// ---------------------------------------------------------------------------
+
+builder.queryField("questionTopicTags", (t) =>
+  t.field({
+    type: ["String"],
+    description:
+      "Distinct topic_tag values across readable questions — feeds the bank's topic filter. " +
+      "Optionally narrowed by subject/classLevel. TEACHER content scope enforced.",
+    authScopes: { hasPermission: "question:read" },
+    args: {
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+
+      const filter: FilterQuery<IContentArtifact> = { docType: "question", current: true };
+      if (args.subject) filter.subject = args.subject;
+      if (args.classLevel != null) filter.classLevel = args.classLevel;
+
+      const scope = await buildContentScope(ctx);
+      const scopeFilter = contentScopeMongo(scope);
+      if (scopeFilter === null) return [];
+      if (scopeFilter) filter.$or = scopeFilter.$or;
+
+      const tags = (await ContentArtifact.distinct(
+        "envelopeJson.tags.topic_tag",
+        filter,
+      )) as unknown[];
+      return tags
+        .filter((tag): tag is string => typeof tag === "string" && tag.trim() !== "")
+        .sort((a, b) => a.localeCompare(b, "bn"));
     },
   }),
 );

@@ -131,6 +131,115 @@ export async function addQuestionToSet(
   return { setId: set._id.toString(), itemCount: set.basketItems.length };
 }
 
+export interface CreateSetWithQuestionsInput {
+  setType: SetType;
+  sectionId: string;
+  classId: string;
+  subjectId?: string;
+  name?: string;
+  /** Ordered — the resulting basketItems preserve this order (dedup keeps first occurrence). */
+  artifactIds: string[];
+  /** HW / AS only — ISO date string */
+  dueDate?: string;
+  /** CT only */
+  durationMinutes?: number;
+  actorId: string;
+}
+
+/** One-step transactional create: validate every artifact, then create the set
+ *  directly in `assembled` status with the full ordered basket (ux-audit F6/F10).
+ *  A single AssessmentSet.create() is the atomicity mechanism — nothing is
+ *  written until every artifact has been verified, so a failure can never leave
+ *  a half-populated draft behind (the old createSet + N×addQuestionToSet trap).
+ *  Emits the same corpus events as the incremental path: one questions_selected
+ *  per question + one set_assembled (ADR-005 de-identified). */
+export async function createSetWithQuestions(
+  input: CreateSetWithQuestionsInput,
+): Promise<CreateSetResult> {
+  const ids = [...new Set(input.artifactIds)];
+  if (ids.length === 0) throw new Error("Cannot assemble an empty set");
+
+  const artifacts = await ContentArtifact.find({ _id: { $in: ids } }).lean();
+  const byId = new Map(artifacts.map((a) => [a._id.toString(), a]));
+
+  const items = ids.map((artifactId) => {
+    const artifact = byId.get(artifactId);
+    if (!artifact) throw new Error("Question artifact not found");
+    if (artifact.docType !== "question") throw new Error("Artifact is not a question");
+    const env = artifact.envelopeJson as Record<string, unknown>;
+    const payload = (env.payload ?? {}) as Record<string, unknown>;
+    return {
+      artifactId: artifact._id as Types.ObjectId,
+      qid: (payload.qid as string | undefined) ?? artifactId,
+      marks: typeof payload.marks === "number" ? payload.marks : 1,
+      subject: artifact.subject,
+      classLevel: artifact.classLevel,
+    };
+  });
+
+  const totalMarks = items.reduce((sum, item) => sum + item.marks, 0);
+  const now = new Date();
+  const trimmedName = input.name?.trim();
+
+  const doc = await AssessmentSet.create({
+    setType: input.setType,
+    name: trimmedName ? trimmedName : undefined,
+    sectionId: input.sectionId,
+    classId: input.classId,
+    subjectId: input.subjectId,
+    status: "assembled",
+    basketItems: items.map(({ artifactId, qid, marks }) => ({ artifactId, qid, marks })),
+    totalMarks,
+    createdBy: input.actorId,
+    assembledBy: input.actorId,
+    assembledAt: now,
+    durationMinutes:
+      input.setType === "CT" && input.durationMinutes != null
+        ? input.durationMinutes
+        : undefined,
+    dueDate:
+      (input.setType === "HW" || input.setType === "AS") && input.dueDate
+        ? new Date(input.dueDate)
+        : undefined,
+  });
+
+  // De-identified corpus events — same shapes as addQuestionToSet + assembleSet (ADR-005)
+  const pseudoId = Buffer.from(input.actorId).toString("base64");
+  await CorpusEvent.insertMany(
+    items.map((item) => ({
+      eventKind: "questions_selected",
+      pseudoActorId: pseudoId,
+      occurredAt: now,
+      meta: {
+        setId: doc._id.toString(),
+        qid: item.qid,
+        subject: item.subject,
+        classLevel: item.classLevel,
+      },
+    })),
+  );
+  await CorpusEvent.create({
+    eventKind: "set_assembled",
+    pseudoActorId: pseudoId,
+    occurredAt: now,
+    meta: {
+      setId: doc._id.toString(),
+      setType: doc.setType,
+      sectionId: doc.sectionId.toString(),
+      itemCount: items.length,
+      totalMarks,
+    },
+  });
+
+  return {
+    setId: doc._id.toString(),
+    setType: doc.setType,
+    sectionId: doc.sectionId.toString(),
+    classId: doc.classId.toString(),
+    status: doc.status,
+  };
+}
+
 /** Set (or clear) a set's display name. Write-scope enforced by the resolver.
  *  Allowed in ANY status — a name is just a label, not question content, so an
  *  already-assembled set can still be named/renamed for later identification. */
