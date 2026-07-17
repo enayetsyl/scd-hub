@@ -31,6 +31,7 @@ const mockArtifactFindById = jest.fn();
 const mockBatchCreate = jest.fn();
 const mockBatchUpdateOne = jest.fn();
 const mockEventCreate = jest.fn();
+const mockEventInsertMany = jest.fn();
 
 jest.mock("../modules/content/models/ContentArtifact", () => ({
   ContentArtifact: {
@@ -54,6 +55,7 @@ jest.mock("../modules/platform/models/ImportBatch", () => ({
 jest.mock("../modules/corpus/models/CorpusEvent", () => ({
   CorpusEvent: {
     create: (a: unknown) => mockEventCreate(a),
+    insertMany: (a: unknown) => mockEventInsertMany(a),
     deleteMany: jest.fn(),
   },
 }));
@@ -79,7 +81,8 @@ jest.mock("child_process");
 // Import AFTER mocks
 import { readFileSync } from "fs";
 import { importEnvelope, importContentFiles } from "../modules/content/services/ContentService";
-import { addQuestionToSet, assembleSet, createSet, removeQuestionFromSet, renameSet } from "../modules/assessment/services/AssessmentService";
+import { addQuestionToSet, assembleSet, createSet, createSetWithQuestions, removeQuestionFromSet, renameSet } from "../modules/assessment/services/AssessmentService";
+import { normalizeBanglaDigits, escapeRegex } from "../modules/questions/search";
 
 const execFileMock = cp.execFile as jest.MockedFunction<typeof cp.execFile>;
 
@@ -167,6 +170,7 @@ beforeEach(() => {
   mockArtifactFindOne.mockImplementation(() => ({ lean: mockArtifactFindOneResult }));
   mockArtifactUpdateOne.mockResolvedValue({ modifiedCount: 1 });
   mockEventCreate.mockResolvedValue({ _id: new mongoose.Types.ObjectId() });
+  mockEventInsertMany.mockResolvedValue([]);
 });
 
 // ===========================================================================
@@ -802,5 +806,200 @@ describe("J3.5 — write-scope: supervisory grant is read-only for assembly", ()
 
   test("RBAC: TEACHER has question:select permission", () => {
     expect(roleHasPermission("TEACHER", "question:select")).toBe(true);
+  });
+});
+
+// ===========================================================================
+// ux-audit F4 — question-bank search helpers (Bangla digits + regex safety)
+// ===========================================================================
+
+describe("F4 — search helpers", () => {
+  test("normalizeBanglaDigits maps ০-৯ to 0-9 ('৪২' → '42')", () => {
+    expect(normalizeBanglaDigits("৪২")).toBe("42");
+    expect(normalizeBanglaDigits("HW-০০৪২")).toBe("HW-0042");
+    expect(normalizeBanglaDigits("০১২৩৪৫৬৭৮৯")).toBe("0123456789");
+  });
+
+  test("normalizeBanglaDigits leaves Latin digits and Bangla text untouched", () => {
+    expect(normalizeBanglaDigits("HW-0042")).toBe("HW-0042");
+    expect(normalizeBanglaDigits("ভগ্নাংশ")).toBe("ভগ্নাংশ");
+  });
+
+  test("escapeRegex neutralises regex metacharacters", () => {
+    expect(escapeRegex("a.b*c(d)")).toBe("a\\.b\\*c\\(d\\)");
+    expect(new RegExp(escapeRegex("HW-0042 (৫)")).test("HW-0042 (৫)")).toBe(true);
+    // an unescaped '(' would throw on RegExp construction
+    expect(() => new RegExp(escapeRegex("(["))).not.toThrow();
+  });
+
+  test("digit-normalised qid regex: '৪২' substring-matches 'HW-0042'", () => {
+    const qidRe = new RegExp(escapeRegex(normalizeBanglaDigits("৪২")), "i");
+    expect(qidRe.test("HW-0042")).toBe(true);
+    expect(qidRe.test("HW-0035")).toBe(false);
+  });
+});
+
+// ===========================================================================
+// ux-audit F6/F10 — createSetWithQuestions (one-step transactional create)
+// ===========================================================================
+
+describe("F6/F10 — createSetWithQuestions (transactional one-step create)", () => {
+  const ART_A = new mongoose.Types.ObjectId();
+  const ART_B = new mongoose.Types.ObjectId();
+  const ART_C = new mongoose.Types.ObjectId();
+
+  function artifact(id: mongoose.Types.ObjectId, qid: string, marks: number, docType = "question") {
+    return {
+      _id: id,
+      docType,
+      subject: "BAN",
+      classLevel: 5,
+      envelopeJson: { payload: { qid, marks } },
+    };
+  }
+
+  function baseInput(extra: Partial<Parameters<typeof createSetWithQuestions>[0]> = {}) {
+    return {
+      setType: "HW" as const,
+      sectionId: SECTION_ID.toString(),
+      classId: CLASS_ID.toString(),
+      name: "ভগ্নাংশ অনুশীলন",
+      artifactIds: [ART_A.toString(), ART_B.toString()],
+      dueDate: "2026-07-20T00:00:00.000Z",
+      actorId: ACTOR_ID.toString(),
+      ...extra,
+    };
+  }
+
+  function createdDoc(over: Record<string, unknown> = {}) {
+    return {
+      _id: SET_ID,
+      setType: "HW",
+      sectionId: SECTION_ID,
+      classId: CLASS_ID,
+      status: "assembled",
+      ...over,
+    };
+  }
+
+  beforeEach(() => {
+    mockSetCreate.mockResolvedValue(createdDoc());
+  });
+
+  test("happy path HW: one create, ordered items, summed totalMarks, assembled + dueDate", async () => {
+    // find({$in}) returns artifacts in DB order (B before A) — order must come from artifactIds
+    mockArtifactFind.mockResolvedValue([artifact(ART_B, "QP-B", 2), artifact(ART_A, "QP-A", 5)]);
+
+    const result = await createSetWithQuestions(baseInput());
+
+    expect(result.status).toBe("assembled");
+    expect(mockSetCreate).toHaveBeenCalledTimes(1);
+    const arg = mockSetCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(arg.status).toBe("assembled");
+    const items = arg.basketItems as Array<{ qid: string; marks: number }>;
+    expect(items.map((i) => i.qid)).toEqual(["QP-A", "QP-B"]); // input order, not DB order
+    expect(arg.totalMarks).toBe(7);
+    expect((arg.dueDate as Date).toISOString()).toBe("2026-07-20T00:00:00.000Z");
+    expect(arg.durationMinutes).toBeUndefined();
+    expect(arg.name).toBe("ভগ্নাংশ অনুশীলন");
+    expect(arg.assembledAt).toBeInstanceOf(Date);
+  });
+
+  test("emits one questions_selected per question (insertMany) + one set_assembled", async () => {
+    mockArtifactFind.mockResolvedValue([artifact(ART_A, "QP-A", 5), artifact(ART_B, "QP-B", 2)]);
+
+    await createSetWithQuestions(baseInput());
+
+    expect(mockEventInsertMany).toHaveBeenCalledTimes(1);
+    const events = mockEventInsertMany.mock.calls[0][0] as Array<Record<string, unknown>>;
+    expect(events).toHaveLength(2);
+    expect(events.every((e) => e.eventKind === "questions_selected")).toBe(true);
+    expect(events.every((e) => e.pseudoActorId !== ACTOR_ID.toString())).toBe(true); // de-identified
+    expect((events[0].meta as Record<string, unknown>).qid).toBe("QP-A");
+
+    expect(mockEventCreate).toHaveBeenCalledTimes(1);
+    const assembled = mockEventCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(assembled.eventKind).toBe("set_assembled");
+    const meta = assembled.meta as Record<string, unknown>;
+    expect(meta.itemCount).toBe(2);
+    expect(meta.totalMarks).toBe(7);
+  });
+
+  test("CT: stores durationMinutes, ignores dueDate", async () => {
+    mockArtifactFind.mockResolvedValue([artifact(ART_A, "QP-A", 5)]);
+    mockSetCreate.mockResolvedValue(createdDoc({ setType: "CT" }));
+
+    await createSetWithQuestions(
+      baseInput({ setType: "CT", artifactIds: [ART_A.toString()], durationMinutes: 40 }),
+    );
+
+    const arg = mockSetCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(arg.durationMinutes).toBe(40);
+    expect(arg.dueDate).toBeUndefined();
+  });
+
+  test("unknown artifact id → throws BEFORE any write, no events (F10 atomicity)", async () => {
+    mockArtifactFind.mockResolvedValue([artifact(ART_A, "QP-A", 5)]); // ART_B missing
+
+    await expect(createSetWithQuestions(baseInput())).rejects.toThrow(
+      "Question artifact not found",
+    );
+    expect(mockSetCreate).not.toHaveBeenCalled();
+    expect(mockEventInsertMany).not.toHaveBeenCalled();
+    expect(mockEventCreate).not.toHaveBeenCalled();
+  });
+
+  test("non-question artifact → throws, nothing written", async () => {
+    mockArtifactFind.mockResolvedValue([
+      artifact(ART_A, "QP-A", 5),
+      artifact(ART_B, "STIM-1", 0, "stimulus"),
+    ]);
+
+    await expect(createSetWithQuestions(baseInput())).rejects.toThrow(
+      "Artifact is not a question",
+    );
+    expect(mockSetCreate).not.toHaveBeenCalled();
+  });
+
+  test("duplicate artifactIds are deduped preserving first occurrence", async () => {
+    mockArtifactFind.mockResolvedValue([
+      artifact(ART_A, "QP-A", 5),
+      artifact(ART_B, "QP-B", 2),
+      artifact(ART_C, "QP-C", 3),
+    ]);
+
+    await createSetWithQuestions(
+      baseInput({
+        artifactIds: [
+          ART_C.toString(), ART_A.toString(), ART_C.toString(), ART_B.toString(), ART_A.toString(),
+        ],
+      }),
+    );
+
+    const arg = mockSetCreate.mock.calls[0][0] as Record<string, unknown>;
+    const items = arg.basketItems as Array<{ qid: string }>;
+    expect(items.map((i) => i.qid)).toEqual(["QP-C", "QP-A", "QP-B"]);
+    expect(arg.totalMarks).toBe(10);
+  });
+
+  test("empty artifactIds → throws 'Cannot assemble an empty set'", async () => {
+    await expect(createSetWithQuestions(baseInput({ artifactIds: [] }))).rejects.toThrow(
+      "Cannot assemble an empty set",
+    );
+    expect(mockSetCreate).not.toHaveBeenCalled();
+  });
+
+  test("marks default to 1 when payload has no numeric marks; qid falls back to artifactId", async () => {
+    mockArtifactFind.mockResolvedValue([
+      { _id: ART_A, docType: "question", subject: "BAN", classLevel: 5, envelopeJson: { payload: {} } },
+    ]);
+
+    await createSetWithQuestions(baseInput({ artifactIds: [ART_A.toString()] }));
+
+    const arg = mockSetCreate.mock.calls[0][0] as Record<string, unknown>;
+    const items = arg.basketItems as Array<{ qid: string; marks: number }>;
+    expect(items[0].marks).toBe(1);
+    expect(items[0].qid).toBe(ART_A.toString());
+    expect(arg.totalMarks).toBe(1);
   });
 });

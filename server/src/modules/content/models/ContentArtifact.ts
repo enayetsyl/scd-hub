@@ -84,5 +84,7 @@ ContentArtifactSchema.index({ docType: 1, subject: 1, classLevel: 1, "address.an
 ContentArtifactSchema.index({ subject: 1, classLevel: 1, docType: 1, current: 1 });
 ContentArtifactSchema.index({ curationTag: 1, current: 1 });
 ContentArtifactSchema.index({ reviewStatus: 1, current: 1 });
+// Question-bank list: newest-first browse + cursor pagination (questions query)
+ContentArtifactSchema.index({ docType: 1, current: 1, importedAt: -1, _id: -1 });
 
 export const ContentArtifact = model<IContentArtifact>("ContentArtifact", ContentArtifactSchema);

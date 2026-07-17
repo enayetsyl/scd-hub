@@ -15,6 +15,7 @@ import { AppErrorFallback } from "./src/observability/AppErrorFallback";
 import { getItem, setItem } from "./src/lib/storage";
 import { AuthProvider } from "./src/auth/AuthContext";
 import { BasketProvider } from "./src/state/BasketContext";
+import { QuestionBankProvider } from "./src/state/QuestionBankContext";
 import { SectionProvider } from "./src/state/SectionContext";
 import { LanguageProvider, useLanguage } from "./src/state/LanguageContext";
 import { SidebarProvider } from "./src/state/SidebarContext";
@@ -162,6 +163,10 @@ function App(): React.ReactElement | null {
             <LanguageProvider>
               <AuthProvider>
                 <BasketProvider>
+                  {/* ux-audit F5: question-bank filters/search/pagination live above
+                      the navigator so navigation never wipes them; filters+search
+                      also persist to storage. */}
+                  <QuestionBankProvider>
                   <SectionProvider>
                     {/* SidebarProvider sits above the navigator so the drawer
                         (AppTabs) and every content Screen share one collapse
@@ -186,6 +191,7 @@ function App(): React.ReactElement | null {
                       </ToastProvider>
                     </SidebarProvider>
                   </SectionProvider>
+                  </QuestionBankProvider>
                 </BasketProvider>
               </AuthProvider>
             </LanguageProvider>

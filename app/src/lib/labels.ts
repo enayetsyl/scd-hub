@@ -305,6 +305,13 @@ export const reviewStatusLabel = (v?: string | null): string =>
 export const curationTagLabel = (v?: string | null): string =>
   (v && pick(CURATION_TAG_LABELS_BN, CURATION_TAG_LABELS_EN)[v as CurationTag]) || v || DASH;
 
+/** Selection-tray summary (ux-audit F6): "৫টি প্রশ্ন · ২০ নম্বর" / "5 questions · 20 marks". */
+export function selectionSummaryLabel(count: number, marks: number): string {
+  return _lang === "en"
+    ? `${count} question${count === 1 ? "" : "s"} · ${marks} marks`
+    : `${bnNum(count)}টি প্রশ্ন · ${bnNum(marks)} নম্বর`;
+}
+
 export const teacherAttendanceStatusLabel = (v?: string | null): string =>
   (v && pick(TEACHER_ATTENDANCE_STATUS_LABELS_BN, TEACHER_ATTENDANCE_STATUS_LABELS_EN)[v as TeacherAttendanceStatus]) || v || DASH;
 
@@ -1025,6 +1032,19 @@ const STR_BN = {
   addedToSet: "যোগ হয়েছে",
   addingToSet: "সেটে প্রশ্ন যোগ করা হচ্ছে",
   addQuestions: "প্রশ্ন যোগ করুন",
+  qbSearchPlaceholder: "প্রশ্ন বা কোড খুঁজুন…",
+  qbEmptyFiltered: "এই ফিল্টারে কোনো প্রশ্ন নেই — ফিল্টার বদলে দেখুন।",
+  qbClearFilters: "সব ফিল্টার মুছুন",
+  qbTopicTag: "টপিক ট্যাগ",
+  qbTopicTagAny: "যেকোনো টপিক",
+  qbSelectQuestion: "প্রশ্ন নির্বাচন করুন",
+  qbDeselectQuestion: "নির্বাচন বাতিল করুন",
+  qbMoveUp: "উপরে সরান",
+  qbMoveDown: "নিচে সরান",
+  qbCreateSet: "সেট তৈরি করুন",
+  qbSetCreated: "সেট তৈরি হয়েছে",
+  qbApplyFilters: "দেখুন",
+  qbClearSelection: "নির্বাচন বাতিল করুন",
   showAnswers: "উত্তর দেখান",
   showMarks: "নম্বর দেখান",
   answerLabel: "উত্তর",
@@ -3441,6 +3461,19 @@ const STR_EN: StrTable = {
   addedToSet: "Added",
   addingToSet: "Adding questions to the set",
   addQuestions: "Add questions",
+  qbSearchPlaceholder: "Search questions or code…",
+  qbEmptyFiltered: "No questions match these filters — try changing them.",
+  qbClearFilters: "Clear all filters",
+  qbTopicTag: "Topic tag",
+  qbTopicTagAny: "Any topic",
+  qbSelectQuestion: "Select question",
+  qbDeselectQuestion: "Deselect question",
+  qbMoveUp: "Move up",
+  qbMoveDown: "Move down",
+  qbCreateSet: "Create set",
+  qbSetCreated: "Set created",
+  qbApplyFilters: "Show results",
+  qbClearSelection: "Clear selection",
   showAnswers: "Show answers",
   showMarks: "Show marks",
   answerLabel: "Answer",
