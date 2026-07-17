@@ -21,6 +21,8 @@ import {
   removeQuestionFromSet as removeQuestionSvc,
   renameSet as renameSetSvc,
   assembleSet as assembleSetSvc,
+  listMyRecentSets,
+  type RecentSetItem,
 } from "../services/AssessmentService";
 import { AssessmentSet } from "../models/AssessmentSet";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
@@ -414,6 +416,49 @@ builder.queryField("assessmentSets", (t) =>
 
       const docs = await AssessmentSet.find(filter).sort({ createdAt: -1 }).lean() as LeanSet[];
       return docs.map((d) => setToShape(d));
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Query: myRecentSets — the caller's newest sets across all sections (ux-audit F7)
+// ---------------------------------------------------------------------------
+
+const MyRecentSetRef = builder.objectRef<RecentSetItem>("MyRecentSet");
+MyRecentSetRef.implement({
+  description:
+    "A recently created/assembled set of the caller, with the id of its still-open " +
+    "tracker (if any) so the Today screen can jump straight into TrackerEntry.",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    setType: t.exposeString("setType"),
+    name: t.string({ nullable: true, resolve: (s) => s.name }),
+    sectionId: t.exposeString("sectionId"),
+    classId: t.exposeString("classId"),
+    subjectId: t.string({ nullable: true, resolve: (s) => s.subjectId }),
+    status: t.exposeString("status"),
+    itemCount: t.exposeInt("itemCount"),
+    totalMarks: t.float({ nullable: true, resolve: (s) => s.totalMarks }),
+    dueDate: t.string({ nullable: true, resolve: (s) => s.dueDate }),
+    createdAt: t.exposeString("createdAt"),
+    openTrackerId: t.string({ nullable: true, resolve: (s) => s.openTrackerId }),
+  }),
+});
+
+builder.queryField("myRecentSets", (t) =>
+  t.field({
+    type: [MyRecentSetRef],
+    description:
+      "The caller's most recently created/assembled sets across ALL their sections. " +
+      "Self-scoped (createdBy/assembledBy = caller), so no section read-scope check.",
+    authScopes: { hasPermission: "set:read" },
+    args: {
+      limit: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const limit = Math.min(Math.max(args.limit ?? 2, 1), 10);
+      return listMyRecentSets(ctx.auth.userId as string, limit);
     },
   }),
 );

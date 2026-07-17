@@ -1077,6 +1077,44 @@ export const ASSESSMENT_SETS_QUERY = gql<
   }
 `;
 
+/** ux-audit F7 — Today's "সাম্প্রতিক সেট": the caller's newest sets across ALL
+ *  their sections, each with the id of a still-open tracker (if any) so the
+ *  shortcut can route straight to TrackerEntry instead of re-firing the
+ *  non-idempotent openTracker mutation. */
+export interface RecentSetT {
+  id: string;
+  setType: string;
+  name: string | null;
+  sectionId: string;
+  classId: string;
+  subjectId: string | null;
+  status: string;
+  itemCount: number;
+  totalMarks: number | null;
+  dueDate: string | null;
+  createdAt: string;
+  openTrackerId: string | null;
+}
+
+export const MY_RECENT_SETS = gql<{ myRecentSets: RecentSetT[] }, { limit?: number | null }>`
+  query MyRecentSets($limit: Int) {
+    myRecentSets(limit: $limit) {
+      id
+      setType
+      name
+      sectionId
+      classId
+      subjectId
+      status
+      itemCount
+      totalMarks
+      dueDate
+      createdAt
+      openTrackerId
+    }
+  }
+`;
+
 // ===========================================================================
 // Trackers (J4)
 // ===========================================================================
