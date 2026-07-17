@@ -2,7 +2,12 @@
 
 **Status:** audit 2026-07-16; **F2, F3, F14 FIXED 2026-07-16** (branch `fix/f2-f3-error-states`: shared
 `QueryGate` + netinfo offline detection swept over all 30 error-less screens, retry wired on the 4 dead
-ErrorBanners, ConfirmSheet + result handling on the 3 unconfirmed destructive mutations). Other findings open.
+ErrorBanners, ConfirmSheet + result handling on the 3 unconfirmed destructive mutations). **F1 FIXED
+2026-07-17** (branch `feat/ux-audit-f1-tracker-entry`: TrackerEntry rebuilt per the approved "এক ট্যাপে
+ট্র্যাকিং" prototype — one-tap `OutcomeSegment` rows with optimistic save + আনডু toast, `BatchBar` one-tap
+batch via a new `recordEntries` server mutation (fills unrecorded rows only), `ScoreSheet` numpad for marks,
+sticky progress header, server-state hydration via client-side sha256 pseudonym matching, QueryGate adoption,
+confirm-close → per-student TrackerSummary). Other findings open.
 **Method:** static analysis of all 174 screen files + shared components/theme; no runtime testing.
 **Baseline:** this audit is *post* UX-1…UX-8 (D-#265) and post ui-guidelines adoption (D-#61). It does not
 re-report gaps those programs already fixed (toasts, confirm sheets, DateField, searchable Select,
@@ -233,7 +238,7 @@ text) — good. OS font scaling is not disabled — good.
 
 | # | Sev | Screen / area | Issue | Evidence | User impact |
 |---|---|---|---|---|---|
-| F1 | **Critical** | TrackerEntry | Per-student chip+Save, no batch, saved-state not reloaded | TrackerEntryScreen.tsx:66-71,139-148 | 60+ taps per class; re-entry shows blank slate → double entry / abandonment of the tracking loop |
+| F1 | **Critical** — **FIXED 2026-07-17** | TrackerEntry | Per-student chip+Save, no batch, saved-state not reloaded. Fixed: one-tap `OutcomeSegment` (optimistic save + আনডু), `BatchBar` (one `recordEntries` mutation, unrecorded rows only, 3 taps for all+2 exceptions), `ScoreSheet` marks numpad, sticky "১২/৩০ রেকর্ড হয়েছে" progress header, hydration via client-side sha256 pseudonym map, QueryGate, confirm-close → per-student summary | TrackerEntryScreen.tsx:66-71,139-148 | 60+ taps per class; re-entry shows blank slate → double entry / abandonment of the tracking loop |
 | F2 | **Critical** — **FIXED 2026-07-16** | 30 query screens incl. all 7 guardian screens | No error state — failures & offline render as "empty". Fixed: shared `QueryGate` (Loader/ErrorBanner+retry/offline via netinfo) swept over all 30 | e.g. ChildHomeworkScreen.tsx:212, RoutineHomeScreen.tsx:116 | Guardians/teachers silently see wrong "no data"; trust damage; no recovery path |
 | F3 | **Critical** — **FIXED 2026-07-16** | ChatThread, SetDetail, AssignmentSchedule | Destructive mutations without confirmation; SetDetail also discarded the mutation result. Fixed: `confirmAction` + toast feedback + result handling (incl. SetDetail `onSaveName`) | ChatThreadScreen.tsx:176-178,482; SetDetailScreen.tsx:78-82; AssignmentScheduleScreen.tsx:128-134 | One mis-tap permanently deletes a message / silently corrupts a set |
 | F4 | **Major** | QuestionBank | No topic-tag / review-status filter (API supports both), no text/qid search | QuestionBankScreen.tsx:113-124; operations.ts:735,742 | The "tagged question bank" value prop is unusable at scale; teachers eyeball long lists |

@@ -135,6 +135,95 @@ export async function recordEntry(input: RecordEntryInput): Promise<RecordEntryR
 }
 
 // ---------------------------------------------------------------------------
+// recordEntries — batch upsert/clear (ux-audit F1 one-tap redesign)
+// ---------------------------------------------------------------------------
+
+export interface BatchEntryInput {
+  studentId: string;
+  /** CT only */
+  score?: number;
+  /** AS only */
+  submitted?: boolean;
+  /** HW only */
+  complete?: boolean;
+  /** Remove this student's entry entirely (undo of a fresh record). */
+  clear?: boolean;
+}
+
+export interface RecordEntriesInput {
+  trackerId: string;
+  entries: BatchEntryInput[];
+  actorId: string;
+}
+
+export interface RecordEntriesResult {
+  trackerId: string;
+  entryCount: number;
+}
+
+/**
+ * Upsert (or clear) many student entries in one open tracker with a single
+ * document save. Each written entry emits a tracker_recorded CorpusEvent
+ * (insertMany, de-identified — ADR-005); `clear` removals emit no event.
+ */
+export async function recordEntries(input: RecordEntriesInput): Promise<RecordEntriesResult> {
+  const tracker = await TrackerRecord.findById(input.trackerId);
+  if (!tracker) throw new Error("TrackerRecord not found");
+  if (tracker.status !== "open") throw new Error("Tracker is closed");
+
+  const written: string[] = []; // pseudoStudentIds that got a value written
+
+  for (const entry of input.entries) {
+    const pseudoStudentId = pseudonymize(entry.studentId);
+    const idx = tracker.entries.findIndex((e) => e.pseudoStudentId === pseudoStudentId);
+
+    if (entry.clear) {
+      if (idx >= 0) tracker.entries.splice(idx, 1);
+      continue;
+    }
+
+    if (idx >= 0) {
+      if (entry.score !== undefined) tracker.entries[idx].score = entry.score;
+      if (entry.submitted !== undefined) tracker.entries[idx].submitted = entry.submitted;
+      if (entry.complete !== undefined) tracker.entries[idx].complete = entry.complete;
+    } else {
+      tracker.entries.push({
+        pseudoStudentId,
+        score: entry.score,
+        submitted: entry.submitted,
+        complete: entry.complete,
+      });
+    }
+    written.push(pseudoStudentId);
+  }
+
+  await tracker.save();
+
+  if (written.length > 0) {
+    const pseudoActorId = Buffer.from(input.actorId).toString("base64");
+    const occurredAt = new Date();
+    await CorpusEvent.insertMany(
+      written.map((pseudoStudentId) => ({
+        eventKind: "tracker_recorded",
+        pseudoActorId,
+        occurredAt,
+        meta: {
+          trackerId: tracker._id.toString(),
+          trackerKind: tracker.trackerKind,
+          pseudoStudentId,
+          setId: tracker.setId.toString(),
+        },
+      })),
+    );
+  }
+
+  return {
+    trackerId: tracker._id.toString(),
+    entryCount: tracker.entries.length,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // closeTracker
 // ---------------------------------------------------------------------------
 

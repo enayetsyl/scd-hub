@@ -1108,6 +1108,32 @@ export const RECORD_ENTRY = gql<
   }
 `;
 
+/** One row of the recordEntries batch (ux-audit F1). `clear` removes the entry (undo). */
+export interface TrackerEntryInputT {
+  studentId: string;
+  score?: number | null;
+  submitted?: boolean | null;
+  complete?: boolean | null;
+  clear?: boolean | null;
+}
+
+export interface RecordEntriesResultT {
+  trackerId: string;
+  entryCount: number;
+}
+
+export const RECORD_ENTRIES = gql<
+  { recordEntries: RecordEntriesResultT },
+  { trackerId: string; entries: TrackerEntryInputT[] }
+>`
+  mutation RecordEntries($trackerId: String!, $entries: [TrackerEntryInput!]!) {
+    recordEntries(trackerId: $trackerId, entries: $entries) {
+      trackerId
+      entryCount
+    }
+  }
+`;
+
 export interface CloseTrackerResultT {
   trackerId: string;
   status: string;

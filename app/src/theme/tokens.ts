@@ -40,6 +40,7 @@ export const fonts = {
 
 /** §5 — type scale (sp; OS font scaling stays enabled). */
 export const typeScale = {
+  display: { fontSize: 28, lineHeight: 36, fontFamily: fonts.bold },
   pageTitle: { fontSize: 22, lineHeight: 30, fontFamily: fonts.bold },
   sectionTitle: { fontSize: 18, lineHeight: 24, fontFamily: fonts.bold },
   body: { fontSize: 16, lineHeight: 24, fontFamily: fonts.regular },

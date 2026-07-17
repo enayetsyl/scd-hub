@@ -20,6 +20,7 @@ import { builder } from "../../../schema";
 import {
   openTracker as openTrackerSvc,
   recordEntry as recordEntrySvc,
+  recordEntries as recordEntriesSvc,
   closeTracker as closeTrackerSvc,
   listTrackers,
   getTrackerSummary,
@@ -245,6 +246,73 @@ builder.mutationField("recordEntry", (t) =>
         score: args.score ?? undefined,
         submitted: args.submitted ?? undefined,
         complete: args.complete ?? undefined,
+        actorId: ctx.auth.userId as string,
+      });
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Mutation: recordEntries — batch upsert/clear (ux-audit F1)
+// ---------------------------------------------------------------------------
+
+const TrackerEntryInput = builder.inputType("TrackerEntryInput", {
+  fields: (t) => ({
+    studentId: t.string({ required: true }),
+    /** CT only */
+    score: t.float({ required: false }),
+    /** AS only */
+    submitted: t.boolean({ required: false }),
+    /** HW only */
+    complete: t.boolean({ required: false }),
+    /** Remove this student's entry (undo of a fresh record). */
+    clear: t.boolean({ required: false }),
+  }),
+});
+
+interface RecordEntriesResultShape {
+  trackerId: string;
+  entryCount: number;
+}
+
+const RecordEntriesResultRef = builder.objectRef<RecordEntriesResultShape>("RecordEntriesResult");
+RecordEntriesResultRef.implement({
+  fields: (t) => ({
+    trackerId: t.exposeString("trackerId"),
+    entryCount: t.exposeInt("entryCount"),
+  }),
+});
+
+builder.mutationField("recordEntries", (t) =>
+  t.field({
+    type: RecordEntriesResultRef,
+    description:
+      "Batch record/update/clear student entries in an open tracker with one save. Write-scope enforced (J4.5).",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      trackerId: t.arg.string({ required: true }),
+      entries: t.arg({ type: [TrackerEntryInput], required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+
+      const trackerDoc = await TrackerRecord.findById(args.trackerId).lean() as LeanTracker | null;
+      if (!trackerDoc) throw new Error("TrackerRecord not found");
+      await assertCanWrite(
+        ctx,
+        trackerDoc.sectionId.toString(),
+        trackerDoc.subjectId ? trackerDoc.subjectId.toString() : undefined,
+      );
+
+      return recordEntriesSvc({
+        trackerId: args.trackerId,
+        entries: args.entries.map((e) => ({
+          studentId: e.studentId,
+          score: e.score ?? undefined,
+          submitted: e.submitted ?? undefined,
+          complete: e.complete ?? undefined,
+          clear: e.clear ?? undefined,
+        })),
         actorId: ctx.auth.userId as string,
       });
     },
