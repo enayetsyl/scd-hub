@@ -23,7 +23,8 @@ import {
   type RevisionDashboardT,
   type RevisionMistakesAggT,
 } from "../../graphql/revision";
-import { Screen, Card, Body, Muted, Button, Field, Badge, Notice, Loader } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Field, Badge, Notice } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum, classLevelLabel, revCategoryLabel, revMistakeLabel, revTrendGlyph } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { RevisionStackParamList } from "../../navigation/types";
@@ -91,33 +92,33 @@ export default function RevisionDashboardScreen({ route }: Props): React.ReactEl
   const [studentId, setStudentId] = useState("");
   const [activeStudent, setActiveStudent] = useState<string | null>(null);
 
-  const [levelQ] = useQuery({
+  const [levelQ, refetchLevel] = useQuery({
     query: REVISION_LEVEL_DASHBOARD_QUERY,
     variables: { groupId: groupId ?? "", asOf },
     pause: !groupId,
   });
-  const [coverageQ] = useQuery({
+  const [coverageQ, refetchCoverage] = useQuery({
     query: REVISION_GROUP_COVERAGE_QUERY,
     variables: { groupId: groupId ?? "", asOf, windowDays: null },
     pause: !groupId,
   });
-  const [trendQ] = useQuery({
+  const [trendQ, refetchTrend] = useQuery({
     query: REVISION_WEEKLY_TREND_QUERY,
     variables: { groupId: groupId ?? null, studentId: null, asOf },
     pause: !groupId,
   });
-  const [mistakeQ] = useQuery({
+  const [mistakeQ, refetchMistake] = useQuery({
     query: REVISION_MISTAKE_BREAKDOWN_QUERY,
     variables: { groupId: groupId ?? null, studentId: null, asOf },
     pause: !groupId,
   });
-  const [weaknessQ] = useQuery({
+  const [weaknessQ, refetchWeakness] = useQuery({
     query: STUDENT_JUZ_WEAKNESS_QUERY,
     variables: { studentId: activeStudent ?? "", asOf },
     pause: !activeStudent,
   });
-  const [completeQ] = useQuery({ query: REVISION_COMPLETENESS_STATUS_QUERY, variables: { date } });
-  const [chaseQ] = useQuery({ query: REVISION_COMPLETENESS_CHASE_QUERY, variables: { date } });
+  const [completeQ, refetchComplete] = useQuery({ query: REVISION_COMPLETENESS_STATUS_QUERY, variables: { date } });
+  const [chaseQ, refetchChase] = useQuery({ query: REVISION_COMPLETENESS_CHASE_QUERY, variables: { date } });
 
   const coverage = coverageQ.data?.revisionGroupCoverage ?? [];
   const overdue = coverage.filter((c) => c.overdue);
@@ -136,11 +137,22 @@ export default function RevisionDashboardScreen({ route }: Props): React.ReactEl
           </Muted>
         </Card>
 
+        <QueryGate
+          results={[levelQ, coverageQ, trendQ, mistakeQ, weaknessQ, completeQ, chaseQ]}
+          onRetry={() => {
+            refetchLevel({ requestPolicy: "network-only" });
+            refetchCoverage({ requestPolicy: "network-only" });
+            refetchTrend({ requestPolicy: "network-only" });
+            refetchMistake({ requestPolicy: "network-only" });
+            refetchWeakness({ requestPolicy: "network-only" });
+            refetchComplete({ requestPolicy: "network-only" });
+            refetchChase({ requestPolicy: "network-only" });
+          }}
+          loaderLabel={STR.loading}
+        >
         {/* Level dashboard — only when a group is in scope */}
         {groupId ? (
-          levelQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : levelQ.data?.revisionLevelDashboard ? (
+          levelQ.data?.revisionLevelDashboard ? (
             <DashboardCard dash={levelQ.data.revisionLevelDashboard} />
           ) : null
         ) : null}
@@ -151,9 +163,7 @@ export default function RevisionDashboardScreen({ route }: Props): React.ReactEl
             <Body style={{ fontWeight: "700" }}>
               {STR.revTrend} {trend ? revTrendGlyph(trend.trend) : ""}
             </Body>
-            {trendQ.fetching ? (
-              <Loader label={STR.loading} />
-            ) : !trend || trend.points.length === 0 ? (
+            {!trend || trend.points.length === 0 ? (
               <Muted style={{ marginTop: space(2) }}>{STR.revNoData}</Muted>
             ) : (
               trend.points.map((p) => (
@@ -176,9 +186,7 @@ export default function RevisionDashboardScreen({ route }: Props): React.ReactEl
         {groupId ? (
           <Card>
             <Body style={{ fontWeight: "700" }}>{STR.revMistakeBreakdown}</Body>
-            {mistakeQ.fetching ? (
-              <Loader label={STR.loading} />
-            ) : mistakeQ.data?.revisionMistakeBreakdown ? (
+            {mistakeQ.data?.revisionMistakeBreakdown ? (
               <MistakeList m={mistakeQ.data.revisionMistakeBreakdown} />
             ) : (
               <Muted style={{ marginTop: space(2) }}>{STR.revNoData}</Muted>
@@ -190,9 +198,7 @@ export default function RevisionDashboardScreen({ route }: Props): React.ReactEl
         {groupId ? (
           <Card>
             <Body style={{ fontWeight: "700" }}>{STR.revCoverage}</Body>
-            {coverageQ.fetching ? (
-              <Loader label={STR.loading} />
-            ) : overdue.length === 0 ? (
+            {overdue.length === 0 ? (
               <Muted style={{ marginTop: space(2) }}>{STR.revNoData}</Muted>
             ) : (
               overdue.map((c, i) => (
@@ -219,9 +225,7 @@ export default function RevisionDashboardScreen({ route }: Props): React.ReactEl
           <Field label={STR.revStudentId} value={studentId} onChangeText={setStudentId} />
           <Button title={STR.revLoad} variant="secondary" onPress={() => setActiveStudent(studentId.trim() || null)} />
           {activeStudent ? (
-            weaknessQ.fetching ? (
-              <Loader label={STR.loading} />
-            ) : (weaknessQ.data?.studentJuzWeakness ?? []).length === 0 ? (
+            (weaknessQ.data?.studentJuzWeakness ?? []).length === 0 ? (
               <Muted style={{ marginTop: space(2) }}>{STR.revNoData}</Muted>
             ) : (
               (weaknessQ.data?.studentJuzWeakness ?? []).map((w) => (
@@ -246,9 +250,7 @@ export default function RevisionDashboardScreen({ route }: Props): React.ReactEl
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.revCompleteness}</Body>
           <Muted>{STR.revIncompleteGroups}</Muted>
-          {completeQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : incomplete.length === 0 ? (
+          {incomplete.length === 0 ? (
             <Notice message={STR.revAllComplete} tone="ok" />
           ) : (
             incomplete.map((g) => (
@@ -289,6 +291,7 @@ export default function RevisionDashboardScreen({ route }: Props): React.ReactEl
             ))}
           </Card>
         ) : null}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );

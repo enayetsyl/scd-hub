@@ -11,7 +11,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { roleHasPermission } from "@scd/shared";
 import { MY_CLASS_TESTS_QUERY } from "../../graphql/classTest";
-import { Screen, Card, Body, Muted, Button, Badge, Loader } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, hwSubjectLabel, classTestStatusLabel, bnNum } from "../../lib/labels";
 import { space } from "../../theme/tokens";
@@ -28,7 +29,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
   const canPrint = !!role && roleHasPermission(role, "roster:manage");
   const isAdmin = role === "PRINCIPAL" || role === "OFFICE";
 
-  const [myQ] = useQuery({ query: MY_CLASS_TESTS_QUERY, variables: {} });
+  const [myQ, refetchMy] = useQuery({ query: MY_CLASS_TESTS_QUERY, variables: {} });
   const mine = myQ.data?.myClassTests ?? [];
 
   return (
@@ -55,9 +56,12 @@ export default function ClassTestHomeScreen(): React.ReactElement {
 
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.ctMyTests}</Body>
-          {myQ.fetching ? (
-            <Loader label={STR.loading} />
-          ) : mine.length === 0 ? (
+          <QueryGate
+            result={myQ}
+            onRetry={() => refetchMy({ requestPolicy: "network-only" })}
+            loaderLabel={STR.loading}
+          >
+          {mine.length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.ctNoMyTests}</Muted>
           ) : (
             mine.map((t) => (
@@ -117,6 +121,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
               </View>
             ))
           )}
+          </QueryGate>
         </Card>
       </ScrollView>
     </Screen>

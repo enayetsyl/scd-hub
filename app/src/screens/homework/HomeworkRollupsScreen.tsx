@@ -41,9 +41,9 @@ export default function HomeworkRollupsScreen({ navigation }: Props): React.Reac
   const base = { sectionId: selection.sectionId ?? "", classId: selection.classId ?? "" };
   const { from, to } = monthRange(month);
 
-  const [watchQ] = useQuery({ query: HOMEWORK_WATCHLIST, variables: base, pause: !hasSection });
-  const [trimQ] = useQuery({ query: HOMEWORK_TRIM_PATTERN, variables: { ...base, from, to }, pause: !hasSection });
-  const [usageQ] = useQuery({ query: QUESTION_USAGE_FEED, variables: base, pause: !hasSection });
+  const [watchQ, refetchWatch] = useQuery({ query: HOMEWORK_WATCHLIST, variables: base, pause: !hasSection });
+  const [trimQ, refetchTrim] = useQuery({ query: HOMEWORK_TRIM_PATTERN, variables: { ...base, from, to }, pause: !hasSection });
+  const [usageQ, refetchUsage] = useQuery({ query: QUESTION_USAGE_FEED, variables: base, pause: !hasSection });
 
   const watch = watchQ.data?.homeworkWatchList;
   const trim = trimQ.data?.homeworkTrimPattern;
@@ -62,7 +62,14 @@ export default function HomeworkRollupsScreen({ navigation }: Props): React.Reac
         {!hasSection ? (
           <EmptyState message={STR.pickSection} />
         ) : anyError ? (
-          <ErrorBanner message={friendlyError(watchQ.error ?? trimQ.error ?? usageQ.error)} />
+          <ErrorBanner
+            message={friendlyError(watchQ.error ?? trimQ.error ?? usageQ.error)}
+            onRetry={() => {
+              refetchWatch({ requestPolicy: "network-only" });
+              refetchTrim({ requestPolicy: "network-only" });
+              refetchUsage({ requestPolicy: "network-only" });
+            }}
+          />
         ) : loading ? (
           <Loader label={STR.loading} />
         ) : (

@@ -10,7 +10,8 @@ import { useQuery } from "urql";
 import { roleHasPermission } from "@scd/shared";
 import { SUBJECT_GROUPS_QUERY } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
-import { Screen, Body, Muted, Card, Button, Badge, Loader } from "../../components/ui";
+import { Screen, Body, Muted, Card, Button, Badge } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
 import { STR, periodTrackLabel, getActiveLang } from "../../lib/labels";
 import { useSectionContext } from "../../state/SectionContext";
@@ -24,7 +25,7 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
   const { role, user } = useAuth();
   const lang = getActiveLang();
   const canManage = !!role && roleHasPermission(role, "routine:manage");
-  const [groupsQ] = useQuery({ query: SUBJECT_GROUPS_QUERY, variables: { track: null } });
+  const [groupsQ, refetchGroups] = useQuery({ query: SUBJECT_GROUPS_QUERY, variables: { track: null } });
   const sectionLabel = lang === "en" ? selection.sectionCode ?? selection.sectionNameBn : selection.sectionNameBn;
   const routineTitle = sectionLabel ?? STR.rtSectionRoutine;
 
@@ -113,7 +114,7 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
         </Card>
 
         <Body style={{ fontWeight: "700", marginTop: space(2) }}>{STR.rtSubjectGroups}</Body>
-        {groupsQ.fetching ? <Loader /> : null}
+        <QueryGate result={groupsQ} onRetry={() => refetchGroups({ requestPolicy: "network-only" })}>
         {groupsQ.data && groupsQ.data.subjectGroups.length === 0 ? <Muted>{STR.empty}</Muted> : null}
         {groupsQ.data?.subjectGroups.map((g) => (
           <Card key={g.id}>
@@ -154,6 +155,7 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
             </View>
           </Card>
         ))}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );

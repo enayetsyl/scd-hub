@@ -13,7 +13,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { STUDENTS_QUERY } from "../../graphql/operations";
 import { SECTION_STUDENT_COMMENTS_QUERY } from "../../graphql/comments";
-import { Screen, Card, Body, Muted, Button, Badge, Loader } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
 import { STR, commentTypeLabel, commentSentimentLabel } from "../../lib/labels";
@@ -28,7 +29,7 @@ export default function SectionCommentsScreen(): React.ReactElement {
   const [section, setSection] = useState<SectionPick | null>(null);
   const sectionId = section?.sectionId ?? "";
 
-  const [studentsQ] = useQuery({ query: STUDENTS_QUERY, variables: { sectionId }, pause: !sectionId });
+  const [studentsQ, refetchStudents] = useQuery({ query: STUDENTS_QUERY, variables: { sectionId }, pause: !sectionId });
   const students = (studentsQ.data?.studentsInSection ?? []).filter((s) => s.active);
   const nameById = useMemo(() => {
     const m = new Map<string, string>();
@@ -71,12 +72,17 @@ export default function SectionCommentsScreen(): React.ReactElement {
             <Muted>{STR.cmNoSection}</Muted>
           </Card>
         ) : (
-          <>
+          <QueryGate
+            results={[studentsQ, commentsQ]}
+            onRetry={() => {
+              refetchStudents({ requestPolicy: "network-only" });
+              refetchComments({ requestPolicy: "network-only" });
+            }}
+            loaderLabel={STR.loading}
+          >
             <Card>
               <Body style={{ fontWeight: "700" }}>{STR.cmStudents}</Body>
-              {studentsQ.fetching ? (
-                <Loader label={STR.loading} />
-              ) : students.length === 0 ? (
+              {students.length === 0 ? (
                 <Muted style={{ marginTop: space(2) }}>{STR.cmNoStudents}</Muted>
               ) : (
                 students.map((s) => (
@@ -102,9 +108,7 @@ export default function SectionCommentsScreen(): React.ReactElement {
 
             <Card>
               <Body style={{ fontWeight: "700" }}>{STR.cmCommentsFor}</Body>
-              {commentsQ.fetching ? (
-                <Loader label={STR.loading} />
-              ) : comments.length === 0 ? (
+              {comments.length === 0 ? (
                 <Muted style={{ marginTop: space(2) }}>{STR.cmNoComments}</Muted>
               ) : (
                 comments.map((c) => {
@@ -139,7 +143,7 @@ export default function SectionCommentsScreen(): React.ReactElement {
                 })
               )}
             </Card>
-          </>
+          </QueryGate>
         )}
       </ScrollView>
     </Screen>

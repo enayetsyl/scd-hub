@@ -30,6 +30,8 @@ import {
 } from "../../components/ui";
 import { STR, setTypeLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useConfirm } from "../../state/ConfirmContext";
+import { useToast } from "../../state/ToastContext";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { parsePayload, prettyCode, type QuestionPayload } from "../../lib/question";
 import { AnswerCarrier } from "../../components/QuestionAnswer";
@@ -50,6 +52,8 @@ export default function SetDetailScreen({ route, navigation }: Props): React.Rea
   });
   const [, removeQuestion] = useMutation(REMOVE_QUESTION_FROM_SET);
   const [, renameSetMut] = useMutation(RENAME_SET);
+  const { confirmAction } = useConfirm();
+  const toast = useToast();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [nameBusy, setNameBusy] = useState(false);
@@ -76,9 +80,15 @@ export default function SetDetailScreen({ route, navigation }: Props): React.Rea
   }
 
   async function onRemove(artifactId: string): Promise<void> {
+    if (!(await confirmAction({ message: STR.setRemoveQuestionConfirm, confirmLabel: STR.remove }))) return;
     setBusyId(artifactId);
-    await removeQuestion({ setId, artifactId });
+    const res = await removeQuestion({ setId, artifactId });
     setBusyId(null);
+    if (res.error) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
+    toast.show(STR.setQuestionRemoved, "ok");
   }
 
   function startRename(): void {
@@ -88,8 +98,12 @@ export default function SetDetailScreen({ route, navigation }: Props): React.Rea
 
   async function onSaveName(): Promise<void> {
     setNameBusy(true);
-    await renameSetMut({ setId, name: nameInput.trim() });
+    const res = await renameSetMut({ setId, name: nameInput.trim() });
     setNameBusy(false);
+    if (res.error) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
     setEditingName(false);
   }
 

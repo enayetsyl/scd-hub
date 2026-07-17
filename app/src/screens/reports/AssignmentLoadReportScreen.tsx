@@ -7,7 +7,8 @@ import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
 import { ACADEMIC_YEARS_QUERY, ASSIGNMENT_LOAD_REPORT, type AssignmentLoadRowT } from "../../graphql/operations";
-import { Screen, Body, Muted, Card, Select, Loader, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Select, EmptyState } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { space, useColors } from "../../theme";
 
@@ -40,13 +41,13 @@ function Table({ title, rows, subjectLabels }: { title: string; rows: Assignment
 }
 
 export default function AssignmentLoadReportScreen(): React.ReactElement {
-  const [yearsQ] = useQuery({ query: ACADEMIC_YEARS_QUERY });
+  const [yearsQ, refetchYears] = useQuery({ query: ACADEMIC_YEARS_QUERY });
   const years = yearsQ.data?.academicYears ?? [];
   const [pickedYearId, setPickedYearId] = useState<string | null>(null);
   const defaultYear = years.find((y) => y.current) ?? years[0];
   const yearId = pickedYearId ?? defaultYear?.id ?? "";
 
-  const [q] = useQuery({ query: ASSIGNMENT_LOAD_REPORT, variables: { academicYearId: yearId }, pause: !yearId });
+  const [q, refetch] = useQuery({ query: ASSIGNMENT_LOAD_REPORT, variables: { academicYearId: yearId }, pause: !yearId });
   const report = q.data?.assignmentLoadReport ?? null;
 
   return (
@@ -64,9 +65,15 @@ export default function AssignmentLoadReportScreen(): React.ReactElement {
           />
         </Card>
 
-        {q.fetching && !report ? (
-          <Loader label={STR.loading} />
-        ) : !report ? (
+        <QueryGate
+          results={[yearsQ, q]}
+          onRetry={() => {
+            refetchYears({ requestPolicy: "network-only" });
+            refetch({ requestPolicy: "network-only" });
+          }}
+          loaderLabel={STR.loading}
+        >
+        {!report ? (
           <EmptyState message={STR.empty} />
         ) : (
           <>
@@ -74,6 +81,7 @@ export default function AssignmentLoadReportScreen(): React.ReactElement {
             <Table title={STR.alByTeacher} rows={report.byTeacher} subjectLabels={false} />
           </>
         )}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );

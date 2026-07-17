@@ -10,6 +10,7 @@ import { ScrollView, View, RefreshControl } from "react-native";
 import { useQuery } from "urql";
 import { CHILD_HOMEWORK_QUERY, CHILD_HW_NIL_DAYS, type GuardianHwRecordT } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { DateField } from "../../components/DateField";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
@@ -135,7 +136,7 @@ export default function ChildHomeworkScreen(): React.ReactElement {
     pause: !selected,
   });
   // D-#299: the class's explicit "no homework" days in the same range.
-  const [nilQ] = useQuery({
+  const [nilQ, refetchNil] = useQuery({
     query: CHILD_HW_NIL_DAYS,
     variables: { studentId: selected?.studentId ?? "", from, to },
     pause: !selected,
@@ -197,29 +198,36 @@ export default function ChildHomeworkScreen(): React.ReactElement {
           </View>
         </View>
         {fileError ? <Notice message={fileError} tone="danger" /> : null}
-        {nilDays.length > 0 ? (
-          <Card>
-            {nilDays.map((n) => (
-              <Muted key={`${n.dateKey}|${n.subject}`}>
-                {bnNum(n.dateKey)} · {n.subjectLabelBn} — {STR.hwNilGuardian} ({hwNilReasonLabel(n.reason)})
-              </Muted>
-            ))}
-          </Card>
-        ) : null}
-        {hwQ.fetching && records.length === 0 ? (
-          <Loader label={STR.loading} />
-        ) : byDay.length === 0 ? (
-          <EmptyState message={STR.gpNoHomework} />
-        ) : (
-          byDay.map((g) => (
-            <View key={g.day}>
-              <Muted style={{ marginTop: space(3), marginBottom: space(1) }}>{bnNum(g.day)}</Muted>
-              {g.rows.map((r) => (
-                <RecordCard key={r.recordId} record={r} onOpenFile={onOpenFile} />
+        <QueryGate
+          results={[hwQ, nilQ]}
+          onRetry={() => {
+            refetchHw({ requestPolicy: "network-only" });
+            refetchNil({ requestPolicy: "network-only" });
+          }}
+          loaderLabel={STR.loading}
+        >
+          {nilDays.length > 0 ? (
+            <Card>
+              {nilDays.map((n) => (
+                <Muted key={`${n.dateKey}|${n.subject}`}>
+                  {bnNum(n.dateKey)} · {n.subjectLabelBn} — {STR.hwNilGuardian} ({hwNilReasonLabel(n.reason)})
+                </Muted>
               ))}
-            </View>
-          ))
-        )}
+            </Card>
+          ) : null}
+          {byDay.length === 0 ? (
+            <EmptyState message={STR.gpNoHomework} />
+          ) : (
+            byDay.map((g) => (
+              <View key={g.day}>
+                <Muted style={{ marginTop: space(3), marginBottom: space(1) }}>{bnNum(g.day)}</Muted>
+                {g.rows.map((r) => (
+                  <RecordCard key={r.recordId} record={r} onOpenFile={onOpenFile} />
+                ))}
+              </View>
+            ))
+          )}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );

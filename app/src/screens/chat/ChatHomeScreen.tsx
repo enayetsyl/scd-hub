@@ -13,7 +13,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import { roleHasPermission } from "@scd/shared";
 import { MY_CONVERSATIONS_QUERY, type ConversationT } from "../../graphql/operations";
 import type { ChatStackParamList } from "../../navigation/types";
-import { Screen, Card, Body, Muted, Button, Badge, EmptyState, Loader } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge, EmptyState } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum } from "../../lib/labels";
 import { conversationTitle, conversationKindLabel } from "../../lib/chat";
@@ -117,22 +118,26 @@ export default function ChatHomeScreen({ navigation }: Props): React.ReactElemen
         </View>
       ) : null}
 
-      {convQ.fetching && conversations.length === 0 ? (
-        <Loader label={STR.loading} />
-      ) : conversations.length === 0 ? (
-        <EmptyState message={STR.chatNoConversations} />
-      ) : (
-        conversations.map((c) => (
-          <ConversationRow
-            key={c.id}
-            conv={c}
-            myUserId={myUserId}
-            onPress={() =>
-              navigation.navigate("ChatThread", { conversationId: c.id, title: conversationTitle(c, myUserId) })
-            }
-          />
-        ))
-      )}
+      <QueryGate
+        result={convQ}
+        onRetry={() => refetch({ requestPolicy: "network-only" })}
+        loaderLabel={STR.loading}
+      >
+        {conversations.length === 0 ? (
+          <EmptyState message={STR.chatNoConversations} />
+        ) : (
+          conversations.map((c) => (
+            <ConversationRow
+              key={c.id}
+              conv={c}
+              myUserId={myUserId}
+              onPress={() =>
+                navigation.navigate("ChatThread", { conversationId: c.id, title: conversationTitle(c, myUserId) })
+              }
+            />
+          ))
+        )}
+      </QueryGate>
     </Screen>
   );
 }

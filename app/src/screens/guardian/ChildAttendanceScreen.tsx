@@ -7,6 +7,7 @@ import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
 import { CHILD_ATTENDANCE_HISTORY_QUERY } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Badge, Loader, EmptyState } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { DateField } from "../../components/DateField";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
@@ -50,7 +51,7 @@ export default function ChildAttendanceScreen(): React.ReactElement {
   const [fromKey, setFromKey] = useState(daysAgo(30));
   const [toKey, setToKey] = useState(isoDay(new Date()));
 
-  const [q] = useQuery({
+  const [q, refetchQ] = useQuery({
     query: CHILD_ATTENDANCE_HISTORY_QUERY,
     variables: { studentId: selected?.studentId ?? "", fromKey, toKey },
     pause: !selected,
@@ -90,9 +91,12 @@ export default function ChildAttendanceScreen(): React.ReactElement {
           </View>
         </Card>
 
-        {q.fetching ? (
-          <Loader label={STR.loading} />
-        ) : history ? (
+        <QueryGate
+          result={q}
+          onRetry={() => refetchQ({ requestPolicy: "network-only" })}
+          loaderLabel={STR.loading}
+        >
+        {history ? (
           <>
             <Card>
               <Body style={{ fontWeight: "700" }}>{lang === "en" ? selected.name : selected.nameBn}</Body>
@@ -114,6 +118,7 @@ export default function ChildAttendanceScreen(): React.ReactElement {
         ) : (
           <EmptyState message={STR.empty} />
         )}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );

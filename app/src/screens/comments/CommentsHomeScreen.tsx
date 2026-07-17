@@ -14,7 +14,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { roleHasPermission } from "@scd/shared";
 import { MY_STUDENT_COMMENTS_QUERY } from "../../graphql/comments";
-import { Screen, Card, Body, Muted, Button, Badge, Loader } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, commentTypeLabel, commentSentimentLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
@@ -83,9 +84,12 @@ export default function CommentsHomeScreen(): React.ReactElement {
           <Card>
             <Body style={{ fontWeight: "700" }}>{STR.cmMyComments}</Body>
             <Muted style={{ marginTop: space(1) }}>{STR.cmMyCommentsSub}</Muted>
-            {mineQ.fetching && mine.length === 0 ? (
-              <Loader label={STR.loading} />
-            ) : mine.length === 0 ? (
+            <QueryGate
+              result={mineQ}
+              onRetry={() => refetchMine({ requestPolicy: "network-only" })}
+              loaderLabel={STR.loading}
+            >
+            {mine.length === 0 ? (
               <Muted style={{ marginTop: space(2) }}>{STR.cmNoMyComments}</Muted>
             ) : (
               mine.map((c) => (
@@ -114,6 +118,7 @@ export default function CommentsHomeScreen(): React.ReactElement {
                 </Card>
               ))
             )}
+            </QueryGate>
           </Card>
         ) : null}
       </ScrollView>

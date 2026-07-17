@@ -33,7 +33,7 @@ export default function MarkAttendanceScreen({ route }: Props): React.ReactEleme
   const [busy, setBusy] = useState(false);
   const toast = useToast();
 
-  const [rosterQ] = useQuery({ query: ATTENDANCE_UNIT_ROSTER, variables: { unitType, unitId, dateKey } });
+  const [rosterQ, refetchRoster] = useQuery({ query: ATTENDANCE_UNIT_ROSTER, variables: { unitType, unitId, dateKey } });
   const [dayQ, refetchDay] = useQuery({
     query: ATTENDANCE_UNIT_DAY,
     variables: { unitType, unitId, dateKey },
@@ -85,7 +85,10 @@ export default function MarkAttendanceScreen({ route }: Props): React.ReactEleme
       <Muted>{dateKey} · {STR.attTapAbsent}</Muted>
 
       {rosterQ.error ? (
-        <ErrorBanner message={friendlyError(rosterQ.error)} />
+        <ErrorBanner
+          message={friendlyError(rosterQ.error)}
+          onRetry={() => refetchRoster({ requestPolicy: "network-only" })}
+        />
       ) : rosterQ.fetching ? (
         <Loader label={STR.loading} />
       ) : totalStudents === 0 ? (

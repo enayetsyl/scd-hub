@@ -7,6 +7,7 @@ import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
 import { CHILD_FEE_DUE_QUERY } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Loader, EmptyState, Notice } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { STR, bnNum, getActiveLang } from "../../lib/labels";
@@ -16,7 +17,7 @@ export default function ChildFeesScreen(): React.ReactElement {
   const { selected, fetching } = useGuardianChild();
   const lang = getActiveLang();
 
-  const [q] = useQuery({
+  const [q, refetchQ] = useQuery({
     query: CHILD_FEE_DUE_QUERY,
     variables: { studentId: selected?.studentId ?? "" },
     pause: !selected,
@@ -49,9 +50,12 @@ export default function ChildFeesScreen(): React.ReactElement {
           <Muted style={{ marginTop: space(1) }}>{STR.open}</Muted>
         </Card>
 
-        {q.fetching ? (
-          <Loader label={STR.loading} />
-        ) : due ? (
+        <QueryGate
+          result={q}
+          onRetry={() => refetchQ({ requestPolicy: "network-only" })}
+          loaderLabel={STR.loading}
+        >
+        {due ? (
           <>
             <Card>
               <Body style={{ fontWeight: "700" }}>{lang === "en" ? selected.name : selected.nameBn}</Body>
@@ -68,6 +72,7 @@ export default function ChildFeesScreen(): React.ReactElement {
         ) : (
           <EmptyState message={STR.empty} />
         )}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );

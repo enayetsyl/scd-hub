@@ -13,7 +13,8 @@ import { useQuery } from "urql";
 import { HW_SUBJECTS, OBSERVATION_FORMS, OBSERVATION_STATES } from "@scd/shared";
 import { ALL_CLASSROOM_OBSERVATIONS_QUERY } from "../../graphql/observation";
 import { TEACHERS_QUERY } from "../../graphql/operations";
-import { Screen, Card, Body, Muted, Button, Badge, Chip, ChipRow, Field, Select, Loader } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge, Chip, ChipRow, Field, Select } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
 import { DateField } from "../../components/DateField";
 import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel, bnNum } from "../../lib/labels";
 import { space } from "../../theme/tokens";
@@ -80,7 +81,7 @@ export default function AllObservationsScreen(): React.ReactElement {
     return () => clearTimeout(id);
   }, [searchInput]);
 
-  const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
+  const [teachersQ, refetchTeachers] = useQuery({ query: TEACHERS_QUERY });
   const teachers = teachersQ.data?.teachers ?? [];
   const nameById = useMemo(() => {
     const map: Record<string, string> = {};
@@ -89,7 +90,7 @@ export default function AllObservationsScreen(): React.ReactElement {
   }, [teachers]);
   const teacherOptions = useMemo(() => teachers.map((t) => ({ label: t.name, value: t.id })), [teachers]);
 
-  const [obsQ] = useQuery({
+  const [obsQ, refetchObs] = useQuery({
     query: ALL_CLASSROOM_OBSERVATIONS_QUERY,
     variables: {
       form: filters.form,
@@ -240,9 +241,15 @@ export default function AllObservationsScreen(): React.ReactElement {
         </View>
 
         {/* --- Results ----------------------------------------------------- */}
-        {obsQ.fetching && rows.length === 0 ? (
-          <Loader label={STR.loading} />
-        ) : rows.length === 0 ? (
+        <QueryGate
+          result={obsQ}
+          onRetry={() => {
+            refetchObs({ requestPolicy: "network-only" });
+            refetchTeachers({ requestPolicy: "network-only" });
+          }}
+          loaderLabel={STR.loading}
+        >
+        {rows.length === 0 ? (
           <Card>
             <Muted>{STR.obsNoAllObservations}</Muted>
           </Card>
@@ -279,6 +286,7 @@ export default function AllObservationsScreen(): React.ReactElement {
             );
           })
         )}
+        </QueryGate>
       </ScrollView>
     </Screen>
   );
