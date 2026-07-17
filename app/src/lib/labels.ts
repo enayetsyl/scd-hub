@@ -290,6 +290,19 @@ export function dateHeaderLabel(key: string): string {
   return wk ? `${wk} · ${bnNum(key)}` : bnNum(key);
 }
 
+/** Full date header for the Today screen (ux-audit F7): "বুধবার, ১৬ জুলাই ২০২৬" (bn) /
+ *  "Wednesday, 16 July 2026" (en). Component-parses the LOCAL YYYY-MM-DD key —
+ *  never `new Date(key)`, which is UTC midnight and can shift the weekday (D-#304). */
+export function fullDateLabel(key: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!m) return bnNum(key);
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const dow = DAYS_OF_WEEK[d.getDay()];
+  const wk = dow ? pick(DAY_OF_WEEK_LABELS_BN, DAY_OF_WEEK_LABELS_EN)[dow] : "";
+  const datePart = `${bnNum(Number(m[3]))} ${monthLabel(Number(m[2]) - 1)} ${bnNum(Number(m[1]))}`;
+  return wk ? `${wk}, ${datePart}` : datePart;
+}
+
 export const subjectLabel = (code?: string | null): string =>
   (code && pick(SUBJECT_LABELS_BN, SUBJECT_LABELS_EN)[code as Subject]) || code || DASH;
 
@@ -746,8 +759,15 @@ const STR_BN = {
   cnNoNotes: "এই তারিখে কোনো ক্লাস নোট নেই।",
   cnContent: "বিষয়বস্তু",
   cnAuthor: "লিখেছেন",
-  myPeriods: "আমার ক্লাস",
-  pendingWork: "বাকি কাজ",
+  myPeriods: "আমার পিরিয়ড",
+  pendingWork: "অমীমাংসিত কাজ",
+  /** Today redesign (ux-audit F7). */
+  tdRecentSets: "সাম্প্রতিক সেট",
+  tdEmptyDay: "আজ কোনো নির্ধারিত কাজ নেই।",
+  tdNow: "এখন",
+  tdQuestionBank: "প্রশ্নব্যাংক",
+  tdMySets: "আমার সেট",
+  tdLeaveApply: "ছুটির আবেদন",
   /** Today banner: shown in red until the caller submits their attendance (D-#278). */
   attendancePendingBanner: "⚠ আপনার আজকের উপস্থিতি এখনও জমা দেওয়া হয়নি — জমা দিতে ট্যাপ করুন",
   /** Today red backlog alerts (D-#279). */
@@ -3189,7 +3209,14 @@ const STR_EN: StrTable = {
   cnContent: "Content",
   cnAuthor: "Author",
   myPeriods: "My periods",
-  pendingWork: "Pending work",
+  pendingWork: "Unresolved work",
+  /** Today redesign (ux-audit F7). */
+  tdRecentSets: "Recent sets",
+  tdEmptyDay: "No scheduled work today.",
+  tdNow: "Now",
+  tdQuestionBank: "Question bank",
+  tdMySets: "My sets",
+  tdLeaveApply: "Leave request",
   attendancePendingBanner: "⚠ Your attendance is pending — tap to submit",
   alertsTitle: "Pending",
   alertAttendance: "Attendance not submitted",

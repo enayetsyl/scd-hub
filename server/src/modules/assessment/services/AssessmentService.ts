@@ -15,6 +15,7 @@ import type { Types } from "mongoose";
 import { AssessmentSet } from "../models/AssessmentSet";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { CorpusEvent } from "../../corpus/models/CorpusEvent";
+import { TrackerRecord } from "../../trackers/models/TrackerRecord";
 import type { SetType } from "@scd/shared";
 
 export interface CreateSetInput {
@@ -238,6 +239,64 @@ export async function createSetWithQuestions(
     classId: doc.classId.toString(),
     status: doc.status,
   };
+}
+
+export interface RecentSetItem {
+  id: string;
+  setType: SetType;
+  name: string | null;
+  sectionId: string;
+  classId: string;
+  subjectId: string | null;
+  status: string;
+  itemCount: number;
+  totalMarks: number | null;
+  dueDate: string | null;
+  createdAt: string;
+  /** The newest still-open tracker for this set, if any — lets the client route
+   *  straight to TrackerEntry instead of calling the NON-idempotent openTracker
+   *  mutation again (which would create a duplicate TrackerRecord). */
+  openTrackerId: string | null;
+}
+
+/** The caller's most recently created/assembled sets, across ALL their sections
+ *  (ux-audit F7 — the Today-screen "সাম্প্রতিক সেট" shortcut back into tracking).
+ *  Self-scoped: only sets the caller created or assembled — no section arg, so no
+ *  assertCanRead needed beyond the set:read permission gate in the resolver. */
+export async function listMyRecentSets(userId: string, limit = 2): Promise<RecentSetItem[]> {
+  const docs = await AssessmentSet.find({
+    $or: [{ createdBy: userId }, { assembledBy: userId }],
+  })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+
+  const ids = docs.map((d) => d._id.toString());
+  const open = await TrackerRecord.find({ setId: { $in: ids }, status: "open" })
+    .select("setId createdAt")
+    .sort({ createdAt: -1 })
+    .lean();
+  // Newest open tracker per set — first hit wins because of the sort above.
+  const openBySet = new Map<string, string>();
+  for (const trk of open) {
+    const key = trk.setId.toString();
+    if (!openBySet.has(key)) openBySet.set(key, trk._id.toString());
+  }
+
+  return docs.map((doc) => ({
+    id: doc._id.toString(),
+    setType: doc.setType,
+    name: doc.name ?? null,
+    sectionId: doc.sectionId.toString(),
+    classId: doc.classId.toString(),
+    subjectId: doc.subjectId?.toString() ?? null,
+    status: doc.status,
+    itemCount: doc.basketItems?.length ?? 0,
+    totalMarks: typeof doc.totalMarks === "number" ? doc.totalMarks : null,
+    dueDate: doc.dueDate ? (doc.dueDate as unknown as Date).toISOString() : null,
+    createdAt: (doc.createdAt as unknown as Date).toISOString(),
+    openTrackerId: openBySet.get(doc._id.toString()) ?? null,
+  }));
 }
 
 /** Set (or clear) a set's display name. Write-scope enforced by the resolver.
