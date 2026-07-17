@@ -113,6 +113,7 @@ Type scale (sizes in sp — they scale with OS settings):
 
 | Role | Size / line-height | Weight | Use |
 |---|---|---|---|
+| `display` | 28 / 36 | 700 | Hero numbers only (score readout, stat tiles) — never running text |
 | `pageTitle` | 22 / 30 | 700 | Screen title |
 | `sectionTitle` | 18 / 24 | 700 | Card/section headers |
 | `body` | 16 / 24 | 400 | Default text |

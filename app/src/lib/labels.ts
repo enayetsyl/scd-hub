@@ -691,6 +691,24 @@ export const markRangeMsg = (min: number, max: number): string =>
     ? `Enter a mark between ${bnNum(min)} and ${bnNum(max)}.`
     : `নম্বর ${bnNum(min)}–${bnNum(max)} এর মধ্যে দিন।`;
 
+/** "১২/৩০ রেকর্ড হয়েছে" / "12/30 recorded" — TrackerEntry progress header (F1). */
+export const trackerProgressMsg = (recorded: number, total: number): string =>
+  _lang === "en"
+    ? `${bnNum(recorded)}/${bnNum(total)} recorded`
+    : `${bnNum(recorded)}/${bnNum(total)} রেকর্ড হয়েছে`;
+
+/** "N জন শিক্ষার্থী এখনো রেকর্ড করা হয়নি।" — close-confirm pending line (F1). */
+export const trackerPendingMsg = (n: number): string =>
+  _lang === "en"
+    ? `${bnNum(n)} student${n === 1 ? "" : "s"} not recorded yet.`
+    : `${bnNum(n)} জন শিক্ষার্থী এখনো রেকর্ড করা হয়নি।`;
+
+/** "৭/১০ নম্বর রেকর্ড হয়েছে" — CT save toast; full ≤ 0 → "৭ নম্বর রেকর্ড হয়েছে" (F1). */
+export const scoreRecordedMsg = (score: number, full: number): string => {
+  const val = full > 0 ? `${bnNum(score)}/${bnNum(full)}` : bnNum(score);
+  return _lang === "en" ? `Recorded ${val} marks` : `${val} নম্বর রেকর্ড হয়েছে`;
+};
+
 // --- UI chrome strings -------------------------------------------------------
 
 /** Bangla chrome strings — labels, buttons, headers, statuses, errors. The EN
@@ -1068,6 +1086,37 @@ const STR_BN = {
   guardianPhone: "অভিভাবকের ফোন",
   studentName: "শিক্ষার্থীর নাম",
   waLinkHint: "লিংকটি কপি করে নিজে পাঠান (স্বয়ংক্রিয় প্রেরণ নেই)।",
+
+  // Tracker entry redesign (ux-audit F1 — এক ট্যাপে ট্র্যাকিং)
+  trkOneTap: "এক ট্যাপে ট্র্যাকিং",
+  trkBatchComplete: "সবাই সম্পন্ন",
+  trkBatchSubmitted: "সবাই জমা দিয়েছে",
+  trkBatchFullMarks: "সবাইকে পূর্ণ নম্বর",
+  trkExceptions: "ব্যতিক্রম",
+  trkEnterMarks: "নম্বর দিন",
+  trkUndo: "আনডু",
+  trkRoll: "রোল",
+  trkRecordedComplete: "সম্পন্ন হিসেবে রেকর্ড হয়েছে",
+  trkRecordedIncomplete: "অসম্পূর্ণ হিসেবে রেকর্ড হয়েছে",
+  trkRecordedSubmitted: "জমা দিয়েছে হিসেবে রেকর্ড হয়েছে",
+  trkRecordedMissing: "জমা দেয়নি হিসেবে রেকর্ড হয়েছে",
+  trkBatchRecorded: "রেকর্ড করা হয়েছে",
+  trkUndone: "আনডু করা হয়েছে",
+  trkFullMarks: "পূর্ণ নম্বর",
+  trkAbsent: "অনুপস্থিত",
+  trkDelete: "মুছুন",
+  trkSubmit: "জমা দিন",
+  trkCloseTitle: "ট্র্যাকার বন্ধ করবেন?",
+  trkCloseWarn: "বন্ধ করার পর এই ট্র্যাকার আর খোলা যাবে না।",
+  trkCloseConfirm: "বন্ধ করে সারাংশ দেখুন",
+  trkAllRecorded: "সব শিক্ষার্থী রেকর্ড করা হয়েছে।",
+  trkNoStudentsYet: "এই ক্লাসে এখনো কোনো শিক্ষার্থী যোগ করা হয়নি। শিক্ষার্থী তালিকা তৈরি হলে এখানে ট্র্যাক করা যাবে।",
+  trkDone: "ট্র্যাকিং সম্পন্ন",
+  trkLocked: "এই ট্র্যাকার লক করা হয়েছে — পুনরায় খোলা যাবে না।",
+  trkPerStudent: "শিক্ষার্থীভিত্তিক ফলাফল",
+  trkNotRecorded: "রেকর্ড হয়নি",
+  trkAvgMarks: "গড় নম্বর",
+  trkGotFullMarks: "পূর্ণ নম্বর পেয়েছে",
 
   // Homework Tracker (HW-T1..T4)
   tabHomework: "বাড়ির কাজ",
@@ -3453,6 +3502,37 @@ const STR_EN: StrTable = {
   guardianPhone: "Guardian phone",
   studentName: "Student name",
   waLinkHint: "Copy the link and send it yourself (no automatic send).",
+
+  // Tracker entry redesign (ux-audit F1 — one-tap tracking)
+  trkOneTap: "One-tap tracking",
+  trkBatchComplete: "All complete",
+  trkBatchSubmitted: "All submitted",
+  trkBatchFullMarks: "Full marks for all",
+  trkExceptions: "Exceptions",
+  trkEnterMarks: "Enter marks",
+  trkUndo: "Undo",
+  trkRoll: "Roll",
+  trkRecordedComplete: "Recorded as complete",
+  trkRecordedIncomplete: "Recorded as incomplete",
+  trkRecordedSubmitted: "Recorded as submitted",
+  trkRecordedMissing: "Recorded as not submitted",
+  trkBatchRecorded: "recorded",
+  trkUndone: "Undone",
+  trkFullMarks: "Full marks",
+  trkAbsent: "Absent",
+  trkDelete: "Delete",
+  trkSubmit: "Submit",
+  trkCloseTitle: "Close this tracker?",
+  trkCloseWarn: "Once closed, this tracker cannot be reopened.",
+  trkCloseConfirm: "Close and view summary",
+  trkAllRecorded: "All students recorded.",
+  trkNoStudentsYet: "No students have been added to this class yet. Tracking becomes available once the roster is ready.",
+  trkDone: "Tracking complete",
+  trkLocked: "This tracker is locked — it cannot be reopened.",
+  trkPerStudent: "Per-student results",
+  trkNotRecorded: "Not recorded",
+  trkAvgMarks: "Average marks",
+  trkGotFullMarks: "Got full marks",
 
   // Homework Tracker (HW-T1..T4)
   tabHomework: "Homework",
