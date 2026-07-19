@@ -44,7 +44,11 @@ export default function CollectAssignmentScreen({ route }: Props): React.ReactEl
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const records = recsQ.data?.assignmentRecords ?? [];
+  // Records arrive in insertion order — list students alphabetically (owner
+  // request; matches the studentsInSection server sort).
+  const records = [...(recsQ.data?.assignmentRecords ?? [])].sort((a, b) =>
+    nameOf(a.studentId).localeCompare(nameOf(b.studentId)),
+  );
   const open = records.filter((r) => OPEN_STATES.has(r.state));
   const awaitingRedelivery = records.filter((r) => r.state === "ABSENT_REDELIVER");
   const done = records.filter((r) => !OPEN_STATES.has(r.state) && r.state !== "ABSENT_REDELIVER");

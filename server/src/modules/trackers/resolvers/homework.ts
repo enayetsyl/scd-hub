@@ -678,7 +678,11 @@ builder.queryField("homeworkOpenRecords", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      // Owner decision 2026-07-19: the checking flow is subject-scoped for EVERY
+      // teacher — the class teacher too. Reconcile/tally/items keep oversight.
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, {
+        classTeacherOversight: false,
+      });
       const states = args.states.filter((s): s is LifecycleState =>
         (LIFECYCLE_STATES as readonly string[]).includes(s),
       );
