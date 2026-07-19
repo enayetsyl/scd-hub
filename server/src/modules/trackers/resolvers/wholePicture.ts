@@ -84,6 +84,7 @@ const GuardianTrajectoryRef = builder.objectRef<GuardianTrajectory>("GuardianTra
     studentId: t.exposeString("studentId"),
     overall: t.exposeString("overall"),
     linesBn: t.exposeStringList("linesBn"),
+    linesEn: t.exposeStringList("linesEn"),
     presentPct: t.exposeInt("presentPct"),
     avgPercent: t.int({ nullable: true, resolve: (g) => g.avgPercent }),
   }),
