@@ -19,8 +19,10 @@ import {
   HOMEWORK_OPEN_RECORDS,
   TRANSITION_HOMEWORK_RECORD,
   MARK_HOMEWORK_RECORDS_DUE,
+  REVERT_HW_RECORD,
   type HwOpenRecordT,
 } from "../../graphql/operations";
+import { useConfirm } from "../../state/ConfirmContext";
 import { groupByDate } from "../../lib/groupByDate";
 import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
 import { SubjectFold } from "../../components/SubjectFold";
@@ -36,8 +38,15 @@ import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HomeworkStackParamList, "HomeworkRecords">;
 
-/** Open (non-terminal) states — what counts as "pending" lifecycle work. */
-const OPEN_STATES = ["GIVEN", "ABSENT_REDELIVER", "DUE", "SUBMITTED", "CHASE", "CHECKED", "RESUBMIT"];
+/** Open (non-terminal) states — what counts as "pending" lifecycle work.
+ *  RETURNED (terminal) is queried too since D-#338, but rendered ONLY while its
+ *  last stamp is still today (Dhaka) — an undo-only card for a mistaken return. */
+const OPEN_STATES = ["GIVEN", "ABSENT_REDELIVER", "DUE", "SUBMITTED", "CHASE", "CHECKED", "RESUBMIT", "RETURNED"];
+
+/** Calendar day (YYYY-MM-DD) of an ISO instant in Asia/Dhaka — mirrors the server gate. */
+function dhakaDayOf(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+}
 
 /** Legal next states per state (language-free; mirrors lifecycle.ts LIFECYCLE_EDGES). */
 const NEXT_STATES: Record<string, string[]> = {
@@ -87,8 +96,13 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
   });
   const [, transition] = useMutation(TRANSITION_HOMEWORK_RECORD);
   const [, markManyDue] = useMutation(MARK_HOMEWORK_RECORDS_DUE);
+  const [, revertRecord] = useMutation(REVERT_HW_RECORD);
+  const { confirmAction } = useConfirm();
 
-  const records = recsQ.data?.homeworkOpenRecords ?? [];
+  const today = dhakaDayOf(new Date().toISOString());
+  const records = (recsQ.data?.homeworkOpenRecords ?? []).filter(
+    (r) => r.state !== "RETURNED" || dhakaDayOf(r.lastStateAt) === today,
+  );
   // D-#306: fold subjects the caller doesn't actively teach on this section.
   const taught = useTaughtSubjects(selection.sectionId ?? null);
 
@@ -139,6 +153,22 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
       return;
     }
     setOk(lifecycleStateLabel(res.data.transitionHomeworkRecord.state));
+    refetchRecs({ requestPolicy: "network-only" });
+  }
+
+  /** D-#338 — undo the last recorded step (server enforces own-action + same-day). */
+  async function onRevert(recordId: string): Promise<void> {
+    if (!(await confirmAction({ title: STR.revertConfirmTitle, message: STR.revertConfirmBody, confirmLabel: STR.revertAction }))) return;
+    setError(null);
+    setOk(null);
+    setBusyId(recordId);
+    const res = await revertRecord({ sectionId: base.sectionId, recordId });
+    setBusyId(null);
+    if (res.error || !res.data?.revertHomeworkRecord) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    setOk(STR.revertDone);
     refetchRecs({ requestPolicy: "network-only" });
   }
 
@@ -209,6 +239,18 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
                 <View style={{ marginTop: 8 }}>
                   <Muted style={{ marginBottom: 6 }}>{STR.hwCheckHint}</Muted>
                   <Button title={STR.hwGoChecking} onPress={() => navigation.navigate("CheckingQueue")} />
+                </View>
+              ) : null}
+              {/* D-#338: undo the last recorded step (never offered on the entry stamp). */}
+              {r.stampCount > 1 ? (
+                <View style={{ marginTop: 8, alignItems: "flex-end" }}>
+                  <Button
+                    title={STR.revertAction}
+                    variant="ghost"
+                    onPress={() => void onRevert(r.id)}
+                    loading={busyId === r.id}
+                    disabled={busyId !== null}
+                  />
                 </View>
               ) : null}
             </Card>

@@ -278,6 +278,13 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
     expect(res.status).toBe("declared");
   });
 
+  // D-#338: same class+section+subject+day may not be declared twice.
+  test("duplicate declaration for the same class+section+subject+day is rejected", async () => {
+    mockItemFindOne.mockResolvedValue({ hwId: "HW-C1-MATH-0001" });
+    await expect(declareHomeworkItem(validDeclareInput())).rejects.toThrow(/আগেই ঘোষণা করা হয়েছে/);
+    expect(mockItemCreate).not.toHaveBeenCalled();
+  });
+
   test("rejects a weekend dateGiven (Fri/Sat blocked, §6.1)", async () => {
     await expect(declareHomeworkItem(validDeclareInput({ dateGiven: A_FRIDAY }))).rejects.toThrow(
       /school nights only/,
