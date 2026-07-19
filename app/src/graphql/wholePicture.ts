@@ -65,6 +65,7 @@ export interface GuardianTrajectoryT {
   studentId: string;
   overall: string;
   linesBn: string[];
+  linesEn: string[];
   presentPct: number;
   avgPercent: number | null;
 }
@@ -75,7 +76,7 @@ export const CHILD_TRAJECTORY_QUERY = gql<
 >`
   query ChildTrajectory($studentId: String!) {
     childTrajectory(studentId: $studentId) {
-      studentId overall linesBn presentPct avgPercent
+      studentId overall linesBn linesEn presentPct avgPercent
     }
   }
 `;
