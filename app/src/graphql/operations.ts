@@ -2954,6 +2954,9 @@ export interface GuardianHwRecordT {
   chaseCount: number;
   result: string | null;
   resultLabelBn: string | null;
+  description: string | null;
+  qCount: number;
+  timeDecl: number;
   resubOf: string | null;
   topupFlag: boolean;
   topupQCount: number;
@@ -2971,7 +2974,7 @@ export const CHILD_HOMEWORK_QUERY = gql<
     childHomework(studentId: $studentId, from: $from, to: $to) {
       recordId hwId subject subjectLabelBn dateGiven state stateLabelBn
       givenAt dueDate submittedAt checkedAt returnedAt
-      chaseCount result resultLabelBn resubOf
+      chaseCount result resultLabelBn description qCount timeDecl resubOf
       topupFlag topupQCount topupTimeMin
       questionFileId answerFileId attachmentIds
     }
