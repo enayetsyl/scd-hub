@@ -20,7 +20,7 @@
  * DERIVED AT READ TIME, never stored (D-#85). Identity plane; imports no corpus model,
  * so the ADR-005 firewall is untouched.
  */
-import { HW_SUBJECT_LABELS_BN } from "@scd/shared";
+import { HW_SUBJECT_LABELS_BN, HW_SUBJECT_LABELS_EN } from "@scd/shared";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { studentProfile, regressionSlope, type StudentProfileAnalytics } from "./ClassTestSummaryService";
 import { childAssignments } from "./AssignmentSummaryService";
@@ -238,6 +238,8 @@ export interface GuardianTrajectory {
   overall: string;
   /** Plain-language Bangla lines. NO rank, NO class comparison (owner ruling). */
   linesBn: string[];
+  /** The same lines in English — the app picks by the active UI language. */
+  linesEn: string[];
   presentPct: number;
   /** The child's own average, never a peer comparison. */
   avgPercent: number | null;
@@ -249,37 +251,68 @@ const OVERALL_BN: Record<string, string> = {
   declining: "সার্বিকভাবে পিছিয়ে পড়ছে",
   na: "মূল্যায়নের জন্য যথেষ্ট তথ্য নেই",
 };
+const OVERALL_EN: Record<string, string> = {
+  improving: "Improving overall",
+  steady: "Steady overall",
+  declining: "Falling behind overall",
+  na: "Not enough information yet",
+};
 
 /**
  * The guardian-facing view: direction of travel and their OWN child's numbers.
  * Deliberately omits `latestRank`, `latestRankOf` and every peer comparison — a
  * guardian is told how their child is doing, not who they beat (owner ruling, D-#281
  * planning). Built from the same `wholePicture`, so the two can never disagree.
+ *
+ * Every flagged line carries its number AND the benchmark it fell short of, so a
+ * guardian can see WHY the roll-up reads the way it does (owner ask 2026-07-19).
  */
 export async function guardianTrajectory(studentId: string, now: Date = new Date()): Promise<GuardianTrajectory> {
   const wp = await wholePicture(studentId, now);
-  const lines: string[] = [OVERALL_BN[wp.overall] ?? OVERALL_BN.na];
+  const bn: string[] = [OVERALL_BN[wp.overall] ?? OVERALL_BN.na];
+  const en: string[] = [OVERALL_EN[wp.overall] ?? OVERALL_EN.na];
 
   if (wp.classTest.avgPercent !== null) {
-    lines.push(`ক্লাস টেস্টে গড় ${wp.classTest.avgPercent}%।`);
+    bn.push(`ক্লাস টেস্টে গড় ${wp.classTest.avgPercent}%।`);
+    en.push(`Class-test average ${wp.classTest.avgPercent}%.`);
+  }
+  if (wp.classTest.trajectory === "down") {
+    bn.push("ক্লাস টেস্টের ফলাফল নিচের দিকে যাচ্ছে।");
+    en.push("Class-test results are trending down.");
   }
   if (wp.classTest.weakestSubject) {
-    lines.push(`বেশি মনোযোগ দরকার: ${HW_SUBJECT_LABELS_BN[wp.classTest.weakestSubject as never] ?? wp.classTest.weakestSubject}।`);
+    const subj = wp.classTest.weakestSubject;
+    bn.push(`বেশি মনোযোগ দরকার: ${HW_SUBJECT_LABELS_BN[subj as never] ?? subj}।`);
+    en.push(`Needs more attention: ${HW_SUBJECT_LABELS_EN[subj as never] ?? subj}.`);
   }
   if (wp.attendance.markedDays > 0) {
-    lines.push(`উপস্থিতি ${wp.attendance.presentPct}%।`);
+    if (wp.signals.includes("ATTENDANCE_LOW")) {
+      bn.push(`উপস্থিতি ${wp.attendance.presentPct}% (কাম্য অন্তত ${ATTENDANCE_CONCERN_PCT}%)।`);
+      en.push(`Attendance ${wp.attendance.presentPct}% (expected at least ${ATTENDANCE_CONCERN_PCT}%).`);
+    } else {
+      bn.push(`উপস্থিতি ${wp.attendance.presentPct}%।`);
+      en.push(`Attendance ${wp.attendance.presentPct}%.`);
+    }
   }
   if (wp.signals.includes("HOMEWORK_LOW")) {
-    lines.push("বাড়ির কাজ নিয়মিত জমা হচ্ছে না।");
+    const { total, done, completionPct } = wp.homework;
+    bn.push(
+      `বাড়ির কাজ: ${total}টির মধ্যে ${done}টি সম্পন্ন — ${completionPct}% (কাম্য অন্তত ${HOMEWORK_CONCERN_PCT}%)।`,
+    );
+    en.push(
+      `Homework: ${done} of ${total} completed — ${completionPct}% (expected at least ${HOMEWORK_CONCERN_PCT}%).`,
+    );
   }
   if (wp.signals.includes("ASSIGNMENT_LATE")) {
-    lines.push("অ্যাসাইনমেন্ট প্রায়ই দেরিতে জমা হচ্ছে।");
+    bn.push(`অ্যাসাইনমেন্ট: ${wp.assignment.total}টির মধ্যে ${wp.assignment.late}টি দেরিতে জমা।`);
+    en.push(`Assignments: ${wp.assignment.late} of ${wp.assignment.total} submitted late.`);
   }
 
   return {
     studentId,
     overall: wp.overall,
-    linesBn: lines,
+    linesBn: bn,
+    linesEn: en,
     presentPct: wp.attendance.presentPct,
     avgPercent: wp.classTest.avgPercent,
   };

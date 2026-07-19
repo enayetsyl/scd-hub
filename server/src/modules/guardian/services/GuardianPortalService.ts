@@ -143,6 +143,11 @@ export interface GuardianHomeworkRecord {
   chaseCount: number;
   result: HwResult | null;
   resultLabelBn: string | null;
+  /** What was assigned (mandatory since D-#317; null on legacy rows). */
+  description: string | null;
+  /** Declared question count + estimated minutes — lets the lesson history show the day's load. */
+  qCount: number;
+  timeDecl: number;
   /** Set on a resubmission record — the prior record it re-issues (D-#43). */
   resubOf: string | null;
   topupFlag: boolean;
@@ -486,6 +491,9 @@ export async function childHomework(
       chaseCount: r.chaseCount,
       result: r.result ?? null,
       resultLabelBn: r.result ? HW_RESULT_LABELS_BN[r.result] ?? null : null,
+      description: item.description ?? null,
+      qCount: item.qCount,
+      timeDecl: item.timeDecl,
       resubOf: r.resubOf ? idStr(r.resubOf) : null,
       topupFlag: r.topupFlag,
       topupQCount: r.topupQids?.length ?? 0,

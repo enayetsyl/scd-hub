@@ -1336,6 +1336,27 @@ const STR_BN = {
   gpPastLessons: "আগের পাঠ দেখুন",
   gpClassNotesHistory: "পাঠের ইতিহাস",
   gpNoNotesDay: "এই দিনে কোনো পাঠ-নোট নেই",
+  gpHwGivenTitle: "এই দিনের বাড়ির কাজ",
+  gpHwTotalTime: "মোট আনুমানিক সময়",
+  gpHwQuestions: "প্রশ্ন",
+  gpAlertsTitle: "দৃষ্টি আকর্ষণ",
+  gpAlertHwChase: "বাড়ির কাজের তাগাদা চলছে",
+  gpAlertAsgnLate: "অ্যাসাইনমেন্ট দেরিতে/তাগাদায়",
+  gpAlertFeesDue: "ফি বকেয়া",
+  gpAlertNewComment: "শিক্ষকের নতুন মন্তব্য",
+  gpAlertNewTest: "নতুন ক্লাস টেস্ট ফলাফল",
+  gpAlertNotifications: "নতুন নোটিফিকেশন",
+  gpTrajHowTitle: "কীভাবে নির্ধারিত হয়?",
+  gpTrajHowHide: "ব্যাখ্যা লুকান",
+  gpTrajHowBody:
+    "এই মূল্যায়ন গত ৯০ দিনের তথ্য থেকে অ্যাপ নিজে থেকে হিসাব করে। যা যা দেখা হয়:\n" +
+    "• ক্লাস টেস্ট — ফলাফল আগের চেয়ে ভালো হচ্ছে, নাকি খারাপের দিকে যাচ্ছে।\n" +
+    "• উপস্থিতি — অন্তত ৯০% দিন উপস্থিত থাকা কাম্য; এর কম হলে সেটিকে দুর্বল দিক ধরা হয়।\n" +
+    "• বাড়ির কাজ — দেওয়া কাজের অন্তত ৮০% সম্পন্ন হওয়া কাম্য; এর কম হলে দুর্বল দিক ধরা হয়।\n" +
+    "• অ্যাসাইনমেন্ট — প্রায়ই দেরিতে জমা পড়লে দুর্বল দিক ধরা হয়।\n\n" +
+    "শুধু একটি দিক দুর্বল হলেই \"পিছিয়ে পড়ছে\" বলা হয় না। ক্লাস টেস্টের ফল নামতে থাকলে, " +
+    "অথবা একসাথে অন্তত দুটি দিক দুর্বল হলে তবেই \"পিছিয়ে পড়ছে\" দেখানো হয়। " +
+    "এখানে আপনার সন্তানের নিজের অগ্রগতিই দেখা হয় — অন্য কোনো শিক্ষার্থীর সাথে তুলনা করা হয় না।",
   hwClassTeacherOnly: "শুধু শ্রেণিশিক্ষক সমন্বয় করতে পারেন",
   hwNoClassLevel: "শ্রেণি স্তর পাওয়া যায়নি",
   hwRollups: "সারসংক্ষেপ ও পর্যবেক্ষণ",
@@ -3785,6 +3806,27 @@ const STR_EN: StrTable = {
   gpPastLessons: "View past lessons",
   gpClassNotesHistory: "Lesson history",
   gpNoNotesDay: "No class notes for this day",
+  gpHwGivenTitle: "Homework given this day",
+  gpHwTotalTime: "Total estimated time",
+  gpHwQuestions: "questions",
+  gpAlertsTitle: "Needs your attention",
+  gpAlertHwChase: "Homework chase in progress",
+  gpAlertAsgnLate: "Assignments late or chased",
+  gpAlertFeesDue: "Fees due",
+  gpAlertNewComment: "New comment from the teacher",
+  gpAlertNewTest: "New class-test result",
+  gpAlertNotifications: "New notifications",
+  gpTrajHowTitle: "How is this decided?",
+  gpTrajHowHide: "Hide explanation",
+  gpTrajHowBody:
+    "Your child's progress is calculated automatically by the app from the last 90 days of records. It looks at:\n" +
+    "• Class tests — whether results are getting better or worse over time.\n" +
+    "• Attendance — we expect at least 90% of days present; below that counts as a weak area.\n" +
+    "• Homework — we expect at least 80% of given work completed; below that counts as a weak area.\n" +
+    "• Assignments — frequently late submissions count as a weak area.\n\n" +
+    "One weak area alone never shows \"Declining\". It shows only when class-test results keep falling, " +
+    "or when at least two areas are weak together. Only your own child's progress is measured — " +
+    "there is no comparison with any other student.",
   hwClassTeacherOnly: "Only the class teacher can reconcile",
   hwNoClassLevel: "Class level not found",
   hwRollups: "Summary & monitoring",

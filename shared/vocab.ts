@@ -1774,7 +1774,13 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
       "আসসালামু আলাইকুম {name}। SCD Hub অ্যাপে আপনার (অভিভাবক) লগইন তথ্য:\n" +
       "আইডি: {identifier}\n" +
       "পাসওয়ার্ড: {password}\n" +
-      "অনুগ্রহ করে তথ্যগুলো গোপন রাখুন এবং প্রথমবার লগইনের পর সংরক্ষণ করুন।",
+      "লগইন লিংক: https://scdhub.shafayet.me\n" +
+      "অনুগ্রহ করে তথ্যগুলো গোপন রাখুন এবং প্রথমবার লগইনের পর সংরক্ষণ করুন।\n" +
+      "\n" +
+      "আমরা Eximus থেকে ধাপে ধাপে SCD Hub অ্যাপে স্থানান্তরিত হচ্ছি। " +
+      "আপাতত দুটি অ্যাপেই একই ধরনের তথ্য দেখা যাবে, তবে শীঘ্রই আমরা সম্পূর্ণভাবে এই অ্যাপে চলে যাব ইনশাআল্লাহ। " +
+      "তাই আপনাকে নিয়মিত এই অ্যাপটি ব্যবহার করার জন্য অনুরোধ করা হচ্ছে। " +
+      "অ্যাপ ব্যবহারে কোনো সমস্যা হলে তাজকির উস্তাজকে হোয়াটসঅ্যাপে জানান: +880 1717-793162",
     defaultLangMode: "BN",
   },
   "credential.share.staff.wa": {
@@ -1784,6 +1790,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
       "আসসালামু আলাইকুম {name}। SCD Hub অ্যাপে আপনার (শিক্ষক/স্টাফ) লগইন তথ্য:\n" +
       "আইডি: {identifier}\n" +
       "পাসওয়ার্ড: {password}\n" +
+      "লগইন লিংক: https://scdhub.shafayet.me\n" +
       "অনুগ্রহ করে তথ্যগুলো গোপন রাখুন এবং প্রথমবার লগইনের পর সংরক্ষণ করুন।",
     defaultLangMode: "BN",
   },
