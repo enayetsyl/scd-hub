@@ -66,6 +66,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { selected, fetching } = useGuardianChild();
   const lang = getActiveLang();
+  const [showTrajHow, setShowTrajHow] = React.useState(false);
   const sid = selected?.studentId ?? "";
   const date = today();
   const { openingId, runOpen } = useFileOpen();
@@ -223,11 +224,23 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 tone={traj.overall === "improving" ? "ok" : traj.overall === "declining" ? "danger" : "warn"}
               />
             </View>
-            {traj.linesBn.map((line, i) => (
+            {(lang === "en" && traj.linesEn.length > 0 ? traj.linesEn : traj.linesBn).map((line, i) => (
               <Muted key={i} style={{ marginTop: space(1) }}>
                 {line}
               </Muted>
             ))}
+            {/* Owner ask 2026-07-19: guardians should see HOW the badge is decided. */}
+            <Pressable
+              onPress={() => setShowTrajHow((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel={STR.gpTrajHowTitle}
+              style={({ pressed }) => [{ marginTop: space(2) }, pressed && { opacity: 0.7 }]}
+            >
+              <Body style={{ textDecorationLine: "underline" }}>
+                {showTrajHow ? STR.gpTrajHowHide : STR.gpTrajHowTitle}
+              </Body>
+            </Pressable>
+            {showTrajHow ? <Muted style={{ marginTop: space(1) }}>{STR.gpTrajHowBody}</Muted> : null}
           </Card>
         ) : null}
 
