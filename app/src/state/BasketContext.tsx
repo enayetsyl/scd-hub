@@ -24,6 +24,8 @@ interface BasketContextValue {
   has: (artifactId: string) => boolean;
   add: (entry: BasketEntry) => void;
   remove: (artifactId: string) => void;
+  /** Swap an item with its neighbour (dir -1 = up, +1 = down). No-op at the ends. */
+  move: (artifactId: string, dir: -1 | 1) => void;
   clear: () => void;
 }
 
@@ -42,6 +44,17 @@ export function BasketProvider({ children }: { children: React.ReactNode }): Rea
     setItems((prev) => prev.filter((i) => i.artifactId !== artifactId));
   }, []);
 
+  const move = useCallback((artifactId: string, dir: -1 | 1) => {
+    setItems((prev) => {
+      const from = prev.findIndex((i) => i.artifactId === artifactId);
+      const to = from + dir;
+      if (from < 0 || to < 0 || to >= prev.length) return prev;
+      const next = [...prev];
+      [next[from], next[to]] = [next[to], next[from]];
+      return next;
+    });
+  }, []);
+
   const clear = useCallback(() => setItems([]), []);
 
   const has = useCallback(
@@ -57,9 +70,10 @@ export function BasketProvider({ children }: { children: React.ReactNode }): Rea
       has,
       add,
       remove,
+      move,
       clear,
     }),
-    [items, has, add, remove, clear],
+    [items, has, add, remove, move, clear],
   );
 
   return <BasketContext.Provider value={value}>{children}</BasketContext.Provider>;

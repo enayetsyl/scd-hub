@@ -47,10 +47,6 @@ export function questionText(json: string | null | undefined): string {
   return parsePayload(json).question_text ?? "";
 }
 
-export function truncate(s: string, n = 90): string {
-  return s.length > n ? `${s.slice(0, n)}…` : s;
-}
-
 /** Prettify an enum code for display (mcq → MCQ, short_answer → Short Answer). */
 export function prettyCode(code?: string | null): string {
   if (!code) return "";

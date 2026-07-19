@@ -44,10 +44,12 @@ jest.mock("../modules/assessment/models/AssessmentSet", () => ({
 }));
 
 const mockEventCreate = jest.fn();
+const mockEventInsertMany = jest.fn();
 
 jest.mock("../modules/corpus/models/CorpusEvent", () => ({
   CorpusEvent: {
     create: (a: unknown) => mockEventCreate(a),
+    insertMany: (a: unknown) => mockEventInsertMany(a),
   },
 }));
 
@@ -55,6 +57,7 @@ jest.mock("../modules/corpus/models/CorpusEvent", () => ({
 import {
   openTracker,
   recordEntry,
+  recordEntries,
   closeTracker,
   buildNonSubmitterLink,
   listTrackers,
@@ -110,6 +113,7 @@ function makeTrackerDoc(extra: Record<string, unknown> = {}) {
 beforeEach(() => {
   jest.clearAllMocks();
   mockEventCreate.mockResolvedValue({ _id: new mongoose.Types.ObjectId() });
+  mockEventInsertMany.mockResolvedValue([]);
 });
 
 // ===========================================================================
@@ -223,6 +227,95 @@ describe("J4.1 — class-test tracker lifecycle (openTracker → recordEntry →
     mockTrackerFindById.mockReturnValue(makeTrackerDoc({ status: "closed" }));
     await expect(
       recordEntry({ trackerId: TRACKER_ID.toString(), studentId: "s1", actorId: ACTOR_ID.toString() }),
+    ).rejects.toThrow("Tracker is closed");
+  });
+
+  test("recordEntries batch-upserts new + existing entries in one save (ux-audit F1)", async () => {
+    const crypto = await import("crypto");
+    const sidExisting = "student-existing";
+    const pseudoExisting = crypto.createHash("sha256").update(sidExisting).digest("hex");
+
+    const trackerDoc = makeTrackerDoc({
+      trackerKind: "homework",
+      entries: [{ pseudoStudentId: pseudoExisting, complete: false }],
+    });
+    mockTrackerFindById.mockReturnValue(trackerDoc);
+
+    const result = await recordEntries({
+      trackerId: TRACKER_ID.toString(),
+      entries: [
+        { studentId: sidExisting, complete: true }, // overwrite existing
+        { studentId: "student-new-1", complete: true }, // fresh
+        { studentId: "student-new-2", complete: true }, // fresh
+      ],
+      actorId: ACTOR_ID.toString(),
+    });
+
+    expect(trackerDoc.entries).toHaveLength(3); // no duplicate for existing
+    expect(trackerDoc.entries[0].complete).toBe(true); // updated in place
+    expect(trackerDoc.save).toHaveBeenCalledTimes(1); // one document save
+
+    // One de-identified event per WRITTEN entry, via insertMany
+    expect(mockEventInsertMany).toHaveBeenCalledTimes(1);
+    const events = mockEventInsertMany.mock.calls[0][0] as Array<Record<string, unknown>>;
+    expect(events).toHaveLength(3);
+    expect(events[0].eventKind).toBe("tracker_recorded");
+    expect(events[0].pseudoActorId).not.toBe(ACTOR_ID.toString());
+    const meta = events[1].meta as Record<string, unknown>;
+    expect(meta.pseudoStudentId).not.toBe("student-new-1"); // de-identified
+
+    expect(result.entryCount).toBe(3);
+  });
+
+  test("recordEntries clear removes the entry and emits no event for it", async () => {
+    const crypto = await import("crypto");
+    const sid = "student-clear-me";
+    const pseudo = crypto.createHash("sha256").update(sid).digest("hex");
+
+    const trackerDoc = makeTrackerDoc({
+      trackerKind: "homework",
+      entries: [
+        { pseudoStudentId: pseudo, complete: true },
+        { pseudoStudentId: "other", complete: true },
+      ],
+    });
+    mockTrackerFindById.mockReturnValue(trackerDoc);
+
+    const result = await recordEntries({
+      trackerId: TRACKER_ID.toString(),
+      entries: [{ studentId: sid, clear: true }],
+      actorId: ACTOR_ID.toString(),
+    });
+
+    expect(trackerDoc.entries).toHaveLength(1);
+    expect(trackerDoc.entries[0].pseudoStudentId).toBe("other");
+    expect(trackerDoc.save).toHaveBeenCalledTimes(1);
+    expect(mockEventInsertMany).not.toHaveBeenCalled(); // clears emit nothing
+    expect(result.entryCount).toBe(1);
+  });
+
+  test("recordEntries clear of a non-existent entry is a no-op (idempotent undo)", async () => {
+    const trackerDoc = makeTrackerDoc({ trackerKind: "homework" });
+    mockTrackerFindById.mockReturnValue(trackerDoc);
+
+    const result = await recordEntries({
+      trackerId: TRACKER_ID.toString(),
+      entries: [{ studentId: "never-recorded", clear: true }],
+      actorId: ACTOR_ID.toString(),
+    });
+
+    expect(trackerDoc.entries).toHaveLength(0);
+    expect(result.entryCount).toBe(0);
+  });
+
+  test("recordEntries throws when tracker is closed", async () => {
+    mockTrackerFindById.mockReturnValue(makeTrackerDoc({ status: "closed" }));
+    await expect(
+      recordEntries({
+        trackerId: TRACKER_ID.toString(),
+        entries: [{ studentId: "s1", complete: true }],
+        actorId: ACTOR_ID.toString(),
+      }),
     ).rejects.toThrow("Tracker is closed");
   });
 

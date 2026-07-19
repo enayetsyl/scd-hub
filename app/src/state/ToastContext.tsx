@@ -16,14 +16,18 @@ import { makeStyles, radius, space, typeScale, useColors } from "../theme";
 
 export type ToastTone = "ok" | "danger" | "info";
 
-type ToastState = { show: (message: string, tone?: ToastTone) => void };
+/** Optional single action (e.g. আনডু) — pressing it dismisses the toast. */
+export type ToastAction = { label: string; onPress: () => void };
+export type ToastOptions = { action?: ToastAction; durationMs?: number };
+
+type ToastState = { show: (message: string, tone?: ToastTone, opts?: ToastOptions) => void };
 
 const ToastContext = React.createContext<ToastState>({ show: () => {} });
 
 const TOAST_DISMISS_MS = 3500;
 
 export function ToastProvider({ children }: { children: React.ReactNode }): React.ReactElement {
-  const [toast, setToast] = React.useState<{ message: string; tone: ToastTone } | null>(null);
+  const [toast, setToast] = React.useState<{ message: string; tone: ToastTone; action?: ToastAction } | null>(null);
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dismiss = React.useCallback(() => {
@@ -34,13 +38,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }): Reac
     setToast(null);
   }, []);
 
-  const show = React.useCallback((message: string, tone: ToastTone = "ok") => {
+  const show = React.useCallback((message: string, tone: ToastTone = "ok", opts?: ToastOptions) => {
     if (timer.current) clearTimeout(timer.current);
-    setToast({ message, tone });
+    setToast({ message, tone, action: opts?.action });
     timer.current = setTimeout(() => {
       timer.current = null;
       setToast(null);
-    }, TOAST_DISMISS_MS);
+    }, opts?.durationMs ?? TOAST_DISMISS_MS);
   }, []);
 
   React.useEffect(
@@ -56,7 +60,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }): Reac
     <ToastContext.Provider value={value}>
       <View style={{ flex: 1 }}>
         {children}
-        {toast ? <ToastPill message={toast.message} tone={toast.tone} onPress={dismiss} /> : null}
+        {toast ? <ToastPill message={toast.message} tone={toast.tone} action={toast.action} onPress={dismiss} /> : null}
       </View>
     </ToastContext.Provider>
   );
@@ -69,10 +73,12 @@ export function useToast(): ToastState {
 function ToastPill({
   message,
   tone,
+  action,
   onPress,
 }: {
   message: string;
   tone: ToastTone;
+  action?: ToastAction;
   onPress: () => void;
 }): React.ReactElement {
   const styles = useStyles();
@@ -93,7 +99,23 @@ function ToastPill({
         accessibilityLiveRegion="polite"
         style={({ pressed }) => [styles.pill, { backgroundColor: t.bg }, pressed && styles.pressed]}
       >
-        <Text style={[styles.pillText, { color: t.fg }]}>{message}</Text>
+        <View style={styles.pillRow}>
+          <Text style={[styles.pillText, { color: t.fg }, action ? styles.pillTextWithAction : null]}>{message}</Text>
+          {action ? (
+            <Pressable
+              onPress={() => {
+                onPress(); // dismiss first — the action may re-show a toast
+                action.onPress();
+              }}
+              hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={action.label}
+              style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
+            >
+              <Text style={[styles.actionText, { color: t.fg }]}>{action.label}</Text>
+            </Pressable>
+          ) : null}
+        </View>
       </Pressable>
     </View>
   );
@@ -118,6 +140,14 @@ const useStyles = makeStyles((colors) => ({
     marginHorizontal: space(4),
     maxWidth: 520,
   },
+  pillRow: { flexDirection: "row", alignItems: "center", gap: space(2) },
   pillText: { ...typeScale.secondary, fontFamily: typeScale.chip.fontFamily },
+  pillTextWithAction: { flexShrink: 1 },
+  actionBtn: {
+    minHeight: 40,
+    justifyContent: "center",
+    paddingHorizontal: space(2),
+  },
+  actionText: { ...typeScale.bodyStrong },
   pressed: { opacity: 0.7 },
 }));

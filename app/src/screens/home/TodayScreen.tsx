@@ -1,43 +1,85 @@
 /**
- * TodayScreen (UX-4, prd-ux-improvements.md §4.4, D-#265) — the staff landing
- * dashboard: the caller's day at a glance via the ONE `myDay` read.
- *   date header      — today + the Bangla day name
- *   Pending (red)    — backlog alerts (D-#279): attendance / class notes / assignment
- *                      entry owed TODAY or on a previous school day (7-day look-back).
- *                      Each row deep-links into the screen that clears it. Above them
- *                      sits the AMBER assignment-prep countdown (D-#280) — the work that
- *                      has not slipped yet; it ticks locally off the server's absolute
- *                      `dueAt`, vanishes on delivery, and becomes a red row once overdue.
- *   Class presence   — Principal/Office only: per-class present/absent for today,
- *                      followed by the sections nobody has marked yet (D-#279)
- *   My periods       — the caller's own routine slots (time · subject · class),
- *                      day-type empty state on holidays/off days
- *   Pending work     — tappable count rows deep-linking straight into the exact
- *                      work queue (checking / homework home / attendance)
- *   Quick actions    — chips into the highest-traffic entry forms, rendered only
- *                      when the role holds the target tab's EXISTING gate (the
- *                      same roleHasPermission checks AppTabs uses — no new gating)
- * Refetches on focus (the HomeworkHome pattern) so counts never go stale.
+ * TodayScreen "আজকের কাজ" (ux-audit F7 redesign, D-#265/#279/#280/#290/#318 logic
+ * kept) — the teacher landing dashboard. Every daily job — INCLUDING the
+ * question-bank sets loop — starts here in ≤2 taps; the screen answers "what
+ * needs me right now?" before anything else.
+ *
+ *   Header          — full Bangla date ("বুধবার, ১৬ জুলাই ২০২৬") + class-teacher
+ *                     duty line (D-#290)
+ *   Alert stack     — SAME alert logic/deep-links as before (D-#279/#280),
+ *                     restyled: errorContainer/goldContainer filled cards with a
+ *                     1dp matching border, 22dp icon + text (never color alone)
+ *   আমার পিরিয়ড     — horizontal timeline of today's slots; past slots dimmed,
+ *                     the CURRENT slot highlighted primaryContainer + "এখন"
+ *                     badge (12sp — caption floor); tap → class notes
+ *   অমীমাংসিত কাজ   — count rows with display-scale Bangla numerals; each row
+ *                     one-tap deep-links into the exact queue
+ *   Quick actions   — 8-tile lucide-icon grid (F7 core: adds প্রশ্নব্যাংক /
+ *                     আমার সেট / ট্র্যাকার / ছুটির আবেদন to the old four), gated
+ *                     exactly like the target tabs (AppTabs' checks — no new
+ *                     gating), Bangla accessibilityLabel on every tile
+ *   সাম্প্রতিক সেট   — the caller's last 2 sets (new myRecentSets read) with a
+ *                     one-tap [ট্র্যাকার খুলুন]: routes to the EXISTING open
+ *                     tracker when there is one (openTracker is not idempotent),
+ *                     else opens one — TrackerEntry in 2 taps from login
+ *
+ * QueryGate wraps the aggregate myDay sections; the quick-action grid renders
+ * OUTSIDE the gate so the empty-day state ("আজ কোনো নির্ধারিত কাজ নেই।") still
+ * offers every entry point. Pull-to-refresh + focus-refetch keep counts fresh.
+ * No emoji — Icon (lucide) only (F19 seed).
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { useQuery } from "urql";
-import { DAYS_OF_WEEK, roleHasPermission } from "@scd/shared";
+import { useMutation, useQuery } from "urql";
+import { roleHasPermission } from "@scd/shared";
 import type { Role } from "@scd/shared";
-import { MY_DAY_QUERY, UNMARKED_SECTIONS, MY_SECTION_ATTENDANCE } from "../../graphql/operations";
-import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Badge, Loader, ErrorBanner } from "../../components/ui";
-import { STR, bnNum, classLevelLabel, dayOfWeekLabel, dayTypeLabel, routineSubjectLabel } from "../../lib/labels";
+import {
+  MY_DAY_QUERY,
+  MY_SECTION_ATTENDANCE,
+  MY_RECENT_SETS,
+  OPEN_TRACKER,
+  type RecentSetT,
+  type RoutineSlotT,
+} from "../../graphql/operations";
+import { Screen, H1, H2, Body, Muted, Card, Badge, Button, EmptyState, Notice } from "../../components/ui";
+import { QueryGate } from "../../components/QueryGate";
+import { Icon, type IconName } from "../../components/Icon";
+import {
+  STR,
+  bnNum,
+  classLevelLabel,
+  dayTypeLabel,
+  fullDateLabel,
+  routineSubjectLabel,
+  selectionSummaryLabel,
+  setTypeLabel,
+} from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useColors } from "../../theme";
-import { space } from "../../theme/tokens";
+import { radius, space, typeScale } from "../../theme/tokens";
+import { usePullRefresh } from "../../lib/useRefresh";
 import { dateKey } from "../../lib/dates";
 
 const todayISO = (): string => dateKey();
 
 /** Cross-tab navigation (the Basket→Sets convention): navigate bubbles up to the drawer. */
 type CrossNav = { navigate: (name: string, params?: object) => void };
+
+/** "HH:MM" for the local clock — comparable against the slots' zero-padded times. */
+const hhmm = (ms: number): string => {
+  const d = new Date(ms);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+};
+
+type SlotPhase = "past" | "current" | "upcoming";
+const slotPhase = (s: RoutineSlotT, nowHM: string): SlotPhase => {
+  if (!s.startTime || !s.endTime) return "upcoming";
+  if (s.endTime <= nowHM) return "past";
+  if (s.startTime <= nowHM) return "current";
+  return "upcoming";
+};
 
 export default function TodayScreen(): React.ReactElement {
   const nav = useNavigation() as unknown as CrossNav;
@@ -47,8 +89,46 @@ export default function TodayScreen(): React.ReactElement {
 
   const [q, refetch] = useQuery({ query: MY_DAY_QUERY, variables: { date } });
 
-  // Focus-refetch (HomeworkHome pattern): skip the first focus — the query already
-  // runs on mount — then refresh whenever the user returns to the dashboard.
+  // The SAME gates AppTabs uses for the target tabs (no new gating logic).
+  const canDeclare = !!role && roleHasPermission(role as Role, "tracker:read");
+  const canManage = !!role && roleHasPermission(role as Role, "attendance:manage");
+  const canAttendance =
+    !!role &&
+    (roleHasPermission(role as Role, "attendance:mark") || roleHasPermission(role as Role, "attendance:manage"));
+  const canClassTest =
+    !!role && (roleHasPermission(role as Role, "tracker:read") || roleHasPermission(role as Role, "roster:manage"));
+  const canClassNotes = !!role && roleHasPermission(role as Role, "routine:read");
+  const canQuestions = !!role && roleHasPermission(role as Role, "question:read");
+  const canSets = !!role && roleHasPermission(role as Role, "set:read");
+  const canTrackers = !!role && roleHasPermission(role as Role, "tracker:read");
+  const canHr = !!role && role !== "GUARDIAN";
+
+  // D-#318: the teacher's OWN sections' attendance at a glance (admins land on
+  // the card dashboard instead, so no pause needed beyond the guardian gate).
+  const [mySectionsQ, refetchMySections] = useQuery({
+    query: MY_SECTION_ATTENDANCE,
+    variables: { dateKey: date },
+    pause: canManage,
+  });
+  const mySections = mySectionsQ.data?.mySectionAttendance ?? [];
+
+  // ux-audit F7: the caller's last 2 sets — the shortcut back into tracking.
+  const [recentQ, refetchRecent] = useQuery({
+    query: MY_RECENT_SETS,
+    variables: { limit: 2 },
+    pause: !canSets,
+  });
+  const recentSets = recentQ.data?.myRecentSets ?? [];
+
+  const refetchAll = useCallback(() => {
+    refetch({ requestPolicy: "network-only" });
+    if (!canManage) refetchMySections({ requestPolicy: "network-only" });
+    if (canSets) refetchRecent({ requestPolicy: "network-only" });
+  }, [refetch, refetchMySections, refetchRecent, canManage, canSets]);
+
+  // Focus-refetch (HomeworkHome pattern): skip the first focus — the queries
+  // already run on mount — then refresh whenever the user returns. Also picks
+  // up a just-opened tracker's id for the recent-set shortcut.
   const firstFocus = useRef(true);
   useFocusEffect(
     useCallback(() => {
@@ -56,43 +136,30 @@ export default function TodayScreen(): React.ReactElement {
         firstFocus.current = false;
         return;
       }
-      refetch({ requestPolicy: "network-only" });
-    }, [refetch]),
+      refetchAll();
+    }, [refetchAll]),
+  );
+
+  const { refreshing, onRefresh } = usePullRefresh(
+    q.fetching || mySectionsQ.fetching || recentQ.fetching,
+    refetchAll,
   );
 
   const day = q.data?.myDay;
   const slots = day?.slots ?? [];
   const hw = day?.homework;
   const alerts = day?.alerts ?? [];
-  const presence = day?.classPresence ?? [];
   const ctOf = day?.classTeacherOf ?? [];
-
-  // The SAME gates AppTabs uses for the target tabs (no new gating logic).
-  const canDeclare = !!role && roleHasPermission(role as Role, "tracker:read");
-  const canManage = !!role && roleHasPermission(role as Role, "attendance:manage");
-  const canAttendance =
-    !!role &&
-    (roleHasPermission(role as Role, "attendance:mark") || roleHasPermission(role as Role, "attendance:manage"));
-
-  // Manager-only: who still hasn't marked today (reuses the existing §8 query).
-  const [unmarkedQ] = useQuery({ query: UNMARKED_SECTIONS, variables: { dateKey: date }, pause: !canManage });
-  const unmarked = unmarkedQ.data?.unmarkedSections ?? [];
-
-  // D-#318: the teacher's OWN sections' attendance at a glance (admins land on
-  // the card dashboard instead, so no pause needed beyond the guardian gate).
-  const [mySectionsQ] = useQuery({ query: MY_SECTION_ATTENDANCE, variables: { dateKey: date }, pause: canManage });
-  const mySections = mySectionsQ.data?.mySectionAttendance ?? [];
-
-  // The countdown ticks locally (the server sends an absolute `dueAt` instant), so the
-  // remaining time stays truthful without re-querying. One tick a minute is enough —
-  // the row is rendered to minute precision.
   const prep = day?.assignmentPrep ?? null;
+
+  // ONE always-on minute tick drives both the amber countdown and the timeline's
+  // past/current highlighting (the old interval only ran while `prep` existed).
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!prep) return;
     const id = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(id);
-  }, [prep?.dueAt]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
+  const nowHM = hhmm(now);
 
   /** "3d 4h" / "4h 20m" / "20m" — coarsest two units, minute precision at the end. */
   const timeLeft = (dueAt: string): string => {
@@ -118,227 +185,352 @@ export default function TodayScreen(): React.ReactElement {
             ? STR.alertAsReconcile
             : STR.alertAssignmentEntry;
 
-  /** Each alert deep-links into the screen that clears it. */
+  /** Each alert deep-links into the screen that clears it (unchanged, D-#279). */
   const alertTarget = (kind: string): void => {
     if (kind === "attendance") nav.navigate("AttendanceTab", { screen: "AttendanceHome" });
     else if (kind === "class_note") nav.navigate("ClassNotesTab", { screen: "MyClassNotes" });
     else if (kind === "hw_reconcile") nav.navigate("HomeworkTab", { screen: "HomeworkHome" });
     else nav.navigate("AssignmentTab", { screen: "AssignmentHome" });
   };
-  const canClassTest =
-    !!role && (roleHasPermission(role as Role, "tracker:read") || roleHasPermission(role as Role, "roster:manage"));
-  const canClassNotes = !!role && roleHasPermission(role as Role, "routine:read");
 
-  const PendingRow = ({
+  // Recent-set → tracker shortcut. openTracker is NOT idempotent, so when the
+  // server says a tracker is already open we route straight into it.
+  const [, openTracker] = useMutation(OPEN_TRACKER);
+  const [busySetId, setBusySetId] = useState<string | null>(null);
+  const [trackerError, setTrackerError] = useState<string | null>(null);
+  const gotoTracker = (trackerId: string): void =>
+    nav.navigate("TrackersTab", { screen: "TrackerEntry", params: { trackerId }, initial: false });
+  const onOpenTracker = async (s: RecentSetT): Promise<void> => {
+    if (busySetId) return;
+    if (s.openTrackerId) {
+      gotoTracker(s.openTrackerId);
+      return;
+    }
+    setBusySetId(s.id);
+    setTrackerError(null);
+    const res = await openTracker({ setId: s.id, sectionId: s.sectionId });
+    setBusySetId(null);
+    if (res.error || !res.data?.openTracker) {
+      setTrackerError(friendlyError(res.error));
+      return;
+    }
+    gotoTracker(res.data.openTracker.trackerId);
+  };
+
+  // Empty day: the aggregate loaded and there is literally nothing scheduled or
+  // owed. The quick-action grid still renders below (outside the gate).
+  const counts = [hw?.pendingChecking ?? 0, hw?.activeChases ?? 0, hw?.openResubmissions ?? 0];
+  const emptyDay =
+    !!day &&
+    slots.length === 0 &&
+    alerts.length === 0 &&
+    !prep &&
+    counts.every((c) => c === 0) &&
+    !day.attendancePending;
+
+  // ---------------------------------------------------------------------------
+  // Section pieces
+  // ---------------------------------------------------------------------------
+
+  const AlertCard = ({
+    icon,
+    tone,
+    title,
+    sub,
+    onPress,
+  }: {
+    icon: IconName;
+    tone: "error" | "gold";
+    title: string;
+    sub: string;
+    onPress: () => void;
+  }): React.ReactElement => {
+    const fg = tone === "error" ? colors.onErrorContainer : colors.onGoldContainer;
+    return (
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${title} — ${sub}`}
+        style={({ pressed }) => [
+          {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: space(3),
+            minHeight: 56,
+            padding: space(3),
+            borderRadius: radius.md,
+            borderWidth: 1,
+            backgroundColor: tone === "error" ? colors.errorContainer : colors.goldContainer,
+            borderColor: tone === "error" ? colors.error : colors.gold,
+            marginBottom: space(2),
+          },
+          pressed && { opacity: 0.7 },
+        ]}
+      >
+        <Icon name={icon} size={22} color={fg} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Body style={{ fontWeight: "700", color: fg }}>{title}</Body>
+          <Body style={{ ...typeScale.secondary, color: fg }}>{sub}</Body>
+        </View>
+        <Icon name="chevron-right" size={20} color={fg} />
+      </Pressable>
+    );
+  };
+
+  const CountRow = ({
     label,
     count,
+    color,
     onPress,
-    danger,
+    last,
   }: {
     label: string;
     count: number;
+    color: string;
     onPress: () => void;
-    danger?: boolean;
+    last?: boolean;
   }): React.ReactElement => (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityLabel={`${label} — ${bnNum(count)}`}
       style={({ pressed }) => [
         {
           flexDirection: "row",
-          justifyContent: "space-between",
           alignItems: "center",
-          minHeight: 48,
-          paddingVertical: space(2),
+          justifyContent: "space-between",
+          gap: space(3),
+          minHeight: 56,
+          borderBottomWidth: last ? 0 : 1,
+          borderBottomColor: colors.border,
         },
         pressed && { opacity: 0.7 },
       ]}
     >
       <Body style={{ flex: 1 }}>{label}</Body>
-      <Badge text={bnNum(count)} tone={count > 0 ? (danger ? "danger" : "warn") : "ok"} />
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+        <Body style={{ ...typeScale.display, color }}>{bnNum(count)}</Body>
+        <Icon name="chevron-right" size={20} color={colors.textSecondary} />
+      </View>
     </Pressable>
   );
 
-  return (
-    <Screen padded={false}>
-      <ScrollView contentContainerStyle={{ padding: space(4) }}>
-        {/* Date header — today + the Bangla day name */}
-        <H2>
-          {bnNum(date)} · {dayOfWeekLabel(DAYS_OF_WEEK[new Date().getDay()])}
-        </H2>
+  type Tile = { key: string; icon: IconName; label: string; go: () => void };
+  const tiles: (Tile | false)[] = [
+    canDeclare && {
+      key: "hw",
+      icon: "book-open" as const,
+      label: STR.hwDeclareTitle,
+      go: () => nav.navigate("HomeworkTab", { screen: "DeclareHomework", initial: false }),
+    },
+    canAttendance && {
+      key: "att",
+      icon: "hand" as const,
+      label: STR.tabAttendance,
+      go: () => nav.navigate("AttendanceTab", { screen: "AttendanceHome" }),
+    },
+    canClassNotes && {
+      key: "notes",
+      icon: "square-pen" as const,
+      label: STR.drawerItemClassNotes,
+      go: () => nav.navigate("ClassNotesTab", { screen: "MyClassNotes" }),
+    },
+    canClassTest && {
+      key: "ct",
+      icon: "flask-conical" as const,
+      label: STR.tabClassTest,
+      go: () => nav.navigate("ClassTestTab", { screen: "RequestClassTest", initial: false }),
+    },
+    canQuestions && {
+      key: "qbank",
+      icon: "clipboard-list" as const,
+      label: STR.tdQuestionBank,
+      go: () => nav.navigate("QuestionsTab", { screen: "QuestionBank", initial: false }),
+    },
+    canSets && {
+      key: "sets",
+      icon: "star" as const,
+      label: STR.tdMySets,
+      go: () => nav.navigate("SetsTab", { screen: "SetList", initial: false }),
+    },
+    canTrackers && {
+      key: "trackers",
+      icon: "check-square" as const,
+      label: STR.tabTrackers,
+      go: () => nav.navigate("TrackersTab", { screen: "TrackerList", initial: false }),
+    },
+    canHr && {
+      key: "leave",
+      icon: "calendar" as const,
+      label: STR.tdLeaveApply,
+      go: () => nav.navigate("HrTab", { screen: "MyLeave", initial: false }),
+    },
+  ];
+  const visibleTiles = tiles.filter((t): t is Tile => !!t);
 
-        {/* D-#290: name the class-teacher duty — the reconcile alerts have an owner. */}
-        {ctOf.length > 0 ? (
-          <Muted style={{ marginBottom: space(2) }}>
-            🎓 {STR.ctOfTitle}:{" "}
+  return (
+    <Screen
+      scroll
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
+      {/* Header — full Bangla date + class-teacher duty line (D-#290) */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+        <Icon name="calendar" size={20} color={colors.primary} />
+        <H1>{fullDateLabel(date)}</H1>
+      </View>
+      {ctOf.length > 0 ? (
+        <View
+          style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: space(1), marginBottom: space(2) }}
+        >
+          <Icon name="graduation-cap" size={16} color={colors.textSecondary} />
+          <Muted style={{ flex: 1 }}>
+            {STR.ctOfTitle}:{" "}
             {ctOf
               .map((s) => `${classLevelLabel(s.classLevel)}${s.nameBn ? ` — ${s.nameBn}` : ""}`)
               .join(", ")}
           </Muted>
-        ) : null}
+        </View>
+      ) : (
+        <View style={{ height: space(2) }} />
+      )}
 
-        {q.error ? (
-          <ErrorBanner message={friendlyError(q.error)} onRetry={() => refetch({ requestPolicy: "network-only" })} />
-        ) : null}
-        {q.fetching && !day ? <Loader label={STR.loading} /> : null}
-
-        {/* Red backlog alerts (D-#279) — anything owed TODAY or on a previous school day.
-            Each row deep-links into the screen that clears it. Empty ⇒ nothing renders. */}
-        {alerts.length > 0 || prep ? (
-          <Card>
-            <Body style={{ fontWeight: "700", marginBottom: space(1), color: colors.error }}>
-              ⚠ {STR.alertsTitle}
-            </Body>
-
-            {/* Amber countdown (D-#280) — sits above the red rows: it is the thing that
-                has NOT slipped yet. Vanishes the moment the item is delivered, and turns
-                into the red `assignment_entry` row once the deadline passes. */}
-            {prep ? (
-              <Pressable
-                onPress={() => nav.navigate("AssignmentTab", { screen: "AssignmentHome" })}
-                accessibilityRole="button"
-                accessibilityLabel={STR.prepAssignment}
-                style={({ pressed }) => [{ paddingVertical: space(2) }, pressed && { opacity: 0.7 }]}
-              >
-                <Body style={{ fontWeight: "600", color: colors.warning }}>
-                  ⏳ {STR.prepAssignment} · {timeLeft(prep.dueAt)} {STR.prepLeft}
-                </Body>
-                <Muted>
-                  {STR.prepDeadline}: {bnNum(prep.deliveryDateKey)} · {bnNum(prep.items)} {STR.alertItems}
-                </Muted>
-              </Pressable>
+      <QueryGate
+        result={q}
+        onRetry={refetchAll}
+        isEmpty={emptyDay}
+        empty={
+          <View style={{ marginBottom: space(3) }}>
+            {day && day.dayType !== "FULL" && day.dayType !== "QURAN_ONLY" ? (
+              <Muted style={{ textAlign: "center", marginBottom: space(1) }}>{dayTypeLabel(day.dayType)}</Muted>
             ) : null}
-
-            {alerts.map((a) => (
-              <Pressable
-                key={a.kind}
-                onPress={() => alertTarget(a.kind)}
-                accessibilityRole="button"
-                accessibilityLabel={alertLabel(a.kind)}
-                style={({ pressed }) => [{ paddingVertical: space(2) }, pressed && { opacity: 0.7 }]}
-              >
-                <Body style={{ fontWeight: "600", color: colors.error }}>
-                  {alertLabel(a.kind)} · {bnNum(a.count)}{" "}
-                  {a.kind === "assignment_entry" ? STR.alertItems : STR.alertDays}
-                </Body>
-                {a.oldestDateKey && a.oldestDateKey !== date ? (
-                  <Muted>
-                    {STR.alertOldest}: {bnNum(a.oldestDateKey)}
-                  </Muted>
-                ) : null}
-              </Pressable>
-            ))}
-          </Card>
-        ) : null}
-
-        {/* Principal/Office: per-class presence for today, then who still hasn't marked. */}
-        {canManage && presence.length > 0 ? (
-          <Card>
-            <View
-              style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: space(2) }}
-            >
-              <Body style={{ fontWeight: "700", flex: 1 }}>{STR.classPresenceTitle}</Body>
-              {/* D-#312: the school-wide present total at a glance. */}
-              <Badge
-                text={`${STR.presentWord}: ${bnNum(presence.reduce((s, c) => s + c.presentCount, 0))}`}
-                tone="ok"
+            <EmptyState message={STR.tdEmptyDay} />
+          </View>
+        }
+      >
+        {/* Alert stack — restyled D-#279/#280 cards; deep-links unchanged */}
+        {alerts.length > 0 || prep ? (
+          <View style={{ marginBottom: space(2) }}>
+            <Muted style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.alertsTitle}</Muted>
+            {prep ? (
+              <AlertCard
+                icon="clock"
+                tone="gold"
+                title={STR.prepAssignment}
+                sub={`${timeLeft(prep.dueAt)} ${STR.prepLeft} · ${bnNum(prep.items)} ${STR.alertItems}`}
+                onPress={() => nav.navigate("AssignmentTab", { screen: "AssignmentHome" })}
               />
-            </View>
-            {presence.map((c) => (
-              <View
-                key={c.classId}
-                style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: space(2) }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Body style={{ fontWeight: "600" }}>{classLevelLabel(c.classLevel)}</Body>
-                  <Muted>
-                    {STR.presentWord}: {bnNum(c.presentCount)} · {STR.absentWord}: {bnNum(c.absentCount)} /{" "}
-                    {bnNum(c.totalCount)}
-                  </Muted>
-                </View>
-                {c.complete ? (
-                  <Badge text={bnNum(c.presentCount)} tone="ok" />
-                ) : (
-                  <Badge text={STR.presenceIncomplete} tone="warn" />
-                )}
-              </View>
+            ) : null}
+            {alerts.map((a) => (
+              <AlertCard
+                key={a.kind}
+                icon="alert-triangle"
+                tone="error"
+                title={alertLabel(a.kind)}
+                sub={`${bnNum(a.count)} ${a.kind === "assignment_entry" ? STR.alertItems : STR.alertDays}${
+                  a.oldestDateKey && a.oldestDateKey !== date ? ` · ${STR.alertOldest}: ${bnNum(a.oldestDateKey)}` : ""
+                }`}
+                onPress={() => alertTarget(a.kind)}
+              />
             ))}
-          </Card>
+          </View>
         ) : null}
 
-        {canManage && unmarked.length > 0 ? (
-          <Card>
-            <Body style={{ fontWeight: "700", marginBottom: space(1), color: colors.error }}>
-              ⚠ {STR.attUnmarkedSections} · {bnNum(unmarked.length)}
-            </Body>
-            {/* Same shape as Attendance → Report: name the still-missing UNITS (the Quran
-                GROUPS for Class 1–5), so the Office can see which teacher to chase from
-                here too — the two screens must not disagree. */}
-            {unmarked.map((u) => (
-              <View key={u.sectionId} style={{ paddingVertical: space(2) }}>
-                <Body style={{ fontWeight: "600" }}>
-                  {classLevelLabel(u.classLevel)}
-                  {u.sectionNameBn ? ` — ${u.sectionNameBn}` : ""}
-                </Body>
-                {u.pendingUnits.map((p) => (
-                  <View
-                    key={`${p.unitType}:${p.unitId}`}
-                    style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: space(1) }}
-                  >
-                    <Muted style={{ flex: 1 }}>
-                      {p.unitType === "subjectgroup" ? "🕌 " : ""}
-                      {p.label}
-                    </Muted>
-                    <Muted>{p.markerName ?? "—"}</Muted>
+        {/* আমার পিরিয়ড — horizontal timeline; current slot highlighted */}
+        <H2>{STR.myPeriods}</H2>
+        {day && slots.length === 0 ? (
+          <Muted style={{ marginBottom: space(3) }}>
+            {day.dayType !== "FULL" && day.dayType !== "QURAN_ONLY" ? dayTypeLabel(day.dayType) : STR.rtNoSlots}
+          </Muted>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginHorizontal: -space(4), marginBottom: space(3) }}
+            contentContainerStyle={{ gap: space(2), paddingHorizontal: space(4), paddingVertical: space(1) }}
+          >
+            {slots.map((s) => {
+              const phase = slotPhase(s, nowHM);
+              const current = phase === "current";
+              const fg = current ? colors.onPrimaryContainer : colors.textPrimary;
+              const fgMuted = current ? colors.onPrimaryContainer : colors.textSecondary;
+              return (
+                <Pressable
+                  key={s.id}
+                  onPress={() => nav.navigate("ClassNotesTab", { screen: "MyClassNotes" })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${STR.rtPeriodN} ${bnNum(s.periodNumber)} — ${routineSubjectLabel(s.subject)}${current ? ` — ${STR.tdNow}` : ""}`}
+                  style={({ pressed }) => [
+                    {
+                      width: 136,
+                      padding: space(3),
+                      borderRadius: radius.md,
+                      borderWidth: 1,
+                      borderColor: current ? colors.primary : colors.border,
+                      backgroundColor: current ? colors.primaryContainer : colors.surface,
+                    },
+                    phase === "past" && { opacity: 0.6 },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space(1) }}>
+                    <Body style={{ ...typeScale.caption, fontWeight: current ? "700" : "400", color: fgMuted }}>
+                      {STR.rtPeriodN} {bnNum(s.periodNumber)}
+                      {s.startTime ? ` · ${bnNum(s.startTime)}` : ""}
+                    </Body>
+                    {current ? (
+                      <View
+                        style={{
+                          backgroundColor: colors.primary,
+                          borderRadius: radius.pill,
+                          paddingHorizontal: space(2),
+                        }}
+                      >
+                        {/* 12sp minimum — the caption floor (the prototype's 11px is below it) */}
+                        <Body style={{ ...typeScale.caption, fontWeight: "700", color: colors.onPrimary }}>
+                          {STR.tdNow}
+                        </Body>
+                      </View>
+                    ) : null}
                   </View>
-                ))}
-              </View>
-            ))}
-          </Card>
-        ) : null}
-
-        {/* My periods */}
-        <Card>
-          <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.myPeriods}</Body>
-          {day && slots.length === 0 ? (
-            <Muted>{day.dayType !== "FULL" && day.dayType !== "QURAN_ONLY" ? dayTypeLabel(day.dayType) : STR.rtNoSlots}</Muted>
-          ) : null}
-          {slots.map((s) => (
-            <View key={s.id} style={{ paddingVertical: space(2) }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
-                <Body style={{ fontWeight: "600", flex: 1 }}>
-                  {STR.rtPeriodN} {bnNum(s.periodNumber)}
-                  {s.startTime && s.endTime ? ` · ${bnNum(s.startTime)}–${bnNum(s.endTime)}` : ""}
-                </Body>
-                {s.isCovering ? <Badge text={STR.rtCoveringFor} tone="warn" /> : null}
-              </View>
-              <Muted>
-                {routineSubjectLabel(s.subject)}
-                {s.groupName ? ` · ${s.groupName}` : ""}
-                {s.isCovering && s.teacherName ? ` · ${STR.rtCoveringFor} ${s.teacherName}` : ""}
-                {!s.isCovering && s.coverTeacherName ? ` · ${STR.rtCovered}: ${s.coverTeacherName}` : ""}
-              </Muted>
-            </View>
-          ))}
-        </Card>
+                  <Body style={{ fontWeight: "700", color: fg }} numberOfLines={1}>
+                    {routineSubjectLabel(s.subject)}
+                  </Body>
+                  <Body style={{ ...typeScale.caption, color: fgMuted }} numberOfLines={1}>
+                    {s.groupName ?? "—"}
+                    {s.isCovering && s.teacherName ? ` · ${STR.rtCoveringFor} ${s.teacherName}` : ""}
+                    {!s.isCovering && s.coverTeacherName ? ` · ${STR.rtCovered}: ${s.coverTeacherName}` : ""}
+                  </Body>
+                  {s.isCovering ? (
+                    <View style={{ alignSelf: "flex-start", marginTop: space(1) }}>
+                      <Badge text={STR.rtCoveringFor} tone="warn" />
+                    </View>
+                  ) : null}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
 
         {/* D-#318: the teacher's OWN sections' attendance at a glance — tap for names. */}
         {!canManage && mySections.length > 0 ? (
           <Card onPress={() => nav.navigate("AttendanceTab", { screen: "SectionAttendance", initial: false })}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: space(1) }}>
-              <Body style={{ fontWeight: "700", flex: 1 }}>🙋 {STR.attMySectionsToday}</Body>
-              <Muted>→</Muted>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginBottom: space(1) }}>
+              <Icon name="hand" size={18} color={colors.textPrimary} />
+              <Body style={{ fontWeight: "700", flex: 1 }}>{STR.attMySectionsToday}</Body>
+              <Icon name="chevron-right" size={20} color={colors.textSecondary} />
             </View>
             {mySections.map((sec) => (
               <View
                 key={sec.sectionId}
                 style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: space(1) }}
               >
-                <Body style={{ flex: 1 }}>
-                  {classLevelLabel(sec.classLevel)}
-                  {sec.sectionNameBn ? ` — ${sec.sectionNameBn}` : ""}
-                  {!sec.complete ? " ⚠" : ""}
-                </Body>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: space(1), flex: 1 }}>
+                  <Body>
+                    {classLevelLabel(sec.classLevel)}
+                    {sec.sectionNameBn ? ` — ${sec.sectionNameBn}` : ""}
+                  </Body>
+                  {!sec.complete ? <Badge text={STR.presenceIncomplete} tone="warn" /> : null}
+                </View>
                 <Muted>
                   {STR.presentWord}: {bnNum(sec.presentCount)} · {STR.absentWord}: {bnNum(sec.absentCount)} /{" "}
                   {bnNum(sec.totalCount)}
@@ -348,68 +540,130 @@ export default function TodayScreen(): React.ReactElement {
           </Card>
         ) : null}
 
-        {/* Pending work — each count opens the exact queue in one tap */}
+        {/* অমীমাংসিত কাজ — display-numeral count rows, one-tap deep links */}
         {day ? (
-          <Card>
-            <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.pendingWork}</Body>
-            <PendingRow
-              label={STR.hwCheckingTitle}
-              count={hw?.pendingChecking ?? 0}
-              onPress={() => nav.navigate("HomeworkTab", { screen: "CheckingQueue", initial: false })}
-            />
-            <PendingRow
-              label={STR.hwChaseList}
-              count={hw?.activeChases ?? 0}
-              danger
-              onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkHome" })}
-            />
-            <PendingRow
-              label={STR.hwOpenResubmissions}
-              count={hw?.openResubmissions ?? 0}
-              onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkRecords", initial: false })}
-            />
-            {canAttendance ? (
-              <PendingRow
-                label={STR.attMarkTitle}
-                count={day.attendancePending ? 1 : 0}
-                danger
-                onPress={() => nav.navigate("AttendanceTab", { screen: "AttendanceHome" })}
+          <>
+            <H2>{STR.pendingWork}</H2>
+            <Card>
+              <CountRow
+                label={STR.hwCheckingTitle}
+                count={hw?.pendingChecking ?? 0}
+                color={colors.error}
+                onPress={() => nav.navigate("HomeworkTab", { screen: "CheckingQueue", initial: false })}
               />
-            ) : null}
-          </Card>
-        ) : null}
-
-        {/* Quick actions — gated exactly like the target tabs */}
-        {canDeclare || canAttendance || canClassTest ? (
-          <Card>
-            <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.quickActions}</Body>
-            <ChipRow>
-              {canDeclare ? (
-                <Chip
-                  label={`📒 ${STR.hwDeclareTitle}`}
-                  onPress={() => nav.navigate("HomeworkTab", { screen: "DeclareHomework", initial: false })}
-                />
-              ) : null}
+              <CountRow
+                label={STR.hwChaseList}
+                count={hw?.activeChases ?? 0}
+                color={colors.warning}
+                onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkHome" })}
+              />
+              <CountRow
+                label={STR.hwOpenResubmissions}
+                count={hw?.openResubmissions ?? 0}
+                color={colors.info}
+                onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkRecords", initial: false })}
+                last={!canAttendance}
+              />
               {canAttendance ? (
-                <Chip label={`🙋 ${STR.tabAttendance}`} onPress={() => nav.navigate("AttendanceTab", { screen: "AttendanceHome" })} />
-              ) : null}
-              {/* UX-8 §4.8 note 5: the Class Notes deep link (same routine:read gate). */}
-              {canClassNotes ? (
-                <Chip
-                  label={`📓 ${STR.drawerItemClassNotes}`}
-                  onPress={() => nav.navigate("ClassNotesTab", { screen: "MyClassNotes" })}
+                <CountRow
+                  label={STR.attMarkTitle}
+                  count={day.attendancePending ? 1 : 0}
+                  color={colors.error}
+                  onPress={() => nav.navigate("AttendanceTab", { screen: "AttendanceHome" })}
+                  last
                 />
               ) : null}
-              {canClassTest ? (
-                <Chip
-                  label={`🧪 ${STR.tabClassTest}`}
-                  onPress={() => nav.navigate("ClassTestTab", { screen: "RequestClassTest", initial: false })}
-                />
-              ) : null}
-            </ChipRow>
-          </Card>
+            </Card>
+          </>
         ) : null}
-      </ScrollView>
+      </QueryGate>
+
+      {/* Quick actions — OUTSIDE the gate: reachable on empty days and errors too */}
+      {visibleTiles.length > 0 ? (
+        <>
+          <H2>{STR.quickActions}</H2>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: space(3) }}>
+            {visibleTiles.map((t) => (
+              <Pressable
+                key={t.key}
+                onPress={t.go}
+                accessibilityRole="button"
+                accessibilityLabel={t.label}
+                style={({ pressed }) => [
+                  {
+                    width: "25%",
+                    minHeight: 96,
+                    alignItems: "center",
+                    paddingVertical: space(2),
+                    paddingHorizontal: space(1),
+                    gap: space(2),
+                  },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: radius.md,
+                    backgroundColor: colors.primaryContainer,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon name={t.icon} size={24} color={colors.primary} />
+                </View>
+                <Body style={{ ...typeScale.caption, fontWeight: "500", textAlign: "center" }} numberOfLines={2}>
+                  {t.label}
+                </Body>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      {/* সাম্প্রতিক সেট — assembly → tracking in 2 taps (F7 loop closure) */}
+      {canSets && recentSets.length > 0 ? (
+        <>
+          <H2>{STR.tdRecentSets}</H2>
+          {trackerError ? <Notice message={trackerError} tone="danger" /> : null}
+          {recentSets.map((s) => (
+            <Card key={s.id}>
+              <Pressable
+                onPress={() => nav.navigate("SetsTab", { screen: "SetDetail", params: { setId: s.id }, initial: false })}
+                accessibilityRole="button"
+                accessibilityLabel={s.name ?? setTypeLabel(s.setType)}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+              >
+                <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: space(2) }}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Body style={{ fontWeight: "700" }} numberOfLines={2}>
+                      {s.name ?? setTypeLabel(s.setType)}
+                    </Body>
+                    <Muted>
+                      {setTypeLabel(s.setType)} · {selectionSummaryLabel(s.itemCount, s.totalMarks ?? 0)}
+                    </Muted>
+                  </View>
+                  <Badge
+                    text={s.status === "assembled" ? STR.statusAssembled : STR.statusDraft}
+                    tone={s.status === "assembled" ? "ok" : "warn"}
+                  />
+                </View>
+              </Pressable>
+              {s.status === "assembled" ? (
+                <View style={{ marginTop: space(3) }}>
+                  <Button
+                    title={STR.openTracker}
+                    variant="secondary"
+                    loading={busySetId === s.id}
+                    onPress={() => void onOpenTracker(s)}
+                  />
+                </View>
+              ) : null}
+            </Card>
+          ))}
+        </>
+      ) : null}
     </Screen>
   );
 }

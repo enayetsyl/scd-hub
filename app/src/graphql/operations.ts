@@ -702,6 +702,7 @@ export interface QuestionListItem {
   subject: string;
   classLevel: number;
   qid: string | null;
+  topicTag: string | null;
   questionType: string | null;
   paperRole: string | null;
   bloomLevel: string | null;
@@ -724,8 +725,12 @@ export interface QuestionsVars {
   marksMin?: number | null;
   marksMax?: number | null;
   reviewStatus?: string | null;
+  /** Free-text over question_text + qid; Bangla digits match Latin qids. */
+  search?: string | null;
   limit?: number | null;
   offset?: number | null;
+  /** Cursor: id of the previous page's last item (ux-audit F16). */
+  after?: string | null;
 }
 
 export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsVars>`
@@ -740,8 +745,10 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
     $marksMin: Float
     $marksMax: Float
     $reviewStatus: String
+    $search: String
     $limit: Int
     $offset: Int
+    $after: String
   ) {
     questions(
       subject: $subject
@@ -754,13 +761,16 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       marksMin: $marksMin
       marksMax: $marksMax
       reviewStatus: $reviewStatus
+      search: $search
       limit: $limit
       offset: $offset
+      after: $after
     ) {
       id
       subject
       classLevel
       qid
+      topicTag
       questionType
       paperRole
       bloomLevel
@@ -770,6 +780,15 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       reviewStatus
       payloadJson
     }
+  }
+`;
+
+export const QUESTION_TOPIC_TAGS_QUERY = gql<
+  { questionTopicTags: string[] },
+  { subject?: string | null; classLevel?: number | null }
+>`
+  query QuestionTopicTags($subject: String, $classLevel: Int) {
+    questionTopicTags(subject: $subject, classLevel: $classLevel)
   }
 `;
 
@@ -839,6 +858,61 @@ export const CREATE_SET = gql<
 >`
   mutation CreateSet($setType: String!, $sectionId: String!, $classId: String!, $subjectId: String, $name: String) {
     createSet(setType: $setType, sectionId: $sectionId, classId: $classId, subjectId: $subjectId, name: $name) {
+      id
+      setType
+      name
+      sectionId
+      classId
+      subjectId
+      status
+      basketItems { artifactId qid marks }
+      totalMarks
+      durationMinutes
+      dueDate
+      createdBy
+      assembledBy
+      assembledAt
+      createdAt
+    }
+  }
+`;
+
+/** One-step transactional create (ux-audit F6/F10): create + attach in order +
+ *  assemble in a single mutation. Returns the full AssessmentSet so the urql
+ *  document cache invalidates set-list queries. */
+export const CREATE_SET_WITH_QUESTIONS = gql<
+  { createSetWithQuestions: AssessmentSetT },
+  {
+    setType: string;
+    sectionId: string;
+    classId: string;
+    subjectId?: string | null;
+    name?: string | null;
+    artifactIds: string[];
+    dueDate?: string | null;
+    durationMinutes?: number | null;
+  }
+>`
+  mutation CreateSetWithQuestions(
+    $setType: String!
+    $sectionId: String!
+    $classId: String!
+    $subjectId: String
+    $name: String
+    $artifactIds: [String!]!
+    $dueDate: String
+    $durationMinutes: Int
+  ) {
+    createSetWithQuestions(
+      setType: $setType
+      sectionId: $sectionId
+      classId: $classId
+      subjectId: $subjectId
+      name: $name
+      artifactIds: $artifactIds
+      dueDate: $dueDate
+      durationMinutes: $durationMinutes
+    ) {
       id
       setType
       name
@@ -1003,6 +1077,44 @@ export const ASSESSMENT_SETS_QUERY = gql<
   }
 `;
 
+/** ux-audit F7 — Today's "সাম্প্রতিক সেট": the caller's newest sets across ALL
+ *  their sections, each with the id of a still-open tracker (if any) so the
+ *  shortcut can route straight to TrackerEntry instead of re-firing the
+ *  non-idempotent openTracker mutation. */
+export interface RecentSetT {
+  id: string;
+  setType: string;
+  name: string | null;
+  sectionId: string;
+  classId: string;
+  subjectId: string | null;
+  status: string;
+  itemCount: number;
+  totalMarks: number | null;
+  dueDate: string | null;
+  createdAt: string;
+  openTrackerId: string | null;
+}
+
+export const MY_RECENT_SETS = gql<{ myRecentSets: RecentSetT[] }, { limit?: number | null }>`
+  query MyRecentSets($limit: Int) {
+    myRecentSets(limit: $limit) {
+      id
+      setType
+      name
+      sectionId
+      classId
+      subjectId
+      status
+      itemCount
+      totalMarks
+      dueDate
+      createdAt
+      openTrackerId
+    }
+  }
+`;
+
 // ===========================================================================
 // Trackers (J4)
 // ===========================================================================
@@ -1103,6 +1215,32 @@ export const RECORD_ENTRY = gql<
     recordEntry(trackerId: $trackerId, studentId: $studentId, score: $score, submitted: $submitted, complete: $complete) {
       trackerId
       pseudoStudentId
+      entryCount
+    }
+  }
+`;
+
+/** One row of the recordEntries batch (ux-audit F1). `clear` removes the entry (undo). */
+export interface TrackerEntryInputT {
+  studentId: string;
+  score?: number | null;
+  submitted?: boolean | null;
+  complete?: boolean | null;
+  clear?: boolean | null;
+}
+
+export interface RecordEntriesResultT {
+  trackerId: string;
+  entryCount: number;
+}
+
+export const RECORD_ENTRIES = gql<
+  { recordEntries: RecordEntriesResultT },
+  { trackerId: string; entries: TrackerEntryInputT[] }
+>`
+  mutation RecordEntries($trackerId: String!, $entries: [TrackerEntryInput!]!) {
+    recordEntries(trackerId: $trackerId, entries: $entries) {
+      trackerId
       entryCount
     }
   }

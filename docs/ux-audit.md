@@ -2,7 +2,31 @@
 
 **Status:** audit 2026-07-16; **F2, F3, F14 FIXED 2026-07-16** (branch `fix/f2-f3-error-states`: shared
 `QueryGate` + netinfo offline detection swept over all 30 error-less screens, retry wired on the 4 dead
-ErrorBanners, ConfirmSheet + result handling on the 3 unconfirmed destructive mutations). Other findings open.
+ErrorBanners, ConfirmSheet + result handling on the 3 unconfirmed destructive mutations). **F1 FIXED
+2026-07-17** (branch `feat/ux-audit-f1-tracker-entry`: TrackerEntry rebuilt per the approved "এক ট্যাপে
+ট্র্যাকিং" prototype — one-tap `OutcomeSegment` rows with optimistic save + আনডু toast, `BatchBar` one-tap
+batch via a new `recordEntries` server mutation (fills unrecorded rows only), `ScoreSheet` numpad for marks,
+sticky progress header, server-state hydration via client-side sha256 pseudonym matching, QueryGate adoption,
+confirm-close → per-student TrackerSummary). **F4, F5, F6, F10 (+F15, F16) FIXED 2026-07-17** (branch
+`feat/ux-audit-f4-question-bank`: QuestionBank rebuilt per the approved "প্রশ্ন খুঁজুন ও বাছাই করুন" prototype —
+`SearchField` (debounced text+qid search, Bangla-digit "৪২"→HW-0042 via a new server `search` arg),
+`FilterBar` active chips + `FilterSheet` with টপিক ট্যাগ (new `questionTopicTags` distinct query) and review
+status wired, filters+search persisted via `QuestionBankContext` (storage-backed, survive restarts; selection
+survives navigation via BasketContext), `SelectableCard` checkbox multi-select + sticky `SelectionTray`,
+grapheme-safe `numberOfLines` clamp replacing `truncate()`, true cursor pagination (`after` arg, pages append),
+and a one-step `CreateSetSheet` (reorder ▲/▼, HW/AS/CT, due date/duration) calling a new transactional
+`createSetWithQuestions` mutation — validate-all-then-one-write, so a failure can never leave a half-set;
+BasketScreen/AssembleSetScreen retained for the draft-edit path). **F7 FIXED 2026-07-17** (branch
+`feat/ux-audit-f7-today-screen`: teacher TodayScreen rebuilt per the approved "আজকের কাজ" prototype —
+lucide vector icons land (first F19 seed: `react-native-svg` + `lucide-react-native`, shared `Icon` wrapper
+with Bangla accessibilityLabels; zero emoji on the screen), full Bangla date header (`fullDateLabel`),
+alert stack restyled as errorContainer/goldContainer filled cards (deep-links unchanged), আমার পিরিয়ড
+horizontal timeline with a live current-period highlight + 12sp "এখন" badge (prototype's 11px raised to the
+caption floor), অমীমাংসিত কাজ display-numeral count rows, 8-tile quick-action grid adding
+প্রশ্নব্যাংক/আমার সেট/ট্র্যাকার/ছুটির আবেদন (gates mirror AppTabs), সাম্প্রতিক সেট cards fed by a new
+self-scoped `myRecentSets` query whose `openTrackerId` routes [ট্র্যাকার খুলুন] straight into an
+already-open tracker instead of re-firing the non-idempotent `openTracker`, QueryGate + pull-to-refresh,
+empty-day state with the grid still reachable; D-#318 my-sections card kept by owner choice). Other findings open.
 **Method:** static analysis of all 174 screen files + shared components/theme; no runtime testing.
 **Baseline:** this audit is *post* UX-1…UX-8 (D-#265) and post ui-guidelines adoption (D-#61). It does not
 re-report gaps those programs already fixed (toasts, confirm sheets, DateField, searchable Select,
@@ -233,22 +257,22 @@ text) — good. OS font scaling is not disabled — good.
 
 | # | Sev | Screen / area | Issue | Evidence | User impact |
 |---|---|---|---|---|---|
-| F1 | **Critical** | TrackerEntry | Per-student chip+Save, no batch, saved-state not reloaded | TrackerEntryScreen.tsx:66-71,139-148 | 60+ taps per class; re-entry shows blank slate → double entry / abandonment of the tracking loop |
+| F1 | **Critical** — **FIXED 2026-07-17** | TrackerEntry | Per-student chip+Save, no batch, saved-state not reloaded. Fixed: one-tap `OutcomeSegment` (optimistic save + আনডু), `BatchBar` (one `recordEntries` mutation, unrecorded rows only, 3 taps for all+2 exceptions), `ScoreSheet` marks numpad, sticky "১২/৩০ রেকর্ড হয়েছে" progress header, hydration via client-side sha256 pseudonym map, QueryGate, confirm-close → per-student summary | TrackerEntryScreen.tsx:66-71,139-148 | 60+ taps per class; re-entry shows blank slate → double entry / abandonment of the tracking loop |
 | F2 | **Critical** — **FIXED 2026-07-16** | 30 query screens incl. all 7 guardian screens | No error state — failures & offline render as "empty". Fixed: shared `QueryGate` (Loader/ErrorBanner+retry/offline via netinfo) swept over all 30 | e.g. ChildHomeworkScreen.tsx:212, RoutineHomeScreen.tsx:116 | Guardians/teachers silently see wrong "no data"; trust damage; no recovery path |
 | F3 | **Critical** — **FIXED 2026-07-16** | ChatThread, SetDetail, AssignmentSchedule | Destructive mutations without confirmation; SetDetail also discarded the mutation result. Fixed: `confirmAction` + toast feedback + result handling (incl. SetDetail `onSaveName`) | ChatThreadScreen.tsx:176-178,482; SetDetailScreen.tsx:78-82; AssignmentScheduleScreen.tsx:128-134 | One mis-tap permanently deletes a message / silently corrupts a set |
-| F4 | **Major** | QuestionBank | No topic-tag / review-status filter (API supports both), no text/qid search | QuestionBankScreen.tsx:113-124; operations.ts:735,742 | The "tagged question bank" value prop is unusable at scale; teachers eyeball long lists |
-| F5 | **Major** | QuestionBank | Filters are local useState — wiped on every navigation | QuestionBankScreen.tsx:95-102 | Re-filter from scratch on every basket round-trip; compounds F4 |
-| F6 | **Major** | Bank→Basket→Set | No batch add, no reorder, 4-screen create flow, top-anchored basket summary scrolls away | BasketScreen.tsx:103-113; AssembleSetScreen.tsx:123-135 | 12–15 taps for a small set; question papers can't be ordered |
-| F7 | **Major** | TodayScreen + homework module | Two parallel HW systems; core sets loop absent from landing quick actions | TodayScreen.tsx:383-411; DeclareHomeworkScreen.tsx | Confused mental model; the flagship loop starts with drawer spelunking |
+| F4 | **Major** — **FIXED 2026-07-17** | QuestionBank | No topic-tag / review-status filter (API supports both), no text/qid search. Fixed: FilterSheet wires topicTag (distinct-values query) + reviewStatus; SearchField searches text+qid server-side with Bangla-digit normalisation | QuestionBankScreen.tsx:113-124; operations.ts:735,742 | The "tagged question bank" value prop is unusable at scale; teachers eyeball long lists |
+| F5 | **Major** — **FIXED 2026-07-17** | QuestionBank | Filters are local useState — wiped on every navigation. Fixed: QuestionBankContext above the navigator; filters+search also persist to storage across restarts | QuestionBankScreen.tsx:95-102 | Re-filter from scratch on every basket round-trip; compounds F4 |
+| F6 | **Major** — **FIXED 2026-07-17** | Bank→Basket→Set | No batch add, no reorder, 4-screen create flow, top-anchored basket summary scrolls away. Fixed: checkbox multi-select cards, sticky SelectionTray, one CreateSetSheet with ▲/▼ reorder (old screens retained for draft edits) | BasketScreen.tsx:103-113; AssembleSetScreen.tsx:123-135 | 12–15 taps for a small set; question papers can't be ordered |
+| F7 | **Major** — **FIXED 2026-07-17** | TodayScreen + homework module | Two parallel HW systems; core sets loop absent from landing quick actions. Fixed: "আজকের কাজ" rebuild — 8-tile lucide quick grid adds প্রশ্নব্যাংক/আমার সেট/ট্র্যাকার/ছুটির আবেদন (QuestionBank 1 tap, with F5's restored filters); সাম্প্রতিক সেট cards (new `myRecentSets`) close assembly→tracking in 2 taps, `openTrackerId` guards the non-idempotent openTracker; timeline + display-numeral count rows; QueryGate + pull-to-refresh + empty-day state | TodayScreen.tsx:383-411; DeclareHomeworkScreen.tsx | Confused mental model; the flagship loop starts with drawer spelunking |
 | F8 | **Major** | App-wide | Accessibility: 4 labels total, no selected-state on chips, unlabeled emoji controls | grep totals; ui.tsx Chip | Screen-reader users locked out; Android TalkBack unusable |
 | F9 | **Major** | ClassNoteReport (+RoutineMaster, CompareObservations) | Off-palette hard-coded light-only colors, sub-12sp text, synthetic-bold Bangla | ClassNoteReportScreen.tsx:291-339; RoutineMasterScreen.tsx:105-139 | Illegible in dark mode; sub-floor text on low-end phones |
-| F10 | **Major** | BasketScreen | create-set + per-question add loop; mid-loop failure leaves half-set + full basket | BasketScreen.tsx:80-85 | Duplicate/corrupt draft sets after flaky connections |
+| F10 | **Major** — **FIXED 2026-07-17** | BasketScreen | create-set + per-question add loop; mid-loop failure leaves half-set + full basket. Fixed: transactional `createSetWithQuestions` (validate-all-then-one-write) is the primary path; error → toast, sheet stays open, selection intact | BasketScreen.tsx:80-85 | Duplicate/corrupt draft sets after flaky connections |
 | F11 | **Major** | 86 mutation screens | R-Feedback toast adopted by only 13/99; Notice-at-top as sole submit feedback persists | ToastContext.tsx header vs grep | Submit results invisible below the fold → retries, duplicate posts |
 | F12 | **Minor** | CompareObservations | Publish fires with no success/error surface | CompareObservationsScreen.tsx:73-74 | Silent failure of a sign-off action |
 | F13 | **Minor** | ~50 list screens | Pull-to-refresh on only 10 screens | usePullRefresh grep | Stale counts on mobile with no refresh gesture |
 | F14 | **Minor** — **FIXED 2026-07-16** | 4 screens | ErrorBanner without onRetry (dead banner). Fixed: retry wired to network-only reexecute on all 4 | MarkAttendanceScreen.tsx:88 et al. | Error shown but unrecoverable in place |
-| F15 | **Minor** | QuestionBank cards | 90-char naive slice truncation of Bangla | question.ts:50-52 | Conjuncts can be cut mid-grapheme on collapsed cards |
-| F16 | **Minor** | QuestionBank | Load-more refetches entire grown window | QuestionBankScreen.tsx:104-123 | Slow growth on big banks / low-end phones |
+| F15 | **Minor** — **FIXED 2026-07-17** | QuestionBank cards | 90-char naive slice truncation of Bangla. Fixed: `numberOfLines={2}` clamp; `truncate()` deleted | question.ts:50-52 | Conjuncts can be cut mid-grapheme on collapsed cards |
+| F16 | **Minor** — **FIXED 2026-07-17** | QuestionBank | Load-more refetches entire grown window. Fixed: cursor pagination (`after` arg) appends one page per fetch | QuestionBankScreen.tsx:104-123 | Slow growth on big banks / low-end phones |
 | F17 | **Minor** | SectionPicker, GuardianHome | Dead-end empty states (generic message, no CTA) | SectionPickerScreen.tsx:84; GuardianHomeScreen.tsx:161 | Blocked users get no next step |
 | F18 | **Minor** | App-wide | No offline detection/stale indicator; default document cache | client.ts | Offline is indistinguishable from empty (worst on F2 screens) |
 | F19 | **Minor** | 43 files | Emoji as the only iconography; no vector icon set | package.json | Inconsistent rendering across OEM emoji fonts; unprofessional edge |

@@ -15,6 +15,7 @@ import type { Types } from "mongoose";
 import { AssessmentSet } from "../models/AssessmentSet";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { CorpusEvent } from "../../corpus/models/CorpusEvent";
+import { TrackerRecord } from "../../trackers/models/TrackerRecord";
 import type { SetType } from "@scd/shared";
 
 export interface CreateSetInput {
@@ -129,6 +130,173 @@ export async function addQuestionToSet(
   });
 
   return { setId: set._id.toString(), itemCount: set.basketItems.length };
+}
+
+export interface CreateSetWithQuestionsInput {
+  setType: SetType;
+  sectionId: string;
+  classId: string;
+  subjectId?: string;
+  name?: string;
+  /** Ordered — the resulting basketItems preserve this order (dedup keeps first occurrence). */
+  artifactIds: string[];
+  /** HW / AS only — ISO date string */
+  dueDate?: string;
+  /** CT only */
+  durationMinutes?: number;
+  actorId: string;
+}
+
+/** One-step transactional create: validate every artifact, then create the set
+ *  directly in `assembled` status with the full ordered basket (ux-audit F6/F10).
+ *  A single AssessmentSet.create() is the atomicity mechanism — nothing is
+ *  written until every artifact has been verified, so a failure can never leave
+ *  a half-populated draft behind (the old createSet + N×addQuestionToSet trap).
+ *  Emits the same corpus events as the incremental path: one questions_selected
+ *  per question + one set_assembled (ADR-005 de-identified). */
+export async function createSetWithQuestions(
+  input: CreateSetWithQuestionsInput,
+): Promise<CreateSetResult> {
+  const ids = [...new Set(input.artifactIds)];
+  if (ids.length === 0) throw new Error("Cannot assemble an empty set");
+
+  const artifacts = await ContentArtifact.find({ _id: { $in: ids } }).lean();
+  const byId = new Map(artifacts.map((a) => [a._id.toString(), a]));
+
+  const items = ids.map((artifactId) => {
+    const artifact = byId.get(artifactId);
+    if (!artifact) throw new Error("Question artifact not found");
+    if (artifact.docType !== "question") throw new Error("Artifact is not a question");
+    const env = artifact.envelopeJson as Record<string, unknown>;
+    const payload = (env.payload ?? {}) as Record<string, unknown>;
+    return {
+      artifactId: artifact._id as Types.ObjectId,
+      qid: (payload.qid as string | undefined) ?? artifactId,
+      marks: typeof payload.marks === "number" ? payload.marks : 1,
+      subject: artifact.subject,
+      classLevel: artifact.classLevel,
+    };
+  });
+
+  const totalMarks = items.reduce((sum, item) => sum + item.marks, 0);
+  const now = new Date();
+  const trimmedName = input.name?.trim();
+
+  const doc = await AssessmentSet.create({
+    setType: input.setType,
+    name: trimmedName ? trimmedName : undefined,
+    sectionId: input.sectionId,
+    classId: input.classId,
+    subjectId: input.subjectId,
+    status: "assembled",
+    basketItems: items.map(({ artifactId, qid, marks }) => ({ artifactId, qid, marks })),
+    totalMarks,
+    createdBy: input.actorId,
+    assembledBy: input.actorId,
+    assembledAt: now,
+    durationMinutes:
+      input.setType === "CT" && input.durationMinutes != null
+        ? input.durationMinutes
+        : undefined,
+    dueDate:
+      (input.setType === "HW" || input.setType === "AS") && input.dueDate
+        ? new Date(input.dueDate)
+        : undefined,
+  });
+
+  // De-identified corpus events — same shapes as addQuestionToSet + assembleSet (ADR-005)
+  const pseudoId = Buffer.from(input.actorId).toString("base64");
+  await CorpusEvent.insertMany(
+    items.map((item) => ({
+      eventKind: "questions_selected",
+      pseudoActorId: pseudoId,
+      occurredAt: now,
+      meta: {
+        setId: doc._id.toString(),
+        qid: item.qid,
+        subject: item.subject,
+        classLevel: item.classLevel,
+      },
+    })),
+  );
+  await CorpusEvent.create({
+    eventKind: "set_assembled",
+    pseudoActorId: pseudoId,
+    occurredAt: now,
+    meta: {
+      setId: doc._id.toString(),
+      setType: doc.setType,
+      sectionId: doc.sectionId.toString(),
+      itemCount: items.length,
+      totalMarks,
+    },
+  });
+
+  return {
+    setId: doc._id.toString(),
+    setType: doc.setType,
+    sectionId: doc.sectionId.toString(),
+    classId: doc.classId.toString(),
+    status: doc.status,
+  };
+}
+
+export interface RecentSetItem {
+  id: string;
+  setType: SetType;
+  name: string | null;
+  sectionId: string;
+  classId: string;
+  subjectId: string | null;
+  status: string;
+  itemCount: number;
+  totalMarks: number | null;
+  dueDate: string | null;
+  createdAt: string;
+  /** The newest still-open tracker for this set, if any — lets the client route
+   *  straight to TrackerEntry instead of calling the NON-idempotent openTracker
+   *  mutation again (which would create a duplicate TrackerRecord). */
+  openTrackerId: string | null;
+}
+
+/** The caller's most recently created/assembled sets, across ALL their sections
+ *  (ux-audit F7 — the Today-screen "সাম্প্রতিক সেট" shortcut back into tracking).
+ *  Self-scoped: only sets the caller created or assembled — no section arg, so no
+ *  assertCanRead needed beyond the set:read permission gate in the resolver. */
+export async function listMyRecentSets(userId: string, limit = 2): Promise<RecentSetItem[]> {
+  const docs = await AssessmentSet.find({
+    $or: [{ createdBy: userId }, { assembledBy: userId }],
+  })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+
+  const ids = docs.map((d) => d._id.toString());
+  const open = await TrackerRecord.find({ setId: { $in: ids }, status: "open" })
+    .select("setId createdAt")
+    .sort({ createdAt: -1 })
+    .lean();
+  // Newest open tracker per set — first hit wins because of the sort above.
+  const openBySet = new Map<string, string>();
+  for (const trk of open) {
+    const key = trk.setId.toString();
+    if (!openBySet.has(key)) openBySet.set(key, trk._id.toString());
+  }
+
+  return docs.map((doc) => ({
+    id: doc._id.toString(),
+    setType: doc.setType,
+    name: doc.name ?? null,
+    sectionId: doc.sectionId.toString(),
+    classId: doc.classId.toString(),
+    subjectId: doc.subjectId?.toString() ?? null,
+    status: doc.status,
+    itemCount: doc.basketItems?.length ?? 0,
+    totalMarks: typeof doc.totalMarks === "number" ? doc.totalMarks : null,
+    dueDate: doc.dueDate ? (doc.dueDate as unknown as Date).toISOString() : null,
+    createdAt: (doc.createdAt as unknown as Date).toISOString(),
+    openTrackerId: openBySet.get(doc._id.toString()) ?? null,
+  }));
 }
 
 /** Set (or clear) a set's display name. Write-scope enforced by the resolver.

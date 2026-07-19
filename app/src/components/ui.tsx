@@ -155,13 +155,19 @@ export function H2({ children }: { children: React.ReactNode }): React.ReactElem
 export function Body({
   children,
   style,
+  numberOfLines,
 }: {
   children: React.ReactNode;
   style?: StyleProp<TextStyle>;
+  /** Grapheme-safe clamp — prefer this over any substring truncation (ux-audit F15). */
+  numberOfLines?: number;
 }): React.ReactElement {
   const styles = useStyles();
   return (
-    <Text style={resolveTextStyle(styles.body, StyleSheet.flatten(style) as TextStyle | undefined)}>
+    <Text
+      style={resolveTextStyle(styles.body, StyleSheet.flatten(style) as TextStyle | undefined)}
+      numberOfLines={numberOfLines}
+    >
       {children}
     </Text>
   );

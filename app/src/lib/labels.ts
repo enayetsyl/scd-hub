@@ -290,6 +290,19 @@ export function dateHeaderLabel(key: string): string {
   return wk ? `${wk} · ${bnNum(key)}` : bnNum(key);
 }
 
+/** Full date header for the Today screen (ux-audit F7): "বুধবার, ১৬ জুলাই ২০২৬" (bn) /
+ *  "Wednesday, 16 July 2026" (en). Component-parses the LOCAL YYYY-MM-DD key —
+ *  never `new Date(key)`, which is UTC midnight and can shift the weekday (D-#304). */
+export function fullDateLabel(key: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!m) return bnNum(key);
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const dow = DAYS_OF_WEEK[d.getDay()];
+  const wk = dow ? pick(DAY_OF_WEEK_LABELS_BN, DAY_OF_WEEK_LABELS_EN)[dow] : "";
+  const datePart = `${bnNum(Number(m[3]))} ${monthLabel(Number(m[2]) - 1)} ${bnNum(Number(m[1]))}`;
+  return wk ? `${wk}, ${datePart}` : datePart;
+}
+
 export const subjectLabel = (code?: string | null): string =>
   (code && pick(SUBJECT_LABELS_BN, SUBJECT_LABELS_EN)[code as Subject]) || code || DASH;
 
@@ -304,6 +317,13 @@ export const reviewStatusLabel = (v?: string | null): string =>
 
 export const curationTagLabel = (v?: string | null): string =>
   (v && pick(CURATION_TAG_LABELS_BN, CURATION_TAG_LABELS_EN)[v as CurationTag]) || v || DASH;
+
+/** Selection-tray summary (ux-audit F6): "৫টি প্রশ্ন · ২০ নম্বর" / "5 questions · 20 marks". */
+export function selectionSummaryLabel(count: number, marks: number): string {
+  return _lang === "en"
+    ? `${count} question${count === 1 ? "" : "s"} · ${marks} marks`
+    : `${bnNum(count)}টি প্রশ্ন · ${bnNum(marks)} নম্বর`;
+}
 
 export const teacherAttendanceStatusLabel = (v?: string | null): string =>
   (v && pick(TEACHER_ATTENDANCE_STATUS_LABELS_BN, TEACHER_ATTENDANCE_STATUS_LABELS_EN)[v as TeacherAttendanceStatus]) || v || DASH;
@@ -691,6 +711,24 @@ export const markRangeMsg = (min: number, max: number): string =>
     ? `Enter a mark between ${bnNum(min)} and ${bnNum(max)}.`
     : `নম্বর ${bnNum(min)}–${bnNum(max)} এর মধ্যে দিন।`;
 
+/** "১২/৩০ রেকর্ড হয়েছে" / "12/30 recorded" — TrackerEntry progress header (F1). */
+export const trackerProgressMsg = (recorded: number, total: number): string =>
+  _lang === "en"
+    ? `${bnNum(recorded)}/${bnNum(total)} recorded`
+    : `${bnNum(recorded)}/${bnNum(total)} রেকর্ড হয়েছে`;
+
+/** "N জন শিক্ষার্থী এখনো রেকর্ড করা হয়নি।" — close-confirm pending line (F1). */
+export const trackerPendingMsg = (n: number): string =>
+  _lang === "en"
+    ? `${bnNum(n)} student${n === 1 ? "" : "s"} not recorded yet.`
+    : `${bnNum(n)} জন শিক্ষার্থী এখনো রেকর্ড করা হয়নি।`;
+
+/** "৭/১০ নম্বর রেকর্ড হয়েছে" — CT save toast; full ≤ 0 → "৭ নম্বর রেকর্ড হয়েছে" (F1). */
+export const scoreRecordedMsg = (score: number, full: number): string => {
+  const val = full > 0 ? `${bnNum(score)}/${bnNum(full)}` : bnNum(score);
+  return _lang === "en" ? `Recorded ${val} marks` : `${val} নম্বর রেকর্ড হয়েছে`;
+};
+
 // --- UI chrome strings -------------------------------------------------------
 
 /** Bangla chrome strings — labels, buttons, headers, statuses, errors. The EN
@@ -721,8 +759,15 @@ const STR_BN = {
   cnNoNotes: "এই তারিখে কোনো ক্লাস নোট নেই।",
   cnContent: "বিষয়বস্তু",
   cnAuthor: "লিখেছেন",
-  myPeriods: "আমার ক্লাস",
-  pendingWork: "বাকি কাজ",
+  myPeriods: "আমার পিরিয়ড",
+  pendingWork: "অমীমাংসিত কাজ",
+  /** Today redesign (ux-audit F7). */
+  tdRecentSets: "সাম্প্রতিক সেট",
+  tdEmptyDay: "আজ কোনো নির্ধারিত কাজ নেই।",
+  tdNow: "এখন",
+  tdQuestionBank: "প্রশ্নব্যাংক",
+  tdMySets: "আমার সেট",
+  tdLeaveApply: "ছুটির আবেদন",
   /** Today banner: shown in red until the caller submits their attendance (D-#278). */
   attendancePendingBanner: "⚠ আপনার আজকের উপস্থিতি এখনও জমা দেওয়া হয়নি — জমা দিতে ট্যাপ করুন",
   /** Today red backlog alerts (D-#279). */
@@ -1007,6 +1052,19 @@ const STR_BN = {
   addedToSet: "যোগ হয়েছে",
   addingToSet: "সেটে প্রশ্ন যোগ করা হচ্ছে",
   addQuestions: "প্রশ্ন যোগ করুন",
+  qbSearchPlaceholder: "প্রশ্ন বা কোড খুঁজুন…",
+  qbEmptyFiltered: "এই ফিল্টারে কোনো প্রশ্ন নেই — ফিল্টার বদলে দেখুন।",
+  qbClearFilters: "সব ফিল্টার মুছুন",
+  qbTopicTag: "টপিক ট্যাগ",
+  qbTopicTagAny: "যেকোনো টপিক",
+  qbSelectQuestion: "প্রশ্ন নির্বাচন করুন",
+  qbDeselectQuestion: "নির্বাচন বাতিল করুন",
+  qbMoveUp: "উপরে সরান",
+  qbMoveDown: "নিচে সরান",
+  qbCreateSet: "সেট তৈরি করুন",
+  qbSetCreated: "সেট তৈরি হয়েছে",
+  qbApplyFilters: "দেখুন",
+  qbClearSelection: "নির্বাচন বাতিল করুন",
   showAnswers: "উত্তর দেখান",
   showMarks: "নম্বর দেখান",
   answerLabel: "উত্তর",
@@ -1068,6 +1126,37 @@ const STR_BN = {
   guardianPhone: "অভিভাবকের ফোন",
   studentName: "শিক্ষার্থীর নাম",
   waLinkHint: "লিংকটি কপি করে নিজে পাঠান (স্বয়ংক্রিয় প্রেরণ নেই)।",
+
+  // Tracker entry redesign (ux-audit F1 — এক ট্যাপে ট্র্যাকিং)
+  trkOneTap: "এক ট্যাপে ট্র্যাকিং",
+  trkBatchComplete: "সবাই সম্পন্ন",
+  trkBatchSubmitted: "সবাই জমা দিয়েছে",
+  trkBatchFullMarks: "সবাইকে পূর্ণ নম্বর",
+  trkExceptions: "ব্যতিক্রম",
+  trkEnterMarks: "নম্বর দিন",
+  trkUndo: "আনডু",
+  trkRoll: "রোল",
+  trkRecordedComplete: "সম্পন্ন হিসেবে রেকর্ড হয়েছে",
+  trkRecordedIncomplete: "অসম্পূর্ণ হিসেবে রেকর্ড হয়েছে",
+  trkRecordedSubmitted: "জমা দিয়েছে হিসেবে রেকর্ড হয়েছে",
+  trkRecordedMissing: "জমা দেয়নি হিসেবে রেকর্ড হয়েছে",
+  trkBatchRecorded: "রেকর্ড করা হয়েছে",
+  trkUndone: "আনডু করা হয়েছে",
+  trkFullMarks: "পূর্ণ নম্বর",
+  trkAbsent: "অনুপস্থিত",
+  trkDelete: "মুছুন",
+  trkSubmit: "জমা দিন",
+  trkCloseTitle: "ট্র্যাকার বন্ধ করবেন?",
+  trkCloseWarn: "বন্ধ করার পর এই ট্র্যাকার আর খোলা যাবে না।",
+  trkCloseConfirm: "বন্ধ করে সারাংশ দেখুন",
+  trkAllRecorded: "সব শিক্ষার্থী রেকর্ড করা হয়েছে।",
+  trkNoStudentsYet: "এই ক্লাসে এখনো কোনো শিক্ষার্থী যোগ করা হয়নি। শিক্ষার্থী তালিকা তৈরি হলে এখানে ট্র্যাক করা যাবে।",
+  trkDone: "ট্র্যাকিং সম্পন্ন",
+  trkLocked: "এই ট্র্যাকার লক করা হয়েছে — পুনরায় খোলা যাবে না।",
+  trkPerStudent: "শিক্ষার্থীভিত্তিক ফলাফল",
+  trkNotRecorded: "রেকর্ড হয়নি",
+  trkAvgMarks: "গড় নম্বর",
+  trkGotFullMarks: "পূর্ণ নম্বর পেয়েছে",
 
   // Homework Tracker (HW-T1..T4)
   tabHomework: "বাড়ির কাজ",
@@ -3120,7 +3209,14 @@ const STR_EN: StrTable = {
   cnContent: "Content",
   cnAuthor: "Author",
   myPeriods: "My periods",
-  pendingWork: "Pending work",
+  pendingWork: "Unresolved work",
+  /** Today redesign (ux-audit F7). */
+  tdRecentSets: "Recent sets",
+  tdEmptyDay: "No scheduled work today.",
+  tdNow: "Now",
+  tdQuestionBank: "Question bank",
+  tdMySets: "My sets",
+  tdLeaveApply: "Leave request",
   attendancePendingBanner: "⚠ Your attendance is pending — tap to submit",
   alertsTitle: "Pending",
   alertAttendance: "Attendance not submitted",
@@ -3392,6 +3488,19 @@ const STR_EN: StrTable = {
   addedToSet: "Added",
   addingToSet: "Adding questions to the set",
   addQuestions: "Add questions",
+  qbSearchPlaceholder: "Search questions or code…",
+  qbEmptyFiltered: "No questions match these filters — try changing them.",
+  qbClearFilters: "Clear all filters",
+  qbTopicTag: "Topic tag",
+  qbTopicTagAny: "Any topic",
+  qbSelectQuestion: "Select question",
+  qbDeselectQuestion: "Deselect question",
+  qbMoveUp: "Move up",
+  qbMoveDown: "Move down",
+  qbCreateSet: "Create set",
+  qbSetCreated: "Set created",
+  qbApplyFilters: "Show results",
+  qbClearSelection: "Clear selection",
   showAnswers: "Show answers",
   showMarks: "Show marks",
   answerLabel: "Answer",
@@ -3453,6 +3562,37 @@ const STR_EN: StrTable = {
   guardianPhone: "Guardian phone",
   studentName: "Student name",
   waLinkHint: "Copy the link and send it yourself (no automatic send).",
+
+  // Tracker entry redesign (ux-audit F1 — one-tap tracking)
+  trkOneTap: "One-tap tracking",
+  trkBatchComplete: "All complete",
+  trkBatchSubmitted: "All submitted",
+  trkBatchFullMarks: "Full marks for all",
+  trkExceptions: "Exceptions",
+  trkEnterMarks: "Enter marks",
+  trkUndo: "Undo",
+  trkRoll: "Roll",
+  trkRecordedComplete: "Recorded as complete",
+  trkRecordedIncomplete: "Recorded as incomplete",
+  trkRecordedSubmitted: "Recorded as submitted",
+  trkRecordedMissing: "Recorded as not submitted",
+  trkBatchRecorded: "recorded",
+  trkUndone: "Undone",
+  trkFullMarks: "Full marks",
+  trkAbsent: "Absent",
+  trkDelete: "Delete",
+  trkSubmit: "Submit",
+  trkCloseTitle: "Close this tracker?",
+  trkCloseWarn: "Once closed, this tracker cannot be reopened.",
+  trkCloseConfirm: "Close and view summary",
+  trkAllRecorded: "All students recorded.",
+  trkNoStudentsYet: "No students have been added to this class yet. Tracking becomes available once the roster is ready.",
+  trkDone: "Tracking complete",
+  trkLocked: "This tracker is locked — it cannot be reopened.",
+  trkPerStudent: "Per-student results",
+  trkNotRecorded: "Not recorded",
+  trkAvgMarks: "Average marks",
+  trkGotFullMarks: "Got full marks",
 
   // Homework Tracker (HW-T1..T4)
   tabHomework: "Homework",
