@@ -210,10 +210,12 @@ export interface ClassNoteAdminRow {
   attachments: ClassNoteAttachmentView[];
 }
 
-/** Principal/Office: every class note for a date, enriched with class/section names,
- *  author name and attachment file names. Newest first. */
-export async function classNotesAdmin(date: Date): Promise<ClassNoteAdminRow[]> {
-  const { start, end } = dayBounds(date);
+/** Principal/Office: every class note for a date — or an inclusive date RANGE when
+ *  `dateTo` is given (admin filters, D-#309 pattern) — enriched with class/section
+ *  names, author name and attachment file names. Newest first. */
+export async function classNotesAdmin(date: Date, dateTo?: Date): Promise<ClassNoteAdminRow[]> {
+  const { start } = dayBounds(dateTo && dateTo < date ? dateTo : date);
+  const { end } = dayBounds(dateTo && dateTo > date ? dateTo : date);
   const notes = (await ClassNote.find({ date: { $gte: start, $lte: end } })
     .sort({ publishedAt: -1 })
     .lean()) as unknown as IClassNote[];

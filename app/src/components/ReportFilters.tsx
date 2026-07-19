@@ -81,6 +81,8 @@ export interface FilterOptionSets {
   teachers: string[];
   /** null = no subject axis on this screen (the select is hidden). */
   subjects: string[] | null;
+  /** Label formatter for subject codes (default hwSubjectLabel; routine screens pass routineSubjectLabel). */
+  subjectLabel?: (code: string) => string;
 }
 
 /**
@@ -91,7 +93,7 @@ export interface FilterOptionSets {
  */
 export function useReportFilterState(sets: FilterOptionSets): {
   node: React.ReactElement;
-  match: (classLevel: number, teacherName: string | null, subject?: string) => boolean;
+  match: (classLevel: number | null, teacherName: string | null, subject?: string) => boolean;
 } {
   const [cls, setCls] = useState<string>(ALL);
   const [teacher, setTeacher] = useState<string>(ALL);
@@ -117,13 +119,13 @@ export function useReportFilterState(sets: FilterOptionSets): {
         ? null
         : [
             { label: STR.all, value: ALL as string },
-            ...[...new Set(sets.subjects)].sort().map((c) => ({ label: hwSubjectLabel(c), value: c })),
+            ...[...new Set(sets.subjects)].sort().map((c) => ({ label: (sets.subjectLabel ?? hwSubjectLabel)(c), value: c })),
           ],
     [sets.subjects],
   );
 
-  const match = (classLevel: number, teacherName: string | null, subj?: string): boolean =>
-    (cls === ALL || String(classLevel) === cls) &&
+  const match = (classLevel: number | null, teacherName: string | null, subj?: string): boolean =>
+    (cls === ALL || (classLevel != null && String(classLevel) === cls)) &&
     (teacher === ALL || teacherName === teacher) &&
     (subject === ALL || subj === undefined || subj === subject);
 
@@ -147,10 +149,13 @@ export function useReportFilterState(sets: FilterOptionSets): {
 }
 
 export interface RowFilterConfig<T> {
-  classOf: (r: T) => number;
+  /** null = the row has no class (e.g. subject-group notes) — it matches only "All". */
+  classOf: (r: T) => number | null;
   teacherOf: (r: T) => string | null;
   /** Omit when the row kind has no subject axis (e.g. homework issue-pending). */
   subjectOf?: (r: T) => string;
+  /** Optional subject-code label formatter (default hwSubjectLabel). */
+  subjectLabel?: (code: string) => string;
 }
 
 /** Single-list convenience over useReportFilterState. */
@@ -160,9 +165,10 @@ export function useRowFilters<T>(
 ): { filtered: T[]; node: React.ReactElement } {
   const sets = useMemo<FilterOptionSets>(
     () => ({
-      classLevels: rows.map(cfg.classOf),
+      classLevels: rows.map(cfg.classOf).filter((l): l is number => l != null),
       teachers: rows.map(cfg.teacherOf).filter(Boolean) as string[],
       subjects: cfg.subjectOf ? rows.map(cfg.subjectOf) : null,
+      subjectLabel: cfg.subjectLabel,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [rows],
