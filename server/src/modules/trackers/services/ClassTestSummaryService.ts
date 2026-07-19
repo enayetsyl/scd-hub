@@ -90,22 +90,39 @@ export interface ReportStatusRow extends ExamReportStatus {
   classLevel: number;
   sectionId: string;
   teacherId: string;
+  /** D-#339: the report author's display name (drill-down rows). */
+  teacherName: string;
+  /** D-#339: newest result-row submittedAt (CT-8 propose-for-release) — null until proposed. */
+  submittedAt: string | null;
   state: ReportState;
 }
 
 export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatusRow[]> {
   const now = filter.asOf ?? new Date();
   const exams = await loadPrintedExams(filter);
+  if (exams.length === 0) return [];
+
+  const teacherNames = await loadUserNames([...new Set(exams.map((e) => e.requestedBy.toString()))]);
+  const submitted = (await ClassTestResult.aggregate([
+    { $match: { testId: { $in: exams.map((e) => e._id) }, submittedAt: { $ne: null } } },
+    { $group: { _id: "$testId", latest: { $max: "$submittedAt" } } },
+  ])) as Array<{ _id: Types.ObjectId; latest: Date }>;
+  const submittedByTest = new Map(submitted.map((s) => [s._id.toString(), s.latest]));
+
   const rows: ReportStatusRow[] = [];
   for (const exam of exams) {
     const status = await examReportStatus(exam._id.toString(), now);
+    const teacherId = exam.requestedBy.toString();
+    const sub = submittedByTest.get(exam._id.toString());
     rows.push({
       ...status,
       subject: exam.subject,
       testNumber: exam.testNumber,
       classLevel: exam.classLevel,
       sectionId: exam.sectionId.toString(),
-      teacherId: exam.requestedBy.toString(),
+      teacherId,
+      teacherName: teacherNames.get(teacherId) ?? "শিক্ষক",
+      submittedAt: sub ? new Date(sub).toISOString() : null,
       state: reportStateOf(status),
     });
   }

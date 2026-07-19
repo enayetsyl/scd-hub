@@ -38,7 +38,9 @@ export default function ClassTestHomeScreen(): React.ReactElement {
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.ctHomeTitle}</Body>
           <View style={{ marginTop: space(2), gap: space(2) }}>
-            {canWrite ? <Button title={STR.ctRequestNav} onPress={() => nav.navigate("RequestClassTest")} /> : null}
+            {/* D-#339: Principal/Office also reach the form — the no-print register
+                (server-gated: admin bypasses tracker:write there). */}
+            {canWrite || isAdmin ? <Button title={STR.ctRequestNav} onPress={() => nav.navigate("RequestClassTest")} /> : null}
             {/* PQ-5 (D-#281): class-test printing lives on the ONE print queue now. */}
             {canPrint ? (
               <Button

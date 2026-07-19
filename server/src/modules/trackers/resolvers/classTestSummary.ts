@@ -117,6 +117,9 @@ ReportStatusRowRef.implement({
     classLevel: t.exposeInt("classLevel"),
     sectionId: t.exposeString("sectionId"),
     teacherId: t.exposeString("teacherId"),
+    // D-#339: drill-down row enrichment.
+    teacherName: t.exposeString("teacherName"),
+    submittedAt: t.string({ nullable: true, resolve: (r) => r.submittedAt }),
     examDate: t.exposeString("examDate"),
     deadline: t.exposeString("deadline"),
     deadlineDays: t.exposeInt("deadlineDays"),
