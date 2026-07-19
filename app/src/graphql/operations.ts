@@ -1616,6 +1616,11 @@ export interface HwDayItemT {
   revItem: boolean;
   status: string;
   bandWarning: boolean;
+  /** D-#336: raw codes + refs so the edit form can prefill. Optional — only the
+   *  day-tally selection fetches them (trim-candidate selections do not). */
+  topTags?: string[];
+  poolRef?: string | null;
+  attachmentIds?: string[];
 }
 
 export interface HwDayTallyT {
@@ -1658,7 +1663,7 @@ export const HOMEWORK_DAY_TALLY = gql<
       overBy
       withinCeiling
       state
-      items { itemId hwId subject topicLabelBn description timeDecl qCount revItem status bandWarning }
+      items { itemId hwId subject topicLabelBn description timeDecl qCount revItem status bandWarning topTags poolRef attachmentIds }
       bandWarnings
     }
   }
@@ -1908,6 +1913,48 @@ export interface HwNilDeclT {
   dateKey: string;
   reason: string;
 }
+
+/** D-#336: tiered edit — declared: every declare field; issued: description/topics/
+ *  attachments only (server enforces). clearPoolRef=true removes the pool ref. */
+export const UPDATE_HOMEWORK_ITEM = gql<
+  { updateHomeworkItem: HwItemT },
+  {
+    itemId: string;
+    description?: string | null;
+    topTags?: string[] | null;
+    timeDecl?: number | null;
+    qCount?: number | null;
+    poolRef?: string | null;
+    clearPoolRef?: boolean | null;
+    revItem?: boolean | null;
+    attachmentIds?: string[] | null;
+  }
+>`
+  mutation UpdateHomeworkItem(
+    $itemId: String!, $description: String, $topTags: [String!], $timeDecl: Int,
+    $qCount: Int, $poolRef: String, $clearPoolRef: Boolean, $revItem: Boolean, $attachmentIds: [String!]
+  ) {
+    updateHomeworkItem(
+      itemId: $itemId, description: $description, topTags: $topTags, timeDecl: $timeDecl,
+      qCount: $qCount, poolRef: $poolRef, clearPoolRef: $clearPoolRef, revItem: $revItem, attachmentIds: $attachmentIds
+    ) {
+      id hwId classLevel subject dateGiven topTags timeDecl qCount revItem status questionFileId attachmentIds
+    }
+  }
+`;
+
+/** D-#336: delete a mis-declared item (declared-only + day unreconciled). */
+export const DELETE_HOMEWORK_ITEM = gql<
+  { deleteHomeworkItem: { itemId: string; hwId: string } },
+  { itemId: string }
+>`
+  mutation DeleteHomeworkItem($itemId: String!) {
+    deleteHomeworkItem(itemId: $itemId) {
+      itemId
+      hwId
+    }
+  }
+`;
 
 export const HW_NIL_DECLARATIONS = gql<
   { homeworkNilDeclarations: HwNilDeclT[] },

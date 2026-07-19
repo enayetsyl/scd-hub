@@ -2,6 +2,12 @@
  * DeclareHomeworkScreen (§8.2) — a subject teacher declares one common sheet for
  * the class+subject+day: HW item with ≥1 TOP-tag, TIME_DECL, Q_COUNT, optional
  * Pool ref + revision flag. classLevel is derived from the selected class.
+ *
+ * EDIT MODE (D-#336): `route.params.editItem` prefills the same form for an
+ * existing item and submits updateHomeworkItem instead. Identity (subject/date)
+ * is locked — a wrong subject/date is fixed by delete + re-declare (hwId embeds
+ * them). Issued items additionally lock TIME_DECL / Q_COUNT / pool / revision
+ * (server re-gates): only description, topics and attachments stay editable.
  */
 import React, { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -11,6 +17,7 @@ import { HW_SUBJECTS } from "@scd/shared";
 import {
   CLASSES_QUERY,
   DECLARE_HOMEWORK_ITEM,
+  UPDATE_HOMEWORK_ITEM,
   ATTACH_HW_QUESTION_FILE,
   HOMEWORK_TOPICS_QUERY,
   HW_NIL_DECLARATIONS,
@@ -45,16 +52,20 @@ const today = (): string => dateKey();
 
 export default function DeclareHomeworkScreen({ navigation, route }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
-  const [subject, setSubject] = useState<string | null>(null);
+  // D-#336 edit mode: prefill from the carried item; identity fields are locked.
+  const editItem = route.params?.editItem ?? null;
+  const isEdit = editItem !== null;
+  const issued = editItem?.status === "issued";
+  const [subject, setSubject] = useState<string | null>(editItem?.subject ?? null);
   // R-Context (UX-5): inherit the date picked on Homework home; still editable here.
   const [date, setDate] = useState(route.params?.date ?? today());
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
-  const [timeDecl, setTimeDecl] = useState("20");
-  const [qCount, setQCount] = useState("");
+  const [selectedTopics, setSelectedTopics] = useState<string[]>(editItem?.topTags ?? []);
+  const [timeDecl, setTimeDecl] = useState(editItem ? String(editItem.timeDecl) : "20");
+  const [qCount, setQCount] = useState(editItem ? String(editItem.qCount) : "");
   // D-#317: the mandatory brief "what is the homework".
-  const [description, setDescription] = useState("");
-  const [poolRef, setPoolRef] = useState("");
-  const [revItem, setRevItem] = useState(false);
+  const [description, setDescription] = useState(editItem?.description ?? "");
+  const [poolRef, setPoolRef] = useState(editItem?.poolRef ?? "");
+  const [revItem, setRevItem] = useState(editItem?.revItem ?? false);
   // R-Validate (UX-1): per-field errors; the toast names the first offending field.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -63,8 +74,16 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
   /** The just-declared item — target for the optional question-file attach (GP-A). */
   const [lastItem, setLastItem] = useState<{ id: string; hwId: string } | null>(null);
   const [fileBusy, setFileBusy] = useState(false);
-  /** Declare-form attachments (≤5) — uploaded on pick, bound at declare time. */
-  const [files, setFiles] = useState<UploadedFile[]>([]);
+  /** Declare-form attachments (≤5) — uploaded on pick, bound at declare time.
+   *  Edit mode seeds the item's existing ids (names aren't stored client-side —
+   *  a generic label; tap opens the file to check which is which). */
+  const [files, setFiles] = useState<UploadedFile[]>(
+    (editItem?.attachmentIds ?? []).map((fileId, i) => ({
+      fileId,
+      originalName: `${STR.cnAttachments} ${i + 1}`,
+      mime: "",
+    })),
+  );
   const [pickBusy, setPickBusy] = useState(false);
   /** "No homework today" (D-#299): reason chip + declare/remove. */
   const [nilReason, setNilReason] = useState<string | null>(null);
@@ -122,6 +141,7 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
     refetchNil({ requestPolicy: "network-only" });
   }
   const [, declare] = useMutation(DECLARE_HOMEWORK_ITEM);
+  const [, updateItem] = useMutation(UPDATE_HOMEWORK_ITEM);
   const [, attachQuestion] = useMutation(ATTACH_HW_QUESTION_FILE);
 
   const [classesQ] = useQuery({
@@ -168,6 +188,35 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
     }
     const tags = selectedTopics;
     const td = timeDecl.trim() === "" ? undefined : parseInt(timeDecl, 10);
+
+    // D-#336 edit mode — same form, updateHomeworkItem instead. Issued items send
+    // ONLY the descriptive fields (the server rejects frozen ones with a clear
+    // error anyway; not sending them keeps a stale form from tripping it).
+    if (isEdit && editItem) {
+      setBusy(true);
+      const res = await updateItem({
+        itemId: editItem.itemId,
+        description: description.trim(),
+        topTags: tags,
+        attachmentIds: files.map((f) => f.fileId),
+        ...(issued
+          ? {}
+          : {
+              timeDecl: td,
+              qCount: q,
+              ...(poolRef.trim() ? { poolRef: poolRef.trim() } : { clearPoolRef: true }),
+              revItem,
+            }),
+      });
+      setBusy(false);
+      if (res.error || !res.data?.updateHomeworkItem) {
+        toast.show(friendlyError(res.error), "danger");
+        return;
+      }
+      toast.show(`${res.data.updateHomeworkItem.hwId} — ${STR.hwUpdated}`, "ok");
+      navigation.goBack();
+      return;
+    }
 
     setBusy(true);
     const res = await declare({
@@ -264,18 +313,33 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
             />
           </View>
         ) : null}
-        <Card>
-          <Body style={{ fontWeight: "700", marginBottom: 8 }}>{STR.hwSubject}</Body>
-          <ChipRow>
-            {HW_SUBJECTS.map((s) => (
-              <Chip key={s} label={hwSubjectLabel(s)} selected={subject === s} onPress={() => chooseSubject(s)} />
-            ))}
-          </ChipRow>
-          {fieldErrors.subject ? <Body style={{ color: colors.error, marginTop: 4 }}>⚠ {fieldErrors.subject}</Body> : null}
-          {classLevel != null ? <Muted style={{ marginTop: 4 }}>{classLevelLabel(classLevel)}</Muted> : null}
-        </Card>
-        <DateField label={STR.hwDate} value={date} onChange={setDate} />
-        {subject ? (
+        {isEdit && editItem ? (
+          <Card>
+            <Body style={{ fontWeight: "700" }}>
+              {STR.hwEditTitle} — {editItem.hwId}
+            </Body>
+            <Muted style={{ marginTop: 4 }}>
+              {hwSubjectLabel(editItem.subject)}
+              {classLevel != null ? ` · ${classLevelLabel(classLevel)}` : ""}
+            </Muted>
+            {issued ? <Muted style={{ color: colors.warning, marginTop: 4 }}>{STR.hwIssuedEditNote}</Muted> : null}
+          </Card>
+        ) : (
+          <>
+            <Card>
+              <Body style={{ fontWeight: "700", marginBottom: 8 }}>{STR.hwSubject}</Body>
+              <ChipRow>
+                {HW_SUBJECTS.map((s) => (
+                  <Chip key={s} label={hwSubjectLabel(s)} selected={subject === s} onPress={() => chooseSubject(s)} />
+                ))}
+              </ChipRow>
+              {fieldErrors.subject ? <Body style={{ color: colors.error, marginTop: 4 }}>⚠ {fieldErrors.subject}</Body> : null}
+              {classLevel != null ? <Muted style={{ marginTop: 4 }}>{classLevelLabel(classLevel)}</Muted> : null}
+            </Card>
+            <DateField label={STR.hwDate} value={date} onChange={setDate} />
+          </>
+        )}
+        {subject && !isEdit ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: 4 }}>{STR.hwNilTitle}</Body>
             {nilForSubject ? (
@@ -337,8 +401,13 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
           )}
           {fieldErrors.topics ? <Body style={{ color: colors.error, marginTop: 4 }}>⚠ {fieldErrors.topics}</Body> : null}
         </Card>
-        <Field label={STR.hwTimeDecl} value={timeDecl} onChangeText={setTimeDecl} keyboardType="number-pad" />
-        <Field label={STR.hwQCount} value={qCount} onChangeText={setQCount} keyboardType="number-pad" error={fieldErrors.qCount} />
+        {/* D-#336: TIME_DECL/Q_COUNT freeze at issue (reconciled DAY_TOTAL contract). */}
+        {issued ? null : (
+          <>
+            <Field label={STR.hwTimeDecl} value={timeDecl} onChangeText={setTimeDecl} keyboardType="number-pad" />
+            <Field label={STR.hwQCount} value={qCount} onChangeText={setQCount} keyboardType="number-pad" error={fieldErrors.qCount} />
+          </>
+        )}
         {/* D-#317: the mandatory brief "what is the homework" — every later card shows it. */}
         <Field
           label={STR.hwDescLabel}
@@ -376,14 +445,16 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
             disabled={pickBusy || files.length >= HW_MAX_ATTACHMENTS}
           />
         </Card>
-        <MoreOptions>
-          <Field label={STR.hwPoolRef} value={poolRef} onChangeText={setPoolRef} placeholder={`QP-${subject ?? "MATH"}-C${classLevel ?? 1}-U01`} />
-          <ChipRow>
-            <Chip label={STR.hwRevItem} selected={revItem} onPress={() => setRevItem((v) => !v)} />
-          </ChipRow>
-        </MoreOptions>
+        {issued ? null : (
+          <MoreOptions>
+            <Field label={STR.hwPoolRef} value={poolRef} onChangeText={setPoolRef} placeholder={`QP-${subject ?? "MATH"}-C${classLevel ?? 1}-U01`} />
+            <ChipRow>
+              <Chip label={STR.hwRevItem} selected={revItem} onPress={() => setRevItem((v) => !v)} />
+            </ChipRow>
+          </MoreOptions>
+        )}
         <View style={{ marginTop: space(3) }}>
-          <Button title={STR.hwDeclare} onPress={onSubmit} loading={busy} disabled={busy} />
+          <Button title={isEdit ? STR.save : STR.hwDeclare} onPress={onSubmit} loading={busy} disabled={busy} />
         </View>
       </ScrollView>
     </Screen>
