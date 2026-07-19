@@ -13,7 +13,9 @@ import {
   STUDENTS_QUERY,
   COLLECT_ASSIGNMENT,
   REDELIVER_AS_RECORD,
+  REVERT_AS_RECORD,
 } from "../../graphql/operations";
+import { useConfirm } from "../../state/ConfirmContext";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Loader, EmptyState, Notice } from "../../components/ui";
 import { STR, bnNum, lifecycleStateLabel } from "../../lib/labels";
@@ -38,11 +40,14 @@ export default function CollectAssignmentScreen({ route }: Props): React.ReactEl
 
   const [, collect] = useMutation(COLLECT_ASSIGNMENT);
   const [, redeliver] = useMutation(REDELIVER_AS_RECORD);
+  const [, revertRecord] = useMutation(REVERT_AS_RECORD);
+  const { confirmAction } = useConfirm();
 
   const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [revertBusyId, setRevertBusyId] = useState<string | null>(null);
 
   // Records arrive in insertion order — list students alphabetically (owner
   // request; matches the studentsInSection server sort).
@@ -79,6 +84,19 @@ export default function CollectAssignmentScreen({ route }: Props): React.ReactEl
     setOk(null);
     const res = await redeliver({ sectionId, recordId });
     if (res.error || !res.data?.redeliverAssignmentRecord) return setError(friendlyError(res.error));
+    refetchRecs({ requestPolicy: "network-only" });
+  }
+
+  /** D-#338 — undo the last recorded step (server enforces own-action + same-day). */
+  async function onRevert(recordId: string): Promise<void> {
+    if (!(await confirmAction({ title: STR.revertConfirmTitle, message: STR.revertConfirmBody, confirmLabel: STR.revertAction }))) return;
+    setError(null);
+    setOk(null);
+    setRevertBusyId(recordId);
+    const res = await revertRecord({ sectionId, recordId });
+    setRevertBusyId(null);
+    if (res.error || !res.data?.revertAssignmentRecord) return setError(friendlyError(res.error));
+    setOk(STR.revertDone);
     refetchRecs({ requestPolicy: "network-only" });
   }
 
@@ -153,8 +171,20 @@ export default function CollectAssignmentScreen({ route }: Props): React.ReactEl
                     key={r.id}
                     style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", minHeight: 40 }}
                   >
-                    <Body>{nameOf(r.studentId)}</Body>
-                    <Badge text={lifecycleStateLabel(r.state)} tone="brand" />
+                    <Body style={{ flexShrink: 1 }}>{nameOf(r.studentId)}</Body>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+                      {/* D-#338: undo a mistaken submit/return mark. */}
+                      {r.stateDates.length > 1 ? (
+                        <Button
+                          title={STR.revertAction}
+                          variant="ghost"
+                          onPress={() => void onRevert(r.id)}
+                          loading={revertBusyId === r.id}
+                          disabled={revertBusyId !== null}
+                        />
+                      ) : null}
+                      <Badge text={lifecycleStateLabel(r.state)} tone="brand" />
+                    </View>
                   </View>
                 ))}
               </Card>

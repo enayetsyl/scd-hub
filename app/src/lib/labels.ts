@@ -1296,6 +1296,11 @@ const STR_BN = {
   hwConfirm: "নিশ্চিত",
   hwSeeRecords: "রেকর্ডস",
   hwNoOpenRecords: "কোনো মুলতুবি কাজ নেই",
+  // Undo last lifecycle action (D-#338)
+  revertAction: "⤺ আনডু",
+  revertConfirmTitle: "শেষ ধাপটি ফেরাবেন?",
+  revertConfirmBody: "এই শিক্ষার্থীর সর্বশেষ চিহ্নিত ধাপটি মুছে আগের অবস্থায় ফেরানো হবে।",
+  revertDone: "ফেরানো হয়েছে",
   // Guardian portal (GP-2, D-#68)
   gpToday: "আজ",
   gpChildren: "সন্তান",
@@ -3740,6 +3745,11 @@ const STR_EN: StrTable = {
   hwConfirm: "Confirm",
   hwSeeRecords: "Records",
   hwNoOpenRecords: "Nothing pending",
+  // Undo last lifecycle action (D-#338)
+  revertAction: "⤺ Undo",
+  revertConfirmTitle: "Undo the last step?",
+  revertConfirmBody: "The most recent recorded step for this student will be removed and the previous state restored.",
+  revertDone: "Reverted",
   // Guardian portal (GP-2, D-#68)
   gpToday: "Today",
   gpChildren: "Children",

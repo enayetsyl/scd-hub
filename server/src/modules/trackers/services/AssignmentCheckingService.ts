@@ -15,6 +15,7 @@
  *
  * Write-scope (subject teacher) is enforced by the resolver.
  */
+import { Types } from "mongoose";
 import { HW_RESULTS } from "@scd/shared";
 import type { HwResult } from "@scd/shared";
 import { AssignmentItem } from "../models/AssignmentItem";
@@ -75,7 +76,7 @@ export async function checkAssignmentRecord(
   const at = input.at ?? new Date();
   rec.result = input.result as HwResult;
   rec.state = "CHECKED";
-  rec.stateDates.push({ state: "CHECKED", at });
+  rec.stateDates.push({ state: "CHECKED", at, by: new Types.ObjectId(input.actorId) });
   await rec.save();
 
   return {
@@ -114,7 +115,7 @@ export async function issueAssignmentResubmission(
   assertTransition(rec.state, "RESUBMIT"); // throws unless CHECKED
 
   rec.state = "RESUBMIT";
-  rec.stateDates.push({ state: "RESUBMIT", at });
+  rec.stateDates.push({ state: "RESUBMIT", at, by: new Types.ObjectId(actorId) });
 
   const created = await AssignmentStudentRecord.create({
     asItemId: rec.asItemId,
@@ -123,7 +124,7 @@ export async function issueAssignmentResubmission(
     sectionId: rec.sectionId,
     classId: rec.classId,
     state: "GIVEN",
-    stateDates: [{ state: "GIVEN", at }],
+    stateDates: [{ state: "GIVEN", at, by: new Types.ObjectId(actorId) }],
     dueDate: nextSchoolDay(at),
     chaseCount: 0,
     resubOf: rec._id,

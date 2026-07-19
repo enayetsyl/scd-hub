@@ -1808,6 +1808,10 @@ export interface HwOpenRecordT {
   hasAnswerFile: boolean;
   dueDate: string | null;
   result: string | null;
+  /** D-#338: stamps on the record — আনডু is only offered when > 1 (entry never pops). */
+  stampCount: number;
+  /** D-#338: ISO `at` of the newest stamp — same-Dhaka-day undo hint. */
+  lastStateAt: string;
 }
 
 export const HOMEWORK_OPEN_RECORDS = gql<
@@ -1816,7 +1820,20 @@ export const HOMEWORK_OPEN_RECORDS = gql<
 >`
   query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
     homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
-      id hwId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile dueDate result
+      id hwId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile dueDate result stampCount lastStateAt
+    }
+  }
+`;
+
+// D-#338 — undo the last lifecycle action on one record (server is the gate:
+// own-action + same-Dhaka-day for teachers, anytime for Principal/Office).
+export const REVERT_HW_RECORD = gql<
+  { revertHomeworkRecord: { recordId: string; hwId: string; state: string; poppedStates: string[]; deletedResubmissionId: string | null } },
+  { sectionId: string; recordId: string }
+>`
+  mutation RevertHomeworkRecord($sectionId: String!, $recordId: String!) {
+    revertHomeworkRecord(sectionId: $sectionId, recordId: $recordId) {
+      recordId hwId state poppedStates deletedResubmissionId
     }
   }
 `;
@@ -4010,6 +4027,8 @@ export interface AsRecordT {
   asId: string;
   studentId: string;
   state: string;
+  /** D-#338: undo affordance — offered when > 1 stamp; last `at` drives the same-day hint. */
+  stateDates: { state: string; at: string }[];
   dueDate: string | null;
   chaseCount: number;
   result: string | null;
@@ -4024,7 +4043,19 @@ export const AS_RECORDS = gql<
 >`
   query AssignmentRecords($sectionId: String!, $classId: String!, $itemId: String!) {
     assignmentRecords(sectionId: $sectionId, classId: $classId, itemId: $itemId) {
-      id asId studentId state dueDate chaseCount result marks feedback resubOf
+      id asId studentId state stateDates { state at } dueDate chaseCount result marks feedback resubOf
+    }
+  }
+`;
+
+// D-#338 — undo the last lifecycle action on one assignment record.
+export const REVERT_AS_RECORD = gql<
+  { revertAssignmentRecord: { recordId: string; asId: string; state: string; poppedStates: string[]; deletedResubmissionId: string | null } },
+  { sectionId: string; recordId: string }
+>`
+  mutation RevertAssignmentRecord($sectionId: String!, $recordId: String!) {
+    revertAssignmentRecord(sectionId: $sectionId, recordId: $recordId) {
+      recordId asId state poppedStates deletedResubmissionId
     }
   }
 `;
