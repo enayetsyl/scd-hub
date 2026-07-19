@@ -19,8 +19,10 @@ import {
   HOMEWORK_OPEN_RECORDS,
   RECORD_HOMEWORK_OUTCOME,
   ATTACH_HW_ANSWER_FILE,
+  REVERT_HW_RECORD,
   type HwOpenRecordT,
 } from "../../graphql/operations";
+import { useConfirm } from "../../state/ConfirmContext";
 import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
 import { groupByDate } from "../../lib/groupByDate";
 import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
@@ -111,6 +113,8 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
   });
   const [, recordOutcome] = useMutation(RECORD_HOMEWORK_OUTCOME);
   const [, attachAnswer] = useMutation(ATTACH_HW_ANSWER_FILE);
+  const [, revertRecord] = useMutation(REVERT_HW_RECORD);
+  const { confirmAction } = useConfirm();
 
   const records = recsQ.data?.homeworkOpenRecords ?? [];
   // D-#306: fold subjects the caller doesn't actively teach on this section.
@@ -167,6 +171,19 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
       delete next[recordId];
       return next;
     });
+    refetchRecs({ requestPolicy: "network-only" });
+  }
+
+  /** D-#338 — undo the last recorded step (server enforces own-action + same-day). */
+  async function onRevert(recordId: string): Promise<void> {
+    if (!(await confirmAction({ title: STR.revertConfirmTitle, message: STR.revertConfirmBody, confirmLabel: STR.revertAction }))) return;
+    setError(null);
+    setOk(null);
+    setBusyId(recordId);
+    const res = await revertRecord({ sectionId: base.sectionId, recordId });
+    setBusyId(null);
+    if (res.error || !res.data?.revertHomeworkRecord) return setError(friendlyError(res.error));
+    setOk(STR.revertDone);
     refetchRecs({ requestPolicy: "network-only" });
   }
 
@@ -306,7 +323,19 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
                   ) : (
                     <View style={{ marginTop: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                       {r.result ? <Muted>{hwResultLabel(r.result)}</Muted> : <View />}
-                      <Button title={STR.hwSeeRecords} variant="ghost" onPress={() => navigation.navigate("HomeworkRecords")} />
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        {/* D-#338: undo the mistaken check/chase in place. */}
+                        {r.stampCount > 1 ? (
+                          <Button
+                            title={STR.revertAction}
+                            variant="ghost"
+                            onPress={() => onRevert(r.id)}
+                            loading={busyId === r.id}
+                            disabled={busyId !== null}
+                          />
+                        ) : null}
+                        <Button title={STR.hwSeeRecords} variant="ghost" onPress={() => navigation.navigate("HomeworkRecords")} />
+                      </View>
                     </View>
                   )}
                 </Card>

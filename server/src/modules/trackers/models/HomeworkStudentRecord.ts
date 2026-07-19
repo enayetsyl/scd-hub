@@ -23,6 +23,8 @@ import type { LifecycleState, HwResult } from "@scd/shared";
 export interface StateStamp {
   state: LifecycleState;
   at: Date;
+  /** Acting user (D-#338 revert authorization); absent on pre-D-#338 stamps and system sweeps. */
+  by?: Types.ObjectId;
 }
 
 export interface IHomeworkStudentRecord extends Document {
@@ -64,6 +66,7 @@ const StateStampSchema = new Schema<StateStamp>(
   {
     state: { type: String, enum: LIFECYCLE_STATES, required: true },
     at: { type: Date, required: true },
+    by: { type: Schema.Types.ObjectId, required: false },
   },
   { _id: false },
 );

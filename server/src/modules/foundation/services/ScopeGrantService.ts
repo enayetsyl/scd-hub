@@ -2,18 +2,15 @@ import type { Types } from "mongoose";
 import { ScopeGrant, type SupervisoryExtent } from "../models/ScopeGrant";
 import { Section } from "../models/Section";
 import { writeAudit } from "../../platform/services/AuditService";
+import { dhakaDayStart } from "../../../lib/dhakaDay";
 
 // ---------------------------------------------------------------------------
 // Proxy window helpers (D-#20)
 // ---------------------------------------------------------------------------
 
-const DHAKA_TZ = "Asia/Dhaka";
-
-/** Day-start of a date in Asia/Dhaka time, returned as UTC Date.
- *  We approximate by flooring to the UTC midnight of the local date string. */
+/** Day-start of a date in Asia/Dhaka time, returned as UTC Date (shared helper, D-#338). */
 function dhakaDateStart(d: Date): Date {
-  const localStr = d.toLocaleDateString("en-CA", { timeZone: DHAKA_TZ }); // YYYY-MM-DD
-  return new Date(`${localStr}T00:00:00+06:00`);
+  return dhakaDayStart(d);
 }
 
 /** Compute the exclusive window end: start_date + durationDays in Dhaka time. */
