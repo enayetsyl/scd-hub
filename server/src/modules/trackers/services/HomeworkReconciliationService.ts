@@ -54,6 +54,10 @@ export interface DayItemView {
   topicLabelBn: string;
   /** D-#317: the teacher's brief "what is the homework" — null on pre-D-#317 items. */
   description: string | null;
+  /** Raw topic codes (D-#336) — the edit form prefills its picker from these. */
+  topTags: string[];
+  poolRef: string | null;
+  attachmentIds: string[];
 }
 
 export interface DayTallyResult {
@@ -83,6 +87,9 @@ function toItemView(d: LeanItem): DayItemView {
     bandWarning: d.timeDecl > HW_SUBJECT_BAND_MAX_MIN,
     topicLabelBn: "",
     description: d.description ?? null,
+    topTags: d.topTags ?? [],
+    poolRef: d.poolRef ?? null,
+    attachmentIds: (d.attachmentIds ?? []).map((id) => id.toString()),
   };
 }
 

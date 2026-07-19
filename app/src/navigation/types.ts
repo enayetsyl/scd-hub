@@ -1,6 +1,22 @@
 /** React Navigation param lists. One native-stack per tab; tabs gated by role. */
 import type { NavigatorScreenParams } from "@react-navigation/native";
 
+/** D-#336: a declared/issued item carried into DeclareHomework's edit mode —
+ *  everything the form prefills from (all serializable; no refetch needed). */
+export type HwEditItemParam = {
+  itemId: string;
+  hwId: string;
+  subject: string;
+  status: string;
+  description: string | null;
+  topTags: string[];
+  timeDecl: number;
+  qCount: number;
+  poolRef: string | null;
+  revItem: boolean;
+  attachmentIds: string[];
+};
+
 /** Staff landing dashboard (UX-4, D-#265) — registered FIRST so staff land here. */
 export type HomeStackParamList = {
   Today: undefined;
@@ -58,7 +74,7 @@ export type ReviewStackParamList = {
 export type HomeworkStackParamList = {
   HomeworkHome: undefined;
   /** `date` carries Homework home's calendar pick downstream (UX-5 R-Context). */
-  DeclareHomework: { date?: string } | undefined;
+  DeclareHomework: { date?: string; editItem?: HwEditItemParam } | undefined;
   HomeworkReconcile: { date?: string } | undefined;
   HomeworkRecords: undefined;
   CheckingQueue: undefined;

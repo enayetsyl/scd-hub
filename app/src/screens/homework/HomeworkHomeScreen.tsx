@@ -12,12 +12,13 @@ import React, { useMemo, useState, useRef, useCallback } from "react";
 import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
-import { useQuery } from "urql";
+import { useMutation, useQuery } from "urql";
 import { HW_DAILY_CEILING_MIN } from "@scd/shared";
 import {
   HOMEWORK_DAY_TALLY,
   HOMEWORK_SUMMARY,
   HOMEWORK_CLASS_OVERVIEW,
+  DELETE_HOMEWORK_ITEM,
   type HwClassRefInput,
 } from "../../graphql/operations";
 import type { HomeworkStackParamList } from "../../navigation/types";
@@ -41,6 +42,8 @@ import {
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
+import { useConfirm } from "../../state/ConfirmContext";
+import { useToast } from "../../state/ToastContext";
 import { useSectionContext } from "../../state/SectionContext";
 import { space, useColors } from "../../theme";
 import { dateKey } from "../../lib/dates";
@@ -114,6 +117,28 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
     }, [refs.length, hasSection, refetchOverview, refetchTally, refetchSum]),
   );
 
+  // D-#336: delete a mis-declared item (declared-only; server re-gates).
+  const { confirmAction } = useConfirm();
+  const toast = useToast();
+  const [, deleteItem] = useMutation(DELETE_HOMEWORK_ITEM);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const onDeleteItem = useCallback(
+    async (itemId: string): Promise<void> => {
+      if (deletingId) return;
+      if (!(await confirmAction({ title: STR.hwDeleteAction, message: STR.hwDeleteConfirm, confirmLabel: STR.hwDeleteAction }))) return;
+      setDeletingId(itemId);
+      const res = await deleteItem({ itemId });
+      setDeletingId(null);
+      if (res.error || !res.data?.deleteHomeworkItem) {
+        toast.show(friendlyError(res.error), "danger");
+        return;
+      }
+      toast.show(STR.hwDeleted, "ok");
+      refetchTally({ requestPolicy: "network-only" });
+    },
+    [deletingId, confirmAction, deleteItem, toast, refetchTally],
+  );
+
   const selectedSection =
     myClasses.find((m) => m.cls.id === selection.classId)?.sections.find((s) => s.id === selection.sectionId) ?? null;
   const canReconcileHomework =
@@ -155,23 +180,72 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
               </Muted>
             </Card>
 
-            {/* Declarations */}
+            {/* Declarations — D-#336: full detail + edit/delete affordances.
+                Declared (+ day unreconciled): edit everything, delete. Issued:
+                descriptive-only edit (the form disables the frozen fields). */}
             {(tally?.items ?? []).length === 0 ? (
               <EmptyState message={STR.empty} />
             ) : (
-              (tally?.items ?? []).map((it) => (
-                <Card key={it.itemId}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <Body style={{ fontWeight: "700" }}>{hwSubjectLabel(it.subject)}</Body>
-                    <Badge text={it.status === "issued" ? STR.hwIssued : STR.hwDeclared} tone={it.status === "issued" ? "ok" : "muted"} />
-                  </View>
-                  <Muted style={{ marginTop: 4 }}>
-                    {it.hwId} · {bnNum(it.timeDecl)} {STR.hwMinutes} · {bnNum(it.qCount)} {STR.questionsWord}
-                  </Muted>
-                  {it.topicLabelBn ? <Muted style={{ marginTop: 2 }}>📘 {it.topicLabelBn}</Muted> : null}
-                  {it.bandWarning ? <Muted style={{ color: colors.warning, marginTop: 4 }}>{STR.hwBandWarning}</Muted> : null}
-                </Card>
-              ))
+              (tally?.items ?? []).map((it) => {
+                const editable = it.status === "declared" ? tally?.state !== "reconciled" : true;
+                return (
+                  <Card key={it.itemId}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      <Body style={{ fontWeight: "700" }}>{hwSubjectLabel(it.subject)}</Body>
+                      <Badge text={it.status === "issued" ? STR.hwIssued : STR.hwDeclared} tone={it.status === "issued" ? "ok" : "muted"} />
+                    </View>
+                    <Muted style={{ marginTop: 4 }}>
+                      {it.hwId} · {bnNum(it.timeDecl)} {STR.hwMinutes} · {bnNum(it.qCount)} {STR.questionsWord}
+                    </Muted>
+                    {it.topicLabelBn ? <Muted style={{ marginTop: 2 }}>{STR.hwTopTags}: {it.topicLabelBn}</Muted> : null}
+                    {it.description ? <Body style={{ marginTop: space(1) }}>{it.description}</Body> : null}
+                    {(it.attachmentIds ?? []).length > 0 ? (
+                      <Muted style={{ marginTop: 2 }}>
+                        {STR.cnAttachments}: {bnNum((it.attachmentIds ?? []).length)}
+                      </Muted>
+                    ) : null}
+                    {it.bandWarning ? <Muted style={{ color: colors.warning, marginTop: 4 }}>{STR.hwBandWarning}</Muted> : null}
+                    {editable ? (
+                      <View style={{ flexDirection: "row", gap: space(2), marginTop: space(3) }}>
+                        <View style={{ flex: 1 }}>
+                          <Button
+                            title={STR.hwEditAction}
+                            variant="secondary"
+                            onPress={() =>
+                              navigation.navigate("DeclareHomework", {
+                                date,
+                                editItem: {
+                                  itemId: it.itemId,
+                                  hwId: it.hwId,
+                                  subject: it.subject,
+                                  status: it.status,
+                                  description: it.description,
+                                  topTags: it.topTags ?? [],
+                                  timeDecl: it.timeDecl,
+                                  qCount: it.qCount,
+                                  poolRef: it.poolRef ?? null,
+                                  revItem: it.revItem,
+                                  attachmentIds: it.attachmentIds ?? [],
+                                },
+                              })
+                            }
+                          />
+                        </View>
+                        {it.status === "declared" ? (
+                          <View style={{ flex: 1 }}>
+                            <Button
+                              title={STR.hwDeleteAction}
+                              variant="danger"
+                              loading={deletingId === it.itemId}
+                              onPress={() => void onDeleteItem(it.itemId)}
+                            />
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
+                  </Card>
+                );
+              })
             )}
 
             {/* Summary roll-ups (cumulative for this class) */}
