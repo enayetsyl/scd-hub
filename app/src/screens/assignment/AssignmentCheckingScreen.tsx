@@ -50,7 +50,11 @@ export default function AssignmentCheckingScreen({ route }: Props): React.ReactE
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const records = recsQ.data?.assignmentRecords ?? [];
+  // Records arrive in insertion order — list students alphabetically (owner
+  // request; matches the studentsInSection server sort).
+  const records = [...(recsQ.data?.assignmentRecords ?? [])].sort((a, b) =>
+    nameOf(a.studentId).localeCompare(nameOf(b.studentId)),
+  );
   const submitted = records.filter((r) => r.state === "SUBMITTED");
   const checked = records.filter((r) => r.state === "CHECKED");
 

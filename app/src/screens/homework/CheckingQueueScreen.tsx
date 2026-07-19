@@ -28,7 +28,7 @@ import { SubjectFold } from "../../components/SubjectFold";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
 import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
-import { STR, hwSubjectLabel, hwResultLabel, lifecycleStateLabel, dateHeaderLabel } from "../../lib/labels";
+import { STR, hwSubjectLabel, hwResultLabel, lifecycleStateLabel, dateHeaderLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { useSectionContext } from "../../state/SectionContext";
@@ -93,6 +93,11 @@ const EMPTY_PENDING: Pending = { outcome: "", expanded: false, resubmit: false, 
 export default function CheckingQueueScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
   const [pending, setPending] = useState<Record<string, Pending>>({});
+  // Day accordion (owner request): when a subject has homework pending across
+  // several days, exactly ONE day card is open at a time. null = default (the
+  // newest day); "" = all collapsed. Keyed by dateKey so the same day stays
+  // open across subjects.
+  const [openDateKey, setOpenDateKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -194,11 +199,28 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
     refetchRecs({ requestPolicy: "network-only" }),
   );
 
-  const renderDateGroups = (recs: HwOpenRecordT[]): React.ReactNode =>
-    groupByDate(recs, (r) => r.dateGiven).map((g) => (
+  const renderDateGroups = (recs: HwOpenRecordT[]): React.ReactNode => {
+    const groups = groupByDate(recs, (r) => r.dateGiven);
+    // Accordion only when there is more than one pending day (groups are newest
+    // first — the newest is the default open card).
+    const accordion = groups.length > 1;
+    const effectiveOpen = openDateKey ?? groups[0]?.dateKey ?? "";
+    return groups.map((g) => {
+      const isOpen = !accordion || g.dateKey === effectiveOpen;
+      return (
       <View key={g.dateKey} style={{ marginBottom: space(2) }}>
-        <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{dateHeaderLabel(g.dateKey)}</Muted>
-        {groupByItem(g.items).map((ig) => (
+        {accordion ? (
+          <Button
+            title={`${isOpen ? "▾" : "▸"} ${dateHeaderLabel(g.dateKey)} (${bnNum(g.items.length)})`}
+            variant="secondary"
+            onPress={() => setOpenDateKey(isOpen ? "" : g.dateKey)}
+          />
+        ) : (
+          <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{dateHeaderLabel(g.dateKey)}</Muted>
+        )}
+        {!isOpen
+          ? null
+          : groupByItem(g.items).map((ig) => (
           <View key={ig.hwId} style={{ marginBottom: space(2) }}>
             <Muted style={{ marginBottom: 4 }}>
               {hwSubjectLabel(ig.subject)} · {ig.hwId}
@@ -293,7 +315,9 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
           </View>
         ))}
       </View>
-    ));
+      );
+    });
+  };
 
   return (
     <Screen padded={false}>
