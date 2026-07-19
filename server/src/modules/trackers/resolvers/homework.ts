@@ -18,6 +18,8 @@ import type { LifecycleState } from "@scd/shared";
 import { builder } from "../../../schema";
 import {
   declareHomeworkItem as declareSvc,
+  updateHomeworkItem as updateSvc,
+  deleteHomeworkItem as deleteSvc,
   issueHomeworkItem as issueSvc,
   transitionRecord as transitionSvc,
   markRecordsDue as markRecordsDueSvc,
@@ -282,6 +284,82 @@ builder.mutationField("declareHomeworkItem", (t) =>
         actorId: ctx.auth.userId as string,
       });
       return { ...res, id: res.itemId };
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Mutations: updateHomeworkItem / deleteHomeworkItem (D-#336)
+// ---------------------------------------------------------------------------
+
+builder.mutationField("updateHomeworkItem", (t) =>
+  t.field({
+    type: HomeworkItemRef,
+    description:
+      "Edit a homework item (D-#336). Declared (+ day unreconciled): every declare field " +
+      "except the identity trio subject/classLevel/dateGiven. Issued: description, topics " +
+      "and attachments only. Write-scope enforced.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      itemId: t.arg.string({ required: true }),
+      description: t.arg.string({ required: false }),
+      topTags: t.arg({ type: ["String"], required: false }),
+      timeDecl: t.arg.int({ required: false }),
+      qCount: t.arg.int({ required: false }),
+      poolRef: t.arg.string({ required: false }),
+      clearPoolRef: t.arg.boolean({ required: false }),
+      selectedQids: t.arg({ type: ["String"], required: false }),
+      revItem: t.arg.boolean({ required: false }),
+      attachmentIds: t.arg.stringList({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const target = await HomeworkItem.findById(args.itemId).select("sectionId subject").lean();
+      if (!target) throw new Error("HomeworkItem not found");
+      await assertCanWrite(ctx, target.sectionId.toString(), await resolveSubjectId(target.subject));
+      const res = await updateSvc({
+        itemId: args.itemId,
+        description: args.description ?? undefined,
+        topTags: args.topTags ? [...args.topTags] : undefined,
+        timeDecl: args.timeDecl ?? undefined,
+        qCount: args.qCount ?? undefined,
+        poolRef: args.clearPoolRef ? null : (args.poolRef ?? undefined),
+        selectedQids: args.selectedQids ? [...args.selectedQids] : undefined,
+        revItem: args.revItem ?? undefined,
+        attachmentIds: args.attachmentIds ? [...args.attachmentIds] : undefined,
+        actorId: ctx.auth.userId as string,
+      });
+      return { ...res, id: res.itemId };
+    },
+  }),
+);
+
+const DeleteHomeworkItemResultRef = builder.objectRef<{ itemId: string; hwId: string }>(
+  "DeleteHomeworkItemResult",
+);
+DeleteHomeworkItemResultRef.implement({
+  fields: (t) => ({
+    itemId: t.exposeString("itemId"),
+    hwId: t.exposeString("hwId"),
+  }),
+});
+
+builder.mutationField("deleteHomeworkItem", (t) =>
+  t.field({
+    type: DeleteHomeworkItemResultRef,
+    description:
+      "Delete a mis-declared item (D-#336) — the fix for a wrong subject/class/date " +
+      "(baked into hwId). Declared-only + day unreconciled. Write-scope enforced.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      itemId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const target = await HomeworkItem.findById(args.itemId).select("sectionId subject").lean();
+      if (!target) throw new Error("HomeworkItem not found");
+      await assertCanWrite(ctx, target.sectionId.toString(), await resolveSubjectId(target.subject));
+      return deleteSvc(args.itemId);
     },
   }),
 );
@@ -625,6 +703,9 @@ interface DayItemShape {
   bandWarning: boolean;
   topicLabelBn: string;
   description: string | null;
+  topTags: string[];
+  poolRef: string | null;
+  attachmentIds: string[];
 }
 
 const DayItemRef = builder.objectRef<DayItemShape>("HomeworkDayItem");
@@ -641,6 +722,10 @@ DayItemRef.implement({
     topicLabelBn: t.exposeString("topicLabelBn"),
     // D-#317: the teacher's brief "what is the homework" (null pre-D-#317).
     description: t.string({ nullable: true, resolve: (r) => r.description }),
+    // D-#336: raw codes + refs so the edit form can prefill (view/edit affordance).
+    topTags: t.stringList({ resolve: (r) => r.topTags }),
+    poolRef: t.string({ nullable: true, resolve: (r) => r.poolRef }),
+    attachmentIds: t.stringList({ resolve: (r) => r.attachmentIds }),
   }),
 });
 

@@ -30,6 +30,7 @@ import {
   HW_NIL_REASONS,
   type HwNilReason,
 } from "../models/HomeworkNilDeclaration";
+import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconciliation";
 import { dateKeyOf } from "../../attendance/dates";
 import { Student } from "../../foundation/models/Student";
 import { assertTransition, isEntryState } from "../lifecycle";
@@ -164,27 +165,7 @@ export async function declareHomeworkItem(
     throw new Error("HW-… issues on school nights only (Sun–Thu); Fri/Sat are blocked (handoff §6.1)");
   }
 
-  if (!Array.isArray(input.topTags) || input.topTags.length === 0) {
-    throw new Error("At least one topic is required (handoff §2.1 / REF-07 §3.5)");
-  }
-  // Topics are PICKED from the per-(subject, class) catalog (HomeworkTopic), not typed
-  // free-hand — so every code must exist + be active for this subject+class. This keeps
-  // the topic-touch roll-up grouping on a controlled set of codes.
-  const wantedTags = [...new Set(input.topTags)];
-  const knownTopics = await HomeworkTopic.find({
-    subject,
-    classLevel: input.classLevel,
-    code: { $in: wantedTags },
-    active: true,
-  })
-    .select("code")
-    .lean();
-  const knownCodes = new Set(knownTopics.map((t) => t.code));
-  knownCodes.add(genericTopicCode(subject, input.classLevel));
-  const unknownTags = wantedTags.filter((c) => !knownCodes.has(c));
-  if (unknownTags.length > 0) {
-    throw new Error(`Unknown topic(s) for ${subject} C${input.classLevel}: ${unknownTags.join(", ")}`);
-  }
+  await assertKnownTopTags(subject, input.classLevel, input.topTags);
 
   // TIME_DECL: 0–40 is the working band but a subject MAY exceed 40 on reduced-roster
   // days (handoff §2.1). >40 is NOT rejected here — it surfaces as a band warning at
@@ -256,6 +237,168 @@ export async function declareHomeworkItem(
     status: doc.status,
     attachmentIds: (doc.attachmentIds ?? []).map((id) => id.toString()),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Edit / delete a declared item (D-#336 policy)
+// ---------------------------------------------------------------------------
+
+/** Topics are PICKED from the per-(subject, class) catalog (HomeworkTopic), not typed
+ *  free-hand — every code must exist + be active for this subject+class. Shared by
+ *  declare and update so the topic-touch roll-up stays on a controlled code set. */
+async function assertKnownTopTags(
+  subject: HwSubject,
+  classLevel: number,
+  topTags: string[],
+): Promise<void> {
+  if (!Array.isArray(topTags) || topTags.length === 0) {
+    throw new Error("At least one topic is required (handoff §2.1 / REF-07 §3.5)");
+  }
+  const wantedTags = [...new Set(topTags)];
+  const knownTopics = await HomeworkTopic.find({
+    subject,
+    classLevel,
+    code: { $in: wantedTags },
+    active: true,
+  })
+    .select("code")
+    .lean();
+  const knownCodes = new Set(knownTopics.map((t) => t.code));
+  knownCodes.add(genericTopicCode(subject, classLevel));
+  const unknownTags = wantedTags.filter((c) => !knownCodes.has(c));
+  if (unknownTags.length > 0) {
+    throw new Error(`Unknown topic(s) for ${subject} C${classLevel}: ${unknownTags.join(", ")}`);
+  }
+}
+
+/** Reject writes once the item's day is reconciled — the recon report and the
+ *  immutable trim log (§4.5) are frozen views of that day's declarations. */
+async function assertDayUnreconciled(classId: string, dateGiven: Date): Promise<void> {
+  const existing = await HomeworkReconciliation.findOne({
+    classId,
+    reconDate: reconDayKey(dateGiven),
+  }).lean();
+  if (existing && existing.reconState === "reconciled") {
+    throw new Error("Day already reconciled — declared items are frozen (handoff §4.5)");
+  }
+}
+
+export interface UpdateHomeworkItemInput {
+  itemId: string;
+  /** Omitted fields are left unchanged. */
+  description?: string;
+  topTags?: string[];
+  timeDecl?: number;
+  qCount?: number;
+  /** null clears the pool ref. */
+  poolRef?: string | null;
+  selectedQids?: string[];
+  revItem?: boolean;
+  /** [] clears all attachments. */
+  attachmentIds?: string[];
+  actorId: string;
+}
+
+/** Tiered edit (D-#336):
+ *    declared (+ day unreconciled) → every declare-form field EXCEPT the identity
+ *      trio subject/classLevel/dateGiven (they are baked into hwId and, at issue,
+ *      into every student record's dueDate — never editable; mis-declared identity
+ *      is fixed by deleteHomeworkItem + re-declare).
+ *    issued → descriptive fields only (description, topTags, attachmentIds). All
+ *      downstream reads live-join the item, so these propagate cleanly; timeDecl/
+ *      qCount are frozen because tallyDay recomputes live and an edit would
+ *      silently rewrite the reconciled DAY_TOTAL under the 120-min ceiling gate. */
+export async function updateHomeworkItem(input: UpdateHomeworkItemInput): Promise<HomeworkItemResult> {
+  const item = await HomeworkItem.findById(input.itemId);
+  if (!item) throw new Error("HomeworkItem not found");
+
+  if (item.status !== "declared") {
+    const frozen: [string, unknown][] = [
+      ["TIME_DECL", input.timeDecl],
+      ["Q_COUNT", input.qCount],
+      ["POOL_REF", input.poolRef],
+      ["selected questions", input.selectedQids],
+      ["revision flag", input.revItem],
+    ];
+    const attempted = frozen.filter(([, v]) => v !== undefined).map(([k]) => k);
+    if (attempted.length > 0) {
+      throw new Error(
+        `Item is already issued — ${attempted.join(", ")} is frozen (only description, topics and attachments stay editable)`,
+      );
+    }
+  } else {
+    await assertDayUnreconciled(item.classId.toString(), item.dateGiven);
+  }
+
+  if (input.topTags !== undefined) {
+    await assertKnownTopTags(item.subject, item.classLevel, input.topTags);
+    item.topTags = [...new Set(input.topTags)];
+  }
+  if (input.description !== undefined) {
+    const description = input.description.trim();
+    if (!description) throw new Error("A brief homework description is required (D-#317)");
+    item.description = description;
+  }
+  if (input.attachmentIds !== undefined) {
+    item.attachmentIds = await normalizeAttachmentIds(input.attachmentIds);
+  }
+  if (input.timeDecl !== undefined) {
+    if (!Number.isInteger(input.timeDecl) || input.timeDecl < 0) {
+      throw new Error("TIME_DECL must be a non-negative integer (minutes)");
+    }
+    item.timeDecl = input.timeDecl;
+  }
+  if (input.qCount !== undefined) {
+    if (!Number.isInteger(input.qCount) || input.qCount < 0) {
+      throw new Error("Q_COUNT must be a non-negative integer");
+    }
+    item.qCount = input.qCount;
+  }
+  if (input.poolRef !== undefined) {
+    if (input.poolRef === null || input.poolRef === "") {
+      item.poolRef = undefined;
+    } else {
+      const poolPattern = new RegExp(`^QP-${item.subject}-C${item.classLevel}-U\\d{2,}$`);
+      if (!poolPattern.test(input.poolRef)) {
+        throw new Error(
+          `Malformed POOL_REF "${input.poolRef}" — expected QP-${item.subject}-C${item.classLevel}-U{nn}`,
+        );
+      }
+      item.poolRef = input.poolRef;
+    }
+  }
+  if (input.selectedQids !== undefined) item.selectedQids = input.selectedQids;
+  if (input.revItem !== undefined) item.revItem = input.revItem;
+
+  await item.save();
+
+  return {
+    itemId: item._id.toString(),
+    hwId: item.hwId,
+    classLevel: item.classLevel,
+    subject: item.subject,
+    dateGiven: item.dateGiven.toISOString(),
+    topTags: item.topTags,
+    timeDecl: item.timeDecl,
+    qCount: item.qCount,
+    revItem: item.revItem,
+    status: item.status,
+    attachmentIds: (item.attachmentIds ?? []).map((id) => id.toString()),
+  };
+}
+
+/** Delete a mis-declared item (D-#336) — the only fix for a wrong subject/class/
+ *  date, since those are baked into hwId. Declared-only + day unreconciled; an
+ *  issued item already spawned student records and can never be deleted. */
+export async function deleteHomeworkItem(itemId: string): Promise<{ itemId: string; hwId: string }> {
+  const item = await HomeworkItem.findById(itemId).lean();
+  if (!item) throw new Error("HomeworkItem not found");
+  if (item.status !== "declared") {
+    throw new Error("Item is already issued — issued homework cannot be deleted");
+  }
+  await assertDayUnreconciled(item.classId.toString(), item.dateGiven as unknown as Date);
+  await HomeworkItem.deleteOne({ _id: item._id });
+  return { itemId: item._id.toString(), hwId: item.hwId };
 }
 
 // ---------------------------------------------------------------------------

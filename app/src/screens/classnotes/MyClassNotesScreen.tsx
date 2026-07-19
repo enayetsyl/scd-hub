@@ -58,10 +58,12 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
   // section+subject, fetched only when the publish box is open. Subjectgroup
   // periods (Quran/Arabic) have no section homework — no picker.
   const isSection = slot.groupType === "section" && !!slot.classId;
+  // Also fetched when a published note carries a homework link, so the read-only
+  // view can name the linked hwId (D-#336).
   const [tallyQ] = useQuery({
     query: HOMEWORK_DAY_TALLY,
     variables: { sectionId: slot.groupId, classId: slot.classId ?? "", date },
-    pause: !open || !isSection,
+    pause: !isSection || (!open && !note?.homeworkItemId),
   });
   const dayItems = (tallyQ.data?.homeworkDayTally?.items ?? []).filter((it) => it.subject === slot.subject);
 
@@ -116,8 +118,35 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
         {note ? <Badge text={`✓ ${STR.rtPublished}`} tone="ok" /> : null}
       </View>
 
-      {note ? (
-        <Muted style={{ marginTop: space(1) }}>{note.taughtSummaryBn}</Muted>
+      {note && !open ? (
+        <>
+          <Muted style={{ marginTop: space(1) }}>{note.taughtSummaryBn}</Muted>
+          {note.homeworkItemId ? (
+            <Muted style={{ marginTop: 2 }}>
+              {STR.rtHomeworkId}: {dayItems.find((it) => it.itemId === note.homeworkItemId)?.hwId ?? "✓"}
+            </Muted>
+          ) : null}
+          {note.attachmentIds.length > 0 ? (
+            <Muted style={{ marginTop: 2 }}>
+              {STR.cnAttachments}: {bnNum(note.attachmentIds.length)}
+            </Muted>
+          ) : null}
+          {/* D-#336: the teacher edits their own note — the publish upsert
+              (slotId+date) overwrites and RE-NOTIFIES guardians (owner policy). */}
+          <Button
+            title={STR.cnEditNote}
+            variant="secondary"
+            onPress={() => {
+              setTaught(note.taughtSummaryBn);
+              setHwItemId(note.homeworkItemId);
+              setFiles(
+                note.attachmentIds.map((fileId, i) => ({ fileId, name: `${STR.cnAttachments} ${i + 1}` })),
+              );
+              setOpen(true);
+            }}
+            style={{ marginTop: space(2) }}
+          />
+        </>
       ) : open ? (
         <View style={{ marginTop: space(2), gap: space(1) }}>
           <Field label={STR.rtTaughtSummary} value={taught} onChangeText={setTaught} multiline error={taughtError} />
