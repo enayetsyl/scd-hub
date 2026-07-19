@@ -17,7 +17,7 @@ import { MY_STUDENT_COMMENTS_QUERY } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
-import { STR, commentTypeLabel, commentSentimentLabel } from "../../lib/labels";
+import { STR, commentTypeLabel, commentSentimentLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
 
@@ -112,7 +112,8 @@ export default function CommentsHomeScreen(): React.ReactElement {
                     />
                   </View>
                   <Muted style={{ marginTop: 2 }}>
-                    {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)}
+                    {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)} ·{" "}
+                    {isoDateLabel(c.createdAt)}
                   </Muted>
                   <Body style={{ marginTop: space(1) }}>{c.text}</Body>
                 </Card>

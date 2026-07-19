@@ -13,7 +13,7 @@ import { useQuery } from "urql";
 import { COMMENT_REVIEW_INBOX_QUERY } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Badge, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
-import { STR, commentTypeLabel, commentSentimentLabel } from "../../lib/labels";
+import { STR, commentTypeLabel, commentSentimentLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
 
@@ -63,7 +63,8 @@ export default function CommentReviewScreen(): React.ReactElement {
                 <Badge text={STR.cmDraftBadge} tone="muted" />
               </View>
               <Muted style={{ marginTop: 2 }}>
-                {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)} · {c.authorName}
+                {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)} · {c.authorName} ·{" "}
+                {isoDateLabel(c.createdAt)}
               </Muted>
               <Body style={{ marginTop: space(1) }}>{c.text}</Body>
             </Card>

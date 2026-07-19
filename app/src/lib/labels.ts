@@ -303,6 +303,20 @@ export function fullDateLabel(key: string): string {
   return wk ? `${wk}, ${datePart}` : datePart;
 }
 
+/** Compact localized date for a FULL ISO timestamp (createdAt etc.):
+ *  "২০২৬-০৭-১৭" (bn) / "2026-07-17" (en). Unlike the YYYY-MM-DD helpers above,
+ *  a full ISO string parses to the correct instant, so LOCAL components are
+ *  taken after parsing (no D-#304 weekday shift). */
+export function isoDateLabel(iso?: string | null): string {
+  if (!iso) return DASH;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return bnNum(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return bnNum(`${y}-${m}-${dd}`);
+}
+
 export const subjectLabel = (code?: string | null): string =>
   (code && pick(SUBJECT_LABELS_BN, SUBJECT_LABELS_EN)[code as Subject]) || code || DASH;
 
@@ -2703,6 +2717,7 @@ const STR_BN = {
   cmType: "ধরন",
   cmSentiment: "প্রকৃতি",
   cmText: "মন্তব্য",
+  cmMadeOn: "মন্তব্যের তারিখ",
   cmTextPlaceholder: "শিক্ষার্থী সম্পর্কে মন্তব্য লিখুন…",
   cmPickSection: "শাখা নির্বাচন করুন",
   cmNoSection: "একটি শাখা নির্বাচন করুন।",
@@ -5141,6 +5156,7 @@ const STR_EN: StrTable = {
   cmType: "Type",
   cmSentiment: "Tone",
   cmText: "Comment",
+  cmMadeOn: "Comment date",
   cmTextPlaceholder: "Write a comment about the student…",
   cmPickSection: "Select a section",
   cmNoSection: "Select a section.",

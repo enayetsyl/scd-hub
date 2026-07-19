@@ -45,6 +45,7 @@ import {
   lifecycleStateLabel,
   dayTypeLabel,
   getActiveLang,
+  isoDateLabel,
 } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
@@ -499,7 +500,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                   <Muted>
                     {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)}
                   </Muted>
-                  {c.deliveredAt ? <Muted>{new Date(c.deliveredAt).toLocaleDateString()}</Muted> : null}
+                  <Muted>{isoDateLabel(c.createdAt)}</Muted>
                 </View>
                 <Body style={{ marginTop: space(1) }}>{c.text}</Body>
                 {c.attachmentIds.length > 0 && FILE_VIEW_SUPPORTED ? (
