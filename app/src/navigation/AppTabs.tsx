@@ -218,6 +218,7 @@ import AccessControlUsersScreen from "../screens/admin/AccessControlUsersScreen"
 import AccessControlEditScreen from "../screens/admin/AccessControlEditScreen";
 import ReconciliationReportScreen from "../screens/admin/ReconciliationReportScreen";
 import HwLifecycleReportScreen from "../screens/admin/HwLifecycleReportScreen";
+import AuditLogScreen from "../screens/admin/AuditLogScreen";
 import ReportsHomeScreen from "../screens/reports/ReportsHomeScreen";
 import PendingReportScreen from "../screens/reports/PendingReportScreen";
 import TeacherClassLoadScreen from "../screens/reports/TeacherClassLoadScreen";
@@ -964,6 +965,7 @@ function AdminNavigator(): React.ReactElement {
         component={AccessControlEditScreen}
         options={({ route }) => ({ title: route.params.name || STR.acTitle })}
       />
+      <AdminStack.Screen name="AuditLog" component={AuditLogScreen} options={{ title: STR.audTitle }} />
       <AdminStack.Screen name="ReconciliationReport" component={ReconciliationReportScreen} options={{ title: STR.rrTitle }} />
       <AdminStack.Screen name="HwLifecycleReport" component={HwLifecycleReportScreen} options={{ title: STR.hlrTitle }} />
       <AdminStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
