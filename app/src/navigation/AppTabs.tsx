@@ -151,6 +151,8 @@ import ObservationHomeScreen from "../screens/observation/ObservationHomeScreen"
 import MyObservationsScreen from "../screens/observation/MyObservationsScreen";
 import AllObservationsScreen from "../screens/observation/AllObservationsScreen";
 import UploadObservationScreen from "../screens/observation/UploadObservationScreen";
+import VideoReviewAdminScreen from "../screens/observation/VideoReviewAdminScreen";
+import MyVideoReviewsScreen from "../screens/observation/MyVideoReviewsScreen";
 import ObservationReviewQueueScreen from "../screens/observation/ObservationReviewQueueScreen";
 import ReviewObservationScreen from "../screens/observation/ReviewObservationScreen";
 import ObservationDetailScreen from "../screens/observation/ObservationDetailScreen";
@@ -775,6 +777,8 @@ function ObservationNavigator(): React.ReactElement {
   return (
     <ObservationStack.Navigator screenOptions={stackOptions}>
       <ObservationStack.Screen name="ObservationHome" component={ObservationHomeScreen} options={{ title: STR.obsHomeTitle }} />
+      <ObservationStack.Screen name="VideoReviewAdmin" component={VideoReviewAdminScreen} options={{ title: STR.vrAdminTitle }} />
+      <ObservationStack.Screen name="MyVideoReviews" component={MyVideoReviewsScreen} options={{ title: STR.vrMyTitle }} />
       <ObservationStack.Screen name="MyObservations" component={MyObservationsScreen} options={{ title: STR.obsMyObservationsTitle }} />
       <ObservationStack.Screen name="AllObservations" component={AllObservationsScreen} options={{ title: STR.obsAllObservationsTitle }} />
       <ObservationStack.Screen name="UploadObservation" component={UploadObservationScreen} options={{ title: STR.obsUploadTitle }} />

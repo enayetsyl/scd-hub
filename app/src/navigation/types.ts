@@ -264,6 +264,8 @@ export type ObservationStackParamList = {
   ObservationDueList: undefined;
   ReviewerEffectiveness: undefined;
   ObservationConfig: undefined;
+  VideoReviewAdmin: undefined;
+  MyVideoReviews: undefined;
 };
 
 /** Saturday Qur'an-Hifz Revision (SR app surfaces over SR-1..SR-4) — staff stack
