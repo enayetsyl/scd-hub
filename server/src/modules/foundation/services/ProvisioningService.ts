@@ -42,7 +42,7 @@ export interface ProvisionedCredential {
 export interface GuardianCandidate {
   phone: string;
   suggestedName: string;
-  students: Array<{ id: string; name: string; className: string }>;
+  students: Array<{ id: string; name: string; className: string; classLevel: number | null }>;
   loginExists: boolean;
   loginEnabled: boolean;
   guardianId: string | null;
@@ -99,10 +99,11 @@ export async function guardianCredentialCandidates(): Promise<GuardianCandidate[
     byPhone.set(p, list);
   }
 
-  // Class names for display.
+  // Class names (display) + levels (class-wise grouping/ordering on the screen).
   const classIds = [...new Set(students.map((s) => s.classId?.toString()).filter(Boolean))];
   const classes = await Class.find({ _id: { $in: classIds } }).lean();
   const classNameById = new Map(classes.map((c) => [c._id.toString(), c.nameBn]));
+  const classLevelById = new Map(classes.map((c) => [c._id.toString(), c.level]));
 
   // Existing phone-keyed guardian logins.
   const phones = [...byPhone.keys()];
@@ -119,6 +120,7 @@ export async function guardianCredentialCandidates(): Promise<GuardianCandidate[
         id: s._id.toString(),
         name: s.name,
         className: (s.classId && classNameById.get(s.classId.toString())) || "",
+        classLevel: (s.classId && classLevelById.get(s.classId.toString())) ?? null,
       })),
       loginExists: !!g,
       loginEnabled: !!g?.loginEnabled,
