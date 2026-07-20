@@ -16,6 +16,7 @@
  *
  * Write-scope (subject teacher checks own subject) is enforced by the resolver.
  */
+import { Types } from "mongoose";
 import { HW_RESULTS, HW_DAILY_CEILING_MIN } from "@scd/shared";
 import type { HwResult } from "@scd/shared";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
@@ -128,7 +129,7 @@ export async function checkRecord(input: CheckRecordInput): Promise<CheckRecordR
 
   rec.result = result;
   rec.state = "CHECKED";
-  rec.stateDates.push({ state: "CHECKED", at });
+  rec.stateDates.push({ state: "CHECKED", at, by: new Types.ObjectId(input.actorId) });
 
   let resubmission: CheckRecordResult["resubmission"] = null;
 
@@ -136,7 +137,7 @@ export async function checkRecord(input: CheckRecordInput): Promise<CheckRecordR
     // Original record is marked resubmit-issued (CHECKED → RESUBMIT).
     assertTransition(rec.state, "RESUBMIT");
     rec.state = "RESUBMIT";
-    rec.stateDates.push({ state: "RESUBMIT", at });
+    rec.stateDates.push({ state: "RESUBMIT", at, by: new Types.ObjectId(input.actorId) });
 
     // The resubmission: a NEW record on the SAME HW_ID, its own 1→6 pass (boundary 4).
     const due = nextSchoolDay(at);
@@ -147,7 +148,7 @@ export async function checkRecord(input: CheckRecordInput): Promise<CheckRecordR
       sectionId: rec.sectionId,
       classId: rec.classId,
       state: "GIVEN",
-      stateDates: [{ state: "GIVEN", at }],
+      stateDates: [{ state: "GIVEN", at, by: new Types.ObjectId(input.actorId) }],
       dueDate: due,
       chaseCount: 0,
       resubOf: rec._id,

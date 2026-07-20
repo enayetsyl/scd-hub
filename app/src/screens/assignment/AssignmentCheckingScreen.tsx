@@ -15,7 +15,9 @@ import {
   CHECK_AS_RECORD,
   ISSUE_AS_RESUBMISSION,
   TRANSITION_AS_RECORD,
+  REVERT_AS_RECORD,
 } from "../../graphql/operations";
+import { useConfirm } from "../../state/ConfirmContext";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Loader, EmptyState, Notice } from "../../components/ui";
 import { STR, bnNum, hwResultLabel, lifecycleStateLabel } from "../../lib/labels";
@@ -44,15 +46,23 @@ export default function AssignmentCheckingScreen({ route }: Props): React.ReactE
   const [, check] = useMutation(CHECK_AS_RECORD);
   const [, resub] = useMutation(ISSUE_AS_RESUBMISSION);
   const [, transition] = useMutation(TRANSITION_AS_RECORD);
+  const [, revertRecord] = useMutation(REVERT_AS_RECORD);
+  const { confirmAction } = useConfirm();
 
   const [pending, setPending] = useState<Record<string, Pending>>({});
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const records = recsQ.data?.assignmentRecords ?? [];
+  // Records arrive in insertion order — list students alphabetically (owner
+  // request; matches the studentsInSection server sort).
+  const records = [...(recsQ.data?.assignmentRecords ?? [])].sort((a, b) =>
+    nameOf(a.studentId).localeCompare(nameOf(b.studentId)),
+  );
   const submitted = records.filter((r) => r.state === "SUBMITTED");
-  const checked = records.filter((r) => r.state === "CHECKED");
+  // D-#338: RESUBMIT/RETURNED rows join the checked list so a mistaken
+  // check/resubmit/return can be undone in place.
+  const checked = records.filter((r) => r.state === "CHECKED" || r.state === "RESUBMIT" || r.state === "RETURNED");
 
   function setPend(id: string, patch: Partial<Pending>): void {
     setPending((m) => {
@@ -103,6 +113,17 @@ export default function AssignmentCheckingScreen({ route }: Props): React.ReactE
     setOk(null);
     const res = await transition({ sectionId, recordId, toState: "RETURNED" });
     if (res.error || !res.data?.transitionAssignmentRecord) return setError(friendlyError(res.error));
+    refresh();
+  }
+
+  /** D-#338 — undo the last recorded step (server enforces own-action + same-day). */
+  async function onRevert(recordId: string): Promise<void> {
+    if (!(await confirmAction({ title: STR.revertConfirmTitle, message: STR.revertConfirmBody, confirmLabel: STR.revertAction }))) return;
+    setError(null);
+    setOk(null);
+    const res = await revertRecord({ sectionId, recordId });
+    if (res.error || !res.data?.revertAssignmentRecord) return setError(friendlyError(res.error));
+    setOk(STR.revertDone);
     refresh();
   }
 
@@ -158,8 +179,14 @@ export default function AssignmentCheckingScreen({ route }: Props): React.ReactE
                   {r.feedback ? ` · ${r.feedback}` : ""}
                 </Muted>
                 <ChipRow>
-                  <Chip label={STR.asReturn} onPress={() => void onReturn(r.id)} />
-                  <Chip label={STR.asResubmit} onPress={() => void onResubmit(r.id)} />
+                  {r.state === "CHECKED" ? (
+                    <>
+                      <Chip label={STR.asReturn} onPress={() => void onReturn(r.id)} />
+                      <Chip label={STR.asResubmit} onPress={() => void onResubmit(r.id)} />
+                    </>
+                  ) : null}
+                  {/* D-#338: undo a mistaken check/resubmit/return. */}
+                  {r.stateDates.length > 1 ? <Chip label={STR.revertAction} onPress={() => void onRevert(r.id)} /> : null}
                 </ChipRow>
               </Card>
             ))}

@@ -52,6 +52,7 @@ import {
   checkAssignmentRecord as checkSvc,
   issueAssignmentResubmission as resubSvc,
 } from "../services/AssignmentCheckingService";
+import { revertAssignmentRecord as revertAssignmentRecordSvc } from "../services/AssignmentRevertService";
 import {
   assignmentChaseList as chaseListSvc,
   escalateAssignmentChase as escalateSvc,
@@ -1299,6 +1300,65 @@ builder.queryField("assignmentItemCounts", (t) =>
 // ===========================================================================
 // AS-T3 — checking + teacher-optional resubmission
 // ===========================================================================
+
+// Mutation: revertAssignmentRecord (D-#338 — undo the last lifecycle action) -------
+
+interface AsRevertResultShape {
+  recordId: string;
+  asId: string;
+  state: string;
+  poppedStates: string[];
+  chaseCount: number;
+  result: string | null;
+  marks: number | null;
+  feedback: string | null;
+  deletedResubmissionId: string | null;
+}
+
+const AsRevertResultRef = builder.objectRef<AsRevertResultShape>("AsRevertResult");
+AsRevertResultRef.implement({
+  fields: (t) => ({
+    recordId: t.exposeString("recordId"),
+    asId: t.exposeString("asId"),
+    state: t.exposeString("state"),
+    poppedStates: t.stringList({ resolve: (r) => r.poppedStates }),
+    chaseCount: t.exposeInt("chaseCount"),
+    result: t.string({ nullable: true, resolve: (r) => r.result }),
+    marks: t.int({ nullable: true, resolve: (r) => r.marks }),
+    feedback: t.string({ nullable: true, resolve: (r) => r.feedback }),
+    deletedResubmissionId: t.string({ nullable: true, resolve: (r) => r.deletedResubmissionId }),
+  }),
+});
+
+builder.mutationField("revertAssignmentRecord", (t) =>
+  t.field({
+    type: AsRevertResultRef,
+    description:
+      "Undo the last lifecycle ACTION on an assignment record (D-#338): pops the trailing " +
+      "same-timestamp stamp group and restores the previous state (untouched spawned resubmission " +
+      "deleted; result/marks/feedback cleared on a CHECKED pop; chaseCount decremented). Acting " +
+      "teacher: own action, same Dhaka day; Principal/Office: anytime.",
+    authScopes: { authenticated: true },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      recordId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
+      const admin = ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE";
+      await assertRecordInSection(args.recordId, args.sectionId);
+      if (!admin) {
+        await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
+      }
+      return revertAssignmentRecordSvc({
+        recordId: args.recordId,
+        actorId: ctx.auth.userId as string,
+        admin,
+      });
+    },
+  }),
+);
 
 builder.mutationField("checkAssignmentRecord", (t) =>
   t.field({

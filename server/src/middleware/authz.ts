@@ -97,19 +97,28 @@ export async function allowedSubjectCodesForSection(
   ctx: AppContext,
   sectionId: string,
   classId: string,
+  opts?: {
+    /** Default true. When false, the class-teacher / homework-delegate shortcut is
+     *  skipped so they fall through to their grant-derived subject set (owner
+     *  decision 2026-07-19: checking queue + class notes are subject-scoped for
+     *  EVERY teacher; Principal/Office/supervisors stay unrestricted). */
+    classTeacherOversight?: boolean;
+  },
 ): Promise<Set<string> | null> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE") return null;
   if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
 
   const userId = ctx.auth.userId as string;
-  const section = await Section.findById(sectionId)
-    .select("classTeacherId homeworkConfirmerId")
-    .lean();
-  if (section) {
-    const ctId = section.classTeacherId ? section.classTeacherId.toString() : null;
-    const delegateId = section.homeworkConfirmerId ? section.homeworkConfirmerId.toString() : null;
-    if (userId === ctId || userId === delegateId) return null;
+  if (opts?.classTeacherOversight !== false) {
+    const section = await Section.findById(sectionId)
+      .select("classTeacherId homeworkConfirmerId")
+      .lean();
+    if (section) {
+      const ctId = section.classTeacherId ? section.classTeacherId.toString() : null;
+      const delegateId = section.homeworkConfirmerId ? section.homeworkConfirmerId.toString() : null;
+      if (userId === ctId || userId === delegateId) return null;
+    }
   }
   const me = await User.findById(userId).select("homeworkSupervisor").lean();
   if (me?.homeworkSupervisor) return null;

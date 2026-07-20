@@ -45,6 +45,7 @@ import {
   getStudentDayLoad as studentDayLoadSvc,
 } from "../services/HomeworkResubmissionService";
 import { recordHomeworkOutcome as recordHomeworkOutcomeSvc } from "../services/HomeworkOutcomeService";
+import { revertHomeworkRecord as revertHomeworkRecordSvc } from "../services/HomeworkRevertService";
 import {
   homeworkSummary as homeworkSummarySvc,
   homeworkClassOverview as classOverviewSvc,
@@ -529,7 +530,7 @@ builder.mutationField("markHomeworkRecordsDue", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanWrite(ctx, args.sectionId);
-      return markRecordsDueSvc(args.sectionId, [...args.recordIds]);
+      return markRecordsDueSvc(args.sectionId, [...args.recordIds], ctx.auth.userId as string);
     },
   }),
 );
@@ -660,6 +661,9 @@ OpenRecordRef.implement({
     result: t.string({ nullable: true, resolve: (r) => r.result }),
     // D-#317: the teacher's brief "what is the homework" (null pre-D-#317).
     description: t.string({ nullable: true, resolve: (r) => r.description }),
+    // D-#338: undo affordance — offered only when stampCount > 1 (entry never pops).
+    stampCount: t.exposeInt("stampCount"),
+    lastStateAt: t.exposeString("lastStateAt"),
   }),
 });
 
@@ -678,7 +682,11 @@ builder.queryField("homeworkOpenRecords", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      // Owner decision 2026-07-19: the checking flow is subject-scoped for EVERY
+      // teacher — the class teacher too. Reconcile/tally/items keep oversight.
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, {
+        classTeacherOversight: false,
+      });
       const states = args.states.filter((s): s is LifecycleState =>
         (LIFECYCLE_STATES as readonly string[]).includes(s),
       );
@@ -1083,6 +1091,68 @@ builder.mutationField("checkHomeworkRecord", (t) =>
         resubmit: args.resubmit ?? undefined,
         topup,
         actorId: ctx.auth.userId as string,
+      });
+    },
+  }),
+);
+
+// Mutation: revertHomeworkRecord (D-#338 — undo the last lifecycle action) ---------
+
+interface HwRevertResultShape {
+  recordId: string;
+  hwId: string;
+  state: string;
+  poppedStates: string[];
+  chaseCount: number;
+  result: string | null;
+  deletedResubmissionId: string | null;
+}
+
+const HwRevertResultRef = builder.objectRef<HwRevertResultShape>("HwRevertResult");
+HwRevertResultRef.implement({
+  fields: (t) => ({
+    recordId: t.exposeString("recordId"),
+    hwId: t.exposeString("hwId"),
+    state: t.exposeString("state"),
+    poppedStates: t.stringList({ resolve: (r) => r.poppedStates }),
+    chaseCount: t.exposeInt("chaseCount"),
+    result: t.string({ nullable: true, resolve: (r) => r.result }),
+    deletedResubmissionId: t.string({ nullable: true, resolve: (r) => r.deletedResubmissionId }),
+  }),
+});
+
+builder.mutationField("revertHomeworkRecord", (t) =>
+  t.field({
+    type: HwRevertResultRef,
+    description:
+      "Undo the last lifecycle ACTION on a record (D-#338): pops the trailing same-timestamp stamp " +
+      "group, restores the previous state, cleans side effects (untouched spawned resubmission " +
+      "deleted; result cleared; chaseCount decremented). Acting teacher: own action, same Dhaka day; " +
+      "Principal/Office: anytime. authenticated+role-gated (OFFICE holds no tracker:*, D-#196).",
+    authScopes: { authenticated: true },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      recordId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
+      const admin = ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE";
+      const record = await HomeworkStudentRecord.findById(args.recordId)
+        .select("hwItemId sectionId")
+        .lean();
+      if (!record) throw new Error("HomeworkStudentRecord not found");
+      if (record.sectionId.toString() !== args.sectionId) {
+        throw new Error("Record does not belong to this section");
+      }
+      if (!admin) {
+        const item = await HomeworkItem.findById(record.hwItemId).select("subject").lean();
+        await assertCanWrite(ctx, args.sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
+      }
+      return revertHomeworkRecordSvc({
+        recordId: args.recordId,
+        actorId: ctx.auth.userId as string,
+        admin,
       });
     },
   }),

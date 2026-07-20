@@ -207,6 +207,29 @@ describe("guardianTrajectory — no rank, no peer comparison", () => {
     expect(g.linesBn.some((l) => l.includes("বাড়ির কাজ"))).toBe(true);
   });
 
+  test("flagged lines carry the number AND the benchmark, in Bangla and English (owner ask 2026-07-19)", async () => {
+    mockHwFind.mockResolvedValue([
+      { state: "DUE", chaseCount: 0, dueDate: new Date(2026, 5, 1) },
+      { state: "CHECKED", chaseCount: 0, dueDate: new Date(2026, 5, 2) },
+    ]); // 1 of 2 done → 50% → HOMEWORK_LOW
+    mockAttendanceHistory.mockResolvedValue({ days: [], markedDays: 20, absentDays: 6, presentPct: 71 });
+
+    const g = await guardianTrajectory("kid-1", NOW);
+    expect(g.linesBn).toContain("উপস্থিতি 71% (কাম্য অন্তত 90%)।");
+    expect(g.linesBn).toContain("বাড়ির কাজ: 2টির মধ্যে 1টি সম্পন্ন — 50% (কাম্য অন্তত 80%)।");
+    expect(g.linesEn).toContain("Attendance 71% (expected at least 90%).");
+    expect(g.linesEn).toContain("Homework: 1 of 2 completed — 50% (expected at least 80%).");
+    // The two language tracks always stay line-for-line parallel.
+    expect(g.linesEn.length).toBe(g.linesBn.length);
+  });
+
+  test("a healthy attendance line carries no benchmark suffix", async () => {
+    mockAttendanceHistory.mockResolvedValue({ days: [], markedDays: 20, absentDays: 1, presentPct: 95 });
+    const g = await guardianTrajectory("kid-1", NOW);
+    expect(g.linesBn).toContain("উপস্থিতি 95%।");
+    expect(g.linesEn).toContain("Attendance 95%.");
+  });
+
   test("with no data at all it says so rather than implying zero", async () => {
     mockStudentProfile.mockResolvedValue({
       studentId: "kid-1",
