@@ -1421,7 +1421,7 @@ const PROVISIONED_FIELDS = `
 export interface GuardianCandidateT {
   phone: string;
   suggestedName: string;
-  students: Array<{ id: string; name: string; className: string }>;
+  students: Array<{ id: string; name: string; className: string; classLevel: number | null }>;
   loginExists: boolean;
   loginEnabled: boolean;
   guardianId: string | null;
@@ -1435,7 +1435,7 @@ export const GUARDIAN_CREDENTIAL_CANDIDATES = gql<
     guardianCredentialCandidates {
       phone
       suggestedName
-      students { id name className }
+      students { id name className classLevel }
       loginExists
       loginEnabled
       guardianId

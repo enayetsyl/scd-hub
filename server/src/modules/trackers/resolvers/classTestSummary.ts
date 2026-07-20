@@ -53,13 +53,20 @@ import type { Types } from "mongoose";
 // ---------------------------------------------------------------------------
 
 /** Reports read: Principal/Office unscoped; a TEACHER must scope to a section they
- *  can read (classId resolved server-side); Guardians denied. */
+ *  can read (classId resolved server-side) OR to their OWN reports
+ *  (`selfTeacherId` === caller — the Today pending-results card); Guardians denied. */
 /** Exported so the cross-tracker whole-picture reuses the SAME report-read scope rule. */
-export async function assertReportRead(ctx: AppContext, sectionId?: string | null): Promise<void> {
+export async function assertReportRead(
+  ctx: AppContext,
+  sectionId?: string | null,
+  opts?: { selfTeacherId?: string | null },
+): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role as Role;
   if (role === "PRINCIPAL" || role === "OFFICE") return;
   if (role === "GUARDIAN" || !callerHasPermission(ctx.auth, "tracker:read")) throw new ForbiddenError();
+  // Self-scope: a teacher's own reports need no section — requestedBy IS the scope.
+  if (!sectionId && opts?.selfTeacherId && opts.selfTeacherId === (ctx.auth.userId as string)) return;
   if (!sectionId) throw new ForbiddenError("শিক্ষকের রিপোর্ট পড়তে সেকশন উল্লেখ করতে হবে");
   const section = (await Section.findById(sectionId).select("classId").lean()) as { classId: Types.ObjectId } | null;
   if (!section) throw new ForbiddenError("Section not found");
@@ -151,7 +158,7 @@ builder.queryField("classTestReportsStatus", (t) =>
       asOf: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertReportRead(ctx, args.sectionId);
+      await assertReportRead(ctx, args.sectionId, { selfTeacherId: args.teacherId });
       return reportsStatus(filterFromArgs(args));
     },
   }),

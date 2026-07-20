@@ -43,6 +43,7 @@ StudentBriefRef.implement({
     id: t.exposeString("id"),
     name: t.exposeString("name"),
     className: t.exposeString("className"),
+    classLevel: t.int({ nullable: true, resolve: (s) => s.classLevel }),
   }),
 });
 
