@@ -3132,9 +3132,12 @@ export interface ClassNoteAdminRowT {
   publishedAt: string;
   attachments: ClassNoteAttachmentT[];
 }
-export const CLASS_NOTES_ADMIN_QUERY = gql<{ classNotesAdmin: ClassNoteAdminRowT[] }, { date: string }>`
-  query ClassNotesAdmin($date: String!) {
-    classNotesAdmin(date: $date) {
+export const CLASS_NOTES_ADMIN_QUERY = gql<
+  { classNotesAdmin: ClassNoteAdminRowT[] },
+  { date: string; dateTo?: string | null }
+>`
+  query ClassNotesAdmin($date: String!, $dateTo: String) {
+    classNotesAdmin(date: $date, dateTo: $dateTo) {
       id date subject taughtSummaryBn classLevel classNameBn sectionCode sectionNameBn
       subjectGroupNameBn authorName publishedAt
       attachments { id name mime }

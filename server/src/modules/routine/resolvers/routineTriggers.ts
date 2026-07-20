@@ -239,8 +239,13 @@ builder.queryField("classNotesAdmin", (t) =>
   t.field({
     type: [ClassNoteAdminRowRef],
     authScopes: { hasPermission: "routine:manage" },
-    args: { date: t.arg.string({ required: true }) },
-    resolve: async (_r, args) => classNotesAdmin(parseDate(args.date)),
+    args: {
+      date: t.arg.string({ required: true }),
+      /** Inclusive range end (admin filters); omitted = the single `date`. */
+      dateTo: t.arg.string({ required: false }),
+    },
+    resolve: async (_r, args) =>
+      classNotesAdmin(parseDate(args.date), args.dateTo ? parseDate(args.dateTo) : undefined),
   }),
 );
 

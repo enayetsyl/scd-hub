@@ -33,6 +33,7 @@ import type {
   ClassTestStackParamList,
   CommentsStackParamList,
   ObservationStackParamList,
+  FreeMixingStackParamList,
   RevisionStackParamList,
   FinanceStackParamList,
   HrStackParamList,
@@ -46,7 +47,9 @@ import type {
 } from "./types";
 
 import { useNavigation, DrawerActions } from "@react-navigation/native";
+import { useQuery } from "urql";
 import { useAuth } from "../auth/AuthContext";
+import { MY_VIDEO_REVIEWS } from "../graphql/videoReview";
 import { useLanguage } from "../state/LanguageContext";
 import { useSidebar, DRAWER_PERMANENT_MIN_WIDTH } from "../state/SidebarContext";
 import { useNotifications } from "../state/NotificationContext";
@@ -151,6 +154,7 @@ import ObservationHomeScreen from "../screens/observation/ObservationHomeScreen"
 import MyObservationsScreen from "../screens/observation/MyObservationsScreen";
 import AllObservationsScreen from "../screens/observation/AllObservationsScreen";
 import UploadObservationScreen from "../screens/observation/UploadObservationScreen";
+import FreeMixingHomeScreen from "../screens/freemixing/FreeMixingHomeScreen";
 import ObservationReviewQueueScreen from "../screens/observation/ObservationReviewQueueScreen";
 import ReviewObservationScreen from "../screens/observation/ReviewObservationScreen";
 import ObservationDetailScreen from "../screens/observation/ObservationDetailScreen";
@@ -802,6 +806,16 @@ function ObservationNavigator(): React.ReactElement {
   );
 }
 
+const FreeMixingStack = createNativeStackNavigator<FreeMixingStackParamList>();
+function FreeMixingNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <FreeMixingStack.Navigator screenOptions={stackOptions}>
+      <FreeMixingStack.Screen name="FreeMixingHome" component={FreeMixingHomeScreen} options={{ title: STR.vrTitle }} />
+    </FreeMixingStack.Navigator>
+  );
+}
+
 const RevisionStack = createNativeStackNavigator<RevisionStackParamList>();
 function RevisionNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -910,6 +924,8 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="DailyNote" component={DailyNoteScreen} options={{ title: STR.dailyNoteTitle }} />
       <ReportsStack.Screen name="TeacherClassLoad" component={TeacherClassLoadScreen} options={{ title: STR.clTitle }} />
       <ReportsStack.Screen name="TeacherClassLoadDetail" component={TeacherClassLoadDetailScreen} options={{ title: STR.clTitle }} />
+      <ReportsStack.Screen name="ReconciliationReport" component={ReconciliationReportScreen} options={{ title: STR.rrTitle }} />
+      <ReportsStack.Screen name="HwLifecycleReport" component={HwLifecycleReportScreen} options={{ title: STR.hlrTitle }} />
       <ReportsStack.Screen name="AssignmentLoadReport" component={AssignmentLoadReportScreen} options={{ title: STR.alReportTitle }} />
       {/* D-#340: the class-test oversight report. */}
       <ReportsStack.Screen name="ClassTestReport" component={ClassTestReportScreen} options={{ title: STR.ctReportTitle }} />
@@ -1010,6 +1026,12 @@ const Drawer = createDrawerNavigator<TabParamList>();
 export function AppTabs(): React.ReactElement {
   const { role } = useAuth();
   const colors = useColors();
+  // Free Mixing Observation tab (D-#341, owner ruling): a TEACHER sees it ONLY
+  // when at least one video is assigned to them; Principal/Office always.
+  const [freeMixQ] = useQuery({
+    query: MY_VIDEO_REVIEWS,
+    pause: role !== "TEACHER",
+  });
   // Permanent left sidebar on laptop/desktop web; slide-over (☰) on phone/narrow.
   const { width } = useWindowDimensions();
   const wide = width >= DRAWER_PERMANENT_MIN_WIDTH;
@@ -1059,6 +1081,11 @@ export function AppTabs(): React.ReactElement {
       roleHasPermission(role, "observation:upload") ||
       roleHasPermission(role, "observation:review") ||
       roleHasPermission(role, "observation:manage"));
+  // Free Mixing Observation: Principal/Office (assign+board) always; a teacher
+  // only once something is actually assigned to them (owner ruling 2026-07-20).
+  const canFreeMixing =
+    (!!role && roleHasPermission(role, "observation:upload")) ||
+    (role === "TEACHER" && (freeMixQ.data?.myVideoReviews.length ?? 0) > 0);
   // Saturday Qur'an-Hifz Revision (SR app surfaces): Hifz teachers via tracker:read
   // (record/edit/deliver/history); Principal/Office via roster:manage (dashboards +
   // completeness chase). Every action is re-gated + row-scoped server-side. GUARDIAN
@@ -1126,6 +1153,8 @@ export function AppTabs(): React.ReactElement {
         {canClassTest ? <Drawer.Screen name="ClassTestTab" component={ClassTestNavigator} /> : null}
         {canComments ? <Drawer.Screen name="CommentsTab" component={CommentsNavigator} /> : null}
         {canObservation ? <Drawer.Screen name="ObservationTab" component={ObservationNavigator} /> : null}
+        {/* Free Mixing Observation (D-#341) — P/O always; a teacher only when assigned. */}
+        {canFreeMixing ? <Drawer.Screen name="FreeMixingTab" component={FreeMixingNavigator} /> : null}
         {canRevision ? <Drawer.Screen name="RevisionTab" component={RevisionNavigator} /> : null}
         {canFinance ? <Drawer.Screen name="FinanceTab" component={FinanceNavigator} /> : null}
         {canHr ? <Drawer.Screen name="HrTab" component={HrNavigator} /> : null}

@@ -15,16 +15,13 @@ import {
 } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Field, Button, Badge, Loader, Notice } from "../../components/ui";
 import { ClassNoteAttachments, type AttachmentRef } from "../../components/ClassNoteAttachments";
-import { DateField } from "../../components/DateField";
+import { useReportRange, useRowFilters } from "../../components/ReportFilters";
 import { openStoredFile } from "../../lib/files";
 import { STR, routineSubjectLabel, classLevelLabel, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
-import { dateKey } from "../../lib/dates";
-
-const todayISO = (): string => dateKey();
 
 function rowClass(r: ClassNoteAdminRowT): string {
   const lang = getActiveLang();
@@ -37,14 +34,27 @@ function rowSection(r: ClassNoteAdminRowT): string | null {
 }
 
 export default function ClassNotesAdminScreen(): React.ReactElement {
-  const [date, setDate] = useState(todayISO());
-  const [q, refetch] = useQuery({ query: CLASS_NOTES_ADMIN_QUERY, variables: { date }, requestPolicy: "cache-and-network" });
+  // Owner request: class / subject / teacher / date-range filters. Range fetches
+  // server-side (dateTo); the row filters are the D-#309 client-side pattern —
+  // options derive from the fetched rows, so a select never offers 0 matches.
+  const { fromKey, toKey, node: rangeNode } = useReportRange(1);
+  const [q, refetch] = useQuery({
+    query: CLASS_NOTES_ADMIN_QUERY,
+    variables: { date: fromKey, dateTo: toKey },
+    requestPolicy: "cache-and-network",
+  });
   const [, updateNote] = useMutation(UPDATE_CLASS_NOTE);
   const [, deleteNote] = useMutation(DELETE_CLASS_NOTE);
   const { confirmAction } = useConfirm();
   const toast = useToast();
 
-  const rows = q.data?.classNotesAdmin ?? [];
+  const allRows = q.data?.classNotesAdmin ?? [];
+  const { filtered: rows, node: filterNode } = useRowFilters(allRows, {
+    classOf: (r) => r.classLevel,
+    teacherOf: (r) => r.authorName,
+    subjectOf: (r) => r.subject,
+    subjectLabel: routineSubjectLabel,
+  });
   const [editId, setEditId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [editFiles, setEditFiles] = useState<AttachmentRef[]>([]);
@@ -85,8 +95,13 @@ export default function ClassNotesAdminScreen(): React.ReactElement {
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }} keyboardShouldPersistTaps="handled">
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.cnClassNotesAdmin}</Body>
-          <DateField label={STR.attDate} value={date} onChange={setDate} />
-          <Badge text={`${STR.rtTableShowing} ${rows.length}`} tone="muted" />
+          <View style={{ marginTop: space(2), gap: space(2) }}>
+            {rangeNode}
+            {filterNode}
+          </View>
+          <View style={{ marginTop: space(2), alignSelf: "flex-start" }}>
+            <Badge text={`${STR.rtTableShowing} ${rows.length}`} tone="muted" />
+          </View>
         </Card>
 
         {q.error ? <Notice message={friendlyError(q.error)} tone="danger" /> : null}
