@@ -7,6 +7,8 @@
  * the slot's teacher / cover / admin).
  */
 import { builder } from "../../../schema";
+import { assertCanRead, allowedSubjectCodesForSection } from "../../../middleware/authz";
+import { Section } from "../../foundation/models/Section";
 import { type IBellDutyAssignment } from "../models/BellDutyAssignment";
 import { type IClassNote } from "../models/ClassNote";
 import { RoutineSlotRef } from "./routineSlots";
@@ -142,9 +144,28 @@ builder.queryField("classNotesForDate", (t) =>
       groupId: t.arg.string({ required: true }),
       date: t.arg.string({ required: true }),
     },
-    resolve: async (_r, args) => {
+    resolve: async (_r, args, ctx) => {
       if (args.groupType !== "section" && args.groupType !== "subjectgroup") throw new Error("Invalid groupType");
-      return classNotesForDate(args.groupType, args.groupId, parseDate(args.date));
+      const notes = await classNotesForDate(args.groupType, args.groupId, parseDate(args.date));
+
+      // Owner decision 2026-07-19: a teacher only sees class notes for subjects
+      // they teach (class teacher included; Principal/Office/supervisors see all).
+      // Previously this read had no section scope and no subject filter.
+      if (args.groupType === "section" && ctx.auth) {
+        const section = await Section.findById(args.groupId).select("classId").lean();
+        const classId = section?.classId ? section.classId.toString() : "";
+        await assertCanRead(ctx, args.groupId, classId);
+        const allowed = await allowedSubjectCodesForSection(ctx, args.groupId, classId, {
+          classTeacherOversight: false,
+        });
+        if (allowed) {
+          const userId = ctx.auth.userId as string;
+          // Own notes always stay visible (covers subjects missing from the
+          // Subject catalog, e.g. QURAN slots).
+          return notes.filter((n) => allowed.has(n.subject) || n.publishedBy.toString() === userId);
+        }
+      }
+      return notes;
     },
   }),
 );

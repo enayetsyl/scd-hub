@@ -19,6 +19,7 @@ import {
 } from "@scd/shared";
 import {
   CREATE_CLASS_TEST_REQUEST,
+  REGISTER_CLASS_TEST_OFFICIAL,
   SUGGEST_CLASS_TEST_NUMBER_QUERY,
 } from "../../graphql/classTest";
 import { ASSESSMENT_SETS_QUERY, ACADEMIC_YEARS_QUERY } from "../../graphql/operations";
@@ -48,6 +49,8 @@ export default function RequestClassTestScreen(): React.ReactElement {
   const [section, setSection] = useState<SectionPick | null>(null);
   const [subject, setSubject] = useState<string | null>(null);
   const [source, setSource] = useState<"POOL_SET" | "UPLOADED_PAPER">("POOL_SET");
+  // D-#339: register as ALREADY official — no print request, no print questions.
+  const [skipPrint, setSkipPrint] = useState(false);
   const [setId, setSetId] = useState("");
   // A class test IS a print job, so the Office needs the same two answers here as on any
   // other request: how to print it. Mandatory, nothing pre-selected.
@@ -73,6 +76,7 @@ export default function RequestClassTestScreen(): React.ReactElement {
   const toast = useToast();
 
   const [, createReq] = useMutation(CREATE_CLASS_TEST_REQUEST);
+  const [, registerOfficial] = useMutation(REGISTER_CLASS_TEST_OFFICIAL);
 
   // The caller's assembled sets for the chosen section — the pool-set picker source
   // (UX-3, R-Search). Filtered client-side to CT sets; a set is picked by id, never pasted.
@@ -143,14 +147,19 @@ export default function RequestClassTestScreen(): React.ReactElement {
         value: Number.isFinite(total) && total >= 1 ? total : null,
         message: `${STR.ctTotalMarks} — ${STR.fieldRequired}`,
       },
-      colour: { value: colour, message: `${STR.prColour} — ${STR.fieldRequired}` },
-      sides: { value: sides, message: `${STR.prSides} — ${STR.fieldRequired}` },
-      ...(copiesMode === "FIXED"
+      // Print questions only exist when this IS a print request (D-#339).
+      ...(!skipPrint
         ? {
-            copies: {
-              value: Number.isInteger(Number(copies)) && Number(copies) >= 1 ? copies : null,
-              message: `${STR.prCopies} — ${STR.fieldRequired}`,
-            },
+            colour: { value: colour, message: `${STR.prColour} — ${STR.fieldRequired}` },
+            sides: { value: sides, message: `${STR.prSides} — ${STR.fieldRequired}` },
+            ...(copiesMode === "FIXED"
+              ? {
+                  copies: {
+                    value: Number.isInteger(Number(copies)) && Number(copies) >= 1 ? copies : null,
+                    message: `${STR.prCopies} — ${STR.fieldRequired}`,
+                  },
+                }
+              : {}),
           }
         : {}),
       ...(source === "POOL_SET"
@@ -163,7 +172,7 @@ export default function RequestClassTestScreen(): React.ReactElement {
       return;
     }
     setBusy(true);
-    const res = await createReq({
+    const common = {
       sectionId: section!.sectionId,
       subject: subject!,
       examDate: examDate.trim(),
@@ -172,21 +181,27 @@ export default function RequestClassTestScreen(): React.ReactElement {
       source,
       setId: source === "POOL_SET" ? setId.trim() : null,
       questionFileId: source === "UPLOADED_PAPER" ? (paper?.fileId ?? null) : null,
-      colour,
-      sides,
-      copies: copiesMode === "FIXED" ? Number(copies) : null,
-      copiesMode,
       testNumber: testNumber.trim() ? Number(testNumber) : null,
       deadlineDays: deadlineDays.trim() ? Number(deadlineDays) : null,
       notes: notes.trim() || null,
-    });
+    };
+    // D-#339: the no-print register skips the queue entirely — born official.
+    const res = skipPrint
+      ? await registerOfficial(common)
+      : await createReq({
+          ...common,
+          colour,
+          sides,
+          copies: copiesMode === "FIXED" ? Number(copies) : null,
+          copiesMode,
+        });
     setBusy(false);
     if (res.error) {
       toast.show(friendlyError(res.error), "danger");
       return;
     }
     if (res.data) {
-      toast.show(STR.ctRequestFiled, "ok");
+      toast.show(skipPrint ? STR.ctRegisteredOfficial : STR.ctRequestFiled, "ok");
       nav.navigate("ClassTestHome");
     }
   }
@@ -255,6 +270,14 @@ export default function RequestClassTestScreen(): React.ReactElement {
             </View>
           )}
 
+          {/* D-#339: register as already held/official — the print sections fold away. */}
+          <View style={{ marginTop: space(3) }}>
+            <Chip label={STR.ctSkipPrintToggle} selected={skipPrint} onPress={() => setSkipPrint(!skipPrint)} />
+            {skipPrint ? <Muted style={{ marginTop: space(1) }}>{STR.ctSkipPrintHint}</Muted> : null}
+          </View>
+
+          {skipPrint ? null : (
+          <>
           {/* How to print it — the same two answers every other print job carries. */}
           <View style={{ marginTop: space(3) }}>
             <Body style={{ fontWeight: "700" }}>{STR.prColour} *</Body>
@@ -300,6 +323,8 @@ export default function RequestClassTestScreen(): React.ReactElement {
               <Muted style={{ marginTop: space(1) }}>{STR.ctCopiesClassHint}</Muted>
             )}
           </View>
+          </>
+          )}
 
           <DateField label={STR.ctExamDate} value={examDate} onChange={setExamDate} error={fieldErrors.examDate} />
           <Field label={STR.ctTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" error={fieldErrors.totalMarks} />
@@ -324,7 +349,7 @@ export default function RequestClassTestScreen(): React.ReactElement {
           </MoreOptions>
 
           <View style={{ marginTop: space(2) }}>
-            <Button title={STR.ctSubmitRequest} onPress={onSubmit} loading={busy} disabled={busy} />
+            <Button title={skipPrint ? STR.ctSkipPrintToggle : STR.ctSubmitRequest} onPress={onSubmit} loading={busy} disabled={busy} />
           </View>
         </Card>
       </ScrollView>

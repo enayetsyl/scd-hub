@@ -157,6 +157,22 @@ describe("TEACHER is section-scoped on the reports", () => {
     expect(denied(await run(Q.reports(), "TEACHER"))).toBe(true);
   });
 
+  // D-#340: the Today pending-results card reads the teacher's OWN reports with
+  // no section — teacherId === self is the scope.
+  test("self-scope: teacherId === caller passes with no section; another teacher's id is denied", async () => {
+    const ME = oid().toString();
+    const OTHER = oid().toString();
+    const runSelf = (teacherId: string) =>
+      graphql({
+        schema,
+        source: `query { classTestReportsStatus(teacherId: "${teacherId}") { testId } }`,
+        contextValue: { auth: { role: "TEACHER", userId: ME } },
+      }) as Promise<ExecutionResult>;
+    expect(ok(await runSelf(ME))).toBe(true);
+    expect(mockAssertCanRead).not.toHaveBeenCalled(); // no section check on the self path
+    expect(denied(await runSelf(OTHER))).toBe(true);
+  });
+
   test("a teacher is denied the school-wide Principal Dashboard (P/O only)", async () => {
     expect(denied(await run(Q.dashboard, "TEACHER"))).toBe(true);
   });

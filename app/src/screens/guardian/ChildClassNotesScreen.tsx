@@ -9,13 +9,13 @@ import React from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useQuery } from "urql";
 import { DAYS_OF_WEEK } from "@scd/shared";
-import { CHILD_CLASS_NOTES_QUERY } from "../../graphql/operations";
+import { CHILD_CLASS_NOTES_QUERY, CHILD_HOMEWORK_QUERY, CHILD_HW_NIL_DAYS } from "../../graphql/operations";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
 import { Screen, Body, Muted, Card, Loader, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
-import { STR, bnNum, dayOfWeekLabel, subjectLabel } from "../../lib/labels";
+import { STR, bnNum, dayOfWeekLabel, subjectLabel, hwSubjectLabel, hwNilReasonLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
 
@@ -36,6 +36,20 @@ function recentDates(count: number): string[] {
 function DayNotes({ studentId, date }: { studentId: string; date: string }): React.ReactElement {
   const [q, refetchQ] = useQuery({ query: CHILD_CLASS_NOTES_QUERY, variables: { studentId, date } });
   const notes = q.data?.childClassNotes ?? [];
+  // The day's declared homework — what was given and how long it should take.
+  // Resubmission records re-issue the same item, so they are skipped to keep
+  // the per-day list (and the minute total) from double-counting.
+  const [hwQ] = useQuery({
+    query: CHILD_HOMEWORK_QUERY,
+    variables: { studentId, from: date, to: date },
+  });
+  const [nilQ] = useQuery({
+    query: CHILD_HW_NIL_DAYS,
+    variables: { studentId, from: date, to: date },
+  });
+  const hwItems = (hwQ.data?.childHomework ?? []).filter((r) => r.resubOf === null);
+  const nilDays = nilQ.data?.childHomeworkNilDays ?? [];
+  const totalMinutes = hwItems.reduce((a, r) => a + r.timeDecl + (r.topupTimeMin ?? 0), 0);
   const dow = dayOfWeekLabel(DAYS_OF_WEEK[new Date(date).getDay()]);
   return (
     <Card>
@@ -77,6 +91,32 @@ function DayNotes({ studentId, date }: { studentId: string; date: string }): Rea
           </View>
         ))
       )}
+      {/* The day's homework load — every declared item + the estimated total.
+          Silent while loading/on error: the notes above are the primary content. */}
+      {hwItems.length > 0 ? (
+        <View style={{ marginTop: space(2) }}>
+          <Body style={{ fontWeight: "700" }}>📝 {STR.gpHwGivenTitle}</Body>
+          {hwItems.map((r) => (
+            <Muted key={r.recordId} style={{ marginTop: space(1) }}>
+              {hwSubjectLabel(r.subject)}
+              {r.description ? ` — ${r.description}` : ""} · {bnNum(r.qCount)} {STR.gpHwQuestions} ·{" "}
+              {bnNum(r.timeDecl + (r.topupTimeMin ?? 0))} {STR.gpMinutes}
+            </Muted>
+          ))}
+          <Body style={{ fontWeight: "600", marginTop: space(1) }}>
+            {STR.gpHwTotalTime}: {bnNum(totalMinutes)} {STR.gpMinutes}
+          </Body>
+        </View>
+      ) : nilDays.length > 0 ? (
+        <View style={{ marginTop: space(2) }}>
+          <Body style={{ fontWeight: "700" }}>📝 {STR.gpHwGivenTitle}</Body>
+          {nilDays.map((n) => (
+            <Muted key={`${n.dateKey}-${n.subject}`} style={{ marginTop: space(1) }}>
+              {hwSubjectLabel(n.subject)}: {STR.gpNoHomework} — {hwNilReasonLabel(n.reason)}
+            </Muted>
+          ))}
+        </View>
+      ) : null}
       </QueryGate>
     </Card>
   );

@@ -80,6 +80,7 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "ClassNotesTab", labelKey: "drawerItemClassNotes", icon: "📓" },
   { type: "item", route: "CommentsTab", labelKey: "tabComments", icon: "🗣️" },
   { type: "item", route: "ObservationTab", labelKey: "tabObservation", icon: "👁️" },
+  { type: "item", route: "FreeMixingTab", labelKey: "tabFreeMixing", icon: "🎥" },
   { type: "item", route: "LibraryTab", labelKey: "tabLibrary", icon: "📖" },
   { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },
   { type: "item", route: "FinanceTab", labelKey: "tabFinance", icon: "💰" },
@@ -91,6 +92,8 @@ const STAFF_NAV: NavSection[] = [
     items: [
       { route: "ReportsTab", labelKey: "clTitle", icon: "🧑‍🏫", screen: "TeacherClassLoad" },
       { route: "ReportsTab", labelKey: "alReportTitle", icon: "📋", screen: "AssignmentLoadReport" },
+      // D-#340: the class-test oversight report.
+      { route: "ReportsTab", labelKey: "ctReportTitle", icon: "🧪", screen: "ClassTestReport" },
       { route: "ReportsTab", labelKey: "attReportTitle", icon: "🙋", screen: "AttendanceReport" },
       { route: "ReportsTab", labelKey: "rtNoteReportTitle", icon: "📓", screen: "ClassNoteReport" },
       { route: "ReportsTab", labelKey: "rptHwDeclarePending", icon: "📕", screen: "HwDeclarePending" },

@@ -354,7 +354,7 @@ export async function confirmAssignmentWeek(input: {
         sectionId: item.sectionId,
         classId: item.classId,
         state,
-        stateDates: [{ state, at }],
+        stateDates: [{ state, at, by: new Types.ObjectId(input.actorId) }],
         dueDate: r.present ? item.dueDate : undefined,
         chaseCount: 0,
         issuedBy: input.actorId,
@@ -415,7 +415,7 @@ export async function redeliverAssignmentRecord(
   const item = await AssignmentItem.findById(rec.asItemId).lean();
   if (!item) throw new Error("AssignmentItem not found");
   rec.state = "GIVEN";
-  rec.stateDates.push({ state: "GIVEN", at });
+  rec.stateDates.push({ state: "GIVEN", at, by: new Types.ObjectId(actorId) });
   rec.dueDate = new Date(item.dueDate); // item-wide due, not shifted per student
   await rec.save();
   return transitionShape(rec);
@@ -466,24 +466,25 @@ export async function collectAssignment(
       throw new Error("Record does not belong to this assignment item");
     }
 
+    const by = new Types.ObjectId(actorId);
     if (entryInput.submitted) {
       if (rec.state === "GIVEN") {
         rec.state = "DUE";
-        rec.stateDates.push({ state: "DUE", at });
+        rec.stateDates.push({ state: "DUE", at, by });
       }
       assertTransition(rec.state, "SUBMITTED"); // from DUE or CHASE
       rec.state = "SUBMITTED";
-      rec.stateDates.push({ state: "SUBMITTED", at });
+      rec.stateDates.push({ state: "SUBMITTED", at, by });
       submitted++;
     } else {
       if (rec.state === "GIVEN") {
         rec.state = "DUE";
-        rec.stateDates.push({ state: "DUE", at });
+        rec.stateDates.push({ state: "DUE", at, by });
       }
       if (rec.state === "DUE" && pastDue) {
         rec.state = "CHASE";
         rec.chaseCount += 1;
-        rec.stateDates.push({ state: "CHASE", at });
+        rec.stateDates.push({ state: "CHASE", at, by });
         chased++;
       } else if (rec.state === "DUE") {
         pending++;
@@ -534,7 +535,7 @@ export async function transitionAssignmentRecord(
   assertTransition(rec.state, to);
   if (to === "CHASE") rec.chaseCount += 1;
   rec.state = to;
-  rec.stateDates.push({ state: to, at });
+  rec.stateDates.push({ state: to, at, by: new Types.ObjectId(actorId) });
   await rec.save();
   return transitionShape(rec);
 }

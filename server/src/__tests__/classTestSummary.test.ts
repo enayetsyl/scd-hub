@@ -40,8 +40,13 @@ jest.mock("../modules/trackers/models/ClassTest", () => ({
 }));
 
 const mockResFind = jest.fn();
+// D-#339: reportsStatus batches newest result submittedAt per exam.
+const mockResAggregate = jest.fn();
 jest.mock("../modules/trackers/models/ClassTestResult", () => ({
-  ClassTestResult: { find: (q: unknown) => mockResFind(q) },
+  ClassTestResult: {
+    find: (q: unknown) => mockResFind(q),
+    aggregate: (p: unknown) => mockResAggregate(p),
+  },
 }));
 
 const mockStudentFind = jest.fn();
@@ -73,6 +78,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockStudentFind.mockReturnValue(leanChain([]));
   mockUserFind.mockReturnValue(leanChain([]));
+  mockResAggregate.mockResolvedValue([]);
 });
 
 // ===========================================================================
@@ -153,11 +159,17 @@ describe("reportsStatus / principalDashboard", () => {
     mockExamReportStatus
       .mockResolvedValueOnce(status(e1._id.toString(), { complete: true, enteredCount: 10 }))
       .mockResolvedValueOnce(status(e2._id.toString(), { overdue: true, enteredCount: 4, schoolDaysLate: 2 }));
+    // D-#339: row enrichment — author name + newest result submittedAt.
+    mockUserFind.mockReturnValue(leanChain([{ _id: T_A, name: "Teacher A" }]));
+    mockResAggregate.mockResolvedValue([{ _id: e1._id, latest: new Date(2026, 6, 12) }]);
 
     const rows = await reportsStatus({ asOf: NOW });
     expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({ testNumber: 1, state: "complete", subject: "MATH", teacherId: T_A.toString() });
     expect(rows[1]).toMatchObject({ testNumber: 2, state: "overdue", schoolDaysLate: 2 });
+    expect(rows[0].teacherName).toBe("Teacher A");
+    expect(rows[0].submittedAt).toBe(new Date(2026, 6, 12).toISOString());
+    expect(rows[1].submittedAt).toBeNull();
     // examReportStatus reused with the injected now (deterministic)
     expect(mockExamReportStatus).toHaveBeenCalledWith(e1._id.toString(), NOW);
   });

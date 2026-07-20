@@ -193,6 +193,26 @@ export async function declareHomeworkItem(
 
   const attachmentIds = await normalizeAttachmentIds(input.attachmentIds);
 
+  // D-#338: ONE common sheet per class+section+subject+day (the model header's
+  // stated intent, previously unenforced) — a second declaration is a mistake;
+  // the fix path for the first one is edit or delete (D-#336).
+  {
+    const { start, end } = dayBoundsOf(dateGiven);
+    const existing = await HomeworkItem.findOne({
+      classId: input.classId,
+      sectionId: input.sectionId,
+      subject,
+      dateGiven: { $gte: start, $lte: end },
+    })
+      .select("hwId")
+      .lean();
+    if (existing) {
+      throw new Error(
+        `এই শ্রেণি-বিষয়ের জন্য এই দিনের বাড়ির কাজ আগেই ঘোষণা করা হয়েছে (${existing.hwId}) — প্রয়োজনে সেটি সম্পাদনা বা মুছে ফেলুন`,
+      );
+    }
+  }
+
   const hwId = await generateHwId(input.academicYearId, input.classLevel, subject);
 
   const doc = await HomeworkItem.create({
@@ -608,7 +628,7 @@ export async function issueHomeworkItem(
       sectionId: item.sectionId,
       classId: item.classId,
       state,
-      stateDates: [{ state, at: now }],
+      stateDates: [{ state, at: now, by: new Types.ObjectId(actorId) }],
       // Absent records have no due date until re-delivered (handoff §3 stage 2).
       dueDate: r.present ? due : undefined,
       chaseCount: 0,
@@ -687,7 +707,7 @@ export async function transitionRecord(
   }
 
   record.state = to;
-  record.stateDates.push({ state: to, at });
+  record.stateDates.push({ state: to, at, by: new Types.ObjectId(input.actorId) });
   await record.save();
 
   // D-#260: EVERY chase pushes the student's login-enabled guardians an in-app
@@ -734,12 +754,14 @@ export async function transitionRecord(
  *  early-flip counterpart of the overnight auto-due sweep (same no-side-effect
  *  edge, same bulk shape). Ids outside the section or not currently GIVEN
  *  simply don't match — never an error. Returns how many flipped. */
-export async function markRecordsDue(sectionId: string, recordIds: string[]): Promise<number> {
+export async function markRecordsDue(sectionId: string, recordIds: string[], actorId?: string): Promise<number> {
   if (recordIds.length === 0) return 0;
   const now = new Date();
+  const stamp: { state: string; at: Date; by?: Types.ObjectId } = { state: "DUE", at: now };
+  if (actorId) stamp.by = new Types.ObjectId(actorId);
   const res = await HomeworkStudentRecord.updateMany(
     { _id: { $in: recordIds }, sectionId, state: "GIVEN" },
-    { $set: { state: "DUE" }, $push: { stateDates: { state: "DUE", at: now } } },
+    { $set: { state: "DUE" }, $push: { stateDates: stamp } },
   );
   return res.modifiedCount ?? 0;
 }
@@ -783,6 +805,10 @@ export interface OpenRecordDTO {
   dueDate: string | null;
   /** The recorded RESULT (CORRECT/PARTIAL/WRONG) once checked — null before then. */
   result: string | null;
+  /** D-#338: stamps on the record — আনডু is only offered when > 1 (entry stamp never pops). */
+  stampCount: number;
+  /** D-#338: `at` of the newest stamp (ISO) — the client's same-Dhaka-day undo hint. */
+  lastStateAt: string;
 }
 
 /**
@@ -824,6 +850,8 @@ export async function listOpenRecords(sectionId: string, states: LifecycleState[
         hasAnswerFile: !!r.answerFileId,
         dueDate: r.dueDate ? new Date(r.dueDate as unknown as Date).toISOString() : null,
         result: r.result ?? null,
+        stampCount: r.stateDates.length,
+        lastStateAt: new Date(r.stateDates[r.stateDates.length - 1]!.at as unknown as Date).toISOString(),
       };
     })
     .sort((a, b) =>

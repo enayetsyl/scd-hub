@@ -6,7 +6,7 @@
  * Gated on guardian:link (Principal + Office).
  */
 import React, { useMemo, useState } from "react";
-import { Linking, View } from "react-native";
+import { Linking, Pressable, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
@@ -20,6 +20,7 @@ import {
   CLASSES_QUERY,
   ROSTER_QUERY,
   type ProvisionedCredentialT,
+  type GuardianCandidateT,
 } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Row, Badge, Button, Loader, Notice, Divider, Field, Select, EmptyState } from "../../components/ui";
@@ -54,6 +55,9 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
   const [linkErr, setLinkErr] = useState<string | null>(null);
   const [linkMsg, setLinkMsg] = useState<string | null>(null);
   const [unlinkBusyId, setUnlinkBusyId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [loginFilter, setLoginFilter] = useState("");
+  const [openClasses, setOpenClasses] = useState<Record<string, boolean>>({});
 
   const [{ data: yearData }] = useQuery({ query: CLASSES_QUERY, variables: { academicYearId: manualYearId }, pause: manualYearId === "" });
   const classOptions = (yearData?.classes ?? []).map((c) => ({ label: c.nameBn, value: c.id }));
@@ -161,6 +165,50 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
 
   const candidates = data?.guardianCredentialCandidates ?? [];
 
+  // Search (guardian/student name or phone) + login-status filter.
+  const searching = search.trim() !== "";
+  const filteredCandidates = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return candidates.filter((c) => {
+      if (loginFilter === "has" && !c.loginEnabled) return false;
+      if (loginFilter === "no" && c.loginEnabled) return false;
+      if (!q) return true;
+      return (
+        c.suggestedName.toLowerCase().includes(q) ||
+        c.phone.toLowerCase().includes(q) ||
+        c.students.some((s) => s.name.toLowerCase().includes(q))
+      );
+    });
+  }, [candidates, search, loginFilter]);
+
+  // Class-wise collapsible groups, ordered Nursery → Class 5; families sorted
+  // alphabetically inside each. A family with children in two classes appears
+  // under both, so a class group always lists every family it touches.
+  const classGroups = useMemo(() => {
+    const byClass = new Map<string, { level: number; families: GuardianCandidateT[] }>();
+    for (const c of filteredCandidates) {
+      const classesOf = new Map<string, number>();
+      for (const s of c.students) {
+        const name = s.className || STR.credOtherClass;
+        const level = s.classLevel ?? 999;
+        classesOf.set(name, Math.min(classesOf.get(name) ?? 999, level));
+      }
+      for (const [name, level] of classesOf) {
+        const g = byClass.get(name) ?? { level, families: [] };
+        g.level = Math.min(g.level, level);
+        g.families.push(c);
+        byClass.set(name, g);
+      }
+    }
+    return [...byClass.entries()]
+      .map(([name, g]) => ({
+        name,
+        level: g.level,
+        families: [...g.families].sort((a, b) => a.suggestedName.localeCompare(b.suggestedName)),
+      }))
+      .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+  }, [filteredCandidates]);
+
   return (
     <Screen scroll>
       <H2>{STR.guardianCredentials}</H2>
@@ -182,32 +230,77 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
 
       <Divider />
 
+      <Field
+        label={STR.searchGuardianFamilies}
+        value={search}
+        onChangeText={setSearch}
+        placeholder={STR.searchStudents}
+      />
+      <Select
+        label={STR.filters}
+        value={loginFilter === "" ? null : loginFilter}
+        options={[
+          { label: STR.all, value: "" },
+          { label: STR.loginExistsLabel, value: "has" },
+          { label: STR.noLoginLabel, value: "no" },
+        ]}
+        onChange={(v) => setLoginFilter(v)}
+        placeholder={STR.all}
+      />
+
       {fetching ? (
         <Loader label={STR.loading} />
       ) : error ? (
         <Notice message={friendlyError(error)} tone="danger" />
-      ) : candidates.length === 0 ? (
+      ) : filteredCandidates.length === 0 ? (
         <Muted>{STR.noGuardianCandidates}</Muted>
       ) : (
-        candidates.map((c) => (
-          <Card key={c.phone}>
-            <Body style={{ fontWeight: "700" }}>{c.suggestedName}</Body>
-            <Row label={STR.loginId} value={c.phone} />
-            {c.students.map((s) => (
-              <Row key={s.id} label={s.className || STR.studentName} value={s.name} />
-            ))}
-            <View style={{ marginTop: space(1), flexDirection: "row" }}>
-              <Badge text={c.loginEnabled ? STR.loginExistsLabel : STR.noLoginLabel} tone={c.loginEnabled ? "ok" : "muted"} />
+        classGroups.map((g) => {
+          // An active search auto-expands its hits; otherwise the header toggles.
+          const open = searching || (openClasses[g.name] ?? false);
+          return (
+            <View key={g.name}>
+              <Pressable
+                onPress={() => setOpenClasses((prev) => ({ ...prev, [g.name]: !(prev[g.name] ?? false) }))}
+                accessibilityRole="button"
+                accessibilityLabel={g.name}
+                style={({ pressed }) => [
+                  { paddingVertical: space(2), flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Body style={{ fontWeight: "700" }}>
+                  {open ? "▾" : "▸"} {g.name}
+                </Body>
+                <Muted>{g.families.length}</Muted>
+              </Pressable>
+              {open
+                ? g.families.map((c) => (
+                    <Card key={`${g.name}:${c.phone}`}>
+                      <Body style={{ fontWeight: "700" }}>{c.suggestedName}</Body>
+                      <Row label={STR.loginId} value={c.phone} />
+                      {c.students.map((s) => (
+                        <Row key={s.id} label={s.className || STR.studentName} value={s.name} />
+                      ))}
+                      <View style={{ marginTop: space(1), flexDirection: "row" }}>
+                        <Badge
+                          text={c.loginEnabled ? STR.loginExistsLabel : STR.noLoginLabel}
+                          tone={c.loginEnabled ? "ok" : "muted"}
+                        />
+                      </View>
+                      <Button
+                        title={c.loginEnabled ? STR.resetPassword : STR.generateLogin}
+                        onPress={() => onGenerate(c.phone, c.loginEnabled, c.guardianId)}
+                        loading={busyPhone === c.phone}
+                        variant={c.loginEnabled ? "secondary" : "primary"}
+                        style={{ marginTop: space(2) }}
+                      />
+                    </Card>
+                  ))
+                : null}
             </View>
-            <Button
-              title={c.loginEnabled ? STR.resetPassword : STR.generateLogin}
-              onPress={() => onGenerate(c.phone, c.loginEnabled, c.guardianId)}
-              loading={busyPhone === c.phone}
-              variant={c.loginEnabled ? "secondary" : "primary"}
-              style={{ marginTop: space(2) }}
-            />
-          </Card>
-        ))
+          );
+        })
       )}
 
       <Divider />

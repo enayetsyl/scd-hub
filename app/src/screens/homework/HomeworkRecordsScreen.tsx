@@ -19,8 +19,10 @@ import {
   HOMEWORK_OPEN_RECORDS,
   TRANSITION_HOMEWORK_RECORD,
   MARK_HOMEWORK_RECORDS_DUE,
+  REVERT_HW_RECORD,
   type HwOpenRecordT,
 } from "../../graphql/operations";
+import { useConfirm } from "../../state/ConfirmContext";
 import { groupByDate } from "../../lib/groupByDate";
 import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
 import { SubjectFold } from "../../components/SubjectFold";
@@ -36,8 +38,15 @@ import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HomeworkStackParamList, "HomeworkRecords">;
 
-/** Open (non-terminal) states — what counts as "pending" lifecycle work. */
-const OPEN_STATES = ["GIVEN", "ABSENT_REDELIVER", "DUE", "SUBMITTED", "CHASE", "CHECKED", "RESUBMIT"];
+/** Open (non-terminal) states — what counts as "pending" lifecycle work.
+ *  RETURNED (terminal) is queried too since D-#338, but rendered ONLY while its
+ *  last stamp is still today (Dhaka) — an undo-only card for a mistaken return. */
+const OPEN_STATES = ["GIVEN", "ABSENT_REDELIVER", "DUE", "SUBMITTED", "CHASE", "CHECKED", "RESUBMIT", "RETURNED"];
+
+/** Calendar day (YYYY-MM-DD) of an ISO instant in Asia/Dhaka — mirrors the server gate. */
+function dhakaDayOf(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+}
 
 /** Legal next states per state (language-free; mirrors lifecycle.ts LIFECYCLE_EDGES). */
 const NEXT_STATES: Record<string, string[]> = {
@@ -78,6 +87,10 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
   // D-#313: the picked GIVEN records (bulk early mark-due).
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  // Owner ask 2026-07-20: day accordion — one day's cards open at a time, per
+  // rendered list (main list / each folded subject keeps its own open day).
+  // "" = every day closed; unset = the newest day opens by default.
+  const [openDays, setOpenDays] = useState<Record<string, string>>({});
 
   const base = { sectionId: selection.sectionId ?? "", classId: selection.classId ?? "" };
   const [recsQ, refetchRecs] = useQuery({
@@ -87,8 +100,13 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
   });
   const [, transition] = useMutation(TRANSITION_HOMEWORK_RECORD);
   const [, markManyDue] = useMutation(MARK_HOMEWORK_RECORDS_DUE);
+  const [, revertRecord] = useMutation(REVERT_HW_RECORD);
+  const { confirmAction } = useConfirm();
 
-  const records = recsQ.data?.homeworkOpenRecords ?? [];
+  const today = dhakaDayOf(new Date().toISOString());
+  const records = (recsQ.data?.homeworkOpenRecords ?? []).filter(
+    (r) => r.state !== "RETURNED" || dhakaDayOf(r.lastStateAt) === today,
+  );
   // D-#306: fold subjects the caller doesn't actively teach on this section.
   const taught = useTaughtSubjects(selection.sectionId ?? null);
 
@@ -142,20 +160,55 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
     refetchRecs({ requestPolicy: "network-only" });
   }
 
+  /** D-#338 — undo the last recorded step (server enforces own-action + same-day). */
+  async function onRevert(recordId: string): Promise<void> {
+    if (!(await confirmAction({ title: STR.revertConfirmTitle, message: STR.revertConfirmBody, confirmLabel: STR.revertAction }))) return;
+    setError(null);
+    setOk(null);
+    setBusyId(recordId);
+    const res = await revertRecord({ sectionId: base.sectionId, recordId });
+    setBusyId(null);
+    if (res.error || !res.data?.revertHomeworkRecord) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    setOk(STR.revertDone);
+    refetchRecs({ requestPolicy: "network-only" });
+  }
+
   // UX-7: pull-to-refresh.
   const { refreshing, onRefresh } = usePullRefresh(recsQ.fetching, () =>
     refetchRecs({ requestPolicy: "network-only" }),
   );
 
-  const renderDateGroups = (recs: HwOpenRecordT[]): React.ReactNode =>
-    groupByDate(recs, (r) => r.dateGiven).map((g) => {
+  const renderDateGroups = (recs: HwOpenRecordT[]): React.ReactNode => {
+    const groups = groupByDate(recs, (r) => r.dateGiven);
+    // The main list and each folded subject's list are disjoint subject sets, so
+    // a single-subject list's subject is a collision-free accordion key.
+    const subjects = new Set(recs.map((r) => r.subject));
+    const listKey = subjects.size === 1 ? [...subjects][0] : "main";
+    // Owner ruling 2026-07-20: every day starts CLOSED; a tap opens it (and
+    // closes the previously open one).
+    const openKey = openDays[listKey] ?? "";
+    return groups.map((g) => {
       const givenIds = g.items.filter((r) => r.state === "GIVEN").map((r) => r.id);
+      const isOpen = openKey === g.dateKey;
       return (
-      <View key={g.dateKey} style={{ marginBottom: space(2) }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: space(1) }}>
-          <Muted style={{ fontWeight: "700", flex: 1 }}>{dateHeaderLabel(g.dateKey)}</Muted>
+      <Card key={g.dateKey}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Pressable
+            onPress={() => setOpenDays((prev) => ({ ...prev, [listKey]: isOpen ? "" : g.dateKey }))}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isOpen }}
+            accessibilityLabel={dateHeaderLabel(g.dateKey)}
+            style={({ pressed }) => [{ flex: 1, paddingVertical: space(1) }, pressed && { opacity: 0.7 }]}
+          >
+            <Muted style={{ fontWeight: "700" }}>
+              {isOpen ? "▾" : "▸"} {dateHeaderLabel(g.dateKey)} ({bnNum(g.items.length)})
+            </Muted>
+          </Pressable>
           {/* D-#313: one tap flips the whole day's GIVEN records to DUE. */}
-          {givenIds.length > 0 ? (
+          {isOpen && givenIds.length > 0 ? (
             <Button
               title={`${STR.hwMarkDayDue} (${bnNum(givenIds.length)})`}
               variant="ghost"
@@ -164,7 +217,7 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
             />
           ) : null}
         </View>
-        {g.items.map((r) => {
+        {isOpen ? g.items.map((r) => {
           const moves = NEXT_STATES[r.state] ?? [];
           const isSelected = selected.has(r.id);
           return (
@@ -211,12 +264,25 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
                   <Button title={STR.hwGoChecking} onPress={() => navigation.navigate("CheckingQueue")} />
                 </View>
               ) : null}
+              {/* D-#338: undo the last recorded step (never offered on the entry stamp). */}
+              {r.stampCount > 1 ? (
+                <View style={{ marginTop: 8, alignItems: "flex-end" }}>
+                  <Button
+                    title={STR.revertAction}
+                    variant="ghost"
+                    onPress={() => void onRevert(r.id)}
+                    loading={busyId === r.id}
+                    disabled={busyId !== null}
+                  />
+                </View>
+              ) : null}
             </Card>
           );
-        })}
-      </View>
+        }) : null}
+      </Card>
       );
     });
+  };
 
   return (
     <Screen padded={false}>

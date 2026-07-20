@@ -33,6 +33,7 @@ import type {
   ClassTestStackParamList,
   CommentsStackParamList,
   ObservationStackParamList,
+  FreeMixingStackParamList,
   RevisionStackParamList,
   FinanceStackParamList,
   HrStackParamList,
@@ -151,6 +152,7 @@ import ObservationHomeScreen from "../screens/observation/ObservationHomeScreen"
 import MyObservationsScreen from "../screens/observation/MyObservationsScreen";
 import AllObservationsScreen from "../screens/observation/AllObservationsScreen";
 import UploadObservationScreen from "../screens/observation/UploadObservationScreen";
+import FreeMixingHomeScreen from "../screens/freemixing/FreeMixingHomeScreen";
 import ObservationReviewQueueScreen from "../screens/observation/ObservationReviewQueueScreen";
 import ReviewObservationScreen from "../screens/observation/ReviewObservationScreen";
 import ObservationDetailScreen from "../screens/observation/ObservationDetailScreen";
@@ -219,6 +221,7 @@ import PendingReportScreen from "../screens/reports/PendingReportScreen";
 import TeacherClassLoadScreen from "../screens/reports/TeacherClassLoadScreen";
 import TeacherClassLoadDetailScreen from "../screens/reports/TeacherClassLoadDetailScreen";
 import AssignmentLoadReportScreen from "../screens/reports/AssignmentLoadReportScreen";
+import ClassTestReportScreen from "../screens/reports/ClassTestReportScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
@@ -801,6 +804,16 @@ function ObservationNavigator(): React.ReactElement {
   );
 }
 
+const FreeMixingStack = createNativeStackNavigator<FreeMixingStackParamList>();
+function FreeMixingNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <FreeMixingStack.Navigator screenOptions={stackOptions}>
+      <FreeMixingStack.Screen name="FreeMixingHome" component={FreeMixingHomeScreen} options={{ title: STR.vrTitle }} />
+    </FreeMixingStack.Navigator>
+  );
+}
+
 const RevisionStack = createNativeStackNavigator<RevisionStackParamList>();
 function RevisionNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -910,6 +923,8 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="TeacherClassLoad" component={TeacherClassLoadScreen} options={{ title: STR.clTitle }} />
       <ReportsStack.Screen name="TeacherClassLoadDetail" component={TeacherClassLoadDetailScreen} options={{ title: STR.clTitle }} />
       <ReportsStack.Screen name="AssignmentLoadReport" component={AssignmentLoadReportScreen} options={{ title: STR.alReportTitle }} />
+      {/* D-#340: the class-test oversight report. */}
+      <ReportsStack.Screen name="ClassTestReport" component={ClassTestReportScreen} options={{ title: STR.ctReportTitle }} />
     </ReportsStack.Navigator>
   );
 }
@@ -1123,6 +1138,8 @@ export function AppTabs(): React.ReactElement {
         {canClassTest ? <Drawer.Screen name="ClassTestTab" component={ClassTestNavigator} /> : null}
         {canComments ? <Drawer.Screen name="CommentsTab" component={CommentsNavigator} /> : null}
         {canObservation ? <Drawer.Screen name="ObservationTab" component={ObservationNavigator} /> : null}
+        {/* Free Mixing Observation (D-#341) — its own tab, same perm family as observation. */}
+        {canObservation ? <Drawer.Screen name="FreeMixingTab" component={FreeMixingNavigator} /> : null}
         {canRevision ? <Drawer.Screen name="RevisionTab" component={RevisionNavigator} /> : null}
         {canFinance ? <Drawer.Screen name="FinanceTab" component={FinanceNavigator} /> : null}
         {canHr ? <Drawer.Screen name="HrTab" component={HrNavigator} /> : null}

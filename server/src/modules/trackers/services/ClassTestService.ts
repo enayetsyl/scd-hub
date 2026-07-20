@@ -105,6 +105,9 @@ export interface CreateClassTestRequestInput {
   /** Optional; default 2 (admin-configurable). */
   deadlineDays?: number;
   notes?: string;
+  /** D-#339: register as ALREADY official — born PRINTED (printedBy/At = actor/now),
+   *  NO print-queue row. For tests held without an office print request. */
+  skipPrint?: boolean;
   actorId: string;
 }
 
@@ -257,6 +260,9 @@ export async function createRequest(
 
   const ctId = await generateCtId(klass.academicYearId.toString(), klass.level, subject);
 
+  // D-#339: a no-print register is born PRINTED — the record is the official exam
+  // immediately (deadline clock anchors on the exam date as usual).
+  const now = new Date();
   const doc = await ClassTest.create({
     ctId,
     academicYearId: klass.academicYearId,
@@ -271,20 +277,27 @@ export async function createRequest(
     source,
     setId,
     questionFileId,
-    status: "REQUESTED",
+    status: input.skipPrint ? "PRINTED" : "REQUESTED",
     deadlineDays,
     requestedBy: new Types.ObjectId(input.actorId),
-    requestedAt: new Date(),
+    requestedAt: now,
+    printedBy: input.skipPrint ? new Types.ObjectId(input.actorId) : undefined,
+    printedAt: input.skipPrint ? now : undefined,
     notes: input.notes,
   });
 
   await writeAudit({
-    eventKind: "CLASS_TEST_REQUESTED",
+    eventKind: input.skipPrint ? "CLASS_TEST_PRINTED" : "CLASS_TEST_REQUESTED",
     actorId: input.actorId,
     targetId: doc._id,
     targetKind: "ClassTest",
-    meta: { ctId, subject, source, sectionId: input.sectionId, testNumber },
+    meta: { ctId, subject, source, sectionId: input.sectionId, testNumber, ...(input.skipPrint ? { skipPrint: true } : {}) },
   });
+
+  if (input.skipPrint) {
+    // No print concern — no queue row (the whole point of the no-print register).
+    return classTestShape(doc as unknown as IClassTest);
+  }
 
   // PQ-5 (D-#281): the printing concern moves to the unified queue. The ClassTest keeps
   // its own lifecycle (results, publish); the Office advances BOTH from one screen, and
