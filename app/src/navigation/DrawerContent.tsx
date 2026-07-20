@@ -80,6 +80,7 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "ClassNotesTab", labelKey: "drawerItemClassNotes", icon: "📓" },
   { type: "item", route: "CommentsTab", labelKey: "tabComments", icon: "🗣️" },
   { type: "item", route: "ObservationTab", labelKey: "tabObservation", icon: "👁️" },
+  { type: "item", route: "FreeMixingTab", labelKey: "tabFreeMixing", icon: "🎥" },
   { type: "item", route: "LibraryTab", labelKey: "tabLibrary", icon: "📖" },
   { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },
   { type: "item", route: "FinanceTab", labelKey: "tabFinance", icon: "💰" },

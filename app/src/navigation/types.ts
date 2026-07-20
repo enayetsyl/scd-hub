@@ -264,8 +264,12 @@ export type ObservationStackParamList = {
   ObservationDueList: undefined;
   ReviewerEffectiveness: undefined;
   ObservationConfig: undefined;
-  VideoReviewAdmin: undefined;
-  MyVideoReviews: undefined;
+};
+
+/** Free Mixing Observation (D-#341) — its own staff tab (owner ruling: separate
+ *  from the Classroom Observation hub). One role-routed entry screen. */
+export type FreeMixingStackParamList = {
+  FreeMixingHome: undefined;
 };
 
 /** Saturday Qur'an-Hifz Revision (SR app surfaces over SR-1..SR-4) — staff stack
@@ -362,6 +366,7 @@ export type TabParamList = {
   ClassTestTab: NavigatorScreenParams<ClassTestStackParamList>;
   CommentsTab: NavigatorScreenParams<CommentsStackParamList>;
   ObservationTab: NavigatorScreenParams<ObservationStackParamList>;
+  FreeMixingTab: NavigatorScreenParams<FreeMixingStackParamList>;
   RevisionTab: NavigatorScreenParams<RevisionStackParamList>;
   FinanceTab: NavigatorScreenParams<FinanceStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;

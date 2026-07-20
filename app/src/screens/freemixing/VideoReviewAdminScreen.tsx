@@ -92,7 +92,7 @@ export default function VideoReviewAdminScreen(): React.ReactElement {
         contentContainerStyle={{ flexGrow: 1, padding: space(4) }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <H2>{STR.vrAdminTitle}</H2>
+        <H2>{STR.vrTitle}</H2>
         {ok ? <Notice message={ok} tone="ok" /> : null}
         {error ? <Notice message={error} tone="danger" /> : null}
 

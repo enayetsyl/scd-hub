@@ -33,6 +33,7 @@ import type {
   ClassTestStackParamList,
   CommentsStackParamList,
   ObservationStackParamList,
+  FreeMixingStackParamList,
   RevisionStackParamList,
   FinanceStackParamList,
   HrStackParamList,
@@ -151,8 +152,7 @@ import ObservationHomeScreen from "../screens/observation/ObservationHomeScreen"
 import MyObservationsScreen from "../screens/observation/MyObservationsScreen";
 import AllObservationsScreen from "../screens/observation/AllObservationsScreen";
 import UploadObservationScreen from "../screens/observation/UploadObservationScreen";
-import VideoReviewAdminScreen from "../screens/observation/VideoReviewAdminScreen";
-import MyVideoReviewsScreen from "../screens/observation/MyVideoReviewsScreen";
+import FreeMixingHomeScreen from "../screens/freemixing/FreeMixingHomeScreen";
 import ObservationReviewQueueScreen from "../screens/observation/ObservationReviewQueueScreen";
 import ReviewObservationScreen from "../screens/observation/ReviewObservationScreen";
 import ObservationDetailScreen from "../screens/observation/ObservationDetailScreen";
@@ -777,8 +777,6 @@ function ObservationNavigator(): React.ReactElement {
   return (
     <ObservationStack.Navigator screenOptions={stackOptions}>
       <ObservationStack.Screen name="ObservationHome" component={ObservationHomeScreen} options={{ title: STR.obsHomeTitle }} />
-      <ObservationStack.Screen name="VideoReviewAdmin" component={VideoReviewAdminScreen} options={{ title: STR.vrAdminTitle }} />
-      <ObservationStack.Screen name="MyVideoReviews" component={MyVideoReviewsScreen} options={{ title: STR.vrMyTitle }} />
       <ObservationStack.Screen name="MyObservations" component={MyObservationsScreen} options={{ title: STR.obsMyObservationsTitle }} />
       <ObservationStack.Screen name="AllObservations" component={AllObservationsScreen} options={{ title: STR.obsAllObservationsTitle }} />
       <ObservationStack.Screen name="UploadObservation" component={UploadObservationScreen} options={{ title: STR.obsUploadTitle }} />
@@ -803,6 +801,16 @@ function ObservationNavigator(): React.ReactElement {
       <ObservationStack.Screen name="ReviewerEffectiveness" component={ReviewerEffectivenessScreen} options={{ title: STR.obsReviewerEffTitle }} />
       <ObservationStack.Screen name="ObservationConfig" component={ObservationConfigScreen} options={{ title: STR.obsEscalationTitle }} />
     </ObservationStack.Navigator>
+  );
+}
+
+const FreeMixingStack = createNativeStackNavigator<FreeMixingStackParamList>();
+function FreeMixingNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <FreeMixingStack.Navigator screenOptions={stackOptions}>
+      <FreeMixingStack.Screen name="FreeMixingHome" component={FreeMixingHomeScreen} options={{ title: STR.vrTitle }} />
+    </FreeMixingStack.Navigator>
   );
 }
 
@@ -1130,6 +1138,8 @@ export function AppTabs(): React.ReactElement {
         {canClassTest ? <Drawer.Screen name="ClassTestTab" component={ClassTestNavigator} /> : null}
         {canComments ? <Drawer.Screen name="CommentsTab" component={CommentsNavigator} /> : null}
         {canObservation ? <Drawer.Screen name="ObservationTab" component={ObservationNavigator} /> : null}
+        {/* Free Mixing Observation (D-#341) — its own tab, same perm family as observation. */}
+        {canObservation ? <Drawer.Screen name="FreeMixingTab" component={FreeMixingNavigator} /> : null}
         {canRevision ? <Drawer.Screen name="RevisionTab" component={RevisionNavigator} /> : null}
         {canFinance ? <Drawer.Screen name="FinanceTab" component={FinanceNavigator} /> : null}
         {canHr ? <Drawer.Screen name="HrTab" component={HrNavigator} /> : null}
