@@ -187,7 +187,9 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
     // a single-subject list's subject is a collision-free accordion key.
     const subjects = new Set(recs.map((r) => r.subject));
     const listKey = subjects.size === 1 ? [...subjects][0] : "main";
-    const openKey = openDays[listKey] ?? groups[0]?.dateKey ?? "";
+    // Owner ruling 2026-07-20: every day starts CLOSED; a tap opens it (and
+    // closes the previously open one).
+    const openKey = openDays[listKey] ?? "";
     return groups.map((g) => {
       const givenIds = g.items.filter((r) => r.state === "GIVEN").map((r) => r.id);
       const isOpen = openKey === g.dateKey;
