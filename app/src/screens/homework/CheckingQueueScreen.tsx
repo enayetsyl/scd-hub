@@ -11,7 +11,7 @@
  * (redeliver, returns, manual moves).
  */
 import React, { useState, useRef, useCallback } from "react";
-import { ScrollView, View, RefreshControl } from "react-native";
+import { Pressable, ScrollView, View, RefreshControl } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
@@ -95,11 +95,10 @@ const EMPTY_PENDING: Pending = { outcome: "", expanded: false, resubmit: false, 
 export default function CheckingQueueScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
   const [pending, setPending] = useState<Record<string, Pending>>({});
-  // Day accordion (owner request): when a subject has homework pending across
-  // several days, exactly ONE day card is open at a time. null = default (the
-  // newest day); "" = all collapsed. Keyed by dateKey so the same day stays
-  // open across subjects.
-  const [openDateKey, setOpenDateKey] = useState<string | null>(null);
+  // Day accordion (owner request): exactly ONE day card is open at a time and
+  // every day starts CLOSED (owner ruling 2026-07-20). Keyed by dateKey so the
+  // same day stays open across subjects.
+  const [openDateKey, setOpenDateKey] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -218,23 +217,23 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
 
   const renderDateGroups = (recs: HwOpenRecordT[]): React.ReactNode => {
     const groups = groupByDate(recs, (r) => r.dateGiven);
-    // Accordion only when there is more than one pending day (groups are newest
-    // first — the newest is the default open card).
-    const accordion = groups.length > 1;
-    const effectiveOpen = openDateKey ?? groups[0]?.dateKey ?? "";
+    // One collapsible card per day (owner ask 2026-07-20 — same look as Student
+    // records): every day starts closed; a tap opens it and closes the others.
     return groups.map((g) => {
-      const isOpen = !accordion || g.dateKey === effectiveOpen;
+      const isOpen = g.dateKey === openDateKey;
       return (
-      <View key={g.dateKey} style={{ marginBottom: space(2) }}>
-        {accordion ? (
-          <Button
-            title={`${isOpen ? "▾" : "▸"} ${dateHeaderLabel(g.dateKey)} (${bnNum(g.items.length)})`}
-            variant="secondary"
-            onPress={() => setOpenDateKey(isOpen ? "" : g.dateKey)}
-          />
-        ) : (
-          <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{dateHeaderLabel(g.dateKey)}</Muted>
-        )}
+      <Card key={g.dateKey}>
+        <Pressable
+          onPress={() => setOpenDateKey(isOpen ? "" : g.dateKey)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: isOpen }}
+          accessibilityLabel={dateHeaderLabel(g.dateKey)}
+          style={({ pressed }) => [{ paddingVertical: space(1) }, pressed && { opacity: 0.7 }]}
+        >
+          <Muted style={{ fontWeight: "700" }}>
+            {isOpen ? "▾" : "▸"} {dateHeaderLabel(g.dateKey)} ({bnNum(g.items.length)})
+          </Muted>
+        </Pressable>
         {!isOpen
           ? null
           : groupByItem(g.items).map((ig) => (
@@ -343,7 +342,7 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
             })}
           </View>
         ))}
-      </View>
+      </Card>
       );
     });
   };
