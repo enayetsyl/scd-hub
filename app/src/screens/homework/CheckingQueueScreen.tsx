@@ -11,7 +11,7 @@
  * (redeliver, returns, manual moves).
  */
 import React, { useState, useRef, useCallback } from "react";
-import { ScrollView, View, RefreshControl } from "react-native";
+import { Pressable, ScrollView, View, RefreshControl } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
@@ -218,23 +218,24 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
 
   const renderDateGroups = (recs: HwOpenRecordT[]): React.ReactNode => {
     const groups = groupByDate(recs, (r) => r.dateGiven);
-    // Accordion only when there is more than one pending day (groups are newest
-    // first — the newest is the default open card).
-    const accordion = groups.length > 1;
+    // One collapsible card per day (owner ask 2026-07-20 — same look as Student
+    // records): newest day open by default, opening a day closes the others.
     const effectiveOpen = openDateKey ?? groups[0]?.dateKey ?? "";
     return groups.map((g) => {
-      const isOpen = !accordion || g.dateKey === effectiveOpen;
+      const isOpen = g.dateKey === effectiveOpen;
       return (
-      <View key={g.dateKey} style={{ marginBottom: space(2) }}>
-        {accordion ? (
-          <Button
-            title={`${isOpen ? "▾" : "▸"} ${dateHeaderLabel(g.dateKey)} (${bnNum(g.items.length)})`}
-            variant="secondary"
-            onPress={() => setOpenDateKey(isOpen ? "" : g.dateKey)}
-          />
-        ) : (
-          <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{dateHeaderLabel(g.dateKey)}</Muted>
-        )}
+      <Card key={g.dateKey}>
+        <Pressable
+          onPress={() => setOpenDateKey(isOpen ? "" : g.dateKey)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: isOpen }}
+          accessibilityLabel={dateHeaderLabel(g.dateKey)}
+          style={({ pressed }) => [{ paddingVertical: space(1) }, pressed && { opacity: 0.7 }]}
+        >
+          <Muted style={{ fontWeight: "700" }}>
+            {isOpen ? "▾" : "▸"} {dateHeaderLabel(g.dateKey)} ({bnNum(g.items.length)})
+          </Muted>
+        </Pressable>
         {!isOpen
           ? null
           : groupByItem(g.items).map((ig) => (
@@ -343,7 +344,7 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
             })}
           </View>
         ))}
-      </View>
+      </Card>
       );
     });
   };
