@@ -71,20 +71,8 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {canRoster ? (
-        <Card onPress={() => navigation.navigate("ReconciliationReport")}>
-          <Body style={{ fontWeight: "700" }}>{STR.rrTitle}</Body>
-          <Muted>{STR.admSubReconReport}</Muted>
-        </Card>
-      ) : null}
-
-      {canRoster ? (
-        <Card onPress={() => navigation.navigate("HwLifecycleReport")}>
-          <Body style={{ fontWeight: "700" }}>{STR.hlrTitle}</Body>
-          <Muted>{STR.admSubHwLifecycle}</Muted>
-        </Card>
-      ) : null}
-
+      {/* Owner ask 2026-07-20: the Reconciliation + HW-lifecycle report cards moved
+          to the drawer Reports group; their Admin-stack routes remain for deep links. */}
       {canStaff ? (
         <Card onPress={() => navigation.navigate("Staff")}>
           <Body style={{ fontWeight: "700" }}>{STR.staff}</Body>

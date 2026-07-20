@@ -924,6 +924,8 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="DailyNote" component={DailyNoteScreen} options={{ title: STR.dailyNoteTitle }} />
       <ReportsStack.Screen name="TeacherClassLoad" component={TeacherClassLoadScreen} options={{ title: STR.clTitle }} />
       <ReportsStack.Screen name="TeacherClassLoadDetail" component={TeacherClassLoadDetailScreen} options={{ title: STR.clTitle }} />
+      <ReportsStack.Screen name="ReconciliationReport" component={ReconciliationReportScreen} options={{ title: STR.rrTitle }} />
+      <ReportsStack.Screen name="HwLifecycleReport" component={HwLifecycleReportScreen} options={{ title: STR.hlrTitle }} />
       <ReportsStack.Screen name="AssignmentLoadReport" component={AssignmentLoadReportScreen} options={{ title: STR.alReportTitle }} />
       {/* D-#340: the class-test oversight report. */}
       <ReportsStack.Screen name="ClassTestReport" component={ClassTestReportScreen} options={{ title: STR.ctReportTitle }} />
