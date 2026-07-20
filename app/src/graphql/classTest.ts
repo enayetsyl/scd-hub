@@ -103,6 +103,36 @@ export const CREATE_CLASS_TEST_REQUEST = gql<
   }
 `;
 
+// D-#339: register as ALREADY official — born PRINTED, no print-queue row.
+export const REGISTER_CLASS_TEST_OFFICIAL = gql<
+  { registerClassTestOfficial: ClassTestT },
+  {
+    sectionId: string;
+    subject: string;
+    examDate: string;
+    totalMarks: number;
+    passMark?: number | null;
+    source: string;
+    setId?: string | null;
+    questionFileId?: string | null;
+    testNumber?: number | null;
+    deadlineDays?: number | null;
+    notes?: string | null;
+  }
+>`
+  mutation RegisterClassTestOfficial(
+    $sectionId: String!, $subject: String!, $examDate: String!, $totalMarks: Int!,
+    $passMark: Int, $source: String!, $setId: String, $questionFileId: String,
+    $testNumber: Int, $deadlineDays: Int, $notes: String
+  ) {
+    registerClassTestOfficial(
+      sectionId: $sectionId, subject: $subject, examDate: $examDate, totalMarks: $totalMarks,
+      passMark: $passMark, source: $source, setId: $setId, questionFileId: $questionFileId,
+      testNumber: $testNumber, deadlineDays: $deadlineDays, notes: $notes
+    ) { ${CLASS_TEST_FIELDS} }
+  }
+`;
+
 // ---------------------------------------------------------------------------
 // Per-student results (CT-2)
 // ---------------------------------------------------------------------------
@@ -263,6 +293,9 @@ export interface ClassTestReportStatusRowT {
   classLevel: number;
   sectionId: string;
   teacherId: string;
+  /** D-#339: report author's name + newest result submittedAt (null until proposed). */
+  teacherName: string;
+  submittedAt: string | null;
   examDate: string;
   deadline: string;
   deadlineDays: number;
@@ -295,7 +328,7 @@ export const CLASS_TEST_REPORTS_STATUS_QUERY = gql<
 >`
   query ClassTestReportsStatus(${SUMMARY_ARG_DEFS}) {
     classTestReportsStatus(${SUMMARY_ARG_USE}) {
-      testId ctId subject testNumber classLevel sectionId teacherId examDate deadline deadlineDays
+      testId ctId subject testNumber classLevel sectionId teacherId teacherName submittedAt examDate deadline deadlineDays
       rosterCount enteredCount presentCount absentCount pendingCount complete overdue schoolDaysLate state
     }
   }

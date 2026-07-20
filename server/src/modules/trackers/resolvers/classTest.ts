@@ -156,6 +156,57 @@ builder.mutationField("createClassTestRequest", (t) =>
   }),
 );
 
+// D-#339: register a class test as ALREADY official without a print request —
+// for tests held (or to be held) without office printing. The subject teacher
+// (tracker:write + section write-scope) or Principal/Office can register.
+builder.mutationField("registerClassTestOfficial", (t) =>
+  t.field({
+    type: ClassTestRef,
+    description:
+      "Register a class test as official WITHOUT a print request (D-#339): born PRINTED " +
+      "(printedBy/At = actor/now), no print-queue row — results + overdue tracking start " +
+      "immediately. Subject teacher (write-scope) or Principal/Office.",
+    authScopes: { authenticated: true },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: true }),
+      examDate: t.arg.string({ required: true }),
+      totalMarks: t.arg.int({ required: true }),
+      passMark: t.arg.int({ required: false }),
+      source: t.arg.string({ required: true }),
+      setId: t.arg.string({ required: false }),
+      questionFileId: t.arg.string({ required: false }),
+      testNumber: t.arg.int({ required: false }),
+      deadlineDays: t.arg.int({ required: false }),
+      notes: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const role = ctx.auth.role as Role;
+      const admin = role === "PRINCIPAL" || role === "OFFICE";
+      if (!admin) {
+        if (!callerHasPermission(ctx.auth, "tracker:write")) throw new ForbiddenError();
+        await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
+      }
+      return createRequestSvc({
+        sectionId: args.sectionId,
+        subject: args.subject,
+        examDate: args.examDate,
+        totalMarks: args.totalMarks,
+        passMark: args.passMark ?? undefined,
+        source: args.source,
+        setId: args.setId ?? undefined,
+        questionFileId: args.questionFileId ?? undefined,
+        testNumber: args.testNumber ?? undefined,
+        deadlineDays: args.deadlineDays ?? undefined,
+        notes: args.notes ?? undefined,
+        skipPrint: true,
+        actorId: ctx.auth.userId as string,
+      });
+    },
+  }),
+);
+
 builder.queryField("suggestClassTestNumber", (t) =>
   t.field({
     type: "Int",

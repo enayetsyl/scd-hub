@@ -371,6 +371,27 @@ describe("createRequest", () => {
     await expect(createRequest({ ...baseInput, subject: "QURAN" })).rejects.toThrow(/Unknown subject/);
     await expect(createRequest({ ...baseInput, source: "SCAN" })).rejects.toThrow(/Unknown source/);
   });
+
+  // --- D-#339: register-without-print ("make the class test due") -----------
+
+  test("D-#339 skipPrint: born PRINTED with printedBy/At = actor/now, NO print-queue row", async () => {
+    const res = await createRequest({ ...baseInput, skipPrint: true });
+    expect(res.status).toBe("PRINTED");
+    expect(res.printedBy).toBe(TEACHER_ID);
+    expect(res.printedAt).not.toBeNull();
+    expect(res.ctId).toBe("CT-C3-MATH-0001");
+    expect(mockCreatePrintRequest).not.toHaveBeenCalled();
+    expect(mockCtUpdateOne).not.toHaveBeenCalled(); // no printRequestId back-link either
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventKind: "CLASS_TEST_PRINTED", meta: expect.objectContaining({ skipPrint: true }) }),
+    );
+  });
+
+  test("D-#339 skipPrint still runs the shared validation (non-CT set rejected)", async () => {
+    mockSetFindById.mockReturnValue(leanChain({ setType: "HW" }));
+    await expect(createRequest({ ...baseInput, skipPrint: true })).rejects.toThrow(/not a CT-kind/);
+    expect(mockCtCreate).not.toHaveBeenCalled();
+  });
 });
 
 // ===========================================================================
