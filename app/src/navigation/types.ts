@@ -342,6 +342,10 @@ export type ReportsStackParamList = {
   TeacherClassLoadDetail: { teacherId: string; teacherName?: string; month?: string };
   /** D-#329: assignment load (planned vs given, by subject & teacher). */
   AssignmentLoadReport: undefined;
+  /** Owner ask 2026-07-20: the two admin-hub reports join the Reports hub
+   *  (ALSO registered on the Admin stack — deep links target that copy). */
+  ReconciliationReport: undefined;
+  HwLifecycleReport: undefined;
   /** D-#340: the Principal/Office class-test report (range + filters + state chips). */
   ClassTestReport: undefined;
 };
