@@ -2608,6 +2608,10 @@ const STR_BN = {
   ctRegisteredOfficial: "পরীক্ষা নিবন্ধিত হয়েছে (প্রিন্ট ছাড়া)",
   ctDrilldownTitle: "পরীক্ষাভিত্তিক তালিকা",
   ctSubmittedBadge: "জমা",
+  // D-#340: Today pending-results alert + Reports-hub class-test report
+  tdCtResultPending: "ফলাফল এন্ট্রি বাকি",
+  ctReportTitle: "ক্লাস টেস্ট রিপোর্ট",
+  ctReportSub: "পরীক্ষার তারিখ অনুযায়ী অবস্থা, শিক্ষক ও জমার তথ্য",
   ctPrintQueueTitle: "প্রিন্ট কিউ",
   ctNoQueue: "অপেক্ষমাণ কোনো অনুরোধ নেই।",
   ctViewPaper: "প্রশ্নপত্র দেখুন",
@@ -5080,6 +5084,10 @@ const STR_EN: StrTable = {
   ctRegisteredOfficial: "Test registered (no print)",
   ctDrilldownTitle: "Per-test list",
   ctSubmittedBadge: "Submitted",
+  // D-#340: Today pending-results alert + Reports-hub class-test report
+  tdCtResultPending: "Results entry pending",
+  ctReportTitle: "Class-test report",
+  ctReportSub: "Status by exam date, with teacher + submission info",
   ctPrintQueueTitle: "Print queue",
   ctNoQueue: "No pending requests.",
   ctViewPaper: "View paper",

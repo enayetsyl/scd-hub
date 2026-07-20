@@ -42,6 +42,7 @@ import {
   type RecentSetT,
   type RoutineSlotT,
 } from "../../graphql/operations";
+import { CLASS_TEST_REPORTS_STATUS_QUERY } from "../../graphql/classTest";
 import { Screen, H1, H2, Body, Muted, Card, Badge, Button, EmptyState, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { Icon, type IconName } from "../../components/Icon";
@@ -51,6 +52,7 @@ import {
   classLevelLabel,
   dayTypeLabel,
   fullDateLabel,
+  hwSubjectLabel,
   routineSubjectLabel,
   selectionSummaryLabel,
   setTypeLabel,
@@ -83,7 +85,7 @@ const slotPhase = (s: RoutineSlotT, nowHM: string): SlotPhase => {
 
 export default function TodayScreen(): React.ReactElement {
   const nav = useNavigation() as unknown as CrossNav;
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const colors = useColors();
   const date = todayISO();
 
@@ -120,11 +122,25 @@ export default function TodayScreen(): React.ReactElement {
   });
   const recentSets = recentQ.data?.myRecentSets ?? [];
 
+  // D-#340: MY class tests already held but with incomplete result entry — each
+  // renders as a pending alert that deep-links into its entry grid. Self-scoped
+  // read (teacherId = me), so no section context is needed.
+  const canFileTests = !!role && roleHasPermission(role as Role, "tracker:write");
+  const [ctPendingQ, refetchCtPending] = useQuery({
+    query: CLASS_TEST_REPORTS_STATUS_QUERY,
+    variables: { teacherId: user?.id ?? null },
+    pause: !canFileTests || !user?.id,
+  });
+  const ctPending = (ctPendingQ.data?.classTestReportsStatus ?? []).filter(
+    (r) => r.state !== "complete" && dateKey(new Date(r.examDate)) <= date,
+  );
+
   const refetchAll = useCallback(() => {
     refetch({ requestPolicy: "network-only" });
     if (!canManage) refetchMySections({ requestPolicy: "network-only" });
     if (canSets) refetchRecent({ requestPolicy: "network-only" });
-  }, [refetch, refetchMySections, refetchRecent, canManage, canSets]);
+    if (canFileTests && user?.id) refetchCtPending({ requestPolicy: "network-only" });
+  }, [refetch, refetchMySections, refetchRecent, refetchCtPending, canManage, canSets, canFileTests, user?.id]);
 
   // Focus-refetch (HomeworkHome pattern): skip the first focus — the queries
   // already run on mount — then refresh whenever the user returns. Also picks
@@ -141,7 +157,7 @@ export default function TodayScreen(): React.ReactElement {
   );
 
   const { refreshing, onRefresh } = usePullRefresh(
-    q.fetching || mySectionsQ.fetching || recentQ.fetching,
+    q.fetching || mySectionsQ.fetching || recentQ.fetching || ctPendingQ.fetching,
     refetchAll,
   );
 
@@ -225,6 +241,7 @@ export default function TodayScreen(): React.ReactElement {
     slots.length === 0 &&
     alerts.length === 0 &&
     !prep &&
+    ctPending.length === 0 &&
     counts.every((c) => c === 0) &&
     !day.attendancePending;
 
@@ -408,7 +425,7 @@ export default function TodayScreen(): React.ReactElement {
         }
       >
         {/* Alert stack — restyled D-#279/#280 cards; deep-links unchanged */}
-        {alerts.length > 0 || prep ? (
+        {alerts.length > 0 || prep || ctPending.length > 0 ? (
           <View style={{ marginBottom: space(2) }}>
             <Muted style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.alertsTitle}</Muted>
             {prep ? (
@@ -430,6 +447,28 @@ export default function TodayScreen(): React.ReactElement {
                   a.oldestDateKey && a.oldestDateKey !== date ? ` · ${STR.alertOldest}: ${bnNum(a.oldestDateKey)}` : ""
                 }`}
                 onPress={() => alertTarget(a.kind)}
+              />
+            ))}
+            {/* D-#340: held exams with incomplete result entry → straight into the grid. */}
+            {ctPending.map((r) => (
+              <AlertCard
+                key={r.testId}
+                icon="flask-conical"
+                tone={r.state === "overdue" ? "error" : "gold"}
+                title={`${STR.tdCtResultPending}: ${hwSubjectLabel(r.subject)} · ${STR.ctTestNumber} ${bnNum(r.testNumber)}`}
+                sub={`${bnNum(dateKey(new Date(r.examDate)))} · ${STR.ctEntered} ${bnNum(r.enteredCount)}/${bnNum(r.rosterCount)}${
+                  r.overdue ? ` · ${STR.ctSchoolDaysLate} ${bnNum(r.schoolDaysLate)}` : ""
+                }`}
+                onPress={() =>
+                  nav.navigate("ClassTestTab", {
+                    screen: "ClassTestResults",
+                    params: {
+                      testId: r.testId,
+                      title: `${hwSubjectLabel(r.subject)} · ${STR.ctTestNumber} ${bnNum(r.testNumber)}`,
+                    },
+                    initial: false,
+                  })
+                }
               />
             ))}
           </View>

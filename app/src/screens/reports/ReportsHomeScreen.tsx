@@ -18,6 +18,7 @@ export default function ReportsHomeScreen({ navigation }: Props): React.ReactEle
   const cards: Array<{ icon: string; title: string; sub?: string; onPress: () => void }> = [
     { icon: "🧑‍🏫", title: STR.clTitle, sub: STR.clSub, onPress: () => navigation.navigate("TeacherClassLoad") },
     { icon: "📋", title: STR.alReportTitle, sub: STR.alReportSub, onPress: () => navigation.navigate("AssignmentLoadReport") },
+    { icon: "🧪", title: STR.ctReportTitle, sub: STR.ctReportSub, onPress: () => navigation.navigate("ClassTestReport") },
     { icon: "🙋", title: STR.attReportTitle, onPress: () => navigation.navigate("AttendanceReport") },
     { icon: "📓", title: STR.rtNoteReportTitle, onPress: () => navigation.navigate("ClassNoteReport") },
     { icon: "📕", title: STR.rptHwDeclarePending, sub: STR.rrHwNdSub, onPress: () => navigation.navigate("HwDeclarePending") },

@@ -91,6 +91,8 @@ const STAFF_NAV: NavSection[] = [
     items: [
       { route: "ReportsTab", labelKey: "clTitle", icon: "🧑‍🏫", screen: "TeacherClassLoad" },
       { route: "ReportsTab", labelKey: "alReportTitle", icon: "📋", screen: "AssignmentLoadReport" },
+      // D-#340: the class-test oversight report.
+      { route: "ReportsTab", labelKey: "ctReportTitle", icon: "🧪", screen: "ClassTestReport" },
       { route: "ReportsTab", labelKey: "attReportTitle", icon: "🙋", screen: "AttendanceReport" },
       { route: "ReportsTab", labelKey: "rtNoteReportTitle", icon: "📓", screen: "ClassNoteReport" },
       { route: "ReportsTab", labelKey: "rptHwDeclarePending", icon: "📕", screen: "HwDeclarePending" },
