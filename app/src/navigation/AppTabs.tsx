@@ -219,6 +219,7 @@ import PendingReportScreen from "../screens/reports/PendingReportScreen";
 import TeacherClassLoadScreen from "../screens/reports/TeacherClassLoadScreen";
 import TeacherClassLoadDetailScreen from "../screens/reports/TeacherClassLoadDetailScreen";
 import AssignmentLoadReportScreen from "../screens/reports/AssignmentLoadReportScreen";
+import ClassTestReportScreen from "../screens/reports/ClassTestReportScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
@@ -910,6 +911,8 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="TeacherClassLoad" component={TeacherClassLoadScreen} options={{ title: STR.clTitle }} />
       <ReportsStack.Screen name="TeacherClassLoadDetail" component={TeacherClassLoadDetailScreen} options={{ title: STR.clTitle }} />
       <ReportsStack.Screen name="AssignmentLoadReport" component={AssignmentLoadReportScreen} options={{ title: STR.alReportTitle }} />
+      {/* D-#340: the class-test oversight report. */}
+      <ReportsStack.Screen name="ClassTestReport" component={ClassTestReportScreen} options={{ title: STR.ctReportTitle }} />
     </ReportsStack.Navigator>
   );
 }
