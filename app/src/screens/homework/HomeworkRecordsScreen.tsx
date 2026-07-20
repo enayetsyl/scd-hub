@@ -87,6 +87,10 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
   // D-#313: the picked GIVEN records (bulk early mark-due).
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  // Owner ask 2026-07-20: day accordion — one day's cards open at a time, per
+  // rendered list (main list / each folded subject keeps its own open day).
+  // "" = every day closed; unset = the newest day opens by default.
+  const [openDays, setOpenDays] = useState<Record<string, string>>({});
 
   const base = { sectionId: selection.sectionId ?? "", classId: selection.classId ?? "" };
   const [recsQ, refetchRecs] = useQuery({
@@ -177,15 +181,32 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
     refetchRecs({ requestPolicy: "network-only" }),
   );
 
-  const renderDateGroups = (recs: HwOpenRecordT[]): React.ReactNode =>
-    groupByDate(recs, (r) => r.dateGiven).map((g) => {
+  const renderDateGroups = (recs: HwOpenRecordT[]): React.ReactNode => {
+    const groups = groupByDate(recs, (r) => r.dateGiven);
+    // The main list and each folded subject's list are disjoint subject sets, so
+    // a single-subject list's subject is a collision-free accordion key.
+    const subjects = new Set(recs.map((r) => r.subject));
+    const listKey = subjects.size === 1 ? [...subjects][0] : "main";
+    const openKey = openDays[listKey] ?? groups[0]?.dateKey ?? "";
+    return groups.map((g) => {
       const givenIds = g.items.filter((r) => r.state === "GIVEN").map((r) => r.id);
+      const isOpen = openKey === g.dateKey;
       return (
-      <View key={g.dateKey} style={{ marginBottom: space(2) }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: space(1) }}>
-          <Muted style={{ fontWeight: "700", flex: 1 }}>{dateHeaderLabel(g.dateKey)}</Muted>
+      <Card key={g.dateKey}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Pressable
+            onPress={() => setOpenDays((prev) => ({ ...prev, [listKey]: isOpen ? "" : g.dateKey }))}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isOpen }}
+            accessibilityLabel={dateHeaderLabel(g.dateKey)}
+            style={({ pressed }) => [{ flex: 1, paddingVertical: space(1) }, pressed && { opacity: 0.7 }]}
+          >
+            <Muted style={{ fontWeight: "700" }}>
+              {isOpen ? "▾" : "▸"} {dateHeaderLabel(g.dateKey)} ({bnNum(g.items.length)})
+            </Muted>
+          </Pressable>
           {/* D-#313: one tap flips the whole day's GIVEN records to DUE. */}
-          {givenIds.length > 0 ? (
+          {isOpen && givenIds.length > 0 ? (
             <Button
               title={`${STR.hwMarkDayDue} (${bnNum(givenIds.length)})`}
               variant="ghost"
@@ -194,7 +215,7 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
             />
           ) : null}
         </View>
-        {g.items.map((r) => {
+        {isOpen ? g.items.map((r) => {
           const moves = NEXT_STATES[r.state] ?? [];
           const isSelected = selected.has(r.id);
           return (
@@ -255,10 +276,11 @@ export default function HomeworkRecordsScreen({ navigation }: Props): React.Reac
               ) : null}
             </Card>
           );
-        })}
-      </View>
+        }) : null}
+      </Card>
       );
     });
+  };
 
   return (
     <Screen padded={false}>
