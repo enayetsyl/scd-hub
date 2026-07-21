@@ -103,7 +103,7 @@ export async function createCtQuestionRequest(input: CreateCtQuestionInput): Pro
   if (!(HW_SUBJECTS as readonly string[]).includes(input.subject)) {
     throw new Error(`Unknown subject: ${input.subject}`);
   }
-  if (!input.chapter || input.chapter.trim() === "") throw new Error("অধ্যায়ের নাম লিখুন");
+  if (!input.chapter || input.chapter.trim() === "") throw new Error("অধ্যায় নম্বর লিখুন");
   if (!Number.isInteger(input.totalMarks) || input.totalMarks < 1) {
     throw new Error("পূর্ণমান একটি ধনাত্মক সংখ্যা হতে হবে");
   }

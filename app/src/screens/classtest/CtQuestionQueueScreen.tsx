@@ -6,8 +6,9 @@
  * the teacher confirms, the card goes read-only; printing arrives via the
  * standard print queue as usual.
  */
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { ScrollView, View, RefreshControl } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
 import {
   CT_QUESTION_QUEUE,
@@ -16,6 +17,7 @@ import {
 import { Screen, Body, Muted, Card, Badge, Button, Field, Notice, Loader, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { pickAndUploadClassTestPaper, openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
+import { useFileOpen } from "../../lib/useFileOpen";
 import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -30,6 +32,7 @@ export default function CtQuestionQueueScreen(): React.ReactElement {
   const [, send] = useMutation(SEND_CT_QUESTION_FOR_REVIEW);
 
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadFor, setUploadFor] = useState<string | null>(null);
   const [uploaded, setUploaded] = useState<{ fileId: string; name: string } | null>(null);
   const [note, setNote] = useState("");
@@ -40,9 +43,24 @@ export default function CtQuestionQueueScreen(): React.ReactElement {
   const { refreshing, onRefresh } = usePullRefresh(q.fetching, () =>
     refetch({ requestPolicy: "network-only" }),
   );
+  const { openingId, runOpen } = useFileOpen();
+
+  // Fresh teacher requests must appear on return to this screen (owner find).
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      refetch({ requestPolicy: "network-only" });
+    }, [refetch]),
+  );
 
   async function onPickFile(id: string): Promise<void> {
+    if (uploadingId) return;
     setError(null);
+    setUploadingId(id);
     try {
       const up = await pickAndUploadClassTestPaper();
       if (!up) return;
@@ -50,6 +68,8 @@ export default function CtQuestionQueueScreen(): React.ReactElement {
       setUploaded({ fileId: up.fileId, name: up.originalName });
     } catch (e) {
       setError(e instanceof FileUploadError ? e.message : STR.errGeneric);
+    } finally {
+      setUploadingId(null);
     }
   }
 
@@ -111,7 +131,9 @@ export default function CtQuestionQueueScreen(): React.ReactElement {
                     <Button
                       title={`📄 ${STR.cqViewQuestion}`}
                       variant="ghost"
-                      onPress={() => void openStoredFile(r.currentFileId!)}
+                      loading={openingId === r.currentFileId}
+                      disabled={!!openingId}
+                      onPress={() => void runOpen(r.currentFileId!, () => openStoredFile(r.currentFileId!))}
                       style={{ marginTop: space(1) }}
                     />
                   ) : null}
@@ -121,8 +143,9 @@ export default function CtQuestionQueueScreen(): React.ReactElement {
                       <Button
                         title={uploadingHere ? `${STR.cqUploaded}: ${uploaded!.name}` : STR.cqUploadPaper}
                         variant="secondary"
+                        loading={uploadingId === r.id}
                         onPress={() => void onPickFile(r.id)}
-                        disabled={busyId !== null}
+                        disabled={busyId !== null || uploadingId !== null}
                       />
                       {uploadingHere ? (
                         <>

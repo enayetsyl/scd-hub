@@ -4,9 +4,9 @@
  * changes with a mandatory comment), and once CONFIRMED send it to print from
  * the same card (colour/sides/copies → the standard class-test print path).
  */
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { ScrollView, View, RefreshControl } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import {
@@ -25,6 +25,7 @@ import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, Select, Notice, 
 import { QueryGate } from "../../components/QueryGate";
 import { useConfirm } from "../../state/ConfirmContext";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
+import { useFileOpen } from "../../lib/useFileOpen";
 import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -81,6 +82,19 @@ export default function MyCtQuestionsScreen(): React.ReactElement {
   const rows = q.data?.myCtQuestionRequests ?? [];
   const { refreshing, onRefresh } = usePullRefresh(q.fetching, () =>
     refetch({ requestPolicy: "network-only" }),
+  );
+  const { openingId, runOpen } = useFileOpen();
+
+  // A fresh request filed on the form screen must appear on return (owner find).
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      refetch({ requestPolicy: "network-only" });
+    }, [refetch]),
   );
 
   async function onReview(id: string, approve: boolean, text?: string): Promise<void> {
@@ -159,7 +173,9 @@ export default function MyCtQuestionsScreen(): React.ReactElement {
                     <Button
                       title={`📄 ${STR.cqViewQuestion}`}
                       variant="secondary"
-                      onPress={() => void openStoredFile(r.currentFileId!)}
+                      loading={openingId === r.currentFileId}
+                      disabled={!!openingId}
+                      onPress={() => void runOpen(r.currentFileId!, () => openStoredFile(r.currentFileId!))}
                       style={{ marginTop: space(2) }}
                     />
                   ) : null}
