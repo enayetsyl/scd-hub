@@ -315,6 +315,8 @@ export type AdminStackParamList = {
   // Access Control (AC-2): per-user permission editor (access:manage / Principal).
   AccessControlUsers: undefined;
   AccessControlEdit: { userId: string; name: string; role: string };
+  // Owner ask 2026-07-20: the Principal's audit-log viewer (audit:read).
+  AuditLog: undefined;
   // D-#290: who didn't submit reconciliation (Principal/Office).
   ReconciliationReport: undefined;
   // D-#300: per subject × class homework lifecycle report (Principal/Office).
