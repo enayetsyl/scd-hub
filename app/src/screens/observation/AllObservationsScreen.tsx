@@ -7,7 +7,7 @@
  */
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { HW_SUBJECTS, OBSERVATION_FORMS, OBSERVATION_STATES } from "@scd/shared";
@@ -62,8 +62,15 @@ const EMPTY: Filters = {
 
 export default function AllObservationsScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
+  // Deep-links (e.g. the admin-Today "awaiting publish" badge) may seed the
+  // state/published filters via route params; the user can clear them as usual.
+  const route = useRoute<RouteProp<ObservationStackParamList, "AllObservations">>();
 
-  const [filters, setFilters] = useState<Filters>(EMPTY);
+  const [filters, setFilters] = useState<Filters>({
+    ...EMPTY,
+    state: route.params?.state ?? null,
+    published: route.params?.published ?? null,
+  });
   const [searchInput, setSearchInput] = useState("");
   const [page, setPage] = useState(0);
 
