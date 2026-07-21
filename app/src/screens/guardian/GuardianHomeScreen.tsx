@@ -183,6 +183,44 @@ export default function GuardianHomeScreen(): React.ReactElement {
   );
   const load = loadQ.data?.childDayLoad;
 
+  // Owner ask 2026-07-21: the open-homework list groups by GIVEN date (the
+  // server already sorts newest-first, and Map keeps that order), each date
+  // showing its own load sum (declared minutes + top-up) so the family sees
+  // the day-wise চাপ; tapping the card opens the homework screen.
+  const hwByDate = new Map<string, typeof openHomework>();
+  for (const r of openHomework) {
+    const k = r.dateGiven.slice(0, 10);
+    const list = hwByDate.get(k);
+    if (list) list.push(r);
+    else hwByDate.set(k, [r]);
+  }
+  const dateMinutes = (rows: typeof openHomework): number =>
+    rows.reduce((m, r) => m + (r.timeDecl ?? 0) + (r.topupFlag ? (r.topupTimeMin ?? 0) : 0), 0);
+  const goHomework = (): void =>
+    (nav as unknown as { navigate: (name: string, params?: object) => void }).navigate(
+      "GuardianHomeworkTab",
+      { screen: "ChildHomework" },
+    );
+
+  // Same treatment for assignments: group by the given (delivery) date — due
+  // date as fallback — with a per-date item count; the card opens the
+  // assignment screen. Assignments carry no declared minutes, so the count is
+  // the load figure here.
+  const assignments = asgnQ.data?.childAssignments ?? [];
+  const asgnByDate = new Map<string, typeof assignments>();
+  for (const a of assignments) {
+    const k = (a.deliveryDate ?? a.dueDate ?? "").slice(0, 10);
+    const list = asgnByDate.get(k);
+    if (list) list.push(a);
+    else asgnByDate.set(k, [a]);
+  }
+  const asgnDates = [...asgnByDate.keys()].sort((x, y) => y.localeCompare(x));
+  const goAssignments = (): void =>
+    (nav as unknown as { navigate: (name: string, params?: object) => void }).navigate(
+      "GuardianAssignmentsTab",
+      { screen: "ChildAssignments" },
+    );
+
   // Owner ask 2026-07-19: teacher-Today-style attention cards for the family.
   // Each fires only when there is something to act on; the strip hides entirely
   // on a quiet day. Composed from the queries this screen already runs (+fees).
@@ -404,79 +442,106 @@ export default function GuardianHomeScreen(): React.ReactElement {
           </View>
         </Card>
 
-        {/* Open homework + day-load vs 120 */}
+        {/* Open homework + day-load vs 120, grouped per given-date; the whole
+            card taps through to the homework screen. */}
         <Card>
-          <Body style={{ fontWeight: "700" }}>{STR.gpHomeworkOpen}</Body>
-          {load ? (
-            <Muted style={{ marginTop: space(1) }}>
-              {STR.gpDayLoad}: {bnNum(load.totalMinutes)}/{bnNum(load.ceiling)} {STR.gpMinutes}
-              {load.topupMinutes > 0
-                ? ` (${STR.gpDayLoadBase} ${bnNum(load.baseMinutes)} + ${STR.gpDayLoadTopup} ${bnNum(
-                    load.topupMinutes,
-                  )})`
-                : ""}
-            </Muted>
-          ) : null}
-          {load?.overCeiling ? (
-            <Notice
-              message={`${STR.gpDayLoad}: ${bnNum(load.totalMinutes)}/${bnNum(load.ceiling)} ${STR.gpMinutes}`}
-              tone="warn"
-            />
-          ) : null}
-          {openHomework.length === 0 ? (
-            <Muted style={{ marginTop: space(2) }}>{STR.gpNoHomework}</Muted>
-          ) : (
-            openHomework.map((r) => (
-              <View
-                key={r.recordId}
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginTop: space(2),
-                }}
-              >
-                <View style={{ flexShrink: 1 }}>
-                  <Body>{subjectLabel(r.subject)}</Body>
-                  <Muted>{r.hwId}</Muted>
+          <Pressable accessibilityRole="button" onPress={goHomework}>
+            <Body style={{ fontWeight: "700" }}>{STR.gpHomeworkOpen}</Body>
+            {load ? (
+              <Muted style={{ marginTop: space(1) }}>
+                {STR.gpDayLoad}: {bnNum(load.totalMinutes)}/{bnNum(load.ceiling)} {STR.gpMinutes}
+                {load.topupMinutes > 0
+                  ? ` (${STR.gpDayLoadBase} ${bnNum(load.baseMinutes)} + ${STR.gpDayLoadTopup} ${bnNum(
+                      load.topupMinutes,
+                    )})`
+                  : ""}
+              </Muted>
+            ) : null}
+            {load?.overCeiling ? (
+              <Notice
+                message={`${STR.gpDayLoad}: ${bnNum(load.totalMinutes)}/${bnNum(load.ceiling)} ${STR.gpMinutes}`}
+                tone="warn"
+              />
+            ) : null}
+            {openHomework.length === 0 ? (
+              <Muted style={{ marginTop: space(2) }}>{STR.gpNoHomework}</Muted>
+            ) : (
+              [...hwByDate.entries()].map(([k, rows]) => (
+                <View key={k} style={{ marginTop: space(2) }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Body style={{ fontWeight: "700" }}>{isoDateLabel(k)}</Body>
+                    <Muted>
+                      {STR.gpDateLoad}: {bnNum(dateMinutes(rows))}/{bnNum(load?.ceiling ?? 120)} {STR.gpMinutes}
+                    </Muted>
+                  </View>
+                  {rows.map((r) => (
+                    <View
+                      key={r.recordId}
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginTop: space(2),
+                      }}
+                    >
+                      <View style={{ flexShrink: 1 }}>
+                        <Body>{subjectLabel(r.subject)}</Body>
+                        <Muted>{r.hwId}</Muted>
+                      </View>
+                      <Badge text={lifecycleStateLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
+                    </View>
+                  ))}
                 </View>
-                <Badge text={lifecycleStateLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
-              </View>
-            ))
-          )}
+              ))
+            )}
+          </Pressable>
         </Card>
 
         {/* Assignments — the child's weekly AS-… items (AS-T5 childAssignments,
-            read-only; issued items only — a DRAFT week has no student record yet) */}
+            read-only; issued items only — a DRAFT week has no student record yet),
+            grouped per date with a count; the card taps through to the
+            assignment screen. */}
         <Card>
-          <Body style={{ fontWeight: "700" }}>{STR.gpAssignments}</Body>
-          {(asgnQ.data?.childAssignments ?? []).length === 0 ? (
-            <Muted style={{ marginTop: space(2) }}>{STR.gpNoAssignments}</Muted>
-          ) : (
-            (asgnQ.data?.childAssignments ?? []).map((a) => (
-              <View
-                key={a.recordId}
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginTop: space(2),
-                }}
-              >
-                <View style={{ flexShrink: 1 }}>
-                  <Body>{hwSubjectLabel(a.subject)}</Body>
-                  <Muted>
-                    {a.asId}
-                    {a.daysLate > 0 ? ` · ${bnNum(a.daysLate)} ${STR.asDaysOverdue}` : ""}
-                    {a.marks !== null
-                      ? ` · ${bnNum(a.marks)}${a.totalMarks !== null ? `/${bnNum(a.totalMarks)}` : ""}`
-                      : ""}
-                  </Muted>
+          <Pressable accessibilityRole="button" onPress={goAssignments}>
+            <Body style={{ fontWeight: "700" }}>{STR.gpAssignments}</Body>
+            {assignments.length === 0 ? (
+              <Muted style={{ marginTop: space(2) }}>{STR.gpNoAssignments}</Muted>
+            ) : (
+              asgnDates.map((k) => (
+                <View key={k || "-"} style={{ marginTop: space(2) }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Body style={{ fontWeight: "700" }}>{k ? isoDateLabel(k) : "—"}</Body>
+                    <Muted>
+                      {STR.gpDateCount}: {bnNum((asgnByDate.get(k) ?? []).length)}
+                    </Muted>
+                  </View>
+                  {(asgnByDate.get(k) ?? []).map((a) => (
+                    <View
+                      key={a.recordId}
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginTop: space(2),
+                      }}
+                    >
+                      <View style={{ flexShrink: 1 }}>
+                        <Body>{hwSubjectLabel(a.subject)}</Body>
+                        <Muted>
+                          {a.asId}
+                          {a.daysLate > 0 ? ` · ${bnNum(a.daysLate)} ${STR.asDaysOverdue}` : ""}
+                          {a.marks !== null
+                            ? ` · ${bnNum(a.marks)}${a.totalMarks !== null ? `/${bnNum(a.totalMarks)}` : ""}`
+                            : ""}
+                        </Muted>
+                      </View>
+                      <Badge text={lifecycleStateLabel(a.state)} tone={a.state === "CHASE" ? "danger" : "brand"} />
+                    </View>
+                  ))}
                 </View>
-                <Badge text={lifecycleStateLabel(a.state)} tone={a.state === "CHASE" ? "danger" : "brand"} />
-              </View>
-            ))
-          )}
+              ))
+            )}
+          </Pressable>
         </Card>
 
         {/* Library loans — read-only child-loans card (LB-5 rider, J-L9; D-#68:
