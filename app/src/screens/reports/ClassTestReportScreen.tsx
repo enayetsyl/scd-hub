@@ -36,7 +36,7 @@ export default function ClassTestReportScreen(): React.ReactElement {
 
   // Exam-date range (D-#309 chips) — applied before the row filters so the
   // class/teacher/subject options only offer values present in the range.
-  const { fromKey, toKey, node: rangeNode } = useReportRange(30);
+  const { fromKey, toKey, node: rangeNode } = useReportRange(30, { withAll: true });
   const inRange = all.filter((r) => {
     const k = dateKey(new Date(r.examDate));
     return k >= fromKey && k <= toKey;

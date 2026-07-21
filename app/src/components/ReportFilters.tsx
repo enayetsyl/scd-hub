@@ -3,7 +3,11 @@
  * Principal/Office report screens (Reconciliation report + the Reports hub).
  *
  *   useReportRange  — Today/7/14/30 chips plus a custom from–to picker; yields
- *                     the [fromKey, toKey] the report query takes.
+ *                     the [fromKey, toKey] the report query takes. Screens that
+ *                     filter client-side may opt into an extra "All time" chip
+ *                     ({ withAll: true }) — it widens the keys to sentinel
+ *                     bounds, so only use it where from/to never hit a server
+ *                     query that would scan unbounded.
  *   useRowFilters   — client-side Class / Teacher / Subject selects over the
  *                     ALREADY-FETCHED rows (the report payloads are small);
  *                     options are derived from the rows themselves so the
@@ -29,7 +33,10 @@ const keyDaysAgo = (days: number): string => {
   return dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1)));
 };
 
-export function useReportRange(defaultDays = 7): {
+/** days === ALL_DAYS ⇒ the "All time" chip: sentinel bounds, no date restriction. */
+const ALL_DAYS = 0;
+
+export function useReportRange(defaultDays = 7, opts?: { withAll?: boolean }): {
   fromKey: string;
   toKey: string;
   node: React.ReactElement;
@@ -39,8 +46,8 @@ export function useReportRange(defaultDays = 7): {
   const [customFrom, setCustomFrom] = useState(keyDaysAgo(7));
   const [customTo, setCustomTo] = useState(dateKey());
 
-  const fromKey = custom ? customFrom : keyDaysAgo(days);
-  const toKey = custom ? customTo : dateKey();
+  const fromKey = custom ? customFrom : days === ALL_DAYS ? "0000-01-01" : keyDaysAgo(days);
+  const toKey = custom ? customTo : days === ALL_DAYS ? "9999-12-31" : dateKey();
 
   const node = (
     <View>
@@ -56,6 +63,16 @@ export function useReportRange(defaultDays = 7): {
             }}
           />
         ))}
+        {opts?.withAll ? (
+          <Chip
+            label={STR.rptAllTime}
+            selected={!custom && days === ALL_DAYS}
+            onPress={() => {
+              setCustom(false);
+              setDays(ALL_DAYS);
+            }}
+          />
+        ) : null}
         <Chip label={STR.rptCustomRange} selected={custom} onPress={() => setCustom(true)} />
       </ChipRow>
       {custom ? (
