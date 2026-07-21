@@ -30,11 +30,16 @@ export async function assertClassTestFileReadAccess(
   // The requesting teacher — the file's own uploader.
   if (file.uploadedBy.toString() === ctx.auth.userId) return;
   // CT-question flow (owner ask 2026-07-20): the OFFICE uploaded the paper; the
-  // REQUESTING teacher must open it to review — any round's file of their own request.
-  const reviewed = await ClassTestQuestionRequest.exists({
-    requestedBy: ctx.auth.userId,
-    "rounds.fileId": file._id,
-  });
-  if (reviewed) return;
+  // REQUESTING teacher must open it to review — any round's file of their own
+  // request. A lookup failure denies (fail-closed), never 500s.
+  try {
+    const reviewed = await ClassTestQuestionRequest.exists({
+      requestedBy: ctx.auth.userId,
+      "rounds.fileId": file._id,
+    });
+    if (reviewed) return;
+  } catch {
+    // fall through to deny
+  }
   throw new ForbiddenError("এই প্রশ্নপত্র দেখার অনুমতি নেই");
 }
