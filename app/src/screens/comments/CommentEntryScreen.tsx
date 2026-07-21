@@ -27,7 +27,7 @@ import {
   type CommentDeliveryOutcomeT,
 } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Button, Chip, ChipRow, Field, Badge, Notice, Loader } from "../../components/ui";
-import { STR, commentTypeLabel, commentSentimentLabel, bnNum } from "../../lib/labels";
+import { STR, commentTypeLabel, commentSentimentLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { useToast } from "../../state/ToastContext";
@@ -197,6 +197,11 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
               <Badge text={delivered ? STR.cmDeliveredBadge : STR.cmDraftBadge} tone={delivered ? "ok" : "muted"} />
             ) : null}
           </View>
+          {existing ? (
+            <Muted style={{ marginTop: 2 }}>
+              {STR.cmMadeOn}: {isoDateLabel(existing.createdAt)}
+            </Muted>
+          ) : null}
         </Card>
 
         {delivered ? <Notice message={STR.cmDeliveredLocked} tone="info" /> : null}
