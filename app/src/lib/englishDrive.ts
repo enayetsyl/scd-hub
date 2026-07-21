@@ -72,9 +72,21 @@ export function parseEnglishDriveFilename(filename: string): ParsedEnglishDriveN
     ? (kindMatch[1] as EnglishDriveKind)
     : null;
   let seq = kindMatch?.[2] ? Number(kindMatch[2]) : null;
-  // Generator variants the token pass misses (PRD §4).
+  // Generator variants the token pass misses (PRD §4) — full-word kinds
+  // (C4_Eng_Assignment_W3…) and the grammar-block file.
   if (!kind && /GRAMMAR[\s_-]?BLOCK/.test(stem)) kind = "BLOCK";
+  if (!kind && /ASSIGNMENT/.test(stem)) kind = "AS";
+  if (!kind && /HOMEWORK/.test(stem)) kind = "HW";
+  if (!kind && /CLASSWORK/.test(stem)) kind = "CW";
+  if (!kind && /PRACTICE[\s_-]?TEST/.test(stem)) kind = "PT";
+  if (!kind && /TEACHER[\s_-]?NOTE/.test(stem)) kind = "TN";
   if (!kind && /CLUE/.test(stem)) kind = "CLUE";
+  // Week-numbered names (Assignment_W3) — the W-number is the sequence when no
+  // digits were glued to the kind token itself.
+  if (seq === null) {
+    const weekMatch = /(?:^|[^A-Z])W0*(\d+)(?=[^0-9]|$)/.exec(stem);
+    if (weekMatch) seq = Number(weekMatch[1]);
+  }
   if (kind && seq === null) seq = 1;
 
   return {

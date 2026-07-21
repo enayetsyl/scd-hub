@@ -39,7 +39,8 @@ export const ENGLISH_DRIVE_CLASS_LEVELS = [1, 2, 3, 4, 5] as const;
 export interface EnglishDriveDocShape {
   id: string;
   classLevel: number;
-  blockNumber: number;
+  /** Null = block-less (assignments are week-scoped, D-#346). */
+  blockNumber: number | null;
   kind: string;
   seq: number;
   title: string;
@@ -58,7 +59,7 @@ function shape(
   return {
     id: doc._id.toString(),
     classLevel: doc.classLevel,
-    blockNumber: doc.blockNumber,
+    blockNumber: doc.blockNumber ?? null,
     kind: doc.kind,
     seq: doc.seq ?? 1, // pre-seq rows have no field
     title: doc.title,
@@ -180,7 +181,8 @@ export async function englishDriveDocs(
     .sort(
       (a, b) =>
         a.classLevel - b.classLevel ||
-        a.blockNumber - b.blockNumber ||
+        // Block-less docs (assignments) group after the numbered blocks.
+        (a.blockNumber ?? Infinity) - (b.blockNumber ?? Infinity) ||
         kindOrder(a.kind) - kindOrder(b.kind) ||
         (a.seq ?? 1) - (b.seq ?? 1),
     )
@@ -204,7 +206,8 @@ export async function englishDriveDocById(
 
 export interface UploadEnglishDriveDocInput {
   classLevel: number;
-  blockNumber: number;
+  /** Optional for AS (week-scoped, D-#346); required for every other kind. */
+  blockNumber?: number | null;
   kind: string;
   /** Sequence within (block × kind), e.g. HW4 → 4. Defaults to 1. */
   seq?: number | null;
@@ -227,11 +230,16 @@ export async function uploadEnglishDriveDoc(
   if (!Number.isInteger(input.classLevel) || input.classLevel < 1 || input.classLevel > 5) {
     throw new Error("শ্রেণি ১ থেকে ৫ এর মধ্যে দিন");
   }
-  if (!Number.isInteger(input.blockNumber) || input.blockNumber < 1) {
-    throw new Error("ব্লক নম্বর দিন (১ বা তার বেশি)");
-  }
   if (!(ENGLISH_DRIVE_KINDS as readonly string[]).includes(input.kind)) {
     throw new Error(`ডকুমেন্টের ধরন সঠিক নয় (${ENGLISH_DRIVE_KINDS.join("/")})`);
+  }
+  // Assignments are week-scoped, not block-scoped (D-#346) — block optional for
+  // AS only; every other kind lives inside a block.
+  const blockNumber = input.blockNumber ?? null;
+  if (blockNumber === null) {
+    if (input.kind !== "AS") throw new Error("ব্লক নম্বর দিন (১ বা তার বেশি)");
+  } else if (!Number.isInteger(blockNumber) || blockNumber < 1) {
+    throw new Error("ব্লক নম্বর দিন (১ বা তার বেশি)");
   }
   const seq = input.seq ?? 1;
   if (!Number.isInteger(seq) || seq < 1) {
@@ -249,7 +257,7 @@ export async function uploadEnglishDriveDoc(
 
   const prev = await EnglishDriveDoc.findOne({
     classLevel: input.classLevel,
-    blockNumber: input.blockNumber,
+    blockNumber, // null matches missing = the block-less identity
     kind: input.kind,
     // Pre-seq rows carry no seq field — they are identity seq 1 ({seq: null}
     // matches missing in Mongo).
@@ -263,7 +271,7 @@ export async function uploadEnglishDriveDoc(
 
   const doc = await EnglishDriveDoc.create({
     classLevel: input.classLevel,
-    blockNumber: input.blockNumber,
+    blockNumber,
     kind: input.kind as EnglishDriveKind,
     seq,
     title,
@@ -280,7 +288,7 @@ export async function uploadEnglishDriveDoc(
     targetKind: "EnglishDriveDoc",
     meta: {
       classLevel: input.classLevel,
-      blockNumber: input.blockNumber,
+      blockNumber,
       kind: input.kind,
       seq,
       version: input.version,
@@ -331,7 +339,8 @@ export async function sendEnglishDriveDocToPrint(
   const doc = await englishDriveDocById(ctx, input.id);
 
   const kindTag = doc.seq > 1 ? `${doc.kind}${doc.seq}` : doc.kind;
-  const stamp = `C${doc.classLevel}_B${doc.blockNumber}_${kindTag}_v${doc.version}`;
+  const blockTag = doc.blockNumber === null ? "" : `_B${doc.blockNumber}`;
+  const stamp = `C${doc.classLevel}${blockTag}_${kindTag}_v${doc.version}`;
   const title = `English Drive ${stamp} — ${doc.title}`.slice(0, 200);
   const pdf = await markdownToPdf(doc.contentMd ?? "", { title });
 

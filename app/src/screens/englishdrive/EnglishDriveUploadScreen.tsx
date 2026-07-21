@@ -60,13 +60,16 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
   const [existingQ, refetchExisting] = useQuery({ query: ENGLISH_DRIVE_DOCS, variables: {} });
   const existing = existingQ.data?.englishDriveDocs ?? [];
 
+  // Block is part of the identity only when set — AS is block-less (D-#346).
+  const blockOf = (s: StagedDoc): number | null => intOrNull(s.blockNumber);
+
   const conflictVersion = (s: StagedDoc): number | null => {
     const cl = s.classLevel ? Number(s.classLevel) : null;
-    const bn = intOrNull(s.blockNumber);
     const sq = intOrNull(s.seq);
-    if (cl === null || bn === null || sq === null || !s.kind) return null;
+    if (cl === null || sq === null || !s.kind) return null;
     const hit = existing.find(
-      (d) => d.classLevel === cl && d.blockNumber === bn && d.kind === s.kind && d.seq === sq,
+      (d) =>
+        d.classLevel === cl && d.blockNumber === blockOf(s) && d.kind === s.kind && d.seq === sq,
     );
     return hit ? hit.version : null;
   };
@@ -126,7 +129,8 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
   const isComplete = (s: StagedDoc): boolean =>
     s.classLevel !== null &&
     s.kind !== null &&
-    intOrNull(s.blockNumber) !== null &&
+    // Assignments are week-scoped — block optional for AS only (D-#346).
+    (intOrNull(s.blockNumber) !== null || (s.kind === "AS" && s.blockNumber.trim() === "")) &&
     intOrNull(s.seq) !== null &&
     intOrNull(s.version) !== null &&
     s.title.trim() !== "";
@@ -137,13 +141,25 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
       setError(STR.edFormIncomplete);
       return;
     }
+    // Two staged files must never claim the same identity — the second would
+    // silently replace the first (e.g. Assignment_W3 + its AnswerKey both → seq 3).
+    const byIdentity = new Map<string, string[]>();
+    for (const s of staged) {
+      const key = `${s.classLevel}|${blockOf(s) ?? ""}|${s.kind}|${intOrNull(s.seq)}`;
+      byIdentity.set(key, [...(byIdentity.get(key) ?? []), s.filename]);
+    }
+    const dups = [...byIdentity.values()].filter((names) => names.length > 1);
+    if (dups.length > 0) {
+      setError(`${STR.edDupInBatch}: ${dups.map((names) => names.join(" = ")).join("; ")}`);
+      return;
+    }
     setBusy(true);
     setError(null);
     const results: UploadOutcome[] = [];
     for (const s of staged) {
       const res = await upload({
         classLevel: Number(s.classLevel),
-        blockNumber: intOrNull(s.blockNumber)!,
+        blockNumber: blockOf(s),
         kind: s.kind!,
         seq: intOrNull(s.seq)!,
         title: s.title.trim(),
@@ -201,6 +217,7 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
               value={s.blockNumber}
               onChangeText={(v) => patchStaged(s.filename, { blockNumber: v })}
               keyboardType="numeric"
+              helper={STR.edBlockOptionalAs}
             />
             <Select
               label={STR.edKindLabel}

@@ -37,12 +37,14 @@ englishDrivePdfRouter.get("/:id", async (req: Request, res: Response) => {
   // reject out of the async handler and crash the Node process (Express 4 does not
   // catch async errors).
   try {
-    const title = `English Drive — Class ${doc.classLevel} · Block ${doc.blockNumber} · ${doc.kind}: ${doc.title}`;
+    const blockPart = doc.blockNumber === null ? "" : ` · Block ${doc.blockNumber}`;
+    const title = `English Drive — Class ${doc.classLevel}${blockPart} · ${doc.kind}: ${doc.title}`;
     const pdfBuffer = await markdownToPdf(doc.contentMd ?? "", { title });
+    const blockTag = doc.blockNumber === null ? "" : `_B${doc.blockNumber}`;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `inline; filename="english_drive_C${doc.classLevel}_B${doc.blockNumber}_${doc.kind}_v${doc.version}.pdf"`,
+      `inline; filename="english_drive_C${doc.classLevel}${blockTag}_${doc.kind}_v${doc.version}.pdf"`,
     );
     res.setHeader("Content-Length", pdfBuffer.byteLength);
     res.send(pdfBuffer);

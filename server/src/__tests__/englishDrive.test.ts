@@ -391,6 +391,19 @@ describe("uploadEnglishDriveDoc", () => {
     await expect(uploadEnglishDriveDoc({ ...validUpload(), seq: 0 })).rejects.toThrow(/ক্রমিক/);
   });
 
+  test("AS may be block-less (week-scoped, D-#346); other kinds still need a block", async () => {
+    await uploadEnglishDriveDoc({ ...validUpload(), kind: "AS", blockNumber: null, seq: 3 });
+    expect(mockFindOne).toHaveBeenCalledWith(
+      expect.objectContaining({ blockNumber: null, kind: "AS", seq: 3 }),
+    );
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ blockNumber: null, kind: "AS", seq: 3 }),
+    );
+    await expect(
+      uploadEnglishDriveDoc({ ...validUpload(), kind: "CW", blockNumber: null }),
+    ).rejects.toThrow(/ব্লক/);
+  });
+
   test("re-upload replaces: old row stamped replacedAt, audit ENGLISH_DRIVE_REPLACED", async () => {
     const prev = madeDoc({ version: 2 });
     mockFindOne.mockResolvedValue(prev);
@@ -479,6 +492,13 @@ describe("sendEnglishDriveDocToPrint", () => {
       await sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), printInput);
       expect(mockCreatePrint).toHaveBeenCalledWith(expect.objectContaining({ purpose }));
     }
+  });
+
+  test("a block-less assignment's print stamp omits the block", async () => {
+    mockFindById.mockReturnValue(madeDoc({ kind: "AS", blockNumber: null, seq: 3 }));
+    const out = await sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), printInput);
+    expect(out.title).toContain("C3_AS3_v2");
+    expect(out.title).not.toContain("_B");
   });
 
   test("Drive down → Bangla error, no request filed", async () => {

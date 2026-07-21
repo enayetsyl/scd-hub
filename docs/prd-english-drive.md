@@ -38,9 +38,9 @@ PDF, and file print requests — all without leaving the app.
 
 ## 3. Data model (app-native, NO wire twin)
 `EnglishDriveDoc` (server, trackers-adjacent module `englishDrive`):
-`{ classLevel (1..5, C-prefix), blockNumber, kind ∈ {BLOCK,TN,CW,HW,PT,AS,CLUE},
-seq (int ≥ 1, D-#345), title, version (int), contentMd (string, ≤ 1 MB), uploadedBy,
-uploadedAt, replacedAt? }`
+`{ classLevel (1..5, C-prefix), blockNumber (null for AS — assignments are week-scoped,
+D-#346), kind ∈ {BLOCK,TN,CW,HW,PT,AS,CLUE}, seq (int ≥ 1, D-#345), title, version (int),
+contentMd (string, ≤ 1 MB), uploadedBy, uploadedAt, replacedAt? }`
 - The markdown is stored **in the document** (class-note precedent) — no file-storage round trip;
   render + PDF + print all derive from `contentMd`.
 - **`seq` (D-#345, testing finding 2026-07-21):** a block holds SEVERAL documents of one kind —
@@ -59,9 +59,12 @@ The parser is **lenient** — separators are NOT required (the real corpus mixes
 `C1B03_HW4.md`, `GrammarBlock3…` — D-#345): `C[1-5]` (not followed by a digit) → class; `B(\d+)` or
 `Block(\d+)` → block; a kind keyword (`BLOCK|TN|CW|HW|PT|AS|CLUE`, case-insensitive, with digits
 glued to the kind → **seq**, e.g. `HW4` → HW seq 4; also maps `GrammarBlock…` → BLOCK, `Clue` →
-CLUE); a separated `v(\d+)` → version. Whatever fails to parse leaves its form field empty; the
+CLUE); full-word kinds (`Assignment`/`Homework`/`Classwork`/`PracticeTest`/`TeacherNote`,
+D-#346); a standalone `W(\d+)` → seq when no digits are glued to the kind (Assignment_W3 → AS
+seq 3); a separated `v(\d+)` → version. Whatever fails to parse leaves its form field empty; the
 upload form always shows the parsed values **prefilled and editable** (override rule, owner #4).
-Title defaults to the first `# heading` of the md, editable.
+Title defaults to the first `# heading` of the md, editable. The upload batch refuses two staged
+files claiming the same (class, block, kind, seq) — the second would silently replace the first.
 
 ## 5. Permissions & visibility (compose existing — no new permission)
 - **Upload / replace:** `roster:manage` (the house Principal/Office gate).

@@ -93,7 +93,8 @@ export default function EnglishDriveDocScreen({ route }: Props): React.ReactElem
                   style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
                 >
                   <Body style={{ fontWeight: "700", flexShrink: 1 }}>
-                    {classLevelLabel(doc.classLevel)} · {STR.edBlock} {bnNum(doc.blockNumber)} ·{" "}
+                    {classLevelLabel(doc.classLevel)}
+                    {doc.blockNumber !== null ? ` · ${STR.edBlock} ${bnNum(doc.blockNumber)}` : ""} ·{" "}
                     {englishDriveKindLabel(doc.kind)}
                     {doc.seq > 1 ? ` ${bnNum(doc.seq)}` : ""}
                   </Body>

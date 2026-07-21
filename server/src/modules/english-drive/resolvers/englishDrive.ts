@@ -32,7 +32,8 @@ EnglishDriveDocRef.implement({
   fields: (t) => ({
     id: t.exposeString("id"),
     classLevel: t.exposeInt("classLevel"),
-    blockNumber: t.exposeInt("blockNumber"),
+    // Null = block-less (assignments are week-scoped, D-#346).
+    blockNumber: t.int({ nullable: true, resolve: (r) => r.blockNumber }),
     kind: t.exposeString("kind"),
     seq: t.exposeInt("seq"),
     title: t.exposeString("title"),
@@ -124,7 +125,8 @@ builder.mutationField("uploadEnglishDriveDoc", (t) =>
     authScopes: { hasPermission: "roster:manage" },
     args: {
       classLevel: t.arg.int({ required: true }),
-      blockNumber: t.arg.int({ required: true }),
+      // Optional for AS (week-scoped, D-#346); the service requires it otherwise.
+      blockNumber: t.arg.int({ required: false }),
       kind: t.arg.string({ required: true }),
       seq: t.arg.int({ required: false }),
       title: t.arg.string({ required: true }),

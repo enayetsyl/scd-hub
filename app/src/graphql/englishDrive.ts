@@ -10,7 +10,8 @@ type NoVars = Record<string, never>;
 export interface EnglishDriveDocT {
   id: string;
   classLevel: number;
-  blockNumber: number;
+  /** Null = block-less (assignments are week-scoped, D-#346). */
+  blockNumber: number | null;
   kind: string;
   seq: number;
   title: string;
@@ -69,7 +70,7 @@ export const UPLOAD_ENGLISH_DRIVE_DOC = gql<
   },
   {
     classLevel: number;
-    blockNumber: number;
+    blockNumber: number | null;
     kind: string;
     seq: number;
     title: string;
@@ -79,7 +80,7 @@ export const UPLOAD_ENGLISH_DRIVE_DOC = gql<
 >`
   mutation UploadEnglishDriveDoc(
     $classLevel: Int!
-    $blockNumber: Int!
+    $blockNumber: Int
     $kind: String!
     $seq: Int
     $title: String!
