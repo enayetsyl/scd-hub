@@ -67,6 +67,8 @@ export interface NotificationRefs {
   /** Consecutive-absence escalation streak length + flag (SR-2, D-#245). */
   streakLength?: number;
   escalation?: boolean;
+  /** CT question-request loop (deep-link: MyCtQuestions / CtQuestionQueue; D-#342). */
+  ctQuestionRequestId?: string;
 }
 
 export interface INotification extends Document {

@@ -108,6 +108,10 @@ export interface CreateClassTestRequestInput {
   /** D-#339: register as ALREADY official — born PRINTED (printedBy/At = actor/now),
    *  NO print-queue row. For tests held without an office print request. */
   skipPrint?: boolean;
+  /** CT-question flow (owner ask 2026-07-20): the paper was uploaded by the OFFICE
+   *  and teacher-CONFIRMED in review — waive the uploader-ownership check. Set
+   *  ONLY by ClassTestQuestionService; never exposed to a resolver arg. */
+  allowForeignQuestionFile?: boolean;
   actorId: string;
 }
 
@@ -226,8 +230,10 @@ export async function createRequest(
       .lean()) as { kind: string; uploadedBy: Types.ObjectId } | null;
     if (!file) throw new Error("Question file not found");
     if (file.kind !== "classtest_question") throw new Error("The linked file is not a class-test question paper");
-    // The uploader must be the requesting teacher (the file is theirs, §5.2).
-    if (file.uploadedBy.toString() !== input.actorId) {
+    // The uploader must be the requesting teacher (the file is theirs, §5.2) —
+    // EXCEPT the reviewed CT-question flow, where the OFFICE uploaded the paper
+    // and the teacher confirmed it (allowForeignQuestionFile, service-internal).
+    if (!input.allowForeignQuestionFile && file.uploadedBy.toString() !== input.actorId) {
       throw new Error("The uploaded paper was not uploaded by this teacher");
     }
     questionFileId = new Types.ObjectId(input.questionFileId);

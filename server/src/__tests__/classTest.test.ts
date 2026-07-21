@@ -117,6 +117,12 @@ jest.mock("../modules/foundation/models/User", () => ({
   User: { findById: (id: unknown) => ({ select: () => ({ lean: () => mockUserFindById(id) }) }) },
 }));
 
+// D-#342: the file read-gate's last-resort lookup (requesting teacher of a
+// question-request round). No question requests exist in these DB-free tests.
+jest.mock("../modules/trackers/models/ClassTestQuestionRequest", () => ({
+  ClassTestQuestionRequest: { exists: async () => null },
+}));
+
 // Import AFTER mocks
 import {
   generateCtId,
@@ -488,8 +494,8 @@ describe("POST /files/classtest", () => {
     expect(mockUpload).not.toHaveBeenCalled();
   });
 
-  test("OFFICE → 403 (Office prints, doesn't file requests — no tracker:write)", async () => {
-    expect((await upload(officeTok)).status).toBe(403);
+  test("OFFICE → 200 (D-#342: the office uploads question-request papers here too)", async () => {
+    expect((await upload(officeTok)).status).toBe(200);
   });
 
   test("teacher upload OK — fileId returned, NEVER driveFileId", async () => {
@@ -502,13 +508,13 @@ describe("POST /files/classtest", () => {
     expect(mockStoredCreate).toHaveBeenCalledTimes(1);
   });
 
-  test("wrong mime → 422 Bangla, Drive never called", async () => {
+  test("wrong mime → 422 Bangla (D-#342 envelope: jpeg/png/pdf/doc/docx), Drive never called", async () => {
     const res = await request(app)
       .post("/files/classtest")
       .set("Authorization", `Bearer ${teacherTok}`)
       .attach("file", Buffer.from("gif"), { filename: "x.gif", contentType: "image/gif" });
     expect(res.status).toBe(422);
-    expect(res.body.error).toBe(FILE_ERRORS_BN.badMime);
+    expect(res.body.error).toBe("শুধু JPEG, PNG, PDF বা Word (DOC/DOCX) ফাইল সংযুক্ত করা যাবে");
     expect(mockUpload).not.toHaveBeenCalled();
   });
 

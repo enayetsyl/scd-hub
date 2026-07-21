@@ -41,6 +41,13 @@ export default function ClassTestHomeScreen(): React.ReactElement {
             {/* D-#339: Principal/Office also reach the form — the no-print register
                 (server-gated: admin bypasses tracker:write there). */}
             {canWrite || isAdmin ? <Button title={STR.ctRequestNav} onPress={() => nav.navigate("RequestClassTest")} /> : null}
+            {/* Owner ask 2026-07-20: office-produced question papers — teacher side + office queue. */}
+            {canWrite ? (
+              <Button title={STR.cqMyNav} variant="secondary" onPress={() => nav.navigate("MyCtQuestions")} />
+            ) : null}
+            {canPrint ? (
+              <Button title={STR.cqQueueNav} variant="secondary" onPress={() => nav.navigate("CtQuestionQueue")} />
+            ) : null}
             {/* PQ-5 (D-#281): class-test printing lives on the ONE print queue now. */}
             {canPrint ? (
               <Button

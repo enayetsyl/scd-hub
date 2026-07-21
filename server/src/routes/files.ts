@@ -86,6 +86,24 @@ export function validateUpload(mime: string, sizeBytes: number): string | null {
   return null;
 }
 
+// Class-test question papers additionally accept Word documents (D-#342 — the
+// office authors papers in Word); everything else keeps the jpeg/png/pdf envelope.
+export const CLASSTEST_FILE_MIMES = [
+  ...ALLOWED_FILE_MIMES,
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+] as const;
+
+/** Class-test upload validation — jpeg/png/pdf/doc/docx ≤ 5 MB. */
+export function validateClassTestUpload(mime: string, sizeBytes: number): string | null {
+  if (!(CLASSTEST_FILE_MIMES as readonly string[]).includes(mime)) {
+    return "শুধু JPEG, PNG, PDF বা Word (DOC/DOCX) ফাইল সংযুক্ত করা যাবে";
+  }
+  if (sizeBytes > MAX_FILE_BYTES) return FILE_ERRORS_BN.tooLarge;
+  if (sizeBytes <= 0) return FILE_ERRORS_BN.badMime;
+  return null;
+}
+
 // Class-note attachments (Feature: class notes get attachments) — jpeg/png/pdf ≤ 10 MB,
 // up to 5 per note (the 5-file cap is enforced where attachmentIds are bound).
 export const MAX_CLASSNOTE_ATTACHMENT_BYTES = 10 * 1024 * 1024;
@@ -294,7 +312,12 @@ filesRouter.post("/chat", parseChatUpload, async (req: Request, res: Response) =
 
 filesRouter.post("/classtest", parseUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
+  // D-#342: the OFFICE (roster:manage) also uploads papers here — the question-
+  // request flow's produced paper — alongside the teacher's own (tracker:write).
+  if (
+    !ctx.auth ||
+    (!callerHasPermission(ctx.auth, "tracker:write") && !callerHasPermission(ctx.auth, "roster:manage"))
+  ) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -304,7 +327,7 @@ filesRouter.post("/classtest", parseUpload, async (req: Request, res: Response) 
     res.status(400).json({ error: "file field missing" });
     return;
   }
-  const rejection = validateUpload(file.mimetype, file.size);
+  const rejection = validateClassTestUpload(file.mimetype, file.size);
   if (rejection) {
     res.status(422).json({ error: rejection });
     return;

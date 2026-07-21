@@ -1023,6 +1023,11 @@ export const NOTIFICATION_KINDS = [
   // D-#314: the auto-issue sweep confirmed+issued a within-ceiling, fully-covered
   // day (attendance-backed roster) — the confirmer is informed, not asked.
   "HW_AUTO_ISSUED",
+  // D-#342 CT question-request loop (app-native, NO wire twin): REVIEW → the
+  // requesting teacher (an office paper round awaits their verdict); OFFICE →
+  // the queue operators (new request / changes requested / confirmed).
+  "CT_QUESTION_REVIEW",
+  "CT_QUESTION_OFFICE",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1053,6 +1058,8 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   HW_PENDING_REMINDER: "বাড়ির কাজ নিশ্চিত করা বাকি",
   HW_PENDING_ESCALATION: "বাড়ির কাজ নিশ্চিত হয়নি (এসকেলেশন)",
   HW_AUTO_ISSUED: "বাড়ির কাজ স্বয়ংক্রিয়ভাবে ইস্যু হয়েছে",
+  CT_QUESTION_REVIEW: "প্রশ্নপত্র রিভিউর অপেক্ষায়",
+  CT_QUESTION_OFFICE: "প্রশ্ন তৈরির অনুরোধ",
   PRINT_DELIVERED: "প্রিন্ট ডেলিভারি হয়েছে",
   PRINT_REQUESTED: "নতুন প্রিন্ট অনুরোধ",
 };
@@ -1083,6 +1090,8 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   HW_PENDING_REMINDER: "Homework confirm pending",
   HW_PENDING_ESCALATION: "Homework not confirmed (escalation)",
   HW_AUTO_ISSUED: "Homework auto-issued",
+  CT_QUESTION_REVIEW: "Question paper awaiting review",
+  CT_QUESTION_OFFICE: "Question request update",
   PRINT_DELIVERED: "Print job delivered",
   PRINT_REQUESTED: "New print request",
 };
