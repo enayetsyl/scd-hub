@@ -27,13 +27,17 @@ import {
 import {
   pickAndUploadHomeworkFile,
   pickAndUploadHomeworkFiles,
+  uploadHomeworkWebFile,
+  uploadHomeworkQuestionWebFiles,
   openStoredFile,
   HW_MAX_ATTACHMENTS,
   FileUploadError,
   type UploadedFile,
+  type MultiUploadResult,
 } from "../../lib/files";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, EmptyState } from "../../components/ui";
+import { UploadDropZone } from "../../components/UploadDropZone";
 import { DateField } from "../../components/DateField";
 import { MoreOptions } from "../../components/MoreOptions";
 import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
@@ -251,12 +255,13 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
   }
 
   /** Multi-pick question attachments (≤5) — each uploads immediately; partial
-   *  failures toast but the good ones stay (the print-form pattern). */
-  async function onPickFiles(): Promise<void> {
+   *  failures toast but the good ones stay (the print-form pattern). Shared by
+   *  the pick button and the web drop zone; both cap at remaining capacity. */
+  async function runAttachmentsUpload(upload: (remaining: number) => Promise<MultiUploadResult>): Promise<void> {
     if (pickBusy || files.length >= HW_MAX_ATTACHMENTS) return;
     setPickBusy(true);
     try {
-      const res = await pickAndUploadHomeworkFiles(HW_MAX_ATTACHMENTS - files.length);
+      const res = await upload(HW_MAX_ATTACHMENTS - files.length);
       if (res.uploaded.length > 0) setFiles((cur) => [...cur, ...res.uploaded]);
       if (res.failures.length > 0) toast.show(res.failures.join("\n"), "danger");
     } catch (e) {
@@ -266,13 +271,23 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
     }
   }
 
+  function onPickFiles(): Promise<void> {
+    return runAttachmentsUpload(pickAndUploadHomeworkFiles);
+  }
+
+  /** Web drag-and-drop → same handling, starting from browser File objects. */
+  function onDropFiles(dropped: File[]): Promise<void> {
+    return runAttachmentsUpload((remaining) => uploadHomeworkQuestionWebFiles(dropped, remaining));
+  }
+
   /** Optional question-file attach (GP-A, D-#70) — failure toasts a Bangla
-   *  message and never blocks the declaration (GP-J8). */
-  async function onAttachQuestion(): Promise<void> {
+   *  message and never blocks the declaration (GP-J8). Shared by the pick
+   *  button (null = picker cancelled) and the web drop zone. */
+  async function runAttachQuestion(upload: () => Promise<UploadedFile | null>): Promise<void> {
     if (!lastItem || fileBusy) return;
     setFileBusy(true);
     try {
-      const uploaded = await pickAndUploadHomeworkFile("question");
+      const uploaded = await upload();
       if (!uploaded) return; // picker cancelled
       const res = await attachQuestion({ hwItemId: lastItem.id, fileId: uploaded.fileId });
       if (res.error || !res.data?.attachHomeworkQuestionFile) {
@@ -285,6 +300,15 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
     } finally {
       setFileBusy(false);
     }
+  }
+
+  function onAttachQuestion(): Promise<void> {
+    return runAttachQuestion(() => pickAndUploadHomeworkFile("question"));
+  }
+
+  /** Single-file flow — a multi-file drop attaches only the first file. */
+  function onDropQuestion(dropped: File[]): Promise<void> {
+    return runAttachQuestion(() => uploadHomeworkWebFile(dropped[0], "question"));
   }
 
   if (!hasSection) {
@@ -304,13 +328,15 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
         {lastItem ? (
           <View style={{ marginBottom: space(3) }}>
-            <Button
-              title={`${STR.hwAttachQuestion} (${lastItem.hwId})`}
-              variant="secondary"
-              onPress={onAttachQuestion}
-              loading={fileBusy}
-              disabled={fileBusy}
-            />
+            <UploadDropZone onFiles={(dropped) => void onDropQuestion(dropped)} disabled={fileBusy}>
+              <Button
+                title={`${STR.hwAttachQuestion} (${lastItem.hwId})`}
+                variant="secondary"
+                onPress={onAttachQuestion}
+                loading={fileBusy}
+                disabled={fileBusy}
+              />
+            </UploadDropZone>
           </View>
         ) : null}
         {isEdit && editItem ? (
@@ -437,13 +463,18 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
               />
             </View>
           ))}
-          <Button
-            title={pickBusy ? STR.saving : STR.cnAttachFile}
-            variant="secondary"
-            onPress={() => void onPickFiles()}
-            loading={pickBusy}
+          <UploadDropZone
+            onFiles={(dropped) => void onDropFiles(dropped)}
             disabled={pickBusy || files.length >= HW_MAX_ATTACHMENTS}
-          />
+          >
+            <Button
+              title={pickBusy ? STR.saving : STR.cnAttachFile}
+              variant="secondary"
+              onPress={() => void onPickFiles()}
+              loading={pickBusy}
+              disabled={pickBusy || files.length >= HW_MAX_ATTACHMENTS}
+            />
+          </UploadDropZone>
         </Card>
         {issued ? null : (
           <MoreOptions>

@@ -20,15 +20,15 @@ import {
 } from "../../graphql/operations";
 import type { AttendanceStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Button, Notice, Divider, Select, Loader } from "../../components/ui";
+import { UploadDropZone } from "../../components/UploadDropZone";
 import { STR, bnNum, teacherAttendanceStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AttendanceStackParamList, "TeacherAttendanceImport">;
 
-/** Binary file → base64 without Node Buffer / web btoa (cross-platform). */
-async function uriToBase64(uri: string): Promise<string> {
-  const bytes = new Uint8Array(await (await fetch(uri)).arrayBuffer());
+/** Binary bytes → base64 without Node Buffer / web btoa (cross-platform). */
+function bytesToBase64(bytes: Uint8Array): string {
   const ABC = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   let out = "";
   for (let i = 0; i < bytes.length; i += 3) {
@@ -40,6 +40,11 @@ async function uriToBase64(uri: string): Promise<string> {
     out += i + 2 < bytes.length ? ABC[c & 63] : "=";
   }
   return out;
+}
+
+/** Binary file → base64 (the picker path; drops go via bytesToBase64 directly). */
+async function uriToBase64(uri: string): Promise<string> {
+  return bytesToBase64(new Uint8Array(await (await fetch(uri)).arrayBuffer()));
 }
 
 export default function TeacherAttendanceImportScreen(_props: Props): React.ReactElement {
@@ -65,12 +70,17 @@ export default function TeacherAttendanceImportScreen(_props: Props): React.Reac
 
   const staffOptions = (staffQ.data?.staff ?? []).map((s) => ({ label: s.name, value: s.id, hint: s.designation ?? undefined }));
 
-  async function pickFile(): Promise<void> {
+  /** Clear the previous file's staging state — a new file starts a fresh preview. */
+  function resetImport(): void {
     setError(null);
     setOk(null);
     setPreview(null);
     setMappings({});
     setIgnored(new Set());
+  }
+
+  async function pickFile(): Promise<void> {
+    resetImport();
     try {
       const res = await DocumentPicker.getDocumentAsync({
         copyToCacheDirectory: true,
@@ -82,6 +92,19 @@ export default function TeacherAttendanceImportScreen(_props: Props): React.Reac
       if (res.canceled || !res.assets?.[0]) return;
       setFileName(res.assets[0].name);
       setFileBase64(await uriToBase64(res.assets[0].uri));
+    } catch {
+      setError(STR.errGeneric);
+    }
+  }
+
+  // Web drop: a dropped .xlsx enters the SAME staged-base64 path as the picker
+  // (then preview → resolve → commit as usual). Single-file flow — extras ignored.
+  async function onDropXlsx(files: File[]): Promise<void> {
+    resetImport();
+    try {
+      const file = files[0];
+      setFileName(file.name);
+      setFileBase64(bytesToBase64(new Uint8Array(await file.arrayBuffer())));
     } catch {
       setError(STR.errGeneric);
     }
@@ -131,7 +154,9 @@ export default function TeacherAttendanceImportScreen(_props: Props): React.Reac
   return (
     <Screen scroll>
       <Notice message={STR.attUploadHint} tone="info" />
-      <Button title={STR.attPickXlsx} variant="secondary" onPress={pickFile} />
+      <UploadDropZone onFiles={(files) => void onDropXlsx(files)} disabled={busy}>
+        <Button title={STR.attPickXlsx} variant="secondary" onPress={pickFile} />
+      </UploadDropZone>
       {fileName ? <Muted style={{ marginTop: space(2) }}>📄 {fileName}</Muted> : null}
       {fileBase64 && !preview ? (
         <View style={{ marginTop: space(2) }}>

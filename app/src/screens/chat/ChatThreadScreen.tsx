@@ -34,7 +34,8 @@ import { useToast } from "../../state/ToastContext";
 import { friendlyError } from "../../lib/errors";
 import { STR, bnNum } from "../../lib/labels";
 import { aggregateReactions, conversationTitle, REACTION_PALETTE } from "../../lib/chat";
-import { pickAndUploadChatFile, openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError, type UploadedChatFile } from "../../lib/files";
+import { pickAndUploadChatFile, uploadChatWebFile, openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError, type UploadedChatFile } from "../../lib/files";
+import { UploadDropZone } from "../../components/UploadDropZone";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { space } from "../../theme/tokens";
 
@@ -167,6 +168,23 @@ export default function ChatThreadScreen({ route, navigation }: Props): React.Re
     try {
       const file = await pickAndUploadChatFile(conversationId);
       if (file) setPending((prev) => [...prev, file]);
+    } catch (e) {
+      setError(e instanceof FileUploadError ? e.message : STR.chatActionFailed);
+    }
+  }
+
+  /** Web drop on the composer — same pending/error path as onAttach, from browser Files. */
+  async function onDropFiles(files: File[]): Promise<void> {
+    if (!FILE_VIEW_SUPPORTED) {
+      setError(STR.chatAttachWebOnly);
+      return;
+    }
+    setError(null);
+    try {
+      for (const f of files) {
+        const uploaded = await uploadChatWebFile(conversationId, f);
+        setPending((prev) => [...prev, uploaded]);
+      }
     } catch (e) {
       setError(e instanceof FileUploadError ? e.message : STR.chatActionFailed);
     }
@@ -308,6 +326,10 @@ export default function ChatThreadScreen({ route, navigation }: Props): React.Re
       {announcementLocked ? (
         <Notice message={STR.chatAnnouncementOnly} tone="info" />
       ) : (
+        // Whole composer is the drop target (web): dropping a file anywhere on it
+        // attaches, same as the 📎 button. Disabled mid-send and while editing
+        // (edits can't add attachments — the attach button hides too).
+        <UploadDropZone onFiles={(files) => void onDropFiles(files)} disabled={busy || !!editing}>
         <View style={{ padding: space(3), gap: space(2) }}>
           {editing ? (
             <ContextBanner label={STR.chatEditing} text={editing.body} onClear={() => { setEditing(null); setBody(""); }} />
@@ -348,6 +370,7 @@ export default function ChatThreadScreen({ route, navigation }: Props): React.Re
             />
           </View>
         </View>
+        </UploadDropZone>
       )}
     </Screen>
   );

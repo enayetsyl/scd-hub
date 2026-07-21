@@ -509,6 +509,84 @@ export async function pickAndUploadCommentFile(
   return body;
 }
 
+// ---------------------------------------------------------------------------
+// Drag-and-drop uploads (web): the UploadDropZone hands the screens browser
+// File objects directly — same multipart POSTs (and server-side validation +
+// Bangla error messages) as the pickers, minus DocumentPicker. Web only; on
+// native the zone never fires.
+// ---------------------------------------------------------------------------
+
+/** POST one browser File to a /files/* endpoint; parses the JSON body. */
+async function postWebFileForm<T>(path: string, file: File, extra?: Record<string, string>): Promise<T> {
+  const form = new FormData();
+  form.append("file", file);
+  for (const [k, v] of Object.entries(extra ?? {})) form.append(k, v);
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}${path}`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  return (await res.json()) as T;
+}
+
+export const uploadHomeworkWebFile = (file: File, kind: "question" | "answer"): Promise<UploadedFile> =>
+  postWebFileForm<UploadedFile>("/files/hw", file, { kind });
+
+export const uploadChatWebFile = (conversationId: string, file: File): Promise<UploadedChatFile> =>
+  postWebFileForm<UploadedChatFile>("/files/chat", file, { conversationId });
+
+export const uploadClassTestPaperWebFile = (file: File): Promise<UploadedFile> =>
+  postWebFileForm<UploadedFile>("/files/classtest", file);
+
+export const uploadClassNoteWebFile = (file: File): Promise<UploadedFile> =>
+  postWebFileForm<UploadedFile>("/files/classnote", file);
+
+export const uploadCommentWebFile = (commentId: string, file: File): Promise<UploadedChatFile> =>
+  postWebFileForm<UploadedChatFile>("/files/comment", file, { commentId });
+
+/** Multi-file web upload with the pickers' cap + per-file failure semantics:
+ *  at most `maxFiles` are taken, extras land in `failures` ("name: limit"),
+ *  and one bad file never sinks the rest. */
+async function uploadWebFilesCapped(
+  path: string,
+  files: File[],
+  maxFiles: number,
+  extra?: Record<string, string>,
+): Promise<MultiUploadResult> {
+  const take = files.slice(0, Math.max(0, maxFiles));
+  const skipped = files.slice(Math.max(0, maxFiles));
+  const uploaded: UploadedFile[] = [];
+  const failures: string[] = skipped.map((f) => `${f.name}: limit`);
+  for (const file of take) {
+    try {
+      uploaded.push(await postWebFileForm<UploadedFile>(path, file, extra));
+    } catch (e) {
+      failures.push(`${file.name}: ${e instanceof FileUploadError ? e.message : String(e)}`);
+    }
+  }
+  return { uploaded, failures };
+}
+
+export const uploadPrintWebFiles = (files: File[], maxFiles: number): Promise<MultiUploadResult> =>
+  uploadWebFilesCapped("/files/print", files, maxFiles);
+
+export const uploadAssignmentWebFiles = (files: File[], maxFiles: number): Promise<MultiUploadResult> =>
+  uploadWebFilesCapped("/files/assignment", files, maxFiles);
+
+export const uploadHomeworkQuestionWebFiles = (files: File[], maxFiles: number): Promise<MultiUploadResult> =>
+  uploadWebFilesCapped("/files/hw", files, maxFiles, { kind: "question" });
+
 /** Fetch a stored file (with auth) and open it in a new browser tab. Web only. */
 export async function openStoredFile(fileId: string): Promise<void> {
   if (Platform.OS !== "web") {

@@ -31,7 +31,13 @@ import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { required } from "../../lib/validate";
 import { useToast } from "../../state/ToastContext";
-import { pickAndUploadClassTestPaper, FileUploadError } from "../../lib/files";
+import {
+  pickAndUploadClassTestPaper,
+  uploadClassTestPaperWebFile,
+  FileUploadError,
+  type UploadedFile,
+} from "../../lib/files";
+import { UploadDropZone } from "../../components/UploadDropZone";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
 
@@ -120,11 +126,13 @@ export default function RequestClassTestScreen(): React.ReactElement {
   // BUG-013: the Drive round-trip takes seconds — without a busy state and a
   // success toast the upload read as "nothing happened".
   const [uploadBusy, setUploadBusy] = useState(false);
-  async function onUpload(): Promise<void> {
+  // One post-upload path for both entry points (pick button + web drop zone):
+  // same busy state, same success toast, same FileUploadError handling.
+  async function runUpload(upload: () => Promise<UploadedFile | null>): Promise<void> {
     if (uploadBusy) return;
     setUploadBusy(true);
     try {
-      const f = await pickAndUploadClassTestPaper();
+      const f = await upload();
       if (f) {
         setPaper({ fileId: f.fileId, name: f.originalName });
         toast.show(`${STR.ctPaperUploaded}: ${f.originalName}`, "ok");
@@ -135,6 +143,10 @@ export default function RequestClassTestScreen(): React.ReactElement {
       setUploadBusy(false);
     }
   }
+  const onUpload = (): Promise<void> => runUpload(pickAndUploadClassTestPaper);
+  // Single-paper flow: a multi-file drop takes the first file, extras are ignored.
+  const onDropPaper = (files: File[]): Promise<void> =>
+    runUpload(() => uploadClassTestPaperWebFile(files[0]));
 
   async function onSubmit(): Promise<void> {
     setFieldErrors({});
@@ -251,12 +263,14 @@ export default function RequestClassTestScreen(): React.ReactElement {
             </>
           ) : (
             <View style={{ marginTop: space(2) }}>
-              <Button
-                title={uploadBusy ? STR.saving : STR.ctUploadPaper}
-                variant="secondary"
-                onPress={onUpload}
-                loading={uploadBusy}
-              />
+              <UploadDropZone onFiles={(files) => void onDropPaper(files)} disabled={uploadBusy}>
+                <Button
+                  title={uploadBusy ? STR.saving : STR.ctUploadPaper}
+                  variant="secondary"
+                  onPress={onUpload}
+                  loading={uploadBusy}
+                />
+              </UploadDropZone>
               {/* Attaching the wrong paper was previously unrecoverable — the only way out
                   was to abandon the form. */}
               {paper ? (

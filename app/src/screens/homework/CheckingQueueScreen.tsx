@@ -23,13 +23,14 @@ import {
   type HwOpenRecordT,
 } from "../../graphql/operations";
 import { useConfirm } from "../../state/ConfirmContext";
-import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
+import { pickAndUploadHomeworkFile, uploadHomeworkWebFile, FileUploadError, type UploadedFile } from "../../lib/files";
 import { groupByDate } from "../../lib/groupByDate";
 import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
 import { SubjectFold } from "../../components/SubjectFold";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
 import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
+import { UploadDropZone } from "../../components/UploadDropZone";
 import { STR, hwSubjectLabel, hwResultLabel, lifecycleStateLabel, dateHeaderLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -187,14 +188,15 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
   }
 
   /** Optional checked-answer attach (GP-A, D-#70) — failure shows a Bangla notice
-   *  and never blocks checking (GP-J8). */
-  async function onAttachAnswer(recordId: string): Promise<void> {
+   *  and never blocks checking (GP-J8). Shared by the pick button (null = picker
+   *  cancelled) and the web drop zone. */
+  async function runAttachAnswer(recordId: string, upload: () => Promise<UploadedFile | null>): Promise<void> {
     if (fileBusyId) return;
     setError(null);
     setOk(null);
     setFileBusyId(recordId);
     try {
-      const uploaded = await pickAndUploadHomeworkFile("answer");
+      const uploaded = await upload();
       if (!uploaded) return;
       const res = await attachAnswer({ recordId, fileId: uploaded.fileId });
       if (res.error || !res.data?.attachHomeworkAnswerFile) {
@@ -208,6 +210,15 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
     } finally {
       setFileBusyId(null);
     }
+  }
+
+  function onAttachAnswer(recordId: string): Promise<void> {
+    return runAttachAnswer(recordId, () => pickAndUploadHomeworkFile("answer"));
+  }
+
+  /** Single-file flow — a multi-file drop attaches only the first file. */
+  function onDropAnswer(recordId: string, dropped: File[]): Promise<void> {
+    return runAttachAnswer(recordId, () => uploadHomeworkWebFile(dropped[0], "answer"));
   }
 
   // UX-7: pull-to-refresh.
@@ -310,13 +321,18 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
                         </View>
                       ) : null}
                       <View style={{ marginTop: 8 }}>
-                        <Button
-                          title={STR.hwAttachAnswer}
-                          variant="secondary"
-                          onPress={() => onAttachAnswer(r.id)}
-                          loading={fileBusyId === r.id}
+                        <UploadDropZone
+                          onFiles={(dropped) => void onDropAnswer(r.id, dropped)}
                           disabled={fileBusyId !== null}
-                        />
+                        >
+                          <Button
+                            title={STR.hwAttachAnswer}
+                            variant="secondary"
+                            onPress={() => onAttachAnswer(r.id)}
+                            loading={fileBusyId === r.id}
+                            disabled={fileBusyId !== null}
+                          />
+                        </UploadDropZone>
                       </View>
                     </>
                   ) : (

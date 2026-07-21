@@ -31,7 +31,15 @@ import { STR, commentTypeLabel, commentSentimentLabel, bnNum, isoDateLabel } fro
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { useToast } from "../../state/ToastContext";
-import { pickAndUploadCommentFile, openStoredFile, FileUploadError, FILE_VIEW_SUPPORTED } from "../../lib/files";
+import {
+  pickAndUploadCommentFile,
+  uploadCommentWebFile,
+  openStoredFile,
+  FileUploadError,
+  FILE_VIEW_SUPPORTED,
+  type UploadedChatFile,
+} from "../../lib/files";
+import { UploadDropZone } from "../../components/UploadDropZone";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
@@ -122,11 +130,13 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
     }
   }
 
-  async function onAttach(): Promise<void> {
+  /** Shared attach path (pick button AND web drop): needs a saved comment id first;
+      same busy flag, toasts and refetch either way. */
+  async function runAttach(upload: (id: string) => Promise<UploadedChatFile | null>): Promise<void> {
     if (!commentId) return toast.show(STR.cmAttachFirst, "danger");
     setAttachBusy(true);
     try {
-      const f = await pickAndUploadCommentFile(commentId);
+      const f = await upload(commentId);
       if (f) {
         toast.show(STR.cmSaved, "ok");
         refetchComment();
@@ -136,6 +146,15 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
     } finally {
       setAttachBusy(false);
     }
+  }
+
+  async function onAttach(): Promise<void> {
+    await runAttach((id) => pickAndUploadCommentFile(id));
+  }
+
+  /** Web drop on the attach button — one file per drop (extras ignored). */
+  function onDropAttach(files: File[]): void {
+    void runAttach((id) => uploadCommentWebFile(id, files[0]));
   }
 
   async function onRemoveAttachment(fileId: string): Promise<void> {
@@ -288,13 +307,17 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
           )}
           {!delivered ? (
             <View style={{ marginTop: space(2) }}>
-              <Button
-                title={attachBusy ? STR.cmUploading : STR.cmAttach}
-                variant="secondary"
-                onPress={onAttach}
-                loading={attachBusy}
-                disabled={busy || attachBusy || removeBusyId !== null}
-              />
+              {/* Drop zone mirrors the button's enablement (undelivered + not busy);
+                  a drop before first save hits the same cmAttachFirst toast. */}
+              <UploadDropZone onFiles={onDropAttach} disabled={busy || attachBusy || removeBusyId !== null}>
+                <Button
+                  title={attachBusy ? STR.cmUploading : STR.cmAttach}
+                  variant="secondary"
+                  onPress={onAttach}
+                  loading={attachBusy}
+                  disabled={busy || attachBusy || removeBusyId !== null}
+                />
+              </UploadDropZone>
               {!commentId ? <Muted style={{ marginTop: space(1) }}>{STR.cmAttachFirst}</Muted> : null}
             </View>
           ) : null}
