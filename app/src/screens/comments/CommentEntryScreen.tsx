@@ -26,6 +26,7 @@ import {
   type StudentCommentT,
   type CommentDeliveryOutcomeT,
 } from "../../graphql/comments";
+import { TEACHERS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Chip, ChipRow, Field, Badge, Notice, Loader } from "../../components/ui";
 import { STR, commentTypeLabel, commentSentimentLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -73,6 +74,14 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
     refetchStudent({ requestPolicy: "network-only" });
     refetchMine({ requestPolicy: "network-only" });
   }
+  // Owner ask 2026-07-21: the detail header names the commenting teacher.
+  const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
+  const authorName = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const t of teachersQ.data?.teachers ?? []) map[t.id] = t.name;
+    return (id: string): string | null => map[id] ?? null;
+  }, [teachersQ.data]);
+
   const [commentId, setCommentId] = useState<string | null>(initialCommentId ?? null);
   const existing: StudentCommentT | null = useMemo(() => {
     if (!commentId) return null;
@@ -219,6 +228,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
           {existing ? (
             <Muted style={{ marginTop: 2 }}>
               {STR.cmMadeOn}: {isoDateLabel(existing.createdAt)}
+              {authorName(existing.authorUserId) ? ` · ${STR.cmAuthor}: ${authorName(existing.authorUserId)}` : ""}
             </Muted>
           ) : null}
         </Card>
