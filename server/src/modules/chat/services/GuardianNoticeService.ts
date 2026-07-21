@@ -57,7 +57,7 @@ export function buildGuardianNoticeLink(args: {
     `আসসালামু আলাইকুম। ${args.studentName} এর অভিভাবক,\n` +
     `SCD থেকে একটি জরুরি বার্তা:\n` +
     `${args.title}\n${args.body}\n` +
-    `জাযাকাল্লাহু খাইরান।`;
+    `মাআসসালামাহ।`;
   return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 }
 

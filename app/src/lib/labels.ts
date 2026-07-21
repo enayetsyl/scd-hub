@@ -2656,6 +2656,8 @@ const STR_BN = {
   ctRegisteredOfficial: "পরীক্ষা নিবন্ধিত হয়েছে (প্রিন্ট ছাড়া)",
   ctDrilldownTitle: "পরীক্ষাভিত্তিক তালিকা",
   ctSubmittedBadge: "জমা",
+  ctFilterSubmitted: "জমা হয়েছে",
+  ctTeacherComments: "শিক্ষকের মন্তব্য",
   // D-#340: Today pending-results alert + Reports-hub class-test report
   tdCtResultPending: "ফলাফল এন্ট্রি বাকি",
   ctReportTitle: "ক্লাস টেস্ট রিপোর্ট",
@@ -5200,6 +5202,8 @@ const STR_EN: StrTable = {
   ctRegisteredOfficial: "Test registered (no print)",
   ctDrilldownTitle: "Per-test list",
   ctSubmittedBadge: "Submitted",
+  ctFilterSubmitted: "Submitted",
+  ctTeacherComments: "Teacher's comments",
   // D-#340: Today pending-results alert + Reports-hub class-test report
   tdCtResultPending: "Results entry pending",
   ctReportTitle: "Class-test report",

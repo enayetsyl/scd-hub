@@ -11,6 +11,7 @@ import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
+import { roleHasPermission } from "@scd/shared";
 import { STUDENTS_QUERY } from "../../graphql/operations";
 import {
   CLASS_TEST_QUERY,
@@ -20,6 +21,7 @@ import {
 import { Screen, Card, Body, Muted, Button, Badge, Chip, Field, Loader, Notice } from "../../components/ui";
 import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
@@ -31,6 +33,10 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   const { testId, title } = route.params;
   const nav = useNavigation<Nav>();
   const toast = useToast();
+  // Admin viewer (Principal/Office — the house roster:manage check): sees the
+  // teacher's comment texts read-only per student (owner ask 2026-07-21).
+  const { role } = useAuth();
+  const isAdmin = !!role && roleHasPermission(role, "roster:manage");
 
   const [testQ] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
   const test = testQ.data?.classTest ?? null;
@@ -161,6 +167,23 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                     )
                   ) : null}
                 </View>
+
+                {isAdmin && !isOpen && existing && (existing.weakness || existing.teacherAction || existing.guardianAction) ? (
+                  // Admin read-only view of the teacher's comments (owner ask 2026-07-21).
+                  // Teacher entry behavior below is unchanged — this block is display-only.
+                  <View style={{ marginTop: space(2) }}>
+                    <Muted style={{ fontWeight: "700" }}>{STR.ctTeacherComments}</Muted>
+                    {existing.weakness ? (
+                      <Muted>{`${STR.ctWeakness}: ${existing.weakness}`}</Muted>
+                    ) : null}
+                    {existing.teacherAction ? (
+                      <Muted>{`${STR.ctTeacherAction}: ${existing.teacherAction}`}</Muted>
+                    ) : null}
+                    {existing.guardianAction ? (
+                      <Muted>{`${STR.ctGuardianAction}: ${existing.guardianAction}`}</Muted>
+                    ) : null}
+                  </View>
+                ) : null}
 
                 {existing?.publishedAt ? (
                   // Published results are locked (owner ruling) — unpublish first (via the

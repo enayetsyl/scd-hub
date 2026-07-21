@@ -86,7 +86,9 @@ const GuardianTrajectoryRef = builder.objectRef<GuardianTrajectory>("GuardianTra
     linesBn: t.exposeStringList("linesBn"),
     linesEn: t.exposeStringList("linesEn"),
     presentPct: t.exposeInt("presentPct"),
-    avgPercent: t.int({ nullable: true, resolve: (g) => g.avgPercent }),
+    // avgPercent carries one decimal (e.g. 56.7) — Int here crashed the guardian
+    // Today query with "Int cannot represent non-integer value".
+    avgPercent: t.float({ nullable: true, resolve: (g) => g.avgPercent }),
   }),
 });
 

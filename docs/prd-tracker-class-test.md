@@ -93,11 +93,11 @@ Three Bangla templates ship inline (Islamic salutation + du'a preserved; a weak 
   > আসসালামু আলাইকুম। {StudentName}-এর {Subject} ক্লাস টেস্ট ({TestNumber}) ফলাফল — প্রাপ্ত নম্বর: {Marks}/{TotalMarks}।
   > লক্ষণীয় দিক: {Weakness}
   > অভিভাবকের করণীয়: {GuardianAction}
-  > আল্লাহ তাকে উত্তরোত্তর উন্নতি দান করুন, আমীন। কোনো জিজ্ঞাসা থাকলে জানাবেন। জাযাকাল্লাহু খাইরান।
+  > আল্লাহ তাকে উত্তরোত্তর উন্নতি দান করুন, আমীন। কোনো জিজ্ঞাসা থাকলে জানাবেন। মাআসসালামাহ।
 - **Excellent (no weakness):**
-  > আসসালামু আলাইকুম। আলহামদুলিল্লাহ! {StudentName} {Subject} ক্লাস টেস্ট ({TestNumber})-এ চমৎকার করেছে — {Marks}/{TotalMarks}। আল্লাহুম্মা বারিক। এই ধারাবাহিকতা ধরে রাখতে তাকে উৎসাহ দিন। জাযাকাল্লাহু খাইরান।
+  > আসসালামু আলাইকুম। আলহামদুলিল্লাহ! {StudentName} {Subject} ক্লাস টেস্ট ({TestNumber})-এ চমৎকার করেছে — {Marks}/{TotalMarks}। আল্লাহুম্মা বারিক। এই ধারাবাহিকতা ধরে রাখতে তাকে উৎসাহ দিন। মাআসসালামাহ।
 - **Absent:**
-  > আসসালামু আলাইকুম। {StudentName} {TestDate}-এর {Subject} ক্লাস টেস্টে ({TestNumber}) অনুপস্থিত ছিল। নিয়মিত উপস্থিতি তার জন্য জরুরি — অনুগ্রহ করে উপস্থিতি নিশ্চিত করুন। জাযাকাল্লাহু খাইরান।
+  > আসসালামু আলাইকুম। {StudentName} {TestDate}-এর {Subject} ক্লাস টেস্টে ({TestNumber}) অনুপস্থিত ছিল। নিয়মিত উপস্থিতি তার জন্য জরুরি — অনুগ্রহ করে উপস্থিতি নিশ্চিত করুন। মাআসসালামাহ।
 
 Delivery: wa.me for **all** guardians (ADR-003); login-enabled additionally get a `Notification` via emit() (D-#72). `NOTIFICATION_KINDS += CLASS_TEST_RESULT` extends verifier §C.5; if `vocab.ts` is frozen by an in-flight branch at CT-3 build, ship the **kind-gated no-op + wa.me path** and activate the kind when vocab unfreezes (the D-#94 `ASSIGNMENT_CHASE` / `VOCAB_RESULT` precedent). These templates **migrate verbatim** onto the planned Message Templates registry when it exists — no rework (wording is identical either way).
 

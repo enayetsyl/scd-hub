@@ -29,7 +29,11 @@ import { ClassTest, type IClassTest } from "../models/ClassTest";
 import { ClassTestResult, type IClassTestResult } from "../models/ClassTestResult";
 import { Student } from "../../foundation/models/Student";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
-import { emitClassTestGuardianResult } from "../../notifications/services/emitters";
+import {
+  emitClassTestGuardianResult,
+  emitCtResultSubmitted,
+  emitCtResultPublished,
+} from "../../notifications/services/emitters";
 import { writeAudit } from "../../platform/services/AuditService";
 import { ClassTestResultError } from "./ClassTestResultService";
 
@@ -263,6 +267,20 @@ export async function publishExam(testId: string, actorId: string): Promise<Publ
     },
   });
 
+  // CT-8 notify: the exam's requesting teacher learns the release went out.
+  // Deduped on the max stamped version, so a republish (bumped version) re-notifies.
+  if (test.requestedBy && recipients.length > 0) {
+    const subjectBn = (HW_SUBJECT_LABELS_BN as Record<string, string>)[test.subject] ?? test.subject;
+    await emitCtResultPublished({
+      testId,
+      ctId: test.ctId,
+      teacherUserId: test.requestedBy.toString(),
+      publishedVersion: recipients.reduce((m, r) => Math.max(m, r.publishedVersion), 0),
+      titleBn: "ক্লাস টেস্টের ফলাফল প্রকাশিত হয়েছে",
+      bodyBn: `আপনার ${subjectBn} ক্লাস টেস্টের (${test.ctId}) ফলাফল প্রকাশিত হয়েছে।`,
+    });
+  }
+
   return { testId, recipients, unreachableCount };
 }
 
@@ -334,15 +352,16 @@ export interface SubmitOutcome {
 /** Teacher: propose the exam's DRAFT results for release. Sets submittedAt (guardian
  *  does NOT see yet) and clears any prior send-back. PRINTED-only; needs entered rows. */
 export async function submitExam(testId: string, actorId: string): Promise<SubmitOutcome> {
-  await loadPrintedTest(testId);
+  const test = await loadPrintedTest(testId);
   const oid = new Types.ObjectId(testId);
   if ((await ClassTestResult.countDocuments({ testId: oid })) === 0) {
     throw new ClassTestResultError("No results entered for this exam — nothing to submit");
   }
+  const submittedAt = new Date();
   const res = await ClassTestResult.updateMany(
     { testId: oid, publishedAt: null },
     {
-      $set: { submittedAt: new Date(), submittedBy: new Types.ObjectId(actorId) },
+      $set: { submittedAt, submittedBy: new Types.ObjectId(actorId) },
       $unset: { sendBackReason: "", sendBackAt: "", sendBackBy: "" },
     },
   );
@@ -354,6 +373,18 @@ export async function submitExam(testId: string, actorId: string): Promise<Submi
     targetKind: "ClassTest",
     meta: { testId, count },
   });
+
+  // CT-8 notify: every approver (active Principal/Office) learns results await
+  // their review. Deduped on this submit's stamp, so a re-submit re-notifies.
+  const subjectBn = (HW_SUBJECT_LABELS_BN as Record<string, string>)[test.subject] ?? test.subject;
+  await emitCtResultSubmitted({
+    testId,
+    ctId: test.ctId,
+    submittedAtMs: submittedAt.getTime(),
+    titleBn: "ক্লাস টেস্টের ফলাফল জমা হয়েছে",
+    bodyBn: `${subjectBn} ক্লাস টেস্ট (${test.ctId}) ফলাফল জমা হয়েছে — অনুমোদন করুন।`,
+  });
+
   return { testId, count };
 }
 
