@@ -296,6 +296,8 @@ export interface ClassTestReportStatusRowT {
   /** D-#339: report author's name + newest result submittedAt (null until proposed). */
   teacherName: string;
   submittedAt: string | null;
+  /** Newest result publishedAt — null until ≥1 result of the exam is published. */
+  publishedAt: string | null;
   examDate: string;
   deadline: string;
   deadlineDays: number;
@@ -328,7 +330,7 @@ export const CLASS_TEST_REPORTS_STATUS_QUERY = gql<
 >`
   query ClassTestReportsStatus(${SUMMARY_ARG_DEFS}) {
     classTestReportsStatus(${SUMMARY_ARG_USE}) {
-      testId ctId subject testNumber classLevel sectionId teacherId teacherName submittedAt examDate deadline deadlineDays
+      testId ctId subject testNumber classLevel sectionId teacherId teacherName submittedAt publishedAt examDate deadline deadlineDays
       rosterCount enteredCount presentCount absentCount pendingCount complete overdue schoolDaysLate state
     }
   }

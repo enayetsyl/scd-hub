@@ -94,6 +94,8 @@ export interface ReportStatusRow extends ExamReportStatus {
   teacherName: string;
   /** D-#339: newest result-row submittedAt (CT-8 propose-for-release) — null until proposed. */
   submittedAt: string | null;
+  /** Newest result-row publishedAt (CT-3 publish/approve) — null until ≥1 result is published. */
+  publishedAt: string | null;
   state: ReportState;
 }
 
@@ -108,12 +110,18 @@ export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatus
     { $group: { _id: "$testId", latest: { $max: "$submittedAt" } } },
   ])) as Array<{ _id: Types.ObjectId; latest: Date }>;
   const submittedByTest = new Map(submitted.map((s) => [s._id.toString(), s.latest]));
+  const published = (await ClassTestResult.aggregate([
+    { $match: { testId: { $in: exams.map((e) => e._id) }, publishedAt: { $ne: null } } },
+    { $group: { _id: "$testId", latest: { $max: "$publishedAt" } } },
+  ])) as Array<{ _id: Types.ObjectId; latest: Date }>;
+  const publishedByTest = new Map(published.map((p) => [p._id.toString(), p.latest]));
 
   const rows: ReportStatusRow[] = [];
   for (const exam of exams) {
     const status = await examReportStatus(exam._id.toString(), now);
     const teacherId = exam.requestedBy.toString();
     const sub = submittedByTest.get(exam._id.toString());
+    const pub = publishedByTest.get(exam._id.toString());
     rows.push({
       ...status,
       subject: exam.subject,
@@ -123,6 +131,7 @@ export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatus
       teacherId,
       teacherName: teacherNames.get(teacherId) ?? "শিক্ষক",
       submittedAt: sub ? new Date(sub).toISOString() : null,
+      publishedAt: pub ? new Date(pub).toISOString() : null,
       state: reportStateOf(status),
     });
   }

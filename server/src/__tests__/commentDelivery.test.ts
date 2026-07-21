@@ -185,7 +185,7 @@ describe("deliverComment", () => {
     const out = await deliverComment(doc._id.toString(), TEACHER_ID);
     const typeBn = COMMENT_TYPE_LABELS_BN.BEHAVIOUR;
     expect(out.messageBn).toBe(
-      `আসসালামু আলাইকুম। আলী সম্পর্কে শিক্ষকের একটি পর্যবেক্ষণ (${typeBn}): ক্লাসে মনোযোগ কম ছিল। — জাযাকাল্লাহু খাইরান।`,
+      `আসসালামু আলাইকুম। আলী সম্পর্কে শিক্ষকের একটি পর্যবেক্ষণ (${typeBn}): ক্লাসে মনোযোগ কম ছিল। — মাআসসালামাহ।`,
     );
   });
 

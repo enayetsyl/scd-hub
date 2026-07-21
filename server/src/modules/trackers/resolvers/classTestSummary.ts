@@ -127,6 +127,7 @@ ReportStatusRowRef.implement({
     // D-#339: drill-down row enrichment.
     teacherName: t.exposeString("teacherName"),
     submittedAt: t.string({ nullable: true, resolve: (r) => r.submittedAt }),
+    publishedAt: t.string({ nullable: true, resolve: (r) => r.publishedAt }),
     examDate: t.exposeString("examDate"),
     deadline: t.exposeString("deadline"),
     deadlineDays: t.exposeInt("deadlineDays"),
