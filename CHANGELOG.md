@@ -767,3 +767,4 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-07-21 | UX | Guardian-message closing phrase জাযাকাল্লাহু খাইরান → মাআসসালামাহ across all 14 template code-defaults, guardian notices and matching PRD quotes (owner ask). DB-stored template overrides, if any, keep the old phrase until re-saved. | maassalamah-phrase
 - 2026-07-21 | UX | Admin-Today badges are tappable: every badge deep-links to its card's screen, and the observation "awaiting publish" badge opens All Observations pre-filtered to reviewed+unpublished (AllObservations gains optional state/published seed params). | today-badge-links
 - 2026-07-21 | UX | Comment detail header names the commenting teacher (লিখেছেন: …) next to the comment date — resolved via the teachers list. | comment-author-name
+- 2026-07-21 | Docs | English Drive PRD (docs/prd-english-drive.md, D-#344): md import + teacher library + PDF/print build contract, slices ED-1/ED-2. | english-drive-prd
