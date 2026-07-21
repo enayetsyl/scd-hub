@@ -53,6 +53,9 @@ export default function PendingReportScreen({ route }: Props): React.ReactElemen
 
   const rows: Row[] = React.useMemo(() => {
     if (!report) return [];
+    // Assignment week keys arrive as full ISO instants — show the DATE only
+    // (owner ask 2026-07-21). Safe on bare YYYY-MM-DD keys too.
+    const dayOf = (k: string): string => bnNum(k.slice(0, 10));
     switch (kind) {
       case "HwDeclarePending":
         return report.hwNotDeclared.map((m) => ({
@@ -80,19 +83,19 @@ export default function PendingReportScreen({ route }: Props): React.ReactElemen
         return report.asNotDeclared.map((m) => ({
           key: `${m.sectionId}|${m.subject}|${m.weekNumber}`,
           groupKey: m.weekStartKey,
-          groupLabel: `${STR.rrWeek} ${bnNum(m.weekNumber)} · ${bnNum(m.weekStartKey)}`,
+          groupLabel: `${STR.rrWeek} ${bnNum(m.weekNumber)} · ${dayOf(m.weekStartKey)}`,
           classLevel: m.classLevel,
           sectionNameBn: m.sectionNameBn,
           subject: m.subject,
           teacherName: m.teacherName,
-          detail: m.deliveryDateKey ? bnNum(m.deliveryDateKey) : undefined,
+          detail: m.deliveryDateKey ? dayOf(m.deliveryDateKey) : undefined,
           badge: STR.rrNotDeclared,
         }));
       case "AsDeliverPending":
         return report.asMisses.map((m) => ({
           key: `${m.sectionId}|${m.weekNumber}`,
           groupKey: m.deliveryDateKey,
-          groupLabel: `${STR.rrWeek} ${bnNum(m.weekNumber)} · ${bnNum(m.deliveryDateKey)}`,
+          groupLabel: `${STR.rrWeek} ${bnNum(m.weekNumber)} · ${dayOf(m.deliveryDateKey)}`,
           classLevel: m.classLevel,
           sectionNameBn: m.sectionNameBn,
           teacherName: m.confirmerName,
