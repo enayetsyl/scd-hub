@@ -42,8 +42,12 @@ jest.mock("../modules/foundation/models/Class", () => ({
   Class: { findById: (id: unknown) => ({ select: () => ({ lean: async () => mockClassFindById(id) }) }) },
 }));
 const mockUserFind = jest.fn();
+const mockUserFindById = jest.fn();
 jest.mock("../modules/foundation/models/User", () => ({
-  User: { find: (q: unknown) => ({ select: () => ({ lean: async () => mockUserFind(q) }) }) },
+  User: {
+    find: (q: unknown) => ({ select: () => ({ lean: async () => mockUserFind(q) }) }),
+    findById: (id: unknown) => ({ select: () => ({ lean: async () => mockUserFindById(id) }) }),
+  },
 }));
 const mockStoredFileFindById = jest.fn();
 jest.mock("../modules/platform/models/StoredFile", () => ({
@@ -58,6 +62,13 @@ const mockCreateRequest = jest.fn();
 jest.mock("../modules/trackers/services/ClassTestService", () => ({
   suggestTestNumber: (...a: unknown[]) => mockSuggestTestNumber(...a),
   createRequest: (i: unknown) => mockCreateRequest(i),
+}));
+// D-#342: stage notifications — teacher on send-for-review, office otherwise.
+const mockEmitTeacher = jest.fn();
+const mockEmitOffice = jest.fn();
+jest.mock("../modules/notifications/services/emitters", () => ({
+  emitCtQuestionTeacher: (id: unknown, e: unknown) => mockEmitTeacher(id, e),
+  emitCtQuestionOffice: (e: unknown) => mockEmitOffice(e),
 }));
 
 import {
@@ -121,6 +132,7 @@ beforeEach(() => {
   mockCreate.mockImplementation(async (d: Record<string, unknown>) => madeDoc(d));
   mockStoredFileFindById.mockReturnValue({ kind: "classtest_question" });
   mockUserFind.mockReturnValue([{ _id: TEACHER, name: "Nuha" }]);
+  mockUserFindById.mockReturnValue({ name: "Nuha" });
 });
 
 describe("createCtQuestionRequest — mandatory fields + derivation", () => {
@@ -131,12 +143,13 @@ describe("createCtQuestionRequest — mandatory fields + derivation", () => {
     await expect(createCtQuestionRequest({ ...validCreate(), examDate: "nope" })).rejects.toThrow(/তারিখ/);
   });
 
-  test("derives level/year from the section, auto test number, REQUESTED + audit", async () => {
+  test("derives level/year from the section, auto test number, REQUESTED + audit + office notify", async () => {
     const out = await createCtQuestionRequest(validCreate());
     expect(mockSuggestTestNumber).toHaveBeenCalledWith(YEAR.toString(), 3, "MATH");
     expect(out.status).toBe("REQUESTED");
     expect(out.testNumber).toBe(4);
     expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "CT_QUESTION_REQUESTED" }));
+    expect(mockEmitOffice).toHaveBeenCalledWith(expect.objectContaining({ dedupeSuffix: "new" }));
   });
 });
 
@@ -157,6 +170,11 @@ describe("sendCtQuestionForReview — office rounds", () => {
     expect(out.rounds).toHaveLength(2);
     expect(out.currentFileId).toBe(FILE.toString());
     expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "CT_QUESTION_SENT_FOR_REVIEW" }));
+    // The requesting teacher is told a round awaits them — round-unique dedupe.
+    expect(mockEmitTeacher).toHaveBeenCalledWith(
+      TEACHER.toString(),
+      expect.objectContaining({ dedupeSuffix: "review:r2" }),
+    );
   });
 
   test("a CONFIRMED request refuses new rounds (locked)", async () => {
@@ -190,6 +208,9 @@ describe("reviewCtQuestion — teacher verdict", () => {
     const out = await reviewCtQuestion({ id: "x", approve: false, comment: "২ নম্বর প্রশ্ন বদলান", actorId: TEACHER.toString() });
     expect(out.status).toBe("CHANGES_REQUESTED");
     expect(out.rounds[0].teacherComment).toBe("২ নম্বর প্রশ্ন বদলান");
+    expect(mockEmitOffice).toHaveBeenCalledWith(
+      expect.objectContaining({ bodyBn: expect.stringContaining("২ নম্বর প্রশ্ন বদলান") }),
+    );
   });
 
   test("approve locks: CONFIRMED + confirmedAt", async () => {

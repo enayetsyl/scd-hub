@@ -14,7 +14,11 @@
  * audited. Bangla errors surface in the app as-is.
  */
 import { Types } from "mongoose";
-import { HW_SUBJECTS, type HwSubject } from "@scd/shared";
+import { HW_SUBJECTS, HW_SUBJECT_LABELS_BN, type HwSubject } from "@scd/shared";
+import {
+  emitCtQuestionTeacher,
+  emitCtQuestionOffice,
+} from "../../notifications/services/emitters";
 import {
   ClassTestQuestionRequest,
   type IClassTestQuestionRequest,
@@ -155,6 +159,17 @@ export async function createCtQuestionRequest(input: CreateCtQuestionInput): Pro
     meta: { subject: input.subject, chapter: doc.chapter, testNumber, sectionId: input.sectionId },
   });
 
+  // D-#342 notify: the office queue has new work.
+  const requester = (await User.findById(input.actorId).select("name").lean()) as {
+    name?: string;
+  } | null;
+  await emitCtQuestionOffice({
+    requestId: doc._id.toString(),
+    titleBn: "নতুন প্রশ্নের অনুরোধ",
+    bodyBn: `${HW_SUBJECT_LABELS_BN[input.subject as HwSubject] ?? input.subject} · শ্রেণি ${klass.level} · অধ্যায় ${doc.chapter}${requester?.name ? ` — ${requester.name}` : ""}`,
+    dedupeSuffix: "new",
+  });
+
   return shape(doc);
 }
 
@@ -197,6 +212,14 @@ export async function sendCtQuestionForReview(input: SendCtQuestionInput): Promi
     targetId: doc._id,
     targetKind: "ClassTestQuestionRequest",
     meta: { round: doc.rounds.length, fileId: input.fileId },
+  });
+
+  // D-#342 notify: the requesting teacher has a paper to review.
+  await emitCtQuestionTeacher(doc.requestedBy.toString(), {
+    requestId: doc._id.toString(),
+    titleBn: "প্রশ্নপত্র রিভিউর জন্য প্রস্তুত",
+    bodyBn: `${HW_SUBJECT_LABELS_BN[doc.subject as HwSubject] ?? doc.subject} · শ্রেণি ${doc.classLevel} · টেস্ট ${doc.testNumber} — প্রশ্নটি দেখে মতামত দিন`,
+    dedupeSuffix: `review:r${doc.rounds.length}`,
   });
 
   return shape(doc);
@@ -244,6 +267,18 @@ export async function reviewCtQuestion(input: ReviewCtQuestionInput): Promise<Ct
     targetId: doc._id,
     targetKind: "ClassTestQuestionRequest",
     meta: { approve: input.approve, comment: input.approve ? undefined : (input.comment ?? "").trim() },
+  });
+
+  // D-#342 notify: the office learns the verdict — a change request is new work;
+  // a confirm means the paper is locked and the print request will follow.
+  const subjectBn = HW_SUBJECT_LABELS_BN[doc.subject as HwSubject] ?? doc.subject;
+  await emitCtQuestionOffice({
+    requestId: doc._id.toString(),
+    titleBn: input.approve ? "প্রশ্ন চূড়ান্ত হয়েছে" : "প্রশ্নে পরিবর্তন চেয়েছেন শিক্ষক",
+    bodyBn: input.approve
+      ? `${subjectBn} · শ্রেণি ${doc.classLevel} · টেস্ট ${doc.testNumber} — শিক্ষক নিশ্চিত করেছেন`
+      : `${subjectBn} · শ্রেণি ${doc.classLevel} · টেস্ট ${doc.testNumber} — ${(input.comment ?? "").trim()}`,
+    dedupeSuffix: input.approve ? "confirmed" : `changes:r${doc.rounds.length}`,
   });
 
   return shape(doc);
