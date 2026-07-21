@@ -259,7 +259,7 @@ export type ObservationStackParamList = {
   ObservationHome: undefined;
   UploadObservation: undefined;
   MyObservations: undefined;
-  AllObservations: undefined;
+  AllObservations: { state?: string; published?: boolean } | undefined;
   ObservationReviewQueue: undefined;
   ReviewObservation: { observationId: string; form: string; title: string };
   ObservationDetail: { observationId: string; title?: string };

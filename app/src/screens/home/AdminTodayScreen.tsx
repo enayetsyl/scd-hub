@@ -76,6 +76,17 @@ const BADGE_LABELS: Record<string, LabelKey> = {
 
 const badgeLabel = (key: string): string => (BADGE_LABELS[key] ? STR[BADGE_LABELS[key]] : key);
 
+/** Badges that deep-link somewhere MORE specific than their card's target
+ *  (owner ask 2026-07-21: tapping "awaiting publish" opens the filtered list).
+ *  Badges without an entry fall back to the card target, like the rows. */
+const BADGE_TARGETS: Record<string, CardMeta["target"] & { params?: object }> = {
+  obsAwaitingPublish: {
+    tab: "ObservationTab",
+    screen: "AllObservations",
+    params: { state: "REVIEWED", published: false },
+  },
+};
+
 export default function AdminTodayScreen(): React.ReactElement {
   const nav = useNavigation<NavigationProp<TabParamList>>();
   const date = dateKey();
@@ -89,11 +100,13 @@ export default function AdminTodayScreen(): React.ReactElement {
   // The registry's tab is a union, so the per-tab tuple overloads can't narrow —
   // route the call through a plain signature (params shape is the nested-navigate
   // standard: { screen, initial }).
-  const goTo = (meta: CardMeta): void =>
-    (nav.navigate as unknown as (tab: string, params: object) => void)(meta.target.tab, {
-      screen: meta.target.screen,
+  const goTarget = (target: CardMeta["target"] & { params?: object }): void =>
+    (nav.navigate as unknown as (tab: string, params: object) => void)(target.tab, {
+      screen: target.screen,
       initial: false,
+      ...(target.params ? { params: target.params } : {}),
     });
+  const goTo = (meta: CardMeta): void => goTarget(meta.target);
 
   const renderCard = (card: AdminTodayCardT): React.ReactElement | null => {
     const meta = REGISTRY[card.key];
@@ -108,7 +121,13 @@ export default function AdminTodayScreen(): React.ReactElement {
         </View>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1), marginTop: space(1) }}>
           {card.badges.map((b) => (
-            <Badge key={b.key} text={`${badgeLabel(b.key)}: ${bnNum(b.value)}`} tone={toneOf(b.tone)} />
+            <Pressable
+              key={b.key}
+              accessibilityRole="button"
+              onPress={() => goTarget(BADGE_TARGETS[b.key] ?? meta.target)}
+            >
+              <Badge text={`${badgeLabel(b.key)}: ${bnNum(b.value)}`} tone={toneOf(b.tone)} />
+            </Pressable>
           ))}
         </View>
         {isOpen ? (
