@@ -90,10 +90,12 @@ import "./modules/saturday-revision/resolvers/revision";
 import "./modules/saturday-revision/resolvers/revisionDelivery";
 import "./modules/saturday-revision/resolvers/revisionSummary";
 import "./modules/saturday-revision/resolvers/revisionGuardian";
+import "./modules/english-drive/resolvers/englishDrive";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";
 import { setPdfRouter } from "./modules/assessment/routes/setPdf";
+import { englishDrivePdfRouter } from "./modules/english-drive/routes/englishDrivePdf";
 import { filesRouter } from "./routes/files";
 import { triggersRouter } from "./routes/triggers";
 import { eventsRouter } from "./routes/events";
@@ -245,6 +247,7 @@ app.use("/events", corsForRest);
 // Thin HTTP surface — PDF export (ADR-003, ADR-009)
 app.use("/pdf", pdfRouter);
 app.use("/pdf/set", setPdfRouter);
+app.use("/pdf/english-drive", englishDrivePdfRouter);
 
 // Thin HTTP surface — homework files (GP-A, D-#70): server-in-the-middle
 // upload/download; Drive is never exposed to a client.

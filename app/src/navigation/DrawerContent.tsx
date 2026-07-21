@@ -61,6 +61,8 @@ const STAFF_NAV: NavSection[] = [
       { route: "ReviewTab", labelKey: "tabReview", icon: "📝" },
       { route: "RoutineTab", labelKey: "tabRoutine", icon: "📅" },
       { route: "VocabTab", labelKey: "tabVocab", icon: "🔤" },
+      // English Drive (D-#344) — entry point per owner decision #9.
+      { route: "EnglishDriveTab", labelKey: "tabEnglishDrive", icon: "🅰️" },
     ],
   },
   {

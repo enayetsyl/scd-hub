@@ -34,6 +34,7 @@ import type {
   CommentsStackParamList,
   ObservationStackParamList,
   FreeMixingStackParamList,
+  EnglishDriveStackParamList,
   RevisionStackParamList,
   FinanceStackParamList,
   HrStackParamList,
@@ -50,6 +51,7 @@ import { useNavigation, DrawerActions } from "@react-navigation/native";
 import { useQuery } from "urql";
 import { useAuth } from "../auth/AuthContext";
 import { MY_VIDEO_REVIEWS } from "../graphql/videoReview";
+import { ENGLISH_DRIVE_MY_CLASS_LEVELS } from "../graphql/englishDrive";
 import { useLanguage } from "../state/LanguageContext";
 import { useSidebar, DRAWER_PERMANENT_MIN_WIDTH } from "../state/SidebarContext";
 import { useNotifications } from "../state/NotificationContext";
@@ -158,6 +160,9 @@ import MyObservationsScreen from "../screens/observation/MyObservationsScreen";
 import AllObservationsScreen from "../screens/observation/AllObservationsScreen";
 import UploadObservationScreen from "../screens/observation/UploadObservationScreen";
 import FreeMixingHomeScreen from "../screens/freemixing/FreeMixingHomeScreen";
+import EnglishDriveHomeScreen from "../screens/englishdrive/EnglishDriveHomeScreen";
+import EnglishDriveDocScreen from "../screens/englishdrive/EnglishDriveDocScreen";
+import EnglishDriveUploadScreen from "../screens/englishdrive/EnglishDriveUploadScreen";
 import ObservationReviewQueueScreen from "../screens/observation/ObservationReviewQueueScreen";
 import ReviewObservationScreen from "../screens/observation/ReviewObservationScreen";
 import ObservationDetailScreen from "../screens/observation/ObservationDetailScreen";
@@ -823,6 +828,30 @@ function FreeMixingNavigator(): React.ReactElement {
   );
 }
 
+const EnglishDriveStack = createNativeStackNavigator<EnglishDriveStackParamList>();
+function EnglishDriveNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <EnglishDriveStack.Navigator screenOptions={stackOptions}>
+      <EnglishDriveStack.Screen
+        name="EnglishDriveHome"
+        component={EnglishDriveHomeScreen}
+        options={{ title: STR.edTitle }}
+      />
+      <EnglishDriveStack.Screen
+        name="EnglishDriveDoc"
+        component={EnglishDriveDocScreen}
+        options={({ route }) => ({ title: route.params.title || STR.edTitle })}
+      />
+      <EnglishDriveStack.Screen
+        name="EnglishDriveUpload"
+        component={EnglishDriveUploadScreen}
+        options={{ title: STR.edUploadTitle }}
+      />
+    </EnglishDriveStack.Navigator>
+  );
+}
+
 const RevisionStack = createNativeStackNavigator<RevisionStackParamList>();
 function RevisionNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -1040,6 +1069,12 @@ export function AppTabs(): React.ReactElement {
     query: MY_VIDEO_REVIEWS,
     pause: role !== "TEACHER",
   });
+  // English Drive tab (D-#344): P/O always; a TEACHER only when the server says
+  // they have an English involvement in at least one class (PRD §5).
+  const [engDriveQ] = useQuery({
+    query: ENGLISH_DRIVE_MY_CLASS_LEVELS,
+    pause: role !== "TEACHER",
+  });
   // Permanent left sidebar on laptop/desktop web; slide-over (☰) on phone/narrow.
   const { width } = useWindowDimensions();
   const wide = width >= DRAWER_PERMANENT_MIN_WIDTH;
@@ -1094,6 +1129,11 @@ export function AppTabs(): React.ReactElement {
   const canFreeMixing =
     (!!role && roleHasPermission(role, "observation:upload")) ||
     (role === "TEACHER" && (freeMixQ.data?.myVideoReviews.length ?? 0) > 0);
+  // English Drive (D-#344): upload = roster:manage (P/O); a teacher sees the tab
+  // only when the server-resolved English class set is non-empty. GUARDIAN never.
+  const canEnglishDrive =
+    (!!role && roleHasPermission(role, "roster:manage")) ||
+    (role === "TEACHER" && (engDriveQ.data?.englishDriveMyClassLevels.length ?? 0) > 0);
   // Saturday Qur'an-Hifz Revision (SR app surfaces): Hifz teachers via tracker:read
   // (record/edit/deliver/history); Principal/Office via roster:manage (dashboards +
   // completeness chase). Every action is re-gated + row-scoped server-side. GUARDIAN
@@ -1163,6 +1203,8 @@ export function AppTabs(): React.ReactElement {
         {canObservation ? <Drawer.Screen name="ObservationTab" component={ObservationNavigator} /> : null}
         {/* Free Mixing Observation (D-#341) — P/O always; a teacher only when assigned. */}
         {canFreeMixing ? <Drawer.Screen name="FreeMixingTab" component={FreeMixingNavigator} /> : null}
+        {/* English Drive (D-#344) — P/O always; a teacher only with an ENG class. */}
+        {canEnglishDrive ? <Drawer.Screen name="EnglishDriveTab" component={EnglishDriveNavigator} /> : null}
         {canRevision ? <Drawer.Screen name="RevisionTab" component={RevisionNavigator} /> : null}
         {canFinance ? <Drawer.Screen name="FinanceTab" component={FinanceNavigator} /> : null}
         {canHr ? <Drawer.Screen name="HrTab" component={HrNavigator} /> : null}

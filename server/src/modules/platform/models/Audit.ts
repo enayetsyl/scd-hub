@@ -137,6 +137,8 @@ export type AuditEventKind =
   | "CT_QUESTION_REQUESTED"       // a subject teacher asked the office to produce a class-test question paper (owner ask 2026-07-20; tracker:write)
   | "CT_QUESTION_SENT_FOR_REVIEW" // the office uploaded a paper round and sent it for teacher review (roster:manage)
   | "CT_QUESTION_REVIEWED"        // the teacher's verdict on a round — approve (locks) or changes-requested with comment (tracker:write)
+  | "ENGLISH_DRIVE_UPLOADED"      // an English Drive md document uploaded — new (class, block, kind) (D-#344; roster:manage)
+  | "ENGLISH_DRIVE_REPLACED"      // a newer version replaced an existing (class, block, kind) doc — old row stamped replacedAt (D-#344)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

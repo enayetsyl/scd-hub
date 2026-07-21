@@ -276,6 +276,14 @@ export type FreeMixingStackParamList = {
   FreeMixingHome: undefined;
 };
 
+/** English Drive (D-#344) — the md-import + class-scoped teacher library:
+ *  library home (upload entry inside, P/O only), doc viewer + PDF, upload UI. */
+export type EnglishDriveStackParamList = {
+  EnglishDriveHome: undefined;
+  EnglishDriveDoc: { docId: string; title?: string };
+  EnglishDriveUpload: undefined;
+};
+
 /** Saturday Qur'an-Hifz Revision (SR app surfaces over SR-1..SR-4) — staff stack
  *  (tracker:read || roster:manage tab; GUARDIAN excluded). */
 export type RevisionStackParamList = {
@@ -377,6 +385,7 @@ export type TabParamList = {
   CommentsTab: NavigatorScreenParams<CommentsStackParamList>;
   ObservationTab: NavigatorScreenParams<ObservationStackParamList>;
   FreeMixingTab: NavigatorScreenParams<FreeMixingStackParamList>;
+  EnglishDriveTab: NavigatorScreenParams<EnglishDriveStackParamList>;
   RevisionTab: NavigatorScreenParams<RevisionStackParamList>;
   FinanceTab: NavigatorScreenParams<FinanceStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;
