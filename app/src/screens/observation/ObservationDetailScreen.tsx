@@ -23,7 +23,7 @@ import {
   REQUEST_CO_REVIEW_OBSERVATION,
   OBSERVATIONS_FOR_RECORDING_QUERY,
 } from "../../graphql/observation";
-import { TEACHERS_QUERY } from "../../graphql/operations";
+import { TEACHERS_QUERY, ACADEMIC_YEARS_QUERY, CLASSES_QUERY } from "../../graphql/operations";
 // CO-2 footage rider: in-app YouTube-unlisted upload (web GIS). Native → paste-id fallback below.
 import {
   isYouTubeUploadSupported,
@@ -74,6 +74,26 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
     for (const t of teachersQ.data?.teachers ?? []) map[t.id] = t.name;
     return map;
   }, [teachersQ.data]);
+
+  // Owner ask 2026-07-21: show class/section + subject on the header card.
+  // Section labels resolve via the UploadObservationScreen pattern (current
+  // year → classes → "class — section").
+  const [yearsQ] = useQuery({ query: ACADEMIC_YEARS_QUERY });
+  const currentYearId = React.useMemo(() => {
+    const years = yearsQ.data?.academicYears ?? [];
+    return years.find((y) => y.current)?.id ?? years[0]?.id ?? null;
+  }, [yearsQ.data]);
+  const [classesQ] = useQuery({
+    query: CLASSES_QUERY,
+    variables: { academicYearId: currentYearId ?? "" },
+    pause: !currentYearId,
+  });
+  const sectionLabelById = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const c of classesQ.data?.classes ?? [])
+      for (const s of c.sections) map[s.id] = `${c.nameBn} — ${s.nameBn || s.code}`;
+    return map;
+  }, [classesQ.data]);
 
   const [, respond] = useMutation(RESPOND_TO_CLASSROOM_OBSERVATION);
   const [, rate] = useMutation(RATE_OBSERVATION_REVIEW);
@@ -191,6 +211,10 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
           {canUpload && obs.observerId ? (
             <Row label={STR.obsObserver} value={nameById[obs.observerId] ?? obs.observerId} />
           ) : null}
+          {obs.sectionId ? (
+            <Row label={STR.obsClassSection} value={sectionLabelById[obs.sectionId] ?? obs.sectionId} />
+          ) : null}
+          <Row label={STR.obsSubject} value={hwSubjectLabel(obs.subject)} />
           <Row label={STR.obsClassDate} value={new Date(obs.classDate).toLocaleDateString()} />
         </Card>
 
