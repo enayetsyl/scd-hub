@@ -959,3 +959,52 @@ export async function emitPrintRequested(event: PrintRequestedEvent): Promise<vo
     }
   });
 }
+
+// ---------------------------------------------------------------------------
+// D-#342 — CT question-request loop
+// ---------------------------------------------------------------------------
+
+export interface CtQuestionNotifyEvent {
+  requestId: string;
+  titleBn: string;
+  bodyBn: string;
+  /** Stage-unique suffix (e.g. "review:r2") so later rounds are never deduped away. */
+  dedupeSuffix: string;
+}
+
+/** Tell the REQUESTING teacher a paper round awaits their verdict. Best-effort. */
+export async function emitCtQuestionTeacher(
+  teacherId: string,
+  event: CtQuestionNotifyEvent,
+): Promise<void> {
+  return bestEffort("ct question → teacher", async () => {
+    await emit({
+      recipientUserId: teacherId,
+      kind: "CT_QUESTION_REVIEW",
+      titleBn: event.titleBn,
+      bodyBn: event.bodyBn,
+      refs: { ctQuestionRequestId: event.requestId },
+      dedupeKey: `ctq:${event.requestId}:${event.dedupeSuffix}`,
+    });
+  });
+}
+
+/** Tell every queue operator (active Principal/Office) about a loop event
+ *  (new request / changes requested / confirmed). Best-effort. */
+export async function emitCtQuestionOffice(event: CtQuestionNotifyEvent): Promise<void> {
+  return bestEffort("ct question → office", async () => {
+    const operators = (await User.find({ role: { $in: ["PRINCIPAL", "OFFICE"] }, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    for (const op of operators) {
+      await emit({
+        recipientUserId: op._id.toString(),
+        kind: "CT_QUESTION_OFFICE",
+        titleBn: event.titleBn,
+        bodyBn: event.bodyBn,
+        refs: { ctQuestionRequestId: event.requestId },
+        dedupeKey: `ctq:${event.requestId}:${event.dedupeSuffix}:${op._id.toString()}`,
+      });
+    }
+  });
+}

@@ -89,6 +89,13 @@ export function notificationTarget(
     case "HW_AUTO_ISSUED":
       return { tab: "HomeworkTab", screen: "HomeworkReconcile", params: refs?.date ? { date: refs.date } : undefined };
 
+    // D-#342 CT question loop: the teacher lands on their request list; the
+    // office lands on the work queue.
+    case "CT_QUESTION_REVIEW":
+      return { tab: "ClassTestTab", screen: "MyCtQuestions" };
+    case "CT_QUESTION_OFFICE":
+      return { tab: "ClassTestTab", screen: "CtQuestionQueue" };
+
     // Guardian chase/result/delivery kinds → the child's screen; the staff
     // fallbacks are defensive (these kinds are guardian-addressed today).
     case "HW_CHASE":

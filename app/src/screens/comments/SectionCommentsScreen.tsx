@@ -17,7 +17,7 @@ import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
-import { STR, commentTypeLabel, commentSentimentLabel } from "../../lib/labels";
+import { STR, commentTypeLabel, commentSentimentLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
 
@@ -129,7 +129,8 @@ export default function SectionCommentsScreen(): React.ReactElement {
                         <View style={{ flexShrink: 1 }}>
                           <Body style={{ fontWeight: "700" }}>{nameById.get(c.studentId) ?? c.studentId}</Body>
                           <Muted>
-                            {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)}
+                            {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)} ·{" "}
+                            {isoDateLabel(c.createdAt)}
                           </Muted>
                         </View>
                         <Badge
