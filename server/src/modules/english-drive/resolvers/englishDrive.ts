@@ -34,6 +34,7 @@ EnglishDriveDocRef.implement({
     classLevel: t.exposeInt("classLevel"),
     blockNumber: t.exposeInt("blockNumber"),
     kind: t.exposeString("kind"),
+    seq: t.exposeInt("seq"),
     title: t.exposeString("title"),
     version: t.exposeInt("version"),
     uploadedAt: t.exposeString("uploadedAt"),
@@ -118,13 +119,14 @@ builder.mutationField("uploadEnglishDriveDoc", (t) =>
   t.field({
     type: EnglishDriveUploadResultRef,
     description:
-      "Upload one English Drive markdown document; an existing (class, block, kind) is replaced " +
+      "Upload one English Drive markdown document; an existing (class, block, kind, seq) is replaced " +
       "(old row stamped replacedAt). Requires roster:manage (Principal/Office). Audited.",
     authScopes: { hasPermission: "roster:manage" },
     args: {
       classLevel: t.arg.int({ required: true }),
       blockNumber: t.arg.int({ required: true }),
       kind: t.arg.string({ required: true }),
+      seq: t.arg.int({ required: false }),
       title: t.arg.string({ required: true }),
       version: t.arg.int({ required: true }),
       contentMd: t.arg.string({ required: true }),

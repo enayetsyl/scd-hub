@@ -140,6 +140,7 @@ const madeDoc = (over: Record<string, unknown> = {}) => ({
   classLevel: 3,
   blockNumber: 1,
   kind: "TN",
+  seq: 1,
   title: "Block 1 Teacher Note",
   version: 2,
   contentMd: "# Block 1\ncontent",
@@ -360,7 +361,11 @@ describe("uploadEnglishDriveDoc", () => {
     const out = await uploadEnglishDriveDoc(validUpload());
     expect(out.replacedVersion).toBeNull();
     expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ classLevel: 3, blockNumber: 1, kind: "TN", version: 2 }),
+      expect.objectContaining({ classLevel: 3, blockNumber: 1, kind: "TN", seq: 1, version: 2 }),
+    );
+    // The replace lookup treats pre-seq rows (no field) as identity seq 1.
+    expect(mockFindOne).toHaveBeenCalledWith(
+      expect.objectContaining({ seq: { $in: [1, null] } }),
     );
     expect(mockWriteAudit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -368,6 +373,22 @@ describe("uploadEnglishDriveDoc", () => {
         meta: expect.objectContaining({ classLevel: 3, blockNumber: 1, kind: "TN", version: 2 }),
       }),
     );
+  });
+
+  test("same kind, different seq does NOT replace — HW1..HW4 live side by side", async () => {
+    // The testing finding behind D-#345: 4 different homework files in one block.
+    await uploadEnglishDriveDoc({ ...validUpload(), kind: "HW", seq: 4 });
+    expect(mockFindOne).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "HW", seq: 4, replacedAt: null }),
+    );
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ kind: "HW", seq: 4 }));
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventKind: "ENGLISH_DRIVE_UPLOADED" }),
+    );
+  });
+
+  test("rejects a bad seq", async () => {
+    await expect(uploadEnglishDriveDoc({ ...validUpload(), seq: 0 })).rejects.toThrow(/ক্রমিক/);
   });
 
   test("re-upload replaces: old row stamped replacedAt, audit ENGLISH_DRIVE_REPLACED", async () => {
