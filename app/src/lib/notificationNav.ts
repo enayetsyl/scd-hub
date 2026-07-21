@@ -96,6 +96,14 @@ export function notificationTarget(
     case "CT_QUESTION_OFFICE":
       return { tab: "ClassTestTab", screen: "CtQuestionQueue" };
 
+    // CT-8 submit/approve loop: the approver (Principal/Office) lands on the
+    // dashboard (submitted badge + per-test drill-down); the teacher lands on
+    // their class-test home where the published exam lives.
+    case "CT_RESULT_SUBMITTED":
+      return { tab: "ClassTestTab", screen: "ClassTestDashboard" };
+    case "CT_RESULT_PUBLISHED":
+      return { tab: "ClassTestTab", screen: "ClassTestHome" };
+
     // Guardian chase/result/delivery kinds → the child's screen; the staff
     // fallbacks are defensive (these kinds are guardian-addressed today).
     case "HW_CHASE":

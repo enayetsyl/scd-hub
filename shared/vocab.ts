@@ -1028,6 +1028,11 @@ export const NOTIFICATION_KINDS = [
   // the queue operators (new request / changes requested / confirmed).
   "CT_QUESTION_REVIEW",
   "CT_QUESTION_OFFICE",
+  // CT-8 submit/approve loop (app-native, NO wire twin): SUBMITTED → every active
+  // Principal/Office user (a teacher's results await their approval); PUBLISHED →
+  // the exam's requesting teacher (approve/publish released the results to guardians).
+  "CT_RESULT_SUBMITTED",
+  "CT_RESULT_PUBLISHED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1060,6 +1065,8 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   HW_AUTO_ISSUED: "বাড়ির কাজ স্বয়ংক্রিয়ভাবে ইস্যু হয়েছে",
   CT_QUESTION_REVIEW: "প্রশ্নপত্র রিভিউর অপেক্ষায়",
   CT_QUESTION_OFFICE: "প্রশ্ন তৈরির অনুরোধ",
+  CT_RESULT_SUBMITTED: "ফলাফল অনুমোদনের অপেক্ষায়",
+  CT_RESULT_PUBLISHED: "ক্লাস টেস্টের ফলাফল প্রকাশিত",
   PRINT_DELIVERED: "প্রিন্ট ডেলিভারি হয়েছে",
   PRINT_REQUESTED: "নতুন প্রিন্ট অনুরোধ",
 };
@@ -1092,6 +1099,8 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   HW_AUTO_ISSUED: "Homework auto-issued",
   CT_QUESTION_REVIEW: "Question paper awaiting review",
   CT_QUESTION_OFFICE: "Question request update",
+  CT_RESULT_SUBMITTED: "Class-test results submitted",
+  CT_RESULT_PUBLISHED: "Class-test results published",
   PRINT_DELIVERED: "Print job delivered",
   PRINT_REQUESTED: "New print request",
 };
@@ -1754,7 +1763,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
       "আসসালামু আলাইকুম {borrowerName}। SCD লাইব্রেরি থেকে নেওয়া বইটির ফেরতের তারিখ পেরিয়ে গেছে:\n" +
       "বই: {title} ({accessionNo})\n" +
       "ফেরতের তারিখ ছিল: {dueDateKey}\n" +
-      "অনুগ্রহ করে বইটি লাইব্রেরিতে ফেরত দিন। জাযাকাল্লাহু খাইরান।",
+      "অনুগ্রহ করে বইটি লাইব্রেরিতে ফেরত দিন। মাআসসালামাহ।",
     defaultLangMode: "BN",
   },
   // --- Assignment guardian chase (AS-T4, D-#88): the body is shared by the in-app
@@ -1827,7 +1836,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
       "আপনার সন্তান {StudentName} {TestDate} তারিখের ভোকাবুলারি টেস্টে " +
       "{TotalMarks} নম্বরের মধ্যে {Score} পেয়েছে (ভুল: {WrongCount}টি)।\n" +
       "যেসব শব্দ ভুল হয়েছে:\n{WrongWords}\n" +
-      "অনুগ্রহ করে শব্দগুলো বাড়িতে অনুশীলন করান। জাযাকাল্লাহু খাইরান — {School}",
+      "অনুগ্রহ করে শব্দগুলো বাড়িতে অনুশীলন করান। মাআসসালামাহ — {School}",
     defaultLangMode: "BN",
   },
   "vocab.result.perfect.body": {
@@ -1837,7 +1846,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
       "আসসালামু আলাইকুম। সম্মানিত অভিভাবক, আলহামদুলিল্লাহ! " +
       "আপনার সন্তান {StudentName} {TestDate} তারিখের ভোকাবুলারি টেস্টে " +
       "{TotalMarks} নম্বরের মধ্যে {Score} পেয়ে সম্পূর্ণ সঠিক করেছে। " +
-      "আল্লাহ তাকে আরও উন্নতি দান করুন। জাযাকাল্লাহু খাইরান — {School}",
+      "আল্লাহ তাকে আরও উন্নতি দান করুন। মাআসসালামাহ — {School}",
     defaultLangMode: "BN",
   },
   "vocab.result.absent.body": {
@@ -1846,7 +1855,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     bnDefault:
       "আসসালামু আলাইকুম। সম্মানিত অভিভাবক, " +
       "আপনার সন্তান {StudentName} {TestDate} তারিখের ভোকাবুলারি টেস্টে অনুপস্থিত ছিল। " +
-      "পরবর্তী টেস্টে অংশগ্রহণ নিশ্চিত করুন। জাযাকাল্লাহু খাইরান — {School}",
+      "পরবর্তী টেস্টে অংশগ্রহণ নিশ্চিত করুন। মাআসসালামাহ — {School}",
     defaultLangMode: "BN",
   },
   "vocab.result.cumulative.body": {
@@ -1857,7 +1866,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
       "{PeriodLabel} সময়কালে আপনার সন্তান {StudentName} {NumTests}টি ভোকাবুলারি টেস্টে অংশ নিয়েছে, " +
       "গড়ে {TotalMarks} নম্বরের মধ্যে {Score} পেয়েছে।\n" +
       "বারবার ভুল হওয়া শব্দ:\n{PersistentWords}\n" +
-      "অনুগ্রহ করে এই শব্দগুলোতে বিশেষ মনোযোগ দিন। জাযাকাল্লাহু খাইরান — {School}",
+      "অনুগ্রহ করে এই শব্দগুলোতে বিশেষ মনোযোগ দিন। মাআসসালামাহ — {School}",
     defaultLangMode: "BN",
   },
 
@@ -1876,7 +1885,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
       "আসসালামু আলাইকুম। {StudentName}-এর {Subject} ক্লাস টেস্ট ({TestNumber}) ফলাফল — প্রাপ্ত নম্বর: {Marks}/{TotalMarks}।\n" +
       "লক্ষণীয় দিক: {Weakness}\n" +
       "অভিভাবকের করণীয়: {GuardianAction}\n" +
-      "আল্লাহ তাকে উত্তরোত্তর উন্নতি দান করুন, আমীন। কোনো জিজ্ঞাসা থাকলে জানাবেন। জাযাকাল্লাহু খাইরান।",
+      "আল্লাহ তাকে উত্তরোত্তর উন্নতি দান করুন, আমীন। কোনো জিজ্ঞাসা থাকলে জানাবেন। মাআসসালামাহ।",
     defaultLangMode: "BN",
   },
   "class_test.result.excellent.body": {
@@ -1884,7 +1893,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     placeholders: ["StudentName", "Subject", "TestNumber", "Marks", "TotalMarks"],
     bnDefault:
       "আসসালামু আলাইকুম। আলহামদুলিল্লাহ! {StudentName} {Subject} ক্লাস টেস্ট ({TestNumber})-এ চমৎকার করেছে — {Marks}/{TotalMarks}। " +
-      "আল্লাহুম্মা বারিক। এই ধারাবাহিকতা ধরে রাখতে তাকে উৎসাহ দিন। জাযাকাল্লাহু খাইরান।",
+      "আল্লাহুম্মা বারিক। এই ধারাবাহিকতা ধরে রাখতে তাকে উৎসাহ দিন। মাআসসালামাহ।",
     defaultLangMode: "BN",
   },
   "class_test.result.absent.body": {
@@ -1892,7 +1901,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     placeholders: ["StudentName", "TestDate", "Subject", "TestNumber"],
     bnDefault:
       "আসসালামু আলাইকুম। {StudentName} {TestDate}-এর {Subject} ক্লাস টেস্টে ({TestNumber}) অনুপস্থিত ছিল। " +
-      "নিয়মিত উপস্থিতি তার জন্য জরুরি — অনুগ্রহ করে উপস্থিতি নিশ্চিত করুন। জাযাকাল্লাহু খাইরান।",
+      "নিয়মিত উপস্থিতি তার জন্য জরুরি — অনুগ্রহ করে উপস্থিতি নিশ্চিত করুন। মাআসসালামাহ।",
     defaultLangMode: "BN",
   },
   // --- Office → teacher overdue-report chase (CT-4, §6/J6 — the AS-T4 chase
@@ -1903,7 +1912,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     placeholders: ["TeacherName", "Count", "ExamList"],
     bnDefault:
       "আসসালামু আলাইকুম {TeacherName}। আপনার {Count}টি ক্লাস টেস্টের ফলাফল নির্ধারিত সময়ের মধ্যে জমা পড়েনি: {ExamList}। " +
-      "অনুগ্রহ করে দ্রুত ফলাফল এন্ট্রি ও প্রকাশ করুন। জাযাকাল্লাহু খাইরান — অফিস।",
+      "অনুগ্রহ করে দ্রুত ফলাফল এন্ট্রি ও প্রকাশ করুন। মাআসসালামাহ — অফিস।",
     defaultLangMode: "BN",
   },
   // --- Daily student-comment guardian delivery (CM-2, §6/J-CM1 — the per-comment
@@ -1918,7 +1927,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     group: "comment", labelBn: "শিক্ষকের পর্যবেক্ষণ — বার্তা (ইনবক্স + হোয়াটসঅ্যাপ)",
     placeholders: ["StudentName", "CommentType", "CommentText"],
     bnDefault:
-      "আসসালামু আলাইকুম। {StudentName} সম্পর্কে শিক্ষকের একটি পর্যবেক্ষণ ({CommentType}): {CommentText} — জাযাকাল্লাহু খাইরান।",
+      "আসসালামু আলাইকুম। {StudentName} সম্পর্কে শিক্ষকের একটি পর্যবেক্ষণ ({CommentType}): {CommentText} — মাআসসালামাহ।",
     defaultLangMode: "BN",
   },
   // --- Finance fee-due chase (FIN-2B, §6/J-FIN2-7 — the guardian fee-due reminder:
@@ -1938,7 +1947,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   "finance.fee_due.chase.wa": {
     group: "finance", labelBn: "ফি বকেয়ার তাগিদ — হোয়াটসঅ্যাপ",
     placeholders: ["StudentName", "AmountDue"],
-    bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর ফি বাবদ {AmountDue} টাকা বকেয়া রয়েছে — অনুগ্রহ করে পরিশোধ করুন। জাযাকাল্লাহু খাইরান।",
+    bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর ফি বাবদ {AmountDue} টাকা বকেয়া রয়েছে — অনুগ্রহ করে পরিশোধ করুন। মাআসসালামাহ।",
     defaultLangMode: "BN",
   },
   // --- Saturday Revision guardian delivery (SR-2, D-#244/#131) ---
@@ -1955,7 +1964,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   "sr.absent.wa": {
     group: "saturdayRevision", labelBn: "শনিবার রিভিশনে অনুপস্থিত — হোয়াটসঅ্যাপ",
     placeholders: ["StudentName", "Date"],
-    bnDefault: "আসসালামু আলাইকুম। {StudentName} {Date} তারিখের শনিবারের কুরআন রিভিশনে অনুপস্থিত ছিল। জাযাকাল্লাহু খাইরান।",
+    bnDefault: "আসসালামু আলাইকুম। {StudentName} {Date} তারিখের শনিবারের কুরআন রিভিশনে অনুপস্থিত ছিল। মাআসসালামাহ।",
     defaultLangMode: "BN",
   },
   "sr.digest.title": {
@@ -1971,14 +1980,14 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   "sr.digest.wa": {
     group: "saturdayRevision", labelBn: "সাপ্তাহিক রিভিশন রিপোর্ট — হোয়াটসঅ্যাপ",
     placeholders: ["StudentName", "Date", "Summary"],
-    bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর {Date} তারিখের কুরআন রিভিশন:\n{Summary}\nজাযাকাল্লাহু খাইরান।",
+    bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর {Date} তারিখের কুরআন রিভিশন:\n{Summary}\nমাআসসালামাহ।",
     defaultLangMode: "BN",
   },
   // --- Saturday Revision completeness chase (SR-3, D-#246/#131; stateless Office nudge) ---
   "sr.completeness_chase.wa": {
     group: "saturdayRevision", labelBn: "রিভিশন এন্ট্রি বাকি — হোয়াটসঅ্যাপ (শিক্ষককে)",
     placeholders: ["TeacherName", "GroupName", "Date"],
-    bnDefault: "আসসালামু আলাইকুম {TeacherName}। {GroupName} গ্রুপের {Date} তারিখের শনিবারের রিভিশন এখনও এন্ট্রি করা হয়নি — অনুগ্রহ করে সম্পন্ন করুন। জাযাকাল্লাহু খাইরান।",
+    bnDefault: "আসসালামু আলাইকুম {TeacherName}। {GroupName} গ্রুপের {Date} তারিখের শনিবারের রিভিশন এখনও এন্ট্রি করা হয়নি — অনুগ্রহ করে সম্পন্ন করুন। মাআসসালামাহ।",
     defaultLangMode: "BN",
   },
 };

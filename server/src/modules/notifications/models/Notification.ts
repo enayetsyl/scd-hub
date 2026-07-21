@@ -69,6 +69,9 @@ export interface NotificationRefs {
   escalation?: boolean;
   /** CT question-request loop (deep-link: MyCtQuestions / CtQuestionQueue; D-#342). */
   ctQuestionRequestId?: string;
+  /** CT-8 submit/approve loop — the human CT_ID carried alongside classTestId
+   *  (deep-link: ClassTestDashboard / ClassTestHome). */
+  ctId?: string;
 }
 
 export interface INotification extends Document {
@@ -120,6 +123,10 @@ const RefsSchema = new Schema<NotificationRefs>(
     revisionEntryId: { type: String },
     streakLength: { type: Number },
     escalation: { type: Boolean },
+    // D-#342 CT question loop (was missing from the sub-schema — mongoose silently
+    // stripped it from stored rows) + the CT-8 submit/approve loop's human CT_ID.
+    ctQuestionRequestId: { type: String },
+    ctId: { type: String },
   },
   { _id: false },
 );

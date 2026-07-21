@@ -93,6 +93,15 @@ const dedupeKeys = {
    *  slotId alone, since a revoke-then-reapprove cycle mints a NEW grant that should
    *  re-notify — but a retried call for the SAME grant is a no-op. */
   hrCoverAssigned: (slotId: string, grantId: string) => `HRCOV:${slotId}:${grantId}`,
+  /** Per test+submission-stamp+recipient (CT-8): a re-submit after a send-back writes
+   *  a NEW submittedAt stamp → a NEW key → the approvers RE-notify; a retry of the
+   *  same stamp is a no-op. */
+  ctResultSubmitted: (testId: string, submittedAtMs: number, recipientId: string) =>
+    `CTSUB:${testId}:${submittedAtMs}:${recipientId}`,
+  /** Per test+published-version+teacher (CT-8): a republish bumps publishedVersion →
+   *  a NEW key → the teacher RE-notifies; the same version is a no-op. */
+  ctResultPublished: (testId: string, publishedVersion: number, teacherId: string) =>
+    `CTPUB:${testId}:v${publishedVersion}:${teacherId}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -1006,5 +1015,68 @@ export async function emitCtQuestionOffice(event: CtQuestionNotifyEvent): Promis
         dedupeKey: `ctq:${event.requestId}:${event.dedupeSuffix}:${op._id.toString()}`,
       });
     }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// CT-8 submit/approve loop — SUBMITTED → every approver (active Principal/Office);
+// PUBLISHED → the exam's requesting teacher. Same posture as the D-#342 question
+// loop: staff-facing, inline pre-rendered Bangla, best-effort, app-native.
+// ---------------------------------------------------------------------------
+
+export interface CtResultSubmittedEvent {
+  testId: string;
+  ctId: string;
+  /** The submittedAt stamp this submit wrote — anchors the dedupe key so a
+   *  re-submit (after a send-back/recall) RE-notifies the approvers. */
+  submittedAtMs: number;
+  titleBn: string;
+  bodyBn: string;
+}
+
+/** Tell every approver (active Principal/Office) a teacher submitted an exam's
+ *  results for review/approval. Best-effort. */
+export async function emitCtResultSubmitted(event: CtResultSubmittedEvent): Promise<void> {
+  return bestEffort("ct result submitted → office", async () => {
+    const operators = (await User.find({ role: { $in: ["PRINCIPAL", "OFFICE"] }, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    for (const op of operators) {
+      await emit({
+        recipientUserId: op._id.toString(),
+        kind: "CT_RESULT_SUBMITTED",
+        titleBn: event.titleBn,
+        bodyBn: event.bodyBn,
+        refs: { classTestId: event.testId, ctId: event.ctId },
+        dedupeKey: dedupeKeys.ctResultSubmitted(event.testId, event.submittedAtMs, op._id.toString()),
+      });
+    }
+  });
+}
+
+export interface CtResultPublishedEvent {
+  testId: string;
+  ctId: string;
+  /** The exam's requesting teacher — the one recipient. */
+  teacherUserId: string;
+  /** The (max) version this publish stamped — part of the dedupe key so a
+   *  republish (bumped version) RE-notifies; the same version is a no-op. */
+  publishedVersion: number;
+  titleBn: string;
+  bodyBn: string;
+}
+
+/** Tell the exam's teacher their results were approved/published to guardians.
+ *  Best-effort. */
+export async function emitCtResultPublished(event: CtResultPublishedEvent): Promise<void> {
+  return bestEffort("ct result published → teacher", async () => {
+    await emit({
+      recipientUserId: event.teacherUserId,
+      kind: "CT_RESULT_PUBLISHED",
+      titleBn: event.titleBn,
+      bodyBn: event.bodyBn,
+      refs: { classTestId: event.testId, ctId: event.ctId },
+      dedupeKey: dedupeKeys.ctResultPublished(event.testId, event.publishedVersion, event.teacherUserId),
+    });
   });
 }

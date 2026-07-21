@@ -60,6 +60,13 @@ jest.mock("../modules/foundation/models/Student", () => ({
   Student: { find: (q: unknown) => mockStudentFind(q) },
 }));
 
+// CT-8 submit/approve notify: the submit emitter resolves the approvers
+// (active Principal/Office) through User.find.
+const mockUserFind = jest.fn();
+jest.mock("../modules/foundation/models/User", () => ({
+  User: { find: (q: unknown) => mockUserFind(q) },
+}));
+
 // The real emitClassTestGuardianResult runs (so the dedupeKey it builds is exercised);
 // only the leaf models + the single emit() door are mocked.
 const mockEmit = jest.fn();
@@ -106,6 +113,8 @@ const TEST_OID = oid();
 const SECTION_OID = oid();
 const STUDENT_OID = oid();
 const GUARDIAN_OID = oid();
+const TEACHER_OID = oid();
+const OFFICE_OID = oid();
 const ACTOR = oid().toString();
 
 const printedTest = (over: Record<string, unknown> = {}) => ({
@@ -142,6 +151,8 @@ beforeEach(() => {
   // one login-enabled guardian for the student
   mockLinkFind.mockReturnValue(leanChain([{ guardianId: GUARDIAN_OID }]));
   mockGuardianFind.mockReturnValue(leanChain([{ _id: GUARDIAN_OID }]));
+  // one active Office approver (CT-8 submit notify)
+  mockUserFind.mockReturnValue(leanChain([{ _id: OFFICE_OID }]));
   mockEmit.mockResolvedValue({ created: true, dedupeKey: "x" });
   mockWriteAudit.mockResolvedValue(undefined);
 });
@@ -168,7 +179,7 @@ describe("class_test.result.* templates", () => {
     expect(rendered).toBe(expected);
     expect(rendered).toContain("আসসালামু আলাইকুম");
     expect(rendered).toContain("লক্ষণীয় দিক: ভগ্নাংশ");
-    expect(rendered).toContain("জাযাকাল্লাহু খাইরান");
+    expect(rendered).toContain("মাআসসালামাহ");
   });
 
   test("buildClassTestResultMessage picks excellent (no weakness) + absent variants", async () => {
@@ -275,6 +286,23 @@ describe("publishExam (bulk)", () => {
     mockResFind.mockReturnValue(leanChain([]));
     await expect(publishExam(TEST_OID.toString(), ACTOR)).rejects.toThrow(/nothing to publish/);
   });
+
+  test("notifies the exam's teacher (CT_RESULT_PUBLISHED) with a version-anchored dedupeKey", async () => {
+    mockCtFindById.mockReturnValue(leanChain(printedTest({ requestedBy: TEACHER_OID })));
+    mockResFind.mockReturnValue(leanChain([{ _id: oid(), studentId: STUDENT_OID }]));
+    mockResFindByIdUpdate.mockResolvedValue(resultDoc({ studentId: STUDENT_OID, publishedVersion: 2 }));
+    await publishExam(TEST_OID.toString(), ACTOR);
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "CT_RESULT_PUBLISHED",
+        recipientUserId: TEACHER_OID.toString(),
+        bodyBn: expect.stringContaining("প্রকাশিত হয়েছে"),
+        refs: expect.objectContaining({ classTestId: TEST_OID.toString(), ctId: "CT-C3-MATH-0001" }),
+        // v2 (the stamped version) — a republish bumps it → a fresh key → re-notify
+        dedupeKey: `CTPUB:${TEST_OID.toString()}:v2:${TEACHER_OID.toString()}`,
+      }),
+    );
+  });
 });
 
 // ===========================================================================
@@ -336,6 +364,24 @@ describe("CT-8 approval gate", () => {
     mockResCount.mockResolvedValue(0);
     await expect(submitExam(TEST_OID.toString(), ACTOR)).rejects.toBeInstanceOf(ClassTestResultError);
     expect(mockResUpdateMany).not.toHaveBeenCalled();
+    expect(mockEmit).not.toHaveBeenCalled(); // a refused submit notifies nobody
+  });
+
+  test("submitExam notifies every approver (CT_RESULT_SUBMITTED) with a stamp-anchored dedupeKey", async () => {
+    mockResCount.mockResolvedValue(3);
+    mockResUpdateMany.mockResolvedValue({ modifiedCount: 3 });
+    await submitExam(TEST_OID.toString(), ACTOR);
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "CT_RESULT_SUBMITTED",
+        recipientUserId: OFFICE_OID.toString(),
+        bodyBn: expect.stringContaining("অনুমোদন করুন"),
+        refs: expect.objectContaining({ classTestId: TEST_OID.toString(), ctId: "CT-C3-MATH-0001" }),
+        // CTSUB:<testId>:<submittedAt ms>:<recipient> — a re-submit stamps a new
+        // submittedAt → a fresh key → the approvers re-notify.
+        dedupeKey: expect.stringMatching(new RegExp(`^CTSUB:${TEST_OID.toString()}:\\d+:${OFFICE_OID.toString()}$`)),
+      }),
+    );
   });
 
   test("recallExam clears the submission back to draft + audits RECALLED", async () => {

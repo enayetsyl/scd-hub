@@ -398,7 +398,7 @@ export function Field({
 const normalizeSearch = (s: string): string => s.toLowerCase().replace(/\s+/g, "");
 
 /** A tap-to-expand dropdown styled like Field. Options list inline below the
- *  trigger (scrolls past ~6 rows); picking one closes the menu. `searchable`
+ *  trigger (scrolls past ~9 rows); picking one closes the menu. `searchable`
  *  (UX-1 house rule R-Search — required beyond ~10 options) pins a filter input
  *  above the list that narrows by label + hint as the user types. */
 export function Select<T extends string>({
@@ -721,7 +721,7 @@ const useStyles = makeStyles((colors) => ({
     backgroundColor: colors.surface,
     overflow: "hidden",
   },
-  selectScroll: { maxHeight: 260 },
+  selectScroll: { maxHeight: 420 },
   selectEmpty: { ...typeScale.secondary, color: colors.textSecondary, padding: space(3) },
   selectSearch: {
     minHeight: 44,
