@@ -37,34 +37,51 @@ export interface ParsedEnglishDriveName {
   classLevel: number | null;
   blockNumber: number | null;
   kind: EnglishDriveKind | null;
+  /** Sequence within (block × kind): C1B03_HW4 → 4, C1B03CW1 → 1. */
+  seq: number | null;
   version: number | null;
 }
 
-/** Token boundary: start/end of name or _ - . or whitespace. */
-const tok = (body: string): RegExp => new RegExp(`(?:^|[_\\-\\s.])${body}(?=[_\\-\\s.]|$)`, "i");
-
+/**
+ * Lenient by design (PRD §4): the real corpus mixes separator styles —
+ * `C1B03CW1.md`, `C1B03_HW4.md`, `C3_ENG_B01_TN_v2.md`, `GrammarBlock3…` —
+ * so tokens are matched WITHOUT requiring separators. Whatever fails stays
+ * null; the form always shows every field editable (owner rule #4).
+ */
 export function parseEnglishDriveFilename(filename: string): ParsedEnglishDriveName {
-  const stem = filename.replace(/\.md$/i, "");
+  const stem = filename.replace(/\.md$/i, "").toUpperCase();
 
-  const classMatch = tok("C([1-5])").exec(stem);
-  const blockMatch = tok("B(?:lock)?[\\s_-]?0*(\\d+)").exec(stem);
-  const versionMatch = tok("v0*(\\d+)").exec(stem);
+  // Class: C1..C5 not followed by another digit (so C12 is not class 1).
+  const classMatch = /C([1-5])(?!\d)/.exec(stem);
+  // Block: B03 / Block3 / B 3 — the first B-number run.
+  const blockMatch = /B(?:LOCK)?[\s_-]?0*(\d+)/.exec(stem);
+  // Version: a separated v-number (v2, _V10) — never digits glued to the kind.
+  const versionMatch = /(?:^|[_\-\s.])V0*(\d+)(?=[_\-\s.]|$)/.exec(stem);
 
-  let kind: EnglishDriveKind | null = null;
-  for (const k of ENGLISH_DRIVE_KINDS) {
-    if (tok(k).test(stem)) {
-      kind = k;
-      break;
-    }
-  }
-  // Generator variants the strict tokens miss (PRD §4).
-  if (!kind && /grammar[\s_-]?block/i.test(stem)) kind = "BLOCK";
-  if (!kind && /clue/i.test(stem)) kind = "CLUE";
+  // Kind (+ optional glued sequence, HW4 / CW1). Matched with the block-number
+  // token blanked out so "Block3" never reads as the BLOCK kind.
+  const kindSource = blockMatch
+    ? stem.slice(0, blockMatch.index) +
+      "_".repeat(blockMatch[0].length) +
+      stem.slice(blockMatch.index + blockMatch[0].length)
+    : stem;
+  const kindMatch =
+    /(?:^|[^A-Z])(BLOCK|TN|CW|HW|PT|AS|CLUE)[\s_-]?0*(\d+)?(?=[^A-Z0-9]|$)/.exec(kindSource);
+
+  let kind: EnglishDriveKind | null = kindMatch
+    ? (kindMatch[1] as EnglishDriveKind)
+    : null;
+  let seq = kindMatch?.[2] ? Number(kindMatch[2]) : null;
+  // Generator variants the token pass misses (PRD §4).
+  if (!kind && /GRAMMAR[\s_-]?BLOCK/.test(stem)) kind = "BLOCK";
+  if (!kind && /CLUE/.test(stem)) kind = "CLUE";
+  if (kind && seq === null) seq = 1;
 
   return {
     classLevel: classMatch ? Number(classMatch[1]) : null,
     blockNumber: blockMatch ? Number(blockMatch[1]) : null,
     kind,
+    seq,
     version: versionMatch ? Number(versionMatch[1]) : null,
   };
 }

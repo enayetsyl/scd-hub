@@ -8,9 +8,11 @@
  * Kinds are a module-local enum (HW_NIL_REASONS / VideoReview precedent) — no
  * shared-vocab twin, no verifier change. English only; no subject axis in v1.
  *
- * Replace semantics (owner #5): uploading an existing (classLevel, blockNumber,
- * kind) stamps the old row `replacedAt` and inserts the new one; reads always
- * take the unreplaced row. History stays in the collection (audit), no UI in v1.
+ * Replace semantics (owner #5, refined by the 2026-07-21 testing finding): a
+ * block can hold SEVERAL documents of one kind (C1B03_HW1..HW4), so the
+ * identity is (classLevel, blockNumber, kind, seq) — uploading an existing
+ * tuple stamps the old row `replacedAt` and inserts the new one; reads always
+ * take the unreplaced rows. History stays in the collection (audit), no UI in v1.
  *
  * Operational plane; no corpus path (ADR-005). Guardians have no resolver path.
  */
@@ -28,6 +30,9 @@ export interface IEnglishDriveDoc extends Document {
   classLevel: number;
   blockNumber: number;
   kind: EnglishDriveKind;
+  /** Sequence within (block × kind) — HW **4**, CW **1**. 1 for single-doc kinds.
+   *  Pre-seq rows have no field; reads treat missing as 1. */
+  seq: number;
   title: string;
   version: number;
   /** The full markdown source (≤ 1 MB). */
@@ -45,6 +50,7 @@ const EnglishDriveDocSchema = new Schema<IEnglishDriveDoc>(
     classLevel: { type: Number, required: true, min: 1, max: 5 },
     blockNumber: { type: Number, required: true, min: 1 },
     kind: { type: String, required: true, enum: ENGLISH_DRIVE_KINDS },
+    seq: { type: Number, required: true, min: 1, default: 1 },
     title: { type: String, required: true, trim: true },
     version: { type: Number, required: true, min: 1 },
     contentMd: { type: String, required: true },
@@ -54,7 +60,7 @@ const EnglishDriveDocSchema = new Schema<IEnglishDriveDoc>(
   { timestamps: true },
 );
 
-// The library list ("latest of every (class, block, kind)") is the hot read.
-EnglishDriveDocSchema.index({ classLevel: 1, blockNumber: 1, kind: 1, replacedAt: 1 });
+// The library list ("latest of every (class, block, kind, seq)") is the hot read.
+EnglishDriveDocSchema.index({ classLevel: 1, blockNumber: 1, kind: 1, seq: 1, replacedAt: 1 });
 
 export const EnglishDriveDoc = model<IEnglishDriveDoc>("EnglishDriveDoc", EnglishDriveDocSchema);

@@ -131,26 +131,37 @@ export default function EnglishDriveHomeScreen({ navigation }: Props): React.Rea
                     <Muted>({bnNum(rows.length)})</Muted>
                   </Pressable>
                   {isOpen
-                    ? rows.map((r) => (
-                        <Pressable
-                          key={r.id}
-                          onPress={() =>
-                            navigation.navigate("EnglishDriveDoc", { docId: r.id, title: r.title })
-                          }
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            paddingVertical: space(2),
-                          }}
-                        >
-                          <View style={{ flex: 1, marginRight: space(2) }}>
-                            <Body style={{ fontWeight: "600" }}>{englishDriveKindLabel(r.kind)}</Body>
-                            <Muted>{r.title}</Muted>
-                          </View>
-                          <Badge text={`v${bnNum(r.version)}`} tone="muted" />
-                        </Pressable>
-                      ))
+                    ? (() => {
+                        // Number the rows only when a block holds several of one
+                        // kind (HW ১…HW ৪) — single docs keep the plain label.
+                        const kindTotals = new Map<string, number>();
+                        for (const r of rows) {
+                          kindTotals.set(r.kind, (kindTotals.get(r.kind) ?? 0) + 1);
+                        }
+                        return rows.map((r) => (
+                          <Pressable
+                            key={r.id}
+                            onPress={() =>
+                              navigation.navigate("EnglishDriveDoc", { docId: r.id, title: r.title })
+                            }
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              paddingVertical: space(2),
+                            }}
+                          >
+                            <View style={{ flex: 1, marginRight: space(2) }}>
+                              <Body style={{ fontWeight: "600" }}>
+                                {englishDriveKindLabel(r.kind)}
+                                {(kindTotals.get(r.kind) ?? 1) > 1 ? ` ${bnNum(r.seq)}` : ""}
+                              </Body>
+                              <Muted>{r.title}</Muted>
+                            </View>
+                            <Badge text={`v${bnNum(r.version)}`} tone="muted" />
+                          </Pressable>
+                        ));
+                      })()
                     : null}
                 </Card>
               );

@@ -12,6 +12,7 @@ export interface EnglishDriveDocT {
   classLevel: number;
   blockNumber: number;
   kind: string;
+  seq: number;
   title: string;
   version: number;
   uploadedAt: string;
@@ -23,7 +24,7 @@ export interface EnglishDriveDocFullT extends EnglishDriveDocT {
 }
 
 const ENGLISH_DRIVE_DOC_FIELDS = `
-  id classLevel blockNumber kind title version uploadedAt uploadedByName
+  id classLevel blockNumber kind seq title version uploadedAt uploadedByName
 `;
 
 export const ENGLISH_DRIVE_MY_CLASS_LEVELS = gql<{ englishDriveMyClassLevels: number[] }, NoVars>`
@@ -70,6 +71,7 @@ export const UPLOAD_ENGLISH_DRIVE_DOC = gql<
     classLevel: number;
     blockNumber: number;
     kind: string;
+    seq: number;
     title: string;
     version: number;
     contentMd: string;
@@ -79,6 +81,7 @@ export const UPLOAD_ENGLISH_DRIVE_DOC = gql<
     $classLevel: Int!
     $blockNumber: Int!
     $kind: String!
+    $seq: Int
     $title: String!
     $version: Int!
     $contentMd: String!
@@ -87,6 +90,7 @@ export const UPLOAD_ENGLISH_DRIVE_DOC = gql<
       classLevel: $classLevel
       blockNumber: $blockNumber
       kind: $kind
+      seq: $seq
       title: $title
       version: $version
       contentMd: $contentMd

@@ -30,6 +30,8 @@ interface StagedDoc {
   classLevel: string | null;
   blockNumber: string;
   kind: string | null;
+  /** Sequence within (block × kind): HW4 → "4". */
+  seq: string;
   version: string;
   title: string;
 }
@@ -61,9 +63,10 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
   const conflictVersion = (s: StagedDoc): number | null => {
     const cl = s.classLevel ? Number(s.classLevel) : null;
     const bn = intOrNull(s.blockNumber);
-    if (cl === null || bn === null || !s.kind) return null;
+    const sq = intOrNull(s.seq);
+    if (cl === null || bn === null || sq === null || !s.kind) return null;
     const hit = existing.find(
-      (d) => d.classLevel === cl && d.blockNumber === bn && d.kind === s.kind,
+      (d) => d.classLevel === cl && d.blockNumber === bn && d.kind === s.kind && d.seq === sq,
     );
     return hit ? hit.version : null;
   };
@@ -86,6 +89,7 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
           classLevel: parsed.classLevel === null ? null : String(parsed.classLevel),
           blockNumber: parsed.blockNumber === null ? "" : String(parsed.blockNumber),
           kind: parsed.kind,
+          seq: parsed.seq === null ? "1" : String(parsed.seq),
           version: parsed.version === null ? "1" : String(parsed.version),
           title: titleFromMarkdown(f.content) ?? "",
         });
@@ -123,6 +127,7 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
     s.classLevel !== null &&
     s.kind !== null &&
     intOrNull(s.blockNumber) !== null &&
+    intOrNull(s.seq) !== null &&
     intOrNull(s.version) !== null &&
     s.title.trim() !== "";
 
@@ -140,6 +145,7 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
         classLevel: Number(s.classLevel),
         blockNumber: intOrNull(s.blockNumber)!,
         kind: s.kind!,
+        seq: intOrNull(s.seq)!,
         title: s.title.trim(),
         version: intOrNull(s.version)!,
         contentMd: s.content,
@@ -204,6 +210,13 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
                 value: k,
               }))}
               onChange={(v) => patchStaged(s.filename, { kind: v })}
+            />
+            <Field
+              label={STR.edSeqLabel}
+              value={s.seq}
+              onChangeText={(v) => patchStaged(s.filename, { seq: v })}
+              keyboardType="numeric"
+              helper={STR.edSeqHelper}
             />
             <Field
               label={STR.edVersionLabel}

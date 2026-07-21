@@ -41,6 +41,7 @@ export interface EnglishDriveDocShape {
   classLevel: number;
   blockNumber: number;
   kind: string;
+  seq: number;
   title: string;
   version: number;
   uploadedAt: string;
@@ -59,6 +60,7 @@ function shape(
     classLevel: doc.classLevel,
     blockNumber: doc.blockNumber,
     kind: doc.kind,
+    seq: doc.seq ?? 1, // pre-seq rows have no field
     title: doc.title,
     version: doc.version,
     uploadedAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
@@ -179,7 +181,8 @@ export async function englishDriveDocs(
       (a, b) =>
         a.classLevel - b.classLevel ||
         a.blockNumber - b.blockNumber ||
-        kindOrder(a.kind) - kindOrder(b.kind),
+        kindOrder(a.kind) - kindOrder(b.kind) ||
+        (a.seq ?? 1) - (b.seq ?? 1),
     )
     .map((r) => shape(r, names.get(r.uploadedBy.toString()) ?? null, false));
 }
@@ -203,6 +206,8 @@ export interface UploadEnglishDriveDocInput {
   classLevel: number;
   blockNumber: number;
   kind: string;
+  /** Sequence within (block × kind), e.g. HW4 → 4. Defaults to 1. */
+  seq?: number | null;
   title: string;
   version: number;
   contentMd: string;
@@ -228,6 +233,10 @@ export async function uploadEnglishDriveDoc(
   if (!(ENGLISH_DRIVE_KINDS as readonly string[]).includes(input.kind)) {
     throw new Error(`ডকুমেন্টের ধরন সঠিক নয় (${ENGLISH_DRIVE_KINDS.join("/")})`);
   }
+  const seq = input.seq ?? 1;
+  if (!Number.isInteger(seq) || seq < 1) {
+    throw new Error("ক্রমিক নম্বর দিন (১ বা তার বেশি)");
+  }
   const title = input.title.trim();
   if (title === "") throw new Error("শিরোনাম লিখুন");
   if (!Number.isInteger(input.version) || input.version < 1) {
@@ -242,6 +251,9 @@ export async function uploadEnglishDriveDoc(
     classLevel: input.classLevel,
     blockNumber: input.blockNumber,
     kind: input.kind,
+    // Pre-seq rows carry no seq field — they are identity seq 1 ({seq: null}
+    // matches missing in Mongo).
+    seq: seq === 1 ? { $in: [1, null] } : seq,
     replacedAt: null,
   });
   if (prev) {
@@ -253,6 +265,7 @@ export async function uploadEnglishDriveDoc(
     classLevel: input.classLevel,
     blockNumber: input.blockNumber,
     kind: input.kind as EnglishDriveKind,
+    seq,
     title,
     version: input.version,
     contentMd: input.contentMd,
@@ -269,6 +282,7 @@ export async function uploadEnglishDriveDoc(
       classLevel: input.classLevel,
       blockNumber: input.blockNumber,
       kind: input.kind,
+      seq,
       version: input.version,
       ...(prev ? { prevVersion: prev.version } : {}),
     },
@@ -316,7 +330,8 @@ export async function sendEnglishDriveDocToPrint(
   // Same read gate as the doc screen: teacher of the class or P/O; guardian never.
   const doc = await englishDriveDocById(ctx, input.id);
 
-  const stamp = `C${doc.classLevel}_B${doc.blockNumber}_${doc.kind}_v${doc.version}`;
+  const kindTag = doc.seq > 1 ? `${doc.kind}${doc.seq}` : doc.kind;
+  const stamp = `C${doc.classLevel}_B${doc.blockNumber}_${kindTag}_v${doc.version}`;
   const title = `English Drive ${stamp} — ${doc.title}`.slice(0, 200);
   const pdf = await markdownToPdf(doc.contentMd ?? "", { title });
 
