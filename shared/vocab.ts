@@ -619,7 +619,7 @@ export type LifecycleState = (typeof LIFECYCLE_STATES)[number];
 export const LIFECYCLE_STATE_LABELS_BN: Record<LifecycleState, string> = {
   GIVEN: "প্রদান করা হয়েছে",
   ABSENT_REDELIVER: "অনুপস্থিত / পুনঃপ্রদান",
-  DUE: "জমার দিন",
+  DUE: "জমা দেওয়া হয়নি",
   SUBMITTED: "জমা হয়েছে",
   CHASE: "স্মরণ করানো হয়েছে",
   CHECKED: "দেখা হয়েছে",
