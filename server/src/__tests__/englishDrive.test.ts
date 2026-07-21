@@ -74,14 +74,41 @@ jest.mock("../middleware/authz", () => {
   };
 });
 
+// ED-2 collaborators — mocked so the DB-free test never loads pdfkit/Drive/queue.
+const mockMarkdownToPdf = jest.fn();
+jest.mock("../routes/pdfRenderer", () => ({
+  markdownToPdf: (md: unknown, o: unknown) => mockMarkdownToPdf(md, o),
+}));
+
+const mockDriveUpload = jest.fn();
+jest.mock("../modules/platform/services/DriveStore", () => {
+  class DriveUnavailableError extends Error {}
+  return {
+    DriveUnavailableError,
+    uploadToDrive: (i: unknown) => mockDriveUpload(i),
+  };
+});
+
+const mockStoredCreate = jest.fn();
+jest.mock("../modules/platform/models/StoredFile", () => ({
+  StoredFile: { create: (d: unknown) => mockStoredCreate(d) },
+}));
+
+const mockCreatePrint = jest.fn();
+jest.mock("../modules/printing/services/PrintRequestService", () => ({
+  createPrintRequest: (i: unknown) => mockCreatePrint(i),
+}));
+
 // Import AFTER mocks
 import { ForbiddenError } from "../middleware/authz";
+import { DriveUnavailableError } from "../modules/platform/services/DriveStore";
 import {
   allowedEnglishDriveClassLevels,
   myEnglishDriveClassLevels,
   englishDriveDocs,
   englishDriveDocById,
   uploadEnglishDriveDoc,
+  sendEnglishDriveDocToPrint,
 } from "../modules/english-drive/services/EnglishDriveService";
 
 const ENG_ID = oid();
@@ -134,6 +161,8 @@ const validUpload = () => ({
   actorRole: "OFFICE",
 });
 
+const STORED_ID = oid();
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockSubjectFind.mockReturnValue([{ _id: ENG_ID }]);
@@ -147,6 +176,10 @@ beforeEach(() => {
   mockCreate.mockImplementation(async (d: Record<string, unknown>) => madeDoc(d));
   mockFindOne.mockResolvedValue(null);
   mockFind.mockReturnValue([]);
+  mockMarkdownToPdf.mockResolvedValue(Buffer.from("%PDF-fake"));
+  mockDriveUpload.mockResolvedValue("drive-file-1");
+  mockStoredCreate.mockImplementation(async (d: Record<string, unknown>) => ({ _id: STORED_ID, ...d }));
+  mockCreatePrint.mockImplementation(async (i: { title: string }) => ({ _id: oid(), title: i.title }));
 });
 
 // ---------------------------------------------------------------------------
@@ -350,5 +383,90 @@ describe("uploadEnglishDriveDoc", () => {
         meta: expect.objectContaining({ version: 3, prevVersion: 2 }),
       }),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ED-2 — send to print through the EXISTING queue path
+// ---------------------------------------------------------------------------
+
+describe("sendEnglishDriveDocToPrint", () => {
+  const printInput = { id: "x", colour: "BW", sides: "SINGLE", copies: 10 };
+
+  test("a teacher of the class files an UPLOAD request with a print_upload PDF they own", async () => {
+    mockResolveScopes.mockResolvedValue([teachingScope(ENG_ID, C3_ID)]);
+    mockFindById.mockReturnValue(madeDoc());
+    const out = await sendEnglishDriveDocToPrint(ctxOf("TEACHER"), printInput);
+    expect(mockMarkdownToPdf).toHaveBeenCalledWith(
+      expect.stringContaining("# Block 1"),
+      expect.anything(),
+    );
+    expect(mockStoredCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "print_upload",
+        mime: "application/pdf",
+        uploadedBy: TEACHER_ID.toString(),
+      }),
+    );
+    // The requester owns the file → assertSourceResolves passes with NO waiver.
+    expect(mockCreatePrint).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceType: "UPLOAD",
+        fileIds: [STORED_ID.toString()],
+        purpose: "LESSON_PLAN", // TN
+        colour: "BW",
+        sides: "SINGLE",
+        copies: 10,
+        subject: "ENG",
+        requestedBy: TEACHER_ID.toString(),
+      }),
+    );
+    expect(out.printRequestId).toBeTruthy();
+    expect(out.title).toContain("C3_B1_TN_v2");
+  });
+
+  test("a teacher outside the doc's class is denied — nothing rendered or filed", async () => {
+    mockResolveScopes.mockResolvedValue([teachingScope(ENG_ID, C3_ID)]);
+    mockFindById.mockReturnValue(madeDoc({ classLevel: 4 }));
+    await expect(sendEnglishDriveDocToPrint(ctxOf("TEACHER"), printInput)).rejects.toThrow(
+      ForbiddenError,
+    );
+    expect(mockMarkdownToPdf).not.toHaveBeenCalled();
+    expect(mockCreatePrint).not.toHaveBeenCalled();
+  });
+
+  test("a guardian is denied", async () => {
+    mockFindById.mockReturnValue(madeDoc());
+    await expect(sendEnglishDriveDocToPrint(ctxOf("GUARDIAN"), printInput)).rejects.toThrow(
+      ForbiddenError,
+    );
+    expect(mockCreatePrint).not.toHaveBeenCalled();
+  });
+
+  test("kind maps to the queue purpose the Office reads", async () => {
+    const cases: Array<[string, string]> = [
+      ["BLOCK", "LESSON_PLAN"],
+      ["CW", "CLASSWORK"],
+      ["HW", "HOMEWORK"],
+      ["PT", "CLASS_TEST"],
+      ["AS", "ASSIGNMENT"],
+      ["CLUE", "LESSON_PLAN"],
+    ];
+    for (const [kind, purpose] of cases) {
+      mockCreatePrint.mockClear();
+      mockFindById.mockReturnValue(madeDoc({ kind }));
+      await sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), printInput);
+      expect(mockCreatePrint).toHaveBeenCalledWith(expect.objectContaining({ purpose }));
+    }
+  });
+
+  test("Drive down → Bangla error, no request filed", async () => {
+    mockFindById.mockReturnValue(madeDoc());
+    mockDriveUpload.mockRejectedValue(new DriveUnavailableError("down"));
+    await expect(sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), printInput)).rejects.toThrow(
+      /স্টোরেজ/,
+    );
+    expect(mockStoredCreate).not.toHaveBeenCalled();
+    expect(mockCreatePrint).not.toHaveBeenCalled();
   });
 });

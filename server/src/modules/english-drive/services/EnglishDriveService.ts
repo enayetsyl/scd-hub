@@ -14,12 +14,17 @@
  * the app as-is).
  */
 import { Types } from "mongoose";
+import type { PrintPurpose } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError, resolveTeacherScopes } from "../../../middleware/authz";
+import { markdownToPdf } from "../../../routes/pdfRenderer";
 import { Subject } from "../../foundation/models/Subject";
 import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
+import { StoredFile } from "../../platform/models/StoredFile";
+import { uploadToDrive, DriveUnavailableError } from "../../platform/services/DriveStore";
+import { createPrintRequest } from "../../printing/services/PrintRequestService";
 import {
   EnglishDriveDoc,
   ENGLISH_DRIVE_KINDS,
@@ -270,4 +275,85 @@ export async function uploadEnglishDriveDoc(
   });
 
   return { doc: shape(doc, null, false), replacedVersion: prev ? prev.version : null };
+}
+
+// ---------------------------------------------------------------------------
+// ED-2 — send to print (PRD §6): render the PDF server-side, store it as a
+// print_upload StoredFile owned by the caller, and file it through the EXISTING
+// createPrintRequest path. The office queue, PRINTED/DELIVERED logging,
+// notifications and the /files read-gate (uploader OR roster:manage) all apply
+// untouched — no new source type, no vocab change, no waiver: the file IS a
+// print_upload uploaded by the requester, so assertSourceResolves passes as-is.
+// ---------------------------------------------------------------------------
+
+/** Queue-purpose per document kind — the label the Office sees on the row. */
+const KIND_PRINT_PURPOSE: Record<EnglishDriveKind, PrintPurpose> = {
+  BLOCK: "LESSON_PLAN",
+  TN: "LESSON_PLAN",
+  CW: "CLASSWORK",
+  HW: "HOMEWORK",
+  PT: "CLASS_TEST",
+  AS: "ASSIGNMENT",
+  CLUE: "LESSON_PLAN",
+};
+
+export interface SendEnglishDriveToPrintInput {
+  id: string;
+  colour: string;
+  sides: string;
+  copies: number;
+}
+
+export interface EnglishDrivePrintResult {
+  printRequestId: string;
+  title: string;
+}
+
+export async function sendEnglishDriveDocToPrint(
+  ctx: AppContext,
+  input: SendEnglishDriveToPrintInput,
+): Promise<EnglishDrivePrintResult> {
+  // Same read gate as the doc screen: teacher of the class or P/O; guardian never.
+  const doc = await englishDriveDocById(ctx, input.id);
+
+  const stamp = `C${doc.classLevel}_B${doc.blockNumber}_${doc.kind}_v${doc.version}`;
+  const title = `English Drive ${stamp} — ${doc.title}`.slice(0, 200);
+  const pdf = await markdownToPdf(doc.contentMd ?? "", { title });
+
+  let driveFileId: string;
+  try {
+    driveFileId = await uploadToDrive({
+      name: `english_drive_${stamp}.pdf`,
+      mime: "application/pdf",
+      data: pdf,
+      year: String(new Date().getFullYear()),
+      subfolder: "print",
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      throw new Error("ফাইল স্টোরেজ এখন উপলব্ধ নয় — একটু পরে আবার চেষ্টা করুন");
+    }
+    throw e;
+  }
+  const stored = await StoredFile.create({
+    kind: "print_upload",
+    mime: "application/pdf",
+    sizeBytes: pdf.byteLength,
+    originalName: `english_drive_${stamp}.pdf`,
+    driveFileId,
+    uploadedBy: ctx.auth!.userId,
+  });
+
+  const req = await createPrintRequest({
+    title,
+    purpose: KIND_PRINT_PURPOSE[doc.kind as EnglishDriveKind] ?? "OTHER",
+    sourceType: "UPLOAD",
+    fileIds: [stored._id.toString()],
+    colour: input.colour,
+    sides: input.sides,
+    copies: input.copies,
+    subject: "ENG",
+    requestedBy: ctx.auth!.userId as string,
+  });
+  return { printRequestId: req._id.toString(), title: req.title };
 }

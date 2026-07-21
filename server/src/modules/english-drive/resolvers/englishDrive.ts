@@ -18,8 +18,10 @@ import {
   englishDriveDocById,
   myEnglishDriveClassLevels,
   uploadEnglishDriveDoc,
+  sendEnglishDriveDocToPrint,
   type EnglishDriveDocShape,
   type EnglishDriveUploadResult,
+  type EnglishDrivePrintResult,
 } from "../services/EnglishDriveService";
 
 const EnglishDriveDocRef = builder.objectRef<EnglishDriveDocShape>("EnglishDriveDoc");
@@ -79,6 +81,36 @@ builder.queryField("englishDriveMyClassLevels", (t) =>
       "(hides the drawer tab). Principal/Office get all five; guardians [].",
     authScopes: { authenticated: true },
     resolve: async (_root, _args, ctx) => myEnglishDriveClassLevels(ctx),
+  }),
+);
+
+const EnglishDrivePrintResultRef =
+  builder.objectRef<EnglishDrivePrintResult>("EnglishDrivePrintResult");
+EnglishDrivePrintResultRef.implement({
+  fields: (t) => ({
+    printRequestId: t.exposeString("printRequestId"),
+    title: t.exposeString("title"),
+  }),
+});
+
+builder.mutationField("sendEnglishDriveDocToPrint", (t) =>
+  t.field({
+    type: EnglishDrivePrintResultRef,
+    description:
+      "ED-2: render the doc's PDF server-side and file it through the EXISTING print queue " +
+      "(UPLOAD source, print_upload file owned by the caller). Same read gate as the doc " +
+      "screen — the class's English teachers + Principal/Office; guardians never.",
+    authScopes: { authenticated: true },
+    args: {
+      id: t.arg.string({ required: true }),
+      colour: t.arg.string({ required: true }),
+      sides: t.arg.string({ required: true }),
+      copies: t.arg.int({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return sendEnglishDriveDocToPrint(ctx, args);
+    },
   }),
 );
 

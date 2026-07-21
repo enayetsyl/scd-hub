@@ -47,6 +47,18 @@ export const ENGLISH_DRIVE_DOC = gql<{ englishDriveDoc: EnglishDriveDocFullT }, 
   }
 `;
 
+export const SEND_ENGLISH_DRIVE_TO_PRINT = gql<
+  { sendEnglishDriveDocToPrint: { printRequestId: string; title: string } },
+  { id: string; colour: string; sides: string; copies: number }
+>`
+  mutation SendEnglishDriveDocToPrint($id: String!, $colour: String!, $sides: String!, $copies: Int!) {
+    sendEnglishDriveDocToPrint(id: $id, colour: $colour, sides: $sides, copies: $copies) {
+      printRequestId
+      title
+    }
+  }
+`;
+
 export const UPLOAD_ENGLISH_DRIVE_DOC = gql<
   {
     uploadEnglishDriveDoc: {
