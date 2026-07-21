@@ -228,6 +228,10 @@ export type VocabStackParamList = {
 export type ClassTestStackParamList = {
   ClassTestHome: undefined;
   RequestClassTest: undefined;
+  /** Owner ask 2026-07-20: office-produced question papers — teacher list/form + office queue. */
+  MyCtQuestions: undefined;
+  CtQuestionRequest: undefined;
+  CtQuestionQueue: undefined;
   ClassTestResults: { testId: string; title: string };
   ClassTestResultsView: { testId: string; title: string };
   ClassTestPublish: { testId: string; title: string };

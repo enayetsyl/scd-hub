@@ -18,6 +18,7 @@ import { callerHasPermission } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import type { IStoredFile } from "../../platform/models/StoredFile";
+import { ClassTestQuestionRequest } from "../models/ClassTestQuestionRequest";
 
 export async function assertClassTestFileReadAccess(
   ctx: AppContext,
@@ -28,5 +29,12 @@ export async function assertClassTestFileReadAccess(
   if (callerHasPermission(ctx.auth, "roster:manage")) return;
   // The requesting teacher — the file's own uploader.
   if (file.uploadedBy.toString() === ctx.auth.userId) return;
+  // CT-question flow (owner ask 2026-07-20): the OFFICE uploaded the paper; the
+  // REQUESTING teacher must open it to review — any round's file of their own request.
+  const reviewed = await ClassTestQuestionRequest.exists({
+    requestedBy: ctx.auth.userId,
+    "rounds.fileId": file._id,
+  });
+  if (reviewed) return;
   throw new ForbiddenError("এই প্রশ্নপত্র দেখার অনুমতি নেই");
 }

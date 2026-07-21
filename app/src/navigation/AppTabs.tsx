@@ -136,6 +136,9 @@ import VocabMessagesScreen from "../screens/vocab/VocabMessagesScreen";
 import VocabAssignmentScreen from "../screens/vocab/VocabAssignmentScreen";
 import ClassTestHomeScreen from "../screens/classtest/ClassTestHomeScreen";
 import RequestClassTestScreen from "../screens/classtest/RequestClassTestScreen";
+import MyCtQuestionsScreen from "../screens/classtest/MyCtQuestionsScreen";
+import CtQuestionRequestScreen from "../screens/classtest/CtQuestionRequestScreen";
+import CtQuestionQueueScreen from "../screens/classtest/CtQuestionQueueScreen";
 import ClassTestResultsScreen from "../screens/classtest/ClassTestResultsScreen";
 import ClassTestResultsViewScreen from "../screens/classtest/ClassTestResultsViewScreen";
 import ClassTestPublishScreen from "../screens/classtest/ClassTestPublishScreen";
@@ -715,6 +718,9 @@ function ClassTestNavigator(): React.ReactElement {
     <ClassTestStack.Navigator screenOptions={stackOptions}>
       <ClassTestStack.Screen name="ClassTestHome" component={ClassTestHomeScreen} options={{ title: STR.ctHomeTitle }} />
       <ClassTestStack.Screen name="RequestClassTest" component={RequestClassTestScreen} options={{ title: STR.ctNewRequest }} />
+      <ClassTestStack.Screen name="MyCtQuestions" component={MyCtQuestionsScreen} options={{ title: STR.cqMyTitle }} />
+      <ClassTestStack.Screen name="CtQuestionRequest" component={CtQuestionRequestScreen} options={{ title: STR.cqFormTitle }} />
+      <ClassTestStack.Screen name="CtQuestionQueue" component={CtQuestionQueueScreen} options={{ title: STR.cqQueueTitle }} />
       <ClassTestStack.Screen
         name="ClassTestResults"
         component={ClassTestResultsScreen}
