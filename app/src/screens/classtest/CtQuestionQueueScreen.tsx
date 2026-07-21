@@ -16,7 +16,15 @@ import {
 } from "../../graphql/classTest";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Notice, Loader, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
-import { pickAndUploadClassTestPaper, openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
+import {
+  pickAndUploadClassTestPaper,
+  uploadClassTestPaperWebFile,
+  openStoredFile,
+  FILE_VIEW_SUPPORTED,
+  FileUploadError,
+  type UploadedFile,
+} from "../../lib/files";
+import { UploadDropZone } from "../../components/UploadDropZone";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -57,12 +65,14 @@ export default function CtQuestionQueueScreen(): React.ReactElement {
     }, [refetch]),
   );
 
-  async function onPickFile(id: string): Promise<void> {
+  // One post-upload path for both entry points (pick button + web drop zone):
+  // same per-card busy state, same staged-file result, same error notice.
+  async function runUpload(id: string, upload: () => Promise<UploadedFile | null>): Promise<void> {
     if (uploadingId) return;
     setError(null);
     setUploadingId(id);
     try {
-      const up = await pickAndUploadClassTestPaper();
+      const up = await upload();
       if (!up) return;
       setUploadFor(id);
       setUploaded({ fileId: up.fileId, name: up.originalName });
@@ -72,6 +82,10 @@ export default function CtQuestionQueueScreen(): React.ReactElement {
       setUploadingId(null);
     }
   }
+  const onPickFile = (id: string): Promise<void> => runUpload(id, pickAndUploadClassTestPaper);
+  // Single-paper flow: a multi-file drop takes the first file, extras are ignored.
+  const onDropFile = (id: string, files: File[]): Promise<void> =>
+    runUpload(id, () => uploadClassTestPaperWebFile(files[0]));
 
   async function onSend(id: string): Promise<void> {
     if (!uploaded || uploadFor !== id) return;
@@ -140,13 +154,18 @@ export default function CtQuestionQueueScreen(): React.ReactElement {
 
                   {actionable ? (
                     <View style={{ marginTop: space(2) }}>
-                      <Button
-                        title={uploadingHere ? `${STR.cqUploaded}: ${uploaded!.name}` : STR.cqUploadPaper}
-                        variant="secondary"
-                        loading={uploadingId === r.id}
-                        onPress={() => void onPickFile(r.id)}
+                      <UploadDropZone
+                        onFiles={(files) => void onDropFile(r.id, files)}
                         disabled={busyId !== null || uploadingId !== null}
-                      />
+                      >
+                        <Button
+                          title={uploadingHere ? `${STR.cqUploaded}: ${uploaded!.name}` : STR.cqUploadPaper}
+                          variant="secondary"
+                          loading={uploadingId === r.id}
+                          onPress={() => void onPickFile(r.id)}
+                          disabled={busyId !== null || uploadingId !== null}
+                        />
+                      </UploadDropZone>
                       {uploadingHere ? (
                         <>
                           <Field label={STR.cqOfficeNote} value={note} onChangeText={setNote} />

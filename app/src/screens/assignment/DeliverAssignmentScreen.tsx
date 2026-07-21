@@ -11,11 +11,14 @@ import { useQuery, useMutation } from "urql";
 import { STUDENTS_QUERY, DELIVER_ASSIGNMENT, HOMEWORK_ISSUE_ROSTER } from "../../graphql/operations";
 import {
   pickAndUploadAssignmentFiles,
+  uploadAssignmentWebFiles,
   openStoredFile,
   AS_MAX_ATTACHMENTS,
   FileUploadError,
   type UploadedFile,
+  type MultiUploadResult,
 } from "../../lib/files";
+import { UploadDropZone } from "../../components/UploadDropZone";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Loader, EmptyState, Notice } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel, classLevelLabel } from "../../lib/labels";
@@ -68,11 +71,12 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [pickBusy, setPickBusy] = useState(false);
 
-  async function onPickFiles(): Promise<void> {
+  /** Shared upload tail for both entry points — the pick button and the web drop. */
+  async function runAttachmentUpload(upload: () => Promise<MultiUploadResult>): Promise<void> {
     if (pickBusy || files.length >= AS_MAX_ATTACHMENTS) return;
     setPickBusy(true);
     try {
-      const res = await pickAndUploadAssignmentFiles(AS_MAX_ATTACHMENTS - files.length);
+      const res = await upload();
       if (res.uploaded.length > 0) setFiles((cur) => [...cur, ...res.uploaded]);
       if (res.failures.length > 0) setError(res.failures.join("\n"));
     } catch (e) {
@@ -80,6 +84,15 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
     } finally {
       setPickBusy(false);
     }
+  }
+
+  async function onPickFiles(): Promise<void> {
+    await runAttachmentUpload(() => pickAndUploadAssignmentFiles(AS_MAX_ATTACHMENTS - files.length));
+  }
+
+  /** Web only: files dragged onto the attach button, same cap + failure handling. */
+  async function onDropFiles(dropped: File[]): Promise<void> {
+    await runAttachmentUpload(() => uploadAssignmentWebFiles(dropped, AS_MAX_ATTACHMENTS - files.length));
   }
 
   async function onDeliver(): Promise<void> {
@@ -148,13 +161,18 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
               />
             </View>
           ))}
-          <Button
-            title={pickBusy ? STR.saving : STR.cnAttachFile}
-            variant="secondary"
-            onPress={() => void onPickFiles()}
-            loading={pickBusy}
+          <UploadDropZone
+            onFiles={(dropped) => void onDropFiles(dropped)}
             disabled={pickBusy || files.length >= AS_MAX_ATTACHMENTS}
-          />
+          >
+            <Button
+              title={pickBusy ? STR.saving : STR.cnAttachFile}
+              variant="secondary"
+              onPress={() => void onPickFiles()}
+              loading={pickBusy}
+              disabled={pickBusy || files.length >= AS_MAX_ATTACHMENTS}
+            />
+          </UploadDropZone>
         </Card>
 
         {error ? <Notice message={error} tone="danger" /> : null}

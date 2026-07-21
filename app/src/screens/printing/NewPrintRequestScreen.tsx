@@ -30,7 +30,13 @@ import { Screen, H2, Body, Muted, Card, Field, Chip, ChipRow, Button, Notice } f
 import { DateField } from "../../components/DateField";
 import { STR, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
-import { pickAndUploadPrintFiles, FileUploadError } from "../../lib/files";
+import {
+  pickAndUploadPrintFiles,
+  uploadPrintWebFiles,
+  FileUploadError,
+  type MultiUploadResult,
+} from "../../lib/files";
+import { UploadDropZone } from "../../components/UploadDropZone";
 import { useToast } from "../../state/ToastContext";
 import { useAuth } from "../../auth/AuthContext";
 import { useSectionContext } from "../../state/SectionContext";
@@ -91,7 +97,8 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
   });
   const classes = (classData?.classes ?? []).filter((c) => c.active);
 
-  async function onPickFile(): Promise<void> {
+  /** Shared upload tail for both entry points — the pick button and the web drop. */
+  async function runUpload(upload: () => Promise<MultiUploadResult>): Promise<void> {
     if (files.length >= MAX_PRINT_UPLOADS) {
       setError(`${MAX_PRINT_UPLOADS} ${STR.prMaxFiles}`);
       return;
@@ -101,7 +108,7 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
     try {
       // D-#294 follow-up: pick SEVERAL files in one go (capped at the remaining
       // slots); partial failures keep the successful uploads and are reported.
-      const { uploaded, failures } = await pickAndUploadPrintFiles(MAX_PRINT_UPLOADS - files.length);
+      const { uploaded, failures } = await upload();
       if (uploaded.length > 0) {
         setFiles((prev) => [
           ...prev,
@@ -114,6 +121,15 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
     } finally {
       setUploading(false);
     }
+  }
+
+  async function onPickFile(): Promise<void> {
+    await runUpload(() => pickAndUploadPrintFiles(MAX_PRINT_UPLOADS - files.length));
+  }
+
+  /** Web only: files dragged onto the pick button, same cap + failure handling. */
+  async function onDropFiles(dropped: File[]): Promise<void> {
+    await runUpload(() => uploadPrintWebFiles(dropped, MAX_PRINT_UPLOADS - files.length));
   }
 
   /** Drop an attached file before submitting (it stays uploaded but is not bound). */
@@ -212,13 +228,18 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
                     />
                   </View>
                 ))}
-                <Button
-                  title={uploading ? STR.prUploading : STR.prPickFile}
-                  variant="secondary"
-                  onPress={onPickFile}
-                  loading={uploading}
+                <UploadDropZone
+                  onFiles={(dropped) => void onDropFiles(dropped)}
                   disabled={busy || uploading || files.length >= MAX_PRINT_UPLOADS}
-                />
+                >
+                  <Button
+                    title={uploading ? STR.prUploading : STR.prPickFile}
+                    variant="secondary"
+                    onPress={onPickFile}
+                    loading={uploading}
+                    disabled={busy || uploading || files.length >= MAX_PRINT_UPLOADS}
+                  />
+                </UploadDropZone>
               </View>
             ) : (
               <View style={{ marginTop: space(2) }}>
