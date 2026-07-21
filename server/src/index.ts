@@ -74,6 +74,7 @@ import "./modules/classroom-observation/resolvers/observationEffectiveness";
 import "./modules/classroom-observation/resolvers/observationSchedule";
 import "./modules/classroom-observation/resolvers/videoReview";
 import "./modules/platform/resolvers/audit";
+import "./modules/trackers/resolvers/classTestQuestion";
 import "./modules/comments/resolvers/parentMeeting";
 import "./modules/comments/resolvers/meetingDispatch";
 import "./modules/comments/resolvers/meetingComment";

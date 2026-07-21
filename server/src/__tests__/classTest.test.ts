@@ -117,6 +117,12 @@ jest.mock("../modules/foundation/models/User", () => ({
   User: { findById: (id: unknown) => ({ select: () => ({ lean: () => mockUserFindById(id) }) }) },
 }));
 
+// D-#342: the file read-gate's last-resort lookup (requesting teacher of a
+// question-request round). No question requests exist in these DB-free tests.
+jest.mock("../modules/trackers/models/ClassTestQuestionRequest", () => ({
+  ClassTestQuestionRequest: { exists: async () => null },
+}));
+
 // Import AFTER mocks
 import {
   generateCtId,
