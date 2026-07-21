@@ -73,6 +73,35 @@ describe("allowedSubjectCodesForSection", () => {
     await expect(allowedSubjectCodesForSection(ctxOf("TEACHER"), SECTION, CLASS)).resolves.toBeNull();
   });
 
+  // Owner decision 2026-07-19: the checking queue + class notes pass
+  // { classTeacherOversight: false } — the class teacher falls through to
+  // their grant-derived subject set like any subject teacher.
+  test("classTeacherOversight:false — class teacher narrows to their own teaching grants", async () => {
+    mockSectionFindById.mockResolvedValue({ classTeacherId: TEACHER_ID });
+    mockGrantFind.mockResolvedValue([
+      { kind: "teaching", sectionId: SECTION, classId: CLASS, subjectId: SUBJ_ENG_ID, active: true },
+    ]);
+    mockSubjectFind.mockResolvedValue([{ _id: SUBJ_ENG_ID, code: "ENG" }]);
+    const allowed = await allowedSubjectCodesForSection(ctxOf("TEACHER"), SECTION, CLASS, {
+      classTeacherOversight: false,
+    });
+    expect(allowed).toEqual(new Set(["ENG"]));
+  });
+
+  test("classTeacherOversight:false — class teacher with NO grants gets an empty set", async () => {
+    mockSectionFindById.mockResolvedValue({ classTeacherId: TEACHER_ID });
+    const allowed = await allowedSubjectCodesForSection(ctxOf("TEACHER"), SECTION, CLASS, {
+      classTeacherOversight: false,
+    });
+    expect(allowed).toEqual(new Set());
+  });
+
+  test("classTeacherOversight:false — Principal/Office stay unrestricted", async () => {
+    await expect(
+      allowedSubjectCodesForSection(ctxOf("PRINCIPAL"), SECTION, CLASS, { classTeacherOversight: false }),
+    ).resolves.toBeNull();
+  });
+
   test("a school-wide homework supervisor is unrestricted", async () => {
     mockUserFindById.mockResolvedValue({ homeworkSupervisor: true });
     await expect(allowedSubjectCodesForSection(ctxOf("TEACHER"), SECTION, CLASS)).resolves.toBeNull();

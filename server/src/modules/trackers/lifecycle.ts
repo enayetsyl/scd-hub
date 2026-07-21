@@ -97,3 +97,46 @@ export function assertTransition(from: LifecycleState, to: LifecycleState): void
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Revert (D-#338) — pop the last ACTION off a record's stateDates.
+// ---------------------------------------------------------------------------
+
+/** The stamp shape both trackers persist per transition. `by` was added with the
+ *  revert capability (D-#338); older stamps lack it. */
+export interface StateStampLike {
+  state: LifecycleState;
+  at: Date;
+  by?: unknown;
+}
+
+/**
+ * Determine the record's last ACTION as the trailing run of stamps sharing the
+ * final stamp's exact `at` — multi-hop mutations (one-tap outcome, collect,
+ * WRONG check) push their stamps with ONE timestamp, so this run is precisely
+ * "what the teacher did last". Pure; throws on invariant breach:
+ *  - the entry stamp (index 0 — issuance) is never popped;
+ *  - the final stamp must match the record's current state (audit consistency).
+ * Returns the popped stamps (oldest→newest) and the stamp whose state is restored.
+ */
+export function popActionGroup<T extends StateStampLike>(
+  stateDates: readonly T[],
+  currentState: LifecycleState,
+): { popped: T[]; restored: T } {
+  if (stateDates.length < 2) {
+    throw new Error("প্রথম ধাপ (ইস্যু) ফেরানো যায় না");
+  }
+  const last = stateDates[stateDates.length - 1];
+  if (last.state !== currentState) {
+    throw new Error("রেকর্ডের অবস্থা অসঙ্গত — ফেরানো সম্ভব নয়");
+  }
+  const t = new Date(last.at).getTime();
+  let start = stateDates.length - 1;
+  // Extend the group backwards over identical timestamps, but never swallow
+  // the entry stamp at index 0.
+  while (start > 1 && new Date(stateDates[start - 1].at).getTime() === t) start -= 1;
+  return {
+    popped: stateDates.slice(start) as T[],
+    restored: stateDates[start - 1],
+  };
+}

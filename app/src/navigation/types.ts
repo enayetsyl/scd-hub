@@ -228,6 +228,10 @@ export type VocabStackParamList = {
 export type ClassTestStackParamList = {
   ClassTestHome: undefined;
   RequestClassTest: undefined;
+  /** Owner ask 2026-07-20: office-produced question papers — teacher list/form + office queue. */
+  MyCtQuestions: undefined;
+  CtQuestionRequest: undefined;
+  CtQuestionQueue: undefined;
   ClassTestResults: { testId: string; title: string };
   ClassTestResultsView: { testId: string; title: string };
   ClassTestPublish: { testId: string; title: string };
@@ -264,6 +268,12 @@ export type ObservationStackParamList = {
   ObservationDueList: undefined;
   ReviewerEffectiveness: undefined;
   ObservationConfig: undefined;
+};
+
+/** Free Mixing Observation (D-#341) — its own staff tab (owner ruling: separate
+ *  from the Classroom Observation hub). One role-routed entry screen. */
+export type FreeMixingStackParamList = {
+  FreeMixingHome: undefined;
 };
 
 /** Saturday Qur'an-Hifz Revision (SR app surfaces over SR-1..SR-4) — staff stack
@@ -309,6 +319,8 @@ export type AdminStackParamList = {
   // Access Control (AC-2): per-user permission editor (access:manage / Principal).
   AccessControlUsers: undefined;
   AccessControlEdit: { userId: string; name: string; role: string };
+  // Owner ask 2026-07-20: the Principal's audit-log viewer (audit:read).
+  AuditLog: undefined;
   // D-#290: who didn't submit reconciliation (Principal/Office).
   ReconciliationReport: undefined;
   // D-#300: per subject × class homework lifecycle report (Principal/Office).
@@ -336,6 +348,12 @@ export type ReportsStackParamList = {
   TeacherClassLoadDetail: { teacherId: string; teacherName?: string; month?: string };
   /** D-#329: assignment load (planned vs given, by subject & teacher). */
   AssignmentLoadReport: undefined;
+  /** Owner ask 2026-07-20: the two admin-hub reports join the Reports hub
+   *  (ALSO registered on the Admin stack — deep links target that copy). */
+  ReconciliationReport: undefined;
+  HwLifecycleReport: undefined;
+  /** D-#340: the Principal/Office class-test report (range + filters + state chips). */
+  ClassTestReport: undefined;
 };
 
 export type TabParamList = {
@@ -358,6 +376,7 @@ export type TabParamList = {
   ClassTestTab: NavigatorScreenParams<ClassTestStackParamList>;
   CommentsTab: NavigatorScreenParams<CommentsStackParamList>;
   ObservationTab: NavigatorScreenParams<ObservationStackParamList>;
+  FreeMixingTab: NavigatorScreenParams<FreeMixingStackParamList>;
   RevisionTab: NavigatorScreenParams<RevisionStackParamList>;
   FinanceTab: NavigatorScreenParams<FinanceStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;

@@ -132,6 +132,11 @@ export type AuditEventKind =
   | "SR_ABSENCE_ESCALATED"        // a consecutive-absence streak escalated to guardian + Principal (Saturday-Revision SR-2, §3/J-SR2-4, D-#245)
   | "SR_ESCALATION_CONFIG_SET"    // the consecutive-absence threshold edited (Saturday-Revision SR-2, message:dispatch)
   | "HOMEWORK_SUPERVISOR_SET"     // a school-wide homework supervisor toggled on/off (roster:manage)
+  | "VIDEO_REVIEW_ASSIGNED"       // a class-session YouTube video logged + assigned to a teacher (owner ask 2026-07-20; observation:upload)
+  | "VIDEO_REVIEW_REVIEWED"       // the assigned teacher's OK / NOT_OK-with-comment verdict (observation:review)
+  | "CT_QUESTION_REQUESTED"       // a subject teacher asked the office to produce a class-test question paper (owner ask 2026-07-20; tracker:write)
+  | "CT_QUESTION_SENT_FOR_REVIEW" // the office uploaded a paper round and sent it for teacher review (roster:manage)
+  | "CT_QUESTION_REVIEWED"        // the teacher's verdict on a round — approve (locks) or changes-requested with comment (tracker:write)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

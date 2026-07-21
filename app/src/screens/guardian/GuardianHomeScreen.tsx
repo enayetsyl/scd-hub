@@ -18,6 +18,7 @@ import {
   CHILD_LIBRARY_LOANS_QUERY,
   CHILD_VOCAB_QUERY,
   CHILD_ASSIGNMENTS,
+  CHILD_FEE_DUE_QUERY,
 } from "../../graphql/operations";
 import { CHILD_TEST_RESULTS_QUERY } from "../../graphql/classTest";
 import { CHILD_COMMENTS_QUERY } from "../../graphql/comments";
@@ -26,6 +27,7 @@ import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } 
 import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { useNotifications } from "../../state/NotificationContext";
 import { CHILD_TRAJECTORY_QUERY } from "../../graphql/wholePicture";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
@@ -67,6 +69,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { selected, fetching } = useGuardianChild();
   const lang = getActiveLang();
+  const [showTrajHow, setShowTrajHow] = React.useState(false);
   const sid = selected?.studentId ?? "";
   const date = today();
   const { openingId, runOpen } = useFileOpen();
@@ -126,11 +129,18 @@ export default function GuardianHomeScreen(): React.ReactElement {
     variables: { studentId: sid },
     pause: !selected,
   });
+  const [feeQ, refetchFee] = useQuery({
+    query: CHILD_FEE_DUE_QUERY,
+    variables: { studentId: sid },
+    pause: !selected,
+  });
+  const { unreadCount } = useNotifications();
 
   // UX-7: pull-to-refresh — one gesture refreshes every card on the guardian home.
   const anyFetching =
     routineQ.fetching || notesQ.fetching || hwQ.fetching || loadQ.fetching || libraryQ.fetching ||
-    vocabQ.fetching || testResultsQ.fetching || commentsQ.fetching || revisionQ.fetching || asgnQ.fetching;
+    vocabQ.fetching || testResultsQ.fetching || commentsQ.fetching || revisionQ.fetching || asgnQ.fetching ||
+    feeQ.fetching;
   const { refreshing, onRefresh } = usePullRefresh(anyFetching, () => {
     const opts = { requestPolicy: "network-only" as const };
     refetchRoutine(opts);
@@ -143,6 +153,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
     refetchComments(opts);
     refetchRevision(opts);
     refetchAsgn(opts);
+    refetchFee(opts);
   });
   // CM-6 follow-up: no guardian meeting-slot card is rendered. The server's
   // childMeetingSlot(meetingId, studentId) read needs a meetingId, but there is NO
@@ -171,6 +182,53 @@ export default function GuardianHomeScreen(): React.ReactElement {
     (r) => OPEN_STATES.has(r.state) || r.dateGiven.slice(0, 10) === date,
   );
   const load = loadQ.data?.childDayLoad;
+
+  // Owner ask 2026-07-19: teacher-Today-style attention cards for the family.
+  // Each fires only when there is something to act on; the strip hides entirely
+  // on a quiet day. Composed from the queries this screen already runs (+fees).
+  const RECENT_MS = 7 * 24 * 60 * 60 * 1000;
+  const isRecent = (iso: string | null | undefined): boolean =>
+    !!iso && Date.now() - new Date(iso).getTime() <= RECENT_MS;
+  const hwChaseCount = openHomework.filter((r) => r.state === "CHASE").length;
+  const asgnChaseCount = (asgnQ.data?.childAssignments ?? []).filter(
+    (a) => a.state === "CHASE" || (a.pending && a.daysLate > 0),
+  ).length;
+  const feeDue = feeQ.data?.childFeeDue?.guardianDue ?? 0;
+  const recentComments = (commentsQ.data?.childComments ?? []).filter((c) =>
+    isRecent(c.deliveredAt ?? c.createdAt),
+  ).length;
+  const recentTests = (testResultsQ.data?.childTestResults ?? []).filter((t) =>
+    isRecent(t.publishedAt),
+  ).length;
+  const alerts: Array<{ key: string; text: string; tone: "danger" | "warn" | "info"; onPress?: () => void }> = [];
+  if (hwChaseCount > 0) {
+    alerts.push({ key: "hw", text: `${STR.gpAlertHwChase}: ${bnNum(hwChaseCount)}`, tone: "danger" });
+  }
+  if (asgnChaseCount > 0) {
+    alerts.push({ key: "asgn", text: `${STR.gpAlertAsgnLate}: ${bnNum(asgnChaseCount)}`, tone: "danger" });
+  }
+  if (feeDue > 0) {
+    alerts.push({
+      key: "fees",
+      text: `${STR.gpAlertFeesDue}: ${bnNum(feeDue)}`,
+      tone: "warn",
+      onPress: () => nav.navigate("ChildFees"),
+    });
+  }
+  if (recentComments > 0) {
+    alerts.push({ key: "comments", text: `${STR.gpAlertNewComment}: ${bnNum(recentComments)}`, tone: "info" });
+  }
+  if (recentTests > 0) {
+    alerts.push({ key: "tests", text: `${STR.gpAlertNewTest}: ${bnNum(recentTests)}`, tone: "info" });
+  }
+  if (unreadCount > 0) {
+    alerts.push({
+      key: "notifications",
+      text: `${STR.gpAlertNotifications}: ${bnNum(unreadCount)}`,
+      tone: "info",
+      onPress: () => openNotificationCenter(),
+    });
+  }
   const shortcuts = [
     { key: "attendance", title: STR.gpAttendance, onPress: () => nav.navigate("ChildAttendance") },
     { key: "fees", title: STR.gpFees, onPress: () => nav.navigate("ChildFees") },
@@ -188,7 +246,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
         <ChildSwitcher />
 
         <QueryGate
-          results={[trajQ, routineQ, notesQ, hwQ, loadQ, libraryQ, vocabQ, testResultsQ, commentsQ, revisionQ, asgnQ]}
+          results={[trajQ, routineQ, notesQ, hwQ, loadQ, libraryQ, vocabQ, testResultsQ, commentsQ, revisionQ, asgnQ, feeQ]}
           onRetry={() => {
             const opts = { requestPolicy: "network-only" as const };
             refetchTraj(opts);
@@ -202,9 +260,33 @@ export default function GuardianHomeScreen(): React.ReactElement {
             refetchComments(opts);
             refetchRevision(opts);
             refetchAsgn(opts);
+            refetchFee(opts);
           }}
           loaderLabel={STR.loading}
         >
+        {/* Attention strip (owner ask 2026-07-19) — chase, fees due, new comment/
+            result, unread notifications. Hidden entirely on a quiet day. */}
+        {alerts.length > 0 ? (
+          <Card>
+            <Body style={{ fontWeight: "700" }}>{STR.gpAlertsTitle}</Body>
+            {alerts.map((a) =>
+              a.onPress ? (
+                <Pressable
+                  key={a.key}
+                  onPress={a.onPress}
+                  accessibilityRole="button"
+                  accessibilityLabel={a.text}
+                  style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+                >
+                  <Notice message={`${a.text} ›`} tone={a.tone} />
+                </Pressable>
+              ) : (
+                <Notice key={a.key} message={a.text} tone={a.tone} />
+              ),
+            )}
+          </Card>
+        ) : null}
+
         {/* Trajectory summary — how the child is doing, in plain Bangla. The server
             sends direction + their own numbers only; there is no rank to leak here. */}
         {traj ? (
@@ -224,11 +306,23 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 tone={traj.overall === "improving" ? "ok" : traj.overall === "declining" ? "danger" : "warn"}
               />
             </View>
-            {traj.linesBn.map((line, i) => (
+            {(lang === "en" && traj.linesEn.length > 0 ? traj.linesEn : traj.linesBn).map((line, i) => (
               <Muted key={i} style={{ marginTop: space(1) }}>
                 {line}
               </Muted>
             ))}
+            {/* Owner ask 2026-07-19: guardians should see HOW the badge is decided. */}
+            <Pressable
+              onPress={() => setShowTrajHow((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel={STR.gpTrajHowTitle}
+              style={({ pressed }) => [{ marginTop: space(2) }, pressed && { opacity: 0.7 }]}
+            >
+              <Body style={{ textDecorationLine: "underline" }}>
+                {showTrajHow ? STR.gpTrajHowHide : STR.gpTrajHowTitle}
+              </Body>
+            </Pressable>
+            {showTrajHow ? <Muted style={{ marginTop: space(1) }}>{STR.gpTrajHowBody}</Muted> : null}
           </Card>
         ) : null}
 

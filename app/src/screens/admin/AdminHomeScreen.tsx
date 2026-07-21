@@ -24,6 +24,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   const canTemplates = !!role && roleHasPermission(role, "template:manage");
   // access:manage is RESERVED-locked + Principal-only — roleHasPermission is exact here.
   const canAccess = !!role && roleHasPermission(role, "access:manage");
+  const canAudit = !!role && roleHasPermission(role, "audit:read");
 
   return (
     <Screen scroll>
@@ -71,17 +72,12 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {canRoster ? (
-        <Card onPress={() => navigation.navigate("ReconciliationReport")}>
-          <Body style={{ fontWeight: "700" }}>{STR.rrTitle}</Body>
-          <Muted>{STR.admSubReconReport}</Muted>
-        </Card>
-      ) : null}
-
-      {canRoster ? (
-        <Card onPress={() => navigation.navigate("HwLifecycleReport")}>
-          <Body style={{ fontWeight: "700" }}>{STR.hlrTitle}</Body>
-          <Muted>{STR.admSubHwLifecycle}</Muted>
+      {/* Owner ask 2026-07-20: the Reconciliation + HW-lifecycle report cards moved
+          to the drawer Reports group; their Admin-stack routes remain for deep links. */}
+      {canAudit ? (
+        <Card onPress={() => navigation.navigate("AuditLog")}>
+          <Body style={{ fontWeight: "700" }}>{STR.audTitle}</Body>
+          <Muted>{STR.audSubtitle}</Muted>
         </Card>
       ) : null}
 

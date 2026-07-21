@@ -33,6 +33,7 @@ import type {
   ClassTestStackParamList,
   CommentsStackParamList,
   ObservationStackParamList,
+  FreeMixingStackParamList,
   RevisionStackParamList,
   FinanceStackParamList,
   HrStackParamList,
@@ -46,7 +47,9 @@ import type {
 } from "./types";
 
 import { useNavigation, DrawerActions } from "@react-navigation/native";
+import { useQuery } from "urql";
 import { useAuth } from "../auth/AuthContext";
+import { MY_VIDEO_REVIEWS } from "../graphql/videoReview";
 import { useLanguage } from "../state/LanguageContext";
 import { useSidebar, DRAWER_PERMANENT_MIN_WIDTH } from "../state/SidebarContext";
 import { useNotifications } from "../state/NotificationContext";
@@ -133,6 +136,9 @@ import VocabMessagesScreen from "../screens/vocab/VocabMessagesScreen";
 import VocabAssignmentScreen from "../screens/vocab/VocabAssignmentScreen";
 import ClassTestHomeScreen from "../screens/classtest/ClassTestHomeScreen";
 import RequestClassTestScreen from "../screens/classtest/RequestClassTestScreen";
+import MyCtQuestionsScreen from "../screens/classtest/MyCtQuestionsScreen";
+import CtQuestionRequestScreen from "../screens/classtest/CtQuestionRequestScreen";
+import CtQuestionQueueScreen from "../screens/classtest/CtQuestionQueueScreen";
 import ClassTestResultsScreen from "../screens/classtest/ClassTestResultsScreen";
 import ClassTestResultsViewScreen from "../screens/classtest/ClassTestResultsViewScreen";
 import ClassTestPublishScreen from "../screens/classtest/ClassTestPublishScreen";
@@ -151,6 +157,7 @@ import ObservationHomeScreen from "../screens/observation/ObservationHomeScreen"
 import MyObservationsScreen from "../screens/observation/MyObservationsScreen";
 import AllObservationsScreen from "../screens/observation/AllObservationsScreen";
 import UploadObservationScreen from "../screens/observation/UploadObservationScreen";
+import FreeMixingHomeScreen from "../screens/freemixing/FreeMixingHomeScreen";
 import ObservationReviewQueueScreen from "../screens/observation/ObservationReviewQueueScreen";
 import ReviewObservationScreen from "../screens/observation/ReviewObservationScreen";
 import ObservationDetailScreen from "../screens/observation/ObservationDetailScreen";
@@ -214,11 +221,13 @@ import AccessControlUsersScreen from "../screens/admin/AccessControlUsersScreen"
 import AccessControlEditScreen from "../screens/admin/AccessControlEditScreen";
 import ReconciliationReportScreen from "../screens/admin/ReconciliationReportScreen";
 import HwLifecycleReportScreen from "../screens/admin/HwLifecycleReportScreen";
+import AuditLogScreen from "../screens/admin/AuditLogScreen";
 import ReportsHomeScreen from "../screens/reports/ReportsHomeScreen";
 import PendingReportScreen from "../screens/reports/PendingReportScreen";
 import TeacherClassLoadScreen from "../screens/reports/TeacherClassLoadScreen";
 import TeacherClassLoadDetailScreen from "../screens/reports/TeacherClassLoadDetailScreen";
 import AssignmentLoadReportScreen from "../screens/reports/AssignmentLoadReportScreen";
+import ClassTestReportScreen from "../screens/reports/ClassTestReportScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
@@ -709,6 +718,9 @@ function ClassTestNavigator(): React.ReactElement {
     <ClassTestStack.Navigator screenOptions={stackOptions}>
       <ClassTestStack.Screen name="ClassTestHome" component={ClassTestHomeScreen} options={{ title: STR.ctHomeTitle }} />
       <ClassTestStack.Screen name="RequestClassTest" component={RequestClassTestScreen} options={{ title: STR.ctNewRequest }} />
+      <ClassTestStack.Screen name="MyCtQuestions" component={MyCtQuestionsScreen} options={{ title: STR.cqMyTitle }} />
+      <ClassTestStack.Screen name="CtQuestionRequest" component={CtQuestionRequestScreen} options={{ title: STR.cqFormTitle }} />
+      <ClassTestStack.Screen name="CtQuestionQueue" component={CtQuestionQueueScreen} options={{ title: STR.cqQueueTitle }} />
       <ClassTestStack.Screen
         name="ClassTestResults"
         component={ClassTestResultsScreen}
@@ -798,6 +810,16 @@ function ObservationNavigator(): React.ReactElement {
       <ObservationStack.Screen name="ReviewerEffectiveness" component={ReviewerEffectivenessScreen} options={{ title: STR.obsReviewerEffTitle }} />
       <ObservationStack.Screen name="ObservationConfig" component={ObservationConfigScreen} options={{ title: STR.obsEscalationTitle }} />
     </ObservationStack.Navigator>
+  );
+}
+
+const FreeMixingStack = createNativeStackNavigator<FreeMixingStackParamList>();
+function FreeMixingNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <FreeMixingStack.Navigator screenOptions={stackOptions}>
+      <FreeMixingStack.Screen name="FreeMixingHome" component={FreeMixingHomeScreen} options={{ title: STR.vrTitle }} />
+    </FreeMixingStack.Navigator>
   );
 }
 
@@ -909,7 +931,11 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="DailyNote" component={DailyNoteScreen} options={{ title: STR.dailyNoteTitle }} />
       <ReportsStack.Screen name="TeacherClassLoad" component={TeacherClassLoadScreen} options={{ title: STR.clTitle }} />
       <ReportsStack.Screen name="TeacherClassLoadDetail" component={TeacherClassLoadDetailScreen} options={{ title: STR.clTitle }} />
+      <ReportsStack.Screen name="ReconciliationReport" component={ReconciliationReportScreen} options={{ title: STR.rrTitle }} />
+      <ReportsStack.Screen name="HwLifecycleReport" component={HwLifecycleReportScreen} options={{ title: STR.hlrTitle }} />
       <ReportsStack.Screen name="AssignmentLoadReport" component={AssignmentLoadReportScreen} options={{ title: STR.alReportTitle }} />
+      {/* D-#340: the class-test oversight report. */}
+      <ReportsStack.Screen name="ClassTestReport" component={ClassTestReportScreen} options={{ title: STR.ctReportTitle }} />
     </ReportsStack.Navigator>
   );
 }
@@ -945,6 +971,7 @@ function AdminNavigator(): React.ReactElement {
         component={AccessControlEditScreen}
         options={({ route }) => ({ title: route.params.name || STR.acTitle })}
       />
+      <AdminStack.Screen name="AuditLog" component={AuditLogScreen} options={{ title: STR.audTitle }} />
       <AdminStack.Screen name="ReconciliationReport" component={ReconciliationReportScreen} options={{ title: STR.rrTitle }} />
       <AdminStack.Screen name="HwLifecycleReport" component={HwLifecycleReportScreen} options={{ title: STR.hlrTitle }} />
       <AdminStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
@@ -1007,6 +1034,12 @@ const Drawer = createDrawerNavigator<TabParamList>();
 export function AppTabs(): React.ReactElement {
   const { role } = useAuth();
   const colors = useColors();
+  // Free Mixing Observation tab (D-#341, owner ruling): a TEACHER sees it ONLY
+  // when at least one video is assigned to them; Principal/Office always.
+  const [freeMixQ] = useQuery({
+    query: MY_VIDEO_REVIEWS,
+    pause: role !== "TEACHER",
+  });
   // Permanent left sidebar on laptop/desktop web; slide-over (☰) on phone/narrow.
   const { width } = useWindowDimensions();
   const wide = width >= DRAWER_PERMANENT_MIN_WIDTH;
@@ -1056,6 +1089,11 @@ export function AppTabs(): React.ReactElement {
       roleHasPermission(role, "observation:upload") ||
       roleHasPermission(role, "observation:review") ||
       roleHasPermission(role, "observation:manage"));
+  // Free Mixing Observation: Principal/Office (assign+board) always; a teacher
+  // only once something is actually assigned to them (owner ruling 2026-07-20).
+  const canFreeMixing =
+    (!!role && roleHasPermission(role, "observation:upload")) ||
+    (role === "TEACHER" && (freeMixQ.data?.myVideoReviews.length ?? 0) > 0);
   // Saturday Qur'an-Hifz Revision (SR app surfaces): Hifz teachers via tracker:read
   // (record/edit/deliver/history); Principal/Office via roster:manage (dashboards +
   // completeness chase). Every action is re-gated + row-scoped server-side. GUARDIAN
@@ -1123,6 +1161,8 @@ export function AppTabs(): React.ReactElement {
         {canClassTest ? <Drawer.Screen name="ClassTestTab" component={ClassTestNavigator} /> : null}
         {canComments ? <Drawer.Screen name="CommentsTab" component={CommentsNavigator} /> : null}
         {canObservation ? <Drawer.Screen name="ObservationTab" component={ObservationNavigator} /> : null}
+        {/* Free Mixing Observation (D-#341) — P/O always; a teacher only when assigned. */}
+        {canFreeMixing ? <Drawer.Screen name="FreeMixingTab" component={FreeMixingNavigator} /> : null}
         {canRevision ? <Drawer.Screen name="RevisionTab" component={RevisionNavigator} /> : null}
         {canFinance ? <Drawer.Screen name="FinanceTab" component={FinanceNavigator} /> : null}
         {canHr ? <Drawer.Screen name="HrTab" component={HrNavigator} /> : null}

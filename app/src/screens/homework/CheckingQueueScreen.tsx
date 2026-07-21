@@ -11,7 +11,7 @@
  * (redeliver, returns, manual moves).
  */
 import React, { useState, useRef, useCallback } from "react";
-import { ScrollView, View, RefreshControl } from "react-native";
+import { Pressable, ScrollView, View, RefreshControl } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
@@ -19,8 +19,10 @@ import {
   HOMEWORK_OPEN_RECORDS,
   RECORD_HOMEWORK_OUTCOME,
   ATTACH_HW_ANSWER_FILE,
+  REVERT_HW_RECORD,
   type HwOpenRecordT,
 } from "../../graphql/operations";
+import { useConfirm } from "../../state/ConfirmContext";
 import { pickAndUploadHomeworkFile, FileUploadError } from "../../lib/files";
 import { groupByDate } from "../../lib/groupByDate";
 import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
@@ -28,7 +30,7 @@ import { SubjectFold } from "../../components/SubjectFold";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
 import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
-import { STR, hwSubjectLabel, hwResultLabel, lifecycleStateLabel, dateHeaderLabel } from "../../lib/labels";
+import { STR, hwSubjectLabel, hwResultLabel, lifecycleStateLabel, dateHeaderLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { useSectionContext } from "../../state/SectionContext";
@@ -93,6 +95,10 @@ const EMPTY_PENDING: Pending = { outcome: "", expanded: false, resubmit: false, 
 export default function CheckingQueueScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
   const [pending, setPending] = useState<Record<string, Pending>>({});
+  // Day accordion (owner request): exactly ONE day card is open at a time and
+  // every day starts CLOSED (owner ruling 2026-07-20). Keyed by dateKey so the
+  // same day stays open across subjects.
+  const [openDateKey, setOpenDateKey] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -106,6 +112,8 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
   });
   const [, recordOutcome] = useMutation(RECORD_HOMEWORK_OUTCOME);
   const [, attachAnswer] = useMutation(ATTACH_HW_ANSWER_FILE);
+  const [, revertRecord] = useMutation(REVERT_HW_RECORD);
+  const { confirmAction } = useConfirm();
 
   const records = recsQ.data?.homeworkOpenRecords ?? [];
   // D-#306: fold subjects the caller doesn't actively teach on this section.
@@ -165,6 +173,19 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
     refetchRecs({ requestPolicy: "network-only" });
   }
 
+  /** D-#338 — undo the last recorded step (server enforces own-action + same-day). */
+  async function onRevert(recordId: string): Promise<void> {
+    if (!(await confirmAction({ title: STR.revertConfirmTitle, message: STR.revertConfirmBody, confirmLabel: STR.revertAction }))) return;
+    setError(null);
+    setOk(null);
+    setBusyId(recordId);
+    const res = await revertRecord({ sectionId: base.sectionId, recordId });
+    setBusyId(null);
+    if (res.error || !res.data?.revertHomeworkRecord) return setError(friendlyError(res.error));
+    setOk(STR.revertDone);
+    refetchRecs({ requestPolicy: "network-only" });
+  }
+
   /** Optional checked-answer attach (GP-A, D-#70) — failure shows a Bangla notice
    *  and never blocks checking (GP-J8). */
   async function onAttachAnswer(recordId: string): Promise<void> {
@@ -194,11 +215,28 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
     refetchRecs({ requestPolicy: "network-only" }),
   );
 
-  const renderDateGroups = (recs: HwOpenRecordT[]): React.ReactNode =>
-    groupByDate(recs, (r) => r.dateGiven).map((g) => (
-      <View key={g.dateKey} style={{ marginBottom: space(2) }}>
-        <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{dateHeaderLabel(g.dateKey)}</Muted>
-        {groupByItem(g.items).map((ig) => (
+  const renderDateGroups = (recs: HwOpenRecordT[]): React.ReactNode => {
+    const groups = groupByDate(recs, (r) => r.dateGiven);
+    // One collapsible card per day (owner ask 2026-07-20 — same look as Student
+    // records): every day starts closed; a tap opens it and closes the others.
+    return groups.map((g) => {
+      const isOpen = g.dateKey === openDateKey;
+      return (
+      <Card key={g.dateKey}>
+        <Pressable
+          onPress={() => setOpenDateKey(isOpen ? "" : g.dateKey)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: isOpen }}
+          accessibilityLabel={dateHeaderLabel(g.dateKey)}
+          style={({ pressed }) => [{ paddingVertical: space(1) }, pressed && { opacity: 0.7 }]}
+        >
+          <Muted style={{ fontWeight: "700" }}>
+            {isOpen ? "▾" : "▸"} {dateHeaderLabel(g.dateKey)} ({bnNum(g.items.length)})
+          </Muted>
+        </Pressable>
+        {!isOpen
+          ? null
+          : groupByItem(g.items).map((ig) => (
           <View key={ig.hwId} style={{ marginBottom: space(2) }}>
             <Muted style={{ marginBottom: 4 }}>
               {hwSubjectLabel(ig.subject)} · {ig.hwId}
@@ -284,7 +322,19 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
                   ) : (
                     <View style={{ marginTop: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                       {r.result ? <Muted>{hwResultLabel(r.result)}</Muted> : <View />}
-                      <Button title={STR.hwSeeRecords} variant="ghost" onPress={() => navigation.navigate("HomeworkRecords")} />
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        {/* D-#338: undo the mistaken check/chase in place. */}
+                        {r.stampCount > 1 ? (
+                          <Button
+                            title={STR.revertAction}
+                            variant="ghost"
+                            onPress={() => onRevert(r.id)}
+                            loading={busyId === r.id}
+                            disabled={busyId !== null}
+                          />
+                        ) : null}
+                        <Button title={STR.hwSeeRecords} variant="ghost" onPress={() => navigation.navigate("HomeworkRecords")} />
+                      </View>
                     </View>
                   )}
                 </Card>
@@ -292,8 +342,10 @@ export default function CheckingQueueScreen({ navigation }: Props): React.ReactE
             })}
           </View>
         ))}
-      </View>
-    ));
+      </Card>
+      );
+    });
+  };
 
   return (
     <Screen padded={false}>

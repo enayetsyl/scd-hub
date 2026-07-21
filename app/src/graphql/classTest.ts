@@ -103,6 +103,36 @@ export const CREATE_CLASS_TEST_REQUEST = gql<
   }
 `;
 
+// D-#339: register as ALREADY official — born PRINTED, no print-queue row.
+export const REGISTER_CLASS_TEST_OFFICIAL = gql<
+  { registerClassTestOfficial: ClassTestT },
+  {
+    sectionId: string;
+    subject: string;
+    examDate: string;
+    totalMarks: number;
+    passMark?: number | null;
+    source: string;
+    setId?: string | null;
+    questionFileId?: string | null;
+    testNumber?: number | null;
+    deadlineDays?: number | null;
+    notes?: string | null;
+  }
+>`
+  mutation RegisterClassTestOfficial(
+    $sectionId: String!, $subject: String!, $examDate: String!, $totalMarks: Int!,
+    $passMark: Int, $source: String!, $setId: String, $questionFileId: String,
+    $testNumber: Int, $deadlineDays: Int, $notes: String
+  ) {
+    registerClassTestOfficial(
+      sectionId: $sectionId, subject: $subject, examDate: $examDate, totalMarks: $totalMarks,
+      passMark: $passMark, source: $source, setId: $setId, questionFileId: $questionFileId,
+      testNumber: $testNumber, deadlineDays: $deadlineDays, notes: $notes
+    ) { ${CLASS_TEST_FIELDS} }
+  }
+`;
+
 // ---------------------------------------------------------------------------
 // Per-student results (CT-2)
 // ---------------------------------------------------------------------------
@@ -263,6 +293,9 @@ export interface ClassTestReportStatusRowT {
   classLevel: number;
   sectionId: string;
   teacherId: string;
+  /** D-#339: report author's name + newest result submittedAt (null until proposed). */
+  teacherName: string;
+  submittedAt: string | null;
   examDate: string;
   deadline: string;
   deadlineDays: number;
@@ -295,7 +328,7 @@ export const CLASS_TEST_REPORTS_STATUS_QUERY = gql<
 >`
   query ClassTestReportsStatus(${SUMMARY_ARG_DEFS}) {
     classTestReportsStatus(${SUMMARY_ARG_USE}) {
-      testId ctId subject testNumber classLevel sectionId teacherId examDate deadline deadlineDays
+      testId ctId subject testNumber classLevel sectionId teacherId teacherName submittedAt examDate deadline deadlineDays
       rosterCount enteredCount presentCount absentCount pendingCount complete overdue schoolDaysLate state
     }
   }
@@ -490,6 +523,114 @@ export const CHILD_TEST_RESULTS_QUERY = gql<
   query ChildTestResults($studentId: String!) {
     childTestResults(studentId: $studentId) {
       testId ctId subject testNumber examDate classLevel status marks totalMarks percent pass weakness guardianAction publishedAt
+    }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// CT question-request loop (owner ask 2026-07-20): teacher asks the office for
+// a question paper; office uploads rounds; teacher approves (locks) or asks for
+// changes; a CONFIRMED paper goes to print via the standard class-test path.
+// ---------------------------------------------------------------------------
+
+export interface CtQuestionRoundT {
+  fileId: string;
+  note: string | null;
+  sentBy: string;
+  sentAt: string;
+  teacherComment: string | null;
+  respondedAt: string | null;
+}
+
+export interface CtQuestionRequestT {
+  id: string;
+  classLevel: number;
+  sectionId: string;
+  subject: string;
+  chapter: string;
+  testNumber: number;
+  totalMarks: number;
+  durationMinutes: number;
+  examDate: string;
+  status: string;
+  rounds: CtQuestionRoundT[];
+  currentFileId: string | null;
+  requestedBy: string;
+  requesterName: string | null;
+  requestedAt: string;
+  confirmedAt: string | null;
+  classTestId: string | null;
+}
+
+const CT_QUESTION_FIELDS = `
+  id classLevel sectionId subject chapter testNumber totalMarks durationMinutes examDate status
+  rounds { fileId note sentBy sentAt teacherComment respondedAt }
+  currentFileId requestedBy requesterName requestedAt confirmedAt classTestId
+`;
+
+export const MY_CT_QUESTION_REQUESTS = gql<{ myCtQuestionRequests: CtQuestionRequestT[] }, Record<string, never>>`
+  query MyCtQuestionRequests {
+    myCtQuestionRequests { ${CT_QUESTION_FIELDS} }
+  }
+`;
+
+export const CT_QUESTION_QUEUE = gql<{ ctQuestionQueue: CtQuestionRequestT[] }, Record<string, never>>`
+  query CtQuestionQueue {
+    ctQuestionQueue { ${CT_QUESTION_FIELDS} }
+  }
+`;
+
+export const CREATE_CT_QUESTION_REQUEST = gql<
+  { createCtQuestionRequest: CtQuestionRequestT },
+  { sectionId: string; subject: string; chapter: string; totalMarks: number; durationMinutes: number; examDate: string }
+>`
+  mutation CreateCtQuestionRequest(
+    $sectionId: String!
+    $subject: String!
+    $chapter: String!
+    $totalMarks: Int!
+    $durationMinutes: Int!
+    $examDate: String!
+  ) {
+    createCtQuestionRequest(
+      sectionId: $sectionId
+      subject: $subject
+      chapter: $chapter
+      totalMarks: $totalMarks
+      durationMinutes: $durationMinutes
+      examDate: $examDate
+    ) {
+      ${CT_QUESTION_FIELDS}
+    }
+  }
+`;
+
+export const SEND_CT_QUESTION_FOR_REVIEW = gql<
+  { sendCtQuestionForReview: CtQuestionRequestT },
+  { id: string; fileId: string; note?: string | null }
+>`
+  mutation SendCtQuestionForReview($id: String!, $fileId: String!, $note: String) {
+    sendCtQuestionForReview(id: $id, fileId: $fileId, note: $note) { ${CT_QUESTION_FIELDS} }
+  }
+`;
+
+export const REVIEW_CT_QUESTION = gql<
+  { reviewCtQuestion: CtQuestionRequestT },
+  { id: string; approve: boolean; comment?: string | null }
+>`
+  mutation ReviewCtQuestion($id: String!, $approve: Boolean!, $comment: String) {
+    reviewCtQuestion(id: $id, approve: $approve, comment: $comment) { ${CT_QUESTION_FIELDS} }
+  }
+`;
+
+export const REQUEST_CT_QUESTION_PRINT = gql<
+  { requestCtQuestionPrint: { request: CtQuestionRequestT; ctId: string } },
+  { id: string; colour?: string | null; sides?: string | null; copies?: number | null; copiesMode?: string | null }
+>`
+  mutation RequestCtQuestionPrint($id: String!, $colour: String, $sides: String, $copies: Int, $copiesMode: String) {
+    requestCtQuestionPrint(id: $id, colour: $colour, sides: $sides, copies: $copies, copiesMode: $copiesMode) {
+      request { ${CT_QUESTION_FIELDS} }
+      ctId
     }
   }
 `;

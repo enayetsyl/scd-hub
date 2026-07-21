@@ -197,12 +197,20 @@ export async function pickAndUploadChatFile(
 // the returned fileId as questionFileId.
 // ---------------------------------------------------------------------------
 
-/** Pick one jpeg/png/pdf and upload it as a class-test question paper; null if the
- *  picker is cancelled. Throws FileUploadError with the server's Bangla message on
- *  rejection/failure (the caller shows a notice; the request is filed after). */
+/** Class-test papers additionally accept Word documents (D-#342 — the office
+ *  authors papers in Word); the server enforces the same list. */
+export const CLASSTEST_FILE_MIMES = [
+  ...FILE_MIMES,
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+
+/** Pick one jpeg/png/pdf/doc/docx and upload it as a class-test question paper; null
+ *  if the picker is cancelled. Throws FileUploadError with the server's Bangla message
+ *  on rejection/failure (the caller shows a notice; the request is filed after). */
 export async function pickAndUploadClassTestPaper(): Promise<UploadedFile | null> {
   const picked = await DocumentPicker.getDocumentAsync({
-    type: FILE_MIMES,
+    type: CLASSTEST_FILE_MIMES,
     multiple: false,
     copyToCacheDirectory: true,
   });

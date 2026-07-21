@@ -39,8 +39,8 @@ describe("listOpenRecords (date-grouped pending queue source)", () => {
     const stuA = oid();
     const stuB = oid();
     mockRecordFind.mockResolvedValue([
-      { _id: oid(), hwItemId: item1, hwId: "HW-C5-SCI-0001", studentId: stuA, state: "CHECKED", chaseCount: 0, answerFileId: oid(), dueDate: new Date("2026-06-17"), result: "CORRECT" },
-      { _id: oid(), hwItemId: item2, hwId: "HW-C5-BAN-0002", studentId: stuB, state: "SUBMITTED", chaseCount: 1 },
+      { _id: oid(), hwItemId: item1, hwId: "HW-C5-SCI-0001", studentId: stuA, state: "CHECKED", chaseCount: 0, answerFileId: oid(), dueDate: new Date("2026-06-17"), result: "CORRECT", stateDates: [{ state: "GIVEN", at: new Date("2026-06-15") }, { state: "CHECKED", at: new Date("2026-06-18T04:00:00Z") }] },
+      { _id: oid(), hwItemId: item2, hwId: "HW-C5-BAN-0002", studentId: stuB, state: "SUBMITTED", chaseCount: 1, stateDates: [{ state: "GIVEN", at: new Date("2026-06-16") }] },
     ]);
     mockItemFind.mockResolvedValue([
       { _id: item1, subject: "SCI", dateGiven: new Date("2026-06-15") },
@@ -66,13 +66,17 @@ describe("listOpenRecords (date-grouped pending queue source)", () => {
     expect(res[1].dueDate).toMatch(/^2026-06-17/);
     expect(res[1].result).toBe("CORRECT");
     expect(res[0].result).toBeNull(); // not yet checked
+    // D-#338: undo affordance fields
+    expect(res[1].stampCount).toBe(2);
+    expect(res[1].lastStateAt).toMatch(/^2026-06-18/);
+    expect(res[0].stampCount).toBe(1);
   });
 
   test("missing item/student → '?' subject + the id as a safe fallback", async () => {
     const orphanItem = oid();
     const orphanStu = oid();
     mockRecordFind.mockResolvedValue([
-      { _id: oid(), hwItemId: orphanItem, hwId: "HW-X", studentId: orphanStu, state: "DUE", chaseCount: 0 },
+      { _id: oid(), hwItemId: orphanItem, hwId: "HW-X", studentId: orphanStu, state: "DUE", chaseCount: 0, stateDates: [{ state: "GIVEN", at: new Date("2026-06-15") }] },
     ]);
     mockItemFind.mockResolvedValue([]);
     mockStudentFind.mockResolvedValue([]);
