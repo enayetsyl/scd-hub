@@ -28,7 +28,9 @@ export interface IEnglishDriveDoc extends Document {
   _id: Types.ObjectId;
   /** Content axis C1..C5 stored as the integer 1..5 (English Drive covers no Nursery/KG). */
   classLevel: number;
-  blockNumber: number;
+  /** Null for block-less documents — assignments are week-scoped, not block-scoped
+   *  (owner ruling 2026-07-21, D-#346). Required for every other kind (service). */
+  blockNumber: number | null;
   kind: EnglishDriveKind;
   /** Sequence within (block × kind) — HW **4**, CW **1**. 1 for single-doc kinds.
    *  Pre-seq rows have no field; reads treat missing as 1. */
@@ -48,7 +50,9 @@ export interface IEnglishDriveDoc extends Document {
 const EnglishDriveDocSchema = new Schema<IEnglishDriveDoc>(
   {
     classLevel: { type: Number, required: true, min: 1, max: 5 },
-    blockNumber: { type: Number, required: true, min: 1 },
+    // Optional at the schema so AS can be block-less; the SERVICE requires it for
+    // every other kind (D-#346).
+    blockNumber: { type: Number, min: 1, default: null },
     kind: { type: String, required: true, enum: ENGLISH_DRIVE_KINDS },
     seq: { type: Number, required: true, min: 1, default: 1 },
     title: { type: String, required: true, trim: true },

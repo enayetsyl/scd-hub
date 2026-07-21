@@ -51,14 +51,17 @@ export default function EnglishDriveHomeScreen({ navigation }: Props): React.Rea
   const docs = docsQ.data?.englishDriveDocs ?? [];
 
   // Blocks as collapsible groups — exactly one open (the first by default).
+  // Block-less docs (assignments, D-#346) get their own group, listed last (-1 key).
   const blocks = useMemo(() => {
     const byBlock = new Map<number, EnglishDriveDocT[]>();
     for (const d of docs) {
-      const list = byBlock.get(d.blockNumber) ?? [];
+      const key = d.blockNumber ?? -1;
+      const list = byBlock.get(key) ?? [];
       list.push(d);
-      byBlock.set(d.blockNumber, list);
+      byBlock.set(key, list);
     }
-    return [...byBlock.entries()].sort((a, b) => a[0] - b[0]);
+    const pos = (k: number): number => (k === -1 ? Number.POSITIVE_INFINITY : k);
+    return [...byBlock.entries()].sort((a, b) => pos(a[0]) - pos(b[0]));
   }, [docs]);
   const [openBlock, setOpenBlock] = useState<number | null>(null);
   const effectiveOpen = openBlock ?? (blocks.length > 0 ? blocks[0][0] : null);
@@ -126,7 +129,8 @@ export default function EnglishDriveHomeScreen({ navigation }: Props): React.Rea
                     style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
                   >
                     <Body style={{ fontWeight: "700" }}>
-                      {isOpen ? "▾" : "▸"} {STR.edBlock} {bnNum(blockNumber)}
+                      {isOpen ? "▾" : "▸"}{" "}
+                      {blockNumber === -1 ? STR.edNoBlock : `${STR.edBlock} ${bnNum(blockNumber)}`}
                     </Body>
                     <Muted>({bnNum(rows.length)})</Muted>
                   </Pressable>
