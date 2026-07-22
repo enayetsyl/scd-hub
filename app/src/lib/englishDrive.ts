@@ -7,7 +7,7 @@
  * Recommended generator convention: C{class}_ENG_B{block}_{KIND}_v{version}.md
  * e.g. C3_ENG_B01_TN_v2.md — but any filename carrying the tokens works.
  */
-import { STR } from "./labels";
+import { STR, bnNum } from "./labels";
 
 export const ENGLISH_DRIVE_KINDS = ["BLOCK", "TN", "CW", "HW", "PT", "AS", "CLUE"] as const;
 export type EnglishDriveKind = (typeof ENGLISH_DRIVE_KINDS)[number];
@@ -36,10 +36,53 @@ export function englishDriveKindLabel(kind: string): string {
 export interface ParsedEnglishDriveName {
   classLevel: number | null;
   blockNumber: number | null;
+  /** The blocks a PT covers (D-#347): `B03-05` → [3,4,5], `B3,4,5` → [3,4,5].
+   *  Empty for every other kind (they use blockNumber). */
+  blockNumbers: number[];
   kind: EnglishDriveKind | null;
   /** Sequence within (block × kind): C1B03_HW4 → 4, C1B03CW1 → 1. */
   seq: number | null;
   version: number | null;
+}
+
+/** Bangla block coverage for a PT: [3,4,5] → "৩–৫", [3,5] → "৩, ৫" (D-#347). */
+export function formatBlocksBn(nums: number[]): string {
+  const b = [...nums].sort((a, z) => a - z);
+  const contiguous = b.length > 1 && b.length === b[b.length - 1] - b[0] + 1;
+  return contiguous
+    ? `${bnNum(b[0])}–${bnNum(b[b.length - 1])}`
+    : b.map((n) => bnNum(n)).join(", ");
+}
+
+/** Expand a bare "covers blocks" form value — "3-5" / "3,4,5" / "3 5" → number[] (D-#347). */
+export function parseBlockList(text: string): number[] {
+  const set = new Set<number>();
+  if (text.trim() === "") return [];
+  for (const r of text.matchAll(/0*(\d+)\s*-\s*0*(\d+)/g)) {
+    const a = Number(r[1]);
+    const b = Number(r[2]);
+    for (let i = Math.min(a, b); i <= Math.max(a, b); i++) set.add(i);
+  }
+  for (const n of text.matchAll(/0*(\d+)/g)) set.add(Number(n[1]));
+  return [...set].filter((n) => n >= 1).sort((a, b) => a - b);
+}
+
+/** Every block referenced by a name — ranges (B3-5) and lists (B3,4,5) expanded (D-#347). */
+export function parseBlockSet(stem: string): number[] {
+  const set = new Set<number>();
+  // Each B-anchored group: a number, a range, or a comma list — e.g. B03-05, B3,4,5.
+  const groupRe = /B(?:LOCK)?[\s_-]?0*(\d+(?:\s*[-,]\s*0*\d+)*)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = groupRe.exec(stem)) !== null) {
+    const body = m[1];
+    for (const r of body.matchAll(/0*(\d+)\s*-\s*0*(\d+)/g)) {
+      const a = Number(r[1]);
+      const b = Number(r[2]);
+      for (let i = Math.min(a, b); i <= Math.max(a, b); i++) set.add(i);
+    }
+    for (const n of body.matchAll(/0*(\d+)/g)) set.add(Number(n[1]));
+  }
+  return [...set].sort((a, b) => a - b);
 }
 
 /**
@@ -89,9 +132,13 @@ export function parseEnglishDriveFilename(filename: string): ParsedEnglishDriveN
   }
   if (kind && seq === null) seq = 1;
 
+  // PT covers 1+ blocks (D-#347) — collect the whole set, and its scalar block is null.
+  const blockNumbers = kind === "PT" ? parseBlockSet(stem) : [];
+
   return {
     classLevel: classMatch ? Number(classMatch[1]) : null,
-    blockNumber: blockMatch ? Number(blockMatch[1]) : null,
+    blockNumber: kind === "PT" ? null : blockMatch ? Number(blockMatch[1]) : null,
+    blockNumbers,
     kind,
     seq,
     version: versionMatch ? Number(versionMatch[1]) : null,
