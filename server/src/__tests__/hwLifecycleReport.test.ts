@@ -1,33 +1,34 @@
 /**
- * D-#300 — homeworkLifecycleReport: per subject × class lifecycle monitoring in
- * five sections (funnel, checking backlog, chase columns, declaration
- * consistency incl. D-#299 nils, teacher scorecard).
+ * D-#350 — homeworkLifecycleReport (teacher-first redesign) + homeworkLifecyclePending
+ * drill-down. Supersedes the D-#300 section×subject five-card layout.
  *
  * DB-free: models mocked (the reconReport.test pattern); the accumulation +
- * latency math is real. NOW is pinned to Mon 2026-07-13.
+ * pending-bucket + waiting-days math is real. NOW is pinned to Mon 2026-07-13.
  */
 const mockItemFind = jest.fn();
 const mockRecFind = jest.fn();
-const mockNilFind = jest.fn();
 const mockSectionFind = jest.fn();
 const mockClassFind = jest.fn();
 const mockUserFind = jest.fn();
-const mockSlotFind = jest.fn();
-const mockHolidayFind = jest.fn();
+const mockStudentFind = jest.fn();
+const mockGuardianFind = jest.fn();
+const mockLinkFind = jest.fn();
 
-const chain = (fn: jest.Mock) => (f: unknown) => ({
-  lean: () => fn(f),
-  select: () => ({ lean: () => fn(f) }),
-});
+// Chain supporting find(f).lean(), .select().lean(), .select().sort().lean().
+const chain = (fn: jest.Mock) => (f: unknown) => {
+  const res: { lean: () => unknown; select: () => typeof res; sort: () => typeof res } = {
+    lean: () => fn(f),
+    select: () => res,
+    sort: () => res,
+  };
+  return res;
+};
 
 jest.mock("../modules/trackers/models/HomeworkItem", () => ({
   HomeworkItem: { find: (f: unknown) => chain(mockItemFind)(f) },
 }));
 jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
   HomeworkStudentRecord: { find: (f: unknown) => chain(mockRecFind)(f) },
-}));
-jest.mock("../modules/trackers/models/HomeworkNilDeclaration", () => ({
-  HomeworkNilDeclaration: { find: (f: unknown) => chain(mockNilFind)(f) },
 }));
 jest.mock("../modules/foundation/models/Section", () => ({
   Section: { find: (f: unknown) => chain(mockSectionFind)(f) },
@@ -38,182 +39,187 @@ jest.mock("../modules/foundation/models/Class", () => ({
 jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (f: unknown) => chain(mockUserFind)(f) },
 }));
-jest.mock("../modules/routine/models/RoutineSlot", () => ({
-  RoutineSlot: { find: (f: unknown) => chain(mockSlotFind)(f) },
+jest.mock("../modules/foundation/models/Student", () => ({
+  Student: { find: (f: unknown) => chain(mockStudentFind)(f) },
 }));
-jest.mock("../modules/routine/models/HolidayException", () => ({
-  HolidayException: { find: (f: unknown) => chain(mockHolidayFind)(f) },
+jest.mock("../modules/foundation/models/Guardian", () => ({
+  Guardian: { find: (f: unknown) => chain(mockGuardianFind)(f) },
+}));
+jest.mock("../modules/foundation/models/GuardianLink", () => ({
+  GuardianLink: { find: (f: unknown) => chain(mockLinkFind)(f) },
 }));
 
-import { homeworkLifecycleReport } from "../modules/trackers/services/HomeworkLifecycleReportService";
+import {
+  homeworkLifecycleReport,
+  homeworkLifecyclePending,
+} from "../modules/trackers/services/HomeworkLifecycleReportService";
 
 const SEC = "sec-1";
 const CLS = "cls-1";
 const ITEM1 = "item-1";
-const T1 = "teach-1"; // declares SCI
-const T2 = "teach-2"; // routine MATH teacher who never declares
-const T3 = "teach-3"; // declares an ENG nil
+const T1 = "teach-1";
+const S1 = "stu-1";
+const G1 = "guard-1";
 
 const NOW = new Date(2026, 6, 13); // Mon 2026-07-13
 
-const slot = (subject: string, dayOfWeek: string, teacherId: string) => ({
-  groupId: SEC,
-  dayOfWeek,
-  periodNumber: 3,
-  subject,
-  teacherId,
-  effectiveFrom: new Date(2026, 0, 1),
-  effectiveTo: null,
-});
+const item1 = {
+  _id: ITEM1,
+  sectionId: SEC,
+  classId: CLS,
+  classLevel: 3,
+  subject: "SCI",
+  status: "issued",
+  declaredBy: T1,
+};
+
+// Four records: a clean full pass, a stuck-SUBMITTED (backlog), a chased pre-submit, a checked-awaiting-return.
+const records = [
+  {
+    hwItemId: ITEM1, studentId: S1, sectionId: SEC, state: "RETURNED", chaseCount: 0,
+    stateDates: [
+      { state: "GIVEN", at: new Date(2026, 6, 9) },
+      { state: "SUBMITTED", at: new Date(2026, 6, 10) },
+      { state: "CHECKED", at: new Date(2026, 6, 11) },
+      { state: "RETURNED", at: new Date(2026, 6, 12) },
+    ],
+  },
+  {
+    hwItemId: ITEM1, studentId: "stu-2", sectionId: SEC, state: "SUBMITTED", chaseCount: 0,
+    stateDates: [
+      { state: "GIVEN", at: new Date(2026, 6, 9) },
+      { state: "SUBMITTED", at: new Date(2026, 6, 10) }, // 3 days ago → backlog
+    ],
+  },
+  {
+    hwItemId: ITEM1, studentId: S1, sectionId: SEC, state: "CHASE", chaseCount: 2,
+    stateDates: [
+      { state: "GIVEN", at: new Date(2026, 6, 9) },
+      { state: "CHASE", at: new Date(2026, 6, 11) }, // 2 days ago
+    ],
+  },
+  {
+    hwItemId: ITEM1, studentId: "stu-3", sectionId: SEC, state: "CHECKED", chaseCount: 0,
+    stateDates: [
+      { state: "GIVEN", at: new Date(2026, 6, 9) },
+      { state: "SUBMITTED", at: new Date(2026, 6, 10) },
+      { state: "CHECKED", at: new Date(2026, 6, 11) },
+    ],
+  },
+];
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockItemFind.mockResolvedValue([]);
   mockRecFind.mockResolvedValue([]);
-  mockNilFind.mockResolvedValue([]);
   mockSectionFind.mockResolvedValue([{ _id: SEC, nameBn: "মূল", classId: CLS }]);
   mockClassFind.mockResolvedValue([{ _id: CLS, level: 3 }]);
-  mockUserFind.mockResolvedValue([
-    { _id: T1, name: "Teacher One" },
-    { _id: T2, name: "Teacher Two" },
-    { _id: T3, name: "Teacher Three" },
-  ]);
-  mockSlotFind.mockResolvedValue([]);
-  mockHolidayFind.mockResolvedValue([]);
+  mockUserFind.mockResolvedValue([{ _id: T1, name: "Teacher One" }]);
+  mockStudentFind.mockResolvedValue([]);
+  mockGuardianFind.mockResolvedValue([]);
+  mockLinkFind.mockResolvedValue([]);
 });
 
-describe("homeworkLifecycleReport (D-#300)", () => {
-  test("empty world → empty sections, range + threshold echoed", async () => {
-    const r = await homeworkLifecycleReport("2026-07-07", "2026-07-13", NOW);
+describe("homeworkLifecycleReport (D-#350, teacher-first)", () => {
+  test("empty world → empty teachers/backlog, range + threshold echoed", async () => {
+    const r = await homeworkLifecycleReport("2026-07-07", "2026-07-13", { now: NOW });
     expect(r).toMatchObject({
       fromKey: "2026-07-07",
       toKey: "2026-07-13",
       backlogThresholdDays: 2,
-      funnel: [],
+      teachers: [],
       backlog: [],
-      consistency: [],
-      scorecard: [],
     });
   });
 
   test("from after to is rejected", async () => {
-    await expect(homeworkLifecycleReport("2026-07-13", "2026-07-07", NOW)).rejects.toThrow(
+    await expect(homeworkLifecycleReport("2026-07-13", "2026-07-07", { now: NOW })).rejects.toThrow(
       "from must not be after to",
     );
   });
 
-  test("funnel + backlog + chase + scorecard from one item's records", async () => {
-    mockItemFind.mockResolvedValue([
-      { _id: ITEM1, sectionId: SEC, classId: CLS, subject: "SCI", dateGiven: new Date(2026, 6, 9), status: "issued", declaredBy: T1 },
-    ]);
-    mockRecFind.mockResolvedValue([
-      {
-        // Full clean pass: on time, checked next day, returned the day after.
-        hwItemId: ITEM1,
-        state: "RETURNED",
-        dueDate: new Date(2026, 6, 10),
-        chaseCount: 0,
-        result: "CORRECT",
-        stateDates: [
-          { state: "GIVEN", at: new Date(2026, 6, 9) },
-          { state: "SUBMITTED", at: new Date(2026, 6, 10) },
-          { state: "CHECKED", at: new Date(2026, 6, 11) },
-          { state: "RETURNED", at: new Date(2026, 6, 12) },
-        ],
-      },
-      {
-        // Submitted on time, then STUCK in SUBMITTED for 3 days → backlog.
-        hwItemId: ITEM1,
-        state: "SUBMITTED",
-        dueDate: new Date(2026, 6, 10),
-        chaseCount: 0,
-        stateDates: [
-          { state: "GIVEN", at: new Date(2026, 6, 9) },
-          { state: "SUBMITTED", at: new Date(2026, 6, 10) },
-        ],
-      },
-      {
-        // Never submitted, chased twice.
-        hwItemId: ITEM1,
-        state: "CHASE",
-        dueDate: new Date(2026, 6, 10),
-        chaseCount: 2,
-        stateDates: [{ state: "GIVEN", at: new Date(2026, 6, 9) }],
-      },
-    ]);
+  test("teacher row: totals + pending buckets + backlog from one item's records", async () => {
+    mockItemFind.mockResolvedValue([item1]);
+    mockRecFind.mockResolvedValue(records);
 
-    const r = await homeworkLifecycleReport("2026-07-07", "2026-07-13", NOW);
+    const r = await homeworkLifecycleReport("2026-07-07", "2026-07-13", { now: NOW });
 
-    expect(r.funnel).toHaveLength(1);
-    expect(r.funnel[0]).toMatchObject({
-      sectionNameBn: "মূল",
-      classLevel: 3,
-      subject: "SCI",
+    expect(r.teachers).toHaveLength(1);
+    expect(r.teachers[0]).toMatchObject({
+      teacherId: T1,
+      teacherName: "Teacher One",
       declaredItems: 1,
       issuedItems: 1,
-      given: 3,
-      submitted: 2,
-      checked: 1,
-      returned: 1,
-      onTimePct: 67, // 2 of 3 due-dated records submitted on time
-      stuckSubmitted: 1,
-      chasedRecords: 1,
-      chases: 2,
-      chaseRatePct: 33,
+      given: 4,
+      submitted: 3, // A, B, D ever reached SUBMITTED
+      checked: 2, // A, D
+      returned: 1, // A
+      pendingSubmission: 1, // C (CHASE)
+      pendingChecking: 1, // B (SUBMITTED)
+      pendingReturn: 1, // D (CHECKED)
+      chasedPending: 1, // C chased + still pre-submit
     });
 
     expect(r.backlog).toHaveLength(1);
     expect(r.backlog[0]).toMatchObject({
       subject: "SCI",
+      sectionNameBn: "মূল",
+      classLevel: 3,
       teacherName: "Teacher One",
       count: 1,
       oldestDays: 3,
     });
+  });
 
-    const t1 = r.scorecard.find((s) => s.teacherId === T1)!;
-    expect(t1).toMatchObject({
-      teacherName: "Teacher One",
-      declaredItems: 1,
-      onTimePct: 67,
-      avgCheckLatencyDays: 1,
-      avgReturnLatencyDays: 1,
-      chases: 2,
-      wrongRatePct: 0, // 0 WRONG of 1 resulted
+  test("class + subject filters flow into the HomeworkItem query", async () => {
+    await homeworkLifecycleReport("2026-07-07", "2026-07-13", { classLevel: 3, subject: "SCI", now: NOW });
+    expect(mockItemFind).toHaveBeenCalledWith(
+      expect.objectContaining({ classLevel: 3, subject: "SCI", dateGiven: expect.any(Object) }),
+    );
+  });
+});
+
+describe("homeworkLifecyclePending (D-#350 drill-down)", () => {
+  test("names the stuck students with roll, section, guardian phone, waiting days", async () => {
+    mockItemFind.mockResolvedValue([item1]);
+    mockRecFind.mockResolvedValue([records[2]]); // the CHASE record for S1
+    mockStudentFind.mockResolvedValue([
+      { _id: S1, name: "Student One", nameBn: "ছাত্র এক", rollNumber: "5", phone: "01720000000" },
+    ]);
+    mockLinkFind.mockResolvedValue([{ studentId: S1, guardianId: G1, createdAt: new Date(2026, 0, 1) }]);
+    mockGuardianFind.mockResolvedValue([{ _id: G1, phone: "01710000000" }]);
+
+    const rows = await homeworkLifecyclePending("2026-07-07", "2026-07-13", T1, "SUBMISSION", { now: NOW });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      studentId: S1,
+      name: "Student One",
+      nameBn: "ছাত্র এক",
+      rollNumber: "5",
+      sectionNameBn: "মূল",
+      classLevel: 3,
+      subject: "SCI",
+      guardianPhone: "01710000000", // guardian preferred over student's own phone
+      state: "CHASE",
+      daysWaiting: 2,
+      chaseCount: 2,
     });
   });
 
-  test("consistency: declared / nil / missed routine days, missed attributed to the routine teacher", async () => {
-    mockSlotFind.mockResolvedValue([
-      slot("SCI", "THU", T1), // Thu 2026-07-09 — declared
-      slot("ENG", "TUE", T3), // Tue 2026-07-07 — nil-declared
-      slot("MATH", "SUN", T2), // Sun 2026-07-12 — neither → missed
-    ]);
-    mockItemFind.mockResolvedValue([
-      { _id: ITEM1, sectionId: SEC, classId: CLS, subject: "SCI", dateGiven: new Date(2026, 6, 9), status: "declared", declaredBy: T1 },
-    ]);
-    mockNilFind.mockResolvedValue([
-      { sectionId: SEC, classId: CLS, subject: "ENG", dateKey: "2026-07-07", reason: "EXAM", declaredBy: T3 },
-    ]);
+  test("falls back to the student's own phone when no guardian link", async () => {
+    mockItemFind.mockResolvedValue([item1]);
+    mockRecFind.mockResolvedValue([records[2]]);
+    mockStudentFind.mockResolvedValue([{ _id: S1, name: "Student One", phone: "01720000000" }]);
+    mockLinkFind.mockResolvedValue([]);
 
-    const r = await homeworkLifecycleReport("2026-07-07", "2026-07-13", NOW);
-
-    const bySubject = new Map(r.consistency.map((c) => [c.subject, c]));
-    expect(bySubject.get("SCI")).toMatchObject({ routineDays: 1, declaredDays: 1, nilDays: 0, missedDays: 0, respondedPct: 100 });
-    expect(bySubject.get("ENG")).toMatchObject({ routineDays: 1, declaredDays: 0, nilDays: 1, missedDays: 0, respondedPct: 100 });
-    expect(bySubject.get("MATH")).toMatchObject({ routineDays: 1, declaredDays: 0, nilDays: 0, missedDays: 1, respondedPct: 0 });
-
-    const t2 = r.scorecard.find((s) => s.teacherId === T2)!;
-    expect(t2.missedDeclarations).toBe(1);
-    const t3 = r.scorecard.find((s) => s.teacherId === T3)!;
-    expect(t3.nilDays).toBe(1);
-    // Worst first: the teacher with the missed declaration leads.
-    expect(r.scorecard[0].teacherId).toBe(T2);
+    const rows = await homeworkLifecyclePending("2026-07-07", "2026-07-13", T1, "SUBMISSION", { now: NOW });
+    expect(rows[0].guardianPhone).toBe("01720000000");
   });
 
-  test("future days never enter the consistency denominators", async () => {
-    mockSlotFind.mockResolvedValue([slot("SCI", "THU", T1)]);
-    // Range extends past NOW: Thu 2026-07-16 is in range but in the future.
-    const r = await homeworkLifecycleReport("2026-07-13", "2026-07-19", NOW);
-    expect(r.consistency).toEqual([]);
+  test("no items → empty drill", async () => {
+    mockItemFind.mockResolvedValue([]);
+    const rows = await homeworkLifecyclePending("2026-07-07", "2026-07-13", T1, "CHECK", { now: NOW });
+    expect(rows).toEqual([]);
   });
 });
