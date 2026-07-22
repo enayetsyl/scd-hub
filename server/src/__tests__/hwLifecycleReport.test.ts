@@ -13,6 +13,7 @@ const mockUserFind = jest.fn();
 const mockStudentFind = jest.fn();
 const mockGuardianFind = jest.fn();
 const mockLinkFind = jest.fn();
+const mockSlotFind = jest.fn();
 
 // Chain supporting find(f).lean(), .select().lean(), .select().sort().lean().
 const chain = (fn: jest.Mock) => (f: unknown) => {
@@ -48,6 +49,9 @@ jest.mock("../modules/foundation/models/Guardian", () => ({
 jest.mock("../modules/foundation/models/GuardianLink", () => ({
   GuardianLink: { find: (f: unknown) => chain(mockLinkFind)(f) },
 }));
+jest.mock("../modules/routine/models/RoutineSlot", () => ({
+  RoutineSlot: { find: (f: unknown) => chain(mockSlotFind)(f) },
+}));
 
 import {
   homeworkLifecycleReport,
@@ -71,6 +75,7 @@ const item1 = {
   subject: "SCI",
   status: "issued",
   declaredBy: T1,
+  dateGiven: new Date(2026, 6, 9), // Thu 2026-07-09
 };
 
 // Four records: a clean full pass, a stuck-SUBMITTED (backlog), a chased pre-submit, a checked-awaiting-return.
@@ -118,6 +123,7 @@ beforeEach(() => {
   mockStudentFind.mockResolvedValue([]);
   mockGuardianFind.mockResolvedValue([]);
   mockLinkFind.mockResolvedValue([]);
+  mockSlotFind.mockResolvedValue([]); // no routine → attribution falls back to declarer
 });
 
 describe("homeworkLifecycleReport (D-#350, teacher-first)", () => {
@@ -176,6 +182,27 @@ describe("homeworkLifecycleReport (D-#350, teacher-first)", () => {
     expect(mockItemFind).toHaveBeenCalledWith(
       expect.objectContaining({ classLevel: 3, subject: "SCI", dateGiven: expect.any(Object) }),
     );
+  });
+
+  test("attributes to the routine SUBJECT teacher, not the declarer (Principal's on-behalf entry)", async () => {
+    const PRIN = "principal-1";
+    mockItemFind.mockResolvedValue([{ ...item1, declaredBy: PRIN }]); // Principal declared it
+    mockRecFind.mockResolvedValue([records[1]]); // one SUBMITTED record
+    // Routine: Class-3 SCI on Thursday is taught by T1 (earliest period).
+    mockSlotFind.mockResolvedValue([
+      { groupId: SEC, subject: "SCI", dayOfWeek: "THU", periodNumber: 2, teacherId: T1, effectiveFrom: new Date(2026, 0, 1), effectiveTo: null },
+    ]);
+    mockUserFind.mockResolvedValue([
+      { _id: T1, name: "Teacher One" },
+      { _id: PRIN, name: "Principal" },
+    ]);
+
+    const r = await homeworkLifecycleReport("2026-07-07", "2026-07-13", { now: NOW });
+
+    expect(r.teachers).toHaveLength(1);
+    expect(r.teachers[0].teacherId).toBe(T1); // the subject teacher, NOT the Principal
+    expect(r.teachers[0].teacherName).toBe("Teacher One");
+    expect(r.teachers.some((t) => t.teacherId === PRIN)).toBe(false);
   });
 });
 
