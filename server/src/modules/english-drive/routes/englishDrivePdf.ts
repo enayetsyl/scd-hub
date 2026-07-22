@@ -12,7 +12,7 @@ import type { Router, Request, Response } from "express";
 import { Router as createRouter } from "express";
 import { buildContext } from "../../../context";
 import { markdownToPdf } from "../../../routes/pdfRenderer";
-import { englishDriveDocById } from "../services/EnglishDriveService";
+import { englishDriveDocById, formatBlockTag } from "../services/EnglishDriveService";
 
 export const englishDrivePdfRouter: Router = createRouter();
 
@@ -37,14 +37,14 @@ englishDrivePdfRouter.get("/:id", async (req: Request, res: Response) => {
   // reject out of the async handler and crash the Node process (Express 4 does not
   // catch async errors).
   try {
-    const blockPart = doc.blockNumber === null ? "" : ` · Block ${doc.blockNumber}`;
+    const blockTag = formatBlockTag(doc); // "B3-5" / "B3" / "" (D-#347: PT covers many)
+    const blockPart = blockTag ? ` · ${blockTag.replace(/^B/, "Block ")}` : "";
     const title = `English Drive — Class ${doc.classLevel}${blockPart} · ${doc.kind}: ${doc.title}`;
     const pdfBuffer = await markdownToPdf(doc.contentMd ?? "", { title });
-    const blockTag = doc.blockNumber === null ? "" : `_B${doc.blockNumber}`;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `inline; filename="english_drive_C${doc.classLevel}${blockTag}_${doc.kind}_v${doc.version}.pdf"`,
+      `inline; filename="english_drive_C${doc.classLevel}${blockTag ? `_${blockTag}` : ""}_${doc.kind}_v${doc.version}.pdf"`,
     );
     res.setHeader("Content-Length", pdfBuffer.byteLength);
     res.send(pdfBuffer);

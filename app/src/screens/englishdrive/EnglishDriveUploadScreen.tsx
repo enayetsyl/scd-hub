@@ -17,6 +17,7 @@ import { FileDropZone } from "../../components/FileDropZone";
 import {
   ENGLISH_DRIVE_KINDS,
   englishDriveKindLabel,
+  parseBlockList,
   parseEnglishDriveFilename,
   titleFromMarkdown,
 } from "../../lib/englishDrive";
@@ -29,6 +30,8 @@ interface StagedDoc {
   content: string;
   classLevel: string | null;
   blockNumber: string;
+  /** PT only (D-#347): the blocks it covers, as raw text ("3-5" / "3,4,5"). */
+  blockNumbers: string;
   kind: string | null;
   /** Sequence within (block × kind): HW4 → "4". */
   seq: string;
@@ -60,8 +63,13 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
   const [existingQ, refetchExisting] = useQuery({ query: ENGLISH_DRIVE_DOCS, variables: {} });
   const existing = existingQ.data?.englishDriveDocs ?? [];
 
-  // Block is part of the identity only when set — AS is block-less (D-#346).
-  const blockOf = (s: StagedDoc): number | null => intOrNull(s.blockNumber);
+  // Scalar block is part of the identity only when set. PT is always block-less
+  // (its blocks live in blockNumbers, never keyed) — AS too (D-#346/#347).
+  const blockOf = (s: StagedDoc): number | null =>
+    s.kind === "PT" ? null : intOrNull(s.blockNumber);
+  // The blocks a PT covers (surfacing only), from the editable "covers blocks" field.
+  const blocksOf = (s: StagedDoc): number[] =>
+    s.kind === "PT" ? parseBlockList(s.blockNumbers) : [];
 
   const conflictVersion = (s: StagedDoc): number | null => {
     const cl = s.classLevel ? Number(s.classLevel) : null;
@@ -91,6 +99,7 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
           content: f.content,
           classLevel: parsed.classLevel === null ? null : String(parsed.classLevel),
           blockNumber: parsed.blockNumber === null ? "" : String(parsed.blockNumber),
+          blockNumbers: parsed.blockNumbers.join(","),
           kind: parsed.kind,
           seq: parsed.seq === null ? "1" : String(parsed.seq),
           version: parsed.version === null ? "1" : String(parsed.version),
@@ -126,11 +135,16 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
     setStaged((prev) => prev.filter((f) => f.filename !== filename));
   }
 
+  const blockFieldOk = (s: StagedDoc): boolean => {
+    if (s.kind === "PT") return blocksOf(s).length >= 1; // covers 1+ blocks (D-#347)
+    if (s.kind === "AS") return intOrNull(s.blockNumber) !== null || s.blockNumber.trim() === "";
+    return intOrNull(s.blockNumber) !== null;
+  };
+
   const isComplete = (s: StagedDoc): boolean =>
     s.classLevel !== null &&
     s.kind !== null &&
-    // Assignments are week-scoped — block optional for AS only (D-#346).
-    (intOrNull(s.blockNumber) !== null || (s.kind === "AS" && s.blockNumber.trim() === "")) &&
+    blockFieldOk(s) &&
     intOrNull(s.seq) !== null &&
     intOrNull(s.version) !== null &&
     s.title.trim() !== "";
@@ -160,6 +174,7 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
       const res = await upload({
         classLevel: Number(s.classLevel),
         blockNumber: blockOf(s),
+        blockNumbers: s.kind === "PT" ? blocksOf(s) : undefined,
         kind: s.kind!,
         seq: intOrNull(s.seq)!,
         title: s.title.trim(),
@@ -212,13 +227,6 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
               onChange={(v) => patchStaged(s.filename, { classLevel: v })}
               placeholder={STR.vbPickClass}
             />
-            <Field
-              label={STR.edBlockNumber}
-              value={s.blockNumber}
-              onChangeText={(v) => patchStaged(s.filename, { blockNumber: v })}
-              keyboardType="numeric"
-              helper={STR.edBlockOptionalAs}
-            />
             <Select
               label={STR.edKindLabel}
               value={s.kind}
@@ -228,6 +236,22 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
               }))}
               onChange={(v) => patchStaged(s.filename, { kind: v })}
             />
+            {s.kind === "PT" ? (
+              <Field
+                label={STR.edCoversBlocks}
+                value={s.blockNumbers}
+                onChangeText={(v) => patchStaged(s.filename, { blockNumbers: v })}
+                helper={STR.edCoversBlocksHelper}
+              />
+            ) : (
+              <Field
+                label={STR.edBlockNumber}
+                value={s.blockNumber}
+                onChangeText={(v) => patchStaged(s.filename, { blockNumber: v })}
+                keyboardType="numeric"
+                helper={STR.edBlockOptionalAs}
+              />
+            )}
             <Field
               label={STR.edSeqLabel}
               value={s.seq}

@@ -39,8 +39,10 @@ export const ENGLISH_DRIVE_CLASS_LEVELS = [1, 2, 3, 4, 5] as const;
 export interface EnglishDriveDocShape {
   id: string;
   classLevel: number;
-  /** Null = block-less (assignments are week-scoped, D-#346). */
+  /** Null = block-less (assignments are week-scoped, D-#346; PT uses blockNumbers). */
   blockNumber: number | null;
+  /** The blocks a PT covers (D-#347); [] for every other kind. */
+  blockNumbers: number[];
   kind: string;
   seq: number;
   title: string;
@@ -60,6 +62,7 @@ function shape(
     id: doc._id.toString(),
     classLevel: doc.classLevel,
     blockNumber: doc.blockNumber ?? null,
+    blockNumbers: doc.blockNumbers ?? [],
     kind: doc.kind,
     seq: doc.seq ?? 1, // pre-seq rows have no field
     title: doc.title,
@@ -204,10 +207,28 @@ export async function englishDriveDocById(
   return shape(doc, names.get(doc.uploadedBy.toString()) ?? null, true);
 }
 
+/** Compact block tag for filenames/stamps: "B3-5" (contiguous) / "B3,5" (list) /
+ *  "B3" (single) / "" (block-less). Shared by the print stamp + the PDF route (D-#347). */
+export function formatBlockTag(doc: {
+  blockNumber: number | null;
+  blockNumbers?: number[] | null;
+}): string {
+  const many = doc.blockNumbers ?? [];
+  if (many.length > 0) {
+    const b = [...new Set(many)].sort((x, y) => x - y);
+    const contiguous = b.length > 1 && b.length === b[b.length - 1] - b[0] + 1;
+    return contiguous ? `B${b[0]}-${b[b.length - 1]}` : `B${b.join(",")}`;
+  }
+  return doc.blockNumber === null ? "" : `B${doc.blockNumber}`;
+}
+
 export interface UploadEnglishDriveDocInput {
   classLevel: number;
-  /** Optional for AS (week-scoped, D-#346); required for every other kind. */
+  /** Optional for AS (week-scoped, D-#346); required for every other kind. Always
+   *  null for PT — a practice test uses `blockNumbers` (D-#347). */
   blockNumber?: number | null;
+  /** The blocks a PT covers (D-#347) — required (1+) for PT, ignored otherwise. */
+  blockNumbers?: number[] | null;
   kind: string;
   /** Sequence within (block × kind), e.g. HW4 → 4. Defaults to 1. */
   seq?: number | null;
@@ -233,10 +254,22 @@ export async function uploadEnglishDriveDoc(
   if (!(ENGLISH_DRIVE_KINDS as readonly string[]).includes(input.kind)) {
     throw new Error(`ডকুমেন্টের ধরন সঠিক নয় (${ENGLISH_DRIVE_KINDS.join("/")})`);
   }
-  // Assignments are week-scoped, not block-scoped (D-#346) — block optional for
-  // AS only; every other kind lives inside a block.
-  const blockNumber = input.blockNumber ?? null;
-  if (blockNumber === null) {
+  // Block rules by kind:
+  //  - PT covers 1+ blocks (D-#347): scalar block is null, blockNumbers drives surfacing.
+  //  - AS is week-scoped (D-#346): block-less.
+  //  - every other kind lives inside exactly one block.
+  let blockNumber = input.blockNumber ?? null;
+  let blockNumbers: number[] = [];
+  if (input.kind === "PT") {
+    const clean = [...new Set(input.blockNumbers ?? [])]
+      .filter((b) => Number.isInteger(b) && b >= 1)
+      .sort((a, b) => a - b);
+    if (clean.length === 0) {
+      throw new Error("প্র্যাকটিস টেস্ট কোন কোন ব্লকের সাথে যুক্ত তা দিন (এক বা একাধিক)");
+    }
+    blockNumbers = clean;
+    blockNumber = null; // never keyed on the block set — PT identity is (class, PT, seq)
+  } else if (blockNumber === null) {
     if (input.kind !== "AS") throw new Error("ব্লক নম্বর দিন (১ বা তার বেশি)");
   } else if (!Number.isInteger(blockNumber) || blockNumber < 1) {
     throw new Error("ব্লক নম্বর দিন (১ বা তার বেশি)");
@@ -272,6 +305,7 @@ export async function uploadEnglishDriveDoc(
   const doc = await EnglishDriveDoc.create({
     classLevel: input.classLevel,
     blockNumber,
+    blockNumbers,
     kind: input.kind as EnglishDriveKind,
     seq,
     title,
@@ -289,6 +323,7 @@ export async function uploadEnglishDriveDoc(
     meta: {
       classLevel: input.classLevel,
       blockNumber,
+      ...(blockNumbers.length > 0 ? { blockNumbers } : {}),
       kind: input.kind,
       seq,
       version: input.version,
@@ -339,8 +374,8 @@ export async function sendEnglishDriveDocToPrint(
   const doc = await englishDriveDocById(ctx, input.id);
 
   const kindTag = doc.seq > 1 ? `${doc.kind}${doc.seq}` : doc.kind;
-  const blockTag = doc.blockNumber === null ? "" : `_B${doc.blockNumber}`;
-  const stamp = `C${doc.classLevel}${blockTag}_${kindTag}_v${doc.version}`;
+  const blockTag = formatBlockTag(doc);
+  const stamp = `C${doc.classLevel}${blockTag ? `_${blockTag}` : ""}_${kindTag}_v${doc.version}`;
   const title = `English Drive ${stamp} — ${doc.title}`.slice(0, 200);
   const pdf = await markdownToPdf(doc.contentMd ?? "", { title });
 

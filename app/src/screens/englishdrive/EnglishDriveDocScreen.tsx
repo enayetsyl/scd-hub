@@ -19,7 +19,7 @@ import type { EnglishDriveStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Chip, ChipRow, Field, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import Markdown from "../../components/Markdown";
-import { englishDriveKindLabel } from "../../lib/englishDrive";
+import { englishDriveKindLabel, formatBlocksBn } from "../../lib/englishDrive";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { friendlyError } from "../../lib/errors";
 import { STR, bnNum, classLevelLabel, isoDateLabel } from "../../lib/labels";
@@ -94,9 +94,13 @@ export default function EnglishDriveDocScreen({ route }: Props): React.ReactElem
                 >
                   <Body style={{ fontWeight: "700", flexShrink: 1 }}>
                     {classLevelLabel(doc.classLevel)}
-                    {doc.blockNumber !== null ? ` · ${STR.edBlock} ${bnNum(doc.blockNumber)}` : ""} ·{" "}
-                    {englishDriveKindLabel(doc.kind)}
-                    {doc.seq > 1 ? ` ${bnNum(doc.seq)}` : ""}
+                    {doc.kind === "PT" && doc.blockNumbers.length
+                      ? ` · ${STR.edBlock} ${formatBlocksBn(doc.blockNumbers)}`
+                      : doc.blockNumber !== null
+                        ? ` · ${STR.edBlock} ${bnNum(doc.blockNumber)}`
+                        : ""}{" "}
+                    · {englishDriveKindLabel(doc.kind)}
+                    {doc.kind !== "PT" && doc.seq > 1 ? ` ${bnNum(doc.seq)}` : ""}
                   </Body>
                   <Badge text={`v${bnNum(doc.version)}`} tone="muted" />
                 </View>

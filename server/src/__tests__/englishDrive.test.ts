@@ -391,6 +391,30 @@ describe("uploadEnglishDriveDoc", () => {
     await expect(uploadEnglishDriveDoc({ ...validUpload(), seq: 0 })).rejects.toThrow(/ক্রমিক/);
   });
 
+  test("PT covers 1+ blocks (D-#347): blockNumbers stored, scalar block null, keyed by seq", async () => {
+    await uploadEnglishDriveDoc({
+      ...validUpload(),
+      kind: "PT",
+      blockNumber: null,
+      blockNumbers: [5, 3, 4, 3], // deduped + sorted → [3,4,5]
+      seq: 2,
+    });
+    // Replace identity ignores the block set — a PT is keyed (class, PT, seq).
+    expect(mockFindOne).toHaveBeenCalledWith(
+      expect.objectContaining({ blockNumber: null, kind: "PT", seq: 2 }),
+    );
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "PT", blockNumber: null, blockNumbers: [3, 4, 5], seq: 2 }),
+    );
+  });
+
+  test("PT with no blocks is rejected", async () => {
+    await expect(
+      uploadEnglishDriveDoc({ ...validUpload(), kind: "PT", blockNumber: null, blockNumbers: [] }),
+    ).rejects.toThrow(/ব্লক/);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
   test("AS may be block-less (week-scoped, D-#346); other kinds still need a block", async () => {
     await uploadEnglishDriveDoc({ ...validUpload(), kind: "AS", blockNumber: null, seq: 3 });
     expect(mockFindOne).toHaveBeenCalledWith(
@@ -499,6 +523,14 @@ describe("sendEnglishDriveDocToPrint", () => {
     const out = await sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), printInput);
     expect(out.title).toContain("C3_AS3_v2");
     expect(out.title).not.toContain("_B");
+  });
+
+  test("a multi-block PT's print stamp lists its block range (D-#347)", async () => {
+    mockFindById.mockReturnValue(
+      madeDoc({ kind: "PT", blockNumber: null, blockNumbers: [3, 4, 5], seq: 1 }),
+    );
+    const out = await sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), printInput);
+    expect(out.title).toContain("C3_B3-5_PT_v2");
   });
 
   test("Drive down → Bangla error, no request filed", async () => {
