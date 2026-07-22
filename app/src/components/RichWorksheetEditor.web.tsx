@@ -45,17 +45,28 @@ export function RichWorksheetEditor({
     if (editorRef.current) {
       editorRef.current.innerHTML = md.render(stripLsDirectives(stripHtmlComments(sourceMd)));
     }
+    // Track the last non-empty selection INSIDE the editor. A toolbar <select>
+    // steals focus and collapses the live selection, so we restore this before
+    // applying a size/spacing change. `selectionchange` is the reliable signal.
+    const onSelChange = (): void => {
+      const sel = window.getSelection();
+      const root = editorRef.current;
+      if (
+        sel &&
+        sel.rangeCount &&
+        !sel.isCollapsed &&
+        root &&
+        root.contains(sel.anchorNode) &&
+        root.contains(sel.focusNode)
+      ) {
+        savedRange.current = sel.getRangeAt(0).cloneRange();
+      }
+    };
+    document.addEventListener("selectionchange", onSelChange);
+    return () => document.removeEventListener("selectionchange", onSelChange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Remember the last non-empty selection inside the editor — a toolbar <select>
-  // takes focus and collapses the live selection, so we restore this before applying.
-  function saveSel(): void {
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount && !sel.isCollapsed && editorRef.current?.contains(sel.anchorNode)) {
-      savedRange.current = sel.getRangeAt(0).cloneRange();
-    }
-  }
   function activeRange(): Range | null {
     const sel = window.getSelection();
     if (sel && sel.rangeCount && !sel.isCollapsed && editorRef.current?.contains(sel.anchorNode)) {
@@ -115,26 +126,41 @@ export function RichWorksheetEditor({
     document.execCommand(cmd, false);
   }
 
+  /** Print via a hidden iframe (not window.open, which popup-blockers kill). The
+   *  browser's print dialog is the PDF preview. */
   function printWorksheet(): void {
     const root = editorRef.current;
     if (!root) return;
     const rootLh = root.style.lineHeight || "1.4";
-    const win = window.open("", "_blank", "width=900,height=1000");
-    if (!win) return;
-    win.document.write(
+    const html =
       `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>` +
-        `<style>` +
-        `@page { size: A4; margin: 16mm; }` +
-        `body { font-family: 'Noto Sans Bengali','Nirmala UI','Segoe UI',sans-serif; color:#000; font-size:12pt; line-height:${rootLh}; }` +
-        `table { border-collapse: collapse; width:100%; margin:6px 0; }` +
-        `td,th { border:1px solid #999; padding:4px 7px; vertical-align:top; }` +
-        `h1{font-size:16pt;margin:6px 0} h2{font-size:14pt;margin:6px 0} h3{font-size:12pt;margin:6px 0}` +
-        `ul,ol{margin:4px 0 4px 22px} p{margin:5px 0} hr{border:none;border-top:1px solid #000;margin:8px 0}` +
-        `</style></head><body>${root.innerHTML}</body></html>`,
-    );
-    win.document.close();
-    win.focus();
-    win.setTimeout(() => win.print(), 250);
+      `<style>` +
+      `@page { size: A4; margin: 16mm; }` +
+      `body { font-family: 'Noto Sans Bengali','Nirmala UI','Segoe UI',sans-serif; color:#000; font-size:12pt; line-height:${rootLh}; margin:0; }` +
+      `table { border-collapse: collapse; width:100%; margin:6px 0; }` +
+      `td,th { border:1px solid #999; padding:4px 7px; vertical-align:top; }` +
+      `h1{font-size:16pt;margin:6px 0} h2{font-size:14pt;margin:6px 0} h3{font-size:12pt;margin:6px 0}` +
+      `ul,ol{margin:4px 0 4px 22px} p{margin:5px 0} hr{border:none;border-top:1px solid #000;margin:8px 0}` +
+      `</style></head><body>${root.innerHTML}</body></html>`;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+    document.body.appendChild(iframe);
+    const idoc = iframe.contentWindow?.document;
+    if (!idoc) {
+      document.body.removeChild(iframe);
+      return;
+    }
+    idoc.open();
+    idoc.write(html);
+    idoc.close();
+    const iwin = iframe.contentWindow!;
+    iwin.onafterprint = () => window.setTimeout(() => document.body.removeChild(iframe), 500);
+    // Give the iframe a tick to lay out (fonts/tables) before opening the dialog.
+    window.setTimeout(() => {
+      iwin.focus();
+      iwin.print();
+    }, 300);
   }
 
   const btn: React.CSSProperties = {
@@ -166,15 +192,28 @@ export function RichWorksheetEditor({
           background: "#f1f3f5",
           borderBottom: `1px solid ${c.border}`,
         }}
-        onMouseDown={(e) => e.preventDefault() /* keep the editor selection */}
       >
-        <button style={{ ...btn, fontWeight: 700 }} onClick={() => exec("bold")}>
+        {/* preventDefault on the BUTTONS only keeps the text selection; on a <select>
+            it would block the dropdown from opening (the size/spacing bug). */}
+        <button
+          style={{ ...btn, fontWeight: 700 }}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => exec("bold")}
+        >
           B
         </button>
-        <button style={{ ...btn, fontStyle: "italic" }} onClick={() => exec("italic")}>
+        <button
+          style={{ ...btn, fontStyle: "italic" }}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => exec("italic")}
+        >
           I
         </button>
-        <button style={{ ...btn, textDecoration: "underline" }} onClick={() => exec("underline")}>
+        <button
+          style={{ ...btn, textDecoration: "underline" }}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => exec("underline")}
+        >
           U
         </button>
         <label style={{ fontSize: 13, color: "#333" }}>
@@ -208,7 +247,7 @@ export function RichWorksheetEditor({
         </label>
         <div style={{ flex: 1 }} />
         <button style={primaryBtn} onClick={printWorksheet}>
-          🖨 {STR.cqSendToPrint}
+          🖨 {STR.edPrintNow}
         </button>
         <button style={btn} onClick={onDone}>
           {STR.edEditClose}
@@ -221,8 +260,6 @@ export function RichWorksheetEditor({
           contentEditable
           suppressContentEditableWarning
           spellCheck={false}
-          onMouseUp={saveSel}
-          onKeyUp={saveSel}
           style={{
             background: "#fff",
             color: "#000",
