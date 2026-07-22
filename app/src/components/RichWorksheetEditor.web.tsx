@@ -103,12 +103,20 @@ export interface RichWorksheetEditorProps {
   sourceMd: string;
   title: string;
   onDone: () => void;
+  /** Jump to the office Print-queue upload form — the NORMAL print channel
+   *  (Save-as-PDF → upload bridge). Omitted → the button hides. */
+  onSendToQueue?: () => void;
+  /** Jump to the Class Test "Request" flow — the CLASS-TEST channel (upload the
+   *  saved PDF as the exam paper → tracked exam + results + publish). Omitted → hides. */
+  onSendToClassTest?: () => void;
 }
 
 export function RichWorksheetEditor({
   sourceMd,
   title,
   onDone,
+  onSendToQueue,
+  onSendToClassTest,
 }: RichWorksheetEditorProps): React.ReactElement {
   const c = useColors();
   const editorRef = useRef<HTMLDivElement>(null);
@@ -320,6 +328,16 @@ export function RichWorksheetEditor({
         <button style={primaryBtn} onClick={printWorksheet}>
           🖨 {STR.edPrintNow}
         </button>
+        {onSendToQueue ? (
+          <button style={btn} onClick={onSendToQueue}>
+            {STR.edSendToQueue}
+          </button>
+        ) : null}
+        {onSendToClassTest ? (
+          <button style={btn} onClick={onSendToClassTest}>
+            {STR.edSendToClassTest}
+          </button>
+        ) : null}
         <button style={btn} onClick={onDone}>
           {STR.edEditClose}
         </button>
@@ -356,7 +374,10 @@ export function RichWorksheetEditor({
       </div>
 
       <div style={{ padding: 8, fontSize: 12, color: c.textSecondary, borderTop: `1px solid ${c.border}` }}>
-        {STR.edRichHint}
+        <div>{STR.edRichHint}</div>
+        {onSendToQueue || onSendToClassTest ? (
+          <div style={{ marginTop: 4 }}>{STR.edQueueHint}</div>
+        ) : null}
       </div>
     </div>
   );
