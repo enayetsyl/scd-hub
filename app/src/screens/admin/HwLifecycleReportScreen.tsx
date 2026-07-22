@@ -1,19 +1,25 @@
 /**
- * HwLifecycleReportScreen (D-#300) — Principal/Office homework lifecycle
- * monitoring per subject × class, five sections (owner: "i want all 5"):
- * checking backlog (red, on top — the actionable stall), lifecycle funnel,
- * chase rate, declaration consistency (uses the D-#299 nil markers), and the
- * per-teacher scorecard. Range chips like the reconciliation report.
+ * HwLifecycleReportScreen (D-#350, teacher-first redesign — supersedes the D-#300
+ * five-card layout). Principal/Office homework oversight:
+ *   - a from/to date range + class + subject + teacher filter bar;
+ *   - the red checking backlog on top (the sharpest stall);
+ *   - one card per teacher with the lifecycle totals (declared/issued/given/
+ *     submitted/checked/returned) and the actionable PENDING pills — tap any
+ *     pending number to open the drill-down naming the stuck students + guardian
+ *     phone (HwPendingSheet).
  */
 import React, { useMemo, useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useQuery } from "urql";
-import { HW_LIFECYCLE_REPORT_QUERY } from "../../graphql/operations";
-import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Badge, Loader, ErrorBanner } from "../../components/ui";
+import { HW_SUBJECTS, ROSTER_CLASS_LEVELS } from "@scd/shared";
+import { HW_LIFECYCLE_REPORT_QUERY, type HwPendingStage } from "../../graphql/operations";
+import { Screen, H2, Body, Muted, Card, Badge, Select, Loader, ErrorBanner } from "../../components/ui";
+import { DateField } from "../../components/DateField";
+import { HwPendingSheet, type HwPendingTarget } from "../../components/HwPendingSheet";
 import { STR, bnNum, classLevelLabel, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
-import { space } from "../../theme/tokens";
+import { space, radius } from "../../theme/tokens";
 
 const keyOf = (d: Date): string => {
   const y = d.getFullYear();
@@ -22,70 +28,111 @@ const keyOf = (d: Date): string => {
   return `${y}-${m}-${day}`;
 };
 
-const RANGES = [
-  { labelKey: "rrLast7", days: 7 },
-  { labelKey: "rrLast14", days: 14 },
-  { labelKey: "rrLast30", days: 30 },
-] as const;
-
-const pctText = (v: number | null): string => (v == null ? "—" : `${bnNum(v)}%`);
+interface PendingPillSpec {
+  stage: HwPendingStage;
+  label: string;
+  count: number;
+}
 
 export default function HwLifecycleReportScreen(): React.ReactElement {
   const colors = useColors();
-  const [days, setDays] = useState<number>(14);
 
-  const { from, to } = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
-    return { from: keyOf(start), to: keyOf(now) };
-  }, [days]);
+  // Default: last 14 days ending today.
+  const today = useMemo(() => new Date(), []);
+  const [from, setFrom] = useState<string>(() =>
+    keyOf(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 13)),
+  );
+  const [to, setTo] = useState<string>(() => keyOf(today));
+
+  // "" = all. classLevel string round-trips through ROSTER_CLASS_LEVELS.
+  const [classLevel, setClassLevel] = useState<string>("");
+  const [subject, setSubject] = useState<string>("");
+  const [teacherId, setTeacherId] = useState<string>(""); // client-side row filter
+
+  const [target, setTarget] = useState<HwPendingTarget | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const classLevelArg = classLevel === "" ? null : Number(classLevel);
+  const subjectArg = subject === "" ? null : subject;
 
   const [q, refetch] = useQuery({
     query: HW_LIFECYCLE_REPORT_QUERY,
-    variables: { from, to },
+    variables: { from, to, classLevel: classLevelArg, subject: subjectArg },
     requestPolicy: "cache-and-network",
   });
   const report = q.data?.homeworkLifecycleReport;
+
   const cellTitle = (r: { classLevel: number; sectionNameBn: string; subject: string }): string =>
     `${classLevelLabel(r.classLevel)}${r.sectionNameBn ? ` — ${r.sectionNameBn}` : ""} · ${hwSubjectLabel(r.subject)}`;
 
-  const chaseRows = useMemo(
-    () =>
-      (report?.funnel ?? [])
-        .filter((r) => (r.chaseRatePct ?? 0) > 0)
-        .slice()
-        .sort((a, b) => (b.chaseRatePct ?? 0) - (a.chaseRatePct ?? 0)),
+  const teacherOptions = useMemo(
+    () => [
+      { label: STR.hlrAll, value: "" },
+      ...(report?.teachers ?? []).map((t) => ({ label: t.teacherName, value: t.teacherId })),
+    ],
     [report],
   );
+
+  const teachers = useMemo(
+    () => (report?.teachers ?? []).filter((t) => teacherId === "" || t.teacherId === teacherId),
+    [report, teacherId],
+  );
+
+  const openDrill = (t: { teacherId: string; teacherName: string }, stage: HwPendingStage, label: string): void => {
+    setTarget({ teacherId: t.teacherId, teacherName: t.teacherName, stage, stageLabel: label });
+    setSheetOpen(true);
+  };
 
   return (
     <Screen scroll>
       <H2>{STR.hlrTitle}</H2>
       <Muted style={{ marginBottom: space(2) }}>{STR.hlrSub}</Muted>
 
-      <ChipRow>
-        {RANGES.map((r) => (
-          <Chip key={r.days} label={STR[r.labelKey]} selected={days === r.days} onPress={() => setDays(r.days)} />
-        ))}
-      </ChipRow>
+      {/* Filter bar */}
+      <Card>
+        <View style={{ flexDirection: "row", gap: space(3) }}>
+          <View style={{ flex: 1 }}>
+            <DateField label={STR.hlrFrom} value={from} onChange={setFrom} max={to} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <DateField label={STR.hlrTo} value={to} onChange={setTo} min={from} max={keyOf(today)} />
+          </View>
+        </View>
+        <Select
+          label={STR.hlrFilterClass}
+          value={classLevel}
+          onChange={setClassLevel}
+          options={[
+            { label: STR.hlrAll, value: "" },
+            ...ROSTER_CLASS_LEVELS.map((l) => ({ label: classLevelLabel(l), value: String(l) })),
+          ]}
+        />
+        <Select
+          label={STR.hlrFilterSubject}
+          value={subject}
+          onChange={setSubject}
+          options={[{ label: STR.hlrAll, value: "" }, ...HW_SUBJECTS.map((s) => ({ label: hwSubjectLabel(s), value: s }))]}
+        />
+        <Select label={STR.hlrFilterTeacher} value={teacherId} onChange={setTeacherId} options={teacherOptions} searchable />
+      </Card>
 
       {q.error ? (
         <ErrorBanner message={friendlyError(q.error)} onRetry={() => refetch({ requestPolicy: "network-only" })} />
       ) : null}
       {q.fetching && !report ? <Loader label={STR.loading} /> : null}
 
-      {report && report.funnel.length === 0 && report.consistency.length === 0 ? (
+      {report && teachers.length === 0 && report.backlog.length === 0 ? (
         <Card>
           <Body style={{ fontWeight: "600" }}>{STR.hlrEmpty}</Body>
         </Card>
       ) : null}
 
-      {/* 2 — checking backlog: the actionable stall, red, on top. */}
+      {/* Checking backlog — the actionable stall, red, on top. */}
       {(report?.backlog.length ?? 0) > 0 ? (
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: 2 }}>🔴 {STR.hlrBacklogTitle}</Body>
           <Muted style={{ marginBottom: space(1) }}>
-            &gt; {bnNum(report!.backlogThresholdDays)} {STR.hlrDays} {STR.hlrBacklogSub}
+            &gt; {bnNum(report!.backlogThresholdDays)} {STR.hlrDays} · {STR.hlrBacklogSub}
           </Muted>
           {report!.backlog.map((b) => (
             <View
@@ -104,112 +151,65 @@ export default function HwLifecycleReportScreen(): React.ReactElement {
         </Card>
       ) : null}
 
-      {/* 1 — lifecycle funnel per (section × subject). */}
-      {(report?.funnel.length ?? 0) > 0 ? (
-        <Card>
-          <Body style={{ fontWeight: "700", marginBottom: space(1) }}>📊 {STR.hlrFunnelTitle}</Body>
-          {report!.funnel.map((r) => (
-            <View key={`${r.sectionId}-${r.subject}`} style={{ paddingVertical: space(1) }}>
-              <Body style={{ fontWeight: "600" }}>{cellTitle(r)}</Body>
-              <Muted>
-                {STR.hlrDeclared} {bnNum(r.declaredItems)} → {STR.hlrIssued} {bnNum(r.issuedItems)} → {STR.hlrGiven}{" "}
-                {bnNum(r.given)} → {STR.hlrSubmitted} {bnNum(r.submitted)} → {STR.hlrChecked} {bnNum(r.checked)} →{" "}
-                {STR.hlrReturned} {bnNum(r.returned)}
-              </Muted>
-              <Muted>
-                {STR.hlrOnTime} {pctText(r.onTimePct)}
-                {r.stuckSubmitted > 0 ? (
-                  <Muted style={{ color: colors.error }}>
-                    {" "}
-                    · {STR.hlrStuck} {bnNum(r.stuckSubmitted)}
-                  </Muted>
-                ) : null}
-              </Muted>
+      {/* One card per teacher: totals + tappable pending pills. */}
+      {teachers.map((t) => {
+        const pills: PendingPillSpec[] = [
+          { stage: "SUBMISSION", label: STR.hlrPendingSubmission, count: t.pendingSubmission },
+          { stage: "CHECK", label: STR.hlrPendingCheck, count: t.pendingChecking },
+          { stage: "RETURN", label: STR.hlrPendingReturn, count: t.pendingReturn },
+          { stage: "CHASE", label: STR.hlrChasedPending, count: t.chasedPending },
+        ];
+        return (
+          <Card key={t.teacherId}>
+            <Body style={{ fontWeight: "700", marginBottom: 2 }}>🧑‍🏫 {t.teacherName}</Body>
+            <Muted style={{ marginBottom: space(2) }}>
+              {STR.hlrDeclared} {bnNum(t.declaredItems)} · {STR.hlrIssued} {bnNum(t.issuedItems)} · {STR.hlrGiven}{" "}
+              {bnNum(t.given)} · {STR.hlrSubmitted} {bnNum(t.submitted)} · {STR.hlrChecked} {bnNum(t.checked)} ·{" "}
+              {STR.hlrReturned} {bnNum(t.returned)}
+            </Muted>
+            <Muted style={{ fontWeight: "600", marginBottom: space(1) }}>{STR.hlrPendingHeader}</Muted>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+              {pills.map((p) => {
+                const active = p.count > 0;
+                return (
+                  <Pressable
+                    key={p.stage}
+                    disabled={!active}
+                    onPress={() => openDrill(t, p.stage, p.label)}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: space(1),
+                      paddingVertical: space(1),
+                      paddingHorizontal: space(2),
+                      borderRadius: radius.pill,
+                      borderWidth: 1,
+                      borderColor: active ? colors.error : colors.border,
+                      backgroundColor: active ? colors.errorContainer : colors.surfaceAlt,
+                      opacity: active ? 1 : 0.6,
+                    }}
+                  >
+                    <Body style={{ fontWeight: "700", color: active ? colors.onErrorContainer : colors.textSecondary }}>
+                      {bnNum(p.count)}
+                    </Body>
+                    <Muted style={{ color: active ? colors.onErrorContainer : colors.textSecondary }}>{p.label}</Muted>
+                  </Pressable>
+                );
+              })}
             </View>
-          ))}
-        </Card>
-      ) : null}
+          </Card>
+        );
+      })}
 
-      {/* 3 — chase rate, worst first. */}
-      {chaseRows.length > 0 ? (
-        <Card>
-          <Body style={{ fontWeight: "700", marginBottom: space(1) }}>📣 {STR.hlrChaseTitle}</Body>
-          {chaseRows.map((r) => (
-            <View
-              key={`${r.sectionId}-${r.subject}`}
-              style={{ flexDirection: "row", alignItems: "center", paddingVertical: space(1), gap: space(2) }}
-            >
-              <View style={{ flex: 1 }}>
-                <Body style={{ fontWeight: "600" }}>{cellTitle(r)}</Body>
-                <Muted>
-                  {bnNum(r.chasedRecords)}/{bnNum(r.given)} · {STR.hlrChases} {bnNum(r.chases)}
-                </Muted>
-              </View>
-              <Badge text={pctText(r.chaseRatePct)} tone={(r.chaseRatePct ?? 0) >= 25 ? "danger" : "warn"} />
-            </View>
-          ))}
-        </Card>
-      ) : null}
-
-      {/* 4 — declaration consistency (routine-expected vs declared + nil). */}
-      {(report?.consistency.length ?? 0) > 0 ? (
-        <Card>
-          <Body style={{ fontWeight: "700", marginBottom: space(1) }}>🗓️ {STR.hlrConsistencyTitle}</Body>
-          {report!.consistency.map((r) => (
-            <View
-              key={`${r.sectionId}-${r.subject}`}
-              style={{ flexDirection: "row", alignItems: "center", paddingVertical: space(1), gap: space(2) }}
-            >
-              <View style={{ flex: 1 }}>
-                <Body style={{ fontWeight: "600" }}>{cellTitle(r)}</Body>
-                <Muted>
-                  {STR.hlrRoutineDays} {bnNum(r.routineDays)} · {STR.hlrDeclared} {bnNum(r.declaredDays)} ·{" "}
-                  {STR.hlrNilDays} {bnNum(r.nilDays)}
-                  {r.missedDays > 0 ? (
-                    <Muted style={{ color: colors.error }}>
-                      {" "}
-                      · {STR.hlrMissedDays} {bnNum(r.missedDays)}
-                    </Muted>
-                  ) : null}
-                </Muted>
-              </View>
-              <Badge
-                text={pctText(r.respondedPct)}
-                tone={(r.respondedPct ?? 0) >= 100 ? "ok" : (r.respondedPct ?? 0) >= 80 ? "warn" : "danger"}
-              />
-            </View>
-          ))}
-        </Card>
-      ) : null}
-
-      {/* 5 — teacher scorecard, worst first. */}
-      {(report?.scorecard.length ?? 0) > 0 ? (
-        <Card>
-          <Body style={{ fontWeight: "700", marginBottom: space(1) }}>🧑‍🏫 {STR.hlrScorecardTitle}</Body>
-          {report!.scorecard.map((s) => (
-            <View key={s.teacherId} style={{ paddingVertical: space(1) }}>
-              <Body style={{ fontWeight: "600" }}>{s.teacherName}</Body>
-              <Muted>
-                {STR.hlrDeclared} {bnNum(s.declaredItems)} · {STR.hlrNilDays} {bnNum(s.nilDays)}
-                {s.missedDeclarations > 0 ? (
-                  <Muted style={{ color: colors.error }}>
-                    {" "}
-                    · {STR.hlrMissedDecl} {bnNum(s.missedDeclarations)}
-                  </Muted>
-                ) : null}{" "}
-                · {STR.hlrOnTime} {pctText(s.onTimePct)}
-              </Muted>
-              <Muted>
-                {STR.hlrCheckLatency}{" "}
-                {s.avgCheckLatencyDays == null ? "—" : `${bnNum(s.avgCheckLatencyDays)} ${STR.hlrDays}`} ·{" "}
-                {STR.hlrReturnLatency}{" "}
-                {s.avgReturnLatencyDays == null ? "—" : `${bnNum(s.avgReturnLatencyDays)} ${STR.hlrDays}`} ·{" "}
-                {STR.hlrChases} {bnNum(s.chases)} · {STR.hlrWrongRate} {pctText(s.wrongRatePct)}
-              </Muted>
-            </View>
-          ))}
-        </Card>
-      ) : null}
+      <HwPendingSheet
+        visible={sheetOpen}
+        target={target}
+        from={from}
+        to={to}
+        classLevel={classLevelArg}
+        subject={subjectArg}
+        onClose={() => setSheetOpen(false)}
+      />
     </Screen>
   );
 }
