@@ -38,8 +38,9 @@ PDF, and file print requests — all without leaving the app.
 
 ## 3. Data model (app-native, NO wire twin)
 `EnglishDriveDoc` (server, trackers-adjacent module `englishDrive`):
-`{ classLevel (1..5, C-prefix), blockNumber (null for AS — assignments are week-scoped,
-D-#346), kind ∈ {BLOCK,TN,CW,HW,PT,AS,CLUE}, seq (int ≥ 1, D-#345), title, version (int),
+`{ classLevel (1..5, C-prefix), blockNumber (null for AS — week-scoped, D-#346; null for PT —
+uses blockNumbers instead), blockNumbers (int[], D-#347 — the blocks a PT covers; [] for every
+other kind), kind ∈ {BLOCK,TN,CW,HW,PT,AS,CLUE}, seq (int ≥ 1, D-#345), title, version (int),
 contentMd (string, ≤ 1 MB), uploadedBy, uploadedAt, replacedAt? }`
 - The markdown is stored **in the document** (class-note precedent) — no file-storage round trip;
   render + PDF + print all derive from `contentMd`.
@@ -49,6 +50,10 @@ contentMd (string, ≤ 1 MB), uploadedBy, uploadedAt, replacedAt? }`
 - **Replace semantics:** upload of an existing (classLevel, blockNumber, kind, seq) stamps the old
   row `replacedAt` and inserts the new one; reads always take the unreplaced rows. History stays in
   the collection (audit), but no UI lists it in v1.
+- **`blockNumbers` (D-#347):** a **PT covers one or more blocks** — it is stored block-less
+  (`blockNumber = null`) and carries `blockNumbers = [3,4,5]`. Its replace identity stays
+  (classLevel, kind=PT, seq) — two practice tests differ by `seq`, so `blockNumbers` is purely
+  where the PT SURFACES, never part of the key. Every other kind keeps `blockNumbers = []`.
 - Kinds are a **module-local enum** (HW_NIL_REASONS / VideoReview precedent): labels live in the
   app + module, **no shared-vocab twin, no verifier change**.
 
@@ -61,10 +66,13 @@ The parser is **lenient** — separators are NOT required (the real corpus mixes
 glued to the kind → **seq**, e.g. `HW4` → HW seq 4; also maps `GrammarBlock…` → BLOCK, `Clue` →
 CLUE); full-word kinds (`Assignment`/`Homework`/`Classwork`/`PracticeTest`/`TeacherNote`,
 D-#346); a standalone `W(\d+)` → seq when no digits are glued to the kind (Assignment_W3 → AS
-seq 3); a separated `v(\d+)` → version. Whatever fails to parse leaves its form field empty; the
-upload form always shows the parsed values **prefilled and editable** (override rule, owner #4).
-Title defaults to the first `# heading` of the md, editable. The upload batch refuses two staged
-files claiming the same (class, block, kind, seq) — the second would silently replace the first.
+seq 3); a separated `v(\d+)` → version. For a **PT**, block RANGES/LISTS map to `blockNumbers`
+(`B03-05` → [3,4,5]; `B3,4,5` or repeated `_B` tokens → the list; a single `B03` → [3]) (D-#347).
+Whatever fails to parse leaves its form field empty; the upload form always shows the parsed values
+**prefilled and editable** (override rule, owner #4) — for a PT the single block field becomes a
+multi-block "covers blocks" input. Title defaults to the first `# heading` of the md, editable. The
+upload batch refuses two staged files claiming the same (class, block, kind, seq) — the second would
+silently replace the first.
 
 ## 5. Permissions & visibility (compose existing — no new permission)
 - **Upload / replace:** `roster:manage` (the house Principal/Office gate).
@@ -89,6 +97,19 @@ files claiming the same (class, block, kind, seq) — the second would silently 
 - Doc screen gains "প্রিন্টে পাঠান" (teacher + P/O): renders the PDF and files it through the existing
   `createRequest` path (colour/sides/copies form) so the office queue, PRINTED/DELIVERED logging and
   read-gates stay untouched.
+### ED-3a — PT multi-block linking (D-#347)
+- Server: `blockNumbers: number[]` on the model (default []); `uploadEnglishDriveDoc` accepts it; PT
+  stores its covered blocks with `blockNumber = null`; PDF/print stamp lists the blocks
+  (`C1_PT_B03-05_v2`). Jest: PT surfaces under each covered block + the section; range/list parse;
+  PT replace keyed on seq not blocks.
+- App: parser reads PT block ranges/lists; the PT upload row shows a multi-block "covers blocks"
+  field (prefilled, editable); the library lists a PT **under every block it covers** (labelled
+  "প্র্যাকটিস টেস্ট · ব্লক ৩–৫") **and** in a dedicated bottom **"প্র্যাকটিস টেস্ট"** section.
+### ED-3b — related-docs strip (D-#347)
+- Doc screen shows tappable chips for the same block's other materials (a block doc → that block's
+  BLOCK/TN/CW/HW/CLUE + any PT covering it; a PT → the union of its blocks' docs) → one tap navigates
+  to the sibling. Computed **client-side** from the already-scoped `englishDriveDocs(classLevel)` read
+  — no new resolver, no new permission.
 
 ## 7. Acceptance criteria
 1. Principal drops `C3_ENG_B01_TN_v2.md` + 6 siblings on the import screen → form shows class ৩,
@@ -100,7 +121,13 @@ files claiming the same (class, block, kind, seq) — the second would silently 
 5. "প্রিন্টে পাঠান" files a print request that behaves exactly like today's print queue rows.
 6. Every upload/replace appears in the audit log with actor + (class, block, kind, version).
 7. Firewall + full server Jest stay green; no shared-vocab or import-envelope change is needed.
+8. (ED-3a) A PT uploaded as covering blocks 3–5 appears inside Block 3, 4 and 5's groups (labelled
+   with its range) AND once in the "প্র্যাকটিস টেস্ট" section; re-uploading it replaces by (class, PT,
+   seq) regardless of its block set.
+9. (ED-3b) Opening any block doc shows tap-through chips to the block's other materials; opening a PT
+   shows chips for every block it covers.
 
-## 8. Out of scope (v1)
-Non-English subjects; xlsx vocab pools; version history UI; guardian/student access; CW/HW/PT→tracker
-linking (owner-dropped); editing md in-app (re-upload is the edit path); Word/PDF ingestion.
+## 9. Out of scope (v1)
+Non-English subjects; xlsx vocab pools; version history UI; guardian/student access; CW/HW/PT→**tracker**
+linking (owner-dropped, D-#344 #10 — note the D-#347 intra-LIBRARY linking is a different thing and IS
+in scope); editing md in-app (re-upload is the edit path); Word/PDF ingestion.
