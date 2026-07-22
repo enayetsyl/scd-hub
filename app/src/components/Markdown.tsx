@@ -154,7 +154,44 @@ const INLINE = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*\n]+\*|_[^_\n]+_)/g;
 
 type MdStyles = ReturnType<typeof useStyles>;
 
-function renderInline(styles: MdStyles, text: string, keyPrefix: string, base?: TextStyle): React.ReactNode {
+/** HTML entities the authored markdown uses for spacing/punctuation. markdown-it
+ *  (the PDF path) decodes these; this on-screen renderer must match so `&emsp;`
+ *  shows as a wide space, not literal text (D-#348 follow-up). */
+const NAMED_ENTITIES: Record<string, string> = {
+  emsp: " ",
+  ensp: " ",
+  nbsp: " ",
+  thinsp: " ",
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  mdash: "—",
+  ndash: "–",
+  hellip: "…",
+  middot: "·",
+  rsquo: "’",
+  lsquo: "‘",
+  rdquo: "”",
+  ldquo: "“",
+  times: "×",
+};
+export function decodeEntities(s: string): string {
+  return s.replace(/&(#x?[0-9a-f]+|[a-z][a-z0-9]*);/gi, (whole, body: string) => {
+    if (body[0] === "#") {
+      const code =
+        body[1] === "x" || body[1] === "X"
+          ? parseInt(body.slice(2), 16)
+          : parseInt(body.slice(1), 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : whole;
+    }
+    return NAMED_ENTITIES[body.toLowerCase()] ?? whole;
+  });
+}
+
+function renderInline(styles: MdStyles, rawText: string, keyPrefix: string, base?: TextStyle): React.ReactNode {
+  const text = decodeEntities(rawText);
   const parts = text.split(INLINE);
   return parts.map((part, idx) => {
     if (!part) return null;
