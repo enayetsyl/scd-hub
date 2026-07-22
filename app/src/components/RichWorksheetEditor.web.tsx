@@ -22,6 +22,25 @@ const escapeHtml = (s: string): string =>
   s.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch] ?? ch);
 
 /**
+ * The ONE worksheet stylesheet — used both to style the on-screen editor page and
+ * to build the print document, so the editor and the print are identical (D-#349).
+ * `sel` scopes it (".scd-ws" for the editor, "body" for the print window).
+ */
+function worksheetCss(sel: string, lineHeight: string): string {
+  return (
+    `${sel}{font-family:'Noto Sans Bengali','Nirmala UI','Segoe UI',sans-serif;color:#000;font-size:12pt;line-height:${lineHeight};white-space:pre-wrap;}` +
+    `${sel} table{border-collapse:collapse;width:100%;margin:6px 0;}` +
+    `${sel} td,${sel} th{border:1px solid #999;padding:4px 7px;vertical-align:top;}` +
+    `${sel} h1{font-size:16pt;margin:6px 0;}` +
+    `${sel} h2{font-size:14pt;margin:6px 0;}` +
+    `${sel} h3{font-size:12pt;margin:6px 0;}` +
+    `${sel} p{margin:5px 0;}` +
+    `${sel} ul,${sel} ol{margin:4px 0 4px 22px;}` +
+    `${sel} hr{border:none;border-top:1px solid #000;margin:8px 0;}`
+  );
+}
+
+/**
  * Flatten <ol>/<ul> lists into plain <div> lines with the marker as EDITABLE TEXT
  * (D-#349 fix). A real <ol> in contentEditable auto-numbers — Enter makes a new
  * <li> and the numbers renumber, so a teacher can't type their own "4." or delete
@@ -190,14 +209,8 @@ export function RichWorksheetEditor({
     const rootLh = root.style.lineHeight || "1.4";
     const html =
       `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>` +
-      `<style>` +
-      `@page { size: A4; margin: 16mm; }` +
-      `body { font-family: 'Noto Sans Bengali','Nirmala UI','Segoe UI',sans-serif; color:#000; font-size:12pt; line-height:${rootLh}; margin:0; white-space:pre-wrap; }` +
-      `table { border-collapse: collapse; width:100%; margin:6px 0; }` +
-      `td,th { border:1px solid #999; padding:4px 7px; vertical-align:top; }` +
-      `h1{font-size:16pt;margin:6px 0} h2{font-size:14pt;margin:6px 0} h3{font-size:12pt;margin:6px 0}` +
-      `ul,ol{margin:4px 0 4px 22px} p{margin:5px 0} hr{border:none;border-top:1px solid #000;margin:8px 0}` +
-      `</style></head><body>${root.innerHTML}</body></html>`;
+      `<style>@page{size:A4;margin:16mm;}body{margin:0;}${worksheetCss("body", rootLh)}</style>` +
+      `</head><body>${root.innerHTML}</body></html>`;
 
     const iframe = document.createElement("iframe");
     iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
@@ -238,6 +251,8 @@ export function RichWorksheetEditor({
 
   return (
     <div style={{ border: `1px solid ${c.border}`, borderRadius: 8, overflow: "hidden" }}>
+      {/* The editor page and the print doc share this exact CSS (WYSIWYG). */}
+      <style dangerouslySetInnerHTML={{ __html: worksheetCss(".scd-ws", "1.4") }} />
       <div
         style={{
           display: "flex",
@@ -313,6 +328,7 @@ export function RichWorksheetEditor({
       <div style={{ background: "#e5e7eb", padding: 16, maxHeight: 640, overflow: "auto" }}>
         <div
           ref={editorRef}
+          className="scd-ws"
           contentEditable
           suppressContentEditableWarning
           spellCheck={false}
@@ -324,20 +340,17 @@ export function RichWorksheetEditor({
             }
           }}
           style={{
+            // An actual A4 page (794px = A4 @96dpi) with a 16mm inset, so the on-screen
+            // page matches the print @page exactly. Typography comes from `.scd-ws` above.
             background: "#fff",
-            color: "#000",
-            width: "100%",
-            maxWidth: 794,
+            width: 794,
+            maxWidth: "100%",
             margin: "0 auto",
-            minHeight: 420,
-            padding: "32px 40px",
+            minHeight: 500,
+            padding: 60,
+            boxSizing: "border-box",
             boxShadow: "0 1px 4px rgba(0,0,0,.15)",
-            fontFamily: "'Noto Sans Bengali','Nirmala UI','Segoe UI',sans-serif",
-            fontSize: 14,
-            lineHeight: 1.4,
             outline: "none",
-            // Preserve the teacher's spaces + tabs (manual alignment); wrap long lines.
-            whiteSpace: "pre-wrap",
           }}
         />
       </div>
