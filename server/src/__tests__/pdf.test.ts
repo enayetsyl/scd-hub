@@ -10,7 +10,12 @@
  * This test does NOT need a DB connection.
  */
 
-import { markdownToPdf, stripHtmlComments, transliterateForPdf } from "../routes/pdfRenderer";
+import {
+  markdownToPdf,
+  resolveLayout,
+  stripHtmlComments,
+  transliterateForPdf,
+} from "../routes/pdfRenderer";
 
 // Markdown with both English and Bengali content — mirrors a real session plan
 const BANGLA_MARKDOWN = `
@@ -84,6 +89,36 @@ describe("PDF — Bengali reph / GPOS mark positioning (fontkit null-anchor regr
 
   test("renders reph-heavy Bengali to a valid PDF without throwing", async () => {
     const buf = await markdownToPdf(REPH_MARKDOWN, { title: "পদার্থের গঠন" });
+    expect(buf.slice(0, 4).toString("ascii")).toBe("%PDF");
+    expect(buf.byteLength).toBeGreaterThan(5_000);
+  }, 30_000);
+});
+
+describe("PDF — layout knobs (D-#348 edit-before-print)", () => {
+  test("resolveLayout defaults to the historical 1/1/50 when nothing is passed", () => {
+    expect(resolveLayout({})).toEqual({ fontScale: 1, lineSpacing: 1, margin: 50 });
+  });
+
+  test("resolveLayout clamps out-of-range knobs", () => {
+    expect(resolveLayout({ fontScale: 5, lineSpacing: 0.1, margin: 500 })).toEqual({
+      fontScale: 1.6,
+      lineSpacing: 0.8,
+      margin: 90,
+    });
+    expect(resolveLayout({ fontScale: 0.1, lineSpacing: 9, margin: 5 })).toEqual({
+      fontScale: 0.75,
+      lineSpacing: 2.5,
+      margin: 25,
+    });
+  });
+
+  test("a doc rendered with custom font/spacing/margin still produces a valid PDF", async () => {
+    const buf = await markdownToPdf(BANGLA_MARKDOWN, {
+      title: "Edited",
+      fontScale: 1.3,
+      lineSpacing: 2,
+      margin: 70,
+    });
     expect(buf.slice(0, 4).toString("ascii")).toBe("%PDF");
     expect(buf.byteLength).toBeGreaterThan(5_000);
   }, 30_000);

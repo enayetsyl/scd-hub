@@ -34,7 +34,7 @@ import {
   englishDriveKindLabel,
   formatBlocksBn,
 } from "../../lib/englishDrive";
-import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
+import { openPdf, openPdfPost, PDF_SUPPORTED } from "../../lib/pdf";
 import { friendlyError } from "../../lib/errors";
 import { STR, bnNum, classLevelLabel, isoDateLabel } from "../../lib/labels";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -99,6 +99,14 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
   const [printErr, setPrintErr] = useState<string | null>(null);
   const [printOk, setPrintOk] = useState<string | null>(null);
 
+  // D-#348 edit-before-print: a one-off edit (content + layout knobs) that feeds
+  // the PDF preview + send-to-print. NOT persisted to the stored doc.
+  const [editMode, setEditMode] = useState(false);
+  const [editedMd, setEditedMd] = useState("");
+  const [fontScale, setFontScale] = useState(1);
+  const [lineSpacing, setLineSpacing] = useState(1);
+  const [margin, setMargin] = useState(50);
+
   const retry = (): void => refetch({ requestPolicy: "network-only" });
   const { refreshing, onRefresh } = usePullRefresh(docQ.fetching, retry);
 
@@ -115,13 +123,45 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
     }
   }
 
+  function enterEdit(): void {
+    setEditedMd(doc?.contentMd ?? "");
+    setEditMode(true);
+    setPrintOk(null);
+  }
+
+  async function onPreviewEdited(): Promise<void> {
+    if (pdfBusy) return;
+    setPdfBusy(true);
+    setPdfErr(null);
+    try {
+      await openPdfPost("/pdf/english-drive/render", {
+        markdown: editedMd,
+        title: doc?.title,
+        fontScale,
+        lineSpacing,
+        margin,
+      });
+    } catch {
+      setPdfErr(STR.pdfError);
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
   async function onSendToPrint(): Promise<void> {
     const n = Number(copies);
     if (printBusy || !colour || !sides || !Number.isInteger(n) || n < 1) return;
     setPrintBusy(true);
     setPrintErr(null);
     setPrintOk(null);
-    const res = await sendToPrint({ id: docId, colour, sides, copies: n });
+    const res = await sendToPrint({
+      id: docId,
+      colour,
+      sides,
+      copies: n,
+      // Edit-before-print: print the edited version + layout when in edit mode.
+      ...(editMode ? { contentMd: editedMd, fontScale, lineSpacing, margin } : {}),
+    });
     setPrintBusy(false);
     if (res.error || !res.data?.sendEnglishDriveDocToPrint) {
       setPrintErr(friendlyError(res.error));
@@ -130,6 +170,25 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
     setPrintOk(STR.edSentToPrint);
     setPrinting(false);
   }
+
+  // Layout presets (D-#348). Defaults (1.0 / 1.0 / 50) reproduce the current PDF.
+  const FONT_PRESETS = [
+    { label: STR.edFontSmall, v: 0.9 },
+    { label: STR.edFontMed, v: 1.0 },
+    { label: STR.edFontLarge, v: 1.15 },
+    { label: STR.edFontXL, v: 1.3 },
+  ];
+  const SPACING_PRESETS = [
+    { label: STR.edSpaceTight, v: 0.9 },
+    { label: STR.edSpaceNormal, v: 1.0 },
+    { label: STR.edSpaceOpen, v: 1.5 },
+    { label: STR.edSpaceXOpen, v: 2.0 },
+  ];
+  const MARGIN_PRESETS = [
+    { label: STR.edMarginNarrow, v: 35 },
+    { label: STR.edMarginNormal, v: 50 },
+    { label: STR.edMarginWide, v: 70 },
+  ];
 
   return (
     <Screen padded={false}>
@@ -175,6 +234,31 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                 {pdfErr ? <Notice message={pdfErr} tone="danger" /> : null}
 
                 <View style={{ marginTop: space(2) }}>
+                  {!editMode ? (
+                    <Button title={`✎ ${STR.edEditPrint}`} variant="ghost" onPress={enterEdit} />
+                  ) : (
+                    <View style={{ flexDirection: "row", gap: space(2) }}>
+                      {PDF_SUPPORTED ? (
+                        <View style={{ flex: 1 }}>
+                          <Button
+                            title={pdfBusy ? STR.preparingPdf : STR.edPreviewPdf}
+                            variant="secondary"
+                            onPress={() => void onPreviewEdited()}
+                            loading={pdfBusy}
+                          />
+                        </View>
+                      ) : null}
+                      <View style={{ flex: 1 }}>
+                        <Button title={STR.edEditClose} variant="ghost" onPress={() => setEditMode(false)} />
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                <View style={{ marginTop: space(2) }}>
+                  {editMode ? (
+                    <Muted style={{ marginBottom: space(1) }}>{STR.edEditedWillPrint}</Muted>
+                  ) : null}
                   {!printing ? (
                     <Button
                       title={`🖨️ ${STR.cqSendToPrint}`}
@@ -228,6 +312,43 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                 {printErr ? <Notice message={printErr} tone="danger" /> : null}
               </Card>
 
+              {editMode ? (
+                <Card>
+                  <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.edLayoutTitle}</Muted>
+                  <Muted style={{ marginBottom: space(2) }}>{STR.edEditHint}</Muted>
+
+                  <Body style={{ fontWeight: "700", marginBottom: 4 }}>{STR.edLayoutFont}</Body>
+                  <ChipRow>
+                    {FONT_PRESETS.map((p) => (
+                      <Chip key={p.label} label={p.label} selected={fontScale === p.v} onPress={() => setFontScale(p.v)} />
+                    ))}
+                  </ChipRow>
+
+                  <Body style={{ fontWeight: "700", marginTop: space(2), marginBottom: 4 }}>{STR.edLayoutSpacing}</Body>
+                  <ChipRow>
+                    {SPACING_PRESETS.map((p) => (
+                      <Chip key={p.label} label={p.label} selected={lineSpacing === p.v} onPress={() => setLineSpacing(p.v)} />
+                    ))}
+                  </ChipRow>
+
+                  <Body style={{ fontWeight: "700", marginTop: space(2), marginBottom: 4 }}>{STR.edLayoutMargin}</Body>
+                  <ChipRow>
+                    {MARGIN_PRESETS.map((p) => (
+                      <Chip key={p.label} label={p.label} selected={margin === p.v} onPress={() => setMargin(p.v)} />
+                    ))}
+                  </ChipRow>
+
+                  <View style={{ marginTop: space(2) }}>
+                    <Field
+                      label={STR.edContentLabel}
+                      value={editedMd}
+                      onChangeText={setEditedMd}
+                      multiline
+                    />
+                  </View>
+                </Card>
+              ) : null}
+
               {related.length > 0 ? (
                 <Card>
                   <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.edRelated}</Muted>
@@ -247,7 +368,7 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
               ) : null}
 
               <Card>
-                <Markdown source={doc.contentMd ?? ""} />
+                <Markdown source={editMode ? editedMd : doc.contentMd ?? ""} />
               </Card>
             </>
           ) : null}

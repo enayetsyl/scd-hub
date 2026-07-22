@@ -1,20 +1,38 @@
 /**
- * English Drive PDF route — GET /pdf/english-drive/:id (D-#344, PRD §6 ED-1).
+ * English Drive PDF routes (D-#344 ED-1; D-#348 edit-before-print):
  *
- * Renders the doc's stored markdown through the EXISTING A4 engine
- * (routes/pdfRenderer.ts — pdfkit + NotoSansBengali), owner decision #8: the
- * app's existing PDF style, no Word pixel-matching.
+ *   GET  /pdf/english-drive/:id        — render the STORED doc. Read-scoped like
+ *        the library. Optional layout query params ?fontScale=&lineSpacing=&margin=
+ *        let a teacher tweak spacing/size without editing the content.
+ *   POST /pdf/english-drive/render     — render SUPPLIED (edited) markdown + layout
+ *        to PDF, for "edit before print". No storage; the content is the caller's
+ *        own edit, so auth (non-guardian) is the only gate — nothing stored is read.
  *
- * GATE — same read scope as the GraphQL library: Principal/Office, or a
- * teacher with an English involvement in the doc's class. Guardians 403.
+ * Both render through the EXISTING A4 engine (routes/pdfRenderer.ts — pdfkit +
+ * NotoSansBengali). Layout knobs are clamped in the renderer (resolveLayout).
  */
 import type { Router, Request, Response } from "express";
-import { Router as createRouter } from "express";
+import { Router as createRouter, json } from "express";
 import { buildContext } from "../../../context";
 import { markdownToPdf } from "../../../routes/pdfRenderer";
+import { ENGLISH_DRIVE_MD_MAX_BYTES } from "../models/EnglishDriveDoc";
 import { englishDriveDocById, formatBlockTag } from "../services/EnglishDriveService";
 
 export const englishDrivePdfRouter: Router = createRouter();
+
+/** Pull the optional layout knobs off a query string / JSON body (NaN → undefined,
+ *  so the renderer applies its defaults and clamps the rest). */
+function layoutFrom(src: Record<string, unknown>): {
+  fontScale?: number;
+  lineSpacing?: number;
+  margin?: number;
+} {
+  const num = (v: unknown): number | undefined => {
+    const n = typeof v === "number" ? v : typeof v === "string" ? parseFloat(v) : NaN;
+    return Number.isFinite(n) ? n : undefined;
+  };
+  return { fontScale: num(src.fontScale), lineSpacing: num(src.lineSpacing), margin: num(src.margin) };
+}
 
 englishDrivePdfRouter.get("/:id", async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
@@ -40,7 +58,7 @@ englishDrivePdfRouter.get("/:id", async (req: Request, res: Response) => {
     const blockTag = formatBlockTag(doc); // "B3-5" / "B3" / "" (D-#347: PT covers many)
     const blockPart = blockTag ? ` · ${blockTag.replace(/^B/, "Block ")}` : "";
     const title = `English Drive — Class ${doc.classLevel}${blockPart} · ${doc.kind}: ${doc.title}`;
-    const pdfBuffer = await markdownToPdf(doc.contentMd ?? "", { title });
+    const pdfBuffer = await markdownToPdf(doc.contentMd ?? "", { title, ...layoutFrom(req.query) });
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
@@ -50,6 +68,37 @@ englishDrivePdfRouter.get("/:id", async (req: Request, res: Response) => {
     res.send(pdfBuffer);
   } catch (err) {
     console.error(`PDF render failed for English Drive doc ${req.params.id}:`, err);
+    res.status(500).json({ error: "Could not generate the PDF" });
+  }
+});
+
+// Edit-before-print: render the caller's edited markdown with their layout knobs.
+englishDrivePdfRouter.post("/render", json({ limit: "2mb" }), async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || ctx.auth.role === "GUARDIAN") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const markdown = typeof body.markdown === "string" ? body.markdown : "";
+  if (markdown.trim() === "") {
+    res.status(400).json({ error: "No content to render" });
+    return;
+  }
+  if (Buffer.byteLength(markdown, "utf8") > ENGLISH_DRIVE_MD_MAX_BYTES) {
+    res.status(413).json({ error: "Content too large" });
+    return;
+  }
+  const title = typeof body.title === "string" && body.title.trim() ? body.title : "English Drive";
+
+  try {
+    const pdfBuffer = await markdownToPdf(markdown, { title, ...layoutFrom(body) });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="english_drive_edited.pdf"`);
+    res.setHeader("Content-Length", pdfBuffer.byteLength);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error("PDF render failed for edited English Drive content:", err);
     res.status(500).json({ error: "Could not generate the PDF" });
   }
 });
