@@ -533,6 +533,30 @@ describe("sendEnglishDriveDocToPrint", () => {
     expect(out.title).toContain("C3_B3-5_PT_v2");
   });
 
+  test("edit-before-print renders the EDITED markdown + layout, not the stored doc (D-#348)", async () => {
+    mockFindById.mockReturnValue(madeDoc());
+    await sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), {
+      ...printInput,
+      contentMd: "# Edited worksheet\nnew content",
+      fontScale: 1.3,
+      lineSpacing: 2,
+      margin: 70,
+    });
+    expect(mockMarkdownToPdf).toHaveBeenCalledWith(
+      expect.stringContaining("Edited worksheet"),
+      expect.objectContaining({ fontScale: 1.3, lineSpacing: 2, margin: 70 }),
+    );
+  });
+
+  test("edit-before-print falls back to the stored markdown when no edit is supplied", async () => {
+    mockFindById.mockReturnValue(madeDoc());
+    await sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), printInput);
+    expect(mockMarkdownToPdf).toHaveBeenCalledWith(
+      expect.stringContaining("# Block 1"),
+      expect.anything(),
+    );
+  });
+
   test("Drive down → Bangla error, no request filed", async () => {
     mockFindById.mockReturnValue(madeDoc());
     mockDriveUpload.mockRejectedValue(new DriveUnavailableError("down"));

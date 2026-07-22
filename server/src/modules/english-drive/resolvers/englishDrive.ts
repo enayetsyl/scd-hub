@@ -110,6 +110,11 @@ builder.mutationField("sendEnglishDriveDocToPrint", (t) =>
       colour: t.arg.string({ required: true }),
       sides: t.arg.string({ required: true }),
       copies: t.arg.int({ required: true }),
+      // Edit-before-print (D-#348): optional edited markdown + layout knobs.
+      contentMd: t.arg.string({ required: false }),
+      fontScale: t.arg.float({ required: false }),
+      lineSpacing: t.arg.float({ required: false }),
+      margin: t.arg.float({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");

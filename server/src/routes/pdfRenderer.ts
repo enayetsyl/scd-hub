@@ -129,6 +129,30 @@ export function mixedTextInBox(
 
 interface RenderOptions {
   title?: string;
+  /** Base-font multiplier (English Drive edit-before-print, D-#348). Default 1. */
+  fontScale?: number;
+  /** Line-gap + inter-block spacing multiplier. Default 1. */
+  lineSpacing?: number;
+  /** Page margin in points. Default 50. */
+  margin?: number;
+}
+
+/** Resolved, clamped layout knobs. Absent options → the historical defaults, so
+ *  every existing caller (artifact / set PDFs) renders byte-identically. */
+export interface LayoutCfg {
+  fontScale: number;
+  lineSpacing: number;
+  margin: number;
+}
+
+const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n));
+
+export function resolveLayout(options: RenderOptions): LayoutCfg {
+  return {
+    fontScale: clamp(options.fontScale ?? 1, 0.75, 1.6),
+    lineSpacing: clamp(options.lineSpacing ?? 1, 0.8, 2.5),
+    margin: clamp(options.margin ?? 50, 25, 90),
+  };
 }
 
 /** Convert rendered_markdown to a PDF Buffer. */
@@ -136,11 +160,12 @@ export async function markdownToPdf(
   markdownText: string,
   options: RenderOptions = {},
 ): Promise<Buffer> {
+  const cfg = resolveLayout(options);
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
 
     const doc = new PDFDocument({
-      margin: 50,
+      margin: cfg.margin,
       size: "A4",
       info: {
         Title: options.title ?? "Lesson Plan",
@@ -154,16 +179,18 @@ export async function markdownToPdf(
 
     // Bengali font for Bengali runs; Helvetica (built-in) is the Latin fallback.
     doc.registerFont(BENGALI_FONT, FONT_PATH);
-    doc.font(BENGALI_FONT).fontSize(10);
+    doc.font(BENGALI_FONT).fontSize(10 * cfg.fontScale);
 
     const tokens = md.parse(transliterateForPdf(stripUnsupportedGlyphs(stripHtmlComments(markdownText))), {});
-    renderTokens(doc, tokens);
+    renderTokens(doc, tokens, cfg);
 
     doc.end();
   });
 }
 
-function renderTokens(doc: PDFKit.PDFDocument, tokens: Token[]): void {
+function renderTokens(doc: PDFKit.PDFDocument, tokens: Token[], cfg: LayoutCfg): void {
+  const fs = cfg.fontScale;
+  const ls = cfg.lineSpacing;
   let i = 0;
   while (i < tokens.length) {
     const token = tokens[i];
@@ -174,8 +201,8 @@ function renderTokens(doc: PDFKit.PDFDocument, tokens: Token[]): void {
       const text = inlineToken ? collectInlineText(inlineToken.children ?? []) : "";
       i += 2; // skip heading_close
 
-      const fontSize = level === 1 ? 18 : level === 2 ? 14 : 12;
-      const moveDown = level === 1 ? 0.5 : 0.3;
+      const fontSize = (level === 1 ? 18 : level === 2 ? 14 : 12) * fs;
+      const moveDown = (level === 1 ? 0.5 : 0.3) * ls;
       doc.fontSize(fontSize);
       mixedText(doc, text, {});
       doc.moveDown(moveDown);
@@ -187,9 +214,9 @@ function renderTokens(doc: PDFKit.PDFDocument, tokens: Token[]): void {
       const inlineToken = tokens[i + 1];
       const text = inlineToken ? collectInlineText(inlineToken.children ?? []) : "";
       i += 2; // skip paragraph_close
-      doc.fontSize(10);
-      mixedText(doc, text, { lineGap: 2 });
-      doc.moveDown(0.3);
+      doc.fontSize(10 * fs);
+      mixedText(doc, text, { lineGap: 2 * ls });
+      doc.moveDown(0.3 * ls);
       i++;
       continue;
     }
@@ -210,20 +237,20 @@ function renderTokens(doc: PDFKit.PDFDocument, tokens: Token[]): void {
             i++;
           }
           const bullet = token.type === "bullet_list_open" ? "•  " : `${listNum++}.  `;
-          doc.fontSize(10);
-          mixedText(doc, `${bullet}${itemText}`, { indent: 15, lineGap: 1 });
+          doc.fontSize(10 * fs);
+          mixedText(doc, `${bullet}${itemText}`, { indent: 15, lineGap: 1 * ls });
           i++; // skip list_item_close
           continue;
         }
         i++;
       }
-      doc.moveDown(0.3);
+      doc.moveDown(0.3 * ls);
       i++; // skip list_close
       continue;
     }
 
     if (token.type === "hr") {
-      doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke().moveDown(0.3);
+      doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.width - doc.page.margins.right, doc.y).stroke().moveDown(0.3 * ls);
       i++;
       continue;
     }
@@ -234,13 +261,13 @@ function renderTokens(doc: PDFKit.PDFDocument, tokens: Token[]): void {
         const bt = tokens[i];
         if (bt.type === "inline") {
           const text = collectInlineText(bt.children ?? []);
-          doc.fontSize(9).fillColor("#555555");
-          mixedText(doc, text, { indent: 20, lineGap: 1 });
+          doc.fontSize(9 * fs).fillColor("#555555");
+          mixedText(doc, text, { indent: 20, lineGap: 1 * ls });
           doc.fillColor("#000000");
         }
         i++;
       }
-      doc.moveDown(0.3);
+      doc.moveDown(0.3 * ls);
       i++; // skip blockquote_close
       continue;
     }
@@ -278,7 +305,7 @@ function renderTokens(doc: PDFKit.PDFDocument, tokens: Token[]): void {
         }
         i++;
       }
-      renderTable(doc, rows);
+      renderTable(doc, rows, cfg);
       i++; // skip table_close
       continue;
     }
@@ -296,16 +323,16 @@ interface TableRow {
  *  per-row height measured from the actual cell draw, header rows shaded. This
  *  replaces the old `cells.join(" | ")` flow whose wrapping caused the columns to
  *  collide (the Chapter-Overview overlap). */
-function renderTable(doc: PDFKit.PDFDocument, rows: TableRow[]): void {
+function renderTable(doc: PDFKit.PDFDocument, rows: TableRow[], cfg: LayoutCfg): void {
   if (rows.length === 0) return;
   const nCols = Math.max(...rows.map((r) => r.cells.length));
   if (nCols === 0) return;
 
   const left = doc.page.margins.left;
   const tableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-  const fontSize = 9;
+  const fontSize = 9 * cfg.fontScale;
   const padX = 4;
-  const padY = 3;
+  const padY = 3 * cfg.lineSpacing;
 
   // Weighted columns: width ∝ the column's longest cell (clamped so a "#" column
   // stays slim and one verbose column can't starve the rest), normalised to fit.
@@ -336,7 +363,7 @@ function renderTable(doc: PDFKit.PDFDocument, rows: TableRow[]): void {
     for (let c = 0; c < nCols; c++) {
       const h = doc.heightOfString(cells[c].length > 0 ? cells[c] : " ", {
         width: colWidths[c] - 2 * padX,
-        lineGap: 1,
+        lineGap: 1 * cfg.lineSpacing,
       });
       estHeight = Math.max(estHeight, h);
     }
@@ -347,7 +374,7 @@ function renderTable(doc: PDFKit.PDFDocument, rows: TableRow[]): void {
     const rowTop = doc.y;
     let rowBottom = rowTop;
     for (let c = 0; c < nCols; c++) {
-      mixedTextInBox(doc, cells[c], colX[c] + padX, rowTop + padY, colWidths[c] - 2 * padX, { lineGap: 1 });
+      mixedTextInBox(doc, cells[c], colX[c] + padX, rowTop + padY, colWidths[c] - 2 * padX, { lineGap: 1 * cfg.lineSpacing });
       rowBottom = Math.max(rowBottom, doc.y);
     }
     rowBottom += padY;
@@ -371,7 +398,7 @@ function renderTable(doc: PDFKit.PDFDocument, rows: TableRow[]): void {
   // Cells were positioned at absolute x; restore the left margin so the next block
   // (heading/paragraph) flows full-width instead of inside the last column.
   doc.x = left;
-  doc.moveDown(0.5);
+  doc.moveDown(0.5 * cfg.lineSpacing);
 }
 
 function collectInlineText(children: Token[]): string {

@@ -359,6 +359,13 @@ export interface SendEnglishDriveToPrintInput {
   colour: string;
   sides: string;
   copies: number;
+  /** Edit-before-print (D-#348): the teacher's edited markdown + layout knobs.
+   *  When contentMd is given, the printed PDF renders THAT (falling back to the
+   *  stored doc otherwise); the read gate on `id` still applies. */
+  contentMd?: string | null;
+  fontScale?: number | null;
+  lineSpacing?: number | null;
+  margin?: number | null;
 }
 
 export interface EnglishDrivePrintResult {
@@ -377,7 +384,18 @@ export async function sendEnglishDriveDocToPrint(
   const blockTag = formatBlockTag(doc);
   const stamp = `C${doc.classLevel}${blockTag ? `_${blockTag}` : ""}_${kindTag}_v${doc.version}`;
   const title = `English Drive ${stamp} — ${doc.title}`.slice(0, 200);
-  const pdf = await markdownToPdf(doc.contentMd ?? "", { title });
+
+  // Print the edited version when supplied (D-#348), else the stored markdown.
+  const source = input.contentMd != null && input.contentMd.trim() !== "" ? input.contentMd : doc.contentMd ?? "";
+  if (Buffer.byteLength(source, "utf8") > ENGLISH_DRIVE_MD_MAX_BYTES) {
+    throw new Error("ফাইলটি খুব বড় (সর্বোচ্চ ১ MB)");
+  }
+  const pdf = await markdownToPdf(source, {
+    title,
+    fontScale: input.fontScale ?? undefined,
+    lineSpacing: input.lineSpacing ?? undefined,
+    margin: input.margin ?? undefined,
+  });
 
   let driveFileId: string;
   try {
