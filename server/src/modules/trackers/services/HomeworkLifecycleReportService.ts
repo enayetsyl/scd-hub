@@ -20,6 +20,7 @@
  * and guardian phones — allowed here (ADR-005 only forbids the CORPUS plane from
  * joining back to identity; this service is never imported by corpus).
  */
+import { DAYS_OF_WEEK } from "@scd/shared";
 import type { LifecycleState } from "@scd/shared";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
@@ -29,6 +30,7 @@ import { User } from "../../foundation/models/User";
 import { Student } from "../../foundation/models/Student";
 import { Guardian } from "../../foundation/models/Guardian";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
+import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { parseDateKey } from "../../attendance/dates";
 
 export const HW_CHECKING_BACKLOG_DAYS = 2;
@@ -148,13 +150,83 @@ function everReached(stamps: Array<{ state: string; at: Date }>, state: Lifecycl
 function itemFilter(
   start: Date,
   end: Date,
-  opts: { classLevel?: number | null; subject?: string | null; declaredBy?: string } = {},
+  opts: { classLevel?: number | null; subject?: string | null } = {},
 ): Record<string, unknown> {
   const f: Record<string, unknown> = { dateGiven: { $gte: start, $lte: end } };
   if (opts.classLevel != null) f.classLevel = opts.classLevel;
   if (opts.subject) f.subject = opts.subject;
-  if (opts.declaredBy) f.declaredBy = opts.declaredBy;
   return f;
+}
+
+interface ItemLite {
+  _id: { toString(): string };
+  sectionId: { toString(): string };
+  subject: string;
+  dateGiven: Date;
+  declaredBy: { toString(): string };
+}
+
+interface SlotLite {
+  groupId: { toString(): string };
+  subject: string;
+  dayOfWeek: string;
+  periodNumber: number;
+  teacherId?: { toString(): string } | null;
+  effectiveFrom: Date;
+  effectiveTo?: Date | null;
+}
+
+/**
+ * Attribute each homework item to its ACCOUNTABLE subject teacher (D-#350 owner
+ * finding) — the routine's teacher for that section×subject (earliest live period
+ * on the item's day; the D-#293 rule), NOT whoever physically declared it. A
+ * Principal/Office data-entry on a teacher's behalf must land in that teacher's
+ * row, not the entrant's. Falls back to the declarer only when the routine names
+ * no teacher for the cell (e.g. an unscheduled catch-up subject).
+ */
+async function accountableTeacherByItem(items: ItemLite[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (items.length === 0) return out;
+
+  const sectionIds = [...new Set(items.map((i) => i.sectionId.toString()))];
+  const subjects = [...new Set(items.map((i) => i.subject))];
+  const slots = (await RoutineSlot.find({
+    groupType: "section",
+    active: true,
+    isBreak: false,
+    groupId: { $in: sectionIds },
+    subject: { $in: subjects },
+  })
+    .select("groupId dayOfWeek periodNumber subject teacherId effectiveFrom effectiveTo")
+    .lean()) as unknown as SlotLite[];
+
+  const byCell = new Map<string, SlotLite[]>();
+  for (const s of slots) {
+    if (!s.teacherId) continue;
+    const k = `${s.groupId.toString()}|${s.subject}`;
+    (byCell.get(k) ?? byCell.set(k, []).get(k)!).push(s);
+  }
+
+  const live = (s: SlotLite, t: number): boolean =>
+    new Date(s.effectiveFrom).getTime() <= t && (!s.effectiveTo || new Date(s.effectiveTo).getTime() >= t);
+  const earliest = (arr: SlotLite[]): string | null => {
+    if (arr.length === 0) return null;
+    const best = arr.reduce((a, b) => (b.periodNumber < a.periodNumber ? b : a));
+    return best.teacherId ? best.teacherId.toString() : null;
+  };
+
+  for (const it of items) {
+    const cell = byCell.get(`${it.sectionId.toString()}|${it.subject}`) ?? [];
+    const d = new Date(it.dateGiven);
+    const t = d.getTime();
+    const dow = DAYS_OF_WEEK[d.getDay()];
+    const teacher =
+      earliest(cell.filter((s) => s.dayOfWeek === dow && live(s, t))) ?? // teacher scheduled that day
+      earliest(cell.filter((s) => live(s, t))) ?? // any live slot for the cell
+      earliest(cell); // any slot for the cell, ignoring effective dates
+    out.set(it._id.toString(), teacher ?? it.declaredBy.toString());
+  }
+  return out;
 }
 
 function rangeBounds(fromKey: string, toKey: string): { start: Date; end: Date } {
@@ -174,7 +246,7 @@ export async function homeworkLifecycleReport(
   const { start, end } = rangeBounds(fromKey, toKey);
 
   const items = await HomeworkItem.find(itemFilter(start, end, opts))
-    .select("sectionId classId classLevel subject status declaredBy")
+    .select("sectionId classId classLevel subject status declaredBy dateGiven")
     .lean();
 
   const records =
@@ -185,6 +257,12 @@ export async function homeworkLifecycleReport(
           .lean();
 
   const itemById = new Map(items.map((i) => [i._id.toString(), i]));
+  // Attribute every item to its accountable subject teacher (routine), not the
+  // declarer (D-#350 owner finding: a Principal's on-behalf entry belongs to the
+  // subject teacher's row).
+  const accById = await accountableTeacherByItem(items as unknown as ItemLite[]);
+  const teacherOfItem = (it: { _id: { toString(): string }; declaredBy: { toString(): string } }): string =>
+    accById.get(it._id.toString()) ?? it.declaredBy.toString();
 
   // --- per-teacher accumulation -------------------------------------------------
   interface TeacherAcc {
@@ -213,7 +291,7 @@ export async function homeworkLifecycleReport(
   };
 
   for (const it of items) {
-    const a = teacherFor(it.declaredBy.toString());
+    const a = teacherFor(teacherOfItem(it));
     a.declaredItems += 1;
     if (it.status === "issued") a.issuedItems += 1;
   }
@@ -225,7 +303,7 @@ export async function homeworkLifecycleReport(
   for (const r of records) {
     const it = itemById.get(r.hwItemId.toString());
     if (!it) continue;
-    const a = teacherFor(it.declaredBy.toString());
+    const a = teacherFor(teacherOfItem(it));
     const stamps = (r.stateDates ?? []) as Array<{ state: string; at: Date }>;
     const state = r.state as LifecycleState;
 
@@ -250,7 +328,7 @@ export async function homeworkLifecycleReport(
       if (since) {
         const waitDays = (now.getTime() - since.getTime()) / DAY_MS;
         if (waitDays > HW_CHECKING_BACKLOG_DAYS) {
-          const tid = it.declaredBy.toString();
+          const tid = teacherOfItem(it);
           const bk = `${it.sectionId.toString()}|${it.subject}|${tid}`;
           const b =
             backlogAcc.get(bk) ??
@@ -335,9 +413,16 @@ export async function homeworkLifecyclePending(
   const now = opts.now ?? new Date();
   const { start, end } = rangeBounds(fromKey, toKey);
 
-  const items = await HomeworkItem.find(itemFilter(start, end, { ...opts, declaredBy: teacherId }))
-    .select("subject classLevel")
+  const allItems = await HomeworkItem.find(itemFilter(start, end, opts))
+    .select("sectionId subject classLevel dateGiven declaredBy")
     .lean();
+  if (allItems.length === 0) return [];
+  // Keep only items this teacher is ACCOUNTABLE for (routine subject teacher), so
+  // the drill matches the card's attribution — not the declarer (D-#350 finding).
+  const accById = await accountableTeacherByItem(allItems as unknown as ItemLite[]);
+  const items = allItems.filter(
+    (it) => (accById.get(it._id.toString()) ?? it.declaredBy.toString()) === teacherId,
+  );
   if (items.length === 0) return [];
   const subjectOf = new Map(items.map((i) => [i._id.toString(), { subject: i.subject, classLevel: i.classLevel }]));
 
