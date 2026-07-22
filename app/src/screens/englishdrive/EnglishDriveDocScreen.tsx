@@ -3,8 +3,13 @@
  * stored markdown with the existing renderer, plus "PDF তৈরি করুন" through the
  * existing server-side A4 engine (GET /pdf/english-drive/:id). Read access is
  * re-gated server-side (the doc query and the PDF route share the same scope).
+ *
+ * ED-3b (D-#347): a "সম্পর্কিত ফাইল" strip cross-links the same block's other
+ * materials — computed client-side from the already-scoped englishDriveDocs read
+ * (no new resolver, no new permission). A block doc links its block's BLOCK/TN/
+ * CW/HW/CLUE + any PT covering it; a PT links every doc in the blocks it covers.
  */
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
@@ -14,12 +19,21 @@ import {
   PRINT_SIDES,
   PRINT_SIDES_LABELS_EN,
 } from "@scd/shared";
-import { ENGLISH_DRIVE_DOC, SEND_ENGLISH_DRIVE_TO_PRINT } from "../../graphql/englishDrive";
+import {
+  ENGLISH_DRIVE_DOC,
+  ENGLISH_DRIVE_DOCS,
+  SEND_ENGLISH_DRIVE_TO_PRINT,
+  type EnglishDriveDocT,
+} from "../../graphql/englishDrive";
 import type { EnglishDriveStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Chip, ChipRow, Field, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import Markdown from "../../components/Markdown";
-import { englishDriveKindLabel, formatBlocksBn } from "../../lib/englishDrive";
+import {
+  ENGLISH_DRIVE_KINDS,
+  englishDriveKindLabel,
+  formatBlocksBn,
+} from "../../lib/englishDrive";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { friendlyError } from "../../lib/errors";
 import { STR, bnNum, classLevelLabel, isoDateLabel } from "../../lib/labels";
@@ -28,10 +42,48 @@ import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<EnglishDriveStackParamList, "EnglishDriveDoc">;
 
-export default function EnglishDriveDocScreen({ route }: Props): React.ReactElement {
+/** The blocks a doc touches: a PT its whole coverage, else its single block. */
+function blocksOf(d: Pick<EnglishDriveDocT, "kind" | "blockNumber" | "blockNumbers">): number[] {
+  if (d.kind === "PT") return d.blockNumbers;
+  return d.blockNumber !== null ? [d.blockNumber] : [];
+}
+
+function relatedChipLabel(d: EnglishDriveDocT): string {
+  if (d.kind === "PT") {
+    return d.blockNumbers.length
+      ? `${englishDriveKindLabel(d.kind)} ${formatBlocksBn(d.blockNumbers)}`
+      : englishDriveKindLabel(d.kind);
+  }
+  return `${englishDriveKindLabel(d.kind)}${d.seq > 1 ? ` ${bnNum(d.seq)}` : ""}`;
+}
+
+export default function EnglishDriveDocScreen({ route, navigation }: Props): React.ReactElement {
   const { docId } = route.params;
   const [docQ, refetch] = useQuery({ query: ENGLISH_DRIVE_DOC, variables: { id: docId } });
   const doc = docQ.data?.englishDriveDoc ?? null;
+
+  // ED-3b: siblings in the same class, once the doc (and its class) is known. Same
+  // scoped read the library uses — server re-gates; metadata only (contentMd null).
+  const [siblingsQ] = useQuery({
+    query: ENGLISH_DRIVE_DOCS,
+    variables: { classLevel: doc?.classLevel ?? null },
+    pause: !doc,
+  });
+  const related = useMemo(() => {
+    if (!doc) return [] as EnglishDriveDocT[];
+    const blocks = new Set(blocksOf(doc));
+    if (blocks.size === 0) return []; // block-less (AS) — nothing to cross-link
+    const all = siblingsQ.data?.englishDriveDocs ?? [];
+    return all
+      .filter((d) => d.id !== doc.id && blocksOf(d).some((b) => blocks.has(b)))
+      .sort(
+        (a, b) =>
+          ENGLISH_DRIVE_KINDS.indexOf(a.kind as (typeof ENGLISH_DRIVE_KINDS)[number]) -
+            ENGLISH_DRIVE_KINDS.indexOf(b.kind as (typeof ENGLISH_DRIVE_KINDS)[number]) ||
+          (a.blockNumber ?? Infinity) - (b.blockNumber ?? Infinity) ||
+          a.seq - b.seq,
+      );
+  }, [doc, siblingsQ.data]);
 
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfErr, setPdfErr] = useState<string | null>(null);
@@ -175,6 +227,24 @@ export default function EnglishDriveDocScreen({ route }: Props): React.ReactElem
                 {printOk ? <Notice message={printOk} tone="ok" /> : null}
                 {printErr ? <Notice message={printErr} tone="danger" /> : null}
               </Card>
+
+              {related.length > 0 ? (
+                <Card>
+                  <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.edRelated}</Muted>
+                  <ChipRow>
+                    {related.map((r) => (
+                      <Chip
+                        key={r.id}
+                        label={relatedChipLabel(r)}
+                        selected={false}
+                        onPress={() =>
+                          navigation.push("EnglishDriveDoc", { docId: r.id, title: r.title })
+                        }
+                      />
+                    ))}
+                  </ChipRow>
+                </Card>
+              ) : null}
 
               <Card>
                 <Markdown source={doc.contentMd ?? ""} />
