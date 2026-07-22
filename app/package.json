@@ -39,6 +39,7 @@
     "graphql": "^16.8.1",
     "js-sha256": "^0.11.1",
     "lucide-react-native": "^1.25.0",
+    "markdown-it": "^14.3.0",
     "nativewind": "4.0.36",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -53,6 +54,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
+    "@types/markdown-it": "^14.1.2",
     "@types/react": "~18.2.79",
     "tailwindcss": "^3.4.4",
     "typescript": "*"
