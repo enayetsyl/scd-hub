@@ -32,8 +32,10 @@ EnglishDriveDocRef.implement({
   fields: (t) => ({
     id: t.exposeString("id"),
     classLevel: t.exposeInt("classLevel"),
-    // Null = block-less (assignments are week-scoped, D-#346).
+    // Null = block-less (assignments are week-scoped, D-#346; PT uses blockNumbers).
     blockNumber: t.int({ nullable: true, resolve: (r) => r.blockNumber }),
+    // The blocks a PT covers (D-#347); [] for every other kind.
+    blockNumbers: t.field({ type: ["Int"], resolve: (r) => r.blockNumbers }),
     kind: t.exposeString("kind"),
     seq: t.exposeInt("seq"),
     title: t.exposeString("title"),
@@ -125,8 +127,10 @@ builder.mutationField("uploadEnglishDriveDoc", (t) =>
     authScopes: { hasPermission: "roster:manage" },
     args: {
       classLevel: t.arg.int({ required: true }),
-      // Optional for AS (week-scoped, D-#346); the service requires it otherwise.
+      // Optional for AS (week-scoped, D-#346) and PT (uses blockNumbers); required otherwise.
       blockNumber: t.arg.int({ required: false }),
+      // The blocks a PT covers (D-#347) — required (1+) for PT, ignored otherwise.
+      blockNumbers: t.arg.intList({ required: false }),
       kind: t.arg.string({ required: true }),
       seq: t.arg.int({ required: false }),
       title: t.arg.string({ required: true }),

@@ -28,9 +28,13 @@ export interface IEnglishDriveDoc extends Document {
   _id: Types.ObjectId;
   /** Content axis C1..C5 stored as the integer 1..5 (English Drive covers no Nursery/KG). */
   classLevel: number;
-  /** Null for block-less documents — assignments are week-scoped, not block-scoped
-   *  (owner ruling 2026-07-21, D-#346). Required for every other kind (service). */
+  /** Null for block-less documents — assignments are week-scoped (D-#346); also null
+   *  for PT, which uses `blockNumbers` instead. Required for every other kind (service). */
   blockNumber: number | null;
+  /** The blocks a PT COVERS (D-#347) — a practice test may span several blocks; it
+   *  surfaces under each. Empty for every other kind (they use scalar blockNumber).
+   *  NEVER part of the replace identity — a PT is keyed (class, PT, seq). */
+  blockNumbers: number[];
   kind: EnglishDriveKind;
   /** Sequence within (block × kind) — HW **4**, CW **1**. 1 for single-doc kinds.
    *  Pre-seq rows have no field; reads treat missing as 1. */
@@ -53,6 +57,8 @@ const EnglishDriveDocSchema = new Schema<IEnglishDriveDoc>(
     // Optional at the schema so AS can be block-less; the SERVICE requires it for
     // every other kind (D-#346).
     blockNumber: { type: Number, min: 1, default: null },
+    // PT's covered blocks (D-#347); [] for every other kind. Surfacing-only, never keyed.
+    blockNumbers: { type: [Number], default: [] },
     kind: { type: String, required: true, enum: ENGLISH_DRIVE_KINDS },
     seq: { type: Number, required: true, min: 1, default: 1 },
     title: { type: String, required: true, trim: true },

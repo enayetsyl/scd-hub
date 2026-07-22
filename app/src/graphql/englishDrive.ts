@@ -10,8 +10,10 @@ type NoVars = Record<string, never>;
 export interface EnglishDriveDocT {
   id: string;
   classLevel: number;
-  /** Null = block-less (assignments are week-scoped, D-#346). */
+  /** Null = block-less (assignments are week-scoped, D-#346; PT uses blockNumbers). */
   blockNumber: number | null;
+  /** The blocks a PT covers (D-#347); [] for every other kind. */
+  blockNumbers: number[];
   kind: string;
   seq: number;
   title: string;
@@ -25,7 +27,7 @@ export interface EnglishDriveDocFullT extends EnglishDriveDocT {
 }
 
 const ENGLISH_DRIVE_DOC_FIELDS = `
-  id classLevel blockNumber kind seq title version uploadedAt uploadedByName
+  id classLevel blockNumber blockNumbers kind seq title version uploadedAt uploadedByName
 `;
 
 export const ENGLISH_DRIVE_MY_CLASS_LEVELS = gql<{ englishDriveMyClassLevels: number[] }, NoVars>`
@@ -71,6 +73,7 @@ export const UPLOAD_ENGLISH_DRIVE_DOC = gql<
   {
     classLevel: number;
     blockNumber: number | null;
+    blockNumbers?: number[] | null;
     kind: string;
     seq: number;
     title: string;
@@ -81,6 +84,7 @@ export const UPLOAD_ENGLISH_DRIVE_DOC = gql<
   mutation UploadEnglishDriveDoc(
     $classLevel: Int!
     $blockNumber: Int
+    $blockNumbers: [Int!]
     $kind: String!
     $seq: Int
     $title: String!
@@ -90,6 +94,7 @@ export const UPLOAD_ENGLISH_DRIVE_DOC = gql<
     uploadEnglishDriveDoc(
       classLevel: $classLevel
       blockNumber: $blockNumber
+      blockNumbers: $blockNumbers
       kind: $kind
       seq: $seq
       title: $title

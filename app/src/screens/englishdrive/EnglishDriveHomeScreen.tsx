@@ -20,7 +20,7 @@ import type { EnglishDriveStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Select, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
-import { englishDriveKindLabel } from "../../lib/englishDrive";
+import { englishDriveKindLabel, formatBlocksBn } from "../../lib/englishDrive";
 import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
@@ -50,17 +50,31 @@ export default function EnglishDriveHomeScreen({ navigation }: Props): React.Rea
   });
   const docs = docsQ.data?.englishDriveDocs ?? [];
 
-  // Blocks as collapsible groups — exactly one open (the first by default).
-  // Block-less docs (assignments, D-#346) get their own group, listed last (-1 key).
+  // Collapsible groups — exactly one open (the first by default). A PT surfaces
+  // under EACH block it covers AND in a dedicated section (D-#347, owner: both);
+  // block-less assignments (D-#346) get their own group. Special keys sort last:
+  //   -1 = "no block" (AS) · -2 = "Practice tests" section.
+  const NO_BLOCK = -1;
+  const PT_SECTION = -2;
   const blocks = useMemo(() => {
     const byBlock = new Map<number, EnglishDriveDocT[]>();
-    for (const d of docs) {
-      const key = d.blockNumber ?? -1;
+    const push = (key: number, d: EnglishDriveDocT): void => {
       const list = byBlock.get(key) ?? [];
       list.push(d);
       byBlock.set(key, list);
+    };
+    for (const d of docs) {
+      if (d.kind === "PT") {
+        for (const b of d.blockNumbers ?? []) push(b, d); // under each covered block
+        push(PT_SECTION, d); // and the dedicated section
+      } else if (d.blockNumber !== null) {
+        push(d.blockNumber, d);
+      } else {
+        push(NO_BLOCK, d); // block-less (assignments)
+      }
     }
-    const pos = (k: number): number => (k === -1 ? Number.POSITIVE_INFINITY : k);
+    const pos = (k: number): number =>
+      k === NO_BLOCK ? 1e6 : k === PT_SECTION ? 1e7 : k;
     return [...byBlock.entries()].sort((a, b) => pos(a[0]) - pos(b[0]));
   }, [docs]);
   const [openBlock, setOpenBlock] = useState<number | null>(null);
@@ -125,12 +139,16 @@ export default function EnglishDriveHomeScreen({ navigation }: Props): React.Rea
               return (
                 <Card key={blockNumber}>
                   <Pressable
-                    onPress={() => setOpenBlock(isOpen ? -1 : blockNumber)}
+                    onPress={() => setOpenBlock(isOpen ? 0 : blockNumber)}
                     style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
                   >
                     <Body style={{ fontWeight: "700" }}>
                       {isOpen ? "▾" : "▸"}{" "}
-                      {blockNumber === -1 ? STR.edNoBlock : `${STR.edBlock} ${bnNum(blockNumber)}`}
+                      {blockNumber === PT_SECTION
+                        ? STR.edPtSection
+                        : blockNumber === NO_BLOCK
+                          ? STR.edNoBlock
+                          : `${STR.edBlock} ${bnNum(blockNumber)}`}
                     </Body>
                     <Muted>({bnNum(rows.length)})</Muted>
                   </Pressable>
@@ -157,8 +175,15 @@ export default function EnglishDriveHomeScreen({ navigation }: Props): React.Rea
                           >
                             <View style={{ flex: 1, marginRight: space(2) }}>
                               <Body style={{ fontWeight: "600" }}>
-                                {englishDriveKindLabel(r.kind)}
-                                {(kindTotals.get(r.kind) ?? 1) > 1 ? ` ${bnNum(r.seq)}` : ""}
+                                {r.kind === "PT"
+                                  ? `${englishDriveKindLabel(r.kind)}${
+                                      r.blockNumbers.length
+                                        ? ` · ${STR.edCovers} ${formatBlocksBn(r.blockNumbers)}`
+                                        : ""
+                                    }`
+                                  : `${englishDriveKindLabel(r.kind)}${
+                                      (kindTotals.get(r.kind) ?? 1) > 1 ? ` ${bnNum(r.seq)}` : ""
+                                    }`}
                               </Body>
                               <Muted>{r.title}</Muted>
                             </View>
