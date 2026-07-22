@@ -29,6 +29,7 @@ import type { EnglishDriveStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Chip, ChipRow, Field, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import Markdown from "../../components/Markdown";
+import { RichWorksheetEditor } from "../../components/RichWorksheetEditor";
 import {
   ENGLISH_DRIVE_KINDS,
   englishDriveKindLabel,
@@ -98,6 +99,10 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
   const [printBusy, setPrintBusy] = useState(false);
   const [printErr, setPrintErr] = useState<string | null>(null);
   const [printOk, setPrintOk] = useState<string | null>(null);
+
+  // D-#349: the web WYSIWYG worksheet editor (browser print). Web only; native
+  // falls back to the D-#348 markdown edit mode below.
+  const [richOpen, setRichOpen] = useState(false);
 
   // D-#348 edit-before-print: a one-off edit (content + layout knobs) that feeds
   // the PDF preview + send-to-print. NOT persisted to the stored doc.
@@ -235,9 +240,7 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                 {pdfErr ? <Notice message={pdfErr} tone="danger" /> : null}
 
                 <View style={{ marginTop: space(2) }}>
-                  {!editMode ? (
-                    <Button title={`✎ ${STR.edEditPrint}`} variant="ghost" onPress={enterEdit} />
-                  ) : (
+                  {editMode ? (
                     <View style={{ flexDirection: "row", gap: space(2) }}>
                       {PDF_SUPPORTED ? (
                         <View style={{ flex: 1 }}>
@@ -253,6 +256,13 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                         <Button title={STR.edEditClose} variant="ghost" onPress={() => setEditMode(false)} />
                       </View>
                     </View>
+                  ) : richOpen ? null : (
+                    <Button
+                      title={`✎ ${STR.edEditPrint}`}
+                      variant="ghost"
+                      // Web → the WYSIWYG editor (D-#349); native → the markdown edit mode (D-#348).
+                      onPress={() => (PDF_SUPPORTED ? setRichOpen(true) : enterEdit())}
+                    />
                   )}
                 </View>
 
@@ -312,6 +322,16 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                 {printOk ? <Notice message={printOk} tone="ok" /> : null}
                 {printErr ? <Notice message={printErr} tone="danger" /> : null}
               </Card>
+
+              {richOpen ? (
+                <View style={{ marginTop: space(3) }}>
+                  <RichWorksheetEditor
+                    sourceMd={doc.contentMd ?? ""}
+                    title={`${classLevelLabel(doc.classLevel)} · ${englishDriveKindLabel(doc.kind)} — ${doc.title}`}
+                    onDone={() => setRichOpen(false)}
+                  />
+                </View>
+              ) : null}
 
               {editMode ? (
                 <Card>
