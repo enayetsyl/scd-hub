@@ -137,7 +137,12 @@ export default function ClassTestReportsScreen(): React.ReactElement {
                     {r.ctId} · {new Date(r.examDate).toLocaleDateString()}
                   </Muted>
                 </View>
-                <Badge text={ctReportStateLabel(r.state)} tone={stateTone(r.state)} />
+                {/* Published is the terminal state past complete — surface it as its own
+                    badge (owner ask) so a released exam is distinct from a merely-complete one. */}
+                <Badge
+                  text={r.publishedAt ? STR.ctPublishedBadge : ctReportStateLabel(r.state)}
+                  tone={r.publishedAt ? "ok" : stateTone(r.state)}
+                />
               </View>
               <Muted style={{ marginTop: space(1) }}>
                 {STR.ctEntered} {bnNum(r.enteredCount)}/{bnNum(r.rosterCount)} · {STR.ctPending} {bnNum(r.pendingCount)}
