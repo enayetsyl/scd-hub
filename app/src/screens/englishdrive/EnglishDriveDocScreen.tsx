@@ -178,11 +178,12 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
     { label: STR.edFontLarge, v: 1.15 },
     { label: STR.edFontXL, v: 1.3 },
   ];
+  // Google-Docs line-height presets (single / 1.15 / 1.5 / double).
   const SPACING_PRESETS = [
-    { label: STR.edSpaceTight, v: 0.9 },
-    { label: STR.edSpaceNormal, v: 1.0 },
-    { label: STR.edSpaceOpen, v: 1.5 },
-    { label: STR.edSpaceXOpen, v: 2.0 },
+    { label: STR.edSpaceSingle, v: 1.0 },
+    { label: "1.15", v: 1.15 },
+    { label: "1.5", v: 1.5 },
+    { label: STR.edSpaceDouble, v: 2.0 },
   ];
   const MARGIN_PRESETS = [
     { label: STR.edMarginNarrow, v: 35 },
@@ -317,33 +318,42 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                   <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.edLayoutTitle}</Muted>
                   <Muted style={{ marginBottom: space(2) }}>{STR.edEditHint}</Muted>
 
-                  <Body style={{ fontWeight: "700", marginBottom: 4 }}>{STR.edLayoutFont}</Body>
-                  <ChipRow>
-                    {FONT_PRESETS.map((p) => (
-                      <Chip key={p.label} label={p.label} selected={fontScale === p.v} onPress={() => setFontScale(p.v)} />
-                    ))}
-                  </ChipRow>
+                  {/* On a wide screen the three groups sit in one row; they wrap on a phone. */}
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(5) }}>
+                    <View>
+                      <Body style={{ fontWeight: "700", marginBottom: 4 }}>{STR.edLayoutFont}</Body>
+                      <ChipRow>
+                        {FONT_PRESETS.map((p) => (
+                          <Chip key={p.label} label={p.label} selected={fontScale === p.v} onPress={() => setFontScale(p.v)} />
+                        ))}
+                      </ChipRow>
+                    </View>
+                    <View>
+                      <Body style={{ fontWeight: "700", marginBottom: 4 }}>{STR.edLayoutSpacing}</Body>
+                      <ChipRow>
+                        {SPACING_PRESETS.map((p) => (
+                          <Chip key={p.label} label={p.label} selected={lineSpacing === p.v} onPress={() => setLineSpacing(p.v)} />
+                        ))}
+                      </ChipRow>
+                    </View>
+                    <View>
+                      <Body style={{ fontWeight: "700", marginBottom: 4 }}>{STR.edLayoutMargin}</Body>
+                      <ChipRow>
+                        {MARGIN_PRESETS.map((p) => (
+                          <Chip key={p.label} label={p.label} selected={margin === p.v} onPress={() => setMargin(p.v)} />
+                        ))}
+                      </ChipRow>
+                    </View>
+                  </View>
 
-                  <Body style={{ fontWeight: "700", marginTop: space(2), marginBottom: 4 }}>{STR.edLayoutSpacing}</Body>
-                  <ChipRow>
-                    {SPACING_PRESETS.map((p) => (
-                      <Chip key={p.label} label={p.label} selected={lineSpacing === p.v} onPress={() => setLineSpacing(p.v)} />
-                    ))}
-                  </ChipRow>
-
-                  <Body style={{ fontWeight: "700", marginTop: space(2), marginBottom: 4 }}>{STR.edLayoutMargin}</Body>
-                  <ChipRow>
-                    {MARGIN_PRESETS.map((p) => (
-                      <Chip key={p.label} label={p.label} selected={margin === p.v} onPress={() => setMargin(p.v)} />
-                    ))}
-                  </ChipRow>
-
-                  <View style={{ marginTop: space(2) }}>
+                  <View style={{ marginTop: space(3) }}>
                     <Field
                       label={STR.edContentLabel}
                       value={editedMd}
                       onChangeText={setEditedMd}
                       multiline
+                      inputStyle={{ minHeight: 340, textAlignVertical: "top" }}
+                      helper={STR.edLsBlockHint}
                     />
                   </View>
                 </Card>
@@ -368,7 +378,12 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
               ) : null}
 
               <Card>
-                <Markdown source={editMode ? editedMd : doc.contentMd ?? ""} />
+                <Markdown
+                  source={(editMode ? editedMd : doc.contentMd ?? "").replace(
+                    /^[ \t]*\{ls:[^}]*\}[ \t]*$/gim,
+                    "",
+                  )}
+                />
               </Card>
             </>
           ) : null}

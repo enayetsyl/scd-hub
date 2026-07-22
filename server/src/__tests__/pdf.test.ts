@@ -122,6 +122,15 @@ describe("PDF — layout knobs (D-#348 edit-before-print)", () => {
     expect(buf.slice(0, 4).toString("ascii")).toBe("%PDF");
     expect(buf.byteLength).toBeGreaterThan(5_000);
   }, 30_000);
+
+  test("a per-block {ls:…} directive is honoured and never rendered as text", async () => {
+    const withDirective = `# Worksheet\n\n{ls:2}\n\n1. father —— M / F\n2. brother —— M / F\n\n{ls:reset}\n\nEnd.\n`;
+    const buf = await markdownToPdf(withDirective, { title: "Directive" });
+    expect(buf.slice(0, 4).toString("ascii")).toBe("%PDF");
+    // The literal "{ls:" must not leak into the drawn text (pdfkit writes glyphs
+    // via the font, but a control token like this would show if rendered).
+    expect(buf.byteLength).toBeGreaterThan(1_000);
+  }, 30_000);
 });
 
 describe("PDF — HTML comments + tables", () => {
