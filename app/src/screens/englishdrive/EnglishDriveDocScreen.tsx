@@ -329,6 +329,20 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                     sourceMd={doc.contentMd ?? ""}
                     title={`${classLevelLabel(doc.classLevel)} · ${englishDriveKindLabel(doc.kind)} — ${doc.title}`}
                     onDone={() => setRichOpen(false)}
+                    // Save-as-PDF → office queue bridge: jump to the Print tab's upload
+                    // form (source defaults to UPLOAD) with the worksheet title prefilled.
+                    onSendToQueue={() =>
+                      (
+                        navigation.getParent() as unknown as
+                          | { navigate: (r: string, p?: unknown) => void }
+                          | undefined
+                      )?.navigate("PrintTab", {
+                        screen: "NewPrintRequest",
+                        params: {
+                          title: `${classLevelLabel(doc.classLevel)} · ${englishDriveKindLabel(doc.kind)} — ${doc.title}`,
+                        },
+                      })
+                    }
                   />
                 </View>
               ) : null}

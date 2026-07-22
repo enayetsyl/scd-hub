@@ -103,12 +103,16 @@ export interface RichWorksheetEditorProps {
   sourceMd: string;
   title: string;
   onDone: () => void;
+  /** Jump to the office Print-queue upload form (edited worksheets print locally,
+   *  so this is the Save-as-PDF → upload bridge). Omitted → the button hides. */
+  onSendToQueue?: () => void;
 }
 
 export function RichWorksheetEditor({
   sourceMd,
   title,
   onDone,
+  onSendToQueue,
 }: RichWorksheetEditorProps): React.ReactElement {
   const c = useColors();
   const editorRef = useRef<HTMLDivElement>(null);
@@ -320,6 +324,11 @@ export function RichWorksheetEditor({
         <button style={primaryBtn} onClick={printWorksheet}>
           🖨 {STR.edPrintNow}
         </button>
+        {onSendToQueue ? (
+          <button style={btn} onClick={onSendToQueue}>
+            {STR.edSendToQueue}
+          </button>
+        ) : null}
         <button style={btn} onClick={onDone}>
           {STR.edEditClose}
         </button>
@@ -356,7 +365,8 @@ export function RichWorksheetEditor({
       </div>
 
       <div style={{ padding: 8, fontSize: 12, color: c.textSecondary, borderTop: `1px solid ${c.border}` }}>
-        {STR.edRichHint}
+        <div>{STR.edRichHint}</div>
+        {onSendToQueue ? <div style={{ marginTop: 4 }}>{STR.edQueueHint}</div> : null}
       </div>
     </div>
   );

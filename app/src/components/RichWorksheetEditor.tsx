@@ -12,6 +12,7 @@ export interface RichWorksheetEditorProps {
   sourceMd: string;
   title: string;
   onDone: () => void;
+  onSendToQueue?: () => void;
 }
 
 export function RichWorksheetEditor(_props: RichWorksheetEditorProps): React.ReactElement {
