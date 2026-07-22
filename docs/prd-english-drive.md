@@ -110,6 +110,15 @@ silently replace the first.
   BLOCK/TN/CW/HW/CLUE + any PT covering it; a PT → the union of its blocks' docs) → one tap navigates
   to the sibling. Computed **client-side** from the already-scoped `englishDriveDocs(classLevel)` read
   — no new resolver, no new permission.
+### ED-4 — edit before print (D-#348)
+- The pdfkit renderer is **parametrized** (`resolveLayout` → clamped fontScale / lineSpacing / margin;
+  absent = the historical 1/1/50, so artifact & set PDFs stay byte-identical).
+- Doc screen "সম্পাদনা করে প্রিন্ট" mode: an editable markdown box (prefilled) + font-size / line-spacing /
+  margin preset chips → **PDF প্রিভিউ** (`POST /pdf/english-drive/render`; auth non-guardian; ≤ 1 MB; no
+  storage) and **send-to-print of the edited version** (`sendEnglishDriveDocToPrint` gains optional
+  `contentMd` + layout; the read gate on `id` still applies). Edits are **one-off** — not persisted; the
+  canonical doc changes only via re-upload. PDF preview stays web-only; edited send-to-print works on
+  native (server renders). The GET route also accepts `?fontScale=&lineSpacing=&margin=`.
 
 ## 7. Acceptance criteria
 1. Principal drops `C3_ENG_B01_TN_v2.md` + 6 siblings on the import screen → form shows class ৩,
