@@ -343,6 +343,15 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                         },
                       })
                     }
+                    // Class-test channel: jump to the Class Test "Request" flow (upload the
+                    // saved PDF as the exam paper → tracked exam + results + publish).
+                    onSendToClassTest={() =>
+                      (
+                        navigation.getParent() as unknown as
+                          | { navigate: (r: string, p?: unknown) => void }
+                          | undefined
+                      )?.navigate("ClassTestTab", { screen: "RequestClassTest" })
+                    }
                   />
                 </View>
               ) : null}
