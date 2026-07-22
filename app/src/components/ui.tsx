@@ -325,6 +325,7 @@ export function Field({
   helper,
   onSubmitEditing,
   returnKeyType,
+  inputStyle,
 }: {
   label?: string;
   value: string;
@@ -343,6 +344,8 @@ export function Field({
   /** Fires on Enter (web) / keyboard submit (native) — e.g. submit a login form. */
   onSubmitEditing?: () => void;
   returnKeyType?: TextInputProps["returnKeyType"];
+  /** Extra style for the input (e.g. a taller multiline box). */
+  inputStyle?: StyleProp<TextStyle>;
 }): React.ReactElement {
   const styles = useStyles();
   const colors = useColors();
@@ -359,6 +362,7 @@ export function Field({
             !editable && styles.inputDisabled,
             !!error && styles.inputError,
             secureToggle && { paddingRight: space(10) },
+            inputStyle,
           ]}
           value={value}
           onChangeText={onChangeText}

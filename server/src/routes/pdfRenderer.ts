@@ -147,6 +147,28 @@ export interface LayoutCfg {
 
 const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n));
 
+/**
+ * Line gap for a block (D-#348). `ls` is a Google-Docs-style line-height multiple
+ * (1.0 single / 1.15 / 1.5 / 2.0 double). At ls=1 the gap is the historical `base`
+ * (so default renders are byte-identical); above 1 we ADD roughly one font-height
+ * of lead per whole step, which is what makes "double" actually look double.
+ */
+const lineGapFor = (base: number, fontSize: number, ls: number): number =>
+  base + fontSize * (ls - 1);
+
+/** A per-block spacing directive on its own line: `{ls:1.5}` / `{ls:double}` /
+ *  `{ls:reset}` (back to the document setting). Sets the line-height for the blocks
+ *  that follow until the next directive. Stripped from the output. */
+const LS_DIRECTIVE = /^\{ls:\s*([a-z0-9.]+)\s*\}$/i;
+function parseLsDirective(raw: string, fallback: number): number {
+  const v = raw.trim().toLowerCase();
+  if (v === "reset") return fallback;
+  if (v === "single") return 1;
+  if (v === "double") return 2;
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? clamp(n, 0.8, 3) : fallback;
+}
+
 export function resolveLayout(options: RenderOptions): LayoutCfg {
   return {
     fontScale: clamp(options.fontScale ?? 1, 0.75, 1.6),
@@ -190,7 +212,8 @@ export async function markdownToPdf(
 
 function renderTokens(doc: PDFKit.PDFDocument, tokens: Token[], cfg: LayoutCfg): void {
   const fs = cfg.fontScale;
-  const ls = cfg.lineSpacing;
+  // Mutable — a `{ls:…}` directive can raise/lower the line-height mid-document.
+  let ls = cfg.lineSpacing;
   let i = 0;
   while (i < tokens.length) {
     const token = tokens[i];
@@ -214,8 +237,16 @@ function renderTokens(doc: PDFKit.PDFDocument, tokens: Token[], cfg: LayoutCfg):
       const inlineToken = tokens[i + 1];
       const text = inlineToken ? collectInlineText(inlineToken.children ?? []) : "";
       i += 2; // skip paragraph_close
-      doc.fontSize(10 * fs);
-      mixedText(doc, text, { lineGap: 2 * ls });
+      // A standalone `{ls:…}` paragraph is a directive, not content — apply + skip.
+      const dir = LS_DIRECTIVE.exec(text.trim());
+      if (dir) {
+        ls = parseLsDirective(dir[1], cfg.lineSpacing);
+        i++;
+        continue;
+      }
+      const size = 10 * fs;
+      doc.fontSize(size);
+      mixedText(doc, text, { lineGap: lineGapFor(2, size, ls) });
       doc.moveDown(0.3 * ls);
       i++;
       continue;
@@ -237,8 +268,9 @@ function renderTokens(doc: PDFKit.PDFDocument, tokens: Token[], cfg: LayoutCfg):
             i++;
           }
           const bullet = token.type === "bullet_list_open" ? "•  " : `${listNum++}.  `;
-          doc.fontSize(10 * fs);
-          mixedText(doc, `${bullet}${itemText}`, { indent: 15, lineGap: 1 * ls });
+          const size = 10 * fs;
+          doc.fontSize(size);
+          mixedText(doc, `${bullet}${itemText}`, { indent: 15, lineGap: lineGapFor(1, size, ls) });
           i++; // skip list_item_close
           continue;
         }
@@ -261,8 +293,9 @@ function renderTokens(doc: PDFKit.PDFDocument, tokens: Token[], cfg: LayoutCfg):
         const bt = tokens[i];
         if (bt.type === "inline") {
           const text = collectInlineText(bt.children ?? []);
-          doc.fontSize(9 * fs).fillColor("#555555");
-          mixedText(doc, text, { indent: 20, lineGap: 1 * ls });
+          const size = 9 * fs;
+          doc.fontSize(size).fillColor("#555555");
+          mixedText(doc, text, { indent: 20, lineGap: lineGapFor(1, size, ls) });
           doc.fillColor("#000000");
         }
         i++;
@@ -305,7 +338,7 @@ function renderTokens(doc: PDFKit.PDFDocument, tokens: Token[], cfg: LayoutCfg):
         }
         i++;
       }
-      renderTable(doc, rows, cfg);
+      renderTable(doc, rows, cfg, ls);
       i++; // skip table_close
       continue;
     }
@@ -323,7 +356,7 @@ interface TableRow {
  *  per-row height measured from the actual cell draw, header rows shaded. This
  *  replaces the old `cells.join(" | ")` flow whose wrapping caused the columns to
  *  collide (the Chapter-Overview overlap). */
-function renderTable(doc: PDFKit.PDFDocument, rows: TableRow[], cfg: LayoutCfg): void {
+function renderTable(doc: PDFKit.PDFDocument, rows: TableRow[], cfg: LayoutCfg, ls: number): void {
   if (rows.length === 0) return;
   const nCols = Math.max(...rows.map((r) => r.cells.length));
   if (nCols === 0) return;
@@ -332,7 +365,7 @@ function renderTable(doc: PDFKit.PDFDocument, rows: TableRow[], cfg: LayoutCfg):
   const tableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   const fontSize = 9 * cfg.fontScale;
   const padX = 4;
-  const padY = 3 * cfg.lineSpacing;
+  const padY = 3 * ls;
 
   // Weighted columns: width ∝ the column's longest cell (clamped so a "#" column
   // stays slim and one verbose column can't starve the rest), normalised to fit.
@@ -363,7 +396,7 @@ function renderTable(doc: PDFKit.PDFDocument, rows: TableRow[], cfg: LayoutCfg):
     for (let c = 0; c < nCols; c++) {
       const h = doc.heightOfString(cells[c].length > 0 ? cells[c] : " ", {
         width: colWidths[c] - 2 * padX,
-        lineGap: 1 * cfg.lineSpacing,
+        lineGap: lineGapFor(1, fontSize, ls),
       });
       estHeight = Math.max(estHeight, h);
     }
@@ -374,7 +407,7 @@ function renderTable(doc: PDFKit.PDFDocument, rows: TableRow[], cfg: LayoutCfg):
     const rowTop = doc.y;
     let rowBottom = rowTop;
     for (let c = 0; c < nCols; c++) {
-      mixedTextInBox(doc, cells[c], colX[c] + padX, rowTop + padY, colWidths[c] - 2 * padX, { lineGap: 1 * cfg.lineSpacing });
+      mixedTextInBox(doc, cells[c], colX[c] + padX, rowTop + padY, colWidths[c] - 2 * padX, { lineGap: lineGapFor(1, fontSize, ls) });
       rowBottom = Math.max(rowBottom, doc.y);
     }
     rowBottom += padY;
@@ -398,7 +431,7 @@ function renderTable(doc: PDFKit.PDFDocument, rows: TableRow[], cfg: LayoutCfg):
   // Cells were positioned at absolute x; restore the left margin so the next block
   // (heading/paragraph) flows full-width instead of inside the last column.
   doc.x = left;
-  doc.moveDown(0.5 * cfg.lineSpacing);
+  doc.moveDown(0.5 * ls);
 }
 
 function collectInlineText(children: Token[]): string {
