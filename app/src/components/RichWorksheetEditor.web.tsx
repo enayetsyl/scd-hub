@@ -21,6 +21,60 @@ const stripLsDirectives = (s: string): string =>
 const escapeHtml = (s: string): string =>
   s.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch] ?? ch);
 
+/**
+ * Flatten <ol>/<ul> lists into plain <div> lines with the marker as EDITABLE TEXT
+ * (D-#349 fix). A real <ol> in contentEditable auto-numbers — Enter makes a new
+ * <li> and the numbers renumber, so a teacher can't type their own "4." or delete
+ * a number. As plain lines the numbers are just text: Enter makes a normal line,
+ * numbers are fully editable. Handles nesting leaf-first. Also scrubs whitespace-
+ * only text nodes between blocks so `white-space:pre-wrap` doesn't add blank lines.
+ */
+function flattenListsHtml(html: string): string {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+
+  let guard = 0;
+  let list = tmp.querySelector("ol, ul");
+  while (list && guard++ < 1000) {
+    let leaf: Element = list;
+    let inner = leaf.querySelector("ol, ul");
+    while (inner) {
+      leaf = inner;
+      inner = leaf.querySelector("ol, ul");
+    }
+    const ordered = leaf.tagName === "OL";
+    let idx = parseInt(leaf.getAttribute("start") ?? "1", 10) || 1;
+    const frag = document.createDocumentFragment();
+    Array.from(leaf.children).forEach((li) => {
+      if (li.tagName !== "LI") return;
+      const div = document.createElement("div");
+      div.style.marginLeft = "1.4em";
+      div.appendChild(document.createTextNode(ordered ? `${idx++}. ` : "• "));
+      while (li.firstChild) div.appendChild(li.firstChild);
+      frag.appendChild(div);
+    });
+    leaf.replaceWith(frag);
+    list = tmp.querySelector("ol, ul");
+  }
+
+  const CONTAINERS = new Set(["TABLE", "THEAD", "TBODY", "TR"]);
+  const scrub = (node: Node): void => {
+    Array.from(node.childNodes).forEach((k) => {
+      if (
+        k.nodeType === 3 &&
+        /^\s*$/.test(k.textContent ?? "") &&
+        (node === tmp || (node.nodeType === 1 && CONTAINERS.has((node as Element).tagName)))
+      ) {
+        k.remove();
+      } else if (k.nodeType === 1) {
+        scrub(k);
+      }
+    });
+  };
+  scrub(tmp);
+  return tmp.innerHTML;
+}
+
 const FONT_SIZES = [10, 11, 12, 14, 16, 18, 20, 24];
 const BLOCK_TAGS = new Set([
   "P", "DIV", "LI", "TD", "TH", "H1", "H2", "H3", "H4", "H5", "H6", "BLOCKQUOTE", "UL", "OL", "TABLE", "TR",
@@ -43,7 +97,9 @@ export function RichWorksheetEditor({
 
   useEffect(() => {
     if (editorRef.current) {
-      editorRef.current.innerHTML = md.render(stripLsDirectives(stripHtmlComments(sourceMd)));
+      editorRef.current.innerHTML = flattenListsHtml(
+        md.render(stripLsDirectives(stripHtmlComments(sourceMd))),
+      );
     }
     // Track the last non-empty selection INSIDE the editor. A toolbar <select>
     // steals focus and collapses the live selection, so we restore this before
@@ -136,7 +192,7 @@ export function RichWorksheetEditor({
       `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>` +
       `<style>` +
       `@page { size: A4; margin: 16mm; }` +
-      `body { font-family: 'Noto Sans Bengali','Nirmala UI','Segoe UI',sans-serif; color:#000; font-size:12pt; line-height:${rootLh}; margin:0; }` +
+      `body { font-family: 'Noto Sans Bengali','Nirmala UI','Segoe UI',sans-serif; color:#000; font-size:12pt; line-height:${rootLh}; margin:0; white-space:pre-wrap; }` +
       `table { border-collapse: collapse; width:100%; margin:6px 0; }` +
       `td,th { border:1px solid #999; padding:4px 7px; vertical-align:top; }` +
       `h1{font-size:16pt;margin:6px 0} h2{font-size:14pt;margin:6px 0} h3{font-size:12pt;margin:6px 0}` +
@@ -260,6 +316,13 @@ export function RichWorksheetEditor({
           contentEditable
           suppressContentEditableWarning
           spellCheck={false}
+          onKeyDown={(e) => {
+            // Tab inserts a real tab (worksheet alignment) instead of leaving the editor.
+            if (e.key === "Tab") {
+              e.preventDefault();
+              document.execCommand("insertText", false, "\t");
+            }
+          }}
           style={{
             background: "#fff",
             color: "#000",
@@ -273,6 +336,8 @@ export function RichWorksheetEditor({
             fontSize: 14,
             lineHeight: 1.4,
             outline: "none",
+            // Preserve the teacher's spaces + tabs (manual alignment); wrap long lines.
+            whiteSpace: "pre-wrap",
           }}
         />
       </div>
