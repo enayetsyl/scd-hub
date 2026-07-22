@@ -2574,23 +2574,20 @@ export interface ReconReportT {
   hwNilDeclared: HwNilDeclaredT[];
   asNotDeclared: AsNotDeclaredT[];
 }
-// D-#300 — homework lifecycle report (Principal/Office).
-export interface HwFunnelRowT {
-  sectionId: string;
-  sectionNameBn: string;
-  classLevel: number;
-  subject: string;
+// D-#350 — homework lifecycle report, teacher-first (Principal/Office).
+export interface HwTeacherLifecycleRowT {
+  teacherId: string;
+  teacherName: string;
   declaredItems: number;
   issuedItems: number;
   given: number;
   submitted: number;
   checked: number;
   returned: number;
-  onTimePct: number | null;
-  stuckSubmitted: number;
-  chasedRecords: number;
-  chases: number;
-  chaseRatePct: number | null;
+  pendingSubmission: number;
+  pendingChecking: number;
+  pendingReturn: number;
+  chasedPending: number;
 }
 export interface HwBacklogRowT {
   sectionId: string;
@@ -2601,51 +2598,67 @@ export interface HwBacklogRowT {
   count: number;
   oldestDays: number;
 }
-export interface HwConsistencyRowT {
-  sectionId: string;
-  sectionNameBn: string;
-  classLevel: number;
-  subject: string;
-  routineDays: number;
-  declaredDays: number;
-  nilDays: number;
-  missedDays: number;
-  respondedPct: number | null;
-}
-export interface HwTeacherScoreRowT {
-  teacherId: string;
-  teacherName: string;
-  declaredItems: number;
-  nilDays: number;
-  missedDeclarations: number;
-  onTimePct: number | null;
-  avgCheckLatencyDays: number | null;
-  avgReturnLatencyDays: number | null;
-  chases: number;
-  wrongRatePct: number | null;
-}
 export interface HwLifecycleReportT {
   fromKey: string;
   toKey: string;
   backlogThresholdDays: number;
-  funnel: HwFunnelRowT[];
+  teachers: HwTeacherLifecycleRowT[];
   backlog: HwBacklogRowT[];
-  consistency: HwConsistencyRowT[];
-  scorecard: HwTeacherScoreRowT[];
+}
+/** The drill-down behind a pending number: a named stuck student. */
+export type HwPendingStage = "SUBMISSION" | "CHECK" | "RETURN" | "CHASE";
+export interface HwPendingStudentT {
+  studentId: string;
+  name: string;
+  nameBn: string | null;
+  rollNumber: string | null;
+  sectionNameBn: string | null;
+  classLevel: number;
+  subject: string;
+  guardianPhone: string | null;
+  state: string;
+  daysWaiting: number;
+  chaseCount: number;
 }
 export const HW_LIFECYCLE_REPORT_QUERY = gql<
   { homeworkLifecycleReport: HwLifecycleReportT },
-  { from: string; to: string }
+  { from: string; to: string; classLevel?: number | null; subject?: string | null }
 >`
-  query HomeworkLifecycleReport($from: String!, $to: String!) {
-    homeworkLifecycleReport(from: $from, to: $to) {
+  query HomeworkLifecycleReport($from: String!, $to: String!, $classLevel: Int, $subject: String) {
+    homeworkLifecycleReport(from: $from, to: $to, classLevel: $classLevel, subject: $subject) {
       fromKey
       toKey
       backlogThresholdDays
-      funnel { sectionId sectionNameBn classLevel subject declaredItems issuedItems given submitted checked returned onTimePct stuckSubmitted chasedRecords chases chaseRatePct }
+      teachers { teacherId teacherName declaredItems issuedItems given submitted checked returned pendingSubmission pendingChecking pendingReturn chasedPending }
       backlog { sectionId sectionNameBn classLevel subject teacherName count oldestDays }
-      consistency { sectionId sectionNameBn classLevel subject routineDays declaredDays nilDays missedDays respondedPct }
-      scorecard { teacherId teacherName declaredItems nilDays missedDeclarations onTimePct avgCheckLatencyDays avgReturnLatencyDays chases wrongRatePct }
+    }
+  }
+`;
+
+export const HW_LIFECYCLE_PENDING_QUERY = gql<
+  { homeworkLifecyclePending: HwPendingStudentT[] },
+  { from: string; to: string; teacherId: string; stage: HwPendingStage; classLevel?: number | null; subject?: string | null }
+>`
+  query HomeworkLifecyclePending(
+    $from: String!
+    $to: String!
+    $teacherId: String!
+    $stage: String!
+    $classLevel: Int
+    $subject: String
+  ) {
+    homeworkLifecyclePending(from: $from, to: $to, teacherId: $teacherId, stage: $stage, classLevel: $classLevel, subject: $subject) {
+      studentId
+      name
+      nameBn
+      rollNumber
+      sectionNameBn
+      classLevel
+      subject
+      guardianPhone
+      state
+      daysWaiting
+      chaseCount
     }
   }
 `;
