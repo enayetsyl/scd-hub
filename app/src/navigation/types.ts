@@ -85,10 +85,16 @@ export type HomeworkStackParamList = {
 export type AssignmentStackParamList = {
   AssignmentHome: undefined;
   AssignmentSchedule: undefined;
+  /** `weekNumber` is the CONTINUOUS term-anchored index (the server key). `month` +
+   *  `weekOfMonth` carry the human label the Assignments home shows ("July · Week 4")
+   *  so a detail screen never prints a different week number for the same week — both
+   *  are optional so an entry point without the expected-week payload still renders. */
   DeliverAssignment: {
     academicYearId: string;
     entryId: string;
     weekNumber: number;
+    month?: number;
+    weekOfMonth?: number;
     sectionId: string;
     classId: string;
     classLevel: number;
@@ -98,7 +104,14 @@ export type AssignmentStackParamList = {
   };
   CollectAssignment: { itemId: string; sectionId: string; classId: string; asId: string };
   AssignmentChecking: { itemId: string; sectionId: string; classId: string; asId: string };
-  AssignmentReconcile: { academicYearId: string; sectionId: string; classId: string; weekNumber: number };
+  AssignmentReconcile: {
+    academicYearId: string;
+    sectionId: string;
+    classId: string;
+    weekNumber: number;
+    month?: number;
+    weekOfMonth?: number;
+  };
   AssignmentChase: undefined;
   AssignmentRollups: { academicYearId: string };
 };
