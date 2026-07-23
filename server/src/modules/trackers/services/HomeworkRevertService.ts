@@ -24,6 +24,7 @@ import type { LifecycleState, HwResult } from "@scd/shared";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { popActionGroup } from "../lifecycle";
 import { isSameDhakaDay } from "../../../lib/dhakaDay";
+import { writeAudit } from "../../platform/services/AuditService";
 
 export interface HwRevertInput {
   recordId: string;
@@ -96,9 +97,36 @@ export async function revertHomeworkRecord(input: HwRevertInput): Promise<HwReve
     }
   }
 
+  const revertedFrom = rec.state;
   rec.state = restored.state as LifecycleState;
   rec.stateDates.splice(rec.stateDates.length - popped.length, popped.length);
   await rec.save();
+
+  // The ONLY trace this revert ever happened: the popped stamps are now gone from
+  // the record, so without this row a submitted+checked record silently reads as
+  // never-submitted (D-#354). Keep the full popped detail — who did the undone
+  // work and when — since that is exactly what an "it went back to pending"
+  // investigation needs.
+  await writeAudit({
+    eventKind: "HW_RECORD_REVERTED",
+    actorId: input.actorId,
+    targetId: rec._id,
+    targetKind: "HomeworkStudentRecord",
+    meta: {
+      hwId: rec.hwId,
+      hwItemId: rec.hwItemId.toString(),
+      studentId: rec.studentId.toString(),
+      revertedFrom,
+      restoredTo: rec.state,
+      admin: input.admin,
+      popped: popped.map((s) => ({
+        state: s.state,
+        at: new Date(s.at).toISOString(),
+        by: s.by ? s.by.toString() : null,
+      })),
+      ...(deletedResubmissionId ? { deletedResubmissionId } : {}),
+    },
+  });
 
   return {
     recordId: rec._id.toString(),

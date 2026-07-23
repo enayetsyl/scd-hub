@@ -2417,11 +2417,18 @@ export interface ClassPresenceT {
 }
 /** Countdown to having the assignment question ready (D-#280). `dueAt` is the school
  *  day's start on the resolved delivery date; null once delivered or once overdue. */
+export interface AssignmentPrepCellT {
+  classLevel: number;
+  subject: string;
+  sectionId: string;
+}
 export interface AssignmentPrepT {
   dueAt: string;
   deliveryDateKey: string;
   weekNumber: number;
   items: number;
+  /** Which (class × subject) still need preparing for the delivery week. */
+  cells: AssignmentPrepCellT[];
 }
 export interface ClassTeacherSectionT {
   sectionId: string;
@@ -2508,7 +2515,7 @@ export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
       homework { pendingChecking openResubmissions activeChases }
       attendancePending
       alerts { kind count oldestDateKey }
-      assignmentPrep { dueAt deliveryDateKey weekNumber items }
+      assignmentPrep { dueAt deliveryDateKey weekNumber items cells { classLevel subject sectionId } }
       classPresence {
         classId classLevel classNameBn markedCount presentCount absentCount totalCount complete
       }

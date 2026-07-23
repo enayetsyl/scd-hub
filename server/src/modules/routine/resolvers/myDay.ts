@@ -11,8 +11,17 @@ import { ForbiddenError } from "../../../middleware/authz";
 import type { IRoutineSlot } from "../models/RoutineSlot";
 import { RoutineSlotRef } from "./routineSlots";
 import { myDayFor, type MyDayHomeworkCounts, type MyDayResult, type ClassTeacherSection } from "../services/MyDayService";
-import type { PendingAlert, AssignmentPrep } from "../services/PendingAlertService";
+import type { PendingAlert, AssignmentPrep, AssignmentPrepCell } from "../services/PendingAlertService";
 import type { ClassPresence } from "../../attendance/services/AttendanceReportService";
+
+const AssignmentPrepCellRef = builder.objectRef<AssignmentPrepCell>("AssignmentPrepCell").implement({
+  description: "One (class × subject) still needing an assignment prepared for the delivery week.",
+  fields: (t) => ({
+    classLevel: t.exposeInt("classLevel"),
+    subject: t.exposeString("subject"),
+    sectionId: t.exposeString("sectionId"),
+  }),
+});
 
 const AssignmentPrepRef = builder.objectRef<AssignmentPrep>("AssignmentPrep").implement({
   description:
@@ -25,6 +34,7 @@ const AssignmentPrepRef = builder.objectRef<AssignmentPrep>("AssignmentPrep").im
     deliveryDateKey: t.exposeString("deliveryDateKey"),
     weekNumber: t.exposeInt("weekNumber"),
     items: t.exposeInt("items"),
+    cells: t.field({ type: [AssignmentPrepCellRef], resolve: (r) => r.cells ?? [] }),
   }),
 });
 
