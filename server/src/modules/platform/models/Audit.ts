@@ -139,6 +139,8 @@ export type AuditEventKind =
   | "CT_QUESTION_REVIEWED"        // the teacher's verdict on a round — approve (locks) or changes-requested with comment (tracker:write)
   | "ENGLISH_DRIVE_UPLOADED"      // an English Drive md document uploaded — new (class, block, kind) (D-#344; roster:manage)
   | "ENGLISH_DRIVE_REPLACED"      // a newer version replaced an existing (class, block, kind) doc — old row stamped replacedAt (D-#344)
+  | "ASSIGNMENT_ITEM_EDITED"      // a delivered assignment was edited after the fact (D-#353)
+  | "ASSIGNMENT_ITEM_DELETED"     // a still-DRAFT delivered assignment was deleted (D-#353)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {
