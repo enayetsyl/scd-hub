@@ -2654,6 +2654,8 @@ const STR_BN = {
   ctTestNumber: "টেস্ট নং",
   ctDeadlineDays: "সময়সীমা (স্কুল-দিন)",
   ctNotes: "মন্তব্য",
+  ctSubjectTeacher: "বিষয় শিক্ষক",
+  ctSubjectTeacherAuto: "রুটিন অনুযায়ী",
   ctSubmitRequest: "অনুরোধ জমা দিন",
   ctRequestFiled: "অনুরোধ জমা হয়েছে",
   // D-#339: no-print register + dashboard drill-down
@@ -5273,6 +5275,8 @@ const STR_EN: StrTable = {
   ctTestNumber: "Test #",
   ctDeadlineDays: "Deadline (school-days)",
   ctNotes: "Notes",
+  ctSubjectTeacher: "Subject teacher",
+  ctSubjectTeacherAuto: "From routine",
   ctSubmitRequest: "File request",
   ctRequestFiled: "Request filed",
   // D-#339: no-print register + dashboard drill-down

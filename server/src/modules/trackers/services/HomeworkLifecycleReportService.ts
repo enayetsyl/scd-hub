@@ -20,7 +20,6 @@
  * and guardian phones — allowed here (ADR-005 only forbids the CORPUS plane from
  * joining back to identity; this service is never imported by corpus).
  */
-import { DAYS_OF_WEEK } from "@scd/shared";
 import type { LifecycleState } from "@scd/shared";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
@@ -30,8 +29,8 @@ import { User } from "../../foundation/models/User";
 import { Student } from "../../foundation/models/Student";
 import { Guardian } from "../../foundation/models/Guardian";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
-import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { parseDateKey } from "../../attendance/dates";
+import { resolveSubjectTeachers } from "../subjectTeacher";
 
 export const HW_CHECKING_BACKLOG_DAYS = 2;
 const DAY_MS = 86_400_000;
@@ -166,65 +165,32 @@ interface ItemLite {
   declaredBy: { toString(): string };
 }
 
-interface SlotLite {
-  groupId: { toString(): string };
-  subject: string;
-  dayOfWeek: string;
-  periodNumber: number;
-  teacherId?: { toString(): string } | null;
-  effectiveFrom: Date;
-  effectiveTo?: Date | null;
-}
-
 /**
  * Attribute each homework item to its ACCOUNTABLE subject teacher (D-#350 owner
- * finding) — the routine's teacher for that section×subject (earliest live period
- * on the item's day; the D-#293 rule), NOT whoever physically declared it. A
- * Principal/Office data-entry on a teacher's behalf must land in that teacher's
- * row, not the entrant's. Falls back to the declarer only when the routine names
- * no teacher for the cell (e.g. an unscheduled catch-up subject).
+ * finding) — the routine's teacher for that section×subject, NOT whoever
+ * physically declared it. A Principal/Office data-entry on a teacher's behalf
+ * must land in that teacher's row, not the entrant's. Falls back to the declarer
+ * only when the routine names no teacher for the cell (e.g. an unscheduled
+ * catch-up subject).
+ *
+ * The routine walk itself lives in ../subjectTeacher so the class-test tracker
+ * resolves attribution by the identical rule.
  */
 async function accountableTeacherByItem(items: ItemLite[]): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   if (items.length === 0) return out;
 
-  const sectionIds = [...new Set(items.map((i) => i.sectionId.toString()))];
-  const subjects = [...new Set(items.map((i) => i.subject))];
-  const slots = (await RoutineSlot.find({
-    groupType: "section",
-    active: true,
-    isBreak: false,
-    groupId: { $in: sectionIds },
-    subject: { $in: subjects },
-  })
-    .select("groupId dayOfWeek periodNumber subject teacherId effectiveFrom effectiveTo")
-    .lean()) as unknown as SlotLite[];
-
-  const byCell = new Map<string, SlotLite[]>();
-  for (const s of slots) {
-    if (!s.teacherId) continue;
-    const k = `${s.groupId.toString()}|${s.subject}`;
-    (byCell.get(k) ?? byCell.set(k, []).get(k)!).push(s);
-  }
-
-  const live = (s: SlotLite, t: number): boolean =>
-    new Date(s.effectiveFrom).getTime() <= t && (!s.effectiveTo || new Date(s.effectiveTo).getTime() >= t);
-  const earliest = (arr: SlotLite[]): string | null => {
-    if (arr.length === 0) return null;
-    const best = arr.reduce((a, b) => (b.periodNumber < a.periodNumber ? b : a));
-    return best.teacherId ? best.teacherId.toString() : null;
-  };
-
+  const resolved = await resolveSubjectTeachers(
+    items.map((i) => ({
+      key: i._id.toString(),
+      sectionId: i.sectionId.toString(),
+      subject: i.subject,
+      on: new Date(i.dateGiven),
+    })),
+  );
   for (const it of items) {
-    const cell = byCell.get(`${it.sectionId.toString()}|${it.subject}`) ?? [];
-    const d = new Date(it.dateGiven);
-    const t = d.getTime();
-    const dow = DAYS_OF_WEEK[d.getDay()];
-    const teacher =
-      earliest(cell.filter((s) => s.dayOfWeek === dow && live(s, t))) ?? // teacher scheduled that day
-      earliest(cell.filter((s) => live(s, t))) ?? // any live slot for the cell
-      earliest(cell); // any slot for the cell, ignoring effective dates
-    out.set(it._id.toString(), teacher ?? it.declaredBy.toString());
+    const k = it._id.toString();
+    out.set(k, resolved.get(k) ?? it.declaredBy.toString());
   }
   return out;
 }

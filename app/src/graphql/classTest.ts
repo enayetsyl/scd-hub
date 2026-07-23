@@ -29,6 +29,8 @@ export interface ClassTestT {
   questionFileId: string | null;
   status: string;
   deadlineDays: number;
+  /** Accountable subject teacher (null on rows predating the field). */
+  teacherId: string | null;
   requestedBy: string;
   requestedAt: string;
   printedBy: string | null;
@@ -36,7 +38,7 @@ export interface ClassTestT {
   notes: string | null;
 }
 
-const CLASS_TEST_FIELDS = `id ctId academicYearId classLevel classId sectionId subject testNumber examDate totalMarks passMark source setId questionFileId status deadlineDays requestedBy requestedAt printedBy printedAt notes`;
+const CLASS_TEST_FIELDS = `id ctId academicYearId classLevel classId sectionId subject testNumber examDate totalMarks passMark source setId questionFileId status deadlineDays teacherId requestedBy requestedAt printedBy printedAt notes`;
 
 // PQ-5 (D-#281): the class-test print queue was absorbed into the unified PrintRequest
 // queue (`app/src/graphql/printing.ts`). The server resolvers remain for back-compat and
@@ -86,19 +88,21 @@ export const CREATE_CLASS_TEST_REQUEST = gql<
     testNumber?: number | null;
     deadlineDays?: number | null;
     notes?: string | null;
+    /** Accountable subject teacher; omit → the routine decides. */
+    teacherId?: string | null;
   }
 >`
   mutation CreateClassTestRequest(
     $sectionId: String!, $subject: String!, $examDate: String!, $totalMarks: Int!,
     $passMark: Int, $source: String!, $setId: String, $questionFileId: String,
     $colour: String, $sides: String, $copies: Int, $copiesMode: String,
-    $testNumber: Int, $deadlineDays: Int, $notes: String
+    $testNumber: Int, $deadlineDays: Int, $notes: String, $teacherId: String
   ) {
     createClassTestRequest(
       sectionId: $sectionId, subject: $subject, examDate: $examDate, totalMarks: $totalMarks,
       passMark: $passMark, source: $source, setId: $setId, questionFileId: $questionFileId,
       colour: $colour, sides: $sides, copies: $copies, copiesMode: $copiesMode,
-      testNumber: $testNumber, deadlineDays: $deadlineDays, notes: $notes
+      testNumber: $testNumber, deadlineDays: $deadlineDays, notes: $notes, teacherId: $teacherId
     ) { ${CLASS_TEST_FIELDS} }
   }
 `;
@@ -118,17 +122,19 @@ export const REGISTER_CLASS_TEST_OFFICIAL = gql<
     testNumber?: number | null;
     deadlineDays?: number | null;
     notes?: string | null;
+    /** Accountable subject teacher; omit → the routine decides. */
+    teacherId?: string | null;
   }
 >`
   mutation RegisterClassTestOfficial(
     $sectionId: String!, $subject: String!, $examDate: String!, $totalMarks: Int!,
     $passMark: Int, $source: String!, $setId: String, $questionFileId: String,
-    $testNumber: Int, $deadlineDays: Int, $notes: String
+    $testNumber: Int, $deadlineDays: Int, $notes: String, $teacherId: String
   ) {
     registerClassTestOfficial(
       sectionId: $sectionId, subject: $subject, examDate: $examDate, totalMarks: $totalMarks,
       passMark: $passMark, source: $source, setId: $setId, questionFileId: $questionFileId,
-      testNumber: $testNumber, deadlineDays: $deadlineDays, notes: $notes
+      testNumber: $testNumber, deadlineDays: $deadlineDays, notes: $notes, teacherId: $teacherId
     ) { ${CLASS_TEST_FIELDS} }
   }
 `;

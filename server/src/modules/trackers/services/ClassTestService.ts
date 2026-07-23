@@ -36,6 +36,7 @@ import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
 import { createPrintRequest } from "../../printing/services/PrintRequestService";
 import { PrintRequest } from "../../printing/models/PrintRequest";
+import { resolveSubjectTeacher } from "../subjectTeacher";
 
 // ---------------------------------------------------------------------------
 // CT_ID generation (D-#34 numbering pattern) + Test# auto-suggest
@@ -112,6 +113,10 @@ export interface CreateClassTestRequestInput {
    *  and teacher-CONFIRMED in review — waive the uploader-ownership check. Set
    *  ONLY by ClassTestQuestionService; never exposed to a resolver arg. */
   allowForeignQuestionFile?: boolean;
+  /** The ACCOUNTABLE subject teacher. Optional: Principal/Office requesting on a
+   *  teacher's behalf pick them explicitly; otherwise the routine decides, and
+   *  only a routine with no teacher for the cell falls back to the actor. */
+  teacherId?: string;
   actorId: string;
 }
 
@@ -132,6 +137,8 @@ export interface ClassTestShape {
   questionFileId: string | null;
   status: string;
   deadlineDays: number;
+  /** Accountable subject teacher (null on pre-field rows until backfilled). */
+  teacherId: string | null;
   requestedBy: string;
   requestedAt: string;
   printedBy: string | null;
@@ -157,6 +164,7 @@ export function classTestShape(d: IClassTest): ClassTestShape {
     questionFileId: d.questionFileId ? d.questionFileId.toString() : null,
     status: d.status,
     deadlineDays: d.deadlineDays,
+    teacherId: d.teacherId ? d.teacherId.toString() : null,
     requestedBy: d.requestedBy.toString(),
     requestedAt: new Date(d.requestedAt).toISOString(),
     printedBy: d.printedBy ? d.printedBy.toString() : null,
@@ -266,6 +274,15 @@ export async function createRequest(
 
   const ctId = await generateCtId(klass.academicYearId.toString(), klass.level, subject);
 
+  // The ACCOUNTABLE subject teacher: an explicit pick (Principal/Office requesting
+  // on a teacher's behalf) wins; otherwise the routine names the section×subject
+  // teacher for the exam day; only if the routine names nobody does it fall back to
+  // the requester. Keeps the exam in the right teacher's account and report row.
+  const subjectTeacherId =
+    input.teacherId ??
+    (await resolveSubjectTeacher(input.sectionId, subject, examDate)) ??
+    input.actorId;
+
   // D-#339: a no-print register is born PRINTED — the record is the official exam
   // immediately (deadline clock anchors on the exam date as usual).
   const now = new Date();
@@ -285,6 +302,7 @@ export async function createRequest(
     questionFileId,
     status: input.skipPrint ? "PRINTED" : "REQUESTED",
     deadlineDays,
+    teacherId: new Types.ObjectId(subjectTeacherId),
     requestedBy: new Types.ObjectId(input.actorId),
     requestedAt: now,
     printedBy: input.skipPrint ? new Types.ObjectId(input.actorId) : undefined,
@@ -418,9 +436,14 @@ export async function listPrintQueue(): Promise<ClassTestShape[]> {
   return docs.map(classTestShape);
 }
 
-/** A teacher's own class tests (any status), newest first. */
+/** A teacher's own class tests (any status), newest first — the exams they are the
+ *  ACCOUNTABLE subject teacher for, plus any they requested themselves. The union
+ *  means an exam an admin registered on a teacher's behalf lands in the teacher's
+ *  account, while the admin still sees what they entered. */
 export async function listMyClassTests(actorId: string): Promise<ClassTestShape[]> {
-  const docs = (await ClassTest.find({ requestedBy: actorId })
+  const docs = (await ClassTest.find({
+    $or: [{ teacherId: actorId }, { requestedBy: actorId }],
+  })
     .sort({ requestedAt: -1 })
     .lean()) as unknown as IClassTest[];
   return docs.map(classTestShape);

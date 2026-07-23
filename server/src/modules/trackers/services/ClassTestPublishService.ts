@@ -267,14 +267,17 @@ export async function publishExam(testId: string, actorId: string): Promise<Publ
     },
   });
 
-  // CT-8 notify: the exam's requesting teacher learns the release went out.
-  // Deduped on the max stamped version, so a republish (bumped version) re-notifies.
-  if (test.requestedBy && recipients.length > 0) {
+  // CT-8 notify: the exam's ACCOUNTABLE subject teacher learns the release went out
+  // (not the entrant — an admin registering on a teacher's behalf must not swallow
+  // the teacher's notification). Deduped on the max stamped version, so a republish
+  // (bumped version) re-notifies.
+  const notifyTeacherId = test.teacherId ?? test.requestedBy;
+  if (notifyTeacherId && recipients.length > 0) {
     const subjectBn = (HW_SUBJECT_LABELS_BN as Record<string, string>)[test.subject] ?? test.subject;
     await emitCtResultPublished({
       testId,
       ctId: test.ctId,
-      teacherUserId: test.requestedBy.toString(),
+      teacherUserId: notifyTeacherId.toString(),
       publishedVersion: recipients.reduce((m, r) => Math.max(m, r.publishedVersion), 0),
       titleBn: "ক্লাস টেস্টের ফলাফল প্রকাশিত হয়েছে",
       bodyBn: `আপনার ${subjectBn} ক্লাস টেস্টের (${test.ctId}) ফলাফল প্রকাশিত হয়েছে।`,
