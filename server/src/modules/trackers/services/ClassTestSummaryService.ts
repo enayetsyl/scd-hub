@@ -38,7 +38,8 @@ export interface SummaryFilter {
   classLevel?: number;
   sectionId?: string;
   subject?: string;
-  /** The report author (ClassTest.requestedBy) — restricts to one teacher. */
+  /** The ACCOUNTABLE subject teacher (ClassTest.teacherId, falling back to
+   *  requestedBy on pre-field rows) — restricts to one teacher. */
   teacherId?: string;
   asOf?: Date;
 }
@@ -49,7 +50,12 @@ function examQuery(filter: SummaryFilter): Record<string, unknown> {
   if (typeof filter.classLevel === "number") q.classLevel = filter.classLevel;
   if (filter.sectionId) q.sectionId = new Types.ObjectId(filter.sectionId);
   if (filter.subject) q.subject = filter.subject;
-  if (filter.teacherId) q.requestedBy = new Types.ObjectId(filter.teacherId);
+  if (filter.teacherId) {
+    // Match the accountable teacher; rows predating `teacherId` (not yet backfilled)
+    // still answer on requestedBy, so no exam falls out of the filter mid-rollout.
+    const tid = new Types.ObjectId(filter.teacherId);
+    q.$or = [{ teacherId: tid }, { teacherId: { $exists: false }, requestedBy: tid }];
+  }
   return q;
 }
 
@@ -104,7 +110,12 @@ export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatus
   const exams = await loadPrintedExams(filter);
   if (exams.length === 0) return [];
 
-  const teacherNames = await loadUserNames([...new Set(exams.map((e) => e.requestedBy.toString()))]);
+  // Attribute to the ACCOUNTABLE subject teacher, not whoever entered the exam —
+  // a Principal/Office registration on a teacher's behalf belongs in the teacher's
+  // row (the D-#351 rule, now applied to class tests).
+  const accountableOf = (e: IClassTest): string =>
+    (e.teacherId ?? e.requestedBy).toString();
+  const teacherNames = await loadUserNames([...new Set(exams.map(accountableOf))]);
   const submitted = (await ClassTestResult.aggregate([
     { $match: { testId: { $in: exams.map((e) => e._id) }, submittedAt: { $ne: null } } },
     { $group: { _id: "$testId", latest: { $max: "$submittedAt" } } },
@@ -119,7 +130,7 @@ export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatus
   const rows: ReportStatusRow[] = [];
   for (const exam of exams) {
     const status = await examReportStatus(exam._id.toString(), now);
-    const teacherId = exam.requestedBy.toString();
+    const teacherId = accountableOf(exam);
     const sub = submittedByTest.get(exam._id.toString());
     const pub = publishedByTest.get(exam._id.toString());
     rows.push({
