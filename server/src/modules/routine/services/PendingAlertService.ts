@@ -166,6 +166,15 @@ export interface AssignmentPrep {
   weekNumber: number;
   /** How many of the caller's items are still undelivered for that week. */
   items: number;
+  /** WHICH cells still need preparing (owner ask 2026-07-23 — the countdown alone
+   *  didn't say what to prepare). One row per undelivered (class × subject). */
+  cells: AssignmentPrepCell[];
+}
+
+export interface AssignmentPrepCell {
+  classLevel: number;
+  subject: string;
+  sectionId: string;
 }
 
 /** The deadline instant for a delivery date: its local day-start (07:00). */
@@ -250,7 +259,13 @@ async function assignmentWork(userId: string, today: Date): Promise<AssignmentWo
       overdueCount += mine.length;
       overdueDates.push(deliveryKey);
     } else if (prep === null || deadline.getTime() < deadlineFor(prep.deliveryDateKey, startMinutes).getTime()) {
-      prep = { dueAt: deadline.toISOString(), deliveryDateKey: deliveryKey, weekNumber, items: mine.length };
+      prep = {
+        dueAt: deadline.toISOString(),
+        deliveryDateKey: deliveryKey,
+        weekNumber,
+        items: mine.length,
+        cells: mine.map((i) => ({ classLevel: i.classLevel, subject: i.subject, sectionId: i.sectionId })),
+      };
     }
   }
 

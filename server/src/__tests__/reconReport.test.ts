@@ -339,6 +339,54 @@ describe("asNotDeclared (D-#309)", () => {
     });
   });
 
+  // Regression (owner finding 2026-07-23): the real expectedItemsForWeek returns
+  // dateOnlyISO() — a FULL instant — while these mocks used a bare date key, so the
+  // "not late yet" string compare ("2026-07-23T00:00:00.000Z" > "2026-07-23" === true)
+  // silently hid every undelivered cell on its own delivery day. These two pin the
+  // real format down.
+  const isoWeek = (w: number, over: Record<string, unknown> = {}) =>
+    expectedWeek(w, {
+      deliveryDate: w === 1 ? "2026-07-09T00:00:00.000Z" : "2026-07-16T00:00:00.000Z",
+      ...over,
+    });
+
+  test("the DELIVERY DAY itself reports (full-ISO delivery instant vs date key)", async () => {
+    seedSection();
+    mockUserFind.mockResolvedValue([{ _id: "u-as", name: "Tanjila Akter Jerin" }]);
+    mockScheduleFind.mockResolvedValue([{ academicYearId: "ay-1", termStartDate: TERM }]);
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(
+        isoWeek(w, {
+          items: [{ delivered: false, sectionId: SEC, classLevel: -1, subject: "ARABIC", teacherId: "u-as" }],
+        }),
+      ),
+    );
+    const DELIVERY_DAY = new Date(2026, 6, 16); // Thu 2026-07-16 — week 2's delivery date
+    const r = await reconciliationReport("2026-07-16", "2026-07-16", DELIVERY_DAY);
+
+    expect(r.asNotDeclared).toHaveLength(1);
+    expect(r.asNotDeclared[0]).toMatchObject({
+      weekNumber: 2,
+      subject: "ARABIC",
+      deliveryDateKey: "2026-07-16", // a KEY, never the raw instant
+    });
+  });
+
+  test("a delivery date still in the FUTURE stays silent", async () => {
+    seedSection();
+    mockScheduleFind.mockResolvedValue([{ academicYearId: "ay-1", termStartDate: TERM }]);
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(
+        isoWeek(w, {
+          items: [{ delivered: false, sectionId: SEC, classLevel: -1, subject: "ARABIC", teacherId: "u-as" }],
+        }),
+      ),
+    );
+    // Mon 2026-07-13 sits inside week 2, whose delivery is Thu 2026-07-16.
+    const r = await reconciliationReport("2026-07-13", "2026-07-13", new Date(2026, 6, 13));
+    expect(r.asNotDeclared).toEqual([]);
+  });
+
   test("suspended weeks owe nothing", async () => {
     seedSection();
     mockScheduleFind.mockResolvedValue([{ academicYearId: "ay-1", termStartDate: TERM }]);
