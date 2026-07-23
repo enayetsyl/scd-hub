@@ -16,6 +16,7 @@ import type { LifecycleState, HwResult } from "@scd/shared";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { popActionGroup } from "../lifecycle";
 import { isSameDhakaDay } from "../../../lib/dhakaDay";
+import { writeAudit } from "../../platform/services/AuditService";
 
 export interface AsRevertInput {
   recordId: string;
@@ -81,9 +82,33 @@ export async function revertAssignmentRecord(input: AsRevertInput): Promise<AsRe
     }
   }
 
+  const revertedFrom = rec.state;
   rec.state = restored.state as LifecycleState;
   rec.stateDates.splice(rec.stateDates.length - popped.length, popped.length);
   await rec.save();
+
+  // The ONLY trace this revert happened — the popped stamps are gone from the
+  // record (D-#354; mirrors HomeworkRevertService).
+  await writeAudit({
+    eventKind: "AS_RECORD_REVERTED",
+    actorId: input.actorId,
+    targetId: rec._id,
+    targetKind: "AssignmentStudentRecord",
+    meta: {
+      asId: rec.asId,
+      asItemId: rec.asItemId.toString(),
+      studentId: rec.studentId.toString(),
+      revertedFrom,
+      restoredTo: rec.state,
+      admin: input.admin,
+      popped: popped.map((s) => ({
+        state: s.state,
+        at: new Date(s.at).toISOString(),
+        by: s.by ? s.by.toString() : null,
+      })),
+      ...(deletedResubmissionId ? { deletedResubmissionId } : {}),
+    },
+  });
 
   return {
     recordId: rec._id.toString(),
