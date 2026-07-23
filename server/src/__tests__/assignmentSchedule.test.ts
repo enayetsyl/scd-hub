@@ -12,6 +12,7 @@ import mongoose from "mongoose";
 
 const mockScheduleFindOne = jest.fn();
 const mockItemFind = jest.fn();
+const mockAsNilFind = jest.fn();
 const mockHolidayFind = jest.fn();
 
 jest.mock("../modules/trackers/models/AssignmentSchedule", () => ({
@@ -22,6 +23,9 @@ jest.mock("../modules/trackers/models/AssignmentSchedule", () => ({
 }));
 jest.mock("../modules/trackers/models/AssignmentItem", () => ({
   AssignmentItem: { find: (q: unknown) => ({ lean: () => mockItemFind(q) }) },
+}));
+jest.mock("../modules/trackers/models/AssignmentNilDeclaration", () => ({
+  AssignmentNilDeclaration: { find: (q: unknown) => ({ lean: () => mockAsNilFind(q) }) },
 }));
 jest.mock("../modules/routine/models/HolidayException", () => ({
   HolidayException: { find: (q: unknown) => ({ lean: () => mockHolidayFind(q) }) },
@@ -86,6 +90,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockHolidayFind.mockResolvedValue([]);
   mockItemFind.mockResolvedValue([]);
+  mockAsNilFind.mockResolvedValue([]);
 });
 
 // ===========================================================================
