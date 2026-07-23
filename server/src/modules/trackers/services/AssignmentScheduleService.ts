@@ -205,7 +205,7 @@ export interface ExpectedItem {
   status: string | null;
   asItemId: string | null;
   asId: string | null;
-  /** D-#352: current values, so the edit sheet can prefill without a second read. */
+  /** D-#353: current values, so the edit sheet can prefill without a second read. */
   estMinutes: number | null;
   totalMarks: number | null;
 }

@@ -64,7 +64,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
   const [scheduleQ, refetchSchedule] = useQuery({ query: AS_SCHEDULE_QUERY, variables: { academicYearId: yearId }, pause: !yearId });
   const schedule = scheduleQ.data?.assignmentSchedule ?? null;
 
-  // D-#352 — edit / delete a delivered assignment (own cell, or Principal/Office).
+  // D-#353 — edit / delete a delivered assignment (own cell, or Principal/Office).
   const [editTarget, setEditTarget] = useState<AssignmentEditTarget | null>(null);
   const [delTarget, setDelTarget] = useState<{ itemId: string; label: string } | null>(null);
   const [, deleteItem] = useMutation(DELETE_ASSIGNMENT_ITEM);
@@ -113,7 +113,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
     return items;
   }, [expected, role, user, myCtSectionIds]);
 
-  /** D-#352: the cell's own subject teacher, or Principal/Office — mirrors the server gate. */
+  /** D-#353: the cell's own subject teacher, or Principal/Office — mirrors the server gate. */
   function canEditItem(item: ExpectedAsItemT): boolean {
     if (!item.asItemId) return false;
     return role !== "TEACHER" || item.teacherId === user?.id;

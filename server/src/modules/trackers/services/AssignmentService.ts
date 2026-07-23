@@ -225,7 +225,7 @@ export async function deliverAssignmentItem(
 }
 
 // ---------------------------------------------------------------------------
-// Edit / delete a delivered assignment (D-#352 policy — the D-#336 homework twin)
+// Edit / delete a delivered assignment (D-#353 policy — the D-#336 homework twin)
 // ---------------------------------------------------------------------------
 
 export interface UpdateAssignmentItemInput {
@@ -264,7 +264,7 @@ function assertOwnsAssignmentCell(
 }
 
 /**
- * Tiered edit (D-#352 — mirrors the D-#336 homework rule):
+ * Tiered edit (D-#353 — mirrors the D-#336 homework rule):
  *   DRAFT  (delivered, week not yet confirmed) → every delivery-form field:
  *     estMinutes, totalMarks, setId, attachmentIds. No student records exist yet.
  *   ISSUED (week confirmed, records spawned)   → descriptive only: totalMarks,
@@ -370,7 +370,7 @@ export interface DeleteAssignmentItemInput {
 }
 
 /**
- * Delete a still-DRAFT delivery (D-#352). ISSUED is refused: per-student records
+ * Delete a still-DRAFT delivery (D-#353). ISSUED is refused: per-student records
  * exist and carry lifecycle history — that is a revert, not a delete. Defensive
  * record check so a DRAFT that somehow spawned records is never silently orphaned.
  */

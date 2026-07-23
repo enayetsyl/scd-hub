@@ -1408,7 +1408,7 @@ const STR_BN = {
   asDeliverTitle: "অ্যাসাইনমেন্ট বিতরণ",
   asDraft: "খসড়া",
   asAwaitingConfirm: "সাপ্তাহিক নিশ্চিতকরণের অপেক্ষায়",
-  // D-#352 — edit / delete a delivered assignment
+  // D-#353 — edit / delete a delivered assignment
   asEdit: "সম্পাদনা",
   asEditTitle: "অ্যাসাইনমেন্ট সম্পাদনা",
   asEditMinutes: "সময় (মিনিট)",
@@ -4045,7 +4045,7 @@ const STR_EN: StrTable = {
   asDeliverTitle: "Deliver assignment",
   asDraft: "Draft",
   asAwaitingConfirm: "Awaiting weekly confirm",
-  // D-#352 — edit / delete a delivered assignment
+  // D-#353 — edit / delete a delivered assignment
   asEdit: "Edit",
   asEditTitle: "Edit assignment",
   asEditMinutes: "Time (minutes)",

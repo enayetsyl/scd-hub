@@ -1,5 +1,5 @@
 /**
- * AssignmentEditSheet (D-#352) — edit a delivered assignment.
+ * AssignmentEditSheet (D-#353) — edit a delivered assignment.
  *
  * Tier rule mirrors the server (and the D-#336 homework twin):
  *   DRAFT  → time (minutes) + total marks editable

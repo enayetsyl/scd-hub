@@ -3929,7 +3929,7 @@ export const EXPECTED_AS_WEEK = gql<
   }
 `;
 
-/** D-#352 — tiered edit of a delivered assignment. DRAFT: time + marks + set.
+/** D-#353 — tiered edit of a delivered assignment. DRAFT: time + marks + set.
  *  ISSUED: descriptive only (the time is frozen with the confirmed weekly load). */
 export const UPDATE_ASSIGNMENT_ITEM = gql<
   { updateAssignmentItem: { itemId: string; asId: string; status: string; estMinutes: number; totalMarks: number | null } },
@@ -3942,7 +3942,7 @@ export const UPDATE_ASSIGNMENT_ITEM = gql<
   }
 `;
 
-/** D-#352 — delete a still-DRAFT delivery (the mistaken-delivery fix path). */
+/** D-#353 — delete a still-DRAFT delivery (the mistaken-delivery fix path). */
 export const DELETE_ASSIGNMENT_ITEM = gql<{ deleteAssignmentItem: boolean }, { itemId: string }>`
   mutation DeleteAssignmentItem($itemId: String!) {
     deleteAssignmentItem(itemId: $itemId)

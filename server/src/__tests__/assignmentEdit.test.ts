@@ -1,5 +1,5 @@
 /**
- * D-#352 — tiered edit + DRAFT-delete of a delivered assignment (the D-#336
+ * D-#353 — tiered edit + DRAFT-delete of a delivered assignment (the D-#336
  * homework twin, owner ask 2026-07-23).
  *
  *   DRAFT  → estMinutes / totalMarks / setId / attachments all editable
@@ -72,7 +72,7 @@ beforeEach(() => {
   mockFileFind.mockResolvedValue([]);
 });
 
-describe("updateAssignmentItem (D-#352 tiered edit)", () => {
+describe("updateAssignmentItem (D-#353 tiered edit)", () => {
   test("DRAFT: the teacher can change the time (estMinutes)", async () => {
     const doc = makeItem();
     mockItemFindById.mockReturnValue(doc);
@@ -145,7 +145,7 @@ describe("updateAssignmentItem (D-#352 tiered edit)", () => {
   });
 });
 
-describe("deleteAssignmentItem (D-#352 DRAFT-only delete)", () => {
+describe("deleteAssignmentItem (D-#353 DRAFT-only delete)", () => {
   test("a DRAFT delivery can be deleted by its teacher (the mistaken-delivery fix path)", async () => {
     mockItemFindById.mockReturnValue(makeItem());
 

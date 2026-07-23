@@ -940,7 +940,7 @@ builder.queryField("myAssignmentPrepPrompts", (t) =>
 const UpdateAssignmentResultRef = builder
   .objectRef<UpdateAssignmentItemResult>("UpdateAssignmentItemResult")
   .implement({
-    description: "A delivered assignment after a tiered edit (D-#352).",
+    description: "A delivered assignment after a tiered edit (D-#353).",
     fields: (t) => ({
       itemId: t.exposeString("itemId"),
       asId: t.exposeString("asId"),
@@ -966,7 +966,7 @@ builder.mutationField("updateAssignmentItem", (t) =>
   t.field({
     type: UpdateAssignmentResultRef,
     description:
-      "Edit a delivered assignment (D-#352). DRAFT: estMinutes/totalMarks/setId/attachments. " +
+      "Edit a delivered assignment (D-#353). DRAFT: estMinutes/totalMarks/setId/attachments. " +
       "ISSUED: descriptive only — estMinutes is FROZEN (weekly load already confirmed) and the " +
       "§4-resolved delivery/due dates are never editable. Own cell, or Principal/Office.",
     authScopes: { hasPermission: "tracker:write" },
@@ -997,7 +997,7 @@ builder.mutationField("deleteAssignmentItem", (t) =>
   t.field({
     type: "Boolean",
     description:
-      "Delete a still-DRAFT delivered assignment (D-#352) — the fix path for a mistaken delivery. " +
+      "Delete a still-DRAFT delivered assignment (D-#353) — the fix path for a mistaken delivery. " +
       "ISSUED is refused (student records exist). Own cell, or Principal/Office.",
     authScopes: { hasPermission: "tracker:write" },
     args: { itemId: t.arg.string({ required: true }) },
