@@ -34,6 +34,7 @@ import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { resolveScheduleWeek } from "./AssignmentScheduleService";
 import { assertTransition } from "../lifecycle";
 import { atMidnight, dateOnlyISO } from "../assignmentCalendar";
+import { writeAudit } from "../../platform/services/AuditService";
 
 // ---------------------------------------------------------------------------
 // AS_ID generation (D-#34 numbering pattern)
@@ -221,6 +222,184 @@ export async function deliverAssignmentItem(
     presentCount: input.roster.filter((r) => r.present).length,
     absentCount: input.roster.filter((r) => !r.present).length,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Edit / delete a delivered assignment (D-#353 policy — the D-#336 homework twin)
+// ---------------------------------------------------------------------------
+
+export interface UpdateAssignmentItemInput {
+  itemId: string;
+  estMinutes?: number;
+  totalMarks?: number;
+  setId?: string;
+  attachmentIds?: string[];
+  actorId: string;
+  /** Principal/Office may correct any cell; a teacher only their own rotation cell. */
+  isAdmin?: boolean;
+}
+
+export interface UpdateAssignmentItemResult {
+  itemId: string;
+  asId: string;
+  weekNumber: number;
+  subject: HwSubject;
+  status: "DRAFT" | "ISSUED";
+  estMinutes: number;
+  totalMarks: number | null;
+  deliveryDate: string;
+  dueDate: string;
+}
+
+/** The cell's own subject teacher, or Principal/Office. */
+function assertOwnsAssignmentCell(
+  item: { teacherId: { toString(): string } },
+  actorId: string,
+  isAdmin: boolean | undefined,
+): void {
+  if (isAdmin) return;
+  if (item.teacherId.toString() !== actorId) {
+    throw new Error("এই অ্যাসাইনমেন্টটি আপনার বিষয়/সপ্তাহের নয় — শুধু দায়িত্বপ্রাপ্ত শিক্ষক বা অফিস সম্পাদনা করতে পারে");
+  }
+}
+
+/**
+ * Tiered edit (D-#353 — mirrors the D-#336 homework rule):
+ *   DRAFT  (delivered, week not yet confirmed) → every delivery-form field:
+ *     estMinutes, totalMarks, setId, attachmentIds. No student records exist yet.
+ *   ISSUED (week confirmed, records spawned)   → descriptive only: totalMarks,
+ *     setId, attachmentIds. **estMinutes is FROZEN** (it was validated against the
+ *     weekly ceiling at confirmAssignmentWeek — editing it would silently rewrite
+ *     a confirmed week's total), and so are deliveryDate/dueDate (students already
+ *     hold those deadlines).
+ * Identity (week/section/subject) and the §4-resolved dates are NEVER client-editable
+ * at any status — a mis-delivered cell is fixed by delete + re-deliver while DRAFT.
+ */
+export async function updateAssignmentItem(
+  input: UpdateAssignmentItemInput,
+): Promise<UpdateAssignmentItemResult> {
+  if (!Types.ObjectId.isValid(input.itemId)) throw new Error("Invalid assignment id");
+  const item = await AssignmentItem.findById(input.itemId);
+  if (!item) throw new Error("AssignmentItem not found");
+  assertOwnsAssignmentCell(item, input.actorId, input.isAdmin);
+
+  const issued = item.status === "ISSUED";
+
+  if (input.estMinutes !== undefined) {
+    if (issued) {
+      throw new Error(
+        "ইস্যু হয়ে যাওয়ার পর সময় (মিনিট) পরিবর্তন করা যাবে না — সপ্তাহের লোড ইতিমধ্যে নিশ্চিত হয়েছে",
+      );
+    }
+    if (!Number.isInteger(input.estMinutes) || input.estMinutes < 0) {
+      throw new Error("estMinutes must be a non-negative integer");
+    }
+    item.estMinutes = input.estMinutes;
+  }
+
+  if (input.totalMarks !== undefined) {
+    if (!Number.isInteger(input.totalMarks) || input.totalMarks < 1) {
+      throw new Error("totalMarks must be a positive integer");
+    }
+    // Never strand an already-checked record above the new ceiling (D-#87 invariant).
+    const over = await AssignmentStudentRecord.findOne({
+      asItemId: item._id,
+      marks: { $gt: input.totalMarks },
+    })
+      .select("_id")
+      .lean();
+    if (over) {
+      throw new Error(
+        `পূর্ণমান ${input.totalMarks} করা যাবে না — কোনো শিক্ষার্থীর প্রাপ্ত নম্বর এর চেয়ে বেশি`,
+      );
+    }
+    item.totalMarks = input.totalMarks;
+  }
+
+  if (input.setId !== undefined) {
+    const raw = input.setId.trim();
+    if (raw === "") {
+      item.setId = undefined;
+    } else {
+      if (!Types.ObjectId.isValid(raw)) {
+        throw new Error("Question-set id must be a valid id — leave it blank if there is no set");
+      }
+      item.setId = new Types.ObjectId(raw);
+    }
+  }
+
+  if (input.attachmentIds !== undefined) {
+    item.attachmentIds = await normalizeAttachmentIds(input.attachmentIds);
+  }
+
+  await item.save();
+  // The Maruf incident (2026-07-23): a delivered assignment had no trace of who
+  // touched it. Every after-the-fact edit is now on the audit log.
+  await writeAudit({
+    eventKind: "ASSIGNMENT_ITEM_EDITED",
+    actorId: input.actorId,
+    targetId: item._id,
+    targetKind: "AssignmentItem",
+    meta: {
+      asId: item.asId,
+      status: item.status,
+      estMinutes: input.estMinutes,
+      totalMarks: input.totalMarks,
+      setId: input.setId,
+      attachments: input.attachmentIds?.length,
+    },
+  });
+
+  return {
+    itemId: item._id.toString(),
+    asId: item.asId,
+    weekNumber: item.weekNumber,
+    subject: item.subject,
+    status: item.status,
+    estMinutes: item.estMinutes,
+    totalMarks: item.totalMarks ?? null,
+    deliveryDate: dateOnlyISO(item.deliveryDate),
+    dueDate: dateOnlyISO(item.dueDate),
+  };
+}
+
+export interface DeleteAssignmentItemInput {
+  itemId: string;
+  actorId: string;
+  isAdmin?: boolean;
+}
+
+/**
+ * Delete a still-DRAFT delivery (D-#353). ISSUED is refused: per-student records
+ * exist and carry lifecycle history — that is a revert, not a delete. Defensive
+ * record check so a DRAFT that somehow spawned records is never silently orphaned.
+ */
+export async function deleteAssignmentItem(
+  input: DeleteAssignmentItemInput,
+): Promise<{ itemId: string; asId: string }> {
+  if (!Types.ObjectId.isValid(input.itemId)) throw new Error("Invalid assignment id");
+  const item = await AssignmentItem.findById(input.itemId);
+  if (!item) throw new Error("AssignmentItem not found");
+  assertOwnsAssignmentCell(item, input.actorId, input.isAdmin);
+
+  if (item.status !== "DRAFT") {
+    throw new Error("ইস্যু হয়ে যাওয়া অ্যাসাইনমেন্ট মুছে ফেলা যাবে না — শিক্ষার্থীদের রেকর্ড তৈরি হয়ে গেছে");
+  }
+  const spawned = await AssignmentStudentRecord.findOne({ asItemId: item._id }).select("_id").lean();
+  if (spawned) {
+    throw new Error("এই অ্যাসাইনমেন্টের শিক্ষার্থী রেকর্ড আছে — মুছে ফেলা যাবে না");
+  }
+
+  const asId = item.asId;
+  await AssignmentItem.deleteOne({ _id: item._id });
+  await writeAudit({
+    eventKind: "ASSIGNMENT_ITEM_DELETED",
+    actorId: input.actorId,
+    targetId: item._id,
+    targetKind: "AssignmentItem",
+    meta: { asId, weekNumber: item.weekNumber, subject: item.subject, sectionId: item.sectionId?.toString() },
+  });
+  return { itemId: input.itemId, asId };
 }
 
 // ---------------------------------------------------------------------------

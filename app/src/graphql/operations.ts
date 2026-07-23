@@ -3899,6 +3899,8 @@ export interface ExpectedAsItemT {
   status: string | null;
   asItemId: string | null;
   asId: string | null;
+  estMinutes: number | null;
+  totalMarks: number | null;
 }
 
 export interface ExpectedAsWeekT {
@@ -3922,8 +3924,28 @@ export const EXPECTED_AS_WEEK = gql<
   query ExpectedAssignmentsForWeek($academicYearId: String!, $weekNumber: Int!) {
     expectedAssignmentsForWeek(academicYearId: $academicYearId, weekNumber: $weekNumber) {
       academicYearId weekNumber cycleWeek weekStart year month weekOfMonth suspended deliveryDate dueDate
-      items { entryId cycleWeek classId classLevel sectionId subject teacherId delivered status asItemId asId }
+      items { entryId cycleWeek classId classLevel sectionId subject teacherId delivered status asItemId asId estMinutes totalMarks }
     }
+  }
+`;
+
+/** D-#353 — tiered edit of a delivered assignment. DRAFT: time + marks + set.
+ *  ISSUED: descriptive only (the time is frozen with the confirmed weekly load). */
+export const UPDATE_ASSIGNMENT_ITEM = gql<
+  { updateAssignmentItem: { itemId: string; asId: string; status: string; estMinutes: number; totalMarks: number | null } },
+  { itemId: string; estMinutes?: number | null; totalMarks?: number | null; setId?: string | null }
+>`
+  mutation UpdateAssignmentItem($itemId: String!, $estMinutes: Int, $totalMarks: Int, $setId: String) {
+    updateAssignmentItem(itemId: $itemId, estMinutes: $estMinutes, totalMarks: $totalMarks, setId: $setId) {
+      itemId asId status estMinutes totalMarks
+    }
+  }
+`;
+
+/** D-#353 — delete a still-DRAFT delivery (the mistaken-delivery fix path). */
+export const DELETE_ASSIGNMENT_ITEM = gql<{ deleteAssignmentItem: boolean }, { itemId: string }>`
+  mutation DeleteAssignmentItem($itemId: String!) {
+    deleteAssignmentItem(itemId: $itemId)
   }
 `;
 
