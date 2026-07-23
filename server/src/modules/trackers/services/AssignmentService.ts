@@ -25,6 +25,7 @@ import { AS_WEEKLY_CEILING_MIN } from "@scd/shared";
 import { Types } from "mongoose";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { AssignmentItem, type IAssignmentItem } from "../models/AssignmentItem";
+import { AssignmentNilDeclaration } from "../models/AssignmentNilDeclaration";
 import {
   AssignmentStudentRecord,
   type IAssignmentStudentRecord,
@@ -208,6 +209,12 @@ export async function deliverAssignmentItem(
     deliveredBy: input.actorId,
     deliveredAt: at,
     attachmentIds,
+  });
+  await AssignmentNilDeclaration.deleteOne({
+    academicYearId: input.academicYearId,
+    weekNumber: input.weekNumber,
+    sectionId: entry.sectionId,
+    subject: entry.subject,
   });
 
   return {

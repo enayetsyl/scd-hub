@@ -37,6 +37,7 @@ export default function ReconciliationReportScreen(): React.ReactElement {
       ...(r?.asMisses ?? []).map((m) => ({ cls: m.classLevel, t: m.confirmerName, s: undefined as string | undefined })),
       ...(r?.hwNotDeclared ?? []).map((m) => ({ cls: m.classLevel, t: m.teacherName, s: m.subject })),
       ...(r?.hwNilDeclared ?? []).map((m) => ({ cls: m.classLevel, t: m.teacherName, s: m.subject })),
+      ...(r?.asNilDeclared ?? []).map((m) => ({ cls: m.classLevel, t: m.teacherName, s: m.subject })),
     ];
     return {
       classLevels: all.map((x) => x.cls),
@@ -50,6 +51,7 @@ export default function ReconciliationReportScreen(): React.ReactElement {
   const asMisses = (report?.asMisses ?? []).filter((m) => match(m.classLevel, m.confirmerName));
   const hwNotDeclared = (report?.hwNotDeclared ?? []).filter((m) => match(m.classLevel, m.teacherName, m.subject));
   const hwNilDeclared = (report?.hwNilDeclared ?? []).filter((m) => match(m.classLevel, m.teacherName, m.subject));
+  const asNilDeclared = (report?.asNilDeclared ?? []).filter((m) => match(m.classLevel, m.teacherName, m.subject));
 
   const hwByDay = useMemo(() => {
     const map = new Map<string, HwReconMissT[]>();
@@ -84,7 +86,7 @@ export default function ReconciliationReportScreen(): React.ReactElement {
       ) : null}
       {q.fetching && !report ? <Loader label={STR.loading} /> : null}
 
-      {report && hwMisses.length === 0 && asMisses.length === 0 && hwNotDeclared.length === 0 ? (
+      {report && hwMisses.length === 0 && asMisses.length === 0 && hwNotDeclared.length === 0 && hwNilDeclared.length === 0 && asNilDeclared.length === 0 ? (
         <Card>
           <Body style={{ fontWeight: "600" }}>{STR.rrNoMisses}</Body>
         </Card>
@@ -202,6 +204,29 @@ export default function ReconciliationReportScreen(): React.ReactElement {
                 </Body>
                 <Muted>
                   {bnNum(m.dateKey)} · {m.teacherName ?? "—"}
+                </Muted>
+              </View>
+              <Badge text={hwNilReasonLabel(m.reason)} tone="brand" />
+            </View>
+          ))}
+        </Card>
+      ) : null}
+
+      {asNilDeclared.length > 0 ? (
+        <Card>
+          <Body style={{ fontWeight: "700", marginBottom: space(1) }}>📘 {STR.asNilReportTitle}</Body>
+          {asNilDeclared.map((m) => (
+            <View
+              key={`${m.sectionId}-${m.subject}-${m.weekNumber}`}
+              style={{ flexDirection: "row", alignItems: "center", paddingVertical: space(1), gap: space(2) }}
+            >
+              <View style={{ flex: 1 }}>
+                <Body style={{ fontWeight: "600" }}>
+                  {classLevelLabel(m.classLevel)}
+                  {m.sectionNameBn ? ` — ${m.sectionNameBn}` : ""} · {hwSubjectLabel(m.subject)}
+                </Body>
+                <Muted>
+                  {STR.rrWeek} {bnNum(m.weekNumber)} · {bnNum(m.deliveryDateKey)} · {m.teacherName ?? "—"}
                 </Muted>
               </View>
               <Badge text={hwNilReasonLabel(m.reason)} tone="brand" />

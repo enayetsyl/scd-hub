@@ -249,7 +249,7 @@ async function assignmentWork(userId: string, today: Date): Promise<AssignmentWo
   for (const weekNumber of weeks) {
     const week = await expectedItemsForWeek(academicYearId, weekNumber);
     if (week.suspended || !week.deliveryDate) continue;
-    const mine = week.items.filter((i) => i.teacherId === userId && !i.delivered);
+    const mine = week.items.filter((i) => i.teacherId === userId && !i.delivered && !i.nilDeclared);
     if (mine.length === 0) continue; // delivered ⇒ the countdown disappears at once
 
     const deliveryKey = week.deliveryDate.slice(0, 10);

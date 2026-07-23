@@ -17,6 +17,7 @@ const mockItemCreate = jest.fn();
 const mockItemFindOne = jest.fn();
 const mockItemFindById = jest.fn();
 const mockItemFind = jest.fn();
+const mockAsNilDeleteOne = jest.fn();
 const mockRecInsertMany = jest.fn();
 const mockRecFindById = jest.fn();
 const mockRecFind = jest.fn();
@@ -46,6 +47,9 @@ jest.mock("../modules/trackers/models/AssignmentItem", () => ({
       });
     },
   },
+}));
+jest.mock("../modules/trackers/models/AssignmentNilDeclaration", () => ({
+  AssignmentNilDeclaration: { deleteOne: (q: unknown) => mockAsNilDeleteOne(q) },
 }));
 jest.mock("../modules/trackers/models/AssignmentStudentRecord", () => ({
   AssignmentStudentRecord: {
@@ -141,6 +145,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockHolidayFind.mockResolvedValue([]);
   mockItemFindOne.mockResolvedValue(null);
+  mockAsNilDeleteOne.mockResolvedValue({ deletedCount: 0 });
   mockSeqUpdate.mockResolvedValue({ seq: 1 });
   mockItemCreate.mockImplementation((a: Record<string, unknown>) =>
     Promise.resolve({ _id: oid(), ...a }),

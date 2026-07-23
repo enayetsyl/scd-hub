@@ -20,6 +20,8 @@ import {
   MY_AS_PREP_PROMPTS,
   MY_SECTIONS_AS_CLASS_TEACHER_QUERY,
   DELETE_ASSIGNMENT_ITEM,
+  DECLARE_NO_ASSIGNMENT,
+  REMOVE_NO_ASSIGNMENT,
   type ExpectedAsItemT,
 } from "../../graphql/operations";
 import type { AssignmentStackParamList } from "../../navigation/types";
@@ -27,8 +29,10 @@ import { Screen, Body, Muted, Card, Badge, Button, Chip, ChipRow, EmptyState, No
 import { QueryGate } from "../../components/QueryGate";
 import { AssignmentEditSheet, type AssignmentEditTarget } from "../../components/AssignmentEditSheet";
 import { ConfirmSheet } from "../../components/ConfirmSheet";
-import { STR, bnNum, hwSubjectLabel, classLevelLabel, monthLabel } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, classLevelLabel, monthLabel, HW_NIL_REASONS, hwNilReasonLabel } from "../../lib/labels";
+import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
+import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AssignmentStackParamList, "AssignmentHome">;
@@ -56,6 +60,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
   const canTrackerRead = !!role && roleHasPermission(role, "tracker:read");
   const canSchedule = !!role && roleHasPermission(role, "roster:manage");
   const isFollowUpAdmin = role === "PRINCIPAL" || role === "OFFICE";
+  const toast = useToast();
 
   const [yearsQ, refetchYears] = useQuery({ query: ACADEMIC_YEARS_QUERY });
   const year = (yearsQ.data?.academicYears ?? []).find((y) => y.current) ?? yearsQ.data?.academicYears?.[0];
@@ -68,6 +73,10 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
   const [editTarget, setEditTarget] = useState<AssignmentEditTarget | null>(null);
   const [delTarget, setDelTarget] = useState<{ itemId: string; label: string } | null>(null);
   const [, deleteItem] = useMutation(DELETE_ASSIGNMENT_ITEM);
+  const [, declareNil] = useMutation(DECLARE_NO_ASSIGNMENT);
+  const [, removeNil] = useMutation(REMOVE_NO_ASSIGNMENT);
+  const [nilReasonByEntry, setNilReasonByEntry] = useState<Record<string, string | null>>({});
+  const [nilBusyEntry, setNilBusyEntry] = useState<string | null>(null);
 
   const [week, setWeek] = useState<number | null>(null);
   const weekNumber = week ?? (schedule ? currentWeekNumber(schedule.termStartDate) : 1);
@@ -147,6 +156,55 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
       deliveryDate: expected.deliveryDate,
       dueDate: expected.dueDate,
     });
+  }
+
+  function canDeclareNil(item: ExpectedAsItemT): boolean {
+    if (item.delivered) return false;
+    return canTrackerRead && (item.teacherId === user?.id || role !== "TEACHER");
+  }
+
+  async function onDeclareNil(item: ExpectedAsItemT): Promise<void> {
+    const reason = nilReasonByEntry[item.entryId];
+    if (!reason || nilBusyEntry) {
+      if (!reason) toast.show(STR.asNilPickReason, "danger");
+      return;
+    }
+    setNilBusyEntry(item.entryId);
+    const res = await declareNil({
+      academicYearId: yearId,
+      weekNumber,
+      entryId: item.entryId,
+      sectionId: item.sectionId,
+      reason,
+    });
+    setNilBusyEntry(null);
+    if (res.error || !res.data?.declareNoAssignment) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
+    toast.show(STR.asNilDeclaredOk, "ok");
+    setNilReasonByEntry((cur) => ({ ...cur, [item.entryId]: null }));
+    refetchExpected({ requestPolicy: "network-only" });
+    refetchPrompts({ requestPolicy: "network-only" });
+  }
+
+  async function onRemoveNil(item: ExpectedAsItemT): Promise<void> {
+    if (nilBusyEntry) return;
+    setNilBusyEntry(item.entryId);
+    const res = await removeNil({
+      academicYearId: yearId,
+      weekNumber,
+      entryId: item.entryId,
+      sectionId: item.sectionId,
+    });
+    setNilBusyEntry(null);
+    if (res.error) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
+    toast.show(STR.asNilRemovedOk, "ok");
+    refetchExpected({ requestPolicy: "network-only" });
+    refetchPrompts({ requestPolicy: "network-only" });
   }
 
   return (
@@ -229,8 +287,16 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                       {classLevelLabel(item.classLevel)} — {hwSubjectLabel(item.subject)}
                     </Body>
                     <Badge
-                      text={item.status === "ISSUED" ? STR.asDelivered : item.delivered ? STR.asDraft : STR.asNotDelivered}
-                      tone={item.status === "ISSUED" ? "ok" : item.delivered ? "brand" : "warn"}
+                      text={
+                        item.status === "ISSUED"
+                          ? STR.asDelivered
+                          : item.delivered
+                            ? STR.asDraft
+                            : item.nilDeclared
+                              ? STR.asNilBadge
+                              : STR.asNotDelivered
+                      }
+                      tone={item.status === "ISSUED" ? "ok" : item.delivered || item.nilDeclared ? "brand" : "warn"}
                     />
                   </View>
                   {item.asId ? <Muted style={{ marginTop: 2 }}>{item.asId}</Muted> : null}
@@ -297,10 +363,56 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                           ) : null}
                         </ChipRow>
                       </View>
-                    ) : canTrackerRead && (item.teacherId === user?.id || role !== "TEACHER") ? (
+                    ) : !item.nilDeclared && canTrackerRead && (item.teacherId === user?.id || role !== "TEACHER") ? (
                       // Only the subject teacher (or an unscoped admin) delivers; a
                       // class teacher reconciles but doesn't deliver others' subjects.
                       <Button title={STR.asDeliver} onPress={() => openDeliver(item)} />
+                    ) : null}
+                    {canDeclareNil(item) ? (
+                      <View style={{ marginTop: space(2) }}>
+                        <Body style={{ fontWeight: "700", marginBottom: 4 }}>{STR.asNilTitle}</Body>
+                        {item.nilDeclared ? (
+                          <>
+                            <Muted>
+                              ✓ {STR.asNilDeclaredNotice} — {hwNilReasonLabel(item.nilReason)}
+                            </Muted>
+                            <Button
+                              title={STR.asNilRemove}
+                              variant="ghost"
+                              onPress={() => void onRemoveNil(item)}
+                              loading={nilBusyEntry === item.entryId}
+                              disabled={!!nilBusyEntry}
+                              style={{ marginTop: space(1) }}
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <ChipRow>
+                              {HW_NIL_REASONS.map((r) => (
+                                <Chip
+                                  key={r}
+                                  label={hwNilReasonLabel(r)}
+                                  selected={nilReasonByEntry[item.entryId] === r}
+                                  onPress={() =>
+                                    setNilReasonByEntry((cur) => ({
+                                      ...cur,
+                                      [item.entryId]: cur[item.entryId] === r ? null : r,
+                                    }))
+                                  }
+                                />
+                              ))}
+                            </ChipRow>
+                            <Button
+                              title={STR.asNilButton}
+                              variant="secondary"
+                              onPress={() => void onDeclareNil(item)}
+                              loading={nilBusyEntry === item.entryId}
+                              disabled={!!nilBusyEntry || !nilReasonByEntry[item.entryId]}
+                              style={{ marginTop: space(1) }}
+                            />
+                          </>
+                        )}
+                      </View>
                     ) : null}
                   </View>
                 </Card>
