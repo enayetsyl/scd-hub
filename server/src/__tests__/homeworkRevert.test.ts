@@ -19,12 +19,20 @@ jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
   },
 }));
 
+// D-#354: a revert deletes the popped stamps, so the audit row is the only trace.
+const mockWriteAudit = jest.fn();
+jest.mock("../modules/platform/services/AuditService", () => ({
+  writeAudit: (p: unknown) => mockWriteAudit(p),
+}));
+
 import { revertHomeworkRecord } from "../modules/trackers/services/HomeworkRevertService";
 import { popActionGroup } from "../modules/trackers/lifecycle";
 
 const ACTOR = new mongoose.Types.ObjectId();
 const OTHER = new mongoose.Types.ObjectId();
 const REC_ID = new mongoose.Types.ObjectId();
+const ITEM_ID = new mongoose.Types.ObjectId();
+const STUDENT_ID = new mongoose.Types.ObjectId();
 
 const T0 = new Date("2026-07-19T09:00:00+06:00"); // issue
 const T1 = new Date("2026-07-19T10:00:00+06:00"); // action 1
@@ -35,6 +43,8 @@ function makeRec(extra: Record<string, unknown> = {}) {
   return {
     _id: REC_ID,
     hwId: "HW-C1-MATH-0001",
+    hwItemId: ITEM_ID,
+    studentId: STUDENT_ID,
     state: "CHECKED",
     stateDates: [
       { state: "GIVEN", at: T0 },
@@ -97,6 +107,34 @@ describe("revertHomeworkRecord", () => {
     expect(rec.result).toBeUndefined();
     expect(rec.stateDates).toHaveLength(1);
     expect(rec.save).toHaveBeenCalled();
+  });
+
+  // D-#354: the popped stamps are DELETED from the record, so without this audit
+  // row a submitted+checked record silently reads as never-submitted. The row must
+  // preserve what was undone, who had done it, and where the record landed.
+  test("writes an HW_RECORD_REVERTED audit carrying the popped stamps (the only trace)", async () => {
+    const rec = makeRec();
+    mockFindById.mockResolvedValue(rec);
+
+    await revertHomeworkRecord({ recordId: REC_ID.toString(), actorId: ACTOR.toString(), admin: false, now: NOW });
+
+    expect(mockWriteAudit).toHaveBeenCalledTimes(1);
+    const row = mockWriteAudit.mock.calls[0][0];
+    expect(row.eventKind).toBe("HW_RECORD_REVERTED");
+    expect(row.actorId).toBe(ACTOR.toString());
+    expect(row.targetKind).toBe("HomeworkStudentRecord");
+    expect(row.meta.revertedFrom).toBe("CHECKED");
+    expect(row.meta.restoredTo).toBe("GIVEN");
+    expect(row.meta.hwId).toBe("HW-C1-MATH-0001");
+    expect(row.meta.studentId).toBe(STUDENT_ID.toString());
+    // The work that was undone is still legible even though the stamps are gone.
+    expect(row.meta.popped.map((p: { state: string }) => p.state)).toEqual([
+      "DUE",
+      "SUBMITTED",
+      "CHECKED",
+    ]);
+    expect(row.meta.popped[1].by).toBe(ACTOR.toString());
+    expect(rec.stateDates).toHaveLength(1); // stamps really are gone from the record
   });
 
   test("WRONG action (CHECKED+RESUBMIT) deletes the untouched spawn, back to SUBMITTED", async () => {

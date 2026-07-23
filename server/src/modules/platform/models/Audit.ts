@@ -81,6 +81,13 @@ export type AuditEventKind =
   | "VOCAB_RESULT_RECORDED"       // a student's vocab marks recorded — attendance + per-position mistakes (VC-3, §3.6, D-#142)
   | "VOCAB_RESULT_MESSAGED"       // guardian vocab-result messages generated for a test — wa.me + emit() (VC-4, §8, D-#154)
   | "HW_FILE_ATTACHED"    // a question/answer file attached to homework (GP-A, D-#70)
+  // A lifecycle REVERT is the one tracker action that leaves no trace on the record
+  // itself: popActionGroup DELETES the popped stateDates stamps, so completed work
+  // can silently return to "pending" with nothing to show it ever happened. These
+  // two rows are the only evidence — they carry the popped states + the restored
+  // state so "I marked it and it went back to pending" is answerable (D-#354).
+  | "HW_RECORD_REVERTED"  // a homework student record's last action was undone (D-#338)
+  | "AS_RECORD_REVERTED"  // an assignment student record's last action was undone (D-#338)
   | "BOOK_ISSUED"         // library desk issued a copy to a borrower (LB-2, D-#81/#82)
   | "BOOK_RETURNED"       // copy returned at the desk (LB-2)
   | "BOOK_RENEWED"        // loan renewed (LB-2)
