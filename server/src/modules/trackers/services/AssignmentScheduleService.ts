@@ -205,6 +205,9 @@ export interface ExpectedItem {
   status: string | null;
   asItemId: string | null;
   asId: string | null;
+  /** D-#352: current values, so the edit sheet can prefill without a second read. */
+  estMinutes: number | null;
+  totalMarks: number | null;
 }
 
 export interface ExpectedWeek {
@@ -269,6 +272,8 @@ export async function expectedItemsForWeek(
     sectionId: { toString(): string };
     subject: string;
     status: string;
+    estMinutes?: number;
+    totalMarks?: number;
   }>;
   const itemKey = (sectionId: string, subject: string): string => `${sectionId}|${subject}`;
   const byEntry = new Map(existing.map((i) => [itemKey(i.sectionId.toString(), i.subject), i]));
@@ -298,6 +303,8 @@ export async function expectedItemsForWeek(
         status: item ? item.status : null,
         asItemId: item ? item._id.toString() : null,
         asId: item ? item.asId : null,
+        estMinutes: item?.estMinutes ?? null,
+        totalMarks: item?.totalMarks ?? null,
       };
     }),
   };

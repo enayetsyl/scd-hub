@@ -11,7 +11,7 @@ import React, { useCallback, useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
-import { useQuery } from "urql";
+import { useMutation, useQuery } from "urql";
 import { roleHasPermission } from "@scd/shared";
 import {
   ACADEMIC_YEARS_QUERY,
@@ -19,11 +19,14 @@ import {
   EXPECTED_AS_WEEK,
   MY_AS_PREP_PROMPTS,
   MY_SECTIONS_AS_CLASS_TEACHER_QUERY,
+  DELETE_ASSIGNMENT_ITEM,
   type ExpectedAsItemT,
 } from "../../graphql/operations";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Chip, ChipRow, EmptyState, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { AssignmentEditSheet, type AssignmentEditTarget } from "../../components/AssignmentEditSheet";
+import { ConfirmSheet } from "../../components/ConfirmSheet";
 import { STR, bnNum, hwSubjectLabel, classLevelLabel, monthLabel } from "../../lib/labels";
 import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
@@ -60,6 +63,11 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
 
   const [scheduleQ, refetchSchedule] = useQuery({ query: AS_SCHEDULE_QUERY, variables: { academicYearId: yearId }, pause: !yearId });
   const schedule = scheduleQ.data?.assignmentSchedule ?? null;
+
+  // D-#352 — edit / delete a delivered assignment (own cell, or Principal/Office).
+  const [editTarget, setEditTarget] = useState<AssignmentEditTarget | null>(null);
+  const [delTarget, setDelTarget] = useState<{ itemId: string; label: string } | null>(null);
+  const [, deleteItem] = useMutation(DELETE_ASSIGNMENT_ITEM);
 
   const [week, setWeek] = useState<number | null>(null);
   const weekNumber = week ?? (schedule ? currentWeekNumber(schedule.termStartDate) : 1);
@@ -104,6 +112,23 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
     }
     return items;
   }, [expected, role, user, myCtSectionIds]);
+
+  /** D-#352: the cell's own subject teacher, or Principal/Office — mirrors the server gate. */
+  function canEditItem(item: ExpectedAsItemT): boolean {
+    if (!item.asItemId) return false;
+    return role !== "TEACHER" || item.teacherId === user?.id;
+  }
+
+  function openEdit(item: ExpectedAsItemT): void {
+    setEditTarget({
+      itemId: item.asItemId as string,
+      asId: item.asId ?? "",
+      label: `${classLevelLabel(item.classLevel)} — ${hwSubjectLabel(item.subject)}`,
+      issued: item.status === "ISSUED",
+      estMinutes: item.estMinutes,
+      totalMarks: item.totalMarks,
+    });
+  }
 
   function openDeliver(item: ExpectedAsItemT): void {
     if (!expected?.deliveryDate || !expected.dueDate) return;
@@ -230,22 +255,41 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                             })
                           }
                         />
+                        {canEditItem(item) ? (
+                          <Chip label={`✎ ${STR.asEdit}`} onPress={() => openEdit(item)} />
+                        ) : null}
                       </ChipRow>
                     ) : item.delivered ? (
                       // DRAFT — awaiting the weekly confirm (AS-T6)
                       <View>
                         <Muted style={{ marginBottom: 6 }}>{STR.asAwaitingConfirm}</Muted>
-                        <Chip
-                          label={`⚖️ ${STR.asReconcileTitle}`}
-                          onPress={() =>
-                            navigation.navigate("AssignmentReconcile", {
-                              academicYearId: yearId,
-                              sectionId: item.sectionId,
-                              classId: item.classId,
-                              weekNumber,
-                            })
-                          }
-                        />
+                        <ChipRow>
+                          <Chip
+                            label={`⚖️ ${STR.asReconcileTitle}`}
+                            onPress={() =>
+                              navigation.navigate("AssignmentReconcile", {
+                                academicYearId: yearId,
+                                sectionId: item.sectionId,
+                                classId: item.classId,
+                                weekNumber,
+                              })
+                            }
+                          />
+                          {canEditItem(item) ? (
+                            <>
+                              <Chip label={`✎ ${STR.asEdit}`} onPress={() => openEdit(item)} />
+                              <Chip
+                                label={`🗑 ${STR.asDelete}`}
+                                onPress={() =>
+                                  setDelTarget({
+                                    itemId: item.asItemId as string,
+                                    label: `${classLevelLabel(item.classLevel)} — ${hwSubjectLabel(item.subject)}`,
+                                  })
+                                }
+                              />
+                            </>
+                          ) : null}
+                        </ChipRow>
                       </View>
                     ) : canTrackerRead && (item.teacherId === user?.id || role !== "TEACHER") ? (
                       // Only the subject teacher (or an unscoped admin) delivers; a
@@ -276,6 +320,28 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
           </>
         )}
         </QueryGate>
+
+        <AssignmentEditSheet
+          visible={!!editTarget}
+          target={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSaved={() => refetchExpected({ requestPolicy: "network-only" })}
+        />
+        <ConfirmSheet
+          visible={!!delTarget}
+          title={STR.asDelete}
+          message={`${delTarget?.label ?? ""}
+${STR.asDeleteConfirm}`}
+          confirmLabel={STR.asDelete}
+          onCancel={() => setDelTarget(null)}
+          onConfirm={async () => {
+            const id = delTarget?.itemId;
+            setDelTarget(null);
+            if (!id) return;
+            await deleteItem({ itemId: id });
+            refetchExpected({ requestPolicy: "network-only" });
+          }}
+        />
       </ScrollView>
     </Screen>
   );

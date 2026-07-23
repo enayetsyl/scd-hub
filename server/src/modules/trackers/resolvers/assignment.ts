@@ -37,6 +37,9 @@ import {
 } from "../services/AssignmentScheduleService";
 import {
   deliverAssignmentItem as deliverSvc,
+  updateAssignmentItem as updateAssignmentItemSvc,
+  deleteAssignmentItem as deleteAssignmentItemSvc,
+  type UpdateAssignmentItemResult,
   redeliverAssignmentRecord as redeliverSvc,
   collectAssignment as collectSvc,
   sweepAssignmentChases as sweepSvc,
@@ -259,6 +262,8 @@ interface ExpectedItemShape {
   status: string | null;
   asItemId: string | null;
   asId: string | null;
+  estMinutes: number | null;
+  totalMarks: number | null;
 }
 const ExpectedItemRef = builder.objectRef<ExpectedItemShape>("ExpectedAssignmentItem");
 ExpectedItemRef.implement({
@@ -274,6 +279,8 @@ ExpectedItemRef.implement({
     status: t.string({ nullable: true, resolve: (r) => r.status }),
     asItemId: t.string({ nullable: true, resolve: (r) => r.asItemId }),
     asId: t.string({ nullable: true, resolve: (r) => r.asId }),
+    estMinutes: t.int({ nullable: true, resolve: (r) => r.estMinutes }),
+    totalMarks: t.int({ nullable: true, resolve: (r) => r.totalMarks }),
   }),
 });
 
@@ -929,6 +936,83 @@ builder.queryField("myAssignmentPrepPrompts", (t) =>
 // ===========================================================================
 // AS-T2 — delivery + collection (teacher write-scope)
 // ===========================================================================
+
+const UpdateAssignmentResultRef = builder
+  .objectRef<UpdateAssignmentItemResult>("UpdateAssignmentItemResult")
+  .implement({
+    description: "A delivered assignment after a tiered edit (D-#352).",
+    fields: (t) => ({
+      itemId: t.exposeString("itemId"),
+      asId: t.exposeString("asId"),
+      weekNumber: t.exposeInt("weekNumber"),
+      subject: t.exposeString("subject"),
+      status: t.exposeString("status"),
+      estMinutes: t.exposeInt("estMinutes"),
+      totalMarks: t.int({ nullable: true, resolve: (r) => r.totalMarks }),
+      deliveryDate: t.exposeString("deliveryDate"),
+      dueDate: t.exposeString("dueDate"),
+    }),
+  });
+
+/** Load the item's real section so write-scope is asserted on IT, never on a
+ *  client-supplied one (the module header's rule). */
+async function assertCanWriteOnItem(ctx: AppContext, itemId: string) {
+  const item = await AssignmentItem.findById(itemId).select("sectionId subject").lean();
+  if (!item) throw new Error("AssignmentItem not found");
+  await assertCanWrite(ctx, item.sectionId.toString(), await resolveSubjectId(item.subject));
+}
+
+builder.mutationField("updateAssignmentItem", (t) =>
+  t.field({
+    type: UpdateAssignmentResultRef,
+    description:
+      "Edit a delivered assignment (D-#352). DRAFT: estMinutes/totalMarks/setId/attachments. " +
+      "ISSUED: descriptive only — estMinutes is FROZEN (weekly load already confirmed) and the " +
+      "§4-resolved delivery/due dates are never editable. Own cell, or Principal/Office.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      itemId: t.arg.string({ required: true }),
+      estMinutes: t.arg.int({ required: false }),
+      totalMarks: t.arg.int({ required: false }),
+      setId: t.arg.string({ required: false }),
+      attachmentIds: t.arg.stringList({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanWriteOnItem(ctx, args.itemId);
+      return updateAssignmentItemSvc({
+        itemId: args.itemId,
+        estMinutes: args.estMinutes ?? undefined,
+        totalMarks: args.totalMarks ?? undefined,
+        setId: args.setId ?? undefined,
+        attachmentIds: args.attachmentIds ? [...args.attachmentIds] : undefined,
+        actorId: ctx.auth.userId as string,
+        isAdmin: ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE",
+      });
+    },
+  }),
+);
+
+builder.mutationField("deleteAssignmentItem", (t) =>
+  t.field({
+    type: "Boolean",
+    description:
+      "Delete a still-DRAFT delivered assignment (D-#352) — the fix path for a mistaken delivery. " +
+      "ISSUED is refused (student records exist). Own cell, or Principal/Office.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: { itemId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanWriteOnItem(ctx, args.itemId);
+      await deleteAssignmentItemSvc({
+        itemId: args.itemId,
+        actorId: ctx.auth.userId as string,
+        isAdmin: ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE",
+      });
+      return true;
+    },
+  }),
+);
 
 builder.mutationField("deliverAssignment", (t) =>
   t.field({
