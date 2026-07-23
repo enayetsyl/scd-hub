@@ -41,6 +41,7 @@ import {
   OPEN_TRACKER,
   type RecentSetT,
   type RoutineSlotT,
+  type AssignmentPrepT,
 } from "../../graphql/operations";
 import { CLASS_TEST_REPORTS_STATUS_QUERY } from "../../graphql/classTest";
 import { Screen, H1, H2, Body, Muted, Card, Badge, Button, EmptyState, Notice } from "../../components/ui";
@@ -249,6 +250,24 @@ export default function TodayScreen(): React.ReactElement {
   // Section pieces
   // ---------------------------------------------------------------------------
 
+  /** The prep card names the (class × subject) cells still to prepare — the bare
+   *  countdown didn't say WHAT to make (owner ask 2026-07-23). Caps the list so a
+   *  teacher with many rotation cells still gets a readable one-liner. */
+  const prepSubtitle = (p: AssignmentPrepT): string => {
+    // "বাকি"/"left" only reads right while time REMAINS — once timeLeft() flips to
+    // prepDueNow it would render "সময় শেষ বাকি" ("time's up left").
+    const remaining = new Date(p.dueAt).getTime() - now;
+    const head = remaining > 0 ? `${timeLeft(p.dueAt)} ${STR.prepLeft}` : timeLeft(p.dueAt);
+    const cells = p.cells ?? [];
+    if (cells.length === 0) return `${head} · ${bnNum(p.items)} ${STR.alertItems}`;
+    const shown = cells
+      .slice(0, 4)
+      .map((c) => `${classLevelLabel(c.classLevel)} · ${hwSubjectLabel(c.subject)}`)
+      .join(", ");
+    const rest = cells.length - 4;
+    return rest > 0 ? `${head} — ${shown} +${bnNum(rest)} ${STR.prepMore}` : `${head} — ${shown}`;
+  };
+
   const AlertCard = ({
     icon,
     tone,
@@ -433,7 +452,7 @@ export default function TodayScreen(): React.ReactElement {
                 icon="clock"
                 tone="gold"
                 title={STR.prepAssignment}
-                sub={`${timeLeft(prep.dueAt)} ${STR.prepLeft} · ${bnNum(prep.items)} ${STR.alertItems}`}
+                sub={prepSubtitle(prep)}
                 onPress={() => nav.navigate("AssignmentTab", { screen: "AssignmentHome" })}
               />
             ) : null}

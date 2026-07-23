@@ -195,13 +195,18 @@ async function asNotDeclaredRows(
         continue; // schedule vanished between reads — nothing owed
       }
       if (week.suspended || !week.deliveryDate) continue;
-      if (week.deliveryDate > todayKey) continue; // not late yet
+      // expectedItemsForWeek returns a FULL ISO instant (dateOnlyISO), so it must be
+      // narrowed to a date key before comparing with one — "2026-07-23T00:00:00.000Z"
+      // sorts AFTER "2026-07-23" (longer string, equal prefix), which silently hid
+      // every undelivered cell on its own delivery day (owner finding 2026-07-23).
+      const deliveryKey = (week.deliveryDate as string).slice(0, 10);
+      if (deliveryKey > todayKey) continue; // only the FUTURE isn't due yet
       for (const item of week.items) {
         if (item.delivered) continue;
         out.push({
           weekNumber: week.weekNumber,
           weekStartKey: week.weekStart,
-          deliveryDateKey: week.deliveryDate,
+          deliveryDateKey: deliveryKey,
           sectionId: item.sectionId,
           classLevel: item.classLevel,
           subject: item.subject,
