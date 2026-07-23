@@ -12,14 +12,23 @@ import { useQuery, useMutation } from "urql";
 import { AS_WEEK_LOAD, SET_AS_ITEM_MINUTES, CONFIRM_AS_WEEK } from "../../graphql/operations";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, Loader, EmptyState, Notice } from "../../components/ui";
-import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, monthLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AssignmentStackParamList, "AssignmentReconcile">;
 
 export default function AssignmentReconcileScreen({ route, navigation }: Props): React.ReactElement {
-  const { academicYearId, sectionId, weekNumber } = route.params;
+  const { academicYearId, sectionId, weekNumber, month, weekOfMonth } = route.params;
+
+  // `weekNumber` is the CONTINUOUS term-anchored index (the server key) — it is NOT the
+  // number the teacher sees on the Assignments home ("July · Week 4" = week-of-month).
+  // Label with the home screen's form when it was passed, so the same week never shows
+  // two different numbers; fall back to the raw index otherwise.
+  const weekLabel =
+    month != null && weekOfMonth != null
+      ? `${monthLabel(month)} · ${STR.asWeek} ${bnNum(weekOfMonth)}`
+      : `${STR.asWeek} ${bnNum(weekNumber)}`;
 
   const [loadQ, refetch] = useQuery({
     query: AS_WEEK_LOAD,
@@ -81,8 +90,8 @@ export default function AssignmentReconcileScreen({ route, navigation }: Props):
           <>
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Body style={{ fontWeight: "700" }}>
-                  {STR.asWeek} {bnNum(weekNumber)} — {STR.asWeeklyTotal}
+                <Body style={{ fontWeight: "700", flexShrink: 1 }}>
+                  {weekLabel} — {STR.asWeeklyTotal}
                 </Body>
                 <Badge
                   text={`${bnNum(load.totalMinutes)} / ${bnNum(load.ceiling)} ${STR.asMinutes}`}
