@@ -136,6 +136,10 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
       academicYearId: yearId,
       entryId: item.entryId,
       weekNumber,
+      // Carry the home screen's human label so the detail screen shows the SAME
+      // week ("July · Week 4"), not the continuous term-anchored index.
+      month: expected.month,
+      weekOfMonth: expected.weekOfMonth,
       sectionId: item.sectionId,
       classId: item.classId,
       classLevel: item.classLevel,
@@ -272,6 +276,8 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                                 sectionId: item.sectionId,
                                 classId: item.classId,
                                 weekNumber,
+                                month: expected?.month,
+                                weekOfMonth: expected?.weekOfMonth,
                               })
                             }
                           />
