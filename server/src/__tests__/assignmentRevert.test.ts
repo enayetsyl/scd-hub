@@ -18,11 +18,19 @@ jest.mock("../modules/trackers/models/AssignmentStudentRecord", () => ({
   },
 }));
 
+// D-#354: a revert deletes the popped stamps, so the audit row is the only trace.
+const mockWriteAudit = jest.fn();
+jest.mock("../modules/platform/services/AuditService", () => ({
+  writeAudit: (p: unknown) => mockWriteAudit(p),
+}));
+
 import { revertAssignmentRecord } from "../modules/trackers/services/AssignmentRevertService";
 
 const ACTOR = new mongoose.Types.ObjectId();
 const OTHER = new mongoose.Types.ObjectId();
 const REC_ID = new mongoose.Types.ObjectId();
+const ITEM_ID = new mongoose.Types.ObjectId();
+const STUDENT_ID = new mongoose.Types.ObjectId();
 
 const T0 = new Date("2026-07-19T09:00:00+06:00");
 const T1 = new Date("2026-07-19T10:00:00+06:00");
@@ -33,6 +41,8 @@ function makeRec(extra: Record<string, unknown> = {}) {
   return {
     _id: REC_ID,
     asId: "AS-C2-MATH-0001",
+    asItemId: ITEM_ID,
+    studentId: STUDENT_ID,
     state: "CHECKED",
     stateDates: [
       { state: "GIVEN", at: T0 },
@@ -67,6 +77,26 @@ describe("revertAssignmentRecord", () => {
     expect(rec.marks).toBeUndefined();
     expect(rec.feedback).toBeUndefined();
     expect(rec.save).toHaveBeenCalled();
+  });
+
+  // D-#354: the popped stamps are DELETED from the record — this row is the only
+  // evidence the undone work ever happened.
+  test("writes an AS_RECORD_REVERTED audit carrying the popped stamps (the only trace)", async () => {
+    const rec = makeRec();
+    mockFindById.mockResolvedValue(rec);
+
+    await revertAssignmentRecord({ recordId: REC_ID.toString(), actorId: ACTOR.toString(), admin: false, now: NOW });
+
+    expect(mockWriteAudit).toHaveBeenCalledTimes(1);
+    const row = mockWriteAudit.mock.calls[0][0];
+    expect(row.eventKind).toBe("AS_RECORD_REVERTED");
+    expect(row.targetKind).toBe("AssignmentStudentRecord");
+    expect(row.meta.revertedFrom).toBe("CHECKED");
+    expect(row.meta.restoredTo).toBe("SUBMITTED");
+    expect(row.meta.asId).toBe("AS-C2-MATH-0001");
+    expect(row.meta.studentId).toBe(STUDENT_ID.toString());
+    expect(row.meta.popped.map((p: { state: string }) => p.state)).toEqual(["CHECKED"]);
+    expect(row.meta.popped[0].by).toBe(ACTOR.toString());
   });
 
   test("RESUBMIT-alone pop restores CHECKED and KEEPS result/marks/feedback", async () => {
