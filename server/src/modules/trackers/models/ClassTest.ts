@@ -56,6 +56,13 @@ export interface IClassTest extends Document {
   /** The queue row this test's PRINTING is tracked on (PQ-5, D-#281). The Office
    *  works the unified PrintRequest queue; this test's status mirrors it. */
   printRequestId?: Types.ObjectId;
+  /** The ACCOUNTABLE subject teacher — whose exam this is, whose account it shows
+   *  in, and who the report attributes it to. Defaulted from the routine at
+   *  creation (overridable when an admin requests on a teacher's behalf), so
+   *  `requestedBy` stays purely "who entered it". Optional: rows created before
+   *  this field are backfilled from the routine; readers fall back to
+   *  `requestedBy`. Mirrors AssignmentItem.teacherId / .deliveredBy. */
+  teacherId?: Types.ObjectId;
   requestedBy: Types.ObjectId;
   requestedAt: Date;
   printedBy?: Types.ObjectId;
@@ -82,6 +89,7 @@ const ClassTestSchema = new Schema<IClassTest>(
     questionFileId: { type: Schema.Types.ObjectId, ref: "StoredFile" },
     status: { type: String, enum: CLASS_TEST_STATUSES, required: true, default: "REQUESTED" },
     deadlineDays: { type: Number, required: true, default: 2, min: 0 },
+    teacherId: { type: Schema.Types.ObjectId },
     requestedBy: { type: Schema.Types.ObjectId, required: true },
     requestedAt: { type: Date, required: true, default: () => new Date() },
     printedBy: { type: Schema.Types.ObjectId },
@@ -96,6 +104,8 @@ ClassTestSchema.index({ status: 1, requestedAt: 1 });
 // Teacher's own requests + testNumber auto-suggest scan (per class+subject+year).
 ClassTestSchema.index({ academicYearId: 1, classLevel: 1, subject: 1 });
 ClassTestSchema.index({ requestedBy: 1, requestedAt: -1 });
+// The subject teacher's own exams (their account / the report's teacher filter).
+ClassTestSchema.index({ teacherId: 1, requestedAt: -1 });
 ClassTestSchema.index({ sectionId: 1, status: 1 });
 
 export const ClassTest = model<IClassTest>("ClassTest", ClassTestSchema);

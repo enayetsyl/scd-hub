@@ -22,7 +22,7 @@ import {
   REGISTER_CLASS_TEST_OFFICIAL,
   SUGGEST_CLASS_TEST_NUMBER_QUERY,
 } from "../../graphql/classTest";
-import { ASSESSMENT_SETS_QUERY, ACADEMIC_YEARS_QUERY } from "../../graphql/operations";
+import { ASSESSMENT_SETS_QUERY, ACADEMIC_YEARS_QUERY, TEACHERS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Field, Chip, Select } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { MoreOptions } from "../../components/MoreOptions";
@@ -76,6 +76,10 @@ export default function RequestClassTestScreen(): React.ReactElement {
   const [testNumber, setTestNumber] = useState("");
   const [deadlineDays, setDeadlineDays] = useState("");
   const [notes, setNotes] = useState("");
+  // The ACCOUNTABLE subject teacher. "" = let the routine decide (the default and
+  // the common case); an explicit pick is how Principal/Office register an exam on
+  // a teacher's behalf so it lands in THAT teacher's account and report row.
+  const [teacherId, setTeacherId] = useState("");
   // R-Validate (UX-1): per-field errors; the toast names the first offending field.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -83,6 +87,9 @@ export default function RequestClassTestScreen(): React.ReactElement {
 
   const [, createReq] = useMutation(CREATE_CLASS_TEST_REQUEST);
   const [, registerOfficial] = useMutation(REGISTER_CLASS_TEST_OFFICIAL);
+
+  // Teacher options for the "on behalf of" override (see the picker in More options).
+  const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
 
   // The caller's assembled sets for the chosen section — the pool-set picker source
   // (UX-3, R-Search). Filtered client-side to CT sets; a set is picked by id, never pasted.
@@ -196,6 +203,9 @@ export default function RequestClassTestScreen(): React.ReactElement {
       testNumber: testNumber.trim() ? Number(testNumber) : null,
       deadlineDays: deadlineDays.trim() ? Number(deadlineDays) : null,
       notes: notes.trim() || null,
+      // Empty → the server reads the routine's subject teacher for this
+      // section × subject; a pick overrides it (registering on someone's behalf).
+      teacherId: teacherId || null,
     };
     // D-#339: the no-print register skips the queue entirely — born official.
     const res = skipPrint
@@ -359,6 +369,18 @@ export default function RequestClassTestScreen(): React.ReactElement {
             />
             <Field label={STR.ctTestNumber} value={testNumber} onChangeText={setTestNumber} keyboardType="number-pad" />
             <Field label={STR.ctDeadlineDays} value={deadlineDays} onChangeText={setDeadlineDays} keyboardType="number-pad" />
+            {/* Whose exam this is. Default (empty) = the routine's subject teacher;
+                pick a name to register on that teacher's behalf, so the exam shows
+                under THEIR name and lands in THEIR account. */}
+            <Select
+              label={STR.ctSubjectTeacher}
+              value={teacherId}
+              options={[
+                { label: STR.ctSubjectTeacherAuto, value: "" },
+                ...(teachersQ.data?.teachers ?? []).map((t) => ({ label: t.name, value: t.id })),
+              ]}
+              onChange={(v) => setTeacherId(v ?? "")}
+            />
             <Field label={STR.ctNotes} value={notes} onChangeText={setNotes} />
           </MoreOptions>
 

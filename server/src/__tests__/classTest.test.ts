@@ -83,6 +83,15 @@ jest.mock("../modules/assessment/models/AssessmentSet", () => ({
   AssessmentSet: { findById: (id: unknown) => mockSetFindById(id) },
 }));
 
+// The routine decides a new exam's ACCOUNTABLE subject teacher (createRequest →
+// resolveSubjectTeacher). Default: no slots, so attribution falls back to the
+// actor and every pre-existing assertion holds; a test that wants the on-behalf
+// path stubs slots explicitly.
+const mockSlotFind = jest.fn(() => leanChain([]));
+jest.mock("../modules/routine/models/RoutineSlot", () => ({
+  RoutineSlot: { find: (...a: unknown[]) => mockSlotFind(...(a as [])) },
+}));
+
 const mockUpload = jest.fn();
 const mockDownload = jest.fn();
 jest.mock("../modules/platform/services/DriveStore", () => {
@@ -176,6 +185,7 @@ beforeEach(() => {
   mockSectionFindById.mockReturnValue(leanChain({ classId: CLASS_OID }));
   mockClassFindById.mockReturnValue(leanChain({ level: 3, academicYearId: AY_OID }));
   mockSetFindById.mockReturnValue(leanChain({ setType: "CT" }));
+  mockSlotFind.mockReturnValue(leanChain([])); // routine names nobody → actor is accountable
   mockCtFindOne.mockReturnValue(leanChain(null)); // suggestTestNumber: none yet → 1
   mockCtCreate.mockImplementation(async (a: Record<string, unknown>) => ({ _id: oid(), ...a }));
   mockUpload.mockResolvedValue("drive-internal-ct");
@@ -397,6 +407,54 @@ describe("createRequest", () => {
     mockSetFindById.mockReturnValue(leanChain({ setType: "HW" }));
     await expect(createRequest({ ...baseInput, skipPrint: true })).rejects.toThrow(/not a CT-kind/);
     expect(mockCtCreate).not.toHaveBeenCalled();
+  });
+
+  // --- accountable subject teacher (owner ask: an admin registering on a
+  // teacher's behalf must attribute the exam to that TEACHER, not to themselves).
+  test("attributes the exam to the ROUTINE's subject teacher, not the actor", async () => {
+    const routineTeacher = oid();
+    mockSlotFind.mockReturnValue(
+      leanChain([
+        {
+          groupId: SECTION_OID,
+          subject: "MATH",
+          dayOfWeek: "SUN",
+          periodNumber: 2,
+          teacherId: routineTeacher,
+          effectiveFrom: new Date("2020-01-01"),
+          effectiveTo: null,
+        },
+      ]),
+    );
+    const res = await createRequest(baseInput);
+    expect(res.teacherId).toBe(routineTeacher.toString());
+    expect(res.requestedBy).toBe(TEACHER_ID); // who ENTERED it is unchanged
+  });
+
+  test("an explicit teacherId (admin picking on-behalf) wins over the routine", async () => {
+    const routineTeacher = oid();
+    const picked = oid();
+    mockSlotFind.mockReturnValue(
+      leanChain([
+        {
+          groupId: SECTION_OID,
+          subject: "MATH",
+          dayOfWeek: "SUN",
+          periodNumber: 1,
+          teacherId: routineTeacher,
+          effectiveFrom: new Date("2020-01-01"),
+          effectiveTo: null,
+        },
+      ]),
+    );
+    const res = await createRequest({ ...baseInput, teacherId: picked.toString() });
+    expect(res.teacherId).toBe(picked.toString());
+  });
+
+  test("falls back to the actor when the routine names no teacher for the cell", async () => {
+    mockSlotFind.mockReturnValue(leanChain([]));
+    const res = await createRequest(baseInput);
+    expect(res.teacherId).toBe(TEACHER_ID);
   });
 });
 

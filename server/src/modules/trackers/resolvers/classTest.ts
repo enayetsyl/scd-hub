@@ -91,6 +91,7 @@ ClassTestRef.implement({
     questionFileId: t.string({ nullable: true, resolve: (r) => r.questionFileId }),
     status: t.exposeString("status"),
     deadlineDays: t.exposeInt("deadlineDays"),
+    teacherId: t.string({ nullable: true, resolve: (r) => r.teacherId }),
     requestedBy: t.exposeString("requestedBy"),
     requestedAt: t.exposeString("requestedAt"),
     printedBy: t.string({ nullable: true, resolve: (r) => r.printedBy }),
@@ -130,6 +131,9 @@ builder.mutationField("createClassTestRequest", (t) =>
       testNumber: t.arg.int({ required: false }),
       deadlineDays: t.arg.int({ required: false }),
       notes: t.arg.string({ required: false }),
+      /** Accountable subject teacher — set when registering on a teacher's
+       *  behalf. Omitted → the routine decides (else the actor). */
+      teacherId: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -150,6 +154,7 @@ builder.mutationField("createClassTestRequest", (t) =>
         testNumber: args.testNumber ?? undefined,
         deadlineDays: args.deadlineDays ?? undefined,
         notes: args.notes ?? undefined,
+        teacherId: args.teacherId ?? undefined,
         actorId: ctx.auth.userId as string,
       });
     },
@@ -179,6 +184,9 @@ builder.mutationField("registerClassTestOfficial", (t) =>
       testNumber: t.arg.int({ required: false }),
       deadlineDays: t.arg.int({ required: false }),
       notes: t.arg.string({ required: false }),
+      /** Accountable subject teacher — the Principal/Office "on behalf of" pick.
+       *  Omitted → the routine decides (else the actor). */
+      teacherId: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -200,6 +208,7 @@ builder.mutationField("registerClassTestOfficial", (t) =>
         testNumber: args.testNumber ?? undefined,
         deadlineDays: args.deadlineDays ?? undefined,
         notes: args.notes ?? undefined,
+        teacherId: args.teacherId ?? undefined,
         skipPrint: true,
         actorId: ctx.auth.userId as string,
       });
