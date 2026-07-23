@@ -55,6 +55,10 @@ const mockNilFind = jest.fn();
 jest.mock("../modules/trackers/models/HomeworkNilDeclaration", () => ({
   HomeworkNilDeclaration: { find: (f: unknown) => chain(mockNilFind)(f) },
 }));
+const mockAsNilFind = jest.fn();
+jest.mock("../modules/trackers/models/AssignmentNilDeclaration", () => ({
+  AssignmentNilDeclaration: { find: (f: unknown) => chain(mockAsNilFind)(f) },
+}));
 // D-#309 — assignment declare-pending: schedules enumerate weeks; the expected
 // grid itself is the AssignmentScheduleService's (already covered there).
 const mockScheduleFind = jest.fn();
@@ -82,6 +86,7 @@ beforeEach(() => {
   mockSlotFind.mockResolvedValue([]);
   mockHolidayFind.mockResolvedValue([]);
   mockNilFind.mockResolvedValue([]);
+  mockAsNilFind.mockResolvedValue([]);
   mockScheduleFind.mockResolvedValue([]);
   mockExpectedWeek.mockResolvedValue({ suspended: true, deliveryDate: null, items: [] });
 });
@@ -107,6 +112,7 @@ describe("reconciliationReport (D-#290)", () => {
       asMisses: [],
       hwNotDeclared: [],
       hwNilDeclared: [],
+      asNilDeclared: [],
       asNotDeclared: [],
     });
   });
@@ -385,6 +391,52 @@ describe("asNotDeclared (D-#309)", () => {
     // Mon 2026-07-13 sits inside week 2, whose delivery is Thu 2026-07-16.
     const r = await reconciliationReport("2026-07-13", "2026-07-13", new Date(2026, 6, 13));
     expect(r.asNotDeclared).toEqual([]);
+  });
+
+  test("an explicit no-assignment declaration moves the cell out of the red list into asNilDeclared", async () => {
+    seedSection();
+    mockUserFind.mockResolvedValue([{ _id: "u-as", name: "Tanjila Akter Jerin" }]);
+    mockScheduleFind.mockResolvedValue([{ academicYearId: "ay-1", termStartDate: TERM }]);
+    mockAsNilFind.mockResolvedValue([
+      {
+        weekNumber: 1,
+        weekStartKey: "2026-07-05",
+        deliveryDateKey: "2026-07-09",
+        sectionId: SEC,
+        classLevel: -1,
+        subject: "ENG",
+        declaredBy: "u-as",
+        reason: "REVISION",
+      },
+    ]);
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(
+        expectedWeek(w, {
+          items: [
+            {
+              delivered: false,
+              nilDeclared: true,
+              sectionId: SEC,
+              classLevel: -1,
+              subject: "ENG",
+              teacherId: "u-as",
+            },
+          ],
+        }),
+      ),
+    );
+
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotDeclared).toEqual([]);
+    expect(r.asNilDeclared).toHaveLength(1);
+    expect(r.asNilDeclared[0]).toMatchObject({
+      weekNumber: 1,
+      deliveryDateKey: "2026-07-09",
+      sectionId: SEC,
+      subject: "ENG",
+      teacherName: "Tanjila Akter Jerin",
+      reason: "REVISION",
+    });
   });
 
   test("suspended weeks owe nothing", async () => {

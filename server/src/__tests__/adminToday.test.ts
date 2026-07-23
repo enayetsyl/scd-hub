@@ -101,6 +101,7 @@ const EMPTY_RECON = {
   asMisses: [],
   hwNotDeclared: [],
   hwNilDeclared: [],
+  asNilDeclared: [],
   asNotDeclared: [],
 };
 
