@@ -17,7 +17,7 @@ import { RECON_REPORT_QUERY } from "../../graphql/operations";
 import type { ReportsStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Loader, ErrorBanner } from "../../components/ui";
 import { useReportRange, useRowFilters } from "../../components/ReportFilters";
-import { STR, bnNum, classLevelLabel, hwSubjectLabel } from "../../lib/labels";
+import { STR, bnNum, classLevelLabel, hwSubjectLabel, monthLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
@@ -38,7 +38,6 @@ interface Row {
   detail?: string;
   badge: string;
 }
-
 export default function PendingReportScreen({ route }: Props): React.ReactElement {
   const kind = route.name as Kind;
   const colors = useColors();
@@ -56,6 +55,14 @@ export default function PendingReportScreen({ route }: Props): React.ReactElemen
     // Assignment week keys arrive as full ISO instants — show the DATE only
     // (owner ask 2026-07-21). Safe on bare YYYY-MM-DD keys too.
     const dayOf = (k: string): string => bnNum(k.slice(0, 10));
+    const assignmentWeekLabel = (deliveryKey: string | null | undefined, fallbackWeekNumber: number, fallbackDateKey: string): string => {
+      const key = deliveryKey?.slice(0, 10) ?? fallbackDateKey.slice(0, 10);
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+      if (!m) return `${STR.rrWeek} ${bnNum(fallbackWeekNumber)} - ${dayOf(key)}`;
+      const month = Number(m[2]) - 1;
+      const weekOfMonth = Math.floor((Number(m[3]) - 1) / 7) + 1;
+      return `${monthLabel(month)} - ${STR.rrWeek} ${bnNum(weekOfMonth)} - ${dayOf(key)}`;
+    };
     switch (kind) {
       case "HwDeclarePending":
         return report.hwNotDeclared.map((m) => ({
@@ -82,8 +89,8 @@ export default function PendingReportScreen({ route }: Props): React.ReactElemen
       case "AsDeclarePending":
         return report.asNotDeclared.map((m) => ({
           key: `${m.sectionId}|${m.subject}|${m.weekNumber}`,
-          groupKey: m.weekStartKey,
-          groupLabel: `${STR.rrWeek} ${bnNum(m.weekNumber)} · ${dayOf(m.weekStartKey)}`,
+          groupKey: m.deliveryDateKey ?? m.weekStartKey,
+          groupLabel: assignmentWeekLabel(m.deliveryDateKey, m.weekNumber, m.weekStartKey),
           classLevel: m.classLevel,
           sectionNameBn: m.sectionNameBn,
           subject: m.subject,
@@ -95,7 +102,7 @@ export default function PendingReportScreen({ route }: Props): React.ReactElemen
         return report.asMisses.map((m) => ({
           key: `${m.sectionId}|${m.weekNumber}`,
           groupKey: m.deliveryDateKey,
-          groupLabel: `${STR.rrWeek} ${bnNum(m.weekNumber)} · ${dayOf(m.deliveryDateKey)}`,
+          groupLabel: assignmentWeekLabel(m.deliveryDateKey, m.weekNumber, m.deliveryDateKey),
           classLevel: m.classLevel,
           sectionNameBn: m.sectionNameBn,
           teacherName: m.confirmerName,
