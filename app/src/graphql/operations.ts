@@ -2561,6 +2561,17 @@ export interface HwNilDeclaredT {
   teacherName: string | null;
   reason: string;
 }
+export interface AsNilDeclaredT {
+  weekNumber: number;
+  weekStartKey: string;
+  deliveryDateKey: string;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  subject: string;
+  teacherName: string | null;
+  reason: string;
+}
 /** D-#309: rotation-expected assignment nobody declared — per section × subject × week. */
 export interface AsNotDeclaredT {
   weekNumber: number;
@@ -2579,6 +2590,7 @@ export interface ReconReportT {
   asMisses: AsReconMissT[];
   hwNotDeclared: HwNotDeclaredT[];
   hwNilDeclared: HwNilDeclaredT[];
+  asNilDeclared: AsNilDeclaredT[];
   asNotDeclared: AsNotDeclaredT[];
 }
 // D-#350 — homework lifecycle report, teacher-first (Principal/Office).
@@ -2682,6 +2694,7 @@ export const RECON_REPORT_QUERY = gql<
       asMisses { weekNumber deliveryDateKey sectionId sectionNameBn classLevel confirmerName draftItems draftMinutes }
       hwNotDeclared { dateKey sectionId sectionNameBn classLevel subject teacherName }
       hwNilDeclared { dateKey sectionId sectionNameBn classLevel subject teacherName reason }
+      asNilDeclared { weekNumber weekStartKey deliveryDateKey sectionId sectionNameBn classLevel subject teacherName reason }
       asNotDeclared { weekNumber weekStartKey deliveryDateKey sectionId sectionNameBn classLevel subject teacherName }
     }
   }
@@ -3908,6 +3921,9 @@ export interface ExpectedAsItemT {
   asId: string | null;
   estMinutes: number | null;
   totalMarks: number | null;
+  nilDeclared: boolean;
+  nilReason: string | null;
+  nilDeclarationId: string | null;
 }
 
 export interface ExpectedAsWeekT {
@@ -3931,8 +3947,44 @@ export const EXPECTED_AS_WEEK = gql<
   query ExpectedAssignmentsForWeek($academicYearId: String!, $weekNumber: Int!) {
     expectedAssignmentsForWeek(academicYearId: $academicYearId, weekNumber: $weekNumber) {
       academicYearId weekNumber cycleWeek weekStart year month weekOfMonth suspended deliveryDate dueDate
-      items { entryId cycleWeek classId classLevel sectionId subject teacherId delivered status asItemId asId estMinutes totalMarks }
+      items { entryId cycleWeek classId classLevel sectionId subject teacherId delivered status asItemId asId estMinutes totalMarks nilDeclared nilReason nilDeclarationId }
     }
+  }
+`;
+
+export interface AsNilDeclT {
+  id: string;
+  academicYearId: string;
+  weekNumber: number;
+  cycleWeek: number;
+  weekStartKey: string;
+  deliveryDateKey: string;
+  classId: string;
+  classLevel: number;
+  sectionId: string;
+  subject: string;
+  teacherId: string;
+  reason: string;
+  declaredBy: string;
+}
+
+export const DECLARE_NO_ASSIGNMENT = gql<
+  { declareNoAssignment: AsNilDeclT },
+  { academicYearId: string; weekNumber: number; entryId: string; sectionId: string; reason: string }
+>`
+  mutation DeclareNoAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!, $reason: String!) {
+    declareNoAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId, reason: $reason) {
+      id academicYearId weekNumber cycleWeek weekStartKey deliveryDateKey classId classLevel sectionId subject teacherId reason declaredBy
+    }
+  }
+`;
+
+export const REMOVE_NO_ASSIGNMENT = gql<
+  { removeNoAssignment: boolean },
+  { academicYearId: string; weekNumber: number; entryId: string; sectionId: string }
+>`
+  mutation RemoveNoAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!) {
+    removeNoAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId)
   }
 `;
 

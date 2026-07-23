@@ -23,6 +23,7 @@ import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkNilDeclaration } from "../models/HomeworkNilDeclaration";
 import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconciliation";
 import { AssignmentItem } from "../models/AssignmentItem";
+import { AssignmentNilDeclaration } from "../models/AssignmentNilDeclaration";
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
@@ -97,6 +98,18 @@ export interface AsNotDeclared {
   teacherName: string | null;
 }
 
+export interface AsNilDeclared {
+  weekNumber: number;
+  weekStartKey: string;
+  deliveryDateKey: string;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  subject: string;
+  teacherName: string | null;
+  reason: string;
+}
+
 export interface ReconReport {
   fromKey: string;
   toKey: string;
@@ -108,6 +121,7 @@ export interface ReconReport {
   /** Explicit "no homework today" declarations in the range (D-#299) — the neutral
    *  list; these cells are EXCLUDED from hwNotDeclared. */
   hwNilDeclared: HwNilDeclared[];
+  asNilDeclared: AsNilDeclared[];
   /** D-#309: rotation-expected assignments never declared, per (section × subject × week). */
   asNotDeclared: AsNotDeclared[];
 }
@@ -202,7 +216,7 @@ async function asNotDeclaredRows(
       const deliveryKey = (week.deliveryDate as string).slice(0, 10);
       if (deliveryKey > todayKey) continue; // only the FUTURE isn't due yet
       for (const item of week.items) {
-        if (item.delivered) continue;
+        if (item.delivered || item.nilDeclared) continue;
         out.push({
           weekNumber: week.weekNumber,
           weekStartKey: week.weekStart,
@@ -312,6 +326,9 @@ export async function reconciliationReport(
   const nilKeys = new Set(
     nilRows.map((r) => `${r.sectionId.toString()}|${r.subject}|${r.dateKey}`),
   );
+  const asNilRows = await AssignmentNilDeclaration.find({
+    deliveryDateKey: { $gte: fromKey, $lte: toKey },
+  }).lean();
 
   // --- Homework never declared at all (routine-expected, per class × subject × day) --
   const notDeclRaw = await hwNotDeclaredRows(fromKey, toKey, now, nilKeys);
@@ -402,6 +419,7 @@ export async function reconciliationReport(
       ...asPending.map((b) => b.sectionId),
       ...notDeclRaw.map((r) => r.sectionId),
       ...nilRows.map((r) => r.sectionId.toString()),
+      ...asNilRows.map((r) => r.sectionId.toString()),
       ...asNotDeclRaw.map((r) => r.sectionId),
     ]),
   ]);
@@ -410,6 +428,7 @@ export async function reconciliationReport(
     ...new Set([
       ...(notDeclRaw.map((r) => r.teacherId).filter(Boolean) as string[]),
       ...nilRows.map((r) => r.declaredBy.toString()),
+      ...asNilRows.map((r) => r.declaredBy.toString()),
       ...(asNotDeclRaw.map((r) => r.teacherId).filter(Boolean) as string[]),
     ]),
   ];
@@ -437,6 +456,27 @@ export async function reconciliationReport(
         : a.dateKey < b.dateKey
           ? 1
           : -1,
+    );
+
+  const asNilDeclared: AsNilDeclared[] = asNilRows
+    .map((r) => {
+      const s = info.get(r.sectionId.toString());
+      return {
+        weekNumber: r.weekNumber,
+        weekStartKey: r.weekStartKey,
+        deliveryDateKey: r.deliveryDateKey,
+        sectionId: r.sectionId.toString(),
+        sectionNameBn: s?.nameBn ?? r.sectionId.toString(),
+        classLevel: s?.classLevel ?? r.classLevel,
+        subject: r.subject,
+        teacherName: teacherNameOf.get(r.declaredBy.toString()) ?? null,
+        reason: r.reason,
+      };
+    })
+    .sort((a, b) =>
+      a.weekNumber === b.weekNumber
+        ? a.classLevel - b.classLevel || a.subject.localeCompare(b.subject)
+        : b.weekNumber - a.weekNumber,
     );
 
   const hwNotDeclared: HwNotDeclared[] = notDeclRaw
@@ -512,5 +552,5 @@ export async function reconciliationReport(
         : b.weekNumber - a.weekNumber,
     );
 
-  return { fromKey, toKey, hwMisses, asMisses, hwNotDeclared, hwNilDeclared, asNotDeclared };
+  return { fromKey, toKey, hwMisses, asMisses, hwNotDeclared, hwNilDeclared, asNilDeclared, asNotDeclared };
 }

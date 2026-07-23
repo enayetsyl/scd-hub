@@ -34,6 +34,9 @@ import {
   getAssignmentSchedule as getScheduleSvc,
   expectedItemsForWeek as expectedWeekSvc,
   myAssignmentPrepPrompts as prepPromptsSvc,
+  declareNoAssignment as declareNoAssignmentSvc,
+  removeNoAssignment as removeNoAssignmentSvc,
+  type AssignmentNilDeclarationDTO,
 } from "../services/AssignmentScheduleService";
 import {
   deliverAssignmentItem as deliverSvc,
@@ -264,6 +267,9 @@ interface ExpectedItemShape {
   asId: string | null;
   estMinutes: number | null;
   totalMarks: number | null;
+  nilDeclared: boolean;
+  nilReason: string | null;
+  nilDeclarationId: string | null;
 }
 const ExpectedItemRef = builder.objectRef<ExpectedItemShape>("ExpectedAssignmentItem");
 ExpectedItemRef.implement({
@@ -281,6 +287,29 @@ ExpectedItemRef.implement({
     asId: t.string({ nullable: true, resolve: (r) => r.asId }),
     estMinutes: t.int({ nullable: true, resolve: (r) => r.estMinutes }),
     totalMarks: t.int({ nullable: true, resolve: (r) => r.totalMarks }),
+    nilDeclared: t.exposeBoolean("nilDeclared"),
+    nilReason: t.string({ nullable: true, resolve: (r) => r.nilReason }),
+    nilDeclarationId: t.string({ nullable: true, resolve: (r) => r.nilDeclarationId }),
+  }),
+});
+
+const AssignmentNilDeclarationRef = builder.objectRef<AssignmentNilDeclarationDTO>("AssignmentNilDeclaration");
+AssignmentNilDeclarationRef.implement({
+  description: "Explicit 'no assignment this week' declaration for one scheduled assignment cell.",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    academicYearId: t.exposeString("academicYearId"),
+    weekNumber: t.exposeInt("weekNumber"),
+    cycleWeek: t.exposeInt("cycleWeek"),
+    weekStartKey: t.exposeString("weekStartKey"),
+    deliveryDateKey: t.exposeString("deliveryDateKey"),
+    classId: t.exposeString("classId"),
+    classLevel: t.exposeInt("classLevel"),
+    sectionId: t.exposeString("sectionId"),
+    subject: t.exposeString("subject"),
+    teacherId: t.exposeString("teacherId"),
+    reason: t.exposeString("reason"),
+    declaredBy: t.exposeString("declaredBy"),
   }),
 });
 
@@ -929,6 +958,71 @@ builder.queryField("myAssignmentPrepPrompts", (t) =>
         ctx.auth.userId as string,
         args.date ? new Date(args.date) : undefined,
       );
+    },
+  }),
+);
+
+builder.mutationField("declareNoAssignment", (t) =>
+  t.field({
+    type: AssignmentNilDeclarationRef,
+    description:
+      "Declare an expected assignment cell as deliberately none for the week. Clears prep/report pending rows.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      academicYearId: t.arg.string({ required: true }),
+      weekNumber: t.arg.int({ required: true }),
+      entryId: t.arg.string({ required: true }),
+      sectionId: t.arg.string({ required: true }),
+      reason: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const schedule = await AssignmentSchedule.findOne({ academicYearId: args.academicYearId });
+      const entry = schedule?.entries.id(args.entryId);
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        entry?.subject ? await resolveSubjectId(entry.subject) : undefined,
+      );
+      return declareNoAssignmentSvc({
+        academicYearId: args.academicYearId,
+        weekNumber: args.weekNumber,
+        entryId: args.entryId,
+        sectionId: args.sectionId,
+        reason: args.reason,
+        actorId: ctx.auth.userId as string,
+      });
+    },
+  }),
+);
+
+builder.mutationField("removeNoAssignment", (t) =>
+  t.field({
+    type: "Boolean",
+    description: "Remove an explicit 'no assignment' declaration for one expected assignment cell.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      academicYearId: t.arg.string({ required: true }),
+      weekNumber: t.arg.int({ required: true }),
+      entryId: t.arg.string({ required: true }),
+      sectionId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const schedule = await AssignmentSchedule.findOne({ academicYearId: args.academicYearId });
+      const entry = schedule?.entries.id(args.entryId);
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        entry?.subject ? await resolveSubjectId(entry.subject) : undefined,
+      );
+      return removeNoAssignmentSvc({
+        academicYearId: args.academicYearId,
+        weekNumber: args.weekNumber,
+        entryId: args.entryId,
+        sectionId: args.sectionId,
+        actorId: ctx.auth.userId as string,
+      });
     },
   }),
 );

@@ -18,6 +18,7 @@ import { HW_SUBJECTS, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@sc
 import type { HwSubject } from "@scd/shared";
 import { AssignmentSchedule, type IAssignmentSchedule } from "../models/AssignmentSchedule";
 import { AssignmentItem } from "../models/AssignmentItem";
+import { AssignmentNilDeclaration, AS_NIL_REASONS, type AsNilReason } from "../models/AssignmentNilDeclaration";
 import { HolidayException } from "../../routine/models/HolidayException";
 import { dayTypeFor } from "../../routine/calendar";
 import {
@@ -208,6 +209,10 @@ export interface ExpectedItem {
   /** D-#353: current values, so the edit sheet can prefill without a second read. */
   estMinutes: number | null;
   totalMarks: number | null;
+  /** Explicit "no assignment this week" declaration for this expected cell. */
+  nilDeclared: boolean;
+  nilReason: string | null;
+  nilDeclarationId: string | null;
 }
 
 export interface ExpectedWeek {
@@ -277,6 +282,16 @@ export async function expectedItemsForWeek(
   }>;
   const itemKey = (sectionId: string, subject: string): string => `${sectionId}|${subject}`;
   const byEntry = new Map(existing.map((i) => [itemKey(i.sectionId.toString(), i.subject), i]));
+  const nilRows = (await AssignmentNilDeclaration.find({
+    academicYearId,
+    weekNumber,
+  }).lean()) as unknown as Array<{
+    _id: { toString(): string };
+    sectionId: { toString(): string };
+    subject: string;
+    reason: string;
+  }>;
+  const nilByEntry = new Map(nilRows.map((n) => [itemKey(n.sectionId.toString(), n.subject), n]));
 
   return {
     academicYearId,
@@ -291,6 +306,7 @@ export async function expectedItemsForWeek(
     dueDate: resolved.dueDate ? dateOnlyISO(resolved.dueDate) : null,
     items: entries.map((e) => {
       const item = byEntry.get(itemKey(e.sectionId.toString(), e.subject));
+      const nil = nilByEntry.get(itemKey(e.sectionId.toString(), e.subject));
       return {
         entryId: e._id.toString(),
         cycleWeek: e.cycleWeek,
@@ -305,9 +321,147 @@ export async function expectedItemsForWeek(
         asId: item ? item.asId : null,
         estMinutes: item?.estMinutes ?? null,
         totalMarks: item?.totalMarks ?? null,
+        nilDeclared: !!nil,
+        nilReason: nil?.reason ?? null,
+        nilDeclarationId: nil ? nil._id.toString() : null,
       };
     }),
   };
+}
+
+// ---------------------------------------------------------------------------
+// "No assignment this week" nil declarations
+// ---------------------------------------------------------------------------
+
+export interface AssignmentNilDeclarationDTO {
+  id: string;
+  academicYearId: string;
+  weekNumber: number;
+  cycleWeek: number;
+  weekStartKey: string;
+  deliveryDateKey: string;
+  classId: string;
+  classLevel: number;
+  sectionId: string;
+  subject: HwSubject;
+  teacherId: string;
+  reason: AsNilReason;
+  declaredBy: string;
+}
+
+function nilDto(doc: {
+  _id: { toString(): string };
+  academicYearId: { toString(): string };
+  weekNumber: number;
+  cycleWeek: number;
+  weekStartKey: string;
+  deliveryDateKey: string;
+  classId: { toString(): string };
+  classLevel: number;
+  sectionId: { toString(): string };
+  subject: HwSubject;
+  teacherId: { toString(): string };
+  reason: AsNilReason;
+  declaredBy: { toString(): string };
+}): AssignmentNilDeclarationDTO {
+  return {
+    id: doc._id.toString(),
+    academicYearId: doc.academicYearId.toString(),
+    weekNumber: doc.weekNumber,
+    cycleWeek: doc.cycleWeek,
+    weekStartKey: doc.weekStartKey,
+    deliveryDateKey: doc.deliveryDateKey,
+    classId: doc.classId.toString(),
+    classLevel: doc.classLevel,
+    sectionId: doc.sectionId.toString(),
+    subject: doc.subject,
+    teacherId: doc.teacherId.toString(),
+    reason: doc.reason,
+    declaredBy: doc.declaredBy.toString(),
+  };
+}
+
+interface NilInput {
+  academicYearId: string;
+  weekNumber: number;
+  entryId: string;
+  sectionId: string;
+  reason?: string;
+  actorId: string;
+}
+
+async function resolveNilCell(input: Omit<NilInput, "reason" | "actorId">) {
+  const schedule = await AssignmentSchedule.findOne({ academicYearId: input.academicYearId });
+  if (!schedule) throw new Error("No AssignmentSchedule for this academic year — set the term anchor first");
+  const entry = schedule.entries.id(input.entryId);
+  if (!entry) throw new Error("Schedule entry not found in this year's rotation");
+  if (entry.sectionId.toString() !== input.sectionId) {
+    throw new Error("sectionId does not match the schedule entry's section");
+  }
+  const resolved = await resolveScheduleWeek(schedule, input.weekNumber);
+  if (resolved.cycleWeek !== entry.cycleWeek) {
+    throw new Error(
+      `Week ${input.weekNumber} is cycle week ${resolved.cycleWeek}, but this entry belongs to cycle week ${entry.cycleWeek}`,
+    );
+  }
+  if (resolved.suspended || !resolved.deliveryDate) {
+    throw new Error(`Week ${input.weekNumber} is suspended — no assignment is expected`);
+  }
+  return { entry, resolved };
+}
+
+export async function declareNoAssignment(input: NilInput): Promise<AssignmentNilDeclarationDTO> {
+  if (!input.reason || !(AS_NIL_REASONS as readonly string[]).includes(input.reason)) {
+    throw new Error(`Unknown no-assignment reason: ${input.reason ?? ""}`);
+  }
+  const { entry, resolved } = await resolveNilCell(input);
+  const existing = await AssignmentItem.findOne({
+    academicYearId: input.academicYearId,
+    weekNumber: input.weekNumber,
+    sectionId: entry.sectionId,
+    subject: entry.subject,
+  }).lean();
+  if (existing) {
+    throw new Error("This assignment is already delivered; edit/delete it instead of declaring no assignment");
+  }
+
+  const doc = await AssignmentNilDeclaration.findOneAndUpdate(
+    {
+      academicYearId: input.academicYearId,
+      weekNumber: input.weekNumber,
+      sectionId: entry.sectionId,
+      subject: entry.subject,
+    },
+    {
+      $set: {
+        academicYearId: input.academicYearId,
+        weekNumber: input.weekNumber,
+        cycleWeek: resolved.cycleWeek,
+        weekStartKey: dateOnlyISO(resolved.weekStart).slice(0, 10),
+        deliveryDateKey: dateOnlyISO(resolved.deliveryDate as Date).slice(0, 10),
+        classId: entry.classId,
+        classLevel: entry.classLevel,
+        sectionId: entry.sectionId,
+        subject: entry.subject,
+        teacherId: entry.teacherId,
+        reason: input.reason,
+        declaredBy: input.actorId,
+      },
+    },
+    { new: true, upsert: true },
+  );
+  return nilDto(doc as never);
+}
+
+export async function removeNoAssignment(input: Omit<NilInput, "reason">): Promise<boolean> {
+  const { entry } = await resolveNilCell(input);
+  const res = await AssignmentNilDeclaration.deleteOne({
+    academicYearId: input.academicYearId,
+    weekNumber: input.weekNumber,
+    sectionId: entry.sectionId,
+    subject: entry.subject,
+  });
+  return res.deletedCount > 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -348,7 +502,7 @@ export async function myAssignmentPrepPrompts(
   if (week.suspended || !week.deliveryDate || !week.dueDate) return [];
 
   return week.items
-    .filter((i) => i.teacherId === teacherId && !i.delivered)
+    .filter((i) => i.teacherId === teacherId && !i.delivered && !i.nilDeclared)
     .map((i) => ({
       entryId: i.entryId,
       weekNumber,
