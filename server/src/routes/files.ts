@@ -43,6 +43,7 @@ import { assertFileReadAccess } from "../modules/trackers/services/HomeworkFileS
 import { assertClassTestFileReadAccess } from "../modules/trackers/services/ClassTestFileService";
 import { assertAssignmentFileReadAccess } from "../modules/trackers/services/AssignmentFileService";
 import { assertEnglishDriveFileReadAccess } from "../modules/english-drive/services/EnglishDriveService";
+import { docxToPdf, isDocxMime } from "../modules/platform/services/docxConvert";
 import {
   validateChatUpload,
   assertChatFileReadAccess,
@@ -585,8 +586,9 @@ filesRouter.post("/english-drive", parseClassNoteUpload, async (req: Request, re
     return;
   }
   try {
+    const originalName = decodeUploadName(file.originalname);
     const driveFileId = await uploadToDrive({
-      name: `${Date.now()}_${decodeUploadName(file.originalname)}`,
+      name: `${Date.now()}_${originalName}`,
       mime: file.mimetype,
       data: file.buffer,
       year: String(new Date().getFullYear()),
@@ -596,12 +598,44 @@ filesRouter.post("/english-drive", parseClassNoteUpload, async (req: Request, re
       kind: "english_drive" as StoredFileKind,
       mime: file.mimetype,
       sizeBytes: file.size,
-      originalName: decodeUploadName(file.originalname),
+      originalName,
       driveFileId,
       uploadedBy: ctx.auth.userId,
     });
+
+    // A DOCX is converted to a PDF (owner 2026-07-25) so preview + office print get
+    // a real PDF; the original .docx stays the download. Best-effort — a conversion
+    // failure leaves pdfFileId null and the caller falls back to the .docx.
+    let pdfFileId: string | null = null;
+    if (isDocxMime(file.mimetype)) {
+      try {
+        const pdf = await docxToPdf(file.buffer, originalName);
+        const pdfDriveId = await uploadToDrive({
+          name: `${Date.now()}_${originalName.replace(/\.[^.]+$/, "")}.pdf`,
+          mime: "application/pdf",
+          data: pdf,
+          year: String(new Date().getFullYear()),
+          subfolder: "english-drive",
+        });
+        const pdfStored = await StoredFile.create({
+          kind: "english_drive" as StoredFileKind,
+          mime: "application/pdf",
+          sizeBytes: pdf.byteLength,
+          originalName: `${originalName.replace(/\.[^.]+$/, "")}.pdf`,
+          driveFileId: pdfDriveId,
+          uploadedBy: ctx.auth.userId,
+        });
+        pdfFileId = pdfStored._id.toString();
+      } catch (convErr) {
+        if (convErr instanceof DriveUnavailableError) throw convErr;
+        // A DocxConvertError (soffice down/slow) is non-fatal — keep the .docx.
+        console.warn("english-drive DOCX→PDF conversion failed:", (convErr as Error)?.message);
+      }
+    }
+
     res.json({
       fileId: stored._id.toString(),
+      pdfFileId,
       kind: "english_drive",
       mime: stored.mime,
       sizeBytes: stored.sizeBytes,

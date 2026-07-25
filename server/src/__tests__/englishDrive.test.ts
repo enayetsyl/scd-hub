@@ -466,15 +466,19 @@ describe("uploadEnglishDriveDoc", () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  test("DOCX is a valid format", async () => {
+  test("DOCX stores the converted pdfFileId alongside the original (owner 2026-07-25)", async () => {
     mockStoredFindById.mockResolvedValue({ kind: "english_drive" });
+    const pdfId = oid();
     await uploadEnglishDriveDoc({
       ...validUpload(),
       contentMd: undefined,
       format: "DOCX",
       fileId: STORED_ID.toString(),
+      pdfFileId: pdfId.toString(),
     });
-    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ format: "DOCX" }));
+    const created = mockCreate.mock.calls[0][0] as { format: string; pdfFileId: unknown };
+    expect(created.format).toBe("DOCX");
+    expect(String(created.pdfFileId)).toBe(pdfId.toString());
   });
 
   test("rejects an unknown format", async () => {
@@ -586,7 +590,7 @@ describe("sendEnglishDriveDocToPrint", () => {
     expect(out.title).toContain("C3_B3-5_PT_v2");
   });
 
-  test("a PDF/DOCX doc files the STORED binary to the queue directly (trusted), no pdfkit (owner 2026-07-25)", async () => {
+  test("a PDF doc files its own binary to the queue directly (trusted), no pdfkit (owner 2026-07-25)", async () => {
     const fileId = oid();
     mockFindById.mockReturnValue(madeDoc({ format: "PDF", fileId, contentMd: "" }));
     const out = await sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), printInput);
@@ -603,6 +607,16 @@ describe("sendEnglishDriveDocToPrint", () => {
       }),
     );
     expect(out.printRequestId).toBeTruthy();
+  });
+
+  test("a DOCX doc files the CONVERTED pdfFileId to the queue, not the .docx (owner 2026-07-25)", async () => {
+    const fileId = oid();
+    const pdfFileId = oid();
+    mockFindById.mockReturnValue(madeDoc({ format: "DOCX", fileId, pdfFileId, contentMd: "" }));
+    await sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), printInput);
+    expect(mockCreatePrint).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceType: "UPLOAD", fileIds: [pdfFileId.toString()], trusted: true }),
+    );
   });
 
   test("edit-before-print renders the EDITED markdown + layout, not the stored doc (D-#348)", async () => {
