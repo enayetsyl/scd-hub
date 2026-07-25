@@ -28,8 +28,10 @@ import { createPrintRequest } from "../../printing/services/PrintRequestService"
 import {
   EnglishDriveDoc,
   ENGLISH_DRIVE_KINDS,
+  ENGLISH_DRIVE_FORMATS,
   ENGLISH_DRIVE_MD_MAX_BYTES,
   type EnglishDriveKind,
+  type EnglishDriveFormat,
   type IEnglishDriveDoc,
 } from "../models/EnglishDriveDoc";
 
@@ -47,6 +49,12 @@ export interface EnglishDriveDocShape {
   seq: number;
   title: string;
   version: number;
+  /** MD (markdown in contentMd) | PDF | DOCX (binary in fileId). Legacy rows = MD. */
+  format: string;
+  /** The binary StoredFile id (PDF/DOCX) to open via GET /files/:id; null for MD. */
+  fileId: string | null;
+  fileName: string | null;
+  fileMime: string | null;
   uploadedAt: string;
   uploadedByName: string | null;
   /** Null on library-list rows — only the single-doc read carries the markdown. */
@@ -67,6 +75,10 @@ function shape(
     seq: doc.seq ?? 1, // pre-seq rows have no field
     title: doc.title,
     version: doc.version,
+    format: doc.format ?? "MD", // legacy rows have no field
+    fileId: doc.fileId ? doc.fileId.toString() : null,
+    fileName: doc.fileName ?? null,
+    fileMime: doc.fileMime ?? null,
     uploadedAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
     uploadedByName,
     contentMd: withContent ? doc.contentMd : null,
@@ -192,6 +204,25 @@ export async function englishDriveDocs(
     .map((r) => shape(r, names.get(r.uploadedBy.toString()) ?? null, false));
 }
 
+/**
+ * Read gate for an `english_drive` StoredFile (owner 2026-07-25) — GET /files/:id
+ * dispatches here. The file carries no class back-reference, so reverse-resolve
+ * the owning EnglishDriveDoc and apply the same class-scope as the doc screen.
+ */
+export async function assertEnglishDriveFileReadAccess(
+  ctx: AppContext,
+  file: { _id: { toString(): string } },
+): Promise<void> {
+  const doc = (await EnglishDriveDoc.findOne({ fileId: file._id })
+    .select("classLevel")
+    .lean()) as unknown as { classLevel: number } | null;
+  if (!doc) throw new ForbiddenError("অনুমতি নেই");
+  const allowed = await allowedEnglishDriveClassLevels(ctx);
+  if (allowed !== null && !allowed.has(doc.classLevel)) {
+    throw new ForbiddenError("এই শ্রেণির ইংরেজি ড্রাইভ দেখার অনুমতি নেই");
+  }
+}
+
 /** One document WITH its markdown — the doc screen + PDF read. Scope-checked. */
 export async function englishDriveDocById(
   ctx: AppContext,
@@ -234,7 +265,14 @@ export interface UploadEnglishDriveDocInput {
   seq?: number | null;
   title: string;
   version: number;
-  contentMd: string;
+  /** MD (default) | PDF | DOCX (owner 2026-07-25). */
+  format?: string | null;
+  /** Required for MD; empty for PDF/DOCX. */
+  contentMd?: string | null;
+  /** Required for PDF/DOCX (a StoredFile of kind `english_drive`); ignored for MD. */
+  fileId?: string | null;
+  fileName?: string | null;
+  fileMime?: string | null;
   actorId: string;
   actorRole?: string;
 }
@@ -283,9 +321,26 @@ export async function uploadEnglishDriveDoc(
   if (!Number.isInteger(input.version) || input.version < 1) {
     throw new Error("ভার্সন নম্বর দিন (১ বা তার বেশি)");
   }
-  if (input.contentMd.trim() === "") throw new Error("ফাইলটি খালি — কনটেন্ট পাওয়া যায়নি");
-  if (Buffer.byteLength(input.contentMd, "utf8") > ENGLISH_DRIVE_MD_MAX_BYTES) {
-    throw new Error("ফাইলটি খুব বড় (সর্বোচ্চ ১ MB)");
+  // Format gate (owner 2026-07-25): MD carries markdown; PDF/DOCX carry a binary
+  // StoredFile id (uploaded via /files/english-drive) and no markdown.
+  const format = (input.format ?? "MD") as EnglishDriveFormat;
+  if (!(ENGLISH_DRIVE_FORMATS as readonly string[]).includes(format)) {
+    throw new Error("ফাইলের ধরন সঠিক নয় (MD/PDF/DOCX)");
+  }
+  const contentMd = input.contentMd ?? "";
+  let fileId: Types.ObjectId | null = null;
+  if (format === "MD") {
+    if (contentMd.trim() === "") throw new Error("ফাইলটি খালি — কনটেন্ট পাওয়া যায়নি");
+    if (Buffer.byteLength(contentMd, "utf8") > ENGLISH_DRIVE_MD_MAX_BYTES) {
+      throw new Error("ফাইলটি খুব বড় (সর্বোচ্চ ১ MB)");
+    }
+  } else {
+    if (!input.fileId) throw new Error("ফাইলটি আপলোড হয়নি — আবার চেষ্টা করুন");
+    const stored = await StoredFile.findById(input.fileId).select("kind").lean();
+    if (!stored || stored.kind !== "english_drive") {
+      throw new Error("ফাইলটি খুঁজে পাওয়া যায়নি");
+    }
+    fileId = new Types.ObjectId(input.fileId);
   }
 
   const prev = await EnglishDriveDoc.findOne({
@@ -310,7 +365,11 @@ export async function uploadEnglishDriveDoc(
     seq,
     title,
     version: input.version,
-    contentMd: input.contentMd,
+    format,
+    contentMd: format === "MD" ? contentMd : "",
+    fileId,
+    fileName: format === "MD" ? null : input.fileName ?? null,
+    fileMime: format === "MD" ? null : input.fileMime ?? null,
     uploadedBy: input.actorId,
   });
 
@@ -379,6 +438,12 @@ export async function sendEnglishDriveDocToPrint(
 ): Promise<EnglishDrivePrintResult> {
   // Same read gate as the doc screen: teacher of the class or P/O; guardian never.
   const doc = await englishDriveDocById(ctx, input.id);
+
+  // Office-print renders the stored MARKDOWN via pdfkit. A PDF/DOCX doc has no
+  // markdown — it's opened/downloaded and printed locally (owner 2026-07-25).
+  if ((doc.format ?? "MD") !== "MD") {
+    throw new Error("PDF/DOCX ফাইল সরাসরি খুলে প্রিন্ট করুন — এটি প্রিন্ট সারিতে পাঠানো যায় না");
+  }
 
   const kindTag = doc.seq > 1 ? `${doc.kind}${doc.seq}` : doc.kind;
   const blockTag = formatBlockTag(doc);

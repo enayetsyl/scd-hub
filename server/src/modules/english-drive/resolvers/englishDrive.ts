@@ -40,6 +40,11 @@ EnglishDriveDocRef.implement({
     seq: t.exposeInt("seq"),
     title: t.exposeString("title"),
     version: t.exposeInt("version"),
+    // Body format (owner 2026-07-25): MD (markdown) | PDF | DOCX (binary in fileId).
+    format: t.exposeString("format"),
+    fileId: t.string({ nullable: true, resolve: (r) => r.fileId }),
+    fileName: t.string({ nullable: true, resolve: (r) => r.fileName }),
+    fileMime: t.string({ nullable: true, resolve: (r) => r.fileMime }),
     uploadedAt: t.exposeString("uploadedAt"),
     uploadedByName: t.string({ nullable: true, resolve: (r) => r.uploadedByName }),
     contentMd: t.string({ nullable: true, resolve: (r) => r.contentMd }),
@@ -140,7 +145,12 @@ builder.mutationField("uploadEnglishDriveDoc", (t) =>
       seq: t.arg.int({ required: false }),
       title: t.arg.string({ required: true }),
       version: t.arg.int({ required: true }),
-      contentMd: t.arg.string({ required: true }),
+      // MD (default) → contentMd; PDF/DOCX → fileId of an `english_drive` StoredFile.
+      format: t.arg.string({ required: false }),
+      contentMd: t.arg.string({ required: false }),
+      fileId: t.arg.string({ required: false }),
+      fileName: t.arg.string({ required: false }),
+      fileMime: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");

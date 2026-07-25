@@ -21,6 +21,12 @@ import { Schema, model, Document, Types } from "mongoose";
 export const ENGLISH_DRIVE_KINDS = ["BLOCK", "TN", "CW", "HW", "PT", "AS", "CLUE"] as const;
 export type EnglishDriveKind = (typeof ENGLISH_DRIVE_KINDS)[number];
 
+/** How the document body is stored (owner 2026-07-25). MD = markdown in `contentMd`
+ *  (the original, editable, pdfkit-rendered path); PDF/DOCX = a binary StoredFile
+ *  referenced by `fileId` (opened/downloaded via GET /files/:id, not editable). */
+export const ENGLISH_DRIVE_FORMATS = ["MD", "PDF", "DOCX"] as const;
+export type EnglishDriveFormat = (typeof ENGLISH_DRIVE_FORMATS)[number];
+
 /** Upload cap for one markdown document (PRD §3). */
 export const ENGLISH_DRIVE_MD_MAX_BYTES = 1024 * 1024;
 
@@ -41,8 +47,16 @@ export interface IEnglishDriveDoc extends Document {
   seq: number;
   title: string;
   version: number;
-  /** The full markdown source (≤ 1 MB). */
+  /** How the body is stored — MD (default/legacy) | PDF | DOCX (owner 2026-07-25). */
+  format: EnglishDriveFormat;
+  /** The full markdown source (≤ 1 MB) — set for MD, empty for PDF/DOCX. */
   contentMd: string;
+  /** The binary StoredFile (kind `english_drive`) for a PDF/DOCX doc; null for MD. */
+  fileId?: Types.ObjectId | null;
+  /** Original upload filename (PDF/DOCX) — the download name + a nicer library label. */
+  fileName?: string | null;
+  /** The binary's MIME (application/pdf | …wordprocessingml.document); null for MD. */
+  fileMime?: string | null;
   uploadedBy: Types.ObjectId;
   /** Stamped when a newer upload of the same (classLevel, blockNumber, kind) replaced this row. */
   replacedAt?: Date | null;
@@ -63,7 +77,13 @@ const EnglishDriveDocSchema = new Schema<IEnglishDriveDoc>(
     seq: { type: Number, required: true, min: 1, default: 1 },
     title: { type: String, required: true, trim: true },
     version: { type: Number, required: true, min: 1 },
-    contentMd: { type: String, required: true },
+    // Default MD so every pre-existing row (all markdown) reads back as MD without a migration.
+    format: { type: String, enum: ENGLISH_DRIVE_FORMATS, required: true, default: "MD" },
+    // Required only for MD (service-enforced) so a PDF/DOCX row can carry no markdown.
+    contentMd: { type: String, default: "" },
+    fileId: { type: Schema.Types.ObjectId, ref: "StoredFile", default: null },
+    fileName: { type: String, default: null },
+    fileMime: { type: String, default: null },
     uploadedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     replacedAt: { type: Date, default: null },
   },

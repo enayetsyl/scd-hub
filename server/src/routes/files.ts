@@ -42,6 +42,7 @@ import {
 import { assertFileReadAccess } from "../modules/trackers/services/HomeworkFileService";
 import { assertClassTestFileReadAccess } from "../modules/trackers/services/ClassTestFileService";
 import { assertAssignmentFileReadAccess } from "../modules/trackers/services/AssignmentFileService";
+import { assertEnglishDriveFileReadAccess } from "../modules/english-drive/services/EnglishDriveService";
 import {
   validateChatUpload,
   assertChatFileReadAccess,
@@ -100,6 +101,24 @@ export function validateClassTestUpload(mime: string, sizeBytes: number): string
     return "শুধু JPEG, PNG, PDF বা Word (DOC/DOCX) ফাইল সংযুক্ত করা যাবে";
   }
   if (sizeBytes > MAX_FILE_BYTES) return FILE_ERRORS_BN.tooLarge;
+  if (sizeBytes <= 0) return FILE_ERRORS_BN.badMime;
+  return null;
+}
+
+// English Drive binary documents (owner 2026-07-25) — PDF or Word (DOC/DOCX) only
+// (images/markdown go the other paths), ≤ 10 MB. Office/Principal upload; the read
+// gate reverse-resolves the owning EnglishDriveDoc's class scope.
+export const ENGLISH_DRIVE_FILE_MIMES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+] as const;
+export const MAX_ENGLISH_DRIVE_FILE_BYTES = 10 * 1024 * 1024;
+export function validateEnglishDriveUpload(mime: string, sizeBytes: number): string | null {
+  if (!(ENGLISH_DRIVE_FILE_MIMES as readonly string[]).includes(mime)) {
+    return "শুধু PDF বা Word (DOC/DOCX) ফাইল আপলোড করা যাবে";
+  }
+  if (sizeBytes > MAX_ENGLISH_DRIVE_FILE_BYTES) return FILE_ERRORS_BN.tooLarge;
   if (sizeBytes <= 0) return FILE_ERRORS_BN.badMime;
   return null;
 }
@@ -542,6 +561,62 @@ filesRouter.post("/print", parseClassNoteUpload, async (req: Request, res: Respo
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/english-drive — Office/Principal upload a PDF/DOCX English Drive
+// document (owner 2026-07-25). roster:manage + pdf/doc/docx ≤ 10 MB, Drive-first
+// (a Drive failure persists nothing). The returned fileId is carried into
+// uploadEnglishDriveDoc with format=PDF|DOCX. Read gate (GET below) reverse-
+// resolves the owning doc's class scope.
+// ---------------------------------------------------------------------------
+
+filesRouter.post("/english-drive", parseClassNoteUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "roster:manage")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const rejection = validateEnglishDriveUpload(file.mimetype, file.size);
+  if (rejection) {
+    res.status(422).json({ error: rejection });
+    return;
+  }
+  try {
+    const driveFileId = await uploadToDrive({
+      name: `${Date.now()}_${decodeUploadName(file.originalname)}`,
+      mime: file.mimetype,
+      data: file.buffer,
+      year: String(new Date().getFullYear()),
+      subfolder: "english-drive",
+    });
+    const stored = await StoredFile.create({
+      kind: "english_drive" as StoredFileKind,
+      mime: file.mimetype,
+      sizeBytes: file.size,
+      originalName: decodeUploadName(file.originalname),
+      driveFileId,
+      uploadedBy: ctx.auth.userId,
+    });
+    res.json({
+      fileId: stored._id.toString(),
+      kind: "english_drive",
+      mime: stored.mime,
+      sizeBytes: stored.sizeBytes,
+      originalName: stored.originalName,
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      res.status(503).json({ error: FILE_ERRORS_BN.driveDown });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /files/comment — teacher attaches a file to a daily student comment (CM-2,
 // prd-comments-meetings §5). tracker:write + the comment's section verified
 // server-side; MIME image/pdf/video/audio ≤ 10 MB (chat parity, D-#108); Drive-first
@@ -683,6 +758,8 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       }
     } else if (file.kind === "assignment_attachment") {
       await assertAssignmentFileReadAccess(ctx, file);
+    } else if (file.kind === "english_drive") {
+      await assertEnglishDriveFileReadAccess(ctx, file);
     } else if (file.kind === "print_upload") {
       // A print upload is readable by the teacher who sent it and by the Office/Principal
       // who has to print it (PQ-2, D-#281) — nobody else.

@@ -90,8 +90,12 @@ jest.mock("../modules/platform/services/DriveStore", () => {
 });
 
 const mockStoredCreate = jest.fn();
+const mockStoredFindById = jest.fn();
 jest.mock("../modules/platform/models/StoredFile", () => ({
-  StoredFile: { create: (d: unknown) => mockStoredCreate(d) },
+  StoredFile: {
+    create: (d: unknown) => mockStoredCreate(d),
+    findById: (id: unknown) => ({ select: () => ({ lean: async () => mockStoredFindById(id) }) }),
+  },
 }));
 
 const mockCreatePrint = jest.fn();
@@ -426,6 +430,55 @@ describe("uploadEnglishDriveDoc", () => {
     await expect(
       uploadEnglishDriveDoc({ ...validUpload(), kind: "CW", blockNumber: null }),
     ).rejects.toThrow(/ব্লক/);
+  });
+
+  test("PDF format: requires a valid english_drive fileId, stores no markdown (owner 2026-07-25)", async () => {
+    mockStoredFindById.mockResolvedValue({ kind: "english_drive" });
+    const out = await uploadEnglishDriveDoc({
+      ...validUpload(),
+      contentMd: undefined,
+      format: "PDF",
+      fileId: STORED_ID.toString(),
+      fileName: "C3_ENG_B1_TN.pdf",
+      fileMime: "application/pdf",
+    });
+    expect(out.replacedVersion).toBeNull();
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ format: "PDF", contentMd: "", fileName: "C3_ENG_B1_TN.pdf" }),
+    );
+    // The fileId is bound (as an ObjectId) — the markdown byte-cap path is skipped.
+    const created = mockCreate.mock.calls[0][0] as { fileId: unknown };
+    expect(String(created.fileId)).toBe(STORED_ID.toString());
+  });
+
+  test("PDF format rejects a missing fileId", async () => {
+    await expect(
+      uploadEnglishDriveDoc({ ...validUpload(), contentMd: undefined, format: "PDF" }),
+    ).rejects.toThrow(/আপলোড/);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("PDF format rejects a fileId that isn't an english_drive StoredFile", async () => {
+    mockStoredFindById.mockResolvedValue({ kind: "hw_answer" });
+    await expect(
+      uploadEnglishDriveDoc({ ...validUpload(), contentMd: undefined, format: "PDF", fileId: STORED_ID.toString() }),
+    ).rejects.toThrow(/খুঁজে/);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("DOCX is a valid format", async () => {
+    mockStoredFindById.mockResolvedValue({ kind: "english_drive" });
+    await uploadEnglishDriveDoc({
+      ...validUpload(),
+      contentMd: undefined,
+      format: "DOCX",
+      fileId: STORED_ID.toString(),
+    });
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ format: "DOCX" }));
+  });
+
+  test("rejects an unknown format", async () => {
+    await expect(uploadEnglishDriveDoc({ ...validUpload(), format: "XLS" })).rejects.toThrow(/ধরন/);
   });
 
   test("re-upload replaces: old row stamped replacedAt, audit ENGLISH_DRIVE_REPLACED", async () => {
