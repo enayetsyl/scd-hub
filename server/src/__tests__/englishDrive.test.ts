@@ -619,6 +619,23 @@ describe("sendEnglishDriveDocToPrint", () => {
     );
   });
 
+  test("threads the D-#294 print flow (copiesMode/class/use-date) to the queue (owner 2026-07-25)", async () => {
+    mockFindById.mockReturnValue(madeDoc());
+    await sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), {
+      ...printInput,
+      copiesMode: "CLASS_PRESENT",
+      copiesClassId: "class-4",
+      neededByKey: "2026-07-30",
+    });
+    expect(mockCreatePrint).toHaveBeenCalledWith(
+      expect.objectContaining({
+        copiesMode: "CLASS_PRESENT",
+        copiesClassId: "class-4",
+        neededByKey: "2026-07-30",
+      }),
+    );
+  });
+
   test("edit-before-print renders the EDITED markdown + layout, not the stored doc (D-#348)", async () => {
     mockFindById.mockReturnValue(madeDoc());
     await sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), {

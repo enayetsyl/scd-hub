@@ -25,6 +25,8 @@ import {
   SEND_ENGLISH_DRIVE_TO_PRINT,
   type EnglishDriveDocT,
 } from "../../graphql/englishDrive";
+import { ACADEMIC_YEARS_QUERY, CLASSES_QUERY } from "../../graphql/operations";
+import { DateField } from "../../components/DateField";
 import type { EnglishDriveStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Chip, ChipRow, Field, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -64,6 +66,12 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
   const [docQ, refetch] = useQuery({ query: ENGLISH_DRIVE_DOC, variables: { id: docId } });
   const doc = docQ.data?.englishDriveDoc ?? null;
 
+  // Class chips for a per-class-present print job (D-#294) — current academic year.
+  const [yearsQ] = useQuery({ query: ACADEMIC_YEARS_QUERY });
+  const printYearId = yearsQ.data?.academicYears?.find((y) => y.current)?.id ?? yearsQ.data?.academicYears?.[0]?.id ?? null;
+  const [classesQ] = useQuery({ query: CLASSES_QUERY, variables: { academicYearId: printYearId ?? "" }, pause: !printYearId });
+  const printClasses = (classesQ.data?.classes ?? []).filter((c) => c.active);
+
   // ED-3b: siblings in the same class, once the doc (and its class) is known. Same
   // scoped read the library uses — server re-gates; metadata only (contentMd null).
   const [siblingsQ] = useQuery({
@@ -97,6 +105,10 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
   const [colour, setColour] = useState<string | null>(null);
   const [sides, setSides] = useState<string | null>(null);
   const [copies, setCopies] = useState("1");
+  // D-#294 print flow (owner 2026-07-25): copies mode + class + use date.
+  const [copiesMode, setCopiesMode] = useState<"FIXED" | "CLASS_PRESENT">("FIXED");
+  const [copiesClassId, setCopiesClassId] = useState<string | null>(null);
+  const [neededByKey, setNeededByKey] = useState("");
   const [printBusy, setPrintBusy] = useState(false);
   const [printErr, setPrintErr] = useState<string | null>(null);
   const [printOk, setPrintOk] = useState<string | null>(null);
@@ -177,7 +189,8 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
 
   async function onSendToPrint(): Promise<void> {
     const n = Number(copies);
-    if (printBusy || !colour || !sides || !Number.isInteger(n) || n < 1) return;
+    if (printBusy || !colour || !sides || !neededByKey) return;
+    if (copiesMode === "FIXED" ? !Number.isInteger(n) || n < 1 : !copiesClassId) return;
     setPrintBusy(true);
     setPrintErr(null);
     setPrintOk(null);
@@ -185,7 +198,10 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
       id: docId,
       colour,
       sides,
-      copies: n,
+      copies: copiesMode === "FIXED" ? n : 1, // resolved from attendance at print time
+      copiesMode,
+      copiesClassId: copiesMode === "CLASS_PRESENT" ? copiesClassId : null,
+      neededByKey,
       // Edit-before-print: print the edited version + layout when in edit mode.
       ...(editMode ? { contentMd: editedMd, fontScale, lineSpacing, margin } : {}),
     });
@@ -356,17 +372,42 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                           />
                         ))}
                       </ChipRow>
-                      <Field
-                        label={STR.prCopies}
-                        value={copies}
-                        onChangeText={setCopies}
-                        keyboardType="number-pad"
-                      />
+
+                      {/* D-#294 copies: a typed number OR one per student present in a
+                          class on the use day (owner 2026-07-25). */}
+                      <Body style={{ fontWeight: "700", marginVertical: space(1) }}>{STR.prCopies} *</Body>
+                      <ChipRow>
+                        <Chip label={STR.prCopiesFixed} selected={copiesMode === "FIXED"} onPress={() => setCopiesMode("FIXED")} />
+                        <Chip label={STR.prCopiesClass} selected={copiesMode === "CLASS_PRESENT"} onPress={() => setCopiesMode("CLASS_PRESENT")} />
+                      </ChipRow>
+                      {copiesMode === "FIXED" ? (
+                        <Field label={STR.prCopies} value={copies} onChangeText={setCopies} keyboardType="number-pad" />
+                      ) : (
+                        <View style={{ marginTop: space(1) }}>
+                          <Muted style={{ marginBottom: space(1) }}>{STR.prCopiesClassHint}</Muted>
+                          <ChipRow>
+                            {printClasses.map((c) => (
+                              <Chip key={c.id} label={classLevelLabel(c.level)} selected={copiesClassId === c.id} onPress={() => setCopiesClassId(c.id)} />
+                            ))}
+                          </ChipRow>
+                        </View>
+                      )}
+
+                      {/* The day the print will be USED — mandatory (also picks the
+                          attendance day for a per-class-present job). */}
+                      <DateField label={`${STR.prUseDate} *`} value={neededByKey} onChange={setNeededByKey} />
+
                       <Button
                         title={STR.cqSendToPrint}
                         onPress={() => void onSendToPrint()}
                         loading={printBusy}
-                        disabled={printBusy || !colour || !sides || !(Number(copies) >= 1)}
+                        disabled={
+                          printBusy ||
+                          !colour ||
+                          !sides ||
+                          !neededByKey ||
+                          (copiesMode === "FIXED" ? !(Number(copies) >= 1) : !copiesClassId)
+                        }
                         style={{ marginTop: space(1) }}
                       />
                     </>
