@@ -568,13 +568,13 @@ function HomeworkNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
   return (
     <HomeworkStack.Navigator screenOptions={stackOptions}>
-      <HomeworkStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
       <HomeworkStack.Screen name="HomeworkHome" component={HomeworkHomeScreen} options={{ title: STR.tabHomework }} />
       <HomeworkStack.Screen name="DeclareHomework" component={DeclareHomeworkScreen} options={{ title: STR.hwDeclareTitle }} />
       <HomeworkStack.Screen name="HomeworkReconcile" component={HomeworkReconcileScreen} options={{ title: STR.hwReconcileTitle }} />
       <HomeworkStack.Screen name="HomeworkWorkspace" component={HomeworkWorkspaceScreen} options={{ title: STR.hwWorkspaceTitle }} />
       <HomeworkStack.Screen name="HomeworkRollups" component={HomeworkRollupsScreen} options={{ title: STR.hwRollupsTitle }} />
       <HomeworkStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
+      <HomeworkStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
     </HomeworkStack.Navigator>
   );
 }
@@ -585,7 +585,6 @@ function AssignmentNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
   return (
     <AssignmentStack.Navigator screenOptions={stackOptions}>
-      <AssignmentStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
       <AssignmentStack.Screen name="AssignmentHome" component={AssignmentHomeScreen} options={{ title: STR.tabAssignment }} />
       <AssignmentStack.Screen name="AssignmentSchedule" component={AssignmentScheduleScreen} options={{ title: STR.asScheduleTitle }} />
       <AssignmentStack.Screen name="DeliverAssignment" component={DeliverAssignmentScreen} options={{ title: STR.asDeliverTitle }} />
@@ -593,6 +592,7 @@ function AssignmentNavigator(): React.ReactElement {
       <AssignmentStack.Screen name="AssignmentReconcile" component={AssignmentReconcileScreen} options={{ title: STR.asReconcileTitle }} />
       <AssignmentStack.Screen name="AssignmentChase" component={AssignmentChaseScreen} options={{ title: STR.asChaseTitle }} />
       <AssignmentStack.Screen name="AssignmentRollups" component={AssignmentRollupsScreen} options={{ title: STR.asRollupsTitle }} />
+      <AssignmentStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
     </AssignmentStack.Navigator>
   );
 }
@@ -636,7 +636,6 @@ function AttendanceNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
   return (
     <AttendanceStack.Navigator screenOptions={stackOptions}>
-      <AttendanceStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
       <AttendanceStack.Screen name="AttendanceHome" component={AttendanceHomeScreen} options={{ title: STR.tabAttendance }} />
       <AttendanceStack.Screen name="MarkAttendance" component={MarkAttendanceScreen} options={{ title: STR.attMarkTitle }} />
       <AttendanceStack.Screen name="AttendanceAdmin" component={AttendanceAdminScreen} options={{ title: STR.attAdminTitle }} />
@@ -645,6 +644,7 @@ function AttendanceNavigator(): React.ReactElement {
       <AttendanceStack.Screen name="SectionAttendance" component={SectionAttendanceScreen} options={{ title: STR.attMySectionsToday }} />
       <AttendanceStack.Screen name="AssignMarker" component={AssignMarkerScreen} options={{ title: STR.attAssignMarkerTitle }} />
       <AttendanceStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
+      <AttendanceStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
     </AttendanceStack.Navigator>
   );
 }
@@ -727,7 +727,6 @@ function ClassTestNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
   return (
     <ClassTestStack.Navigator screenOptions={stackOptions}>
-      <ClassTestStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
       <ClassTestStack.Screen name="ClassTestHome" component={ClassTestHomeScreen} options={{ title: STR.ctHomeTitle }} />
       <ClassTestStack.Screen name="RequestClassTest" component={RequestClassTestScreen} options={{ title: STR.ctNewRequest }} />
       <ClassTestStack.Screen name="MyCtQuestions" component={MyCtQuestionsScreen} options={{ title: STR.cqMyTitle }} />
@@ -760,6 +759,7 @@ function ClassTestNavigator(): React.ReactElement {
         component={ClassTestStudentProfileScreen}
         options={({ route }) => ({ title: route.params.studentName || STR.ctStudentProfileTitle })}
       />
+      <ClassTestStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
     </ClassTestStack.Navigator>
   );
 }
@@ -981,7 +981,6 @@ function AdminNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
   return (
     <AdminStack.Navigator screenOptions={stackOptions}>
-      <AdminStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
       <AdminStack.Screen name="AdminHome" component={AdminHomeScreen} options={{ title: STR.admin }} />
       <AdminStack.Screen name="Import" component={ImportScreen} options={{ title: STR.importContent }} />
       <AdminStack.Screen name="UserList" component={UserListScreen} options={{ title: STR.users }} />
@@ -1012,6 +1011,7 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="ReconciliationReport" component={ReconciliationReportScreen} options={{ title: STR.rrTitle }} />
       <AdminStack.Screen name="HwLifecycleReport" component={HwLifecycleReportScreen} options={{ title: STR.hlrTitle }} />
       <AdminStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
+      <AdminStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
     </AdminStack.Navigator>
   );
 }
