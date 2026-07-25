@@ -38,12 +38,15 @@ import {
   MY_DAY_QUERY,
   MY_SECTION_ATTENDANCE,
   MY_RECENT_SETS,
+  MY_HW_LIFECYCLE_QUERY,
   OPEN_TRACKER,
   type RecentSetT,
   type RoutineSlotT,
   type AssignmentPrepT,
+  type HwPendingStage,
 } from "../../graphql/operations";
 import { CLASS_TEST_REPORTS_STATUS_QUERY } from "../../graphql/classTest";
+import { HwPendingSheet, type HwPendingTarget } from "../../components/HwPendingSheet";
 import { Screen, H1, H2, Body, Muted, Card, Badge, Button, EmptyState, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { Icon, type IconName } from "../../components/Icon";
@@ -136,12 +139,32 @@ export default function TodayScreen(): React.ReactElement {
     (r) => r.state !== "complete" && dateKey(new Date(r.examDate)) <= date,
   );
 
+  // Owner 2026-07-25: the teacher's OWN homework lifecycle at a glance — totals +
+  // the four pending pills, each tapping the pending drill (HwPendingSheet). Same
+  // routine attribution (D-#351) as the admin report; self-scoped read.
+  const hwLcFrom = dateKey(new Date(Date.now() - 14 * 86_400_000));
+  const hwLcTo = dateKey(new Date());
+  const [hwLcQ, refetchHwLc] = useQuery({
+    query: MY_HW_LIFECYCLE_QUERY,
+    variables: { from: hwLcFrom, to: hwLcTo },
+    pause: !canTrackers,
+  });
+  const myHwLc = hwLcQ.data?.myHomeworkLifecycle ?? null;
+  const [hwLcTarget, setHwLcTarget] = useState<HwPendingTarget | null>(null);
+  const [hwLcSheetOpen, setHwLcSheetOpen] = useState(false);
+  const openHwLcDrill = (stage: HwPendingStage, label: string): void => {
+    if (!user?.id) return;
+    setHwLcTarget({ teacherId: user.id, teacherName: myHwLc?.teacherName ?? "", stage, stageLabel: label });
+    setHwLcSheetOpen(true);
+  };
+
   const refetchAll = useCallback(() => {
     refetch({ requestPolicy: "network-only" });
     if (!canManage) refetchMySections({ requestPolicy: "network-only" });
     if (canSets) refetchRecent({ requestPolicy: "network-only" });
     if (canFileTests && user?.id) refetchCtPending({ requestPolicy: "network-only" });
-  }, [refetch, refetchMySections, refetchRecent, refetchCtPending, canManage, canSets, canFileTests, user?.id]);
+    if (canTrackers) refetchHwLc({ requestPolicy: "network-only" });
+  }, [refetch, refetchMySections, refetchRecent, refetchCtPending, refetchHwLc, canManage, canSets, canFileTests, canTrackers, user?.id]);
 
   // Focus-refetch (HomeworkHome pattern): skip the first focus — the queries
   // already run on mount — then refresh whenever the user returns. Also picks
@@ -598,6 +621,53 @@ export default function TodayScreen(): React.ReactElement {
           </Card>
         ) : null}
 
+        {/* Owner 2026-07-25: my homework lifecycle — totals + tappable pending pills. */}
+        {canTrackers && myHwLc && myHwLc.given > 0 ? (
+          <Card>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginBottom: space(1) }}>
+              <Icon name="book-open" size={18} color={colors.textPrimary} />
+              <Body style={{ fontWeight: "700", flex: 1 }}>{STR.tdMyHwLifecycle}</Body>
+            </View>
+            <Muted style={{ marginBottom: space(2) }}>
+              {STR.hlrGiven} {bnNum(myHwLc.given)} · {STR.hlrSubmitted} {bnNum(myHwLc.submitted)} ·{" "}
+              {STR.hlrChecked} {bnNum(myHwLc.checked)} · {STR.hlrReturned} {bnNum(myHwLc.returned)}
+            </Muted>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+              {(
+                [
+                  { stage: "SUBMISSION", label: STR.hlrPendingSubmission, count: myHwLc.pendingSubmission },
+                  { stage: "CHECK", label: STR.hlrPendingCheck, count: myHwLc.pendingChecking },
+                  { stage: "RETURN", label: STR.hlrPendingReturn, count: myHwLc.pendingReturn },
+                  { stage: "CHASE", label: STR.hlrChasedPending, count: myHwLc.chasedPending },
+                ] as { stage: HwPendingStage; label: string; count: number }[]
+              ).map((p) => {
+                const active = p.count > 0;
+                return (
+                  <Pressable
+                    key={p.stage}
+                    onPress={() => (active ? openHwLcDrill(p.stage, p.label) : undefined)}
+                    disabled={!active}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: space(1),
+                      paddingVertical: space(1),
+                      paddingHorizontal: space(2),
+                      borderRadius: radius.pill,
+                      backgroundColor: active ? colors.errorContainer : colors.surfaceAlt,
+                    }}
+                  >
+                    <Body style={{ fontWeight: "700", color: active ? colors.error : colors.textSecondary }}>
+                      {bnNum(p.count)}
+                    </Body>
+                    <Muted style={{ color: active ? colors.textPrimary : colors.textSecondary }}>{p.label}</Muted>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Card>
+        ) : null}
+
         {/* অমীমাংসিত কাজ — display-numeral count rows, one-tap deep links */}
         {day ? (
           <>
@@ -722,6 +792,17 @@ export default function TodayScreen(): React.ReactElement {
           ))}
         </>
       ) : null}
+
+      {/* The pending drill behind a homework-lifecycle pill (self-scoped). */}
+      <HwPendingSheet
+        visible={hwLcSheetOpen}
+        target={hwLcTarget}
+        from={hwLcFrom}
+        to={hwLcTo}
+        classLevel={null}
+        subject={null}
+        onClose={() => setHwLcSheetOpen(false)}
+      />
     </Screen>
   );
 }
