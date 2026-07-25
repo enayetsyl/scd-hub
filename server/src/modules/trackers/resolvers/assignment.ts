@@ -44,7 +44,6 @@ import {
   deleteAssignmentItem as deleteAssignmentItemSvc,
   type UpdateAssignmentItemResult,
   redeliverAssignmentRecord as redeliverSvc,
-  collectAssignment as collectSvc,
   sweepAssignmentChases as sweepSvc,
   transitionAssignmentRecord as transitionSvc,
   assignmentItemCounts as countsSvc,
@@ -422,24 +421,6 @@ AsTransitionRef.implement({
   }),
 });
 
-interface CollectResultShape {
-  itemId: string;
-  asId: string;
-  submittedCount: number;
-  chaseCount: number;
-  pendingCount: number;
-}
-const CollectResultRef = builder.objectRef<CollectResultShape>("CollectAssignmentResult");
-CollectResultRef.implement({
-  fields: (t) => ({
-    itemId: t.exposeString("itemId"),
-    asId: t.exposeString("asId"),
-    submittedCount: t.exposeInt("submittedCount"),
-    chaseCount: t.exposeInt("chaseCount"),
-    pendingCount: t.exposeInt("pendingCount"),
-  }),
-});
-
 interface ItemShape {
   id: string;
   asId: string;
@@ -781,13 +762,6 @@ const DeliveryRosterInput = builder.inputType("AssignmentRosterEntryInput", {
   fields: (t) => ({
     studentId: t.string({ required: true }),
     present: t.boolean({ required: true }),
-  }),
-});
-
-const CollectionEntryInput = builder.inputType("AssignmentCollectionEntryInput", {
-  fields: (t) => ({
-    recordId: t.string({ required: true }),
-    submitted: t.boolean({ required: true }),
   }),
 });
 
@@ -1327,31 +1301,6 @@ builder.mutationField("redeliverAssignmentRecord", (t) =>
       await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
       await assertRecordInSection(args.recordId, args.sectionId);
       return redeliverSvc(args.recordId, ctx.auth.userId as string);
-    },
-  }),
-);
-
-builder.mutationField("collectAssignment", (t) =>
-  t.field({
-    type: CollectResultRef,
-    description:
-      "The due-date pass (AJ-4): submitted → SUBMITTED; non-submitted past due → CHASE. " +
-      "Counts derived. Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
-    args: {
-      sectionId: t.arg.string({ required: true }),
-      itemId: t.arg.string({ required: true }),
-      entries: t.arg({ type: [CollectionEntryInput], required: true }),
-    },
-    resolve: async (_root, args, ctx) => {
-      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await assignmentItemSubjectId(args.itemId));
-      await assertItemInSection(args.itemId, args.sectionId);
-      return collectSvc(
-        args.itemId,
-        args.entries.map((e) => ({ recordId: e.recordId, submitted: e.submitted })),
-        ctx.auth.userId as string,
-      );
     },
   }),
 );
