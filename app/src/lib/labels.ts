@@ -1325,6 +1325,7 @@ const STR_BN = {
   hlrFilterTeacher: "শিক্ষক",
   hlrAll: "সব",
   // Pending buckets (tappable → names)
+  tdMyHwLifecycle: "আমার বাড়ির কাজের অবস্থা",
   hlrPendingHeader: "বাকি কাজ",
   hlrPendingSubmission: "জমা বাকি",
   hlrPendingCheck: "চেক বাকি",
@@ -2966,7 +2967,7 @@ const STR_BN = {
   edOnlyMd: "শুধু .md, PDF বা DOCX ফাইল আপলোড করা যায়",
   edOpenFile: "ফাইল খুলুন",
   edDownloadFile: "ডাউনলোড করুন",
-  edBinaryHint: "এই ফাইলটি খুলে স্থানীয়ভাবে প্রিন্ট করুন (এডিট বা প্রিন্ট-সারি প্রযোজ্য নয়)",
+  edBinaryHint: "ফাইলটি খুলে স্থানীয়ভাবে প্রিন্ট করুন, অথবা নিচে অফিস প্রিন্ট সারিতে পাঠান (এডিট প্রযোজ্য নয়)",
   edWillReplace: "প্রতিস্থাপন হবে",
   edNewDoc: "নতুন ডকুমেন্ট",
   edUploadAll: "সবগুলো আপলোড করুন",
@@ -3998,6 +3999,7 @@ const STR_EN: StrTable = {
   hlrFilterTeacher: "Teacher",
   hlrAll: "All",
   // Pending buckets (tappable → names)
+  tdMyHwLifecycle: "My homework lifecycle",
   hlrPendingHeader: "Pending",
   hlrPendingSubmission: "Awaiting submission",
   hlrPendingCheck: "Awaiting check",
@@ -5633,7 +5635,7 @@ const STR_EN: StrTable = {
   edOnlyMd: "Only .md, PDF or DOCX files can be uploaded",
   edOpenFile: "Open file",
   edDownloadFile: "Download",
-  edBinaryHint: "Open this file and print it locally (editing and the print queue don't apply)",
+  edBinaryHint: "Open the file to print locally, or send it to the office print queue below (editing doesn't apply)",
   edWillReplace: "will be replaced",
   edNewDoc: "New document",
   edUploadAll: "Upload all",

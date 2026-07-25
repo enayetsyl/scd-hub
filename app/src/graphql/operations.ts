@@ -2689,6 +2689,18 @@ export const HW_LIFECYCLE_REPORT_QUERY = gql<
   }
 `;
 
+/** The caller's OWN homework lifecycle row — the teacher-dashboard card (owner 2026-07-25). */
+export const MY_HW_LIFECYCLE_QUERY = gql<
+  { myHomeworkLifecycle: HwTeacherLifecycleRowT },
+  { from: string; to: string }
+>`
+  query MyHomeworkLifecycle($from: String!, $to: String!) {
+    myHomeworkLifecycle(from: $from, to: $to) {
+      teacherId teacherName declaredItems issuedItems given submitted checked returned pendingSubmission pendingChecking pendingReturn chasedPending
+    }
+  }
+`;
+
 export const HW_LIFECYCLE_PENDING_QUERY = gql<
   { homeworkLifecyclePending: HwPendingStudentT[] },
   { from: string; to: string; teacherId: string; stage: HwPendingStage; classLevel?: number | null; subject?: string | null }
