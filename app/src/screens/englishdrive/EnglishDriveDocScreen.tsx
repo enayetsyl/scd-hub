@@ -300,7 +300,11 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                     />
                   )}
                 </View>
+                </>
+                )}
 
+                {/* Send-to-print — BOTH formats: MD renders via pdfkit; a PDF/DOCX
+                    files the stored binary to the office queue (owner 2026-07-25). */}
                 <View style={{ marginTop: space(2) }}>
                   {editMode ? (
                     <Muted style={{ marginBottom: space(1) }}>{STR.edEditedWillPrint}</Muted>
@@ -356,8 +360,6 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                 </View>
                 {printOk ? <Notice message={printOk} tone="ok" /> : null}
                 {printErr ? <Notice message={printErr} tone="danger" /> : null}
-                </>
-                )}
               </Card>
 
               {!isBinary && richOpen ? (
