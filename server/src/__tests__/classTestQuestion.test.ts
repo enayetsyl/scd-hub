@@ -21,6 +21,7 @@ const mockCreate = jest.fn();
 const mockFindById = jest.fn();
 const mockFind = jest.fn();
 const mockExists = jest.fn();
+const mockCountDocuments = jest.fn();
 jest.mock("../modules/trackers/models/ClassTestQuestionRequest", () => {
   const actual = jest.requireActual("../modules/trackers/models/ClassTestQuestionRequest");
   return {
@@ -30,6 +31,7 @@ jest.mock("../modules/trackers/models/ClassTestQuestionRequest", () => {
       findById: (id: unknown) => mockFindById(id),
       find: (q: unknown) => ({ lean: async () => mockFind(q) }),
       exists: (q: unknown) => mockExists(q),
+      countDocuments: (q: unknown) => mockCountDocuments(q),
     },
   };
 });
@@ -77,6 +79,7 @@ import {
   reviewCtQuestion,
   requestCtQuestionPrint,
   ctQuestionQueue,
+  ctQuestionCounts,
 } from "../modules/trackers/services/ClassTestQuestionService";
 
 const TEACHER = oid();
@@ -269,5 +272,25 @@ describe("ctQuestionQueue", () => {
     const rows = await ctQuestionQueue();
     expect(rows.map((r) => r.status)).toEqual(["REQUESTED", "CHANGES_REQUESTED", "IN_REVIEW", "PRINT_REQUESTED"]);
     expect(rows[0].requesterName).toBe("Nuha");
+  });
+});
+
+describe("ctQuestionCounts (drawer badges, owner 2026-07-25)", () => {
+  test("pending = REQUESTED + CHANGES_REQUESTED; inReview = IN_REVIEW; office-wide (no owner filter)", async () => {
+    // countDocuments called twice: [pending, inReview].
+    mockCountDocuments.mockResolvedValueOnce(5).mockResolvedValueOnce(2);
+    const counts = await ctQuestionCounts(null);
+    expect(counts).toEqual({ pending: 5, inReview: 2 });
+    // pending query is the two office-owed statuses; neither query carries requestedBy.
+    const pendingQ = mockCountDocuments.mock.calls[0][0];
+    expect(pendingQ.status).toEqual({ $in: ["REQUESTED", "CHANGES_REQUESTED"] });
+    expect(pendingQ.requestedBy).toBeUndefined();
+  });
+
+  test("teacher scope filters by requestedBy", async () => {
+    mockCountDocuments.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
+    await ctQuestionCounts("teacher-123");
+    expect(mockCountDocuments.mock.calls[0][0].requestedBy).toBe("teacher-123");
+    expect(mockCountDocuments.mock.calls[1][0]).toMatchObject({ requestedBy: "teacher-123", status: "IN_REVIEW" });
   });
 });

@@ -23,6 +23,7 @@ import type { Role } from "@scd/shared";
 import { STR } from "../lib/labels";
 import { bnNum } from "../lib/labels";
 import { PRINT_QUEUE_COUNTS } from "../graphql/printing";
+import { CT_QUESTION_COUNTS } from "../graphql/classTest";
 import { subscribeLiveEvents } from "../lib/liveEvents";
 import { useAuth } from "../auth/AuthContext";
 import { useBasket } from "../state/BasketContext";
@@ -170,16 +171,44 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   }, [isPrintOperator, refetchCounts]);
   const printCounts = countsQ.data?.printQueueCounts;
 
+  // Owner 2026-07-25: Class Test drawer badges mirroring Print — red = question
+  // requests the office still owes a paper on (REQUESTED/CHANGES_REQUESTED),
+  // yellow = papers in the teacher's review (IN_REVIEW). Office/Principal see the
+  // whole pipeline; a teacher sees their own (server-scoped). Same cache-nudge on
+  // any CT-question mutation via the shared typename.
+  const canClassTestBadge = !!role && (roleHasPermission(role as Role, "roster:manage") || roleHasPermission(role as Role, "tracker:write"));
+  const ctCountsContext = React.useMemo(() => ({ additionalTypenames: ["CtQuestionRequest"] }), []);
+  const [ctCountsQ, refetchCtCounts] = useQuery({
+    query: CT_QUESTION_COUNTS,
+    pause: !canClassTestBadge,
+    requestPolicy: "cache-and-network",
+    context: ctCountsContext,
+  });
+  React.useEffect(() => {
+    if (!canClassTestBadge) return;
+    const id = setInterval(() => refetchCtCounts({ requestPolicy: "network-only" }), 60_000);
+    return () => clearInterval(id);
+  }, [canClassTestBadge, refetchCtCounts]);
+  const ctCounts = ctCountsQ.data?.ctQuestionCounts;
+
   const badgeFor = (route: RouteName): number | undefined =>
     route === "QuestionsTab" && basket.count > 0 ? basket.count : undefined;
 
   /** Extra tinted badges (D-#294): [count, background] pairs, rendered when > 0. */
   const tintedBadgesFor = (route: RouteName): Array<{ count: number; bg: string }> => {
-    if (route !== "PrintTab" || !isPrintOperator || !printCounts) return [];
-    const out: Array<{ count: number; bg: string }> = [];
-    if (printCounts.requested > 0) out.push({ count: printCounts.requested, bg: colors.error });
-    if (printCounts.printed > 0) out.push({ count: printCounts.printed, bg: colors.warning });
-    return out;
+    if (route === "PrintTab" && isPrintOperator && printCounts) {
+      const out: Array<{ count: number; bg: string }> = [];
+      if (printCounts.requested > 0) out.push({ count: printCounts.requested, bg: colors.error });
+      if (printCounts.printed > 0) out.push({ count: printCounts.printed, bg: colors.warning });
+      return out;
+    }
+    if (route === "ClassTestTab" && canClassTestBadge && ctCounts) {
+      const out: Array<{ count: number; bg: string }> = [];
+      if (ctCounts.pending > 0) out.push({ count: ctCounts.pending, bg: colors.error });
+      if (ctCounts.inReview > 0) out.push({ count: ctCounts.inReview, bg: colors.warning });
+      return out;
+    }
+    return [];
   };
 
   const go = (leaf: NavLeaf): void => {

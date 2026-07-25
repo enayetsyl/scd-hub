@@ -21,6 +21,7 @@ import {
   requestCtQuestionPrint,
   myCtQuestionRequests,
   ctQuestionQueue,
+  ctQuestionCounts,
   type CtQuestionRequestShape,
   type CtQuestionRoundShape,
   type PrintCtQuestionResult,
@@ -211,6 +212,36 @@ builder.queryField("ctQuestionQueue", (t) =>
     resolve: async (_root, _args, ctx) => {
       assertOffice(ctx);
       return ctQuestionQueue();
+    },
+  }),
+);
+
+const CtQuestionCountsRef = builder
+  .objectRef<{ pending: number; inReview: number }>("CtQuestionCounts")
+  .implement({
+    description:
+      "Class Test sidebar badge counts (owner 2026-07-25): question requests the office still owes " +
+      "a paper on (pending) and papers waiting on the teacher (inReview).",
+    fields: (t) => ({
+      pending: t.exposeInt("pending"),
+      inReview: t.exposeInt("inReview"),
+    }),
+  });
+
+builder.queryField("ctQuestionCounts", (t) =>
+  t.field({
+    type: CtQuestionCountsRef,
+    description:
+      "How many class-test question requests are pending (REQUESTED/CHANGES_REQUESTED) and in review " +
+      "(IN_REVIEW). Office/Principal (roster:manage) see the whole pipeline; a teacher (tracker:write) " +
+      "sees only their own. Anyone else gets zeros.",
+    authScopes: { authenticated: true },
+    resolve: async (_root, _args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const officeWide = callerHasPermission(ctx.auth, "roster:manage");
+      const canRequest = callerHasPermission(ctx.auth, "tracker:write");
+      if (!officeWide && !canRequest) return { pending: 0, inReview: 0 };
+      return ctQuestionCounts(officeWide ? null : (ctx.auth.userId as string));
     },
   }),
 );
