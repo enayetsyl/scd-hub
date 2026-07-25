@@ -30,6 +30,16 @@ function assertLifecycleReportAdmin(ctx: AppContext): void {
   }
 }
 
+/** A zeroed row for a teacher with no attributed items in range. */
+function emptyRow(teacherId: string, teacherName: string): HwTeacherLifecycleRow {
+  return {
+    teacherId,
+    teacherName,
+    declaredItems: 0, issuedItems: 0, given: 0, submitted: 0, checked: 0, returned: 0,
+    pendingSubmission: 0, pendingChecking: 0, pendingReturn: 0, chasedPending: 0,
+  };
+}
+
 const HwTeacherLifecycleRowRef = builder.objectRef<HwTeacherLifecycleRow>("HwTeacherLifecycleRow").implement({
   description: "One teacher's homework lifecycle counts + pending buckets (D-#350).",
   fields: (t) => ({
@@ -116,7 +126,8 @@ builder.queryField("homeworkLifecyclePending", (t) =>
   t.field({
     type: [HwPendingStudentRef],
     description:
-      "The named students stuck at one teacher's pending stage — the drill-down behind a pending number (Principal/Office).",
+      "The named students stuck at one teacher's pending stage — the drill-down behind a pending number. " +
+      "Principal/Office for any teacher; a teacher may drill their OWN pending (teacherId = self, D-#340 SELF pattern).",
     authScopes: { authenticated: true },
     args: {
       from: t.arg.string({ required: true }),
@@ -127,7 +138,9 @@ builder.queryField("homeworkLifecyclePending", (t) =>
       subject: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      assertLifecycleReportAdmin(ctx);
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      // SELF-scope: a teacher may drill their own pending; anyone else needs admin.
+      if (args.teacherId !== ctx.auth.userId) assertLifecycleReportAdmin(ctx);
       if (!isHwPendingStage(args.stage)) {
         throw new ForbiddenError(`অজানা ধাপ: ${args.stage}`);
       }
@@ -135,6 +148,27 @@ builder.queryField("homeworkLifecyclePending", (t) =>
         classLevel: args.classLevel ?? null,
         subject: args.subject ?? null,
       });
+    },
+  }),
+);
+
+builder.queryField("myHomeworkLifecycle", (t) =>
+  t.field({
+    type: HwTeacherLifecycleRowRef,
+    description:
+      "The CALLER's own homework lifecycle row (totals + pending buckets), self-scoped — the teacher-" +
+      "dashboard card (owner 2026-07-25). Attribution is the routine subject teacher (D-#351), so a " +
+      "Principal's on-behalf entries land in the accountable teacher's own card.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      from: t.arg.string({ required: true }),
+      to: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const me = ctx.auth.userId as string;
+      const report = await homeworkLifecycleReport(args.from, args.to, {});
+      return report.teachers.find((r) => r.teacherId === me) ?? emptyRow(me, me);
     },
   }),
 );

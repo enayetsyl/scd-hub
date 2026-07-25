@@ -1325,6 +1325,7 @@ const STR_BN = {
   hlrFilterTeacher: "শিক্ষক",
   hlrAll: "সব",
   // Pending buckets (tappable → names)
+  tdMyHwLifecycle: "আমার বাড়ির কাজের অবস্থা",
   hlrPendingHeader: "বাকি কাজ",
   hlrPendingSubmission: "জমা বাকি",
   hlrPendingCheck: "চেক বাকি",
@@ -3998,6 +3999,7 @@ const STR_EN: StrTable = {
   hlrFilterTeacher: "Teacher",
   hlrAll: "All",
   // Pending buckets (tappable → names)
+  tdMyHwLifecycle: "My homework lifecycle",
   hlrPendingHeader: "Pending",
   hlrPendingSubmission: "Awaiting submission",
   hlrPendingCheck: "Awaiting check",
