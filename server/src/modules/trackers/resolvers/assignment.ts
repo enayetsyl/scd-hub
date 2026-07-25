@@ -24,7 +24,7 @@
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
-import type { Role } from "@scd/shared";
+import type { Role, LifecycleState } from "@scd/shared";
 import { dateOnlyISO } from "../assignmentCalendar";
 import {
   upsertAssignmentSchedule as upsertScheduleSvc,
@@ -59,6 +59,13 @@ import {
   issueAssignmentResubmission as resubSvc,
 } from "../services/AssignmentCheckingService";
 import { revertAssignmentRecord as revertAssignmentRecordSvc } from "../services/AssignmentRevertService";
+import {
+  listOpenAssignmentRecords as listOpenAsRecordsSvc,
+  submitPass as asSubmitPassSvc,
+  returnPass as asReturnPassSvc,
+  recordAssignmentOutcome as recordAsOutcomeSvc,
+  type AsOpenRecordDTO,
+} from "../services/AssignmentRosterPassService";
 import {
   assignmentChaseList as chaseListSvc,
   escalateAssignmentChase as escalateSvc,
@@ -1557,6 +1564,173 @@ builder.mutationField("checkAssignmentRecord", (t) =>
       await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
       await assertRecordInSection(args.recordId, args.sectionId);
       return checkSvc({
+        recordId: args.recordId,
+        result: args.result,
+        marks: args.marks ?? undefined,
+        feedback: args.feedback ?? undefined,
+        actorId: ctx.auth.userId as string,
+      });
+    },
+  }),
+);
+
+// ===========================================================================
+// RP-3 (D-#356) — the roster-pass parity: a section-wide read + the two passes
+// + the individual outcome (marks + feedback, no auto-spawn).
+// ===========================================================================
+
+const AsOpenRecordRef = builder.objectRef<AsOpenRecordDTO>("AssignmentOpenRecord");
+AsOpenRecordRef.implement({
+  description:
+    "A section's open assignment record across all weeks, enriched with the item's subject/dates " +
+    "and the student's name — the row the roster-pass workspace renders (RP-3, D-#356).",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    asItemId: t.exposeString("asItemId"),
+    asId: t.exposeString("asId"),
+    subject: t.exposeString("subject"),
+    classLevel: t.exposeInt("classLevel"),
+    deliveryDate: t.string({ nullable: true, resolve: (r) => r.deliveryDate }),
+    dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),
+    studentId: t.exposeString("studentId"),
+    studentName: t.exposeString("studentName"),
+    state: t.exposeString("state"),
+    chaseCount: t.exposeInt("chaseCount"),
+    result: t.string({ nullable: true, resolve: (r) => r.result }),
+    marks: t.int({ nullable: true, resolve: (r) => r.marks }),
+    totalMarks: t.int({ nullable: true, resolve: (r) => r.totalMarks }),
+    feedback: t.string({ nullable: true, resolve: (r) => r.feedback }),
+    resubOf: t.string({ nullable: true, resolve: (r) => r.resubOf }),
+    stampCount: t.exposeInt("stampCount"),
+    lastStateAt: t.exposeString("lastStateAt"),
+  }),
+});
+
+builder.queryField("assignmentOpenRecords", (t) =>
+  t.field({
+    type: [AsOpenRecordRef],
+    description:
+      "All of a section's assignment records in the given states, across all weeks (newest delivery-date " +
+      "first), for the roster-pass workspace (RP-3). Read-scope + per-item subject-readability enforced.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+      states: t.arg({ type: ["String"], required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      const rows = await listOpenAsRecordsSvc(args.sectionId, args.states as LifecycleState[]);
+      // Per-item subject-readability: drop items the caller may not open (a
+      // subject teacher never sees another subject's records — mirrors
+      // assignmentRecords' assertItemSubjectReadable, applied set-wise).
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      return allowed ? rows.filter((r) => allowed.has(r.subject)) : rows;
+    },
+  }),
+);
+
+const AsSubmitPassEntryInput = builder.inputType("AsSubmitPassEntryInput", {
+  fields: (t) => ({
+    recordId: t.string({ required: true }),
+    submitted: t.boolean({ required: true }),
+  }),
+});
+const AsReturnPassEntryInput = builder.inputType("AsReturnPassEntryInput", {
+  fields: (t) => ({
+    recordId: t.string({ required: true }),
+    returned: t.boolean({ required: true }),
+  }),
+});
+
+const AsSubmitPassResultRef = builder
+  .objectRef<{ submittedCount: number; chasedCount: number; unchangedCount: number }>("AsSubmitPassResult")
+  .implement({
+    fields: (t) => ({
+      submittedCount: t.exposeInt("submittedCount"),
+      chasedCount: t.exposeInt("chasedCount"),
+      unchangedCount: t.exposeInt("unchangedCount"),
+    }),
+  });
+const AsReturnPassResultRef = builder
+  .objectRef<{ returnedCount: number; unchangedCount: number }>("AsReturnPassResult")
+  .implement({
+    fields: (t) => ({
+      returnedCount: t.exposeInt("returnedCount"),
+      unchangedCount: t.exposeInt("unchangedCount"),
+    }),
+  });
+
+builder.mutationField("assignmentSubmitPass", (t) =>
+  t.field({
+    type: AsSubmitPassResultRef,
+    description:
+      "The submission roster pass (RP-3, D-#356): uncrossed → SUBMITTED; crossed → CHASE " +
+      "FIRST-CROSS-ONLY, regardless of due date. Subject-teacher write-scope.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      itemId: t.arg.string({ required: true }),
+      entries: t.arg({ type: [AsSubmitPassEntryInput], required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanWrite(ctx, args.sectionId, await assignmentItemSubjectId(args.itemId));
+      await assertItemInSection(args.itemId, args.sectionId);
+      return asSubmitPassSvc(
+        args.itemId,
+        args.entries.map((e) => ({ recordId: e.recordId, submitted: e.submitted })),
+        ctx.auth.userId as string,
+      );
+    },
+  }),
+);
+
+builder.mutationField("assignmentReturnPass", (t) =>
+  t.field({
+    type: AsReturnPassResultRef,
+    description:
+      "The return roster pass (RP-3, D-#356): each uncrossed CHECKED/RESUBMIT record → RETURNED. " +
+      "Subject-teacher write-scope.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      itemId: t.arg.string({ required: true }),
+      entries: t.arg({ type: [AsReturnPassEntryInput], required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanWrite(ctx, args.sectionId, await assignmentItemSubjectId(args.itemId));
+      await assertItemInSection(args.itemId, args.sectionId);
+      return asReturnPassSvc(
+        args.itemId,
+        args.entries.map((e) => ({ recordId: e.recordId, returned: e.returned })),
+        ctx.auth.userId as string,
+      );
+    },
+  }),
+);
+
+builder.mutationField("recordAssignmentOutcome", (t) =>
+  t.field({
+    type: CheckResultRef,
+    description:
+      "One-tap assignment check (RP-3, D-#356): fast-forwards the record to SUBMITTED then checks it " +
+      "(result + optional marks ≤ totalMarks + feedback). NOTHING auto-spawns (D-#87). Write-scope enforced.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      recordId: t.arg.string({ required: true }),
+      result: t.arg.string({ required: true }),
+      marks: t.arg.int({ required: false }),
+      feedback: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
+      await assertRecordInSection(args.recordId, args.sectionId);
+      return recordAsOutcomeSvc({
         recordId: args.recordId,
         result: args.result,
         marks: args.marks ?? undefined,

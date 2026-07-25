@@ -1796,6 +1796,8 @@ export const HOMEWORK_STUDENT_RECORDS = gql<
 export interface HwOpenRecordT {
   id: string;
   hwId: string;
+  /** The item's Mongo _id — the roster-pass mutations' `itemId` arg (RP-1, D-#355). */
+  hwItemId: string;
   /** D-#317: the teacher's brief "what is the homework" (null pre-D-#317). */
   description: string | null;
   subject: string;
@@ -1820,7 +1822,7 @@ export const HOMEWORK_OPEN_RECORDS = gql<
 >`
   query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
     homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
-      id hwId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile dueDate result stampCount lastStateAt
+      id hwId hwItemId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile dueDate result stampCount lastStateAt
     }
   }
 `;
@@ -2209,6 +2211,39 @@ export const MARK_HOMEWORK_RECORDS_DUE = gql<
 >`
   mutation MarkHomeworkRecordsDue($sectionId: String!, $recordIds: [String!]!) {
     markHomeworkRecordsDue(sectionId: $sectionId, recordIds: $recordIds)
+  }
+`;
+
+// RP-1 (D-#355): the two roster passes. The submit pass fast-forwards the
+// uncrossed to SUBMITTED and chases the crossed FIRST-CROSS-ONLY; the return
+// pass hands back the uncrossed checked khatas.
+export interface HwSubmitPassEntry {
+  recordId: string;
+  submitted: boolean;
+}
+export const HOMEWORK_SUBMIT_PASS = gql<
+  { homeworkSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number } },
+  { sectionId: string; itemId: string; entries: HwSubmitPassEntry[] }
+>`
+  mutation HomeworkSubmitPass($sectionId: String!, $itemId: String!, $entries: [HwSubmitPassEntryInput!]!) {
+    homeworkSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
+      submittedCount chasedCount unchangedCount
+    }
+  }
+`;
+
+export interface HwReturnPassEntry {
+  recordId: string;
+  returned: boolean;
+}
+export const HOMEWORK_RETURN_PASS = gql<
+  { homeworkReturnPass: { returnedCount: number; unchangedCount: number } },
+  { sectionId: string; itemId: string; entries: HwReturnPassEntry[] }
+>`
+  mutation HomeworkReturnPass($sectionId: String!, $itemId: String!, $entries: [HwReturnPassEntryInput!]!) {
+    homeworkReturnPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
+      returnedCount unchangedCount
+    }
   }
 `;
 
@@ -4211,6 +4246,79 @@ export const ISSUE_AS_RESUBMISSION = gql<
 >`
   mutation IssueAssignmentResubmission($sectionId: String!, $recordId: String!) {
     issueAssignmentResubmission(sectionId: $sectionId, recordId: $recordId) { recordId originalRecordId state }
+  }
+`;
+
+// RP-3 (D-#356): the section-wide roster-pass read + the two passes + the outcome.
+export interface AsOpenRecordT {
+  id: string;
+  asItemId: string;
+  asId: string;
+  subject: string;
+  classLevel: number;
+  deliveryDate: string | null;
+  dueDate: string | null;
+  studentId: string;
+  studentName: string;
+  state: string;
+  chaseCount: number;
+  result: string | null;
+  marks: number | null;
+  totalMarks: number | null;
+  feedback: string | null;
+  resubOf: string | null;
+  stampCount: number;
+  lastStateAt: string;
+}
+export const AS_OPEN_RECORDS = gql<
+  { assignmentOpenRecords: AsOpenRecordT[] },
+  { sectionId: string; classId: string; states: string[] }
+>`
+  query AssignmentOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
+    assignmentOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
+      id asItemId asId subject classLevel deliveryDate dueDate studentId studentName state chaseCount result marks totalMarks feedback resubOf stampCount lastStateAt
+    }
+  }
+`;
+
+export interface AsSubmitPassEntry {
+  recordId: string;
+  submitted: boolean;
+}
+export const ASSIGNMENT_SUBMIT_PASS = gql<
+  { assignmentSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number } },
+  { sectionId: string; itemId: string; entries: AsSubmitPassEntry[] }
+>`
+  mutation AssignmentSubmitPass($sectionId: String!, $itemId: String!, $entries: [AsSubmitPassEntryInput!]!) {
+    assignmentSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
+      submittedCount chasedCount unchangedCount
+    }
+  }
+`;
+
+export interface AsReturnPassEntry {
+  recordId: string;
+  returned: boolean;
+}
+export const ASSIGNMENT_RETURN_PASS = gql<
+  { assignmentReturnPass: { returnedCount: number; unchangedCount: number } },
+  { sectionId: string; itemId: string; entries: AsReturnPassEntry[] }
+>`
+  mutation AssignmentReturnPass($sectionId: String!, $itemId: String!, $entries: [AsReturnPassEntryInput!]!) {
+    assignmentReturnPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
+      returnedCount unchangedCount
+    }
+  }
+`;
+
+export const RECORD_AS_OUTCOME = gql<
+  { recordAssignmentOutcome: { recordId: string; state: string; result: string; marks: number | null } },
+  { sectionId: string; recordId: string; result: string; marks?: number | null; feedback?: string | null }
+>`
+  mutation RecordAssignmentOutcome($sectionId: String!, $recordId: String!, $result: String!, $marks: Int, $feedback: String) {
+    recordAssignmentOutcome(sectionId: $sectionId, recordId: $recordId, result: $result, marks: $marks, feedback: $feedback) {
+      recordId state result marks
+    }
   }
 `;
 
