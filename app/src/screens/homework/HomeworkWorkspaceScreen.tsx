@@ -55,9 +55,16 @@ import { space } from "../../theme/tokens";
 type Props = NativeStackScreenProps<HomeworkStackParamList, "HomeworkWorkspace">;
 
 /** Every non-terminal state + same-day RETURNED (undo-only, kept as today). */
-const OPEN_STATES = ["GIVEN", "ABSENT_REDELIVER", "DUE", "SUBMITTED", "CHASE", "CHECKED", "RESUBMIT"];
+// RETURNED is queried so a just-returned batch stays visible as a same-day
+// confirmation list (with Undo), then clears next Dhaka day — the D-#338 posture.
+const OPEN_STATES = ["GIVEN", "ABSENT_REDELIVER", "DUE", "SUBMITTED", "CHASE", "CHECKED", "RESUBMIT", "RETURNED"];
 const SUBMIT_STATES = new Set(["GIVEN", "DUE", "CHASE"]);
 const RETURN_STATES = new Set(["CHECKED", "RESUBMIT"]);
+
+/** Calendar day (YYYY-MM-DD) of an ISO instant in Asia/Dhaka — mirrors the server gate. */
+function dhakaDayOf(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+}
 
 interface ItemGroup {
   hwItemId: string;
@@ -107,7 +114,12 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
     variables: { ...base, states: OPEN_STATES },
     pause: !hasSection,
   });
-  const records = recsQ.data?.homeworkOpenRecords ?? [];
+  // Keep RETURNED rows only while their last stamp is still today (Dhaka) — the
+  // same-day "ফেরত হয়েছে" confirmation list; older returns fall off.
+  const today = dhakaDayOf(new Date().toISOString());
+  const records = (recsQ.data?.homeworkOpenRecords ?? []).filter(
+    (r) => r.state !== "RETURNED" || dhakaDayOf(r.lastStateAt) === today,
+  );
   const taught = useTaughtSubjects(selection.sectionId ?? null);
 
   const [error, setError] = useState<string | null>(null);
@@ -188,6 +200,7 @@ function ItemCard({
   const [, submitPass] = useMutation(HOMEWORK_SUBMIT_PASS);
   const [, returnPass] = useMutation(HOMEWORK_RETURN_PASS);
   const [, transition] = useMutation(TRANSITION_HOMEWORK_RECORD);
+  const [, revertRecord] = useMutation(REVERT_HW_RECORD);
   const [submitBusy, setSubmitBusy] = useState(false);
   const [returnBusy, setReturnBusy] = useState(false);
   const [showAbsent, setShowAbsent] = useState(false);
@@ -197,6 +210,7 @@ function ItemCard({
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
   const checkRows = group.rows.filter((r) => r.state === "SUBMITTED");
   const returnRows = group.rows.filter((r) => RETURN_STATES.has(r.state));
+  const returnedRows = group.rows.filter((r) => r.state === "RETURNED");
   const absentRows = group.rows.filter((r) => r.state === "ABSENT_REDELIVER");
   const chaseRows = submitRows.filter((r) => r.state === "CHASE");
 
@@ -244,6 +258,16 @@ function ItemCard({
     setBusyId(null);
     if (res.error || !res.data?.transitionHomeworkRecord) return onNotify(null, friendlyError(res.error));
     onNotify(STR.hwChaseAction, null);
+    onDone();
+  }
+
+  /** Undo a same-day return (D-#338) — puts the student back into ফেরত. */
+  async function onUndoReturn(recordId: string): Promise<void> {
+    setBusyId(recordId);
+    const res = await revertRecord({ sectionId: base.sectionId, recordId });
+    setBusyId(null);
+    if (res.error || !res.data?.revertHomeworkRecord) return onNotify(null, friendlyError(res.error));
+    onNotify(STR.revertDone, null);
     onDone();
   }
 
@@ -337,6 +361,23 @@ function ItemCard({
             busy={returnBusy}
             onCommit={onReturnCommit}
           />
+        </View>
+      ) : null}
+
+      {/* Same-day confirmation of what was handed back (with Undo); clears next day. */}
+      {returnedRows.length > 0 ? (
+        <View style={{ marginTop: space(3) }}>
+          <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>
+            ── {STR.hwReturnedHeading} ({bnNum(returnedRows.length)}) ──
+          </Muted>
+          {returnedRows.map((r) => (
+            <View key={r.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", minHeight: 40 }}>
+              <Body style={{ flexShrink: 1 }}>✓ {r.studentName}</Body>
+              {r.stampCount > 1 ? (
+                <Button title={STR.revertAction} variant="ghost" onPress={() => void onUndoReturn(r.id)} loading={busyId === r.id} disabled={busyId !== null} />
+              ) : null}
+            </View>
+          ))}
         </View>
       ) : null}
     </Card>

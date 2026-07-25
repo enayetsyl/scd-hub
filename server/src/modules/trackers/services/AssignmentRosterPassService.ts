@@ -55,6 +55,8 @@ export interface AsOpenRecordDTO {
   feedback: string | null;
   resubOf: string | null;
   stampCount: number;
+  /** ISO `at` of the newest stamp — the client's same-Dhaka-day RETURNED filter. */
+  lastStateAt: string;
 }
 
 /** All of a section's assignment records in the given states, across all weeks,
@@ -101,6 +103,7 @@ export async function listOpenAssignmentRecords(
         feedback: r.feedback ?? null,
         resubOf: r.resubOf ? r.resubOf.toString() : null,
         stampCount: r.stateDates.length,
+        lastStateAt: new Date(r.stateDates[r.stateDates.length - 1]!.at as unknown as Date).toISOString(),
       };
     })
     .sort((a, b) => {

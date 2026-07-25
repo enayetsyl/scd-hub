@@ -1602,6 +1602,7 @@ AsOpenRecordRef.implement({
     feedback: t.string({ nullable: true, resolve: (r) => r.feedback }),
     resubOf: t.string({ nullable: true, resolve: (r) => r.resubOf }),
     stampCount: t.exposeInt("stampCount"),
+    lastStateAt: t.exposeString("lastStateAt"),
   }),
 });
 

@@ -4268,6 +4268,7 @@ export interface AsOpenRecordT {
   feedback: string | null;
   resubOf: string | null;
   stampCount: number;
+  lastStateAt: string;
 }
 export const AS_OPEN_RECORDS = gql<
   { assignmentOpenRecords: AsOpenRecordT[] },
@@ -4275,7 +4276,7 @@ export const AS_OPEN_RECORDS = gql<
 >`
   query AssignmentOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
     assignmentOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
-      id asItemId asId subject classLevel deliveryDate dueDate studentId studentName state chaseCount result marks totalMarks feedback resubOf stampCount
+      id asItemId asId subject classLevel deliveryDate dueDate studentId studentName state chaseCount result marks totalMarks feedback resubOf stampCount lastStateAt
     }
   }
 `;
