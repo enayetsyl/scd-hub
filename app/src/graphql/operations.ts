@@ -4169,32 +4169,6 @@ export const AS_ITEMS = gql<
   }
 `;
 
-export interface AsRecordT {
-  id: string;
-  asId: string;
-  studentId: string;
-  state: string;
-  /** D-#338: undo affordance — offered when > 1 stamp; last `at` drives the same-day hint. */
-  stateDates: { state: string; at: string }[];
-  dueDate: string | null;
-  chaseCount: number;
-  result: string | null;
-  marks: number | null;
-  feedback: string | null;
-  resubOf: string | null;
-}
-
-export const AS_RECORDS = gql<
-  { assignmentRecords: AsRecordT[] },
-  { sectionId: string; classId: string; itemId: string }
->`
-  query AssignmentRecords($sectionId: String!, $classId: String!, $itemId: String!) {
-    assignmentRecords(sectionId: $sectionId, classId: $classId, itemId: $itemId) {
-      id asId studentId state stateDates { state at } dueDate chaseCount result marks feedback resubOf
-    }
-  }
-`;
-
 // D-#338 — undo the last lifecycle action on one assignment record.
 export const REVERT_AS_RECORD = gql<
   { revertAssignmentRecord: { recordId: string; asId: string; state: string; poppedStates: string[]; deletedResubmissionId: string | null } },
@@ -4203,22 +4177,6 @@ export const REVERT_AS_RECORD = gql<
   mutation RevertAssignmentRecord($sectionId: String!, $recordId: String!) {
     revertAssignmentRecord(sectionId: $sectionId, recordId: $recordId) {
       recordId asId state poppedStates deletedResubmissionId
-    }
-  }
-`;
-
-export interface AsCollectionEntryIn {
-  recordId: string;
-  submitted: boolean;
-}
-
-export const COLLECT_ASSIGNMENT = gql<
-  { collectAssignment: { itemId: string; asId: string; submittedCount: number; chaseCount: number; pendingCount: number } },
-  { sectionId: string; itemId: string; entries: AsCollectionEntryIn[] }
->`
-  mutation CollectAssignment($sectionId: String!, $itemId: String!, $entries: [AssignmentCollectionEntryInput!]!) {
-    collectAssignment(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
-      itemId asId submittedCount chaseCount pendingCount
     }
   }
 `;
@@ -4241,16 +4199,6 @@ export const TRANSITION_AS_RECORD = gql<
   }
 `;
 
-export const CHECK_AS_RECORD = gql<
-  { checkAssignmentRecord: { recordId: string; state: string; result: string; marks: number | null } },
-  { sectionId: string; recordId: string; result: string; marks?: number | null; feedback?: string | null }
->`
-  mutation CheckAssignmentRecord($sectionId: String!, $recordId: String!, $result: String!, $marks: Int, $feedback: String) {
-    checkAssignmentRecord(sectionId: $sectionId, recordId: $recordId, result: $result, marks: $marks, feedback: $feedback) {
-      recordId state result marks
-    }
-  }
-`;
 
 export const ISSUE_AS_RESUBMISSION = gql<
   { issueAssignmentResubmission: { recordId: string; originalRecordId: string; state: string } },

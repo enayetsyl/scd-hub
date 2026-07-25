@@ -9,7 +9,7 @@
  */
 import React from "react";
 import { Text, Pressable, View, Modal, useWindowDimensions } from "react-native";
-import { createNativeStackNavigator, type NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { HeaderBackButton } from "@react-navigation/elements";
 import { roleHasPermission } from "@scd/shared";
@@ -563,16 +563,6 @@ function TrackersNavigator(): React.ReactElement {
 
 const HomeworkStack = createNativeStackNavigator<HomeworkStackParamList>();
 
-/** RP-2 (D-#355): the two retired routes redirect to the workspace for one release
- *  (PR 3 deletes them). `replace` so Back doesn't return to a blank redirect. */
-function RedirectToHomeworkWorkspace(): React.ReactElement {
-  const navigation = useNavigation<NativeStackNavigationProp<HomeworkStackParamList>>();
-  React.useEffect(() => {
-    navigation.replace("HomeworkWorkspace");
-  }, [navigation]);
-  return <View />;
-}
-
 function HomeworkNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
   return (
@@ -581,9 +571,6 @@ function HomeworkNavigator(): React.ReactElement {
       <HomeworkStack.Screen name="DeclareHomework" component={DeclareHomeworkScreen} options={{ title: STR.hwDeclareTitle }} />
       <HomeworkStack.Screen name="HomeworkReconcile" component={HomeworkReconcileScreen} options={{ title: STR.hwReconcileTitle }} />
       <HomeworkStack.Screen name="HomeworkWorkspace" component={HomeworkWorkspaceScreen} options={{ title: STR.hwWorkspaceTitle }} />
-      {/* Retired RP-2 — redirected to the workspace for one release (PR 3 deletes these two). */}
-      <HomeworkStack.Screen name="HomeworkRecords" component={RedirectToHomeworkWorkspace} options={{ title: STR.hwWorkspaceTitle }} />
-      <HomeworkStack.Screen name="CheckingQueue" component={RedirectToHomeworkWorkspace} options={{ title: STR.hwWorkspaceTitle }} />
       <HomeworkStack.Screen name="HomeworkRollups" component={HomeworkRollupsScreen} options={{ title: STR.hwRollupsTitle }} />
       <HomeworkStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </HomeworkStack.Navigator>
@@ -591,22 +578,6 @@ function HomeworkNavigator(): React.ReactElement {
 }
 
 const AssignmentStack = createNativeStackNavigator<AssignmentStackParamList>();
-
-/** RP-4 (D-#356): the retired Collect/Checking routes carry {sectionId, classId};
- *  redirect (replace) to the section's workspace for one release (PR 3 deletes). */
-function RedirectToAssignmentWorkspace({
-  route,
-}: {
-  route: { params?: { sectionId?: string; classId?: string } };
-}): React.ReactElement {
-  const navigation = useNavigation<NativeStackNavigationProp<AssignmentStackParamList>>();
-  React.useEffect(() => {
-    const { sectionId, classId } = route.params ?? {};
-    if (sectionId && classId) navigation.replace("AssignmentWorkspace", { sectionId, classId });
-    else navigation.goBack();
-  }, [navigation, route.params]);
-  return <View />;
-}
 
 function AssignmentNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -616,9 +587,6 @@ function AssignmentNavigator(): React.ReactElement {
       <AssignmentStack.Screen name="AssignmentSchedule" component={AssignmentScheduleScreen} options={{ title: STR.asScheduleTitle }} />
       <AssignmentStack.Screen name="DeliverAssignment" component={DeliverAssignmentScreen} options={{ title: STR.asDeliverTitle }} />
       <AssignmentStack.Screen name="AssignmentWorkspace" component={AssignmentWorkspaceScreen} options={{ title: STR.asWorkspaceTitle }} />
-      {/* Retired RP-4 — redirected to the workspace for one release (PR 3 deletes these two). */}
-      <AssignmentStack.Screen name="CollectAssignment" component={RedirectToAssignmentWorkspace} options={{ title: STR.asWorkspaceTitle }} />
-      <AssignmentStack.Screen name="AssignmentChecking" component={RedirectToAssignmentWorkspace} options={{ title: STR.asWorkspaceTitle }} />
       <AssignmentStack.Screen name="AssignmentReconcile" component={AssignmentReconcileScreen} options={{ title: STR.asReconcileTitle }} />
       <AssignmentStack.Screen name="AssignmentChase" component={AssignmentChaseScreen} options={{ title: STR.asChaseTitle }} />
       <AssignmentStack.Screen name="AssignmentRollups" component={AssignmentRollupsScreen} options={{ title: STR.asRollupsTitle }} />

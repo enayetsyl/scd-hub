@@ -78,9 +78,6 @@ export type HomeworkStackParamList = {
   HomeworkReconcile: { date?: string } | undefined;
   /** RP-2 (D-#355): the roster-pass workspace replacing Records + Checking. */
   HomeworkWorkspace: undefined;
-  /** Retired RP-2; routes kept one release, redirecting to HomeworkWorkspace (PR 3 deletes). */
-  HomeworkRecords: undefined;
-  CheckingQueue: undefined;
   HomeworkRollups: undefined;
   SectionPicker: undefined;
 };
@@ -107,9 +104,6 @@ export type AssignmentStackParamList = {
   };
   /** RP-4 (D-#356): the section's roster-pass workspace (all open items, week×subject). */
   AssignmentWorkspace: { sectionId: string; classId: string };
-  /** Retired RP-4; kept one release, redirecting to AssignmentWorkspace (PR 3 deletes). */
-  CollectAssignment: { itemId: string; sectionId: string; classId: string; asId: string };
-  AssignmentChecking: { itemId: string; sectionId: string; classId: string; asId: string };
   AssignmentReconcile: {
     academicYearId: string;
     sectionId: string;

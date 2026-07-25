@@ -608,79 +608,9 @@ export async function redeliverAssignmentRecord(
 }
 
 // ---------------------------------------------------------------------------
-// collectAssignment (the Sunday pass, AJ-4)
+// (collectAssignment — the old AJ-4 Sunday pass — was retired with the roster-pass
+//  workspace: the submit pass replaces it. Removed in the PR-3 cleanup, D-#356.)
 // ---------------------------------------------------------------------------
-
-export interface CollectionEntry {
-  recordId: string;
-  submitted: boolean;
-}
-
-export interface CollectAssignmentResult {
-  itemId: string;
-  asId: string;
-  submittedCount: number;
-  chaseCount: number;
-  /** Records left in DUE (not yet past the due date). */
-  pendingCount: number;
-}
-
-/**
- * The due-date pass: each open record moves GIVEN → DUE (stamped), then
- * submitted ones → SUBMITTED; non-submitted past the due date → CHASE. A
- * record already in CHASE that now submits goes CHASE → SUBMITTED (the engine
- * edge for late submission). Counts in the result are derived, never typed.
- */
-export async function collectAssignment(
-  itemId: string,
-  entries: CollectionEntry[],
-  actorId: string,
-  at: Date = new Date(),
-): Promise<CollectAssignmentResult> {
-  const item = await AssignmentItem.findById(itemId).lean();
-  if (!item) throw new Error("AssignmentItem not found");
-  const pastDue = atMidnight(at).getTime() > atMidnight(new Date(item.dueDate)).getTime();
-
-  let submitted = 0;
-  let chased = 0;
-  let pending = 0;
-
-  for (const entryInput of entries) {
-    const rec = await AssignmentStudentRecord.findById(entryInput.recordId);
-    if (!rec) throw new Error(`AssignmentStudentRecord not found: ${entryInput.recordId}`);
-    if (rec.asItemId.toString() !== item._id.toString()) {
-      throw new Error("Record does not belong to this assignment item");
-    }
-
-    const by = new Types.ObjectId(actorId);
-    if (entryInput.submitted) {
-      if (rec.state === "GIVEN") {
-        rec.state = "DUE";
-        rec.stateDates.push({ state: "DUE", at, by });
-      }
-      assertTransition(rec.state, "SUBMITTED"); // from DUE or CHASE
-      rec.state = "SUBMITTED";
-      rec.stateDates.push({ state: "SUBMITTED", at, by });
-      submitted++;
-    } else {
-      if (rec.state === "GIVEN") {
-        rec.state = "DUE";
-        rec.stateDates.push({ state: "DUE", at, by });
-      }
-      if (rec.state === "DUE" && pastDue) {
-        rec.state = "CHASE";
-        rec.chaseCount += 1;
-        rec.stateDates.push({ state: "CHASE", at, by });
-        chased++;
-      } else if (rec.state === "DUE") {
-        pending++;
-      }
-    }
-    await rec.save();
-  }
-
-  return { itemId: item._id.toString(), asId: item.asId, submittedCount: submitted, chaseCount: chased, pendingCount: pending };
-}
 
 /**
  * Sweep: every DUE record past its due date → CHASE (PRD AS-T2 "past-due
