@@ -588,6 +588,16 @@ export const CT_QUESTION_QUEUE = gql<{ ctQuestionQueue: CtQuestionRequestT[] }, 
   }
 `;
 
+/** Sidebar badge counts for the Class Test drawer item (owner 2026-07-25). */
+export const CT_QUESTION_COUNTS = gql<
+  { ctQuestionCounts: { pending: number; inReview: number } },
+  Record<string, never>
+>`
+  query CtQuestionCounts {
+    ctQuestionCounts { pending inReview }
+  }
+`;
+
 export const CREATE_CT_QUESTION_REQUEST = gql<
   { createCtQuestionRequest: CtQuestionRequestT },
   { sectionId: string; subject: string; chapter: string; totalMarks: number; durationMinutes: number; examDate: string }
