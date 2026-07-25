@@ -18,6 +18,12 @@ export interface EnglishDriveDocT {
   seq: number;
   title: string;
   version: number;
+  /** MD (markdown) | PDF | DOCX (binary opened via fileId). Legacy rows = MD. */
+  format: string;
+  /** The binary StoredFile id (PDF/DOCX) to open via /files/:id; null for MD. */
+  fileId: string | null;
+  fileName: string | null;
+  fileMime: string | null;
   uploadedAt: string;
   uploadedByName: string | null;
 }
@@ -27,7 +33,7 @@ export interface EnglishDriveDocFullT extends EnglishDriveDocT {
 }
 
 const ENGLISH_DRIVE_DOC_FIELDS = `
-  id classLevel blockNumber blockNumbers kind seq title version uploadedAt uploadedByName
+  id classLevel blockNumber blockNumbers kind seq title version format fileId fileName fileMime uploadedAt uploadedByName
 `;
 
 export const ENGLISH_DRIVE_MY_CLASS_LEVELS = gql<{ englishDriveMyClassLevels: number[] }, NoVars>`
@@ -105,7 +111,11 @@ export const UPLOAD_ENGLISH_DRIVE_DOC = gql<
     seq: number;
     title: string;
     version: number;
-    contentMd: string;
+    format?: string | null;
+    contentMd?: string | null;
+    fileId?: string | null;
+    fileName?: string | null;
+    fileMime?: string | null;
   }
 >`
   mutation UploadEnglishDriveDoc(
@@ -116,7 +126,11 @@ export const UPLOAD_ENGLISH_DRIVE_DOC = gql<
     $seq: Int
     $title: String!
     $version: Int!
-    $contentMd: String!
+    $format: String
+    $contentMd: String
+    $fileId: String
+    $fileName: String
+    $fileMime: String
   ) {
     uploadEnglishDriveDoc(
       classLevel: $classLevel
@@ -126,7 +140,11 @@ export const UPLOAD_ENGLISH_DRIVE_DOC = gql<
       seq: $seq
       title: $title
       version: $version
+      format: $format
       contentMd: $contentMd
+      fileId: $fileId
+      fileName: $fileName
+      fileMime: $fileMime
     ) {
       doc { ${ENGLISH_DRIVE_DOC_FIELDS} }
       replacedVersion

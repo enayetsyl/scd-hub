@@ -14,6 +14,7 @@ import { CLASS_LEVELS } from "@scd/shared";
 import { ENGLISH_DRIVE_DOCS, UPLOAD_ENGLISH_DRIVE_DOC } from "../../graphql/englishDrive";
 import { Screen, H2, Body, Muted, Card, Badge, Button, Field, Notice, Select, Divider } from "../../components/ui";
 import { FileDropZone } from "../../components/FileDropZone";
+import { uploadEnglishDriveAsset, englishDriveFormatOf, FileUploadError } from "../../lib/files";
 import {
   ENGLISH_DRIVE_KINDS,
   englishDriveKindLabel,
@@ -27,7 +28,12 @@ import { space } from "../../theme/tokens";
 
 interface StagedDoc {
   filename: string;
+  /** MD carries markdown here; PDF/DOCX carry "" and set fileId instead. */
   content: string;
+  /** MD (markdown) | PDF | DOCX (binary already uploaded → fileId). */
+  format: "MD" | "PDF" | "DOCX";
+  fileId?: string;
+  fileMime?: string;
   classLevel: string | null;
   blockNumber: string;
   /** PT only (D-#347): the blocks it covers, as raw text ("3-5" / "3,4,5"). */
@@ -37,6 +43,11 @@ interface StagedDoc {
   seq: string;
   version: string;
   title: string;
+}
+
+/** A filename's base (no extension) — the fallback title for a binary doc. */
+function baseName(filename: string): string {
+  return filename.replace(/\.[^.]+$/, "");
 }
 
 interface UploadOutcome {
@@ -82,48 +93,92 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
     return hit ? hit.version : null;
   };
 
-  // Merge new files (picker OR web drag-drop), de-duped by filename; non-.md rejected.
-  const addFiles = useCallback((picked: Array<{ filename: string; content: string }>): void => {
-    if (picked.length === 0) return;
-    setError(null);
-    setOutcomes([]);
-    const md = picked.filter((f) => /\.md$/i.test(f.filename));
-    setRejected(picked.filter((f) => !/\.md$/i.test(f.filename)).map((f) => f.filename));
-    if (md.length === 0) return;
+  const stageOne = useCallback((doc: StagedDoc): void => {
     setStaged((prev) => {
       const map = new Map(prev.map((f) => [f.filename, f]));
-      for (const f of md) {
-        const parsed = parseEnglishDriveFilename(f.filename);
-        map.set(f.filename, {
-          filename: f.filename,
-          content: f.content,
-          classLevel: parsed.classLevel === null ? null : String(parsed.classLevel),
-          blockNumber: parsed.blockNumber === null ? "" : String(parsed.blockNumber),
-          blockNumbers: parsed.blockNumbers.join(","),
-          kind: parsed.kind,
-          seq: parsed.seq === null ? "1" : String(parsed.seq),
-          version: parsed.version === null ? "1" : String(parsed.version),
-          title: titleFromMarkdown(f.content) ?? "",
-        });
-      }
+      map.set(doc.filename, doc);
       return Array.from(map.values());
     });
   }, []);
 
+  /** Build a staged MD doc from a text file (drop OR pick of a .md). */
+  const mdStagedDoc = useCallback((filename: string, content: string): StagedDoc => {
+    const parsed = parseEnglishDriveFilename(filename);
+    return {
+      filename,
+      content,
+      format: "MD",
+      classLevel: parsed.classLevel === null ? null : String(parsed.classLevel),
+      blockNumber: parsed.blockNumber === null ? "" : String(parsed.blockNumber),
+      blockNumbers: parsed.blockNumbers.join(","),
+      kind: parsed.kind,
+      seq: parsed.seq === null ? "1" : String(parsed.seq),
+      version: parsed.version === null ? "1" : String(parsed.version),
+      title: titleFromMarkdown(content) ?? "",
+    };
+  }, []);
+
+  // Drag-drop path is web + text only (the drop zone reads files as text), so it
+  // stays markdown-only; PDF/DOCX are added through the picker below.
+  const addFiles = useCallback(
+    (picked: Array<{ filename: string; content: string }>): void => {
+      if (picked.length === 0) return;
+      setError(null);
+      setOutcomes([]);
+      const md = picked.filter((f) => /\.md$/i.test(f.filename));
+      setRejected(picked.filter((f) => !/\.md$/i.test(f.filename)).map((f) => f.filename));
+      for (const f of md) stageOne(mdStagedDoc(f.filename, f.content));
+    },
+    [mdStagedDoc, stageOne],
+  );
+
   async function pickFiles(): Promise<void> {
     setError(null);
+    setOutcomes([]);
     try {
       const res = await DocumentPicker.getDocumentAsync({ multiple: true, copyToCacheDirectory: true });
       if (res.canceled) return;
-      const picked = await Promise.all(
-        (res.assets ?? []).map(async (a) => ({
-          filename: a.name,
-          content: await fetch(a.uri).then((r) => r.text()),
-        })),
-      );
-      addFiles(picked);
+      setBusy(true);
+      const rej: string[] = [];
+      for (const a of res.assets ?? []) {
+        if (/\.md$/i.test(a.name)) {
+          const content = await fetch(a.uri).then((r) => r.text());
+          stageOne(mdStagedDoc(a.name, content));
+          continue;
+        }
+        const format = englishDriveFormatOf(a.mimeType ?? "", a.name);
+        if (!format) {
+          rej.push(a.name);
+          continue;
+        }
+        // Binary: upload to /files/english-drive now → fileId; stage with metadata
+        // parsed from the filename (title falls back to the base name — no H1).
+        try {
+          const up = await uploadEnglishDriveAsset(a);
+          const parsed = parseEnglishDriveFilename(a.name);
+          stageOne({
+            filename: a.name,
+            content: "",
+            format,
+            fileId: up.fileId,
+            fileMime: up.mime,
+            classLevel: parsed.classLevel === null ? null : String(parsed.classLevel),
+            blockNumber: parsed.blockNumber === null ? "" : String(parsed.blockNumber),
+            blockNumbers: parsed.blockNumbers.join(","),
+            kind: parsed.kind,
+            seq: parsed.seq === null ? "1" : String(parsed.seq),
+            version: parsed.version === null ? "1" : String(parsed.version),
+            title: baseName(a.name),
+          });
+        } catch (e) {
+          rej.push(`${a.name}: ${e instanceof FileUploadError ? e.message : STR.errGeneric}`);
+        }
+      }
+      setRejected(rej);
     } catch {
       setError(STR.errGeneric);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -179,7 +234,12 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
         seq: intOrNull(s.seq)!,
         title: s.title.trim(),
         version: intOrNull(s.version)!,
-        contentMd: s.content,
+        format: s.format,
+        // MD carries markdown; PDF/DOCX carry the already-uploaded fileId.
+        contentMd: s.format === "MD" ? s.content : undefined,
+        fileId: s.format === "MD" ? undefined : s.fileId,
+        fileName: s.format === "MD" ? undefined : s.filename,
+        fileMime: s.format === "MD" ? undefined : s.fileMime,
       });
       if (res.error || !res.data?.uploadEnglishDriveDoc) {
         results.push({ filename: s.filename, ok: false, replacedVersion: null, error: friendlyError(res.error) });
@@ -206,7 +266,7 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
         {Platform.OS === "web" ? (
           <Muted style={{ marginBottom: space(1), textAlign: "center" }}>{STR.edDropHint}</Muted>
         ) : null}
-        <Button title={STR.pickFiles} variant="secondary" onPress={pickFiles} />
+        <Button title={STR.edPickFiles} variant="secondary" onPress={pickFiles} />
       </FileDropZone>
 
       {rejected.length > 0 ? <Notice message={`${STR.edOnlyMd}: ${rejected.join(", ")}`} tone="warn" /> : null}
@@ -217,7 +277,10 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
         return (
           <Card key={s.filename}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Body style={{ fontWeight: "700", flexShrink: 1 }}>{s.filename}</Body>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), flexShrink: 1 }}>
+                <Badge text={s.format} tone={s.format === "MD" ? "muted" : "info"} />
+                <Body style={{ fontWeight: "700", flexShrink: 1 }}>{s.filename}</Body>
+              </View>
               <Button title={STR.removeFile} variant="ghost" onPress={() => removeStaged(s.filename)} />
             </View>
             <Select

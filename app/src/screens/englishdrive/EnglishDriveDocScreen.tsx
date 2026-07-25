@@ -36,6 +36,7 @@ import {
   formatBlocksBn,
 } from "../../lib/englishDrive";
 import { openPdf, openPdfPost, PDF_SUPPORTED } from "../../lib/pdf";
+import { openStoredFile, FileUploadError } from "../../lib/files";
 import { friendlyError } from "../../lib/errors";
 import { STR, bnNum, classLevelLabel, isoDateLabel } from "../../lib/labels";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -111,6 +112,24 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
   const [fontScale, setFontScale] = useState(1);
   const [lineSpacing, setLineSpacing] = useState(1);
   const [margin, setMargin] = useState(50);
+
+  // PDF/DOCX docs (owner 2026-07-25) are binaries — opened/downloaded via the
+  // authed /files/:id, not markdown-rendered/edited/office-printed.
+  const isBinary = !!doc && (doc.format ?? "MD") !== "MD";
+  const [openBusy, setOpenBusy] = useState(false);
+  const [openErr, setOpenErr] = useState<string | null>(null);
+  async function onOpenFile(): Promise<void> {
+    if (openBusy || !doc?.fileId) return;
+    setOpenBusy(true);
+    setOpenErr(null);
+    try {
+      await openStoredFile(doc.fileId);
+    } catch (e) {
+      setOpenErr(e instanceof FileUploadError ? e.message : STR.errGeneric);
+    } finally {
+      setOpenBusy(false);
+    }
+  }
 
   const retry = (): void => refetch({ requestPolicy: "network-only" });
   const { refreshing, onRefresh } = usePullRefresh(docQ.fetching, retry);
@@ -225,6 +244,22 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                 <Muted style={{ marginTop: 2 }}>
                   {STR.edUploadedBy}: {doc.uploadedByName ?? "—"} · {isoDateLabel(doc.uploadedAt)}
                 </Muted>
+
+                {isBinary ? (
+                  <View style={{ marginTop: space(2) }}>
+                    <Badge text={doc.format} tone="info" />
+                    <View style={{ marginTop: space(2) }}>
+                      <Button
+                        title={openBusy ? STR.loading : doc.format === "PDF" ? STR.edOpenFile : STR.edDownloadFile}
+                        onPress={() => void onOpenFile()}
+                        loading={openBusy}
+                      />
+                    </View>
+                    <Muted style={{ marginTop: space(2) }}>{STR.edBinaryHint}</Muted>
+                    {openErr ? <Notice message={openErr} tone="danger" /> : null}
+                  </View>
+                ) : (
+                <>
                 <View style={{ marginTop: space(2) }}>
                   {PDF_SUPPORTED ? (
                     <Button
@@ -321,9 +356,11 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                 </View>
                 {printOk ? <Notice message={printOk} tone="ok" /> : null}
                 {printErr ? <Notice message={printErr} tone="danger" /> : null}
+                </>
+                )}
               </Card>
 
-              {richOpen ? (
+              {!isBinary && richOpen ? (
                 <View style={{ marginTop: space(3) }}>
                   <RichWorksheetEditor
                     sourceMd={doc.contentMd ?? ""}
@@ -356,7 +393,7 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                 </View>
               ) : null}
 
-              {editMode ? (
+              {!isBinary && editMode ? (
                 <Card>
                   <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.edLayoutTitle}</Muted>
                   <Muted style={{ marginBottom: space(2) }}>{STR.edEditHint}</Muted>
@@ -420,14 +457,16 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                 </Card>
               ) : null}
 
-              <Card>
-                <Markdown
-                  source={(editMode ? editedMd : doc.contentMd ?? "").replace(
-                    /^[ \t]*\{ls:[^}]*\}[ \t]*$/gim,
-                    "",
-                  )}
-                />
-              </Card>
+              {!isBinary ? (
+                <Card>
+                  <Markdown
+                    source={(editMode ? editedMd : doc.contentMd ?? "").replace(
+                      /^[ \t]*\{ls:[^}]*\}[ \t]*$/gim,
+                      "",
+                    )}
+                  />
+                </Card>
+              ) : null}
             </>
           ) : null}
         </QueryGate>

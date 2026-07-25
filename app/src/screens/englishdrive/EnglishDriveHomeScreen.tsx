@@ -187,7 +187,10 @@ export default function EnglishDriveHomeScreen({ navigation }: Props): React.Rea
                               </Body>
                               <Muted>{r.title}</Muted>
                             </View>
-                            <Badge text={`v${bnNum(r.version)}`} tone="muted" />
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+                              {(r.format ?? "MD") !== "MD" ? <Badge text={r.format} tone="info" /> : null}
+                              <Badge text={`v${bnNum(r.version)}`} tone="muted" />
+                            </View>
                           </Pressable>
                         ));
                       })()
