@@ -62,9 +62,35 @@ jest.mock("../middleware/authz", () => ({
 }));
 
 const mockAssertReportRead = jest.fn();
-jest.mock("../modules/trackers/resolvers/classTestSummary", () => ({
-  assertReportRead: (...a: unknown[]) => mockAssertReportRead(...a),
-  StudentAnalyticsRef: undefined,
+jest.mock("../modules/trackers/resolvers/classTestSummary", () => {
+  // The profile serves the class-test panel through the SAME GraphQL type, so the
+  // mock must hand back a real objectRef (a stub would not build a schema). Declared
+  // here rather than loading the whole CT-4 resolver module.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { builder: b } = require("../schema");
+  const ref = b.objectRef("ClassTestStudentProfile");
+  ref.implement({
+    fields: (t: { exposeString: (n: string) => unknown }) => ({ studentName: t.exposeString("studentName") }),
+  });
+  return {
+    assertReportRead: (...a: unknown[]) => mockAssertReportRead(...a),
+    StudentAnalyticsRef: undefined,
+    StudentProfileRef: ref,
+  };
+});
+
+const mockCtProfile = jest.fn();
+jest.mock("../modules/trackers/services/ClassTestSummaryService", () => ({
+  studentProfile: (...a: unknown[]) => mockCtProfile(...a),
+}));
+
+const mockHeader = jest.fn();
+const mockAttendance = jest.fn();
+const mockComments = jest.fn();
+jest.mock("../modules/trackers/services/StudentProfileContextService", () => ({
+  studentProfileHeader: (...a: unknown[]) => mockHeader(...a),
+  studentProfileAttendance: (...a: unknown[]) => mockAttendance(...a),
+  studentProfileComments: (...a: unknown[]) => mockComments(...a),
 }));
 
 const mockStudentFindById = jest.fn();
@@ -94,6 +120,10 @@ const STUDENT = oid().toString();
 
 const HW = `query { studentProfileHomework(studentId: "${STUDENT}", fromKey: "2026-07-01", toKey: "2026-07-31") { fullView subjectFilter totals { sheets } } }`;
 const AS = `query { studentProfileAssignment(studentId: "${STUDENT}", fromKey: "2026-07-01", toKey: "2026-07-31") { fullView totals { sheets } } }`;
+const CT = `query { studentProfileClassTest(studentId: "${STUDENT}") { studentName } }`;
+const HEADER = `query { studentProfileHeader(studentId: "${STUDENT}") { name fullView } }`;
+const ATT = `query { studentProfileAttendance(studentId: "${STUDENT}", fromKey: "2026-07-01", toKey: "2026-07-31") { presentPct } }`;
+const CMT = `query { studentProfileComments(studentId: "${STUDENT}", fromKey: "2026-07-01", toKey: "2026-07-31") { tally { total } } }`;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -101,6 +131,15 @@ beforeEach(() => {
   // per-test mockResolvedValue cannot leak into the next test.
   mockHomeworkPanel.mockResolvedValue(emptyPanel);
   mockAssignmentPanel.mockResolvedValue(emptyPanel);
+  mockCtProfile.mockResolvedValue({ studentId: "s", studentName: "করিম", results: [], bySubject: [] });
+  mockHeader.mockResolvedValue({ studentId: "s", name: "করিম", guardians: [], academicYear: null });
+  mockAttendance.mockResolvedValue({ studentId: "s", presentPct: 92, days: [], monthly: [], leaves: [] });
+  mockComments.mockResolvedValue({
+    studentId: "s",
+    tally: { total: 0, concern: 0, positive: 0, undelivered: 0 },
+    comments: [],
+    timeline: { meetingComments: [], sinceMeetingDate: null },
+  });
   mockStudentFindById.mockReturnValue({ sectionId: SECTION, classId: CLASS });
   mockAssertReportRead.mockResolvedValue(undefined); // in scope by default
   mockAllowedSubjects.mockResolvedValue(null); // unrestricted by default
@@ -194,6 +233,18 @@ describe("tier 2 — subject narrowing (D-#357)", () => {
     );
   });
 
+  test("the class-test panel is narrowed too — no average from exams the caller can't see", async () => {
+    mockAllowedSubjects.mockResolvedValue(new Set(["ENG"]));
+    expect(ok(await run(CT, "TEACHER"))).toBe(true);
+    expect(mockCtProfile).toHaveBeenCalledWith(STUDENT, ["ENG"]);
+  });
+
+  test("a full-view caller's class-test panel passes null (every subject)", async () => {
+    mockAllowedSubjects.mockResolvedValue(null);
+    expect(ok(await run(CT, "PRINCIPAL"))).toBe(true);
+    expect(mockCtProfile).toHaveBeenCalledWith(STUDENT, null);
+  });
+
   test("the assignment panel runs the identical gate", async () => {
     mockAllowedSubjects.mockResolvedValue(new Set(["MATH"]));
     await run(AS, "TEACHER");
@@ -208,5 +259,52 @@ describe("tier 2 — subject narrowing (D-#357)", () => {
       STUDENT,
       expect.objectContaining({ subjects: ["MATH"] }),
     );
+  });
+});
+
+// ===========================================================================
+// SP-2 — the subject-free panels: same tier 1, NO narrowing (§4)
+// ===========================================================================
+
+describe("subject-free panels (SP-2)", () => {
+  test.each([
+    ["header", HEADER],
+    ["attendance", ATT],
+    ["comments", CMT],
+  ])("%s passes tier 1 for an in-scope teacher", async (_name, q) => {
+    expect(ok(await run(q, "TEACHER"))).toBe(true);
+    expect(mockAssertReportRead).toHaveBeenCalledWith(expect.anything(), SECTION.toString());
+  });
+
+  test.each([
+    ["header", HEADER],
+    ["attendance", ATT],
+    ["comments", CMT],
+  ])("%s denies a guardian", async (_name, q) => {
+    mockAssertReportRead.mockRejectedValue(new FakeForbidden());
+    expect(denied(await run(q, "GUARDIAN"))).toBe(true);
+    expect(mockHeader).not.toHaveBeenCalled();
+    expect(mockAttendance).not.toHaveBeenCalled();
+    expect(mockComments).not.toHaveBeenCalled();
+  });
+
+  test("a NARROWED subject teacher still gets attendance and comments in full", async () => {
+    mockAllowedSubjects.mockResolvedValue(new Set(["ENG"]));
+    expect(ok(await run(ATT, "TEACHER"))).toBe(true);
+    expect(ok(await run(CMT, "TEACHER"))).toBe(true);
+    // No subject argument reaches either service — absence and behaviour are not a
+    // subject's property (§4). If a future edit narrows them, these calls change shape.
+    expect(mockAttendance).toHaveBeenCalledWith(STUDENT, "2026-07-01", "2026-07-31");
+    expect(mockComments).toHaveBeenCalledWith(STUDENT, "2026-07-01", "2026-07-31");
+  });
+
+  test("the header reports fullView from the gate, not a hardcoded true", async () => {
+    mockAllowedSubjects.mockResolvedValue(new Set(["ENG"]));
+    const narrowed = await run(HEADER, "TEACHER");
+    expect((narrowed.data as { studentProfileHeader: { fullView: boolean } }).studentProfileHeader.fullView).toBe(false);
+
+    mockAllowedSubjects.mockResolvedValue(null);
+    const full = await run(HEADER, "PRINCIPAL");
+    expect((full.data as { studentProfileHeader: { fullView: boolean } }).studentProfileHeader.fullView).toBe(true);
   });
 });

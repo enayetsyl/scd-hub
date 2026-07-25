@@ -159,18 +159,25 @@ teacher** only if the owner later objects — for now it stays (a subject teache
 exam's ranking on the entry grid).
 
 ### 5.5 Attendance
-`studentAttendanceHistory(studentId, fromKey, toKey)` verbatim, plus derived: `absentStreakMax`,
-`absentUncoveredDays` (absent and **not** leave-covered), `monthly[]` = per-month `presentPct` for the
-chart, and the `recentPresentPct` / `earlierPresentPct` split `WholePictureService` already computes.
-Leave applications for the window are listed beside it (status, from→to, reason) so a run of absences
-reads as *covered* rather than truancy.
+`studentAttendanceHistory(studentId, fromKey, toKey)` verbatim (it is already D-#278 cutover-safe), plus
+derived: `absentStreakMax` (a *run* reads worse than a total), `absentUncoveredDays` (absent and **not**
+leave-covered — the truancy number), `monthly[]` = per-month `presentPct` for the chart, and the
+`recentPresentPct` / `earlierPresentPct` split, which is now **extracted from `WholePictureService` as
+`attendanceSplitOf`** and shared rather than re-derived (the §5.1 rule applied again).
+
+Leave applications overlapping the window are listed beside it with `fromKey`→`toKey`, `reason`,
+`submittedAt` and `daysInWindow`, so a run of absences reads as *covered* rather than truancy. Note
+`StudentLeaveApplication` carries **no approval status** — recording one is the approval today — so the
+panel shows no status chip, and the overlap query is two-sided (`fromKey ≤ to` AND `toKey ≥ from`) or a
+leave straddling the window edge would be missed.
 
 ### 5.6 Comments / meetings
-`StudentComment` rows newest-first (type, sentiment, text, author name, `deliveredAt` → a
-Draft/Delivered badge, the comment date localized through the existing `isoDateLabel`) + a per-sentiment tally
-(CONCERN vs POSITIVE) for the header band. `ParentMeeting` rows with their `MeetingComment` history —
-the CM-5 cross-meeting timeline, which is exactly the "what did we tell this guardian last time"
-question a profile must answer.
+`StudentComment` rows newest-first (type, sentiment, text, author name joined in, `deliveredAt` → a
+Draft/Delivered badge, the date localized through the existing `isoDateLabel`) windowed **by date key**,
+plus a tally of `total` / `concern` / `positive` / **`undelivered`** — a written-but-undelivered comment is
+a to-do, not a record. Meeting history comes from the existing `studentCommentTimeline` (the CM-5
+cross-meeting read) rather than a second query: `positiveText` / `concernText` per past meeting, which is
+exactly the "what did we tell this guardian last time" question a profile must answer.
 
 ### 5.7 Window (D-#358)
 Every panel takes `fromKey` / `toKey`. **The window axis is the ITEM's date** — `dateGiven` for
@@ -306,7 +313,7 @@ the profile will be opened repeatedly during meeting week. Rules:
 | Slice | Contents | Gate |
 |---|---|---|
 | **SP-1** ✅ | Extract `trackers/lifecycleBuckets.ts` (§5.1) + the tracker-panel service (`StudentProfileService`) with the §5.2/§5.3 counters; `studentProfileHomework` / `studentProfileAssignment` + the §4 two-tier gate. **No UI.** | **BUILT** — jest 45 new (21 pure tally incl. the resubmission + due-today + partition rules, 11 panel windowing/narrowing, 13 RBAC tiers), server tsc clean, lifecycle-report suite green |
-| **SP-2** | `studentProfileHeader` + `studentProfileAttendance` + `studentProfileComments`; `subjects` arg on `classTestStudentProfile` | jest per resolver + the firewall test |
+| **SP-2** ✅ | `studentProfileHeader` + `studentProfileAttendance` + `studentProfileComments` + `studentProfileClassTest` (the narrowed class-test panel; `classTestStudentProfile` itself stays byte-compatible for the CT screen) | **BUILT** — jest 24 new (16 context incl. the pure attendance/leave derivations, 8 more RBAC covering the subject-free posture + class-test narrowing); server tsc clean; firewall green |
 | **SP-3** | `StudentProfileScreen` — header, WholePictureCard, range chips, all five panels; the five entry points; `MiniBarChart` stacked + `MiniLineChart` (§8.2) | app tsc + expo web export + **live drive**: one full-view class teacher, one narrowed subject teacher, one Principal, on the dev site |
 | **SP-4** | `GET /pdf/student-profile/:studentId` (§9) | jest (gate + narrowed PDF) + a rendered PDF opened and eyeballed |
 | **SP-5** *(optional, after owner review)* | v2 panels from §3's deferred list, one panel each | per panel |

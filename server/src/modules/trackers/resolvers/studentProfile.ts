@@ -32,7 +32,23 @@ import {
   type TrackerItemRow,
   type TrackerSubjectRow,
 } from "../services/StudentProfileService";
-import { assertReportRead } from "./classTestSummary";
+import {
+  studentProfileAttendance,
+  studentProfileComments,
+  studentProfileHeader,
+  type ProfileAcademicYear,
+  type ProfileAttendanceDay,
+  type ProfileAttendanceMonth,
+  type ProfileComment,
+  type ProfileCommentTally,
+  type ProfileGuardian,
+  type ProfileLeave,
+  type StudentProfileAttendance,
+  type StudentProfileComments,
+  type StudentProfileHeader,
+} from "../services/StudentProfileContextService";
+import { studentProfile as classTestStudentProfileFor } from "../services/ClassTestSummaryService";
+import { assertReportRead, StudentProfileRef as ClassTestProfileRef } from "./classTestSummary";
 
 /** The §4 gate. Returns the subject narrowing to pass to the service:
  *  `null` = unrestricted, otherwise the caller's own subject codes. */
@@ -178,6 +194,239 @@ builder.queryField("studentProfileAssignment", (t) =>
         toKey: args.toKey,
         subjects,
       });
+    },
+  }),
+);
+
+builder.queryField("studentProfileClassTest", (t) =>
+  t.field({
+    type: ClassTestProfileRef,
+    description:
+      "The student's class-test profile served through the PROFILE gate: a subject teacher gets " +
+      "their own subjects only, and every derived number (average, streak, best/weakest subject, " +
+      "rank) is recomputed over that slice. `classTestStudentProfile` is unchanged for the CT screen.",
+    authScopes: { authenticated: true },
+    args: { studentId: t.arg.string(panelArgs.studentId) },
+    resolve: async (_root, args, ctx) => {
+      const { subjects } = await assertStudentProfileRead(ctx, args.studentId);
+      return classTestStudentProfileFor(args.studentId, subjects);
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// SP-2 — the subject-free panels (visible to any caller past tier 1, §4)
+// ---------------------------------------------------------------------------
+
+const GuardianRef = builder.objectRef<ProfileGuardian>("StudentProfileGuardian").implement({
+  fields: (t) => ({
+    guardianId: t.exposeString("guardianId"),
+    name: t.exposeString("name"),
+    relation: t.exposeString("relation"),
+    phone: t.string({ nullable: true, resolve: (g) => g.phone }),
+    primary: t.exposeBoolean("primary"),
+  }),
+});
+
+const AcademicYearRef = builder.objectRef<ProfileAcademicYear>("StudentProfileAcademicYear").implement({
+  description: "The current year and the §5.7 default window (year start → today).",
+  fields: (t) => ({
+    academicYearId: t.exposeString("academicYearId"),
+    label: t.exposeString("label"),
+    fromKey: t.exposeString("fromKey"),
+    toKey: t.exposeString("toKey"),
+  }),
+});
+
+/** The service stays auth-agnostic, so the resolver attaches the gate's answer. */
+type HeaderWithView = StudentProfileHeader & { fullView: boolean };
+
+const HeaderRef = builder.objectRef<HeaderWithView>("StudentProfileHeader").implement({
+  description: "Who the child is: roster identity, section/class, guardians to phone, class teacher.",
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    name: t.exposeString("name"),
+    nameBn: t.string({ nullable: true, resolve: (h) => h.nameBn }),
+    rollNumber: t.string({ nullable: true, resolve: (h) => h.rollNumber }),
+    gender: t.string({ nullable: true, resolve: (h) => h.gender }),
+    dob: t.string({ nullable: true, resolve: (h) => h.dob }),
+    bloodGroup: t.string({ nullable: true, resolve: (h) => h.bloodGroup }),
+    phone: t.string({ nullable: true, resolve: (h) => h.phone }),
+    classLevel: t.exposeInt("classLevel"),
+    sectionId: t.exposeString("sectionId"),
+    sectionNameBn: t.string({ nullable: true, resolve: (h) => h.sectionNameBn }),
+    classTeacherName: t.string({ nullable: true, resolve: (h) => h.classTeacherName }),
+    guardians: t.field({ type: [GuardianRef], resolve: (h) => h.guardians }),
+    academicYear: t.field({ type: AcademicYearRef, nullable: true, resolve: (h) => h.academicYear }),
+    /** Does this caller see every subject, or only their own (§4)? */
+    fullView: t.exposeBoolean("fullView"),
+  }),
+});
+
+const AttendanceDayRef = builder.objectRef<ProfileAttendanceDay>("StudentProfileAttendanceDay").implement({
+  fields: (t) => ({
+    dateKey: t.exposeString("dateKey"),
+    absent: t.exposeBoolean("absent"),
+    leaveCovered: t.exposeBoolean("leaveCovered"),
+  }),
+});
+
+const AttendanceMonthRef = builder
+  .objectRef<ProfileAttendanceMonth>("StudentProfileAttendanceMonth")
+  .implement({
+    description: "Per-month presence for the trend chart.",
+    fields: (t) => ({
+      monthKey: t.exposeString("monthKey"),
+      markedDays: t.exposeInt("markedDays"),
+      absentDays: t.exposeInt("absentDays"),
+      presentPct: t.int({ nullable: true, resolve: (m) => m.presentPct }),
+    }),
+  });
+
+const LeaveRef = builder.objectRef<ProfileLeave>("StudentProfileLeave").implement({
+  fields: (t) => ({
+    leaveId: t.exposeString("leaveId"),
+    fromKey: t.exposeString("fromKey"),
+    toKey: t.exposeString("toKey"),
+    reason: t.exposeString("reason"),
+    submittedAt: t.exposeString("submittedAt"),
+    daysInWindow: t.exposeInt("daysInWindow"),
+  }),
+});
+
+const AttendanceRef = builder.objectRef<StudentProfileAttendance>("StudentProfileAttendance").implement({
+  description:
+    "Presence over the window: totals, the uncovered-absence count, the longest absent run, " +
+    "a recent-vs-earlier split, a per-month series, the day list, and the covering leave applications.",
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    fromKey: t.exposeString("fromKey"),
+    toKey: t.exposeString("toKey"),
+    markedDays: t.exposeInt("markedDays"),
+    absentDays: t.exposeInt("absentDays"),
+    presentPct: t.exposeInt("presentPct"),
+    absentUncoveredDays: t.exposeInt("absentUncoveredDays"),
+    absentStreakMax: t.exposeInt("absentStreakMax"),
+    recentPresentPct: t.int({ nullable: true, resolve: (a) => a.recentPresentPct }),
+    earlierPresentPct: t.int({ nullable: true, resolve: (a) => a.earlierPresentPct }),
+    trajectory: t.exposeString("trajectory"),
+    monthly: t.field({ type: [AttendanceMonthRef], resolve: (a) => a.monthly }),
+    days: t.field({ type: [AttendanceDayRef], resolve: (a) => a.days }),
+    leaves: t.field({ type: [LeaveRef], resolve: (a) => a.leaves }),
+  }),
+});
+
+const CommentRef = builder.objectRef<ProfileComment>("StudentProfileComment").implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    type: t.exposeString("type"),
+    sentiment: t.exposeString("sentiment"),
+    text: t.exposeString("text"),
+    authorName: t.string({ nullable: true, resolve: (c) => c.authorName }),
+    attachmentIds: t.exposeStringList("attachmentIds"),
+    deliveredAt: t.string({ nullable: true, resolve: (c) => c.deliveredAt }),
+    createdAt: t.exposeString("createdAt"),
+  }),
+});
+
+const CommentTallyRef = builder.objectRef<ProfileCommentTally>("StudentProfileCommentTally").implement({
+  fields: (t) => ({
+    total: t.exposeInt("total"),
+    concern: t.exposeInt("concern"),
+    positive: t.exposeInt("positive"),
+    undelivered: t.exposeInt("undelivered"),
+  }),
+});
+
+const MeetingNoteRef = builder
+  .objectRef<{
+    id: string;
+    meetingId: string;
+    instanceLabel: string;
+    meetingDate: string;
+    positiveText: string;
+    concernText: string;
+    createdAt: string;
+  }>("StudentProfileMeetingNote")
+  .implement({
+    description: "One parent-meeting note for the child (the CM-5 history).",
+    fields: (t) => ({
+      id: t.exposeString("id"),
+      meetingId: t.exposeString("meetingId"),
+      instanceLabel: t.exposeString("instanceLabel"),
+      meetingDate: t.exposeString("meetingDate"),
+      positiveText: t.exposeString("positiveText"),
+      concernText: t.exposeString("concernText"),
+      createdAt: t.exposeString("createdAt"),
+    }),
+  });
+
+const CommentsRef = builder.objectRef<StudentProfileComments>("StudentProfileComments").implement({
+  description:
+    "The daily comment log over the window (+ a CONCERN/POSITIVE tally) and the parent-meeting " +
+    "note history — 'what have we already told this guardian'.",
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    fromKey: t.exposeString("fromKey"),
+    toKey: t.exposeString("toKey"),
+    tally: t.field({ type: CommentTallyRef, resolve: (c) => c.tally }),
+    comments: t.field({ type: [CommentRef], resolve: (c) => c.comments }),
+    meetingNotes: t.field({ type: [MeetingNoteRef], resolve: (c) => c.timeline.meetingComments }),
+    /** The meeting the daily-comment rollup window opens at (null when none yet). */
+    sinceMeetingDate: t.string({ nullable: true, resolve: (c) => c.timeline.sinceMeetingDate }),
+  }),
+});
+
+builder.queryField("studentProfileHeader", (t) =>
+  t.field({
+    type: HeaderRef,
+    description:
+      "The profile header + the default window (current academic year to date, D-#358). Same tier-1 " +
+      "gate as the panels; `fullView` reports whether this caller sees every subject.",
+    authScopes: { authenticated: true },
+    args: { studentId: t.arg.string(panelArgs.studentId) },
+    resolve: async (_root, args, ctx) => {
+      const { subjects } = await assertStudentProfileRead(ctx, args.studentId);
+      const header = await studentProfileHeader(args.studentId);
+      return { ...header, fullView: subjects === null };
+    },
+  }),
+);
+
+builder.queryField("studentProfileAttendance", (t) =>
+  t.field({
+    type: AttendanceRef,
+    description:
+      "Presence over [fromKey, toKey]. Subject-FREE: visible to any caller past tier 1 — absence is " +
+      "not a subject's property, and a subject teacher already sees it on their attendance screen.",
+    authScopes: { authenticated: true },
+    args: {
+      studentId: t.arg.string(panelArgs.studentId),
+      fromKey: t.arg.string(panelArgs.fromKey),
+      toKey: t.arg.string(panelArgs.toKey),
+    },
+    resolve: async (_root, args, ctx) => {
+      await assertStudentProfileRead(ctx, args.studentId);
+      return studentProfileAttendance(args.studentId, args.fromKey, args.toKey);
+    },
+  }),
+);
+
+builder.queryField("studentProfileComments", (t) =>
+  t.field({
+    type: CommentsRef,
+    description:
+      "Daily comments over the window + the parent-meeting note history. Subject-FREE (§4): " +
+      "behaviour is not a subject's property. Staff only — guardians read their own delivered feed.",
+    authScopes: { authenticated: true },
+    args: {
+      studentId: t.arg.string(panelArgs.studentId),
+      fromKey: t.arg.string(panelArgs.fromKey),
+      toKey: t.arg.string(panelArgs.toKey),
+    },
+    resolve: async (_root, args, ctx) => {
+      await assertStudentProfileRead(ctx, args.studentId);
+      return studentProfileComments(args.studentId, args.fromKey, args.toKey);
     },
   }),
 );
