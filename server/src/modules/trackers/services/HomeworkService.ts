@@ -791,6 +791,8 @@ export async function listStudentRecords(hwItemId: string) {
 export interface OpenRecordDTO {
   id: string;
   hwId: string;
+  /** The item's Mongo _id — the roster-pass mutations' `itemId` arg (RP-1, D-#355). */
+  hwItemId: string;
   subject: string;
   /** The item's topic(s), resolved to Bangla catalog labels (joined). "" if none. */
   topicLabelBn: string;
@@ -839,6 +841,7 @@ export async function listOpenRecords(sectionId: string, states: LifecycleState[
       return {
         id: r._id.toString(),
         hwId: r.hwId,
+        hwItemId: r.hwItemId.toString(),
         subject: it?.subject ?? "?",
         topicLabelBn: it ? joinTopicLabels(it.topTags ?? [], labelByCode) : "",
         description: it?.description ?? null,

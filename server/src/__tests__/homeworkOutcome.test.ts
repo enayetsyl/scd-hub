@@ -63,7 +63,16 @@ function stubFindById(doc: ReturnType<typeof rec>) {
   mockRecFindById.mockReturnValue({
     then: (resolve: (v: unknown) => void, reject: (e: unknown) => void) =>
       Promise.resolve(doc).then(resolve, reject),
-    select: () => ({ lean: () => Promise.resolve({ state: doc.state }) }),
+    select: () => ({
+      lean: () =>
+        Promise.resolve({
+          state: doc.state,
+          hwId: doc.hwId,
+          chaseCount: doc.chaseCount,
+          result: doc.result ?? null,
+          dueDate: doc.dueDate ?? null,
+        }),
+    }),
   });
 }
 
@@ -201,13 +210,19 @@ describe("NOT_SUBMITTED — chase path, no check call", () => {
     expect(r.chaseCount).toBe(1);
   });
 
-  test("CHASE + NOT_SUBMITTED (3rd chase): re-chases, parent-comms nudge fires", async () => {
+  // D-#355 (first-cross-only): re-marking an already-CHASE record not-submitted is
+  // now a NO-OP — no state stamp, no chaseCount increment, no guardian/parent nudge.
+  // Escalation is the explicit CHASE→CHASE transition (তাগাদা), not a re-run.
+  test("CHASE + NOT_SUBMITTED: no-op — count untouched, nothing emitted", async () => {
     const r = rec({ state: "CHASE", chaseCount: 2 });
     stubFindById(r);
-    await recordHomeworkOutcome({ recordId: REC_ID.toString(), outcome: "NOT_SUBMITTED", actorId: ACTOR });
-    expect(r.stateDates.map((s) => s.state)).toEqual(["CHASE"]);
-    expect(r.chaseCount).toBe(3);
-    expect(mockEmitParentComms).toHaveBeenCalledTimes(1);
+    const res = await recordHomeworkOutcome({ recordId: REC_ID.toString(), outcome: "NOT_SUBMITTED", actorId: ACTOR });
+    expect(r.stateDates).toEqual([]);
+    expect(r.chaseCount).toBe(2);
+    expect(r.save).not.toHaveBeenCalled();
+    expect(mockEmitChase).not.toHaveBeenCalled();
+    expect(mockEmitParentComms).not.toHaveBeenCalled();
+    expect(res.kind).toBe("chased");
   });
 
   test("SUBMITTED + NOT_SUBMITTED is explicitly rejected", async () => {

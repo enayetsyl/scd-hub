@@ -45,6 +45,10 @@ import {
   getStudentDayLoad as studentDayLoadSvc,
 } from "../services/HomeworkResubmissionService";
 import { recordHomeworkOutcome as recordHomeworkOutcomeSvc } from "../services/HomeworkOutcomeService";
+import {
+  submitPass as submitPassSvc,
+  returnPass as returnPassSvc,
+} from "../services/HomeworkRosterPassService";
 import { revertHomeworkRecord as revertHomeworkRecordSvc } from "../services/HomeworkRevertService";
 import {
   homeworkSummary as homeworkSummarySvc,
@@ -649,6 +653,7 @@ OpenRecordRef.implement({
   fields: (t) => ({
     id: t.exposeString("id"),
     hwId: t.exposeString("hwId"),
+    hwItemId: t.exposeString("hwItemId"),
     subject: t.exposeString("subject"),
     topicLabelBn: t.exposeString("topicLabelBn"),
     dateGiven: t.exposeString("dateGiven"),
@@ -1238,6 +1243,104 @@ builder.mutationField("recordHomeworkOutcome", (t) =>
             dueDate: outcome.result.dueDate,
             resubmission: null,
           };
+    },
+  }),
+);
+
+// Mutations: homeworkSubmitPass / homeworkReturnPass (RP-1, D-#355) --------------
+// The two roster-shaped stages driven attendance-style: the app sends one entry
+// per open record; the service fast-forwards, chases first-cross-only, or returns.
+
+const HwSubmitPassEntryInput = builder.inputType("HwSubmitPassEntryInput", {
+  fields: (t) => ({
+    recordId: t.string({ required: true }),
+    submitted: t.boolean({ required: true }),
+  }),
+});
+const HwReturnPassEntryInput = builder.inputType("HwReturnPassEntryInput", {
+  fields: (t) => ({
+    recordId: t.string({ required: true }),
+    returned: t.boolean({ required: true }),
+  }),
+});
+
+interface SubmitPassResultShape {
+  submittedCount: number;
+  chasedCount: number;
+  unchangedCount: number;
+}
+const HwSubmitPassResultRef = builder.objectRef<SubmitPassResultShape>("HwSubmitPassResult");
+HwSubmitPassResultRef.implement({
+  fields: (t) => ({
+    submittedCount: t.exposeInt("submittedCount"),
+    chasedCount: t.exposeInt("chasedCount"),
+    unchangedCount: t.exposeInt("unchangedCount"),
+  }),
+});
+
+interface ReturnPassResultShape {
+  returnedCount: number;
+  unchangedCount: number;
+}
+const HwReturnPassResultRef = builder.objectRef<ReturnPassResultShape>("HwReturnPassResult");
+HwReturnPassResultRef.implement({
+  fields: (t) => ({
+    returnedCount: t.exposeInt("returnedCount"),
+    unchangedCount: t.exposeInt("unchangedCount"),
+  }),
+});
+
+/** Resolve the item's subject → write-scope (mirrors recordHomeworkOutcome). */
+async function assertItemWriteScope(ctx: Parameters<typeof assertCanWrite>[0], sectionId: string, itemId: string): Promise<void> {
+  const item = await HomeworkItem.findById(itemId).select("subject").lean();
+  await assertCanWrite(ctx, sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
+}
+
+builder.mutationField("homeworkSubmitPass", (t) =>
+  t.field({
+    type: HwSubmitPassResultRef,
+    description:
+      "The submission roster pass (RP-1, D-#355): each entry's open record (GIVEN/DUE/CHASE) is either " +
+      "fast-forwarded to SUBMITTED (submitted:true) or chased FIRST-CROSS-ONLY (submitted:false — an " +
+      "already-CHASE record is a no-op). Subject-teacher write-scope; illegal states rejected.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      itemId: t.arg.string({ required: true }),
+      entries: t.arg({ type: [HwSubmitPassEntryInput], required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertItemWriteScope(ctx, args.sectionId, args.itemId);
+      return submitPassSvc(
+        args.itemId,
+        args.entries.map((e) => ({ recordId: e.recordId, submitted: e.submitted })),
+        ctx.auth.userId as string,
+      );
+    },
+  }),
+);
+
+builder.mutationField("homeworkReturnPass", (t) =>
+  t.field({
+    type: HwReturnPassResultRef,
+    description:
+      "The return roster pass (RP-1, D-#355): each uncrossed CHECKED/RESUBMIT record is handed back " +
+      "(→ RETURNED). Subject-teacher write-scope; a non-checked record is rejected.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      itemId: t.arg.string({ required: true }),
+      entries: t.arg({ type: [HwReturnPassEntryInput], required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertItemWriteScope(ctx, args.sectionId, args.itemId);
+      return returnPassSvc(
+        args.itemId,
+        args.entries.map((e) => ({ recordId: e.recordId, returned: e.returned })),
+        ctx.auth.userId as string,
+      );
     },
   }),
 );

@@ -68,10 +68,30 @@ export async function recordHomeworkOutcome(
     if (state === "SUBMITTED") {
       throw new Error("Cannot mark a submitted record as not-submitted — use Records");
     }
+    // First-cross-only (PRD §3.1, D-#355): an already-CHASE record is a no-op —
+    // re-marking not-submitted must not inflate chaseCount or re-notify the
+    // guardian. Escalation is the explicit CHASE→CHASE transition (তাগাদা).
+    if (state === "CHASE") {
+      const rec = await HomeworkStudentRecord.findById(input.recordId)
+        .select("hwId state chaseCount result dueDate")
+        .lean();
+      if (!rec) throw new Error("HomeworkStudentRecord not found");
+      return {
+        kind: "chased",
+        result: {
+          recordId: input.recordId,
+          hwId: rec.hwId,
+          state: rec.state as LifecycleState,
+          chaseCount: rec.chaseCount,
+          result: rec.result ?? null,
+          dueDate: rec.dueDate ? new Date(rec.dueDate).toISOString() : null,
+        },
+      };
+    }
     if (state === "GIVEN") {
       await transitionRecord({ recordId: input.recordId, toState: "DUE", actorId: input.actorId, at });
     }
-    // Both DUE→CHASE and CHASE→CHASE are legal — one hop covers either starting state.
+    // DUE→CHASE (first cross): increments 0→1 and emits the guardian reminder.
     const result = await transitionRecord({
       recordId: input.recordId,
       toState: "CHASE",

@@ -300,8 +300,8 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
               {canReconcileHomework ? (
                 <Button title={STR.hwReconcile} variant="secondary" onPress={() => navigation.navigate("HomeworkReconcile", { date })} />
               ) : null}
-              <Button title={STR.hwRecords} variant="secondary" onPress={() => navigation.navigate("HomeworkRecords")} />
-              <Button title={STR.hwChecking} variant="secondary" onPress={() => navigation.navigate("CheckingQueue")} />
+              {/* RP-2 (D-#355): one workspace replaces Records + Checking. */}
+              <Button title={STR.hwWorkspace} variant="secondary" onPress={() => navigation.navigate("HomeworkWorkspace")} />
               <Button title={STR.hwRollups} variant="secondary" onPress={() => navigation.navigate("HomeworkRollups")} />
               {!canReconcileHomework && hasSection ? <Muted>{STR.hwClassTeacherOnly}</Muted> : null}
             </View>
