@@ -22,6 +22,24 @@ export type HomeStackParamList = {
   Today: undefined;
 };
 
+/** Which panel the Student Profile opens on (SP-3, prd-student-profile §8.1). */
+export type StudentProfilePanelKey = "attendance" | "homework" | "assignment" | "classTest" | "comments";
+
+/**
+ * Student Profile route params. The screen is registered in EVERY stack that can
+ * drill into a child (roster, attendance, homework, assignment, class test), so the
+ * params live here once and each ParamList references this type — a second copy would
+ * be a second contract.
+ */
+export type StudentProfileParams = {
+  studentId: string;
+  /** Shown until the header read lands; the profile re-labels itself from the server. */
+  studentName?: string;
+  /** Which panel to open (defaults to attendance) — lets an entry point land the
+   *  teacher on the plane they were already looking at. */
+  initialPanel?: StudentProfilePanelKey;
+};
+
 /** Teacher-first Class Notes entry (UX-8, D-#266) — own periods, zero selection. */
 export type ClassNotesStackParamList = {
   MyClassNotes: undefined;
@@ -72,6 +90,7 @@ export type ReviewStackParamList = {
 };
 
 export type HomeworkStackParamList = {
+  StudentProfile: StudentProfileParams;
   HomeworkHome: undefined;
   /** `date` carries Homework home's calendar pick downstream (UX-5 R-Context). */
   DeclareHomework: { date?: string; editItem?: HwEditItemParam } | undefined;
@@ -86,6 +105,7 @@ export type HomeworkStackParamList = {
 };
 
 export type AssignmentStackParamList = {
+  StudentProfile: StudentProfileParams;
   AssignmentHome: undefined;
   AssignmentSchedule: undefined;
   /** `weekNumber` is the CONTINUOUS term-anchored index (the server key). `month` +
@@ -146,6 +166,7 @@ export type PrintStackParamList = {
 };
 
 export type AttendanceStackParamList = {
+  StudentProfile: StudentProfileParams;
   AttendanceHome: undefined;
   /** An attendance UNIT (D-#278): a Quran group (Class 1–5) or a Nursery/KG section.
    *  `amend` (D-#292): Principal/Office write path — any unit, today or a past day. */
@@ -245,6 +266,7 @@ export type VocabStackParamList = {
 
 /** Class Test tracker (CT-5) — staff stack (tracker:read || roster:manage tab). */
 export type ClassTestStackParamList = {
+  StudentProfile: StudentProfileParams;
   ClassTestHome: undefined;
   RequestClassTest: undefined;
   /** Owner ask 2026-07-20: office-produced question papers — teacher list/form + office queue. */
@@ -327,6 +349,7 @@ export type FinanceStackParamList = {
 };
 
 export type AdminStackParamList = {
+  StudentProfile: StudentProfileParams;
   AdminHome: undefined;
   Import: undefined;
   UserList: undefined;

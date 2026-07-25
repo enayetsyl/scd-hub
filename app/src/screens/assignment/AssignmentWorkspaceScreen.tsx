@@ -14,9 +14,9 @@
  * of an already-chased student is the "তাগাদা" secondary control under ①.
  */
 import React, { useState, useCallback } from "react";
-import { ScrollView, View, RefreshControl } from "react-native";
+import { ScrollView, View, RefreshControl, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
 import { HW_RESULTS } from "@scd/shared";
 import {
@@ -381,6 +381,7 @@ function AsCheckRow({
   onDone: () => void;
   onNotify: (ok: string | null, err: string | null) => void;
 }): React.ReactElement {
+  const nav = useNavigation<Props["navigation"]>();
   const [, recordOutcome] = useMutation(RECORD_AS_OUTCOME);
   const [, revertRecord] = useMutation(REVERT_AS_RECORD);
   const { confirmAction } = useConfirm();
@@ -419,7 +420,19 @@ function AsCheckRow({
   return (
     <Card>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Body style={{ fontWeight: "700", flex: 1 }}>{record.studentName}</Body>
+        {/* SP-3 entry point: the full profile, opened on the assignment panel. */}
+        <Pressable
+          style={{ flex: 1 }}
+          onPress={() =>
+            nav.navigate("StudentProfile", {
+              studentId: record.studentId,
+              studentName: record.studentName,
+              initialPanel: "assignment",
+            })
+          }
+        >
+          <Body style={{ fontWeight: "700" }}>{record.studentName}</Body>
+        </Pressable>
         {record.resubOf ? <Badge text={STR.hwResubmissions} tone="muted" /> : null}
       </View>
       <ChipRow>
