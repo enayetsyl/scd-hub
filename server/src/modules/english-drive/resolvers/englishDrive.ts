@@ -116,6 +116,10 @@ builder.mutationField("sendEnglishDriveDocToPrint", (t) =>
       colour: t.arg.string({ required: true }),
       sides: t.arg.string({ required: true }),
       copies: t.arg.int({ required: true }),
+      // D-#294 print flow (owner 2026-07-25): copies mode + class + use date.
+      copiesMode: t.arg.string({ required: false }),
+      copiesClassId: t.arg.string({ required: false }),
+      neededByKey: t.arg.string({ required: false }),
       // Edit-before-print (D-#348): optional edited markdown + layout knobs.
       contentMd: t.arg.string({ required: false }),
       fontScale: t.arg.float({ required: false }),
@@ -124,6 +128,9 @@ builder.mutationField("sendEnglishDriveDocToPrint", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      // The use date is MANDATORY on a teacher's request — the office queue needs to
+      // know when the print is used (enforced at this teacher-facing seam, like colour/sides).
+      if (!args.neededByKey) throw new Error("প্রিন্ট কবে ব্যবহার হবে সেই তারিখ দিন");
       return sendEnglishDriveDocToPrint(ctx, args);
     },
   }),

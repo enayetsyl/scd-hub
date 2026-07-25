@@ -677,7 +677,7 @@ export default function TodayScreen(): React.ReactElement {
                 label={STR.hwCheckingTitle}
                 count={hw?.pendingChecking ?? 0}
                 color={colors.error}
-                onPress={() => nav.navigate("HomeworkTab", { screen: "CheckingQueue", initial: false })}
+                onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkWorkspace", initial: false })}
               />
               <CountRow
                 label={STR.hwChaseList}
@@ -689,7 +689,7 @@ export default function TodayScreen(): React.ReactElement {
                 label={STR.hwOpenResubmissions}
                 count={hw?.openResubmissions ?? 0}
                 color={colors.info}
-                onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkRecords", initial: false })}
+                onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkWorkspace", initial: false })}
                 last={!canAttendance}
               />
               {canAttendance ? (

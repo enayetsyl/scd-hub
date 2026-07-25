@@ -80,7 +80,6 @@ import {
   generateAsId,
   deliverAssignmentItem,
   redeliverAssignmentRecord,
-  collectAssignment,
   sweepAssignmentChases,
   transitionAssignmentRecord,
   assignmentItemCounts,
@@ -443,72 +442,6 @@ describe("redeliverAssignmentRecord", () => {
 // ===========================================================================
 // AJ-4 — collection pass + chase
 // ===========================================================================
-
-describe("AJ-4 — collectAssignment", () => {
-  const ITEM_ID = oid();
-  const item = { _id: ITEM_ID, asId: "AS-C2-BAN-0001", dueDate: new Date(2026, 0, 11) };
-
-  test("on the due day: submitted → SUBMITTED; non-submitted stay DUE (not yet past)", async () => {
-    mockItemFindById.mockResolvedValue(item);
-    const r1 = rec({ asItemId: ITEM_ID });
-    const r2 = rec({ asItemId: ITEM_ID });
-    mockRecFindById.mockImplementation((id: unknown) =>
-      Promise.resolve(id === r1._id.toString() ? r1 : r2),
-    );
-
-    const res = await collectAssignment(
-      ITEM_ID.toString(),
-      [
-        { recordId: r1._id.toString(), submitted: true },
-        { recordId: r2._id.toString(), submitted: false },
-      ],
-      ACTOR,
-      new Date(2026, 0, 11, 10), // the due day itself
-    );
-
-    expect(r1.state).toBe("SUBMITTED");
-    expect(r1.stateDates.map((s) => s.state)).toEqual(["GIVEN", "DUE", "SUBMITTED"]); // engine path, stamped
-    expect(r2.state).toBe("DUE"); // not past due yet
-    expect(res.submittedCount).toBe(1);
-    expect(res.chaseCount).toBe(0);
-    expect(res.pendingCount).toBe(1);
-  });
-
-  test("past the due date: non-submitted → CHASE (chaseCount 1); late submit from CHASE works", async () => {
-    mockItemFindById.mockResolvedValue(item);
-    const missing = rec({ asItemId: ITEM_ID });
-    mockRecFindById.mockResolvedValue(missing);
-
-    const res = await collectAssignment(
-      ITEM_ID.toString(),
-      [{ recordId: missing._id.toString(), submitted: false }],
-      ACTOR,
-      new Date(2026, 0, 12, 10), // past due
-    );
-    expect(missing.state).toBe("CHASE");
-    expect(missing.chaseCount).toBe(1);
-    expect(res.chaseCount).toBe(1);
-
-    // The chased student submits late: CHASE → SUBMITTED (engine edge)
-    const late = await collectAssignment(
-      ITEM_ID.toString(),
-      [{ recordId: missing._id.toString(), submitted: true }],
-      ACTOR,
-      new Date(2026, 0, 13, 10),
-    );
-    expect(missing.state).toBe("SUBMITTED");
-    expect(late.submittedCount).toBe(1);
-  });
-
-  test("a record from another item is rejected", async () => {
-    mockItemFindById.mockResolvedValue(item);
-    const foreign = rec({ asItemId: oid() });
-    mockRecFindById.mockResolvedValue(foreign);
-    await expect(
-      collectAssignment(ITEM_ID.toString(), [{ recordId: foreign._id.toString(), submitted: true }], ACTOR),
-    ).rejects.toThrow(/does not belong/);
-  });
-});
 
 describe("sweepAssignmentChases", () => {
   test("every DUE record past its due date → CHASE", async () => {

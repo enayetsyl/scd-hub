@@ -432,6 +432,12 @@ export interface SendEnglishDriveToPrintInput {
   colour: string;
   sides: string;
   copies: number;
+  /** D-#294 print flow (owner 2026-07-25): FIXED = typed count; CLASS_PRESENT =
+   *  one per student present in `copiesClassId` on the `neededByKey` use day. */
+  copiesMode?: string | null;
+  copiesClassId?: string | null;
+  /** The day the print will be USED (YYYY-MM-DD) — required at the resolver. */
+  neededByKey?: string | null;
   /** Edit-before-print (D-#348): the teacher's edited markdown + layout knobs.
    *  When contentMd is given, the printed PDF renders THAT (falling back to the
    *  stored doc otherwise); the read gate on `id` still applies. */
@@ -475,6 +481,9 @@ export async function sendEnglishDriveDocToPrint(
       colour: input.colour,
       sides: input.sides,
       copies: input.copies,
+      copiesMode: input.copiesMode ?? undefined,
+      copiesClassId: input.copiesClassId ?? undefined,
+      neededByKey: input.neededByKey ?? undefined,
       subject: "ENG",
       requestedBy: ctx.auth!.userId as string,
       trusted: true,
@@ -526,6 +535,9 @@ export async function sendEnglishDriveDocToPrint(
     colour: input.colour,
     sides: input.sides,
     copies: input.copies,
+    copiesMode: input.copiesMode ?? undefined,
+    copiesClassId: input.copiesClassId ?? undefined,
+    neededByKey: input.neededByKey ?? undefined,
     subject: "ENG",
     requestedBy: ctx.auth!.userId as string,
   });
