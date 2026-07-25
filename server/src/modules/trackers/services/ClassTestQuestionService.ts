@@ -373,6 +373,25 @@ const QUEUE_ORDER: Record<string, number> = {
   PRINT_REQUESTED: 4,
 };
 
+/**
+ * Sidebar badge counts for the Class Test drawer item (owner ask 2026-07-25 —
+ * mirrors the print-queue badges). `pending` = requests the OFFICE still owes a
+ * paper on (REQUESTED + CHANGES_REQUESTED); `inReview` = papers waiting on the
+ * TEACHER (IN_REVIEW). Office/Principal see the whole pipeline; a teacher sees
+ * only their own requests (`ownerId`).
+ */
+export async function ctQuestionCounts(
+  ownerId: string | null,
+): Promise<{ pending: number; inReview: number }> {
+  const base: Record<string, unknown> = { active: { $ne: false } };
+  if (ownerId) base.requestedBy = ownerId;
+  const [pending, inReview] = await Promise.all([
+    ClassTestQuestionRequest.countDocuments({ ...base, status: { $in: ["REQUESTED", "CHANGES_REQUESTED"] } }),
+    ClassTestQuestionRequest.countDocuments({ ...base, status: "IN_REVIEW" }),
+  ]);
+  return { pending, inReview };
+}
+
 /** The office queue — work-needed first, teacher names joined. */
 export async function ctQuestionQueue(): Promise<CtQuestionRequestShape[]> {
   const rows = (await ClassTestQuestionRequest.find({
