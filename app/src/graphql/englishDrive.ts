@@ -66,6 +66,9 @@ export const SEND_ENGLISH_DRIVE_TO_PRINT = gql<
     colour: string;
     sides: string;
     copies: number;
+    copiesMode?: string | null;
+    copiesClassId?: string | null;
+    neededByKey?: string | null;
     contentMd?: string | null;
     fontScale?: number | null;
     lineSpacing?: number | null;
@@ -77,6 +80,9 @@ export const SEND_ENGLISH_DRIVE_TO_PRINT = gql<
     $colour: String!
     $sides: String!
     $copies: Int!
+    $copiesMode: String
+    $copiesClassId: String
+    $neededByKey: String
     $contentMd: String
     $fontScale: Float
     $lineSpacing: Float
@@ -87,6 +93,9 @@ export const SEND_ENGLISH_DRIVE_TO_PRINT = gql<
       colour: $colour
       sides: $sides
       copies: $copies
+      copiesMode: $copiesMode
+      copiesClassId: $copiesClassId
+      neededByKey: $neededByKey
       contentMd: $contentMd
       fontScale: $fontScale
       lineSpacing: $lineSpacing
