@@ -33,6 +33,8 @@ interface StagedDoc {
   /** MD (markdown) | PDF | DOCX (binary already uploaded → fileId). */
   format: "MD" | "PDF" | "DOCX";
   fileId?: string;
+  /** DOCX: the server-converted PDF StoredFile id (for preview + print). */
+  pdfFileId?: string;
   fileMime?: string;
   classLevel: string | null;
   blockNumber: string;
@@ -161,6 +163,7 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
             content: "",
             format,
             fileId: up.fileId,
+            pdfFileId: up.pdfFileId ?? undefined,
             fileMime: up.mime,
             classLevel: parsed.classLevel === null ? null : String(parsed.classLevel),
             blockNumber: parsed.blockNumber === null ? "" : String(parsed.blockNumber),
@@ -235,9 +238,11 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
         title: s.title.trim(),
         version: intOrNull(s.version)!,
         format: s.format,
-        // MD carries markdown; PDF/DOCX carry the already-uploaded fileId.
+        // MD carries markdown; PDF/DOCX carry the already-uploaded fileId (+ the
+        // server-converted pdfFileId for a DOCX).
         contentMd: s.format === "MD" ? s.content : undefined,
         fileId: s.format === "MD" ? undefined : s.fileId,
+        pdfFileId: s.format === "MD" ? undefined : s.pdfFileId,
         fileName: s.format === "MD" ? undefined : s.filename,
         fileMime: s.format === "MD" ? undefined : s.fileMime,
       });

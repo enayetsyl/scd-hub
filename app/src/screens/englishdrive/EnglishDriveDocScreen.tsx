@@ -116,14 +116,17 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
   // PDF/DOCX docs (owner 2026-07-25) are binaries — opened/downloaded via the
   // authed /files/:id, not markdown-rendered/edited/office-printed.
   const isBinary = !!doc && (doc.format ?? "MD") !== "MD";
+  // What previews/opens as a PDF: the converted PDF for a DOCX, else a PDF doc's
+  // own file. Null for a DOCX whose conversion failed (download only).
+  const previewFileId = doc ? doc.pdfFileId ?? (doc.format === "PDF" ? doc.fileId : null) : null;
   const [openBusy, setOpenBusy] = useState(false);
   const [openErr, setOpenErr] = useState<string | null>(null);
-  async function onOpenFile(): Promise<void> {
-    if (openBusy || !doc?.fileId) return;
+  async function onOpenFile(fileId: string | null): Promise<void> {
+    if (openBusy || !fileId) return;
     setOpenBusy(true);
     setOpenErr(null);
     try {
-      await openStoredFile(doc.fileId);
+      await openStoredFile(fileId);
     } catch (e) {
       setOpenErr(e instanceof FileUploadError ? e.message : STR.errGeneric);
     } finally {
@@ -248,13 +251,24 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                 {isBinary ? (
                   <View style={{ marginTop: space(2) }}>
                     <Badge text={doc.format} tone="info" />
-                    <View style={{ marginTop: space(2) }}>
-                      <Button
-                        title={openBusy ? STR.loading : doc.format === "PDF" ? STR.edOpenFile : STR.edDownloadFile}
-                        onPress={() => void onOpenFile()}
-                        loading={openBusy}
-                      />
-                    </View>
+                    {/* Open as PDF (a DOCX opens its converted PDF); Download gives
+                        the original file. A DOCX whose conversion failed shows only
+                        Download. (owner 2026-07-25) */}
+                    {previewFileId ? (
+                      <View style={{ marginTop: space(2) }}>
+                        <Button title={STR.edOpenFile} onPress={() => void onOpenFile(previewFileId)} loading={openBusy} />
+                      </View>
+                    ) : null}
+                    {doc.format === "DOCX" ? (
+                      <View style={{ marginTop: space(2) }}>
+                        <Button
+                          title={STR.edDownloadFile}
+                          variant={previewFileId ? "secondary" : "primary"}
+                          onPress={() => void onOpenFile(doc.fileId)}
+                          loading={openBusy}
+                        />
+                      </View>
+                    ) : null}
                     <Muted style={{ marginTop: space(2) }}>{STR.edBinaryHint}</Muted>
                     {openErr ? <Notice message={openErr} tone="danger" /> : null}
                   </View>

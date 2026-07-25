@@ -534,10 +534,16 @@ export function englishDriveFormatOf(mime: string, name: string): "PDF" | "DOCX"
   return null;
 }
 
+/** English Drive upload result — a DOCX also carries the server-converted PDF. */
+export interface UploadedEnglishDriveFile extends UploadedFile {
+  /** DOCX: the LibreOffice-converted PDF StoredFile id; null for PDF / on failure. */
+  pdfFileId: string | null;
+}
+
 /** Upload ONE picked binary to POST /files/english-drive. */
 export async function uploadEnglishDriveAsset(
   asset: DocumentPicker.DocumentPickerAsset,
-): Promise<UploadedFile> {
+): Promise<UploadedEnglishDriveFile> {
   const form = new FormData();
   if (Platform.OS === "web") {
     const blob = await fetch(asset.uri).then((r) => r.blob());
@@ -565,12 +571,9 @@ export async function uploadEnglishDriveAsset(
     }
     throw new FileUploadError(message);
   }
-  const body = (await res.json()) as { fileId: string; originalName: string; mime: string };
-  return { fileId: body.fileId, originalName: body.originalName, mime: body.mime };
+  const body = (await res.json()) as { fileId: string; pdfFileId?: string | null; originalName: string; mime: string };
+  return { fileId: body.fileId, pdfFileId: body.pdfFileId ?? null, originalName: body.originalName, mime: body.mime };
 }
-
-export const uploadEnglishDriveWebFile = (file: File): Promise<UploadedFile> =>
-  postWebFileForm<UploadedFile>("/files/english-drive", file);
 
 // ---------------------------------------------------------------------------
 // Drag-and-drop uploads (web): the UploadDropZone hands the screens browser
