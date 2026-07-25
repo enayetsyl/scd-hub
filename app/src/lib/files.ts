@@ -510,6 +510,69 @@ export async function pickAndUploadCommentFile(
 }
 
 // ---------------------------------------------------------------------------
+// English Drive binary documents (owner 2026-07-25 server: POST /files/english-drive).
+// PDF or Word (DOC/DOCX) only, ≤ 10 MB; Office/Principal upload. The returned fileId
+// is carried into uploadEnglishDriveDoc with format=PDF|DOCX.
+// ---------------------------------------------------------------------------
+
+export const ENGLISH_DRIVE_BINARY_MIMES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+
+/** Map a picked binary's mime/name to the doc format (PDF | DOCX). */
+export function englishDriveFormatOf(mime: string, name: string): "PDF" | "DOCX" | null {
+  if (mime === "application/pdf" || /\.pdf$/i.test(name)) return "PDF";
+  if (
+    mime === "application/msword" ||
+    mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    /\.docx?$/i.test(name)
+  ) {
+    return "DOCX";
+  }
+  return null;
+}
+
+/** Upload ONE picked binary to POST /files/english-drive. */
+export async function uploadEnglishDriveAsset(
+  asset: DocumentPicker.DocumentPickerAsset,
+): Promise<UploadedFile> {
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", {
+      uri: asset.uri,
+      name: asset.name,
+      type: asset.mimeType ?? "application/octet-stream",
+    } as unknown as Blob);
+  }
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/english-drive`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const body = (await res.json()) as { fileId: string; originalName: string; mime: string };
+  return { fileId: body.fileId, originalName: body.originalName, mime: body.mime };
+}
+
+export const uploadEnglishDriveWebFile = (file: File): Promise<UploadedFile> =>
+  postWebFileForm<UploadedFile>("/files/english-drive", file);
+
+// ---------------------------------------------------------------------------
 // Drag-and-drop uploads (web): the UploadDropZone hands the screens browser
 // File objects directly — same multipart POSTs (and server-side validation +
 // Bangla error messages) as the pickers, minus DocumentPicker. Web only; on

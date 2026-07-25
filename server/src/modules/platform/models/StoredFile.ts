@@ -41,7 +41,9 @@ export type StoredFileKind =
   /** A document a teacher sent to the Office for printing (PQ-2, D-#281). */
   | "print_upload"
   /** An assignment sheet/instruction file attached at the delivery pass (D-#298). */
-  | "assignment_attachment";
+  | "assignment_attachment"
+  /** A PDF/DOCX English Drive document uploaded as a binary (owner 2026-07-25). */
+  | "english_drive";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -58,6 +60,7 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "classnote_attachment",
   "print_upload",
   "assignment_attachment",
+  "english_drive",
 ];
 
 /** The chat-attachment subset (M-4) — the read gate routes these to chat. */
