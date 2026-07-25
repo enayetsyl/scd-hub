@@ -58,11 +58,20 @@ export default function ClassTestClassSubjectScreen({ route }: Props): React.Rea
                   tone={s.trend === "up" ? "ok" : s.trend === "down" ? "danger" : "muted"}
                 />
               </View>
+              {/* SP-3: this drill now lands on the FULL profile with the class-test
+                  panel open — marks alone spot a problem a term late. The CT-only
+                  screen stays registered for any deep link that still points at it. */}
               <View style={{ marginTop: space(2) }}>
                 <Button
                   title={STR.ctViewProfile}
                   variant="ghost"
-                  onPress={() => nav.navigate("ClassTestStudentProfile", { studentId: s.studentId, studentName: s.studentName })}
+                  onPress={() =>
+                    nav.navigate("StudentProfile", {
+                      studentId: s.studentId,
+                      studentName: s.studentName,
+                      initialPanel: "classTest",
+                    })
+                  }
                 />
               </View>
             </Card>

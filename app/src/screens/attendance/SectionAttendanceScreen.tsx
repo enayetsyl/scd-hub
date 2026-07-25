@@ -5,7 +5,7 @@
  * server-side; the Today brief card links here.
  */
 import React, { useState } from "react";
-import { View } from "react-native";
+import { View, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { MY_SECTION_ATTENDANCE } from "../../graphql/operations";
@@ -19,7 +19,7 @@ import { dateKey } from "../../lib/dates";
 
 type Props = NativeStackScreenProps<AttendanceStackParamList, "SectionAttendance">;
 
-export default function SectionAttendanceScreen(_props: Props): React.ReactElement {
+export default function SectionAttendanceScreen({ navigation: nav }: Props): React.ReactElement {
   const [day, setDay] = useState(dateKey());
   const [q, refetch] = useQuery({
     query: MY_SECTION_ATTENDANCE,
@@ -55,9 +55,18 @@ export default function SectionAttendanceScreen(_props: Props): React.ReactEleme
             </View>
           </View>
           {!sec.complete ? <Muted style={{ marginTop: 2 }}>⚠ {STR.attNotFullyMarked}</Muted> : null}
+          {/* SP-3 entry point: an absentee row is exactly where "why is this child
+              missing so often?" gets asked — tap through to the profile's attendance. */}
           {sec.absentees.map((a) => (
-            <View
+            <Pressable
               key={a.studentId}
+              onPress={() =>
+                nav.navigate("StudentProfile", {
+                  studentId: a.studentId,
+                  studentName: a.nameBn || a.name,
+                  initialPanel: "attendance",
+                })
+              }
               style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 2, marginTop: 2 }}
             >
               <Body style={{ flex: 1 }}>{a.nameBn || a.name}</Body>
@@ -65,7 +74,7 @@ export default function SectionAttendanceScreen(_props: Props): React.ReactEleme
                 {STR.attRoll}: {a.rollNumber ? bnNum(a.rollNumber) : "—"} · {STR.attIdNo}: {bnNum(a.schoolId)}
                 {a.leaveCovered ? " · ✓" : ""}
               </Muted>
-            </View>
+            </Pressable>
           ))}
         </Card>
       ))}

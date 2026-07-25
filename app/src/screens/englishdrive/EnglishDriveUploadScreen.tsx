@@ -12,9 +12,15 @@ import * as DocumentPicker from "expo-document-picker";
 import { useMutation, useQuery } from "urql";
 import { CLASS_LEVELS } from "@scd/shared";
 import { ENGLISH_DRIVE_DOCS, UPLOAD_ENGLISH_DRIVE_DOC } from "../../graphql/englishDrive";
-import { Screen, H2, Body, Muted, Card, Badge, Button, Field, Notice, Select, Divider } from "../../components/ui";
-import { FileDropZone } from "../../components/FileDropZone";
-import { uploadEnglishDriveAsset, englishDriveFormatOf, FileUploadError } from "../../lib/files";
+import { Screen, H2, Body, Muted, Card, Badge, Button, Field, Notice, Select, Divider, Loader } from "../../components/ui";
+import { UploadDropZone } from "../../components/UploadDropZone";
+import {
+  uploadEnglishDriveAsset,
+  uploadEnglishDriveWebFile,
+  englishDriveFormatOf,
+  FileUploadError,
+  type UploadedEnglishDriveFile,
+} from "../../lib/files";
 import {
   ENGLISH_DRIVE_KINDS,
   englishDriveKindLabel,
@@ -68,6 +74,9 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
   const [staged, setStaged] = useState<StagedDoc[]>([]);
   const [rejected, setRejected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  // Separate from `busy` (the upload-all commit): the pick/drop → server upload +
+  // DOCX conversion takes a few seconds, so show its own loading state.
+  const [ingesting, setIngesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [outcomes, setOutcomes] = useState<UploadOutcome[]>([]);
   const [, upload] = useMutation(UPLOAD_ENGLISH_DRIVE_DOC);
@@ -120,19 +129,59 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
     };
   }, []);
 
-  // Drag-drop path is web + text only (the drop zone reads files as text), so it
-  // stays markdown-only; PDF/DOCX are added through the picker below.
-  const addFiles = useCallback(
-    (picked: Array<{ filename: string; content: string }>): void => {
-      if (picked.length === 0) return;
-      setError(null);
-      setOutcomes([]);
-      const md = picked.filter((f) => /\.md$/i.test(f.filename));
-      setRejected(picked.filter((f) => !/\.md$/i.test(f.filename)).map((f) => f.filename));
-      for (const f of md) stageOne(mdStagedDoc(f.filename, f.content));
+  /** Stage an already-uploaded binary (from pick OR drop), metadata from the name. */
+  const binaryStagedDoc = useCallback(
+    (name: string, format: "PDF" | "DOCX", up: UploadedEnglishDriveFile): StagedDoc => {
+      const parsed = parseEnglishDriveFilename(name);
+      return {
+        filename: name,
+        content: "",
+        format,
+        fileId: up.fileId,
+        pdfFileId: up.pdfFileId ?? undefined,
+        fileMime: up.mime,
+        classLevel: parsed.classLevel === null ? null : String(parsed.classLevel),
+        blockNumber: parsed.blockNumber === null ? "" : String(parsed.blockNumber),
+        blockNumbers: parsed.blockNumbers.join(","),
+        kind: parsed.kind,
+        seq: parsed.seq === null ? "1" : String(parsed.seq),
+        version: parsed.version === null ? "1" : String(parsed.version),
+        title: baseName(name),
+      };
     },
-    [mdStagedDoc, stageOne],
+    [],
   );
+
+  /** Web drag-drop — the zone hands raw browser Files: .md read as text, PDF/DOCX
+   *  uploaded (+ server-side DOCX→PDF) with a visible loading state. */
+  async function onDropFiles(files: File[]): Promise<void> {
+    if (files.length === 0) return;
+    setError(null);
+    setOutcomes([]);
+    setIngesting(true);
+    const rej: string[] = [];
+    try {
+      for (const file of files) {
+        if (/\.md$/i.test(file.name)) {
+          stageOne(mdStagedDoc(file.name, await file.text()));
+          continue;
+        }
+        const format = englishDriveFormatOf(file.type, file.name);
+        if (!format) {
+          rej.push(file.name);
+          continue;
+        }
+        try {
+          stageOne(binaryStagedDoc(file.name, format, await uploadEnglishDriveWebFile(file)));
+        } catch (e) {
+          rej.push(`${file.name}: ${e instanceof FileUploadError ? e.message : STR.errGeneric}`);
+        }
+      }
+      setRejected(rej);
+    } finally {
+      setIngesting(false);
+    }
+  }
 
   async function pickFiles(): Promise<void> {
     setError(null);
@@ -140,7 +189,7 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
     try {
       const res = await DocumentPicker.getDocumentAsync({ multiple: true, copyToCacheDirectory: true });
       if (res.canceled) return;
-      setBusy(true);
+      setIngesting(true);
       const rej: string[] = [];
       for (const a of res.assets ?? []) {
         if (/\.md$/i.test(a.name)) {
@@ -153,26 +202,9 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
           rej.push(a.name);
           continue;
         }
-        // Binary: upload to /files/english-drive now → fileId; stage with metadata
-        // parsed from the filename (title falls back to the base name — no H1).
+        // Binary: upload to /files/english-drive now → fileId (+ converted pdfFileId).
         try {
-          const up = await uploadEnglishDriveAsset(a);
-          const parsed = parseEnglishDriveFilename(a.name);
-          stageOne({
-            filename: a.name,
-            content: "",
-            format,
-            fileId: up.fileId,
-            pdfFileId: up.pdfFileId ?? undefined,
-            fileMime: up.mime,
-            classLevel: parsed.classLevel === null ? null : String(parsed.classLevel),
-            blockNumber: parsed.blockNumber === null ? "" : String(parsed.blockNumber),
-            blockNumbers: parsed.blockNumbers.join(","),
-            kind: parsed.kind,
-            seq: parsed.seq === null ? "1" : String(parsed.seq),
-            version: parsed.version === null ? "1" : String(parsed.version),
-            title: baseName(a.name),
-          });
+          stageOne(binaryStagedDoc(a.name, format, await uploadEnglishDriveAsset(a)));
         } catch (e) {
           rej.push(`${a.name}: ${e instanceof FileUploadError ? e.message : STR.errGeneric}`);
         }
@@ -181,7 +213,7 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
     } catch {
       setError(STR.errGeneric);
     } finally {
-      setBusy(false);
+      setIngesting(false);
     }
   }
 
@@ -267,12 +299,14 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
     <Screen scroll>
       <H2>{STR.edUploadTitle}</H2>
 
-      <FileDropZone onFiles={addFiles}>
+      <UploadDropZone onFiles={(files) => void onDropFiles(files)} disabled={ingesting}>
         {Platform.OS === "web" ? (
           <Muted style={{ marginBottom: space(1), textAlign: "center" }}>{STR.edDropHint}</Muted>
         ) : null}
-        <Button title={STR.edPickFiles} variant="secondary" onPress={pickFiles} />
-      </FileDropZone>
+        <Button title={STR.edPickFiles} variant="secondary" onPress={pickFiles} loading={ingesting} disabled={ingesting} />
+      </UploadDropZone>
+
+      {ingesting ? <Loader label={STR.edUploading} /> : null}
 
       {rejected.length > 0 ? <Notice message={`${STR.edOnlyMd}: ${rejected.join(", ")}`} tone="warn" /> : null}
 

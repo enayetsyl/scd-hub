@@ -26,11 +26,14 @@ import { studentProfile, regressionSlope, type StudentProfileAnalytics } from ".
 import { childAssignments } from "./AssignmentSummaryService";
 import { studentAttendanceHistory } from "../../attendance/services/AttendanceReportService";
 import { dateKeyOf } from "../../attendance/dates";
+import { DONE_TO_STUDENT_STATES, OPEN_TO_STUDENT_STATES } from "../lifecycleBuckets";
 
-/** Homework states that are still open — the child owes work. */
-const OPEN_HW_STATES = new Set(["GIVEN", "DUE", "CHASE", "RESUBMIT", "ABSENT_REDELIVER"]);
-/** Homework states that closed cleanly. */
-const DONE_HW_STATES = new Set(["CHECKED", "RETURNED"]);
+/** The student-duty partition — "does the child still owe work?" — now defined ONCE
+ *  in ../lifecycleBuckets and shared (D-#359). Membership is unchanged; note it is
+ *  a DIFFERENT (and equally correct) cut from the report's teacher-workflow sets:
+ *  CHECKED is done to the student while still awaiting the teacher's hand-back. */
+const OPEN_HW_STATES = new Set<string>(OPEN_TO_STUDENT_STATES);
+const DONE_HW_STATES = new Set<string>(DONE_TO_STUDENT_STATES);
 
 /** Below this, presence is a concern worth naming. */
 export const ATTENDANCE_CONCERN_PCT = 90;
@@ -128,11 +131,19 @@ async function assignmentPicture(studentId: string, to: Date): Promise<Assignmen
   };
 }
 
-async function attendancePicture(studentId: string, fromKey: string, toKey: string): Promise<AttendancePicture> {
-  const history = await studentAttendanceHistory(studentId, fromKey, toKey);
-  const days = history.days; // already sorted oldest → newest
+/**
+ * PURE recent-vs-earlier presence split: halve the marked days and compare, so a
+ * slide shows before the term average moves. Exported because the student profile's
+ * attendance panel shows the SAME split — one definition of "attendance is
+ * improving", two readers (the D-#359 discipline).
+ */
+export function attendanceSplitOf(days: readonly { absent: boolean }[]): {
+  recentPresentPct: number | null;
+  earlierPresentPct: number | null;
+  trajectory: string;
+} {
   const half = Math.floor(days.length / 2);
-  const presentPctOf = (slice: typeof days): number | null =>
+  const presentPctOf = (slice: readonly { absent: boolean }[]): number | null =>
     slice.length === 0 ? null : pct(slice.filter((d) => !d.absent).length, slice.length);
 
   const earlier = half > 0 ? presentPctOf(days.slice(0, half)) : null;
@@ -140,14 +151,20 @@ async function attendancePicture(studentId: string, fromKey: string, toKey: stri
   // Two points → the slope IS the difference; reuse the one primitive rather than a
   // second definition of "improving".
   const slope = earlier !== null && recent !== null ? regressionSlope([earlier, recent]) : null;
+  return {
+    recentPresentPct: recent,
+    earlierPresentPct: earlier,
+    trajectory: trajectoryOf(slope, 2), // ±2 percentage points is noise
+  };
+}
 
+async function attendancePicture(studentId: string, fromKey: string, toKey: string): Promise<AttendancePicture> {
+  const history = await studentAttendanceHistory(studentId, fromKey, toKey);
   return {
     markedDays: history.markedDays,
     absentDays: history.absentDays,
     presentPct: history.presentPct,
-    recentPresentPct: recent,
-    earlierPresentPct: earlier,
-    trajectory: trajectoryOf(slope, 2), // ±2 percentage points is noise
+    ...attendanceSplitOf(history.days), // days are already sorted oldest → newest
   };
 }
 

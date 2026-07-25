@@ -618,6 +618,10 @@ export const uploadClassTestPaperWebFile = (file: File): Promise<UploadedFile> =
 export const uploadClassNoteWebFile = (file: File): Promise<UploadedFile> =>
   postWebFileForm<UploadedFile>("/files/classnote", file);
 
+/** Web drag-drop of a PDF/DOCX English Drive doc — carries the converted pdfFileId. */
+export const uploadEnglishDriveWebFile = (file: File): Promise<UploadedEnglishDriveFile> =>
+  postWebFileForm<UploadedEnglishDriveFile>("/files/english-drive", file);
+
 export const uploadCommentWebFile = (commentId: string, file: File): Promise<UploadedChatFile> =>
   postWebFileForm<UploadedChatFile>("/files/comment", file, { commentId });
 

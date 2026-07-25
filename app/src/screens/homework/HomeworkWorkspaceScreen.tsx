@@ -15,9 +15,9 @@
  * secondary "চলমান তাগাদা" control under ①. Undo (D-#338) rides every checked row.
  */
 import React, { useState, useRef, useCallback } from "react";
-import { ScrollView, View, RefreshControl } from "react-native";
+import { ScrollView, View, RefreshControl, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
 import {
   HOMEWORK_OPEN_RECORDS,
@@ -399,6 +399,7 @@ function CheckRow({
   onDone: () => void;
   onNotify: (ok: string | null, err: string | null) => void;
 }): React.ReactElement {
+  const nav = useNavigation<Props["navigation"]>();
   const [, recordOutcome] = useMutation(RECORD_HOMEWORK_OUTCOME);
   const [, attachAnswer] = useMutation(ATTACH_HW_ANSWER_FILE);
   const [, revertRecord] = useMutation(REVERT_HW_RECORD);
@@ -463,7 +464,20 @@ function CheckRow({
   return (
     <Card>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Body style={{ fontWeight: "700", flex: 1 }}>{record.studentName}</Body>
+        {/* SP-3 entry point: while marking, "is this child always like this?" is one
+            tap away — the profile opens on the homework panel. */}
+        <Pressable
+          style={{ flex: 1 }}
+          onPress={() =>
+            nav.navigate("StudentProfile", {
+              studentId: record.studentId,
+              studentName: record.studentName,
+              initialPanel: "homework",
+            })
+          }
+        >
+          <Body style={{ fontWeight: "700" }}>{record.studentName}</Body>
+        </Pressable>
         {record.hasAnswerFile ? <Badge text={STR.hwFileHas} tone="ok" /> : null}
       </View>
       <ChipRow>
