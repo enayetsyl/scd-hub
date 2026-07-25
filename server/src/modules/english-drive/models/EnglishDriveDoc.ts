@@ -51,8 +51,13 @@ export interface IEnglishDriveDoc extends Document {
   format: EnglishDriveFormat;
   /** The full markdown source (≤ 1 MB) — set for MD, empty for PDF/DOCX. */
   contentMd: string;
-  /** The binary StoredFile (kind `english_drive`) for a PDF/DOCX doc; null for MD. */
+  /** The binary StoredFile (kind `english_drive`) for a PDF/DOCX doc; null for MD.
+   *  This is always the ORIGINAL upload (the .docx for a DOCX doc) — the download. */
   fileId?: Types.ObjectId | null;
+  /** For a DOCX doc: the LibreOffice-converted PDF StoredFile (owner 2026-07-25) —
+   *  what previews + prints. Null for PDF docs (fileId already IS the pdf) and MD,
+   *  and null when a DOCX conversion failed (callers fall back to fileId). */
+  pdfFileId?: Types.ObjectId | null;
   /** Original upload filename (PDF/DOCX) — the download name + a nicer library label. */
   fileName?: string | null;
   /** The binary's MIME (application/pdf | …wordprocessingml.document); null for MD. */
@@ -82,6 +87,7 @@ const EnglishDriveDocSchema = new Schema<IEnglishDriveDoc>(
     // Required only for MD (service-enforced) so a PDF/DOCX row can carry no markdown.
     contentMd: { type: String, default: "" },
     fileId: { type: Schema.Types.ObjectId, ref: "StoredFile", default: null },
+    pdfFileId: { type: Schema.Types.ObjectId, ref: "StoredFile", default: null },
     fileName: { type: String, default: null },
     fileMime: { type: String, default: null },
     uploadedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },

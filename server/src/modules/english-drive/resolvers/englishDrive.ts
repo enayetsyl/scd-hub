@@ -43,6 +43,7 @@ EnglishDriveDocRef.implement({
     // Body format (owner 2026-07-25): MD (markdown) | PDF | DOCX (binary in fileId).
     format: t.exposeString("format"),
     fileId: t.string({ nullable: true, resolve: (r) => r.fileId }),
+    pdfFileId: t.string({ nullable: true, resolve: (r) => r.pdfFileId }),
     fileName: t.string({ nullable: true, resolve: (r) => r.fileName }),
     fileMime: t.string({ nullable: true, resolve: (r) => r.fileMime }),
     uploadedAt: t.exposeString("uploadedAt"),
@@ -149,6 +150,7 @@ builder.mutationField("uploadEnglishDriveDoc", (t) =>
       format: t.arg.string({ required: false }),
       contentMd: t.arg.string({ required: false }),
       fileId: t.arg.string({ required: false }),
+      pdfFileId: t.arg.string({ required: false }),
       fileName: t.arg.string({ required: false }),
       fileMime: t.arg.string({ required: false }),
     },

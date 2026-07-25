@@ -51,8 +51,11 @@ export interface EnglishDriveDocShape {
   version: number;
   /** MD (markdown in contentMd) | PDF | DOCX (binary in fileId). Legacy rows = MD. */
   format: string;
-  /** The binary StoredFile id (PDF/DOCX) to open via GET /files/:id; null for MD. */
+  /** The ORIGINAL binary StoredFile id (PDF/DOCX) — the download; null for MD. */
   fileId: string | null;
+  /** For a DOCX doc: the converted PDF StoredFile — previews + prints (owner 2026-07-25).
+   *  Null for PDF/MD and for a DOCX whose conversion failed (fall back to fileId). */
+  pdfFileId: string | null;
   fileName: string | null;
   fileMime: string | null;
   uploadedAt: string;
@@ -77,6 +80,7 @@ function shape(
     version: doc.version,
     format: doc.format ?? "MD", // legacy rows have no field
     fileId: doc.fileId ? doc.fileId.toString() : null,
+    pdfFileId: doc.pdfFileId ? doc.pdfFileId.toString() : null,
     fileName: doc.fileName ?? null,
     fileMime: doc.fileMime ?? null,
     uploadedAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
@@ -213,7 +217,8 @@ export async function assertEnglishDriveFileReadAccess(
   ctx: AppContext,
   file: { _id: { toString(): string } },
 ): Promise<void> {
-  const doc = (await EnglishDriveDoc.findOne({ fileId: file._id })
+  // The file may be the original (fileId) OR the converted PDF (pdfFileId).
+  const doc = (await EnglishDriveDoc.findOne({ $or: [{ fileId: file._id }, { pdfFileId: file._id }] })
     .select("classLevel")
     .lean()) as unknown as { classLevel: number } | null;
   if (!doc) throw new ForbiddenError("অনুমতি নেই");
@@ -271,6 +276,8 @@ export interface UploadEnglishDriveDocInput {
   contentMd?: string | null;
   /** Required for PDF/DOCX (a StoredFile of kind `english_drive`); ignored for MD. */
   fileId?: string | null;
+  /** DOCX only: the converted PDF StoredFile id (from /files/english-drive). */
+  pdfFileId?: string | null;
   fileName?: string | null;
   fileMime?: string | null;
   actorId: string;
@@ -329,6 +336,7 @@ export async function uploadEnglishDriveDoc(
   }
   const contentMd = input.contentMd ?? "";
   let fileId: Types.ObjectId | null = null;
+  let pdfFileId: Types.ObjectId | null = null;
   if (format === "MD") {
     if (contentMd.trim() === "") throw new Error("ফাইলটি খালি — কনটেন্ট পাওয়া যায়নি");
     if (Buffer.byteLength(contentMd, "utf8") > ENGLISH_DRIVE_MD_MAX_BYTES) {
@@ -341,6 +349,11 @@ export async function uploadEnglishDriveDoc(
       throw new Error("ফাইলটি খুঁজে পাওয়া যায়নি");
     }
     fileId = new Types.ObjectId(input.fileId);
+    // DOCX carries the converted PDF (owner 2026-07-25) — validate it's ours too.
+    if (input.pdfFileId) {
+      const pdfStored = await StoredFile.findById(input.pdfFileId).select("kind").lean();
+      if (pdfStored && pdfStored.kind === "english_drive") pdfFileId = new Types.ObjectId(input.pdfFileId);
+    }
   }
 
   const prev = await EnglishDriveDoc.findOne({
@@ -368,6 +381,7 @@ export async function uploadEnglishDriveDoc(
     format,
     contentMd: format === "MD" ? contentMd : "",
     fileId,
+    pdfFileId,
     fileName: format === "MD" ? null : input.fileName ?? null,
     fileMime: format === "MD" ? null : input.fileMime ?? null,
     uploadedBy: input.actorId,
@@ -450,12 +464,14 @@ export async function sendEnglishDriveDocToPrint(
   // was office-uploaded through /files/english-drive and the caller passed the
   // doc read gate above; the office reads it via the english_drive /files gate.
   if ((doc.format ?? "MD") !== "MD") {
-    if (!doc.fileId) throw new Error("ফাইলটি খুঁজে পাওয়া যায়নি");
+    // Prefer the converted PDF (DOCX); a PDF doc's fileId already IS the pdf.
+    const printFileId = doc.pdfFileId ?? doc.fileId;
+    if (!printFileId) throw new Error("ফাইলটি খুঁজে পাওয়া যায়নি");
     const req = await createPrintRequest({
       title,
       purpose: KIND_PRINT_PURPOSE[doc.kind as EnglishDriveKind] ?? "OTHER",
       sourceType: "UPLOAD",
-      fileIds: [doc.fileId],
+      fileIds: [printFileId],
       colour: input.colour,
       sides: input.sides,
       copies: input.copies,
