@@ -3485,6 +3485,7 @@ const STR_BN = {
   spNoComments: "এই সময়সীমায় কোনো মন্তব্য নেই",
   spPrintSheet: "প্রোফাইল প্রিন্ট (PDF)",
   spPrintFailed: "PDF তৈরি করা যায়নি",
+  spNoStudent: "কোনো শিক্ষার্থী নির্বাচন করা হয়নি",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -6209,6 +6210,7 @@ const STR_EN: StrTable = {
   spNoComments: "No comments in this date range",
   spPrintSheet: "Print profile (PDF)",
   spPrintFailed: "Could not generate the PDF",
+  spNoStudent: "No student selected",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

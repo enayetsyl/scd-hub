@@ -31,7 +31,7 @@ import {
 } from "../../graphql/studentProfile";
 import { STUDENT_WHOLE_PICTURE_QUERY } from "../../graphql/wholePicture";
 import { WholePictureCard } from "../../components/WholePictureCard";
-import { Screen, Card, Body, Muted, Badge, Loader, Notice, Chip, ChipRow, Button } from "../../components/ui";
+import { Screen, Card, Body, Muted, Badge, Loader, Notice, Chip, ChipRow, Button, EmptyState } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { MiniBarChart, type BarDatum } from "../../components/MiniBarChart";
 import { ChartLegend, MiniLineChart, MiniStackedBars, type StackedRow } from "../../components/MiniCharts";
@@ -61,13 +61,28 @@ const keyDaysAgo = (days: number): string => {
 export default function StudentProfileScreen(): React.ReactElement {
   // Registered in several stacks (roster / attendance / homework / assignment /
   // class test), so params are read via useRoute rather than tied to one ParamList.
-  const { studentId, studentName, initialPanel } = useRoute().params as StudentProfileParams;
+  //
+  // Params are read DEFENSIVELY (`?? {}`), never destructured off `params` directly.
+  // A profile with no studentId must degrade to an empty state, not throw: this
+  // screen is reachable by five routes plus deep links and navigation-state
+  // restoration, and a destructure of `undefined` takes the whole tab down with the
+  // error boundary. That is exactly what happened when it was accidentally
+  // registered as a stack's FIRST screen (= its initial route, so it mounted with
+  // no params) — see the fix alongside this guard.
+  const params = (useRoute().params ?? {}) as Partial<StudentProfileParams>;
+  const studentId = params.studentId ?? "";
+  const studentName = params.studentName;
+  const initialPanel = params.initialPanel;
   const colors = useColors();
   const [open, setOpen] = useState<PanelKey | null>(initialPanel ?? "attendance");
   const { openingId, runOpen } = useFileOpen();
   const [pdfError, setPdfError] = useState<string | null>(null);
 
-  const [headerQ] = useQuery({ query: STUDENT_PROFILE_HEADER_QUERY, variables: { studentId } });
+  const [headerQ] = useQuery({
+    query: STUDENT_PROFILE_HEADER_QUERY,
+    variables: { studentId },
+    pause: !studentId,
+  });
   const header = headerQ.data?.studentProfileHeader ?? null;
 
   // The window defaults to the academic year to date (D-#358); the header supplies it.
@@ -87,10 +102,14 @@ export default function StudentProfileScreen(): React.ReactElement {
   const panelVars = { studentId, fromKey, toKey };
   // Each panel waits until it is opened — and until the window is known, so the
   // year-default never fires a throwaway request with fallback bounds.
-  const ready = mode !== "year" || !!year;
+  const ready = !!studentId && (mode !== "year" || !!year);
   const paused = (k: PanelKey) => open !== k || !ready;
 
-  const [wpQ] = useQuery({ query: STUDENT_WHOLE_PICTURE_QUERY, variables: { studentId } });
+  const [wpQ] = useQuery({
+    query: STUDENT_WHOLE_PICTURE_QUERY,
+    variables: { studentId },
+    pause: !studentId,
+  });
   const [attQ] = useQuery({
     query: STUDENT_PROFILE_ATTENDANCE_QUERY,
     variables: panelVars,
@@ -119,6 +138,15 @@ export default function StudentProfileScreen(): React.ReactElement {
 
   const wp = wpQ.data?.studentWholePicture ?? null;
   const narrowed = header ? !header.fullView : false;
+
+  // AFTER every hook, so hook order never varies between renders (rules of hooks).
+  if (!studentId) {
+    return (
+      <Screen>
+        <EmptyState message={STR.spNoStudent} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen padded={false}>
