@@ -31,6 +31,7 @@ import "./modules/trackers/resolvers/homeworkFiles";
 import "./modules/trackers/resolvers/assignment";
 import "./modules/printing/resolvers/printRequest";
 import "./modules/trackers/resolvers/wholePicture";
+import "./modules/trackers/resolvers/studentProfile";
 import "./modules/trackers/resolvers/reconReport";
 import "./modules/trackers/resolvers/hwLifecycleReport";
 import "./modules/dashboard/resolvers/adminToday";

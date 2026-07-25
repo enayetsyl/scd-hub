@@ -26,11 +26,14 @@ import { studentProfile, regressionSlope, type StudentProfileAnalytics } from ".
 import { childAssignments } from "./AssignmentSummaryService";
 import { studentAttendanceHistory } from "../../attendance/services/AttendanceReportService";
 import { dateKeyOf } from "../../attendance/dates";
+import { DONE_TO_STUDENT_STATES, OPEN_TO_STUDENT_STATES } from "../lifecycleBuckets";
 
-/** Homework states that are still open — the child owes work. */
-const OPEN_HW_STATES = new Set(["GIVEN", "DUE", "CHASE", "RESUBMIT", "ABSENT_REDELIVER"]);
-/** Homework states that closed cleanly. */
-const DONE_HW_STATES = new Set(["CHECKED", "RETURNED"]);
+/** The student-duty partition — "does the child still owe work?" — now defined ONCE
+ *  in ../lifecycleBuckets and shared (D-#359). Membership is unchanged; note it is
+ *  a DIFFERENT (and equally correct) cut from the report's teacher-workflow sets:
+ *  CHECKED is done to the student while still awaiting the teacher's hand-back. */
+const OPEN_HW_STATES = new Set<string>(OPEN_TO_STUDENT_STATES);
+const DONE_HW_STATES = new Set<string>(DONE_TO_STUDENT_STATES);
 
 /** Below this, presence is a concern worth naming. */
 export const ATTENDANCE_CONCERN_PCT = 90;

@@ -29,18 +29,18 @@ import { User } from "../../foundation/models/User";
 import { Student } from "../../foundation/models/Student";
 import { Guardian } from "../../foundation/models/Guardian";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
-import { parseDateKey } from "../../attendance/dates";
 import { resolveSubjectTeachers } from "../subjectTeacher";
+import {
+  AWAITING_CHECK_STATES as AWAITING_CHECK,
+  AWAITING_RETURN_STATES as AWAITING_RETURN,
+  PRE_SUBMIT_STATES as PRE_SUBMIT,
+  currentStateSince,
+  dayRangeBounds,
+  everReached,
+} from "../lifecycleBuckets";
 
 export const HW_CHECKING_BACKLOG_DAYS = 2;
 const DAY_MS = 86_400_000;
-
-/** Lifecycle states a record sits in BEFORE it has been submitted. */
-const PRE_SUBMIT: readonly LifecycleState[] = ["GIVEN", "ABSENT_REDELIVER", "DUE", "CHASE"];
-/** Submitted, awaiting the teacher's check. */
-const AWAITING_CHECK: readonly LifecycleState[] = ["SUBMITTED"];
-/** Checked, awaiting hand-back to the student. */
-const AWAITING_RETURN: readonly LifecycleState[] = ["CHECKED", "RESUBMIT"];
 
 /** The four drillable pending stages. */
 export type HwPendingStage = "SUBMISSION" | "CHECK" | "RETURN" | "CHASE";
@@ -132,19 +132,6 @@ interface SectionMeta {
   classLevel: number;
 }
 
-/** Last stamp of a record's current state → when it entered that state. */
-function currentStateSince(stamps: Array<{ state: string; at: Date }>, state: string): Date | null {
-  for (let i = stamps.length - 1; i >= 0; i--) {
-    if (stamps[i].state === state) return new Date(stamps[i].at);
-  }
-  return null;
-}
-
-/** True iff a record's audit trail ever reached `state`. */
-function everReached(stamps: Array<{ state: string; at: Date }>, state: LifecycleState): boolean {
-  return stamps.some((s) => s.state === state);
-}
-
 /** Build the HomeworkItem filter shared by the report + the drill (D-#350). */
 function itemFilter(
   start: Date,
@@ -195,21 +182,13 @@ async function accountableTeacherByItem(items: ItemLite[]): Promise<Map<string, 
   return out;
 }
 
-function rangeBounds(fromKey: string, toKey: string): { start: Date; end: Date } {
-  const start = parseDateKey(fromKey);
-  const last = parseDateKey(toKey);
-  const end = new Date(last.getFullYear(), last.getMonth(), last.getDate(), 23, 59, 59, 999);
-  if (start.getTime() > end.getTime()) throw new Error("from must not be after to");
-  return { start, end };
-}
-
 export async function homeworkLifecycleReport(
   fromKey: string,
   toKey: string,
   opts: HwLifecycleFilters = {},
 ): Promise<HwLifecycleReport> {
   const now = opts.now ?? new Date();
-  const { start, end } = rangeBounds(fromKey, toKey);
+  const { start, end } = dayRangeBounds(fromKey, toKey);
 
   const items = await HomeworkItem.find(itemFilter(start, end, opts))
     .select("sectionId classId classLevel subject status declaredBy dateGiven")
@@ -377,7 +356,7 @@ export async function homeworkLifecyclePending(
   opts: HwLifecycleFilters = {},
 ): Promise<HwPendingStudent[]> {
   const now = opts.now ?? new Date();
-  const { start, end } = rangeBounds(fromKey, toKey);
+  const { start, end } = dayRangeBounds(fromKey, toKey);
 
   const allItems = await HomeworkItem.find(itemFilter(start, end, opts))
     .select("sectionId subject classLevel dateGiven declaredBy")
