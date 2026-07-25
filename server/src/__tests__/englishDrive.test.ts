@@ -586,6 +586,25 @@ describe("sendEnglishDriveDocToPrint", () => {
     expect(out.title).toContain("C3_B3-5_PT_v2");
   });
 
+  test("a PDF/DOCX doc files the STORED binary to the queue directly (trusted), no pdfkit (owner 2026-07-25)", async () => {
+    const fileId = oid();
+    mockFindById.mockReturnValue(madeDoc({ format: "PDF", fileId, contentMd: "" }));
+    const out = await sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), printInput);
+    // No markdown render, no new print_upload — the existing english_drive file is filed.
+    expect(mockMarkdownToPdf).not.toHaveBeenCalled();
+    expect(mockStoredCreate).not.toHaveBeenCalled();
+    expect(mockCreatePrint).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceType: "UPLOAD",
+        fileIds: [fileId.toString()],
+        trusted: true,
+        subject: "ENG",
+        purpose: "LESSON_PLAN", // TN
+      }),
+    );
+    expect(out.printRequestId).toBeTruthy();
+  });
+
   test("edit-before-print renders the EDITED markdown + layout, not the stored doc (D-#348)", async () => {
     mockFindById.mockReturnValue(madeDoc());
     await sendEnglishDriveDocToPrint(ctxOf("PRINCIPAL"), {

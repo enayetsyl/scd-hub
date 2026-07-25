@@ -439,16 +439,32 @@ export async function sendEnglishDriveDocToPrint(
   // Same read gate as the doc screen: teacher of the class or P/O; guardian never.
   const doc = await englishDriveDocById(ctx, input.id);
 
-  // Office-print renders the stored MARKDOWN via pdfkit. A PDF/DOCX doc has no
-  // markdown — it's opened/downloaded and printed locally (owner 2026-07-25).
-  if ((doc.format ?? "MD") !== "MD") {
-    throw new Error("PDF/DOCX ফাইল সরাসরি খুলে প্রিন্ট করুন — এটি প্রিন্ট সারিতে পাঠানো যায় না");
-  }
-
   const kindTag = doc.seq > 1 ? `${doc.kind}${doc.seq}` : doc.kind;
   const blockTag = formatBlockTag(doc);
   const stamp = `C${doc.classLevel}${blockTag ? `_${blockTag}` : ""}_${kindTag}_v${doc.version}`;
   const title = `English Drive ${stamp} — ${doc.title}`.slice(0, 200);
+
+  // A PDF/DOCX doc (owner 2026-07-25) is already a print-ready binary — file the
+  // STORED english_drive file to the queue directly (no pdfkit render). `trusted`
+  // skips the print_upload-kind check (the class-test precedent, D-#342): the file
+  // was office-uploaded through /files/english-drive and the caller passed the
+  // doc read gate above; the office reads it via the english_drive /files gate.
+  if ((doc.format ?? "MD") !== "MD") {
+    if (!doc.fileId) throw new Error("ফাইলটি খুঁজে পাওয়া যায়নি");
+    const req = await createPrintRequest({
+      title,
+      purpose: KIND_PRINT_PURPOSE[doc.kind as EnglishDriveKind] ?? "OTHER",
+      sourceType: "UPLOAD",
+      fileIds: [doc.fileId],
+      colour: input.colour,
+      sides: input.sides,
+      copies: input.copies,
+      subject: "ENG",
+      requestedBy: ctx.auth!.userId as string,
+      trusted: true,
+    });
+    return { printRequestId: req._id.toString(), title: req.title };
+  }
 
   // Print the edited version when supplied (D-#348), else the stored markdown.
   const source = input.contentMd != null && input.contentMd.trim() !== "" ? input.contentMd : doc.contentMd ?? "";
