@@ -302,26 +302,14 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                   {item.asId ? <Muted style={{ marginTop: 2 }}>{item.asId}</Muted> : null}
                   <View style={{ marginTop: 8 }}>
                     {item.status === "ISSUED" && item.asItemId ? (
+                      // RP-4 (D-#356): one workspace replaces সংগ্রহ + যাচাই.
                       <ChipRow>
                         <Chip
-                          label={STR.asCollectTitle}
+                          label={STR.asWorkspace}
                           onPress={() =>
-                            navigation.navigate("CollectAssignment", {
-                              itemId: item.asItemId as string,
+                            navigation.navigate("AssignmentWorkspace", {
                               sectionId: item.sectionId,
                               classId: item.classId,
-                              asId: item.asId ?? "",
-                            })
-                          }
-                        />
-                        <Chip
-                          label={STR.asCheckTitle}
-                          onPress={() =>
-                            navigation.navigate("AssignmentChecking", {
-                              itemId: item.asItemId as string,
-                              sectionId: item.sectionId,
-                              classId: item.classId,
-                              asId: item.asId ?? "",
                             })
                           }
                         />

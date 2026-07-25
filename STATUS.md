@@ -2660,6 +2660,7 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
 - **graphql-codegen client-preset** to replace the hand-typed operations (PRD §8 step 8).
 
 ## In flight
+- 2026-07-23: **Tracker roster-pass redesign (docs/prd-tracker-roster-pass.md, D-#355/#356) — code complete on branch `feat/rp-homework-roster-pass`, awaiting live verify + review.** All four slices built: RP-1/RP-2 (homework submit/return chip passes + HomeworkWorkspaceScreen + RosterChipPass/CardGrid, Records+Checking retired→redirect), RP-3/RP-4 (assignment parity: assignmentOpenRecords + passes + recordAssignmentOutcome + AssignmentWorkspaceScreen, Collect+Checking retired→redirect). First-cross-only chase in both; assignment chase decoupled from due date. Automated gates GREEN: server tsc + 2121 jest (20 new) + vocab verifier; app tsc + web export. **Next: live-drive on the dev site with a real two-subject teacher (PRD §8) before the PR-3 retirement sweep + the dev→main promote.**
 - 2026-07-02: dev deploy repair in progress - three guardian screen modules were present locally but missing from the branch; app typecheck is green after confirming them.
 - (none — Slice 4 shipped)
 
