@@ -214,6 +214,7 @@ import UserListScreen from "../screens/admin/UserListScreen";
 import ScopeGrantScreen from "../screens/admin/ScopeGrantScreen";
 import SupervisoryGrantScreen from "../screens/admin/SupervisoryGrantScreen";
 import RosterScreen from "../screens/admin/RosterScreen";
+import StudentProfileScreen from "../screens/student/StudentProfileScreen";
 import StaffListScreen from "../screens/admin/StaffListScreen";
 import AssignClassTeacherScreen from "../screens/admin/AssignClassTeacherScreen";
 import AssignSubjectTeacherScreen from "../screens/admin/AssignSubjectTeacherScreen";
@@ -567,6 +568,7 @@ function HomeworkNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
   return (
     <HomeworkStack.Navigator screenOptions={stackOptions}>
+      <HomeworkStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
       <HomeworkStack.Screen name="HomeworkHome" component={HomeworkHomeScreen} options={{ title: STR.tabHomework }} />
       <HomeworkStack.Screen name="DeclareHomework" component={DeclareHomeworkScreen} options={{ title: STR.hwDeclareTitle }} />
       <HomeworkStack.Screen name="HomeworkReconcile" component={HomeworkReconcileScreen} options={{ title: STR.hwReconcileTitle }} />
@@ -583,6 +585,7 @@ function AssignmentNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
   return (
     <AssignmentStack.Navigator screenOptions={stackOptions}>
+      <AssignmentStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
       <AssignmentStack.Screen name="AssignmentHome" component={AssignmentHomeScreen} options={{ title: STR.tabAssignment }} />
       <AssignmentStack.Screen name="AssignmentSchedule" component={AssignmentScheduleScreen} options={{ title: STR.asScheduleTitle }} />
       <AssignmentStack.Screen name="DeliverAssignment" component={DeliverAssignmentScreen} options={{ title: STR.asDeliverTitle }} />
@@ -633,6 +636,7 @@ function AttendanceNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
   return (
     <AttendanceStack.Navigator screenOptions={stackOptions}>
+      <AttendanceStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
       <AttendanceStack.Screen name="AttendanceHome" component={AttendanceHomeScreen} options={{ title: STR.tabAttendance }} />
       <AttendanceStack.Screen name="MarkAttendance" component={MarkAttendanceScreen} options={{ title: STR.attMarkTitle }} />
       <AttendanceStack.Screen name="AttendanceAdmin" component={AttendanceAdminScreen} options={{ title: STR.attAdminTitle }} />
@@ -723,6 +727,7 @@ function ClassTestNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
   return (
     <ClassTestStack.Navigator screenOptions={stackOptions}>
+      <ClassTestStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
       <ClassTestStack.Screen name="ClassTestHome" component={ClassTestHomeScreen} options={{ title: STR.ctHomeTitle }} />
       <ClassTestStack.Screen name="RequestClassTest" component={RequestClassTestScreen} options={{ title: STR.ctNewRequest }} />
       <ClassTestStack.Screen name="MyCtQuestions" component={MyCtQuestionsScreen} options={{ title: STR.cqMyTitle }} />
@@ -976,6 +981,7 @@ function AdminNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
   return (
     <AdminStack.Navigator screenOptions={stackOptions}>
+      <AdminStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
       <AdminStack.Screen name="AdminHome" component={AdminHomeScreen} options={{ title: STR.admin }} />
       <AdminStack.Screen name="Import" component={ImportScreen} options={{ title: STR.importContent }} />
       <AdminStack.Screen name="UserList" component={UserListScreen} options={{ title: STR.users }} />

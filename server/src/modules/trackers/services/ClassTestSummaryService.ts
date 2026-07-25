@@ -400,17 +400,38 @@ export function regressionSlope(ys: number[]): number | null {
   return den === 0 ? 0 : Math.round((num / den) * 100) / 100;
 }
 
-export async function studentProfile(studentId: string): Promise<StudentProfile> {
+/**
+ * One student across every subject — per-result list (newest first) + a per-subject
+ * roll-up + the CT-10 analytics.
+ *
+ * `subjects` (SP-2, D-#357): when given, the profile is narrowed to those subject
+ * codes BEFORE anything is derived, so a subject teacher's averages, streak, best/
+ * weakest subject and rank all describe the slice they may see — never a number
+ * computed from exams hidden from them. `null`/omitted = every subject (the
+ * behaviour every existing caller keeps).
+ */
+export async function studentProfile(
+  studentId: string,
+  subjects?: readonly string[] | null,
+): Promise<StudentProfile> {
   const studentOid = new Types.ObjectId(studentId);
-  const docs = (await ClassTestResult.find({ studentId: studentOid }).lean()) as unknown as IClassTestResult[];
+  const allDocs = (await ClassTestResult.find({ studentId: studentOid }).lean()) as unknown as IClassTestResult[];
   const names = await loadStudentNames([studentId]);
   const studentName = names.get(studentId) ?? "শিক্ষার্থী";
-  if (docs.length === 0) return { studentId, studentName, results: [], bySubject: [], analytics: EMPTY_ANALYTICS };
+  const empty: StudentProfile = { studentId, studentName, results: [], bySubject: [], analytics: EMPTY_ANALYTICS };
+  if (allDocs.length === 0) return empty;
+  // An empty allow-list is a real answer ("teaches nothing here"), not "unrestricted".
+  if (subjects && subjects.length === 0) return empty;
 
-  const testIds = [...new Set(docs.map((d) => d.testId.toString()))].map((id) => new Types.ObjectId(id));
-  const exams = (await ClassTest.find({ _id: { $in: testIds }, status: "PRINTED" })
-    .lean()) as unknown as IClassTest[];
+  const testIds = [...new Set(allDocs.map((d) => d.testId.toString()))].map((id) => new Types.ObjectId(id));
+  const examQ: Record<string, unknown> = { _id: { $in: testIds }, status: "PRINTED" };
+  if (subjects) examQ.subject = { $in: [...subjects] };
+  const exams = (await ClassTest.find(examQ).lean()) as unknown as IClassTest[];
   const examById = new Map(exams.map((e) => [e._id.toString(), e]));
+  // Drop out-of-scope results HERE so every downstream derivation (weakness tally,
+  // rank, streak) sees only the permitted slice.
+  const docs = allDocs.filter((d) => examById.has(d.testId.toString()));
+  if (docs.length === 0) return empty;
 
   const results: StudentProfileResult[] = [];
   for (const d of docs) {

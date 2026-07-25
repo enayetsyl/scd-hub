@@ -324,7 +324,9 @@ StudentAnalyticsRef.implement({
   }),
 });
 
-const StudentProfileRef = builder.objectRef<StudentProfile>("ClassTestStudentProfile");
+/** Exported so the student-profile hub (SP-2) can serve the SAME type from its own
+ *  narrowing gate instead of declaring a second class-test profile shape. */
+export const StudentProfileRef = builder.objectRef<StudentProfile>("ClassTestStudentProfile");
 StudentProfileRef.implement({
   description: "One student across subjects (CT-4) — per-result list (newest first) + per-subject roll-up + CT-10 analytics.",
   fields: (t) => ({

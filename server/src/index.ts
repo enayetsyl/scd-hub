@@ -31,6 +31,7 @@ import "./modules/trackers/resolvers/homeworkFiles";
 import "./modules/trackers/resolvers/assignment";
 import "./modules/printing/resolvers/printRequest";
 import "./modules/trackers/resolvers/wholePicture";
+import "./modules/trackers/resolvers/studentProfile";
 import "./modules/trackers/resolvers/reconReport";
 import "./modules/trackers/resolvers/hwLifecycleReport";
 import "./modules/dashboard/resolvers/adminToday";
@@ -96,6 +97,7 @@ import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";
 import { setPdfRouter } from "./modules/assessment/routes/setPdf";
 import { englishDrivePdfRouter } from "./modules/english-drive/routes/englishDrivePdf";
+import { studentProfilePdfRouter } from "./modules/trackers/routes/studentProfilePdf";
 import { filesRouter } from "./routes/files";
 import { triggersRouter } from "./routes/triggers";
 import { eventsRouter } from "./routes/events";
@@ -248,6 +250,7 @@ app.use("/events", corsForRest);
 app.use("/pdf", pdfRouter);
 app.use("/pdf/set", setPdfRouter);
 app.use("/pdf/english-drive", englishDrivePdfRouter);
+app.use("/pdf/student-profile", studentProfilePdfRouter);
 
 // Thin HTTP surface — homework files (GP-A, D-#70): server-in-the-middle
 // upload/download; Drive is never exposed to a client.

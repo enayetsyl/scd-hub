@@ -43,11 +43,18 @@ function formatDob(iso: string | null): string {
   return bnNum(`${d}/${m}/${y}`);
 }
 
-function StudentCard({ s }: { s: RosterStudentT }): React.ReactElement {
+function StudentCard({ s, nav }: { s: RosterStudentT; nav: Nav }): React.ReactElement {
   return (
     <Card>
       <Body style={{ fontWeight: "700" }}>{s.nameBn || s.name}</Body>
       {s.nameBn ? <Muted>{s.name}</Muted> : null}
+      {/* SP-3 entry point: the roster is where an admin looks a child up. */}
+      <Button
+        title={STR.spOpenProfile}
+        variant="secondary"
+        style={{ marginTop: space(2) }}
+        onPress={() => nav.navigate("StudentProfile", { studentId: s.id, studentName: s.nameBn || s.name })}
+      />
       <Divider />
       <Row label={STR.studentId} value={s.schoolId} />
       <Row label={STR.gender} value={genderLabel(s.gender)} />
@@ -158,7 +165,7 @@ export default function RosterScreen(): React.ReactElement {
             <EmptyState message={STR.noMatches} />
           )
         }
-        renderItem={({ item: s }) => <StudentCard s={s} />}
+        renderItem={({ item: s }) => <StudentCard s={s} nav={nav} />}
       />
     </Screen>
   );
