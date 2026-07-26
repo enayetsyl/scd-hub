@@ -29,6 +29,9 @@ import {
   TRACKER_KIND_LABELS_EN,
   DOC_TYPE_LABELS_BN,
   DOC_TYPE_LABELS_EN,
+  PRINT_PURPOSE_LABELS_BN,
+  PRINT_PURPOSE_LABELS_EN,
+  type PrintPurpose,
   type Subject,
   type Difficulty,
   type PaperRole,
@@ -322,6 +325,11 @@ export function isoDateLabel(iso?: string | null): string {
 
 export const subjectLabel = (code?: string | null): string =>
   (code && pick(SUBJECT_LABELS_BN, SUBJECT_LABELS_EN)[code as Subject]) || code || DASH;
+
+/** What a print job is FOR — classwork / homework / assignment / class test / … The
+ *  print queue showed the raw enum before the D-#362 history needed to sort by it. */
+export const printPurposeLabel = (v?: string | null): string =>
+  (v && pick(PRINT_PURPOSE_LABELS_BN, PRINT_PURPOSE_LABELS_EN)[v as PrintPurpose]) || v || DASH;
 
 export const difficultyLabel = (v?: string | null): string =>
   (v && pick(DIFFICULTY_LABELS_BN, DIFFICULTY_LABELS_EN)[v as Difficulty]) || v || DASH;
@@ -1001,6 +1009,16 @@ const STR_BN = {
   prSourceLink: "লিংক",
   prSourceSet: "প্রশ্ন সেট (নির্বাচিত)",
   prSourcePlan: "পাঠ পরিকল্পনা (নির্বাচিত)",
+  // Reprint history (D-#362)
+  prHistory: "আগে যা ছাপা হয়েছে",
+  prHistoryHint: "আগে ছাপা কাজ আবার পাঠাতে ফাইল নতুন করে দিতে হবে না — এখান থেকেই প্রিন্টে পাঠান।",
+  prHistoryEmpty: "আগে ছাপা কোনো কাজ নেই",
+  prHistoryCapped: "সাম্প্রতিক কাজগুলো দেখানো হচ্ছে — এর চেয়ে পুরনো কিছু বাদ পড়তে পারে।",
+  prReprint: "আবার ছাপান",
+  prReprintOk: "আবার প্রিন্টে পাঠানো হয়েছে",
+  prPrintedTimes: "বার ছাপা হয়েছে",
+  prLastPrinted: "শেষ ছাপা",
+  prNoClass: "শ্রেণি ছাড়া",
   asAcademicYear: "শিক্ষাবর্ষ",
   asCurrentYear: "চলতি",
   asNoAcademicYear: "কোনো শিক্ষাবর্ষ নেই — Admin থেকে যোগ করুন",
@@ -3738,6 +3756,16 @@ const STR_EN: StrTable = {
   prSourceLink: "Link",
   prSourceSet: "Question set (selected)",
   prSourcePlan: "Lesson plan (selected)",
+  // Reprint history (D-#362)
+  prHistory: "Already printed",
+  prHistoryHint: "No need to send the file again — put an earlier print straight back in the queue.",
+  prHistoryEmpty: "Nothing has been printed yet",
+  prHistoryCapped: "Showing recent jobs — prints older than this window may be missing.",
+  prReprint: "Reprint",
+  prReprintOk: "Sent to print again",
+  prPrintedTimes: "times printed",
+  prLastPrinted: "Last printed",
+  prNoClass: "No class",
   asAcademicYear: "Academic year",
   asCurrentYear: "current",
   asNoAcademicYear: "No academic year exists — add one from Admin",

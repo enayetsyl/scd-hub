@@ -69,6 +69,7 @@ export type AuditEventKind =
   | "PRINT_REQUEST_PRINTED"       // Office marked it printed (PQ-1, D-#281)
   | "PRINT_REQUEST_DELIVERED"     // Office handed it back to the requesting teacher (PQ-1, D-#281)
   | "PRINT_REQUEST_CANCELLED"     // requester (while REQUESTED) or Office withdrew it (PQ-1, D-#281)
+  | "PRINT_REQUEST_REPRINTED"     // an already-printed job re-queued from the history, source reused (D-#362)
   | "CLASS_TEST_REQUESTED"        // a teacher filed a class-test print request (CT-1, §5/J1, D-#119)
   | "CLASS_TEST_PRINTED"          // Office marked printed → the official exam record (CT-1, §5/J2, D-#120)
   | "CLASS_TEST_CANCELLED"        // Office cancelled a withdrawn print request (CT-1, §5)

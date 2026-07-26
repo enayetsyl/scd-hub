@@ -22,6 +22,7 @@ import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
 import { emitPrintDelivered, emitPrintRequested } from "../../notifications/services/emitters";
 import { User } from "../../foundation/models/User";
+import { Class } from "../../foundation/models/Class";
 import { ClassTest } from "../../trackers/models/ClassTest";
 import { classPresenceForDate } from "../../attendance/services/AttendanceReportService";
 import { dateKeyOf } from "../../attendance/dates";
@@ -437,6 +438,290 @@ export async function myPrintRequests(userId: string, limit = 50): Promise<IPrin
 
 export async function printRequestById(id: string): Promise<IPrintRequest | null> {
   return PrintRequest.findById(id).lean() as unknown as Promise<IPrintRequest | null>;
+}
+
+// ---------------------------------------------------------------------------
+// D-#362 — the reprint history: what has already been printed, one row per document
+// ---------------------------------------------------------------------------
+
+/** Statuses that count as "already printed" — the only jobs the history offers for a
+ *  reprint (owner ruling: paper that actually came off the printer; a cancelled or
+ *  still-queued job is not history). */
+const PRINTED_STATUSES = ["PRINTED", "DELIVERED"] as const;
+
+export interface PrintHistoryFilter {
+  classId?: string | null;
+  subject?: string | null;
+  purpose?: string | null;
+  /** Own-row scope: a teacher only ever sees the jobs they filed. */
+  requestedBy?: string | null;
+  /** Max GROUPS returned (not jobs scanned). */
+  limit?: number | null;
+}
+
+export interface PrintHistoryRow {
+  /** The grouping key — source identity × class × subject × purpose (see `historyKey`). */
+  key: string;
+  /** The most recent job in the group: the row's display representative AND the
+   *  record a reprint clones from. */
+  latest: IPrintRequest;
+  /** How many times this document has been printed (jobs in the group). */
+  printCount: number;
+  lastPrintedAt: Date;
+  firstPrintedAt: Date;
+  /** Distinct requester ids across the group — the Office sees who has printed it. */
+  requesterIds: string[];
+  /** Resolved for sorting/display; null when the job named no class. */
+  classLevel: number | null;
+}
+
+/** How many recent printed jobs one history read scans before grouping. Generous for a
+ *  single school (a term is low hundreds of jobs); a read that hits the cap is reported
+ *  through `PrintHistoryPage.scannedCapped` rather than silently truncated. */
+export const PRINT_HISTORY_SCAN_CAP = 1000;
+
+export interface PrintHistoryPage {
+  rows: PrintHistoryRow[];
+  /** True when the scan hit PRINT_HISTORY_SCAN_CAP, so older prints may be missing. */
+  scannedCapped: boolean;
+}
+
+/**
+ * The identity of "the same document, printed again".
+ *
+ * The SOURCE alone is not enough: one worksheet legitimately gets printed for class 3
+ * Bangla and for class 4 Bangla, and the history is browsed BY class/subject/purpose —
+ * collapsing those into one row would lose the axis the teacher navigates by. So the
+ * key is source identity × class × subject × purpose, which still folds the real case
+ * (the same sheet, same class, printed five times over a term) into one row.
+ */
+export function historyKey(doc: IPrintRequest): string {
+  let src: string;
+  switch (doc.sourceType as PrintSource) {
+    case "SET":
+      src = `set:${doc.setId?.toString() ?? ""}`;
+      break;
+    case "CONTENT_ARTIFACT":
+      src = `artifact:${doc.contentArtifactId?.toString() ?? ""}`;
+      break;
+    case "UPLOAD":
+      // Sorted, so the same attachment set in a different order is still one document.
+      src = `upload:${(doc.fileIds ?? []).map((f) => f.toString()).sort().join(",")}`;
+      break;
+    case "LINK":
+      src = `link:${doc.linkUrl ?? ""}`;
+      break;
+    default:
+      src = `${doc.sourceType}:${doc._id.toString()}`; // unknown source → never grouped
+  }
+  return [src, doc.classId?.toString() ?? "-", doc.subject ?? "-", doc.purpose].join("|");
+}
+
+/** When a job was printed, for grouping — `printedAt` is stamped at markPrinted, but a
+ *  migration-backfilled row may lack it, so fall back to the request time. */
+function printedAtOf(doc: IPrintRequest): Date {
+  return new Date(doc.printedAt ?? doc.requestedAt);
+}
+
+/**
+ * Already-printed jobs, collapsed to ONE ROW PER DOCUMENT and ordered the way the
+ * Office and teachers hunt for a reprint: class, then subject, then purpose
+ * (classwork / homework / assignment / class test / …), newest print first inside a
+ * group. Filters narrow the same three axes.
+ *
+ * The point is that a second print never needs the file sent again — the caller picks
+ * the row and calls `reprintPrintRequest` on `latest`.
+ */
+export async function printHistory(filter: PrintHistoryFilter = {}): Promise<PrintHistoryPage> {
+  const q: Record<string, unknown> = { status: { $in: PRINTED_STATUSES } };
+  if (filter.classId) q.classId = new Types.ObjectId(filter.classId);
+  if (filter.subject) q.subject = filter.subject;
+  if (filter.purpose) {
+    if (!(PRINT_PURPOSES as readonly string[]).includes(filter.purpose)) {
+      throw new PrintRequestError("Invalid purpose");
+    }
+    q.purpose = filter.purpose;
+  }
+  if (filter.requestedBy) q.requestedBy = new Types.ObjectId(filter.requestedBy);
+
+  const docs = (await PrintRequest.find(q)
+    .sort({ printedAt: -1, requestedAt: -1 })
+    .limit(PRINT_HISTORY_SCAN_CAP)
+    .lean()) as unknown as IPrintRequest[];
+
+  const groups = new Map<string, PrintHistoryRow>();
+  for (const doc of docs) {
+    const key = historyKey(doc);
+    const at = printedAtOf(doc);
+    const existing = groups.get(key);
+    if (!existing) {
+      groups.set(key, {
+        key,
+        latest: doc,
+        printCount: 1,
+        lastPrintedAt: at,
+        firstPrintedAt: at,
+        requesterIds: [doc.requestedBy.toString()],
+        classLevel: null,
+      });
+      continue;
+    }
+    existing.printCount += 1;
+    if (at > existing.lastPrintedAt) {
+      existing.latest = doc;
+      existing.lastPrintedAt = at;
+    }
+    if (at < existing.firstPrintedAt) existing.firstPrintedAt = at;
+    const requester = doc.requestedBy.toString();
+    if (!existing.requesterIds.includes(requester)) existing.requesterIds.push(requester);
+  }
+
+  const rows = [...groups.values()];
+
+  // Class LEVEL, not id, is the meaningful sort key ("class 1 … class 5"); one batched
+  // lookup for the whole page.
+  const classIds = [...new Set(rows.map((r) => r.latest.classId?.toString()).filter(Boolean))] as string[];
+  if (classIds.length) {
+    const classes = await Class.find({ _id: { $in: classIds } }).select("level").lean();
+    const levelOf = new Map(classes.map((c) => [c._id.toString(), c.level]));
+    for (const r of rows) {
+      r.classLevel = r.latest.classId ? (levelOf.get(r.latest.classId.toString()) ?? null) : null;
+    }
+  }
+
+  const purposeOrder = new Map((PRINT_PURPOSES as readonly string[]).map((p, i) => [p, i]));
+  rows.sort(
+    (a, b) =>
+      // A job with no class sorts last, not as level 0 (which would put it before class 1).
+      (a.classLevel ?? Number.MAX_SAFE_INTEGER) - (b.classLevel ?? Number.MAX_SAFE_INTEGER) ||
+      (a.latest.subject ?? "").localeCompare(b.latest.subject ?? "") ||
+      (purposeOrder.get(a.latest.purpose) ?? 99) - (purposeOrder.get(b.latest.purpose) ?? 99) ||
+      b.lastPrintedAt.getTime() - a.lastPrintedAt.getTime(),
+  );
+
+  const limit = Math.min(Math.max(filter.limit ?? 200, 1), 500);
+  return { rows: rows.slice(0, limit), scannedCapped: docs.length === PRINT_HISTORY_SCAN_CAP };
+}
+
+/**
+ * Re-send an already-printed job to the queue WITHOUT re-uploading or re-attaching it
+ * (D-#362) — the whole point of the history. Clones the original's source, print
+ * settings and class/subject/purpose into a NEW `REQUESTED` job for a new use date.
+ *
+ * Deliberately NOT a pass-through to `createPrintRequest`:
+ *   - the UPLOAD "you may only attach files you uploaded" check must not apply — the
+ *     files were already accepted onto a printed job, and the Office reprints jobs
+ *     that other people filed;
+ *   - `classTestId` is NEVER copied. A class test's PRINTED status is what makes it the
+ *     official exam (CT-1); a second print of the same paper must not mirror another
+ *     transition onto that ClassTest.
+ * The source is still re-checked for existence, so a reprint can't open onto a 404.
+ */
+export interface ReprintInput {
+  sourceRequestId: string;
+  /** The date the reprint will be USED — a reprint is always for a new day. */
+  neededByKey: string;
+  /** Override the original count; omitted keeps it. */
+  copies?: number | null;
+  notes?: string | null;
+  actorId: string;
+  isOffice: boolean;
+}
+
+export async function reprintPrintRequest(input: ReprintInput): Promise<IPrintRequest> {
+  const original = await PrintRequest.findById(input.sourceRequestId).lean();
+  if (!original) throw new PrintRequestError("Print request not found");
+  if (!(PRINTED_STATUSES as readonly string[]).includes(original.status)) {
+    throw new PrintRequestError(
+      `Only an already-printed job can be reprinted (this one is ${original.status})`,
+    );
+  }
+  if (!input.isOffice && original.requestedBy.toString() !== input.actorId) {
+    throw new PrintRequestError("You may only reprint your own print request");
+  }
+  if (!DATE_KEY_RE.test(input.neededByKey)) {
+    throw new PrintRequestError("neededByKey must be YYYY-MM-DD");
+  }
+  const copies = input.copies ?? original.copies;
+  if (!Number.isInteger(copies) || copies < 1) throw new PrintRequestError("copies must be a positive integer");
+
+  // The source must still resolve — but by EXISTENCE only (no uploader check, see above).
+  await assertReprintSourceExists(original);
+
+  const source = original.sourceType as PrintSource;
+  const doc = await PrintRequest.create({
+    title: original.title,
+    purpose: original.purpose,
+    sourceType: source,
+    ...(source === "SET" ? { setId: original.setId } : {}),
+    ...(source === "CONTENT_ARTIFACT" ? { contentArtifactId: original.contentArtifactId } : {}),
+    ...(source === "UPLOAD" ? { fileIds: original.fileIds } : {}),
+    ...(source === "LINK" ? { linkUrl: original.linkUrl } : {}),
+    colour: original.colour,
+    sides: original.sides,
+    copies,
+    copiesMode: original.copiesMode ?? "FIXED",
+    ...(original.copiesClassId ? { copiesClassId: original.copiesClassId } : {}),
+    neededByKey: input.neededByKey,
+    ...(original.classId ? { classId: original.classId } : {}),
+    ...(original.sectionId ? { sectionId: original.sectionId } : {}),
+    ...(original.subject ? { subject: original.subject } : {}),
+    ...(input.notes ? { notes: input.notes } : original.notes ? { notes: original.notes } : {}),
+    status: "REQUESTED" as PrintRequestStatus,
+    requestedBy: new Types.ObjectId(input.actorId),
+    requestedAt: new Date(),
+  });
+
+  await writeAudit({
+    eventKind: "PRINT_REQUEST_REPRINTED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "PrintRequest",
+    meta: {
+      fromPrintRequestId: original._id.toString(),
+      originalRequestedBy: original.requestedBy.toString(),
+      purpose: original.purpose,
+      sourceType: source,
+      copies,
+    },
+  });
+  publishRealtime("print_queue", { op: "created", id: doc._id.toString() });
+  const requester = await User.findById(input.actorId).select("name").lean();
+  await emitPrintRequested({
+    printRequestId: doc._id.toString(),
+    title: doc.title,
+    requesterName: requester?.name ?? "",
+  });
+  return doc;
+}
+
+/** Existence-only source check for a reprint (the ownership/status rules that apply to a
+ *  FRESH request were already satisfied when the original was printed). */
+async function assertReprintSourceExists(
+  original: Pick<IPrintRequest, "sourceType" | "setId" | "contentArtifactId" | "fileIds">,
+): Promise<void> {
+  switch (original.sourceType as PrintSource) {
+    case "SET": {
+      const set = await AssessmentSet.findById(original.setId).select("_id").lean();
+      if (!set) throw new PrintRequestError("The question set no longer exists — file a new request");
+      break;
+    }
+    case "CONTENT_ARTIFACT": {
+      const artifact = await ContentArtifact.findById(original.contentArtifactId).select("_id").lean();
+      if (!artifact) throw new PrintRequestError("The plan no longer exists — file a new request");
+      break;
+    }
+    case "UPLOAD": {
+      const ids = original.fileIds ?? [];
+      const files = await StoredFile.find({ _id: { $in: ids } }).select("_id").lean();
+      if (files.length !== ids.length) {
+        throw new PrintRequestError("An attached file no longer exists — file a new request");
+      }
+      break;
+    }
+    case "LINK":
+      break; // external by nature; nothing to verify
+  }
 }
 
 /** The sidebar badge counts (D-#294): jobs awaiting printing / awaiting delivery. */

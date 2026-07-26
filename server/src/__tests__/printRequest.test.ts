@@ -27,13 +27,27 @@ const mockClassTestUpdateOne = jest.fn().mockResolvedValue({});
 const mockClassPresence = jest.fn();
 const mockCountDocuments = jest.fn();
 const mockPublishRealtime = jest.fn();
+const mockFind = jest.fn();
+const mockClassFind = jest.fn().mockResolvedValue([]);
 
 jest.mock("../modules/printing/models/PrintRequest", () => ({
   PrintRequest: {
     create: (d: unknown) => mockCreate(d),
     findById: (id: unknown) => mockFindById(id),
     countDocuments: (f: unknown) => Promise.resolve(mockCountDocuments(f)),
+    // D-#362: the reprint history's scan — .sort().limit().lean().
+    find: (q: unknown) => {
+      const chain: Record<string, unknown> = {};
+      chain.sort = () => chain;
+      chain.limit = () => chain;
+      chain.lean = () => mockFind(q);
+      return chain;
+    },
   },
+}));
+// D-#362: the history sorts by class LEVEL, resolved in one batched lookup.
+jest.mock("../modules/foundation/models/Class", () => ({
+  Class: { find: (q: unknown) => ({ select: () => ({ lean: () => mockClassFind(q) }) }) },
 }));
 // D-#294: CLASS_PRESENT copies resolve from the use day's attendance roll-up.
 jest.mock("../modules/attendance/services/AttendanceReportService", () => ({
@@ -81,6 +95,9 @@ import {
   isPrintableUrl,
   effectiveCopiesFor,
   printQueueCounts,
+  printHistory,
+  reprintPrintRequest,
+  historyKey,
   PrintRequestError,
 } from "../modules/printing/services/PrintRequestService";
 
@@ -531,5 +548,234 @@ describe("realtime nudges (D-#295)", () => {
       "print_queue",
       expect.objectContaining({ op: "cancelled" }),
     );
+  });
+});
+
+// ===========================================================================
+// D-#362 — the reprint history + the reprint clone
+// ===========================================================================
+
+/** A LEAN history doc (what `.lean()` hands back), not a hydrated document. */
+const histDoc = (over: Record<string, unknown> = {}): any => ({
+  _id: oid(),
+  title: "Worksheet",
+  purpose: "HOMEWORK",
+  sourceType: "UPLOAD",
+  fileIds: [oid()],
+  colour: "BW",
+  sides: "SINGLE",
+  copies: 20,
+  copiesMode: "FIXED",
+  status: "PRINTED",
+  requestedBy: new mongoose.Types.ObjectId(TEACHER),
+  requestedAt: new Date("2026-07-01T04:00:00Z"),
+  printedAt: new Date("2026-07-01T05:00:00Z"),
+  ...over,
+});
+
+describe("historyKey — what counts as THE SAME document", () => {
+  test("the same upload for the same class/subject/purpose is ONE document", () => {
+    const cls = oid(), file = oid();
+    const a = histDoc({ fileIds: [file], classId: cls, subject: "BAN" });
+    const b = histDoc({ fileIds: [file], classId: cls, subject: "BAN" });
+    expect(historyKey(a)).toBe(historyKey(b));
+  });
+
+  test("attachment ORDER does not split one document into two", () => {
+    const f1 = oid(), f2 = oid();
+    expect(historyKey(histDoc({ fileIds: [f1, f2] }))).toBe(historyKey(histDoc({ fileIds: [f2, f1] })));
+  });
+
+  test("the same sheet printed for a DIFFERENT class / subject / purpose stays separate", () => {
+    const file = oid(), c3 = oid(), c4 = oid();
+    const base = { fileIds: [file], subject: "BAN", purpose: "HOMEWORK" };
+    const k3 = historyKey(histDoc({ ...base, classId: c3 }));
+    expect(historyKey(histDoc({ ...base, classId: c4 }))).not.toBe(k3);
+    expect(historyKey(histDoc({ ...base, classId: c3, subject: "MATH" }))).not.toBe(k3);
+    expect(historyKey(histDoc({ ...base, classId: c3, purpose: "CLASSWORK" }))).not.toBe(k3);
+  });
+
+  test("a set / plan / link is keyed by its own reference", () => {
+    expect(historyKey(histDoc({ sourceType: "SET", setId: oid(), fileIds: [] }))).toContain("set:");
+    expect(historyKey(histDoc({ sourceType: "LINK", linkUrl: "https://x.test/a", fileIds: [] }))).toContain("link:");
+  });
+});
+
+describe("printHistory — one row per document, browsable by class/subject/purpose", () => {
+  test("reads only ALREADY-PRINTED jobs (printed + delivered)", async () => {
+    mockFind.mockResolvedValue([]);
+    await printHistory();
+    expect(mockFind.mock.calls[0][0]).toMatchObject({ status: { $in: ["PRINTED", "DELIVERED"] } });
+  });
+
+  test("collapses repeats into one row carrying the count and the newest print", async () => {
+    const file = oid(), cls = oid();
+    const older = histDoc({ fileIds: [file], classId: cls, subject: "BAN", printedAt: new Date("2026-07-01T05:00:00Z") });
+    const mid = histDoc({ fileIds: [file], classId: cls, subject: "BAN", printedAt: new Date("2026-07-10T05:00:00Z") });
+    const recent = histDoc({ fileIds: [file], classId: cls, subject: "BAN", printedAt: new Date("2026-07-20T05:00:00Z") });
+    mockFind.mockResolvedValue([recent, mid, older]);
+    mockClassFind.mockResolvedValue([{ _id: cls, level: 3 }]);
+
+    const page = await printHistory();
+    expect(page.rows).toHaveLength(1);
+    expect(page.rows[0].printCount).toBe(3);
+    // `latest` IS the reprint source, so it must be the most recent print.
+    expect(page.rows[0].latest._id.toString()).toBe(recent._id.toString());
+    expect(page.rows[0].lastPrintedAt.toISOString()).toBe("2026-07-20T05:00:00.000Z");
+    expect(page.rows[0].firstPrintedAt.toISOString()).toBe("2026-07-01T05:00:00.000Z");
+    expect(page.rows[0].classLevel).toBe(3);
+  });
+
+  test("lists every requester of a shared document (the Office view)", async () => {
+    const file = oid(), other = oid();
+    mockFind.mockResolvedValue([
+      histDoc({ fileIds: [file] }),
+      histDoc({ fileIds: [file], requestedBy: other }),
+      histDoc({ fileIds: [file] }),
+    ]);
+    const page = await printHistory();
+    expect(page.rows[0].requesterIds.sort()).toEqual([TEACHER, other.toString()].sort());
+  });
+
+  test("orders by class level, then subject, then purpose", async () => {
+    const c1 = oid(), c5 = oid();
+    mockFind.mockResolvedValue([
+      histDoc({ fileIds: [oid()], classId: c5, subject: "BAN", purpose: "HOMEWORK" }),
+      histDoc({ fileIds: [oid()], classId: c1, subject: "MATH", purpose: "HOMEWORK" }),
+      histDoc({ fileIds: [oid()], classId: c1, subject: "BAN", purpose: "CLASS_TEST" }),
+      // CLASSWORK precedes CLASS_TEST in PRINT_PURPOSES, so it sorts first within (c1, BAN).
+      histDoc({ fileIds: [oid()], classId: c1, subject: "BAN", purpose: "CLASSWORK" }),
+      histDoc({ fileIds: [oid()], classId: null, subject: "BAN", purpose: "OTHER" }),
+    ]);
+    mockClassFind.mockResolvedValue([{ _id: c1, level: 1 }, { _id: c5, level: 5 }]);
+
+    const page = await printHistory();
+    expect(page.rows.map((r) => [r.classLevel, r.latest.subject, r.latest.purpose])).toEqual([
+      [1, "BAN", "CLASSWORK"],
+      [1, "BAN", "CLASS_TEST"],
+      [1, "MATH", "HOMEWORK"],
+      [5, "BAN", "HOMEWORK"],
+      // A job with no class sorts LAST, not as level 0 ahead of class 1.
+      [null, "BAN", "OTHER"],
+    ]);
+  });
+
+  test("scopes to one requester when asked (a teacher sees only their own)", async () => {
+    mockFind.mockResolvedValue([]);
+    await printHistory({ requestedBy: TEACHER, subject: "BAN", purpose: "HOMEWORK" });
+    const q = mockFind.mock.calls[0][0] as Record<string, { toString(): string }>;
+    expect(q.requestedBy.toString()).toBe(TEACHER);
+    expect(q).toMatchObject({ subject: "BAN", purpose: "HOMEWORK" });
+  });
+
+  test("rejects an unknown purpose filter", async () => {
+    await expect(printHistory({ purpose: "NONSENSE" })).rejects.toThrow(PrintRequestError);
+  });
+});
+
+describe("reprintPrintRequest — send an earlier print again, no re-upload", () => {
+  const reprintArgs = { neededByKey: "2026-08-01", actorId: TEACHER, isOffice: false };
+
+  test("clones the source + print settings into a NEW REQUESTED job for the new date", async () => {
+    const file = oid(), cls = oid(), sec = oid();
+    const original = histDoc({
+      fileIds: [file], classId: cls, sectionId: sec, subject: "BAN",
+      copies: 20, colour: "COLOR", sides: "DOUBLE",
+    });
+    mockFindById.mockReturnValue({ lean: async () => original });
+    mockStoredFileFind.mockResolvedValue([{ _id: file }]);
+    mockCreate.mockImplementation(async (d: Record<string, unknown>) => ({ _id: oid(), ...d }));
+
+    await reprintPrintRequest({ ...reprintArgs, sourceRequestId: original._id.toString() });
+
+    expect(mockCreate.mock.calls[0][0]).toMatchObject({
+      sourceType: "UPLOAD",
+      fileIds: [file],
+      classId: cls,
+      sectionId: sec,
+      subject: "BAN",
+      colour: "COLOR",
+      sides: "DOUBLE",
+      copies: 20,
+      neededByKey: "2026-08-01",
+      status: "REQUESTED",
+    });
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventKind: "PRINT_REQUEST_REPRINTED",
+        meta: expect.objectContaining({ fromPrintRequestId: original._id.toString() }),
+      }),
+    );
+    // The queue's operators are nudged exactly as for a fresh request.
+    expect(mockEmitRequested).toHaveBeenCalled();
+  });
+
+  test("an override copy count wins over the original's", async () => {
+    const file = oid();
+    const original = histDoc({ fileIds: [file], copies: 20 });
+    mockFindById.mockReturnValue({ lean: async () => original });
+    mockStoredFileFind.mockResolvedValue([{ _id: file }]);
+    mockCreate.mockImplementation(async (d: Record<string, unknown>) => ({ _id: oid(), ...d }));
+
+    await reprintPrintRequest({ ...reprintArgs, sourceRequestId: original._id.toString(), copies: 35 });
+    expect(mockCreate.mock.calls[0][0]).toMatchObject({ copies: 35 });
+  });
+
+  test("NEVER re-links the class test — the exam record keeps its own lifecycle", async () => {
+    const file = oid();
+    const original = histDoc({ fileIds: [file], classTestId: oid(), purpose: "CLASS_TEST" });
+    mockFindById.mockReturnValue({ lean: async () => original });
+    mockStoredFileFind.mockResolvedValue([{ _id: file }]);
+    mockCreate.mockImplementation(async (d: Record<string, unknown>) => ({ _id: oid(), ...d }));
+
+    await reprintPrintRequest({ ...reprintArgs, sourceRequestId: original._id.toString() });
+    expect(mockCreate.mock.calls[0][0].classTestId).toBeUndefined();
+  });
+
+  test("the Office may reprint another teacher's job; a teacher may not", async () => {
+    const file = oid();
+    const original = histDoc({ fileIds: [file], requestedBy: oid() }); // filed by a third party
+    mockFindById.mockReturnValue({ lean: async () => original });
+    mockStoredFileFind.mockResolvedValue([{ _id: file }]);
+    mockCreate.mockImplementation(async (d: Record<string, unknown>) => ({ _id: oid(), ...d }));
+
+    await expect(
+      reprintPrintRequest({ ...reprintArgs, sourceRequestId: original._id.toString() }),
+    ).rejects.toThrow(/only reprint your own/i);
+
+    await reprintPrintRequest({
+      ...reprintArgs, sourceRequestId: original._id.toString(), actorId: OFFICE, isOffice: true,
+    });
+    // The NEW job belongs to whoever filed the reprint, not to the original requester.
+    expect(mockCreate.mock.calls[0][0].requestedBy.toString()).toBe(OFFICE);
+  });
+
+  test("only an ALREADY-PRINTED job can be reprinted", async () => {
+    for (const status of ["REQUESTED", "CANCELLED"]) {
+      const original = histDoc({ status });
+      mockFindById.mockReturnValue({ lean: async () => original });
+      await expect(
+        reprintPrintRequest({ ...reprintArgs, sourceRequestId: original._id.toString() }),
+      ).rejects.toThrow(/already-printed/i);
+    }
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("refuses when an attached file has since been deleted", async () => {
+    const original = histDoc({ fileIds: [oid(), oid()] });
+    mockFindById.mockReturnValue({ lean: async () => original });
+    mockStoredFileFind.mockResolvedValue([{ _id: original.fileIds[0] }]); // one of two survives
+    await expect(
+      reprintPrintRequest({ ...reprintArgs, sourceRequestId: original._id.toString() }),
+    ).rejects.toThrow(/no longer exists/i);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("validates the new use date", async () => {
+    const original = histDoc();
+    mockFindById.mockReturnValue({ lean: async () => original });
+    await expect(
+      reprintPrintRequest({ ...reprintArgs, sourceRequestId: original._id.toString(), neededByKey: "01-08-2026" }),
+    ).rejects.toThrow(/YYYY-MM-DD/);
   });
 });
