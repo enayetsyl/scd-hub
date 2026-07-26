@@ -362,4 +362,23 @@ describe("userIdsOnLeave — who is out that day (D-#268)", () => {
     mockLeaveFind.mockResolvedValue([]);
     expect((await userIdsOnLeave("2026-06-14")).size).toBe(0);
   });
+
+  test("a PARTIAL day only rules the teacher out of the periods it covers (D-#361)", async () => {
+    const p1 = oid(), u1 = oid();
+    mockLeaveFind.mockResolvedValue([{ staffProfileId: p1, dayPart: "late_entry", partialPeriods: [1, 2] }]);
+    mockResolveUserForStaff.mockResolvedValue(u1.toString());
+
+    expect((await userIdsOnLeave("2026-06-14", 2)).has(u1.toString())).toBe(true); // inside the window
+    expect((await userIdsOnLeave("2026-06-14", 6)).size).toBe(0); // back at school by period 6
+    // With no period in hand the caller gets the conservative answer: treat them as out.
+    expect((await userIdsOnLeave("2026-06-14")).has(u1.toString())).toBe(true);
+  });
+
+  test("a FULL-day leave is out for every period, with or without one named", async () => {
+    const p1 = oid(), u1 = oid();
+    mockLeaveFind.mockResolvedValue([{ staffProfileId: p1, dayPart: "full", partialPeriods: [] }]);
+    mockResolveUserForStaff.mockResolvedValue(u1.toString());
+    expect((await userIdsOnLeave("2026-06-14", 6)).has(u1.toString())).toBe(true);
+    expect((await userIdsOnLeave("2026-06-14")).has(u1.toString())).toBe(true);
+  });
 });

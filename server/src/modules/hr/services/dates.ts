@@ -30,6 +30,34 @@ export function countLeaveDays(fromKey: string, toKey: string): number {
   return Math.round(ms / 86_400_000) + 1;
 }
 
+/** Round a day count to 2dp for display/serialization (D-#361). Partial days are held
+ *  as the exact fraction 1/3 so three of them sum back to 1.0 — but 1/3 + 1/3 + 1/3 is
+ *  0.9999999999999999 in IEEE-754, so every number that LEAVES the service (a balance,
+ *  an application's `days`, a paid/unpaid split) rounds here, never at the source. */
+export function roundLeaveDays(days: number): number {
+  return Math.round(days * 100) / 100;
+}
+
+/** The period numbers a partial-day leave is absent for (D-#361), given the last
+ *  period of that staff member's teaching day. `late_entry` misses the FIRST n periods
+ *  (1..n — the teacher joins at n+1); `early_leave` misses the LAST n (…lastPeriod).
+ *  Pure so the window is unit-testable without a routine; `full` has no window.
+ *  `count` is clamped into [1, lastPeriod] — a teacher asking for more periods than the
+ *  day holds is simply out for the whole teaching day, which is what they meant. */
+export function partialPeriodWindow(
+  dayPart: "full" | "late_entry" | "early_leave",
+  count: number,
+  lastPeriod: number,
+): number[] {
+  if (dayPart === "full") return [];
+  if (!Number.isInteger(count) || count < 1) throw new LeaveError("Choose at least 1 period for a partial-day leave");
+  if (lastPeriod < 1) return [];
+  const n = Math.min(count, lastPeriod);
+  return dayPart === "late_entry"
+    ? Array.from({ length: n }, (_, i) => i + 1)
+    : Array.from({ length: n }, (_, i) => lastPeriod - n + 1 + i);
+}
+
 /** Does [fromKey, toKey] cover dateKey? (string compare is valid for ISO keys). */
 export function rangeCovers(fromKey: string, toKey: string, dateKey: string): boolean {
   return fromKey <= dateKey && dateKey <= toKey;

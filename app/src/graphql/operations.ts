@@ -5237,6 +5237,13 @@ export interface StaffLeaveT {
   leaveType: string;
   fromKey: string;
   toKey: string;
+  /** D-#361 — "full" | "late_entry" | "early_leave". */
+  dayPart: string;
+  /** D-#361 — how many periods a partial day covers (null for a full day). */
+  partialPeriodCount: number | null;
+  /** D-#361 — the period numbers actually missed (empty for a full day). */
+  partialPeriods: number[];
+  /** Fractional since D-#361: a partial day is 1/3, shown rounded to 2dp. */
   days: number;
   reason: string;
   status: string;
@@ -5250,6 +5257,7 @@ export interface StaffLeaveT {
 
 const STAFF_LEAVE_FIELDS = `
   id staffProfileId leaveType fromKey toKey days reason status
+  dayPart partialPeriodCount partialPeriods
   paidDays unpaidDays exceedWarning decisionNote decidedAt createdAt
 `;
 
@@ -5286,10 +5294,19 @@ export const MY_STAFF_LEAVE_BALANCES_QUERY = gql<
 
 export const APPLY_FOR_STAFF_LEAVE = gql<
   { applyForStaffLeave: StaffLeaveT },
-  { leaveType: string; fromKey: string; toKey: string; reason: string; staffProfileId?: string | null }
+  {
+    leaveType: string;
+    fromKey: string;
+    toKey: string;
+    reason: string;
+    staffProfileId?: string | null;
+    /** D-#361 — omit for a whole-day leave. */
+    dayPart?: string | null;
+    partialPeriodCount?: number | null;
+  }
 >`
-  mutation ApplyForStaffLeave($leaveType: String!, $fromKey: String!, $toKey: String!, $reason: String!, $staffProfileId: String) {
-    applyForStaffLeave(leaveType: $leaveType, fromKey: $fromKey, toKey: $toKey, reason: $reason, staffProfileId: $staffProfileId) {
+  mutation ApplyForStaffLeave($leaveType: String!, $fromKey: String!, $toKey: String!, $reason: String!, $staffProfileId: String, $dayPart: String, $partialPeriodCount: Int) {
+    applyForStaffLeave(leaveType: $leaveType, fromKey: $fromKey, toKey: $toKey, reason: $reason, staffProfileId: $staffProfileId, dayPart: $dayPart, partialPeriodCount: $partialPeriodCount) {
       ${STAFF_LEAVE_FIELDS}
     }
   }

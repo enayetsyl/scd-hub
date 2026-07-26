@@ -346,6 +346,27 @@ export const LEAVE_STATUS_LABELS_EN: Record<LeaveStatus, string> = {
   applied: "Applied", approved: "Approved", rejected: "Rejected", cancelled: "Cancelled",
 };
 
+/** Which PART of a day a leave covers (D-#361 — owner ask: a teacher often misses only
+ *  the first few or the last few periods, not the whole day). `full` is the pre-existing
+ *  whole-day leave and stays the default for every existing row; `late_entry` = away for
+ *  the FIRST n periods (joins mid-day), `early_leave` = away for the LAST n periods
+ *  (leaves before the day ends). A partial day is SINGLE-DATE only (fromKey === toKey). */
+export const LEAVE_DAY_PARTS = ["full", "late_entry", "early_leave"] as const;
+export type LeaveDayPart = (typeof LEAVE_DAY_PARTS)[number];
+
+export const LEAVE_DAY_PART_LABELS_BN: Record<LeaveDayPart, string> = {
+  full: "পূর্ণ দিন", late_entry: "দেরিতে আসা", early_leave: "আগে চলে যাওয়া",
+};
+export const LEAVE_DAY_PART_LABELS_EN: Record<LeaveDayPart, string> = {
+  full: "Full day", late_entry: "Late entry", early_leave: "Early leave",
+};
+
+/** Owner ruling (D-#361): THREE partial-day leaves cost ONE day of balance — so one
+ *  partial day draws exactly 1/3 of a day, whatever its period count. Kept as an exact
+ *  JS fraction (never a pre-rounded 0.33) so three of them still sum back to one day;
+ *  round only at the display/serialization edge (`roundLeaveDays`). */
+export const PARTIAL_DAY_FRACTION = 1 / 3;
+
 /** Cover-slot status (prd-hr §3.5, D-#22). A leave fans out one slot per class the
  *  absent teacher teaches; each is `needs_cover` until a teacher is `proposed`, and
  *  becomes `approved` only on Principal/Office approval — that approval is what mints
