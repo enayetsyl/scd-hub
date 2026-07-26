@@ -16,6 +16,7 @@
  * Identity/operational plane; the corpus-plane boundary still overrides (ADR-005).
  */
 import { Types } from "mongoose";
+import type { LeaveDayPart } from "@scd/shared";
 import { StaffCoverSlot, type IStaffCoverSlot } from "../models/StaffCoverSlot";
 import { StaffLeaveApplication } from "../models/StaffLeaveApplication";
 import { Subject } from "../../foundation/models/Subject";
@@ -23,17 +24,58 @@ import { User } from "../../foundation/models/User";
 import { Class } from "../../foundation/models/Class";
 import { Section } from "../../foundation/models/Section";
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
+import { PeriodGrid } from "../../routine/models/PeriodGrid";
 import { assignProxy, revokeProxy } from "../../foundation/services/ScopeGrantService";
 import { slotsForTeacherOnDate } from "../../routine/services/RoutineSlotService";
 import { resolveDayType } from "../../routine/calendar";
 import { resolveUserIdForStaff } from "./staffMatch";
-import { parseDateKey, datesInRange, LeaveError } from "./dates";
+import { parseDateKey, datesInRange, partialPeriodWindow, LeaveError } from "./dates";
 import { writeAudit } from "../../platform/services/AuditService";
 import { emitHrCoverAssigned } from "../../notifications/services/emitters";
 
+/**
+ * The period numbers a partial-day leave (D-#361) actually misses, resolved ONCE at
+ * apply time and stored on the application.
+ *
+ * `late_entry` needs nothing but the count (the first n periods of the day). An
+ * `early_leave` window has to be anchored to the END of that staff member's day, and
+ * "the end of the day" is not one number school-wide — nursery/KG runs 6 periods and
+ * class 1–5 runs 8 (PeriodGrid, D-#57). So the anchor is the teacher's OWN last
+ * teaching period on that date, which is both well-defined per person and exactly what
+ * "I'll leave two periods early" means to them. Fallbacks, in order: their routine that
+ * day → the longest active period grid (staff with no login/routine, e.g. support
+ * staff, whose window is informational only since they fan out no cover).
+ */
+export async function resolvePartialPeriods(
+  staffProfileId: string,
+  dateKey: string,
+  dayPart: LeaveDayPart,
+  periodCount: number,
+): Promise<number[]> {
+  if (dayPart === "full") return [];
+
+  let lastPeriod = 0;
+  const absentUserId = await resolveUserIdForStaff(staffProfileId);
+  if (absentUserId) {
+    const daySlots = await slotsForTeacherOnDate(absentUserId, parseDateKey(dateKey));
+    for (const rs of daySlots) {
+      if (!rs.isBreak && rs.periodNumber > lastPeriod) lastPeriod = rs.periodNumber;
+    }
+  }
+  if (lastPeriod === 0) {
+    const grids = await PeriodGrid.find({ active: true }).select("periods").lean();
+    for (const g of grids) {
+      for (const p of g.periods) if (!p.isBreak && p.number > lastPeriod) lastPeriod = p.number;
+    }
+  }
+  return partialPeriodWindow(dayPart, periodCount, lastPeriod);
+}
+
 /** Fan out one needs-cover slot per actual class meeting (date × period) the absent
- *  staff teaches during the leave span. No-op (zero slots) when the staff has no
- *  login/routine slots (support staff don't teach). Handles BOTH general "section"
+ *  staff teaches during the leave span — narrowed to the missed periods only when the
+ *  leave is a D-#361 partial day (a late entry leaves the afternoon classes covered by
+ *  the teacher themselves, so they must NOT fan out). No-op (zero slots) when the staff
+ *  has no login/routine slots (support staff don't teach). Handles BOTH general "section"
  *  meetings (approval mints a subject-scoped proxy grant) AND Quran/Arabic
  *  "subjectgroup" meetings (D-#48/#56 — approval records the cover only, no scope;
  *  see the model doc + decideCoverSlot). Only breaks are skipped. */
@@ -47,6 +89,10 @@ export async function fanOutCoverSlots(
   const leave = await StaffLeaveApplication.findById(leaveApplicationId).lean();
   if (!leave) return [];
 
+  // A partial day covers only its stored window; a full day (and every pre-D-#361 row,
+  // where dayPart is absent) covers every period.
+  const missedPeriods = leave.dayPart && leave.dayPart !== "full" ? new Set(leave.partialPeriods ?? []) : null;
+
   const created: IStaffCoverSlot[] = [];
   for (const { date, dateKey } of datesInRange(leave.fromKey, leave.toKey)) {
     const dayType = await resolveDayType(date);
@@ -55,6 +101,7 @@ export async function fanOutCoverSlots(
     const daySlots = await slotsForTeacherOnDate(absentUserId, date);
     for (const rs of daySlots) {
       if (rs.isBreak) continue;
+      if (missedPeriods && !missedPeriods.has(rs.periodNumber)) continue;
       const isSubjectGroup = rs.groupType === "subjectgroup";
       // A section slot must have a classId; a subjectgroup slot must have its group.
       if (!isSubjectGroup && !rs.classId) continue;
@@ -96,17 +143,25 @@ export async function fanOutCoverSlots(
  *  them and decideCoverSlot refuses to assign them (D-#268 live-testing find).
  *  "applied" is included (not just "approved") deliberately: don't propose someone
  *  whose leave is likely to be granted. Batched staffProfile→User resolution — small
- *  scale, the loop is fine (matches the N+1 note already accepted for this module). */
-export async function userIdsOnLeave(dateKey: string): Promise<Set<string>> {
+ *  scale, the loop is fine (matches the N+1 note already accepted for this module).
+ *
+ *  `periodNumber` (D-#361) narrows the question to ONE meeting: a teacher on a partial
+ *  day is in the building for the rest of it, so someone taking the first two periods
+ *  off is a perfectly good cover for period six. Omit it and any partial-day leave
+ *  counts as out (the conservative read, for callers with no period in hand). */
+export async function userIdsOnLeave(dateKey: string, periodNumber?: number): Promise<Set<string>> {
   const leaves = await StaffLeaveApplication.find({
     status: { $in: ["applied", "approved"] },
     fromKey: { $lte: dateKey },
     toKey: { $gte: dateKey },
   })
-    .select("staffProfileId")
+    .select("staffProfileId dayPart partialPeriods")
     .lean();
   const ids = new Set<string>();
   for (const l of leaves) {
+    if (periodNumber !== undefined && l.dayPart && l.dayPart !== "full" && !(l.partialPeriods ?? []).includes(periodNumber)) {
+      continue; // partial leave, but not over THIS period — they are at school for it
+    }
     const userId = await resolveUserIdForStaff(l.staffProfileId.toString());
     if (userId) ids.add(userId);
   }
@@ -231,9 +286,10 @@ export async function decideCoverSlot(
   // A teacher who is THEMSELVES on leave that day can't cover anyone — hard backstop
   // behind the picker's exclusion (the picker won't offer them, but a stale client or
   // a direct call must still be refused).
-  if ((await userIdsOnLeave(slot.dateKey)).has(finalTeacherId)) {
+  if ((await userIdsOnLeave(slot.dateKey, slot.periodNumber)).has(finalTeacherId)) {
     throw new LeaveError(
-      `This teacher is on leave on ${slot.dateKey} and cannot cover a class that day — pick someone else`,
+      `This teacher is on leave on ${slot.dateKey} at period ${slot.periodNumber} and cannot cover that class — ` +
+        "pick someone else",
     );
   }
 

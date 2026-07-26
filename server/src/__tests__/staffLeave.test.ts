@@ -27,6 +27,7 @@ const mockAssignProxy = jest.fn();
 const mockRevokeProxy = jest.fn().mockResolvedValue(undefined);
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
 const mockSlotsForTeacherOnDate = jest.fn();
+const mockPeriodGridFind = jest.fn();
 const mockResolveDayType = jest.fn();
 const mockSubjectFindOne = jest.fn();
 const mockEmitHrCoverAssigned = jest.fn().mockResolvedValue(undefined);
@@ -90,6 +91,9 @@ jest.mock("../modules/foundation/models/Subject", () => ({
 jest.mock("../modules/routine/services/RoutineSlotService", () => ({
   slotsForTeacherOnDate: (t: unknown, d: unknown) => mockSlotsForTeacherOnDate(t, d),
 }));
+jest.mock("../modules/routine/models/PeriodGrid", () => ({
+  PeriodGrid: { find: (q: unknown) => ({ select: () => ({ lean: () => mockPeriodGridFind(q) }) }) },
+}));
 jest.mock("../modules/routine/calendar", () => ({
   resolveDayType: (d: unknown) => mockResolveDayType(d),
 }));
@@ -107,6 +111,8 @@ jest.mock("../modules/foundation/services/credentials", () => ({
 import {
   countLeaveDays,
   rangeCovers,
+  roundLeaveDays,
+  partialPeriodWindow,
   LeaveError,
 } from "../modules/hr/services/dates";
 import {
@@ -119,9 +125,14 @@ import {
   applyForLeave,
   decideLeave,
 } from "../modules/hr/services/StaffLeaveService";
-import { fanOutCoverSlots, decideCoverSlot, revokeCoversForLeave } from "../modules/hr/services/CoverService";
+import {
+  fanOutCoverSlots,
+  decideCoverSlot,
+  revokeCoversForLeave,
+  resolvePartialPeriods,
+} from "../modules/hr/services/CoverService";
 import { resolveUserIdForStaff, resolveStaffProfileForUser } from "../modules/hr/services/staffMatch";
-import { LEAVE_TYPE_RULES } from "@scd/shared";
+import { LEAVE_TYPE_RULES, PARTIAL_DAY_FRACTION } from "@scd/shared";
 
 const ACTOR = oid().toString();
 
@@ -188,6 +199,64 @@ describe("staffLeaveCovers (attendance overlay predicate)", () => {
     expect(staffLeaveCovers(leaves, "s2", "2026-06-11")).toBe(false);
     expect(staffLeaveCovers(leaves, "s1", "2026-06-13")).toBe(false);
   });
+  test("a PARTIAL day never relabels a full-day ✘ as LEAVE (D-#361)", () => {
+    const partial = [{ staffProfileId: "s1", fromKey: "2026-06-10", toKey: "2026-06-10", dayPart: "early_leave" as const }];
+    expect(staffLeaveCovers(partial, "s1", "2026-06-10")).toBe(false);
+    // ...while an explicit full-day row still does, as does a pre-D-#361 row with no dayPart.
+    expect(staffLeaveCovers([{ ...partial[0], dayPart: "full" as const }], "s1", "2026-06-10")).toBe(true);
+  });
+});
+
+// ===========================================================================
+describe("partial-day leave — the period window + 1/3-day rule (D-#361)", () => {
+  test("late_entry takes the first n periods; early_leave the last n of THAT day", () => {
+    expect(partialPeriodWindow("late_entry", 3, 8)).toEqual([1, 2, 3]);
+    expect(partialPeriodWindow("early_leave", 2, 8)).toEqual([7, 8]);
+    // A nursery/KG day is 6 periods, so "2 periods early" ends at 6, not 8 (D-#57).
+    expect(partialPeriodWindow("early_leave", 2, 6)).toEqual([5, 6]);
+    expect(partialPeriodWindow("full", 2, 8)).toEqual([]);
+  });
+
+  test("clamps a count longer than the day, and refuses a count below 1", () => {
+    expect(partialPeriodWindow("late_entry", 12, 6)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(partialPeriodWindow("early_leave", 6, 6)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(() => partialPeriodWindow("early_leave", 0, 8)).toThrow(LeaveError);
+  });
+
+  test("THREE partial days cost exactly ONE day of balance (the owner rule)", () => {
+    const three = PARTIAL_DAY_FRACTION + PARTIAL_DAY_FRACTION + PARTIAL_DAY_FRACTION;
+    expect(three).toBe(1); // holds only because the fraction is stored EXACT, not as 0.33
+    expect(roundLeaveDays(three)).toBe(1);
+    // The pre-rounded alternative is what this design avoids: 0.33 × 3 never reaches a day.
+    expect(0.33 * 3).toBeLessThan(1);
+    // A single partial day still READS as 0.33 wherever it is displayed.
+    expect(roundLeaveDays(PARTIAL_DAY_FRACTION)).toBe(0.33);
+    // Longer runs do drift below the exact value, which is why every read-out rounds.
+    const seven = Array.from({ length: 7 }, () => PARTIAL_DAY_FRACTION).reduce((a, b) => a + b, 0);
+    expect(roundLeaveDays(seven)).toBe(2.33);
+  });
+
+  test("resolvePartialPeriods anchors early_leave to the teacher's OWN last teaching period", async () => {
+    const staffId = oid().toString();
+    mockStaffFindById.mockResolvedValue({ phone: "01700000000" });
+    mockUserFindOne.mockResolvedValue({ _id: oid() });
+    mockSlotsForTeacherOnDate.mockResolvedValue([
+      { _id: oid(), periodNumber: 4, isBreak: false },
+      { _id: oid(), periodNumber: 6, isBreak: false },
+      { _id: oid(), periodNumber: 7, isBreak: true }, // a break is not a teaching period
+    ]);
+    expect(await resolvePartialPeriods(staffId, "2026-06-14", "early_leave", 2)).toEqual([5, 6]);
+    expect(mockPeriodGridFind).not.toHaveBeenCalled(); // routine answered it; no grid fallback
+  });
+
+  test("resolvePartialPeriods falls back to the longest active period grid with no routine", async () => {
+    mockStaffFindById.mockResolvedValue(null); // no login (support staff) → no routine
+    mockPeriodGridFind.mockResolvedValue([
+      { periods: [{ number: 1, isBreak: false }, { number: 6, isBreak: false }] },
+      { periods: [{ number: 8, isBreak: false }, { number: 9, isBreak: true }] },
+    ]);
+    expect(await resolvePartialPeriods(oid().toString(), "2026-06-14", "early_leave", 1)).toEqual([8]);
+  });
 });
 
 // ===========================================================================
@@ -216,6 +285,51 @@ describe("applyForLeave", () => {
     expect(mockLeaveCreate).toHaveBeenCalledTimes(1);
     expect(mockLeaveCreate.mock.calls[0][0]).toMatchObject({ days: 3, leaveType: "casual", status: "applied" });
     expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "STAFF_LEAVE_SUBMITTED" }));
+  });
+
+  test("a partial day stores 1/3 of a day + its resolved period window (D-#361)", async () => {
+    const staffId = oid().toString();
+    mockStaffFindById
+      .mockResolvedValueOnce({ active: true }) // applyForLeave's own active check
+      .mockResolvedValue({ phone: "01700000000" }); // then every staff→user resolution
+    mockUserFindOne.mockResolvedValue({ _id: oid() });
+    mockAYFindOne.mockResolvedValue({ _id: oid() });
+    mockSlotsForTeacherOnDate.mockResolvedValue([
+      { _id: oid(), classId: oid(), groupId: oid(), subject: "MATH", periodNumber: 1, isBreak: false },
+      { _id: oid(), classId: oid(), groupId: oid(), subject: "BAN", periodNumber: 6, isBreak: false },
+    ]);
+    const created = { _id: oid() };
+    mockLeaveCreate.mockResolvedValue(created);
+    mockLeaveFindById.mockReturnValue({ lean: async () => null }); // fan-out no-ops after create
+
+    await applyForLeave({
+      staffProfileId: staffId,
+      leaveType: "casual",
+      fromKey: "2026-06-14",
+      toKey: "2026-06-14",
+      reason: "doctor",
+      dayPart: "late_entry",
+      partialPeriodCount: 2,
+      actorId: ACTOR,
+    });
+
+    expect(mockLeaveCreate.mock.calls[0][0]).toMatchObject({
+      dayPart: "late_entry",
+      partialPeriodCount: 2,
+      partialPeriods: [1, 2],
+      days: PARTIAL_DAY_FRACTION,
+    });
+  });
+
+  test("a partial day must be ONE date and must name a period count (D-#361)", async () => {
+    mockStaffFindById.mockResolvedValue({ active: true });
+    const base = { staffProfileId: oid().toString(), leaveType: "casual" as const, reason: "ok", actorId: ACTOR };
+    await expect(
+      applyForLeave({ ...base, fromKey: "2026-06-14", toKey: "2026-06-15", dayPart: "early_leave", partialPeriodCount: 2 }),
+    ).rejects.toThrow(/ONE date/i);
+    await expect(
+      applyForLeave({ ...base, fromKey: "2026-06-14", toKey: "2026-06-14", dayPart: "early_leave" }),
+    ).rejects.toThrow(/how many periods/i);
   });
 
   test("rejects an empty reason and unknown staff", async () => {
@@ -327,6 +441,31 @@ describe("cover fan-out + proxy seam (D-#20/#22)", () => {
     const slots = await fanOutCoverSlots(oid().toString(), staffId);
     expect(slots).toEqual([]);
     expect(mockSlotCreate).not.toHaveBeenCalled();
+  });
+
+  test("fanOutCoverSlots covers ONLY the periods a partial day misses (D-#361)", async () => {
+    const staffId = oid().toString();
+    mockStaffFindById.mockResolvedValueOnce({ phone: "01700000000" });
+    mockUserFindOne.mockResolvedValueOnce({ _id: oid() });
+    // Late entry over periods 1–2: the teacher is back for their period-6 class, which
+    // must NOT fan out a cover slot (they teach it themselves).
+    mockLeaveFindById.mockReturnValue({
+      lean: async () => ({ fromKey: "2026-06-14", toKey: "2026-06-14", dayPart: "late_entry", partialPeriods: [1, 2] }),
+    });
+    mockResolveDayType.mockResolvedValue("FULL");
+    const cls = oid(), sec = oid();
+    mockSlotsForTeacherOnDate.mockResolvedValue([
+      { _id: oid(), classId: cls, groupId: sec, subject: "MATH", periodNumber: 2, isBreak: false },
+      { _id: oid(), classId: cls, groupId: sec, subject: "BAN", periodNumber: 6, isBreak: false },
+    ]);
+    mockSlotFindOne.mockResolvedValue(null);
+    mockSubjectFindOne.mockResolvedValue({ _id: oid() });
+    mockSlotCreate.mockImplementation(async (d) => ({ _id: oid(), ...d }));
+
+    const slots = await fanOutCoverSlots(oid().toString(), staffId);
+    expect(slots).toHaveLength(1);
+    expect(mockSlotCreate).toHaveBeenCalledTimes(1);
+    expect(mockSlotCreate.mock.calls[0][0]).toMatchObject({ periodNumber: 2, status: "needs_cover" });
   });
 
   test("fanOutCoverSlots creates a subjectgroup slot for a Quran/Arabic meeting (no classId, no subject)", async () => {

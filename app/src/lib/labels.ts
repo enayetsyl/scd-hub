@@ -47,6 +47,8 @@ import {
   LEAVE_TYPE_LABELS_EN,
   LEAVE_STATUS_LABELS_BN,
   LEAVE_STATUS_LABELS_EN,
+  LEAVE_DAY_PART_LABELS_BN,
+  LEAVE_DAY_PART_LABELS_EN,
   COVER_SLOT_STATUS_LABELS_BN,
   COVER_SLOT_STATUS_LABELS_EN,
   CONDUCT_STAGE_LABELS_BN,
@@ -80,6 +82,7 @@ import {
   type ClearanceItemStatus,
   type LeaveType,
   type LeaveStatus,
+  type LeaveDayPart,
   type CoverSlotStatus,
   type ConductStage,
   type ConductRecordStatus,
@@ -674,6 +677,19 @@ export const leaveStatusLabel = (v?: string | null): string =>
 
 export const coverSlotStatusLabel = (v?: string | null): string =>
   (v && pick(COVER_SLOT_STATUS_LABELS_BN, COVER_SLOT_STATUS_LABELS_EN)[v as CoverSlotStatus]) || v || DASH;
+
+/** Full day / late entry / early leave (D-#361). */
+export const leaveDayPartLabel = (v?: string | null): string =>
+  (v && pick(LEAVE_DAY_PART_LABELS_BN, LEAVE_DAY_PART_LABELS_EN)[v as LeaveDayPart]) || v || DASH;
+
+/** One line describing a partial-day leave — "আগে চলে যাওয়া · পিরিয়ড ৭, ৮" — or null
+ *  for a full day, so a leave card can render it unconditionally (D-#361). */
+export const leavePartialSummary = (dayPart?: string | null, periods?: number[] | null): string | null => {
+  if (!dayPart || dayPart === "full") return null;
+  const label = leaveDayPartLabel(dayPart);
+  if (!periods || periods.length === 0) return label;
+  return `${label} · ${STR.hrLeavePeriodShort} ${periods.map((p) => bnNum(p)).join(", ")}`;
+};
 
 export const conductStageLabel = (v?: string | null): string =>
   (v && pick(CONDUCT_STAGE_LABELS_BN, CONDUCT_STAGE_LABELS_EN)[v as ConductStage]) || v || DASH;
@@ -2316,6 +2332,12 @@ const STR_BN = {
   hrLeaveViewCover: "কভার দেখুন",
   hrLeavePaid: "সবেতন",
   hrLeaveUnpaid: "অবৈতনিক",
+  // Partial-day leave (D-#361)
+  hrLeaveDayPart: "দিনের ধরন",
+  hrLeavePartialPeriods: "কত পিরিয়ড ছুটি",
+  hrLeavePartialHint: "একই দিনের আবেদনে দেরিতে আসা বা আগে চলে যাওয়ার সুযোগ — শুধু ওই পিরিয়ডগুলোর জন্য প্রক্সি লাগবে।",
+  hrLeavePartialThird: "৩টি আংশিক ছুটি = ১ দিন",
+  hrLeavePeriodShort: "পিরিয়ড",
   // Cover slots
   hrCoverTitle: "কভার স্লট",
   hrCoverClass: "শ্রেণি/শাখা",
@@ -5045,6 +5067,12 @@ const STR_EN: StrTable = {
   hrLeaveViewCover: "View cover",
   hrLeavePaid: "Paid",
   hrLeaveUnpaid: "Unpaid",
+  // Partial-day leave (D-#361)
+  hrLeaveDayPart: "Day part",
+  hrLeavePartialPeriods: "Periods on leave",
+  hrLeavePartialHint: "Same-day application only — a late entry or early leave needs proxy cover for those periods alone.",
+  hrLeavePartialThird: "3 partial days = 1 day",
+  hrLeavePeriodShort: "Period",
   hrCoverTitle: "Cover slots",
   hrCoverClass: "Class/Section",
   hrCoverSubject: "Subject",

@@ -35,7 +35,8 @@ import {
 import { resolveStaffProfileForUser } from "../services/staffMatch";
 import { StaffLeaveApplication, type IStaffLeaveApplication } from "../models/StaffLeaveApplication";
 import type { IStaffCoverSlot } from "../models/StaffCoverSlot";
-import type { LeaveType } from "@scd/shared";
+import type { LeaveType, LeaveDayPart } from "@scd/shared";
+import { roundLeaveDays } from "../services/dates";
 
 // ---------------------------------------------------------------------------
 // Gates / helpers
@@ -69,11 +70,16 @@ StaffLeaveRef.implement({
     leaveType: t.exposeString("leaveType"),
     fromKey: t.exposeString("fromKey"),
     toKey: t.exposeString("toKey"),
-    days: t.exposeInt("days"),
+    // D-#361: "full" | "late_entry" | "early_leave"; the periods a partial day misses.
+    dayPart: t.string({ resolve: (l) => l.dayPart ?? "full" }),
+    partialPeriodCount: t.int({ nullable: true, resolve: (l) => l.partialPeriodCount ?? null }),
+    partialPeriods: t.intList({ resolve: (l) => l.partialPeriods ?? [] }),
+    // Float, not Int, since D-#361: a partial day is 1/3 of a day.
+    days: t.float({ resolve: (l) => roundLeaveDays(l.days) }),
     reason: t.exposeString("reason"),
     status: t.exposeString("status"),
-    paidDays: t.int({ nullable: true, resolve: (l) => l.paidDays ?? null }),
-    unpaidDays: t.int({ nullable: true, resolve: (l) => l.unpaidDays ?? null }),
+    paidDays: t.float({ nullable: true, resolve: (l) => (l.paidDays == null ? null : roundLeaveDays(l.paidDays)) }),
+    unpaidDays: t.float({ nullable: true, resolve: (l) => (l.unpaidDays == null ? null : roundLeaveDays(l.unpaidDays)) }),
     exceedWarning: t.string({ nullable: true, resolve: (l) => l.exceedWarning ?? null }),
     decisionNote: t.string({ nullable: true, resolve: (l) => l.decisionNote ?? null }),
     decidedAt: t.string({ nullable: true, resolve: (l) => (l.decidedAt ? new Date(l.decidedAt).toISOString() : null) }),
@@ -136,8 +142,9 @@ StaffLeaveBalanceRef.implement({
     balanceTracked: t.exposeBoolean("balanceTracked"),
     allowanceDays: t.exposeInt("allowanceDays"),
     carriedOverDays: t.exposeInt("carriedOverDays"),
-    takenDays: t.exposeInt("takenDays"),
-    remainingDays: t.exposeInt("remainingDays"),
+    // Float since D-#361 — a partial day draws 1/3, so a balance can be fractional.
+    takenDays: t.exposeFloat("takenDays"),
+    remainingDays: t.exposeFloat("remainingDays"),
     encashableDays: t.exposeInt("encashableDays"),
   }),
 });
@@ -190,7 +197,10 @@ builder.mutationField("applyForStaffLeave", (t) =>
     description:
       "Record a staff leave application (prd-hr H2.1). A teacher applies for THEIR OWN leave " +
       "(own-row; omit staffProfileId). Principal/Office (leave:manage) may record on any staff " +
-      "member's behalf by passing staffProfileId. Fans out cover slots. Audited.",
+      "member's behalf by passing staffProfileId. Fans out cover slots. Audited. " +
+      "`dayPart` (D-#361) is optional/additive: omitted or \"full\" is the original whole-day " +
+      "leave; \"late_entry\"/\"early_leave\" need `partialPeriodCount` and a single date " +
+      "(fromKey === toKey), fan out cover for ONLY the missed periods, and cost 1/3 of a day.",
     authScopes: { authenticated: true },
     args: {
       staffProfileId: t.arg.string({ required: false }),
@@ -198,6 +208,8 @@ builder.mutationField("applyForStaffLeave", (t) =>
       fromKey: t.arg.string({ required: true }),
       toKey: t.arg.string({ required: true }),
       reason: t.arg.string({ required: true }),
+      dayPart: t.arg.string({ required: false }),
+      partialPeriodCount: t.arg.int({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       let target: string;
@@ -215,6 +227,8 @@ builder.mutationField("applyForStaffLeave", (t) =>
         fromKey: args.fromKey,
         toKey: args.toKey,
         reason: args.reason,
+        dayPart: (args.dayPart ?? undefined) as LeaveDayPart | undefined,
+        partialPeriodCount: args.partialPeriodCount ?? undefined,
         actorId: ctx.auth!.userId,
       }) as unknown as Promise<LeaveShape>;
     },
