@@ -265,6 +265,8 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
             {obs.priorFocusProgress ? (
               <Row label={STR.obsPriorFocusProgress} value={obsGrowthProgressLabel(obs.priorFocusProgress)} />
             ) : null}
+            {/* CO-10 (D-#363): how the prior focus moved, in the observer's words. */}
+            {obs.priorFocusNote ? <Row label={STR.obsPriorFocusNote} value={obs.priorFocusNote} /> : null}
           </Card>
         ) : null}
 

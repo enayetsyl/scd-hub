@@ -14,8 +14,9 @@
  *
  * `validateRef11Payload` THROWS a Ref11ValidationError (Bangla-friendly) on the first
  * violation and otherwise returns the normalised payload (trimmed notes/strings,
- * canonical domain/gate order). The optional carry-forward (`priorFocusProgress`) is
- * validated only when present (it belongs to a re-review, §4).
+ * canonical domain/gate order). The optional carry-forward (`priorFocusProgress` +
+ * the CO-10 `priorFocusNote`, D-#363) is validated only when present — an observation
+ * with no prior observation carries neither.
  */
 import {
   OBSERVATION_DOMAINS,
@@ -50,6 +51,7 @@ export interface Ref11PayloadInput {
   oneStrength: string;
   growthFocus: string;
   priorFocusProgress?: string | null;
+  priorFocusNote?: string | null;
 }
 
 export interface DomainScore {
@@ -68,6 +70,7 @@ export interface Ref11Payload {
   oneStrength: string;
   growthFocus: string;
   priorFocusProgress: GrowthProgress | null;
+  priorFocusNote: string | null;
 }
 
 function nonEmpty(s: string | null | undefined): string {
@@ -141,7 +144,10 @@ export function validateRef11Payload(input: Ref11PayloadInput): Ref11Payload {
   const growthFocus = nonEmpty(input.growthFocus);
   if (!growthFocus) throw new Ref11ValidationError("One growth focus is required");
 
-  // --- optional carry-forward (a re-review only, §4) ------------------------------
+  // --- optional carry-forward (CO-10, §4) -----------------------------------------
+  // Both fields are optional and independent: an observation with no prior carries
+  // neither, and a note without a verdict (or the reverse) is accepted — the form
+  // decides what to ask, the validator only refuses an unknown enum value.
   let priorFocusProgress: GrowthProgress | null = null;
   if (input.priorFocusProgress !== undefined && input.priorFocusProgress !== null && nonEmpty(input.priorFocusProgress)) {
     if (!(GROWTH_PROGRESS as readonly string[]).includes(input.priorFocusProgress)) {
@@ -149,6 +155,8 @@ export function validateRef11Payload(input: Ref11PayloadInput): Ref11Payload {
     }
     priorFocusProgress = input.priorFocusProgress as GrowthProgress;
   }
+  // Free text on HOW the focus moved (D-#363) — trimmed, null when blank.
+  const priorFocusNote = nonEmpty(input.priorFocusNote) || null;
 
-  return { domains, gates, oneStrength, growthFocus, priorFocusProgress };
+  return { domains, gates, oneStrength, growthFocus, priorFocusProgress, priorFocusNote };
 }

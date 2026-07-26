@@ -20,10 +20,15 @@
  *                         anchor/recording, mark the prior REVIEWED row SUPERSEDED
  *                         (`supersededById`/`prevObservationId`). Enables CO-7
  *                         calibration (≥1 observation per recording). Audited (both).
- *   reads               — getObservation / observationsForTeacher / myReviewQueue,
- *                         plus the PURE row-scope predicate `canReadObservation`
- *                         (observer own; observed teacher own at/after REVIEWED;
- *                         Principal/Office all) the resolver enforces.
+ *   reads               — getObservation / observationsForTeacher / myReviewQueue /
+ *                         observerReviewsPaged (CO-11 own history, D-#363), plus the
+ *                         PURE row-scope predicate `canReadObservation` (observer own;
+ *                         observed teacher own at/after REVIEWED; Principal/Office all)
+ *                         the resolver enforces.
+ *   priorObservationContext — the CO-10 carry-forward slice (D-#363): a NARROW view of
+ *                         the observation whose growth focus this review carries
+ *                         forward, gated by `canReadPriorContext`. Read its docblock
+ *                         before adding a field — the field set IS the visibility rule.
  *
  * Role RBAC (observation:upload / :review / :read / :manage) is enforced by the
  * RESOLVER; this service trusts the actor + applies the conflict guard + state gates.
@@ -99,6 +104,8 @@ export interface ClassroomObservationShape {
   growthFocus: string | null;
   prevObservationId: string | null;
   priorFocusProgress: string | null;
+  /** CO-10 (D-#363): how the prior focus moved, in the observer's own words. */
+  priorFocusNote: string | null;
   /** The Quran (ClassEcho) payload — set on a QURAN-form row at review, else null. */
   quran: QuranPayloadShape | null;
   /** CO-7 teacher fairness rating of the review (1–5; null until rated). */
@@ -136,6 +143,7 @@ function shape(d: IClassroomObservation): ClassroomObservationShape {
     growthFocus: d.growthFocus ?? null,
     prevObservationId: d.prevObservationId ? d.prevObservationId.toString() : null,
     priorFocusProgress: d.priorFocusProgress ?? null,
+    priorFocusNote: d.priorFocusNote ?? null,
     quran: d.quran
       ? {
           ratings: (d.quran.ratings ?? []).map((x) => ({
@@ -394,6 +402,7 @@ export async function reviewObservation(input: ReviewObservationInput): Promise<
     doc.oneStrength = payload.oneStrength;
     doc.growthFocus = payload.growthFocus;
     doc.priorFocusProgress = payload.priorFocusProgress;
+    doc.priorFocusNote = payload.priorFocusNote;
   }
   doc.state = "REVIEWED"; // observer/Principal-only until PUBLISHED (CO-8, D-#271)
   doc.reviewedAt = new Date();
@@ -797,6 +806,131 @@ export async function observationsForRecording(recordingId: string): Promise<Cla
 }
 
 // ---------------------------------------------------------------------------
+// priorObservationContext — the CO-10 carry-forward slice (D-#363)
+// ---------------------------------------------------------------------------
+
+/**
+ * The NARROW prior-observation slice the review form carries forward (CO-10, D-#363).
+ *
+ * This is deliberately NOT a `ClassroomObservationShape`. The prior review was usually
+ * written by a DIFFERENT observer, whose row `canReadObservation` does not expose, so
+ * the widening is held to exactly these fields: the developmental thread (what focus was
+ * set, when, in which subject, and how it was last judged) and nothing else. There is NO
+ * `domains`, NO `gates`, NO breach note, NO `teacherResponse`, NO fairness rating and —
+ * deliberately — NO `observerId`: peer scores and peer identity stay private (D-#28).
+ *
+ * Adding a field here re-opens that decision. Don't widen it without a new ADR row.
+ */
+export interface PriorFocusContextShape {
+  /** The prior observation's id — for the audit trail / a manager's own drill-down. */
+  observationId: string;
+  classDate: string;
+  subject: string;
+  form: ObservationForm;
+  growthFocus: string | null;
+  oneStrength: string | null;
+  /** How the prior review itself judged ITS prior focus (the thread, one link back). */
+  priorFocusProgress: string | null;
+  /** False ⇒ the focus was set in a DIFFERENT subject; the UI says so, because that
+   *  changes how the observer should read it. */
+  sameSubject: boolean;
+  /** True ⇒ resolved via `prevObservationId` (a re-review of the SAME session). */
+  isReReview: boolean;
+}
+
+/** The states whose growth focus is settled enough to carry forward. An UPLOADED or
+ *  ASSIGNED row has no payload at all; a SUPERSEDED one was still real feedback. */
+const PRIOR_FOCUS_STATES: ObservationState[] = ["REVIEWED", "TEACHER_RESPONDED", "SUPERSEDED"];
+
+function priorSlice(
+  prior: IClassroomObservation,
+  current: { subject: string },
+  isReReview: boolean,
+): PriorFocusContextShape {
+  return {
+    observationId: prior._id.toString(),
+    classDate: prior.classDate,
+    subject: prior.subject,
+    form: prior.form,
+    growthFocus: prior.growthFocus ?? null,
+    oneStrength: prior.oneStrength ?? null,
+    priorFocusProgress: prior.priorFocusProgress ?? null,
+    sameSubject: prior.subject === current.subject,
+    isReReview,
+  };
+}
+
+/**
+ * Resolve the observation whose growth focus `observationId` carries forward (CO-10):
+ *   1. `prevObservationId` when set — a re-review points at its own predecessor, so
+ *      there is nothing to search for;
+ *   2. otherwise the newest REF-11 row for the SAME teacher with a non-null growthFocus,
+ *      a settled state and `classDate <` this row's, PREFERRING the same subject — a
+ *      same-subject prior is chosen ahead of any other-subject one, not merely sorted
+ *      first, because "the focus you set in this subject" is the question being asked;
+ *   3. else null (a first-ever observation — the form then hides both fields).
+ *
+ * REF-11 only: a QURAN row has no growthFocus and no progress field to answer.
+ * Callers MUST gate access first (see `canReadPriorContext`) — this is a pure read.
+ */
+export async function priorObservationContext(
+  observationId: string,
+): Promise<PriorFocusContextShape | null> {
+  const current = (await ClassroomObservation.findById(
+    oid(observationId, "observationId"),
+  ).lean()) as IClassroomObservation | null;
+  if (!current) throw new ClassroomObservationError("Observation not found");
+  // The carry-forward question only exists on the REF-11 form (§4).
+  if (current.form !== "REF11") return null;
+
+  // (1) A re-review already names its predecessor.
+  if (current.prevObservationId) {
+    const linked = (await ClassroomObservation.findById(
+      current.prevObservationId,
+    ).lean()) as IClassroomObservation | null;
+    if (linked) return priorSlice(linked, current, true);
+    // A dangling link falls through to the date search rather than returning nothing.
+  }
+
+  const base: FilterQuery<IClassroomObservation> = {
+    _id: { $ne: current._id },
+    teacherId: current.teacherId,
+    form: "REF11",
+    state: { $in: PRIOR_FOCUS_STATES },
+    growthFocus: { $ne: null },
+    classDate: { $lt: current.classDate },
+  };
+  const sort = { classDate: -1 as const, reviewedAt: -1 as const };
+
+  // (2a) Same subject wins outright...
+  const sameSubject = (await ClassroomObservation.findOne({ ...base, subject: current.subject })
+    .sort(sort)
+    .lean()) as IClassroomObservation | null;
+  if (sameSubject) return priorSlice(sameSubject, current, false);
+
+  // (2b) ...otherwise the most recent focus set in any subject.
+  const anySubject = (await ClassroomObservation.findOne(base)
+    .sort(sort)
+    .lean()) as IClassroomObservation | null;
+  return anySubject ? priorSlice(anySubject, current, false) : null;
+}
+
+/**
+ * Who may pull the CO-10 slice for a row: the ASSIGNED OBSERVER of that row (they are
+ * the one being asked the carry-forward question) or a manager. Deliberately NOT the
+ * observed teacher — they read their own published feedback through the normal row
+ * read; this endpoint exists to fill in a form, and its whole point is showing one
+ * slice of a row the caller could not otherwise see.
+ */
+export function canReadPriorContext(
+  actor: ObservationActor,
+  obs: { observerId: string | null },
+): boolean {
+  if (actor.canManage) return true;
+  return !!obs.observerId && obs.observerId === actor.userId;
+}
+
+// ---------------------------------------------------------------------------
 // allObservationsPaged — the filtered + paginated oversight read (WS1)
 // ---------------------------------------------------------------------------
 
@@ -811,6 +945,9 @@ export interface AllObservationsFilterInput {
   state?: string | null;
   form?: string | null;
   subject?: string | null;
+  /** The CLASS/section anchor (CO-11, D-#363) — every row stores one, no screen
+   *  could filter on it. A subjectGroup-anchored row simply never matches. */
+  sectionId?: string | null;
   /** CO-8 publish gate (D-#324): true = released to the teacher (publishedAt set);
    *  false = not yet published (publishedAt null); undefined = either. */
   published?: boolean | null;
@@ -849,6 +986,7 @@ export async function allObservationsPaged(
   if (input.state) q.state = input.state;
   if (input.form) q.form = input.form;
   if (input.subject) q.subject = input.subject;
+  if (input.sectionId) q.sectionId = oid(input.sectionId, "sectionId");
   // CO-8 publish gate (D-#324): publishedAt set = released to the teacher.
   if (input.published === true) q.publishedAt = { $ne: null };
   else if (input.published === false) q.publishedAt = null;
@@ -877,6 +1015,24 @@ export async function allObservationsPaged(
     .lean()) as unknown as IClassroomObservation[];
 
   return { items: docs.map(shape), total, hasMore: offset + docs.length < total };
+}
+
+/**
+ * The observer's OWN review history (CO-11, D-#363) — the same filter/paging engine as
+ * `allObservationsPaged` with `observerId` FORCED to the caller.
+ *
+ * The force is the point: `observerId` is not an argument of the resolver, and any
+ * caller-supplied one is dropped here too, so this can never be pointed at a peer's
+ * work. No state restriction — `myReviewQueue` answers "what is still open", this
+ * answers "everything I have touched", which is why a reviewed row stops vanishing the
+ * moment it is submitted. Every returned row is one the caller observed, so
+ * `canReadObservation` already permitted it: nothing is widened.
+ */
+export async function observerReviewsPaged(
+  observerId: string,
+  input: AllObservationsFilterInput,
+): Promise<ObservationPageShape> {
+  return allObservationsPaged({ ...input, observerId });
 }
 
 /** The observer's open review queue (ASSIGNED rows assigned to them). */
