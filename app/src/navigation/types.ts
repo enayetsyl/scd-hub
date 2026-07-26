@@ -157,6 +157,8 @@ export type RoutineStackParamList = {
 export type PrintStackParamList = {
   PrintHome: undefined;
   NewPrintRequest: { setId?: string; contentArtifactId?: string; title?: string } | undefined;
+  /** D-#362 — already-printed documents, one row each, with a reprint action. */
+  PrintHistory: undefined;
 };
 
 export type AttendanceStackParamList = {

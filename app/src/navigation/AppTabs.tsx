@@ -65,6 +65,7 @@ import AdminTodayScreen from "../screens/home/AdminTodayScreen";
 import MyClassNotesScreen from "../screens/classnotes/MyClassNotesScreen";
 import PrintHomeScreen from "../screens/printing/PrintHomeScreen";
 import NewPrintRequestScreen from "../screens/printing/NewPrintRequestScreen";
+import PrintHistoryScreen from "../screens/printing/PrintHistoryScreen";
 import ContentTreeScreen from "../screens/content/ContentTreeScreen";
 import PlanViewScreen from "../screens/content/PlanViewScreen";
 import QuestionBankScreen from "../screens/questions/QuestionBankScreen";
@@ -506,6 +507,7 @@ function PrintNavigator(): React.ReactElement {
     <PrintStack.Navigator screenOptions={stackOptions}>
       <PrintStack.Screen name="PrintHome" component={PrintHomeScreen} options={{ title: STR.prQueueTitle }} />
       <PrintStack.Screen name="NewPrintRequest" component={NewPrintRequestScreen} options={{ title: STR.prNew }} />
+      <PrintStack.Screen name="PrintHistory" component={PrintHistoryScreen} options={{ title: STR.prHistory }} />
     </PrintStack.Navigator>
   );
 }

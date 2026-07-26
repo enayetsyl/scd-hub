@@ -12,7 +12,7 @@
  * in the plan viewer.
  */
 import React, { useEffect, useState } from "react";
-import { Linking, View } from "react-native";
+import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { roleHasPermission, PRINT_COLOUR_LABELS_EN, PRINT_SIDES_LABELS_EN } from "@scd/shared";
@@ -32,7 +32,7 @@ import { friendlyError } from "../../lib/errors";
 import { openStoredFile } from "../../lib/files";
 import { subscribeLiveEvents } from "../../lib/liveEvents";
 import { useFileOpen } from "../../lib/useFileOpen";
-import { openPdf } from "../../lib/pdf";
+import { openPrintSource } from "../../lib/printSource";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -115,21 +115,12 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
   // duplicate tabs (the BUG-014 pattern, applied here).
   const { openingId, runOpen } = useFileOpen();
 
-  /** Open the job's SINGLE-document sources. Uploads get one button PER FILE (below) —
-   *  opening only fileIds[0] left every other attachment unreachable (live-testing find:
-   *  a teacher attached a PDF + an image and only the image could be opened). */
+  /** Open the job's SINGLE-document sources (shared with the reprint history via
+   *  `openPrintSource`). Uploads get one button PER FILE (below) — opening only
+   *  fileIds[0] left every other attachment unreachable (live-testing find: a teacher
+   *  attached a PDF + an image and only the image could be opened). */
   async function openSource(r: PrintRequestT): Promise<void> {
-    if (r.sourceType === "SET" && r.setId) return openPdf(`/pdf/set/${r.setId}`);
-    // A plan is stored as markdown; `/pdf/artifact/:id` renders it through the same
-    // pdfkit + NotoSansBengali pipeline the question sets use.
-    if (r.sourceType === "CONTENT_ARTIFACT" && r.contentArtifactId) {
-      return openPdf(`/pdf/artifact/${r.contentArtifactId}`);
-    }
-    if (r.sourceType === "LINK" && r.linkUrl) {
-      await Linking.openURL(r.linkUrl);
-      return;
-    }
-    toast.show(STR.prOpenPlanHint, "info");
+    if (!(await openPrintSource(r))) toast.show(STR.prOpenPlanHint, "info");
   }
 
   async function run(fn: () => Promise<{ error?: unknown }>, okMsg: string): Promise<void> {
@@ -296,6 +287,14 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
       {canRequest ? (
         <Button title={`➕ ${STR.prNew}`} onPress={() => navigation.navigate("NewPrintRequest")} />
       ) : null}
+      {/* D-#362: before filing a new request, check whether it was printed before —
+          a reprint reuses the earlier job's file instead of sending it again. */}
+      <Button
+        title={`🗂 ${STR.prHistory}`}
+        variant="secondary"
+        onPress={() => navigation.navigate("PrintHistory")}
+      />
+      <Muted style={{ marginBottom: space(2) }}>{STR.prHistoryHint}</Muted>
 
       {isOffice ? (
         <>

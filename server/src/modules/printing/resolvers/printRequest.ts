@@ -26,6 +26,9 @@ import {
   myPrintRequests,
   printRequestById,
   printQueueCounts,
+  printHistory,
+  reprintPrintRequest,
+  type PrintHistoryRow,
 } from "../services/PrintRequestService";
 import type { IPrintRequest } from "../models/PrintRequest";
 
@@ -66,6 +69,8 @@ interface PrintRequestView {
   effectiveCopies: number | null;
   copiesPending: boolean;
   copiesClassLevel: number | null;
+  /** D-#362: the level of the job's OWN class (`classId`) — the history sorts by it. */
+  classLevel: number | null;
 }
 
 const PrintFileRef = builder.objectRef<PrintFileView>("PrintFile");
@@ -107,6 +112,10 @@ PrintRequestRef.implement({
     /** True while the use day's attendance is pending — the Office may print with a manual count. */
     copiesPending: t.boolean({ resolve: (v) => v.copiesPending }),
     neededByKey: t.string({ nullable: true, resolve: (v) => v.doc.neededByKey ?? null }),
+    // D-#362: the job's own class/section, so the history can group and label by class.
+    classId: t.string({ nullable: true, resolve: (v) => v.doc.classId?.toString() ?? null }),
+    classLevel: t.int({ nullable: true, resolve: (v) => v.classLevel }),
+    sectionId: t.string({ nullable: true, resolve: (v) => v.doc.sectionId?.toString() ?? null }),
     subject: t.string({ nullable: true, resolve: (v) => v.doc.subject ?? null }),
     notes: t.string({ nullable: true, resolve: (v) => v.doc.notes ?? null }),
     status: t.string({ resolve: (v) => v.doc.status }),
@@ -138,8 +147,17 @@ async function decorate(docs: IPrintRequest[]): Promise<PrintRequestView[]> {
   const fileById = new Map(files.map((f) => [f._id.toString(), f]));
 
   // D-#294: per-class-present copy resolution, batched per distinct use day.
+  // The class lookup covers BOTH `copiesClassId` (the count's class) and `classId` (the
+  // job's own class, which the D-#362 history labels and sorts by) in one query.
   const cpDocs = docs.filter((d) => d.copiesMode === "CLASS_PRESENT");
-  const classIds = [...new Set(cpDocs.map((d) => d.copiesClassId?.toString()).filter(Boolean))] as string[];
+  const classIds = [
+    ...new Set(
+      [
+        ...cpDocs.map((d) => d.copiesClassId?.toString()),
+        ...docs.map((d) => d.classId?.toString()),
+      ].filter(Boolean),
+    ),
+  ] as string[];
   const classes = classIds.length
     ? await Class.find({ _id: { $in: classIds } }).select("level").lean()
     : [];
@@ -183,6 +201,7 @@ async function decorate(docs: IPrintRequest[]): Promise<PrintRequestView[]> {
       effectiveCopies,
       copiesPending,
       copiesClassLevel: doc.copiesClassId ? (levelOf.get(doc.copiesClassId.toString()) ?? null) : null,
+      classLevel: doc.classId ? (levelOf.get(doc.classId.toString()) ?? null) : null,
     };
   });
 }
@@ -338,6 +357,131 @@ builder.queryField("myPrintRequests", (t) =>
     authScopes: { hasPermission: "tracker:write" },
     args: { limit: t.arg.int({ required: false }) },
     resolve: async (_root, args, ctx) => decorate(await myPrintRequests(ctx.auth!.userId, args.limit ?? 50)),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// D-#362 — reprint history
+// ---------------------------------------------------------------------------
+
+interface PrintHistoryRowView {
+  row: PrintHistoryRow;
+  latest: PrintRequestView;
+  requesterNames: string[];
+}
+
+const PrintHistoryRowRef = builder.objectRef<PrintHistoryRowView>("PrintHistoryRow");
+PrintHistoryRowRef.implement({
+  description:
+    "One already-printed DOCUMENT in the reprint history (D-#362) — repeats of the same source for the " +
+    "same class/subject/purpose collapse into a single row. `latest` is the job a reprint clones.",
+  fields: (t) => ({
+    key: t.string({ resolve: (v) => v.row.key }),
+    /** The most recent print of this document — the reprint source. */
+    latest: t.field({ type: PrintRequestRef, resolve: (v) => v.latest }),
+    /** How many times it has already been printed. */
+    printCount: t.int({ resolve: (v) => v.row.printCount }),
+    lastPrintedAt: t.string({ resolve: (v) => v.row.lastPrintedAt.toISOString() }),
+    firstPrintedAt: t.string({ resolve: (v) => v.row.firstPrintedAt.toISOString() }),
+    /** Everyone who has printed it (Office view); a teacher only ever sees themselves. */
+    requesterNames: t.stringList({ resolve: (v) => v.requesterNames }),
+  }),
+});
+
+const PrintHistoryPageRef = builder
+  .objectRef<{ rows: PrintHistoryRowView[]; scannedCapped: boolean }>("PrintHistoryPage")
+  .implement({
+    description: "A page of the reprint history (D-#362).",
+    fields: (t) => ({
+      rows: t.field({ type: [PrintHistoryRowRef], resolve: (v) => v.rows }),
+      /** True when the scan cap was reached, so prints older than the window may be missing. */
+      scannedCapped: t.boolean({ resolve: (v) => v.scannedCapped }),
+    }),
+  });
+
+builder.queryField("printHistory", (t) =>
+  t.field({
+    type: PrintHistoryPageRef,
+    description:
+      "Already-printed jobs (PRINTED + DELIVERED), collapsed to ONE ROW PER DOCUMENT and ordered by " +
+      "class → subject → purpose → newest print (D-#362). Filter by class / subject / purpose. " +
+      "The Office/Principal (roster:manage) see every requester's prints; a teacher (tracker:write) " +
+      "sees only their own — enforced server-side, not by an argument.",
+    authScopes: { authenticated: true },
+    args: {
+      classId: t.arg.string({ required: false }),
+      subject: t.arg.string({ required: false }),
+      purpose: t.arg.string({ required: false }),
+      limit: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const office = isOffice(ctx);
+      if (!office && !callerHasPermission(ctx.auth, "tracker:write")) {
+        throw new ForbiddenError("Not allowed to read the print history");
+      }
+      const page = await printHistory({
+        classId: args.classId,
+        subject: args.subject,
+        purpose: args.purpose,
+        // Own-row scope for a teacher: the caller cannot widen it.
+        requestedBy: office ? null : ctx.auth.userId,
+        limit: args.limit,
+      });
+      const decorated = await decorate(page.rows.map((r) => r.latest));
+      const names = await requesterNamesFor(page.rows);
+      return {
+        rows: page.rows.map((row, i) => ({
+          row,
+          latest: decorated[i],
+          requesterNames: row.requesterIds.map((id) => names.get(id) ?? "—"),
+        })),
+        scannedCapped: page.scannedCapped,
+      };
+    },
+  }),
+);
+
+/** Names for every requester across the page's groups, in one query. */
+async function requesterNamesFor(rows: PrintHistoryRow[]): Promise<Map<string, string>> {
+  const ids = [...new Set(rows.flatMap((r) => r.requesterIds))];
+  if (ids.length === 0) return new Map();
+  const users = await User.find({ _id: { $in: ids } }).select("name").lean();
+  return new Map(users.map((u) => [u._id.toString(), u.name]));
+}
+
+builder.mutationField("reprintPrintRequest", (t) =>
+  t.field({
+    type: PrintRequestRef,
+    description:
+      "Re-queue an already-printed job WITHOUT re-uploading its file (D-#362): clones the original's " +
+      "source, print settings and class/subject/purpose into a new REQUESTED job for `neededByKey`. " +
+      "The original's requester (own-row) or the Office/Principal may reprint. A linked class test is " +
+      "deliberately NOT re-linked — the exam record keeps its own lifecycle. Audited; the queue is notified.",
+    authScopes: { authenticated: true },
+    args: {
+      id: t.arg.string({ required: true }),
+      /** The date the reprint will be USED — a reprint is always for a new day. */
+      neededByKey: t.arg.string({ required: true }),
+      copies: t.arg.int({ required: false }),
+      notes: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const office = isOffice(ctx);
+      if (!office && !callerHasPermission(ctx.auth, "tracker:write")) {
+        throw new ForbiddenError("Not allowed to file a print request");
+      }
+      const doc = await reprintPrintRequest({
+        sourceRequestId: args.id,
+        neededByKey: args.neededByKey,
+        copies: args.copies,
+        notes: args.notes,
+        actorId: ctx.auth.userId,
+        isOffice: office,
+      });
+      return decorateOne(doc);
+    },
   }),
 );
 
