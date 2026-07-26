@@ -18,6 +18,8 @@ const mockSubjectFind = jest.fn();
 const mockGroupFind = jest.fn();
 const mockAssignProxy = jest.fn();
 const mockRevokeProxy = jest.fn().mockResolvedValue(undefined);
+const mockSubUpdate = jest.fn().mockResolvedValue({});
+const mockSubDelete = jest.fn().mockResolvedValue({});
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
 const mockEmitHrCoverAssigned = jest.fn().mockResolvedValue(undefined);
 const mockResolveUserForStaff = jest.fn();
@@ -58,6 +60,12 @@ jest.mock("../modules/foundation/models/Subject", () => ({
 }));
 jest.mock("../modules/routine/models/SubjectGroup", () => ({
   SubjectGroup: { find: (q: unknown) => findChain(mockGroupFind(q)) },
+}));
+jest.mock("../modules/routine/models/RoutineSubstitution", () => ({
+  RoutineSubstitution: {
+    updateOne: (f: unknown, u: unknown, o: unknown) => mockSubUpdate(f, u, o),
+    deleteOne: (f: unknown) => mockSubDelete(f),
+  },
 }));
 jest.mock("../modules/routine/services/RoutineSlotService", () => ({
   slotsForTeacherOnDate: jest.fn(async () => []),
@@ -106,6 +114,7 @@ function baseSlot(over: Record<string, unknown> = {}) {
     finalCoverTeacherUserId: null,
     status: "needs_cover",
     proxyGrantId: null,
+    routineSlotId: oid(),
     dateKey: "2026-06-14",
     periodNumber: 2,
     ...over,
@@ -187,6 +196,22 @@ describe("decideCoverSlot — override + direct-assign (D-#268)", () => {
     const res = await decideCoverSlot(slot._id.toString(), true, ACTOR, override.toString());
     expect(res.status).toBe("approved");
     expect(res.finalCoverTeacherUserId!.toString()).toBe(override.toString());
+  });
+
+  test("approving a section cover ALSO upserts a RoutineSubstitution (owner 2026-07-26 bug)", async () => {
+    const override = oid();
+    const slot = baseSlot({ proposedCoverTeacherId: null, status: "needs_cover" });
+    mockSlotFindById.mockResolvedValue(slot);
+    mockAssignProxy.mockResolvedValue(oid().toString());
+
+    await decideCoverSlot(slot._id.toString(), true, ACTOR, override.toString());
+
+    // The class-note / homework gates key off RoutineSubstitution, not the proxy grant.
+    expect(mockSubUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ slotId: slot.routineSlotId, coverTeacherId: expect.anything() }),
+      expect.anything(),
+      expect.objectContaining({ upsert: true }),
+    );
   });
 
   test("approve with neither a proposal nor an override is still rejected", async () => {

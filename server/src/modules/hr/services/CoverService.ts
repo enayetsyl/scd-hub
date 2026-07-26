@@ -24,6 +24,7 @@ import { User } from "../../foundation/models/User";
 import { Class } from "../../foundation/models/Class";
 import { Section } from "../../foundation/models/Section";
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
+import { RoutineSubstitution } from "../../routine/models/RoutineSubstitution";
 import { PeriodGrid } from "../../routine/models/PeriodGrid";
 import { assignProxy, revokeProxy } from "../../foundation/services/ScopeGrantService";
 import { slotsForTeacherOnDate } from "../../routine/services/RoutineSlotService";
@@ -247,6 +248,15 @@ export async function decideCoverSlot(
 
   if (!approve) {
     if (slot.proxyGrantId) await revokeProxy(slot.proxyGrantId.toString(), actorId);
+    // Remove the cover's RoutineSubstitution too (created at approval) so the class
+    // reverts to its scheduled teacher for the routine-based gates.
+    if (slot.finalCoverTeacherUserId) {
+      await RoutineSubstitution.deleteOne({
+        slotId: slot.routineSlotId,
+        date: parseDateKey(slot.dateKey),
+        coverTeacherId: slot.finalCoverTeacherUserId,
+      });
+    }
     slot.proxyGrantId = null;
     slot.status = "needs_cover";
     await slot.save();
@@ -310,6 +320,25 @@ export async function decideCoverSlot(
       assignedBy: actorId,
     });
     slot.proxyGrantId = new Types.ObjectId(grantId);
+
+    // A leave cover must ALSO become a RoutineSubstitution (owner 2026-07-26 bug):
+    // the proxy grant authorizes generic write-scope, but the ROUTINE-based gates —
+    // publishClassNote and the homework accessible-class list — recognise a cover
+    // teacher only through a RoutineSubstitution (the RoutineCoverService path does
+    // both; this leave path had only ever minted the grant). Idempotent on
+    // (routineSlotId, date, coverTeacherId) so a re-approve doesn't duplicate.
+    const subDate = parseDateKey(slot.dateKey);
+    await RoutineSubstitution.updateOne(
+      { slotId: slot.routineSlotId, date: subDate, coverTeacherId: new Types.ObjectId(finalTeacherId) },
+      {
+        $set: {
+          absentTeacherId: slot.absentTeacherUserId ?? null,
+          proxyGrantId: new Types.ObjectId(grantId),
+          createdBy: new Types.ObjectId(actorId),
+        },
+      },
+      { upsert: true },
+    );
   }
   slot.finalCoverTeacherUserId = new Types.ObjectId(finalTeacherId);
   slot.status = "approved";
