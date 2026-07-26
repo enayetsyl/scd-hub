@@ -669,6 +669,8 @@ OpenRecordRef.implement({
     // D-#338: undo affordance — offered only when stampCount > 1 (entry never pops).
     stampCount: t.exposeInt("stampCount"),
     lastStateAt: t.exposeString("lastStateAt"),
+    // Resubmission marker (owner 2026-07-26) — badges the redo record in the workspace.
+    resubOf: t.string({ nullable: true, resolve: (r) => r.resubOf }),
   }),
 });
 

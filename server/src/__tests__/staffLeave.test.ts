@@ -31,6 +31,7 @@ const mockPeriodGridFind = jest.fn();
 const mockResolveDayType = jest.fn();
 const mockSubjectFindOne = jest.fn();
 const mockEmitHrCoverAssigned = jest.fn().mockResolvedValue(undefined);
+const mockEmitStaffLeaveSubmitted = jest.fn().mockResolvedValue(undefined);
 
 /** A find()-chain stub: .select()/.sort() return self, .lean() resolves the value. */
 const leanChain = (val: unknown) => {
@@ -105,6 +106,7 @@ jest.mock("../modules/routine/calendar", () => ({
 }));
 jest.mock("../modules/notifications/services/emitters", () => ({
   emitHrCoverAssigned: (e: unknown) => mockEmitHrCoverAssigned(e),
+  emitStaffLeaveSubmitted: (e: unknown) => mockEmitStaffLeaveSubmitted(e),
 }));
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
@@ -291,6 +293,10 @@ describe("applyForLeave", () => {
     expect(mockLeaveCreate).toHaveBeenCalledTimes(1);
     expect(mockLeaveCreate.mock.calls[0][0]).toMatchObject({ days: 3, leaveType: "casual", status: "applied" });
     expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "STAFF_LEAVE_SUBMITTED" }));
+    // Owner 2026-07-26: approvers are notified on submit.
+    expect(mockEmitStaffLeaveSubmitted).toHaveBeenCalledWith(
+      expect.objectContaining({ leaveApplicationId: created._id.toString() }),
+    );
   });
 
   test("a partial day stores 1/3 of a day + its resolved period window (D-#361)", async () => {

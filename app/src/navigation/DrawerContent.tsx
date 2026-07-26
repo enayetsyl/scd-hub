@@ -24,6 +24,7 @@ import { STR } from "../lib/labels";
 import { bnNum } from "../lib/labels";
 import { PRINT_QUEUE_COUNTS } from "../graphql/printing";
 import { CT_QUESTION_COUNTS } from "../graphql/classTest";
+import { STAFF_LEAVE_PENDING_COUNT } from "../graphql/operations";
 import { subscribeLiveEvents } from "../lib/liveEvents";
 import { useAuth } from "../auth/AuthContext";
 import { useBasket } from "../state/BasketContext";
@@ -191,6 +192,23 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   }, [canClassTestBadge, refetchCtCounts]);
   const ctCounts = ctCountsQ.data?.ctQuestionCounts;
 
+  // Owner 2026-07-26: Staff drawer badge — leave applications awaiting approval
+  // (Principal/Office, leave:manage). Refreshes on any StaffLeaveApplication mutation.
+  const canLeaveBadge = !!role && roleHasPermission(role as Role, "leave:manage");
+  const leaveCountContext = React.useMemo(() => ({ additionalTypenames: ["StaffLeaveApplication"] }), []);
+  const [leaveCountQ, refetchLeaveCount] = useQuery({
+    query: STAFF_LEAVE_PENDING_COUNT,
+    pause: !canLeaveBadge,
+    requestPolicy: "cache-and-network",
+    context: leaveCountContext,
+  });
+  React.useEffect(() => {
+    if (!canLeaveBadge) return;
+    const id = setInterval(() => refetchLeaveCount({ requestPolicy: "network-only" }), 60_000);
+    return () => clearInterval(id);
+  }, [canLeaveBadge, refetchLeaveCount]);
+  const leavePending = leaveCountQ.data?.staffLeavePendingCount ?? 0;
+
   const badgeFor = (route: RouteName): number | undefined =>
     route === "QuestionsTab" && basket.count > 0 ? basket.count : undefined;
 
@@ -207,6 +225,9 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
       if (ctCounts.pending > 0) out.push({ count: ctCounts.pending, bg: colors.error });
       if (ctCounts.inReview > 0) out.push({ count: ctCounts.inReview, bg: colors.warning });
       return out;
+    }
+    if (route === "HrTab" && canLeaveBadge && leavePending > 0) {
+      return [{ count: leavePending, bg: colors.error }];
     }
     return [];
   };
