@@ -280,7 +280,11 @@ function ItemCard({
             students={submitRows.map((r) => ({
               id: r.id,
               name: r.studentName,
-              badge: r.chaseCount > 0 ? `(${lifecycleStateLabel("CHASE")} ${bnNum(r.chaseCount)})` : undefined,
+              // Badge the redo so it isn't mistaken for a duplicate (owner 2026-07-26).
+              badge:
+                (r.resubOf ? `🔁 ${STR.hwResubTag}` : "") +
+                  (r.chaseCount > 0 ? `${r.resubOf ? " · " : ""}${lifecycleStateLabel("CHASE")} ${bnNum(r.chaseCount)}` : "") ||
+                undefined,
             }))}
             onLabel={STR.asSubmitted}
             offLabel={STR.asNotSubmitted}

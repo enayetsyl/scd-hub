@@ -313,7 +313,12 @@ function ItemCard({
             students={submitRows.map((r) => ({
               id: r.id,
               name: r.studentName,
-              badge: r.chaseCount > 0 ? `(${STR.hwChaseAction} ${bnNum(r.chaseCount)})` : undefined,
+              // A resubmission (the student's redo) is badged so it isn't mistaken for
+              // a duplicate of their original still awaiting return (owner 2026-07-26).
+              badge:
+                (r.resubOf ? `🔁 ${STR.hwResubTag}` : "") +
+                  (r.chaseCount > 0 ? `${r.resubOf ? " · " : ""}${STR.hwChaseAction} ${bnNum(r.chaseCount)}` : "") ||
+                undefined,
             }))}
             onLabel={STR.hwPassSubmitted}
             offLabel={STR.hwPassNotSubmitted}

@@ -1814,6 +1814,8 @@ export interface HwOpenRecordT {
   stampCount: number;
   /** D-#338: ISO `at` of the newest stamp — same-Dhaka-day undo hint. */
   lastStateAt: string;
+  /** Set when this record is a RESUBMISSION (owner 2026-07-26) — badged in the workspace. */
+  resubOf: string | null;
 }
 
 export const HOMEWORK_OPEN_RECORDS = gql<
@@ -1822,7 +1824,7 @@ export const HOMEWORK_OPEN_RECORDS = gql<
 >`
   query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
     homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
-      id hwId hwItemId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile dueDate result stampCount lastStateAt
+      id hwId hwItemId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile dueDate result stampCount lastStateAt resubOf
     }
   }
 `;

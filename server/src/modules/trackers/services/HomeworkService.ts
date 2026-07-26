@@ -811,6 +811,9 @@ export interface OpenRecordDTO {
   stampCount: number;
   /** D-#338: `at` of the newest stamp (ISO) — the client's same-Dhaka-day undo hint. */
   lastStateAt: string;
+  /** Set when this record is a RESUBMISSION (HW-T3) — the workspace badges it so a
+   *  student redoing work isn't mistaken for a duplicate across passes (owner 2026-07-26). */
+  resubOf: string | null;
 }
 
 /**
@@ -855,6 +858,7 @@ export async function listOpenRecords(sectionId: string, states: LifecycleState[
         result: r.result ?? null,
         stampCount: r.stateDates.length,
         lastStateAt: new Date(r.stateDates[r.stateDates.length - 1]!.at as unknown as Date).toISOString(),
+        resubOf: r.resubOf ? r.resubOf.toString() : null,
       };
     })
     .sort((a, b) =>
