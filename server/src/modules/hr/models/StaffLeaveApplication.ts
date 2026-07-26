@@ -1,5 +1,12 @@
 import { Schema, model, Document, Types } from "mongoose";
-import { LEAVE_TYPES, LEAVE_STATUSES, type LeaveType, type LeaveStatus } from "@scd/shared";
+import {
+  LEAVE_TYPES,
+  LEAVE_STATUSES,
+  LEAVE_DAY_PARTS,
+  type LeaveType,
+  type LeaveStatus,
+  type LeaveDayPart,
+} from "@scd/shared";
 
 /**
  * StaffLeaveApplication (HR-2; prd-hr §3, H2) — the PARENT leave record (D-#22):
@@ -8,6 +15,10 @@ import { LEAVE_TYPES, LEAVE_STATUSES, type LeaveType, type LeaveStatus } from "@
  * the absent teacher teaches (CoverService) and, when an approved application's ✘
  * appears in the biometric import, drives the LEAVE-vs-ABSENT split (the seam AT-1
  * left open) via a read-time overlay.
+ *
+ * A leave is whole-day by default; D-#361 adds the SINGLE-DATE partial day (`dayPart`
+ * late_entry / early_leave + a period count) for the common "I'll miss the first two
+ * periods" case — it fans out cover slots for only those periods and costs 1/3 of a day.
  *
  * The exceed rule WARNS, never blocks (§3.3): on approval the days over the balance
  * are recorded as `unpaidDays` (LWP); `paidDays` draw the entitlement. Maternity/
@@ -24,7 +35,26 @@ export interface IStaffLeaveApplication extends Document {
   leaveType: LeaveType;
   fromKey: string; // YYYY-MM-DD inclusive
   toKey: string;   // YYYY-MM-DD inclusive
-  /** Inclusive calendar-day span (derived at apply time, stored for balance math). */
+  /**
+   * Which part of the day this leave covers (D-#361). `full` (the default, and what
+   * every pre-D-#361 row reads as) is the original whole-day leave. `late_entry` /
+   * `early_leave` are SINGLE-DATE partial leaves: the staff member misses only the
+   * first / last `partialPeriodCount` periods, so only THOSE class meetings fan out
+   * cover slots and the day costs PARTIAL_DAY_FRACTION (1/3) of the balance.
+   */
+  dayPart: LeaveDayPart;
+  /** How many periods the partial-day leave spans (null for a full-day leave). */
+  partialPeriodCount?: number | null;
+  /**
+   * The period numbers actually missed — RESOLVED at apply time from the staff
+   * member's own routine for that date (their last teaching period anchors an
+   * `early_leave` window) and STORED, so every downstream read (cover fan-out,
+   * "can this teacher cover?", the app's card) is an exact list lookup rather than a
+   * re-derivation against a routine that may have changed since. Empty for `full`.
+   */
+  partialPeriods: number[];
+  /** Day span for balance math: the inclusive calendar-day count for a full-day leave,
+   *  or the exact 1/3 fraction for a partial day (D-#361). */
   days: number;
   reason: string;
   status: LeaveStatus;
@@ -48,7 +78,11 @@ const StaffLeaveApplicationSchema = new Schema<IStaffLeaveApplication>(
     leaveType: { type: String, enum: LEAVE_TYPES, required: true },
     fromKey: { type: String, required: true },
     toKey: { type: String, required: true },
-    days: { type: Number, required: true, min: 1 },
+    dayPart: { type: String, enum: LEAVE_DAY_PARTS, required: true, default: "full" },
+    partialPeriodCount: { type: Number, default: null, min: 1 },
+    partialPeriods: { type: [Number], default: [] },
+    // min 0, not 1: a partial day is 1/3 (D-#361).
+    days: { type: Number, required: true, min: 0 },
     reason: { type: String, required: true, trim: true },
     status: { type: String, enum: LEAVE_STATUSES, required: true, default: "applied" },
     paidDays: { type: Number, min: 0 },

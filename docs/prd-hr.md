@@ -116,6 +116,24 @@ Mirrors the app's slice approach; each ships its journeys' acceptance criteria a
   audit-logged.
 - **H2.7 Leave visibility** *(§3, §1)* — Given a logged-in staff member, Then they see **their own** leave
   + balances; Principal/Office see and manage all.
+- **H2.8 Partial-day leave — late entry / early leave** *(**D-#361**, owner ask; extends H2.5/H2.6)* —
+  Given a teacher who will miss only the **first few** or the **last few** periods of a day, When they apply
+  with `dayPart` = `late_entry` | `early_leave` plus a **period count**, Then:
+  - the application is **single-date** (`fromKey === toKey`) — a multi-day partial is rejected; a longer
+    absence is either a full-day leave or one partial application per day;
+  - the **missed period numbers are resolved at apply time and stored** — `late_entry` takes periods
+    `1..n`; `early_leave` takes the last `n` periods of **that staff member's own teaching day** (their last
+    routine period, falling back to the longest active `PeriodGrid`), because a nursery/KG day is 6 periods
+    and a class 1–5 day is 8 (D-#57);
+  - **cover fans out for those periods only** — the classes the teacher still teaches that day raise **no**
+    cover slot; proposal → Principal/Office approval → one-day proxy grant is unchanged (H2.6);
+  - a teacher on a partial day **may still cover** another absence in a period outside their own window
+    (the cover pickers and the double-book guard are period-scoped, not day-scoped);
+  - **balance cost is a flat one third of a day** — **three partial-day leaves = one day** (owner ruling),
+    whatever the period count. Balances, the paid/unpaid split and payroll's unpaid-leave deduction are
+    therefore fractional and round to 2dp only where they are displayed;
+  - a partial day **does not** flip a biometric ✘ to LEAVE (H3's overlay) — the staff member was at school
+    that day, so a whole-day absence against a partial leave stays a real ABSENT worth investigating.
 
 ### H3 — Staff attendance  *(design §3a; build-step 2, attendance half)*
 - **H3.1 Biometric terminal is the source of truth; all staff enrolled** *(§3a.1, **D-#25**)* — Given any

@@ -90,7 +90,9 @@ export async function teacherAvailability(date: Date, periodNumber: number): Pro
   // Found live-testing: without this, a teacher on leave still appeared as "free" for
   // any period they don't personally teach, so another absent teacher's class could be
   // assigned to someone who is also out that day.
-  const onLeave = await userIdsOnLeave(dateKey);
+  // Period-scoped (D-#361): a partial-day leave only rules the teacher out of the
+  // periods it actually covers, so a late-entry teacher still ranks for period 6.
+  const onLeave = await userIdsOnLeave(dateKey, periodNumber);
 
   const teachers = (await User.find({ role: "TEACHER", active: true }).select("_id name").lean()) as unknown as Array<{
     _id: Types.ObjectId;

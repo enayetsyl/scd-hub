@@ -37,7 +37,7 @@ import {
   Notice,
 } from "../../components/ui";
 import { StaffSelect, AcademicYearSelect } from "../../components/selects";
-import { STR, bnNum, leaveTypeLabel, leaveStatusLabel } from "../../lib/labels";
+import { STR, bnNum, leaveTypeLabel, leaveStatusLabel, leavePartialSummary } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
@@ -159,6 +159,11 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
             <Muted>
               {leaveTypeLabel(a.leaveType)} · {fmtDate(a.fromKey)} – {fmtDate(a.toKey)} · {bnNum(a.days)} {STR.hrLeaveDays}
             </Muted>
+            {/* D-#361 — which periods a partial day misses, so the approver sees the
+                cover it will actually need before approving. */}
+            {leavePartialSummary(a.dayPart, a.partialPeriods) ? (
+              <Muted>{leavePartialSummary(a.dayPart, a.partialPeriods)}</Muted>
+            ) : null}
             <Muted>{a.reason}</Muted>
             {a.status === "approved" && a.paidDays != null ? (
               <Muted>{STR.hrLeavePaid}: {bnNum(a.paidDays)} · {STR.hrLeaveUnpaid}: {bnNum(a.unpaidDays ?? 0)}</Muted>

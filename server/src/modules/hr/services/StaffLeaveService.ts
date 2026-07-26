@@ -3,7 +3,9 @@
  * biometric importer left open.
  *
  *   applyForLeave  — record a leave (self or Office on behalf), resolve its academic
- *                    year, fan out cover slots (CoverService). Status `applied`.
+ *                    year, fan out cover slots (CoverService). Status `applied`. A
+ *                    D-#361 partial day (late entry / early leave, single date) fans
+ *                    out only its missed periods and costs 1/3 of a day.
  *   decideLeave    — Principal/Office approve/reject/cancel. Approve stamps the
  *                    paid/unpaid split: paid days draw the balance, the excess is
  *                    unpaid (LWP) and only WARNS (§3.3 — never blocks). Cancel/reject
@@ -16,15 +18,22 @@
  * Identity/operational plane, behind the ADR-005 firewall (NO corpus path).
  */
 import { Types } from "mongoose";
-import { LEAVE_TYPES, LEAVE_TYPE_RULES, type LeaveType } from "@scd/shared";
+import {
+  LEAVE_TYPES,
+  LEAVE_TYPE_RULES,
+  LEAVE_DAY_PARTS,
+  PARTIAL_DAY_FRACTION,
+  type LeaveType,
+  type LeaveDayPart,
+} from "@scd/shared";
 import { StaffLeaveApplication, type IStaffLeaveApplication } from "../models/StaffLeaveApplication";
 import { StaffLeaveEntitlement } from "../models/StaffLeaveEntitlement";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { AcademicYear } from "../../foundation/models/AcademicYear";
 import { writeAudit } from "../../platform/services/AuditService";
-import { countLeaveDays, parseDateKey, rangeCovers, LeaveError } from "./dates";
+import { countLeaveDays, parseDateKey, rangeCovers, roundLeaveDays, LeaveError } from "./dates";
 import { computeRemaining, takenPaidDays } from "./LeaveEntitlementService";
-import { fanOutCoverSlots, revokeCoversForLeave } from "./CoverService";
+import { fanOutCoverSlots, revokeCoversForLeave, resolvePartialPeriods } from "./CoverService";
 
 // --- pure split math -------------------------------------------------------
 
@@ -46,7 +55,7 @@ export function splitLeaveDays(leaveType: LeaveType, days: number, remainingBala
   const unpaidDays = days - paidDays;
   const exceedWarning =
     unpaidDays > 0
-      ? `Exceeds ${leaveType} balance by ${unpaidDays} day(s) — recorded as unpaid (LWP). (§3.3)`
+      ? `Exceeds ${leaveType} balance by ${roundLeaveDays(unpaidDays)} day(s) — recorded as unpaid (LWP). (§3.3)`
       : null;
   return { paidDays, unpaidDays, exceedWarning };
 }
@@ -74,17 +83,39 @@ export interface ApplyLeaveInput {
   toKey: string;
   reason: string;
   actorId: string;
+  /** D-#361 — omit (or "full") for the original whole-day leave. */
+  dayPart?: LeaveDayPart;
+  /** D-#361 — how many periods a partial day spans; required when dayPart is partial. */
+  partialPeriodCount?: number;
 }
 
 export async function applyForLeave(input: ApplyLeaveInput): Promise<IStaffLeaveApplication> {
   if (!LEAVE_TYPES.includes(input.leaveType)) throw new LeaveError(`Unknown leave type: ${input.leaveType}`);
   if (!input.reason.trim()) throw new LeaveError("A reason is required");
-  const days = countLeaveDays(input.fromKey, input.toKey); // validates keys + ordering
+  const spanDays = countLeaveDays(input.fromKey, input.toKey); // validates keys + ordering
+
+  // --- D-#361 partial day ---------------------------------------------------
+  const dayPart: LeaveDayPart = input.dayPart ?? "full";
+  if (!LEAVE_DAY_PARTS.includes(dayPart)) throw new LeaveError(`Unknown leave day part: ${dayPart}`);
+  if (dayPart !== "full" && input.fromKey !== input.toKey) {
+    throw new LeaveError("A late-entry / early-leave application covers ONE date — apply per day (D-#361)");
+  }
+  const partialPeriodCount = dayPart === "full" ? null : input.partialPeriodCount ?? 0;
+  if (partialPeriodCount !== null && partialPeriodCount < 1) {
+    throw new LeaveError("Choose how many periods the partial-day leave covers (D-#361)");
+  }
+  // 3 partial days = 1 day of balance, so one partial day costs exactly 1/3 whatever
+  // its period count (owner ruling, D-#361).
+  const days = dayPart === "full" ? spanDays : PARTIAL_DAY_FRACTION;
 
   const staff = await StaffProfile.findById(input.staffProfileId).select("active").lean();
   if (!staff || !staff.active) throw new LeaveError("Staff profile not found");
 
   const academicYearId = await resolveAcademicYearId(input.fromKey);
+  const partialPeriods =
+    dayPart === "full"
+      ? []
+      : await resolvePartialPeriods(input.staffProfileId, input.fromKey, dayPart, partialPeriodCount!);
 
   const application = await StaffLeaveApplication.create({
     staffProfileId: new Types.ObjectId(input.staffProfileId),
@@ -92,6 +123,9 @@ export async function applyForLeave(input: ApplyLeaveInput): Promise<IStaffLeave
     leaveType: input.leaveType,
     fromKey: input.fromKey,
     toKey: input.toKey,
+    dayPart,
+    partialPeriodCount,
+    partialPeriods,
     days,
     reason: input.reason.trim(),
     status: "applied",
@@ -106,7 +140,15 @@ export async function applyForLeave(input: ApplyLeaveInput): Promise<IStaffLeave
     actorId: input.actorId,
     targetId: application._id,
     targetKind: "StaffLeaveApplication",
-    meta: { staffProfileId: input.staffProfileId, leaveType: input.leaveType, fromKey: input.fromKey, toKey: input.toKey, days },
+    meta: {
+      staffProfileId: input.staffProfileId,
+      leaveType: input.leaveType,
+      fromKey: input.fromKey,
+      toKey: input.toKey,
+      days,
+      dayPart,
+      partialPeriods,
+    },
   });
   return application;
 }
@@ -202,6 +244,8 @@ export interface ApprovedLeaveWindow {
   staffProfileId: string;
   fromKey: string;
   toKey: string;
+  /** D-#361; absent on pre-D-#361 rows, which are all full-day. */
+  dayPart?: LeaveDayPart;
 }
 
 /** Approved leave windows overlapping [fromKey, toKey] for a set of staff — loaded
@@ -218,20 +262,31 @@ export async function loadApprovedLeaves(
     fromKey: { $lte: toKey },
     toKey: { $gte: fromKey },
   })
-    .select("staffProfileId fromKey toKey")
+    .select("staffProfileId fromKey toKey dayPart")
     .lean();
   return rows.map((r) => ({
     staffProfileId: r.staffProfileId.toString(),
     fromKey: r.fromKey,
     toKey: r.toKey,
+    dayPart: r.dayPart,
   }));
 }
 
-/** Pure: does an approved leave cover this staff member on this date? */
+/** Pure: does an approved FULL-DAY leave cover this staff member on this date?
+ *
+ *  A D-#361 partial day deliberately does NOT: the staff member was at school that
+ *  day, so their biometric row is a real presence record (and a ✘ against it is a real
+ *  full-day absence worth investigating, not something to silently relabel LEAVE). The
+ *  partial leave is visible on the leave screens and in the cover slots instead. */
 export function staffLeaveCovers(
   leaves: ApprovedLeaveWindow[],
   staffProfileId: string,
   dateKey: string,
 ): boolean {
-  return leaves.some((l) => l.staffProfileId === staffProfileId && rangeCovers(l.fromKey, l.toKey, dateKey));
+  return leaves.some(
+    (l) =>
+      l.staffProfileId === staffProfileId &&
+      (l.dayPart ?? "full") === "full" &&
+      rangeCovers(l.fromKey, l.toKey, dateKey),
+  );
 }

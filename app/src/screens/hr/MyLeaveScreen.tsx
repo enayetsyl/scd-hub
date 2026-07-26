@@ -9,7 +9,7 @@
 import React from "react";
 import { View } from "react-native";
 import { useQuery, useMutation } from "urql";
-import { LEAVE_TYPES } from "@scd/shared";
+import { LEAVE_TYPES, LEAVE_DAY_PARTS } from "@scd/shared";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
   ACADEMIC_YEARS_QUERY,
@@ -37,7 +37,7 @@ import {
   ErrorBanner,
   Notice,
 } from "../../components/ui";
-import { STR, bnNum, leaveTypeLabel, leaveStatusLabel } from "../../lib/labels";
+import { STR, bnNum, leaveTypeLabel, leaveStatusLabel, leaveDayPartLabel, leavePartialSummary } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { DateField } from "../../components/DateField";
@@ -46,6 +46,10 @@ import { space } from "../../theme/tokens";
 type Props = NativeStackScreenProps<HrStackParamList, "MyLeave">;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The longest school day is 8 periods (PeriodGrid class_1_5, D-#57); the server
+ *  clamps a bigger count down to the staff member's own last teaching period. */
+const MAX_PARTIAL_PERIODS = 8;
 
 function statusTone(s: string): "info" | "ok" | "danger" | "muted" {
   return s === "approved" ? "ok" : s === "rejected" ? "danger" : s === "cancelled" ? "muted" : "info";
@@ -60,6 +64,8 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
   const [leaveType, setLeaveType] = React.useState<string | null>(null);
   const [fromKey, setFromKey] = React.useState("");
   const [toKey, setToKey] = React.useState("");
+  const [dayPart, setDayPart] = React.useState<string>("full");
+  const [periodCount, setPeriodCount] = React.useState<string | null>(null);
   const [reason, setReason] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -82,14 +88,38 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
   const applications = leaveQ.data?.myStaffLeave ?? [];
   const balances = balQ.data?.myStaffLeaveBalances ?? [];
 
-  const formValid = leaveType && ISO_DATE.test(fromKey) && ISO_DATE.test(toKey) && reason.trim() !== "";
+  // A partial day (D-#361) is single-date only, so the day-part control appears only
+  // once both dates are set and equal — and any date edit that breaks that resets it,
+  // so a multi-day application can never carry a stale "early leave" into submit.
+  const sameDay = ISO_DATE.test(fromKey) && fromKey === toKey;
+  React.useEffect(() => {
+    if (!sameDay && dayPart !== "full") {
+      setDayPart("full");
+      setPeriodCount(null);
+    }
+  }, [sameDay, dayPart]);
+
+  const isPartial = dayPart !== "full";
+  const formValid =
+    leaveType &&
+    ISO_DATE.test(fromKey) &&
+    ISO_DATE.test(toKey) &&
+    reason.trim() !== "" &&
+    (!isPartial || (sameDay && periodCount !== null));
 
   async function submit(): Promise<void> {
     if (!formValid) return;
     setBusy(true);
     setError(null);
     setOk(null);
-    const res = await applyLeave({ leaveType: leaveType!, fromKey, toKey, reason: reason.trim() });
+    const res = await applyLeave({
+      leaveType: leaveType!,
+      fromKey,
+      toKey,
+      reason: reason.trim(),
+      dayPart: isPartial ? dayPart : undefined,
+      partialPeriodCount: isPartial ? parseInt(periodCount!, 10) : undefined,
+    });
     setBusy(false);
     if (res.error || !res.data?.applyForStaffLeave) {
       setError(friendlyError(res.error));
@@ -99,6 +129,8 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
     setLeaveType(null);
     setFromKey("");
     setToKey("");
+    setDayPart("full");
+    setPeriodCount(null);
     setReason("");
     refetchLeave({ requestPolicy: "network-only" });
     refetchBal({ requestPolicy: "network-only" });
@@ -169,6 +201,33 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
         />
         <DateField label={STR.hrLeaveFrom} value={fromKey} onChange={setFromKey} helper={STR.hrDateHint} />
         <DateField label={STR.hrLeaveTo} value={toKey} onChange={setToKey} min={fromKey || undefined} helper={STR.hrDateHint} />
+        {sameDay ? (
+          <>
+            <Select
+              label={STR.hrLeaveDayPart}
+              value={dayPart}
+              options={LEAVE_DAY_PARTS.map((p) => ({ label: leaveDayPartLabel(p), value: p }))}
+              onChange={(v) => setDayPart(v ?? "full")}
+              placeholder={STR.hrLeaveDayPart}
+            />
+            {isPartial ? (
+              <>
+                <Select
+                  label={STR.hrLeavePartialPeriods}
+                  value={periodCount}
+                  options={Array.from({ length: MAX_PARTIAL_PERIODS }, (_, i) => ({
+                    label: `${bnNum(i + 1)} ${STR.hrLeavePeriodShort}`,
+                    value: String(i + 1),
+                  }))}
+                  onChange={setPeriodCount}
+                  placeholder={STR.hrLeavePartialPeriods}
+                />
+                <Muted>{STR.hrLeavePartialHint}</Muted>
+                <Muted>{STR.hrLeavePartialThird}</Muted>
+              </>
+            ) : null}
+          </>
+        ) : null}
         <Field
           label={STR.hrLeaveReason}
           value={reason}
@@ -198,6 +257,9 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
             <Muted>
               {fmtDate(a.fromKey)} – {fmtDate(a.toKey)} · {bnNum(a.days)} {STR.hrLeaveDays}
             </Muted>
+            {leavePartialSummary(a.dayPart, a.partialPeriods) ? (
+              <Muted>{leavePartialSummary(a.dayPart, a.partialPeriods)}</Muted>
+            ) : null}
             <Muted>{a.reason}</Muted>
             {a.status === "approved" && a.paidDays != null ? (
               <Muted>

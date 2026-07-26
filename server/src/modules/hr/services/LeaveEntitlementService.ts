@@ -12,7 +12,7 @@ import { LEAVE_TYPES, LEAVE_TYPE_RULES, type LeaveType } from "@scd/shared";
 import { StaffLeaveEntitlement } from "../models/StaffLeaveEntitlement";
 import { StaffLeaveApplication } from "../models/StaffLeaveApplication";
 import { writeAudit } from "../../platform/services/AuditService";
-import { LeaveError } from "./dates";
+import { LeaveError, roundLeaveDays } from "./dates";
 
 // --- pure helpers ----------------------------------------------------------
 
@@ -107,6 +107,7 @@ export async function takenPaidDays(
   };
   if (excludeId) q._id = { $ne: new Types.ObjectId(excludeId) };
   const rows = await StaffLeaveApplication.find(q).select("paidDays days").lean();
+  // Summed EXACTLY (partial days are 1/3, D-#361) — rounded only where it is displayed.
   return rows.reduce((sum, r) => sum + (r.paidDays ?? r.days), 0);
 }
 
@@ -147,8 +148,9 @@ export async function balancesForStaff(
       balanceTracked: true,
       allowanceDays,
       carriedOverDays,
-      takenDays,
-      remainingDays: computeRemaining(allowanceDays, carriedOverDays, takenDays),
+      // The display edge for D-#361 fractions: three 1/3 days read as 1, not 0.99.
+      takenDays: roundLeaveDays(takenDays),
+      remainingDays: roundLeaveDays(computeRemaining(allowanceDays, carriedOverDays, takenDays)),
       encashableDays: rules.encashable ? carriedOverDays : 0,
     });
   }
