@@ -120,6 +120,34 @@ across, `printRequestId` back-filled).
 - **PQ5.2** Existing `ClassTest` rows migrate with status carried across; no print job is lost.
 - **PQ5.3** `markDelivered` emits `PRINT_DELIVERED` to `requestedBy` (best-effort; never blocks the mutation).
 
+### PQ-6 — Reprint history *(**D-#362**, owner ask; additive to PQ-3/PQ-4)*
+- **PQ6.1** A screen lists **already-printed** jobs — `PRINTED` + `DELIVERED` only (a cancelled or
+  still-queued job is not history) — so a document that was printed before is never sent to the Office
+  a second time as a fresh upload.
+- **PQ6.2** Rows are **one per document**: repeats of the same source for the same class × subject ×
+  purpose collapse into a single row carrying `printCount`, `firstPrintedAt`, `lastPrintedAt` and the
+  distinct requesters. The source identity is the set / artifact id, the sorted upload file-id list, or
+  the link URL. Class/subject/purpose are part of the key deliberately — the same sheet printed for
+  class 3 and class 4 stays two rows, because those are the axes the list is browsed by.
+- **PQ6.3** Ordering is **class level → subject → purpose → newest print**, with filter chips on the
+  same three axes; a job with no class sorts last. Purpose order follows `PRINT_PURPOSES`
+  (classwork, homework, assignment, class test, lesson plan, other).
+- **PQ6.4** Scope is server-side: `roster:manage` sees every requester's prints; a teacher
+  (`tracker:write`) sees only their own — there is no argument that widens it.
+- **PQ6.5** **Reprint** clones the earlier job's source, colour/sides, copies and class/subject/purpose
+  into a new `REQUESTED` job for a **new use date** (`neededByKey` is required — a reprint is always for
+  a new day; copies may be overridden). The original's requester or the Office may reprint; the new job
+  belongs to whoever filed it. Audited as `PRINT_REQUEST_REPRINTED` with `fromPrintRequestId`, and the
+  queue's operators are notified exactly as for a fresh request.
+- **PQ6.6** A reprint **never re-links the class test**. `classTestId` is not copied: a `ClassTest`'s
+  `PRINTED` status is what makes it the official exam (CT-1), so a second print of the same paper must
+  not mirror another transition onto that record.
+- **PQ6.7** The upload "you may only attach files you uploaded" rule does **not** apply to a reprint —
+  the files were already accepted onto a printed job, and the Office reprints other people's jobs. The
+  source is still re-checked for **existence**, so a reprint can never open onto a 404.
+- **PQ6.8** The read scans a bounded window of recent printed jobs; hitting the bound is reported
+  (`scannedCapped`) and surfaced in the app rather than silently truncating the list.
+
 ## 6. Out of scope
 - **A `print:*` permission** — reuses `tracker:write` / `roster:manage` (D-#281).
 - **Teacher receipt confirmation** — the Office marks delivered; no acknowledge step.

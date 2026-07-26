@@ -32,6 +32,10 @@ export interface PrintRequestT {
   effectiveCopies: number | null;
   copiesPending: boolean;
   neededByKey: string | null;
+  /** D-#362: the job's own class/section — the reprint history groups and labels by it. */
+  classId: string | null;
+  classLevel: number | null;
+  sectionId: string | null;
   subject: string | null;
   notes: string | null;
   status: string;
@@ -47,7 +51,7 @@ const PRINT_REQUEST_FIELDS = `
   id title purpose sourceType setId contentArtifactId fileIds linkUrl
   files { id name mime }
   colour sides copies copiesMode copiesClassId copiesClassLevel effectiveCopies copiesPending
-  neededByKey subject notes status
+  neededByKey classId classLevel sectionId subject notes status
   requestedBy requesterName requestedAt printedAt deliveredAt cancelReason
 `;
 
@@ -127,6 +131,50 @@ export const PRINT_QUEUE_COUNTS = gql<{ printQueueCounts: { requested: number; p
 export const MARK_PRINT_REQUEST_DELIVERED = gql<{ markPrintRequestDelivered: PrintRequestT }, { id: string }>`
   mutation MarkPrintRequestDelivered($id: String!) {
     markPrintRequestDelivered(id: $id) { ${PRINT_REQUEST_FIELDS} }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// D-#362 — reprint history: find what was already printed, send it again
+// ---------------------------------------------------------------------------
+
+export interface PrintHistoryRowT {
+  key: string;
+  /** The most recent print of this document — what a reprint clones. */
+  latest: PrintRequestT;
+  printCount: number;
+  lastPrintedAt: string;
+  firstPrintedAt: string;
+  requesterNames: string[];
+}
+
+/** Already-printed jobs, ONE ROW PER DOCUMENT, ordered class → subject → purpose →
+ *  newest print. The Office sees everyone's; a teacher sees only their own (server-side
+ *  scope — there is no argument to widen it). */
+export const PRINT_HISTORY_QUERY = gql<
+  { printHistory: { rows: PrintHistoryRowT[]; scannedCapped: boolean } },
+  { classId?: string | null; subject?: string | null; purpose?: string | null; limit?: number | null }
+>`
+  query PrintHistory($classId: String, $subject: String, $purpose: String, $limit: Int) {
+    printHistory(classId: $classId, subject: $subject, purpose: $purpose, limit: $limit) {
+      scannedCapped
+      rows {
+        key printCount lastPrintedAt firstPrintedAt requesterNames
+        latest { ${PRINT_REQUEST_FIELDS} }
+      }
+    }
+  }
+`;
+
+/** Re-queue an already-printed job — same source, no re-upload — for a new use date. */
+export const REPRINT_PRINT_REQUEST = gql<
+  { reprintPrintRequest: PrintRequestT },
+  { id: string; neededByKey: string; copies?: number | null; notes?: string | null }
+>`
+  mutation ReprintPrintRequest($id: String!, $neededByKey: String!, $copies: Int, $notes: String) {
+    reprintPrintRequest(id: $id, neededByKey: $neededByKey, copies: $copies, notes: $notes) {
+      ${PRINT_REQUEST_FIELDS}
+    }
   }
 `;
 
