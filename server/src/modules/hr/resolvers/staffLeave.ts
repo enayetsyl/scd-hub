@@ -347,6 +347,17 @@ builder.queryField("staffLeaveApplications", (t) =>
   }),
 );
 
+builder.queryField("staffLeavePendingCount", (t) =>
+  t.field({
+    type: "Int",
+    description:
+      "How many leave applications are awaiting approval (status 'applied') — the Staff drawer badge " +
+      "(owner 2026-07-26). Requires leave:manage.",
+    authScopes: { hasPermission: "leave:manage" },
+    resolve: async () => StaffLeaveApplication.countDocuments({ status: "applied" }),
+  }),
+);
+
 builder.queryField("staffLeaveBalances", (t) =>
   t.field({
     type: [StaffLeaveBalanceRef],

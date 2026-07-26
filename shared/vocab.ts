@@ -1054,6 +1054,9 @@ export const NOTIFICATION_KINDS = [
   // the exam's requesting teacher (approve/publish released the results to guardians).
   "CT_RESULT_SUBMITTED",
   "CT_RESULT_PUBLISHED",
+  // Staff leave (owner 2026-07-26): a teacher submitted a leave application →
+  // every approver (active Principal/Office). App-native, no wire twin.
+  "STAFF_LEAVE_SUBMITTED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1088,6 +1091,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   CT_QUESTION_OFFICE: "প্রশ্ন তৈরির অনুরোধ",
   CT_RESULT_SUBMITTED: "ফলাফল অনুমোদনের অপেক্ষায়",
   CT_RESULT_PUBLISHED: "ক্লাস টেস্টের ফলাফল প্রকাশিত",
+  STAFF_LEAVE_SUBMITTED: "ছুটির আবেদন অনুমোদনের অপেক্ষায়",
   PRINT_DELIVERED: "প্রিন্ট ডেলিভারি হয়েছে",
   PRINT_REQUESTED: "নতুন প্রিন্ট অনুরোধ",
 };
@@ -1122,6 +1126,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   CT_QUESTION_OFFICE: "Question request update",
   CT_RESULT_SUBMITTED: "Class-test results submitted",
   CT_RESULT_PUBLISHED: "Class-test results published",
+  STAFF_LEAVE_SUBMITTED: "Leave application awaiting approval",
   PRINT_DELIVERED: "Print job delivered",
   PRINT_REQUESTED: "New print request",
 };

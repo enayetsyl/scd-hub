@@ -22,6 +22,7 @@ import {
   LEAVE_TYPES,
   LEAVE_TYPE_RULES,
   LEAVE_DAY_PARTS,
+  LEAVE_TYPE_LABELS_BN,
   PARTIAL_DAY_FRACTION,
   type LeaveType,
   type LeaveDayPart,
@@ -34,6 +35,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { countLeaveDays, parseDateKey, rangeCovers, roundLeaveDays, LeaveError } from "./dates";
 import { computeRemaining, takenPaidDays } from "./LeaveEntitlementService";
 import { fanOutCoverSlots, revokeCoversForLeave, resolvePartialPeriods } from "./CoverService";
+import { emitStaffLeaveSubmitted } from "../../notifications/services/emitters";
 
 // --- pure split math -------------------------------------------------------
 
@@ -108,7 +110,7 @@ export async function applyForLeave(input: ApplyLeaveInput): Promise<IStaffLeave
   // its period count (owner ruling, D-#361).
   const days = dayPart === "full" ? spanDays : PARTIAL_DAY_FRACTION;
 
-  const staff = await StaffProfile.findById(input.staffProfileId).select("active").lean();
+  const staff = await StaffProfile.findById(input.staffProfileId).select("active name nameBn").lean();
   if (!staff || !staff.active) throw new LeaveError("Staff profile not found");
 
   const academicYearId = await resolveAcademicYearId(input.fromKey);
@@ -150,6 +152,17 @@ export async function applyForLeave(input: ApplyLeaveInput): Promise<IStaffLeave
       partialPeriods,
     },
   });
+
+  // Notify every approver (active Principal/Office) — owner 2026-07-26. Best-effort;
+  // a notification problem never blocks the application.
+  const staffName = staff.nameBn || staff.name || "";
+  const span = input.fromKey === input.toKey ? input.fromKey : `${input.fromKey} – ${input.toKey}`;
+  await emitStaffLeaveSubmitted({
+    leaveApplicationId: application._id.toString(),
+    titleBn: "নতুন ছুটির আবেদন",
+    bodyBn: `${staffName} — ${LEAVE_TYPE_LABELS_BN[input.leaveType]} (${span})`,
+  });
+
   return application;
 }
 
