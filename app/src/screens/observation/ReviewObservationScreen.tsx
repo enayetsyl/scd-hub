@@ -3,7 +3,11 @@
  * observer) — the assigned observer scores + comments. The row's `form` decides the
  * payload:
  *   REF-11: 5 domain levels (1–4) + notes, 2 gate results (PASS/BREACH) + breach notes,
- *           one strength, a growth focus, optional prior-focus-progress.
+ *           one strength, a growth focus, and — ONLY when the teacher has an earlier
+ *           observation (CO-10, D-#363) — the carry-forward pair: prior-focus progress
+ *           plus a free-text note on how it moved. The prior focus itself is quoted in
+ *           a card above the form (`observationPriorFocusContext`), so the observer is
+ *           never asked to recall it across a sitting of several teachers.
  *   QURAN (ClassEcho): 8 ratings (1–5) + 7 yes/no compliance items + strengths /
  *           improvements / suggestions.
  * reviewClassroomObservation → REVIEWED, released to the observed teacher (no Principal
@@ -24,9 +28,13 @@ import {
   QURAN_REVIEW_CRITERIA,
   QURAN_COMPLIANCE_ITEMS,
 } from "@scd/shared";
-import { REVIEW_CLASSROOM_OBSERVATION, OBSERVATION_RECORDING_QUERY } from "../../graphql/observation";
+import {
+  REVIEW_CLASSROOM_OBSERVATION,
+  OBSERVATION_RECORDING_QUERY,
+  OBSERVATION_PRIOR_FOCUS_CONTEXT_QUERY,
+} from "../../graphql/observation";
 import { YouTubeEmbed } from "../../components/YouTubeEmbed";
-import { Screen, Card, Body, Muted, Button, Field, Select, Chip, Notice } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge, Field, Select, Chip, Notice } from "../../components/ui";
 import {
   STR,
   obsDomainLabel,
@@ -36,6 +44,7 @@ import {
   obsGrowthProgressLabel,
   obsQuranCriterionLabel,
   obsQuranComplianceLabel,
+  hwSubjectLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -61,6 +70,7 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
   const [oneStrength, setOneStrength] = useState("");
   const [growthFocus, setGrowthFocus] = useState("");
   const [priorFocusProgress, setPriorFocusProgress] = useState<string | null>(null);
+  const [priorFocusNote, setPriorFocusNote] = useState("");
 
   // Quran state
   const [quranScores, setQuranScores] = useState<Record<string, string | null>>({});
@@ -77,6 +87,16 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
 
   const [recQ] = useQuery({ query: OBSERVATION_RECORDING_QUERY, variables: { observationId } });
   const recording = recQ.data?.observationRecording ?? null;
+
+  // CO-10 (D-#363): the growth focus this review carries forward. Null for a first-ever
+  // observation — and then the carry-forward fields are not rendered at all, rather than
+  // asking the observer to judge progress against nothing. Quran rows never have one.
+  const [priorQ] = useQuery({
+    query: OBSERVATION_PRIOR_FOCUS_CONTEXT_QUERY,
+    variables: { observationId },
+    pause: isQuran,
+  });
+  const prior = priorQ.data?.observationPriorFocusContext ?? null;
 
   async function onSubmit(): Promise<void> {
     setError(null);
@@ -128,7 +148,10 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
         gates,
         oneStrength: oneStrength.trim(),
         growthFocus: growthFocus.trim(),
-        priorFocusProgress: priorFocusProgress ?? null,
+        // Carry-forward is only meaningful against a prior focus (CO-10) — with no
+        // prior the fields are hidden, so never send stale state.
+        priorFocusProgress: prior ? priorFocusProgress ?? null : null,
+        priorFocusNote: prior ? priorFocusNote.trim() || null : null,
       });
     }
     setBusy(false);
@@ -194,6 +217,37 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
           </>
         ) : (
           <>
+            {/* CO-10 (D-#363): the prior growth focus, quoted — the observer answers the
+                progress question from the screen, not from memory. */}
+            {prior ? (
+              <Card>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <Body style={{ fontWeight: "700", flexShrink: 1 }}>{STR.obsPriorFocusCard}</Body>
+                  {prior.isReReview ? (
+                    <Badge text={STR.obsPriorFocusReReview} tone="brand" />
+                  ) : !prior.sameSubject ? (
+                    <Badge text={STR.obsPriorFocusOtherSubject} tone="muted" />
+                  ) : null}
+                </View>
+                <Muted style={{ marginTop: space(1) }}>
+                  {new Date(prior.classDate).toLocaleDateString()} · {hwSubjectLabel(prior.subject)}
+                </Muted>
+                {prior.growthFocus ? (
+                  <Body style={{ marginTop: space(2), fontStyle: "italic" }}>“{prior.growthFocus}”</Body>
+                ) : null}
+                {prior.oneStrength ? (
+                  <Muted style={{ marginTop: space(1) }}>
+                    {STR.obsOneStrength}: {prior.oneStrength}
+                  </Muted>
+                ) : null}
+                {prior.priorFocusProgress ? (
+                  <Muted style={{ marginTop: space(1) }}>
+                    {STR.obsPriorFocusPrevVerdict}: {obsGrowthProgressLabel(prior.priorFocusProgress)}
+                  </Muted>
+                ) : null}
+              </Card>
+            ) : null}
+
             <Card>
               <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsDomainScores}</Body>
               {(OBSERVATION_DOMAINS as readonly string[]).map((d) => (
@@ -237,13 +291,27 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
             <Card>
               <Field label={STR.obsOneStrength} value={oneStrength} onChangeText={setOneStrength} multiline />
               <Field label={STR.obsGrowthFocus} value={growthFocus} onChangeText={setGrowthFocus} multiline />
-              <Select
-                label={STR.obsPriorFocusProgress}
-                value={priorFocusProgress}
-                options={GROWTH_OPTS}
-                onChange={setPriorFocusProgress}
-                placeholder={STR.obsPriorFocusProgress}
-              />
+              {/* No prior focus ⇒ no progress question. Rendering the select anyway (as
+                  it did before CO-10) invites an answer that means nothing. */}
+              {prior ? (
+                <>
+                  <Select
+                    label={STR.obsPriorFocusProgress}
+                    value={priorFocusProgress}
+                    options={GROWTH_OPTS}
+                    onChange={setPriorFocusProgress}
+                    placeholder={STR.obsPriorFocusProgress}
+                  />
+                  <Field
+                    label={STR.obsPriorFocusNote}
+                    value={priorFocusNote}
+                    onChangeText={setPriorFocusNote}
+                    multiline
+                  />
+                </>
+              ) : (
+                <Muted style={{ marginTop: space(1) }}>{STR.obsPriorFocusNone}</Muted>
+              )}
             </Card>
           </>
         )}

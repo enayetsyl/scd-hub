@@ -41,6 +41,11 @@ export default function ObservationHomeScreen(): React.ReactElement {
             {canReview ? (
               <Button title={STR.obsReviewQueueNav} variant="secondary" onPress={() => nav.navigate("ObservationReviewQueue")} />
             ) : null}
+            {/* CO-11 (D-#363): the reviews they have already completed — the queue only
+                ever shows the open ones. */}
+            {canReview ? (
+              <Button title={STR.obsMyReviewsNav} variant="secondary" onPress={() => nav.navigate("MyReviewHistory")} />
+            ) : null}
             {canRead ? (
               <Button title={STR.obsTrendNav} variant="secondary" onPress={() => nav.navigate("ObservationTrend")} />
             ) : null}

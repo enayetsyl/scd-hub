@@ -32,6 +32,15 @@ export default function ObservationReviewQueueScreen(): React.ReactElement {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
+        {/* The queue holds only what is still OPEN; completed reviews live in the
+            history (CO-11, D-#363). */}
+        <Card>
+          <Button
+            title={STR.obsMyReviewsNav}
+            variant="secondary"
+            onPress={() => nav.navigate("MyReviewHistory")}
+          />
+        </Card>
         <QueryGate
           results={[q, teachersQ]}
           onRetry={() => {

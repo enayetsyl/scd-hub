@@ -65,6 +65,8 @@ export interface ClassroomObservationT {
   growthFocus: string | null;
   prevObservationId: string | null;
   priorFocusProgress: string | null;
+  /** CO-10 (D-#363): how the prior focus moved, in the observer's own words. */
+  priorFocusNote: string | null;
   quran: ObsQuranPayloadT | null;
   recordingId: string | null;
   hasFairnessRating: boolean;
@@ -77,7 +79,7 @@ export interface ClassroomObservationT {
 }
 
 const QURAN_PAYLOAD_FIELDS = `quran { ratings { criterion score note } compliance { item yesNo } strengths improvements suggestions }`;
-const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt publishedAt publishedBy domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
+const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt publishedAt publishedBy domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress priorFocusNote ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
 
 export const CLASSROOM_OBSERVATION_QUERY = gql<
   { classroomObservation: ClassroomObservationT | null },
@@ -110,6 +112,8 @@ export interface ObservationFilterVars {
   state?: string | null;
   form?: string | null;
   subject?: string | null;
+  /** CO-11 (D-#363): the class/section anchor. */
+  sectionId?: string | null;
   /** D-#324: CO-8 publish gate — true=published, false=unpublished, null=either. */
   published?: boolean | null;
   dateFrom?: string | null;
@@ -118,6 +122,10 @@ export interface ObservationFilterVars {
   limit?: number | null;
   offset?: number | null;
 }
+/** The observer's own history takes the SAME filters minus `observerId` — the server
+ *  forces that to the caller (CO-11), so the app never sends it. */
+export type MyReviewFilterVars = Omit<ObservationFilterVars, "observerId">;
+
 export interface ClassroomObservationPageT {
   items: ClassroomObservationT[];
   total: number;
@@ -130,17 +138,66 @@ export const ALL_CLASSROOM_OBSERVATIONS_QUERY = gql<
 >`
   query AllClassroomObservations(
     $teacherId: String, $observerId: String, $state: String, $form: String,
-    $subject: String, $published: Boolean, $dateFrom: String, $dateTo: String, $search: String,
-    $limit: Int, $offset: Int
+    $subject: String, $sectionId: String, $published: Boolean, $dateFrom: String, $dateTo: String,
+    $search: String, $limit: Int, $offset: Int
   ) {
     allClassroomObservations(
       teacherId: $teacherId, observerId: $observerId, state: $state, form: $form,
-      subject: $subject, published: $published, dateFrom: $dateFrom, dateTo: $dateTo, search: $search,
+      subject: $subject, sectionId: $sectionId, published: $published, dateFrom: $dateFrom,
+      dateTo: $dateTo, search: $search, limit: $limit, offset: $offset
+    ) {
+      items { ${OBSERVATION_FIELDS} }
+      total
+      hasMore
+    }
+  }
+`;
+
+/** CO-11 (D-#363) — the signed-in observer's OWN review history (every row they were
+ *  assigned, not just the open ones). No `observerId` variable by design. */
+export const MY_OBSERVATION_REVIEWS_QUERY = gql<
+  { myObservationReviews: ClassroomObservationPageT },
+  MyReviewFilterVars
+>`
+  query MyObservationReviews(
+    $teacherId: String, $state: String, $form: String, $subject: String, $sectionId: String,
+    $published: Boolean, $dateFrom: String, $dateTo: String, $search: String,
+    $limit: Int, $offset: Int
+  ) {
+    myObservationReviews(
+      teacherId: $teacherId, state: $state, form: $form, subject: $subject, sectionId: $sectionId,
+      published: $published, dateFrom: $dateFrom, dateTo: $dateTo, search: $search,
       limit: $limit, offset: $offset
     ) {
       items { ${OBSERVATION_FIELDS} }
       total
       hasMore
+    }
+  }
+`;
+
+/** CO-10 (D-#363) — the narrow prior-focus slice the review form carries forward.
+ *  Deliberately carries no scores, no teacher response and no observer identity. */
+export interface ObservationPriorFocusContextT {
+  observationId: string;
+  classDate: string;
+  subject: string;
+  form: string;
+  growthFocus: string | null;
+  oneStrength: string | null;
+  priorFocusProgress: string | null;
+  sameSubject: boolean;
+  isReReview: boolean;
+}
+
+export const OBSERVATION_PRIOR_FOCUS_CONTEXT_QUERY = gql<
+  { observationPriorFocusContext: ObservationPriorFocusContextT | null },
+  { observationId: string }
+>`
+  query ObservationPriorFocusContext($observationId: String!) {
+    observationPriorFocusContext(observationId: $observationId) {
+      observationId classDate subject form growthFocus oneStrength priorFocusProgress
+      sameSubject isReReview
     }
   }
 `;
@@ -209,18 +266,19 @@ export const REVIEW_CLASSROOM_OBSERVATION = gql<
     oneStrength?: string | null;
     growthFocus?: string | null;
     priorFocusProgress?: string | null;
+    priorFocusNote?: string | null;
     quran?: QuranReviewInput | null;
   }
 >`
   mutation ReviewClassroomObservation(
     $observationId: String!, $domains: [Ref11DomainInput!], $gates: [Ref11GateInput!],
     $oneStrength: String, $growthFocus: String, $priorFocusProgress: String,
-    $quran: QuranReviewInput
+    $priorFocusNote: String, $quran: QuranReviewInput
   ) {
     reviewClassroomObservation(
       observationId: $observationId, domains: $domains, gates: $gates,
       oneStrength: $oneStrength, growthFocus: $growthFocus, priorFocusProgress: $priorFocusProgress,
-      quran: $quran
+      priorFocusNote: $priorFocusNote, quran: $quran
     ) { ${OBSERVATION_FIELDS} }
   }
 `;
