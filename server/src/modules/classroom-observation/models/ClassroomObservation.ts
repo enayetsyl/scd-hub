@@ -118,6 +118,9 @@ export interface IClassroomObservation extends Document {
   /** A re-review's link back to the superseded observation (carry-forward, §4). */
   prevObservationId?: Types.ObjectId | null;
   priorFocusProgress?: GrowthProgress | null;
+  /** CO-10 (D-#363): free text on HOW the prior focus moved — the enum alone cannot
+   *  say that. REF-11 only, optional; null when the observer leaves it blank. */
+  priorFocusNote?: string | null;
   // --- Quran (ClassEcho) payload (CO-5; set at REVIEW on a QURAN-form row, else
   //     unset). A REF-11 observation leaves this null and vice-versa. -------------
   quran?: IQuranPayload | null;
@@ -204,6 +207,7 @@ const ClassroomObservationSchema = new Schema<IClassroomObservation>(
     growthFocus: { type: String, trim: true, default: null },
     prevObservationId: { type: Schema.Types.ObjectId, ref: "ClassroomObservation", default: null },
     priorFocusProgress: { type: String, enum: GROWTH_PROGRESS, default: null },
+    priorFocusNote: { type: String, trim: true, default: null },
     quran: { type: QuranPayloadSchema, default: null },
     fairnessRating: { type: Number, min: 1, max: 5, default: null },
     usefulnessRating: { type: Number, min: 1, max: 5, default: null },

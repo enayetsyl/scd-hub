@@ -12,7 +12,13 @@
  *   - reads (`classroomObservation` / `teacherClassroomObservations`): `observation:read`,
  *     ROW-SCOPED via the pure `canReadObservation` predicate (observer own; observed
  *     teacher own at/after REVIEWED; Principal/Office all). `myObservationReviewQueue`
- *     is the observer's own ASSIGNED queue (`observation:review`).
+ *     is the observer's own ASSIGNED queue (`observation:review`); `myObservationReviews`
+ *     (CO-11, D-#363) is their own FULL history — same filter engine as the oversight
+ *     read with `observerId` forced to the caller, so there is no peer path.
+ *   - `observationPriorFocusContext` (CO-10, D-#363): `observation:read` + a SECOND gate
+ *     (`canReadPriorContext` — the row's assigned observer, or a manager). It is the one
+ *     read that shows a slice of ANOTHER observer's row, so the returned field set is
+ *     itself the visibility rule — see `PriorFocusContextRef` below.
  *
  * Staff-internal — GUARDIAN holds no observation:* permission (§7). Identity plane
  * (names teacherId/observerId); no corpus path (ADR-005).
@@ -32,11 +38,15 @@ import {
   observationsForTeacher,
   observationsForRecording,
   allObservationsPaged,
+  observerReviewsPaged,
   myReviewQueue,
   canReadObservation,
+  priorObservationContext,
+  canReadPriorContext,
   type ObservationActor,
   type ClassroomObservationShape,
   type ObservationPageShape,
+  type PriorFocusContextShape,
 } from "../services/ClassroomObservationService";
 import {
   getEscalationConfig,
@@ -140,6 +150,7 @@ ObservationRef.implement({
     growthFocus: t.string({ nullable: true, resolve: (r) => r.growthFocus }),
     prevObservationId: t.string({ nullable: true, resolve: (r) => r.prevObservationId }),
     priorFocusProgress: t.string({ nullable: true, resolve: (r) => r.priorFocusProgress }),
+    priorFocusNote: t.string({ nullable: true, resolve: (r) => r.priorFocusNote }),
     quran: t.field({ type: QuranPayloadRef, nullable: true, resolve: (r) => r.quran }),
     // CO-7 privacy: the actual scores are visible only to observation:manage (Principal/Office) so the
     // rated OBSERVER never sees their per-observation fairness score. hasFairnessRating is a safe
@@ -165,6 +176,30 @@ ObservationRef.implement({
     supersededById: t.string({ nullable: true, resolve: (r) => r.supersededById }),
     createdAt: t.exposeString("createdAt"),
     updatedAt: t.exposeString("updatedAt"),
+  }),
+});
+
+// --- CO-10 prior-focus carry-forward slice (D-#363) -----------------------------
+// This type IS the visibility decision: it is the exact set of fields an observer may
+// see of ANOTHER observer's row. No domains, no gates, no teacher response, no fairness
+// rating, and no observerId — peer scores and peer identity stay private (D-#28).
+// Adding a field here widens a decided rule; do not, without a new ADR row.
+const PriorFocusContextRef = builder.objectRef<PriorFocusContextShape>("ObservationPriorFocusContext");
+PriorFocusContextRef.implement({
+  description:
+    "The prior observation whose growth focus this review carries forward (CO-10, D-#363) — a NARROW slice: what " +
+    "focus was set, when, in which subject, and how the prior review judged its own predecessor. Deliberately " +
+    "carries NO scores, NO teacher response and NO observer identity.",
+  fields: (t) => ({
+    observationId: t.exposeString("observationId"),
+    classDate: t.exposeString("classDate"),
+    subject: t.exposeString("subject"),
+    form: t.exposeString("form"),
+    growthFocus: t.string({ nullable: true, resolve: (r) => r.growthFocus }),
+    oneStrength: t.string({ nullable: true, resolve: (r) => r.oneStrength }),
+    priorFocusProgress: t.string({ nullable: true, resolve: (r) => r.priorFocusProgress }),
+    sameSubject: t.exposeBoolean("sameSubject"),
+    isReReview: t.exposeBoolean("isReReview"),
   }),
 });
 
@@ -306,6 +341,7 @@ builder.mutationField("reviewClassroomObservation", (t) =>
       oneStrength: t.arg.string({ required: false }),
       growthFocus: t.arg.string({ required: false }),
       priorFocusProgress: t.arg.string({ required: false }),
+      priorFocusNote: t.arg.string({ required: false }),
       // Quran (ClassEcho) payload — provide ONLY for a QURAN-form observation (CO-5).
       quran: t.arg({ type: QuranPayloadInputType, required: false }),
     },
@@ -318,6 +354,7 @@ builder.mutationField("reviewClassroomObservation", (t) =>
         oneStrength: args.oneStrength ?? "",
         growthFocus: args.growthFocus ?? "",
         priorFocusProgress: args.priorFocusProgress ?? undefined,
+        priorFocusNote: args.priorFocusNote ?? undefined,
         quran: args.quran
           ? {
               ratings: args.quran.ratings.map((r) => ({ criterion: r.criterion, score: r.score, note: r.note ?? null })),
@@ -514,6 +551,31 @@ builder.queryField("teacherClassroomObservations", (t) =>
   }),
 );
 
+builder.queryField("observationPriorFocusContext", (t) =>
+  t.field({
+    type: PriorFocusContextRef,
+    nullable: true,
+    description:
+      "The prior growth focus this observation carries forward (CO-10, D-#363), so the observer answers the " +
+      "prior-focus question from the screen instead of memory. Resolves `prevObservationId` when set, else the " +
+      "newest settled REF-11 observation of the same teacher before this one, preferring the same subject; null " +
+      "for a first-ever observation or a QURAN row (which has no growth focus). Gated to the row's ASSIGNED " +
+      "OBSERVER or observation:manage — it exposes one narrow slice of another observer's row, so it is not open " +
+      "to the observed teacher. Requires observation:read.",
+    authScopes: { hasPermission: "observation:read" },
+    args: { observationId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      const obs = await getObservation(args.observationId);
+      if (!obs) return null;
+      if (!canReadPriorContext(actor, obs)) {
+        throw new ForbiddenError("Not permitted to read this observation's prior focus");
+      }
+      return priorObservationContext(args.observationId);
+    },
+  }),
+);
+
 builder.queryField("myObservationReviewQueue", (t) =>
   t.field({
     type: [ObservationRef],
@@ -533,7 +595,8 @@ builder.queryField("allClassroomObservations", (t) =>
     description:
       "All observations, newest first — Principal/Office oversight view, filtered + paginated (WS1). Filters " +
       "AND-combine; `search` matches the observed-teacher OR observer name. `published` true/false filters on the " +
-      "CO-8 publish gate (D-#324); omit for either. limit defaults 20 (max 100). Requires observation:upload.",
+      "CO-8 publish gate (D-#324); `sectionId` filters by class/section (CO-11, D-#363). omit for either. limit " +
+      "defaults 20 (max 100). Requires observation:upload.",
     authScopes: { hasPermission: "observation:upload" },
     args: {
       teacherId: t.arg.string({ required: false }),
@@ -541,6 +604,7 @@ builder.queryField("allClassroomObservations", (t) =>
       state: t.arg.string({ required: false }),
       form: t.arg.string({ required: false }),
       subject: t.arg.string({ required: false }),
+      sectionId: t.arg.string({ required: false }),
       published: t.arg.boolean({ required: false }),
       dateFrom: t.arg.string({ required: false }),
       dateTo: t.arg.string({ required: false }),
@@ -555,6 +619,7 @@ builder.queryField("allClassroomObservations", (t) =>
         state: args.state ?? undefined,
         form: args.form ?? undefined,
         subject: args.subject ?? undefined,
+        sectionId: args.sectionId ?? undefined,
         published: args.published ?? undefined,
         dateFrom: args.dateFrom ?? undefined,
         dateTo: args.dateTo ?? undefined,
@@ -562,6 +627,47 @@ builder.queryField("allClassroomObservations", (t) =>
         limit: args.limit ?? undefined,
         offset: args.offset ?? undefined,
       }),
+  }),
+);
+
+builder.queryField("myObservationReviews", (t) =>
+  t.field({
+    type: ObservationPageRef,
+    description:
+      "The signed-in observer's OWN review history (CO-11, D-#363) — every observation they were assigned, not just " +
+      "the open ones, filtered + paginated exactly like the oversight view. There is deliberately NO observerId " +
+      "argument: it is forced to the caller server-side, so this cannot be pointed at a peer's reviews. Requires " +
+      "observation:review.",
+    authScopes: { hasPermission: "observation:review" },
+    args: {
+      teacherId: t.arg.string({ required: false }),
+      state: t.arg.string({ required: false }),
+      form: t.arg.string({ required: false }),
+      subject: t.arg.string({ required: false }),
+      sectionId: t.arg.string({ required: false }),
+      published: t.arg.boolean({ required: false }),
+      dateFrom: t.arg.string({ required: false }),
+      dateTo: t.arg.string({ required: false }),
+      search: t.arg.string({ required: false }),
+      limit: t.arg.int({ required: false }),
+      offset: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return observerReviewsPaged(actor.userId, {
+        teacherId: args.teacherId ?? undefined,
+        state: args.state ?? undefined,
+        form: args.form ?? undefined,
+        subject: args.subject ?? undefined,
+        sectionId: args.sectionId ?? undefined,
+        published: args.published ?? undefined,
+        dateFrom: args.dateFrom ?? undefined,
+        dateTo: args.dateTo ?? undefined,
+        search: args.search ?? undefined,
+        limit: args.limit ?? undefined,
+        offset: args.offset ?? undefined,
+      });
+    },
   }),
 );
 

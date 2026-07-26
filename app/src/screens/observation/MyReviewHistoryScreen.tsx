@@ -1,18 +1,20 @@
 /**
- * AllObservationsScreen — Principal/Office oversight view of classroom observations,
- * newest first, with SERVER-SIDE filtering + pagination (WS1). The filter block itself
- * is the shared `ObservationFilters` (CO-11, D-#363) — name search (teacher/observer),
- * form, state, publish status, subject, CLASS/section, teacher, observer and a
- * class-date range — so this screen and the observer's own review history filter
- * identically. Page through the results (20/page); tapping a row opens
- * ObservationDetailScreen. Requires observation:upload permission.
+ * MyReviewHistoryScreen (CO-11, D-#363, observation:review) — an observer's OWN past
+ * reviews. Before this, `myObservationReviewQueue` was their only surface and it returns
+ * ASSIGNED rows only, so a review vanished from their view the moment they submitted it:
+ * no way to re-watch a session they reviewed or re-read what they wrote.
+ *
+ * Same filter block and paging as the Principal/Office oversight view (the shared
+ * `ObservationFilters`), minus the observer picker — the server FORCES observerId to the
+ * caller on `myObservationReviews`, so there is nothing to choose. Rows open
+ * ObservationDetailScreen, which already embeds the session footage.
  */
 import React, { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
-import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { ALL_CLASSROOM_OBSERVATIONS_QUERY } from "../../graphql/observation";
+import { MY_OBSERVATION_REVIEWS_QUERY } from "../../graphql/observation";
 import { TEACHERS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -36,20 +38,11 @@ function stateTone(state: string): "ok" | "brand" | "muted" | "danger" {
   return "muted";
 }
 
-export default function AllObservationsScreen(): React.ReactElement {
+export default function MyReviewHistoryScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
-  // Deep-links (e.g. the admin-Today "awaiting publish" badge) may seed the
-  // state/published filters via route params; the user can clear them as usual.
-  const route = useRoute<RouteProp<ObservationStackParamList, "AllObservations">>();
-
-  const [filters, setFilters] = useState<ObservationFilterState>({
-    ...EMPTY_OBSERVATION_FILTERS,
-    state: route.params?.state ?? null,
-    published: route.params?.published ?? null,
-  });
+  const [filters, setFilters] = useState<ObservationFilterState>(EMPTY_OBSERVATION_FILTERS);
   const [page, setPage] = useState(0);
 
-  // Any filter change resets to the first page.
   function patch(p: Partial<ObservationFilterState>): void {
     setFilters((f) => ({ ...f, ...p }));
     setPage(0);
@@ -68,8 +61,9 @@ export default function AllObservationsScreen(): React.ReactElement {
   }, [teachers]);
   const teacherOptions = useMemo(() => teachers.map((t) => ({ label: t.name, value: t.id })), [teachers]);
 
+  // NOTE: no observerId variable — the server forces it to the caller (CO-11).
   const [obsQ, refetchObs] = useQuery({
-    query: ALL_CLASSROOM_OBSERVATIONS_QUERY,
+    query: MY_OBSERVATION_REVIEWS_QUERY,
     variables: {
       form: filters.form,
       state: filters.state,
@@ -77,7 +71,6 @@ export default function AllObservationsScreen(): React.ReactElement {
       sectionId: filters.sectionId,
       published: filters.published,
       teacherId: filters.teacherId,
-      observerId: filters.observerId,
       dateFrom: filters.dateFrom || null,
       dateTo: filters.dateTo || null,
       search: filters.search.trim() || null,
@@ -86,7 +79,7 @@ export default function AllObservationsScreen(): React.ReactElement {
     },
   });
 
-  const data = obsQ.data?.allClassroomObservations;
+  const data = obsQ.data?.myObservationReviews;
   const rows = data?.items ?? [];
   const total = data?.total ?? 0;
   const hasMore = data?.hasMore ?? false;
@@ -96,14 +89,19 @@ export default function AllObservationsScreen(): React.ReactElement {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.obsMyReviewsTitle}</Body>
+          <Muted style={{ marginTop: space(1) }}>{STR.obsMyReviewsHint}</Muted>
+        </Card>
+
         <ObservationFilters
           value={filters}
           onChange={patch}
           onClear={clearAll}
           teacherOptions={teacherOptions}
+          showObserver={false}
         />
 
-        {/* --- Result count + pagination ----------------------------------- */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: space(2) }}>
           <Muted>{`${bnNum(from)}–${bnNum(to)} / ${bnNum(total)}`}</Muted>
           <View style={{ flexDirection: "row", gap: space(2) }}>
@@ -112,7 +110,6 @@ export default function AllObservationsScreen(): React.ReactElement {
           </View>
         </View>
 
-        {/* --- Results ----------------------------------------------------- */}
         <QueryGate
           result={obsQ}
           onRetry={() => {
@@ -121,43 +118,41 @@ export default function AllObservationsScreen(): React.ReactElement {
           }}
           loaderLabel={STR.loading}
         >
-        {rows.length === 0 ? (
-          <Card>
-            <Muted>{STR.obsNoAllObservations}</Muted>
-          </Card>
-        ) : (
-          rows.map((o) => {
-            const teacherName = nameById[o.teacherId] ?? o.teacherId;
-            const reviewerName = o.observerId ? (nameById[o.observerId] ?? o.observerId) : "—";
-            const title = `${obsFormLabel(o.form)} · ${hwSubjectLabel(o.subject)}`;
-            return (
-              <Card key={o.id}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <View style={{ flexShrink: 1 }}>
-                    <Body style={{ fontWeight: "700" }}>{title}</Body>
-                    <Muted>{new Date(o.classDate).toLocaleDateString()}</Muted>
-                    <Muted>{STR.obsTeacher}: {teacherName}</Muted>
-                    <Muted>{STR.obsObserver}: {reviewerName}</Muted>
+          {rows.length === 0 ? (
+            <Card>
+              <Muted>{STR.obsNoMyReviews}</Muted>
+            </Card>
+          ) : (
+            rows.map((o) => {
+              const teacherName = nameById[o.teacherId] ?? o.teacherId;
+              const title = `${obsFormLabel(o.form)} · ${hwSubjectLabel(o.subject)}`;
+              return (
+                <Card key={o.id}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <View style={{ flexShrink: 1 }}>
+                      <Body style={{ fontWeight: "700" }}>{title}</Body>
+                      <Muted>{new Date(o.classDate).toLocaleDateString()}</Muted>
+                      <Muted>{STR.obsTeacher}: {teacherName}</Muted>
+                    </View>
+                    <View style={{ alignItems: "flex-end", gap: space(1) }}>
+                      <Badge text={obsStateLabel(o.state)} tone={stateTone(o.state)} />
+                      <Badge
+                        text={o.publishedAt ? STR.obsPublished : STR.obsUnpublished}
+                        tone={o.publishedAt ? "ok" : "muted"}
+                      />
+                    </View>
                   </View>
-                  <View style={{ alignItems: "flex-end", gap: space(1) }}>
-                    <Badge text={obsStateLabel(o.state)} tone={stateTone(o.state)} />
-                    <Badge
-                      text={o.publishedAt ? STR.obsPublished : STR.obsUnpublished}
-                      tone={o.publishedAt ? "ok" : "muted"}
+                  <View style={{ marginTop: space(2) }}>
+                    <Button
+                      title={STR.obsDetailTitle}
+                      variant="secondary"
+                      onPress={() => nav.navigate("ObservationDetail", { observationId: o.id, title })}
                     />
                   </View>
-                </View>
-                <View style={{ marginTop: space(2) }}>
-                  <Button
-                    title={STR.obsDetailTitle}
-                    variant="secondary"
-                    onPress={() => nav.navigate("ObservationDetail", { observationId: o.id, title })}
-                  />
-                </View>
-              </Card>
-            );
-          })
-        )}
+                </Card>
+              );
+            })
+          )}
         </QueryGate>
       </ScrollView>
     </Screen>

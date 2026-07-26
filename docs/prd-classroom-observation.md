@@ -17,7 +17,7 @@
 - **Anchor:** a session = a `RoutineSlot` + date → teacher, subject, period, and the **Section** (general/Islam) or **SubjectGroup** (Arabic groups; Quran groups Qaida/Ammapara/Najera/Hifz, D-#56/#48).
 - **Plane:** identity/operational **staff** data; **no corpus/student path** — ADR-005 firewall unaffected.
 - **Contract surface:** app-native `/shared/vocab.ts` additions only — **no wire twin, no two-/three-place sync** (D-#46/#52). Vocab verifier stays green.
-- **Build order:** **CO-1** REF-11 form core + pipeline + roles → **CO-2** footage upload → **CO-3** release + teacher response + notify/escalate (in-app) → **CO-4** trend → **CO-5** Quran (ClassEcho) form → **CO-6** review scheduler → **CO-7** reviewer effectiveness → **CO-8** publish gate (D-#271) → **CO-9** parallel multi-reviewer co-review + compare (D-#272).
+- **Build order:** **CO-1** REF-11 form core + pipeline + roles → **CO-2** footage upload → **CO-3** release + teacher response + notify/escalate (in-app) → **CO-4** trend → **CO-5** Quran (ClassEcho) form → **CO-6** review scheduler → **CO-7** reviewer effectiveness → **CO-8** publish gate (D-#271) → **CO-9** parallel multi-reviewer co-review + compare (D-#272) → **CO-10** prior-focus carry-forward on the review form (D-#363) → **CO-11** the observer's own review history (D-#363).
 
 ---
 
@@ -107,6 +107,48 @@ A single recording can be reviewed by **several observers in parallel**. `reques
 - [ ] `classroomObservationsForRecording` returns every reviewer's row for a recording (Principal/Office); the compare view highlights domains where reviewers differ by >1 level.
 - [ ] Each reviewer's row publishes on its own `publishedAt` (CO-8); server tsc + tests green.
 
+### CO-10 — Prior-focus carry-forward on the review form (D-#363)
+**The problem this fixes.** `priorFocusProgress` asks the observer "did the prior growth focus progress?" (হ্যাঁ / আংশিক / এখনও নয়) but the review form shows **nothing** about the prior observation — so an observer reviewing several teachers in a sitting is asked to answer from memory. Worse, the only link to a previous observation, `prevObservationId`, is written **solely by `requestReReview`** (a re-review of the SAME session); a normal new observation of the same teacher weeks later has no link at all. So the data path did not exist either.
+
+**New read `priorObservationContext(observationId)`** — resolves the observation whose growth focus this review is carrying forward:
+1. if `prevObservationId` is set (a re-review), that row — no search;
+2. otherwise the **newest** REF-11 row for the SAME `teacherId` with a non-null `growthFocus`, `state ∈ {REVIEWED, TEACHER_RESPONDED, SUPERSEDED}` and `classDate < ` this row's, **preferring the same `subject`** (a same-subject prior is returned ahead of any other-subject prior, not merely sorted before it);
+3. else `null`.
+Ordered `classDate desc, reviewedAt desc`. Served off the existing `{ teacherId: 1, classDate: -1 }` index.
+
+**VISIBILITY — a deliberate, NARROW widening of `canReadObservation` (the sensitive part).** The prior review was usually written by a *different* observer, and the row rule is "an observer sees only their own rows". Carry-forward cannot work under that rule, so this read returns a **fixed narrow slice and nothing else**: `classDate`, `subject`, `form`, `growthFocus`, `oneStrength`, `priorFocusProgress`, plus the derived `sameSubject` / `isReReview` flags. It NEVER returns the prior `domains`, `gates`, breach notes, `teacherResponse`, fairness ratings, or the prior **observer's identity** — peer scores and peer identity stay private; only the developmental thread is carried. Access is gated to the **assigned observer of the row being reviewed** (or `observation:manage`), so it is not a general back door onto another observer's work.
+
+**`priorFocusNote`** — a new optional free-text on `ClassroomObservation` beside `priorFocusProgress`: the enum alone cannot say *how* the focus moved. Validated like the rest of the REF-11 payload (trimmed, `null` when empty), REF-11-only, never required — an observation with no prior carries neither field.
+
+**UI (`ReviewObservationScreen`).** A prior-focus card above the REF-11 block quotes the prior growth focus with its date + subject (and marks an other-subject prior as such, since "the focus was set in a different subject" changes how it is read). When there is **no prior**, the progress select AND the note field are **not rendered at all** — today a first-ever observation still offers "পূর্ববর্তী ফোকাসের অগ্রগতি", inviting a meaningless answer. `ObservationDetailScreen` shows the stored note under the progress row.
+
+**Deliberately REF-11 only.** A QURAN row has no `growthFocus` (its narrative lives in `quran.improvements`) and no `priorFocusProgress` field to answer, so no prior card is shown on the Quran form. Carrying Quran improvements forward is a separate ask, not this slice.
+
+**Acceptance:**
+- [ ] With a prior REF-11 observation for the same teacher, the review form shows that prior growth focus (date + subject) and both carry-forward fields.
+- [ ] With no prior, `priorObservationContext` returns null and NEITHER the progress select nor the note renders.
+- [ ] A re-review (`prevObservationId` set) resolves to exactly that row, not a date search.
+- [ ] A same-subject prior wins over a more recent other-subject prior.
+- [ ] The payload NEVER contains the prior row's domains, gates, teacher response, fairness rating, or observer id — a test asserts the field set.
+- [ ] A teacher who is neither the assigned observer nor a manager is refused; the observed teacher gets no path to it.
+- [ ] `priorFocusNote` round-trips, trims, stores null when blank, and is refused on a QURAN row like the rest of the REF-11 payload.
+
+### CO-11 — The observer's own review history (D-#363)
+**The problem this fixes.** An observer's only surface is `myObservationReviewQueue`, which returns **ASSIGNED rows only** — the moment they submit, the review disappears from their view. They cannot re-watch a session they reviewed, re-read what they wrote, or find "that class 4 English review from last month". The full filter/search/pagination UI already exists in `AllObservationsScreen`, but it is gated on `observation:upload` (Principal/Office).
+
+**New read `myObservationReviews(...)`** — the same filter + pagination engine as `allClassroomObservations`, with `observerId` **forced server-side to the caller** (not an argument, so it cannot be pointed at a peer). Permission `observation:review`. Every returned row is one the caller observed, which `canReadObservation` already permits — no widening. States are not restricted: the queue answers "what's open", the history answers "everything I have touched".
+
+**New `sectionId` filter** on `allObservationsPaged` (and therefore both screens) — the owner asked to filter by class and no screen had it, although every row stores `sectionId`.
+
+**UI.** The filter block is extracted from `AllObservationsScreen` into a shared `ObservationFilters` component (identical filters, one definition) and mounted by a new `MyReviewHistoryScreen`, reachable from the review queue and the observation hub. Rows open `ObservationDetailScreen`, which already embeds the session video — so "see the video I reviewed earlier" needs no new plumbing.
+
+**Acceptance:**
+- [ ] `myObservationReviews` returns only rows where the caller is the observer, whatever `observerId`-shaped input is supplied.
+- [ ] Reviewed / published / superseded rows all appear (not just ASSIGNED); filters + paging behave as on the oversight screen.
+- [ ] A `sectionId` filter narrows both `myObservationReviews` and `allClassroomObservations`.
+- [ ] Opening a history row plays the reviewed session's footage.
+- [ ] A caller without `observation:review` is refused; `allClassroomObservations` stays `observation:upload`.
+
 ## §6 — Given/When/Then journeys
 
 1. **Upload & assign.** *Given* a recorded session, *when* Office uploads it and assigns a senior teacher (not the class's own teacher), *then* it is ASSIGNED and audited.
@@ -116,6 +158,8 @@ A single recording can be reviewed by **several observers in parallel**. `reques
 5. **Quran form.** *Given* a Quran session, *when* it is reviewed, *then* the ClassEcho form is used, not REF-11.
 6. **Due list.** *Given* tiers and last-review dates, *when* the scheduler runs, *then* overdue teachers are suggested, weakest/most-overdue first.
 7. **Calibration.** *Given* two observers on one recording, *when* both submit, *then* their agreement-within-one-level is reported to the Principal.
+8. **Carry-forward (CO-10).** *Given* a teacher observed before, *when* their next observation is opened for review, *then* the prior growth focus is quoted on the form and the observer answers the progress question from the screen, not from memory.
+9. **Review history (CO-11).** *Given* an observer who has completed reviews, *when* they open "আমার পর্যালোচনা", *then* they can filter their own past reviews by class, subject, teacher and date and re-open the session footage.
 
 ## §7 — Out of scope
 
@@ -123,4 +167,4 @@ Appraisal / pay / discipline (REF-11 §1.3; HR / School Handbook) — and this d
 
 ## §8 — Traceability
 
-REF-11 v1.1 (D-PROJ00-054/-065) · REF-18 §4 (Bloom, D2) · D-#17 (supervisory overlay) · D-#28 (observation input / appraisal-outcome reserved to Principal) · D-#36 (HW_SUBJECTS, Quran excluded from HW) · D-#46/#52 (app-native vocab, no wire twin; deferred push) · D-#48/#56 (SubjectGroup; Quran/Arabic groups; Deen→Islam) · D-#54 (ROUTINE_SUBJECTS incl. QURAN) · ADR-005 (firewall) · ADR-008 (audit). New: **D-#146–#152**. Vocab: `OBSERVATION_FORMS/DOMAINS/LEVELS/GATES/GATE_RESULTS/STATES`, `QURAN_REVIEW_CRITERIA`, `QURAN_COMPLIANCE_ITEMS`, `GROWTH_PROGRESS`, `SUPPORT_TIERS`, `observation:{upload,review,read,manage}`; reuses `RoutineSlot`, `SubjectGroup`, `Section`, `HW_SUBJECTS`, `ROUTINE_SUBJECTS`.
+REF-11 v1.1 (D-PROJ00-054/-065) · REF-18 §4 (Bloom, D2) · D-#17 (supervisory overlay) · D-#28 (observation input / appraisal-outcome reserved to Principal) · D-#36 (HW_SUBJECTS, Quran excluded from HW) · D-#46/#52 (app-native vocab, no wire twin; deferred push) · D-#48/#56 (SubjectGroup; Quran/Arabic groups; Deen→Islam) · D-#54 (ROUTINE_SUBJECTS incl. QURAN) · ADR-005 (firewall) · ADR-008 (audit). New: **D-#146–#152**; **D-#271** (CO-8 publish gate) · **D-#272** (CO-9 co-review) · **D-#324** (published filter) · **D-#363** (CO-10 carry-forward + CO-11 review history). Vocab: `OBSERVATION_FORMS/DOMAINS/LEVELS/GATES/GATE_RESULTS/STATES`, `QURAN_REVIEW_CRITERIA`, `QURAN_COMPLIANCE_ITEMS`, `GROWTH_PROGRESS`, `SUPPORT_TIERS`, `observation:{upload,review,read,manage}`; reuses `RoutineSlot`, `SubjectGroup`, `Section`, `HW_SUBJECTS`, `ROUTINE_SUBJECTS`.
