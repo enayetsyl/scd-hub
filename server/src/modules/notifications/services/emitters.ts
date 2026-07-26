@@ -102,6 +102,10 @@ const dedupeKeys = {
    *  a NEW key → the teacher RE-notifies; the same version is a no-op. */
   ctResultPublished: (testId: string, publishedVersion: number, teacherId: string) =>
     `CTPUB:${testId}:v${publishedVersion}:${teacherId}`,
+  /** Per leave-application + approver (owner 2026-07-26): one notice per approver;
+   *  keyed on the application so a re-run of apply doesn't double-notify. */
+  staffLeaveSubmitted: (leaveApplicationId: string, recipientId: string) =>
+    `LEAVE:${leaveApplicationId}:${recipientId}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -1049,6 +1053,37 @@ export async function emitCtResultSubmitted(event: CtResultSubmittedEvent): Prom
         bodyBn: event.bodyBn,
         refs: { classTestId: event.testId, ctId: event.ctId },
         dedupeKey: dedupeKeys.ctResultSubmitted(event.testId, event.submittedAtMs, op._id.toString()),
+      });
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Staff leave submitted → every approver (active Principal/Office). App-native,
+// inline Bangla, best-effort — mirrors the CT-8 submit notice (owner 2026-07-26).
+// ---------------------------------------------------------------------------
+
+export interface StaffLeaveSubmittedEvent {
+  leaveApplicationId: string;
+  titleBn: string;
+  bodyBn: string;
+}
+
+/** Tell every approver (active Principal/Office) that a teacher submitted a leave
+ *  application awaiting their approval. Best-effort. */
+export async function emitStaffLeaveSubmitted(event: StaffLeaveSubmittedEvent): Promise<void> {
+  return bestEffort("staff leave submitted → office", async () => {
+    const operators = (await User.find({ role: { $in: ["PRINCIPAL", "OFFICE"] }, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    for (const op of operators) {
+      await emit({
+        recipientUserId: op._id.toString(),
+        kind: "STAFF_LEAVE_SUBMITTED",
+        titleBn: event.titleBn,
+        bodyBn: event.bodyBn,
+        refs: { leaveApplicationId: event.leaveApplicationId },
+        dedupeKey: dedupeKeys.staffLeaveSubmitted(event.leaveApplicationId, op._id.toString()),
       });
     }
   });

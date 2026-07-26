@@ -5325,6 +5325,13 @@ export const DECIDE_STAFF_LEAVE = gql<
   }
 `;
 
+/** Pending leave applications awaiting approval — the Staff drawer badge (owner 2026-07-26). */
+export const STAFF_LEAVE_PENDING_COUNT = gql<{ staffLeavePendingCount: number }, Record<string, never>>`
+  query StaffLeavePendingCount {
+    staffLeavePendingCount
+  }
+`;
+
 export interface StaffCoverSlotT {
   id: string;
   leaveApplicationId: string;

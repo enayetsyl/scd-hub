@@ -72,6 +72,8 @@ export interface NotificationRefs {
   /** CT-8 submit/approve loop — the human CT_ID carried alongside classTestId
    *  (deep-link: ClassTestDashboard / ClassTestHome). */
   ctId?: string;
+  /** Staff leave submitted → approver (deep-link: the Staff leave inbox; owner 2026-07-26). */
+  leaveApplicationId?: string;
 }
 
 export interface INotification extends Document {
@@ -127,6 +129,7 @@ const RefsSchema = new Schema<NotificationRefs>(
     // stripped it from stored rows) + the CT-8 submit/approve loop's human CT_ID.
     ctQuestionRequestId: { type: String },
     ctId: { type: String },
+    leaveApplicationId: { type: String },
   },
   { _id: false },
 );
