@@ -91,6 +91,12 @@ jest.mock("../modules/foundation/models/Subject", () => ({
 jest.mock("../modules/routine/services/RoutineSlotService", () => ({
   slotsForTeacherOnDate: (t: unknown, d: unknown) => mockSlotsForTeacherOnDate(t, d),
 }));
+jest.mock("../modules/routine/models/RoutineSubstitution", () => ({
+  RoutineSubstitution: {
+    updateOne: jest.fn().mockResolvedValue({}),
+    deleteOne: jest.fn().mockResolvedValue({}),
+  },
+}));
 jest.mock("../modules/routine/models/PeriodGrid", () => ({
   PeriodGrid: { find: (q: unknown) => ({ select: () => ({ lean: () => mockPeriodGridFind(q) }) }) },
 }));
