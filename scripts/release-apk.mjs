@@ -50,6 +50,19 @@ if (!apiUrl || /localhost|127\.0\.0\.1/.test(apiUrl)) {
   console.error(`app/.env EXPO_PUBLIC_API_URL is "${apiUrl ?? "(unset)"}" — set the PROD GraphQL URL before a release build.`);
   process.exit(1);
 }
+// A release APK must report crashes: EXPO_PUBLIC_SENTRY_DSN bakes into the bundle so
+// @sentry/react-native can init (else initSentry() is a silent no-op and no crash ever
+// reaches GlitchTip — that gap shipped once, D-#367). Set the scdhub-app project DSN in
+// app/.env. Escape hatch: ALLOW_NO_SENTRY=1 for a deliberate no-telemetry build.
+const sentryDsn = (appEnv.match(/^EXPO_PUBLIC_SENTRY_DSN=(.*)$/m) || [])[1]?.trim();
+if (!sentryDsn && process.env.ALLOW_NO_SENTRY !== "1") {
+  console.error(
+    "app/.env EXPO_PUBLIC_SENTRY_DSN is unset — the release APK would report NO crashes to GlitchTip.\n" +
+      "  Copy the scdhub-app project's DSN (GlitchTip → Projects → scdhub-app → Client Keys / DSN)\n" +
+      "  into app/.env, or pass ALLOW_NO_SENTRY=1 to build without crash reporting on purpose.",
+  );
+  process.exit(1);
+}
 if (!fs.existsSync(path.join(ANDROID, "keystore.properties"))) {
   console.error("app/android/keystore.properties missing — the build would fall back to the DEBUG key. Aborting.");
   process.exit(1);
@@ -59,9 +72,15 @@ if (!fs.existsSync(path.join(ANDROID, "keystore.properties"))) {
 // The Sentry gradle plugin uploads release source maps when SENTRY_AUTH_TOKEN is
 // set; without it the upload task FAILS the build, so explicitly skip it (crash
 // stacks for that release are then unsymbolicated — prefer exporting the token).
+// The token is a BUILD secret (never EXPO_PUBLIC, never bundled) — read it from the
+// gitignored app/.env if not already exported, so a release symbolicates by default.
 const env = { ...process.env };
 if (!env.SENTRY_AUTH_TOKEN) {
-  console.warn("WARN: SENTRY_AUTH_TOKEN not set — skipping Sentry source-map upload for this build.");
+  const fileToken = (appEnv.match(/^SENTRY_AUTH_TOKEN=(.*)$/m) || [])[1]?.trim();
+  if (fileToken) env.SENTRY_AUTH_TOKEN = fileToken;
+}
+if (!env.SENTRY_AUTH_TOKEN) {
+  console.warn("WARN: SENTRY_AUTH_TOKEN not set (app/.env or env) — skipping Sentry source-map upload; crash stacks for this release will be UNSYMBOLICATED.");
   env.SENTRY_DISABLE_AUTO_UPLOAD = "true";
 }
 const gradlew = path.join(ANDROID, process.platform === "win32" ? "gradlew.bat" : "gradlew");

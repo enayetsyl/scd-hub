@@ -155,6 +155,7 @@ const token = (userId: string, role: string) => jwt.sign({ userId, role }, SECRE
 
 const TEACHER_ID = oid().toString();
 const OTHER_TEACHER_ID = oid().toString();
+const PRINCIPAL_ID = oid().toString();
 const SECTION_OID = oid();
 const CLASS_OID = oid();
 const AY_OID = oid();
@@ -268,6 +269,30 @@ describe("createRequest", () => {
     expect(mockWriteAudit).toHaveBeenCalledWith(
       expect.objectContaining({ eventKind: "CLASS_TEST_REQUESTED", targetKind: "ClassTest" }),
     );
+  });
+
+  // --- D-#366: Principal/Office must not silently self-own an exam ---------------
+  test("D-#366: a roster:manage creator with no teacher pick AND no routine teacher is refused", async () => {
+    // Default RoutineSlot mock names nobody → resolveSubjectTeacher returns null.
+    await expect(
+      createRequest({ ...baseInput, actorId: PRINCIPAL_ID, actorCanManage: true }),
+    ).rejects.toThrow(/pick the subject teacher/i);
+  });
+
+  test("D-#366: a roster:manage creator with an EXPLICIT teacher pick is attributed to that teacher", async () => {
+    const res = await createRequest({
+      ...baseInput,
+      actorId: PRINCIPAL_ID,
+      actorCanManage: true,
+      teacherId: TEACHER_ID,
+    });
+    expect(res.teacherId).toBe(TEACHER_ID);
+    expect(res.requestedBy).toBe(PRINCIPAL_ID);
+  });
+
+  test("D-#366: a plain teacher (no roster:manage) still falls back to themselves", async () => {
+    const res = await createRequest({ ...baseInput, actorId: TEACHER_ID });
+    expect(res.teacherId).toBe(TEACHER_ID);
   });
 
   // A class test IS a print job (PQ-5), so the Office must learn HOW to print it from the
