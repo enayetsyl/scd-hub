@@ -118,6 +118,12 @@ export interface CreateClassTestRequestInput {
    *  only a routine with no teacher for the cell falls back to the actor. */
   teacherId?: string;
   actorId: string;
+  /** True when the actor holds `roster:manage` (Principal/Office). When they create
+   *  WITHOUT an explicit teacher pick AND the routine names nobody, we refuse rather
+   *  than silently self-assign the test to the admin (owner 2026-07-27, D-#366) — the
+   *  exam would otherwise land in the principal's account instead of the subject
+   *  teacher's. A plain teacher (no roster:manage) still falls back to themselves. */
+  actorCanManage?: boolean;
 }
 
 export interface ClassTestShape {
@@ -278,10 +284,18 @@ export async function createRequest(
   // on a teacher's behalf) wins; otherwise the routine names the section×subject
   // teacher for the exam day; only if the routine names nobody does it fall back to
   // the requester. Keeps the exam in the right teacher's account and report row.
-  const subjectTeacherId =
-    input.teacherId ??
-    (await resolveSubjectTeacher(input.sectionId, subject, examDate)) ??
-    input.actorId;
+  const routineTeacherId =
+    input.teacherId ?? (await resolveSubjectTeacher(input.sectionId, subject, examDate));
+  // Guard (D-#366): a Principal/Office creator who neither picked a teacher nor has a
+  // routine teacher for this cell must not silently self-own the exam — force an
+  // explicit pick. A plain subject teacher still falls back to themselves (their test).
+  if (!routineTeacherId && input.actorCanManage) {
+    throw new Error(
+      "Pick the subject teacher: the routine names no teacher for this section × subject on the exam date, " +
+        "so the test cannot be attributed automatically. Choose whose exam this is.",
+    );
+  }
+  const subjectTeacherId = routineTeacherId ?? input.actorId;
 
   // D-#339: a no-print register is born PRINTED — the record is the official exam
   // immediately (deadline clock anchors on the exam date as usual).

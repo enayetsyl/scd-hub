@@ -156,6 +156,7 @@ builder.mutationField("createClassTestRequest", (t) =>
         notes: args.notes ?? undefined,
         teacherId: args.teacherId ?? undefined,
         actorId: ctx.auth.userId as string,
+        actorCanManage: callerHasPermission(ctx.auth, "roster:manage"),
       });
     },
   }),
@@ -211,6 +212,7 @@ builder.mutationField("registerClassTestOfficial", (t) =>
         teacherId: args.teacherId ?? undefined,
         skipPrint: true,
         actorId: ctx.auth.userId as string,
+        actorCanManage: admin || callerHasPermission(ctx.auth, "roster:manage"),
       });
     },
   }),
