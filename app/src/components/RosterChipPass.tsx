@@ -1,9 +1,13 @@
 /**
- * RosterChipPass (RP-2, D-#355) — the attendance idiom (MarkAttendanceScreen,
- * D-#63) generalised for the two roster-shaped tracker stages. Every student is a
- * chip that DEFAULTS ON (the good outcome); the teacher taps only the exceptions,
- * which cross out (✗); a live counter reads "{onLabel}: N · {offLabel}: M"; one
- * commit button emits `[{id, on}]` for the whole roster.
+ * RosterChipPass (RP-2, D-#355; inverted per owner 2026-07-27) — a roster of
+ * student chips that DEFAULT OFF. The teacher taps only the students who ACTUALLY
+ * did the action (submitted / were returned), which light up (✓); every untapped
+ * chip counts as the "not done" side. A live counter reads
+ * "{onLabel}: N · {offLabel}: M"; one commit button emits `[{id, on}]` for the
+ * whole roster.
+ *
+ * (Originally attendance-style — default ON, tap the exceptions. The owner flipped
+ * it so the teacher marks the affirmative minority, not the exceptions.)
  *
  * Purely presentational — it knows nothing about lifecycle states. The parent maps
  * `on → submitted/returned` and calls the pass mutation. Used four times across
@@ -38,23 +42,23 @@ export function RosterChipPass({
   busy?: boolean;
   onCommit: (entries: { id: string; on: boolean }[]) => void;
 }): React.ReactElement {
-  // "off" = crossed (the exception). Everyone starts ON.
-  const [crossed, setCrossed] = useState<Set<string>>(new Set());
+  // "on" = ticked (the affirmative action — submitted/returned). Everyone starts OFF.
+  const [ticked, setTicked] = useState<Set<string>>(new Set());
 
   // Prune stale ids when the roster shrinks (e.g. after a refetch drops submitted
-  // students) so a crossed id can't linger across passes.
+  // students) so a ticked id can't linger across passes.
   const present = useMemo(() => new Set(students.map((s) => s.id)), [students]);
   const live = useMemo(() => {
     const next = new Set<string>();
-    for (const id of crossed) if (present.has(id)) next.add(id);
+    for (const id of ticked) if (present.has(id)) next.add(id);
     return next;
-  }, [crossed, present]);
+  }, [ticked, present]);
 
-  const offCount = live.size;
-  const onCount = students.length - offCount;
+  const onCount = live.size;
+  const offCount = students.length - onCount;
 
   function toggle(id: string): void {
-    setCrossed((prev) => {
+    setTicked((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -63,8 +67,8 @@ export function RosterChipPass({
   }
 
   function commit(): void {
-    onCommit(students.map((s) => ({ id: s.id, on: !live.has(s.id) })));
-    setCrossed(new Set());
+    onCommit(students.map((s) => ({ id: s.id, on: live.has(s.id) })));
+    setTicked(new Set());
   }
 
   return (
@@ -76,9 +80,9 @@ export function RosterChipPass({
       </Muted>
       <ChipRow>
         {students.map((s) => {
-          const isCrossed = live.has(s.id);
-          const label = `${s.name}${s.badge ? ` ${s.badge}` : ""}${isCrossed ? " ✗" : ""}`;
-          return <Chip key={s.id} label={label} selected={!isCrossed} onPress={() => toggle(s.id)} />;
+          const isTicked = live.has(s.id);
+          const label = `${s.name}${s.badge ? ` ${s.badge}` : ""}${isTicked ? " ✓" : ""}`;
+          return <Chip key={s.id} label={label} selected={isTicked} onPress={() => toggle(s.id)} />;
         })}
       </ChipRow>
       <View style={{ marginTop: space(2) }}>
