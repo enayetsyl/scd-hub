@@ -5332,6 +5332,26 @@ export const STAFF_LEAVE_PENDING_COUNT = gql<{ staffLeavePendingCount: number },
   }
 `;
 
+/** Undelivered comments awaiting review — the Comments drawer badge (owner 2026-07-26). */
+export const COMMENT_REVIEW_COUNT = gql<{ commentReviewCount: number }, Record<string, never>>`
+  query CommentReviewCount {
+    commentReviewCount
+  }
+`;
+
+/** Observations awaiting my review / awaiting publish — the Observation drawer badge (owner 2026-07-26). */
+export const OBSERVATION_COUNTS = gql<
+  { observationCounts: { toReview: number; toPublish: number } },
+  Record<string, never>
+>`
+  query ObservationCounts {
+    observationCounts {
+      toReview
+      toPublish
+    }
+  }
+`;
+
 export interface StaffCoverSlotT {
   id: string;
   leaveApplicationId: string;

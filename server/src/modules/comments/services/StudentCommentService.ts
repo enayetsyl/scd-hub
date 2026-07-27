@@ -310,6 +310,11 @@ export interface CommentReviewRow extends AuthoredCommentShape {
  * the Principal/Office review dashboard (D-#264): they decide what reaches the guardian.
  * School-wide (no section scope); gated `roster:manage` (Principal/Office) by the resolver.
  */
+/** How many undelivered comments await review — the Comments drawer badge (owner 2026-07-26). */
+export async function reviewInboxCount(): Promise<number> {
+  return StudentComment.countDocuments({ deliveredAt: null });
+}
+
 export async function reviewInbox(): Promise<CommentReviewRow[]> {
   const docs = (await StudentComment.find({ deliveredAt: null }).sort({ createdAt: -1 }).lean()) as unknown as IStudentComment[];
   if (docs.length === 0) return [];

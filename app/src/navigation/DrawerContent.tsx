@@ -24,7 +24,7 @@ import { STR } from "../lib/labels";
 import { bnNum } from "../lib/labels";
 import { PRINT_QUEUE_COUNTS } from "../graphql/printing";
 import { CT_QUESTION_COUNTS } from "../graphql/classTest";
-import { STAFF_LEAVE_PENDING_COUNT } from "../graphql/operations";
+import { STAFF_LEAVE_PENDING_COUNT, COMMENT_REVIEW_COUNT, OBSERVATION_COUNTS } from "../graphql/operations";
 import { subscribeLiveEvents } from "../lib/liveEvents";
 import { useAuth } from "../auth/AuthContext";
 import { useBasket } from "../state/BasketContext";
@@ -209,6 +209,44 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   }, [canLeaveBadge, refetchLeaveCount]);
   const leavePending = leaveCountQ.data?.staffLeavePendingCount ?? 0;
 
+  // Owner 2026-07-26: Comments drawer badge — undelivered comments awaiting
+  // Principal/Office review (roster:manage), mirroring Print. Refreshes on any
+  // StudentComment mutation (record / edit / deliver).
+  const canCommentBadge = !!role && roleHasPermission(role as Role, "roster:manage");
+  const commentCountContext = React.useMemo(() => ({ additionalTypenames: ["StudentComment"] }), []);
+  const [commentCountQ, refetchCommentCount] = useQuery({
+    query: COMMENT_REVIEW_COUNT,
+    pause: !canCommentBadge,
+    requestPolicy: "cache-and-network",
+    context: commentCountContext,
+  });
+  React.useEffect(() => {
+    if (!canCommentBadge) return;
+    const id = setInterval(() => refetchCommentCount({ requestPolicy: "network-only" }), 60_000);
+    return () => clearInterval(id);
+  }, [canCommentBadge, refetchCommentCount]);
+  const commentPending = commentCountQ.data?.commentReviewCount ?? 0;
+
+  // Owner 2026-07-26: Observation drawer badge — red = observations assigned to me
+  // awaiting my review (observation:review); yellow = reviewed awaiting publish
+  // (observation:upload). Any observation participant (observation:read) asks; each
+  // count is server-scoped and 0 without the matching permission. Refreshes on any
+  // ClassroomObservation mutation.
+  const canObservationBadge = !!role && roleHasPermission(role as Role, "observation:read");
+  const obsCountContext = React.useMemo(() => ({ additionalTypenames: ["ClassroomObservation"] }), []);
+  const [obsCountQ, refetchObsCount] = useQuery({
+    query: OBSERVATION_COUNTS,
+    pause: !canObservationBadge,
+    requestPolicy: "cache-and-network",
+    context: obsCountContext,
+  });
+  React.useEffect(() => {
+    if (!canObservationBadge) return;
+    const id = setInterval(() => refetchObsCount({ requestPolicy: "network-only" }), 60_000);
+    return () => clearInterval(id);
+  }, [canObservationBadge, refetchObsCount]);
+  const obsCounts = obsCountQ.data?.observationCounts;
+
   const badgeFor = (route: RouteName): number | undefined =>
     route === "QuestionsTab" && basket.count > 0 ? basket.count : undefined;
 
@@ -228,6 +266,15 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     }
     if (route === "HrTab" && canLeaveBadge && leavePending > 0) {
       return [{ count: leavePending, bg: colors.error }];
+    }
+    if (route === "CommentsTab" && canCommentBadge && commentPending > 0) {
+      return [{ count: commentPending, bg: colors.error }];
+    }
+    if (route === "ObservationTab" && canObservationBadge && obsCounts) {
+      const out: Array<{ count: number; bg: string }> = [];
+      if (obsCounts.toReview > 0) out.push({ count: obsCounts.toReview, bg: colors.error });
+      if (obsCounts.toPublish > 0) out.push({ count: obsCounts.toPublish, bg: colors.warning });
+      return out;
     }
     return [];
   };
