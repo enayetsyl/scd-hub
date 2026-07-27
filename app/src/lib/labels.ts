@@ -570,6 +570,23 @@ export const qardIouDirectionLabel = (v?: string | null): string =>
 export const lifecycleStateLabel = (v?: string | null): string =>
   (v && pick(LIFECYCLE_STATE_LABELS_BN, LIFECYCLE_STATE_LABELS_EN)[v as LifecycleState]) || v || DASH;
 
+/**
+ * GUARDIAN-facing homework status wording (owner 2026-07-26). The shared lifecycle
+ * labels are neutral (teacher-facing); parents need an actionable phrasing. Only the
+ * states parents act on are overridden — everything else falls back to the shared
+ * label. Homework-specific ("বাড়ির কাজ"), so NOT used for the assignment view.
+ */
+const HW_GUARDIAN_STATUS_BN: Partial<Record<string, string>> = {
+  DUE: "বাড়ির কাজ করে আনেনি — শেষ করে দ্রুত জমা দিন",
+  CHASE: "বাড়ির কাজ আনেনি",
+};
+const HW_GUARDIAN_STATUS_EN: Partial<Record<string, string>> = {
+  DUE: "Homework not done — please finish and submit soon",
+  CHASE: "Homework not brought",
+};
+export const hwGuardianStatusLabel = (v?: string | null): string =>
+  (v && pick(HW_GUARDIAN_STATUS_BN, HW_GUARDIAN_STATUS_EN)[v]) || lifecycleStateLabel(v);
+
 export const hwResultLabel = (v?: string | null): string =>
   (v && pick(HW_RESULT_LABELS_BN, HW_RESULT_LABELS_EN)[v as HwResult]) || v || DASH;
 

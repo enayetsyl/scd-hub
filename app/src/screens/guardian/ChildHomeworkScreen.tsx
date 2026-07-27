@@ -14,7 +14,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { DateField } from "../../components/DateField";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
-import { STR, bnNum, lifecycleStateLabel, subjectLabel, hwResultLabel, hwNilReasonLabel } from "../../lib/labels";
+import { STR, bnNum, lifecycleStateLabel, hwGuardianStatusLabel, subjectLabel, hwResultLabel, hwNilReasonLabel } from "../../lib/labels";
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -56,7 +56,7 @@ function RecordCard({
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
           {r.resubOf ? <Badge text={lifecycleStateLabel("RESUBMIT")} tone="warn" /> : null}
-          <Badge text={lifecycleStateLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
+          <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
         </View>
       </View>
 
