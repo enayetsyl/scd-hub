@@ -113,17 +113,23 @@ export default function SectionCommentsScreen(): React.ReactElement {
               ) : (
                 comments.map((c) => {
                   const delivered = !!c.deliveredAt;
+                  const discarded = !!c.discardedAt;
                   return (
                     <Card
                       key={c.id}
-                      onPress={() =>
-                        nav.navigate("CommentEntry", {
-                          sectionId,
-                          studentId: c.studentId,
-                          studentName: nameById.get(c.studentId) ?? c.studentId,
-                          commentId: c.id,
-                        })
+                      // A discarded comment is retracted — not re-openable for edit/deliver.
+                      onPress={
+                        discarded
+                          ? undefined
+                          : () =>
+                              nav.navigate("CommentEntry", {
+                                sectionId,
+                                studentId: c.studentId,
+                                studentName: nameById.get(c.studentId) ?? c.studentId,
+                                commentId: c.id,
+                              })
                       }
+                      style={discarded ? { opacity: 0.6 } : undefined}
                     >
                       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                         <View style={{ flexShrink: 1 }}>
@@ -134,11 +140,23 @@ export default function SectionCommentsScreen(): React.ReactElement {
                           </Muted>
                         </View>
                         <Badge
-                          text={delivered ? STR.cmDeliveredBadge : STR.cmDraftBadge}
-                          tone={delivered ? "ok" : "muted"}
+                          text={discarded ? STR.cmDiscardedTag : delivered ? STR.cmDeliveredBadge : STR.cmDraftBadge}
+                          tone={discarded ? "danger" : delivered ? "ok" : "muted"}
                         />
                       </View>
-                      <Body style={{ marginTop: space(1) }}>{c.text}</Body>
+                      <Body
+                        style={{
+                          marginTop: space(1),
+                          ...(discarded ? { textDecorationLine: "line-through" } : {}),
+                        }}
+                      >
+                        {c.text}
+                      </Body>
+                      {discarded && c.discardReason ? (
+                        <Muted style={{ marginTop: space(1), fontStyle: "italic" }}>
+                          {STR.cmDiscardedTag}: {c.discardReason}
+                        </Muted>
+                      ) : null}
                     </Card>
                   );
                 })

@@ -25,6 +25,7 @@ import {
   myComments,
   reviewInbox,
   reviewInboxCount,
+  discardComment,
   type StudentCommentShape,
   type AuthoredCommentShape,
   type CommentReviewRow,
@@ -67,6 +68,8 @@ StudentCommentRef.implement({
     attachmentIds: t.exposeStringList("attachmentIds"),
     deliveredAt: t.string({ nullable: true, resolve: (r) => r.deliveredAt }),
     deliveryChannels: t.exposeStringList("deliveryChannels"),
+    discardedAt: t.string({ nullable: true, resolve: (r) => r.discardedAt }),
+    discardReason: t.string({ nullable: true, resolve: (r) => r.discardReason }),
     createdAt: t.exposeString("createdAt"),
     updatedAt: t.exposeString("updatedAt"),
   }),
@@ -164,6 +167,26 @@ builder.mutationField("removeCommentAttachment", (t) =>
   }),
 );
 
+builder.mutationField("discardStudentComment", (t) =>
+  t.field({
+    type: StudentCommentRef,
+    description:
+      "Discard an UNDELIVERED comment with a reason — drop it from the review inbox WITHOUT sending it to the " +
+      "guardian (owner 2026-07-27, D-#365). The comment is NOT deleted: it stays greyed on the child's staff " +
+      "timeline with the reason (a discarded comment can never reach a guardian). Refused once delivered. " +
+      "Requires roster:manage (Principal/Office). Audited.",
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      commentId: t.arg.string({ required: true }),
+      reason: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return discardComment({ commentId: args.commentId, reason: args.reason, actorId: ctx.auth.userId as string });
+    },
+  }),
+);
+
 // ---------------------------------------------------------------------------
 // Queries (read-scope via assertReadSection; reviewers via roster:manage)
 // ---------------------------------------------------------------------------
@@ -216,6 +239,8 @@ AuthoredCommentRef.implement({
     attachmentIds: t.exposeStringList("attachmentIds"),
     deliveredAt: t.string({ nullable: true, resolve: (r) => r.deliveredAt }),
     deliveryChannels: t.exposeStringList("deliveryChannels"),
+    discardedAt: t.string({ nullable: true, resolve: (r) => r.discardedAt }),
+    discardReason: t.string({ nullable: true, resolve: (r) => r.discardReason }),
     createdAt: t.exposeString("createdAt"),
     updatedAt: t.exposeString("updatedAt"),
   }),

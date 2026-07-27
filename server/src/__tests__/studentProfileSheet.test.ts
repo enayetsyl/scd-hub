@@ -120,6 +120,7 @@ const input = (over: Partial<SheetInput> = {}): SheetInput => ({
         id: "c1", studentId: "s1", sectionId: "sec1", authorUserId: "u1",
         type: "BEHAVIOUR", sentiment: "CONCERN", text: "ক্লাসে মনোযোগ কম",
         attachmentIds: [], deliveredAt: null, deliveryChannels: [],
+        discardedAt: null, discardReason: null,
         createdAt: "2026-07-01T04:00:00.000Z", updatedAt: "2026-07-01T04:00:00.000Z",
         authorName: "Nuha Karim",
       },

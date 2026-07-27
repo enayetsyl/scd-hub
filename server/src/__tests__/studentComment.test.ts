@@ -76,6 +76,7 @@ import {
   studentComments,
   myComments,
   reviewInbox,
+  discardComment,
   StudentCommentError,
 } from "../modules/comments/services/StudentCommentService";
 import { assertCanWrite, assertCanRead, ForbiddenError } from "../middleware/authz";
@@ -391,7 +392,7 @@ describe("reviewInbox (Principal/Office dashboard)", () => {
     mockUserFind.mockReturnValue(leanChain([{ _id: author, name: "Md Teacher" }]));
 
     const rows = await reviewInbox();
-    expect(mockFind).toHaveBeenCalledWith({ deliveredAt: null });
+    expect(mockFind).toHaveBeenCalledWith({ deliveredAt: null, discardedAt: null });
     expect(rows).toHaveLength(1);
     expect(rows[0].studentName).toBe("Abdullah Al Anas");
     expect(rows[0].authorName).toBe("Md Teacher");
@@ -404,6 +405,79 @@ describe("reviewInbox (Principal/Office dashboard)", () => {
     expect(rows).toEqual([]);
     expect(mockStudentFind).not.toHaveBeenCalled();
     expect(mockUserFind).not.toHaveBeenCalled();
+  });
+});
+
+// ===========================================================================
+// discardComment — reviewer drops a draft with a reason, never delivered (D-#365)
+// ===========================================================================
+
+describe("discardComment (reviewer retracts a draft)", () => {
+  const REVIEWER_ID = oid().toString();
+  const makeDoc = (over: Record<string, unknown> = {}) => {
+    const doc: Record<string, unknown> = {
+      _id: STUDENT_OID,
+      studentId: STUDENT_OID,
+      sectionId: SECTION_OID,
+      authorUserId: new mongoose.Types.ObjectId(TEACHER_ID),
+      type: "GENERAL",
+      sentiment: "CONCERN",
+      text: "Please review.",
+      attachmentIds: [],
+      deliveryChannels: [],
+      deliveredAt: undefined,
+      discardedAt: undefined,
+      discardReason: undefined,
+      createdAt: new Date("2026-07-27T00:00:00Z"),
+      updatedAt: new Date("2026-07-27T00:00:00Z"),
+      ...over,
+    };
+    doc.save = jest.fn(async () => doc);
+    return doc;
+  };
+
+  test("stamps discardedAt + reason + discardedBy and audits (discarded)", async () => {
+    const doc = makeDoc();
+    mockFindById.mockResolvedValue(doc);
+    const res = await discardComment({ commentId: STUDENT_OID.toString(), reason: "Duplicate of another comment", actorId: REVIEWER_ID });
+    expect(doc.discardedAt).toBeInstanceOf(Date);
+    expect(doc.discardReason).toBe("Duplicate of another comment");
+    expect(doc.discardedBy?.toString()).toBe(REVIEWER_ID);
+    expect((doc.save as jest.Mock)).toHaveBeenCalled();
+    expect(res.discardedAt).toBeTruthy();
+    expect(res.discardReason).toBe("Duplicate of another comment");
+    // never stamps delivery — a discarded comment cannot reach a guardian
+    expect(res.deliveredAt).toBeNull();
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventKind: "STUDENT_COMMENT_RECORDED", meta: expect.objectContaining({ discarded: true }) }),
+    );
+  });
+
+  test("a blank reason is refused", async () => {
+    await expect(
+      discardComment({ commentId: STUDENT_OID.toString(), reason: "   ", actorId: REVIEWER_ID }),
+    ).rejects.toThrow(/reason is required/i);
+  });
+
+  test("a delivered comment cannot be discarded", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ deliveredAt: new Date("2026-07-27T01:00:00Z") }));
+    await expect(
+      discardComment({ commentId: STUDENT_OID.toString(), reason: "too late", actorId: REVIEWER_ID }),
+    ).rejects.toThrow(/already reached the guardian|cannot be discarded/i);
+  });
+
+  test("an already-discarded comment is refused (idempotent guard)", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ discardedAt: new Date("2026-07-27T00:30:00Z"), discardReason: "first" }));
+    await expect(
+      discardComment({ commentId: STUDENT_OID.toString(), reason: "again", actorId: REVIEWER_ID }),
+    ).rejects.toThrow(/already discarded/i);
+  });
+
+  test("a missing comment throws", async () => {
+    mockFindById.mockResolvedValue(null);
+    await expect(
+      discardComment({ commentId: STUDENT_OID.toString(), reason: "x", actorId: REVIEWER_ID }),
+    ).rejects.toBeInstanceOf(StudentCommentError);
   });
 });
 
