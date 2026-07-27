@@ -45,6 +45,7 @@ import {
   revCategoryLabel,
   subjectLabel,
   lifecycleStateLabel,
+  hwGuardianStatusLabel,
   dayTypeLabel,
   getActiveLang,
   isoDateLabel,
@@ -488,7 +489,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                         <Body>{subjectLabel(r.subject)}</Body>
                         <Muted>{r.hwId}</Muted>
                       </View>
-                      <Badge text={lifecycleStateLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
+                      <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
                     </View>
                   ))}
                 </View>
