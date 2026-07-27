@@ -46,6 +46,7 @@ import {
   hwResultLabel,
   lifecycleStateLabel,
   dateHeaderLabel,
+  dhakaDateKey,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -63,7 +64,7 @@ const RETURN_STATES = new Set(["CHECKED", "RESUBMIT"]);
 
 /** Calendar day (YYYY-MM-DD) of an ISO instant in Asia/Dhaka — mirrors the server gate. */
 function dhakaDayOf(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+  return dhakaDateKey(iso);
 }
 
 interface ItemGroup {

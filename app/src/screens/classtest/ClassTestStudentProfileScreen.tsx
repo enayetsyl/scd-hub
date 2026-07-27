@@ -13,7 +13,7 @@ import { STUDENT_WHOLE_PICTURE_QUERY } from "../../graphql/wholePicture";
 import { WholePictureCard } from "../../components/WholePictureCard";
 import { Screen, Card, Body, Muted, Badge, Loader, Notice } from "../../components/ui";
 import { MiniBarChart, type BarDatum } from "../../components/MiniBarChart";
-import { STR, hwSubjectLabel, ctTrendGlyph, bnNum } from "../../lib/labels";
+import { STR, hwSubjectLabel, ctTrendGlyph, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
@@ -124,7 +124,7 @@ export default function ClassTestStudentProfileScreen({ route }: Props): React.R
                       {hwSubjectLabel(r.subject)} · {STR.ctTestNumber} {bnNum(r.testNumber)}
                     </Body>
                     <Muted>
-                      {r.ctId} · {new Date(r.examDate).toLocaleDateString()}
+                      {r.ctId} · {isoDateLabel(r.examDate)}
                     </Muted>
                   </View>
                   {r.status === "ABSENT" ? (

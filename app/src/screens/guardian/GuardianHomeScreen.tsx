@@ -566,9 +566,9 @@ export default function GuardianHomeScreen(): React.ReactElement {
                   <Body>{loan.titleBn ?? loan.accessionNo ?? "—"}</Body>
                   <Muted>
                     {loan.status === "ACTIVE"
-                      ? `${STR.libDue}: ${new Date(loan.dueDate).toLocaleDateString()}`
+                      ? `${STR.libDue}: ${isoDateLabel(loan.dueDate)}`
                       : loan.returnedAt
-                        ? `${loanStatusLabel(loan.status)}: ${new Date(loan.returnedAt).toLocaleDateString()}`
+                        ? `${loanStatusLabel(loan.status)}: ${isoDateLabel(loan.returnedAt)}`
                         : loanStatusLabel(loan.status)}
                   </Muted>
                 </View>
@@ -599,7 +599,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                   <Body>
                     {vocabProgramLabel(v.program)} · {v.label}
                   </Body>
-                  <Muted>{new Date(v.testDate).toLocaleDateString()}</Muted>
+                  <Muted>{isoDateLabel(v.testDate)}</Muted>
                 </View>
                 <Badge
                   text={
@@ -628,7 +628,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                     <Body>
                       {hwSubjectLabel(r.subject)} · {STR.ctTestNumber} {bnNum(r.testNumber)}
                     </Body>
-                    <Muted>{new Date(r.examDate).toLocaleDateString()}</Muted>
+                    <Muted>{isoDateLabel(r.examDate)}</Muted>
                   </View>
                   <Badge
                     text={

@@ -10,7 +10,7 @@ import { useQuery } from "urql";
 import { VOCAB_STUDENT_DASHBOARD_QUERY, VOCAB_STUDENT_CUMULATIVE_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Badge, Chip } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
-import { STR, bnNum, vocabProgramLabel, vocabCumulativeModeLabel } from "../../lib/labels";
+import { STR, bnNum, vocabProgramLabel, vocabCumulativeModeLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { VocabStackParamList } from "../../navigation/types";
 
@@ -113,7 +113,7 @@ export default function VocabStudentReportScreen({ route }: Props): React.ReactE
                     <Body>
                       {vocabProgramLabel(e.test.program)} · {e.test.label}
                     </Body>
-                    <Muted>{new Date(e.test.testDate).toLocaleDateString()}</Muted>
+                    <Muted>{isoDateLabel(e.test.testDate)}</Muted>
                   </View>
                   <Badge
                     text={

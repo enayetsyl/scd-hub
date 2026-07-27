@@ -15,7 +15,7 @@ import { CLASS_TEST_REPORTS_STATUS_QUERY } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Chip, ChipRow, Select, Loader, Notice } from "../../components/ui";
 import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
-import { STR, hwSubjectLabel, ctReportStateLabel, bnNum } from "../../lib/labels";
+import { STR, hwSubjectLabel, ctReportStateLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
@@ -134,7 +134,7 @@ export default function ClassTestReportsScreen(): React.ReactElement {
                     {hwSubjectLabel(r.subject)} · {STR.ctTestNumber} {bnNum(r.testNumber)}
                   </Body>
                   <Muted>
-                    {r.ctId} · {new Date(r.examDate).toLocaleDateString()}
+                    {r.ctId} · {isoDateLabel(r.examDate)}
                   </Muted>
                 </View>
                 {/* Published is the terminal state past complete — surface it as its own

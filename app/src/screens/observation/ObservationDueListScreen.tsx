@@ -18,7 +18,7 @@ import {
 } from "../../graphql/observation";
 import { TEACHERS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Field, Row, Badge, Loader, Notice } from "../../components/ui";
-import { STR, obsTierLabel, bnNum } from "../../lib/labels";
+import { STR, obsTierLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import type { ObservationStackParamList } from "../../navigation/types";
@@ -118,7 +118,7 @@ export default function ObservationDueListScreen(): React.ReactElement {
                 <View style={{ flexShrink: 1 }}>
                   <Body style={{ fontWeight: "700" }}>{nameById[it.teacherId] ?? it.teacherId}</Body>
                   <Muted>
-                    {it.neverReviewed ? STR.obsNeverReviewed : `${STR.obsDueDate}: ${new Date(it.dueDate).toLocaleDateString()}`}
+                    {it.neverReviewed ? STR.obsNeverReviewed : `${STR.obsDueDate}: ${isoDateLabel(it.dueDate)}`}
                   </Muted>
                 </View>
                 <View style={{ alignItems: "flex-end", gap: space(1) }}>

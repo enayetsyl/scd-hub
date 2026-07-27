@@ -17,7 +17,7 @@ import {
 } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Button, Badge, Field, Notice } from "../../components/ui";
 import { TeacherSelect } from "../../components/selects";
-import { STR, borrowerTypeLabel } from "../../lib/labels";
+import { STR, borrowerTypeLabel, isoDateTimeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
@@ -168,7 +168,7 @@ export default function LibraryAdminScreen(): React.ReactElement {
             <Body style={{ flex: 1, fontWeight: "700" }}>{h.userName ?? h.userId}</Body>
             <Badge text={h.action} tone={h.action === "assign" ? "ok" : "muted"} />
           </View>
-          <Muted>{new Date(h.at).toLocaleString()}</Muted>
+          <Muted>{isoDateTimeLabel(h.at)}</Muted>
         </Card>
       ))}
     </Screen>

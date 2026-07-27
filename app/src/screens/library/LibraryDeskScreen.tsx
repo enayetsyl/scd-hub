@@ -29,6 +29,7 @@ import {
   borrowerTypeLabel,
   loanStatusLabel,
   reservationStatusLabel,
+  isoDateLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -169,7 +170,7 @@ export default function LibraryDeskScreen(): React.ReactElement {
                 {loan.overdue ? <Badge text={STR.libOverdue} tone="danger" /> : <Badge text={loanStatusLabel(loan.status)} tone="ok" />}
               </View>
               <Muted>
-                {loan.accessionNo ?? "—"} · {STR.libDue}: {new Date(loan.dueDate).toLocaleDateString()} ·{" "}
+                {loan.accessionNo ?? "—"} · {STR.libDue}: {isoDateLabel(loan.dueDate)} ·{" "}
                 {STR.libRenewCount}: {bnNum(loan.renewCount)}
               </Muted>
               <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2), flexWrap: "wrap" }}>
@@ -214,7 +215,7 @@ export default function LibraryDeskScreen(): React.ReactElement {
               </View>
               {r.status === "READY" && r.expiresAt ? (
                 <Muted>
-                  {STR.libHoldUntil}: {new Date(r.expiresAt).toLocaleDateString()}
+                  {STR.libHoldUntil}: {isoDateLabel(r.expiresAt)}
                   {r.heldAccessionNo ? ` · ${r.heldAccessionNo}` : ""}
                 </Muted>
               ) : null}

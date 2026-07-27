@@ -11,7 +11,7 @@ import { ROLES } from "@scd/shared";
 import { AUDIT_LOG_QUERY, type AuditRowT } from "../../graphql/audit";
 import { Screen, H2, Body, Muted, Card, Badge, Button, Field, Select, Loader, EmptyState, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
-import { STR, bnNum } from "../../lib/labels";
+import { STR, bnNum, isoDateTimeLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
 const PAGE = 50;
@@ -150,7 +150,7 @@ export default function AuditLogScreen(): React.ReactElement {
                 <Card key={r.id}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                     <Badge text={r.eventKind} tone="muted" />
-                    <Muted>{new Date(r.eventAt).toLocaleString()}</Muted>
+                    <Muted>{isoDateTimeLabel(r.eventAt)}</Muted>
                   </View>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: space(1) }}>
                     <Body style={{ fontWeight: "700", flexShrink: 1 }}>

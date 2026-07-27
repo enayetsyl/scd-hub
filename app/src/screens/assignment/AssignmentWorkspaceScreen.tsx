@@ -35,7 +35,7 @@ import { RosterChipPass } from "../../components/RosterChipPass";
 import { CardGrid } from "../../components/CardGrid";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
-import { STR, bnNum, hwSubjectLabel, hwResultLabel, classLevelLabel, lifecycleStateLabel } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, hwResultLabel, classLevelLabel, lifecycleStateLabel, dhakaDateKey } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
@@ -52,7 +52,7 @@ const day = (iso?: string | null): string => (iso ? iso.slice(0, 10) : "—");
 
 /** Calendar day (YYYY-MM-DD) of an ISO instant in Asia/Dhaka. */
 function dhakaDayOf(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+  return dhakaDateKey(iso);
 }
 
 interface ItemGroup {

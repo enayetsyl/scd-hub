@@ -26,7 +26,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { useConfirm } from "../../state/ConfirmContext";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
-import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
+import { STR, hwSubjectLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
@@ -56,7 +56,7 @@ export function CtQuestionMeta({ r }: { r: CtQuestionRequestT }): React.ReactEle
     <Muted style={{ marginTop: 2 }}>
       {STR.cqChapter}: {r.chapter} · {STR.ctTestNumber} {bnNum(r.testNumber)} · {STR.ctTotalMarks}{" "}
       {bnNum(r.totalMarks)} · {bnNum(r.durationMinutes)} {STR.gpMinutes} ·{" "}
-      {new Date(r.examDate).toLocaleDateString()}
+      {isoDateLabel(r.examDate)}
     </Muted>
   );
 }
