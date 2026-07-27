@@ -21,7 +21,7 @@ import {
   EMPTY_OBSERVATION_FILTERS,
   type ObservationFilterState,
 } from "../../components/ObservationFilters";
-import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel, bnNum } from "../../lib/labels";
+import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { ObservationStackParamList } from "../../navigation/types";
 
@@ -135,7 +135,7 @@ export default function AllObservationsScreen(): React.ReactElement {
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <View style={{ flexShrink: 1 }}>
                     <Body style={{ fontWeight: "700" }}>{title}</Body>
-                    <Muted>{new Date(o.classDate).toLocaleDateString()}</Muted>
+                    <Muted>{isoDateLabel(o.classDate)}</Muted>
                     <Muted>{STR.obsTeacher}: {teacherName}</Muted>
                     <Muted>{STR.obsObserver}: {reviewerName}</Muted>
                   </View>

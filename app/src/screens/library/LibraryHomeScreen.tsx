@@ -21,7 +21,7 @@ import {
 import type { LibraryStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Badge, Chip, ChipRow, Field, Notice, EmptyState, Loader } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
-import { STR, bnNum, bookLanguageLabel, reservationStatusLabel, borrowerTypeLabel } from "../../lib/labels";
+import { STR, bnNum, bookLanguageLabel, reservationStatusLabel, borrowerTypeLabel, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
@@ -95,7 +95,7 @@ export default function LibraryHomeScreen({ navigation }: Props): React.ReactEle
             {loan.overdue ? <Badge text={STR.libOverdue} tone="danger" /> : null}
           </View>
           <Muted>
-            {loan.accessionNo ?? "—"} · {STR.libDue}: {new Date(loan.dueDate).toLocaleDateString()}
+            {loan.accessionNo ?? "—"} · {STR.libDue}: {isoDateLabel(loan.dueDate)}
           </Muted>
         </Card>
       ))}
@@ -111,7 +111,7 @@ export default function LibraryHomeScreen({ navigation }: Props): React.ReactEle
           </View>
           {r.status === "READY" && r.expiresAt ? (
             <Muted>
-              {STR.libHoldUntil}: {new Date(r.expiresAt).toLocaleDateString()}
+              {STR.libHoldUntil}: {isoDateLabel(r.expiresAt)}
               {r.heldAccessionNo ? ` · ${r.heldAccessionNo}` : ""}
             </Muted>
           ) : null}
@@ -134,7 +134,7 @@ export default function LibraryHomeScreen({ navigation }: Props): React.ReactEle
               </View>
               <Muted>
                 {borrowerTypeLabel(row.borrowerType)} · {row.titleBn ?? "—"} ({row.accessionNo ?? "—"}) · {STR.libDue}:{" "}
-                {new Date(row.dueDate).toLocaleDateString()}
+                {isoDateLabel(row.dueDate)}
               </Muted>
               {row.waLink ? (
                 <Button

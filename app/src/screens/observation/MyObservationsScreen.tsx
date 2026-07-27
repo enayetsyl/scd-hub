@@ -14,7 +14,7 @@ import { TEACHER_CLASSROOM_OBSERVATIONS_QUERY } from "../../graphql/observation"
 import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
-import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel } from "../../lib/labels";
+import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { ObservationStackParamList } from "../../navigation/types";
 
@@ -59,7 +59,7 @@ export default function MyObservationsScreen(): React.ReactElement {
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View style={{ flexShrink: 1 }}>
                     <Body style={{ fontWeight: "700" }}>{title}</Body>
-                    <Muted>{new Date(o.classDate).toLocaleDateString()}</Muted>
+                    <Muted>{isoDateLabel(o.classDate)}</Muted>
                   </View>
                   <Badge
                     text={obsStateLabel(o.state)}

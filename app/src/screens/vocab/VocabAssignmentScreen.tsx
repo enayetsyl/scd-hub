@@ -18,7 +18,7 @@ import { DateField } from "../../components/DateField";
 import { ProgramSelect, ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { TeacherSelect } from "../../components/selects";
 import { AcademicYearSelect } from "../../components/selects";
-import { STR, vocabProgramLabel, vocabAssignmentSourceLabel } from "../../lib/labels";
+import { STR, vocabProgramLabel, vocabAssignmentSourceLabel, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
@@ -112,7 +112,7 @@ export default function VocabAssignmentScreen(): React.ReactElement {
                   <View style={{ flexShrink: 1 }}>
                     <Body>{teacherName(a.assignedTeacherId)}</Body>
                     <Muted>
-                      {vocabProgramLabel(a.program)} · {new Date(a.weekOf).toLocaleDateString()}
+                      {vocabProgramLabel(a.program)} · {isoDateLabel(a.weekOf)}
                     </Muted>
                   </View>
                   <Badge text={vocabAssignmentSourceLabel(a.source)} tone="muted" />

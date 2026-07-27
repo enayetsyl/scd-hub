@@ -14,12 +14,12 @@ import {
 } from "../../graphql/videoReview";
 import { TEACHERS_QUERY } from "../../graphql/operations";
 import { Screen, H2, Body, Muted, Card, Badge, Button, Field, Select, Notice, Loader, EmptyState, Divider } from "../../components/ui";
-import { STR, bnNum } from "../../lib/labels";
+import { STR, bnNum, dhakaDateKey } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
 
-const todayKey = (): string => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+const todayKey = (): string => dhakaDateKey();
 
 function statusBadge(status: string): { text: string; tone: "warn" | "ok" | "danger" } {
   if (status === "PENDING") return { text: STR.vrStatusPending, tone: "warn" };

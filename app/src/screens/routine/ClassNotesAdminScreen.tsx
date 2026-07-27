@@ -17,7 +17,7 @@ import { Screen, Body, Muted, Card, Field, Button, Badge, Loader, Notice } from 
 import { ClassNoteAttachments, type AttachmentRef } from "../../components/ClassNoteAttachments";
 import { useReportRange, useRowFilters } from "../../components/ReportFilters";
 import { openStoredFile } from "../../lib/files";
-import { STR, routineSubjectLabel, classLevelLabel, getActiveLang } from "../../lib/labels";
+import { STR, routineSubjectLabel, classLevelLabel, getActiveLang, isoDateTimeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { useToast } from "../../state/ToastContext";
@@ -117,7 +117,7 @@ export default function ClassNotesAdminScreen(): React.ReactElement {
                   {rowSection(r) ? ` · ${rowSection(r)}` : ""} · {routineSubjectLabel(r.subject)}
                 </Body>
                 <Muted>
-                  {STR.cnAuthor}: {r.authorName ?? "—"} · {new Date(r.publishedAt).toLocaleString()}
+                  {STR.cnAuthor}: {r.authorName ?? "—"} · {isoDateTimeLabel(r.publishedAt)}
                 </Muted>
               </View>
             </View>

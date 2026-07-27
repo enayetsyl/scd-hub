@@ -22,7 +22,7 @@ import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Badge, Notice, EmptyState } from "../../components/ui";
 import { TeacherSelect } from "../../components/selects";
 import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
-import { STR, classLevelLabel, bnNum, getActiveLang } from "../../lib/labels";
+import { STR, classLevelLabel, bnNum, getActiveLang, isoDateTimeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -278,7 +278,7 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
                   {h.role} · {h.op}
                 </Body>
                 <Muted>
-                  {h.teacherId ? nameOf(h.teacherId) : "—"} · {new Date(h.at).toLocaleString()}
+                  {h.teacherId ? nameOf(h.teacherId) : "—"} · {isoDateTimeLabel(h.at)}
                 </Muted>
               </Card>
             ))}

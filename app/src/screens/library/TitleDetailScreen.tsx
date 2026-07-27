@@ -25,6 +25,7 @@ import {
   copyStatusLabel,
   borrowerTypeLabel,
   reservationStatusLabel,
+  isoDateLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -148,7 +149,7 @@ export default function TitleDetailScreen({ route }: Props): React.ReactElement 
               <Muted>
                 {borrowerTypeLabel(r.borrowerType)}
                 {r.status === "READY" && r.expiresAt
-                  ? ` · ${STR.libHoldUntil}: ${new Date(r.expiresAt).toLocaleDateString()}${r.heldAccessionNo ? ` · ${r.heldAccessionNo}` : ""}`
+                  ? ` · ${STR.libHoldUntil}: ${isoDateLabel(r.expiresAt)}${r.heldAccessionNo ? ` · ${r.heldAccessionNo}` : ""}`
                   : ""}
               </Muted>
               <Button title={STR.libCancelReservation} variant="danger" onPress={() => void runCancel(r.id)} style={{ marginTop: space(2) }} />

@@ -14,7 +14,7 @@ import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-n
 import { useQuery, useMutation } from "urql";
 import { MEETING_COMPARISON_QUERY, SAVE_MEETING_COMMENT } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Button, Field, Notice, Loader, Divider } from "../../components/ui";
-import { STR, commentTypeLabel, bnNum } from "../../lib/labels";
+import { STR, commentTypeLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
@@ -83,7 +83,7 @@ export default function MeetingComparisonScreen({ route }: Props): React.ReactEl
           <Body style={{ fontWeight: "700" }}>{studentName}</Body>
           {comp ? (
             <Muted>
-              {comp.instanceLabel} · {new Date(comp.meetingDate).toLocaleDateString()}
+              {comp.instanceLabel} · {isoDateLabel(comp.meetingDate)}
             </Muted>
           ) : null}
         </Card>
@@ -137,7 +137,7 @@ export default function MeetingComparisonScreen({ route }: Props): React.ReactEl
               <View key={p.id}>
                 {i > 0 ? <Divider /> : <View style={{ height: space(2) }} />}
                 <Muted>
-                  {p.instanceLabel} · {new Date(p.meetingDate).toLocaleDateString()}
+                  {p.instanceLabel} · {isoDateLabel(p.meetingDate)}
                 </Muted>
                 {p.positiveText ? (
                   <Body style={{ marginTop: space(1) }}>

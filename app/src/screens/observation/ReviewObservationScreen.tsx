@@ -45,6 +45,7 @@ import {
   obsQuranCriterionLabel,
   obsQuranComplianceLabel,
   hwSubjectLabel,
+  isoDateLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -230,7 +231,7 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
                   ) : null}
                 </View>
                 <Muted style={{ marginTop: space(1) }}>
-                  {new Date(prior.classDate).toLocaleDateString()} · {hwSubjectLabel(prior.subject)}
+                  {isoDateLabel(prior.classDate)} · {hwSubjectLabel(prior.subject)}
                 </Muted>
                 {prior.growthFocus ? (
                   <Body style={{ marginTop: space(2), fontStyle: "italic" }}>“{prior.growthFocus}”</Body>
