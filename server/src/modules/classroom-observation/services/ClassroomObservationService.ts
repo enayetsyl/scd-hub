@@ -1045,3 +1045,23 @@ export async function myReviewQueue(observerId: string): Promise<ClassroomObserv
     .lean()) as unknown as IClassroomObservation[];
   return docs.map(shape);
 }
+
+/** Observation drawer badge counts (owner 2026-07-26): `toReview` = observations
+ *  assigned to the caller awaiting their review (observation:review); `toPublish` =
+ *  reviewed-but-unpublished, awaiting Principal/Office release (observation:upload).
+ *  Each is 0 when the caller lacks that permission. */
+export async function observationCounts(
+  observerId: string,
+  canReview: boolean,
+  canPublish: boolean,
+): Promise<{ toReview: number; toPublish: number }> {
+  const [toReview, toPublish] = await Promise.all([
+    canReview
+      ? ClassroomObservation.countDocuments({ observerId: oid(observerId, "observerId"), state: "ASSIGNED" })
+      : Promise.resolve(0),
+    canPublish
+      ? ClassroomObservation.countDocuments({ state: "REVIEWED", publishedAt: null })
+      : Promise.resolve(0),
+  ]);
+  return { toReview, toPublish };
+}

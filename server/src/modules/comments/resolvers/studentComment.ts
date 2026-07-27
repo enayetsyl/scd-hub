@@ -24,6 +24,7 @@ import {
   studentComments,
   myComments,
   reviewInbox,
+  reviewInboxCount,
   type StudentCommentShape,
   type AuthoredCommentShape,
   type CommentReviewRow,
@@ -266,6 +267,20 @@ builder.queryField("commentReviewInbox", (t) =>
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return reviewInbox();
+    },
+  }),
+);
+
+builder.queryField("commentReviewCount", (t) =>
+  t.field({
+    type: "Int",
+    description:
+      "How many undelivered comments await Principal/Office review — the Comments drawer badge " +
+      "(owner 2026-07-26). Requires roster:manage.",
+    authScopes: { hasPermission: "roster:manage" },
+    resolve: async (_root, _args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return reviewInboxCount();
     },
   }),
 );
