@@ -67,6 +67,12 @@ export async function deliverComment(commentId: string, actorId: string): Promis
   if (!Types.ObjectId.isValid(commentId)) throw new StudentCommentError("Invalid comment id");
   const comment = (await StudentComment.findById(commentId)) as IStudentComment | null;
   if (!comment) throw new StudentCommentError("Comment not found");
+  // A discarded draft was deliberately dropped (D-#365) — it must never reach a guardian,
+  // even if some stale UI path tries to deliver it. (Idempotent redelivery of an already
+  // delivered comment stays allowed below.)
+  if (comment.discardedAt && !comment.deliveredAt) {
+    throw new StudentCommentError("This comment was discarded and cannot be delivered");
+  }
 
   const student = (await Student.findById(comment.studentId)
     .select("name nameBn phone")

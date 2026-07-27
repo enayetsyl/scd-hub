@@ -25,11 +25,14 @@ export interface StudentCommentT {
   attachmentIds: string[];
   deliveredAt: string | null;
   deliveryChannels: string[];
+  /** Set when a reviewer discarded the draft (D-#365) — greyed on the staff timeline. */
+  discardedAt: string | null;
+  discardReason: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-const STUDENT_COMMENT_FIELDS = `id studentId sectionId authorUserId type sentiment text attachmentIds deliveredAt deliveryChannels createdAt updatedAt`;
+const STUDENT_COMMENT_FIELDS = `id studentId sectionId authorUserId type sentiment text attachmentIds deliveredAt deliveryChannels discardedAt discardReason createdAt updatedAt`;
 
 export const SECTION_STUDENT_COMMENTS_QUERY = gql<
   { sectionStudentComments: StudentCommentT[] },
@@ -130,6 +133,17 @@ export const REMOVE_COMMENT_ATTACHMENT = gql<
 >`
   mutation RemoveCommentAttachment($commentId: String!, $fileId: String!) {
     removeCommentAttachment(commentId: $commentId, fileId: $fileId) { ${STUDENT_COMMENT_FIELDS} }
+  }
+`;
+
+// Discard an undelivered draft with a reason (D-#365) — drops from the review inbox,
+// never sent to the guardian; kept greyed on the staff timeline.
+export const DISCARD_STUDENT_COMMENT = gql<
+  { discardStudentComment: StudentCommentT },
+  { commentId: string; reason: string }
+>`
+  mutation DiscardStudentComment($commentId: String!, $reason: String!) {
+    discardStudentComment(commentId: $commentId, reason: $reason) { ${STUDENT_COMMENT_FIELDS} }
   }
 `;
 

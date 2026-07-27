@@ -44,6 +44,10 @@ export interface StudentCommentShape {
   attachmentIds: string[];
   deliveredAt: string | null;
   deliveryChannels: string[];
+  /** Set when a reviewer discarded the draft (owner 2026-07-27) — greyed on the staff
+   *  timeline, never delivered, absent from the review inbox. */
+  discardedAt: string | null;
+  discardReason: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,6 +64,8 @@ function shape(d: IStudentComment): StudentCommentShape {
     attachmentIds: (d.attachmentIds ?? []).map((a) => a.toString()),
     deliveredAt: d.deliveredAt ? new Date(d.deliveredAt).toISOString() : null,
     deliveryChannels: d.deliveryChannels ?? [],
+    discardedAt: d.discardedAt ? new Date(d.discardedAt).toISOString() : null,
+    discardReason: d.discardReason ?? null,
     createdAt: new Date(d.createdAt).toISOString(),
     updatedAt: new Date(d.updatedAt).toISOString(),
   };
@@ -189,6 +195,10 @@ export async function editComment(input: EditCommentInput): Promise<StudentComme
   if (doc.deliveredAt) {
     throw new StudentCommentError("A delivered comment is immutable — record a new comment to correct it");
   }
+  // A discarded draft is retracted (D-#365) — not editable back into the queue.
+  if (doc.discardedAt) {
+    throw new StudentCommentError("A discarded comment cannot be edited");
+  }
 
   if (input.type !== undefined) doc.type = assertType(input.type);
   if (input.sentiment !== undefined) doc.sentiment = assertSentiment(input.sentiment);
@@ -245,6 +255,57 @@ export async function removeCommentAttachment(input: RemoveAttachmentInput): Pro
     targetId: doc._id,
     targetKind: "StudentComment",
     meta: { studentId: doc.studentId.toString(), attachmentRemoved: input.fileId },
+  });
+
+  return shape(doc);
+}
+
+// ---------------------------------------------------------------------------
+// discardComment (reviewer-only; drops from the inbox, never delivered — D-#365)
+// ---------------------------------------------------------------------------
+
+export interface DiscardCommentInput {
+  commentId: string;
+  /** The reviewer's required reason (kept for the audit + greyed timeline). */
+  reason: string;
+  /** The authenticated reviewer (Principal/Office). */
+  actorId: string;
+}
+
+/**
+ * Discard an UNDELIVERED comment with a reason (owner 2026-07-27, D-#365). A
+ * reviewer (Principal/Office) uses this to drop an unwanted draft from the review
+ * inbox WITHOUT sending it to the guardian. The comment is NOT deleted — it stays
+ * on the child's staff timeline greyed with the reason (the "permanent history"
+ * rule + ADR-008 audit) — but a discarded comment can never reach a guardian, who
+ * only ever sees delivered comments. Refused once delivered, and idempotently
+ * refused if already discarded. Audited.
+ */
+export async function discardComment(input: DiscardCommentInput): Promise<StudentCommentShape> {
+  if (!Types.ObjectId.isValid(input.commentId)) throw new StudentCommentError("Invalid comment id");
+  const reason = (input.reason ?? "").trim();
+  if (!reason) throw new StudentCommentError("A reason is required to discard a comment");
+
+  const doc = (await StudentComment.findById(input.commentId)) as IStudentComment | null;
+  if (!doc) throw new StudentCommentError("Comment not found");
+  if (doc.deliveredAt) {
+    throw new StudentCommentError("A delivered comment cannot be discarded — it has already reached the guardian");
+  }
+  if (doc.discardedAt) {
+    throw new StudentCommentError("This comment is already discarded");
+  }
+
+  doc.discardedAt = new Date();
+  doc.discardReason = reason;
+  doc.discardedBy = new Types.ObjectId(input.actorId);
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "STUDENT_COMMENT_RECORDED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "StudentComment",
+    meta: { studentId: doc.studentId.toString(), sectionId: doc.sectionId.toString(), discarded: true, reason },
   });
 
   return shape(doc);
@@ -310,13 +371,14 @@ export interface CommentReviewRow extends AuthoredCommentShape {
  * the Principal/Office review dashboard (D-#264): they decide what reaches the guardian.
  * School-wide (no section scope); gated `roster:manage` (Principal/Office) by the resolver.
  */
-/** How many undelivered comments await review — the Comments drawer badge (owner 2026-07-26). */
+/** How many undelivered comments await review — the Comments drawer badge (owner 2026-07-26).
+ *  Discarded drafts (D-#365) are excluded — they've left the queue. */
 export async function reviewInboxCount(): Promise<number> {
-  return StudentComment.countDocuments({ deliveredAt: null });
+  return StudentComment.countDocuments({ deliveredAt: null, discardedAt: null });
 }
 
 export async function reviewInbox(): Promise<CommentReviewRow[]> {
-  const docs = (await StudentComment.find({ deliveredAt: null }).sort({ createdAt: -1 }).lean()) as unknown as IStudentComment[];
+  const docs = (await StudentComment.find({ deliveredAt: null, discardedAt: null }).sort({ createdAt: -1 }).lean()) as unknown as IStudentComment[];
   if (docs.length === 0) return [];
 
   const studentIds = [...new Set(docs.map((d) => d.studentId.toString()))];

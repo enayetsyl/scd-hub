@@ -92,32 +92,48 @@ export default function CommentsHomeScreen(): React.ReactElement {
             {mine.length === 0 ? (
               <Muted style={{ marginTop: space(2) }}>{STR.cmNoMyComments}</Muted>
             ) : (
-              mine.map((c) => (
+              mine.map((c) => {
+                const discarded = !!c.discardedAt;
+                return (
                 <Card
                   key={c.id}
-                  onPress={() =>
-                    nav.navigate("CommentEntry", {
-                      sectionId: c.sectionId,
-                      studentId: c.studentId,
-                      studentName: c.studentName,
-                      commentId: c.id,
-                    })
+                  onPress={
+                    discarded
+                      ? undefined
+                      : () =>
+                          nav.navigate("CommentEntry", {
+                            sectionId: c.sectionId,
+                            studentId: c.studentId,
+                            studentName: c.studentName,
+                            commentId: c.id,
+                          })
                   }
+                  style={discarded ? { opacity: 0.6 } : undefined}
                 >
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                     <Body style={{ fontWeight: "700", flexShrink: 1 }}>{c.studentName}</Body>
                     <Badge
-                      text={c.deliveredAt ? STR.cmDeliveredBadge : STR.cmDraftBadge}
-                      tone={c.deliveredAt ? "ok" : "muted"}
+                      text={discarded ? STR.cmDiscardedTag : c.deliveredAt ? STR.cmDeliveredBadge : STR.cmDraftBadge}
+                      tone={discarded ? "danger" : c.deliveredAt ? "ok" : "muted"}
                     />
                   </View>
                   <Muted style={{ marginTop: 2 }}>
                     {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)} ·{" "}
                     {isoDateLabel(c.createdAt)}
                   </Muted>
-                  <Body style={{ marginTop: space(1) }}>{c.text}</Body>
+                  <Body
+                    style={{ marginTop: space(1), ...(discarded ? { textDecorationLine: "line-through" } : {}) }}
+                  >
+                    {c.text}
+                  </Body>
+                  {discarded && c.discardReason ? (
+                    <Muted style={{ marginTop: space(1), fontStyle: "italic" }}>
+                      {STR.cmDiscardedTag}: {c.discardReason}
+                    </Muted>
+                  ) : null}
                 </Card>
-              ))
+                );
+              })
             )}
             </QueryGate>
           </Card>

@@ -45,6 +45,15 @@ export interface IStudentComment extends Document {
   deliveredAt?: Date;
   /** Channels the CM-2 delivery actually used (wa.me / inbox / push). */
   deliveryChannels: string[];
+  /** Set when a reviewer DISCARDS the draft (owner 2026-07-27, D-#365): the comment
+   *  is never delivered and drops out of the review inbox, but is KEPT (greyed) on the
+   *  staff timeline for audit — guardians only ever see delivered comments, so a
+   *  discarded one is structurally unreachable by them. */
+  discardedAt?: Date;
+  /** The reviewer's required reason for discarding. */
+  discardReason?: string;
+  /** The reviewer (Principal/Office) who discarded it. */
+  discardedBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -60,6 +69,9 @@ const StudentCommentSchema = new Schema<IStudentComment>(
     attachmentIds: { type: [Schema.Types.ObjectId], default: [] },
     deliveredAt: { type: Date },
     deliveryChannels: { type: [String], default: [] },
+    discardedAt: { type: Date },
+    discardReason: { type: String, trim: true },
+    discardedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true },
 );
