@@ -44,7 +44,7 @@
       [
         "@sentry/react-native/expo",
         {
-          "url": "https://errors.scdhub.shafayet.me",
+          "url": "https://scdhub-errors.shafayet.me",
           "organization": "scd",
           "project": "scdhub-app"
         }
