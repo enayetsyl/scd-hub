@@ -72,9 +72,15 @@ if (!fs.existsSync(path.join(ANDROID, "keystore.properties"))) {
 // The Sentry gradle plugin uploads release source maps when SENTRY_AUTH_TOKEN is
 // set; without it the upload task FAILS the build, so explicitly skip it (crash
 // stacks for that release are then unsymbolicated — prefer exporting the token).
+// The token is a BUILD secret (never EXPO_PUBLIC, never bundled) — read it from the
+// gitignored app/.env if not already exported, so a release symbolicates by default.
 const env = { ...process.env };
 if (!env.SENTRY_AUTH_TOKEN) {
-  console.warn("WARN: SENTRY_AUTH_TOKEN not set — skipping Sentry source-map upload for this build.");
+  const fileToken = (appEnv.match(/^SENTRY_AUTH_TOKEN=(.*)$/m) || [])[1]?.trim();
+  if (fileToken) env.SENTRY_AUTH_TOKEN = fileToken;
+}
+if (!env.SENTRY_AUTH_TOKEN) {
+  console.warn("WARN: SENTRY_AUTH_TOKEN not set (app/.env or env) — skipping Sentry source-map upload; crash stacks for this release will be UNSYMBOLICATED.");
   env.SENTRY_DISABLE_AUTO_UPLOAD = "true";
 }
 const gradlew = path.join(ANDROID, process.platform === "win32" ? "gradlew.bat" : "gradlew");
