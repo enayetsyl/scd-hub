@@ -26,6 +26,7 @@
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
+import { callerHasPermission } from "@scd/shared";
 import {
   uploadObservation,
   assignObserver,
@@ -40,6 +41,7 @@ import {
   allObservationsPaged,
   observerReviewsPaged,
   myReviewQueue,
+  observationCounts,
   canReadObservation,
   priorObservationContext,
   canReadPriorContext,
@@ -585,6 +587,34 @@ builder.queryField("myObservationReviewQueue", (t) =>
     resolve: async (_root, _args, ctx) => {
       const actor = actorOf(ctx);
       return myReviewQueue(actor.userId);
+    },
+  }),
+);
+
+const ObservationCountsRef = builder
+  .objectRef<{ toReview: number; toPublish: number }>("ObservationCounts")
+  .implement({
+    description:
+      "Observation drawer badge counts (owner 2026-07-26): toReview = assigned to me awaiting my review; " +
+      "toPublish = reviewed but not yet published (Principal/Office).",
+    fields: (t) => ({
+      toReview: t.exposeInt("toReview"),
+      toPublish: t.exposeInt("toPublish"),
+    }),
+  });
+
+builder.queryField("observationCounts", (t) =>
+  t.field({
+    type: ObservationCountsRef,
+    description:
+      "How many observations await MY review (observation:review) and await publish (observation:upload) — " +
+      "the Observation drawer badge. Requires observation:read; each count is 0 without the matching permission.",
+    authScopes: { hasPermission: "observation:read" },
+    resolve: async (_root, _args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const canReview = callerHasPermission(ctx.auth, "observation:review");
+      const canPublish = callerHasPermission(ctx.auth, "observation:upload");
+      return observationCounts(ctx.auth.userId as string, canReview, canPublish);
     },
   }),
 );
