@@ -11,7 +11,7 @@ import { Screen, Card, Body, Muted, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { ProgramSelect, ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
-import { STR, bnNum, vocabProgramLabel } from "../../lib/labels";
+import { STR, bnNum, vocabProgramLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
 export default function VocabClassReportScreen(): React.ReactElement {
@@ -70,7 +70,7 @@ export default function VocabClassReportScreen(): React.ReactElement {
                           <Body>
                             {vocabProgramLabel(e.test.program)} · {e.test.label}
                           </Body>
-                          <Muted>{new Date(e.test.testDate).toLocaleDateString()}</Muted>
+                          <Muted>{isoDateLabel(e.test.testDate)}</Muted>
                         </View>
                         <Muted>
                           {STR.vbAvgScore}: {bnNum(e.rollup.averageScore)}/{bnNum(e.rollup.averageTotal)}

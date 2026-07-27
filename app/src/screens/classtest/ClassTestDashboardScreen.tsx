@@ -18,7 +18,7 @@ import {
   CLASS_TEST_REPORTS_STATUS_QUERY,
 } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Loader, Notice } from "../../components/ui";
-import { STR, hwSubjectLabel, ctReportStateLabel, bnNum } from "../../lib/labels";
+import { STR, hwSubjectLabel, ctReportStateLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
@@ -113,7 +113,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                           {hwSubjectLabel(r.subject)} · {STR.ctTestNumber} {bnNum(r.testNumber)}
                         </Body>
                         <Muted>
-                          {r.ctId} · {new Date(r.examDate).toLocaleDateString()} · {r.teacherName}
+                          {r.ctId} · {isoDateLabel(r.examDate)} · {r.teacherName}
                         </Muted>
                       </View>
                       <Badge text={ctReportStateLabel(r.state)} tone={stateTone(r.state)} />
@@ -122,7 +122,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                       {STR.ctEntered} {bnNum(r.enteredCount)}/{bnNum(r.rosterCount)} · {STR.ctPending} {bnNum(r.pendingCount)}
                       {r.overdue ? ` · ${STR.ctSchoolDaysLate} ${bnNum(r.schoolDaysLate)}` : ""}
                       {r.submittedAt
-                        ? ` · ${STR.ctSubmittedBadge} ${new Date(r.submittedAt).toLocaleDateString()}`
+                        ? ` · ${STR.ctSubmittedBadge} ${isoDateLabel(r.submittedAt)}`
                         : ""}
                     </Muted>
                   </Pressable>

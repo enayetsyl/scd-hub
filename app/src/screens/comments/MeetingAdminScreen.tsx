@@ -27,7 +27,7 @@ import {
   type MeetingDispatchResultT,
 } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Button, Badge, Loader, Notice } from "../../components/ui";
-import { STR, meetingStatusLabel, minutesToHHMM, bnNum } from "../../lib/labels";
+import { STR, meetingStatusLabel, minutesToHHMM, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
@@ -132,7 +132,7 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <View style={{ flexShrink: 1 }}>
               <Body style={{ fontWeight: "700" }}>{meeting?.instanceLabel}</Body>
-              {meeting ? <Muted>{new Date(meeting.meetingDate).toLocaleDateString()}</Muted> : null}
+              {meeting ? <Muted>{isoDateLabel(meeting.meetingDate)}</Muted> : null}
             </View>
             {meeting ? (
               <Badge

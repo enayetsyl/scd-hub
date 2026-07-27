@@ -12,7 +12,7 @@ import { useQuery, useMutation } from "urql";
 import { PARENT_MEETINGS_QUERY, CREATE_PARENT_MEETING } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Button, Badge, Field, Loader, Notice } from "../../components/ui";
 import { DateField } from "../../components/DateField";
-import { STR, meetingStatusLabel, bnNum } from "../../lib/labels";
+import { STR, meetingStatusLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
@@ -103,7 +103,7 @@ export default function MeetingsListScreen(): React.ReactElement {
                   <View style={{ flexShrink: 1 }}>
                     <Body style={{ fontWeight: "700" }}>{m.instanceLabel}</Body>
                     <Muted>
-                      {new Date(m.meetingDate).toLocaleDateString()} · {bnNum(m.slotMinutes)} {STR.cmSlotMinutes}
+                      {isoDateLabel(m.meetingDate)} · {bnNum(m.slotMinutes)} {STR.cmSlotMinutes}
                     </Muted>
                   </View>
                   <Badge

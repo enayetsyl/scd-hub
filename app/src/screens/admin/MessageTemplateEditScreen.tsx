@@ -25,7 +25,7 @@ import type { AdminStackParamList } from "../../navigation/types";
 import {
   Screen, Body, Muted, Card, Button, Badge, Field, Select, Chip, ChipRow, Notice, Loader, ErrorBanner,
 } from "../../components/ui";
-import { STR } from "../../lib/labels";
+import { STR, isoDateTimeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useLanguage } from "../../state/LanguageContext";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -196,7 +196,7 @@ export default function MessageTemplateEditScreen({ route, navigation }: Props):
           <Card key={i}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <Body style={{ fontWeight: "700" }}>{h.action === "reset" ? STR.mtActionReset : STR.mtActionEdit}</Body>
-              <Muted>{new Date(h.at).toLocaleString()}</Muted>
+              <Muted>{isoDateTimeLabel(h.at)}</Muted>
             </View>
             {h.priorBnBody ? (
               <Muted style={{ marginTop: 2 }}>

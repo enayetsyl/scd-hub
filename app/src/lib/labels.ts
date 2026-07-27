@@ -323,6 +323,37 @@ export function isoDateLabel(iso?: string | null): string {
   return bnNum(`${y}-${m}-${dd}`);
 }
 
+/** Deterministic Dhaka (UTC+6, no DST) calendar-day KEY as ASCII "YYYY-MM-DD".
+ *  Replaces `toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" })`, which routes
+ *  through Hermes `Intl`/device ICU and CRASHES on some Android Go devices (owner
+ *  2026-07-27). Never Bangla-numeralised — this is a key, not a display string. */
+export function dhakaDateKey(input?: string | Date | null): string {
+  const d = input == null ? new Date() : input instanceof Date ? input : new Date(input);
+  if (Number.isNaN(d.getTime())) return "";
+  const s = new Date(d.getTime() + 6 * 3600 * 1000); // shift into Dhaka, read UTC parts
+  const y = s.getUTCFullYear();
+  const m = String(s.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(s.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
+/** Compact Dhaka date+time for a full ISO timestamp: "২০২৬-০৭-১৭ ১৪:৩০".
+ *  Deterministic replacement for `toLocaleString()` (device-ICU; Hermes-Intl crash
+ *  vector on some Android Go devices, owner 2026-07-27). Fixed Dhaka offset — every
+ *  user is in Bangladesh, so this reads the same as the old device-local time. */
+export function isoDateTimeLabel(iso?: string | null): string {
+  if (!iso) return DASH;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return bnNum(iso);
+  const s = new Date(d.getTime() + 6 * 3600 * 1000);
+  const y = s.getUTCFullYear();
+  const mo = String(s.getUTCMonth() + 1).padStart(2, "0");
+  const da = String(s.getUTCDate()).padStart(2, "0");
+  const hh = String(s.getUTCHours()).padStart(2, "0");
+  const mi = String(s.getUTCMinutes()).padStart(2, "0");
+  return bnNum(`${y}-${mo}-${da} ${hh}:${mi}`);
+}
+
 export const subjectLabel = (code?: string | null): string =>
   (code && pick(SUBJECT_LABELS_BN, SUBJECT_LABELS_EN)[code as Subject]) || code || DASH;
 

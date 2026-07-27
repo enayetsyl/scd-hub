@@ -14,7 +14,7 @@ import { Screen, Card, Body, Muted, Button, Badge, Chip } from "../../components
 import { QueryGate } from "../../components/QueryGate";
 import { ProgramSelect, ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
-import { STR, vocabProgramLabel, vocabTestStatusLabel } from "../../lib/labels";
+import { STR, vocabProgramLabel, vocabTestStatusLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { VocabStackParamList } from "../../navigation/types";
 
@@ -63,7 +63,7 @@ export default function VocabTestsScreen(): React.ReactElement {
                       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                         <View style={{ flexShrink: 1 }}>
                           <Body style={{ fontWeight: "700" }}>{title}</Body>
-                          <Muted>{new Date(tst.testDate).toLocaleDateString()}</Muted>
+                          <Muted>{isoDateLabel(tst.testDate)}</Muted>
                         </View>
                         <Badge text={vocabTestStatusLabel(tst.status)} tone={tst.status === "marked" ? "ok" : "muted"} />
                       </View>

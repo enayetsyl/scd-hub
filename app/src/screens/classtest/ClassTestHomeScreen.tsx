@@ -14,7 +14,7 @@ import { MY_CLASS_TESTS_QUERY } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
-import { STR, hwSubjectLabel, classTestStatusLabel, bnNum } from "../../lib/labels";
+import { STR, hwSubjectLabel, classTestStatusLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList, TabParamList } from "../../navigation/types";
 
@@ -81,7 +81,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
                       {hwSubjectLabel(t.subject)} · {STR.ctTestNumber} {bnNum(t.testNumber)}
                     </Body>
                     <Muted>
-                      {t.ctId} · {new Date(t.examDate).toLocaleDateString()}
+                      {t.ctId} · {isoDateLabel(t.examDate)}
                     </Muted>
                   </View>
                   <Badge

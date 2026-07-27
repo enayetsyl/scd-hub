@@ -12,7 +12,7 @@ import { MY_OBSERVATION_REVIEW_QUEUE_QUERY } from "../../graphql/observation";
 import { TEACHERS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
-import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel } from "../../lib/labels";
+import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { ObservationStackParamList } from "../../navigation/types";
 
@@ -62,7 +62,7 @@ export default function ObservationReviewQueueScreen(): React.ReactElement {
                     {obsFormLabel(o.form)} · {hwSubjectLabel(o.subject)}
                   </Body>
                   <Muted>
-                    {STR.obsTeacher}: {nameById[o.teacherId] ?? o.teacherId} · {new Date(o.classDate).toLocaleDateString()}
+                    {STR.obsTeacher}: {nameById[o.teacherId] ?? o.teacherId} · {isoDateLabel(o.classDate)}
                   </Muted>
                 </View>
                 <Badge text={obsStateLabel(o.state)} tone="brand" />

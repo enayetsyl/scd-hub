@@ -15,7 +15,7 @@ import { MY_VOCAB_ASSIGNMENTS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
-import { STR, vocabProgramLabel } from "../../lib/labels";
+import { STR, vocabProgramLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { VocabStackParamList } from "../../navigation/types";
 
@@ -57,7 +57,7 @@ export default function VocabHomeScreen(): React.ReactElement {
                 <View key={a.id} style={{ marginTop: space(2) }}>
                   <Body>{vocabProgramLabel(a.program)}</Body>
                   <Muted>
-                    {STR.vbWeekOf}: {new Date(a.weekOf).toLocaleDateString()}
+                    {STR.vbWeekOf}: {isoDateLabel(a.weekOf)}
                   </Muted>
                 </View>
               ))

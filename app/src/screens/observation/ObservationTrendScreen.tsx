@@ -15,7 +15,7 @@ import {
 } from "../../graphql/observation";
 import { Screen, Card, Body, Muted, Button, Field, Row, Badge, Loader } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
-import { STR, obsDomainLabel, obsLevelLabel, obsTrendGlyph, bnNum } from "../../lib/labels";
+import { STR, obsDomainLabel, obsLevelLabel, obsTrendGlyph, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
@@ -65,7 +65,7 @@ export default function ObservationTrendScreen(): React.ReactElement {
               {trend.firstClassDate && trend.lastClassDate ? (
                 <Row
                   label={STR.obsDateRange}
-                  value={`${new Date(trend.firstClassDate).toLocaleDateString()} – ${new Date(trend.lastClassDate).toLocaleDateString()}`}
+                  value={`${isoDateLabel(trend.firstClassDate)} – ${isoDateLabel(trend.lastClassDate)}`}
                 />
               ) : null}
               {trend.domains.map((d) => (

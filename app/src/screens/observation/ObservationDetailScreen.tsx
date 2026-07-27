@@ -49,6 +49,8 @@ import {
   obsQuranComplianceLabel,
   obsGrowthProgressLabel,
   bnNum,
+  isoDateLabel,
+  isoDateTimeLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -215,7 +217,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
             <Row label={STR.obsClassSection} value={sectionLabelById[obs.sectionId] ?? obs.sectionId} />
           ) : null}
           <Row label={STR.obsSubject} value={hwSubjectLabel(obs.subject)} />
-          <Row label={STR.obsClassDate} value={new Date(obs.classDate).toLocaleDateString()} />
+          <Row label={STR.obsClassDate} value={isoDateLabel(obs.classDate)} />
         </Card>
 
         {/* CO-8 (D-#271): Principal/Office publish gate — REVIEWED is not visible to the
@@ -224,7 +226,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsPublishTitle}</Body>
             {obs.publishedAt ? (
-              <Row label={STR.obsPublishedOn} value={new Date(obs.publishedAt).toLocaleString()} />
+              <Row label={STR.obsPublishedOn} value={isoDateTimeLabel(obs.publishedAt)} />
             ) : (
               <>
                 <Muted style={{ marginBottom: space(2) }}>{STR.obsPublishHint}</Muted>
