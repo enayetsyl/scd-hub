@@ -350,7 +350,10 @@ export async function studentProfileComments(
   ]);
 
   // Window on the comment's own date, by KEY (never an instant comparison).
+  // Discarded drafts (D-#365) are retracted — excluded from the profile tally + list
+  // so a dropped comment never inflates the concern/positive/undelivered counts.
   const inWindow = all.filter((c) => {
+    if (c.discardedAt) return false;
     const key = dateKeyOf(new Date(c.createdAt));
     return key >= fromKey && key <= toKey;
   });
