@@ -10,8 +10,12 @@
  *              a secondary পুনঃজমা list issues the explicit resubmission (D-#87)
  *
  * Section + class arrive as route params (from an AssignmentHome cell). Absent-at-
- * delivery students sit behind the header badge (redeliver → GIVEN); manual re-chase
- * of an already-chased student is the "তাগাদা" secondary control under ①.
+ * delivery students sit behind the redeliver toggle inside the fold (redeliver → GIVEN);
+ * manual re-chase of an already-chased student is the "তাগাদা" secondary control under ①.
+ *
+ * Each card is a FOLD (owner ask 2026-07-28, D-#371 — the homework fold applied to this
+ * twin): collapsed by default with the per-stage counts on the header, so a section with
+ * several subjects opens as a scannable index rather than one long roster scroll.
  */
 import React, { useState, useCallback } from "react";
 import { ScrollView, View, RefreshControl, Pressable } from "react-native";
@@ -171,6 +175,11 @@ function ItemCard({
   const [showChase, setShowChase] = useState(false);
   const [showResub, setShowResub] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Owner ask 2026-07-28 (D-#371, the homework fold applied to its twin): each
+  // class×subject card folds. Collapsed by default so a multi-subject section opens as a
+  // scannable index instead of one long roster scroll; the folded header carries the
+  // per-stage counts so no card hides work. Same ▸/▾ idiom as D-#302/#306.
+  const [open, setOpen] = useState(false);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
   const checkRows = group.rows.filter((r) => r.state === "SUBMITTED");
@@ -245,21 +254,44 @@ function ItemCard({
     onDone();
   }
 
+  // Folded summary — only the stages that actually have work, so a card with nothing
+  // pending reads as done without being opened.
+  const summary = [
+    submitRows.length > 0 ? `${STR.hwPassSubmit} ${bnNum(submitRows.length)}` : null,
+    checkRows.length > 0 ? `${STR.asCheck} ${bnNum(checkRows.length)}` : null,
+    returnRows.length > 0 ? `${STR.asReturn} ${bnNum(returnRows.length)}` : null,
+    absentRows.length > 0 ? `${STR.asRedeliver} ${bnNum(absentRows.length)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <Card>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+      {/* The whole header is the fold toggle — a 44pt row, so it stays thumb-friendly. */}
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", minHeight: 44 }}
+      >
         <View style={{ flexShrink: 1 }}>
           <Body style={{ fontWeight: "700" }}>
-            {classLevelLabel(group.classLevel)} · {hwSubjectLabel(group.subject)}
+            {open ? "▾" : "▸"} {classLevelLabel(group.classLevel)} · {hwSubjectLabel(group.subject)}
           </Body>
           <Muted style={{ marginTop: 2 }}>
             {group.asId} · {STR.asDeliverBy} {day(group.deliveryDate)} · {STR.asDueBy} {day(group.dueDate)}
           </Muted>
+          {!open && summary ? <Muted style={{ marginTop: 2 }}>{summary}</Muted> : null}
         </View>
-        {absentRows.length > 0 ? (
-          <Button title={`${STR.asRedeliver} · ${bnNum(absentRows.length)}`} variant="ghost" onPress={() => setShowAbsent((v) => !v)} />
-        ) : null}
-      </View>
+      </Pressable>
+
+      {!open ? null : (
+        <>
+      {/* Redeliver toggle — OUTSIDE the header Pressable on purpose: nested pressables
+          would let one tap both open the drill and fold the card. */}
+      {absentRows.length > 0 ? (
+        <Button title={`${STR.asRedeliver} · ${bnNum(absentRows.length)}`} variant="ghost" onPress={() => setShowAbsent((v) => !v)} />
+      ) : null}
 
       {showAbsent && absentRows.length > 0 ? (
         <Card>
@@ -370,6 +402,8 @@ function ItemCard({
           ))}
         </View>
       ) : null}
+        </>
+      )}
     </Card>
   );
 }
