@@ -212,7 +212,8 @@ async function observationsCard(): Promise<AdminTodayCard> {
       ClassroomObservation.countDocuments({ state: "ASSIGNED" }),
       ClassroomObservation.countDocuments({ state: "REVIEWED" }),
       ClassroomObservation.countDocuments({ state: "TEACHER_RESPONDED" }),
-      ClassroomObservation.countDocuments({ state: "REVIEWED", publishedAt: null }),
+      // CO-12 (D-#369): withheld rows are a closed decision, not outstanding work.
+      ClassroomObservation.countDocuments({ state: "REVIEWED", publishedAt: null, withheldAt: null }),
       ClassroomObservation.find({ state: { $ne: "SUPERSEDED" } })
         .sort({ createdAt: -1 })
         .limit(ROW_CAP)

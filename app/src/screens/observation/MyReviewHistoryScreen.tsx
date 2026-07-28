@@ -23,7 +23,7 @@ import {
   EMPTY_OBSERVATION_FILTERS,
   type ObservationFilterState,
 } from "../../components/ObservationFilters";
-import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel, bnNum, isoDateLabel } from "../../lib/labels";
+import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel, obsPublishBadge, bnNum, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { ObservationStackParamList } from "../../navigation/types";
 
@@ -70,6 +70,7 @@ export default function MyReviewHistoryScreen(): React.ReactElement {
       subject: filters.subject,
       sectionId: filters.sectionId,
       published: filters.published,
+      withheld: filters.withheld,
       teacherId: filters.teacherId,
       dateFrom: filters.dateFrom || null,
       dateTo: filters.dateTo || null,
@@ -136,10 +137,7 @@ export default function MyReviewHistoryScreen(): React.ReactElement {
                     </View>
                     <View style={{ alignItems: "flex-end", gap: space(1) }}>
                       <Badge text={obsStateLabel(o.state)} tone={stateTone(o.state)} />
-                      <Badge
-                        text={o.publishedAt ? STR.obsPublished : STR.obsUnpublished}
-                        tone={o.publishedAt ? "ok" : "muted"}
-                      />
+                      <Badge {...obsPublishBadge(o)} />
                     </View>
                   </View>
                   <View style={{ marginTop: space(2) }}>

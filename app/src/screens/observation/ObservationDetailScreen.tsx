@@ -5,6 +5,8 @@
  *     and Rate the review fairness/usefulness 1–5 (rateObservationReview, CO-7).
  *   - Principal/Office (observation:upload) may Re-request a re-review
  *     (reRequestClassroomObservation) and attach session footage (recordSessionFootage, CO-2).
+ *   - Principal/Office (observation:manage) may Publish a REVIEWED row (CO-8) or WITHHOLD it
+ *     with a required reason (CO-12, D-#369) — and lift that hold again.
  * Every action is re-gated server-side; the Bangla deny surfaces inline.
  */
 import React, { useState } from "react";
@@ -20,6 +22,8 @@ import {
   RE_REQUEST_CLASSROOM_OBSERVATION,
   RECORD_SESSION_FOOTAGE,
   PUBLISH_CLASSROOM_OBSERVATION,
+  WITHHOLD_CLASSROOM_OBSERVATION,
+  RELEASE_CLASSROOM_OBSERVATION_HOLD,
   REQUEST_CO_REVIEW_OBSERVATION,
   OBSERVATIONS_FOR_RECORDING_QUERY,
 } from "../../graphql/observation";
@@ -102,6 +106,8 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
   const [, reRequest] = useMutation(RE_REQUEST_CLASSROOM_OBSERVATION);
   const [, attachFootage] = useMutation(RECORD_SESSION_FOOTAGE);
   const [, publish] = useMutation(PUBLISH_CLASSROOM_OBSERVATION);
+  const [, withhold] = useMutation(WITHHOLD_CLASSROOM_OBSERVATION);
+  const [, liftHold] = useMutation(RELEASE_CLASSROOM_OBSERVATION_HOLD);
   const [, coReview] = useMutation(REQUEST_CO_REVIEW_OBSERVATION);
 
   // CO-9 co-review group — every observation on this recording (manager oversight).
@@ -114,6 +120,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
   const activeReviewers = group.filter((g) => g.state !== "SUPERSEDED");
 
   const [responseText, setResponseText] = useState("");
+  const [withholdReason, setWithholdReason] = useState("");
   const [coObserverId, setCoObserverId] = useState<string | null>(null);
   const [fairness, setFairness] = useState<string | null>(null);
   const [usefulness, setUsefulness] = useState<string | null>(null);
@@ -148,6 +155,18 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
     refetchObs({ requestPolicy: "network-only" });
     refetchRec({ requestPolicy: "network-only" });
     return res.data;
+  }
+
+  // CO-12 (D-#369): withhold needs a reason — the server refuses an empty one, so catch it
+  // here too rather than round-tripping to a Bangla server error.
+  async function onWithhold(): Promise<void> {
+    const reason = withholdReason.trim();
+    if (!reason) {
+      setError(STR.obsWithholdReasonRequired);
+      return;
+    }
+    const res = await run(() => withhold({ observationId, reason }), STR.obsWithholdDone);
+    if (res) setWithholdReason("");
   }
 
   // CO-2: authorize YouTube (separate gesture from the upload, so the file dialog keeps its user gesture).
@@ -221,12 +240,34 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
         </Card>
 
         {/* CO-8 (D-#271): Principal/Office publish gate — REVIEWED is not visible to the
-            teacher until published. Show status + a Publish action to managers. */}
+            teacher until published. Show status + a Publish action to managers.
+            CO-12 (D-#369): or WITHHOLD it with a reason — a recorded decision not to
+            publish, which takes the row out of the awaiting-publish counts. A withheld
+            row shows the hold (with its reason) instead of the publish action; publishing
+            it means lifting the hold first, which the server also enforces. */}
         {canManage && (obs.state === "REVIEWED" || obs.publishedAt) ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsPublishTitle}</Body>
             {obs.publishedAt ? (
               <Row label={STR.obsPublishedOn} value={isoDateTimeLabel(obs.publishedAt)} />
+            ) : obs.withheldAt ? (
+              <>
+                <View style={{ flexDirection: "row", marginBottom: space(2) }}>
+                  <Badge text={STR.obsWithheld} tone="warn" />
+                </View>
+                <Row label={STR.obsWithheldOn} value={isoDateTimeLabel(obs.withheldAt)} />
+                {obs.withheldBy ? (
+                  <Row label={STR.obsWithheldBy} value={nameById[obs.withheldBy] ?? obs.withheldBy} />
+                ) : null}
+                <Row label={STR.obsWithholdReason} value={obs.withheldReason ?? "—"} />
+                <Muted style={{ marginTop: space(2), marginBottom: space(2) }}>{STR.obsLiftHoldHint}</Muted>
+                <Button
+                  title={STR.obsLiftHold}
+                  variant="secondary"
+                  onPress={() => void run(() => liftHold({ observationId }), STR.obsLiftHoldDone)}
+                  disabled={busy}
+                />
+              </>
             ) : (
               <>
                 <Muted style={{ marginBottom: space(2) }}>{STR.obsPublishHint}</Muted>
@@ -234,6 +275,21 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
                   title={STR.obsPublish}
                   onPress={() => void run(() => publish({ observationId }), STR.obsPublished)}
                   disabled={busy}
+                />
+                <Divider />
+                <Muted style={{ marginBottom: space(2) }}>{STR.obsWithholdHint}</Muted>
+                <Field
+                  label={STR.obsWithholdReason}
+                  value={withholdReason}
+                  onChangeText={setWithholdReason}
+                  placeholder={STR.obsWithholdReasonPlaceholder}
+                  multiline
+                />
+                <Button
+                  title={STR.obsWithhold}
+                  variant="secondary"
+                  onPress={() => void onWithhold()}
+                  disabled={busy || withholdReason.trim().length === 0}
                 />
               </>
             )}

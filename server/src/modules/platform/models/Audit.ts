@@ -111,6 +111,8 @@ export type AuditEventKind =
   | "CLASSROOM_OBSERVATION_ASSIGNED"   // a senior-teacher observer assigned to an observation (CO-1, §5/J1, D-#147)
   | "CLASSROOM_OBSERVATION_REVIEWED"   // the assigned observer scored the observation → REVIEWED (observer/Principal-only since CO-8, D-#271)
   | "CLASSROOM_OBSERVATION_PUBLISHED"  // Principal/Office published a reviewed observation → released to the observed teacher (CO-8, D-#271)
+  | "CLASSROOM_OBSERVATION_WITHHELD"   // Principal/Office recorded a decision NOT to publish a reviewed observation, with a reason (CO-12, D-#369)
+  | "CLASSROOM_OBSERVATION_HOLD_LIFTED" // a withhold was lifted → back into the awaiting-publish queue (CO-12, D-#369)
   | "CLASSROOM_OBSERVATION_SUPERSEDED" // a re-review superseded a prior observation (CO-1, §5, D-#194)
   | "CLASSROOM_OBSERVATION_RESPONDED"  // the observed teacher acknowledged a released observation → TEACHER_RESPONDED (CO-3)
   | "OBSERVATION_REVIEW_RATED"         // the observed teacher rated the review's fairness/usefulness (CO-7, observation:read)

@@ -21,7 +21,7 @@ import {
   EMPTY_OBSERVATION_FILTERS,
   type ObservationFilterState,
 } from "../../components/ObservationFilters";
-import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel, bnNum, isoDateLabel } from "../../lib/labels";
+import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel, obsPublishBadge, bnNum, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { ObservationStackParamList } from "../../navigation/types";
 
@@ -46,6 +46,7 @@ export default function AllObservationsScreen(): React.ReactElement {
     ...EMPTY_OBSERVATION_FILTERS,
     state: route.params?.state ?? null,
     published: route.params?.published ?? null,
+    withheld: route.params?.withheld ?? null,
   });
   const [page, setPage] = useState(0);
 
@@ -76,6 +77,7 @@ export default function AllObservationsScreen(): React.ReactElement {
       subject: filters.subject,
       sectionId: filters.sectionId,
       published: filters.published,
+      withheld: filters.withheld,
       teacherId: filters.teacherId,
       observerId: filters.observerId,
       dateFrom: filters.dateFrom || null,
@@ -141,10 +143,7 @@ export default function AllObservationsScreen(): React.ReactElement {
                   </View>
                   <View style={{ alignItems: "flex-end", gap: space(1) }}>
                     <Badge text={obsStateLabel(o.state)} tone={stateTone(o.state)} />
-                    <Badge
-                      text={o.publishedAt ? STR.obsPublished : STR.obsUnpublished}
-                      tone={o.publishedAt ? "ok" : "muted"}
-                    />
+                    <Badge {...obsPublishBadge(o)} />
                   </View>
                 </View>
                 <View style={{ marginTop: space(2) }}>
