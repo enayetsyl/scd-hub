@@ -1,8 +1,11 @@
 /**
  * HomeworkWorkspaceScreen (RP-2, D-#355) — the single homework screen that
  * replaces Records + Checking. One card per subject per date (one hwItem), laid
- * out in responsive columns (CardGrid). Each card runs the three lifecycle stages
- * that are genuinely roster-shaped or individual:
+ * out in responsive columns (CardGrid). Each card is a FOLD (owner ask 2026-07-28,
+ * D-#371): collapsed by default with the per-stage counts on the header, so a
+ * multi-subject day opens as a scannable index instead of one long roster scroll.
+ * Each card runs the three lifecycle stages that are genuinely roster-shaped or
+ * individual:
  *
  *   ① জমা   — RosterChipPass over GIVEN/DUE/CHASE → homeworkSubmitPass
  *              (uncrossed → SUBMITTED; crossed → CHASE first-cross-only, §3.1)
@@ -207,6 +210,12 @@ function ItemCard({
   const [showAbsent, setShowAbsent] = useState(false);
   const [showChase, setShowChase] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Owner ask 2026-07-28: each subject×date card folds. A section with several subjects
+  // open was one long scroll of rosters — 14 name chips per item — with no way to see
+  // what else was waiting. Collapsed by default so the screen opens as a scannable index
+  // of the day's work; the header carries the per-stage counts so you can tell WHICH card
+  // needs you without opening it. Follows the existing ▸/▾ fold idiom (D-#302/#306).
+  const [open, setOpen] = useState(false);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
   const checkRows = group.rows.filter((r) => r.state === "SUBMITTED");
@@ -272,26 +281,52 @@ function ItemCard({
     onDone();
   }
 
+  // The collapsed summary: only the stages that actually have work, so an item with
+  // nothing pending reads as done at a glance instead of showing three zeroes.
+  const summary = [
+    submitRows.length > 0 ? `${STR.hwPassSubmit} ${bnNum(submitRows.length)}` : null,
+    checkRows.length > 0 ? `${STR.hwPassCheck} ${bnNum(checkRows.length)}` : null,
+    returnRows.length > 0 ? `${STR.hwPassReturn} ${bnNum(returnRows.length)}` : null,
+    // Absent-at-issue too — its control now lives inside the fold, so a folded card
+    // must still say those students are waiting on a redeliver.
+    absentRows.length > 0 ? `${STR.hwAbsentAtIssue} ${bnNum(absentRows.length)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <Card>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+      {/* The whole header is the fold toggle — a 44pt row, so it stays thumb-friendly. */}
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", minHeight: 44 }}
+      >
         <View style={{ flexShrink: 1 }}>
           <Body style={{ fontWeight: "700" }}>
-            {dateHeaderLabel(group.dateGiven.slice(0, 10))} · {hwSubjectLabel(group.subject)}
+            {open ? "▾" : "▸"} {dateHeaderLabel(group.dateGiven.slice(0, 10))} · {hwSubjectLabel(group.subject)}
           </Body>
           <Muted style={{ marginTop: 2 }}>
             {group.hwId}
             {group.topicLabelBn ? ` · 📘 ${group.topicLabelBn}` : ""}
           </Muted>
+          {/* Shown only while folded — open, the stage headings say the same thing. */}
+          {!open && summary ? <Muted style={{ marginTop: 2 }}>{summary}</Muted> : null}
         </View>
-        {absentRows.length > 0 ? (
-          <Button
-            title={`${STR.hwAbsentAtIssue} · ${bnNum(absentRows.length)}`}
-            variant="ghost"
-            onPress={() => setShowAbsent((v) => !v)}
-          />
-        ) : null}
-      </View>
+      </Pressable>
+
+      {!open ? null : (
+        <>
+      {/* Absent-at-issue toggle — OUTSIDE the header Pressable on purpose: nested
+          pressables would let one tap both open the drill and fold the card. */}
+      {absentRows.length > 0 ? (
+        <Button
+          title={`${STR.hwAbsentAtIssue} · ${bnNum(absentRows.length)}`}
+          variant="ghost"
+          onPress={() => setShowAbsent((v) => !v)}
+        />
+      ) : null}
       {group.description ? <Body style={{ marginTop: 2 }}>📝 {group.description}</Body> : null}
 
       {/* Absent-at-issue drill (off the main flow) — redeliver puts them into ①. */}
@@ -386,6 +421,8 @@ function ItemCard({
           ))}
         </View>
       ) : null}
+        </>
+      )}
     </Card>
   );
 }
