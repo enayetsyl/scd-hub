@@ -8,7 +8,7 @@
  *   Admin     content:import | user:manage  (Principal, Office)
  */
 import React from "react";
-import { Text, Pressable, View, Modal, useWindowDimensions } from "react-native";
+import { Text, Pressable, View, Modal, ActivityIndicator, useWindowDimensions } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { HeaderBackButton } from "@react-navigation/elements";
@@ -1073,7 +1073,7 @@ function GuardianAssignmentsNavigator(): React.ReactElement {
 const Drawer = createDrawerNavigator<TabParamList>();
 
 export function AppTabs(): React.ReactElement {
-  const { role } = useAuth();
+  const { role, logout } = useAuth();
   const colors = useColors();
   // Free Mixing Observation tab (D-#341, owner ruling): a TEACHER sees it ONLY
   // when at least one video is assigned to them; Principal/Office always.
@@ -1170,6 +1170,37 @@ export function AppTabs(): React.ReactElement {
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
   const canGuardian = !!role && roleHasPermission(role, "guardian:read_child");
+
+  // Defensive (D-#369): a role-less / unrecognised authed session makes EVERY tab
+  // gate false, which would mount an empty Drawer.Navigator and hard-crash the app
+  // ("Couldn't find any screens for the navigator" — confirmed via GlitchTip
+  // 2026-07-28, a guardian whose me.role came back null). Never render an empty
+  // drawer: fall back to a recover-by-re-login screen instead of crashing.
+  const hasAnyTab =
+    canHome || canContent || canQuestions || canSets || canTrackers || canHomework ||
+    canAssignment || canReview || canRoutine || canAttendance || canPrint || canLibrary ||
+    canChat || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
+    canEnglishDrive || canRevision || canFinance || canHr || canReports || canAdmin || canGuardian;
+  if (!hasAnyTab) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginBottom: space(4) }} />
+        <Text style={{ ...typeScale.sectionTitle, color: colors.textPrimary, textAlign: "center", marginBottom: space(3) }}>
+          {STR.sessionRecoverTitle}
+        </Text>
+        <Text style={{ ...typeScale.body, color: colors.textSecondary, textAlign: "center", marginBottom: space(5) }}>
+          {STR.sessionRecoverBody}
+        </Text>
+        <Pressable
+          onPress={() => void logout()}
+          accessibilityRole="button"
+          style={{ backgroundColor: colors.primary, paddingVertical: space(3), paddingHorizontal: space(6), borderRadius: radius.md }}
+        >
+          <Text style={{ ...typeScale.button, color: colors.onPrimary }}>{STR.sessionRecoverAction}</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <GuardianChildProvider enabled={role === "GUARDIAN"}>

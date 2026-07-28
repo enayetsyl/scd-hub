@@ -1105,6 +1105,9 @@ const STR_BN = {
   password: "পাসওয়ার্ড",
   loggingIn: "লগইন হচ্ছে…",
   loginInvalid: "ইমেইল বা পাসওয়ার্ড ভুল।",
+  sessionRecoverTitle: "সেশন প্রস্তুত হচ্ছে…",
+  sessionRecoverBody: "একটু সময় লাগছে। কিছুক্ষণের মধ্যে না হলে আবার লগইন করুন।",
+  sessionRecoverAction: "আবার লগইন করুন",
   welcome: "স্বাগতম",
 
   // Generic actions
@@ -3894,6 +3897,9 @@ const STR_EN: StrTable = {
   password: "Password",
   loggingIn: "Logging in…",
   loginInvalid: "Email or password is incorrect.",
+  sessionRecoverTitle: "Getting your session ready…",
+  sessionRecoverBody: "This is taking a moment. If it doesn't finish, please log in again.",
+  sessionRecoverAction: "Log in again",
   welcome: "Welcome",
 
   // Generic actions
