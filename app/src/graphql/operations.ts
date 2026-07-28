@@ -1829,6 +1829,31 @@ export const HOMEWORK_OPEN_RECORDS = gql<
   }
 `;
 
+/** D-#383 — per-item pipeline counts for the workspace card headers. The card
+ *  cannot derive these: the workspace fetches only OPEN rows and drops RETURNED
+ *  ones older than today, so a finished item's students are simply absent from
+ *  `homeworkOpenRecords`. submitted/checked/returned are cumulative. */
+export interface HwItemTallyT {
+  hwItemId: string;
+  total: number;
+  submitted: number;
+  checked: number;
+  returned: number;
+  pendingSubmission: number;
+  absent: number;
+}
+
+export const HOMEWORK_ITEM_TALLIES = gql<
+  { homeworkItemTallies: HwItemTallyT[] },
+  { sectionId: string; classId: string }
+>`
+  query HomeworkItemTallies($sectionId: String!, $classId: String!) {
+    homeworkItemTallies(sectionId: $sectionId, classId: $classId) {
+      hwItemId total submitted checked returned pendingSubmission absent
+    }
+  }
+`;
+
 // D-#338 — undo the last lifecycle action on one record (server is the gate:
 // own-action + same-Dhaka-day for teachers, anytime for Principal/Office).
 export const REVERT_HW_RECORD = gql<
@@ -4239,6 +4264,28 @@ export const AS_OPEN_RECORDS = gql<
   query AssignmentOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
     assignmentOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
       id asItemId asId subject classLevel deliveryDate dueDate studentId studentName state chaseCount result marks totalMarks feedback resubOf stampCount lastStateAt
+    }
+  }
+`;
+
+/** D-#383 — twin of HOMEWORK_ITEM_TALLIES for the assignment workspace cards. */
+export interface AsItemTallyT {
+  asItemId: string;
+  total: number;
+  submitted: number;
+  checked: number;
+  returned: number;
+  pendingSubmission: number;
+  absent: number;
+}
+
+export const ASSIGNMENT_ITEM_TALLIES = gql<
+  { assignmentItemTallies: AsItemTallyT[] },
+  { sectionId: string; classId: string }
+>`
+  query AssignmentItemTallies($sectionId: String!, $classId: String!) {
+    assignmentItemTallies(sectionId: $sectionId, classId: $classId) {
+      asItemId total submitted checked returned pendingSubmission absent
     }
   }
 `;

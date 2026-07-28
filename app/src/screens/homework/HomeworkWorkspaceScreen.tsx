@@ -17,7 +17,7 @@
  * them into ① the same day. Manual re-chase of an already-chased student is the
  * secondary "চলমান তাগাদা" control under ①. Undo (D-#338) rides every checked row.
  */
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useMemo } from "react";
 import { ScrollView, View, RefreshControl, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -30,7 +30,9 @@ import {
   ATTACH_HW_ANSWER_FILE,
   TRANSITION_HOMEWORK_RECORD,
   REVERT_HW_RECORD,
+  HOMEWORK_ITEM_TALLIES,
   type HwOpenRecordT,
+  type HwItemTallyT,
 } from "../../graphql/operations";
 import { useConfirm } from "../../state/ConfirmContext";
 import { pickAndUploadHomeworkFile, uploadHomeworkWebFile, FileUploadError, type UploadedFile } from "../../lib/files";
@@ -118,6 +120,18 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
     variables: { ...base, states: OPEN_STATES },
     pause: !hasSection,
   });
+  // D-#383: the card header's pipeline counts. Must come from the server — the
+  // rows above are open-work only (RETURNED falls off after today), so a finished
+  // item has no rows left to count.
+  const [talliesQ, refetchTallies] = useQuery({
+    query: HOMEWORK_ITEM_TALLIES,
+    variables: base,
+    pause: !hasSection,
+  });
+  const tallyByItem = useMemo(
+    () => new Map((talliesQ.data?.homeworkItemTallies ?? []).map((t) => [t.hwItemId, t])),
+    [talliesQ.data],
+  );
   // Keep RETURNED rows only while their last stamp is still today (Dhaka) — the
   // same-day "ফেরত হয়েছে" confirmation list; older returns fall off.
   const today = dhakaDayOf(new Date().toISOString());
@@ -129,7 +143,12 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
-  const refresh = useCallback(() => refetchRecs({ requestPolicy: "network-only" }), [refetchRecs]);
+  // Both queries refetch together: a submit/return pass changes the rows AND the
+  // header counts, so refreshing one without the other leaves a stale card.
+  const refresh = useCallback(() => {
+    refetchRecs({ requestPolicy: "network-only" });
+    refetchTallies({ requestPolicy: "network-only" });
+  }, [refetchRecs, refetchTallies]);
 
   const firstFocus = useRef(true);
   useFocusEffect(
@@ -162,6 +181,7 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
         <ItemCard
           key={g.hwItemId}
           group={g}
+          tally={tallyByItem.get(g.hwItemId) ?? null}
           base={base}
           open={openItemId === g.hwItemId}
           onToggle={() => setOpenItemId((id) => (id === g.hwItemId ? null : g.hwItemId))}
@@ -206,6 +226,7 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
 
 function ItemCard({
   group,
+  tally,
   base,
   open,
   onToggle,
@@ -214,6 +235,8 @@ function ItemCard({
   navigation,
 }: {
   group: ItemGroup;
+  /** D-#383 pipeline counts; null while the query is in flight or if the item has none. */
+  tally: HwItemTallyT | null;
   base: { sectionId: string; classId: string };
   /** Accordion: owned by the screen so only ONE card can be open (D-#371 refinement). */
   open: boolean;
@@ -296,18 +319,31 @@ function ItemCard({
     onDone();
   }
 
-  // The collapsed summary: only the stages that actually have work, so an item with
-  // nothing pending reads as done at a glance instead of showing three zeroes.
-  const summary = [
-    submitRows.length > 0 ? `${STR.hwPassSubmit} ${bnNum(submitRows.length)}` : null,
-    checkRows.length > 0 ? `${STR.hwPassCheck} ${bnNum(checkRows.length)}` : null,
-    returnRows.length > 0 ? `${STR.hwPassReturn} ${bnNum(returnRows.length)}` : null,
-    // Absent-at-issue too — its control now lives inside the fold, so a folded card
-    // must still say those students are waiting on a redeliver.
-    absentRows.length > 0 ? `${STR.hwAbsentAtIssue} ${bnNum(absentRows.length)}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // The collapsed summary (D-#383, owner ask). It used to list PENDING work only, so a
+  // 17-of-21-returned item showed nothing but "অনুপস্থিত ৪" and read like a problem —
+  // the finished students were not even in `group.rows` to count (open-work query).
+  // Now the three pipeline stages ALWAYS hold their position, so the eye learns one
+  // slot per stage, and only the two "still needs doing" figures are conditional.
+  const summary = tally
+    ? [
+        `${STR.hwPassSubmit} ${bnNum(tally.submitted)}`,
+        `${STR.hwPassCheck} ${bnNum(tally.checked)}`,
+        `${STR.hwPassReturn} ${bnNum(tally.returned)}`,
+        tally.pendingSubmission > 0 ? `${STR.hwStillPending} ${bnNum(tally.pendingSubmission)}` : null,
+        // Absent-at-issue: its control lives inside the fold, so a folded card must
+        // still say those students are waiting on a redeliver.
+        tally.absent > 0 ? `${STR.hwAbsentAtIssue} ${bnNum(tally.absent)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : // Tally not in yet — fall back to what the open rows can prove, so the header
+      // never goes blank on a slow network.
+      [
+        submitRows.length > 0 ? `${STR.hwStillPending} ${bnNum(submitRows.length)}` : null,
+        absentRows.length > 0 ? `${STR.hwAbsentAtIssue} ${bnNum(absentRows.length)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
 
   return (
     <Card>

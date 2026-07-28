@@ -298,6 +298,71 @@ export interface QuestionUsageResult {
   feed: { qid: string; count: number }[];
 }
 
+/**
+ * Per-item pipeline tally for a section's workspace cards (D-#383, owner ask).
+ *
+ * The workspace renders only OPEN rows and drops RETURNED ones older than today,
+ * so a finished item decays to whatever scraps remain (usually the absentees) and
+ * a 17/21-returned card read as bare "অনুপস্থিত ৪". The card can't count what it
+ * was never sent, so the progress counts come from here.
+ *
+ * submitted/checked/returned are CUMULATIVE — read off `stateDates`, not the
+ * current state, so a student who has moved on to RETURNED still counts as having
+ * submitted. A D-#338 undo pops the stamp, so a reverted record correctly stops
+ * counting. pendingSubmission/absent are current-state (what still needs doing).
+ */
+export interface HomeworkItemTally {
+  hwItemId: string;
+  /** Roster size the records were spawned from — the denominator. */
+  total: number;
+  submitted: number;
+  checked: number;
+  returned: number;
+  /** Current GIVEN/DUE/CHASE — still owes a submission. */
+  pendingSubmission: number;
+  /** Current ABSENT_REDELIVER — absent at issue, awaiting a redeliver. */
+  absent: number;
+}
+
+const PENDING_SUBMISSION_STATES = new Set(["GIVEN", "DUE", "CHASE"]);
+
+export async function homeworkItemTallies(
+  sectionId: string,
+  /** Subject allow-list from the caller's scope; null/undefined = unrestricted. */
+  subjects?: ReadonlySet<string> | null,
+): Promise<HomeworkItemTally[]> {
+  // Subject scope is an ITEM property, so restrict by item before touching records.
+  let itemFilter: Record<string, unknown> = { sectionId };
+  if (subjects) {
+    const ids = await HomeworkItem.find({ sectionId, subject: { $in: [...subjects] } })
+      .select("_id")
+      .lean();
+    itemFilter = { hwItemId: { $in: ids.map((i) => i._id) } };
+  }
+
+  const records = await HomeworkStudentRecord.find(itemFilter)
+    .select("hwItemId state stateDates")
+    .lean();
+
+  const byItem = new Map<string, HomeworkItemTally>();
+  for (const r of records) {
+    const key = r.hwItemId.toString();
+    let t = byItem.get(key);
+    if (!t) {
+      t = { hwItemId: key, total: 0, submitted: 0, checked: 0, returned: 0, pendingSubmission: 0, absent: 0 };
+      byItem.set(key, t);
+    }
+    t.total += 1;
+    const stamped = new Set((r.stateDates ?? []).map((s) => s.state));
+    if (stamped.has("SUBMITTED")) t.submitted += 1;
+    if (stamped.has("CHECKED")) t.checked += 1;
+    if (stamped.has("RETURNED")) t.returned += 1;
+    if (PENDING_SUBMISSION_STATES.has(r.state)) t.pendingSubmission += 1;
+    if (r.state === "ABSENT_REDELIVER") t.absent += 1;
+  }
+  return [...byItem.values()];
+}
+
 export async function questionUsageFeed(classId: string): Promise<QuestionUsageResult> {
   const items = await HomeworkItem.find({ classId }).lean();
   const topups = await HomeworkStudentRecord.find({ classId, topupFlag: true }).lean();
