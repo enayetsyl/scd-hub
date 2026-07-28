@@ -215,6 +215,10 @@ export async function declareHomeworkItem(
 
   const hwId = await generateHwId(input.academicYearId, input.classLevel, subject);
 
+  // The findOne above is a check-then-act: two simultaneous declares can both pass
+  // it before either insert lands. The unique index on the model is the real
+  // enforcement, so translate its duplicate-key error into the SAME message the
+  // check gives — a racing teacher must not see a raw E11000.
   const doc = await HomeworkItem.create({
     hwId,
     academicYearId: input.academicYearId,
@@ -234,6 +238,14 @@ export async function declareHomeworkItem(
     status: "declared",
     declaredBy: input.actorId,
     attachmentIds,
+  }).catch((err: unknown) => {
+    const e = err as { code?: number; keyPattern?: Record<string, unknown> };
+    if (e?.code === 11000 && e.keyPattern && "sectionId" in e.keyPattern && "subject" in e.keyPattern) {
+      throw new Error(
+        `এই শ্রেণি-বিষয়ের জন্য এই দিনের বাড়ির কাজ আগেই ঘোষণা করা হয়েছে — প্রয়োজনে সেটি সম্পাদনা বা মুছে ফেলুন`,
+      );
+    }
+    throw err;
   });
 
   // D-#299: a real declaration supersedes a "no homework today" marker for the
