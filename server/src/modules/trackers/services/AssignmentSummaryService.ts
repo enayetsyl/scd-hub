@@ -291,3 +291,61 @@ export async function childAssignments(
 function has(r: RecordLean, s: string): boolean {
   return r.stateDates.some((d) => d.state === s);
 }
+
+/**
+ * Per-item pipeline tally for the assignment workspace cards (D-#383) — the exact
+ * twin of homeworkItemTallies, keeping the two parity workspaces identical (D-#372).
+ *
+ * Same reason it must live on the server: the workspace fetches open rows only and
+ * drops RETURNED ones after today, so a finished item has nothing left to count.
+ * submitted/checked/returned are cumulative (read off stateDates); pendingSubmission
+ * and absent are current-state.
+ */
+export interface AssignmentItemTally {
+  asItemId: string;
+  total: number;
+  submitted: number;
+  checked: number;
+  returned: number;
+  pendingSubmission: number;
+  absent: number;
+}
+
+const AS_PENDING_SUBMISSION_STATES = new Set(["GIVEN", "DUE", "CHASE"]);
+
+export async function assignmentItemTallies(
+  sectionId: string,
+  /** Subject allow-list from the caller's scope; null/undefined = unrestricted. */
+  subjects?: ReadonlySet<string> | null,
+): Promise<AssignmentItemTally[]> {
+  // Subject scope is an ITEM property, so restrict by item before touching records.
+  let filter: Record<string, unknown> = { sectionId };
+  if (subjects) {
+    const ids = await AssignmentItem.find({ sectionId, subject: { $in: [...subjects] } })
+      .select("_id")
+      .lean();
+    filter = { asItemId: { $in: ids.map((i) => i._id) } };
+  }
+
+  const records = await AssignmentStudentRecord.find(filter)
+    .select("asItemId state stateDates")
+    .lean();
+
+  const byItem = new Map<string, AssignmentItemTally>();
+  for (const r of records) {
+    const key = r.asItemId.toString();
+    let t = byItem.get(key);
+    if (!t) {
+      t = { asItemId: key, total: 0, submitted: 0, checked: 0, returned: 0, pendingSubmission: 0, absent: 0 };
+      byItem.set(key, t);
+    }
+    t.total += 1;
+    const stamped = new Set((r.stateDates ?? []).map((s) => s.state));
+    if (stamped.has("SUBMITTED")) t.submitted += 1;
+    if (stamped.has("CHECKED")) t.checked += 1;
+    if (stamped.has("RETURNED")) t.returned += 1;
+    if (AS_PENDING_SUBMISSION_STATES.has(r.state)) t.pendingSubmission += 1;
+    if (r.state === "ABSENT_REDELIVER") t.absent += 1;
+  }
+  return [...byItem.values()];
+}

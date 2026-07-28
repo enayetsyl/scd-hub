@@ -1322,6 +1322,8 @@ const STR_BN = {
   hwPassKeptBack: "রাখা",
   hwReturnedHeading: "ফেরত হয়েছে",
   hwAbsentAtIssue: "অনুপস্থিত ছিল",
+  /** D-#383 card header: students who still owe a submission. */
+  hwStillPending: "বাকি",
   hwPassSubmitDone: "জমা নেওয়া হয়েছে",
   hwPassReturnDone: "ফেরত দেওয়া হয়েছে",
   hwPassNoOpenItems: "এই শাখায় খোলা কোনো বাড়ির কাজ নেই",
@@ -4109,6 +4111,7 @@ const STR_EN: StrTable = {
   hwPassKeptBack: "Kept back",
   hwReturnedHeading: "Returned",
   hwAbsentAtIssue: "Absent when issued",
+  hwStillPending: "Pending",
   hwPassSubmitDone: "Submissions recorded",
   hwPassReturnDone: "Returns recorded",
   hwPassNoOpenItems: "No open homework for this section",

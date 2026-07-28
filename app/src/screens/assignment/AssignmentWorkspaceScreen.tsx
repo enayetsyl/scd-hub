@@ -17,7 +17,7 @@
  * twin): collapsed by default with the per-stage counts on the header, so a section with
  * several subjects opens as a scannable index rather than one long roster scroll.
  */
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { ScrollView, View, RefreshControl, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -25,6 +25,7 @@ import { useQuery, useMutation } from "urql";
 import { HW_RESULTS } from "@scd/shared";
 import {
   AS_OPEN_RECORDS,
+  ASSIGNMENT_ITEM_TALLIES,
   ASSIGNMENT_SUBMIT_PASS,
   ASSIGNMENT_RETURN_PASS,
   RECORD_AS_OUTCOME,
@@ -33,6 +34,7 @@ import {
   ISSUE_AS_RESUBMISSION,
   REVERT_AS_RECORD,
   type AsOpenRecordT,
+  type AsItemTallyT,
 } from "../../graphql/operations";
 import { useConfirm } from "../../state/ConfirmContext";
 import { RosterChipPass } from "../../components/RosterChipPass";
@@ -105,6 +107,17 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
     query: AS_OPEN_RECORDS,
     variables: { sectionId, classId, states: OPEN_STATES },
   });
+  // D-#383: card-header pipeline counts. Server-side because the rows above are
+  // open-work only (RETURNED falls off after today), so a finished item has no rows
+  // left to count. Mirrors the homework workspace exactly (D-#372 parity).
+  const [talliesQ, refetchTallies] = useQuery({
+    query: ASSIGNMENT_ITEM_TALLIES,
+    variables: { sectionId, classId },
+  });
+  const tallyByItem = useMemo(
+    () => new Map((talliesQ.data?.assignmentItemTallies ?? []).map((t) => [t.asItemId, t])),
+    [talliesQ.data],
+  );
   const today = dhakaDayOf(new Date().toISOString());
   const records = (recsQ.data?.assignmentOpenRecords ?? []).filter(
     (r) => r.state !== "RETURNED" || dhakaDayOf(r.lastStateAt) === today,
@@ -112,7 +125,11 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
 
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const refresh = useCallback(() => refetchRecs({ requestPolicy: "network-only" }), [refetchRecs]);
+  // Both queries refetch together: a pass changes the rows AND the header counts.
+  const refresh = useCallback(() => {
+    refetchRecs({ requestPolicy: "network-only" });
+    refetchTallies({ requestPolicy: "network-only" });
+  }, [refetchRecs, refetchTallies]);
   const notify = useCallback((okMsg: string | null, errMsg: string | null) => {
     setOk(okMsg);
     setError(errMsg);
@@ -151,6 +168,7 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
                 <ItemCard
                   key={g.asItemId}
                   group={g}
+                  tally={tallyByItem.get(g.asItemId) ?? null}
                   sectionId={sectionId}
                   open={openItemId === g.asItemId}
                   onToggle={() => setOpenItemId((id) => (id === g.asItemId ? null : g.asItemId))}
@@ -168,6 +186,7 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
 
 function ItemCard({
   group,
+  tally,
   sectionId,
   open,
   onToggle,
@@ -178,6 +197,8 @@ function ItemCard({
   open: boolean;
   onToggle: () => void;
   group: ItemGroup;
+  /** D-#383 pipeline counts; null while the query is in flight or if the item has none. */
+  tally: AsItemTallyT | null;
   sectionId: string;
   onDone: () => void;
   onNotify: (ok: string | null, err: string | null) => void;
@@ -270,14 +291,28 @@ function ItemCard({
 
   // Folded summary — only the stages that actually have work, so a card with nothing
   // pending reads as done without being opened.
-  const summary = [
-    submitRows.length > 0 ? `${STR.hwPassSubmit} ${bnNum(submitRows.length)}` : null,
-    checkRows.length > 0 ? `${STR.asCheck} ${bnNum(checkRows.length)}` : null,
-    returnRows.length > 0 ? `${STR.asReturn} ${bnNum(returnRows.length)}` : null,
-    absentRows.length > 0 ? `${STR.asRedeliver} ${bnNum(absentRows.length)}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // D-#383 (owner ask), twin of the homework card. Was pending-work only, so a
+  // finished item showed nothing but its absentees — and the completed students
+  // were not even in `group.rows` to count. The three pipeline stages now always
+  // hold their position; only the two "still needs doing" figures are conditional.
+  const summary = tally
+    ? [
+        `${STR.hwPassSubmit} ${bnNum(tally.submitted)}`,
+        `${STR.asCheck} ${bnNum(tally.checked)}`,
+        `${STR.asReturn} ${bnNum(tally.returned)}`,
+        tally.pendingSubmission > 0 ? `${STR.hwStillPending} ${bnNum(tally.pendingSubmission)}` : null,
+        tally.absent > 0 ? `${STR.asRedeliver} ${bnNum(tally.absent)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : // Tally not in yet — fall back to what the open rows prove, so the header
+      // never goes blank on a slow network.
+      [
+        submitRows.length > 0 ? `${STR.hwStillPending} ${bnNum(submitRows.length)}` : null,
+        absentRows.length > 0 ? `${STR.asRedeliver} ${bnNum(absentRows.length)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
 
   return (
     <Card>

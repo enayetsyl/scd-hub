@@ -74,6 +74,8 @@ import {
 import {
   assignmentSummary as summarySvc,
   childAssignments as childAssignmentsSvc,
+  assignmentItemTallies,
+  type AssignmentItemTally,
 } from "../services/AssignmentSummaryService";
 import {
   assignmentLoadReport as loadReportSvc,
@@ -1576,6 +1578,48 @@ builder.queryField("assignmentOpenRecords", (t) =>
       // assignmentRecords' assertItemSubjectReadable, applied set-wise).
       const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
       return allowed ? rows.filter((r) => allowed.has(r.subject)) : rows;
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Query: assignmentItemTallies (D-#383 — twin of homeworkItemTallies)
+// ---------------------------------------------------------------------------
+
+const AsItemTallyRef = builder.objectRef<AssignmentItemTally>("AssignmentItemTally");
+AsItemTallyRef.implement({
+  description:
+    "Per-item lifecycle tally for a section's assignment cards. submitted/checked/returned are " +
+    "CUMULATIVE (a returned student still counts as submitted); pendingSubmission/absent are " +
+    "current-state. Needed because the workspace fetches only OPEN rows and drops RETURNED ones " +
+    "older than today, leaving a finished card with nothing but its absentees to show.",
+  fields: (t) => ({
+    asItemId: t.exposeString("asItemId"),
+    total: t.exposeInt("total"),
+    submitted: t.exposeInt("submitted"),
+    checked: t.exposeInt("checked"),
+    returned: t.exposeInt("returned"),
+    pendingSubmission: t.exposeInt("pendingSubmission"),
+    absent: t.exposeInt("absent"),
+  }),
+});
+
+builder.queryField("assignmentItemTallies", (t) =>
+  t.field({
+    type: [AsItemTallyRef],
+    description:
+      "Pipeline counts per assignment item for a section, for the workspace card headers. " +
+      "Read-scope + the same subject-readability filter as assignmentOpenRecords.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      return assignmentItemTallies(args.sectionId, allowed);
     },
   }),
 );
