@@ -56,7 +56,9 @@ import {
   resubmissionWatchList as watchListSvc,
   trimPatternFlags as trimPatternSvc,
   questionUsageFeed as usageFeedSvc,
+  homeworkItemTallies,
   type ClassOverviewResult,
+  type HomeworkItemTally,
 } from "../services/HomeworkSummaryService";
 import {
   assertCanWrite,
@@ -699,6 +701,53 @@ builder.queryField("homeworkOpenRecords", (t) =>
       );
       const rows = await listOpenRecords(args.sectionId, states);
       return allowed ? rows.filter((r) => allowed.has(r.subject)) : rows;
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Query: homeworkItemTallies (D-#383 — per-item pipeline counts for the cards)
+// ---------------------------------------------------------------------------
+
+const ItemTallyRef = builder.objectRef<HomeworkItemTally>("HomeworkItemTally");
+ItemTallyRef.implement({
+  description:
+    "Per-item lifecycle tally for a section — how far each homework item actually got. " +
+    "submitted/checked/returned are CUMULATIVE (a returned student still counts as submitted); " +
+    "pendingSubmission/absent are current-state. The workspace needs this because it fetches " +
+    "only OPEN rows and drops RETURNED ones older than today, so a finished card would otherwise " +
+    "show nothing but its absentees.",
+  fields: (t) => ({
+    hwItemId: t.exposeString("hwItemId"),
+    total: t.exposeInt("total"),
+    submitted: t.exposeInt("submitted"),
+    checked: t.exposeInt("checked"),
+    returned: t.exposeInt("returned"),
+    pendingSubmission: t.exposeInt("pendingSubmission"),
+    absent: t.exposeInt("absent"),
+  }),
+});
+
+builder.queryField("homeworkItemTallies", (t) =>
+  t.field({
+    type: [ItemTallyRef],
+    description:
+      "Pipeline counts per homework item for a section, for the workspace card headers. Read-scope " +
+      "enforced; subject-scoped exactly like homeworkOpenRecords so a teacher never sees counts for " +
+      "a subject they cannot read.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      // Same posture as the checking queue above (owner decision 2026-07-19).
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, {
+        classTeacherOversight: false,
+      });
+      return homeworkItemTallies(args.sectionId, allowed);
     },
   }),
 );
