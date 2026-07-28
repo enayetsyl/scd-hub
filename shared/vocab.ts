@@ -1936,8 +1936,13 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   "class_test.overdue_chase.wa": {
     group: "classTest", labelBn: "ক্লাস টেস্ট — শিক্ষককে অসম্পূর্ণ ফলাফলের তাগিদ (হোয়াটসঅ্যাপ)",
     placeholders: ["TeacherName", "Count", "ExamList"],
+    // D-#373: {ExamList} is now a MULTI-LINE numbered list (class+section · subject ·
+    // test · date · pending/roster · days late · CT id) — the old single-line
+    // "subject টেস্ট n (dd/mm)" join rendered two same-subject same-date exams in
+    // different sections as the identical string twice. Hence the newlines around it
+    // instead of an inline ": {ExamList}।".
     bnDefault:
-      "আসসালামু আলাইকুম {TeacherName}। আপনার {Count}টি ক্লাস টেস্টের ফলাফল নির্ধারিত সময়ের মধ্যে জমা পড়েনি: {ExamList}। " +
+      "আসসালামু আলাইকুম {TeacherName}। আপনার {Count}টি ক্লাস টেস্টের ফলাফল নির্ধারিত সময়ের মধ্যে জমা পড়েনি:\n\n{ExamList}\n\n" +
       "অনুগ্রহ করে দ্রুত ফলাফল এন্ট্রি ও প্রকাশ করুন। মাআসসালামাহ — অফিস।",
     defaultLangMode: "BN",
   },

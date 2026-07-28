@@ -149,10 +149,26 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
     setError(errMsg);
   }, []);
 
+  // Owner ask 2026-07-28 (refinement of D-#371): a TRUE accordion — at most ONE card open
+  // at a time, so opening one collapses the previous. The open id therefore lives HERE,
+  // above the cards, not as per-card state: only a single owner can enforce "one open".
+  // It is keyed by hwItemId (not index) so the selection survives the list re-ordering on
+  // refresh, and `null` = everything collapsed, which is the initial state.
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
+
   const renderCards = (recs: HwOpenRecordT[]): React.ReactNode => (
     <CardGrid>
       {groupByItem(recs).map((g) => (
-        <ItemCard key={g.hwItemId} group={g} base={base} onDone={refresh} onNotify={notify} navigation={navigation} />
+        <ItemCard
+          key={g.hwItemId}
+          group={g}
+          base={base}
+          open={openItemId === g.hwItemId}
+          onToggle={() => setOpenItemId((id) => (id === g.hwItemId ? null : g.hwItemId))}
+          onDone={refresh}
+          onNotify={notify}
+          navigation={navigation}
+        />
       ))}
     </CardGrid>
   );
@@ -191,12 +207,17 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
 function ItemCard({
   group,
   base,
+  open,
+  onToggle,
   onDone,
   onNotify,
   navigation,
 }: {
   group: ItemGroup;
   base: { sectionId: string; classId: string };
+  /** Accordion: owned by the screen so only ONE card can be open (D-#371 refinement). */
+  open: boolean;
+  onToggle: () => void;
   onDone: () => void;
   onNotify: (ok: string | null, err: string | null) => void;
   navigation: Props["navigation"];
@@ -210,12 +231,6 @@ function ItemCard({
   const [showAbsent, setShowAbsent] = useState(false);
   const [showChase, setShowChase] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
-  // Owner ask 2026-07-28: each subject×date card folds. A section with several subjects
-  // open was one long scroll of rosters — 14 name chips per item — with no way to see
-  // what else was waiting. Collapsed by default so the screen opens as a scannable index
-  // of the day's work; the header carries the per-stage counts so you can tell WHICH card
-  // needs you without opening it. Follows the existing ▸/▾ fold idiom (D-#302/#306).
-  const [open, setOpen] = useState(false);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
   const checkRows = group.rows.filter((r) => r.state === "SUBMITTED");
@@ -298,7 +313,7 @@ function ItemCard({
     <Card>
       {/* The whole header is the fold toggle — a 44pt row, so it stays thumb-friendly. */}
       <Pressable
-        onPress={() => setOpen((v) => !v)}
+        onPress={onToggle}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", minHeight: 44 }}

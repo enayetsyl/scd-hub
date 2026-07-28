@@ -20,7 +20,9 @@
  * Identity-plane (names studentIds/teacherIds); NO corpus path (ADR-005).
  */
 import { Types } from "mongoose";
-import { HW_SUBJECT_LABELS_BN } from "@scd/shared";
+import { HW_SUBJECT_LABELS_BN, ROSTER_CLASS_LABELS_BN, type RosterClassLevel } from "@scd/shared";
+import { Section } from "../../foundation/models/Section";
+import { bnNum } from "../../../lib/bnNum";
 import { ClassTest, type IClassTest } from "../models/ClassTest";
 import { ClassTestResult, type IClassTestResult } from "../models/ClassTestResult";
 import { Student } from "../../foundation/models/Student";
@@ -69,6 +71,10 @@ function subjectBn(subject: string): string {
 
 function ddmm(d: Date): string {
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function classBn(level: number): string {
+  return (ROSTER_CLASS_LABELS_BN as Record<number, string>)[level as RosterClassLevel] ?? `ক্লাস ${bnNum(level)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -618,6 +624,19 @@ export async function overdueChaseList(filter: SummaryFilter): Promise<OverdueCh
   // N+1 guard: resolve the chase template ONCE, interpolate per teacher.
   const eff = await getEffectiveTemplate("class_test.overdue_chase.wa");
 
+  // Section names for the exam lines (D-#373). Subject + test number alone were NOT
+  // unique — two sections sitting "ইংরেজি টেস্ট ১" on the same date rendered as the SAME
+  // string twice, so the teacher could not tell which two exams were meant. ONE batched
+  // query (the N+1 guard above applies here too), not a lookup per exam.
+  const sectionIds = [...new Set(overdueRows.map((r) => r.sectionId))].filter(Boolean);
+  const sections =
+    sectionIds.length === 0
+      ? [] // nothing overdue → don't round-trip for section names at all
+      : ((await Section.find({ _id: { $in: sectionIds.map((id) => new Types.ObjectId(id)) } })
+          .select("nameBn code")
+          .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string; code?: string }>);
+  const sectionById = new Map(sections.map((s) => [s._id.toString(), s.nameBn || s.code || ""]));
+
   const entries: OverdueChaseEntry[] = [];
   let unreachableCount = 0;
   for (const teacherId of teacherIds) {
@@ -633,12 +652,28 @@ export async function overdueChaseList(filter: SummaryFilter): Promise<OverdueCh
       schoolDaysLate: r.schoolDaysLate,
       pendingCount: r.pendingCount,
     }));
+    // One NUMBERED LINE per exam (D-#373). The old form was a comma-joined
+    // "subject টেস্ট n (dd/mm)", which for two same-subject same-date exams in
+    // different sections produced the identical string twice and named neither. Each
+    // line now carries what the teacher needs to act: which class+section, which
+    // subject/test, when it sat, HOW MANY students are still missing, how late it is,
+    // and the CT id to search for. Bangla numerals throughout — a Bangla sentence with
+    // ASCII digits reads half-translated.
     const examList = examRows
-      .map((r) => `${subjectBn(r.subject)} টেস্ট ${r.testNumber} (${ddmm(new Date(r.examDate))})`)
-      .join(", ");
+      .map((r, i) => {
+        const section = sectionById.get(r.sectionId);
+        const where = section ? `${classBn(r.classLevel)} (${section})` : classBn(r.classLevel);
+        const pending = `${bnNum(r.pendingCount)}/${bnNum(r.rosterCount)} জনের ফলাফল বাকি`;
+        const late = r.schoolDaysLate > 0 ? ` · ${bnNum(r.schoolDaysLate)} কর্মদিবস দেরি` : "";
+        return (
+          `${bnNum(i + 1)}) ${where} · ${subjectBn(r.subject)} · টেস্ট ${bnNum(r.testNumber)} · ` +
+          `পরীক্ষা ${bnNum(ddmm(new Date(r.examDate)))} — ${pending}${late} [${r.ctId}]`
+        );
+      })
+      .join("\n");
     const messageBn = renderFromEffective(eff, {
       TeacherName: teacherName,
-      Count: examRows.length,
+      Count: bnNum(examRows.length),
       ExamList: examList,
     });
     const waLink = waLinkFor(teacher?.phone, messageBn);
