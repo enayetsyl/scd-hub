@@ -149,6 +149,23 @@ Ordered `classDate desc, reviewedAt desc`. Served off the existing `{ teacherId:
 - [ ] Opening a history row plays the reviewed session's footage.
 - [ ] A caller without `observation:review` is refused; `allClassroomObservations` stays `observation:upload`.
 
+### CO-12 — Withhold: a recorded decision NOT to publish (D-#369)
+**The problem this fixes.** CO-8 made the awaiting-publish queue (`state: REVIEWED, publishedAt: null`) the Principal's work list — it drives the Observation drawer badge and the admin-Today `obsAwaitingPublish` tile. But some reviews are deliberately never released to the observed teacher (handled verbally, unusable footage, a re-observation already scheduled). Today such a row is indistinguishable from one nobody has got to yet, so it inflates the badge **forever** and the real backlog becomes unreadable.
+
+**The flag.** Additive `withheldAt` / `withheldBy` / `withheldReason` on `ClassroomObservation` — the same Option-A shape CO-8 chose, **NOT** a new `OBSERVATION_STATES` value, so the CO-4/6/7 aggregates keyed off REVIEWED stay untouched and no contract sync is needed. `withholdClassroomObservation(observationId, reason)` (`observation:manage`) stamps all three; **the reason is REQUIRED** (trimmed, 3–500 chars) — it is the record of *why* the observed teacher never received this feedback. `releaseClassroomObservationHold(observationId)` clears them and returns the row to the queue; it deliberately does **not** publish (two separate acts). Both audited (`CLASSROOM_OBSERVATION_WITHHELD` / `_HOLD_LIFTED`, the latter carrying `priorReason` so lifting a hold does not erase the record).
+
+**What changes, and what deliberately does not.** ONLY the counts and the filter: `observationCounts.toPublish` and the admin-Today `obsAwaitingPublish` tile add `withheldAt: null`. Everything downstream is already correct — the observed teacher could never read an unpublished row (`canReadObservation`), respond, or rate it, and the CO-3 escalation ladder already scans `publishedAt != null`. `publishObservation` refuses a withheld row (lift the hold first) so publishing stays deliberate. **Withholding is silent to the observed teacher** — telling them a review exists that they may not read is worse than not publishing it. No migration: `withheldAt` defaults null, so every existing row reads as "no hold".
+
+**UI.** The publish-status chip row becomes one mutually-exclusive four-way over the two server booleans — All / Published / **Pending** (`published:false` + `withheld:false`, the real queue) / **Withheld** — on both the oversight screen and the observer's own history. The row badge gains a `warn`-tone "স্থগিত". `ObservationDetailScreen` shows Publish **or** Withhold (with a required reason field) on an unpublished REVIEWED row, and a withheld row shows the hold, who set it, its reason, and a Lift button. The admin-Today badge deep-link seeds `withheld: false` so the opened list matches the number that was tapped.
+
+**Acceptance:**
+- [ ] Withholding a REVIEWED row stamps all three fields, audits with the reason, leaves `state` REVIEWED and `publishedAt` null, and notifies nobody.
+- [ ] An empty/whitespace-only reason is refused and nothing is written; the stored reason is trimmed.
+- [ ] A non-REVIEWED row, an already-published row and a second withhold are each refused.
+- [ ] `observationCounts.toPublish` and the admin-Today awaiting-publish tile both drop the withheld row.
+- [ ] `publishClassroomObservation` refuses a withheld row; lifting the hold clears all three fields, audits `priorReason`, and does NOT publish.
+- [ ] The Withheld filter chip returns exactly the held rows; the Pending chip excludes them. Server tsc + tests green.
+
 ## §6 — Given/When/Then journeys
 
 1. **Upload & assign.** *Given* a recorded session, *when* Office uploads it and assigns a senior teacher (not the class's own teacher), *then* it is ASSIGNED and audited.
@@ -160,6 +177,7 @@ Ordered `classDate desc, reviewedAt desc`. Served off the existing `{ teacherId:
 7. **Calibration.** *Given* two observers on one recording, *when* both submit, *then* their agreement-within-one-level is reported to the Principal.
 8. **Carry-forward (CO-10).** *Given* a teacher observed before, *when* their next observation is opened for review, *then* the prior growth focus is quoted on the form and the observer answers the progress question from the screen, not from memory.
 9. **Review history (CO-11).** *Given* an observer who has completed reviews, *when* they open "আমার পর্যালোচনা", *then* they can filter their own past reviews by class, subject, teacher and date and re-open the session footage.
+10. **Withhold (CO-12).** *Given* a REVIEWED observation the Principal has decided not to release, *when* they withhold it with a reason, *then* it leaves the awaiting-publish badge and the Today tile, stays visible to them and the observer under the Withheld filter, the teacher is neither notified nor able to read it — and lifting the hold later puts it back in the queue without publishing it.
 
 ## §7 — Out of scope
 
@@ -167,4 +185,4 @@ Appraisal / pay / discipline (REF-11 §1.3; HR / School Handbook) — and this d
 
 ## §8 — Traceability
 
-REF-11 v1.1 (D-PROJ00-054/-065) · REF-18 §4 (Bloom, D2) · D-#17 (supervisory overlay) · D-#28 (observation input / appraisal-outcome reserved to Principal) · D-#36 (HW_SUBJECTS, Quran excluded from HW) · D-#46/#52 (app-native vocab, no wire twin; deferred push) · D-#48/#56 (SubjectGroup; Quran/Arabic groups; Deen→Islam) · D-#54 (ROUTINE_SUBJECTS incl. QURAN) · ADR-005 (firewall) · ADR-008 (audit). New: **D-#146–#152**; **D-#271** (CO-8 publish gate) · **D-#272** (CO-9 co-review) · **D-#324** (published filter) · **D-#363** (CO-10 carry-forward + CO-11 review history). Vocab: `OBSERVATION_FORMS/DOMAINS/LEVELS/GATES/GATE_RESULTS/STATES`, `QURAN_REVIEW_CRITERIA`, `QURAN_COMPLIANCE_ITEMS`, `GROWTH_PROGRESS`, `SUPPORT_TIERS`, `observation:{upload,review,read,manage}`; reuses `RoutineSlot`, `SubjectGroup`, `Section`, `HW_SUBJECTS`, `ROUTINE_SUBJECTS`.
+REF-11 v1.1 (D-PROJ00-054/-065) · REF-18 §4 (Bloom, D2) · D-#17 (supervisory overlay) · D-#28 (observation input / appraisal-outcome reserved to Principal) · D-#36 (HW_SUBJECTS, Quran excluded from HW) · D-#46/#52 (app-native vocab, no wire twin; deferred push) · D-#48/#56 (SubjectGroup; Quran/Arabic groups; Deen→Islam) · D-#54 (ROUTINE_SUBJECTS incl. QURAN) · ADR-005 (firewall) · ADR-008 (audit). New: **D-#146–#152**; **D-#271** (CO-8 publish gate) · **D-#272** (CO-9 co-review) · **D-#324** (published filter) · **D-#363** (CO-10 carry-forward + CO-11 review history) · **D-#369** (CO-12 withhold flag). Vocab: `OBSERVATION_FORMS/DOMAINS/LEVELS/GATES/GATE_RESULTS/STATES`, `QURAN_REVIEW_CRITERIA`, `QURAN_COMPLIANCE_ITEMS`, `GROWTH_PROGRESS`, `SUPPORT_TIERS`, `observation:{upload,review,read,manage}`; reuses `RoutineSlot`, `SubjectGroup`, `Section`, `HW_SUBJECTS`, `ROUTINE_SUBJECTS`.

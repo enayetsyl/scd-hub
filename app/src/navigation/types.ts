@@ -296,7 +296,7 @@ export type ObservationStackParamList = {
   ObservationHome: undefined;
   UploadObservation: undefined;
   MyObservations: undefined;
-  AllObservations: { state?: string; published?: boolean } | undefined;
+  AllObservations: { state?: string; published?: boolean; withheld?: boolean } | undefined;
   ObservationReviewQueue: undefined;
   /** CO-11 (D-#363) — the observer's own completed reviews. */
   MyReviewHistory: undefined;

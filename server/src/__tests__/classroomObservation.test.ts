@@ -91,6 +91,8 @@ import {
   assignObserver,
   reviewObservation,
   publishObservation,
+  withholdObservation,
+  releaseObservationHold,
   respondToObservation,
   requestReReview,
   requestCoReview,
@@ -149,6 +151,9 @@ const makeDoc = (over: Record<string, unknown> = {}) => {
     reviewedAt: null,
     publishedAt: null,
     publishedBy: null,
+    withheldAt: null,
+    withheldBy: null,
+    withheldReason: null,
     domains: [],
     gates: [],
     oneStrength: null,
@@ -536,6 +541,125 @@ describe("publishObservation (CO-8)", () => {
       publishObservation({ observationId: oid().toString(), actorId: OFFICE.toString() }),
     ).rejects.toThrow(/ইতিমধ্যে প্রকাশিত/);
     expect(mockEmit).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "OBSERVATION_RELEASED" }));
+  });
+});
+
+// ===========================================================================
+// CO-12 withhold flag (D-#369) — a recorded decision NOT to publish
+// ===========================================================================
+
+describe("withholdObservation (CO-12)", () => {
+  test("withholds a REVIEWED row → stamps + reason, audited, state unchanged, teacher NOT notified", async () => {
+    const doc = makeDoc({ state: "REVIEWED", publishedAt: null });
+    mockFindById.mockResolvedValue(doc);
+    const res = await withholdObservation({
+      observationId: String(doc._id),
+      reason: "Footage was unusable; re-observing next week.",
+      actorId: OFFICE.toString(),
+    });
+    expect(res.withheldAt).toBeTruthy();
+    expect(res.withheldBy).toBe(OFFICE.toString());
+    expect(res.withheldReason).toBe("Footage was unusable; re-observing next week.");
+    expect(res.state).toBe("REVIEWED"); // additive flag, not a new state (the CO-8 shape)
+    expect(res.publishedAt).toBeNull();
+    expect(doc.save as jest.Mock).toHaveBeenCalled();
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventKind: "CLASSROOM_OBSERVATION_WITHHELD",
+        meta: expect.objectContaining({ reason: "Footage was unusable; re-observing next week." }),
+      }),
+    );
+    // Withholding is silent — telling the teacher a review exists they may not read is worse.
+    expect(mockEmit).not.toHaveBeenCalled();
+  });
+
+  test("requires a reason (empty / whitespace-only refused, nothing written)", async () => {
+    const doc = makeDoc({ state: "REVIEWED", publishedAt: null });
+    mockFindById.mockResolvedValue(doc);
+    await expect(
+      withholdObservation({ observationId: String(doc._id), reason: "   ", actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/কারণ/);
+    expect(doc.save as jest.Mock).not.toHaveBeenCalled();
+    expect(mockWriteAudit).not.toHaveBeenCalled();
+  });
+
+  test("trims the stored reason", async () => {
+    const doc = makeDoc({ state: "REVIEWED", publishedAt: null });
+    mockFindById.mockResolvedValue(doc);
+    const res = await withholdObservation({
+      observationId: String(doc._id),
+      reason: "  handled verbally  ",
+      actorId: OFFICE.toString(),
+    });
+    expect(res.withheldReason).toBe("handled verbally");
+  });
+
+  test("refuses a non-REVIEWED row, an already-published row and a double withhold", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "ASSIGNED" }));
+    await expect(
+      withholdObservation({ observationId: oid().toString(), reason: "not needed", actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/পর্যালোচিত/);
+
+    mockFindById.mockResolvedValue(makeDoc({ state: "REVIEWED", publishedAt: new Date("2026-06-15T00:00:00Z") }));
+    await expect(
+      withholdObservation({ observationId: oid().toString(), reason: "too late", actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/প্রকাশিত/);
+
+    mockFindById.mockResolvedValue(
+      makeDoc({ state: "REVIEWED", withheldAt: new Date("2026-06-15T00:00:00Z"), withheldReason: "already" }),
+    );
+    await expect(
+      withholdObservation({ observationId: oid().toString(), reason: "again", actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/ইতিমধ্যে স্থগিত/);
+  });
+});
+
+describe("publishObservation refuses a withheld row (CO-12)", () => {
+  test("a hold must be lifted before publishing — the teacher is not released to", async () => {
+    const doc = makeDoc({
+      state: "REVIEWED",
+      publishedAt: null,
+      withheldAt: new Date("2026-06-15T00:00:00Z"),
+      withheldReason: "handled verbally",
+    });
+    mockFindById.mockResolvedValue(doc);
+    await expect(
+      publishObservation({ observationId: String(doc._id), actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/স্থগিত/);
+    expect(doc.publishedAt).toBeNull();
+    expect(mockEmit).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "OBSERVATION_RELEASED" }));
+  });
+});
+
+describe("releaseObservationHold (CO-12)", () => {
+  test("clears the three stamps, audits the prior reason, and does NOT publish", async () => {
+    const doc = makeDoc({
+      state: "REVIEWED",
+      publishedAt: null,
+      withheldAt: new Date("2026-06-15T00:00:00Z"),
+      withheldBy: OFFICE,
+      withheldReason: "handled verbally",
+    });
+    mockFindById.mockResolvedValue(doc);
+    const res = await releaseObservationHold({ observationId: String(doc._id), actorId: OFFICE.toString() });
+    expect(res.withheldAt).toBeNull();
+    expect(res.withheldBy).toBeNull();
+    expect(res.withheldReason).toBeNull();
+    expect(res.publishedAt).toBeNull(); // lifting a hold is NOT publishing
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventKind: "CLASSROOM_OBSERVATION_HOLD_LIFTED",
+        meta: expect.objectContaining({ priorReason: "handled verbally" }),
+      }),
+    );
+    expect(mockEmit).not.toHaveBeenCalled();
+  });
+
+  test("refuses a row that is not withheld", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "REVIEWED", withheldAt: null }));
+    await expect(
+      releaseObservationHold({ observationId: oid().toString(), actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/স্থগিত করা নেই/);
   });
 });
 

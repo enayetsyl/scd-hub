@@ -16,6 +16,11 @@
  *   publishObservation  — Principal/Office PUBLISH a REVIEWED row (CO-8) → stamps
  *                         `publishedAt`/`publishedBy`, releases + notifies the teacher.
  *                         Audited.
+ *   withholdObservation — Principal/Office record a decision NOT to publish a REVIEWED row
+ *                         (CO-12, D-#369) → stamps `withheldAt`/`withheldBy` + a REQUIRED
+ *                         `withheldReason`; the row leaves the awaiting-publish counts.
+ *                         Silent to the teacher. Audited. `releaseObservationHold` lifts
+ *                         it back into the queue (still a separate act from publishing).
  *   requestReReview     — re-review: create a NEW ASSIGNED observation on the same
  *                         anchor/recording, mark the prior REVIEWED row SUPERSEDED
  *                         (`supersededById`/`prevObservationId`). Enables CO-7
@@ -98,6 +103,10 @@ export interface ClassroomObservationShape {
   /** CO-8 (D-#271): publish stamp — teacher visibility gate. null = unpublished. */
   publishedAt: string | null;
   publishedBy: string | null;
+  /** CO-12 (D-#369): withhold stamp — a decision NOT to publish. null = no hold. */
+  withheldAt: string | null;
+  withheldBy: string | null;
+  withheldReason: string | null;
   domains: DomainScoreShape[];
   gates: GateScoreShape[];
   oneStrength: string | null;
@@ -137,6 +146,9 @@ function shape(d: IClassroomObservation): ClassroomObservationShape {
     reviewedAt: d.reviewedAt ? new Date(d.reviewedAt).toISOString() : null,
     publishedAt: d.publishedAt ? new Date(d.publishedAt).toISOString() : null,
     publishedBy: d.publishedBy ? d.publishedBy.toString() : null,
+    withheldAt: d.withheldAt ? new Date(d.withheldAt).toISOString() : null,
+    withheldBy: d.withheldBy ? d.withheldBy.toString() : null,
+    withheldReason: d.withheldReason ?? null,
     domains: (d.domains ?? []).map((x) => ({ domain: x.domain, level: x.level, note: x.note })),
     gates: (d.gates ?? []).map((x) => ({ gate: x.gate, result: x.result, breachNote: x.breachNote ?? null })),
     oneStrength: d.oneStrength ?? null,
@@ -498,6 +510,11 @@ export async function publishObservation(input: PublishObservationInput): Promis
   if (doc.publishedAt) {
     throw new ClassroomObservationError("এই পর্যবেক্ষণ ইতিমধ্যে প্রকাশিত হয়েছে");
   }
+  // CO-12 (D-#369): a withheld row is a recorded decision NOT to publish — lift the hold
+  // first. Refusing here (rather than silently publishing) keeps the decision deliberate.
+  if (doc.withheldAt) {
+    throw new ClassroomObservationError("এই পর্যবেক্ষণ স্থগিত করা আছে — আগে স্থগিতাদেশ বাতিল করুন");
+  }
   doc.publishedAt = new Date();
   doc.publishedBy = oid(input.actorId, "actorId");
   await doc.save();
@@ -512,6 +529,113 @@ export async function publishObservation(input: PublishObservationInput): Promis
 
   // The release notice to the teacher now fires at PUBLISH (moved from review).
   await emitObservationReleased(doc);
+
+  return shape(doc);
+}
+
+// ---------------------------------------------------------------------------
+// withholdObservation / releaseObservationHold (CO-12, D-#369)
+// ---------------------------------------------------------------------------
+
+/** A withhold reason is REQUIRED and must say something — the whole point of the flag is
+ *  that "why did this teacher never get this feedback?" has an answer on the row. */
+const WITHHOLD_REASON_MIN = 3;
+const WITHHOLD_REASON_MAX = 500;
+
+export interface WithholdObservationInput {
+  observationId: string;
+  /** REQUIRED free text — why this review is not going to the observed teacher. */
+  reason: string;
+  /** The authenticated actor (Principal/Office — observation:manage). */
+  actorId: string;
+}
+
+/**
+ * Withhold a REVIEWED observation (CO-12) — record the decision NOT to publish it. Stamps
+ * `withheldAt`/`withheldBy`/`withheldReason`; the row drops out of the awaiting-publish
+ * counts (drawer badge + admin Today) but stays fully visible to the observer and
+ * Principal/Office, and is still findable under the "withheld" filter. NOTHING else
+ * changes: the teacher already could not read an unpublished row, the escalation clock
+ * already ignored it, and `state` stays REVIEWED (additive flag, the CO-8 shape). Only a
+ * REVIEWED, not-yet-published, not-already-withheld row can be withheld. Audited. RBAC
+ * (observation:manage) is enforced by the resolver.
+ */
+export async function withholdObservation(input: WithholdObservationInput): Promise<ClassroomObservationShape> {
+  const reason = (input.reason ?? "").trim();
+  if (reason.length < WITHHOLD_REASON_MIN) {
+    throw new ClassroomObservationError("স্থগিত করার কারণ লিখুন");
+  }
+  if (reason.length > WITHHOLD_REASON_MAX) {
+    throw new ClassroomObservationError("কারণটি অনেক বড় — ৫০০ অক্ষরের মধ্যে লিখুন");
+  }
+
+  const doc = (await ClassroomObservation.findById(input.observationId)) as IClassroomObservation | null;
+  if (!doc) throw new ClassroomObservationError("Observation not found");
+  if (doc.state !== "REVIEWED") {
+    throw new ClassroomObservationError("শুধু পর্যালোচিত পর্যবেক্ষণই স্থগিত করা যাবে");
+  }
+  if (doc.publishedAt) {
+    throw new ClassroomObservationError("প্রকাশিত পর্যবেক্ষণ স্থগিত করা যাবে না");
+  }
+  if (doc.withheldAt) {
+    throw new ClassroomObservationError("এই পর্যবেক্ষণ ইতিমধ্যে স্থগিত করা আছে");
+  }
+
+  doc.withheldAt = new Date();
+  doc.withheldBy = oid(input.actorId, "actorId");
+  doc.withheldReason = reason;
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "CLASSROOM_OBSERVATION_WITHHELD",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "ClassroomObservation",
+    meta: {
+      teacherId: doc.teacherId.toString(),
+      observerId: doc.observerId ? doc.observerId.toString() : null,
+      reason,
+    },
+  });
+
+  // No notification: withholding is deliberately silent to the observed teacher — telling
+  // them a review exists that they may not read would be worse than not publishing it.
+  return shape(doc);
+}
+
+export interface ReleaseObservationHoldInput {
+  observationId: string;
+  actorId: string;
+}
+
+/**
+ * Lift a withhold (CO-12) — clears `withheldAt`/`withheldBy`/`withheldReason`, putting the
+ * row straight back into the awaiting-publish queue. Does NOT publish: releasing the hold
+ * and releasing to the teacher stay two separate, deliberate acts. Audited (the prior
+ * reason is carried into the audit meta so lifting a hold does not erase the record).
+ */
+export async function releaseObservationHold(
+  input: ReleaseObservationHoldInput,
+): Promise<ClassroomObservationShape> {
+  const doc = (await ClassroomObservation.findById(input.observationId)) as IClassroomObservation | null;
+  if (!doc) throw new ClassroomObservationError("Observation not found");
+  if (!doc.withheldAt) {
+    throw new ClassroomObservationError("এই পর্যবেক্ষণ স্থগিত করা নেই");
+  }
+
+  const priorReason = doc.withheldReason ?? null;
+  doc.withheldAt = null;
+  doc.withheldBy = null;
+  doc.withheldReason = null;
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "CLASSROOM_OBSERVATION_HOLD_LIFTED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "ClassroomObservation",
+    meta: { teacherId: doc.teacherId.toString(), priorReason },
+  });
 
   return shape(doc);
 }
@@ -951,6 +1075,10 @@ export interface AllObservationsFilterInput {
   /** CO-8 publish gate (D-#324): true = released to the teacher (publishedAt set);
    *  false = not yet published (publishedAt null); undefined = either. */
   published?: boolean | null;
+  /** CO-12 withhold flag (D-#369): true = held back on purpose (withheldAt set); false =
+   *  no hold; undefined = either. AND-combines with `published`, so the real publish
+   *  queue is `published: false, withheld: false`. */
+  withheld?: boolean | null;
   /** classDate >= dateFrom (YYYY-MM-DD, inclusive). */
   dateFrom?: string | null;
   /** classDate <= dateTo (YYYY-MM-DD, inclusive). */
@@ -990,6 +1118,9 @@ export async function allObservationsPaged(
   // CO-8 publish gate (D-#324): publishedAt set = released to the teacher.
   if (input.published === true) q.publishedAt = { $ne: null };
   else if (input.published === false) q.publishedAt = null;
+  // CO-12 withhold flag (D-#369): withheldAt set = a recorded decision not to publish.
+  if (input.withheld === true) q.withheldAt = { $ne: null };
+  else if (input.withheld === false) q.withheldAt = null;
   if (input.dateFrom || input.dateTo) {
     const range: Record<string, string> = {};
     if (input.dateFrom) range.$gte = input.dateFrom;
@@ -1049,7 +1180,11 @@ export async function myReviewQueue(observerId: string): Promise<ClassroomObserv
 /** Observation drawer badge counts (owner 2026-07-26): `toReview` = observations
  *  assigned to the caller awaiting their review (observation:review); `toPublish` =
  *  reviewed-but-unpublished, awaiting Principal/Office release (observation:upload).
- *  Each is 0 when the caller lacks that permission. */
+ *  Each is 0 when the caller lacks that permission.
+ *
+ *  CO-12 (D-#369): `toPublish` excludes WITHHELD rows — a row the Principal has decided
+ *  not to publish is a closed decision, not outstanding work, so it must not sit in the
+ *  badge forever. That exclusion is the whole reason the withhold flag exists. */
 export async function observationCounts(
   observerId: string,
   canReview: boolean,
@@ -1060,7 +1195,7 @@ export async function observationCounts(
       ? ClassroomObservation.countDocuments({ observerId: oid(observerId, "observerId"), state: "ASSIGNED" })
       : Promise.resolve(0),
     canPublish
-      ? ClassroomObservation.countDocuments({ state: "REVIEWED", publishedAt: null })
+      ? ClassroomObservation.countDocuments({ state: "REVIEWED", publishedAt: null, withheldAt: null })
       : Promise.resolve(0),
   ]);
   return { toReview, toPublish };

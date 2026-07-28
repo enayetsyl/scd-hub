@@ -83,7 +83,9 @@ const BADGE_TARGETS: Record<string, CardMeta["target"] & { params?: object }> = 
   obsAwaitingPublish: {
     tab: "ObservationTab",
     screen: "AllObservations",
-    params: { state: "REVIEWED", published: false },
+    // withheld:false so the opened list matches the badge's own count (CO-12, D-#369 —
+    // the card excludes deliberately-withheld rows).
+    params: { state: "REVIEWED", published: false, withheld: false },
   },
 };
 

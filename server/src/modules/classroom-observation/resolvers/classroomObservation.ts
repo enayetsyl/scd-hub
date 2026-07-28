@@ -32,6 +32,8 @@ import {
   assignObserver,
   reviewObservation,
   publishObservation,
+  withholdObservation,
+  releaseObservationHold,
   requestReReview,
   requestCoReview,
   respondToObservation,
@@ -146,6 +148,9 @@ ObservationRef.implement({
     reviewedAt: t.string({ nullable: true, resolve: (r) => r.reviewedAt }),
     publishedAt: t.string({ nullable: true, resolve: (r) => r.publishedAt }),
     publishedBy: t.string({ nullable: true, resolve: (r) => r.publishedBy }),
+    withheldAt: t.string({ nullable: true, resolve: (r) => r.withheldAt }),
+    withheldBy: t.string({ nullable: true, resolve: (r) => r.withheldBy }),
+    withheldReason: t.string({ nullable: true, resolve: (r) => r.withheldReason }),
     domains: t.field({ type: [DomainScoreRef], resolve: (r) => r.domains }),
     gates: t.field({ type: [GateScoreRef], resolve: (r) => r.gates }),
     oneStrength: t.string({ nullable: true, resolve: (r) => r.oneStrength }),
@@ -458,6 +463,45 @@ builder.mutationField("publishClassroomObservation", (t) =>
   }),
 );
 
+builder.mutationField("withholdClassroomObservation", (t) =>
+  t.field({
+    type: ObservationRef,
+    description:
+      "Withhold a REVIEWED observation (CO-12, D-#369): record the decision NOT to publish it, with a REQUIRED " +
+      "reason. Stamps withheldAt/withheldBy/withheldReason; the row leaves the awaiting-publish counts but stays " +
+      "readable to the observer + Principal/Office. Silent to the observed teacher. Only a REVIEWED, unpublished, " +
+      "not-already-withheld row. Requires observation:manage (Principal/Office). Audited.",
+    authScopes: { hasPermission: "observation:manage" },
+    args: {
+      observationId: t.arg.string({ required: true }),
+      reason: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return withholdObservation({
+        observationId: args.observationId,
+        reason: args.reason,
+        actorId: actor.userId,
+      });
+    },
+  }),
+);
+
+builder.mutationField("releaseClassroomObservationHold", (t) =>
+  t.field({
+    type: ObservationRef,
+    description:
+      "Lift a withhold (CO-12, D-#369): clears withheldAt/withheldBy/withheldReason and puts the row back into the " +
+      "awaiting-publish queue. Does NOT publish — that stays a separate act. Requires observation:manage. Audited.",
+    authScopes: { hasPermission: "observation:manage" },
+    args: { observationId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return releaseObservationHold({ observationId: args.observationId, actorId: actor.userId });
+    },
+  }),
+);
+
 // ---------------------------------------------------------------------------
 // Escalation cadence config (observation:manage — admin-tunable, D-#97 defaults)
 // ---------------------------------------------------------------------------
@@ -625,8 +669,9 @@ builder.queryField("allClassroomObservations", (t) =>
     description:
       "All observations, newest first — Principal/Office oversight view, filtered + paginated (WS1). Filters " +
       "AND-combine; `search` matches the observed-teacher OR observer name. `published` true/false filters on the " +
-      "CO-8 publish gate (D-#324); `sectionId` filters by class/section (CO-11, D-#363). omit for either. limit " +
-      "defaults 20 (max 100). Requires observation:upload.",
+      "CO-8 publish gate (D-#324); `withheld` true/false filters on the CO-12 withhold flag (D-#369) — the real " +
+      "publish queue is published:false + withheld:false; `sectionId` filters by class/section (CO-11, D-#363). " +
+      "omit for either. limit defaults 20 (max 100). Requires observation:upload.",
     authScopes: { hasPermission: "observation:upload" },
     args: {
       teacherId: t.arg.string({ required: false }),
@@ -636,6 +681,7 @@ builder.queryField("allClassroomObservations", (t) =>
       subject: t.arg.string({ required: false }),
       sectionId: t.arg.string({ required: false }),
       published: t.arg.boolean({ required: false }),
+      withheld: t.arg.boolean({ required: false }),
       dateFrom: t.arg.string({ required: false }),
       dateTo: t.arg.string({ required: false }),
       search: t.arg.string({ required: false }),
@@ -651,6 +697,7 @@ builder.queryField("allClassroomObservations", (t) =>
         subject: args.subject ?? undefined,
         sectionId: args.sectionId ?? undefined,
         published: args.published ?? undefined,
+        withheld: args.withheld ?? undefined,
         dateFrom: args.dateFrom ?? undefined,
         dateTo: args.dateTo ?? undefined,
         search: args.search ?? undefined,
@@ -676,6 +723,7 @@ builder.queryField("myObservationReviews", (t) =>
       subject: t.arg.string({ required: false }),
       sectionId: t.arg.string({ required: false }),
       published: t.arg.boolean({ required: false }),
+      withheld: t.arg.boolean({ required: false }),
       dateFrom: t.arg.string({ required: false }),
       dateTo: t.arg.string({ required: false }),
       search: t.arg.string({ required: false }),
@@ -691,6 +739,7 @@ builder.queryField("myObservationReviews", (t) =>
         subject: args.subject ?? undefined,
         sectionId: args.sectionId ?? undefined,
         published: args.published ?? undefined,
+        withheld: args.withheld ?? undefined,
         dateFrom: args.dateFrom ?? undefined,
         dateTo: args.dateTo ?? undefined,
         search: args.search ?? undefined,
