@@ -20,13 +20,11 @@ import type { StudentProfileHeader, StudentProfileAttendance, StudentProfileComm
 import type { StudentTrackerPanel, TrackerCounters } from "./StudentProfileService";
 import type { StudentProfile as ClassTestProfile } from "./ClassTestSummaryService";
 
-const BN_DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
-
-/** Bangla numerals, matching the app's `bnNum` so the sheet reads like the screen. */
-export function bn(n: number | string | null | undefined): string {
-  if (n === null || n === undefined) return "—";
-  return String(n).replace(/[0-9]/g, (d) => BN_DIGITS[Number(d)]);
-}
+/** Bangla numerals, matching the app's `bnNum` so the sheet reads like the screen.
+ *  Definition moved to `lib/bnNum` (shared with the chase-message renderers); kept
+ *  exported under this name so existing callers are untouched. */
+export { bnNum as bn } from "../../../lib/bnNum";
+import { bnNum as bn } from "../../../lib/bnNum";
 
 const ROSTER_CLASS_BN: Record<number, string> = {
   [-1]: "নার্সারি",
