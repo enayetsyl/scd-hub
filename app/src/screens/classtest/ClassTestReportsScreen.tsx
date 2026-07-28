@@ -15,6 +15,13 @@ import { CLASS_TEST_REPORTS_STATUS_QUERY } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Chip, ChipRow, Select, Loader, Notice } from "../../components/ui";
 import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
+import {
+  CT_PUBLISH_FILTERS,
+  ctPublishBadge,
+  ctPublishFilterLabel,
+  matchesCtPublishFilter,
+  type CtPublishFilter,
+} from "../../lib/ctPublishStatus";
 import { STR, hwSubjectLabel, ctReportStateLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -27,15 +34,14 @@ const stateTone = (s: string): "ok" | "danger" | "brand" | "muted" =>
 
 /** Entry-state chips (the sibling ClassTestReportScreen pattern) + the publish axis. */
 const STATES = ["complete", "in_progress", "not_started", "overdue"] as const;
-const PUBLISH_FILTERS = ["submitted", "published", "unpublished"] as const;
 
 type RowLike = { state: string; submittedAt: string | null; publishedAt: string | null };
-/** One predicate per chip — the publish axis rides submittedAt/publishedAt, not `state`. */
+/** One predicate per chip. The publish axis rides submittedAt/publishedAt, not `state`,
+ *  and is delegated to the SHARED helper so this screen and the dashboard always agree
+ *  on what "unpublished" counts as. */
 const matchesFilter = (r: RowLike, f: string): boolean =>
   f === "" ? true
-  : f === "submitted" ? !!r.submittedAt
-  : f === "published" ? !!r.publishedAt
-  : f === "unpublished" ? !!r.submittedAt && !r.publishedAt
+  : (CT_PUBLISH_FILTERS as readonly string[]).includes(f) ? matchesCtPublishFilter(r, f as CtPublishFilter)
   : r.state === f;
 
 export default function ClassTestReportsScreen(): React.ReactElement {
@@ -56,10 +62,9 @@ export default function ClassTestReportsScreen(): React.ReactElement {
   const rows = allRows.filter((r) => matchesFilter(r, filter));
   const countOf = (f: string): number => allRows.filter((r) => matchesFilter(r, f)).length;
   const filterLabel = (f: string): string =>
-    f === "submitted" ? STR.ctFilterSubmitted
-    : f === "published" ? STR.ctPublishedBadge
-    : f === "unpublished" ? STR.ctUnpublishedBadge
-    : ctReportStateLabel(f);
+    (CT_PUBLISH_FILTERS as readonly string[]).includes(f)
+      ? ctPublishFilterLabel(f as CtPublishFilter)
+      : ctReportStateLabel(f);
 
   return (
     <Screen padded={false}>
@@ -101,7 +106,7 @@ export default function ClassTestReportsScreen(): React.ReactElement {
                 selected={filter === ""}
                 onPress={() => setFilter("")}
               />
-              {[...STATES, ...PUBLISH_FILTERS].map((f) => (
+              {[...STATES, ...CT_PUBLISH_FILTERS].map((f) => (
                 <Chip
                   key={f}
                   label={`${filterLabel(f)} (${bnNum(countOf(f))})`}
@@ -137,17 +142,19 @@ export default function ClassTestReportsScreen(): React.ReactElement {
                     {r.ctId} · {isoDateLabel(r.examDate)}
                   </Muted>
                 </View>
-                {/* Published is the terminal state past complete — surface it as its own
-                    badge (owner ask) so a released exam is distinct from a merely-complete one. */}
-                <Badge
-                  text={r.publishedAt ? STR.ctPublishedBadge : ctReportStateLabel(r.state)}
-                  tone={r.publishedAt ? "ok" : stateTone(r.state)}
-                />
+                {/* Two independent axes, two badges (owner ask 2026-07-28). Previously the
+                    publish badge REPLACED the entry-state one, so a published exam lost its
+                    complete/overdue standing — the two facts are orthogonal and both matter. */}
+                <View style={{ alignItems: "flex-end", gap: space(1) }}>
+                  <Badge text={ctReportStateLabel(r.state)} tone={stateTone(r.state)} />
+                  <Badge {...ctPublishBadge(r)} />
+                </View>
               </View>
               <Muted style={{ marginTop: space(1) }}>
                 {STR.ctEntered} {bnNum(r.enteredCount)}/{bnNum(r.rosterCount)} · {STR.ctPending} {bnNum(r.pendingCount)}
                 {r.overdue ? ` · ${STR.ctSchoolDaysLate} ${bnNum(r.schoolDaysLate)}` : ""}
-                {r.publishedAt ? ` · ${STR.ctPublishedBadge}` : r.submittedAt ? ` · ${STR.ctFilterSubmitted}` : ""}
+                {r.submittedAt ? ` · ${STR.ctSubmittedBadge} ${isoDateLabel(r.submittedAt)}` : ""}
+                {r.publishedAt ? ` · ${STR.ctPublishedBadge} ${isoDateLabel(r.publishedAt)}` : ""}
               </Muted>
               <View style={{ marginTop: space(2) }}>
                 <Button

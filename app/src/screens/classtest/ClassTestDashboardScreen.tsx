@@ -3,6 +3,13 @@
  * (logged / complete / in-progress / not-started / overdue + completion rate),
  * a per-test DRILL-DOWN under the tiles (D-#339: tap a tile = state filter; each
  * row shows who/when and taps through to the results), the overdue-by-teacher
+ *
+ * TWO INDEPENDENT AXES (owner ask 2026-07-28). The tiles are the ENTRY state — "are the
+ * marks in?". The chip row under the drill-down is the PUBLISH state — "can the guardian
+ * see them?" (`lib/ctPublishStatus`, derived from submittedAt/publishedAt, which the
+ * reports-status row already carried). They AND-combine, so Complete + Unpublished is
+ * the release backlog — a number this screen previously could not show at all. Each row
+ * carries both badges for the same reason.
  * breakdown, and the Office overdue-chase (a rendered wa.me nudge per teacher —
  * message:dispatch). Reads are gated Principal/Office server-side; a teacher
  * reaching here sees the Bangla deny inline.
@@ -17,7 +24,14 @@ import {
   CLASS_TEST_OVERDUE_CHASE_QUERY,
   CLASS_TEST_REPORTS_STATUS_QUERY,
 } from "../../graphql/classTest";
-import { Screen, Card, Body, Muted, Button, Badge, Loader, Notice } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge, Chip, ChipRow, Loader, Notice } from "../../components/ui";
+import {
+  CT_PUBLISH_FILTERS,
+  ctPublishBadge,
+  ctPublishFilterLabel,
+  matchesCtPublishFilter,
+  type CtPublishFilter,
+} from "../../lib/ctPublishStatus";
 import { STR, hwSubjectLabel, ctReportStateLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -59,13 +73,22 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   // D-#339: tap a tile → filter the per-test drill-down below (logged = all).
   const [stateFilter, setStateFilter] = useState<StateFilter>(null);
+  // Owner ask 2026-07-28: the PUBLISH axis, independent of the entry state above — the
+  // tiles only ever answered "are the marks in?", never "can the guardian see them?".
+  // The two AND-combine, so "Complete + Unpublished" = the actual release backlog.
+  const [publishFilter, setPublishFilter] = useState<CtPublishFilter | null>(null);
   const [dashQ] = useQuery({ query: CLASS_TEST_DASHBOARD_QUERY, variables: {} });
   const [chaseQ] = useQuery({ query: CLASS_TEST_OVERDUE_CHASE_QUERY, variables: {} });
   const [rowsQ] = useQuery({ query: CLASS_TEST_REPORTS_STATUS_QUERY, variables: {} });
   const d = dashQ.data?.classTestPrincipalDashboard ?? null;
   const chase = chaseQ.data?.classTestOverdueChase ?? null;
   const allRows = rowsQ.data?.classTestReportsStatus ?? [];
-  const rows = stateFilter ? allRows.filter((r) => r.state === stateFilter) : allRows;
+  const stateRows = stateFilter ? allRows.filter((r) => r.state === stateFilter) : allRows;
+  const rows = publishFilter ? stateRows.filter((r) => matchesCtPublishFilter(r, publishFilter)) : stateRows;
+  // Chip counts are computed WITHIN the tile selection so they always add up to what the
+  // list below is showing, rather than to a school-wide total the user cannot see.
+  const publishCount = (f: CtPublishFilter): number =>
+    stateRows.filter((r) => matchesCtPublishFilter(r, f)).length;
 
   return (
     <Screen padded={false}>
@@ -87,8 +110,28 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
             {/* D-#339: per-test drill-down — who submitted / logged what, filtered by the tapped tile. */}
             <Card>
               <Body style={{ fontWeight: "700" }}>
-                {STR.ctDrilldownTitle} · {stateFilter ? ctReportStateLabel(stateFilter) : STR.ctLogged} ({bnNum(rows.length)})
+                {STR.ctDrilldownTitle} · {stateFilter ? ctReportStateLabel(stateFilter) : STR.ctLogged}
+                {publishFilter ? ` · ${ctPublishFilterLabel(publishFilter)}` : ""} ({bnNum(rows.length)})
               </Body>
+
+              {/* The publish axis (owner ask 2026-07-28) — AND-combines with the tile above. */}
+              <Muted style={{ marginTop: space(2) }}>{STR.ctFilterPublishTitle}</Muted>
+              <ChipRow>
+                <Chip
+                  label={`${STR.all} (${bnNum(stateRows.length)})`}
+                  selected={publishFilter === null}
+                  onPress={() => setPublishFilter(null)}
+                />
+                {CT_PUBLISH_FILTERS.map((f) => (
+                  <Chip
+                    key={f}
+                    label={`${ctPublishFilterLabel(f)} (${bnNum(publishCount(f))})`}
+                    selected={publishFilter === f}
+                    onPress={() => setPublishFilter(publishFilter === f ? null : f)}
+                  />
+                ))}
+              </ChipRow>
+
               {rowsQ.error ? (
                 <Notice message={friendlyError(rowsQ.error)} tone="danger" />
               ) : rowsQ.fetching ? (
@@ -116,13 +159,20 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                           {r.ctId} · {isoDateLabel(r.examDate)} · {r.teacherName}
                         </Muted>
                       </View>
-                      <Badge text={ctReportStateLabel(r.state)} tone={stateTone(r.state)} />
+                      {/* Two independent axes, two badges: entry state + publish state. */}
+                      <View style={{ alignItems: "flex-end", gap: space(1) }}>
+                        <Badge text={ctReportStateLabel(r.state)} tone={stateTone(r.state)} />
+                        <Badge {...ctPublishBadge(r)} />
+                      </View>
                     </View>
                     <Muted style={{ marginTop: space(1) }}>
                       {STR.ctEntered} {bnNum(r.enteredCount)}/{bnNum(r.rosterCount)} · {STR.ctPending} {bnNum(r.pendingCount)}
                       {r.overdue ? ` · ${STR.ctSchoolDaysLate} ${bnNum(r.schoolDaysLate)}` : ""}
                       {r.submittedAt
                         ? ` · ${STR.ctSubmittedBadge} ${isoDateLabel(r.submittedAt)}`
+                        : ""}
+                      {r.publishedAt
+                        ? ` · ${STR.ctPublishedBadge} ${isoDateLabel(r.publishedAt)}`
                         : ""}
                     </Muted>
                   </Pressable>
