@@ -49,6 +49,8 @@ server/scripts/students.json
 server/scripts/staff.json
 _xlsx_dump.txt
 _xlsx_vals.txt
+# Pre-delete dumps written by the purge scripts — real student records.
+server/scripts/backups/
 
 # ---- Editor / OS ----
 .vscode/*
