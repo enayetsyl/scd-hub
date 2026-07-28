@@ -59,6 +59,10 @@ export interface ClassroomObservationT {
   reviewedAt: string | null;
   publishedAt: string | null;
   publishedBy: string | null;
+  /** CO-12 (D-#369): a recorded decision NOT to publish. null = no hold. */
+  withheldAt: string | null;
+  withheldBy: string | null;
+  withheldReason: string | null;
   domains: ObsDomainScoreT[];
   gates: ObsGateScoreT[];
   oneStrength: string | null;
@@ -79,7 +83,7 @@ export interface ClassroomObservationT {
 }
 
 const QURAN_PAYLOAD_FIELDS = `quran { ratings { criterion score note } compliance { item yesNo } strengths improvements suggestions }`;
-const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt publishedAt publishedBy domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress priorFocusNote ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
+const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt publishedAt publishedBy withheldAt withheldBy withheldReason domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress priorFocusNote ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
 
 export const CLASSROOM_OBSERVATION_QUERY = gql<
   { classroomObservation: ClassroomObservationT | null },
@@ -116,6 +120,9 @@ export interface ObservationFilterVars {
   sectionId?: string | null;
   /** D-#324: CO-8 publish gate — true=published, false=unpublished, null=either. */
   published?: boolean | null;
+  /** D-#369: CO-12 withhold flag — true=withheld, false=no hold, null=either. The real
+   *  publish queue is published:false + withheld:false. */
+  withheld?: boolean | null;
   dateFrom?: string | null;
   dateTo?: string | null;
   search?: string | null;
@@ -138,13 +145,13 @@ export const ALL_CLASSROOM_OBSERVATIONS_QUERY = gql<
 >`
   query AllClassroomObservations(
     $teacherId: String, $observerId: String, $state: String, $form: String,
-    $subject: String, $sectionId: String, $published: Boolean, $dateFrom: String, $dateTo: String,
-    $search: String, $limit: Int, $offset: Int
+    $subject: String, $sectionId: String, $published: Boolean, $withheld: Boolean,
+    $dateFrom: String, $dateTo: String, $search: String, $limit: Int, $offset: Int
   ) {
     allClassroomObservations(
       teacherId: $teacherId, observerId: $observerId, state: $state, form: $form,
-      subject: $subject, sectionId: $sectionId, published: $published, dateFrom: $dateFrom,
-      dateTo: $dateTo, search: $search, limit: $limit, offset: $offset
+      subject: $subject, sectionId: $sectionId, published: $published, withheld: $withheld,
+      dateFrom: $dateFrom, dateTo: $dateTo, search: $search, limit: $limit, offset: $offset
     ) {
       items { ${OBSERVATION_FIELDS} }
       total
@@ -161,12 +168,12 @@ export const MY_OBSERVATION_REVIEWS_QUERY = gql<
 >`
   query MyObservationReviews(
     $teacherId: String, $state: String, $form: String, $subject: String, $sectionId: String,
-    $published: Boolean, $dateFrom: String, $dateTo: String, $search: String,
+    $published: Boolean, $withheld: Boolean, $dateFrom: String, $dateTo: String, $search: String,
     $limit: Int, $offset: Int
   ) {
     myObservationReviews(
       teacherId: $teacherId, state: $state, form: $form, subject: $subject, sectionId: $sectionId,
-      published: $published, dateFrom: $dateFrom, dateTo: $dateTo, search: $search,
+      published: $published, withheld: $withheld, dateFrom: $dateFrom, dateTo: $dateTo, search: $search,
       limit: $limit, offset: $offset
     ) {
       items { ${OBSERVATION_FIELDS} }
@@ -289,6 +296,26 @@ export const PUBLISH_CLASSROOM_OBSERVATION = gql<
 >`
   mutation PublishClassroomObservation($observationId: String!) {
     publishClassroomObservation(observationId: $observationId) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+/** CO-12 (D-#369) — record a decision NOT to publish this review. The reason is required. */
+export const WITHHOLD_CLASSROOM_OBSERVATION = gql<
+  { withholdClassroomObservation: ClassroomObservationT },
+  { observationId: string; reason: string }
+>`
+  mutation WithholdClassroomObservation($observationId: String!, $reason: String!) {
+    withholdClassroomObservation(observationId: $observationId, reason: $reason) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+/** CO-12 (D-#369) — lift the hold; the row returns to the awaiting-publish queue. */
+export const RELEASE_CLASSROOM_OBSERVATION_HOLD = gql<
+  { releaseClassroomObservationHold: ClassroomObservationT },
+  { observationId: string }
+>`
+  mutation ReleaseClassroomObservationHold($observationId: String!) {
+    releaseClassroomObservationHold(observationId: $observationId) { ${OBSERVATION_FIELDS} }
   }
 `;
 

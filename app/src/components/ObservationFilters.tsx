@@ -27,6 +27,9 @@ export interface ObservationFilterState {
   sectionId: string | null;
   /** CO-8 publish gate (D-#324): true=published, false=unpublished, null=either. */
   published: boolean | null;
+  /** CO-12 withhold flag (D-#369): true=withheld, false=no hold, null=either. Paired
+   *  with `published` by the chip row below — "Pending" is published:false + withheld:false. */
+  withheld: boolean | null;
   teacherId: string | null;
   observerId: string | null;
   dateFrom: string;
@@ -40,6 +43,7 @@ export const EMPTY_OBSERVATION_FILTERS: ObservationFilterState = {
   subject: null,
   sectionId: null,
   published: null,
+  withheld: null,
   teacherId: null,
   observerId: null,
   dateFrom: "",
@@ -54,12 +58,37 @@ export function hasActiveObservationFilters(f: ObservationFilterState): boolean 
     f.subject !== null ||
     f.sectionId !== null ||
     f.published !== null ||
+    f.withheld !== null ||
     f.teacherId !== null ||
     f.observerId !== null ||
     f.dateFrom !== "" ||
     f.dateTo !== "" ||
     f.search !== ""
   );
+}
+
+/**
+ * The publish-status chip row is ONE selection over TWO server booleans (`published`,
+ * `withheld`). These map between them so the chips stay mutually exclusive:
+ *   Published = published:true (a published row can never be withheld — the server refuses)
+ *   Pending   = published:false + withheld:false  ← the real awaiting-publish queue
+ *   Withheld  = withheld:true
+ * Any other combination (e.g. seeded from a deep-link) reads as no selection.
+ */
+type PublishChip = "published" | "pending" | "withheld" | null;
+
+const PUBLISH_CHIP_PATCH: Record<"all" | "published" | "pending" | "withheld", Partial<ObservationFilterState>> = {
+  all: { published: null, withheld: null },
+  published: { published: true, withheld: null },
+  pending: { published: false, withheld: false },
+  withheld: { published: null, withheld: true },
+};
+
+function publishChip(f: ObservationFilterState): PublishChip {
+  if (f.withheld === true) return "withheld";
+  if (f.published === true) return "published";
+  if (f.published === false && f.withheld === false) return "pending";
+  return null;
 }
 
 /** Subject filter label: HW subjects via hwSubjectLabel; QURAN via the Quran-form label. */
@@ -175,19 +204,30 @@ export function ObservationFilters({
         ))}
       </ChipRow>
 
-      {/* CO-8 publish gate (D-#324): a released-to-teacher / awaiting-publish split. */}
+      {/* CO-8 publish gate (D-#324) + CO-12 withhold flag (D-#369). One mutually-exclusive
+          row over the two server booleans: Pending is the REAL work queue (unpublished AND
+          not withheld), so a deliberately-withheld row stops hiding in it. */}
       <Muted style={{ marginTop: space(2) }}>{STR.obsFilterPublished}</Muted>
       <ChipRow>
-        <Chip label={STR.all} selected={value.published === null} onPress={() => onChange({ published: null })} />
         <Chip
-          label={STR.obsPublished}
-          selected={value.published === true}
-          onPress={() => onChange({ published: value.published === true ? null : true })}
+          label={STR.all}
+          selected={publishChip(value) === null}
+          onPress={() => onChange(PUBLISH_CHIP_PATCH.all)}
         />
         <Chip
-          label={STR.obsUnpublished}
-          selected={value.published === false}
-          onPress={() => onChange({ published: value.published === false ? null : false })}
+          label={STR.obsPublished}
+          selected={publishChip(value) === "published"}
+          onPress={() => onChange(publishChip(value) === "published" ? PUBLISH_CHIP_PATCH.all : PUBLISH_CHIP_PATCH.published)}
+        />
+        <Chip
+          label={STR.obsPendingPublish}
+          selected={publishChip(value) === "pending"}
+          onPress={() => onChange(publishChip(value) === "pending" ? PUBLISH_CHIP_PATCH.all : PUBLISH_CHIP_PATCH.pending)}
+        />
+        <Chip
+          label={STR.obsWithheld}
+          selected={publishChip(value) === "withheld"}
+          onPress={() => onChange(publishChip(value) === "withheld" ? PUBLISH_CHIP_PATCH.all : PUBLISH_CHIP_PATCH.withheld)}
         />
       </ChipRow>
 

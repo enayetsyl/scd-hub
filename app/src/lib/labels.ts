@@ -552,6 +552,20 @@ export const obsQuranCriterionLabel = (v?: string | null): string =>
   (v && pick(QURAN_REVIEW_CRITERIA_LABELS_BN, QURAN_REVIEW_CRITERIA_LABELS_EN)[v as QuranReviewCriterion]) || v || DASH;
 export const obsQuranComplianceLabel = (v?: string | null): string =>
   (v && pick(QURAN_COMPLIANCE_ITEM_LABELS_BN, QURAN_COMPLIANCE_ITEM_LABELS_EN)[v as QuranComplianceItem]) || v || DASH;
+/**
+ * The publish-status badge for one observation row (CO-8 + CO-12, D-#369): published /
+ * withheld-on-purpose / still pending. Withheld wins over unpublished because it is the
+ * more specific fact — the server never lets both stamps coexist.
+ */
+export const obsPublishBadge = (
+  o: { publishedAt?: string | null; withheldAt?: string | null },
+): { text: string; tone: "ok" | "muted" | "warn" } =>
+  o.publishedAt
+    ? { text: STR.obsPublished, tone: "ok" }
+    : o.withheldAt
+      ? { text: STR.obsWithheld, tone: "warn" }
+      : { text: STR.obsUnpublished, tone: "muted" };
+
 /** Trend (CO-4) string → arrow glyph (server returns up/down/flat). */
 export const obsTrendGlyph = (v?: string | null): string =>
   v === "up" ? "↑" : v === "down" ? "↓" : v === "flat" ? "→" : DASH;
@@ -3232,6 +3246,20 @@ const STR_BN = {
   obsPublished: "প্রকাশিত হয়েছে",
   obsPublishHint: "পর্যালোচনা সম্পন্ন। প্রকাশ করলে সংশ্লিষ্ট শিক্ষক এটি দেখতে ও সাড়া দিতে পারবেন।",
   obsPublishedOn: "প্রকাশিত",
+  // Withhold — decided not to publish (CO-12, D-#369)
+  obsPendingPublish: "প্রকাশের অপেক্ষায়",
+  obsWithheld: "স্থগিত",
+  obsWithhold: "প্রকাশ স্থগিত করুন",
+  obsWithholdHint: "এই পর্যালোচনা শিক্ষকের কাছে পাঠাতে না চাইলে স্থগিত করুন — এটি প্রকাশের তালিকা ও সংখ্যা থেকে সরে যাবে, তবে আপনি ও পর্যবেক্ষক দেখতে পাবেন। শিক্ষক কোনো নোটিফিকেশন পাবেন না।",
+  obsWithholdReason: "স্থগিত করার কারণ",
+  obsWithholdReasonPlaceholder: "কেন এটি প্রকাশ করা হচ্ছে না",
+  obsWithholdReasonRequired: "স্থগিত করার কারণ লিখুন",
+  obsWithheldOn: "স্থগিত করা হয়েছে",
+  obsWithheldBy: "স্থগিত করেছেন",
+  obsWithholdDone: "স্থগিত করা হয়েছে",
+  obsLiftHold: "স্থগিতাদেশ বাতিল করুন",
+  obsLiftHoldHint: "বাতিল করলে এটি আবার প্রকাশের তালিকায় ফিরে আসবে (স্বয়ংক্রিয়ভাবে প্রকাশ হবে না)।",
+  obsLiftHoldDone: "স্থগিতাদেশ বাতিল হয়েছে",
   // Co-review + compare (CO-9, D-#272)
   obsCompareTitle: "তুলনা",
   obsCompareReviewers: "পর্যালোচক",
@@ -5997,6 +6025,20 @@ const STR_EN: StrTable = {
   obsPublished: "Published",
   obsPublishHint: "Review complete. Publishing lets the observed teacher see it and respond.",
   obsPublishedOn: "Published on",
+  // Withhold — decided not to publish (CO-12, D-#369)
+  obsPendingPublish: "Pending",
+  obsWithheld: "Withheld",
+  obsWithhold: "Withhold from teacher",
+  obsWithholdHint: "If this review is not going to the teacher, withhold it — it leaves the publish list and counts, but you and the observer keep seeing it. The teacher is not notified.",
+  obsWithholdReason: "Reason for withholding",
+  obsWithholdReasonPlaceholder: "Why this is not being published",
+  obsWithholdReasonRequired: "Enter a reason for withholding",
+  obsWithheldOn: "Withheld on",
+  obsWithheldBy: "Withheld by",
+  obsWithholdDone: "Withheld",
+  obsLiftHold: "Lift the hold",
+  obsLiftHoldHint: "Lifting puts it back in the publish list (it does not publish it).",
+  obsLiftHoldDone: "Hold lifted",
   // Co-review + compare (CO-9, D-#272)
   obsCompareTitle: "Compare",
   obsCompareReviewers: "reviewers",

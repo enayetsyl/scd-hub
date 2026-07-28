@@ -23,6 +23,10 @@
  * re-review creates a NEW row and marks the prior SUPERSEDED (`supersededById` /
  * `prevObservationId`).
  *
+ * CO-12 (D-#369) adds `withheldAt`/`withheldBy`/`withheldReason` — the same additive-flag
+ * shape for the opposite decision: "reviewed, and deliberately NOT going to the teacher".
+ * A withheld row is excluded from the awaiting-publish counts; it is NOT a state either.
+ *
  * `recordingId?` (the YouTube SessionRecording) is CO-2; `teacherResponse?` is CO-3 —
  * the fields exist now, set by later slices.
  *
@@ -110,6 +114,14 @@ export interface IClassroomObservation extends Document {
    *  unpublished (observer/Principal-only). */
   publishedAt?: Date | null;
   publishedBy?: Types.ObjectId | null;
+  /** CO-12 (D-#369): a deliberate DECISION not to publish this review. Set only on a
+   *  REVIEWED, not-yet-published row; a withheld row leaves the publish queue (and the
+   *  drawer/Today counts) but stays fully readable to the observer + Principal/Office.
+   *  `withheldReason` is REQUIRED when withholding — the record of WHY the observed
+   *  teacher never received this feedback. Lifting the hold clears all three. */
+  withheldAt?: Date | null;
+  withheldBy?: Types.ObjectId | null;
+  withheldReason?: string | null;
   // --- REF-11 payload (set at REVIEW; empty until then) — NO total/average -----
   domains: IDomainScore[];
   gates: IGateScore[];
@@ -201,6 +213,9 @@ const ClassroomObservationSchema = new Schema<IClassroomObservation>(
     reviewedAt: { type: Date, default: null },
     publishedAt: { type: Date, default: null },
     publishedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    withheldAt: { type: Date, default: null },
+    withheldBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    withheldReason: { type: String, trim: true, default: null },
     domains: { type: [DomainScoreSchema], default: [] },
     gates: { type: [GateScoreSchema], default: [] },
     oneStrength: { type: String, trim: true, default: null },
