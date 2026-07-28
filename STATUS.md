@@ -219,9 +219,10 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
   now folds behind its header (▸/▾, the D-#302/#306 idiom), **collapsed by default**, with a
   per-stage summary on the folded header (only non-zero stages) so nothing hides. Absent-at-issue
   control moved out of the header Pressable (nested-press double-fire) and its count joined the
-  summary. App-only; NOT applied to the twin AssignmentWorkspaceScreen (same problem, offered
-  separately). **Gate GREEN (executed):** app `tsc --noEmit` clean, `expo export --platform web`
-  exit 0 (no new strings). **Not verified live.**
+  summary. **Extended to the twin `AssignmentWorkspaceScreen` in the same branch (D-#372, owner
+  follow-up "yes do same for assignment")** — identical treatment, so the two parity workspaces
+  (RP-2/RP-4) now behave the same. **Gate GREEN (executed):** app `tsc --noEmit` clean,
+  `expo export --platform web` exit 0 (no new strings). **Not verified live.**
 - **Built (Class-test publish axis, D-#370) [branch `feat/classtest-publish-filter` off `dev`]:**
   owner ask — the dashboard could not answer "which one is submitted, which one is published".
   Its five tiles are all ENTRY state; the publish facts (`submittedAt`/`publishedAt`) were
