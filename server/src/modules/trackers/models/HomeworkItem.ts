@@ -101,6 +101,17 @@ const HomeworkItemSchema = new Schema<IHomeworkItem>(
   { timestamps: true },
 );
 
+// ONE common sheet per class+section+subject+day (the header's stated intent).
+// D-#338 enforces this in declareHomeworkItem, but that is a findOne-then-create:
+// two concurrent declares can both pass the check before either insert lands. This
+// unique index is the backstop that makes the rule true rather than likely — the
+// same posture AssignmentItem already takes on (year, week, section, subject).
+// `dateGiven` is stored at exactly 00:00:00.000Z (a calendar day, not an instant),
+// so equal days compare equal here.
+HomeworkItemSchema.index(
+  { classId: 1, sectionId: 1, subject: 1, dateGiven: 1 },
+  { unique: true, name: "uniq_class_section_subject_day" },
+);
 // Daily declaration view (handoff §8.1): items for a class on a day.
 HomeworkItemSchema.index({ classId: 1, dateGiven: 1 });
 // Reverse lookup for the GET /files/:id read gate (which item owns this file?).
