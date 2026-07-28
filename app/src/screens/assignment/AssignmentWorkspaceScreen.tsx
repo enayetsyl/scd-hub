@@ -118,6 +118,12 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
     setError(errMsg);
   }, []);
 
+  // Owner ask 2026-07-28 (refinement of D-#371): a TRUE accordion — at most ONE card open,
+  // so opening one collapses the previous. The open id lives HERE, above the cards, because
+  // only a single owner can enforce "one open"; keyed by asItemId (not index) so the
+  // selection survives list re-ordering on refresh. null = all collapsed (the initial state).
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
+
   useFocusEffect(
     useCallback(() => {
       refresh();
@@ -142,7 +148,15 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
             {error ? <Notice message={error} tone="danger" /> : null}
             <CardGrid>
               {groupByItem(records).map((g) => (
-                <ItemCard key={g.asItemId} group={g} sectionId={sectionId} onDone={refresh} onNotify={notify} />
+                <ItemCard
+                  key={g.asItemId}
+                  group={g}
+                  sectionId={sectionId}
+                  open={openItemId === g.asItemId}
+                  onToggle={() => setOpenItemId((id) => (id === g.asItemId ? null : g.asItemId))}
+                  onDone={refresh}
+                  onNotify={notify}
+                />
               ))}
             </CardGrid>
           </>
@@ -155,9 +169,14 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
 function ItemCard({
   group,
   sectionId,
+  open,
+  onToggle,
   onDone,
   onNotify,
 }: {
+  /** Accordion: owned by the screen so only ONE card can be open (D-#371 refinement). */
+  open: boolean;
+  onToggle: () => void;
   group: ItemGroup;
   sectionId: string;
   onDone: () => void;
@@ -175,11 +194,6 @@ function ItemCard({
   const [showChase, setShowChase] = useState(false);
   const [showResub, setShowResub] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
-  // Owner ask 2026-07-28 (D-#371, the homework fold applied to its twin): each
-  // class×subject card folds. Collapsed by default so a multi-subject section opens as a
-  // scannable index instead of one long roster scroll; the folded header carries the
-  // per-stage counts so no card hides work. Same ▸/▾ idiom as D-#302/#306.
-  const [open, setOpen] = useState(false);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
   const checkRows = group.rows.filter((r) => r.state === "SUBMITTED");
@@ -269,7 +283,7 @@ function ItemCard({
     <Card>
       {/* The whole header is the fold toggle — a 44pt row, so it stays thumb-friendly. */}
       <Pressable
-        onPress={() => setOpen((v) => !v)}
+        onPress={onToggle}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", minHeight: 44 }}

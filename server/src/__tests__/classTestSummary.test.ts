@@ -59,6 +59,13 @@ jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (q: unknown) => mockUserFind(q) },
 }));
 
+// D-#373: the chase message names class + SECTION per overdue exam, so the section
+// names are batch-loaded. Mocked here like every other model in this DB-free suite.
+const mockSectionFind = jest.fn();
+jest.mock("../modules/foundation/models/Section", () => ({
+  Section: { find: (q: unknown) => mockSectionFind(q) },
+}));
+
 // Import AFTER mocks
 import {
   reportStateOf,
@@ -79,6 +86,8 @@ beforeEach(() => {
   mockStudentFind.mockReturnValue(leanChain([]));
   mockUserFind.mockReturnValue(leanChain([]));
   mockResAggregate.mockResolvedValue([]);
+  // D-#373: one section on file for the chase lines (the fixture's SECTION).
+  mockSectionFind.mockReturnValue(leanChain([{ _id: SECTION, nameBn: "মূল", code: "A" }]));
 });
 
 // ===========================================================================
@@ -304,15 +313,24 @@ describe("overdueChaseList", () => {
     expect(entry).toMatchObject({ teacherId: T_A.toString(), teacherName: "Ustadh A", overdueCount: 2, unreachableByWa: false });
     expect(entry.exams).toHaveLength(2);
 
-    // message is the registry default interpolated (byte-check)
-    const examList = `গণিত টেস্ট 1 (10/07), গণিত টেস্ট 2 (10/07)`;
+    // message is the registry default interpolated (byte-check). D-#373: each exam is
+    // its OWN numbered line carrying class+section, subject, test, date, how many
+    // students are still missing, how late it is, and the CT id — the old comma-joined
+    // "subject টেস্ট n (dd/mm)" named neither of two same-subject same-date exams.
+    const examList =
+      "১) তৃতীয় শ্রেণি (মূল) · গণিত · টেস্ট ১ · পরীক্ষা ১০/০৭ — ১০/১০ জনের ফলাফল বাকি · ৩ কর্মদিবস দেরি [CT-C3-MATH-0001]\n" +
+      "২) তৃতীয় শ্রেণি (মূল) · গণিত · টেস্ট ২ · পরীক্ষা ১০/০৭ — ৮/১০ জনের ফলাফল বাকি · ১ কর্মদিবস দেরি [CT-C3-MATH-0001]";
     const expected = interpolate(MESSAGE_TEMPLATE_REGISTRY["class_test.overdue_chase.wa"].bnDefault, {
       TeacherName: "Ustadh A",
-      Count: 2,
+      Count: "২",
       ExamList: examList,
     });
     expect(entry.messageBn).toBe(expected);
     expect(entry.messageBn).toContain("আসসালামু আলাইকুম Ustadh A");
+    // The whole point: the two exams are distinguishable on their own lines.
+    expect(entry.messageBn).toContain("টেস্ট ১");
+    expect(entry.messageBn).toContain("টেস্ট ২");
+    expect(entry.messageBn).toContain("তৃতীয় শ্রেণি (মূল)");
     expect(entry.waLink).toMatch(/^https:\/\/wa\.me\/01711000000\?text=/);
     expect(list.unreachableCount).toBe(0);
   });
