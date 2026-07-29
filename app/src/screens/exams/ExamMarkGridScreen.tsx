@@ -18,7 +18,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { convertMark } from "@scd/shared";
 import {
-  EXAM_PAPERS_QUERY,
+  EXAM_PAPER_QUERY,
   EXAM_MARKS_QUERY,
   EXAM_CT_PROPOSALS_QUERY,
   ENTER_EXAM_MARKS,
@@ -33,12 +33,15 @@ import type { ExamsStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<ExamsStackParamList, "ExamMarkGrid">;
 
-export default function ExamMarkGridScreen({ route }: Props): React.ReactElement {
+export default function ExamMarkGridScreen({ route, navigation }: Props): React.ReactElement {
   const { paperId } = route.params;
 
-  // The paper list is the only read that carries a paper's shape; filter to this one.
-  const [papersQ] = useQuery({ query: EXAM_PAPERS_QUERY, variables: { examId: route.params.examId ?? "" }, pause: !route.params.examId });
-  const paper = (papersQ.data?.examPapers ?? []).find((p) => p.id === paperId) ?? null;
+  // Fetch the paper BY ID. It deliberately does not depend on being handed an examId:
+  // the first live drive opened this screen from the hub with only a paperId and the
+  // list-based lookup silently produced "no paper" — tsc could not see it because the
+  // param was optional.
+  const [papersQ] = useQuery({ query: EXAM_PAPER_QUERY, variables: { paperId } });
+  const paper = papersQ.data?.examPaper ?? null;
 
   // The server returns the roster already in printed (schoolId) order, so the screen and
   // the paper mark sheet read line-for-line.
@@ -106,6 +109,26 @@ export default function ExamMarkGridScreen({ route }: Props): React.ReactElement
     if (!max || paper.paperFullMarks <= 0) return null;
     return String(convertMark(n, paper.paperFullMarks, max));
   }
+
+  /** Out of range for its own entry scale. The server refuses these, but the live drive
+   *  showed a raw 150 on a /100 script happily previewing "120 / 80" — an impossible
+   *  converted value — with Save still enabled. Catch it here rather than making the
+   *  user discover it through a round-trip (the same posture as the custody note). */
+  function rangeErrorFor(component: string, raw: string): string | null {
+    if (absent[component]) return null;
+    const t = (raw ?? "").trim();
+    if (!t) return null;
+    const n = Number(t);
+    if (Number.isNaN(n)) return STR.errGeneric;
+    const scale = scaleFor(component);
+    if (n < 0) return `${STR.exRawOutOf} ${bnNum(scale)})`;
+    if (n > scale) return `${STR.exOutOfRange} ${bnNum(scale)}`;
+    return null;
+  }
+
+  const openRangeErrors = (paper?.components ?? [])
+    .map((c) => rangeErrorFor(c.component, draft[c.component] ?? ""))
+    .filter((e): e is string => e !== null);
 
   async function onSave(): Promise<void> {
     if (!openId || !paper) return;
@@ -246,12 +269,25 @@ export default function ExamMarkGridScreen({ route }: Props): React.ReactElement
               </View>
 
               {!isOpen ? (
-                <View style={{ marginTop: space(2) }}>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
                   <Button
                     title={STR.exEnterMarks}
                     variant="secondary"
                     onPress={() => openStudent(s.id)}
                     disabled={!!paper.tabulatedAt}
+                  />
+                  {/* The card is the natural next question from a marked row ("what does
+                      this add up to?"), and without this the screen was unreachable. */}
+                  <Button
+                    title={STR.exReportTitle}
+                    variant="ghost"
+                    onPress={() =>
+                      navigation.navigate("ExamReportCard", {
+                        examId: paper.examId,
+                        studentId: s.id,
+                        title: s.name,
+                      })
+                    }
                   />
                 </View>
               ) : (
@@ -293,7 +329,12 @@ export default function ExamMarkGridScreen({ route }: Props): React.ReactElement
                               onChangeText={(v) => setDraft((p) => ({ ...p, [c.component]: v }))}
                               keyboardType="numeric"
                             />
-                            {preview !== null ? (
+                            {rangeErrorFor(c.component, draft[c.component] ?? "") ? (
+                              <Notice
+                                message={rangeErrorFor(c.component, draft[c.component] ?? "")!}
+                                tone="danger"
+                              />
+                            ) : preview !== null ? (
                               <Muted>
                                 {STR.exConverted}: {bnNum(preview)} / {bnNum(c.maxMarks)}
                               </Muted>
@@ -305,7 +346,7 @@ export default function ExamMarkGridScreen({ route }: Props): React.ReactElement
                   })}
 
                   <View style={{ flexDirection: "row", gap: space(2), marginTop: space(3) }}>
-                    <Button title={STR.exSave} onPress={onSave} loading={busy} disabled={busy} />
+                    <Button title={STR.exSave} onPress={onSave} loading={busy} disabled={busy || openRangeErrors.length > 0} />
                     <Button title={STR.cancel} variant="ghost" onPress={() => setOpenId(null)} />
                   </View>
                 </View>

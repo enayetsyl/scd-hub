@@ -6750,6 +6750,16 @@ export interface ExamMarkT {
   resolvedRawMark: number | null;
 }
 
+export const EXAM_PAPER_QUERY = gql<{ examPaper: ExamPaperT | null }, { paperId: string }>`
+  query ExamPaper($paperId: String!) {
+    examPaper(paperId: $paperId) {
+      id examId classId sectionId subject
+      components { component maxMarks }
+      paperFullMarks examDateKey ctAggregationMode tabulatedAt
+    }
+  }
+`;
+
 export interface ExamRosterStudentT {
   id: string;
   schoolId: string;

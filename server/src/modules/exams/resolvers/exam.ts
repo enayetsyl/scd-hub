@@ -16,6 +16,7 @@ import {
   examById,
   examsForYear,
   papersForExam,
+  paperById,
   ExamError,
 } from "../services/ExamService";
 import type { IExam } from "../models/Exam";
@@ -142,6 +143,23 @@ builder.queryField("exam", (t) =>
     resolve: async (_root, args, ctx) => {
       assertExamReader(ctx);
       return examById(args.id);
+    },
+  }),
+);
+
+builder.queryField("examPaper", (t) =>
+  t.field({
+    type: ExamPaperRef,
+    nullable: true,
+    description:
+      "ONE paper by id. Exists so a screen opened with only a paperId (a deep link, a " +
+      "notification, a duty row) can stand on its own instead of depending on the caller " +
+      "to also hand it the examId.",
+    authScopes: { authenticated: true },
+    args: { paperId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      assertExamReader(ctx);
+      return paperById(args.paperId);
     },
   }),
 );

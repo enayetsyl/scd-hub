@@ -126,7 +126,7 @@ export default function ExamReportCardScreen({ route }: Props): React.ReactEleme
             <Body style={{ fontWeight: "700" }}>{STR.exTotalGpa}</Body>
             <Body style={{ fontWeight: "700" }}>
               {bnNum(card.totals.totalObtained)}/{bnNum(card.totals.totalFullMarks)} ·{" "}
-              {card.totals.gpa.toFixed(2)} · {gradeLetterLabel(card.totals.letter)}
+              {bnNum(card.totals.gpa.toFixed(2))} · {gradeLetterLabel(card.totals.letter)}
             </Body>
           </View>
           {card.totals.failedBySubject ? (

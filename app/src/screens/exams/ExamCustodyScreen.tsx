@@ -302,7 +302,7 @@ export default function ExamCustodyScreen({ route }: Props): React.ReactElement 
           {eventsQ.fetching ? (
             <Loader label={STR.loading} />
           ) : events.length === 0 ? (
-            <Muted>{STR.exNoExceptions}</Muted>
+            <Muted>{STR.exNoHandovers}</Muted>
           ) : (
             events.map((e) => eventRow(e, false))
           )}

@@ -270,7 +270,7 @@ export type VocabStackParamList = {
  *  web export catches. */
 export type ExamsStackParamList = {
   ExamHome: undefined;
-  ExamMarkGrid: { paperId: string; examId?: string; title?: string };
+  ExamMarkGrid: { paperId: string; title?: string };
   ExamRecheck: { paperId: string; title?: string };
   ExamCustody: { examId: string; paperId?: string; title?: string };
   ExamReportCard: { examId: string; studentId: string; title?: string };
