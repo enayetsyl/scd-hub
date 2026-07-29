@@ -97,6 +97,15 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
     }
   }
 
+  // Nothing entered yet ⇒ neither submit nor approve can do anything: the server
+  // throws "No results entered for this exam". That guard is right, but letting the
+  // button be pressed turns a foreseeable empty state into a server error (and, until
+  // the observability fix, a GlitchTip alert). Gate it here instead.
+  // `resultsQ.fetching` guard: an in-flight first load must not look "empty".
+  const hasResults = results.length > 0;
+  const resultsUnknown = resultsQ.fetching && results.length === 0;
+  const blockEmpty = !hasResults && !resultsUnknown;
+
   // Exam-level status: any pending (submitted, not published) row?
   const anySubmitted = results.some((r) => r.submittedAt && !r.publishedAt);
   const anyPublished = results.some((r) => !!r.publishedAt);
@@ -110,16 +119,20 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
 
           {isAdmin ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
-              <Button title={STR.ctApproveRelease} onPress={onApprove} loading={busy} disabled={busy} />
+              <Button title={STR.ctApproveRelease} onPress={onApprove} loading={busy} disabled={busy || blockEmpty} />
               <Button title={STR.ctSendBack} variant="secondary" onPress={() => setSendBackOpen((v) => !v)} disabled={busy} />
               <Button title={STR.ctUnpublishAll} variant="ghost" onPress={() => void run(() => unpublishExam({ testId }), STR.ctUnpublishedBadge)} disabled={busy} />
             </View>
           ) : (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
-              <Button title={STR.ctSubmitForRelease} onPress={() => void run(() => submitExam({ testId }), STR.ctSubmittedForApproval)} loading={busy} disabled={busy} />
+              <Button title={STR.ctSubmitForRelease} onPress={() => void run(() => submitExam({ testId }), STR.ctSubmittedForApproval)} loading={busy} disabled={busy || blockEmpty} />
               <Button title={STR.ctRecall} variant="ghost" onPress={() => void run(() => recallExam({ testId }), STR.ctRecall)} disabled={busy} />
             </View>
           )}
+
+          {/* Say WHY the action is unavailable — a disabled button with no reason is
+              its own support ticket. */}
+          {blockEmpty ? <Muted style={{ marginTop: space(2) }}>{STR.ctNoResultsYet}</Muted> : null}
 
           {/* Admin send-back reason (D-A: reason required) */}
           {isAdmin && sendBackOpen ? (

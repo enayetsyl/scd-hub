@@ -2836,6 +2836,8 @@ const STR_BN = {
   ctMark: "নম্বর দিন",
   ctViewResults: "ফলাফল দেখুন",
   ctNotEntered: "এন্ট্রি হয়নি",
+  /** Shown when an exam has no marks entered yet — submit/approve stay disabled. */
+  ctNoResultsYet: "এখনো কোনো ফলাফল দেওয়া হয়নি — আগে নম্বর দিন",
   ctSubmitForRelease: "প্রকাশের জন্য জমা দিন",
   ctRecall: "ফেরত নিন",
   ctApproveRelease: "অনুমোদন ও প্রকাশ",
@@ -5621,6 +5623,7 @@ const STR_EN: StrTable = {
   ctMark: "Mark",
   ctViewResults: "View results",
   ctNotEntered: "Not entered",
+  ctNoResultsYet: "No marks entered yet — enter marks first",
   ctSubmitForRelease: "Submit for release",
   ctRecall: "Recall",
   ctApproveRelease: "Approve & release",
