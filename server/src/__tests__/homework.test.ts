@@ -285,6 +285,27 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
     expect(mockItemCreate).not.toHaveBeenCalled();
   });
 
+  // The findOne guard is check-then-act: two simultaneous declares both pass it,
+  // and only the unique index stops the second insert. That loser must get the
+  // SAME Bangla message, never a raw E11000.
+  test("a racing declare that slips past the check fails with the same message", async () => {
+    mockItemFindOne.mockResolvedValue(null); // both requests saw "nothing there"
+    const dupKeyErr = Object.assign(new Error("E11000 duplicate key error"), {
+      code: 11000,
+      keyPattern: { classId: 1, sectionId: 1, subject: 1, dateGiven: 1 },
+    });
+    mockItemCreate.mockRejectedValueOnce(dupKeyErr);
+
+    await expect(declareHomeworkItem(validDeclareInput())).rejects.toThrow(/আগেই ঘোষণা করা হয়েছে/);
+  });
+
+  test("an unrelated write error is not swallowed as a duplicate", async () => {
+    mockItemFindOne.mockResolvedValue(null);
+    mockItemCreate.mockRejectedValueOnce(new Error("connection reset"));
+
+    await expect(declareHomeworkItem(validDeclareInput())).rejects.toThrow(/connection reset/);
+  });
+
   test("rejects a weekend dateGiven (Fri/Sat blocked, §6.1)", async () => {
     await expect(declareHomeworkItem(validDeclareInput({ dateGiven: A_FRIDAY }))).rejects.toThrow(
       /school nights only/,
