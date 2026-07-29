@@ -123,7 +123,10 @@ export type AssignmentStackParamList = {
     dueDate: string;
   };
   /** RP-4 (D-#356): the section's roster-pass workspace (all open items, week×subject). */
-  AssignmentWorkspace: { sectionId: string; classId: string };
+  /** Params are OPTIONAL (D-#385): arriving from a week-grid cell pins that
+   *  section; arriving from the nav falls back to the shared section selection
+   *  and shows the class chips, like the homework workspace. */
+  AssignmentWorkspace: { sectionId: string; classId: string } | undefined;
   AssignmentReconcile: {
     academicYearId: string;
     sectionId: string;
