@@ -50,6 +50,10 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "ParentMeetingError",
   "PayrollError",
   "PerformanceError",
+  // Registered 2026-07-29 alongside the constructor.name fix: pure input validation
+  // ("A SET request needs a setId", "One strength is required"), never a fault.
+  "PrintRequestError",
+  "Ref11ValidationError",
   "PushDeviceError",
   "QuranValidationError",
   "ReviewError",
@@ -66,7 +70,22 @@ const EXPECTED_MESSAGE_RE = /not authori[sz]ed|unauthenticated|forbidden/i;
 export function isExpectedError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const e = err as { name?: string; message?: string };
+  const ctorName = Object.getPrototypeOf(err)?.constructor?.name as string | undefined;
+
+  // Match on BOTH the instance `.name` and the CONSTRUCTOR name.
+  //
+  // `class ClassTestResultError extends Error {}` — the codebase's dominant pattern —
+  // never assigns `this.name`, so instances inherit `Error.prototype.name === "Error"`
+  // and the `.name` lookup below can never match the class name they were listed under.
+  // Every empty-bodied domain error class was therefore reported as a real fault despite
+  // sitting in EXPECTED_ERROR_NAMES (prod, 2026-07-29: "No results entered for this exam"
+  // paged the maintainer). Only classes that happen to set `name` in a constructor —
+  // ForbiddenError and friends — ever worked, which is why this went unnoticed.
+  //
+  // constructor.name is safe here: the server ships as `tsc` output, never minified, and
+  // the plain-Error check below already depends on it.
   if (e.name && EXPECTED_ERROR_NAMES.has(e.name)) return true;
+  if (ctorName && EXPECTED_ERROR_NAMES.has(ctorName)) return true;
   if (e.message && EXPECTED_MESSAGE_RE.test(e.message)) return true;
 
   // A PLAIN `new Error("...")` is this codebase's convention for a deliberate business
@@ -85,7 +104,7 @@ export function isExpectedError(err: unknown): boolean {
   // Real faults arrive as SUBCLASSES and still report: TypeError, RangeError, CastError,
   // MongoServerError (the one that took Lesson Plans down, D-#284) — all keep their own
   // constructor.name, so none of them are swallowed here.
-  if (Object.getPrototypeOf(err)?.constructor?.name === "Error") return true;
+  if (ctorName === "Error") return true;
 
   return false;
 }

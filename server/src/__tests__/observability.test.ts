@@ -41,6 +41,42 @@ describe("observability / sentry seam (MON-2)", () => {
       }
     });
 
+    /**
+     * The regression this file MISSED for six weeks.
+     *
+     * The test above fabricates `new Error("x")` and ASSIGNS `.name`. Real domain
+     * errors are declared `class XError extends Error {}` with an empty body, which
+     * never assigns `this.name` — instances inherit `Error.prototype.name === "Error"`,
+     * so the name lookup could not match the class they were listed under, and every
+     * one of them was reported to GlitchTip as a real fault. Prod, 2026-07-29:
+     * ClassTestResultError("No results entered for this exam") paged the maintainer.
+     *
+     * So: construct them the way the codebase actually does.
+     */
+    it("skips an EMPTY-BODIED subclass — the codebase's real pattern", () => {
+      class ClassTestResultError extends Error {}
+      const err = new ClassTestResultError("No results entered for this exam — nothing to submit");
+
+      // Precondition: this is exactly why the `.name` lookup alone was not enough.
+      expect(err.name).toBe("Error");
+      expect(EXPECTED_ERROR_NAMES.has(err.name)).toBe(false);
+
+      expect(isExpectedError(err)).toBe(true);
+    });
+
+    it("skips the REAL exported classes, not stand-ins", async () => {
+      const { ClassTestResultError } = await import(
+        "../modules/trackers/services/ClassTestResultService"
+      );
+      const err = new ClassTestResultError("No results entered for this exam — nothing to submit");
+      expect(isExpectedError(err)).toBe(true);
+    });
+
+    it("still captures a subclass that is NOT registered", () => {
+      class TotallyUnexpectedError extends Error {}
+      expect(isExpectedError(new TotallyUnexpectedError("boom"))).toBe(false);
+    });
+
     it("skips Pothos scope-auth 'Not authorized' / unauthenticated text", () => {
       expect(isExpectedError(new Error("Not authorized to read field"))).toBe(true);
       expect(isExpectedError(new Error("Unauthenticated"))).toBe(true);
