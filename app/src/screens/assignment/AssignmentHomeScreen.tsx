@@ -409,6 +409,11 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
 
             <Card>
               <ChipRow>
+                {/* D-#385: browse the whole section by class chip, without first
+                    drilling into one week's cell — the homework workspace entry. */}
+                {canTrackerRead ? (
+                  <Chip label={`📋 ${STR.asWorkspace}`} onPress={() => navigation.navigate("AssignmentWorkspace")} />
+                ) : null}
                 {canSchedule ? (
                   <Chip label={`⚙️ ${STR.asScheduleTitle}`} onPress={() => navigation.navigate("AssignmentSchedule")} />
                 ) : null}
