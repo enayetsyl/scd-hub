@@ -37,7 +37,7 @@ import {
 import { useConfirm } from "../../state/ConfirmContext";
 import { pickAndUploadHomeworkFile, uploadHomeworkWebFile, FileUploadError, type UploadedFile } from "../../lib/files";
 import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
-import { SubjectFold } from "../../components/SubjectFold";
+import { SubjectFold, type SubjectFoldRenderOpts } from "../../components/SubjectFold";
 import { RosterChipPass } from "../../components/RosterChipPass";
 import { CardGrid } from "../../components/CardGrid";
 import { UploadDropZone } from "../../components/UploadDropZone";
@@ -175,13 +175,14 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
   // refresh, and `null` = everything collapsed, which is the initial state.
   const [openItemId, setOpenItemId] = useState<string | null>(null);
 
-  const renderCards = (recs: HwOpenRecordT[]): React.ReactNode => (
+  const renderCards = (recs: HwOpenRecordT[], opts?: SubjectFoldRenderOpts): React.ReactNode => (
     <CardGrid>
       {groupByItem(recs).map((g) => (
         <ItemCard
           key={g.hwItemId}
           group={g}
           tally={tallyByItem.get(g.hwItemId) ?? null}
+          readOnly={!!opts?.readOnly}
           base={base}
           open={openItemId === g.hwItemId}
           onToggle={() => setOpenItemId((id) => (id === g.hwItemId ? null : g.hwItemId))}
@@ -227,6 +228,7 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
 function ItemCard({
   group,
   tally,
+  readOnly,
   base,
   open,
   onToggle,
@@ -237,6 +239,8 @@ function ItemCard({
   group: ItemGroup;
   /** D-#383 pipeline counts; null while the query is in flight or if the item has none. */
   tally: HwItemTallyT | null;
+  /** D-#388: a FOLDED (not-my-subject) card — oversight only, no lifecycle controls. */
+  readOnly: boolean;
   base: { sectionId: string; classId: string };
   /** Accordion: owned by the screen so only ONE card can be open (D-#371 refinement). */
   open: boolean;
@@ -367,7 +371,33 @@ function ItemCard({
         </View>
       </Pressable>
 
-      {!open ? null : (
+      {!open ? null : readOnly ? (
+        /* D-#388 — a folded, not-my-subject card. The class teacher may SEE where the
+           section stands; collecting and marking stay with the subject teacher. The
+           server enforces that independently (canWrite honours only teaching/proxy
+           grants matching section AND subject), so every control below would 403 —
+           showing a roster read-out instead of dead buttons is the honest rendering. */
+        <View style={{ marginTop: space(2) }}>
+          <Muted style={{ fontStyle: "italic" }}>{STR.foldViewOnly}</Muted>
+          <View style={{ marginTop: space(2) }}>
+            {group.rows.map((r) => (
+              <View
+                key={r.id}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingVertical: space(1),
+                  gap: space(2),
+                }}
+              >
+                <Body style={{ flexShrink: 1 }}>{r.studentName}</Body>
+                <Muted>{lifecycleStateLabel(r.state)}</Muted>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : (
         <>
       {/* Absent-at-issue toggle — OUTSIDE the header Pressable on purpose: nested
           pressables would let one tap both open the drill and fold the card. */}

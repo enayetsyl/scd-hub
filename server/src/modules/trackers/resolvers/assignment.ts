@@ -1576,14 +1576,11 @@ builder.queryField("assignmentOpenRecords", (t) =>
       // Per-item subject-readability: drop items the caller may not open (a
       // subject teacher never sees another subject's records — mirrors
       // assignmentRecords' assertItemSubjectReadable, applied set-wise).
-      // classTeacherOversight:false — the roster-pass workspace is SUBJECT-scoped for
-      // every teacher, class teacher included (owner decision 2026-07-19, already the
-      // posture on homeworkOpenRecords; assignments were missed). A class teacher's
-      // oversight is for reconciling the week, not for collecting another teacher's
-      // subject. Principal/Office/supervisors stay unrestricted inside the helper.
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, {
-        classTeacherOversight: false,
-      });
+      // D-#388 (owner, 2026-07-29): the class teacher sees the whole section again —
+      // the workspace FOLDS other subjects away read-only rather than hiding them.
+      // D-#386 had narrowed this to match homework; D-#388 moves both back together.
+      // Writes stay grant-scoped in assertCanWrite, which no fold can bypass.
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
       return allowed ? rows.filter((r) => allowed.has(r.subject)) : rows;
     },
   }),
@@ -1625,11 +1622,9 @@ builder.queryField("assignmentItemTallies", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
-      // Same scope as assignmentOpenRecords above — the counts must not reveal a
-      // subject whose cards the caller cannot see.
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, {
-        classTeacherOversight: false,
-      });
+      // Same scope as assignmentOpenRecords above (D-#388) — the counts must cover
+      // exactly the cards the caller can see, folded ones included.
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
       return assignmentItemTallies(args.sectionId, allowed);
     },
   }),
