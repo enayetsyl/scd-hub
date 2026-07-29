@@ -42,7 +42,7 @@ import {
 import { useConfirm } from "../../state/ConfirmContext";
 import { RosterChipPass } from "../../components/RosterChipPass";
 import { CardGrid } from "../../components/CardGrid";
-import { SubjectFold } from "../../components/SubjectFold";
+import { SubjectFold, type SubjectFoldRenderOpts } from "../../components/SubjectFold";
 import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
 import { useSectionContext } from "../../state/SectionContext";
 import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
@@ -186,13 +186,14 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
   // rather than crowding the list (same posture as the homework workspace).
   const taught = useTaughtSubjects(hasSection ? sectionId : null);
 
-  const renderCards = (recs: AsOpenRecordT[]): React.ReactNode => (
+  const renderCards = (recs: AsOpenRecordT[], opts?: SubjectFoldRenderOpts): React.ReactNode => (
     <CardGrid>
       {groupByItem(recs).map((g) => (
         <ItemCard
           key={g.asItemId}
           group={g}
           tally={tallyByItem.get(g.asItemId) ?? null}
+          readOnly={!!opts?.readOnly}
           sectionId={sectionId}
           open={openItemId === g.asItemId}
           onToggle={() => setOpenItemId((id) => (id === g.asItemId ? null : g.asItemId))}
@@ -236,6 +237,7 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
 function ItemCard({
   group,
   tally,
+  readOnly,
   sectionId,
   open,
   onToggle,
@@ -248,6 +250,8 @@ function ItemCard({
   group: ItemGroup;
   /** D-#383 pipeline counts; null while the query is in flight or if the item has none. */
   tally: AsItemTallyT | null;
+  /** D-#388: a FOLDED (not-my-subject) card — oversight only, no lifecycle controls. */
+  readOnly: boolean;
   sectionId: string;
   onDone: () => void;
   onNotify: (ok: string | null, err: string | null) => void;
@@ -383,7 +387,32 @@ function ItemCard({
         </View>
       </Pressable>
 
-      {!open ? null : (
+      {!open ? null : readOnly ? (
+        /* D-#388 — a folded, not-my-subject card: oversight only. The server refuses
+           these writes independently (canWrite honours only teaching/proxy grants
+           matching section AND subject), so a roster read-out is the honest rendering
+           rather than controls that would 403. Twin of the homework workspace. */
+        <View style={{ marginTop: space(2) }}>
+          <Muted style={{ fontStyle: "italic" }}>{STR.foldViewOnly}</Muted>
+          <View style={{ marginTop: space(2) }}>
+            {group.rows.map((r) => (
+              <View
+                key={r.id}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingVertical: space(1),
+                  gap: space(2),
+                }}
+              >
+                <Body style={{ flexShrink: 1 }}>{r.studentName}</Body>
+                <Muted>{lifecycleStateLabel(r.state)}</Muted>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : (
         <>
       {/* Redeliver toggle — OUTSIDE the header Pressable on purpose: nested pressables
           would let one tap both open the drill and fold the card. */}

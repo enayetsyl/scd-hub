@@ -691,11 +691,15 @@ builder.queryField("homeworkOpenRecords", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
-      // Owner decision 2026-07-19: the checking flow is subject-scoped for EVERY
-      // teacher — the class teacher too. Reconcile/tally/items keep oversight.
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, {
-        classTeacherOversight: false,
-      });
+      // D-#388 (owner, 2026-07-29) supersedes the 2026-07-19 narrowing for READS: the
+      // class teacher sees the whole section again, because the workspace now FOLDS
+      // other subjects away (SubjectFold) instead of hiding them — own subjects open,
+      // the rest one tap away, read-only. Hiding them outright left the coordinator
+      // unable to answer "where does the section stand?" at all.
+      // WRITES are untouched and remain the real gate: assertCanWrite → canWrite
+      // honours only teaching/proxy grants matching section AND subject, with no
+      // class-teacher or supervisory escape, so oversight can never become authorship.
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
       const states = args.states.filter((s): s is LifecycleState =>
         (LIFECYCLE_STATES as readonly string[]).includes(s),
       );
@@ -743,10 +747,9 @@ builder.queryField("homeworkItemTallies", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
-      // Same posture as the checking queue above (owner decision 2026-07-19).
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, {
-        classTeacherOversight: false,
-      });
+      // Same posture as the record list above (D-#388) — the counts must cover exactly
+      // the cards the caller can see, including the folded ones.
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
       return homeworkItemTallies(args.sectionId, allowed);
     },
   }),

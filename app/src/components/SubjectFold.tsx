@@ -14,10 +14,18 @@ import { Button } from "./ui";
 import { hwSubjectLabel, bnNum } from "../lib/labels";
 import { space } from "../theme/tokens";
 
+export interface SubjectFoldRenderOpts {
+  /** True for a FOLDED (not-my-subject) group — D-#388: oversight is read-only.
+   *  The server already refuses the writes (canWrite honours only teaching/proxy
+   *  grants matching section AND subject), so this hides controls that would
+   *  simply 403 rather than being the gate itself. */
+  readOnly?: boolean;
+}
+
 interface Props<T extends { subject: string }> {
   records: readonly T[];
   taught: Set<string> | null;
-  render: (records: T[]) => React.ReactNode;
+  render: (records: T[], opts?: SubjectFoldRenderOpts) => React.ReactNode;
 }
 
 export function SubjectFold<T extends { subject: string }>({
@@ -56,7 +64,7 @@ export function SubjectFold<T extends { subject: string }>({
               variant="secondary"
               onPress={() => setOpen((m) => ({ ...m, [subject]: !m[subject] }))}
             />
-            {isOpen ? <View style={{ marginTop: space(2) }}>{render(rows)}</View> : null}
+            {isOpen ? <View style={{ marginTop: space(2) }}>{render(rows, { readOnly: true })}</View> : null}
           </View>
         );
       })}

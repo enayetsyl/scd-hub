@@ -1314,6 +1314,8 @@ const STR_BN = {
   /** RP-2 (D-#355): the roster-pass workspace. */
   hwWorkspace: "বাড়ির কাজ",
   hwWorkspaceTitle: "বাড়ির কাজ",
+  /** Folded (not-my-subject) card body: oversight view, no actions. */
+  foldViewOnly: "শুধু দেখা — এই বিষয়ের কাজ বিষয়শিক্ষক করবেন",
   hwPassSubmit: "জমা",
   hwPassSubmitCommit: "জমা নিশ্চিত করুন",
   hwPassSubmitted: "জমা",
@@ -4108,6 +4110,7 @@ const STR_EN: StrTable = {
   /** RP-2 (D-#355): the roster-pass workspace. */
   hwWorkspace: "Homework",
   hwWorkspaceTitle: "Homework",
+  foldViewOnly: "View only — the subject teacher handles this",
   hwPassSubmit: "Submission",
   hwPassSubmitCommit: "Confirm submissions",
   hwPassSubmitted: "Submitted",
