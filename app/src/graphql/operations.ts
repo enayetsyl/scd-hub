@@ -6611,3 +6611,595 @@ export const CHILD_VOCAB_QUERY = gql<
     }
   }
 `;
+
+// ===========================================================================
+// Exams — EX-1..EX-9 (docs/prd-exams.md, D-#375–#382)
+// ===========================================================================
+
+export interface ExamGradeBandT {
+  letter: string;
+  point: number;
+  minPercent: number;
+  maxPercent: number;
+}
+
+export interface ExamT {
+  id: string;
+  academicYearId: string;
+  term: string;
+  name: string;
+  status: string;
+  startDateKey: string | null;
+  endDateKey: string | null;
+  gradeScale: ExamGradeBandT[];
+  failRule: string;
+  ctAggregationMode: string;
+  ctAggregationBestN: number | null;
+  publishedAt: string | null;
+  publishedVersion: number;
+  createdAt: string;
+}
+
+const EXAM_FIELDS = `
+  id academicYearId term name status startDateKey endDateKey
+  gradeScale { letter point minPercent maxPercent }
+  failRule ctAggregationMode ctAggregationBestN publishedAt publishedVersion createdAt
+`;
+
+export const EXAMS_QUERY = gql<{ exams: ExamT[] }, { academicYearId?: string | null }>`
+  query Exams($academicYearId: String) {
+    exams(academicYearId: $academicYearId) { ${EXAM_FIELDS} }
+  }
+`;
+
+export const EXAM_QUERY = gql<{ exam: ExamT | null }, { id: string }>`
+  query Exam($id: String!) {
+    exam(id: $id) { ${EXAM_FIELDS} }
+  }
+`;
+
+export interface ExamPaperComponentT {
+  component: string;
+  maxMarks: number;
+}
+
+export interface ExamPaperT {
+  id: string;
+  examId: string;
+  classId: string;
+  sectionId: string | null;
+  subject: string;
+  components: ExamPaperComponentT[];
+  paperFullMarks: number;
+  examDateKey: string | null;
+  ctAggregationMode: string | null;
+  tabulatedAt: string | null;
+}
+
+export const EXAM_PAPERS_QUERY = gql<{ examPapers: ExamPaperT[] }, { examId: string }>`
+  query ExamPapers($examId: String!) {
+    examPapers(examId: $examId) {
+      id examId classId sectionId subject
+      components { component maxMarks }
+      paperFullMarks examDateKey ctAggregationMode tabulatedAt
+    }
+  }
+`;
+
+// --- EX-2 duty assignments -------------------------------------------------
+
+export interface ExamAssignmentT {
+  id: string;
+  examId: string;
+  paperId: string | null;
+  userId: string;
+  userName: string | null;
+  role: string;
+  createdAt: string;
+}
+
+const EXAM_ASSIGNMENT_FIELDS = `id examId paperId userId userName role createdAt`;
+
+export const EXAM_ASSIGNMENTS_QUERY = gql<
+  { examAssignments: ExamAssignmentT[] },
+  { examId: string; paperId?: string | null }
+>`
+  query ExamAssignments($examId: String!, $paperId: String) {
+    examAssignments(examId: $examId, paperId: $paperId) { ${EXAM_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const MY_EXAM_DUTIES_QUERY = gql<
+  { myExamDuties: ExamAssignmentT[] },
+  { examId?: string | null }
+>`
+  query MyExamDuties($examId: String) {
+    myExamDuties(examId: $examId) { ${EXAM_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const ASSIGN_EXAM_DUTY = gql<
+  { assignExamDuty: ExamAssignmentT },
+  { examId: string; userId: string; role: string; paperId?: string | null }
+>`
+  mutation AssignExamDuty($examId: String!, $userId: String!, $role: String!, $paperId: String) {
+    assignExamDuty(examId: $examId, userId: $userId, role: $role, paperId: $paperId) { ${EXAM_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const REVOKE_EXAM_DUTY = gql<{ revokeExamDuty: boolean }, { assignmentId: string }>`
+  mutation RevokeExamDuty($assignmentId: String!) {
+    revokeExamDuty(assignmentId: $assignmentId)
+  }
+`;
+
+// --- EX-3 marks ------------------------------------------------------------
+
+export interface ExamMarkT {
+  id: string;
+  paperId: string;
+  studentId: string;
+  component: string;
+  status: string;
+  rawMark: number | null;
+  entryScale: number | null;
+  componentValue: number;
+  source: string;
+  overrideReason: string | null;
+  recheckRawMark: number | null;
+  resolvedRawMark: number | null;
+}
+
+export const EXAM_PAPER_QUERY = gql<{ examPaper: ExamPaperT | null }, { paperId: string }>`
+  query ExamPaper($paperId: String!) {
+    examPaper(paperId: $paperId) {
+      id examId classId sectionId subject
+      components { component maxMarks }
+      paperFullMarks examDateKey ctAggregationMode tabulatedAt
+    }
+  }
+`;
+
+export interface ExamRosterStudentT {
+  id: string;
+  schoolId: string;
+  name: string;
+  rollNumber: string | null;
+}
+
+export const EXAM_PAPER_ROSTER_QUERY = gql<
+  { examPaperRoster: ExamRosterStudentT[] },
+  { paperId: string }
+>`
+  query ExamPaperRoster($paperId: String!) {
+    examPaperRoster(paperId: $paperId) { id schoolId name rollNumber }
+  }
+`;
+
+export const EXAM_MARKS_QUERY = gql<{ examMarks: ExamMarkT[] }, { paperId: string }>`
+  query ExamMarks($paperId: String!) {
+    examMarks(paperId: $paperId) {
+      id paperId studentId component status rawMark entryScale componentValue
+      source overrideReason recheckRawMark resolvedRawMark
+    }
+  }
+`;
+
+export interface ExamCtProposalT {
+  studentId: string;
+  value: number | null;
+  testsCounted: number;
+  mode: string;
+  bestN: number;
+}
+
+export const EXAM_CT_PROPOSALS_QUERY = gql<
+  { examCtProposals: ExamCtProposalT[] },
+  { paperId: string }
+>`
+  query ExamCtProposals($paperId: String!) {
+    examCtProposals(paperId: $paperId) { studentId value testsCounted mode bestN }
+  }
+`;
+
+export const ENTER_EXAM_MARKS = gql<
+  { enterExamMarks: ExamMarkT[] },
+  {
+    paperId: string;
+    studentIds: string[];
+    components: string[];
+    statuses: string[];
+    rawMarks?: (number | null)[] | null;
+    overrideReason?: string | null;
+  }
+>`
+  mutation EnterExamMarks(
+    $paperId: String!, $studentIds: [String!]!, $components: [String!]!,
+    $statuses: [String!]!, $rawMarks: [Float!], $overrideReason: String
+  ) {
+    enterExamMarks(
+      paperId: $paperId, studentIds: $studentIds, components: $components,
+      statuses: $statuses, rawMarks: $rawMarks, overrideReason: $overrideReason
+    ) {
+      id paperId studentId component status rawMark entryScale componentValue
+      source overrideReason recheckRawMark resolvedRawMark
+    }
+  }
+`;
+
+export const APPLY_EXAM_CT_PULL = gql<{ applyExamCtPull: number }, { paperId: string }>`
+  mutation ApplyExamCtPull($paperId: String!) {
+    applyExamCtPull(paperId: $paperId)
+  }
+`;
+
+// --- EX-4 recheck ----------------------------------------------------------
+
+export interface ExamRecheckRowT {
+  studentId: string;
+  component: string;
+  checkerRawMark: number | null;
+  checkerStatus: string | null;
+  recheckRawMark: number | null;
+  recheckStatus: string | null;
+  divergent: boolean;
+  resolvedRawMark: number | null;
+}
+
+export const EXAM_RECHECK_WORKSHEET_QUERY = gql<
+  { examRecheckWorksheet: ExamRecheckRowT[] },
+  { paperId: string }
+>`
+  query ExamRecheckWorksheet($paperId: String!) {
+    examRecheckWorksheet(paperId: $paperId) {
+      studentId component checkerRawMark checkerStatus
+      recheckRawMark recheckStatus divergent resolvedRawMark
+    }
+  }
+`;
+
+export interface ExamDivergenceT {
+  studentId: string;
+  component: string;
+  checkerRawMark: number | null;
+  checkerStatus: string;
+  recheckRawMark: number | null;
+  recheckStatus: string;
+  resolved: boolean;
+}
+
+export const EXAM_DIVERGENCES_QUERY = gql<
+  { examDivergences: ExamDivergenceT[] },
+  { paperId: string }
+>`
+  query ExamDivergences($paperId: String!) {
+    examDivergences(paperId: $paperId) {
+      studentId component checkerRawMark checkerStatus recheckRawMark recheckStatus resolved
+    }
+  }
+`;
+
+export interface ExamTabulationReadinessT {
+  ready: boolean;
+  missingMarks: number;
+  unresolvedDivergences: number;
+  notRechecked: number;
+  custodyBlockers: string[];
+}
+
+export const EXAM_TABULATION_READINESS_QUERY = gql<
+  { examTabulationReadiness: ExamTabulationReadinessT },
+  { paperId: string }
+>`
+  query ExamTabulationReadiness($paperId: String!) {
+    examTabulationReadiness(paperId: $paperId) {
+      ready missingMarks unresolvedDivergences notRechecked custodyBlockers
+    }
+  }
+`;
+
+export const ENTER_EXAM_RECHECK_MARKS = gql<
+  { enterExamRecheckMarks: number },
+  { paperId: string; studentIds: string[]; components: string[]; statuses: string[]; rawMarks?: (number | null)[] | null }
+>`
+  mutation EnterExamRecheckMarks(
+    $paperId: String!, $studentIds: [String!]!, $components: [String!]!,
+    $statuses: [String!]!, $rawMarks: [Float!]
+  ) {
+    enterExamRecheckMarks(
+      paperId: $paperId, studentIds: $studentIds, components: $components,
+      statuses: $statuses, rawMarks: $rawMarks
+    )
+  }
+`;
+
+export const RESOLVE_EXAM_DIVERGENCE = gql<
+  { resolveExamDivergence: boolean },
+  { paperId: string; studentId: string; component: string; status: string; rawMark?: number | null }
+>`
+  mutation ResolveExamDivergence(
+    $paperId: String!, $studentId: String!, $component: String!, $status: String!, $rawMark: Float
+  ) {
+    resolveExamDivergence(
+      paperId: $paperId, studentId: $studentId, component: $component, status: $status, rawMark: $rawMark
+    )
+  }
+`;
+
+export const TABULATE_EXAM_PAPER = gql<
+  { tabulateExamPaper: { id: string; tabulatedAt: string | null } },
+  { paperId: string }
+>`
+  mutation TabulateExamPaper($paperId: String!) {
+    tabulateExamPaper(paperId: $paperId) { id tabulatedAt }
+  }
+`;
+
+export const REOPEN_EXAM_PAPER = gql<
+  { reopenExamPaper: { id: string; tabulatedAt: string | null } },
+  { paperId: string; reason: string }
+>`
+  mutation ReopenExamPaper($paperId: String!, $reason: String!) {
+    reopenExamPaper(paperId: $paperId, reason: $reason) { id tabulatedAt }
+  }
+`;
+
+// --- EX-5 report cards -----------------------------------------------------
+
+export interface ExamReportCellT {
+  component: string;
+  value: number | null;
+  absent: boolean;
+}
+
+export interface ExamReportRowT {
+  paperId: string;
+  subject: string;
+  cells: ExamReportCellT[];
+  obtained: number;
+  fullMarks: number;
+  percent: number;
+  point: number;
+  letter: string;
+  highest: number | null;
+}
+
+export interface ExamReportTotalsT {
+  totalObtained: number;
+  totalFullMarks: number;
+  gpa: number;
+  letter: string;
+  failedBySubject: boolean;
+  failedSubjects: string[];
+}
+
+export interface ExamReportCardT {
+  examId: string;
+  examName: string;
+  term: string;
+  session: string;
+  studentId: string;
+  studentSchoolId: string;
+  studentName: string;
+  branch: string;
+  shift: string;
+  rows: ExamReportRowT[];
+  totals: ExamReportTotalsT;
+  comment: string | null;
+  publishedAt: string | null;
+}
+
+const REPORT_CARD_FIELDS = `
+  examId examName term session studentId studentSchoolId studentName branch shift
+  rows {
+    paperId subject obtained fullMarks percent point letter highest
+    cells { component value absent }
+  }
+  totals { totalObtained totalFullMarks gpa letter failedBySubject failedSubjects }
+  comment publishedAt
+`;
+
+export const EXAM_REPORT_CARD_QUERY = gql<
+  { examReportCard: ExamReportCardT },
+  { examId: string; studentId: string }
+>`
+  query ExamReportCard($examId: String!, $studentId: String!) {
+    examReportCard(examId: $examId, studentId: $studentId) { ${REPORT_CARD_FIELDS} }
+  }
+`;
+
+export const EXAM_CLASS_REPORT_CARDS_QUERY = gql<
+  { examClassReportCards: ExamReportCardT[] },
+  { examId: string; classId: string }
+>`
+  query ExamClassReportCards($examId: String!, $classId: String!) {
+    examClassReportCards(examId: $examId, classId: $classId) { ${REPORT_CARD_FIELDS} }
+  }
+`;
+
+export const EXAM_COMMENT_SUGGESTIONS_QUERY = gql<{ examCommentSuggestions: string[] }, NoVars>`
+  query ExamCommentSuggestions { examCommentSuggestions }
+`;
+
+export const SET_EXAM_REPORT_COMMENT = gql<
+  { setExamReportComment: string },
+  { examId: string; studentId: string; comment: string }
+>`
+  mutation SetExamReportComment($examId: String!, $studentId: String!, $comment: String!) {
+    setExamReportComment(examId: $examId, studentId: $studentId, comment: $comment)
+  }
+`;
+
+// --- EX-6/7/8 custody ------------------------------------------------------
+
+export interface ExamCustodyEventT {
+  id: string;
+  examId: string;
+  paperId: string | null;
+  stage: string;
+  itemKind: string;
+  fromUserId: string;
+  fromName: string | null;
+  toUserId: string;
+  toName: string | null;
+  declaredCount: number;
+  countedCount: number | null;
+  status: string;
+  discrepancyNote: string | null;
+  handedOverAt: string;
+  acknowledgedAt: string | null;
+}
+
+const CUSTODY_FIELDS = `
+  id examId paperId stage itemKind fromUserId fromName toUserId toName
+  declaredCount countedCount status discrepancyNote handedOverAt acknowledgedAt
+`;
+
+export interface ExamCustodyRecipientT {
+  id: string;
+  name: string;
+  role: string;
+}
+
+export const EXAM_CUSTODY_RECIPIENTS_QUERY = gql<
+  { examCustodyRecipients: ExamCustodyRecipientT[] },
+  NoVars
+>`
+  query ExamCustodyRecipients {
+    examCustodyRecipients { id name role }
+  }
+`;
+
+export const EXAM_CUSTODY_EVENTS_QUERY = gql<
+  { examCustodyEvents: ExamCustodyEventT[] },
+  { examId: string; paperId?: string | null }
+>`
+  query ExamCustodyEvents($examId: String!, $paperId: String) {
+    examCustodyEvents(examId: $examId, paperId: $paperId) { ${CUSTODY_FIELDS} }
+  }
+`;
+
+export interface ExamCustodyTallyT {
+  stage: string;
+  declared: number;
+  counted: number;
+  pending: number;
+  disputed: number;
+}
+
+export interface ExamCustodyBalanceT {
+  paperId: string | null;
+  studentsPresent: number;
+  tallies: ExamCustodyTallyT[];
+  blockers: string[];
+  balanced: boolean;
+}
+
+export const EXAM_CUSTODY_BALANCE_QUERY = gql<
+  { examCustodyBalance: ExamCustodyBalanceT },
+  { paperId: string }
+>`
+  query ExamCustodyBalance($paperId: String!) {
+    examCustodyBalance(paperId: $paperId) {
+      paperId studentsPresent balanced blockers
+      tallies { stage declared counted pending disputed }
+    }
+  }
+`;
+
+export const MY_PENDING_CUSTODY_QUERY = gql<
+  { myPendingCustodyAcknowledgements: ExamCustodyEventT[] },
+  NoVars
+>`
+  query MyPendingCustody {
+    myPendingCustodyAcknowledgements { ${CUSTODY_FIELDS} }
+  }
+`;
+
+export const EXAM_CUSTODY_EXCEPTIONS_QUERY = gql<
+  { examCustodyExceptions: ExamCustodyEventT[] },
+  { examId: string; staleHours?: number | null }
+>`
+  query ExamCustodyExceptions($examId: String!, $staleHours: Int) {
+    examCustodyExceptions(examId: $examId, staleHours: $staleHours) { ${CUSTODY_FIELDS} }
+  }
+`;
+
+export const RECORD_EXAM_CUSTODY_HANDOVER = gql<
+  { recordExamCustodyHandover: ExamCustodyEventT },
+  {
+    examId: string; paperId?: string | null; stage: string; itemKind: string;
+    toUserId: string; declaredCount: number;
+  }
+>`
+  mutation RecordExamCustodyHandover(
+    $examId: String!, $paperId: String, $stage: String!, $itemKind: String!,
+    $toUserId: String!, $declaredCount: Int!
+  ) {
+    recordExamCustodyHandover(
+      examId: $examId, paperId: $paperId, stage: $stage, itemKind: $itemKind,
+      toUserId: $toUserId, declaredCount: $declaredCount
+    ) { ${CUSTODY_FIELDS} }
+  }
+`;
+
+export const ACKNOWLEDGE_EXAM_CUSTODY = gql<
+  { acknowledgeExamCustodyHandover: ExamCustodyEventT },
+  { eventId: string; countedCount: number; discrepancyNote?: string | null }
+>`
+  mutation AcknowledgeExamCustody($eventId: String!, $countedCount: Int!, $discrepancyNote: String) {
+    acknowledgeExamCustodyHandover(
+      eventId: $eventId, countedCount: $countedCount, discrepancyNote: $discrepancyNote
+    ) { ${CUSTODY_FIELDS} }
+  }
+`;
+
+export const CANCEL_EXAM_CUSTODY = gql<
+  { cancelExamCustodyHandover: ExamCustodyEventT },
+  { eventId: string }
+>`
+  mutation CancelExamCustody($eventId: String!) {
+    cancelExamCustodyHandover(eventId: $eventId) { ${CUSTODY_FIELDS} }
+  }
+`;
+
+// --- EX-9 publish ----------------------------------------------------------
+
+export interface ExamPublishStateT {
+  id: string;
+  status: string;
+  submittedAt: string | null;
+  approvedAt: string | null;
+  publishedAt: string | null;
+  publishedVersion: number;
+  sendBackReason: string | null;
+}
+
+const PUBLISH_FIELDS = `id status submittedAt approvedAt publishedAt publishedVersion sendBackReason`;
+
+export const SUBMIT_EXAM_RESULTS = gql<{ submitExamResults: ExamPublishStateT }, { examId: string }>`
+  mutation SubmitExamResults($examId: String!) {
+    submitExamResults(examId: $examId) { ${PUBLISH_FIELDS} }
+  }
+`;
+
+export const APPROVE_EXAM_RESULTS = gql<{ approveExamResults: ExamPublishStateT }, { examId: string }>`
+  mutation ApproveExamResults($examId: String!) {
+    approveExamResults(examId: $examId) { ${PUBLISH_FIELDS} }
+  }
+`;
+
+export const SEND_BACK_EXAM_RESULTS = gql<
+  { sendBackExamResults: ExamPublishStateT },
+  { examId: string; reason: string }
+>`
+  mutation SendBackExamResults($examId: String!, $reason: String!) {
+    sendBackExamResults(examId: $examId, reason: $reason) { ${PUBLISH_FIELDS} }
+  }
+`;
+
+export const UNPUBLISH_EXAM_RESULTS = gql<{ unpublishExamResults: ExamPublishStateT }, { examId: string }>`
+  mutation UnpublishExamResults($examId: String!) {
+    unpublishExamResults(examId: $examId) { ${PUBLISH_FIELDS} }
+  }
+`;

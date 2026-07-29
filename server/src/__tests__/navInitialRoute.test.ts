@@ -22,8 +22,16 @@
 import { readFileSync } from "fs";
 import path from "path";
 
-/** Screens whose route params are required — they can never be an initial route. */
-const PARAM_REQUIRING_SCREENS = ["StudentProfile"];
+/** Screens whose route params are required — they can never be an initial route.
+ *  The exam screens (EX-1..EX-9) all destructure `paperId` / `examId` / `studentId`
+ *  on the first render, so each one is a live instance of the same trap. */
+const PARAM_REQUIRING_SCREENS = [
+  "StudentProfile",
+  "ExamMarkGrid",
+  "ExamRecheck",
+  "ExamCustody",
+  "ExamReportCard",
+];
 
 const APP_TABS = path.resolve(__dirname, "../../../app/src/navigation/AppTabs.tsx");
 
@@ -77,6 +85,17 @@ describe("AppTabs navigator registration", () => {
     expect(withProfile).toEqual(
       ["AdminStack", "AssignmentStack", "AttendanceStack", "ClassTestStack", "HomeworkStack"].sort(),
     );
+  });
+
+  test("the Exams stack exists and opens on the param-less hub (EX-1..EX-9)", () => {
+    const exams = navigators.find((n) => n.stack === "ExamsStack");
+    expect(exams).toBeDefined();
+    expect(exams?.screensInOrder[0]).toBe("ExamHome");
+    // All four param-requiring exam screens are registered — a missing one would mean a
+    // dead `navigate()` call rather than a crash, which is quieter but still broken.
+    for (const s of ["ExamMarkGrid", "ExamRecheck", "ExamCustody", "ExamReportCard"]) {
+      expect(exams?.screensInOrder).toContain(s);
+    }
   });
 
   test("no param-requiring screen is any stack's FIRST screen (= its initial route)", () => {

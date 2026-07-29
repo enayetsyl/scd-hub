@@ -31,6 +31,7 @@ import type {
   ChatStackParamList,
   VocabStackParamList,
   ClassTestStackParamList,
+  ExamsStackParamList,
   CommentsStackParamList,
   ObservationStackParamList,
   FreeMixingStackParamList,
@@ -144,6 +145,11 @@ import RequestClassTestScreen from "../screens/classtest/RequestClassTestScreen"
 import MyCtQuestionsScreen from "../screens/classtest/MyCtQuestionsScreen";
 import CtQuestionRequestScreen from "../screens/classtest/CtQuestionRequestScreen";
 import CtQuestionQueueScreen from "../screens/classtest/CtQuestionQueueScreen";
+import ExamHomeScreen from "../screens/exams/ExamHomeScreen";
+import ExamMarkGridScreen from "../screens/exams/ExamMarkGridScreen";
+import ExamRecheckScreen from "../screens/exams/ExamRecheckScreen";
+import ExamCustodyScreen from "../screens/exams/ExamCustodyScreen";
+import ExamReportCardScreen from "../screens/exams/ExamReportCardScreen";
 import ClassTestResultsScreen from "../screens/classtest/ClassTestResultsScreen";
 import ClassTestResultsViewScreen from "../screens/classtest/ClassTestResultsViewScreen";
 import ClassTestPublishScreen from "../screens/classtest/ClassTestPublishScreen";
@@ -725,6 +731,38 @@ function VocabNavigator(): React.ReactElement {
   );
 }
 
+const ExamsStack = createNativeStackNavigator<ExamsStackParamList>();
+function ExamsNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ExamsStack.Navigator screenOptions={stackOptions}>
+      {/* ExamHome takes NO params and MUST stay first — the initial route of a stack
+          cannot require params or the tab crashes on mount (RN initial-route trap). */}
+      <ExamsStack.Screen name="ExamHome" component={ExamHomeScreen} options={{ title: STR.exHomeTitle }} />
+      <ExamsStack.Screen
+        name="ExamMarkGrid"
+        component={ExamMarkGridScreen}
+        options={({ route }) => ({ title: route.params.title || STR.exMarkTitle })}
+      />
+      <ExamsStack.Screen
+        name="ExamRecheck"
+        component={ExamRecheckScreen}
+        options={({ route }) => ({ title: route.params.title || STR.exRecheckTitle })}
+      />
+      <ExamsStack.Screen
+        name="ExamCustody"
+        component={ExamCustodyScreen}
+        options={({ route }) => ({ title: route.params.title || STR.exCustodyTitle })}
+      />
+      <ExamsStack.Screen
+        name="ExamReportCard"
+        component={ExamReportCardScreen}
+        options={({ route }) => ({ title: route.params.title || STR.exReportTitle })}
+      />
+    </ExamsStack.Navigator>
+  );
+}
+
 const ClassTestStack = createNativeStackNavigator<ClassTestStackParamList>();
 function ClassTestNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -1123,6 +1161,7 @@ export function AppTabs(): React.ReactElement {
   // reports); Office via roster:manage (print queue + dashboard + overdue-chase).
   // Every action is re-gated server-side. GUARDIAN never sees this staff tab.
   const canClassTest = !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
+  const canExams = !!role && roleHasPermission(role, "exam:read");
   // Comments + Parents-Meeting (CM-6): Principal/Teacher via tracker:read (daily
   // comments + comparison reads); Office via roster:manage (the parents'-meeting
   // admin). Every action is re-gated server-side. GUARDIAN never sees this staff tab.
@@ -1242,6 +1281,8 @@ export function AppTabs(): React.ReactElement {
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
         {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}
         {canClassTest ? <Drawer.Screen name="ClassTestTab" component={ClassTestNavigator} /> : null}
+        {/* Exams (D-#375) — staff who can read exams; the server re-gates every action. */}
+        {canExams ? <Drawer.Screen name="ExamsTab" component={ExamsNavigator} /> : null}
         {canComments ? <Drawer.Screen name="CommentsTab" component={CommentsNavigator} /> : null}
         {canObservation ? <Drawer.Screen name="ObservationTab" component={ObservationNavigator} /> : null}
         {/* Free Mixing Observation (D-#341) — P/O always; a teacher only when assigned. */}

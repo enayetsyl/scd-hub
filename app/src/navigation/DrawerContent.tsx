@@ -76,6 +76,7 @@ const STAFF_NAV: NavSection[] = [
       { route: "HomeworkTab", labelKey: "tabHomework", icon: "📒" },
       { route: "AssignmentTab", labelKey: "tabAssignment", icon: "📋" },
       { route: "ClassTestTab", labelKey: "tabClassTest", icon: "🧪" },
+      { route: "ExamsTab", labelKey: "tabExams", icon: "📝" },
       { route: "RevisionTab", labelKey: "tabRevision", icon: "🕌" },
     ],
   },

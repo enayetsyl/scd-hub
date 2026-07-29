@@ -35,6 +35,9 @@ export interface NotificationRefs {
   substitutionId?: string;
   /** Print job delivered (deep-link: PrintHome; PQ-5, D-#281). */
   printRequestId?: string;
+  /** Exam custody + report-card publish (deep-link: ExamHome; EX-8/EX-9, D-#382). */
+  examId?: string;
+  examPaperId?: string;
   /** Library due-soon/overdue reminders (deep-link: LibraryHome; LB-5, D-#84). */
   loanId?: string;
   /** Overdue ladder rung (1 = first school day after due, then every 3rd). */
@@ -108,6 +111,8 @@ const RefsSchema = new Schema<NotificationRefs>(
     artifactId: { type: String },
     substitutionId: { type: String },
     loanId: { type: String },
+    examId: { type: String },
+    examPaperId: { type: String },
     rung: { type: Number },
     audienceKey: { type: String },
     periodNumber: { type: Number },

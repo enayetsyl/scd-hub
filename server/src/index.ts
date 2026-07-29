@@ -41,6 +41,13 @@ import "./modules/trackers/resolvers/classTestGuardian";
 import "./modules/trackers/resolvers/classTestSummary";
 import "./modules/routine/resolvers/routine";
 import "./modules/routine/resolvers/routineSlots";
+import "./modules/exams/resolvers/exam";
+import "./modules/exams/resolvers/examAssignment";
+import "./modules/exams/resolvers/examMark";
+import "./modules/exams/resolvers/examRecheck";
+import "./modules/exams/resolvers/examReportCard";
+import "./modules/exams/resolvers/examCustody";
+import "./modules/exams/resolvers/examPublish";
 import "./modules/routine/resolvers/routineTriggers";
 import "./modules/routine/resolvers/myDay";
 import "./modules/routine/resolvers/teacherClassLoad";
@@ -98,6 +105,7 @@ import { pdfRouter } from "./routes/pdf";
 import { setPdfRouter } from "./modules/assessment/routes/setPdf";
 import { englishDrivePdfRouter } from "./modules/english-drive/routes/englishDrivePdf";
 import { studentProfilePdfRouter } from "./modules/trackers/routes/studentProfilePdf";
+import { reportCardPdfRouter } from "./modules/exams/routes/reportCardPdf";
 import { filesRouter } from "./routes/files";
 import { triggersRouter } from "./routes/triggers";
 import { eventsRouter } from "./routes/events";
@@ -251,6 +259,7 @@ app.use("/pdf", pdfRouter);
 app.use("/pdf/set", setPdfRouter);
 app.use("/pdf/english-drive", englishDrivePdfRouter);
 app.use("/pdf/student-profile", studentProfilePdfRouter);
+app.use("/pdf/report-card", reportCardPdfRouter);
 
 // Thin HTTP surface — homework files (GP-A, D-#70): server-in-the-middle
 // upload/download; Drive is never exposed to a client.

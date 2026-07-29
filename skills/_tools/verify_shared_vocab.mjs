@@ -34,12 +34,18 @@ check("default-deny: unknown role", V.roleHasPermission("GHOST", "content:read")
 check("PRINCIPAL has user:manage + audit:read", V.roleHasPermission("PRINCIPAL", "user:manage") && V.roleHasPermission("PRINCIPAL", "audit:read"));
 check("TEACHER lacks user:manage / audit:read / content:import", !["user:manage","audit:read","content:import"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("TEACHER can read content + assemble + write trackers", ["content:read","set:assemble","tracker:write"].every((p) => V.roleHasPermission("TEACHER", p)));
-check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/routine/attendance/library/chat/observation/finance", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage","finance:manage"]));
+check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/routine/attendance/library/chat/observation/finance/exam", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage","finance:manage","exam:manage","exam:custody","exam:read"]));
 check("routine: PRINCIPAL+OFFICE manage, TEACHER read-only, GUARDIAN none", V.roleHasPermission("PRINCIPAL","routine:manage") && V.roleHasPermission("OFFICE","routine:manage") && V.roleHasPermission("TEACHER","routine:read") && !V.roleHasPermission("TEACHER","routine:manage") && !V.roleHasPermission("GUARDIAN","routine:read"));
 check("TEACHER has content:review (reviewer APPROVE), lacks assign/promote", V.roleHasPermission("TEACHER","content:review") && !["content:assign_review","content:promote_gold"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("GUARDIAN only has guardian:read_child", eq(V.permissionsForRole("GUARDIAN"), ["guardian:read_child"]));
 check("no role can write audit (audit:write undeclared)", !V.PERMISSIONS.includes("audit:write"));
 check("NO pipeline perms remain — every permission is BUILD (chat:oversee flipped at M-6 per D-#111; chat:manage at M-2 per D-#98)", eq(V.PERMISSIONS.filter((p) => V.PERMISSION_BUILD_STATUS[p] !== "build"), []));
+check("exams: PRINCIPAL+OFFICE manage, TEACHER marks but never manages, GUARDIAN none (D-#375)",
+  ["PRINCIPAL","OFFICE"].every((r) => V.roleHasPermission(r,"exam:manage"))
+  && V.roleHasPermission("TEACHER","exam:mark")
+  && !V.roleHasPermission("TEACHER","exam:manage")
+  && !["PRINCIPAL","OFFICE"].some((r) => V.roleHasPermission(r,"exam:mark"))
+  && !["exam:manage","exam:custody","exam:mark","exam:read"].some((p) => V.roleHasPermission("GUARDIAN", p)));
 
 console.log("=== C. label maps total over their enums ===");
 const total = (labels, keys) => keys.every((k) => typeof labels[k] === "string" && labels[k].length > 0);
@@ -119,7 +125,13 @@ check("attendance: PRINCIPAL+OFFICE manage (not mark), TEACHER mark (not manage)
 console.log("=== C.5 Notification kinds + own-row posture (D-#72–#75) ===");
 check("NOTIFICATION_KIND_LABELS_BN total", total(V.NOTIFICATION_KIND_LABELS_BN, V.NOTIFICATION_KINDS));
 check("NOTIFICATION_KIND_LABELS_EN total", total(V.NOTIFICATION_KIND_LABELS_EN, V.NOTIFICATION_KINDS));
-check("kinds are exactly the 8 phase-1 kinds + 2 library kinds + 1 class-test kind + 1 vocab kind + 1 student-comment kind + 5 classroom-observation kinds + 1 finance kind + 2 saturday-revision kinds + 1 homework-chase kind + 1 assignment-chase kind + 3 homework-confirm kinds + 2 print kinds + 2 ct-question kinds + 2 ct-result kinds (D-#72/#74/#84/#122; VC-4 += VOCAB_RESULT, D-#154; CM-2 += STUDENT_COMMENT, D-#172; CO-3 += OBSERVATION_*; CO-8 += OBSERVATION_READY_TO_PUBLISH, D-#271; FIN-2B += FINANCE_FEE_DUE, D-#227; SR-2 += SR_ABSENT/SR_DIGEST, D-#244; HW per-chase += HW_CHASE, D-#260; AS-T4 per-chase += ASSIGNMENT_CHASE, D-#88/#94; HW pending-confirm += HW_PENDING_REMINDER/HW_PENDING_ESCALATION; auto-issue += HW_AUTO_ISSUED, D-#314; PQ-5 += PRINT_DELIVERED, D-#281; web-push += PRINT_REQUESTED, D-#296; CT question loop += CT_QUESTION_REVIEW/CT_QUESTION_OFFICE, D-#342; CT-8 submit/approve loop += CT_RESULT_SUBMITTED/CT_RESULT_PUBLISHED)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","HW_CHASE","ASSIGNMENT_CHASE","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE","CLASS_TEST_RESULT","VOCAB_RESULT","STUDENT_COMMENT","OBSERVATION_RELEASED","OBSERVATION_RESPONSE_REMINDER","OBSERVATION_ESCALATED","OBSERVATION_RESPONDED","OBSERVATION_READY_TO_PUBLISH","FINANCE_FEE_DUE","SR_ABSENT","SR_DIGEST","HW_PENDING_REMINDER","HW_PENDING_ESCALATION","HW_AUTO_ISSUED","CT_QUESTION_REVIEW","CT_QUESTION_OFFICE","CT_RESULT_SUBMITTED","CT_RESULT_PUBLISHED","PRINT_DELIVERED","PRINT_REQUESTED","STAFF_LEAVE_SUBMITTED"]));
+check("kinds are exactly the 8 phase-1 kinds + 2 library kinds + 1 class-test kind + 1 vocab kind + 1 student-comment kind + 5 classroom-observation kinds + 1 finance kind + 2 saturday-revision kinds + 1 homework-chase kind + 1 assignment-chase kind + 3 homework-confirm kinds + 2 print kinds + 2 ct-question kinds + 2 ct-result kinds (D-#72/#74/#84/#122; VC-4 += VOCAB_RESULT, D-#154; CM-2 += STUDENT_COMMENT, D-#172; CO-3 += OBSERVATION_*; CO-8 += OBSERVATION_READY_TO_PUBLISH, D-#271; FIN-2B += FINANCE_FEE_DUE, D-#227; SR-2 += SR_ABSENT/SR_DIGEST, D-#244; HW per-chase += HW_CHASE, D-#260; AS-T4 per-chase += ASSIGNMENT_CHASE, D-#88/#94; HW pending-confirm += HW_PENDING_REMINDER/HW_PENDING_ESCALATION; auto-issue += HW_AUTO_ISSUED, D-#314; PQ-5 += PRINT_DELIVERED, D-#281; web-push += PRINT_REQUESTED, D-#296; CT question loop += CT_QUESTION_REVIEW/CT_QUESTION_OFFICE, D-#342; CT-8 submit/approve loop += CT_RESULT_SUBMITTED/CT_RESULT_PUBLISHED)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","HW_CHASE","ASSIGNMENT_CHASE","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE","CLASS_TEST_RESULT","VOCAB_RESULT","STUDENT_COMMENT","OBSERVATION_RELEASED","OBSERVATION_RESPONSE_REMINDER","OBSERVATION_ESCALATED","OBSERVATION_RESPONDED","OBSERVATION_READY_TO_PUBLISH","FINANCE_FEE_DUE","SR_ABSENT","SR_DIGEST","HW_PENDING_REMINDER","HW_PENDING_ESCALATION","HW_AUTO_ISSUED","CT_QUESTION_REVIEW","CT_QUESTION_OFFICE","CT_RESULT_SUBMITTED","CT_RESULT_PUBLISHED","PRINT_DELIVERED","PRINT_REQUESTED","STAFF_LEAVE_SUBMITTED","EXAM_CUSTODY_HANDOVER","EXAM_CUSTODY_DISPUTED","EXAM_RESULT_SUBMITTED","EXAM_RESULT_PUBLISHED"]));
+// EX-8/EX-9 exam kinds (D-#382). HANDOVER → the named receiver only; DISPUTED → exam:manage
+// holders, because a count mismatch is an Office problem, not the signatories' to settle.
+check("exam custody + result NotificationKinds registered with BN and EN labels",
+  ["EXAM_CUSTODY_HANDOVER","EXAM_CUSTODY_DISPUTED","EXAM_RESULT_SUBMITTED","EXAM_RESULT_PUBLISHED"]
+    .every((k) => V.NOTIFICATION_KINDS.includes(k)
+      && !!V.NOTIFICATION_KIND_LABELS_BN[k] && !!V.NOTIFICATION_KIND_LABELS_EN[k]));
 check("STAFF_LEAVE_SUBMITTED is a registered NotificationKind (leave submit → approvers, extends §C.5, owner 2026-07-26)", V.NOTIFICATION_KINDS.includes("STAFF_LEAVE_SUBMITTED"));
 check("HW_CHASE is a registered NotificationKind (per-chase guardian notify, extends §C.5, D-#260)", V.NOTIFICATION_KINDS.includes("HW_CHASE"));
 check("ASSIGNMENT_CHASE is a registered NotificationKind (AS-T4 per-chase guardian notify, extends §C.5, D-#88/#94)", V.NOTIFICATION_KINDS.includes("ASSIGNMENT_CHASE"));
@@ -570,6 +582,69 @@ check("sr.absent.* + sr.digest.* guardian-message template keys registered (titl
 // SR-3 — the stateless completeness-chase wa.me key (D-#246/#131)
 check("sr.completeness_chase.wa template key registered (SR-3 §4 — Office nudge to the group's teacher)",
   V.MESSAGE_TEMPLATE_KEYS.includes("sr.completeness_chase.wa") && !!V.MESSAGE_TEMPLATE_REGISTRY["sr.completeness_chase.wa"]);
+
+console.log("=== C.20 Exams / report-card vocab (EX-1 — prd-exams §4, D-#375–#382; app-native, NO wire twin) ===");
+check("EXAM_TERMS exact — HALF_YEARLY/ANNUAL (D-#380 terms stand alone)", eq(V.EXAM_TERMS, ["HALF_YEARLY","ANNUAL"]));
+check("EXAM_TERM_LABELS_BN total", total(V.EXAM_TERM_LABELS_BN, V.EXAM_TERMS));
+check("EXAM_TERM_LABELS_EN total", total(V.EXAM_TERM_LABELS_EN, V.EXAM_TERMS));
+check("EXAM_STATUSES exact — the 7-step lifecycle", eq(V.EXAM_STATUSES, ["PLANNED","IN_PROGRESS","MARKING","TABULATED","APPROVED","PUBLISHED","ARCHIVED"]));
+check("EXAM_STATUS_LABELS_BN total", total(V.EXAM_STATUS_LABELS_BN, V.EXAM_STATUSES));
+check("EXAM_STATUS_LABELS_EN total", total(V.EXAM_STATUS_LABELS_EN, V.EXAM_STATUSES));
+check("EXAM_COMPONENTS exact — CT/ADAB/FINAL (§5.2)", eq(V.EXAM_COMPONENTS, ["CT","ADAB","FINAL"]));
+check("EXAM_COMPONENT_LABELS_BN total", total(V.EXAM_COMPONENT_LABELS_BN, V.EXAM_COMPONENTS));
+check("EXAM_COMPONENT_LABELS_EN total", total(V.EXAM_COMPONENT_LABELS_EN, V.EXAM_COMPONENTS));
+check("ADAB prints as \"Performance\" on the English transcript (one value, two names)", V.EXAM_COMPONENT_LABELS_EN.ADAB === "Performance");
+check("MARK_ENTRY_STATUSES exact — PRESENT/ABSENT (per-COMPONENT, D-#377f)", eq(V.MARK_ENTRY_STATUSES, ["PRESENT","ABSENT"]));
+check("MARK_ENTRY_STATUS_LABELS_BN total", total(V.MARK_ENTRY_STATUS_LABELS_BN, V.MARK_ENTRY_STATUSES));
+check("MARK_ENTRY_STATUS_LABELS_EN total", total(V.MARK_ENTRY_STATUS_LABELS_EN, V.MARK_ENTRY_STATUSES));
+check("GRADE_LETTERS exact + display glyphs total", eq(V.GRADE_LETTERS, ["A_PLUS","A","A_MINUS","B","C","F"]) && total(V.GRADE_LETTER_DISPLAY, V.GRADE_LETTERS));
+check("DEFAULT_GRADE_SCALE covers every GRADE_LETTER exactly once, points 5/4/3.5/3/2/0 (§5.1)",
+  eq(V.DEFAULT_GRADE_SCALE.map((r) => r.letter), V.GRADE_LETTERS)
+  && eq(V.DEFAULT_GRADE_SCALE.map((r) => r.point), [5,4,3.5,3,2,0]));
+check("DEFAULT_GRADE_SCALE bands are contiguous and cover 0..100 with no gap/overlap",
+  V.DEFAULT_GRADE_SCALE.every((r) => r.minPercent <= r.maxPercent)
+  && V.DEFAULT_GRADE_SCALE[0].maxPercent === 100
+  && V.DEFAULT_GRADE_SCALE[V.DEFAULT_GRADE_SCALE.length - 1].minPercent === 0
+  && V.DEFAULT_GRADE_SCALE.slice(1).every((r, i) => Math.abs(V.DEFAULT_GRADE_SCALE[i].minPercent - r.maxPercent) < 0.011));
+check("CT_AGGREGATION_MODES exact — MEAN/BEST_N, BOTH ship (D-#378)", eq(V.CT_AGGREGATION_MODES, ["MEAN","BEST_N"]));
+check("CT_AGGREGATION_MODE_LABELS_BN total", total(V.CT_AGGREGATION_MODE_LABELS_BN, V.CT_AGGREGATION_MODES));
+check("CT_AGGREGATION_MODE_LABELS_EN total", total(V.CT_AGGREGATION_MODE_LABELS_EN, V.CT_AGGREGATION_MODES));
+check("EXAM_DUTY_ROLES exact — the 5 duty rows (NOT ROLES entries, D-#375)", eq(V.EXAM_DUTY_ROLES, ["INVIGILATOR","CHECKER","RECHECKER","TABULATOR","MARK_RECHECKER"]));
+check("EXAM_DUTY_ROLE_LABELS_BN total", total(V.EXAM_DUTY_ROLE_LABELS_BN, V.EXAM_DUTY_ROLES));
+check("EXAM_DUTY_ROLE_LABELS_EN total", total(V.EXAM_DUTY_ROLE_LABELS_EN, V.EXAM_DUTY_ROLES));
+check("no EXAM_DUTY_ROLE leaked into ROLES (the single TEACHER role is never widened)",
+  !V.EXAM_DUTY_ROLES.some((d) => V.ROLES.includes(d)));
+// D-#377a — nearest-0.5 rounding, THE single implementation both the screen and the PDF call
+check("roundToHalf: 43.24→43 · 43.25→43.5 · 43.4→43.5 · 43.74→43.5 · 43.75→44 (half-up on the tie)",
+  V.roundToHalf(43.24) === 43 && V.roundToHalf(43.25) === 43.5 && V.roundToHalf(43.4) === 43.5
+  && V.roundToHalf(43.74) === 43.5 && V.roundToHalf(43.75) === 44);
+check("convertMark scales onto the component max then rounds — 66/80→/90 = 74.5; 84/100→/90 = 75.5; 90/100→/90 = 81",
+  V.convertMark(66, 80, 90) === 74.5 && V.convertMark(84, 100, 90) === 75.5 && V.convertMark(90, 100, 90) === 81);
+check("convertMark is identity when the paper already matches the component scale", V.convertMark(57, 80, 80) === 57);
+check("convertMark refuses a zero/negative paperFullMarks (no silent Infinity)", (() => {
+  try { V.convertMark(10, 0, 80); return false; } catch { return true; }
+})());
+check("EXAM_PAPER_COMPONENT_TOTAL is 100 (the only composition guard, D-#376)", V.EXAM_PAPER_COMPONENT_TOTAL === 100);
+// EX-6/EX-7 — the custody chain (D-#382)
+// 12 stages cover the PRD's 13 table rows: question papers and blank scripts share
+// QUESTION_ISSUE and are told apart by CUSTODY_ITEM_KINDS, not by a separate stage.
+check("CUSTODY_STAGES — the 12 stages, in real-world order", eq(V.CUSTODY_STAGES, [
+  "QUESTION_ISSUE","QUESTION_RETURN_UNUSED","SCRIPT_RETURN","CHECK_ISSUE","CHECK_RETURN",
+  "RECHECK_ISSUE","RECHECK_RETURN","TABULATION_ISSUE","TABULATION_RETURN",
+  "MARK_RECHECK_ISSUE","MARK_RECHECK_RETURN","ARCHIVE"]));
+check("CUSTODY_STAGE_LABELS_BN total", total(V.CUSTODY_STAGE_LABELS_BN, V.CUSTODY_STAGES));
+check("CUSTODY_STAGE_LABELS_EN total", total(V.CUSTODY_STAGE_LABELS_EN, V.CUSTODY_STAGES));
+check("every ISSUE stage has a matching RETURN (no one-way leg in the chain)",
+  V.CUSTODY_STAGES.filter((s) => s.endsWith("_ISSUE"))
+    .every((s) => V.CUSTODY_STAGES.includes(s.replace(/_ISSUE$/, "_RETURN"))
+      || s === "QUESTION_ISSUE")); // QUESTION_ISSUE returns via SCRIPT_RETURN + QUESTION_RETURN_UNUSED
+check("CUSTODY_ITEM_KINDS exact", eq(V.CUSTODY_ITEM_KINDS, ["QUESTION_PAPER","BLANK_SCRIPT","ANSWER_SCRIPT","MARK_SHEET"]));
+check("CUSTODY_ITEM_KIND_LABELS_BN total", total(V.CUSTODY_ITEM_KIND_LABELS_BN, V.CUSTODY_ITEM_KINDS));
+check("CUSTODY_ITEM_KIND_LABELS_EN total", total(V.CUSTODY_ITEM_KIND_LABELS_EN, V.CUSTODY_ITEM_KINDS));
+check("CUSTODY_EVENT_STATUSES exact — DISPUTED is a terminal state, not an error (D-#382)",
+  eq(V.CUSTODY_EVENT_STATUSES, ["PENDING_ACK","ACKNOWLEDGED","DISPUTED","CANCELLED"]));
+check("CUSTODY_EVENT_STATUS_LABELS_BN total", total(V.CUSTODY_EVENT_STATUS_LABELS_BN, V.CUSTODY_EVENT_STATUSES));
+check("CUSTODY_EVENT_STATUS_LABELS_EN total", total(V.CUSTODY_EVENT_STATUS_LABELS_EN, V.CUSTODY_EVENT_STATUSES));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

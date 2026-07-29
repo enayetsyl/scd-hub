@@ -1057,6 +1057,15 @@ export const NOTIFICATION_KINDS = [
   // Staff leave (owner 2026-07-26): a teacher submitted a leave application →
   // every approver (active Principal/Office). App-native, no wire twin.
   "STAFF_LEAVE_SUBMITTED",
+  // Exam custody (EX-8, D-#382). App-native, no wire twin. HANDOVER goes to the named
+  // RECEIVER ("you have scripts to acknowledge"); DISPUTED goes to exam:manage holders,
+  // because a count mismatch is an Office problem, not the two signatories' to settle.
+  "EXAM_CUSTODY_HANDOVER",
+  "EXAM_CUSTODY_DISPUTED",
+  // EX-9 publish loop: SUBMITTED → Principal/Office (a card set awaits approval);
+  // PUBLISHED → the exam's guardians via the guardian portal path.
+  "EXAM_RESULT_SUBMITTED",
+  "EXAM_RESULT_PUBLISHED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1094,6 +1103,10 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   STAFF_LEAVE_SUBMITTED: "ছুটির আবেদন অনুমোদনের অপেক্ষায়",
   PRINT_DELIVERED: "প্রিন্ট ডেলিভারি হয়েছে",
   PRINT_REQUESTED: "নতুন প্রিন্ট অনুরোধ",
+  EXAM_CUSTODY_HANDOVER: "গ্রহণ স্বীকার করুন",
+  EXAM_CUSTODY_DISPUTED: "হস্তান্তরে সংখ্যার গরমিল",
+  EXAM_RESULT_SUBMITTED: "ফলাফল অনুমোদনের অপেক্ষায়",
+  EXAM_RESULT_PUBLISHED: "পরীক্ষার ফলাফল প্রকাশিত",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1129,6 +1142,10 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   STAFF_LEAVE_SUBMITTED: "Leave application awaiting approval",
   PRINT_DELIVERED: "Print job delivered",
   PRINT_REQUESTED: "New print request",
+  EXAM_CUSTODY_HANDOVER: "Acknowledge a handover",
+  EXAM_CUSTODY_DISPUTED: "Custody count disputed",
+  EXAM_RESULT_SUBMITTED: "Report cards await approval",
+  EXAM_RESULT_PUBLISHED: "Exam results published",
 };
 
 
@@ -2713,6 +2730,235 @@ export const BUDGET_LINE_KIND_LABELS_EN: Record<BudgetLineKind, string> = {
   INCOME: "Income",
 };
 
+// --- A.20 EXAMS / REPORT CARDS (EX-1, docs/prd-exams.md, D-#375–#382) ---------
+// App-native only; NO envelope twin, NO harness enum sync (the D-#46/#52 pattern).
+// The custody-chain enums land with EX-6, not here.
+
+/** Exam term. The scans say `অর্ধ-বার্ষিক`; ANNUAL is declared now so closing the
+ *  year needs no schema change. Terms STAND ALONE — the annual carries nothing
+ *  forward from the half-yearly (D-#380). */
+export const EXAM_TERMS = ["HALF_YEARLY", "ANNUAL"] as const;
+export type ExamTerm = (typeof EXAM_TERMS)[number];
+export const EXAM_TERM_LABELS_BN: Record<ExamTerm, string> = {
+  HALF_YEARLY: "অর্ধ-বার্ষিক",
+  ANNUAL: "বার্ষিক",
+};
+export const EXAM_TERM_LABELS_EN: Record<ExamTerm, string> = {
+  HALF_YEARLY: "Half Yearly",
+  ANNUAL: "Annual",
+};
+
+/** Exam lifecycle. MARKING→TABULATED is gated on custody reconciliation (EX-7);
+ *  APPROVED→PUBLISHED is the guardian-visible flip (EX-9, the CT-8/CO-8 pattern). */
+export const EXAM_STATUSES = [
+  "PLANNED", "IN_PROGRESS", "MARKING", "TABULATED", "APPROVED", "PUBLISHED", "ARCHIVED",
+] as const;
+export type ExamStatus = (typeof EXAM_STATUSES)[number];
+export const EXAM_STATUS_LABELS_BN: Record<ExamStatus, string> = {
+  PLANNED: "পরিকল্পিত",
+  IN_PROGRESS: "চলমান",
+  MARKING: "খাতা মূল্যায়ন",
+  TABULATED: "নম্বর সংকলিত",
+  APPROVED: "অনুমোদিত",
+  PUBLISHED: "প্রকাশিত",
+  ARCHIVED: "সংরক্ষিত",
+};
+export const EXAM_STATUS_LABELS_EN: Record<ExamStatus, string> = {
+  PLANNED: "Planned",
+  IN_PROGRESS: "In progress",
+  MARKING: "Marking",
+  TABULATED: "Tabulated",
+  APPROVED: "Approved",
+  PUBLISHED: "Published",
+  ARCHIVED: "Archived",
+};
+
+/** The report card's three mark columns. ADAB is printed "Performance" on the English
+ *  transcript and written "আদব" on the Bangla mark sheets — ONE value, two names, one
+ *  code. Composition is PER PAPER, never per class band (D-#376). */
+export const EXAM_COMPONENTS = ["CT", "ADAB", "FINAL"] as const;
+export type ExamComponent = (typeof EXAM_COMPONENTS)[number];
+export const EXAM_COMPONENT_LABELS_BN: Record<ExamComponent, string> = {
+  CT: "শ্রেণি পরীক্ষা",
+  ADAB: "আদব",
+  FINAL: "সেমিস্টার ফাইনাল",
+};
+export const EXAM_COMPONENT_LABELS_EN: Record<ExamComponent, string> = {
+  CT: "CT",
+  ADAB: "Performance",
+  FINAL: "Semester Final",
+};
+
+/** Per-COMPONENT attendance (D-#377f): `Ab` appears in a lone Semester-Final cell while
+ *  CT/Adab still carry marks. An absent component contributes 0 and prints "Ab", and does
+ *  NOT drop the student from cohort denominators. */
+export const MARK_ENTRY_STATUSES = ["PRESENT", "ABSENT"] as const;
+export type MarkEntryStatus = (typeof MARK_ENTRY_STATUSES)[number];
+export const MARK_ENTRY_STATUS_LABELS_BN: Record<MarkEntryStatus, string> = {
+  PRESENT: "উপস্থিত",
+  ABSENT: "অনুপস্থিত",
+};
+export const MARK_ENTRY_STATUS_LABELS_EN: Record<MarkEntryStatus, string> = {
+  PRESENT: "Present",
+  ABSENT: "Ab",
+};
+
+/** Grade letters. Codes are identifier-safe; DISPLAY carries the printed glyph. The
+ *  point/percent BANDS are NOT here — they are stored per `Exam` so a future year can
+ *  re-band without a code change (D-#377). */
+export const GRADE_LETTERS = ["A_PLUS", "A", "A_MINUS", "B", "C", "F"] as const;
+export type GradeLetter = (typeof GRADE_LETTERS)[number];
+export const GRADE_LETTER_DISPLAY: Record<GradeLetter, string> = {
+  A_PLUS: "A+", A: "A", A_MINUS: "A-", B: "B", C: "C", F: "F",
+};
+
+/** The default scale printed on every 2026 card. Seeded onto a new `Exam`; editable
+ *  per exam thereafter. `maxPercent` is inclusive. */
+export const DEFAULT_GRADE_SCALE = [
+  { letter: "A_PLUS",  point: 5,   minPercent: 80, maxPercent: 100 },
+  { letter: "A",       point: 4,   minPercent: 70, maxPercent: 79.99 },
+  { letter: "A_MINUS", point: 3.5, minPercent: 60, maxPercent: 69.99 },
+  { letter: "B",       point: 3,   minPercent: 50, maxPercent: 59.99 },
+  { letter: "C",       point: 2,   minPercent: 40, maxPercent: 49.99 },
+  { letter: "F",       point: 0,   minPercent: 0,  maxPercent: 39.99 },
+] as const satisfies readonly { letter: GradeLetter; point: number; minPercent: number; maxPercent: number }[];
+
+/** How the CT component is pulled from the class-test tracker. BOTH ship (D-#378) —
+ *  set on the Exam, overridable per paper. */
+export const CT_AGGREGATION_MODES = ["MEAN", "BEST_N"] as const;
+export type CtAggregationMode = (typeof CT_AGGREGATION_MODES)[number];
+export const CT_AGGREGATION_MODE_LABELS_BN: Record<CtAggregationMode, string> = {
+  MEAN: "গড়",
+  BEST_N: "সেরা কয়টি",
+};
+export const CT_AGGREGATION_MODE_LABELS_EN: Record<CtAggregationMode, string> = {
+  MEAN: "Mean of all tests",
+  BEST_N: "Best N tests",
+};
+export const CT_AGGREGATION_DEFAULT_BEST_N = 3;
+
+/** Exam duty assignments (EX-2). These are ASSIGNMENT ROWS, not `ROLES` entries — the
+ *  single TEACHER role is never widened (the CO-1 / D-#42 pattern). */
+export const EXAM_DUTY_ROLES = [
+  "INVIGILATOR", "CHECKER", "RECHECKER", "TABULATOR", "MARK_RECHECKER",
+] as const;
+export type ExamDutyRole = (typeof EXAM_DUTY_ROLES)[number];
+export const EXAM_DUTY_ROLE_LABELS_BN: Record<ExamDutyRole, string> = {
+  INVIGILATOR: "পরীক্ষার দায়িত্বে",
+  CHECKER: "খাতা চেককারী",
+  RECHECKER: "খাতা রিচেককারী",
+  TABULATOR: "নম্বর সংকলনকারী",
+  MARK_RECHECKER: "নম্বর রিচেককারী",
+};
+export const EXAM_DUTY_ROLE_LABELS_EN: Record<ExamDutyRole, string> = {
+  INVIGILATOR: "Invigilator",
+  CHECKER: "Checker",
+  RECHECKER: "Rechecker",
+  TABULATOR: "Tabulator",
+  MARK_RECHECKER: "Mark rechecker",
+};
+
+// --- A.20b EXAM CUSTODY CHAIN (EX-6/EX-7, D-#382) ----------------------------
+// The owner's core ask. The paper mark sheets carry names and signatures but NO counts and
+// no issue/return record, so "how many scripts went out, how many came back" was
+// unanswerable. Every physical handover is now a two-signature event carrying a count.
+
+/** The 13 real-world steps, in order, from printing the papers to filing the scripts. */
+export const CUSTODY_STAGES = [
+  "QUESTION_ISSUE",         // Office → invigilator: printed papers + blank scripts
+  "QUESTION_RETURN_UNUSED", // invigilator → Office: papers NOT used
+  "SCRIPT_RETURN",          // invigilator → Office: the used answer scripts
+  "CHECK_ISSUE",            // Office → checker
+  "CHECK_RETURN",           // checker → Office
+  "RECHECK_ISSUE",          // Office → rechecker
+  "RECHECK_RETURN",         // rechecker → Office
+  "TABULATION_ISSUE",       // Office → tabulator (mark sheet)
+  "TABULATION_RETURN",      // tabulator → Office
+  "MARK_RECHECK_ISSUE",     // Office → mark-rechecker
+  "MARK_RECHECK_RETURN",    // mark-rechecker → Office
+  "ARCHIVE",                // Office → store
+] as const;
+export type CustodyStage = (typeof CUSTODY_STAGES)[number];
+export const CUSTODY_STAGE_LABELS_BN: Record<CustodyStage, string> = {
+  QUESTION_ISSUE: "প্রশ্ন সরবরাহ",
+  QUESTION_RETURN_UNUSED: "অব্যবহৃত প্রশ্ন ফেরত",
+  SCRIPT_RETURN: "উত্তরপত্র ফেরত",
+  CHECK_ISSUE: "চেকের জন্য প্রদান",
+  CHECK_RETURN: "চেক শেষে ফেরত",
+  RECHECK_ISSUE: "রিচেকের জন্য প্রদান",
+  RECHECK_RETURN: "রিচেক শেষে ফেরত",
+  TABULATION_ISSUE: "সংকলনের জন্য প্রদান",
+  TABULATION_RETURN: "সংকলন শেষে ফেরত",
+  MARK_RECHECK_ISSUE: "নম্বর রিচেকের জন্য প্রদান",
+  MARK_RECHECK_RETURN: "নম্বর রিচেক শেষে ফেরত",
+  ARCHIVE: "সংরক্ষণাগারে জমা",
+};
+export const CUSTODY_STAGE_LABELS_EN: Record<CustodyStage, string> = {
+  QUESTION_ISSUE: "Question issue",
+  QUESTION_RETURN_UNUSED: "Unused questions returned",
+  SCRIPT_RETURN: "Answer scripts returned",
+  CHECK_ISSUE: "Issued for checking",
+  CHECK_RETURN: "Returned from checking",
+  RECHECK_ISSUE: "Issued for rechecking",
+  RECHECK_RETURN: "Returned from rechecking",
+  TABULATION_ISSUE: "Issued for tabulation",
+  TABULATION_RETURN: "Returned from tabulation",
+  MARK_RECHECK_ISSUE: "Issued for mark recheck",
+  MARK_RECHECK_RETURN: "Returned from mark recheck",
+  ARCHIVE: "Archived",
+};
+
+/** What physically moved. */
+export const CUSTODY_ITEM_KINDS = ["QUESTION_PAPER", "BLANK_SCRIPT", "ANSWER_SCRIPT", "MARK_SHEET"] as const;
+export type CustodyItemKind = (typeof CUSTODY_ITEM_KINDS)[number];
+export const CUSTODY_ITEM_KIND_LABELS_BN: Record<CustodyItemKind, string> = {
+  QUESTION_PAPER: "প্রশ্নপত্র",
+  BLANK_SCRIPT: "খালি খাতা",
+  ANSWER_SCRIPT: "উত্তরপত্র",
+  MARK_SHEET: "মার্কশিট",
+};
+export const CUSTODY_ITEM_KIND_LABELS_EN: Record<CustodyItemKind, string> = {
+  QUESTION_PAPER: "Question paper",
+  BLANK_SCRIPT: "Blank script",
+  ANSWER_SCRIPT: "Answer script",
+  MARK_SHEET: "Mark sheet",
+};
+
+/** DISPUTED is a valid TERMINAL state, not an error: it carries BOTH counts plus a note.
+ *  The app never overwrites one person's count with the other's — that is the entire point
+ *  of recording a chain (D-#382). */
+export const CUSTODY_EVENT_STATUSES = ["PENDING_ACK", "ACKNOWLEDGED", "DISPUTED", "CANCELLED"] as const;
+export type CustodyEventStatus = (typeof CUSTODY_EVENT_STATUSES)[number];
+export const CUSTODY_EVENT_STATUS_LABELS_BN: Record<CustodyEventStatus, string> = {
+  PENDING_ACK: "গ্রহণের অপেক্ষায়",
+  ACKNOWLEDGED: "গৃহীত",
+  DISPUTED: "সংখ্যায় গরমিল",
+  CANCELLED: "বাতিল",
+};
+export const CUSTODY_EVENT_STATUS_LABELS_EN: Record<CustodyEventStatus, string> = {
+  PENDING_ACK: "Awaiting acknowledgement",
+  ACKNOWLEDGED: "Acknowledged",
+  DISPUTED: "Count disputed",
+  CANCELLED: "Cancelled",
+};
+
+/** Every paper's components must sum to this (D-#376): the only composition guard. */
+export const EXAM_PAPER_COMPONENT_TOTAL = 100;
+
+/** Paper-scale conversion rounds to NEAREST 0.5 (D-#377a). THE single implementation —
+ *  the marking screen's live preview and the report-card renderer BOTH call this. Two
+ *  rounding sites is exactly how the printed card and the on-screen figure drift apart. */
+export function roundToHalf(value: number): number {
+  return Math.round(value * 2) / 2;
+}
+
+/** Convert a raw mark against its paper's own full marks onto a component's scale.
+ *  Derived on read, NEVER stored (D-#85). */
+export function convertMark(rawMark: number, paperFullMarks: number, componentMax: number): number {
+  if (paperFullMarks <= 0) throw new Error("paperFullMarks must be > 0");
+  return roundToHalf((rawMark / paperFullMarks) * componentMax);
+}
+
 
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
@@ -2783,6 +3029,11 @@ export const PERMISSIONS = [
   "observation:manage",    // designations, cadence config, dashboards, override reads (Principal/Office; CO-1)
   // finance / accounting (app-native; Finance module, D-#221 — Principal+Office)
   "finance:manage",        // ledgers, opening balances, postings, reconciliation, budgets, dashboard (Principal/Office; FIN-1). Distinct from roster:manage so AC-1 can grant the books to the accountant alone (D-#221)
+  // exams / report cards (app-native; Exams module, D-#375–#382)
+  "exam:manage",           // create exams/papers/grade scale, assign duty, approve+publish report cards, re-open a tabulated paper (Principal/Office; EX-1/EX-9)
+  "exam:custody",          // record + acknowledge a physical handover of questions/scripts/mark sheets (Principal/Office AND any TEACHER named on the event — the resolver gates to from/to, EX-6)
+  "exam:mark",             // TEACHER base perm — enter/recheck/tabulate marks; the RESOLVER gates it to the ExamAssignment for that paper (EX-3/EX-4, the observation:review pattern)
+  "exam:read",             // read exams/papers/marks/report cards, ROW-SCOPED in the resolver. Staff-internal — GUARDIAN reads a PUBLISHED card via guardian:read_child, never this
   // guardian portal (ACTIVE since GP-1, D-#68)
   "guardian:read_child",   // reads linked children's permitted operational slices
 ] as const;
@@ -2832,6 +3083,10 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "observation:read": "build",    // Classroom-Observation CO-1 (row-scoped read, D-#195)
   "observation:manage": "build",  // Classroom-Observation CO-1 (config/dashboards, D-#195)
   "finance:manage": "build",      // Finance FIN-1 (ledgers + opening balances, D-#221)
+  "exam:manage": "build",         // Exams EX-1 (exam/paper/grade-scale + publish gate, D-#375)
+  "exam:custody": "build",        // Exams EX-6 (two-signature handover, D-#382)
+  "exam:mark": "build",           // Exams EX-3 (assignment-gated mark entry, D-#375)
+  "exam:read": "build",           // Exams EX-1 (row-scoped staff read, D-#375)
   "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
 };
 
@@ -2857,6 +3112,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "access:manage",         // PRINCIPAL ONLY (Access Control AC-1, D-#193/#212) — RESERVED-locked; Office/Teacher/Guardian never get it
     "observation:upload", "observation:read", "observation:manage", // classroom observation (CO-1, D-#195) — NOT observation:review (the observer is an assigned TEACHER, D-#147)
     "finance:manage",        // finance/accounting (FIN-1, D-#221) — Principal+Office
+    "exam:manage", "exam:custody", "exam:read", // exams (D-#375) — NOT exam:mark (checkers/recheckers are assigned TEACHERs, the observation:review pattern)
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
   // fills trackers; authors nothing in-app (no content:import). message:dispatch
@@ -2874,6 +3130,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "message:dispatch",
     "observation:review",    // the assigned senior-teacher observer scores+comments — gated to observerId in the resolver (CO-1, D-#147)
     "observation:read",      // read own observations as observer + own (observed) at/after REVIEWED — row-scoped in the resolver (CO-1)
+    "exam:mark",             // enter/recheck/tabulate marks — gated to the teacher's ExamAssignment for that paper in the resolver (EX-3/EX-4, D-#375)
+    "exam:custody",          // acknowledge a handover addressed to them / hand on to the next holder — gated to from/to in the resolver (EX-6, D-#382)
+    "exam:read",             // read own papers' marks + own duty list, row-scoped in the resolver (EX-1)
   ],
   // Roster, guardian linkage, messaging dispatch (REQ §2), plus content import (the
   // publisher seam), plan-review assignment (D-#39), and routine authoring (D-#46).
@@ -2887,6 +3146,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "chat:read", "chat:write", "chat:manage", // staff chat + group/posting-policy admin (D-#76/#78); NO chat:oversee (Principal only, D-#77)
     "observation:upload", "observation:read", "observation:manage", // classroom observation: upload+assign, row-scoped read, config (CO-1, D-#195); NOT observation:review (the observer is an assigned TEACHER)
     "finance:manage",        // finance/accounting (FIN-1, D-#221) — the accountant's books (Principal+Office)
+    "exam:manage", "exam:custody", "exam:read", // exams: the Office runs the exam cycle and is the hub of every custody handover (D-#375/#382); NOT exam:mark
   ],
   // Guardian portal v1 (GP-1, D-#68): the single grant is ACTIVE — guardian-scoped
   // resolvers read linked children only (assertGuardianOfStudent, link-scoped).
@@ -3050,6 +3310,10 @@ export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
   "observation:read": { name: "অবজারভেশন পড়া", desc: "রো-স্কোপড অবজারভেশন পড়া" },
   "observation:manage": { name: "অবজারভেশন পরিচালনা", desc: "ডেজিগনেশন, কনফিগ ও ড্যাশবোর্ড" },
   "finance:manage": { name: "অর্থ ব্যবস্থাপনা", desc: "লেজার, ব্যালেন্স, পোস্টিং ও হিসাব" },
+  "exam:manage": { name: "পরীক্ষা পরিচালনা", desc: "পরীক্ষা ও বিষয়পত্র তৈরি, দায়িত্ব বণ্টন, ফল অনুমোদন ও প্রকাশ" },
+  "exam:custody": { name: "খাতা-প্রশ্নের হস্তান্তর", desc: "প্রশ্ন, খাতা ও মার্কশিট হস্তান্তর নথিভুক্ত ও গ্রহণ স্বীকার" },
+  "exam:mark": { name: "খাতা মূল্যায়ন", desc: "বরাদ্দকৃত বিষয়পত্রে নম্বর প্রদান, রিচেক ও সংকলন" },
+  "exam:read": { name: "পরীক্ষার তথ্য দেখা", desc: "রো-স্কোপড পরীক্ষা, নম্বর ও ফলাফল পড়া" },
   "guardian:read_child": { name: "সন্তানের তথ্য দেখা (অভিভাবক প্লেন)", desc: "অভিভাবক প্লেন — স্টাফকে দেওয়া যায় না" },
 };
 
@@ -3095,5 +3359,9 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "observation:read": { name: "Read observation", desc: "Row-scoped observation read" },
   "observation:manage": { name: "Manage observation", desc: "Designations, config, dashboards" },
   "finance:manage": { name: "Manage finance", desc: "Ledgers, balances, postings, accounts" },
+  "exam:manage": { name: "Manage exams", desc: "Create exams/papers, assign duty, approve and publish results" },
+  "exam:custody": { name: "Exam custody", desc: "Record and acknowledge handovers of questions, scripts, mark sheets" },
+  "exam:mark": { name: "Mark exam scripts", desc: "Enter, recheck and tabulate marks on an assigned paper" },
+  "exam:read": { name: "Read exams", desc: "Row-scoped read of exams, marks and report cards" },
   "guardian:read_child": { name: "Read child (guardian plane)", desc: "Guardian plane — not grantable to staff" },
 };
