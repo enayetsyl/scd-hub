@@ -251,7 +251,7 @@ builder.mutationField("reopenExamPaper", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      if (!isManager(ctx)) throw new ForbiddenError("পুনরায় খোলা অফিস বা অধ্যক্ষের কাজ");
+      if (!isManager(ctx)) throw new ForbiddenError("পুনরায় খোলা অফিস বা প্রধান শিক্ষকের কাজ");
       try {
         return await reopenPaper(args.paperId, args.reason, ctx.auth.userId);
       } catch (err) { rethrow(err); }

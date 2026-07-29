@@ -31,7 +31,7 @@ function assertExamReader(ctx: AppContext): void {
 function assertExamManager(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (!callerHasPermission(ctx.auth, "exam:manage")) {
-    throw new ForbiddenError("এই কাজ অফিস বা অধ্যক্ষের");
+    throw new ForbiddenError("এই কাজ অফিস বা প্রধান শিক্ষকের");
   }
 }
 

@@ -23,7 +23,7 @@ import { User } from "../../foundation/models/User";
 function assertExamManager(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (!callerHasPermission(ctx.auth, "exam:manage")) {
-    throw new ForbiddenError("দায়িত্ব বণ্টন অফিস বা অধ্যক্ষের কাজ");
+    throw new ForbiddenError("দায়িত্ব বণ্টন অফিস বা প্রধান শিক্ষকের কাজ");
   }
 }
 

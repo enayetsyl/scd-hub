@@ -29,7 +29,7 @@ import type { IExamPaper } from "../models/ExamPaper";
 function assertExamManager(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (!callerHasPermission(ctx.auth, "exam:manage")) {
-    throw new ForbiddenError("পরীক্ষা পরিচালনা অফিস বা অধ্যক্ষের কাজ");
+    throw new ForbiddenError("পরীক্ষা পরিচালনা অফিস বা প্রধান শিক্ষকের কাজ");
   }
 }
 

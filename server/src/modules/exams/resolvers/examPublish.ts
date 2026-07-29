@@ -21,7 +21,7 @@ import type { IExam } from "../models/Exam";
 function assertExamManager(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (!callerHasPermission(ctx.auth, "exam:manage")) {
-    throw new ForbiddenError("অনুমোদন অফিস বা অধ্যক্ষের কাজ");
+    throw new ForbiddenError("অনুমোদন অফিস বা প্রধান শিক্ষকের কাজ");
   }
 }
 
