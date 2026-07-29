@@ -58,6 +58,8 @@ import {
   sweepHomeworkAutoIssue,
   buildIssueRoster,
   HW_AUTO_ISSUE_ACTOR_ID,
+  autoIssueWindow,
+  HW_AUTO_ISSUE_LOOKBACK_SCHOOL_DAYS,
 } from "../modules/trackers/services/HomeworkAutoIssueService";
 
 const oid = () => new mongoose.Types.ObjectId();
@@ -69,9 +71,27 @@ const NOW = new Date(2026, 6, 14, 13, 0, 0); // Tue 13:00 local
 
 const student = (id: mongoose.Types.ObjectId) => ({ _id: id, sectionId: SECTION_ID, classId: CLASS_ID });
 
+/** Midnight of a Date, the key the sweep's per-day query is built from. */
+const midnight = (d: Date): number => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+/**
+ * D-#389: the sweep now queries ONE DAY AT A TIME across a lookback window, so a
+ * blanket mockResolvedValue would hand the same class back on all five days and
+ * every count would be 5×. This helper answers only for the days named, which is
+ * what "there is a declared item on day X" actually means.
+ */
+function declaredOn(days: Date[]): void {
+  const wanted = new Set(days.map(midnight));
+  mockItemFind.mockImplementation((filter: { dateGiven?: { $gte?: Date } }) => {
+    const from = filter?.dateGiven?.$gte;
+    if (!from || !wanted.has(midnight(from))) return Promise.resolve([]);
+    return Promise.resolve([{ classId: CLASS_ID, sectionId: SECTION_ID }]);
+  });
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
-  mockItemFind.mockResolvedValue([{ classId: CLASS_ID, sectionId: SECTION_ID }]);
+  declaredOn([NOW]);
   mockReconFind.mockResolvedValue([]);
   mockStudentFind.mockResolvedValue([student(S1), student(S2)]);
   // Both students attend via their section; the section's day record is marked.
@@ -149,6 +169,73 @@ describe("D-#314 sweepHomeworkAutoIssue", () => {
     mockItemFind.mockResolvedValue([]);
     const res = await sweepHomeworkAutoIssue(NOW);
     expect(res).toEqual({ issued: 0, deferred: 0 });
+    expect(mockStudentFind).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * D-#389 — the sweep looks back over recent school days, not just today.
+ *
+ * The bug it closes: the sweep queried `dateGiven` = TODAY only and ran 12:00–17:00,
+ * so a class whose last declaration or attendance landed after 17:00 was never looked
+ * at again and its items stayed `declared` forever. 6 of the 24 items purged on
+ * 2026-07-28 died that way with every gate passing.
+ */
+describe("D-#389 lookback window", () => {
+  test("returns school days only, newest first, bounded by the lookback", () => {
+    // Tue 2026-07-14. Walking back: Tue, Mon, Sun, then Sat+Fri are NOT school days,
+    // so the window must skip them and reach back into the prior week.
+    const days = autoIssueWindow(NOW);
+    expect(days).toHaveLength(HW_AUTO_ISSUE_LOOKBACK_SCHOOL_DAYS);
+    expect(days.every((d) => d.getDay() !== 5 && d.getDay() !== 6)).toBe(true);
+    for (let i = 1; i < days.length; i += 1) {
+      expect(days[i].getTime()).toBeLessThan(days[i - 1].getTime());
+    }
+    expect(days[0].getDate()).toBe(NOW.getDate()); // today is included
+  });
+
+  test("a day stranded BEFORE today is still recovered", async () => {
+    const twoSchoolDaysAgo = autoIssueWindow(NOW)[2];
+    declaredOn([twoSchoolDaysAgo]); // nothing declared today at all
+
+    const res = await sweepHomeworkAutoIssue(NOW);
+
+    expect(res).toEqual({ issued: 1, deferred: 0 });
+    // Confirmed as ITSELF — the stale day, never `now`.
+    expect(mockConfirm).toHaveBeenCalledTimes(1);
+    const { date } = mockConfirm.mock.calls[0][0];
+    expect(midnight(date)).toBe(midnight(twoSchoolDaysAgo));
+  });
+
+  test("each day's roster is built from THAT day's attendance", async () => {
+    const older = autoIssueWindow(NOW)[1];
+    declaredOn([older]);
+
+    await sweepHomeworkAutoIssue(NOW);
+
+    // buildIssueRoster keys attendance by dateKey; using today's would spawn records
+    // off the wrong day's absentees.
+    const dateKeys = mockDayFind.mock.calls.map((c) => (c[0] as { dateKey: string }).dateKey);
+    expect(dateKeys.every((k) => k !== undefined)).toBe(true);
+    expect(new Set(dateKeys).size).toBe(1);
+    expect(dateKeys[0]).not.toBe("2026-07-14"); // not today
+  });
+
+  test("several stranded days are each issued once", async () => {
+    const w = autoIssueWindow(NOW);
+    declaredOn([w[0], w[2], w[3]]);
+
+    const res = await sweepHomeworkAutoIssue(NOW);
+
+    expect(res).toEqual({ issued: 3, deferred: 0 });
+    expect(mockConfirm).toHaveBeenCalledTimes(3);
+  });
+
+  test("a quiet window costs nothing beyond the per-day item query", async () => {
+    declaredOn([]);
+    const res = await sweepHomeworkAutoIssue(NOW);
+    expect(res).toEqual({ issued: 0, deferred: 0 });
+    expect(mockItemFind).toHaveBeenCalledTimes(HW_AUTO_ISSUE_LOOKBACK_SCHOOL_DAYS);
     expect(mockStudentFind).not.toHaveBeenCalled();
   });
 });
