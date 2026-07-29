@@ -24,6 +24,7 @@ import {
 import { ExamError } from "../services/ExamService";
 import { assertAssignedTo } from "../services/ExamAssignmentService";
 import { ExamPaper } from "../models/ExamPaper";
+import { Student } from "../../foundation/models/Student";
 import type { IExamMark } from "../models/ExamMark";
 
 const isManager = (ctx: AppContext): boolean =>
@@ -100,6 +101,48 @@ CtProposalRef.implement({
     bestN: t.exposeInt("bestN"),
   }),
 });
+
+const RosterStudentRef = builder.objectRef<{
+  id: string; schoolId: string; name: string; rollNumber: string | null;
+}>("ExamRosterStudent");
+RosterStudentRef.implement({
+  description:
+    "The roster a paper is marked against, in printed (schoolId) order — the same order " +
+    "as the paper mark sheet, so transcription is line-for-line.",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    schoolId: t.exposeString("schoolId"),
+    name: t.exposeString("name"),
+    rollNumber: t.string({ nullable: true, resolve: (s) => s.rollNumber }),
+  }),
+});
+
+builder.queryField("examPaperRoster", (t) =>
+  t.field({
+    type: [RosterStudentRef],
+    description:
+      "Active students for a paper's class (narrowed to its section when it has one). " +
+      "Exposed as its own read so no screen has to re-derive how a paper maps to a roster.",
+    authScopes: { authenticated: true },
+    args: { paperId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      assertExamReader(ctx);
+      const paper = await ExamPaper.findById(args.paperId);
+      if (!paper) throw new ForbiddenError("বিষয়পত্র পাওয়া যায়নি");
+      const filter: Record<string, unknown> = { classId: paper.classId, active: true };
+      if (paper.sectionId) filter.sectionId = paper.sectionId;
+      const rows = await Student.find(filter);
+      return rows
+        .map((s) => ({
+          id: s._id.toString(),
+          schoolId: s.schoolId,
+          name: s.name,
+          rollNumber: s.rollNumber ?? null,
+        }))
+        .sort((a, b) => a.schoolId.localeCompare(b.schoolId));
+    },
+  }),
+);
 
 builder.queryField("examMarks", (t) =>
   t.field({

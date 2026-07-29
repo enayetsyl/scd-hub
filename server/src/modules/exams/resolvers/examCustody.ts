@@ -116,6 +116,34 @@ BalanceRef.implement({
 // Queries
 // ---------------------------------------------------------------------------
 
+const RecipientRef = builder.objectRef<{ id: string; name: string; role: string }>("ExamCustodyRecipient");
+RecipientRef.implement({
+  description:
+    "Staff a handover may be addressed to. Gated on exam:custody rather than user:manage — " +
+    "an Office clerk must be able to pick a receiver without holding the account-admin " +
+    "permission, and only active staff can sign for anything.",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    name: t.exposeString("name"),
+    role: t.exposeString("role"),
+  }),
+});
+
+builder.queryField("examCustodyRecipients", (t) =>
+  t.field({
+    type: [RecipientRef],
+    description: "Active staff (Principal/Office/Teacher) who can receive a handover.",
+    authScopes: { authenticated: true },
+    resolve: async (_root, _args, ctx) => {
+      assertCustody(ctx);
+      const rows = await User.find({ role: { $in: ["PRINCIPAL", "OFFICE", "TEACHER"] }, active: true });
+      return rows
+        .map((u) => ({ id: u._id.toString(), name: u.name as string, role: u.role as string }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    },
+  }),
+);
+
 builder.queryField("examCustodyEvents", (t) =>
   t.field({
     type: [CustodyEventRef],
