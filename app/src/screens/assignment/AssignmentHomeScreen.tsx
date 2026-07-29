@@ -248,9 +248,21 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
             ) : null}
 
             <Card>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Body style={{ fontWeight: "700" }}>{STR.asThisWeek}</Body>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+              {/* Wraps on a narrow screen (owner report 2026-07-29): the title and the
+                  week stepper could not both fit on a phone, and the row did not wrap,
+                  so the ▶ (next week) chip was pushed off the right edge — the week was
+                  navigable backwards only. */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: space(2),
+                }}
+              >
+                <Body style={{ fontWeight: "700", flexShrink: 1 }}>{STR.asThisWeek}</Body>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), flexShrink: 0 }}>
                   <Chip label="◀" onPress={() => setWeek(Math.max(1, weekNumber - 1))} />
                   <Body>
                     {expected
