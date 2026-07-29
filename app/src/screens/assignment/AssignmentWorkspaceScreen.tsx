@@ -9,15 +9,18 @@
  *   ③ ফেরত  — RosterChipPass over CHECKED/RESUBMIT → assignmentReturnPass;
  *              a secondary পুনঃজমা list issues the explicit resubmission (D-#87)
  *
- * Section + class arrive as route params (from an AssignmentHome cell). Absent-at-
- * delivery students sit behind the redeliver toggle inside the fold (redeliver → GIVEN);
- * manual re-chase of an already-chased student is the "তাগাদা" secondary control under ①.
+ * The class is chosen HERE, from the always-visible class chips (D-#385) — the same
+ * browse the homework workspace has. Arriving from an AssignmentHome week-grid cell
+ * passes that cell's section as route params, which the screen adopts into the shared
+ * selection on mount; from then on the chips drive it. Absent-at-delivery students sit
+ * behind the redeliver toggle inside the fold (redeliver → GIVEN); manual re-chase of
+ * an already-chased student is the "তাগাদা" secondary control under ①.
  *
  * Each card is a FOLD (owner ask 2026-07-28, D-#371 — the homework fold applied to this
  * twin): collapsed by default with the per-stage counts on the header, so a section with
  * several subjects opens as a scannable index rather than one long roster scroll.
  */
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { ScrollView, View, RefreshControl, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -105,15 +108,31 @@ function groupByItem(records: readonly AsOpenRecordT[]): ItemGroup[] {
 }
 
 export default function AssignmentWorkspaceScreen({ route }: Props): React.ReactElement {
-  // D-#385: two ways in. A week-grid cell passes the section explicitly (that
-  // drill-in must keep pinning exactly the cell you tapped). Opening the tab
-  // directly passes nothing and falls back to the shared section selection, so
-  // the screen browses by class chip like the homework workspace does.
-  const { selection, hasSection: contextHasSection } = useSectionContext();
-  const pinned = route.params ?? null;
-  const sectionId = pinned?.sectionId ?? selection.sectionId ?? "";
-  const classId = pinned?.classId ?? selection.classId ?? "";
-  const hasSection = pinned ? true : contextHasSection;
+  // D-#385 (+ owner correction 2026-07-29): the class chips are ALWAYS shown, so
+  // the class is switchable from here no matter how you arrived. A week-grid cell
+  // still lands you on the right class — it does so by ADOPTING its section into
+  // the shared selection once on mount, rather than pinning it behind the chips.
+  // (Pinning was the original call; it left a drill-in with no way to switch.)
+  const { selection, hasSection, setSection } = useSectionContext();
+  const pinnedRef = useRef(route.params ?? null);
+
+  useEffect(() => {
+    const p = pinnedRef.current;
+    if (!p) return; // arrived from the nav — the existing selection stands
+    setSection({
+      classId: p.classId,
+      sectionId: p.sectionId,
+      // Labels are unknown here; ClassSectionDashboard resolves them from its own
+      // query and highlights by id, so null is safe.
+      classLevel: null,
+      classNameBn: null,
+      sectionCode: null,
+      sectionNameBn: null,
+    });
+  }, [setSection]);
+
+  const sectionId = selection.sectionId ?? "";
+  const classId = selection.classId ?? "";
 
   const [recsQ, refetchRecs] = useQuery({
     query: AS_OPEN_RECORDS,
@@ -186,13 +205,11 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
 
   return (
     <Screen padded={false}>
-      {/* Only when we arrived WITHOUT a pinned cell — a drill-in from the week grid
-          must not offer a class switcher that would silently leave that cell. */}
-      {pinned ? null : (
-        <View style={{ padding: space(4), paddingBottom: 0 }}>
-          <ClassSectionDashboard />
-        </View>
-      )}
+      {/* Always present: the class is switchable from the workspace itself,
+          however you got here (owner ask 2026-07-29). */}
+      <View style={{ padding: space(4), paddingBottom: 0 }}>
+        <ClassSectionDashboard />
+      </View>
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, padding: space(4) }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
