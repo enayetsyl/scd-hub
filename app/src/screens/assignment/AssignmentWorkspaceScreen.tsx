@@ -39,6 +39,10 @@ import {
 import { useConfirm } from "../../state/ConfirmContext";
 import { RosterChipPass } from "../../components/RosterChipPass";
 import { CardGrid } from "../../components/CardGrid";
+import { SubjectFold } from "../../components/SubjectFold";
+import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
+import { useSectionContext } from "../../state/SectionContext";
+import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel, hwResultLabel, classLevelLabel, lifecycleStateLabel, dhakaDateKey } from "../../lib/labels";
@@ -101,11 +105,20 @@ function groupByItem(records: readonly AsOpenRecordT[]): ItemGroup[] {
 }
 
 export default function AssignmentWorkspaceScreen({ route }: Props): React.ReactElement {
-  const { sectionId, classId } = route.params;
+  // D-#385: two ways in. A week-grid cell passes the section explicitly (that
+  // drill-in must keep pinning exactly the cell you tapped). Opening the tab
+  // directly passes nothing and falls back to the shared section selection, so
+  // the screen browses by class chip like the homework workspace does.
+  const { selection, hasSection: contextHasSection } = useSectionContext();
+  const pinned = route.params ?? null;
+  const sectionId = pinned?.sectionId ?? selection.sectionId ?? "";
+  const classId = pinned?.classId ?? selection.classId ?? "";
+  const hasSection = pinned ? true : contextHasSection;
 
   const [recsQ, refetchRecs] = useQuery({
     query: AS_OPEN_RECORDS,
     variables: { sectionId, classId, states: OPEN_STATES },
+    pause: !hasSection,
   });
   // D-#383: card-header pipeline counts. Server-side because the rows above are
   // open-work only (RETURNED falls off after today), so a finished item has no rows
@@ -113,6 +126,7 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
   const [talliesQ, refetchTallies] = useQuery({
     query: ASSIGNMENT_ITEM_TALLIES,
     variables: { sectionId, classId },
+    pause: !hasSection,
   });
   const tallyByItem = useMemo(
     () => new Map((talliesQ.data?.assignmentItemTallies ?? []).map((t) => [t.asItemId, t])),
@@ -149,13 +163,43 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
 
   const { refreshing, onRefresh } = usePullRefresh(recsQ.fetching, refresh);
 
+  // Subjects this caller actually teaches on the section — others fold away
+  // rather than crowding the list (same posture as the homework workspace).
+  const taught = useTaughtSubjects(hasSection ? sectionId : null);
+
+  const renderCards = (recs: AsOpenRecordT[]): React.ReactNode => (
+    <CardGrid>
+      {groupByItem(recs).map((g) => (
+        <ItemCard
+          key={g.asItemId}
+          group={g}
+          tally={tallyByItem.get(g.asItemId) ?? null}
+          sectionId={sectionId}
+          open={openItemId === g.asItemId}
+          onToggle={() => setOpenItemId((id) => (id === g.asItemId ? null : g.asItemId))}
+          onDone={refresh}
+          onNotify={notify}
+        />
+      ))}
+    </CardGrid>
+  );
+
   return (
     <Screen padded={false}>
+      {/* Only when we arrived WITHOUT a pinned cell — a drill-in from the week grid
+          must not offer a class switcher that would silently leave that cell. */}
+      {pinned ? null : (
+        <View style={{ padding: space(4), paddingBottom: 0 }}>
+          <ClassSectionDashboard />
+        </View>
+      )}
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, padding: space(4) }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {recsQ.fetching && records.length === 0 ? (
+        {!hasSection ? (
+          <EmptyState message={STR.pickSection} />
+        ) : recsQ.fetching && records.length === 0 ? (
           <Loader label={STR.loading} />
         ) : records.length === 0 ? (
           <EmptyState message={STR.asPassNoOpenItems} />
@@ -163,20 +207,8 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
           <>
             {ok ? <Notice message={ok} tone="ok" /> : null}
             {error ? <Notice message={error} tone="danger" /> : null}
-            <CardGrid>
-              {groupByItem(records).map((g) => (
-                <ItemCard
-                  key={g.asItemId}
-                  group={g}
-                  tally={tallyByItem.get(g.asItemId) ?? null}
-                  sectionId={sectionId}
-                  open={openItemId === g.asItemId}
-                  onToggle={() => setOpenItemId((id) => (id === g.asItemId ? null : g.asItemId))}
-                  onDone={refresh}
-                  onNotify={notify}
-                />
-              ))}
-            </CardGrid>
+            {/* Keyed by section so the fold state resets when the class chip changes. */}
+            <SubjectFold key={sectionId} records={records} taught={taught} render={renderCards} />
           </>
         )}
       </ScrollView>
