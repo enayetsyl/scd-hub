@@ -17,12 +17,18 @@
  * sentinel, autoIssued stamped on the reconciliation row); every gate above
  * throws inside confirm and is treated as "not ready — skip silently". The
  * scheduler runs this every tick inside the 12:00–17:00 window on school days.
+ *
+ * D-#389: each pass covers the last HW_AUTO_ISSUE_LOOKBACK_SCHOOL_DAYS school days,
+ * not just today. The window is what the gates are checked AGAINST — every day is
+ * confirmed as itself, on its own attendance — so widening it recovers days that
+ * became ready after 17:00 without ever issuing one on the wrong day's evidence.
  */
 import { HomeworkItem } from "../models/HomeworkItem";
 import { Student } from "../../foundation/models/Student";
 import { StudentAttendanceDay } from "../../attendance/models/StudentAttendanceDay";
 import { resolveUnits, unitKey, type StudentLite } from "../../attendance/attendanceUnit";
 import { dateKeyOf } from "../../attendance/dates";
+import { isSchoolDay } from "../calendar";
 import { confirmHomeworkDay, type ConfirmHomeworkDayResult } from "./HomeworkReconciliationService";
 import type { IssueRosterEntry } from "./HomeworkService";
 import { emitHwAutoIssued } from "../../notifications/services/emitters";
@@ -85,63 +91,100 @@ export interface AutoIssueSummary {
 }
 
 /**
- * One sweep pass: every class with ≥1 still-`declared` item today whose day is
- * not yet reconciled gets ONE confirm attempt off the attendance-backed roster.
- * Any confirm-gate failure (coverage, ceiling, raced double-confirm) defers the
- * class to the next tick — the sweep never trims, never guesses, never throws.
+ * How many school days back the sweep looks (D-#389). The sweep used to query
+ * `dateGiven` = TODAY only, so a class whose gates cleared after the 17:00 window
+ * closed — a late declaration, attendance marked in the evening — was never looked
+ * at again and its items sat in `declared` permanently. 6 of the 24 items purged on
+ * 2026-07-28 died exactly that way, with every gate passing at the time of audit.
+ *
+ * 5 school days ≈ a full week's tail: long enough that a Sunday stranded by a
+ * Thursday-evening declaration is still recovered, short enough that the sweep
+ * never silently resurrects a day the school has moved on from.
+ */
+export const HW_AUTO_ISSUE_LOOKBACK_SCHOOL_DAYS = 5;
+
+/** The school days (newest first) the sweep considers, `now` included. */
+export function autoIssueWindow(now: Date, lookback = HW_AUTO_ISSUE_LOOKBACK_SCHOOL_DAYS): Date[] {
+  const days: Date[] = [];
+  const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // Walk back a bounded number of CALENDAR days, collecting only school days, so a
+  // long holiday can never make this loop unbounded.
+  for (let i = 0; i < lookback * 3 && days.length < lookback; i += 1) {
+    const d = new Date(cursor);
+    d.setDate(d.getDate() - i);
+    if (isSchoolDay(d)) days.push(d);
+  }
+  return days;
+}
+
+/**
+ * One sweep pass: for each school day in the lookback window (newest first), every
+ * class with ≥1 still-`declared` item that day gets ONE confirm attempt off that
+ * day's attendance-backed roster. Any confirm-gate failure (coverage, ceiling,
+ * raced double-confirm) defers the class to the next tick — the sweep never trims,
+ * never guesses, never throws.
  */
 export async function sweepHomeworkAutoIssue(now = new Date()): Promise<AutoIssueSummary> {
   const summary: AutoIssueSummary = { issued: 0, deferred: 0 };
-  const dateKey = dateKeyOf(now);
-  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dayEnd = new Date(dayStart);
-  dayEnd.setDate(dayEnd.getDate() + 1);
 
-  const items = (await HomeworkItem.find({
-    status: "declared",
-    dateGiven: { $gte: dayStart, $lt: dayEnd },
-  })
-    .select("classId sectionId")
-    .lean()) as unknown as Array<{ classId: { toString(): string }; sectionId: { toString(): string } }>;
-  if (items.length === 0) return summary;
+  // D-#389: look back over recent school days, not just today. Each day is confirmed
+  // AS ITSELF — its own roster, its own dateKey, its own gates — so a stale day can
+  // only ever issue on the evidence that day actually has. Newest first, so today
+  // still gets served before any tail work.
+  for (const day of autoIssueWindow(now)) {
+    const dateKey = dateKeyOf(day);
+    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
 
-  const sectionOfClass = new Map<string, string>();
-  for (const it of items) sectionOfClass.set(it.classId.toString(), it.sectionId.toString());
+    const items = (await HomeworkItem.find({
+      status: "declared",
+      dateGiven: { $gte: dayStart, $lt: dayEnd },
+    })
+      .select("classId sectionId")
+      .lean()) as unknown as Array<{ classId: { toString(): string }; sectionId: { toString(): string } }>;
+    if (items.length === 0) continue;
 
-  // D-#319: reconciled classes are NOT filtered out any more — every class in
-  // the map has ≥1 still-`declared` item today (the query above), so a
-  // reconciled one is a LATE TOP-UP candidate and confirm handles it (issuing
-  // only the still-declared items). A fully-issued day never enters the map.
+    const sectionOfClass = new Map<string, string>();
+    for (const it of items) sectionOfClass.set(it.classId.toString(), it.sectionId.toString());
 
-  for (const [classId, sectionId] of sectionOfClass) {
-    const roster = await buildIssueRoster(sectionId, dateKey);
-    if (!roster) {
-      summary.deferred += 1;
-      continue;
-    }
-    let res: ConfirmHomeworkDayResult;
-    try {
-      res = await confirmHomeworkDay({
+    // D-#319: reconciled classes are NOT filtered out — every class in the map has
+    // ≥1 still-`declared` item on this day, so a reconciled one is a LATE TOP-UP
+    // candidate and confirm handles it (issuing only the still-declared items).
+    // A fully-issued day never enters the map.
+
+    for (const [classId, sectionId] of sectionOfClass) {
+      // The roster is built for THAT day's attendance — never today's, or a
+      // recovered Sunday would spawn records off Thursday's absentees.
+      const roster = await buildIssueRoster(sectionId, dateKey);
+      if (!roster) {
+        summary.deferred += 1;
+        continue;
+      }
+      let res: ConfirmHomeworkDayResult;
+      try {
+        res = await confirmHomeworkDay({
+          classId,
+          date: day,
+          roster,
+          actorId: HW_AUTO_ISSUE_ACTOR_ID,
+          autoIssued: true,
+        });
+      } catch {
+        // Coverage gate / over-ceiling / raced confirm — not ready; the pending
+        // ladder keeps the human in the loop. Next tick retries.
+        summary.deferred += 1;
+        continue;
+      }
+      summary.issued += 1;
+      await emitHwAutoIssued({
         classId,
-        date: now,
-        roster,
-        actorId: HW_AUTO_ISSUE_ACTOR_ID,
-        autoIssued: true,
+        sectionId,
+        dateKey,
+        issuedItems: res.issuedItems,
+        dayTotal: res.dayTotal,
       });
-    } catch {
-      // Coverage gate / over-ceiling / raced confirm — not ready; the pending
-      // ladder keeps the human in the loop. Next tick retries.
-      summary.deferred += 1;
-      continue;
     }
-    summary.issued += 1;
-    await emitHwAutoIssued({
-      classId,
-      sectionId,
-      dateKey,
-      issuedItems: res.issuedItems,
-      dayTotal: res.dayTotal,
-    });
   }
   return summary;
 }

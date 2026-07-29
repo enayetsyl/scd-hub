@@ -8,6 +8,7 @@ import React, { useState } from "react";
 import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
+import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
 import { ROUTINE_FOR_DATE_QUERY, CLASS_NOTES_FOR_DATE_QUERY, PUBLISH_CLASS_NOTE } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Badge, Notice, Loader } from "../../components/ui";
@@ -38,6 +39,15 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
   const [slotsQ, refetchSlots] = useQuery({ query: ROUTINE_FOR_DATE_QUERY, variables: { groupType, groupId, date } });
   const [notesQ, refetchNotes] = useQuery({ query: CLASS_NOTES_FOR_DATE_QUERY, variables: { groupType, groupId, date } });
   const [, publish] = useMutation(PUBLISH_CLASS_NOTE);
+
+  // D-#389: the server now returns the WHOLE section's notes to a class teacher
+  // (it used to hide other subjects outright, which left the coordinator unable to
+  // see what was taught). Other subjects therefore collapse per slot instead —
+  // own subjects read as before, the rest are one tap away. `taught` is null for
+  // admins / a subject-group view, which renders everything expanded, exactly as
+  // SubjectFold treats null.
+  const taughtSubjects = useTaughtSubjects(groupType === "section" ? groupId : null);
+  const [openNote, setOpenNote] = useState<Record<string, boolean>>({});
 
   const notesBySlot = new Map((notesQ.data?.classNotesForDate ?? []).map((n) => [n.slotId, n]));
   const slots = (slotsQ.data?.routineForDate ?? []).filter((s) => !s.isBreak);
@@ -92,6 +102,9 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
 
         {slots.map((s) => {
           const note = notesBySlot.get(s.id);
+          // Not my subject ⇒ oversight only: the note collapses, and no publish
+          // control is offered (the mutation is subject-scoped and would refuse).
+          const mine = !taughtSubjects || taughtSubjects.has(s.subject);
           return (
             <Card key={s.id}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -101,7 +114,23 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
                 {note ? <Badge text={STR.rtPublished} tone="ok" /> : null}
               </View>
 
-              {note ? (
+              {!mine ? (
+                note ? (
+                  <>
+                    <Button
+                      title={`${openNote[s.id] ? "▾" : "▸"} ${routineSubjectLabel(s.subject)}`}
+                      variant="secondary"
+                      onPress={() => setOpenNote((m) => ({ ...m, [s.id]: !m[s.id] }))}
+                      style={{ marginTop: space(2) }}
+                    />
+                    {openNote[s.id] ? (
+                      <Muted style={{ marginTop: space(1) }}>{note.taughtSummaryBn}</Muted>
+                    ) : null}
+                  </>
+                ) : (
+                  <Muted style={{ marginTop: space(1) }}>{STR.foldViewOnly}</Muted>
+                )
+              ) : note ? (
                 <Muted style={{ marginTop: space(1) }}>{note.taughtSummaryBn}</Muted>
               ) : sel === s.id ? (
                 <View style={{ marginTop: space(2), gap: space(1) }}>

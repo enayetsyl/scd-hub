@@ -148,16 +148,18 @@ builder.queryField("classNotesForDate", (t) =>
       if (args.groupType !== "section" && args.groupType !== "subjectgroup") throw new Error("Invalid groupType");
       const notes = await classNotesForDate(args.groupType, args.groupId, parseDate(args.date));
 
-      // Owner decision 2026-07-19: a teacher only sees class notes for subjects
-      // they teach (class teacher included; Principal/Office/supervisors see all).
-      // Previously this read had no section scope and no subject filter.
+      // D-#389 (owner, 2026-07-29) — the same move D-#388 made for the trackers:
+      // the class teacher SEES the whole section's notes again, because the screen
+      // now collapses other subjects behind a per-slot toggle instead of hiding
+      // them. Hiding at the query left the section coordinator unable to see what
+      // was taught in their own section at all. A plain subject teacher is still
+      // narrowed to their own subjects — they have no oversight to extend.
+      // Publishing stays subject-scoped in the mutation; reading is not writing.
       if (args.groupType === "section" && ctx.auth) {
         const section = await Section.findById(args.groupId).select("classId").lean();
         const classId = section?.classId ? section.classId.toString() : "";
         await assertCanRead(ctx, args.groupId, classId);
-        const allowed = await allowedSubjectCodesForSection(ctx, args.groupId, classId, {
-          classTeacherOversight: false,
-        });
+        const allowed = await allowedSubjectCodesForSection(ctx, args.groupId, classId);
         if (allowed) {
           const userId = ctx.auth.userId as string;
           // Own notes always stay visible (covers subjects missing from the
