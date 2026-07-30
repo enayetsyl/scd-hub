@@ -29,6 +29,9 @@ const mockCountDocuments = jest.fn();
 const mockPublishRealtime = jest.fn();
 const mockFind = jest.fn();
 const mockClassFind = jest.fn().mockResolvedValue([]);
+// PQ-9: tagging loads HYDRATED docs (it saves them), so `find` is awaited directly.
+const mockFindMany = jest.fn().mockResolvedValue([]);
+const mockClassExists = jest.fn().mockResolvedValue({ _id: "x" });
 
 jest.mock("../modules/printing/models/PrintRequest", () => ({
   PrintRequest: {
@@ -36,18 +39,25 @@ jest.mock("../modules/printing/models/PrintRequest", () => ({
     findById: (id: unknown) => mockFindById(id),
     countDocuments: (f: unknown) => Promise.resolve(mockCountDocuments(f)),
     // D-#362: the reprint history's scan — .sort().limit().lean().
+    // PQ-9: also awaitable directly (thenable), which is how the tag path loads docs.
     find: (q: unknown) => {
       const chain: Record<string, unknown> = {};
       chain.sort = () => chain;
       chain.limit = () => chain;
       chain.lean = () => mockFind(q);
+      chain.then = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) =>
+        Promise.resolve(mockFindMany(q)).then(res, rej);
       return chain;
     },
   },
 }));
 // D-#362: the history sorts by class LEVEL, resolved in one batched lookup.
+// PQ-9: `exists` guards a tag against pointing at a class that is not in the roster.
 jest.mock("../modules/foundation/models/Class", () => ({
-  Class: { find: (q: unknown) => ({ select: () => ({ lean: () => mockClassFind(q) }) }) },
+  Class: {
+    find: (q: unknown) => ({ select: () => ({ lean: () => mockClassFind(q) }) }),
+    exists: (q: unknown) => mockClassExists(q),
+  },
 }));
 // D-#294: CLASS_PRESENT copies resolve from the use day's attendance roll-up.
 jest.mock("../modules/attendance/services/AttendanceReportService", () => ({
@@ -98,6 +108,8 @@ import {
   printHistory,
   reprintPrintRequest,
   historyKey,
+  tagPrintRequests,
+  suggestTagFor,
   PrintRequestError,
 } from "../modules/printing/services/PrintRequestService";
 
@@ -142,6 +154,9 @@ beforeEach(() => {
   mockStoredFileFind.mockResolvedValue([]);
   mockEmitDelivered.mockResolvedValue(undefined);
   mockClassTestUpdateOne.mockResolvedValue({});
+  mockClassFind.mockResolvedValue([]);
+  mockFindMany.mockResolvedValue([]);
+  mockClassExists.mockResolvedValue({ _id: "x" });
 });
 
 describe("isPrintableUrl", () => {
@@ -803,6 +818,198 @@ describe("printHistory — the effective class (PQ-8)", () => {
     mockFind.mockResolvedValue([]);
     await printHistory({ classId: oid().toString(), fromKey: "2026-07-01" });
     expect((mockFind.mock.calls[0][0] as any).$and).toHaveLength(2);
+  });
+
+  test("a row carries EVERY job behind it, so tagging cannot split the group", async () => {
+    const file = oid();
+    const a = histDoc({ fileIds: [file] }), b = histDoc({ fileIds: [file] });
+    mockFind.mockResolvedValue([a, b]);
+    const page = await printHistory();
+    expect(page.rows).toHaveLength(1);
+    expect(page.rows[0].jobIds.sort()).toEqual([a._id.toString(), b._id.toString()].sort());
+  });
+});
+
+// PQ-9 — the 31 jobs no data can tag: a person names the class, with a pre-fill read out
+// of the file name where there is one.
+describe("suggestTagFor — reading a class/subject out of the job's own names", () => {
+  test("the FILE name is read before the title (the live titles are generic)", () => {
+    const s = suggestTagFor({
+      title: "Print request — Md Enayetur Rahman",
+      fileNames: ["C1_Eng_Block02.pdf"],
+    });
+    expect(s).toMatchObject({ classLevel: 1, subject: "ENG", evidence: "C1_Eng_Block02.pdf" });
+  });
+
+  test("the shapes that actually occur in the live data", () => {
+    expect(suggestTagFor({ fileNames: ["Class 3 HW L2.pdf"] }).classLevel).toBe(3);
+    expect(suggestTagFor({ fileNames: ["C4 B02 Sub cards 3-4.png"] }).classLevel).toBe(4);
+    expect(suggestTagFor({ fileNames: ["C5 B03 Clue Card.png"] }).classLevel).toBe(5);
+    expect(suggestTagFor({ title: "English Drive C1_B3_PT_v1 — C1B03_PT" }).classLevel).toBe(1);
+    expect(suggestTagFor({ title: "CT-C2-ISLAM-0003" })).toMatchObject({ classLevel: 2, subject: "ISLAM" });
+  });
+
+  test("pre-primary is read by name, not by number", () => {
+    expect(suggestTagFor({ fileNames: ["Nursery rhymes sheet.pdf"] }).classLevel).toBe(-1);
+    expect(suggestTagFor({ fileNames: ["নার্সারি ছড়া.pdf"] }).classLevel).toBe(-1);
+    expect(suggestTagFor({ fileNames: ["KG maths sheet.pdf"] })).toMatchObject({ classLevel: 0, subject: "MATH" });
+  });
+
+  test("Bangladesh & Global Studies is not mistaken for Bangla", () => {
+    expect(suggestTagFor({ fileNames: ["C3 Bangladesh & Global Studies L4.pdf"] }).subject).toBe("BGS");
+    expect(suggestTagFor({ fileNames: ["C3 Bangla L4.pdf"] }).subject).toBe("BAN");
+  });
+
+  test("'Class Test' is not read as a class number", () => {
+    // The digit has to follow the C/Class token, or every class-test sheet would land in
+    // whatever class its title happened to mention next.
+    expect(suggestTagFor({ title: "Class Test paper 3" }).classLevel).toBeNull();
+  });
+
+  test("no readable code yields nothing at all — never a default class", () => {
+    expect(suggestTagFor({ title: "Print request — Kawsar Hossain", fileNames: [] })).toEqual({
+      classLevel: null,
+      subject: null,
+      evidence: null,
+    });
+  });
+});
+
+describe("tagPrintRequests — naming the class of a historical job (PQ-9)", () => {
+  const CLS = oid().toString();
+  /** A hydrated, saveable job stub — tagging saves, so these are not lean docs. */
+  const tagDoc = (over: Record<string, unknown> = {}): any => ({
+    _id: oid(),
+    requestedBy: new mongoose.Types.ObjectId(TEACHER),
+    title: "Worksheet",
+    save: jest.fn().mockResolvedValue(undefined),
+    ...over,
+  });
+
+  test("tags EVERY job passed, so the whole document moves together", async () => {
+    const a = tagDoc(), b = tagDoc();
+    mockFindMany.mockResolvedValue([a, b]);
+    const out = await tagPrintRequests({
+      ids: [a._id.toString(), b._id.toString()],
+      classId: CLS,
+      subject: "ENG",
+      actorId: TEACHER,
+      isOffice: false,
+    });
+    expect(out).toHaveLength(2);
+    expect(a.classId.toString()).toBe(CLS);
+    expect(b.classId.toString()).toBe(CLS);
+    expect(a.subject).toBe("ENG");
+    expect(a.save).toHaveBeenCalled();
+    expect(b.save).toHaveBeenCalled();
+  });
+
+  test("an OMITTED field is left alone; an explicit null clears it", async () => {
+    const keep = tagDoc({ subject: "BAN" });
+    mockFindMany.mockResolvedValue([keep]);
+    await tagPrintRequests({ ids: [keep._id.toString()], classId: CLS, actorId: OFFICE, isOffice: true });
+    expect(keep.subject).toBe("BAN"); // untouched — subject was not part of the call
+
+    const clear = tagDoc({ subject: "BAN", classId: new mongoose.Types.ObjectId() });
+    mockFindMany.mockResolvedValue([clear]);
+    await tagPrintRequests({
+      ids: [clear._id.toString()],
+      classId: null,
+      subject: null,
+      actorId: OFFICE,
+      isOffice: true,
+    });
+    expect(clear.classId).toBeUndefined();
+    expect(clear.subject).toBeUndefined();
+  });
+
+  test("audits BOTH sides — a tag is a human judgement, so what it replaced matters", async () => {
+    const prev = oid();
+    const doc = tagDoc({ classId: prev, subject: "BAN" });
+    mockFindMany.mockResolvedValue([doc]);
+    await tagPrintRequests({ ids: [doc._id.toString()], classId: CLS, subject: "ENG", actorId: OFFICE, isOffice: true });
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventKind: "PRINT_REQUEST_CLASS_TAGGED",
+        actorId: OFFICE,
+        meta: expect.objectContaining({
+          before: { classId: prev.toString(), subject: "BAN" },
+          after: { classId: CLS, subject: "ENG" },
+          byOffice: true,
+        }),
+      }),
+    );
+  });
+
+  test("a teacher may tag only their OWN job; the Office may tag anyone's", async () => {
+    const foreign = tagDoc({ requestedBy: new mongoose.Types.ObjectId(OFFICE) });
+    mockFindMany.mockResolvedValue([foreign]);
+    await expect(
+      tagPrintRequests({ ids: [foreign._id.toString()], classId: CLS, actorId: TEACHER, isOffice: false }),
+    ).rejects.toThrow(/only tag your own/);
+    expect(foreign.save).not.toHaveBeenCalled();
+
+    mockFindMany.mockResolvedValue([foreign]);
+    await tagPrintRequests({ ids: [foreign._id.toString()], classId: CLS, actorId: OFFICE, isOffice: true });
+    expect(foreign.save).toHaveBeenCalled();
+  });
+
+  test("one foreign job in the list blocks the WHOLE group — no partial write", async () => {
+    const mine = tagDoc(), theirs = tagDoc({ requestedBy: new mongoose.Types.ObjectId(OFFICE) });
+    mockFindMany.mockResolvedValue([mine, theirs]);
+    await expect(
+      tagPrintRequests({
+        ids: [mine._id.toString(), theirs._id.toString()],
+        classId: CLS,
+        actorId: TEACHER,
+        isOffice: false,
+      }),
+    ).rejects.toThrow(/only tag your own/);
+    // The group is one document; half-tagging it would split the row in two.
+    expect(mine.save).not.toHaveBeenCalled();
+  });
+
+  test("a class-test job is refused — its class belongs to the exam record", async () => {
+    const ct = tagDoc({ classTestId: oid() });
+    mockFindMany.mockResolvedValue([ct]);
+    await expect(
+      tagPrintRequests({ ids: [ct._id.toString()], classId: CLS, actorId: OFFICE, isOffice: true }),
+    ).rejects.toThrow(/exam record/);
+    expect(ct.save).not.toHaveBeenCalled();
+  });
+
+  test("the target class must exist in the roster", async () => {
+    const doc = tagDoc();
+    mockFindMany.mockResolvedValue([doc]);
+    mockClassExists.mockResolvedValue(null);
+    await expect(
+      tagPrintRequests({ ids: [doc._id.toString()], classId: CLS, actorId: OFFICE, isOffice: true }),
+    ).rejects.toThrow(/Class not found/);
+  });
+
+  test("rejects a bad subject, a bad id, an empty list and an empty call", async () => {
+    const doc = tagDoc();
+    mockFindMany.mockResolvedValue([doc]);
+    const base = { ids: [doc._id.toString()], actorId: OFFICE, isOffice: true };
+    await expect(tagPrintRequests({ ...base, subject: "PHYSICS" })).rejects.toThrow(/Invalid subject/);
+    await expect(tagPrintRequests({ ...base, classId: "nope" })).rejects.toThrow(/Invalid classId/);
+    await expect(tagPrintRequests({ ...base, ids: ["nope"], classId: CLS })).rejects.toThrow(/Invalid print request id/);
+    await expect(tagPrintRequests({ ...base, ids: [] })).rejects.toThrow(/Nothing to tag/);
+    // No field at all: nothing to do, and silently succeeding would look like a write.
+    await expect(tagPrintRequests(base)).rejects.toThrow(/Nothing to tag/);
+  });
+
+  test("refuses when an id in the list does not exist", async () => {
+    const doc = tagDoc();
+    mockFindMany.mockResolvedValue([doc]); // one back for two asked
+    await expect(
+      tagPrintRequests({
+        ids: [doc._id.toString(), oid().toString()],
+        classId: CLS,
+        actorId: OFFICE,
+        isOffice: true,
+      }),
+    ).rejects.toThrow(/not found/);
   });
 });
 
