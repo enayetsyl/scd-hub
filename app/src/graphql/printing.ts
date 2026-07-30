@@ -146,20 +146,41 @@ export interface PrintHistoryRowT {
   lastPrintedAt: string;
   firstPrintedAt: string;
   requesterNames: string[];
+  /** PQ-7: index-aligned with `requesterNames` — the teacher filter keys off these. */
+  requesterIds: string[];
 }
 
 /** Already-printed jobs, ONE ROW PER DOCUMENT, ordered class → subject → purpose →
  *  newest print. The Office sees everyone's; a teacher sees only their own (server-side
- *  scope — there is no argument to widen it). */
+ *  scope — there is no argument to widen it).
+ *
+ *  PQ-7: `fromKey`/`toKey` narrow the PRINTED-ON window server-side (applied to the jobs
+ *  before grouping); `truncated` reports a page cut short instead of hiding it. */
 export const PRINT_HISTORY_QUERY = gql<
-  { printHistory: { rows: PrintHistoryRowT[]; scannedCapped: boolean } },
-  { classId?: string | null; subject?: string | null; purpose?: string | null; limit?: number | null }
+  { printHistory: { rows: PrintHistoryRowT[]; scannedCapped: boolean; truncated: boolean; totalRows: number } },
+  {
+    classId?: string | null;
+    subject?: string | null;
+    purpose?: string | null;
+    requestedBy?: string | null;
+    fromKey?: string | null;
+    toKey?: string | null;
+    limit?: number | null;
+  }
 >`
-  query PrintHistory($classId: String, $subject: String, $purpose: String, $limit: Int) {
-    printHistory(classId: $classId, subject: $subject, purpose: $purpose, limit: $limit) {
+  query PrintHistory(
+    $classId: String, $subject: String, $purpose: String,
+    $requestedBy: String, $fromKey: String, $toKey: String, $limit: Int
+  ) {
+    printHistory(
+      classId: $classId, subject: $subject, purpose: $purpose,
+      requestedBy: $requestedBy, fromKey: $fromKey, toKey: $toKey, limit: $limit
+    ) {
       scannedCapped
+      truncated
+      totalRows
       rows {
-        key printCount lastPrintedAt firstPrintedAt requesterNames
+        key printCount lastPrintedAt firstPrintedAt requesterNames requesterIds
         latest { ${PRINT_REQUEST_FIELDS} }
       }
     }

@@ -25,7 +25,7 @@ import { User } from "../../foundation/models/User";
 import { Class } from "../../foundation/models/Class";
 import { ClassTest } from "../../trackers/models/ClassTest";
 import { classPresenceForDate } from "../../attendance/services/AttendanceReportService";
-import { dateKeyOf } from "../../attendance/dates";
+import { dateKeyOf, isValidDateKey, parseDateKey } from "../../attendance/dates";
 import { publishRealtime } from "../../realtime/bus";
 
 export class PrintRequestError extends Error {
@@ -455,6 +455,11 @@ export interface PrintHistoryFilter {
   purpose?: string | null;
   /** Own-row scope: a teacher only ever sees the jobs they filed. */
   requestedBy?: string | null;
+  /** PQ-7: printed-on window, inclusive `YYYY-MM-DD` keys. Applied to the JOBS before
+   *  grouping, so "printed in June" means a print actually landed in June — not that the
+   *  document's newest print did. */
+  fromKey?: string | null;
+  toKey?: string | null;
   /** Max GROUPS returned (not jobs scanned). */
   limit?: number | null;
 }
@@ -480,10 +485,21 @@ export interface PrintHistoryRow {
  *  through `PrintHistoryPage.scannedCapped` rather than silently truncated. */
 export const PRINT_HISTORY_SCAN_CAP = 1000;
 
+/** Default / max GROUPS one read returns. The default matches the scan cap so the page
+ *  limit is never the silent ceiling (PQ-7 fix: at 263 grouped rows the old default of
+ *  200 dropped 63 rows with nothing on screen to say so). */
+export const PRINT_HISTORY_DEFAULT_LIMIT = 1000;
+export const PRINT_HISTORY_MAX_LIMIT = 1000;
+
 export interface PrintHistoryPage {
   rows: PrintHistoryRow[];
   /** True when the scan hit PRINT_HISTORY_SCAN_CAP, so older prints may be missing. */
   scannedCapped: boolean;
+  /** PQ-7: true when MORE grouped rows matched than `limit` returned — the caller must
+   *  say so rather than present a short list as the whole history. */
+  truncated: boolean;
+  /** How many grouped rows matched before `limit` was applied. */
+  totalRows: number;
 }
 
 /**
@@ -542,7 +558,33 @@ export async function printHistory(filter: PrintHistoryFilter = {}): Promise<Pri
     }
     q.purpose = filter.purpose;
   }
-  if (filter.requestedBy) q.requestedBy = new Types.ObjectId(filter.requestedBy);
+  if (filter.requestedBy) {
+    // A caller-supplied requester id (PQ-7) must not reach the ObjectId ctor unchecked —
+    // a BSON throw would surface as a fault, not the input error it is.
+    if (!Types.ObjectId.isValid(filter.requestedBy)) throw new PrintRequestError("Invalid requestedBy");
+    q.requestedBy = new Types.ObjectId(filter.requestedBy);
+  }
+
+  // PQ-7 — the printed-on window. `printedAtOf` falls back to `requestedAt` for a
+  // migration-backfilled row, so the query has to match on the same pair or those rows
+  // would silently drop out of every dated view.
+  if (filter.fromKey || filter.toKey) {
+    const range: Record<string, Date> = {};
+    if (filter.fromKey) {
+      if (!isValidDateKey(filter.fromKey)) throw new PrintRequestError("fromKey must be YYYY-MM-DD");
+      range.$gte = parseDateKey(filter.fromKey);
+    }
+    if (filter.toKey) {
+      if (!isValidDateKey(filter.toKey)) throw new PrintRequestError("toKey must be YYYY-MM-DD");
+      const end = parseDateKey(filter.toKey);
+      end.setDate(end.getDate() + 1); // inclusive of the whole `toKey` day
+      range.$lt = end;
+    }
+    if (range.$gte && range.$lt && range.$gte >= range.$lt) {
+      throw new PrintRequestError("fromKey must not be after toKey");
+    }
+    q.$or = [{ printedAt: range }, { printedAt: null, requestedAt: range }];
+  }
 
   const docs = (await PrintRequest.find(q)
     .sort({ printedAt: -1, requestedAt: -1 })
@@ -599,8 +641,13 @@ export async function printHistory(filter: PrintHistoryFilter = {}): Promise<Pri
       b.lastPrintedAt.getTime() - a.lastPrintedAt.getTime(),
   );
 
-  const limit = Math.min(Math.max(filter.limit ?? 200, 1), 500);
-  return { rows: rows.slice(0, limit), scannedCapped: docs.length === PRINT_HISTORY_SCAN_CAP };
+  const limit = Math.min(Math.max(filter.limit ?? PRINT_HISTORY_DEFAULT_LIMIT, 1), PRINT_HISTORY_MAX_LIMIT);
+  return {
+    rows: rows.slice(0, limit),
+    scannedCapped: docs.length === PRINT_HISTORY_SCAN_CAP,
+    truncated: rows.length > limit,
+    totalRows: rows.length,
+  };
 }
 
 /**

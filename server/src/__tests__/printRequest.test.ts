@@ -673,6 +673,64 @@ describe("printHistory — one row per document, browsable by class/subject/purp
   });
 });
 
+// PQ-7 — the filters the Office asked for after live use, and the honest page flag.
+describe("printHistory — PQ-7 date window + truncation reporting", () => {
+  test("the printed-on window filters the JOBS, matching backfilled rows on requestedAt", async () => {
+    mockFind.mockResolvedValue([]);
+    await printHistory({ fromKey: "2026-07-01", toKey: "2026-07-31" });
+    const q = mockFind.mock.calls[0][0] as { $or: Array<Record<string, any>> };
+    expect(q.$or).toHaveLength(2);
+    // A row printed on the LAST day of the window is inside it (exclusive upper bound
+    // sits at the following midnight, so 2026-07-31 23:59 still matches).
+    const range = q.$or[0].printedAt as { $gte: Date; $lt: Date };
+    expect(range.$gte).toEqual(new Date(2026, 6, 1));
+    expect(range.$lt).toEqual(new Date(2026, 7, 1));
+    // The fallback branch is for rows that never got a printedAt stamp.
+    expect(q.$or[1]).toMatchObject({ printedAt: null });
+  });
+
+  test("an open-ended window is allowed at either end", async () => {
+    mockFind.mockResolvedValue([]);
+    await printHistory({ fromKey: "2026-07-01" });
+    const from = (mockFind.mock.calls[0][0] as any).$or[0].printedAt;
+    expect(from.$lt).toBeUndefined();
+
+    mockFind.mockClear();
+    await printHistory({ toKey: "2026-07-31" });
+    const to = (mockFind.mock.calls[0][0] as any).$or[0].printedAt;
+    expect(to.$gte).toBeUndefined();
+  });
+
+  test("no window means no date clause at all", async () => {
+    mockFind.mockResolvedValue([]);
+    await printHistory();
+    expect((mockFind.mock.calls[0][0] as Record<string, unknown>).$or).toBeUndefined();
+  });
+
+  test("rejects a malformed or inverted window", async () => {
+    await expect(printHistory({ fromKey: "01-07-2026" })).rejects.toThrow(/YYYY-MM-DD/);
+    await expect(printHistory({ toKey: "2026-13-01" })).rejects.toThrow(/YYYY-MM-DD/);
+    await expect(printHistory({ fromKey: "2026-07-31", toKey: "2026-07-01" })).rejects.toThrow(/not be after/);
+  });
+
+  test("a page cut short by the limit REPORTS it — the regression that hid 63 documents", async () => {
+    // 3 distinct documents, asked for 2: the caller must be able to tell.
+    mockFind.mockResolvedValue([histDoc({ fileIds: [oid()] }), histDoc({ fileIds: [oid()] }), histDoc({ fileIds: [oid()] })]);
+    const page = await printHistory({ limit: 2 });
+    expect(page.rows).toHaveLength(2);
+    expect(page.truncated).toBe(true);
+    expect(page.totalRows).toBe(3);
+  });
+
+  test("a complete page is not flagged", async () => {
+    mockFind.mockResolvedValue([histDoc({ fileIds: [oid()] }), histDoc({ fileIds: [oid()] })]);
+    const page = await printHistory();
+    expect(page.truncated).toBe(false);
+    expect(page.totalRows).toBe(2);
+    expect(page.scannedCapped).toBe(false);
+  });
+});
+
 describe("reprintPrintRequest — send an earlier print again, no re-upload", () => {
   const reprintArgs = { neededByKey: "2026-08-01", actorId: TEACHER, isOffice: false };
 

@@ -9,10 +9,15 @@
  * date — no re-upload, no re-attaching a link.
  *
  * Scope is server-side: the Office/Principal see every requester's prints, a teacher
- * sees only their own. The chips are derived from the rows actually returned, so a
- * teacher's filters only ever offer their own classes/subjects.
+ * sees only their own.
+ *
+ * PQ-7 (owner ask, live testing): the class chips come from the ROSTER — deriving them
+ * from the returned rows hid Nursery/KG entirely, because only the class-test path tags a
+ * job with a class. Added a teacher filter (Office view) and a printed-on date window,
+ * which narrows server-side so it can reach past the page window. And a page cut short by
+ * the limit now says so instead of passing a short list off as the whole history.
  */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
@@ -23,6 +28,7 @@ import {
   REPRINT_PRINT_REQUEST,
   type PrintHistoryRowT,
 } from "../../graphql/printing";
+import { ACADEMIC_YEARS_QUERY, CLASSES_QUERY } from "../../graphql/operations";
 import type { PrintStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -41,12 +47,15 @@ import {
   Notice,
 } from "../../components/ui";
 import { DateField } from "../../components/DateField";
-import { STR, bnNum, classLevelLabel, subjectLabel, printPurposeLabel } from "../../lib/labels";
+// routineSubjectLabel, not subjectLabel: a print job's subject can be ARABIC/QURAN, which
+// the foundation subject labels don't carry (they'd render as the raw code).
+import { STR, bnNum, classLevelLabel, routineSubjectLabel, printPurposeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { openStoredFile } from "../../lib/files";
 import { openPrintSource } from "../../lib/printSource";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { useAuth } from "../../auth/AuthContext";
+import { useSectionContext } from "../../state/SectionContext";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 
@@ -61,6 +70,9 @@ function todayKey(): string {
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** Sentinel for "no filter" — an empty string would collide with a real missing class. */
 const ANY = "__any__";
+/** Sentinel for "jobs with no class". Distinct from ANY: it used to share it, which made
+ *  the "no class" chip a second, permanently-lit copy of "all" that filtered nothing. */
+const NONE = "__none__";
 
 export default function PrintHistoryScreen({ navigation }: Props): React.ReactElement {
   const { role } = useAuth();
@@ -70,6 +82,10 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
   const [classFilter, setClassFilter] = useState<string>(ANY);
   const [subjectFilter, setSubjectFilter] = useState<string>(ANY);
   const [purposeFilter, setPurposeFilter] = useState<string>(ANY);
+  const [teacherFilter, setTeacherFilter] = useState<string>(ANY);
+  // PQ-7: the printed-on window. Empty = open-ended; a half-typed date is simply not sent.
+  const [fromKey, setFromKey] = useState("");
+  const [toKey, setToKey] = useState("");
 
   // The open reprint form, keyed by row — only one at a time.
   const [reprintFor, setReprintFor] = useState<string | null>(null);
@@ -77,40 +93,91 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
   const [copies, setCopies] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // The date window is the only filter that goes to the SERVER: it is applied to the
+  // jobs BEFORE they are grouped (so "printed in June" is exact), and it is what lets a
+  // read reach past the page window once a year's worth of jobs has piled up.
+  const datesValid = (!fromKey || ISO_DATE.test(fromKey)) && (!toKey || ISO_DATE.test(toKey));
+  const datesInverted = ISO_DATE.test(fromKey) && ISO_DATE.test(toKey) && fromKey > toKey;
+  const sendDates = datesValid && !datesInverted;
+
   // cache-and-network: a reprint moves the job into the REQUESTED bucket and bumps this
   // document's print count, so the cached page is stale the moment we act.
   const [historyQ, refetchHistory] = useQuery({
     query: PRINT_HISTORY_QUERY,
-    variables: {},
+    variables: {
+      fromKey: sendDates && ISO_DATE.test(fromKey) ? fromKey : null,
+      toKey: sendDates && ISO_DATE.test(toKey) ? toKey : null,
+    },
     requestPolicy: "cache-and-network",
   });
   const [, reprint] = useMutation(REPRINT_PRINT_REQUEST);
   const { openingId, runOpen } = useFileOpen();
 
+  // The roster's classes — the class axis has to be complete even for a class nobody has
+  // printed for yet (deriving it from the rows dropped Nursery/KG, PQ-7).
+  const { selection } = useSectionContext();
+  const [{ data: yearsData }] = useQuery({ query: ACADEMIC_YEARS_QUERY });
+  const academicYearId =
+    selection.academicYearId ?? yearsData?.academicYears.find((y) => y.current)?.id ?? null;
+  const [{ data: classData }] = useQuery({
+    query: CLASSES_QUERY,
+    variables: { academicYearId: academicYearId ?? "" },
+    pause: !academicYearId,
+  });
+
   const rows = historyQ.data?.printHistory.rows ?? [];
   const scannedCapped = historyQ.data?.printHistory.scannedCapped ?? false;
+  const truncated = historyQ.data?.printHistory.truncated ?? false;
+  const totalRows = historyQ.data?.printHistory.totalRows ?? 0;
 
-  // Filter options come from the rows themselves: whatever HAS been printed is what is
-  // worth filtering by, and it keeps a teacher's chips scoped to their own prints
-  // without a second round trip for class/subject master lists.
+  // Every roster class, PLUS any class a row names that the roster no longer lists (a job
+  // filed against an earlier year's class), PLUS "no class" — which is where every
+  // teacher-filed upload lands, since only the class-test path tags one.
   const classOptions = useMemo(() => {
     const seen = new Map<string, number | null>();
-    for (const r of rows) seen.set(r.latest.classId ?? ANY, r.latest.classLevel);
-    return [...seen.entries()].sort(
+    for (const c of classData?.classes ?? []) if (c.active) seen.set(c.id, c.level);
+    for (const r of rows) if (r.latest.classId) seen.set(r.latest.classId, r.latest.classLevel);
+    const out = [...seen.entries()].sort(
       (a, b) => (a[1] ?? Number.MAX_SAFE_INTEGER) - (b[1] ?? Number.MAX_SAFE_INTEGER),
     );
-  }, [rows]);
+    // "No class" sorts last, matching the row order.
+    if (rows.some((r) => !r.latest.classId)) out.push([NONE, null]);
+    return out;
+  }, [rows, classData]);
   const subjectOptions = useMemo(
     () => [...new Set(rows.map((r) => r.latest.subject).filter((s): s is string => !!s))].sort(),
     [rows],
   );
   const purposeOptions = useMemo(() => [...new Set(rows.map((r) => r.latest.purpose))], [rows]);
+  // Requester ids are index-aligned with the names; a group can list several.
+  const teacherOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const r of rows) r.requesterIds.forEach((id, i) => seen.set(id, r.requesterNames[i] ?? "—"));
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [rows]);
+
+  // A narrowed date window can remove the very option a chip is pinned to; drop such a
+  // selection rather than leave an invisible filter hiding every row. Only once the new
+  // page has actually landed — mid-fetch the option lists are empty, and resetting off
+  // that would wipe the teacher's chips every time they touch a date.
+  useEffect(() => {
+    if (historyQ.fetching || !historyQ.data) return;
+    if (classFilter !== ANY && !classOptions.some(([id]) => id === classFilter)) setClassFilter(ANY);
+    if (subjectFilter !== ANY && !subjectOptions.includes(subjectFilter)) setSubjectFilter(ANY);
+    if (purposeFilter !== ANY && !purposeOptions.includes(purposeFilter)) setPurposeFilter(ANY);
+    if (teacherFilter !== ANY && !teacherOptions.some(([id]) => id === teacherFilter)) setTeacherFilter(ANY);
+  }, [
+    historyQ.fetching, historyQ.data,
+    classOptions, subjectOptions, purposeOptions, teacherOptions,
+    classFilter, subjectFilter, purposeFilter, teacherFilter,
+  ]);
 
   const visible = rows.filter(
     (r) =>
-      (classFilter === ANY || (r.latest.classId ?? ANY) === classFilter) &&
+      (classFilter === ANY || (r.latest.classId ?? NONE) === classFilter) &&
       (subjectFilter === ANY || r.latest.subject === subjectFilter) &&
-      (purposeFilter === ANY || r.latest.purpose === purposeFilter),
+      (purposeFilter === ANY || r.latest.purpose === purposeFilter) &&
+      (teacherFilter === ANY || r.requesterIds.includes(teacherFilter)),
   );
 
   function openReprint(r: PrintHistoryRowT): void {
@@ -150,6 +217,31 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
       <H2>{STR.prHistory}</H2>
       <Muted>{STR.prHistoryHint}</Muted>
       {scannedCapped ? <Notice message={STR.prHistoryCapped} tone="warn" /> : null}
+      {/* PQ-7: a page cut short by the limit says so — a short list must never read as
+          "this is everything that was ever printed". */}
+      {truncated ? <Notice message={STR.prHistoryTruncated} tone="warn" /> : null}
+      {datesInverted ? <Notice message={STR.prDatesInverted} tone="danger" /> : null}
+
+      {/* PQ-7 — the printed-on window. Narrows server-side, so it reaches past the page. */}
+      <Muted style={{ marginTop: space(3) }}>{STR.prPrintedBetween}</Muted>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+        <View style={{ flex: 1, minWidth: 150 }}>
+          <DateField label={STR.prFromDate} value={fromKey} onChange={setFromKey} />
+        </View>
+        <View style={{ flex: 1, minWidth: 150 }}>
+          <DateField label={STR.prToDate} value={toKey} onChange={setToKey} />
+        </View>
+      </View>
+      {fromKey || toKey ? (
+        <Button
+          title={STR.prClearDates}
+          variant="ghost"
+          onPress={() => {
+            setFromKey("");
+            setToKey("");
+          }}
+        />
+      ) : null}
 
       {/* The three axes the owner asked to browse by: class, subject, then what it is for. */}
       {classOptions.length > 1 ? (
@@ -160,7 +252,7 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
             {classOptions.map(([id, level]) => (
               <Chip
                 key={id}
-                label={level !== null ? classLevelLabel(level) : STR.prNoClass}
+                label={id === NONE || level === null ? STR.prNoClass : classLevelLabel(level)}
                 selected={classFilter === id}
                 onPress={() => setClassFilter(id)}
               />
@@ -177,7 +269,7 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
             {subjectOptions.map((s) => (
               <Chip
                 key={s}
-                label={subjectLabel(s)}
+                label={routineSubjectLabel(s)}
                 selected={subjectFilter === s}
                 onPress={() => setSubjectFilter(s)}
               />
@@ -203,6 +295,31 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
         </>
       ) : null}
 
+      {/* PQ-7 — who printed it. Pointless for a teacher: their scope is already themselves. */}
+      {isOffice && teacherOptions.length > 1 ? (
+        <>
+          <Muted>{STR.prPickTeacher}</Muted>
+          <ChipRow>
+            <Chip label={STR.all} selected={teacherFilter === ANY} onPress={() => setTeacherFilter(ANY)} />
+            {teacherOptions.map(([id, name]) => (
+              <Chip
+                key={id}
+                label={name}
+                selected={teacherFilter === id}
+                onPress={() => setTeacherFilter(id)}
+              />
+            ))}
+          </ChipRow>
+        </>
+      ) : null}
+
+      {rows.length > 0 ? (
+        <Muted style={{ marginTop: space(2) }}>
+          {bnNum(visible.length)}
+          {visible.length !== totalRows ? ` / ${bnNum(totalRows)}` : ""} {STR.prHistoryCount}
+        </Muted>
+      ) : null}
+
       {historyQ.fetching && rows.length === 0 ? (
         <Loader label={STR.loading} />
       ) : historyQ.error ? (
@@ -220,7 +337,7 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
                 <Body style={{ fontWeight: "700" }}>{r.latest.title}</Body>
                 <Muted>
                   {r.latest.classLevel !== null ? classLevelLabel(r.latest.classLevel) : STR.prNoClass}
-                  {r.latest.subject ? ` · ${subjectLabel(r.latest.subject)}` : ""}
+                  {r.latest.subject ? ` · ${routineSubjectLabel(r.latest.subject)}` : ""}
                   {` · ${printPurposeLabel(r.latest.purpose)}`}
                 </Muted>
                 <Muted>
