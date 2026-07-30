@@ -450,7 +450,12 @@ export async function printRequestById(id: string): Promise<IPrintRequest | null
 const PRINTED_STATUSES = ["PRINTED", "DELIVERED"] as const;
 
 export interface PrintHistoryFilter {
+  /** PQ-8: matches the EFFECTIVE class — `classId`, or `copiesClassId` on a job that has
+   *  no class of its own. See `effectiveClassIdOf`. */
   classId?: string | null;
+  /** PQ-8: only jobs that name no class either way. Mutually exclusive with `classId`;
+   *  passing both AND-s to nothing, which is the honest reading of the request. */
+  noClass?: boolean | null;
   subject?: string | null;
   purpose?: string | null;
   /** Own-row scope: a teacher only ever sees the jobs they filed. */
@@ -476,7 +481,10 @@ export interface PrintHistoryRow {
   firstPrintedAt: Date;
   /** Distinct requester ids across the group — the Office sees who has printed it. */
   requesterIds: string[];
-  /** Resolved for sorting/display; null when the job named no class. */
+  /** PQ-8: the class the row is FOR — `effectiveClassIdOf(latest)`, so a CLASS_PRESENT
+   *  job counts under the class it prints for rather than under "no class". */
+  classId: string | null;
+  /** Resolved for sorting/display; null when the job named no class either way. */
   classLevel: number | null;
 }
 
@@ -511,6 +519,23 @@ export interface PrintHistoryPage {
  * key is source identity × class × subject × purpose, which still folds the real case
  * (the same sheet, same class, printed five times over a term) into one row.
  */
+/**
+ * The class a printed job is FOR, as the history means it (PQ-8).
+ *
+ * `classId` is the job's own class, but only the class-test path has ever set it: of 269
+ * printed jobs on the live data 25 carried it, so a class chip built on `classId` alone
+ * showed Nursery 0 / Class 1 1 while the school had printed for all of them. A
+ * CLASS_PRESENT job, though, names `copiesClassId` — "one copy per student present in
+ * THIS class" — which is a class the teacher explicitly chose, not an inference. Falling
+ * back to it recovers 172 of the 244 untagged jobs (Nursery among them).
+ *
+ * `classId` wins where both exist: a sheet for class 1 whose count follows class 3's
+ * attendance is a class-1 print.
+ */
+export function effectiveClassIdOf(doc: IPrintRequest): Types.ObjectId | null {
+  return doc.classId ?? doc.copiesClassId ?? null;
+}
+
 export function historyKey(doc: IPrintRequest): string {
   let src: string;
   switch (doc.sourceType as PrintSource) {
@@ -530,7 +555,7 @@ export function historyKey(doc: IPrintRequest): string {
     default:
       src = `${doc.sourceType}:${doc._id.toString()}`; // unknown source → never grouped
   }
-  return [src, doc.classId?.toString() ?? "-", doc.subject ?? "-", doc.purpose].join("|");
+  return [src, effectiveClassIdOf(doc)?.toString() ?? "-", doc.subject ?? "-", doc.purpose].join("|");
 }
 
 /** When a job was printed, for grouping — `printedAt` is stamped at markPrinted, but a
@@ -550,7 +575,23 @@ function printedAtOf(doc: IPrintRequest): Date {
  */
 export async function printHistory(filter: PrintHistoryFilter = {}): Promise<PrintHistoryPage> {
   const q: Record<string, unknown> = { status: { $in: PRINTED_STATUSES } };
-  if (filter.classId) q.classId = new Types.ObjectId(filter.classId);
+  // Two clauses below each need their own `$or`, so they are AND-ed explicitly rather
+  // than assigned to `q.$or` — the second assignment would silently drop the first.
+  const and: Record<string, unknown>[] = [];
+
+  if (filter.classId) {
+    if (!Types.ObjectId.isValid(filter.classId)) throw new PrintRequestError("Invalid classId");
+    const oid = new Types.ObjectId(filter.classId);
+    // PQ-8: match the EFFECTIVE class — the job's own class, or the class its copy count
+    // follows when it has no class of its own. Mirrors `effectiveClassIdOf`, including
+    // the precedence: a job with a different `classId` must NOT match on copiesClassId.
+    and.push({ $or: [{ classId: oid }, { classId: null, copiesClassId: oid }] });
+  }
+  if (filter.noClass) {
+    // "Neither field names a class" — the honest remainder (72 live jobs), not everything
+    // the old `classId`-only view lumped together.
+    and.push({ classId: null, copiesClassId: null });
+  }
   if (filter.subject) q.subject = filter.subject;
   if (filter.purpose) {
     if (!(PRINT_PURPOSES as readonly string[]).includes(filter.purpose)) {
@@ -583,8 +624,10 @@ export async function printHistory(filter: PrintHistoryFilter = {}): Promise<Pri
     if (range.$gte && range.$lt && range.$gte >= range.$lt) {
       throw new PrintRequestError("fromKey must not be after toKey");
     }
-    q.$or = [{ printedAt: range }, { printedAt: null, requestedAt: range }];
+    and.push({ $or: [{ printedAt: range }, { printedAt: null, requestedAt: range }] });
   }
+
+  if (and.length) q.$and = and;
 
   const docs = (await PrintRequest.find(q)
     .sort({ printedAt: -1, requestedAt: -1 })
@@ -604,6 +647,7 @@ export async function printHistory(filter: PrintHistoryFilter = {}): Promise<Pri
         lastPrintedAt: at,
         firstPrintedAt: at,
         requesterIds: [doc.requestedBy.toString()],
+        classId: effectiveClassIdOf(doc)?.toString() ?? null,
         classLevel: null,
       });
       continue;
@@ -620,15 +664,13 @@ export async function printHistory(filter: PrintHistoryFilter = {}): Promise<Pri
 
   const rows = [...groups.values()];
 
-  // Class LEVEL, not id, is the meaningful sort key ("class 1 … class 5"); one batched
-  // lookup for the whole page.
-  const classIds = [...new Set(rows.map((r) => r.latest.classId?.toString()).filter(Boolean))] as string[];
+  // Class LEVEL, not id, is the meaningful sort key ("Nursery … class 5"); one batched
+  // lookup for the whole page, over the EFFECTIVE class (PQ-8) the row is grouped by.
+  const classIds = [...new Set(rows.map((r) => r.classId).filter(Boolean))] as string[];
   if (classIds.length) {
     const classes = await Class.find({ _id: { $in: classIds } }).select("level").lean();
     const levelOf = new Map(classes.map((c) => [c._id.toString(), c.level]));
-    for (const r of rows) {
-      r.classLevel = r.latest.classId ? (levelOf.get(r.latest.classId.toString()) ?? null) : null;
-    }
+    for (const r of rows) r.classLevel = r.classId ? (levelOf.get(r.classId) ?? null) : null;
   }
 
   const purposeOrder = new Map((PRINT_PURPOSES as readonly string[]).map((p, i) => [p, i]));

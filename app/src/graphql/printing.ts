@@ -148,6 +148,10 @@ export interface PrintHistoryRowT {
   requesterNames: string[];
   /** PQ-7: index-aligned with `requesterNames` — the teacher filter keys off these. */
   requesterIds: string[];
+  /** PQ-8: the class the ROW is for — the job's own class, else the class its copy count
+   *  follows. Browse by this, not `latest.classId`: only the class-test path sets that. */
+  classId: string | null;
+  classLevel: number | null;
 }
 
 /** Already-printed jobs, ONE ROW PER DOCUMENT, ordered class → subject → purpose →
@@ -180,7 +184,7 @@ export const PRINT_HISTORY_QUERY = gql<
       truncated
       totalRows
       rows {
-        key printCount lastPrintedAt firstPrintedAt requesterNames requesterIds
+        key printCount lastPrintedAt firstPrintedAt requesterNames requesterIds classId classLevel
         latest { ${PRINT_REQUEST_FIELDS} }
       }
     }
