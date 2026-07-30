@@ -148,6 +148,29 @@ across, `printRequestId` back-filled).
 - **PQ6.8** The read scans a bounded window of recent printed jobs; hitting the bound is reported
   (`scannedCapped`) and surfaced in the app rather than silently truncating the list.
 
+### PQ-7 — History filters the Office actually needs *(**D-#390**, owner ask off live use; additive to PQ-6)*
+- **PQ7.1** The **page limit reports itself** (`truncated`, `totalRows`) exactly as the scan cap does —
+  PQ6.8 covered only the scan. The old default of 200 groups against 263 grouped documents dropped 63
+  rows with nothing on screen to say so. Default and max are now the scan cap (1000), so the reported
+  scan bound is the only ceiling.
+- **PQ7.2** A **printed-on window** (`fromKey` / `toKey`, inclusive `YYYY-MM-DD`) filters the JOBS
+  *before* grouping — "printed in June" means a print landed in June, not that the document's newest
+  print did. `toKey` includes its whole day. A row with no `printedAt` (migration-backfilled) is matched
+  on `requestedAt`, the same fallback the grouping uses, so a dated view cannot silently drop it.
+- **PQ7.3** The history may be narrowed **by requester** (`requestedBy`). Office only: for a teacher the
+  scope is already their own rows, so the argument is ignored rather than allowed to widen it — PQ6.4
+  stands. Rows expose `requesterIds` alongside `requesterNames` (index-aligned) so the filter keys off
+  identity, not a display name two staff could share.
+- **PQ7.4** The class filter offers **every roster class** (Nursery … Class 5), not just classes that
+  appear in the returned rows. Deriving the axis from the rows hid Nursery/KG entirely — only the
+  class-test path tagged a job with a class, so 244 of 269 printed jobs carried none.
+- **PQ7.5** A print request **names the class and subject it is for** (both optional — an office notice
+  belongs to no class), so a teacher-filed job is findable on those axes later. For a `CLASS_PRESENT`
+  job the count's class defaults to the job's own class.
+- **PQ7.6** "No class" is a **filter in its own right**, distinct from "all". It previously shared the
+  "any" sentinel, which rendered it as a second permanently-lit copy of the *all* chip that filtered
+  nothing.
+
 ## 6. Out of scope
 - **A `print:*` permission** — reuses `tracker:write` / `roster:manage` (D-#281).
 - **Teacher receipt confirmation** — the Office marks delivered; no acknowledge step.
