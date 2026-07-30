@@ -152,6 +152,14 @@ export interface PrintHistoryRowT {
    *  follows. Browse by this, not `latest.classId`: only the class-test path sets that. */
   classId: string | null;
   classLevel: number | null;
+  /** PQ-9: every job behind the row — what the tag mutation is called with. */
+  jobIds: string[];
+  /** PQ-9: read out of the job's own file name / title, present only on an untagged row.
+   *  A pre-fill for the tag control; `suggestionEvidence` is the text it came from. */
+  suggestedClassId: string | null;
+  suggestedClassLevel: number | null;
+  suggestedSubject: string | null;
+  suggestionEvidence: string | null;
 }
 
 /** Already-printed jobs, ONE ROW PER DOCUMENT, ordered class → subject → purpose →
@@ -185,8 +193,23 @@ export const PRINT_HISTORY_QUERY = gql<
       totalRows
       rows {
         key printCount lastPrintedAt firstPrintedAt requesterNames requesterIds classId classLevel
+        jobIds suggestedClassId suggestedClassLevel suggestedSubject suggestionEvidence
         latest { ${PRINT_REQUEST_FIELDS} }
       }
+    }
+  }
+`;
+
+/** PQ-9: name the class/subject a historical job was for. Pass the row's whole `jobIds`
+ *  list — the row is a document, not a single print. Omitting an argument leaves that
+ *  field alone; passing null clears it. */
+export const TAG_PRINT_REQUESTS = gql<
+  { tagPrintRequests: PrintRequestT[] },
+  { ids: string[]; classId?: string | null; subject?: string | null }
+>`
+  mutation TagPrintRequests($ids: [String!]!, $classId: String, $subject: String) {
+    tagPrintRequests(ids: $ids, classId: $classId, subject: $subject) {
+      id
     }
   }
 `;

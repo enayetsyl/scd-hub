@@ -28,7 +28,10 @@ import {
   printQueueCounts,
   printHistory,
   reprintPrintRequest,
+  tagPrintRequests,
+  suggestTagFor,
   type PrintHistoryRow,
+  type PrintTagSuggestion,
 } from "../services/PrintRequestService";
 import type { IPrintRequest } from "../models/PrintRequest";
 
@@ -368,6 +371,8 @@ interface PrintHistoryRowView {
   row: PrintHistoryRow;
   latest: PrintRequestView;
   requesterNames: string[];
+  /** PQ-9: what the job's own file/title names suggest, for an untagged row only. */
+  suggestion: (PrintTagSuggestion & { classId: string | null }) | null;
 }
 
 interface PrintHistoryPageView {
@@ -400,6 +405,16 @@ PrintHistoryRowRef.implement({
      *  job's own field; browse the history by THIS one. Null = names no class either way. */
     classId: t.string({ nullable: true, resolve: (v) => v.row.classId }),
     classLevel: t.int({ nullable: true, resolve: (v) => v.row.classLevel }),
+    /** PQ-9: every job behind this row — what `tagPrintRequests` is called with, so the
+     *  whole document is tagged rather than just the print that represents it. */
+    jobIds: t.stringList({ resolve: (v) => v.row.jobIds }),
+    /** PQ-9: the class/subject the job's own file name or title suggests, present ONLY on
+     *  a row that names no class. A pre-fill for the tag control, never applied by itself. */
+    suggestedClassId: t.string({ nullable: true, resolve: (v) => v.suggestion?.classId ?? null }),
+    suggestedClassLevel: t.int({ nullable: true, resolve: (v) => v.suggestion?.classLevel ?? null }),
+    suggestedSubject: t.string({ nullable: true, resolve: (v) => v.suggestion?.subject ?? null }),
+    /** The text the suggestion was read out of, so the person confirming can judge it. */
+    suggestionEvidence: t.string({ nullable: true, resolve: (v) => v.suggestion?.evidence ?? null }),
   }),
 });
 
@@ -463,11 +478,21 @@ builder.queryField("printHistory", (t) =>
       });
       const decorated = await decorate(page.rows.map((r) => r.latest));
       const names = await requesterNamesFor(page.rows);
+      // PQ-9: a level→class map for the suggestions, fetched once and only when some row
+      // actually needs one (a fully tagged page pays nothing).
+      const needsSuggestion = page.rows.some((r) => r.classId === null);
+      const classByLevel = needsSuggestion ? await activeClassByLevel() : new Map<number, string>();
       return {
         rows: page.rows.map((row, i) => ({
           row,
           latest: decorated[i],
           requesterNames: row.requesterIds.map((id) => names.get(id) ?? "—"),
+          // Only an untagged row gets a suggestion — on a tagged one it would invite
+          // re-tagging a class somebody already established.
+          suggestion:
+            row.classId === null
+              ? suggestionFor(decorated[i], classByLevel)
+              : null,
         })),
         scannedCapped: page.scannedCapped,
         truncated: page.truncated,
@@ -477,6 +502,28 @@ builder.queryField("printHistory", (t) =>
   }),
 );
 
+/** Roster class per LEVEL, for turning a suggested level into a real class id (PQ-9).
+ *  Only ACTIVE classes: a suggestion must not point at a retired year's class. */
+async function activeClassByLevel(): Promise<Map<number, string>> {
+  const classes = await Class.find({ active: true }).select("level").lean();
+  const out = new Map<number, string>();
+  // First one wins per level; the roster has exactly one class per level today, and a
+  // duplicate must not make the suggestion depend on document order silently.
+  for (const c of classes) if (!out.has(c.level)) out.set(c.level, c._id.toString());
+  return out;
+}
+
+/** The suggestion for one row: read the job's own file names + title, then resolve the
+ *  level to a class. A level with no matching class yields a suggestion with no id — the
+ *  evidence is still worth showing. */
+function suggestionFor(
+  view: PrintRequestView,
+  classByLevel: Map<number, string>,
+): PrintTagSuggestion & { classId: string | null } {
+  const s = suggestTagFor({ title: view.doc.title, fileNames: view.files.map((f) => f.name) });
+  return { ...s, classId: s.classLevel === null ? null : classByLevel.get(s.classLevel) ?? null };
+}
+
 /** Names for every requester across the page's groups, in one query. */
 async function requesterNamesFor(rows: PrintHistoryRow[]): Promise<Map<string, string>> {
   const ids = [...new Set(rows.flatMap((r) => r.requesterIds))];
@@ -484,6 +531,43 @@ async function requesterNamesFor(rows: PrintHistoryRow[]): Promise<Map<string, s
   const users = await User.find({ _id: { $in: ids } }).select("name").lean();
   return new Map(users.map((u) => [u._id.toString(), u.name]));
 }
+
+builder.mutationField("tagPrintRequests", (t) =>
+  t.field({
+    type: [PrintRequestRef],
+    description:
+      "Name the class/subject a historical print job was FOR (PQ-9, D-#392). Pass EVERY job behind a " +
+      "history row (`PrintHistoryRow.jobIds`) — the row stands for the document, so tagging one print " +
+      "would split it. Omit an argument to leave that field alone; pass null to clear it. The Office " +
+      "(roster:manage) may tag any job, a teacher only their own; a class-test job is refused outright " +
+      "because its class belongs to the exam record. Audited with both the old and the new value.",
+    authScopes: { authenticated: true },
+    args: {
+      ids: t.arg.stringList({ required: true }),
+      /** Omitted = leave; null = clear; an id = set. Validated against the roster. */
+      classId: t.arg.string({ required: false }),
+      /** Omitted = leave; null = clear; a `ROUTINE_SUBJECTS` code = set. */
+      subject: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const office = isOffice(ctx);
+      if (!office && !callerHasPermission(ctx.auth, "tracker:write")) {
+        throw new ForbiddenError("Not allowed to tag a print request");
+      }
+      const docs = await tagPrintRequests({
+        ids: args.ids,
+        // An omitted GraphQL argument is absent from `args`, an explicit null is null —
+        // that distinction IS the leave/clear signal, so it is passed through untouched.
+        classId: args.classId === undefined ? undefined : args.classId,
+        subject: args.subject === undefined ? undefined : args.subject,
+        actorId: ctx.auth.userId,
+        isOffice: office,
+      });
+      return decorate(docs);
+    },
+  }),
+);
 
 builder.mutationField("reprintPrintRequest", (t) =>
   t.field({

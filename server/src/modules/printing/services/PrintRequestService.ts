@@ -13,7 +13,7 @@
  * Sources are references by id, never PDF snapshots (see the model's header).
  */
 import { Types } from "mongoose";
-import { MAX_PRINT_UPLOADS, PLAN_DOC_TYPES, PRINT_COLOURS, PRINT_PURPOSES, PRINT_SIDES, PRINT_SOURCES } from "@scd/shared";
+import { MAX_PRINT_UPLOADS, PLAN_DOC_TYPES, PRINT_COLOURS, PRINT_PURPOSES, PRINT_SIDES, PRINT_SOURCES, ROUTINE_SUBJECTS } from "@scd/shared";
 import type { PrintColour, PrintPurpose, PrintRequestStatus, PrintSides, PrintSource } from "@scd/shared";
 import { PrintRequest, type IPrintRequest } from "../models/PrintRequest";
 import { AssessmentSet } from "../../assessment/models/AssessmentSet";
@@ -481,6 +481,9 @@ export interface PrintHistoryRow {
   firstPrintedAt: Date;
   /** Distinct requester ids across the group — the Office sees who has printed it. */
   requesterIds: string[];
+  /** PQ-9: every job in the group. Tagging the row means tagging all of them — the row
+   *  stands for the DOCUMENT, so tagging only `latest` would split it into two rows. */
+  jobIds: string[];
   /** PQ-8: the class the row is FOR — `effectiveClassIdOf(latest)`, so a CLASS_PRESENT
    *  job counts under the class it prints for rather than under "no class". */
   classId: string | null;
@@ -647,12 +650,14 @@ export async function printHistory(filter: PrintHistoryFilter = {}): Promise<Pri
         lastPrintedAt: at,
         firstPrintedAt: at,
         requesterIds: [doc.requestedBy.toString()],
+        jobIds: [doc._id.toString()],
         classId: effectiveClassIdOf(doc)?.toString() ?? null,
         classLevel: null,
       });
       continue;
     }
     existing.printCount += 1;
+    existing.jobIds.push(doc._id.toString());
     if (at > existing.lastPrintedAt) {
       existing.latest = doc;
       existing.lastPrintedAt = at;
@@ -690,6 +695,195 @@ export async function printHistory(filter: PrintHistoryFilter = {}): Promise<Pri
     truncated: rows.length > limit,
     totalRows: rows.length,
   };
+}
+
+// ---------------------------------------------------------------------------
+// PQ-9 (D-#392) — tagging a historical job with the class/subject it was for
+// ---------------------------------------------------------------------------
+
+/**
+ * What the file/job NAMES suggest a print was for.
+ *
+ * PQ-8 recovered every job that named a class through `copiesClassId`; 72 printed jobs
+ * still name one nowhere. 41 of those DO carry a readable code in the attached file's
+ * name or the title (`C1_Eng_Block02.pdf`, `Class 3 HW L2.pdf`, `English Drive C1_B3_PT`).
+ * This reads that code so the tag control can arrive PRE-FILLED — a suggestion a person
+ * confirms, never a silent write: on the live data the code names a class the requester
+ * does not teach for 12 of the 22 rows where that could be cross-checked (coordination
+ * work, or grants that have since changed), so it is evidence, not proof.
+ */
+export interface PrintTagSuggestion {
+  /** Roster class LEVEL (-1 Nursery … 5), not an id — the caller maps it to a class. */
+  classLevel: number | null;
+  /** A `ROUTINE_SUBJECTS` code. */
+  subject: string | null;
+  /** The exact text the guess came from, so the confirming human can judge it. */
+  evidence: string | null;
+}
+
+/**
+ * Underscores are WORD characters, so `\bEng\b` never matches inside `C1_Eng_Block02` —
+ * the exact shape the live file names use. Both readers match on a separator-normalized
+ * copy; the ORIGINAL text is what gets shown back as evidence.
+ */
+function normalizeForMatch(text: string): string {
+  return text.replace(/[_]+/g, " ");
+}
+
+/** `C1` / `C 1` / `Class 3` / `C1B03` / `-C1-` → level; Nursery/KG spelled either way. */
+function classLevelFromText(raw: string): number | null {
+  const text = normalizeForMatch(raw);
+  // `Class 3` / `C-1` / `C_2` — a digit must follow the separator, so "Class Test" misses.
+  const spelt = /\bC(?:lass)?[ _-]?([1-5])\b/i.exec(text);
+  if (spelt) return Number(spelt[1]);
+  // `C1B03`, `C4B02` — a code glued to the next token.
+  const glued = /\bC([1-5])[A-Za-z_]/.exec(text);
+  if (glued) return Number(glued[1]);
+  const dashed = /-C([1-5])-/i.exec(text);
+  if (dashed) return Number(dashed[1]);
+  if (/\bnursery\b|নার্সারি/i.test(text)) return -1;
+  if (/\bK\.?\s?G\b|\bC0\b|কেজি/i.test(text)) return 0;
+  return null;
+}
+
+/** Subject code from a name. Bangladesh (BGS) is tested BEFORE Bangla, or every
+ *  "Bangladesh & Global Studies" sheet would read as BAN. */
+function subjectFromText(raw: string): string | null {
+  const text = normalizeForMatch(raw);
+  if (/bangladesh|\bBGS\b|বিশ্বপরিচয়/i.test(text)) return "BGS";
+  if (/\bban(gla)?\b|বাংলা/i.test(text)) return "BAN";
+  if (/\beng(lish)?\b|ইংরেজি/i.test(text)) return "ENG";
+  if (/\bmath(s|ematics)?\b|গণিত/i.test(text)) return "MATH";
+  if (/\bsci(ence)?\b|বিজ্ঞান/i.test(text)) return "SCI";
+  if (/\bislam(iat)?\b|ইসলাম/i.test(text)) return "ISLAM";
+  if (/\barabic\b|আরবি/i.test(text)) return "ARABIC";
+  if (/\bqur(’|')?an\b|কুরআন/i.test(text)) return "QURAN";
+  return null;
+}
+
+/**
+ * Read a class/subject out of a job's own text. `fileNames` is checked FIRST — on the
+ * live data the attached file names carry the code 38 times against the title's 3, and a
+ * title is usually the generic "Print request — <teacher>".
+ */
+export function suggestTagFor(doc: {
+  title?: string | null;
+  fileNames?: string[];
+}): PrintTagSuggestion {
+  const candidates = [...(doc.fileNames ?? []), doc.title ?? ""].filter((t) => t.trim().length > 0);
+  let classLevel: number | null = null;
+  let subject: string | null = null;
+  let evidence: string | null = null;
+  for (const text of candidates) {
+    const lvl = classLevelFromText(text);
+    const sub = subjectFromText(text);
+    if (classLevel === null && lvl !== null) {
+      classLevel = lvl;
+      evidence = text;
+    }
+    if (subject === null && sub !== null) {
+      subject = sub;
+      if (evidence === null) evidence = text;
+    }
+    if (classLevel !== null && subject !== null) break;
+  }
+  return { classLevel, subject, evidence };
+}
+
+export interface TagPrintRequestsInput {
+  /** EVERY job behind the history row. The unit being tagged is the DOCUMENT the row
+   *  stands for, not one of its prints — tagging only `latest` would split the group in
+   *  two and leave the older prints unfindable. */
+  ids: string[];
+  /** Undefined leaves the class alone; null CLEARS it; an id sets it. */
+  classId?: string | null;
+  subject?: string | null;
+  actorId: string;
+  isOffice: boolean;
+}
+
+/** A guard against a runaway id list; the largest live group is a handful of prints. */
+const MAX_TAG_IDS = 200;
+
+/**
+ * Set (or clear) the class/subject a historical print job was FOR.
+ *
+ * The 31 jobs PQ-8 could not recover are unrecoverable from data — 18 are Google Docs
+ * links with opaque ids, 13 are uploads with unrevealing names, and no requester teaches
+ * only one class, so "infer it from who filed it" is ambiguous for every row. Only a
+ * person knows, so this is how they say it.
+ *
+ * Scope mirrors `reprintPrintRequest`: the Office may tag any job, a teacher only their
+ * own. A job carrying `classTestId` is REFUSED outright — its class belongs to the exam
+ * record it mirrors (CT-1), and the history must not become a side door onto that.
+ * All-or-nothing: a group is one document, so a partial write would leave it in two
+ * states and silently split the row.
+ */
+export async function tagPrintRequests(input: TagPrintRequestsInput): Promise<IPrintRequest[]> {
+  const setsClass = input.classId !== undefined;
+  const setsSubject = input.subject !== undefined;
+  if (!setsClass && !setsSubject) throw new PrintRequestError("Nothing to tag");
+
+  if (input.ids.length === 0) throw new PrintRequestError("No print request given");
+  if (input.ids.length > MAX_TAG_IDS) throw new PrintRequestError("Too many print requests at once");
+  for (const id of input.ids) {
+    if (!Types.ObjectId.isValid(id)) throw new PrintRequestError("Invalid print request id");
+  }
+
+  // Validate the target class against the ROSTER, not just its shape: a tag pointing at
+  // a class that does not exist would read as "no class" forever after.
+  let classId: Types.ObjectId | null = null;
+  if (setsClass && input.classId !== null) {
+    if (!Types.ObjectId.isValid(input.classId!)) throw new PrintRequestError("Invalid classId");
+    classId = new Types.ObjectId(input.classId!);
+    if (!(await Class.exists({ _id: classId }))) throw new PrintRequestError("Class not found");
+  }
+  if (setsSubject && input.subject !== null) {
+    if (!(ROUTINE_SUBJECTS as readonly string[]).includes(input.subject!)) {
+      throw new PrintRequestError("Invalid subject");
+    }
+  }
+
+  const docs = await PrintRequest.find({ _id: { $in: input.ids.map((i) => new Types.ObjectId(i)) } });
+  if (docs.length !== input.ids.length) throw new PrintRequestError("Print request not found");
+
+  for (const doc of docs) {
+    if (!input.isOffice && doc.requestedBy.toString() !== input.actorId) {
+      throw new PrintRequestError("You may only tag your own print request");
+    }
+    if (doc.classTestId) {
+      throw new PrintRequestError("A class-test job takes its class from the exam record");
+    }
+  }
+
+  const updated: IPrintRequest[] = [];
+  for (const doc of docs) {
+    const before = { classId: doc.classId?.toString() ?? null, subject: doc.subject ?? null };
+    if (setsClass) {
+      if (classId) doc.classId = classId;
+      else doc.classId = undefined;
+    }
+    if (setsSubject) {
+      if (input.subject) doc.subject = input.subject;
+      else doc.subject = undefined;
+    }
+    await doc.save();
+    await writeAudit({
+      eventKind: "PRINT_REQUEST_CLASS_TAGGED",
+      actorId: input.actorId,
+      targetId: doc._id,
+      targetKind: "PrintRequest",
+      // Both sides recorded: the tag is a human judgement, so a later reader needs to see
+      // what it replaced as well as who made it.
+      meta: {
+        before,
+        after: { classId: doc.classId?.toString() ?? null, subject: doc.subject ?? null },
+        byOffice: input.isOffice,
+      },
+    });
+    updated.push(doc);
+  }
+  return updated;
 }
 
 /**
