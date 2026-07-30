@@ -21,11 +21,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission, PRINT_COLOUR_LABELS_EN, PRINT_SIDES_LABELS_EN } from "@scd/shared";
+import { roleHasPermission, ROUTINE_SUBJECTS, PRINT_COLOUR_LABELS_EN, PRINT_SIDES_LABELS_EN } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import {
   PRINT_HISTORY_QUERY,
   REPRINT_PRINT_REQUEST,
+  TAG_PRINT_REQUESTS,
   type PrintHistoryRowT,
 } from "../../graphql/printing";
 import { ACADEMIC_YEARS_QUERY, CLASSES_QUERY } from "../../graphql/operations";
@@ -75,7 +76,7 @@ const ANY = "__any__";
 const NONE = "__none__";
 
 export default function PrintHistoryScreen({ navigation }: Props): React.ReactElement {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const toast = useToast();
   const isOffice = !!role && roleHasPermission(role as Role, "roster:manage");
 
@@ -89,6 +90,10 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
 
   // The open reprint form, keyed by row — only one at a time.
   const [reprintFor, setReprintFor] = useState<string | null>(null);
+  // PQ-9 — the open tag form, likewise one at a time.
+  const [tagFor, setTagFor] = useState<string | null>(null);
+  const [tagClass, setTagClass] = useState<string | null>(null);
+  const [tagSubject, setTagSubject] = useState<string | null>(null);
   const [useDate, setUseDate] = useState("");
   const [copies, setCopies] = useState("");
   const [busy, setBusy] = useState(false);
@@ -111,6 +116,7 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
     requestPolicy: "cache-and-network",
   });
   const [, reprint] = useMutation(REPRINT_PRINT_REQUEST);
+  const [, tagRequests] = useMutation(TAG_PRINT_REQUESTS);
   const { openingId, runOpen } = useFileOpen();
 
   // The roster's classes — the class axis has to be complete even for a class nobody has
@@ -181,6 +187,39 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
       (purposeFilter === ANY || r.latest.purpose === purposeFilter) &&
       (teacherFilter === ANY || r.requesterIds.includes(teacherFilter)),
   );
+
+  // PQ-9 — who may name the class of an untagged row: the Office, or the teacher who
+  // filed it. Mirrors the server gate; the server is still the one enforcing it.
+  const canTag = (r: PrintHistoryRowT): boolean =>
+    isOffice || (!!user && r.requesterIds.includes(user.id));
+
+  function openTag(r: PrintHistoryRowT): void {
+    if (tagFor === r.key) {
+      setTagFor(null);
+      return;
+    }
+    setTagFor(r.key);
+    // Pre-filled from the file name where we could read one — the point is a one-tap
+    // confirm, not a fresh choice. Both stay editable.
+    setTagClass(r.suggestedClassId);
+    setTagSubject(r.suggestedSubject);
+  }
+
+  async function saveTag(r: PrintHistoryRowT): Promise<void> {
+    if (!tagClass) return;
+    setBusy(true);
+    // The WHOLE group is tagged: the row is a document, and tagging one print of it would
+    // move that print into a row of its own.
+    const res = await tagRequests({ ids: r.jobIds, classId: tagClass, subject: tagSubject });
+    setBusy(false);
+    if (res.error) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
+    toast.show(STR.prTagOk, "ok");
+    setTagFor(null);
+    refetchHistory({ requestPolicy: "network-only" });
+  }
 
   function openReprint(r: PrintHistoryRowT): void {
     if (reprintFor === r.key) {
@@ -399,7 +438,60 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
                 />
               ) : null}
               <Button title={STR.prReprint} onPress={() => openReprint(r)} disabled={busy} />
+              {/* PQ-9 — offered only where there is nothing to browse by yet, and only to
+                  someone allowed to say (the Office, or whoever filed it). */}
+              {!r.classId && canTag(r) ? (
+                <Button title={STR.prTag} variant="secondary" onPress={() => openTag(r)} disabled={busy} />
+              ) : null}
             </View>
+
+            {/* The tag form: class is required (it is the axis that was missing), subject
+                optional. Both arrive pre-filled when the file name gave them away. */}
+            {tagFor === r.key ? (
+              <View style={{ marginTop: space(2) }}>
+                <Muted>{STR.prTagHint}</Muted>
+                {r.suggestionEvidence ? (
+                  <Muted style={{ marginTop: space(1) }}>
+                    {STR.prTagGuess}: {r.suggestionEvidence}
+                  </Muted>
+                ) : null}
+                <Muted style={{ marginTop: space(2) }}>{STR.prPickClass}</Muted>
+                <ChipRow>
+                  {(classData?.classes ?? [])
+                    .filter((c) => c.active)
+                    .slice()
+                    .sort((a, b) => a.level - b.level)
+                    .map((c) => (
+                      <Chip
+                        key={c.id}
+                        label={classLevelLabel(c.level)}
+                        selected={tagClass === c.id}
+                        onPress={() => setTagClass(c.id)}
+                      />
+                    ))}
+                </ChipRow>
+                <Muted>{STR.prTagSubjectOptional}</Muted>
+                <ChipRow>
+                  {ROUTINE_SUBJECTS.map((s) => (
+                    <Chip
+                      key={s}
+                      label={routineSubjectLabel(s)}
+                      selected={tagSubject === s}
+                      // Tapping the chosen subject again clears it — subject is optional,
+                      // so there has to be a way back to "not saying".
+                      onPress={() => setTagSubject(tagSubject === s ? null : s)}
+                    />
+                  ))}
+                </ChipRow>
+                <Button
+                  title={STR.prTagSave}
+                  loading={busy}
+                  disabled={busy || !tagClass}
+                  onPress={() => saveTag(r)}
+                />
+                {!tagClass ? <Muted>{STR.prTagNeedClass}</Muted> : null}
+              </View>
+            ) : null}
 
             {/* The reprint form: everything carries over from the earlier job, so only the
                 use date (and optionally the count) is asked for. */}

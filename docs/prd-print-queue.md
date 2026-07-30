@@ -191,6 +191,34 @@ across, `printRequestId` back-filled).
   section either). Class is not inferred from a title, so those stay untagged and are reached by
   teacher + date instead.
 
+### PQ-9 — Naming the class of a print that never recorded one *(**D-#392**, owner ask: "how can we fix no-class items and tag appropriately")*
+- **PQ9.1** A history row that names no class offers a **tag control**: pick the class (required — it
+  is the axis that was missing) and optionally the subject. Shown only to someone allowed to say so:
+  the Office (`roster:manage`) or the teacher who filed the job. The server enforces the same rule.
+- **PQ9.2** Tagging applies to **every job behind the row** (`PrintHistoryRow.jobIds`), because the row
+  stands for a document (PQ6.2). Tagging only the representative print would move it into a row of its
+  own and leave the older prints unfindable. The write is **all-or-nothing**: one job in the list the
+  caller may not touch refuses the whole group rather than half-tagging it.
+- **PQ9.3** A **class-test job is refused outright** — its class belongs to the exam record it mirrors
+  (PQ-5/CT-1), and the history must not become a side door onto that.
+- **PQ9.4** The control arrives **pre-filled from the job's own file name or title** where one can be
+  read (`C1_Eng_Block02.pdf` → Class 1 · English; `Class 3 HW L2.pdf` → Class 3). Measured on the live
+  data: **42 of the 72** untagged jobs arrive with a class suggested, 20 of those with a subject as well;
+  the remaining 30 are chosen from scratch. The suggestion is **never applied by itself** — on the live
+  data the code names a class the requester does not teach for 12 of the 22 rows where that could be
+  cross-checked, so it is evidence a person confirms, and `suggestionEvidence` shows the exact text it
+  was read from. A tagged row is offered no suggestion, so nothing invites re-tagging a settled class.
+- **PQ9.5** Both sides of the change are **audited** (`PRINT_REQUEST_CLASS_TAGGED`, before + after +
+  whether the actor was the Office). A tag is a human judgement, so a later reader needs to see what it
+  replaced, not just what it now says.
+- **PQ9.6** Omitting an argument **leaves** that field; passing null **clears** it. The class is
+  validated against the roster (a tag pointing at a non-existent class would read as "no class" forever
+  after) and the subject against `ROUTINE_SUBJECTS` — the same vocabulary the request form offers, so
+  ARABIC / ISLAM / QURAN are taggable even though the content plane's `SUBJECTS` omits them.
+- **PQ9.7** Class is still **never inferred silently** from a title, a link, or the requester's teaching
+  scope. The 18 untagged Google Docs links carry opaque ids, and no requester teaches only one class, so
+  "guess it from who filed it" is ambiguous for every single row (D-#391 §residual).
+
 ## 6. Out of scope
 - **A `print:*` permission** — reuses `tracker:write` / `roster:manage` (D-#281).
 - **Teacher receipt confirmation** — the Office marks delivered; no acknowledge step.
