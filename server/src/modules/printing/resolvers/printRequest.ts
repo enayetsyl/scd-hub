@@ -370,6 +370,13 @@ interface PrintHistoryRowView {
   requesterNames: string[];
 }
 
+interface PrintHistoryPageView {
+  rows: PrintHistoryRowView[];
+  scannedCapped: boolean;
+  truncated: boolean;
+  totalRows: number;
+}
+
 const PrintHistoryRowRef = builder.objectRef<PrintHistoryRowView>("PrintHistoryRow");
 PrintHistoryRowRef.implement({
   description:
@@ -385,17 +392,24 @@ PrintHistoryRowRef.implement({
     firstPrintedAt: t.string({ resolve: (v) => v.row.firstPrintedAt.toISOString() }),
     /** Everyone who has printed it (Office view); a teacher only ever sees themselves. */
     requesterNames: t.stringList({ resolve: (v) => v.requesterNames }),
+    /** PQ-7: the same requesters as ids, index-aligned with `requesterNames`, so the
+     *  Office can filter the history by teacher (two staff may share a name). */
+    requesterIds: t.stringList({ resolve: (v) => v.row.requesterIds }),
   }),
 });
 
 const PrintHistoryPageRef = builder
-  .objectRef<{ rows: PrintHistoryRowView[]; scannedCapped: boolean }>("PrintHistoryPage")
+  .objectRef<PrintHistoryPageView>("PrintHistoryPage")
   .implement({
     description: "A page of the reprint history (D-#362).",
     fields: (t) => ({
       rows: t.field({ type: [PrintHistoryRowRef], resolve: (v) => v.rows }),
       /** True when the scan cap was reached, so prints older than the window may be missing. */
       scannedCapped: t.boolean({ resolve: (v) => v.scannedCapped }),
+      /** PQ-7: true when more documents matched than were returned — never truncate silently. */
+      truncated: t.boolean({ resolve: (v) => v.truncated }),
+      /** How many documents matched the filters before the page limit. */
+      totalRows: t.int({ resolve: (v) => v.totalRows }),
     }),
   });
 
@@ -404,7 +418,8 @@ builder.queryField("printHistory", (t) =>
     type: PrintHistoryPageRef,
     description:
       "Already-printed jobs (PRINTED + DELIVERED), collapsed to ONE ROW PER DOCUMENT and ordered by " +
-      "class → subject → purpose → newest print (D-#362). Filter by class / subject / purpose. " +
+      "class → subject → purpose → newest print (D-#362). Filter by class / subject / purpose, by " +
+      "requester and by printed-on window (PQ-7). " +
       "The Office/Principal (roster:manage) see every requester's prints; a teacher (tracker:write) " +
       "sees only their own — enforced server-side, not by an argument.",
     authScopes: { authenticated: true },
@@ -412,6 +427,12 @@ builder.queryField("printHistory", (t) =>
       classId: t.arg.string({ required: false }),
       subject: t.arg.string({ required: false }),
       purpose: t.arg.string({ required: false }),
+      /** PQ-7: narrow to one requester. Office only — for a teacher the scope is already
+       *  their own, so the argument is ignored rather than allowed to widen it. */
+      requestedBy: t.arg.string({ required: false }),
+      /** PQ-7: inclusive printed-on window, `YYYY-MM-DD`. */
+      fromKey: t.arg.string({ required: false }),
+      toKey: t.arg.string({ required: false }),
       limit: t.arg.int({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
@@ -424,8 +445,10 @@ builder.queryField("printHistory", (t) =>
         classId: args.classId,
         subject: args.subject,
         purpose: args.purpose,
-        // Own-row scope for a teacher: the caller cannot widen it.
-        requestedBy: office ? null : ctx.auth.userId,
+        // Own-row scope for a teacher: the caller cannot widen it. The Office may narrow.
+        requestedBy: office ? args.requestedBy ?? null : ctx.auth.userId,
+        fromKey: args.fromKey,
+        toKey: args.toKey,
         limit: args.limit,
       });
       const decorated = await decorate(page.rows.map((r) => r.latest));
@@ -437,6 +460,8 @@ builder.queryField("printHistory", (t) =>
           requesterNames: row.requesterIds.map((id) => names.get(id) ?? "—"),
         })),
         scannedCapped: page.scannedCapped,
+        truncated: page.truncated,
+        totalRows: page.totalRows,
       };
     },
   }),

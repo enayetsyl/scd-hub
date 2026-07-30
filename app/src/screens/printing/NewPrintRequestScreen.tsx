@@ -9,6 +9,11 @@
  *   CONTENT_ARTIFACT — a chapter/session plan, passed in from the plan viewer
  *
  * No PDF snapshot is taken: an assembled set is locked, so its id is enough.
+ *
+ * PQ-7: the request also names the CLASS and SUBJECT it is for (both optional — an office
+ * notice belongs to no class). Without them every teacher-filed job landed in the reprint
+ * history as "no class, no subject", which left that screen's class axis usable only for
+ * class tests and hid Nursery/KG completely.
  */
 import React, { useState } from "react";
 import { View } from "react-native";
@@ -22,13 +27,14 @@ import {
   PRINT_SIDES,
   PRINT_SIDES_LABELS_EN,
   MAX_PRINT_UPLOADS,
+  ROUTINE_SUBJECTS,
 } from "@scd/shared";
 import { CREATE_PRINT_REQUEST } from "../../graphql/printing";
 import { ACADEMIC_YEARS_QUERY, CLASSES_QUERY } from "../../graphql/operations";
 import type { PrintStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Field, Chip, ChipRow, Button, Notice } from "../../components/ui";
 import { DateField } from "../../components/DateField";
-import { STR, classLevelLabel } from "../../lib/labels";
+import { STR, classLevelLabel, routineSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import {
   pickAndUploadPrintFiles,
@@ -78,6 +84,9 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
   // chosen class on the USE day (resolved from that day's attendance by the Office).
   const [copiesMode, setCopiesMode] = useState<"FIXED" | "CLASS_PRESENT">("FIXED");
   const [copiesClassId, setCopiesClassId] = useState<string | null>(null);
+  // PQ-7 — what the print is FOR. Optional: an office notice belongs to no class.
+  const [classId, setClassId] = useState<string | null>(null);
+  const [subject, setSubject] = useState<string | null>(null);
   const [neededByKey, setNeededByKey] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -95,7 +104,8 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
     variables: { academicYearId: academicYearId ?? "" },
     pause: !academicYearId,
   });
-  const classes = (classData?.classes ?? []).filter((c) => c.active);
+  // Nursery (-1) and KG (0) sort ahead of class 1..5 — the order the school reads them in.
+  const classes = (classData?.classes ?? []).filter((c) => c.active).slice().sort((a, b) => a.level - b.level);
 
   /** Shared upload tail for both entry points — the pick button and the web drop. */
   async function runUpload(upload: () => Promise<MultiUploadResult>): Promise<void> {
@@ -169,8 +179,12 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
       sides,
       copies: copiesMode === "FIXED" ? n : 1, // finalized from attendance at print time
       copiesMode,
-      copiesClassId: copiesMode === "CLASS_PRESENT" ? copiesClassId : null,
+      // The count's class defaults to the job's own class — they are the same in practice.
+      copiesClassId: copiesMode === "CLASS_PRESENT" ? copiesClassId ?? classId : null,
       neededByKey,
+      // PQ-7: carried so the reprint history can group and filter by them.
+      classId,
+      subject,
       notes: notes.trim() || null,
     });
     setBusy(false);
@@ -197,6 +211,35 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
         <ChipRow>
           {PRINT_PURPOSES.map((p) => (
             <Chip key={p} label={PRINT_PURPOSE_LABELS_EN[p]} selected={purpose === p} onPress={() => setPurpose(p)} />
+          ))}
+        </ChipRow>
+      </Card>
+
+      {/* PQ-7 — which class and subject the print is for. Both optional, both tappable
+          off again: this is what makes the job findable in the reprint history later. */}
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.prPickClass}</Body>
+        <ChipRow>
+          {classes.map((c) => (
+            <Chip
+              key={c.id}
+              label={classLevelLabel(c.level)}
+              selected={classId === c.id}
+              onPress={() => setClassId(classId === c.id ? null : c.id)}
+            />
+          ))}
+        </ChipRow>
+        <Body style={{ fontWeight: "700", marginTop: space(3), marginBottom: space(2) }}>
+          {STR.hrCoverSubject}
+        </Body>
+        <ChipRow>
+          {ROUTINE_SUBJECTS.map((s) => (
+            <Chip
+              key={s}
+              label={routineSubjectLabel(s)}
+              selected={subject === s}
+              onPress={() => setSubject(subject === s ? null : s)}
+            />
           ))}
         </ChipRow>
       </Card>
