@@ -395,6 +395,11 @@ PrintHistoryRowRef.implement({
     /** PQ-7: the same requesters as ids, index-aligned with `requesterNames`, so the
      *  Office can filter the history by teacher (two staff may share a name). */
     requesterIds: t.stringList({ resolve: (v) => v.row.requesterIds }),
+    /** PQ-8: the class this row is FOR — the job's own `classId`, else the class its copy
+     *  count follows (`copiesClassId`). Distinct from `latest.classId`, which stays the
+     *  job's own field; browse the history by THIS one. Null = names no class either way. */
+    classId: t.string({ nullable: true, resolve: (v) => v.row.classId }),
+    classLevel: t.int({ nullable: true, resolve: (v) => v.row.classLevel }),
   }),
 });
 
@@ -424,7 +429,11 @@ builder.queryField("printHistory", (t) =>
       "sees only their own — enforced server-side, not by an argument.",
     authScopes: { authenticated: true },
     args: {
+      /** PQ-8: the EFFECTIVE class — matches a job's own `classId`, or `copiesClassId` on
+       *  a job that names no class of its own. */
       classId: t.arg.string({ required: false }),
+      /** PQ-8: only jobs that name no class either way. */
+      noClass: t.arg.boolean({ required: false }),
       subject: t.arg.string({ required: false }),
       purpose: t.arg.string({ required: false }),
       /** PQ-7: narrow to one requester. Office only — for a teacher the scope is already
@@ -443,6 +452,7 @@ builder.queryField("printHistory", (t) =>
       }
       const page = await printHistory({
         classId: args.classId,
+        noClass: args.noClass,
         subject: args.subject,
         purpose: args.purpose,
         // Own-row scope for a teacher: the caller cannot widen it. The Office may narrow.

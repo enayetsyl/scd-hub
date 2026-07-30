@@ -171,6 +171,26 @@ across, `printRequestId` back-filled).
   "any" sentinel, which rendered it as a second permanently-lit copy of the *all* chip that filtered
   nothing.
 
+### PQ-8 — The class a print is *for* *(**D-#391**, owner ask: the PQ-7 chips were still empty)*
+- **PQ8.1** The history's class axis reads the **effective class**: the job's own `classId`, else
+  `copiesClassId` — the class a `CLASS_PRESENT` job prints one copy per present student of. PQ7.4 gave
+  the chips a complete roster but every historical job still answered "no class", so Nursery listed 0
+  documents and Class 1 listed 1 of 263. This is not inference: `copiesClassId` is a class the teacher
+  explicitly picked on the job. Live effect — Nursery 0→7, KG 1→9, Class 1 1→27, Class 2 4→35,
+  Class 3 4→37, Class 4 7→36, Class 5 8→43, no-class 238→72.
+- **PQ8.2** A job's **own class wins** where both are set: a class-1 sheet whose count follows class 3's
+  attendance is a class-1 print, and must not appear under class 3.
+- **PQ8.3** The effective class is part of the **grouping key**, so the same sheet printed for two
+  different classes stays two rows — the axis the history is browsed by (PQ6.2 rationale, now applied to
+  the class that is actually known).
+- **PQ8.4** Rows expose the effective class as `PrintHistoryRow.classId` / `classLevel`, *separate* from
+  `latest.classId`, which keeps meaning the job's own field. The row-level pair is what the class chips
+  and the row label read.
+- **PQ8.5** The server's `classId` filter matches the same effective class, and `noClass` selects the
+  honest remainder — jobs naming a class **neither** way (72 live: fixed-count uploads and links, no
+  section either). Class is not inferred from a title, so those stay untagged and are reached by
+  teacher + date instead.
+
 ## 6. Out of scope
 - **A `print:*` permission** — reuses `tracker:write` / `roster:manage` (D-#281).
 - **Teacher receipt confirmation** — the Office marks delivered; no acknowledge step.

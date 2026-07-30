@@ -131,17 +131,19 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
   const totalRows = historyQ.data?.printHistory.totalRows ?? 0;
 
   // Every roster class, PLUS any class a row names that the roster no longer lists (a job
-  // filed against an earlier year's class), PLUS "no class" — which is where every
-  // teacher-filed upload lands, since only the class-test path tags one.
+  // filed against an earlier year's class), PLUS "no class" for the remainder that names
+  // one nowhere. Rows are keyed on the row's EFFECTIVE class (PQ-8) — `latest.classId` is
+  // set only by the class-test path, so filtering on it showed Nursery empty and Class 1
+  // with a single row while the school had printed for both all term.
   const classOptions = useMemo(() => {
     const seen = new Map<string, number | null>();
     for (const c of classData?.classes ?? []) if (c.active) seen.set(c.id, c.level);
-    for (const r of rows) if (r.latest.classId) seen.set(r.latest.classId, r.latest.classLevel);
+    for (const r of rows) if (r.classId) seen.set(r.classId, r.classLevel);
     const out = [...seen.entries()].sort(
       (a, b) => (a[1] ?? Number.MAX_SAFE_INTEGER) - (b[1] ?? Number.MAX_SAFE_INTEGER),
     );
     // "No class" sorts last, matching the row order.
-    if (rows.some((r) => !r.latest.classId)) out.push([NONE, null]);
+    if (rows.some((r) => !r.classId)) out.push([NONE, null]);
     return out;
   }, [rows, classData]);
   const subjectOptions = useMemo(
@@ -174,7 +176,7 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
 
   const visible = rows.filter(
     (r) =>
-      (classFilter === ANY || (r.latest.classId ?? NONE) === classFilter) &&
+      (classFilter === ANY || (r.classId ?? NONE) === classFilter) &&
       (subjectFilter === ANY || r.latest.subject === subjectFilter) &&
       (purposeFilter === ANY || r.latest.purpose === purposeFilter) &&
       (teacherFilter === ANY || r.requesterIds.includes(teacherFilter)),
@@ -336,7 +338,7 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
               <View style={{ flex: 1 }}>
                 <Body style={{ fontWeight: "700" }}>{r.latest.title}</Body>
                 <Muted>
-                  {r.latest.classLevel !== null ? classLevelLabel(r.latest.classLevel) : STR.prNoClass}
+                  {r.classLevel !== null ? classLevelLabel(r.classLevel) : STR.prNoClass}
                   {r.latest.subject ? ` · ${routineSubjectLabel(r.latest.subject)}` : ""}
                   {` · ${printPurposeLabel(r.latest.purpose)}`}
                 </Muted>
