@@ -678,33 +678,36 @@ describe("printHistory — PQ-7 date window + truncation reporting", () => {
   test("the printed-on window filters the JOBS, matching backfilled rows on requestedAt", async () => {
     mockFind.mockResolvedValue([]);
     await printHistory({ fromKey: "2026-07-01", toKey: "2026-07-31" });
-    const q = mockFind.mock.calls[0][0] as { $or: Array<Record<string, any>> };
-    expect(q.$or).toHaveLength(2);
+    // PQ-8: clauses are AND-ed, since the class filter needs an `$or` of its own.
+    const dateClause = (mockFind.mock.calls[0][0] as any).$and[0].$or as Array<Record<string, any>>;
+    expect(dateClause).toHaveLength(2);
     // A row printed on the LAST day of the window is inside it (exclusive upper bound
     // sits at the following midnight, so 2026-07-31 23:59 still matches).
-    const range = q.$or[0].printedAt as { $gte: Date; $lt: Date };
+    const range = dateClause[0].printedAt as { $gte: Date; $lt: Date };
     expect(range.$gte).toEqual(new Date(2026, 6, 1));
     expect(range.$lt).toEqual(new Date(2026, 7, 1));
     // The fallback branch is for rows that never got a printedAt stamp.
-    expect(q.$or[1]).toMatchObject({ printedAt: null });
+    expect(dateClause[1]).toMatchObject({ printedAt: null });
   });
 
   test("an open-ended window is allowed at either end", async () => {
     mockFind.mockResolvedValue([]);
     await printHistory({ fromKey: "2026-07-01" });
-    const from = (mockFind.mock.calls[0][0] as any).$or[0].printedAt;
+    const from = (mockFind.mock.calls[0][0] as any).$and[0].$or[0].printedAt;
     expect(from.$lt).toBeUndefined();
 
     mockFind.mockClear();
     await printHistory({ toKey: "2026-07-31" });
-    const to = (mockFind.mock.calls[0][0] as any).$or[0].printedAt;
+    const to = (mockFind.mock.calls[0][0] as any).$and[0].$or[0].printedAt;
     expect(to.$gte).toBeUndefined();
   });
 
   test("no window means no date clause at all", async () => {
     mockFind.mockResolvedValue([]);
     await printHistory();
-    expect((mockFind.mock.calls[0][0] as Record<string, unknown>).$or).toBeUndefined();
+    const q = mockFind.mock.calls[0][0] as Record<string, unknown>;
+    expect(q.$and).toBeUndefined();
+    expect(q.$or).toBeUndefined();
   });
 
   test("rejects a malformed or inverted window", async () => {
@@ -728,6 +731,78 @@ describe("printHistory — PQ-7 date window + truncation reporting", () => {
     expect(page.truncated).toBe(false);
     expect(page.totalRows).toBe(2);
     expect(page.scannedCapped).toBe(false);
+  });
+});
+
+// PQ-8 — the class a row is FOR. `classId` is set only by the class-test path, so the
+// class axis has to read the copy-count class too or the chips stay empty (live: Nursery
+// showed 0 and class 1 showed 1 of 263 documents).
+describe("printHistory — the effective class (PQ-8)", () => {
+  test("a CLASS_PRESENT job with no class of its own counts under the class it prints for", async () => {
+    const nursery = oid();
+    mockFind.mockResolvedValue([
+      histDoc({ fileIds: [oid()], classId: null, copiesMode: "CLASS_PRESENT", copiesClassId: nursery }),
+    ]);
+    mockClassFind.mockResolvedValue([{ _id: nursery, level: -1 }]);
+
+    const page = await printHistory();
+    expect(page.rows[0].classId).toBe(nursery.toString());
+    expect(page.rows[0].classLevel).toBe(-1); // Nursery, and it sorts ahead of KG
+  });
+
+  test("the job's OWN class wins where both are set", async () => {
+    const c1 = oid(), c3 = oid();
+    mockFind.mockResolvedValue([
+      histDoc({ fileIds: [oid()], classId: c1, copiesMode: "CLASS_PRESENT", copiesClassId: c3 }),
+    ]);
+    mockClassFind.mockResolvedValue([{ _id: c1, level: 1 }, { _id: c3, level: 3 }]);
+
+    const page = await printHistory();
+    expect(page.rows[0].classId).toBe(c1.toString());
+    expect(page.rows[0].classLevel).toBe(1);
+  });
+
+  test("a job naming no class either way stays under 'no class'", async () => {
+    mockFind.mockResolvedValue([histDoc({ fileIds: [oid()], classId: null, copiesClassId: null })]);
+    const page = await printHistory();
+    expect(page.rows[0].classId).toBeNull();
+    expect(page.rows[0].classLevel).toBeNull();
+  });
+
+  test("the same sheet printed for two different copy-count classes stays two rows", async () => {
+    const file = oid(), c2 = oid(), c4 = oid();
+    const base = { fileIds: [file], classId: null, copiesMode: "CLASS_PRESENT", subject: "BAN" };
+    expect(historyKey(histDoc({ ...base, copiesClassId: c2 }))).not.toBe(
+      historyKey(histDoc({ ...base, copiesClassId: c4 })),
+    );
+  });
+
+  test("the class filter matches either field — but not a job claiming another class", async () => {
+    const c2 = oid().toString();
+    mockFind.mockResolvedValue([]);
+    await printHistory({ classId: c2 });
+    const clause = (mockFind.mock.calls[0][0] as any).$and[0].$or as Array<Record<string, any>>;
+    expect(clause[0].classId.toString()).toBe(c2);
+    // The fallback branch only applies where the job has NO class of its own, so a
+    // class-1 sheet counted off class-2 attendance never shows up under class 2.
+    expect(clause[1]).toMatchObject({ classId: null });
+    expect(clause[1].copiesClassId.toString()).toBe(c2);
+  });
+
+  test("noClass asks for the remainder that names a class nowhere", async () => {
+    mockFind.mockResolvedValue([]);
+    await printHistory({ noClass: true });
+    expect((mockFind.mock.calls[0][0] as any).$and[0]).toEqual({ classId: null, copiesClassId: null });
+  });
+
+  test("rejects a malformed class id instead of throwing BSON", async () => {
+    await expect(printHistory({ classId: "not-an-oid" })).rejects.toThrow(/Invalid classId/);
+  });
+
+  test("the date window and the class filter both apply", async () => {
+    mockFind.mockResolvedValue([]);
+    await printHistory({ classId: oid().toString(), fromKey: "2026-07-01" });
+    expect((mockFind.mock.calls[0][0] as any).$and).toHaveLength(2);
   });
 });
 
