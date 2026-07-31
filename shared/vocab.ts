@@ -1634,6 +1634,16 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "print.delivered.body",
   "print.requested.title",
   "print.requested.body",
+  // Monthly progress report (MR-4/MR-6, D-#399): the fallback paragraph the report
+  // falls back to when the model fails or its output is rejected — the report must
+  // never block on an external API — plus the release / re-release notifications.
+  "monthly_report.comment.fallback",
+  "monthly_report.released.title",
+  "monthly_report.released.body",
+  "monthly_report.released.wa",
+  "monthly_report.revised.title",
+  "monthly_report.revised.body",
+  "monthly_report.revised.wa",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1730,6 +1740,42 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   "print.requested.body": {
     group: "print", labelBn: "নতুন প্রিন্ট অনুরোধ — বার্তা", placeholders: ["title", "requesterName"],
     bnDefault: "{requesterName} “{title}” ছাপানোর অনুরোধ করেছেন — প্রিন্ট কিউ দেখুন।", defaultLangMode: "BN",
+  },
+  // --- Monthly progress report (MR-4/MR-6, D-#399) ---
+  // The fallback paragraph is deliberately PLAIN: it states the two numbers the
+  // month turns on and nothing else. It is what a family reads when the model is
+  // unreachable or its draft was rejected, so it must never need a person to fix it.
+  "monthly_report.comment.fallback": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট — বিকল্প মন্তব্য", placeholders: ["month", "attendanceRate", "homeworkRate"],
+    bnDefault:
+      "{month} মাসে উপস্থিতি ছিল {attendanceRate}% এবং বাড়ির কাজ জমার হার {homeworkRate}%। বিস্তারিত রিপোর্টে দেখুন; কোনো প্রশ্ন থাকলে শ্রেণি শিক্ষকের সঙ্গে যোগাযোগ করুন।",
+    defaultLangMode: "BN",
+  },
+  "monthly_report.released.title": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট প্রকাশিত — শিরোনাম", placeholders: [],
+    bnDefault: "মাসিক অগ্রগতি রিপোর্ট", defaultLangMode: "BN",
+  },
+  "monthly_report.released.body": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট প্রকাশিত — বার্তা", placeholders: ["studentName", "month"],
+    bnDefault: "{studentName}-এর {month} মাসের অগ্রগতি রিপোর্ট প্রকাশিত হয়েছে।", defaultLangMode: "BN",
+  },
+  "monthly_report.released.wa": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট প্রকাশিত — হোয়াটসঅ্যাপ", placeholders: ["studentName", "month"],
+    bnDefault: "আসসালামু আলাইকুম। {studentName}-এর {month} মাসের অগ্রগতি রিপোর্ট প্রকাশিত হয়েছে। অ্যাপে দেখুন।", defaultLangMode: "BN",
+  },
+  // A REVISED report gets its own wording (§9) — a family must never be handed
+  // different numbers under the same message.
+  "monthly_report.revised.title": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট সংশোধিত — শিরোনাম", placeholders: [],
+    bnDefault: "মাসিক রিপোর্ট সংশোধিত", defaultLangMode: "BN",
+  },
+  "monthly_report.revised.body": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট সংশোধিত — বার্তা", placeholders: ["studentName", "month"],
+    bnDefault: "{studentName}-এর {month} মাসের রিপোর্টে নতুন তথ্য যুক্ত হয়েছে — সংশোধিত সংস্করণ প্রকাশিত হয়েছে।", defaultLangMode: "BN",
+  },
+  "monthly_report.revised.wa": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট সংশোধিত — হোয়াটসঅ্যাপ", placeholders: ["studentName", "month"],
+    bnDefault: "আসসালামু আলাইকুম। {studentName}-এর {month} মাসের রিপোর্ট সংশোধিত হয়েছে — অ্যাপে নতুন সংস্করণ দেখুন।", defaultLangMode: "BN",
   },
   // --- Bell reminder (N2.1) ---
   "bell.reminder.title": {

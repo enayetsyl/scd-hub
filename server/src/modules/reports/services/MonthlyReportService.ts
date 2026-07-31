@@ -21,7 +21,14 @@
  */
 import { Types } from "mongoose";
 import { MonthlyReport, type IMonthlyReport, type IReportChange } from "../models/MonthlyReport";
+import { Class } from "../../foundation/models/Class";
 import { Student } from "../../foundation/models/Student";
+import {
+  commentFactsOf,
+  generateGuardianComment,
+  providerFromEnv,
+  type CommentProvider,
+} from "./MonthlyCommentService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { dateKeyOf } from "../../attendance/dates";
 import {
@@ -376,6 +383,43 @@ export async function buildSectionMonthlyReports(
 // ---------------------------------------------------------------------------
 // Review + release
 // ---------------------------------------------------------------------------
+
+/**
+ * Draft (or re-draft) the guardian paragraph onto a revision (MR-4).
+ *
+ * Writes `commentDraft` ONLY — never `commentFinal`, which a person must set. A fresh
+ * draft CLEARS any prior review, because accepting text is a judgement about the words
+ * that were actually read.
+ */
+export async function draftMonthlyComment(
+  reportId: string,
+  opts: { provider?: CommentProvider | null } = {},
+): Promise<IMonthlyReport> {
+  const report = await MonthlyReport.findById(reportId);
+  if (!report) throw new MonthlyReportError("Report not found");
+  if (report.status === "RELEASED" || report.status === "SUPERSEDED") {
+    throw new MonthlyReportError("A released report cannot be re-drafted — a correction is a new revision");
+  }
+
+  const klass = (await Class.findById(report.classId).select("level").lean()) as { level: number } | null;
+  const facts = commentFactsOf(report.snapshot as unknown as MonthlySnapshot, klass?.level ?? null);
+  const provider = opts.provider === undefined ? providerFromEnv() : opts.provider;
+  const draft = await generateGuardianComment(facts, provider);
+
+  report.commentDraft = {
+    text: draft.text,
+    model: draft.model,
+    promptVersion: draft.promptVersion,
+    promptHash: draft.promptHash,
+    generatedAt: draft.generatedAt,
+    fallback: draft.fallback,
+  };
+  report.reviewedAt = null;
+  report.reviewedByUserId = null;
+  if (report.status === "READY") report.status = "DRAFT";
+  await report.save();
+  return report;
+}
 
 /** Accept or edit the generated paragraph. Required before release (D-#399). */
 export async function reviewMonthlyReport(
