@@ -264,8 +264,13 @@ re-release prompts).
 
 ### 7.1 Model
 
-`MonthlyReport`, keyed `(studentId, periodKey, academicYearId)` — unique index, because two revisions of
-the same month for the same child are revisions, not rows.
+`MonthlyReport`, unique on **`(studentId, periodKey, revision)`**.
+
+**Corrected at MR-3:** the contract first said one row per (student × month). It cannot be — a released
+revision has to stay byte-stable while the next one is being built, and one row would mean editing the
+document the family is currently reading. **A revision is its own row**; at most one may be `RELEASED` at a
+time, and releasing a newer one stamps the older `SUPERSEDED`. The unique index is also the concurrency
+guard: two nightly sweeps racing cannot both write "revision 2".
 
 Fields: `status` · `revision` · `snapshot` (**the frozen computed numbers, the frozen config, and both
 comments**) · `dataAsOf` · `coverage{homework, assignment, classTest}` · `provisional` ·
