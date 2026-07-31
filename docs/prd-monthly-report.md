@@ -48,13 +48,14 @@ live there and are **linked, never duplicated** (D-#402). It is not a ranking sh
 | `/triggers` — shared-secret, idempotent external-scheduler endpoints (AT-4, D-#65); `startNotificationTicker` (D-#73) | `server/src/index.ts`, `notifications/services/SchedulerService.ts` | **§6.3 nightly recompute** | yes |
 | `ObservationEscalationConfig` — `key: "SINGLETON"`, read-time defaults, **never seeded** against the live DB (D-#97) | `classroom-observation/models/` | **the pattern for `MonthlyReportConfig`** (§6.1) | yes |
 | `writeAudit` (ADR-008, append-only) | `platform/services/AuditService.ts` | every release / re-release / revoke | yes |
-| `RevisionEntry` (Saturday revision / Hifz) | `saturday-revision/models/` | §5.7 | **confirm fields at MR-1** |
-| `BookLoan` / `LibraryPolicy` | `library/models/` | §5.9 | **confirm fields at MR-1** |
-| `GuardianNotice`, `MessageReceipt`, `chaseCount` on tracker records | `chat/models/`, `trackers/models/` | §5.10 guardian participation | **confirm fields at MR-1** |
+| `RevisionEntry` — `present` + `juzRecords[{amountJuz, tanbih, fath, mistakes}]` + `teacherComment`; **no grade band** | `saturday-revision/models/` | §5.7 | yes (MR-1) |
+| `BookLoan` — `issuedAt` / `dueDate` / `returnedAt`; OVERDUE derived, never stored | `library/models/` | §5.9 | yes (MR-1) |
+| `GuardianNotice` (`sectionId` + `createdAt`, **no read receipt**), `chaseCount` on tracker records | `chat/models/`, `trackers/models/` | §5.10, reduced — see the drop table there | yes (MR-1) |
 
-**The three rows marked "confirm at MR-1" are named by model, not by field.** MR-1 opens each file before
-computing anything from it (AGENTS rule 3); if a field the metric needs does not exist, the metric is
-dropped from v1 and recorded here — it is not approximated.
+**The last three rows were named by model, not by field, until MR-1 opened them** (AGENTS rule 3). Two came
+back different from the assumption: Hifz stores no grade band (§5.7) and guardian participation has no read
+receipt, no inbound reply and no meeting attendance (§5.10). Those metrics were **dropped, not
+approximated**, and the drops are recorded where the metric was specified.
 
 ## 3. Scope of v1 (owner ruling 2026-07-30)
 
@@ -145,9 +146,14 @@ re-derived here** — a term exam appears as the link in §5.12.
 
 ### 5.7 Saturday revision (Hifz)
 
-Sessions held · attended · absent · the evaluation split · the latest portion covered. Source
-`RevisionEntry`; the Qur'an is deliberately outside the homework tracker (D-#36), so without this section
-the report would omit half of what the school teaches.
+Sessions · attended · absent · **juz heard** (`amountJuz` summed) · **tanbih / fath** prompts · **tajweed
+mistakes** (harf + ghunnah + madd + other) · the latest teacher note. Source `RevisionEntry`; the Qur'an is
+deliberately outside the homework tracker (D-#36), so without this section the report would omit half of
+what the school teaches.
+
+**Corrected at MR-1:** `RevisionEntry` carries **no evaluation or grade band** — effort, prompts and
+structured mistake counts are what it actually stores. The planning sample showed a ভালো/মধ্যম/দুর্বল split;
+that field does not exist and is not invented.
 
 ### 5.8 Concerns (D-#400)
 
@@ -163,13 +169,23 @@ Loans taken · returned on time · overdue · still held · year-to-date total.
 
 ### 5.10 Guardian participation
 
-Reminders sent to the family · replies · parent-meeting attendance · notices sent vs read · whether a
-usable phone number is on file. Sources per §2; anything whose field does not exist is dropped at MR-1,
-not estimated.
+**Reminders sent** about this child's work (`chaseCount` summed across both trackers) · **notices sent** to
+the child's section or the whole school · whether a **usable phone number** is on file.
 
-The class teacher's most recent `MeetingComment` (`positiveText` / `concernText`) prints verbatim above the
-AI paragraph. Human words carry more weight with a family than generated ones, and this is the cheapest
-way to keep a human voice on the page.
+**Dropped at MR-1, per the §2 rule — the data does not exist:**
+
+| Planned | Why it is not computed |
+|---|---|
+| Notices **read** | `GuardianNotice` has no per-family read receipt; `MessageReceipt` belongs to chat messages, not notices |
+| Guardian **replies** to reminders | reminders go out over wa.me click-to-send (ADR-003) — there is no inbound leg to count |
+| Parent-meeting **attendance** | `ParentMeeting` has `status` (draft/scheduled/closed) and `MeetingComment` is per (meeting × child); neither records who turned up |
+
+Each is a real feature request, not an oversight — they need a field before they can be a number.
+
+**The class teacher's `MeetingComment` does NOT appear on the guardian sheet.** It is explicitly
+staff/in-meeting only (J-CM8, D-#124: "never shown in the guardian portal — the guardian shape
+structurally cannot reach it"), and a monthly report is not a side door onto it. It is shown on the
+**staff view only**, as context for the person reviewing the AI paragraph.
 
 ### 5.11 Fees (D-#401)
 
