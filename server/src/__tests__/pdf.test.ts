@@ -11,8 +11,11 @@
  */
 
 import {
+  BENGALI_FONT,
+  LATIN_FONT,
   markdownToPdf,
   resolveLayout,
+  splitScriptRuns,
   stripHtmlComments,
   transliterateForPdf,
 } from "../routes/pdfRenderer";
@@ -130,6 +133,35 @@ describe("PDF — layout knobs (D-#348 edit-before-print)", () => {
     // The literal "{ls:" must not leak into the drawn text (pdfkit writes glyphs
     // via the font, but a control token like this would show if rendered).
     expect(buf.byteLength).toBeGreaterThan(1_000);
+  }, 30_000);
+});
+
+describe("PDF — the middle dot renders as a glyph, not a .notdef box", () => {
+  // `·` is the separator this codebase writes INSIDE Bangla sentences
+  // (StudentProfileSheetService's extras line, englishDrivePdf's title). It is
+  // neutral, so it used to inherit the Bengali run — and the Noto-Bengali subset
+  // has no glyph for it, so every separator drew an empty box on the page.
+  const dotIn = (text: string): boolean =>
+    splitScriptRuns(text).some((r) => r.font === LATIN_FONT && r.text.includes("·"));
+
+  test("a middle dot between two Bangla runs is drawn in the Latin font", () => {
+    expect(dotIn("পুনঃজমা ৩ · রিমাইন্ডার ২")).toBe(true);
+  });
+
+  test("the Bangla either side of it stays Bengali", () => {
+    const runs = splitScriptRuns("বাংলা · ইংরেজি");
+    expect(runs[0].font).toBe(BENGALI_FONT);
+    expect(runs[runs.length - 1].font).toBe(BENGALI_FONT);
+    expect(runs.map((r) => r.text).join("")).toBe("বাংলা · ইংরেজি");
+  });
+
+  test("a leading middle dot is still Latin", () => {
+    expect(dotIn("· শুরু")).toBe(true);
+  });
+
+  test("a sheet line carrying middle dots renders to a valid PDF", async () => {
+    const buf = await markdownToPdf("# রিপোর্ট\n\nপুনঃজমা ৩ · অনুপস্থিত ৬ · রিমাইন্ডার ২\n");
+    expect(buf.slice(0, 4).toString("ascii")).toBe("%PDF");
   }, 30_000);
 });
 
