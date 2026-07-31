@@ -152,6 +152,12 @@ export type AuditEventKind =
   | "ENGLISH_DRIVE_REPLACED"      // a newer version replaced an existing (class, block, kind) doc — old row stamped replacedAt (D-#344)
   | "ASSIGNMENT_ITEM_EDITED"      // a delivered assignment was edited after the fact (D-#353)
   | "ASSIGNMENT_ITEM_DELETED"     // a still-DRAFT delivered assignment was deleted (D-#353)
+  | "MONTHLY_REPORT_CONFIG_SET"    // Principal edited the monthly-report thresholds / gate / calendar — prior + new retained (MR-2, D-#395)
+  | "MONTHLY_REPORT_RELEASED"      // a monthly report revision released to the family, individually or in a batch (MR-3, D-#397)
+  | "MONTHLY_REPORT_RERELEASED"    // a LATER revision released over one the family had already seen (MR-3, D-#393)
+  | "MONTHLY_REPORT_REVOKED"       // a released report withdrawn — guardian access removed (Principal only, MR-3, D-#397)
+  | "MONTHLY_REPORT_GATE_OVERRIDDEN" // the coverage block overridden with a reason (Principal only, MR-3, D-#394)
+  | "MONTHLY_REPORT_UNLOCKED"      // a hard-locked month reopened with a reason (Principal only, MR-3, D-#398)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {
