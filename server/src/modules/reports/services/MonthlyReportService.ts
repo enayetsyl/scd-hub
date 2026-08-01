@@ -515,6 +515,16 @@ export async function releaseMonthlyReport(
   report.revokeReason = null;
   await report.save();
 
+  // MR-6: tell the family. Isolated on purpose — the release is already decided and
+  // audited, so a template or transport failure is a follow-up, never a reason to
+  // leave the document un-released.
+  try {
+    const { deliverMonthlyReport } = await import("./MonthlyReportDeliveryService");
+    await deliverMonthlyReport(report);
+  } catch (err) {
+    console.error(`[MonthlyReport] delivery failed for ${report._id.toString()}:`, err);
+  }
+
   await writeAudit({
     eventKind: report.isRerelease ? "MONTHLY_REPORT_RERELEASED" : "MONTHLY_REPORT_RELEASED",
     actorId,

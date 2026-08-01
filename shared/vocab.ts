@@ -1011,6 +1011,10 @@ export const NOTIFICATION_KINDS = [
   "CLASS_TEST_RESULT",
   "VOCAB_RESULT",
   "STUDENT_COMMENT",
+  // MR-6: the monthly progress report reached the family. Fired on RELEASE and again
+  // on a RE-RELEASE, with different wording each time (§9) — a family must never be
+  // handed different numbers under the same message.
+  "MONTHLY_REPORT",
   // CO-3 classroom-observation kinds (app-native, NO wire twin — D-#46/#72). The
   // release notify, the escalation reminders (1st + 2nd), the Principal flag at the
   // final threshold, and the teacher-responded notice. See the CO-3 build.
@@ -1075,6 +1079,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   LIBRARY_OVERDUE: "বই ফেরত বকেয়া",
   CLASS_TEST_RESULT: "ক্লাস টেস্টের ফলাফল",
   VOCAB_RESULT: "ভোকাবুলারি টেস্টের ফলাফল",
+  MONTHLY_REPORT: "মাসিক অগ্রগতি রিপোর্ট",
   STUDENT_COMMENT: "শিক্ষকের পর্যবেক্ষণ",
   OBSERVATION_RELEASED: "শ্রেণি পর্যবেক্ষণ প্রকাশিত",
   OBSERVATION_RESPONSE_REMINDER: "পর্যবেক্ষণে সাড়া দেওয়ার তাগিদ",
@@ -1110,6 +1115,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   LIBRARY_OVERDUE: "Book overdue",
   CLASS_TEST_RESULT: "Class-test result",
   VOCAB_RESULT: "Vocabulary-test result",
+  MONTHLY_REPORT: "Monthly progress report",
   STUDENT_COMMENT: "Teacher's comment",
   OBSERVATION_RELEASED: "Observation released",
   OBSERVATION_RESPONSE_REMINDER: "Observation response reminder",

@@ -75,6 +75,10 @@ const dedupeKeys = {
   /** Per comment+guardian (CM-2): a comment is delivered once + then immutable, so a
    *  re-delivery is correctly a no-op (no version — unlike the class-test republish). */
   studentComment: (commentId: string, guardianId: string) => `SCMT:${commentId}:${guardianId}`,
+  /** Keyed on the REVISION, not the report: a re-release is a new thing to say, so
+   *  revision 2 must notify even though revision 1 already did (§9, D-#393). */
+  monthlyReport: (reportId: string, revision: number, guardianId: string) =>
+    `MRPT:${reportId}:${revision}:${guardianId}`,
   /** Per slot+guardian (CM-4): a re-dispatch of the same meeting slot is a no-op for the
    *  inbox (the wa.me link is re-built each call regardless). */
   meetingSchedule: (slotId: string, guardianId: string) => `MTSCH:${slotId}:${guardianId}`,
@@ -683,6 +687,60 @@ export async function emitHrCoverAssigned(event: HrCoverAssignedEvent): Promise<
 // safety net): if it's not yet in NOTIFICATION_KINDS the emitter is a no-op (returns
 // []) and delivery falls through to wa.me only. Returns the notified guardian ids.
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// MR-6 — a released monthly report → each login-enabled guardian of the child.
+// Title + body PRE-RENDERED by the caller (MonthlyReportDeliveryService), so
+// renderTemplate is never called inside this per-guardian loop (the MT N+1 guard).
+// Contact-only guardians have no inbox; the caller's wa.me link reaches them
+// (D-#31/#72). Returns the notified guardian ids.
+// ---------------------------------------------------------------------------
+
+export interface MonthlyReportEvent {
+  reportId: IdLike;
+  studentId: IdLike;
+  revision: number;
+  periodKey: string;
+  /** Pre-rendered (monthly_report.released.title / .revised.title). */
+  titleBn: string;
+  /** Pre-rendered (monthly_report.released.body / .revised.body). */
+  messageBn: string;
+}
+
+export async function emitMonthlyReport(ev: MonthlyReportEvent): Promise<string[]> {
+  const notified: string[] = [];
+  await bestEffort("monthly report released", async () => {
+    if (!(NOTIFICATION_KINDS as readonly string[]).includes("MONTHLY_REPORT")) return;
+
+    const links = (await GuardianLink.find({
+      studentId: ev.studentId,
+      active: { $ne: false },
+    })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+
+    await Promise.all(
+      guardians.map(async (g) => {
+        await emit({
+          recipientGuardianId: g._id.toString(),
+          kind: "MONTHLY_REPORT",
+          titleBn: ev.titleBn,
+          bodyBn: ev.messageBn,
+          refs: { studentId: ev.studentId.toString() },
+          dedupeKey: dedupeKeys.monthlyReport(ev.reportId.toString(), ev.revision, g._id.toString()),
+        });
+        notified.push(g._id.toString());
+      }),
+    );
+  });
+  return notified;
+}
 
 export interface StudentCommentEvent {
   commentId: IdLike;
