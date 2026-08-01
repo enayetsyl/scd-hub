@@ -411,6 +411,8 @@ export type ReportsStackParamList = {
    *  param-requiring screen in the initial slot crashes the tab on mount. */
   MonthlyReportConsole: { sectionId?: string; periodKey?: string } | undefined;
   MonthlyReportDetail: { reportId: string; studentName?: string };
+  /** What still has to be finished before a month's reports are complete. */
+  MonthlyPendingWork: { periodKey?: string } | undefined;
 };
 
 export type TabParamList = {
