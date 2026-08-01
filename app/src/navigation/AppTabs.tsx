@@ -238,6 +238,8 @@ import TeacherClassLoadScreen from "../screens/reports/TeacherClassLoadScreen";
 import TeacherClassLoadDetailScreen from "../screens/reports/TeacherClassLoadDetailScreen";
 import AssignmentLoadReportScreen from "../screens/reports/AssignmentLoadReportScreen";
 import ClassTestReportScreen from "../screens/reports/ClassTestReportScreen";
+import MonthlyReportConsoleScreen from "../screens/reports/MonthlyReportConsoleScreen";
+import MonthlyReportDetailScreen from "../screens/reports/MonthlyReportDetailScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
@@ -976,6 +978,10 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="AssignmentLoadReport" component={AssignmentLoadReportScreen} options={{ title: STR.alReportTitle }} />
       {/* D-#340: the class-test oversight report. */}
       <ReportsStack.Screen name="ClassTestReport" component={ClassTestReportScreen} options={{ title: STR.ctReportTitle }} />
+      {/* MR-5b. Registered AFTER the param-free screens on purpose: a screen whose
+          params are required must never sit in the stack's initial slot. */}
+      <ReportsStack.Screen name="MonthlyReportConsole" component={MonthlyReportConsoleScreen} options={{ title: STR.mrConsoleTitle }} />
+      <ReportsStack.Screen name="MonthlyReportDetail" component={MonthlyReportDetailScreen} options={{ title: STR.mrConsoleTitle }} />
     </ReportsStack.Navigator>
   );
 }
