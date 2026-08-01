@@ -365,6 +365,12 @@ export async function hostHealth(now = new Date()): Promise<HostHealth> {
  * inflating the history. Returns false when there is nothing to read (non-Linux).
  */
 export async function captureNetSnapshot(now = new Date()): Promise<boolean> {
+  // No connection ⇒ do not even try. Mongoose would BUFFER the write for 10s and then
+  // throw, which on the ticker's path means a 10s stall per pass — the ticker runs
+  // before/independently of the DB being up, and a telemetry row is never worth delaying
+  // the notification work behind it. (CI caught this: /proc exists on Linux, so the
+  // Windows dev box skipped the write and never saw the stall.)
+  if (mongoose.connection.readyState !== 1) return false;
   const counters = await readNetCounters();
   if (!counters) return false;
   const dateKey = dateKeyOf(now);

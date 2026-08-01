@@ -6,6 +6,7 @@
  * either double-count or go negative, so those paths are pinned here alongside the bands
  * and the fail-soft posture every probe promises.
  */
+import mongoose from "mongoose";
 import { NetSnapshot } from "../modules/platform/models/NetSnapshot";
 
 jest.mock("../modules/platform/models/NetSnapshot", () => ({
@@ -27,6 +28,7 @@ import {
   driveHealth,
   resetDriveCache,
   hostHealth,
+  captureNetSnapshot,
   ATLAS_M0_LIMIT_BYTES,
   WARN_RATIO,
   CRITICAL_RATIO,
@@ -153,6 +155,18 @@ describe("driveHealth — a network probe that must never take the panel down", 
     await driveHealth();
     await driveHealth();
     expect(mockDriveQuota).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("captureNetSnapshot — must never stall the ticker", () => {
+  test("writes nothing when the DB is not connected", async () => {
+    // The regression CI caught: /proc/net/dev EXISTS on Linux, so without this guard the
+    // capture reached mongoose, buffered for 10s and threw — 10s of dead time on every
+    // scheduler pass, and six timed-out tests in the scheduler suite. readyState is 0 in
+    // this suite (nothing is connected), which is exactly the production startup case.
+    expect(mongoose.connection.readyState).not.toBe(1);
+    await expect(captureNetSnapshot(new Date(2026, 7, 15))).resolves.toBe(false);
+    expect(NetSnapshot.updateOne).not.toHaveBeenCalled();
   });
 });
 
