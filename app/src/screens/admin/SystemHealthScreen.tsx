@@ -124,6 +124,11 @@ export default function SystemHealthScreen(_props: Props): React.ReactElement {
   const memUsed = h.host.memTotalBytes - h.host.memFreeBytes;
   const egressPct =
     h.host.egressMonthBytes === null ? null : pct(h.host.egressMonthBytes, h.host.egressLimitBytes);
+  // Disk points only exist from the first capture onward (no backfill is possible), so a
+  // short series renders as an explanation rather than a one-bar chart.
+  const diskSeries = h.history
+    .filter((p) => typeof p.diskUsedBytes === "number")
+    .map((p) => ({ dateKey: p.dateKey, value: p.diskUsedBytes, estimated: false }));
   const drivePct =
     h.drive.usageBytes === null ? null : pct(h.drive.usageBytes, h.drive.limitBytes);
 
@@ -218,6 +223,24 @@ export default function SystemHealthScreen(_props: Props): React.ReactElement {
           {STR.shUptime}: {bnNum((h.host.uptimeSec / 3600).toFixed(1))} {STR.shHours}
         </Muted>
 
+        {/* Disk over time. Unlike the database chart there is NO backfill here: document
+            counts could be walked backwards, but nothing recorded yesterday's disk usage,
+            so this fills one point per day from the first capture onward. */}
+        <View style={{ marginTop: space(3) }}>
+          <Muted>{STR.shServerTrend}</Muted>
+          {diskSeries.length >= 2 ? (
+            <TrendSparkline
+              points={diskSeries}
+              limit={h.host.diskTotalBytes}
+              accessibilityLabel={`${STR.shServerTrend}: ${bytesLabel(diskSeries[0]?.value)} → ${bytesLabel(
+                diskSeries[diskSeries.length - 1]?.value,
+              )}`}
+            />
+          ) : (
+            <Muted>{STR.shServerTrendPending}</Muted>
+          )}
+        </View>
+
         <View style={{ marginTop: space(3) }}>
           <Body>
             {STR.shEgress}: {h.host.egressMonthBytes === null ? "—" : bytesLabel(h.host.egressMonthBytes)}
@@ -292,6 +315,32 @@ export default function SystemHealthScreen(_props: Props): React.ReactElement {
               {bnNum(h.backup.count)} {STR.shBackupKept} · {bytesLabel(h.backup.totalSizeBytes)}
             </Muted>
             {h.backup.band !== "ok" ? <Notice message={STR.shBackupStale} tone="danger" /> : null}
+
+            {/* Every archive by name and date. Listing them is also what makes the
+                rotation legible: without it, the thinning older dates read as gaps. */}
+            {h.backup.archives.length > 0 ? (
+              <View style={{ marginTop: space(3) }}>
+                <Muted>{STR.shBackupFiles}</Muted>
+                {h.backup.archives.map((a) => (
+                  <View
+                    key={a.name}
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      gap: space(2),
+                      marginTop: space(1),
+                    }}
+                  >
+                    <Muted style={{ flexShrink: 1 }}>{a.name}</Muted>
+                    <Muted>
+                      {a.createdAt.slice(0, 10)}
+                      {a.sizeBytes ? ` · ${bytesLabel(a.sizeBytes)}` : ""}
+                    </Muted>
+                  </View>
+                ))}
+                <Muted style={{ marginTop: space(2) }}>{STR.shBackupRotation}</Muted>
+              </View>
+            ) : null}
           </>
         )}
         {h.backup.error ? (

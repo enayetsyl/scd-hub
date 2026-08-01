@@ -19,6 +19,7 @@ import {
   BACKUP_FOLDER,
   BACKUP_WARN_DAYS,
   BACKUP_CRITICAL_DAYS,
+  BACKUP_LIST_LIMIT,
 } from "../modules/platform/services/BackupService";
 
 const NOW = new Date("2026-08-01T12:00:00Z");
@@ -105,6 +106,29 @@ describe("backupStatus", () => {
     const s = await backupStatus(NOW);
     expect(s.band).toBe("unknown");
     expect(s.error).toMatch(/ETIMEDOUT/);
+  });
+
+  test("lists every archive newest-first, with name, date and size", async () => {
+    // The owner asked to see the file names and dates. The list is also what makes the
+    // rotation legible — without it the thinning older dates just look like gaps.
+    mockList.mockResolvedValue([archive(2), archive(0), archive(1)]);
+    const s = await backupStatus(NOW);
+    expect(s.archives).toHaveLength(3);
+    expect(s.archives.map((a) => a.createdAt)).toEqual([
+      archive(0).createdTime,
+      archive(1).createdTime,
+      archive(2).createdTime,
+    ]);
+    expect(s.archives[0]).toMatchObject({ name: archive(0).name, sizeBytes: 9_700_000 });
+  });
+
+  test("the list is capped, but the COUNT still reports the truth", async () => {
+    // A misconfigured folder must not flood the card — while still telling the reader how
+    // many are really there.
+    mockList.mockResolvedValue(Array.from({ length: 60 }, (_, i) => archive(i, `x${i}`)));
+    const s = await backupStatus(NOW);
+    expect(s.archives.length).toBe(BACKUP_LIST_LIMIT);
+    expect(s.count).toBe(60);
   });
 
   test("totals the pool so unbounded growth is visible", async () => {

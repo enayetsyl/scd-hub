@@ -508,6 +508,7 @@ export async function systemHealth(now = new Date()): Promise<SystemHealth> {
         folder: BACKUP_FOLDER,
         found: false,
         count: 0,
+        archives: [],
         newestName: null,
         newestAt: null,
         newestSizeBytes: null,

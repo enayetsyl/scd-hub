@@ -23,7 +23,7 @@ import {
   type TickerHealth,
 } from "../services/SystemHealthService";
 import type { HistoryPoint, Projection, PrunableEstimate } from "../services/HealthHistoryService";
-import type { BackupStatus } from "../services/BackupService";
+import type { BackupStatus, BackupArchive } from "../services/BackupService";
 
 const DatabaseUsageRef = builder.objectRef<DatabaseUsage>("DatabaseUsage");
 DatabaseUsageRef.implement({
@@ -156,6 +156,18 @@ PrunableRef.implement({
   }),
 });
 
+const BackupArchiveRef = builder.objectRef<BackupArchive>("BackupArchive");
+BackupArchiveRef.implement({
+  description:
+    "One archive in the backup folder. Listing them all makes the 7/4/3 rotation legible — " +
+    "otherwise the thinning older dates read as missed nights.",
+  fields: (t) => ({
+    name: t.exposeString("name"),
+    createdAt: t.exposeString("createdAt"),
+    sizeBytes: t.float({ nullable: true, resolve: (a) => a.sizeBytes }),
+  }),
+});
+
 const BackupStatusRef = builder.objectRef<BackupStatus>("BackupStatus");
 BackupStatusRef.implement({
   description:
@@ -165,6 +177,7 @@ BackupStatusRef.implement({
     folder: t.exposeString("folder"),
     found: t.boolean({ resolve: (b) => b.found }),
     count: t.int({ resolve: (b) => b.count }),
+    archives: t.field({ type: [BackupArchiveRef], resolve: (b) => b.archives }),
     newestName: t.string({ nullable: true, resolve: (b) => b.newestName }),
     newestAt: t.string({ nullable: true, resolve: (b) => b.newestAt }),
     newestSizeBytes: t.float({ nullable: true, resolve: (b) => b.newestSizeBytes }),
