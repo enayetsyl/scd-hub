@@ -422,6 +422,43 @@ export async function draftMonthlyComment(
   return report;
 }
 
+/**
+ * Draft many, ONE AT A TIME (MR-4).
+ *
+ * Strictly sequential and deliberately so: the free Gemini tier is rated per minute,
+ * and firing a section's worth of requests at once would trip the limit and turn a
+ * whole class into template fallbacks. A slow, complete run beats a fast, half-failed
+ * one — the office presses this once for a month, not once per child.
+ *
+ * One child's failure never stops the rest; each outcome comes back with its reason,
+ * and a report that fell back to the template still counts as drafted (it has a
+ * usable paragraph) — the caller can see which ones from `fallback`.
+ */
+export async function draftMonthlyCommentsSequentially(
+  reportIds: readonly string[],
+  opts: { provider?: CommentProvider | null } = {},
+): Promise<Array<{ reportId: string; drafted: boolean; fallback: boolean; error: string | null }>> {
+  const out: Array<{ reportId: string; drafted: boolean; fallback: boolean; error: string | null }> = [];
+  // Resolved ONCE: providerFromEnv() per child would re-read the env for every call
+  // and lose the resolved-model memo the provider builds up.
+  const provider = opts.provider === undefined ? providerFromEnv() : opts.provider;
+
+  for (const id of reportIds) {
+    try {
+      const r = await draftMonthlyComment(id, { provider });
+      out.push({ reportId: id, drafted: true, fallback: !!r.commentDraft?.fallback, error: null });
+    } catch (err) {
+      out.push({
+        reportId: id,
+        drafted: false,
+        fallback: false,
+        error: err instanceof Error ? err.message : "Failed",
+      });
+    }
+  }
+  return out;
+}
+
 /** Accept or edit the generated paragraph. Required before release (D-#399). */
 export async function reviewMonthlyReport(
   reportId: string,

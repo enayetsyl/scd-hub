@@ -18,6 +18,8 @@ import {
   generateGuardianComment,
   MonthlyCommentError,
   looksLikeProse,
+  monthLabelBn,
+  splitSubjects,
   promptHashOf,
   validateNumerals,
   type CommentFacts,
@@ -270,5 +272,60 @@ describe("MR-4 — a rejection has to be correctable", () => {
     const c = await generateGuardianComment(facts(), stubborn);
     expect(c.fallback).toBe(true);
     expect(c.fallbackReason).toMatch(/invented numbers/);
+  });
+});
+
+describe("MR-4 — a subject is never both a strength and a weakness", () => {
+  test("THE LIVE BUG: three subjects no longer overlap", () => {
+    // BAN=100, MATH=66.7, ENG=0 produced strongest [BAN, MATH] and weakest [ENG, MATH]
+    // — the model was told MATH was both, and wrote exactly that to a family.
+    const s = splitSubjects(["BAN", "MATH", "ENG"]);
+    expect(s.strongest).toEqual(["BAN"]);
+    expect(s.weakest).toEqual(["ENG"]);
+    expect(s.strongest.filter((x) => s.weakest.includes(x))).toEqual([]);
+  });
+
+  test("four or more subjects name two of each, still disjoint", () => {
+    const s = splitSubjects(["A", "B", "C", "D", "E"]);
+    expect(s.strongest).toEqual(["A", "B"]);
+    expect(s.weakest).toEqual(["E", "D"]);
+    expect(s.strongest.filter((x) => s.weakest.includes(x))).toEqual([]);
+  });
+
+  test("two subjects: one each", () => {
+    expect(splitSubjects(["A", "B"])).toEqual({ strongest: ["A"], weakest: ["B"] });
+  });
+
+  test("one subject is a strength with no weakness invented beside it", () => {
+    expect(splitSubjects(["A"])).toEqual({ strongest: ["A"], weakest: [] });
+  });
+
+  test("no subjects at all is empty, not a crash", () => {
+    expect(splitSubjects([])).toEqual({ strongest: [], weakest: [] });
+  });
+
+  test("the facts built from a real three-subject month are disjoint", () => {
+    const f = facts();
+    expect(f.strongestSubjects.filter((x) => f.weakestSubjects.includes(x))).toEqual([]);
+  });
+});
+
+describe("MR-4 — the report names its month", () => {
+  test("the period key becomes a Bangla month", () => {
+    expect(monthLabelBn("2026-07")).toBe("জুলাই ২০২৬");
+    expect(monthLabelBn("2026-01")).toBe("জানুয়ারি ২০২৬");
+    expect(monthLabelBn("2025-12")).toBe("ডিসেম্বর ২০২৫");
+  });
+
+  test("the prompt asks for the month by name and forbids 'last month'", () => {
+    const p = buildPrompt(facts());
+    expect(p).toContain("জুলাই ২০২৬");
+    expect(p).toContain("বিগত মাস");
+  });
+
+  test("the month name stays OUT of the facts — they are codes only", () => {
+    const f = facts();
+    expect(JSON.stringify(f)).not.toContain("জুলাই");
+    expect(() => assertDeidentified(f)).not.toThrow();
   });
 });

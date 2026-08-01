@@ -36,6 +36,7 @@ import {
   bulkReleaseMonthlyReports,
   buildSectionMonthlyReports,
   draftMonthlyComment,
+  draftMonthlyCommentsSequentially,
   releaseMonthlyReport,
   releaseVerdictOf,
   lockStateOf,
@@ -448,6 +449,43 @@ builder.mutationField("draftMonthlyReportComment", (t) =>
       const report = await draftMonthlyComment(args.reportId);
       const { subjects, isTeacher } = await assertStaffReportRead(ctx, report);
       return viewOf(report, subjects, isTeacher, (ctx.auth?.role as Role) === "PRINCIPAL");
+    },
+  }),
+);
+
+const DraftOutcomeRef = builder
+  .objectRef<{ reportId: string; drafted: boolean; fallback: boolean; error: string | null }>(
+    "MonthlyReportDraftOutcome",
+  )
+  .implement({
+    fields: (t) => ({
+      reportId: t.exposeString("reportId"),
+      drafted: t.exposeBoolean("drafted"),
+      /** True when the template wrote it — drafted, but worth a second look. */
+      fallback: t.exposeBoolean("fallback"),
+      error: t.string({ nullable: true, resolve: (o) => o.error }),
+    }),
+  });
+
+builder.mutationField("draftMonthlyReportComments", (t) =>
+  t.field({
+    type: [DraftOutcomeRef],
+    description:
+      "Generate the paragraph for MANY reports, one after another. Sequential on purpose: " +
+      "the model's free tier is rated per minute, so a parallel burst would turn a whole " +
+      "class into template fallbacks.",
+    authScopes: { authenticated: true },
+    args: { reportIds: t.arg.stringList({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      assertRelease(ctx);
+      // Every id is gated individually — a bulk argument must never be a way past the
+      // per-report read gate.
+      for (const id of args.reportIds) {
+        const r = await MonthlyReport.findById(id).select("sectionId classId");
+        if (!r) throw new ForbiddenError("রিপোর্ট পাওয়া যায়নি");
+        await assertStaffReportRead(ctx, r);
+      }
+      return draftMonthlyCommentsSequentially(args.reportIds);
     },
   }),
 );

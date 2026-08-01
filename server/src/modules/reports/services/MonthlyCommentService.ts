@@ -55,10 +55,32 @@ export interface CommentFacts {
  * fresh object rather than deleting fields from the snapshot, so a field added to the
  * snapshot later cannot leak by default.
  */
+/** PURE. Split ranked subjects into strongest / weakest so that NO SUBJECT IS IN BOTH.
+ *
+ *  The first version took `slice(0,2)` and `slice(-2)`, which overlap whenever there
+ *  are three subjects or fewer — and three is what Nursery and KG have. The model was
+ *  handed MATH as a strength and a weakness at once and faithfully wrote both, so a
+ *  live report told a family their child was improving in maths and needed to
+ *  concentrate on maths in the same sentence.
+ *
+ *  With three subjects or fewer it names ONE of each: ranking three items into 2+2
+ *  says almost nothing anyway. */
+export function splitSubjects(ranked: readonly string[]): { strongest: string[]; weakest: string[] } {
+  if (ranked.length < 2) return { strongest: [...ranked], weakest: [] };
+  const take = ranked.length <= 3 ? 1 : 2;
+  const strongest = ranked.slice(0, take);
+  // The weakest are drawn from what is LEFT, so the two lists are disjoint by
+  // construction rather than by luck.
+  const rest = ranked.slice(take);
+  const weakest = rest.slice(-take).reverse();
+  return { strongest, weakest };
+}
+
 export function commentFactsOf(snapshot: MonthlySnapshot, classLevel: number | null): CommentFacts {
   const m = snapshot.metrics;
   const bySubject = [...m.homework.bySubject].filter((s) => s.qualityRate != null);
   const ranked = bySubject.sort((a, b) => (b.qualityRate ?? 0) - (a.qualityRate ?? 0));
+  const split = splitSubjects(ranked.map((s) => s.subject));
 
   return {
     periodKey: m.periodKey,
@@ -91,8 +113,8 @@ export function commentFactsOf(snapshot: MonthlySnapshot, classLevel: number | n
     },
     hifz: { attended: m.hifz.present, sessions: m.hifz.sessions },
     concerns: { count: m.concerns.concern, trend: snapshot.trends.concerns.state },
-    strongestSubjects: ranked.slice(0, 2).map((s) => s.subject),
-    weakestSubjects: ranked.slice(-2).reverse().map((s) => s.subject),
+    strongestSubjects: split.strongest,
+    weakestSubjects: split.weakest,
     flags: snapshot.flags.map((f) => f.flag),
     provisional:
       [m.homework.coverage.pct, m.assignment.coverage.pct, m.classTest.coverage.pct].some(
@@ -232,6 +254,21 @@ export function correctivePrompt(base: string, invented: readonly string[], shap
   return `${base}\n\n${notes.join("\n")}`;
 }
 
+const BN_MONTHS = [
+  "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
+  "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর",
+];
+
+/** PURE. `2026-07` → `জুলাই ২০২৬`. Lives in the PROMPT, never in the facts: the facts
+ *  are a code-only whitelist and a Bangla month name would (rightly) trip the
+ *  de-identification assertion. */
+export function monthLabelBn(periodKey: string): string {
+  const [y, m] = periodKey.split("-").map(Number);
+  const name = BN_MONTHS[(m ?? 1) - 1] ?? periodKey;
+  const year = String(y ?? "").replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
+  return `${name} ${year}`;
+}
+
 /** PURE. The instruction half — pinned here so `promptVersion` means something. */
 export function buildPrompt(facts: CommentFacts): string {
   const rules = [
@@ -245,6 +282,7 @@ export function buildPrompt(facts: CommentFacts): string {
     "৬. flags-এ SERIOUS_MATTER থাকলে বিষয়টি বর্ণনা করবে না — শুধু লিখবে যে শ্রেণি শিক্ষক যোগাযোগ করবেন।",
     "৭. provisional true হলে বোঝাবে যে কিছু তথ্য এখনো আসেনি।",
     "৮. শিক্ষার্থীর নাম নেই — নাম ছাড়াই লেখো (\"আপনার সন্তান\")।",
+    `৯. এই রিপোর্টটি ${monthLabelBn(facts.periodKey)} মাসের। মাসের নাম উল্লেখ করো — "গত মাস" বা "বিগত মাস" লিখবে না।`,
   ].join("\n");
   return `${rules}\n\nJSON:\n${JSON.stringify(facts)}`;
 }
