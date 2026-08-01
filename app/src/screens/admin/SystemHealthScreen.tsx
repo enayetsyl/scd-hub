@@ -13,7 +13,13 @@ import React from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { SYSTEM_HEALTH_QUERY, type CollectionUsageT, type DatabaseUsageT } from "../../graphql/systemHealth";
+import {
+  SYSTEM_HEALTH_QUERY,
+  type CollectionUsageT,
+  type DatabaseUsageT,
+  type SystemHealthT,
+} from "../../graphql/systemHealth";
+import { TrendSparkline } from "../../components/TrendSparkline";
 import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Loader, ErrorBanner, Notice } from "../../components/ui";
 import { STR, bnNum } from "../../lib/labels";
@@ -73,6 +79,19 @@ function UsageBar({ ratio, band }: { ratio: number | null; band: string }): Reac
   );
 }
 
+/**
+ * The projection in one sentence. Says "not enough days" or "not growing" rather than
+ * dressing a meaningless fit as a date — a confident wrong forecast is worse here than
+ * an admission, because it is the line the Principal would actually plan against.
+ */
+function projectionLine(p: SystemHealthT["projection"]): string {
+  if (p.points < 3) return STR.shProjectionThin;
+  if (p.bytesPerDay === null || p.bytesPerDay <= 0) return STR.shProjectionFlat;
+  const perDay = `${STR.shProjectionPerDay}: ${bytesLabel(p.bytesPerDay)}`;
+  if (p.daysToLimit === null || !p.limitDateKey) return perDay;
+  return `${STR.shProjection} ${STR.shProjectionFull} ${p.limitDateKey} · ${perDay}`;
+}
+
 function SectionHeader({ title, band }: { title: string; band: string }): React.ReactElement {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space(2) }}>
@@ -125,6 +144,27 @@ export default function SystemHealthScreen(_props: Props): React.ReactElement {
             would read as far more headroom than the school actually has. */}
         {!h.mongo.clusterWide ? <Notice message={STR.shNotClusterWide} tone="warn" /> : null}
         {h.mongo.error ? <Muted style={{ marginTop: space(1) }}>{h.mongo.error}</Muted> : null}
+
+        {/* SH-4 — the trend. A percentage answers "how full"; only the direction answers
+            "how long have we got", which is the question that drives a decision. */}
+        {h.history.length > 0 ? (
+          <View style={{ marginTop: space(3) }}>
+            <Muted>{STR.shTrend}</Muted>
+            <TrendSparkline
+              points={h.history.map((p) => ({
+                dateKey: p.dateKey,
+                value: p.dbStorageBytes,
+                estimated: p.estimated,
+              }))}
+              limit={h.mongo.limitBytes}
+              accessibilityLabel={`${STR.shTrend}: ${bytesLabel(h.history[0]?.dbStorageBytes)} → ${bytesLabel(
+                h.history[h.history.length - 1]?.dbStorageBytes,
+              )}`}
+            />
+            {h.history.some((p) => p.estimated) ? <Muted>{STR.shTrendEstimated}</Muted> : null}
+            <Muted style={{ marginTop: space(1) }}>{projectionLine(h.projection)}</Muted>
+          </View>
+        ) : null}
 
         {h.mongo.databases.length > 0 ? (
           <View style={{ marginTop: space(3) }}>
@@ -206,6 +246,73 @@ export default function SystemHealthScreen(_props: Props): React.ReactElement {
         <Muted style={{ marginTop: space(2) }}>{STR.shDriveNote}</Muted>
         {h.drive.error ? <Muted style={{ marginTop: space(1) }}>{h.drive.error}</Muted> : null}
       </Card>
+
+      {/* ---------------- SH-5: the scheduler's pulse ---------------- */}
+      <Card>
+        <SectionHeader title={STR.shTicker} band={h.ticker.band} />
+        <Body style={{ marginTop: space(1) }}>
+          {h.ticker.ageSeconds === null
+            ? STR.shTickerNever
+            : `${STR.shTickerLast}: ${bnNum(h.ticker.ageSeconds)}${STR.shSecondsAgo}`}
+        </Body>
+        {/* Named in words, not just a red chip: a stalled ticker means no reminders and
+            no automatic homework work, and that consequence is not obvious from "60s". */}
+        {h.ticker.band === "critical" || h.ticker.band === "warn" ? (
+          <Notice message={STR.shTickerStalled} tone={h.ticker.band === "critical" ? "danger" : "warn"} />
+        ) : null}
+      </Card>
+
+      {/* ---------------- SH-7: the restore point ---------------- */}
+      <Card>
+        <SectionHeader
+          title={STR.shBackup}
+          band={
+            !h.backup.enabled || h.backup.ageDays === null
+              ? "critical"
+              : h.backup.ageDays > 14
+                ? "warn"
+                : "ok"
+          }
+        />
+        {!h.backup.enabled ? (
+          // The honest headline: Atlas M0 has no automated backups, so "off" is not a
+          // preference, it is the absence of any way back.
+          <Notice message={STR.shBackupOff} tone="danger" />
+        ) : h.backup.ageDays === null ? (
+          <Notice message={STR.shBackupNever} tone="danger" />
+        ) : (
+          <Body style={{ marginTop: space(1) }}>
+            {STR.shBackupLast}: {bnNum(h.backup.ageDays)} {STR.shBackupDaysAgo}
+            {h.backup.lastSizeBytes ? ` · ${bytesLabel(h.backup.lastSizeBytes)}` : ""}
+          </Body>
+        )}
+        {h.backup.lastOk === false && h.backup.lastError ? (
+          <Muted style={{ marginTop: space(1) }}>
+            {STR.shBackupFailed}: {h.backup.lastError}
+          </Muted>
+        ) : null}
+      </Card>
+
+      {/* ---------------- SH-6: the lever, quantified ---------------- */}
+      {h.prunable.length > 0 ? (
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.shPrunable}</Body>
+          {h.prunable.map((p) => (
+            <View
+              key={p.collection}
+              style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2), marginTop: space(1) }}
+            >
+              <Muted style={{ flexShrink: 1 }}>
+                {p.collection} · {bnNum(p.olderThanDays)} {STR.shOlderThan}
+              </Muted>
+              <Muted>
+                {bnNum(p.docCount)} · {bytesLabel(p.reclaimableBytes)}
+              </Muted>
+            </View>
+          ))}
+          <Muted style={{ marginTop: space(2) }}>{STR.shPrunableNote}</Muted>
+        </Card>
+      ) : null}
 
       <Muted>
         {STR.shCheckedAt}: {h.checkedAt.slice(0, 16).replace("T", " ")}

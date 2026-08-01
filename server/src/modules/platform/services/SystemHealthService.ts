@@ -29,6 +29,19 @@ import * as os from "os";
 import { NetSnapshot } from "../models/NetSnapshot";
 import { driveQuota, type DriveQuota } from "./DriveStore";
 import { dateKeyOf } from "../../attendance/dates";
+import { getTickerHealth } from "../../notifications/services/tickerHeartbeat";
+import {
+  captureHealthSnapshot,
+  backfillHistory,
+  historySeries,
+  projectToLimit,
+  prunableEstimates,
+  HISTORY_DAYS,
+  type HistoryPoint,
+  type Projection,
+  type PrunableEstimate,
+} from "./HealthHistoryService";
+import { backupStatus, type BackupStatus } from "./BackupService";
 
 /**
  * The Atlas M0 storage ceiling. It is a CONSTANT because the driver cannot ask: no
@@ -127,10 +140,36 @@ export interface DriveHealth {
   error: string | null;
 }
 
+/** The notification ticker's heartbeat (SH-5). If it stalls, homework auto-DUE and
+ *  auto-ISSUE, attendance reminders, class-note prompts, library sweeps and every
+ *  escalation stop SILENTLY — nothing else in the app would say so. */
+export interface TickerHealth {
+  lastTickAt: string | null;
+  ageSeconds: number | null;
+  band: HealthBand;
+}
+
+/** Warn at 2.5x the 60s interval, critical at 10x: one skipped pass is noise, ten
+ *  minutes of silence is a stopped scheduler. */
+export const TICKER_WARN_SECONDS = 150;
+export const TICKER_CRITICAL_SECONDS = 600;
+
+export function tickerBand(ageSeconds: number | null): HealthBand {
+  if (ageSeconds === null) return "unknown";
+  if (ageSeconds >= TICKER_CRITICAL_SECONDS) return "critical";
+  if (ageSeconds >= TICKER_WARN_SECONDS) return "warn";
+  return "ok";
+}
+
 export interface SystemHealth {
   mongo: MongoHealth;
   host: HostHealth;
   drive: DriveHealth;
+  ticker: TickerHealth;
+  history: HistoryPoint[];
+  projection: Projection;
+  prunable: PrunableEstimate[];
+  backup: BackupStatus;
   checkedAt: Date;
 }
 
@@ -429,6 +468,83 @@ export async function driveHealth(): Promise<DriveHealth> {
 /** The whole panel in one read. Sections run in parallel and each carries its own error,
  *  so one dead probe never costs the others. */
 export async function systemHealth(now = new Date()): Promise<SystemHealth> {
+  const [mongo, host, drive, history, backup] = await Promise.all([
+    mongoHealth(),
+    hostHealth(now),
+    driveHealth(),
+    historySeries(HISTORY_DAYS, now).catch(() => [] as HistoryPoint[]),
+    backupStatus(now).catch(() => ({
+      enabled: false,
+      lastRunAt: null,
+      lastOk: null,
+      lastSizeBytes: null,
+      lastError: null,
+      ageDays: null,
+    })),
+  ]);
+
+  // Prunable needs the measured collection sizes, so it runs after mongoHealth rather
+  // than beside it. A failure here must not cost the panel its numbers.
+  const prunable = await prunableEstimates(
+    mongo.topCollections.map((c) => ({
+      name: c.name,
+      docCount: c.docCount,
+      storageBytes: c.storageSizeBytes,
+    })),
+    now,
+  ).catch(() => [] as PrunableEstimate[]);
+
+  const tick = getTickerHealth(now);
+  return {
+    mongo,
+    host,
+    drive,
+    ticker: { ...tick, band: tickerBand(tick.ageSeconds) },
+    history,
+    projection: projectToLimit(
+      history.map((p) => ({ dateKey: p.dateKey, value: p.dbStorageBytes, estimated: p.estimated })),
+      mongo.limitBytes,
+      now,
+    ),
+    prunable,
+    backup,
+    checkedAt: now,
+  };
+}
+
+/** Today's gauge row + a gap-filling backfill, called once per scheduler day (SH-4).
+ *  Reuses the numbers `mongoHealth`/`hostHealth`/`driveHealth` already gathered rather
+ *  than re-reading the cluster. */
+export async function captureDailyHealth(now = new Date()): Promise<boolean> {
+  if (mongoose.connection.readyState !== 1) return false;
   const [mongo, host, drive] = await Promise.all([mongoHealth(), hostHealth(now), driveHealth()]);
-  return { mongo, host, drive, checkedAt: now };
+  const collections = mongo.topCollections.map((c) => ({
+    name: c.name,
+    docCount: c.docCount,
+    storageBytes: c.storageSizeBytes,
+  }));
+  const wrote = await captureHealthSnapshot(
+    {
+      dbStorageBytes: mongo.totalStorageBytes,
+      databases: mongo.databases.map((d) => ({ name: d.name, storageBytes: d.storageBytes })),
+      collections,
+      diskUsedBytes:
+        host.diskTotalBytes !== null && host.diskFreeBytes !== null
+          ? host.diskTotalBytes - host.diskFreeBytes
+          : null,
+      diskTotalBytes: host.diskTotalBytes,
+      driveUsageBytes: drive.usageBytes,
+    },
+    now,
+  );
+  // Fills only the days that have no row at all, so it is a no-op after the first run.
+  // The baseline keeps reconstructed days in the same unit as the measured ones: what the
+  // walk cannot see (other databases, the untracked tail) is held at today's value.
+  const trackedToday = collections.reduce((n, c) => n + c.storageBytes, 0);
+  await backfillHistory({
+    collections,
+    baselineBytes: Math.max(0, mongo.totalStorageBytes - trackedToday),
+    now,
+  });
+  return wrote;
 }

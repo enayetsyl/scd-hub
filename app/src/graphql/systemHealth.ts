@@ -57,6 +57,41 @@ export interface SystemHealthT {
     band: HealthBandT;
     error: string | null;
   };
+  /** SH-5: a stalled ticker silently stops every scheduled job in the app. */
+  ticker: { lastTickAt: string | null; ageSeconds: number | null; band: HealthBandT };
+  /** SH-4: `estimated` days are reconstructed from timestamps — counts exact, bytes derived. */
+  history: {
+    dateKey: string;
+    dbStorageBytes: number | null;
+    diskUsedBytes: number | null;
+    driveUsageBytes: number | null;
+    totalDocs: number;
+    estimated: boolean;
+  }[];
+  projection: {
+    bytesPerDay: number | null;
+    daysToLimit: number | null;
+    limitDateKey: string | null;
+    points: number;
+    usesEstimates: boolean;
+  };
+  /** SH-6: report only — nothing in the app deletes these. */
+  prunable: {
+    collection: string;
+    olderThanDays: number;
+    reason: string;
+    docCount: number;
+    reclaimableBytes: number;
+  }[];
+  /** SH-7: `enabled: false` means NO restore point exists — M0 has no automated backups. */
+  backup: {
+    enabled: boolean;
+    lastRunAt: string | null;
+    lastOk: boolean | null;
+    lastSizeBytes: number | null;
+    lastError: string | null;
+    ageDays: number | null;
+  };
   checkedAt: string;
 }
 
@@ -80,6 +115,11 @@ export const SYSTEM_HEALTH_QUERY = gql<{ systemHealth: SystemHealthT }, Record<s
         error
       }
       drive { usageBytes usageInDriveBytes limitBytes band error }
+      ticker { lastTickAt ageSeconds band }
+      history { dateKey dbStorageBytes diskUsedBytes driveUsageBytes totalDocs estimated }
+      projection { bytesPerDay daysToLimit limitDateKey points usesEstimates }
+      prunable { collection olderThanDays reason docCount reclaimableBytes }
+      backup { enabled lastRunAt lastOk lastSizeBytes lastError ageDays }
     }
   }
 `;
