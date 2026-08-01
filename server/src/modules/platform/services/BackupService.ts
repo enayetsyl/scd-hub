@@ -35,11 +35,24 @@ export const BACKUP_CRITICAL_DAYS = 3;
 
 export type BackupBand = "ok" | "warn" | "critical" | "unknown";
 
+export interface BackupArchive {
+  name: string;
+  createdAt: string;
+  sizeBytes: number | null;
+}
+
+/** How many archives the panel lists. The rotation keeps ~14, so this shows all of them
+ *  with room to spare; the cap only stops a misconfigured folder from flooding the card. */
+export const BACKUP_LIST_LIMIT = 40;
+
 export interface BackupStatus {
   folder: string;
   /** False when no such folder exists — reported as a finding, never auto-created. */
   found: boolean;
   count: number;
+  /** Every archive, newest first — the owner asked to see the names and dates, and the
+   *  list is also what makes the 7/4/3 rotation legible instead of looking like gaps. */
+  archives: BackupArchive[];
   newestName: string | null;
   newestAt: string | null;
   newestSizeBytes: number | null;
@@ -77,6 +90,7 @@ export async function backupStatus(now = new Date()): Promise<BackupStatus> {
     folder: BACKUP_FOLDER,
     found: false,
     count: 0,
+    archives: [],
     newestName: null,
     newestAt: null,
     newestSizeBytes: null,
@@ -111,6 +125,11 @@ export async function backupStatus(now = new Date()): Promise<BackupStatus> {
     folder: BACKUP_FOLDER,
     found: true,
     count: sorted.length,
+    archives: sorted.slice(0, BACKUP_LIST_LIMIT).map((f) => ({
+      name: f.name,
+      createdAt: f.createdTime,
+      sizeBytes: f.sizeBytes,
+    })),
     newestName: newest?.name ?? null,
     newestAt: newest?.createdTime ?? null,
     newestSizeBytes: newest?.sizeBytes ?? null,

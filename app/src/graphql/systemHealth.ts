@@ -91,6 +91,7 @@ export interface SystemHealthT {
     folder: string;
     found: boolean;
     count: number;
+    archives: { name: string; createdAt: string; sizeBytes: number | null }[];
     newestName: string | null;
     newestAt: string | null;
     newestSizeBytes: number | null;
@@ -126,7 +127,7 @@ export const SYSTEM_HEALTH_QUERY = gql<{ systemHealth: SystemHealthT }, Record<s
       history { dateKey dbStorageBytes diskUsedBytes driveUsageBytes totalDocs estimated }
       projection { bytesPerDay daysToLimit limitDateKey points usesEstimates }
       prunable { collection olderThanDays reason docCount reclaimableBytes }
-      backup { folder found count newestName newestAt newestSizeBytes ageDays totalSizeBytes band error }
+      backup { folder found count archives { name createdAt sizeBytes } newestName newestAt newestSizeBytes ageDays totalSizeBytes band error }
     }
   }
 `;
