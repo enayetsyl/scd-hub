@@ -25,7 +25,7 @@ import { ClassTestResult } from "../../trackers/models/ClassTestResult";
 import { Class } from "../../foundation/models/Class";
 import { Section } from "../../foundation/models/Section";
 import { User } from "../../foundation/models/User";
-import { AWAITING_CHECK_STATES, OWED_BY_STUDENT_STATES, inStates } from "../../trackers/lifecycleBuckets";
+import { AWAITING_CHECK_STATES, OWED_BY_STUDENT_STATES, inStates, isOverdue } from "../../trackers/lifecycleBuckets";
 import { monthWindowOf } from "./MonthlyMetricsService";
 import { monthLabelBn } from "./MonthlyCommentService";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
@@ -53,17 +53,22 @@ export interface PendingRow {
   subject: string;
   dateKey: string;
   ref: string;
-  /** Submitted, waiting on the teacher. */
+  /** Submitted, waiting on the TEACHER to check and return. Blocks the report. */
   toCheck: number;
-  /** Still owed by the child. */
-  notIn: number;
+  /** Owed by the child and not yet past due. Blocks the report, but settles by
+   *  itself once the due date passes — nobody has to do anything. */
+  awaiting: number;
+  /** Owed, past due, never handed in. NOT blocking and NOT the teacher's queue —
+   *  the outcome is known, and the follow-up is with the family. */
+  notSubmitted: number;
 }
 
 export interface PendingGroup {
   key: string;
   items: number;
   toCheck: number;
-  notIn: number;
+  awaiting: number;
+  notSubmitted: number;
 }
 
 export interface PendingClassTest {
@@ -83,10 +88,12 @@ export interface MonthlyPendingWork {
   totals: {
     homeworkItems: number;
     homeworkToCheck: number;
-    homeworkNotIn: number;
+    homeworkAwaiting: number;
+    homeworkNotSubmitted: number;
     assignmentItems: number;
     assignmentToCheck: number;
-    assignmentNotIn: number;
+    assignmentAwaiting: number;
+    assignmentNotSubmitted: number;
     classTestsNoResults: number;
     classTestsUnmarked: number;
   };
@@ -102,25 +109,48 @@ export function groupPending(rows: readonly PendingRow[], keyOf: (r: PendingRow)
   const acc = new Map<string, PendingGroup>();
   for (const r of rows) {
     const key = keyOf(r);
-    const g = acc.get(key) ?? acc.set(key, { key, items: 0, toCheck: 0, notIn: 0 }).get(key)!;
+    const g =
+      acc.get(key) ?? acc.set(key, { key, items: 0, toCheck: 0, awaiting: 0, notSubmitted: 0 }).get(key)!;
     g.items += 1;
     g.toCheck += r.toCheck;
-    g.notIn += r.notIn;
+    g.awaiting += r.awaiting;
+    g.notSubmitted += r.notSubmitted;
   }
+  // Sorted by what BLOCKS the month, not by raw volume — a teacher with 100
+  // never-handed-in sheets and nothing to check is not the one to chase.
   return [...acc.values()].sort(
-    (a, b) => b.toCheck + b.notIn - (a.toCheck + a.notIn) || a.key.localeCompare(b.key),
+    (a, b) => b.toCheck + b.awaiting - (a.toCheck + a.awaiting) || a.key.localeCompare(b.key),
   );
 }
 
-/** PURE. One item's records → its outstanding counts. */
-export function countOutstanding(states: readonly string[]): { toCheck: number; notIn: number } {
+/**
+ * PURE. One item's records → its outstanding counts, split THE SAME WAY the coverage
+ * percentage splits them.
+ *
+ * The first version counted every owed state as one bucket, which made the chase
+ * message disagree with the report it was chasing: coverage treats an OVERDUE unsubmitted
+ * sheet as SETTLED — the outcome is known, the child did not hand it in — while this
+ * counted it as outstanding work and put it in a teacher's message. It was neither
+ * blocking nor theirs.
+ *
+ * isOverdue() is the shared rule (due TODAY is not late, D-#354), so the two readers
+ * cannot drift apart again.
+ */
+export function countOutstanding(
+  records: ReadonlyArray<{ state: string; dueDate?: Date | null }>,
+  now: Date = new Date(),
+): { toCheck: number; awaiting: number; notSubmitted: number } {
   let toCheck = 0;
-  let notIn = 0;
-  for (const s of states) {
-    if (inStates(s, AWAITING_CHECK_STATES)) toCheck += 1;
-    else if (inStates(s, OWED_BY_STUDENT_STATES)) notIn += 1;
+  let awaiting = 0;
+  let notSubmitted = 0;
+  for (const r of records) {
+    if (inStates(r.state, AWAITING_CHECK_STATES)) toCheck += 1;
+    else if (inStates(r.state, OWED_BY_STUDENT_STATES)) {
+      if (isOverdue(r.dueDate, now)) notSubmitted += 1;
+      else awaiting += 1;
+    }
   }
-  return { toCheck, notIn };
+  return { toCheck, awaiting, notSubmitted };
 }
 
 const dayKey = (d: Date | undefined | null): string => (d ? new Date(d).toISOString().slice(0, 10) : "—");
@@ -160,22 +190,23 @@ export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPend
     const list = items;
     if (list.length === 0) continue;
 
+    const now = new Date();
     const records = (await (RecordModel as typeof HomeworkStudentRecord)
       .find({ [fk]: { $in: list.map((i) => i._id) } })
-      .select(`${fk} state`)
-      .lean()) as unknown as Array<{ state: string; [k: string]: unknown }>;
+      .select(`${fk} state dueDate`)
+      .lean()) as unknown as Array<{ state: string; dueDate?: Date; [k: string]: unknown }>;
 
-    const byItem = new Map<string, string[]>();
+    const byItem = new Map<string, Array<{ state: string; dueDate?: Date | null }>>();
     for (const r of records) {
       const k = String(r[fk]);
       const g = byItem.get(k);
-      if (g) g.push(r.state);
-      else byItem.set(k, [r.state]);
+      if (g) g.push({ state: r.state, dueDate: r.dueDate ?? null });
+      else byItem.set(k, [{ state: r.state, dueDate: r.dueDate ?? null }]);
     }
 
     for (const it of list) {
-      const { toCheck, notIn } = countOutstanding(byItem.get(it._id.toString()) ?? []);
-      if (toCheck + notIn === 0) continue;
+      const { toCheck, awaiting, notSubmitted } = countOutstanding(byItem.get(it._id.toString()) ?? [], now);
+      if (toCheck + awaiting + notSubmitted === 0) continue;
       rows.push({
         kind,
         teacherId: String(it[teacherField] ?? ""),
@@ -186,7 +217,8 @@ export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPend
         dateKey: dayKey(it[dateField] as Date),
         ref: String(it[refField] ?? ""),
         toCheck,
-        notIn,
+        awaiting,
+        notSubmitted,
       });
     }
   }
@@ -231,7 +263,7 @@ export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPend
   }
   classTests.sort((a, b) => b.dateKey.localeCompare(a.dateKey));
 
-  const sum = (kind: string, f: "toCheck" | "notIn"): number =>
+  const sum = (kind: string, f: "toCheck" | "awaiting" | "notSubmitted"): number =>
     rows.filter((r) => r.kind === kind).reduce((n, r) => n + r[f], 0);
 
   return {
@@ -239,10 +271,12 @@ export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPend
     totals: {
       homeworkItems: rows.filter((r) => r.kind === "HOMEWORK").length,
       homeworkToCheck: sum("HOMEWORK", "toCheck"),
-      homeworkNotIn: sum("HOMEWORK", "notIn"),
+      homeworkAwaiting: sum("HOMEWORK", "awaiting"),
+      homeworkNotSubmitted: sum("HOMEWORK", "notSubmitted"),
       assignmentItems: rows.filter((r) => r.kind === "ASSIGNMENT").length,
       assignmentToCheck: sum("ASSIGNMENT", "toCheck"),
-      assignmentNotIn: sum("ASSIGNMENT", "notIn"),
+      assignmentAwaiting: sum("ASSIGNMENT", "awaiting"),
+      assignmentNotSubmitted: sum("ASSIGNMENT", "notSubmitted"),
       classTestsNoResults: classTests.filter((t) => t.results === 0).length,
       classTestsUnmarked: classTests.reduce((n, t) => n + t.unmarked, 0),
     },
@@ -273,7 +307,8 @@ export interface TeacherChase {
   homeworkItems: number;
   assignmentItems: number;
   toCheck: number;
-  notIn: number;
+  awaiting: number;
+  notSubmitted: number;
 }
 
 /** How many lines of each stream a message carries before it says "…আরও Nটি".
@@ -288,6 +323,8 @@ export function chaseItemsBlock(
   subjectLabels: Record<string, string>,
   cap: number = CHASE_ITEM_CAP,
 ): string {
+  // Only what the TEACHER can act on goes in the list. A sheet the child never
+  // handed in is not their queue and does not hold the month open.
   const sub = (c: string): string => subjectLabels[c] ?? c;
   const dm = (k: string): string => bnNum(`${k.slice(8, 10)}/${k.slice(5, 7)}`);
   const out: string[] = [];
@@ -307,18 +344,21 @@ export function chaseItemsBlock(
     ["HOMEWORK", "বাড়ির কাজ"],
     ["ASSIGNMENT", "অ্যাসাইনমেন্ট"],
   ] as const) {
-    const mine = rows.filter((r) => r.kind === kind);
+    const mine = rows.filter((r) => r.kind === kind && r.toCheck > 0);
     if (mine.length === 0) continue;
     const toCheck = mine.reduce((n, r) => n + r.toCheck, 0);
-    const notIn = mine.reduce((n, r) => n + r.notIn, 0);
-    out.push(
-      "",
-      `${title} — ${bnNum(mine.length)}টি আইটেম (${bnNum(toCheck)} যাচাই বাকি, ${bnNum(notIn)} জমা পড়েনি):`,
-    );
+    out.push("", `${title} — যাচাই ও ফেরত বাকি (${bnNum(toCheck)}টি):`);
     for (const r of mine.slice(0, cap)) {
-      out.push(`• ${r.sectionLabel} — ${sub(r.subject)} — ${dm(r.dateKey)} — ${bnNum(r.toCheck)}/${bnNum(r.notIn)}`);
+      out.push(`• ${r.sectionLabel} — ${sub(r.subject)} — ${dm(r.dateKey)} — ${bnNum(r.toCheck)}টি`);
     }
     if (mine.length > cap) out.push(`  … আরও ${bnNum(mine.length - cap)}টি`);
+  }
+
+  // Stated once, plainly, and NOT as the teacher's task: the child did not hand it
+  // in, so the follow-up is with the family.
+  const neverIn = rows.reduce((n, r) => n + r.notSubmitted, 0);
+  if (neverIn > 0) {
+    out.push("", `(এ ছাড়া ${bnNum(neverIn)}টি কাজ শিক্ষার্থীরা জমা দেয়নি — এটি যাচাইয়ের তালিকায় নেই, অভিভাবকের সঙ্গে যোগাযোগের বিষয়।)`);
   }
 
   return out.join("\n");
@@ -373,9 +413,12 @@ export async function monthlyTeacherChase(periodKey: string): Promise<TeacherCha
       homeworkItems: rows.filter((r) => r.kind === "HOMEWORK").length,
       assignmentItems: rows.filter((r) => r.kind === "ASSIGNMENT").length,
       toCheck: rows.reduce((n, r) => n + r.toCheck, 0),
-      notIn: rows.reduce((n, r) => n + r.notIn, 0),
+      awaiting: rows.reduce((n, r) => n + r.awaiting, 0),
+      notSubmitted: rows.reduce((n, r) => n + r.notSubmitted, 0),
     });
   }
 
-  return out.sort((a, b) => b.toCheck + b.notIn + b.classTests * 50 - (a.toCheck + a.notIn + a.classTests * 50));
+  // Heaviest by what actually blocks: unmarked class tests first, then checking.
+  const weight = (c: TeacherChase): number => c.classTests * 50 + c.toCheck;
+  return out.filter((c) => weight(c) > 0).sort((a, b) => weight(b) - weight(a));
 }
