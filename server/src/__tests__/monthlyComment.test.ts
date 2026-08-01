@@ -16,6 +16,7 @@ import {
   commentFactsOf,
   generateGuardianComment,
   MonthlyCommentError,
+  looksLikeProse,
   promptHashOf,
   validateNumerals,
   type CommentFacts,
@@ -130,7 +131,7 @@ describe("MR-4 D-#399 — the model may not author a number", () => {
 });
 
 describe("MR-4 D-#399 — it never blocks", () => {
-  const ok: CommentProvider = { model: "gemini-test", generate: async () => "উপস্থিতি ৮২% — ভালো।" };
+  const ok: CommentProvider = { model: "gemini-test", generate: async () => "সম্মানিত অভিভাবক, এ মাসে আপনার সন্তানের উপস্থিতি ছিল ৮২%। নিয়মিত উপস্থিতি নিশ্চিত করুন।" };
 
   test("a clean draft is returned with its model and prompt version stamped", async () => {
     const c = await generateGuardianComment(facts(), ok);
@@ -142,7 +143,7 @@ describe("MR-4 D-#399 — it never blocks", () => {
     let call = 0;
     const flaky: CommentProvider = {
       model: "gemini-test",
-      generate: async () => (++call === 1 ? "১৫টি জমা পড়েনি।" : "উপস্থিতি ৮২%।"),
+      generate: async () => (++call === 1 ? "১৫টি জমা পড়েনি।" : "সম্মানিত অভিভাবক, এ মাসে উপস্থিতি ছিল ৮২% — নিয়মিত পাঠানোর অনুরোধ করছি।"),
     };
     const c = await generateGuardianComment(facts(), flaky);
     expect(call).toBe(2);
@@ -176,11 +177,49 @@ describe("MR-4 D-#399 — it never blocks", () => {
   });
 
   test("a leaking facts object never reaches the provider AT ALL", async () => {
-    const spy = jest.fn(async () => "ঠিক আছে।");
+    const spy = jest.fn(async () => "সম্মানিত অভিভাবক, সবকিছু ঠিক আছে বলে মনে হচ্ছে এই মাসে।");
     const provider: CommentProvider = { model: "gemini-test", generate: spy };
     await expect(
       generateGuardianComment({ ...facts(), flags: ["মারুফ হাসান"] }, provider),
     ).rejects.toThrow(MonthlyCommentError);
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe("MR-4 — a truncated or debris draft never becomes a comment", () => {
+  test("real prod debris is rejected: the tail of the model's own reasoning", () => {
+    // What the console actually showed on the first live run.
+    const v = looksLikeProse("4, `expected`: 8, `ratePct`: 50");
+    expect(v.ok).toBe(false);
+    expect(v.reason).toMatch(/JSON fragments|too short/);
+  });
+
+  test("a sentence cut off mid-flow is rejected", () => {
+    const v = looksLikeProse("সম্মানিত অভিভাবক, এই মাসের অগ্রগতি প্রতিবেদনে দেখা যাচ্ছে আপনার");
+    expect(v.ok).toBe(false);
+    expect(v.reason).toMatch(/mid-sentence/);
+  });
+
+  test("a finished Bangla paragraph passes", () => {
+    const v = looksLikeProse(
+      "সম্মানিত অভিভাবক, এ মাসে মোট ২২ কর্মদিবসের মধ্যে আপনার সন্তান ১৫ দিন উপস্থিত ছিল। নিয়মিত উপস্থিতি নিশ্চিত করুন।",
+    );
+    expect(v).toEqual({ ok: true, reason: null });
+  });
+
+  test("the numeral guard alone would have PASSED the debris — hence the shape check", () => {
+    const f = facts();
+    // 4, 8 and 50 are all genuine figures, so the numeral guard sees nothing wrong.
+    expect(validateNumerals("4, `expected`: 8, `ratePct`: 50", { ...f, homework: { ...f.homework, submittedOf: 4, expected: 8, ratePct: 50 } }).ok).toBe(true);
+  });
+
+  test("a cut-off draft falls back rather than being stored", async () => {
+    const truncating: CommentProvider = {
+      model: "gemini-test",
+      generate: async () => "সম্মানিত অভিভাবক, এই মাসের অগ্রগতি প্রতিবেদনে দেখা যাচ্ছে আপনার",
+    };
+    const c = await generateGuardianComment(facts(), truncating);
+    expect(c.fallback).toBe(true);
+    expect(c.fallbackReason).toMatch(/mid-sentence/);
   });
 });

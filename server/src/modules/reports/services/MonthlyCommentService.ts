@@ -166,6 +166,24 @@ export function allowedNumbers(facts: CommentFacts): Set<string> {
   return out;
 }
 
+/** PURE. Does this read like a finished Bangla paragraph, or like debris?
+ *
+ *  The first live drafts came back as `4, \`expected\`: 8, \`ratePct\`: 50` — the tail of
+ *  the model's own reasoning over the facts JSON, truncated. The numeral guard passed
+ *  it (every figure WAS in the facts), which is exactly why a second, structural check
+ *  is needed: the numbers being real does not make the text a sentence. */
+export function looksLikeProse(text: string): { ok: boolean; reason: string | null } {
+  const t = text.trim();
+  if (t.length < 40) return { ok: false, reason: "the draft is too short to be a paragraph" };
+  // JSON debris: quoted keys, backticked identifiers, brace/bracket noise.
+  if (/["\`][a-zA-Z_]+["\`]\s*:/.test(t) || /[{}[\]]/.test(t)) {
+    return { ok: false, reason: "the draft contains JSON fragments, not prose" };
+  }
+  // A finished Bangla sentence ends in a danda (or a full stop / question mark).
+  if (!/[।.?!]\s*$/.test(t)) return { ok: false, reason: "the draft ends mid-sentence" };
+  return { ok: true, reason: null };
+}
+
 export interface NumeralVerdict {
   ok: boolean;
   /** The numbers the model produced that are in no fact — the reason for rejection. */
@@ -250,17 +268,39 @@ export class GeminiCommentProvider implements CommentProvider {
         headers: { "Content-Type": "application/json", "x-goog-api-key": this.apiKey },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 400 },
+          // maxOutputTokens has to cover the model's REASONING as well as its answer.
+          // At 400 the live gemini-3.6-flash spent 382 tokens thinking and emitted 14,
+          // so every draft came back cut off mid-sentence and the console showed a
+          // fragment. Thinking cannot be switched off on this model (thinkingBudget: 0
+          // is refused), so the budget is simply big enough for both.
+          generationConfig: { temperature: 0.4, maxOutputTokens: 2048 },
         }),
       },
     );
     if (!res.ok) throw new MonthlyCommentError(`Gemini returned ${res.status}`);
     const body = (await res.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      candidates?: Array<{
+        finishReason?: string;
+        content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+      }>;
       modelVersion?: string;
     };
     if (body.modelVersion) this.resolvedModel = body.modelVersion;
-    const text = body.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim();
+
+    const candidate = body.candidates?.[0];
+    // Only STOP means the model finished its sentence. MAX_TOKENS (and SAFETY, and
+    // the rest) leave a fragment, and a fragment must never reach a guardian — it is
+    // rejected here so the retry-then-template path handles it like any other failure.
+    if (candidate?.finishReason && candidate.finishReason !== "STOP") {
+      throw new MonthlyCommentError(`Gemini stopped early (${candidate.finishReason}) — the reply was cut off`);
+    }
+    // A thinking model returns its reasoning as parts flagged `thought`; those are
+    // NOT the answer and must never be shown to anyone.
+    const text = (candidate?.content?.parts ?? [])
+      .filter((p) => !p.thought)
+      .map((p) => p.text ?? "")
+      .join("")
+      .trim();
     if (!text) throw new MonthlyCommentError("Gemini returned no text");
     return text;
   }
@@ -334,8 +374,9 @@ export async function generateGuardianComment(
         lastReason = `The draft invented numbers not in the report: ${verdict.invented.join(", ")}`;
         continue;
       }
-      if (!text) {
-        lastReason = "The model returned an empty draft";
+      const shape = looksLikeProse(text);
+      if (!shape.ok) {
+        lastReason = shape.reason ?? "The draft did not read as a paragraph";
         continue;
       }
       return {
