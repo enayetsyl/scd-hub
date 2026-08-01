@@ -68,7 +68,7 @@ function GroupList({ title, groups }: { title: string; groups: PendingGroupT[] }
             {bnNum(g.toCheck)} {STR.mpToCheck}
           </Muted>
           <Muted style={{ flex: 1, textAlign: "right" }}>
-            {bnNum(g.notIn)} {STR.mpNotIn}
+            {bnNum(g.notSubmitted)} {STR.mpNotSubmitted}
           </Muted>
         </View>
       ))}
@@ -84,7 +84,7 @@ function ChaseCard({ c }: { c: TeacherChaseT }): React.ReactElement {
       <Body style={{ fontWeight: "700" }}>{c.teacherName}</Body>
       <Muted>
         {c.classTests > 0 ? `${STR.mrClassTest} ${bnNum(c.classTests)} · ` : ""}
-        {bnNum(c.toCheck)} {STR.mpToCheck} · {bnNum(c.notIn)} {STR.mpNotIn}
+        {bnNum(c.toCheck)} {STR.mpToCheck} · {bnNum(c.notSubmitted)} {STR.mpNotSubmitted}
       </Muted>
       {/* A teacher with no number is NAMED, not quietly skipped. */}
       {c.unreachable ? (
@@ -141,14 +141,18 @@ export default function MonthlyPendingWorkScreen(): React.ReactElement {
           ) : p ? (
             <>
               <Card>
+                <Muted style={{ fontWeight: "700" }}>{STR.mpBlocking}</Muted>
                 <Tally label={`${STR.mrHomework} — ${STR.mpToCheck}`} value={p.homeworkToCheck} tone={colors.warning} />
-                <Tally label={`${STR.mrHomework} — ${STR.mpNotIn}`} value={p.homeworkNotIn} />
                 <Tally label={`${STR.mrAssignment} — ${STR.mpToCheck}`} value={p.assignmentToCheck} tone={colors.warning} />
-                <Tally label={`${STR.mrAssignment} — ${STR.mpNotIn}`} value={p.assignmentNotIn} />
+                <Tally label={STR.mpAwaiting} value={p.homeworkAwaiting + p.assignmentAwaiting} />
                 <Tally label={`${STR.mrClassTest} — ${STR.mpNoResults}`} value={p.classTestsNoResults} tone={colors.error} />
                 {p.classTestsUnmarked > 0 ? (
                   <Tally label={`${STR.mrClassTest} — ${STR.mpUnmarked}`} value={p.classTestsUnmarked} tone={colors.error} />
                 ) : null}
+                {/* Below the line: real, but it holds no report open and belongs to
+                    the family, not the teacher. */}
+                <Muted style={{ fontWeight: "700", marginTop: space(2) }}>{STR.mpNotBlocking}</Muted>
+                <Tally label={STR.mpNotSubmitted} value={p.homeworkNotSubmitted + p.assignmentNotSubmitted} />
               </Card>
 
               {/* First, because one untouched test blanks a whole section's panel. */}
@@ -195,8 +199,8 @@ export default function MonthlyPendingWorkScreen(): React.ReactElement {
                       {r.sectionLabel} — {hwSubjectLabel(r.subject)} — {bnNum(r.dateKey)}
                     </Body>
                     <Muted>
-                      {r.teacherName} — {r.ref} — {bnNum(r.toCheck)} {STR.mpToCheck} — {bnNum(r.notIn)}{" "}
-                      {STR.mpNotIn}
+                      {r.teacherName} — {r.ref} — {bnNum(r.toCheck)} {STR.mpToCheck} — {bnNum(r.notSubmitted)}{" "}
+                      {STR.mpNotSubmitted}
                     </Muted>
                   </View>
                 ))}

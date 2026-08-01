@@ -392,7 +392,8 @@ const PendingGroupRef = builder.objectRef<PendingGroup>("MonthlyPendingGroup").i
     key: t.exposeString("key"),
     items: t.exposeInt("items"),
     toCheck: t.exposeInt("toCheck"),
-    notIn: t.exposeInt("notIn"),
+    awaiting: t.exposeInt("awaiting"),
+    notSubmitted: t.exposeInt("notSubmitted"),
   }),
 });
 
@@ -405,7 +406,8 @@ const PendingRowRef = builder.objectRef<PendingRow>("MonthlyPendingRow").impleme
     dateKey: t.exposeString("dateKey"),
     ref: t.exposeString("ref"),
     toCheck: t.exposeInt("toCheck"),
-    notIn: t.exposeInt("notIn"),
+    awaiting: t.exposeInt("awaiting"),
+    notSubmitted: t.exposeInt("notSubmitted"),
   }),
 });
 
@@ -430,10 +432,12 @@ const PendingWorkRef = builder.objectRef<MonthlyPendingWork>("MonthlyPendingWork
     periodKey: t.exposeString("periodKey"),
     homeworkItems: t.int({ resolve: (p) => p.totals.homeworkItems }),
     homeworkToCheck: t.int({ resolve: (p) => p.totals.homeworkToCheck }),
-    homeworkNotIn: t.int({ resolve: (p) => p.totals.homeworkNotIn }),
+    homeworkAwaiting: t.int({ resolve: (p) => p.totals.homeworkAwaiting }),
+    homeworkNotSubmitted: t.int({ resolve: (p) => p.totals.homeworkNotSubmitted }),
     assignmentItems: t.int({ resolve: (p) => p.totals.assignmentItems }),
     assignmentToCheck: t.int({ resolve: (p) => p.totals.assignmentToCheck }),
-    assignmentNotIn: t.int({ resolve: (p) => p.totals.assignmentNotIn }),
+    assignmentAwaiting: t.int({ resolve: (p) => p.totals.assignmentAwaiting }),
+    assignmentNotSubmitted: t.int({ resolve: (p) => p.totals.assignmentNotSubmitted }),
     classTestsNoResults: t.int({ resolve: (p) => p.totals.classTestsNoResults }),
     classTestsUnmarked: t.int({ resolve: (p) => p.totals.classTestsUnmarked }),
     byTeacher: t.field({ type: [PendingGroupRef], resolve: (p) => p.byTeacher }),
@@ -474,7 +478,8 @@ const TeacherChaseRef = builder.objectRef<TeacherChase>("MonthlyTeacherChase").i
     homeworkItems: t.exposeInt("homeworkItems"),
     assignmentItems: t.exposeInt("assignmentItems"),
     toCheck: t.exposeInt("toCheck"),
-    notIn: t.exposeInt("notIn"),
+    awaiting: t.exposeInt("awaiting"),
+    notSubmitted: t.exposeInt("notSubmitted"),
   }),
 });
 

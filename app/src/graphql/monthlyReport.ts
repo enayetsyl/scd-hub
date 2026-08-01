@@ -157,7 +157,8 @@ export interface PendingGroupT {
   key: string;
   items: number;
   toCheck: number;
-  notIn: number;
+  awaiting: number;
+  notSubmitted: number;
 }
 
 export interface PendingClassTestT {
@@ -179,17 +180,20 @@ export interface PendingRowT {
   dateKey: string;
   ref: string;
   toCheck: number;
-  notIn: number;
+  awaiting: number;
+  notSubmitted: number;
 }
 
 export interface PendingWorkT {
   periodKey: string;
   homeworkItems: number;
   homeworkToCheck: number;
-  homeworkNotIn: number;
+  homeworkAwaiting: number;
+  homeworkNotSubmitted: number;
   assignmentItems: number;
   assignmentToCheck: number;
-  assignmentNotIn: number;
+  assignmentAwaiting: number;
+  assignmentNotSubmitted: number;
   classTestsNoResults: number;
   classTestsUnmarked: number;
   byTeacher: PendingGroupT[];
@@ -202,13 +206,13 @@ export const MONTHLY_PENDING_WORK_QUERY = gql<{ monthlyPendingWork: PendingWorkT
   query MonthlyPendingWork($periodKey: String!) {
     monthlyPendingWork(periodKey: $periodKey) {
       periodKey
-      homeworkItems homeworkToCheck homeworkNotIn
-      assignmentItems assignmentToCheck assignmentNotIn
+      homeworkItems homeworkToCheck homeworkAwaiting homeworkNotSubmitted
+      assignmentItems assignmentToCheck assignmentAwaiting assignmentNotSubmitted
       classTestsNoResults classTestsUnmarked
-      byTeacher { key items toCheck notIn }
-      bySection { key items toCheck notIn }
+      byTeacher { key items toCheck awaiting notSubmitted }
+      bySection { key items toCheck awaiting notSubmitted }
       classTests { ctId sectionLabel subject dateKey status teacherName results unmarked }
-      rows { kind teacherName sectionLabel subject dateKey ref toCheck notIn }
+      rows { kind teacherName sectionLabel subject dateKey ref toCheck awaiting notSubmitted }
     }
   }
 `;
@@ -224,14 +228,15 @@ export interface TeacherChaseT {
   homeworkItems: number;
   assignmentItems: number;
   toCheck: number;
-  notIn: number;
+  awaiting: number;
+  notSubmitted: number;
 }
 
 export const MONTHLY_TEACHER_CHASE_QUERY = gql<{ monthlyTeacherChase: TeacherChaseT[] }, { periodKey: string }>`
   query MonthlyTeacherChase($periodKey: String!) {
     monthlyTeacherChase(periodKey: $periodKey) {
       teacherId teacherName phone messageBn waLink unreachable
-      classTests homeworkItems assignmentItems toCheck notIn
+      classTests homeworkItems assignmentItems toCheck awaiting notSubmitted
     }
   }
 `;
