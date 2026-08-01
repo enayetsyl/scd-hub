@@ -156,7 +156,13 @@ export function allowedNumbers(facts: CommentFacts): Set<string> {
   };
   const walk = (v: unknown): void => {
     if (typeof v === "number" && Number.isFinite(v)) add(v);
-    else if (Array.isArray(v)) v.forEach(walk);
+    else if (Array.isArray(v)) {
+      // "তিনটি বিষয়ে" when three subject codes were supplied is TRUE — it counts what
+      // the model was given. Rejecting it made the guard fire on honest prose, which
+      // is how a real draft was thrown away for the number 3.
+      add(v.length);
+      v.forEach(walk);
+    }
     else if (v && typeof v === "object") Object.values(v).forEach(walk);
     else if (typeof v === "string") {
       for (const m of v.matchAll(/\d+/g)) out.add(m[0]);
@@ -208,6 +214,23 @@ export function validateNumerals(text: string, facts: CommentFacts): NumeralVerd
 // ---------------------------------------------------------------------------
 // The prompt
 // ---------------------------------------------------------------------------
+
+/** PURE. What to send on a RETRY after a draft was refused.
+ *
+ *  Re-sending the identical prompt was not a retry at all: same input, same settings,
+ *  so the model reproduced the same violation and the second failure was near
+ *  guaranteed — every rejection became a template fallback. Naming the offending
+ *  numbers gives it something to correct. */
+export function correctivePrompt(base: string, invented: readonly string[], shapeProblem: string | null): string {
+  const notes: string[] = ["পূর্বের খসড়াটি গ্রহণ করা হয়নি। আবার লেখো, এই সংশোধনসহ:"];
+  if (invented.length > 0) {
+    notes.push(
+      `- এই সংখ্যাগুলো JSON-এ নেই, তাই লিখবে না: ${invented.join(", ")}। সংখ্যা ছাড়া বাক্যটি লেখো অথবা JSON-এর সংখ্যা ব্যবহার করো।`,
+    );
+  }
+  if (shapeProblem) notes.push("- সম্পূর্ণ অনুচ্ছেদ লেখো, দাঁড়ি দিয়ে শেষ করো। কোনো JSON বা কোড লিখবে না।");
+  return `${base}\n\n${notes.join("\n")}`;
+}
 
 /** PURE. The instruction half — pinned here so `promptVersion` means something. */
 export function buildPrompt(facts: CommentFacts): string {
@@ -363,19 +386,27 @@ export async function generateGuardianComment(
 
   const prompt = buildPrompt(facts);
   const promptHash = promptHashOf(prompt);
-  const attempts = opts.attempts ?? 2;
+  // Three, because the first correction is the one most likely to land.
+  const attempts = opts.attempts ?? 3;
   let lastReason = "Generation failed";
+  let invented: string[] = [];
+  let shapeProblem: string | null = null;
 
   for (let i = 0; i < attempts; i++) {
     try {
-      const text = (await provider.generate(prompt)).trim();
+      const ask = i === 0 ? prompt : correctivePrompt(prompt, invented, shapeProblem);
+      const text = (await provider.generate(ask)).trim();
       const verdict = validateNumerals(text, facts);
       if (!verdict.ok) {
+        invented = verdict.invented;
+        shapeProblem = null;
         lastReason = `The draft invented numbers not in the report: ${verdict.invented.join(", ")}`;
         continue;
       }
       const shape = looksLikeProse(text);
       if (!shape.ok) {
+        invented = [];
+        shapeProblem = shape.reason;
         lastReason = shape.reason ?? "The draft did not read as a paragraph";
         continue;
       }
