@@ -153,66 +153,6 @@ export const MONTHLY_REPORT_QUERY = gql<{ monthlyReport: MonthlyReportT }, { rep
   }
 `;
 
-export interface PendingGroupT {
-  key: string;
-  items: number;
-  toCheck: number;
-  notIn: number;
-}
-
-export interface PendingClassTestT {
-  ctId: string;
-  sectionLabel: string;
-  subject: string;
-  dateKey: string;
-  status: string;
-  teacherName: string;
-  results: number;
-  unmarked: number;
-}
-
-export interface PendingRowT {
-  kind: string;
-  teacherName: string;
-  sectionLabel: string;
-  subject: string;
-  dateKey: string;
-  ref: string;
-  toCheck: number;
-  notIn: number;
-}
-
-export interface PendingWorkT {
-  periodKey: string;
-  homeworkItems: number;
-  homeworkToCheck: number;
-  homeworkNotIn: number;
-  assignmentItems: number;
-  assignmentToCheck: number;
-  assignmentNotIn: number;
-  classTestsNoResults: number;
-  classTestsUnmarked: number;
-  byTeacher: PendingGroupT[];
-  bySection: PendingGroupT[];
-  classTests: PendingClassTestT[];
-  rows: PendingRowT[];
-}
-
-export const MONTHLY_PENDING_WORK_QUERY = gql<{ monthlyPendingWork: PendingWorkT }, { periodKey: string }>`
-  query MonthlyPendingWork($periodKey: String!) {
-    monthlyPendingWork(periodKey: $periodKey) {
-      periodKey
-      homeworkItems homeworkToCheck homeworkNotIn
-      assignmentItems assignmentToCheck assignmentNotIn
-      classTestsNoResults classTestsUnmarked
-      byTeacher { key items toCheck notIn }
-      bySection { key items toCheck notIn }
-      classTests { ctId sectionLabel subject dateKey status teacherName results unmarked }
-      rows { kind teacherName sectionLabel subject dateKey ref toCheck notIn }
-    }
-  }
-`;
-
 export interface MonthlyReportConfigT {
   attendanceThresholdPp: number;
   attendanceMinDays: number;
