@@ -3780,6 +3780,12 @@ const STR_BN = {
   mpUnmarked: "নম্বর বাকি",
   mpAllClear: "এই মাসের কোনো কাজ বাকি নেই",
   mpDetails: "বিস্তারিত তালিকা",
+  mpChase: "শিক্ষককে পাঠান",
+  mpChaseTitle: "শিক্ষক অনুযায়ী বার্তা",
+  mpChaseSend: "হোয়াটসঅ্যাপে পাঠান",
+  mpChasePreview: "বার্তা দেখুন",
+  mpChaseHide: "বার্তা লুকান",
+  mpNoPhone: "ফোন নম্বর নেই",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -6709,6 +6715,12 @@ const STR_EN: StrTable = {
   mpUnmarked: "unmarked",
   mpAllClear: "Nothing outstanding for this month",
   mpDetails: "Full list",
+  mpChase: "Send to teacher",
+  mpChaseTitle: "Message per teacher",
+  mpChaseSend: "Send on WhatsApp",
+  mpChasePreview: "Show message",
+  mpChaseHide: "Hide message",
+  mpNoPhone: "No phone on file",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use
