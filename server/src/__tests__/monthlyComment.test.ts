@@ -14,6 +14,7 @@ import {
   assertDeidentified,
   buildPrompt,
   commentFactsOf,
+  correctivePrompt,
   generateGuardianComment,
   MonthlyCommentError,
   looksLikeProse,
@@ -221,5 +222,53 @@ describe("MR-4 — a truncated or debris draft never becomes a comment", () => {
     const c = await generateGuardianComment(facts(), truncating);
     expect(c.fallback).toBe(true);
     expect(c.fallbackReason).toMatch(/mid-sentence/);
+  });
+});
+
+describe("MR-4 — a rejection has to be correctable", () => {
+  test("counting what it was given is NOT invention: 3 subjects is 3", () => {
+    // The live failure: the guard rejected "3" while three subject codes were supplied.
+    const f = facts();
+    expect(f.strongestSubjects.length + f.weakestSubjects.length).toBeGreaterThan(0);
+    expect(allowedNumbers(f).has(String(f.weakestSubjects.length))).toBe(true);
+  });
+
+  test("the retry NAMES the offending numbers instead of repeating itself", () => {
+    const p = correctivePrompt("BASE", ["3", "15"], null);
+    expect(p).toContain("BASE");
+    expect(p).toContain("3, 15");
+  });
+
+  test("a shape rejection asks for a finished paragraph", () => {
+    expect(correctivePrompt("BASE", [], "the draft ends mid-sentence")).toMatch(/দাঁড়ি/);
+  });
+
+  test("the SECOND attempt gets a corrected prompt, not the same one", async () => {
+    const asks: string[] = [];
+    const provider: CommentProvider = {
+      model: "gemini-test",
+      generate: async (prompt: string) => {
+        asks.push(prompt);
+        return asks.length === 1
+          ? "আপনার সন্তান ১৫টি কাজ জমা দেয়নি বলে মনে হচ্ছে এই মাসে।"
+          : "সম্মানিত অভিভাবক, এ মাসে উপস্থিতি ছিল ৮২% — নিয়মিত পাঠানোর অনুরোধ করছি।";
+      },
+    };
+    const c = await generateGuardianComment(facts(), provider);
+    expect(asks).toHaveLength(2);
+    expect(asks[0]).not.toContain("গ্রহণ করা হয়নি");
+    expect(asks[1]).toContain("গ্রহণ করা হয়নি");
+    expect(asks[1]).toContain("15");
+    expect(c.fallback).toBe(false);
+  });
+
+  test("three refusals still fall back — the report is never blocked", async () => {
+    const stubborn: CommentProvider = {
+      model: "gemini-test",
+      generate: async () => "আপনার সন্তান ১৫টি কাজ জমা দেয়নি বলে মনে হচ্ছে এই মাসে।",
+    };
+    const c = await generateGuardianComment(facts(), stubborn);
+    expect(c.fallback).toBe(true);
+    expect(c.fallbackReason).toMatch(/invented numbers/);
   });
 });
