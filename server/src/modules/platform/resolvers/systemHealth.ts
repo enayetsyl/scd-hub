@@ -20,7 +20,10 @@ import {
   type DriveHealth,
   type DatabaseUsage,
   type CollectionUsage,
+  type TickerHealth,
 } from "../services/SystemHealthService";
+import type { HistoryPoint, Projection, PrunableEstimate } from "../services/HealthHistoryService";
+import type { BackupStatus } from "../services/BackupService";
 
 const DatabaseUsageRef = builder.objectRef<DatabaseUsage>("DatabaseUsage");
 DatabaseUsageRef.implement({
@@ -96,6 +99,77 @@ DriveHealthRef.implement({
   }),
 });
 
+const TickerHealthRef = builder.objectRef<TickerHealth>("TickerHealth");
+TickerHealthRef.implement({
+  description:
+    "The notification ticker's heartbeat (SH-5). A stalled ticker stops homework auto-DUE/auto-ISSUE, " +
+    "attendance reminders, class-note prompts, library sweeps and every escalation — silently.",
+  fields: (t) => ({
+    lastTickAt: t.string({ nullable: true, resolve: (v) => v.lastTickAt }),
+    ageSeconds: t.int({ nullable: true, resolve: (v) => v.ageSeconds }),
+    band: t.string({ resolve: (v) => v.band }),
+  }),
+});
+
+const HistoryPointRef = builder.objectRef<HistoryPoint>("HealthHistoryPoint");
+HistoryPointRef.implement({
+  description:
+    "One day of the trend. `estimated` marks a BACKFILLED day: counts are exact (documents carry " +
+    "their creation time) but bytes are count x today's bytes-per-document, since Mongo keeps no " +
+    "history of collection sizes.",
+  fields: (t) => ({
+    dateKey: t.exposeString("dateKey"),
+    dbStorageBytes: t.float({ nullable: true, resolve: (p) => p.dbStorageBytes }),
+    diskUsedBytes: t.float({ nullable: true, resolve: (p) => p.diskUsedBytes }),
+    driveUsageBytes: t.float({ nullable: true, resolve: (p) => p.driveUsageBytes }),
+    totalDocs: t.int({ resolve: (p) => p.totalDocs }),
+    estimated: t.boolean({ resolve: (p) => p.estimated }),
+  }),
+});
+
+const ProjectionRef = builder.objectRef<Projection>("HealthProjection");
+ProjectionRef.implement({
+  description:
+    "Least-squares growth fit. Nulls rather than a guess when the answer would be meaningless: " +
+    "fewer than three points is not a trend, and a flat or shrinking series has no crossing date.",
+  fields: (t) => ({
+    bytesPerDay: t.float({ nullable: true, resolve: (p) => p.bytesPerDay }),
+    daysToLimit: t.int({ nullable: true, resolve: (p) => p.daysToLimit }),
+    limitDateKey: t.string({ nullable: true, resolve: (p) => p.limitDateKey }),
+    points: t.int({ resolve: (p) => p.points }),
+    usesEstimates: t.boolean({ resolve: (p) => p.usesEstimates }),
+  }),
+});
+
+const PrunableRef = builder.objectRef<PrunableEstimate>("PrunableEstimate");
+PrunableRef.implement({
+  description:
+    "How much an allowlisted collection could give back. REPORT ONLY — nothing here deletes, and " +
+    "`audits` is excluded by rule (ADR-008 append-only).",
+  fields: (t) => ({
+    collection: t.exposeString("collection"),
+    olderThanDays: t.int({ resolve: (p) => p.olderThanDays }),
+    reason: t.exposeString("reason"),
+    docCount: t.int({ resolve: (p) => p.docCount }),
+    reclaimableBytes: t.float({ resolve: (p) => p.reclaimableBytes }),
+  }),
+});
+
+const BackupStatusRef = builder.objectRef<BackupStatus>("BackupStatus");
+BackupStatusRef.implement({
+  description:
+    "Backup freshness (SH-7). Atlas M0 has NO automated backups, so `enabled: false` means no " +
+    "restore point exists at all. `ageDays` measures from the last SUCCESS, never the last attempt.",
+  fields: (t) => ({
+    enabled: t.boolean({ resolve: (b) => b.enabled }),
+    lastRunAt: t.string({ nullable: true, resolve: (b) => b.lastRunAt }),
+    lastOk: t.boolean({ nullable: true, resolve: (b) => b.lastOk }),
+    lastSizeBytes: t.float({ nullable: true, resolve: (b) => b.lastSizeBytes }),
+    lastError: t.string({ nullable: true, resolve: (b) => b.lastError }),
+    ageDays: t.int({ nullable: true, resolve: (b) => b.ageDays }),
+  }),
+});
+
 const SystemHealthRef = builder.objectRef<SystemHealth>("SystemHealth");
 SystemHealthRef.implement({
   description: "Free-tier headroom across the three ceilings that can actually stop the school (D-#414).",
@@ -103,6 +177,11 @@ SystemHealthRef.implement({
     mongo: t.field({ type: MongoHealthRef, resolve: (s) => s.mongo }),
     host: t.field({ type: HostHealthRef, resolve: (s) => s.host }),
     drive: t.field({ type: DriveHealthRef, resolve: (s) => s.drive }),
+    ticker: t.field({ type: TickerHealthRef, resolve: (s) => s.ticker }),
+    history: t.field({ type: [HistoryPointRef], resolve: (s) => s.history }),
+    projection: t.field({ type: ProjectionRef, resolve: (s) => s.projection }),
+    prunable: t.field({ type: [PrunableRef], resolve: (s) => s.prunable }),
+    backup: t.field({ type: BackupStatusRef, resolve: (s) => s.backup }),
     checkedAt: t.string({ resolve: (s) => s.checkedAt.toISOString() }),
   }),
 });

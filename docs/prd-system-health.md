@@ -1,7 +1,8 @@
 # PRD — System health (free-tier headroom)
 
-**Slices:** SH-1 (the read + screen), SH-2 (egress snapshots), SH-3 (bands).
-**Decision:** D-#414. **Owner ask (2026-08-01):** *"is it possible to add a part in the principal ui
+**Slices:** SH-1 (the read + screen), SH-2 (egress snapshots), SH-3 (bands), SH-4 (trend + projection),
+SH-5 (scheduler heartbeat), SH-6 (prunable), SH-7 (backups).
+**Decisions:** D-#414 (SH-1..3), D-#416 (SH-4..7). **Owner ask (2026-08-01):** *"is it possible to add a part in the principal ui
 to see the vs and mongodb status so that he can take step to keep within free tire limit."*
 
 ## 1. Why
@@ -61,6 +62,59 @@ Two findings shaped the build:
   never hide the two numbers that were fine.
 - **SH3.3** Drive is a network hop, so its answer is **cached for 5 minutes** — refreshing the panel
   must not hammer Google or make the two local probes wait.
+
+### SH-4 — Trend + projection *(**D-#416**, owner ask: charts, and earlier data)*
+- **SH4.1** A daily `HealthSnapshot` row of point-in-time GAUGES (storage per database, tracked
+  collections, disk, Drive, process RSS). Kept SEPARATE from `NetSnapshot`, which holds cumulative
+  COUNTERS: the two need opposite arithmetic, and one row holding both invites reading a gauge as a
+  delta.
+- **SH4.2** History from before the feature shipped is **reconstructed from document creation times**,
+  so the chart is not empty on day one. Counts are **exact** (every document carries `_id`); **bytes
+  are not recoverable**, so a backfilled day is `count × today's bytes-per-document` and the row is
+  flagged `estimated`. The app draws those bars in muted ink **and** says so in words — the
+  distinction never rests on colour alone.
+- **SH4.3** A backfilled day adds a **constant baseline** for what the walk cannot see (the other
+  databases, this database's untracked tail). Without it the series changes units mid-chart:
+  reconstructed days sum ~9 MB of one database while measured days report the ~76 MB cluster total
+  that the cap counts, producing an eight-fold cliff on the day of the deploy and a projection fitted
+  across two different quantities. Caught by running the real service against the dev database — not
+  by review.
+- **SH4.4** The projection is a least-squares fit that **refuses to guess**: fewer than three points is
+  not a trend; a flat or shrinking series has no crossing date; already past the limit reports zero
+  days, never a negative. Null values are gaps, never zeroes.
+- **SH4.5** The chart scales to the DATA, not to the cap. At 15% of the limit, scaling to the limit
+  would flatten every movement into one line along the bottom.
+
+### SH-5 — The scheduler heartbeat *(**D-#416**)*
+- **SH5.1** The panel shows when the notification ticker last ran — amber past 150s, red past 600s
+  (2.5× and 10× the 60s interval: one skipped pass is noise, ten minutes of silence is a stopped
+  scheduler). A stall silently stops homework auto-DUE/auto-ISSUE, attendance reminders, class-note
+  prompts, library sweeps and every escalation, so the consequence is named **in words**, not left to
+  the colour of a chip.
+- **SH5.2** The heartbeat moved to its own leaf module. The health service reports it, and the
+  scheduler imports the health service for its snapshots; keeping the state in `SchedulerService`
+  would close a require cycle that TypeScript compiles happily and Node can resolve to `undefined` at
+  runtime depending on load order.
+
+### SH-6 — Prunable estimates *(**D-#416**)*
+- **SH6.1** Per collection: "N records older than X days ≈ Y MB reclaimable", from an **allowlist**.
+- **SH6.2** `audits` is excluded **by rule** — ADR-008 makes it append-only, and a "reclaim 300 KB"
+  suggestion against it would be an invitation to break that. School records (homework, assignments,
+  attendance, reports) are excluded because they are the product, not exhaust. A test pins both.
+- **SH6.3** **Report only.** Nothing in the app deletes. The panel makes the case; a person decides.
+
+### SH-7 — Backups *(**D-#416**)*
+- **SH7.1** Atlas M0 has **no automated backups**, so "off" does not mean a preference — it means no
+  restore point exists at all. The panel says that in red rather than leaving it unsaid.
+- **SH7.2** A weekly job dumps the database to Drive as gzipped NDJSON, **streamed** so only the
+  compressed result is held whole. No `mongodump` dependency to provision on the VM, and the output is
+  inspectable by a human.
+- **SH7.3** **OFF unless `BACKUP_ENABLED=1`.** A job that writes to Drive on a schedule should start
+  when a person decides it starts, not the moment a deploy lands.
+- **SH7.4** Retention keeps the newest four and touches **only files this job created**. It runs
+  **after** a successful upload, so a failed run never costs an existing restore point.
+- **SH7.5** A **failed run is recorded**, and `ageDays` measures from the last **success**, never the
+  last attempt — a job failing nightly must not look fresh.
 
 ## 4. Out of scope
 
