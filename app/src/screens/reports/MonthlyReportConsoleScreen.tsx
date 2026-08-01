@@ -110,7 +110,9 @@ function ReportRow({
         />
         <Pressable style={{ flex: 1 }} onPress={onOpen}>
           <Body style={{ fontWeight: "700" }}>
-            {report.studentId.slice(-6)} — {STR.mrRevision} {bnNum(report.revision)}
+            {report.studentName || report.studentId.slice(-6)}
+            {report.rollNumber ? ` (${bnNum(report.rollNumber)})` : ""} — {STR.mrRevision}{" "}
+            {bnNum(report.revision)}
           </Body>
           <Muted>
             {statusLabel(report.status)}

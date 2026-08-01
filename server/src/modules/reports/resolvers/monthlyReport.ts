@@ -30,6 +30,7 @@ import {
 } from "../../../middleware/authz";
 import { assertReportRead } from "../../trackers/resolvers/classTestSummary";
 import { Section } from "../../foundation/models/Section";
+import { Student } from "../../foundation/models/Student";
 import { MonthlyReport, type IMonthlyReport } from "../models/MonthlyReport";
 import {
   bulkReleaseMonthlyReports,
@@ -94,6 +95,9 @@ async function assertStaffReportRead(
 
 export interface ReportView {
   report: IMonthlyReport;
+  /** The child, so a reviewer reads a name rather than an id fragment. */
+  studentName: string;
+  rollNumber: string | null;
   fullView: boolean;
   subjectFilter: string[];
   /** Suppressed entirely on a narrowed view, and on the guardian path until released. */
@@ -150,13 +154,23 @@ async function viewOf(
   subjects: string[] | null,
   isTeacher: boolean,
   isPrincipal: boolean,
+  student?: { name: string; nameBn?: string; rollNumber?: string } | null,
 ): Promise<ReportView> {
   const cfg = await readMonthlyReportConfig();
+  // Loaded by the caller for a list (one query for the section, not one per row);
+  // fetched here for a single report.
+  const child =
+    student ??
+    ((await Student.findById(report.studentId).select("name nameBn rollNumber").lean()) as unknown as
+      | { name: string; nameBn?: string; rollNumber?: string }
+      | null);
   const lock = lockStateOf(report.periodKey, new Date(), cfg);
   const verdict = releaseVerdictOf(report, lock, isPrincipal);
   const fullView = subjects === null;
   return {
     report,
+    studentName: child?.nameBn || child?.name || "",
+    rollNumber: child?.rollNumber ?? null,
     fullView,
     subjectFilter: subjects ?? [],
     // §4: no AI paragraph on a narrowed view.
@@ -183,6 +197,8 @@ const ReportRef = builder.objectRef<ReportView>("MonthlyReport").implement({
   fields: (t) => ({
     id: t.string({ resolve: (v) => v.report._id.toString() }),
     studentId: t.string({ resolve: (v) => v.report.studentId.toString() }),
+    studentName: t.exposeString("studentName"),
+    rollNumber: t.string({ nullable: true, resolve: (v) => v.rollNumber }),
     sectionId: t.string({ resolve: (v) => v.report.sectionId.toString() }),
     periodKey: t.string({ resolve: (v) => v.report.periodKey }),
     revision: t.int({ resolve: (v) => v.report.revision }),
@@ -195,6 +211,7 @@ const ReportRef = builder.objectRef<ReportView>("MonthlyReport").implement({
     comment: t.string({ nullable: true, resolve: (v) => v.comment }),
     commentDraft: t.string({ nullable: true, resolve: (v) => v.commentDraft }),
     commentIsFallback: t.boolean({ resolve: (v) => !!v.report.commentDraft?.fallback }),
+    commentFallbackReason: t.string({ nullable: true, resolve: (v) => v.report.commentDraft?.fallbackReason ?? null }),
     commentModel: t.string({ nullable: true, resolve: (v) => v.report.commentDraft?.model ?? null }),
     reviewedAt: t.string({ nullable: true, resolve: (v) => v.report.reviewedAt?.toISOString() ?? null }),
     releasedAt: t.string({ nullable: true, resolve: (v) => v.report.releasedAt?.toISOString() ?? null }),
@@ -283,9 +300,21 @@ builder.queryField("monthlyReportsForSection", (t) =>
         if (!newest.has(key)) newest.set(key, r);
         else if (r.status === "RELEASED") released.push(r);
       }
-      return Promise.all(
-        [...newest.values(), ...released].map((r) => viewOf(r, subjects, isTeacher, isPrincipal)),
+      const students = (await Student.find({
+        _id: { $in: [...new Set(rows.map((r) => r.studentId.toString()))] },
+      })
+        .select("name nameBn rollNumber")
+        .lean()) as unknown as Array<{ _id: { toString(): string }; name: string; nameBn?: string; rollNumber?: string }>;
+      const byId = new Map(students.map((s) => [s._id.toString(), s]));
+
+      const views = await Promise.all(
+        [...newest.values(), ...released].map((r) =>
+          viewOf(r, subjects, isTeacher, isPrincipal, byId.get(r.studentId.toString())),
+        ),
       );
+      // Alphabetical by the name the reviewer actually reads — an id-ordered list is
+      // unreviewable when you are working through twenty children.
+      return views.sort((a, b) => a.studentName.localeCompare(b.studentName, "bn"));
     },
   }),
 );

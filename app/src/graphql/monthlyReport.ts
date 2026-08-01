@@ -12,6 +12,8 @@ import { gql } from "urql";
 export interface MonthlyReportT {
   id: string;
   studentId: string;
+  studentName: string;
+  rollNumber: string | null;
   sectionId: string;
   periodKey: string;
   revision: number;
@@ -24,6 +26,7 @@ export interface MonthlyReportT {
   comment: string | null;
   commentDraft: string | null;
   commentIsFallback: boolean;
+  commentFallbackReason: string | null;
   commentModel: string | null;
   reviewedAt: string | null;
   releasedAt: string | null;
@@ -40,9 +43,9 @@ export interface MonthlyReportT {
 }
 
 const REPORT_FIELDS = `
-  id studentId sectionId periodKey revision status provisional dataAsOf
+  id studentId studentName rollNumber sectionId periodKey revision status provisional dataAsOf
   coverageHomework coverageAssignment coverageClassTest
-  comment commentDraft commentIsFallback commentModel reviewedAt
+  comment commentDraft commentIsFallback commentFallbackReason commentModel reviewedAt
   releasedAt releaseBatchId isRerelease changeLog
   fullView subjectFilter lockState releasable blockedReason requiresPrincipal
   snapshotJson
