@@ -233,10 +233,14 @@ export class GeminiCommentProvider implements CommentProvider {
   readonly model: string;
   private readonly apiKey: string;
 
-  constructor(apiKey: string, model = "gemini-2.5-flash") {
+  constructor(apiKey: string, model = "gemini-flash-latest") {
     this.apiKey = apiKey;
     this.model = model;
   }
+
+  /** Set from the response: the alias resolves to a dated model, and THAT is what
+   *  a bad batch has to be traceable to. */
+  resolvedModel: string | null = null;
 
   async generate(prompt: string): Promise<string> {
     const res = await fetch(
@@ -253,7 +257,9 @@ export class GeminiCommentProvider implements CommentProvider {
     if (!res.ok) throw new MonthlyCommentError(`Gemini returned ${res.status}`);
     const body = (await res.json()) as {
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      modelVersion?: string;
     };
+    if (body.modelVersion) this.resolvedModel = body.modelVersion;
     const text = body.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim();
     if (!text) throw new MonthlyCommentError("Gemini returned no text");
     return text;
@@ -334,7 +340,7 @@ export async function generateGuardianComment(
       }
       return {
         text,
-        model: provider.model,
+        model: (provider as { resolvedModel?: string | null }).resolvedModel || provider.model,
         promptVersion: MONTHLY_COMMENT_PROMPT_VERSION,
         promptHash,
         generatedAt: new Date(),
@@ -346,5 +352,8 @@ export async function generateGuardianComment(
     }
   }
 
+  // A silent fallback is undiagnosable from the outside — this feature fell back in
+  // prod for a retired model id and left NOTHING in the log to say so.
+  console.error(`[MonthlyComment] falling back to the template: ${lastReason}`);
   return fallbackComment(facts, lastReason);
 }
