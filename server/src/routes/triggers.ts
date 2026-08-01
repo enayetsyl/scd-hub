@@ -18,6 +18,9 @@ import {
   AttendanceReminderError,
 } from "../modules/attendance/services/AttendanceReminderService";
 import { dispatchLibraryReminders } from "../modules/library/services/LibraryReminderService";
+import { Section } from "../modules/foundation/models/Section";
+import { sweepSectionMonth, sweepPeriodKeyFor } from "../modules/reports/services/MonthlyReportService";
+import { isValidPeriodKey } from "../modules/reports/services/MonthlyMetricsService";
 import { ATTENDANCE_REMINDER_TIERS, type AttendanceReminderTier } from "@scd/shared";
 
 export const triggersRouter: Router = createRouter();
@@ -51,6 +54,65 @@ triggersRouter.post("/attendance-reminder", async (req, res) => {
       return;
     }
     console.error("[triggers] attendance-reminder failed:", e);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+/**
+ * POST /triggers/monthly-report-sweep (MR-6, prd-monthly-report §6.3, D-#398) —
+ * the nightly recompute of the month that has just ended.
+ *
+ * Deliberately a trigger rather than a write hook on every tracker mutation: a mark
+ * entered for thirty students would otherwise fire thirty recomputes of the same
+ * class. Idempotent by construction — `buildMonthlyReport` raises a revision only
+ * when a PRINTED figure moved, so calling this twice in a night writes nothing the
+ * second time, and a HARD_LOCKED month is skipped outright (reopening is a person's
+ * decision, never a cron's).
+ *
+ * Body: `{ periodKey?: "YYYY-MM" }` — defaults to last month.
+ */
+triggersRouter.post("/monthly-report-sweep", async (req, res) => {
+  const secret = process.env.ATTENDANCE_TRIGGER_SECRET;
+  const provided = req.header("x-trigger-secret");
+  if (!secret || provided !== secret) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const body = (req.body ?? {}) as { periodKey?: unknown };
+  const periodKey =
+    typeof body.periodKey === "string" ? body.periodKey : sweepPeriodKeyFor(new Date());
+  if (!isValidPeriodKey(periodKey)) {
+    res.status(400).json({ error: "periodKey must be YYYY-MM" });
+    return;
+  }
+
+  try {
+    const sections = (await Section.find({ active: { $ne: false } })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: { toString(): string } }>;
+
+    let built = 0;
+    let revisions = 0;
+    let skipped = 0;
+    const failures: Array<{ sectionId: string; error: string }> = [];
+
+    for (const s of sections) {
+      const sectionId = s._id.toString();
+      try {
+        const out = await sweepSectionMonth(sectionId, periodKey);
+        if (out.skipped) skipped += 1;
+        built += out.built;
+        revisions += out.revisions;
+      } catch (e) {
+        // One section's bad data must not stop the other six being swept.
+        failures.push({ sectionId, error: e instanceof Error ? e.message : "failed" });
+      }
+    }
+
+    res.json({ ok: true, periodKey, sections: sections.length, skipped, built, revisions, failures });
+  } catch (e) {
+    console.error("[triggers] monthly-report-sweep failed:", e);
     res.status(500).json({ error: "Internal error" });
   }
 });

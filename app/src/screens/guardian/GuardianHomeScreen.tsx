@@ -475,21 +475,20 @@ export default function GuardianHomeScreen(): React.ReactElement {
                       {STR.gpDateLoad}: {bnNum(dateMinutes(rows))}/{bnNum(load?.ceiling ?? 120)} {STR.gpMinutes}
                     </Muted>
                   </View>
+                  {/* Same shape as ChildHomeworkScreen: the parent-facing status is a
+                      sentence, so it goes UNDER the subject rather than beside it. Inline,
+                      it left the title column a few pixels wide (RN defaults flexShrink to
+                      0, so the badge never yielded) and `ইংরেজি` / `HW-C1-ENG-0013` wrapped
+                      one character per line. */}
                   {rows.map((r) => (
-                    <View
-                      key={r.recordId}
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginTop: space(2),
-                      }}
-                    >
+                    <View key={r.recordId} style={{ marginTop: space(2) }}>
                       <View style={{ flexShrink: 1 }}>
                         <Body>{subjectLabel(r.subject)}</Body>
                         <Muted>{r.hwId}</Muted>
                       </View>
-                      <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
+                      <View style={{ marginTop: space(1) }}>
+                        <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
+                      </View>
                     </View>
                   ))}
                 </View>

@@ -290,15 +290,28 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
             <Muted style={{ marginTop: space(1) }}>—</Muted>
           ) : (
             attachmentIds.map((fid, i) => (
+              // The row WRAPS: label + both buttons do not fit a phone's width, and a
+              // button never shrinks below its text (`btn` has fixed padding and no
+              // flexShrink), so on one line "Remove" ran off the screen edge. An auto
+              // margin right-aligns the buttons while they still fit, replacing the old
+              // `flex: 1` spacer — which collapsed to nothing and let the row overflow
+              // instead of moving a button down.
               <View
                 key={fid}
-                style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: space(2) }}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: space(2),
+                  marginTop: space(2),
+                }}
               >
-                <Muted>{`${STR.cmAttachmentN} ${bnNum(i + 1)}`}</Muted>
-                <View style={{ flex: 1 }} />
+                {/* Shrinks first — the label may ellipsize, the actions may not. */}
+                <Muted style={{ flexShrink: 1 }}>{`${STR.cmAttachmentN} ${bnNum(i + 1)}`}</Muted>
                 <Button
                   title={STR.cmOpenAttachment}
                   variant="ghost"
+                  style={{ marginLeft: "auto" }}
                   loading={openingId === fid}
                   disabled={!!openingId}
                   onPress={() => runOpen(fid, () => onOpenAttachment(fid))}

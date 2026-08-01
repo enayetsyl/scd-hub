@@ -49,15 +49,21 @@ function RecordCard({
   const { openingId, runOpen } = useFileOpen();
   return (
     <Card>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+      {/* The guardian status is a SENTENCE, not a chip word ("বাড়ির কাজ করে আনেনি — শেষ
+          করে দ্রুত জমা দিন", worded for parents), so it gets its own full-width line.
+          Sitting beside the title it crushed that column to a few pixels — flexShrink is
+          0 by default in RN, so the badge never yielded and the only shrinkable child
+          took the whole squeeze, wrapping the subject and hwId one character per line. */}
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
         <View style={{ flexShrink: 1 }}>
           <Body style={{ fontWeight: "700" }}>{subjectLabel(r.subject)}</Body>
           <Muted>{r.hwId}</Muted>
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
-          {r.resubOf ? <Badge text={lifecycleStateLabel("RESUBMIT")} tone="warn" /> : null}
-          <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
-        </View>
+        {/* Short enough to stay inline. */}
+        {r.resubOf ? <Badge text={lifecycleStateLabel("RESUBMIT")} tone="warn" /> : null}
+      </View>
+      <View style={{ marginTop: space(2) }}>
+        <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
       </View>
 
       {/* Stage timeline (GP-J4) */}

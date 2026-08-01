@@ -405,6 +405,11 @@ export type ReportsStackParamList = {
   HwLifecycleReport: undefined;
   /** D-#340: the Principal/Office class-test report (range + filters + state chips). */
   ClassTestReport: undefined;
+  /** MR-5b: the monthly-report release console + one child's revision.
+   *  BOTH take params, so neither may be registered FIRST in this stack — a
+   *  param-requiring screen in the initial slot crashes the tab on mount. */
+  MonthlyReportConsole: { sectionId?: string; periodKey?: string } | undefined;
+  MonthlyReportDetail: { reportId: string; studentName?: string };
 };
 
 export type TabParamList = {

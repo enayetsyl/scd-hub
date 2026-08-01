@@ -66,6 +66,13 @@ interface Run {
 function strongFont(cp: number): RunFont | null {
   if ((cp >= 0x0980 && cp <= 0x09ff) || cp === 0x0964 || cp === 0x0965) return BENGALI_FONT; // Bengali + danda
   if ((cp >= 0x41 && cp <= 0x5a) || (cp >= 0x61 && cp <= 0x7a)) return LATIN_FONT; // A–Z / a–z
+  // U+00B7 MIDDLE DOT is the separator half this codebase writes inside Bangla
+  // sentences ("পুনঃজমা ৩ · রিমাইন্ডার ২"). As a NEUTRAL it inherited the Bengali
+  // run, and the Noto-Bengali subset has no glyph for it — so every one of them
+  // drew a .notdef box on the page. Helvetica (WinAnsi) has periodcentered, so it
+  // is strong-Latin: the dot switches font for itself alone and the Bangla either
+  // side is untouched.
+  if (cp === 0x00b7) return LATIN_FONT;
   return null; // spaces, digits, punctuation, bullets, dashes — keep with the current run
 }
 
