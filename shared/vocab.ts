@@ -1011,6 +1011,10 @@ export const NOTIFICATION_KINDS = [
   "CLASS_TEST_RESULT",
   "VOCAB_RESULT",
   "STUDENT_COMMENT",
+  // MR-6: the monthly progress report reached the family. Fired on RELEASE and again
+  // on a RE-RELEASE, with different wording each time (§9) — a family must never be
+  // handed different numbers under the same message.
+  "MONTHLY_REPORT",
   // CO-3 classroom-observation kinds (app-native, NO wire twin — D-#46/#72). The
   // release notify, the escalation reminders (1st + 2nd), the Principal flag at the
   // final threshold, and the teacher-responded notice. See the CO-3 build.
@@ -1075,6 +1079,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   LIBRARY_OVERDUE: "বই ফেরত বকেয়া",
   CLASS_TEST_RESULT: "ক্লাস টেস্টের ফলাফল",
   VOCAB_RESULT: "ভোকাবুলারি টেস্টের ফলাফল",
+  MONTHLY_REPORT: "মাসিক অগ্রগতি রিপোর্ট",
   STUDENT_COMMENT: "শিক্ষকের পর্যবেক্ষণ",
   OBSERVATION_RELEASED: "শ্রেণি পর্যবেক্ষণ প্রকাশিত",
   OBSERVATION_RESPONSE_REMINDER: "পর্যবেক্ষণে সাড়া দেওয়ার তাগিদ",
@@ -1110,6 +1115,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   LIBRARY_OVERDUE: "Book overdue",
   CLASS_TEST_RESULT: "Class-test result",
   VOCAB_RESULT: "Vocabulary-test result",
+  MONTHLY_REPORT: "Monthly progress report",
   STUDENT_COMMENT: "Teacher's comment",
   OBSERVATION_RELEASED: "Observation released",
   OBSERVATION_RESPONSE_REMINDER: "Observation response reminder",
@@ -1634,6 +1640,16 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "print.delivered.body",
   "print.requested.title",
   "print.requested.body",
+  // Monthly progress report (MR-4/MR-6, D-#399): the fallback paragraph the report
+  // falls back to when the model fails or its output is rejected — the report must
+  // never block on an external API — plus the release / re-release notifications.
+  "monthly_report.comment.fallback",
+  "monthly_report.released.title",
+  "monthly_report.released.body",
+  "monthly_report.released.wa",
+  "monthly_report.revised.title",
+  "monthly_report.revised.body",
+  "monthly_report.revised.wa",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1730,6 +1746,42 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   "print.requested.body": {
     group: "print", labelBn: "নতুন প্রিন্ট অনুরোধ — বার্তা", placeholders: ["title", "requesterName"],
     bnDefault: "{requesterName} “{title}” ছাপানোর অনুরোধ করেছেন — প্রিন্ট কিউ দেখুন।", defaultLangMode: "BN",
+  },
+  // --- Monthly progress report (MR-4/MR-6, D-#399) ---
+  // The fallback paragraph is deliberately PLAIN: it states the two numbers the
+  // month turns on and nothing else. It is what a family reads when the model is
+  // unreachable or its draft was rejected, so it must never need a person to fix it.
+  "monthly_report.comment.fallback": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট — বিকল্প মন্তব্য", placeholders: ["month", "attendanceRate", "homeworkRate"],
+    bnDefault:
+      "{month} মাসে উপস্থিতি ছিল {attendanceRate}% এবং বাড়ির কাজ জমার হার {homeworkRate}%। বিস্তারিত রিপোর্টে দেখুন; কোনো প্রশ্ন থাকলে শ্রেণি শিক্ষকের সঙ্গে যোগাযোগ করুন।",
+    defaultLangMode: "BN",
+  },
+  "monthly_report.released.title": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট প্রকাশিত — শিরোনাম", placeholders: [],
+    bnDefault: "মাসিক অগ্রগতি রিপোর্ট", defaultLangMode: "BN",
+  },
+  "monthly_report.released.body": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট প্রকাশিত — বার্তা", placeholders: ["studentName", "month"],
+    bnDefault: "{studentName}-এর {month} মাসের অগ্রগতি রিপোর্ট প্রকাশিত হয়েছে।", defaultLangMode: "BN",
+  },
+  "monthly_report.released.wa": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট প্রকাশিত — হোয়াটসঅ্যাপ", placeholders: ["studentName", "month"],
+    bnDefault: "আসসালামু আলাইকুম। {studentName}-এর {month} মাসের অগ্রগতি রিপোর্ট প্রকাশিত হয়েছে। অ্যাপে দেখুন।", defaultLangMode: "BN",
+  },
+  // A REVISED report gets its own wording (§9) — a family must never be handed
+  // different numbers under the same message.
+  "monthly_report.revised.title": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট সংশোধিত — শিরোনাম", placeholders: [],
+    bnDefault: "মাসিক রিপোর্ট সংশোধিত", defaultLangMode: "BN",
+  },
+  "monthly_report.revised.body": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট সংশোধিত — বার্তা", placeholders: ["studentName", "month"],
+    bnDefault: "{studentName}-এর {month} মাসের রিপোর্টে নতুন তথ্য যুক্ত হয়েছে — সংশোধিত সংস্করণ প্রকাশিত হয়েছে।", defaultLangMode: "BN",
+  },
+  "monthly_report.revised.wa": {
+    group: "monthlyReport", labelBn: "মাসিক রিপোর্ট সংশোধিত — হোয়াটসঅ্যাপ", placeholders: ["studentName", "month"],
+    bnDefault: "আসসালামু আলাইকুম। {studentName}-এর {month} মাসের রিপোর্ট সংশোধিত হয়েছে — অ্যাপে নতুন সংস্করণ দেখুন।", defaultLangMode: "BN",
   },
   // --- Bell reminder (N2.1) ---
   "bell.reminder.title": {
@@ -2783,6 +2835,12 @@ export const PERMISSIONS = [
   "observation:manage",    // designations, cadence config, dashboards, override reads (Principal/Office; CO-1)
   // finance / accounting (app-native; Finance module, D-#221 — Principal+Office)
   "finance:manage",        // ledgers, opening balances, postings, reconciliation, budgets, dashboard (Principal/Office; FIN-1). Distinct from roster:manage so AC-1 can grant the books to the accountant alone (D-#221)
+  // monthly progress report (app-native; Monthly-Report module, D-#397)
+  "report:release",        // release / re-release a monthly progress report to the family, individually or in a
+                           // batch, and edit the MR-2 thresholds (Principal/Office). The Principal-ONLY powers —
+                           // overriding the coverage block, revoking a released report, reopening a hard-locked
+                           // month — ride the ROLE inside the resolver, not a second permission (D-#397), so
+                           // AC-1 can hand the Office release without handing it the overrides.
   // guardian portal (ACTIVE since GP-1, D-#68)
   "guardian:read_child",   // reads linked children's permitted operational slices
 ] as const;
@@ -2832,6 +2890,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "observation:read": "build",    // Classroom-Observation CO-1 (row-scoped read, D-#195)
   "observation:manage": "build",  // Classroom-Observation CO-1 (config/dashboards, D-#195)
   "finance:manage": "build",      // Finance FIN-1 (ledgers + opening balances, D-#221)
+  "report:release": "build",      // Monthly Report MR-3 (release/re-release + threshold config, D-#397)
   "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
 };
 
@@ -2857,6 +2916,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "access:manage",         // PRINCIPAL ONLY (Access Control AC-1, D-#193/#212) — RESERVED-locked; Office/Teacher/Guardian never get it
     "observation:upload", "observation:read", "observation:manage", // classroom observation (CO-1, D-#195) — NOT observation:review (the observer is an assigned TEACHER, D-#147)
     "finance:manage",        // finance/accounting (FIN-1, D-#221) — Principal+Office
+    "report:release",        // monthly progress report: release/re-release + the MR-2 thresholds. The Principal
+                             // ALSO holds the three override powers by role (D-#397) — see the permission's note.
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
   // fills trackers; authors nothing in-app (no content:import). message:dispatch
@@ -2887,6 +2948,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "chat:read", "chat:write", "chat:manage", // staff chat + group/posting-policy admin (D-#76/#78); NO chat:oversee (Principal only, D-#77)
     "observation:upload", "observation:read", "observation:manage", // classroom observation: upload+assign, row-scoped read, config (CO-1, D-#195); NOT observation:review (the observer is an assigned TEACHER)
     "finance:manage",        // finance/accounting (FIN-1, D-#221) — the accountant's books (Principal+Office)
+    "report:release",        // monthly progress report: release/re-release, individually or in a batch (D-#397).
+                             // NOT the overrides — a coverage-block override, a revoke and a hard-lock reopen are
+                             // Principal-only by role, so a bulk mistake has exactly one owner.
   ],
   // Guardian portal v1 (GP-1, D-#68): the single grant is ACTIVE — guardian-scoped
   // resolvers read linked children only (assertGuardianOfStudent, link-scoped).
@@ -3050,6 +3114,7 @@ export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
   "observation:read": { name: "অবজারভেশন পড়া", desc: "রো-স্কোপড অবজারভেশন পড়া" },
   "observation:manage": { name: "অবজারভেশন পরিচালনা", desc: "ডেজিগনেশন, কনফিগ ও ড্যাশবোর্ড" },
   "finance:manage": { name: "অর্থ ব্যবস্থাপনা", desc: "লেজার, ব্যালেন্স, পোস্টিং ও হিসাব" },
+  "report:release": { name: "মাসিক রিপোর্ট প্রকাশ", desc: "মাসিক অগ্রগতি রিপোর্ট প্রকাশ ও পুনঃপ্রকাশ" },
   "guardian:read_child": { name: "সন্তানের তথ্য দেখা (অভিভাবক প্লেন)", desc: "অভিভাবক প্লেন — স্টাফকে দেওয়া যায় না" },
 };
 
@@ -3095,5 +3160,6 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "observation:read": { name: "Read observation", desc: "Row-scoped observation read" },
   "observation:manage": { name: "Manage observation", desc: "Designations, config, dashboards" },
   "finance:manage": { name: "Manage finance", desc: "Ledgers, balances, postings, accounts" },
+  "report:release": { name: "Release monthly reports", desc: "Release and re-release monthly progress reports" },
   "guardian:read_child": { name: "Read child (guardian plane)", desc: "Guardian plane — not grantable to staff" },
 };

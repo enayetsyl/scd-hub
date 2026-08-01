@@ -46,6 +46,13 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "LibraryError",
   "MeetingCommentError",
   "MessageTemplateError",
+  // Monthly report (MR-1..MR-4): all three are deliberate denials, not faults — a
+  // release refused because the month is provisional, a config whose hard lock
+  // precedes its window, a facts object carrying a name (which is the privacy guard
+  // firing as designed, D-#399).
+  "MonthlyCommentError",
+  "MonthlyReportConfigError",
+  "MonthlyReportError",
   "OffboardingError",
   "ParentMeetingError",
   "PayrollError",
