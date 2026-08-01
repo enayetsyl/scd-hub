@@ -1,8 +1,8 @@
 # PRD — System health (free-tier headroom)
 
 **Slices:** SH-1 (the read + screen), SH-2 (egress snapshots), SH-3 (bands), SH-4 (trend + projection),
-SH-5 (scheduler heartbeat), SH-6 (prunable), SH-7 (backups).
-**Decisions:** D-#414 (SH-1..3), D-#416 (SH-4..7). **Owner ask (2026-08-01):** *"is it possible to add a part in the principal ui
+SH-5 (scheduler heartbeat), SH-6 (prunable), SH-7 (backup freshness), SH-8 (the Drive ceiling).
+**Decisions:** D-#414 (SH-1..3), D-#416 (SH-4..6), D-#425 (SH-7 rewritten, SH-8). **Owner ask (2026-08-01):** *"is it possible to add a part in the principal ui
 to see the vs and mongodb status so that he can take step to keep within free tire limit."*
 
 ## 1. Why
@@ -20,7 +20,7 @@ binds was an open question:
 | Ceiling | Reading | Verdict |
 |---|---|---|
 | **Atlas M0 — 512 MB, cluster-wide** | 76.2 MB (14.9%) | **The one that binds.** |
-| **Google Drive** | 1.33 TB of 100 TB pooled Workspace quota | Not a risk; reported for completeness. |
+| **Google Drive** | **51.57 GB of 100 GB (51.6%)** — see SH-8 | Second-tightest. The first reading here (1.3% of a pooled quota) was WRONG; corrected in D-#425. |
 | **VM disk / RAM / egress** | host-dependent | Worth watching; egress needs snapshots. |
 
 Two findings shaped the build:
@@ -103,18 +103,36 @@ Two findings shaped the build:
   attendance, reports) are excluded because they are the product, not exhaust. A test pins both.
 - **SH6.3** **Report only.** Nothing in the app deletes. The panel makes the case; a person decides.
 
-### SH-7 — Backups *(**D-#416**)*
-- **SH7.1** Atlas M0 has **no automated backups**, so "off" does not mean a preference — it means no
-  restore point exists at all. The panel says that in red rather than leaving it unsaid.
-- **SH7.2** A weekly job dumps the database to Drive as gzipped NDJSON, **streamed** so only the
-  compressed result is held whole. No `mongodump` dependency to provision on the VM, and the output is
-  inspectable by a human.
-- **SH7.3** **OFF unless `BACKUP_ENABLED=1`.** A job that writes to Drive on a schedule should start
-  when a person decides it starts, not the moment a deploy lands.
-- **SH7.4** Retention keeps the newest four and touches **only files this job created**. It runs
-  **after** a successful upload, so a failed run never costs an existing restore point.
-- **SH7.5** A **failed run is recorded**, and `ageDays` measures from the last **success**, never the
-  last attempt — a job failing nightly must not look fresh.
+### SH-7 — Backup freshness *(**D-#425**, superseding D-#416's version)*
+- **SH7.1** The panel **WATCHES the school's existing nightly backup**; it does not take one.
+  `scripts/backup.sh` has run from cron since 2026-06-30 (ADR-011) — `mongodump --archive --gzip` of
+  prod into the Drive folder `SCD-Hub-Backups`, with a tested restore runbook (`scripts/restore.md`,
+  DEP-4 drill). D-#416 built a second, competing job on the false premise that no backup existed;
+  that job is **deleted**, not merely disabled.
+- **SH7.2** The band comes from the **newest archive's age alone** — amber at 2 days, red at 3, for a
+  nightly job. It must **never** be derived from the spacing between files: `drive-backup.mjs` rotates
+  grandfather-father-son (7 daily / 4 weekly / 3 monthly), so older archives legitimately thin out and
+  a spacing check would cry wolf every week. *(This is exactly the misreading the owner caught: the
+  folder looks weekly before the last 7 days, and nothing is wrong.)*
+- **SH7.3** A **missing folder** and an **empty folder** are both red — either way there is no restore
+  point. The folder is never auto-created: a missing one is a finding, and conjuring an empty one
+  would hide it.
+- **SH7.4** An **unreachable Drive is "unknown", never "no backups"** — reporting a disaster because a
+  network call failed would send someone hunting a problem that is not happening.
+- **SH7.5** Read-only: it lists and reports, never writes, uploads or deletes. A monitor that could
+  delete its own subject is not a monitor.
+- **SH7.6** The listing is cached for 5 minutes but the **age is recomputed on every read** — the
+  folder changes once a day, while "how old is it" changes continuously, and a cached age would keep
+  claiming last night's backup indefinitely.
+
+### SH-8 — The Drive ceiling is configuration, not Google's number *(**D-#425**)*
+- **SH8.1** The card shows **`usageInDrive`** against a **configured** limit (`DRIVE_LIMIT_GB`,
+  default 100 GB) — the pair the account's own Drive page shows, and therefore the pair a person can
+  check. The API's `usage` (all Google services) and `limit` (a 100 TiB pooled sentinel) are **not**
+  usable here: taken together they rendered the card as **1.3% "Healthy"** when the real position was
+  **51.6% of 100 GB**. A headroom panel that understates a ceiling by 40× has inverted its own job.
+- **SH8.2** `usageInDriveTrash` is shown **separately as reclaimable** — trash still counts against the
+  quota until the bin is emptied (11.61 GB of it live, ~a fifth of usage).
 
 ## 4. Out of scope
 

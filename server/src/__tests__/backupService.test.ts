@@ -1,122 +1,127 @@
 /**
- * BackupService (SH-7, D-#416).
+ * BackupService (SH-7, D-#425) — WATCHING the school's nightly backup, not taking one.
  *
- * This is the one part of the health slice that WRITES outside the app — it uploads the
- * whole database to Drive and deletes old files. So the tests are mostly about refusals:
- * it must not run unasked, must not delete more than it should, and must record a failure
- * as loudly as a success (a backup page showing only successes is how a broken job goes
- * unnoticed for months).
+ * The trap this module has to avoid is misreading a healthy folder as a broken job. The
+ * cron rotates grandfather-father-son (7 daily / 4 weekly / 3 monthly), so the archive
+ * dates legitimately thin out into the past — an "are they evenly spaced?" check would
+ * cry wolf every week. Only the NEWEST archive's age can say whether last night ran.
  */
-const mockCreate = jest.fn();
-const mockFindOne = jest.fn();
-const mockUpload = jest.fn();
 const mockList = jest.fn();
-const mockDelete = jest.fn();
 
-jest.mock("../modules/platform/models/BackupRun", () => ({
-  BackupRun: {
-    create: (d: unknown) => mockCreate(d),
-    findOne: (q: unknown) => ({ sort: () => ({ lean: () => mockFindOne(q) }) }),
-  },
-}));
 jest.mock("../modules/platform/services/DriveStore", () => ({
-  uploadToDrive: (i: unknown) => mockUpload(i),
-  listDriveFolder: (y: unknown, s: unknown) => mockList(y, s),
-  deleteFromDrive: (id: unknown) => mockDelete(id),
+  listFolderByName: (name: string) => mockList(name),
 }));
 
 import {
-  runBackup,
   backupStatus,
-  backupEnabled,
-  pruneOldBackups,
-  BACKUP_KEEP,
+  backupBand,
+  resetBackupCache,
+  BACKUP_FOLDER,
+  BACKUP_WARN_DAYS,
+  BACKUP_CRITICAL_DAYS,
 } from "../modules/platform/services/BackupService";
 
-/** A saveable BackupRun stub. */
-const runStub = () => ({ save: jest.fn().mockResolvedValue(undefined) }) as any;
+const NOW = new Date("2026-08-01T12:00:00Z");
+/** An archive created `daysAgo` before NOW, named the way the cron names them. */
+const archive = (daysAgo: number, id = `f${daysAgo}`) => ({
+  id,
+  name: `scdhub_prod-2026-07-${String(31 - daysAgo).padStart(2, "0")}_023001.archive.gz`,
+  createdTime: new Date(NOW.getTime() - daysAgo * 86_400_000).toISOString(),
+  sizeBytes: 9_700_000,
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
-  delete process.env.BACKUP_ENABLED;
-  mockCreate.mockImplementation(() => Promise.resolve(runStub()));
-  mockFindOne.mockResolvedValue(null);
-  mockList.mockResolvedValue([]);
+  resetBackupCache();
 });
 
-describe("the enable gate", () => {
-  test("off unless explicitly switched on", () => {
-    expect(backupEnabled()).toBe(false);
-    process.env.BACKUP_ENABLED = "true"; // only "1" counts — no truthy-string surprises
-    expect(backupEnabled()).toBe(false);
-    process.env.BACKUP_ENABLED = "1";
-    expect(backupEnabled()).toBe(true);
+describe("backupBand", () => {
+  test("fresh is ok, a missed night warns, three days is critical", () => {
+    expect(backupBand(true, 0)).toBe("ok");
+    expect(backupBand(true, 1)).toBe("ok");
+    expect(backupBand(true, BACKUP_WARN_DAYS)).toBe("warn");
+    expect(backupBand(true, BACKUP_CRITICAL_DAYS)).toBe("critical");
   });
 
-  test("a disabled run uploads NOTHING and records why", async () => {
-    const run = runStub();
-    mockCreate.mockResolvedValue(run);
-    const out = await runBackup(new Date(2026, 7, 1));
-    expect(mockUpload).not.toHaveBeenCalled();
-    expect(out.ok).toBe(false);
-    expect(out.error).toMatch(/not enabled/);
-    // Recorded, not swallowed: the panel must be able to say a run was attempted.
-    expect(run.save).toHaveBeenCalled();
-  });
-
-  test("enabled but with no database connection still refuses, and says so", async () => {
-    process.env.BACKUP_ENABLED = "1";
-    const run = runStub();
-    mockCreate.mockResolvedValue(run);
-    const out = await runBackup(new Date(2026, 7, 1));
-    expect(mockUpload).not.toHaveBeenCalled();
-    expect(out.error).toMatch(/connection/i);
+  test("no folder and an empty folder are BOTH critical", () => {
+    // Either way there is no restore point, which is the state worth shouting about.
+    expect(backupBand(false, null)).toBe("critical");
+    expect(backupBand(true, null)).toBe("critical");
   });
 });
 
-describe("backupStatus — freshness the panel can trust", () => {
-  test("reports 'never' when nothing has run", async () => {
-    const s = await backupStatus();
-    expect(s).toMatchObject({ enabled: false, lastRunAt: null, ageDays: null });
-  });
-});
-
-describe("pruneOldBackups — retention must not eat the restore points", () => {
-  test(`keeps the newest ${BACKUP_KEEP} and deletes only beyond them`, async () => {
-    const files = Array.from({ length: 7 }, (_, i) => ({
-      id: `f${i}`,
-      name: `scdhub-prod-2026-07-${String(i + 1).padStart(2, "0")}.ndjson.gz`,
-      createdTime: `2026-07-${String(i + 1).padStart(2, "0")}T00:00:00Z`,
-      sizeBytes: 100,
-    }));
-    mockList.mockResolvedValue(files);
-    const removed = await pruneOldBackups("2026");
-    expect(removed).toBe(3);
-    // The three OLDEST go; the four newest survive.
-    expect(mockDelete.mock.calls.map((c) => c[0]).sort()).toEqual(["f0", "f1", "f2"]);
+describe("backupStatus", () => {
+  test("reads the newest archive and reports its age", async () => {
+    mockList.mockResolvedValue([archive(3), archive(0), archive(1)]);
+    const s = await backupStatus(NOW);
+    expect(mockList).toHaveBeenCalledWith(BACKUP_FOLDER);
+    expect(s.found).toBe(true);
+    expect(s.count).toBe(3);
+    expect(s.ageDays).toBe(0);
+    expect(s.band).toBe("ok");
+    // Newest wins regardless of the order Drive returned them in.
+    expect(s.newestAt).toBe(archive(0).createdTime);
   });
 
-  test("touches nothing that is not a backup file", async () => {
-    // The folder is ours, but a stray file must never be collateral: only the exact
-    // artefact this job creates is eligible for deletion.
+  test("ROTATION IS NOT A FAILURE — sparse older archives stay 'ok'", async () => {
+    // Exactly the live shape: a run of dailies, then weekly and monthly keepers. The
+    // gaps are the rotation policy doing its job, and must not read as missed nights.
     mockList.mockResolvedValue([
-      ...Array.from({ length: 5 }, (_, i) => ({
-        id: `b${i}`,
-        name: `scdhub-prod-2026-07-0${i + 1}.ndjson.gz`,
-        createdTime: `2026-07-0${i + 1}T00:00:00Z`,
-        sizeBytes: 1,
-      })),
-      { id: "keep-me", name: "notes.txt", createdTime: "2020-01-01T00:00:00Z", sizeBytes: 1 },
+      archive(0), archive(1), archive(2), archive(3), archive(4), archive(5), archive(6),
+      archive(13, "w1"), archive(20, "w2"), archive(32, "m1"),
     ]);
-    await pruneOldBackups("2026");
-    expect(mockDelete.mock.calls.map((c) => c[0])).not.toContain("keep-me");
+    const s = await backupStatus(NOW);
+    expect(s.band).toBe("ok");
+    expect(s.count).toBe(10);
   });
 
-  test("does nothing when there are fewer files than the retention count", async () => {
-    mockList.mockResolvedValue([
-      { id: "a", name: "scdhub-prod-2026-07-01.ndjson.gz", createdTime: "2026-07-01T00:00:00Z", sizeBytes: 1 },
-    ]);
-    expect(await pruneOldBackups("2026")).toBe(0);
-    expect(mockDelete).not.toHaveBeenCalled();
+  test("a stale newest archive is what raises the alarm", async () => {
+    mockList.mockResolvedValue([archive(4), archive(11), archive(18)]);
+    const s = await backupStatus(NOW);
+    expect(s.ageDays).toBe(4);
+    expect(s.band).toBe("critical");
+  });
+
+  test("a missing folder is 'no backups', and is critical", async () => {
+    mockList.mockResolvedValue(null);
+    const s = await backupStatus(NOW);
+    expect(s.found).toBe(false);
+    expect(s.band).toBe("critical");
+    expect(s.count).toBe(0);
+  });
+
+  test("an empty folder is critical too — the folder existing proves nothing", async () => {
+    mockList.mockResolvedValue([]);
+    const s = await backupStatus(NOW);
+    expect(s.found).toBe(true);
+    expect(s.ageDays).toBeNull();
+    expect(s.band).toBe("critical");
+  });
+
+  test("an unreachable Drive is UNKNOWN, never 'no backups'", async () => {
+    // Reporting "no restore point" because a network call failed would send someone
+    // hunting a disaster that is not happening.
+    mockList.mockRejectedValue(new Error("Drive unreachable: ETIMEDOUT"));
+    const s = await backupStatus(NOW);
+    expect(s.band).toBe("unknown");
+    expect(s.error).toMatch(/ETIMEDOUT/);
+  });
+
+  test("totals the pool so unbounded growth is visible", async () => {
+    mockList.mockResolvedValue([archive(0), archive(1)]);
+    const s = await backupStatus(NOW);
+    expect(s.totalSizeBytes).toBe(19_400_000);
+  });
+
+  test("the listing is cached, but the AGE is recomputed", async () => {
+    mockList.mockResolvedValue([archive(0)]);
+    const first = await backupStatus(NOW);
+    expect(first.ageDays).toBe(0);
+    // Two days later, without re-listing: the folder has not changed, but its freshness
+    // has — a cached "0 days" would keep claiming last night's backup forever.
+    const later = await backupStatus(new Date(NOW.getTime() + 2 * 86_400_000));
+    expect(mockList).toHaveBeenCalledTimes(1);
+    expect(later.ageDays).toBe(2);
+    expect(later.band).toBe("warn");
   });
 });

@@ -92,7 +92,8 @@ DriveHealthRef.implement({
   description: "Google Drive, where every uploaded byte lives. Limit comes from Google, not from us.",
   fields: (t) => ({
     usageBytes: t.float({ nullable: true, resolve: (d) => d.usageBytes }),
-    usageInDriveBytes: t.float({ nullable: true, resolve: (d) => d.usageInDriveBytes }),
+    usageAllServicesBytes: t.float({ nullable: true, resolve: (d) => d.usageAllServicesBytes }),
+    usageTrashBytes: t.float({ nullable: true, resolve: (d) => d.usageTrashBytes }),
     limitBytes: t.float({ nullable: true, resolve: (d) => d.limitBytes }),
     band: t.string({ resolve: (d) => d.band }),
     error: t.string({ nullable: true, resolve: (d) => d.error }),
@@ -161,12 +162,16 @@ BackupStatusRef.implement({
     "Backup freshness (SH-7). Atlas M0 has NO automated backups, so `enabled: false` means no " +
     "restore point exists at all. `ageDays` measures from the last SUCCESS, never the last attempt.",
   fields: (t) => ({
-    enabled: t.boolean({ resolve: (b) => b.enabled }),
-    lastRunAt: t.string({ nullable: true, resolve: (b) => b.lastRunAt }),
-    lastOk: t.boolean({ nullable: true, resolve: (b) => b.lastOk }),
-    lastSizeBytes: t.float({ nullable: true, resolve: (b) => b.lastSizeBytes }),
-    lastError: t.string({ nullable: true, resolve: (b) => b.lastError }),
+    folder: t.exposeString("folder"),
+    found: t.boolean({ resolve: (b) => b.found }),
+    count: t.int({ resolve: (b) => b.count }),
+    newestName: t.string({ nullable: true, resolve: (b) => b.newestName }),
+    newestAt: t.string({ nullable: true, resolve: (b) => b.newestAt }),
+    newestSizeBytes: t.float({ nullable: true, resolve: (b) => b.newestSizeBytes }),
     ageDays: t.int({ nullable: true, resolve: (b) => b.ageDays }),
+    totalSizeBytes: t.float({ resolve: (b) => b.totalSizeBytes }),
+    band: t.string({ resolve: (b) => b.band }),
+    error: t.string({ nullable: true, resolve: (b) => b.error }),
   }),
 });
 

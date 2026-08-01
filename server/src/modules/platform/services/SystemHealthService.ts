@@ -41,7 +41,7 @@ import {
   type Projection,
   type PrunableEstimate,
 } from "./HealthHistoryService";
-import { backupStatus, type BackupStatus } from "./BackupService";
+import { backupStatus, BACKUP_FOLDER, type BackupStatus } from "./BackupService";
 
 /**
  * The Atlas M0 storage ceiling. It is a CONSTANT because the driver cannot ask: no
@@ -133,11 +133,32 @@ export interface HostHealth {
 }
 
 export interface DriveHealth {
+  /** What the Drive page shows as "used" — files in Drive, NOT the all-services total. */
   usageBytes: number | null;
-  usageInDriveBytes: number | null;
+  /** The all-services figure Google also returns, kept for reference only. */
+  usageAllServicesBytes: number | null;
+  usageTrashBytes: number | null;
   limitBytes: number | null;
   band: HealthBand;
   error: string | null;
+}
+
+/**
+ * The Drive ceiling, in bytes.
+ *
+ * NOT the API's `storageQuota.limit`. On this account that field returns 100 TiB — the
+ * sentinel Google reports for a pooled Workspace allowance — while the account's own
+ * Drive page shows **100 GB**, and it is the page a person believes. Reading the API
+ * value put the card at 1.3% "Healthy" when the real position is ~52%: the exact failure
+ * a headroom panel exists to prevent, so the limit is configuration, not a guess.
+ */
+export const DRIVE_DEFAULT_LIMIT_BYTES = 100 * 1024 ** 3;
+
+export function driveLimitBytes(): number {
+  const override = Number(process.env.DRIVE_LIMIT_GB);
+  return Number.isFinite(override) && override > 0
+    ? override * 1024 ** 3
+    : DRIVE_DEFAULT_LIMIT_BYTES;
 }
 
 /** The notification ticker's heartbeat (SH-5). If it stalls, homework auto-DUE and
@@ -447,17 +468,23 @@ export async function driveHealth(): Promise<DriveHealth> {
       driveCache = { at: Date.now(), value: await driveQuota() };
     }
     const q = driveCache.value;
+    // `usageInDrive` is what the Drive page calls "used"; `usage` spans every Google
+    // service and would overstate this ceiling by ~26x on the live account.
+    const used = q.usageInDriveBytes ?? q.usageBytes;
+    const limit = driveLimitBytes();
     return {
-      usageBytes: q.usageBytes,
-      usageInDriveBytes: q.usageInDriveBytes,
-      limitBytes: q.limitBytes,
-      band: bandFor(q.usageBytes, q.limitBytes),
+      usageBytes: used,
+      usageAllServicesBytes: q.usageBytes,
+      usageTrashBytes: q.usageInDriveTrashBytes,
+      limitBytes: limit,
+      band: bandFor(used, limit),
       error: null,
     };
   } catch (e) {
     return {
       usageBytes: null,
-      usageInDriveBytes: null,
+      usageAllServicesBytes: null,
+      usageTrashBytes: null,
       limitBytes: null,
       band: "unknown",
       error: (e as Error).message,
@@ -473,14 +500,23 @@ export async function systemHealth(now = new Date()): Promise<SystemHealth> {
     hostHealth(now),
     driveHealth(),
     historySeries(HISTORY_DAYS, now).catch(() => [] as HistoryPoint[]),
-    backupStatus(now).catch(() => ({
-      enabled: false,
-      lastRunAt: null,
-      lastOk: null,
-      lastSizeBytes: null,
-      lastError: null,
-      ageDays: null,
-    })),
+    // A Drive hiccup must leave the backup card "unknown", never "no backups" — the
+    // difference between "we could not look" and "there is nothing there" is the whole
+    // value of this card.
+    backupStatus(now).catch(
+      (e): BackupStatus => ({
+        folder: BACKUP_FOLDER,
+        found: false,
+        count: 0,
+        newestName: null,
+        newestAt: null,
+        newestSizeBytes: null,
+        ageDays: null,
+        totalSizeBytes: 0,
+        band: "unknown",
+        error: (e as Error).message,
+      }),
+    ),
   ]);
 
   // Prunable needs the measured collection sizes, so it runs after mongoHealth rather
