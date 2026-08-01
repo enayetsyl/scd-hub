@@ -63,7 +63,8 @@ import {
   HW_AUTO_ISSUE_END_HOUR,
 } from "../../trackers/services/HomeworkAutoIssueService";
 import { captureNetSnapshot, captureDailyHealth } from "../../platform/services/SystemHealthService";
-import { runBackup, backupEnabled } from "../../platform/services/BackupService";
+// (No backup import: the school's own nightly cron owns backups — ADR-011. The health
+// panel WATCHES that folder rather than running a second job; see BackupService.)
 import { markTick, resetTickerHeartbeat } from "./tickerHeartbeat";
 export { getTickerHealth } from "./tickerHeartbeat";
 import { emit } from "./NotificationService";
@@ -184,8 +185,6 @@ export interface TickSummary {
   netSnapshotRan: boolean;
   /** SH-4: whether the daily health gauges were captured this pass. */
   healthSnapshotRan: boolean;
-  /** SH-7: whether the weekly backup ran this pass (only when BACKUP_ENABLED=1). */
-  backupRan: boolean;
   hwPendingEmitted: number;
   hwDueFlipped: number;
   hwAutoIssued: number;
@@ -220,7 +219,6 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     observationEscalationRan: false,
     netSnapshotRan: false,
     healthSnapshotRan: false,
-    backupRan: false,
     hwPendingEmitted: 0,
     hwDueFlipped: 0,
     hwAutoIssued: 0,
@@ -254,21 +252,6 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       await captureDailyHealth(now);
     });
   });
-
-  // --- Weekly backup (SH-7, D-#416) — Atlas M0 has NO automated backups, so this is the
-  // only restore point that exists. OFF unless BACKUP_ENABLED=1: a job that writes to
-  // Drive on a schedule starts when a person decides, not when a deploy lands. Sunday, on
-  // a WEEK key so a restart mid-week cannot trigger a second run.
-  if (backupEnabled() && now.getDay() === 0) {
-    await family("backup", async () => {
-      const weekKey = `${now.getFullYear()}-W${Math.ceil(
-        ((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / 86_400_000 + 1) / 7,
-      )}`;
-      summary.backupRan = await runOnce(weekKey, "BACKUP", async () => {
-        await runBackup(now);
-      });
-    });
-  }
 
   // --- Offboarding access revocation (HR-5/H6.3, D-#117) — the SYSTEM disables the
   // login + revokes all scope grants on the last working day. Reuses THIS ticker (no

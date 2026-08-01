@@ -52,7 +52,8 @@ export interface SystemHealthT {
   };
   drive: {
     usageBytes: number | null;
-    usageInDriveBytes: number | null;
+    usageAllServicesBytes: number | null;
+    usageTrashBytes: number | null;
     limitBytes: number | null;
     band: HealthBandT;
     error: string | null;
@@ -83,14 +84,20 @@ export interface SystemHealthT {
     docCount: number;
     reclaimableBytes: number;
   }[];
-  /** SH-7: `enabled: false` means NO restore point exists — M0 has no automated backups. */
+  /** SH-7: freshness of the school's OWN nightly backup (ADR-011) — the app watches that
+   *  folder, it does not write one. Sparse older archives are the 7/4/3 rotation working;
+   *  only `ageDays` says whether last night ran. */
   backup: {
-    enabled: boolean;
-    lastRunAt: string | null;
-    lastOk: boolean | null;
-    lastSizeBytes: number | null;
-    lastError: string | null;
+    folder: string;
+    found: boolean;
+    count: number;
+    newestName: string | null;
+    newestAt: string | null;
+    newestSizeBytes: number | null;
     ageDays: number | null;
+    totalSizeBytes: number;
+    band: HealthBandT;
+    error: string | null;
   };
   checkedAt: string;
 }
@@ -114,12 +121,12 @@ export const SYSTEM_HEALTH_QUERY = gql<{ systemHealth: SystemHealthT }, Record<s
         egressMonthBytes egressLimitBytes egressBand egressPartial
         error
       }
-      drive { usageBytes usageInDriveBytes limitBytes band error }
+      drive { usageBytes usageAllServicesBytes usageTrashBytes limitBytes band error }
       ticker { lastTickAt ageSeconds band }
       history { dateKey dbStorageBytes diskUsedBytes driveUsageBytes totalDocs estimated }
       projection { bytesPerDay daysToLimit limitDateKey points usesEstimates }
       prunable { collection olderThanDays reason docCount reclaimableBytes }
-      backup { enabled lastRunAt lastOk lastSizeBytes lastError ageDays }
+      backup { folder found count newestName newestAt newestSizeBytes ageDays totalSizeBytes band error }
     }
   }
 `;

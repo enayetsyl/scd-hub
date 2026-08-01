@@ -243,6 +243,13 @@ export default function SystemHealthScreen(_props: Props): React.ReactElement {
           {drivePct !== null ? ` · ${bnNum(drivePct.toFixed(1))}%` : ""}
         </Body>
         <UsageBar ratio={drivePct} band={h.drive.band} />
+        {/* Trash still counts against the quota until the bin is emptied, so it is
+            reclaimable space rather than space already spent — worth its own line. */}
+        {h.drive.usageTrashBytes ? (
+          <Muted style={{ marginTop: space(1) }}>
+            {STR.shDriveTrash}: {bytesLabel(h.drive.usageTrashBytes)}
+          </Muted>
+        ) : null}
         <Muted style={{ marginTop: space(2) }}>{STR.shDriveNote}</Muted>
         {h.drive.error ? <Muted style={{ marginTop: space(1) }}>{h.drive.error}</Muted> : null}
       </Card>
@@ -262,33 +269,34 @@ export default function SystemHealthScreen(_props: Props): React.ReactElement {
         ) : null}
       </Card>
 
-      {/* ---------------- SH-7: the restore point ---------------- */}
+      {/* ---------------- SH-7: is last night's backup there? ----------------
+          The school's own cron owns the backups (ADR-011); this only watches them. The
+          band comes from the NEWEST archive's age — the older ones thin out by the 7/4/3
+          rotation, and reading that thinning as failure would cry wolf every week. */}
       <Card>
-        <SectionHeader
-          title={STR.shBackup}
-          band={
-            !h.backup.enabled || h.backup.ageDays === null
-              ? "critical"
-              : h.backup.ageDays > 14
-                ? "warn"
-                : "ok"
-          }
-        />
-        {!h.backup.enabled ? (
-          // The honest headline: Atlas M0 has no automated backups, so "off" is not a
-          // preference, it is the absence of any way back.
-          <Notice message={STR.shBackupOff} tone="danger" />
+        <SectionHeader title={STR.shBackup} band={h.backup.band} />
+        {!h.backup.found ? (
+          <Notice message={STR.shBackupMissing} tone="danger" />
         ) : h.backup.ageDays === null ? (
           <Notice message={STR.shBackupNever} tone="danger" />
         ) : (
-          <Body style={{ marginTop: space(1) }}>
-            {STR.shBackupLast}: {bnNum(h.backup.ageDays)} {STR.shBackupDaysAgo}
-            {h.backup.lastSizeBytes ? ` · ${bytesLabel(h.backup.lastSizeBytes)}` : ""}
-          </Body>
+          <>
+            <Body style={{ marginTop: space(1) }}>
+              {STR.shBackupLast}:{" "}
+              {h.backup.ageDays === 0
+                ? STR.shBackupToday
+                : `${bnNum(h.backup.ageDays)} ${STR.shBackupDaysAgo}`}
+              {h.backup.newestSizeBytes ? ` · ${bytesLabel(h.backup.newestSizeBytes)}` : ""}
+            </Body>
+            <Muted style={{ marginTop: space(1) }}>
+              {bnNum(h.backup.count)} {STR.shBackupKept} · {bytesLabel(h.backup.totalSizeBytes)}
+            </Muted>
+            {h.backup.band !== "ok" ? <Notice message={STR.shBackupStale} tone="danger" /> : null}
+          </>
         )}
-        {h.backup.lastOk === false && h.backup.lastError ? (
+        {h.backup.error ? (
           <Muted style={{ marginTop: space(1) }}>
-            {STR.shBackupFailed}: {h.backup.lastError}
+            {STR.shUnavailable}: {h.backup.error}
           </Muted>
         ) : null}
       </Card>

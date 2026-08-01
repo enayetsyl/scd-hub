@@ -30,6 +30,7 @@ import {
   hostHealth,
   captureNetSnapshot,
   ATLAS_M0_LIMIT_BYTES,
+  DRIVE_DEFAULT_LIMIT_BYTES,
   WARN_RATIO,
   CRITICAL_RATIO,
 } from "../modules/platform/services/SystemHealthService";
@@ -43,6 +44,7 @@ beforeEach(() => {
   resetDriveCache();
   delete process.env.ATLAS_STORAGE_LIMIT_MB;
   delete process.env.VM_EGRESS_LIMIT_GB;
+  delete process.env.DRIVE_LIMIT_GB;
   mockFind.mockReturnValue({ sort: () => ({ lean: () => Promise.resolve([]) }) });
 });
 
@@ -132,14 +134,37 @@ describe("egressForMonth — cumulative counters into a monthly figure", () => {
 });
 
 describe("driveHealth — a network probe that must never take the panel down", () => {
-  test("reports usage against the limit Google gives", async () => {
+  test("reports FILES-IN-DRIVE against the configured limit, not Google's two other numbers", async () => {
+    // The live account is exactly this shape: `usage` spans all Google services (~1.3 TB)
+    // and `limit` is the 100 TiB pooled sentinel, while the Drive page a person actually
+    // looks at shows usageInDrive against 100 GB. Reading the API pair put the card at
+    // 1.3% "Healthy" when the truth was ~52% — so the card must take usageInDrive.
     mockDriveQuota.mockResolvedValue({
-      usageBytes: 50,
-      usageInDriveBytes: 40,
-      limitBytes: 100,
+      usageBytes: 1_431_033_212_452,
+      usageInDriveBytes: 55_376_267_326,
+      usageInDriveTrashBytes: 12_465_802_130,
+      limitBytes: 109_951_162_777_600,
     });
     const d = await driveHealth();
-    expect(d).toMatchObject({ usageBytes: 50, limitBytes: 100, band: "ok", error: null });
+    expect(d.usageBytes).toBe(55_376_267_326);
+    expect(d.limitBytes).toBe(DRIVE_DEFAULT_LIMIT_BYTES);
+    expect(d.usageAllServicesBytes).toBe(1_431_033_212_452);
+    expect(d.usageTrashBytes).toBe(12_465_802_130); // reclaimable, so shown separately
+    // 51.6 GiB of 100 GiB — past the 70% warn line? No: this is the real position.
+    expect(d.band).toBe("ok");
+    expect(d.error).toBeNull();
+  });
+
+  test("the limit is configurable, because Google's cannot be trusted here", async () => {
+    process.env.DRIVE_LIMIT_GB = "200";
+    mockDriveQuota.mockResolvedValue({
+      usageBytes: 10,
+      usageInDriveBytes: 10,
+      usageInDriveTrashBytes: 0,
+      limitBytes: 109_951_162_777_600,
+    });
+    expect((await driveHealth()).limitBytes).toBe(200 * 1024 ** 3);
+    delete process.env.DRIVE_LIMIT_GB;
   });
 
   test("an unreachable Drive degrades to an error string, not a thrown query", async () => {
@@ -151,7 +176,7 @@ describe("driveHealth — a network probe that must never take the panel down", 
   });
 
   test("the answer is cached — the panel may be refreshed without hammering Google", async () => {
-    mockDriveQuota.mockResolvedValue({ usageBytes: 1, usageInDriveBytes: 1, limitBytes: 10 });
+    mockDriveQuota.mockResolvedValue({ usageBytes: 1, usageInDriveBytes: 1, usageInDriveTrashBytes: 0, limitBytes: 10 });
     await driveHealth();
     await driveHealth();
     expect(mockDriveQuota).toHaveBeenCalledTimes(1);
