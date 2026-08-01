@@ -81,6 +81,15 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
+      {/* SH-1 (D-#414): same gate as the audit log — `audit:read` is Principal-only, and
+          infrastructure headroom is a Principal decision (prune, archive, or pay). */}
+      {canAudit ? (
+        <Card onPress={() => navigation.navigate("SystemHealth")}>
+          <Body style={{ fontWeight: "700" }}>{STR.shTitle}</Body>
+          <Muted>{STR.shSubtitle}</Muted>
+        </Card>
+      ) : null}
+
       {canStaff ? (
         <Card onPress={() => navigation.navigate("Staff")}>
           <Body style={{ fontWeight: "700" }}>{STR.staff}</Body>

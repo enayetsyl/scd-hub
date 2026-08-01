@@ -372,6 +372,7 @@ export type AdminStackParamList = {
   AccessControlEdit: { userId: string; name: string; role: string };
   // Owner ask 2026-07-20: the Principal's audit-log viewer (audit:read).
   AuditLog: undefined;
+  SystemHealth: undefined;
   // D-#290: who didn't submit reconciliation (Principal/Office).
   ReconciliationReport: undefined;
   // D-#300: per subject × class homework lifecycle report (Principal/Office).
