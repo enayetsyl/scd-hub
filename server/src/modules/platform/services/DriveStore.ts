@@ -144,6 +144,41 @@ export interface DriveUploadInput {
   subfolder?: string;
 }
 
+/** What Google says about the storing account's space (SH-1, D-#414). `limit` is null on
+ *  an account with no quota (some Workspace tiers report none) — the caller must render
+ *  "no limit reported" rather than divide by it. */
+export interface DriveQuota {
+  usageBytes: number;
+  /** Of `usageBytes`, the part that is Drive files (the rest is Gmail/Photos). */
+  usageInDriveBytes: number | null;
+  limitBytes: number | null;
+}
+
+/**
+ * The Drive account's storage quota, straight from Google — never a hardcoded ceiling.
+ * Every uploaded byte lives in Drive (StoredFile holds only a handle), so this is the
+ * quota that grows with usage; the DB only holds metadata.
+ *
+ * Deliberately NOT returning the account's email address: the health panel is infra
+ * telemetry and has no reason to carry an identity.
+ */
+export async function driveQuota(): Promise<DriveQuota> {
+  const res = await driveFetch(
+    "https://www.googleapis.com/drive/v3/about?fields=storageQuota",
+    { method: "GET" },
+  );
+  if (!res.ok) throw new DriveUnavailableError(`Drive about.get failed: HTTP ${res.status}`);
+  const json = (await res.json()) as {
+    storageQuota?: { limit?: string; usage?: string; usageInDrive?: string };
+  };
+  const q = json.storageQuota ?? {};
+  return {
+    usageBytes: Number(q.usage ?? 0),
+    usageInDriveBytes: q.usageInDrive === undefined ? null : Number(q.usageInDrive),
+    limitBytes: q.limit === undefined ? null : Number(q.limit),
+  };
+}
+
 /** Stream a file into its private folder; returns the Drive file id
  *  (SERVER-INTERNAL — never expose it to a client). */
 export async function uploadToDrive(input: DriveUploadInput): Promise<string> {
