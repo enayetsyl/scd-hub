@@ -62,7 +62,10 @@ import {
   HW_AUTO_ISSUE_START_HOUR,
   HW_AUTO_ISSUE_END_HOUR,
 } from "../../trackers/services/HomeworkAutoIssueService";
-import { captureNetSnapshot } from "../../platform/services/SystemHealthService";
+import { captureNetSnapshot, captureDailyHealth } from "../../platform/services/SystemHealthService";
+import { runBackup, backupEnabled } from "../../platform/services/BackupService";
+import { markTick, resetTickerHeartbeat } from "./tickerHeartbeat";
+export { getTickerHealth } from "./tickerHeartbeat";
 import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 
@@ -156,29 +159,13 @@ async function runOnce(dateKey: string, key: string, fn: () => Promise<void>): P
 export function resetSchedulerMemory(): void {
   fired.clear();
   firedDateKey = "";
-  lastTickAt = null;
+  resetTickerHeartbeat();
 }
 
-// ---------------------------------------------------------------------------
-// Ticker heartbeat (MON-4, prd-observability.md §4) — the watchdog the off-box
-// monitor checks so a STALLED ticker (a silent failure: no exception thrown, just
-// nothing firing) is caught. Updated at the START of every pass, so it reflects
-// "the ticker is alive" regardless of whether the day emitted anything.
-// ---------------------------------------------------------------------------
-let lastTickAt: Date | null = null;
-
-/** Health probe for the notification ticker: when it last ran + how stale that is.
- *  Exposed at GET /internal/ticker; MON-5's external monitor alerts past ~2× the 60s
- *  interval. `ageSeconds` is null before the first tick (e.g. under jest). */
-export function getTickerHealth(now = new Date()): {
-  lastTickAt: string | null;
-  ageSeconds: number | null;
-} {
-  return {
-    lastTickAt: lastTickAt ? lastTickAt.toISOString() : null,
-    ageSeconds: lastTickAt ? Math.floor((now.getTime() - lastTickAt.getTime()) / 1000) : null,
-  };
-}
+// The MON-4 heartbeat itself now lives in `tickerHeartbeat.ts` — the health panel reports
+// it, and this module imports that panel's service for the daily snapshots, so keeping the
+// state here would close a require cycle (SH-5, D-#416). Re-exported below so existing
+// importers keep one import site.
 
 // ---------------------------------------------------------------------------
 // The tick
@@ -195,6 +182,10 @@ export interface TickSummary {
   observationEscalationRan: boolean;
   /** SH-2: whether today's VM network counters were captured this pass. */
   netSnapshotRan: boolean;
+  /** SH-4: whether the daily health gauges were captured this pass. */
+  healthSnapshotRan: boolean;
+  /** SH-7: whether the weekly backup ran this pass (only when BACKUP_ENABLED=1). */
+  backupRan: boolean;
   hwPendingEmitted: number;
   hwDueFlipped: number;
   hwAutoIssued: number;
@@ -216,7 +207,7 @@ async function family(label: string, body: () => Promise<void>): Promise<void> {
 /** One scheduler pass. Pure-in-time: `now` is injectable for tests; production
  *  ticks call it with the wall clock. Safe to run any number of times. */
 export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
-  lastTickAt = now; // MON-4 heartbeat — set first, before any early return
+  markTick(now); // MON-4 heartbeat — set first, before any early return
   const dateKey = dateKeyOf(now);
   const summary: TickSummary = {
     dateKey,
@@ -228,6 +219,8 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     librarySweepRan: false,
     observationEscalationRan: false,
     netSnapshotRan: false,
+    healthSnapshotRan: false,
+    backupRan: false,
     hwPendingEmitted: 0,
     hwDueFlipped: 0,
     hwAutoIssued: 0,
@@ -252,6 +245,30 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       await captureNetSnapshot(now);
     });
   });
+
+  // --- Daily health gauges (SH-4, D-#416) — storage/disk/Drive/RSS, so the panel can
+  // show a trend and a projection rather than one number with no direction. Calendar
+  // cadence for the same reason as the counters: storage grows on holidays too.
+  await family("health snapshot", async () => {
+    summary.healthSnapshotRan = await runOnce(dateKey, "HEALTHSNAP", async () => {
+      await captureDailyHealth(now);
+    });
+  });
+
+  // --- Weekly backup (SH-7, D-#416) — Atlas M0 has NO automated backups, so this is the
+  // only restore point that exists. OFF unless BACKUP_ENABLED=1: a job that writes to
+  // Drive on a schedule starts when a person decides, not when a deploy lands. Sunday, on
+  // a WEEK key so a restart mid-week cannot trigger a second run.
+  if (backupEnabled() && now.getDay() === 0) {
+    await family("backup", async () => {
+      const weekKey = `${now.getFullYear()}-W${Math.ceil(
+        ((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / 86_400_000 + 1) / 7,
+      )}`;
+      summary.backupRan = await runOnce(weekKey, "BACKUP", async () => {
+        await runBackup(now);
+      });
+    });
+  }
 
   // --- Offboarding access revocation (HR-5/H6.3, D-#117) — the SYSTEM disables the
   // login + revokes all scope grants on the last working day. Reuses THIS ticker (no

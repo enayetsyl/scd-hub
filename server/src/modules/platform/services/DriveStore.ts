@@ -203,6 +203,36 @@ export async function uploadToDrive(input: DriveUploadInput): Promise<string> {
 }
 
 /** Fetch a file's bytes from Drive (the server streams them on to the client). */
+export interface DriveFileRef {
+  id: string;
+  name: string;
+  createdTime: string;
+  sizeBytes: number | null;
+}
+
+/** Files in one year/subfolder, newest first (SH-7) — the backup retention sweep needs to
+ *  see what is already there before it can drop the oldest. */
+export async function listDriveFolder(year: string, subfolder: string): Promise<DriveFileRef[]> {
+  const folderId = await ensureYearSubfolder(year, subfolder);
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+  const url = `${DRIVE_FILES_URL}?q=${q}&fields=files(id,name,createdTime,size)&orderBy=createdTime desc&pageSize=100`;
+  const json = (await (await driveFetch(url, { method: "GET" })).json()) as {
+    files: Array<{ id: string; name: string; createdTime: string; size?: string }>;
+  };
+  return (json.files ?? []).map((f) => ({
+    id: f.id,
+    name: f.name,
+    createdTime: f.createdTime,
+    sizeBytes: f.size === undefined ? null : Number(f.size),
+  }));
+}
+
+/** Permanently remove a Drive file. Only ever called by the backup retention sweep on a
+ *  file the sweep itself created, in the backups folder — never on school content. */
+export async function deleteFromDrive(driveFileId: string): Promise<void> {
+  await driveFetch(`${DRIVE_FILES_URL}/${encodeURIComponent(driveFileId)}`, { method: "DELETE" });
+}
+
 export async function downloadFromDrive(driveFileId: string): Promise<Buffer> {
   const res = await driveFetch(
     `${DRIVE_FILES_URL}/${encodeURIComponent(driveFileId)}?alt=media`,
