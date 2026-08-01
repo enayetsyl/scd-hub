@@ -645,6 +645,102 @@ export async function sweepSectionMonth(
   };
 }
 
+// ---------------------------------------------------------------------------
+// The Principal's class roll-up (MR-7, prd §3)
+// ---------------------------------------------------------------------------
+
+export interface ClassRollup {
+  sectionId: string;
+  periodKey: string;
+  students: number;
+  released: number;
+  awaitingReview: number;
+  provisional: number;
+  /** Cohort means over the children who HAVE a figure — never a fabricated zero. */
+  avgAttendancePct: number | null;
+  avgHomeworkSubmissionPct: number | null;
+  avgClassTestPct: number | null;
+  /** How many children tripped each absolute flag — where the Principal looks first. */
+  flagCounts: Array<{ flag: string; students: number }>;
+  /** Children whose attendance trend is DOWN this month. */
+  attendanceDeclining: number;
+}
+
+/**
+ * PURE. Rolls the section's newest revisions up into one row.
+ *
+ * Reads the STORED snapshots rather than recomputing: the Principal's view must be
+ * the same arithmetic the families were sent, and a second computation path is how
+ * the two start disagreeing.
+ */
+export function rollupOf(
+  sectionId: string,
+  periodKey: string,
+  reports: ReadonlyArray<{
+    status: string;
+    provisional: boolean;
+    reviewedAt?: Date | null;
+    snapshot: Record<string, unknown>;
+  }>,
+): ClassRollup {
+  const mean = (xs: number[]): number | null =>
+    xs.length === 0 ? null : Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10;
+
+  const att: number[] = [];
+  const hw: number[] = [];
+  const ct: number[] = [];
+  const flagAcc = new Map<string, number>();
+  let attendanceDeclining = 0;
+
+  for (const r of reports) {
+    const s = r.snapshot as unknown as MonthlySnapshot;
+    const m = s?.metrics;
+    if (m?.attendance?.rate != null) att.push(m.attendance.rate);
+    if (m?.homework?.submissionRate != null) hw.push(m.homework.submissionRate);
+    if (m?.classTest?.rate != null) ct.push(m.classTest.rate);
+    if (s?.trends?.attendance?.state === "DOWN") attendanceDeclining += 1;
+    for (const f of s?.flags ?? []) flagAcc.set(f.flag, (flagAcc.get(f.flag) ?? 0) + 1);
+  }
+
+  return {
+    sectionId,
+    periodKey,
+    students: reports.length,
+    released: reports.filter((r) => r.status === "RELEASED").length,
+    awaitingReview: reports.filter((r) => r.status !== "RELEASED" && !r.reviewedAt).length,
+    provisional: reports.filter((r) => r.provisional).length,
+    avgAttendancePct: mean(att),
+    avgHomeworkSubmissionPct: mean(hw),
+    avgClassTestPct: mean(ct),
+    flagCounts: [...flagAcc.entries()]
+      .map(([flag, students]) => ({ flag, students }))
+      .sort((a, b) => b.students - a.students || a.flag.localeCompare(b.flag)),
+    attendanceDeclining,
+  };
+}
+
+/** One row per section for a month — the newest revision of each child. */
+export async function monthlyClassRollup(sectionId: string, periodKey: string): Promise<ClassRollup> {
+  const rows = (await MonthlyReport.find({ sectionId: new Types.ObjectId(sectionId), periodKey })
+    .sort({ revision: -1 })
+    .select("studentId status provisional reviewedAt snapshot")
+    .lean()) as unknown as Array<{
+    studentId: Types.ObjectId;
+    status: string;
+    provisional: boolean;
+    reviewedAt?: Date | null;
+    snapshot: Record<string, unknown>;
+  }>;
+
+  // Newest revision per child — a superseded one is history, not a second student.
+  const newest = new Map<string, (typeof rows)[number]>();
+  for (const r of rows) {
+    const k = r.studentId.toString();
+    if (!newest.has(k)) newest.set(k, r);
+  }
+  return rollupOf(sectionId, periodKey, [...newest.values()]);
+}
+
 /** The period the nightly sweep should be working on: the month that has just ended. */
 export function sweepPeriodKeyFor(now: Date): string {
   const key = dateKeyOf(now).slice(0, 7);

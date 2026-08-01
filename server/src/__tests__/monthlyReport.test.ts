@@ -11,6 +11,7 @@ import {
   lockStateOf,
   releaseVerdictOf,
   reportedFigures,
+  rollupOf,
   sweepPeriodKeyFor,
   type MonthlySnapshot,
 } from "../modules/reports/services/MonthlyReportService";
@@ -179,5 +180,69 @@ describe("MR-3 D-#394/#397/#399 — who may release what", () => {
 
   test("a WINDOW_CLOSED month still releases — the window governs recompute, not release", () => {
     expect(releaseVerdictOf(reviewed, "WINDOW_CLOSED", false).allowed).toBe(true);
+  });
+});
+
+describe("MR-7 — the Principal's class roll-up", () => {
+  const rep = (p: {
+    status?: string;
+    provisional?: boolean;
+    reviewed?: boolean;
+    att?: number | null;
+    hw?: number | null;
+    ct?: number | null;
+    trend?: string;
+    flags?: string[];
+  }) => ({
+    status: p.status ?? "DRAFT",
+    provisional: p.provisional ?? false,
+    reviewedAt: p.reviewed ? new Date() : null,
+    snapshot: {
+      metrics: {
+        attendance: { rate: p.att === undefined ? 80 : p.att },
+        homework: { submissionRate: p.hw === undefined ? 90 : p.hw },
+        classTest: { rate: p.ct === undefined ? 70 : p.ct },
+      },
+      trends: { attendance: { state: p.trend ?? "STEADY" } },
+      flags: (p.flags ?? []).map((flag) => ({ flag, value: 3, threshold: 3 })),
+    } as unknown as Record<string, unknown>,
+  });
+
+  test("counts what the office has to act on", () => {
+    const r = rollupOf("sec", "2026-07", [
+      rep({ status: "RELEASED", reviewed: true }),
+      rep({ status: "READY", reviewed: true }),
+      rep({ status: "DRAFT" }),
+      rep({ status: "DRAFT", provisional: true }),
+    ]);
+    expect(r).toMatchObject({ students: 4, released: 1, awaitingReview: 2, provisional: 1 });
+  });
+
+  test("averages skip children with no figure rather than counting them as zero", () => {
+    const r = rollupOf("sec", "2026-07", [rep({ att: 90 }), rep({ att: 70 }), rep({ att: null })]);
+    expect(r.avgAttendancePct).toBe(80);
+  });
+
+  test("flags are tallied per child, most common first", () => {
+    const r = rollupOf("sec", "2026-07", [
+      rep({ flags: ["ABSENT_STREAK", "SERIOUS_MATTER"] }),
+      rep({ flags: ["ABSENT_STREAK"] }),
+      rep({}),
+    ]);
+    expect(r.flagCounts).toEqual([
+      { flag: "ABSENT_STREAK", students: 2 },
+      { flag: "SERIOUS_MATTER", students: 1 },
+    ]);
+  });
+
+  test("declining attendance is counted, because that is what the Principal looks for", () => {
+    const r = rollupOf("sec", "2026-07", [rep({ trend: "DOWN" }), rep({ trend: "DOWN" }), rep({ trend: "UP" })]);
+    expect(r.attendanceDeclining).toBe(2);
+  });
+
+  test("an empty section yields nulls, not zeroes", () => {
+    expect(rollupOf("sec", "2026-07", [])).toMatchObject({
+      students: 0, avgAttendancePct: null, avgHomeworkSubmissionPct: null, flagCounts: [],
+    });
   });
 });

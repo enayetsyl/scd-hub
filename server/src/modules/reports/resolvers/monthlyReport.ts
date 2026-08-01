@@ -29,6 +29,7 @@ import {
   assertGuardianOfStudent,
 } from "../../../middleware/authz";
 import { assertReportRead } from "../../trackers/resolvers/classTestSummary";
+import { Section } from "../../foundation/models/Section";
 import { MonthlyReport, type IMonthlyReport } from "../models/MonthlyReport";
 import {
   bulkReleaseMonthlyReports,
@@ -40,6 +41,8 @@ import {
   reviewMonthlyReport,
   revokeMonthlyReport,
   revokeReleaseBatch,
+  monthlyClassRollup,
+  type ClassRollup,
 } from "../services/MonthlyReportService";
 import {
   readMonthlyReportConfig,
@@ -297,6 +300,50 @@ builder.queryField("monthlyReport", (t) =>
       if (!report) throw new ForbiddenError("রিপোর্ট পাওয়া যায়নি");
       const { subjects, isTeacher } = await assertStaffReportRead(ctx, report);
       return viewOf(report, subjects, isTeacher, (ctx.auth?.role as Role) === "PRINCIPAL");
+    },
+  }),
+);
+
+const RollupRef = builder.objectRef<ClassRollup>("MonthlyClassRollup").implement({
+  description:
+    "One section's month in a line: how many are released, how many still need a comment reviewed, " +
+    "how many are held back by incomplete data, and where the flags are. Rolled up from the STORED " +
+    "revisions — the same arithmetic the families were sent, never a second computation.",
+  fields: (t) => ({
+    sectionId: t.exposeString("sectionId"),
+    periodKey: t.exposeString("periodKey"),
+    students: t.exposeInt("students"),
+    released: t.exposeInt("released"),
+    awaitingReview: t.exposeInt("awaitingReview"),
+    provisional: t.exposeInt("provisional"),
+    avgAttendancePct: t.float({ nullable: true, resolve: (r) => r.avgAttendancePct }),
+    avgHomeworkSubmissionPct: t.float({ nullable: true, resolve: (r) => r.avgHomeworkSubmissionPct }),
+    avgClassTestPct: t.float({ nullable: true, resolve: (r) => r.avgClassTestPct }),
+    attendanceDeclining: t.exposeInt("attendanceDeclining"),
+    flagCounts: t.stringList({ resolve: (r) => r.flagCounts.map((f) => `${f.flag}:${f.students}`) }),
+  }),
+});
+
+builder.queryField("monthlyClassRollups", (t) =>
+  t.field({
+    type: [RollupRef],
+    description:
+      "The Principal/Office view: every section's month at once, so a struggling class or an " +
+      "unreviewed pile is visible without opening each console in turn.",
+    authScopes: { authenticated: true },
+    args: { periodKey: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      // Whole-school by definition, so it rides the release gate rather than a
+      // per-section read: a teacher has no business with other classes' totals.
+      assertRelease(ctx);
+      const sections = (await Section.find({ active: { $ne: false } })
+        .select("_id")
+        .lean()) as unknown as Array<{ _id: { toString(): string } }>;
+      const out: ClassRollup[] = [];
+      for (const s of sections) out.push(await monthlyClassRollup(s._id.toString(), args.periodKey));
+      // A section with no reports built yet is dropped — an empty row reads as
+      // "this class had no month", which is a different and false claim.
+      return out.filter((r) => r.students > 0);
     },
   }),
 );
