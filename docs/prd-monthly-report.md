@@ -358,6 +358,71 @@ one-line change.
 Delivery: in-app to the guardian, the wa.me + notification rails from `CommentDeliveryService`, and paper
 through the existing `PrintRequest` queue (D-#281) — no new print path.
 
+## 8b. The Desktop round trip (MR-8, D-#414)
+
+A second lane to the same field. The in-app model (MR-4) writes `commentDraft`; so does
+this. Nothing downstream knows the difference, and neither lane can release anything on
+its own.
+
+**Why it exists.** The free tier rate-limits mid-class, the paragraph it writes is
+serviceable rather than good, and the school already authors its curriculum this way
+(`docs/import-workflow.md`). This is that workflow pointed at comments.
+
+### 8b.1 Export — Markdown, de-identified
+
+`GET /export/monthly-comments?sectionId=&periodKey=` (or `?all=1` for the school,
+D-#414) streams a `.md` file: the instruction block first — the SAME rules as the MR-4
+prompt, kept in one place so the two lanes cannot drift — then one fenced block per
+child.
+
+**No name, no roll, no phone leaves the building.** Each block is keyed by
+`reportId` and carries the same whitelisted facts `commentFactsOf` builds, because a
+file that goes into a chat window is a wider exposure than an API call, not a narrower
+one. The reviewer sees ids in Desktop and names in the console; the app re-attaches
+them on the way back.
+
+Every block also carries `revision` and `figuresHash` — see §8b.4.
+
+### 8b.2 Return — JSON, not prose
+
+```json
+{ "periodKey": "2026-07", "sectionId": "…", "comments": [ { "reportId": "…", "text": "…" } ] }
+```
+
+Markdown back would mean parsing prose, and the first stray heading breaks it. The
+envelope is validated on arrival: unknown `reportId`, wrong `periodKey`/`sectionId`,
+duplicate ids and missing text are all refusals that NAME the row, never silent drops.
+
+### 8b.3 The guards run again, in full
+
+An uploaded comment is unverified text. That a person pasted it does not make its
+numbers real, so on import each one faces exactly what a generated draft faces:
+
+- `validateNumerals` against **that report's own facts**;
+- `looksLikeProse` (length, no JSON debris, ends on a danda);
+- the report must be writable — a `RELEASED` or `SUPERSEDED` revision is refused,
+  because a released document is immutable (D-#393).
+
+A row that fails is reported with its reason and its `reportId`; the rest still import.
+
+### 8b.4 Bound to the revision
+
+The export stamps `revision` and `figuresHash` (a hash of `reportedFigures`). On
+import, a report whose figures have moved since the export is **refused**: a mark that
+landed in between means the comment describes numbers nobody will ever see. Without
+this the feature quietly reintroduces the drift the freeze rule exists to prevent.
+
+The remedy is stated in the refusal: rebuild, re-export, redo those rows.
+
+### 8b.5 It is still a draft
+
+An imported comment lands as `commentDraft` with `source: "IMPORT"`, and a person
+still presses accept in the app (owner ruling, D-#414). One rule holds for both lanes:
+**nothing is released that a person has not accepted in the app.** Treating the upload
+itself as the review would mean the release gate could be satisfied by a file.
+
+Bulk-accept for a section exists so this is one press, not twenty-one.
+
 ## 9. Notification
 
 On **release**: a notification + wa.me line saying the month's report is available.
@@ -376,6 +441,7 @@ No notification on draft, recompute, or revocation of an unreleased revision.
 | **MR-5** | Staff UI: per-class console, coverage chips, comment review, release / bulk release / revoke | app typecheck + expo export + **live drive** |
 | **MR-6** | Guardian read (released revisions only) + release/re-release notifications | jest RBAC + live drive |
 | **MR-7** | PDF + print queue + the Principal's class-level roll-up | rendered sheet eyeballed |
+| **MR-8** | The Desktop round trip: de-identified Markdown export (section or whole school), validated JSON import, same guards, revision-bound | jest — a moved figure is refused; an invented numeral is refused; a released revision is refused |
 
 MR-1..MR-4 are server-only and land without any UI. MR-5 is the first slice a person can see.
 
@@ -414,3 +480,4 @@ D-#402 scope + relationship to the exam report card.
 3. Should a guardian see the class average at all for Nursery, where the cohort is tiny?
 4. Fee **dues** — worth a fee-schedule model as its own feature later? (Owner: "we will do it later.")
 5. Should the class-level roll-up (MR-7) also go to the class teacher, or Principal only?
+6. MR-8: should a whole-school export split into one file per section inside a zip, or one long file? (Starting with one file per request; `?all=1` concatenates.)
