@@ -241,6 +241,7 @@ import AssignmentLoadReportScreen from "../screens/reports/AssignmentLoadReportS
 import ClassTestReportScreen from "../screens/reports/ClassTestReportScreen";
 import MonthlyReportConsoleScreen from "../screens/reports/MonthlyReportConsoleScreen";
 import MonthlyReportDetailScreen from "../screens/reports/MonthlyReportDetailScreen";
+import MonthlyPendingWorkScreen from "../screens/reports/MonthlyPendingWorkScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
@@ -983,6 +984,7 @@ function ReportsNavigator(): React.ReactElement {
           params are required must never sit in the stack's initial slot. */}
       <ReportsStack.Screen name="MonthlyReportConsole" component={MonthlyReportConsoleScreen} options={{ title: STR.mrConsoleTitle }} />
       <ReportsStack.Screen name="MonthlyReportDetail" component={MonthlyReportDetailScreen} options={{ title: STR.mrConsoleTitle }} />
+      <ReportsStack.Screen name="MonthlyPendingWork" component={MonthlyPendingWorkScreen} options={{ title: STR.mpTitle }} />
     </ReportsStack.Navigator>
   );
 }
