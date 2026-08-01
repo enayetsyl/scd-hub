@@ -211,8 +211,12 @@ export default function MonthlyReportDetailScreen(): React.ReactElement {
             <>
               <Card>
                 <Body style={{ fontWeight: "700" }}>
-                  {bnNum(report.periodKey)} — {STR.mrRevision} {bnNum(report.revision)}
+                  {report.studentName}
+                  {report.rollNumber ? ` (${bnNum(report.rollNumber)})` : ""}
                 </Body>
+                <Muted>
+                  {bnNum(report.periodKey)} — {STR.mrRevision} {bnNum(report.revision)}
+                </Muted>
                 <Muted>
                   {report.status}
                   {report.provisional ? ` · ${STR.mrProvisional}` : ""}
@@ -246,7 +250,12 @@ export default function MonthlyReportDetailScreen(): React.ReactElement {
               {report.fullView ? (
                 <Card>
                   <Body style={{ fontWeight: "700" }}>{STR.mrComment}</Body>
-                  {report.commentIsFallback ? <Muted style={{ color: colors.warning }}>{STR.mrCommentFallback}</Muted> : null}
+                  {report.commentIsFallback ? (
+                    <Muted style={{ color: colors.warning }}>
+                      {STR.mrCommentFallback}
+                      {report.commentFallbackReason ? `: ${report.commentFallbackReason}` : ""}
+                    </Muted>
+                  ) : null}
                   {report.commentModel ? <Muted>{report.commentModel}</Muted> : null}
                   <Field value={body} onChangeText={setText} multiline />
                   <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>

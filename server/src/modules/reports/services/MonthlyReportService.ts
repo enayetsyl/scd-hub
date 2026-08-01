@@ -413,6 +413,7 @@ export async function draftMonthlyComment(
     promptHash: draft.promptHash,
     generatedAt: draft.generatedAt,
     fallback: draft.fallback,
+    fallbackReason: draft.fallbackReason,
   };
   report.reviewedAt = null;
   report.reviewedByUserId = null;

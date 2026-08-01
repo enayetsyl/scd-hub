@@ -40,6 +40,9 @@ export interface ICommentDraft {
   generatedAt: Date;
   /** True when the template fallback wrote it instead of the model. */
   fallback: boolean;
+  /** WHY it fell back — surfaced to the reviewer, so a misconfigured model id is
+   *  visible in the app rather than only in a server log. */
+  fallbackReason?: string | null;
 }
 
 export interface IMonthlyReport extends Document {
@@ -106,6 +109,7 @@ const CommentDraftSchema = new Schema<ICommentDraft>(
     promptHash: { type: String, required: true },
     generatedAt: { type: Date, required: true },
     fallback: { type: Boolean, required: true, default: false },
+    fallbackReason: { type: String, default: null },
   },
   { _id: false },
 );
