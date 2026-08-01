@@ -17,7 +17,8 @@
 - **Anchor:** a session = a `RoutineSlot` + date → teacher, subject, period, and the **Section** (general/Islam) or **SubjectGroup** (Arabic groups; Quran groups Qaida/Ammapara/Najera/Hifz, D-#56/#48).
 - **Plane:** identity/operational **staff** data; **no corpus/student path** — ADR-005 firewall unaffected.
 - **Contract surface:** app-native `/shared/vocab.ts` additions only — **no wire twin, no two-/three-place sync** (D-#46/#52). Vocab verifier stays green.
-- **Build order:** **CO-1** REF-11 form core + pipeline + roles → **CO-2** footage upload → **CO-3** release + teacher response + notify/escalate (in-app) → **CO-4** trend → **CO-5** Quran (ClassEcho) form → **CO-6** review scheduler → **CO-7** reviewer effectiveness → **CO-8** publish gate (D-#271) → **CO-9** parallel multi-reviewer co-review + compare (D-#272) → **CO-10** prior-focus carry-forward on the review form (D-#363) → **CO-11** the observer's own review history (D-#363).
+- **Build order:** **CO-1** REF-11 form core + pipeline + roles → **CO-2** footage upload → **CO-3** release + teacher response + notify/escalate (in-app) → **CO-4** trend → **CO-5** Quran (ClassEcho) form → **CO-6** review scheduler → **CO-7** reviewer effectiveness → **CO-8** publish gate (D-#271) → **CO-9** parallel multi-reviewer co-review + compare (D-#272) → **CO-10** prior-focus carry-forward on the review form (D-#363) → **CO-11** the observer's own review history (D-#363) → **CO-12** withhold (D-#369) → **CO-13** AI review analysis (D-#426/#427) → **CO-14** AI review rota from a written instruction (D-#426/#427).
+- **The AI pair (CO-13/CO-14) share one rule:** the model **chooses and narrates; it never computes.** Every number, date, period and clock time is produced server-side and handed to it; its output is validated against that same server-built set before anything is shown. See D-#426.
 
 ---
 
@@ -35,6 +36,8 @@ One consistent, growth-framed way to review teaching across the school: REF-11 f
 | Two-way feedback | None. | Observer comment → teacher response, with reminders (CO-3). |
 | Cadence | None. | Tiered scheduler suggests who's due (CO-6). |
 | Observer quality | None. | Calibration + timeliness + throughput + impact + fairness (CO-7). |
+| Reading the reviews | A Principal reads 34+ free-text reviews by hand to see who needs help. | A ranked, narrated per-teacher read, computed server-side and worded by the model (CO-13). |
+| Planning the next month | The CO-6 due list says *who*; turning that into dated sessions is manual against a routine that changes often. | A written instruction ("Zarir every other day, rotate his 3 classes…") → a validated dated rota (CO-14). |
 
 ## §3 — Reused / unchanged (do not rebuild)
 
@@ -166,6 +169,66 @@ Ordered `classDate desc, reviewedAt desc`. Served off the existing `{ teacherId:
 - [ ] `publishClassroomObservation` refuses a withheld row; lifting the hold clears all three fields, audits `priorReason`, and does NOT publish.
 - [ ] The Withheld filter chip returns exactly the held rows; the Pending chip excludes them. Server tsc + tests green.
 
+### CO-13 — AI review analysis: a ranked, narrated read of who needs help (D-#426/#427)
+
+**The problem this fixes.** CO-4 plots a trend and CO-6 says who is *due*; neither says **who is struggling and why**. That answer lives in the free text — 5 domain notes per review, plus strengths, growth focus, breach notes and the teacher's reply — and reading it is a manual sitting. Measured on live data 2026-08-01: 46 observations, 34 reviewed, and the signal that matters (one teacher with 3 gate breaches; a school-wide D4 assessment gap in 15 of 34 reviews) is invisible without reading all of it.
+
+**Split of labour — the rule that makes this safe.** The **server ranks; the model narrates.** Nothing about the ordering is delegated:
+- `observationAnalysisFacts(from, to)` (PURE, testable) computes per teacher: review count, per-domain mean, overall domain mean, gate-breach count, first/last review date, direction of travel across reviews, `priorFocusProgress` distribution, fairness/usefulness means, and the CO-6 `SUPPORT_TIERS` tier — **reusing `supportTierOf`, not a second definition**.
+- **The rank is a stated rule, not a model opinion:** any teacher with a gate BREACH in the window sorts first (REF-11 §2.1 — a breach stands on its own regardless of levels), then ascending overall domain mean. A teacher with `reviewCount < 2` is ranked but carries a **`lowConfidence`** flag; one review is not a record.
+- The model receives the facts + the free text and returns **one narrative per teacher plus an optional `rankNote`** where it disagrees with the computed order. The note is shown to the Principal; **it never reorders anybody.** An LLM quietly re-sorting named staff is precisely the failure this split exists to prevent.
+
+**Guards (D-#399 lineage, enforced here not trusted to the prompt).** `validateNumerals` (reused from MR-4) rejects any numeral in a narrative that is not in that teacher's own facts, retry once. Teacher identity is **de-identified outbound** — the model sees `T1…Tn`, names are spliced in locally at render, so no staff name leaves the building. Free text is sent **unmodified, including student names** — the narrow, deliberate exception recorded in **D-#427**; read that row before changing this line. Every generation stores model id, `promptVersion` and `promptHash`.
+
+**Never stored (owner ruling).** `observationAnalysis(from, to)` is derived at read time and persisted nowhere — the D-#85 discipline CO-6 already follows. A saved league table of named staff becomes an HR record that outlives its accuracy and gets cited months later against a teacher who has since improved. **Visibility is `observation:manage` (Principal/Office) only**, consistent with CO-7's "not a public scoreboard"; a teacher has no path to a peer's rank.
+
+**Never blocks.** Two API failures (or two validator failures) fall back to the **computed ranking with rule-based reason chips** off the facts — "3 breaches", "D4 mean 1.4", "trend down". The Principal still gets the ranking; only the prose is missing, and the UI says so.
+
+**Labelled.** The narrative is marked AI-drafted in the UI. It is advisory input to a human judgement, never an appraisal output (§7 already bars that use, and D-#28 reserves appraisal outcomes to the Principal).
+
+**Acceptance:**
+- [ ] `observationAnalysisFacts` is pure and unit-tested; every number in the UI traces to it, none to the model.
+- [ ] Ordering is breach-first then ascending domain mean, and is identical with the provider disabled.
+- [ ] A narrative containing a numeral absent from that teacher's facts is rejected, retried once, then falls back to chips.
+- [ ] The outbound prompt contains no staff name (a test asserts the token set); names appear only after local render.
+- [ ] `rankNote` renders as a note and provably does not affect order (a test asserts order is unchanged by its content).
+- [ ] Nothing is written to any collection; a caller without `observation:manage` is refused.
+- [ ] With `GEMINI_API_KEY` unset the whole screen still renders from facts alone. Server tsc + tests green.
+
+### CO-14 — AI review rota from a written instruction (D-#426/#427)
+
+**The problem this fixes.** The reviewer can take about one video a school day, and the Principal's real instruction is prose: *"Zarir every other day rotating his 3 classes, then the others one by rotation, skip Jerin (on leave), Hamida at most twice and only in the first half, classes 1–5, no Nursery/KG."* Turning that into dated sessions means knowing which weekdays are school days, which of a teacher's classes exist on each weekday, the period number and the clock time — and **the routine changes often**, so a table typed once is wrong within weeks.
+
+**The model picks from a menu it did not build.** The server expands the routine into concrete dated candidates *first*:
+- **School days** are derived — the distinct `dayOfWeek` on active non-break `RoutineSlot`s (SUN–THU today), never hardcoded — minus `HolidayException`.
+- **Eligibility:** `classLevel ∈ [1..5]` (Nursery −1 / KG 0 excluded), `isBreak: false`, `active: true`, teacher active and not excluded.
+- **Clock time is computed, never guessed:** `ScheduleWindow.dayStartMinutes` + the cumulative `PeriodGrid` durations for the audience serving that class level (`class_1_5` → P5 = 09:40–10:15 at a 07:00 start).
+- Each candidate carries a stable id and its teacher's CO-6 tier + `lastReviewedAt`.
+
+The model gets the **instruction verbatim** plus that candidate set, and returns `{date, candidateId, reason}` per school day through `responseSchema` constrained decoding. **It never emits a period, a time or a class** — only an id that already exists. A hallucinated slot is therefore not a validation failure to catch; it is unrepresentable.
+
+**The constraint echo — how you see whether it understood you.** Alongside the schedule the model returns a **structured restatement of the instruction it acted on** (`{intensive:[{teacher, everyNDays, rotateClasses}], excluded:[…], caps:[{teacher, max, window}], levels, perDay}`). Two jobs: the validator checks the schedule against **the echo**, and the Principal reads the echo to confirm it matches what they meant. "Did it understand me?" becomes something displayed rather than assumed.
+
+**Validation (the core of this slice).** Every returned id exists and its date matches; exactly one per school day, none missing, none doubled; every row is levels 1–5; no excluded teacher appears; every cap in the echo holds; the intensive teacher's spacing matches `everyNDays`; and where `rotateClasses` is set, that teacher's classes differ by at most one in count. On violation: **one retry with the violations named**, then **refuse and show them**. There is deliberately **no fallback table** — unlike a monthly comment, a plausible-looking wrong rota is worse than no rota, because nobody can tell by looking.
+
+**Display only (owner ruling).** Accepting a rota does **not** create `ClassroomObservation` rows. CO-6's guardrail — the system suggests, humans assign — is unchanged, and a model-influenced list must not write into the observation pipeline unattended.
+
+**Stored, and re-checked against a moving routine.** `ObservationRota { periodFrom, periodTo, instruction, constraintEcho, rows:[{date, candidateId, teacherId, sectionId|subjectGroupId, subject, periodNumber, startHHmm, endHHmm, reason}], model, promptVersion, promptHash, createdBy }`. On every later read each row is **re-resolved against the live routine** and flagged `slotChanged` when its slot no longer exists — so a rota degrades visibly instead of quietly showing a period that moved. Regenerating is one call, because the instruction was stored, not just its output.
+
+**Relationship to CO-6.** CO-14 **consumes** the tier + `lastReviewedAt` signal and does not replace the due list. Two schedulers disagreeing about who is overdue is the obvious way to get this wrong.
+
+**Additive.** No new vocab, no new state, no new permission (`observation:manage`), no wire twin — the verifier is untouched.
+
+**Acceptance:**
+- [ ] The candidate expander is pure and unit-tested: school days derived from the routine, holidays removed, levels −1/0 excluded, clock times computed from `dayStartMinutes` + grid durations.
+- [ ] A returned id that is absent from the candidate set, or whose date disagrees, is rejected.
+- [ ] Missing day, doubled day, excluded teacher, and a breached cap are each caught and named.
+- [ ] The intensive teacher lands on every Nth school day and their classes are balanced within one.
+- [ ] Two failures produce a refusal listing the violations — never a partial or unvalidated table.
+- [ ] Accepting a rota writes `ObservationRota` and creates **no** observation rows.
+- [ ] A stored rota whose underlying slot has since moved renders `slotChanged` rather than a stale period.
+- [ ] The constraint echo is rendered to the user beside the table. Server tsc + tests green.
+
 ## §6 — Given/When/Then journeys
 
 1. **Upload & assign.** *Given* a recorded session, *when* Office uploads it and assigns a senior teacher (not the class's own teacher), *then* it is ASSIGNED and audited.
@@ -178,11 +241,13 @@ Ordered `classDate desc, reviewedAt desc`. Served off the existing `{ teacherId:
 8. **Carry-forward (CO-10).** *Given* a teacher observed before, *when* their next observation is opened for review, *then* the prior growth focus is quoted on the form and the observer answers the progress question from the screen, not from memory.
 9. **Review history (CO-11).** *Given* an observer who has completed reviews, *when* they open "আমার পর্যালোচনা", *then* they can filter their own past reviews by class, subject, teacher and date and re-open the session footage.
 10. **Withhold (CO-12).** *Given* a REVIEWED observation the Principal has decided not to release, *when* they withhold it with a reason, *then* it leaves the awaiting-publish badge and the Today tile, stays visible to them and the observer under the Withheld filter, the teacher is neither notified nor able to read it — and lifting the hold later puts it back in the queue without publishing it.
+11. **Analysis (CO-13).** *Given* a term of completed reviews, *when* the Principal opens the analysis, *then* teachers are ordered breach-first then weakest-mean-first with a narrative reason each, low-confidence single-review teachers are marked as such, and with the AI provider unavailable the same order still renders with rule-based chips.
+12. **Rota (CO-14).** *Given* a written instruction and a month, *when* the Principal generates a rota, *then* the app shows one dated session per school day with class, subject, period and clock time drawn from the live routine, alongside a restatement of the constraints it applied — and if the model breaks one of them, the Principal sees the violation, not a table.
 
 ## §7 — Out of scope
 
-Appraisal / pay / discipline (REF-11 §1.3; HR / School Handbook) — and this data is **not** to be repurposed as appraisal without the Principal (cf. D-#28). Device **push** transport (deferred pipeline, D-#52 — in-app only now). Guardian visibility (none; staff-internal). Cadence *enforcement* (the scheduler suggests; humans assign). Peer/self review as a formal record (practice only, REF-11 §1.4). REF-11 rubric governance (curriculum Project; adopted by ADR).
+Appraisal / pay / discipline (REF-11 §1.3; HR / School Handbook) — and this data is **not** to be repurposed as appraisal without the Principal (cf. D-#28); the CO-13 ranking is advisory input to that judgement, never its output. **Auto-assignment from a generated rota** (CO-14 displays; humans assign — CO-6's guardrail). **A stored ranking history** (CO-13 is read-time only, owner ruling). **Model-chosen ordering of staff** (the rank is a stated rule; the model narrates it). Device **push** transport (deferred pipeline, D-#52 — in-app only now). Guardian visibility (none; staff-internal). Cadence *enforcement* (the scheduler suggests; humans assign). Peer/self review as a formal record (practice only, REF-11 §1.4). REF-11 rubric governance (curriculum Project; adopted by ADR).
 
 ## §8 — Traceability
 
-REF-11 v1.1 (D-PROJ00-054/-065) · REF-18 §4 (Bloom, D2) · D-#17 (supervisory overlay) · D-#28 (observation input / appraisal-outcome reserved to Principal) · D-#36 (HW_SUBJECTS, Quran excluded from HW) · D-#46/#52 (app-native vocab, no wire twin; deferred push) · D-#48/#56 (SubjectGroup; Quran/Arabic groups; Deen→Islam) · D-#54 (ROUTINE_SUBJECTS incl. QURAN) · ADR-005 (firewall) · ADR-008 (audit). New: **D-#146–#152**; **D-#271** (CO-8 publish gate) · **D-#272** (CO-9 co-review) · **D-#324** (published filter) · **D-#363** (CO-10 carry-forward + CO-11 review history) · **D-#369** (CO-12 withhold flag). Vocab: `OBSERVATION_FORMS/DOMAINS/LEVELS/GATES/GATE_RESULTS/STATES`, `QURAN_REVIEW_CRITERIA`, `QURAN_COMPLIANCE_ITEMS`, `GROWTH_PROGRESS`, `SUPPORT_TIERS`, `observation:{upload,review,read,manage}`; reuses `RoutineSlot`, `SubjectGroup`, `Section`, `HW_SUBJECTS`, `ROUTINE_SUBJECTS`.
+REF-11 v1.1 (D-PROJ00-054/-065) · REF-18 §4 (Bloom, D2) · D-#17 (supervisory overlay) · D-#28 (observation input / appraisal-outcome reserved to Principal) · D-#36 (HW_SUBJECTS, Quran excluded from HW) · D-#46/#52 (app-native vocab, no wire twin; deferred push) · D-#48/#56 (SubjectGroup; Quran/Arabic groups; Deen→Islam) · D-#54 (ROUTINE_SUBJECTS incl. QURAN) · ADR-005 (firewall) · ADR-008 (audit). New: **D-#146–#152**; **D-#271** (CO-8 publish gate) · **D-#272** (CO-9 co-review) · **D-#324** (published filter) · **D-#363** (CO-10 carry-forward + CO-11 review history) · **D-#369** (CO-12 withhold flag) · **D-#426** (CO-13/CO-14: the model chooses and narrates, never computes) · **D-#427** (observation free text goes outbound unmodified — the student-name carve-out from D-#399(a)). Reuses the MR-4 AI seam: `CommentProvider` / `GeminiCommentProvider` / `validateNumerals` / `promptHashOf` (`server/src/modules/reports/services/MonthlyCommentService.ts`, D-#399), `GEMINI_API_KEY`; and CO-6's `supportTierOf`. Vocab: `OBSERVATION_FORMS/DOMAINS/LEVELS/GATES/GATE_RESULTS/STATES`, `QURAN_REVIEW_CRITERIA`, `QURAN_COMPLIANCE_ITEMS`, `GROWTH_PROGRESS`, `SUPPORT_TIERS`, `observation:{upload,review,read,manage}`; reuses `RoutineSlot`, `SubjectGroup`, `Section`, `HW_SUBJECTS`, `ROUTINE_SUBJECTS`.
