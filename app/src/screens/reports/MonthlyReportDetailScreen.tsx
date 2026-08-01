@@ -181,8 +181,8 @@ export default function MonthlyReportDetailScreen(): React.ReactElement {
   const { reportId } = route.params;
 
   const [q, refetch] = useQuery({ query: MONTHLY_REPORT_QUERY, variables: { reportId } });
-  const [, draft] = useMutation(DRAFT_MONTHLY_COMMENT_MUTATION);
-  const [, review] = useMutation(REVIEW_MONTHLY_COMMENT_MUTATION);
+  const [draftState, draft] = useMutation(DRAFT_MONTHLY_COMMENT_MUTATION);
+  const [reviewState, review] = useMutation(REVIEW_MONTHLY_COMMENT_MUTATION);
   const [, release] = useMutation(RELEASE_MONTHLY_REPORT_MUTATION);
   const [, revoke] = useMutation(REVOKE_MONTHLY_REPORT_MUTATION);
 
@@ -262,12 +262,18 @@ export default function MonthlyReportDetailScreen(): React.ReactElement {
                     <Button
                       title={STR.mrGenerate}
                       variant="secondary"
+                      // The model takes several seconds — without this the button looks
+                      // dead and gets pressed again, queueing a second generation.
+                      loading={draftState.fetching}
+                      disabled={draftState.fetching}
                       onPress={async () => {
                         await after(await draft({ reportId }));
                       }}
                     />
                     <Button
                       title={STR.mrAccept}
+                      loading={reviewState.fetching}
+                      disabled={reviewState.fetching || draftState.fetching}
                       onPress={async () => {
                         if (!body.trim()) return;
                         await after(await review({ reportId, text: body }));

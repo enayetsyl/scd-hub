@@ -206,6 +206,22 @@ export const DRAFT_MONTHLY_COMMENT_MUTATION = gql<
   }
 `;
 
+export interface DraftOutcomeT {
+  reportId: string;
+  drafted: boolean;
+  fallback: boolean;
+  error: string | null;
+}
+
+export const DRAFT_MONTHLY_COMMENTS_MUTATION = gql<
+  { draftMonthlyReportComments: DraftOutcomeT[] },
+  { reportIds: string[] }
+>`
+  mutation DraftMonthlyReportComments($reportIds: [String!]!) {
+    draftMonthlyReportComments(reportIds: $reportIds) { reportId drafted fallback error }
+  }
+`;
+
 export const REVIEW_MONTHLY_COMMENT_MUTATION = gql<
   { reviewMonthlyReportComment: MonthlyReportT },
   { reportId: string; text: string }
