@@ -151,6 +151,9 @@ export interface DriveQuota {
   usageBytes: number;
   /** Of `usageBytes`, the part that is Drive files (the rest is Gmail/Photos). */
   usageInDriveBytes: number | null;
+  /** Trashed files. Still counted against the quota until the bin is emptied, so this is
+   *  reclaimable space rather than space already gone (11.6 GB of it on the live account). */
+  usageInDriveTrashBytes: number | null;
   limitBytes: number | null;
 }
 
@@ -169,12 +172,19 @@ export async function driveQuota(): Promise<DriveQuota> {
   );
   if (!res.ok) throw new DriveUnavailableError(`Drive about.get failed: HTTP ${res.status}`);
   const json = (await res.json()) as {
-    storageQuota?: { limit?: string; usage?: string; usageInDrive?: string };
+    storageQuota?: {
+      limit?: string;
+      usage?: string;
+      usageInDrive?: string;
+      usageInDriveTrash?: string;
+    };
   };
   const q = json.storageQuota ?? {};
   return {
     usageBytes: Number(q.usage ?? 0),
     usageInDriveBytes: q.usageInDrive === undefined ? null : Number(q.usageInDrive),
+    usageInDriveTrashBytes:
+      q.usageInDriveTrash === undefined ? null : Number(q.usageInDriveTrash),
     limitBytes: q.limit === undefined ? null : Number(q.limit),
   };
 }
@@ -210,8 +220,41 @@ export interface DriveFileRef {
   sizeBytes: number | null;
 }
 
-/** Files in one year/subfolder, newest first (SH-7) — the backup retention sweep needs to
- *  see what is already there before it can drop the oldest. */
+/**
+ * Files in a folder found BY NAME anywhere in the account, newest first (SH-7, D-#425).
+ *
+ * The school's own backup cron writes to a top-level `SCD-Hub-Backups`, outside the
+ * `SCD-Hub-Files` tree this module otherwise owns — so the health panel has to look the
+ * folder up by name rather than construct a path. Read-only: this never creates the
+ * folder, because a missing folder is a finding (no backups) and silently conjuring an
+ * empty one would hide it.
+ */
+export async function listFolderByName(name: string): Promise<DriveFileRef[] | null> {
+  const q = encodeURIComponent(
+    `name = '${name.replace(/'/g, "\\'")}' and mimeType = '${FOLDER_MIME}' and trashed = false`,
+  );
+  const found = (await (
+    await driveFetch(`${DRIVE_FILES_URL}?q=${q}&fields=files(id)&pageSize=1`, { method: "GET" })
+  ).json()) as { files: Array<{ id: string }> };
+  const folderId = found.files?.[0]?.id;
+  if (!folderId) return null;
+
+  const childQ = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+  const list = (await (
+    await driveFetch(
+      `${DRIVE_FILES_URL}?q=${childQ}&fields=files(id,name,createdTime,size)&orderBy=createdTime desc&pageSize=100`,
+      { method: "GET" },
+    )
+  ).json()) as { files: Array<{ id: string; name: string; createdTime: string; size?: string }> };
+  return (list.files ?? []).map((f) => ({
+    id: f.id,
+    name: f.name,
+    createdTime: f.createdTime,
+    sizeBytes: f.size === undefined ? null : Number(f.size),
+  }));
+}
+
+/** Files in one year/subfolder, newest first. */
 export async function listDriveFolder(year: string, subfolder: string): Promise<DriveFileRef[]> {
   const folderId = await ensureYearSubfolder(year, subfolder);
   const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);

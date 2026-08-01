@@ -1,186 +1,124 @@
 /**
- * BackupService (SH-7, D-#416) — a restore point for a database that has none.
+ * BackupService (SH-7, D-#425 superseding D-#416's version) — WATCHES the school's
+ * existing backups rather than taking its own.
  *
- * Atlas M0 provides **no automated backups**. Until now a dropped collection or a bad
- * migration had no way back, and nothing in the app said so — which is the worst shape a
- * risk can take: invisible. This dumps the live database to the school's own Drive and
- * records the run so the panel can show its AGE.
+ * The first version of this file dumped the database to Drive on a weekly schedule,
+ * written on the belief that no restore point existed because Atlas M0 has no automated
+ * backups. True of Atlas, false of this school: `scripts/backup.sh` has run nightly from
+ * cron since 2026-06-30 (ADR-011/016), writing `mongodump --archive --gzip` to a
+ * top-level `SCD-Hub-Backups` folder. Running a second, competing job into a different
+ * folder on a different schedule would have been strictly worse than watching the real
+ * one — and the script was in this repo the whole time.
  *
- * Deliberate choices:
- *   - **No `mongodump`.** It may not exist on the VM and would add a provisioning step to
- *     something whose whole point is reliability. This reads through the existing driver
- *     and writes NDJSON — restorable with a short script, and inspectable by a human.
- *   - **Gzip streamed, not buffered.** The dump is written into a gzip stream collection
- *     by collection; only the compressed result is held whole (a few MB), not the ~100 MB
- *     of JSON. Node's default heap would not thank us for the alternative.
- *   - **OFF unless `BACKUP_ENABLED=1`.** A job that writes to Drive on a schedule should
- *     start when a person decides it starts, not the moment a deploy lands. The panel
- *     reports "not enabled" rather than pretending a restore point exists.
- *   - **A failed run is recorded.** A history of successes only is how a broken backup
- *     goes unnoticed.
+ * The folder LOOKS sparse before the last week (30 Jun, 12 Jul, 19 Jul, then daily) but
+ * nothing is missing: `scripts/drive-backup.mjs` rotates grandfather-father-son — every
+ * archive for 7 days, the newest of each of 4 weeks, the newest of each of 3 months. A
+ * monitor must not mistake that thinning for a failure, which is why the band is computed
+ * from the NEWEST archive's age alone and never from the spacing between files.
+ *
+ * Age is the point: a nightly job that starts failing is silent, and a backup nobody
+ * checks is one you find out about on the day you need it.
+ *
+ * READ-ONLY. It lists a folder and reports. It never writes, uploads, or deletes — the
+ * backups belong to the cron that makes them, and a monitor that could delete its subject
+ * is not a monitor.
  */
-import { createGzip } from "zlib";
-import mongoose from "mongoose";
-import { BackupRun, type IBackupRun } from "../models/BackupRun";
-import { uploadToDrive, listDriveFolder, deleteFromDrive } from "./DriveStore";
+import { listFolderByName, type DriveFileRef } from "./DriveStore";
 
-/** Backups older than this many runs are dropped from Drive. Four weekly runs ≈ a month
- *  of restore points, which is proportionate for a school's data at this size. */
-export const BACKUP_KEEP = 4;
+/** The folder the school's cron writes to; overridable if that ever moves. */
+export const BACKUP_FOLDER = process.env.BACKUP_FOLDER_NAME ?? "SCD-Hub-Backups";
 
-/** Refuse to dump more than this uncompressed. A runaway collection should surface as a
- *  loud skip, not as a VM quietly filling its memory. */
-export const BACKUP_MAX_RAW_BYTES = 512 * 1024 * 1024;
+/** The cron is daily, so one missed night is a warning and three days is a real failure —
+ *  tight enough to catch a broken job while the previous archives are still current. */
+export const BACKUP_WARN_DAYS = 2;
+export const BACKUP_CRITICAL_DAYS = 3;
 
-/** Documents read per batch — small enough to stay off the heap, large enough to be fast. */
-const BATCH = 500;
-
-export function backupEnabled(): boolean {
-  return process.env.BACKUP_ENABLED === "1";
-}
+export type BackupBand = "ok" | "warn" | "critical" | "unknown";
 
 export interface BackupStatus {
-  enabled: boolean;
-  lastRunAt: string | null;
-  lastOk: boolean | null;
-  lastSizeBytes: number | null;
-  lastError: string | null;
-  /** Whole days since the last SUCCESSFUL run; null when there has never been one. */
+  folder: string;
+  /** False when no such folder exists — reported as a finding, never auto-created. */
+  found: boolean;
+  count: number;
+  newestName: string | null;
+  newestAt: string | null;
+  newestSizeBytes: number | null;
+  /** Whole days since the newest archive. */
   ageDays: number | null;
+  /** Total size of everything kept, so unbounded growth is visible. */
+  totalSizeBytes: number;
+  band: BackupBand;
+  error: string | null;
+}
+
+export function backupBand(found: boolean, ageDays: number | null): BackupBand {
+  if (!found) return "critical"; // no folder = no restore point, which is the worst case
+  if (ageDays === null) return "critical"; // folder exists but is empty
+  if (ageDays >= BACKUP_CRITICAL_DAYS) return "critical";
+  if (ageDays >= BACKUP_WARN_DAYS) return "warn";
+  return "ok";
+}
+
+/** Whole days between two instants, floored — "yesterday's backup" reads as 1, not 0.9. */
+function daysBetween(from: Date, to: Date): number {
+  return Math.floor((to.getTime() - from.getTime()) / 86_400_000);
+}
+
+/** Drive is a network hop; the panel may be refreshed freely without re-listing. */
+let cache: { at: number; value: BackupStatus } | null = null;
+const TTL_MS = 5 * 60_000;
+
+export function resetBackupCache(): void {
+  cache = null;
 }
 
 export async function backupStatus(now = new Date()): Promise<BackupStatus> {
   const base: BackupStatus = {
-    enabled: backupEnabled(),
-    lastRunAt: null,
-    lastOk: null,
-    lastSizeBytes: null,
-    lastError: null,
+    folder: BACKUP_FOLDER,
+    found: false,
+    count: 0,
+    newestName: null,
+    newestAt: null,
+    newestSizeBytes: null,
     ageDays: null,
+    totalSizeBytes: 0,
+    band: "critical",
+    error: null,
   };
-  if (mongoose.connection.readyState !== 1) return base;
 
-  const last = (await BackupRun.findOne({}).sort({ startedAt: -1 }).lean()) as IBackupRun | null;
-  if (!last) return base;
-  // Age is measured from the last SUCCESS, not the last attempt: a job failing nightly
-  // must not look fresh.
-  const lastOkRun = last.ok
-    ? last
-    : ((await BackupRun.findOne({ ok: true }).sort({ startedAt: -1 }).lean()) as IBackupRun | null);
-  return {
-    enabled: backupEnabled(),
-    lastRunAt: last.startedAt.toISOString(),
-    lastOk: last.ok,
-    lastSizeBytes: last.sizeBytes ?? null,
-    lastError: last.error ?? null,
-    ageDays: lastOkRun
-      ? Math.floor((now.getTime() - lastOkRun.startedAt.getTime()) / 86_400_000)
-      : null,
-  };
-}
-
-/** Collect a gzip stream's output without ever holding the uncompressed text whole. */
-function gzipCollector(): { gz: ReturnType<typeof createGzip>; done: Promise<Buffer> } {
-  const gz = createGzip();
-  const chunks: Buffer[] = [];
-  const done = new Promise<Buffer>((resolve, reject) => {
-    gz.on("data", (c: Buffer) => chunks.push(c));
-    gz.on("end", () => resolve(Buffer.concat(chunks)));
-    gz.on("error", reject);
-  });
-  return { gz, done };
-}
-
-/** Backpressure-aware write: without awaiting `drain`, a fast reader outruns the
- *  compressor and the "streaming" dump quietly buffers in memory after all. */
-function write(gz: ReturnType<typeof createGzip>, text: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (gz.write(text)) return resolve();
-    gz.once("drain", resolve);
-    gz.once("error", reject);
-  });
-}
-
-/**
- * Dump every collection of the current database to Drive as one gzipped NDJSON file.
- * Each line is `{"__collection":"name"}` followed by that collection's documents, so a
- * restore is a single pass with no index file to keep in sync.
- */
-export async function runBackup(now = new Date()): Promise<IBackupRun> {
-  const run = await BackupRun.create({ startedAt: now, ok: false });
-
-  try {
-    if (!backupEnabled()) throw new Error("Backups are not enabled (set BACKUP_ENABLED=1)");
-    if (mongoose.connection.readyState !== 1) throw new Error("No database connection");
-    const conn = mongoose.connection;
-    if (!conn.db) throw new Error("No database handle");
-
-    const dbName = conn.db.databaseName;
-    const { gz, done } = gzipCollector();
-    let rawBytes = 0;
-    let docCount = 0;
-
-    const collections = await conn.db.listCollections().toArray();
-    for (const c of collections) {
-      if (c.type === "view") continue;
-      await write(gz, JSON.stringify({ __collection: c.name }) + "\n");
-      const cursor = conn.db.collection(c.name).find({}).batchSize(BATCH);
-      for await (const doc of cursor) {
-        const line = JSON.stringify(doc) + "\n";
-        rawBytes += Buffer.byteLength(line);
-        if (rawBytes > BACKUP_MAX_RAW_BYTES) {
-          gz.destroy();
-          throw new Error(
-            `Backup aborted: raw size passed ${Math.round(BACKUP_MAX_RAW_BYTES / 1024 ** 2)} MB`,
-          );
-        }
-        await write(gz, line);
-        docCount++;
-      }
-    }
-    gz.end();
-    const gzipped = await done;
-
-    const dateKey = now.toISOString().slice(0, 10);
-    const fileName = `scdhub-${dbName}-${dateKey}.ndjson.gz`;
-    const driveFileId = await uploadToDrive({
-      name: fileName,
-      mime: "application/gzip",
-      data: gzipped,
-      year: String(now.getFullYear()),
-      subfolder: "backups",
-    });
-
-    run.finishedAt = new Date();
-    run.ok = true;
-    run.sizeBytes = gzipped.length;
-    run.rawBytes = rawBytes;
-    run.collectionCount = collections.length;
-    run.docCount = docCount;
-    run.driveFileId = driveFileId;
-    run.fileName = fileName;
-    await run.save();
-
-    // Retention runs AFTER a successful upload, so a failure never costs an old backup:
-    // the worst case is one extra file, and the worst case of the alternative is none.
-    await pruneOldBackups(String(now.getFullYear()));
-    return run;
-  } catch (e) {
-    run.finishedAt = new Date();
-    run.ok = false;
-    run.error = (e as Error).message;
-    await run.save();
-    return run;
+  if (cache && Date.now() - cache.at < TTL_MS) {
+    // Age is recomputed from the cached listing rather than served stale: the folder
+    // changes once a day, but "how old is it" changes continuously.
+    const v = cache.value;
+    const ageDays = v.newestAt ? daysBetween(new Date(v.newestAt), now) : null;
+    return { ...v, ageDays, band: backupBand(v.found, ageDays) };
   }
-}
 
-/** Keep the newest `BACKUP_KEEP` files in the backups folder; drop the rest. */
-export async function pruneOldBackups(year: string): Promise<number> {
-  const files = await listDriveFolder(year, "backups");
-  const stale = files
-    .filter((f) => f.name.endsWith(".ndjson.gz"))
-    .sort((a, b) => b.createdTime.localeCompare(a.createdTime))
-    .slice(BACKUP_KEEP);
-  for (const f of stale) await deleteFromDrive(f.id);
-  return stale.length;
+  let files: DriveFileRef[] | null;
+  try {
+    files = await listFolderByName(BACKUP_FOLDER);
+  } catch (e) {
+    // Unknown, NOT "missing": an unreachable Drive must not be reported as "no backups".
+    return { ...base, band: "unknown", error: (e as Error).message };
+  }
+
+  if (files === null) return { ...base, found: false, band: "critical" };
+
+  const sorted = [...files].sort((a, b) => b.createdTime.localeCompare(a.createdTime));
+  const newest = sorted[0] ?? null;
+  const ageDays = newest ? daysBetween(new Date(newest.createdTime), now) : null;
+  const value: BackupStatus = {
+    folder: BACKUP_FOLDER,
+    found: true,
+    count: sorted.length,
+    newestName: newest?.name ?? null,
+    newestAt: newest?.createdTime ?? null,
+    newestSizeBytes: newest?.sizeBytes ?? null,
+    ageDays,
+    totalSizeBytes: sorted.reduce((n, f) => n + (f.sizeBytes ?? 0), 0),
+    band: backupBand(true, ageDays),
+    error: null,
+  };
+  cache = { at: Date.now(), value };
+  return value;
 }
