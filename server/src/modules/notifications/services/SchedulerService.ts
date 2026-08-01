@@ -62,6 +62,7 @@ import {
   HW_AUTO_ISSUE_START_HOUR,
   HW_AUTO_ISSUE_END_HOUR,
 } from "../../trackers/services/HomeworkAutoIssueService";
+import { captureNetSnapshot } from "../../platform/services/SystemHealthService";
 import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 
@@ -192,6 +193,8 @@ export interface TickSummary {
   attendanceTiersRun: AttendanceReminderTier[];
   librarySweepRan: boolean;
   observationEscalationRan: boolean;
+  /** SH-2: whether today's VM network counters were captured this pass. */
+  netSnapshotRan: boolean;
   hwPendingEmitted: number;
   hwDueFlipped: number;
   hwAutoIssued: number;
@@ -224,6 +227,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     attendanceTiersRun: [],
     librarySweepRan: false,
     observationEscalationRan: false,
+    netSnapshotRan: false,
     hwPendingEmitted: 0,
     hwDueFlipped: 0,
     hwAutoIssued: 0,
@@ -236,6 +240,16 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
   await family("observation escalation", async () => {
     summary.observationEscalationRan = await runOnce(dateKey, "OBSESC", async () => {
       await runObservationEscalation(now);
+    });
+  });
+
+  // --- VM network snapshot (SH-2, D-#414) — one row a day holding the cumulative
+  // /proc/net/dev counters, so month-to-date egress can be derived as deltas. Must run
+  // on EVERY calendar day (traffic does not stop on a holiday), hence its place above
+  // the school-day gate; idempotent on the date key, and a no-op off Linux.
+  await family("net snapshot", async () => {
+    summary.netSnapshotRan = await runOnce(dateKey, "NETSNAP", async () => {
+      await captureNetSnapshot(now);
     });
   });
 
