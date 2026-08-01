@@ -48,8 +48,6 @@ import {
 } from "../services/MonthlyReportService";
 import {
   monthlyPendingWork,
-  monthlyTeacherChase,
-  type TeacherChase,
   type MonthlyPendingWork,
   type PendingClassTest,
   type PendingGroup,
@@ -454,39 +452,6 @@ builder.queryField("monthlyPendingWork", (t) =>
     resolve: async (_root, args, ctx) => {
       assertRelease(ctx);
       return monthlyPendingWork(args.periodKey);
-    },
-  }),
-);
-
-const TeacherChaseRef = builder.objectRef<TeacherChase>("MonthlyTeacherChase").implement({
-  description:
-    "One ready-to-send nudge per teacher with outstanding work. NOTHING is sent from here — " +
-    "the body is rendered and a wa.me link offered; a person presses it (ADR-003).",
-  fields: (t) => ({
-    teacherId: t.exposeString("teacherId"),
-    teacherName: t.exposeString("teacherName"),
-    phone: t.string({ nullable: true, resolve: (c) => c.phone }),
-    messageBn: t.exposeString("messageBn"),
-    waLink: t.string({ nullable: true, resolve: (c) => c.waLink }),
-    /** No phone on file — named, never silently dropped. */
-    unreachable: t.exposeBoolean("unreachable"),
-    classTests: t.exposeInt("classTests"),
-    homeworkItems: t.exposeInt("homeworkItems"),
-    assignmentItems: t.exposeInt("assignmentItems"),
-    toCheck: t.exposeInt("toCheck"),
-    notIn: t.exposeInt("notIn"),
-  }),
-});
-
-builder.queryField("monthlyTeacherChase", (t) =>
-  t.field({
-    type: [TeacherChaseRef],
-    description: "Per-teacher pending-work messages for a month, heaviest first.",
-    authScopes: { authenticated: true },
-    args: { periodKey: t.arg.string({ required: true }) },
-    resolve: async (_root, args, ctx) => {
-      assertRelease(ctx);
-      return monthlyTeacherChase(args.periodKey);
     },
   }),
 );

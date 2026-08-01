@@ -12,16 +12,14 @@
  * hole: it makes a whole section's class-test panel read 0/0.
  */
 import React, { useMemo, useState } from "react";
-import { Linking, Pressable, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
 import {
   MONTHLY_PENDING_WORK_QUERY,
-  MONTHLY_TEACHER_CHASE_QUERY,
-  type TeacherChaseT,
   type PendingGroupT,
   type PendingWorkT,
 } from "../../graphql/monthlyReport";
-import { Screen, Body, Muted, Card, Select, Button, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Select, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { space, useColors } from "../../theme";
@@ -76,40 +74,12 @@ function GroupList({ title, groups }: { title: string; groups: PendingGroupT[] }
   );
 }
 
-function ChaseCard({ c }: { c: TeacherChaseT }): React.ReactElement {
-  const colors = useColors();
-  const [open, setOpen] = useState(false);
-  return (
-    <View style={{ paddingVertical: space(2), borderBottomWidth: 1, borderBottomColor: colors.border }}>
-      <Body style={{ fontWeight: "700" }}>{c.teacherName}</Body>
-      <Muted>
-        {c.classTests > 0 ? `${STR.mrClassTest} ${bnNum(c.classTests)} · ` : ""}
-        {bnNum(c.toCheck)} {STR.mpToCheck} · {bnNum(c.notIn)} {STR.mpNotIn}
-      </Muted>
-      {/* A teacher with no number is NAMED, not quietly skipped. */}
-      {c.unreachable ? (
-        <Muted style={{ color: colors.error }}>{STR.mpNoPhone}</Muted>
-      ) : (
-        <Button title={STR.mpChaseSend} onPress={() => void Linking.openURL(c.waLink as string)} />
-      )}
-      <Pressable onPress={() => setOpen((v) => !v)}>
-        <Muted style={{ color: colors.primary, marginTop: space(1) }}>
-          {open ? STR.mpChaseHide : STR.mpChasePreview}
-        </Muted>
-      </Pressable>
-      {open ? <Muted style={{ marginTop: space(1) }}>{c.messageBn}</Muted> : null}
-    </View>
-  );
-}
-
 export default function MonthlyPendingWorkScreen(): React.ReactElement {
   const colors = useColors();
   const periods = useMemo(() => recentPeriodKeys(new Date()), []);
   const [periodKey, setPeriodKey] = useState<string>(periods[0]);
 
   const [q, refetch] = useQuery({ query: MONTHLY_PENDING_WORK_QUERY, variables: { periodKey } });
-  const [chaseQ] = useQuery({ query: MONTHLY_TEACHER_CHASE_QUERY, variables: { periodKey } });
-  const chases = chaseQ.data?.monthlyTeacherChase ?? [];
   const p: PendingWorkT | null = q.data?.monthlyPendingWork ?? null;
 
   const nothingLeft =
@@ -168,15 +138,6 @@ export default function MonthlyPendingWorkScreen(): React.ReactElement {
                         {t.results === 0 ? ` — ${STR.mpNoResults}` : ` — ${bnNum(t.unmarked)} ${STR.mpUnmarked}`}
                       </Muted>
                     </View>
-                  ))}
-                </Card>
-              ) : null}
-
-              {chases.length > 0 ? (
-                <Card>
-                  <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.mpChaseTitle}</Body>
-                  {chases.map((c) => (
-                    <ChaseCard key={c.teacherId} c={c} />
                   ))}
                 </Card>
               ) : null}

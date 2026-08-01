@@ -213,29 +213,6 @@ export const MONTHLY_PENDING_WORK_QUERY = gql<{ monthlyPendingWork: PendingWorkT
   }
 `;
 
-export interface TeacherChaseT {
-  teacherId: string;
-  teacherName: string;
-  phone: string | null;
-  messageBn: string;
-  waLink: string | null;
-  unreachable: boolean;
-  classTests: number;
-  homeworkItems: number;
-  assignmentItems: number;
-  toCheck: number;
-  notIn: number;
-}
-
-export const MONTHLY_TEACHER_CHASE_QUERY = gql<{ monthlyTeacherChase: TeacherChaseT[] }, { periodKey: string }>`
-  query MonthlyTeacherChase($periodKey: String!) {
-    monthlyTeacherChase(periodKey: $periodKey) {
-      teacherId teacherName phone messageBn waLink unreachable
-      classTests homeworkItems assignmentItems toCheck notIn
-    }
-  }
-`;
-
 export interface MonthlyReportConfigT {
   attendanceThresholdPp: number;
   attendanceMinDays: number;

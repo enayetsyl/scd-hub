@@ -1650,7 +1650,6 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "monthly_report.revised.title",
   "monthly_report.revised.body",
   "monthly_report.revised.wa",
-  "monthly_report.teacher_chase.wa",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -1783,15 +1782,6 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   "monthly_report.revised.wa": {
     group: "monthlyReport", labelBn: "মাসিক রিপোর্ট সংশোধিত — হোয়াটসঅ্যাপ", placeholders: ["studentName", "month"],
     bnDefault: "আসসালামু আলাইকুম। {studentName}-এর {month} মাসের রিপোর্ট সংশোধিত হয়েছে — অ্যাপে নতুন সংস্করণ দেখুন।", defaultLangMode: "BN",
-  },
-  // The Office's nudge to a teacher whose entries are holding a month open. The ITEM
-  // LIST is composed server-side and arrives as {items}, so the Principal can reword
-  // the wrapper without a deploy while the list itself stays generated.
-  "monthly_report.teacher_chase.wa": {
-    group: "monthlyReport", labelBn: "শিক্ষককে বাকি কাজের তাগিদ — হোয়াটসঅ্যাপ", placeholders: ["teacherName", "month", "items"],
-    bnDefault:
-      "আসসালামু আলাইকুম {teacherName}।\n{month} মাসের রিপোর্ট তৈরি করতে নিচের কাজগুলো বাকি আছে:\n{items}\nঅনুগ্রহ করে অ্যাপে এন্ট্রি সম্পন্ন করুন। ধন্যবাদ।",
-    defaultLangMode: "BN",
   },
   // --- Bell reminder (N2.1) ---
   "bell.reminder.title": {

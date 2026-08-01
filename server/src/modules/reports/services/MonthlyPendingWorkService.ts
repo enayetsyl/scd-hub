@@ -27,12 +27,6 @@ import { Section } from "../../foundation/models/Section";
 import { User } from "../../foundation/models/User";
 import { AWAITING_CHECK_STATES, OWED_BY_STUDENT_STATES, inStates } from "../../trackers/lifecycleBuckets";
 import { monthWindowOf } from "./MonthlyMetricsService";
-import { monthLabelBn } from "./MonthlyCommentService";
-import { StaffProfile } from "../../foundation/models/StaffProfile";
-import { renderTemplate } from "../../templates/services/MessageTemplateService";
-import { commentWaLink } from "../../comments/services/CommentDeliveryService";
-import { bnNum } from "../../../lib/bnNum";
-import { HW_SUBJECT_LABELS_BN } from "@scd/shared";
 
 /** The slice of a homework/assignment item this read needs — one shape for both. */
 interface ItemRow {
@@ -46,7 +40,6 @@ interface ItemRow {
 export interface PendingRow {
   /** HOMEWORK | ASSIGNMENT */
   kind: string;
-  teacherId: string;
   teacherName: string;
   sectionLabel: string;
   sectionId: string;
@@ -68,7 +61,6 @@ export interface PendingGroup {
 
 export interface PendingClassTest {
   ctId: string;
-  teacherId: string;
   sectionLabel: string;
   subject: string;
   dateKey: string;
@@ -178,7 +170,6 @@ export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPend
       if (toCheck + notIn === 0) continue;
       rows.push({
         kind,
-        teacherId: String(it[teacherField] ?? ""),
         teacherName: userName.get(String(it[teacherField])) ?? "—",
         sectionLabel: label(it.classId, it.sectionId),
         sectionId: it.sectionId.toString(),
@@ -219,7 +210,6 @@ export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPend
     if (results.length > 0 && unmarked === 0) continue;
     classTests.push({
       ctId: t.ctId,
-      teacherId: String(t.teacherId ?? t.requestedBy ?? ""),
       sectionLabel: label(t.classId, t.sectionId),
       subject: t.subject,
       dateKey: dayKey(t.examDate),
@@ -253,129 +243,4 @@ export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPend
     classTests,
     rows,
   };
-}
-
-// ---------------------------------------------------------------------------
-// The Office's nudge to a teacher
-// ---------------------------------------------------------------------------
-
-export interface TeacherChase {
-  teacherId: string;
-  teacherName: string;
-  phone: string | null;
-  /** The rendered Bangla body — the wa.me text and what the screen previews. */
-  messageBn: string;
-  /** Click-to-send (ADR-003 — ALWAYS a manual send); null with no phone. */
-  waLink: string | null;
-  /** No phone on file: named, never silently dropped. */
-  unreachable: boolean;
-  classTests: number;
-  homeworkItems: number;
-  assignmentItems: number;
-  toCheck: number;
-  notIn: number;
-}
-
-/** How many lines of each stream a message carries before it says "…আরও Nটি".
- *  Owner ruling: cap it — a phone-readable nudge beats a complete one nobody reads,
- *  and the full list is one tap away in the app. */
-export const CHASE_ITEM_CAP = 12;
-
-/** PURE. The item block, capped. Exported so the cap is testable without a DB. */
-export function chaseItemsBlock(
-  rows: readonly PendingRow[],
-  tests: readonly PendingClassTest[],
-  subjectLabels: Record<string, string>,
-  cap: number = CHASE_ITEM_CAP,
-): string {
-  const sub = (c: string): string => subjectLabels[c] ?? c;
-  const dm = (k: string): string => bnNum(`${k.slice(8, 10)}/${k.slice(5, 7)}`);
-  const out: string[] = [];
-
-  if (tests.length > 0) {
-    out.push("", "ক্লাস টেস্ট (ফলাফল ওঠেনি):");
-    for (const t of tests) {
-      out.push(
-        `• ${t.sectionLabel} — ${sub(t.subject)} — ${dm(t.dateKey)} — ${
-          t.results === 0 ? "কোনো ফলাফল নেই" : `${bnNum(t.unmarked)} জনের নম্বর বাকি`
-        }`,
-      );
-    }
-  }
-
-  for (const [kind, title] of [
-    ["HOMEWORK", "বাড়ির কাজ"],
-    ["ASSIGNMENT", "অ্যাসাইনমেন্ট"],
-  ] as const) {
-    const mine = rows.filter((r) => r.kind === kind);
-    if (mine.length === 0) continue;
-    const toCheck = mine.reduce((n, r) => n + r.toCheck, 0);
-    const notIn = mine.reduce((n, r) => n + r.notIn, 0);
-    out.push(
-      "",
-      `${title} — ${bnNum(mine.length)}টি আইটেম (${bnNum(toCheck)} যাচাই বাকি, ${bnNum(notIn)} জমা পড়েনি):`,
-    );
-    for (const r of mine.slice(0, cap)) {
-      out.push(`• ${r.sectionLabel} — ${sub(r.subject)} — ${dm(r.dateKey)} — ${bnNum(r.toCheck)}/${bnNum(r.notIn)}`);
-    }
-    if (mine.length > cap) out.push(`  … আরও ${bnNum(mine.length - cap)}টি`);
-  }
-
-  return out.join("\n");
-}
-
-/**
- * One message per teacher with outstanding work, ready to send.
- *
- * Nothing is sent from here — the body is rendered and a wa.me link is offered, and a
- * person presses it (ADR-003). Late-month items are deliberately INCLUDED (owner
- * ruling): a sheet issued on the 30th is still work the month is waiting on.
- */
-export async function monthlyTeacherChase(periodKey: string): Promise<TeacherChase[]> {
-  const pending = await monthlyPendingWork(periodKey);
-  const ids = [
-    ...new Set([...pending.rows.map((r) => r.teacherId), ...pending.classTests.map((t) => t.teacherId)]),
-  ].filter(Boolean);
-  if (ids.length === 0) return [];
-
-  const [users, profiles] = await Promise.all([
-    User.find({ _id: { $in: ids.map((i) => new Types.ObjectId(i)) } })
-      .select("name phone")
-      .lean() as Promise<Array<{ _id: Types.ObjectId; name: string; phone?: string }>>,
-    StaffProfile.find({ userId: { $in: ids.map((i) => new Types.ObjectId(i)) } })
-      .select("userId phone")
-      .lean() as unknown as Promise<Array<{ userId: Types.ObjectId; phone?: string }>>,
-  ]);
-  const byId = new Map(users.map((u) => [u._id.toString(), u]));
-  const profilePhone = new Map(profiles.map((p) => [p.userId.toString(), p.phone]));
-
-  const month = monthLabelBn(periodKey);
-  const out: TeacherChase[] = [];
-
-  for (const id of ids) {
-    const rows = pending.rows.filter((r) => r.teacherId === id);
-    const tests = pending.classTests.filter((t) => t.teacherId === id);
-    const u = byId.get(id);
-    const teacherName = u?.name ?? "—";
-    const items = chaseItemsBlock(rows, tests, HW_SUBJECT_LABELS_BN as unknown as Record<string, string>);
-    const messageBn = await renderTemplate("monthly_report.teacher_chase.wa", { teacherName, month, items });
-    const phone = (u?.phone || profilePhone.get(id) || "").trim() || null;
-    const waLink = commentWaLink(phone, messageBn);
-
-    out.push({
-      teacherId: id,
-      teacherName,
-      phone,
-      messageBn,
-      waLink,
-      unreachable: waLink === null,
-      classTests: tests.length,
-      homeworkItems: rows.filter((r) => r.kind === "HOMEWORK").length,
-      assignmentItems: rows.filter((r) => r.kind === "ASSIGNMENT").length,
-      toCheck: rows.reduce((n, r) => n + r.toCheck, 0),
-      notIn: rows.reduce((n, r) => n + r.notIn, 0),
-    });
-  }
-
-  return out.sort((a, b) => b.toCheck + b.notIn + b.classTests * 50 - (a.toCheck + a.notIn + a.classTests * 50));
 }
