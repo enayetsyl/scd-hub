@@ -354,12 +354,11 @@ export function chaseItemsBlock(
     if (mine.length > cap) out.push(`  … আরও ${bnNum(mine.length - cap)}টি`);
   }
 
-  // Stated once, plainly, and NOT as the teacher's task: the child did not hand it
-  // in, so the follow-up is with the family.
-  const neverIn = rows.reduce((n, r) => n + r.notSubmitted, 0);
-  if (neverIn > 0) {
-    out.push("", `(এ ছাড়া ${bnNum(neverIn)}টি কাজ শিক্ষার্থীরা জমা দেয়নি — এটি যাচাইয়ের তালিকায় নেই, অভিভাবকের সঙ্গে যোগাযোগের বিষয়।)`);
-  }
+  // Never-handed-in work is deliberately ABSENT from this message. It is not the
+  // teacher's task and it blocks no report, so naming it here only pads a work list
+  // with something the reader cannot act on (owner, on reading a real message). The
+  // office still sees it on the pending-work screen, where it is context rather than
+  // an instruction.
 
   return out.join("\n");
 }
