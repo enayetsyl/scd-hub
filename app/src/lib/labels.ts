@@ -3710,6 +3710,12 @@ const STR_BN = {
   mrFlagUncovered: "ছুটি ছাড়া অনুপস্থিতি",
   mrFlagSerious: "গুরুতর বিষয় — শ্রেণি শিক্ষক যোগাযোগ করবেন",
   mrActionFailed: "কাজটি সম্পন্ন হয়নি",
+  mrGenerateAll: "মন্তব্য তৈরি করুন (যাদের নেই)",
+  mrGenerating: "মন্তব্য তৈরি হচ্ছে…",
+  mrGenerateAllNote: "একটির পর একটি পাঠানো হয়, তাই সময় লাগে",
+  mrGenerateDone: "মন্তব্য তৈরি হয়েছে",
+  mrGenerateFallback: "বিকল্প মন্তব্য",
+  mrNoneToGenerate: "সবার মন্তব্য আগেই তৈরি আছে",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -6570,6 +6576,12 @@ const STR_EN: StrTable = {
   mrFlagUncovered: "Absences with no leave",
   mrFlagSerious: "Serious matter — the class teacher will make contact",
   mrActionFailed: "That action did not complete",
+  mrGenerateAll: "Generate missing comments",
+  mrGenerating: "Generating comments…",
+  mrGenerateAllNote: "Sent one at a time, so this takes a while",
+  mrGenerateDone: "Comments generated",
+  mrGenerateFallback: "fell back to the template",
+  mrNoneToGenerate: "Every report already has a comment",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

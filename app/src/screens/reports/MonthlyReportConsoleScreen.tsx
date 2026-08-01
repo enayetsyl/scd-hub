@@ -18,6 +18,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   BULK_RELEASE_MUTATION,
   BUILD_MONTHLY_REPORTS_MUTATION,
+  DRAFT_MONTHLY_COMMENTS_MUTATION,
   MONTHLY_REPORTS_FOR_SECTION_QUERY,
   parseSnapshot,
   type MonthlyReportT,
@@ -168,8 +169,9 @@ export default function MonthlyReportConsoleScreen(): React.ReactElement {
     variables: { sectionId: activeSection, periodKey },
     pause: !activeSection,
   });
-  const [, build] = useMutation(BUILD_MONTHLY_REPORTS_MUTATION);
-  const [, bulkRelease] = useMutation(BULK_RELEASE_MUTATION);
+  const [buildState, build] = useMutation(BUILD_MONTHLY_REPORTS_MUTATION);
+  const [releaseState, bulkRelease] = useMutation(BULK_RELEASE_MUTATION);
+  const [draftState, draftAll] = useMutation(DRAFT_MONTHLY_COMMENTS_MUTATION);
 
   const rows = q.data?.monthlyReportsForSection ?? [];
   // The console lists what is CURRENT per child; a superseded revision is history
@@ -184,6 +186,38 @@ export default function MonthlyReportConsoleScreen(): React.ReactElement {
       return;
     }
     Alert.alert(STR.mrBuild, `${bnNum(res.data?.buildMonthlyReports ?? 0)} ${STR.mrBuilt}`);
+    refetch({ requestPolicy: "network-only" });
+  };
+
+  // Only the ones with nothing to review yet — regenerating a comment a person has
+  // already accepted would throw their words away, and paying for a model call to do
+  // it is worse than useless.
+  const needComment = current.filter((r) => !r.reviewedAt && r.status !== "RELEASED" && !r.commentDraft);
+
+  const onDraftAll = async (): Promise<void> => {
+    if (needComment.length === 0) {
+      Alert.alert(STR.mrGenerateAll, STR.mrNoneToGenerate);
+      return;
+    }
+    const res = await draftAll({ reportIds: needComment.map((r) => r.id) });
+    if (res.error) {
+      Alert.alert(STR.mrActionFailed, res.error.message);
+      return;
+    }
+    const outcomes = res.data?.draftMonthlyReportComments ?? [];
+    const ok = outcomes.filter((o) => o.drafted).length;
+    const fellBack = outcomes.filter((o) => o.drafted && o.fallback).length;
+    const failed = outcomes.filter((o) => !o.drafted);
+    Alert.alert(
+      STR.mrGenerateDone,
+      [
+        `${bnNum(ok)} / ${bnNum(outcomes.length)}`,
+        fellBack > 0 ? `${bnNum(fellBack)} ${STR.mrGenerateFallback}` : null,
+        ...failed.map((f) => `• ${f.error ?? ""}`),
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    );
     refetch({ requestPolicy: "network-only" });
   };
 
@@ -240,7 +274,12 @@ export default function MonthlyReportConsoleScreen(): React.ReactElement {
             }}
             placeholder={STR.mrMonth}
           />
-          <Button title={STR.mrBuild} onPress={onBuild} disabled={!activeSection} />
+          <Button
+            title={STR.mrBuild}
+            onPress={onBuild}
+            loading={buildState.fetching}
+            disabled={!activeSection || buildState.fetching}
+          />
         </Card>
 
         <QueryGate results={[q]} onRetry={() => refetch({ requestPolicy: "network-only" })} loaderLabel={STR.loading}>
@@ -267,6 +306,19 @@ export default function MonthlyReportConsoleScreen(): React.ReactElement {
                 </Pressable>
               </View>
 
+              {/* Drafting a class runs one call per child, sequentially — the label
+                  says so, because it is the slowest button on the screen. */}
+              <View style={{ marginBottom: space(3) }}>
+                <Button
+                  title={draftState.fetching ? STR.mrGenerating : `${STR.mrGenerateAll} (${bnNum(needComment.length)})`}
+                  variant="secondary"
+                  loading={draftState.fetching}
+                  disabled={draftState.fetching || needComment.length === 0}
+                  onPress={onDraftAll}
+                />
+                <Muted>{STR.mrGenerateAllNote}</Muted>
+              </View>
+
               {current.map((r) => (
                 <ReportRow
                   key={r.id}
@@ -288,7 +340,12 @@ export default function MonthlyReportConsoleScreen(): React.ReactElement {
                       multiline
                     />
                   ) : null}
-                  <Button title={STR.mrReleaseAll} onPress={onBulkRelease} />
+                  <Button
+                    title={STR.mrReleaseAll}
+                    onPress={onBulkRelease}
+                    loading={releaseState.fetching}
+                    disabled={releaseState.fetching}
+                  />
                 </View>
               ) : null}
             </Card>
