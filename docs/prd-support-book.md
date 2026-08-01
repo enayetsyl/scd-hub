@@ -3,7 +3,8 @@
 **Status:** DRAFT (build contract) — planning 2026-07-31
 **Owner:** Principal
 **Module:** `support-book` (standalone; **its own MongoDB connection**, D-#404 — no identity plane, no corpus plane)
-**Decisions:** D-#403–#413 (this contract)
+**Decisions:** D-#403–#413, #417–#420 (this contract)
+**Informed by (proven, not vendored):** the **Storybook Workbench** (`workbench/`, July 2026) — a working internal production app over the same renderer, five books assembled through it. Its stage machine, lineage invalidation, human review gates, SSE log streaming and per-slot image workspace are adopted here as design (D-#417/#418); its code is not imported. See §10.
 **Implements (external, LOCKED):** the Support-Book Programme governance — `README v2.2`, `SCHEMA_support-book_v1` (v1.3), `REF-1 Curation Policy v1`, `REF-2 Content Register v1`, `ASSEMBLY v1.0-draft`, `PROJECT-INSTRUCTIONS-Production v2.0`. Adopted as cross-Project **coordination, not imported curriculum governance** (AGENTS scope boundary; the D-#33 / REF-11 pattern). **The app stores these documents as DATA, never as repo files** (D-#403).
 **Vendors (unmodified):** `studybook-pipeline` — `validate-studybook.js`, `build-book.js`, `src/lib/{geometry,profiles,compose,fonts,font-audit}.js`, `src/tools/*`, the 4 Noto TTFs. Copied into `/book-pipeline/` and **spawned, never ported** (D-#407).
 
@@ -17,7 +18,7 @@
 - **Two authoring paths, one contract.** Claude Desktop (patch file uploaded) and the in-app chat (API) both emit the **same §5 patch object** and pass the **same validator** before merge (D-#408). The validator is the gate; the prompt is not.
 - **Plane:** a **third plane.** Not identity (no student/guardian/staff row is referenced except `userId` for attribution), not corpus. It gets its own Mongo connection so the isolation is structural rather than remembered (D-#404). ADR-005 is unaffected and untouched.
 - **Contract surface:** app-native `/shared/vocab.ts` additions only — book subject rides `ROUTINE_SUBJECTS`, class rides `ROSTER_CLASS_LEVELS`, so there is **no envelope/schema twin and no harness sync** (D-#405). Vocab verifier stays green.
-- **Build order:** **SB-1** foundations (policy store, book/lesson models, patch upload + validator + merge) → **SB-2** image pipeline → **SB-3** review + escalation chain → **SB-4** assembly (render worker + assembler workspace) → **SB-5** rationale dashboard → **SB-6** in-app LLM authoring chat. **The LLM chat is deliberately LAST** (D-#412) — the Claude Desktop path already works today, so it is a convenience with the highest cost and risk, not a dependency of anything above it.
+- **Build order:** **SB-1** foundations (policy store, book/lesson models, patch upload + validator + merge) → **SB-2** image pipeline → **SB-3** review + escalation chain → **SB-4** assembly (render worker + assembler workspace) → **SB-5** rationale dashboard → **SB-6** in-app LLM authoring chat → **SB-7** in-app image generation via API (D-#419; the external-upload path built in SB-2 remains permanently). **The LLM chat is deliberately LAST** (D-#412) — the Claude Desktop path already works today, so it is a convenience with the highest cost and risk, not a dependency of anything above it.
 
 ---
 
@@ -65,7 +66,10 @@ Let five people build a সহায়িকা together at the quality one per
 **App-native workflow vocab:**
 - `LESSON_STATES = [COMPLIANCE_MAP, RULED, CONTENT_DRAFT, CONTENT_APPROVED, IMAGES_APPROVED, COMPLIANCE_DONE, ASSEMBLED, QA_PASSED]` — the README §7 status flow, per পাঠ.
 - `IMAGE_SLOT_STATES = [DRAFT, PROMPT_READY, GENERATED, APPROVED, COMPLIANT, REJECTED]`.
-- `PATCH_SOURCES = [DESKTOP_UPLOAD, IN_APP_CHAT]`.
+- `PATCH_SOURCES = [DESKTOP_UPLOAD, IN_APP_CHAT]`; `IMAGE_SOURCES = [EXTERNAL_UPLOAD, IN_APP_API]` — both permanent, neither a migration away from the other (D-#419).
+- `ARTIFACT_STAGES = [APPROVED, CROPPED, UPSCALED, COMPLIANT]` — the per-slot lineage chain; each records a fingerprint of its input and output so a re-approval upstream can mark everything downstream stale (D-#417).
+- `LINEAGE_STATES = [FRESH, STALE, MISSING]` — per slot per stage; **any STALE anywhere locks assembly**.
+- `REVIEW_GATES = [IMAGE_GRID_REVIEWED, CROP_GRID_REVIEWED, UPSCALE_TEXTURE_REVIEWED, STRIP_GRID_REVIEWED, RENDER_SPOT_CHECKED]` — human eyeball gates that the system may never satisfy on a person's behalf; each stores `{by, at}` (D-#418).
 - `ESCALATION_STATES = [OPEN, ANSWERED, RESOLVED, WITHDRAWN]`; `ESCALATION_TARGETS = [LESSON, BLOCK, IMAGE_SLOT]`.
 - `BUILD_STATES = [QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED]`; `BUILD_SCOPES = [LESSON, RANGE, FULL]`.
 - `POLICY_DOC_KEYS = [README, DECISIONS, SCHEMA, REF1_CURATION, REF2_REGISTER, ASSEMBLY, PROJECT_INSTRUCTIONS, LETTER_INVENTORY]` — `LETTER_INVENTORY` is per-book; the rest are programme-wide.
@@ -110,7 +114,9 @@ Let five people build a সহায়িকা together at the quality one per
 - [ ] Vocab verifier + shared build + server tsc + jest green.
 
 ### SB-2 — Image pipeline: prompt out, artwork in, Drive as the store
-**Slot surface.** The illustrator's workspace lists books → lessons → slots needing work, and shows each slot's `scene_description`, `image_class`, `action`, `contains_living_being`, `aspect`, `refs[]` (cast reference sheets), and the **prompt** — copyable in one tap, because generation happens in ChatGPT/Gemini outside the app (D-#409). `compliance_note` is shown as guidance; **stripe language is never shown to the illustrator and never enters a prompt** (README §5).
+**Slot surface.** The illustrator's workspace lists books → lessons → slots needing work, and shows each slot's `scene_description`, `image_class`, `action`, `contains_living_being`, `aspect`, `refs[]` (cast reference sheets), and the **prompt** — copyable in one tap. `compliance_note` is shown as guidance; **stripe language is never shown to the illustrator and never enters a prompt** (README §5).
+
+**Two image paths, both permanent (D-#419 — amends D-#409).** `EXTERNAL_UPLOAD` is v1 and stays forever: the illustrator copies the prompt, generates in ChatGPT/Gemini outside the app, uploads the result. `IN_APP_API` lands in a later slice (SB-7) and calls an image model directly with the cast refs attached. This mirrors D-#408's two authoring paths exactly, and for the same reason — **downstream of the upload there is one code path**: same `BookImageAsset`, same slot states, same lineage, same reviewer view. Which path produced a file is recorded in `IMAGE_SOURCES` for the timeline, and nothing else in the module branches on it. The external path is not a stepping stone to be retired; a person with a better result from a tool the app does not call must always be able to bring it in.
 
 **`BookImageAsset`** — `{ bookId, lessonNo, slotId, stage ∈ [RAW, APPROVED, COMPLIANT], storedFileId, generatorTool, generatorNote, promptSha256, uploadedBy, uploadedAt, supersedes? }`. Bytes ride `StoredFile` + `DriveStore` with new kinds `book_image_raw|book_image_approved|book_image_compliant`.
 
@@ -118,8 +124,15 @@ Let five people build a সহায়িকা together at the quality one per
 
 **Deliberately out of the app for v1:** crop → upscale → strip. It needs `placements.json` and the interactive `preview.js` placement editor, and it is the least valuable part to move. The illustrator (or the assembler) runs it locally and uploads the COMPLIANT file; the app records lineage (D-#409).
 
+**Lineage + staleness — the anti-"easy to forget" system (D-#417).** Adopted wholesale from the storybook workbench, where it is proven over five completed books. Each slot carries `lineage: { approved, cropped, upscaled, compliant }`, each a fingerprint (size + mtime, or sha256) of that stage's output. **Re-approving a slot's image marks every downstream artifact for that slot STALE**, and any STALE artifact anywhere **locks SB-4 assembly** until it is cleared or re-run. The UI names exactly which files are stale rather than reporting a generic "out of date".
+
+This is the difference between a pipeline one person can hold in their head and one a five-person team can run. With 201 image slots across 54 lessons, a re-approved image whose compliant version was never regenerated is not an unlikely mistake — it is the default outcome of a busy week, and it reaches print silently because the PDF still builds.
+
 **Acceptance:**
+- [ ] Re-approving one slot flips only that slot's downstream artifacts to STALE, and the build refuses while any STALE remains.
+- [ ] The stale list names files, not stages.
 - [ ] An illustrator with only `book:illustrate` + `book:read` can see prompts and upload, and cannot edit any text block.
+- [ ] A file arriving by `EXTERNAL_UPLOAD` and one by `IN_APP_API` are identical downstream except for the recorded source.
 - [ ] Upload of a non-image MIME or an over-cap file is refused in Bangla; the slot state does not move.
 - [ ] `driveFileId` appears in no GraphQL type and no HTTP response; images stream through `GET /files/:id` behind a book-plane read gate.
 - [ ] A re-upload supersedes rather than overwrites; the prior asset stays readable from the timeline.
@@ -149,6 +162,10 @@ Let five people build a সহায়িকা together at the quality one per
 **The worker** is a **separate process** from the school API (D-#407) **on the same VM** (D-#413): Chromium is hundreds of MB per render and a 54-lesson book is minutes of work; an OOM there must not take down attendance and homework. It claims a QUEUED job, materializes a temp book folder (`book.json` written from the lesson docs + `images-compliant/` pulled from Drive), runs `validate-studybook.js`, then `build-book.js` for **both** profiles via `execFile` with `shell:false`, captures the geometry assert / fit guard / `pdffonts` audit output into the job, uploads both PDFs to Drive as `book_pdf`, and marks the job SUCCEEDED. **Any failure in either profile fails the whole job** — a single-edition success is not a pass (ASSEMBLY §5).
 
 **The assembler's workspace** offers per-chapter, range and full builds, so a reviewer can be shown chapter 7 alone or chapters 1–7 cumulatively — which is what "other users should be able to see individual and cumulative chapters" needs. Every build's PDFs stay downloadable from the job row, so an older render is never lost.
+
+**Live logs over SSE (D-#418).** The worker streams the spawned script's stdout/stderr to the browser as `text/event-stream`, and writes the full log beside the job. One-directional streaming, no WebSocket, the workbench's proven choice. A build that fails on lesson 31's fit guard should say so **while it is failing**, not in a report after a four-minute wait — the person watching is the one who can fix it.
+
+**Human review gates are real gates (D-#418).** `REVIEW_GATES` are eyeball checks the system may never satisfy on someone's behalf: the strip grid was looked at, the render was spot-checked. Each stores `{by, at}`. The app **never auto-advances past one**, and it never infers a human judgement from a green exit code — the workbench's rule that "the app never sets `anchor.verified`" is the same principle, and here it protects `reviewer_signoff.checklist_passed` (SB-3) the same way. **Backward is always allowed** (re-open images, re-pick a placement); forward past an unmet gate never is.
 
 **Host constraints, measured 2026-07-31 (D-#413) — pin these before SB-4 starts:**
 - **The VM is `aarch64`, and Puppeteer publishes no bundled Chromium for linux-arm64.** Install the OS Chromium (`chromium-browser`, a 200 MB snap — the only form Ubuntu 24.04 ARM offers) and set **`PUPPETEER_EXECUTABLE_PATH`**. That is an env var, so the vendored renderer stays byte-identical and D-#407 holds. Verify the browser launches under the systemd unit, not just an interactive shell — snap confinement is the one place this can surprise.
@@ -196,6 +213,15 @@ A streaming chat where the author works a chapter through the nine steps without
 
 ---
 
+### SB-7 — In-app image generation (the API path)
+The second image path (D-#419). A slot workspace that calls an image model directly with the cast reference sheets attached, keeps a per-slot conversation thread so "same scene, the child slightly smaller" works as an edit rather than a re-roll, and lets the illustrator approve one candidate. Proven shape: the workbench does exactly this over five books (`server/images.js` + `server/gemini.js` + `server/keys.js`), including multi-key rotation with 429 cooldown handling and daily-quota resets — read it before designing this slice.
+
+**Non-negotiable carry-overs:** the cast reference sheet is attached to every generation of a canon character — **never generated from text alone** (README §3.4 / SOP 5.2, the drift-prevention rule); every attempt is retained, not just the winner; and **no stripe language ever enters a prompt** (README §5) — the strip stays programmatic and post-generation.
+
+**Acceptance:** [ ] a slot can be generated, iterated and approved in-app; [ ] the approved file is indistinguishable downstream from an uploaded one except for `IMAGE_SOURCES`; [ ] refs are attached on every canon generation; [ ] API keys live in server env, never in a client or a committed file.
+
+---
+
 ## §6 — Given/When/Then journeys
 
 1. **Author (Desktop path).** *Given* a chapter written in Claude Desktop, *when* the author uploads `patch_C2-BAN_L012_CONTENT_v1.json`, *then* the validator runs, a RED failure is shown per offending unit with nothing merged, and a green run replaces lesson 12 wholesale and stamps the policy hash.
@@ -236,3 +262,22 @@ A streaming chat where the author works a chapter through the nine steps without
 | `ASSEMBLY v1.0-draft` §2–§5 | SB-4: the four frozen invariants (font embedding, geometry assert, fit guard, post-render audit), both profiles always rendered, the render-proof gate |
 | `PROJECT-INSTRUCTIONS-Production v2.0` | "The filesystem is the database" → superseded here by D-#406 (Mongo authoritative, folder materialized), with the export escape hatch preserving the original posture |
 | scd-hub D-#70 (Drive), D-#193/#212 (AC-1), ADR-005 (planes), ADR-008 (audit) | §3 reuse list |
+| Storybook Workbench PRD §0/§6/§6.1, `workbench/server/{images,gemini,keys,runner}.js` | D-#417 lineage, D-#418 gates + SSE, SB-7's slot workspace |
+
+---
+
+## §10 — The second book type: storybooks (scope note, not a build contract)
+
+**Owner ruling, 2026-08-01: the storybook line is now school-first** (D-#420). It was designed as a commercial product — 40 books across 8 series, ৳5–20, subscriptions, a streaming reader — and that framing is **demoted, not deleted**: nothing here forecloses selling later, but the school is the primary audience now, which is what makes it eligible to live beside the সহায়িকা at all. The upstream "product separation is absolute" rule (README §7) existed to keep an internal free book out of a sales catalog; with both lines school-first, the rule's purpose is satisfied rather than violated.
+
+**What already exists (do not rebuild, do not move yet):**
+- **`workbench/`** — Express + vanilla-JS SPA on `127.0.0.1:4321`. Eight-stage machine (Import → Images → Crop → Upscale → Placements → Strips → Assembly → Done) with entry/completion gates, in-app Gemini image generation with per-slot threads and reference attachment, multi-key rotation, SSE logs, lineage invalidation. **Five S1 books fully assembled through it**; `GB-B01` mid-flight; `S4-B01` importing.
+- **`storybook-pipeline/`** — a *different* renderer from `studybook-pipeline`: 8×8 square trim, fixed 24-page spine, 3 profiles × 2 languages = 6 PDFs, cream palette. A `chapter-book-48` format was specified 2026-08-01 and must land **additively** — `S1-B01` has to build byte-identically after it.
+- **`pipeline-tools/`** — the Python image chain (`crop_edges`, `apply_strips`, `make_strips`, `pick_placements`) shared in spirit with the সহায়িকা flow.
+- Governance: `islamic-series-master-guide.md` (series canon, 6-beat arc, image system, stage prompts), `book-production-sop.md` (11 steps), `writing style.md`, `storybook-business-master-plan.md`.
+
+**What differs from the সহায়িকা and therefore cannot be assumed:** the unit of work is a **slot/book**, not a পাঠ; there is no NCTB fidelity, no compliance C-codes, no letter audit; instead there is **series canon + character consistency** enforced by reference images. Anchor verification is a **fresh-eyes rule** — a different chat/model than the one that wrote the story, then a human hadith check (SOP 2.3: *"an LLM 'verified' is a lead, not a verdict"*). Output is six PDFs, not two. Quality control upstream is *"the chat itself"*, which is a single-founder posture that does **not** survive contact with a team — a storybook slice set would need SB-3's review/escalation chain, which the workbench has no equivalent of.
+
+**Consequence for this contract:** the SB-1..SB-7 core is to be built **book-type-agnostic** — `SupportBook` becomes one `bookType` among others; the stage machine, lineage, review gates, job runner, escalation chain and rationale timeline carry no সহায়িকা-specific assumptions. Type-specific pieces (schema, validator checks, render profiles, policy doc set) sit behind a per-type adapter, which is the same shape ASSEMBLY §1 already uses to keep a shared renderer neutral. **This is a design constraint on SB-1, not extra work in SB-1.**
+
+**Explicitly NOT decided here:** whether the workbench is migrated into scd-hub, rewritten, or left running on the laptop; the storybook's own slice set; and anything about a storefront, reader app, pricing or payments — **no commercial surface enters this repo without its own PRD and its own ruling.** The workbench is producing books today; nothing in this module should stop it.
