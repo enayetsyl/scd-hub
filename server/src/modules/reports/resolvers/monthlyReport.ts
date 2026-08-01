@@ -47,6 +47,13 @@ import {
   type ClassRollup,
 } from "../services/MonthlyReportService";
 import {
+  monthlyPendingWork,
+  type MonthlyPendingWork,
+  type PendingClassTest,
+  type PendingGroup,
+  type PendingRow,
+} from "../services/MonthlyPendingWorkService";
+import {
   readMonthlyReportConfig,
   setMonthlyReportConfig,
   type MonthlyReportConfigShape,
@@ -374,6 +381,77 @@ builder.queryField("monthlyClassRollups", (t) =>
       // A section with no reports built yet is dropped — an empty row reads as
       // "this class had no month", which is a different and false claim.
       return out.filter((r) => r.students > 0);
+    },
+  }),
+);
+
+const PendingGroupRef = builder.objectRef<PendingGroup>("MonthlyPendingGroup").implement({
+  fields: (t) => ({
+    key: t.exposeString("key"),
+    items: t.exposeInt("items"),
+    toCheck: t.exposeInt("toCheck"),
+    notIn: t.exposeInt("notIn"),
+  }),
+});
+
+const PendingRowRef = builder.objectRef<PendingRow>("MonthlyPendingRow").implement({
+  fields: (t) => ({
+    kind: t.exposeString("kind"),
+    teacherName: t.exposeString("teacherName"),
+    sectionLabel: t.exposeString("sectionLabel"),
+    subject: t.exposeString("subject"),
+    dateKey: t.exposeString("dateKey"),
+    ref: t.exposeString("ref"),
+    toCheck: t.exposeInt("toCheck"),
+    notIn: t.exposeInt("notIn"),
+  }),
+});
+
+const PendingClassTestRef = builder.objectRef<PendingClassTest>("MonthlyPendingClassTest").implement({
+  fields: (t) => ({
+    ctId: t.exposeString("ctId"),
+    sectionLabel: t.exposeString("sectionLabel"),
+    subject: t.exposeString("subject"),
+    dateKey: t.exposeString("dateKey"),
+    status: t.exposeString("status"),
+    teacherName: t.exposeString("teacherName"),
+    results: t.exposeInt("results"),
+    unmarked: t.exposeInt("unmarked"),
+  }),
+});
+
+const PendingWorkRef = builder.objectRef<MonthlyPendingWork>("MonthlyPendingWork").implement({
+  description:
+    "What is still unsettled for a month — the work that keeps reports below the coverage gate. " +
+    "Uses the SAME unsettled predicate as the coverage percentage, so the two cannot disagree.",
+  fields: (t) => ({
+    periodKey: t.exposeString("periodKey"),
+    homeworkItems: t.int({ resolve: (p) => p.totals.homeworkItems }),
+    homeworkToCheck: t.int({ resolve: (p) => p.totals.homeworkToCheck }),
+    homeworkNotIn: t.int({ resolve: (p) => p.totals.homeworkNotIn }),
+    assignmentItems: t.int({ resolve: (p) => p.totals.assignmentItems }),
+    assignmentToCheck: t.int({ resolve: (p) => p.totals.assignmentToCheck }),
+    assignmentNotIn: t.int({ resolve: (p) => p.totals.assignmentNotIn }),
+    classTestsNoResults: t.int({ resolve: (p) => p.totals.classTestsNoResults }),
+    classTestsUnmarked: t.int({ resolve: (p) => p.totals.classTestsUnmarked }),
+    byTeacher: t.field({ type: [PendingGroupRef], resolve: (p) => p.byTeacher }),
+    bySection: t.field({ type: [PendingGroupRef], resolve: (p) => p.bySection }),
+    classTests: t.field({ type: [PendingClassTestRef], resolve: (p) => p.classTests }),
+    rows: t.field({ type: [PendingRowRef], resolve: (p) => p.rows }),
+  }),
+});
+
+builder.queryField("monthlyPendingWork", (t) =>
+  t.field({
+    type: PendingWorkRef,
+    description:
+      "Whole-school by definition — it names other teachers' outstanding work — so it rides the " +
+      "release gate rather than a per-section read.",
+    authScopes: { authenticated: true },
+    args: { periodKey: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      assertRelease(ctx);
+      return monthlyPendingWork(args.periodKey);
     },
   }),
 );

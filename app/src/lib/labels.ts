@@ -3745,6 +3745,18 @@ const STR_BN = {
   mrGenerateDone: "মন্তব্য তৈরি হয়েছে",
   mrGenerateFallback: "বিকল্প মন্তব্য",
   mrNoneToGenerate: "সবার মন্তব্য আগেই তৈরি আছে",
+  mpTitle: "মাসিক রিপোর্টের বাকি কাজ",
+  mpSub: "যে কাজগুলো শেষ হলে মাসের রিপোর্ট সম্পূর্ণ হবে",
+  mpToCheck: "যাচাই বাকি",
+  mpNotIn: "জমা পড়েনি",
+  mpItems: "আইটেম",
+  mpByTeacher: "শিক্ষক অনুযায়ী",
+  mpBySection: "শ্রেণি অনুযায়ী",
+  mpClassTests: "ক্লাস টেস্ট — ফলাফল ওঠেনি",
+  mpNoResults: "কোনো ফলাফল নেই",
+  mpUnmarked: "নম্বর বাকি",
+  mpAllClear: "এই মাসের কোনো কাজ বাকি নেই",
+  mpDetails: "বিস্তারিত তালিকা",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -6639,6 +6651,18 @@ const STR_EN: StrTable = {
   mrGenerateDone: "Comments generated",
   mrGenerateFallback: "fell back to the template",
   mrNoneToGenerate: "Every report already has a comment",
+  mpTitle: "Pending work for the monthly report",
+  mpSub: "Finish these and the month's reports are complete",
+  mpToCheck: "to check",
+  mpNotIn: "not submitted",
+  mpItems: "items",
+  mpByTeacher: "By teacher",
+  mpBySection: "By class",
+  mpClassTests: "Class tests with no results",
+  mpNoResults: "no results",
+  mpUnmarked: "unmarked",
+  mpAllClear: "Nothing outstanding for this month",
+  mpDetails: "Full list",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use
