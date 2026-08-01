@@ -358,7 +358,7 @@ one-line change.
 Delivery: in-app to the guardian, the wa.me + notification rails from `CommentDeliveryService`, and paper
 through the existing `PrintRequest` queue (D-#281) — no new print path.
 
-## 8b. The Desktop round trip (MR-8, D-#414)
+## 8b. The Desktop round trip (MR-8, D-#415)
 
 A second lane to the same field. The in-app model (MR-4) writes `commentDraft`; so does
 this. Nothing downstream knows the difference, and neither lane can release anything on
