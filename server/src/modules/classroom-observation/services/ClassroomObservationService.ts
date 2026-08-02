@@ -107,6 +107,10 @@ export interface ClassroomObservationShape {
   withheldAt: string | null;
   withheldBy: string | null;
   withheldReason: string | null;
+  /** CO-15 (D-#428): cancel stamp — a planned review that will not happen. null = live. */
+  cancelledAt: string | null;
+  cancelledBy: string | null;
+  cancelledReason: string | null;
   domains: DomainScoreShape[];
   gates: GateScoreShape[];
   oneStrength: string | null;
@@ -149,6 +153,9 @@ function shape(d: IClassroomObservation): ClassroomObservationShape {
     withheldAt: d.withheldAt ? new Date(d.withheldAt).toISOString() : null,
     withheldBy: d.withheldBy ? d.withheldBy.toString() : null,
     withheldReason: d.withheldReason ?? null,
+    cancelledAt: d.cancelledAt ? new Date(d.cancelledAt).toISOString() : null,
+    cancelledBy: d.cancelledBy ? d.cancelledBy.toString() : null,
+    cancelledReason: d.cancelledReason ?? null,
     domains: (d.domains ?? []).map((x) => ({ domain: x.domain, level: x.level, note: x.note })),
     gates: (d.gates ?? []).map((x) => ({ gate: x.gate, result: x.result, breachNote: x.breachNote ?? null })),
     oneStrength: d.oneStrength ?? null,
@@ -347,6 +354,11 @@ export async function assignObserver(input: AssignObserverInput): Promise<Classr
   if (doc.state !== "UPLOADED" && doc.state !== "ASSIGNED") {
     throw new ClassroomObservationError("Only an uploaded/assigned observation can be (re)assigned");
   }
+  // CO-15 (D-#428): a cancelled plan must be restored before it can be worked on again —
+  // otherwise assigning would quietly resurrect it while the cancel flag still reads true.
+  if (doc.cancelledAt) {
+    throw new ClassroomObservationError("বাতিল করা পর্যবেক্ষণে পর্যবেক্ষক দেওয়া যাবে না — আগে বাতিল প্রত্যাহার করুন");
+  }
   const observerId = oid(input.observerId, "observerId");
   // CONFLICT GUARD (§5): observer ≠ observed teacher.
   if (observerId.equals(doc.teacherId)) {
@@ -391,6 +403,12 @@ export async function reviewObservation(input: ReviewObservationInput): Promise<
   if (!doc) throw new ClassroomObservationError("Observation not found");
   if (doc.state !== "ASSIGNED") {
     throw new ClassroomObservationError("Only an assigned observation can be reviewed");
+  }
+  // CO-15 (D-#428): a cancelled plan is not reviewable. The row has already left this
+  // observer's queue, so reaching here means a stale client — refuse rather than accept
+  // a review of work the Principal called off.
+  if (doc.cancelledAt) {
+    throw new ClassroomObservationError("এই পর্যবেক্ষণ বাতিল করা হয়েছে");
   }
   // Gated to the ASSIGNED observer (the base observation:review perm is widened to
   // the specific row here — a different teacher with observation:review is refused).
@@ -635,6 +653,141 @@ export async function releaseObservationHold(
     targetId: doc._id,
     targetKind: "ClassroomObservation",
     meta: { teacherId: doc.teacherId.toString(), priorReason },
+  });
+
+  return shape(doc);
+}
+
+// ---------------------------------------------------------------------------
+// cancelObservation / restoreCancelledObservation (CO-15, D-#428)
+// ---------------------------------------------------------------------------
+
+/** Like a withhold reason, a cancel reason is REQUIRED: it is the record of why a
+ *  planned observation of a named teacher never took place. */
+const CANCEL_REASON_MIN = 3;
+const CANCEL_REASON_MAX = 500;
+
+/** The only states a plan can be cancelled from — before any review exists. A REVIEWED
+ *  row is CO-12's business (withhold), not this one. */
+const CANCELLABLE_STATES = ["UPLOADED", "ASSIGNED"] as const;
+
+export interface CancelObservationInput {
+  observationId: string;
+  /** REQUIRED free text — why this planned review will not happen. */
+  reason: string;
+  /** The authenticated actor (Principal/Office — observation:manage). */
+  actorId: string;
+}
+
+/**
+ * Cancel a planned observation (CO-15, D-#428) — an UPLOADED or ASSIGNED row that will
+ * not now be reviewed (unusable footage, teacher on leave, duplicate upload, the routine
+ * moved under it). Stamps `cancelledAt`/`cancelledBy`/`cancelledReason`; the row leaves
+ * the observer's queue and the `toReview` count but stays readable to Principal/Office
+ * under the "cancelled" filter.
+ *
+ * `state` is deliberately NOT changed (the CO-8/CO-12 additive-flag shape, third use):
+ * a new OBSERVATION_STATES value would ripple into every state-keyed read — the CO-4
+ * trend, CO-6 tier derivation, CO-7 throughput — to express what is a flag on a row
+ * rather than a stage of its life. It is also what makes `restoreCancelledObservation`
+ * a CLEAR rather than a transition: nothing has to remember where the row came from.
+ *
+ * REFUSES a REVIEWED row and names the alternative. Cancel means "this review will not
+ * happen"; withhold (CO-12) means "it happened and will not be released". Collapsing the
+ * two would let a completed review be erased as though it had never been written, which
+ * is precisely the record CO-12 exists to keep.
+ *
+ * The linked SessionRecording is NOT touched — it is CO-2's object with its own
+ * lifecycle, may be shared with a CO-9 co-review, and a fresh observation can be raised
+ * against the same footage.
+ *
+ * Audited. RBAC (observation:manage) is enforced by the resolver.
+ */
+export async function cancelObservation(input: CancelObservationInput): Promise<ClassroomObservationShape> {
+  const reason = (input.reason ?? "").trim();
+  if (reason.length < CANCEL_REASON_MIN) {
+    throw new ClassroomObservationError("বাতিল করার কারণ লিখুন");
+  }
+  if (reason.length > CANCEL_REASON_MAX) {
+    throw new ClassroomObservationError("কারণটি অনেক বড় — ৫০০ অক্ষরের মধ্যে লিখুন");
+  }
+
+  const doc = (await ClassroomObservation.findById(input.observationId)) as IClassroomObservation | null;
+  if (!doc) throw new ClassroomObservationError("Observation not found");
+  if (doc.cancelledAt) {
+    throw new ClassroomObservationError("এই পর্যবেক্ষণ ইতিমধ্যে বাতিল করা আছে");
+  }
+  if (doc.state === "REVIEWED") {
+    // Name the right tool rather than a flat refusal — these two are easy to confuse.
+    throw new ClassroomObservationError(
+      "পর্যালোচিত পর্যবেক্ষণ বাতিল করা যাবে না — প্রকাশ না করতে চাইলে 'স্থগিত' করুন",
+    );
+  }
+  if (!(CANCELLABLE_STATES as readonly string[]).includes(doc.state)) {
+    throw new ClassroomObservationError("শুধু আপলোডকৃত বা বরাদ্দকৃত পর্যবেক্ষণ বাতিল করা যাবে");
+  }
+
+  doc.cancelledAt = new Date();
+  doc.cancelledBy = oid(input.actorId, "actorId");
+  doc.cancelledReason = reason;
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "CLASSROOM_OBSERVATION_CANCELLED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "ClassroomObservation",
+    meta: {
+      teacherId: doc.teacherId.toString(),
+      observerId: doc.observerId ? doc.observerId.toString() : null,
+      priorState: doc.state,
+      reason,
+    },
+  });
+
+  // NOTE (CO-15, deferred): the assigned observer should be notified that the assignment
+  // was cancelled — it was in their queue and silent disappearance is worse than a
+  // notice. That needs an `OBSERVATION_ASSIGNMENT_CANCELLED` NotificationKind in
+  // shared/vocab.ts, which is frozen while PR #424 (feat/exams) also edits
+  // NOTIFICATION_KINDS (AGENTS.md "contract files are serialized"). Add it once that
+  // lands. The observed teacher is never notified either way: an unpublished row was
+  // already invisible to them.
+  return shape(doc);
+}
+
+export interface RestoreCancelledObservationInput {
+  observationId: string;
+  actorId: string;
+}
+
+/**
+ * Undo a cancel (CO-15) — clears `cancelledAt`/`cancelledBy`/`cancelledReason`, putting
+ * the row back where it was. Because `state` was never touched, this is a clear rather
+ * than a transition: an UPLOADED row returns UPLOADED, an ASSIGNED row returns ASSIGNED
+ * to the same observer, and it reappears in their queue and the `toReview` count.
+ * Audited, carrying the prior reason so restoring does not erase the record.
+ */
+export async function restoreCancelledObservation(
+  input: RestoreCancelledObservationInput,
+): Promise<ClassroomObservationShape> {
+  const doc = (await ClassroomObservation.findById(input.observationId)) as IClassroomObservation | null;
+  if (!doc) throw new ClassroomObservationError("Observation not found");
+  if (!doc.cancelledAt) {
+    throw new ClassroomObservationError("এই পর্যবেক্ষণ বাতিল করা নেই");
+  }
+
+  const priorReason = doc.cancelledReason ?? null;
+  doc.cancelledAt = null;
+  doc.cancelledBy = null;
+  doc.cancelledReason = null;
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "CLASSROOM_OBSERVATION_RESTORED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "ClassroomObservation",
+    meta: { teacherId: doc.teacherId.toString(), restoredToState: doc.state, priorReason },
   });
 
   return shape(doc);
@@ -1079,6 +1232,11 @@ export interface AllObservationsFilterInput {
    *  no hold; undefined = either. AND-combines with `published`, so the real publish
    *  queue is `published: false, withheld: false`. */
   withheld?: boolean | null;
+  /** CO-15 cancel flag (D-#428): true = cancelled (cancelledAt set); false = live;
+   *  undefined = either. The UI's "Pending" chip sends `false` — a called-off plan is not
+   *  outstanding work, the same reasoning that keeps withheld rows out of it — while
+   *  "All" leaves this undefined so nothing vanishes from oversight by default. */
+  cancelled?: boolean | null;
   /** classDate >= dateFrom (YYYY-MM-DD, inclusive). */
   dateFrom?: string | null;
   /** classDate <= dateTo (YYYY-MM-DD, inclusive). */
@@ -1121,6 +1279,9 @@ export async function allObservationsPaged(
   // CO-12 withhold flag (D-#369): withheldAt set = a recorded decision not to publish.
   if (input.withheld === true) q.withheldAt = { $ne: null };
   else if (input.withheld === false) q.withheldAt = null;
+  // CO-15 cancel flag (D-#428): cancelledAt set = a planned review that will not happen.
+  if (input.cancelled === true) q.cancelledAt = { $ne: null };
+  else if (input.cancelled === false) q.cancelledAt = null;
   if (input.dateFrom || input.dateTo) {
     const range: Record<string, string> = {};
     if (input.dateFrom) range.$gte = input.dateFrom;
@@ -1166,11 +1327,13 @@ export async function observerReviewsPaged(
   return allObservationsPaged({ ...input, observerId });
 }
 
-/** The observer's open review queue (ASSIGNED rows assigned to them). */
+/** The observer's open review queue (ASSIGNED rows assigned to them).
+ *  CO-15 (D-#428): a CANCELLED row is not outstanding work — it leaves the queue. */
 export async function myReviewQueue(observerId: string): Promise<ClassroomObservationShape[]> {
   const docs = (await ClassroomObservation.find({
     observerId: oid(observerId, "observerId"),
     state: "ASSIGNED",
+    cancelledAt: null,
   })
     .sort({ assignedAt: -1, createdAt: -1 })
     .lean()) as unknown as IClassroomObservation[];
@@ -1192,7 +1355,13 @@ export async function observationCounts(
 ): Promise<{ toReview: number; toPublish: number }> {
   const [toReview, toPublish] = await Promise.all([
     canReview
-      ? ClassroomObservation.countDocuments({ observerId: oid(observerId, "observerId"), state: "ASSIGNED" })
+      ? ClassroomObservation.countDocuments({
+          observerId: oid(observerId, "observerId"),
+          state: "ASSIGNED",
+          // CO-15 (D-#428): a cancelled plan is a closed decision, not outstanding work —
+          // the same reason `toPublish` excludes withheld rows.
+          cancelledAt: null,
+        })
       : Promise.resolve(0),
     canPublish
       ? ClassroomObservation.countDocuments({ state: "REVIEWED", publishedAt: null, withheldAt: null })

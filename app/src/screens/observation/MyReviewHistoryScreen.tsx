@@ -71,6 +71,7 @@ export default function MyReviewHistoryScreen(): React.ReactElement {
       sectionId: filters.sectionId,
       published: filters.published,
       withheld: filters.withheld,
+      cancelled: filters.cancelled,
       teacherId: filters.teacherId,
       dateFrom: filters.dateFrom || null,
       dateTo: filters.dateTo || null,

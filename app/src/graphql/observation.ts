@@ -63,6 +63,10 @@ export interface ClassroomObservationT {
   withheldAt: string | null;
   withheldBy: string | null;
   withheldReason: string | null;
+  /** CO-15 (D-#428): cancel stamp — a planned review that will not happen. */
+  cancelledAt: string | null;
+  cancelledBy: string | null;
+  cancelledReason: string | null;
   domains: ObsDomainScoreT[];
   gates: ObsGateScoreT[];
   oneStrength: string | null;
@@ -83,7 +87,7 @@ export interface ClassroomObservationT {
 }
 
 const QURAN_PAYLOAD_FIELDS = `quran { ratings { criterion score note } compliance { item yesNo } strengths improvements suggestions }`;
-const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt publishedAt publishedBy withheldAt withheldBy withheldReason domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress priorFocusNote ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
+const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt publishedAt publishedBy withheldAt withheldBy withheldReason cancelledAt cancelledBy cancelledReason domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress priorFocusNote ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
 
 export const CLASSROOM_OBSERVATION_QUERY = gql<
   { classroomObservation: ClassroomObservationT | null },
@@ -123,6 +127,9 @@ export interface ObservationFilterVars {
   /** D-#369: CO-12 withhold flag — true=withheld, false=no hold, null=either. The real
    *  publish queue is published:false + withheld:false. */
   withheld?: boolean | null;
+  /** D-#428: CO-15 cancel flag — true=cancelled, false=live, null=either. The oversight
+   *  screen's default view sends false so called-off plans do not clutter it. */
+  cancelled?: boolean | null;
   dateFrom?: string | null;
   dateTo?: string | null;
   search?: string | null;
@@ -145,12 +152,12 @@ export const ALL_CLASSROOM_OBSERVATIONS_QUERY = gql<
 >`
   query AllClassroomObservations(
     $teacherId: String, $observerId: String, $state: String, $form: String,
-    $subject: String, $sectionId: String, $published: Boolean, $withheld: Boolean,
+    $subject: String, $sectionId: String, $published: Boolean, $withheld: Boolean, $cancelled: Boolean,
     $dateFrom: String, $dateTo: String, $search: String, $limit: Int, $offset: Int
   ) {
     allClassroomObservations(
       teacherId: $teacherId, observerId: $observerId, state: $state, form: $form,
-      subject: $subject, sectionId: $sectionId, published: $published, withheld: $withheld,
+      subject: $subject, sectionId: $sectionId, published: $published, withheld: $withheld, cancelled: $cancelled,
       dateFrom: $dateFrom, dateTo: $dateTo, search: $search, limit: $limit, offset: $offset
     ) {
       items { ${OBSERVATION_FIELDS} }
@@ -168,12 +175,12 @@ export const MY_OBSERVATION_REVIEWS_QUERY = gql<
 >`
   query MyObservationReviews(
     $teacherId: String, $state: String, $form: String, $subject: String, $sectionId: String,
-    $published: Boolean, $withheld: Boolean, $dateFrom: String, $dateTo: String, $search: String,
+    $published: Boolean, $withheld: Boolean, $cancelled: Boolean, $dateFrom: String, $dateTo: String, $search: String,
     $limit: Int, $offset: Int
   ) {
     myObservationReviews(
       teacherId: $teacherId, state: $state, form: $form, subject: $subject, sectionId: $sectionId,
-      published: $published, withheld: $withheld, dateFrom: $dateFrom, dateTo: $dateTo, search: $search,
+      published: $published, withheld: $withheld, cancelled: $cancelled, dateFrom: $dateFrom, dateTo: $dateTo, search: $search,
       limit: $limit, offset: $offset
     ) {
       items { ${OBSERVATION_FIELDS} }
@@ -316,6 +323,27 @@ export const RELEASE_CLASSROOM_OBSERVATION_HOLD = gql<
 >`
   mutation ReleaseClassroomObservationHold($observationId: String!) {
     releaseClassroomObservationHold(observationId: $observationId) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+/** CO-15 (D-#428) — call off a planned (UPLOADED/ASSIGNED) review. Reason required.
+ *  A REVIEWED row is refused by the server: use WITHHOLD_CLASSROOM_OBSERVATION. */
+export const CANCEL_CLASSROOM_OBSERVATION = gql<
+  { cancelClassroomObservation: ClassroomObservationT },
+  { observationId: string; reason: string }
+>`
+  mutation CancelClassroomObservation($observationId: String!, $reason: String!) {
+    cancelClassroomObservation(observationId: $observationId, reason: $reason) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+/** CO-15 (D-#428) — undo a cancel; the row returns to the same state + observer. */
+export const RESTORE_CANCELLED_CLASSROOM_OBSERVATION = gql<
+  { restoreCancelledClassroomObservation: ClassroomObservationT },
+  { observationId: string }
+>`
+  mutation RestoreCancelledClassroomObservation($observationId: String!) {
+    restoreCancelledClassroomObservation(observationId: $observationId) { ${OBSERVATION_FIELDS} }
   }
 `;
 

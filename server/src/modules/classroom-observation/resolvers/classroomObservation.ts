@@ -34,6 +34,8 @@ import {
   publishObservation,
   withholdObservation,
   releaseObservationHold,
+  cancelObservation,
+  restoreCancelledObservation,
   requestReReview,
   requestCoReview,
   respondToObservation,
@@ -151,6 +153,9 @@ ObservationRef.implement({
     withheldAt: t.string({ nullable: true, resolve: (r) => r.withheldAt }),
     withheldBy: t.string({ nullable: true, resolve: (r) => r.withheldBy }),
     withheldReason: t.string({ nullable: true, resolve: (r) => r.withheldReason }),
+    cancelledAt: t.string({ nullable: true, resolve: (r) => r.cancelledAt }),
+    cancelledBy: t.string({ nullable: true, resolve: (r) => r.cancelledBy }),
+    cancelledReason: t.string({ nullable: true, resolve: (r) => r.cancelledReason }),
     domains: t.field({ type: [DomainScoreRef], resolve: (r) => r.domains }),
     gates: t.field({ type: [GateScoreRef], resolve: (r) => r.gates }),
     oneStrength: t.string({ nullable: true, resolve: (r) => r.oneStrength }),
@@ -502,6 +507,48 @@ builder.mutationField("releaseClassroomObservationHold", (t) =>
   }),
 );
 
+builder.mutationField("cancelClassroomObservation", (t) =>
+  t.field({
+    type: ObservationRef,
+    description:
+      "Cancel a planned observation (CO-15, D-#428): an UPLOADED or ASSIGNED row that will not now be reviewed — " +
+      "unusable footage, a teacher on leave, a duplicate upload. Stamps cancelledAt/cancelledBy/cancelledReason " +
+      "with a REQUIRED reason; the row leaves the observer's queue and the toReview count but stays readable under " +
+      "the cancelled filter. `state` is unchanged, so restoring is a clear, not a transition. A REVIEWED row is " +
+      "REFUSED — use withholdClassroomObservation instead (cancel = 'will not happen', withhold = 'happened, not " +
+      "released'). The linked SessionRecording is kept. Requires observation:manage. Audited.",
+    authScopes: { hasPermission: "observation:manage" },
+    args: {
+      observationId: t.arg.string({ required: true }),
+      reason: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return cancelObservation({
+        observationId: args.observationId,
+        reason: args.reason,
+        actorId: actor.userId,
+      });
+    },
+  }),
+);
+
+builder.mutationField("restoreCancelledClassroomObservation", (t) =>
+  t.field({
+    type: ObservationRef,
+    description:
+      "Undo a cancel (CO-15, D-#428): clears cancelledAt/cancelledBy/cancelledReason and returns the row to the " +
+      "SAME state and observer it had — UPLOADED comes back UPLOADED, ASSIGNED comes back ASSIGNED and reappears " +
+      "in that observer's queue. Requires observation:manage. Audited with the prior reason.",
+    authScopes: { hasPermission: "observation:manage" },
+    args: { observationId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return restoreCancelledObservation({ observationId: args.observationId, actorId: actor.userId });
+    },
+  }),
+);
+
 // ---------------------------------------------------------------------------
 // Escalation cadence config (observation:manage — admin-tunable, D-#97 defaults)
 // ---------------------------------------------------------------------------
@@ -682,6 +729,7 @@ builder.queryField("allClassroomObservations", (t) =>
       sectionId: t.arg.string({ required: false }),
       published: t.arg.boolean({ required: false }),
       withheld: t.arg.boolean({ required: false }),
+      cancelled: t.arg.boolean({ required: false }),
       dateFrom: t.arg.string({ required: false }),
       dateTo: t.arg.string({ required: false }),
       search: t.arg.string({ required: false }),
@@ -698,6 +746,7 @@ builder.queryField("allClassroomObservations", (t) =>
         sectionId: args.sectionId ?? undefined,
         published: args.published ?? undefined,
         withheld: args.withheld ?? undefined,
+        cancelled: args.cancelled ?? undefined,
         dateFrom: args.dateFrom ?? undefined,
         dateTo: args.dateTo ?? undefined,
         search: args.search ?? undefined,
@@ -724,6 +773,7 @@ builder.queryField("myObservationReviews", (t) =>
       sectionId: t.arg.string({ required: false }),
       published: t.arg.boolean({ required: false }),
       withheld: t.arg.boolean({ required: false }),
+      cancelled: t.arg.boolean({ required: false }),
       dateFrom: t.arg.string({ required: false }),
       dateTo: t.arg.string({ required: false }),
       search: t.arg.string({ required: false }),
@@ -740,6 +790,7 @@ builder.queryField("myObservationReviews", (t) =>
         sectionId: args.sectionId ?? undefined,
         published: args.published ?? undefined,
         withheld: args.withheld ?? undefined,
+        cancelled: args.cancelled ?? undefined,
         dateFrom: args.dateFrom ?? undefined,
         dateTo: args.dateTo ?? undefined,
         search: args.search ?? undefined,
