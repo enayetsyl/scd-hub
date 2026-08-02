@@ -24,6 +24,8 @@ import {
   PUBLISH_CLASSROOM_OBSERVATION,
   WITHHOLD_CLASSROOM_OBSERVATION,
   RELEASE_CLASSROOM_OBSERVATION_HOLD,
+  CANCEL_CLASSROOM_OBSERVATION,
+  RESTORE_CANCELLED_CLASSROOM_OBSERVATION,
   REQUEST_CO_REVIEW_OBSERVATION,
   OBSERVATIONS_FOR_RECORDING_QUERY,
 } from "../../graphql/observation";
@@ -108,6 +110,8 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
   const [, publish] = useMutation(PUBLISH_CLASSROOM_OBSERVATION);
   const [, withhold] = useMutation(WITHHOLD_CLASSROOM_OBSERVATION);
   const [, liftHold] = useMutation(RELEASE_CLASSROOM_OBSERVATION_HOLD);
+  const [, cancelObs] = useMutation(CANCEL_CLASSROOM_OBSERVATION);
+  const [, restoreObs] = useMutation(RESTORE_CANCELLED_CLASSROOM_OBSERVATION);
   const [, coReview] = useMutation(REQUEST_CO_REVIEW_OBSERVATION);
 
   // CO-9 co-review group — every observation on this recording (manager oversight).
@@ -121,6 +125,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
 
   const [responseText, setResponseText] = useState("");
   const [withholdReason, setWithholdReason] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
   const [coObserverId, setCoObserverId] = useState<string | null>(null);
   const [fairness, setFairness] = useState<string | null>(null);
   const [usefulness, setUsefulness] = useState<string | null>(null);
@@ -167,6 +172,18 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
     }
     const res = await run(() => withhold({ observationId, reason }), STR.obsWithholdDone);
     if (res) setWithholdReason("");
+  }
+
+  // CO-15 (D-#428): cancelling a PLANNED review also needs a reason — caught here so the
+  // user sees it before a round-trip, exactly like withhold above.
+  async function onCancel(): Promise<void> {
+    const reason = cancelReason.trim();
+    if (!reason) {
+      setError(STR.obsCancelReasonRequired);
+      return;
+    }
+    const res = await run(() => cancelObs({ observationId, reason }), STR.obsCancelDone);
+    if (res) setCancelReason("");
   }
 
   // CO-2: authorize YouTube (separate gesture from the upload, so the file dialog keeps its user gesture).
@@ -238,6 +255,54 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
           <Row label={STR.obsSubject} value={hwSubjectLabel(obs.subject)} />
           <Row label={STR.obsClassDate} value={isoDateLabel(obs.classDate)} />
         </Card>
+
+        {/* CO-15 (D-#428): Principal/Office cancel a PLANNED review — UPLOADED/ASSIGNED
+            only. Deliberately a SEPARATE card from publish/withhold below, and the two
+            never render together: a row is either still planned (this card) or already
+            reviewed (that one). Cancel = "this review will not happen"; withhold = "it
+            happened and is not being released". A cancelled row shows the cancel with its
+            reason and a Restore action instead of the cancel form. */}
+        {canManage && (obs.state === "UPLOADED" || obs.state === "ASSIGNED") ? (
+          <Card>
+            <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsCancelTitle}</Body>
+            {obs.cancelledAt ? (
+              <>
+                <View style={{ flexDirection: "row", marginBottom: space(2) }}>
+                  <Badge text={STR.obsCancelled} tone="warn" />
+                </View>
+                <Row label={STR.obsCancelledOn} value={isoDateTimeLabel(obs.cancelledAt)} />
+                {obs.cancelledBy ? (
+                  <Row label={STR.obsCancelledBy} value={nameById[obs.cancelledBy] ?? obs.cancelledBy} />
+                ) : null}
+                <Row label={STR.obsCancelReason} value={obs.cancelledReason ?? "—"} />
+                <Muted style={{ marginTop: space(2), marginBottom: space(2) }}>{STR.obsRestoreHint}</Muted>
+                <Button
+                  title={STR.obsRestore}
+                  variant="secondary"
+                  onPress={() => void run(() => restoreObs({ observationId }), STR.obsRestoreDone)}
+                  disabled={busy}
+                />
+              </>
+            ) : (
+              <>
+                <Muted style={{ marginBottom: space(2) }}>{STR.obsCancelHint}</Muted>
+                <Field
+                  label={STR.obsCancelReason}
+                  value={cancelReason}
+                  onChangeText={setCancelReason}
+                  placeholder={STR.obsCancelReasonPlaceholder}
+                  multiline
+                />
+                <Button
+                  title={STR.obsCancel}
+                  variant="secondary"
+                  onPress={() => void onCancel()}
+                  disabled={busy || cancelReason.trim().length === 0}
+                />
+              </>
+            )}
+          </Card>
+        ) : null}
 
         {/* CO-8 (D-#271): Principal/Office publish gate — REVIEWED is not visible to the
             teacher until published. Show status + a Publish action to managers.

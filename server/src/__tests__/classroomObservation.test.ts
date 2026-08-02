@@ -59,12 +59,14 @@ const mockCreate = jest.fn();
 const mockFindById = jest.fn();
 const mockFind = jest.fn();
 const mockFindOne = jest.fn();
+const mockCountDocuments = jest.fn();
 jest.mock("../modules/classroom-observation/models/ClassroomObservation", () => ({
   ClassroomObservation: {
     create: (doc: unknown) => mockCreate(doc),
     findById: (id: unknown) => mockFindById(id),
     find: (q: unknown) => mockFind(q),
     findOne: (q: unknown) => mockFindOne(q),
+    countDocuments: (q: unknown) => mockCountDocuments(q),
   },
 }));
 
@@ -93,6 +95,10 @@ import {
   publishObservation,
   withholdObservation,
   releaseObservationHold,
+  cancelObservation,
+  restoreCancelledObservation,
+  myReviewQueue,
+  observationCounts,
   respondToObservation,
   requestReReview,
   requestCoReview,
@@ -154,6 +160,9 @@ const makeDoc = (over: Record<string, unknown> = {}) => {
     withheldAt: null,
     withheldBy: null,
     withheldReason: null,
+    cancelledAt: null,
+    cancelledBy: null,
+    cancelledReason: null,
     domains: [],
     gates: [],
     oneStrength: null,
@@ -742,5 +751,183 @@ describe("observationsForRecording (CO-9 group read)", () => {
     const res = await observationsForRecording(RECORDING.toString());
     expect(res).toHaveLength(2);
     expect(mockFind).toHaveBeenCalledWith(expect.objectContaining({ recordingId: expect.anything() }));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CO-15 — cancel a planned review (D-#428)
+// ---------------------------------------------------------------------------
+
+describe("cancelObservation (CO-15)", () => {
+  test.each(["UPLOADED", "ASSIGNED"])(
+    "cancels a %s row → stamps + reason, audited, state UNCHANGED (additive flag)",
+    async (state) => {
+      const doc = makeDoc({ state, observerId: state === "UPLOADED" ? null : OBSERVER });
+      mockFindById.mockResolvedValue(doc);
+      const res = await cancelObservation({
+        observationId: String(doc._id),
+        reason: "Teacher on leave for a month; re-planning in September.",
+        actorId: OFFICE.toString(),
+      });
+      expect(res.cancelledAt).toBeTruthy();
+      expect(res.cancelledBy).toBe(OFFICE.toString());
+      expect(res.cancelledReason).toBe("Teacher on leave for a month; re-planning in September.");
+      // The whole point of the additive-flag shape: `state` survives, so restore is a clear.
+      expect(res.state).toBe(state);
+      expect(doc.save as jest.Mock).toHaveBeenCalled();
+      expect(mockWriteAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventKind: "CLASSROOM_OBSERVATION_CANCELLED",
+          meta: expect.objectContaining({ priorState: state }),
+        }),
+      );
+    },
+  );
+
+  test("REFUSES a REVIEWED row and points at withhold (CO-12 owns that case)", async () => {
+    const doc = makeDoc({ state: "REVIEWED" });
+    mockFindById.mockResolvedValue(doc);
+    await expect(
+      cancelObservation({ observationId: String(doc._id), reason: "changed my mind", actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/স্থগিত/); // the message names the alternative
+    expect(doc.save as jest.Mock).not.toHaveBeenCalled();
+    expect(mockWriteAudit).not.toHaveBeenCalled();
+  });
+
+  test("refuses TEACHER_RESPONDED, SUPERSEDED and a double cancel", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "TEACHER_RESPONDED" }));
+    await expect(
+      cancelObservation({ observationId: oid().toString(), reason: "too late", actorId: OFFICE.toString() }),
+    ).rejects.toThrow(ClassroomObservationError);
+
+    mockFindById.mockResolvedValue(makeDoc({ state: "SUPERSEDED" }));
+    await expect(
+      cancelObservation({ observationId: oid().toString(), reason: "too late", actorId: OFFICE.toString() }),
+    ).rejects.toThrow(ClassroomObservationError);
+
+    mockFindById.mockResolvedValue(makeDoc({ state: "ASSIGNED", cancelledAt: new Date() }));
+    await expect(
+      cancelObservation({ observationId: oid().toString(), reason: "again", actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/ইতিমধ্যে/);
+  });
+
+  test("requires a reason (whitespace-only refused, nothing written) and trims it", async () => {
+    const doc = makeDoc({ state: "ASSIGNED" });
+    mockFindById.mockResolvedValue(doc);
+    await expect(
+      cancelObservation({ observationId: String(doc._id), reason: "   ", actorId: OFFICE.toString() }),
+    ).rejects.toThrow(/কারণ/);
+    expect(doc.save as jest.Mock).not.toHaveBeenCalled();
+    expect(mockWriteAudit).not.toHaveBeenCalled();
+
+    const doc2 = makeDoc({ state: "ASSIGNED" });
+    mockFindById.mockResolvedValue(doc2);
+    const res = await cancelObservation({
+      observationId: String(doc2._id),
+      reason: "  duplicate upload  ",
+      actorId: OFFICE.toString(),
+    });
+    expect(res.cancelledReason).toBe("duplicate upload");
+  });
+
+  test("keeps the linked SessionRecording (CO-2 object, own lifecycle)", async () => {
+    const doc = makeDoc({ state: "ASSIGNED", recordingId: RECORDING });
+    mockFindById.mockResolvedValue(doc);
+    const res = await cancelObservation({
+      observationId: String(doc._id),
+      reason: "covered by a substitute",
+      actorId: OFFICE.toString(),
+    });
+    expect(res.recordingId).toBe(RECORDING.toString());
+  });
+
+  test("the observed teacher is never notified", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "ASSIGNED" }));
+    await cancelObservation({
+      observationId: oid().toString(),
+      reason: "routine changed under it",
+      actorId: OFFICE.toString(),
+    });
+    expect(mockEmit).not.toHaveBeenCalled();
+  });
+});
+
+describe("a cancelled row cannot be worked on (CO-15)", () => {
+  test("assignObserver refuses it — restore first", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "ASSIGNED", cancelledAt: new Date() }));
+    await expect(
+      assignObserver({
+        observationId: oid().toString(),
+        observerId: OBSERVER.toString(),
+        actorId: OFFICE.toString(),
+      }),
+    ).rejects.toThrow(/বাতিল/);
+  });
+
+  test("reviewObservation refuses it (stale client)", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "ASSIGNED", cancelledAt: new Date() }));
+    await expect(
+      reviewObservation({
+        observationId: oid().toString(),
+        actorId: OBSERVER.toString(),
+        ...validPayload(),
+      }),
+    ).rejects.toThrow(/বাতিল/);
+  });
+});
+
+describe("restoreCancelledObservation (CO-15)", () => {
+  test("clears all three fields and returns the row to the SAME state + observer", async () => {
+    const doc = makeDoc({
+      state: "ASSIGNED",
+      observerId: OBSERVER,
+      cancelledAt: new Date(),
+      cancelledBy: OFFICE,
+      cancelledReason: "teacher was on leave",
+    });
+    mockFindById.mockResolvedValue(doc);
+    const res = await restoreCancelledObservation({
+      observationId: String(doc._id),
+      actorId: OFFICE.toString(),
+    });
+    expect(res.cancelledAt).toBeNull();
+    expect(res.cancelledBy).toBeNull();
+    expect(res.cancelledReason).toBeNull();
+    expect(res.state).toBe("ASSIGNED");
+    expect(res.observerId).toBe(OBSERVER.toString());
+    // The prior reason survives in the audit — restoring must not erase the record.
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventKind: "CLASSROOM_OBSERVATION_RESTORED",
+        meta: expect.objectContaining({ priorReason: "teacher was on leave", restoredToState: "ASSIGNED" }),
+      }),
+    );
+  });
+
+  test("refuses a row that is not cancelled", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "ASSIGNED", cancelledAt: null }));
+    await expect(
+      restoreCancelledObservation({ observationId: oid().toString(), actorId: OFFICE.toString() }),
+    ).rejects.toThrow(ClassroomObservationError);
+  });
+});
+
+describe("cancelled rows leave the queue and the count (CO-15)", () => {
+  test("myReviewQueue excludes cancelled rows", async () => {
+    mockFind.mockReturnValue(leanChain([]));
+    await myReviewQueue(OBSERVER.toString());
+    expect(mockFind).toHaveBeenCalledWith(expect.objectContaining({ state: "ASSIGNED", cancelledAt: null }));
+  });
+
+  test("observationCounts.toReview excludes cancelled rows; toPublish is untouched", async () => {
+    mockCountDocuments.mockResolvedValue(0);
+    await observationCounts(OBSERVER.toString(), true, true);
+    expect(mockCountDocuments).toHaveBeenCalledWith(
+      expect.objectContaining({ state: "ASSIGNED", cancelledAt: null }),
+    );
+    // The publish queue filters REVIEWED, which cancel can never reach — unchanged.
+    expect(mockCountDocuments).toHaveBeenCalledWith(
+      expect.objectContaining({ state: "REVIEWED", publishedAt: null, withheldAt: null }),
+    );
   });
 });
