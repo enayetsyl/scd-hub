@@ -55,6 +55,33 @@ function downloadCsv(filename: string, header: string[], rows: string[][]): void
   URL.revokeObjectURL(url);
 }
 
+/**
+ * The report table's own "paper" palette.
+ *
+ * This grid deliberately paints a fixed printed-report look (blue header, blue-tinted
+ * zebra rows) instead of the theme surface, because it is the on-screen twin of the
+ * print/CSV export. That is a conscious exception to the "screens never hard-code a
+ * hex" rule in `theme/tokens.ts` — but it only works if the TEXT colours are pinned
+ * here too. They used to come from the theme (`Body` → textPrimary, `Muted` →
+ * textSecondary), so on a device set to DARK mode the near-white `#E7ECE9` body text
+ * landed on these hard-coded near-white rows and read as washed-out grey, while the
+ * same screen looked black-on-white on a light-mode device (owner report 2026-08-02).
+ * Paper is paper in both schemes: keep every colour in this table on this one surface.
+ */
+const REPORT = {
+  headerBg: "#4f9cf9",
+  headerText: "#fff",
+  headerHint: "rgba(255,255,255,0.65)",
+  headerDivider: "rgba(255,255,255,0.18)",
+  rowEven: "#eef5ff",
+  rowOdd: "#fff",
+  rowPressed: "#dbeafe",
+  rowBorder: "#dde7f5",
+  /** Mirrors lightColors.textPrimary / textSecondary — pinned, not theme-resolved. */
+  text: "#182420",
+  textMuted: "#46554E",
+} as const;
+
 function SubjectList({
   subjects,
   emptyLabel,
@@ -64,7 +91,7 @@ function SubjectList({
   emptyLabel: string;
   tone: "ok" | "warn";
 }): React.ReactElement {
-  if (subjects.length === 0) return <Muted>{emptyLabel}</Muted>;
+  if (subjects.length === 0) return <Muted style={{ color: REPORT.textMuted }}>{emptyLabel}</Muted>;
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1) }}>
       {subjects.map((subject, index) => (
@@ -288,7 +315,7 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
           <Card style={{ padding: 0, overflow: "hidden" }}>
             <ScrollView horizontal showsHorizontalScrollIndicator>
               <View style={{ minWidth: tableWidth }}>
-                <View style={{ flexDirection: "row", backgroundColor: "#4f9cf9" }}>
+                <View style={{ flexDirection: "row", backgroundColor: REPORT.headerBg }}>
                   {columns.map((col) => (
                     <View
                       key={col.key}
@@ -299,12 +326,12 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
                         justifyContent: "center",
                         alignItems: col.align === "center" ? "center" : col.align === "right" ? "flex-end" : "flex-start",
                         borderRightWidth: 1,
-                        borderRightColor: "rgba(255,255,255,0.18)",
+                        borderRightColor: REPORT.headerDivider,
                       }}
                     >
-                      <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }} numberOfLines={1}>
+                      <Text style={{ color: REPORT.headerText, fontWeight: "700", fontSize: 14 }} numberOfLines={1}>
                         {col.label}
-                        <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 11 }}>  ▲▼</Text>
+                        <Text style={{ color: REPORT.headerHint, fontSize: 11 }}>  ▲▼</Text>
                       </Text>
                     </View>
                   ))}
@@ -328,35 +355,35 @@ export default function ClassNoteReportScreen({ navigation, route }: Props): Rea
                       style={({ pressed }) => [
                         {
                           flexDirection: "row",
-                          backgroundColor: index % 2 === 0 ? "#eef5ff" : "#fff",
+                          backgroundColor: index % 2 === 0 ? REPORT.rowEven : REPORT.rowOdd,
                           borderBottomWidth: 1,
-                          borderBottomColor: "#dde7f5",
+                          borderBottomColor: REPORT.rowBorder,
                         },
-                        pressed ? { backgroundColor: "#dbeafe" } : null,
+                        pressed ? { backgroundColor: REPORT.rowPressed } : null,
                       ]}
                     >
                       <View style={{ width: 56, padding: space(2), justifyContent: "center" }}>
-                        <Text style={{ fontWeight: "700" }}>{bnNum(index + 1)}</Text>
+                        <Text style={{ color: REPORT.text, fontWeight: "700" }}>{bnNum(index + 1)}</Text>
                       </View>
                       <View style={{ width: 180, padding: space(2), justifyContent: "center" }}>
-                        <Body style={{ fontWeight: "700" }}>{primary}</Body>
+                        <Body style={{ fontWeight: "700", color: REPORT.text }}>{primary}</Body>
                       </View>
                       <View style={{ width: 140, padding: space(2), justifyContent: "center" }}>
-                        <Muted>{secondary ?? "—"}</Muted>
+                        <Muted style={{ color: REPORT.textMuted }}>{secondary ?? "—"}</Muted>
                       </View>
                       {showTeacherColumns ? (
                         <>
                           <View style={{ width: 132, padding: space(2), justifyContent: "center" }}>
-                            <Body style={{ fontWeight: "700" }}>{row.teacherSchoolId ?? "—"}</Body>
+                            <Body style={{ fontWeight: "700", color: REPORT.text }}>{row.teacherSchoolId ?? "—"}</Body>
                           </View>
                           <View style={{ width: 180, padding: space(2), justifyContent: "center" }}>
-                            <Body style={{ fontWeight: "700" }}>
+                            <Body style={{ fontWeight: "700", color: REPORT.text }}>
                               {row.teacherName ?? "—"}
                             </Body>
-                            <Muted>{row.teacherPhone ?? "—"}</Muted>
+                            <Muted style={{ color: REPORT.textMuted }}>{row.teacherPhone ?? "—"}</Muted>
                           </View>
                           <View style={{ width: 160, padding: space(2), justifyContent: "center" }}>
-                            <Muted>{row.teacherPhone ?? "—"}</Muted>
+                            <Muted style={{ color: REPORT.textMuted }}>{row.teacherPhone ?? "—"}</Muted>
                           </View>
                         </>
                       ) : null}
