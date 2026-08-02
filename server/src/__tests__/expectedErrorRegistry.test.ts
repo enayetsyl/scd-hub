@@ -27,6 +27,12 @@ const DELIBERATE_FAULTS = new Set([
   "DocxConvertError",
   // The MON-2 smoke test's own error; its whole purpose is to arrive.
   "SentrySmokeError",
+  // "BOOK_MONGODB_URI is not set" — book production is wired but its database was
+  // never provisioned (SB-1, D-#404). It cannot fire per-request: only a deliberate
+  // connectBookDb() raises it, so it is a misconfiguration to fix, not user noise.
+  // The whole point of the named error is that a missing URI is LOUD rather than a
+  // silent fallback onto the identity connection.
+  "BookDbNotConfiguredError",
 ]);
 
 function findErrorClasses(): Map<string, string> {

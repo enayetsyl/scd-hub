@@ -2776,6 +2776,254 @@ export const BUDGET_LINE_KIND_LABELS_EN: Record<BudgetLineKind, string> = {
 };
 
 
+// --- A.18 BOOK PRODUCTION (SB-1, prd-support-book.md §4, D-#403–#427) ----------
+// App-native, NO wire twin, NO harness sync (D-#405): a book's subject rides
+// ROUTINE_SUBJECTS and its class rides ROSTER_CLASS_LEVELS, so ISLAM and Nursery are
+// expressible without widening the LOCKED content enums.
+//
+// The values that mirror `SCHEMA_support-book_v1.md` are VERBATIM — they are written
+// into and read out of book.json, so renaming one silently breaks the render pipeline.
+// The workflow enums below them are ours.
+
+/** Which production line a book belongs to. The engine is type-agnostic (D-#420);
+ *  only the per-type adapter (schema, validator set, render profiles, policy set)
+ *  may branch on this. */
+export const BOOK_TYPES = ["SUPPORT_BOOK", "STORYBOOK"] as const;
+export type BookType = (typeof BOOK_TYPES)[number];
+export const BOOK_TYPE_LABELS_BN: Record<BookType, string> = {
+  SUPPORT_BOOK: "সহায়িকা",
+  STORYBOOK: "গল্পের বই",
+};
+export const BOOK_TYPE_LABELS_EN: Record<BookType, string> = {
+  SUPPORT_BOOK: "Support book",
+  STORYBOOK: "Storybook",
+};
+
+// -- Schema mirrors (VERBATIM from SCHEMA_support-book_v1; do not rename) --------
+
+/** Mode-R = selective genre-matched replacement; Mode-C = exam fidelity, no `replace`. */
+export const BOOK_MODES = ["R", "C"] as const;
+export type BookMode = (typeof BOOK_MODES)[number];
+
+/** Per-পাঠ action flag. Mode-C books never carry `replace` (validator-enforced). */
+export const LESSON_ACTIONS = ["retain", "retain-curated", "replace"] as const;
+export type LessonAction = (typeof LESSON_ACTIONS)[number];
+
+/** Severity when action ≠ retain. S4 is the "fits no C-code" ESCALATION flag
+ *  (README §3.2), not a band — it routes to the Principal rather than grading. */
+export const LESSON_SEVERITIES = ["S1", "S2", "S3", "S4"] as const;
+export type LessonSeverity = (typeof LESSON_SEVERITIES)[number];
+
+/** How a পাঠ renders in the always-on bw-photocopy edition (D-016 upstream). */
+export const BW_TREATMENTS = ["native_safe", "redesigned", "print_only_omit"] as const;
+export type BwTreatment = (typeof BW_TREATMENTS)[number];
+
+/** Text block types the composer lays out by `type` + `layout_hint`. */
+export const BLOCK_TYPES = [
+  "heading", "instruction", "oral_text", "decodable_text", "poem", "rhyme", "story",
+  "dialogue", "word_list", "exercise", "fill_blank", "matching", "writing_line",
+  "tracing_ref", "table",
+] as const;
+export type BlockType = (typeof BLOCK_TYPES)[number];
+
+/** Provenance. The letter audit keys off exactly this (+ `edited`, `oral`). */
+export const BLOCK_SOURCES = ["nctb", "school"] as const;
+export type BlockSource = (typeof BLOCK_SOURCES)[number];
+
+/** Image doctrine rows (README §5). */
+export const IMAGE_CLASSES = [
+  "object", "narrative_figure", "animal_story", "diagram", "photo_replace", "tracing_asset",
+] as const;
+export type ImageClass = (typeof IMAGE_CLASSES)[number];
+
+export const IMAGE_SLOT_ACTIONS = [
+  "substitute_objects", "generate_stripe", "redraw_schematic", "keep_nctb", "omit", "vector_asset",
+] as const;
+export type ImageSlotAction = (typeof IMAGE_SLOT_ACTIONS)[number];
+
+/** Support-book editions — BOTH always rendered; a single-edition pass is not a pass. */
+export const RENDER_PROFILES = ["print-colour", "bw-photocopy"] as const;
+export type RenderProfile = (typeof RENDER_PROFILES)[number];
+
+// -- Workflow (ours) ------------------------------------------------------------
+
+/** Per-পাঠ status flow (README §7). */
+export const LESSON_STATES = [
+  "COMPLIANCE_MAP", "RULED", "CONTENT_DRAFT", "CONTENT_APPROVED",
+  "IMAGES_APPROVED", "COMPLIANCE_DONE", "ASSEMBLED", "QA_PASSED",
+] as const;
+export type LessonState = (typeof LESSON_STATES)[number];
+export const LESSON_STATE_LABELS_BN: Record<LessonState, string> = {
+  COMPLIANCE_MAP: "কমপ্লায়েন্স ম্যাপ",
+  RULED: "সিদ্ধান্ত হয়েছে",
+  CONTENT_DRAFT: "খসড়া লেখা",
+  CONTENT_APPROVED: "লেখা অনুমোদিত",
+  IMAGES_APPROVED: "ছবি অনুমোদিত",
+  COMPLIANCE_DONE: "কমপ্লায়েন্স সম্পন্ন",
+  ASSEMBLED: "বই তৈরি",
+  QA_PASSED: "যাচাই সম্পন্ন",
+};
+export const LESSON_STATE_LABELS_EN: Record<LessonState, string> = {
+  COMPLIANCE_MAP: "Compliance map",
+  RULED: "Ruled",
+  CONTENT_DRAFT: "Content draft",
+  CONTENT_APPROVED: "Content approved",
+  IMAGES_APPROVED: "Images approved",
+  COMPLIANCE_DONE: "Compliance done",
+  ASSEMBLED: "Assembled",
+  QA_PASSED: "QA passed",
+};
+
+export const IMAGE_SLOT_STATES = [
+  "DRAFT", "PROMPT_READY", "GENERATED", "APPROVED", "COMPLIANT", "REJECTED",
+] as const;
+export type ImageSlotState = (typeof IMAGE_SLOT_STATES)[number];
+export const IMAGE_SLOT_STATE_LABELS_BN: Record<ImageSlotState, string> = {
+  DRAFT: "খসড়া",
+  PROMPT_READY: "প্রম্পট প্রস্তুত",
+  GENERATED: "ছবি তৈরি",
+  APPROVED: "অনুমোদিত",
+  COMPLIANT: "কমপ্লায়েন্ট",
+  REJECTED: "বাতিল",
+};
+export const IMAGE_SLOT_STATE_LABELS_EN: Record<ImageSlotState, string> = {
+  DRAFT: "Draft",
+  PROMPT_READY: "Prompt ready",
+  GENERATED: "Generated",
+  APPROVED: "Approved",
+  COMPLIANT: "Compliant",
+  REJECTED: "Rejected",
+};
+
+/** How a lesson patch reached the merge gate. Recorded for the rationale timeline
+ *  and branched on NOWHERE else — both paths pass the same validator (D-#408). */
+export const PATCH_SOURCES = ["DESKTOP_UPLOAD", "IN_APP_CHAT"] as const;
+export type PatchSource = (typeof PATCH_SOURCES)[number];
+
+/** How an image reached the app. Both permanent; neither retires the other (D-#419). */
+export const IMAGE_SOURCES = ["EXTERNAL_UPLOAD", "IN_APP_API"] as const;
+export type ImageSource = (typeof IMAGE_SOURCES)[number];
+
+/** The per-slot lineage chain. Each stage fingerprints its input and output so a
+ *  re-approval upstream marks everything downstream stale (D-#417). */
+export const ARTIFACT_STAGES = ["APPROVED", "CROPPED", "UPSCALED", "COMPLIANT"] as const;
+export type ArtifactStage = (typeof ARTIFACT_STAGES)[number];
+
+/** Any STALE artifact anywhere locks assembly (D-#417). */
+export const LINEAGE_STATES = ["FRESH", "STALE", "MISSING"] as const;
+export type LineageState = (typeof LINEAGE_STATES)[number];
+
+/** Human eyeball gates. The system may NEVER satisfy one on a person's behalf, and
+ *  never infers a human judgement from a green exit code (D-#418). */
+export const REVIEW_GATES = [
+  "IMAGE_GRID_REVIEWED", "CROP_GRID_REVIEWED", "UPSCALE_TEXTURE_REVIEWED",
+  "STRIP_GRID_REVIEWED", "RENDER_SPOT_CHECKED",
+] as const;
+export type ReviewGate = (typeof REVIEW_GATES)[number];
+
+/** A reviewer↔senior-reviewer thread. A senior's reply ANSWERS; a further reply
+ *  re-OPENS. Resolution never mutates content — it produces a citing patch (D-#410). */
+export const ESCALATION_STATES = ["OPEN", "ANSWERED", "RESOLVED", "WITHDRAWN"] as const;
+export type EscalationState = (typeof ESCALATION_STATES)[number];
+export const ESCALATION_STATE_LABELS_BN: Record<EscalationState, string> = {
+  OPEN: "খোলা",
+  ANSWERED: "উত্তর দেওয়া",
+  RESOLVED: "নিষ্পত্তি",
+  WITHDRAWN: "প্রত্যাহার",
+};
+export const ESCALATION_STATE_LABELS_EN: Record<EscalationState, string> = {
+  OPEN: "Open",
+  ANSWERED: "Answered",
+  RESOLVED: "Resolved",
+  WITHDRAWN: "Withdrawn",
+};
+
+/** What an escalation is ABOUT — it is anchored to an item, not to a book (D-#410). */
+export const ESCALATION_TARGETS = ["LESSON", "BLOCK", "IMAGE_SLOT"] as const;
+export type EscalationTarget = (typeof ESCALATION_TARGETS)[number];
+
+export const BUILD_STATES = ["QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELLED"] as const;
+export type BuildState = (typeof BUILD_STATES)[number];
+export const BUILD_STATE_LABELS_BN: Record<BuildState, string> = {
+  QUEUED: "সারিতে",
+  RUNNING: "চলছে",
+  SUCCEEDED: "সফল",
+  FAILED: "ব্যর্থ",
+  CANCELLED: "বাতিল",
+};
+export const BUILD_STATE_LABELS_EN: Record<BuildState, string> = {
+  QUEUED: "Queued",
+  RUNNING: "Running",
+  SUCCEEDED: "Succeeded",
+  FAILED: "Failed",
+  CANCELLED: "Cancelled",
+};
+
+export const BUILD_SCOPES = ["LESSON", "RANGE", "FULL"] as const;
+export type BuildScope = (typeof BUILD_SCOPES)[number];
+
+/** Programme governance stored as DATA, never as repo files (D-#403). Every
+ *  generation stamps the active set's hash so a decision stays reproducible. */
+export const POLICY_DOC_KEYS = [
+  "README", "DECISIONS", "SCHEMA", "REF1_CURATION", "REF2_REGISTER",
+  "ASSEMBLY", "PROJECT_INSTRUCTIONS", "LETTER_INVENTORY",
+] as const;
+export type PolicyDocKey = (typeof POLICY_DOC_KEYS)[number];
+/** LETTER_INVENTORY is per-book; every other key is programme-wide. */
+export const PER_BOOK_POLICY_DOC_KEYS: readonly PolicyDocKey[] = ["LETTER_INVENTORY"];
+
+/** The validator's check set (README §6 + the layout check the shipped CLI adds).
+ *  C4 is the ONLY subject-specific one — it runs for C1–C2 বাংলা and is skipped
+ *  otherwise (D-#427: port it from validator_letter_audit.py, not from the schema doc). */
+export const VALIDATOR_CHECKS = [
+  "C1_JSON_VERSION", "C2_INVENTORY_FLAGS", "C3_CODES", "C4_LETTER_AUDIT", "C5_GENRE",
+  "C6_SLOT_BOOLEANS", "C7_SOURCE_NOTE", "C8_SCRIPT_GUARD", "C9_NO_STRIPE_LANGUAGE",
+  "C10_MAP_DERIVABLE", "C11_BW_COMPLETE", "C12_LAYOUT",
+] as const;
+export type ValidatorCheck = (typeof VALIDATOR_CHECKS)[number];
+
+/** RED refuses the merge; GREY merges with a warning; INFO is reported only. */
+export const VALIDATOR_SEVERITIES = ["RED", "GREY", "INFO"] as const;
+export type ValidatorSeverity = (typeof VALIDATOR_SEVERITIES)[number];
+
+/** The teacher-reviewer's per-পাঠ checklist, README §7 VERBATIM (SB-3). Every item
+ *  must be ticked before `reviewer_signoff.checklist_passed` can go true — the list
+ *  is the sign-off, not a suggestion attached to one. */
+export const BOOK_REVIEW_CHECKLIST = [
+  "GENRE",             // genre matches the corrected TG tag
+  "LETTER_AUDIT",      // the executed letter audit passed
+  "OUTCOME_COVERAGE",  // শিখনফল coverage
+  "SOURCE_NOTE",       // Islamic-narrative source note checked
+  "REGISTER_VS_NCTB",  // replacement read side-by-side with the NCTB original
+  "IMAGES_MATCH",      // images match the manifest
+  "PHOTOCOPY",         // the bw-photocopy edition survives the school's copier
+] as const;
+export type BookReviewChecklistItem = (typeof BOOK_REVIEW_CHECKLIST)[number];
+export const BOOK_REVIEW_CHECKLIST_LABELS_BN: Record<BookReviewChecklistItem, string> = {
+  GENRE: "ধরন মিলেছে",
+  LETTER_AUDIT: "বর্ণ-অডিট পাস",
+  OUTCOME_COVERAGE: "শিখনফল কভারেজ",
+  SOURCE_NOTE: "সূত্র-নোট যাচাই",
+  REGISTER_VS_NCTB: "এনসিটিবির সাথে মিলিয়ে পড়া",
+  IMAGES_MATCH: "ছবি ম্যানিফেস্ট অনুযায়ী",
+  PHOTOCOPY: "ফটোকপি যাচাই",
+};
+export const BOOK_REVIEW_CHECKLIST_LABELS_EN: Record<BookReviewChecklistItem, string> = {
+  GENRE: "Genre matches",
+  LETTER_AUDIT: "Letter audit passed",
+  OUTCOME_COVERAGE: "Outcome coverage",
+  SOURCE_NOTE: "Source note checked",
+  REGISTER_VS_NCTB: "Register vs NCTB",
+  IMAGES_MATCH: "Images match manifest",
+  PHOTOCOPY: "Photocopy check",
+};
+
+/** A review round's lifecycle. Mirrors `ReviewAssignment`'s shape (D-#40) — one OPEN
+ *  round per পাঠ at a time, so two reviewers can never both be "the" reviewer. */
+export const BOOK_REVIEW_ROUND_STATUSES = ["ASSIGNED", "SUBMITTED", "SUPERSEDED", "CANCELLED"] as const;
+export type BookReviewRoundStatus = (typeof BOOK_REVIEW_ROUND_STATUSES)[number];
+
+
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
 // =============================================================================
@@ -2851,6 +3099,16 @@ export const PERMISSIONS = [
                            // overriding the coverage block, revoking a released report, reopening a hard-locked
                            // month — ride the ROLE inside the resolver, not a second permission (D-#397), so
                            // AC-1 can hand the Office release without handing it the overrides.
+  // book production — সহায়িকা + storybooks (SB-1, D-#405/#421/#424). ONE set for BOTH
+  // book types: they differ in content rules, not process shape. All seven sit on the
+  // PRINCIPAL template (D-#424); everyone else is granted per user via AC-1.
+  "book:read",             // read books, lessons, prompts, images, threads (every production role holds it)
+  "book:author",           // upload a patch, run the authoring chat, merge on a green validator
+  "book:illustrate",       // read prompts, upload/generate images, mark a slot GENERATED
+  "book:review",           // reviewer verdicts + raise an escalation
+  "book:review_senior",    // answer escalations, content sign-off, anchor HUMAN_VERIFIED
+  "book:assemble",         // queue a build, release an edition
+  "book:manage",           // create books, upload policy versions, assign people, read everything
   // guardian portal (ACTIVE since GP-1, D-#68)
   "guardian:read_child",   // reads linked children's permitted operational slices
 ] as const;
@@ -2901,6 +3159,13 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "observation:manage": "build",  // Classroom-Observation CO-1 (config/dashboards, D-#195)
   "finance:manage": "build",      // Finance FIN-1 (ledgers + opening balances, D-#221)
   "report:release": "build",      // Monthly Report MR-3 (release/re-release + threshold config, D-#397)
+  "book:read": "build",           // Book production SB-1 (D-#405/#421/#424)
+  "book:author": "build",         // SB-1
+  "book:illustrate": "build",     // SB-2
+  "book:review": "build",         // SB-3
+  "book:review_senior": "build",  // SB-3
+  "book:assemble": "build",       // SB-4
+  "book:manage": "build",         // SB-1
   "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
 };
 
@@ -2928,6 +3193,13 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "finance:manage",        // finance/accounting (FIN-1, D-#221) — Principal+Office
     "report:release",        // monthly progress report: release/re-release + the MR-2 thresholds. The Principal
                              // ALSO holds the three override powers by role (D-#397) — see the permission's note.
+    // Book production — ALL SEVEN (D-#424, owner ruling). The Principal can author,
+    // illustrate, review, sign off and assemble. Permissions were never the constraint:
+    // the row-level separations (reviewer ≠ author of THAT lesson, verifier ≠ author of
+    // THAT book) survive, and for the Principal they resolve to a `selfReviewed` /
+    // `selfVerified` STAMP rather than a refusal — recorded, never silently allowed.
+    "book:read", "book:author", "book:illustrate", "book:review",
+    "book:review_senior", "book:assemble", "book:manage",
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
   // fills trackers; authors nothing in-app (no content:import). message:dispatch
@@ -3125,6 +3397,13 @@ export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
   "observation:manage": { name: "অবজারভেশন পরিচালনা", desc: "ডেজিগনেশন, কনফিগ ও ড্যাশবোর্ড" },
   "finance:manage": { name: "অর্থ ব্যবস্থাপনা", desc: "লেজার, ব্যালেন্স, পোস্টিং ও হিসাব" },
   "report:release": { name: "মাসিক রিপোর্ট প্রকাশ", desc: "মাসিক অগ্রগতি রিপোর্ট প্রকাশ ও পুনঃপ্রকাশ" },
+  "book:read": { name: "বই দেখা", desc: "বই, অধ্যায়, প্রম্পট ও ছবি পড়া" },
+  "book:author": { name: "বই লেখা", desc: "প্যাচ আপলোড ও অধ্যায় মার্জ করা" },
+  "book:illustrate": { name: "বইয়ের ছবি", desc: "প্রম্পট দেখা ও ছবি আপলোড করা" },
+  "book:review": { name: "বই রিভিউ", desc: "অধ্যায় যাচাই ও এসকালেশন তোলা" },
+  "book:review_senior": { name: "বই সিনিয়র রিভিউ", desc: "এসকালেশনের উত্তর ও চূড়ান্ত সাইন-অফ" },
+  "book:assemble": { name: "বই তৈরি", desc: "বিল্ড চালানো ও সংস্করণ প্রকাশ" },
+  "book:manage": { name: "বই পরিচালনা", desc: "বই তৈরি, নীতিমালা ও দায়িত্ব বণ্টন" },
   "guardian:read_child": { name: "সন্তানের তথ্য দেখা (অভিভাবক প্লেন)", desc: "অভিভাবক প্লেন — স্টাফকে দেওয়া যায় না" },
 };
 
@@ -3171,5 +3450,12 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "observation:manage": { name: "Manage observation", desc: "Designations, config, dashboards" },
   "finance:manage": { name: "Manage finance", desc: "Ledgers, balances, postings, accounts" },
   "report:release": { name: "Release monthly reports", desc: "Release and re-release monthly progress reports" },
+  "book:read": { name: "Read books", desc: "Books, lessons, prompts, images, threads" },
+  "book:author": { name: "Author books", desc: "Upload a patch and merge a lesson" },
+  "book:illustrate": { name: "Illustrate books", desc: "Read prompts, upload images" },
+  "book:review": { name: "Review books", desc: "Reviewer verdicts and escalations" },
+  "book:review_senior": { name: "Senior book review", desc: "Answer escalations, content sign-off" },
+  "book:assemble": { name: "Assemble books", desc: "Queue a build, release an edition" },
+  "book:manage": { name: "Manage book production", desc: "Create books, policy versions, assignments" },
   "guardian:read_child": { name: "Read child (guardian plane)", desc: "Guardian plane — not grantable to staff" },
 };

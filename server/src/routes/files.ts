@@ -24,6 +24,7 @@ import type { Router, Request, Response } from "express";
 import express, { Router as createRouter } from "express";
 import multer from "multer";
 import { buildContext } from "../context";
+import { isBookDbReady } from "../bookDb";
 import { assertClassNoteFileReadAccess } from "../modules/routine/services/ClassNoteFileService";
 import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../middleware/authz";
@@ -61,6 +62,17 @@ import {
 import { assertCanWrite } from "../middleware/authz";
 import { StudentComment } from "../modules/comments/models/StudentComment";
 import { writeAudit } from "../modules/platform/services/AuditService";
+import {
+  BOOK_FILE_ERRORS_BN,
+  validateBookUpload,
+  kindForStage,
+  bookDrivePath,
+  assertBookFileReadAccess,
+  MAX_BOOK_PDF_BYTES,
+} from "../modules/support-book/services/BookFileService";
+import { registerAsset } from "../modules/support-book/services/BookImageService";
+import { ARTIFACT_STAGES, type ArtifactStage } from "@scd/shared";
+import { Types as MongoTypes } from "mongoose";
 
 export const ALLOWED_FILE_MIMES = ["image/jpeg", "image/png", "application/pdf"] as const;
 export const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB (prd-guardian-portal §5)
@@ -753,6 +765,131 @@ filesRouter.post("/comment", parseCommentUpload, async (req: Request, res: Respo
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/book — book-production artwork + editions (SB-2, D-#409/#417/#419)
+// ---------------------------------------------------------------------------
+// Multipart `file` + fields: bookId, lessonNo, slotId, stage (APPROVED|CROPPED|
+// UPSCALED|COMPLIANT). Uploads to Drive under books/<BOOK_ID>/<stage>/ with
+// appProperties naming the slot, persists StoredFile, then REGISTERS the artifact so
+// the lineage chain updates — registering is what makes downstream stages stale, so
+// it must happen on the same request that brought the bytes in, never as a follow-up
+// a client could forget.
+
+const uploadBook = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_BOOK_PDF_BYTES },
+});
+
+const parseBookUpload: express.RequestHandler = (req, res, next) => {
+  uploadBook.single("file")(req, res, (err: unknown) => {
+    if (err) {
+      res.status(422).json({ error: BOOK_FILE_ERRORS_BN.tooLargePdf });
+      return;
+    }
+    next();
+  });
+};
+
+filesRouter.post("/book", parseBookUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  // book:illustrate brings artwork in; book:assemble files a rendered edition.
+  const mayUpload =
+    !!ctx.auth &&
+    (callerHasPermission(ctx.auth, "book:illustrate") || callerHasPermission(ctx.auth, "book:assemble"));
+  if (!mayUpload) {
+    res.status(403).json({ error: BOOK_FILE_ERRORS_BN.forbidden });
+    return;
+  }
+
+  // BEFORE any Drive work. Without this, a caller on a host where the book plane is
+  // not provisioned uploads the bytes successfully, writes a StoredFile row, and THEN
+  // hangs forever on registerAsset against an unopened connection — leaving an orphan
+  // file in Drive and a request that never answers. The GraphQL resolvers all check;
+  // this route was the one surface that did not.
+  if (!isBookDbReady()) {
+    res.status(503).json({ error: "বই-প্রোডাকশন ডেটাবেস কনফিগার করা হয়নি" });
+    return;
+  }
+
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+
+  const bookId = String(req.body?.bookId ?? "");
+  const slotId = String(req.body?.slotId ?? "");
+  const stageArg = String(req.body?.stage ?? "");
+  const lessonNo = Number(req.body?.lessonNo);
+  if (!bookId || !slotId || !Number.isFinite(lessonNo)) {
+    res.status(400).json({ error: "bookId, lessonNo and slotId are required" });
+    return;
+  }
+  if (!(ARTIFACT_STAGES as readonly string[]).includes(stageArg)) {
+    res.status(400).json({ error: BOOK_FILE_ERRORS_BN.badStage });
+    return;
+  }
+  const stage = stageArg as ArtifactStage;
+
+  const isPdf = file.mimetype === "application/pdf";
+  const rejection = validateBookUpload(file.mimetype, file.size, isPdf);
+  if (rejection) {
+    res.status(422).json({ error: rejection });
+    return;
+  }
+
+  try {
+    // Drive FIRST — only a successful upload persists metadata (GP-J8).
+    const driveFileId = await uploadToDrive({
+      name: `${lessonNo}-${slotId}-${Date.now()}_${decodeUploadName(file.originalname)}`,
+      mime: file.mimetype,
+      data: file.buffer,
+      year: String(new Date().getFullYear()),
+      subfolder: bookDrivePath(bookId, stage),
+      appProperties: { bookId, lessonNo: String(lessonNo), slotId, stage },
+    });
+    const stored = await StoredFile.create({
+      kind: kindForStage(stage),
+      mime: file.mimetype,
+      sizeBytes: file.size,
+      originalName: decodeUploadName(file.originalname),
+      driveFileId, // server-internal — NOT in the response below
+      uploadedBy: ctx.auth!.userId,
+    });
+
+    const asset = await registerAsset({
+      bookId,
+      lessonNo,
+      slotId,
+      stage,
+      storedFileId: stored._id,
+      uploadedBy: new MongoTypes.ObjectId(ctx.auth!.userId),
+      source: stage === "APPROVED" ? "EXTERNAL_UPLOAD" : undefined,
+      generatorTool: req.body?.generatorTool ? String(req.body.generatorTool) : undefined,
+      generatorNote: req.body?.generatorNote ? String(req.body.generatorNote) : undefined,
+      promptSha256: req.body?.promptSha256 ? String(req.body.promptSha256) : undefined,
+    });
+
+    res.json({
+      fileId: stored._id.toString(),
+      assetId: asset._id.toString(),
+      kind: stored.kind,
+      stage,
+      slotId,
+      lessonNo,
+      mime: stored.mime,
+      sizeBytes: stored.sizeBytes,
+      originalName: stored.originalName,
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      res.status(503).json({ error: FILE_ERRORS_BN.driveDown });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /files/:id — authz first, then stream from Drive (no redirect, ever)
 // ---------------------------------------------------------------------------
 
@@ -792,6 +929,12 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       }
     } else if (file.kind === "assignment_attachment") {
       await assertAssignmentFileReadAccess(ctx, file);
+    } else if (file.kind.startsWith("book_")) {
+      // Prefix rather than the exported kind list: a dozen suites mock this module,
+      // and a dispatch that depends on a new named export breaks every one of them
+      // the day it is added. The `book_` prefix is an invariant of the kind set and
+      // is pinned by a test (supportBookFiles.test.ts) rather than assumed here.
+      assertBookFileReadAccess(ctx, file);
     } else if (file.kind === "english_drive") {
       await assertEnglishDriveFileReadAccess(ctx, file);
     } else if (file.kind === "print_upload") {
