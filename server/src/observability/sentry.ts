@@ -34,6 +34,10 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // or a truncated one. A person's mistake to correct, not a fault to page anyone
   // about. (A validator RED is not an error at all: it is RETURNED, never thrown.)
   "PatchShapeError",
+  // A support-book review rule denial (SB-3): self-review, a second open round, an
+  // incomplete checklist, an unresolved escalation. Deliberate refusals the caller
+  // is meant to see — not faults.
+  "ReviewRuleError",
   "ForbiddenError",
   "AccessControlError",
   "AttendanceError",

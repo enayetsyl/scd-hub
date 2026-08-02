@@ -84,6 +84,7 @@ import "./modules/comments/resolvers/meetingComment";
 import "./modules/access-control/resolvers/accessControl";
 import "./modules/support-book/resolvers/supportBook";
 import "./modules/support-book/resolvers/supportBookSlots";
+import "./modules/support-book/resolvers/supportBookReview";
 import "./modules/finance/resolvers/financeLedger";
 import "./modules/finance/resolvers/financePosting";
 import "./modules/finance/resolvers/feeSupport";

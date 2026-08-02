@@ -25,6 +25,10 @@ export type AuditEventKind =
   | "BOOK_POLICY_ACTIVATED" // a new governance-document version was activated (D-#403)
   | "BOOK_PATCH_MERGED"     // a lesson patch passed the validator and merged wholesale
   | "BOOK_PATCH_REJECTED"   // a lesson patch was refused by the validator (stored, not merged)
+  | "BOOK_REVIEW_ASSIGNED"   // a review round opened on a পাঠ (SB-3)
+  | "BOOK_REVIEW_SUBMITTED"  // a reviewer submitted a verdict + checklist
+  | "BOOK_ESCALATION_RESOLVED" // a senior reviewer closed an escalation with a ruling
+  | "BOOK_LESSON_SIGNED_OFF"   // the content sign-off was recorded on a পাঠ
   | "CREDENTIAL_PROVISIONED" // login generated/reset for a guardian or staff member (D-#59/#60)
   | "SECTIONS_MERGED"     // a class's gender sections combined into one (D-#62)
   | "SECTIONS_SPLIT"      // a merged class split back to its source sections (D-#62)

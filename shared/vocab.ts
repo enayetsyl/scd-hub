@@ -2986,6 +2986,43 @@ export type ValidatorCheck = (typeof VALIDATOR_CHECKS)[number];
 export const VALIDATOR_SEVERITIES = ["RED", "GREY", "INFO"] as const;
 export type ValidatorSeverity = (typeof VALIDATOR_SEVERITIES)[number];
 
+/** The teacher-reviewer's per-পাঠ checklist, README §7 VERBATIM (SB-3). Every item
+ *  must be ticked before `reviewer_signoff.checklist_passed` can go true — the list
+ *  is the sign-off, not a suggestion attached to one. */
+export const BOOK_REVIEW_CHECKLIST = [
+  "GENRE",             // genre matches the corrected TG tag
+  "LETTER_AUDIT",      // the executed letter audit passed
+  "OUTCOME_COVERAGE",  // শিখনফল coverage
+  "SOURCE_NOTE",       // Islamic-narrative source note checked
+  "REGISTER_VS_NCTB",  // replacement read side-by-side with the NCTB original
+  "IMAGES_MATCH",      // images match the manifest
+  "PHOTOCOPY",         // the bw-photocopy edition survives the school's copier
+] as const;
+export type BookReviewChecklistItem = (typeof BOOK_REVIEW_CHECKLIST)[number];
+export const BOOK_REVIEW_CHECKLIST_LABELS_BN: Record<BookReviewChecklistItem, string> = {
+  GENRE: "ধরন মিলেছে",
+  LETTER_AUDIT: "বর্ণ-অডিট পাস",
+  OUTCOME_COVERAGE: "শিখনফল কভারেজ",
+  SOURCE_NOTE: "সূত্র-নোট যাচাই",
+  REGISTER_VS_NCTB: "এনসিটিবির সাথে মিলিয়ে পড়া",
+  IMAGES_MATCH: "ছবি ম্যানিফেস্ট অনুযায়ী",
+  PHOTOCOPY: "ফটোকপি যাচাই",
+};
+export const BOOK_REVIEW_CHECKLIST_LABELS_EN: Record<BookReviewChecklistItem, string> = {
+  GENRE: "Genre matches",
+  LETTER_AUDIT: "Letter audit passed",
+  OUTCOME_COVERAGE: "Outcome coverage",
+  SOURCE_NOTE: "Source note checked",
+  REGISTER_VS_NCTB: "Register vs NCTB",
+  IMAGES_MATCH: "Images match manifest",
+  PHOTOCOPY: "Photocopy check",
+};
+
+/** A review round's lifecycle. Mirrors `ReviewAssignment`'s shape (D-#40) — one OPEN
+ *  round per পাঠ at a time, so two reviewers can never both be "the" reviewer. */
+export const BOOK_REVIEW_ROUND_STATUSES = ["ASSIGNED", "SUBMITTED", "SUPERSEDED", "CANCELLED"] as const;
+export type BookReviewRoundStatus = (typeof BOOK_REVIEW_ROUND_STATUSES)[number];
+
 
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
