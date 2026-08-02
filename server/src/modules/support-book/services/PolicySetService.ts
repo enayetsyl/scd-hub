@@ -16,6 +16,7 @@
  */
 import { createHash } from "node:crypto";
 import { PolicyDoc, type IPolicyDoc } from "../models/PolicyDoc";
+import { PolicySetSnapshot, type IPolicySetSnapshot } from "../models/PolicySetSnapshot";
 import { PER_BOOK_POLICY_DOC_KEYS, POLICY_DOC_KEYS, type PolicyDocKey } from "@scd/shared";
 import type { LetterInventory } from "./validator/letterAudit";
 
@@ -67,7 +68,72 @@ export async function activePolicySet(bookId: string): Promise<PolicySet> {
 
   const h = createHash("sha256");
   for (const d of ordered) h.update(`${d.docKey}:${d.version}:${d.sha256}\n`);
-  return { docs: ordered, hash: h.digest("hex"), missing };
+  const hash = h.digest("hex");
+
+  // Memoize what this hash MEANS (SB-5). Without it the stamp on every patch is a
+  // dead end: provably the same policy as some other patch, but nobody can say what
+  // the policy was. Upsert-on-sight rather than a separate write path, so a hash can
+  // never exist in the wild without a row explaining it.
+  await PolicySetSnapshot.updateOne(
+    { hash, bookId },
+    {
+      $setOnInsert: {
+        hash,
+        bookId,
+        members: ordered.map((d) => ({ docKey: d.docKey, version: d.version, sha256: d.sha256 })),
+        missing,
+        firstSeenAt: new Date(),
+      },
+    },
+    { upsert: true },
+  ).catch(() => undefined); // a memo failing must never break a merge
+
+  return { docs: ordered, hash, missing };
+}
+
+export interface ResolvedPolicySet {
+  hash: string;
+  bookId: string;
+  firstSeenAt: Date;
+  missing: PolicyDocKey[];
+  members: Array<{ docKey: PolicyDocKey; version: number; body: string; supersededSince: Date | null }>;
+}
+
+/**
+ * Resolve a `policySetHash` back to the DOCUMENTS AND TEXT that were in force.
+ *
+ * This is what makes the stamp worth carrying. `supersededSince` is filled when a
+ * member is no longer the active version — so a reader can see at a glance that they
+ * are looking at policy that has since moved on, which is exactly the case where
+ * quoting today's text would mislead them.
+ */
+export async function resolvePolicySet(hash: string, bookId: string): Promise<ResolvedPolicySet | null> {
+  const snap = await PolicySetSnapshot.findOne({ hash, bookId }).lean<IPolicySetSnapshot>();
+  if (!snap) return null;
+
+  const members: ResolvedPolicySet["members"] = [];
+  for (const m of snap.members) {
+    const doc = await PolicyDoc.findOne({
+      docKey: m.docKey,
+      bookId: PER_BOOK_POLICY_DOC_KEYS.includes(m.docKey) ? bookId : null,
+      version: m.version,
+    }).lean<IPolicyDoc>();
+    members.push({
+      docKey: m.docKey,
+      version: m.version,
+      // A member the memo names but the store no longer has should say so plainly
+      // rather than render as empty text.
+      body: doc?.body ?? "[this version is no longer in the policy store]",
+      supersededSince: doc && !doc.active ? doc.updatedAt : null,
+    });
+  }
+  return {
+    hash: snap.hash,
+    bookId: snap.bookId,
+    firstSeenAt: snap.firstSeenAt,
+    missing: snap.missing,
+    members,
+  };
 }
 
 /** The book's letter inventory, parsed — or null when it has none.

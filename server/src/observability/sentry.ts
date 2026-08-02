@@ -41,6 +41,13 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // The SB-4 assembly gate refusing a doomed render (stale artifacts, an unresolved
   // escalation, an empty scope). The refusal IS the feature.
   "BuildGateError",
+  // The in-app authoring chat refusing a turn (SB-6): no provider configured, the
+  // monthly token ceiling reached, an unknown book, a closed session. All deliberate
+  // refusals the author is meant to read. A provider fault (a 5xx, a truncated
+  // answer, unparseable JSON) also surfaces as this class — accepted, because the
+  // alternative is a second error type whose only job is to page someone about an
+  // external API that the caller already sees fail.
+  "AuthorChatError",
   "ForbiddenError",
   "AccessControlError",
   "AttendanceError",
@@ -51,6 +58,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "ChatError",
   "ClassTestResultError",
   "ClassroomObservationError",
+  // CO-14 (D-#426): a refused rota is a DELIBERATE outcome — the model broke a rule the
+  // user set and the violations are shown to them. Not a fault to page anyone about.
+  "ObservationRotaError",
   "DriveUnavailableError",
   "FinanceError",
   "LeaveError",

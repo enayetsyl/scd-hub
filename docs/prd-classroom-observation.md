@@ -231,6 +231,20 @@ The model gets the **instruction verbatim** plus that candidate set, and returns
 - [ ] A stored rota whose underlying slot has since moved renders `slotChanged` rather than a stale period.
 - [ ] The constraint echo is rendered to the user beside the table. Server tsc + tests green.
 
+**BUILT 2026-08-02.** `rota.ts` (pure: `datesInRange` / `candidatesForDate` / `validateRota` /
+`normalizeEcho`) + `ObservationRotaService` (expansion, provider seam, orchestration,
+save/read) + `ObservationRota` model + `observationRota` resolvers + `ObservationRotaScreen`.
+Two things the build settled that the spec left open:
+- **School days come from `resolveDayType`, not from the routine's own weekday coverage.**
+  That is the ONE calendar source the trackers and attendance already use (D-#50), so
+  holidays are honoured for free and there is no second definition of "a school day".
+  FULL only — Saturday is QURAN_ONLY and a REF-11 review targets general teaching.
+- **`saveObservationRota` regenerates from the stored instruction rather than accepting a
+  client-posted table.** The rows a client could send are exactly what the validator
+  exists to distrust, so trusting them on save would defeat the whole design.
+Gates: jest 2807/2807 (164 suites, 28 new), shared/server/app typecheck clean, vocab
+verifier PASS, expo web export exit 0.
+
 ### CO-15 — Cancel a planned review (UPLOADED / ASSIGNED) — D-#428
 
 **The problem this fixes.** Once a session is uploaded or an observer assigned, there is **no way out**. The row can only move forward: an observer must review it, or it sits in `myObservationReviewQueue` and `observationCounts.toReview` forever. But plans lapse for ordinary reasons — the footage is unusable, the teacher left or is on leave, the class was covered by a substitute, the routine changed under it, or it was simply uploaded twice. Today the only remedies are to review something nobody wants reviewed, or to delete the row and lose the record. Owner ask: **Principal and Office need to cancel an assigned or uploaded review.**
