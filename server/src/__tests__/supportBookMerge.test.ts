@@ -92,6 +92,15 @@ jest.mock("../modules/support-book/models/BookEvent", () => ({
   },
 }));
 
+// activePolicySet memoizes what each hash means (SB-5). Unmocked, the write buffers
+// against an unopened connection and every merge test times out.
+jest.mock("../modules/support-book/models/PolicySetSnapshot", () => ({
+  PolicySetSnapshot: {
+    updateOne: () => Promise.resolve({ acknowledged: true }),
+    findOne: () => ({ lean: () => Promise.resolve(null) }),
+  },
+}));
+
 jest.mock("../modules/support-book/models/PolicyDoc", () => ({
   PolicyDoc: {
     find: (q: Record<string, unknown>) => ({

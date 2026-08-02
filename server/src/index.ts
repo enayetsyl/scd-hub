@@ -86,6 +86,7 @@ import "./modules/support-book/resolvers/supportBook";
 import "./modules/support-book/resolvers/supportBookSlots";
 import "./modules/support-book/resolvers/supportBookReview";
 import "./modules/support-book/resolvers/supportBookBuild";
+import "./modules/support-book/resolvers/supportBookRationale";
 import "./modules/finance/resolvers/financeLedger";
 import "./modules/finance/resolvers/financePosting";
 import "./modules/finance/resolvers/feeSupport";
