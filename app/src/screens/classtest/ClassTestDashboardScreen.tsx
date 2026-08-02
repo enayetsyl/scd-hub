@@ -32,6 +32,7 @@ import {
   matchesCtPublishFilter,
   type CtPublishFilter,
 } from "../../lib/ctPublishStatus";
+import { CT_PAGE_SIZE, ctOrderRows, ctPageOf } from "../../lib/ctDashboardOrder";
 import { STR, hwSubjectLabel, ctReportStateLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -42,29 +43,6 @@ type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
 /** null = all logged tests (the default drill-down scope). */
 type StateFilter = "complete" | "in_progress" | "not_started" | "overdue" | null;
 
-/** Rows per page in the drill-down (owner ask 2026-08-02). */
-const PAGE_SIZE = 50;
-
-/**
- * Drill-down order (owner ask 2026-08-02) — by what still needs DOING, not by the
- * order the rows happen to arrive in:
- *
- *   0  complete, not yet visible to guardians — the release backlog
- *   1  incomplete AND overdue                 — the chase list
- *   2  incomplete                             — still in hand
- *   3  complete AND published                 — done; nothing to act on
- *
- * `state` is already a mutually-exclusive 4-way partition in which `overdue` MEANS
- * incomplete-and-past-deadline (ClassTestSummaryService.reportStateOf), so these four
- * buckets cover every row exactly once. Bucket 0 deliberately takes `!publishedAt`
- * rather than the stricter "Unpublished" badge (submitted-but-not-published), so a
- * complete test whose marks were never submitted lands with the work still to do
- * instead of falling in beside the finished ones.
- */
-function actionBucket(r: { state: string; publishedAt: string | null }): number {
-  if (r.state === "complete") return r.publishedAt ? 3 : 0;
-  return r.state === "overdue" ? 1 : 2;
-}
 
 const stateTone = (s: string): "ok" | "danger" | "brand" | "muted" =>
   s === "complete" ? "ok" : s === "overdue" ? "danger" : s === "in_progress" ? "brand" : "muted";
@@ -120,21 +98,9 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
   const allRows = rowsQ.data?.classTestReportsStatus ?? [];
   const stateRows = stateFilter ? allRows.filter((r) => r.state === stateFilter) : allRows;
   const filtered = publishFilter ? stateRows.filter((r) => matchesCtPublishFilter(r, publishFilter)) : stateRows;
-  // Action order, then newest exam first inside a bucket — except the overdue bucket,
-  // which leads with the most days late, the one worth chasing first.
-  const rows = [...filtered].sort((a, b) => {
-    const ba = actionBucket(a);
-    const bb = actionBucket(b);
-    if (ba !== bb) return ba - bb;
-    if (ba === 1) return b.schoolDaysLate - a.schoolDaysLate;
-    return a.examDate < b.examDate ? 1 : a.examDate > b.examDate ? -1 : 0;
-  });
-  // Paging. `page` is clamped rather than reset by an effect, so a filter that shrinks
-  // the list can never strand the view on an empty page.
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const page = Math.min(pageAt, pageCount - 1);
-  const from = page * PAGE_SIZE;
-  const pageRows = rows.slice(from, from + PAGE_SIZE);
+  // Release backlog → overdue → in hand → done (lib/ctDashboardOrder), then 50 a page.
+  const rows = ctOrderRows(filtered);
+  const { page, pageCount, from, rows: pageRows } = ctPageOf(rows, pageAt);
   // Chip counts are computed WITHIN the tile selection so they always add up to what the
   // list below is showing, rather than to a school-wide total the user cannot see.
   const publishCount = (f: CtPublishFilter): number =>
@@ -231,7 +197,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
 
               {/* Pager — 50 rows a page. Hidden when everything fits on one, so the
                   common case is unchanged. */}
-              {rows.length > PAGE_SIZE ? (
+              {rows.length > CT_PAGE_SIZE ? (
                 <View
                   style={{
                     flexDirection: "row",
