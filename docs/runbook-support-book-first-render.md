@@ -18,7 +18,7 @@
 |---|---|
 | Code | SB-1..SB-6 merged to `dev`, auto-deployed |
 | Book database | **not provisioned** — the module is inert |
-| Chromium 150 (snap) | ✅ installed, `/snap/bin/chromium` |
+| Chromium | ✅ non-snap Playwright arm64 build at `/opt/chromium-pw`. The **snap does not work** under a systemd service (D-#435) |
 | `python3-pil` 10.2.0 | ✅ installed |
 | `pdffonts`, `soffice` | ✅ already present |
 | `book-pipeline/` | vendored in the repo; **deps not installed on the VM** |
