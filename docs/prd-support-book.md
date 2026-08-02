@@ -3,7 +3,8 @@
 **Status:** DRAFT (build contract) — planning 2026-07-31
 **Owner:** Principal
 **Module:** `support-book` (standalone; **its own MongoDB connection**, D-#404 — no identity plane, no corpus plane)
-**Decisions:** D-#403–#413, #417–#420 (this contract)
+**Decisions:** D-#403–#413, #417–#423 (this contract)
+**Second book type:** [prd-storybook.md](prd-storybook.md) — storybooks ride this same engine as a second `bookType` (D-#421). Type-specific schema, validator set, render profiles and policy set live there; nothing else branches on type.
 **Informed by (proven, not vendored):** the **Storybook Workbench** (`workbench/`, July 2026) — a working internal production app over the same renderer, five books assembled through it. Its stage machine, lineage invalidation, human review gates, SSE log streaming and per-slot image workspace are adopted here as design (D-#417/#418); its code is not imported. See §10.
 **Implements (external, LOCKED):** the Support-Book Programme governance — `README v2.2`, `SCHEMA_support-book_v1` (v1.3), `REF-1 Curation Policy v1`, `REF-2 Content Register v1`, `ASSEMBLY v1.0-draft`, `PROJECT-INSTRUCTIONS-Production v2.0`. Adopted as cross-Project **coordination, not imported curriculum governance** (AGENTS scope boundary; the D-#33 / REF-11 pattern). **The app stores these documents as DATA, never as repo files** (D-#403).
 **Vendors (unmodified):** `studybook-pipeline` — `validate-studybook.js`, `build-book.js`, `src/lib/{geometry,profiles,compose,fonts,font-audit}.js`, `src/tools/*`, the 4 Noto TTFs. Copied into `/book-pipeline/` and **spawned, never ported** (D-#407).
@@ -82,7 +83,9 @@ Let five people build a সহায়িকা together at the quality one per
 - `book:review` — reviewer verdicts, raise an escalation.
 - `book:review_senior` — answer escalations, content sign-off (`reviewer_signoff`).
 - `book:assemble` — queue a build, release an edition.
-- `book:manage` — create books, upload policy versions, assign people, read everything (PRINCIPAL by template; grantable to OFFICE).
+- `book:manage` — create books, upload policy versions, assign people, read everything (grantable to OFFICE).
+
+> **The PRINCIPAL holds all seven by template (D-#424).** Owner ruling: the Principal can author, illustrate, review, sign off and assemble. Permissions were never the constraint — the constraints in this contract are **row-level separations** (a reviewer is not the author of *that* book; SB-3's checklist sign-off is a second pair of eyes), and holding every grant does not by itself dissolve them. How they resolve for a one-person operation is D-#424: **the separation becomes a stamp, not a wall.** The Principal may occupy both sides; the system records that it happened rather than refusing it, because in a school where no second person exists, blocking the work is useless and pretending a second person reviewed it is worse. `selfReviewed: true` is stamped automatically, shown on the book, and carried in the rationale timeline. No typed reason is required — for a solo Principal it would read "nobody else available" every time, which the flag already says.
 
 > Contract chores that ride with this: add all seven to `PERMISSIONS`, `PERMISSION_BUILD_STATUS` (`build`), `PERMISSION_LABELS_BN`, `PERMISSION_LABELS_EN`. **None is RESERVED** — reserved perms are ungrantable and these must be grantable. Grant `book:manage` to `PRINCIPAL` in `ROLE_PERMISSIONS`; grant nothing else by template.
 
@@ -103,7 +106,12 @@ Let five people build a সহায়িকা together at the quality one per
 
 **`LessonPatch`** — `{ bookId, lessonNo, patchId, task, source ∈ PATCH_SOURCES, payload, validatorReport, policySetHash, chatSessionId?, escalationIds[], submittedBy, mergedAt?, mergedBy?, supersedes? }`. Append-only; a merge replaces the lesson **wholesale by `lesson_no`** — no field-level merging, per SCHEMA §5.
 
-**The validator** — ported to `server/src/modules/support-book/services/validator/` as TypeScript, check-for-check against `validate-studybook.js`, including the letter audit driven by the book's `LETTER_INVENTORY` (C1–C2 বাংলা only, skipped otherwise) and the shared script-guard allowlist. **A RED result refuses the merge**; GREY merges with a warning. Proven by the upstream **seeded-error test** (README §6): ≥3 planted violations — one letter-audit, one missing flag, one banned glyph — must all be caught before the module counts as pipeline-proven.
+**The validator** — ported to `server/src/modules/support-book/services/validator/` as TypeScript, check-for-check against the real sources, which are in **two places and two languages** (surveyed 2026-08-01, D-#432):
+- **`studybook-pipeline/src/validate-studybook.js`** implements six checks — `checkTopLevel`, `checkInventory`, `checkScriptGuard`, `checkImages`, `checkBwTreatment`, `checkLayout`. It contains **no letter audit**.
+- **`SB-Governance/validator_letter_audit.py`** is the letter audit, a separate executable with its rule documented in its header, driven by **`SB-Governance/letter_inventory_C1-BAN.json`** (43 KB). Both exist; neither is in the pipeline folder, which is why a survey of `studybook-pipeline` alone reports the audit as missing.
+- **The inventory's real shape is NOT the one `SCHEMA_support-book_v1.md` §6 documents.** The file carries `{schema_version, inventory_id, book_id, class, subject, source, audit_rule, sequence_summary, open_items, lessons}` — per-lesson — where the schema describes `cumulative_after_lesson` / `kar_after_lesson` / `conjunct_whitelist_by_lesson` maps. **Port against the Python file and the real JSON; the schema doc is stale.** Read `open_items` before trusting a clean run.
+
+The port covers both, plus the shared script-guard allowlist. Letter audit runs for C1–C2 বাংলা only and is skipped otherwise. **A RED result refuses the merge**; GREY merges with a warning. Proven by the upstream **seeded-error test** (README §6): ≥3 planted violations — one letter-audit, one missing flag, one banned glyph — must all be caught before the module counts as pipeline-proven.
 
 **Acceptance:**
 - [ ] Book models live on a second connection; a deliberate `populate("User")` from a book model fails loudly in a test (isolation is structural, not conventional).
@@ -153,6 +161,7 @@ This is the difference between a pipeline one person can hold in their head and 
 - [ ] Three or more back-and-forth messages on one item are preserved in order with their attachments.
 - [ ] A resolution alone changes no lesson field; the following patch links back to it.
 - [ ] `reviewer_signoff.checklist_passed` can only be set true by `book:review_senior` with every checklist item ticked.
+- [ ] A non-Principal cannot review a lesson they authored (refused at assignment). **A Principal can**, and the round is stamped `selfReviewed: true` and surfaced wherever the sign-off is shown (D-#424).
 
 ### SB-4 — Assembly: the render worker and the assembler's workspace
 **`/book-pipeline/`** — the vendored CLI, an npm workspace of its own (`commonjs`, puppeteer + sharp, the 4 Noto TTFs). **Not ported, not modified** (D-#407): ASSEMBLY §1's whole discipline is that the frozen renderer core is never edited for support-book needs, and a TypeScript port would fork it silently.
@@ -169,7 +178,10 @@ This is the difference between a pipeline one person can hold in their head and 
 
 **Host constraints, measured 2026-07-31 (D-#413) — pin these before SB-4 starts:**
 - **The VM is `aarch64`, and Puppeteer publishes no bundled Chromium for linux-arm64.** Install the OS Chromium (`chromium-browser`, a 200 MB snap — the only form Ubuntu 24.04 ARM offers) and set **`PUPPETEER_EXECUTABLE_PATH`**. That is an env var, so the vendored renderer stays byte-identical and D-#407 holds. Verify the browser launches under the systemd unit, not just an interactive shell — snap confinement is the one place this can surprise.
-- **Already present on the host:** `pdffonts` (poppler-utils, `/usr/bin/pdffonts`) for the post-render font audit, and `soffice` for the docxConvert precedent. `sharp` has proper linux-arm64 prebuilds. Only Chromium needs installing.
+- **Already present on the host:** `pdffonts` (poppler-utils, `/usr/bin/pdffonts`) for the post-render font audit, and `soffice` for the docxConvert precedent. `sharp` has proper linux-arm64 prebuilds. Python 3.12.3 is present.
+- **To install (D-#423):** Chromium (above) and **`python3-pil` (Pillow)** — the Python image tools (`crop_edges`, `apply_strips`, `make_strips`) need it and the host does not have it. Verified absent 2026-08-01.
+- **One Chromium serves BOTH renderers** (`studybook-pipeline` + `storybook-pipeline`), and builds stay serialized, so adding the second book type raises no memory peak and installs no second browser.
+- **Upscaling is sharp everywhere (D-#422)** — the storybook's Upscayl step is dropped; see [prd-storybook.md](prd-storybook.md) ST-4.
 - **Concurrency = 1.** The worker claims one job at a time. Two simultaneous Chromiums are the only realistic way to pressure this host, and **the VM has no swap** — under real pressure the kernel OOM-kills rather than degrades.
 
 **Export escape hatch** (D-#406): one action writes the complete book folder — `book.json`, `images-compliant/`, `placements.json`, `layout.json` — as a zip, so the CLI remains runnable on a laptop and the app can never become the only way to build a book.
@@ -266,7 +278,9 @@ The second image path (D-#419). A slot workspace that calls an image model direc
 
 ---
 
-## §10 — The second book type: storybooks (scope note, not a build contract)
+## §10 — The second book type: storybooks
+
+> **SUPERSEDED IN PART, 2026-08-01 (D-#421):** the closing "explicitly NOT decided" clause below is now decided — **the storybook IS hosted in this system, as a first-class second `bookType`, on the same engine as the সহায়িকা** (owner ruling). Its build contract is **[prd-storybook.md](prd-storybook.md)**, slices ST-1..ST-5. The rest of this section stands as the scope note that led there. Still not decided: the workbench **cutover** (prd-storybook §8), and anything commercial — that exclusion is permanent until its own PRD and its own ruling.
 
 **Owner ruling, 2026-08-01: the storybook line is now school-first** (D-#420). It was designed as a commercial product — 40 books across 8 series, ৳5–20, subscriptions, a streaming reader — and that framing is **demoted, not deleted**: nothing here forecloses selling later, but the school is the primary audience now, which is what makes it eligible to live beside the সহায়িকা at all. The upstream "product separation is absolute" rule (README §7) existed to keep an internal free book out of a sales catalog; with both lines school-first, the rule's purpose is satisfied rather than violated.
 

@@ -43,7 +43,14 @@ export type StoredFileKind =
   /** An assignment sheet/instruction file attached at the delivery pass (D-#298). */
   | "assignment_attachment"
   /** A PDF/DOCX English Drive document uploaded as a binary (owner 2026-07-25). */
-  | "english_drive";
+  | "english_drive"
+  /** Book production (SB-2, D-#409/#419). The four stages of a slot's image chain
+   *  plus the rendered editions. `raw` is what the illustrator brought in from
+   *  ChatGPT/Gemini or the in-app API; `compliant` is what book.json names. */
+  | "book_image_raw"
+  | "book_image_approved"
+  | "book_image_compliant"
+  | "book_pdf";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -61,6 +68,10 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "print_upload",
   "assignment_attachment",
   "english_drive",
+  "book_image_raw",
+  "book_image_approved",
+  "book_image_compliant",
+  "book_pdf",
 ];
 
 /** The chat-attachment subset (M-4) — the read gate routes these to chat. */
@@ -73,6 +84,14 @@ export const CHAT_STORED_FILE_KINDS: readonly StoredFileKind[] = [
 
 /** The student-comment attachment subset (CM-2) — the read gate routes these to
  *  the comment file gate (author OR the child's guardian for a DELIVERED comment). */
+/** The book-production subset (SB-2) — the read gate routes these to the book plane. */
+export const BOOK_STORED_FILE_KINDS: readonly StoredFileKind[] = [
+  "book_image_raw",
+  "book_image_approved",
+  "book_image_compliant",
+  "book_pdf",
+];
+
 export const COMMENT_STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "comment_image",
   "comment_pdf",

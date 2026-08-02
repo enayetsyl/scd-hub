@@ -30,6 +30,17 @@ import type { AppContext } from "../context";
  * are NOT sent to GlitchTip. Add new domain error classes here as modules grow.
  */
 export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
+  // A malformed support-book patch envelope (SB-1) — someone uploaded the wrong file
+  // or a truncated one. A person's mistake to correct, not a fault to page anyone
+  // about. (A validator RED is not an error at all: it is RETURNED, never thrown.)
+  "PatchShapeError",
+  // A support-book review rule denial (SB-3): self-review, a second open round, an
+  // incomplete checklist, an unresolved escalation. Deliberate refusals the caller
+  // is meant to see — not faults.
+  "ReviewRuleError",
+  // The SB-4 assembly gate refusing a doomed render (stale artifacts, an unresolved
+  // escalation, an empty scope). The refusal IS the feature.
+  "BuildGateError",
   "ForbiddenError",
   "AccessControlError",
   "AttendanceError",

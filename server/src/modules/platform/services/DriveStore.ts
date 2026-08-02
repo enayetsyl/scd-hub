@@ -125,13 +125,21 @@ async function ensureFolder(name: string, parentId: string | null): Promise<stri
   return id;
 }
 
-/** SCD-Hub-Files/<year>/<subfolder> — the private folder for a year + use.
- *  `hw` is the GP-A homework store; `chat` is the M-4 attachment store. */
+/** SCD-Hub-Files/<year>/<subfolder…> — the private folder for a year + use.
+ *  `hw` is the GP-A homework store; `chat` is the M-4 attachment store.
+ *
+ *  `subfolder` may be a NESTED path ("books/C1-BAN/compliant", SB-2): each segment is
+ *  found-or-created in turn. Book production needs the tree so a file identifies
+ *  itself from the Drive side as well as from Mongo, which is the whole point of
+ *  storing it under a path rather than a flat bucket (D-#409). */
 async function ensureYearSubfolder(year: string, subfolder: string): Promise<string> {
   const rootId =
     process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID ?? (await ensureFolder(ROOT_FOLDER_NAME, null));
-  const yearId = await ensureFolder(year, rootId);
-  return ensureFolder(subfolder, yearId);
+  let parentId = await ensureFolder(year, rootId);
+  for (const seg of subfolder.split("/").filter(Boolean)) {
+    parentId = await ensureFolder(seg, parentId);
+  }
+  return parentId;
 }
 
 export interface DriveUploadInput {
@@ -140,8 +148,13 @@ export interface DriveUploadInput {
   data: Buffer;
   /** Academic-year folder, e.g. "2026". */
   year: string;
-  /** Use-folder under the year (default "hw"; chat attachments pass "chat"). */
+  /** Use-folder under the year (default "hw"; chat attachments pass "chat").
+   *  May be a nested path, e.g. "books/C1-BAN/compliant". */
   subfolder?: string;
+  /** Drive `appProperties` — small key/value metadata stored ON the Drive file, so a
+   *  file found from the Drive side names its own book/lesson/slot/stage instead of
+   *  being an opaque blob (SB-2, D-#409). Mongo stays the index; this is the label. */
+  appProperties?: Record<string, string>;
 }
 
 /** What Google says about the storing account's space (SH-1, D-#414). `limit` is null on
@@ -194,7 +207,11 @@ export async function driveQuota(): Promise<DriveQuota> {
 export async function uploadToDrive(input: DriveUploadInput): Promise<string> {
   const folderId = await ensureYearSubfolder(input.year, input.subfolder ?? "hw");
   const boundary = `scdhub-${Math.abs(Date.now() ^ input.data.length)}`;
-  const meta = JSON.stringify({ name: input.name, parents: [folderId] });
+  const meta = JSON.stringify({
+    name: input.name,
+    parents: [folderId],
+    ...(input.appProperties ? { appProperties: input.appProperties } : {}),
+  });
   const body = Buffer.concat([
     Buffer.from(
       `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n` +

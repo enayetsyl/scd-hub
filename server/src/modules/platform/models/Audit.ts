@@ -18,6 +18,18 @@ export type AuditEventKind =
   | "REVIEW_SUBMITTED"    // reviewer submitted a verdict + feedback (D-#38)
   | "REVIEW_CANCELLED"    // an open review round was cancelled/superseded (D-#40)
   | "PLAN_APPROVED"       // Principal sign-off: reviewed → gold (D-#38; PR-2)
+  // Book production (SB-1, D-#403–#428). SECURITY log only — who did what. The
+  // EDITORIAL "why" lives in the book plane's own BookEvent (D-#411); the two answer
+  // different questions and neither is derivable from the other.
+  | "BOOK_CREATED"          // a support book or storybook was created (book:manage)
+  | "BOOK_POLICY_ACTIVATED" // a new governance-document version was activated (D-#403)
+  | "BOOK_PATCH_MERGED"     // a lesson patch passed the validator and merged wholesale
+  | "BOOK_PATCH_REJECTED"   // a lesson patch was refused by the validator (stored, not merged)
+  | "BOOK_REVIEW_ASSIGNED"   // a review round opened on a পাঠ (SB-3)
+  | "BOOK_REVIEW_SUBMITTED"  // a reviewer submitted a verdict + checklist
+  | "BOOK_ESCALATION_RESOLVED" // a senior reviewer closed an escalation with a ruling
+  | "BOOK_LESSON_SIGNED_OFF"   // the content sign-off was recorded on a পাঠ
+  | "BOOK_BUILD_QUEUED"        // a render was queued (SB-4); `forced` records a gate override
   | "CREDENTIAL_PROVISIONED" // login generated/reset for a guardian or staff member (D-#59/#60)
   | "SECTIONS_MERGED"     // a class's gender sections combined into one (D-#62)
   | "SECTIONS_SPLIT"      // a merged class split back to its source sections (D-#62)
