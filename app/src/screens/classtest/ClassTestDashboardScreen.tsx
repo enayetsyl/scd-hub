@@ -32,6 +32,7 @@ import {
   matchesCtPublishFilter,
   type CtPublishFilter,
 } from "../../lib/ctPublishStatus";
+import { CT_PAGE_SIZE, ctOrderRows, ctPageOf } from "../../lib/ctDashboardOrder";
 import { STR, hwSubjectLabel, ctReportStateLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -41,6 +42,7 @@ type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
 
 /** null = all logged tests (the default drill-down scope). */
 type StateFilter = "complete" | "in_progress" | "not_started" | "overdue" | null;
+
 
 const stateTone = (s: string): "ok" | "danger" | "brand" | "muted" =>
   s === "complete" ? "ok" : s === "overdue" ? "danger" : s === "in_progress" ? "brand" : "muted";
@@ -77,6 +79,17 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
   // tiles only ever answered "are the marks in?", never "can the guardian see them?".
   // The two AND-combine, so "Complete + Unpublished" = the actual release backlog.
   const [publishFilter, setPublishFilter] = useState<CtPublishFilter | null>(null);
+  // Current page of the drill-down; either filter changing sends you back to page 1,
+  // because page 4 of the old list means nothing in the new one.
+  const [pageAt, setPageAt] = useState(0);
+  const pickState = (s: StateFilter): void => {
+    setStateFilter(s);
+    setPageAt(0);
+  };
+  const pickPublish = (f: CtPublishFilter | null): void => {
+    setPublishFilter(f);
+    setPageAt(0);
+  };
   const [dashQ] = useQuery({ query: CLASS_TEST_DASHBOARD_QUERY, variables: {} });
   const [chaseQ] = useQuery({ query: CLASS_TEST_OVERDUE_CHASE_QUERY, variables: {} });
   const [rowsQ] = useQuery({ query: CLASS_TEST_REPORTS_STATUS_QUERY, variables: {} });
@@ -84,7 +97,10 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
   const chase = chaseQ.data?.classTestOverdueChase ?? null;
   const allRows = rowsQ.data?.classTestReportsStatus ?? [];
   const stateRows = stateFilter ? allRows.filter((r) => r.state === stateFilter) : allRows;
-  const rows = publishFilter ? stateRows.filter((r) => matchesCtPublishFilter(r, publishFilter)) : stateRows;
+  const filtered = publishFilter ? stateRows.filter((r) => matchesCtPublishFilter(r, publishFilter)) : stateRows;
+  // Release backlog → overdue → in hand → done (lib/ctDashboardOrder), then 50 a page.
+  const rows = ctOrderRows(filtered);
+  const { page, pageCount, from, rows: pageRows } = ctPageOf(rows, pageAt);
   // Chip counts are computed WITHIN the tile selection so they always add up to what the
   // list below is showing, rather than to a school-wide total the user cannot see.
   const publishCount = (f: CtPublishFilter): number =>
@@ -99,11 +115,11 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
         ) : d ? (
           <>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
-              <Kpi label={STR.ctLogged} value={bnNum(d.logged)} selected={stateFilter === null} onPress={() => setStateFilter(null)} />
-              <Kpi label={STR.ctComplete} value={bnNum(d.complete)} selected={stateFilter === "complete"} onPress={() => setStateFilter("complete")} />
-              <Kpi label={STR.ctInProgress} value={bnNum(d.inProgress)} selected={stateFilter === "in_progress"} onPress={() => setStateFilter("in_progress")} />
-              <Kpi label={STR.ctNotStarted} value={bnNum(d.notStarted)} selected={stateFilter === "not_started"} onPress={() => setStateFilter("not_started")} />
-              <Kpi label={STR.ctOverdue} value={bnNum(d.overdue)} selected={stateFilter === "overdue"} onPress={() => setStateFilter("overdue")} />
+              <Kpi label={STR.ctLogged} value={bnNum(d.logged)} selected={stateFilter === null} onPress={() => pickState(null)} />
+              <Kpi label={STR.ctComplete} value={bnNum(d.complete)} selected={stateFilter === "complete"} onPress={() => pickState("complete")} />
+              <Kpi label={STR.ctInProgress} value={bnNum(d.inProgress)} selected={stateFilter === "in_progress"} onPress={() => pickState("in_progress")} />
+              <Kpi label={STR.ctNotStarted} value={bnNum(d.notStarted)} selected={stateFilter === "not_started"} onPress={() => pickState("not_started")} />
+              <Kpi label={STR.ctOverdue} value={bnNum(d.overdue)} selected={stateFilter === "overdue"} onPress={() => pickState("overdue")} />
               <Kpi label={STR.ctCompletionRate} value={d.completionRatePct == null ? "—" : `${bnNum(d.completionRatePct)}%`} />
             </View>
 
@@ -120,14 +136,14 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                 <Chip
                   label={`${STR.all} (${bnNum(stateRows.length)})`}
                   selected={publishFilter === null}
-                  onPress={() => setPublishFilter(null)}
+                  onPress={() => pickPublish(null)}
                 />
                 {CT_PUBLISH_FILTERS.map((f) => (
                   <Chip
                     key={f}
                     label={`${ctPublishFilterLabel(f)} (${bnNum(publishCount(f))})`}
                     selected={publishFilter === f}
-                    onPress={() => setPublishFilter(publishFilter === f ? null : f)}
+                    onPress={() => pickPublish(publishFilter === f ? null : f)}
                   />
                 ))}
               </ChipRow>
@@ -139,7 +155,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
               ) : rows.length === 0 ? (
                 <Muted style={{ marginTop: space(2) }}>{STR.ctNoReports}</Muted>
               ) : (
-                rows.map((r) => (
+                pageRows.map((r) => (
                   <Pressable
                     key={r.testId}
                     onPress={() =>
@@ -178,6 +194,37 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                   </Pressable>
                 ))
               )}
+
+              {/* Pager — 50 rows a page. Hidden when everything fits on one, so the
+                  common case is unchanged. */}
+              {rows.length > CT_PAGE_SIZE ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: space(2),
+                    marginTop: space(4),
+                  }}
+                >
+                  <Button
+                    title={`◀ ${STR.pagePrev}`}
+                    variant="secondary"
+                    disabled={page === 0}
+                    onPress={() => setPageAt(page - 1)}
+                  />
+                  <Muted>
+                    {STR.pageLabel} {bnNum(page + 1)} / {bnNum(pageCount)} · {bnNum(from + 1)}–
+                    {bnNum(from + pageRows.length)} / {bnNum(rows.length)}
+                  </Muted>
+                  <Button
+                    title={`${STR.pageNext} ▶`}
+                    variant="secondary"
+                    disabled={page >= pageCount - 1}
+                    onPress={() => setPageAt(page + 1)}
+                  />
+                </View>
+              ) : null}
             </Card>
 
             <Card>

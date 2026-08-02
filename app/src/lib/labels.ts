@@ -1157,6 +1157,10 @@ const STR_BN = {
   subject: "বিষয়",
   classLevel: "শ্রেণি",
   all: "সব",
+  // Pager (a long list split into pages)
+  pageLabel: "পৃষ্ঠা",
+  pagePrev: "পূর্ববর্তী",
+  pageNext: "পরবর্তী",
   planType: "পরিকল্পনার ধরন",
   curationTag: "কিউরেশন ট্যাগ",
   reviewStatus: "পর্যালোচনা অবস্থা",
@@ -4131,6 +4135,10 @@ const STR_EN: StrTable = {
   subject: "Subject",
   classLevel: "Class",
   all: "All",
+  // Pager (a long list split into pages)
+  pageLabel: "Page",
+  pagePrev: "Previous",
+  pageNext: "Next",
   planType: "Plan type",
   curationTag: "Curation tag",
   reviewStatus: "Review status",
