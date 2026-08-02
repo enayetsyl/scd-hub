@@ -36,6 +36,22 @@ import { join } from "node:path";
  *  developer laptop can each point at their own copy without a code change. */
 export const PIPELINE_ROOT = process.env.BOOK_PIPELINE_ROOT ?? "book-pipeline";
 
+/**
+ * Where the temp book folder is written — and this is NOT a preference (SB-4, D-#429).
+ *
+ * MEASURED ON THE VM, 2026-08-02: the only Chromium available on Ubuntu 24.04 aarch64
+ * is the **snap**, and a snap gets a PRIVATE /tmp namespace. Chromium therefore cannot
+ * see anything this process writes to the host's `/tmp` — the page simply fails to
+ * load, which surfaces as an empty render or an opaque non-zero exit that says nothing
+ * about namespaces. It reads `$HOME` fine (verified under `systemd-run` as the service
+ * user with the service's environment).
+ *
+ * So the work root is configurable and the deploy host points it at a directory the
+ * snap can actually read. `os.tmpdir()` stays the default because it is right
+ * everywhere that is not a confined snap — a laptop, CI, a container.
+ */
+export const WORK_ROOT = process.env.BOOK_WORK_ROOT || tmpdir();
+
 export interface CommandResult {
   code: number;
   stdout: string;
@@ -104,7 +120,10 @@ export async function renderBook(input: RenderInput): Promise<RenderOutput> {
   const timeoutMs = input.timeoutMs ?? 15 * 60_000; // a 54-lesson book is minutes
   const log = (s: string): void => input.onLog?.(s);
 
-  const workDir = await mkdtemp(join(tmpdir(), `scdbook-${input.bookId}-`));
+  // WORK_ROOT, not tmpdir(): a snap Chromium cannot see the host's /tmp. See the
+  // constant's comment — this line is the whole reason it exists.
+  await mkdir(WORK_ROOT, { recursive: true }).catch(() => undefined);
+  const workDir = await mkdtemp(join(WORK_ROOT, `scdbook-${input.bookId}-`));
   const imagesDir = join(workDir, "images-compliant");
   await mkdir(imagesDir, { recursive: true });
 

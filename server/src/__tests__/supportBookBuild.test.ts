@@ -82,6 +82,7 @@ import {
   assemblyGate, materializeBookJson, queueBuild, claimNextJob, profilesFor, BuildGateError,
 } from "../modules/support-book/services/BookBuildService";
 import { renderBook, parsePdfPaths, type CommandRunner } from "../modules/support-book/services/BookRenderRunner";
+import { existsSync } from "fs";
 
 const BOOK = "C1-BAN";
 const WHO = oid();
@@ -304,5 +305,46 @@ describe("parsePdfPaths", () => {
 
   it("de-duplicates a path the log mentions twice", () => {
     expect(parsePdfPaths("x/y.pdf and again x/y.pdf", "out", "X")).toEqual(["x/y.pdf"]);
+  });
+});
+
+describe("the work root — snap confinement (D-#429, measured on the VM)", () => {
+  it("defaults to the OS temp dir", () => {
+    // Right everywhere that is NOT a confined snap: a laptop, CI, a container.
+    jest.isolateModules(() => {
+      delete process.env.BOOK_WORK_ROOT;
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const m = require("../modules/support-book/services/BookRenderRunner") as { WORK_ROOT: string };
+      expect(m.WORK_ROOT).toBe(require("os").tmpdir());
+    });
+  });
+
+  it("honours BOOK_WORK_ROOT, because a snap Chromium cannot see the host /tmp", () => {
+    // Measured on the VM 2026-08-02: a snap gets a PRIVATE /tmp namespace, so the page
+    // silently fails to load. $HOME reads fine. Without this override the render fails
+    // with an error that says nothing about namespaces.
+    jest.isolateModules(() => {
+      process.env.BOOK_WORK_ROOT = "/home/deploy/scdhub-book-work";
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const m = require("../modules/support-book/services/BookRenderRunner") as { WORK_ROOT: string };
+      expect(m.WORK_ROOT).toBe("/home/deploy/scdhub-book-work");
+      delete process.env.BOOK_WORK_ROOT;
+    });
+  });
+
+  it("writes the book folder under the work root, not wherever it likes", async () => {
+    const seen: string[] = [];
+    const runner: CommandRunner = (_c, args) => {
+      const bookArg = args.find((a) => a.endsWith("book.json"));
+      if (bookArg) seen.push(bookArg);
+      return Promise.resolve({ code: 0, stdout: "", stderr: "" });
+    };
+    const r = await renderBook({ bookId: "C1-BAN", bookJson: { lessons: [] }, images: new Map(), runner });
+    expect(r.workDir.startsWith(require("os").tmpdir())).toBe(true);
+    expect(seen[0]).toContain(r.workDir);
+    expect(existsSync(r.workDir)).toBe(true);
+    const { cleanup } = await import("../modules/support-book/services/BookRenderRunner");
+    await cleanup(r.workDir);
+    expect(existsSync(r.workDir)).toBe(false);
   });
 });
