@@ -142,13 +142,26 @@ sudo chmod -R a+rX /opt/chromium-pw
 transient unit is tolerated by snapd and a persistent service is not, so a
 `systemd-run` probe passes and then the worker fails. Write a throwaway unit:
 ```bash
-sudo systemd-run --uid=deploy --gid=deploy --setenv=HOME=/home/deploy --wait --pipe --collect \
-  /snap/bin/chromium --headless --no-sandbox --disable-gpu \
-  --dump-dom "file:///home/deploy/scdhub-book-work/probe.html"
+printf "<html><body><h1>OK</h1></body></html>" > /home/deploy/scdhub-book-work/probe.html
+sudo tee /etc/systemd/system/chromium-probe.service >/dev/null <<'UNIT'
+[Service]
+Type=oneshot
+User=deploy
+Environment=HOME=/home/deploy
+ExecStart=/opt/chromium-pw/chrome-linux/chrome --headless --no-sandbox --disable-gpu --dump-dom file:///home/deploy/scdhub-book-work/probe.html
+UNIT
+sudo systemctl daemon-reload && sudo systemctl start chromium-probe
+sudo journalctl -u chromium-probe -n 20 --no-pager | grep -o "OK"
+sudo rm /etc/systemd/system/chromium-probe.service && sudo systemctl daemon-reload
 ```
-(Create `probe.html` with any markup first.) If this prints your markup, the render path
-is sound. If it prints nothing, **stop** — nothing downstream will work and the error you
-get later will not point here.
+
+If this prints `OK`, the render path is sound. If it prints nothing, **stop** — nothing
+downstream will work and the error you get later will not point here.
+
+> **Do not substitute `systemd-run` for this.** It creates a TRANSIENT unit, which snapd
+> tolerates, so it passes even when a persistent `.service` cannot launch. That false
+> pass is exactly how the snap reached production and then failed on the first real
+> render (D-#435).
 
 ---
 
