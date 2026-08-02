@@ -10,6 +10,8 @@ export type AuditEventKind =
   | "TRACKER_WRITE"
   | "ROSTER_MANAGE"
   | "GUARDIAN_LINK"
+  | "ROUTINE_SLOT_REVISED"  // a routine cell edited — old row closed, replacement opened (D-#47(3))
+  | "ROUTINE_SLOT_RETIRED"  // a routine cell removed from the timetable (retired, or deleted if unstarted)
   | "SCOPE_GRANT_ASSIGN"
   | "SCOPE_GRANT_REVOKE"
   | "SCOPE_GRANT_EXTEND"

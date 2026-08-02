@@ -37,6 +37,7 @@
 import { StaffProfile, type IStaffProfile } from "../../foundation/models/StaffProfile";
 import { Subject } from "../../foundation/models/Subject";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
+import { liveWindow } from "../../routine/liveWindow";
 import {
   composeTeacherScope,
   type ScopeItem,
@@ -102,7 +103,12 @@ export async function listStaffDirectory(opts: StaffDirectoryOptions): Promise<S
   const codeToSubjectId = new Map<string, string>(subjects.map((s) => [s.code, s._id.toString()]));
 
   // Every active, assigned, non-break slot — collect the teachers in covered cells.
-  const slots = (await RoutineSlot.find({ active: true, isBreak: false, teacherId: { $ne: null } }).lean()) as unknown as {
+  const slots = (await RoutineSlot.find({
+    active: true,
+    isBreak: false,
+    teacherId: { $ne: null },
+    ...liveWindow(),
+  }).lean()) as unknown as {
     teacherId?: { toString(): string } | null;
     classId?: { toString(): string } | null;
     subject: string;

@@ -28,6 +28,7 @@ import { User } from "../../foundation/models/User";
 import { Section, type ISection } from "../../foundation/models/Section";
 import { ScopeGrant } from "../../foundation/models/ScopeGrant";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
+import { liveWindow } from "../../routine/liveWindow";
 import { writeAudit } from "../../platform/services/AuditService";
 import { Conversation, type IConversation } from "../models/Conversation";
 import { ConversationMember } from "../models/ConversationMember";
@@ -140,6 +141,9 @@ async function sectionMemberIds(section: ISection): Promise<string[]> {
     groupId: section._id,
     active: true,
     teacherId: { $exists: true, $ne: null },
+    // Membership follows the CURRENT timetable — a teacher whose slot was retired
+    // should drop out of the group, not linger on a historical row (D-#47(3)).
+    ...liveWindow(),
   })
     .select("teacherId")
     .lean();
@@ -164,6 +168,7 @@ async function subjectMemberIds(subject: RoutineSubject): Promise<string[]> {
     subject,
     active: true,
     teacherId: { $exists: true, $ne: null },
+    ...liveWindow(),
   })
     .select("teacherId")
     .lean();

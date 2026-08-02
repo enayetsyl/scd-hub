@@ -26,9 +26,19 @@ import {
   cancelCover,
   coversForDate,
 } from "../services/RoutineCoverService";
+import { liveWindow } from "../liveWindow";
 import { enrichRoutineSlots } from "../slotView";
 import { routineMasterGrid, routineMasterWeek, type MasterColumn, type MasterRow, type MasterConflict, type RoutineMaster } from "../routineMaster";
 import type { AvailabilityRow } from "../cover";
+
+/** Parse the optional changeover date carried by the versioned write mutations
+ *  (D-#47(3)). Absent → the service defaults to today. */
+function parseEffectiveFrom(raw?: string | null): Date | null {
+  if (!raw) return null;
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) throw new Error("Invalid effectiveFrom");
+  return d;
+}
 
 export const RoutineSlotRef = builder.objectRef<IRoutineSlot>("RoutineSlot").implement({
   fields: (t) => ({
@@ -114,7 +124,12 @@ builder.queryField("routineSlots", (t) =>
       groupId: t.arg.string({ required: true }),
     },
     resolve: async (_r, args) => {
-      const slots = await RoutineSlot.find({ groupType: args.groupType, groupId: args.groupId, active: true })
+      const slots = await RoutineSlot.find({
+        groupType: args.groupType,
+        groupId: args.groupId,
+        active: true,
+        ...liveWindow(),
+      })
         .sort({ dayOfWeek: 1, periodNumber: 1 })
         .lean();
       return enrichRoutineSlots(slots) as unknown as IRoutineSlot[];
@@ -127,7 +142,7 @@ builder.queryField("myRoutineSlots", (t) =>
     type: [RoutineSlotRef],
     authScopes: { hasPermission: "routine:read" },
     resolve: async (_r, _args, ctx) => {
-      const slots = await RoutineSlot.find({ teacherId: ctx.auth!.userId, active: true })
+      const slots = await RoutineSlot.find({ teacherId: ctx.auth!.userId, active: true, ...liveWindow() })
         .sort({ dayOfWeek: 1, periodNumber: 1 })
         .lean();
       return enrichRoutineSlots(slots) as unknown as IRoutineSlot[];
@@ -262,12 +277,19 @@ builder.mutationField("reassignRoutineSubjectTeacher", (t) =>
       sectionId: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
       teacherId: t.arg.string({ required: true }),
+      effectiveFrom: t.arg.string({ required: false }),
     },
     resolve: async (_r, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       if (!(ROUTINE_SUBJECTS as readonly string[]).includes(args.subject))
         throw new Error("Invalid subject");
-      return reassignRoutineSubjectTeacher(args.sectionId, args.subject, args.teacherId, ctx.auth.userId);
+      return reassignRoutineSubjectTeacher(
+        args.sectionId,
+        args.subject,
+        args.teacherId,
+        ctx.auth.userId,
+        parseEffectiveFrom(args.effectiveFrom),
+      );
     },
   }),
 );
@@ -338,6 +360,7 @@ builder.mutationField("updateRoutineSlot", (t) =>
       track: t.arg.string({ required: true }),
       teacherId: t.arg.string({ required: false }),
       roomId: t.arg.string({ required: false }),
+      effectiveFrom: t.arg.string({ required: false }),
     },
     resolve: async (_r, args, ctx) => {
       if (!(PERIOD_TRACKS as readonly string[]).includes(args.track))
@@ -351,6 +374,7 @@ builder.mutationField("updateRoutineSlot", (t) =>
         teacherId: args.teacherId ?? null,
         roomId: args.roomId ?? null,
         actorId: ctx.auth!.userId,
+        effectiveFrom: parseEffectiveFrom(args.effectiveFrom),
       });
     },
   }),
@@ -359,10 +383,17 @@ builder.mutationField("updateRoutineSlot", (t) =>
 builder.mutationField("deleteRoutineSlot", (t) =>
   t.field({
     type: "Boolean",
+    description:
+      "Remove a cell from the timetable. A slot that has already applied is RETIRED from " +
+      "`effectiveFrom` (default today) so history survives; one whose window has not started " +
+      "is deleted outright (D-#47(3)).",
     authScopes: { hasPermission: "routine:manage" },
-    args: { id: t.arg.string({ required: true }) },
+    args: {
+      id: t.arg.string({ required: true }),
+      effectiveFrom: t.arg.string({ required: false }),
+    },
     resolve: async (_r, args, ctx) => {
-      await deleteRoutineSlot(args.id, ctx.auth!.userId);
+      await deleteRoutineSlot(args.id, ctx.auth!.userId, parseEffectiveFrom(args.effectiveFrom));
       return true;
     },
   }),

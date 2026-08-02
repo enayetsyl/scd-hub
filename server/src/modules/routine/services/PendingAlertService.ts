@@ -30,6 +30,7 @@ import type { AppContext } from "../../../context";
 import { dayTypeFor, dayTypeAdmitsTrack } from "../calendar";
 import { HolidayException } from "../models/HolidayException";
 import { RoutineSlot } from "../models/RoutineSlot";
+import { liveWindow } from "../liveWindow";
 import { ClassNote } from "../models/ClassNote";
 import { ScheduleWindow } from "../models/ScheduleWindow";
 import { dateKeyOf, parseDateKey } from "../../attendance/dates";
@@ -114,6 +115,9 @@ async function classNoteBacklog(
   keys: string[],
   dayTypes: Map<string, ReturnType<typeof dayTypeFor>>,
 ): Promise<string[]> {
+  // NO live-window filter here on purpose: the backlog looks back over `BACKLOG_DAYS`,
+  // so a slot retired mid-window is still owed for the days it applied. The window is
+  // evaluated PER DAY in the loop below (D-#47(3)).
   const slots = await RoutineSlot.find({ teacherId: userId, active: true, isBreak: false }).lean();
   if (slots.length === 0) return [];
 
