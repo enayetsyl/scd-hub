@@ -67,6 +67,9 @@ const OPEN_STATES = ["GIVEN", "ABSENT_REDELIVER", "DUE", "SUBMITTED", "CHASE", "
 const SUBMIT_STATES = new Set(["GIVEN", "DUE", "CHASE"]);
 const RETURN_STATES = new Set(["CHECKED", "RESUBMIT"]);
 
+/** "No subject filter" — the default chip. */
+const ANY_SUBJECT = "__any";
+
 /** Calendar day (YYYY-MM-DD) of an ISO instant in Asia/Dhaka — mirrors the server gate. */
 function dhakaDayOf(iso: string): string {
   return dhakaDateKey(iso);
@@ -135,10 +138,44 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
   // Keep RETURNED rows only while their last stamp is still today (Dhaka) — the
   // same-day "ফেরত হয়েছে" confirmation list; older returns fall off.
   const today = dhakaDayOf(new Date().toISOString());
-  const records = (recsQ.data?.homeworkOpenRecords ?? []).filter(
-    (r) => r.state !== "RETURNED" || dhakaDayOf(r.lastStateAt) === today,
-  );
+  const all = recsQ.data?.homeworkOpenRecords ?? [];
+  const records = all.filter((r) => r.state !== "RETURNED" || dhakaDayOf(r.lastStateAt) === today);
+  // Everything left over belongs to an item with NO open rows — finished work. It used
+  // to vanish from the screen entirely (owner: "I need to see the returned card",
+  // 2026-08-02); it now lives in a collapsed fold at the foot.
+  const openItemIds = new Set(records.map((r) => r.hwItemId));
+  const doneRecords = all.filter((r) => !openItemIds.has(r.hwItemId));
   const taught = useTaughtSubjects(selection.sectionId ?? null);
+
+  // Subject filter (owner ask 2026-08-02). Anyone who sees several subjects on one
+  // class — Principal/Office, a class teacher, a teacher carrying two subjects —
+  // opens this screen as a mixed deck of subject×date cards. One chip row narrows it
+  // to a single subject; a caller with only one subject in play never sees the row.
+  // The filter runs BEFORE SubjectFold, so the taught/not-taught fold (D-#388) and
+  // its read-only oversight rendering still apply to whatever is left.
+  const [subjectFilter, setSubjectFilter] = useState<string>(ANY_SUBJECT);
+  // Count CARDS (hwItems), not records — "English (৯)" means nine homework cards,
+  // which is what the chip is narrowing to. Counted over `all`, so a subject whose
+  // only cards are finished still gets a chip.
+  const itemIdsBySubject = new Map<string, Set<string>>();
+  for (const r of all) {
+    let ids = itemIdsBySubject.get(r.subject);
+    if (!ids) {
+      ids = new Set<string>();
+      itemIdsBySubject.set(r.subject, ids);
+    }
+    ids.add(r.hwItemId);
+  }
+  const subjectOptions = [...itemIdsBySubject]
+    .map(([subject, ids]) => ({ subject, count: ids.size }))
+    .sort((a, b) => hwSubjectLabel(a.subject).localeCompare(hwSubjectLabel(b.subject)));
+  // A pick left over from another section reads as "সব" instead of an empty screen.
+  const activeSubject = subjectOptions.some((o) => o.subject === subjectFilter) ? subjectFilter : ANY_SUBJECT;
+  const bySubject = <T extends { subject: string }>(rows: T[]): T[] =>
+    activeSubject === ANY_SUBJECT ? rows : rows.filter((r) => r.subject === activeSubject);
+  const shown = bySubject(records);
+  const shownDone = bySubject(doneRecords);
+  const doneCount = new Set(shownDone.map((r) => r.hwItemId)).size;
 
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -174,6 +211,8 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
   // It is keyed by hwItemId (not index) so the selection survives the list re-ordering on
   // refresh, and `null` = everything collapsed, which is the initial state.
   const [openItemId, setOpenItemId] = useState<string | null>(null);
+  // The finished-work fold — collapsed by default, so the daily deck stays the deck.
+  const [showDone, setShowDone] = useState(false);
 
   const renderCards = (recs: HwOpenRecordT[], opts?: SubjectFoldRenderOpts): React.ReactNode => (
     <CardGrid>
@@ -183,6 +222,7 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
           group={g}
           tally={tallyByItem.get(g.hwItemId) ?? null}
           readOnly={!!opts?.readOnly}
+          viewOnlyNote={opts?.viewOnlyNote}
           base={base}
           open={openItemId === g.hwItemId}
           onToggle={() => setOpenItemId((id) => (id === g.hwItemId ? null : g.hwItemId))}
@@ -198,6 +238,28 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
         <ClassSectionDashboard />
+        {/* Sits with the class/section chips (outside the scroller) so it stays reachable
+            while scrolling a long deck. Hidden when the section has one subject in play. */}
+        {subjectOptions.length > 1 ? (
+          <View style={{ marginTop: space(1) }}>
+            <Muted>{STR.subject}</Muted>
+            <ChipRow>
+              <Chip
+                label={STR.all}
+                selected={activeSubject === ANY_SUBJECT}
+                onPress={() => setSubjectFilter(ANY_SUBJECT)}
+              />
+              {subjectOptions.map((o) => (
+                <Chip
+                  key={o.subject}
+                  label={`${hwSubjectLabel(o.subject)} (${bnNum(o.count)})`}
+                  selected={activeSubject === o.subject}
+                  onPress={() => setSubjectFilter(o.subject)}
+                />
+              ))}
+            </ChipRow>
+          </View>
+        ) : null}
       </View>
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, padding: space(4) }}
@@ -205,15 +267,35 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
       >
         {!hasSection ? (
           <EmptyState message={STR.pickSection} />
-        ) : recsQ.fetching && records.length === 0 ? (
+        ) : recsQ.fetching && all.length === 0 ? (
           <Loader label={STR.loading} />
-        ) : records.length === 0 ? (
-          <EmptyState message={STR.hwPassNoOpenItems} />
         ) : (
           <>
             {ok ? <Notice message={ok} tone="ok" /> : null}
             {error ? <Notice message={error} tone="danger" /> : null}
-            <SubjectFold key={selection.sectionId ?? ""} records={records} taught={taught} render={renderCards} />
+            {shown.length === 0 ? (
+              <EmptyState message={STR.hwPassNoOpenItems} />
+            ) : (
+              <SubjectFold key={selection.sectionId ?? ""} records={shown} taught={taught} render={renderCards} />
+            )}
+            {/* Finished items — every student returned, so no stage is left to run.
+                Collapsed by default and read-only: a teacher's undo is same-Dhaka-day
+                only (HomeworkRevertService), so on older work every control would
+                refuse; Office/Principal correct it from the records/roll-ups. */}
+            {shownDone.length > 0 ? (
+              <View style={{ marginTop: space(3) }}>
+                <Button
+                  title={`${showDone ? "▾" : "▸"} ${STR.wsCompletedFold} (${bnNum(doneCount)})`}
+                  variant="secondary"
+                  onPress={() => setShowDone((v) => !v)}
+                />
+                {showDone ? (
+                  <View style={{ marginTop: space(2) }}>
+                    {renderCards(shownDone, { readOnly: true, viewOnlyNote: STR.wsCompletedNote })}
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </>
         )}
       </ScrollView>
@@ -229,6 +311,7 @@ function ItemCard({
   group,
   tally,
   readOnly,
+  viewOnlyNote,
   base,
   open,
   onToggle,
@@ -239,8 +322,11 @@ function ItemCard({
   group: ItemGroup;
   /** D-#383 pipeline counts; null while the query is in flight or if the item has none. */
   tally: HwItemTallyT | null;
-  /** D-#388: a FOLDED (not-my-subject) card — oversight only, no lifecycle controls. */
+  /** D-#388: a FOLDED (not-my-subject) card — oversight only, no lifecycle controls.
+   *  The completed-work fold reuses it for finished items. */
   readOnly: boolean;
+  /** Why this card is view-only; defaults to the not-my-subject line. */
+  viewOnlyNote?: string;
   base: { sectionId: string; classId: string };
   /** Accordion: owned by the screen so only ONE card can be open (D-#371 refinement). */
   open: boolean;
@@ -378,7 +464,7 @@ function ItemCard({
            grants matching section AND subject), so every control below would 403 —
            showing a roster read-out instead of dead buttons is the honest rendering. */
         <View style={{ marginTop: space(2) }}>
-          <Muted style={{ fontStyle: "italic" }}>{STR.foldViewOnly}</Muted>
+          <Muted style={{ fontStyle: "italic" }}>{viewOnlyNote ?? STR.foldViewOnly}</Muted>
           <View style={{ marginTop: space(2) }}>
             {group.rows.map((r) => (
               <View
@@ -392,7 +478,12 @@ function ItemCard({
                 }}
               >
                 <Body style={{ flexShrink: 1 }}>{r.studentName}</Body>
-                <Muted>{lifecycleStateLabel(r.state)}</Muted>
+                {/* On a finished card the state alone says "ফেরত" for everyone —
+                    the marking result is the substance. */}
+                <Muted>
+                  {lifecycleStateLabel(r.state)}
+                  {r.result ? ` · ${hwResultLabel(r.result)}` : ""}
+                </Muted>
               </View>
             ))}
           </View>
