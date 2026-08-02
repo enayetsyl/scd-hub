@@ -27,6 +27,11 @@
  * shape for the opposite decision: "reviewed, and deliberately NOT going to the teacher".
  * A withheld row is excluded from the awaiting-publish counts; it is NOT a state either.
  *
+ * CO-15 (D-#428) adds `cancelledAt`/`cancelledBy`/`cancelledReason` — the same shape once
+ * more, for the decision made BEFORE a review exists: "this planned review will not
+ * happen". Only UPLOADED/ASSIGNED; a REVIEWED row must use withhold instead. Excluded
+ * from the observer's queue + to-review count. Reversible (the flags clear).
+ *
  * `recordingId?` (the YouTube SessionRecording) is CO-2; `teacherResponse?` is CO-3 —
  * the fields exist now, set by later slices.
  *
@@ -122,6 +127,20 @@ export interface IClassroomObservation extends Document {
   withheldAt?: Date | null;
   withheldBy?: Types.ObjectId | null;
   withheldReason?: string | null;
+  /** CO-15 (D-#428): a planned review that will NOT happen — set only on an UPLOADED or
+   *  ASSIGNED row. The same additive-flag shape as publish/withhold, NOT a state, so
+   *  `state` survives untouched and a restore is a CLEAR rather than a transition (an
+   *  ASSIGNED row comes back ASSIGNED to the same observer). `cancelledReason` is
+   *  REQUIRED — the record of why a planned observation of a named teacher never took
+   *  place. A cancelled row leaves the observer's queue + the to-review count but stays
+   *  readable to Principal/Office under the "cancelled" filter.
+   *
+   *  DISTINCT from `withheldAt` (CO-12) by design: cancel = "this review will not
+   *  happen"; withhold = "it happened and will not be released". A REVIEWED row is
+   *  refused here and must use withhold instead. */
+  cancelledAt?: Date | null;
+  cancelledBy?: Types.ObjectId | null;
+  cancelledReason?: string | null;
   // --- REF-11 payload (set at REVIEW; empty until then) — NO total/average -----
   domains: IDomainScore[];
   gates: IGateScore[];
@@ -216,6 +235,9 @@ const ClassroomObservationSchema = new Schema<IClassroomObservation>(
     withheldAt: { type: Date, default: null },
     withheldBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     withheldReason: { type: String, trim: true, default: null },
+    cancelledAt: { type: Date, default: null },
+    cancelledBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    cancelledReason: { type: String, trim: true, default: null },
     domains: { type: [DomainScoreSchema], default: [] },
     gates: { type: [GateScoreSchema], default: [] },
     oneStrength: { type: String, trim: true, default: null },

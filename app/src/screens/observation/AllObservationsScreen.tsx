@@ -78,6 +78,7 @@ export default function AllObservationsScreen(): React.ReactElement {
       sectionId: filters.sectionId,
       published: filters.published,
       withheld: filters.withheld,
+      cancelled: filters.cancelled,
       teacherId: filters.teacherId,
       observerId: filters.observerId,
       dateFrom: filters.dateFrom || null,
