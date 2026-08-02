@@ -15,9 +15,14 @@
  * The VM is aarch64 and **Puppeteer publishes no bundled Chromium for linux-arm64**,
  * so `npm install puppeteer` yields a library with nothing to launch. The fix is a
  * system Chromium plus `PUPPETEER_EXECUTABLE_PATH` — an ENV VAR, which is precisely
- * why it is the acceptable fix: the vendored renderer stays byte-identical. It must be
- * verified under the systemd unit, not only an interactive shell, because snap
- * confinement is where this bites.
+ * why it is the acceptable fix: the vendored renderer stays byte-identical.
+ *
+ * **IT MUST NOT BE THE SNAP** (D-#435). Ubuntu 24.04 arm64 offers Chromium only as a
+ * snap, and snapd refuses to launch one from inside a systemd SERVICE cgroup:
+ * "…is not a snap cgroup for tag snap.chromium.chromium". A `systemd-run` probe passes
+ * — transient units are tolerated — so this survives exactly the check that looks
+ * rigorous. Use a non-snap binary (the Playwright arm64 build at
+ * /opt/chromium-pw/chrome-linux/chrome).
  *
  * `pdffonts` (poppler) and `soffice` are already installed; `python3-pil` is the one
  * package the Python image tools still need. Upscaling is sharp everywhere (D-#422).

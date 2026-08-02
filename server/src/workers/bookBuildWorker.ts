@@ -10,14 +10,25 @@
  * real pressure the kernel kills rather than slows — and it should kill this.
  *
  * REQUIRED ON THE RENDER HOST (D-#413/#429):
- *   PUPPETEER_EXECUTABLE_PATH=/snap/bin/chromium
- *   BOOK_WORK_ROOT=/home/deploy/scdhub-book-work   ← NOT /tmp; a snap cannot read it
+ *   PUPPETEER_EXECUTABLE_PATH=/opt/chromium-pw/chrome-linux/chrome  ← NOT the snap
+ *   BOOK_WORK_ROOT=/home/deploy/scdhub-book-work
  *   BOOK_MONGODB_URI=...                            ← the book plane (D-#404)
  *
- * It connects to the BOOK plane only. It has no reason to reach identity, and not
- * opening that connection is the cheapest possible way to guarantee it never does.
+ * IT NEEDS BOTH CONNECTIONS. An earlier version of this comment claimed the worker
+ * "connects to the BOOK plane only", which read well and was wrong: filing a rendered
+ * PDF writes a `StoredFile` row, and that model lives on the MAIN connection because
+ * it is the shared file store the whole app uses. Without `connectDb()` the render
+ * succeeds, both editions pass their audits, and then the job dies on
+ * `storedfiles.insertOne() buffering timed out` — a failure that looks like Mongo
+ * being down and is actually a connection that was never opened. Found by the first
+ * real end-to-end render on 2026-08-02, which no mocked unit test could have caught.
+ *
+ * This does NOT weaken D-#404. The boundary is that no BOOK model may reach identity
+ * by ref or populate; a worker holding both connections and writing to each
+ * explicitly is exactly how the two planes are meant to be used together.
  */
 import "dotenv/config";
+import { connectDb, disconnectDb } from "../db";
 import { connectBookDb, disconnectBookDb } from "../bookDb";
 import { workerLoop } from "../modules/support-book/services/BookBuildWorker";
 import { requeueStuckJobs } from "../modules/support-book/services/BookBuildService";
@@ -29,6 +40,9 @@ const STUCK_AFTER_MS = 30 * 60_000;
 let stopping = false;
 
 async function main(): Promise<void> {
+  // Both planes. See the header — the book plane holds the jobs, the main plane holds
+  // StoredFile, and filing a PDF touches both.
+  await connectDb();
   await connectBookDb();
   console.log(`[book-worker] ${WORKER_ID} up`);
 
@@ -58,11 +72,13 @@ for (const sig of ["SIGINT", "SIGTERM"] as const) {
 main()
   .then(async () => {
     await disconnectBookDb();
+    await disconnectDb();
     console.log("[book-worker] stopped");
     process.exit(0);
   })
   .catch(async (err) => {
     console.error("[book-worker] fatal:", err);
     await disconnectBookDb().catch(() => undefined);
+    await disconnectDb().catch(() => undefined);
     process.exit(1);
   });
