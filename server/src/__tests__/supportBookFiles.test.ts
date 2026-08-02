@@ -24,6 +24,8 @@ import {
 import { ForbiddenError } from "../middleware/authz";
 import type { AppContext } from "../context";
 import type { IStoredFile } from "../modules/platform/models/StoredFile";
+import { readFileSync } from "fs";
+import path from "path";
 
 describe("the book_ prefix invariant (the GET /files/:id dispatch depends on it)", () => {
   it("every book kind starts with book_", () => {
@@ -110,5 +112,23 @@ describe("read gate", () => {
 
   it("refuses an unauthenticated caller", () => {
     expect(() => assertBookFileReadAccess({} as AppContext, file)).toThrow(ForbiddenError);
+  });
+});
+
+describe("the upload route refuses before touching Drive", () => {
+  it("POST /files/book checks the book plane FIRST", () => {
+    // Ordering, asserted statically because the failure it prevents is invisible in a
+    // unit test: without the check a caller on an unprovisioned host uploads the bytes
+    // successfully, writes a StoredFile row, and only THEN hangs forever on an
+    // unopened connection — leaving an orphan file in Drive and a request that never
+    // answers. Every GraphQL resolver checked; this route was the one that did not.
+    const src = readFileSync(path.join(__dirname, "..", "routes", "files.ts"), "utf8");
+    const route = src.slice(src.indexOf('filesRouter.post("/book"'));
+    const guardAt = route.indexOf("isBookDbReady");
+    const driveAt = route.indexOf("uploadToDrive");
+    const storeAt = route.indexOf("StoredFile.create");
+    expect(guardAt).toBeGreaterThan(-1);
+    expect(guardAt).toBeLessThan(driveAt);
+    expect(guardAt).toBeLessThan(storeAt);
   });
 });
