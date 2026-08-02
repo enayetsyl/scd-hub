@@ -24,6 +24,7 @@ import type { Router, Request, Response } from "express";
 import express, { Router as createRouter } from "express";
 import multer from "multer";
 import { buildContext } from "../context";
+import { isBookDbReady } from "../bookDb";
 import { assertClassNoteFileReadAccess } from "../modules/routine/services/ClassNoteFileService";
 import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../middleware/authz";
@@ -796,6 +797,16 @@ filesRouter.post("/book", parseBookUpload, async (req: Request, res: Response) =
     (callerHasPermission(ctx.auth, "book:illustrate") || callerHasPermission(ctx.auth, "book:assemble"));
   if (!mayUpload) {
     res.status(403).json({ error: BOOK_FILE_ERRORS_BN.forbidden });
+    return;
+  }
+
+  // BEFORE any Drive work. Without this, a caller on a host where the book plane is
+  // not provisioned uploads the bytes successfully, writes a StoredFile row, and THEN
+  // hangs forever on registerAsset against an unopened connection — leaving an orphan
+  // file in Drive and a request that never answers. The GraphQL resolvers all check;
+  // this route was the one surface that did not.
+  if (!isBookDbReady()) {
+    res.status(503).json({ error: "বই-প্রোডাকশন ডেটাবেস কনফিগার করা হয়নি" });
     return;
   }
 
