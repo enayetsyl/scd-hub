@@ -9,7 +9,9 @@
     "build": "tsc --build",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand --forceExit",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "worker:book": "tsx src/workers/bookBuildWorker.ts",
+    "worker:book:prod": "node dist/workers/bookBuildWorker.js"
   },
   "dependencies": {
     "@pothos/core": "^4.0.0",

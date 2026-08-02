@@ -9,6 +9,7 @@ import express from "express";
 import { createYoga, maskError } from "graphql-yoga";
 import { GraphQLError } from "graphql";
 import { connectDb } from "./db";
+import { connectBookDb, BookDbNotConfiguredError } from "./bookDb";
 import { buildContext } from "./context";
 
 // Import all resolvers (side-effects: register on builder)
@@ -74,6 +75,7 @@ import "./modules/classroom-observation/resolvers/sessionRecording";
 import "./modules/classroom-observation/resolvers/observationTrend";
 import "./modules/classroom-observation/resolvers/observationEffectiveness";
 import "./modules/classroom-observation/resolvers/observationSchedule";
+import "./modules/classroom-observation/resolvers/observationRota";
 import "./modules/classroom-observation/resolvers/videoReview";
 import "./modules/platform/resolvers/audit";
 import "./modules/platform/resolvers/systemHealth";
@@ -82,6 +84,11 @@ import "./modules/comments/resolvers/parentMeeting";
 import "./modules/comments/resolvers/meetingDispatch";
 import "./modules/comments/resolvers/meetingComment";
 import "./modules/access-control/resolvers/accessControl";
+import "./modules/support-book/resolvers/supportBook";
+import "./modules/support-book/resolvers/supportBookSlots";
+import "./modules/support-book/resolvers/supportBookReview";
+import "./modules/support-book/resolvers/supportBookBuild";
+import "./modules/support-book/resolvers/supportBookRationale";
 import "./modules/finance/resolvers/financeLedger";
 import "./modules/finance/resolvers/financePosting";
 import "./modules/finance/resolvers/feeSupport";
@@ -104,6 +111,7 @@ import { monthlyReportPdfRouter } from "./modules/reports/routes/monthlyReportPd
 import { filesRouter } from "./routes/files";
 import { triggersRouter } from "./routes/triggers";
 import { eventsRouter } from "./routes/events";
+import { bookBuildStreamRouter } from "./routes/bookBuildStream";
 import { registerExpoPushChannel } from "./modules/notifications/services/pushChannel";
 import { registerWebPushChannel } from "./modules/notifications/services/webPushChannel";
 import { startNotificationTicker, getTickerHealth } from "./modules/notifications/services/SchedulerService";
@@ -259,6 +267,7 @@ app.use("/pdf/monthly-report", monthlyReportPdfRouter);
 // Thin HTTP surface — homework files (GP-A, D-#70): server-in-the-middle
 // upload/download; Drive is never exposed to a client.
 app.use("/files", filesRouter);
+app.use("/book-builds", bookBuildStreamRouter);
 
 // Trigger endpoints (AT-4, D-#65): external scheduler → idempotent reminder
 // dispatch (shared-secret auth, not a browser surface → no CORS).
@@ -277,6 +286,25 @@ const PORT = Number(process.env.PORT ?? 4000);
 
 async function start() {
   await connectDb();
+  // The BOOK plane (D-#404) — a SECOND connection, opened here so the API can serve
+  // book production once it is provisioned. Until this ran, setting BOOK_MONGODB_URI
+  // did nothing at all: only the render worker opened the connection, so every
+  // resolver kept answering "not configured" on a host that looked correctly set up.
+  //
+  // It is OPTIONAL and must stay optional. A school that does not produce books runs
+  // without it, and — more importantly — a book-plane problem must NEVER stop
+  // attendance and homework from booting. So a missing URI is a normal state, and
+  // even a BROKEN one is logged rather than fatal.
+  try {
+    await connectBookDb();
+    console.log("[book] plane connected");
+  } catch (err) {
+    if (err instanceof BookDbNotConfiguredError) {
+      console.log("[book] plane not configured — book production is inert");
+    } else {
+      console.error("[book] plane failed to open (book production stays inert):", err);
+    }
+  }
   // N-4 (D-#75): Expo push fans out behind emit(). Registered here — not at
   // import time — so jest suites never touch a live transport.
   registerExpoPushChannel();

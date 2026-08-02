@@ -303,6 +303,8 @@ export type ObservationStackParamList = {
   ObservationReviewQueue: undefined;
   /** CO-11 (D-#363) — the observer's own completed reviews. */
   MyReviewHistory: undefined;
+  /** CO-14 (D-#426) — build a review rota from a written instruction. */
+  ObservationRota: undefined;
   ReviewObservation: { observationId: string; form: string; title: string };
   ObservationDetail: { observationId: string; title?: string };
   CompareObservations: { recordingId: string; title?: string };

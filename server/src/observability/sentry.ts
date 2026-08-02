@@ -30,6 +30,24 @@ import type { AppContext } from "../context";
  * are NOT sent to GlitchTip. Add new domain error classes here as modules grow.
  */
 export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
+  // A malformed support-book patch envelope (SB-1) — someone uploaded the wrong file
+  // or a truncated one. A person's mistake to correct, not a fault to page anyone
+  // about. (A validator RED is not an error at all: it is RETURNED, never thrown.)
+  "PatchShapeError",
+  // A support-book review rule denial (SB-3): self-review, a second open round, an
+  // incomplete checklist, an unresolved escalation. Deliberate refusals the caller
+  // is meant to see — not faults.
+  "ReviewRuleError",
+  // The SB-4 assembly gate refusing a doomed render (stale artifacts, an unresolved
+  // escalation, an empty scope). The refusal IS the feature.
+  "BuildGateError",
+  // The in-app authoring chat refusing a turn (SB-6): no provider configured, the
+  // monthly token ceiling reached, an unknown book, a closed session. All deliberate
+  // refusals the author is meant to read. A provider fault (a 5xx, a truncated
+  // answer, unparseable JSON) also surfaces as this class — accepted, because the
+  // alternative is a second error type whose only job is to page someone about an
+  // external API that the caller already sees fail.
+  "AuthorChatError",
   "ForbiddenError",
   "AccessControlError",
   "AttendanceError",
@@ -40,6 +58,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "ChatError",
   "ClassTestResultError",
   "ClassroomObservationError",
+  // CO-14 (D-#426): a refused rota is a DELIBERATE outcome — the model broke a rule the
+  // user set and the violations are shown to them. Not a fault to page anyone about.
+  "ObservationRotaError",
   "DriveUnavailableError",
   "FinanceError",
   "LeaveError",
