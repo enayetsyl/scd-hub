@@ -29,6 +29,7 @@ export type AuditEventKind =
   | "BOOK_REVIEW_SUBMITTED"  // a reviewer submitted a verdict + checklist
   | "BOOK_ESCALATION_RESOLVED" // a senior reviewer closed an escalation with a ruling
   | "BOOK_LESSON_SIGNED_OFF"   // the content sign-off was recorded on a পাঠ
+  | "BOOK_BUILD_QUEUED"        // a render was queued (SB-4); `forced` records a gate override
   | "CREDENTIAL_PROVISIONED" // login generated/reset for a guardian or staff member (D-#59/#60)
   | "SECTIONS_MERGED"     // a class's gender sections combined into one (D-#62)
   | "SECTIONS_SPLIT"      // a merged class split back to its source sections (D-#62)

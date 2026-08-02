@@ -38,6 +38,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // incomplete checklist, an unresolved escalation. Deliberate refusals the caller
   // is meant to see — not faults.
   "ReviewRuleError",
+  // The SB-4 assembly gate refusing a doomed render (stale artifacts, an unresolved
+  // escalation, an empty scope). The refusal IS the feature.
+  "BuildGateError",
   "ForbiddenError",
   "AccessControlError",
   "AttendanceError",
