@@ -9,6 +9,7 @@ import express from "express";
 import { createYoga, maskError } from "graphql-yoga";
 import { GraphQLError } from "graphql";
 import { connectDb } from "./db";
+import { connectBookDb, BookDbNotConfiguredError } from "./bookDb";
 import { buildContext } from "./context";
 
 // Import all resolvers (side-effects: register on builder)
@@ -285,6 +286,25 @@ const PORT = Number(process.env.PORT ?? 4000);
 
 async function start() {
   await connectDb();
+  // The BOOK plane (D-#404) — a SECOND connection, opened here so the API can serve
+  // book production once it is provisioned. Until this ran, setting BOOK_MONGODB_URI
+  // did nothing at all: only the render worker opened the connection, so every
+  // resolver kept answering "not configured" on a host that looked correctly set up.
+  //
+  // It is OPTIONAL and must stay optional. A school that does not produce books runs
+  // without it, and — more importantly — a book-plane problem must NEVER stop
+  // attendance and homework from booting. So a missing URI is a normal state, and
+  // even a BROKEN one is logged rather than fatal.
+  try {
+    await connectBookDb();
+    console.log("[book] plane connected");
+  } catch (err) {
+    if (err instanceof BookDbNotConfiguredError) {
+      console.log("[book] plane not configured — book production is inert");
+    } else {
+      console.error("[book] plane failed to open (book production stays inert):", err);
+    }
+  }
   // N-4 (D-#75): Expo push fans out behind emit(). Registered here — not at
   // import time — so jest suites never touch a live transport.
   registerExpoPushChannel();
