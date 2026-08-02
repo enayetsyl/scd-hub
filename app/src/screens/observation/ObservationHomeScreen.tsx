@@ -52,6 +52,10 @@ export default function ObservationHomeScreen(): React.ReactElement {
             {canManage ? (
               <Button title={STR.obsDueListNav} variant="secondary" onPress={() => nav.navigate("ObservationDueList")} />
             ) : null}
+            {/* CO-14 (D-#426): the due list says WHO; this turns that into dated sessions. */}
+            {canManage ? (
+              <Button title={STR.obsRotaTitle} variant="secondary" onPress={() => nav.navigate("ObservationRota")} />
+            ) : null}
             {canManage ? (
               <Button title={STR.obsReviewerEffNav} variant="secondary" onPress={() => nav.navigate("ReviewerEffectiveness")} />
             ) : null}

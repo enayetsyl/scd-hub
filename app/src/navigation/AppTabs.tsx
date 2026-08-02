@@ -168,6 +168,7 @@ import EnglishDriveDocScreen from "../screens/englishdrive/EnglishDriveDocScreen
 import EnglishDriveUploadScreen from "../screens/englishdrive/EnglishDriveUploadScreen";
 import ObservationReviewQueueScreen from "../screens/observation/ObservationReviewQueueScreen";
 import MyReviewHistoryScreen from "../screens/observation/MyReviewHistoryScreen";
+import ObservationRotaScreen from "../screens/observation/ObservationRotaScreen";
 import ReviewObservationScreen from "../screens/observation/ReviewObservationScreen";
 import ObservationDetailScreen from "../screens/observation/ObservationDetailScreen";
 import CompareObservationsScreen from "../screens/observation/CompareObservationsScreen";
@@ -810,6 +811,7 @@ function ObservationNavigator(): React.ReactElement {
       <ObservationStack.Screen name="UploadObservation" component={UploadObservationScreen} options={{ title: STR.obsUploadTitle }} />
       <ObservationStack.Screen name="ObservationReviewQueue" component={ObservationReviewQueueScreen} options={{ title: STR.obsQueueTitle }} />
       <ObservationStack.Screen name="MyReviewHistory" component={MyReviewHistoryScreen} options={{ title: STR.obsMyReviewsTitle }} />
+      <ObservationStack.Screen name="ObservationRota" component={ObservationRotaScreen} options={{ title: STR.obsRotaTitle }} />
       <ObservationStack.Screen
         name="ReviewObservation"
         component={ReviewObservationScreen}

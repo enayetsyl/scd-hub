@@ -75,6 +75,7 @@ import "./modules/classroom-observation/resolvers/sessionRecording";
 import "./modules/classroom-observation/resolvers/observationTrend";
 import "./modules/classroom-observation/resolvers/observationEffectiveness";
 import "./modules/classroom-observation/resolvers/observationSchedule";
+import "./modules/classroom-observation/resolvers/observationRota";
 import "./modules/classroom-observation/resolvers/videoReview";
 import "./modules/platform/resolvers/audit";
 import "./modules/platform/resolvers/systemHealth";
