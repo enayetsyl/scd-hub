@@ -20,6 +20,10 @@ export interface SubjectFoldRenderOpts {
    *  grants matching section AND subject), so this hides controls that would
    *  simply 403 rather than being the gate itself. */
   readOnly?: boolean;
+  /** Override for the read-only banner. The workspaces' completed-work fold reuses
+   *  the same read-only card but is view-only for a different reason (the work is
+   *  finished, not someone else's subject), so it supplies its own line. */
+  viewOnlyNote?: string;
 }
 
 interface Props<T extends { subject: string }> {

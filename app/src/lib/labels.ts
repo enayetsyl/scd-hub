@@ -1337,6 +1337,9 @@ const STR_BN = {
   hwWorkspaceTitle: "বাড়ির কাজ",
   /** Folded (not-my-subject) card body: oversight view, no actions. */
   foldViewOnly: "শুধু দেখা — এই বিষয়ের কাজ বিষয়শিক্ষক করবেন",
+  /** The finished-work fold at the foot of both workspaces (owner ask 2026-08-02). */
+  wsCompletedFold: "সম্পন্ন কাজ",
+  wsCompletedNote: "সবার কাজ ফেরত দেওয়া হয়েছে — শুধু দেখা",
   hwPassSubmit: "জমা",
   hwPassSubmitCommit: "জমা নিশ্চিত করুন",
   hwPassSubmitted: "জমা",
@@ -4307,6 +4310,8 @@ const STR_EN: StrTable = {
   hwWorkspace: "Homework",
   hwWorkspaceTitle: "Homework",
   foldViewOnly: "View only — the subject teacher handles this",
+  wsCompletedFold: "Completed work",
+  wsCompletedNote: "Everyone's work has been returned — view only",
   hwPassSubmit: "Submission",
   hwPassSubmitCommit: "Confirm submissions",
   hwPassSubmitted: "Submitted",
