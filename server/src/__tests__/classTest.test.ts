@@ -484,6 +484,74 @@ describe("createRequest", () => {
 });
 
 // ===========================================================================
+// CT-11 — duplicate guard (D-#429)
+// ===========================================================================
+
+describe("createRequest duplicate guard (CT-11)", () => {
+  const dupInput = {
+    sectionId: SECTION_OID.toString(),
+    subject: "BAN",
+    examDate: "2026-07-29",
+    totalMarks: 20,
+    source: "POOL_SET",
+    setId: oid().toString(),
+    actorId: TEACHER_ID,
+    testNumber: 1, // explicit, so suggestTestNumber is skipped and findOne is the guard
+  };
+
+  test("refuses a second live test with the same section + subject + test number", async () => {
+    mockCtFindOne.mockReturnValue(
+      leanChain({ ctId: "CT-C5-BAN-0002", examDate: new Date("2026-07-29"), status: "PRINTED" }),
+    );
+    await expect(createRequest(dupInput)).rejects.toThrow(/CT-C5-BAN-0002/);
+    // Nothing is written when the guard trips.
+    expect(mockCtCreate).not.toHaveBeenCalled();
+    expect(mockCreatePrintRequest).not.toHaveBeenCalled();
+    expect(mockWriteAudit).not.toHaveBeenCalled();
+  });
+
+  test("the refusal names the existing test, its date and status so the teacher can act", async () => {
+    mockCtFindOne.mockReturnValue(
+      leanChain({ ctId: "CT-C2-BAN-0002", examDate: new Date("2026-07-14"), status: "PRINTED" }),
+    );
+    await expect(createRequest(dupInput)).rejects.toThrow(/2026-07-14/);
+    await expect(createRequest(dupInput)).rejects.toThrow(/PRINTED/);
+    await expect(createRequest(dupInput)).rejects.toThrow(/different Test #/);
+  });
+
+  test("keys on section + subject + testNumber and EXCLUDES cancelled rows", async () => {
+    mockCtFindOne.mockReturnValue(leanChain(null));
+    await createRequest(dupInput);
+    expect(mockCtFindOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sectionId: SECTION_OID,
+        subject: "BAN",
+        testNumber: 1,
+        status: { $ne: "CANCELLED" },
+      }),
+    );
+    // The key deliberately omits examDate — the same Test # twice is a mistake whatever
+    // the dates, and keying on the date let both live incidents through.
+    const q = mockCtFindOne.mock.calls[0][0] as Record<string, unknown>;
+    expect(q.examDate).toBeUndefined();
+  });
+
+  test("a withdrawn (CANCELLED) request does not block its replacement", async () => {
+    // The query excludes CANCELLED, so the DB returns nothing and creation proceeds.
+    mockCtFindOne.mockReturnValue(leanChain(null));
+    const res = await createRequest(dupInput);
+    expect(res.status).toBe("REQUESTED");
+    expect(mockCtCreate).toHaveBeenCalled();
+  });
+
+  test("a different test number for the same class + subject is allowed", async () => {
+    mockCtFindOne.mockReturnValue(leanChain(null));
+    const res = await createRequest({ ...dupInput, testNumber: 2 });
+    expect(res.testNumber).toBe(2);
+  });
+});
+
+// ===========================================================================
 // markPrinted / cancelRequest (J2)
 // ===========================================================================
 
