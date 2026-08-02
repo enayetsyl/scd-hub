@@ -84,7 +84,7 @@ first render to happen on the production instance.
 
 ```bash
 BOOK_MONGODB_URI=mongodb://127.0.0.1:27017/scdhub_books_dev
-PUPPETEER_EXECUTABLE_PATH=/snap/bin/chromium
+PUPPETEER_EXECUTABLE_PATH=/opt/chromium-pw/chrome-linux/chrome
 BOOK_WORK_ROOT=/home/deploy/scdhub-book-work
 BOOK_PIPELINE_ROOT=/opt/scdhub/dev/book-pipeline
 ```
@@ -128,8 +128,19 @@ node src/validate-studybook.js /path/to/any/book.json
 # expect: "=== study-book validator — <ID> ===" and a RED/GREY count
 ```
 
-**Then verify Chromium launches under the SERVICE, not just your shell** — snap
-confinement behaves differently under systemd, and this is the check that catches it:
+**Chromium must NOT be the snap (D-#435).** Ubuntu 24.04 arm64 offers it only as a
+snap, and snapd refuses to launch one from inside a systemd SERVICE cgroup
+(`…is not a snap cgroup for tag snap.chromium.chromium`). Install a non-snap build:
+
+```bash
+sudo npx --yes playwright@1.49.1 install --with-deps chromium
+sudo cp -r /root/.cache/ms-playwright/chromium-*/ /opt/chromium-pw
+sudo chmod -R a+rX /opt/chromium-pw
+```
+
+**Then verify it launches from a real `.service` unit — NOT `systemd-run`.** A
+transient unit is tolerated by snapd and a persistent service is not, so a
+`systemd-run` probe passes and then the worker fails. Write a throwaway unit:
 ```bash
 sudo systemd-run --uid=deploy --gid=deploy --setenv=HOME=/home/deploy --wait --pipe --collect \
   /snap/bin/chromium --headless --no-sandbox --disable-gpu \
