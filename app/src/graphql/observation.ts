@@ -631,3 +631,111 @@ export const RATE_OBSERVATION_REVIEW = gql<
     }
   }
 `;
+
+// ---------------------------------------------------------------------------
+// CO-14 — review rota from a written instruction (D-#426)
+// ---------------------------------------------------------------------------
+
+export interface RotaEchoT {
+  intensive: Array<{ teacherName: string; everyNDays: number; rotateClasses: boolean }>;
+  excluded: Array<{ teacherName: string; reason: string | null }>;
+  caps: Array<{ teacherName: string; max: number; window: string | null }>;
+  classLevels: number[];
+  perDay: number;
+}
+
+export interface RotaDraftRowT {
+  date: string;
+  candidateId: string;
+  reason: string | null;
+  dayOfWeek: string;
+  teacherId: string;
+  teacherName: string;
+  groupLabel: string;
+  classLevel: number | null;
+  subject: string;
+  periodNumber: number;
+  startHHMM: string;
+  endHHMM: string;
+}
+
+export interface RotaDraftT {
+  periodFrom: string;
+  periodTo: string;
+  instruction: string;
+  constraintEcho: RotaEchoT;
+  rows: RotaDraftRowT[];
+  model: string;
+  promptVersion: string;
+}
+
+export interface StoredRotaRowT extends Omit<RotaDraftRowT, "dayOfWeek" | "classLevel"> {
+  slotChanged: boolean;
+}
+
+export interface StoredRotaT {
+  id: string;
+  periodFrom: string;
+  periodTo: string;
+  instruction: string;
+  constraintEcho: RotaEchoT;
+  rows: StoredRotaRowT[];
+  model: string;
+  promptVersion: string;
+  createdAt: string;
+}
+
+const ROTA_ECHO_FIELDS = `constraintEcho {
+  intensive { teacherName everyNDays rotateClasses }
+  excluded { teacherName reason }
+  caps { teacherName max window }
+  classLevels perDay
+}`;
+
+/** CO-14 — instruction in, validated rota out. Writes nothing; the server refuses with
+ *  named violations rather than returning an unvalidated table. */
+export const GENERATE_OBSERVATION_ROTA = gql<
+  { generateObservationRota: RotaDraftT },
+  { periodFrom: string; periodTo: string; instruction: string }
+>`
+  mutation GenerateObservationRota($periodFrom: String!, $periodTo: String!, $instruction: String!) {
+    generateObservationRota(periodFrom: $periodFrom, periodTo: $periodTo, instruction: $instruction) {
+      periodFrom periodTo instruction model promptVersion
+      ${ROTA_ECHO_FIELDS}
+      rows {
+        date candidateId reason dayOfWeek teacherId teacherName
+        groupLabel classLevel subject periodNumber startHHMM endHHMM
+      }
+    }
+  }
+`;
+
+/** CO-14 — store the accepted rota with its instruction. Creates NO assignments. */
+export const SAVE_OBSERVATION_ROTA = gql<
+  { saveObservationRota: StoredRotaT },
+  { periodFrom: string; periodTo: string; instruction: string }
+>`
+  mutation SaveObservationRota($periodFrom: String!, $periodTo: String!, $instruction: String!) {
+    saveObservationRota(periodFrom: $periodFrom, periodTo: $periodTo, instruction: $instruction) {
+      id periodFrom periodTo instruction model promptVersion createdAt
+      ${ROTA_ECHO_FIELDS}
+      rows {
+        date candidateId reason teacherId teacherName
+        groupLabel subject periodNumber startHHMM endHHMM slotChanged
+      }
+    }
+  }
+`;
+
+export const OBSERVATION_ROTAS_QUERY = gql<{ observationRotas: StoredRotaT[] }, { limit?: number }>`
+  query ObservationRotas($limit: Int) {
+    observationRotas(limit: $limit) {
+      id periodFrom periodTo instruction model promptVersion createdAt
+      ${ROTA_ECHO_FIELDS}
+      rows {
+        date candidateId reason teacherId teacherName
+        groupLabel subject periodNumber startHHMM endHHMM slotChanged
+      }
+    }
+  }
+`;

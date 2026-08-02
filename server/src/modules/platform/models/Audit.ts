@@ -128,6 +128,7 @@ export type AuditEventKind =
   | "CLASSROOM_OBSERVATION_HOLD_LIFTED" // a withhold was lifted → back into the awaiting-publish queue (CO-12, D-#369)
   | "CLASSROOM_OBSERVATION_CANCELLED"  // Principal/Office called off a planned (UPLOADED/ASSIGNED) review, with a reason (CO-15, D-#428)
   | "CLASSROOM_OBSERVATION_RESTORED"   // a cancel was undone → the row returns to its same state + observer (CO-15, D-#428)
+  | "OBSERVATION_ROTA_SAVED"          // a generated review rota was accepted and stored (CO-14, D-#426) — creates NO assignments
   | "CLASSROOM_OBSERVATION_SUPERSEDED" // a re-review superseded a prior observation (CO-1, §5, D-#194)
   | "CLASSROOM_OBSERVATION_RESPONDED"  // the observed teacher acknowledged a released observation → TEACHER_RESPONDED (CO-3)
   | "OBSERVATION_REVIEW_RATED"         // the observed teacher rated the review's fairness/usefulness (CO-7, observation:read)
