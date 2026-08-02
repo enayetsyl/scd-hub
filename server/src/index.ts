@@ -108,6 +108,7 @@ import { monthlyReportPdfRouter } from "./modules/reports/routes/monthlyReportPd
 import { filesRouter } from "./routes/files";
 import { triggersRouter } from "./routes/triggers";
 import { eventsRouter } from "./routes/events";
+import { bookBuildStreamRouter } from "./routes/bookBuildStream";
 import { registerExpoPushChannel } from "./modules/notifications/services/pushChannel";
 import { registerWebPushChannel } from "./modules/notifications/services/webPushChannel";
 import { startNotificationTicker, getTickerHealth } from "./modules/notifications/services/SchedulerService";
@@ -263,6 +264,7 @@ app.use("/pdf/monthly-report", monthlyReportPdfRouter);
 // Thin HTTP surface — homework files (GP-A, D-#70): server-in-the-middle
 // upload/download; Drive is never exposed to a client.
 app.use("/files", filesRouter);
+app.use("/book-builds", bookBuildStreamRouter);
 
 // Trigger endpoints (AT-4, D-#65): external scheduler → idempotent reminder
 // dispatch (shared-secret auth, not a browser surface → no CORS).
