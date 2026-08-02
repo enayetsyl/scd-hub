@@ -15,6 +15,7 @@ import { ScopeGrant } from "../../foundation/models/ScopeGrant";
 import { writeAudit } from "../../platform/services/AuditService";
 import { weekdayBaseDayType, dayTypeAdmitsTrack } from "../calendar";
 import { detectConflicts, type SlotLite } from "../conflicts";
+import { liveWindow, startOfDay, endOfDayBefore } from "../liveWindow";
 import { routineGrantPlan } from "../binding";
 import { onRoutineSlotChangedSync } from "../../chat/services/ChatGroupService";
 
@@ -154,16 +155,41 @@ export interface UpdateSlotInput {
   teacherId?: string | null;
   roomId?: string | null;
   actorId: string;
+  /** The date the change takes effect (D-#47(3)). Defaults to today. */
+  effectiveFrom?: Date | null;
 }
 
-/** Edit an existing slot in place (R-3 master-grid cell edit): change the subject,
- *  track, teacher or room of one slot WITHOUT moving its (group, day, period) or
- *  effective window. Runs the same conflict engine as create (excluding the slot
- *  itself) and re-syncs the routine teaching grant — unbinding the old (teacher,
- *  subject) if it is now orphaned, binding the new one (+ authority warning). */
+/**
+ * Edit a slot (R-3 master-grid cell edit): change the subject, track, teacher or room
+ * WITHOUT moving its (group, day, period).
+ *
+ * VERSIONED (D-#47(3)): the edit does not overwrite the past. The existing row is
+ * CLOSED the day before `effectiveFrom` and a REPLACEMENT row is opened from that date
+ * carrying the new values, so "who taught this period in June?" stays answerable. The
+ * one exception is an edit effective at or before the row's own start — there is no
+ * history to preserve, so that row is corrected in place (this is the same-day
+ * fix-a-typo path, and it keeps a slot created today from spawning a zero-length
+ * historical twin).
+ *
+ * Runs the same conflict engine as create (excluding the row being replaced, and
+ * window-aware so a retired row never blocks its own successor) and re-syncs the
+ * routine teaching grant — unbinding the old (teacher, subject) if it is orphaned as
+ * of the changeover date, binding the new one (+ authority warning).
+ */
 export async function updateRoutineSlot(input: UpdateSlotInput): Promise<CreateSlotResult> {
   const existing = await RoutineSlot.findById(input.slotId).lean();
   if (!existing) throw new Error("Routine slot not found");
+
+  const changeFrom = startOfDay(input.effectiveFrom ?? new Date());
+  // Editing a row that has already been retired would rewrite history — the caller
+  // wants whichever row is in force on that date instead.
+  if (existing.effectiveTo && startOfDay(new Date(existing.effectiveTo)) < changeFrom)
+    throw new Error(
+      `That slot stopped applying on ${new Date(existing.effectiveTo).toISOString().slice(0, 10)} — ` +
+        `edit the slot in force on the change date instead`,
+    );
+  // Nothing to preserve when the change starts at or before the row's own start.
+  const inPlace = changeFrom <= startOfDay(new Date(existing.effectiveFrom));
 
   // R2.1 — the weekday must admit the new track; a break takes no teacher.
   const idx = DAYS_OF_WEEK.indexOf(existing.dayOfWeek as DayOfWeek);
@@ -190,7 +216,10 @@ export async function updateRoutineSlot(input: UpdateSlotInput): Promise<CreateS
     groupId: existing.groupId.toString(),
     teacherId: input.teacherId ?? null,
     roomId: input.roomId ?? null,
-    effectiveFrom: existing.effectiveFrom,
+    // The replacement runs from the changeover date, not from the old row's start —
+    // otherwise it would appear to collide with slots that only ever overlapped the
+    // period it is replacing.
+    effectiveFrom: inPlace ? existing.effectiveFrom : changeFrom,
     effectiveTo: existing.effectiveTo ?? null,
   };
   const otherDocs = await RoutineSlot.find({
@@ -208,27 +237,63 @@ export async function updateRoutineSlot(input: UpdateSlotInput): Promise<CreateS
   const oldSubject = existing.subject;
   const newTeacherId = input.teacherId ?? null;
 
-  // Persist the field changes ($unset clears a removed teacher/room).
-  const set: Record<string, unknown> = { subject: input.subject, track: input.track };
-  const unset: Record<string, ""> = {};
-  if (newTeacherId) set.teacherId = new Types.ObjectId(newTeacherId);
-  else unset.teacherId = "";
-  if (input.roomId) set.roomId = new Types.ObjectId(input.roomId);
-  else unset.roomId = "";
-  const update: Record<string, unknown> = { $set: set };
-  if (Object.keys(unset).length) update.$unset = unset;
-  await RoutineSlot.updateOne({ _id: existing._id }, update);
+  // Persist. In place when there is no history to keep; otherwise close the old row
+  // the day before the change and open its replacement ($unset clears a removed
+  // teacher/room on the in-place path).
+  let liveId = existing._id;
+  if (inPlace) {
+    const set: Record<string, unknown> = { subject: input.subject, track: input.track };
+    const unset: Record<string, ""> = {};
+    if (newTeacherId) set.teacherId = new Types.ObjectId(newTeacherId);
+    else unset.teacherId = "";
+    if (input.roomId) set.roomId = new Types.ObjectId(input.roomId);
+    else unset.roomId = "";
+    const update: Record<string, unknown> = { $set: set };
+    if (Object.keys(unset).length) update.$unset = unset;
+    await RoutineSlot.updateOne({ _id: existing._id }, update);
+  } else {
+    await RoutineSlot.updateOne({ _id: existing._id }, { $set: { effectiveTo: endOfDayBefore(changeFrom) } });
+    const replacement = await RoutineSlot.create({
+      groupType: existing.groupType,
+      groupId: existing.groupId,
+      classId: existing.classId,
+      dayOfWeek: existing.dayOfWeek,
+      periodNumber: existing.periodNumber,
+      subject: input.subject,
+      track: input.track,
+      isBreak: existing.isBreak,
+      teacherId: newTeacherId ? new Types.ObjectId(newTeacherId) : undefined,
+      roomId: input.roomId ? new Types.ObjectId(input.roomId) : undefined,
+      effectiveFrom: changeFrom,
+      effectiveTo: existing.effectiveTo ?? undefined,
+      createdBy: new Types.ObjectId(input.actorId),
+    });
+    liveId = replacement._id;
+  }
+  await writeAudit({
+    eventKind: "ROUTINE_SLOT_REVISED",
+    actorId: input.actorId,
+    targetId: liveId,
+    targetKind: "RoutineSlot",
+    meta: {
+      supersededSlotId: inPlace ? null : existing._id.toString(),
+      effectiveFrom: changeFrom.toISOString().slice(0, 10),
+      inPlace,
+      from: { subject: oldSubject, teacherId: oldTeacherId },
+      to: { subject: input.subject, teacherId: newTeacherId },
+    },
+  });
 
   // Re-sync the routine teaching grant: unbind the old (teacher, subject) if it is
-  // now orphaned, then bind the new one. unbind runs AFTER the write so its
-  // "still justified?" check sees the new state.
+  // orphaned AS OF the changeover date, then bind the new one. unbind runs AFTER the
+  // write so its "still justified?" check sees the new state.
   const warnings: string[] = [];
   const oldPlan = routineGrantPlan(
     { groupType: existing.groupType, isBreak: existing.isBreak, teacherId: oldTeacherId ?? undefined, subject: oldSubject },
     SUBJECTS,
   );
   if (oldPlan.bind && oldTeacherId && (oldTeacherId !== newTeacherId || oldSubject !== input.subject)) {
-    await unbindIfOrphaned(oldTeacherId, existing.groupId.toString(), oldSubject, input.actorId);
+    await unbindIfOrphaned(oldTeacherId, existing.groupId.toString(), oldSubject, input.actorId, changeFrom);
   }
   const newPlan = routineGrantPlan(
     { groupType: existing.groupType, isBreak: existing.isBreak, teacherId: newTeacherId ?? undefined, subject: input.subject },
@@ -239,7 +304,7 @@ export async function updateRoutineSlot(input: UpdateSlotInput): Promise<CreateS
     if (warn) warnings.push(warn);
   }
 
-  const slot = await RoutineSlot.findById(existing._id).lean();
+  const slot = await RoutineSlot.findById(liveId).lean();
   await onRoutineSlotChangedSync(slot as unknown as IRoutineSlot);
   return { slot: slot as unknown as IRoutineSlot, warnings };
 }
@@ -301,19 +366,50 @@ async function bindRoutineGrant(
   return warn;
 }
 
-/** Delete a routine slot; revoke its routine grant only if no remaining slot
- *  justifies it (idempotent sync — manual grants are never touched, D-#49). */
-export async function deleteRoutineSlot(slotId: string, actorId: string): Promise<void> {
+/**
+ * Remove a slot from the routine; revoke its routine grant only if no remaining slot
+ * justifies it (idempotent sync — manual grants are never touched, D-#49).
+ *
+ * VERSIONED (D-#47(3)): a slot that has already been taught is RETIRED, not deleted —
+ * `effectiveTo` closes the day before `effectiveFrom` so the past stays intact. Only a
+ * slot whose window has not started yet is hard-deleted, which is the "this row was a
+ * mistake" path. Retirement never sets `active: false`: every read filters on `active`,
+ * so that would hide the row from historical queries as well.
+ */
+export async function deleteRoutineSlot(
+  slotId: string,
+  actorId: string,
+  effectiveFrom?: Date | null,
+): Promise<void> {
   const slot = await RoutineSlot.findById(slotId).lean();
   if (!slot) throw new Error("Routine slot not found");
-  await RoutineSlot.deleteOne({ _id: slotId });
+
+  const changeFrom = startOfDay(effectiveFrom ?? new Date());
+  const neverApplied = changeFrom <= startOfDay(new Date(slot.effectiveFrom));
+  if (neverApplied) {
+    await RoutineSlot.deleteOne({ _id: slotId });
+  } else {
+    await RoutineSlot.updateOne({ _id: slotId }, { $set: { effectiveTo: endOfDayBefore(changeFrom) } });
+  }
+  await writeAudit({
+    eventKind: "ROUTINE_SLOT_RETIRED",
+    actorId,
+    targetId: slot._id,
+    targetKind: "RoutineSlot",
+    meta: {
+      deleted: neverApplied,
+      effectiveTo: neverApplied ? null : endOfDayBefore(changeFrom).toISOString().slice(0, 10),
+      subject: slot.subject,
+      teacherId: slot.teacherId ? slot.teacherId.toString() : null,
+    },
+  });
 
   const plan = routineGrantPlan(
     { groupType: slot.groupType, isBreak: slot.isBreak, teacherId: slot.teacherId?.toString(), subject: slot.subject },
     SUBJECTS,
   );
   if (plan.bind && slot.teacherId) {
-    await unbindIfOrphaned(slot.teacherId.toString(), slot.groupId.toString(), slot.subject, actorId);
+    await unbindIfOrphaned(slot.teacherId.toString(), slot.groupId.toString(), slot.subject, actorId, changeFrom);
   }
 
   // M-2 (D-#78): re-sync the affected SECTION + SUBJECT chat groups (the teacher
@@ -321,13 +417,17 @@ export async function deleteRoutineSlot(slotId: string, actorId: string): Promis
   await onRoutineSlotChangedSync(slot);
 }
 
-/** Revoke the routine teaching grant for (teacher, section, subject) iff no other
- *  active routine section-slot still maps to it. */
+/** Revoke the routine teaching grant for (teacher, section, subject) iff no routine
+ *  section-slot that is IN FORCE on `on` still maps to it. The window filter is what
+ *  stops a retired slot from justifying a grant forever (D-#47(3)); `on` is the date
+ *  the routine change takes effect, so a future-dated retirement is evaluated against
+ *  the state it will actually produce. */
 async function unbindIfOrphaned(
   teacherId: string,
   sectionId: string,
   subjectCode: string,
   actorId: string,
+  on: Date = new Date(),
 ): Promise<void> {
   const remaining = await RoutineSlot.findOne({
     groupType: "section",
@@ -335,6 +435,7 @@ async function unbindIfOrphaned(
     teacherId,
     subject: subjectCode,
     active: true,
+    ...liveWindow(on),
   }).lean();
   if (remaining) return; // still justified by another slot
 
@@ -480,8 +581,11 @@ export async function reassignRoutineSubjectTeacher(
   subject: string,
   teacherId: string,
   actorId: string,
-  now = new Date(),
+  effectiveFrom?: Date | null,
 ): Promise<ReassignSubjectTeacherResult> {
+  // Everything below is evaluated as of the changeover date: which slots are in force,
+  // whether the new teacher is free, and the effective date each replacement carries.
+  const now = startOfDay(effectiveFrom ?? new Date());
   const slots = await liveSectionSlots(sectionId, subject, now);
   if (slots.length === 0) {
     throw new Error(`No live routine slots for ${subject} in this section — nothing to update`);
@@ -517,6 +621,7 @@ export async function reassignRoutineSubjectTeacher(
       teacherId,
       roomId: s.roomId ? s.roomId.toString() : null,
       actorId,
+      effectiveFrom: now,
     });
     for (const w of res.warnings) warnings.add(w);
     updatedSlots += 1;

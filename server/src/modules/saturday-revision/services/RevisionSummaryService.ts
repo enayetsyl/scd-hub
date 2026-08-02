@@ -23,6 +23,7 @@ import { RevisionEntry, type IRevisionEntry, type IJuzRecord } from "../models/R
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
+import { liveWindow } from "../../routine/liveWindow";
 import { Student } from "../../foundation/models/Student";
 import { User } from "../../foundation/models/User";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
@@ -366,6 +367,8 @@ export async function completenessChase(date: Date): Promise<CompletenessChaseRo
       groupId: new Types.ObjectId(g.groupId),
       track: "quran",
       active: { $ne: false },
+      // Whoever led the group ON THAT DATE is the one to chase (D-#47(3)).
+      ...liveWindow(date),
     })
       .select("teacherId")
       .lean()) as unknown as Array<{ teacherId?: Types.ObjectId }>;

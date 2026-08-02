@@ -292,7 +292,23 @@ describe("R2.5 deleteRoutineSlot unbinds only when orphaned", () => {
     isBreak: false,
     teacherId: new mongoose.Types.ObjectId(TEACHER_A),
     classId: CLASS,
+    effectiveFrom: D("2026-01-01"),
+    effectiveTo: null,
   };
+  test("a slot that has already applied is RETIRED, not deleted (D-#47(3))", async () => {
+    mockSlotFindById.mockResolvedValue(slotDoc);
+    mockSlotFindOne.mockResolvedValue(null);
+    await deleteRoutineSlot(slotDoc._id.toString(), ACTOR, D("2026-09-01"));
+    expect(mockSlotDeleteOne).not.toHaveBeenCalled();
+    const [, update] = mockSlotUpdateOne.mock.calls[0];
+    expect(update.$set.effectiveTo).toEqual(new Date(2026, 7, 31, 23, 59, 59, 999));
+  });
+  test("a slot whose window has not started is hard-deleted (the mistake path)", async () => {
+    mockSlotFindById.mockResolvedValue({ ...slotDoc, effectiveFrom: D("2026-09-01") });
+    mockSlotFindOne.mockResolvedValue(null);
+    await deleteRoutineSlot(slotDoc._id.toString(), ACTOR, D("2026-09-01"));
+    expect(mockSlotDeleteOne).toHaveBeenCalledTimes(1);
+  });
   test("revokes the routine grant when no slot remains", async () => {
     mockSlotFindById.mockResolvedValue(slotDoc);
     mockSlotFindOne.mockResolvedValue(null); // no remaining slot → orphan
@@ -311,7 +327,7 @@ describe("R2.5 deleteRoutineSlot unbinds only when orphaned", () => {
 // ---------------------------------------------------------------------------
 // R-3 (master-grid cell edit) — updateRoutineSlot
 // ---------------------------------------------------------------------------
-describe("updateRoutineSlot (edit a slot in place)", () => {
+describe("updateRoutineSlot (versioned cell edit — D-#47(3))", () => {
   const TEACHER_B = new mongoose.Types.ObjectId().toString();
   const SLOT_ID = new mongoose.Types.ObjectId();
   const sectionSlot = {
@@ -339,27 +355,52 @@ describe("updateRoutineSlot (edit a slot in place)", () => {
     expect(mockSlotUpdateOne).not.toHaveBeenCalled();
   });
 
-  test("persists the change and binds the new teacher's routine grant", async () => {
+  test("versions the change (D-#47(3)): closes the old row, opens a replacement, binds the new grant", async () => {
     mockSlotFindById.mockResolvedValue(sectionSlot);
     mockSlotFind.mockResolvedValue([]); // no conflict
-    const res = await updateRoutineSlot({ slotId: SLOT_ID.toString(), subject: "BAN", track: "general", teacherId: TEACHER_B, roomId: null, actorId: ACTOR });
-    // field write: subject/track $set, teacher set to B, room cleared
+    const res = await updateRoutineSlot({ slotId: SLOT_ID.toString(), subject: "BAN", track: "general", teacherId: TEACHER_B, roomId: null, actorId: ACTOR, effectiveFrom: D("2026-09-01") });
+    // the old row is CLOSED the day before the changeover, not overwritten
     expect(mockSlotUpdateOne).toHaveBeenCalledTimes(1);
     const [, update] = mockSlotUpdateOne.mock.calls[0];
-    expect(update.$set).toMatchObject({ subject: "BAN", track: "general" });
-    expect(update.$unset).toMatchObject({ roomId: "" });
+    expect(update.$set.effectiveTo).toEqual(new Date(2026, 7, 31, 23, 59, 59, 999));
+    expect(update.$set.subject).toBeUndefined(); // history untouched
+    // the replacement carries the new values from the changeover date
+    expect(mockSlotCreate).toHaveBeenCalledTimes(1);
+    const created = mockSlotCreate.mock.calls[0][0];
+    expect(created).toMatchObject({ subject: "BAN", track: "general", dayOfWeek: "TUE", periodNumber: 5 });
+    expect(String(created.teacherId)).toBe(TEACHER_B);
+    expect(created.effectiveFrom).toEqual(new Date(2026, 8, 1));
     // grant rebind: the new teacher (B) gets a routine teaching grant + an authority warning
     expect(mockGrantCreate).toHaveBeenCalledTimes(1);
     expect(String(mockGrantCreate.mock.calls[0][0].teacherId)).toBe(TEACHER_B);
     expect(res.warnings).toHaveLength(1);
   });
 
-  test("clearing the teacher $unsets it and binds no new grant", async () => {
+  test("an edit effective at/before the row's own start is corrected IN PLACE (no historical twin)", async () => {
+    mockSlotFindById.mockResolvedValue(sectionSlot); // effectiveFrom 2026-01-01
+    mockSlotFind.mockResolvedValue([]);
+    await updateRoutineSlot({ slotId: SLOT_ID.toString(), subject: "BAN", track: "general", teacherId: TEACHER_B, roomId: null, actorId: ACTOR, effectiveFrom: D("2026-01-01") });
+    expect(mockSlotCreate).not.toHaveBeenCalled();
+    const [, update] = mockSlotUpdateOne.mock.calls[0];
+    expect(update.$set).toMatchObject({ subject: "BAN", track: "general" });
+    expect(update.$unset).toMatchObject({ roomId: "" });
+  });
+
+  test("editing an already-retired row is refused — it would rewrite history", async () => {
+    mockSlotFindById.mockResolvedValue({ ...sectionSlot, effectiveTo: D("2026-06-30") });
+    mockSlotFind.mockResolvedValue([]);
+    await expect(
+      updateRoutineSlot({ slotId: SLOT_ID.toString(), subject: "BAN", track: "general", teacherId: TEACHER_B, roomId: null, actorId: ACTOR, effectiveFrom: D("2026-09-01") }),
+    ).rejects.toThrow(/stopped applying/i);
+    expect(mockSlotUpdateOne).not.toHaveBeenCalled();
+    expect(mockSlotCreate).not.toHaveBeenCalled();
+  });
+
+  test("clearing the teacher leaves the replacement teacherless and binds no new grant", async () => {
     mockSlotFindById.mockResolvedValue(sectionSlot);
     mockSlotFind.mockResolvedValue([]);
-    await updateRoutineSlot({ slotId: SLOT_ID.toString(), subject: "BAN", track: "general", teacherId: null, roomId: null, actorId: ACTOR });
-    const [, update] = mockSlotUpdateOne.mock.calls[0];
-    expect(update.$unset).toMatchObject({ teacherId: "" });
+    await updateRoutineSlot({ slotId: SLOT_ID.toString(), subject: "BAN", track: "general", teacherId: null, roomId: null, actorId: ACTOR, effectiveFrom: D("2026-09-01") });
+    expect(mockSlotCreate.mock.calls[0][0].teacherId).toBeUndefined();
     expect(mockGrantCreate).not.toHaveBeenCalled();
   });
 });
