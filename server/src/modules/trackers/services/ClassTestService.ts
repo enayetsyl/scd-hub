@@ -262,6 +262,35 @@ export async function createRequest(
     throw new Error("testNumber must be a positive integer");
   }
 
+  // --- CT-11 (D-#429): DUPLICATE GUARD.
+  // Nothing stopped the same test being filed twice: `ctId` is the only unique key and
+  // it is generated per row, so it is always distinct. Live prod hit this twice — a
+  // teacher re-submitting within minutes rather than editing the first attempt
+  // (CT-C5-BAN-0001/0002 42s apart; CT-C2-BAN-0002/0003 5min apart, the second of which
+  // ended up with marks entered into BOTH copies and one child's result disagreeing
+  // between them). Both duplicates then consumed real paper through the print queue.
+  //
+  // The natural key is (section × subject × testNumber) — NOT including examDate: the
+  // same Test # twice for one section+subject is a mistake whatever the dates, and
+  // keying on the date would have let both live incidents through on a re-entry a day
+  // later. CANCELLED rows are excluded, matching `suggestTestNumber`, so a withdrawn
+  // request never blocks its own replacement.
+  const existing = (await ClassTest.findOne({
+    sectionId: new Types.ObjectId(input.sectionId),
+    subject,
+    testNumber,
+    status: { $ne: "CANCELLED" },
+  })
+    .select("ctId examDate status")
+    .lean()) as { ctId: string; examDate: Date; status: string } | null;
+  if (existing) {
+    const when = new Date(existing.examDate).toISOString().slice(0, 10);
+    throw new Error(
+      `Test # ${testNumber} already exists for this class and subject — ${existing.ctId} ` +
+        `(${when}, ${existing.status}). Edit that one, or use a different Test # if this is a new test.`,
+    );
+  }
+
   // --- deadline days (admin-configurable, default 2)
   const deadlineDays = input.deadlineDays ?? 2;
   if (!Number.isInteger(deadlineDays) || deadlineDays < 0) {
