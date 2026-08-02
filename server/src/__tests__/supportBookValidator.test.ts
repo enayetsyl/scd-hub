@@ -40,7 +40,7 @@ const INV: LetterInventory = {
   },
 };
 
-describe("A. letter audit — the Python reference's own 8 seeded cases (D-#427)", () => {
+describe("A. letter audit — the Python reference's own 8 seeded cases (D-#432)", () => {
   // Clean cases: must produce NO violations.
   it("clean: পাঠ 10 knows only অ/আ", () => {
     expect(auditText("আ অ আ", 10, INV)).toEqual([]);
@@ -89,7 +89,7 @@ describe("A. letter audit — the Python reference's own 8 seeded cases (D-#427)
     expect(() => auditText("আ", 99, INV)).toThrow(/no পাঠ 99/);
   });
 
-  describe("nukta letters — the deliberate divergence from the Python (D-#428)", () => {
+  describe("nukta letters — the deliberate divergence from the Python (D-#433)", () => {
     // ড় ঢ় য় are single letters in the inventory but circulate DECOMPOSED as
     // base + nukta in real text, and Unicode's composition-exclusion list means NFC
     // never recomposes them. The reference audit flags the bare ় — 29 of 37 hits on

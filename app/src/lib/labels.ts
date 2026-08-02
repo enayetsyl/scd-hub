@@ -558,13 +558,17 @@ export const obsQuranComplianceLabel = (v?: string | null): string =>
  * more specific fact — the server never lets both stamps coexist.
  */
 export const obsPublishBadge = (
-  o: { publishedAt?: string | null; withheldAt?: string | null },
+  o: { publishedAt?: string | null; withheldAt?: string | null; cancelledAt?: string | null },
 ): { text: string; tone: "ok" | "muted" | "warn" } =>
-  o.publishedAt
-    ? { text: STR.obsPublished, tone: "ok" }
-    : o.withheldAt
-      ? { text: STR.obsWithheld, tone: "warn" }
-      : { text: STR.obsUnpublished, tone: "muted" };
+  // CO-15 (D-#428) first: a cancelled plan never reached the publish question at all, so
+  // labelling it "unpublished" beside a live queue would read as outstanding work.
+  o.cancelledAt
+    ? { text: STR.obsCancelled, tone: "warn" }
+    : o.publishedAt
+      ? { text: STR.obsPublished, tone: "ok" }
+      : o.withheldAt
+        ? { text: STR.obsWithheld, tone: "warn" }
+        : { text: STR.obsUnpublished, tone: "muted" };
 
 /** Trend (CO-4) string → arrow glyph (server returns up/down/flat). */
 export const obsTrendGlyph = (v?: string | null): string =>
@@ -1153,6 +1157,10 @@ const STR_BN = {
   subject: "বিষয়",
   classLevel: "শ্রেণি",
   all: "সব",
+  // Pager (a long list split into pages)
+  pageLabel: "পৃষ্ঠা",
+  pagePrev: "পূর্ববর্তী",
+  pageNext: "পরবর্তী",
   planType: "পরিকল্পনার ধরন",
   curationTag: "কিউরেশন ট্যাগ",
   reviewStatus: "পর্যালোচনা অবস্থা",
@@ -1333,6 +1341,9 @@ const STR_BN = {
   hwWorkspaceTitle: "বাড়ির কাজ",
   /** Folded (not-my-subject) card body: oversight view, no actions. */
   foldViewOnly: "শুধু দেখা — এই বিষয়ের কাজ বিষয়শিক্ষক করবেন",
+  /** The finished-work fold at the foot of both workspaces (owner ask 2026-08-02). */
+  wsCompletedFold: "সম্পন্ন কাজ",
+  wsCompletedNote: "সবার কাজ ফেরত দেওয়া হয়েছে — শুধু দেখা",
   hwPassSubmit: "জমা",
   hwPassSubmitCommit: "জমা নিশ্চিত করুন",
   hwPassSubmitted: "জমা",
@@ -3347,6 +3358,21 @@ const STR_BN = {
   obsLiftHold: "স্থগিতাদেশ বাতিল করুন",
   obsLiftHoldHint: "বাতিল করলে এটি আবার প্রকাশের তালিকায় ফিরে আসবে (স্বয়ংক্রিয়ভাবে প্রকাশ হবে না)।",
   obsLiftHoldDone: "স্থগিতাদেশ বাতিল হয়েছে",
+  // CO-15 (D-#428) — cancel a PLANNED review. Distinct from withhold above: বাতিল =
+  // the review will not happen; স্থগিত = it happened and is not being released.
+  obsCancelled: "বাতিল",
+  obsCancelTitle: "পরিকল্পিত পর্যবেক্ষণ",
+  obsCancel: "পর্যবেক্ষণ বাতিল করুন",
+  obsCancelHint: "এই পর্যবেক্ষণ আর হবে না (ভিডিও ব্যবহারযোগ্য নয়, শিক্ষক ছুটিতে, একই ক্লাস দুইবার আপলোড হয়েছে ইত্যাদি)। বাতিল করলে এটি পর্যবেক্ষকের তালিকা ও সংখ্যা থেকে সরে যাবে; ভিডিও মুছে যাবে না এবং পরে ফেরানো যাবে।",
+  obsCancelReason: "বাতিলের কারণ",
+  obsCancelReasonPlaceholder: "কেন এই পর্যবেক্ষণ হচ্ছে না",
+  obsCancelReasonRequired: "বাতিল করার কারণ লিখুন",
+  obsCancelledOn: "বাতিল করা হয়েছে",
+  obsCancelledBy: "বাতিল করেছেন",
+  obsCancelDone: "বাতিল করা হয়েছে",
+  obsRestore: "বাতিল প্রত্যাহার করুন",
+  obsRestoreHint: "প্রত্যাহার করলে এটি আগের অবস্থায় ও একই পর্যবেক্ষকের তালিকায় ফিরে যাবে।",
+  obsRestoreDone: "বাতিল প্রত্যাহার হয়েছে",
   // Co-review + compare (CO-9, D-#272)
   obsCompareTitle: "তুলনা",
   obsCompareReviewers: "পর্যালোচক",
@@ -4109,6 +4135,10 @@ const STR_EN: StrTable = {
   subject: "Subject",
   classLevel: "Class",
   all: "All",
+  // Pager (a long list split into pages)
+  pageLabel: "Page",
+  pagePrev: "Previous",
+  pageNext: "Next",
   planType: "Plan type",
   curationTag: "Curation tag",
   reviewStatus: "Review status",
@@ -4288,6 +4318,8 @@ const STR_EN: StrTable = {
   hwWorkspace: "Homework",
   hwWorkspaceTitle: "Homework",
   foldViewOnly: "View only — the subject teacher handles this",
+  wsCompletedFold: "Completed work",
+  wsCompletedNote: "Everyone's work has been returned — view only",
   hwPassSubmit: "Submission",
   hwPassSubmitCommit: "Confirm submissions",
   hwPassSubmitted: "Submitted",
@@ -6293,6 +6325,19 @@ const STR_EN: StrTable = {
   obsLiftHold: "Lift the hold",
   obsLiftHoldHint: "Lifting puts it back in the publish list (it does not publish it).",
   obsLiftHoldDone: "Hold lifted",
+  obsCancelled: "Cancelled",
+  obsCancelTitle: "Planned observation",
+  obsCancel: "Cancel this observation",
+  obsCancelHint: "This observation will not now happen (unusable footage, teacher on leave, a duplicate upload). Cancelling takes it out of the observer's queue and counts; the video is kept and it can be restored later.",
+  obsCancelReason: "Reason for cancelling",
+  obsCancelReasonPlaceholder: "Why this observation is not happening",
+  obsCancelReasonRequired: "Enter a reason for cancelling",
+  obsCancelledOn: "Cancelled on",
+  obsCancelledBy: "Cancelled by",
+  obsCancelDone: "Cancelled",
+  obsRestore: "Undo the cancel",
+  obsRestoreHint: "Restoring returns it to the same state and the same observer's queue.",
+  obsRestoreDone: "Cancel undone",
   // Co-review + compare (CO-9, D-#272)
   obsCompareTitle: "Compare",
   obsCompareReviewers: "reviewers",

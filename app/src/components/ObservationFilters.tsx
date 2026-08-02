@@ -30,6 +30,10 @@ export interface ObservationFilterState {
   /** CO-12 withhold flag (D-#369): true=withheld, false=no hold, null=either. Paired
    *  with `published` by the chip row below — "Pending" is published:false + withheld:false. */
   withheld: boolean | null;
+  /** CO-15 cancel flag (D-#428): true=cancelled, false=live, null=either. Part of the
+   *  same mutually-exclusive status chip row — "Pending" excludes cancelled plans so the
+   *  real work queue stays readable, and a dedicated chip keeps the record one tap away. */
+  cancelled: boolean | null;
   teacherId: string | null;
   observerId: string | null;
   dateFrom: string;
@@ -44,6 +48,7 @@ export const EMPTY_OBSERVATION_FILTERS: ObservationFilterState = {
   sectionId: null,
   published: null,
   withheld: null,
+  cancelled: null,
   teacherId: null,
   observerId: null,
   dateFrom: "",
@@ -59,6 +64,7 @@ export function hasActiveObservationFilters(f: ObservationFilterState): boolean 
     f.sectionId !== null ||
     f.published !== null ||
     f.withheld !== null ||
+    f.cancelled !== null ||
     f.teacherId !== null ||
     f.observerId !== null ||
     f.dateFrom !== "" ||
@@ -71,20 +77,30 @@ export function hasActiveObservationFilters(f: ObservationFilterState): boolean 
  * The publish-status chip row is ONE selection over TWO server booleans (`published`,
  * `withheld`). These map between them so the chips stay mutually exclusive:
  *   Published = published:true (a published row can never be withheld — the server refuses)
- *   Pending   = published:false + withheld:false  ← the real awaiting-publish queue
+ *   Pending   = published:false + withheld:false + cancelled:false  ← the real work queue
  *   Withheld  = withheld:true
+ *   Cancelled = cancelled:true   (CO-15, D-#428 — a plan called off before any review)
  * Any other combination (e.g. seeded from a deep-link) reads as no selection.
+ *
+ * CO-15 note: "Pending" excludes cancelled rows because a called-off plan is not
+ * outstanding work — the same reasoning that keeps withheld rows out of it. "All" still
+ * shows them, so nothing disappears from the oversight view by default.
  */
-type PublishChip = "published" | "pending" | "withheld" | null;
+type PublishChip = "published" | "pending" | "withheld" | "cancelled" | null;
 
-const PUBLISH_CHIP_PATCH: Record<"all" | "published" | "pending" | "withheld", Partial<ObservationFilterState>> = {
-  all: { published: null, withheld: null },
-  published: { published: true, withheld: null },
-  pending: { published: false, withheld: false },
-  withheld: { published: null, withheld: true },
+const PUBLISH_CHIP_PATCH: Record<
+  "all" | "published" | "pending" | "withheld" | "cancelled",
+  Partial<ObservationFilterState>
+> = {
+  all: { published: null, withheld: null, cancelled: null },
+  published: { published: true, withheld: null, cancelled: null },
+  pending: { published: false, withheld: false, cancelled: false },
+  withheld: { published: null, withheld: true, cancelled: null },
+  cancelled: { published: null, withheld: null, cancelled: true },
 };
 
 function publishChip(f: ObservationFilterState): PublishChip {
+  if (f.cancelled === true) return "cancelled";
   if (f.withheld === true) return "withheld";
   if (f.published === true) return "published";
   if (f.published === false && f.withheld === false) return "pending";
@@ -228,6 +244,11 @@ export function ObservationFilters({
           label={STR.obsWithheld}
           selected={publishChip(value) === "withheld"}
           onPress={() => onChange(publishChip(value) === "withheld" ? PUBLISH_CHIP_PATCH.all : PUBLISH_CHIP_PATCH.withheld)}
+        />
+        <Chip
+          label={STR.obsCancelled}
+          selected={publishChip(value) === "cancelled"}
+          onPress={() => onChange(publishChip(value) === "cancelled" ? PUBLISH_CHIP_PATCH.all : PUBLISH_CHIP_PATCH.cancelled)}
         />
       </ChipRow>
 

@@ -7,7 +7,7 @@
  * softer way into a book.
  *
  * PROVENANCE OF EACH CHECK — deliberately recorded, because the two sources disagree
- * about what exists (D-#427):
+ * about what exists (D-#432):
  *
  *   CLI     = ported from `studybook-pipeline/src/validate-studybook.js`
  *   PY      = ported from `SB-Governance/validator_letter_audit.py`

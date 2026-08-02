@@ -1,5 +1,5 @@
 /**
- * Letter audit — the ONE subject-specific validator check (SB-1, D-#427).
+ * Letter audit — the ONE subject-specific validator check (SB-1, D-#432).
  *
  * Ported from `SB-Governance/validator_letter_audit.py`, which is where the real
  * implementation lives — NOT from `SCHEMA_support-book_v1.md` §6, whose documented
@@ -11,7 +11,7 @@
  *                      conjunct_whitelist: { glyphs: string[] | null, needs_review } } }
  *
  * A port written from the schema would compile, run, and audit nothing. That is the
- * whole reason D-#427 exists.
+ * whole reason D-#432 exists.
  *
  * WHAT IT ENFORCES (README §4.2 / D-009): decodable text for পাঠ N may use only the
  * বর্ণ and কারচিহ্ন taught up to N, and only the whole-unit conjuncts that N's own
@@ -85,7 +85,7 @@ export function cumulativeAllowed(
 }
 
 /**
- * DELIBERATE DIVERGENCE from `validator_letter_audit.py` (D-#428).
+ * DELIBERATE DIVERGENCE from `validator_letter_audit.py` (D-#433).
  *
  * ড় ঢ় য় are single letters in the inventory (U+09DC/09DD/09DF), but real Bengali
  * text carries them DECOMPOSED as base + nukta (ড + ়). The reference audit compares

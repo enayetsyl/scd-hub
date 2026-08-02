@@ -37,7 +37,7 @@ import { join } from "node:path";
 export const PIPELINE_ROOT = process.env.BOOK_PIPELINE_ROOT ?? "book-pipeline";
 
 /**
- * Where the temp book folder is written — and this is NOT a preference (SB-4, D-#429).
+ * Where the temp book folder is written — and this is NOT a preference (SB-4, D-#434).
  *
  * MEASURED ON THE VM, 2026-08-02: the only Chromium available on Ubuntu 24.04 aarch64
  * is the **snap**, and a snap gets a PRIVATE /tmp namespace. Chromium therefore cannot

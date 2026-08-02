@@ -157,12 +157,18 @@ describe("teacher chase — the message only asks for what is theirs", () => {
       row({ subject: "ENG", dateKey: `2026-07-${String(i + 1).padStart(2, "0")}`, ref: `HW-${i}`, toCheck: 1 }),
     );
 
-  test("NEVER-HANDED-IN WORK IS NOT IN THE LIST — it is not the teacher's queue", () => {
-    const block = chaseItemsBlock([row({ toCheck: 0, notSubmitted: 40 })], [], labels);
-    expect(block.split("\n").filter((l) => l.startsWith("•"))).toHaveLength(0);
-    // It is stated once, plainly, as a family matter.
-    expect(block).toContain("অভিভাবকের সঙ্গে যোগাযোগের বিষয়");
-    expect(block).toContain("৪০");
+  test("NEVER-HANDED-IN WORK IS ABSENT ENTIRELY — not listed, not even mentioned", () => {
+    // Owner, on reading a real message: naming it only pads a work list with
+    // something the teacher cannot act on. The office still sees it on the screen,
+    // where it is context rather than an instruction.
+    expect(chaseItemsBlock([row({ toCheck: 0, notSubmitted: 40 })], [], labels)).toBe("");
+  });
+
+  test("a teacher with BOTH gets only the part that is theirs", () => {
+    const block = chaseItemsBlock([row({ toCheck: 12, notSubmitted: 40 })], [], labels);
+    expect(block).toContain("১২");
+    expect(block).not.toContain("৪০");
+    expect(block).not.toContain("জমা দেয়নি");
   });
 
   test("what IS theirs is listed: submitted work awaiting a check", () => {

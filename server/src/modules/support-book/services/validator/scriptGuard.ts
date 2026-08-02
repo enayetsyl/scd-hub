@@ -1,6 +1,6 @@
 /**
  * Script guard — SCHEMA check 8, ported byte-for-byte from
- * `studybook-pipeline/src/validate-studybook.js` (SB-1, D-#427).
+ * `studybook-pipeline/src/validate-studybook.js` (SB-1, D-#432).
  *
  * The allowlist is SHARED with the render pipeline's own guard: a string that
  * passes one must pass the other, because the reason it exists is that the four

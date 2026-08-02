@@ -308,7 +308,7 @@ describe("parsePdfPaths", () => {
   });
 });
 
-describe("the work root — snap confinement (D-#429, measured on the VM)", () => {
+describe("the work root — snap confinement (D-#434, measured on the VM)", () => {
   it("defaults to the OS temp dir", () => {
     // Right everywhere that is NOT a confined snap: a laptop, CI, a container.
     jest.isolateModules(() => {
