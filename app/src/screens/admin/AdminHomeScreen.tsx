@@ -14,7 +14,7 @@ import { useAuth } from "../../auth/AuthContext";
 type Props = NativeStackScreenProps<AdminStackParamList, "AdminHome">;
 
 export default function AdminHomeScreen({ navigation }: Props): React.ReactElement {
-  const { role, can } = useAuth();
+  const { role } = useAuth();
   const canImport = !!role && roleHasPermission(role, "content:import");
   const canManageUsers = !!role && roleHasPermission(role, "user:manage");
   const canRoster = !!role && roleHasPermission(role, "roster:manage");
@@ -25,11 +25,6 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // access:manage is RESERVED-locked + Principal-only — roleHasPermission is exact here.
   const canAccess = !!role && roleHasPermission(role, "access:manage");
   const canAudit = !!role && roleHasPermission(role, "audit:read");
-  // Anyone who works the image queue: the illustrator, and the reviewers who look at
-  // what came back. `book:read` alone is not enough — that is a spectator.
-  const canBookImages = can("book:illustrate") || can("book:review") || can("book:review_senior");
-  const canBookReview = can("book:review") || can("book:review_senior");
-  const canBookAssemble = can("book:assemble");
 
   return (
     <Screen scroll>
@@ -95,40 +90,9 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {/* SB-2: support-book image production. Gated on the caller's EFFECTIVE
-          permissions, not the role template — `book:*` sits only on the PRINCIPAL
-          template and every illustrator reaches it by per-user grant (D-#405), so
-          `roleHasPermission` would hide this from the people who use it most. */}
-      {canBookImages ? (
-        <Card onPress={() => navigation.navigate("BookImageQueue")}>
-          <Body style={{ fontWeight: "700" }}>{STR.sbQueueTitle}</Body>
-          <Muted>{STR.sbQueueSub}</Muted>
-        </Card>
-      ) : null}
-
-      {canBookReview ? (
-        <Card onPress={() => navigation.navigate("BookReview")}>
-          <Body style={{ fontWeight: "700" }}>{STR.sbReviewTitle}</Body>
-          <Muted>{STR.sbReviewSub}</Muted>
-        </Card>
-      ) : null}
-
-      {/* The inbox is offered to ordinary reviewers too, not only seniors: a reviewer
-          needs to follow the thread they raised. Only a senior gets the resolve form,
-          and that is decided inside the screen. */}
-      {canBookReview ? (
-        <Card onPress={() => navigation.navigate("BookEscalationInbox")}>
-          <Body style={{ fontWeight: "700" }}>{STR.sbInboxTitle}</Body>
-          <Muted>{STR.sbInboxSub}</Muted>
-        </Card>
-      ) : null}
-
-      {canBookAssemble ? (
-        <Card onPress={() => navigation.navigate("BookAssemble")}>
-          <Body style={{ fontWeight: "700" }}>{STR.sbAssembleTitle}</Body>
-          <Muted>{STR.sbAssembleSub}</Muted>
-        </Card>
-      ) : null}
+      {/* SB-2..SB-4: the four support-book screens are NOT cards here — they live in
+          their own 📕 drawer group, because the Admin tab's own gate (content:import /
+          user:manage) is a role template no granted illustrator or reviewer passes. */}
 
       {canStaff ? (
         <Card onPress={() => navigation.navigate("Staff")}>

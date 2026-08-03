@@ -39,6 +39,7 @@ import type {
   FinanceStackParamList,
   HrStackParamList,
   ReportsStackParamList,
+  SupportBookStackParamList,
   AdminStackParamList,
   GuardianHomeStackParamList,
   GuardianHomeworkStackParamList,
@@ -1076,12 +1077,25 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="HwLifecycleReport" component={HwLifecycleReportScreen} options={{ title: STR.hlrTitle }} />
       <AdminStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
       <AdminStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
-      {/* SB-2: the illustrator's queue. Param-free, so its position here is safe. */}
-      <AdminStack.Screen name="BookImageQueue" component={BookImageQueueScreen} options={{ title: STR.sbQueueTitle }} />
-      <AdminStack.Screen name="BookReview" component={BookReviewScreen} options={{ title: STR.sbReviewTitle }} />
-      <AdminStack.Screen name="BookEscalationInbox" component={BookEscalationInboxScreen} options={{ title: STR.sbInboxTitle }} />
-      <AdminStack.Screen name="BookAssemble" component={BookAssembleScreen} options={{ title: STR.sbAssembleTitle }} />
     </AdminStack.Navigator>
+  );
+}
+
+// --- Support-book production (SB-2..SB-4) ------------------------------------
+// Its own stack + drawer group. These four screens used to be cards in the Admin
+// hub, which put them behind the Admin tab's ROLE-TEMPLATE gate (content:import /
+// user:manage) — a gate no granted illustrator or reviewer passes, so the screens
+// were unreachable for them. All four are param-free, so the initial slot is safe.
+const SupportBookStack = createNativeStackNavigator<SupportBookStackParamList>();
+function SupportBookNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <SupportBookStack.Navigator screenOptions={stackOptions}>
+      <SupportBookStack.Screen name="BookImageQueue" component={BookImageQueueScreen} options={{ title: STR.sbQueueTitle }} />
+      <SupportBookStack.Screen name="BookReview" component={BookReviewScreen} options={{ title: STR.sbReviewTitle }} />
+      <SupportBookStack.Screen name="BookEscalationInbox" component={BookEscalationInboxScreen} options={{ title: STR.sbInboxTitle }} />
+      <SupportBookStack.Screen name="BookAssemble" component={BookAssembleScreen} options={{ title: STR.sbAssembleTitle }} />
+    </SupportBookStack.Navigator>
   );
 }
 
@@ -1138,7 +1152,7 @@ function GuardianAssignmentsNavigator(): React.ReactElement {
 const Drawer = createDrawerNavigator<TabParamList>();
 
 export function AppTabs(): React.ReactElement {
-  const { role, logout } = useAuth();
+  const { role, can, logout } = useAuth();
   const colors = useColors();
   // Free Mixing Observation tab (D-#341, owner ruling): a TEACHER sees it ONLY
   // when at least one video is assigned to them; Principal/Office always.
@@ -1229,6 +1243,14 @@ export function AppTabs(): React.ReactElement {
   // to empty/zero server-side when the caller lacks the underlying permission.
   const canHome = !!role && role !== "GUARDIAN";
   const canAdmin = !!role && (roleHasPermission(role, "content:import") || roleHasPermission(role, "user:manage"));
+  // Support-book production: gated on the caller's EFFECTIVE permissions, never the
+  // role template — `book:*` sits only on the PRINCIPAL template and every
+  // illustrator/reviewer/assembler reaches it by AC-1 grant (D-#405), so
+  // `roleHasPermission` would hide the tab from everyone who actually works the
+  // pipeline. Each leaf inside re-checks its own grant (DrawerContent `perms`), and
+  // every resolver re-gates server-side — hiding a tab is a courtesy, not the gate.
+  const canSupportBook =
+    can("book:illustrate") || can("book:review") || can("book:review_senior") || can("book:assemble");
   // D-#309: the Reports hub — school-wide oversight reads, Principal/Office by
   // ROLE (the reconciliationReport resolver's own gate; OFFICE holds no tracker:read).
   const canReports = role === "PRINCIPAL" || role === "OFFICE";
@@ -1245,7 +1267,8 @@ export function AppTabs(): React.ReactElement {
     canHome || canContent || canQuestions || canSets || canTrackers || canHomework ||
     canAssignment || canReview || canRoutine || canAttendance || canPrint || canLibrary ||
     canChat || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
-    canEnglishDrive || canRevision || canFinance || canHr || canReports || canAdmin || canGuardian;
+    canEnglishDrive || canRevision || canFinance || canHr || canReports || canSupportBook ||
+    canAdmin || canGuardian;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -1317,6 +1340,8 @@ export function AppTabs(): React.ReactElement {
         {canFinance ? <Drawer.Screen name="FinanceTab" component={FinanceNavigator} /> : null}
         {canHr ? <Drawer.Screen name="HrTab" component={HrNavigator} /> : null}
         {canReports ? <Drawer.Screen name="ReportsTab" component={ReportsNavigator} /> : null}
+        {/* SB-2..SB-4 — effective-permission gate, see canSupportBook above. */}
+        {canSupportBook ? <Drawer.Screen name="SupportBookTab" component={SupportBookNavigator} /> : null}
         {canAdmin ? <Drawer.Screen name="AdminTab" component={AdminNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianHomeTab" component={GuardianHomeNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianHomeworkTab" component={GuardianHomeworkNavigator} /> : null}
