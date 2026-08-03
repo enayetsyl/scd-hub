@@ -11,6 +11,7 @@ import { SubjectGroup } from "./models/SubjectGroup";
 import { PeriodGrid } from "./models/PeriodGrid";
 import { ScheduleWindow } from "./models/ScheduleWindow";
 import { computePeriodTimes } from "./schedule";
+import { liveWindow } from "./liveWindow";
 import { enrichRoutineSlots, type SlotViewFields } from "./slotView";
 
 export interface MasterColumn { periodNumber: number; startTime: string | null; endTime: string | null; isBreak: boolean; }
@@ -25,7 +26,9 @@ export interface RoutineMaster {
 }
 
 export async function routineMasterGrid(day: string): Promise<RoutineMaster> {
-  const raw = (await RoutineSlot.find({ dayOfWeek: day, active: true }).sort({ periodNumber: 1 }).lean()) as unknown as IRoutineSlot[];
+  const raw = (await RoutineSlot.find({ dayOfWeek: day, active: true, ...liveWindow() })
+    .sort({ periodNumber: 1 })
+    .lean()) as unknown as IRoutineSlot[];
   const slots = await enrichRoutineSlots(raw);
 
   // Columns: the class_1_5 grid is the superset (8 periods incl. the break); its times

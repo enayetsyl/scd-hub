@@ -219,7 +219,7 @@ describe("the editorial trail (D-#411)", () => {
   });
 });
 
-describe("an independently-produced artifact is NOT stale (D-#436)", () => {
+describe("an independently-produced artifact is NOT stale (D-#437)", () => {
   // The primary workflow: the crop/upscale/strip chain runs on a laptop and only the
   // finished COMPLIANT file is uploaded (D-#409). Treating a never-existed upstream as
   // "vanished" made the assembly gate refuse a correctly-prepared book forever — found

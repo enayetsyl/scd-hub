@@ -25,7 +25,7 @@ import {
   type ClassTestPublishOutcomeT,
 } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Field, Loader, Notice } from "../../components/ui";
-import { STR, bnNum } from "../../lib/labels";
+import { STR, hwSubjectLabel, classLevelLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { roleHasPermission } from "@scd/shared";
@@ -116,6 +116,15 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
         <Card>
           <Body style={{ fontWeight: "700" }}>{title}</Body>
+          {/* Same reason as the results grid: this is the surface where Office/Principal
+              APPROVE a release, so the class must be on screen before they press it
+              (owner ask 2026-08-02). */}
+          {test ? (
+            <Muted>
+              {classLevelLabel(test.classLevel)} · {hwSubjectLabel(test.subject)} · {STR.ctTotalMarks}{" "}
+              {bnNum(test.totalMarks)} · {STR.ctPassMark} {bnNum(test.passMark)}
+            </Muted>
+          ) : null}
 
           {isAdmin ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>

@@ -179,7 +179,7 @@ export async function chainStates(
       states[stage] = "FRESH"; // head of the chain — derived from nothing
     } else if (!rows[upstream]) {
       // Upstream absent. TWO DIFFERENT SITUATIONS, and conflating them broke the
-      // primary workflow (D-#436):
+      // primary workflow (D-#437):
       //
       //   inputFingerprint === null → this artifact never HAD an upstream. It was
       //     produced independently, which is exactly what D-#409 blesses: the
