@@ -89,6 +89,7 @@ import "./modules/support-book/resolvers/supportBookSlots";
 import "./modules/support-book/resolvers/supportBookReview";
 import "./modules/support-book/resolvers/supportBookBuild";
 import "./modules/support-book/resolvers/supportBookRationale";
+import "./modules/support-book/resolvers/supportBookContent";
 import "./modules/finance/resolvers/financeLedger";
 import "./modules/finance/resolvers/financePosting";
 import "./modules/finance/resolvers/feeSupport";
@@ -185,6 +186,7 @@ const EXPOSED_DOMAIN_ERRORS = new Set<string>([
   // masked as "Unexpected error" they are worse than useless, because the caller is
   // told something broke when the system is working exactly as designed (D-#437).
   "BuildGateError", "ReviewRuleError", "PatchShapeError", "AuthorChatError",
+  "CommentRuleError",
 ]);
 
 /**

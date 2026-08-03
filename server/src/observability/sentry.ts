@@ -38,6 +38,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // incomplete checklist, an unresolved escalation. Deliberate refusals the caller
   // is meant to see — not faults.
   "ReviewRuleError",
+  // A per-item review-note denial (SB-3b): an empty body, a note that is already
+  // resolved, a missing id. Deliberate refusals the caller is meant to read.
+  "CommentRuleError",
   // The SB-4 assembly gate refusing a doomed render (stale artifacts, an unresolved
   // escalation, an empty scope). The refusal IS the feature.
   "BuildGateError",

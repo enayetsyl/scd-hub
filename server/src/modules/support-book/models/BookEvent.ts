@@ -46,6 +46,10 @@ export const BOOK_EVENT_KINDS = [
   "BUILD_QUEUED",
   "BUILD_SUCCEEDED",
   "BUILD_FAILED",
+  // SB-3b: the ordinary reviewer→author channel (D-#440). Item-anchored, so a
+  // block's own timeline carries the notes raised against it.
+  "COMMENT_ADDED",
+  "COMMENT_RESOLVED",
 ] as const;
 export type BookEventKind = (typeof BOOK_EVENT_KINDS)[number];
 
@@ -69,6 +73,7 @@ export interface IBookEvent extends Document {
     escalationId?: Types.ObjectId;
     buildJobId?: Types.ObjectId;
     assetId?: Types.ObjectId;
+    commentId?: Types.ObjectId;
     policySetHash?: string;
   };
   createdAt: Date;
@@ -91,6 +96,7 @@ const BookEventSchema = new Schema<IBookEvent>(
       escalationId: { type: Schema.Types.ObjectId },
       buildJobId: { type: Schema.Types.ObjectId },
       assetId: { type: Schema.Types.ObjectId },
+      commentId: { type: Schema.Types.ObjectId },
       policySetHash: { type: String },
     },
   },

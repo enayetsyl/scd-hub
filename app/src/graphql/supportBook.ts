@@ -312,3 +312,90 @@ export const SUBMIT_SUPPORT_BOOK_PATCH = gql`
     }
   }
 `;
+
+// ---------------------------------------------------------------------------
+// SB-3b: lesson CONTENT + per-item comments (D-#440)
+// ---------------------------------------------------------------------------
+
+/** `json` carries the block verbatim as the frozen renderer's schema defines it — the
+ *  three typed fields are what the reviewer reads, `json` is what nothing is hidden by. */
+export interface SupportBookBlockT {
+  id: string;
+  layoutHint: string | null;
+  textBn: string | null;
+  json: string;
+}
+
+export interface SupportBookContentSlotT {
+  id: string;
+  sceneDescription: string | null;
+  imageClass: string | null;
+  aspect: string | null;
+  json: string;
+}
+
+export interface SupportBookLessonContentT {
+  bookId: string;
+  lessonNo: number;
+  nctbTitleBn: string | null;
+  state: string;
+  action: string | null;
+  severity: string | null;
+  bwTreatment: string | null;
+  policySetHash: string | null;
+  blocks: SupportBookBlockT[];
+  imageSlots: SupportBookContentSlotT[];
+}
+
+/** One lesson at a time on purpose: a 54-lesson book is 764 KB of JSON. */
+export const SUPPORT_BOOK_LESSON_CONTENT = gql`
+  query SupportBookLessonContent($bookId: String!, $lessonNo: Int!) {
+    supportBookLessonContent(bookId: $bookId, lessonNo: $lessonNo) {
+      bookId lessonNo nctbTitleBn state action severity bwTreatment policySetHash
+      blocks { id layoutHint textBn json }
+      imageSlots { id sceneDescription imageClass aspect json }
+    }
+  }
+`;
+
+export interface SupportBookCommentT {
+  commentId: string;
+  bookId: string;
+  lessonNo: number;
+  target: string;
+  targetId: string | null;
+  body: string;
+  authorId: string;
+  resolved: boolean;
+  resolutionNote: string | null;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+}
+
+const COMMENT_FIELDS = `
+  commentId bookId lessonNo target targetId body authorId
+  resolved resolutionNote resolvedBy resolvedAt createdAt
+`;
+
+export const SUPPORT_BOOK_COMMENTS = gql`
+  query SupportBookComments($bookId: String!, $lessonNo: Int, $openOnly: Boolean) {
+    supportBookComments(bookId: $bookId, lessonNo: $lessonNo, openOnly: $openOnly) { ${COMMENT_FIELDS} }
+  }
+`;
+
+export const COMMENT_ON_SUPPORT_BOOK_ITEM = gql`
+  mutation CommentOnSupportBookItem($bookId: String!, $lessonNo: Int!, $target: String!, $body: String!, $targetId: String) {
+    commentOnSupportBookItem(bookId: $bookId, lessonNo: $lessonNo, target: $target, body: $body, targetId: $targetId) {
+      ${COMMENT_FIELDS}
+    }
+  }
+`;
+
+/** Resolving edits no lesson field — the text still moves only through a validated
+ *  patch. An unresolved comment blocks sign-off (D-#440). */
+export const RESOLVE_SUPPORT_BOOK_COMMENT = gql`
+  mutation ResolveSupportBookComment($commentId: String!, $resolutionNote: String) {
+    resolveSupportBookComment(commentId: $commentId, resolutionNote: $resolutionNote) { ${COMMENT_FIELDS} }
+  }
+`;
