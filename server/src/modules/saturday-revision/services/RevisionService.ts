@@ -27,6 +27,7 @@ import { RevisionEntry, type IRevisionEntry, type IJuzRecord } from "../models/R
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
+import { liveWindow } from "../../routine/liveWindow";
 import { Student } from "../../foundation/models/Student";
 import { resolveDayType } from "../../routine/calendar";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -410,6 +411,9 @@ export async function teacherGroupIds(actorId: string): Promise<string[]> {
     teacherId: new Types.ObjectId(actorId),
     track: "quran",
     active: { $ne: false },
+    // Scope follows the CURRENT timetable: a retired slot must not keep granting
+    // access to a Quran group the teacher no longer leads (D-#47(3)).
+    ...liveWindow(),
   })
     .select("groupId")
     .lean()) as unknown as Array<{ groupId: Types.ObjectId }>;

@@ -15,6 +15,7 @@
 import type { Types } from "mongoose";
 import { DAYS_OF_WEEK } from "@scd/shared";
 import { RoutineSlot } from "../routine/models/RoutineSlot";
+import { liveWindow } from "../routine/liveWindow";
 import { RoutineSubstitution } from "../routine/models/RoutineSubstitution";
 import { StaffCoverSlot } from "../hr/models/StaffCoverSlot";
 import { Section } from "../foundation/models/Section";
@@ -90,6 +91,8 @@ export async function unmarkedMarkingDays(userId: string, fullDayKeys: string[])
 
   // ---- 1. Candidate units: the four ways a teacher becomes responsible ----------
   const [ownSlotsRaw, myCovers, myHrCovers, ctSections, myAssignments] = await Promise.all([
+    // No live-window filter: this is a LOOK-BACK: a slot retired mid-window still owed
+    // attendance on the days it applied. `liveOn` applies the window per date below.
     RoutineSlot.find({ teacherId: userId, active: true, isBreak: false }).lean(),
     RoutineSubstitution.find({ coverTeacherId: userId, active: true, date: { $gte: windowStart, $lte: windowEnd } })
       .select("slotId")

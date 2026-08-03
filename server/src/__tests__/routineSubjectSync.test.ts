@@ -16,6 +16,7 @@ const mockSlotFind = jest.fn();
 const mockSlotFindById = jest.fn();
 const mockSlotFindOne = jest.fn();
 const mockSlotUpdateOne = jest.fn();
+const mockSlotCreate = jest.fn();
 const mockSectionFindById = jest.fn();
 const mockSubjectFindOne = jest.fn();
 const mockGrantFindOne = jest.fn();
@@ -34,6 +35,7 @@ jest.mock("../modules/routine/models/RoutineSlot", () => ({
     findById: (id: unknown) => ({ lean: () => mockSlotFindById(id) }),
     findOne: (f: unknown) => ({ lean: () => mockSlotFindOne(f) }),
     updateOne: (f: unknown, u: unknown) => Promise.resolve(mockSlotUpdateOne(f, u)),
+    create: (d: unknown) => Promise.resolve(mockSlotCreate(d)),
   },
 }));
 jest.mock("../modules/foundation/models/Section", () => ({
@@ -93,6 +95,7 @@ beforeEach(() => {
   mockSlotFindById.mockResolvedValue(null);
   mockSlotFindOne.mockResolvedValue(null);
   mockSlotUpdateOne.mockResolvedValue({});
+  mockSlotCreate.mockImplementation(async (d) => ({ _id: oid(), ...(d as object) }));
   mockSectionFindById.mockResolvedValue({ _id: SEC, classId: oid() });
   mockSubjectFindOne.mockResolvedValue({ _id: oid(), code: "SCI" });
   mockGrantFindOne.mockResolvedValue(null);
@@ -145,7 +148,7 @@ describe("reassignRoutineSubjectTeacher (D-#291)", () => {
     expect(mockSlotUpdateOne).not.toHaveBeenCalled();
   });
 
-  test("happy path: every live slot is pointed at the new teacher via the cell-edit path", async () => {
+  test("happy path: every live slot is re-pointed via the versioned cell-edit path", async () => {
     const s1 = liveSlot();
     const s2 = liveSlot({ dayOfWeek: "TUE", periodNumber: 6 });
     mockSlotFind
@@ -156,12 +159,28 @@ describe("reassignRoutineSubjectTeacher (D-#291)", () => {
       Promise.resolve([s1, s2].find((s) => s._id === id) ?? s1),
     );
 
-    const res = await reassignRoutineSubjectTeacher(SEC, "SCI", NEW_T, ACTOR);
+    const res = await reassignRoutineSubjectTeacher(SEC, "SCI", NEW_T, ACTOR, new Date(2026, 8, 1));
     expect(res.updatedSlots).toBe(2);
+    // D-#47(3): each old row is CLOSED and a replacement opened — not overwritten.
     expect(mockSlotUpdateOne).toHaveBeenCalledTimes(2);
-    const [, update] = mockSlotUpdateOne.mock.calls[0] as [unknown, { $set: { teacherId: { toString(): string } } }];
-    expect(update.$set.teacherId.toString()).toBe(NEW_T);
+    const [, update] = mockSlotUpdateOne.mock.calls[0] as [unknown, { $set: { effectiveTo: Date } }];
+    expect(update.$set.effectiveTo).toEqual(new Date(2026, 7, 31, 23, 59, 59, 999));
+    expect(mockSlotCreate).toHaveBeenCalledTimes(2);
+    const created = mockSlotCreate.mock.calls[0][0] as { teacherId: { toString(): string }; effectiveFrom: Date };
+    expect(created.teacherId.toString()).toBe(NEW_T);
+    expect(created.effectiveFrom).toEqual(new Date(2026, 8, 1));
     // The reused path re-syncs grants + chat like any master-grid edit.
     expect(mockChatSync).toHaveBeenCalledTimes(2);
+  });
+
+  test("the changeover date defaults to today when the caller gives none", async () => {
+    const s1 = liveSlot();
+    mockSlotFind.mockResolvedValueOnce([s1]).mockResolvedValueOnce([]).mockResolvedValue([]);
+    mockSlotFindById.mockResolvedValue(s1);
+
+    await reassignRoutineSubjectTeacher(SEC, "SCI", NEW_T, ACTOR);
+    const now = new Date();
+    const created = mockSlotCreate.mock.calls[0][0] as { effectiveFrom: Date };
+    expect(created.effectiveFrom).toEqual(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
   });
 });

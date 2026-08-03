@@ -19,7 +19,7 @@ import {
   ENTER_CLASS_TEST_RESULT,
 } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Chip, Field, Loader, Notice } from "../../components/ui";
-import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
+import { STR, hwSubjectLabel, classLevelLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
@@ -126,9 +126,12 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
         <Card>
           <Body style={{ fontWeight: "700" }}>{title}</Body>
+          {/* Class FIRST: the title carries only subject + test number, so an admin
+              looking at "English · Test # 1" had no way to tell which class it belongs
+              to (owner ask 2026-08-02). */}
           <Muted>
-            {hwSubjectLabel(test.subject)} · {STR.ctTotalMarks} {bnNum(test.totalMarks)} · {STR.ctPassMark}{" "}
-            {bnNum(test.passMark)}
+            {classLevelLabel(test.classLevel)} · {hwSubjectLabel(test.subject)} · {STR.ctTotalMarks}{" "}
+            {bnNum(test.totalMarks)} · {STR.ctPassMark} {bnNum(test.passMark)}
           </Muted>
           <View style={{ marginTop: space(2) }}>
             <Button
