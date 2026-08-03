@@ -47,6 +47,10 @@ const mockCtCreate = jest.fn();
 const mockCtFindById = jest.fn();
 const mockCtFindOne = jest.fn();
 const mockCtFind = jest.fn();
+const mockCtResultCount = jest.fn().mockResolvedValue(0);
+jest.mock("../modules/trackers/models/ClassTestResult", () => ({
+  ClassTestResult: { countDocuments: (q: unknown) => mockCtResultCount(q) },
+}));
 jest.mock("../modules/trackers/models/ClassTest", () => ({
   ClassTest: {
     create: (a: unknown) => mockCtCreate(a),
@@ -140,6 +144,8 @@ import {
   createRequest,
   markPrinted,
   cancelRequest,
+  retireClassTest,
+  restoreClassTest,
 } from "../modules/trackers/services/ClassTestService";
 import { filesRouter, FILE_ERRORS_BN } from "../routes/files";
 
@@ -618,6 +624,87 @@ describe("markPrinted / cancelRequest", () => {
   test("cancelRequest refuses a PRINTED official exam", async () => {
     mockCtFindById.mockReturnValue(findByIdResult(makeDoc("PRINTED")));
     await expect(cancelRequest(oid().toString(), oid().toString())).rejects.toThrow(/Only a REQUESTED/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// retire / restore — the Principal's own route out of a PRINTED exam.
+// Built after three prod scripts did this by hand in two days (owner ask 2026-08-03);
+// cancelRequest above only ever accepted REQUESTED, so PRINTED had no exit at all.
+// ---------------------------------------------------------------------------
+describe("retireClassTest / restoreClassTest", () => {
+  const makeDoc = (status: string) => ({
+    _id: oid(),
+    ctId: "CT-C4-ENG-0001",
+    academicYearId: AY_OID,
+    classLevel: 4,
+    classId: CLASS_OID,
+    sectionId: SECTION_OID,
+    subject: "ENG",
+    testNumber: 1,
+    examDate: new Date("2026-07-23"),
+    totalMarks: 39,
+    passMark: 13,
+    source: "UPLOADED_PAPER",
+    status,
+    deadlineDays: 2,
+    requestedBy: new mongoose.Types.ObjectId(TEACHER_ID),
+    requestedAt: new Date(),
+    save: jest.fn().mockResolvedValue(undefined),
+  });
+
+  test("retire: PRINTED → CANCELLED, stores the reason + audit", async () => {
+    const doc = makeDoc("PRINTED");
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    const res = await retireClassTest(doc._id.toString(), "  answer papers lost  ", oid().toString());
+    expect(res.status).toBe("CANCELLED");
+    expect(res.notes).toBe("answer papers lost"); // trimmed
+    expect(doc.save).toHaveBeenCalled();
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventKind: "CLASS_TEST_CANCELLED",
+        meta: expect.objectContaining({ reason: "answer papers lost", priorStatus: "PRINTED" }),
+      }),
+    );
+  });
+
+  test("retire refuses once ANY result exists — hiding marked work is not a retirement", async () => {
+    const doc = makeDoc("PRINTED");
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(3);
+    await expect(retireClassTest(doc._id.toString(), "wrong paper", oid().toString())).rejects.toThrow(
+      /3 result\(s\) entered/,
+    );
+    expect(doc.save).not.toHaveBeenCalled();
+  });
+
+  test("retire requires a reason", async () => {
+    const doc = makeDoc("PRINTED");
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    await expect(retireClassTest(doc._id.toString(), "   ", oid().toString())).rejects.toThrow(/reason is required/);
+    expect(doc.save).not.toHaveBeenCalled();
+  });
+
+  test("retire refuses anything that is not PRINTED", async () => {
+    mockCtFindById.mockReturnValue(findByIdResult(makeDoc("REQUESTED")));
+    await expect(retireClassTest(oid().toString(), "x", oid().toString())).rejects.toThrow(/Only a PRINTED/);
+  });
+
+  test("restore: CANCELLED → PRINTED + audit, so a mistaken retire is not a dead end", async () => {
+    const doc = makeDoc("CANCELLED");
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    const res = await restoreClassTest(doc._id.toString(), oid().toString());
+    expect(res.status).toBe("PRINTED");
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventKind: "CLASS_TEST_RESTORED" }),
+    );
+  });
+
+  test("restore refuses a live exam", async () => {
+    mockCtFindById.mockReturnValue(findByIdResult(makeDoc("PRINTED")));
+    await expect(restoreClassTest(oid().toString(), oid().toString())).rejects.toThrow(/Only a retired/);
   });
 });
 

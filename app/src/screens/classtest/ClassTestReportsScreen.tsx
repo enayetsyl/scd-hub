@@ -49,10 +49,14 @@ export default function ClassTestReportsScreen(): React.ReactElement {
   const [yearId, setYearId] = useState("");
   const [section, setSection] = useState<SectionPick | null>(null);
   const [subject, setSubject] = useState<string | null>(null);
+  // Retired exams are hidden from every normal list by design (status CANCELLED), so
+  // without this toggle a retirement would be a one-way door — nothing could reach the
+  // exam to restore it (owner ask 2026-08-03).
+  const [showRetired, setShowRetired] = useState(false);
 
   const [rowsQ] = useQuery({
     query: CLASS_TEST_REPORTS_STATUS_QUERY,
-    variables: { sectionId: section?.sectionId ?? null, subject: subject ?? null },
+    variables: { sectionId: section?.sectionId ?? null, subject: subject ?? null, retired: showRetired || null },
     pause: !section,
   });
   const allRows = rowsQ.data?.classTestReportsStatus ?? [];
@@ -97,6 +101,18 @@ export default function ClassTestReportsScreen(): React.ReactElement {
             </View>
           ) : null}
         </Card>
+
+        {section ? (
+          <Card>
+            <ChipRow>
+              <Chip
+                label={STR.ctRetiredList}
+                selected={showRetired}
+                onPress={() => { setShowRetired((v) => !v); setFilter(""); }}
+              />
+            </ChipRow>
+          </Card>
+        ) : null}
 
         {section && allRows.length > 0 ? (
           <Card>

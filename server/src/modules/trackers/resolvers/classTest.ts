@@ -27,6 +27,8 @@ import {
   listPrintQueue as listPrintQueueSvc,
   listMyClassTests as listMyClassTestsSvc,
   listClassTestsForSection as listForSectionSvc,
+  retireClassTest as retireClassTestSvc,
+  restoreClassTest as restoreClassTestSvc,
   type ClassTestShape,
 } from "../services/ClassTestService";
 import { Section } from "../../foundation/models/Section";
@@ -274,6 +276,38 @@ builder.mutationField("cancelClassTest", (t) =>
     resolve: async (_root, args, ctx) => {
       assertPrintAdmin(ctx);
       return cancelRequestSvc(args.id, ctx.auth!.userId as string);
+    },
+  }),
+);
+
+builder.mutationField("retireClassTest", (t) =>
+  t.field({
+    type: ClassTestRef,
+    description:
+      "Principal/Office: retire a PRINTED exam (→ CANCELLED) with a required reason — it leaves every " +
+      "dashboard, report and Overdue count while the record survives, so it can be restored. Refused " +
+      "once any result is entered.",
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      id: t.arg.string({ required: true }),
+      reason: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return retireClassTestSvc(args.id, args.reason, ctx.auth.userId as string);
+    },
+  }),
+);
+
+builder.mutationField("restoreClassTest", (t) =>
+  t.field({
+    type: ClassTestRef,
+    description: "Principal/Office: put a retired exam back on the boards (CANCELLED → PRINTED).",
+    authScopes: { hasPermission: "roster:manage" },
+    args: { id: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return restoreClassTestSvc(args.id, ctx.auth.userId as string);
     },
   }),
 );
