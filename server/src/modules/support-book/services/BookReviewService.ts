@@ -14,6 +14,7 @@ import { BookEscalation, type IBookEscalation } from "../models/BookEscalation";
 import { SupportBookLesson } from "../models/SupportBookLesson";
 import { LessonPatch } from "../models/LessonPatch";
 import { writeBookEvent } from "../models/BookEvent";
+import { openComments } from "./BookCommentService";
 
 export class ReviewRuleError extends Error {
   constructor(message: string) {
@@ -29,6 +30,7 @@ export const REVIEW_ERRORS_BN = {
   notReviewer: "এই রাউন্ডটি আপনার নয়",
   checklistIncomplete: "চেকলিস্টের সব ধাপ সম্পন্ন হয়নি",
   openEscalation: "খোলা এসকালেশন থাকতে পাঠটি অনুমোদন করা যাবে না",
+  openComment: "অমীমাংসিত মন্তব্য থাকতে পাঠটি অনুমোদন করা যাবে না",
 } as const;
 
 /** Who last authored this lesson's content — the reviewer≠author comparison (D-#424). */
@@ -168,6 +170,13 @@ export interface SignoffInput {
 export async function signOffLesson(input: SignoffInput): Promise<void> {
   const pending = await openEscalations(input.bookId, input.lessonNo);
   if (pending.length) throw new ReviewRuleError(REVIEW_ERRORS_BN.openEscalation);
+
+  // Unresolved review notes block sign-off for the same reason open escalations do
+  // (D-#440): a note nobody has to answer is a note that gets skipped in a busy week,
+  // and 54 lessons across five people is exactly the situation where that happens.
+  // Resolved means the change is IN, not that the note has been read.
+  const notes = await openComments(input.bookId, input.lessonNo);
+  if (notes.length) throw new ReviewRuleError(REVIEW_ERRORS_BN.openComment);
 
   const round = await BookReviewRound.findOne({
     bookId: input.bookId, lessonNo: input.lessonNo, status: "SUBMITTED",

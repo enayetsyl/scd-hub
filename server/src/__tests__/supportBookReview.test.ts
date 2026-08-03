@@ -17,6 +17,7 @@ const mockEscalations: Row[] = [];
 const mockLessons: Row[] = [];
 const mockPatches: Row[] = [];
 const mockEvents: Row[] = [];
+const mockComments: Row[] = [];
 
 const oid = (): Types.ObjectId => new Types.ObjectId();
 
@@ -93,6 +94,18 @@ jest.mock("../modules/support-book/models/LessonPatch", () => ({
   },
 }));
 
+jest.mock("../modules/support-book/models/BookItemComment", () => ({
+  BookItemComment: {
+    find: (q: Record<string, unknown>) => ({
+      sort: () => ({ lean: () => Promise.resolve(mockComments.filter((c) => matches(c, q))) }),
+    }),
+    findById: (id: unknown) => Promise.resolve(
+      (() => { const hit = mockComments.find((c) => String(c._id) === String(id)); return hit ? docify(hit) : null; })(),
+    ),
+    create: (doc: Row) => { const c = docify({ _id: oid(), ...doc }); mockComments.push(c); return Promise.resolve(c); },
+  },
+}));
+
 jest.mock("../modules/support-book/models/BookEvent", () => ({
   writeBookEvent: (e: Row) => { mockEvents.push(e); return Promise.resolve(); },
 }));
@@ -119,7 +132,7 @@ function seedLesson(lessonNo = 12): void {
 
 beforeEach(() => {
   mockRounds.length = 0; mockEscalations.length = 0; mockLessons.length = 0;
-  mockPatches.length = 0; mockEvents.length = 0;
+  mockPatches.length = 0; mockEvents.length = 0; mockComments.length = 0;
   seedLesson();
 });
 
