@@ -39,7 +39,14 @@ type LabelKey = keyof typeof STR;
  * `initial: false`, so back returns to the stack's home — the D-#311 lesson).
  * Used by the Reports group, whose leaves all live in the one ReportsTab stack.
  */
-type NavLeaf = { route: RouteName; labelKey: LabelKey; icon: string; screen?: string };
+/**
+ * `perms` (optional) is an ANY-OF gate on the caller's EFFECTIVE permissions. The
+ * route-level gate in AppTabs decides whether a tab exists at all; inside a tab
+ * whose leaves are handed out per user (support-book production — D-#405), it is
+ * too coarse: an assembler must not be shown the reviewer's queue. Leaves without
+ * `perms` stay purely route-gated, as every leaf was before.
+ */
+type NavLeaf = { route: RouteName; labelKey: LabelKey; icon: string; screen?: string; perms?: string[] };
 type NavSection =
   | ({ type: "item" } & NavLeaf)
   | { type: "group"; titleKey: LabelKey; icon: string; items: NavLeaf[] };
@@ -109,6 +116,53 @@ const STAFF_NAV: NavSection[] = [
       { route: "ReportsTab", labelKey: "hlrTitle", icon: "📘", screen: "HwLifecycleReport" },
     ],
   },
+  /**
+   * Support-book production (SB-2..SB-4). One stack, four deep-linked leaves —
+   * the Reports shape. Each leaf carries its own `perms`, because the five
+   * production roles are per-user grants (D-#405): an illustrator sees only the
+   * image queue, an assembler only the build workspace, and the whole group
+   * disappears for everyone else.
+   */
+  {
+    type: "group",
+    titleKey: "drawerGroupBook",
+    icon: "📕",
+    items: [
+      {
+        route: "SupportBookTab",
+        labelKey: "sbQueueTitle",
+        icon: "🖼️",
+        screen: "BookImageQueue",
+        // The reviewers see the queue too — they look at what came back. `book:read`
+        // alone is not enough; that is a spectator.
+        perms: ["book:illustrate", "book:review", "book:review_senior"],
+      },
+      {
+        route: "SupportBookTab",
+        labelKey: "sbReviewTitle",
+        icon: "🔎",
+        screen: "BookReview",
+        perms: ["book:review", "book:review_senior"],
+      },
+      {
+        route: "SupportBookTab",
+        labelKey: "sbInboxTitle",
+        icon: "📨",
+        screen: "BookEscalationInbox",
+        // Offered to ordinary reviewers too, not only seniors: a reviewer needs to
+        // follow the thread they raised. Only a senior gets the resolve form, and
+        // that is decided inside the screen.
+        perms: ["book:review", "book:review_senior"],
+      },
+      {
+        route: "SupportBookTab",
+        labelKey: "sbAssembleTitle",
+        icon: "🏗️",
+        screen: "BookAssemble",
+        perms: ["book:assemble"],
+      },
+    ],
+  },
   { type: "item", route: "AdminTab", labelKey: "tabAdmin", icon: "⚙️" },
 ];
 
@@ -131,8 +185,13 @@ const NAV: NavSection[] = [...STAFF_NAV, ...GUARDIAN_NAV];
 export default function DrawerContent(props: DrawerContentComponentProps): React.ReactElement {
   const colors = useColors();
   const basket = useBasket();
-  const { role } = useAuth();
+  const { role, can } = useAuth();
   const present = React.useMemo(() => new Set(props.state.routeNames), [props.state.routeNames]);
+  /** Route-gate + the optional per-leaf effective-permission gate (see NavLeaf). */
+  const visibleLeaf = React.useCallback(
+    (leaf: NavLeaf): boolean => present.has(leaf.route) && (!leaf.perms || leaf.perms.some(can)),
+    [present, can],
+  );
   const focusedTab = props.state.routes[props.state.index];
   const activeRoute = focusedTab?.name as RouteName | undefined;
   // The focused screen INSIDE the active tab's stack (undefined until the stack
@@ -290,7 +349,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   };
 
   const Leaf = ({ leaf, indent }: { leaf: NavLeaf; indent?: boolean }): React.ReactElement | null => {
-    if (!present.has(leaf.route)) return null;
+    if (!visibleLeaf(leaf)) return null;
     const active = leaf.route === activeRoute && (!leaf.screen || leaf.screen === activeNested);
     const badge = badgeFor(leaf.route);
     const tinted = tintedBadgesFor(leaf.route);
@@ -369,7 +428,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     if (section.type === "item") {
       return <Leaf key={section.route} leaf={section} />;
     }
-    const visible = section.items.filter((it) => present.has(it.route));
+    const visible = section.items.filter(visibleLeaf);
     if (visible.length === 0) return null;
     const key = `${section.titleKey}-${idx}`;
     const isCollapsed = collapsed[key] ?? false;
