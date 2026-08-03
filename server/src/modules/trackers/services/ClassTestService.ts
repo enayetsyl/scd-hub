@@ -27,6 +27,7 @@ import {
 import type { HwSubject, ClassTestSource } from "@scd/shared";
 import { ClassTest, type IClassTest } from "../models/ClassTest";
 import { ClassTestSequence } from "../models/ClassTestSequence";
+import { ClassTestResult } from "../models/ClassTestResult";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
@@ -459,6 +460,72 @@ export async function cancelRequest(id: string, actorId: string): Promise<ClassT
     { $set: { status: "CANCELLED", cancelledBy: new Types.ObjectId(actorId), cancelledAt: new Date() } },
   );
 
+  return classTestShape(doc as unknown as IClassTest);
+}
+
+/**
+ * RETIRE a PRINTED exam (Principal/Office). The domain's own "delete": every
+ * dashboard, summary and report query filters `status: "PRINTED"` and mark entry
+ * refuses anything else, so CANCELLED takes the exam off the boards and out of the
+ * Overdue counts — while the row survives intact, making it restorable.
+ *
+ * Built after three prod scripts did this by hand in two days (duplicate paper
+ * re-uploaded, and an exam whose answer papers were lost): `cancelRequest` only ever
+ * accepted REQUESTED, so a PRINTED exam had no route out at all.
+ *
+ * Refuses once ANY result exists. A marked exam is a real record — hiding it would
+ * take published marks off guardians' screens. Unpublish and revert the marks first
+ * if it truly must go.
+ */
+export async function retireClassTest(id: string, reason: string, actorId: string): Promise<ClassTestShape> {
+  const doc = await ClassTest.findById(id);
+  if (!doc) throw new Error("ClassTest not found");
+  if (doc.status !== "PRINTED") {
+    throw new Error(`Only a PRINTED exam can be retired (this one is ${doc.status})`);
+  }
+  const trimmed = reason.trim();
+  if (!trimmed) throw new Error("A reason is required to retire an exam");
+
+  const marked = await ClassTestResult.countDocuments({ testId: doc._id });
+  if (marked > 0) {
+    throw new Error(
+      `This exam has ${marked} result(s) entered — unpublish and remove the marks first if it really must be retired`,
+    );
+  }
+
+  const priorStatus = doc.status;
+  doc.status = "CANCELLED";
+  doc.notes = trimmed;
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "CLASS_TEST_CANCELLED",
+    actorId,
+    targetId: doc._id,
+    targetKind: "ClassTest",
+    meta: { ctId: doc.ctId, reason: trimmed, priorStatus, via: "retireClassTest" },
+  });
+  return classTestShape(doc as unknown as IClassTest);
+}
+
+/** Undo a retirement — CANCELLED → PRINTED, so a mistaken retire is not a dead end
+ *  (the row never left the database). Principal/Office. */
+export async function restoreClassTest(id: string, actorId: string): Promise<ClassTestShape> {
+  const doc = await ClassTest.findById(id);
+  if (!doc) throw new Error("ClassTest not found");
+  if (doc.status !== "CANCELLED") {
+    throw new Error(`Only a retired exam can be restored (this one is ${doc.status})`);
+  }
+  doc.status = "PRINTED";
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "CLASS_TEST_RESTORED",
+    actorId,
+    targetId: doc._id,
+    targetKind: "ClassTest",
+    meta: { ctId: doc.ctId, restoredTo: "PRINTED" },
+  });
   return classTestShape(doc as unknown as IClassTest);
 }
 
