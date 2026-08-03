@@ -219,6 +219,7 @@ import ScopeGrantScreen from "../screens/admin/ScopeGrantScreen";
 import SupervisoryGrantScreen from "../screens/admin/SupervisoryGrantScreen";
 import RosterScreen from "../screens/admin/RosterScreen";
 import StudentProfileScreen from "../screens/student/StudentProfileScreen";
+import BookImportScreen from "../screens/supportbook/BookImportScreen";
 import BookImageQueueScreen from "../screens/supportbook/BookImageQueueScreen";
 import BookReviewScreen from "../screens/supportbook/BookReviewScreen";
 import BookEscalationInboxScreen from "../screens/supportbook/BookEscalationInboxScreen";
@@ -1091,6 +1092,9 @@ function SupportBookNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
   return (
     <SupportBookStack.Navigator screenOptions={stackOptions}>
+      {/* SB-1 first: a book has to EXIST before any other screen here means anything.
+          Param-free, so its position in the initial slot is safe. */}
+      <SupportBookStack.Screen name="BookImport" component={BookImportScreen} options={{ title: STR.sbImportTitle }} />
       <SupportBookStack.Screen name="BookImageQueue" component={BookImageQueueScreen} options={{ title: STR.sbQueueTitle }} />
       <SupportBookStack.Screen name="BookReview" component={BookReviewScreen} options={{ title: STR.sbReviewTitle }} />
       <SupportBookStack.Screen name="BookEscalationInbox" component={BookEscalationInboxScreen} options={{ title: STR.sbInboxTitle }} />
@@ -1250,7 +1254,8 @@ export function AppTabs(): React.ReactElement {
   // pipeline. Each leaf inside re-checks its own grant (DrawerContent `perms`), and
   // every resolver re-gates server-side — hiding a tab is a courtesy, not the gate.
   const canSupportBook =
-    can("book:illustrate") || can("book:review") || can("book:review_senior") || can("book:assemble");
+    can("book:illustrate") || can("book:review") || can("book:review_senior") ||
+    can("book:assemble") || can("book:author") || can("book:manage");
   // D-#309: the Reports hub — school-wide oversight reads, Principal/Office by
   // ROLE (the reconciliationReport resolver's own gate; OFFICE holds no tracker:read).
   const canReports = role === "PRINCIPAL" || role === "OFFICE";

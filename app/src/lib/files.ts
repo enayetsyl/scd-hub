@@ -763,3 +763,31 @@ export async function pickAndUploadBookImage(
   const body = (await res.json()) as UploadedBookImage;
   return body;
 }
+
+// ---------------------------------------------------------------------------
+// Plain JSON pick (SB-1 import). No upload — the bytes are READ here and travel
+// as a GraphQL string argument, because `submitSupportBookPatch` wants the text,
+// not a stored file: a patch is not an artifact to keep, it is a proposal to
+// validate. Whether it is kept is `LessonPatch`'s decision, made server-side.
+// ---------------------------------------------------------------------------
+
+export interface PickedJson {
+  name: string;
+  text: string;
+}
+
+/** Pick one .json file and return its text. null when cancelled. */
+export async function pickJsonFile(): Promise<PickedJson | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: ["application/json", "text/json"],
+    multiple: false,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  const asset = picked.assets[0];
+  // fetch() on the picker's uri works for both web blob: urls and native file: urls,
+  // which is why this does not need a platform branch the way the uploads above do.
+  const res = await fetch(asset.uri);
+  if (!res.ok) throw new FileUploadError(`could not read ${asset.name}`);
+  return { name: asset.name, text: await res.text() };
+}
