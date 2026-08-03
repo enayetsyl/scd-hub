@@ -320,26 +320,36 @@ export async function decideCoverSlot(
       assignedBy: actorId,
     });
     slot.proxyGrantId = new Types.ObjectId(grantId);
-
-    // A leave cover must ALSO become a RoutineSubstitution (owner 2026-07-26 bug):
-    // the proxy grant authorizes generic write-scope, but the ROUTINE-based gates —
-    // publishClassNote and the homework accessible-class list — recognise a cover
-    // teacher only through a RoutineSubstitution (the RoutineCoverService path does
-    // both; this leave path had only ever minted the grant). Idempotent on
-    // (routineSlotId, date, coverTeacherId) so a re-approve doesn't duplicate.
-    const subDate = parseDateKey(slot.dateKey);
-    await RoutineSubstitution.updateOne(
-      { slotId: slot.routineSlotId, date: subDate, coverTeacherId: new Types.ObjectId(finalTeacherId) },
-      {
-        $set: {
-          absentTeacherId: slot.absentTeacherUserId ?? null,
-          proxyGrantId: new Types.ObjectId(grantId),
-          createdBy: new Types.ObjectId(actorId),
-        },
-      },
-      { upsert: true },
-    );
   }
+
+  // A leave cover must ALSO become a RoutineSubstitution (owner 2026-07-26 bug):
+  // the proxy grant authorizes generic write-scope, but the ROUTINE-based gates —
+  // publishClassNote and the homework accessible-class list — recognise a cover
+  // teacher only through a RoutineSubstitution (the RoutineCoverService path does
+  // both; this leave path had only ever minted the grant). Idempotent on
+  // (routineSlotId, date, coverTeacherId) so a re-approve doesn't duplicate.
+  //
+  // BOTH group types (owner report 2026-08-03). This used to sit INSIDE the
+  // section-only branch above, so a Quran/Arabic subjectgroup cover recorded a
+  // StaffCoverSlot and nothing else: the class-note report kept naming the absent
+  // teacher, and — worse — the covering teacher could not publish the note at all,
+  // because publishClassNote's cover gate reads RoutineSubstitution. Only the PROXY
+  // GRANT is section-only (a subjectgroup has no content/tracker scope to grant,
+  // mirroring the R-4 precedent in RoutineCoverService.assignCover, which likewise
+  // always writes the substitution and gates only the grant).
+  const subDate = parseDateKey(slot.dateKey);
+  await RoutineSubstitution.updateOne(
+    { slotId: slot.routineSlotId, date: subDate, coverTeacherId: new Types.ObjectId(finalTeacherId) },
+    {
+      $set: {
+        absentTeacherId: slot.absentTeacherUserId ?? null,
+        // Null for a subjectgroup cover — recorded + notified, no scope granted.
+        proxyGrantId: grantId ? new Types.ObjectId(grantId) : null,
+        createdBy: new Types.ObjectId(actorId),
+      },
+    },
+    { upsert: true },
+  );
   slot.finalCoverTeacherUserId = new Types.ObjectId(finalTeacherId);
   slot.status = "approved";
   await slot.save();
