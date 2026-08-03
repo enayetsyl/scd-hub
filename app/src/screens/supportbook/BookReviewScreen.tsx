@@ -1,6 +1,11 @@
 /**
  * BookReviewScreen (SB-3, D-#410/#424) — the reviewer's lesson list and verdict form.
  *
+ * THE CONTENT IS RIGHT HERE (SB-3b, D-#440). Expanding a পাঠ renders its blocks and
+ * image slots in reading order, each with its own comment thread. Until that landed the
+ * server exposed `blockCount` and not the blocks, so this screen asked for a verdict on
+ * text nobody could see — the decorative-checklist failure the module warns about.
+ *
  * ONE LESSON AT A TIME, expanded in place. A reviewer reads a পাঠ, works the README §7
  * checklist against it, and records APPROVE or CHANGES_REQUESTED. The checklist is not
  * decoration: `checklistPassed` goes true only on APPROVE with every item ticked, and
@@ -26,6 +31,8 @@ import {
 } from "../../graphql/supportBook";
 import { Screen, Body, Muted, Card, Select, Badge, Button, Chip, ChipRow, Field, EmptyState, Divider } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { LessonContentPanel } from "./LessonContentPanel";
+import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, bookChecklistLabel, lessonStateLabel, reviewVerdictLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space, useColors } from "../../theme";
@@ -62,10 +69,14 @@ function RoundRow({ round }: { round: SupportBookReviewRoundT }): React.ReactEle
 function LessonCard({
   lesson,
   rounds,
+  canComment,
+  canResolve,
   onChanged,
 }: {
   lesson: SupportBookLessonT;
   rounds: SupportBookReviewRoundT[];
+  canComment: boolean;
+  canResolve: boolean;
   onChanged: () => void;
 }): React.ReactElement {
   const colors = useColors();
@@ -154,6 +165,18 @@ function LessonCard({
 
       {open ? (
         <>
+          <Divider />
+
+          {/* Content first: a verdict comes AFTER reading, and the panel is mounted
+              only while expanded so a 54-lesson list does not fetch 54 lessons. */}
+          <Body style={{ fontWeight: "700" }}>{STR.sbContent}</Body>
+          <LessonContentPanel
+            bookId={lesson.bookId}
+            lessonNo={lesson.lessonNo}
+            canComment={canComment}
+            canResolve={canResolve}
+          />
+
           <Divider />
 
           {rounds.length > 0 ? (
@@ -247,6 +270,13 @@ function LessonCard({
 }
 
 export default function BookReviewScreen(): React.ReactElement {
+  const { can } = useAuth();
+  // Writing a note is the reviewer's job; closing one belongs to EITHER side — the
+  // author resolves what they fixed, the reviewer withdraws what they thought better
+  // of. The server enforces the same split (D-#440).
+  const canComment = can("book:review") || can("book:review_senior");
+  const canResolve = canComment || can("book:author");
+
   const [booksQ, refetchBooks] = useQuery<{ supportBooks: SupportBookT[] }>({ query: SUPPORT_BOOKS });
   const books = booksQ.data?.supportBooks ?? [];
   const [pickedBook, setPickedBook] = useState<string | null>(null);
@@ -316,6 +346,8 @@ export default function BookReviewScreen(): React.ReactElement {
                 key={`${l.bookId}-${l.lessonNo}`}
                 lesson={l}
                 rounds={roundsByLesson.get(l.lessonNo) ?? []}
+                canComment={canComment}
+                canResolve={canResolve}
                 onChanged={refetchAll}
               />
             ))
