@@ -10,6 +10,7 @@ export const builder = new SchemaBuilder<{
   AuthScopes: {
     authenticated: boolean;
     hasPermission: Permission;
+    hasAnyPermission: Permission[];
   };
 }>({
   plugins: [ScopeAuthPlugin, SimpleObjectsPlugin],
@@ -21,6 +22,13 @@ export const builder = new SchemaBuilder<{
       // grants/revokes + additional templates are applied; empty arrays ⇒ identical-to-today.
       hasPermission: (perm: Permission) =>
         ctx.auth !== null && callerHasPermission(ctx.auth, perm),
+      // OR over the SAME scope, which `hasPermission` cannot express and Pothos's
+      // `$any` cannot either (it combines DIFFERENT scopes, one entry per name).
+      // Written as its own scope rather than as an `if` inside a resolver so the gate
+      // stays declarative and the static resolver-gate guard can still read it — a
+      // permission check hidden in a resolver body is one the guard cannot see.
+      hasAnyPermission: (perms: Permission[]) =>
+        ctx.auth !== null && perms.some((p) => callerHasPermission(ctx.auth!, p)),
     }),
   },
 });

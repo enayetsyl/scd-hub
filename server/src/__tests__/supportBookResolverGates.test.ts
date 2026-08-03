@@ -58,16 +58,28 @@ describe("support-book resolvers — every field is permission-gated", () => {
     "%s field %s declares an authScopes with a book:* permission",
     (_kind, name) => {
       const f = all.find((x) => x.name === name)!;
-      expect(f.body).toMatch(/authScopes:\s*\{\s*hasPermission:\s*"book:[a-z_]+"\s*\}/);
+      // Two legal shapes: ONE permission, or an OR over several (`hasAnyPermission`,
+      // added for the comment-resolve rule where either side of the channel may act).
+      // A field with no authScopes at all matches neither and still fails — the point.
+      expect(f.body).toMatch(
+        /authScopes:\s*\{\s*(hasPermission:\s*"book:[a-z_]+"|hasAnyPermission:\s*\[[^\]]*"book:[a-z_]+"[^\]]*\])\s*\}/,
+      );
     },
   );
 
-  it("writes go to book:author or book:manage — never to book:read", () => {
+  it("writes go to a WRITE permission — never to book:read, in ANY position", () => {
+    const WRITES = ["book:author", "book:manage", "book:illustrate", "book:review", "book:review_senior", "book:assemble"];
     for (const f of all.filter((x) => x.kind === "mutation")) {
-      const m = f.body.match(/hasPermission:\s*"(book:[a-z_]+)"/);
-      expect(m).not.toBeNull();
-      expect(["book:author", "book:manage", "book:illustrate", "book:review", "book:review_senior", "book:assemble"])
-        .toContain(m![1]);
+      // The authScopes BLOCK only. A permission named in a description or a comment
+      // further down the field is not a gate and must not be read as one.
+      const scope = f.body.match(/authScopes:\s*\{[^}]*\}/);
+      expect(scope).not.toBeNull();
+      const perms = [...scope![0].matchAll(/"(book:[a-z_]+)"/g)].map((x) => x[1]);
+      expect(perms.length).toBeGreaterThan(0);
+      // EVERY permission in an OR must be a write. One read-level member would let any
+      // production role through a mutation — which is what the first version of the
+      // comment-resolve gate did, and what this test caught.
+      for (const perm of perms) expect(WRITES).toContain(perm);
     }
   });
 
