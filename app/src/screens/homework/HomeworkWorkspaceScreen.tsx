@@ -343,12 +343,15 @@ function ItemCard({
   const [returnBusy, setReturnBusy] = useState(false);
   const [showAbsent, setShowAbsent] = useState(false);
   const [showChase, setShowChase] = useState(false);
+  const [showUndoCheck, setShowUndoCheck] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
   const checkRows = group.rows.filter((r) => r.state === "SUBMITTED");
   const returnRows = group.rows.filter((r) => RETURN_STATES.has(r.state));
   const returnedRows = group.rows.filter((r) => r.state === "RETURNED");
+  // Awaiting return AND carrying an undoable step — the "checked by mistake" list.
+  const undoCheckRows = returnRows.filter((r) => r.stampCount > 1);
   const absentRows = group.rows.filter((r) => r.state === "ABSENT_REDELIVER");
   const chaseRows = submitRows.filter((r) => r.state === "CHASE");
 
@@ -399,7 +402,8 @@ function ItemCard({
     onDone();
   }
 
-  /** Undo a same-day return (D-#338) — puts the student back into ফেরত. */
+  /** Undo the last recorded step for one student (D-#338). Used by BOTH the
+   *  same-day returned list and the ③ ফেরত step's "checked by mistake" list. */
   async function onUndoReturn(recordId: string): Promise<void> {
     setBusyId(recordId);
     const res = await revertRecord({ sectionId: base.sectionId, recordId });
@@ -574,6 +578,40 @@ function ItemCard({
             busy={returnBusy}
             onCommit={onReturnCommit}
           />
+          {/*
+            The ONLY way back out of CHECKED (owner report 2026-08-03). The ② যাচাই
+            cards list SUBMITTED rows and the "returned" list only appears once a
+            return is committed — so a record checked by mistake had no revert control
+            anywhere, and pressing ফেরত just added a third wrong stamp. This exposes
+            the same D-#338 undo the other two steps already offer. Collapsed by
+            default: on a full class this would otherwise repeat the whole roster.
+          */}
+          {undoCheckRows.length > 0 ? (
+            <View style={{ marginTop: space(2) }}>
+              <Button
+                title={`${STR.revertFromReturn} (${bnNum(undoCheckRows.length)})`}
+                variant="ghost"
+                onPress={() => setShowUndoCheck((v) => !v)}
+              />
+              {showUndoCheck
+                ? undoCheckRows.map((r) => (
+                    <View
+                      key={r.id}
+                      style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", minHeight: 44 }}
+                    >
+                      <Body style={{ flexShrink: 1 }}>{r.studentName}</Body>
+                      <Button
+                        title={STR.revertAction}
+                        variant="ghost"
+                        onPress={() => void onUndoReturn(r.id)}
+                        loading={busyId === r.id}
+                        disabled={busyId !== null}
+                      />
+                    </View>
+                  ))
+                : null}
+            </View>
+          ) : null}
         </View>
       ) : null}
 
