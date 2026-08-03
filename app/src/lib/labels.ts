@@ -1481,6 +1481,8 @@ const STR_BN = {
   revertConfirmTitle: "শেষ ধাপটি ফেরাবেন?",
   revertConfirmBody: "এই শিক্ষার্থীর সর্বশেষ চিহ্নিত ধাপটি মুছে আগের অবস্থায় ফেরানো হবে।",
   revertDone: "ফেরানো হয়েছে",
+  /** ③ ফেরত ধাপে "ভুল করে যাচাই হয়েছে?" — যাচাই হয়ে যাওয়া রেকর্ড ফেরানোর একমাত্র পথ। */
+  revertFromReturn: "ভুল করে যাচাই হয়েছে?",
   // Guardian portal (GP-2, D-#68)
   gpToday: "আজ",
   gpChildren: "সন্তান",
@@ -3321,6 +3323,11 @@ const STR_BN = {
   obsNo: "না",
   obsSubmitReview: "রিভিউ জমা দিন",
   obsReviewSaved: "রিভিউ সংরক্ষিত হয়েছে",
+  // Local draft autosave for the observer's review form (owner ask 2026-08-03).
+  obsDraftSaved: "খসড়া এই ডিভাইসে সংরক্ষিত",
+  obsDraftRestored: "আগের অসম্পূর্ণ খসড়া ফিরিয়ে আনা হয়েছে — জমা দেওয়ার আগে দেখে নিন।",
+  obsDraftDiscard: "সংরক্ষিত খসড়া মুছুন",
+  obsDraftNote: "লেখা এই ডিভাইসে নিজে থেকেই জমা থাকে, তাই ইন্টারনেট গেলে বা পেজ রিলোড হলেও হারাবে না। রিভিউ জমা দিলে খসড়া মুছে যাবে।",
 
   // Detail (J4) + respond + rate + footage
   obsDetailTitle: "পর্যবেক্ষণ বিবরণ",
@@ -4484,6 +4491,7 @@ const STR_EN: StrTable = {
   revertConfirmTitle: "Undo the last step?",
   revertConfirmBody: "The most recent recorded step for this student will be removed and the previous state restored.",
   revertDone: "Reverted",
+  revertFromReturn: "Checked by mistake?",
   // Guardian portal (GP-2, D-#68)
   gpToday: "Today",
   gpChildren: "Children",
@@ -6316,6 +6324,10 @@ const STR_EN: StrTable = {
   obsNo: "No",
   obsSubmitReview: "Submit review",
   obsReviewSaved: "Review saved",
+  obsDraftSaved: "Draft saved on this device",
+  obsDraftRestored: "An unfinished draft was restored — check it before submitting.",
+  obsDraftDiscard: "Delete saved draft",
+  obsDraftNote: "What you type is saved on this device automatically, so it survives a dropped connection or a page reload. The draft is cleared once the review is submitted.",
 
   // Detail (J4) + respond + rate + footage
   obsDetailTitle: "Observation detail",
