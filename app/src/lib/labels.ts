@@ -873,6 +873,9 @@ const STR_BN = {
   // Drawer navigation (D-#258) — group headers + a disambiguated leaf
   drawerGroupAcademics: "একাডেমিক",
   drawerGroupTrackers: "ট্র্যাকার",
+  // NOT "বই তৈরি" — that is the Assemble leaf's own title (sbAssembleTitle), and a
+  // group header reading the same as one of its children is unreadable in the drawer.
+  drawerGroupBook: "বই প্রকাশনা",
   drawerItemDailyTracker: "দৈনিক ট্র্যাকার",
   drawerItemToday: "আজ",
   drawerItemClassNotes: "ক্লাস নোট",
@@ -3978,6 +3981,7 @@ const STR_EN: StrTable = {
   // Drawer navigation (D-#258) — group headers + a disambiguated leaf
   drawerGroupAcademics: "Academics",
   drawerGroupTrackers: "Trackers",
+  drawerGroupBook: "Book Production",
   drawerItemDailyTracker: "Daily Tracker",
   drawerItemToday: "Today",
   drawerItemClassNotes: "Class Notes",

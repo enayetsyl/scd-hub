@@ -380,9 +380,15 @@ export type AdminStackParamList = {
   // D-#300: per subject × class homework lifecycle report (Principal/Office).
   HwLifecycleReport: undefined;
   SectionPicker: undefined;
-  // SB-2: support-book image production. Mounted in the Admin stack rather than
-  // given a tab — book production is periodic project work for a handful of
-  // people, not a daily surface for the whole school (D-#405 gates it on book:*).
+};
+
+// Support-book production (SB-2..SB-4). Its OWN stack, not four cards in the Admin
+// hub: the Admin tab is registered on the role TEMPLATE (content:import / user:manage),
+// which a granted illustrator or reviewer does not hold — mounting them there made
+// the screens unreachable for exactly the people they were built for (D-#405 hands
+// `book:*` out per user; the `myPermissions` / `can()` gate is the fix). Every screen
+// here is param-free, so the stack's initial route is safe whichever one is first.
+export type SupportBookStackParamList = {
   BookImageQueue: undefined;
   BookReview: undefined;
   BookEscalationInbox: undefined;
@@ -450,6 +456,7 @@ export type TabParamList = {
   FinanceTab: NavigatorScreenParams<FinanceStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;
   ReportsTab: NavigatorScreenParams<ReportsStackParamList>;
+  SupportBookTab: NavigatorScreenParams<SupportBookStackParamList>;
   AdminTab: NavigatorScreenParams<AdminStackParamList>;
   GuardianHomeTab: NavigatorScreenParams<GuardianHomeStackParamList>;
   GuardianHomeworkTab: NavigatorScreenParams<GuardianHomeworkStackParamList>;
