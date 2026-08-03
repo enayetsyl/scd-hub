@@ -96,6 +96,7 @@ function filterFromArgs(args: {
   subject?: string | null;
   teacherId?: string | null;
   asOf?: string | null;
+  retired?: boolean | null;
 }): SummaryFilter {
   const asOf = args.asOf ? new Date(args.asOf) : undefined;
   if (asOf && Number.isNaN(asOf.getTime())) throw new ForbiddenError("asOf is not a valid date");
@@ -104,6 +105,7 @@ function filterFromArgs(args: {
     classLevel: args.classLevel ?? undefined,
     sectionId: args.sectionId ?? undefined,
     subject: args.subject ?? undefined,
+    retired: args.retired ?? undefined,
     teacherId: args.teacherId ?? undefined,
     asOf,
   };
@@ -157,6 +159,8 @@ builder.queryField("classTestReportsStatus", (t) =>
       subject: t.arg.string({ required: false }),
       teacherId: t.arg.string({ required: false }),
       asOf: t.arg.string({ required: false }),
+      /** true → list RETIRED exams instead of live ones, so a retirement can be undone. */
+      retired: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       await assertReportRead(ctx, args.sectionId, { selfTeacherId: args.teacherId });

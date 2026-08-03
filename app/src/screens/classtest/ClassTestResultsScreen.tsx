@@ -17,6 +17,8 @@ import {
   CLASS_TEST_QUERY,
   CLASS_TEST_RESULTS_QUERY,
   ENTER_CLASS_TEST_RESULT,
+  RETIRE_CLASS_TEST,
+  RESTORE_CLASS_TEST,
 } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Chip, Field, Loader, Notice } from "../../components/ui";
 import { STR, hwSubjectLabel, classLevelLabel, bnNum } from "../../lib/labels";
@@ -38,7 +40,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   const { role } = useAuth();
   const isAdmin = !!role && roleHasPermission(role, "roster:manage");
 
-  const [testQ] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
+  const [testQ, refetchTest] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
   const test = testQ.data?.classTest ?? null;
   const [studentsQ] = useQuery({ query: STUDENTS_QUERY, variables: { sectionId: test?.sectionId ?? "" }, pause: !test });
   const students = (studentsQ.data?.studentsInSection ?? []).filter((s) => s.active);
@@ -51,6 +53,34 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   }, [results]);
 
   const [, enter] = useMutation(ENTER_CLASS_TEST_RESULT);
+  const [, retire] = useMutation(RETIRE_CLASS_TEST);
+  const [, restore] = useMutation(RESTORE_CLASS_TEST);
+
+  // Retire / restore (Principal/Office) — see the buttons below.
+  const [retireOpen, setRetireOpen] = useState(false);
+  const [retireReason, setRetireReason] = useState("");
+  const [retireBusy, setRetireBusy] = useState(false);
+
+  async function onRetire(): Promise<void> {
+    setError(null);
+    setRetireBusy(true);
+    const res = await retire({ id: testId, reason: retireReason.trim() });
+    setRetireBusy(false);
+    if (res.error || !res.data?.retireClassTest) return setError(friendlyError(res.error));
+    setRetireOpen(false);
+    setRetireReason("");
+    refetchTest({ requestPolicy: "network-only" });
+    nav.goBack();
+  }
+
+  async function onRestore(): Promise<void> {
+    setError(null);
+    setRetireBusy(true);
+    const res = await restore({ id: testId });
+    setRetireBusy(false);
+    if (res.error || !res.data?.restoreClassTest) return setError(friendlyError(res.error));
+    refetchTest({ requestPolicy: "network-only" });
+  }
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [status, setStatus] = useState<"PRESENT" | "ABSENT">("PRESENT");
@@ -113,6 +143,37 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
       </Screen>
     );
   }
+  // A RETIRED exam is not "not printed yet" — say so, show why, and give the admin
+  // the way back (owner ask 2026-08-03). Without this, retiring would be a one-way
+  // door: the exam leaves every list, so nothing could reach it to restore it.
+  if (test.status === "CANCELLED") {
+    return (
+      <Screen>
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{title}</Body>
+          <Muted>
+            {classLevelLabel(test.classLevel)} · {hwSubjectLabel(test.subject)}
+          </Muted>
+          <View style={{ marginTop: space(2) }}>
+            <Badge text={STR.ctRetiredBadge} tone="muted" />
+          </View>
+          <Notice message={STR.ctRetiredNotice} tone="warn" />
+          {test.notes ? <Muted>{test.notes}</Muted> : null}
+          {isAdmin ? (
+            <View style={{ marginTop: space(3) }}>
+              <Button
+                title={STR.ctRestoreExam}
+                onPress={() => void onRestore()}
+                loading={retireBusy}
+                disabled={retireBusy}
+              />
+            </View>
+          ) : null}
+          {error ? <Notice message={error} tone="danger" /> : null}
+        </Card>
+      </Screen>
+    );
+  }
   if (test.status !== "PRINTED") {
     return (
       <Screen>
@@ -135,11 +196,38 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
           </Muted>
           <View style={{ marginTop: space(2) }}>
             <Button
-              title={STR.ctPublishTitle}
+              // A teacher can only SUBMIT for approval on the next screen — labelling
+              // their button "Publish results" promised something they cannot do
+              // (owner ask 2026-08-03). Admins really do publish.
+              title={isAdmin ? STR.ctPublishTitle : STR.ctSubmitShort}
               variant="secondary"
               onPress={() => nav.navigate("ClassTestPublish", { testId, title })}
             />
           </View>
+
+          {/* Retire (Principal/Office). The domain's own "delete": the exam leaves every
+              board and the Overdue counts, the record survives, and it can be restored.
+              Refused server-side once any mark exists. */}
+          {isAdmin ? (
+            <View style={{ marginTop: space(3) }}>
+              {retireOpen ? (
+                <>
+                  <Field label={STR.ctRetireReason} value={retireReason} onChangeText={setRetireReason} multiline />
+                  <View style={{ flexDirection: "row", gap: space(2) }}>
+                    <Button
+                      title={STR.ctRetireExam}
+                      onPress={() => void onRetire()}
+                      loading={retireBusy}
+                      disabled={retireBusy || !retireReason.trim()}
+                    />
+                    <Button title={STR.cancel} variant="ghost" onPress={() => setRetireOpen(false)} disabled={retireBusy} />
+                  </View>
+                </>
+              ) : (
+                <Button title={STR.ctRetireExam} variant="ghost" onPress={() => setRetireOpen(true)} />
+              )}
+            </View>
+          ) : null}
         </Card>
 
         {studentsQ.fetching ? (

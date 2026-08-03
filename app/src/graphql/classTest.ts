@@ -61,6 +61,22 @@ export const CLASS_TEST_QUERY = gql<{ classTest: ClassTestT | null }, { id: stri
   query ClassTest($id: String!) { classTest(id: $id) { ${CLASS_TEST_FIELDS} } }
 `;
 
+
+/** CT retire/restore (owner ask 2026-08-03) — the Principal's own route out of a
+ *  PRINTED exam, replacing the hand-run scripts. Retire needs a reason; restore
+ *  puts it back, so a mistake is never a dead end. */
+export const RETIRE_CLASS_TEST = gql<{ retireClassTest: ClassTestT }, { id: string; reason: string }>`
+  mutation RetireClassTest($id: String!, $reason: String!) {
+    retireClassTest(id: $id, reason: $reason) { ${CLASS_TEST_FIELDS} }
+  }
+`;
+
+export const RESTORE_CLASS_TEST = gql<{ restoreClassTest: ClassTestT }, { id: string }>`
+  mutation RestoreClassTest($id: String!) {
+    restoreClassTest(id: $id) { ${CLASS_TEST_FIELDS} }
+  }
+`;
+
 export const SUGGEST_CLASS_TEST_NUMBER_QUERY = gql<
   { suggestClassTestNumber: number },
   { sectionId: string; subject: string }
@@ -325,10 +341,12 @@ export interface ClassTestSummaryVars {
   subject?: string | null;
   teacherId?: string | null;
   asOf?: string | null;
+  /** true → list RETIRED exams instead of live ones (so a retirement can be undone). */
+  retired?: boolean | null;
 }
 
-const SUMMARY_ARG_DEFS = `$academicYearId: String, $classLevel: Int, $sectionId: String, $subject: String, $teacherId: String, $asOf: String`;
-const SUMMARY_ARG_USE = `academicYearId: $academicYearId, classLevel: $classLevel, sectionId: $sectionId, subject: $subject, teacherId: $teacherId, asOf: $asOf`;
+const SUMMARY_ARG_DEFS = `$academicYearId: String, $classLevel: Int, $sectionId: String, $subject: String, $teacherId: String, $asOf: String, $retired: Boolean`;
+const SUMMARY_ARG_USE = `academicYearId: $academicYearId, classLevel: $classLevel, sectionId: $sectionId, subject: $subject, teacherId: $teacherId, asOf: $asOf, retired: $retired`;
 
 export const CLASS_TEST_REPORTS_STATUS_QUERY = gql<
   { classTestReportsStatus: ClassTestReportStatusRowT[] },

@@ -44,10 +44,14 @@ export interface SummaryFilter {
    *  requestedBy on pre-field rows) — restricts to one teacher. */
   teacherId?: string;
   asOf?: Date;
+  /** List RETIRED exams instead of live ones (CANCELLED). The drill-down uses this
+   *  so a retired exam stays reachable — otherwise retiring it would be a one-way
+   *  door with no restore path (owner ask 2026-08-03). */
+  retired?: boolean;
 }
 
 function examQuery(filter: SummaryFilter): Record<string, unknown> {
-  const q: Record<string, unknown> = { status: "PRINTED" };
+  const q: Record<string, unknown> = { status: filter.retired ? "CANCELLED" : "PRINTED" };
   if (filter.academicYearId) q.academicYearId = new Types.ObjectId(filter.academicYearId);
   if (typeof filter.classLevel === "number") q.classLevel = filter.classLevel;
   if (filter.sectionId) q.sectionId = new Types.ObjectId(filter.sectionId);
