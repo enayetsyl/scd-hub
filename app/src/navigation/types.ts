@@ -384,6 +384,9 @@ export type AdminStackParamList = {
   // given a tab — book production is periodic project work for a handful of
   // people, not a daily surface for the whole school (D-#405 gates it on book:*).
   BookImageQueue: undefined;
+  BookReview: undefined;
+  BookEscalationInbox: undefined;
+  BookAssemble: undefined;
 };
 
 // D-#309: the Principal/Office Reports hub — a launcher plus the four

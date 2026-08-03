@@ -28,6 +28,8 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // Anyone who works the image queue: the illustrator, and the reviewers who look at
   // what came back. `book:read` alone is not enough — that is a spectator.
   const canBookImages = can("book:illustrate") || can("book:review") || can("book:review_senior");
+  const canBookReview = can("book:review") || can("book:review_senior");
+  const canBookAssemble = can("book:assemble");
 
   return (
     <Screen scroll>
@@ -101,6 +103,30 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         <Card onPress={() => navigation.navigate("BookImageQueue")}>
           <Body style={{ fontWeight: "700" }}>{STR.sbQueueTitle}</Body>
           <Muted>{STR.sbQueueSub}</Muted>
+        </Card>
+      ) : null}
+
+      {canBookReview ? (
+        <Card onPress={() => navigation.navigate("BookReview")}>
+          <Body style={{ fontWeight: "700" }}>{STR.sbReviewTitle}</Body>
+          <Muted>{STR.sbReviewSub}</Muted>
+        </Card>
+      ) : null}
+
+      {/* The inbox is offered to ordinary reviewers too, not only seniors: a reviewer
+          needs to follow the thread they raised. Only a senior gets the resolve form,
+          and that is decided inside the screen. */}
+      {canBookReview ? (
+        <Card onPress={() => navigation.navigate("BookEscalationInbox")}>
+          <Body style={{ fontWeight: "700" }}>{STR.sbInboxTitle}</Body>
+          <Muted>{STR.sbInboxSub}</Muted>
+        </Card>
+      ) : null}
+
+      {canBookAssemble ? (
+        <Card onPress={() => navigation.navigate("BookAssemble")}>
+          <Body style={{ fontWeight: "700" }}>{STR.sbAssembleTitle}</Body>
+          <Muted>{STR.sbAssembleSub}</Muted>
         </Card>
       ) : null}
 

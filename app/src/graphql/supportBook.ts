@@ -84,3 +84,182 @@ export const SUPPORT_BOOK_STALENESS = gql`
     }
   }
 `;
+
+// ---------------------------------------------------------------------------
+// SB-3: review + escalation
+// ---------------------------------------------------------------------------
+
+export interface SupportBookLessonT {
+  bookId: string;
+  lessonNo: number;
+  nctbTitleBn: string | null;
+  state: string;
+  action: string | null;
+  severity: string | null;
+  bwTreatment: string | null;
+  blockCount: number;
+  slotCount: number;
+  checklistPassed: boolean;
+  selfReviewed: boolean;
+}
+
+export const SUPPORT_BOOK_LESSONS = gql`
+  query SupportBookLessons($bookId: String!) {
+    supportBookLessons(bookId: $bookId) {
+      bookId lessonNo nctbTitleBn state action severity bwTreatment
+      blockCount slotCount checklistPassed selfReviewed
+    }
+  }
+`;
+
+export interface SupportBookReviewRoundT {
+  roundId: string;
+  bookId: string;
+  lessonNo: number;
+  roundNumber: number;
+  status: string;
+  reviewerId: string;
+  verdict: string | null;
+  feedback: string | null;
+  checklist: string[];
+  checklistPassed: boolean;
+  selfReviewed: boolean;
+  assignedAt: string;
+}
+
+export const SUPPORT_BOOK_REVIEW_ROUNDS = gql`
+  query SupportBookReviewRounds($bookId: String!, $lessonNo: Int) {
+    supportBookReviewRounds(bookId: $bookId, lessonNo: $lessonNo) {
+      roundId bookId lessonNo roundNumber status reviewerId
+      verdict feedback checklist checklistPassed selfReviewed assignedAt
+    }
+  }
+`;
+
+/** `checklistPassed` goes true ONLY on APPROVE with every item ticked — the server
+ *  derives it, so the screen never computes its own version of "passed". */
+export const SUBMIT_SUPPORT_BOOK_REVIEW = gql`
+  mutation SubmitSupportBookReview(
+    $bookId: String!, $lessonNo: Int!, $verdict: String!, $checklist: [String!]!, $feedback: String
+  ) {
+    submitSupportBookReview(
+      bookId: $bookId, lessonNo: $lessonNo, verdict: $verdict, checklist: $checklist, feedback: $feedback
+    ) {
+      roundId lessonNo roundNumber status verdict feedback checklist checklistPassed selfReviewed
+    }
+  }
+`;
+
+export interface SupportBookEscalationMessageT {
+  authorId: string;
+  body: string;
+  attachments: string[];
+  createdAt: string;
+}
+
+export interface SupportBookEscalationT {
+  escalationId: string;
+  bookId: string;
+  lessonNo: number;
+  target: string;
+  targetId: string | null;
+  subject: string;
+  state: string;
+  raisedBy: string;
+  resolution: string | null;
+  messages: SupportBookEscalationMessageT[];
+  createdAt: string;
+}
+
+const ESCALATION_FIELDS = `
+  escalationId bookId lessonNo target targetId subject state raisedBy resolution createdAt
+  messages { authorId body attachments createdAt }
+`;
+
+/** Oldest first — the thread waiting longest is the one blocking a lesson. */
+export const SUPPORT_BOOK_ESCALATIONS = gql`
+  query SupportBookEscalations($bookId: String, $openOnly: Boolean) {
+    supportBookEscalations(bookId: $bookId, openOnly: $openOnly) { ${ESCALATION_FIELDS} }
+  }
+`;
+
+export const RAISE_SUPPORT_BOOK_ESCALATION = gql`
+  mutation RaiseSupportBookEscalation(
+    $bookId: String!, $lessonNo: Int!, $target: String!, $subject: String!, $body: String!, $targetId: String
+  ) {
+    raiseSupportBookEscalation(
+      bookId: $bookId, lessonNo: $lessonNo, target: $target, subject: $subject, body: $body, targetId: $targetId
+    ) { ${ESCALATION_FIELDS} }
+  }
+`;
+
+export const REPLY_SUPPORT_BOOK_ESCALATION = gql`
+  mutation ReplySupportBookEscalation($escalationId: String!, $body: String!) {
+    replySupportBookEscalation(escalationId: $escalationId, body: $body) { ${ESCALATION_FIELDS} }
+  }
+`;
+
+/** Resolving changes NO lesson field — the author then submits a patch citing the
+ *  ruling, through the same validator (D-#410). */
+export const RESOLVE_SUPPORT_BOOK_ESCALATION = gql`
+  mutation ResolveSupportBookEscalation($escalationId: String!, $resolution: String!) {
+    resolveSupportBookEscalation(escalationId: $escalationId, resolution: $resolution) { ${ESCALATION_FIELDS} }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// SB-4: the assembly gate + render jobs
+// ---------------------------------------------------------------------------
+
+/** Every blocker at once, not one at a time — being told about the next blocker only
+ *  after fixing the last one is the worst version of a gate. */
+export interface SupportBookGateT {
+  ok: boolean;
+  reasons: string[];
+}
+
+export const SUPPORT_BOOK_ASSEMBLY_GATE = gql`
+  query SupportBookAssemblyGate($bookId: String!, $lessonNos: [Int!]) {
+    supportBookAssemblyGate(bookId: $bookId, lessonNos: $lessonNos) { ok reasons }
+  }
+`;
+
+export interface SupportBookBuildJobT {
+  jobId: string;
+  bookId: string;
+  scope: string;
+  lessonNos: number[];
+  profiles: string[];
+  state: string;
+  queuedAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  failureReason: string | null;
+  outputFileIds: string[];
+  log: string;
+}
+
+export const SUPPORT_BOOK_BUILD_JOBS = gql`
+  query SupportBookBuildJobs($bookId: String!, $limit: Int) {
+    supportBookBuildJobs(bookId: $bookId, limit: $limit) {
+      jobId bookId scope lessonNos profiles state
+      queuedAt startedAt finishedAt failureReason outputFileIds log
+    }
+  }
+`;
+
+export const QUEUE_SUPPORT_BOOK_BUILD = gql`
+  mutation QueueSupportBookBuild($bookId: String!, $scope: String!, $lessonNos: [Int!], $force: Boolean) {
+    queueSupportBookBuild(bookId: $bookId, scope: $scope, lessonNos: $lessonNos, force: $force) {
+      jobId state scope lessonNos profiles queuedAt failureReason
+    }
+  }
+`;
+
+/** The export escape hatch (D-#406): the app must never become the only way to build
+ *  a book. Returns `book.json` as text. */
+export const SUPPORT_BOOK_EXPORT_JSON = gql`
+  query SupportBookExportJson($bookId: String!, $lessonNos: [Int!]) {
+    supportBookExportJson(bookId: $bookId, lessonNos: $lessonNos)
+  }
+`;
