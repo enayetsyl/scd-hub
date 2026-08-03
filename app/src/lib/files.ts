@@ -683,3 +683,83 @@ export async function openStoredFile(fileId: string): Promise<void> {
     setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Support-book artwork (SB-2 → POST /files/book). png/jpeg ≤ 25 MB per image.
+//
+// A DIFFERENT ROUTE FROM THE ONES ABOVE, because the upload does more than store
+// bytes: it registers a lineage row at a named stage, which is what makes a
+// re-approval invalidate everything downstream (D-#417). So the request carries
+// bookId + lessonNo + slotId + stage, and the server answers with the ASSET it
+// created, not just a fileId.
+// ---------------------------------------------------------------------------
+
+export const BOOK_IMAGE_MIMES = ["image/png", "image/jpeg"];
+export const BOOK_IMAGE_MAX_BYTES = 25 * 1024 * 1024;
+
+export interface UploadedBookImage {
+  fileId: string;
+  assetId: string;
+  stage: string;
+  slotId: string;
+  lessonNo: number;
+}
+
+export interface BookImageUploadTarget {
+  bookId: string;
+  lessonNo: number;
+  slotId: string;
+  /** APPROVED | CROPPED | UPSCALED | COMPLIANT. */
+  stage: string;
+  /** APPROVED rows only — which tool drew it, for the audit trail (D-#419). */
+  generatorTool?: string;
+}
+
+/** Pick one png/jpeg and upload it against a slot+stage. null when cancelled. */
+export async function pickAndUploadBookImage(
+  target: BookImageUploadTarget,
+): Promise<UploadedBookImage | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: BOOK_IMAGE_MIMES,
+    multiple: false,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  const asset = picked.assets[0];
+
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", {
+      uri: asset.uri,
+      name: asset.name,
+      type: asset.mimeType ?? "application/octet-stream",
+    } as unknown as Blob);
+  }
+  form.append("bookId", target.bookId);
+  form.append("lessonNo", String(target.lessonNo));
+  form.append("slotId", target.slotId);
+  form.append("stage", target.stage);
+  if (target.generatorTool) form.append("generatorTool", target.generatorTool);
+
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/book`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const body = (await res.json()) as UploadedBookImage;
+  return body;
+}

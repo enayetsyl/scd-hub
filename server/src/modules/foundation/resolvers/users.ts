@@ -3,7 +3,7 @@ import { User, type IUser } from "../models/User";
 import { Guardian } from "../models/Guardian";
 import { hashPassword } from "../services/AuthService";
 import type { Role } from "@scd/shared";
-import { ROLES } from "@scd/shared";
+import { ROLES, effectivePermissions, isPermissionActive } from "@scd/shared";
 
 type UserShape = Pick<IUser, "email" | "phone" | "role" | "name" | "active" | "homeworkSupervisor"> & {
   _id: { toString(): string };
@@ -50,6 +50,35 @@ builder.queryField("me", (t) =>
         };
       }
       return User.findById(ctx.auth.userId).lean();
+    },
+  }),
+);
+
+builder.queryField("myPermissions", (t) =>
+  t.field({
+    type: ["String"],
+    authScopes: { authenticated: true },
+    description:
+      "The caller's OWN effective permissions — role template(s) + grants − revocations. " +
+      "Lets the app show only the screens the caller can actually use.",
+    resolve: (_root, _args, ctx) => {
+      if (!ctx.auth) return [];
+      // Deliberately a SEPARATE field from `me` rather than a column on UserRef: UserRef
+      // is also the shape of OTHER people (the teachers list), and one person's
+      // permissions are not another's business.
+      //
+      // WHY THE APP NEEDS THIS AT ALL. Navigation has always gated on
+      // `roleHasPermission(role, …)`, i.e. on the role TEMPLATE. That was fine while
+      // every permission a person held came from their role. It stops being fine for
+      // the book module (D-#405): `book:*` sits only on the PRINCIPAL template, and
+      // the illustrator/reviewer/assembler reach it by per-user grant (AC-1). Gating
+      // their screens on the template would hide those screens from precisely the
+      // people they were built for.
+      //
+      // This is a READ OF THE CALLER'S OWN TOKEN — no new data surface, and no new
+      // authority: every resolver still checks `callerHasPermission` for itself. Hiding
+      // a screen is a courtesy, never the gate.
+      return [...effectivePermissions(ctx.auth)].filter((p) => isPermissionActive(p)).sort();
     },
   }),
 );
