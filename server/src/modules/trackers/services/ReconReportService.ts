@@ -29,6 +29,7 @@ import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
+import { RoutineSubstitution } from "../../routine/models/RoutineSubstitution";
 import { HolidayException } from "../../routine/models/HolidayException";
 import { dayTypeFor } from "../../routine/calendar";
 import { dateKeyOf, parseDateKey } from "../../attendance/dates";
@@ -65,8 +66,10 @@ export interface HwNotDeclared {
   classLevel: number;
   /** The HW subject code (BAN/ENG/…) whose declaration never happened that day. */
   subject: string;
-  /** The routine's subject teacher for that (section, subject, weekday) — who owes
-   *  the declaration. Null when the slot names nobody. */
+  /** Who owes the declaration: the routine's subject teacher for that
+   *  (section, subject, weekday) — or, when an active cover exists for THAT DATE,
+   *  the covering teacher, since they are the one who actually taught the period.
+   *  Null when the slot names nobody. */
   teacherName: string | null;
 }
 
@@ -275,6 +278,21 @@ async function hwNotDeclaredRows(
     declared.map((d) => `${d.sectionId.toString()}|${d.subject}|${dateKeyOf(new Date(d.dateGiven))}`),
   );
 
+  // Whoever actually TAUGHT the period owes the declaration, so a cover must be named
+  // here rather than the absent routine teacher (owner report 2026-08-03: Fida was on
+  // leave with Tamany approved as proxy, and the red row still chased Fida). Keyed by
+  // (slotId, dateKey) because a cover is per-DATE, not standing.
+  const subs = await RoutineSubstitution.find({
+    slotId: { $in: slots.map((s) => s._id) },
+    active: true,
+    date: { $gte: start, $lte: end },
+  })
+    .select("slotId date coverTeacherId")
+    .lean();
+  const coverBySlotDay = new Map(
+    subs.map((su) => [`${su.slotId.toString()}|${dateKeyOf(new Date(su.date))}`, su.coverTeacherId.toString()]),
+  );
+
   const out: Array<Omit<HwNotDeclared, "sectionNameBn" | "classLevel"> & { teacherId: string | null }> = [];
   for (let d = new Date(start); d.getTime() <= end.getTime(); d.setDate(d.getDate() + 1)) {
     const dateKey = dateKeyOf(d);
@@ -297,7 +315,10 @@ async function hwNotDeclaredRows(
       const prev = bySectionSubject.get(key);
       if (!prev || s.periodNumber < prev.periodNumber) {
         bySectionSubject.set(key, {
-          teacherId: s.teacherId ? s.teacherId.toString() : null,
+          // Cover for THIS date wins over the standing routine teacher.
+          teacherId:
+            coverBySlotDay.get(`${s._id.toString()}|${dateKey}`) ??
+            (s.teacherId ? s.teacherId.toString() : null),
           periodNumber: s.periodNumber,
         });
       }
