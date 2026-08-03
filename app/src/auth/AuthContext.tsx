@@ -19,6 +19,14 @@ interface AuthContextValue {
   status: Status;
   user: MeUser | null;
   role: Role | null;
+  /** The caller's OWN effective permissions (role template(s) + grants − revocations).
+   *  Prefer `can()` over `roleHasPermission(role, …)` for any NEW gate: the template
+   *  alone is blind to per-user grants (AC-1), which is how the book-production roles
+   *  are assigned (D-#405). Empty until `me` resolves. */
+  permissions: string[];
+  /** Should this screen/tile be OFFERED? Never the authorization gate — every resolver
+   *  re-checks server-side; this only avoids showing a door that will not open. */
+  can: (perm: string) => boolean;
   login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
   logout: () => Promise<void>;
 }
@@ -29,9 +37,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   const client = useClient();
   const [status, setStatus] = useState<Status>("loading");
   const [user, setUser] = useState<MeUser | null>(null);
+  const [permissions, setPermissions] = useState<string[]>([]);
 
   const resolveMe = useCallback(async (): Promise<MeUser | null> => {
     const res = await client.query(ME_QUERY, {}, { requestPolicy: "network-only" }).toPromise();
+    // One query, both answers — see ME_QUERY. Permissions are set even when `me` comes
+    // back null so a rejected session never leaves a stale set behind.
+    setPermissions(res.data?.myPermissions ?? []);
     return res.data?.me ?? null;
   }, [client]);
 
@@ -104,11 +116,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     await unregisterPushToken(client);
     await persistToken(null);
     setUser(null);
+    setPermissions([]);
     setStatus("anon");
   }, [client]);
 
+  const can = useCallback((perm: string) => permissions.includes(perm), [permissions]);
+
   return (
-    <AuthContext.Provider value={{ status, user, role: user?.role ?? null, login, logout }}>
+    <AuthContext.Provider
+      value={{ status, user, role: user?.role ?? null, permissions, can, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -218,6 +218,7 @@ import ScopeGrantScreen from "../screens/admin/ScopeGrantScreen";
 import SupervisoryGrantScreen from "../screens/admin/SupervisoryGrantScreen";
 import RosterScreen from "../screens/admin/RosterScreen";
 import StudentProfileScreen from "../screens/student/StudentProfileScreen";
+import BookImageQueueScreen from "../screens/supportbook/BookImageQueueScreen";
 import StaffListScreen from "../screens/admin/StaffListScreen";
 import AssignClassTeacherScreen from "../screens/admin/AssignClassTeacherScreen";
 import AssignSubjectTeacherScreen from "../screens/admin/AssignSubjectTeacherScreen";
@@ -1072,6 +1073,8 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="HwLifecycleReport" component={HwLifecycleReportScreen} options={{ title: STR.hlrTitle }} />
       <AdminStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
       <AdminStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
+      {/* SB-2: the illustrator's queue. Param-free, so its position here is safe. */}
+      <AdminStack.Screen name="BookImageQueue" component={BookImageQueueScreen} options={{ title: STR.sbQueueTitle }} />
     </AdminStack.Navigator>
   );
 }
