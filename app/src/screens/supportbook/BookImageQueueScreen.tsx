@@ -28,6 +28,7 @@ import {
 import { Screen, Body, Muted, Card, Select, Badge, Button, Chip, ChipRow, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum } from "../../lib/labels";
+import { pickAndUploadBookImage, FileUploadError } from "../../lib/files";
 import { space, useColors } from "../../theme";
 
 /** A slot is outstanding until its COMPLIANT artifact exists and is fresh — that is the
@@ -56,14 +57,58 @@ function StageChip({ label, state }: { label: string; state: string }): React.Re
   );
 }
 
-function SlotCard({ slot }: { slot: SupportBookSlotT }): React.ReactElement {
+/** The chain, in the order a person walks it. Rendered as four upload buttons rather
+ *  than a stage dropdown: the four stages ARE the workflow, and one tap is the whole
+ *  interaction on a screen someone visits two hundred times. */
+const STAGES: Array<{ stage: string; label: string }> = [
+  { stage: "APPROVED", label: STR.sbStageApproved },
+  { stage: "CROPPED", label: STR.sbStageCropped },
+  { stage: "UPSCALED", label: STR.sbStageUpscaled },
+  { stage: "COMPLIANT", label: STR.sbStageCompliant },
+];
+
+function SlotCard({
+  slot,
+  onUploaded,
+}: {
+  slot: SupportBookSlotT;
+  onUploaded: () => void;
+}): React.ReactElement {
   const colors = useColors();
   const [copied, setCopied] = useState(false);
+  const [busyStage, setBusyStage] = useState<string | null>(null);
+  const [note, setNote] = useState<{ text: string; bad: boolean } | null>(null);
 
   async function onCopy(): Promise<void> {
     if (!slot.prompt) return;
     await Clipboard.setStringAsync(slot.prompt);
     setCopied(true);
+  }
+
+  async function onUpload(stage: string): Promise<void> {
+    setNote(null);
+    setBusyStage(stage);
+    try {
+      const up = await pickAndUploadBookImage({
+        bookId: slot.bookId,
+        lessonNo: slot.lessonNo,
+        slotId: slot.slotId,
+        stage,
+        // The tool that drew it is recorded on APPROVED rows (D-#419). For now every
+        // image comes from the desktop app; when the API path lands this stops being
+        // a constant.
+        generatorTool: stage === "APPROVED" ? "chatgpt-desktop" : undefined,
+      });
+      if (!up) return; // picker cancelled — not an outcome worth reporting
+      setNote({ text: STR.sbUploaded, bad: false });
+      // Refetch rather than patch locally: the upload may have made DOWNSTREAM stages
+      // stale (D-#417), and only the server knows the whole chain.
+      onUploaded();
+    } catch (e) {
+      setNote({ text: e instanceof FileUploadError ? e.message : String(e), bad: true });
+    } finally {
+      setBusyStage(null);
+    }
   }
 
   return (
@@ -127,6 +172,32 @@ function SlotCard({ slot }: { slot: SupportBookSlotT }): React.ReactElement {
         ) : (
           <Muted>{STR.sbNoPrompt}</Muted>
         )}
+      </View>
+
+      <View
+        style={{
+          marginTop: space(3), borderTopWidth: 1, borderTopColor: colors.border, paddingTop: space(3),
+        }}
+      >
+        <Muted style={{ marginBottom: 4 }}>{STR.sbUploadHint}</Muted>
+        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+          {STAGES.map((s) => (
+            <Button
+              key={s.stage}
+              title={busyStage === s.stage ? STR.sbUploading : `${STR.sbUpload} · ${s.label}`}
+              variant="ghost"
+              loading={busyStage === s.stage}
+              disabled={busyStage !== null}
+              onPress={() => { void onUpload(s.stage); }}
+              style={{ marginRight: space(2), marginTop: 4 }}
+            />
+          ))}
+        </View>
+        {note ? (
+          <Muted style={{ marginTop: space(2), color: note.bad ? colors.error : colors.primary }}>
+            {note.text}
+          </Muted>
+        ) : null}
       </View>
     </Card>
   );
@@ -209,7 +280,13 @@ export default function BookImageQueueScreen(): React.ReactElement {
           {shown.length === 0 ? (
             <EmptyState message={outstandingOnly && all.length > 0 ? STR.sbAllDone : STR.empty} />
           ) : (
-            shown.map((s) => <SlotCard key={`${s.lessonNo}-${s.slotId}`} slot={s} />)
+            shown.map((s) => (
+              <SlotCard
+                key={`${s.lessonNo}-${s.slotId}`}
+                slot={s}
+                onUploaded={() => refetchSlots({ requestPolicy: "network-only" })}
+              />
+            ))
           )}
         </QueryGate>
       </ScrollView>
