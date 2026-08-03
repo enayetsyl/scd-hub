@@ -316,7 +316,9 @@ function HeaderBell(): React.ReactElement {
             style={{
               position: "absolute",
               top: -4,
-              right: -10,
+              // -8, not -10: the Pressable's 8px padding then absorbs the badge, so a
+              // two-digit count cannot bleed past the bell into 👤 or the title.
+              right: -8,
               backgroundColor: colors.error,
               borderRadius: 9,
               minWidth: 18,
@@ -454,6 +456,45 @@ function HeaderRight(): React.ReactElement {
   );
 }
 
+/**
+ * Header chrome widths (px) reserved on each side of the title.
+ *
+ * `@react-navigation/elements` caps the title container at
+ * `layout.width - ((leftButton ? 72 : 16) + (rightButton ? 72 : 16) + insets)` — a
+ * HARD-CODED 72 per side. This app's header is wider than that on BOTH sides: back +
+ * ☰ on the left (HeaderLeft), and 🔔 (whose unread badge is absolutely positioned
+ * past its own box) + 👤 on the right. Emoji also lay out wider than their nominal
+ * font size. So a long Bangla title — e.g. "মাসিক রিপোর্টের বাকি কাজ" — was allowed
+ * to grow under the bell instead of ellipsising before it (owner report 2026-08-03).
+ *
+ * native-stack v6 does not forward `headerTitleContainerStyle`, so the container cap
+ * cannot be corrected from options; HeaderTitle below bounds the TEXT instead, which
+ * it can do because a child may be narrower than its container.
+ */
+const HEADER_LEFT_RESERVED = 92;
+const HEADER_RIGHT_RESERVED = 96;
+/** Never collapse the title to nothing on a very narrow viewport. */
+const HEADER_TITLE_MIN = 72;
+
+/** The stack header title: ellipsised inside the space the chrome actually leaves. */
+function HeaderTitle({ children, tintColor }: { children?: string; tintColor?: string }): React.ReactElement {
+  const { width } = useWindowDimensions();
+  return (
+    <Text
+      numberOfLines={1}
+      ellipsizeMode="tail"
+      style={{
+        color: tintColor,
+        fontFamily: fonts.bold,
+        fontSize: 18,
+        maxWidth: Math.max(HEADER_TITLE_MIN, width - HEADER_LEFT_RESERVED - HEADER_RIGHT_RESERVED),
+      }}
+    >
+      {children}
+    </Text>
+  );
+}
+
 /** Stack header/content styling from the active token set (light + dark). The
  *  shared headerLeft gives every stack root the ☰ drawer toggle and every pushed
  *  screen the native back button (see HeaderLeft) — one place, no per-screen edit. */
@@ -466,6 +507,9 @@ function useStackOptions() {
     contentStyle: { backgroundColor: colors.bg },
     headerLeft: (props: { canGoBack?: boolean; tintColor?: string }) => (
       <HeaderLeft canGoBack={props.canGoBack} tintColor={props.tintColor} />
+    ),
+    headerTitle: (props: { children?: string; tintColor?: string }) => (
+      <HeaderTitle tintColor={props.tintColor ?? colors.onPrimary}>{props.children}</HeaderTitle>
     ),
     headerRight: () => <HeaderRight />,
   } as const;
