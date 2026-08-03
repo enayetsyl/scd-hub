@@ -263,3 +263,52 @@ export const SUPPORT_BOOK_EXPORT_JSON = gql`
     supportBookExportJson(bookId: $bookId, lessonNos: $lessonNos)
   }
 `;
+
+// ---------------------------------------------------------------------------
+// SB-1: create a book, submit a patch
+// ---------------------------------------------------------------------------
+
+export const CREATE_SUPPORT_BOOK = gql`
+  mutation CreateSupportBook(
+    $bookId: String!, $bookType: String!, $classLevel: Int!, $subject: String!,
+    $titleBn: String!, $mode: String, $hasTextEn: Boolean
+  ) {
+    createSupportBook(
+      bookId: $bookId, bookType: $bookType, classLevel: $classLevel, subject: $subject,
+      titleBn: $titleBn, mode: $mode, hasTextEn: $hasTextEn
+    ) { bookId bookType classLevel subject titleBn status lessonCount }
+  }
+`;
+
+/** One validator finding. RED refuses the merge; GREY merges with a warning. */
+export interface SupportBookFindingT {
+  check: string;
+  severity: string;
+  message: string;
+  lessonNo: number | null;
+  blockId: string | null;
+  slotId: string | null;
+  unit: string | null;
+}
+
+/** A RED result is NOT an error — it comes back with its findings for the author to
+ *  act on, and the patch is stored either way. The screen renders it as an outcome. */
+export interface SupportBookMergeResultT {
+  merged: boolean;
+  patchId: string;
+  redCount: number;
+  greyCount: number;
+  lessonNos: number[];
+  policySetHash: string;
+  policyMissing: string[];
+  findings: SupportBookFindingT[];
+}
+
+export const SUBMIT_SUPPORT_BOOK_PATCH = gql`
+  mutation SubmitSupportBookPatch($patchJson: String!, $source: String) {
+    submitSupportBookPatch(patchJson: $patchJson, source: $source) {
+      merged patchId redCount greyCount lessonNos policySetHash policyMissing
+      findings { check severity message lessonNo blockId slotId unit }
+    }
+  }
+`;

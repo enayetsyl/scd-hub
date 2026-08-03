@@ -389,6 +389,7 @@ export type AdminStackParamList = {
 // `book:*` out per user; the `myPermissions` / `can()` gate is the fix). Every screen
 // here is param-free, so the stack's initial route is safe whichever one is first.
 export type SupportBookStackParamList = {
+  BookImport: undefined;
   BookImageQueue: undefined;
   BookReview: undefined;
   BookEscalationInbox: undefined;
