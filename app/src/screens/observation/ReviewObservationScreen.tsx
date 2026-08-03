@@ -14,7 +14,7 @@
  * sign-off). The server validates the right payload per the row's form + gates the
  * caller to the assigned observerId — the Bangla deny surfaces inline.
  */
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -46,8 +46,11 @@ import {
   obsQuranComplianceLabel,
   hwSubjectLabel,
   isoDateLabel,
+  isoDateTimeLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useFormDraft } from "../../lib/useFormDraft";
+import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 import type { ObservationStackParamList } from "../../navigation/types";
 
@@ -85,6 +88,71 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [, review] = useMutation(REVIEW_CLASSROOM_OBSERVATION);
+
+  // ---- local draft autosave (owner ask 2026-08-03) -------------------------
+  // A review is a lot of typing and it is only ever sent on submit, so a dropped
+  // connection or a page reload used to lose all of it. Everything the observer
+  // enters is mirrored to this device, restored on the way back in, and dropped
+  // once the review is actually submitted. LOCAL only — never a server write; a
+  // half-finished review must not become a record other people can see.
+  const { user } = useAuth();
+  const draftSnapshot = useMemo(
+    () => ({
+      domainLevels,
+      domainNotes,
+      gateResults,
+      breachNotes,
+      oneStrength,
+      growthFocus,
+      priorFocusProgress,
+      priorFocusNote,
+      quranScores,
+      quranNotes,
+      compliance,
+      strengths,
+      improvements,
+      suggestions,
+    }),
+    [
+      domainLevels,
+      domainNotes,
+      gateResults,
+      breachNotes,
+      oneStrength,
+      growthFocus,
+      priorFocusProgress,
+      priorFocusNote,
+      quranScores,
+      quranNotes,
+      compliance,
+      strengths,
+      improvements,
+      suggestions,
+    ],
+  );
+  const applyDraft = useCallback((d: typeof draftSnapshot) => {
+    setDomainLevels(d.domainLevels ?? {});
+    setDomainNotes(d.domainNotes ?? {});
+    setGateResults(d.gateResults ?? {});
+    setBreachNotes(d.breachNotes ?? {});
+    setOneStrength(d.oneStrength ?? "");
+    setGrowthFocus(d.growthFocus ?? "");
+    setPriorFocusProgress(d.priorFocusProgress ?? null);
+    setPriorFocusNote(d.priorFocusNote ?? "");
+    setQuranScores(d.quranScores ?? {});
+    setQuranNotes(d.quranNotes ?? {});
+    setCompliance(d.compliance ?? {});
+    setStrengths(d.strengths ?? "");
+    setImprovements(d.improvements ?? "");
+    setSuggestions(d.suggestions ?? "");
+  }, []);
+  // Keyed by observation AND user: a shared device must not show one observer the
+  // other's unfinished words.
+  const draft = useFormDraft(
+    user ? `obs-review:${observationId}:${user.id}` : null,
+    draftSnapshot,
+    applyDraft,
+  );
 
   const [recQ] = useQuery({ query: OBSERVATION_RECORDING_QUERY, variables: { observationId } });
   const recording = recQ.data?.observationRecording ?? null;
@@ -158,6 +226,9 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
     setBusy(false);
     if (res.error) return setError(friendlyError(res.error));
     if (res.data) {
+      // Submitted for real — drop the local draft, or coming back here would restore
+      // a draft of something already sent.
+      draft.clear();
       setOk(STR.obsReviewSaved);
       nav.navigate("ObservationDetail", { observationId, title });
     }
@@ -316,6 +387,25 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
             </Card>
           </>
         )}
+
+        {/* Draft state, right above the one button that clears it. */}
+        {draft.restored ? (
+          <Notice message={STR.obsDraftRestored} tone="info" />
+        ) : null}
+        <View
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space(2), marginBottom: space(2) }}
+        >
+          <Muted style={{ flexShrink: 1 }}>
+            {draft.savedAt
+              ? `${STR.obsDraftSaved} · ${isoDateTimeLabel(new Date(draft.savedAt).toISOString())}`
+              : STR.obsDraftNote}
+          </Muted>
+          {draft.savedAt ? (
+            // Clears the STORED copy only — never what is on screen, so a stray tap
+            // cannot destroy work the observer can see.
+            <Button title={STR.obsDraftDiscard} variant="ghost" onPress={draft.clear} disabled={busy} />
+          ) : null}
+        </View>
 
         <Button title={STR.obsSubmitReview} onPress={onSubmit} loading={busy} disabled={busy} />
         <View style={{ height: space(6) }} />
