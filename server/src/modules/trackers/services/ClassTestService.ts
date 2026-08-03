@@ -508,6 +508,85 @@ export async function retireClassTest(id: string, reason: string, actorId: strin
   return classTestShape(doc as unknown as IClassTest);
 }
 
+export interface UpdateClassTestDetailsInput {
+  id: string;
+  /** Only the provided fields change; omitted ones are left alone. */
+  totalMarks?: number;
+  passMark?: number;
+  examDate?: string;
+  actorId: string;
+  /** True when the actor holds `roster:manage` (Principal/Office). */
+  canManage: boolean;
+}
+
+/**
+ * Correct an exam's details — total marks, pass mark, exam date (owner ask 2026-08-03).
+ *
+ * Until now there was no update path at all, only create: a mis-typed total (42 for a
+ * 32-mark paper, found in prod today) needed a hand-run script.
+ *
+ * WHO: Principal/Office, or the exam's OWN teacher — the accountable subject teacher
+ * or whoever filed it, matching `listMyClassTests`'s notion of "mine". A teacher fixing
+ * their own typo shouldn't need an admin.
+ *
+ * REFUSED once ANY result exists (owner's decision). totalMarks is the denominator of
+ * every percentage and pass/fail flag, so changing it under existing marks would
+ * silently re-grade students — and shift numbers already published to guardians. The
+ * marks have to be cleared first, deliberately.
+ */
+export async function updateClassTestDetails(input: UpdateClassTestDetailsInput): Promise<ClassTestShape> {
+  const doc = await ClassTest.findById(input.id);
+  if (!doc) throw new Error("ClassTest not found");
+  if (doc.status === "CANCELLED") {
+    throw new Error("This exam is retired — restore it before editing its details");
+  }
+
+  if (!input.canManage) {
+    const owns =
+      (doc.teacherId && doc.teacherId.toString() === input.actorId) ||
+      doc.requestedBy.toString() === input.actorId;
+    if (!owns) throw new Error("Only this exam's own teacher (or Office/Principal) can edit its details");
+  }
+
+  const marked = await ClassTestResult.countDocuments({ testId: doc._id });
+  if (marked > 0) {
+    throw new Error(
+      `This exam has ${marked} result(s) entered — clear the marks first, since changing the total would re-grade them`,
+    );
+  }
+
+  const before = { totalMarks: doc.totalMarks, passMark: doc.passMark, examDate: doc.examDate };
+
+  const nextTotal = input.totalMarks ?? doc.totalMarks;
+  const nextPass = input.passMark ?? doc.passMark;
+  if (!Number.isInteger(nextTotal) || nextTotal < 1) throw new Error("Total marks must be a whole number of at least 1");
+  if (!Number.isInteger(nextPass) || nextPass < 1) throw new Error("Pass mark must be a whole number of at least 1");
+  if (nextPass > nextTotal) throw new Error("Pass mark cannot be higher than the total marks");
+
+  if (input.examDate !== undefined) {
+    const d = new Date(input.examDate);
+    if (Number.isNaN(d.getTime())) throw new Error("Invalid exam date");
+    doc.examDate = d;
+  }
+  doc.totalMarks = nextTotal;
+  doc.passMark = nextPass;
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "CLASS_TEST_DETAILS_EDITED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "ClassTest",
+    meta: {
+      ctId: doc.ctId,
+      byOwnTeacher: !input.canManage,
+      from: { totalMarks: before.totalMarks, passMark: before.passMark, examDate: new Date(before.examDate).toISOString() },
+      to: { totalMarks: doc.totalMarks, passMark: doc.passMark, examDate: new Date(doc.examDate).toISOString() },
+    },
+  });
+  return classTestShape(doc as unknown as IClassTest);
+}
+
 /** Undo a retirement — CANCELLED → PRINTED, so a mistaken retire is not a dead end
  *  (the row never left the database). Principal/Office. */
 export async function restoreClassTest(id: string, actorId: string): Promise<ClassTestShape> {

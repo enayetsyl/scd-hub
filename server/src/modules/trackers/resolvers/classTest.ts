@@ -29,6 +29,7 @@ import {
   listClassTestsForSection as listForSectionSvc,
   retireClassTest as retireClassTestSvc,
   restoreClassTest as restoreClassTestSvc,
+  updateClassTestDetails as updateClassTestDetailsSvc,
   type ClassTestShape,
 } from "../services/ClassTestService";
 import { Section } from "../../foundation/models/Section";
@@ -295,6 +296,37 @@ builder.mutationField("retireClassTest", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return retireClassTestSvc(args.id, args.reason, ctx.auth.userId as string);
+    },
+  }),
+);
+
+builder.mutationField("updateClassTestDetails", (t) =>
+  t.field({
+    type: ClassTestRef,
+    description:
+      "Correct an exam's total marks / pass mark / exam date. Principal/Office, or the exam's OWN " +
+      "teacher (accountable subject teacher or the person who filed it). Refused once any result is " +
+      "entered — the total is the denominator of every percentage, so editing it would re-grade them.",
+    authScopes: { authenticated: true },
+    args: {
+      id: t.arg.string({ required: true }),
+      totalMarks: t.arg.int({ required: false }),
+      passMark: t.arg.int({ required: false }),
+      examDate: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const canManage = callerHasPermission(ctx.auth, "roster:manage");
+      // A plain teacher still needs write scope; ownership is checked in the service.
+      if (!canManage && !callerHasPermission(ctx.auth, "tracker:write")) throw new ForbiddenError();
+      return updateClassTestDetailsSvc({
+        id: args.id,
+        totalMarks: args.totalMarks ?? undefined,
+        passMark: args.passMark ?? undefined,
+        examDate: args.examDate ?? undefined,
+        actorId: ctx.auth.userId as string,
+        canManage,
+      });
     },
   }),
 );

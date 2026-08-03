@@ -90,6 +90,7 @@ export type AuditEventKind =
   | "CLASS_TEST_PRINTED"          // Office marked printed → the official exam record (CT-1, §5/J2, D-#120)
   | "CLASS_TEST_CANCELLED"        // Office cancelled a withdrawn print request (CT-1, §5)
   | "CLASS_TEST_RESTORED"         // a retired (CANCELLED) exam put back on the boards
+  | "CLASS_TEST_DETAILS_EDITED"   // total marks / pass mark / exam date corrected (refused once marks exist)
   | "CLASS_TEST_RESULT_ENTERED"   // a teacher entered/edited a student's class-test result — marks/Absent + weakness/actions (CT-2, §3.3/J3, D-#158)
   | "CLASS_TEST_RESULT_SUBMITTED" // teacher submitted an exam's results for Office/Principal approval (CT-8 approval gate)
   | "CLASS_TEST_RESULT_RECALLED"  // teacher recalled a pending submission back to draft (CT-8)

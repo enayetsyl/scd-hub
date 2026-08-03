@@ -71,6 +71,15 @@ export const RETIRE_CLASS_TEST = gql<{ retireClassTest: ClassTestT }, { id: stri
   }
 `;
 
+export const UPDATE_CLASS_TEST_DETAILS = gql<
+  { updateClassTestDetails: ClassTestT },
+  { id: string; totalMarks?: number | null; passMark?: number | null; examDate?: string | null }
+>`
+  mutation UpdateClassTestDetails($id: String!, $totalMarks: Int, $passMark: Int, $examDate: String) {
+    updateClassTestDetails(id: $id, totalMarks: $totalMarks, passMark: $passMark, examDate: $examDate) { ${CLASS_TEST_FIELDS} }
+  }
+`;
+
 export const RESTORE_CLASS_TEST = gql<{ restoreClassTest: ClassTestT }, { id: string }>`
   mutation RestoreClassTest($id: String!) {
     restoreClassTest(id: $id) { ${CLASS_TEST_FIELDS} }
