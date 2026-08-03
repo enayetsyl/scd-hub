@@ -47,6 +47,10 @@ jest.mock("../modules/foundation/models/User", () => ({
 jest.mock("../modules/routine/models/RoutineSlot", () => ({
   RoutineSlot: { find: (f: unknown) => chain(mockSlotFind)(f) },
 }));
+const mockSubFind = jest.fn();
+jest.mock("../modules/routine/models/RoutineSubstitution", () => ({
+  RoutineSubstitution: { find: (f: unknown) => chain(mockSubFind)(f) },
+}));
 jest.mock("../modules/routine/models/HolidayException", () => ({
   HolidayException: { find: (f: unknown) => chain(mockHolidayFind)(f) },
 }));
@@ -84,6 +88,7 @@ beforeEach(() => {
   mockClassFind.mockResolvedValue([]);
   mockUserFind.mockResolvedValue([]);
   mockSlotFind.mockResolvedValue([]);
+  mockSubFind.mockResolvedValue([]);
   mockHolidayFind.mockResolvedValue([]);
   mockNilFind.mockResolvedValue([]);
   mockAsNilFind.mockResolvedValue([]);
@@ -201,6 +206,7 @@ describe("reconciliationReport (D-#290)", () => {
 describe("hwNotDeclared (D-#293)", () => {
   const NOW = new Date(2026, 6, 13); // Mon 2026-07-13
   const sciSlot = (over: Record<string, unknown> = {}) => ({
+    _id: "slot-sci",
     groupId: SEC,
     dayOfWeek: "THU",
     periodNumber: 5,
@@ -226,6 +232,46 @@ describe("hwNotDeclared (D-#293)", () => {
       teacherName: "Husne ara Rahman Fida",
       classLevel: -1,
     });
+  });
+
+  test("an active cover for that DATE is named instead of the absent routine teacher", async () => {
+    // Owner report 2026-08-03: Fida was on approved leave with Tamany as her approved
+    // proxy, and the red row still chased Fida. Whoever taught the period owes the
+    // declaration, so the cover must win for that date.
+    seedSection();
+    mockSlotFind.mockResolvedValue([sciSlot()]);
+    mockSubFind.mockResolvedValue([
+      { slotId: "slot-sci", date: new Date(2026, 6, 9), coverTeacherId: "u-cover" },
+    ]);
+    mockUserFind.mockResolvedValue([
+      { _id: "u-sci", name: "Husne ara Rahman Fida" },
+      { _id: "u-cover", name: "Nuha Kalam Tamany" },
+    ]);
+
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.hwNotDeclared).toHaveLength(1);
+    expect(r.hwNotDeclared[0]).toMatchObject({
+      dateKey: "2026-07-09",
+      subject: "SCI",
+      teacherName: "Nuha Kalam Tamany",
+    });
+  });
+
+  test("a cover on a DIFFERENT date leaves the routine teacher named", async () => {
+    // The cover is per-date, not standing — a Thursday substitution must not rewrite
+    // who owes a different day's declaration.
+    seedSection();
+    mockSlotFind.mockResolvedValue([sciSlot()]);
+    mockSubFind.mockResolvedValue([
+      { slotId: "slot-sci", date: new Date(2026, 6, 2), coverTeacherId: "u-cover" },
+    ]);
+    mockUserFind.mockResolvedValue([
+      { _id: "u-sci", name: "Husne ara Rahman Fida" },
+      { _id: "u-cover", name: "Nuha Kalam Tamany" },
+    ]);
+
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.hwNotDeclared[0]).toMatchObject({ dateKey: "2026-07-09", teacherName: "Husne ara Rahman Fida" });
   });
 
   test("D-#299: an explicit nil declaration moves the cell out of the red list into hwNilDeclared", async () => {

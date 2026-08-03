@@ -318,6 +318,40 @@ describe("decideCoverSlot — override + direct-assign (D-#268)", () => {
       expect.objectContaining({ meta: expect.objectContaining({ groupType: "subjectgroup", proxyGrantId: null }) }),
     );
   });
+
+  test("a subjectgroup cover ALSO upserts a RoutineSubstitution (owner report 2026-08-03)", async () => {
+    // The regression this file previously missed: the substitution write sat INSIDE
+    // the section-only branch, so a Quran/Arabic cover recorded a StaffCoverSlot and
+    // nothing else. The class-note report kept naming the ABSENT teacher, and
+    // publishClassNote — whose cover gate reads RoutineSubstitution — refused the
+    // covering teacher outright. Only the proxy GRANT is section-only.
+    const cover = oid();
+    const slot = baseSlot({
+      groupType: "subjectgroup",
+      classId: null,
+      sectionId: null,
+      subjectId: null,
+      subjectGroupId: oid(),
+      proposedCoverTeacherId: cover,
+      status: "proposed",
+    });
+    mockSlotFindById.mockResolvedValue(slot);
+
+    await decideCoverSlot(slot._id.toString(), true, ACTOR);
+
+    expect(mockSubUpdate).toHaveBeenCalledTimes(1);
+    const [filter, update, opts] = mockSubUpdate.mock.calls[0] as [
+      { slotId: unknown; coverTeacherId: { toString(): string } },
+      { $set: { proxyGrantId: unknown } },
+      { upsert: boolean },
+    ];
+    expect(filter.slotId).toEqual(slot.routineSlotId);
+    expect(filter.coverTeacherId.toString()).toBe(cover.toString());
+    expect(opts.upsert).toBe(true);
+    // Recorded, but no scope granted — a subjectgroup has none to give.
+    expect(update.$set.proxyGrantId).toBeNull();
+    expect(mockAssignProxy).not.toHaveBeenCalled();
+  });
 });
 
 describe("needsCoverSlots — cross-leave inbox range/status filtering", () => {
