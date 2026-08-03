@@ -19,6 +19,7 @@ import {
   ENTER_CLASS_TEST_RESULT,
   RETIRE_CLASS_TEST,
   RESTORE_CLASS_TEST,
+  UPDATE_CLASS_TEST_DETAILS,
 } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Chip, Field, Loader, Notice } from "../../components/ui";
 import { STR, hwSubjectLabel, classLevelLabel, bnNum } from "../../lib/labels";
@@ -37,7 +38,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   const toast = useToast();
   // Admin viewer (Principal/Office — the house roster:manage check): sees the
   // teacher's comment texts read-only per student (owner ask 2026-07-21).
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const isAdmin = !!role && roleHasPermission(role, "roster:manage");
 
   const [testQ, refetchTest] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
@@ -52,9 +53,38 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
     return m;
   }, [results]);
 
+  // Who may correct the details: Principal/Office, or the exam's OWN teacher — the
+  // accountable subject teacher or whoever filed it (the same "mine" listMyClassTests
+  // uses). The server enforces this too; this only decides whether the button shows.
+  const canEditDetails =
+    isAdmin || (!!user && !!test && (test.teacherId === user.id || test.requestedBy === user.id));
+
   const [, enter] = useMutation(ENTER_CLASS_TEST_RESULT);
   const [, retire] = useMutation(RETIRE_CLASS_TEST);
   const [, restore] = useMutation(RESTORE_CLASS_TEST);
+  const [, updateDetails] = useMutation(UPDATE_CLASS_TEST_DETAILS);
+
+  // Edit details — admin, or the exam's OWN teacher (accountable subject teacher, or
+  // whoever filed it: the same "mine" the my-class-tests list uses).
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTotal, setEditTotal] = useState("");
+  const [editPass, setEditPass] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
+
+  async function onSaveDetails(): Promise<void> {
+    setError(null);
+    setEditBusy(true);
+    const res = await updateDetails({
+      id: testId,
+      totalMarks: editTotal.trim() ? Number(editTotal) : null,
+      passMark: editPass.trim() ? Number(editPass) : null,
+    });
+    setEditBusy(false);
+    if (res.error || !res.data?.updateClassTestDetails) return setError(friendlyError(res.error));
+    setEditOpen(false);
+    toast.show(STR.ctEditSaved, "ok");
+    refetchTest({ requestPolicy: "network-only" });
+  }
 
   // Retire / restore (Principal/Office) — see the buttons below.
   const [retireOpen, setRetireOpen] = useState(false);
@@ -204,6 +234,36 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
               onPress={() => nav.navigate("ClassTestPublish", { testId, title })}
             />
           </View>
+
+          {/* Correct a mis-typed total / pass mark / date (owner ask 2026-08-03 — a
+              32-mark paper had been recorded as 42, and there was no update path at all,
+              only a script). Open to Principal/Office AND the exam's own teacher, so a
+              teacher can fix their own typo. The server refuses once any mark exists,
+              since the total is the denominator of every percentage. */}
+          {canEditDetails ? (
+            <View style={{ marginTop: space(3) }}>
+              {editOpen ? (
+                <>
+                  <Field label={STR.ctTotalMarks} value={editTotal} onChangeText={setEditTotal} keyboardType="number-pad" />
+                  <Field label={STR.ctPassMark} value={editPass} onChangeText={setEditPass} keyboardType="number-pad" />
+                  <View style={{ flexDirection: "row", gap: space(2) }}>
+                    <Button title={STR.save} onPress={() => void onSaveDetails()} loading={editBusy} disabled={editBusy} />
+                    <Button title={STR.cancel} variant="ghost" onPress={() => setEditOpen(false)} disabled={editBusy} />
+                  </View>
+                </>
+              ) : (
+                <Button
+                  title={STR.ctEditDetails}
+                  variant="ghost"
+                  onPress={() => {
+                    setEditTotal(String(test.totalMarks));
+                    setEditPass(String(test.passMark));
+                    setEditOpen(true);
+                  }}
+                />
+              )}
+            </View>
+          ) : null}
 
           {/* Retire (Principal/Office). The domain's own "delete": the exam leaves every
               board and the Overdue counts, the record survives, and it can be restored.

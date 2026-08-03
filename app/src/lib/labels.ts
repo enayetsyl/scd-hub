@@ -3058,6 +3058,8 @@ const STR_BN = {
   ctPublishTitle: "ফলাফল প্রকাশ",
   /** Teacher view of the same button: they SUBMIT for approval, they do not publish. */
   ctSubmitShort: "জমা দিন",
+  ctEditDetails: "পরীক্ষার তথ্য সংশোধন",
+  ctEditSaved: "সংশোধন সংরক্ষিত হয়েছে",
   ctRetireExam: "পরীক্ষা প্রত্যাহার",
   ctRetireReason: "প্রত্যাহারের কারণ",
   ctRetireConfirmTitle: "পরীক্ষাটি প্রত্যাহার করবেন?",
@@ -6198,6 +6200,8 @@ const STR_EN: StrTable = {
   ctSubmittedLocked: "Pending approval — recall to edit.",
   ctPublishTitle: "Publish results",
   ctSubmitShort: "Submit",
+  ctEditDetails: "Edit exam details",
+  ctEditSaved: "Changes saved",
   ctRetireExam: "Retire exam",
   ctRetireReason: "Reason for retiring",
   ctRetireConfirmTitle: "Retire this exam?",

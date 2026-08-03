@@ -146,6 +146,7 @@ import {
   cancelRequest,
   retireClassTest,
   restoreClassTest,
+  updateClassTestDetails,
 } from "../modules/trackers/services/ClassTestService";
 import { filesRouter, FILE_ERRORS_BN } from "../routes/files";
 
@@ -705,6 +706,119 @@ describe("retireClassTest / restoreClassTest", () => {
   test("restore refuses a live exam", async () => {
     mockCtFindById.mockReturnValue(findByIdResult(makeDoc("PRINTED")));
     await expect(restoreClassTest(oid().toString(), oid().toString())).rejects.toThrow(/Only a retired/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateClassTestDetails — fixing a mis-typed total without a script (owner ask
+// 2026-08-03: a 32-mark paper recorded as 42). Owner's rules: total/pass/date only,
+// Principal/Office OR the exam's own teacher, refused once marks exist.
+// ---------------------------------------------------------------------------
+describe("updateClassTestDetails", () => {
+  const OWNER = oid();
+  const makeDoc = (over: Record<string, unknown> = {}) => ({
+    _id: oid(),
+    ctId: "CT-C3-ENG-0002",
+    academicYearId: AY_OID,
+    classLevel: 3,
+    classId: CLASS_OID,
+    sectionId: SECTION_OID,
+    subject: "ENG",
+    testNumber: 2,
+    examDate: new Date("2026-07-30"),
+    totalMarks: 42,
+    passMark: 21,
+    source: "UPLOADED_PAPER",
+    status: "PRINTED",
+    deadlineDays: 2,
+    teacherId: OWNER,
+    requestedBy: OWNER,
+    requestedAt: new Date(),
+    save: jest.fn().mockResolvedValue(undefined),
+    ...over,
+  });
+  const admin = (doc: ReturnType<typeof makeDoc>, over: Record<string, unknown> = {}) => ({
+    id: doc._id.toString(),
+    actorId: oid().toString(),
+    canManage: true,
+    ...over,
+  });
+
+  test("an admin corrects the total and pass mark; audit records before → after", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    const res = await updateClassTestDetails({ ...admin(doc), totalMarks: 32, passMark: 16 });
+    expect(res.totalMarks).toBe(32);
+    expect(res.passMark).toBe(16);
+    expect(doc.save).toHaveBeenCalled();
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventKind: "CLASS_TEST_DETAILS_EDITED",
+        meta: expect.objectContaining({
+          from: expect.objectContaining({ totalMarks: 42, passMark: 21 }),
+          to: expect.objectContaining({ totalMarks: 32, passMark: 16 }),
+        }),
+      }),
+    );
+  });
+
+  test("omitted fields are left alone", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    const res = await updateClassTestDetails({ ...admin(doc), totalMarks: 32, passMark: 16 });
+    expect(res.examDate.slice(0, 10)).toBe("2026-07-30"); // untouched
+  });
+
+  test("REFUSED once any result exists — the total is the denominator of every percentage", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(5);
+    await expect(updateClassTestDetails({ ...admin(doc), totalMarks: 32 })).rejects.toThrow(/5 result\(s\) entered/);
+    expect(doc.save).not.toHaveBeenCalled();
+  });
+
+  test("the exam's OWN teacher may edit it without roster:manage", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    const res = await updateClassTestDetails({
+      id: doc._id.toString(),
+      actorId: OWNER.toString(),
+      canManage: false,
+      totalMarks: 32,
+      passMark: 16,
+    });
+    expect(res.totalMarks).toBe(32);
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ meta: expect.objectContaining({ byOwnTeacher: true }) }),
+    );
+  });
+
+  test("a DIFFERENT teacher is refused", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    await expect(
+      updateClassTestDetails({ id: doc._id.toString(), actorId: oid().toString(), canManage: false, totalMarks: 32 }),
+    ).rejects.toThrow(/own teacher/);
+    expect(doc.save).not.toHaveBeenCalled();
+  });
+
+  test("pass mark above the total is refused", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    await expect(updateClassTestDetails({ ...admin(doc), totalMarks: 32, passMark: 40 })).rejects.toThrow(
+      /cannot be higher/,
+    );
+  });
+
+  test("a retired exam must be restored before editing", async () => {
+    const doc = makeDoc({ status: "CANCELLED" });
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    await expect(updateClassTestDetails({ ...admin(doc), totalMarks: 32 })).rejects.toThrow(/retired/);
   });
 });
 
