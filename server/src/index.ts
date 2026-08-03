@@ -181,6 +181,10 @@ const EXPOSED_DOMAIN_ERRORS = new Set<string>([
   "AttendanceReminderError", "VocabError", "LeaveError", "PerformanceError",
   "OffboardingError", "PayrollError", "MessageTemplateError", "AttendanceParseError",
   "FinanceError", "LibraryError", "RevisionError", "ClassTestResultError",
+  // Book production. The gate's REASONS are the whole point of refusing a build —
+  // masked as "Unexpected error" they are worse than useless, because the caller is
+  // told something broke when the system is working exactly as designed (D-#437).
+  "BuildGateError", "ReviewRuleError", "PatchShapeError", "AuthorChatError",
 ]);
 
 /**

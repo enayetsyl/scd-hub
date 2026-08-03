@@ -178,8 +178,20 @@ export async function chainStates(
     if (!upstream) {
       states[stage] = "FRESH"; // head of the chain — derived from nothing
     } else if (!rows[upstream]) {
-      // Derived from something the book no longer has.
-      states[stage] = "STALE";
+      // Upstream absent. TWO DIFFERENT SITUATIONS, and conflating them broke the
+      // primary workflow (D-#437):
+      //
+      //   inputFingerprint === null → this artifact never HAD an upstream. It was
+      //     produced independently, which is exactly what D-#409 blesses: the
+      //     crop/upscale/strip chain runs on a laptop and the finished COMPLIANT file
+      //     is uploaded on its own. Treating that as stale made the gate refuse a
+      //     correctly-prepared book forever.
+      //
+      //   inputFingerprint set → it WAS derived from something the book no longer
+      //     has. Genuinely stale.
+      //
+      // Staleness requires a prior relationship. No relationship, no staleness.
+      states[stage] = row.inputFingerprint == null ? "FRESH" : "STALE";
     } else if (row.inputFingerprint !== rows[upstream]!.fingerprint) {
       states[stage] = "STALE";
     } else {
