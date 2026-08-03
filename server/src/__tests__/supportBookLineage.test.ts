@@ -218,3 +218,26 @@ describe("the editorial trail (D-#411)", () => {
     expect(row.source).toBe("EXTERNAL_UPLOAD");
   });
 });
+
+describe("an independently-produced artifact is NOT stale (D-#437)", () => {
+  // The primary workflow: the crop/upscale/strip chain runs on a laptop and only the
+  // finished COMPLIANT file is uploaded (D-#409). Treating a never-existed upstream as
+  // "vanished" made the assembly gate refuse a correctly-prepared book forever — found
+  // on prod with a real 10.5 MB image from C1-BAN.
+  it("COMPLIANT uploaded alone is FRESH, and the book can build", async () => {
+    await put("L001-img-01", "COMPLIANT");
+    const lin = await slotLineage(BOOK, "L001-img-01");
+    expect(lin!.stages.APPROVED).toBe("MISSING");
+    expect(lin!.stages.COMPLIANT).toBe("FRESH");
+    expect(lin!.hasStale).toBe(false);
+    expect((await bookStaleness(BOOK)).blocksAssembly).toBe(false);
+  });
+
+  it("but an artifact whose upstream ACTUALLY vanished is still STALE", async () => {
+    // The distinction is a prior relationship: this one was derived from something,
+    // and that something is gone.
+    await fullChain("L001-img-02");
+    for (const r of mockAssets.filter((a) => a.slotId === "L001-img-02" && a.stage === "UPSCALED")) r.current = false;
+    expect(await stageState(BOOK, "L001-img-02", "COMPLIANT")).toBe("STALE");
+  });
+});
