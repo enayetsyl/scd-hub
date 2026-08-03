@@ -130,6 +130,15 @@ const STAFF_NAV: NavSection[] = [
     items: [
       {
         route: "SupportBookTab",
+        labelKey: "sbImportTitle",
+        icon: "📥",
+        screen: "BookImport",
+        // Step one of the module: the author brings book.json/patch.json in, and
+        // book:manage creates the title. Everything below is downstream of this.
+        perms: ["book:author", "book:manage"],
+      },
+      {
+        route: "SupportBookTab",
         labelKey: "sbQueueTitle",
         icon: "🖼️",
         screen: "BookImageQueue",
