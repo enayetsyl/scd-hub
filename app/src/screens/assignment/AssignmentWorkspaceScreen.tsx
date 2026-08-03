@@ -354,6 +354,7 @@ function ItemCard({
   const [showAbsent, setShowAbsent] = useState(false);
   const [showChase, setShowChase] = useState(false);
   const [showResub, setShowResub] = useState(false);
+  const [showUndoCheck, setShowUndoCheck] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
@@ -363,6 +364,8 @@ function ItemCard({
   const absentRows = group.rows.filter((r) => r.state === "ABSENT_REDELIVER");
   const chaseRows = submitRows.filter((r) => r.state === "CHASE");
   const checkedRows = group.rows.filter((r) => r.state === "CHECKED");
+  // Awaiting return AND carrying an undoable step — the "checked by mistake" list.
+  const undoCheckRows = returnRows.filter((r) => r.stampCount > 1);
 
   async function onSubmitCommit(entries: { id: string; on: boolean }[]): Promise<void> {
     setSubmitBusy(true);
@@ -595,6 +598,36 @@ function ItemCard({
                         {r.result ? ` · ${hwResultLabel(r.result)}` : ""}
                       </Body>
                       <Button title={STR.asResubmit} variant="secondary" onPress={() => void onResubmit(r.id)} loading={busyId === r.id} disabled={busyId !== null} />
+                    </View>
+                  ))
+                : null}
+            </View>
+          ) : null}
+          {/* Same gap as the homework tracker (owner report 2026-08-03): a record
+              checked by mistake sat in this step with no D-#338 undo anywhere — the
+              checking cards list SUBMITTED only, and the returned list appears just
+              after a return is committed. Collapsed by default. */}
+          {undoCheckRows.length > 0 ? (
+            <View style={{ marginTop: space(2) }}>
+              <Button
+                title={`${STR.revertFromReturn} (${bnNum(undoCheckRows.length)})`}
+                variant="ghost"
+                onPress={() => setShowUndoCheck((v) => !v)}
+              />
+              {showUndoCheck
+                ? undoCheckRows.map((r) => (
+                    <View
+                      key={r.id}
+                      style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", minHeight: 44 }}
+                    >
+                      <Body style={{ flexShrink: 1 }}>{r.studentName}</Body>
+                      <Button
+                        title={STR.revertAction}
+                        variant="ghost"
+                        onPress={() => void onUndoReturn(r.id)}
+                        loading={busyId === r.id}
+                        disabled={busyId !== null}
+                      />
                     </View>
                   ))
                 : null}
