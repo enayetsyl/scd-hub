@@ -341,19 +341,31 @@ export interface ClassTestSummaryVars {
   subject?: string | null;
   teacherId?: string | null;
   asOf?: string | null;
+}
+
+/** Reports-status ONLY. `retired` exists on no other summary field, so it lives in its
+ *  own vars type — the shared one must stay exactly what all three queries accept. */
+export interface ClassTestReportsVars extends ClassTestSummaryVars {
   /** true → list RETIRED exams instead of live ones (so a retirement can be undone). */
   retired?: boolean | null;
 }
 
-const SUMMARY_ARG_DEFS = `$academicYearId: String, $classLevel: Int, $sectionId: String, $subject: String, $teacherId: String, $asOf: String, $retired: Boolean`;
-const SUMMARY_ARG_USE = `academicYearId: $academicYearId, classLevel: $classLevel, sectionId: $sectionId, subject: $subject, teacherId: $teacherId, asOf: $asOf, retired: $retired`;
+const SUMMARY_ARG_DEFS = `$academicYearId: String, $classLevel: Int, $sectionId: String, $subject: String, $teacherId: String, $asOf: String`;
+const SUMMARY_ARG_USE = `academicYearId: $academicYearId, classLevel: $classLevel, sectionId: $sectionId, subject: $subject, teacherId: $teacherId, asOf: $asOf`;
+// `retired` exists ONLY on classTestReportsStatus (the per-test list). It must not ride
+// the SHARED constants: classTestPrincipalDashboard and classTestOverdueChase do not
+// declare it, and sending it there fails the whole document with
+// "Unknown argument retired" — which is exactly what broke the Class-test dashboard
+// in prod on 2026-08-03.
+const REPORTS_ARG_DEFS = `${SUMMARY_ARG_DEFS}, $retired: Boolean`;
+const REPORTS_ARG_USE = `${SUMMARY_ARG_USE}, retired: $retired`;
 
 export const CLASS_TEST_REPORTS_STATUS_QUERY = gql<
   { classTestReportsStatus: ClassTestReportStatusRowT[] },
-  ClassTestSummaryVars
+  ClassTestReportsVars
 >`
-  query ClassTestReportsStatus(${SUMMARY_ARG_DEFS}) {
-    classTestReportsStatus(${SUMMARY_ARG_USE}) {
+  query ClassTestReportsStatus(${REPORTS_ARG_DEFS}) {
+    classTestReportsStatus(${REPORTS_ARG_USE}) {
       testId ctId subject testNumber classLevel sectionId teacherId teacherName submittedAt publishedAt examDate deadline deadlineDays
       rosterCount enteredCount presentCount absentCount pendingCount complete overdue schoolDaysLate state
     }
