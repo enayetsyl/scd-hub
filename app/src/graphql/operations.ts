@@ -27,9 +27,15 @@ export interface MeUser {
   homeworkSupervisor: boolean;
 }
 
-export const ME_QUERY = gql<{ me: MeUser | null }, NoVars>`
+/** `myPermissions` rides the SAME round-trip as `me` — it is needed at exactly the
+ *  moment `me` is (boot, and again after login), and a second request for it would just
+ *  be a second chance to be out of sync. Navigation has historically gated on the role
+ *  TEMPLATE; that misses per-user grants (AC-1), which is how everyone but the Principal
+ *  reaches the book-production screens (D-#405). */
+export const ME_QUERY = gql<{ me: MeUser | null; myPermissions: string[] }, NoVars>`
   query Me {
     me { id email phone role name active homeworkSupervisor }
+    myPermissions
   }
 `;
 
