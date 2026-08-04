@@ -22,14 +22,23 @@ const fs = require('fs');
 const path = require('path');
 
 /* ---- shared script-guard allowlist (SCHEMA check 8 / same invariant) ---- */
-/* Basic Latin, Latin-1, common punctuation, Bengali U+0980–09FF,
+/* Basic Latin, Latin-1, common punctuation, en/em dash, Bengali U+0980–09FF,
    danda/double-danda U+0964–0965, ZWNJ/ZWJ, plus structural whitespace.
-   Anything else (Arabic, Devanagari digits, CJK, arrows, em-dash, emoji) FAILS.
-   Rule: fix the text, never widen the allowlist. */
+   Anything else (Arabic, Devanagari digits, CJK, arrows, emoji) FAILS — those are
+   characters the embedded faces genuinely lack, and a .notdef box reaches print
+   silently because the build still succeeds.
+
+   MUST STAY IDENTICAL to the app's copy in
+   server/src/modules/support-book/services/validator/scriptGuard.ts — a string that
+   passes one has to pass the other. Both change together or neither does.
+
+   D-#442: en/em dash admitted. They were excluded as house style, not capability —
+   all four faces in fonts/ carry U+2013 and U+2014 (cmap-checked, not assumed). */
 function isAllowedCodepoint(cp) {
   if (cp === 0x09 || cp === 0x0a || cp === 0x0d) return true;        // tab/newline
   if (cp >= 0x20 && cp <= 0x7e) return true;                          // Basic Latin
   if (cp >= 0xa0 && cp <= 0xff) return true;                          // Latin-1 Supplement
+  if (cp === 0x2013 || cp === 0x2014) return true;                    // – —  (D-#442)
   if (cp === 0x0964 || cp === 0x0965) return true;                    // danda / double danda
   if (cp >= 0x0980 && cp <= 0x09ff) return true;                      // Bengali block
   if (cp === 0x200c || cp === 0x200d) return true;                    // ZWNJ / ZWJ

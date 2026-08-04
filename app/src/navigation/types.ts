@@ -390,6 +390,7 @@ export type AdminStackParamList = {
 // here is param-free, so the stack's initial route is safe whichever one is first.
 export type SupportBookStackParamList = {
   BookImport: undefined;
+  BookPolicy: undefined;
   BookImageQueue: undefined;
   BookReview: undefined;
   BookEscalationInbox: undefined;

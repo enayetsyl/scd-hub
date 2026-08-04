@@ -791,3 +791,21 @@ export async function pickJsonFile(): Promise<PickedJson | null> {
   if (!res.ok) throw new FileUploadError(`could not read ${asset.name}`);
   return { name: asset.name, text: await res.text() };
 }
+
+/** Pick one text file (markdown or json) and return its contents — the governance
+ *  documents are plain text bodies, versioned server-side (D-#403). */
+export async function pickTextFile(): Promise<PickedJson | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    // Governance docs are .md; the letter inventory is .json. `*/*` because a
+    // Markdown file's reported MIME is inconsistent across platforms and a filter
+    // that hides the file you need is worse than no filter.
+    type: "*/*",
+    multiple: false,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  const asset = picked.assets[0];
+  const res = await fetch(asset.uri);
+  if (!res.ok) throw new FileUploadError(`could not read ${asset.name}`);
+  return { name: asset.name, text: await res.text() };
+}

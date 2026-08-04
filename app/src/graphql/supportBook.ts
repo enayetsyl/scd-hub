@@ -399,3 +399,44 @@ export const RESOLVE_SUPPORT_BOOK_COMMENT = gql`
     resolveSupportBookComment(commentId: $commentId, resolutionNote: $resolutionNote) { ${COMMENT_FIELDS} }
   }
 `;
+
+// ---------------------------------------------------------------------------
+// SB-1: the governance policy set (D-#403)
+// ---------------------------------------------------------------------------
+
+export interface SupportBookPolicyDocT {
+  docKey: string;
+  version: number;
+}
+
+/** `missing` names documents the set EXPECTED and did not find. It is surfaced, never
+ *  swallowed: a patch validated against an incomplete set passed a weaker test than
+ *  the author thinks it did. */
+export interface SupportBookPolicySetT {
+  hash: string;
+  missing: string[];
+  docs: SupportBookPolicyDocT[];
+}
+
+export const SUPPORT_BOOK_POLICY_SET = gql`
+  query SupportBookPolicySet($bookId: String!) {
+    supportBookPolicySet(bookId: $bookId) {
+      hash
+      missing
+      docs { docKey version }
+    }
+  }
+`;
+
+/** Activating supersedes the prior version; it never deletes one, so a decision stays
+ *  reproducible against the policy AS IT STOOD (D-#403). `bookId` is required for
+ *  LETTER_INVENTORY (per-book) and must be omitted for the programme-wide docs. */
+export const ACTIVATE_SUPPORT_BOOK_POLICY = gql`
+  mutation ActivateSupportBookPolicy($docKey: String!, $body: String!, $bookId: String) {
+    activateSupportBookPolicy(docKey: $docKey, body: $body, bookId: $bookId) {
+      hash
+      missing
+      docs { docKey version }
+    }
+  }
+`;
