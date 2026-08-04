@@ -154,6 +154,7 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
   // The filter runs BEFORE SubjectFold, so the taught/not-taught fold (D-#388) and
   // its read-only oversight rendering still apply to whatever is left.
   const [subjectFilter, setSubjectFilter] = useState<string>(ANY_SUBJECT);
+  const [subjectOpen, setSubjectOpen] = useState(false);
   // Count CARDS (hwItems), not records — "English (৯)" means nine homework cards,
   // which is what the chip is narrowing to. Counted over `all`, so a subject whose
   // only cards are finished still gets a chip.
@@ -242,22 +243,43 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
             while scrolling a long deck. Hidden when the section has one subject in play. */}
         {subjectOptions.length > 1 ? (
           <View style={{ marginTop: space(1) }}>
-            <Muted>{STR.subject}</Muted>
-            <ChipRow>
-              <Chip
-                label={STR.all}
-                selected={activeSubject === ANY_SUBJECT}
-                onPress={() => setSubjectFilter(ANY_SUBJECT)}
-              />
-              {subjectOptions.map((o) => (
+            {/* Collapsed by default — the assignment workspace's twin (owner ask
+                2026-08-03). The header keeps the ACTIVE subject visible while shut, so a
+                filter can never silently hide work; picking one closes it again. */}
+            <Pressable
+              onPress={() => setSubjectOpen((v) => !v)}
+              accessibilityRole="button"
+              style={{ flexDirection: "row", alignItems: "center", minHeight: 36 }}
+              hitSlop={8}
+            >
+              <Muted>
+                {subjectOpen ? "▾" : "▸"} {STR.subject}
+                {activeSubject === ANY_SUBJECT ? "" : `: ${hwSubjectLabel(activeSubject)}`}
+              </Muted>
+            </Pressable>
+            {subjectOpen ? (
+              <ChipRow>
                 <Chip
-                  key={o.subject}
-                  label={`${hwSubjectLabel(o.subject)} (${bnNum(o.count)})`}
-                  selected={activeSubject === o.subject}
-                  onPress={() => setSubjectFilter(o.subject)}
+                  label={STR.all}
+                  selected={activeSubject === ANY_SUBJECT}
+                  onPress={() => {
+                    setSubjectFilter(ANY_SUBJECT);
+                    setSubjectOpen(false);
+                  }}
                 />
-              ))}
-            </ChipRow>
+                {subjectOptions.map((o) => (
+                  <Chip
+                    key={o.subject}
+                    label={`${hwSubjectLabel(o.subject)} (${bnNum(o.count)})`}
+                    selected={activeSubject === o.subject}
+                    onPress={() => {
+                      setSubjectFilter(o.subject);
+                      setSubjectOpen(false);
+                    }}
+                  />
+                ))}
+              </ChipRow>
+            ) : null}
           </View>
         ) : null}
       </View>
