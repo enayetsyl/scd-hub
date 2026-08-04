@@ -46,6 +46,7 @@ import {
 } from "../../graphql/operations";
 import { CLASS_TEST_REPORTS_STATUS_QUERY } from "../../graphql/classTest";
 import { HwPendingSheet, type HwPendingTarget } from "../../components/HwPendingSheet";
+import { useSectionContext } from "../../state/SectionContext";
 import { Screen, H1, H2, Body, Muted, Card, Badge, Button, EmptyState, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { Icon, type IconName } from "../../components/Icon";
@@ -149,6 +150,8 @@ export default function TodayScreen(): React.ReactElement {
     pause: !canTrackers,
   });
   const myHwLc = hwLcQ.data?.myHomeworkLifecycle ?? null;
+  // The workspace reads its class/section from here, so a drill row can point it.
+  const { setSection } = useSectionContext();
   const [hwLcTarget, setHwLcTarget] = useState<HwPendingTarget | null>(null);
   const [hwLcSheetOpen, setHwLcSheetOpen] = useState(false);
   const openHwLcDrill = (stage: HwPendingStage, label: string): void => {
@@ -801,6 +804,22 @@ export default function TodayScreen(): React.ReactElement {
         classLevel={null}
         subject={null}
         onClose={() => setHwLcSheetOpen(false)}
+        // Tapping a row opens the workspace on THAT card's class/section (owner ask
+        // 2026-08-04). The workspace reads the shared SectionContext, so the selection
+        // is set first and the sheet closed — otherwise it would open on whatever class
+        // was last looked at, which is exactly the guesswork this drill removes.
+        onOpenCard={(g) => {
+          setSection({
+            classId: g.classId,
+            sectionId: g.sectionId,
+            classLevel: g.classLevel,
+            classNameBn: null,
+            sectionCode: null,
+            sectionNameBn: g.sectionNameBn,
+          });
+          setHwLcSheetOpen(false);
+          nav.navigate("HomeworkTab", { screen: "HomeworkWorkspace", initial: false });
+        }}
       />
     </Screen>
   );

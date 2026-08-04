@@ -2708,6 +2708,11 @@ export interface HwPendingStudentT {
   state: string;
   daysWaiting: number;
   chaseCount: number;
+  /** Grouping + navigation for the drill sheet (owner ask 2026-08-04). */
+  hwItemId: string;
+  dateGiven: string;
+  sectionId: string;
+  classId: string;
 }
 export const HW_LIFECYCLE_REPORT_QUERY = gql<
   { homeworkLifecycleReport: HwLifecycleReportT },
@@ -2760,6 +2765,10 @@ export const HW_LIFECYCLE_PENDING_QUERY = gql<
       state
       daysWaiting
       chaseCount
+      hwItemId
+      dateGiven
+      sectionId
+      classId
     }
   }
 `;

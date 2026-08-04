@@ -125,11 +125,18 @@ export interface HwPendingStudent {
   /** Whole days sitting in the current state. */
   daysWaiting: number;
   chaseCount: number;
+  /** Grouping + navigation (owner ask 2026-08-04): the drill lists DATE + CLASS and
+   *  opens the matching workspace card, instead of a flat roll of names and phones. */
+  hwItemId: string;
+  dateGiven: string;
+  sectionId: string;
+  classId: string;
 }
 
 interface SectionMeta {
   nameBn: string;
   classLevel: number;
+  classId: string;
 }
 
 /** Build the HomeworkItem filter shared by the report + the drill (D-#350). */
@@ -298,9 +305,13 @@ export async function homeworkLifecycleReport(
     : [];
   const levelOf = new Map(classes.map((c) => [c._id.toString(), c.level]));
   const metaOf = new Map<string, SectionMeta>(
-    sections.map((s) => [s._id.toString(), { nameBn: s.nameBn, classLevel: levelOf.get(s.classId.toString()) ?? 0 }]),
+    sections.map((s) => [
+      s._id.toString(),
+      { nameBn: s.nameBn, classLevel: levelOf.get(s.classId.toString()) ?? 0, classId: s.classId.toString() },
+    ]),
   );
-  const meta = (sectionId: string): SectionMeta => metaOf.get(sectionId) ?? { nameBn: sectionId, classLevel: 0 };
+  const meta = (sectionId: string): SectionMeta =>
+    metaOf.get(sectionId) ?? { nameBn: sectionId, classLevel: 0, classId: "" };
 
   const teachers = await User.find({ _id: { $in: [...teacherAcc.keys()] } }).select("name").lean();
   const teacherNameOf = new Map(teachers.map((u) => [u._id.toString(), u.name]));
@@ -369,7 +380,12 @@ export async function homeworkLifecyclePending(
     (it) => (accById.get(it._id.toString()) ?? it.declaredBy.toString()) === teacherId,
   );
   if (items.length === 0) return [];
-  const subjectOf = new Map(items.map((i) => [i._id.toString(), { subject: i.subject, classLevel: i.classLevel }]));
+  const subjectOf = new Map(
+    items.map((i) => [
+      i._id.toString(),
+      { subject: i.subject, classLevel: i.classLevel, dateGiven: new Date(i.dateGiven).toISOString() },
+    ]),
+  );
 
   const recFilter: Record<string, unknown> = {
     hwItemId: { $in: items.map((i) => i._id) },
@@ -399,7 +415,10 @@ export async function homeworkLifecyclePending(
     : [];
   const levelOf = new Map(classes.map((c) => [c._id.toString(), c.level]));
   const sectionMeta = new Map<string, SectionMeta>(
-    sections.map((s) => [s._id.toString(), { nameBn: s.nameBn, classLevel: levelOf.get(s.classId.toString()) ?? 0 }]),
+    sections.map((s) => [
+      s._id.toString(),
+      { nameBn: s.nameBn, classLevel: levelOf.get(s.classId.toString()) ?? 0, classId: s.classId.toString() },
+    ]),
   );
   const studentOf = new Map(students.map((s) => [s._id.toString(), s]));
 
@@ -436,6 +455,10 @@ export async function homeworkLifecyclePending(
       state: r.state,
       daysWaiting,
       chaseCount: r.chaseCount ?? 0,
+      hwItemId: r.hwItemId.toString(),
+      dateGiven: it?.dateGiven ?? "",
+      sectionId: r.sectionId.toString(),
+      classId: sm?.classId ?? "",
     };
   });
 
