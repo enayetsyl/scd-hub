@@ -10,7 +10,6 @@ import React from "react";
 import { View } from "react-native";
 import { useQuery, useMutation } from "urql";
 import { CONDUCT_STAGES } from "@scd/shared";
-import { roleHasPermission } from "@scd/shared";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
   STAFF_CONDUCT_RECORDS_QUERY,
@@ -53,8 +52,8 @@ function statusTone(s: string): "info" | "ok" | "muted" | "danger" {
 export default function StaffConductScreen({ route }: Props): React.ReactElement {
   const { staffProfileId } = route.params;
   const { confirmAction } = useConfirm();
-  const { role } = useAuth();
-  const canFinalize = !!role && roleHasPermission(role, "performance:signoff");
+  const { role, can } = useAuth();
+  const canFinalize = can("performance:signoff");
 
   // New-step form
   const [stage, setStage] = React.useState<string | null>(null);

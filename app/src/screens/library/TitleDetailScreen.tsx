@@ -7,7 +7,6 @@ import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import {
   BOOK_TITLE_QUERY,
   AM_I_LIBRARIAN_QUERY,
@@ -44,12 +43,12 @@ const COPY_TONE: Record<string, "ok" | "warn" | "danger" | "muted" | "info"> = {
 
 export default function TitleDetailScreen({ route }: Props): React.ReactElement {
   const { titleId } = route.params;
-  const { role } = useAuth();
+  const { role, can } = useAuth();
   const { confirmAction } = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
-  const canManage = !!role && roleHasPermission(role, "library:manage");
+  const canManage = can("library:manage");
   const [librarianQ] = useQuery({ query: AM_I_LIBRARIAN_QUERY });
   const isLibrarian = canManage || (librarianQ.data?.amILibrarian ?? false);
 

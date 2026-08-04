@@ -7,7 +7,7 @@ import React, { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
-import { ROLES, roleHasPermission } from "@scd/shared";
+import { ROLES } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import { CREATE_USER, USERS_QUERY } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
@@ -21,8 +21,8 @@ type Props = NativeStackScreenProps<AdminStackParamList, "UserList">;
 const STAFF_ROLES = ROLES.filter((r) => r !== "GUARDIAN");
 
 export default function UserListScreen(_props: Props): React.ReactElement {
-  const { user } = useAuth();
-  const canManage = !!user && roleHasPermission(user.role as Role, "user:manage");
+  const { user, can } = useAuth();
+  const canManage = !!user && can("user:manage");
   const [{ data, fetching, error: usersError }, refetchUsers] = useQuery({
     query: USERS_QUERY,
     pause: !canManage,

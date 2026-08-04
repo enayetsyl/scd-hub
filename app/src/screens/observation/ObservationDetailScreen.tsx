@@ -13,7 +13,6 @@ import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation, type CombinedError } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import {
   CLASSROOM_OBSERVATION_QUERY,
   OBSERVATION_RECORDING_QUERY,
@@ -68,9 +67,9 @@ const RATE_OPTS = [1, 2, 3, 4, 5].map((n) => ({ label: String(n), value: String(
 
 export default function ObservationDetailScreen({ route, navigation }: Props): React.ReactElement {
   const { observationId } = route.params;
-  const { user, role } = useAuth();
-  const canUpload = !!role && roleHasPermission(role, "observation:upload");
-  const canManage = !!role && roleHasPermission(role, "observation:manage");
+  const { user, role, can } = useAuth();
+  const canUpload = can("observation:upload");
+  const canManage = can("observation:manage");
 
   const [obsQ, refetchObs] = useQuery({ query: CLASSROOM_OBSERVATION_QUERY, variables: { id: observationId } });
   const obs = obsQ.data?.classroomObservation ?? null;

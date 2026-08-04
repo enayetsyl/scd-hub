@@ -10,7 +10,6 @@ import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import {
   MY_CONVERSATIONS_QUERY,
   OPEN_DIRECT_CONVERSATION,
@@ -25,9 +24,9 @@ import { space } from "../../theme/tokens";
 type Props = NativeStackScreenProps<ChatStackParamList, "NewChat">;
 
 export default function NewChatScreen({ navigation }: Props): React.ReactElement {
-  const { user, role } = useAuth();
+  const { user, role, can } = useAuth();
   const myUserId = user?.id ?? "";
-  const canManage = !!role && roleHasPermission(role, "chat:manage");
+  const canManage = can("chat:manage");
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);

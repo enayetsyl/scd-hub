@@ -28,7 +28,6 @@ import { Screen, Card, Body, Muted, Button, Badge, Field, Loader, Notice } from 
 import { STR, hwSubjectLabel, classLevelLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
-import { roleHasPermission } from "@scd/shared";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
 
@@ -37,8 +36,8 @@ type Props = NativeStackScreenProps<ClassTestStackParamList, "ClassTestPublish">
 export default function ClassTestPublishScreen({ route }: Props): React.ReactElement {
   const { testId, title } = route.params;
   // CT-8 role split: teacher submits; Office/Principal (roster:manage) approve + send WhatsApp.
-  const { role } = useAuth();
-  const isAdmin = !!role && roleHasPermission(role, "roster:manage");
+  const { role, can } = useAuth();
+  const isAdmin = can("roster:manage");
 
   const [testQ] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
   const test = testQ.data?.classTest ?? null;

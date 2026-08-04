@@ -9,7 +9,6 @@ import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { roleHasPermission } from "@scd/shared";
 import { useQuery } from "urql";
 import { MY_REVISION_GROUPS_QUERY } from "../../graphql/revision";
 import { Screen, Card, Body, Muted, Button, Badge, EmptyState } from "../../components/ui";
@@ -33,8 +32,8 @@ export function mostRecentSaturday(from: Date = new Date()): string {
 
 export default function RevisionHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
-  const { role } = useAuth();
-  const canManage = !!role && roleHasPermission(role, "roster:manage");
+  const { role, can } = useAuth();
+  const canManage = can("roster:manage");
   const [date, setDate] = useState(mostRecentSaturday());
 
   const [groupsQ, refetchGroups] = useQuery({ query: MY_REVISION_GROUPS_QUERY });

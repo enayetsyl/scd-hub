@@ -14,7 +14,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Linking, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { COMMENT_TYPES, COMMENT_SENTIMENTS, roleHasPermission } from "@scd/shared";
+import { COMMENT_TYPES, COMMENT_SENTIMENTS } from "@scd/shared";
 import { useAuth } from "../../auth/AuthContext";
 import {
   STUDENT_COMMENTS_QUERY,
@@ -51,10 +51,10 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
   const { studentId, studentName, commentId: initialCommentId } = route.params;
   // Delivery to guardians is a Principal/Office action (D-#264); teachers author + edit
   // only — comments are released from the review dashboard.
-  const { role } = useAuth();
+  const { role, can } = useAuth();
   const { confirmAction } = useConfirm();
   const toast = useToast();
-  const canDeliver = !!role && roleHasPermission(role, "roster:manage");
+  const canDeliver = can("roster:manage");
 
   // The edit/deliver path needs the live comment row. Load it from BOTH the section
   // timeline (`studentComments` — scoped; serves Principal/Office + section-scoped

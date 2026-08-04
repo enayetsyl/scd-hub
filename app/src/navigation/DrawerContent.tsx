@@ -17,7 +17,6 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { DrawerContentScrollView, type DrawerContentComponentProps } from "@react-navigation/drawer";
 import { useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import type { Role } from "@scd/shared";
 
 import { STR } from "../lib/labels";
@@ -226,7 +225,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   // device completes — create / mark printed / mark delivered / cancel — even though
   // the counts payload itself carries no PrintRequest object. The 60s poll remains
   // only for jobs arriving from OTHER devices; teachers (no roster:manage) never ask.
-  const isPrintOperator = !!role && roleHasPermission(role as Role, "roster:manage");
+  const isPrintOperator = can("roster:manage");
   const countsContext = React.useMemo(() => ({ additionalTypenames: ["PrintRequest"] }), []);
   const [countsQ, refetchCounts] = useQuery({
     query: PRINT_QUEUE_COUNTS,
@@ -254,7 +253,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   // yellow = papers in the teacher's review (IN_REVIEW). Office/Principal see the
   // whole pipeline; a teacher sees their own (server-scoped). Same cache-nudge on
   // any CT-question mutation via the shared typename.
-  const canClassTestBadge = !!role && (roleHasPermission(role as Role, "roster:manage") || roleHasPermission(role as Role, "tracker:write"));
+  const canClassTestBadge = !!role && (can("roster:manage") || can("tracker:write"));
   const ctCountsContext = React.useMemo(() => ({ additionalTypenames: ["CtQuestionRequest"] }), []);
   const [ctCountsQ, refetchCtCounts] = useQuery({
     query: CT_QUESTION_COUNTS,
@@ -271,7 +270,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
 
   // Owner 2026-07-26: Staff drawer badge — leave applications awaiting approval
   // (Principal/Office, leave:manage). Refreshes on any StaffLeaveApplication mutation.
-  const canLeaveBadge = !!role && roleHasPermission(role as Role, "leave:manage");
+  const canLeaveBadge = can("leave:manage");
   const leaveCountContext = React.useMemo(() => ({ additionalTypenames: ["StaffLeaveApplication"] }), []);
   const [leaveCountQ, refetchLeaveCount] = useQuery({
     query: STAFF_LEAVE_PENDING_COUNT,
@@ -289,7 +288,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   // Owner 2026-07-26: Comments drawer badge — undelivered comments awaiting
   // Principal/Office review (roster:manage), mirroring Print. Refreshes on any
   // StudentComment mutation (record / edit / deliver).
-  const canCommentBadge = !!role && roleHasPermission(role as Role, "roster:manage");
+  const canCommentBadge = can("roster:manage");
   const commentCountContext = React.useMemo(() => ({ additionalTypenames: ["StudentComment"] }), []);
   const [commentCountQ, refetchCommentCount] = useQuery({
     query: COMMENT_REVIEW_COUNT,
@@ -309,7 +308,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   // (observation:upload). Any observation participant (observation:read) asks; each
   // count is server-scoped and 0 without the matching permission. Refreshes on any
   // ClassroomObservation mutation.
-  const canObservationBadge = !!role && roleHasPermission(role as Role, "observation:read");
+  const canObservationBadge = can("observation:read");
   const obsCountContext = React.useMemo(() => ({ additionalTypenames: ["ClassroomObservation"] }), []);
   const [obsCountQ, refetchObsCount] = useQuery({
     query: OBSERVATION_COUNTS,

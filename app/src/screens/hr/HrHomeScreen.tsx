@@ -7,7 +7,6 @@
  */
 import React from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { roleHasPermission } from "@scd/shared";
 import type { HrStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card } from "../../components/ui";
 import { STR } from "../../lib/labels";
@@ -17,11 +16,11 @@ import { space } from "../../theme/tokens";
 type Props = NativeStackScreenProps<HrStackParamList, "HrHome">;
 
 export default function HrHomeScreen({ navigation }: Props): React.ReactElement {
-  const { role } = useAuth();
-  const canLeaveManage = !!role && roleHasPermission(role, "leave:manage");
-  const canPayroll = !!role && roleHasPermission(role, "payroll:manage");
-  const canPerformance = !!role && roleHasPermission(role, "performance:manage");
-  const canOffboarding = !!role && roleHasPermission(role, "staff:manage");
+  const { role, can } = useAuth();
+  const canLeaveManage = can("leave:manage");
+  const canPayroll = can("payroll:manage");
+  const canPerformance = can("performance:manage");
+  const canOffboarding = can("staff:manage");
   const showAdmin = canLeaveManage || canPayroll || canPerformance || canOffboarding;
 
   return (

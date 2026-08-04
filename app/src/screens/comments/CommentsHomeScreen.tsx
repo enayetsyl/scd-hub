@@ -12,7 +12,6 @@ import { useNavigation } from "@react-navigation/native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import { MY_STUDENT_COMMENTS_QUERY } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -25,11 +24,11 @@ type Nav = NativeStackNavigationProp<CommentsStackParamList>;
 
 export default function CommentsHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
-  const { role } = useAuth();
-  const canComments = !!role && roleHasPermission(role, "tracker:read");
-  const canMeetings = !!role && roleHasPermission(role, "roster:manage");
+  const { role, can } = useAuth();
+  const canComments = can("tracker:read");
+  const canMeetings = can("roster:manage");
   // Principal/Office review + release comments to guardians (D-#264).
-  const canReview = !!role && roleHasPermission(role, "roster:manage");
+  const canReview = can("roster:manage");
 
   const [mineQ, refetchMine] = useQuery({ query: MY_STUDENT_COMMENTS_QUERY, variables: {}, pause: !canComments });
   const mine = mineQ.data?.myStudentComments ?? [];

@@ -6,13 +6,12 @@
  * list. The server re-gates every action either way.
  */
 import React from "react";
-import { roleHasPermission } from "@scd/shared";
 import { useAuth } from "../../auth/AuthContext";
 import VideoReviewAdminScreen from "./VideoReviewAdminScreen";
 import MyVideoReviewsScreen from "./MyVideoReviewsScreen";
 
 export default function FreeMixingHomeScreen(): React.ReactElement {
-  const { role } = useAuth();
-  const canUpload = !!role && roleHasPermission(role, "observation:upload");
+  const { role, can } = useAuth();
+  const canUpload = can("observation:upload");
   return canUpload ? <VideoReviewAdminScreen /> : <MyVideoReviewsScreen />;
 }

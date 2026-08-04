@@ -14,7 +14,6 @@ import React, { useState } from "react";
 import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import {
   TEACHING_GRANTS_QUERY,
   GRANT_TEACHING,
@@ -41,7 +40,7 @@ type Props = NativeStackScreenProps<AdminStackParamList, "AssignSubjectTeacher">
 export default function AssignSubjectTeacherScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
   const { confirmAction } = useConfirm();
-  const { role } = useAuth();
+  const { role, can } = useAuth();
   const colors = useColors();
   const [subjectId, setSubjectId] = useState("");
   const [teacherId, setTeacherId] = useState("");
@@ -72,7 +71,7 @@ export default function AssignSubjectTeacherScreen({ navigation }: Props): React
   const routineBySubject = new Map(
     (routineQ.data?.sectionSubjectRoutineTeachers ?? []).map((r) => [r.subject, r]),
   );
-  const canEditRoutine = !!role && roleHasPermission(role, "routine:manage");
+  const canEditRoutine = can("routine:manage");
 
   const grants = grantsQ.data?.teachingGrants ?? [];
 

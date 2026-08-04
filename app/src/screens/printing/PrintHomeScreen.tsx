@@ -15,7 +15,7 @@ import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission, PRINT_COLOUR_LABELS_EN, PRINT_SIDES_LABELS_EN } from "@scd/shared";
+import { PRINT_COLOUR_LABELS_EN, PRINT_SIDES_LABELS_EN } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import {
   PRINT_QUEUE_QUERY,
@@ -60,11 +60,11 @@ const statusTone = (s: string): "ok" | "warn" | "muted" =>
 const isActiveRequest = (s: string): boolean => s === "REQUESTED" || s === "PRINTED";
 
 export default function PrintHomeScreen({ navigation }: Props): React.ReactElement {
-  const { role } = useAuth();
+  const { role, can } = useAuth();
   const toast = useToast();
   const { confirmAction } = useConfirm();
-  const isOffice = !!role && roleHasPermission(role as Role, "roster:manage");
-  const canRequest = !!role && roleHasPermission(role as Role, "tracker:write");
+  const isOffice = can("roster:manage");
+  const canRequest = can("tracker:write");
 
   const [bucket, setBucket] = useState<string>("REQUESTED");
   const [busy, setBusy] = useState(false);
