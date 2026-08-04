@@ -178,6 +178,14 @@ export type AuditEventKind =
   | "MONTHLY_REPORT_REVOKED"       // a released report withdrawn — guardian access removed (Principal only, MR-3, D-#397)
   | "MONTHLY_REPORT_GATE_OVERRIDDEN" // the coverage block overridden with a reason (Principal only, MR-3, D-#394)
   | "MONTHLY_REPORT_UNLOCKED"      // a hard-locked month reopened with a reason (Principal only, MR-3, D-#398)
+  // Answer-script archive (AR-1..AR-3, prd-script-archive §5/§7, D-#443–#447)
+  | "SCRIPT_BUNDLE_FILED"          // a test's scripts filed into a box (teacher tracker:write / Office roster:manage)
+  | "SCRIPT_BUNDLE_ACKNOWLEDGED"   // the ONE office acknowledgement stamped (additive, D-#444)
+  | "SCRIPT_BUNDLE_CHECKED_OUT"    // desk handed a bundle out — borrower + purpose in meta (Office only)
+  | "SCRIPT_BUNDLE_CHECKED_IN"     // bundle returned to a box (optionally re-boxed)
+  | "SCRIPT_BUNDLE_DISPOSED"       // outside-retention bundle disposed with a reason (D-#446; shred AFTER this row)
+  | "SCRIPT_BUNDLE_VOIDED"         // a filed-in-error bundle voided — record kept, unique slot freed
+  | "STORAGE_BOX_CHANGED"          // box create/update/retire — prior+new in meta (the LIBRARY_CATALOG_CHANGED pattern)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

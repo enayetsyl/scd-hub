@@ -279,6 +279,13 @@ export type ClassTestStackParamList = {
   ClassTestReports: undefined;
   ClassTestClassSubject: { sectionId: string; classId: string; subject: string; title: string };
   ClassTestStudentProfile: { studentId: string; studentName: string };
+  /** Answer-script archive (AR-1..AR-4, D-#443–#447) — physical storage of
+   *  class-test scripts. Lives in this stack because its audience is exactly
+   *  this tab's (teachers tracker:*, Office roster:manage). */
+  ArchiveHome: undefined;
+  ArchiveFileBundle: { testId?: string; ctId?: string };
+  ArchiveBundle: { bundleId: string };
+  ArchiveBox: { boxId: string };
 };
 
 /** Student Comments + Parents-Meeting (CM-6) — staff stack
