@@ -27,6 +27,7 @@ const mockDispatchAttendance = jest.fn();
 const mockDispatchLibrary = jest.fn();
 const mockPendingHomework = jest.fn();
 const mockSweepHomeworkDue = jest.fn();
+const mockSweepHomeworkAutoChase = jest.fn();
 const mockEmit = jest.fn();
 
 jest.mock("../modules/routine/calendar", () => ({
@@ -80,6 +81,13 @@ jest.mock("../modules/trackers/services/HomeworkReconciliationService", () => ({
 jest.mock("../modules/trackers/services/HomeworkDueSweepService", () => ({
   sweepHomeworkDue: (d: unknown) => mockSweepHomeworkDue(d),
 }));
+// The 17:30 end-of-due-day system chase (owner ruling 2026-08-04) — mocked so the
+// scheduler test stays DB-free (the sweep is covered in homeworkChaseSweep.test.ts).
+jest.mock("../modules/trackers/services/HomeworkChaseSweepService", () => ({
+  sweepHomeworkAutoChase: (d: unknown) => mockSweepHomeworkAutoChase(d),
+  HW_AUTO_CHASE_MINUTES: 17 * 60 + 30,
+  HW_AUTO_CHASE_LOOKBACK_DAYS: 3,
+}));
 // D-#314: the auto-ISSUE sweep (covered in homeworkAutoIssue.test.ts) — mocked
 // as a quiet no-op so 12:00–17:00 ticks stay DB-free here.
 jest.mock("../modules/trackers/services/HomeworkAutoIssueService", () => ({
@@ -120,7 +128,48 @@ beforeEach(() => {
   mockDispatchLibrary.mockResolvedValue({ dueSoonEmitted: 0, overdueEmitted: 0 });
   mockPendingHomework.mockResolvedValue([]);
   mockSweepHomeworkDue.mockResolvedValue(0);
+  mockSweepHomeworkAutoChase.mockResolvedValue(0);
   mockEmit.mockResolvedValue({ created: true, dedupeKey: "x" });
+});
+
+// ---------------------------------------------------------------------------
+// Homework auto-CHASE rung (17:30 end-of-due-day system chase, 2026-08-04 ruling)
+// ---------------------------------------------------------------------------
+
+describe("homework auto-chase rung", () => {
+  it("17:30 — runs the sweep once and counts the chases", async () => {
+    mockSweepHomeworkAutoChase.mockResolvedValue(3);
+    const s = await runSchedulerTick(at(17, 30));
+    expect(s.hwAutoChased).toBe(3);
+    expect(mockSweepHomeworkAutoChase).toHaveBeenCalledTimes(1);
+  });
+
+  it("before the rung (17:29) — silent", async () => {
+    const s = await runSchedulerTick(at(17, 29));
+    expect(s.hwAutoChased).toBe(0);
+    expect(mockSweepHomeworkAutoChase).not.toHaveBeenCalled();
+  });
+
+  it("stale (18:05, > 30 min past) — skipped, never backfilled that evening", async () => {
+    const s = await runSchedulerTick(at(18, 5));
+    expect(s.hwAutoChased).toBe(0);
+    expect(mockSweepHomeworkAutoChase).not.toHaveBeenCalled();
+  });
+
+  it("runOnce — a second tick in the window does not re-run the sweep", async () => {
+    mockSweepHomeworkAutoChase.mockResolvedValue(2);
+    await runSchedulerTick(at(17, 30));
+    const s2 = await runSchedulerTick(at(17, 35));
+    expect(mockSweepHomeworkAutoChase).toHaveBeenCalledTimes(1);
+    expect(s2.hwAutoChased).toBe(0);
+  });
+
+  it("OFF/HOLIDAY — the school-day gate keeps the sweep silent", async () => {
+    mockResolveDayType.mockResolvedValue("HOLIDAY");
+    const s = await runSchedulerTick(at(17, 30));
+    expect(s.hwAutoChased).toBe(0);
+    expect(mockSweepHomeworkAutoChase).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
