@@ -64,39 +64,17 @@ function collectDocuments(): Array<{ where: string; doc: DocumentNode }> {
 }
 
 /**
- * KNOWN-BAD, quarantined 2026-08-03 — the seven documents this gate found already
- * broken on its very first run. All in finance.ts, all rejected wholesale by the
- * server today (so those screens do not work in prod):
+ * EMPTY, and it should stay that way.
  *
- *   RECORD_FINANCE_POSTING        Unknown type "FeeLineInput" (server: FinanceFeeLineInput),
- *                                 Unknown type "SalaryAdjustmentInput"
- *                                 (server: FinanceSalaryAdjustmentInput), $mode nullable
- *                                 vs String!
- *   SET_FEE_SUPPORT_ALLOCATION    Unknown type "FeeCoverageInput"
- *                                 (server: FinanceCoverageItemInput)
- *   RECORD_RECONCILIATION         Unknown type "EximusClosingInput"
- *   RECORD_PROVIDER_RECEIPT       $mode nullable vs String!
- *   RECORD_QARD_IOU_ENTRY         $mode nullable vs String!
- *   LATEST_RECONCILIATION_QUERY   $date nullable vs String!
- *   RECONCILIATION_HISTORY_QUERY  $from/$to nullable vs String!
+ * This gate found seven already-broken documents on its first run (2026-08-03), all in
+ * finance.ts. They were quarantined for one commit and then fixed — every one is now
+ * valid, so the list is bare.
  *
- * They are quarantined rather than fixed here ON PURPOSE: they are money mutations,
- * pre-existing, and unrelated to the change that added this gate — they deserve their
- * own reviewed fix, not a drive-by rename buried in a feature PR.
- *
- * This is NOT a soft allowlist. The test below asserts each entry is STILL failing, so
- * a fixed document breaks the build until it is removed from this list, and the list
- * can never quietly absorb a new regression.
+ * If you are about to add an entry here: a quarantined document is a screen that does
+ * not work. Fix it instead. The test below asserts every entry is STILL failing, so a
+ * stale entry breaks the build rather than rotting quietly.
  */
-const QUARANTINE = new Set([
-  "finance.ts → RECORD_FINANCE_POSTING",
-  "finance.ts → SET_FEE_SUPPORT_ALLOCATION",
-  "finance.ts → RECORD_RECONCILIATION",
-  "finance.ts → RECORD_PROVIDER_RECEIPT",
-  "finance.ts → RECORD_QARD_IOU_ENTRY",
-  "finance.ts → LATEST_RECONCILIATION_QUERY",
-  "finance.ts → RECONCILIATION_HISTORY_QUERY",
-]);
+const QUARANTINE = new Set<string>([]);
 
 let schema: GraphQLSchema;
 let documents: Array<{ where: string; doc: DocumentNode }>;
