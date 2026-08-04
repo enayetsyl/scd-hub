@@ -3024,6 +3024,55 @@ export const BOOK_REVIEW_ROUND_STATUSES = ["ASSIGNED", "SUBMITTED", "SUPERSEDED"
 export type BookReviewRoundStatus = (typeof BOOK_REVIEW_ROUND_STATUSES)[number];
 
 
+// --- A.19 ANSWER-SCRIPT ARCHIVE ENUMS (app-native; archive module — ---------
+// prd-script-archive.md §4, D-#443–#447). NO wire-contract twin (the
+// CLASS_TEST_STATUSES precedent): physical script storage is a feature, not
+// import content — only /shared + the vocab verifier run. NO new permission
+// (D-#447): teachers file under `tracker:write`, the Office operates under
+// `roster:manage`, reads ride `tracker:read`.
+
+/** What a ScriptBundle archives (D-#443). EXAM is RESERVED vocabulary for the
+ *  term-exam module (prd-exams.md EX-7 stage 13 files into this archive when it
+ *  builds) — v1 wires CLASS_TEST only. */
+export const ARCHIVE_SOURCE_KINDS = ["CLASS_TEST", "EXAM"] as const;
+export type ArchiveSourceKind = (typeof ARCHIVE_SOURCE_KINDS)[number];
+
+export const ARCHIVE_SOURCE_KIND_LABELS_BN: Record<ArchiveSourceKind, string> = {
+  CLASS_TEST: "ক্লাস টেস্ট", EXAM: "পরীক্ষা (সাময়িক/বার্ষিক)",
+};
+export const ARCHIVE_SOURCE_KIND_LABELS_EN: Record<ArchiveSourceKind, string> = {
+  CLASS_TEST: "Class test", EXAM: "Term exam",
+};
+
+/** Bundle lifecycle (D-#444): FILED → (CHECKED_OUT ↔ FILED) → DISPOSED.
+ *  VOID = filed-in-error, terminal, record kept (the BookCopy WITHDRAWN
+ *  posture). OVERDUE is COMPUTED from the open checkout's expected return,
+ *  never stored (D-#85). */
+export const SCRIPT_BUNDLE_STATUSES = ["FILED", "CHECKED_OUT", "DISPOSED", "VOID"] as const;
+export type ScriptBundleStatus = (typeof SCRIPT_BUNDLE_STATUSES)[number];
+
+export const SCRIPT_BUNDLE_STATUS_LABELS_BN: Record<ScriptBundleStatus, string> = {
+  FILED: "সংরক্ষিত", CHECKED_OUT: "বের করা হয়েছে",
+  DISPOSED: "নিষ্পত্তি হয়েছে", VOID: "ভুলবশত — বাতিল",
+};
+export const SCRIPT_BUNDLE_STATUS_LABELS_EN: Record<ScriptBundleStatus, string> = {
+  FILED: "Filed", CHECKED_OUT: "Checked out",
+  DISPOSED: "Disposed", VOID: "Void",
+};
+
+/** Box lifecycle (D-#445). RETIRED = closed to NEW filings; contents stay
+ *  findable forever; never deleted. */
+export const STORAGE_BOX_STATUSES = ["ACTIVE", "RETIRED"] as const;
+export type StorageBoxStatus = (typeof STORAGE_BOX_STATUSES)[number];
+
+export const STORAGE_BOX_STATUS_LABELS_BN: Record<StorageBoxStatus, string> = {
+  ACTIVE: "চালু", RETIRED: "বন্ধ (সংরক্ষিত)",
+};
+export const STORAGE_BOX_STATUS_LABELS_EN: Record<StorageBoxStatus, string> = {
+  ACTIVE: "Active", RETIRED: "Retired",
+};
+
+
 // =============================================================================
 // SECTION B — RBAC: ROLES, PERMISSIONS, ROLE→PERMISSION MAP
 // =============================================================================

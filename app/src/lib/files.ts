@@ -249,6 +249,50 @@ export async function pickAndUploadClassTestPaper(): Promise<UploadedFile | null
   return { fileId: body.fileId, originalName: body.originalName, mime: body.mime };
 }
 
+/** Pick one jpeg/png photo and upload it as an archive bundle photo (AR-3 —
+ *  a photo of the bundle / its cover sheet); null if the picker is cancelled.
+ *  Throws FileUploadError with the server's Bangla message on rejection. */
+export async function pickAndUploadArchivePhoto(): Promise<UploadedFile | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: ["image/jpeg", "image/png"],
+    multiple: false,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  const asset = picked.assets[0];
+
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", {
+      uri: asset.uri,
+      name: asset.name,
+      type: asset.mimeType ?? "application/octet-stream",
+    } as unknown as Blob);
+  }
+
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/archive`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const body = (await res.json()) as { fileId: string; originalName: string; mime: string };
+  return { fileId: body.fileId, originalName: body.originalName, mime: body.mime };
+}
+
 // ---------------------------------------------------------------------------
 // Class-note attachments (server: POST /files/classnote). jpeg/png/pdf ≤ 10 MB,
 // up to 5 per note (the cap is enforced when the fileIds are bound to the note).
@@ -658,6 +702,34 @@ export const uploadHomeworkQuestionWebFiles = (files: File[], maxFiles: number):
   uploadWebFilesCapped("/files/hw", files, maxFiles, { kind: "question" });
 
 /** Fetch a stored file (with auth) and open it in a new browser tab. Web only. */
+/** Open a bundle's printable cover sheet (AR-4, GET /pdf/archive-cover/:id) in a
+ *  new tab. Web-only, like openStoredFile. */
+export async function openArchiveCoverPdf(bundleId: string): Promise<void> {
+  if (Platform.OS !== "web") {
+    throw new FileUploadError("File viewing is web-only in this build");
+  }
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/pdf/archive-cover/${encodeURIComponent(bundleId)}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    let message = `pdf request failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  if (typeof window !== "undefined") {
+    window.open(blobUrl, "_blank");
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+  }
+}
+
 export async function openStoredFile(fileId: string): Promise<void> {
   if (Platform.OS !== "web") {
     throw new FileUploadError("File viewing is web-only in this build");

@@ -2,18 +2,35 @@
  * HwPendingSheet (D-#350) — the drill-down behind a pending number on the
  * homework lifecycle report. Given a teacher + pending stage (and the report's
  * active date/class/subject filters), it lists the named students stuck at that
- * stage with roll, class·subject·section, the primary guardian phone (tap to
- * call), current state, and days waiting. Same Modal scaffold as FilterSheet.
+ * stage — grouped into ONE ROW PER CARD (owner ask 2026-08-04): date · class ·
+ * subject with the pending count, tapping straight through to that workspace card.
+ * It used to list every stuck child with a guardian phone: a long scroll you could
+ * not act on, when the question being asked is "which card do I open?". The names
+ * are one tap further in, on the card itself. Same Modal scaffold as FilterSheet.
  */
 import React from "react";
-import { Linking, Modal, Pressable, ScrollView, View } from "react-native";
+import { Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "urql";
 import { HW_LIFECYCLE_PENDING_QUERY, type HwPendingStage } from "../graphql/operations";
 import { Body, Button, H2, Muted, Loader, ErrorBanner } from "./ui";
-import { STR, bnNum, classLevelLabel, hwSubjectLabel, getActiveLang } from "../lib/labels";
+import { STR, bnNum, classLevelLabel, hwSubjectLabel, isoDateLabel } from "../lib/labels";
 import { friendlyError } from "../lib/errors";
 import { makeStyles, radius, space } from "../theme";
+
+/** One homework CARD with pending students behind it — what a drill row now is. */
+export interface HwPendingGroup {
+  key: string;
+  hwItemId: string;
+  dateGiven: string;
+  classLevel: number;
+  subject: string;
+  sectionNameBn: string | null;
+  sectionId: string;
+  classId: string;
+  count: number;
+  maxDaysWaiting: number;
+}
 
 export interface HwPendingTarget {
   teacherId: string;
@@ -30,6 +47,7 @@ export function HwPendingSheet({
   classLevel,
   subject,
   onClose,
+  onOpenCard,
 }: {
   visible: boolean;
   target: HwPendingTarget | null;
@@ -38,10 +56,11 @@ export function HwPendingSheet({
   classLevel: number | null;
   subject: string | null;
   onClose: () => void;
+  /** Open the workspace card a row stands for. Omitted → rows are not tappable. */
+  onOpenCard?: (g: HwPendingGroup) => void;
 }): React.ReactElement {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
-  const lang = getActiveLang();
 
   const [q] = useQuery({
     query: HW_LIFECYCLE_PENDING_QUERY,
@@ -58,9 +77,33 @@ export function HwPendingSheet({
   });
   const rows = q.data?.homeworkLifecyclePending ?? [];
 
-  const call = (phone: string): void => {
-    Linking.openURL(`tel:${phone}`).catch(() => undefined);
-  };
+  /** One entry per homework CARD (item), newest day first — what the teacher opens. */
+  const groups = React.useMemo<HwPendingGroup[]>(() => {
+    const byItem = new Map<string, HwPendingGroup>();
+    for (const s of rows) {
+      const g = byItem.get(s.hwItemId);
+      if (g) {
+        g.count += 1;
+        g.maxDaysWaiting = Math.max(g.maxDaysWaiting, s.daysWaiting);
+        continue;
+      }
+      byItem.set(s.hwItemId, {
+        key: s.hwItemId,
+        hwItemId: s.hwItemId,
+        dateGiven: s.dateGiven,
+        classLevel: s.classLevel,
+        subject: s.subject,
+        sectionNameBn: s.sectionNameBn,
+        sectionId: s.sectionId,
+        classId: s.classId,
+        count: 1,
+        maxDaysWaiting: s.daysWaiting,
+      });
+    }
+    return [...byItem.values()].sort(
+      (a, b) => b.dateGiven.localeCompare(a.dateGiven) || a.subject.localeCompare(b.subject),
+    );
+  }, [rows]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -77,39 +120,40 @@ export function HwPendingSheet({
             <Muted style={{ marginTop: space(2) }}>{STR.hlrNoPending}</Muted>
           ) : null}
 
+          {/*
+            ONE ROW PER CARD, not per student (owner ask 2026-08-04). The drill used to
+            be a flat roll of every stuck child with their guardian's phone — dozens of
+            rows to scroll, and nothing you could act on from here. What the teacher
+            actually wants is "which card do I open", so it now groups by the homework
+            item and shows DATE · CLASS · SUBJECT with the count, and tapping opens that
+            workspace card. The names are still one tap further in, on the card itself.
+          */}
           <ScrollView style={styles.scroll}>
-            {rows.map((s) => (
-              <View key={s.studentId} style={styles.row}>
+            {groups.map((g) => (
+              <Pressable
+                key={g.key}
+                style={styles.row}
+                onPress={() => onOpenCard?.(g)}
+                accessibilityRole="button"
+              >
                 <View style={{ flex: 1 }}>
-                  <Body style={{ fontWeight: "600" }}>
-                    {lang === "en" ? s.name : s.nameBn || s.name}
-                    {s.rollNumber ? <Muted>{`  ${STR.hlrRoll} ${bnNum(s.rollNumber)}`}</Muted> : null}
-                  </Body>
+                  <Body style={{ fontWeight: "600" }}>{isoDateLabel(g.dateGiven)}</Body>
                   <Muted>
-                    {classLevelLabel(s.classLevel)}
-                    {s.subject ? ` · ${hwSubjectLabel(s.subject)}` : ""}
-                    {s.sectionNameBn ? ` · ${s.sectionNameBn}` : ""}
+                    {classLevelLabel(g.classLevel)}
+                    {g.subject ? ` · ${hwSubjectLabel(g.subject)}` : ""}
+                    {g.sectionNameBn ? ` · ${g.sectionNameBn}` : ""}
                   </Muted>
-                  {s.guardianPhone ? (
-                    <Pressable onPress={() => call(s.guardianPhone!)} hitSlop={6}>
-                      <Muted style={styles.phone}>📞 {s.guardianPhone}</Muted>
-                    </Pressable>
-                  ) : (
-                    <Muted>{STR.hlrNoPhone}</Muted>
-                  )}
                 </View>
                 <View style={styles.wait}>
-                  <Body style={{ fontWeight: "700" }}>
-                    {bnNum(s.daysWaiting)} {STR.hlrDays}
-                  </Body>
-                  <Muted>{STR.hlrWaiting}</Muted>
-                  {s.chaseCount > 0 ? (
+                  <Body style={{ fontWeight: "700" }}>{bnNum(g.count)}</Body>
+                  <Muted>{STR.studentsWord}</Muted>
+                  {g.maxDaysWaiting > 0 ? (
                     <Muted>
-                      {STR.hlrChases} {bnNum(s.chaseCount)}
+                      {bnNum(g.maxDaysWaiting)} {STR.hlrDays}
                     </Muted>
                   ) : null}
                 </View>
-              </View>
+              </Pressable>
             ))}
           </ScrollView>
 
@@ -146,6 +190,5 @@ const useStyles = makeStyles((colors) => ({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  phone: { color: colors.primary, marginTop: 2 },
   wait: { alignItems: "flex-end", minWidth: 64 },
 }));

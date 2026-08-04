@@ -525,3 +525,27 @@ builder.mutationField("createHolidayException", (t) =>
     },
   }),
 );
+
+/**
+ * Remove a holiday by RETIRING it, never by deleting the row. Every read site
+ * (day-type resolution, the guardian portal, the pending-alert sweep, teacher load,
+ * the assignment schedule, homework reconciliation, the recon report) filters
+ * `active: true`, so flipping the flag withdraws the holiday everywhere at once
+ * while the record of what was declared — and undeclared — survives.
+ */
+builder.mutationField("retireHolidayException", (t) =>
+  t.field({
+    type: HolidayExceptionRef,
+    authScopes: { hasPermission: "routine:manage" },
+    args: { id: t.arg.string({ required: true }) },
+    resolve: async (_r, args) => {
+      const h = await HolidayException.findByIdAndUpdate(
+        args.id,
+        { active: false },
+        { new: true },
+      ).lean();
+      if (!h) throw new Error("Holiday not found");
+      return h as unknown as IHolidayException;
+    },
+  }),
+);

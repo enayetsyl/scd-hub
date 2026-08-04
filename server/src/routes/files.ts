@@ -399,6 +399,80 @@ filesRouter.post("/classtest", parseUpload, async (req: Request, res: Response) 
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/archive — a photo of an archived script bundle / its cover sheet
+// (AR-3, prd-script-archive §5). Filers upload: teacher tracker:write or Office
+// roster:manage (the /classtest gate). Images only (a photo, not a document),
+// ≤ 5 MB; the returned fileId is carried into fileScriptBundle as an
+// attachmentFileId.
+// ---------------------------------------------------------------------------
+
+export const ARCHIVE_PHOTO_MIMES = ["image/jpeg", "image/png"] as const;
+
+/** Archive-photo validation — jpeg/png ≤ 5 MB. */
+export function validateArchivePhotoUpload(mime: string, sizeBytes: number): string | null {
+  if (!(ARCHIVE_PHOTO_MIMES as readonly string[]).includes(mime)) {
+    return "শুধু JPEG বা PNG ছবি সংযুক্ত করা যাবে";
+  }
+  if (sizeBytes > MAX_FILE_BYTES) return FILE_ERRORS_BN.tooLarge;
+  if (sizeBytes <= 0) return FILE_ERRORS_BN.badMime;
+  return null;
+}
+
+filesRouter.post("/archive", parseUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (
+    !ctx.auth ||
+    (!callerHasPermission(ctx.auth, "tracker:write") && !callerHasPermission(ctx.auth, "roster:manage"))
+  ) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const rejection = validateArchivePhotoUpload(file.mimetype, file.size);
+  if (rejection) {
+    res.status(422).json({ error: rejection });
+    return;
+  }
+
+  try {
+    // Drive FIRST — only a successful upload persists metadata (GP-J8 posture).
+    const driveFileId = await uploadToDrive({
+      name: `${Date.now()}_${decodeUploadName(file.originalname)}`,
+      mime: file.mimetype,
+      data: file.buffer,
+      year: String(new Date().getFullYear()),
+      subfolder: "archive",
+    });
+    const stored = await StoredFile.create({
+      kind: "archive_photo" as StoredFileKind,
+      mime: file.mimetype,
+      sizeBytes: file.size,
+      originalName: decodeUploadName(file.originalname),
+      driveFileId, // server-internal — NOT in the response below
+      uploadedBy: ctx.auth.userId,
+    });
+    res.json({
+      fileId: stored._id.toString(),
+      kind: "archive_photo",
+      mime: stored.mime,
+      sizeBytes: stored.sizeBytes,
+      originalName: stored.originalName,
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      res.status(503).json({ error: FILE_ERRORS_BN.driveDown });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /files/classnote — staff attach a file to a class note (≤ 10 MB, jpeg/png/pdf).
 // The 5-per-note cap is enforced when attachmentIds are bound (publish/update). Read
 // gate = staff routine:read. tracker/routine publisher then carries the fileId along.
@@ -935,6 +1009,15 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       // the day it is added. The `book_` prefix is an invariant of the kind set and
       // is pinned by a test (supportBookFiles.test.ts) rather than assumed here.
       assertBookFileReadAccess(ctx, file);
+    } else if (file.kind === "archive_photo") {
+      // A bundle photo is operational staff metadata (AR-3): the class-test
+      // screens' read audience — tracker:read staff or the Office/Principal.
+      if (
+        !callerHasPermission(ctx.auth, "tracker:read") &&
+        !callerHasPermission(ctx.auth, "roster:manage")
+      ) {
+        throw new ForbiddenError(FILE_ERRORS_BN.forbidden);
+      }
     } else if (file.kind === "english_drive") {
       await assertEnglishDriveFileReadAccess(ctx, file);
     } else if (file.kind === "print_upload") {

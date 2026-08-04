@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | DRAFT v1.0 — build contract (docs-only; nothing built) |
+| **Status** | v1.0 — BUILT (AR-1..AR-4, branch `feat/script-archive`, 2026-08-04) |
 | **Owner** | Principal |
 | **Date** | 2026-08-04 |
 | **Decisions** | D-#443, D-#444, D-#445, D-#446, D-#447 (this session); builds on D-#34 (tracker ids), D-#85 (derive-never-store), D-#94/#17 (compose existing permissions), D-#143 (server-side resolution from sectionId), D-#145 (no schoolId), D-#193/#211 (AC-1 per-user grants), D-#441 (`hasAnyPermission` scope for OR-gates), ADR-008 (audit); precedents: library D-#81–#84 (accession/shelf/desk), print-queue D-#281, `ClassTestQuestionRequest.rounds[]` (embedded append-only log) |

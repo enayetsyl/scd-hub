@@ -441,8 +441,12 @@ export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSu
 
 export async function unwrittenClassNoteSlots(date: Date, teacherId?: string): Promise<IRoutineSlot[]> {
   const dayOfWeek = DAYS_OF_WEEK[date.getDay()];
+  // The teacher filter is applied AFTER the cover overlay below, not in the query —
+  // on a covered day the person who owes the note is the one who taught it, not the
+  // one the slot names (owner report 2026-08-03). Filtering in the query would both
+  // miss the periods a teacher covered and wrongly keep the ones they were away for.
   const slots = (await RoutineSlot.find({
-    teacherId: teacherId ?? { $exists: true, $ne: null },
+    teacherId: { $exists: true, $ne: null },
     dayOfWeek,
     active: true,
     isBreak: false,
@@ -454,9 +458,28 @@ export async function unwrittenClassNoteSlots(date: Date, teacherId?: string): P
 
   const { start, end } = dayBounds(date);
   const slotIds = slots.map((s) => s._id);
+
+  const subs = await RoutineSubstitution.find({
+    active: true,
+    slotId: { $in: slotIds },
+    date: { $gte: start, $lte: end },
+  })
+    .select("slotId coverTeacherId")
+    .lean();
+  const coverBySlot = new Map(subs.map((su) => [su.slotId.toString(), su.coverTeacherId]));
+
   const notes = await ClassNote.find({ slotId: { $in: slotIds }, date: { $gte: start, $lte: end } }).select("slotId").lean();
   const noted = new Set(notes.map((n) => n.slotId.toString()));
-  return slots.filter((s) => !noted.has(s._id.toString()));
+
+  return slots
+    .filter((s) => !noted.has(s._id.toString()))
+    // Rewrite teacherId to WHO ACTUALLY TAUGHT IT, so every caller — the push ladder,
+    // the in-app prompt — addresses the right person from one place.
+    .map((s) => {
+      const cover = coverBySlot.get(s._id.toString());
+      return cover ? ({ ...s, teacherId: cover } as IRoutineSlot) : s;
+    })
+    .filter((s) => (teacherId ? s.teacherId?.toString() === teacherId : true));
 }
 
 /** The teacher's slots on a date that still need a class note (R5.3 reminder). */

@@ -43,8 +43,12 @@ jest.mock("../modules/routine/models/RoutineSlot", () => ({
 }));
 
 const mockSubFindOne = jest.fn();
+const mockSubFind = jest.fn();
 jest.mock("../modules/routine/models/RoutineSubstitution", () => ({
-  RoutineSubstitution: { findOne: () => ({ lean: () => mockSubFindOne() }) },
+  RoutineSubstitution: {
+    findOne: () => ({ lean: () => mockSubFindOne() }),
+    find: () => ({ select: () => ({ lean: () => mockSubFind() }) }),
+  },
 }));
 
 const mockNoteUpdateOne = jest.fn();
@@ -72,6 +76,7 @@ const DATE = new Date(2026, 5, 2, 9, 0, 0); // a 2026 date
 beforeEach(() => {
   jest.clearAllMocks();
   mockSubFindOne.mockResolvedValue(null);
+  mockSubFind.mockResolvedValue([]);
   mockNoteFindOne.mockResolvedValue({ _id: oid(), taughtSummaryBn: "x" });
   mockNoteFind.mockResolvedValue([]);
 });
@@ -176,10 +181,31 @@ describe("R5.3 publishClassNote", () => {
 
 describe("R5.3 myClassNotePrompts", () => {
   test("returns the teacher's slots that still need a note", async () => {
-    const s1 = oid(), s2 = oid();
-    mockSlotFind.mockResolvedValue([{ _id: s1 }, { _id: s2 }]);
+    const me = oid(), s1 = oid(), s2 = oid();
+    mockSlotFind.mockResolvedValue([
+      { _id: s1, teacherId: me },
+      { _id: s2, teacherId: me },
+      { _id: oid(), teacherId: oid() }, // someone else's period
+    ]);
     mockNoteFind.mockResolvedValue([{ slotId: s1 }]); // s1 already has a note
-    const prompts = await myClassNotePrompts(DATE, oid().toString());
+    const prompts = await myClassNotePrompts(DATE, me.toString());
     expect(prompts.map((s) => s._id.toString())).toEqual([s2.toString()]);
+  });
+
+  // COVER OVERLAY (owner report 2026-08-03) — the prompt goes to whoever taught the
+  // period, so it must swap BOTH ways on a covered day. This is the single seam the
+  // push ladder and the in-app prompt share.
+  test("a period I covered is prompted to me, and my covered-away period is not", async () => {
+    const me = oid(), other = oid(), mine = oid(), theirs = oid();
+    mockSlotFind.mockResolvedValue([
+      { _id: mine, teacherId: me },
+      { _id: theirs, teacherId: other },
+    ]);
+    mockSubFind.mockResolvedValue([
+      { slotId: mine, coverTeacherId: other }, // I was away — not my note
+      { slotId: theirs, coverTeacherId: me }, // I stood in — mine to write
+    ]);
+    const prompts = await myClassNotePrompts(DATE, me.toString());
+    expect(prompts.map((s) => s._id.toString())).toEqual([theirs.toString()]);
   });
 });

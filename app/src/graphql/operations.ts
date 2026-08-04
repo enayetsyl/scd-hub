@@ -1612,6 +1612,8 @@ export const EXTEND_PROXY = gql<
 
 export interface HwDayItemT {
   itemId: string;
+  /** Who declared it — Edit/Delete are gated on this (owner report 2026-08-04). */
+  declaredBy: string;
   hwId: string;
   subject: string;
   topicLabelBn: string;
@@ -1669,7 +1671,7 @@ export const HOMEWORK_DAY_TALLY = gql<
       overBy
       withinCeiling
       state
-      items { itemId hwId subject topicLabelBn description timeDecl qCount revItem status bandWarning topTags poolRef attachmentIds }
+      items { itemId hwId subject topicLabelBn description timeDecl qCount revItem status bandWarning topTags poolRef attachmentIds declaredBy }
       bandWarnings
     }
   }
@@ -2706,6 +2708,11 @@ export interface HwPendingStudentT {
   state: string;
   daysWaiting: number;
   chaseCount: number;
+  /** Grouping + navigation for the drill sheet (owner ask 2026-08-04). */
+  hwItemId: string;
+  dateGiven: string;
+  sectionId: string;
+  classId: string;
 }
 export const HW_LIFECYCLE_REPORT_QUERY = gql<
   { homeworkLifecycleReport: HwLifecycleReportT },
@@ -2758,6 +2765,10 @@ export const HW_LIFECYCLE_PENDING_QUERY = gql<
       state
       daysWaiting
       chaseCount
+      hwItemId
+      dateGiven
+      sectionId
+      classId
     }
   }
 `;
@@ -3410,6 +3421,53 @@ export const ASSIGN_BELL_DUTY = gql<
     assignBellDuty(date: $date, periodNumber: $periodNumber, adminId: $adminId) {
       id date periodNumber adminId active
     }
+  }
+`;
+
+// --- Holidays (D-#50) — ad-hoc closures that OVERRIDE the day type ---
+
+export interface HolidayT {
+  id: string;
+  fromDate: string;
+  toDate: string;
+  type: string;
+  nameBn: string;
+  note: string | null;
+  active: boolean;
+}
+
+const HOLIDAY_FIELDS = `id fromDate toDate type nameBn note active`;
+
+export const HOLIDAYS_QUERY = gql<{ holidays: HolidayT[] }, Record<string, never>>`
+  query Holidays {
+    holidays { ${HOLIDAY_FIELDS} }
+  }
+`;
+
+export const CREATE_HOLIDAY = gql<
+  { createHolidayException: HolidayT },
+  { fromDate: string; toDate: string; type: string; nameBn: string; note?: string | null }
+>`
+  mutation CreateHoliday(
+    $fromDate: String!
+    $toDate: String!
+    $type: String!
+    $nameBn: String!
+    $note: String
+  ) {
+    createHolidayException(
+      fromDate: $fromDate
+      toDate: $toDate
+      type: $type
+      nameBn: $nameBn
+      note: $note
+    ) { ${HOLIDAY_FIELDS} }
+  }
+`;
+
+export const RETIRE_HOLIDAY = gql<{ retireHolidayException: HolidayT }, { id: string }>`
+  mutation RetireHoliday($id: String!) {
+    retireHolidayException(id: $id) { ${HOLIDAY_FIELDS} }
   }
 `;
 

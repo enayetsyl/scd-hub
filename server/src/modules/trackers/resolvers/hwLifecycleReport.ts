@@ -85,6 +85,11 @@ const HwPendingStudentRef = builder.objectRef<HwPendingStudent>("HwPendingStuden
     state: t.exposeString("state"),
     daysWaiting: t.exposeInt("daysWaiting"),
     chaseCount: t.exposeInt("chaseCount"),
+    // Grouping + navigation for the drill sheet (owner ask 2026-08-04).
+    hwItemId: t.exposeString("hwItemId"),
+    dateGiven: t.exposeString("dateGiven"),
+    sectionId: t.exposeString("sectionId"),
+    classId: t.exposeString("classId"),
   }),
 });
 

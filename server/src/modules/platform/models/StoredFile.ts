@@ -50,7 +50,10 @@ export type StoredFileKind =
   | "book_image_raw"
   | "book_image_approved"
   | "book_image_compliant"
-  | "book_pdf";
+  | "book_pdf"
+  /** A photo of an archived answer-script bundle / cover sheet (AR-3,
+   *  prd-script-archive §5). Staff-read via tracker:read or roster:manage. */
+  | "archive_photo";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -72,6 +75,7 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "book_image_approved",
   "book_image_compliant",
   "book_pdf",
+  "archive_photo",
 ];
 
 /** The chat-attachment subset (M-4) — the read gate routes these to chat. */

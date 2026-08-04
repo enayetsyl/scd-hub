@@ -48,6 +48,7 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
           <>
             <Button title={STR.rtMasterGrid} onPress={() => navigation.navigate("RoutineMaster")} />
             <Button title={STR.rtBellSchedule} variant="secondary" onPress={() => navigation.navigate("BellSchedule")} />
+            <Button title={STR.hxManage} variant="secondary" onPress={() => navigation.navigate("Holidays")} />
             <Button title={STR.rtNoteReportTitle} variant="secondary" onPress={() => navigation.navigate("ClassNoteReport")} />
             <Button title={STR.cnClassNotesAdmin} variant="secondary" onPress={() => navigation.navigate("ClassNotesAdmin")} />
           </>

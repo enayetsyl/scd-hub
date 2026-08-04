@@ -31,6 +31,12 @@ import {
   DOC_TYPE_LABELS_EN,
   PRINT_PURPOSE_LABELS_BN,
   PRINT_PURPOSE_LABELS_EN,
+  SCRIPT_BUNDLE_STATUS_LABELS_BN,
+  SCRIPT_BUNDLE_STATUS_LABELS_EN,
+  STORAGE_BOX_STATUS_LABELS_BN,
+  STORAGE_BOX_STATUS_LABELS_EN,
+  type ScriptBundleStatus,
+  type StorageBoxStatus,
   type PrintPurpose,
   type Subject,
   type Difficulty,
@@ -125,6 +131,10 @@ import {
   DAYS_OF_WEEK,
   PERIOD_TRACK_LABELS_BN,
   PERIOD_TRACK_LABELS_EN,
+  HOLIDAY_TYPES,
+  HOLIDAY_TYPE_LABELS_BN,
+  HOLIDAY_TYPE_LABELS_EN,
+  type HolidayType,
   TEACHER_ATTENDANCE_STATUS_LABELS_BN,
   TEACHER_ATTENDANCE_STATUS_LABELS_EN,
   type TeacherAttendanceStatus,
@@ -545,6 +555,11 @@ export const classTestSourceLabel = (v?: string | null): string =>
   (v && pick(CLASS_TEST_SOURCE_LABELS_BN, CLASS_TEST_SOURCE_LABELS_EN)[v as ClassTestSource]) || v || DASH;
 export const classTestAttendanceLabel = (v?: string | null): string =>
   (v && pick(CLASS_TEST_ATTENDANCE_STATUS_LABELS_BN, CLASS_TEST_ATTENDANCE_STATUS_LABELS_EN)[v as ClassTestAttendanceStatus]) || v || DASH;
+// Answer-script archive (AR-1..AR-4)
+export const scriptBundleStatusLabel = (v?: string | null): string =>
+  (v && pick(SCRIPT_BUNDLE_STATUS_LABELS_BN, SCRIPT_BUNDLE_STATUS_LABELS_EN)[v as ScriptBundleStatus]) || v || DASH;
+export const storageBoxStatusLabel = (v?: string | null): string =>
+  (v && pick(STORAGE_BOX_STATUS_LABELS_BN, STORAGE_BOX_STATUS_LABELS_EN)[v as StorageBoxStatus]) || v || DASH;
 /** App-derived report state (CT-4 reportStateOf) → label. */
 export const ctReportStateLabel = (v?: string | null): string => {
   const bn: Record<string, string> = { not_started: "শুরু হয়নি", in_progress: "চলমান", complete: "সম্পূর্ণ", overdue: "বিলম্বিত" };
@@ -743,6 +758,14 @@ export const dayOfWeekLabel = (v?: string | null): string =>
 
 export const periodTrackLabel = (v?: string | null): string =>
   (v && pick(PERIOD_TRACK_LABELS_BN, PERIOD_TRACK_LABELS_EN)[v as PeriodTrack]) || v || DASH;
+
+/** Holiday type (D-#50). Labels come from vocab.ts — the enum's one home. */
+export const holidayTypeLabel = (v?: string | null): string =>
+  (v && pick(HOLIDAY_TYPE_LABELS_BN, HOLIDAY_TYPE_LABELS_EN)[v as HolidayType]) || v || DASH;
+
+/** The type picker's options, in vocab order. */
+export const holidayTypeOptions = (): { label: string; value: HolidayType }[] =>
+  HOLIDAY_TYPES.map((v) => ({ label: holidayTypeLabel(v), value: v }));
 
 // Library (LB-4, D-#81–#84)
 export const borrowerTypeLabel = (v?: string | null): string =>
@@ -2285,6 +2308,33 @@ const STR_BN = {
   rtNoCovers: "কোনো কভার নেই।",
   rtCoveringFor: "কভার করছেন",
 
+  // Holidays (D-#50) — ad-hoc closures that override the day type
+  hxTitle: "ছুটির দিন",
+  hxManage: "ছুটির দিন",
+  hxUpcoming: "আসন্ন ছুটি",
+  hxPast: "আগের ছুটি",
+  hxNone: "কোনো ছুটি নেই।",
+  hxAdd: "ছুটি যোগ করুন",
+  hxFrom: "শুরুর তারিখ",
+  hxTo: "শেষ তারিখ",
+  hxDateHint: "YYYY-MM-DD",
+  hxOneDayHint: "এক দিনের ছুটি হলে দুই ঘরে একই তারিখ দিন।",
+  hxType: "ধরন",
+  hxName: "নাম",
+  hxNamePlaceholder: "যেমন: ঈদুল ফিতর",
+  hxNote: "মন্তব্য (ঐচ্ছিক)",
+  hxSave: "সংরক্ষণ করুন",
+  hxSaved: "ছুটি যোগ হয়েছে।",
+  hxRemove: "বাতিল করুন",
+  hxRemoved: "ছুটি বাতিল হয়েছে।",
+  hxRemoveConfirm: "এই ছুটি বাতিল করবেন? ওই দিন আবার নিয়মিত ক্লাসের দিন হিসেবে গণ্য হবে।",
+  hxRetired: "বাতিল",
+  hxEffect:
+    "ছুটির দিনে রুটিন বন্ধ থাকে, উপস্থিতি নেওয়া লাগে না, এবং বাড়ির কাজ বা অ্যাসাইনমেন্টের তাগাদা যায় না।",
+  hxBadDate: "তারিখ YYYY-MM-DD আকারে দিন।",
+  hxBadRange: "শুরুর তারিখ শেষ তারিখের পরে হতে পারে না।",
+  hxNeedName: "ছুটির নাম দিন।",
+
   // Routine triggers + class-note / daily-diary (R-5)
   dailyNoteTitle: "ক্লাস নোট",
   bellScheduleTitle: "ঘণ্টা সূচি",
@@ -2950,6 +3000,55 @@ const STR_BN = {
   gpTestResults: "ক্লাস টেস্টের ফলাফল",
   gpNoTestResults: "এখনো কোনো ফলাফল প্রকাশিত হয়নি।",
 
+  // --- Answer-script archive (AR-1..AR-4, D-#443–#447) ---
+  arHomeTitle: "খাতা আর্কাইভ",
+  arHomeNav: "খাতা আর্কাইভ (স্ক্রিপ্ট সংরক্ষণ)",
+  arWhereScripts: "স্ক্রিপ্ট কোথায়?",
+  arNotFiled: "ফাইল করা হয়নি",
+  arFileNow: "খাতা ফাইল করুন",
+  arFileTitle: "খাতা ফাইল করা",
+  arBundleTitle: "খাতার বান্ডিল",
+  arBoxTitle: "সংরক্ষণ বাক্স",
+  arSearchPlaceholder: "টেস্ট আইডি খুঁজুন (যেমন CT-C5-BAN-0001)",
+  arBoxes: "বাক্সসমূহ",
+  arNewBox: "নতুন বাক্স",
+  arBoxLabel: "বাক্সের নাম (যেমন Class Five · ২০২৬)",
+  arBoxLocation: "অবস্থান (যেমন অফিস আলমারি, তাক ২)",
+  arCreateBox: "বাক্স তৈরি করুন",
+  arRetireBox: "বাক্স বন্ধ করুন",
+  arSaveBox: "বাক্স সংরক্ষণ করুন",
+  arBoxContents: "বাক্সের বান্ডিলসমূহ",
+  arScriptCount: "স্ক্রিপ্ট সংখ্যা",
+  arPickBox: "কোন বাক্সে রাখা হলো?",
+  arPickTest: "কোন টেস্টের খাতা?",
+  arNotes: "নোট (ঐচ্ছিক)",
+  arFileBundle: "ফাইল নিশ্চিত করুন",
+  arFiledBy: "ফাইল করেছেন",
+  arAcknowledge: "অফিস গ্রহণ করুন",
+  arPendingAcks: "অফিসের গ্রহণ বাকি",
+  arOpenCheckouts: "বের করা বান্ডিল",
+  arOverdue: "ফেরত বাকি (সময় পার)",
+  arCheckOut: "বের করুন",
+  arCheckIn: "ফেরত নিন",
+  arCheckOutTo: "কার কাছে দেওয়া হলো?",
+  arPurpose: "কারণ",
+  arExpectedReturn: "প্রত্যাশিত ফেরতের তারিখ (YYYY-MM-DD, ঐচ্ছিক)",
+  arReturnNote: "ফেরত নোট (ঐচ্ছিক)",
+  arHeldBy: "কাছে আছে",
+  arDispose: "নিষ্পত্তি করুন",
+  arDisposable: "নিষ্পত্তিযোগ্য (পুরনো বর্ষ)",
+  arVoid: "ভুলবশত — বাতিল করুন",
+  arReason: "কারণ",
+  arCheckoutLog: "বের করার লগ",
+  arCoverPdf: "কভার শিট (PDF)",
+  arPhotoAttach: "ছবি সংযুক্ত করুন (ঐচ্ছিক)",
+  arPhotoUploaded: "ছবি আপলোড হয়েছে",
+  arExamDate: "পরীক্ষার তারিখ",
+  arBox: "বাক্স",
+  arNoBoxes: "কোনো বাক্স নেই — আগে একটি বাক্স তৈরি করুন",
+  arNoResults: "কিছু পাওয়া যায়নি",
+  arFiledOk: "খাতা ফাইল হয়েছে",
+  arAlreadyFiledPickerNote: "শুধু ফাইল-না-হওয়া অফিসিয়াল টেস্ট দেখানো হচ্ছে",
   // --- Class Test tracker (CT-5) ---
   tabClassTest: "ক্লাস টেস্ট",
   ctHomeTitle: "ক্লাস টেস্ট ট্র্যাকার",
@@ -5448,6 +5547,33 @@ const STR_EN: StrTable = {
   rtNoCovers: "No covers.",
   rtCoveringFor: "Covering for",
 
+  // Holidays (D-#50) — ad-hoc closures that override the day type
+  hxTitle: "Holidays",
+  hxManage: "Holidays",
+  hxUpcoming: "Upcoming holidays",
+  hxPast: "Past holidays",
+  hxNone: "No holidays.",
+  hxAdd: "Add a holiday",
+  hxFrom: "From date",
+  hxTo: "To date",
+  hxDateHint: "YYYY-MM-DD",
+  hxOneDayHint: "For a single day, put the same date in both boxes.",
+  hxType: "Type",
+  hxName: "Name",
+  hxNamePlaceholder: "e.g. Eid-ul-Fitr",
+  hxNote: "Note (optional)",
+  hxSave: "Save",
+  hxSaved: "Holiday added.",
+  hxRemove: "Remove",
+  hxRemoved: "Holiday removed.",
+  hxRemoveConfirm: "Remove this holiday? The day goes back to being a normal school day.",
+  hxRetired: "Removed",
+  hxEffect:
+    "On a holiday no routine resolves, attendance is not expected, and no homework or assignment chase goes out.",
+  hxBadDate: "Enter the date as YYYY-MM-DD.",
+  hxBadRange: "The from-date cannot be after the to-date.",
+  hxNeedName: "Give the holiday a name.",
+
   // Routine triggers + class-note / daily-diary (R-5)
   dailyNoteTitle: "Class note",
   bellScheduleTitle: "Bell schedule",
@@ -6107,6 +6233,55 @@ const STR_EN: StrTable = {
   gpTestResults: "Class-test results",
   gpNoTestResults: "No results published yet.",
 
+  // --- Answer-script archive (AR-1..AR-4, D-#443–#447) ---
+  arHomeTitle: "Script Archive",
+  arHomeNav: "Script archive (physical storage)",
+  arWhereScripts: "Where are the scripts?",
+  arNotFiled: "Not filed",
+  arFileNow: "File scripts",
+  arFileTitle: "File scripts",
+  arBundleTitle: "Script bundle",
+  arBoxTitle: "Storage box",
+  arSearchPlaceholder: "Search test id (e.g. CT-C5-BAN-0001)",
+  arBoxes: "Boxes",
+  arNewBox: "New box",
+  arBoxLabel: "Box label (e.g. Class Five · 2026)",
+  arBoxLocation: "Location (e.g. office almirah, shelf 2)",
+  arCreateBox: "Create box",
+  arRetireBox: "Retire box",
+  arSaveBox: "Save box",
+  arBoxContents: "Bundles in this box",
+  arScriptCount: "Script count",
+  arPickBox: "Which box?",
+  arPickTest: "Which test's scripts?",
+  arNotes: "Notes (optional)",
+  arFileBundle: "Confirm filing",
+  arFiledBy: "Filed by",
+  arAcknowledge: "Office acknowledge",
+  arPendingAcks: "Pending office acknowledgement",
+  arOpenCheckouts: "Checked-out bundles",
+  arOverdue: "Overdue",
+  arCheckOut: "Check out",
+  arCheckIn: "Check in",
+  arCheckOutTo: "Handed to whom?",
+  arPurpose: "Purpose",
+  arExpectedReturn: "Expected return date (YYYY-MM-DD, optional)",
+  arReturnNote: "Return note (optional)",
+  arHeldBy: "Held by",
+  arDispose: "Dispose",
+  arDisposable: "Disposable (old years)",
+  arVoid: "Void (filed in error)",
+  arReason: "Reason",
+  arCheckoutLog: "Checkout log",
+  arCoverPdf: "Cover sheet (PDF)",
+  arPhotoAttach: "Attach photo (optional)",
+  arPhotoUploaded: "Photo uploaded",
+  arExamDate: "Exam date",
+  arBox: "Box",
+  arNoBoxes: "No boxes yet — create one first",
+  arNoResults: "Nothing found",
+  arFiledOk: "Scripts filed",
+  arAlreadyFiledPickerNote: "Showing only official tests not yet filed",
   // --- Class Test tracker (CT-5) ---
   tabClassTest: "Class Test",
   ctHomeTitle: "Class Test Tracker",

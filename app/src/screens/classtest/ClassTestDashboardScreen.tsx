@@ -24,6 +24,7 @@ import {
   CLASS_TEST_OVERDUE_CHASE_QUERY,
   CLASS_TEST_REPORTS_STATUS_QUERY,
 } from "../../graphql/classTest";
+import { ARCHIVE_LOCATIONS_QUERY } from "../../graphql/archive";
 import { Screen, Card, Body, Muted, Button, Badge, Chip, ChipRow, Loader, Notice } from "../../components/ui";
 import {
   CT_PUBLISH_FILTERS,
@@ -101,6 +102,16 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
   // Release backlog → overdue → in hand → done (lib/ctDashboardOrder), then 50 a page.
   const rows = ctOrderRows(filtered);
   const { page, pageCount, from, rows: pageRows } = ctPageOf(rows, pageAt);
+  // AR-1: one batched "where are the scripts?" lookup for the VISIBLE page only
+  // (50 rows), never per row. Every drill-down row is already PRINTED. urql keys
+  // on the variables' VALUE, so the rebuilt array is not a refetch per render.
+  const pageTestIds = pageRows.map((r) => r.testId);
+  const [locsQ] = useQuery({
+    query: ARCHIVE_LOCATIONS_QUERY,
+    variables: { testIds: pageTestIds },
+    pause: pageTestIds.length === 0,
+  });
+  const locOf = new Map((locsQ.data?.archiveLocationsForTests ?? []).map((l) => [l.testId, l]));
   // Chip counts are computed WITHIN the tile selection so they always add up to what the
   // list below is showing, rather than to a school-wide total the user cannot see.
   const publishCount = (f: CtPublishFilter): number =>
@@ -191,6 +202,18 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                         ? ` · ${STR.ctPublishedBadge} ${isoDateLabel(r.publishedAt)}`
                         : ""}
                     </Muted>
+                    {/* AR-1 lookup line: box + location (+ holder while out), or not-filed. */}
+                    {(() => {
+                      const loc = locOf.get(r.testId);
+                      return (
+                        <Muted style={{ marginTop: space(1) }}>
+                          {STR.arWhereScripts}{" "}
+                          {loc
+                            ? `${loc.boxCode} · ${loc.locationNote}${loc.holderName ? ` · ${loc.holderName}-${STR.arHeldBy}` : ""}`
+                            : STR.arNotFiled}
+                        </Muted>
+                      );
+                    })()}
                   </Pressable>
                 ))
               )}
