@@ -117,6 +117,17 @@ async function hwCycleCard(dateKey: string, recon: ReconReport): Promise<AdminTo
       value: `${m.declaredItems} · ${m.declaredMinutes}m`,
       tone: "danger",
     }));
+    // NAME the classes that declared nothing (owner ask 2026-08-04). The badge has
+    // always carried the count, but finding WHICH class meant opening each one in
+    // turn — the whole point of a dashboard is not having to. Same rows the reports
+    // screen shows, surfaced a level up; they sort first because they are the work
+    // that has not started at all.
+    const notDeclaredRows = recon.hwNotDeclared.map((n) => ({
+      title: `${lvl(n.classLevel)} — ${n.sectionNameBn}`,
+      subtitle: n.teacherName,
+      value: n.subject, // subject CODE — this card is language-neutral by design (header)
+      tone: "warn",
+    }));
     const confirmedRows = confirmed.map((r) => ({
       title: lvl(levelOf.get(r.classId.toString()) ?? 0),
       subtitle: null,
@@ -130,7 +141,7 @@ async function hwCycleCard(dateKey: string, recon: ReconReport): Promise<AdminTo
         { key: "confirmed", value: confirmed.length, tone: "ok" },
         { key: "autoIssued", value: confirmed.filter((r) => r.autoIssued).length, tone: "info" },
       ],
-      ...cap([...pendingRows, ...confirmedRows]),
+      ...cap([...notDeclaredRows, ...pendingRows, ...confirmedRows]),
     };
   });
 }
