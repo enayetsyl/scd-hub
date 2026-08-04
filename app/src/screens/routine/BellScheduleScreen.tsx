@@ -8,7 +8,6 @@ import React, { useState } from "react";
 import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import { BELL_SCHEDULE_QUERY, ASSIGN_BELL_DUTY, TEACHERS_QUERY } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Badge, Notice, Loader } from "../../components/ui";
@@ -25,8 +24,8 @@ const todayISO = (): string => dateKey();
 type Props = NativeStackScreenProps<RoutineStackParamList, "BellSchedule">;
 
 export default function BellScheduleScreen(_props: Props): React.ReactElement {
-  const { role } = useAuth();
-  const canManage = !!role && roleHasPermission(role, "routine:manage");
+  const { role, can } = useAuth();
+  const canManage = can("routine:manage");
   const [date, setDate] = useState(todayISO());
   const [audienceKey, setAudienceKey] = useState("class_1_5");
   const [adminId, setAdminId] = useState("");

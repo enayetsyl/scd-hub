@@ -8,7 +8,6 @@
 import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import {
   TEACHER_OBSERVATION_TREND_QUERY,
   SCHOOL_OBSERVATION_PATTERNS_QUERY,
@@ -20,8 +19,8 @@ import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
 export default function ObservationTrendScreen(): React.ReactElement {
-  const { user, role } = useAuth();
-  const canManage = !!role && roleHasPermission(role, "observation:manage");
+  const { user, role, can } = useAuth();
+  const canManage = can("observation:manage");
 
   // Default to the caller's own id; a manager may type any teacher id.
   const [teacherId, setTeacherId] = useState(user?.id ?? "");

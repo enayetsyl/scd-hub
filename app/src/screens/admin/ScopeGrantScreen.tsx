@@ -9,7 +9,6 @@ import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import { ASSIGN_PROXY, REVOKE_PROXY, EXTEND_PROXY, ACADEMIC_YEARS_QUERY, CLASSES_QUERY, PROXY_GRANTS_QUERY, TEACHERS_QUERY, SUBJECTS_QUERY } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
@@ -49,10 +48,10 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
   const [, revokeProxy] = useMutation(REVOKE_PROXY);
   const [, extendProxy] = useMutation(EXTEND_PROXY);
 
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const { confirmAction } = useConfirm();
   const toast = useToast();
-  const canManage = !!user && roleHasPermission(user.role as Role, "user:manage");
+  const canManage = !!user && can("user:manage");
 
   // Active grants list (Slice-4 follow-up): pick a grant to extend/revoke.
   const [{ data: grantData, fetching: grantsFetching }, refetchGrants] = useQuery({

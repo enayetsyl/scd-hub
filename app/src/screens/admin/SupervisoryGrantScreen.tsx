@@ -10,7 +10,6 @@ import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import {
   GRANT_SUPERVISORY,
@@ -35,9 +34,9 @@ type Extent = "whole_school" | "subject_dept" | "grade_class" | "explicit_set";
 type Pair = { classId: string; subjectId: string };
 
 export default function SupervisoryGrantScreen(_props: Props): React.ReactElement {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const { confirmAction } = useConfirm();
-  const canManage = !!user && roleHasPermission(user.role as Role, "user:manage");
+  const canManage = !!user && can("user:manage");
 
   // Assign form
   const [teacherId, setTeacherId] = useState("");

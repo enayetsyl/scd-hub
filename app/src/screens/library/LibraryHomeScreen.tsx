@@ -9,7 +9,7 @@ import React, { useState } from "react";
 import { Linking, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission, BOOK_LANGUAGES } from "@scd/shared";
+import { BOOK_LANGUAGES } from "@scd/shared";
 import {
   AM_I_LIBRARIAN_QUERY,
   BOOK_TITLES_QUERY,
@@ -29,14 +29,14 @@ import { space } from "../../theme/tokens";
 type Props = NativeStackScreenProps<LibraryStackParamList, "LibraryHome">;
 
 export default function LibraryHomeScreen({ navigation }: Props): React.ReactElement {
-  const { role } = useAuth();
+  const { role, can } = useAuth();
   const { confirmAction } = useConfirm();
   const [search, setSearch] = useState("");
   const [language, setLanguage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
-  const canManage = !!role && roleHasPermission(role, "library:manage");
+  const canManage = can("library:manage");
   const [librarianQ] = useQuery({ query: AM_I_LIBRARIAN_QUERY });
   const isLibrarian = canManage || (librarianQ.data?.amILibrarian ?? false);
 

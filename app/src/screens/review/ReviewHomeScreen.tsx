@@ -15,7 +15,7 @@ import { View, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "urql";
-import { roleHasPermission, SUBJECTS, CLASS_LEVELS, PLAN_DOC_TYPES } from "@scd/shared";
+import { SUBJECTS, CLASS_LEVELS, PLAN_DOC_TYPES } from "@scd/shared";
 import { MY_REVIEW_ASSIGNMENTS, PLAN_REVIEW_INBOX, type ReviewAssignmentT } from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
 import { useAuth } from "../../auth/AuthContext";
@@ -52,9 +52,9 @@ function planTitle(r: ReviewAssignmentT): string {
 }
 
 export default function ReviewHomeScreen({ navigation }: Props): React.ReactElement {
-  const { role } = useAuth();
-  const canAssign = !!role && roleHasPermission(role, "content:assign_review");
-  const canReview = !!role && roleHasPermission(role, "content:review");
+  const { role, can } = useAuth();
+  const canAssign = can("content:assign_review");
+  const canReview = can("content:review");
 
   const [{ data: inboxData, fetching: inboxFetching, error: inboxErr }, refetchInbox] = useQuery({
     query: PLAN_REVIEW_INBOX,

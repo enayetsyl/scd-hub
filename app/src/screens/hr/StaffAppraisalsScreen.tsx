@@ -8,7 +8,6 @@ import React from "react";
 import { View } from "react-native";
 import { useQuery, useMutation } from "urql";
 import { APPRAISAL_OUTCOMES } from "@scd/shared";
-import { roleHasPermission } from "@scd/shared";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { STAFF_APPRAISALS_QUERY, UPSERT_APPRAISAL, SIGN_OFF_APPRAISAL } from "../../graphql/operations";
 import type { HrStackParamList } from "../../navigation/types";
@@ -41,8 +40,8 @@ const linesToList = (s: string): string[] => s.split("\n").map((l) => l.trim()).
 
 export default function StaffAppraisalsScreen({ route }: Props): React.ReactElement {
   const { staffProfileId } = route.params;
-  const { role } = useAuth();
-  const canSignoff = !!role && roleHasPermission(role, "performance:signoff");
+  const { role, can } = useAuth();
+  const canSignoff = can("performance:signoff");
 
   const [yearId, setYearId] = React.useState("");
   const [goals, setGoals] = React.useState("");

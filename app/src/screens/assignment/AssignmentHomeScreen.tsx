@@ -12,7 +12,6 @@ import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useMutation, useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import {
   ACADEMIC_YEARS_QUERY,
   AS_SCHEDULE_QUERY,
@@ -56,9 +55,9 @@ function currentWeekNumber(termStartDate: string, today = new Date()): number {
 const day = (iso?: string | null): string => (iso ? iso.slice(0, 10) : "—");
 
 export default function AssignmentHomeScreen({ navigation }: Props): React.ReactElement {
-  const { role, user } = useAuth();
-  const canTrackerRead = !!role && roleHasPermission(role, "tracker:read");
-  const canSchedule = !!role && roleHasPermission(role, "roster:manage");
+  const { role, user, can } = useAuth();
+  const canTrackerRead = can("tracker:read");
+  const canSchedule = can("roster:manage");
   const isFollowUpAdmin = role === "PRINCIPAL" || role === "OFFICE";
   const toast = useToast();
 

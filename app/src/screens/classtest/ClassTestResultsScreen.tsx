@@ -11,7 +11,6 @@ import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import { STUDENTS_QUERY } from "../../graphql/operations";
 import {
   CLASS_TEST_QUERY,
@@ -38,8 +37,8 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   const toast = useToast();
   // Admin viewer (Principal/Office — the house roster:manage check): sees the
   // teacher's comment texts read-only per student (owner ask 2026-07-21).
-  const { role, user } = useAuth();
-  const isAdmin = !!role && roleHasPermission(role, "roster:manage");
+  const { role, user, can } = useAuth();
+  const isAdmin = can("roster:manage");
 
   const [testQ, refetchTest] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
   const test = testQ.data?.classTest ?? null;

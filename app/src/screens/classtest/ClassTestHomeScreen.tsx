@@ -9,7 +9,6 @@ import { ScrollView, View } from "react-native";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import { MY_CLASS_TESTS_QUERY } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -24,9 +23,9 @@ export default function ClassTestHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   // PQ-5: the print queue is a sibling TAB now, not a screen in this stack.
   const tabNav = useNavigation<NavigationProp<TabParamList>>();
-  const { role } = useAuth();
-  const canWrite = !!role && roleHasPermission(role, "tracker:write");
-  const canPrint = !!role && roleHasPermission(role, "roster:manage");
+  const { role, can } = useAuth();
+  const canWrite = can("tracker:write");
+  const canPrint = can("roster:manage");
   const isAdmin = role === "PRINCIPAL" || role === "OFFICE";
 
   const [myQ, refetchMy] = useQuery({ query: MY_CLASS_TESTS_QUERY, variables: {} });

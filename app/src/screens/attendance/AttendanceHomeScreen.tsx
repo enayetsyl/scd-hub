@@ -11,7 +11,6 @@ import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import { MY_MARKING_UNITS } from "../../graphql/operations";
 import type { AttendanceStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Loader, EmptyState, ErrorBanner } from "../../components/ui";
@@ -29,9 +28,9 @@ const todayKey = (): string => {
 };
 
 export default function AttendanceHomeScreen({ navigation }: Props): React.ReactElement {
-  const { role } = useAuth();
-  const canMark = !!role && roleHasPermission(role, "attendance:mark");
-  const canManage = !!role && roleHasPermission(role, "attendance:manage");
+  const { role, can } = useAuth();
+  const canMark = can("attendance:mark");
+  const canManage = can("attendance:manage");
   const [dateKey, setDateKey] = useState(todayKey());
 
   const [unitsQ, refetch] = useQuery({

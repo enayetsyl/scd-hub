@@ -7,7 +7,6 @@
 import React from "react";
 import { View } from "react-native";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import {
   STAFF_ADVANCES_QUERY,
   ISSUE_STAFF_ADVANCE,
@@ -40,9 +39,9 @@ import { space } from "../../theme/tokens";
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function AdvancesScreen(): React.ReactElement {
-  const { role } = useAuth();
+  const { role, can } = useAuth();
   const { confirmAction } = useConfirm();
-  const canApprove = !!role && roleHasPermission(role, "payroll:approve");
+  const canApprove = can("payroll:approve");
 
   const [staffId, setStaffId] = React.useState("");
   const [principal, setPrincipal] = React.useState("");

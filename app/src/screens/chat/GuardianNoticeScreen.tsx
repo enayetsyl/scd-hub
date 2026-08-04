@@ -21,7 +21,6 @@ import React, { useState } from "react";
 import { Linking, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import {
   COMPOSE_GUARDIAN_NOTICE,
   MY_SECTIONS_AS_CLASS_TEACHER_QUERY,
@@ -41,8 +40,8 @@ type Props = NativeStackScreenProps<ChatStackParamList, "GuardianNotice">;
 type Scope = "SECTION" | "SCHOOL";
 
 export default function GuardianNoticeScreen(_props: Props): React.ReactElement {
-  const { role } = useAuth();
-  const canManage = !!role && roleHasPermission(role, "chat:manage");
+  const { role, can } = useAuth();
+  const canManage = can("chat:manage");
 
   const [scope, setScope] = useState<Scope>("SECTION");
   const [sectionId, setSectionId] = useState<string | null>(null);

@@ -8,7 +8,6 @@ import React from "react";
 import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { roleHasPermission } from "@scd/shared";
 import { Screen, Card, Body, Button } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
 import { STR } from "../../lib/labels";
@@ -19,11 +18,11 @@ type Nav = NativeStackNavigationProp<ObservationStackParamList>;
 
 export default function ObservationHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
-  const { role } = useAuth();
-  const canUpload = !!role && roleHasPermission(role, "observation:upload");
-  const canReview = !!role && roleHasPermission(role, "observation:review");
-  const canRead = !!role && roleHasPermission(role, "observation:read");
-  const canManage = !!role && roleHasPermission(role, "observation:manage");
+  const { role, can } = useAuth();
+  const canUpload = can("observation:upload");
+  const canReview = can("observation:review");
+  const canRead = can("observation:read");
+  const canManage = can("observation:manage");
 
   return (
     <Screen padded={false}>
