@@ -3424,6 +3424,53 @@ export const ASSIGN_BELL_DUTY = gql<
   }
 `;
 
+// --- Holidays (D-#50) — ad-hoc closures that OVERRIDE the day type ---
+
+export interface HolidayT {
+  id: string;
+  fromDate: string;
+  toDate: string;
+  type: string;
+  nameBn: string;
+  note: string | null;
+  active: boolean;
+}
+
+const HOLIDAY_FIELDS = `id fromDate toDate type nameBn note active`;
+
+export const HOLIDAYS_QUERY = gql<{ holidays: HolidayT[] }, Record<string, never>>`
+  query Holidays {
+    holidays { ${HOLIDAY_FIELDS} }
+  }
+`;
+
+export const CREATE_HOLIDAY = gql<
+  { createHolidayException: HolidayT },
+  { fromDate: string; toDate: string; type: string; nameBn: string; note?: string | null }
+>`
+  mutation CreateHoliday(
+    $fromDate: String!
+    $toDate: String!
+    $type: String!
+    $nameBn: String!
+    $note: String
+  ) {
+    createHolidayException(
+      fromDate: $fromDate
+      toDate: $toDate
+      type: $type
+      nameBn: $nameBn
+      note: $note
+    ) { ${HOLIDAY_FIELDS} }
+  }
+`;
+
+export const RETIRE_HOLIDAY = gql<{ retireHolidayException: HolidayT }, { id: string }>`
+  mutation RetireHoliday($id: String!) {
+    retireHolidayException(id: $id) { ${HOLIDAY_FIELDS} }
+  }
+`;
+
 // --- Class-teacher generalization: support + history + my-sections (CT-1) ---
 
 export const SET_SUPPORT_TEACHER = gql<
