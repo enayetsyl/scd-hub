@@ -648,11 +648,16 @@ export const lifecycleStateLabel = (v?: string | null): string =>
  * label. Homework-specific ("বাড়ির কাজ"), so NOT used for the assignment view.
  */
 const HW_GUARDIAN_STATUS_BN: Partial<Record<string, string>> = {
-  DUE: "বাড়ির কাজ করে আনেনি — শেষ করে দ্রুত জমা দিন",
+  // DUE is set by the overnight sweep, NOT by a teacher — it only means the deadline
+  // has arrived, and nothing has been collected yet. The old wording ("বাড়ির কাজ করে
+  // আনেনি") accused the child from midnight until the teacher ran the collection pass
+  // — 15 hours on the day this was reported (owner, 2026-08-03) — and did it to EVERY
+  // parent in the class. Only CHASE is a teacher's deliberate "did not bring it".
+  DUE: "বাড়ির কাজ জমা দেওয়ার সময় হয়েছে",
   CHASE: "বাড়ির কাজ আনেনি",
 };
 const HW_GUARDIAN_STATUS_EN: Partial<Record<string, string>> = {
-  DUE: "Homework not done — please finish and submit soon",
+  DUE: "Homework due — please submit",
   CHASE: "Homework not brought",
 };
 export const hwGuardianStatusLabel = (v?: string | null): string =>
