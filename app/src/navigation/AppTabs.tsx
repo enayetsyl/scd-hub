@@ -141,6 +141,10 @@ import VocabMessagesScreen from "../screens/vocab/VocabMessagesScreen";
 import VocabAssignmentScreen from "../screens/vocab/VocabAssignmentScreen";
 import ClassTestHomeScreen from "../screens/classtest/ClassTestHomeScreen";
 import RequestClassTestScreen from "../screens/classtest/RequestClassTestScreen";
+import ArchiveHomeScreen from "../screens/archive/ArchiveHomeScreen";
+import FileBundleScreen from "../screens/archive/FileBundleScreen";
+import BundleDetailScreen from "../screens/archive/BundleDetailScreen";
+import StorageBoxScreen from "../screens/archive/StorageBoxScreen";
 import MyCtQuestionsScreen from "../screens/classtest/MyCtQuestionsScreen";
 import CtQuestionRequestScreen from "../screens/classtest/CtQuestionRequestScreen";
 import CtQuestionQueueScreen from "../screens/classtest/CtQuestionQueueScreen";
@@ -818,6 +822,12 @@ function ClassTestNavigator(): React.ReactElement {
         options={({ route }) => ({ title: route.params.studentName || STR.ctStudentProfileTitle })}
       />
       <ClassTestStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
+      {/* Answer-script archive (AR-1..AR-4, D-#443–#447) — this stack because its
+          audience is exactly this tab's gate (tracker:* teachers + roster:manage). */}
+      <ClassTestStack.Screen name="ArchiveHome" component={ArchiveHomeScreen} options={{ title: STR.arHomeTitle }} />
+      <ClassTestStack.Screen name="ArchiveFileBundle" component={FileBundleScreen} options={{ title: STR.arFileTitle }} />
+      <ClassTestStack.Screen name="ArchiveBundle" component={BundleDetailScreen} options={{ title: STR.arBundleTitle }} />
+      <ClassTestStack.Screen name="ArchiveBox" component={StorageBoxScreen} options={{ title: STR.arBoxTitle }} />
     </ClassTestStack.Navigator>
   );
 }

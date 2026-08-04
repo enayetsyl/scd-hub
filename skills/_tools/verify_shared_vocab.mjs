@@ -571,5 +571,17 @@ check("sr.absent.* + sr.digest.* guardian-message template keys registered (titl
 check("sr.completeness_chase.wa template key registered (SR-3 §4 — Office nudge to the group's teacher)",
   V.MESSAGE_TEMPLATE_KEYS.includes("sr.completeness_chase.wa") && !!V.MESSAGE_TEMPLATE_REGISTRY["sr.completeness_chase.wa"]);
 
+console.log("=== AR. Answer-script archive (prd-script-archive §4, D-#443–#447) ===");
+check("ARCHIVE_SOURCE_KINDS exact — CLASS_TEST wired, EXAM reserved (D-#443)", eq(V.ARCHIVE_SOURCE_KINDS, ["CLASS_TEST","EXAM"]));
+check("SCRIPT_BUNDLE_STATUSES exact — FILED/CHECKED_OUT/DISPOSED/VOID (D-#444)", eq(V.SCRIPT_BUNDLE_STATUSES, ["FILED","CHECKED_OUT","DISPOSED","VOID"]));
+check("STORAGE_BOX_STATUSES exact — ACTIVE/RETIRED, never deleted (D-#445)", eq(V.STORAGE_BOX_STATUSES, ["ACTIVE","RETIRED"]));
+check("ARCHIVE_SOURCE_KIND_LABELS_BN total",   total(V.ARCHIVE_SOURCE_KIND_LABELS_BN, V.ARCHIVE_SOURCE_KINDS));
+check("ARCHIVE_SOURCE_KIND_LABELS_EN total",   total(V.ARCHIVE_SOURCE_KIND_LABELS_EN, V.ARCHIVE_SOURCE_KINDS));
+check("SCRIPT_BUNDLE_STATUS_LABELS_BN total",  total(V.SCRIPT_BUNDLE_STATUS_LABELS_BN, V.SCRIPT_BUNDLE_STATUSES));
+check("SCRIPT_BUNDLE_STATUS_LABELS_EN total",  total(V.SCRIPT_BUNDLE_STATUS_LABELS_EN, V.SCRIPT_BUNDLE_STATUSES));
+check("STORAGE_BOX_STATUS_LABELS_BN total",    total(V.STORAGE_BOX_STATUS_LABELS_BN, V.STORAGE_BOX_STATUSES));
+check("STORAGE_BOX_STATUS_LABELS_EN total",    total(V.STORAGE_BOX_STATUS_LABELS_EN, V.STORAGE_BOX_STATUSES));
+check("no archive:* permission declared — composed perms only (D-#447)", !V.PERMISSIONS.some((p) => p.startsWith("archive:")));
+
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

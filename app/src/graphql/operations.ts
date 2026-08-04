@@ -1612,6 +1612,8 @@ export const EXTEND_PROXY = gql<
 
 export interface HwDayItemT {
   itemId: string;
+  /** Who declared it — Edit/Delete are gated on this (owner report 2026-08-04). */
+  declaredBy: string;
   hwId: string;
   subject: string;
   topicLabelBn: string;
@@ -1669,7 +1671,7 @@ export const HOMEWORK_DAY_TALLY = gql<
       overBy
       withinCeiling
       state
-      items { itemId hwId subject topicLabelBn description timeDecl qCount revItem status bandWarning topTags poolRef attachmentIds }
+      items { itemId hwId subject topicLabelBn description timeDecl qCount revItem status bandWarning topTags poolRef attachmentIds declaredBy }
       bandWarnings
     }
   }

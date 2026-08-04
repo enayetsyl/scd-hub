@@ -58,6 +58,10 @@ export interface DayItemView {
   topTags: string[];
   poolRef: string | null;
   attachmentIds: string[];
+  /** WHO declared this item. The Edit/Delete controls are theirs (plus Office/
+   *  Principal) — another subject teacher looking at the same day must not be able
+   *  to rewrite or delete work they did not set (owner report 2026-08-04). */
+  declaredBy: string;
 }
 
 export interface DayTallyResult {
@@ -90,6 +94,7 @@ function toItemView(d: LeanItem): DayItemView {
     topTags: d.topTags ?? [],
     poolRef: d.poolRef ?? null,
     attachmentIds: (d.attachmentIds ?? []).map((id) => id.toString()),
+    declaredBy: d.declaredBy ? d.declaredBy.toString() : "",
   };
 }
 
