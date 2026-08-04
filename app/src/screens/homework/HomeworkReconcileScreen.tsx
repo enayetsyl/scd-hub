@@ -10,7 +10,7 @@ import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
-import { HW_DAILY_CEILING_MIN, roleHasPermission } from "@scd/shared";
+import { HW_DAILY_CEILING_MIN } from "@scd/shared";
 import {
   CLASSES_QUERY,
   HOMEWORK_DAY_TALLY,
@@ -37,9 +37,9 @@ const today = (): string => dateKey();
 
 export default function HomeworkReconcileScreen({ navigation, route }: Props): React.ReactElement {
   const colors = useColors();
-  const { role, user } = useAuth();
+  const { role, user, can } = useAuth();
   const { selection, hasSection } = useSectionContext();
-  const isAdmin = (!!role && roleHasPermission(role, "roster:manage")) || !!user?.homeworkSupervisor;
+  const isAdmin = (can("roster:manage")) || !!user?.homeworkSupervisor;
   // R-Context (UX-5): inherit the date picked on Homework home; still editable here.
   const [date, setDate] = useState(route.params?.date ?? today());
   const [trimTo, setTrimTo] = useState<Record<string, string>>({});

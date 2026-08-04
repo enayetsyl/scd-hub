@@ -13,7 +13,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 import { useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import type { CombinedError } from "urql";
 import {
   CLASSES_QUERY,
@@ -51,10 +50,10 @@ export function useAccessibleClasses(): {
   error: CombinedError | undefined;
   isAdmin: boolean;
 } {
-  const { role, user } = useAuth();
+  const { role, user, can } = useAuth();
   const { selection } = useSectionContext();
   const ayId = selection.academicYearId;
-  const isAdmin = (!!role && roleHasPermission(role, "roster:manage")) || !!user?.homeworkSupervisor;
+  const isAdmin = (can("roster:manage")) || !!user?.homeworkSupervisor;
 
   const [{ data: classesData, fetching, error }] = useQuery({
     query: CLASSES_QUERY,

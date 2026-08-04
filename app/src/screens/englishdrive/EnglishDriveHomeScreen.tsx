@@ -10,7 +10,6 @@ import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import {
   ENGLISH_DRIVE_DOCS,
   ENGLISH_DRIVE_MY_CLASS_LEVELS,
@@ -28,8 +27,8 @@ import { space } from "../../theme/tokens";
 type Props = NativeStackScreenProps<EnglishDriveStackParamList, "EnglishDriveHome">;
 
 export default function EnglishDriveHomeScreen({ navigation }: Props): React.ReactElement {
-  const { role } = useAuth();
-  const canUpload = !!role && roleHasPermission(role, "roster:manage");
+  const { role, can } = useAuth();
+  const canUpload = can("roster:manage");
 
   const [levelsQ, refetchLevels] = useQuery({ query: ENGLISH_DRIVE_MY_CLASS_LEVELS });
   const levels = useMemo(

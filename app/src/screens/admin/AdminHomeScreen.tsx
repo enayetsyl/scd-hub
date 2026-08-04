@@ -5,7 +5,6 @@
  */
 import React from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { roleHasPermission } from "@scd/shared";
 import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Notice } from "../../components/ui";
 import { STR } from "../../lib/labels";
@@ -14,17 +13,17 @@ import { useAuth } from "../../auth/AuthContext";
 type Props = NativeStackScreenProps<AdminStackParamList, "AdminHome">;
 
 export default function AdminHomeScreen({ navigation }: Props): React.ReactElement {
-  const { role } = useAuth();
-  const canImport = !!role && roleHasPermission(role, "content:import");
-  const canManageUsers = !!role && roleHasPermission(role, "user:manage");
-  const canRoster = !!role && roleHasPermission(role, "roster:manage");
-  const canRoutine = !!role && roleHasPermission(role, "routine:manage");
-  const canStaff = !!role && roleHasPermission(role, "staff:manage");
-  const canGuardianCreds = !!role && roleHasPermission(role, "guardian:link");
-  const canTemplates = !!role && roleHasPermission(role, "template:manage");
+  const { role, can } = useAuth();
+  const canImport = can("content:import");
+  const canManageUsers = can("user:manage");
+  const canRoster = can("roster:manage");
+  const canRoutine = can("routine:manage");
+  const canStaff = can("staff:manage");
+  const canGuardianCreds = can("guardian:link");
+  const canTemplates = can("template:manage");
   // access:manage is RESERVED-locked + Principal-only — roleHasPermission is exact here.
-  const canAccess = !!role && roleHasPermission(role, "access:manage");
-  const canAudit = !!role && roleHasPermission(role, "audit:read");
+  const canAccess = can("access:manage");
+  const canAudit = can("audit:read");
 
   return (
     <Screen scroll>

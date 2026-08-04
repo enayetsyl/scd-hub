@@ -7,7 +7,6 @@ import React from "react";
 import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import { SUBJECT_GROUPS_QUERY } from "../../graphql/operations";
 import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Badge } from "../../components/ui";
@@ -22,9 +21,9 @@ type Props = NativeStackScreenProps<RoutineStackParamList, "RoutineHome">;
 
 export default function RoutineHomeScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection } = useSectionContext();
-  const { role, user } = useAuth();
+  const { role, user, can } = useAuth();
   const lang = getActiveLang();
-  const canManage = !!role && roleHasPermission(role, "routine:manage");
+  const canManage = can("routine:manage");
   const [groupsQ, refetchGroups] = useQuery({ query: SUBJECT_GROUPS_QUERY, variables: { track: null } });
   const sectionLabel = lang === "en" ? selection.sectionCode ?? selection.sectionNameBn : selection.sectionNameBn;
   const routineTitle = sectionLabel ?? STR.rtSectionRoutine;

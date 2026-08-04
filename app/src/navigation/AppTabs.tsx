@@ -12,7 +12,6 @@ import { Text, Pressable, View, Modal, ActivityIndicator, useWindowDimensions } 
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { HeaderBackButton } from "@react-navigation/elements";
-import { roleHasPermission } from "@scd/shared";
 
 import type {
   HomeStackParamList,
@@ -1179,68 +1178,68 @@ export function AppTabs(): React.ReactElement {
   // flips `collapsed`; the drawer width goes 300↔0 and the body reflows to fill.
   const { collapsed } = useSidebar();
 
-  const canContent = !!role && roleHasPermission(role, "content:read");
-  const canQuestions = !!role && roleHasPermission(role, "question:read");
-  const canSets = !!role && roleHasPermission(role, "set:read");
-  const canTrackers = !!role && roleHasPermission(role, "tracker:read");
-  const canHomework = !!role && roleHasPermission(role, "tracker:read");
+  const canContent = can("content:read");
+  const canQuestions = can("question:read");
+  const canSets = can("set:read");
+  const canTrackers = can("tracker:read");
+  const canHomework = can("tracker:read");
   // Assignment tab: teachers/Principal via tracker:read; OFFICE via roster:manage
   // (Office owns the schedule + the D-#88 follow-up; it holds no tracker:* — D-#94).
   const canAssignment =
-    !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
+    !!role && (can("tracker:read") || can("roster:manage"));
   const canReview =
-    !!role && (roleHasPermission(role, "content:review") || roleHasPermission(role, "content:assign_review"));
-  const canRoutine = !!role && roleHasPermission(role, "routine:read");
+    !!role && (can("content:review") || can("content:assign_review"));
+  const canRoutine = can("routine:read");
   const canAttendance =
-    !!role && (roleHasPermission(role, "attendance:mark") || roleHasPermission(role, "attendance:manage"));
-  const canLibrary = !!role && roleHasPermission(role, "library:read");
+    !!role && (can("attendance:mark") || can("attendance:manage"));
+  const canLibrary = can("library:read");
   // PQ-4: teachers file print requests (tracker:write); Office/Principal work the
   // queue (roster:manage). Same gates as the class-test print flow — no new permission.
   const canPrint =
-    !!role && (roleHasPermission(role, "tracker:write") || roleHasPermission(role, "roster:manage"));
+    !!role && (can("tracker:write") || can("roster:manage"));
   // Chat (M-5): Principal/Teacher/Office hold chat:read; GUARDIAN never does.
-  const canChat = !!role && roleHasPermission(role, "chat:read");
+  const canChat = can("chat:read");
   // Vocab (VC-5): Principal/Teacher via tracker:read (reports/build/mark); Office via
   // roster:manage (the weekly tester assignment + message:dispatch generation). Every
   // action is re-gated server-side. GUARDIAN never sees this staff tab.
-  const canVocab = !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
+  const canVocab = !!role && (can("tracker:read") || can("roster:manage"));
   // Class Test (CT-5): Principal/Teacher via tracker:read (request/results/publish/
   // reports); Office via roster:manage (print queue + dashboard + overdue-chase).
   // Every action is re-gated server-side. GUARDIAN never sees this staff tab.
-  const canClassTest = !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
+  const canClassTest = !!role && (can("tracker:read") || can("roster:manage"));
   // Comments + Parents-Meeting (CM-6): Principal/Teacher via tracker:read (daily
   // comments + comparison reads); Office via roster:manage (the parents'-meeting
   // admin). Every action is re-gated server-side. GUARDIAN never sees this staff tab.
-  const canComments = !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
+  const canComments = !!role && (can("tracker:read") || can("roster:manage"));
   // Classroom Observation (CO app surfaces): any holder of an observation:* perm —
   // Principal/Office (upload/read/manage) and the senior-teacher observer (review/read).
   // GUARDIAN holds none. Every action is re-gated + row-scoped server-side.
   const canObservation =
     !!role &&
-    (roleHasPermission(role, "observation:read") ||
-      roleHasPermission(role, "observation:upload") ||
-      roleHasPermission(role, "observation:review") ||
-      roleHasPermission(role, "observation:manage"));
+    (can("observation:read") ||
+      can("observation:upload") ||
+      can("observation:review") ||
+      can("observation:manage"));
   // Free Mixing Observation: Principal/Office (assign+board) always; a teacher
   // only once something is actually assigned to them (owner ruling 2026-07-20).
   const canFreeMixing =
-    (!!role && roleHasPermission(role, "observation:upload")) ||
+    (can("observation:upload")) ||
     (role === "TEACHER" && (freeMixQ.data?.myVideoReviews.length ?? 0) > 0);
   // English Drive (D-#344): upload = roster:manage (P/O); a teacher sees the tab
   // only when the server-resolved English class set is non-empty. GUARDIAN never.
   const canEnglishDrive =
-    (!!role && roleHasPermission(role, "roster:manage")) ||
+    (can("roster:manage")) ||
     (role === "TEACHER" && (engDriveQ.data?.englishDriveMyClassLevels.length ?? 0) > 0);
   // Saturday Qur'an-Hifz Revision (SR app surfaces): Hifz teachers via tracker:read
   // (record/edit/deliver/history); Principal/Office via roster:manage (dashboards +
   // completeness chase). Every action is re-gated + row-scoped server-side. GUARDIAN
   // holds neither — the guardian read is a card on the guardian Home tab, not here.
   const canRevision =
-    !!role && (roleHasPermission(role, "tracker:read") || roleHasPermission(role, "roster:manage"));
+    !!role && (can("tracker:read") || can("roster:manage"));
   // Finance (FIN-6B): finance:manage is Principal+Office only (AC-1 may grant it to
   // the accountant alone). GUARDIAN never holds it, so the tab is hidden for guardians.
   // Every action is re-gated + row-scoped server-side.
-  const canFinance = !!role && roleHasPermission(role, "finance:manage");
+  const canFinance = can("finance:manage");
   // HR/staff tab: every logged-in staff member (Principal/Teacher/Office) — leave
   // + self-service is universal; GUARDIAN never sees it. Admin entries inside are
   // permission-gated per slice and re-checked server-side.
@@ -1248,7 +1247,7 @@ export function AppTabs(): React.ReactElement {
   // Today dashboard (UX-4): every staff login lands here; each card inside degrades
   // to empty/zero server-side when the caller lacks the underlying permission.
   const canHome = !!role && role !== "GUARDIAN";
-  const canAdmin = !!role && (roleHasPermission(role, "content:import") || roleHasPermission(role, "user:manage"));
+  const canAdmin = !!role && (can("content:import") || can("user:manage"));
   // Support-book production: gated on the caller's EFFECTIVE permissions, never the
   // role template — `book:*` sits only on the PRINCIPAL template and every
   // illustrator/reviewer/assembler reaches it by AC-1 grant (D-#405), so
@@ -1263,7 +1262,7 @@ export function AppTabs(): React.ReactElement {
   const canReports = role === "PRINCIPAL" || role === "OFFICE";
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
-  const canGuardian = !!role && roleHasPermission(role, "guardian:read_child");
+  const canGuardian = can("guardian:read_child");
 
   // Defensive (D-#369): a role-less / unrecognised authed session makes EVERY tab
   // gate false, which would mount an empty Drawer.Navigator and hard-crash the app

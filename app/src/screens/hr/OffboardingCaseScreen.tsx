@@ -8,7 +8,7 @@
 import React from "react";
 import { View } from "react-native";
 import { useQuery, useMutation } from "urql";
-import { CLEARANCE_ITEM_STATUSES, roleHasPermission } from "@scd/shared";
+import { CLEARANCE_ITEM_STATUSES } from "@scd/shared";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
   OFFBOARDING_CASE_QUERY,
@@ -66,9 +66,9 @@ function SettlementLineRow({ label, line }: { label: string; line: SettlementLin
 export default function OffboardingCaseScreen({ route }: Props): React.ReactElement {
   const { caseId } = route.params;
   const { confirmAction } = useConfirm();
-  const { role } = useAuth();
-  const canCompute = !!role && roleHasPermission(role, "payroll:manage");
-  const canRelease = !!role && roleHasPermission(role, "payroll:approve");
+  const { role, can } = useAuth();
+  const canCompute = can("payroll:manage");
+  const canRelease = can("payroll:approve");
 
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);

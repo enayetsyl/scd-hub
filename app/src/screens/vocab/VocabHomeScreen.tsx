@@ -10,7 +10,6 @@ import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import { MY_VOCAB_ASSIGNMENTS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -23,8 +22,8 @@ type Nav = NativeStackNavigationProp<VocabStackParamList>;
 
 export default function VocabHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
-  const { role } = useAuth();
-  const canAssign = !!role && roleHasPermission(role, "roster:manage");
+  const { role, can } = useAuth();
+  const canAssign = can("roster:manage");
   const [myQ, refetchMy] = useQuery({ query: MY_VOCAB_ASSIGNMENTS_QUERY, variables: {} });
   const mine = myQ.data?.myVocabAssignments ?? [];
 

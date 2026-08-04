@@ -7,7 +7,7 @@ import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission, PLAN_DOC_TYPES } from "@scd/shared";
+import { PLAN_DOC_TYPES } from "@scd/shared";
 import { ARTIFACT_QUERY, ASSIGN_PLAN_REVIEW, APPROVE_PLAN, TEACHERS_QUERY } from "../../graphql/operations";
 import type { ContentStackParamList } from "../../navigation/types";
 import { useAuth } from "../../auth/AuthContext";
@@ -53,10 +53,10 @@ export default function PlanViewScreen({ route, navigation }: Props): React.Reac
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
-  const { role } = useAuth();
-  const canAssign = !!role && roleHasPermission(role, "content:assign_review");
-  const canApprove = !!role && roleHasPermission(role, "content:promote_gold");
-  const canRequestPrint = !!role && roleHasPermission(role, "tracker:write");
+  const { role, can } = useAuth();
+  const canAssign = can("content:assign_review");
+  const canApprove = can("content:promote_gold");
+  const canRequestPrint = can("tracker:write");
   const [, assignReview] = useMutation(ASSIGN_PLAN_REVIEW);
   const [, approvePlan] = useMutation(APPROVE_PLAN);
   const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY, pause: !canAssign });

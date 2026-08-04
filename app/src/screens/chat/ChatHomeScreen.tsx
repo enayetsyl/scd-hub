@@ -10,7 +10,6 @@ import { View, RefreshControl } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { useFocusEffect } from "@react-navigation/native";
-import { roleHasPermission } from "@scd/shared";
 import { MY_CONVERSATIONS_QUERY, type ConversationT } from "../../graphql/operations";
 import type { ChatStackParamList } from "../../navigation/types";
 import { Screen, Card, Body, Muted, Button, Badge, EmptyState } from "../../components/ui";
@@ -60,11 +59,11 @@ function ConversationRow({
 }
 
 export default function ChatHomeScreen({ navigation }: Props): React.ReactElement {
-  const { user, role } = useAuth();
+  const { user, role, can } = useAuth();
   const myUserId = user?.id ?? "";
-  const canManage = !!role && roleHasPermission(role, "chat:manage");
-  const canOversee = !!role && roleHasPermission(role, "chat:oversee"); // PRINCIPAL
-  const canWrite = !!role && roleHasPermission(role, "chat:write"); // staff (notice composer)
+  const canManage = can("chat:manage");
+  const canOversee = can("chat:oversee"); // PRINCIPAL
+  const canWrite = can("chat:write"); // staff (notice composer)
 
   const [convQ, refetch] = useQuery({ query: MY_CONVERSATIONS_QUERY });
   // Refresh the list (unread/last-activity) whenever the tab regains focus.

@@ -32,7 +32,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useMutation, useQuery } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import {
   MY_DAY_QUERY,
@@ -89,24 +88,24 @@ const slotPhase = (s: RoutineSlotT, nowHM: string): SlotPhase => {
 
 export default function TodayScreen(): React.ReactElement {
   const nav = useNavigation() as unknown as CrossNav;
-  const { role, user } = useAuth();
+  const { role, user, can } = useAuth();
   const colors = useColors();
   const date = todayISO();
 
   const [q, refetch] = useQuery({ query: MY_DAY_QUERY, variables: { date } });
 
   // The SAME gates AppTabs uses for the target tabs (no new gating logic).
-  const canDeclare = !!role && roleHasPermission(role as Role, "tracker:read");
-  const canManage = !!role && roleHasPermission(role as Role, "attendance:manage");
+  const canDeclare = can("tracker:read");
+  const canManage = can("attendance:manage");
   const canAttendance =
     !!role &&
-    (roleHasPermission(role as Role, "attendance:mark") || roleHasPermission(role as Role, "attendance:manage"));
+    (can("attendance:mark") || can("attendance:manage"));
   const canClassTest =
-    !!role && (roleHasPermission(role as Role, "tracker:read") || roleHasPermission(role as Role, "roster:manage"));
-  const canClassNotes = !!role && roleHasPermission(role as Role, "routine:read");
-  const canQuestions = !!role && roleHasPermission(role as Role, "question:read");
-  const canSets = !!role && roleHasPermission(role as Role, "set:read");
-  const canTrackers = !!role && roleHasPermission(role as Role, "tracker:read");
+    !!role && (can("tracker:read") || can("roster:manage"));
+  const canClassNotes = can("routine:read");
+  const canQuestions = can("question:read");
+  const canSets = can("set:read");
+  const canTrackers = can("tracker:read");
   const canHr = !!role && role !== "GUARDIAN";
 
   // D-#318: the teacher's OWN sections' attendance at a glance (admins land on
@@ -129,7 +128,7 @@ export default function TodayScreen(): React.ReactElement {
   // D-#340: MY class tests already held but with incomplete result entry — each
   // renders as a pending alert that deep-links into its entry grid. Self-scoped
   // read (teacherId = me), so no section context is needed.
-  const canFileTests = !!role && roleHasPermission(role as Role, "tracker:write");
+  const canFileTests = can("tracker:write");
   const [ctPendingQ, refetchCtPending] = useQuery({
     query: CLASS_TEST_REPORTS_STATUS_QUERY,
     variables: { teacherId: user?.id ?? null },

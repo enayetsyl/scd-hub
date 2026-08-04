@@ -11,7 +11,6 @@ import { FlatList, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useClient, useMutation } from "urql";
 import { useFocusEffect } from "@react-navigation/native";
-import { roleHasPermission } from "@scd/shared";
 import {
   MESSAGES_QUERY,
   CONVERSATION_QUERY,
@@ -49,11 +48,11 @@ type ActiveAction = { id: string; type: "react" | "forward" } | null;
 export default function ChatThreadScreen({ route, navigation }: Props): React.ReactElement {
   const { conversationId } = route.params;
   const client = useClient();
-  const { user, role } = useAuth();
+  const { user, role, can } = useAuth();
   const { confirmAction } = useConfirm();
   const toast = useToast();
   const myUserId = user?.id ?? "";
-  const canManage = !!role && roleHasPermission(role, "chat:manage");
+  const canManage = can("chat:manage");
 
   const [messages, setMessages] = useState<ChatMessageT[]>([]); // newest-first
   const [conv, setConv] = useState<ConversationT | null>(null);

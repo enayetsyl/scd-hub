@@ -16,7 +16,6 @@ import { View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import {
   ARTIFACT_QUERY,
   PLAN_REVIEW_THREAD,
@@ -91,9 +90,9 @@ function RoundCard({ r }: { r: ReviewAssignmentT }): React.ReactElement {
 
 export default function ReviewThreadScreen({ route }: Props): React.ReactElement {
   const { artifactId } = route.params;
-  const { role } = useAuth();
-  const canAssign = !!role && roleHasPermission(role, "content:assign_review");
-  const canApprove = !!role && roleHasPermission(role, "content:promote_gold");
+  const { role, can } = useAuth();
+  const canAssign = can("content:assign_review");
+  const canApprove = can("content:promote_gold");
 
   const [{ data: tData, fetching, error }, refetchThread] = useQuery({
     query: PLAN_REVIEW_THREAD,

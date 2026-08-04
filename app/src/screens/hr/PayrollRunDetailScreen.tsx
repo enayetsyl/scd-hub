@@ -8,7 +8,6 @@
 import React from "react";
 import { View } from "react-native";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission } from "@scd/shared";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
   PAYSLIPS_FOR_RUN_QUERY,
@@ -52,8 +51,8 @@ function PayLineRow({ label, line }: { label: string; line: PayLineT }): React.R
 export default function PayrollRunDetailScreen({ route, navigation }: Props): React.ReactElement {
   const { runId, monthKey } = route.params;
   const { confirmAction } = useConfirm();
-  const { role } = useAuth();
-  const canApprove = !!role && roleHasPermission(role, "payroll:approve");
+  const { role, can } = useAuth();
+  const canApprove = can("payroll:approve");
 
   const [status, setStatus] = React.useState(route.params.status);
   const [busy, setBusy] = React.useState(false);

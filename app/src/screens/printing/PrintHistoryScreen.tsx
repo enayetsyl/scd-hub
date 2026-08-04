@@ -21,7 +21,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { roleHasPermission, ROUTINE_SUBJECTS, PRINT_COLOUR_LABELS_EN, PRINT_SIDES_LABELS_EN } from "@scd/shared";
+import { ROUTINE_SUBJECTS, PRINT_COLOUR_LABELS_EN, PRINT_SIDES_LABELS_EN } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import {
   PRINT_HISTORY_QUERY,
@@ -76,9 +76,9 @@ const ANY = "__any__";
 const NONE = "__none__";
 
 export default function PrintHistoryScreen({ navigation }: Props): React.ReactElement {
-  const { role, user } = useAuth();
+  const { role, user, can } = useAuth();
   const toast = useToast();
-  const isOffice = !!role && roleHasPermission(role as Role, "roster:manage");
+  const isOffice = can("roster:manage");
 
   const [classFilter, setClassFilter] = useState<string>(ANY);
   const [subjectFilter, setSubjectFilter] = useState<string>(ANY);
