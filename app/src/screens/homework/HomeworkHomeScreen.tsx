@@ -188,7 +188,13 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
               <EmptyState message={STR.empty} />
             ) : (
               (tally?.items ?? []).map((it) => {
-                const editable = it.status === "declared" ? tally?.state !== "reconciled" : true;
+                // WHOSE work it is. Another subject teacher looking at the same class-day
+                // must not be able to rewrite or delete homework they did not set
+                // (owner report 2026-08-04); Office/Principal keep the override. The
+                // reconciled-day rule still applies on top.
+                const mine = isAdmin || (!!user && it.declaredBy === user.id);
+                const dayOpen = it.status === "declared" ? tally?.state !== "reconciled" : true;
+                const editable = mine && dayOpen;
                 return (
                   <Card key={it.itemId}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>

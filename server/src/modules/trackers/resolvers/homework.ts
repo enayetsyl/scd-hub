@@ -773,6 +773,7 @@ interface DayItemShape {
   topTags: string[];
   poolRef: string | null;
   attachmentIds: string[];
+  declaredBy: string;
 }
 
 const DayItemRef = builder.objectRef<DayItemShape>("HomeworkDayItem");
@@ -793,6 +794,8 @@ DayItemRef.implement({
     topTags: t.stringList({ resolve: (r) => r.topTags }),
     poolRef: t.string({ nullable: true, resolve: (r) => r.poolRef }),
     attachmentIds: t.stringList({ resolve: (r) => r.attachmentIds }),
+    // Who declared it — the app gates Edit/Delete on this (owner report 2026-08-04).
+    declaredBy: t.exposeString("declaredBy"),
   }),
 });
 
