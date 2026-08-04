@@ -49,8 +49,8 @@ function RecordCard({
   const { openingId, runOpen } = useFileOpen();
   return (
     <Card>
-      {/* The guardian status is a SENTENCE, not a chip word ("বাড়ির কাজ করে আনেনি — শেষ
-          করে দ্রুত জমা দিন", worded for parents), so it gets its own full-width line.
+      {/* The guardian status is a SENTENCE, not a chip word ("বাড়ির কাজ জমা দেওয়ার সময়
+          হয়েছে", worded for parents), so it gets its own full-width line.
           Sitting beside the title it crushed that column to a few pixels — flexShrink is
           0 by default in RN, so the badge never yielded and the only shrinkable child
           took the whole squeeze, wrapping the subject and hwId one character per line. */}
@@ -63,7 +63,13 @@ function RecordCard({
         {r.resubOf ? <Badge text={lifecycleStateLabel("RESUBMIT")} tone="warn" /> : null}
       </View>
       <View style={{ marginTop: space(2) }}>
-        <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
+        <Badge
+          text={hwGuardianStatusLabel(r.state)}
+          /* Three steps, not two: amber "due today" → red "did not bring it" → green for
+             everything already handed in. DUE used to render GREEN while saying the
+             child had not done the work, which read as both wrong and alarming. */
+          tone={r.state === "CHASE" ? "danger" : r.state === "DUE" ? "warn" : "brand"}
+        />
       </View>
 
       {/* Stage timeline (GP-J4) */}

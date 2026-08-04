@@ -68,6 +68,9 @@ export default function DailyEntryScreen(): React.ReactElement {
     const { firstErrorKey, errors } = required({
       date: { value: date.trim(), message: `${STR.finDate} — ${STR.fieldRequired}` },
       kind: { value: kind, message: `${STR.finKind} — ${STR.fieldRequired}` },
+      // The server declares mode non-null; it used to be sent as null and the whole
+      // document was rejected, so this never actually reached the server (2026-08-03).
+      mode: { value: mode, message: `${STR.finMode} — ${STR.fieldRequired}` },
     });
     if (firstErrorKey) {
       setFieldErrors(errors);
@@ -81,7 +84,7 @@ export default function DailyEntryScreen(): React.ReactElement {
     const res = await record({
       date: date.trim(),
       kind: kind!,
-      mode: mode ?? null,
+      mode: mode!,
       amount: amount.trim() ? Number(amount) : null,
       note: note.trim() || null,
       studentId: kind === "FEE_COLLECTION" ? studentId.trim() || null : null,

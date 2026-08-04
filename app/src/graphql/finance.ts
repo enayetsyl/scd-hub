@@ -119,7 +119,7 @@ export const RECORD_FINANCE_POSTING = gql<
   {
     date: string;
     kind: string;
-    mode?: string | null;
+    mode: string;
     amount?: number | null;
     note?: string | null;
     studentId?: string | null;
@@ -132,9 +132,9 @@ export const RECORD_FINANCE_POSTING = gql<
   }
 >`
   mutation RecordFinancePosting(
-    $date: String!, $kind: String!, $mode: String, $amount: Float, $note: String,
-    $studentId: String, $feeLines: [FeeLineInput!], $incomeHead: String, $expenseHead: String,
-    $toLedger: String, $salaryBaseAmount: Float, $salaryAdjustments: [SalaryAdjustmentInput!]
+    $date: String!, $kind: String!, $mode: String!, $amount: Float, $note: String,
+    $studentId: String, $feeLines: [FinanceFeeLineInput!], $incomeHead: String, $expenseHead: String,
+    $toLedger: String, $salaryBaseAmount: Float, $salaryAdjustments: [FinanceSalaryAdjustmentInput!]
   ) {
     recordFinancePosting(
       date: $date, kind: $kind, mode: $mode, amount: $amount, note: $note,
@@ -290,7 +290,7 @@ export const SET_FEE_SUPPORT_ALLOCATION = gql<
   }
 >`
   mutation SetFeeSupportAllocation(
-    $studentId: String!, $providerId: String!, $coverage: [FeeCoverageInput!]!,
+    $studentId: String!, $providerId: String!, $coverage: [FinanceCoverageItemInput!]!,
     $effectiveDate: String!, $endDate: String, $status: String, $note: String
   ) {
     setFeeSupportAllocation(
@@ -311,9 +311,9 @@ export interface ProviderReceiptT {
 
 export const RECORD_PROVIDER_RECEIPT = gql<
   { recordProviderReceipt: ProviderReceiptT },
-  { providerId: string; amount: number; date: string; mode?: string | null; note?: string | null }
+  { providerId: string; amount: number; date: string; mode: string; note?: string | null }
 >`
-  mutation RecordProviderReceipt($providerId: String!, $amount: Float!, $date: String!, $mode: String, $note: String) {
+  mutation RecordProviderReceipt($providerId: String!, $amount: Float!, $date: String!, $mode: String!, $note: String) {
     recordProviderReceipt(providerId: $providerId, amount: $amount, date: $date, mode: $mode, note: $note) {
       id providerId amount date mode note
     }
@@ -417,7 +417,7 @@ export const RECORD_QARD_IOU_ENTRY = gql<
     direction: string;
     amount: number;
     date: string;
-    mode?: string | null;
+    mode: string;
     dueDate?: string | null;
     schedule?: QardIouScheduleInput[] | null;
     note?: string | null;
@@ -426,7 +426,7 @@ export const RECORD_QARD_IOU_ENTRY = gql<
 >`
   mutation RecordQardIouEntry(
     $partyId: String!, $type: String!, $direction: String!, $amount: Float!, $date: String!,
-    $mode: String, $dueDate: String, $schedule: [QardIouScheduleInput!], $note: String, $reversesEntryId: String
+    $mode: String!, $dueDate: String, $schedule: [QardIouScheduleInput!], $note: String, $reversesEntryId: String
   ) {
     recordQardIouEntry(
       partyId: $partyId, type: $type, direction: $direction, amount: $amount, date: $date,
@@ -504,7 +504,7 @@ export const RECORD_RECONCILIATION = gql<
   { recordReconciliation: ReconciliationEntryT },
   { date: string; bankStatementBalance: number; eximusClosing: EximusClosingInput; note?: string | null }
 >`
-  mutation RecordReconciliation($date: String!, $bankStatementBalance: Float!, $eximusClosing: EximusClosingInput!, $note: String) {
+  mutation RecordReconciliation($date: String!, $bankStatementBalance: Float!, $eximusClosing: FinanceLedgerTripleInput!, $note: String) {
     recordReconciliation(date: $date, bankStatementBalance: $bankStatementBalance, eximusClosing: $eximusClosing, note: $note) {
       ${RECON_FIELDS}
     }
@@ -515,7 +515,7 @@ export const LATEST_RECONCILIATION_QUERY = gql<
   { latestReconciliation: ReconciliationEntryT | null },
   { date?: string | null }
 >`
-  query LatestReconciliation($date: String) {
+  query LatestReconciliation($date: String!) {
     latestReconciliation(date: $date) { ${RECON_FIELDS} }
   }
 `;
@@ -524,7 +524,7 @@ export const RECONCILIATION_HISTORY_QUERY = gql<
   { reconciliationHistory: ReconciliationEntryT[] },
   { from?: string | null; to?: string | null }
 >`
-  query ReconciliationHistory($from: String, $to: String) {
+  query ReconciliationHistory($from: String!, $to: String!) {
     reconciliationHistory(from: $from, to: $to) { ${RECON_FIELDS} }
   }
 `;

@@ -171,6 +171,7 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
   // row narrows it. Hidden when the section has a single subject in play. Runs BEFORE
   // SubjectFold, so the taught/not-taught fold (D-#388) still applies to what is left.
   const [subjectFilter, setSubjectFilter] = useState<string>(ANY_SUBJECT);
+  const [subjectOpen, setSubjectOpen] = useState(false);
   // Count CARDS (asItems), not records — "English (৪)" means four assignment cards.
   // Counted over `all`, so a subject whose only cards are finished still gets a chip.
   const itemIdsBySubject = new Map<string, Set<string>>();
@@ -254,22 +255,45 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
             while scrolling a long deck. Hidden when the section has one subject in play. */}
         {subjectOptions.length > 1 ? (
           <View style={{ marginTop: space(1) }}>
-            <Muted>{STR.subject}</Muted>
-            <ChipRow>
-              <Chip
-                label={STR.all}
-                selected={activeSubject === ANY_SUBJECT}
-                onPress={() => setSubjectFilter(ANY_SUBJECT)}
-              />
-              {subjectOptions.map((o) => (
+            {/* COLLAPSED BY DEFAULT (owner ask 2026-08-03): with six or seven subjects the
+                chips wrapped to three rows and ate the screen before a single card showed.
+                The header keeps the ACTIVE subject visible while shut — a filter you cannot
+                see is a filter that silently hides work. Picking one closes it again, which
+                is the point: get the space back. */}
+            <Pressable
+              onPress={() => setSubjectOpen((v) => !v)}
+              accessibilityRole="button"
+              style={{ flexDirection: "row", alignItems: "center", minHeight: 36 }}
+              hitSlop={8}
+            >
+              <Muted>
+                {subjectOpen ? "▾" : "▸"} {STR.subject}
+                {activeSubject === ANY_SUBJECT ? "" : `: ${hwSubjectLabel(activeSubject)}`}
+              </Muted>
+            </Pressable>
+            {subjectOpen ? (
+              <ChipRow>
                 <Chip
-                  key={o.subject}
-                  label={`${hwSubjectLabel(o.subject)} (${bnNum(o.count)})`}
-                  selected={activeSubject === o.subject}
-                  onPress={() => setSubjectFilter(o.subject)}
+                  label={STR.all}
+                  selected={activeSubject === ANY_SUBJECT}
+                  onPress={() => {
+                    setSubjectFilter(ANY_SUBJECT);
+                    setSubjectOpen(false);
+                  }}
                 />
-              ))}
-            </ChipRow>
+                {subjectOptions.map((o) => (
+                  <Chip
+                    key={o.subject}
+                    label={`${hwSubjectLabel(o.subject)} (${bnNum(o.count)})`}
+                    selected={activeSubject === o.subject}
+                    onPress={() => {
+                      setSubjectFilter(o.subject);
+                      setSubjectOpen(false);
+                    }}
+                  />
+                ))}
+              </ChipRow>
+            ) : null}
           </View>
         ) : null}
       </View>

@@ -139,6 +139,15 @@ const STAFF_NAV: NavSection[] = [
       },
       {
         route: "SupportBookTab",
+        labelKey: "sbPolicyTitle",
+        icon: "📜",
+        screen: "BookPolicy",
+        // The validator runs against these; a missing one silently weakens every
+        // check that depends on it, so whoever loads books needs to see the gaps.
+        perms: ["book:manage"],
+      },
+      {
+        route: "SupportBookTab",
         labelKey: "sbQueueTitle",
         icon: "🖼️",
         screen: "BookImageQueue",

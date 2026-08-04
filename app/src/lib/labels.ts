@@ -648,11 +648,16 @@ export const lifecycleStateLabel = (v?: string | null): string =>
  * label. Homework-specific ("বাড়ির কাজ"), so NOT used for the assignment view.
  */
 const HW_GUARDIAN_STATUS_BN: Partial<Record<string, string>> = {
-  DUE: "বাড়ির কাজ করে আনেনি — শেষ করে দ্রুত জমা দিন",
+  // DUE is set by the overnight sweep, NOT by a teacher — it only means the deadline
+  // has arrived, and nothing has been collected yet. The old wording ("বাড়ির কাজ করে
+  // আনেনি") accused the child from midnight until the teacher ran the collection pass
+  // — 15 hours on the day this was reported (owner, 2026-08-03) — and did it to EVERY
+  // parent in the class. Only CHASE is a teacher's deliberate "did not bring it".
+  DUE: "বাড়ির কাজ জমা দেওয়ার সময় হয়েছে",
   CHASE: "বাড়ির কাজ আনেনি",
 };
 const HW_GUARDIAN_STATUS_EN: Partial<Record<string, string>> = {
-  DUE: "Homework not done — please finish and submit soon",
+  DUE: "Homework due — please submit",
   CHASE: "Homework not brought",
 };
 export const hwGuardianStatusLabel = (v?: string | null): string =>
@@ -2110,6 +2115,19 @@ const STR_BN = {
   sbUploading: "আপলোড হচ্ছে…",
   sbUploaded: "আপলোড হয়েছে",
   sbUploadHint: "যে ধাপের ফাইল, সেই ধাপে আপলোড করুন",
+  sbPolicyTitle: "নীতি-নথি",
+  sbPolicySub: "যাচাই এই নথিগুলোর বিরুদ্ধে চলে — না থাকলে যাচাই দুর্বল হয়",
+  sbPolicyHash: "সেট হ্যাশ",
+  sbPolicyActive: "সক্রিয় নথি",
+  sbPolicyMissingList: "যেগুলো এখনো নেই",
+  sbPolicyComplete: "সব নীতি-নথি লোড হয়েছে",
+  sbPolicyVersion: "সংস্করণ",
+  sbPolicyUpload: "ফাইল দিন",
+  sbPolicyActivated: "সক্রিয় হয়েছে",
+  sbPolicyPerBook: "এই বইয়ের নিজস্ব",
+  sbPolicyProgramme: "পুরো প্রোগ্রামের",
+  sbPolicyNeedBook: "আগে একটি বই বাছুন",
+  sbPolicyEmptyFile: "ফাইলটি খালি",
   sbContent: "পাঠের লেখা",
   sbShowContent: "লেখা দেখুন",
   sbHideContent: "লেখা লুকান",
@@ -3058,6 +3076,8 @@ const STR_BN = {
   ctPublishTitle: "ফলাফল প্রকাশ",
   /** Teacher view of the same button: they SUBMIT for approval, they do not publish. */
   ctSubmitShort: "জমা দিন",
+  ctEditDetails: "পরীক্ষার তথ্য সংশোধন",
+  ctEditSaved: "সংশোধন সংরক্ষিত হয়েছে",
   ctRetireExam: "পরীক্ষা প্রত্যাহার",
   ctRetireReason: "প্রত্যাহারের কারণ",
   ctRetireConfirmTitle: "পরীক্ষাটি প্রত্যাহার করবেন?",
@@ -5258,6 +5278,19 @@ const STR_EN: StrTable = {
   sbUploading: "Uploading…",
   sbUploaded: "Uploaded",
   sbUploadHint: "Upload each file at the stage it belongs to",
+  sbPolicyTitle: "Governance documents",
+  sbPolicySub: "Validation runs against these — a missing one means a weaker check",
+  sbPolicyHash: "Set hash",
+  sbPolicyActive: "Active documents",
+  sbPolicyMissingList: "Not loaded yet",
+  sbPolicyComplete: "Every governance document is loaded",
+  sbPolicyVersion: "v",
+  sbPolicyUpload: "Choose file",
+  sbPolicyActivated: "Activated",
+  sbPolicyPerBook: "this book only",
+  sbPolicyProgramme: "whole programme",
+  sbPolicyNeedBook: "Pick a book first",
+  sbPolicyEmptyFile: "That file is empty",
   sbContent: "Lesson content",
   sbShowContent: "Read the lesson",
   sbHideContent: "Hide the lesson",
@@ -6198,6 +6231,8 @@ const STR_EN: StrTable = {
   ctSubmittedLocked: "Pending approval — recall to edit.",
   ctPublishTitle: "Publish results",
   ctSubmitShort: "Submit",
+  ctEditDetails: "Edit exam details",
+  ctEditSaved: "Changes saved",
   ctRetireExam: "Retire exam",
   ctRetireReason: "Reason for retiring",
   ctRetireConfirmTitle: "Retire this exam?",

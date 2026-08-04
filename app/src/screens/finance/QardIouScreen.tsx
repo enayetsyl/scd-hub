@@ -98,7 +98,9 @@ export default function QardIouScreen(): React.ReactElement {
   async function onRecordEntry(): Promise<void> {
     setError(null);
     setOk(null);
-    if (!partyId || !type || !direction || !amount.trim() || !date.trim()) return setError(STR.errGeneric);
+    // mode is non-null server-side — it used to go as null and the document was
+    // rejected wholesale, so the entry never saved (2026-08-03).
+    if (!partyId || !type || !direction || !amount.trim() || !date.trim() || !mode) return setError(STR.errGeneric);
     setBusy(true);
     const res = await recordEntry({
       partyId,
@@ -106,7 +108,7 @@ export default function QardIouScreen(): React.ReactElement {
       direction,
       amount: Number(amount),
       date: date.trim(),
-      mode: mode ?? null,
+      mode,
       dueDate: dueDate.trim() || null,
       note: note.trim() || null,
     });
