@@ -220,6 +220,7 @@ import SupervisoryGrantScreen from "../screens/admin/SupervisoryGrantScreen";
 import RosterScreen from "../screens/admin/RosterScreen";
 import StudentProfileScreen from "../screens/student/StudentProfileScreen";
 import BookImportScreen from "../screens/supportbook/BookImportScreen";
+import BookPolicyScreen from "../screens/supportbook/BookPolicyScreen";
 import BookImageQueueScreen from "../screens/supportbook/BookImageQueueScreen";
 import BookReviewScreen from "../screens/supportbook/BookReviewScreen";
 import BookEscalationInboxScreen from "../screens/supportbook/BookEscalationInboxScreen";
@@ -1095,6 +1096,7 @@ function SupportBookNavigator(): React.ReactElement {
       {/* SB-1 first: a book has to EXIST before any other screen here means anything.
           Param-free, so its position in the initial slot is safe. */}
       <SupportBookStack.Screen name="BookImport" component={BookImportScreen} options={{ title: STR.sbImportTitle }} />
+      <SupportBookStack.Screen name="BookPolicy" component={BookPolicyScreen} options={{ title: STR.sbPolicyTitle }} />
       <SupportBookStack.Screen name="BookImageQueue" component={BookImageQueueScreen} options={{ title: STR.sbQueueTitle }} />
       <SupportBookStack.Screen name="BookReview" component={BookReviewScreen} options={{ title: STR.sbReviewTitle }} />
       <SupportBookStack.Screen name="BookEscalationInbox" component={BookEscalationInboxScreen} options={{ title: STR.sbInboxTitle }} />
