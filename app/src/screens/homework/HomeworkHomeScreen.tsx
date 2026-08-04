@@ -9,7 +9,7 @@
  * Checking keep working unchanged. The date is a real calendar (DateField, web + phone).
  */
 import React, { useMemo, useState, useRef, useCallback } from "react";
-import { View, ScrollView } from "react-native";
+import { View, ScrollView, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useMutation, useQuery } from "urql";
@@ -58,6 +58,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
   const { selection } = useSectionContext();
 
   const [date, setDate] = useState(today());
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   // The caller's accessible classes — the shared UX-5 hook (also feeds the badge refs).
   const accessible = useAccessibleClasses();
@@ -248,47 +249,70 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
               })
             )}
 
-            {/* Summary roll-ups (cumulative for this class) */}
+            {/* Summary roll-ups (cumulative for this class).
+                COLLAPSED BY DEFAULT (owner ask 2026-08-03): the chase list runs to
+                dozens of rows on a busy class, so the card buried the rest of the
+                screen. The shut header still carries the two numbers worth glancing
+                at — a summary that shows nothing is not a summary. */}
             {summary ? (
               <Card>
-                <Body style={{ fontWeight: "700", marginBottom: 8 }}>{STR.trackerSummary}</Body>
-                <SummaryRow label={STR.hwPendingChecking} value={bnNum(summary.pendingChecking)} />
-                <SummaryRow label={STR.hwOpenResubmissions} value={bnNum(summary.openResubmissions)} />
-                <SummaryRow label={STR.hwActiveChases} value={bnNum(summary.chaseList.length)} />
-                {selectedOverview ? (
-                  <SummaryRow label={STR.hwOverCeilingDays} value={bnNum(selectedOverview.overCeilingDaysThisWeek)} />
+                <Pressable
+                  onPress={() => setSummaryOpen((v) => !v)}
+                  accessibilityRole="button"
+                  style={{ flexDirection: "row", alignItems: "center", minHeight: 36 }}
+                  hitSlop={8}
+                >
+                  <Body style={{ fontWeight: "700" }}>
+                    {summaryOpen ? "▾" : "▸"} {STR.trackerSummary}
+                  </Body>
+                </Pressable>
+                {!summaryOpen ? (
+                  <Muted>
+                    {STR.hwPendingChecking}: {bnNum(summary.pendingChecking)} · {STR.hwActiveChases}:{" "}
+                    {bnNum(summary.chaseList.length)}
+                  </Muted>
                 ) : null}
-                <SummaryRow
-                  label={STR.hwOnTimePct}
-                  value={summary.submittedOnTimePct == null ? "—" : `${bnNum(summary.submittedOnTimePct)}%`}
-                />
-                <SummaryRow
-                  label={STR.hwReturnLatency}
-                  value={summary.avgReturnLatencyDays == null ? "—" : bnNum(summary.avgReturnLatencyDays)}
-                />
-                {summary.chaseList.length > 0 ? (
+                {summaryOpen ? (
                   <>
-                    <Muted style={{ marginTop: 8, fontWeight: "700" }}>{STR.hwChaseList}</Muted>
-                    {summary.chaseList.map((c) => (
-                      <View key={c.recordId} style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                        <Muted>{c.hwId}</Muted>
-                        <View style={{ flexDirection: "row", gap: 6 }}>
-                          <Badge text={`${STR.trackerEntry} ${bnNum(c.chaseCount)}`} tone="muted" />
-                          {c.commsPrompt ? <Badge text={STR.hwCommsPrompt} tone="danger" /> : c.attention ? <Badge text={STR.hwAttention} tone="warn" /> : null}
-                        </View>
-                      </View>
-                    ))}
-                  </>
-                ) : null}
-                {summary.topicTouches.length > 0 ? (
-                  <>
-                    <Muted style={{ marginTop: 8, fontWeight: "700" }}>{STR.hwTopicTouches}</Muted>
-                    {summary.topicTouches.slice(0, 8).map((tt) => (
-                      <View key={tt.topTag} style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                        <Muted>{tt.topTag}</Muted>
-                        <Muted>{bnNum(tt.count)}</Muted>
-                      </View>
-                    ))}
+                    <SummaryRow label={STR.hwPendingChecking} value={bnNum(summary.pendingChecking)} />
+                    <SummaryRow label={STR.hwOpenResubmissions} value={bnNum(summary.openResubmissions)} />
+                    <SummaryRow label={STR.hwActiveChases} value={bnNum(summary.chaseList.length)} />
+                    {selectedOverview ? (
+                      <SummaryRow label={STR.hwOverCeilingDays} value={bnNum(selectedOverview.overCeilingDaysThisWeek)} />
+                    ) : null}
+                    <SummaryRow
+                      label={STR.hwOnTimePct}
+                      value={summary.submittedOnTimePct == null ? "—" : `${bnNum(summary.submittedOnTimePct)}%`}
+                    />
+                    <SummaryRow
+                      label={STR.hwReturnLatency}
+                      value={summary.avgReturnLatencyDays == null ? "—" : bnNum(summary.avgReturnLatencyDays)}
+                    />
+                    {summary.chaseList.length > 0 ? (
+                      <>
+                        <Muted style={{ marginTop: 8, fontWeight: "700" }}>{STR.hwChaseList}</Muted>
+                        {summary.chaseList.map((c) => (
+                          <View key={c.recordId} style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+                            <Muted>{c.hwId}</Muted>
+                            <View style={{ flexDirection: "row", gap: 6 }}>
+                              <Badge text={`${STR.trackerEntry} ${bnNum(c.chaseCount)}`} tone="muted" />
+                              {c.commsPrompt ? <Badge text={STR.hwCommsPrompt} tone="danger" /> : c.attention ? <Badge text={STR.hwAttention} tone="warn" /> : null}
+                            </View>
+                          </View>
+                        ))}
+                      </>
+                    ) : null}
+                    {summary.topicTouches.length > 0 ? (
+                      <>
+                        <Muted style={{ marginTop: 8, fontWeight: "700" }}>{STR.hwTopicTouches}</Muted>
+                        {summary.topicTouches.slice(0, 8).map((tt) => (
+                          <View key={tt.topTag} style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+                            <Muted>{tt.topTag}</Muted>
+                            <Muted>{bnNum(tt.count)}</Muted>
+                          </View>
+                        ))}
+                      </>
+                    ) : null}
                   </>
                 ) : null}
               </Card>
