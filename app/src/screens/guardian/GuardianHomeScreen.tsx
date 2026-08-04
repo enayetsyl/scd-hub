@@ -487,7 +487,13 @@ export default function GuardianHomeScreen(): React.ReactElement {
                         <Muted>{r.hwId}</Muted>
                       </View>
                       <View style={{ marginTop: space(1) }}>
-                        <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "brand"} />
+                        <Badge
+          text={hwGuardianStatusLabel(r.state)}
+          /* Three steps, not two: amber "due today" → red "did not bring it" → green for
+             everything already handed in. DUE used to render GREEN while saying the
+             child had not done the work, which read as both wrong and alarming. */
+          tone={r.state === "CHASE" ? "danger" : r.state === "DUE" ? "warn" : "brand"}
+        />
                       </View>
                     </View>
                   ))}
