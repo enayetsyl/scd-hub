@@ -131,6 +131,10 @@ import {
   DAYS_OF_WEEK,
   PERIOD_TRACK_LABELS_BN,
   PERIOD_TRACK_LABELS_EN,
+  HOLIDAY_TYPES,
+  HOLIDAY_TYPE_LABELS_BN,
+  HOLIDAY_TYPE_LABELS_EN,
+  type HolidayType,
   TEACHER_ATTENDANCE_STATUS_LABELS_BN,
   TEACHER_ATTENDANCE_STATUS_LABELS_EN,
   type TeacherAttendanceStatus,
@@ -754,6 +758,14 @@ export const dayOfWeekLabel = (v?: string | null): string =>
 
 export const periodTrackLabel = (v?: string | null): string =>
   (v && pick(PERIOD_TRACK_LABELS_BN, PERIOD_TRACK_LABELS_EN)[v as PeriodTrack]) || v || DASH;
+
+/** Holiday type (D-#50). Labels come from vocab.ts — the enum's one home. */
+export const holidayTypeLabel = (v?: string | null): string =>
+  (v && pick(HOLIDAY_TYPE_LABELS_BN, HOLIDAY_TYPE_LABELS_EN)[v as HolidayType]) || v || DASH;
+
+/** The type picker's options, in vocab order. */
+export const holidayTypeOptions = (): { label: string; value: HolidayType }[] =>
+  HOLIDAY_TYPES.map((v) => ({ label: holidayTypeLabel(v), value: v }));
 
 // Library (LB-4, D-#81–#84)
 export const borrowerTypeLabel = (v?: string | null): string =>
@@ -2295,6 +2307,33 @@ const STR_BN = {
   rtCovered: "কভার করা হয়েছে",
   rtNoCovers: "কোনো কভার নেই।",
   rtCoveringFor: "কভার করছেন",
+
+  // Holidays (D-#50) — ad-hoc closures that override the day type
+  hxTitle: "ছুটির দিন",
+  hxManage: "ছুটির দিন",
+  hxUpcoming: "আসন্ন ছুটি",
+  hxPast: "আগের ছুটি",
+  hxNone: "কোনো ছুটি নেই।",
+  hxAdd: "ছুটি যোগ করুন",
+  hxFrom: "শুরুর তারিখ",
+  hxTo: "শেষ তারিখ",
+  hxDateHint: "YYYY-MM-DD",
+  hxOneDayHint: "এক দিনের ছুটি হলে দুই ঘরে একই তারিখ দিন।",
+  hxType: "ধরন",
+  hxName: "নাম",
+  hxNamePlaceholder: "যেমন: ঈদুল ফিতর",
+  hxNote: "মন্তব্য (ঐচ্ছিক)",
+  hxSave: "সংরক্ষণ করুন",
+  hxSaved: "ছুটি যোগ হয়েছে।",
+  hxRemove: "বাতিল করুন",
+  hxRemoved: "ছুটি বাতিল হয়েছে।",
+  hxRemoveConfirm: "এই ছুটি বাতিল করবেন? ওই দিন আবার নিয়মিত ক্লাসের দিন হিসেবে গণ্য হবে।",
+  hxRetired: "বাতিল",
+  hxEffect:
+    "ছুটির দিনে রুটিন বন্ধ থাকে, উপস্থিতি নেওয়া লাগে না, এবং বাড়ির কাজ বা অ্যাসাইনমেন্টের তাগাদা যায় না।",
+  hxBadDate: "তারিখ YYYY-MM-DD আকারে দিন।",
+  hxBadRange: "শুরুর তারিখ শেষ তারিখের পরে হতে পারে না।",
+  hxNeedName: "ছুটির নাম দিন।",
 
   // Routine triggers + class-note / daily-diary (R-5)
   dailyNoteTitle: "ক্লাস নোট",
@@ -5507,6 +5546,33 @@ const STR_EN: StrTable = {
   rtCovered: "Covered",
   rtNoCovers: "No covers.",
   rtCoveringFor: "Covering for",
+
+  // Holidays (D-#50) — ad-hoc closures that override the day type
+  hxTitle: "Holidays",
+  hxManage: "Holidays",
+  hxUpcoming: "Upcoming holidays",
+  hxPast: "Past holidays",
+  hxNone: "No holidays.",
+  hxAdd: "Add a holiday",
+  hxFrom: "From date",
+  hxTo: "To date",
+  hxDateHint: "YYYY-MM-DD",
+  hxOneDayHint: "For a single day, put the same date in both boxes.",
+  hxType: "Type",
+  hxName: "Name",
+  hxNamePlaceholder: "e.g. Eid-ul-Fitr",
+  hxNote: "Note (optional)",
+  hxSave: "Save",
+  hxSaved: "Holiday added.",
+  hxRemove: "Remove",
+  hxRemoved: "Holiday removed.",
+  hxRemoveConfirm: "Remove this holiday? The day goes back to being a normal school day.",
+  hxRetired: "Removed",
+  hxEffect:
+    "On a holiday no routine resolves, attendance is not expected, and no homework or assignment chase goes out.",
+  hxBadDate: "Enter the date as YYYY-MM-DD.",
+  hxBadRange: "The from-date cannot be after the to-date.",
+  hxNeedName: "Give the holiday a name.",
 
   // Routine triggers + class-note / daily-diary (R-5)
   dailyNoteTitle: "Class note",

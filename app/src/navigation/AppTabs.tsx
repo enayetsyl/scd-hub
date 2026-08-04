@@ -110,6 +110,7 @@ import DailyNoteScreen from "../screens/routine/DailyNoteScreen";
 import ClassNoteReportScreen from "../screens/routine/ClassNoteReportScreen";
 import ClassNotesAdminScreen from "../screens/routine/ClassNotesAdminScreen";
 import BellScheduleScreen from "../screens/routine/BellScheduleScreen";
+import HolidaysScreen from "../screens/routine/HolidaysScreen";
 import AttendanceHomeScreen from "../screens/attendance/AttendanceHomeScreen";
 import MarkAttendanceScreen from "../screens/attendance/MarkAttendanceScreen";
 import AttendanceAdminScreen from "../screens/attendance/AttendanceAdminScreen";
@@ -688,6 +689,7 @@ function RoutineNavigator(): React.ReactElement {
       <RoutineStack.Screen name="ClassNoteReport" component={ClassNoteReportScreen} options={{ title: STR.rtNoteReportTitle }} />
       <RoutineStack.Screen name="ClassNotesAdmin" component={ClassNotesAdminScreen} options={{ title: STR.cnClassNotesAdmin }} />
       <RoutineStack.Screen name="BellSchedule" component={BellScheduleScreen} options={{ title: STR.bellScheduleTitle }} />
+      <RoutineStack.Screen name="Holidays" component={HolidaysScreen} options={{ title: STR.hxTitle }} />
       <RoutineStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
     </RoutineStack.Navigator>
   );

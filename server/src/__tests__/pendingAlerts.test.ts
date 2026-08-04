@@ -19,6 +19,7 @@
 const mockHolidayFind = jest.fn();
 const mockSlotFind = jest.fn();
 const mockNoteFind = jest.fn();
+const mockSubFind = jest.fn();
 const mockUnmarkedMarkingDays = jest.fn();
 const mockYearFindOne = jest.fn();
 const mockScheduleFindOne = jest.fn();
@@ -35,6 +36,9 @@ jest.mock("../modules/routine/models/HolidayException", () => ({
 }));
 jest.mock("../modules/routine/models/RoutineSlot", () => ({
   RoutineSlot: { find: (f: unknown) => ({ lean: () => mockSlotFind(f) }) },
+}));
+jest.mock("../modules/routine/models/RoutineSubstitution", () => ({
+  RoutineSubstitution: { find: (f: unknown) => ({ select: () => ({ lean: () => mockSubFind(f) }) }) },
 }));
 jest.mock("../modules/routine/models/ClassNote", () => ({
   ClassNote: { find: (f: unknown) => ({ select: () => ({ lean: () => mockNoteFind(f) }) }) },
@@ -101,6 +105,7 @@ beforeEach(() => {
   mockHolidayFind.mockResolvedValue([]);
   mockSlotFind.mockResolvedValue([]);
   mockNoteFind.mockResolvedValue([]);
+  mockSubFind.mockResolvedValue([]);
   mockUnmarkedMarkingDays.mockResolvedValue([]);
   mockYearFindOne.mockResolvedValue(null);
   mockScheduleFindOne.mockResolvedValue(null);
@@ -184,6 +189,37 @@ describe("class_note alert", () => {
     mockSlotFind.mockResolvedValue([
       { ...slot("s1", "THU"), effectiveTo: new Date(2026, 4, 1) }, // ended in May
     ]);
+    const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
+    expect(alerts.find((x) => x.kind === "class_note")).toBeUndefined();
+  });
+
+  // COVER OVERLAY — the note is owed by whoever STOOD IN FRONT OF THE CLASS, so the
+  // alert follows the substitution in both directions (owner report 2026-08-03).
+  test("a period of mine that someone else covered is no longer my note", async () => {
+    mockSlotFind.mockResolvedValue([slot("s1", "THU")]);
+    mockSubFind.mockResolvedValue([{ slotId: "s1", date: TODAY, coverTeacherId: "other-1" }]);
+    const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
+    expect(alerts.find((x) => x.kind === "class_note")).toBeUndefined();
+  });
+
+  test("a period I covered IS my note, though the slot names another teacher", async () => {
+    mockSlotFind.mockImplementation((f: Record<string, unknown>) =>
+      Promise.resolve("teacherId" in f ? [] : [slot("s9", "THU")]),
+    );
+    mockSubFind.mockResolvedValue([{ slotId: "s9", date: TODAY, coverTeacherId: USER }]);
+    const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
+    const a = alerts.find((x) => x.kind === "class_note")!;
+    expect(a.count).toBe(1);
+    expect(a.oldestDateKey).toBe(TODAY_KEY);
+  });
+
+  test("covering a slot on ONE day does not hand me its other days", async () => {
+    // I covered s9 on Thursday; s9 itself meets on SATURDAY. The Saturday sitting is
+    // still its own teacher's note — a cover is per-DAY, never per-slot.
+    mockSlotFind.mockImplementation((f: Record<string, unknown>) =>
+      Promise.resolve("teacherId" in f ? [] : [slot("s9", "SAT", "quran")]),
+    );
+    mockSubFind.mockResolvedValue([{ slotId: "s9", date: TODAY, coverTeacherId: USER }]);
     const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
     expect(alerts.find((x) => x.kind === "class_note")).toBeUndefined();
   });

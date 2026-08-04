@@ -30,6 +30,7 @@ import type { AppContext } from "../../../context";
 import { dayTypeFor, dayTypeAdmitsTrack } from "../calendar";
 import { HolidayException } from "../models/HolidayException";
 import { RoutineSlot } from "../models/RoutineSlot";
+import { RoutineSubstitution } from "../models/RoutineSubstitution";
 import { liveWindow } from "../liveWindow";
 import { ClassNote } from "../models/ClassNote";
 import { ScheduleWindow } from "../models/ScheduleWindow";
@@ -118,12 +119,46 @@ async function classNoteBacklog(
   // NO live-window filter here on purpose: the backlog looks back over `BACKLOG_DAYS`,
   // so a slot retired mid-window is still owed for the days it applied. The window is
   // evaluated PER DAY in the loop below (D-#47(3)).
-  const slots = await RoutineSlot.find({ teacherId: userId, active: true, isBreak: false }).lean();
-  if (slots.length === 0) return [];
+  const ownSlots = await RoutineSlot.find({ teacherId: userId, active: true, isBreak: false }).lean();
 
   const start = parseDateKey(keys[0]);
   const lastDate = parseDateKey(keys[keys.length - 1]);
   const end = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate(), 23, 59, 59, 999);
+
+  // WHO ACTUALLY TAUGHT IT. A class note is owed by the person who stood in front of
+  // the class, and publishClassNote lets a cover write it — so the alert must follow
+  // the cover too (owner report 2026-08-03, same family as the class-note report and
+  // the declare-pending report). Two directions, both needed:
+  //   · a period of MINE that someone else covered is no longer my note to write;
+  //   · a period I COVERED is mine, even though the slot names another teacher.
+  const subs = await RoutineSubstitution.find({
+    active: true,
+    date: { $gte: start, $lte: end },
+    $or: [{ coverTeacherId: userId }, { slotId: { $in: ownSlots.map((s) => s._id) } }],
+  })
+    .select("slotId date coverTeacherId")
+    .lean();
+
+  const coveredAway = new Set<string>(); // my slot, taught by someone else that day
+  const coveredByMe = new Set<string>(); // someone's slot, taught by me that day
+  for (const su of subs) {
+    const k = `${su.slotId.toString()}|${dateKeyOf(new Date(su.date))}`;
+    if (su.coverTeacherId.toString() === userId) coveredByMe.add(k);
+    else coveredAway.add(k);
+  }
+
+  // Slots I covered but do not own — loaded by id so their day/track/window can be
+  // judged exactly like my own.
+  const ownIds = new Set(ownSlots.map((s) => s._id.toString()));
+  const extraIds = [...new Set(subs.filter((su) => su.coverTeacherId.toString() === userId).map((su) => su.slotId.toString()))]
+    .filter((id) => !ownIds.has(id));
+  const coverSlots = extraIds.length
+    ? await RoutineSlot.find({ _id: { $in: extraIds }, isBreak: false }).lean()
+    : [];
+
+  const slots = [...ownSlots, ...coverSlots];
+  if (slots.length === 0) return [];
+
   const notes = await ClassNote.find({
     slotId: { $in: slots.map((s) => s._id) },
     date: { $gte: start, $lte: end },
@@ -143,7 +178,12 @@ async function classNoteBacklog(
       const from = new Date(s.effectiveFrom).getTime();
       const to = s.effectiveTo ? new Date(s.effectiveTo).getTime() : null;
       if (from > date.getTime() || (to !== null && to < date.getTime())) return false;
-      return !written.has(`${s._id.toString()}|${key}`);
+      const k = `${s._id.toString()}|${key}`;
+      // Mine but covered away → not my note. Not mine and not covered by me → not
+      // my note either (it only reached this list via some other date's cover).
+      const isMine = ownIds.has(s._id.toString());
+      if (isMine ? coveredAway.has(k) : !coveredByMe.has(k)) return false;
+      return !written.has(k);
     });
     if (owed) pending.push(key);
   }

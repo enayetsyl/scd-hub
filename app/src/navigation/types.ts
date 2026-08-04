@@ -150,6 +150,8 @@ export type RoutineStackParamList = {
   ClassNoteReport: { date?: string } | undefined;
   ClassNotesAdmin: undefined;
   BellSchedule: undefined;
+  /** D-#50 holiday exceptions — the admin face the mutation never had. */
+  Holidays: undefined;
   SectionPicker: undefined;
   /** D-#327: a teacher's own class-load detail (shared screen, self-scoped). */
   TeacherClassLoadDetail: { teacherId: string; teacherName?: string; month?: string };
