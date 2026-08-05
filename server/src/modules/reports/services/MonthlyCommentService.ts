@@ -31,8 +31,16 @@ import type { MonthlySnapshot } from "./MonthlyReportService";
  *  and hifz was not one of them, yet the model could see it and reported on it
  *  anyway), and three new rules fix real defects in a live draft: mixed Bengali/Latin
  *  numerals, an inconsistent count phrasing ("৭টির সব" vs "২২-এর মধ্যে ১৯"), and the
- *  closed-area list not actually being enforced. */
-export const MONTHLY_COMMENT_PROMPT_VERSION = "mr4-3";
+ *  closed-area list not actually being enforced. Bumped again to mr4-4 (2026-08-05,
+ *  same day): the attendance benchmark is now the section's BEST rate, not its
+ *  average (`classAvgPct` renamed `classBestPct`, sourced from `.best` not `.avg`);
+ *  a zero count inside the correct/partial/wrong breakdown is no longer spelled out
+ *  ("০টি আংশিক সঠিক" reads as noise, not information — only the non-zero ones are
+ *  worth a sentence); and the uncovered-absence wording is pinned to "X দিনের ছুটির
+ *  দরখাস্ত জমা দেওয়া হয়নি" (a leave application wasn't filed) rather than the
+ *  vaguer "কভার তথ্য নেই" ("no cover info") a live draft used — the fixed wording
+ *  tells a guardian what to actually DO, not just that a system field is empty. */
+export const MONTHLY_COMMENT_PROMPT_VERSION = "mr4-4";
 
 // ---------------------------------------------------------------------------
 // The facts — de-identified by construction
@@ -63,7 +71,11 @@ export interface CommentFacts {
     schoolDays: number;
     ratePct: number | null;
     trend: string;
-    classAvgPct: number | null;
+    /** The section's BEST attendance rate, not its average (owner ask, 2026-08-05:
+     *  a highest is a more legible benchmark than a mean). Null when the section is
+     *  too small to hide who it is (D-#396, `bestWithheld`) — the rules never ask for
+     *  a number that isn't there. */
+    classBestPct: number | null;
     /** Absences NOT covered by an approved leave (the ABSENT_UNCOVERED flag's own
      *  count). Added 2026-08-05: previously only the flag's NAME reached the model,
      *  never this number, so a comment could gesture at it but never cite it. */
@@ -174,7 +186,7 @@ export function commentFactsOf(snapshot: MonthlySnapshot, classLevel: number | n
       schoolDays: m.attendance.schoolDays,
       ratePct: m.attendance.rate,
       trend: snapshot.trends.attendance.state,
-      classAvgPct: snapshot.cohort?.attendanceRate.avg ?? null,
+      classBestPct: snapshot.cohort?.attendanceRate.best ?? null,
       absentUncovered: m.attendance.absentUncovered,
     },
     homework: {
@@ -377,16 +389,17 @@ export function commentRules(periodKey: string): string {
     "২. তথ্যে ঠিক এই বিষয়গুলো আছে — উপস্থিতি, বাড়ির কাজ, অ্যাসাইনমেন্ট, ক্লাস টেস্ট, অভিযোগ। প্রতিটি ছুঁয়ে যাও, যেন শুধু এই লেখাটি পড়েই অভিভাবক প্রতিটি বিষয়ের পূর্ণ চিত্র বুঝতে পারেন — আলাদা টেবিল না দেখেও। কোনো বিষয়ে করার মতো কিছু না থাকলে (যেমন কোনো ক্লাস টেস্ট হয়নি) সেটাও সংক্ষেপে বলো, বাদ দিয়ো না। এই পাঁচটি ছাড়া অন্য কিছু (JSON-এ থাকলেও) উল্লেখ করবে না — এই সারসংক্ষেপের আওতায় শুধু এগুলোই।",
     "৩. প্রতিটি বিষয় ১–২ বাক্যে বলো। সম্মানজনক, সহজ বাংলা।",
     "৪. ঠিক একটি করণীয় পরামর্শ দাও, যা বাড়িতে করা সম্ভব — যে বিষয়টি সবচেয়ে দুর্বল, তার সঙ্গে সম্পর্কিত।",
-    "৫. অন্য কোনো শিক্ষার্থীর সঙ্গে তুলনা করবে না, কারও নাম লিখবে না। শ্রেণির গড় (classAvgPct) উল্লেখ করা যাবে — এটি নাম ছাড়া একটি সংখ্যামাত্র।",
+    "৫. অন্য কোনো শিক্ষার্থীর সঙ্গে তুলনা করবে না, কারও নাম লিখবে না। শ্রেণির সর্বোচ্চ উপস্থিতির হার (classBestPct) উল্লেখ করা যাবে — এটি নাম ছাড়া একটি সংখ্যামাত্র। classBestPct না থাকলে (null) সেটা নিয়ে কিছু লিখবে না।",
     "৬. কোনো রোগ/সমস্যা নির্ণয় করবে না, পরিবার নিয়ে অনুমান করবে না।",
     "৭. flags-এ SERIOUS_MATTER থাকলে বিষয়টি বর্ণনা করবে না — শুধু লিখবে যে শ্রেণি শিক্ষক যোগাযোগ করবেন।",
     "৮. অভিযোগের (concerns) কথা লিখলে 'উদ্বেগ' শব্দটি ব্যবহার করবে না — 'অভিযোগ' লেখো (যেমন, সংখ্যা ০ হলে: \"এই মাসে কোনো অভিযোগ লেখা হয়নি\")।",
-    "৯. কোনো সংখ্যা (কতটি/কতজন) বললে সবসময় \"X-এর মধ্যে Y\" এই প্যাটার্নে লেখো (যেমন: \"২৭টির মধ্যে ২৫টি জমা হয়েছে\"), এমনকি সবগুলো হলেও (যেমন: \"৭টির মধ্যে ৭টি\")। কখনো \"৭টির সব\"-এর মতো এলোমেলো বাক্যগঠন লিখবে না।",
-    "১০. মান (quality) নিয়ে লিখলে শুধু একটা % বলে থেমো না — correct, partial ও wrong সংখ্যাগুলো দেখে লেখো। partial (আংশিক সঠিক) থাকলে সেগুলোকে সম্পূর্ণ ভুল হিসেবে দেখিও না — যেমন: \"৯টি যাচাই হওয়া কাজের মধ্যে ১টি সম্পূর্ণ সঠিক ও ৩টি আংশিক সঠিক হয়েছে, বাকিগুলো ভুল\"। শুধু \"মান ১১%\" লিখলে বোঝা যায় না যে কিছু আংশিক সঠিক ছিল।",
-    "১১. সব সংখ্যা বাংলা অঙ্কে লেখো (০, ১, ২, ৩...) — ইংরেজি সংখ্যা (0, 1, 2, 3...) কখনো ব্যবহার করবে না। % সবসময় পূর্ণ সংখ্যায় রাউন্ড করে লেখো (যেমন ৯৩%) — দশমিক (৯২.৬%) লিখবে না।",
-    "১২. provisional true হলে বোঝাবে যে কিছু তথ্য এখনো আসেনি।",
-    "১৩. শিক্ষার্থীর নাম নেই — নাম ছাড়াই লেখো (\"আপনার সন্তান\")।",
-    `১৪. এই রিপোর্টটি ${monthLabelBn(periodKey)} মাসের। মাসের নাম উল্লেখ করো — "গত মাস" বা "বিগত মাস" লিখবে না।`,
+    "৯. ছুটি ছাড়া অনুপস্থিতি (absentUncovered) নিয়ে লিখলে এভাবে লেখো: \"X দিনের ছুটির দরখাস্ত জমা দেওয়া হয়নি\" — \"কভার তথ্য নেই\" বা এই ধরনের অস্পষ্ট/প্রযুক্তিগত কথা লিখবে না, কারণ এটি অভিভাবকের করণীয়কে স্পষ্ট করে না।",
+    "১০. কোনো সংখ্যা (কতটি/কতজন) বললে সবসময় \"X-এর মধ্যে Y\" এই প্যাটার্নে লেখো (যেমন: \"২৭টির মধ্যে ২৫টি জমা হয়েছে\"), এমনকি সবগুলো হলেও (যেমন: \"৭টির মধ্যে ৭টি\")। কখনো \"৭টির সব\"-এর মতো এলোমেলো বাক্যগঠন লিখবে না।",
+    "১১. মান (quality) নিয়ে লিখলে শুধু একটা % বলে থেমো না — correct, partial ও wrong সংখ্যাগুলো দেখে লেখো। partial (আংশিক সঠিক) থাকলে সেগুলোকে সম্পূর্ণ ভুল হিসেবে দেখিও না — যেমন: \"৯টি যাচাই হওয়া কাজের মধ্যে ১টি সম্পূর্ণ সঠিক ও ৩টি আংশিক সঠিক হয়েছে, বাকিগুলো ভুল\"। শুধু \"মান ১১%\" লিখলে বোঝা যায় না যে কিছু আংশিক সঠিক ছিল। এই তিনটির (correct/partial/wrong) মধ্যে যেটির সংখ্যা ০, সেটি আলাদা করে উল্লেখ করবে না — শুধু যেগুলোতে সংখ্যা আছে সেগুলো বলো (যেমন partial ০ হলে \"০টি আংশিক সঠিক\" লিখবে না, শুধু correct ও wrong বলো)।",
+    "১২. সব সংখ্যা বাংলা অঙ্কে লেখো (০, ১, ২, ৩...) — ইংরেজি সংখ্যা (0, 1, 2, 3...) কখনো ব্যবহার করবে না। % সবসময় পূর্ণ সংখ্যায় রাউন্ড করে লেখো (যেমন ৯৩%) — দশমিক (৯২.৬%) লিখবে না।",
+    "১৩. provisional true হলে বোঝাবে যে কিছু তথ্য এখনো আসেনি।",
+    "১৪. শিক্ষার্থীর নাম নেই — নাম ছাড়াই লেখো (\"আপনার সন্তান\")।",
+    `১৫. এই রিপোর্টটি ${monthLabelBn(periodKey)} মাসের। মাসের নাম উল্লেখ করো — "গত মাস" বা "বিগত মাস" লিখবে না।`,
   ].join("\n");
 }
 
