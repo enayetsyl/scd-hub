@@ -386,8 +386,16 @@ Every block also carries `revision` and `figuresHash` — see §8b.4.
 ### 8b.2 Return — JSON, not prose
 
 ```json
-{ "periodKey": "2026-07", "sectionId": "…", "comments": [ { "reportId": "…", "text": "…" } ] }
+{ "periodKey": "2026-07", "sectionId": "…",
+  "comments": [ { "reportId": "…", "revision": 1, "figuresHash": "…", "text": "…" } ] }
 ```
+
+**The rows ECHO `revision` and `figuresHash`** (build note, 2026-08-05). This sketch
+originally carried only `reportId` + `text`, but §8b.4's binding cannot be checked
+against what does not come back — without the echo the drift guard silently never
+fires, which is the exact failure that section exists to prevent. A row missing either
+stamp is refused by name, so an older file degrades to a visible refusal rather than an
+unchecked import.
 
 Markdown back would mean parsing prose, and the first stray heading breaks it. The
 envelope is validated on arrival: unknown `reportId`, wrong `periodKey`/`sectionId`,
@@ -441,7 +449,7 @@ No notification on draft, recompute, or revocation of an unreleased revision.
 | **MR-5** | Staff UI: per-class console, coverage chips, comment review, release / bulk release / revoke | app typecheck + expo export + **live drive** |
 | **MR-6** | Guardian read (released revisions only) + release/re-release notifications | jest RBAC + live drive |
 | **MR-7** | PDF + print queue + the Principal's class-level roll-up | rendered sheet eyeballed |
-| **MR-8** | The Desktop round trip: de-identified Markdown export (section or whole school), validated JSON import, same guards, revision-bound | jest — a moved figure is refused; an invented numeral is refused; a released revision is refused |
+| **MR-8** ✅ | The Desktop round trip: de-identified Markdown export (section, or whole school as a per-section zip **or** one long file), validated JSON import, same guards, revision-bound | jest 27 — a moved figure is refused; an invented numeral is refused; a released revision is refused — **plus a live drive** of the running app |
 
 MR-1..MR-4 are server-only and land without any UI. MR-5 is the first slice a person can see.
 
@@ -480,4 +488,4 @@ D-#402 scope + relationship to the exam report card.
 3. Should a guardian see the class average at all for Nursery, where the cohort is tiny?
 4. Fee **dues** — worth a fee-schedule model as its own feature later? (Owner: "we will do it later.")
 5. Should the class-level roll-up (MR-7) also go to the class teacher, or Principal only?
-6. MR-8: should a whole-school export split into one file per section inside a zip, or one long file? (Starting with one file per request; `?all=1` concatenates.)
+6. ~~MR-8: should a whole-school export split into one file per section inside a zip, or one long file?~~ **CLOSED 2026-08-05 — BOTH** (owner ruling). Neither is right every month: the zip when sections go to different people or a chat window has a length limit, the long file when one person is doing the lot in a sitting. `?all=1&format=zip` gives one `.md` per section, `&format=single` concatenates. The operator picks per export rather than living with a default someone chose once.

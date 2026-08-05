@@ -51,6 +51,10 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // alternative is a second error type whose only job is to page someone about an
   // external API that the caller already sees fail.
   "AuthorChatError",
+  // A malformed monthly-comment envelope pasted back from Desktop (MR-8): unparseable
+  // JSON, a wrong period, a duplicate or missing reportId. The operator pasted the
+  // wrong thing — their mistake to correct, and the message tells them how.
+  "CommentImportError",
   "ForbiddenError",
   "AccessControlError",
   "AttendanceError",

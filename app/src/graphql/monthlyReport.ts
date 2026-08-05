@@ -28,6 +28,8 @@ export interface MonthlyReportT {
   commentIsFallback: boolean;
   commentFallbackReason: string | null;
   commentModel: string | null;
+  /** MODEL or IMPORT (MR-8) — which lane wrote the draft. */
+  commentSource: string | null;
   reviewedAt: string | null;
   releasedAt: string | null;
   releaseBatchId: string | null;
@@ -45,7 +47,7 @@ export interface MonthlyReportT {
 const REPORT_FIELDS = `
   id studentId studentName rollNumber sectionId periodKey revision status provisional dataAsOf
   coverageHomework coverageAssignment coverageClassTest
-  comment commentDraft commentIsFallback commentFallbackReason commentModel reviewedAt
+  comment commentDraft commentIsFallback commentFallbackReason commentModel commentSource reviewedAt
   releasedAt releaseBatchId isRerelease changeLog
   fullView subjectFilter lockState releasable blockedReason requiresPrincipal
   snapshotJson
@@ -307,6 +309,22 @@ export const DRAFT_MONTHLY_COMMENTS_MUTATION = gql<
 >`
   mutation DraftMonthlyReportComments($reportIds: [String!]!) {
     draftMonthlyReportComments(reportIds: $reportIds) { reportId drafted fallback error }
+  }
+`;
+
+/** MR-8: one row's verdict from the pasted envelope. A refusal names the row. */
+export interface CommentImportOutcomeT {
+  reportId: string;
+  imported: boolean;
+  reason: string | null;
+}
+
+export const IMPORT_MONTHLY_COMMENTS_MUTATION = gql<
+  { importMonthlyComments: CommentImportOutcomeT[] },
+  { payload: string }
+>`
+  mutation ImportMonthlyComments($payload: String!) {
+    importMonthlyComments(payload: $payload) { reportId imported reason }
   }
 `;
 

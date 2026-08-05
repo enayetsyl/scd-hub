@@ -34,6 +34,44 @@ export async function openPdf(path: string): Promise<void> {
   openBlob(await res.blob());
 }
 
+/**
+ * Fetch an authenticated file and SAVE it under a given name, rather than opening it
+ * in a tab (MR-8's comment pack). A `.md` or `.zip` opened in a tab is either rendered
+ * as plain text or downloaded with a uuid for a name — neither is a file you can find
+ * again — so this drives an anchor with `download` set. Web only, like the rest.
+ *
+ * The server's own Content-Disposition filename is ignored on purpose: the caller
+ * knows the section and month and can name it better than a slug can.
+ */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  if (Platform.OS !== "web") {
+    throw new Error("Export is web-only in this build");
+  }
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    // The route answers structured errors (no reports this month, wrong period) — read
+    // the message rather than showing the operator a bare status code.
+    let detail = "";
+    try {
+      detail = ((await res.json()) as { error?: string }).error ?? "";
+    } catch {
+      /* not JSON — fall back to the status */
+    }
+    throw new Error(detail || `Export failed (${res.status})`);
+  }
+  const blobUrl = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+}
+
 /** POST a JSON body (edited markdown + layout knobs) and open the returned PDF.
  *  Web only — used by English Drive edit-before-print (D-#348). */
 export async function openPdfPost(path: string, body: unknown): Promise<void> {
