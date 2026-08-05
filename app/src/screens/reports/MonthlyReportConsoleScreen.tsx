@@ -19,6 +19,8 @@ import {
   BULK_RELEASE_MUTATION,
   BUILD_MONTHLY_REPORTS_MUTATION,
   DRAFT_MONTHLY_COMMENTS_MUTATION,
+  IMPORT_MONTHLY_COMMENTS_MUTATION,
+  type CommentImportOutcomeT,
   MONTHLY_REPORTS_FOR_SECTION_QUERY,
   parseSnapshot,
   type MonthlyReportT,
@@ -27,6 +29,7 @@ import { ACADEMIC_YEARS_QUERY, CLASSES_QUERY } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Select, Button, Field, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum } from "../../lib/labels";
+import { downloadFile, PDF_SUPPORTED } from "../../lib/pdf";
 import { space, useColors } from "../../theme";
 import type { ReportsStackParamList } from "../../navigation/types";
 
@@ -162,6 +165,12 @@ export default function MonthlyReportConsoleScreen(): React.ReactElement {
   const [periodKey, setPeriodKey] = useState<string>(periods[0]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [overrideReason, setOverrideReason] = useState("");
+  // MR-8 — collapsed by default: the in-app lane is the normal path and this is the
+  // escape hatch, so it should not compete for the eye above the child rows.
+  const [desktopOpen, setDesktopOpen] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importResult, setImportResult] = useState<CommentImportOutcomeT[] | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const activeSection = sectionId ?? sections[0]?.id ?? "";
   const [q, refetch] = useQuery({
@@ -172,6 +181,7 @@ export default function MonthlyReportConsoleScreen(): React.ReactElement {
   const [buildState, build] = useMutation(BUILD_MONTHLY_REPORTS_MUTATION);
   const [releaseState, bulkRelease] = useMutation(BULK_RELEASE_MUTATION);
   const [draftState, draftAll] = useMutation(DRAFT_MONTHLY_COMMENTS_MUTATION);
+  const [importState, runImport] = useMutation(IMPORT_MONTHLY_COMMENTS_MUTATION);
 
   const rows = q.data?.monthlyReportsForSection ?? [];
   // The console lists what is CURRENT per child; a superseded revision is history
@@ -218,6 +228,46 @@ export default function MonthlyReportConsoleScreen(): React.ReactElement {
         .filter(Boolean)
         .join("\n"),
     );
+    refetch({ requestPolicy: "network-only" });
+  };
+
+  // --- MR-8: the Desktop round trip ---------------------------------------
+  const onExport = async (mode: "section" | "zip" | "single"): Promise<void> => {
+    setExportError(null);
+    if (!PDF_SUPPORTED) {
+      setExportError(STR.mrExportWebOnly);
+      return;
+    }
+    const qs =
+      mode === "section"
+        ? `?sectionId=${encodeURIComponent(activeSection)}&periodKey=${periodKey}`
+        : `?all=1&periodKey=${periodKey}&format=${mode}`;
+    const name =
+      mode === "section"
+        ? `monthly-comments-${periodKey}.md`
+        : `monthly-comments-${periodKey}.${mode === "zip" ? "zip" : "md"}`;
+    try {
+      await downloadFile(`/export/monthly-comments${qs}`, name);
+    } catch (e) {
+      // Inline for the same reason as the import result — an alert never shows on web.
+      setExportError(`${STR.mrExportFailed}: ${e instanceof Error ? e.message : ""}`);
+    }
+  };
+
+  const onImport = async (): Promise<void> => {
+    const res = await runImport({ payload: importText.trim() });
+    if (res.error) {
+      Alert.alert(STR.mrActionFailed, res.error.message);
+      return;
+    }
+    const outcomes = res.data?.importMonthlyComments ?? [];
+    // Rendered INLINE, not through Alert.alert — react-native-web does not implement
+    // Alert, so on the web console (which is where this is used) an alert is a silent
+    // no-op. Every refusal names its row, and that list IS the feature: an operator who
+    // pasted twenty-one paragraphs has to see which one did not take. Sending that to a
+    // dialog that never appears would make the guards invisible exactly when they fire.
+    setImportResult(outcomes);
+    if (outcomes.some((o) => o.imported)) setImportText("");
     refetch({ requestPolicy: "network-only" });
   };
 
@@ -318,6 +368,68 @@ export default function MonthlyReportConsoleScreen(): React.ReactElement {
                 />
                 <Muted>{STR.mrGenerateAllNote}</Muted>
               </View>
+
+              {/* MR-8 — the second lane. Kept BELOW the in-app button and collapsed by
+                  default: most months the generated paragraph is accepted as-is, and
+                  this is the escape hatch for when it is not. */}
+              <Card style={{ marginBottom: space(3) }}>
+                <Pressable
+                  onPress={() => setDesktopOpen((v) => !v)}
+                  accessibilityRole="button"
+                  style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <Body style={{ fontWeight: "700" }}>{STR.mrDesktopTitle}</Body>
+                  <Body style={{ color: colors.primary }}>{desktopOpen ? "▾" : "▸"}</Body>
+                </Pressable>
+
+                {desktopOpen ? (
+                  <View style={{ gap: space(2), marginTop: space(2) }}>
+                    <Muted>{STR.mrDesktopNote}</Muted>
+
+                    <Button title={STR.mrExportSection} variant="secondary" onPress={() => onExport("section")} />
+                    {/* Both whole-school shapes, because neither is right every month:
+                        the zip when sections go to different people or a chat window
+                        has a length limit, the long file when one person does the lot. */}
+                    <Button title={STR.mrExportAllZip} variant="secondary" onPress={() => onExport("zip")} />
+                    <Button title={STR.mrExportAllSingle} variant="secondary" onPress={() => onExport("single")} />
+
+                    <Field
+                      label={STR.mrImportPaste}
+                      value={importText}
+                      onChangeText={setImportText}
+                      multiline
+                    />
+                    <Button
+                      title={importState.fetching ? STR.mrImporting : STR.mrImport}
+                      loading={importState.fetching}
+                      disabled={importState.fetching || !importText.trim()}
+                      onPress={onImport}
+                    />
+                    <Muted>{STR.mrImportNeedsAccept}</Muted>
+
+                    {exportError ? <Muted style={{ color: colors.error }}>{exportError}</Muted> : null}
+
+                    {/* The outcome, on screen. Counts first, then EVERY refusal with the
+                        reason the server gave — the operator has to know which rows to
+                        rewrite, and there may be one bad row among twenty good ones. */}
+                    {importResult ? (
+                      <View style={{ gap: space(1) }}>
+                        <Body style={{ fontWeight: "700" }}>
+                          {STR.mrImportDone}: {bnNum(importResult.filter((o) => o.imported).length)} /{" "}
+                          {bnNum(importResult.length)}
+                        </Body>
+                        {importResult
+                          .filter((o) => !o.imported)
+                          .map((o) => (
+                            <Muted key={o.reportId} style={{ color: colors.error }}>
+                              • {o.reason ?? STR.mrImportRefused}
+                            </Muted>
+                          ))}
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+              </Card>
 
               {current.map((r) => (
                 <ReportRow

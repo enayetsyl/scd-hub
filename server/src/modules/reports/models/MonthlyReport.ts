@@ -30,8 +30,18 @@ export interface IReportChange {
   after: string | null;
 }
 
+/** Which lane wrote the draft (MR-8, D-#415). Both land in the same field and neither
+ *  can release anything on its own — this only says where the text came from, so a
+ *  bad batch is traceable to a lane as well as to a prompt. */
+export const COMMENT_DRAFT_SOURCES = ["MODEL", "IMPORT"] as const;
+export type CommentDraftSource = (typeof COMMENT_DRAFT_SOURCES)[number];
+
 export interface ICommentDraft {
   text: string;
+  /** `MODEL` = the in-app provider (MR-4); `IMPORT` = authored in Desktop and pasted
+   *  back through the validated envelope (MR-8). Defaulted rather than required so
+   *  every draft written before MR-8 reads as MODEL, which is what it was. */
+  source?: CommentDraftSource;
   /** The model that wrote it + the prompt it was written from — a bad batch has to
    *  be traceable to the prompt that produced it (D-#399). */
   model: string;
@@ -104,6 +114,7 @@ const ReportChangeSchema = new Schema<IReportChange>(
 const CommentDraftSchema = new Schema<ICommentDraft>(
   {
     text: { type: String, required: true },
+    source: { type: String, enum: COMMENT_DRAFT_SOURCES, default: "MODEL" },
     model: { type: String, required: true },
     promptVersion: { type: String, required: true },
     promptHash: { type: String, required: true },

@@ -23,6 +23,7 @@ import { englishDrivePdfRouter } from "./modules/english-drive/routes/englishDri
 import { archiveCoverPdfRouter } from "./modules/archive/routes/archiveCoverPdf";
 import { studentProfilePdfRouter } from "./modules/trackers/routes/studentProfilePdf";
 import { monthlyReportPdfRouter } from "./modules/reports/routes/monthlyReportPdf";
+import { monthlyCommentExportRouter } from "./modules/reports/routes/monthlyCommentExport";
 import { filesRouter } from "./routes/files";
 import { triggersRouter } from "./routes/triggers";
 import { eventsRouter } from "./routes/events";
@@ -166,7 +167,12 @@ const corsForRest: express.RequestHandler = (req, res, next) => {
   if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+  // `sentry-trace` + `baggage` are attached to every outgoing fetch by the app's
+  // Sentry browser tracing. Omitting them failed the PREFLIGHT — so the request never
+  // left the browser (net::ERR_FAILED) and the allowlist, not the route, was the
+  // refusal. This affected /pdf, /files and /events too; the app's own
+  // /events/stream has been failing this way in cross-origin dev.
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, sentry-trace, baggage");
   if (req.method === "OPTIONS") {
     res.sendStatus(204);
     return;
@@ -176,6 +182,11 @@ const corsForRest: express.RequestHandler = (req, res, next) => {
 app.use("/pdf", corsForRest);
 app.use("/files", corsForRest);
 app.use("/events", corsForRest);
+// MR-8's comment pack is fetched with an Authorization header exactly like a PDF, so
+// it needs the same preflight answer. Missing this, the browser blocked the request
+// before it left (net::ERR_FAILED) — invisible in production, where app and API share
+// an origin, and fatal anywhere they do not, which includes every local dev run.
+app.use("/export", corsForRest);
 
 // Thin HTTP surface — PDF export (ADR-003, ADR-009)
 app.use("/pdf", pdfRouter);
@@ -183,6 +194,7 @@ app.use("/pdf/set", setPdfRouter);
 app.use("/pdf/english-drive", englishDrivePdfRouter);
 app.use("/pdf/student-profile", studentProfilePdfRouter);
 app.use("/pdf/monthly-report", monthlyReportPdfRouter);
+app.use("/export/monthly-comments", monthlyCommentExportRouter);
 app.use("/pdf/archive-cover", archiveCoverPdfRouter);
 
 // Thin HTTP surface — homework files (GP-A, D-#70): server-in-the-middle

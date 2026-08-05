@@ -178,6 +178,8 @@ export type AuditEventKind =
   | "MONTHLY_REPORT_REVOKED"       // a released report withdrawn — guardian access removed (Principal only, MR-3, D-#397)
   | "MONTHLY_REPORT_GATE_OVERRIDDEN" // the coverage block overridden with a reason (Principal only, MR-3, D-#394)
   | "MONTHLY_REPORT_UNLOCKED"      // a hard-locked month reopened with a reason (Principal only, MR-3, D-#398)
+  | "MONTHLY_COMMENTS_EXPORTED"    // de-identified comment pack streamed for Desktop authoring (MR-8, D-#415)
+  | "MONTHLY_COMMENTS_IMPORTED"    // a comment envelope pasted back — counts + per-row refusals in meta (MR-8, D-#415)
   // Answer-script archive (AR-1..AR-3, prd-script-archive §5/§7, D-#443–#447)
   | "SCRIPT_BUNDLE_FILED"          // a test's scripts filed into a box (teacher tracker:write / Office roster:manage)
   | "SCRIPT_BUNDLE_ACKNOWLEDGED"   // the ONE office acknowledgement stamped (additive, D-#444)

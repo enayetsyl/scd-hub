@@ -46,6 +46,7 @@ import {
   monthlyClassRollup,
   type ClassRollup,
 } from "../services/MonthlyReportService";
+import { importComments, parseImportEnvelope } from "../services/MonthlyCommentExchangeService";
 import {
   monthlyPendingWork,
   monthlyTeacherChase,
@@ -223,6 +224,9 @@ const ReportRef = builder.objectRef<ReportView>("MonthlyReport").implement({
     commentIsFallback: t.boolean({ resolve: (v) => !!v.report.commentDraft?.fallback }),
     commentFallbackReason: t.string({ nullable: true, resolve: (v) => v.report.commentDraft?.fallbackReason ?? null }),
     commentModel: t.string({ nullable: true, resolve: (v) => v.report.commentDraft?.model ?? null }),
+    /** MODEL or IMPORT (MR-8) — which lane wrote it, so the reviewer knows whether they
+     *  are reading a generated paragraph or one a colleague authored in Desktop. */
+    commentSource: t.string({ nullable: true, resolve: (v) => v.report.commentDraft?.source ?? null }),
     reviewedAt: t.string({ nullable: true, resolve: (v) => v.report.reviewedAt?.toISOString() ?? null }),
     releasedAt: t.string({ nullable: true, resolve: (v) => v.report.releasedAt?.toISOString() ?? null }),
     releaseBatchId: t.string({ nullable: true, resolve: (v) => v.report.releaseBatchId ?? null }),
@@ -604,6 +608,49 @@ builder.mutationField("draftMonthlyReportComments", (t) =>
         await assertStaffReportRead(ctx, r);
       }
       return draftMonthlyCommentsSequentially(args.reportIds);
+    },
+  }),
+);
+
+const ImportOutcomeRef = builder
+  .objectRef<{ reportId: string; imported: boolean; reason: string | null }>(
+    "MonthlyCommentImportOutcome",
+  )
+  .implement({
+    fields: (t) => ({
+      reportId: t.exposeString("reportId"),
+      imported: t.exposeBoolean("imported"),
+      /** Why this row was refused, in the operator's language. Null when it imported. */
+      reason: t.string({ nullable: true, resolve: (o) => o.reason }),
+    }),
+  });
+
+builder.mutationField("importMonthlyComments", (t) =>
+  t.field({
+    type: [ImportOutcomeRef],
+    description:
+      "Paste back the JSON envelope authored in Desktop (MR-8). Each row faces the same " +
+      "guards a generated draft faces, plus the revision binding; a bad row is refused BY " +
+      "NAME and the rest still import. Writes commentDraft only — a person still accepts.",
+    authScopes: { authenticated: true },
+    args: { payload: t.arg.string({ required: true, description: "The JSON envelope, verbatim" }) },
+    resolve: async (_root, args, ctx) => {
+      const { actorId } = assertRelease(ctx);
+      let env;
+      try {
+        env = parseImportEnvelope(args.payload);
+      } catch (e) {
+        // A structural fault is the FILE being wrong, not a row — surface it as one
+        // error rather than a list of per-row refusals that would all say the same.
+        throw new ForbiddenError(e instanceof Error ? e.message : "JSON পড়া যায়নি");
+      }
+      // Every id is gated individually — a bulk argument must never be a way past the
+      // per-report read gate (same rule as draftMonthlyReportComments).
+      for (const c of env.comments) {
+        const r = await MonthlyReport.findById(c.reportId).select("sectionId classId");
+        if (r) await assertStaffReportRead(ctx, r);
+      }
+      return importComments(env, actorId);
     },
   }),
 );

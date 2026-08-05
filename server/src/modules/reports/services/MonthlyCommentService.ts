@@ -269,9 +269,14 @@ export function monthLabelBn(periodKey: string): string {
   return `${name} ${year}`;
 }
 
-/** PURE. The instruction half — pinned here so `promptVersion` means something. */
-export function buildPrompt(facts: CommentFacts): string {
-  const rules = [
+/**
+ * PURE. The rules half, on its own — because MR-8's Desktop export must carry the
+ * SAME instructions as the in-app prompt (§8b.1). Two copies of these rules would
+ * drift within a month and the two lanes would quietly start writing different
+ * paragraphs; there is therefore exactly one copy, and both lanes read it.
+ */
+export function commentRules(periodKey: string): string {
+  return [
     "তুমি একটি স্কুলের মাসিক অগ্রগতি রিপোর্টের জন্য অভিভাবকের উদ্দেশ্যে একটি অনুচ্ছেদ লিখবে।",
     "নিয়ম:",
     "১. শুধু নিচের JSON তথ্য ব্যবহার করো। কোনো নতুন সংখ্যা লিখবে না।",
@@ -282,9 +287,13 @@ export function buildPrompt(facts: CommentFacts): string {
     "৬. flags-এ SERIOUS_MATTER থাকলে বিষয়টি বর্ণনা করবে না — শুধু লিখবে যে শ্রেণি শিক্ষক যোগাযোগ করবেন।",
     "৭. provisional true হলে বোঝাবে যে কিছু তথ্য এখনো আসেনি।",
     "৮. শিক্ষার্থীর নাম নেই — নাম ছাড়াই লেখো (\"আপনার সন্তান\")।",
-    `৯. এই রিপোর্টটি ${monthLabelBn(facts.periodKey)} মাসের। মাসের নাম উল্লেখ করো — "গত মাস" বা "বিগত মাস" লিখবে না।`,
+    `৯. এই রিপোর্টটি ${monthLabelBn(periodKey)} মাসের। মাসের নাম উল্লেখ করো — "গত মাস" বা "বিগত মাস" লিখবে না।`,
   ].join("\n");
-  return `${rules}\n\nJSON:\n${JSON.stringify(facts)}`;
+}
+
+/** PURE. The instruction half — pinned here so `promptVersion` means something. */
+export function buildPrompt(facts: CommentFacts): string {
+  return `${commentRules(facts.periodKey)}\n\nJSON:\n${JSON.stringify(facts)}`;
 }
 
 export function promptHashOf(prompt: string): string {

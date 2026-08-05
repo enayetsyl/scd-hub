@@ -19,6 +19,7 @@
  * Role/permission gates (`report:release`, and the Principal-only overrides) are
  * enforced by the RESOLVER — this service takes the actor's role and trusts it.
  */
+import { createHash } from "crypto";
 import { Types } from "mongoose";
 import { MonthlyReport, type IMonthlyReport, type IReportChange } from "../models/MonthlyReport";
 import { Class } from "../../foundation/models/Class";
@@ -121,6 +122,28 @@ export function reportedFigures(s: MonthlySnapshot): Record<string, string | num
   // "flags: — → SERIOUS_MATTER" instead of "flags: '' → SERIOUS_MATTER".
   out["flags"] = s.flags.length ? s.flags.map((f) => f.flag).sort().join(",") : null;
   return out;
+}
+
+/**
+ * PURE. A stable fingerprint of everything a comment could legitimately describe
+ * (MR-8 §8b.4). Stamped on export, re-checked on import: if a mark landed in between,
+ * the hash moves and the comment is refused, because it describes numbers nobody will
+ * ever see.
+ *
+ * Built from `reportedFigures` on purpose rather than the whole snapshot — the same
+ * set the change log is diffed on. A nightly rerun that only re-stamps `dataAsOf`
+ * must not invalidate comments already written against unchanged figures.
+ *
+ * Key order is sorted so the hash depends on the VALUES, not on the order
+ * `reportedFigures` happens to build its object in.
+ */
+export function figuresHashOf(s: MonthlySnapshot): string {
+  const figures = reportedFigures(s);
+  const canonical = Object.keys(figures)
+    .sort()
+    .map((k) => `${k}=${figures[k] ?? ""}`)
+    .join("\n");
+  return createHash("sha256").update(canonical).digest("hex").slice(0, 16);
 }
 
 /** PURE. Field-by-field difference between two revisions' printed figures. */
