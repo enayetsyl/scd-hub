@@ -54,6 +54,12 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // A malformed monthly-comment envelope pasted back from Desktop (MR-8): unparseable
   // JSON, a wrong period, a duplicate or missing reportId. The operator pasted the
   // wrong thing — their mistake to correct, and the message tells them how.
+  // The English Drive block splitter's provider lane (ED-5, D-#455): a 429 on a
+  // free-tier model, a rejected key, a truncated reply, an unreachable host. Every
+  // one is CAUGHT by the splitter, which falls back to the deterministic slice and
+  // tells the operator in `warnings` — the split still produces every sheet. Paging
+  // on a rate limit that the design already absorbs would be pure noise.
+  "OpenRouterError",
   "CommentImportError",
   "ForbiddenError",
   "AccessControlError",

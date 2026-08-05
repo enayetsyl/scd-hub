@@ -107,6 +107,58 @@ export const SEND_ENGLISH_DRIVE_TO_PRINT = gql<
   }
 `;
 
+/** One sheet sliced out of a block file (D-#455) — returned, not saved. */
+export interface DerivedSheetT {
+  kind: string;
+  seq: number;
+  title: string;
+  contentMd: string;
+  blockNumbers: number[];
+  filename: string;
+  /** False = the deterministic slice (no AI, or its tidy was rejected). */
+  polished: boolean;
+}
+
+export const SPLIT_ENGLISH_DRIVE_BLOCK = gql<
+  {
+    splitEnglishDriveBlock: {
+      sheets: DerivedSheetT[];
+      model: string | null;
+      warnings: string[];
+    };
+  },
+  {
+    classLevel: number;
+    blockNumber: number;
+    version: number;
+    contentMd: string;
+    blockTitle?: string | null;
+    polish?: boolean | null;
+  }
+>`
+  mutation SplitEnglishDriveBlock(
+    $classLevel: Int!
+    $blockNumber: Int!
+    $version: Int!
+    $contentMd: String!
+    $blockTitle: String
+    $polish: Boolean
+  ) {
+    splitEnglishDriveBlock(
+      classLevel: $classLevel
+      blockNumber: $blockNumber
+      version: $version
+      contentMd: $contentMd
+      blockTitle: $blockTitle
+      polish: $polish
+    ) {
+      sheets { kind seq title contentMd blockNumbers filename polished }
+      model
+      warnings
+    }
+  }
+`;
+
 export const UPLOAD_ENGLISH_DRIVE_DOC = gql<
   {
     uploadEnglishDriveDoc: {

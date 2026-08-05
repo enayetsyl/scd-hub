@@ -18,7 +18,10 @@
  */
 import { Schema, model, Document, Types } from "mongoose";
 
-export const ENGLISH_DRIVE_KINDS = ["BLOCK", "TN", "CW", "HW", "PT", "AS", "CLUE"] as const;
+// AK (D-#455) joins the set with the block splitter — the master's consolidated
+// answer key is a document of its own, teacher-only, and the delivery sheet names
+// it as a sibling. Module-local like the rest: no shared-vocab twin, no verifier.
+export const ENGLISH_DRIVE_KINDS = ["BLOCK", "TN", "CW", "HW", "PT", "AK", "AS", "CLUE"] as const;
 export type EnglishDriveKind = (typeof ENGLISH_DRIVE_KINDS)[number];
 
 /** How the document body is stored (owner 2026-07-25). MD = markdown in `contentMd`

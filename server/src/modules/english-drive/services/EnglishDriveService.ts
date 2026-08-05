@@ -423,6 +423,8 @@ const KIND_PRINT_PURPOSE: Record<EnglishDriveKind, PrintPurpose> = {
   CW: "CLASSWORK",
   HW: "HOMEWORK",
   PT: "CLASS_TEST",
+  // The answer key prints with the lesson pack, never as a student paper.
+  AK: "LESSON_PLAN",
   AS: "ASSIGNMENT",
   CLUE: "LESSON_PLAN",
 };

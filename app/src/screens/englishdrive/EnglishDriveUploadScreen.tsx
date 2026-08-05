@@ -5,14 +5,39 @@
  * notice when the upload will replace an existing version ("v৫ → v৭
  * প্রতিস্থাপন হবে"), and an upload summary. Content travels as a GraphQL
  * string (the markdown is stored in the doc — class-note precedent).
+ *
+ * ED-5 (D-#455): a staged BLOCK file gains a "split into sheets" action. The
+ * server slices it into the Teacher Delivery sheet, CW/HW sheets, PT and Answer
+ * Key and hands them BACK — nothing is saved. They land in this same staged list,
+ * fully editable, and go up through the ordinary upload path, so a bad AI tidy
+ * cannot reach a teacher's library without a human looking at it first.
  */
 import React, { useCallback, useState } from "react";
 import { Platform, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { useMutation, useQuery } from "urql";
 import { CLASS_LEVELS } from "@scd/shared";
-import { ENGLISH_DRIVE_DOCS, UPLOAD_ENGLISH_DRIVE_DOC } from "../../graphql/englishDrive";
-import { Screen, H2, Body, Muted, Card, Badge, Button, Field, Notice, Select, Divider, Loader } from "../../components/ui";
+import {
+  ENGLISH_DRIVE_DOCS,
+  SPLIT_ENGLISH_DRIVE_BLOCK,
+  UPLOAD_ENGLISH_DRIVE_DOC,
+} from "../../graphql/englishDrive";
+import {
+  Screen,
+  H2,
+  Body,
+  Muted,
+  Card,
+  Badge,
+  Button,
+  Chip,
+  ChipRow,
+  Field,
+  Notice,
+  Select,
+  Divider,
+  Loader,
+} from "../../components/ui";
 import { UploadDropZone } from "../../components/UploadDropZone";
 import {
   uploadEnglishDriveAsset,
@@ -51,6 +76,12 @@ interface StagedDoc {
   seq: string;
   version: string;
   title: string;
+  /** ED-5: this row was sliced out of a block file rather than picked. */
+  derived?: boolean;
+  /** ED-5: an accepted AI tidy shaped it (false = the plain deterministic slice). */
+  polished?: boolean;
+  /** ED-5, BLOCK rows only: the topic printed on the derived sheets' headers. */
+  splitTopic?: string;
 }
 
 /** A filename's base (no extension) — the fallback title for a binary doc. */
@@ -80,6 +111,13 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [outcomes, setOutcomes] = useState<UploadOutcome[]>([]);
   const [, upload] = useMutation(UPLOAD_ENGLISH_DRIVE_DOC);
+  // ED-5 — the block splitter: which file is splitting, what came back.
+  const [, splitBlock] = useMutation(SPLIT_ENGLISH_DRIVE_BLOCK);
+  const [splitting, setSplitting] = useState<string | null>(null);
+  const [splitWarnings, setSplitWarnings] = useState<string[]>([]);
+  const [splitModel, setSplitModel] = useState<string | null>(null);
+  const [useAi, setUseAi] = useState(true);
+  const [preview, setPreview] = useState<string | null>(null);
 
   // P/O see every class — the whole library, for the replace-conflict notice.
   const [existingQ, refetchExisting] = useQuery({ query: ENGLISH_DRIVE_DOCS, variables: {} });
@@ -217,6 +255,61 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
     }
   }
 
+  /**
+   * ED-5 — hand the block file to the server, stage what comes back. The master
+   * stays staged too: the library keeps the block file alongside its sheets.
+   */
+  async function onSplit(s: StagedDoc): Promise<void> {
+    const cl = s.classLevel ? Number(s.classLevel) : null;
+    const block = intOrNull(s.blockNumber);
+    const version = intOrNull(s.version);
+    if (cl === null || block === null || version === null) {
+      setError(STR.edSplitNeedsClassBlock);
+      return;
+    }
+    setError(null);
+    setOutcomes([]);
+    setSplitWarnings([]);
+    setSplitting(s.filename);
+    const res = await splitBlock({
+      classLevel: cl,
+      blockNumber: block,
+      version,
+      contentMd: s.content,
+      blockTitle: s.splitTopic?.trim() ? s.splitTopic.trim() : null,
+      polish: useAi,
+    });
+    setSplitting(null);
+    if (res.error || !res.data?.splitEnglishDriveBlock) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    const out = res.data.splitEnglishDriveBlock;
+    setSplitModel(out.model);
+    setSplitWarnings(out.warnings);
+    setStaged((prev) => {
+      const map = new Map(prev.map((f) => [f.filename, f]));
+      for (const sheet of out.sheets) {
+        map.set(sheet.filename, {
+          filename: sheet.filename,
+          content: sheet.contentMd,
+          format: "MD",
+          classLevel: String(cl),
+          // A PT is block-less and carries its coverage instead (D-#347).
+          blockNumber: sheet.kind === "PT" ? "" : String(block),
+          blockNumbers: sheet.blockNumbers.join(","),
+          kind: sheet.kind,
+          seq: String(sheet.seq),
+          version: String(version),
+          title: sheet.title,
+          derived: true,
+          polished: sheet.polished,
+        });
+      }
+      return Array.from(map.values());
+    });
+  }
+
   function patchStaged(filename: string, patch: Partial<StagedDoc>): void {
     setStaged((prev) => prev.map((f) => (f.filename === filename ? { ...f, ...patch } : f)));
   }
@@ -318,6 +411,12 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), flexShrink: 1 }}>
                 <Badge text={s.format} tone={s.format === "MD" ? "muted" : "info"} />
+                {s.derived ? (
+                  <Badge
+                    text={s.polished ? STR.edSplitByAi : STR.edSplitDeterministic}
+                    tone={s.polished ? "info" : "muted"}
+                  />
+                ) : null}
                 <Body style={{ fontWeight: "700", flexShrink: 1 }}>{s.filename}</Body>
               </View>
               <Button title={STR.removeFile} variant="ghost" onPress={() => removeStaged(s.filename)} />
@@ -380,9 +479,59 @@ export default function EnglishDriveUploadScreen(): React.ReactElement {
             ) : (
               <Muted style={{ marginTop: space(1) }}>{STR.edNewDoc}</Muted>
             )}
+
+            {/* ED-5 — the master block file can be split into its sheets. */}
+            {s.kind === "BLOCK" && s.format === "MD" ? (
+              <View style={{ marginTop: space(2) }}>
+                <Divider />
+                <Muted style={{ fontWeight: "700", marginTop: space(2) }}>{STR.edSplitTitle}</Muted>
+                <Muted style={{ marginBottom: space(1) }}>{STR.edSplitHint}</Muted>
+                <Field
+                  label={STR.edSplitTopic}
+                  value={s.splitTopic ?? ""}
+                  onChangeText={(v) => patchStaged(s.filename, { splitTopic: v })}
+                  helper={STR.edSplitTopicHelper}
+                />
+                <ChipRow>
+                  <Chip label={STR.edSplitUseAi} selected={useAi} onPress={() => setUseAi(!useAi)} />
+                </ChipRow>
+                <Button
+                  title={splitting === s.filename ? STR.edSplitting : STR.edSplitButton}
+                  variant="secondary"
+                  onPress={() => void onSplit(s)}
+                  loading={splitting === s.filename}
+                  disabled={splitting !== null}
+                />
+              </View>
+            ) : null}
+
+            {/* A derived sheet is reviewable before it is committed. */}
+            {s.derived ? (
+              <>
+                <Button
+                  title={preview === s.filename ? STR.edSplitPreviewHide : STR.edSplitPreview}
+                  variant="ghost"
+                  onPress={() => setPreview(preview === s.filename ? null : s.filename)}
+                />
+                {preview === s.filename ? (
+                  <Field
+                    label={STR.edSplitPreview}
+                    value={s.content}
+                    onChangeText={(v) => patchStaged(s.filename, { content: v })}
+                    multiline
+                    inputStyle={{ minHeight: 260, fontFamily: Platform.OS === "web" ? "monospace" : undefined }}
+                  />
+                ) : null}
+              </>
+            ) : null}
           </Card>
         );
       })}
+
+      {splitModel ? <Muted>{`${STR.edSplitDone} · ${splitModel}`}</Muted> : null}
+      {splitWarnings.map((w) => (
+        <Notice key={w} message={w} tone="warn" />
+      ))}
 
       {error ? <Notice message={error} tone="danger" /> : null}
 

@@ -120,6 +120,35 @@ silently replace the first.
   canonical doc changes only via re-upload. PDF preview stays web-only; edited send-to-print works on
   native (server renders). The GET route also accepts `?fontScale=&lineSpacing=&margin=`.
 
+### ED-5 — split a block file into its sheets (D-#455)
+The owner authors ONE block file in Claude Desktop and used to hand-split it there into eleven
+uploads (teacher delivery sheet, CW1–4, HW1–4, PT, answer key). ED-5 does that in the app.
+- **Deterministic split, not a generated one.** The master already carries the seams: every sheet
+  sits under a heading bearing its own document code (`## CW-1 · \`C5B05-CW1\``, `# Performance
+  Test · \`C5B05-PT\``, `# Consolidated Answer Key · \`C5B05-AK\``). `BlockSplitService` CUTS the
+  sheets out — **no exam item is ever regenerated, reworded or invented by a model.** Rules that
+  earn their keep: a section ends at the next heading of the same or shallower level (so the answer
+  key's `### CW-1` sub-headings do not shatter it); a heading inside an already-cut section is not a
+  new sheet; a `#` inside a fenced board-work block is not a heading; a sheet's teacher-only
+  sub-heading (`### PT teacher instructions`) and everything after it moves to the delivery sheet;
+  a declared-but-unbuilt slot ("**Not built.**") is skipped with a warning.
+- **Mechanical reformatting is code:** the school header block, `*(8 items, 2 marks each)*` → `[16]`,
+  dropping the master's name/date line and its `**Total: …**` trailer, signing the document code.
+- **The LLM (OpenRouter, `OPENROUTER_MODEL`) does the one thing that is new writing** — the delivery
+  sheet's front matter and learning outcomes — plus an optional tidy pass per student sheet. Every
+  AI-touched sheet must pass `sameNumberedItems()`: identical numbered items, same numbers, same
+  order, or the deterministic slice ships instead. Front matter that comes back as a whole-document
+  rewrite is refused the same way.
+- **The AI is an improvement, never a dependency.** No `OPENROUTER_API_KEY`, a 429, an unreachable
+  host or a truncated reply all degrade to the plain slice, with the reason in `warnings`.
+- **Nothing is saved by the split.** `splitEnglishDriveBlock` (roster:manage) RETURNS the sheets;
+  they land in the existing staged-upload list, fully editable (metadata and markdown), and commit
+  through the ordinary `uploadEnglishDriveDoc` path — so a bad AI run cannot reach a teacher's
+  library without a human look. The master block file stays staged too and is uploaded alongside.
+- **New kind `AK`** (answer key) joins the module-local enum — teacher-only like the rest of the
+  Drive, BN label উত্তরপত্র, print purpose LESSON_PLAN. Module-local: no shared-vocab twin, no
+  import-envelope change, no verifier change.
+
 ## 7. Acceptance criteria
 1. Principal drops `C3_ENG_B01_TN_v2.md` + 6 siblings on the import screen → form shows class ৩,
    block ১, kind, v২ prefilled → upload → all appear under Class 3 · Block 1.
@@ -135,6 +164,15 @@ silently replace the first.
    seq) regardless of its block set.
 9. (ED-3b) Opening any block doc shows tap-through chips to the block's other materials; opening a PT
    shows chips for every block it covers.
+10. (ED-5) Staging `C5_ENG_Block05_Countability_v1.md`, setting class ৫ / block ৫ and pressing
+    "শীটগুলো আলাদা করুন" stages TN + CW1–4 + HW1–4 + PT + AK; every numbered item of every sheet is
+    identical to the master's; no answer-key text appears on a student sheet; the PT's dictation
+    words appear only on the delivery sheet. Uploading them behaves exactly like uploading eleven
+    hand-made files.
+11. (ED-5) With `OPENROUTER_API_KEY` unset — or the model rate-limited — the same press still yields
+    every sheet, each badged "কেটে আলাদা করা", with the reason listed above the upload button.
+12. (ED-5) A model reply that drops, renumbers or invents a numbered item is discarded: the sheet
+    keeps its deterministic content and the review list says so.
 
 ## 9. Out of scope (v1)
 Non-English subjects; xlsx vocab pools; version history UI; guardian/student access; CW/HW/PT→**tracker**

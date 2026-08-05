@@ -14,6 +14,11 @@
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
 import {
+  splitEnglishDriveBlock,
+  type BlockSplitResult,
+  type DerivedSheet,
+} from "../services/BlockSplitService";
+import {
   englishDriveDocs,
   englishDriveDocById,
   myEnglishDriveClassLevels,
@@ -132,6 +137,70 @@ builder.mutationField("sendEnglishDriveDocToPrint", (t) =>
       // know when the print is used (enforced at this teacher-facing seam, like colour/sides).
       if (!args.neededByKey) throw new Error("প্রিন্ট কবে ব্যবহার হবে সেই তারিখ দিন");
       return sendEnglishDriveDocToPrint(ctx, args);
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// ED-5 (D-#455) — split one block file into its sheets. This does NOT save: it
+// returns the derived sheets so the Principal reviews and edits them in the same
+// upload list, then commits through the existing uploadEnglishDriveDoc path. A
+// bad AI run therefore cannot reach a teacher's library without a human look.
+// ---------------------------------------------------------------------------
+
+const DerivedSheetRef = builder.objectRef<DerivedSheet>("EnglishDriveDerivedSheet");
+DerivedSheetRef.implement({
+  description: "One sheet sliced out of a block file — not yet saved.",
+  fields: (t) => ({
+    kind: t.exposeString("kind"),
+    seq: t.exposeInt("seq"),
+    title: t.exposeString("title"),
+    contentMd: t.exposeString("contentMd"),
+    blockNumbers: t.field({ type: ["Int"], resolve: (r) => r.blockNumbers }),
+    filename: t.exposeString("filename"),
+    /** False = the deterministic slice shipped (no AI, or the AI pass was rejected). */
+    polished: t.exposeBoolean("polished"),
+  }),
+});
+
+const BlockSplitResultRef = builder.objectRef<BlockSplitResult>("EnglishDriveBlockSplitResult");
+BlockSplitResultRef.implement({
+  fields: (t) => ({
+    sheets: t.field({ type: [DerivedSheetRef], resolve: (r) => r.sheets }),
+    model: t.string({ nullable: true, resolve: (r) => r.model }),
+    warnings: t.field({ type: ["String"], resolve: (r) => r.warnings }),
+  }),
+});
+
+builder.mutationField("splitEnglishDriveBlock", (t) =>
+  t.field({
+    type: BlockSplitResultRef,
+    description:
+      "ED-5: slice a block file into its Teacher Delivery sheet, CW/HW sheets, PT and Answer Key. " +
+      "Deterministic — the sheets are CUT from the master, never regenerated; the LLM only writes the " +
+      "delivery sheet's front matter and tidies formatting, and any tidy that changes the numbered " +
+      "items is discarded. Saves nothing: the caller reviews, then uploads. Requires roster:manage.",
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      classLevel: t.arg.int({ required: true }),
+      blockNumber: t.arg.int({ required: true }),
+      version: t.arg.int({ required: true }),
+      contentMd: t.arg.string({ required: true }),
+      /** The topic printed on every sheet header; derived from the master when absent. */
+      blockTitle: t.arg.string({ required: false }),
+      /** False = deterministic only, no API call at all. */
+      polish: t.arg.boolean({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return splitEnglishDriveBlock({
+        classLevel: args.classLevel,
+        blockNumber: args.blockNumber,
+        version: args.version,
+        contentMd: args.contentMd,
+        blockTitle: args.blockTitle ?? null,
+        polish: args.polish ?? true,
+      });
     },
   }),
 );

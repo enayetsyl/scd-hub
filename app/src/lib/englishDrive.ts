@@ -9,7 +9,7 @@
  */
 import { STR, bnNum } from "./labels";
 
-export const ENGLISH_DRIVE_KINDS = ["BLOCK", "TN", "CW", "HW", "PT", "AS", "CLUE"] as const;
+export const ENGLISH_DRIVE_KINDS = ["BLOCK", "TN", "CW", "HW", "PT", "AK", "AS", "CLUE"] as const;
 export type EnglishDriveKind = (typeof ENGLISH_DRIVE_KINDS)[number];
 
 export function englishDriveKindLabel(kind: string): string {
@@ -24,6 +24,8 @@ export function englishDriveKindLabel(kind: string): string {
       return STR.edKindHw;
     case "PT":
       return STR.edKindPt;
+    case "AK":
+      return STR.edKindAk;
     case "AS":
       return STR.edKindAs;
     case "CLUE":
@@ -109,7 +111,7 @@ export function parseEnglishDriveFilename(filename: string): ParsedEnglishDriveN
       stem.slice(blockMatch.index + blockMatch[0].length)
     : stem;
   const kindMatch =
-    /(?:^|[^A-Z])(BLOCK|TN|CW|HW|PT|AS|CLUE)[\s_-]?0*(\d+)?(?=[^A-Z0-9]|$)/.exec(kindSource);
+    /(?:^|[^A-Z])(BLOCK|TN|CW|HW|PT|AK|AS|CLUE)[\s_-]?0*(\d+)?(?=[^A-Z0-9]|$)/.exec(kindSource);
 
   let kind: EnglishDriveKind | null = kindMatch
     ? (kindMatch[1] as EnglishDriveKind)
@@ -122,7 +124,8 @@ export function parseEnglishDriveFilename(filename: string): ParsedEnglishDriveN
   if (!kind && /HOMEWORK/.test(stem)) kind = "HW";
   if (!kind && /CLASSWORK/.test(stem)) kind = "CW";
   if (!kind && /PRACTICE[\s_-]?TEST/.test(stem)) kind = "PT";
-  if (!kind && /TEACHER[\s_-]?NOTE/.test(stem)) kind = "TN";
+  if (!kind && /TEACHER[\s_-]?(NOTE|DELIVERY)/.test(stem)) kind = "TN";
+  if (!kind && /ANSWER[\s_-]?KEY/.test(stem)) kind = "AK";
   if (!kind && /CLUE/.test(stem)) kind = "CLUE";
   // Week-numbered names (Assignment_W3) — the W-number is the sequence when no
   // digits were glued to the kind token itself.
