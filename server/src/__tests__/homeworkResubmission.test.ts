@@ -34,6 +34,15 @@ jest.mock("../modules/content/models/ContentArtifact", () => ({
 jest.mock("../modules/trackers/services/HomeworkService", () => ({
   listDailyItems: (...a: unknown[]) => mockList(...a),
 }));
+// Routine-aware due date (2026-08-04 ruling) — mocked to the old rule; the
+// routine/holiday walk is covered by homeworkDueDate.test.ts.
+jest.mock("../modules/trackers/homeworkDueDate", () => {
+  const { nextSchoolDay } = jest.requireActual("../modules/trackers/calendar");
+  return {
+    resolveHomeworkDueDateByItem: (_i: unknown, _s: unknown, after: Date) =>
+      Promise.resolve(nextSchoolDay(after)),
+  };
+});
 
 import { checkRecord, getStudentDayLoad } from "../modules/trackers/services/HomeworkResubmissionService";
 

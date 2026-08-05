@@ -58,6 +58,10 @@ import { runObservationEscalation } from "../../classroom-observation/services/O
 import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconciliationService";
 import { sweepHomeworkDue } from "../../trackers/services/HomeworkDueSweepService";
 import {
+  sweepHomeworkAutoChase,
+  HW_AUTO_CHASE_MINUTES,
+} from "../../trackers/services/HomeworkChaseSweepService";
+import {
   sweepHomeworkAutoIssue,
   HW_AUTO_ISSUE_START_HOUR,
   HW_AUTO_ISSUE_END_HOUR,
@@ -188,6 +192,8 @@ export interface TickSummary {
   hwPendingEmitted: number;
   hwDueFlipped: number;
   hwAutoIssued: number;
+  /** End-of-due-day system chases (owner ruling 2026-08-04). */
+  hwAutoChased: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -222,6 +228,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     hwPendingEmitted: 0,
     hwDueFlipped: 0,
     hwAutoIssued: 0,
+    hwAutoChased: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -295,6 +302,23 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     if (res.issued > 0) {
       console.log(`[scheduler] homework auto-issue: ${res.issued} class-day(s) confirmed+issued`);
     }
+  });
+
+  // --- Homework auto-CHASE (owner ruling 2026-08-04) — 17:30, once per school
+  // day: every record still GIVEN/DUE with chaseCount 0 whose due day arrived
+  // (3-day lookback) gets ONE system chase, so "the teacher never ran the pass"
+  // no longer means "the guardian never heard". Emits only through
+  // transitionRecord → the D-#260 emitter's own per-day dedupe; no entry in
+  // schedulerDedupeKeys needed. Behind the OFF/HOLIDAY gate; a missed evening
+  // is caught by the next school day's rung via the lookback.
+  await family("homework auto-chase", async () => {
+    if (!windowOpen(nowMin, HW_AUTO_CHASE_MINUTES)) return;
+    await runOnce(dateKey, "HWCHASE", async () => {
+      summary.hwAutoChased = await sweepHomeworkAutoChase(now);
+      if (summary.hwAutoChased > 0) {
+        console.log(`[scheduler] homework auto-chase: ${summary.hwAutoChased} record(s) → CHASE`);
+      }
+    });
   });
 
   // --- BELL_REMINDER (N2.1) — per active grid, ~5 min before each period end.
