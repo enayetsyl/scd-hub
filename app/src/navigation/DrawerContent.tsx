@@ -113,6 +113,8 @@ const STAFF_NAV: NavSection[] = [
       // Owner ask 2026-07-20: moved here from the Admin hub.
       { route: "ReportsTab", labelKey: "rrTitle", icon: "🔄", screen: "ReconciliationReport" },
       { route: "ReportsTab", labelKey: "hlrTitle", icon: "📘", screen: "HwLifecycleReport" },
+      // D-#453: the weekly unsubmitted-homework report (guardian-digest staff twin).
+      { route: "ReportsTab", labelKey: "hwwdTitle", icon: "📅", screen: "HwWeeklyUnsubmitted" },
     ],
   },
   /**

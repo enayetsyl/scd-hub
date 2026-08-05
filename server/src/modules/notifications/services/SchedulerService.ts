@@ -62,6 +62,10 @@ import {
   HW_AUTO_CHASE_MINUTES,
 } from "../../trackers/services/HomeworkChaseSweepService";
 import {
+  isHomeworkWeeklyDigestDay,
+  dispatchHomeworkWeeklyDigest,
+} from "../../trackers/services/HomeworkWeeklyDigestService";
+import {
   sweepHomeworkAutoIssue,
   HW_AUTO_ISSUE_START_HOUR,
   HW_AUTO_ISSUE_END_HOUR,
@@ -106,6 +110,13 @@ export const HW_CONFIRM_ESCALATION_RUNGS = [
   { min: 14 * 60, role: "OFFICE" },
   { min: 16 * 60, role: "PRINCIPAL" },
 ] as const;
+/** Weekly guardian homework digest (D-#452) — 17:00 on the LAST OPEN day of the
+ *  Sun–Thu school week (normally Thursday). */
+export const HW_WEEKLY_DIGEST_MINUTES = 17 * 60;
+/** Wide stale window (17:00–21:00) for the digest ONLY: a weekly cadence has no
+ *  next rung to catch a missed fire, and the emit dedupe is WEEK-scoped, so a
+ *  late fire after a restart is harmless and exact-once per guardian per week. */
+export const HW_WEEKLY_DIGEST_STALE_MINUTES = 240;
 
 /** Latest currently-open rung from a list of due-minutes (rungs <30 min apart can
  *  overlap the stale window; pick the most recent so its own dedupeKey fires). */
@@ -194,6 +205,8 @@ export interface TickSummary {
   hwAutoIssued: number;
   /** End-of-due-day system chases (owner ruling 2026-08-04). */
   hwAutoChased: number;
+  /** Weekly guardian homework-digest notifications emitted (D-#452). */
+  hwWeeklyDigestEmitted: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -229,6 +242,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     hwDueFlipped: 0,
     hwAutoIssued: 0,
     hwAutoChased: 0,
+    hwWeeklyDigestEmitted: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -317,6 +331,25 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       summary.hwAutoChased = await sweepHomeworkAutoChase(now);
       if (summary.hwAutoChased > 0) {
         console.log(`[scheduler] homework auto-chase: ${summary.hwAutoChased} record(s) → CHASE`);
+      }
+    });
+  });
+
+  // --- Weekly guardian homework digest (D-#452) — 17:00 on the LAST OPEN day
+  // of the Sun–Thu week: this week's still-unsubmitted homework subject-wise +
+  // today's fresh homework as the weekend heads-up, one row per guardian×child.
+  // Wide 240-min stale window (no next rung to self-heal a weekly cadence) and
+  // a WEEK-scoped emit dedupe, so a restart inside the window re-fires safely.
+  await family("homework weekly digest", async () => {
+    if (!windowOpen(nowMin, HW_WEEKLY_DIGEST_MINUTES, HW_WEEKLY_DIGEST_STALE_MINUTES)) return;
+    if (!(await isHomeworkWeeklyDigestDay(now))) return;
+    await runOnce(dateKey, "HWWD", async () => {
+      const res = await dispatchHomeworkWeeklyDigest(now);
+      summary.hwWeeklyDigestEmitted = res.notified;
+      if (res.notified > 0) {
+        console.log(
+          `[scheduler] hw weekly digest: ${res.students} student(s), ${res.notified} guardian notification(s)`,
+        );
       }
     });
   });
