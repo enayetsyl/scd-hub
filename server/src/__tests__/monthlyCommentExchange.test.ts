@@ -38,18 +38,19 @@ const snapshot = (p: { present?: number; hwSubmitted?: number } = {}): MonthlySn
       attendance: { present: p.present ?? 18, schoolDays: 22, rate: 82, absentUncovered: 2, absentStreakMax: 2 },
       homework: {
         issued: 38, submitted: p.hwSubmitted ?? 27, expectedWhilePresent: 32,
-        submissionRate: 84, qualityRate: 63,
+        submissionRate: 84, qualityRate: 63, checked: 30, correct: 24, partial: 0, wrong: 6,
         bySubject: [
-          { subject: "BAN", submitted: 15, expectedWhilePresent: 16, qualityRate: 71 },
-          { subject: "MATH", submitted: 12, expectedWhilePresent: 16, qualityRate: 44 },
+          { subject: "BAN", submitted: 15, expectedWhilePresent: 16, checked: 14, correct: 10, partial: 0, wrong: 4, qualityRate: 71 },
+          { subject: "MATH", submitted: 12, expectedWhilePresent: 16, checked: 16, correct: 7, partial: 2, wrong: 7, qualityRate: 44 },
         ],
         coverage: { settled: 0, total: 0, pct: 92 },
       },
       assignment: {
         issued: 6, submitted: 4, expectedWhilePresent: 5, submissionRate: 80, qualityRate: 50,
+        checked: 4, correct: 2, partial: 0, wrong: 2,
         bySubject: [
-          { subject: "BAN", submitted: 2, expectedWhilePresent: 2, qualityRate: 100 },
-          { subject: "MATH", submitted: 2, expectedWhilePresent: 3, qualityRate: 0 },
+          { subject: "BAN", submitted: 2, expectedWhilePresent: 2, checked: 2, correct: 2, partial: 0, wrong: 0, qualityRate: 100 },
+          { subject: "MATH", submitted: 2, expectedWhilePresent: 3, checked: 2, correct: 0, partial: 1, wrong: 1, qualityRate: 0 },
         ],
         coverage: { settled: 0, total: 0, pct: 67 },
       },
