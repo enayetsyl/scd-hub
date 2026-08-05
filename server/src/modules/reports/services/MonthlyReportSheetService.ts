@@ -24,6 +24,13 @@ import { bnNum as bn } from "../../../lib/bnNum";
 import type { MonthlySnapshot } from "./MonthlyReportService";
 import type { MonthlyReportStatus } from "../models/MonthlyReport";
 
+/** Fee tracking is not a real, trustworthy feature in the app yet — every report
+ *  currently shows পরিশোধ ০ regardless of what a family has actually paid, which is
+ *  worse than showing nothing. Flip this once real fee data lands (owner, 2026-08-05).
+ *  Deliberately a flag rather than a deletion: the block, `hideFees` narrowing, and
+ *  the D-#401 metrics underneath it are all correct and stay wired for that day. */
+const FEE_SHEET_LIVE = false;
+
 const STATUS_BN: Record<MonthlyReportStatus, string> = {
   DRAFT: "খসড়া",
   READY: "প্রস্তুত",
@@ -152,7 +159,7 @@ export function buildMonthlyReportMarkdown(input: SheetInput): string {
     if (!block) continue;
     push(`## ${title}`, "");
     push(
-      "| বিষয় | দেওয়া | উপস্থিত থাকাকালে প্রাপ্য | জমা | জমার হার | সঠিকতা |",
+      "| বিষয় | দেওয়া | উপস্থিত থাকাকালে প্রাপ্য | জমা | জমার হার | মান |",
       "|---|---|---|---|---|---|",
       ...block.bySubject.map(
         (r) =>
@@ -238,7 +245,7 @@ export function buildMonthlyReportMarkdown(input: SheetInput): string {
   }
 
   // Absent for a teacher — the resolver strips the block before it reaches here.
-  if (m?.fees) {
+  if (FEE_SHEET_LIVE && m?.fees) {
     push("## ফি (পরিশোধের হিসাব)", "");
     push(
       "| খাত | এই মাস |",
@@ -271,7 +278,7 @@ export function buildMonthlyReportMarkdown(input: SheetInput): string {
       `| উপস্থিতি | ${pct(cfg.attendanceThresholdPp)} | ${bn(cfg.attendanceMinDays)} কর্মদিবস |`,
       `| বাড়ির কাজ জমা | ${pct(cfg.homeworkThresholdPp)} | ${bn(cfg.homeworkMinSheets)}টি |`,
       `| অ্যাসাইনমেন্ট জমা | ${pct(cfg.assignmentThresholdPp)} | ${bn(cfg.assignmentMinItems)}টি |`,
-      `| সঠিকতা | ${pct(cfg.qualityThresholdPp)} | ${bn(cfg.qualityMinChecked)}টি যাচাইকৃত |`,
+      `| মান | ${pct(cfg.qualityThresholdPp)} | ${bn(cfg.qualityMinChecked)}টি যাচাইকৃত |`,
       `| ক্লাস টেস্ট | ${pct(cfg.classTestThresholdPp)} | ${bn(cfg.classTestMinTests)}টি পরীক্ষা |`,
       `| উদ্বেগ | ${bn(cfg.concernThreshold)}টি | — |`,
       "",

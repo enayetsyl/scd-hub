@@ -4119,6 +4119,13 @@ const STR_BN = {
   mrHomework: "বাড়ির কাজ",
   mrAssignment: "অ্যাসাইনমেন্ট",
   mrClassTest: "ক্লাস টেস্ট",
+  // The per-subject row used to cram "submitted/expected · qualityRate%" into one
+  // unlabeled string — two unrelated numbers a reader had to guess apart. "সঠিকতা"
+  // (the PDF's original header word) tested as not user-friendly; "মান" replaces it
+  // everywhere the quality rate is labeled, on this screen and in the PDF, so the
+  // two documents use one vocabulary (owner, 2026-08-05).
+  mrSubjectSubmitted: "জমা",
+  mrSubjectQuality: "মান",
   mrHifz: "শনিবারের রিভিশন",
   mrConcerns: "উদ্বেগ",
   mrLibrary: "লাইব্রেরি",
@@ -7384,6 +7391,8 @@ const STR_EN: StrTable = {
   mrHomework: "Homework",
   mrAssignment: "Assignment",
   mrClassTest: "Class test",
+  mrSubjectSubmitted: "Submitted",
+  mrSubjectQuality: "Quality",
   mrHifz: "Saturday revision",
   mrConcerns: "Concerns",
   mrLibrary: "Library",

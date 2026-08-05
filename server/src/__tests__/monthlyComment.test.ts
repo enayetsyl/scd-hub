@@ -14,6 +14,7 @@ import {
   assertDeidentified,
   buildPrompt,
   commentFactsOf,
+  commentRules,
   correctivePrompt,
   generateGuardianComment,
   MonthlyCommentError,
@@ -42,12 +43,19 @@ const snapshot = (over: Partial<{ name: string; extra: unknown }> = {}): Monthly
         submitted: 27, expectedWhilePresent: 32, submissionRate: 84, qualityRate: 63,
         coverage: { settled: 35, total: 38, pct: 92 },
         bySubject: [
-          { subject: "MATH", qualityRate: 75 },
-          { subject: "BANGLA", qualityRate: 67 },
-          { subject: "ENGLISH", qualityRate: 50 },
+          { subject: "MATH", submitted: 10, expectedWhilePresent: 10, qualityRate: 75 },
+          { subject: "BANGLA", submitted: 9, expectedWhilePresent: 11, qualityRate: 67 },
+          { subject: "ENGLISH", submitted: 8, expectedWhilePresent: 11, qualityRate: 50 },
         ],
       },
-      assignment: { submitted: 4, expectedWhilePresent: 5, submissionRate: 80, coverage: { pct: 67 } },
+      assignment: {
+        submitted: 4, expectedWhilePresent: 5, submissionRate: 80, coverage: { pct: 67 },
+        bySubject: [
+          { subject: "MATH", submitted: 2, expectedWhilePresent: 2, qualityRate: 100 },
+          { subject: "BANGLA", submitted: 1, expectedWhilePresent: 1, qualityRate: 100 },
+          { subject: "ENGLISH", submitted: 1, expectedWhilePresent: 2, qualityRate: 0 },
+        ],
+      },
       classTest: { attended: 12, testsHeld: 14, rate: 79, coverage: { pct: 86 } },
       hifz: { present: 3, sessions: 4 },
       concerns: { concern: 3 },
@@ -327,5 +335,71 @@ describe("MR-4 — the report names its month", () => {
     const f = facts();
     expect(JSON.stringify(f)).not.toContain("জুলাই");
     expect(() => assertDeidentified(f)).not.toThrow();
+  });
+});
+
+describe("MR-4 mr4-2 (2026-08-05) — the comment covers every area, not 2-4 sentences", () => {
+  test("the uncovered-absence count reaches the model — previously only the flag NAME did", () => {
+    const f = facts();
+    expect(f.attendance.absentUncovered).toBe(2);
+    expect(allowedNumbers(f).has("2")).toBe(true);
+  });
+
+  test("per-subject submitted/expected/quality reach the model for BOTH trackers", () => {
+    const f = facts();
+    expect(f.homework.bySubject).toEqual([
+      { subject: "MATH", submittedOf: 10, expected: 10, qualityPct: 75 },
+      { subject: "BANGLA", submittedOf: 9, expected: 11, qualityPct: 67 },
+      { subject: "ENGLISH", submittedOf: 8, expected: 11, qualityPct: 50 },
+    ]);
+    expect(f.assignment.bySubject).toEqual([
+      { subject: "MATH", submittedOf: 2, expected: 2, qualityPct: 100 },
+      { subject: "BANGLA", submittedOf: 1, expected: 1, qualityPct: 100 },
+      { subject: "ENGLISH", submittedOf: 1, expected: 2, qualityPct: 0 },
+    ]);
+  });
+
+  test("a subject nothing has been checked in yet still appears — unfiltered, unlike the ranking", () => {
+    // The strength/weakness ranking drops a null-quality subject (nothing checked); the
+    // full per-subject listing must NOT, or a family never hears their child submitted.
+    const s = snapshot();
+    (s.metrics as unknown as { homework: { bySubject: unknown[] } }).homework.bySubject.push({
+      subject: "SCIENCE", submitted: 5, expectedWhilePresent: 5, qualityRate: null,
+    });
+    const f = commentFactsOf(s, 4);
+    expect(f.homework.bySubject).toContainEqual({ subject: "SCIENCE", submittedOf: 5, expected: 5, qualityPct: null });
+    expect(f.strongestSubjects).not.toContain("SCIENCE");
+    expect(f.weakestSubjects).not.toContain("SCIENCE");
+  });
+
+  test("the rules ask for every area to be touched, not a sentence cap", () => {
+    const rules = commentRules("2026-07");
+    expect(rules).toContain("উপস্থিতি");
+    expect(rules).toContain("বাড়ির কাজ");
+    expect(rules).toContain("অ্যাসাইনমেন্ট");
+    expect(rules).toContain("ক্লাস টেস্ট");
+    expect(rules).not.toContain("২–৪ বাক্য");
+  });
+
+  test("the rules say 'অভিযোগ', not 'উদ্বেগ' — owner wording, 2026-08-05", () => {
+    const rules = commentRules("2026-07");
+    expect(rules).toContain("অভিযোগ");
+    expect(rules).toMatch(/'উদ্বেগ'|"উদ্বেগ"/); // named ONLY as the word to avoid
+    expect(rules).not.toMatch(/লিখবে[^।]*উদ্বেগ/); // never instructed to WRITE it
+  });
+
+  test("a full per-area summary, built only from these facts, passes both guards", () => {
+    // Not hand-waved: every numeral below is checked against the SAME facts object a
+    // real draft would be validated against, using the real guard functions.
+    const f = facts();
+    const comment = [
+      "জুলাই ২০২৬-এ আপনার সন্তান ২২ দিনের মধ্যে ১৮ দিন উপস্থিত ছিল (৮২%), শ্রেণির গড় ৮৮%-এর কিছুটা নিচে,",
+      "এবং ২ দিন ছুটি ছাড়া অনুপস্থিত ছিল। বাড়ির কাজে গণিতে ১০/১০ ও বাংলায় ৯/১১ ভালো মানের হলেও ইংরেজিতে",
+      "৮/১১ জমা দেওয়ার পরও মাত্র ৫০% মানসম্মত হয়েছে। অ্যাসাইনমেন্টে বাংলা ও গণিত পুরোপুরি সঠিক হলেও",
+      "ইংরেজির ১টি অ্যাসাইনমেন্ট যাচাইয়ে ভালো হয়নি। ক্লাস টেস্টে ১৪টির মধ্যে ১২টিতে অংশ নিয়েছে (৭৯%)।",
+      "এই মাসে ৩টি অভিযোগ লেখা হয়েছে। বাড়িতে ইংরেজি পাঠগুলো নিয়মিত অনুশীলন করালে উপকার হতে পারে।",
+    ].join(" ");
+    expect(looksLikeProse(comment)).toEqual({ ok: true, reason: null });
+    expect(validateNumerals(comment, f)).toEqual({ ok: true, invented: [] });
   });
 });
