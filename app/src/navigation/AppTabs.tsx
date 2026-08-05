@@ -254,6 +254,7 @@ import ClassTestReportScreen from "../screens/reports/ClassTestReportScreen";
 import MonthlyReportConsoleScreen from "../screens/reports/MonthlyReportConsoleScreen";
 import MonthlyReportDetailScreen from "../screens/reports/MonthlyReportDetailScreen";
 import MonthlyPendingWorkScreen from "../screens/reports/MonthlyPendingWorkScreen";
+import HwWeeklyUnsubmittedScreen from "../screens/reports/HwWeeklyUnsubmittedScreen";
 import GuardianHomeScreen from "../screens/guardian/GuardianHomeScreen";
 import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
@@ -1049,6 +1050,8 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="MonthlyReportConsole" component={MonthlyReportConsoleScreen} options={{ title: STR.mrConsoleTitle }} />
       <ReportsStack.Screen name="MonthlyReportDetail" component={MonthlyReportDetailScreen} options={{ title: STR.mrConsoleTitle }} />
       <ReportsStack.Screen name="MonthlyPendingWork" component={MonthlyPendingWorkScreen} options={{ title: STR.mpTitle }} />
+      {/* D-#453: the weekly unsubmitted-homework report (guardian-digest staff twin). */}
+      <ReportsStack.Screen name="HwWeeklyUnsubmitted" component={HwWeeklyUnsubmittedScreen} options={{ title: STR.hwwdTitle }} />
     </ReportsStack.Navigator>
   );
 }

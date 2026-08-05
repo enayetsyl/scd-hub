@@ -27,6 +27,9 @@ const mockDispatchAttendance = jest.fn();
 const mockDispatchLibrary = jest.fn();
 const mockPendingHomework = jest.fn();
 const mockSweepHomeworkDue = jest.fn();
+const mockSweepHomeworkAutoChase = jest.fn();
+const mockIsDigestDay = jest.fn();
+const mockDispatchDigest = jest.fn();
 const mockEmit = jest.fn();
 
 jest.mock("../modules/routine/calendar", () => ({
@@ -80,6 +83,19 @@ jest.mock("../modules/trackers/services/HomeworkReconciliationService", () => ({
 jest.mock("../modules/trackers/services/HomeworkDueSweepService", () => ({
   sweepHomeworkDue: (d: unknown) => mockSweepHomeworkDue(d),
 }));
+// The 17:30 end-of-due-day system chase (owner ruling 2026-08-04) — mocked so the
+// scheduler test stays DB-free (the sweep is covered in homeworkChaseSweep.test.ts).
+jest.mock("../modules/trackers/services/HomeworkChaseSweepService", () => ({
+  sweepHomeworkAutoChase: (d: unknown) => mockSweepHomeworkAutoChase(d),
+  HW_AUTO_CHASE_MINUTES: 17 * 60 + 30,
+  HW_AUTO_CHASE_LOOKBACK_DAYS: 3,
+}));
+// D-#452: the weekly guardian digest (covered in homeworkWeeklyDigest.test.ts) —
+// mocked so the scheduler test stays DB-free.
+jest.mock("../modules/trackers/services/HomeworkWeeklyDigestService", () => ({
+  isHomeworkWeeklyDigestDay: (d: unknown) => mockIsDigestDay(d),
+  dispatchHomeworkWeeklyDigest: (d: unknown) => mockDispatchDigest(d),
+}));
 // D-#314: the auto-ISSUE sweep (covered in homeworkAutoIssue.test.ts) — mocked
 // as a quiet no-op so 12:00–17:00 ticks stay DB-free here.
 jest.mock("../modules/trackers/services/HomeworkAutoIssueService", () => ({
@@ -120,7 +136,107 @@ beforeEach(() => {
   mockDispatchLibrary.mockResolvedValue({ dueSoonEmitted: 0, overdueEmitted: 0 });
   mockPendingHomework.mockResolvedValue([]);
   mockSweepHomeworkDue.mockResolvedValue(0);
+  mockSweepHomeworkAutoChase.mockResolvedValue(0);
+  mockIsDigestDay.mockResolvedValue(false);
+  mockDispatchDigest.mockResolvedValue({ students: 0, notified: 0 });
   mockEmit.mockResolvedValue({ created: true, dedupeKey: "x" });
+});
+
+// ---------------------------------------------------------------------------
+// Weekly guardian homework digest (17:00 last open day, D-#452)
+// ---------------------------------------------------------------------------
+
+describe("homework weekly digest family", () => {
+  it("17:00 on a digest day — dispatches once and counts the notifications", async () => {
+    mockIsDigestDay.mockResolvedValue(true);
+    mockDispatchDigest.mockResolvedValue({ students: 12, notified: 9 });
+    const s = await runSchedulerTick(at(17, 0));
+    expect(s.hwWeeklyDigestEmitted).toBe(9);
+    expect(mockDispatchDigest).toHaveBeenCalledTimes(1);
+  });
+
+  it("16:59 — the window is not open yet", async () => {
+    mockIsDigestDay.mockResolvedValue(true);
+    const s = await runSchedulerTick(at(16, 59));
+    expect(s.hwWeeklyDigestEmitted).toBe(0);
+    expect(mockDispatchDigest).not.toHaveBeenCalled();
+  });
+
+  it("20:55 — still inside the WIDE stale window (a weekly rung has no next rung)", async () => {
+    mockIsDigestDay.mockResolvedValue(true);
+    mockDispatchDigest.mockResolvedValue({ students: 1, notified: 1 });
+    const s = await runSchedulerTick(at(20, 55));
+    expect(s.hwWeeklyDigestEmitted).toBe(1);
+  });
+
+  it("21:05 — past the 240-min stale window: skipped", async () => {
+    mockIsDigestDay.mockResolvedValue(true);
+    const s = await runSchedulerTick(at(21, 5));
+    expect(mockDispatchDigest).not.toHaveBeenCalled();
+    expect(s.hwWeeklyDigestEmitted).toBe(0);
+  });
+
+  it("not a digest day — silent even at 17:00", async () => {
+    mockIsDigestDay.mockResolvedValue(false);
+    await runSchedulerTick(at(17, 0));
+    expect(mockDispatchDigest).not.toHaveBeenCalled();
+  });
+
+  it("OFF/HOLIDAY — the school-day gate keeps the digest silent", async () => {
+    mockResolveDayType.mockResolvedValue("HOLIDAY");
+    mockIsDigestDay.mockResolvedValue(true);
+    await runSchedulerTick(at(17, 0));
+    expect(mockDispatchDigest).not.toHaveBeenCalled();
+  });
+
+  it("runOnce — a second tick the same day does not re-dispatch", async () => {
+    mockIsDigestDay.mockResolvedValue(true);
+    mockDispatchDigest.mockResolvedValue({ students: 3, notified: 3 });
+    await runSchedulerTick(at(17, 0));
+    const s2 = await runSchedulerTick(at(17, 1));
+    expect(mockDispatchDigest).toHaveBeenCalledTimes(1);
+    expect(s2.hwWeeklyDigestEmitted).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Homework auto-CHASE rung (17:30 end-of-due-day system chase, 2026-08-04 ruling)
+// ---------------------------------------------------------------------------
+
+describe("homework auto-chase rung", () => {
+  it("17:30 — runs the sweep once and counts the chases", async () => {
+    mockSweepHomeworkAutoChase.mockResolvedValue(3);
+    const s = await runSchedulerTick(at(17, 30));
+    expect(s.hwAutoChased).toBe(3);
+    expect(mockSweepHomeworkAutoChase).toHaveBeenCalledTimes(1);
+  });
+
+  it("before the rung (17:29) — silent", async () => {
+    const s = await runSchedulerTick(at(17, 29));
+    expect(s.hwAutoChased).toBe(0);
+    expect(mockSweepHomeworkAutoChase).not.toHaveBeenCalled();
+  });
+
+  it("stale (18:05, > 30 min past) — skipped, never backfilled that evening", async () => {
+    const s = await runSchedulerTick(at(18, 5));
+    expect(s.hwAutoChased).toBe(0);
+    expect(mockSweepHomeworkAutoChase).not.toHaveBeenCalled();
+  });
+
+  it("runOnce — a second tick in the window does not re-run the sweep", async () => {
+    mockSweepHomeworkAutoChase.mockResolvedValue(2);
+    await runSchedulerTick(at(17, 30));
+    const s2 = await runSchedulerTick(at(17, 35));
+    expect(mockSweepHomeworkAutoChase).toHaveBeenCalledTimes(1);
+    expect(s2.hwAutoChased).toBe(0);
+  });
+
+  it("OFF/HOLIDAY — the school-day gate keeps the sweep silent", async () => {
+    mockResolveDayType.mockResolvedValue("HOLIDAY");
+    const s = await runSchedulerTick(at(17, 30));
+    expect(s.hwAutoChased).toBe(0);
+    expect(mockSweepHomeworkAutoChase).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------

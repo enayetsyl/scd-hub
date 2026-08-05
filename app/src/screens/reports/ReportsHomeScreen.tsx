@@ -21,6 +21,7 @@ export default function ReportsHomeScreen({ navigation }: Props): React.ReactEle
     { icon: "🧪", title: STR.ctReportTitle, sub: STR.ctReportSub, onPress: () => navigation.navigate("ClassTestReport") },
     { icon: "🗓️", title: STR.mrConsoleTitle, sub: STR.mrConsoleSub, onPress: () => navigation.navigate("MonthlyReportConsole") },
     { icon: "⏳", title: STR.mpTitle, sub: STR.mpSub, onPress: () => navigation.navigate("MonthlyPendingWork") },
+    { icon: "📅", title: STR.hwwdTitle, sub: STR.hwwdSub, onPress: () => navigation.navigate("HwWeeklyUnsubmitted") },
     { icon: "🙋", title: STR.attReportTitle, onPress: () => navigation.navigate("AttendanceReport") },
     { icon: "📓", title: STR.rtNoteReportTitle, onPress: () => navigation.navigate("ClassNoteReport") },
     { icon: "📕", title: STR.rptHwDeclarePending, sub: STR.rrHwNdSub, onPress: () => navigation.navigate("HwDeclarePending") },

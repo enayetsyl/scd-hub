@@ -17,8 +17,10 @@
  * (CHASE → CHASE) tap, not a side effect of re-running the pass.
  */
 import type { LifecycleState } from "@scd/shared";
+import { Types } from "mongoose";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { transitionRecord } from "./HomeworkService";
+import { dateKeyOf } from "../../attendance/dates";
 
 /** States the submit pass acts on (the engine moves GIVEN → DUE itself). */
 const SUBMIT_ACTIONABLE: readonly LifecycleState[] = ["GIVEN", "DUE", "CHASE"];
@@ -37,6 +39,9 @@ export interface SubmitPassResult {
   chasedCount: number;
   /** Crossed-but-already-CHASE records — no-ops (PRD §3.1). */
   unchangedCount: number;
+  /** Siblings the pass's payload MISSED that the due-day sweep auto-chased
+   *  (owner ruling 2026-08-04 — normally 0: the app sends every open row). */
+  autoChasedCount: number;
 }
 
 export interface ReturnPassEntry {
@@ -61,7 +66,12 @@ export async function submitPass(
   actorId: string,
   at: Date = new Date(),
 ): Promise<SubmitPassResult> {
-  const result: SubmitPassResult = { submittedCount: 0, chasedCount: 0, unchangedCount: 0 };
+  const result: SubmitPassResult = {
+    submittedCount: 0,
+    chasedCount: 0,
+    unchangedCount: 0,
+    autoChasedCount: 0,
+  };
 
   for (const entry of entries) {
     const record = await HomeworkStudentRecord.findById(entry.recordId).select("state hwItemId").lean();
@@ -95,7 +105,55 @@ export async function submitPass(
     }
   }
 
+  // Owner ruling (2026-08-04): on/after the due day, committing the pass
+  // auto-chases every sibling still owed — even one the payload missed.
+  // Attributed to the committing teacher: the chase is part of their commit.
+  result.autoChasedCount = await chaseUnsubmittedSiblings(itemId, {
+    excludeRecordIds: entries.map((e) => e.recordId),
+    actorId,
+    at,
+  });
+
   return result;
+}
+
+/**
+ * Chase every sibling record of `itemId` still GIVEN | DUE whose due DAY has
+ * arrived (day-granular — a pass run a day early chases only the explicitly
+ * crossed) and whose chaseCount is 0, excluding ids the pass already handled.
+ * ABSENT_REDELIVER is never touched (the child never received the sheet — it
+ * carries no dueDate). Runs through `transitionRecord` so the chaseCount bump,
+ * the D-#260 guardian reminder and the D-#338 stamps stay one truth. Both
+ * filters (state + chaseCount 0) preserve D-#355 first-cross-only.
+ */
+export async function chaseUnsubmittedSiblings(
+  itemId: string,
+  opts: { excludeRecordIds?: string[]; actorId?: string; at?: Date } = {},
+): Promise<number> {
+  const at = opts.at ?? new Date();
+  const todayKey = dateKeyOf(at);
+  const exclude = (opts.excludeRecordIds ?? []).map((id) => new Types.ObjectId(id));
+
+  const siblings = await HomeworkStudentRecord.find({
+    hwItemId: itemId,
+    state: { $in: ["GIVEN", "DUE"] },
+    chaseCount: 0,
+    dueDate: { $exists: true, $ne: null },
+    ...(exclude.length > 0 ? { _id: { $nin: exclude } } : {}),
+  })
+    .select("state dueDate")
+    .lean();
+
+  let chased = 0;
+  for (const sib of siblings) {
+    if (!sib.dueDate || dateKeyOf(new Date(sib.dueDate)) > todayKey) continue; // not due yet
+    if (sib.state === "GIVEN") {
+      await transitionRecord({ recordId: sib._id.toString(), toState: "DUE", actorId: opts.actorId, at });
+    }
+    await transitionRecord({ recordId: sib._id.toString(), toState: "CHASE", actorId: opts.actorId, at });
+    chased += 1;
+  }
+  return chased;
 }
 
 /** The return pass — CHECKED | RESUBMIT → RETURNED for the uncrossed records. */

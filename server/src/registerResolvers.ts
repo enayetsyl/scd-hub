@@ -33,6 +33,7 @@ import "./modules/trackers/resolvers/studentProfile";
 import "./modules/reports/resolvers/monthlyReport";
 import "./modules/trackers/resolvers/reconReport";
 import "./modules/trackers/resolvers/hwLifecycleReport";
+import "./modules/trackers/resolvers/hwWeeklyDigest";
 import "./modules/dashboard/resolvers/adminToday";
 import "./modules/trackers/resolvers/classTest";
 import "./modules/trackers/resolvers/classTestResult";

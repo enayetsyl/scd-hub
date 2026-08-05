@@ -58,6 +58,14 @@ import { runObservationEscalation } from "../../classroom-observation/services/O
 import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconciliationService";
 import { sweepHomeworkDue } from "../../trackers/services/HomeworkDueSweepService";
 import {
+  sweepHomeworkAutoChase,
+  HW_AUTO_CHASE_MINUTES,
+} from "../../trackers/services/HomeworkChaseSweepService";
+import {
+  isHomeworkWeeklyDigestDay,
+  dispatchHomeworkWeeklyDigest,
+} from "../../trackers/services/HomeworkWeeklyDigestService";
+import {
   sweepHomeworkAutoIssue,
   HW_AUTO_ISSUE_START_HOUR,
   HW_AUTO_ISSUE_END_HOUR,
@@ -102,6 +110,13 @@ export const HW_CONFIRM_ESCALATION_RUNGS = [
   { min: 14 * 60, role: "OFFICE" },
   { min: 16 * 60, role: "PRINCIPAL" },
 ] as const;
+/** Weekly guardian homework digest (D-#452) — 17:00 on the LAST OPEN day of the
+ *  Sun–Thu school week (normally Thursday). */
+export const HW_WEEKLY_DIGEST_MINUTES = 17 * 60;
+/** Wide stale window (17:00–21:00) for the digest ONLY: a weekly cadence has no
+ *  next rung to catch a missed fire, and the emit dedupe is WEEK-scoped, so a
+ *  late fire after a restart is harmless and exact-once per guardian per week. */
+export const HW_WEEKLY_DIGEST_STALE_MINUTES = 240;
 
 /** Latest currently-open rung from a list of due-minutes (rungs <30 min apart can
  *  overlap the stale window; pick the most recent so its own dedupeKey fires). */
@@ -188,6 +203,10 @@ export interface TickSummary {
   hwPendingEmitted: number;
   hwDueFlipped: number;
   hwAutoIssued: number;
+  /** End-of-due-day system chases (owner ruling 2026-08-04). */
+  hwAutoChased: number;
+  /** Weekly guardian homework-digest notifications emitted (D-#452). */
+  hwWeeklyDigestEmitted: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -222,6 +241,8 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     hwPendingEmitted: 0,
     hwDueFlipped: 0,
     hwAutoIssued: 0,
+    hwAutoChased: 0,
+    hwWeeklyDigestEmitted: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -295,6 +316,42 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     if (res.issued > 0) {
       console.log(`[scheduler] homework auto-issue: ${res.issued} class-day(s) confirmed+issued`);
     }
+  });
+
+  // --- Homework auto-CHASE (owner ruling 2026-08-04) — 17:30, once per school
+  // day: every record still GIVEN/DUE with chaseCount 0 whose due day arrived
+  // (3-day lookback) gets ONE system chase, so "the teacher never ran the pass"
+  // no longer means "the guardian never heard". Emits only through
+  // transitionRecord → the D-#260 emitter's own per-day dedupe; no entry in
+  // schedulerDedupeKeys needed. Behind the OFF/HOLIDAY gate; a missed evening
+  // is caught by the next school day's rung via the lookback.
+  await family("homework auto-chase", async () => {
+    if (!windowOpen(nowMin, HW_AUTO_CHASE_MINUTES)) return;
+    await runOnce(dateKey, "HWCHASE", async () => {
+      summary.hwAutoChased = await sweepHomeworkAutoChase(now);
+      if (summary.hwAutoChased > 0) {
+        console.log(`[scheduler] homework auto-chase: ${summary.hwAutoChased} record(s) → CHASE`);
+      }
+    });
+  });
+
+  // --- Weekly guardian homework digest (D-#452) — 17:00 on the LAST OPEN day
+  // of the Sun–Thu week: this week's still-unsubmitted homework subject-wise +
+  // today's fresh homework as the weekend heads-up, one row per guardian×child.
+  // Wide 240-min stale window (no next rung to self-heal a weekly cadence) and
+  // a WEEK-scoped emit dedupe, so a restart inside the window re-fires safely.
+  await family("homework weekly digest", async () => {
+    if (!windowOpen(nowMin, HW_WEEKLY_DIGEST_MINUTES, HW_WEEKLY_DIGEST_STALE_MINUTES)) return;
+    if (!(await isHomeworkWeeklyDigestDay(now))) return;
+    await runOnce(dateKey, "HWWD", async () => {
+      const res = await dispatchHomeworkWeeklyDigest(now);
+      summary.hwWeeklyDigestEmitted = res.notified;
+      if (res.notified > 0) {
+        console.log(
+          `[scheduler] hw weekly digest: ${res.students} student(s), ${res.notified} guardian notification(s)`,
+        );
+      }
+    });
   });
 
   // --- BELL_REMINDER (N2.1) — per active grid, ~5 min before each period end.

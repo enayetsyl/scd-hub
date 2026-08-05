@@ -23,7 +23,7 @@ import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { assertTransition, isTerminalState } from "../lifecycle";
-import { nextSchoolDay } from "../calendar";
+import { resolveHomeworkDueDateByItem } from "../homeworkDueDate";
 import { listDailyItems } from "./HomeworkService";
 
 export interface TopupInput {
@@ -140,7 +140,8 @@ export async function checkRecord(input: CheckRecordInput): Promise<CheckRecordR
     rec.stateDates.push({ state: "RESUBMIT", at, by: new Types.ObjectId(input.actorId) });
 
     // The resubmission: a NEW record on the SAME HW_ID, its own 1→6 pass (boundary 4).
-    const due = nextSchoolDay(at);
+    // Due = the subject's next teaching day (routine-aware, 2026-08-04 owner ruling).
+    const due = await resolveHomeworkDueDateByItem(rec.hwItemId, rec.sectionId, at);
     const created = await HomeworkStudentRecord.create({
       hwItemId: rec.hwItemId,
       hwId: rec.hwId, // same HW_ID — never a new id, never a new stream

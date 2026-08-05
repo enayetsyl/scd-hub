@@ -34,7 +34,8 @@ import { HomeworkReconciliation, reconDayKey } from "../models/HomeworkReconcili
 import { dateKeyOf } from "../../attendance/dates";
 import { Student } from "../../foundation/models/Student";
 import { assertTransition, isEntryState } from "../lifecycle";
-import { isSchoolDay, nextSchoolDay } from "../calendar";
+import { isSchoolDay } from "../calendar";
+import { resolveHomeworkDueDate, resolveHomeworkDueDateByItem } from "../homeworkDueDate";
 import { emitHwParentComms, emitHwGuardianChase } from "../../notifications/services/emitters";
 
 const GENERIC_TOPIC_LABEL_BN = "সাধারণ (নির্দিষ্ট অধ্যায় নয়)";
@@ -629,7 +630,9 @@ export async function issueHomeworkItem(
   if (!item) throw new Error("HomeworkItem not found");
 
   const now = new Date();
-  const due = nextSchoolDay(item.dateGiven);
+  // Owner ruling 2026-08-04: due = the subject's next TEACHING day in this
+  // section (routine-aware, holiday-rolled), not merely the next school day.
+  const due = await resolveHomeworkDueDate(item.sectionId, item.subject, item.dateGiven);
 
   const records = roster.map((r) => {
     const state: LifecycleState = r.present ? "GIVEN" : "ABSENT_REDELIVER";
@@ -673,7 +676,9 @@ export async function issueHomeworkItem(
 export interface TransitionRecordInput {
   recordId: string;
   toState: string;
-  actorId: string;
+  /** Acting user. OMITTED only for system sweeps — the stamp then carries no `by`,
+   *  which the D-#338 revert gate already treats as "system" (write-scope undo). */
+  actorId?: string;
   /** Required when entering CHECKED — the RESULT recorded at Checked (handoff §2.2). */
   result?: string;
   /** Override the transition timestamp (defaults to now). */
@@ -713,13 +718,18 @@ export async function transitionRecord(
     record.chaseCount += 1;
   }
 
-  // Re-delivery shifts the due date to the next school day (handoff §3 stage 2 / T1.4).
+  // Re-delivery shifts the due date to the subject's next teaching day
+  // (handoff §3 stage 2 / T1.4; routine-aware per the 2026-08-04 owner ruling).
   if (from === "ABSENT_REDELIVER" && to === "GIVEN") {
-    record.dueDate = nextSchoolDay(at);
+    record.dueDate = await resolveHomeworkDueDateByItem(record.hwItemId, record.sectionId, at);
   }
 
   record.state = to;
-  record.stateDates.push({ state: to, at, by: new Types.ObjectId(input.actorId) });
+  record.stateDates.push(
+    input.actorId
+      ? { state: to, at, by: new Types.ObjectId(input.actorId) }
+      : { state: to, at },
+  );
   await record.save();
 
   // D-#260: EVERY chase pushes the student's login-enabled guardians an in-app

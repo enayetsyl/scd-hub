@@ -88,6 +88,19 @@ jest.mock("../modules/platform/models/StoredFile", () => ({
   },
 }));
 
+// Routine-aware due date (owner ruling 2026-08-04) — mocked back to the old
+// next-school-day rule: THIS suite tests HomeworkService wiring, and the
+// routine/holiday walk itself is covered by homeworkDueDate.test.ts.
+jest.mock("../modules/trackers/homeworkDueDate", () => {
+  const { nextSchoolDay } = jest.requireActual("../modules/trackers/calendar");
+  return {
+    resolveHomeworkDueDate: (_sectionId: unknown, _subject: unknown, after: Date) =>
+      Promise.resolve(nextSchoolDay(after)),
+    resolveHomeworkDueDateByItem: (_itemId: unknown, _sectionId: unknown, after: Date) =>
+      Promise.resolve(nextSchoolDay(after)),
+  };
+});
+
 // Notification emitters (N-1, D-#72) — mocked: the host-side threshold logic is
 // under test here; the emitter internals are covered in notifications.test.ts.
 const mockEmitHwParentComms = jest.fn().mockResolvedValue(undefined);
@@ -664,7 +677,7 @@ describe("transitionRecord — lifecycle moves (timestamped)", () => {
   });
 
   test("T1.4 — re-delivery (ABSENT_REDELIVER→GIVEN) shifts the due date to the next school day", async () => {
-    const rec = makeRecord({ state: "ABSENT_REDELIVER", dueDate: undefined });
+    const rec = makeRecord({ state: "ABSENT_REDELIVER", dueDate: undefined, hwItemId: ITEM_ID });
     mockRecordFindById.mockResolvedValue(rec);
     const res = await transitionRecord({
       recordId: REC_ID.toString(),

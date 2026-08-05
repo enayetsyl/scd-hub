@@ -110,6 +110,10 @@ const dedupeKeys = {
    *  keyed on the application so a re-run of apply doesn't double-notify. */
   staffLeaveSubmitted: (leaveApplicationId: string, recipientId: string) =>
     `LEAVE:${leaveApplicationId}:${recipientId}`,
+  /** Per week+student+guardian (D-#452): WEEK-scoped — a late/re-fired digest
+   *  rung anywhere in the week is a no-op for the inbox; next Sunday's key is new. */
+  hwWeeklyDigest: (weekStartKey: string, studentId: string, guardianId: string) =>
+    `HWWD:${weekStartKey}:${studentId}:${guardianId}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -864,6 +868,59 @@ export interface RevisionDeliveryEvent {
   titleBn: string;
   /** Pre-rendered (sr.{absent,digest}.body). */
   messageBn: string;
+}
+
+// ---------------------------------------------------------------------------
+// D-#452 — weekly guardian homework digest → each login-enabled guardian of the
+// student (one row per guardian × child, the SR_DIGEST posture). Title + body
+// are PRE-RENDERED by the dispatcher (MT N+1 guard). Returns notified guardian ids.
+// ---------------------------------------------------------------------------
+
+export interface HomeworkWeeklyDigestEvent {
+  studentId: IdLike;
+  sectionId: IdLike;
+  /** dateKey of the week's Sunday — the dedupe scope. */
+  weekStartKey: string;
+  /** Pre-rendered (homework.weeklyDigest.title). */
+  titleBn: string;
+  /** Pre-rendered (homework.weeklyDigest.body), already self-capped. */
+  messageBn: string;
+}
+
+export async function emitHomeworkWeeklyDigest(ev: HomeworkWeeklyDigestEvent): Promise<string[]> {
+  const notified: string[] = [];
+  await bestEffort("homework weekly digest", async () => {
+    if (!(NOTIFICATION_KINDS as readonly string[]).includes("HW_WEEKLY_DIGEST")) return;
+
+    const links = (await GuardianLink.find({ studentId: ev.studentId, active: { $ne: false } })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+
+    await Promise.all(
+      guardians.map(async (g) => {
+        await emit({
+          recipientGuardianId: g._id.toString(),
+          kind: "HW_WEEKLY_DIGEST",
+          titleBn: ev.titleBn,
+          bodyBn: ev.messageBn,
+          refs: {
+            date: ev.weekStartKey,
+            studentId: ev.studentId.toString(),
+            sectionId: ev.sectionId.toString(),
+          },
+          dedupeKey: dedupeKeys.hwWeeklyDigest(ev.weekStartKey, ev.studentId.toString(), g._id.toString()),
+        });
+        notified.push(g._id.toString());
+      }),
+    );
+  });
+  return notified;
 }
 
 export async function emitRevisionDelivery(ev: RevisionDeliveryEvent): Promise<string[]> {

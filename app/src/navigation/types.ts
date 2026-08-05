@@ -191,7 +191,10 @@ export type GuardianHomeStackParamList = {
   ChildLeave: undefined;
 };
 export type GuardianHomeworkStackParamList = {
-  ChildHomework: undefined;
+  // Optional deep-link params (D-#452 weekly digest): preselect the child and
+  // preset the date range. OPTIONAL ONLY — this is the stack's first screen,
+  // and a required param in slot 1 crashes the tab (the MR-5b rule).
+  ChildHomework: { studentId?: string; from?: string; to?: string } | undefined;
 };
 export type GuardianRoutineStackParamList = {
   ChildRoutine: undefined;
@@ -439,6 +442,8 @@ export type ReportsStackParamList = {
   MonthlyReportDetail: { reportId: string; studentName?: string };
   /** What still has to be finished before a month's reports are complete. */
   MonthlyPendingWork: { periodKey?: string } | undefined;
+  /** D-#453: the weekly unsubmitted-homework report (the guardian digest's staff twin). */
+  HwWeeklyUnsubmitted: { weekStart?: string } | undefined;
 };
 
 export type TabParamList = {

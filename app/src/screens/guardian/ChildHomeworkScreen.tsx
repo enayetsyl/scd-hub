@@ -136,11 +136,22 @@ function RecordCard({
   );
 }
 
-export default function ChildHomeworkScreen(): React.ReactElement {
-  const { selected, fetching } = useGuardianChild();
-  const [from, setFrom] = useState(daysAgo(14));
-  const [to, setTo] = useState(isoDay(new Date()));
+export default function ChildHomeworkScreen({
+  route,
+}: {
+  route?: { params?: { studentId?: string; from?: string; to?: string } };
+}): React.ReactElement {
+  const { selected, selectChild, fetching } = useGuardianChild();
+  // D-#452: the weekly-digest deep-link presets the range (and child, below).
+  const [from, setFrom] = useState(route?.params?.from ?? daysAgo(14));
+  const [to, setTo] = useState(route?.params?.to ?? isoDay(new Date()));
   const [fileError, setFileError] = useState<string | null>(null);
+
+  const deepLinkedChild = route?.params?.studentId;
+  React.useEffect(() => {
+    if (deepLinkedChild) selectChild(deepLinkedChild);
+    // selectChild is stable (a setState) — re-run only when the param changes.
+  }, [deepLinkedChild, selectChild]);
 
   const [hwQ, refetchHw] = useQuery({
     query: CHILD_HOMEWORK_QUERY,
