@@ -140,6 +140,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
   const [uploading, setUploading] = useState(false);
 
   const isObservedTeacher = !!user && obs?.teacherId === user.id;
+  const isObserver = !!user && obs?.observerId === user.id;
   // released = visible to teacher + Principal (includes SUPERSEDED so historical response shows)
   const released = obs?.state === "REVIEWED" || obs?.state === "TEACHER_RESPONDED" || obs?.state === "SUPERSEDED";
   // teacher may only submit a new response while still in REVIEWED (not yet responded, not superseded)
@@ -458,8 +459,8 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
           ) : null}
         </Card>
 
-        {/* Principal/Office: teacher response + rating — always visible once observation is released */}
-        {canUpload && released ? (
+        {/* Principal/Office + the assigned observer: teacher response + rating — always visible once observation is released */}
+        {(canUpload || isObserver) && released ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsTeacherResponseLabel}</Body>
             {obs.teacherResponse ? (
