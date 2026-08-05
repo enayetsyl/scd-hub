@@ -41,19 +41,26 @@ const snapshot = (over: Partial<{ name: string; extra: unknown }> = {}): Monthly
       attendance: { present: 18, schoolDays: 22, rate: 82, absentUncovered: 2, absentStreakMax: 3 },
       homework: {
         submitted: 27, expectedWhilePresent: 32, submissionRate: 84, qualityRate: 63,
+        checked: 27, correct: 17, partial: 3, wrong: 7,
         coverage: { settled: 35, total: 38, pct: 92 },
         bySubject: [
-          { subject: "MATH", submitted: 10, expectedWhilePresent: 10, qualityRate: 75 },
-          { subject: "BANGLA", submitted: 9, expectedWhilePresent: 11, qualityRate: 67 },
-          { subject: "ENGLISH", submitted: 8, expectedWhilePresent: 11, qualityRate: 50 },
+          { subject: "MATH", submitted: 10, expectedWhilePresent: 10, checked: 8, correct: 6, partial: 0, wrong: 2, qualityRate: 75 },
+          { subject: "BANGLA", submitted: 9, expectedWhilePresent: 11, checked: 9, correct: 6, partial: 0, wrong: 3, qualityRate: 67 },
+          // The PARTIAL showcase: half the checked English work was partial credit, not
+          // wrong outright — a bare "৫০%" cannot say that, which is the bug this fixture
+          // exists to catch (see the "partial credit is not wrong" test below).
+          { subject: "ENGLISH", submitted: 8, expectedWhilePresent: 11, checked: 8, correct: 4, partial: 2, wrong: 2, qualityRate: 50 },
         ],
       },
       assignment: {
         submitted: 4, expectedWhilePresent: 5, submissionRate: 80, coverage: { pct: 67 },
+        checked: 4, correct: 3, partial: 0, wrong: 1,
         bySubject: [
-          { subject: "MATH", submitted: 2, expectedWhilePresent: 2, qualityRate: 100 },
-          { subject: "BANGLA", submitted: 1, expectedWhilePresent: 1, qualityRate: 100 },
-          { subject: "ENGLISH", submitted: 1, expectedWhilePresent: 2, qualityRate: 0 },
+          { subject: "MATH", submitted: 2, expectedWhilePresent: 2, checked: 2, correct: 2, partial: 0, wrong: 0, qualityRate: 100 },
+          { subject: "BANGLA", submitted: 1, expectedWhilePresent: 1, checked: 1, correct: 1, partial: 0, wrong: 0, qualityRate: 100 },
+          // The genuine-failure counterpart: no partial credit here at all — a flat
+          // wrong, which the model should still be able to state plainly.
+          { subject: "ENGLISH", submitted: 1, expectedWhilePresent: 2, checked: 1, correct: 0, partial: 0, wrong: 1, qualityRate: 0 },
         ],
       },
       classTest: { attended: 12, testsHeld: 14, rate: 79, coverage: { pct: 86 } },
@@ -338,7 +345,7 @@ describe("MR-4 — the report names its month", () => {
   });
 });
 
-describe("MR-4 mr4-2 (2026-08-05) — the comment covers every area, not 2-4 sentences", () => {
+describe("MR-4 mr4-2/mr4-3 (2026-08-05) — full per-area coverage + the quality breakdown", () => {
   test("the uncovered-absence count reaches the model — previously only the flag NAME did", () => {
     const f = facts();
     expect(f.attendance.absentUncovered).toBe(2);
@@ -348,15 +355,25 @@ describe("MR-4 mr4-2 (2026-08-05) — the comment covers every area, not 2-4 sen
   test("per-subject submitted/expected/quality reach the model for BOTH trackers", () => {
     const f = facts();
     expect(f.homework.bySubject).toEqual([
-      { subject: "MATH", submittedOf: 10, expected: 10, qualityPct: 75 },
-      { subject: "BANGLA", submittedOf: 9, expected: 11, qualityPct: 67 },
-      { subject: "ENGLISH", submittedOf: 8, expected: 11, qualityPct: 50 },
+      { subject: "MATH", submittedOf: 10, expected: 10, checked: 8, correct: 6, partial: 0, wrong: 2, qualityPct: 75 },
+      { subject: "BANGLA", submittedOf: 9, expected: 11, checked: 9, correct: 6, partial: 0, wrong: 3, qualityPct: 67 },
+      { subject: "ENGLISH", submittedOf: 8, expected: 11, checked: 8, correct: 4, partial: 2, wrong: 2, qualityPct: 50 },
     ]);
     expect(f.assignment.bySubject).toEqual([
-      { subject: "MATH", submittedOf: 2, expected: 2, qualityPct: 100 },
-      { subject: "BANGLA", submittedOf: 1, expected: 1, qualityPct: 100 },
-      { subject: "ENGLISH", submittedOf: 1, expected: 2, qualityPct: 0 },
+      { subject: "MATH", submittedOf: 2, expected: 2, checked: 2, correct: 2, partial: 0, wrong: 0, qualityPct: 100 },
+      { subject: "BANGLA", submittedOf: 1, expected: 1, checked: 1, correct: 1, partial: 0, wrong: 0, qualityPct: 100 },
+      { subject: "ENGLISH", submittedOf: 1, expected: 2, checked: 1, correct: 0, partial: 0, wrong: 1, qualityPct: 0 },
     ]);
+  });
+
+  test("partial credit is NOT reported as wrong — the bug a live draft actually hit", () => {
+    // qualityPct alone is correct/(correct+partial+wrong): English homework's ৫০% here
+    // came from 4 correct + 2 PARTIAL + 2 wrong, not 4 correct + 4 wrong. A comment that
+    // only sees the blended % cannot tell those apart; the facts must carry the split.
+    const f = facts();
+    const eng = f.homework.bySubject.find((s) => s.subject === "ENGLISH");
+    expect(eng).toMatchObject({ checked: 8, correct: 4, partial: 2, wrong: 2 });
+    expect(allowedNumbers(f).has("2")).toBe(true); // the partial count itself is citable
   });
 
   test("a subject nothing has been checked in yet still appears — unfiltered, unlike the ranking", () => {
@@ -388,17 +405,50 @@ describe("MR-4 mr4-2 (2026-08-05) — the comment covers every area, not 2-4 sen
     expect(rules).not.toMatch(/লিখবে[^।]*উদ্বেগ/); // never instructed to WRITE it
   });
 
+  test("hifz is NOT in the facts at all — closed-list belt-and-suspenders", () => {
+    // rule 2 names five areas; hifz was never one of them, yet a live draft mentioned
+    // it anyway because the field was sitting right there in the JSON. Removing the
+    // field is the hard guarantee — an instruction alone is not.
+    const f = facts();
+    expect(JSON.stringify(f)).not.toContain("hifz");
+    expect((f as unknown as Record<string, unknown>).hifz).toBeUndefined();
+  });
+
+  test("the rules close the area list and forbid mixed-script numerals", () => {
+    const rules = commentRules("2026-07");
+    expect(rules).toMatch(/এই পাঁচটি ছাড়া/); // closes the list explicitly
+    expect(rules).toContain("এর মধ্যে"); // the X-এর মধ্যে Y phrasing rule
+    expect(rules).toContain("বাংলা অঙ্কে"); // Bengali numerals only
+    expect(rules).toMatch(/correct.*partial.*wrong|partial.*(সম্পূর্ণ ভুল)/); // the quality-breakdown rule
+    expect(rules).toMatch(/পূর্ণ সংখ্যায় রাউন্ড/); // percentages must be rounded
+  });
+
+  test("a decimal percentage in the DRAFT breaks the guard — found live, why rule 11 rounds", () => {
+    // validateNumerals splits digit runs on '.', so "৯২.৬%" is checked as TWO separate
+    // tokens ("92" and "6") and the bare "6" was never individually whitelisted — only
+    // the rounded/truncated forms of 92.6 were. This bit a real draft during
+    // verification, not a hypothetical: the fix is the rule (round, matching how
+    // pct() already renders everywhere else in this app), not a guard change.
+    const f = facts();
+    expect(validateNumerals("বাড়ির কাজে ৯২.৬% জমা হয়েছে।", f).ok).toBe(false);
+    expect(validateNumerals("বাড়ির কাজে ৮৪% জমা হয়েছে।", f).ok).toBe(true); // rounded homework.ratePct
+  });
+
   test("a full per-area summary, built only from these facts, passes both guards", () => {
     // Not hand-waved: every numeral below is checked against the SAME facts object a
-    // real draft would be validated against, using the real guard functions.
+    // real draft would be validated against, using the real guard functions. Follows
+    // ALL the new rules: Bengali digits only, "X-এর মধ্যে Y" throughout, the English
+    // partial/wrong split named rather than blended into one alarming %, no hifz.
     const f = facts();
     const comment = [
       "জুলাই ২০২৬-এ আপনার সন্তান ২২ দিনের মধ্যে ১৮ দিন উপস্থিত ছিল (৮২%), শ্রেণির গড় ৮৮%-এর কিছুটা নিচে,",
-      "এবং ২ দিন ছুটি ছাড়া অনুপস্থিত ছিল। বাড়ির কাজে গণিতে ১০/১০ ও বাংলায় ৯/১১ ভালো মানের হলেও ইংরেজিতে",
-      "৮/১১ জমা দেওয়ার পরও মাত্র ৫০% মানসম্মত হয়েছে। অ্যাসাইনমেন্টে বাংলা ও গণিত পুরোপুরি সঠিক হলেও",
-      "ইংরেজির ১টি অ্যাসাইনমেন্ট যাচাইয়ে ভালো হয়নি। ক্লাস টেস্টে ১৪টির মধ্যে ১২টিতে অংশ নিয়েছে (৭৯%)।",
+      "এবং ২ দিন ছুটি ছাড়া অনুপস্থিত ছিল। বাড়ির কাজে ৩২টির মধ্যে ২৭টি জমা হয়েছে; গণিতে ১০-এর মধ্যে ১০টি ও",
+      "বাংলায় ১১-এর মধ্যে ৯টি ভালো মানের হলেও, ইংরেজিতে ৮টি যাচাই হওয়া কাজের মধ্যে ৪টি সম্পূর্ণ সঠিক ও ২টি",
+      "আংশিক সঠিক হয়েছে, বাকি ২টি ভুল। অ্যাসাইনমেন্টে ৫-এর মধ্যে ৪টি জমা হয়েছে; বাংলা ও গণিত পুরোপুরি সঠিক",
+      "হলেও ইংরেজির ১টি অ্যাসাইনমেন্ট যাচাইয়ে ভুল হয়েছে। ক্লাস টেস্টে ১৪-এর মধ্যে ১২টিতে অংশ নিয়েছে (৭৯%)।",
       "এই মাসে ৩টি অভিযোগ লেখা হয়েছে। বাড়িতে ইংরেজি পাঠগুলো নিয়মিত অনুশীলন করালে উপকার হতে পারে।",
     ].join(" ");
+    expect(comment).not.toMatch(/[0-9]/); // no Latin digits anywhere
     expect(looksLikeProse(comment)).toEqual({ ok: true, reason: null });
     expect(validateNumerals(comment, f)).toEqual({ ok: true, invented: [] });
   });

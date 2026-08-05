@@ -24,22 +24,34 @@ import { renderTemplate } from "../../templates/services/MessageTemplateService"
 import type { MonthlySnapshot } from "./MonthlyReportService";
 
 /** Bumped whenever the prompt's wording or the facts' shape changes — stored on every
- *  draft so a bad batch is traceable to the prompt that produced it. Bumped to mr4-2
- *  (2026-08-05): the comment moved from a 2-4 sentence highlight to a full per-area
- *  summary, and the facts gained per-subject numbers + the uncovered-absence count to
- *  make that possible. */
-export const MONTHLY_COMMENT_PROMPT_VERSION = "mr4-2";
+ *  draft so a bad batch is traceable to the prompt that produced it. Bumped to mr4-3
+ *  (2026-08-05): correct/partial/wrong now reach the model (a low qualityPct alone
+ *  cannot distinguish "mostly partial credit" from "mostly wrong"), hifz is dropped
+ *  from the whitelist (it was never in the comment's scope — rule 2 named five areas
+ *  and hifz was not one of them, yet the model could see it and reported on it
+ *  anyway), and three new rules fix real defects in a live draft: mixed Bengali/Latin
+ *  numerals, an inconsistent count phrasing ("৭টির সব" vs "২২-এর মধ্যে ১৯"), and the
+ *  closed-area list not actually being enforced. */
+export const MONTHLY_COMMENT_PROMPT_VERSION = "mr4-3";
 
 // ---------------------------------------------------------------------------
 // The facts — de-identified by construction
 // ---------------------------------------------------------------------------
 
 /** One subject's row in a tracker — subject CODE only, never a label a teacher wrote,
- *  so `assertDeidentified`'s all-caps-code rule keeps holding it to account. */
+ *  so `assertDeidentified`'s all-caps-code rule keeps holding it to account.
+ *  `correct`/`partial`/`wrong` added 2026-08-05: `qualityPct` alone is
+ *  `correct / (correct + partial + wrong)`, so a child who scored mostly PARTIAL
+ *  credit reads identically to one who scored mostly WRONG — a live draft reported a
+ *  flat "১১%" for a subject where most checked work was actually partial credit. */
 export interface SubjectQualityFact {
   subject: string;
   submittedOf: number;
   expected: number;
+  checked: number;
+  correct: number;
+  partial: number;
+  wrong: number;
   qualityPct: number | null;
 }
 
@@ -62,6 +74,10 @@ export interface CommentFacts {
     expected: number;
     ratePct: number | null;
     qualityPct: number | null;
+    checked: number;
+    correct: number;
+    partial: number;
+    wrong: number;
     trend: string;
     /** Added 2026-08-05 so a full summary can name each subject's own numbers, not
      *  just which one ranks strongest/weakest. */
@@ -71,11 +87,14 @@ export interface CommentFacts {
     submittedOf: number;
     expected: number;
     ratePct: number | null;
+    checked: number;
+    correct: number;
+    partial: number;
+    wrong: number;
     trend: string;
     bySubject: SubjectQualityFact[];
   };
   classTest: { attended: number; held: number; ratePct: number | null; trend: string };
-  hifz: { attended: number; sessions: number };
   concerns: { count: number; trend: string };
   /** Subject codes only — never a teacher's or a peer's name. */
   strongestSubjects: string[];
@@ -114,15 +133,29 @@ export function splitSubjects(ranked: readonly string[]): { strongest: string[];
 }
 
 /** PURE. A tracker's `bySubject` rows → the shape the model may see — subject code,
- *  submitted/expected, and its own quality rate. Unfiltered (unlike the ranking
- *  below): a subject nothing has been checked in yet still deserves a mention. */
+ *  submitted/expected, the correct/partial/wrong breakdown, and the blended quality
+ *  rate. Unfiltered (unlike the ranking below): a subject nothing has been checked in
+ *  yet still deserves a mention. */
 function subjectFactsOf(
-  rows: readonly { subject: string; submitted: number; expectedWhilePresent: number; qualityRate: number | null }[],
+  rows: readonly {
+    subject: string;
+    submitted: number;
+    expectedWhilePresent: number;
+    checked: number;
+    correct: number;
+    partial: number;
+    wrong: number;
+    qualityRate: number | null;
+  }[],
 ): SubjectQualityFact[] {
   return rows.map((r) => ({
     subject: r.subject,
     submittedOf: r.submitted,
     expected: r.expectedWhilePresent,
+    checked: r.checked,
+    correct: r.correct,
+    partial: r.partial,
+    wrong: r.wrong,
     qualityPct: r.qualityRate,
   }));
 }
@@ -149,6 +182,10 @@ export function commentFactsOf(snapshot: MonthlySnapshot, classLevel: number | n
       expected: m.homework.expectedWhilePresent,
       ratePct: m.homework.submissionRate,
       qualityPct: m.homework.qualityRate,
+      checked: m.homework.checked,
+      correct: m.homework.correct,
+      partial: m.homework.partial,
+      wrong: m.homework.wrong,
       trend: snapshot.trends.homeworkSubmission.state,
       bySubject: subjectFactsOf(m.homework.bySubject),
     },
@@ -156,6 +193,10 @@ export function commentFactsOf(snapshot: MonthlySnapshot, classLevel: number | n
       submittedOf: m.assignment.submitted,
       expected: m.assignment.expectedWhilePresent,
       ratePct: m.assignment.submissionRate,
+      checked: m.assignment.checked,
+      correct: m.assignment.correct,
+      partial: m.assignment.partial,
+      wrong: m.assignment.wrong,
       trend: snapshot.trends.assignmentSubmission.state,
       bySubject: subjectFactsOf(m.assignment.bySubject),
     },
@@ -165,7 +206,6 @@ export function commentFactsOf(snapshot: MonthlySnapshot, classLevel: number | n
       ratePct: m.classTest.rate,
       trend: snapshot.trends.classTest.state,
     },
-    hifz: { attended: m.hifz.present, sessions: m.hifz.sessions },
     concerns: { count: m.concerns.concern, trend: snapshot.trends.concerns.state },
     strongestSubjects: split.strongest,
     weakestSubjects: split.weakest,
@@ -334,16 +374,19 @@ export function commentRules(periodKey: string): string {
     "তুমি একটি স্কুলের মাসিক অগ্রগতি রিপোর্টের জন্য অভিভাবকের উদ্দেশ্যে একটি পূর্ণাঙ্গ সারসংক্ষেপ লিখবে।",
     "নিয়ম:",
     "১. শুধু নিচের JSON তথ্য ব্যবহার করো। কোনো নতুন সংখ্যা লিখবে না।",
-    "২. তথ্যে যে যে বিষয় আছে (উপস্থিতি, বাড়ির কাজ, অ্যাসাইনমেন্ট, ক্লাস টেস্ট, অভিযোগ) প্রতিটি ছুঁয়ে যাও, যেন শুধু এই লেখাটি পড়েই অভিভাবক প্রতিটি বিষয়ের পূর্ণ চিত্র বুঝতে পারেন — আলাদা টেবিল না দেখেও। কোনো বিষয়ে করার মতো কিছু না থাকলে (যেমন কোনো ক্লাস টেস্ট হয়নি) সেটাও সংক্ষেপে বলো, বাদ দিয়ো না।",
+    "২. তথ্যে ঠিক এই বিষয়গুলো আছে — উপস্থিতি, বাড়ির কাজ, অ্যাসাইনমেন্ট, ক্লাস টেস্ট, অভিযোগ। প্রতিটি ছুঁয়ে যাও, যেন শুধু এই লেখাটি পড়েই অভিভাবক প্রতিটি বিষয়ের পূর্ণ চিত্র বুঝতে পারেন — আলাদা টেবিল না দেখেও। কোনো বিষয়ে করার মতো কিছু না থাকলে (যেমন কোনো ক্লাস টেস্ট হয়নি) সেটাও সংক্ষেপে বলো, বাদ দিয়ো না। এই পাঁচটি ছাড়া অন্য কিছু (JSON-এ থাকলেও) উল্লেখ করবে না — এই সারসংক্ষেপের আওতায় শুধু এগুলোই।",
     "৩. প্রতিটি বিষয় ১–২ বাক্যে বলো। সম্মানজনক, সহজ বাংলা।",
     "৪. ঠিক একটি করণীয় পরামর্শ দাও, যা বাড়িতে করা সম্ভব — যে বিষয়টি সবচেয়ে দুর্বল, তার সঙ্গে সম্পর্কিত।",
     "৫. অন্য কোনো শিক্ষার্থীর সঙ্গে তুলনা করবে না, কারও নাম লিখবে না। শ্রেণির গড় (classAvgPct) উল্লেখ করা যাবে — এটি নাম ছাড়া একটি সংখ্যামাত্র।",
     "৬. কোনো রোগ/সমস্যা নির্ণয় করবে না, পরিবার নিয়ে অনুমান করবে না।",
     "৭. flags-এ SERIOUS_MATTER থাকলে বিষয়টি বর্ণনা করবে না — শুধু লিখবে যে শ্রেণি শিক্ষক যোগাযোগ করবেন।",
     "৮. অভিযোগের (concerns) কথা লিখলে 'উদ্বেগ' শব্দটি ব্যবহার করবে না — 'অভিযোগ' লেখো (যেমন, সংখ্যা ০ হলে: \"এই মাসে কোনো অভিযোগ লেখা হয়নি\")।",
-    "৯. provisional true হলে বোঝাবে যে কিছু তথ্য এখনো আসেনি।",
-    "১০. শিক্ষার্থীর নাম নেই — নাম ছাড়াই লেখো (\"আপনার সন্তান\")।",
-    `১১. এই রিপোর্টটি ${monthLabelBn(periodKey)} মাসের। মাসের নাম উল্লেখ করো — "গত মাস" বা "বিগত মাস" লিখবে না।`,
+    "৯. কোনো সংখ্যা (কতটি/কতজন) বললে সবসময় \"X-এর মধ্যে Y\" এই প্যাটার্নে লেখো (যেমন: \"২৭টির মধ্যে ২৫টি জমা হয়েছে\"), এমনকি সবগুলো হলেও (যেমন: \"৭টির মধ্যে ৭টি\")। কখনো \"৭টির সব\"-এর মতো এলোমেলো বাক্যগঠন লিখবে না।",
+    "১০. মান (quality) নিয়ে লিখলে শুধু একটা % বলে থেমো না — correct, partial ও wrong সংখ্যাগুলো দেখে লেখো। partial (আংশিক সঠিক) থাকলে সেগুলোকে সম্পূর্ণ ভুল হিসেবে দেখিও না — যেমন: \"৯টি যাচাই হওয়া কাজের মধ্যে ১টি সম্পূর্ণ সঠিক ও ৩টি আংশিক সঠিক হয়েছে, বাকিগুলো ভুল\"। শুধু \"মান ১১%\" লিখলে বোঝা যায় না যে কিছু আংশিক সঠিক ছিল।",
+    "১১. সব সংখ্যা বাংলা অঙ্কে লেখো (০, ১, ২, ৩...) — ইংরেজি সংখ্যা (0, 1, 2, 3...) কখনো ব্যবহার করবে না। % সবসময় পূর্ণ সংখ্যায় রাউন্ড করে লেখো (যেমন ৯৩%) — দশমিক (৯২.৬%) লিখবে না।",
+    "১২. provisional true হলে বোঝাবে যে কিছু তথ্য এখনো আসেনি।",
+    "১৩. শিক্ষার্থীর নাম নেই — নাম ছাড়াই লেখো (\"আপনার সন্তান\")।",
+    `১৪. এই রিপোর্টটি ${monthLabelBn(periodKey)} মাসের। মাসের নাম উল্লেখ করো — "গত মাস" বা "বিগত মাস" লিখবে না।`,
   ].join("\n");
 }
 
