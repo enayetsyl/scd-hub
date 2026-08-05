@@ -68,7 +68,7 @@ const snapshot = (over: Partial<{ name: string; extra: unknown }> = {}): Monthly
       concerns: { concern: 3 },
       ...(over.extra ? { leaked: over.extra } : {}),
     },
-    cohort: { attendanceRate: { avg: 88 } },
+    cohort: { attendanceRate: { avg: 88, best: 96 } },
     trends: {
       attendance: { state: "DOWN" },
       homeworkSubmission: { state: "STEADY" },
@@ -143,7 +143,8 @@ describe("MR-4 D-#399 — the model may not author a number", () => {
     const allowed = allowedNumbers(facts());
     expect(allowed.has("18")).toBe(true); // present days
     expect(allowed.has("22")).toBe(true); // school days
-    expect(allowed.has("88")).toBe(true); // the class average, from the cohort
+    expect(allowed.has("96")).toBe(true); // the class BEST, from the cohort
+    expect(allowed.has("88")).toBe(false); // the average is no longer surfaced at all
     expect(allowed.has("999")).toBe(false);
   });
 });
@@ -423,6 +424,38 @@ describe("MR-4 mr4-2/mr4-3 (2026-08-05) — full per-area coverage + the quality
     expect(rules).toMatch(/পূর্ণ সংখ্যায় রাউন্ড/); // percentages must be rounded
   });
 
+  test("classBestPct replaces classAvgPct — the section's HIGHEST rate, not its mean", () => {
+    const f = facts();
+    expect(f.attendance).not.toHaveProperty("classAvgPct");
+    expect(f.attendance.classBestPct).toBe(96); // fixture: avg 88, best 96
+    expect(allowedNumbers(f).has("96")).toBe(true);
+  });
+
+  test("classBestPct is null, not the withheld avg, when the section is too small to hide who's best", () => {
+    // D-#396: cohortOf() sets best:null (bestWithheld) below minSectionSizeForClassBest —
+    // the rules must never ask the model to cite a number that isn't there.
+    const s = {
+      ...snapshot(),
+      cohort: { attendanceRate: { avg: 88, best: null } },
+    } as unknown as MonthlySnapshot;
+    const f = commentFactsOf(s, 4);
+    expect(f.attendance.classBestPct).toBeNull();
+  });
+
+  test("the rules ask for the class BEST, and tell the model to skip it when null", () => {
+    const rules = commentRules("2026-07");
+    expect(rules).toContain("classBestPct");
+    expect(rules).not.toContain("classAvgPct");
+    expect(rules).toMatch(/classBestPct.*null|null.*classBestPct/);
+  });
+
+  test("the rules pin the uncovered-absence wording — not the vague 'কভার তথ্য নেই' a live draft used", () => {
+    const rules = commentRules("2026-07");
+    // The fixed phrasing is the one to WRITE; the vague one is named only as what to avoid.
+    expect(rules).toContain("ছুটির দরখাস্ত জমা দেওয়া হয়নি");
+    expect(rules).toMatch(/কভার তথ্য নেই.{0,80}লিখবে না/);
+  });
+
   test("a decimal percentage in the DRAFT breaks the guard — found live, why rule 11 rounds", () => {
     // validateNumerals splits digit runs on '.', so "৯২.৬%" is checked as TWO separate
     // tokens ("92" and "6") and the bare "6" was never individually whitelisted — only
@@ -441,7 +474,7 @@ describe("MR-4 mr4-2/mr4-3 (2026-08-05) — full per-area coverage + the quality
     // partial/wrong split named rather than blended into one alarming %, no hifz.
     const f = facts();
     const comment = [
-      "জুলাই ২০২৬-এ আপনার সন্তান ২২ দিনের মধ্যে ১৮ দিন উপস্থিত ছিল (৮২%), শ্রেণির গড় ৮৮%-এর কিছুটা নিচে,",
+      "জুলাই ২০২৬-এ আপনার সন্তান ২২ দিনের মধ্যে ১৮ দিন উপস্থিত ছিল (৮২%), শ্রেণির সর্বোচ্চ ৯৬%-এর নিচে,",
       "এবং ২ দিন ছুটি ছাড়া অনুপস্থিত ছিল। বাড়ির কাজে ৩২টির মধ্যে ২৭টি জমা হয়েছে; গণিতে ১০-এর মধ্যে ১০টি ও",
       "বাংলায় ১১-এর মধ্যে ৯টি ভালো মানের হলেও, ইংরেজিতে ৮টি যাচাই হওয়া কাজের মধ্যে ৪টি সম্পূর্ণ সঠিক ও ২টি",
       "আংশিক সঠিক হয়েছে, বাকি ২টি ভুল। অ্যাসাইনমেন্টে ৫-এর মধ্যে ৪টি জমা হয়েছে; বাংলা ও গণিত পুরোপুরি সঠিক",

@@ -70,7 +70,7 @@ const snapshot = (p: { present?: number; hwSubmitted?: number } = {}): MonthlySn
       classTest: TREND,
       concerns: TREND,
     },
-    cohort: { attendanceRate: { avg: 88 } },
+    cohort: { attendanceRate: { avg: 88, best: 96 } },
     flags: [],
     config: DEFAULT_MONTHLY_REPORT_CONFIG,
     classLevel: 3,
