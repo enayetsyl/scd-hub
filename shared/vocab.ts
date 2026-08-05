@@ -1061,6 +1061,13 @@ export const NOTIFICATION_KINDS = [
   // Staff leave (owner 2026-07-26): a teacher submitted a leave application →
   // every approver (active Principal/Office). App-native, no wire twin.
   "STAFF_LEAVE_SUBMITTED",
+  // Weekly guardian homework digest (owner 2026-08-04, D-#452; app-native, NO
+  // wire twin). Fired at 17:00 on the LAST OPEN day of the Sun–Thu school week
+  // (normally Thursday), one row per guardian × child: the week's still-
+  // unsubmitted homework subject-wise + the digest day's fresh homework as a
+  // weekend heads-up. Contact-only guardians are reached manually via the
+  // staff weekly report's wa.me lines.
+  "HW_WEEKLY_DIGEST",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1099,6 +1106,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   STAFF_LEAVE_SUBMITTED: "ছুটির আবেদন অনুমোদনের অপেক্ষায়",
   PRINT_DELIVERED: "প্রিন্ট ডেলিভারি হয়েছে",
   PRINT_REQUESTED: "নতুন প্রিন্ট অনুরোধ",
+  HW_WEEKLY_DIGEST: "সাপ্তাহিক বাড়ির কাজ রিপোর্ট",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1135,6 +1143,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   STAFF_LEAVE_SUBMITTED: "Leave application awaiting approval",
   PRINT_DELIVERED: "Print job delivered",
   PRINT_REQUESTED: "New print request",
+  HW_WEEKLY_DIGEST: "Weekly homework digest",
 };
 
 
@@ -1651,6 +1660,12 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "monthly_report.revised.body",
   "monthly_report.revised.wa",
   "monthly_report.teacher_chase.wa",
+  // Weekly guardian homework digest (D-#452): last-open-day 17:00, one message
+  // per guardian × child. {Unsubmitted}/{HeadsUp} are pre-built multi-line
+  // sections (the sr.digest list-through-one-placeholder pattern).
+  "homework.weeklyDigest.title",
+  "homework.weeklyDigest.body",
+  "homework.weeklyDigest.wa",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -2081,6 +2096,25 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     group: "saturdayRevision", labelBn: "রিভিশন এন্ট্রি বাকি — হোয়াটসঅ্যাপ (শিক্ষককে)",
     placeholders: ["TeacherName", "GroupName", "Date"],
     bnDefault: "আসসালামু আলাইকুম {TeacherName}। {GroupName} গ্রুপের {Date} তারিখের শনিবারের রিভিশন এখনও এন্ট্রি করা হয়নি — অনুগ্রহ করে সম্পন্ন করুন। মাআসসালামাহ।",
+    defaultLangMode: "BN",
+  },
+  // --- Weekly guardian homework digest (D-#452): {Unsubmitted}/{HeadsUp} are
+  // pre-built multi-line sections (sr.digest posture — lists flow through ONE
+  // placeholder; renderTemplate does flat interpolation only). ---
+  "homework.weeklyDigest.title": {
+    group: "homework", labelBn: "সাপ্তাহিক বাড়ির কাজ রিপোর্ট — শিরোনাম", placeholders: [],
+    bnDefault: "সাপ্তাহিক বাড়ির কাজ রিপোর্ট", defaultLangMode: "BN",
+  },
+  "homework.weeklyDigest.body": {
+    group: "homework", labelBn: "সাপ্তাহিক বাড়ির কাজ রিপোর্ট — বার্তা (ইনবক্স)",
+    placeholders: ["StudentName", "WeekRange", "Unsubmitted", "HeadsUp"],
+    bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর এই সপ্তাহের ({WeekRange}) বাড়ির কাজ:\n{Unsubmitted}\n{HeadsUp}",
+    defaultLangMode: "BN",
+  },
+  "homework.weeklyDigest.wa": {
+    group: "homework", labelBn: "সাপ্তাহিক বাড়ির কাজ রিপোর্ট — হোয়াটসঅ্যাপ",
+    placeholders: ["StudentName", "WeekRange", "Unsubmitted", "HeadsUp"],
+    bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর এই সপ্তাহের ({WeekRange}) বাড়ির কাজ:\n{Unsubmitted}\n{HeadsUp}\nমাআসসালামাহ।",
     defaultLangMode: "BN",
   },
 };
