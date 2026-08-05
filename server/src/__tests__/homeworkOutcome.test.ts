@@ -31,6 +31,17 @@ jest.mock("../modules/notifications/services/emitters", () => ({
   emitHwGuardianChase: (...a: unknown[]) => mockEmitChase(...a),
   emitHwParentComms: (...a: unknown[]) => mockEmitParentComms(...a),
 }));
+// Routine-aware due date (2026-08-04 ruling) — mocked to the old rule; the
+// routine/holiday walk is covered by homeworkDueDate.test.ts.
+jest.mock("../modules/trackers/homeworkDueDate", () => {
+  const { nextSchoolDay } = jest.requireActual("../modules/trackers/calendar");
+  return {
+    resolveHomeworkDueDate: (_s: unknown, _subj: unknown, after: Date) =>
+      Promise.resolve(nextSchoolDay(after)),
+    resolveHomeworkDueDateByItem: (_i: unknown, _s: unknown, after: Date) =>
+      Promise.resolve(nextSchoolDay(after)),
+  };
+});
 
 import { recordHomeworkOutcome } from "../modules/trackers/services/HomeworkOutcomeService";
 

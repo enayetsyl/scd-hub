@@ -17,6 +17,15 @@ export interface NotificationTarget {
   params?: Record<string, unknown>;
 }
 
+/** `YYYY-MM-DD` + n days → `YYYY-MM-DD` (local — the app's dateKey convention). */
+function addDaysKey(key: string, days: number): string {
+  const [y, m, d] = key.split("-").map(Number);
+  const date = new Date(y, (m ?? 1) - 1, (d ?? 1) + days);
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${mm}-${dd}`;
+}
+
 export function notificationTarget(
   kind: string,
   refs: Partial<NotificationRefsT> | null | undefined,
@@ -110,6 +119,25 @@ export function notificationTarget(
       return guardian
         ? { tab: "GuardianHomeworkTab", screen: "ChildHomework" }
         : { tab: "HomeworkTab", screen: "HomeworkHome" };
+    // D-#452: the weekly digest lands the guardian on the child's homework list
+    // preset to the digest's week (refs.date = the week's Sunday); staff land on
+    // the weekly unsubmitted report.
+    case "HW_WEEKLY_DIGEST":
+      return guardian
+        ? {
+            tab: "GuardianHomeworkTab",
+            screen: "ChildHomework",
+            params: refs?.date
+              ? {
+                  studentId: refs.studentId ?? undefined,
+                  from: refs.date,
+                  to: addDaysKey(refs.date, 4), // Sun → Thu
+                }
+              : refs?.studentId
+                ? { studentId: refs.studentId }
+                : undefined,
+          }
+        : { tab: "ReportsTab", screen: "HwWeeklyUnsubmitted" };
     case "ASSIGNMENT_CHASE":
       return guardian
         ? { tab: "GuardianAssignmentsTab", screen: "ChildAssignments" }

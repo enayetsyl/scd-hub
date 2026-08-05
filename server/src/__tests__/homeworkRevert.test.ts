@@ -109,6 +109,28 @@ describe("revertHomeworkRecord", () => {
     expect(rec.save).toHaveBeenCalled();
   });
 
+  // 2026-08-04 ruling: system auto-chase stamps carry NO `by` — a by-less stamp
+  // is NOT foreign, so the subject teacher can undo it same-day (write-scope
+  // gate only), and popping the CHASE decrements chaseCount back to 0.
+  test("a SYSTEM auto-chase (by-less stamps) is teacher-undoable and restores chaseCount", async () => {
+    const rec = makeRec({
+      state: "CHASE",
+      chaseCount: 1,
+      result: undefined,
+      stateDates: [
+        { state: "GIVEN", at: T0 },
+        { state: "DUE", at: T2 }, // system fast-forward — no `by`
+        { state: "CHASE", at: T2 }, // system chase — no `by`
+      ],
+    });
+    mockFindById.mockResolvedValue(rec);
+    const res = await revertHomeworkRecord({ recordId: REC_ID.toString(), actorId: ACTOR.toString(), admin: false, now: NOW });
+    expect(res.state).toBe("GIVEN");
+    expect(res.poppedStates).toEqual(["DUE", "CHASE"]);
+    expect(res.chaseCount).toBe(0);
+    expect(rec.chaseCount).toBe(0);
+  });
+
   // D-#354: the popped stamps are DELETED from the record, so without this audit
   // row a submitted+checked record silently reads as never-submitted. The row must
   // preserve what was undone, who had done it, and where the record landed.
