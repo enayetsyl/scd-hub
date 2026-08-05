@@ -24,19 +24,56 @@ import { renderTemplate } from "../../templates/services/MessageTemplateService"
 import type { MonthlySnapshot } from "./MonthlyReportService";
 
 /** Bumped whenever the prompt's wording or the facts' shape changes — stored on every
- *  draft so a bad batch is traceable to the prompt that produced it. */
-export const MONTHLY_COMMENT_PROMPT_VERSION = "mr4-1";
+ *  draft so a bad batch is traceable to the prompt that produced it. Bumped to mr4-2
+ *  (2026-08-05): the comment moved from a 2-4 sentence highlight to a full per-area
+ *  summary, and the facts gained per-subject numbers + the uncovered-absence count to
+ *  make that possible. */
+export const MONTHLY_COMMENT_PROMPT_VERSION = "mr4-2";
 
 // ---------------------------------------------------------------------------
 // The facts — de-identified by construction
 // ---------------------------------------------------------------------------
 
+/** One subject's row in a tracker — subject CODE only, never a label a teacher wrote,
+ *  so `assertDeidentified`'s all-caps-code rule keeps holding it to account. */
+export interface SubjectQualityFact {
+  subject: string;
+  submittedOf: number;
+  expected: number;
+  qualityPct: number | null;
+}
+
 export interface CommentFacts {
   periodKey: string;
   classLevel: number | null;
-  attendance: { present: number; schoolDays: number; ratePct: number | null; trend: string; classAvgPct: number | null };
-  homework: { submittedOf: number; expected: number; ratePct: number | null; qualityPct: number | null; trend: string };
-  assignment: { submittedOf: number; expected: number; ratePct: number | null; trend: string };
+  attendance: {
+    present: number;
+    schoolDays: number;
+    ratePct: number | null;
+    trend: string;
+    classAvgPct: number | null;
+    /** Absences NOT covered by an approved leave (the ABSENT_UNCOVERED flag's own
+     *  count). Added 2026-08-05: previously only the flag's NAME reached the model,
+     *  never this number, so a comment could gesture at it but never cite it. */
+    absentUncovered: number;
+  };
+  homework: {
+    submittedOf: number;
+    expected: number;
+    ratePct: number | null;
+    qualityPct: number | null;
+    trend: string;
+    /** Added 2026-08-05 so a full summary can name each subject's own numbers, not
+     *  just which one ranks strongest/weakest. */
+    bySubject: SubjectQualityFact[];
+  };
+  assignment: {
+    submittedOf: number;
+    expected: number;
+    ratePct: number | null;
+    trend: string;
+    bySubject: SubjectQualityFact[];
+  };
   classTest: { attended: number; held: number; ratePct: number | null; trend: string };
   hifz: { attended: number; sessions: number };
   concerns: { count: number; trend: string };
@@ -76,6 +113,20 @@ export function splitSubjects(ranked: readonly string[]): { strongest: string[];
   return { strongest, weakest };
 }
 
+/** PURE. A tracker's `bySubject` rows → the shape the model may see — subject code,
+ *  submitted/expected, and its own quality rate. Unfiltered (unlike the ranking
+ *  below): a subject nothing has been checked in yet still deserves a mention. */
+function subjectFactsOf(
+  rows: readonly { subject: string; submitted: number; expectedWhilePresent: number; qualityRate: number | null }[],
+): SubjectQualityFact[] {
+  return rows.map((r) => ({
+    subject: r.subject,
+    submittedOf: r.submitted,
+    expected: r.expectedWhilePresent,
+    qualityPct: r.qualityRate,
+  }));
+}
+
 export function commentFactsOf(snapshot: MonthlySnapshot, classLevel: number | null): CommentFacts {
   const m = snapshot.metrics;
   const bySubject = [...m.homework.bySubject].filter((s) => s.qualityRate != null);
@@ -91,6 +142,7 @@ export function commentFactsOf(snapshot: MonthlySnapshot, classLevel: number | n
       ratePct: m.attendance.rate,
       trend: snapshot.trends.attendance.state,
       classAvgPct: snapshot.cohort?.attendanceRate.avg ?? null,
+      absentUncovered: m.attendance.absentUncovered,
     },
     homework: {
       submittedOf: m.homework.submitted,
@@ -98,12 +150,14 @@ export function commentFactsOf(snapshot: MonthlySnapshot, classLevel: number | n
       ratePct: m.homework.submissionRate,
       qualityPct: m.homework.qualityRate,
       trend: snapshot.trends.homeworkSubmission.state,
+      bySubject: subjectFactsOf(m.homework.bySubject),
     },
     assignment: {
       submittedOf: m.assignment.submitted,
       expected: m.assignment.expectedWhilePresent,
       ratePct: m.assignment.submissionRate,
       trend: snapshot.trends.assignmentSubmission.state,
+      bySubject: subjectFactsOf(m.assignment.bySubject),
     },
     classTest: {
       attended: m.classTest.attended,
@@ -277,17 +331,19 @@ export function monthLabelBn(periodKey: string): string {
  */
 export function commentRules(periodKey: string): string {
   return [
-    "তুমি একটি স্কুলের মাসিক অগ্রগতি রিপোর্টের জন্য অভিভাবকের উদ্দেশ্যে একটি অনুচ্ছেদ লিখবে।",
+    "তুমি একটি স্কুলের মাসিক অগ্রগতি রিপোর্টের জন্য অভিভাবকের উদ্দেশ্যে একটি পূর্ণাঙ্গ সারসংক্ষেপ লিখবে।",
     "নিয়ম:",
     "১. শুধু নিচের JSON তথ্য ব্যবহার করো। কোনো নতুন সংখ্যা লিখবে না।",
-    "২. ২–৪ বাক্য। সম্মানজনক বাংলা।",
-    "৩. ঠিক একটি করণীয় পরামর্শ দাও, যা বাড়িতে করা সম্ভব।",
-    "৪. অন্য কোনো শিক্ষার্থীর সঙ্গে তুলনা করবে না, কারও নাম লিখবে না।",
-    "৫. কোনো রোগ/সমস্যা নির্ণয় করবে না, পরিবার নিয়ে অনুমান করবে না।",
-    "৬. flags-এ SERIOUS_MATTER থাকলে বিষয়টি বর্ণনা করবে না — শুধু লিখবে যে শ্রেণি শিক্ষক যোগাযোগ করবেন।",
-    "৭. provisional true হলে বোঝাবে যে কিছু তথ্য এখনো আসেনি।",
-    "৮. শিক্ষার্থীর নাম নেই — নাম ছাড়াই লেখো (\"আপনার সন্তান\")।",
-    `৯. এই রিপোর্টটি ${monthLabelBn(periodKey)} মাসের। মাসের নাম উল্লেখ করো — "গত মাস" বা "বিগত মাস" লিখবে না।`,
+    "২. তথ্যে যে যে বিষয় আছে (উপস্থিতি, বাড়ির কাজ, অ্যাসাইনমেন্ট, ক্লাস টেস্ট, অভিযোগ) প্রতিটি ছুঁয়ে যাও, যেন শুধু এই লেখাটি পড়েই অভিভাবক প্রতিটি বিষয়ের পূর্ণ চিত্র বুঝতে পারেন — আলাদা টেবিল না দেখেও। কোনো বিষয়ে করার মতো কিছু না থাকলে (যেমন কোনো ক্লাস টেস্ট হয়নি) সেটাও সংক্ষেপে বলো, বাদ দিয়ো না।",
+    "৩. প্রতিটি বিষয় ১–২ বাক্যে বলো। সম্মানজনক, সহজ বাংলা।",
+    "৪. ঠিক একটি করণীয় পরামর্শ দাও, যা বাড়িতে করা সম্ভব — যে বিষয়টি সবচেয়ে দুর্বল, তার সঙ্গে সম্পর্কিত।",
+    "৫. অন্য কোনো শিক্ষার্থীর সঙ্গে তুলনা করবে না, কারও নাম লিখবে না। শ্রেণির গড় (classAvgPct) উল্লেখ করা যাবে — এটি নাম ছাড়া একটি সংখ্যামাত্র।",
+    "৬. কোনো রোগ/সমস্যা নির্ণয় করবে না, পরিবার নিয়ে অনুমান করবে না।",
+    "৭. flags-এ SERIOUS_MATTER থাকলে বিষয়টি বর্ণনা করবে না — শুধু লিখবে যে শ্রেণি শিক্ষক যোগাযোগ করবেন।",
+    "৮. অভিযোগের (concerns) কথা লিখলে 'উদ্বেগ' শব্দটি ব্যবহার করবে না — 'অভিযোগ' লেখো (যেমন, সংখ্যা ০ হলে: \"এই মাসে কোনো অভিযোগ লেখা হয়নি\")।",
+    "৯. provisional true হলে বোঝাবে যে কিছু তথ্য এখনো আসেনি।",
+    "১০. শিক্ষার্থীর নাম নেই — নাম ছাড়াই লেখো (\"আপনার সন্তান\")।",
+    `১১. এই রিপোর্টটি ${monthLabelBn(periodKey)} মাসের। মাসের নাম উল্লেখ করো — "গত মাস" বা "বিগত মাস" লিখবে না।`,
   ].join("\n");
 }
 
