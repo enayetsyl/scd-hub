@@ -40,13 +40,17 @@ const snapshot = (p: { present?: number; hwSubmitted?: number } = {}): MonthlySn
         issued: 38, submitted: p.hwSubmitted ?? 27, expectedWhilePresent: 32,
         submissionRate: 84, qualityRate: 63,
         bySubject: [
-          { subject: "BAN", qualityRate: 71 },
-          { subject: "MATH", qualityRate: 44 },
+          { subject: "BAN", submitted: 15, expectedWhilePresent: 16, qualityRate: 71 },
+          { subject: "MATH", submitted: 12, expectedWhilePresent: 16, qualityRate: 44 },
         ],
         coverage: { settled: 0, total: 0, pct: 92 },
       },
       assignment: {
         issued: 6, submitted: 4, expectedWhilePresent: 5, submissionRate: 80, qualityRate: 50,
+        bySubject: [
+          { subject: "BAN", submitted: 2, expectedWhilePresent: 2, qualityRate: 100 },
+          { subject: "MATH", submitted: 2, expectedWhilePresent: 3, qualityRate: 0 },
+        ],
         coverage: { settled: 0, total: 0, pct: 67 },
       },
       classTest: {

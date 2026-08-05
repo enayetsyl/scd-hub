@@ -23,6 +23,12 @@ import {
 } from "../../graphql/monthlyReport";
 import { Screen, Body, Muted, Card, Button, Field } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+
+/** Fee tracking is not a real, trustworthy feature in the app yet — every report
+ *  currently shows পরিশোধ ০ regardless of what a family has actually paid, which is
+ *  worse than showing nothing. Flip this once real fee data lands (owner, 2026-08-05).
+ *  Mirrors the same flag in the server's MonthlyReportSheetService. */
+const FEE_CARD_LIVE = false;
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { space, useColors } from "../../theme";
 import type { ReportsStackParamList } from "../../navigation/types";
@@ -120,7 +126,7 @@ function Sections({ snap }: { snap: MonthlySnapshotT }): React.ReactElement {
               <Row
                 key={s.subject}
                 label={hwSubjectLabel(s.subject)}
-                value={`${bnNum(s.submitted)}/${bnNum(s.expectedWhilePresent)} · ${pct(s.qualityRate)}`}
+                value={`${STR.mrSubjectSubmitted} ${bnNum(s.submitted)}/${bnNum(s.expectedWhilePresent)} · ${STR.mrSubjectQuality} ${pct(s.qualityRate)}`}
               />
             ))}
           </Card>
@@ -165,7 +171,7 @@ function Sections({ snap }: { snap: MonthlySnapshotT }): React.ReactElement {
       ) : null}
 
       {/* Absent for a teacher — the server strips the block, so nothing renders. */}
-      {m.fees ? (
+      {FEE_CARD_LIVE && m.fees ? (
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.mrFees}</Body>
           <Row label={STR.mrFees} value={bnNum(m.fees.paidTotal)} />
