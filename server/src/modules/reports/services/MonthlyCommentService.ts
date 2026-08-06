@@ -39,8 +39,13 @@ import type { MonthlySnapshot } from "./MonthlyReportService";
  *  worth a sentence); and the uncovered-absence wording is pinned to "X দিনের ছুটির
  *  দরখাস্ত জমা দেওয়া হয়নি" (a leave application wasn't filed) rather than the
  *  vaguer "কভার তথ্য নেই" ("no cover info") a live draft used — the fixed wording
- *  tells a guardian what to actually DO, not just that a system field is empty. */
-export const MONTHLY_COMMENT_PROMPT_VERSION = "mr4-4";
+ *  tells a guardian what to actually DO, not just that a system field is empty.
+ *  Bumped again to mr4-5 (2026-08-05, same day): at 100% attendance there were no
+ *  absences AT ALL, so a sentence about leave applications is vacuous ("no absence
+ *  lacks a form" when there was no absence to begin with) — a live draft stated it
+ *  anyway. Now skipped entirely at 100%; still stated when SOME absences occurred
+ *  and all were properly covered, which is genuinely reassuring, not noise. */
+export const MONTHLY_COMMENT_PROMPT_VERSION = "mr4-5";
 
 // ---------------------------------------------------------------------------
 // The facts — de-identified by construction
@@ -393,7 +398,7 @@ export function commentRules(periodKey: string): string {
     "৬. কোনো রোগ/সমস্যা নির্ণয় করবে না, পরিবার নিয়ে অনুমান করবে না।",
     "৭. flags-এ SERIOUS_MATTER থাকলে বিষয়টি বর্ণনা করবে না — শুধু লিখবে যে শ্রেণি শিক্ষক যোগাযোগ করবেন।",
     "৮. অভিযোগের (concerns) কথা লিখলে 'উদ্বেগ' শব্দটি ব্যবহার করবে না — 'অভিযোগ' লেখো (যেমন, সংখ্যা ০ হলে: \"এই মাসে কোনো অভিযোগ লেখা হয়নি\")।",
-    "৯. ছুটি ছাড়া অনুপস্থিতি (absentUncovered) নিয়ে লিখলে এভাবে লেখো: \"X দিনের ছুটির দরখাস্ত জমা দেওয়া হয়নি\" — \"কভার তথ্য নেই\" বা এই ধরনের অস্পষ্ট/প্রযুক্তিগত কথা লিখবে না, কারণ এটি অভিভাবকের করণীয়কে স্পষ্ট করে না।",
+    "৯. উপস্থিতি ১০০% হলে (কোনো অনুপস্থিতিই নেই) ছুটির দরখাস্ত নিয়ে কিছু লিখবে না — বলার মতো কিছু নেই। উপস্থিতি ১০০% না হলে এবং absentUncovered > ০ হলে এভাবে লেখো: \"X দিনের ছুটির দরখাস্ত জমা দেওয়া হয়নি\" — \"কভার তথ্য নেই\" বা এই ধরনের অস্পষ্ট/প্রযুক্তিগত কথা লিখবে না, কারণ এটি অভিভাবকের করণীয়কে স্পষ্ট করে না। absentUncovered ০ হলেও কিছু অনুপস্থিতি থাকলে (উপস্থিতি ১০০% এর কম), বলা যেতে পারে যে সব অনুপস্থিতিরই ছুটির দরখাস্ত জমা দেওয়া হয়েছে — এটা আশ্বস্তকর তথ্য।",
     "১০. কোনো সংখ্যা (কতটি/কতজন) বললে সবসময় \"X-এর মধ্যে Y\" এই প্যাটার্নে লেখো (যেমন: \"২৭টির মধ্যে ২৫টি জমা হয়েছে\"), এমনকি সবগুলো হলেও (যেমন: \"৭টির মধ্যে ৭টি\")। কখনো \"৭টির সব\"-এর মতো এলোমেলো বাক্যগঠন লিখবে না।",
     "১১. মান (quality) নিয়ে লিখলে শুধু একটা % বলে থেমো না — correct, partial ও wrong সংখ্যাগুলো দেখে লেখো। partial (আংশিক সঠিক) থাকলে সেগুলোকে সম্পূর্ণ ভুল হিসেবে দেখিও না — যেমন: \"৯টি যাচাই হওয়া কাজের মধ্যে ১টি সম্পূর্ণ সঠিক ও ৩টি আংশিক সঠিক হয়েছে, বাকিগুলো ভুল\"। শুধু \"মান ১১%\" লিখলে বোঝা যায় না যে কিছু আংশিক সঠিক ছিল। এই তিনটির (correct/partial/wrong) মধ্যে যেটির সংখ্যা ০, সেটি আলাদা করে উল্লেখ করবে না — শুধু যেগুলোতে সংখ্যা আছে সেগুলো বলো (যেমন partial ০ হলে \"০টি আংশিক সঠিক\" লিখবে না, শুধু correct ও wrong বলো)।",
     "১২. সব সংখ্যা বাংলা অঙ্কে লেখো (০, ১, ২, ৩...) — ইংরেজি সংখ্যা (0, 1, 2, 3...) কখনো ব্যবহার করবে না। % সবসময় পূর্ণ সংখ্যায় রাউন্ড করে লেখো (যেমন ৯৩%) — দশমিক (৯২.৬%) লিখবে না।",
