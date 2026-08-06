@@ -20,6 +20,7 @@ import {
   type HwNilDeclared,
   type AsNilDeclared,
   type AsNotDeclared,
+  type AsNotPrinted,
 } from "../services/ReconReportService";
 
 function assertReconReportAdmin(ctx: AppContext): void {
@@ -116,6 +117,23 @@ const AsNilDeclaredRef = builder.objectRef<AsNilDeclared>("AsNilDeclared").imple
   }),
 });
 
+const AsNotPrintedRef = builder.objectRef<AsNotPrinted>("AsNotPrinted").implement({
+  description:
+    "One (section, subject, week) the AssignmentSchedule rotation expected but with no matching " +
+    "ASSIGNMENT print request for that delivery date (D-#459) — checked independently of whether " +
+    "the AssignmentItem was declared, since printing is expected regardless.",
+  fields: (t) => ({
+    weekNumber: t.exposeInt("weekNumber"),
+    weekStartKey: t.exposeString("weekStartKey"),
+    deliveryDateKey: t.string({ nullable: true, resolve: (r) => r.deliveryDateKey }),
+    sectionId: t.exposeString("sectionId"),
+    sectionNameBn: t.exposeString("sectionNameBn"),
+    classLevel: t.exposeInt("classLevel"),
+    subject: t.exposeString("subject"),
+    teacherName: t.string({ nullable: true, resolve: (r) => r.teacherName }),
+  }),
+});
+
 const ReconReportRef = builder.objectRef<ReconReport>("ReconciliationReport").implement({
   description:
     "Who didn't submit reconciliation (D-#290): homework per day, assignments per week, " +
@@ -130,6 +148,7 @@ const ReconReportRef = builder.objectRef<ReconReport>("ReconciliationReport").im
     hwNilDeclared: t.field({ type: [HwNilDeclaredRef], resolve: (r) => r.hwNilDeclared }),
     asNilDeclared: t.field({ type: [AsNilDeclaredRef], resolve: (r) => r.asNilDeclared }),
     asNotDeclared: t.field({ type: [AsNotDeclaredRef], resolve: (r) => r.asNotDeclared }),
+    asNotPrinted: t.field({ type: [AsNotPrintedRef], resolve: (r) => r.asNotPrinted }),
   }),
 });
 

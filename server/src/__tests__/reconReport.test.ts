@@ -73,6 +73,12 @@ const mockExpectedWeek = jest.fn();
 jest.mock("../modules/trackers/services/AssignmentScheduleService", () => ({
   expectedItemsForWeek: (ay: string, w: number) => mockExpectedWeek(ay, w),
 }));
+// D-#459 — assignment print-gap: which (section, subject) already have a live
+// ASSIGNMENT print request for the week's delivery date.
+const mockPrintReqFind = jest.fn();
+jest.mock("../modules/printing/models/PrintRequest", () => ({
+  PrintRequest: { find: (f: unknown) => chain(mockPrintReqFind)(f) },
+}));
 
 import { reconciliationReport } from "../modules/trackers/services/ReconReportService";
 
@@ -94,6 +100,7 @@ beforeEach(() => {
   mockAsNilFind.mockResolvedValue([]);
   mockScheduleFind.mockResolvedValue([]);
   mockExpectedWeek.mockResolvedValue({ suspended: true, deliveryDate: null, items: [] });
+  mockPrintReqFind.mockResolvedValue([]);
 });
 
 const seedSection = (over: Record<string, unknown> = {}): void => {
@@ -119,6 +126,7 @@ describe("reconciliationReport (D-#290)", () => {
       hwNilDeclared: [],
       asNilDeclared: [],
       asNotDeclared: [],
+      asNotPrinted: [],
     });
   });
 
@@ -505,5 +513,139 @@ describe("asNotDeclared (D-#309)", () => {
     const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
     expect(r.asNotDeclared).toEqual([]);
     expect(mockExpectedWeek).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-#459 — assignment print-gap (rotation-expected, per section × subject × week,
+// no matching ASSIGNMENT print request)
+// ---------------------------------------------------------------------------
+
+describe("asNotPrinted (D-#459)", () => {
+  const NOW = new Date(2026, 6, 13); // Mon 2026-07-13
+  const TERM = new Date(2026, 6, 5); // week 1 = Jul 5–11 (delivery 07-09), week 2 = Jul 12–18 (delivery 07-16)
+
+  const expectedWeek = (weekNumber: number, over: Record<string, unknown> = {}) => ({
+    weekNumber,
+    weekStart: weekNumber === 1 ? "2026-07-05" : "2026-07-12",
+    suspended: false,
+    deliveryDate: weekNumber === 1 ? "2026-07-09" : "2026-07-16",
+    items: [] as unknown[],
+    ...over,
+  });
+  const engItem = (over: Record<string, unknown> = {}) => ({
+    delivered: true, // D-#459: printing is checked regardless of the declared flag
+    nilDeclared: false,
+    classId: CLS,
+    sectionId: SEC,
+    classLevel: -1,
+    subject: "ENG",
+    teacherId: "u-as",
+    ...over,
+  });
+
+  beforeEach(() => {
+    seedSection();
+    mockUserFind.mockResolvedValue([{ _id: "u-as", name: "Tanjila Akter Jerin" }]);
+    mockScheduleFind.mockResolvedValue([{ academicYearId: "ay-1", termStartDate: TERM }]);
+  });
+
+  test("a rotation cell with NO matching print request reports once the delivery date passed", async () => {
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem()] : [] })),
+    );
+    mockPrintReqFind.mockResolvedValue([]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotPrinted).toHaveLength(1);
+    expect(r.asNotPrinted[0]).toMatchObject({
+      weekNumber: 1,
+      deliveryDateKey: "2026-07-09",
+      sectionId: SEC,
+      sectionNameBn: "মূল",
+      classLevel: -1,
+      subject: "ENG",
+      teacherName: "Tanjila Akter Jerin",
+    });
+  });
+
+  test("delivered=true does NOT suppress the gap — printing is a separate obligation", async () => {
+    // The AssignmentItem was declared (delivered: true), yet no print request exists.
+    // asNotDeclared would stay silent here; asNotPrinted must still report it.
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem({ delivered: true })] : [] })),
+    );
+    mockPrintReqFind.mockResolvedValue([]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotDeclared).toEqual([]);
+    expect(r.asNotPrinted).toHaveLength(1);
+  });
+
+  test("a matching non-cancelled ASSIGNMENT print request clears the gap", async () => {
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem()] : [] })),
+    );
+    mockPrintReqFind.mockResolvedValue([{ sectionId: SEC, subject: "ENG" }]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotPrinted).toEqual([]);
+  });
+
+  test("a print request tagged to a DIFFERENT section leaves the gap open", async () => {
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem()] : [] })),
+    );
+    mockPrintReqFind.mockResolvedValue([{ sectionId: "sec-other", subject: "ENG" }]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotPrinted).toHaveLength(1);
+  });
+
+  test("a print request tagged to a DIFFERENT subject leaves the gap open", async () => {
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem()] : [] })),
+    );
+    mockPrintReqFind.mockResolvedValue([{ sectionId: SEC, subject: "MATH" }]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotPrinted).toHaveLength(1);
+  });
+
+  test("the query scopes to ASSIGNMENT, the delivery date, and excludes CANCELLED", async () => {
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem()] : [] })),
+    );
+    mockPrintReqFind.mockResolvedValue([]);
+    await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    const [filter] = mockPrintReqFind.mock.calls[0] as [Record<string, unknown>];
+    expect(filter).toMatchObject({ purpose: "ASSIGNMENT", neededByKey: "2026-07-09", status: { $ne: "CANCELLED" } });
+  });
+
+  test("an explicit no-assignment declaration owes no print either — never a gap", async () => {
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem({ nilDeclared: true })] : [] })),
+    );
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotPrinted).toEqual([]);
+  });
+
+  test("suspended weeks owe nothing", async () => {
+    mockExpectedWeek.mockResolvedValue(
+      expectedWeek(1, { suspended: true, deliveryDate: null, items: [engItem()] }),
+    );
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotPrinted).toEqual([]);
+  });
+
+  test("a delivery date still in the FUTURE stays silent", async () => {
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(expectedWeek(w, { items: [engItem()] })),
+    );
+    // Mon 2026-07-13 sits inside week 2, whose delivery is Thu 2026-07-16.
+    const r = await reconciliationReport("2026-07-13", "2026-07-13", new Date(2026, 6, 13));
+    expect(r.asNotPrinted).toEqual([]);
+  });
+
+  test("no schedule → no expectation (never throws)", async () => {
+    mockScheduleFind.mockResolvedValue([]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotPrinted).toEqual([]);
+    expect(mockPrintReqFind).not.toHaveBeenCalled();
   });
 });

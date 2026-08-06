@@ -36,6 +36,7 @@ export interface PrintRequestT {
   classId: string | null;
   classLevel: number | null;
   sectionId: string | null;
+  sectionNameBn: string | null;
   subject: string | null;
   notes: string | null;
   status: string;
@@ -51,7 +52,7 @@ const PRINT_REQUEST_FIELDS = `
   id title purpose sourceType setId contentArtifactId fileIds linkUrl
   files { id name mime }
   colour sides copies copiesMode copiesClassId copiesClassLevel effectiveCopies copiesPending
-  neededByKey classId classLevel sectionId subject notes status
+  neededByKey classId classLevel sectionId sectionNameBn subject notes status
   requestedBy requesterName requestedAt printedAt deliveredAt cancelReason
 `;
 
