@@ -23,6 +23,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { emitPrintDelivered, emitPrintRequested } from "../../notifications/services/emitters";
 import { User } from "../../foundation/models/User";
 import { Class } from "../../foundation/models/Class";
+import { Section } from "../../foundation/models/Section";
 import { ClassTest } from "../../trackers/models/ClassTest";
 import { classPresenceForDate } from "../../attendance/services/AttendanceReportService";
 import { dateKeyOf, isValidDateKey, parseDateKey } from "../../attendance/dates";
@@ -77,6 +78,28 @@ export function isPrintableUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * ASSIGNMENT-purpose jobs are the input to the assignment↔print gap report
+ * (`asNotPrintedRows`, D-#459): that report's whole signal is "does a print
+ * request exist matching this class+section+subject+date," so an untagged or
+ * cross-class-tagged ASSIGNMENT request would produce a permanent false gap.
+ * Required here (not just class/subject like other purposes stay optional).
+ */
+async function assertAssignmentTagging(
+  classId: string | null | undefined,
+  sectionId: string | null | undefined,
+  subject: string | null | undefined,
+): Promise<void> {
+  if (!classId || !sectionId || !subject) {
+    throw new PrintRequestError("অ্যাসাইনমেন্ট প্রিন্টের জন্য শ্রেণি, শাখা ও বিষয় আবশ্যক");
+  }
+  if (!Types.ObjectId.isValid(classId) || !Types.ObjectId.isValid(sectionId)) {
+    throw new PrintRequestError("Invalid classId or sectionId");
+  }
+  const section = await Section.findOne({ _id: sectionId, classId }).select("_id").lean();
+  if (!section) throw new PrintRequestError("এই শাখাটি নির্বাচিত শ্রেণির অন্তর্ভুক্ত নয়");
 }
 
 /** Pure: validate the source discriminator against its payload (PQ1.2). */
@@ -158,6 +181,9 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
   }
   validateSource(input);
   if (!input.trusted) await assertSourceResolves(input);
+  if (input.purpose === "ASSIGNMENT") {
+    await assertAssignmentTagging(input.classId, input.sectionId, input.subject);
+  }
 
   const copies = input.copies ?? 1;
   if (!Number.isInteger(copies) || copies < 1) throw new PrintRequestError("copies must be a positive integer");
@@ -927,6 +953,13 @@ export async function reprintPrintRequest(input: ReprintInput): Promise<IPrintRe
   }
   const copies = input.copies ?? original.copies;
   if (!Number.isInteger(copies) || copies < 1) throw new PrintRequestError("copies must be a positive integer");
+  if (original.purpose === "ASSIGNMENT") {
+    await assertAssignmentTagging(
+      original.classId?.toString(),
+      original.sectionId?.toString(),
+      original.subject,
+    );
+  }
 
   // The source must still resolve — but by EXISTENCE only (no uploader check, see above).
   await assertReprintSourceExists(original);

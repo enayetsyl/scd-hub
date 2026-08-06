@@ -35,6 +35,7 @@ import { dayTypeFor } from "../../routine/calendar";
 import { dateKeyOf, parseDateKey } from "../../attendance/dates";
 import { expectedItemsForWeek } from "./AssignmentScheduleService";
 import { weekNumberFor } from "../assignmentCalendar";
+import { PrintRequest } from "../../printing/models/PrintRequest";
 
 export interface HwReconMiss {
   dateKey: string;
@@ -113,6 +114,21 @@ export interface AsNilDeclared {
   reason: string;
 }
 
+/** D-#459: a rotation-expected assignment with no matching ASSIGNMENT print request —
+ *  checked independently of whether the AssignmentItem was ever declared (printing is
+ *  expected for every rotation cell regardless of the digital-declaration workflow). */
+export interface AsNotPrinted {
+  weekNumber: number;
+  weekStartKey: string;
+  deliveryDateKey: string | null;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  subject: string;
+  /** The rotation entry's teacher — who owes the print, unless someone covered. */
+  teacherName: string | null;
+}
+
 export interface ReconReport {
   fromKey: string;
   toKey: string;
@@ -127,6 +143,8 @@ export interface ReconReport {
   asNilDeclared: AsNilDeclared[];
   /** D-#309: rotation-expected assignments never declared, per (section × subject × week). */
   asNotDeclared: AsNotDeclared[];
+  /** D-#459: rotation-expected assignments with no matching ASSIGNMENT print request. */
+  asNotPrinted: AsNotPrinted[];
 }
 
 interface SectionInfo {
@@ -220,6 +238,85 @@ async function asNotDeclaredRows(
       if (deliveryKey > todayKey) continue; // only the FUTURE isn't due yet
       for (const item of week.items) {
         if (item.delivered || item.nilDeclared) continue;
+        out.push({
+          weekNumber: week.weekNumber,
+          weekStartKey: week.weekStart,
+          deliveryDateKey: deliveryKey,
+          sectionId: item.sectionId,
+          classLevel: item.classLevel,
+          subject: item.subject,
+          teacherId: item.teacherId || null,
+          teacherName: null,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * D-#459: the (section × subject × week) cells the AssignmentSchedule rotation expects
+ * but with NO matching ASSIGNMENT print request for that delivery date. Unlike
+ * `asNotDeclaredRows`, this does NOT skip `item.delivered` — whether the digital
+ * AssignmentItem was declared is a separate obligation from printing a copy, and a
+ * printed copy is expected for every rotation-named assignment regardless. Only
+ * `nilDeclared` cells are skipped (an explicit "no assignment this week" owes no print
+ * either). Matching is by (sectionId, subject) within the week's delivery date, since
+ * PrintRequest has no direct FK to a rotation entry.
+ */
+async function asNotPrintedRows(
+  fromKey: string,
+  toKey: string,
+  now: Date,
+): Promise<Array<Omit<AsNotPrinted, "sectionNameBn"> & { teacherId: string | null }>> {
+  const { start, end } = rangeBounds(fromKey, toKey);
+  const todayKey = dateKeyOf(now);
+
+  const schedules = (await AssignmentSchedule.find({}).select("academicYearId termStartDate").lean()) as unknown as Array<{
+    academicYearId: { toString(): string };
+    termStartDate: Date;
+  }>;
+
+  const out: Array<Omit<AsNotPrinted, "sectionNameBn"> & { teacherId: string | null }> = [];
+  for (const sched of schedules) {
+    const term = new Date(sched.termStartDate);
+    const wFrom = Math.max(1, weekNumberFor(term, start));
+    const wTo = Math.min(weekNumberFor(term, end), weekNumberFor(term, now), 53);
+    for (let w = wFrom; w <= wTo; w++) {
+      let week;
+      try {
+        week = await expectedItemsForWeek(sched.academicYearId.toString(), w);
+      } catch {
+        continue;
+      }
+      if (week.suspended || !week.deliveryDate) continue;
+      const deliveryKey = (week.deliveryDate as string).slice(0, 10);
+      if (deliveryKey > todayKey) continue;
+
+      const items = week.items.filter((item) => !item.nilDeclared);
+      if (items.length === 0) continue;
+
+      // One query per week: which (section, subject) cells already have a live
+      // ASSIGNMENT print request for this delivery date? Mongoose auto-casts these
+      // string ids against the schema's ObjectId field — no explicit cast needed.
+      const classIds = [...new Set(items.map((i) => i.classId))];
+      const printed = (await PrintRequest.find({
+        purpose: "ASSIGNMENT",
+        neededByKey: deliveryKey,
+        classId: { $in: classIds },
+        status: { $ne: "CANCELLED" },
+      })
+        .select("sectionId subject")
+        .lean()) as unknown as Array<{ sectionId?: { toString(): string }; subject?: string }>;
+      const printedKeys = new Set(
+        printed
+          .filter((p): p is { sectionId: { toString(): string }; subject: string } => !!p.sectionId && !!p.subject)
+          .map((p) => `${p.sectionId.toString()}|${p.subject}`),
+      );
+
+      for (const item of items) {
+        const key = `${item.sectionId}|${item.subject}`;
+        if (printedKeys.has(key)) continue;
         out.push({
           weekNumber: week.weekNumber,
           weekStartKey: week.weekStart,
@@ -433,6 +530,9 @@ export async function reconciliationReport(
   // --- D-#309: rotation-expected assignments never declared ----------------------
   const asNotDeclRaw = await asNotDeclaredRows(fromKey, toKey, now);
 
+  // --- D-#459: rotation-expected assignments with no matching print request -----
+  const asNotPrintedRaw = await asNotPrintedRows(fromKey, toKey, now);
+
   // --- Enrich with section/class/confirmer names (one batched pass) -------------
   const info = await sectionInfoMap([
     ...new Set([
@@ -442,6 +542,7 @@ export async function reconciliationReport(
       ...nilRows.map((r) => r.sectionId.toString()),
       ...asNilRows.map((r) => r.sectionId.toString()),
       ...asNotDeclRaw.map((r) => r.sectionId),
+      ...asNotPrintedRaw.map((r) => r.sectionId),
     ]),
   ]);
 
@@ -451,6 +552,7 @@ export async function reconciliationReport(
       ...nilRows.map((r) => r.declaredBy.toString()),
       ...asNilRows.map((r) => r.declaredBy.toString()),
       ...(asNotDeclRaw.map((r) => r.teacherId).filter(Boolean) as string[]),
+      ...(asNotPrintedRaw.map((r) => r.teacherId).filter(Boolean) as string[]),
     ]),
   ];
   const notDeclTeachers = notDeclTeacherIds.length
@@ -573,5 +675,35 @@ export async function reconciliationReport(
         : b.weekNumber - a.weekNumber,
     );
 
-  return { fromKey, toKey, hwMisses, asMisses, hwNotDeclared, hwNilDeclared, asNilDeclared, asNotDeclared };
+  const asNotPrinted: AsNotPrinted[] = asNotPrintedRaw
+    .map((r) => {
+      const s = info.get(r.sectionId);
+      return {
+        weekNumber: r.weekNumber,
+        weekStartKey: r.weekStartKey,
+        deliveryDateKey: r.deliveryDateKey,
+        sectionId: r.sectionId,
+        sectionNameBn: s?.nameBn ?? r.sectionId,
+        classLevel: r.classLevel,
+        subject: r.subject,
+        teacherName: r.teacherId ? (teacherNameOf.get(r.teacherId) ?? null) : null,
+      };
+    })
+    .sort((a, b) =>
+      a.weekNumber === b.weekNumber
+        ? a.classLevel - b.classLevel || a.subject.localeCompare(b.subject)
+        : b.weekNumber - a.weekNumber,
+    );
+
+  return {
+    fromKey,
+    toKey,
+    hwMisses,
+    asMisses,
+    hwNotDeclared,
+    hwNilDeclared,
+    asNilDeclared,
+    asNotDeclared,
+    asNotPrinted,
+  };
 }

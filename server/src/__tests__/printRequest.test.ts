@@ -91,6 +91,11 @@ jest.mock("../modules/foundation/models/User", () => ({
     findById: (id: unknown) => ({ select: () => ({ lean: () => mockUserFindById(id) }) }),
   },
 }));
+// D-#459: ASSIGNMENT jobs must name a real section belonging to the chosen class.
+const mockSectionFindOne = jest.fn().mockResolvedValue({ _id: "sec-1" });
+jest.mock("../modules/foundation/models/Section", () => ({
+  Section: { findOne: (f: unknown) => ({ select: () => ({ lean: () => mockSectionFindOne(f) }) }) },
+}));
 // PQ-5: advancing a class-test queue row mirrors onto the linked ClassTest.
 jest.mock("../modules/trackers/models/ClassTest", () => ({
   ClassTest: { updateOne: (q: unknown, u: unknown) => mockClassTestUpdateOne(q, u) },
@@ -157,6 +162,7 @@ beforeEach(() => {
   mockClassFind.mockResolvedValue([]);
   mockFindMany.mockResolvedValue([]);
   mockClassExists.mockResolvedValue({ _id: "x" });
+  mockSectionFindOne.mockResolvedValue({ _id: "sec-1" });
 });
 
 describe("isPrintableUrl", () => {
@@ -242,6 +248,51 @@ describe("createPrintRequest", () => {
     await expect(createPrintRequest({ ...baseInput, purpose: "VIBES" })).rejects.toThrow(/purpose/);
     await expect(createPrintRequest({ ...baseInput, copies: 0 })).rejects.toThrow(/copies/);
     await expect(createPrintRequest({ ...baseInput, neededByKey: "09-07-2026" })).rejects.toThrow(/YYYY-MM-DD/);
+  });
+});
+
+// D-#459: the assignment↔print-request gap report's whole signal is "does a print
+// request exist matching this class+section+subject+date" — so an ASSIGNMENT job
+// must carry all three, and the section must genuinely belong to the class.
+describe("ASSIGNMENT-purpose jobs require class + section + subject (D-#459)", () => {
+  const CLS = oid().toString();
+  const SEC = oid().toString();
+  const asInput = { ...baseInput, purpose: "ASSIGNMENT", classId: CLS, sectionId: SEC, subject: "ENG" };
+
+  test("rejects when class, section, or subject is missing", async () => {
+    await expect(createPrintRequest({ ...asInput, classId: null })).rejects.toThrow(/শ্রেণি/);
+    await expect(createPrintRequest({ ...asInput, sectionId: null })).rejects.toThrow(/শ্রেণি/);
+    await expect(createPrintRequest({ ...asInput, subject: null })).rejects.toThrow(/শ্রেণি/);
+  });
+
+  test("rejects a section that does not belong to the chosen class", async () => {
+    mockSectionFindOne.mockResolvedValue(null);
+    await expect(createPrintRequest(asInput)).rejects.toThrow(/শাখাটি/);
+    expect(mockSectionFindOne).toHaveBeenCalledWith({ _id: SEC, classId: CLS });
+  });
+
+  test("accepts a well-tagged ASSIGNMENT job", async () => {
+    await createPrintRequest(asInput);
+    const created = mockCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(created.purpose).toBe("ASSIGNMENT");
+    expect(created.classId).toBeDefined();
+    expect(created.sectionId).toBeDefined();
+    expect(created.subject).toBe("ENG");
+  });
+
+  test("a non-ASSIGNMENT job never checks section ownership", async () => {
+    await createPrintRequest({ ...baseInput, purpose: "CLASSWORK" });
+    expect(mockSectionFindOne).not.toHaveBeenCalled();
+  });
+
+  test("reprinting an ASSIGNMENT job re-checks its (possibly stale) tagging", async () => {
+    const file = oid();
+    const original = histDoc({ fileIds: [file], purpose: "ASSIGNMENT", classId: null, sectionId: null, subject: null });
+    mockFindById.mockReturnValue({ lean: async () => original });
+    mockStoredFileFind.mockResolvedValue([{ _id: file }]);
+    await expect(
+      reprintPrintRequest({ neededByKey: "2026-08-01", actorId: TEACHER, isOffice: false, sourceRequestId: original._id.toString() }),
+    ).rejects.toThrow(/শ্রেণি/);
   });
 });
 

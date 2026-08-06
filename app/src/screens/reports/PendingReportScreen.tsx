@@ -8,6 +8,8 @@
  *   HwIssuePending   — hwMisses: declared but never confirmed/issued
  *   AsDeclarePending — asNotDeclared: rotation-expected assignment nobody declared
  *   AsDeliverPending — asMisses: delivered items stuck in DRAFT (week unconfirmed)
+ *   AsPrintPending   — asNotPrinted: rotation-expected assignment with no matching
+ *                      ASSIGNMENT print request (D-#459)
  */
 import React from "react";
 import { View } from "react-native";
@@ -22,7 +24,7 @@ import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
 
-type Kind = "HwDeclarePending" | "HwIssuePending" | "AsDeclarePending" | "AsDeliverPending";
+type Kind = "HwDeclarePending" | "HwIssuePending" | "AsDeclarePending" | "AsDeliverPending" | "AsPrintPending";
 type Props = NativeStackScreenProps<ReportsStackParamList, Kind>;
 
 /** A normalized row every report kind maps into. */
@@ -109,10 +111,22 @@ export default function PendingReportScreen({ route }: Props): React.ReactElemen
           detail: `${bnNum(m.draftItems)} ${STR.rrDraftItems} · ${bnNum(m.draftMinutes)} ${STR.rrMinutes}`,
           badge: bnNum(m.draftItems),
         }));
+      case "AsPrintPending":
+        return report.asNotPrinted.map((m) => ({
+          key: `${m.sectionId}|${m.subject}|${m.weekNumber}`,
+          groupKey: m.deliveryDateKey ?? m.weekStartKey,
+          groupLabel: assignmentWeekLabel(m.deliveryDateKey, m.weekNumber, m.weekStartKey),
+          classLevel: m.classLevel,
+          sectionNameBn: m.sectionNameBn,
+          subject: m.subject,
+          teacherName: m.teacherName,
+          detail: m.deliveryDateKey ? dayOf(m.deliveryDateKey) : undefined,
+          badge: STR.rrNotPrinted,
+        }));
     }
   }, [report, kind]);
 
-  const hasSubject = kind === "HwDeclarePending" || kind === "AsDeclarePending";
+  const hasSubject = kind === "HwDeclarePending" || kind === "AsDeclarePending" || kind === "AsPrintPending";
   const { filtered, node: filterNode } = useRowFilters(rows, {
     classOf: (r) => r.classLevel,
     teacherOf: (r) => r.teacherName,
@@ -139,11 +153,13 @@ export default function PendingReportScreen({ route }: Props): React.ReactElemen
     HwIssuePending: STR.rptHwIssuePending,
     AsDeclarePending: STR.rptAsDeclarePending,
     AsDeliverPending: STR.rptAsDeliverPending,
+    AsPrintPending: STR.rptAsPrintPending,
   };
   const SUBS: Partial<Record<Kind, string>> = {
     HwDeclarePending: STR.rrHwNdSub,
     HwIssuePending: STR.admSubReconReport,
     AsDeclarePending: STR.rptAsNdSub,
+    AsPrintPending: STR.rptAsPrintPendingSub,
   };
 
   return (

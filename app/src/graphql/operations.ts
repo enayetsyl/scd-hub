@@ -2653,6 +2653,17 @@ export interface AsNotDeclaredT {
   subject: string;
   teacherName: string | null;
 }
+/** D-#459: rotation-expected assignment with no matching ASSIGNMENT print request. */
+export interface AsNotPrintedT {
+  weekNumber: number;
+  weekStartKey: string;
+  deliveryDateKey: string | null;
+  sectionId: string;
+  sectionNameBn: string;
+  classLevel: number;
+  subject: string;
+  teacherName: string | null;
+}
 export interface ReconReportT {
   fromKey: string;
   toKey: string;
@@ -2662,6 +2673,7 @@ export interface ReconReportT {
   hwNilDeclared: HwNilDeclaredT[];
   asNilDeclared: AsNilDeclaredT[];
   asNotDeclared: AsNotDeclaredT[];
+  asNotPrinted: AsNotPrintedT[];
 }
 // D-#350 — homework lifecycle report, teacher-first (Principal/Office).
 export interface HwTeacherLifecycleRowT {
@@ -2787,6 +2799,7 @@ export const RECON_REPORT_QUERY = gql<
       hwNilDeclared { dateKey sectionId sectionNameBn classLevel subject teacherName reason }
       asNilDeclared { weekNumber weekStartKey deliveryDateKey sectionId sectionNameBn classLevel subject teacherName reason }
       asNotDeclared { weekNumber weekStartKey deliveryDateKey sectionId sectionNameBn classLevel subject teacherName }
+      asNotPrinted { weekNumber weekStartKey deliveryDateKey sectionId sectionNameBn classLevel subject teacherName }
     }
   }
 `;

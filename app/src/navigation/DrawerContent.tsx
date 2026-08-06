@@ -110,6 +110,7 @@ const STAFF_NAV: NavSection[] = [
       { route: "ReportsTab", labelKey: "rptHwIssuePending", icon: "📒", screen: "HwIssuePending" },
       { route: "ReportsTab", labelKey: "rptAsDeclarePending", icon: "📋", screen: "AsDeclarePending" },
       { route: "ReportsTab", labelKey: "rptAsDeliverPending", icon: "📦", screen: "AsDeliverPending" },
+      { route: "ReportsTab", labelKey: "rptAsPrintPending", icon: "🖨️", screen: "AsPrintPending" },
       // Owner ask 2026-07-20: moved here from the Admin hub.
       { route: "ReportsTab", labelKey: "rrTitle", icon: "🔄", screen: "ReconciliationReport" },
       { route: "ReportsTab", labelKey: "hlrTitle", icon: "📘", screen: "HwLifecycleReport" },

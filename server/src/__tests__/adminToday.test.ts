@@ -103,6 +103,7 @@ const EMPTY_RECON = {
   hwNilDeclared: [],
   asNilDeclared: [],
   asNotDeclared: [],
+  asNotPrinted: [],
 };
 
 beforeEach(() => {

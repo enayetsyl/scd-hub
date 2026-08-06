@@ -84,8 +84,12 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
   // chosen class on the USE day (resolved from that day's attendance by the Office).
   const [copiesMode, setCopiesMode] = useState<"FIXED" | "CLASS_PRESENT">("FIXED");
   const [copiesClassId, setCopiesClassId] = useState<string | null>(null);
-  // PQ-7 — what the print is FOR. Optional: an office notice belongs to no class.
+  // PQ-7 — what the print is FOR. Optional (except ASSIGNMENT, see below): an office
+  // notice belongs to no class.
   const [classId, setClassId] = useState<string | null>(null);
+  // D-#459: which section within the class — required for ASSIGNMENT so the print-gap
+  // report can match a rotation cell to a specific section, not just a class.
+  const [sectionId, setSectionId] = useState<string | null>(null);
   const [subject, setSubject] = useState<string | null>(null);
   const [neededByKey, setNeededByKey] = useState("");
   const [notes, setNotes] = useState("");
@@ -106,6 +110,14 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
   });
   // Nursery (-1) and KG (0) sort ahead of class 1..5 — the order the school reads them in.
   const classes = (classData?.classes ?? []).filter((c) => c.active).slice().sort((a, b) => a.level - b.level);
+  const selectedClass = classes.find((c) => c.id === classId) ?? null;
+  const activeSections = selectedClass ? selectedClass.sections.filter((s) => s.active) : [];
+  // A class with exactly one section → auto-select it, same UX as ClassSectionSelect
+  // (components/vocabPickers.tsx) uses elsewhere — no point making the user pick from one.
+  const soleSection = activeSections.length === 1 ? activeSections[0] : null;
+  React.useEffect(() => {
+    if (soleSection && sectionId !== soleSection.id) setSectionId(soleSection.id);
+  }, [soleSection?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Shared upload tail for both entry points — the pick button and the web drop. */
   async function runUpload(upload: () => Promise<MultiUploadResult>): Promise<void> {
@@ -165,6 +177,10 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
     if (!neededByKey) return fail(STR.prNeedNeededBy);
     if (sourceType === "UPLOAD" && files.length === 0) return fail(STR.prPickFile);
     if (sourceType === "LINK" && !linkUrl.trim()) return fail(STR.prLinkUrl);
+    // D-#459: the print-gap report needs class+section+subject on every ASSIGNMENT job.
+    if (purpose === "ASSIGNMENT" && (!classId || !sectionId || !subject)) {
+      return fail(STR.prAssignmentNeedsTagging);
+    }
 
     setBusy(true);
     const res = await create({
@@ -184,6 +200,7 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
       neededByKey,
       // PQ-7: carried so the reprint history can group and filter by them.
       classId,
+      sectionId,
       subject,
       notes: notes.trim() || null,
     });
@@ -225,10 +242,29 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
               key={c.id}
               label={classLevelLabel(c.level)}
               selected={classId === c.id}
-              onPress={() => setClassId(classId === c.id ? null : c.id)}
+              onPress={() => {
+                const next = classId === c.id ? null : c.id;
+                setClassId(next);
+                setSectionId(null); // re-picked below; auto-fills if the class has one section
+              }}
             />
           ))}
         </ChipRow>
+        {classId && activeSections.length > 1 ? (
+          <>
+            <Body style={{ fontWeight: "700", marginTop: space(3), marginBottom: space(2) }}>{STR.section}</Body>
+            <ChipRow>
+              {activeSections.map((s) => (
+                <Chip
+                  key={s.id}
+                  label={s.nameBn || s.code}
+                  selected={sectionId === s.id}
+                  onPress={() => setSectionId(sectionId === s.id ? null : s.id)}
+                />
+              ))}
+            </ChipRow>
+          </>
+        ) : null}
         <Body style={{ fontWeight: "700", marginTop: space(3), marginBottom: space(2) }}>
           {STR.hrCoverSubject}
         </Body>

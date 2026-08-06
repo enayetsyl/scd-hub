@@ -28,6 +28,7 @@ export default function ReportsHomeScreen({ navigation }: Props): React.ReactEle
     { icon: "📒", title: STR.rptHwIssuePending, sub: STR.admSubReconReport, onPress: () => navigation.navigate("HwIssuePending") },
     { icon: "📋", title: STR.rptAsDeclarePending, sub: STR.rptAsNdSub, onPress: () => navigation.navigate("AsDeclarePending") },
     { icon: "📦", title: STR.rptAsDeliverPending, onPress: () => navigation.navigate("AsDeliverPending") },
+    { icon: "🖨️", title: STR.rptAsPrintPending, sub: STR.rptAsPrintPendingSub, onPress: () => navigation.navigate("AsPrintPending") },
   ];
 
   return (
