@@ -456,6 +456,17 @@ describe("MR-4 mr4-2/mr4-3 (2026-08-05) — full per-area coverage + the quality
     expect(rules).toMatch(/কভার তথ্য নেই.{0,80}লিখবে না/);
   });
 
+  test("the rules skip the leave-application sentence entirely at 100% attendance", () => {
+    // Found live: "২১-এর মধ্যে ২১ দিন উপস্থিত (১০০%); ছুটির দরখাস্ত জমা না দেওয়া কোনো
+    // অনুপস্থিতি নেই" states a true but VACUOUS fact — there were no absences AT ALL,
+    // so a sentence about which ones lacked a leave form has nothing to refer to.
+    // Contrast: SOME absences, all covered, is genuinely reassuring, not vacuous —
+    // the rule only skips the sentence at 100%, not whenever absentUncovered is 0.
+    const rules = commentRules("2026-07");
+    expect(rules).toMatch(/১০০%.{0,80}কিছু লিখবে না/);
+    expect(rules).toContain("আশ্বস্তকর"); // still says WHY partial coverage is worth stating
+  });
+
   test("a decimal percentage in the DRAFT breaks the guard — found live, why rule 11 rounds", () => {
     // validateNumerals splits digit runs on '.', so "৯২.৬%" is checked as TWO separate
     // tokens ("92" and "6") and the bare "6" was never individually whitelisted — only
