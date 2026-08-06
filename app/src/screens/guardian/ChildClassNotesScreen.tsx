@@ -15,6 +15,7 @@ import { Screen, Body, Muted, Card, Loader, EmptyState } from "../../components/
 import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { useRecordView } from "../../lib/useRecordView";
 import { STR, bnNum, dayOfWeekLabel, subjectLabel, hwSubjectLabel, hwNilReasonLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
@@ -124,6 +125,7 @@ function DayNotes({ studentId, date }: { studentId: string; date: string }): Rea
 
 export default function ChildClassNotesScreen(): React.ReactElement {
   const { selected, fetching } = useGuardianChild();
+  useRecordView("CLASS_NOTES", selected?.studentId);
 
   if (fetching && !selected) {
     return (

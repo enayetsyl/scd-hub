@@ -1146,6 +1146,63 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   HW_WEEKLY_DIGEST: "Weekly homework digest",
 };
 
+/**
+ * Guardian-portal view surfaces (GE-2, D-#465) — what a family actually opened.
+ *
+ * The guardian read path is otherwise INVISIBLE: every portal query is a pure read,
+ * so a guardian could use the app daily and leave the database byte-identical. These
+ * are the named surfaces the app reports back so "which screens get used" and "which
+ * items were never opened" become answerable.
+ *
+ * NOT an import-contract enum — it mirrors nothing in the wire schema (the
+ * NOTIFICATION_KINDS precedent). Add a surface here AND in the app's recordView call
+ * sites; an unknown surface is rejected server-side rather than silently stored, so
+ * the popularity counts can never be polluted by a typo'd string.
+ */
+export const GUARDIAN_VIEW_SURFACES = [
+  "HOME",            // GuardianHomeScreen — the child dashboard
+  "CLASS_NOTES",     // ChildClassNotesScreen
+  "HOMEWORK",        // ChildHomeworkScreen
+  "ASSIGNMENTS",     // ChildAssignmentsScreen
+  "ROUTINE",         // ChildRoutineScreen
+  "ATTENDANCE",      // ChildAttendanceScreen
+  "FEES",            // ChildFeesScreen
+  "LEAVE",           // ChildLeaveScreen
+  "NOTIFICATIONS",   // NotificationCenterScreen opened from the guardian header bell
+] as const;
+export type GuardianViewSurface = (typeof GUARDIAN_VIEW_SURFACES)[number];
+
+export const GUARDIAN_VIEW_SURFACE_LABELS_BN: Record<GuardianViewSurface, string> = {
+  HOME: "হোম",
+  CLASS_NOTES: "পাঠ নোট",
+  HOMEWORK: "বাড়ির কাজ",
+  ASSIGNMENTS: "অ্যাসাইনমেন্ট",
+  ROUTINE: "রুটিন",
+  ATTENDANCE: "উপস্থিতি",
+  FEES: "ফি",
+  LEAVE: "ছুটি",
+  NOTIFICATIONS: "বিজ্ঞপ্তি",
+};
+
+/**
+ * Guardian engagement bands (GE-1, D-#464) — how regularly a family actually uses
+ * the portal, measured in DISTINCT ACTIVE DAYS inside the report window, not raw
+ * login count (five logins in one afternoon is one engaged day, not five).
+ *
+ * NEVER is deliberately separate from LAPSED: a family that never signed in once is
+ * an ONBOARDING problem (nobody handed them the password), while a lapsed family is
+ * a RETENTION problem. Merging them would hide the difference that decides the fix.
+ */
+export const GUARDIAN_ENGAGEMENT_BANDS = ["REGULAR", "OCCASIONAL", "LAPSED", "NEVER"] as const;
+export type GuardianEngagementBand = (typeof GUARDIAN_ENGAGEMENT_BANDS)[number];
+
+export const GUARDIAN_ENGAGEMENT_BAND_LABELS_BN: Record<GuardianEngagementBand, string> = {
+  REGULAR: "নিয়মিত",
+  OCCASIONAL: "মাঝেমধ্যে",
+  LAPSED: "নিষ্ক্রিয়",
+  NEVER: "কখনও লগইন করেননি",
+};
+
 
 // --- A.x CLASS-TEST TRACKER ENUMS (app-native; Class Test module — ----------
 // prd-tracker-class-test §3.1, D-#119–#122 + build rulings D-#142–#144). NO
