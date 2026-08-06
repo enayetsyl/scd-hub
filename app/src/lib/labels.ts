@@ -1173,6 +1173,11 @@ const STR_BN = {
   prNeedSides: "এক না দুই পৃষ্ঠা — নির্বাচন করুন",
   prNeedNeededBy: "কবে দরকার তা দিন",
   prAssignmentNeedsTagging: "অ্যাসাইনমেন্ট প্রিন্টের জন্য শ্রেণি, শাখা ও বিষয় নির্বাচন করুন",
+  /** D-#463 — class/subject must be ANSWERED; "none" is one of the answers. */
+  prNoSubject: "নির্দিষ্ট বিষয় নয়",
+  prNeedPurpose: "কীসের জন্য প্রিন্ট — নির্বাচন করুন",
+  prNeedClassAnswer: "শ্রেণি নির্বাচন করুন (বা ‘শ্রেণি ছাড়া’)",
+  prNeedSubjectAnswer: "বিষয় নির্বাচন করুন (বা ‘নির্দিষ্ট বিষয় নয়’)",
   prTitleFor: "প্রিন্ট অনুরোধ —",
   moreOptions: "আরও অপশন",
   stepWord: "ধাপ",
@@ -4471,6 +4476,11 @@ const STR_EN: StrTable = {
   prNeedSides: "Choose single or both sides",
   prNeedNeededBy: "Choose when you need it",
   prAssignmentNeedsTagging: "Pick a class, section, and subject for an assignment print",
+  /** D-#463 — class/subject must be ANSWERED; "none" is one of the answers. */
+  prNoSubject: "Not subject-specific",
+  prNeedPurpose: "Choose what the print is for",
+  prNeedClassAnswer: "Choose a class (or ‘No class’)",
+  prNeedSubjectAnswer: "Choose a subject (or ‘Not subject-specific’)",
   prTitleFor: "Print request —",
   moreOptions: "More options",
   stepWord: "Step",
