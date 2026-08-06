@@ -33,6 +33,8 @@ const mockClassFind = jest.fn().mockResolvedValue([]);
 const mockFindMany = jest.fn().mockResolvedValue([]);
 const mockClassExists = jest.fn().mockResolvedValue({ _id: "x" });
 
+/** D-#461: what the last `find()` chain was asked to sort/skip/limit by. */
+const mockQueryPlan: { sort?: unknown; skip?: unknown; limit?: unknown } = {};
 jest.mock("../modules/printing/models/PrintRequest", () => ({
   PrintRequest: {
     create: (d: unknown) => mockCreate(d),
@@ -40,10 +42,14 @@ jest.mock("../modules/printing/models/PrintRequest", () => ({
     countDocuments: (f: unknown) => Promise.resolve(mockCountDocuments(f)),
     // D-#362: the reprint history's scan — .sort().limit().lean().
     // PQ-9: also awaitable directly (thenable), which is how the tag path loads docs.
+    // D-#461: printQueue adds .skip(); the sort/skip/limit it asked for are RECORDED so
+    // the ordering + paging rules can be asserted (they are Mongo's job to execute, so
+    // the arguments are the only honest thing to test at this layer).
     find: (q: unknown) => {
       const chain: Record<string, unknown> = {};
-      chain.sort = () => chain;
-      chain.limit = () => chain;
+      chain.sort = (s: unknown) => { mockQueryPlan.sort = s; return chain; };
+      chain.skip = (n: unknown) => { mockQueryPlan.skip = n; return chain; };
+      chain.limit = (n: unknown) => { mockQueryPlan.limit = n; return chain; };
       chain.lean = () => mockFind(q);
       chain.then = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) =>
         Promise.resolve(mockFindMany(q)).then(res, rej);
@@ -115,6 +121,7 @@ import {
   validateSource,
   isPrintableUrl,
   effectiveCopiesFor,
+  printQueue,
   printQueueCounts,
   printHistory,
   reprintPrintRequest,
@@ -170,6 +177,9 @@ beforeEach(() => {
   mockClassExists.mockResolvedValue({ _id: "x" });
   mockSectionFindOne.mockResolvedValue({ _id: "sec-1" });
   mockSectionExists.mockResolvedValue({ _id: "sec-1" });
+  delete mockQueryPlan.sort;
+  delete mockQueryPlan.skip;
+  delete mockQueryPlan.limit;
 });
 
 describe("isPrintableUrl", () => {
@@ -588,6 +598,73 @@ describe("printQueueCounts (D-#294 badges)", () => {
       f.status === "REQUESTED" ? 3 : 2,
     );
     expect(await printQueueCounts()).toEqual({ requested: 3, printed: 2 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-#461 — the queue pages, and which way each bucket is ordered
+// ---------------------------------------------------------------------------
+
+describe("printQueue — ordering + pagination (D-#461)", () => {
+  beforeEach(() => {
+    mockFind.mockResolvedValue([]);
+    mockCountDocuments.mockReturnValue(0);
+  });
+
+  test("the ACTIVE buckets stay oldest-first — that is the order the Office works them", async () => {
+    for (const status of ["REQUESTED", "PRINTED"]) {
+      await printQueue(status);
+      expect(mockQueryPlan.sort).toEqual({ requestedAt: 1 });
+    }
+  });
+
+  test("DELIVERED is newest-first, keyed on when it was DELIVERED (not requested)", async () => {
+    // A job requested weeks ago but handed over today belongs on top of the history.
+    await printQueue("DELIVERED");
+    expect(mockQueryPlan.sort).toEqual({ deliveredAt: -1, requestedAt: -1 });
+  });
+
+  test("CANCELLED is newest-first, keyed on when it was CANCELLED", async () => {
+    await printQueue("CANCELLED");
+    expect(mockQueryPlan.sort).toEqual({ cancelledAt: -1, requestedAt: -1 });
+  });
+
+  test("a page skips by offset and takes the page size", async () => {
+    await printQueue("DELIVERED", 25, 50);
+    expect(mockQueryPlan.skip).toBe(50);
+    expect(mockQueryPlan.limit).toBe(25);
+  });
+
+  test("total counts the WHOLE bucket, and hasMore is true while later pages remain", async () => {
+    mockFind.mockResolvedValue([histDoc(), histDoc()]);
+    mockCountDocuments.mockReturnValue(10);
+    const page = await printQueue("DELIVERED", 2, 0);
+    expect(page.total).toBe(10);
+    expect(page.items).toHaveLength(2);
+    expect(page.hasMore).toBe(true);
+  });
+
+  test("hasMore is false on the LAST page — the pager must stop there", async () => {
+    mockFind.mockResolvedValue([histDoc(), histDoc()]);
+    mockCountDocuments.mockReturnValue(10);
+    const page = await printQueue("DELIVERED", 2, 8); // 8 + 2 === 10
+    expect(page.hasMore).toBe(false);
+  });
+
+  test("an empty bucket is not 'has more'", async () => {
+    const page = await printQueue("DELIVERED");
+    expect(page).toMatchObject({ total: 0, hasMore: false });
+    expect(page.items).toEqual([]);
+  });
+
+  test("the page size is clamped, and a negative offset cannot walk backwards", async () => {
+    await printQueue("DELIVERED", 9999, -5);
+    expect(mockQueryPlan.limit).toBe(100); // PRINT_QUEUE_PAGE_MAX
+    expect(mockQueryPlan.skip).toBe(0);
+  });
+
+  test("an unknown status still rejects", async () => {
+    await expect(printQueue("SHREDDED")).rejects.toThrow(/Invalid status/);
   });
 });
 

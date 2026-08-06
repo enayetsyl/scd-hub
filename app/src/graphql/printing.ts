@@ -56,13 +56,18 @@ const PRINT_REQUEST_FIELDS = `
   requestedBy requesterName requestedAt printedAt deliveredAt cancelReason
 `;
 
-/** One bucket of the Office queue, oldest first. Requires roster:manage. */
+/** One PAGE of a queue bucket (D-#461). The active buckets stay oldest-first (the order
+ *  the Office works them); DELIVERED/CANCELLED are newest-first. Requires roster:manage. */
 export const PRINT_QUEUE_QUERY = gql<
-  { printQueue: PrintRequestT[] },
-  { status: string; limit?: number | null }
+  { printQueue: { items: PrintRequestT[]; total: number; hasMore: boolean } },
+  { status: string; limit?: number | null; offset?: number | null }
 >`
-  query PrintQueue($status: String!, $limit: Int) {
-    printQueue(status: $status, limit: $limit) { ${PRINT_REQUEST_FIELDS} }
+  query PrintQueue($status: String!, $limit: Int, $offset: Int) {
+    printQueue(status: $status, limit: $limit, offset: $offset) {
+      items { ${PRINT_REQUEST_FIELDS} }
+      total
+      hasMore
+    }
   }
 `;
 
