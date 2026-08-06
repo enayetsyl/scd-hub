@@ -35,7 +35,15 @@ import {
   type HwItemTallyT,
 } from "../../graphql/operations";
 import { useConfirm } from "../../state/ConfirmContext";
-import { pickAndUploadHomeworkFile, uploadHomeworkWebFile, FileUploadError, type UploadedFile } from "../../lib/files";
+import {
+  pickAndUploadHomeworkFile,
+  uploadHomeworkWebFile,
+  openStoredFile,
+  FILE_VIEW_SUPPORTED,
+  FileUploadError,
+  type UploadedFile,
+} from "../../lib/files";
+import { useFileOpen } from "../../lib/useFileOpen";
 import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
 import { SubjectFold, type SubjectFoldRenderOpts } from "../../components/SubjectFold";
 import { RosterChipPass } from "../../components/RosterChipPass";
@@ -680,6 +688,8 @@ function CheckRow({
   const [, revertRecord] = useMutation(REVERT_HW_RECORD);
   const { confirmAction } = useConfirm();
 
+  const { openingId, runOpen } = useFileOpen();
+
   const [expanded, setExpanded] = useState<"" | "PARTIAL" | "WRONG">("");
   const [resubmit, setResubmit] = useState(false);
   const [topupQids, setTopupQids] = useState("");
@@ -726,6 +736,15 @@ function CheckRow({
     }
   }
 
+  /** Stream the submitted answer file through the server and open it (web). */
+  async function onOpenAnswerFile(fileId: string): Promise<void> {
+    try {
+      await openStoredFile(fileId);
+    } catch (e) {
+      onNotify(null, e instanceof FileUploadError ? e.message : STR.errGeneric);
+    }
+  }
+
   async function onRevert(): Promise<void> {
     if (!(await confirmAction({ title: STR.revertConfirmTitle, message: STR.revertConfirmBody, confirmLabel: STR.revertAction }))) return;
     setBusy(true);
@@ -753,7 +772,21 @@ function CheckRow({
         >
           <Body style={{ fontWeight: "700" }}>{record.studentName}</Body>
         </Pressable>
-        {record.hasAnswerFile ? <Badge text={STR.hwFileHas} tone="ok" /> : null}
+        {/* The badge announced "📎 Attachment" but could not be opened, so the checker
+            had no way to SEE what the student handed in (owner report 2026-08-06).
+            Where viewing is supported (web, like every other file viewer here) it is a
+            button; on native it stays the plain badge it always was. */}
+        {record.answerFileId && FILE_VIEW_SUPPORTED ? (
+          <Button
+            title={STR.hwFileHas}
+            variant="secondary"
+            loading={openingId === record.answerFileId}
+            disabled={!!openingId}
+            onPress={() => void runOpen(record.answerFileId!, () => onOpenAnswerFile(record.answerFileId!))}
+          />
+        ) : record.hasAnswerFile ? (
+          <Badge text={STR.hwFileHas} tone="ok" />
+        ) : null}
       </View>
       <ChipRow>
         <Chip label={STR.hwOutcomeCorrect} selected={busy} onPress={() => onChip("CORRECT")} />
