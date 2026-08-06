@@ -44,26 +44,31 @@ const snapshot = (over: Partial<{ name: string; extra: unknown }> = {}): Monthly
         checked: 27, correct: 17, partial: 3, wrong: 7,
         coverage: { settled: 35, total: 38, pct: 92 },
         bySubject: [
-          { subject: "MATH", submitted: 10, expectedWhilePresent: 10, checked: 8, correct: 6, partial: 0, wrong: 2, qualityRate: 75 },
-          { subject: "BANGLA", submitted: 9, expectedWhilePresent: 11, checked: 9, correct: 6, partial: 0, wrong: 3, qualityRate: 67 },
+          { subject: "MATH", submitted: 10, expectedWhilePresent: 10, checked: 8, correct: 6, partial: 0, wrong: 2, qualityRate: 75, notSubmittedDueToAbsence: 0 },
+          { subject: "BANGLA", submitted: 9, expectedWhilePresent: 11, checked: 9, correct: 6, partial: 0, wrong: 3, qualityRate: 67, notSubmittedDueToAbsence: 0 },
           // The PARTIAL showcase: half the checked English work was partial credit, not
           // wrong outright — a bare "৫০%" cannot say that, which is the bug this fixture
-          // exists to catch (see the "partial credit is not wrong" test below).
-          { subject: "ENGLISH", submitted: 8, expectedWhilePresent: 11, checked: 8, correct: 4, partial: 2, wrong: 2, qualityRate: 50 },
+          // exists to catch (see the "partial credit is not wrong" test below). Also the
+          // ABSENCE-FAIRNESS showcase: 2 more sheets were issued while absent, never yet
+          // re-delivered — correctly excluded from expectedWhilePresent already, but the
+          // comment previously had no field to name WHY the gap exists.
+          { subject: "ENGLISH", submitted: 8, expectedWhilePresent: 11, checked: 8, correct: 4, partial: 2, wrong: 2, qualityRate: 50, notSubmittedDueToAbsence: 2 },
         ],
       },
       assignment: {
         submitted: 4, expectedWhilePresent: 5, submissionRate: 80, coverage: { pct: 67 },
         checked: 4, correct: 3, partial: 0, wrong: 1,
         bySubject: [
-          { subject: "MATH", submitted: 2, expectedWhilePresent: 2, checked: 2, correct: 2, partial: 0, wrong: 0, qualityRate: 100 },
-          { subject: "BANGLA", submitted: 1, expectedWhilePresent: 1, checked: 1, correct: 1, partial: 0, wrong: 0, qualityRate: 100 },
+          { subject: "MATH", submitted: 2, expectedWhilePresent: 2, checked: 2, correct: 2, partial: 0, wrong: 0, qualityRate: 100, notSubmittedDueToAbsence: 1 },
+          { subject: "BANGLA", submitted: 1, expectedWhilePresent: 1, checked: 1, correct: 1, partial: 0, wrong: 0, qualityRate: 100, notSubmittedDueToAbsence: 0 },
           // The genuine-failure counterpart: no partial credit here at all — a flat
           // wrong, which the model should still be able to state plainly.
-          { subject: "ENGLISH", submitted: 1, expectedWhilePresent: 2, checked: 1, correct: 0, partial: 0, wrong: 1, qualityRate: 0 },
+          { subject: "ENGLISH", submitted: 1, expectedWhilePresent: 2, checked: 1, correct: 0, partial: 0, wrong: 1, qualityRate: 0, notSubmittedDueToAbsence: 0 },
         ],
       },
-      classTest: { attended: 12, testsHeld: 14, rate: 79, coverage: { pct: 86 } },
+      // 14 tests held, 12 attended, 2 missed to absence — attended + absent = held,
+      // exactly the fairness split rule 12 exists to name.
+      classTest: { attended: 12, testsHeld: 14, absent: 2, rate: 79, coverage: { pct: 86 } },
       hifz: { present: 3, sessions: 4 },
       concerns: { concern: 3 },
       ...(over.extra ? { leaked: over.extra } : {}),
@@ -356,14 +361,14 @@ describe("MR-4 mr4-2/mr4-3 (2026-08-05) — full per-area coverage + the quality
   test("per-subject submitted/expected/quality reach the model for BOTH trackers", () => {
     const f = facts();
     expect(f.homework.bySubject).toEqual([
-      { subject: "MATH", submittedOf: 10, expected: 10, checked: 8, correct: 6, partial: 0, wrong: 2, qualityPct: 75 },
-      { subject: "BANGLA", submittedOf: 9, expected: 11, checked: 9, correct: 6, partial: 0, wrong: 3, qualityPct: 67 },
-      { subject: "ENGLISH", submittedOf: 8, expected: 11, checked: 8, correct: 4, partial: 2, wrong: 2, qualityPct: 50 },
+      { subject: "MATH", submittedOf: 10, expected: 10, checked: 8, correct: 6, partial: 0, wrong: 2, qualityPct: 75, notSubmittedDueToAbsence: 0 },
+      { subject: "BANGLA", submittedOf: 9, expected: 11, checked: 9, correct: 6, partial: 0, wrong: 3, qualityPct: 67, notSubmittedDueToAbsence: 0 },
+      { subject: "ENGLISH", submittedOf: 8, expected: 11, checked: 8, correct: 4, partial: 2, wrong: 2, qualityPct: 50, notSubmittedDueToAbsence: 2 },
     ]);
     expect(f.assignment.bySubject).toEqual([
-      { subject: "MATH", submittedOf: 2, expected: 2, checked: 2, correct: 2, partial: 0, wrong: 0, qualityPct: 100 },
-      { subject: "BANGLA", submittedOf: 1, expected: 1, checked: 1, correct: 1, partial: 0, wrong: 0, qualityPct: 100 },
-      { subject: "ENGLISH", submittedOf: 1, expected: 2, checked: 1, correct: 0, partial: 0, wrong: 1, qualityPct: 0 },
+      { subject: "MATH", submittedOf: 2, expected: 2, checked: 2, correct: 2, partial: 0, wrong: 0, qualityPct: 100, notSubmittedDueToAbsence: 1 },
+      { subject: "BANGLA", submittedOf: 1, expected: 1, checked: 1, correct: 1, partial: 0, wrong: 0, qualityPct: 100, notSubmittedDueToAbsence: 0 },
+      { subject: "ENGLISH", submittedOf: 1, expected: 2, checked: 1, correct: 0, partial: 0, wrong: 1, qualityPct: 0, notSubmittedDueToAbsence: 0 },
     ]);
   });
 
@@ -467,6 +472,32 @@ describe("MR-4 mr4-2/mr4-3 (2026-08-05) — full per-area coverage + the quality
     expect(rules).toContain("আশ্বস্তকর"); // still says WHY partial coverage is worth stating
   });
 
+  test("notSubmittedDueToAbsence reaches the model PER SUBJECT, not just as a total", () => {
+    // The same fairness expectedWhilePresent already gives the totals (D-#399) now
+    // names WHICH subject a gap belongs to — owner ask, 2026-08-06.
+    const f = facts();
+    const eng = f.homework.bySubject.find((s) => s.subject === "ENGLISH");
+    const math = f.homework.bySubject.find((s) => s.subject === "MATH");
+    expect(eng?.notSubmittedDueToAbsence).toBe(2);
+    expect(math?.notSubmittedDueToAbsence).toBe(0);
+    expect(allowedNumbers(f).has("2")).toBe(true); // the absence count itself is citable
+  });
+
+  test("classTest.absent reaches the model — participation and absence were the same number before", () => {
+    // 14 held, 12 attended, 2 absent: attended + absent = held, the exact split rule
+    // 12 exists to keep from being read as "skipped 2 while present."
+    const f = facts();
+    expect(f.classTest.absent).toBe(2);
+    expect(f.classTest.attended + f.classTest.absent).toBe(f.classTest.held);
+  });
+
+  test("the rules say a submission/attendance gap due to absence is NOT neglect", () => {
+    const rules = commentRules("2026-07");
+    expect(rules).toContain("notSubmittedDueToAbsence");
+    expect(rules).toContain("অবহেলা বোঝায় না");
+    expect(rules).toMatch(/অনুপস্থিতির কারণে দেওয়া সম্ভব হয়নি/);
+  });
+
   test("a decimal percentage in the DRAFT breaks the guard — found live, why rule 11 rounds", () => {
     // validateNumerals splits digit runs on '.', so "৯২.৬%" is checked as TWO separate
     // tokens ("92" and "6") and the bare "6" was never individually whitelisted — only
@@ -488,9 +519,10 @@ describe("MR-4 mr4-2/mr4-3 (2026-08-05) — full per-area coverage + the quality
       "জুলাই ২০২৬-এ আপনার সন্তান ২২ দিনের মধ্যে ১৮ দিন উপস্থিত ছিল (৮২%), শ্রেণির সর্বোচ্চ ৯৬%-এর নিচে,",
       "এবং ২ দিন ছুটি ছাড়া অনুপস্থিত ছিল। বাড়ির কাজে ৩২টির মধ্যে ২৭টি জমা হয়েছে; গণিতে ১০-এর মধ্যে ১০টি ও",
       "বাংলায় ১১-এর মধ্যে ৯টি ভালো মানের হলেও, ইংরেজিতে ৮টি যাচাই হওয়া কাজের মধ্যে ৪টি সম্পূর্ণ সঠিক ও ২টি",
-      "আংশিক সঠিক হয়েছে, বাকি ২টি ভুল। অ্যাসাইনমেন্টে ৫-এর মধ্যে ৪টি জমা হয়েছে; বাংলা ও গণিত পুরোপুরি সঠিক",
-      "হলেও ইংরেজির ১টি অ্যাসাইনমেন্ট যাচাইয়ে ভুল হয়েছে। ক্লাস টেস্টে ১৪-এর মধ্যে ১২টিতে অংশ নিয়েছে (৭৯%)।",
-      "এই মাসে ৩টি অভিযোগ লেখা হয়েছে। বাড়িতে ইংরেজি পাঠগুলো নিয়মিত অনুশীলন করালে উপকার হতে পারে।",
+      "আংশিক সঠিক হয়েছে, বাকি ২টি ভুল — আরও ২টি ইংরেজি বাড়ির কাজ অনুপস্থিতির কারণে দেওয়া সম্ভব হয়নি।",
+      "অ্যাসাইনমেন্টে ৫-এর মধ্যে ৪টি জমা হয়েছে; বাংলা ও গণিত পুরোপুরি সঠিক হলেও ইংরেজির ১টি অ্যাসাইনমেন্ট",
+      "যাচাইয়ে ভুল হয়েছে। ক্লাস টেস্টে ১৪-এর মধ্যে ১২টিতে অংশ নিয়েছে (৭৯%), ২টি অনুপস্থিতির কারণে দেওয়া",
+      "সম্ভব হয়নি। এই মাসে ৩টি অভিযোগ লেখা হয়েছে। বাড়িতে ইংরেজি পাঠগুলো নিয়মিত অনুশীলন করালে উপকার হতে পারে।",
     ].join(" ");
     expect(comment).not.toMatch(/[0-9]/); // no Latin digits anywhere
     expect(looksLikeProse(comment)).toEqual({ ok: true, reason: null });

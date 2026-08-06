@@ -129,6 +129,18 @@ describe("MR-1 D-#394 — the fairness denominator", () => {
     expect(m.bySubject[0]).toMatchObject({ subject: "MATH", issued: 4, expectedWhilePresent: 3, submissionRate: 100, qualityRate: 66.7 });
   });
 
+  test("the fairness field reaches the SUBJECT row too, not just the total — owner ask, 2026-08-06", () => {
+    // A guardian comment can name a subject's own absence-caused count; before this
+    // it only ever saw the aggregate, so "ইংরেজিতে ২টি অনুপস্থিতির কারণে দেওয়া হয়নি"
+    // had no field to cite even though the total already carried the number.
+    const m = trackerMonthOf(
+      panelOf(counters({ sheets: 5, received: 3, absentAtIssue: 2, submitted: 3 }), [
+        { ...counters({ sheets: 5, received: 3, absentAtIssue: 2, submitted: 3 }), subject: "ENGLISH" },
+      ]),
+    );
+    expect(m.bySubject[0]).toMatchObject({ subject: "ENGLISH", notSubmittedDueToAbsence: 2 });
+  });
+
   test("nothing received yields a null rate, never a zero", () => {
     expect(trackerMonthOf(panelOf(counters({ sheets: 2, received: 0 }))).submissionRate).toBeNull();
   });

@@ -429,6 +429,10 @@ export interface TrackerMonth {
     partial: number;
     wrong: number;
     qualityRate: number | null;
+    /** Sheets issued to this subject while the child was absent, never yet
+     *  re-delivered — the same fairness field the total already carried
+     *  (D-#399), now visible per subject too (owner ask, 2026-08-06). */
+    notSubmittedDueToAbsence: number;
   }>;
 }
 
@@ -523,6 +527,7 @@ export function trackerMonthOf(panel: StudentTrackerPanel): TrackerMonth {
       partial: r.partial,
       wrong: r.wrong,
       qualityRate: pct(r.correct, r.correct + r.partial + r.wrong),
+      notSubmittedDueToAbsence: r.absentAtIssue,
     })),
   };
 }
