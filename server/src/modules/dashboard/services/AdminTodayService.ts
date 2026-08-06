@@ -342,7 +342,7 @@ export async function adminToday(dateKey: string, now = new Date()): Promise<Adm
     recon = await reconciliationReport(dateKey, dateKey, now);
   } catch (err) {
     console.error("[adminToday] reconciliationReport failed:", err);
-    recon = { fromKey: dateKey, toKey: dateKey, hwMisses: [], asMisses: [], hwNotDeclared: [], hwNilDeclared: [], asNilDeclared: [], asNotDeclared: [] };
+    recon = { fromKey: dateKey, toKey: dateKey, hwMisses: [], asMisses: [], hwNotDeclared: [], hwNilDeclared: [], asNilDeclared: [], asNotDeclared: [], asNotPrinted: [] };
   }
 
   return Promise.all([

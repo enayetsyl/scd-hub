@@ -15,6 +15,7 @@ import type { AppContext } from "../../../context";
 import { User } from "../../foundation/models/User";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { Class } from "../../foundation/models/Class";
+import { Section } from "../../foundation/models/Section";
 import { classPresenceForDate } from "../../attendance/services/AttendanceReportService";
 import { dateKeyOf } from "../../attendance/dates";
 import {
@@ -74,6 +75,8 @@ interface PrintRequestView {
   copiesClassLevel: number | null;
   /** D-#362: the level of the job's OWN class (`classId`) — the history sorts by it. */
   classLevel: number | null;
+  /** D-#459: the job's section label, for display next to classLevel. */
+  sectionNameBn: string | null;
 }
 
 const PrintFileRef = builder.objectRef<PrintFileView>("PrintFile");
@@ -119,6 +122,7 @@ PrintRequestRef.implement({
     classId: t.string({ nullable: true, resolve: (v) => v.doc.classId?.toString() ?? null }),
     classLevel: t.int({ nullable: true, resolve: (v) => v.classLevel }),
     sectionId: t.string({ nullable: true, resolve: (v) => v.doc.sectionId?.toString() ?? null }),
+    sectionNameBn: t.string({ nullable: true, resolve: (v) => v.sectionNameBn }),
     subject: t.string({ nullable: true, resolve: (v) => v.doc.subject ?? null }),
     notes: t.string({ nullable: true, resolve: (v) => v.doc.notes ?? null }),
     status: t.string({ resolve: (v) => v.doc.status }),
@@ -165,6 +169,14 @@ async function decorate(docs: IPrintRequest[]): Promise<PrintRequestView[]> {
     ? await Class.find({ _id: { $in: classIds } }).select("level").lean()
     : [];
   const levelOf = new Map(classes.map((c) => [c._id.toString(), c.level]));
+
+  // D-#459: section labels, batched — only the jobs that carry one (mostly ASSIGNMENT).
+  const sectionIds = [...new Set(docs.map((d) => d.sectionId?.toString()).filter(Boolean))] as string[];
+  const sections = sectionIds.length
+    ? await Section.find({ _id: { $in: sectionIds } }).select("nameBn").lean()
+    : [];
+  const sectionNameById = new Map(sections.map((s) => [s._id.toString(), s.nameBn]));
+
   const todayKey = dateKeyOf(new Date());
   const useKeys = [
     ...new Set(
@@ -205,6 +217,7 @@ async function decorate(docs: IPrintRequest[]): Promise<PrintRequestView[]> {
       copiesPending,
       copiesClassLevel: doc.copiesClassId ? (levelOf.get(doc.copiesClassId.toString()) ?? null) : null,
       classLevel: doc.classId ? (levelOf.get(doc.classId.toString()) ?? null) : null,
+      sectionNameBn: doc.sectionId ? (sectionNameById.get(doc.sectionId.toString()) ?? null) : null,
     };
   });
 }

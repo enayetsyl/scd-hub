@@ -1033,6 +1033,7 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="HwIssuePending" component={PendingReportScreen} options={{ title: STR.rptHwIssuePending }} />
       <ReportsStack.Screen name="AsDeclarePending" component={PendingReportScreen} options={{ title: STR.rptAsDeclarePending }} />
       <ReportsStack.Screen name="AsDeliverPending" component={PendingReportScreen} options={{ title: STR.rptAsDeliverPending }} />
+      <ReportsStack.Screen name="AsPrintPending" component={PendingReportScreen} options={{ title: STR.rptAsPrintPending }} />
       {/* D-#311: in-stack mounts of the attendance/class-note reports so the hub's
           back button returns HERE (a cross-tab jump popped to the host tab's home). */}
       <ReportsStack.Screen name="AttendanceReport" component={AttendanceReportScreen} options={{ title: STR.attReportTitle }} />

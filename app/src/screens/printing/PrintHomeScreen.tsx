@@ -25,9 +25,11 @@ import {
   CANCEL_PRINT_REQUEST,
   type PrintRequestT,
 } from "../../graphql/printing";
+import { RECON_REPORT_QUERY } from "../../graphql/operations";
 import type { PrintStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Button, Badge, Loader, EmptyState, ErrorBanner, Field } from "../../components/ui";
-import { STR, bnNum, classLevelLabel } from "../../lib/labels";
+import { DateField } from "../../components/DateField";
+import { STR, bnNum, classLevelLabel, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { openStoredFile } from "../../lib/files";
 import { subscribeLiveEvents } from "../../lib/liveEvents";
@@ -42,6 +44,12 @@ type Props = NativeStackScreenProps<PrintStackParamList, "PrintHome">;
 
 /** The Office's three buckets, in the order a job moves through them. */
 const BUCKETS = ["REQUESTED", "PRINTED", "DELIVERED"] as const;
+
+/** Today as a `YYYY-MM-DD` key — the default day for the print-gap glance (D-#459). */
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 const bucketLabel = (s: string): string =>
   s === "REQUESTED"
@@ -67,6 +75,10 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
   const canRequest = can("tracker:write");
 
   const [bucket, setBucket] = useState<string>("REQUESTED");
+  // D-#459: a same-day glance at rotation-expected assignments with no matching print
+  // request — a separate view from the three status buckets, not a PrintRequest status.
+  const [view, setView] = useState<"QUEUE" | "GAPS">("QUEUE");
+  const [gapDate, setGapDate] = useState(todayKey());
   const [busy, setBusy] = useState(false);
   // D-#302: past requests (delivered/cancelled) fold away by default — the top of
   // "My requests" carries only the jobs still in flight.
@@ -89,6 +101,14 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
     query: MY_PRINT_REQUESTS_QUERY,
     variables: {},
     pause: !canRequest,
+    requestPolicy: "cache-and-network",
+  });
+  // D-#459: the same reconciliationReport query the Reports-hub AsPrintPending screen
+  // uses, narrowed to a single day — avoids a second server code path/gate.
+  const [gapsQ, refetchGaps] = useQuery({
+    query: RECON_REPORT_QUERY,
+    variables: { from: gapDate, to: gapDate },
+    pause: !isOffice || view !== "GAPS",
     requestPolicy: "cache-and-network",
   });
 
@@ -163,6 +183,7 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
           )}
           <Muted>
             {r.purpose}
+            {r.sectionNameBn ? ` · ${r.sectionNameBn}` : ""}
             {r.neededByKey ? ` · ${STR.prUseDate}: ${bnNum(r.neededByKey)}` : ""}
           </Muted>
           {/* The Office cannot start a job without knowing how to print it. */}
@@ -301,17 +322,52 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
           <H2>{STR.prQueueTitle}</H2>
           <ChipRow>
             {BUCKETS.map((b) => (
-              <Chip key={b} label={bucketLabel(b)} selected={bucket === b} onPress={() => setBucket(b)} />
+              <Chip
+                key={b}
+                label={bucketLabel(b)}
+                selected={view === "QUEUE" && bucket === b}
+                onPress={() => {
+                  setView("QUEUE");
+                  setBucket(b);
+                }}
+              />
             ))}
+            <Chip label={STR.prsNotSubmitted} selected={view === "GAPS"} onPress={() => setView("GAPS")} />
           </ChipRow>
-          {queueQ.error ? (
-            <ErrorBanner message={friendlyError(queueQ.error)} onRetry={() => refetchQueue({ requestPolicy: "network-only" })} />
-          ) : queueQ.fetching && queue.length === 0 ? (
-            <Loader label={STR.loading} />
-          ) : queue.length === 0 ? (
-            <EmptyState message={STR.prNoJobs} />
+          {view === "QUEUE" ? (
+            queueQ.error ? (
+              <ErrorBanner message={friendlyError(queueQ.error)} onRetry={() => refetchQueue({ requestPolicy: "network-only" })} />
+            ) : queueQ.fetching && queue.length === 0 ? (
+              <Loader label={STR.loading} />
+            ) : queue.length === 0 ? (
+              <EmptyState message={STR.prNoJobs} />
+            ) : (
+              queue.map((r) => <Row key={r.id} r={r} office />)
+            )
           ) : (
-            queue.map((r) => <Row key={r.id} r={r} office />)
+            <>
+              <DateField label={STR.prUseDate} value={gapDate} onChange={setGapDate} />
+              {gapsQ.error ? (
+                <ErrorBanner message={friendlyError(gapsQ.error)} onRetry={() => refetchGaps({ requestPolicy: "network-only" })} />
+              ) : gapsQ.fetching && !gapsQ.data ? (
+                <Loader label={STR.loading} />
+              ) : (gapsQ.data?.reconciliationReport.asNotPrinted.length ?? 0) === 0 ? (
+                <EmptyState message={STR.prsNotSubmittedEmpty} />
+              ) : (
+                gapsQ.data!.reconciliationReport.asNotPrinted.map((m) => (
+                  <Card key={`${m.sectionId}|${m.subject}`}>
+                    <Body style={{ fontWeight: "600" }}>
+                      {classLevelLabel(m.classLevel)}
+                      {m.sectionNameBn ? ` — ${m.sectionNameBn}` : ""}
+                      {` · ${hwSubjectLabel(m.subject)}`}
+                    </Body>
+                    <Muted>
+                      {STR.rrConfirmer}: {m.teacherName ?? STR.rrNoConfirmer}
+                    </Muted>
+                  </Card>
+                ))
+              )}
+            </>
           )}
         </>
       ) : null}

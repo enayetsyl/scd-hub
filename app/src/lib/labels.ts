@@ -959,6 +959,7 @@ const STR_BN = {
   rrHwNdTitle: "বাড়ির কাজ ঘোষণা হয়নি — শ্রেণি × বিষয়",
   rrHwNdSub: "রুটিনে পিরিয়ড ছিল কিন্তু সেদিন ওই বিষয়ের কোনো বাড়ির কাজ ঘোষণা করা হয়নি",
   rrNotDeclared: "ঘোষণা হয়নি",
+  rrNotPrinted: "প্রিন্ট হয়নি",
   /** D-#309 — Reports hub + recon-report filters. */
   tabReports: "রিপোর্ট",
   rptHomeSub: "প্রশাসনিক রিপোর্টসমূহ এক জায়গায়",
@@ -967,6 +968,9 @@ const STR_BN = {
   rptAsDeclarePending: "অ্যাসাইনমেন্ট ঘোষণা বাকি",
   rptAsDeliverPending: "অ্যাসাইনমেন্ট ডেলিভারি বাকি",
   rptAsNdSub: "রোটেশনে প্রত্যাশিত কিন্তু ওই সপ্তাহে অ্যাসাইনমেন্ট তৈরি হয়নি",
+  /** D-#459 — assignment↔print-request gap report. */
+  rptAsPrintPending: "অ্যাসাইনমেন্ট প্রিন্ট বাকি",
+  rptAsPrintPendingSub: "রোটেশনে প্রত্যাশিত কিন্তু ওই তারিখে প্রিন্ট অনুরোধ জমা হয়নি",
   rptFilterClass: "শ্রেণি",
   rptFilterTeacher: "শিক্ষক",
   rptFilterSubject: "বিষয়",
@@ -1118,6 +1122,9 @@ const STR_BN = {
   prsPrinted: "ছাপা হয়েছে",
   prsDelivered: "ডেলিভারি হয়েছে",
   prsCancelled: "বাতিল হয়েছে",
+  /** D-#459 — the print-queue's same-day gap glance. */
+  prsNotSubmitted: "জমা দেয়নি",
+  prsNotSubmittedEmpty: "এই তারিখে সব অ্যাসাইনমেন্টের প্রিন্ট অনুরোধ জমা হয়েছে",
   prPastRequests: "পুরনো অনুরোধ (ডেলিভারি/বাতিল)",
   prOpenPlanHint: "পরিকল্পনাটি Lesson Plans-এ দেখুন",
   prPrintedOk: "ছাপা হয়েছে হিসেবে চিহ্নিত",
@@ -1165,6 +1172,7 @@ const STR_BN = {
   prNeedColour: "সাদা-কালো না রঙিন — নির্বাচন করুন",
   prNeedSides: "এক না দুই পৃষ্ঠা — নির্বাচন করুন",
   prNeedNeededBy: "কবে দরকার তা দিন",
+  prAssignmentNeedsTagging: "অ্যাসাইনমেন্ট প্রিন্টের জন্য শ্রেণি, শাখা ও বিষয় নির্বাচন করুন",
   prTitleFor: "প্রিন্ট অনুরোধ —",
   moreOptions: "আরও অপশন",
   stepWord: "ধাপ",
@@ -4254,6 +4262,7 @@ const STR_EN: StrTable = {
   rrHwNdTitle: "Homework never declared — class × subject",
   rrHwNdSub: "The subject had routine periods that day but declared no homework at all",
   rrNotDeclared: "Not declared",
+  rrNotPrinted: "Not printed",
   /** D-#309 — Reports hub + recon-report filters. */
   tabReports: "Reports",
   rptHomeSub: "All admin reports in one place",
@@ -4262,6 +4271,9 @@ const STR_EN: StrTable = {
   rptAsDeclarePending: "Assignment declare pending",
   rptAsDeliverPending: "Assignment deliver pending",
   rptAsNdSub: "The rotation expected an assignment that week but none was created",
+  /** D-#459 — assignment↔print-request gap report. */
+  rptAsPrintPending: "Assignment print pending",
+  rptAsPrintPendingSub: "The rotation expected an assignment that date but no print request was submitted",
   rptFilterClass: "Class",
   rptFilterTeacher: "Teacher",
   rptFilterSubject: "Subject",
@@ -4408,6 +4420,9 @@ const STR_EN: StrTable = {
   prsPrinted: "Printing done",
   prsDelivered: "Delivered",
   prsCancelled: "Cancelled",
+  /** D-#459 — the print-queue's same-day gap glance. */
+  prsNotSubmitted: "Not submitted",
+  prsNotSubmittedEmpty: "Every assignment print request for this date is in",
   prPastRequests: "Past requests (delivered/cancelled)",
   prOpenPlanHint: "Open the plan from Lesson Plans",
   prPrintedOk: "Marked printed",
@@ -4455,6 +4470,7 @@ const STR_EN: StrTable = {
   prNeedColour: "Choose black & white or colour",
   prNeedSides: "Choose single or both sides",
   prNeedNeededBy: "Choose when you need it",
+  prAssignmentNeedsTagging: "Pick a class, section, and subject for an assignment print",
   prTitleFor: "Print request —",
   moreOptions: "More options",
   stepWord: "Step",

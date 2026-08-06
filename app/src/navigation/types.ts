@@ -420,6 +420,7 @@ export type ReportsStackParamList = {
   HwIssuePending: undefined;
   AsDeclarePending: undefined;
   AsDeliverPending: undefined;
+  AsPrintPending: undefined;
   AttendanceReport: undefined;
   ClassNoteReport: { date?: string } | undefined;
   /** ClassNoteReport's drill-down target — must exist wherever it is mounted. */
