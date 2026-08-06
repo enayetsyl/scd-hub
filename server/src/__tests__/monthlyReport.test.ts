@@ -8,6 +8,7 @@
  */
 import {
   diffFigures,
+  figuresHashOf,
   lockStateOf,
   releaseVerdictOf,
   reportedFigures,
@@ -36,10 +37,12 @@ const snapshot = (p: {
       homework: {
         issued: 38, submitted: p.hwSubmitted ?? 27, submissionRate: 84, qualityRate: 63,
         coverage: { settled: 0, total: 0, pct: p.hwCoverage === undefined ? 92 : p.hwCoverage },
+        bySubject: [],
       },
       assignment: {
         issued: 6, submitted: 4, submissionRate: 80, qualityRate: 50,
         coverage: { settled: 0, total: 0, pct: 67 },
+        bySubject: [],
       },
       classTest: {
         testsHeld: 14, rate: p.ctRate ?? 79, unmarked: p.ctUnmarked ?? 2,
@@ -99,6 +102,51 @@ describe("MR-3 §6.3 — a recompute that changes nothing raises nothing", () =>
     expect(keys).not.toContain("previous");
     expect(keys).not.toContain("config");
     expect(keys).toContain("attendance.rate");
+  });
+});
+
+describe("MR-8 D-#459 — a per-subject split IS a reportable change, even when overall totals match", () => {
+  // The exact bug an owner-run audit of a real export file found: two revisions with
+  // identical OVERALL homework totals but different per-subject splits hashed the
+  // same, because reportedFigures never touched bySubject. A comment can legitimately
+  // cite subject-level numbers (D-#456), so the binding has to cover them too.
+  const withHomeworkSplit = (bySubject: Array<{ subject: string; qualityRate: number }>) =>
+    ({
+      ...snapshot({}),
+      metrics: {
+        ...snapshot({}).metrics,
+        homework: {
+          ...snapshot({}).metrics.homework,
+          bySubject: bySubject.map((s) => ({
+            subject: s.subject, submitted: 5, expectedWhilePresent: 5,
+            checked: 5, correct: Math.round((s.qualityRate / 100) * 5), partial: 0,
+            wrong: 5 - Math.round((s.qualityRate / 100) * 5), qualityRate: s.qualityRate,
+          })),
+        },
+      },
+    }) as unknown as MonthlySnapshot;
+
+  const recordFour = withHomeworkSplit([
+    { subject: "BAN", qualityRate: 100 }, { subject: "ENG", qualityRate: 100 }, { subject: "MATH", qualityRate: 60 },
+  ]);
+  const recordTwenty = withHomeworkSplit([
+    { subject: "BAN", qualityRate: 91 }, { subject: "ENG", qualityRate: 100 }, { subject: "MATH", qualityRate: 50 },
+  ]);
+
+  test("figuresHash now DIFFERS for a subject-split-only change — it used to match", () => {
+    expect(figuresHashOf(recordFour)).not.toBe(figuresHashOf(recordTwenty));
+  });
+
+  test("diffFigures names exactly which subject moved, not just that homework changed", () => {
+    const changes = diffFigures(reportedFigures(recordFour), reportedFigures(recordTwenty));
+    const fields = changes.map((c) => c.field);
+    expect(fields).toContain("homework.bySubject.BAN.qualityRate");
+    expect(fields).toContain("homework.bySubject.MATH.qualityRate");
+    expect(fields).not.toContain("homework.bySubject.ENG.qualityRate"); // unchanged, correctly silent
+  });
+
+  test("a subject with no change at all produces an empty diff, same as before this fix", () => {
+    expect(diffFigures(reportedFigures(recordFour), reportedFigures(recordFour))).toEqual([]);
   });
 });
 
