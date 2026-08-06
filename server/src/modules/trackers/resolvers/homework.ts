@@ -664,6 +664,10 @@ OpenRecordRef.implement({
     state: t.exposeString("state"),
     chaseCount: t.exposeInt("chaseCount"),
     hasAnswerFile: t.exposeBoolean("hasAnswerFile"),
+    // The file itself, so the checking queue can open the submitted answer instead of
+    // only badging that one exists. GET /files/:id re-gates it (assertCanRead on this
+    // record's section), so the id is not a capability.
+    answerFileId: t.string({ nullable: true, resolve: (r) => r.answerFileId }),
     dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),
     result: t.string({ nullable: true, resolve: (r) => r.result }),
     // D-#317: the teacher's brief "what is the homework" (null pre-D-#317).

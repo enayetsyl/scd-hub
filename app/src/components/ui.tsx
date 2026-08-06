@@ -134,7 +134,7 @@ export function Row({
       {typeof value === "string" || typeof value === "number" ? (
         <Text style={styles.rowValue}>{value}</Text>
       ) : (
-        <View>{value}</View>
+        <View style={styles.rowValueBox}>{value}</View>
       )}
     </View>
   );
@@ -624,14 +624,23 @@ const useStyles = makeStyles((colors) => ({
     paddingVertical: space(2),
     gap: space(3),
   },
-  rowLabel: { ...typeScale.secondary, color: colors.textSecondary },
+  // flexShrink is 0 by default in RN, so a LONG label refused to give way and the
+  // value — the only shrinkable child — was crushed to a few pixels and wrapped one
+  // character per line, leaving a tall empty band with the label floating in its
+  // middle (owner report 2026-08-06: observation detail, "Questioning & thinking
+  // (Bloom, REF-18 §4)"). Both sides shrink now, and the value keeps a floor so it
+  // can never degenerate into a vertical character column again.
+  rowLabel: { ...typeScale.secondary, color: colors.textSecondary, flexShrink: 1 },
   rowValue: {
     ...typeScale.secondary,
     fontFamily: typeScale.bodyStrong.fontFamily,
     color: colors.textPrimary,
     flexShrink: 1,
+    minWidth: 72,
     textAlign: "right",
   },
+  /** Same floor for a NODE value (a Badge, a chip row) — it could not shrink at all. */
+  rowValueBox: { flexShrink: 1, alignItems: "flex-end" },
 
   h1: { ...typeScale.pageTitle, color: colors.textPrimary, marginBottom: space(1) },
   h2: { ...typeScale.sectionTitle, color: colors.textPrimary, marginBottom: space(1) },
