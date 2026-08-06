@@ -206,10 +206,10 @@ export const PRINT_HISTORY_QUERY = gql<
  *  field alone; passing null clears it. */
 export const TAG_PRINT_REQUESTS = gql<
   { tagPrintRequests: PrintRequestT[] },
-  { ids: string[]; classId?: string | null; subject?: string | null }
+  { ids: string[]; classId?: string | null; sectionId?: string | null; subject?: string | null }
 >`
-  mutation TagPrintRequests($ids: [String!]!, $classId: String, $subject: String) {
-    tagPrintRequests(ids: $ids, classId: $classId, subject: $subject) {
+  mutation TagPrintRequests($ids: [String!]!, $classId: String, $sectionId: String, $subject: String) {
+    tagPrintRequests(ids: $ids, classId: $classId, sectionId: $sectionId, subject: $subject) {
       id
     }
   }
