@@ -45,6 +45,9 @@ type Props = NativeStackScreenProps<PrintStackParamList, "PrintHome">;
 /** The Office's three buckets, in the order a job moves through them. */
 const BUCKETS = ["REQUESTED", "PRINTED", "DELIVERED"] as const;
 
+/** D-#461: the queue pages — DELIVERED runs to hundreds of rows over a term. */
+const PAGE_SIZE = 25;
+
 /** Today as a `YYYY-MM-DD` key — the default day for the print-gap glance (D-#459). */
 function todayKey(): string {
   const d = new Date();
@@ -75,6 +78,9 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
   const canRequest = can("tracker:write");
 
   const [bucket, setBucket] = useState<string>("REQUESTED");
+  // D-#461: 0-based page within the current bucket; reset whenever the bucket changes
+  // (page 3 of DELIVERED is meaningless the moment you switch to REQUESTED).
+  const [page, setPage] = useState(0);
   // D-#459: a same-day glance at rotation-expected assignments with no matching print
   // request — a separate view from the three status buckets, not a PrintRequest status.
   const [view, setView] = useState<"QUEUE" | "GAPS">("QUEUE");
@@ -93,8 +99,8 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
   // Printing-done tab empty until a manual refresh (live-testing find).
   const [queueQ, refetchQueue] = useQuery({
     query: PRINT_QUEUE_QUERY,
-    variables: { status: bucket },
-    pause: !isOffice,
+    variables: { status: bucket, limit: PAGE_SIZE, offset: page * PAGE_SIZE },
+    pause: !isOffice || view !== "QUEUE",
     requestPolicy: "cache-and-network",
   });
   const [mineQ, refetchMine] = useQuery({
@@ -297,7 +303,12 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
     </Card>
   );
 
-  const queue = queueQ.data?.printQueue ?? [];
+  const queue = queueQ.data?.printQueue.items ?? [];
+  const queueTotal = queueQ.data?.printQueue.total ?? 0;
+  const queueHasMore = queueQ.data?.printQueue.hasMore ?? false;
+  // D-#461: the 1-based range this page covers, for the "১–২৫ / ৩৪১" pager label.
+  const pageFrom = queueTotal === 0 ? 0 : page * PAGE_SIZE + 1;
+  const pageTo = page * PAGE_SIZE + queue.length;
   const mine = mineQ.data?.myPrintRequests ?? [];
   // D-#302: in-flight jobs on top; delivered/cancelled behind the fold.
   const mineActive = mine.filter((r) => isActiveRequest(r.status));
@@ -329,6 +340,7 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
                 onPress={() => {
                   setView("QUEUE");
                   setBucket(b);
+                  setPage(0); // D-#461: a page index never carries across buckets
                 }}
               />
             ))}
@@ -342,7 +354,36 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
             ) : queue.length === 0 ? (
               <EmptyState message={STR.prNoJobs} />
             ) : (
-              queue.map((r) => <Row key={r.id} r={r} office />)
+              <>
+                {queue.map((r) => <Row key={r.id} r={r} office />)}
+                {/* D-#461: the pager — shown once the bucket outgrows a single page. */}
+                {queueTotal > PAGE_SIZE ? (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginVertical: space(2),
+                    }}
+                  >
+                    <Muted>{`${bnNum(pageFrom)}–${bnNum(pageTo)} / ${bnNum(queueTotal)}`}</Muted>
+                    <View style={{ flexDirection: "row", gap: space(2) }}>
+                      <Button
+                        title={STR.pagePrev}
+                        variant="secondary"
+                        onPress={() => setPage((p) => Math.max(0, p - 1))}
+                        disabled={page === 0}
+                      />
+                      <Button
+                        title={STR.pageNext}
+                        variant="secondary"
+                        onPress={() => setPage((p) => p + 1)}
+                        disabled={!queueHasMore}
+                      />
+                    </View>
+                  </View>
+                ) : null}
+              </>
             )
           ) : (
             <>

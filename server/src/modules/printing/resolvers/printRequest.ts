@@ -326,20 +326,42 @@ builder.mutationField("cancelPrintRequest", (t) =>
 // Queries
 // ---------------------------------------------------------------------------
 
+interface PrintQueuePageView {
+  items: PrintRequestView[];
+  total: number;
+  hasMore: boolean;
+}
+
+const PrintQueuePageRef = builder.objectRef<PrintQueuePageView>("PrintQueuePage");
+PrintQueuePageRef.implement({
+  description:
+    "One page of a print-queue bucket (D-#461). `total` counts the whole bucket, not the page, " +
+    "so the pager can show a range; `hasMore` is true while later pages remain.",
+  fields: (t) => ({
+    items: t.field({ type: [PrintRequestRef], resolve: (r) => r.items }),
+    total: t.exposeInt("total"),
+    hasMore: t.exposeBoolean("hasMore"),
+  }),
+});
+
 builder.queryField("printQueue", (t) =>
   t.field({
-    type: [PrintRequestRef],
+    type: PrintQueuePageRef,
     description:
-      "One bucket of the Office print queue, oldest request first: REQUESTED (yet to print), " +
-      "PRINTED (printing done), DELIVERED, CANCELLED. Requires roster:manage.",
+      "One paginated bucket of the Office print queue: REQUESTED (yet to print), PRINTED " +
+      "(printing done), DELIVERED, CANCELLED. The two ACTIVE buckets stay oldest-first (the " +
+      "order the Office works them); the two TERMINAL buckets are newest-first history " +
+      "(D-#461). Requires roster:manage.",
     authScopes: { authenticated: true },
     args: {
       status: t.arg.string({ required: true }),
       limit: t.arg.int({ required: false }),
+      offset: t.arg.int({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       assertPrintAdmin(ctx);
-      return decorate(await printQueue(args.status, args.limit ?? 100));
+      const page = await printQueue(args.status, args.limit ?? undefined, args.offset ?? undefined);
+      return { items: await decorate(page.items), total: page.total, hasMore: page.hasMore };
     },
   }),
 );

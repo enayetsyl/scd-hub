@@ -443,15 +443,58 @@ export async function cancelPrintRequest(
 // Reads
 // ---------------------------------------------------------------------------
 
-/** The Office queue for one bucket, oldest request first (index {status, requestedAt}). */
-export async function printQueue(status: string, limit = 100): Promise<IPrintRequest[]> {
+export const PRINT_QUEUE_PAGE_DEFAULT = 25;
+export const PRINT_QUEUE_PAGE_MAX = 100;
+
+export interface PrintQueuePage {
+  items: IPrintRequest[];
+  total: number;
+  hasMore: boolean;
+}
+
+/**
+ * How one bucket is ordered (D-#461, owner ask).
+ *
+ * The two ACTIVE buckets are work queues: the Office prints, then hands over, in the
+ * order the requests came in — so oldest-first is the work order, not a default nobody
+ * chose. Flipping them would bury the request that has waited longest.
+ *
+ * The two TERMINAL buckets are history: "what happened, most recent first", each keyed
+ * on the stamp that ENDED it (a job delivered today belongs on top even if it was
+ * requested weeks ago). `requestedAt` is the tiebreaker so the order is total even on
+ * rows that predate those stamps.
+ */
+function queueSortFor(status: string): Record<string, 1 | -1> {
+  switch (status) {
+    case "DELIVERED":
+      return { deliveredAt: -1, requestedAt: -1 };
+    case "CANCELLED":
+      return { cancelledAt: -1, requestedAt: -1 };
+    default:
+      return { requestedAt: 1 }; // REQUESTED / PRINTED — FIFO work order
+  }
+}
+
+/** One bucket of the Office queue, paginated. Ordering per `queueSortFor`. */
+export async function printQueue(
+  status: string,
+  limit = PRINT_QUEUE_PAGE_DEFAULT,
+  offset = 0,
+): Promise<PrintQueuePage> {
   if (!(["REQUESTED", "PRINTED", "DELIVERED", "CANCELLED"] as string[]).includes(status)) {
     throw new PrintRequestError("Invalid status");
   }
-  return PrintRequest.find({ status })
-    .sort({ requestedAt: 1 })
-    .limit(Math.min(Math.max(limit, 1), 500))
-    .lean() as unknown as Promise<IPrintRequest[]>;
+  const take = Math.min(Math.max(limit, 1), PRINT_QUEUE_PAGE_MAX);
+  const skip = Math.max(offset, 0);
+  const [items, total] = await Promise.all([
+    PrintRequest.find({ status })
+      .sort(queueSortFor(status))
+      .skip(skip)
+      .limit(take)
+      .lean() as unknown as Promise<IPrintRequest[]>,
+    PrintRequest.countDocuments({ status }),
+  ]);
+  return { items, total, hasMore: skip + items.length < total };
 }
 
 /** A teacher's own requests, newest first. */
@@ -704,14 +747,18 @@ export async function printHistory(filter: PrintHistoryFilter = {}): Promise<Pri
     for (const r of rows) r.classLevel = r.classId ? (levelOf.get(r.classId) ?? null) : null;
   }
 
+  // D-#461 (owner ask): MOST RECENTLY PRINTED first. The history answers "was this
+  // printed lately, and can I reprint it" — a question about recency — so the date leads
+  // and class/subject/purpose are only tiebreakers within the same instant. (It used to
+  // lead on class level, which buried this week's prints under every Nursery row.)
   const purposeOrder = new Map((PRINT_PURPOSES as readonly string[]).map((p, i) => [p, i]));
   rows.sort(
     (a, b) =>
+      b.lastPrintedAt.getTime() - a.lastPrintedAt.getTime() ||
       // A job with no class sorts last, not as level 0 (which would put it before class 1).
       (a.classLevel ?? Number.MAX_SAFE_INTEGER) - (b.classLevel ?? Number.MAX_SAFE_INTEGER) ||
       (a.latest.subject ?? "").localeCompare(b.latest.subject ?? "") ||
-      (purposeOrder.get(a.latest.purpose) ?? 99) - (purposeOrder.get(b.latest.purpose) ?? 99) ||
-      b.lastPrintedAt.getTime() - a.lastPrintedAt.getTime(),
+      (purposeOrder.get(a.latest.purpose) ?? 99) - (purposeOrder.get(b.latest.purpose) ?? 99),
   );
 
   const limit = Math.min(Math.max(filter.limit ?? PRINT_HISTORY_DEFAULT_LIMIT, 1), PRINT_HISTORY_MAX_LIMIT);
