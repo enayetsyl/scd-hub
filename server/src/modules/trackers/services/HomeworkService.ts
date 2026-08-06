@@ -826,6 +826,11 @@ export interface OpenRecordDTO {
   state: string;
   chaseCount: number;
   hasAnswerFile: boolean;
+  /** The attached answer file's id — so the checking queue can OPEN what the
+   *  student handed in, not merely announce that something is attached. Reading
+   *  it still goes through GET /files/:id, which re-runs assertCanRead on this
+   *  record's section (HomeworkFileService), so the id grants nothing on its own. */
+  answerFileId: string | null;
   dueDate: string | null;
   /** The recorded RESULT (CORRECT/PARTIAL/WRONG) once checked — null before then. */
   result: string | null;
@@ -876,6 +881,7 @@ export async function listOpenRecords(sectionId: string, states: LifecycleState[
         state: r.state,
         chaseCount: r.chaseCount ?? 0,
         hasAnswerFile: !!r.answerFileId,
+        answerFileId: r.answerFileId ? r.answerFileId.toString() : null,
         dueDate: r.dueDate ? new Date(r.dueDate as unknown as Date).toISOString() : null,
         result: r.result ?? null,
         stampCount: r.stateDates.length,
