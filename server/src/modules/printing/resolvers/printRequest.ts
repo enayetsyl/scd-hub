@@ -559,6 +559,9 @@ builder.mutationField("tagPrintRequests", (t) =>
       ids: t.arg.stringList({ required: true }),
       /** Omitted = leave; null = clear; an id = set. Validated against the roster. */
       classId: t.arg.string({ required: false }),
+      /** D-#459: omitted = leave; null = clear; an id = set. Requires `classId` set in the
+       *  SAME call, and must belong to it. */
+      sectionId: t.arg.string({ required: false }),
       /** Omitted = leave; null = clear; a `ROUTINE_SUBJECTS` code = set. */
       subject: t.arg.string({ required: false }),
     },
@@ -573,6 +576,7 @@ builder.mutationField("tagPrintRequests", (t) =>
         // An omitted GraphQL argument is absent from `args`, an explicit null is null —
         // that distinction IS the leave/clear signal, so it is passed through untouched.
         classId: args.classId === undefined ? undefined : args.classId,
+        sectionId: args.sectionId === undefined ? undefined : args.sectionId,
         subject: args.subject === undefined ? undefined : args.subject,
         actorId: ctx.auth.userId,
         isOffice: office,

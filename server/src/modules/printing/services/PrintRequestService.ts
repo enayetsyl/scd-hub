@@ -823,6 +823,9 @@ export interface TagPrintRequestsInput {
   ids: string[];
   /** Undefined leaves the class alone; null CLEARS it; an id sets it. */
   classId?: string | null;
+  /** D-#459: undefined leaves the section alone; null CLEARS it; an id sets it. Required
+   *  for the assignment↔print gap report to match a section-scoped ASSIGNMENT job. */
+  sectionId?: string | null;
   subject?: string | null;
   actorId: string;
   isOffice: boolean;
@@ -847,8 +850,9 @@ const MAX_TAG_IDS = 200;
  */
 export async function tagPrintRequests(input: TagPrintRequestsInput): Promise<IPrintRequest[]> {
   const setsClass = input.classId !== undefined;
+  const setsSection = input.sectionId !== undefined;
   const setsSubject = input.subject !== undefined;
-  if (!setsClass && !setsSubject) throw new PrintRequestError("Nothing to tag");
+  if (!setsClass && !setsSection && !setsSubject) throw new PrintRequestError("Nothing to tag");
 
   if (input.ids.length === 0) throw new PrintRequestError("No print request given");
   if (input.ids.length > MAX_TAG_IDS) throw new PrintRequestError("Too many print requests at once");
@@ -863,6 +867,21 @@ export async function tagPrintRequests(input: TagPrintRequestsInput): Promise<IP
     if (!Types.ObjectId.isValid(input.classId!)) throw new PrintRequestError("Invalid classId");
     classId = new Types.ObjectId(input.classId!);
     if (!(await Class.exists({ _id: classId }))) throw new PrintRequestError("Class not found");
+  }
+  // D-#459: a section only means something alongside a class — require classId to be set
+  // in the SAME call (mirrors the NewPrintRequestScreen/assertAssignmentTagging flow,
+  // where a section is always picked right after its class) rather than trusting a
+  // section against whatever class the row happened to carry before this tag.
+  let sectionId: Types.ObjectId | null = null;
+  if (setsSection && input.sectionId !== null) {
+    if (!setsClass || !classId) {
+      throw new PrintRequestError("Tagging a section also requires tagging its class");
+    }
+    if (!Types.ObjectId.isValid(input.sectionId!)) throw new PrintRequestError("Invalid sectionId");
+    sectionId = new Types.ObjectId(input.sectionId!);
+    if (!(await Section.exists({ _id: sectionId, classId }))) {
+      throw new PrintRequestError("এই শাখাটি নির্বাচিত শ্রেণির অন্তর্ভুক্ত নয়");
+    }
   }
   if (setsSubject && input.subject !== null) {
     if (!(ROUTINE_SUBJECTS as readonly string[]).includes(input.subject!)) {
@@ -884,10 +903,18 @@ export async function tagPrintRequests(input: TagPrintRequestsInput): Promise<IP
 
   const updated: IPrintRequest[] = [];
   for (const doc of docs) {
-    const before = { classId: doc.classId?.toString() ?? null, subject: doc.subject ?? null };
+    const before = {
+      classId: doc.classId?.toString() ?? null,
+      sectionId: doc.sectionId?.toString() ?? null,
+      subject: doc.subject ?? null,
+    };
     if (setsClass) {
       if (classId) doc.classId = classId;
       else doc.classId = undefined;
+    }
+    if (setsSection) {
+      if (sectionId) doc.sectionId = sectionId;
+      else doc.sectionId = undefined;
     }
     if (setsSubject) {
       if (input.subject) doc.subject = input.subject;
@@ -903,7 +930,11 @@ export async function tagPrintRequests(input: TagPrintRequestsInput): Promise<IP
       // what it replaced as well as who made it.
       meta: {
         before,
-        after: { classId: doc.classId?.toString() ?? null, subject: doc.subject ?? null },
+        after: {
+          classId: doc.classId?.toString() ?? null,
+          sectionId: doc.sectionId?.toString() ?? null,
+          subject: doc.subject ?? null,
+        },
         byOffice: input.isOffice,
       },
     });

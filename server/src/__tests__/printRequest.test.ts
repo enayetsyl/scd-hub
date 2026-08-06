@@ -93,8 +93,14 @@ jest.mock("../modules/foundation/models/User", () => ({
 }));
 // D-#459: ASSIGNMENT jobs must name a real section belonging to the chosen class.
 const mockSectionFindOne = jest.fn().mockResolvedValue({ _id: "sec-1" });
+// D-#459: tagPrintRequests checks section-belongs-to-class via Section.exists, distinct
+// from assertAssignmentTagging's Section.findOne — both need mocking.
+const mockSectionExists = jest.fn().mockResolvedValue({ _id: "sec-1" });
 jest.mock("../modules/foundation/models/Section", () => ({
-  Section: { findOne: (f: unknown) => ({ select: () => ({ lean: () => mockSectionFindOne(f) }) }) },
+  Section: {
+    findOne: (f: unknown) => ({ select: () => ({ lean: () => mockSectionFindOne(f) }) }),
+    exists: (f: unknown) => mockSectionExists(f),
+  },
 }));
 // PQ-5: advancing a class-test queue row mirrors onto the linked ClassTest.
 jest.mock("../modules/trackers/models/ClassTest", () => ({
@@ -163,6 +169,7 @@ beforeEach(() => {
   mockFindMany.mockResolvedValue([]);
   mockClassExists.mockResolvedValue({ _id: "x" });
   mockSectionFindOne.mockResolvedValue({ _id: "sec-1" });
+  mockSectionExists.mockResolvedValue({ _id: "sec-1" });
 });
 
 describe("isPrintableUrl", () => {
@@ -984,8 +991,8 @@ describe("tagPrintRequests — naming the class of a historical job (PQ-9)", () 
         eventKind: "PRINT_REQUEST_CLASS_TAGGED",
         actorId: OFFICE,
         meta: expect.objectContaining({
-          before: { classId: prev.toString(), subject: "BAN" },
-          after: { classId: CLS, subject: "ENG" },
+          before: { classId: prev.toString(), sectionId: null, subject: "BAN" },
+          after: { classId: CLS, sectionId: null, subject: "ENG" },
           byOffice: true,
         }),
       }),
@@ -1048,6 +1055,65 @@ describe("tagPrintRequests — naming the class of a historical job (PQ-9)", () 
     await expect(tagPrintRequests({ ...base, ids: [] })).rejects.toThrow(/Nothing to tag/);
     // No field at all: nothing to do, and silently succeeding would look like a write.
     await expect(tagPrintRequests(base)).rejects.toThrow(/Nothing to tag/);
+  });
+
+  test("D-#459: also tags a section, validated against the class in the SAME call", async () => {
+    const doc = tagDoc();
+    mockFindMany.mockResolvedValue([doc]);
+    const SEC = oid().toString();
+    await tagPrintRequests({
+      ids: [doc._id.toString()],
+      classId: CLS,
+      sectionId: SEC,
+      subject: "ENG",
+      actorId: OFFICE,
+      isOffice: true,
+    });
+    const [existsArg] = mockSectionExists.mock.calls[0] as [{ _id: { toString(): string }; classId: { toString(): string } }];
+    expect(existsArg._id.toString()).toBe(SEC);
+    expect(existsArg.classId.toString()).toBe(CLS);
+    expect(doc.sectionId.toString()).toBe(SEC);
+  });
+
+  test("D-#459: a section not belonging to the class is refused", async () => {
+    const doc = tagDoc();
+    mockFindMany.mockResolvedValue([doc]);
+    mockSectionExists.mockResolvedValue(null);
+    await expect(
+      tagPrintRequests({
+        ids: [doc._id.toString()],
+        classId: CLS,
+        sectionId: oid().toString(),
+        actorId: OFFICE,
+        isOffice: true,
+      }),
+    ).rejects.toThrow(/শাখাটি/);
+    expect(doc.save).not.toHaveBeenCalled();
+  });
+
+  test("D-#459: a section cannot be tagged without also tagging its class in the same call", async () => {
+    const doc = tagDoc({ classId: oid() });
+    mockFindMany.mockResolvedValue([doc]);
+    await expect(
+      tagPrintRequests({
+        ids: [doc._id.toString()],
+        sectionId: oid().toString(),
+        actorId: OFFICE,
+        isOffice: true,
+      }),
+    ).rejects.toThrow(/also requires tagging its class/);
+  });
+
+  test("D-#459: an explicit null clears the section, same as class/subject", async () => {
+    const doc = tagDoc({ sectionId: oid() });
+    mockFindMany.mockResolvedValue([doc]);
+    await tagPrintRequests({
+      ids: [doc._id.toString()],
+      sectionId: null,
+      actorId: OFFICE,
+      isOffice: true,
+    });
+    expect(doc.sectionId).toBeUndefined();
   });
 
   test("refuses when an id in the list does not exist", async () => {

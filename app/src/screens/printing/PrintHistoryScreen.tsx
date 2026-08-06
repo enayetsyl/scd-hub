@@ -93,6 +93,9 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
   // PQ-9 — the open tag form, likewise one at a time.
   const [tagFor, setTagFor] = useState<string | null>(null);
   const [tagClass, setTagClass] = useState<string | null>(null);
+  // D-#459: which section within the class — required alongside class+subject for the
+  // assignment↔print gap report to match an ASSIGNMENT job tagged after the fact.
+  const [tagSection, setTagSection] = useState<string | null>(null);
   const [tagSubject, setTagSubject] = useState<string | null>(null);
   const [useDate, setUseDate] = useState("");
   const [copies, setCopies] = useState("");
@@ -192,6 +195,19 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
   // filed it. Mirrors the server gate; the server is still the one enforcing it.
   const canTag = (r: PrintHistoryRowT): boolean =>
     isOffice || (!!user && r.requesterIds.includes(user.id));
+  // D-#459: also offer the tag form when the class is already set but the SECTION isn't —
+  // e.g. an ASSIGNMENT job filed before the section picker existed, or tagged for class
+  // only. Without a section it can never match the assignment print-gap report.
+  const needsTag = (r: PrintHistoryRowT): boolean => !r.classId || !r.latest.sectionId;
+
+  // D-#459: sections for the currently-picked tag class, same sole-section auto-select
+  // UX as NewPrintRequestScreen.
+  const tagSelectedClass = (classData?.classes ?? []).find((c) => c.id === tagClass) ?? null;
+  const tagActiveSections = tagSelectedClass ? tagSelectedClass.sections.filter((s) => s.active) : [];
+  const tagSoleSection = tagActiveSections.length === 1 ? tagActiveSections[0] : null;
+  useEffect(() => {
+    if (tagSoleSection && tagSection !== tagSoleSection.id) setTagSection(tagSoleSection.id);
+  }, [tagSoleSection?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openTag(r: PrintHistoryRowT): void {
     if (tagFor === r.key) {
@@ -199,10 +215,11 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
       return;
     }
     setTagFor(r.key);
-    // Pre-filled from the file name where we could read one — the point is a one-tap
-    // confirm, not a fresh choice. Both stay editable.
-    setTagClass(r.suggestedClassId);
-    setTagSubject(r.suggestedSubject);
+    // Pre-filled from the row's own class if it already has one (only the section is
+    // missing), else from the file name where we could read one. Both stay editable.
+    setTagClass(r.classId ?? r.suggestedClassId);
+    setTagSection(r.latest.sectionId);
+    setTagSubject(r.latest.subject ?? r.suggestedSubject);
   }
 
   async function saveTag(r: PrintHistoryRowT): Promise<void> {
@@ -210,7 +227,12 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
     setBusy(true);
     // The WHOLE group is tagged: the row is a document, and tagging one print of it would
     // move that print into a row of its own.
-    const res = await tagRequests({ ids: r.jobIds, classId: tagClass, subject: tagSubject });
+    const res = await tagRequests({
+      ids: r.jobIds,
+      classId: tagClass,
+      sectionId: tagSection,
+      subject: tagSubject,
+    });
     setBusy(false);
     if (res.error) {
       toast.show(friendlyError(res.error), "danger");
@@ -438,9 +460,9 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
                 />
               ) : null}
               <Button title={STR.prReprint} onPress={() => openReprint(r)} disabled={busy} />
-              {/* PQ-9 — offered only where there is nothing to browse by yet, and only to
-                  someone allowed to say (the Office, or whoever filed it). */}
-              {!r.classId && canTag(r) ? (
+              {/* PQ-9 / D-#459 — offered while class or section is still missing, and only
+                  to someone allowed to say (the Office, or whoever filed it). */}
+              {needsTag(r) && canTag(r) ? (
                 <Button title={STR.prTag} variant="secondary" onPress={() => openTag(r)} disabled={busy} />
               ) : null}
             </View>
@@ -466,10 +488,28 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
                         key={c.id}
                         label={classLevelLabel(c.level)}
                         selected={tagClass === c.id}
-                        onPress={() => setTagClass(c.id)}
+                        onPress={() => {
+                          setTagClass(c.id);
+                          setTagSection(null); // re-picked below; auto-fills for a single-section class
+                        }}
                       />
                     ))}
                 </ChipRow>
+                {tagClass && tagActiveSections.length > 1 ? (
+                  <>
+                    <Muted>{STR.section}</Muted>
+                    <ChipRow>
+                      {tagActiveSections.map((s) => (
+                        <Chip
+                          key={s.id}
+                          label={s.nameBn || s.code}
+                          selected={tagSection === s.id}
+                          onPress={() => setTagSection(tagSection === s.id ? null : s.id)}
+                        />
+                      ))}
+                    </ChipRow>
+                  </>
+                ) : null}
                 <Muted>{STR.prTagSubjectOptional}</Muted>
                 <ChipRow>
                   {ROUTINE_SUBJECTS.map((s) => (
