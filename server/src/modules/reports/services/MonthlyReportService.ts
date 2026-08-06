@@ -81,6 +81,32 @@ export interface MonthlySnapshot {
 // §6.3 — is this recompute worth a revision?
 // ---------------------------------------------------------------------------
 
+/** PURE. One tracker's `bySubject` rows, flattened into the same flat key shape as
+ *  the rest of `reportedFigures` — `homework.bySubject.ENG.submitted`, etc. Mirrors
+ *  exactly the fields `commentFactsOf`'s `subjectFactsOf` hands the model (2026-08-06,
+ *  D-#459): before this, a comment could legitimately cite a subject's own numbers
+ *  (added 2026-08-05) that the figuresHash binding never covered — two revisions with
+ *  identical OVERALL totals but different per-subject splits hashed the same, so
+ *  MR-8's "the figures moved, refuse the import" guarantee silently didn't apply to
+ *  exactly the numbers it was meant to protect. Found by an owner-run audit of a real
+ *  export file, not a test. */
+function bySubjectFigures(
+  prefix: string,
+  rows: readonly { subject: string; submitted: number; expectedWhilePresent: number; checked: number; correct: number; partial: number; wrong: number; qualityRate: number | null }[],
+): Record<string, string | number | null> {
+  const out: Record<string, string | number | null> = {};
+  for (const r of rows) {
+    out[`${prefix}.${r.subject}.submitted`] = r.submitted;
+    out[`${prefix}.${r.subject}.expectedWhilePresent`] = r.expectedWhilePresent;
+    out[`${prefix}.${r.subject}.checked`] = r.checked;
+    out[`${prefix}.${r.subject}.correct`] = r.correct;
+    out[`${prefix}.${r.subject}.partial`] = r.partial;
+    out[`${prefix}.${r.subject}.wrong`] = r.wrong;
+    out[`${prefix}.${r.subject}.qualityRate`] = r.qualityRate;
+  }
+  return out;
+}
+
 /**
  * PURE. The figures that actually PRINT. A revision is raised only when one of these
  * moves — the snapshot also carries timestamps and sample sizes, and a nightly rerun
@@ -99,11 +125,13 @@ export function reportedFigures(s: MonthlySnapshot): Record<string, string | num
     "homework.submissionRate": m.homework.submissionRate,
     "homework.qualityRate": m.homework.qualityRate,
     "homework.coverage": m.homework.coverage.pct,
+    ...bySubjectFigures("homework.bySubject", m.homework.bySubject),
     "assignment.issued": m.assignment.issued,
     "assignment.submitted": m.assignment.submitted,
     "assignment.submissionRate": m.assignment.submissionRate,
     "assignment.qualityRate": m.assignment.qualityRate,
     "assignment.coverage": m.assignment.coverage.pct,
+    ...bySubjectFigures("assignment.bySubject", m.assignment.bySubject),
     "classTest.testsHeld": m.classTest.testsHeld,
     "classTest.rate": m.classTest.rate,
     "classTest.unmarked": m.classTest.unmarked,
