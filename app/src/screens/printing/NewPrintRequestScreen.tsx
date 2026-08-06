@@ -10,10 +10,16 @@
  *
  * No PDF snapshot is taken: an assembled set is locked, so its id is enough.
  *
- * PQ-7: the request also names the CLASS and SUBJECT it is for (both optional — an office
- * notice belongs to no class). Without them every teacher-filed job landed in the reprint
- * history as "no class, no subject", which left that screen's class axis usable only for
- * class tests and hid Nursery/KG completely.
+ * PQ-7: the request also names the CLASS and SUBJECT it is for. Without them every
+ * teacher-filed job landed in the reprint history as "no class, no subject", which left
+ * that screen's class axis usable only for class tests and hid Nursery/KG completely.
+ *
+ * D-#463: purpose/class/subject must now be ANSWERED — but "no class" and "not
+ * subject-specific" are themselves answers, because 23% of this school's prints (office
+ * notices, lesson plans) genuinely belong to none, and forcing a real class onto those
+ * would store a confidently WRONG value where a blank at least reads as "unknown". The
+ * one exception is ASSIGNMENT, which feeds the print-gap report (D-#459) and therefore
+ * needs a real class+section+subject; the "none" chips are hidden for it.
  */
 import React, { useState } from "react";
 import { View } from "react-native";
@@ -50,6 +56,14 @@ import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<PrintStackParamList, "NewPrintRequest">;
 
+/** D-#463: "deliberately none" for class/subject — distinct from `null`, which means the
+ *  teacher has not answered yet. Both persist as null; the difference is only that one is
+ *  a choice the form made them make, which is what stops the silent skip. */
+const NONE = "__none__";
+/** ASSIGNMENT feeds the print-gap report (D-#459), which matches on a REAL
+ *  class+section+subject — "none" is not an available answer there. */
+const ASSIGNMENT_NEEDS_REAL_TAGS = "ASSIGNMENT";
+
 interface Attached {
   fileId: string;
   originalName: string;
@@ -72,7 +86,9 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
     if (preset.title) return preset.title;
     return who ? `${STR.prTitleFor} ${who}` : "";
   });
-  const [purpose, setPurpose] = useState<string>("CLASSWORK");
+  // D-#463: NO default. "Classwork" was pre-selected, so it was never blank but often
+  // never actually chosen — which quietly inflated it in every purpose-based report.
+  const [purpose, setPurpose] = useState<string | null>(null);
   const [colour, setColour] = useState<string | null>(null);
   const [sides, setSides] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -84,8 +100,11 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
   // chosen class on the USE day (resolved from that day's attendance by the Office).
   const [copiesMode, setCopiesMode] = useState<"FIXED" | "CLASS_PRESENT">("FIXED");
   const [copiesClassId, setCopiesClassId] = useState<string | null>(null);
-  // PQ-7 — what the print is FOR. Optional (except ASSIGNMENT, see below): an office
-  // notice belongs to no class.
+  // PQ-7 / D-#463 — what the print is FOR. An answer is now REQUIRED, but "no class" is
+  // one of the legitimate answers: 23% of the school's prints (office notices, lesson
+  // plans) genuinely belong to none, and forcing a real class onto those would store a
+  // confidently WRONG value where a blank at least reads as "unknown". So: `null` = not
+  // answered yet (blocks submit), NONE = deliberately none, else a real class id.
   const [classId, setClassId] = useState<string | null>(null);
   // D-#459: which section within the class — required for ASSIGNMENT so the print-gap
   // report can match a rotation cell to a specific section, not just a class.
@@ -170,6 +189,12 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
     setError(null);
     const n = Number(copies);
     if (!title.trim()) return fail(STR.prDocTitle);
+    // D-#463: purpose/class/subject must be ANSWERED. "No class" and "not subject-specific"
+    // are answers; skipping is not. This lives client-side by necessity — once "none" is
+    // sent as null the server cannot tell a deliberate none from an omission.
+    if (!purpose) return fail(STR.prNeedPurpose);
+    if (!classId) return fail(STR.prNeedClassAnswer);
+    if (!subject) return fail(STR.prNeedSubjectAnswer);
     if (!colour) return fail(STR.prNeedColour);
     if (!sides) return fail(STR.prNeedSides);
     if (copiesMode === "FIXED" && (!Number.isInteger(n) || n < 1)) return fail(STR.prCopies);
@@ -177,10 +202,19 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
     if (!neededByKey) return fail(STR.prNeedNeededBy);
     if (sourceType === "UPLOAD" && files.length === 0) return fail(STR.prPickFile);
     if (sourceType === "LINK" && !linkUrl.trim()) return fail(STR.prLinkUrl);
-    // D-#459: the print-gap report needs class+section+subject on every ASSIGNMENT job.
-    if (purpose === "ASSIGNMENT" && (!classId || !sectionId || !subject)) {
+    // D-#459: the print-gap report needs a REAL class+section+subject on an ASSIGNMENT —
+    // "none" is not an available answer there, so the sentinels are rejected too.
+    if (
+      purpose === ASSIGNMENT_NEEDS_REAL_TAGS &&
+      (classId === NONE || subject === NONE || !sectionId)
+    ) {
       return fail(STR.prAssignmentNeedsTagging);
     }
+
+    // "Deliberately none" persists as null — the same value a skip used to leave. The
+    // difference the form buys is that it is now a decision, not an omission.
+    const classIdOut = classId === NONE ? null : classId;
+    const subjectOut = subject === NONE ? null : subject;
 
     setBusy(true);
     const res = await create({
@@ -196,12 +230,12 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
       copies: copiesMode === "FIXED" ? n : 1, // finalized from attendance at print time
       copiesMode,
       // The count's class defaults to the job's own class — they are the same in practice.
-      copiesClassId: copiesMode === "CLASS_PRESENT" ? copiesClassId ?? classId : null,
+      copiesClassId: copiesMode === "CLASS_PRESENT" ? copiesClassId ?? classIdOut : null,
       neededByKey,
       // PQ-7: carried so the reprint history can group and filter by them.
-      classId,
+      classId: classIdOut,
       sectionId,
-      subject,
+      subject: subjectOut,
       notes: notes.trim() || null,
     });
     setBusy(false);
@@ -223,19 +257,36 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
 
       <Field label={STR.prDocTitle} value={title} onChangeText={setTitle} />
 
+      {/* D-#463: nothing pre-selected — the teacher picks the purpose deliberately. */}
       <Card>
-        <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.prPurpose}</Body>
+        <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.prPurpose} *</Body>
         <ChipRow>
           {PRINT_PURPOSES.map((p) => (
-            <Chip key={p} label={PRINT_PURPOSE_LABELS_EN[p]} selected={purpose === p} onPress={() => setPurpose(p)} />
+            <Chip
+              key={p}
+              label={PRINT_PURPOSE_LABELS_EN[p]}
+              selected={purpose === p}
+              onPress={() => {
+                setPurpose(p);
+                // Switching TO Assignment invalidates a "none" answer — the gap report
+                // needs a real class/subject there, so make them re-answer rather than
+                // carry a value the next screen would reject.
+                if (p === ASSIGNMENT_NEEDS_REAL_TAGS) {
+                  if (classId === NONE) setClassId(null);
+                  if (subject === NONE) setSubject(null);
+                }
+              }}
+            />
           ))}
         </ChipRow>
       </Card>
 
-      {/* PQ-7 — which class and subject the print is for. Both optional, both tappable
-          off again: this is what makes the job findable in the reprint history later. */}
+      {/* PQ-7 / D-#463 — which class and subject the print is for. An ANSWER is required;
+          "no class" / "not subject-specific" are legitimate answers (an office notice
+          belongs to none) — but not for an ASSIGNMENT, which the print-gap report matches
+          on a real class+section+subject. */}
       <Card>
-        <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.prPickClass}</Body>
+        <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.prPickClass} *</Body>
         <ChipRow>
           {classes.map((c) => (
             <Chip
@@ -243,14 +294,23 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
               label={classLevelLabel(c.level)}
               selected={classId === c.id}
               onPress={() => {
-                const next = classId === c.id ? null : c.id;
-                setClassId(next);
+                setClassId(c.id);
                 setSectionId(null); // re-picked below; auto-fills if the class has one section
               }}
             />
           ))}
+          {purpose !== ASSIGNMENT_NEEDS_REAL_TAGS ? (
+            <Chip
+              label={STR.prNoClass}
+              selected={classId === NONE}
+              onPress={() => {
+                setClassId(NONE);
+                setSectionId(null);
+              }}
+            />
+          ) : null}
         </ChipRow>
-        {classId && activeSections.length > 1 ? (
+        {classId && classId !== NONE && activeSections.length > 1 ? (
           <>
             <Body style={{ fontWeight: "700", marginTop: space(3), marginBottom: space(2) }}>{STR.section}</Body>
             <ChipRow>
@@ -266,7 +326,7 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
           </>
         ) : null}
         <Body style={{ fontWeight: "700", marginTop: space(3), marginBottom: space(2) }}>
-          {STR.hrCoverSubject}
+          {STR.hrCoverSubject} *
         </Body>
         <ChipRow>
           {ROUTINE_SUBJECTS.map((s) => (
@@ -274,9 +334,16 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
               key={s}
               label={routineSubjectLabel(s)}
               selected={subject === s}
-              onPress={() => setSubject(subject === s ? null : s)}
+              onPress={() => setSubject(s)}
             />
           ))}
+          {purpose !== ASSIGNMENT_NEEDS_REAL_TAGS ? (
+            <Chip
+              label={STR.prNoSubject}
+              selected={subject === NONE}
+              onPress={() => setSubject(NONE)}
+            />
+          ) : null}
         </ChipRow>
       </Card>
 
