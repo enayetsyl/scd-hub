@@ -12,7 +12,7 @@ import { HW_SUBJECTS, DAYS_OF_WEEK, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_M
 import {
   ACADEMIC_YEARS_QUERY,
   CLASSES_QUERY,
-  USERS_QUERY,
+  TEACHERS_QUERY,
   AS_SCHEDULE_QUERY,
   UPSERT_AS_SCHEDULE,
   ADD_AS_SCHEDULE_ENTRY,
@@ -69,8 +69,13 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
   const classes = (classesQ.data?.classes ?? []).filter(
     (c) => c.active && c.level >= ROSTER_CLASS_LEVEL_MIN && c.level <= ROSTER_CLASS_LEVEL_MAX,
   );
-  const [usersQ] = useQuery({ query: USERS_QUERY });
-  const teachers = (usersQ.data?.users ?? []).filter((u) => u.active && u.role === "TEACHER");
+  // `users` is gated user:manage — PRINCIPAL only. Office holds roster:manage and owns
+  // this screen, so that query was denied for them and EVERY teacher name in the rotation
+  // (and in the teacher filter) fell back to a raw ObjectId (owner report 2026-08-06).
+  // `teachers` is the authenticated-staff name picker used everywhere else, and returns
+  // exactly this set: active TEACHER accounts.
+  const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
+  const teachers = teachersQ.data?.teachers ?? [];
 
   const [, upsert] = useMutation(UPSERT_AS_SCHEDULE);
   const [, addEntry] = useMutation(ADD_AS_SCHEDULE_ENTRY);

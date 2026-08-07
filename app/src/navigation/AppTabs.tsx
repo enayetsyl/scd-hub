@@ -485,17 +485,28 @@ function HeaderRight(): React.ReactElement {
  * it can do because a child may be narrower than its container.
  */
 const HEADER_LEFT_RESERVED = 92;
-const HEADER_RIGHT_RESERVED = 96;
+// 104, not 96: at 96 the measured ellipsis landed EXACTLY on the bell's left edge
+// (title.right === bell.x at a 390px viewport) — correct, but reading as if the two
+// touch. The extra 8px is the gap.
+const HEADER_RIGHT_RESERVED = 104;
 /** Never collapse the title to nothing on a very narrow viewport. */
 const HEADER_TITLE_MIN = 72;
 
-/** The stack header title: ellipsised inside the space the chrome actually leaves. */
+/**
+ * The stack header title: ellipsised inside the space the chrome actually leaves.
+ *
+ * `maxFontSizeMultiplier` because the reserve above is a WIDTH: on a phone set to a
+ * large system font the title grew ~30% wider and ate the whole budget, so titles that
+ * fit on a default device ellipsised after three words on the owner's. Chrome caps its
+ * scaling (body text does not) — the title stays legible AND stays inside its lane.
+ */
 function HeaderTitle({ children, tintColor }: { children?: string; tintColor?: string }): React.ReactElement {
   const { width } = useWindowDimensions();
   return (
     <Text
       numberOfLines={1}
       ellipsizeMode="tail"
+      maxFontSizeMultiplier={1.2}
       style={{
         color: tintColor,
         fontFamily: fonts.bold,

@@ -92,7 +92,17 @@ export interface MonthlySnapshot {
  *  export file, not a test. */
 function bySubjectFigures(
   prefix: string,
-  rows: readonly { subject: string; submitted: number; expectedWhilePresent: number; checked: number; correct: number; partial: number; wrong: number; qualityRate: number | null }[],
+  rows: readonly {
+    subject: string;
+    submitted: number;
+    expectedWhilePresent: number;
+    checked: number;
+    correct: number;
+    partial: number;
+    wrong: number;
+    qualityRate: number | null;
+    notSubmittedDueToAbsence: number;
+  }[],
 ): Record<string, string | number | null> {
   const out: Record<string, string | number | null> = {};
   for (const r of rows) {
@@ -103,6 +113,10 @@ function bySubjectFigures(
     out[`${prefix}.${r.subject}.partial`] = r.partial;
     out[`${prefix}.${r.subject}.wrong`] = r.wrong;
     out[`${prefix}.${r.subject}.qualityRate`] = r.qualityRate;
+    // Citable by the comment (2026-08-06, D-#463) — must be in the hash for the
+    // SAME reason every other bySubject field is: MR-8's binding only protects
+    // numbers it actually covers.
+    out[`${prefix}.${r.subject}.notSubmittedDueToAbsence`] = r.notSubmittedDueToAbsence;
   }
   return out;
 }
@@ -136,6 +150,9 @@ export function reportedFigures(s: MonthlySnapshot): Record<string, string | num
     "classTest.rate": m.classTest.rate,
     "classTest.unmarked": m.classTest.unmarked,
     "classTest.coverage": m.classTest.coverage.pct,
+    // Citable by the comment (2026-08-06, D-#463) as the absence-fairness reason
+    // for a participation gap — same hash-coverage requirement as everything else.
+    "classTest.absent": m.classTest.absent,
     "hifz.sessions": m.hifz.sessions,
     "hifz.present": m.hifz.present,
     "concerns.concern": m.concerns.concern,

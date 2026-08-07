@@ -8,7 +8,7 @@ import React from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { AS_SUMMARY, USERS_QUERY, CLASSES_QUERY, type AsRateRowT } from "../../graphql/operations";
+import { AS_SUMMARY, TEACHERS_QUERY, CLASSES_QUERY, type AsRateRowT } from "../../graphql/operations";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Loader, EmptyState, Notice } from "../../components/ui";
 import { STR, bnNum } from "../../lib/labels";
@@ -38,11 +38,13 @@ function RateTable({ title, rows, nameOf }: { title: string; rows: AsRateRowT[];
 export default function AssignmentRollupsScreen({ route }: Props): React.ReactElement {
   const { academicYearId } = route.params;
   const [summaryQ] = useQuery({ query: AS_SUMMARY, variables: { academicYearId }, pause: !academicYearId });
-  const [usersQ] = useQuery({ query: USERS_QUERY });
+  // Same trap as the schedule editor: `users` needs user:manage (Principal only), so an
+  // Office or teacher reading these rollups saw raw ObjectIds where names belong.
+  const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
   const [classesQ] = useQuery({ query: CLASSES_QUERY, variables: { academicYearId }, pause: !academicYearId });
 
   const s = summaryQ.data?.assignmentSummary ?? null;
-  const teacherName = (id: string): string => (usersQ.data?.users ?? []).find((u) => u.id === id)?.name ?? id;
+  const teacherName = (id: string): string => (teachersQ.data?.teachers ?? []).find((u) => u.id === id)?.name ?? id;
   const className = (id: string): string => (classesQ.data?.classes ?? []).find((c) => c.id === id)?.nameBn ?? id;
   const weekName = (k: string): string => `${STR.asWeek} ${bnNum(k)}`;
 

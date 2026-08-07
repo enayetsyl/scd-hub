@@ -44,8 +44,16 @@ import type { MonthlySnapshot } from "./MonthlyReportService";
  *  absences AT ALL, so a sentence about leave applications is vacuous ("no absence
  *  lacks a form" when there was no absence to begin with) — a live draft stated it
  *  anyway. Now skipped entirely at 100%; still stated when SOME absences occurred
- *  and all were properly covered, which is genuinely reassuring, not noise. */
-export const MONTHLY_COMMENT_PROMPT_VERSION = "mr4-5";
+ *  and all were properly covered, which is genuinely reassuring, not noise.
+ *  Bumped again to mr4-6 (2026-08-06): the SAME fairness the submission-rate
+ *  denominator already gave homework/assignment (D-#399 — a sheet issued while
+ *  absent, never re-delivered, does not count against the child) now reaches the
+ *  comment itself. `notSubmittedDueToAbsence` is per-subject, not just a total, so
+ *  the model can name WHICH subject's gap is absence, not a no-show. classTest gets
+ *  the matching field it never had: `absent`, distinct from skipping a test while
+ *  present — "৩টির মধ্যে ২টি অংশ নিয়েছে" reads identically for either reason
+ *  otherwise, which is not a fair comparison. */
+export const MONTHLY_COMMENT_PROMPT_VERSION = "mr4-6";
 
 // ---------------------------------------------------------------------------
 // The facts — de-identified by construction
@@ -66,6 +74,12 @@ export interface SubjectQualityFact {
   partial: number;
   wrong: number;
   qualityPct: number | null;
+  /** Sheets issued in THIS subject while the child was absent, never yet
+   *  re-delivered (owner ask, 2026-08-06 — the fairness field D-#399 gave the
+   *  totals now reaches each subject too, so the model can name WHICH subject's
+   *  gap is due to absence rather than leaving a bare submitted/expected count
+   *  to be misread as skipped work). */
+  notSubmittedDueToAbsence: number;
 }
 
 export interface CommentFacts {
@@ -111,7 +125,17 @@ export interface CommentFacts {
     trend: string;
     bySubject: SubjectQualityFact[];
   };
-  classTest: { attended: number; held: number; ratePct: number | null; trend: string };
+  classTest: {
+    attended: number;
+    held: number;
+    ratePct: number | null;
+    trend: string;
+    /** Tests missed because the child was absent that day — distinct from
+     *  skipping one while present. Added 2026-08-06: without this, "৩টির মধ্যে ২টি
+     *  অংশ নিয়েছে" reads the same whether the missing one was an absence or a
+     *  no-show, which is not a fair comparison. */
+    absent: number;
+  };
   concerns: { count: number; trend: string };
   /** Subject codes only — never a teacher's or a peer's name. */
   strongestSubjects: string[];
@@ -163,6 +187,7 @@ function subjectFactsOf(
     partial: number;
     wrong: number;
     qualityRate: number | null;
+    notSubmittedDueToAbsence: number;
   }[],
 ): SubjectQualityFact[] {
   return rows.map((r) => ({
@@ -174,6 +199,7 @@ function subjectFactsOf(
     partial: r.partial,
     wrong: r.wrong,
     qualityPct: r.qualityRate,
+    notSubmittedDueToAbsence: r.notSubmittedDueToAbsence,
   }));
 }
 
@@ -222,6 +248,7 @@ export function commentFactsOf(snapshot: MonthlySnapshot, classLevel: number | n
       held: m.classTest.testsHeld,
       ratePct: m.classTest.rate,
       trend: snapshot.trends.classTest.state,
+      absent: m.classTest.absent,
     },
     concerns: { count: m.concerns.concern, trend: snapshot.trends.concerns.state },
     strongestSubjects: split.strongest,
@@ -401,10 +428,11 @@ export function commentRules(periodKey: string): string {
     "৯. উপস্থিতি ১০০% হলে (কোনো অনুপস্থিতিই নেই) ছুটির দরখাস্ত নিয়ে কিছু লিখবে না — বলার মতো কিছু নেই। উপস্থিতি ১০০% না হলে এবং absentUncovered > ০ হলে এভাবে লেখো: \"X দিনের ছুটির দরখাস্ত জমা দেওয়া হয়নি\" — \"কভার তথ্য নেই\" বা এই ধরনের অস্পষ্ট/প্রযুক্তিগত কথা লিখবে না, কারণ এটি অভিভাবকের করণীয়কে স্পষ্ট করে না। absentUncovered ০ হলেও কিছু অনুপস্থিতি থাকলে (উপস্থিতি ১০০% এর কম), বলা যেতে পারে যে সব অনুপস্থিতিরই ছুটির দরখাস্ত জমা দেওয়া হয়েছে — এটা আশ্বস্তকর তথ্য।",
     "১০. কোনো সংখ্যা (কতটি/কতজন) বললে সবসময় \"X-এর মধ্যে Y\" এই প্যাটার্নে লেখো (যেমন: \"২৭টির মধ্যে ২৫টি জমা হয়েছে\"), এমনকি সবগুলো হলেও (যেমন: \"৭টির মধ্যে ৭টি\")। কখনো \"৭টির সব\"-এর মতো এলোমেলো বাক্যগঠন লিখবে না।",
     "১১. মান (quality) নিয়ে লিখলে শুধু একটা % বলে থেমো না — correct, partial ও wrong সংখ্যাগুলো দেখে লেখো। partial (আংশিক সঠিক) থাকলে সেগুলোকে সম্পূর্ণ ভুল হিসেবে দেখিও না — যেমন: \"৯টি যাচাই হওয়া কাজের মধ্যে ১টি সম্পূর্ণ সঠিক ও ৩টি আংশিক সঠিক হয়েছে, বাকিগুলো ভুল\"। শুধু \"মান ১১%\" লিখলে বোঝা যায় না যে কিছু আংশিক সঠিক ছিল। এই তিনটির (correct/partial/wrong) মধ্যে যেটির সংখ্যা ০, সেটি আলাদা করে উল্লেখ করবে না — শুধু যেগুলোতে সংখ্যা আছে সেগুলো বলো (যেমন partial ০ হলে \"০টি আংশিক সঠিক\" লিখবে না, শুধু correct ও wrong বলো)।",
-    "১২. সব সংখ্যা বাংলা অঙ্কে লেখো (০, ১, ২, ৩...) — ইংরেজি সংখ্যা (0, 1, 2, 3...) কখনো ব্যবহার করবে না। % সবসময় পূর্ণ সংখ্যায় রাউন্ড করে লেখো (যেমন ৯৩%) — দশমিক (৯২.৬%) লিখবে না।",
-    "১৩. provisional true হলে বোঝাবে যে কিছু তথ্য এখনো আসেনি।",
-    "১৪. শিক্ষার্থীর নাম নেই — নাম ছাড়াই লেখো (\"আপনার সন্তান\")।",
-    `১৫. এই রিপোর্টটি ${monthLabelBn(periodKey)} মাসের। মাসের নাম উল্লেখ করো — "গত মাস" বা "বিগত মাস" লিখবে না।`,
+    "১২. বাড়ির কাজ/অ্যাসাইনমেন্টের কোনো বিষয়ে notSubmittedDueToAbsence ০-এর বেশি হলে, বা ক্লাস টেস্টে absent ০-এর বেশি হলে, সেই ঘাটতিকে জমা-না-দেওয়া বা অংশ-না-নেওয়া হিসেবে দেখিও না — কারণ বলো। যেমন: \"ইংরেজিতে ২টি বাড়ির কাজ অনুপস্থিতির কারণে দেওয়া সম্ভব হয়নি\" অথবা \"৫টির মধ্যে ৩টি ক্লাস টেস্টে অংশ নিয়েছে, ২টি অনুপস্থিতির কারণে দেওয়া সম্ভব হয়নি\"। এই সংখ্যা সন্তানের অবহেলা বোঝায় না — শুধু submitted/expected বা attended/held-এর ফাঁক দেখিয়ে দিলে অভিভাবক ভুল বুঝতে পারেন।",
+    "১৩. সব সংখ্যা বাংলা অঙ্কে লেখো (০, ১, ২, ৩...) — ইংরেজি সংখ্যা (0, 1, 2, 3...) কখনো ব্যবহার করবে না। % সবসময় পূর্ণ সংখ্যায় রাউন্ড করে লেখো (যেমন ৯৩%) — দশমিক (৯২.৬%) লিখবে না।",
+    "১৪. provisional true হলে বোঝাবে যে কিছু তথ্য এখনো আসেনি।",
+    "১৫. শিক্ষার্থীর নাম নেই — নাম ছাড়াই লেখো (\"আপনার সন্তান\")।",
+    `১৬. এই রিপোর্টটি ${monthLabelBn(periodKey)} মাসের। মাসের নাম উল্লেখ করো — "গত মাস" বা "বিগত মাস" লিখবে না।`,
   ].join("\n");
 }
 
