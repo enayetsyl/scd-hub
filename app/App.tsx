@@ -13,6 +13,7 @@ import { urqlClient } from "./src/graphql/client";
 import { initSentry, Sentry } from "./src/observability/sentry";
 import { AppErrorFallback } from "./src/observability/AppErrorFallback";
 import { getItem, setItem } from "./src/lib/storage";
+import { NAV_STATE_KEY } from "./src/lib/navState";
 import { AuthProvider } from "./src/auth/AuthContext";
 import { BasketProvider } from "./src/state/BasketContext";
 import { QuestionBankProvider } from "./src/state/QuestionBankContext";
@@ -39,6 +40,11 @@ initSentry();
  * Keying RootNavigator by the active language remounts the navigation subtree on a
  * language switch, so every screen re-reads the new language. The providers above
  * (auth, basket, section) sit outside the key and keep their state.
+ *
+ * The D-#467 view mode deliberately does NOT key this: the drawer's screen list is
+ * already dynamic (it goes from empty to populated the moment `myPermissions` resolves),
+ * so React Navigation reconciles a hat switch in place. A remount would additionally
+ * break the inbox's re-navigate-after-unnarrowing path (NotificationCenterScreen).
  */
 function LanguageScopedNavigator(): React.ReactElement {
   const { lang } = useLanguage();
@@ -49,10 +55,7 @@ function LanguageScopedNavigator(): React.ReactElement {
 // to the initial tab (Content). We persist/restore the React Navigation state so
 // a refresh keeps the user on the screen they were on. Native apps don't reload,
 // so this is web-only (the section/auth contexts already persist themselves).
-// Bumped to _v2 when the navigator changed from bottom-tabs to a grouped drawer
-// (D-#258): a persisted v1 (tab) state tree is incompatible with the drawer
-// navigator, so a stale restore is dropped once on the first post-deploy load.
-const NAV_STATE_KEY = "scd_nav_state_v2";
+// The key (and the clear-on-view-mode-switch path) lives in lib/navState.
 type NavState = React.ComponentProps<typeof NavigationContainer>["initialState"];
 
 // Screens that are transient pickers — pushed on demand, then popped. They are never

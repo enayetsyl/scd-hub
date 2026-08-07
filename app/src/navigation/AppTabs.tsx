@@ -55,7 +55,7 @@ import { ENGLISH_DRIVE_MY_CLASS_LEVELS } from "../graphql/englishDrive";
 import { useLanguage } from "../state/LanguageContext";
 import { useSidebar, DRAWER_PERMANENT_MIN_WIDTH } from "../state/SidebarContext";
 import { useNotifications } from "../state/NotificationContext";
-import { STR, bnNum } from "../lib/labels";
+import { STR, bnNum, roleViewLabel } from "../lib/labels";
 import { appVersionLabel } from "../lib/appUpdate";
 import { fonts, radius, space, typeScale, useColors } from "../theme";
 
@@ -360,7 +360,7 @@ function HeaderBell(): React.ReactElement {
  */
 function AvatarMenu(): React.ReactElement {
   const [open, setOpen] = React.useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, templates, viewMode, setViewMode } = useAuth();
   const { lang, toggle } = useLanguage();
   const navigation = useNavigation();
   const colors = useColors();
@@ -439,6 +439,36 @@ function AvatarMenu(): React.ReactElement {
               </View>
             ) : null}
             {/* Row shows the language it switches TO (matches the old toggle's intent). */}
+            {/* D-#467 view switcher — only for a login that actually wears two hats
+                (e.g. a teacher who also runs the office desk). Purely presentational:
+                it narrows which tabs are OFFERED, never what the server allows. */}
+            {templates.length > 1 ? (
+              <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: space(1) }}>
+                <Text
+                  style={{
+                    ...typeScale.caption,
+                    color: colors.textSecondary,
+                    paddingHorizontal: space(4),
+                    paddingTop: space(2),
+                  }}
+                >
+                  {STR.viewModeLabel}
+                </Text>
+                <MenuRow
+                  icon={viewMode === null ? "✅" : "▫️"}
+                  label={STR.viewModeAll}
+                  onPress={() => setViewMode(null)}
+                />
+                {templates.map((t) => (
+                  <MenuRow
+                    key={t}
+                    icon={viewMode === t ? "✅" : "▫️"}
+                    label={roleViewLabel(t)}
+                    onPress={() => setViewMode(t)}
+                  />
+                ))}
+              </View>
+            ) : null}
             <MenuRow icon="🌐" label={lang === "bn" ? "English" : "বাংলা"} onPress={toggle} />
             <MenuRow
               icon="🐞"
@@ -1190,19 +1220,23 @@ function GuardianAssignmentsNavigator(): React.ReactElement {
 const Drawer = createDrawerNavigator<TabParamList>();
 
 export function AppTabs(): React.ReactElement {
-  const { role, can, logout } = useAuth();
+  // `isRole` rather than `role ===` for the gates below (D-#467): with a view mode on it
+  // answers for the chosen hat, and with none it answers for EVERY template the login
+  // holds — so a teacher who also runs the office desk gets the office-only tabs in the
+  // "everything" view instead of only what their primary role template carries.
+  const { role, isRole, can, logout } = useAuth();
   const colors = useColors();
   // Free Mixing Observation tab (D-#341, owner ruling): a TEACHER sees it ONLY
   // when at least one video is assigned to them; Principal/Office always.
   const [freeMixQ] = useQuery({
     query: MY_VIDEO_REVIEWS,
-    pause: role !== "TEACHER",
+    pause: !isRole("TEACHER"),
   });
   // English Drive tab (D-#344): P/O always; a TEACHER only when the server says
   // they have an English involvement in at least one class (PRD §5).
   const [engDriveQ] = useQuery({
     query: ENGLISH_DRIVE_MY_CLASS_LEVELS,
-    pause: role !== "TEACHER",
+    pause: !isRole("TEACHER"),
   });
   // Permanent left sidebar on laptop/desktop web; slide-over (☰) on phone/narrow.
   const { width } = useWindowDimensions();
@@ -1257,12 +1291,12 @@ export function AppTabs(): React.ReactElement {
   // only once something is actually assigned to them (owner ruling 2026-07-20).
   const canFreeMixing =
     (can("observation:upload")) ||
-    (role === "TEACHER" && (freeMixQ.data?.myVideoReviews.length ?? 0) > 0);
+    (isRole("TEACHER") && (freeMixQ.data?.myVideoReviews.length ?? 0) > 0);
   // English Drive (D-#344): upload = roster:manage (P/O); a teacher sees the tab
   // only when the server-resolved English class set is non-empty. GUARDIAN never.
   const canEnglishDrive =
     (can("roster:manage")) ||
-    (role === "TEACHER" && (engDriveQ.data?.englishDriveMyClassLevels.length ?? 0) > 0);
+    (isRole("TEACHER") && (engDriveQ.data?.englishDriveMyClassLevels.length ?? 0) > 0);
   // Saturday Qur'an-Hifz Revision (SR app surfaces): Hifz teachers via tracker:read
   // (record/edit/deliver/history); Principal/Office via roster:manage (dashboards +
   // completeness chase). Every action is re-gated + row-scoped server-side. GUARDIAN
@@ -1292,7 +1326,9 @@ export function AppTabs(): React.ReactElement {
     can("book:assemble") || can("book:author") || can("book:manage");
   // D-#309: the Reports hub — school-wide oversight reads, Principal/Office by
   // ROLE (the reconciliationReport resolver's own gate; OFFICE holds no tracker:read).
-  const canReports = role === "PRINCIPAL" || role === "OFFICE";
+  // D-#467: template-aware, so an OFFICE template added to a teacher actually delivers
+  // this tab — a bare `role ===` compared only the primary role and silently hid it.
+  const canReports = isRole("PRINCIPAL") || isRole("OFFICE");
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
   const canGuardian = can("guardian:read_child");

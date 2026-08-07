@@ -16,6 +16,9 @@ import {
   effectivePermissions,
   callerHasPermission,
   permissionsForRole,
+  templatesOf,
+  actsAsRole,
+  viewModePermissions,
   ROLES,
   RESERVED_PERMISSIONS,
   type Role,
@@ -156,6 +159,116 @@ describe("A. effectivePermissions / callerHasPermission (the pure seam)", () => 
 // ===========================================================================
 // B. The service mutations (mocked store)
 // ===========================================================================
+
+// ---------------------------------------------------------------------------
+// A2. The view-mode PRESENTATION filter (D-#467). Same pure-seam posture as A: no DB,
+// no resolver. The headline property is that a mode can only ever NARROW — the server
+// never sees a mode, so if the filter could add a permission the app would offer a door
+// the caller cannot open.
+// ---------------------------------------------------------------------------
+describe("A2. viewModePermissions (the D-#467 view switcher's filter)", () => {
+  const dualProfile = { role: "TEACHER" as Role, additionalTemplates: ["OFFICE"] as Role[] };
+  const dualEff = () => effectivePermissions(dualProfile);
+  const dualTemplates = () => templatesOf(dualProfile);
+
+  test("templatesOf: primary role first, additional after, deduped", () => {
+    expect(templatesOf({ role: "TEACHER", additionalTemplates: ["OFFICE"] })).toEqual(["TEACHER", "OFFICE"]);
+    expect(templatesOf({ role: "TEACHER", additionalTemplates: ["TEACHER"] })).toEqual(["TEACHER"]);
+    expect(templatesOf({ role: "OFFICE" })).toEqual(["OFFICE"]);
+  });
+
+  test("actsAsRole: an ADDED template counts, a role never held does not", () => {
+    const dual = { role: "TEACHER" as Role, additionalTemplates: ["OFFICE"] as Role[] };
+    expect(actsAsRole(dual, "TEACHER")).toBe(true);
+    // The whole point: the primary-role comparison this replaces answered false here,
+    // which is why an added OFFICE template did not deliver the office oversight reads.
+    expect(actsAsRole(dual, "OFFICE")).toBe(true);
+    expect(actsAsRole(dual, "PRINCIPAL")).toBe(false);
+    // A plain teacher is unchanged — the additive/zero-migration property.
+    expect(actsAsRole({ role: "TEACHER" }, "OFFICE")).toBe(false);
+    expect(actsAsRole({ role: "TEACHER" }, "TEACHER")).toBe(true);
+  });
+
+  test("actsAsRole does NOT let a per-user grant impersonate a role", () => {
+    // Granting every OFFICE permission one by one still does not make the caller "the
+    // office" for a role-shaped gate — only a TEMPLATE does. Keeps the two concepts apart.
+    const granted = {
+      role: "TEACHER" as Role,
+      grantedPermissions: [...permissionsForRole("OFFICE")] as Permission[],
+    };
+    expect(actsAsRole(granted, "OFFICE")).toBe(false);
+  });
+
+  test("NEVER WIDENS: for every role and every mode, the result is a subset of effective", () => {
+    for (const role of ROLES) {
+      const profile = { role, additionalTemplates: ROLES.filter((r) => r !== role) };
+      const eff = effectivePermissions(profile);
+      const templates = templatesOf(profile);
+      for (const mode of [...ROLES, null]) {
+        for (const p of viewModePermissions(eff, templates, mode)) {
+          expect(eff.has(p)).toBe(true);
+        }
+      }
+    }
+  });
+
+  test("fails OPEN: no mode, a single-template login, or a mode not held all return effective untouched", () => {
+    const eff = dualEff();
+    const sorted = [...eff].sort();
+    expect([...viewModePermissions(eff, dualTemplates(), null)].sort()).toEqual(sorted);
+    expect([...viewModePermissions(eff, dualTemplates(), undefined)].sort()).toEqual(sorted);
+    // PRINCIPAL is not one of this caller's templates — ignored, not applied.
+    expect([...viewModePermissions(eff, dualTemplates(), "PRINCIPAL")].sort()).toEqual(sorted);
+    // Single-template login: nothing to switch between.
+    const solo = effectivePermissions({ role: "TEACHER" });
+    expect([...viewModePermissions(solo, ["TEACHER"], "TEACHER")].sort()).toEqual([...solo].sort());
+  });
+
+  test("TEACHER hat hides the office-only permissions, OFFICE hat hides the teacher-only ones", () => {
+    const eff = dualEff();
+    const teacherView = viewModePermissions(eff, dualTemplates(), "TEACHER");
+    const officeView = viewModePermissions(eff, dualTemplates(), "OFFICE");
+
+    // roster:manage is OFFICE-only, tracker:read is TEACHER-only — the two hats separate.
+    expect(eff.has("roster:manage")).toBe(true);
+    expect(teacherView.has("roster:manage")).toBe(false);
+    expect(officeView.has("roster:manage")).toBe(true);
+    expect(teacherView.has("tracker:read")).toBe(true);
+    expect(officeView.has("tracker:read")).toBe(false);
+
+    // Each hat still equals its own template (intersected with what the caller holds).
+    expect([...teacherView].sort()).toEqual([...effectivePermissions({ role: "TEACHER" })].sort());
+    expect([...officeView].sort()).toEqual([...effectivePermissions({ role: "OFFICE" })].sort());
+  });
+
+  test("a REVOKED permission stays gone in every mode (the mode cannot restore it)", () => {
+    const profile = {
+      role: "TEACHER" as Role,
+      additionalTemplates: ["OFFICE"] as Role[],
+      revokedPermissions: ["tracker:read"] as Permission[],
+    };
+    const eff = effectivePermissions(profile);
+    for (const mode of [null, "TEACHER" as Role, "OFFICE" as Role]) {
+      expect(viewModePermissions(eff, templatesOf(profile), mode).has("tracker:read")).toBe(false);
+    }
+  });
+
+  test("a per-user GRANT survives EVERY hat — it belongs to no template (D-#405)", () => {
+    // book:illustrate sits only on the PRINCIPAL template, so neither of this caller's
+    // two hats carries it; it reaches them by grant. Intersecting with one hat would hide
+    // the book screens from precisely the person the grant was made for.
+    const profile = {
+      role: "TEACHER" as Role,
+      additionalTemplates: ["OFFICE"] as Role[],
+      grantedPermissions: ["book:illustrate"] as Permission[],
+    };
+    const eff = effectivePermissions(profile);
+    expect(eff.has("book:illustrate")).toBe(true);
+    for (const mode of [null, "TEACHER" as Role, "OFFICE" as Role]) {
+      expect(viewModePermissions(eff, templatesOf(profile), mode).has("book:illustrate")).toBe(true);
+    }
+  });
+});
 
 describe("B. AccessControlService mutations + audit", () => {
   test("J-AC1 addGrantedPermission adds the perm and returns the derived effective set", async () => {
