@@ -13,6 +13,7 @@ import { Screen, Body, Muted, Card, Badge, Button, Loader, EmptyState, Notice } 
 import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { useRecordView } from "../../lib/useRecordView";
 import { STR, bnNum, hwSubjectLabel, hwResultLabel, lifecycleStateLabel } from "../../lib/labels";
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { space } from "../../theme/tokens";
@@ -21,6 +22,7 @@ const day = (iso?: string | null): string => (iso ? iso.slice(0, 10) : "—");
 
 export default function ChildAssignmentsScreen(): React.ReactElement {
   const { selected } = useGuardianChild();
+  useRecordView("ASSIGNMENTS", selected?.studentId);
   const [q, refetchQ] = useQuery({
     query: CHILD_ASSIGNMENTS,
     variables: { studentId: selected?.studentId ?? "" },

@@ -29,6 +29,7 @@ import { Screen, Card, Body, Muted, Badge, Button, Loader, EmptyState, ErrorBann
 import { STR, notificationKindLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
+import { useRecordView } from "../../lib/useRecordView";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
 
@@ -52,6 +53,9 @@ export default function NotificationCenterScreen({ navigation }: { navigation: R
   const { role } = useAuth();
   const colors = useColors();
   const { refresh } = useNotifications();
+  // GE-2: this screen serves staff and guardians alike; the hook itself no-ops for
+  // any non-GUARDIAN session, so staff inbox opens never enter the family figures.
+  useRecordView("NOTIFICATIONS");
 
   const [{ data, fetching, error }, refetch] = useQuery({
     query: MY_NOTIFICATIONS_QUERY,

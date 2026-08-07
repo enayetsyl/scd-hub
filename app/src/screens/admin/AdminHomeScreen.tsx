@@ -89,6 +89,16 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
+      {/* GE-1/GE-3 (D-#464/#465): reuses `audit:read` rather than minting a permission —
+          the report names families and their children, so it sits at the same
+          Principal-only bar as the audit log itself. */}
+      {canAudit ? (
+        <Card onPress={() => navigation.navigate("GuardianEngagement")}>
+          <Body style={{ fontWeight: "700" }}>{STR.geTitle}</Body>
+          <Muted>{STR.geSubtitle}</Muted>
+        </Card>
+      ) : null}
+
       {/* SB-2..SB-4: the four support-book screens are NOT cards here — they live in
           their own 📕 drawer group, because the Admin tab's own gate (content:import /
           user:manage) is a role template no granted illustrator or reviewer passes. */}

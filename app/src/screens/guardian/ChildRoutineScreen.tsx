@@ -14,6 +14,7 @@ import { Screen, Body, Muted, Card, Badge, Loader, EmptyState } from "../../comp
 import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { useRecordView } from "../../lib/useRecordView";
 import { STR, bnNum, dayOfWeekLabel, subjectLabel, dayTypeLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
@@ -76,6 +77,7 @@ function DayBlock({ studentId, date, dow }: { studentId: string; date: string; d
 
 export default function ChildRoutineScreen(): React.ReactElement {
   const { selected, fetching } = useGuardianChild();
+  useRecordView("ROUTINE", selected?.studentId);
 
   if (fetching && !selected) {
     return (

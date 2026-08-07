@@ -11,6 +11,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { DateField } from "../../components/DateField";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { useRecordView } from "../../lib/useRecordView";
 import { STR, bnNum, dateHeaderLabel, getActiveLang } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
@@ -47,6 +48,7 @@ function DayRow({
 
 export default function ChildAttendanceScreen(): React.ReactElement {
   const { selected, fetching } = useGuardianChild();
+  useRecordView("ATTENDANCE", selected?.studentId);
   const lang = getActiveLang();
   const [fromKey, setFromKey] = useState(daysAgo(30));
   const [toKey, setToKey] = useState(isoDay(new Date()));
