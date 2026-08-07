@@ -3485,6 +3485,54 @@ export function callerHasPermission(profile: AccessProfile, perm: Permission): b
   return effectivePermissions(profile).has(perm) && isPermissionActive(perm);
 }
 
+/** The templates a login holds: its primary role first, then any additional ones, deduped.
+ *  Length > 1 is exactly the "wears two hats" case the view switcher exists for. */
+export function templatesOf(profile: AccessProfile): Role[] {
+  const seen: Role[] = [];
+  for (const t of [profile.role, ...(profile.additionalTemplates ?? [])]) {
+    if (!seen.includes(t)) seen.push(t);
+  }
+  return seen;
+}
+
+/** "Does this login act as role R?" — TEMPLATE-aware, so an OFFICE template a Principal
+ *  added to a teacher counts, not just the primary role. The replacement for a bare
+ *  `ctx.auth.role === "OFFICE"` in a gate that means "is this person the office desk".
+ *  A bare comparison contradicts the AC-1 model: `effectivePermissions` already hands the
+ *  added template's whole permission set to this caller, so a role-equality gate is the
+ *  one place that silently ignores what the Principal granted (D-#467). */
+export function actsAsRole(profile: AccessProfile, role: Role): boolean {
+  return templatesOf(profile).includes(role);
+}
+
+/** VIEW MODE — a PRESENTATION filter for the dual-template login (a teacher who is also
+ *  the office desk, D-#467). It narrows what the app OFFERS to one hat at a time; it is
+ *  NOT an authorization switch. Two invariants make that safe:
+ *    1. The result is always a SUBSET of `effective` — a mode can never add authority,
+ *       so the server's `callerHasPermission` (which never sees a mode) stays the gate.
+ *    2. It fails OPEN to today's behaviour: an absent mode, a single-template login, or a
+ *       mode the caller does not actually hold all return `effective` untouched.
+ *  Per-user GRANTS survive every mode on purpose: a granted permission belongs to no
+ *  template (that is what a grant is), so intersecting with one template would hide the
+ *  book-production screens from exactly the people who reach them by grant (D-#405). */
+export function viewModePermissions(
+  effective: Iterable<Permission>,
+  templates: readonly Role[],
+  mode: Role | null | undefined,
+): Set<Permission> {
+  const all = new Set(effective);
+  if (!mode || templates.length < 2 || !templates.includes(mode)) return all;
+  const inMode = new Set<Permission>(permissionsForRole(mode));
+  const fromAnyTemplate = new Set<Permission>();
+  for (const t of templates) for (const p of permissionsForRole(t)) fromAnyTemplate.add(p);
+  const out = new Set<Permission>();
+  for (const p of all) {
+    // Keep it if THIS hat carries it, or if no hat does (⇒ it is a per-user grant).
+    if (inMode.has(p) || !fromAnyTemplate.has(p)) out.add(p);
+  }
+  return out;
+}
+
 // --- B.3 PERMISSION LABELS (Bangla-first name + short description; the AC-2 editor) ---
 // Total over the live PERMISSIONS array (verifier-checked). name = the chip; desc = the
 // one-line "what this lets the holder do". RESERVED perms are tagged (সংরক্ষিত / reserved).

@@ -458,6 +458,20 @@ export const genderLabel = (v?: string | null): string => {
     : DASH;
 };
 
+/** A role template named as the WEARER, for the D-#467 view switcher ("শিক্ষক হিসেবে").
+ *  Deliberately not reused for the Access-Control editor, which shows the raw role codes
+ *  a Principal administers; this one is read by the person switching their own hat. */
+export const roleViewLabel = (role: string): string => {
+  const en = _lang === "en";
+  switch (role) {
+    case "PRINCIPAL": return en ? "Principal" : "প্রধান শিক্ষক";
+    case "TEACHER": return en ? "Teacher" : "শিক্ষক";
+    case "OFFICE": return en ? "Office" : "অফিস";
+    case "GUARDIAN": return en ? "Guardian" : "অভিভাবক";
+    default: return role;
+  }
+};
+
 /** Bilingual label for a message-template feature group (MT-3, D-#128). */
 export const mtGroupLabel = (group: string): string => {
   switch (group) {
@@ -1183,6 +1197,9 @@ const STR_BN = {
   stepWord: "ধাপ",
   accountMenu: "অ্যাকাউন্ট মেনু",
   openMenu: "মেনু খুলুন",
+  // View switcher for a two-hat login (D-#467)
+  viewModeLabel: "কোন ভূমিকায় দেখবেন",
+  viewModeAll: "সব একসাথে",
 
   // Auth
   login: "লগইন",
@@ -4528,6 +4545,9 @@ const STR_EN: StrTable = {
   stepWord: "Step",
   accountMenu: "Account menu",
   openMenu: "Open menu",
+  // View switcher for a two-hat login (D-#467)
+  viewModeLabel: "View as",
+  viewModeAll: "Everything",
 
   // Auth
   login: "Log in",
