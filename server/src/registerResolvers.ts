@@ -77,6 +77,8 @@ import "./modules/classroom-observation/resolvers/observationRota";
 import "./modules/classroom-observation/resolvers/videoReview";
 import "./modules/platform/resolvers/audit";
 import "./modules/platform/resolvers/systemHealth";
+import "./modules/engagement/resolvers/guardianView";
+import "./modules/engagement/resolvers/guardianEngagement";
 import "./modules/trackers/resolvers/classTestQuestion";
 import "./modules/comments/resolvers/parentMeeting";
 import "./modules/comments/resolvers/meetingDispatch";

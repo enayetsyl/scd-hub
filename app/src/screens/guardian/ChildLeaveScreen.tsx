@@ -9,6 +9,7 @@ import { Screen, Body, Muted, Card, Field, Button, Loader, EmptyState, Notice, E
 import { DateField } from "../../components/DateField";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { useRecordView } from "../../lib/useRecordView";
 import { STR, dateHeaderLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -40,6 +41,7 @@ function LeaveCard({ item }: { item: GuardianLeaveApplicationT }): React.ReactEl
 
 export default function ChildLeaveScreen(): React.ReactElement {
   const { selected, fetching } = useGuardianChild();
+  useRecordView("LEAVE", selected?.studentId);
   const [fromKey, setFromKey] = useState(daysAgo(1));
   const [toKey, setToKey] = useState(daysAhead(1));
   const [reason, setReason] = useState("");

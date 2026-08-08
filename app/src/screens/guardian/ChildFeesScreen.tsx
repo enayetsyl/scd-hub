@@ -10,11 +10,13 @@ import { Screen, Body, Muted, Card, Loader, EmptyState, Notice } from "../../com
 import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { useRecordView } from "../../lib/useRecordView";
 import { STR, bnNum, getActiveLang } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
 export default function ChildFeesScreen(): React.ReactElement {
   const { selected, fetching } = useGuardianChild();
+  useRecordView("FEES", selected?.studentId);
   const lang = getActiveLang();
 
   const [q, refetchQ] = useQuery({

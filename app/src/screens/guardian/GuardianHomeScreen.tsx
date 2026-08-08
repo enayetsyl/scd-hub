@@ -27,6 +27,7 @@ import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } 
 import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { useRecordView } from "../../lib/useRecordView";
 import { useNotifications } from "../../state/NotificationContext";
 import { CHILD_TRAJECTORY_QUERY } from "../../graphql/wholePicture";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
@@ -69,6 +70,7 @@ const OPEN_STATES = new Set(["GIVEN", "ABSENT_REDELIVER", "DUE", "SUBMITTED", "C
 export default function GuardianHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { selected, fetching } = useGuardianChild();
+  useRecordView("HOME", selected?.studentId);
   const lang = getActiveLang();
   const [showTrajHow, setShowTrajHow] = React.useState(false);
   const sid = selected?.studentId ?? "";

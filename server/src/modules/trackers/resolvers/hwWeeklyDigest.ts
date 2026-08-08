@@ -12,6 +12,7 @@
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
+import { actsAsRole } from "@scd/shared";
 import { isValidDateKey } from "../../attendance/dates";
 import {
   homeworkWeeklyDigestData,
@@ -26,7 +27,10 @@ import {
 
 function assertWeeklyReportAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (ctx.auth.role !== "PRINCIPAL" && ctx.auth.role !== "OFFICE") {
+  // D-#467: TEMPLATE-aware, not primary-role. An OFFICE template the Principal added to
+  // a teacher already carries every OFFICE permission via effectivePermissions; this gate
+  // was the one place that ignored it, so the office desk 403d on its own oversight reads.
+  if (!actsAsRole(ctx.auth, "PRINCIPAL") && !actsAsRole(ctx.auth, "OFFICE")) {
     throw new ForbiddenError("সাপ্তাহিক রিপোর্ট শুধুমাত্র অধ্যক্ষ/অফিসের জন্য");
   }
 }

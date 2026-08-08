@@ -1146,6 +1146,63 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   HW_WEEKLY_DIGEST: "Weekly homework digest",
 };
 
+/**
+ * Guardian-portal view surfaces (GE-2, D-#465) — what a family actually opened.
+ *
+ * The guardian read path is otherwise INVISIBLE: every portal query is a pure read,
+ * so a guardian could use the app daily and leave the database byte-identical. These
+ * are the named surfaces the app reports back so "which screens get used" and "which
+ * items were never opened" become answerable.
+ *
+ * NOT an import-contract enum — it mirrors nothing in the wire schema (the
+ * NOTIFICATION_KINDS precedent). Add a surface here AND in the app's recordView call
+ * sites; an unknown surface is rejected server-side rather than silently stored, so
+ * the popularity counts can never be polluted by a typo'd string.
+ */
+export const GUARDIAN_VIEW_SURFACES = [
+  "HOME",            // GuardianHomeScreen — the child dashboard
+  "CLASS_NOTES",     // ChildClassNotesScreen
+  "HOMEWORK",        // ChildHomeworkScreen
+  "ASSIGNMENTS",     // ChildAssignmentsScreen
+  "ROUTINE",         // ChildRoutineScreen
+  "ATTENDANCE",      // ChildAttendanceScreen
+  "FEES",            // ChildFeesScreen
+  "LEAVE",           // ChildLeaveScreen
+  "NOTIFICATIONS",   // NotificationCenterScreen opened from the guardian header bell
+] as const;
+export type GuardianViewSurface = (typeof GUARDIAN_VIEW_SURFACES)[number];
+
+export const GUARDIAN_VIEW_SURFACE_LABELS_BN: Record<GuardianViewSurface, string> = {
+  HOME: "হোম",
+  CLASS_NOTES: "পাঠ নোট",
+  HOMEWORK: "বাড়ির কাজ",
+  ASSIGNMENTS: "অ্যাসাইনমেন্ট",
+  ROUTINE: "রুটিন",
+  ATTENDANCE: "উপস্থিতি",
+  FEES: "ফি",
+  LEAVE: "ছুটি",
+  NOTIFICATIONS: "বিজ্ঞপ্তি",
+};
+
+/**
+ * Guardian engagement bands (GE-1, D-#464) — how regularly a family actually uses
+ * the portal, measured in DISTINCT ACTIVE DAYS inside the report window, not raw
+ * login count (five logins in one afternoon is one engaged day, not five).
+ *
+ * NEVER is deliberately separate from LAPSED: a family that never signed in once is
+ * an ONBOARDING problem (nobody handed them the password), while a lapsed family is
+ * a RETENTION problem. Merging them would hide the difference that decides the fix.
+ */
+export const GUARDIAN_ENGAGEMENT_BANDS = ["REGULAR", "OCCASIONAL", "LAPSED", "NEVER"] as const;
+export type GuardianEngagementBand = (typeof GUARDIAN_ENGAGEMENT_BANDS)[number];
+
+export const GUARDIAN_ENGAGEMENT_BAND_LABELS_BN: Record<GuardianEngagementBand, string> = {
+  REGULAR: "নিয়মিত",
+  OCCASIONAL: "মাঝেমধ্যে",
+  LAPSED: "নিষ্ক্রিয়",
+  NEVER: "কখনও লগইন করেননি",
+};
+
 
 // --- A.x CLASS-TEST TRACKER ENUMS (app-native; Class Test module — ----------
 // prd-tracker-class-test §3.1, D-#119–#122 + build rulings D-#142–#144). NO
@@ -3426,6 +3483,54 @@ export function effectivePermissions(profile: AccessProfile): Set<Permission> {
  *  the caller's effective set holds the permission AND it is active in this build. */
 export function callerHasPermission(profile: AccessProfile, perm: Permission): boolean {
   return effectivePermissions(profile).has(perm) && isPermissionActive(perm);
+}
+
+/** The templates a login holds: its primary role first, then any additional ones, deduped.
+ *  Length > 1 is exactly the "wears two hats" case the view switcher exists for. */
+export function templatesOf(profile: AccessProfile): Role[] {
+  const seen: Role[] = [];
+  for (const t of [profile.role, ...(profile.additionalTemplates ?? [])]) {
+    if (!seen.includes(t)) seen.push(t);
+  }
+  return seen;
+}
+
+/** "Does this login act as role R?" — TEMPLATE-aware, so an OFFICE template a Principal
+ *  added to a teacher counts, not just the primary role. The replacement for a bare
+ *  `ctx.auth.role === "OFFICE"` in a gate that means "is this person the office desk".
+ *  A bare comparison contradicts the AC-1 model: `effectivePermissions` already hands the
+ *  added template's whole permission set to this caller, so a role-equality gate is the
+ *  one place that silently ignores what the Principal granted (D-#467). */
+export function actsAsRole(profile: AccessProfile, role: Role): boolean {
+  return templatesOf(profile).includes(role);
+}
+
+/** VIEW MODE — a PRESENTATION filter for the dual-template login (a teacher who is also
+ *  the office desk, D-#467). It narrows what the app OFFERS to one hat at a time; it is
+ *  NOT an authorization switch. Two invariants make that safe:
+ *    1. The result is always a SUBSET of `effective` — a mode can never add authority,
+ *       so the server's `callerHasPermission` (which never sees a mode) stays the gate.
+ *    2. It fails OPEN to today's behaviour: an absent mode, a single-template login, or a
+ *       mode the caller does not actually hold all return `effective` untouched.
+ *  Per-user GRANTS survive every mode on purpose: a granted permission belongs to no
+ *  template (that is what a grant is), so intersecting with one template would hide the
+ *  book-production screens from exactly the people who reach them by grant (D-#405). */
+export function viewModePermissions(
+  effective: Iterable<Permission>,
+  templates: readonly Role[],
+  mode: Role | null | undefined,
+): Set<Permission> {
+  const all = new Set(effective);
+  if (!mode || templates.length < 2 || !templates.includes(mode)) return all;
+  const inMode = new Set<Permission>(permissionsForRole(mode));
+  const fromAnyTemplate = new Set<Permission>();
+  for (const t of templates) for (const p of permissionsForRole(t)) fromAnyTemplate.add(p);
+  const out = new Set<Permission>();
+  for (const p of all) {
+    // Keep it if THIS hat carries it, or if no hat does (⇒ it is a per-user grant).
+    if (inMode.has(p) || !fromAnyTemplate.has(p)) out.add(p);
+  }
+  return out;
 }
 
 // --- B.3 PERMISSION LABELS (Bangla-first name + short description; the AC-2 editor) ---

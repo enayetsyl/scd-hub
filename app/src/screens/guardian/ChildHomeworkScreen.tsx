@@ -14,6 +14,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { DateField } from "../../components/DateField";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { useRecordView } from "../../lib/useRecordView";
 import { STR, bnNum, lifecycleStateLabel, hwGuardianStatusLabel, subjectLabel, hwResultLabel, hwNilReasonLabel } from "../../lib/labels";
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
@@ -142,6 +143,7 @@ export default function ChildHomeworkScreen({
   route?: { params?: { studentId?: string; from?: string; to?: string } };
 }): React.ReactElement {
   const { selected, selectChild, fetching } = useGuardianChild();
+  useRecordView("HOMEWORK", selected?.studentId);
   // D-#452: the weekly-digest deep-link presets the range (and child, below).
   const [from, setFrom] = useState(route?.params?.from ?? daysAgo(14));
   const [to, setTo] = useState(route?.params?.to ?? isoDay(new Date()));

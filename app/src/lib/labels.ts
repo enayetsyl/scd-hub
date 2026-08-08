@@ -458,6 +458,20 @@ export const genderLabel = (v?: string | null): string => {
     : DASH;
 };
 
+/** A role template named as the WEARER, for the D-#467 view switcher ("শিক্ষক হিসেবে").
+ *  Deliberately not reused for the Access-Control editor, which shows the raw role codes
+ *  a Principal administers; this one is read by the person switching their own hat. */
+export const roleViewLabel = (role: string): string => {
+  const en = _lang === "en";
+  switch (role) {
+    case "PRINCIPAL": return en ? "Principal" : "প্রধান শিক্ষক";
+    case "TEACHER": return en ? "Teacher" : "শিক্ষক";
+    case "OFFICE": return en ? "Office" : "অফিস";
+    case "GUARDIAN": return en ? "Guardian" : "অভিভাবক";
+    default: return role;
+  }
+};
+
 /** Bilingual label for a message-template feature group (MT-3, D-#128). */
 export const mtGroupLabel = (group: string): string => {
   switch (group) {
@@ -1183,6 +1197,9 @@ const STR_BN = {
   stepWord: "ধাপ",
   accountMenu: "অ্যাকাউন্ট মেনু",
   openMenu: "মেনু খুলুন",
+  // View switcher for a two-hat login (D-#467)
+  viewModeLabel: "কোন ভূমিকায় দেখবেন",
+  viewModeAll: "সব একসাথে",
 
   // Auth
   login: "লগইন",
@@ -3473,6 +3490,48 @@ const STR_BN = {
   audLoadMore: "আরও দেখুন",
   audNoRows: "কোনো রেকর্ড নেই",
   audSystem: "সিস্টেম",
+  // Guardian engagement (GE-1..GE-3, D-#464/#465)
+  geTitle: "অভিভাবকদের ব্যবহার",
+  geSubtitle: "কোন অভিভাবক নিয়মিত অ্যাপ দেখেন, কোনটি কেউ খোলেননি",
+  geHint:
+    "লগইনের হিসাব অডিট লগ থেকে; কোন পর্দা দেখা হয়েছে তার হিসাব শুধু এই সুবিধা চালুর পর থেকে।",
+  geWindow: "সময়সীমা",
+  geDays30: "৩০ দিন",
+  geDays90: "৯০ দিন",
+  geDays365: "১ বছর",
+  geFilterBand: "ব্যবহারের ধরন",
+  geFilterSection: "শাখা",
+  geSearch: "খুঁজুন (অভিভাবক, শিক্ষার্থী)",
+  geTabFamilies: "পরিবার",
+  geTabScreens: "পর্দা",
+  geTabInbox: "বিজ্ঞপ্তি",
+  geTotalGuardians: "মোট অভিভাবক",
+  geLoginEnabled: "লগইন আছে",
+  geContactOnly: "শুধু যোগাযোগ (লগইন নেই)",
+  geEverLoggedIn: "কখনও লগইন করেছেন",
+  geNeverLoggedIn: "একবারও লগইন করেননি",
+  geActive7: "গত ৭ দিনে সক্রিয়",
+  geActive30: "গত ৩০ দিনে সক্রিয়",
+  geRegular: "নিয়মিত",
+  geOccasional: "মাঝেমধ্যে",
+  geLapsed: "নিষ্ক্রিয়",
+  geLastLogin: "শেষ লগইন",
+  geActiveDays: "সক্রিয় দিন",
+  geLoginCount: "লগইন সংখ্যা",
+  geViews: "দেখা হয়েছে",
+  geDistinctGuardians: "যত অভিভাবক",
+  geLastSeen: "শেষ দেখা",
+  geNever: "কখনও নয়",
+  geDelivered: "পাঠানো",
+  geRead: "খোলা হয়েছে",
+  geUnread: "খোলা হয়নি",
+  geNoRows: "কোনো অভিভাবক নেই",
+  geNoViewData:
+    "এখনও কোনো পর্দা দেখার তথ্য জমা হয়নি। এই সুবিধা চালুর পর অভিভাবকেরা অ্যাপ খুললে তথ্য আসতে শুরু করবে।",
+  geContactOnlyNote:
+    "লগইন ছাড়া অভিভাবকদের কোনো ব্যবহারের তথ্য পাওয়া যায় না — তাঁরা এই হিসাবের বাইরে।",
+  geReadCaveat:
+    "“খোলা হয়েছে” সর্বোচ্চ হিসাব: কেউ “সব পড়া হয়েছে” চাপলে না দেখা বিজ্ঞপ্তিও গোনা হয়।",
   // English Drive (D-#344)
   tabEnglishDrive: "ইংরেজি ড্রাইভ",
   edTitle: "ইংরেজি ড্রাইভ",
@@ -4486,6 +4545,9 @@ const STR_EN: StrTable = {
   stepWord: "Step",
   accountMenu: "Account menu",
   openMenu: "Open menu",
+  // View switcher for a two-hat login (D-#467)
+  viewModeLabel: "View as",
+  viewModeAll: "Everything",
 
   // Auth
   login: "Log in",
@@ -6762,6 +6824,48 @@ const STR_EN: StrTable = {
   audLoadMore: "Load more",
   audNoRows: "No records",
   audSystem: "System",
+  // Guardian engagement (GE-1..GE-3, D-#464/#465)
+  geTitle: "Guardian engagement",
+  geSubtitle: "Which families use the app, and which screens nobody opens",
+  geHint:
+    "Login figures come from the audit log; screen-view figures only exist from the day view tracking shipped.",
+  geWindow: "Window",
+  geDays30: "30 days",
+  geDays90: "90 days",
+  geDays365: "1 year",
+  geFilterBand: "Engagement",
+  geFilterSection: "Section",
+  geSearch: "Search (guardian, student)",
+  geTabFamilies: "Families",
+  geTabScreens: "Screens",
+  geTabInbox: "Notifications",
+  geTotalGuardians: "Total guardians",
+  geLoginEnabled: "Login enabled",
+  geContactOnly: "Contact-only (no login)",
+  geEverLoggedIn: "Ever logged in",
+  geNeverLoggedIn: "Never logged in",
+  geActive7: "Active last 7 days",
+  geActive30: "Active last 30 days",
+  geRegular: "Regular",
+  geOccasional: "Occasional",
+  geLapsed: "Lapsed",
+  geLastLogin: "Last login",
+  geActiveDays: "Active days",
+  geLoginCount: "Logins",
+  geViews: "Views",
+  geDistinctGuardians: "Guardians",
+  geLastSeen: "Last seen",
+  geNever: "Never",
+  geDelivered: "Sent",
+  geRead: "Opened",
+  geUnread: "Not opened",
+  geNoRows: "No guardians",
+  geNoViewData:
+    "No screen-view data yet. Figures start accumulating once guardians open the app after this feature shipped.",
+  geContactOnlyNote:
+    "Guardians without a login produce no usage signal at all — they sit outside these figures.",
+  geReadCaveat:
+    "“Opened” is an upper bound: a bulk “mark all read” counts notifications nobody actually opened.",
   // English Drive (D-#344)
   tabEnglishDrive: "English Drive",
   edTitle: "English Drive",

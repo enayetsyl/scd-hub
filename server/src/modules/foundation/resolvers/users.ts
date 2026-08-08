@@ -3,7 +3,7 @@ import { User, type IUser } from "../models/User";
 import { Guardian } from "../models/Guardian";
 import { hashPassword } from "../services/AuthService";
 import type { Role } from "@scd/shared";
-import { ROLES, effectivePermissions, isPermissionActive } from "@scd/shared";
+import { ROLES, effectivePermissions, isPermissionActive, templatesOf } from "@scd/shared";
 
 type UserShape = Pick<IUser, "email" | "phone" | "role" | "name" | "active" | "homeworkSupervisor"> & {
   _id: { toString(): string };
@@ -79,6 +79,23 @@ builder.queryField("myPermissions", (t) =>
       // authority: every resolver still checks `callerHasPermission` for itself. Hiding
       // a screen is a courtesy, never the gate.
       return [...effectivePermissions(ctx.auth)].filter((p) => isPermissionActive(p)).sort();
+    },
+  }),
+);
+
+builder.queryField("myTemplates", (t) =>
+  t.field({
+    type: ["String"],
+    authScopes: { authenticated: true },
+    description:
+      "The caller's OWN role templates — primary role first, then any additional ones (AC-1). " +
+      "Length > 1 means the login wears two hats and the app offers the view switcher (D-#467).",
+    resolve: (_root, _args, ctx) => {
+      if (!ctx.auth) return [];
+      // Same posture as myPermissions: a read of the caller's own token, no new data
+      // surface, and NO authority — the view mode the app derives from this is a
+      // presentation filter that can only ever narrow what is offered (viewModePermissions).
+      return templatesOf(ctx.auth);
     },
   }),
 );

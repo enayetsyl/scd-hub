@@ -24,11 +24,13 @@ import {
 } from "../../graphql/operations";
 import { useAuth } from "../../auth/AuthContext";
 import { useNotifications } from "../../state/NotificationContext";
-import { notificationTarget } from "../../lib/notificationNav";
+import { notificationTarget, type NotificationTarget } from "../../lib/notificationNav";
+import { navigationRef } from "../../navigation/navigationRef";
 import { Screen, Card, Body, Muted, Badge, Button, Loader, EmptyState, ErrorBanner } from "../../components/ui";
 import { STR, notificationKindLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
+import { useRecordView } from "../../lib/useRecordView";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
 
@@ -48,10 +50,27 @@ function shortTime(iso: string): string {
   );
 }
 
+/** Is this drawer tab currently mounted? A D-#467 view mode hides the tabs of the hat
+ *  the user is not wearing, and an inbox row may point at one of them. Reads the live
+ *  navigator rather than re-deriving AppTabs' gate list, so the two can never drift.
+ *  Unknown (ref not ready, drawer not mounted yet) answers TRUE — navigate and let the
+ *  navigator decide, which is exactly the pre-D-#467 behaviour. */
+function drawerHasTab(tab: string): boolean {
+  if (!navigationRef.isReady()) return true;
+  const root = navigationRef.getRootState() as
+    | { routes?: Array<{ name?: string; state?: { routeNames?: string[] } }> }
+    | undefined;
+  const names = root?.routes?.find((r) => r.name === "App")?.state?.routeNames;
+  return !names || names.includes(tab);
+}
+
 export default function NotificationCenterScreen({ navigation }: { navigation: RootNav }): React.ReactElement {
-  const { role } = useAuth();
+  const { role, viewMode, setViewMode } = useAuth();
   const colors = useColors();
   const { refresh } = useNotifications();
+  // GE-2: this screen serves staff and guardians alike; the hook itself no-ops for
+  // any non-GUARDIAN session, so staff inbox opens never enter the family figures.
+  useRecordView("NOTIFICATIONS");
 
   const [{ data, fetching, error }, refetch] = useQuery({
     query: MY_NOTIFICATIONS_QUERY,
@@ -64,6 +83,8 @@ export default function NotificationCenterScreen({ navigation }: { navigation: R
 
   // D-#307: the picked unread rows (checkbox multi-select).
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // A deep-link held back until the view mode has been dropped (see onRowPress).
+  const [pendingTarget, setPendingTarget] = useState<NotificationTarget | null>(null);
 
   const rows = data?.myNotifications ?? [];
   // Server is newest-first; partition unread-first without losing that order.
@@ -87,6 +108,29 @@ export default function NotificationCenterScreen({ navigation }: { navigation: R
     refetch({ requestPolicy: "network-only" });
   };
 
+  /** `initial: false` keeps the tab's home screen beneath the deep-linked screen —
+   *  without it the target becomes the stack's FIRST screen and loses its back button
+   *  (owner report: Reconciliation report). */
+  const go = React.useCallback(
+    (target: NotificationTarget) => {
+      navigation.navigate("App", {
+        screen: target.tab,
+        params: target.params
+          ? { screen: target.screen, params: target.params, initial: false }
+          : { screen: target.screen, initial: false },
+      });
+    },
+    [navigation],
+  );
+
+  // Runs after the hat switch has re-rendered the drawer, so the target tab exists.
+  React.useEffect(() => {
+    if (pendingTarget && !viewMode) {
+      go(pendingTarget);
+      setPendingTarget(null);
+    }
+  }, [pendingTarget, viewMode, go]);
+
   const onRowPress = async (row: NotificationT) => {
     if (!row.readAt) {
       await markRead({ id: row.id });
@@ -96,15 +140,16 @@ export default function NotificationCenterScreen({ navigation }: { navigation: R
     }
     const target = notificationTarget(row.kind, row.refs, role);
     if (target) {
-      // `initial: false` keeps the tab's home screen beneath the deep-linked
-      // screen — without it the target becomes the stack's FIRST screen and
-      // loses its back button (owner report: Reconciliation report).
-      navigation.navigate("App", {
-        screen: target.tab,
-        params: target.params
-          ? { screen: target.screen, params: target.params, initial: false }
-          : { screen: target.screen, initial: false },
-      });
+      // D-#467: the row points at a tab this hat does not show (an office item read
+      // while wearing the teacher hat). Un-narrow first and navigate once the drawer
+      // has re-rendered with the full tab set — `pendingTarget` above. Only when the
+      // tab is genuinely missing, so a same-hat tap never disturbs the chosen view.
+      if (viewMode && !drawerHasTab(target.tab)) {
+        setPendingTarget(target);
+        setViewMode(null);
+        return;
+      }
+      go(target);
     }
   };
 
