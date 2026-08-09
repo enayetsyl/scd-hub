@@ -38,6 +38,7 @@ import { emitRevisionDelivery, emitRevisionEscalation } from "../../notification
 import { dateKeyOf } from "../../attendance/dates";
 import { writeAudit } from "../../platform/services/AuditService";
 import { RevisionError } from "./RevisionService";
+import { actingAsFilter } from "../../foundation/services/RoleScope";
 
 /** The read-time default consecutive-absence threshold (D-#245/#97 — no seed write). */
 export const DEFAULT_ABSENCE_THRESHOLD = 2;
@@ -286,7 +287,7 @@ export async function checkAbsenceEscalation(
     throw err;
   }
 
-  const principals = (await User.find({ role: "PRINCIPAL", active: true })
+  const principals = (await User.find(actingAsFilter(["PRINCIPAL"]))
     .select("_id")
     .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
   const titleBn = await renderTemplate("sr.absent.title");

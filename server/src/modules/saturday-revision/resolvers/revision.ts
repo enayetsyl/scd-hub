@@ -17,6 +17,7 @@ import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../../../middleware/authz";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   recordEntry,
   editEntry,
@@ -37,7 +38,7 @@ import {
 // ---------------------------------------------------------------------------
 
 function isAdmin(ctx: AppContext): boolean {
-  return ctx.auth?.role === "PRINCIPAL" || ctx.auth?.role === "OFFICE";
+  return isAdminStaff(ctx.auth);
 }
 
 /** Write scope: P/O admin; else tracker:write + the teacher leads the group. */

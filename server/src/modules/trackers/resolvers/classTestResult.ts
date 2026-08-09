@@ -40,6 +40,7 @@ import {
 } from "../services/ClassTestPublishService";
 import { Subject } from "../../foundation/models/Subject";
 import { assertCanWrite, assertCanRead, ForbiddenError } from "../../../middleware/authz";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 
 async function resolveSubjectId(subject: string): Promise<string> {
   const doc = await Subject.findOne({ code: subject }).select("_id").lean();
@@ -52,7 +53,7 @@ async function assertReadTest(ctx: AppContext, testId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const test = await getClassTest(testId);
   if (!test) throw new ForbiddenError("Class test not found");
-  if (ctx.auth.role !== "PRINCIPAL" && ctx.auth.role !== "OFFICE") {
+  if (!isAdminStaff(ctx.auth)) {
     await assertCanRead(ctx, test.sectionId, test.classId);
   }
 }

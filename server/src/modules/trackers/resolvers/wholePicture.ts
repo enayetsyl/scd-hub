@@ -25,6 +25,7 @@ import {
   type GuardianTrajectory,
 } from "../services/WholePictureService";
 import { assertReportRead, StudentAnalyticsRef } from "./classTestSummary";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 
 const HomeworkPictureRef = builder.objectRef<HomeworkPicture>("HomeworkPicture").implement({
   description: "Homework completion + chase behaviour over the window — the earliest warning signal.",
@@ -103,7 +104,7 @@ builder.queryField("studentWholePicture", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const role = ctx.auth.role as Role;
-      if (role !== "PRINCIPAL" && role !== "OFFICE") {
+      if (!isAdminStaff(ctx.auth)) {
         const student = (await Student.findById(args.studentId).select("sectionId").lean()) as {
           sectionId: Types.ObjectId;
         } | null;

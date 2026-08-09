@@ -8,6 +8,7 @@
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   teacherClassLoad,
   type TeacherClassLoadShape,
@@ -17,7 +18,7 @@ import {
 
 function assertClassLoadScope(ctx: AppContext, teacherId?: string | null): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE") return;
+  if (isAdminStaff(ctx.auth)) return;
   if (teacherId && teacherId === ctx.auth.userId) return;
   throw new ForbiddenError("A teacher may view only their own class load; all-teacher view is Principal/Office only");
 }

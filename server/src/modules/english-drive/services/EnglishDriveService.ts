@@ -25,6 +25,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { uploadToDrive, DriveUnavailableError } from "../../platform/services/DriveStore";
 import { createPrintRequest } from "../../printing/services/PrintRequestService";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   EnglishDriveDoc,
   ENGLISH_DRIVE_KINDS,
@@ -104,7 +105,7 @@ export async function allowedEnglishDriveClassLevels(
   ctx: AppContext,
 ): Promise<Set<number> | null> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE") return null;
+  if (isAdminStaff(ctx.auth)) return null;
   if (ctx.auth.role !== "TEACHER") {
     throw new ForbiddenError("ইংরেজি ড্রাইভ দেখার অনুমতি নেই");
   }
