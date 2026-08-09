@@ -1201,6 +1201,7 @@ const STR_BN = {
   viewModeLabel: "কোন ভূমিকায় দেখবেন",
   // Workspace subject fold (D-#469): one control over the not-my-subject groups
   wsOtherSubjects: "অন্য বিষয়",
+  tdMyAsLifecycle: "আমার অ্যাসাইনমেন্ট লাইফসাইকেল",
   viewModeAll: "সব একসাথে",
 
   // Auth
@@ -4551,6 +4552,7 @@ const STR_EN: StrTable = {
   viewModeLabel: "View as",
   // Workspace subject fold (D-#469): one control over the not-my-subject groups
   wsOtherSubjects: "Other subjects",
+  tdMyAsLifecycle: "My assignment lifecycle",
   viewModeAll: "Everything",
 
   // Auth
