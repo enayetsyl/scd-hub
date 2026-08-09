@@ -1199,6 +1199,8 @@ const STR_BN = {
   openMenu: "মেনু খুলুন",
   // View switcher for a two-hat login (D-#467)
   viewModeLabel: "কোন ভূমিকায় দেখবেন",
+  // Workspace subject fold (D-#469): one control over the not-my-subject groups
+  wsOtherSubjects: "অন্য বিষয়",
   viewModeAll: "সব একসাথে",
 
   // Auth
@@ -4547,6 +4549,8 @@ const STR_EN: StrTable = {
   openMenu: "Open menu",
   // View switcher for a two-hat login (D-#467)
   viewModeLabel: "View as",
+  // Workspace subject fold (D-#469): one control over the not-my-subject groups
+  wsOtherSubjects: "Other subjects",
   viewModeAll: "Everything",
 
   // Auth

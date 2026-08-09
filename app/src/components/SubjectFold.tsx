@@ -7,11 +7,20 @@
  * `taught` = null (admins, whole-section covers, loading) renders everything
  * expanded — the pre-fold behavior, and the subject-teacher view the server
  * already narrowed stays visually unchanged.
+ *
+ * D-#469: the per-subject toggles now sit behind ONE "other subjects" control that
+ * is CLOSED by default, so a class teacher opens the workspace on their own subject
+ * alone. Owner report: Momin teaches only Islamic Studies but coordinates Class 2, so
+ * four subjects' cards greeted him every morning. This is a DISPLAY default, not a
+ * scope change — the whole section is still one tap away (he is the section's daily
+ * coordinator, D-#42/#45) and the server still decides what may be read at all.
+ * Exception: with no own-subject records the group opens itself, because a screen
+ * that is empty except for a closed toggle reads as "nothing to do" when there is.
  */
 import React, { useState } from "react";
 import { View } from "react-native";
 import { Button } from "./ui";
-import { hwSubjectLabel, bnNum } from "../lib/labels";
+import { hwSubjectLabel, bnNum, STR } from "../lib/labels";
 import { space } from "../theme/tokens";
 
 export interface SubjectFoldRenderOpts {
@@ -38,6 +47,8 @@ export function SubjectFold<T extends { subject: string }>({
   render,
 }: Props<T>): React.ReactElement {
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  // null = the caller has not touched the control yet (see othersOpen below).
+  const [showOthers, setShowOthers] = useState<boolean | null>(null);
   if (!taught) return <>{render([...records])}</>;
 
   const visible = records.filter((r) => taught.has(r.subject));
@@ -55,23 +66,39 @@ export function SubjectFold<T extends { subject: string }>({
     list.push(r);
   }
 
+  const otherCount = foldOrder.reduce((n, s) => n + (folded.get(s)?.length ?? 0), 0);
+  // Nothing of the caller's own on this section ⇒ open the group rather than show a
+  // screen that looks empty. `showOthers === null` means "not touched yet".
+  const othersOpen = showOthers ?? visible.length === 0;
+
   return (
     <>
       {render(visible)}
-      {foldOrder.map((subject) => {
-        const rows = folded.get(subject)!;
-        const isOpen = !!open[subject];
-        return (
-          <View key={subject} style={{ marginBottom: space(2) }}>
-            <Button
-              title={`${isOpen ? "▾" : "▸"} ${hwSubjectLabel(subject)} (${bnNum(rows.length)})`}
-              variant="secondary"
-              onPress={() => setOpen((m) => ({ ...m, [subject]: !m[subject] }))}
-            />
-            {isOpen ? <View style={{ marginTop: space(2) }}>{render(rows, { readOnly: true })}</View> : null}
-          </View>
-        );
-      })}
+      {otherCount > 0 ? (
+        <View style={{ marginTop: space(2) }}>
+          <Button
+            title={`${othersOpen ? "▾" : "▸"} ${STR.wsOtherSubjects} (${bnNum(otherCount)})`}
+            variant="secondary"
+            onPress={() => setShowOthers(!othersOpen)}
+          />
+        </View>
+      ) : null}
+      {othersOpen
+        ? foldOrder.map((subject) => {
+            const rows = folded.get(subject)!;
+            const isOpen = !!open[subject];
+            return (
+              <View key={subject} style={{ marginTop: space(2) }}>
+                <Button
+                  title={`${isOpen ? "▾" : "▸"} ${hwSubjectLabel(subject)} (${bnNum(rows.length)})`}
+                  variant="secondary"
+                  onPress={() => setOpen((m) => ({ ...m, [subject]: !m[subject] }))}
+                />
+                {isOpen ? <View style={{ marginTop: space(2) }}>{render(rows, { readOnly: true })}</View> : null}
+              </View>
+            );
+          })
+        : null}
     </>
   );
 }
