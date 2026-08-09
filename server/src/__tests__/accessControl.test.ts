@@ -54,6 +54,7 @@ jest.mock("../modules/platform/services/AuditService", () => ({
 }));
 
 import * as AC from "../modules/access-control/services/AccessControlService";
+import * as RS from "../modules/foundation/services/RoleScope";
 
 function seedUser(id: string, role: string, over: Partial<MockUser> = {}): MockUser {
   const u: MockUser = {
@@ -354,5 +355,57 @@ describe("B. AccessControlService mutations + audit", () => {
     expect(out.effectivePermissions).toContain("library:manage");
     expect(out.effectivePermissions).not.toContain("tracker:export");
     expect(mockAudits).toHaveLength(0); // a read never audits
+  });
+});
+
+// ===========================================================================
+// D. Template-aware role resolution (D-#468) — the gate + recipient seam
+// ===========================================================================
+
+describe("D. RoleScope: an added template must ACT as that role", () => {
+  test("isAdminStaff: true by primary role, true by ADDED template, false for a plain teacher", () => {
+    expect(RS.isAdminStaff({ userId: "u", role: "OFFICE" })).toBe(true);
+    expect(RS.isAdminStaff({ userId: "u", role: "PRINCIPAL" })).toBe(true);
+    // the whole point: a TEACHER carrying the OFFICE template IS the office desk
+    expect(RS.isAdminStaff({ userId: "u", role: "TEACHER", additionalTemplates: ["OFFICE"] })).toBe(true);
+    expect(RS.isAdminStaff({ userId: "u", role: "TEACHER" })).toBe(false);
+    expect(RS.isAdminStaff({ userId: "u", role: "GUARDIAN" })).toBe(false);
+    expect(RS.isAdminStaff(null)).toBe(false);
+  });
+
+  test("a GRANT of every office permission does NOT make a teacher act as OFFICE (only a template does)", () => {
+    const granted = [...permissionsForRole("OFFICE")] as Permission[];
+    const profile = { userId: "u", role: "TEACHER" as Role, grantedPermissions: granted };
+    // holds the permissions…
+    expect(callerHasPermission(profile, "roster:manage")).toBe(true);
+    // …but is not the office desk: role identity and permission stay separate concepts
+    expect(RS.isAdminStaff(profile)).toBe(false);
+  });
+
+  test("actingAsFilter matches the primary role OR the added template, and only ACTIVE users", () => {
+    const f = RS.actingAsFilter(["PRINCIPAL", "OFFICE"]) as {
+      active: boolean;
+      $or: Array<Record<string, { $in: string[] }>>;
+    };
+    expect(f.active).toBe(true);
+    expect(f.$or).toEqual([
+      { role: { $in: ["PRINCIPAL", "OFFICE"] } },
+      { additionalTemplates: { $in: ["PRINCIPAL", "OFFICE"] } },
+    ]);
+  });
+
+  test("REGRESSION: the office-by-template user the old recipient query missed is now matched", () => {
+    // The old query was { role: { $in: ["PRINCIPAL", "OFFICE"] }, active: true } — a
+    // TEACHER+OFFICE user failed it, so they received no class-test / print / leave notice.
+    const twoHat = { role: "TEACHER", additionalTemplates: ["OFFICE"], active: true };
+    const f = RS.actingAsFilter(["PRINCIPAL", "OFFICE"]) as {
+      $or: Array<{ role?: { $in: string[] }; additionalTemplates?: { $in: string[] } }>;
+    };
+    const matches = f.$or.some((clause) =>
+      clause.role
+        ? clause.role.$in.includes(twoHat.role)
+        : (clause.additionalTemplates?.$in ?? []).some((t) => twoHat.additionalTemplates.includes(t)),
+    );
+    expect(matches).toBe(true);
   });
 });

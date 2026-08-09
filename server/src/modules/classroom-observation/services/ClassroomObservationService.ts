@@ -52,6 +52,7 @@ import { validateQuranPayload, type QuranPayloadInput } from "../quran";
 import { writeAudit } from "../../platform/services/AuditService";
 import { emit } from "../../notifications/services/NotificationService";
 import { User } from "../../foundation/models/User";
+import { actingAsFilter } from "../../foundation/services/RoleScope";
 
 export class ClassroomObservationError extends Error {}
 
@@ -496,7 +497,7 @@ async function emitReadyToPublish(doc: IClassroomObservation): Promise<void> {
 
 /** Principal + Office — the observation:manage holders who may publish. */
 async function managerRecipientIds(): Promise<string[]> {
-  const users = (await User.find({ role: { $in: ["PRINCIPAL", "OFFICE"] }, active: true })
+  const users = (await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"]))
     .select("_id")
     .lean()) as Array<{ _id: Types.ObjectId }>;
   return users.map((u) => u._id.toString());
@@ -854,7 +855,7 @@ export async function respondToObservation(
 /** Best-effort responded-notice to the observer + every Principal (CO-3). */
 async function emitObservationResponded(doc: IClassroomObservation): Promise<void> {
   try {
-    const principals = (await User.find({ role: "PRINCIPAL", active: true }).select("_id").lean()) as Array<{
+    const principals = (await User.find(actingAsFilter(["PRINCIPAL"])).select("_id").lean()) as Array<{
       _id: Types.ObjectId;
     }>;
     // Observer + all Principals, deduped (a principal could also be the observer).

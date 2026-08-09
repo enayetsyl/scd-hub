@@ -47,6 +47,7 @@ import { Section } from "../../foundation/models/Section";
 import { Student } from "../../foundation/models/Student";
 import { assertCanRead, ForbiddenError } from "../../../middleware/authz";
 import type { Types } from "mongoose";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 
 // ---------------------------------------------------------------------------
 // Gate helpers
@@ -63,7 +64,7 @@ export async function assertReportRead(
 ): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role as Role;
-  if (role === "PRINCIPAL" || role === "OFFICE") return;
+  if (isAdminStaff(ctx.auth)) return;
   if (role === "GUARDIAN" || !callerHasPermission(ctx.auth, "tracker:read")) throw new ForbiddenError();
   // Self-scope: a teacher's own reports need no section — requestedBy IS the scope.
   if (!sectionId && opts?.selfTeacherId && opts.selfTeacherId === (ctx.auth.userId as string)) return;
@@ -76,7 +77,7 @@ export async function assertReportRead(
 /** Principal/Office only — the school-wide dashboard (J5). */
 function assertDashboardAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (ctx.auth.role !== "PRINCIPAL" && ctx.auth.role !== "OFFICE") {
+  if (!isAdminStaff(ctx.auth)) {
     throw new ForbiddenError("ড্যাশবোর্ড অফিস/অধ্যক্ষের জন্য");
   }
 }
@@ -85,7 +86,7 @@ function assertDashboardAdmin(ctx: AppContext): void {
 function assertChaseAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role as Role;
-  if ((role === "PRINCIPAL" || role === "OFFICE") && callerHasPermission(ctx.auth, "message:dispatch")) return;
+  if (isAdminStaff(ctx.auth) && callerHasPermission(ctx.auth, "message:dispatch")) return;
   throw new ForbiddenError("ক্লাস টেস্ট ফলো-আপ অফিস/অধ্যক্ষের কাজ");
 }
 
@@ -351,7 +352,7 @@ builder.queryField("classTestStudentProfile", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const role = ctx.auth.role as Role;
-      if (role !== "PRINCIPAL" && role !== "OFFICE") {
+      if (!isAdminStaff(ctx.auth)) {
         // Teacher: scope to the student's own section.
         const student = (await Student.findById(args.studentId).select("sectionId").lean()) as {
           sectionId: Types.ObjectId;

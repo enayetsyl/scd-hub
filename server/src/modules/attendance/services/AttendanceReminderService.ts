@@ -32,6 +32,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import type { MessageTemplateKey } from "@scd/shared";
 import { ATTENDANCE_REMINDER_TIERS, type AttendanceReminderTier } from "@scd/shared";
+import { actingAsFilter } from "../../foundation/services/RoleScope";
 
 export class AttendanceReminderError extends Error {}
 
@@ -85,7 +86,7 @@ export interface ReminderDispatchSummary {
 }
 
 async function userIdsByRole(role: "OFFICE" | "PRINCIPAL"): Promise<string[]> {
-  const users = await User.find({ role, active: true }).select("_id").lean();
+  const users = await User.find(actingAsFilter([role])).select("_id").lean();
   return users.map((u) => u._id.toString());
 }
 

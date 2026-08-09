@@ -15,6 +15,7 @@ import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../../../middleware/authz";
 import { teacherTeachesGroup, teacherCanReadStudent } from "../services/RevisionService";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   studentJuzWeakness,
   groupCoverage,
@@ -39,7 +40,7 @@ import {
 // ---------------------------------------------------------------------------
 
 function isAdmin(ctx: AppContext): boolean {
-  return ctx.auth?.role === "PRINCIPAL" || ctx.auth?.role === "OFFICE";
+  return isAdminStaff(ctx.auth);
 }
 
 async function assertReadStudent(ctx: AppContext, studentId: string): Promise<void> {

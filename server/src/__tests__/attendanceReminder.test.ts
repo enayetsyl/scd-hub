@@ -156,7 +156,9 @@ describe("dispatchAttendanceReminders", () => {
     mockUserFind.mockResolvedValue([{ _id: oid("o1") }, { _id: oid("o2") }]);
 
     await dispatchAttendanceReminders("T1245", DATE);
-    expect(mockUserFind).toHaveBeenCalledWith(expect.objectContaining({ role: "OFFICE", active: true }));
+    // D-#468: recipients resolve by primary role OR added template, so an office-by-
+    // template user is reached too. Asserting the filter INTENT, not a literal shape.
+    expect(mockUserFind).toHaveBeenCalledWith(expect.objectContaining({ active: true, $or: [{ role: { $in: ["OFFICE"] } }, { additionalTemplates: { $in: ["OFFICE"] } }] }));
     expect(mockEmit).toHaveBeenCalledTimes(2);
     expect(mockEmit).toHaveBeenCalledWith(
       expect.objectContaining({ recipientUserId: "o1", dedupeKey: `ATT:${DATE}:T1245:s1:o1` }),

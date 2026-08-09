@@ -27,6 +27,7 @@ import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import { callerHasPermission } from "@scd/shared";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   uploadObservation,
   assignObserver,
@@ -64,7 +65,7 @@ import {
 function actorOf(ctx: AppContext): ObservationActor {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role;
-  return { userId: ctx.auth.userId as string, canManage: role === "PRINCIPAL" || role === "OFFICE" };
+  return { userId: ctx.auth.userId as string, canManage: isAdminStaff(ctx.auth) };
 }
 
 // ---------------------------------------------------------------------------

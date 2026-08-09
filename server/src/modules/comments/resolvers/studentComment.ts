@@ -32,17 +32,18 @@ import {
 } from "../services/StudentCommentService";
 import { Section } from "../../foundation/models/Section";
 import { assertCanRead, ForbiddenError } from "../../../middleware/authz";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 
 /** True when the caller is a Principal/Office reviewer (the comment-delivery authority,
  *  D-#264) — they may edit any undelivered comment + see the review dashboard. */
 function isReviewer(ctx: AppContext): boolean {
-  return ctx.auth?.role === "PRINCIPAL" || ctx.auth?.role === "OFFICE";
+  return isAdminStaff(ctx.auth);
 }
 
 /** Enforce staff read-scope on a section (teachers only; Principal/Office unscoped). */
 async function assertReadSection(ctx: AppContext, sectionId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE") return;
+  if (isAdminStaff(ctx.auth)) return;
   const section = await Section.findById(sectionId).lean();
   if (!section) throw new ForbiddenError("Section not found");
   await assertCanRead(ctx, sectionId, section.classId.toString());

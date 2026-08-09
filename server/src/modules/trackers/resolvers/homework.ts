@@ -70,6 +70,7 @@ import {
 import { Subject } from "../../foundation/models/Subject";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 
 async function resolveSubjectId(subject: string): Promise<string> {
   const doc = await Subject.findOne({ code: subject }).select("_id").lean();
@@ -1203,7 +1204,7 @@ builder.mutationField("revertHomeworkRecord", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
-      const admin = ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE";
+      const admin = isAdminStaff(ctx.auth);
       const record = await HomeworkStudentRecord.findById(args.recordId)
         .select("hwItemId sectionId")
         .lean();
