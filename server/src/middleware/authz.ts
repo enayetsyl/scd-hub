@@ -25,6 +25,7 @@ import { Subject } from "../modules/foundation/models/Subject";
 import { User } from "../modules/foundation/models/User";
 import { Guardian } from "../modules/foundation/models/Guardian";
 import { GuardianLink } from "../modules/foundation/models/GuardianLink";
+import { isAdminStaff } from "../modules/foundation/services/RoleScope";
 
 export class ForbiddenError extends Error {
   constructor(msg = "Forbidden") {
@@ -72,7 +73,7 @@ export async function assertCanRead(
   classId: string,
   subjectId?: string,
 ): Promise<void> {
-  if (ctx.auth?.role === "PRINCIPAL" || ctx.auth?.role === "OFFICE") return;
+  if (isAdminStaff(ctx.auth)) return;
   if (ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
   const scopes = await resolveTeacherScopes(ctx);
   if (!canRead(scopes, sectionId, classId, subjectId)) throw new ForbiddenError();
@@ -106,7 +107,7 @@ export async function allowedSubjectCodesForSection(
   },
 ): Promise<Set<string> | null> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE") return null;
+  if (isAdminStaff(ctx.auth)) return null;
   if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
 
   const userId = ctx.auth.userId as string;

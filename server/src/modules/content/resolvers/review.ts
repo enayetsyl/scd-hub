@@ -16,6 +16,7 @@
 import { GraphQLError } from "graphql";
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   assignPlanReview as assignSvc,
   assignPlanReviewBulk as assignBulkSvc,
@@ -276,7 +277,7 @@ builder.queryField("planReviewThread", (t) =>
         return mapReviewError(err);
       }
       // Row-scope (R4): admins see all; a teacher only threads they participated in.
-      if (ctx.auth.role !== "PRINCIPAL" && ctx.auth.role !== "OFFICE") {
+      if (!isAdminStaff(ctx.auth)) {
         const isParticipant = thread.some((r) => r.reviewerId === ctx.auth!.userId);
         if (!isParticipant) throw new ForbiddenError();
       }

@@ -87,6 +87,7 @@ import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { Subject } from "../../foundation/models/Subject";
 import { Section } from "../../foundation/models/Section";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   assertCanWrite,
   assertCanRead,
@@ -119,7 +120,7 @@ async function assignmentRecordSubjectId(recordId: string): Promise<string | und
 /** Principal/Office — the AS-T4 follow-up owner (D-#88; teachers never chase). */
 function assertFollowUpAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (ctx.auth.role !== "PRINCIPAL" && ctx.auth.role !== "OFFICE") {
+  if (!isAdminStaff(ctx.auth)) {
     throw new ForbiddenError("অ্যাসাইনমেন্ট ফলো-আপ অফিস/অধ্যক্ষের কাজ (D-#88)");
   }
 }
@@ -130,7 +131,7 @@ function assertFollowUpAdmin(ctx: AppContext): void {
 function assertStaffScheduleRead(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role as Role;
-  if (role === "PRINCIPAL" || role === "OFFICE") return;
+  if (isAdminStaff(ctx.auth)) return;
   if (callerHasPermission(ctx.auth, "tracker:read")) return;
   throw new ForbiddenError();
 }
@@ -1064,7 +1065,7 @@ builder.mutationField("updateAssignmentItem", (t) =>
         setId: args.setId ?? undefined,
         attachmentIds: args.attachmentIds ? [...args.attachmentIds] : undefined,
         actorId: ctx.auth.userId as string,
-        isAdmin: ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE",
+        isAdmin: isAdminStaff(ctx.auth),
       });
     },
   }),
@@ -1084,7 +1085,7 @@ builder.mutationField("deleteAssignmentItem", (t) =>
       await deleteAssignmentItemSvc({
         itemId: args.itemId,
         actorId: ctx.auth.userId as string,
-        isAdmin: ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE",
+        isAdmin: isAdminStaff(ctx.auth),
       });
       return true;
     },
@@ -1482,7 +1483,7 @@ builder.mutationField("revertAssignmentRecord", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
-      const admin = ctx.auth.role === "PRINCIPAL" || ctx.auth.role === "OFFICE";
+      const admin = isAdminStaff(ctx.auth);
       await assertRecordInSection(args.recordId, args.sectionId);
       if (!admin) {
         await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));

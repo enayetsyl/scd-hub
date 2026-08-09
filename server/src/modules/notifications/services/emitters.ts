@@ -24,6 +24,7 @@ import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { Section } from "../../foundation/models/Section";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { dateKeyOf } from "../../attendance/dates";
+import { actingAsFilter } from "../../foundation/services/RoleScope";
 
 type IdLike = { toString(): string };
 
@@ -1067,7 +1068,7 @@ export interface PrintRequestedEvent {
  */
 export async function emitPrintRequested(event: PrintRequestedEvent): Promise<void> {
   return bestEffort("print requested", async () => {
-    const operators = (await User.find({ role: { $in: ["PRINCIPAL", "OFFICE"] }, active: true })
+    const operators = (await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"]))
       .select("_id")
       .lean()) as unknown as Array<{ _id: IdLike }>;
     const titleBn = await renderTemplate("print.requested.title");
@@ -1121,7 +1122,7 @@ export async function emitCtQuestionTeacher(
  *  (new request / changes requested / confirmed). Best-effort. */
 export async function emitCtQuestionOffice(event: CtQuestionNotifyEvent): Promise<void> {
   return bestEffort("ct question → office", async () => {
-    const operators = (await User.find({ role: { $in: ["PRINCIPAL", "OFFICE"] }, active: true })
+    const operators = (await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"]))
       .select("_id")
       .lean()) as unknown as Array<{ _id: IdLike }>;
     for (const op of operators) {
@@ -1157,7 +1158,7 @@ export interface CtResultSubmittedEvent {
  *  results for review/approval. Best-effort. */
 export async function emitCtResultSubmitted(event: CtResultSubmittedEvent): Promise<void> {
   return bestEffort("ct result submitted → office", async () => {
-    const operators = (await User.find({ role: { $in: ["PRINCIPAL", "OFFICE"] }, active: true })
+    const operators = (await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"]))
       .select("_id")
       .lean()) as unknown as Array<{ _id: IdLike }>;
     for (const op of operators) {
@@ -1188,7 +1189,7 @@ export interface StaffLeaveSubmittedEvent {
  *  application awaiting their approval. Best-effort. */
 export async function emitStaffLeaveSubmitted(event: StaffLeaveSubmittedEvent): Promise<void> {
   return bestEffort("staff leave submitted → office", async () => {
-    const operators = (await User.find({ role: { $in: ["PRINCIPAL", "OFFICE"] }, active: true })
+    const operators = (await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"]))
       .select("_id")
       .lean()) as unknown as Array<{ _id: IdLike }>;
     for (const op of operators) {

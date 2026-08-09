@@ -41,6 +41,7 @@ import {
 } from "../../../middleware/authz";
 import { Subject } from "../../foundation/models/Subject";
 import type { Types } from "mongoose";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 
 async function resolveSubjectId(subject: string): Promise<string> {
   const doc = await Subject.findOne({ code: subject }).select("_id").lean();
@@ -64,7 +65,7 @@ function assertPrintAdmin(ctx: AppContext): void {
 function assertStaffRead(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role as Role;
-  if (role === "PRINCIPAL" || role === "OFFICE") return;
+  if (isAdminStaff(ctx.auth)) return;
   if (callerHasPermission(ctx.auth, "tracker:read")) return;
   throw new ForbiddenError();
 }
@@ -195,7 +196,7 @@ builder.mutationField("registerClassTestOfficial", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const role = ctx.auth.role as Role;
-      const admin = role === "PRINCIPAL" || role === "OFFICE";
+      const admin = isAdminStaff(ctx.auth);
       if (!admin) {
         if (!callerHasPermission(ctx.auth, "tracker:write")) throw new ForbiddenError();
         await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
@@ -401,7 +402,7 @@ builder.queryField("classTest", (t) =>
       const shape = await getClassTestSvc(args.id);
       if (!shape) return null;
       // Teachers (not Principal/Office) need read-scope on the test's section.
-      if (ctx.auth!.role !== "PRINCIPAL" && ctx.auth!.role !== "OFFICE") {
+      if (!isAdminStaff(ctx.auth)) {
         await assertCanRead(ctx, shape.sectionId, shape.classId);
       }
       return shape;

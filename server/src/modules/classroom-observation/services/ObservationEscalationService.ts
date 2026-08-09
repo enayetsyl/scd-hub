@@ -34,6 +34,7 @@ import { User } from "../../foundation/models/User";
 import { emit } from "../../notifications/services/NotificationService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { ClassroomObservationError } from "./ClassroomObservationService";
+import { actingAsFilter } from "../../foundation/services/RoleScope";
 
 // ---------------------------------------------------------------------------
 // Config (admin-tunable thresholds; read-time defaults, no seed write — D-#97)
@@ -155,7 +156,7 @@ function principalBodyBn(daysSince: number): string {
 }
 
 async function principalRecipientIds(): Promise<string[]> {
-  const users = (await User.find({ role: "PRINCIPAL", active: true }).select("_id").lean()) as Array<{
+  const users = (await User.find(actingAsFilter(["PRINCIPAL"])).select("_id").lean()) as Array<{
     _id: Types.ObjectId;
   }>;
   return users.map((u) => u._id.toString());

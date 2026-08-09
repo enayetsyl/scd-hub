@@ -77,6 +77,7 @@ import { markTick, resetTickerHeartbeat } from "./tickerHeartbeat";
 export { getTickerHealth } from "./tickerHeartbeat";
 import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
+import { actingAsFilter } from "../../foundation/services/RoleScope";
 
 type IdLike = { toString(): string };
 
@@ -443,7 +444,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     const titleBn = await renderTemplate("classNote.escalation.title");
     const bodyBn = await renderTemplate("classNote.escalation.body", { count: missing.length, lines });
 
-    const recipients = (await User.find({ role: rung.role, active: true })
+    const recipients = (await User.find(actingAsFilter([rung.role]))
       .select("_id")
       .lean()) as unknown as Array<{ _id: IdLike }>;
     for (const recipient of recipients) {
@@ -498,7 +499,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     }
 
     if (escRung) {
-      const recipients = (await User.find({ role: escRung.role, active: true })
+      const recipients = (await User.find(actingAsFilter([escRung.role]))
         .select("_id")
         .lean()) as unknown as Array<{ _id: IdLike }>;
       const ctIds = [...new Set(pending.map((s) => s.classTeacherId).filter(Boolean))] as string[];

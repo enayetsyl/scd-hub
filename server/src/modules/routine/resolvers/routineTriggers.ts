@@ -13,6 +13,7 @@ import { type IBellDutyAssignment } from "../models/BellDutyAssignment";
 import { type IClassNote } from "../models/ClassNote";
 import { RoutineSlotRef } from "./routineSlots";
 import type { BellTrigger } from "../trigger";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   bellSchedule,
   assignBellDuty,
@@ -230,7 +231,7 @@ builder.mutationField("publishClassNote", (t) =>
         homeworkItemId: args.homeworkItemId ?? null,
         attachmentIds: args.attachmentIds ?? null,
         actorId: ctx.auth!.userId,
-        canManage: ctx.auth!.role === "PRINCIPAL" || ctx.auth!.role === "OFFICE",
+        canManage: isAdminStaff(ctx.auth),
       }),
   }),
 );

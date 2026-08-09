@@ -260,11 +260,15 @@ describe("homework pending-confirm ladder", () => {
   beforeEach(() => {
     supervisors = [];
     escalationRecipients = [];
-    mockUserFind.mockImplementation((f: { homeworkSupervisor?: boolean; role?: string } | undefined) => {
-      if (f && f.homeworkSupervisor) return Promise.resolve(supervisors);
-      if (f && f.role) return Promise.resolve(escalationRecipients);
-      return Promise.resolve([]); // _id → name lookups
-    });
+    mockUserFind.mockImplementation(
+      (f: { homeworkSupervisor?: boolean; role?: string; $or?: unknown[] } | undefined) => {
+        if (f && f.homeworkSupervisor) return Promise.resolve(supervisors);
+        // D-#468: the escalation lookup is now actingAsFilter([...]) — a role/template
+        // $or rather than a bare `role` field. Match either so the mock tracks the seam.
+        if (f && (f.role || f.$or)) return Promise.resolve(escalationRecipients);
+        return Promise.resolve([]); // _id → name lookups
+      },
+    );
   });
 
   it("13:00 — reminds the class teacher of each still-pending section", async () => {
@@ -547,7 +551,7 @@ describe("N2.4 — class-note escalation (15:00 Office / 16:00 Principal)", () =
 
     const s = await runSchedulerTick(at(15, 5));
     expect(s.escalationsEmitted).toBe(2);
-    expect(mockUserFind).toHaveBeenLastCalledWith(expect.objectContaining({ role: "OFFICE", active: true }));
+    expect(mockUserFind).toHaveBeenLastCalledWith(expect.objectContaining({ active: true, $or: [{ role: { $in: ["OFFICE"] } }, { additionalTemplates: { $in: ["OFFICE"] } }] }));
     expect(mockEmit).toHaveBeenCalledWith(
       expect.objectContaining({
         recipientUserId: "o1",
@@ -570,7 +574,7 @@ describe("N2.4 — class-note escalation (15:00 Office / 16:00 Principal)", () =
     const s = await runSchedulerTick(at(16, 10));
     expect(s.escalationsEmitted).toBe(1);
     expect(mockUserFind).toHaveBeenLastCalledWith(
-      expect.objectContaining({ role: "PRINCIPAL", active: true }),
+      expect.objectContaining({ active: true, $or: [{ role: { $in: ["PRINCIPAL"] } }, { additionalTemplates: { $in: ["PRINCIPAL"] } }] }),
     );
     expect(mockEmit).toHaveBeenCalledWith(
       expect.objectContaining({ dedupeKey: schedulerDedupeKeys.classNoteEscalation(DATE, 16, "p1") }),

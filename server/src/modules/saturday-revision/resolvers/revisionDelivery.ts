@@ -17,6 +17,7 @@ import { ForbiddenError } from "../../../middleware/authz";
 import { callerHasPermission } from "@scd/shared";
 import { RevisionEntry } from "../models/RevisionEntry";
 import { teacherTeachesGroup } from "../services/RevisionService";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   deliverEntry,
   deliverGroupSaturday,
@@ -27,7 +28,7 @@ import {
 } from "../services/RevisionDeliveryService";
 
 function isAdmin(ctx: AppContext): boolean {
-  return ctx.auth?.role === "PRINCIPAL" || ctx.auth?.role === "OFFICE";
+  return isAdminStaff(ctx.auth);
 }
 
 /** Deliver scope: P/O admin; else tracker:write + the teacher leads the group. */

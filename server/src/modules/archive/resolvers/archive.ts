@@ -48,6 +48,7 @@ import {
 import { ClassTest } from "../../trackers/models/ClassTest";
 import { Subject } from "../../foundation/models/Subject";
 import { assertCanWrite, ForbiddenError } from "../../../middleware/authz";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 
 // ---------------------------------------------------------------------------
 // Gate helpers (the classTest.ts pattern)
@@ -57,7 +58,7 @@ import { assertCanWrite, ForbiddenError } from "../../../middleware/authz";
 function assertStaffRead(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role as Role;
-  if (role === "PRINCIPAL" || role === "OFFICE") return;
+  if (isAdminStaff(ctx.auth)) return;
   if (callerHasPermission(ctx.auth, "tracker:read")) return;
   throw new ForbiddenError();
 }
