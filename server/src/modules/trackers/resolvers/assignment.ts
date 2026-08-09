@@ -88,6 +88,7 @@ import { AssignmentItem } from "../models/AssignmentItem";
 import { Subject } from "../../foundation/models/Subject";
 import { Section } from "../../foundation/models/Section";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
+import { myAssignmentLifecycle as myAssignmentLifecycleSvc, type AsTeacherLifecycleRow } from "../services/AssignmentLifecycleService";
 import {
   assertCanWrite,
   assertCanRead,
@@ -1915,6 +1916,49 @@ builder.queryField("childAssignments", (t) =>
     resolve: async (_root, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
       return childAssignmentsSvc(args.studentId);
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Query: myAssignmentLifecycle (D-#471) — the teacher-dashboard card, the twin of
+// myHomeworkLifecycle. SELF-SCOPED: it answers only for the caller, so it needs no
+// oversight gate beyond tracker:read (the D-#340 SELF pattern).
+// ---------------------------------------------------------------------------
+
+const AsTeacherLifecycleRowRef = builder
+  .objectRef<AsTeacherLifecycleRow>("AsTeacherLifecycleRow")
+  .implement({
+    description: "The caller's own assignment lifecycle counts + pending buckets (D-#471).",
+    fields: (t) => ({
+      teacherId: t.exposeString("teacherId"),
+      deliveredItems: t.exposeInt("deliveredItems"),
+      given: t.exposeInt("given"),
+      submitted: t.exposeInt("submitted"),
+      checked: t.exposeInt("checked"),
+      returned: t.exposeInt("returned"),
+      pendingSubmission: t.exposeInt("pendingSubmission"),
+      pendingChecking: t.exposeInt("pendingChecking"),
+      pendingReturn: t.exposeInt("pendingReturn"),
+      chasedPending: t.exposeInt("chasedPending"),
+    }),
+  });
+
+builder.queryField("myAssignmentLifecycle", (t) =>
+  t.field({
+    type: AsTeacherLifecycleRowRef,
+    description:
+      "The CALLER's own assignment lifecycle row (totals + pending buckets), self-scoped — the " +
+      "teacher-dashboard card (D-#471, the twin of myHomeworkLifecycle). Attribution is the " +
+      "item's own teacherId (the rotation owner), so no routine resolution is involved.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      from: t.arg.string({ required: true }),
+      to: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return myAssignmentLifecycleSvc(ctx.auth.userId as string, args.from, args.to);
     },
   }),
 );

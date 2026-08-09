@@ -559,6 +559,11 @@ function useStackOptions() {
     headerTintColor: colors.onPrimary,
     headerTitleStyle: { fontFamily: fonts.bold },
     contentStyle: { backgroundColor: colors.bg },
+    // D-#470: native-stack draws its OWN back arrow on Android IN ADDITION to a custom
+    // headerLeft, so a pushed screen showed "← ← ☰" (owner screenshot, 2026-08-09).
+    // Web never rendered the native one, which is why it hid until the OTA carried the
+    // current header to Android. HeaderLeft already draws the back arrow it wants.
+    headerBackVisible: false,
     headerLeft: (props: { canGoBack?: boolean; tintColor?: string }) => (
       <HeaderLeft canGoBack={props.canGoBack} tintColor={props.tintColor} />
     ),

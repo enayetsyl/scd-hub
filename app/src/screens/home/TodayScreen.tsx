@@ -38,6 +38,7 @@ import {
   MY_SECTION_ATTENDANCE,
   MY_RECENT_SETS,
   MY_HW_LIFECYCLE_QUERY,
+  MY_AS_LIFECYCLE_QUERY,
   OPEN_TRACKER,
   type RecentSetT,
   type RoutineSlotT,
@@ -150,6 +151,16 @@ export default function TodayScreen(): React.ReactElement {
     pause: !canTrackers,
   });
   const myHwLc = hwLcQ.data?.myHomeworkLifecycle ?? null;
+  // D-#471: the same card for assignments, over the same 14-day window so the two read
+  // side by side. Pills open the assignment workspace (where the work is actually done)
+  // rather than a drill sheet — assignments have no pending-drill resolver, and the
+  // owner asked for this card "for easy navigation".
+  const [asLcQ, refetchAsLc] = useQuery({
+    query: MY_AS_LIFECYCLE_QUERY,
+    variables: { from: hwLcFrom, to: hwLcTo },
+    pause: !canTrackers,
+  });
+  const myAsLc = asLcQ.data?.myAssignmentLifecycle ?? null;
   // The workspace reads its class/section from here, so a drill row can point it.
   const { setSection } = useSectionContext();
   const [hwLcTarget, setHwLcTarget] = useState<HwPendingTarget | null>(null);
@@ -166,7 +177,8 @@ export default function TodayScreen(): React.ReactElement {
     if (canSets) refetchRecent({ requestPolicy: "network-only" });
     if (canFileTests && user?.id) refetchCtPending({ requestPolicy: "network-only" });
     if (canTrackers) refetchHwLc({ requestPolicy: "network-only" });
-  }, [refetch, refetchMySections, refetchRecent, refetchCtPending, refetchHwLc, canManage, canSets, canFileTests, canTrackers, user?.id]);
+    if (canTrackers) refetchAsLc({ requestPolicy: "network-only" });
+  }, [refetch, refetchMySections, refetchRecent, refetchCtPending, refetchHwLc, refetchAsLc, canManage, canSets, canFileTests, canTrackers, user?.id]);
 
   // Focus-refetch (HomeworkHome pattern): skip the first focus — the queries
   // already run on mount — then refresh whenever the user returns. Also picks
@@ -648,6 +660,56 @@ export default function TodayScreen(): React.ReactElement {
                   <Pressable
                     key={p.stage}
                     onPress={() => (active ? openHwLcDrill(p.stage, p.label) : undefined)}
+                    disabled={!active}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: space(1),
+                      paddingVertical: space(1),
+                      paddingHorizontal: space(2),
+                      borderRadius: radius.pill,
+                      backgroundColor: active ? colors.errorContainer : colors.surfaceAlt,
+                    }}
+                  >
+                    <Body style={{ fontWeight: "700", color: active ? colors.error : colors.textSecondary }}>
+                      {bnNum(p.count)}
+                    </Body>
+                    <Muted style={{ color: active ? colors.textPrimary : colors.textSecondary }}>{p.label}</Muted>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Card>
+        ) : null}
+
+        {/* D-#471: my assignment lifecycle — the twin of the homework card above.
+            Pills deep-link into the assignment workspace instead of a drill sheet. */}
+        {canTrackers && myAsLc && myAsLc.given > 0 ? (
+          <Card>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginBottom: space(1) }}>
+              <Icon name="clipboard-list" size={18} color={colors.textPrimary} />
+              <Body style={{ fontWeight: "700", flex: 1 }}>{STR.tdMyAsLifecycle}</Body>
+            </View>
+            <Muted style={{ marginBottom: space(2) }}>
+              {STR.hlrGiven} {bnNum(myAsLc.given)} · {STR.hlrSubmitted} {bnNum(myAsLc.submitted)} ·{" "}
+              {STR.hlrChecked} {bnNum(myAsLc.checked)} · {STR.hlrReturned} {bnNum(myAsLc.returned)}
+            </Muted>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+              {[
+                { key: "SUBMISSION", label: STR.hlrPendingSubmission, count: myAsLc.pendingSubmission },
+                { key: "CHECK", label: STR.hlrPendingCheck, count: myAsLc.pendingChecking },
+                { key: "RETURN", label: STR.hlrPendingReturn, count: myAsLc.pendingReturn },
+                { key: "CHASE", label: STR.hlrChasedPending, count: myAsLc.chasedPending },
+              ].map((p) => {
+                const active = p.count > 0;
+                return (
+                  <Pressable
+                    key={p.key}
+                    onPress={() =>
+                      active
+                        ? nav.navigate("AssignmentTab", { screen: "AssignmentWorkspace", initial: false })
+                        : undefined
+                    }
                     disabled={!active}
                     style={{
                       flexDirection: "row",

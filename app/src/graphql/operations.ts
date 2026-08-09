@@ -6699,3 +6699,29 @@ export const CHILD_VOCAB_QUERY = gql<
     }
   }
 `;
+
+/** D-#471 — the assignment twin of MY_HW_LIFECYCLE_QUERY. Same field names (minus the
+ *  homework-only declared/issued split), so the Today card renders from one shape. */
+export interface AsTeacherLifecycleRowT {
+  teacherId: string;
+  deliveredItems: number;
+  given: number;
+  submitted: number;
+  checked: number;
+  returned: number;
+  pendingSubmission: number;
+  pendingChecking: number;
+  pendingReturn: number;
+  chasedPending: number;
+}
+
+export const MY_AS_LIFECYCLE_QUERY = gql<
+  { myAssignmentLifecycle: AsTeacherLifecycleRowT },
+  { from: string; to: string }
+>`
+  query MyAssignmentLifecycle($from: String!, $to: String!) {
+    myAssignmentLifecycle(from: $from, to: $to) {
+      teacherId deliveredItems given submitted checked returned pendingSubmission pendingChecking pendingReturn chasedPending
+    }
+  }
+`;
