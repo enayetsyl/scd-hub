@@ -6725,3 +6725,28 @@ export const MY_AS_LIFECYCLE_QUERY = gql<
     }
   }
 `;
+
+/** D-#472 — the child's upcoming class tests: the guardian-home card that clears
+ *  itself the day after the exam (no cleanup job, no stale notice). */
+export interface ChildUpcomingClassTestT {
+  id: string;
+  subject: string;
+  subjectLabelBn: string;
+  chapter: string | null;
+  testNumber: number | null;
+  examDate: string;
+  totalMarks: number | null;
+  durationMinutes: number | null;
+  daysAway: number;
+}
+
+export const CHILD_UPCOMING_CLASS_TESTS_QUERY = gql<
+  { childUpcomingClassTests: ChildUpcomingClassTestT[] },
+  { studentId: string }
+>`
+  query ChildUpcomingClassTests($studentId: String!) {
+    childUpcomingClassTests(studentId: $studentId) {
+      id subject subjectLabelBn chapter testNumber examDate totalMarks durationMinutes daysAway
+    }
+  }
+`;

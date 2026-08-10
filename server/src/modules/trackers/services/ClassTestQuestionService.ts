@@ -30,6 +30,9 @@ import { User } from "../../foundation/models/User";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
 import { suggestTestNumber, createRequest, type ClassTestShape } from "./ClassTestService";
+import { emitClassTestUpcoming } from "../../notifications/services/emitters";
+import { bnNum } from "../../../lib/bnNum";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
 
 export interface CtQuestionRoundShape {
   fileId: string;
@@ -334,6 +337,21 @@ export async function requestCtQuestionPrint(input: PrintCtQuestionInput): Promi
   doc.status = "PRINT_REQUESTED";
   doc.classTestId = new Types.ObjectId(classTest.id);
   await doc.save();
+
+  // D-#472: the exam is now certain (reviewed, confirmed, paper at the press), so this
+  // is the honest moment to tell families — early enough to revise, late enough that it
+  // will not be retracted. Best-effort inside the emitter: a notification failure must
+  // never roll back a filed class test.
+  await emitClassTestUpcoming({
+    testId: classTest.id,
+    sectionId: doc.sectionId.toString(),
+    titleBn: "আসন্ন ক্লাস টেস্ট",
+    bodyBn:
+      `${(HW_SUBJECT_LABELS_BN[doc.subject as HwSubject] ?? doc.subject)} · টেস্ট ${bnNum(String(doc.testNumber))}\n` +
+      `তারিখ: ${bnNum(dhakaDayKey(new Date(doc.examDate)))}\n` +
+      `অধ্যায়: ${doc.chapter}\n` +
+      `পূর্ণমান ${bnNum(String(doc.totalMarks))} · সময় ${bnNum(String(doc.durationMinutes))} মিনিট`,
+  });
 
   return { request: shape(doc), classTest };
 }
