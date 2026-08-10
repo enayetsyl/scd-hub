@@ -73,6 +73,9 @@ const dedupeKeys = {
    *  publishedVersion → a NEW key → the result RE-notifies; the same version is a no-op. */
   classTestResult: (testId: string, studentId: string, guardianId: string, publishedVersion: number) =>
     `CTR:${testId}:${studentId}:${guardianId}:v${publishedVersion}`,
+  /** Per test+guardian (D-#472). NOT versioned: a reprint of the same paper is the same
+   *  exam on the same day, so re-sending it to print must never re-notify the family. */
+  classTestUpcoming: (testId: string, guardianId: string) => `CTUP:${testId}:${guardianId}`,
   /** Per comment+guardian (CM-2): a comment is delivered once + then immutable, so a
    *  re-delivery is correctly a no-op (no version — unlike the class-test republish). */
   studentComment: (commentId: string, guardianId: string) => `SCMT:${commentId}:${guardianId}`,
@@ -1230,4 +1233,77 @@ export async function emitCtResultPublished(event: CtResultPublishedEvent): Prom
       dedupeKey: dedupeKeys.ctResultPublished(event.testId, event.publishedVersion, event.teacherUserId),
     });
   });
+}
+
+// ---------------------------------------------------------------------------
+// D-#472 — the class test is confirmed and gone to print: tell the family what is
+// coming, while there is still time to revise. Fires ONCE per test per guardian
+// (dedupeKeys.classTestUpcoming is unversioned on purpose — a reprint is the same
+// exam on the same day and must not re-notify).
+//
+// Recipients are the login-enabled guardians of every ACTIVE student in the section
+// (the CLASS_TEST_RESULT posture, D-#31/#72): contact-only families have no inbox and
+// are reached by the manual wa.me path, a limit recorded rather than papered over.
+// ---------------------------------------------------------------------------
+
+export interface ClassTestUpcomingEvent {
+  testId: IdLike;
+  sectionId: IdLike;
+  /** Pre-rendered Bangla — the caller owns wording (no renderTemplate in this loop). */
+  titleBn: string;
+  bodyBn: string;
+}
+
+export async function emitClassTestUpcoming(ev: ClassTestUpcomingEvent): Promise<string[]> {
+  const notified: string[] = [];
+  await bestEffort("class-test upcoming → guardians", async () => {
+    const students = (await Student.find({ sectionId: ev.sectionId, active: { $ne: false } })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    if (students.length === 0) return;
+
+    const links = (await GuardianLink.find({
+      studentId: { $in: students.map((s) => s._id) },
+      active: { $ne: false },
+    })
+      .select("guardianId studentId")
+      .lean()) as unknown as Array<{ guardianId: IdLike; studentId: IdLike }>;
+    if (links.length === 0) return;
+
+    const guardians = (await Guardian.find({
+      _id: { $in: [...new Set(links.map((l) => l.guardianId.toString()))] },
+      loginEnabled: true,
+      active: true,
+    })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    const reachable = new Set(guardians.map((g) => g._id.toString()));
+
+    // One notice per GUARDIAN, not per link: a family with two children in the same
+    // section sits one exam notice, not two identical ones.
+    const firstStudentOf = new Map<string, string>();
+    for (const l of links) {
+      const gid = l.guardianId.toString();
+      if (reachable.has(gid) && !firstStudentOf.has(gid)) firstStudentOf.set(gid, l.studentId.toString());
+    }
+
+    await Promise.all(
+      [...firstStudentOf.entries()].map(async ([guardianId, studentId]) => {
+        await emit({
+          recipientGuardianId: guardianId,
+          kind: "CLASS_TEST_UPCOMING",
+          titleBn: ev.titleBn,
+          bodyBn: ev.bodyBn,
+          refs: {
+            classTestId: ev.testId.toString(),
+            sectionId: ev.sectionId.toString(),
+            studentId,
+          },
+          dedupeKey: dedupeKeys.classTestUpcoming(ev.testId.toString(), guardianId),
+        });
+        notified.push(guardianId);
+      }),
+    );
+  });
+  return notified;
 }

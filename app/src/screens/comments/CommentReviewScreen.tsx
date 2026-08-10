@@ -16,7 +16,7 @@ import { useMutation, useQuery } from "urql";
 import { COMMENT_REVIEW_INBOX_QUERY, DISCARD_STUDENT_COMMENT } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Badge, Button, Field, EmptyState, ErrorBanner } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
-import { STR, commentTypeLabel, commentSentimentLabel, isoDateLabel } from "../../lib/labels";
+import { STR, commentTypeLabel, commentSentimentLabel, isoDateTimeLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
 
@@ -107,7 +107,7 @@ export default function CommentReviewScreen(): React.ReactElement {
                 </View>
                 <Muted style={{ marginTop: 2 }}>
                   {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)} · {c.authorName} ·{" "}
-                  {isoDateLabel(c.createdAt)}
+                  {isoDateTimeLabel(c.createdAt)}
                 </Muted>
                 <Body style={{ marginTop: space(1) }}>{c.text}</Body>
 

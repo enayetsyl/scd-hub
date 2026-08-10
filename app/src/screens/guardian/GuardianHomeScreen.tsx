@@ -15,6 +15,7 @@ import {
   CHILD_CLASS_NOTES_QUERY,
   CHILD_HOMEWORK_QUERY,
   CHILD_DAY_LOAD_QUERY,
+  CHILD_UPCOMING_CLASS_TESTS_QUERY,
   CHILD_LIBRARY_LOANS_QUERY,
   CHILD_VOCAB_QUERY,
   CHILD_ASSIGNMENTS,
@@ -23,7 +24,7 @@ import {
 import { CHILD_TEST_RESULTS_QUERY } from "../../graphql/classTest";
 import { CHILD_COMMENTS_QUERY } from "../../graphql/comments";
 import { CHILD_REVISION_QUERY } from "../../graphql/revision";
-import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState, Divider } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
@@ -107,6 +108,15 @@ export default function GuardianHomeScreen(): React.ReactElement {
     variables: { studentId: sid },
     pause: !selected,
   });
+  // D-#472: confirmed class tests the child will sit — shown until the exam day
+  // passes, then the row simply stops being returned (no cleanup job).
+  const [testsQ, refetchUpcoming] = useQuery({
+    query: CHILD_UPCOMING_CLASS_TESTS_QUERY,
+    variables: { studentId: sid },
+    pause: !selected,
+  });
+  const upcomingTests = testsQ.data?.childUpcomingClassTests ?? [];
+
   const [vocabQ, refetchVocab] = useQuery({
     query: CHILD_VOCAB_QUERY,
     variables: { studentId: sid },
@@ -153,6 +163,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
     refetchLibrary(opts);
     refetchVocab(opts);
     refetchTests(opts);
+    refetchUpcoming(opts);
     refetchComments(opts);
     refetchRevision(opts);
     refetchAsgn(opts);
@@ -305,6 +316,47 @@ export default function GuardianHomeScreen(): React.ReactElement {
           }}
           loaderLabel={STR.loading}
         >
+        {/* D-#472: upcoming class tests — sits ABOVE the attention strip because it is
+            the one thing on this screen the family can still act on (revise). Each row
+            drops off by itself once its exam day has passed. */}
+        {upcomingTests.length > 0 ? (
+          <Card>
+            <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.gpUpcomingTests}</Body>
+            {upcomingTests.map((t, i) => (
+              <View key={t.id} style={{ marginTop: i === 0 ? 0 : space(2) }}>
+                {i === 0 ? null : <Divider />}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+                  <Body style={{ fontWeight: "700", flex: 1 }}>
+                    {t.subjectLabelBn}
+                    {t.testNumber ? ` · টেস্ট ${bnNum(t.testNumber)}` : ""}
+                  </Body>
+                  <Badge
+                    text={
+                      t.daysAway === 0
+                        ? STR.gpTestToday
+                        : t.daysAway === 1
+                          ? STR.gpTestTomorrow
+                          : `${bnNum(t.daysAway)} ${STR.gpTestInDays}`
+                    }
+                    tone={t.daysAway <= 1 ? "warn" : "info"}
+                  />
+                </View>
+                <Muted>{bnNum(t.examDate.slice(0, 10))}</Muted>
+                {t.chapter ? (
+                  <Muted>
+                    {STR.gpChapter}: {t.chapter}
+                  </Muted>
+                ) : null}
+                <Muted>
+                  {t.totalMarks != null ? `${STR.gpMarks} ${bnNum(t.totalMarks)}` : ""}
+                  {t.totalMarks != null && t.durationMinutes != null ? " · " : ""}
+                  {t.durationMinutes != null ? `${bnNum(t.durationMinutes)} ${STR.gpMinutes}` : ""}
+                </Muted>
+              </View>
+            ))}
+          </Card>
+        ) : null}
+
         {/* Attention strip (owner ask 2026-07-19) — chase, fees due, new comment/
             result, unread notifications. Hidden entirely on a quiet day. */}
         {alerts.length > 0 ? (

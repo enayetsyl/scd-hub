@@ -1009,6 +1009,10 @@ export const NOTIFICATION_KINDS = [
   "LIBRARY_DUE_SOON",
   "LIBRARY_OVERDUE",
   "CLASS_TEST_RESULT",
+  // D-#472: the class test is CONFIRMED and gone to print — tell the family what is
+  // coming (subject, chapter, date, marks, minutes) while there is still time to revise.
+  // App-native, NO wire twin: it is a delivery notice, not import-contract vocabulary.
+  "CLASS_TEST_UPCOMING",
   "VOCAB_RESULT",
   "STUDENT_COMMENT",
   // MR-6: the monthly progress report reached the family. Fired on RELEASE and again
@@ -1085,6 +1089,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   LIBRARY_DUE_SOON: "বই ফেরতের স্মরণিকা",
   LIBRARY_OVERDUE: "বই ফেরত বকেয়া",
   CLASS_TEST_RESULT: "ক্লাস টেস্টের ফলাফল",
+  CLASS_TEST_UPCOMING: "আসন্ন ক্লাস টেস্ট",
   VOCAB_RESULT: "ভোকাবুলারি টেস্টের ফলাফল",
   MONTHLY_REPORT: "মাসিক অগ্রগতি রিপোর্ট",
   STUDENT_COMMENT: "শিক্ষকের পর্যবেক্ষণ",
@@ -1122,6 +1127,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   LIBRARY_DUE_SOON: "Book due soon",
   LIBRARY_OVERDUE: "Book overdue",
   CLASS_TEST_RESULT: "Class-test result",
+  CLASS_TEST_UPCOMING: "Upcoming class test",
   VOCAB_RESULT: "Vocabulary-test result",
   MONTHLY_REPORT: "Monthly progress report",
   STUDENT_COMMENT: "Teacher's comment",
