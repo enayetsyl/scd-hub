@@ -1202,6 +1202,13 @@ const STR_BN = {
   // Workspace subject fold (D-#469): one control over the not-my-subject groups
   wsOtherSubjects: "অন্য বিষয়",
   tdMyAsLifecycle: "আমার অ্যাসাইনমেন্ট লাইফসাইকেল",
+  // D-#472 guardian upcoming class tests
+  gpUpcomingTests: "আসন্ন ক্লাস টেস্ট",
+  gpTestToday: "আজ",
+  gpTestTomorrow: "আগামীকাল",
+  gpTestInDays: "দিন পরে",
+  gpChapter: "অধ্যায়",
+  gpMarks: "পূর্ণমান",
   viewModeAll: "সব একসাথে",
 
   // Auth
@@ -4553,6 +4560,13 @@ const STR_EN: StrTable = {
   // Workspace subject fold (D-#469): one control over the not-my-subject groups
   wsOtherSubjects: "Other subjects",
   tdMyAsLifecycle: "My assignment lifecycle",
+  // D-#472 guardian upcoming class tests
+  gpUpcomingTests: "Upcoming class tests",
+  gpTestToday: "Today",
+  gpTestTomorrow: "Tomorrow",
+  gpTestInDays: "days away",
+  gpChapter: "Chapter",
+  gpMarks: "Total marks",
   viewModeAll: "Everything",
 
   // Auth

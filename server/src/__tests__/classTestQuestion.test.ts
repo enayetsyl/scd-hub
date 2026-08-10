@@ -68,9 +68,12 @@ jest.mock("../modules/trackers/services/ClassTestService", () => ({
 // D-#342: stage notifications — teacher on send-for-review, office otherwise.
 const mockEmitTeacher = jest.fn();
 const mockEmitOffice = jest.fn();
+const mockEmitUpcoming = jest.fn();
 jest.mock("../modules/notifications/services/emitters", () => ({
   emitCtQuestionTeacher: (id: unknown, e: unknown) => mockEmitTeacher(id, e),
   emitCtQuestionOffice: (e: unknown) => mockEmitOffice(e),
+  // D-#472: send-to-print also tells the family what is coming.
+  emitClassTestUpcoming: (e: unknown) => mockEmitUpcoming(e),
 }));
 
 import {
@@ -258,6 +261,28 @@ describe("requestCtQuestionPrint — the existing path takes over", () => {
     expect(out.request.status).toBe("PRINT_REQUESTED");
     expect(out.request.classTestId).toBe(ctDbId);
     expect(out.classTest.ctId).toBe("CT-C3-MATH-0007");
+
+    // D-#472: the family is told at exactly this moment, and the notice carries the
+    // four things a parent needs to act on — subject, chapter, date, marks/minutes.
+    expect(mockEmitUpcoming).toHaveBeenCalledTimes(1);
+    const notice = mockEmitUpcoming.mock.calls[0][0] as {
+      testId: string;
+      sectionId: string;
+      titleBn: string;
+      bodyBn: string;
+    };
+    expect(notice.testId).toBe(ctDbId);
+    expect(notice.sectionId).toBe(SECTION.toString());
+    expect(notice.bodyBn).toContain("ভগ্নাংশ"); // chapter
+    expect(notice.bodyBn).toContain("২০২৬-০৭-২৪"); // exam date, Bangla digits
+    expect(notice.bodyBn).toContain("২০"); // total marks
+    expect(notice.bodyBn).toContain("৩০"); // duration minutes
+  });
+
+  test("a paper that never reaches print tells NO family (the notice rides send-to-print only)", async () => {
+    mockFindById.mockResolvedValue(madeDoc({ status: "IN_REVIEW", currentFileId: FILE }));
+    await expect(requestCtQuestionPrint({ id: "x", actorId: TEACHER.toString() })).rejects.toThrow(/চূড়ান্ত/);
+    expect(mockEmitUpcoming).not.toHaveBeenCalled();
   });
 });
 

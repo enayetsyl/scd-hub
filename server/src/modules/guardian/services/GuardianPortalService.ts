@@ -60,6 +60,9 @@ import {
 } from "../../trackers/services/HomeworkResubmissionService";
 import { guardianDueFor } from "../../finance/services/FeeSupportService";
 import { ForbiddenError } from "../../../middleware/authz";
+import { ClassTest } from "../../trackers/models/ClassTest";
+import { ClassTestQuestionRequest } from "../../trackers/models/ClassTestQuestionRequest";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
 
 // ---------------------------------------------------------------------------
 // Shapes (narrow by design — built fresh, never spreads of staff documents)
@@ -620,4 +623,83 @@ export async function submitGuardianLeaveApplication(
     reason: app.reason,
     submittedAt: new Date(app.submittedAt).toISOString(),
   };
+}
+
+// ---------------------------------------------------------------------------
+// D-#472 — the child's UPCOMING class tests: what has been confirmed and sent to
+// print, from today (Dhaka) up to and INCLUDING the exam day. The card disappears
+// by itself the day after the exam — no cleanup job, no stale notice.
+// ---------------------------------------------------------------------------
+
+export interface ChildUpcomingClassTest {
+  id: string;
+  subject: string;
+  subjectLabelBn: string;
+  chapter: string | null;
+  testNumber: number | null;
+  examDate: string;
+  totalMarks: number | null;
+  durationMinutes: number | null;
+  /** Whole days from today (Dhaka) to the exam; 0 = today. */
+  daysAway: number;
+}
+
+export async function childUpcomingClassTests(studentId: string): Promise<ChildUpcomingClassTest[]> {
+  const student = (await Student.findById(studentId).select("sectionId").lean()) as {
+    sectionId?: { toString(): string };
+  } | null;
+  if (!student?.sectionId) return [];
+
+  // Today's Dhaka day, as a UTC instant at its start — the same boundary the rest of
+  // the tracker reads use, so "today's exam still shows" holds everywhere.
+  const todayKey = dhakaDayKey(new Date());
+  const todayStart = new Date(`${todayKey}T00:00:00.000Z`);
+
+  const tests = (await ClassTest.find({
+    sectionId: student.sectionId,
+    examDate: { $gte: todayStart },
+    active: { $ne: false },
+  })
+    .sort({ examDate: 1 })
+    .lean()) as unknown as Array<{
+    _id: { toString(): string };
+    subject: string;
+    examDate: Date;
+    totalMarks?: number;
+    testNumber?: number;
+    notes?: string;
+  }>;
+  if (tests.length === 0) return [];
+
+  // chapter + duration live on the question REQUEST (the D-#472 single path), so join
+  // them in rather than re-parsing the `notes` string createRequest composed.
+  const reqs = (await ClassTestQuestionRequest.find({
+    classTestId: { $in: tests.map((t) => t._id) },
+  })
+    .select("classTestId chapter durationMinutes testNumber")
+    .lean()) as unknown as Array<{
+    classTestId: { toString(): string };
+    chapter?: string;
+    durationMinutes?: number;
+    testNumber?: number;
+  }>;
+  const byTest = new Map(reqs.map((r) => [r.classTestId.toString(), r]));
+
+  return tests.map((t) => {
+    const req = byTest.get(t._id.toString());
+    const examKey = dhakaDayKey(new Date(t.examDate));
+    return {
+      id: t._id.toString(),
+      subject: t.subject,
+      subjectLabelBn: HW_SUBJECT_LABELS_BN[t.subject as HwSubject] ?? t.subject,
+      chapter: req?.chapter ?? null,
+      testNumber: req?.testNumber ?? t.testNumber ?? null,
+      examDate: new Date(t.examDate).toISOString(),
+      totalMarks: t.totalMarks ?? null,
+      durationMinutes: req?.durationMinutes ?? null,
+      daysAway: Math.round(
+        (new Date(`${examKey}T00:00:00.000Z`).getTime() - todayStart.getTime()) / 86_400_000,
+      ),
+    };
+  });
 }

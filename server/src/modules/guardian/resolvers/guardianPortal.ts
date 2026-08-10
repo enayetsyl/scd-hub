@@ -38,6 +38,7 @@ import {
   type GuardianLeaveApplication,
 } from "../services/GuardianPortalService";
 import type { StudentDayLoadResult } from "../../trackers/services/HomeworkResubmissionService";
+import { childUpcomingClassTests, type ChildUpcomingClassTest } from "../services/GuardianPortalService";
 
 function parseDate(s: string): Date {
   const d = new Date(s);
@@ -389,6 +390,40 @@ builder.mutationField("submitChildLeaveApplication", (t) =>
     resolve: async (_r, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
       return submitGuardianLeaveApplication(args.studentId, args.fromKey, args.toKey, args.reason, ctx.auth!.userId);
+    },
+  }),
+);
+
+// --- D-#472: the child's upcoming class tests (card + notice twin) ------------
+
+const ChildUpcomingClassTestRef = builder
+  .objectRef<ChildUpcomingClassTest>("ChildUpcomingClassTest")
+  .implement({
+    description:
+      "A confirmed class test the child will sit, from today (Dhaka) up to and including " +
+      "the exam day — the guardian-home card that clears itself after the exam (D-#472).",
+    fields: (t) => ({
+      id: t.exposeString("id"),
+      subject: t.exposeString("subject"),
+      subjectLabelBn: t.exposeString("subjectLabelBn"),
+      chapter: t.exposeString("chapter", { nullable: true }),
+      testNumber: t.exposeInt("testNumber", { nullable: true }),
+      examDate: t.exposeString("examDate"),
+      totalMarks: t.exposeInt("totalMarks", { nullable: true }),
+      durationMinutes: t.exposeInt("durationMinutes", { nullable: true }),
+      daysAway: t.exposeInt("daysAway"),
+    }),
+  });
+
+builder.queryField("childUpcomingClassTests", (t) =>
+  t.field({
+    type: [ChildUpcomingClassTestRef],
+    authScopes: { hasPermission: "guardian:read_child" },
+    description: "Upcoming class tests for the linked child (D-#472). Link-gated.",
+    args: { studentId: t.arg.string({ required: true }) },
+    resolve: async (_r, args, ctx) => {
+      await assertGuardianOfStudent(ctx, args.studentId);
+      return childUpcomingClassTests(args.studentId);
     },
   }),
 );
