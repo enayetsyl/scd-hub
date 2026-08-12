@@ -59,6 +59,9 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
 
   const [date, setDate] = useState(today());
   const [summaryOpen, setSummaryOpen] = useState(false);
+  // Owner 2026-08-11: the chase list folds, CLOSED by default — it runs to dozens of
+  // rows and buried everything below it.
+  const [chaseOpen, setChaseOpen] = useState(false);
 
   // The caller's accessible classes — the shared UX-5 hook (also feeds the badge refs).
   const accessible = useAccessibleClasses();
@@ -294,10 +297,21 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
                       label={STR.hwReturnLatency}
                       value={summary.avgReturnLatencyDays == null ? "—" : bnNum(summary.avgReturnLatencyDays)}
                     />
+                    {/* Owner 2026-08-11: the chase list runs to dozens of rows and buried
+                        everything under it, so it folds — CLOSED by default, count on the
+                        toggle so its size is readable without opening it. */}
                     {summary.chaseList.length > 0 ? (
                       <>
-                        <Muted style={{ marginTop: 8, fontWeight: "700" }}>{STR.hwChaseList}</Muted>
-                        {summary.chaseList.map((c) => (
+                        <Pressable
+                          onPress={() => setChaseOpen((v) => !v)}
+                          accessibilityRole="button"
+                          style={{ marginTop: 8 }}
+                        >
+                          <Muted style={{ fontWeight: "700" }}>
+                            {chaseOpen ? "▾" : "▸"} {STR.hwChaseList} ({bnNum(summary.chaseList.length)})
+                          </Muted>
+                        </Pressable>
+                        {chaseOpen ? summary.chaseList.map((c) => (
                           <View key={c.recordId} style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
                             <Muted>{c.hwId}</Muted>
                             <View style={{ flexDirection: "row", gap: 6 }}>
@@ -305,7 +319,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
                               {c.commsPrompt ? <Badge text={STR.hwCommsPrompt} tone="danger" /> : c.attention ? <Badge text={STR.hwAttention} tone="warn" /> : null}
                             </View>
                           </View>
-                        ))}
+                        )) : null}
                       </>
                     ) : null}
                     {summary.topicTouches.length > 0 ? (
