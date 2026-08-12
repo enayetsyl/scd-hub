@@ -3519,7 +3519,15 @@ const STR_BN = {
   geLoginEnabled: "লগইন আছে",
   geContactOnly: "শুধু যোগাযোগ (লগইন নেই)",
   geEverLoggedIn: "কখনও লগইন করেছেন",
-  geNeverLoggedIn: "একবারও লগইন করেননি",
+  geNeverLoggedIn: "লগইন আছে, ব্যবহার করেননি",
+  geStudentsReachable: "যেসব শিক্ষার্থীর পরিবারে যোগাযোগ হয়েছে",
+  geStudentsUnreachable: "যোগাযোগ হয়নি",
+  geStudentsNoCredentials: "লগইনই দেওয়া হয়নি",
+  geExcluded: "বাদ দেওয়া অভিভাবক রেকর্ড",
+  geDesignatedNote:
+    "প্রতি শিক্ষার্থীর জন্য যে অভিভাবককে লগইন দেওয়া হয়েছে শুধু তাঁকেই এখানে ধরা হয়েছে; দ্বিতীয় অভিভাবকের সংযোগ নিষ্ক্রিয় থাকায় তাঁরা তালিকায় নেই।",
+  geEmptyPortalWarn:
+    "জন লগইন করতে পারেন কিন্তু তাঁদের সঙ্গে কোনো সক্রিয় শিক্ষার্থী যুক্ত নেই — লগইন করলে খালি পর্দা দেখবেন।",
   geActive7: "গত ৭ দিনে সক্রিয়",
   geActive30: "গত ৩০ দিনে সক্রিয়",
   geRegular: "নিয়মিত",
@@ -6863,7 +6871,15 @@ const STR_EN: StrTable = {
   geLoginEnabled: "Login enabled",
   geContactOnly: "Contact-only (no login)",
   geEverLoggedIn: "Ever logged in",
-  geNeverLoggedIn: "Never logged in",
+  geNeverLoggedIn: "Has login, never used",
+  geStudentsReachable: "Students whose family is reachable",
+  geStudentsUnreachable: "Not reachable",
+  geStudentsNoCredentials: "No credentials issued",
+  geExcluded: "Excluded guardian records",
+  geDesignatedNote:
+    "Only the guardian actually issued the app per student is counted; the second parent's link is deactivated, so they are not listed.",
+  geEmptyPortalWarn:
+    "can log in but have no active student linked — they would land on an empty portal.",
   geActive7: "Active last 7 days",
   geActive30: "Active last 30 days",
   geRegular: "Regular",

@@ -19,7 +19,16 @@ const G_REGULAR = oid();
 const G_LAPSED = oid();
 const G_NEVER = oid();
 const G_CONTACT = oid();
+/** The SECOND parent: a real guardian record whose link was deactivated when the school
+ *  issued the portal to the other parent (D-#474). Must never reach the report. */
+const G_OTHER_PARENT = oid();
+/** A guardian whose only link points at a student who has left. Also not a live family. */
+const G_DEPARTED = oid();
 const STUDENT = oid();
+const STUDENT_2 = oid();
+const STUDENT_3 = oid();
+const STUDENT_4 = oid();
+const STUDENT_GONE = oid();
 const SECTION = oid();
 
 const DAY = 86_400_000;
@@ -79,9 +88,27 @@ beforeEach(() => {
     { _id: G_LAPSED, name: "নিষ্ক্রিয় অভিভাবক", phone: "01700000002", loginEnabled: true },
     { _id: G_NEVER, name: "লগইনহীন অভিভাবক", phone: "01700000003", loginEnabled: true },
     { _id: G_CONTACT, name: "শুধু যোগাযোগ", phone: "01700000004", loginEnabled: false },
+    // Both of these are login-ENABLED, which is exactly why they used to pollute the
+    // chase list: nothing on the guardian record itself marks them as non-portal.
+    { _id: G_OTHER_PARENT, name: "দ্বিতীয় অভিভাবক", phone: "01700000005", loginEnabled: true },
+    { _id: G_DEPARTED, name: "চলে যাওয়া শিক্ষার্থীর অভিভাবক", phone: "01700000006", loginEnabled: true },
   ];
-  linkRows = [{ guardianId: G_REGULAR, studentId: STUDENT, active: true }];
-  studentRows = [{ _id: STUDENT, name: "Child", nameBn: "শিশু", sectionId: SECTION }];
+  linkRows = [
+    { guardianId: G_REGULAR, studentId: STUDENT, active: true },
+    { guardianId: G_LAPSED, studentId: STUDENT_2, active: true },
+    { guardianId: G_NEVER, studentId: STUDENT_3, active: true },
+    { guardianId: G_CONTACT, studentId: STUDENT_4, active: true },
+    // The second parent of STUDENT: same child, link deactivated by the school.
+    { guardianId: G_OTHER_PARENT, studentId: STUDENT, active: false },
+    // Link still active, but the student is gone — Student.find(active:true) drops them.
+    { guardianId: G_DEPARTED, studentId: STUDENT_GONE, active: true },
+  ];
+  studentRows = [
+    { _id: STUDENT, name: "Child", nameBn: "শিশু", sectionId: SECTION },
+    { _id: STUDENT_2, name: "Child2", nameBn: "শিশু২", sectionId: SECTION },
+    { _id: STUDENT_3, name: "Child3", nameBn: "শিশু৩", sectionId: SECTION },
+    { _id: STUDENT_4, name: "Child4", nameBn: "শিশু৪", sectionId: SECTION },
+  ];
   sectionRows = [{ _id: SECTION, nameBn: "ক শাখা", code: "A" }];
 
   // REGULAR: 10 distinct days inside the window. LAPSED: one login 60 days ago.
@@ -140,10 +167,80 @@ describe("Engagement banding", () => {
     expect(row.lastLoginAt).toBeNull();
   });
 
-  test("rows are sorted least-engaged first — the chase list is the top of the screen", async () => {
+  test("a designated guardian with NO login issued is NO_LOGIN, never NEVER", async () => {
+    // D-#474: chasing them is meaningless — nobody gave them a password. The action is
+    // to ISSUE one, which is a different queue.
     const rep = await guardianEngagement({ days: 90 });
-    expect(rep.guardians[0].band).toBe("NEVER");
+    const row = rep.guardians.find((r) => r.guardianId === G_CONTACT.toString())!;
+    expect(row.band).toBe("NO_LOGIN");
+    expect(row.loginEnabled).toBe(false);
+  });
+
+  test("rows are sorted most-actionable first — the chase list is the top of the screen", async () => {
+    const rep = await guardianEngagement({ days: 90 });
+    expect(rep.guardians[0].band).toBe("NO_LOGIN");
+    expect(rep.guardians[1].band).toBe("NEVER");
     expect(rep.guardians[rep.guardians.length - 1].band).toBe("REGULAR");
+  });
+});
+
+describe("Designated-guardian rule (D-#474)", () => {
+  test("the second parent, whose link was deactivated, is EXCLUDED from the report", async () => {
+    // The defect this fixes: 63% of the live chase list was second parents who were
+    // never issued the portal and could never have logged in.
+    const rep = await guardianEngagement({ days: 90 });
+    expect(rep.guardians.map((r) => r.guardianId)).not.toContain(G_OTHER_PARENT.toString());
+  });
+
+  test("a guardian whose only student has left is EXCLUDED even though the link is active", async () => {
+    const rep = await guardianEngagement({ days: 90 });
+    expect(rep.guardians.map((r) => r.guardianId)).not.toContain(G_DEPARTED.toString());
+  });
+
+  test("only the four designated guardians remain", async () => {
+    const rep = await guardianEngagement({ days: 90 });
+    expect(rep.guardians).toHaveLength(4);
+    expect(rep.summary.totalGuardians).toBe(4);
+  });
+
+  test("the exclusion is REPORTED, not silent — and flags logins that would show nothing", async () => {
+    const rep = await guardianEngagement({ days: 90 });
+    expect(rep.summary.excludedNonDesignated).toBe(2);
+    // Both excluded rows are login-enabled: they can sign in and land on an empty
+    // portal, which reads to a family as a broken app. Nothing else reports this.
+    expect(rep.summary.excludedButLoginEnabled).toBe(2);
+  });
+});
+
+describe("Student-level reachability (D-#474)", () => {
+  test("a student counts as reachable when ANY designated guardian has signed in", async () => {
+    const rep = await guardianEngagement({ days: 90 });
+    // STUDENT (via G_REGULAR) and STUDENT_2 (via G_LAPSED) have logins; 3 and 4 do not.
+    expect(rep.summary.studentsTotal).toBe(4);
+    expect(rep.summary.studentsReachable).toBe(2);
+    expect(rep.summary.studentsUnreachable).toBe(2);
+  });
+
+  test("an unreachable student with no credentials anywhere is counted apart", async () => {
+    const rep = await guardianEngagement({ days: 90 });
+    // STUDENT_4's only designated guardian is contact-only → credential gap, not a chase.
+    expect(rep.summary.studentsNoCredentials).toBe(1);
+  });
+
+  test("a second guardian who HAS logged in makes the child reachable", async () => {
+    // Re-activate the second parent's link and give them a login: the child is now
+    // covered even though G_REGULAR's own row is unchanged. Chasing either would be
+    // waste — which is the whole reason student-level coverage exists.
+    linkRows = [
+      { guardianId: G_NEVER, studentId: STUDENT_3, active: true },
+      { guardianId: G_OTHER_PARENT, studentId: STUDENT_3, active: true },
+    ];
+    studentRows = [{ _id: STUDENT_3, name: "Child3", nameBn: "শিশু৩", sectionId: SECTION }];
+    auditRows = [{ actorId: G_OTHER_PARENT, eventAt: new Date(now - 2 * DAY) }];
+    const rep = await guardianEngagement({ days: 90 });
+    expect(rep.summary.studentsTotal).toBe(1);
+    expect(rep.summary.studentsReachable).toBe(1);
+    expect(rep.guardians.find((r) => r.guardianId === G_NEVER.toString())!.band).toBe("NEVER");
   });
 });
 
@@ -158,15 +255,24 @@ describe("Summary", () => {
     expect(rep.summary.totalGuardians).toBe(4);
   });
 
+  test("the NEVER filter returns ONLY chaseable rows — no contact-only mixed in", async () => {
+    // The reported symptom: filtering NEVER returned contact-only guardians too, so the
+    // list disagreed with the "never logged in" tile and the chase list was unusable.
+    const filtered = await guardianEngagement({ days: 90, band: "NEVER" });
+    expect(filtered.guardians).toHaveLength(1);
+    expect(filtered.guardians[0].loginEnabled).toBe(true);
+    expect(filtered.guardians).toHaveLength(filtered.summary.neverLoggedIn); // tile == list
+  });
+
+  test("contact-only rows are reachable under their own band", async () => {
+    const filtered = await guardianEngagement({ days: 90, band: "NO_LOGIN" });
+    expect(filtered.guardians).toHaveLength(1);
+    expect(filtered.guardians[0].loginEnabled).toBe(false);
+  });
+
   test("the denominator ignores row filters", async () => {
     const filtered = await guardianEngagement({ days: 90, band: "NEVER" });
-    // Both no-login families: the one who was given a login and never used it, and the
-    // contact-only one who never had the option. Both belong in NEVER — each still
-    // needs an action — and `loginEnabled` on the row is what tells them apart, so the
-    // Principal knows whether to chase the family or first create the login.
-    expect(filtered.guardians).toHaveLength(2);
-    expect(filtered.guardians.map((r) => r.loginEnabled).sort()).toEqual([false, true]);
-    expect(filtered.summary.totalGuardians).toBe(4); // not 2
+    expect(filtered.summary.totalGuardians).toBe(4); // not 1
   });
 
   test("viewsSince is null when no view has ever been recorded", async () => {
