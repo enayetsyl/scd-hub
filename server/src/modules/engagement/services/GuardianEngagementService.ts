@@ -41,13 +41,29 @@ export const ENGAGEMENT_WINDOW_DEFAULT = 90;
 export const ENGAGEMENT_WINDOW_MAX = 365;
 
 export interface EngagementSummary {
-  /** Every active guardian on the roster — the denominator that matters. */
+  /** DESIGNATED portal guardians — those holding an active link to a current student.
+   *  NOT every guardian record; see the D-#474 note on the query for why. */
   totalGuardians: number;
   loginEnabled: number;
-  /** Active guardians with no login at all: invisible to every signal here, by design. */
+  /** Designated guardians with no login issued: an onboarding gap, not a chase target. */
   contactOnly: number;
   everLoggedIn: number;
   neverLoggedIn: number;
+  // --- student-level reachability (D-#474) ---------------------------------
+  /** Active students with at least one designated guardian. */
+  studentsTotal: number;
+  /** ...whose family has signed in at least once — the figure that actually matters. */
+  studentsReachable: number;
+  /** ...that no guardian has ever signed in for. */
+  studentsUnreachable: number;
+  /** ...where no designated guardian even holds a login (credential gap, not a chase). */
+  studentsNoCredentials: number;
+  /** Guardian records EXCLUDED as non-designated (the other parent). Reported so the
+   *  exclusion is visible rather than a silent filter. */
+  excludedNonDesignated: number;
+  /** Of those, how many could still log in and would see an EMPTY portal — a real
+   *  support trap, surfaced here because nothing else in the app reports it. */
+  excludedButLoginEnabled: number;
   active7: number;
   active30: number;
   active90: number;
@@ -113,7 +129,15 @@ export interface GuardianEngagementInput {
   band?: string | null;
 }
 
-function bandOf(activeDays: number, lastLoginAt: Date | null, now: number): GuardianEngagementBand {
+function bandOf(
+  activeDays: number,
+  lastLoginAt: Date | null,
+  loginEnabled: boolean,
+  now: number,
+): GuardianEngagementBand {
+  // NO_LOGIN outranks everything (D-#474). A family nobody issued a password to cannot
+  // be "chased" — the action is to issue credentials — so it must never sit in NEVER.
+  if (!loginEnabled) return "NO_LOGIN";
   if (!lastLoginAt) return "NEVER";
   if (now - lastLoginAt.getTime() > LAPSED_AFTER_DAYS * DAY_MS) return "LAPSED";
   return activeDays >= REGULAR_MIN_ACTIVE_DAYS ? "REGULAR" : "OCCASIONAL";
@@ -127,23 +151,45 @@ export async function guardianEngagement(
   const since = new Date(now - windowDays * DAY_MS);
 
   // --- roster: guardians, their children, their sections -------------------
-  const guardians = await Guardian.find({ active: { $ne: false } })
+  //
+  // D-#474 — THE DESIGNATED-GUARDIAN RULE. A student carries 2–3 guardian records
+  // (father, mother, sometimes a third), but the school issues the portal to exactly
+  // ONE of them, and records that choice by leaving that guardian's GuardianLink
+  // active while DEACTIVATING the others'. In the live roster that is 91 active links
+  // against 120 deactivated ones.
+  //
+  // The first cut of this report counted every guardian record, so the other parents —
+  // people who were never given the portal and never should have been chased — made up
+  // 63% of the "never logged in" list and swamped the very thing the report exists to
+  // produce. Reachability is a property of the DESIGNATED guardian, so that is the
+  // population, and the excluded count is reported in the summary rather than filtered
+  // away in silence.
+  const allGuardians = await Guardian.find({ active: { $ne: false } })
     .select("name phone identifier loginEnabled")
     .lean();
-  const guardianIds = guardians.map((g) => g._id);
+  const allGuardianIds = allGuardians.map((g) => g._id);
 
-  const links = await GuardianLink.find({ guardianId: { $in: guardianIds } })
+  const links = await GuardianLink.find({ guardianId: { $in: allGuardianIds } })
     .select("guardianId studentId active")
     .lean();
-  const activeLinks = links.filter((l) => l.active !== false);
+  const liveLinks = links.filter((l) => l.active !== false);
 
-  const studentIds = [...new Set(activeLinks.map((l) => l.studentId.toString()))].map(
+  const studentIds = [...new Set(liveLinks.map((l) => l.studentId.toString()))].map(
     (s) => new Types.ObjectId(s),
   );
   const students = await Student.find({ _id: { $in: studentIds }, active: true })
     .select("name nameBn sectionId")
     .lean();
   const studentById = new Map(students.map((s) => [s._id.toString(), s]));
+
+  // A link only designates when BOTH ends are live: an active link to an active student.
+  // A link left active on a departed student does not make its guardian a current family.
+  const activeLinks = liveLinks.filter((l) => studentById.has(l.studentId.toString()));
+  const designatedIds = new Set(activeLinks.map((l) => l.guardianId.toString()));
+
+  const guardians = allGuardians.filter((g) => designatedIds.has(g._id.toString()));
+  const guardianIds = guardians.map((g) => g._id);
+  const excluded = allGuardians.filter((g) => !designatedIds.has(g._id.toString()));
 
   const sectionIds = [...new Set(students.map((s) => s.sectionId?.toString()).filter(Boolean))] as string[];
   const sections = await Section.find({ _id: { $in: sectionIds } }).select("nameBn code").lean();
@@ -270,7 +316,7 @@ export async function guardianEngagement(
       loginEnabled: !!g.loginEnabled,
       childNames: childrenByGuardian.get(gk) ?? [],
       sectionNames: [...(sectionsByGuardian.get(gk) ?? [])],
-      band: bandOf(activeDays, lastLoginAt, now),
+      band: bandOf(activeDays, lastLoginAt, !!g.loginEnabled, now),
       lastLoginAt: lastLoginAt ? lastLoginAt.toISOString() : null,
       loginCount: loginCountInWindow.get(gk) ?? 0,
       activeDays,
@@ -282,8 +328,33 @@ export async function guardianEngagement(
     };
   });
 
-  // Summary is computed over ALL guardians before any filter — a section-filtered view
-  // must not silently redefine the school-wide denominator.
+  // --- student-level reachability (D-#474) ---------------------------------
+  // The guardian rows answer "who ignores the app"; THIS answers "which child's family
+  // cannot be reached", which is the question the school actually acts on. They differ
+  // whenever a student has more than one designated guardian: chasing a parent whose
+  // spouse already reads everything is wasted effort, and the guardian view cannot see
+  // that. Reachable = ANY designated guardian of that student has ever signed in.
+  const guardiansByStudent = new Map<string, string[]>();
+  for (const l of activeLinks) {
+    const sk = l.studentId.toString();
+    const arr = guardiansByStudent.get(sk) ?? [];
+    arr.push(l.guardianId.toString());
+    guardiansByStudent.set(sk, arr);
+  }
+  const loginEnabledById = new Map(allGuardians.map((g) => [g._id.toString(), !!g.loginEnabled]));
+  let studentsReachable = 0;
+  let studentsUnreachable = 0;
+  let studentsNoCredentials = 0;
+  for (const [, gs] of guardiansByStudent) {
+    if (gs.some((g) => lastLoginByGuardian.has(g))) studentsReachable++;
+    else {
+      studentsUnreachable++;
+      if (!gs.some((g) => loginEnabledById.get(g))) studentsNoCredentials++;
+    }
+  }
+
+  // Summary is computed over ALL designated guardians before any filter — a
+  // section-filtered view must not silently redefine the school-wide denominator.
   const summary: EngagementSummary = {
     totalGuardians: rows.length,
     loginEnabled: rows.filter((r) => r.loginEnabled).length,
@@ -296,6 +367,12 @@ export async function guardianEngagement(
     regular: rows.filter((r) => r.band === "REGULAR").length,
     occasional: rows.filter((r) => r.band === "OCCASIONAL").length,
     lapsed: rows.filter((r) => r.band === "LAPSED").length,
+    studentsTotal: guardiansByStudent.size,
+    studentsReachable,
+    studentsUnreachable,
+    studentsNoCredentials,
+    excludedNonDesignated: excluded.length,
+    excludedButLoginEnabled: excluded.filter((g) => g.loginEnabled === true).length,
     notificationsDelivered: inboxRows.length,
     notificationsRead: inboxRows.filter((n) => n.readAt).length,
     viewsRecorded: [...viewCountByGuardian.values()].reduce((a, b) => a + b, 0),
@@ -313,10 +390,11 @@ export async function guardianEngagement(
   // Least-engaged first: this report exists to produce a chase list, so the families
   // needing action must not be buried under the ones already using the app.
   const BAND_ORDER: Record<GuardianEngagementBand, number> = {
-    NEVER: 0,
-    LAPSED: 1,
-    OCCASIONAL: 2,
-    REGULAR: 3,
+    NO_LOGIN: 0, // no password issued — the school's own next action
+    NEVER: 1, // has a password, never used it — the chase list proper
+    LAPSED: 2,
+    OCCASIONAL: 3,
+    REGULAR: 4,
   };
   rows.sort(
     (a, b) =>
