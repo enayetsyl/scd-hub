@@ -22,13 +22,25 @@ import {
 const SummaryRef = builder.objectRef<EngagementSummary>("EngagementSummary");
 SummaryRef.implement({
   description:
-    "School-wide adoption. Always computed over EVERY active guardian, even when the " +
+    "School-wide adoption over the DESIGNATED portal guardians (those holding an active " +
+    "link to a current student, D-#474). Always computed over all of them even when the " +
     "row list is filtered — a section filter must not redefine the denominator.",
   fields: (t) => ({
     totalGuardians: t.int({ resolve: (s) => s.totalGuardians }),
     loginEnabled: t.int({ resolve: (s) => s.loginEnabled }),
-    /** Guardians with no login at all — invisible to every signal, and that is the point. */
+    /** Designated guardians with no login issued — an onboarding gap, not a chase target. */
     contactOnly: t.int({ resolve: (s) => s.contactOnly }),
+    /** Students with a designated guardian. */
+    studentsTotal: t.int({ resolve: (s) => s.studentsTotal }),
+    /** ...whose family has signed in at least once — the figure worth acting on. */
+    studentsReachable: t.int({ resolve: (s) => s.studentsReachable }),
+    studentsUnreachable: t.int({ resolve: (s) => s.studentsUnreachable }),
+    /** ...with no credentials issued to anyone: a different fix from chasing. */
+    studentsNoCredentials: t.int({ resolve: (s) => s.studentsNoCredentials }),
+    /** Guardian records excluded as non-designated — reported so the filter is visible. */
+    excludedNonDesignated: t.int({ resolve: (s) => s.excludedNonDesignated }),
+    /** ...that could still log in and would land on an EMPTY portal (support trap). */
+    excludedButLoginEnabled: t.int({ resolve: (s) => s.excludedButLoginEnabled }),
     everLoggedIn: t.int({ resolve: (s) => s.everLoggedIn }),
     neverLoggedIn: t.int({ resolve: (s) => s.neverLoggedIn }),
     active7: t.int({ resolve: (s) => s.active7 }),
@@ -50,8 +62,10 @@ SummaryRef.implement({
 const GuardianRowRef = builder.objectRef<EngagementGuardianRow>("EngagementGuardianRow");
 GuardianRowRef.implement({
   description:
-    "One family. Sorted least-engaged first (NEVER → LAPSED → OCCASIONAL → REGULAR) so " +
-    "the chase list is the top of the screen, not the bottom.",
+    "One DESIGNATED portal guardian — the parent the school actually issued the app to " +
+    "(D-#474); the other parent's deactivated link keeps them out of this list. Sorted " +
+    "most-actionable first (NO_LOGIN → NEVER → LAPSED → OCCASIONAL → REGULAR) so the " +
+    "chase list is the top of the screen, not the bottom.",
   fields: (t) => ({
     guardianId: t.exposeString("guardianId"),
     name: t.exposeString("name"),

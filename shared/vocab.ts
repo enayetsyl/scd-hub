@@ -1191,22 +1191,37 @@ export const GUARDIAN_VIEW_SURFACE_LABELS_BN: Record<GuardianViewSurface, string
 };
 
 /**
- * Guardian engagement bands (GE-1, D-#464) — how regularly a family actually uses
- * the portal, measured in DISTINCT ACTIVE DAYS inside the report window, not raw
- * login count (five logins in one afternoon is one engaged day, not five).
+ * Guardian engagement bands (GE-1, D-#464; NO_LOGIN added D-#474) — how regularly a
+ * family actually uses the portal, measured in DISTINCT ACTIVE DAYS inside the report
+ * window, not raw login count (five logins in one afternoon is one engaged day).
  *
- * NEVER is deliberately separate from LAPSED: a family that never signed in once is
- * an ONBOARDING problem (nobody handed them the password), while a lapsed family is
- * a RETENTION problem. Merging them would hide the difference that decides the fix.
+ * Every band names a DIFFERENT action, which is the whole reason they are separate:
+ *   NO_LOGIN    → issue credentials. Nobody has been given a password for this family.
+ *   NEVER       → chase. They HAVE a password and have never used it.
+ *   LAPSED      → re-engage. They used it once and stopped.
+ *   OCCASIONAL  → fine.
+ *   REGULAR     → fine.
+ *
+ * NO_LOGIN was split out of NEVER (D-#474) after the owner pointed out the report's
+ * chase list was unusable: a contact-only guardian reads as "never logged in", but
+ * chasing them is meaningless — they were never given the portal. An onboarding gap
+ * and an ignored password need opposite responses, so they cannot share a band.
  */
-export const GUARDIAN_ENGAGEMENT_BANDS = ["REGULAR", "OCCASIONAL", "LAPSED", "NEVER"] as const;
+export const GUARDIAN_ENGAGEMENT_BANDS = [
+  "REGULAR",
+  "OCCASIONAL",
+  "LAPSED",
+  "NEVER",
+  "NO_LOGIN",
+] as const;
 export type GuardianEngagementBand = (typeof GUARDIAN_ENGAGEMENT_BANDS)[number];
 
 export const GUARDIAN_ENGAGEMENT_BAND_LABELS_BN: Record<GuardianEngagementBand, string> = {
   REGULAR: "নিয়মিত",
   OCCASIONAL: "মাঝেমধ্যে",
   LAPSED: "নিষ্ক্রিয়",
-  NEVER: "কখনও লগইন করেননি",
+  NEVER: "লগইন আছে, ব্যবহার করেননি",
+  NO_LOGIN: "লগইন দেওয়া হয়নি",
 };
 
 
@@ -3506,13 +3521,13 @@ export function templatesOf(profile: AccessProfile): Role[] {
  *  `ctx.auth.role === "OFFICE"` in a gate that means "is this person the office desk".
  *  A bare comparison contradicts the AC-1 model: `effectivePermissions` already hands the
  *  added template's whole permission set to this caller, so a role-equality gate is the
- *  one place that silently ignores what the Principal granted (D-#467). */
+ *  one place that silently ignores what the Principal granted (D-#474). */
 export function actsAsRole(profile: AccessProfile, role: Role): boolean {
   return templatesOf(profile).includes(role);
 }
 
 /** VIEW MODE — a PRESENTATION filter for the dual-template login (a teacher who is also
- *  the office desk, D-#467). It narrows what the app OFFERS to one hat at a time; it is
+ *  the office desk, D-#474). It narrows what the app OFFERS to one hat at a time; it is
  *  NOT an authorization switch. Two invariants make that safe:
  *    1. The result is always a SUBSET of `effective` — a mode can never add authority,
  *       so the server's `callerHasPermission` (which never sees a mode) stays the gate.
