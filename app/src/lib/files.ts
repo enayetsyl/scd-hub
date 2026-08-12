@@ -6,18 +6,28 @@
  * Upload failure NEVER blocks declare/check — callers show the Bangla notice
  * and move on (GP-J8).
  *
- * View: fetch the bytes (with auth) from GET /files/:id and open them. Web-only
- * for now, mirroring lib/pdf.ts (native viewing needs expo-file-system +
- * expo-sharing). The server streams the bytes — no Drive URL ever appears here.
+ * View: fetch the bytes (with auth) from GET /files/:id and open them. WEB opens a
+ * blob URL; ANDROID downloads to the cache and hands a content:// URI to the OS viewer
+ * (D-#474). iOS remains unsupported — it needs expo-sharing, which is not in the
+ * shipped binary. The server streams the bytes — no Drive URL ever appears here.
  */
 import { Platform } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { REST_BASE } from "../graphql/client";
 import { getToken } from "./tokenStore";
+import * as FileSystem from "expo-file-system";
+import * as IntentLauncher from "expo-intent-launcher";
 
 export const FILE_MIMES = ["image/jpeg", "image/png", "application/pdf"];
 export const FILE_MAX_BYTES = 5 * 1024 * 1024;
-export const FILE_VIEW_SUPPORTED = Platform.OS === "web";
+/** D-#474: Android joins web. Attachments were web-only because openStoredFile was
+ *  built on blob + URL.createObjectURL + window.open, none of which exist in RN — so
+ *  every screen that guards on this constant (guardian homework, chat, archive,
+ *  class-test queue) simply hid its button on a phone. Android now downloads through
+ *  the SAME authenticated /files/:id route and hands the file to the OS viewer.
+ *  iOS stays off: it needs expo-sharing, which is NOT in the shipped binary, and
+ *  adding it would force an APK + runtimeVersion bump rather than an OTA. */
+export const FILE_VIEW_SUPPORTED = Platform.OS === "web" || Platform.OS === "android";
 
 export class FileUploadError extends Error {}
 
@@ -730,7 +740,42 @@ export async function openArchiveCoverPdf(bundleId: string): Promise<void> {
   }
 }
 
+/**
+ * Android: download through the authenticated route into the CACHE directory (the OS
+ * reclaims it; documentDirectory would grow forever), then hand a content:// URI to
+ * whatever viewer the phone has. FLAG_GRANT_READ_URI_PERMISSION (1) is required or the
+ * receiving app cannot read our file.
+ */
+async function openStoredFileAndroid(fileId: string): Promise<void> {
+  const token = getToken();
+  const target = `${FileSystem.cacheDirectory}scdhub-file-${fileId}`;
+  const res = await FileSystem.downloadAsync(`${REST_BASE}/files/${encodeURIComponent(fileId)}`, target, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (res.status !== 200) {
+    // The route answers a denial as JSON — downloadAsync writes that body to the file,
+    // so surface the server's own Bangla message rather than a bare status code.
+    let message = `file request failed (${res.status})`;
+    try {
+      const body = JSON.parse(await FileSystem.readAsStringAsync(res.uri)) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    await FileSystem.deleteAsync(res.uri, { idempotent: true });
+    throw new FileUploadError(message);
+  }
+  const mime = (res.headers["content-type"] ?? res.headers["Content-Type"] ?? "*/*").split(";")[0].trim();
+  const contentUri = await FileSystem.getContentUriAsync(res.uri);
+  await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
+    data: contentUri,
+    flags: 1,
+    type: mime,
+  });
+}
+
 export async function openStoredFile(fileId: string): Promise<void> {
+  if (Platform.OS === "android") return openStoredFileAndroid(fileId);
   if (Platform.OS !== "web") {
     throw new FileUploadError("File viewing is web-only in this build");
   }
