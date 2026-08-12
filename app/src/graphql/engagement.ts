@@ -20,6 +20,12 @@ export interface EngagementSummaryT {
   contactOnly: number;
   everLoggedIn: number;
   neverLoggedIn: number;
+  studentsTotal: number;
+  studentsReachable: number;
+  studentsUnreachable: number;
+  studentsNoCredentials: number;
+  excludedNonDesignated: number;
+  excludedButLoginEnabled: number;
   active7: number;
   active30: number;
   active90: number;
@@ -81,6 +87,8 @@ export const GUARDIAN_ENGAGEMENT_QUERY = gql<
       summary {
         totalGuardians loginEnabled contactOnly everLoggedIn neverLoggedIn
         active7 active30 active90 regular occasional lapsed
+        studentsTotal studentsReachable studentsUnreachable studentsNoCredentials
+        excludedNonDesignated excludedButLoginEnabled
         notificationsDelivered notificationsRead viewsRecorded viewsSince windowDays
       }
       guardians {

@@ -36,10 +36,11 @@ import { space } from "../../theme/tokens";
 
 type Tab = "FAMILIES" | "SCREENS" | "INBOX";
 
-function bandTone(band: string): "brand" | "info" | "warn" | "muted" {
+function bandTone(band: string): "brand" | "info" | "warn" | "muted" | "danger" {
   if (band === "REGULAR") return "brand";
   if (band === "OCCASIONAL") return "info";
   if (band === "LAPSED") return "warn";
+  if (band === "NO_LOGIN") return "danger"; // the school's own gap, not the family's
   return "muted"; // NEVER
 }
 
@@ -65,22 +66,49 @@ function SummaryCard({ s }: { s: EngagementSummaryT }): React.ReactElement {
   const readPct = s.notificationsDelivered > 0
     ? Math.round((s.notificationsRead / s.notificationsDelivered) * 100)
     : 0;
+  const reachPct = s.studentsTotal > 0
+    ? Math.round((s.studentsReachable / s.studentsTotal) * 100)
+    : 0;
   return (
-    <Card>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(3) }}>
-        <Stat label={STR.geTotalGuardians} value={bnNum(s.totalGuardians)} />
-        <Stat label={STR.geLoginEnabled} value={bnNum(s.loginEnabled)} />
-        <Stat label={STR.geEverLoggedIn} value={bnNum(s.everLoggedIn)} />
-        <Stat label={STR.geNeverLoggedIn} value={bnNum(s.neverLoggedIn)} />
-        <Stat label={STR.geActive7} value={bnNum(s.active7)} />
-        <Stat label={STR.geActive30} value={bnNum(s.active30)} />
-        <Stat label={STR.geRegular} value={bnNum(s.regular)} />
-        <Stat label={STR.geLapsed} value={bnNum(s.lapsed)} />
-        <Stat label={STR.geContactOnly} value={bnNum(s.contactOnly)} />
-        <Stat label={`${STR.geRead} / ${STR.geDelivered}`} value={`${bnNum(readPct)}%`} />
-      </View>
-      {s.contactOnly > 0 ? <Muted style={{ marginTop: space(2) }}>{STR.geContactOnlyNote}</Muted> : null}
-    </Card>
+    <>
+      {/* The headline is the STUDENT, not the guardian (D-#474): "which child's family
+          can we reach" is the question the school acts on, and a guardian-row count
+          cannot answer it once a child has more than one designated guardian. */}
+      <Card>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(3) }}>
+          <Stat label={STR.geStudentsReachable} value={`${bnNum(s.studentsReachable)}/${bnNum(s.studentsTotal)}`} />
+          <Stat label={STR.geStudentsUnreachable} value={bnNum(s.studentsUnreachable)} />
+          <Stat label={STR.geStudentsNoCredentials} value={bnNum(s.studentsNoCredentials)} />
+          <Stat label={`${STR.geStudentsReachable} %`} value={`${bnNum(reachPct)}%`} />
+        </View>
+        <Muted style={{ marginTop: space(2) }}>{STR.geDesignatedNote}</Muted>
+      </Card>
+
+      <Card>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(3) }}>
+          <Stat label={STR.geTotalGuardians} value={bnNum(s.totalGuardians)} />
+          <Stat label={STR.geLoginEnabled} value={bnNum(s.loginEnabled)} />
+          <Stat label={STR.geEverLoggedIn} value={bnNum(s.everLoggedIn)} />
+          <Stat label={STR.geNeverLoggedIn} value={bnNum(s.neverLoggedIn)} />
+          <Stat label={STR.geActive7} value={bnNum(s.active7)} />
+          <Stat label={STR.geActive30} value={bnNum(s.active30)} />
+          <Stat label={STR.geRegular} value={bnNum(s.regular)} />
+          <Stat label={STR.geLapsed} value={bnNum(s.lapsed)} />
+          <Stat label={STR.geContactOnly} value={bnNum(s.contactOnly)} />
+          <Stat label={`${STR.geRead} / ${STR.geDelivered}`} value={`${bnNum(readPct)}%`} />
+        </View>
+        {s.contactOnly > 0 ? <Muted style={{ marginTop: space(2) }}>{STR.geContactOnlyNote}</Muted> : null}
+      </Card>
+
+      {/* Surfaced because nothing else in the app reports it: these accounts CAN sign in
+          and would land on an empty portal, which reads to the family as a broken app. */}
+      {s.excludedButLoginEnabled > 0 ? (
+        <Notice
+          message={`${bnNum(s.excludedButLoginEnabled)} ${STR.geEmptyPortalWarn}`}
+          tone="warn"
+        />
+      ) : null}
+    </>
   );
 }
 
