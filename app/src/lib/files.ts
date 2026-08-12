@@ -746,9 +746,39 @@ export async function openArchiveCoverPdf(bundleId: string): Promise<void> {
  * whatever viewer the phone has. FLAG_GRANT_READ_URI_PERMISSION (1) is required or the
  * receiving app cannot read our file.
  */
+/** D-#475: Android viewers key off the FILE EXTENSION, not just the intent type. A
+ *  content:// URI with no extension is why the chooser offered Google/Wallet/Word
+ *  instead of a PDF reader (owner, 2026-08-12). The name only becomes knowable after
+ *  the response headers arrive, so the download lands on a temp name and is renamed. */
+const MIME_EXT: Record<string, string> = {
+  "application/pdf": "pdf",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
+  "audio/aac": "aac",
+  "audio/ogg": "ogg",
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+  "audio/webm": "weba",
+  "audio/x-m4a": "m4a",
+};
+
+/** Header names are not case-stable across platforms — look up case-insensitively. */
+function headerValue(headers: Record<string, string>, name: string): string | undefined {
+  const want = name.toLowerCase();
+  for (const [k, v] of Object.entries(headers)) if (k.toLowerCase() === want) return v;
+  return undefined;
+}
+
 async function openStoredFileAndroid(fileId: string): Promise<void> {
   const token = getToken();
-  const target = `${FileSystem.cacheDirectory}scdhub-file-${fileId}`;
+  const target = `${FileSystem.cacheDirectory}scdhub-tmp-${fileId}`;
   const res = await FileSystem.downloadAsync(`${REST_BASE}/files/${encodeURIComponent(fileId)}`, target, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -765,12 +795,22 @@ async function openStoredFileAndroid(fileId: string): Promise<void> {
     await FileSystem.deleteAsync(res.uri, { idempotent: true });
     throw new FileUploadError(message);
   }
-  const mime = (res.headers["content-type"] ?? res.headers["Content-Type"] ?? "*/*").split(";")[0].trim();
-  const contentUri = await FileSystem.getContentUriAsync(res.uri);
+  const rawMime = (headerValue(res.headers, "content-type") ?? "").split(";")[0].trim().toLowerCase();
+  // Rename onto a real extension — without it Android matches nothing sensible and the
+  // chooser degrades to whatever handles */*. An unknown mime keeps the bytes and lets
+  // the OS decide, which is still better than a bare name.
+  const ext = MIME_EXT[rawMime];
+  let uri = res.uri;
+  if (ext) {
+    uri = `${FileSystem.cacheDirectory}scdhub-file-${fileId}.${ext}`;
+    await FileSystem.deleteAsync(uri, { idempotent: true }); // a stale copy would block the move
+    await FileSystem.moveAsync({ from: res.uri, to: uri });
+  }
+  const contentUri = await FileSystem.getContentUriAsync(uri);
   await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
     data: contentUri,
     flags: 1,
-    type: mime,
+    type: rawMime || "*/*",
   });
 }
 
