@@ -12,6 +12,7 @@ import { CHILD_HOMEWORK_QUERY, CHILD_HW_NIL_DAYS, type GuardianHwRecordT } from 
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { DateField } from "../../components/DateField";
+import { LoadOlder } from "../../components/LoadOlder";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { useRecordView } from "../../lib/useRecordView";
@@ -20,7 +21,7 @@ import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/
 import { useFileOpen } from "../../lib/useFileOpen";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
-import { dateKey } from "../../lib/dates";
+import { dateKey, addDaysKey, daysBetweenKeys, GUARDIAN_MAX_LOOKBACK_DAYS } from "../../lib/dates";
 
 const isoDay = (d: Date): string => dateKey(d);
 const daysAgo = (n: number): string => {
@@ -28,6 +29,10 @@ const daysAgo = (n: number): string => {
   d.setDate(d.getDate() - n);
   return isoDay(d);
 };
+
+/** How far one "show older" tap reaches back — a fortnight, matching the
+ *  window this screen opens on (D-#476). */
+const STEP_DAYS = 14;
 
 /** One stage-timeline row: label + Bangla-digit date (or dash). */
 function StageRow({ label, at }: { label: string; at: string | null }): React.ReactElement {
@@ -252,6 +257,14 @@ export default function ChildHomeworkScreen({
               </View>
             ))
           )}
+          {/* D-#476: the pickers above jump to a period; this walks back from
+              wherever the window already starts, for a parent who just wants
+              "a bit further back" without picking a date. */}
+          <LoadOlder
+            onPress={() => setFrom((f) => addDaysKey(f, -STEP_DAYS))}
+            loading={hwQ.fetching || nilQ.fetching}
+            exhausted={daysBetweenKeys(from, to) >= GUARDIAN_MAX_LOOKBACK_DAYS}
+          />
         </QueryGate>
       </ScrollView>
     </Screen>

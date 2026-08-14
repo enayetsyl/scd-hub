@@ -1910,12 +1910,21 @@ builder.queryField("childAssignments", (t) =>
     type: [ChildAssignmentRef],
     description:
       "Guardian read (AJ-8): the linked child's assignments — pending, overdue with days late, " +
-      "marks + result + feedback. Link-gated (assertGuardianOfStudent).",
+      "marks + result + feedback. Link-gated (assertGuardianOfStudent). " +
+      "limit/offset are OPTIONAL (D-#476): omitted = the whole history, exactly as before, so a " +
+      "phone still running an older bundle is unaffected.",
     authScopes: { hasPermission: "guardian:read_child" },
-    args: { studentId: t.arg.string({ required: true }) },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      limit: t.arg.int({ required: false }),
+      offset: t.arg.int({ required: false }),
+    },
     resolve: async (_root, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
-      return childAssignmentsSvc(args.studentId);
+      return childAssignmentsSvc(args.studentId, new Date(), {
+        limit: args.limit,
+        offset: args.offset,
+      });
     },
   }),
 );
