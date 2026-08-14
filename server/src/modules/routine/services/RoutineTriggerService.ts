@@ -164,6 +164,27 @@ export async function classNotesForDate(
     .lean() as unknown as IClassNote[];
 }
 
+/**
+ * The range twin of `classNotesForDate` (D-#476) — every note the group has in
+ * [from, to] in ONE query. The guardian class-notes history used to call the
+ * single-day function once per day, which is why its window was pinned at a week;
+ * this is what lets that window grow without the request count growing with it.
+ * Newest day first, subject-ordered inside a day (the per-day sort the callers
+ * already render by).
+ */
+export async function classNotesForRange(
+  groupType: "section" | "subjectgroup",
+  groupId: string,
+  from: Date,
+  to: Date,
+): Promise<IClassNote[]> {
+  const { start } = dayBounds(from);
+  const { end } = dayBounds(to);
+  return ClassNote.find({ groupType, groupId, date: { $gte: start, $lte: end } })
+    .sort({ date: -1, subject: 1 })
+    .lean() as unknown as IClassNote[];
+}
+
 // ---------------------------------------------------------------------------
 // Class-note admin (Principal/Office): edit / delete / enriched list of all notes.
 // ---------------------------------------------------------------------------

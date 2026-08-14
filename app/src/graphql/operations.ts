@@ -3103,6 +3103,30 @@ export const CHILD_CLASS_NOTES_QUERY = gql<
   }
 `;
 
+/** One day of the class-notes history (D-#476). */
+export interface GuardianClassNoteDayT {
+  dateKey: string;
+  notes: GuardianClassNoteT[];
+}
+
+/** D-#476: the whole history window in ONE request. The history screen used to
+ *  fire CHILD_CLASS_NOTES_QUERY once per day, which is what capped it at a week. */
+export const CHILD_CLASS_NOTES_RANGE_QUERY = gql<
+  { childClassNotesRange: GuardianClassNoteDayT[] },
+  { studentId: string; from: string; to: string }
+>`
+  query ChildClassNotesRange($studentId: String!, $from: String!, $to: String!) {
+    childClassNotesRange(studentId: $studentId, from: $from, to: $to) {
+      dateKey
+      notes {
+        subject subjectLabelBn periodNumber taughtSummaryBn
+        homework { hwId subject subjectLabelBn qCount timeDecl }
+        attachments { id name mime }
+      }
+    }
+  }
+`;
+
 export interface GuardianHwRecordT {
   recordId: string;
   hwId: string;
@@ -4942,9 +4966,14 @@ export interface ChildAssignmentT {
   attachmentIds: string[];
 }
 
-export const CHILD_ASSIGNMENTS = gql<{ childAssignments: ChildAssignmentT[] }, { studentId: string }>`
-  query ChildAssignments($studentId: String!) {
-    childAssignments(studentId: $studentId) {
+/** D-#476: limit/offset are optional server-side, so omitting them still returns
+ *  the whole history — the guardian list passes them to page instead. */
+export const CHILD_ASSIGNMENTS = gql<
+  { childAssignments: ChildAssignmentT[] },
+  { studentId: string; limit?: number; offset?: number }
+>`
+  query ChildAssignments($studentId: String!, $limit: Int, $offset: Int) {
+    childAssignments(studentId: $studentId, limit: $limit, offset: $offset) {
       recordId asId subject weekNumber state pending daysLate deliveryDate dueDate
       marks totalMarks result feedback isResubmission attachmentIds
     }

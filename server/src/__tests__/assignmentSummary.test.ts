@@ -14,6 +14,8 @@ import mongoose from "mongoose";
 const mockScheduleFindOne = jest.fn();
 const mockItemFind = jest.fn();
 const mockRecFind = jest.fn();
+const mockRecSkip = jest.fn();
+const mockRecLimit = jest.fn();
 const mockHolidayFind = jest.fn();
 
 jest.mock("../modules/trackers/models/AssignmentSchedule", () => ({
@@ -22,12 +24,25 @@ jest.mock("../modules/trackers/models/AssignmentSchedule", () => ({
 jest.mock("../modules/trackers/models/AssignmentItem", () => ({
   AssignmentItem: { find: (q: unknown) => ({ lean: () => mockItemFind(q) }) },
 }));
+// Chainable so the paged guardian read (D-#476) can be asserted: skip/limit
+// record what was pushed down to Mongo rather than being sliced in JS.
 jest.mock("../modules/trackers/models/AssignmentStudentRecord", () => ({
   AssignmentStudentRecord: {
-    find: (q: unknown) => ({
-      lean: () => mockRecFind(q),
-      sort: () => ({ lean: () => mockRecFind(q) }),
-    }),
+    find: (q: unknown) => {
+      const chain: Record<string, unknown> = {
+        lean: () => mockRecFind(q),
+        sort: () => chain,
+        skip: (n: number) => {
+          mockRecSkip(n);
+          return chain;
+        },
+        limit: (n: number) => {
+          mockRecLimit(n);
+          return chain;
+        },
+      };
+      return chain;
+    },
   },
 }));
 jest.mock("../modules/routine/models/HolidayException", () => ({
@@ -212,5 +227,29 @@ describe("AJ-8 — childAssignments", () => {
   test("no records → empty list", async () => {
     mockRecFind.mockResolvedValue([]);
     expect(await childAssignments(oid().toString())).toHaveLength(0);
+  });
+
+  // D-#476 — the guardian list pages instead of loading a whole year.
+  describe("paging", () => {
+    test("no page argument still loads the WHOLE history — wholePicture depends on it", async () => {
+      mockRecFind.mockResolvedValue([]);
+      await childAssignments(oid().toString());
+      expect(mockRecSkip).not.toHaveBeenCalled();
+      expect(mockRecLimit).not.toHaveBeenCalled();
+    });
+
+    test("limit/offset are pushed down to the query, not sliced afterwards", async () => {
+      mockRecFind.mockResolvedValue([]);
+      await childAssignments(oid().toString(), new Date(2026, 0, 22), { limit: 20, offset: 40 });
+      expect(mockRecSkip).toHaveBeenCalledWith(40);
+      expect(mockRecLimit).toHaveBeenCalledWith(20);
+    });
+
+    test("a zero/negative page is ignored rather than returning nothing", async () => {
+      mockRecFind.mockResolvedValue([]);
+      await childAssignments(oid().toString(), new Date(2026, 0, 22), { limit: 0, offset: 0 });
+      expect(mockRecSkip).not.toHaveBeenCalled();
+      expect(mockRecLimit).not.toHaveBeenCalled();
+    });
   });
 });
