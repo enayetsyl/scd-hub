@@ -16,6 +16,8 @@ import {
   myChildren,
   childRoutine,
   childClassNotes,
+  childClassNotesRange,
+  type GuardianClassNoteDay,
   childHomework,
   childHomeworkNilDays,
   type GuardianHwNilDay,
@@ -143,6 +145,18 @@ const GuardianClassNoteRef = builder.objectRef<GuardianClassNote>("GuardianClass
   }),
 });
 
+/** One day's worth of the class-notes history (D-#476). The day key is the
+ *  local calendar date the notes were filed under, so it round-trips to the
+ *  same "YYYY-MM-DD" the single-day query takes. */
+const GuardianClassNoteDayRef = builder
+  .objectRef<GuardianClassNoteDay>("GuardianClassNoteDay")
+  .implement({
+    fields: (t) => ({
+      dateKey: t.exposeString("dateKey"),
+      notes: t.field({ type: [GuardianClassNoteRef], resolve: (d) => d.notes }),
+    }),
+  });
+
 const GuardianHomeworkRecordRef = builder
   .objectRef<GuardianHomeworkRecord>("GuardianHomeworkRecord")
   .implement({
@@ -269,6 +283,27 @@ builder.queryField("childClassNotes", (t) =>
     resolve: async (_r, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
       return childClassNotes(args.studentId, parseDate(args.date));
+    },
+  }),
+);
+
+builder.queryField("childClassNotesRange", (t) =>
+  t.field({
+    type: [GuardianClassNoteDayRef],
+    description:
+      "D-#476: the class-notes history over a window, grouped per day, newest day first. " +
+      "The day-at-a-time childClassNotes above is kept for the Home tab (and for phones on an " +
+      "older bundle); this is what lets the history screen page back beyond one week without " +
+      "issuing one request per day. Windows longer than 92 days are rejected.",
+    authScopes: { hasPermission: "guardian:read_child" },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      from: t.arg.string({ required: true }),
+      to: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => {
+      await assertGuardianOfStudent(ctx, args.studentId);
+      return childClassNotesRange(args.studentId, parseDate(args.from), parseDate(args.to));
     },
   }),
 );

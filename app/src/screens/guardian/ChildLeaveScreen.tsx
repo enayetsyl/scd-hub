@@ -7,13 +7,14 @@ import { useMutation, useQuery } from "urql";
 import { CHILD_LEAVE_APPLICATIONS_QUERY, SUBMIT_CHILD_LEAVE_APPLICATION, type GuardianLeaveApplicationT } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Field, Button, Loader, EmptyState, Notice, ErrorBanner } from "../../components/ui";
 import { DateField } from "../../components/DateField";
+import { LoadOlder } from "../../components/LoadOlder";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { useRecordView } from "../../lib/useRecordView";
 import { STR, dateHeaderLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
-import { dateKey } from "../../lib/dates";
+import { dateKey, addDaysKey, daysBetweenKeys, GUARDIAN_MAX_LOOKBACK_DAYS } from "../../lib/dates";
 
 const isoDay = (d: Date): string => dateKey(d);
 const daysAgo = (n: number): string => {
@@ -26,6 +27,10 @@ const daysAhead = (n: number): string => {
   d.setDate(d.getDate() + n);
   return isoDay(d);
 };
+
+/** The leave history opens on ±60 days; one "show older" tap reaches back
+ *  another 60 (D-#476). */
+const HISTORY_SPAN_DAYS = 60;
 
 function LeaveCard({ item }: { item: GuardianLeaveApplicationT }): React.ReactElement {
   return (
@@ -48,9 +53,15 @@ export default function ChildLeaveScreen(): React.ReactElement {
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // The HISTORY window, distinct from the fromKey/toKey above (those belong to
+  // the application form). D-#476: it used to be a fixed ±60 days with nothing
+  // older reachable; "show older" now walks the start back.
+  const [historyFrom, setHistoryFrom] = useState(() => daysAgo(HISTORY_SPAN_DAYS));
+  const [historyTo] = useState(() => daysAhead(HISTORY_SPAN_DAYS));
+
   const [q, refetch] = useQuery({
     query: CHILD_LEAVE_APPLICATIONS_QUERY,
-    variables: { studentId: selected?.studentId ?? "", fromKey: daysAgo(60), toKey: daysAhead(60) },
+    variables: { studentId: selected?.studentId ?? "", fromKey: historyFrom, toKey: historyTo },
     pause: !selected,
     requestPolicy: "cache-and-network",
   });
@@ -123,6 +134,13 @@ export default function ChildLeaveScreen(): React.ReactElement {
         ) : (
           items.map((item) => <LeaveCard key={item.id} item={item} />)
         )}
+        {!q.error ? (
+          <LoadOlder
+            onPress={() => setHistoryFrom((f) => addDaysKey(f, -HISTORY_SPAN_DAYS))}
+            loading={q.fetching}
+            exhausted={daysBetweenKeys(historyFrom, historyTo) >= GUARDIAN_MAX_LOOKBACK_DAYS}
+          />
+        ) : null}
       </ScrollView>
     </Screen>
   );
