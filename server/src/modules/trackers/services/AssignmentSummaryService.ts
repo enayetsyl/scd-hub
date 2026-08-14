@@ -246,13 +246,23 @@ export interface ChildAssignmentEntry {
   attachmentIds: string[];
 }
 
+/**
+ * D-#476: `page` is OPTIONAL and off by default — omitting it keeps the historic
+ * unbounded behaviour, which `wholePicture` depends on (it aggregates lateness
+ * over every record the child has ever had). Only the guardian list passes it,
+ * so the parent's phone stops loading a year of assignments to show the newest ten.
+ * The slice is applied in Mongo (records are already createdAt-sorted and never
+ * filtered afterwards, so skip/limit is exact).
+ */
 export async function childAssignments(
   studentId: string,
   asOf: Date = new Date(),
+  page?: { limit?: number | null; offset?: number | null },
 ): Promise<ChildAssignmentEntry[]> {
-  const records = (await AssignmentStudentRecord.find({ studentId })
-    .sort({ createdAt: -1 })
-    .lean()) as unknown as RecordLean[];
+  let q = AssignmentStudentRecord.find({ studentId }).sort({ createdAt: -1 });
+  if (page?.offset != null && page.offset > 0) q = q.skip(page.offset);
+  if (page?.limit != null && page.limit > 0) q = q.limit(page.limit);
+  const records = (await q.lean()) as unknown as RecordLean[];
   if (records.length === 0) return [];
 
   const itemIds = [...new Set(records.map((r) => r.asItemId.toString()))];

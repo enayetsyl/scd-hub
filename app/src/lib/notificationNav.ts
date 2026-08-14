@@ -9,21 +9,13 @@
  */
 import type { Role } from "@scd/shared";
 import type { NotificationRefsT } from "../graphql/operations";
+import { addDaysKey } from "./dates";
 
 export interface NotificationTarget {
   /** A TabParamList key — the root navigate goes App → tab → screen. */
   tab: string;
   screen: string;
   params?: Record<string, unknown>;
-}
-
-/** `YYYY-MM-DD` + n days → `YYYY-MM-DD` (local — the app's dateKey convention). */
-function addDaysKey(key: string, days: number): string {
-  const [y, m, d] = key.split("-").map(Number);
-  const date = new Date(y, (m ?? 1) - 1, (d ?? 1) + days);
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${mm}-${dd}`;
 }
 
 export function notificationTarget(

@@ -9,12 +9,13 @@ import { CHILD_ATTENDANCE_HISTORY_QUERY } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Badge, Loader, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { DateField } from "../../components/DateField";
+import { LoadOlder } from "../../components/LoadOlder";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { useRecordView } from "../../lib/useRecordView";
 import { STR, bnNum, dateHeaderLabel, getActiveLang } from "../../lib/labels";
 import { space } from "../../theme/tokens";
-import { dateKey } from "../../lib/dates";
+import { dateKey, addDaysKey, daysBetweenKeys, GUARDIAN_MAX_LOOKBACK_DAYS } from "../../lib/dates";
 
 const isoDay = (d: Date): string => dateKey(d);
 const daysAgo = (n: number): string => {
@@ -22,6 +23,10 @@ const daysAgo = (n: number): string => {
   d.setDate(d.getDate() - n);
   return isoDay(d);
 };
+
+/** One "show older" tap = another month, matching the month this screen opens on
+ *  (D-#476). */
+const STEP_DAYS = 30;
 
 function DayRow({
   dateKey,
@@ -116,6 +121,11 @@ export default function ChildAttendanceScreen(): React.ReactElement {
             ) : (
               history.days.map((d) => <Card key={d.dateKey}><DayRow {...d} /></Card>)
             )}
+            <LoadOlder
+              onPress={() => setFromKey((f) => addDaysKey(f, -STEP_DAYS))}
+              loading={q.fetching}
+              exhausted={daysBetweenKeys(fromKey, toKey) >= GUARDIAN_MAX_LOOKBACK_DAYS}
+            />
           </>
         ) : (
           <EmptyState message={STR.empty} />

@@ -106,8 +106,11 @@ jest.mock("../modules/routine/services/RoutineSlotService", () => ({
 }));
 
 const mockClassNotesForDate = jest.fn();
+const mockClassNotesForRange = jest.fn();
 jest.mock("../modules/routine/services/RoutineTriggerService", () => ({
   classNotesForDate: (gt: unknown, gid: unknown, d: unknown) => mockClassNotesForDate(gt, gid, d),
+  classNotesForRange: (gt: unknown, gid: unknown, f: unknown, t: unknown) =>
+    mockClassNotesForRange(gt, gid, f, t),
 }));
 
 const mockHwItemFind = jest.fn();
@@ -136,6 +139,8 @@ import {
   myChildren,
   childRoutine,
   childClassNotes,
+  childClassNotesRange,
+  GUARDIAN_RANGE_MAX_DAYS,
   childHomework,
   childDayLoad,
 } from "../modules/guardian/services/GuardianPortalService";
@@ -533,6 +538,122 @@ describe("childClassNotes", () => {
 
   test("no notes → empty list", async () => {
     await expect(childClassNotes(STUDENT_ID.toString(), TUESDAY)).resolves.toEqual([]);
+  });
+});
+
+// ===========================================================================
+// childClassNotesRange (D-#476) — the history window that replaced one
+// request per day. The behaviour that matters: the whole window costs a fixed
+// number of group queries, days come back newest-first, and an absurd window
+// is refused before it reaches the database.
+// ===========================================================================
+
+describe("childClassNotesRange", () => {
+  const FROM = new Date(2026, 5, 1);
+  const TO = new Date(2026, 5, 7);
+
+  function noteOn(date: Date, subject: string, slotId: ReturnType<typeof oid>) {
+    return {
+      _id: oid(),
+      slotId,
+      groupType: "section",
+      groupId: SECTION_ID,
+      date,
+      subject,
+      taughtSummaryBn: `${subject} পড়ানো হয়েছে`,
+      publishedBy: TEACHER_ID,
+      publishedAt: date,
+    };
+  }
+
+  test("groups the window into days, newest first, without a query per day", async () => {
+    const slotId = oid();
+    mockClassNotesForRange.mockImplementation(async (groupType: string) =>
+      groupType === "section"
+        ? [
+            noteOn(new Date(2026, 5, 4), "MATH", slotId),
+            noteOn(new Date(2026, 5, 2), "BAN", slotId),
+            noteOn(new Date(2026, 5, 2), "ENG", slotId),
+          ]
+        : [],
+    );
+    mockRoutineSlotFind.mockResolvedValue([{ _id: slotId, periodNumber: 2 }]);
+    mockHwItemFind.mockResolvedValue([]);
+
+    const days = await childClassNotesRange(STUDENT_ID.toString(), FROM, TO);
+
+    expect(days.map((d) => d.dateKey)).toEqual(["2026-06-04", "2026-06-02"]);
+    expect(days[0].notes.map((n) => n.subject)).toEqual(["MATH"]);
+    expect(days[1].notes.map((n) => n.subject)).toEqual(["BAN", "ENG"]);
+    // One call per GROUP (section + the child's groups) — never one per day.
+    // This is the whole reason the window can now be longer than a week.
+    expect(mockClassNotesForRange).toHaveBeenCalledTimes(1);
+    expect(mockClassNotesForDate).not.toHaveBeenCalled();
+  });
+
+  test("notes keep their period + Bangla labels, exactly as the single-day read shapes them", async () => {
+    const slotId = oid();
+    const hwItemId = oid();
+    mockClassNotesForRange.mockImplementation(async (groupType: string) =>
+      groupType === "section"
+        ? [{ ...noteOn(new Date(2026, 5, 3), "BAN", slotId), homeworkItemId: hwItemId }]
+        : [],
+    );
+    mockRoutineSlotFind.mockResolvedValue([{ _id: slotId, periodNumber: 4 }]);
+    mockHwItemFind.mockResolvedValue([
+      { _id: hwItemId, hwId: "HW-C2-BAN-0007", subject: "BAN", qCount: 3, timeDecl: 20 },
+    ]);
+
+    const days = await childClassNotesRange(STUDENT_ID.toString(), FROM, TO);
+
+    expect(days).toHaveLength(1);
+    expect(days[0].notes[0]).toEqual({
+      subject: "BAN",
+      subjectLabelBn: "বাংলা",
+      periodNumber: 4,
+      taughtSummaryBn: "BAN পড়ানো হয়েছে",
+      homework: {
+        hwId: "HW-C2-BAN-0007",
+        subject: "BAN",
+        subjectLabelBn: "বাংলা",
+        qCount: 3,
+        timeDecl: 20,
+      },
+      attachments: [],
+    });
+  });
+
+  test("an empty window is an empty list, not an error", async () => {
+    mockClassNotesForRange.mockResolvedValue([]);
+    await expect(childClassNotesRange(STUDENT_ID.toString(), FROM, TO)).resolves.toEqual([]);
+  });
+
+  test("a window wider than the cap is refused BEFORE any database work", async () => {
+    const tooFar = new Date(2026, 5, 1);
+    const end = new Date(tooFar);
+    end.setDate(end.getDate() + GUARDIAN_RANGE_MAX_DAYS); // cap + 1 day inclusive
+
+    await expect(childClassNotesRange(STUDENT_ID.toString(), tooFar, end)).rejects.toThrow(
+      /Range too wide/,
+    );
+    expect(mockClassNotesForRange).not.toHaveBeenCalled();
+  });
+
+  test("exactly the cap is allowed — the boundary is inclusive", async () => {
+    mockClassNotesForRange.mockResolvedValue([]);
+    const start = new Date(2026, 5, 1);
+    const end = new Date(start);
+    end.setDate(end.getDate() + (GUARDIAN_RANGE_MAX_DAYS - 1));
+
+    await expect(childClassNotesRange(STUDENT_ID.toString(), start, end)).resolves.toEqual([]);
+    expect(mockClassNotesForRange).toHaveBeenCalled();
+  });
+
+  test("an inverted window is refused", async () => {
+    await expect(childClassNotesRange(STUDENT_ID.toString(), TO, FROM)).rejects.toThrow(
+      /from must not be after to/,
+    );
+    expect(mockClassNotesForRange).not.toHaveBeenCalled();
   });
 });
 

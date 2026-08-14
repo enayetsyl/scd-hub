@@ -6,11 +6,13 @@
 (`AssignmentItem.description`), and app rework of the class-note period card + the guardian home.
 **No new model, no new tracker-kind, no new permission, no `/shared/vocab.ts` change, no envelope /
 harness sync.**
-**Traceability:** D-#476 (merge the surfaces, not the records), D-#477 (assignment description).
+**Traceability:** D-#477 (merge the surfaces, not the records), D-#478 (assignment description).
 Builds on: R-5 class notes (D-#52), UX-8 teacher-first Class Notes (D-#266), HW-T1 declaration
 (D-#33/#34), D-#317 (mandatory homework `description`), D-#299 (nil declaration), D-#336 (edit mode +
 auto-link), AS-T2 delivery pass (D-#86/#87), D-#325 (attendance-backed roster prefill), D-#274/AS-T6
-(weekly ceiling), GE-1..GE-3 (D-#464/#465 — the engagement numbers that motivate the guardian half).
+(weekly ceiling), GE-1..GE-3 (D-#464/#465 — the engagement numbers that motivate the guardian half),
+D-#476 (guardian range reads + "show older" — the deep history this PRD keeps in the tabs while the
+daily path moves to two cards).
 
 ---
 
@@ -132,7 +134,7 @@ input ClassNoteHomeworkInput {
 5. Upsert the `ClassNote` with `homeworkItemId` set to the item from step 4.
 6. Emit `CLASS_NOTE_PUBLISHED` as today.
 
-**Atomicity (D-#476):** homework first, note second, **both idempotent on retry** — rather than a
+**Atomicity (D-#477):** homework first, note second, **both idempotent on retry** — rather than a
 cross-collection transaction. If step 5 fails after step 4, the declared item is legitimate (it is
 exactly what the old two-screen flow would have produced) and the teacher's next tap re-runs step 4 as
 an update and step 5 as an upsert. A transaction would buy strictness at the cost of a replica-set

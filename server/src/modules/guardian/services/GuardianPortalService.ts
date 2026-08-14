@@ -42,7 +42,8 @@ import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { dayTypeFor } from "../../routine/calendar";
 import { computePeriodTimes, windowFor } from "../../routine/schedule";
 import { slotsForDate } from "../../routine/services/RoutineSlotService";
-import { classNotesForDate } from "../../routine/services/RoutineTriggerService";
+import { classNotesForDate, classNotesForRange } from "../../routine/services/RoutineTriggerService";
+import type { IClassNote } from "../../routine/models/ClassNote";
 import {
   studentAttendanceHistory,
   type StudentHistory,
@@ -403,6 +404,16 @@ export async function childClassNotes(studentId: string, date: Date): Promise<Gu
   for (const g of groups) {
     notes.push(...(await classNotesForDate("subjectgroup", g._id.toString(), date)));
   }
+  return toGuardianClassNotes(notes);
+}
+
+/**
+ * Shared shaping for both the single-day and the range read: batch-load the
+ * period numbers, attachment names and homework items ONCE for whatever set of
+ * notes it is handed. Extracted at D-#476 so the range query costs the same
+ * three batched lookups a single day always did.
+ */
+async function toGuardianClassNotes(notes: IClassNote[]): Promise<GuardianClassNote[]> {
   if (notes.length === 0) return [];
 
   const slotIds = [...new Set(notes.map((n) => n.slotId.toString()))];
@@ -449,6 +460,76 @@ export async function childClassNotes(studentId: string, date: Date): Promise<Gu
       }),
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// childClassNotesRange (D-#476) — the SAME notes over a window, grouped per day.
+// The history screen used to fan out one childClassNotes call per day, which is
+// why it could only ever afford a week; this returns the whole window in one
+// round-trip so the guardian can page back through the term.
+// ---------------------------------------------------------------------------
+
+/** Longest window a guardian may ask for in one call. A term, not a year: it
+ *  bounds the worst-case payload without ever being a limit a real parent hits
+ *  (the app pages in 7-day steps). */
+export const GUARDIAN_RANGE_MAX_DAYS = 92;
+
+export interface GuardianClassNoteDay {
+  dateKey: string;
+  notes: GuardianClassNote[];
+}
+
+/** Local-calendar "YYYY-MM-DD" — matches `dayBounds`, which is what the notes
+ *  were matched with, so a note can never land in the wrong day bucket. */
+function localDayKey(d: Date): string {
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+/** Rejects an inverted or over-long window before it reaches the database. */
+export function assertGuardianRange(from: Date, to: Date): void {
+  if (from.getTime() > to.getTime()) throw new Error("from must not be after to");
+  const days = Math.round((dayBounds(to).start.getTime() - dayBounds(from).start.getTime()) / 86_400_000) + 1;
+  if (days > GUARDIAN_RANGE_MAX_DAYS) {
+    throw new Error(`Range too wide: max ${GUARDIAN_RANGE_MAX_DAYS} days`);
+  }
+}
+
+export async function childClassNotesRange(
+  studentId: string,
+  from: Date,
+  to: Date,
+): Promise<GuardianClassNoteDay[]> {
+  assertGuardianRange(from, to);
+  const student = await requireStudent(studentId);
+  const groups = await groupsOf(studentId);
+
+  // One query per group (a child has at most section + Quran + Arabic), not one
+  // per DAY — this is the whole point of the range read.
+  const raw = [...(await classNotesForRange("section", student.sectionId.toString(), from, to))];
+  for (const g of groups) {
+    raw.push(...(await classNotesForRange("subjectgroup", g._id.toString(), from, to)));
+  }
+
+  const shaped = await toGuardianClassNotes(raw);
+
+  // Zip the shaped notes back onto their days — toGuardianClassNotes preserves
+  // input order, so index i of the output is index i of `raw`.
+  const byDay = new Map<string, GuardianClassNote[]>();
+  raw.forEach((n, i) => {
+    const key = localDayKey(new Date(n.date));
+    const bucket = byDay.get(key);
+    if (bucket) bucket.push(shaped[i]);
+    else byDay.set(key, [shaped[i]]);
+  });
+
+  return [...byDay.entries()]
+    .map(([dateKey, notes]) => ({
+      dateKey,
+      notes: notes.sort((a, b) => a.subject.localeCompare(b.subject)),
+    }))
+    .sort((a, b) => b.dateKey.localeCompare(a.dateKey)); // newest day first
 }
 
 // ---------------------------------------------------------------------------
