@@ -28,6 +28,21 @@ JsonSlurper — never edit versions in gradle.
 
 ## OTA release (JS-only) — the routine one
 
+> ⚠️ **Check `app/.env` first — `eas update` will NOT check it for you.**
+> `release-apk.mjs` refuses a localhost `EXPO_PUBLIC_API_URL` (step 3 below); the OTA
+> lane has no such guard, and it is the lane that ships to every phone at once.
+> `client.ts` resolves `EXPO_PUBLIC_API_URL ?? (web ? "/graphql" : "http://localhost:4000/graphql")`,
+> so on native a **missing** `.env` is exactly as fatal as a local-dev one — both bake
+> localhost and cut every phone off from the server. A fresh worktree has no `app/.env`,
+> and the day-to-day one points at localhost. Before publishing:
+>
+> ```sh
+> grep '^EXPO_PUBLIC' app/.env   # API_URL must be the PROD https URL, not localhost
+> ```
+>
+> Keep the real `EXPO_PUBLIC_SENTRY_DSN` and `EXPO_PUBLIC_ENV=production` while you
+> override the URL — dropping the DSN silently ends crash reporting for that build.
+
 ```sh
 cd app
 npx eas update --channel production --platform android --message "<what changed>"
