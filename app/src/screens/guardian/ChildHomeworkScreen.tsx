@@ -68,6 +68,12 @@ function RecordCard({
         {/* Short enough to stay inline. */}
         {r.resubOf ? <Badge text={lifecycleStateLabel("RESUBMIT")} tone="warn" /> : null}
       </View>
+      {/* D-#478: WHAT the work was. The teacher's description has been mandatory at
+          declare since D-#317 and childHomework has always fetched it — it was simply
+          never rendered, so a parent reading তাগাদা saw an id and a red badge and had
+          to go find the class note for the date it was given. It sits ABOVE the status
+          line because it is the thing they opened the app to learn. */}
+      {r.description ? <Body style={{ marginTop: space(1) }}>{r.description}</Body> : null}
       <View style={{ marginTop: space(2) }}>
         <Badge
           text={hwGuardianStatusLabel(r.state)}
