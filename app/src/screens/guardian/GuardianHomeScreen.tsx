@@ -538,7 +538,16 @@ export default function GuardianHomeScreen(): React.ReactElement {
                     <View key={r.recordId} style={{ marginTop: space(2) }}>
                       <View style={{ flexShrink: 1 }}>
                         <Body>{subjectLabel(r.subject)}</Body>
-                        <Muted>{r.hwId}</Muted>
+                        {/* D-#478: what the work actually was — mandatory since D-#317,
+                            fetched by this very query, rendered nowhere until now. The 📎
+                            is a MARKER, not a button: this whole card is a Pressable that
+                            opens the homework screen, and a nested pressable double-fires
+                            (the D-#371 header lesson). The real viewer lives there. */}
+                        {r.description ? <Body>{r.description}</Body> : null}
+                        <Muted>
+                          {r.hwId}
+                          {r.questionFileId || r.attachmentIds.length > 0 ? ` · 📎 ${STR.gpQuestionFile}` : ""}
+                        </Muted>
                       </View>
                       <View style={{ marginTop: space(1) }}>
                         <Badge
