@@ -24,6 +24,9 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // access:manage is RESERVED-locked + Principal-only — roleHasPermission is exact here.
   const canAccess = can("access:manage");
   const canAudit = can("audit:read");
+  // AR-2: the ranking reads the two attendance registers, so it sits behind the gate
+  // that already owns them — `attendance:manage` is Principal + Office exactly.
+  const canAttendance = can("attendance:manage");
 
   return (
     <Screen scroll>
@@ -73,6 +76,13 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
 
       {/* Owner ask 2026-07-20: the Reconciliation + HW-lifecycle report cards moved
           to the drawer Reports group; their Admin-stack routes remain for deep links. */}
+      {canAttendance ? (
+        <Card onPress={() => navigation.navigate("AttendanceRanking")}>
+          <Body style={{ fontWeight: "700" }}>{STR.arTitle}</Body>
+          <Muted>{STR.arHint}</Muted>
+        </Card>
+      ) : null}
+
       {canAudit ? (
         <Card onPress={() => navigation.navigate("AuditLog")}>
           <Body style={{ fontWeight: "700" }}>{STR.audTitle}</Body>

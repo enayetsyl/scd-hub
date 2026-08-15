@@ -395,6 +395,8 @@ export type AdminStackParamList = {
   ReconciliationReport: undefined;
   // D-#300: per subject × class homework lifecycle report (Principal/Office).
   HwLifecycleReport: undefined;
+  // AR-2: attendance ranking, students + staff (attendance:manage).
+  AttendanceRanking: undefined;
   SectionPicker: undefined;
 };
 

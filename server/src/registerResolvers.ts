@@ -48,6 +48,7 @@ import "./modules/routine/resolvers/teacherClassLoad";
 import "./modules/attendance/resolvers/teacherAttendance";
 import "./modules/attendance/resolvers/studentAttendance";
 import "./modules/attendance/resolvers/push";
+import "./modules/attendance/resolvers/attendanceRanking";
 import "./modules/hr/resolvers/staffLeave";
 import "./modules/hr/resolvers/payroll";
 import "./modules/hr/resolvers/performance";
