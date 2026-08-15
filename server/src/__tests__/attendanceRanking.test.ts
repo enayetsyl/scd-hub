@@ -11,6 +11,7 @@ const mockStudentDayFind = jest.fn();
 const mockTeacherDayFind = jest.fn();
 const mockStudentFind = jest.fn();
 const mockSectionFind = jest.fn();
+const mockClassFind = jest.fn();
 const mockStaffFind = jest.fn();
 const mockGroupFind = jest.fn();
 const mockMembershipFind = jest.fn();
@@ -34,6 +35,9 @@ jest.mock("../modules/foundation/models/Student", () => ({
 }));
 jest.mock("../modules/foundation/models/Section", () => ({
   Section: { find: chain(mockSectionFind) },
+}));
+jest.mock("../modules/foundation/models/Class", () => ({
+  Class: { find: chain(mockClassFind) },
 }));
 jest.mock("../modules/foundation/models/StaffProfile", () => ({
   StaffProfile: { find: chain(mockStaffFind) },
@@ -81,6 +85,7 @@ beforeEach(() => {
   mockTeacherDayFind.mockResolvedValue([]);
   mockStudentFind.mockResolvedValue([]);
   mockSectionFind.mockResolvedValue([]);
+  mockClassFind.mockResolvedValue([]);
   mockStaffFind.mockResolvedValue([]);
   mockGroupFind.mockResolvedValue([]);
   mockMembershipFind.mockResolvedValue([]);
@@ -371,5 +376,52 @@ describe("lastMarkedKey — an empty ranking says WHY", () => {
     mockTeacherDayFind.mockResolvedValue([]);
     const res = await rankStaff({ window: "month", anchorKey: "2026-08-15" });
     expect(res.lastMarkedKey).toBe("2026-07-31");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Unit labels — the row must say WHICH class
+// ---------------------------------------------------------------------------
+
+describe("unitLabel — every class's default section is named the same", () => {
+  test("a section row is labelled CLASS · SECTION, not just the section name", async () => {
+    // Live shape: Nursery and KG both have a section called মূল, so a bare section
+    // name made two different classes indistinguishable on a whole-school ranking.
+    mockSectionFind.mockResolvedValue([
+      { _id: oid("secNur"), code: "Main", nameBn: "মূল", classId: oid("cNur") },
+      { _id: oid("secKg"), code: "Main", nameBn: "মূল", classId: oid("cKg") },
+    ]);
+    mockClassFind.mockResolvedValue([
+      { _id: oid("cNur"), nameBn: "নার্সারি", level: -1 },
+      { _id: oid("cKg"), nameBn: "কেজি", level: 0 },
+    ]);
+    mockStudentDayFind.mockResolvedValue([
+      ...Array.from({ length: 32 }, () => ({ sectionId: oid("secNur"), absentStudentIds: [] })),
+      ...Array.from({ length: 30 }, () => ({ sectionId: oid("secKg"), absentStudentIds: [] })),
+    ]);
+    mockStudentFind.mockResolvedValue([
+      { _id: oid("n1"), name: "Nursery Child", sectionId: oid("secNur") },
+      { _id: oid("k1"), name: "KG Child", sectionId: oid("secKg") },
+    ]);
+    const res = await rankStudents({ window: "annual", anchorKey: "2026-08-15", axis: "school" });
+    const labels = Object.fromEntries(res.rows.map((r) => [r.name, r.unitLabel]));
+    expect(labels["Nursery Child"]).toBe("নার্সারি · মূল");
+    expect(labels["KG Child"]).toBe("কেজি · মূল");
+    // …and the two units keep their own denominators, which is the whole reason the
+    // held-day counts legitimately differ between them.
+    const held = Object.fromEntries(res.rows.map((r) => [r.name, r.heldDays]));
+    expect(held["Nursery Child"]).toBe(32);
+    expect(held["KG Child"]).toBe(30);
+  });
+
+  test("a section with no resolvable class still labels cleanly", async () => {
+    mockSectionFind.mockResolvedValue([{ _id: oid("s"), code: "Main", nameBn: "মূল" }]);
+    mockClassFind.mockResolvedValue([]);
+    mockStudentDayFind.mockResolvedValue(
+      Array.from({ length: 10 }, () => ({ sectionId: oid("s"), absentStudentIds: [] })),
+    );
+    mockStudentFind.mockResolvedValue([{ _id: oid("a"), name: "Ayesha", sectionId: oid("s") }]);
+    const res = await rankStudents({ window: "month", anchorKey: "2026-08-15", axis: "school" });
+    expect(res.rows[0].unitLabel).toBe("মূল");
   });
 });
