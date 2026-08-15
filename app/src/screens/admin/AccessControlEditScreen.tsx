@@ -32,6 +32,7 @@ import {
   REMOVE_USER_REVOKED_PERMISSION,
   type UserAccessT,
 } from "../../graphql/accessControl";
+import DelegatedDutiesBlock from "./DelegatedDutiesBlock";
 import type { AdminStackParamList } from "../../navigation/types";
 import {
   Screen, Body, Muted, Card, Chip, ChipRow, Badge, Notice, Divider, Loader, ErrorBanner,
@@ -225,6 +226,9 @@ export default function AccessControlEditScreen({ route }: Props): React.ReactEl
           })}
         </View>
       ))}
+
+      {/* The EXTENT axis (ACS-2): what this person may do BEYOND what they teach. */}
+      <DelegatedDutiesBlock userId={userId} />
     </Screen>
   );
 }

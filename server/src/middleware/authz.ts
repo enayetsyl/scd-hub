@@ -11,10 +11,12 @@
  */
 
 import type { AppContext } from "../context";
+import type { DelegatedAction } from "@scd/shared";
 import {
   composeTeacherScope,
   canRead,
   canWrite,
+  delegationNeedsClassId,
   stampProxyExpired,
   proxyWindowEnd,
   type ScopeItem,
@@ -132,7 +134,11 @@ export async function allowedSubjectCodesForSection(
     } else if (s.kind === "proxy" && s.sectionId === sectionId) {
       if (!s.subjectId) return null; // pre-D-#257 subject-less proxy = whole section
       subjectIds.add(s.subjectId);
-    } else if (s.kind === "supervisory") {
+    } else if (s.kind === "supervisory" || s.kind === "delegation") {
+      // A delegation carries read over its extent (D-#485) — the same extent shapes
+      // as supervisory. Without this, a whole-school submit delegation would pass the
+      // write gate and still render an EMPTY subject list: permission granted, nothing
+      // to act on.
       switch (s.extent) {
         case "whole_school":
           return null;
@@ -160,16 +166,31 @@ export async function allowedSubjectCodesForSection(
 
 /** Assert the caller can write (assemble/tracker) for the given section.
  *  `subjectId` narrows proxy grants for subject-specific actions.
+ *
+ *  `action` (ACS-1, D-#486) is the DUTY this gate performs — pass it and a delegation
+ *  grant listing that action may satisfy the gate from its own extent, on top of the
+ *  usual teaching/proxy match. **Omitting it is the pre-ACS-1 behaviour exactly**: a
+ *  delegation never matches an untagged gate, so reach widens one deliberately tagged
+ *  call site at a time rather than school-wide on ship day.
  */
 export async function assertCanWrite(
   ctx: AppContext,
   sectionId: string,
   subjectId?: string,
+  action?: DelegatedAction,
 ): Promise<void> {
   if (ctx.auth?.role === "PRINCIPAL") return;
   if (ctx.auth?.role === "OFFICE" || ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
   const scopes = await resolveTeacherScopes(ctx);
-  if (!canWrite(scopes, sectionId, subjectId)) throw new ForbiddenError();
+  // The class-shaped extents (grade_class / explicit_set) are the only ones that need
+  // the section's class, so the lookup is lazy — a caller holding no such delegation
+  // pays nothing for this feature.
+  let classId: string | undefined;
+  if (delegationNeedsClassId(scopes, action)) {
+    const section = await Section.findById(sectionId).select("classId").lean();
+    classId = section?.classId ? section.classId.toString() : undefined;
+  }
+  if (!canWrite(scopes, sectionId, subjectId, { action, classId })) throw new ForbiddenError();
 }
 
 /**
@@ -241,6 +262,17 @@ export async function assertCanConfirmHomework(ctx: AppContext, sectionId: strin
   // School-wide homework supervisor (read live — immediate, not JWT-baked) may confirm any section.
   const me = await User.findById(ctx.auth.userId).select("homeworkSupervisor").lean();
   if (me?.homeworkSupervisor) return;
+  // ACS-3 fold (D-#489): the same duty, expressed as an ordinary delegation instead of
+  // a schema field. Read OLD FLAG **OR** NEW GRANT — the two checks above are untouched,
+  // so every existing supervisor/delegate keeps working exactly as before and no data
+  // migration is required; this is purely an additional way to hold the same duty.
+  const scopes = await resolveTeacherScopes(ctx);
+  if (canWrite(scopes, sectionId, undefined, {
+    action: "confirm_homework_day",
+    classId: section.classId ? section.classId.toString() : undefined,
+  })) {
+    return;
+  }
   throw new ForbiddenError(
     "Only the class teacher, the assigned homework delegate, a homework supervisor, or the Principal may confirm homework",
   );

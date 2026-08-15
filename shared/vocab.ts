@@ -3668,3 +3668,78 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "book:manage": { name: "Manage book production", desc: "Create books, policy versions, assignments" },
   "guardian:read_child": { name: "Read child (guardian plane)", desc: "Guardian plane — not grantable to staff" },
 };
+
+// --- B.4 DELEGATED SCOPE ACTIONS (the EXTENT axis, ACS-1 — D-#484..#489) ------
+// A Permission answers WHAT a login may do; a `ScopeGrant` answers WHERE. AC-1
+// (§B.2) made the *what* per-person and deliberately left the *where* alone. These
+// values are the grain of the fourth grant kind, `delegation`: "you may do THIS ONE
+// THING across a wider slice of the school than you teach" (D-#484).
+//
+// NOT permissions, and never interchangeable with them — a delegation widens reach,
+// it never confers a capability. The holder must ALSO hold the matching Permission
+// (`tracker:write`) from a template or an AC-1 grant; the two axes compose and both
+// must pass. The verifier asserts no value here collides with a Permission string.
+//
+// App-native — identity/operational plane behind the ADR-005 firewall. NO
+// wire-contract twin, NO envelope-schema mirror, NO two-place sync; only /shared +
+// the vocab verifier run.
+
+/** The duties a `delegation` grant can carry. A grant lists a non-empty subset. */
+export const DELEGATED_ACTIONS = [
+  "declare_homework",
+  "submit_homework",
+  "check_homework",
+  "declare_assignment",
+  "submit_assignment",
+  "check_assignment",
+  "enter_classtest_result",
+  // ACS-3: the DUTY gate, not a tracker-row write. This is the one that lets the
+  // ad-hoc school-wide booleans (`User.homeworkSupervisor`, `Section.homeworkConfirmerId`)
+  // be expressed as ordinary delegations instead of schema fields (D-#489). Those two
+  // keep working untouched — the gate reads old flag OR new grant.
+  "confirm_homework_day",
+] as const;
+export type DelegatedAction = (typeof DELEGATED_ACTIONS)[number];
+
+/** Which actions have their resolver gate TAGGED in this build. An untagged action
+ *  would be a silent no-op — the Principal ticks it, believes he granted something,
+ *  and nothing changes — so the editor offers `build` actions ONLY, and flipping one
+ *  to `build` and tagging its call site happen in the SAME PR (D-#486). Mirrors the
+ *  `PERMISSION_BUILD_STATUS` idiom above. */
+export const DELEGATED_ACTION_BUILD_STATUS: Record<DelegatedAction, "build" | "pipeline"> = {
+  declare_homework: "build",    // ACS-1: declareHomeworkItem + declareNoHomework
+  submit_homework: "build",     // ACS-1: homeworkSubmitPass + transition →SUBMITTED
+  declare_assignment: "build",  // ACS-1: deliverAssignment + declareNoAssignment
+  submit_assignment: "build",   // ACS-1: assignmentSubmitPass + transition →SUBMITTED
+  check_homework: "build",      // ACS-3: checkHomeworkRecord + recordHomeworkOutcome
+  check_assignment: "build",    // ACS-3: checkAssignmentRecord + recordAssignmentOutcome
+  enter_classtest_result: "build", // ACS-3: enterClassTestResult (+ the publish/unpublish write gate)
+  confirm_homework_day: "build",   // ACS-3: assertCanConfirmHomework (the duty gate, D-#489)
+};
+
+/** True if the delegated action's gate is tagged in this build (editor filter). */
+export function isDelegatedActionActive(action: DelegatedAction): boolean {
+  return DELEGATED_ACTION_BUILD_STATUS[action] === "build";
+}
+
+export const DELEGATED_ACTION_LABELS_BN: Record<DelegatedAction, PermissionLabel> = {
+  declare_homework: { name: "বাড়ির কাজ দেওয়া", desc: "যেকোনো বিষয়ের বাড়ির কাজ ঘোষণা বা 'নেই' চিহ্নিত করা" },
+  submit_homework: { name: "বাড়ির কাজ জমা নেওয়া", desc: "জমা রোস্টার পাস — জমা হয়েছে চিহ্নিত করা" },
+  check_homework: { name: "বাড়ির কাজ দেখা", desc: "জমা দেওয়া কাজ যাচাই ও ফলাফল লেখা" },
+  declare_assignment: { name: "অ্যাসাইনমেন্ট দেওয়া", desc: "যেকোনো বিষয়ের সাপ্তাহিক অ্যাসাইনমেন্ট প্রদান বা 'নেই' চিহ্নিত করা" },
+  submit_assignment: { name: "অ্যাসাইনমেন্ট জমা নেওয়া", desc: "জমা রোস্টার পাস — জমা হয়েছে চিহ্নিত করা" },
+  check_assignment: { name: "অ্যাসাইনমেন্ট দেখা", desc: "জমা দেওয়া অ্যাসাইনমেন্ট যাচাই ও ফলাফল লেখা" },
+  enter_classtest_result: { name: "শ্রেণি পরীক্ষার ফল", desc: "শ্রেণি পরীক্ষার নম্বর ও ফলাফল এন্ট্রি" },
+  confirm_homework_day: { name: "দিনের বাড়ির কাজ চূড়ান্ত", desc: "যেকোনো শাখার দিনের বাড়ির কাজ সমন্বয় ও চূড়ান্ত করা" },
+};
+
+export const DELEGATED_ACTION_LABELS_EN: Record<DelegatedAction, PermissionLabel> = {
+  declare_homework: { name: "Declare homework", desc: "Declare homework, or mark 'none', for any subject" },
+  submit_homework: { name: "Take homework submission", desc: "The submission roster pass — mark work submitted" },
+  check_homework: { name: "Check homework", desc: "Check submitted work and record the result" },
+  declare_assignment: { name: "Deliver assignment", desc: "Deliver the weekly assignment, or mark 'none', for any subject" },
+  submit_assignment: { name: "Take assignment submission", desc: "The submission roster pass — mark work submitted" },
+  check_assignment: { name: "Check assignment", desc: "Check submitted assignments and record the result" },
+  enter_classtest_result: { name: "Enter class-test results", desc: "Enter class-test marks and results" },
+  confirm_homework_day: { name: "Confirm the homework day", desc: "Reconcile and issue any section's daily homework" },
+};

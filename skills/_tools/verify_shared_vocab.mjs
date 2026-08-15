@@ -474,6 +474,38 @@ check("PERMISSION_LABELS have no key outside PERMISSIONS (BN + EN)",
   Object.keys(V.PERMISSION_LABELS_BN).every((k) => V.PERMISSIONS.includes(k)) &&
   Object.keys(V.PERMISSION_LABELS_EN).every((k) => V.PERMISSIONS.includes(k)));
 
+console.log("=== C.17b Delegated scope actions — the EXTENT axis (ACS-1 — prd-access-control-scope §4.1/§11, D-#484–#489) ===");
+// The action vocabulary exists and is non-empty; the status map + both label maps are TOTAL over it.
+check("DELEGATED_ACTIONS is declared + non-empty (§4.1)",
+  Array.isArray(V.DELEGATED_ACTIONS) && V.DELEGATED_ACTIONS.length > 0);
+check("DELEGATED_ACTION_BUILD_STATUS covers every DELEGATED_ACTION",
+  V.DELEGATED_ACTIONS.every((a) => a in V.DELEGATED_ACTION_BUILD_STATUS));
+check("DELEGATED_ACTION_BUILD_STATUS has no key outside DELEGATED_ACTIONS",
+  Object.keys(V.DELEGATED_ACTION_BUILD_STATUS).every((k) => V.DELEGATED_ACTIONS.includes(k)));
+check("every status is exactly build|pipeline",
+  V.DELEGATED_ACTIONS.every((a) => ["build", "pipeline"].includes(V.DELEGATED_ACTION_BUILD_STATUS[a])));
+check("DELEGATED_ACTION_LABELS_BN total over DELEGATED_ACTIONS (name + desc)",
+  totalLabelObj(V.DELEGATED_ACTION_LABELS_BN, V.DELEGATED_ACTIONS));
+check("DELEGATED_ACTION_LABELS_EN total over DELEGATED_ACTIONS (name + desc)",
+  totalLabelObj(V.DELEGATED_ACTION_LABELS_EN, V.DELEGATED_ACTIONS));
+check("DELEGATED_ACTION_LABELS have no key outside DELEGATED_ACTIONS (BN + EN)",
+  Object.keys(V.DELEGATED_ACTION_LABELS_BN).every((k) => V.DELEGATED_ACTIONS.includes(k)) &&
+  Object.keys(V.DELEGATED_ACTION_LABELS_EN).every((k) => V.DELEGATED_ACTIONS.includes(k)));
+// The two axes must never be confusable: a delegated action is NOT a permission and
+// never grants one — the holder needs the Permission too (D-#484).
+check("NO DELEGATED_ACTION collides with a PERMISSION string (the two axes stay distinct, §11)",
+  !V.DELEGATED_ACTIONS.some((a) => V.PERMISSIONS.includes(a)));
+check("NO PERMISSION collides with a DELEGATED_ACTION string (converse)",
+  !V.PERMISSIONS.some((p) => V.DELEGATED_ACTIONS.includes(p)));
+// isDelegatedActionActive mirrors the status map exactly (the editor's offer filter, D-#486)
+check("isDelegatedActionActive === (status === build) for every action",
+  V.DELEGATED_ACTIONS.every((a) =>
+    V.isDelegatedActionActive(a) === (V.DELEGATED_ACTION_BUILD_STATUS[a] === "build")));
+check("NO pipeline delegated actions remain after ACS-3 — every action's gate is tagged (§4.1: flipping one to build tags its call site in the SAME PR)",
+  eq(V.DELEGATED_ACTIONS.filter((a) => V.DELEGATED_ACTION_BUILD_STATUS[a] !== "build"), []));
+check("the ACS-3 duty action exists — the fold that retires the ad-hoc school-wide booleans (D-#489)",
+  V.DELEGATED_ACTIONS.includes("confirm_homework_day"));
+
 console.log("=== C.18 Finance/accounting vocab freeze + finance:manage RBAC (FIN-1 — prd-finance-fin1 §4/§5, D-#221–#223/#247; app-native, NO wire twin REQ §9) ===");
 // ledgers — exactly the 5 (REQ §3); CASH/BANK/ONLINE + the 2 control ledgers
 check("LEDGER_KINDS exact — the 5 ledgers (§4)", eq(V.LEDGER_KINDS, ["CASH","BANK","ONLINE","QARD_CONTROL","IOU_CONTROL"]));

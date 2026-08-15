@@ -272,7 +272,7 @@ builder.mutationField("declareHomeworkItem", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
+      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject), "declare_homework");
       const res = await declareSvc({
         academicYearId: args.academicYearId,
         classId: args.classId,
@@ -407,7 +407,7 @@ builder.mutationField("declareNoHomework", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
+      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject), "declare_homework");
       return declareNilSvc({
         classId: args.classId,
         sectionId: args.sectionId,
@@ -507,7 +507,14 @@ builder.mutationField("transitionHomeworkRecord", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId").lean();
       const item = record ? await HomeworkItem.findById(record.hwItemId).select("subject").lean() : null;
-      await assertCanWrite(ctx, args.sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
+      // Only the →SUBMITTED transition is the delegated "take submission" duty (D-#486);
+      // every other state change on this generic mutation stays teaching/proxy-scoped.
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        item?.subject ? await resolveSubjectId(item.subject) : undefined,
+        args.toState === "SUBMITTED" ? "submit_homework" : undefined,
+      );
       return transitionSvc({
         recordId: args.recordId,
         toState: args.toState,
@@ -1147,7 +1154,12 @@ builder.mutationField("checkHomeworkRecord", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId").lean();
       const item = record ? await HomeworkItem.findById(record.hwItemId).select("subject").lean() : null;
-      await assertCanWrite(ctx, args.sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        item?.subject ? await resolveSubjectId(item.subject) : undefined,
+        "check_homework",
+      );
       const topup =
         args.topupQids && args.topupQids.length > 0
           ? { qids: [...args.topupQids], time: args.topupTime ?? 0 }
@@ -1274,7 +1286,12 @@ builder.mutationField("recordHomeworkOutcome", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId").lean();
       const item = record ? await HomeworkItem.findById(record.hwItemId).select("subject").lean() : null;
-      await assertCanWrite(ctx, args.sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        item?.subject ? await resolveSubjectId(item.subject) : undefined,
+        "check_homework",
+      );
       const topup =
         args.topupQids && args.topupQids.length > 0
           ? { qids: [...args.topupQids], time: args.topupTime ?? 0 }
@@ -1355,9 +1372,14 @@ HwReturnPassResultRef.implement({
 });
 
 /** Resolve the item's subject → write-scope (mirrors recordHomeworkOutcome). */
-async function assertItemWriteScope(ctx: Parameters<typeof assertCanWrite>[0], sectionId: string, itemId: string): Promise<void> {
+async function assertItemWriteScope(
+  ctx: Parameters<typeof assertCanWrite>[0],
+  sectionId: string,
+  itemId: string,
+  action?: Parameters<typeof assertCanWrite>[3],
+): Promise<void> {
   const item = await HomeworkItem.findById(itemId).select("subject").lean();
-  await assertCanWrite(ctx, sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
+  await assertCanWrite(ctx, sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined, action);
 }
 
 builder.mutationField("homeworkSubmitPass", (t) =>
@@ -1375,7 +1397,7 @@ builder.mutationField("homeworkSubmitPass", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertItemWriteScope(ctx, args.sectionId, args.itemId);
+      await assertItemWriteScope(ctx, args.sectionId, args.itemId, "submit_homework");
       return submitPassSvc(
         args.itemId,
         args.entries.map((e) => ({ recordId: e.recordId, submitted: e.submitted })),

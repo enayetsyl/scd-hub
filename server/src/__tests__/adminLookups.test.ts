@@ -46,6 +46,9 @@ describe("grantView (lean grant → client view)", () => {
       proxyStatus: null,
       extent: null,
       explicitSet: null,
+      // delegation-only detail — null on the other three kinds (ACS-1, D-#484)
+      actions: null,
+      expiresAt: null,
     });
   });
 
@@ -63,6 +66,23 @@ describe("grantView (lean grant → client view)", () => {
     expect(v.extent).toBe("explicit_set");
     expect(v.explicitSet).toEqual([{ classId: classId.toString(), subjectId: subjectId.toString() }]);
     expect(v.coveringTeacherId).toBeNull();
+    expect(v.proxyStatus).toBeNull();
+  });
+
+  test("delegation grant exposes actions + ISO expiresAt alongside the extent (ACS-1)", () => {
+    const expires = new Date("2026-12-31T00:00:00+06:00");
+    const v = grantView({
+      _id: oid(),
+      kind: "delegation",
+      active: true,
+      extent: "whole_school",
+      actions: ["declare_assignment"],
+      expiresAt: expires,
+    });
+    expect(v.kind).toBe("delegation");
+    expect(v.extent).toBe("whole_school");
+    expect(v.actions).toEqual(["declare_assignment"]);
+    expect(v.expiresAt).toBe(expires.toISOString());
     expect(v.proxyStatus).toBeNull();
   });
 

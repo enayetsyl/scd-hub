@@ -1,7 +1,9 @@
 import { Schema, model, Document, Types } from "mongoose";
+import { DELEGATED_ACTIONS, type DelegatedAction } from "@scd/shared";
 
-/** Three grant kinds per ADR-017 / D-#17/#18/#20. */
-export type GrantKind = "teaching" | "supervisory" | "proxy";
+/** Four grant kinds: the original three per ADR-017 / D-#17/#18/#20, plus
+ *  `delegation` — the write-capable extent grant added by ACS-1 (D-#484). */
+export type GrantKind = "teaching" | "supervisory" | "proxy" | "delegation";
 
 /** Supervisory extent options (D-#17). */
 export type SupervisoryExtent =
@@ -66,12 +68,40 @@ interface ProxyGrant extends BaseGrant {
   proxyStatus: ProxyStatus;
 }
 
-export type IScopeGrant = (TeachingGrant | SupervisoryGrant | ProxyGrant) & Document & { _id: Types.ObjectId };
+/**
+ * Delegation grant — the fine-grained "who may do what, WHERE" kind (D-#484).
+ *
+ * Shape = the supervisory extent (REUSED verbatim, so one extent vocabulary serves
+ * both kinds) PLUS an action allow-list. It carries READ over its extent — you cannot
+ * submit what you cannot see (D-#485) — and WRITE on exactly the listed actions,
+ * nothing else. It confers no permission: the holder must still hold `tracker:write`
+ * from a template or an AC-1 grant, and both axes must pass.
+ *
+ * `expiresAt` is enforced at REQUEST time, the proxy-window pattern — no cron, and a
+ * lapsed grant survives as history rather than being reaped (D-#488).
+ */
+interface DelegationGrant extends BaseGrant {
+  kind: "delegation";
+  extent: SupervisoryExtent;
+  /** Relevant when extent = grade_class */
+  classId?: Types.ObjectId;
+  /** Relevant when extent = subject_dept */
+  subjectId?: Types.ObjectId;
+  /** Relevant when extent = explicit_set */
+  explicitSet?: Array<{ classId: Types.ObjectId; subjectId: Types.ObjectId }>;
+  /** Non-empty. The duties this grant authorizes — the fine grain. */
+  actions: DelegatedAction[];
+  /** Absent = open-ended. Checked at request time (D-#488). */
+  expiresAt?: Date;
+}
+
+export type IScopeGrant = (TeachingGrant | SupervisoryGrant | ProxyGrant | DelegationGrant) &
+  Document & { _id: Types.ObjectId };
 
 const ScopeGrantSchema = new Schema<IScopeGrant>(
   {
     teacherId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    kind: { type: String, enum: ["teaching", "supervisory", "proxy"], required: true },
+    kind: { type: String, enum: ["teaching", "supervisory", "proxy", "delegation"], required: true },
     active: { type: Boolean, default: true },
     source: { type: String, enum: ["manual", "routine"], default: "manual" },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -92,6 +122,11 @@ const ScopeGrantSchema = new Schema<IScopeGrant>(
         subjectId: { type: Schema.Types.ObjectId, ref: "Subject" },
       },
     ],
+
+    // delegation (ACS-1, D-#484) — extent/classId/subjectId/explicitSet are shared
+    // with the supervisory kind above; these two are the delegation-only fields.
+    actions: { type: [String], enum: [...DELEGATED_ACTIONS], default: undefined },
+    expiresAt: { type: Date },
 
     // proxy
     coveringTeacherId: { type: Schema.Types.ObjectId, ref: "User" },
