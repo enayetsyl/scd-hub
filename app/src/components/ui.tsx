@@ -282,9 +282,20 @@ type BadgeTone = "brand" | "ok" | "warn" | "danger" | "muted" | "info" | "gold";
 export function Badge({
   text,
   tone = "muted",
-  /** Cap the badge's share of a row so a long label cannot crush its sibling text
-   *  column. Defaults to half the row — see the `badge` style note below. */
-  maxWidthPct = 50,
+  /**
+   * OPT-IN cap on the badge's width, as a % of its parent. Off by default, and it
+   * must stay off by default: a percentage resolves against the PARENT, so whenever a
+   * badge is wrapped in a Pressable or any box that is itself sized by the badge, "50%"
+   * means "half of myself" — the badge collapses to half its natural width and its
+   * label ellipsises to nothing. That is exactly what happened to the Today-screen stat
+   * badges (measured 2026-08-15: a 77px button containing a 38px badge showing "উ…").
+   *
+   * A long badge is stopped from crushing its sibling text by making the SIBLING
+   * flexible (`flex: 1`, which the rows already do) and the badge unshrinkable — not by
+   * capping the badge against a container whose width the badge itself determines.
+   * Only pass this when the badge is a direct child of a known-wide row.
+   */
+  maxWidthPct,
 }: {
   text: string;
   tone?: BadgeTone;
@@ -294,8 +305,23 @@ export function Badge({
   const colors = useColors();
   const t = badgeTones(colors)[tone];
   return (
-    <View style={[styles.badge, { backgroundColor: t.bg, maxWidth: `${maxWidthPct}%` }]}>
-      <Text style={[styles.badgeText, { color: t.fg }]}>{text}</Text>
+    <View
+      style={[
+        styles.badge,
+        { backgroundColor: t.bg },
+        maxWidthPct === undefined ? null : { maxWidth: `${maxWidthPct}%` },
+      ]}
+    >
+      {/* ONE LINE, always. The badge is `flexShrink: 1` so a long label cannot crush
+          the text column beside it — but a shrinkable box whose text may wrap at any
+          character has a min-content width of ONE CHARACTER, so in a row of several
+          badges they all collapsed into vertical letter-stacks ("Pre/sen/t: 0") instead
+          of wrapping onto the next line. Pinning to a single line makes the badge's
+          min-content its full label, so it keeps its shape and the 50% cap still
+          protects its sibling; only a genuinely oversized label now ellipsizes. */}
+      <Text style={[styles.badgeText, { color: t.fg }]} numberOfLines={1} ellipsizeMode="tail">
+        {text}
+      </Text>
     </View>
   );
 }
@@ -690,7 +716,10 @@ const useStyles = makeStyles((colors) => ({
     paddingHorizontal: space(2),
     paddingVertical: space(1),
     alignSelf: "flex-start",
-    flexShrink: 1,
+    // NOT shrinkable: a badge is a fixed-meaning chip, and shrinking one only ever
+    // produces an unreadable stub. Rows protect their text column with `flex: 1`
+    // instead, so the long side gives way rather than the label.
+    flexShrink: 0,
   },
   badgeText: typeScale.chip,
 

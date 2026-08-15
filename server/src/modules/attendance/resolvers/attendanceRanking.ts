@@ -44,6 +44,7 @@ RankResultRef.implement({
     toKey: t.exposeString("toKey"),
     unitCount: t.exposeInt("unitCount"),
     minHeldDays: t.int({ resolve: () => MIN_HELD_DAYS }),
+    lastMarkedKey: t.string({ nullable: true, resolve: (r) => r.lastMarkedKey }),
     rows: t.field({ type: [RankRowRef], resolve: (r) => r.rows }),
   }),
 });
