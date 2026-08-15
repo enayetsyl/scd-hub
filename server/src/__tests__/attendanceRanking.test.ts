@@ -17,11 +17,17 @@ const mockMembershipFind = jest.fn();
 
 const chain = (fn: jest.Mock) => () => ({ select: () => ({ lean: async () => fn() }) });
 
+/** `findOne().sort().select().lean()` — the last-marked-day lookup behind the
+ *  self-explaining empty state. */
+const lastMarkedChain = (key: string | null) => () => ({
+  sort: () => ({ select: () => ({ lean: async () => (key ? { dateKey: key } : null) }) }),
+});
+
 jest.mock("../modules/attendance/models/StudentAttendanceDay", () => ({
-  StudentAttendanceDay: { find: chain(mockStudentDayFind) },
+  StudentAttendanceDay: { find: chain(mockStudentDayFind), findOne: lastMarkedChain("2026-08-13") },
 }));
 jest.mock("../modules/attendance/models/TeacherAttendanceDay", () => ({
-  TeacherAttendanceDay: { find: chain(mockTeacherDayFind) },
+  TeacherAttendanceDay: { find: chain(mockTeacherDayFind), findOne: lastMarkedChain("2026-07-31") },
 }));
 jest.mock("../modules/foundation/models/Student", () => ({
   Student: { find: chain(mockStudentFind) },
@@ -32,10 +38,23 @@ jest.mock("../modules/foundation/models/Section", () => ({
 jest.mock("../modules/foundation/models/StaffProfile", () => ({
   StaffProfile: { find: chain(mockStaffFind) },
 }));
+/**
+ * Mirrors the live shape that caused the bug: three years exist (2026 current, plus
+ * future 2027 and 2029 planning rows). `findOne({current:true})` must win; the
+ * `sort({startDate:-1})` fallback would hand back 2029 and empty every cumulative
+ * and annual ranking.
+ */
+const YEARS = {
+  current: { label: "2026", startDate: new Date("2026-01-01"), endDate: new Date("2026-12-31") },
+  newest: { label: "2029", startDate: new Date("2029-01-01"), endDate: new Date("2029-12-31") },
+};
 jest.mock("../modules/foundation/models/AcademicYear", () => ({
   AcademicYear: {
-    findById: () => ({ lean: async () => ({ startDate: new Date("2026-01-01"), endDate: new Date("2026-12-31") }) }),
-    findOne: () => ({ sort: () => ({ lean: async () => ({ startDate: new Date("2026-01-01"), endDate: new Date("2026-12-31") }) }) }),
+    findById: () => ({ lean: async () => YEARS.current }),
+    findOne: (filter?: Record<string, unknown>) =>
+      filter?.current
+        ? { lean: async () => YEARS.current }
+        : { sort: () => ({ lean: async () => YEARS.newest }) },
   },
 }));
 jest.mock("../modules/routine/models/SubjectGroup", () => ({
@@ -72,21 +91,31 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("window resolution", () => {
-  test("the school week runs SATURDAY → FRIDAY around the anchor", () => {
-    // 2026-08-12 is a Wednesday; its week starts Saturday 2026-08-08.
-    expect(weekRange("2026-08-12")).toEqual({ fromKey: "2026-08-08", toKey: "2026-08-14" });
+  // The live register settles the week shape: across 32 marked dates on prod, Sun–Thu
+  // carry rows and Fri/Sat carry ZERO. The school week is Sunday–Thursday, so a
+  // Sunday-start window captures exactly one school week with the weekend at the end.
+  test("the school week runs SUNDAY → SATURDAY around the anchor", () => {
+    // 2026-08-12 is a Wednesday; its week starts Sunday 2026-08-09.
+    expect(weekRange("2026-08-12")).toEqual({ fromKey: "2026-08-09", toKey: "2026-08-15" });
   });
 
-  test("a Saturday anchor starts its own week (not the previous one)", () => {
-    expect(weekRange("2026-08-08")).toEqual({ fromKey: "2026-08-08", toKey: "2026-08-14" });
+  test("a Sunday anchor starts its own week", () => {
+    expect(weekRange("2026-08-09")).toEqual({ fromKey: "2026-08-09", toKey: "2026-08-15" });
   });
 
-  test("a Friday anchor stays at the END of its week", () => {
-    expect(weekRange("2026-08-14")).toEqual({ fromKey: "2026-08-08", toKey: "2026-08-14" });
+  // THE REGRESSION (owner's screenshot, 2026-08-15): a Saturday-start week put a
+  // Saturday anchor at the head of the week AHEAD, so "this week" on a day off showed
+  // five unmarked future days and an empty list.
+  test("a SATURDAY anchor reports the school week that just ended, not the one ahead", () => {
+    expect(weekRange("2026-08-15")).toEqual({ fromKey: "2026-08-09", toKey: "2026-08-15" });
+  });
+
+  test("a Friday anchor also reports the week that just ended", () => {
+    expect(weekRange("2026-08-14")).toEqual({ fromKey: "2026-08-09", toKey: "2026-08-15" });
   });
 
   test("a week spanning a month boundary does not clip", () => {
-    expect(weekRange("2026-09-01")).toEqual({ fromKey: "2026-08-29", toKey: "2026-09-04" });
+    expect(weekRange("2026-08-31")).toEqual({ fromKey: "2026-08-30", toKey: "2026-09-05" });
   });
 
   test("month covers the real last day, including February in a leap year", () => {
@@ -103,6 +132,20 @@ describe("window resolution", () => {
     await expect(resolveWindow("annual", "2026-08-15")).resolves.toEqual({
       fromKey: "2026-01-01",
       toKey: "2026-12-31",
+    });
+  });
+
+  // THE REGRESSION: prod carries future-dated 2027 and 2029 planning years, so
+  // "newest by startDate" resolved to 2029 and every cumulative/annual ranking came
+  // back empty. The CURRENT flag is the only field that means "the year we are in".
+  test("cumulative/annual follow the CURRENT year, not the newest-starting one", async () => {
+    await expect(resolveWindow("annual", "2026-08-15")).resolves.toEqual({
+      fromKey: "2026-01-01",
+      toKey: "2026-12-31",
+    });
+    await expect(resolveWindow("cumulative", "2026-08-15")).resolves.toEqual({
+      fromKey: "2026-01-01",
+      toKey: "2026-08-15",
     });
   });
 
@@ -298,5 +341,35 @@ describe("rankStaff — LEAVE excluded, LATE counts present but breaks ties", ()
     mockTeacherDayFind.mockResolvedValue([]);
     const res = await rankStaff({ window: "week", anchorKey: "2026-08-15" });
     expect(res).toMatchObject({ rows: [], unitCount: 0 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The self-explaining empty state
+// ---------------------------------------------------------------------------
+
+describe("lastMarkedKey — an empty ranking says WHY", () => {
+  test("an empty window still reports the register's last marked day", async () => {
+    mockSectionFind.mockResolvedValue([{ _id: oid("s"), code: "Main", nameBn: "মূল" }]);
+    mockStudentDayFind.mockResolvedValue([]);
+    const res = await rankStudents({ window: "week", anchorKey: "2026-08-22", axis: "school" });
+    expect(res.rows).toEqual([]);
+    expect(res.lastMarkedKey).toBe("2026-08-13"); // "your window is ahead of the data"
+  });
+
+  test("a populated ranking carries it too", async () => {
+    mockSectionFind.mockResolvedValue([{ _id: oid("s"), code: "Main", nameBn: "মূল" }]);
+    mockStudentDayFind.mockResolvedValue(
+      Array.from({ length: 10 }, () => ({ sectionId: oid("s"), absentStudentIds: [] })),
+    );
+    mockStudentFind.mockResolvedValue([{ _id: oid("a"), name: "Ayesha", sectionId: oid("s") }]);
+    const res = await rankStudents({ window: "month", anchorKey: "2026-08-15", axis: "school" });
+    expect(res.lastMarkedKey).toBe("2026-08-13");
+  });
+
+  test("the staff ranking reports its own register's last day, not the students'", async () => {
+    mockTeacherDayFind.mockResolvedValue([]);
+    const res = await rankStaff({ window: "month", anchorKey: "2026-08-15" });
+    expect(res.lastMarkedKey).toBe("2026-07-31");
   });
 });

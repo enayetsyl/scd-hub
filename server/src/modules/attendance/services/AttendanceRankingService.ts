@@ -73,6 +73,14 @@ export interface RankResult {
   rows: RankRow[];
   /** Units that contributed rows — lets the screen say what was actually measured. */
   unitCount: number;
+  /**
+   * The most recent day this register was marked at all, ignoring the window. An
+   * empty ranking is ambiguous on its own — nobody attended? wrong filter? nothing
+   * marked yet? — and the honest answer is usually "the window is ahead of the data".
+   * Carrying the last marked day lets the empty state say which, instead of leaving
+   * the reader to guess (the Saturday-anchor confusion that surfaced this).
+   */
+  lastMarkedKey: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -94,11 +102,19 @@ function dowOf(dateKey: string): number {
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
 }
 
-/** The school week containing `dateKey`: SATURDAY → FRIDAY (the Bangladesh school
- *  week; Friday is the holiday, so it sits at the end and contributes no held days). */
+/**
+ * The school week containing `dateKey`: SUNDAY → SATURDAY.
+ *
+ * Fixed after the first live check (2026-08-15): this school's week is **Sunday to
+ * Thursday**, with BOTH Friday and Saturday off — across the 32 marked dates on prod,
+ * Sun–Thu carry 43/42/42/41/49 rows and Fri/Sat carry **zero**. A Saturday-start week
+ * (the first guess) put a Saturday anchor at the head of the week *ahead*, so asking
+ * for "this week" on a Saturday showed five unmarked future days and an empty list.
+ * Sunday-start puts the weekend at the END, so a Friday or Saturday anchor reports the
+ * school week that just finished — which is what someone looking on a day off means.
+ */
 export function weekRange(dateKey: string): { fromKey: string; toKey: string } {
-  const back = (dowOf(dateKey) + 1) % 7; // Saturday(6) → 0, Sunday(0) → 1, …
-  const fromKey = addDays(dateKey, -back);
+  const fromKey = addDays(dateKey, -dowOf(dateKey)); // Sunday(0) → 0, Monday(1) → 1, …
   return { fromKey, toKey: addDays(fromKey, 6) };
 }
 
@@ -125,9 +141,15 @@ export async function resolveWindow(
   if (window === "week") return weekRange(anchorKey);
   if (window === "month") return monthRange(anchorKey);
 
+  // The CURRENT year, not the newest one. Live check 2026-08-15: prod carries 2026
+  // (current), 2027 and 2029, so "newest startDate" resolved to 2029 and every
+  // cumulative/annual ranking came back empty. `current` is the field that means
+  // "the year the school is in"; sorting by date is a guess that future-dated
+  // planning rows silently break.
   const year = academicYearId
     ? await AcademicYear.findById(academicYearId).lean()
-    : await AcademicYear.findOne().sort({ startDate: -1 }).lean();
+    : (await AcademicYear.findOne({ current: true }).lean()) ??
+      (await AcademicYear.findOne().sort({ startDate: -1 }).lean());
   if (!year) throw new Error("No academic year found for a cumulative/annual window");
   const startKey = new Date(year.startDate).toISOString().slice(0, 10);
   const endKey = new Date(year.endDate).toISOString().slice(0, 10);
@@ -167,6 +189,20 @@ function rankRows(rows: Omit<RankRow, "rank">[]): RankRow[] {
 
 const pct = (held: number, absent: number): number =>
   held === 0 ? 0 : Math.round(((held - absent) / held) * 1000) / 10;
+
+/** The latest day either register was marked, window-independent (see `lastMarkedKey`). */
+async function lastMarked(byGroup: boolean | "staff"): Promise<string | null> {
+  const doc =
+    byGroup === "staff"
+      ? await TeacherAttendanceDay.findOne().sort({ dateKey: -1 }).select("dateKey").lean()
+      : await StudentAttendanceDay.findOne(
+          byGroup ? { subjectGroupId: { $exists: true } } : { sectionId: { $exists: true } },
+        )
+          .sort({ dateKey: -1 })
+          .select("dateKey")
+          .lean();
+  return doc?.dateKey ?? null;
+}
 
 /** The units (and their rosters) a student axis covers. */
 async function resolveStudentUnits(
@@ -214,7 +250,8 @@ export async function rankStudents(input: {
   const { byGroup, units } = await resolveStudentUnits(input.axis, input.axisValue);
   const unitIds = units.map((u) => u.id);
   const labelOf = new Map(units.map((u) => [u.id, u.label]));
-  if (unitIds.length === 0) return { fromKey, toKey, rows: [], unitCount: 0 };
+  if (unitIds.length === 0)
+    return { fromKey, toKey, rows: [], unitCount: 0, lastMarkedKey: await lastMarked(byGroup) };
 
   const days = await StudentAttendanceDay.find({
     dateKey: { $gte: fromKey, $lte: toKey },
@@ -237,7 +274,8 @@ export async function rankStudents(input: {
   }
   // Only units that actually held a day can rank anyone.
   const measured = [...held.keys()];
-  if (measured.length === 0) return { fromKey, toKey, rows: [], unitCount: 0 };
+  if (measured.length === 0)
+    return { fromKey, toKey, rows: [], unitCount: 0, lastMarkedKey: await lastMarked(byGroup) };
 
   // Roster per measured unit → student's unit membership.
   const unitOfStudent = new Map<string, string>();
@@ -276,7 +314,13 @@ export async function rankStudents(input: {
     }];
   });
 
-  return { fromKey, toKey, rows: rankRows(rows), unitCount: measured.length };
+  return {
+    fromKey,
+    toKey,
+    rows: rankRows(rows),
+    unitCount: measured.length,
+    lastMarkedKey: await lastMarked(byGroup),
+  };
 }
 
 /**
@@ -297,7 +341,8 @@ export async function rankStaff(input: {
   const days = await TeacherAttendanceDay.find({ dateKey: { $gte: fromKey, $lte: toKey } })
     .select("staffProfileId status")
     .lean();
-  if (days.length === 0) return { fromKey, toKey, rows: [], unitCount: 0 };
+  if (days.length === 0)
+    return { fromKey, toKey, rows: [], unitCount: 0, lastMarkedKey: await lastMarked("staff") };
 
   type Tally = { held: number; absent: number; late: number; leave: number };
   const tally = new Map<string, Tally>();
@@ -334,5 +379,11 @@ export async function rankStaff(input: {
     }];
   });
 
-  return { fromKey, toKey, rows: rankRows(rows), unitCount: rows.length };
+  return {
+    fromKey,
+    toKey,
+    rows: rankRows(rows),
+    unitCount: rows.length,
+    lastMarkedKey: await lastMarked("staff"),
+  };
 }
