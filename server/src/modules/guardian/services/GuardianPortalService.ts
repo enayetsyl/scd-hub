@@ -112,6 +112,8 @@ export interface GuardianClassNoteHomework {
   subjectLabelBn: string;
   qCount: number;
   timeDecl: number;
+  /** DE-6 (D-#477/#478): WHAT the homework is. Null only on pre-D-#317 items. */
+  description: string | null;
 }
 
 /** A file the teacher attached to the note — the guardian taps to open it. */
@@ -452,6 +454,7 @@ async function toGuardianClassNotes(notes: IClassNote[]): Promise<GuardianClassN
             subjectLabelBn: HW_SUBJECT_LABELS_BN[item.subject] ?? item.subject,
             qCount: item.qCount,
             timeDecl: item.timeDecl,
+            description: item.description ?? null,
           }
         : null,
       attachments: (n.attachmentIds ?? []).map((a) => {

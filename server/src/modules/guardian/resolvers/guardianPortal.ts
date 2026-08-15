@@ -115,6 +115,8 @@ const GuardianClassNoteHomeworkRef = builder
       subjectLabelBn: t.exposeString("subjectLabelBn"),
       qCount: t.exposeInt("qCount"),
       timeDecl: t.exposeInt("timeDecl"),
+      // DE-6 (D-#477/#478): the lesson and its homework read as one thing.
+      description: t.string({ nullable: true, resolve: (h) => h.description }),
     }),
   });
 
