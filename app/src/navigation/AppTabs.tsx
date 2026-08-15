@@ -95,6 +95,7 @@ import AssignmentWorkspaceScreen from "../screens/assignment/AssignmentWorkspace
 import AssignmentReconcileScreen from "../screens/assignment/AssignmentReconcileScreen";
 import AssignmentChaseScreen from "../screens/assignment/AssignmentChaseScreen";
 import AssignmentRollupsScreen from "../screens/assignment/AssignmentRollupsScreen";
+import AssignmentGiftScreen from "../screens/assignment/AssignmentGiftScreen";
 import ChildAssignmentsScreen from "../screens/guardian/ChildAssignmentsScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
@@ -703,6 +704,7 @@ function AssignmentNavigator(): React.ReactElement {
       <AssignmentStack.Screen name="AssignmentReconcile" component={AssignmentReconcileScreen} options={{ title: STR.asReconcileTitle }} />
       <AssignmentStack.Screen name="AssignmentChase" component={AssignmentChaseScreen} options={{ title: STR.asChaseTitle }} />
       <AssignmentStack.Screen name="AssignmentRollups" component={AssignmentRollupsScreen} options={{ title: STR.asRollupsTitle }} />
+      <AssignmentStack.Screen name="AssignmentGift" component={AssignmentGiftScreen} options={{ title: STR.agTitle }} />
       <AssignmentStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
     </AssignmentStack.Navigator>
   );
