@@ -494,6 +494,9 @@ describe("childClassNotes", () => {
         subjectLabelBn: "বাংলা",
         qCount: 3,
         timeDecl: 20,
+        // DE-6 (D-#478): the guardian read now carries WHAT the homework is;
+        // null here because this fixture item predates the field.
+        description: null,
       },
       attachments: [], // a note with no files carries an empty list, never undefined
     });
@@ -618,6 +621,9 @@ describe("childClassNotesRange", () => {
         subjectLabelBn: "বাংলা",
         qCount: 3,
         timeDecl: 20,
+        // DE-6 (D-#478): the guardian read now carries WHAT the homework is;
+        // null here because this fixture item predates the field.
+        description: null,
       },
       attachments: [],
     });

@@ -146,6 +146,32 @@ function assertSubject(s: string): asserts s is HwSubject {
   }
 }
 
+/**
+ * DE-3 (D-#477): the day's item for (class, section, subject), or null.
+ *
+ * Lives here because the (class, section, subject, DAY) key and its day-bounds
+ * comparison are this service's rule — the composite class-note entry point uses
+ * it to route a re-publish to `updateHomeworkItem` instead of tripping the D-#338
+ * duplicate guard.
+ */
+export async function findHomeworkItemIdForDay(
+  classId: string,
+  sectionId: string,
+  subject: string,
+  dateGiven: Date,
+): Promise<string | null> {
+  const { start, end } = dayBoundsOf(dateGiven);
+  const existing = await HomeworkItem.findOne({
+    classId,
+    sectionId,
+    subject,
+    dateGiven: { $gte: start, $lte: end },
+  })
+    .select("_id")
+    .lean();
+  return existing ? existing._id.toString() : null;
+}
+
 export async function declareHomeworkItem(
   input: DeclareHomeworkItemInput,
 ): Promise<HomeworkItemResult> {

@@ -1667,6 +1667,33 @@ export const HOMEWORK_ISSUE_ROSTER = gql<
   }
 `;
 
+
+/** DE-5 (D-#477): the assignment a routine period can hand out on this date — null
+ *  unless the cell is genuinely deliverable today. Resolves the whole term-anchor →
+ *  week → cell chain server-side, so the period card needs none of those axes. */
+export interface AssignmentCellForSlotT {
+  entryId: string;
+  academicYearId: string;
+  weekNumber: number;
+  classId: string;
+  classLevel: number;
+  sectionId: string;
+  subject: string;
+  deliveryDate: string;
+  dueDate: string;
+}
+
+export const ASSIGNMENT_CELL_FOR_SLOT = gql<
+  { assignmentCellForSlot: AssignmentCellForSlotT | null },
+  { sectionId: string; classId: string; subject: string; date: string }
+>`
+  query AssignmentCellForSlot($sectionId: String!, $classId: String!, $subject: String!, $date: String!) {
+    assignmentCellForSlot(sectionId: $sectionId, classId: $classId, subject: $subject, date: $date) {
+      entryId academicYearId weekNumber classId classLevel sectionId subject deliveryDate dueDate
+    }
+  }
+`;
+
 export const HOMEWORK_DAY_TALLY = gql<
   { homeworkDayTally: HwDayTallyT },
   { sectionId: string; classId: string; date: string }
@@ -2444,6 +2471,8 @@ export interface RoutineSlotT {
   startTime: string | null;
   endTime: string | null;
   groupName: string | null;
+  /** DE-4: the period's roster class level — keys the inline homework topic picker. */
+  classLevel: number | null;
   /** True only on myDay's synthesized rows (PXG-1 gap fix, D-#268): this period
    *  belongs to another (absent) teacher and the caller is covering it under an
    *  approved HR leave-cover slot — teacherName is the ABSENT teacher's name. */
@@ -2453,7 +2482,7 @@ export interface RoutineSlotT {
 const ROUTINE_SLOT_FIELDS = `
   id groupType groupId classId dayOfWeek periodNumber subject track
   isBreak teacherId roomId effectiveFrom effectiveTo active coverTeacherId
-  teacherName coverTeacherName startTime endTime groupName isCovering
+  teacherName coverTeacherName startTime endTime groupName classLevel isCovering
 `;
 
 export const ROUTINE_SLOTS_QUERY = gql<
@@ -3086,6 +3115,8 @@ export interface GuardianClassNoteT {
     subjectLabelBn: string;
     qCount: number;
     timeDecl: number;
+    /** DE-6 (D-#478): what the homework is. Null on pre-D-#317 items. */
+    description: string | null;
   } | null;
   attachments: GuardianClassNoteAttachmentT[];
 }
@@ -3097,7 +3128,7 @@ export const CHILD_CLASS_NOTES_QUERY = gql<
   query ChildClassNotes($studentId: String!, $date: String!) {
     childClassNotes(studentId: $studentId, date: $date) {
       subject subjectLabelBn periodNumber taughtSummaryBn
-      homework { hwId subject subjectLabelBn qCount timeDecl }
+      homework { hwId subject subjectLabelBn qCount timeDecl description }
       attachments { id name mime }
     }
   }
@@ -3120,7 +3151,7 @@ export const CHILD_CLASS_NOTES_RANGE_QUERY = gql<
       dateKey
       notes {
         subject subjectLabelBn periodNumber taughtSummaryBn
-        homework { hwId subject subjectLabelBn qCount timeDecl }
+        homework { hwId subject subjectLabelBn qCount timeDecl description }
         attachments { id name mime }
       }
     }
@@ -3273,12 +3304,34 @@ export const MY_CLASS_NOTE_PROMPTS_QUERY = gql<
   }
 `;
 
+/** DE-3 (D-#477): the homework half of a class-note publish. `mode` is a
+ *  server-validated String (house pattern — no GraphQL enum, no contract sync). */
+export interface ClassNoteHomeworkIn {
+  mode: "DECLARE" | "NIL";
+  topTags?: string[];
+  description?: string;
+  qCount?: number;
+  timeDecl?: number;
+  poolRef?: string;
+  revItem?: boolean;
+  attachmentIds?: string[];
+  reason?: string;
+}
+
 export const PUBLISH_CLASS_NOTE = gql<
   { publishClassNote: ClassNoteT },
-  { slotId: string; date: string; taughtSummaryBn: string; homeworkItemId?: string | null; attachmentIds?: string[] | null }
+  {
+    slotId: string;
+    date: string;
+    taughtSummaryBn: string;
+    homeworkItemId?: string | null;
+    attachmentIds?: string[] | null;
+    /** DE-3 (D-#477): declare the day's homework in the SAME call. */
+    homework?: ClassNoteHomeworkIn | null;
+  }
 >`
-  mutation PublishClassNote($slotId: String!, $date: String!, $taughtSummaryBn: String!, $homeworkItemId: String, $attachmentIds: [String!]) {
-    publishClassNote(slotId: $slotId, date: $date, taughtSummaryBn: $taughtSummaryBn, homeworkItemId: $homeworkItemId, attachmentIds: $attachmentIds) {
+  mutation PublishClassNote($slotId: String!, $date: String!, $taughtSummaryBn: String!, $homeworkItemId: String, $attachmentIds: [String!], $homework: ClassNoteHomeworkInput) {
+    publishClassNote(slotId: $slotId, date: $date, taughtSummaryBn: $taughtSummaryBn, homeworkItemId: $homeworkItemId, attachmentIds: $attachmentIds, homework: $homework) {
       ${CLASS_NOTE_FIELDS}
     }
   }

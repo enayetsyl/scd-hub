@@ -107,6 +107,11 @@ export async function enrichRoutineSlots<T extends Enrichable>(slots: T[]): Prom
       coverTeacherName: s.coverTeacherId ? nameById.get(s.coverTeacherId.toString()) ?? null : null,
       startTime: t?.start ?? null,
       endTime: t?.end ?? null,
+      // DE-4 (D-#477): the period card declares homework inline, and the topic
+      // picker is keyed on (subject, classLevel). The level is already resolved
+      // here for the audience/time lookup, so surfacing it costs nothing and saves
+      // the card a CLASSES round-trip per period.
+      classLevel: s.classId ? levelById.get(s.classId.toString()) ?? null : null,
       groupName: groupNameOf(s),
     };
   });

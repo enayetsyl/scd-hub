@@ -33,6 +33,7 @@ import {
   updateScheduleEntryTeacher as updateEntryTeacherSvc,
   getAssignmentSchedule as getScheduleSvc,
   expectedItemsForWeek as expectedWeekSvc,
+  assignmentCellForSlot as assignmentCellForSlotSvc,
   myAssignmentPrepPrompts as prepPromptsSvc,
   declareNoAssignment as declareNoAssignmentSvc,
   removeNoAssignment as removeNoAssignmentSvc,
@@ -930,6 +931,64 @@ builder.queryField("expectedAssignmentsForWeek", (t) =>
     resolve: async (_root, args, ctx) => {
       assertStaffScheduleRead(ctx);
       return expectedWeekSvc(args.academicYearId, args.weekNumber);
+    },
+  }),
+);
+
+interface SlotCellShape {
+  entryId: string;
+  academicYearId: string;
+  weekNumber: number;
+  classId: string;
+  classLevel: number;
+  sectionId: string;
+  subject: string;
+  deliveryDate: string;
+  dueDate: string;
+}
+const SlotCellRef = builder.objectRef<SlotCellShape>("AssignmentCellForSlot");
+SlotCellRef.implement({
+  description:
+    "DE-5 (D-#477): the assignment this routine period can hand out on this date — null unless " +
+    "the cell is genuinely deliverable today (same section+subject, not yet delivered).",
+  fields: (t) => ({
+    entryId: t.exposeString("entryId"),
+    academicYearId: t.exposeString("academicYearId"),
+    weekNumber: t.exposeInt("weekNumber"),
+    classId: t.exposeString("classId"),
+    classLevel: t.exposeInt("classLevel"),
+    sectionId: t.exposeString("sectionId"),
+    subject: t.exposeString("subject"),
+    deliveryDate: t.exposeString("deliveryDate"),
+    dueDate: t.exposeString("dueDate"),
+  }),
+});
+
+builder.queryField("assignmentCellForSlot", (t) =>
+  t.field({
+    type: SlotCellRef,
+    nullable: true,
+    description:
+      "DE-5: resolves slot+date → the deliverable assignment cell, so the class-note period card " +
+      "can hand out the week's assignment without the teacher touching the Assignments grid.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: true }),
+      date: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      const d = new Date(args.date);
+      if (Number.isNaN(d.getTime())) throw new Error("Invalid date");
+      return assignmentCellForSlotSvc({
+        sectionId: args.sectionId,
+        classId: args.classId,
+        subject: args.subject,
+        date: d,
+      });
     },
   }),
 );
