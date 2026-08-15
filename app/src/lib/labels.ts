@@ -190,6 +190,9 @@ import {
   PERMISSION_LABELS_BN,
   PERMISSION_LABELS_EN,
   type Permission,
+  DELEGATED_ACTION_LABELS_BN,
+  DELEGATED_ACTION_LABELS_EN,
+  type DelegatedAction,
   COMMENT_TYPE_LABELS_BN,
   COMMENT_TYPE_LABELS_EN,
   COMMENT_SENTIMENT_LABELS_BN,
@@ -498,6 +501,18 @@ export const permissionName = (p: string): string =>
 /** A permission's one-line "what this lets the holder do". */
 export const permissionDesc = (p: string): string =>
   (pick(PERMISSION_LABELS_BN, PERMISSION_LABELS_EN)[p as Permission]?.desc) ?? "";
+
+// --- Delegated scope (ACS-2): per-action labels ------------------------------
+// The EXTENT axis, not the permission axis: a delegated action names a DUTY a
+// person may perform beyond what they teach (D-#484).
+
+/** A delegated action's Bangla/English display name. */
+export const delegatedActionName = (a: string): string =>
+  (pick(DELEGATED_ACTION_LABELS_BN, DELEGATED_ACTION_LABELS_EN)[a as DelegatedAction]?.name) ?? a;
+
+/** A delegated action's one-line "what this lets the holder do". */
+export const delegatedActionDesc = (a: string): string =>
+  (pick(DELEGATED_ACTION_LABELS_BN, DELEGATED_ACTION_LABELS_EN)[a as DelegatedAction]?.desc) ?? "";
 
 /** The `resource:action` resource prefix → a human module/group label. Permissions
  *  in the AC-2 editor are grouped by this prefix (no shared grouping export). */
@@ -3353,6 +3368,27 @@ const STR_BN = {
   acSaved: "সংরক্ষিত হয়েছে।",
   acOn: "চালু",
   acOff: "বন্ধ",
+
+  // Delegated duties (ACS-2) — the EXTENT axis inside the access editor
+  dgTitle: "দায়িত্ব বণ্টন",
+  dgHint: "নিজের শ্রেণির বাইরেও একটি নির্দিষ্ট কাজ করার অনুমতি দিন — যেমন যেকোনো বিষয়ের অ্যাসাইনমেন্ট দেওয়া।",
+  dgNote: "অনুমতি আলাদা বিষয়: এই দায়িত্ব পেতে সংশ্লিষ্ট অনুমতিও (ট্র্যাকার এন্ট্রি) থাকতে হবে।",
+  dgCurrent: "চলমান দায়িত্ব",
+  dgNone: "এখনো কোনো দায়িত্ব বণ্টন করা হয়নি।",
+  dgAdd: "নতুন দায়িত্ব দিন",
+  dgScope: "পরিধি",
+  dgPickScope: "পরিধি নির্বাচন করুন",
+  dgActions: "কোন কাজগুলো?",
+  dgPickActions: "অন্তত একটি কাজ নির্বাচন করুন।",
+  dgExpiry: "মেয়াদ",
+  dgExpiryNever: "মেয়াদহীন",
+  dgExpiry1m: "১ মাস",
+  dgExpiry3m: "৩ মাস",
+  dgExpiry6m: "৬ মাস",
+  dgExpiresOn: "মেয়াদ শেষ",
+  dgGrant: "দায়িত্ব দিন",
+  dgGranted: "দায়িত্ব দেওয়া হয়েছে।",
+  dgRemoved: "দায়িত্ব প্রত্যাহার করা হয়েছে।",
 
   // Student Comments + Parents-Meeting (CM-6)
   tabComments: "মন্তব্য",
@@ -6741,6 +6777,27 @@ const STR_EN: StrTable = {
   acSaved: "Saved.",
   acOn: "On",
   acOff: "Off",
+
+  // Delegated duties (ACS-2) — the EXTENT axis inside the access editor
+  dgTitle: "Delegated duties",
+  dgHint: "Let this person do one named duty beyond what they teach — e.g. deliver the assignment for any subject.",
+  dgNote: "Separate from permissions: they must also hold the matching permission (write trackers) for a duty to work.",
+  dgCurrent: "Active duties",
+  dgNone: "No duties delegated yet.",
+  dgAdd: "Delegate a duty",
+  dgScope: "Extent",
+  dgPickScope: "Pick an extent",
+  dgActions: "Which duties?",
+  dgPickActions: "Pick at least one duty.",
+  dgExpiry: "Expiry",
+  dgExpiryNever: "No expiry",
+  dgExpiry1m: "1 month",
+  dgExpiry3m: "3 months",
+  dgExpiry6m: "6 months",
+  dgExpiresOn: "Expires",
+  dgGrant: "Delegate",
+  dgGranted: "Duty delegated.",
+  dgRemoved: "Duty revoked.",
 
   // Student Comments + Parents-Meeting (CM-6)
   tabComments: "Comments",

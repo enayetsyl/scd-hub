@@ -1,4 +1,5 @@
 import type { Types } from "mongoose";
+import { DELEGATED_ACTIONS, isDelegatedActionActive, type DelegatedAction } from "@scd/shared";
 import { ScopeGrant, type SupervisoryExtent } from "../models/ScopeGrant";
 import { Section } from "../models/Section";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -64,7 +65,42 @@ export interface ProxyScope {
   grantId: string;
 }
 
-export type ScopeItem = TeachingScope | SupervisoryScope | ProxyScope;
+/** A delegation grant in composed form (ACS-1, D-#484): the supervisory extent shape
+ *  plus the action allow-list. Read over the extent, write on the listed actions only. */
+export interface DelegationScope {
+  kind: "delegation";
+  extent: string;
+  classId?: string;
+  subjectId?: string;
+  explicitSet?: Array<{ classId: string; subjectId: string }>;
+  actions: string[];
+  grantId: string;
+}
+
+export type ScopeItem = TeachingScope | SupervisoryScope | ProxyScope | DelegationScope;
+
+/** Does an extent-shaped scope (supervisory OR delegation) cover this target?
+ *  One implementation so the two kinds can never drift on what an extent means.
+ *  `subjectId` absent = the caller is asking section-wide; a subject_dept extent,
+ *  which is defined BY its subject, cannot answer that and does not match. */
+function extentCovers(
+  s: { extent: string; classId?: string; subjectId?: string; explicitSet?: Array<{ classId: string; subjectId: string }> },
+  classId: string,
+  subjectId?: string,
+): boolean {
+  switch (s.extent) {
+    case "whole_school":
+      return true;
+    case "grade_class":
+      return s.classId === classId;
+    case "subject_dept":
+      return !!subjectId && s.subjectId === subjectId;
+    case "explicit_set":
+      return !!s.explicitSet?.some((e) => e.classId === classId && (!subjectId || e.subjectId === subjectId));
+    default:
+      return false;
+  }
+}
 
 /** Compose the effective scope union for a teacher (ADR-017).
  *  Proxy grants are validated for the window at request time (D-#20).
@@ -100,6 +136,30 @@ export async function composeTeacherScope(
           classId: e.classId.toString(),
           subjectId: e.subjectId.toString(),
         })),
+      });
+    } else if (g.kind === "delegation") {
+      const dg = g as {
+        extent?: string;
+        classId?: Types.ObjectId;
+        subjectId?: Types.ObjectId;
+        explicitSet?: Array<{ classId: Types.ObjectId; subjectId: Types.ObjectId }>;
+        actions?: string[];
+        expiresAt?: Date;
+      };
+      // Request-time expiry (D-#488) — no cron; the row survives as history.
+      if (dg.expiresAt && new Date(dg.expiresAt) <= now) continue;
+      if (!dg.extent || !dg.actions || dg.actions.length === 0) continue;
+      scopes.push({
+        kind: "delegation",
+        extent: dg.extent,
+        classId: dg.classId?.toString(),
+        subjectId: dg.subjectId?.toString(),
+        explicitSet: dg.explicitSet?.map((e) => ({
+          classId: e.classId.toString(),
+          subjectId: e.subjectId.toString(),
+        })),
+        actions: [...dg.actions],
+        grantId: g._id.toString(),
       });
     } else if (g.kind === "proxy") {
       const pg = g as { startDate?: Date; durationDays?: number; proxyStatus?: string; classId?: Types.ObjectId; sectionId?: Types.ObjectId; subjectId?: Types.ObjectId };
@@ -150,6 +210,9 @@ export interface ScopeGrantView {
   // supervisory-only detail (null on teaching/proxy grants)
   extent: string | null;
   explicitSet: Array<{ classId: string; subjectId: string }> | null;
+  // delegation-only detail (null on the other three kinds) — ACS-1, D-#484
+  actions: string[] | null;
+  expiresAt: string | null;
 }
 
 /** A lean ScopeGrant doc, loosely typed (the union hides optional fields). */
@@ -168,6 +231,8 @@ interface LeanGrant {
   proxyStatus?: string | null;
   extent?: string | null;
   explicitSet?: Array<{ classId?: { toString(): string }; subjectId?: { toString(): string } }> | null;
+  actions?: string[] | null;
+  expiresAt?: Date | null;
 }
 
 /** Pure mapper: lean grant doc → ScopeGrantView. */
@@ -192,6 +257,8 @@ export function grantView(g: LeanGrant): ScopeGrantView {
           subjectId: e.subjectId ? e.subjectId.toString() : "",
         }))
       : null,
+    actions: g.actions ? [...g.actions] : null,
+    expiresAt: g.expiresAt ? new Date(g.expiresAt).toISOString() : null,
   };
 }
 
@@ -199,7 +266,9 @@ export function grantView(g: LeanGrant): ScopeGrantView {
 // Row-scope predicates (used by resolver middleware)
 // ---------------------------------------------------------------------------
 
-/** Can a teacher READ the given section? Teaching or supervisory or active proxy. */
+/** Can a teacher READ the given section? Teaching, supervisory, active proxy — or a
+ *  delegation, which carries read over its extent (D-#485: you cannot submit what you
+ *  cannot see). */
 export function canRead(scopes: ScopeItem[], sectionId: string, classId: string, subjectId?: string): boolean {
   for (const s of scopes) {
     if (s.kind === "teaching" && s.sectionId === sectionId) return true;
@@ -207,15 +276,8 @@ export function canRead(scopes: ScopeItem[], sectionId: string, classId: string,
       if (!subjectId) return true;
       if (!s.subjectId || s.subjectId === subjectId) return true;
     }
-    if (s.kind === "supervisory") {
-      switch (s.extent) {
-        case "whole_school": return true;
-        case "grade_class": if (s.classId === classId) return true; break;
-        case "subject_dept": if (subjectId && s.subjectId === subjectId) return true; break;
-        case "explicit_set":
-          if (s.explicitSet?.some((e) => e.classId === classId && (!subjectId || e.subjectId === subjectId))) return true;
-          break;
-      }
+    if ((s.kind === "supervisory" || s.kind === "delegation") && extentCovers(s, classId, subjectId)) {
+      return true;
     }
   }
   return false;
@@ -226,11 +288,29 @@ export function canRead(scopes: ScopeItem[], sectionId: string, classId: string,
  *  A teaching grant is per-(section, subject) (ADR-017), so when the action names
  *  a subject the grant must match it — a Science teacher cannot check/transition
  *  English homework. Subject-less calls keep the section-wide behaviour. */
-export function canWrite(scopes: ScopeItem[], sectionId: string, subjectId?: string): boolean {
+export function canWrite(
+  scopes: ScopeItem[],
+  sectionId: string,
+  subjectId?: string,
+  /** ACS-1 (D-#486). `action` is the duty the CALL SITE names; `classId` is the
+   *  section's class, resolved lazily by the caller and only needed by the
+   *  class-shaped extents. A delegation matches ONLY when an action is named, so
+   *  every untagged gate behaves exactly as it did before ACS-1. */
+  opts?: { action?: string; classId?: string },
+): boolean {
   return scopes.some((s) => {
     if (s.kind === "teaching") {
       if (s.sectionId !== sectionId) return false;
       return !subjectId || s.subjectId === subjectId;
+    }
+    if (s.kind === "delegation") {
+      if (!opts?.action) return false; // untagged gate ⇒ a delegation never matches
+      if (!s.actions.includes(opts.action)) return false;
+      if (s.extent === "whole_school") return true;
+      if (s.extent === "subject_dept") return !!subjectId && s.subjectId === subjectId;
+      // grade_class / explicit_set are class-shaped: without the section's class the
+      // question cannot be answered, so it fails closed rather than guessing.
+      return !!opts.classId && extentCovers(s, opts.classId, subjectId);
     }
     if (s.kind !== "proxy" || s.sectionId !== sectionId) {
       return false;
@@ -240,6 +320,19 @@ export function canWrite(scopes: ScopeItem[], sectionId: string, subjectId?: str
     }
     return !s.subjectId || s.subjectId === subjectId;
   });
+}
+
+/** Does this caller hold a delegation for `action` whose extent needs the section's
+ *  CLASS to decide? Lets the middleware skip the extra Section lookup on the common
+ *  path — a caller with no delegation at all pays nothing. */
+export function delegationNeedsClassId(scopes: ScopeItem[], action?: string): boolean {
+  if (!action) return false;
+  return scopes.some(
+    (s) =>
+      s.kind === "delegation" &&
+      s.actions.includes(action) &&
+      (s.extent === "grade_class" || s.extent === "explicit_set"),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -555,6 +648,121 @@ export async function revokeSupervisory(grantId: string, revokedBy: string): Pro
  *  Pass a teacherId to scope to one teacher; omit to list all. */
 export async function supervisoryGrants(teacherId?: string): Promise<ScopeGrantView[]> {
   const filter: Record<string, unknown> = { kind: "supervisory", active: true };
+  if (teacherId) filter.teacherId = teacherId;
+  const grants = await ScopeGrant.find(filter).sort({ createdAt: -1 }).lean();
+  return grants.map(grantView);
+}
+
+// ---------------------------------------------------------------------------
+// Delegation-grant lifecycle (ACS-1, D-#484..#489) — gated `access:manage`.
+// The write-capable extent grant: same extent vocabulary as supervisory, plus an
+// action allow-list and an optional request-time expiry. Minting one is RESERVED
+// (D-#487) — a delegation manufactures write authority across the school, so the
+// power to mint it must not itself be delegable via AC-1.
+// ---------------------------------------------------------------------------
+
+export interface GrantDelegationInput {
+  teacherId: string;
+  extent: SupervisoryExtent;
+  actions: string[];
+  /** Required for subject_dept. */
+  subjectId?: string;
+  /** Required for grade_class. */
+  classId?: string;
+  /** Required (non-empty) for explicit_set. */
+  explicitSet?: SupervisoryPair[];
+  /** Absent = open-ended (D-#488). */
+  expiresAt?: Date;
+  assignedBy: string;
+}
+
+/** Pure validation of a delegation request — the extent's required args (reusing the
+ *  supervisory rules verbatim) PLUS the action list. Returns an English error string,
+ *  or null when valid (testable without a DB).
+ *
+ *  `pipeline` actions are REFUSED here, not silently accepted: an action whose gate is
+ *  not tagged would be a no-op the Principal believes he granted (D-#486). */
+export function validateDelegationGrant(input: {
+  extent: string;
+  actions?: string[] | null;
+  subjectId?: string | null;
+  classId?: string | null;
+  explicitSet?: SupervisoryPair[] | null;
+  expiresAt?: Date | null;
+}): string | null {
+  const extentErr = validateSupervisoryGrant(input);
+  if (extentErr) return extentErr.replace("supervisory", "delegation");
+  if (!input.actions || input.actions.length === 0)
+    return "a delegation needs at least one action";
+  const unknown = input.actions.filter((a) => !(DELEGATED_ACTIONS as readonly string[]).includes(a));
+  if (unknown.length > 0) return `unknown delegated action: ${unknown.join(", ")}`;
+  const notBuilt = input.actions.filter((a) => !isDelegatedActionActive(a as DelegatedAction));
+  if (notBuilt.length > 0)
+    return `delegated action not available in this build: ${notBuilt.join(", ")}`;
+  if (input.expiresAt && new Date(input.expiresAt).getTime() <= Date.now())
+    return "expiry must be in the future";
+  return null;
+}
+
+/** Create a delegation grant. Always creates — unlike supervisory, two delegations on
+ *  the same extent with different action lists are both meaningful, and merging them
+ *  silently would hide what was granted. Revoke and re-grant to change one. */
+export async function grantDelegation(input: GrantDelegationInput): Promise<string> {
+  const err = validateDelegationGrant(input);
+  if (err) throw new Error(err);
+
+  const grant = await ScopeGrant.create({
+    teacherId: input.teacherId,
+    kind: "delegation",
+    active: true,
+    extent: input.extent,
+    subjectId: input.extent === "subject_dept" ? input.subjectId : undefined,
+    classId: input.extent === "grade_class" ? input.classId : undefined,
+    explicitSet: input.extent === "explicit_set" ? input.explicitSet : undefined,
+    actions: [...input.actions],
+    expiresAt: input.expiresAt,
+    createdBy: input.assignedBy,
+  });
+
+  await writeAudit({
+    eventKind: "SCOPE_GRANT_ASSIGN",
+    actorId: input.assignedBy,
+    targetId: grant._id.toString(),
+    targetKind: "DelegationGrant",
+    meta: {
+      teacherId: input.teacherId,
+      extent: input.extent,
+      actions: [...input.actions],
+      subjectId: input.subjectId,
+      classId: input.classId,
+      pairCount: input.explicitSet?.length,
+      expiresAt: input.expiresAt ? new Date(input.expiresAt).toISOString() : undefined,
+      kind: "delegation",
+    },
+  });
+
+  return grant._id.toString();
+}
+
+/** Revoke a delegation grant (sets active=false; idempotent). */
+export async function revokeDelegation(grantId: string, revokedBy: string): Promise<void> {
+  const grant = await ScopeGrant.findById(grantId);
+  if (!grant || grant.kind !== "delegation") throw new Error("Delegation grant not found");
+  await ScopeGrant.findByIdAndUpdate(grantId, { active: false });
+  await writeAudit({
+    eventKind: "SCOPE_GRANT_REVOKE",
+    actorId: revokedBy,
+    targetId: grantId,
+    targetKind: "DelegationGrant",
+    meta: { kind: "delegation" },
+  });
+}
+
+/** Active delegation grants (the admin list), newest first. Pass a teacherId to scope
+ *  to one person; omit to list all. Lapsed-but-not-revoked grants are included — the
+ *  editor shows them with their expiry so the Principal can see what ran out. */
+export async function delegationGrants(teacherId?: string): Promise<ScopeGrantView[]> {
+  const filter: Record<string, unknown> = { kind: "delegation", active: true };
   if (teacherId) filter.teacherId = teacherId;
   const grants = await ScopeGrant.find(filter).sort({ createdAt: -1 }).lean();
   return grants.map(grantView);

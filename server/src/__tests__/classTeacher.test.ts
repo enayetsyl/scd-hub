@@ -8,12 +8,18 @@ import mongoose from "mongoose";
 
 const mockSectionFindById = jest.fn();
 const mockUserFindById = jest.fn();
+const mockGrantFind = jest.fn();
 
 jest.mock("../modules/foundation/models/Section", () => ({
   Section: { findById: (id: unknown) => ({ lean: () => mockSectionFindById(id) }) },
 }));
 jest.mock("../modules/foundation/models/User", () => ({
   User: { findById: (id: unknown) => ({ select: () => ({ lean: () => mockUserFindById(id) }) }) },
+}));
+// ACS-3 (D-#489): the confirm gate now also accepts a `confirm_homework_day`
+// delegation, so it composes the caller's scope when the older paths all miss.
+jest.mock("../modules/foundation/models/ScopeGrant", () => ({
+  ScopeGrant: { find: () => ({ lean: async () => mockGrantFind() }) },
 }));
 
 import { isClassTeacher, assertIsClassTeacher, assertCanConfirmHomework, ForbiddenError } from "../middleware/authz";
@@ -30,6 +36,7 @@ function ctx(userId: string, role = "TEACHER"): AppContext {
 beforeEach(() => {
   jest.clearAllMocks();
   mockUserFindById.mockResolvedValue({ homeworkSupervisor: false }); // not a supervisor by default
+  mockGrantFind.mockResolvedValue([]); // and holds no delegation by default
 });
 
 describe("isClassTeacher (pure predicate)", () => {

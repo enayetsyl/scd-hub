@@ -1,6 +1,6 @@
 # PRD — Delegated Scope (fine-grained "who may do what, where")
 
-**Status:** Planned — design ratified in session 2026-08-15, no feature code yet
+**Status:** BUILT 2026-08-15 — ACS-1 (server) + ACS-2 (editor) + ACS-3 (remaining duties + the boolean fold) all shipped in one branch. Deviations from the plan are marked **[BUILT]** inline.
 **Owner:** Principal (SCD)
 **Module prefix:** ACS  ·  **Plane:** identity/operational (ADR-005)
 **Traceability:** D-#484–#489 · builds on D-#193 (AC-1 per-user permissions) · ADR-004 (row-scope) · ADR-017 (scope grants) · D-#17/#18/#20 (the three existing grant kinds) · D-#351 (routine-derived attribution) · ADR-008 (append-only audit)
@@ -68,6 +68,8 @@ Plus `DELEGATED_ACTION_BUILD_STATUS: Record<DelegatedAction, "build" | "pipeline
 
 **ACS-1 ships `build`:** `declare_homework`, `submit_homework`, `declare_assignment`, `submit_assignment` — the owner's two, each with its parity twin (homework and assignment delivery are parity twins, D-#478; shipping one half would be a trap). The remaining three are `pipeline` until ACS-3.
 
+**[BUILT]** ACS-3 flipped all three to `build` (their gates are tagged) and added an **eighth** action, **`confirm_homework_day`** — the duty gate rather than a tracker-row write. It is what makes §9's fold possible at all: without an action naming that duty, `assertCanConfirmHomework` had nothing to accept. So no `pipeline` action remains, and the verifier now asserts that.
+
 ### 4.2 What a delegation grant means, exactly
 - **Read** over its extent (same predicate as the supervisory kind). Non-negotiable: you cannot submit what you cannot see, and the subject list a teacher sees is filtered separately by [`allowedSubjectCodesForSection`](../server/src/middleware/authz.ts) — which must learn the new kind or Jerin gets "permission granted" and an empty screen. **This is the single easiest thing to miss in the build.**
 - **Write** on exactly the listed actions, within the extent. Nothing else — not set assembly, not confirmation, not any untagged gate.
@@ -100,7 +102,7 @@ A `delegation` scope matches **iff**:
 - **Attribution.** [`subjectTeacher.ts`](../server/src/modules/trackers/subjectTeacher.ts) resolves the accountable teacher from the **routine**, never from who typed the row (D-#351). A delegated declaration lands in the real subject teacher's row and their downstream flow; `HomeworkItem.declaredBy` records who actually acted. *The data model was already built for "someone else entered it" — only the write gate wasn't.* This is what makes the whole feature safe.
 - **The "expected to declare" red lists.** They key off the routine + `HW_DECLARATION_EXPECTED_SUBJECTS`, not off grants, so a delegation creates **no** new declaration expectation and no teacher-load distortion. (The N×M teaching-grant workaround in S5 *does* distort these — the reason not to use it.)
 - **The firewall.** Identity-plane only; no corpus path (ADR-005). NFR-11 stays green.
-- **Duty designations** (class teacher, librarian, vocab tester) and their gates — `assertIsClassTeacher`, `assertCanConfirmHomework` — are a separate mechanism and are not touched in ACS-1/2.
+- **Duty designations** (class teacher, librarian, vocab tester) and their gates — `assertIsClassTeacher`, `assertCanConfirmHomework` — are a separate mechanism and are not touched in ACS-1/2. **[BUILT]** ACS-3 extends `assertCanConfirmHomework` only, and only by *adding* a path (§9); `assertIsClassTeacher` and the librarian/vocab designations are untouched.
 
 ## 7. Authority to delegate (D-#487)
 Creating / editing / revoking a delegation is gated **`access:manage`** — reserved-locked, Principal-only, ungrantable (vocab §B.2). The existing grant mutations use `user:manage`, which is Principal-by-template but **AC-1-grantable onward**. A delegation manufactures write authority across the school; the power to mint it must not itself be delegable. The friction is deliberate and small (one person, rarely).
@@ -137,7 +139,15 @@ Audit: reuse the existing `SCOPE_GRANT_ASSIGN` / `SCOPE_GRANT_REVOKE` event kind
 - Per-student or per-item delegation (extent stops at class × subject).
 - Self-service request/approve flow for delegations (the Principal grants directly).
 
-## 13. Open questions for the owner
-1. **Expiry default in the editor** — offer "term end" as a one-tap preset, or leave open-ended the default? (Model supports both; this is a UI default only.)
-2. **Should a delegation holder appear anywhere in the tracker UI as such** — e.g. a small "delegated" marker on rows they entered — or is `declaredBy` in the audit trail enough?
-3. **ACS-3 scope confirmation** — is folding `homeworkSupervisor` / `homeworkConfirmerId` onto delegation wanted at all, or should those two stay as the special-cased duties they are?
+## 13. Open questions for the owner — how each was resolved at build (D-#490)
+1. **Expiry default in the editor** — offer "term end" as a one-tap preset, or leave open-ended the default?
+   **[BUILT]** Open-ended is the default, with 1 / 3 / 6-month presets beside it. "Term end" was skipped deliberately: the editor has no term axis in hand, and a wrong guess at a term boundary would silently end someone's authority mid-duty. Worth revisiting once the owner has used it.
+2. **Should a delegation holder appear in the tracker UI as such** — a "delegated" marker on rows they entered — or is `declaredBy` enough?
+   **[BUILT]** No marker. The row already lands in the accountable teacher's account (D-#351) and `declaredBy` records the actor, so nothing is concealed; a marker is presentation, cheaper to add once the owner has seen the feature in use than to guess at now.
+3. **ACS-3 fold** — is folding `homeworkSupervisor` / `homeworkConfirmerId` onto delegation wanted at all?
+   **[BUILT]** Folded, but purely **additively**: both booleans keep working untouched and no data was migrated. The gate reads **old flag OR new grant**, so nothing that works today can break — the delegation is simply another way to hold the same duty (§9). Retiring the fields is a separate, later call.
+
+## 14. Still open after the build
+- **Nothing has been driven at the running app.** Every gate so far is verifier / typecheck / unit; the editor block has never been rendered against a live server, and no delegation has been minted against a real database.
+- Whether the `homeworkSupervisor` / `homeworkConfirmerId` fields should eventually be **retired** now that delegation covers them (§9 froze them; it did not remove them).
+- Whether `check_*` delegations want a narrower extent default in the editor — checking another teacher's work school-wide is a bigger hand-out than declaring, and today both are one tap.
