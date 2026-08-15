@@ -31,6 +31,7 @@ import { StudentAttendanceDay } from "../models/StudentAttendanceDay";
 import { TeacherAttendanceDay } from "../models/TeacherAttendanceDay";
 import { Student } from "../../foundation/models/Student";
 import { Section } from "../../foundation/models/Section";
+import { Class } from "../../foundation/models/Class";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { AcademicYear } from "../../foundation/models/AcademicYear";
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
@@ -214,12 +215,29 @@ async function resolveStudentUnits(
     if (axis === "section") filter._id = axisValue;
     if (axis === "class") filter.classId = axisValue;
     const sections = await Section.find(filter).select("code nameBn classId").lean();
+    // The section name alone is USELESS as a label: every class's default section is
+    // "Main"/মূল (D-#1), so a whole-school ranking rendered "মূল" on every row and the
+    // reader could not tell a Nursery row from a class-4 one — which is exactly the
+    // question the first live read produced. Prefix the class.
+    const classes = await Class.find({
+      _id: { $in: [...new Set(sections.map((s) => s.classId?.toString()).filter(Boolean))] },
+    })
+      .select("nameBn level")
+      .lean();
+    const classLabel = new Map(
+      classes.map((c) => [
+        c._id.toString(),
+        (c as { nameBn?: string; level?: number }).nameBn ?? String((c as { level?: number }).level ?? ""),
+      ]),
+    );
     return {
       byGroup: false,
-      units: sections.map((s) => ({
-        id: s._id.toString(),
-        label: (s as { nameBn?: string; code?: string }).nameBn ?? s.code ?? s._id.toString(),
-      })),
+      units: sections.map((s) => {
+        const sectionName =
+          (s as { nameBn?: string; code?: string }).nameBn ?? s.code ?? s._id.toString();
+        const cls = s.classId ? classLabel.get(s.classId.toString()) : undefined;
+        return { id: s._id.toString(), label: cls ? `${cls} · ${sectionName}` : sectionName };
+      }),
     };
   }
   const filter: Record<string, unknown> = { active: true };
