@@ -24,11 +24,14 @@ export interface RankingT {
   toKey: string;
   unitCount: number;
   minHeldDays: number;
+  /** The register's most recent marked day, window-independent — lets an empty
+   *  ranking explain itself instead of reading as "nobody attended". */
+  lastMarkedKey: string | null;
   rows: RankRowT[];
 }
 
 const RANKING_FIELDS = `
-  fromKey toKey unitCount minHeldDays
+  fromKey toKey unitCount minHeldDays lastMarkedKey
   rows { rank id name unitLabel heldDays absentDays presentPct lateDays leaveDays belowFloor }
 `;
 

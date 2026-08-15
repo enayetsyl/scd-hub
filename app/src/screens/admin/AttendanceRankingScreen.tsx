@@ -213,7 +213,15 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
       ) : q.error ? (
         <ErrorBanner message={friendlyError(q.error)} />
       ) : !result || rows.length === 0 ? (
-        <EmptyState message={STR.arNoData} />
+        // An empty ranking is ambiguous on its own, and the usual cause is a window
+        // ahead of the data (asking for "this week" on a day off). Say so.
+        <EmptyState
+          message={
+            result?.lastMarkedKey
+              ? `${STR.arNoData} ${STR.arLastMarked.replace("{d}", result.lastMarkedKey)}`
+              : STR.arNoData
+          }
+        />
       ) : (
         <View>
           <Muted style={{ marginBottom: space(1) }}>
@@ -235,7 +243,9 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
                     {r.leaveDays ? ` · ${STR.arLeave}: ${r.leaveDays}` : ""}
                   </Muted>
                 </View>
-                <View style={{ alignItems: "flex-end" }}>
+                {/* flexShrink 0: the percentage and its badge are the point of the row
+                    and must never be squeezed by a long name in the flexible column. */}
+                <View style={{ alignItems: "flex-end", flexShrink: 0, gap: space(1) }}>
                   <Body style={{ fontWeight: "700" }}>{r.presentPct}%</Body>
                   {r.belowFloor ? <Badge text={STR.arThin} tone="warn" /> : null}
                 </View>
