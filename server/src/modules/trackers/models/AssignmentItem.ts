@@ -41,6 +41,12 @@ export interface IAssignmentItem extends Document {
   setId?: Types.ObjectId;
   /** Teacher-set marks ceiling; checking validates 0 ≤ marks ≤ totalMarks (D-#87). */
   totalMarks?: number;
+  /** D-#478: the teacher's brief "what is the assignment" — REQUIRED at the delivery
+   *  pass (optional on the schema only for pre-D-#478 rows). The homework twin has
+   *  carried this since D-#317; without it a guardian looking at a late assignment
+   *  sees an AS_ID and nothing else, and — unlike homework — there is no class note
+   *  to fall back on, because an assignment is weekly and links to no slot. */
+  description?: string;
   /** AS-T6 (D-#274): declared minutes for the weekly load ceiling. Summed per
    *  (section × week); confirmAssignmentWeek blocks the week over AS_WEEKLY_CEILING_MIN. */
   estMinutes: number;
@@ -77,6 +83,7 @@ const AssignmentItemSchema = new Schema<IAssignmentItem>(
     dueDate: { type: Date, required: true },
     setId: { type: Schema.Types.ObjectId },
     totalMarks: { type: Number, min: 1 },
+    description: { type: String, trim: true },
     estMinutes: { type: Number, required: true, min: 0, default: 20 },
     status: { type: String, enum: ["DRAFT", "ISSUED"], required: true, default: "DRAFT" },
     draftRoster: {

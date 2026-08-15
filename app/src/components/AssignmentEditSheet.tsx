@@ -24,6 +24,8 @@ export interface AssignmentEditTarget {
   issued: boolean;
   estMinutes: number | null;
   totalMarks: number | null;
+  /** D-#478: null on pre-D-#478 items — editing one is how it gets a description. */
+  description: string | null;
 }
 
 export function AssignmentEditSheet({
@@ -43,6 +45,7 @@ export function AssignmentEditSheet({
 
   const [minutes, setMinutes] = useState("");
   const [marks, setMarks] = useState("");
+  const [desc, setDesc] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -50,6 +53,7 @@ export function AssignmentEditSheet({
     if (visible && target) {
       setMinutes(target.estMinutes == null ? "" : String(target.estMinutes));
       setMarks(target.totalMarks == null ? "" : String(target.totalMarks));
+      setDesc(target.description ?? "");
       setErr(null);
     }
   }, [visible, target]);
@@ -58,9 +62,20 @@ export function AssignmentEditSheet({
     if (!target) return;
     setBusy(true);
     setErr(null);
-    const vars: { itemId: string; estMinutes?: number | null; totalMarks?: number | null } = {
+    const vars: {
+      itemId: string;
+      estMinutes?: number | null;
+      totalMarks?: number | null;
+      description?: string | null;
+    } = {
       itemId: target.itemId,
     };
+    // D-#478: editable in BOTH states — a wrong instruction is exactly what a
+    // teacher must be able to correct, and every guardian is reading it. Sent only
+    // when it actually changed, and never blanked (the server refuses an empty one).
+    if (desc.trim() !== "" && desc.trim() !== (target.description ?? "")) {
+      vars.description = desc.trim();
+    }
     // Only send what changed — an untouched field must stay untouched server-side.
     if (!target.issued && minutes.trim() !== "" && Number(minutes) !== target.estMinutes) {
       vars.estMinutes = Number(minutes);
@@ -103,6 +118,7 @@ export function AssignmentEditSheet({
             helper={target?.issued ? STR.asMinutesFrozen : undefined}
           />
           <Field label={STR.asEditMarks} value={marks} onChangeText={setMarks} keyboardType="numeric" />
+          <Field label={STR.asDescLabel} value={desc} onChangeText={setDesc} multiline />
 
           <View style={styles.footer}>
             <View style={styles.cell}>

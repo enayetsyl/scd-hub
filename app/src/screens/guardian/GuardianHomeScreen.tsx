@@ -596,6 +596,8 @@ export default function GuardianHomeScreen(): React.ReactElement {
                     >
                       <View style={{ flexShrink: 1 }}>
                         <Body>{hwSubjectLabel(a.subject)}</Body>
+                        {/* D-#478, the assignment twin of the homework row above. */}
+                        {a.description ? <Body>{a.description}</Body> : null}
                         <Muted>
                           {a.asId}
                           {a.daysLate > 0 ? ` · ${bnNum(a.daysLate)} ${STR.asDaysOverdue}` : ""}

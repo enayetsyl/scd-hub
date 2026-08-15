@@ -242,6 +242,8 @@ export interface ChildAssignmentEntry {
   result: string | null;
   feedback: string | null;
   isResubmission: boolean;
+  /** D-#478: WHAT the assignment is. Null only for pre-D-#478 items. */
+  description: string | null;
   /** Delivery-pass attachments on the item (≤5, D-#298) — empty when none. */
   attachmentIds: string[];
 }
@@ -293,6 +295,7 @@ export async function childAssignments(
       result: r.result ?? null,
       feedback: r.feedback ?? null,
       isResubmission: !!r.resubOf,
+      description: item?.description ?? null,
       attachmentIds: (item?.attachmentIds ?? []).map((id) => id.toString()),
     };
   });
