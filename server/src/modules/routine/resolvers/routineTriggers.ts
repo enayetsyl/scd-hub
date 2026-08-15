@@ -7,8 +7,16 @@
  * the slot's teacher / cover / admin).
  */
 import { builder } from "../../../schema";
-import { assertCanRead, allowedSubjectCodesForSection } from "../../../middleware/authz";
+import type { AppContext } from "../../../context";
+import { assertCanRead, assertCanWrite, allowedSubjectCodesForSection, ForbiddenError } from "../../../middleware/authz";
+import { callerHasPermission } from "@scd/shared";
 import { Section } from "../../foundation/models/Section";
+import { Subject } from "../../foundation/models/Subject";
+import {
+  resolveNoteHomeworkTarget,
+  resolveClassNoteHomework,
+  type NoteHomeworkTarget,
+} from "../services/ClassNoteHomeworkService";
 import { type IBellDutyAssignment } from "../models/BellDutyAssignment";
 import { type IClassNote } from "../models/ClassNote";
 import { RoutineSlotRef } from "./routineSlots";
@@ -19,6 +27,7 @@ import {
   assignBellDuty,
   bellDutyForDate,
   publishClassNote,
+  resolveNoteAuthorization,
   classNotesForDate,
   classNoteSubmissionReport,
   myClassNotePrompts,
@@ -212,9 +221,53 @@ builder.mutationField("assignBellDuty", (t) =>
   }),
 );
 
+async function resolveSubjectIdByCode(code: string): Promise<string> {
+  const doc = await Subject.findOne({ code }).select("_id").lean();
+  if (!doc) throw new Error(`Subject not found: ${code}`);
+  return doc._id.toString();
+}
+
+/**
+ * DE-3 (D-#477): the day's homework, declared from inside the class note.
+ *
+ * `mode` travels as a validated String (house pattern — no new GraphQL enum, no
+ * `/shared/vocab.ts` change, no contract sync). DECLARE carries the same fields
+ * `declareHomeworkItem` already takes; NIL carries the D-#299 reason.
+ */
+const ClassNoteHomeworkInput = builder.inputType("ClassNoteHomeworkInput", {
+  fields: (t) => ({
+    mode: t.string({ required: true }), // DECLARE | NIL
+    topTags: t.stringList({ required: false }),
+    description: t.string({ required: false }),
+    qCount: t.int({ required: false }),
+    timeDecl: t.int({ required: false }),
+    poolRef: t.string({ required: false }),
+    revItem: t.boolean({ required: false }),
+    attachmentIds: t.stringList({ required: false }),
+    reason: t.string({ required: false }), // NIL only
+  }),
+});
+
+/**
+ * The homework half is gated SEPARATELY from the note (D-#477): publishing a note is
+ * `routine:read`, but declaring homework is `tracker:write` + section/subject
+ * write-scope. A cover teacher legitimately holds the first without the second, so
+ * inheriting one gate for both would quietly widen who can write to the tracker.
+ */
+async function gateNoteHomework(ctx: AppContext, target: NoteHomeworkTarget): Promise<void> {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
+    throw new ForbiddenError("Declaring homework needs tracker:write");
+  }
+  await assertCanWrite(ctx, target.sectionId, await resolveSubjectIdByCode(target.subject));
+}
+
 builder.mutationField("publishClassNote", (t) =>
   t.field({
     type: ClassNoteRef,
+    description:
+      "Publish a class note. DE-3 (D-#477): the optional `homework` payload declares the day's " +
+      "homework (or a nil declaration) through the EXISTING tracker services and links it, so a " +
+      "teacher enters the period once. The homework half is gated separately (tracker:write).",
     authScopes: { hasPermission: "routine:read" },
     args: {
       slotId: t.arg.string({ required: true }),
@@ -222,17 +275,43 @@ builder.mutationField("publishClassNote", (t) =>
       taughtSummaryBn: t.arg.string({ required: true }),
       homeworkItemId: t.arg.string({ required: false }),
       attachmentIds: t.arg.stringList({ required: false }),
+      homework: t.arg({ type: ClassNoteHomeworkInput, required: false }),
     },
-    resolve: async (_r, args, ctx) =>
-      publishClassNote({
+    resolve: async (_r, args, ctx) => {
+      const date = parseDate(args.date);
+      // Order matters (D-#477): the note's own authorization runs FIRST, so a caller
+      // who may not write this note never declares homework as a side effect. Then
+      // the homework, then the note upsert — both idempotent, so a partial failure
+      // self-heals on the next tap instead of needing a cross-collection transaction.
+      const slot = await resolveNoteAuthorization({
         slotId: args.slotId,
-        date: parseDate(args.date),
+        date,
+        actorId: ctx.auth!.userId,
+        canManage: isAdminStaff(ctx.auth),
+      });
+      let linkedItemId = args.homeworkItemId ?? null;
+      if (args.homework) {
+        // Ids come from the SLOT, never from the client — a forged sectionId cannot
+        // move the declaration to a section the caller happens to have scope on.
+        const target = await resolveNoteHomeworkTarget(slot);
+        await gateNoteHomework(ctx, target);
+        linkedItemId = await resolveClassNoteHomework({
+          target,
+          date,
+          hw: args.homework,
+          actorId: ctx.auth!.userId,
+        });
+      }
+      return publishClassNote({
+        slotId: args.slotId,
+        date,
         taughtSummaryBn: args.taughtSummaryBn,
-        homeworkItemId: args.homeworkItemId ?? null,
+        homeworkItemId: linkedItemId,
         attachmentIds: args.attachmentIds ?? null,
         actorId: ctx.auth!.userId,
         canManage: isAdminStaff(ctx.auth),
-      }),
+      });
+    },
   }),
 );
 

@@ -16,6 +16,7 @@
  */
 import { HW_SUBJECTS, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
 import type { HwSubject } from "@scd/shared";
+import { Class } from "../../foundation/models/Class";
 import { AssignmentSchedule, type IAssignmentSchedule } from "../models/AssignmentSchedule";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { AssignmentNilDeclaration, AS_NIL_REASONS, type AsNilReason } from "../models/AssignmentNilDeclaration";
@@ -209,6 +210,8 @@ export interface ExpectedItem {
   /** D-#353: current values, so the edit sheet can prefill without a second read. */
   estMinutes: number | null;
   totalMarks: number | null;
+  /** D-#478: same reason — the edit sheet corrects a wrong instruction in place. */
+  description: string | null;
   /** Explicit "no assignment this week" declaration for this expected cell. */
   nilDeclared: boolean;
   nilReason: string | null;
@@ -251,6 +254,43 @@ export async function resolveScheduleWeek(
   );
 }
 
+/**
+ * DE-5 (D-#477): the assignment cell a ROUTINE SLOT can hand out on a given date,
+ * or null.
+ *
+ * The period card owns none of the assignment axes — it knows a slot and a date,
+ * not a term anchor or a week number — so this resolves the chain server-side:
+ * slot → section+subject+class → the year's schedule → the week that date falls in
+ * → that week's expected cells. It answers only when the cell is genuinely
+ * deliverable TODAY from this period: same section and subject, not yet delivered,
+ * and the §4-resolved delivery date is this date. Anything else returns null and
+ * the card simply shows nothing.
+ */
+export async function assignmentCellForSlot(input: {
+  sectionId: string;
+  subject: string;
+  classId: string;
+  date: Date;
+}): Promise<(ExpectedItem & { academicYearId: string; weekNumber: number; deliveryDate: string; dueDate: string }) | null> {
+  const cls = await Class.findById(input.classId).select("academicYearId").lean();
+  if (!cls) return null;
+  const academicYearId = cls.academicYearId.toString();
+  const schedule = await AssignmentSchedule.findOne({ academicYearId });
+  if (!schedule) return null;
+
+  const weekNumber = weekNumberFor(schedule.termStartDate, input.date);
+  if (weekNumber < 1) return null;
+  const week = await expectedItemsForWeek(academicYearId, weekNumber);
+  if (week.suspended || !week.deliveryDate || !week.dueDate) return null;
+  if (week.deliveryDate !== dateOnlyISO(atMidnight(input.date))) return null;
+
+  const cell = week.items.find(
+    (i) => i.sectionId === input.sectionId && i.subject === input.subject && !i.delivered,
+  );
+  if (!cell) return null;
+  return { ...cell, academicYearId, weekNumber, deliveryDate: week.deliveryDate, dueDate: week.dueDate };
+}
+
 export async function expectedItemsForWeek(
   academicYearId: string,
   weekNumber: number,
@@ -279,6 +319,7 @@ export async function expectedItemsForWeek(
     status: string;
     estMinutes?: number;
     totalMarks?: number;
+    description?: string;
   }>;
   const itemKey = (sectionId: string, subject: string): string => `${sectionId}|${subject}`;
   const byEntry = new Map(existing.map((i) => [itemKey(i.sectionId.toString(), i.subject), i]));
@@ -321,6 +362,7 @@ export async function expectedItemsForWeek(
         asId: item ? item.asId : null,
         estMinutes: item?.estMinutes ?? null,
         totalMarks: item?.totalMarks ?? null,
+        description: item?.description ?? null,
         nilDeclared: !!nil,
         nilReason: nil?.reason ?? null,
         nilDeclarationId: nil ? nil._id.toString() : null,

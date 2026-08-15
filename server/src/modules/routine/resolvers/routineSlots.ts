@@ -67,6 +67,8 @@ export const RoutineSlotRef = builder.objectRef<IRoutineSlot>("RoutineSlot").imp
     startTime: t.string({ nullable: true, resolve: (s) => (s as { startTime?: string | null }).startTime ?? null }),
     endTime: t.string({ nullable: true, resolve: (s) => (s as { endTime?: string | null }).endTime ?? null }),
     groupName: t.string({ nullable: true, resolve: (s) => (s as { groupName?: string | null }).groupName ?? null }),
+    // DE-4 (D-#477): keys the inline homework topic picker on the period card.
+    classLevel: t.int({ nullable: true, resolve: (s) => (s as { classLevel?: number | null }).classLevel ?? null }),
     // True only on myDay's synthesized rows (PXG-1 gap fix): this period belongs to
     // another (absent) teacher and the caller is covering it under an approved HR
     // leave-cover slot for this date — teacherName above is the ABSENT teacher's name.
@@ -101,6 +103,8 @@ const RoutineSubstitutionRef = builder.objectRef<IRoutineSubstitution>("RoutineS
     periodNumber: t.int({ nullable: true, resolve: (s) => (s as { periodNumber?: number | null }).periodNumber ?? null }),
     dayOfWeek: t.string({ nullable: true, resolve: (s) => (s as { dayOfWeek?: string | null }).dayOfWeek ?? null }),
     groupName: t.string({ nullable: true, resolve: (s) => (s as { groupName?: string | null }).groupName ?? null }),
+    // DE-4 (D-#477): keys the inline homework topic picker on the period card.
+    classLevel: t.int({ nullable: true, resolve: (s) => (s as { classLevel?: number | null }).classLevel ?? null }),
   }),
 });
 

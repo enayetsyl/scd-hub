@@ -201,8 +201,18 @@ export default function GuardianHomeScreen(): React.ReactElement {
   // server already sorts newest-first, and Map keeps that order), each date
   // showing its own load sum (declared minutes + top-up) so the family sees
   // the day-wise চাপ; tapping the card opens the homework screen.
+  // DE-6 (D-#477): the action list. DUE = "hand it in today", CHASE = "did not
+  // bring it" — the only two homework states a family can still act on. Everything
+  // else open (submitted, checked, awaiting return) is progress, not a to-do.
+  const TODO_STATES = new Set(["DUE", "CHASE"]);
+  const todoHomework = openHomework.filter((r) => TODO_STATES.has(r.state));
+  const todoIds = new Set(todoHomework.map((r) => r.recordId));
+
+  // ...and the homework card below lists what is NOT already in it, so a row never
+  // appears twice on one screen (the duplication DE-6 exists to remove). The card
+  // still renders for its day-load line even when every open row moved up.
   const hwByDate = new Map<string, typeof openHomework>();
-  for (const r of openHomework) {
+  for (const r of openHomework.filter((x) => !todoIds.has(x.recordId))) {
     const k = r.dateGiven.slice(0, 10);
     const list = hwByDate.get(k);
     if (list) list.push(r);
@@ -221,6 +231,8 @@ export default function GuardianHomeScreen(): React.ReactElement {
   // assignment screen. Assignments carry no declared minutes, so the count is
   // the load figure here.
   const assignments = asgnQ.data?.childAssignments ?? [];
+  // DE-6: the assignment half of the action list — late, or being chased.
+  const todoAssignments = assignments.filter((a) => a.state === "CHASE" || (a.pending && a.daysLate > 0));
   const asgnByDate = new Map<string, typeof assignments>();
   for (const a of assignments) {
     const k = (a.deliveryDate ?? a.dueDate ?? "").slice(0, 10);
@@ -469,6 +481,48 @@ export default function GuardianHomeScreen(): React.ReactElement {
           )}
         </Card>
 
+        {/* DE-6 (D-#477): "করতে হবে" — the one card that answers the question a
+            parent opens the app with. Only what is still ACTIONABLE: homework due
+            or being chased, and assignments pending or late. Each row is
+            self-sufficient (D-#478 description + dates), so nothing here needs a
+            trip to another screen. Hidden entirely on a clear day. */}
+        {todoHomework.length > 0 || todoAssignments.length > 0 ? (
+          <Card>
+            <Body style={{ fontWeight: "700" }}>{STR.gpTodo}</Body>
+            {todoHomework.map((r) => (
+              <Pressable key={r.recordId} accessibilityRole="button" onPress={goHomework} style={{ marginTop: space(2) }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+                  <Body style={{ fontWeight: "700", flexShrink: 1 }}>{subjectLabel(r.subject)}</Body>
+                  <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "warn"} />
+                </View>
+                {r.description ? <Body>{r.description}</Body> : null}
+                <Muted>
+                  {isoDateLabel(r.dateGiven.slice(0, 10))}
+                  {r.timeDecl != null ? ` · ${bnNum(r.timeDecl)} ${STR.gpMinutes}` : ""}
+                  {r.questionFileId || r.attachmentIds.length > 0 ? ` · 📎 ${STR.gpQuestionFile}` : ""}
+                </Muted>
+              </Pressable>
+            ))}
+            {todoAssignments.map((a) => (
+              <Pressable key={a.recordId} accessibilityRole="button" onPress={goAssignments} style={{ marginTop: space(2) }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+                  <Body style={{ fontWeight: "700", flexShrink: 1 }}>
+                    {hwSubjectLabel(a.subject)} · {STR.gpAssignments}
+                  </Body>
+                  <Badge
+                    text={a.daysLate > 0 ? `${bnNum(a.daysLate)} ${STR.asDaysOverdue}` : lifecycleStateLabel(a.state)}
+                    tone={a.daysLate > 0 || a.state === "CHASE" ? "danger" : "warn"}
+                  />
+                </View>
+                {a.description ? <Body>{a.description}</Body> : null}
+                <Muted>
+                  {a.dueDate ? `${STR.asDueBy} ${isoDateLabel(a.dueDate.slice(0, 10))}` : a.asId}
+                </Muted>
+              </Pressable>
+            ))}
+          </Card>
+        ) : null}
+
         {/* Class notes — what was taught today */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpClassNotes}</Body>
@@ -480,10 +534,19 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 <Body style={{ fontWeight: "700" }}>{subjectLabel(n.subject)}</Body>
                 <Body>{n.taughtSummaryBn}</Body>
                 {n.homework ? (
-                  <Muted>
-                    {STR.gpHomeworkOpen}: {n.homework.hwId} · {bnNum(n.homework.qCount)} ·{" "}
-                    {bnNum(n.homework.timeDecl)} {STR.gpMinutes}
-                  </Muted>
+                  <>
+                    {/* DE-6: the lesson and its homework read as one thing, which is
+                        how the family thinks of them. */}
+                    {n.homework.description ? (
+                      <Body>
+                        {STR.gpHomeworkOpen}: {n.homework.description}
+                      </Body>
+                    ) : null}
+                    <Muted>
+                      {n.homework.hwId} · {bnNum(n.homework.qCount)} · {bnNum(n.homework.timeDecl)}{" "}
+                      {STR.gpMinutes}
+                    </Muted>
+                  </>
                 ) : null}
               </View>
             ))
@@ -596,6 +659,8 @@ export default function GuardianHomeScreen(): React.ReactElement {
                     >
                       <View style={{ flexShrink: 1 }}>
                         <Body>{hwSubjectLabel(a.subject)}</Body>
+                        {/* D-#478, the assignment twin of the homework row above. */}
+                        {a.description ? <Body>{a.description}</Body> : null}
                         <Muted>
                           {a.asId}
                           {a.daysLate > 0 ? ` · ${bnNum(a.daysLate)} ${STR.asDaysOverdue}` : ""}

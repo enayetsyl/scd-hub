@@ -92,15 +92,18 @@ function normalizeAttachmentIds(ids: string[] | null | undefined): Types.ObjectI
   return valid.map((id) => new Types.ObjectId(id));
 }
 
-export async function publishClassNote(input: {
+/**
+ * D-#477: the slot + the "may I write this note?" ruling, resolved WITHOUT writing
+ * anything. The composite entry point (DE-3) needs both before it touches the
+ * homework tracker, so that a caller who cannot write the note never causes a
+ * homework declaration as a side effect. `publishClassNote` runs the same check.
+ */
+export async function resolveNoteAuthorization(input: {
   slotId: string;
   date: Date;
-  taughtSummaryBn: string;
-  homeworkItemId?: string | null;
-  attachmentIds?: string[] | null;
   actorId: string;
   canManage: boolean;
-}): Promise<IClassNote> {
+}): Promise<IRoutineSlot> {
   const slot = (await RoutineSlot.findById(input.slotId).lean()) as unknown as IRoutineSlot | null;
   if (!slot) throw new Error("Routine slot not found");
 
@@ -116,6 +119,19 @@ export async function publishClassNote(input: {
     allowed = cover !== null;
   }
   if (!allowed) throw new ForbiddenError("Only the slot's teacher (or cover) may publish its class note");
+  return slot;
+}
+
+export async function publishClassNote(input: {
+  slotId: string;
+  date: Date;
+  taughtSummaryBn: string;
+  homeworkItemId?: string | null;
+  attachmentIds?: string[] | null;
+  actorId: string;
+  canManage: boolean;
+}): Promise<IClassNote> {
+  const slot = await resolveNoteAuthorization(input);
 
   // Guard the optional homework link. homeworkItemId is free-text on the daily
   // note form; a non-id value (prod incident: non-id text crashed the ObjectId

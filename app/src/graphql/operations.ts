@@ -1667,6 +1667,33 @@ export const HOMEWORK_ISSUE_ROSTER = gql<
   }
 `;
 
+
+/** DE-5 (D-#477): the assignment a routine period can hand out on this date — null
+ *  unless the cell is genuinely deliverable today. Resolves the whole term-anchor →
+ *  week → cell chain server-side, so the period card needs none of those axes. */
+export interface AssignmentCellForSlotT {
+  entryId: string;
+  academicYearId: string;
+  weekNumber: number;
+  classId: string;
+  classLevel: number;
+  sectionId: string;
+  subject: string;
+  deliveryDate: string;
+  dueDate: string;
+}
+
+export const ASSIGNMENT_CELL_FOR_SLOT = gql<
+  { assignmentCellForSlot: AssignmentCellForSlotT | null },
+  { sectionId: string; classId: string; subject: string; date: string }
+>`
+  query AssignmentCellForSlot($sectionId: String!, $classId: String!, $subject: String!, $date: String!) {
+    assignmentCellForSlot(sectionId: $sectionId, classId: $classId, subject: $subject, date: $date) {
+      entryId academicYearId weekNumber classId classLevel sectionId subject deliveryDate dueDate
+    }
+  }
+`;
+
 export const HOMEWORK_DAY_TALLY = gql<
   { homeworkDayTally: HwDayTallyT },
   { sectionId: string; classId: string; date: string }
@@ -2444,6 +2471,8 @@ export interface RoutineSlotT {
   startTime: string | null;
   endTime: string | null;
   groupName: string | null;
+  /** DE-4: the period's roster class level — keys the inline homework topic picker. */
+  classLevel: number | null;
   /** True only on myDay's synthesized rows (PXG-1 gap fix, D-#268): this period
    *  belongs to another (absent) teacher and the caller is covering it under an
    *  approved HR leave-cover slot — teacherName is the ABSENT teacher's name. */
@@ -2453,7 +2482,7 @@ export interface RoutineSlotT {
 const ROUTINE_SLOT_FIELDS = `
   id groupType groupId classId dayOfWeek periodNumber subject track
   isBreak teacherId roomId effectiveFrom effectiveTo active coverTeacherId
-  teacherName coverTeacherName startTime endTime groupName isCovering
+  teacherName coverTeacherName startTime endTime groupName classLevel isCovering
 `;
 
 export const ROUTINE_SLOTS_QUERY = gql<
@@ -3086,6 +3115,8 @@ export interface GuardianClassNoteT {
     subjectLabelBn: string;
     qCount: number;
     timeDecl: number;
+    /** DE-6 (D-#478): what the homework is. Null on pre-D-#317 items. */
+    description: string | null;
   } | null;
   attachments: GuardianClassNoteAttachmentT[];
 }
@@ -3097,7 +3128,7 @@ export const CHILD_CLASS_NOTES_QUERY = gql<
   query ChildClassNotes($studentId: String!, $date: String!) {
     childClassNotes(studentId: $studentId, date: $date) {
       subject subjectLabelBn periodNumber taughtSummaryBn
-      homework { hwId subject subjectLabelBn qCount timeDecl }
+      homework { hwId subject subjectLabelBn qCount timeDecl description }
       attachments { id name mime }
     }
   }
@@ -3120,7 +3151,7 @@ export const CHILD_CLASS_NOTES_RANGE_QUERY = gql<
       dateKey
       notes {
         subject subjectLabelBn periodNumber taughtSummaryBn
-        homework { hwId subject subjectLabelBn qCount timeDecl }
+        homework { hwId subject subjectLabelBn qCount timeDecl description }
         attachments { id name mime }
       }
     }
@@ -3273,12 +3304,34 @@ export const MY_CLASS_NOTE_PROMPTS_QUERY = gql<
   }
 `;
 
+/** DE-3 (D-#477): the homework half of a class-note publish. `mode` is a
+ *  server-validated String (house pattern — no GraphQL enum, no contract sync). */
+export interface ClassNoteHomeworkIn {
+  mode: "DECLARE" | "NIL";
+  topTags?: string[];
+  description?: string;
+  qCount?: number;
+  timeDecl?: number;
+  poolRef?: string;
+  revItem?: boolean;
+  attachmentIds?: string[];
+  reason?: string;
+}
+
 export const PUBLISH_CLASS_NOTE = gql<
   { publishClassNote: ClassNoteT },
-  { slotId: string; date: string; taughtSummaryBn: string; homeworkItemId?: string | null; attachmentIds?: string[] | null }
+  {
+    slotId: string;
+    date: string;
+    taughtSummaryBn: string;
+    homeworkItemId?: string | null;
+    attachmentIds?: string[] | null;
+    /** DE-3 (D-#477): declare the day's homework in the SAME call. */
+    homework?: ClassNoteHomeworkIn | null;
+  }
 >`
-  mutation PublishClassNote($slotId: String!, $date: String!, $taughtSummaryBn: String!, $homeworkItemId: String, $attachmentIds: [String!]) {
-    publishClassNote(slotId: $slotId, date: $date, taughtSummaryBn: $taughtSummaryBn, homeworkItemId: $homeworkItemId, attachmentIds: $attachmentIds) {
+  mutation PublishClassNote($slotId: String!, $date: String!, $taughtSummaryBn: String!, $homeworkItemId: String, $attachmentIds: [String!], $homework: ClassNoteHomeworkInput) {
+    publishClassNote(slotId: $slotId, date: $date, taughtSummaryBn: $taughtSummaryBn, homeworkItemId: $homeworkItemId, attachmentIds: $attachmentIds, homework: $homework) {
       ${CLASS_NOTE_FIELDS}
     }
   }
@@ -4107,6 +4160,8 @@ export interface ExpectedAsItemT {
   asId: string | null;
   estMinutes: number | null;
   totalMarks: number | null;
+  /** D-#478: current value, so the edit sheet prefills without a second read. */
+  description: string | null;
   nilDeclared: boolean;
   nilReason: string | null;
   nilDeclarationId: string | null;
@@ -4133,7 +4188,7 @@ export const EXPECTED_AS_WEEK = gql<
   query ExpectedAssignmentsForWeek($academicYearId: String!, $weekNumber: Int!) {
     expectedAssignmentsForWeek(academicYearId: $academicYearId, weekNumber: $weekNumber) {
       academicYearId weekNumber cycleWeek weekStart year month weekOfMonth suspended deliveryDate dueDate
-      items { entryId cycleWeek classId classLevel sectionId subject teacherId delivered status asItemId asId estMinutes totalMarks nilDeclared nilReason nilDeclarationId }
+      items { entryId cycleWeek classId classLevel sectionId subject teacherId delivered status asItemId asId estMinutes totalMarks description nilDeclared nilReason nilDeclarationId }
     }
   }
 `;
@@ -4178,10 +4233,10 @@ export const REMOVE_NO_ASSIGNMENT = gql<
  *  ISSUED: descriptive only (the time is frozen with the confirmed weekly load). */
 export const UPDATE_ASSIGNMENT_ITEM = gql<
   { updateAssignmentItem: { itemId: string; asId: string; status: string; estMinutes: number; totalMarks: number | null } },
-  { itemId: string; estMinutes?: number | null; totalMarks?: number | null; setId?: string | null }
+  { itemId: string; estMinutes?: number | null; totalMarks?: number | null; setId?: string | null; description?: string | null }
 >`
-  mutation UpdateAssignmentItem($itemId: String!, $estMinutes: Int, $totalMarks: Int, $setId: String) {
-    updateAssignmentItem(itemId: $itemId, estMinutes: $estMinutes, totalMarks: $totalMarks, setId: $setId) {
+  mutation UpdateAssignmentItem($itemId: String!, $estMinutes: Int, $totalMarks: Int, $setId: String, $description: String) {
+    updateAssignmentItem(itemId: $itemId, estMinutes: $estMinutes, totalMarks: $totalMarks, setId: $setId, description: $description) {
       itemId asId status estMinutes totalMarks
     }
   }
@@ -4223,10 +4278,10 @@ export interface AsRosterEntryIn {
 
 export const DELIVER_ASSIGNMENT = gql<
   { deliverAssignment: { itemId: string; asId: string; deliveryDate: string; dueDate: string; status: string; estMinutes: number; presentCount: number; absentCount: number } },
-  { academicYearId: string; weekNumber: number; entryId: string; sectionId: string; roster: AsRosterEntryIn[]; setId?: string | null; totalMarks?: number | null; estMinutes?: number | null; attachmentIds?: string[] | null }
+  { academicYearId: string; weekNumber: number; entryId: string; sectionId: string; roster: AsRosterEntryIn[]; description: string; setId?: string | null; totalMarks?: number | null; estMinutes?: number | null; attachmentIds?: string[] | null }
 >`
-  mutation DeliverAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!, $roster: [AssignmentRosterEntryInput!]!, $setId: String, $totalMarks: Int, $estMinutes: Int, $attachmentIds: [String!]) {
-    deliverAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId, roster: $roster, setId: $setId, totalMarks: $totalMarks, estMinutes: $estMinutes, attachmentIds: $attachmentIds) {
+  mutation DeliverAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!, $roster: [AssignmentRosterEntryInput!]!, $description: String!, $setId: String, $totalMarks: Int, $estMinutes: Int, $attachmentIds: [String!]) {
+    deliverAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId, roster: $roster, description: $description, setId: $setId, totalMarks: $totalMarks, estMinutes: $estMinutes, attachmentIds: $attachmentIds) {
       itemId asId deliveryDate dueDate status estMinutes presentCount absentCount
     }
   }
@@ -4963,6 +5018,8 @@ export interface ChildAssignmentT {
   result: string | null;
   feedback: string | null;
   isResubmission: boolean;
+  /** D-#478: WHAT the assignment is. Null only for pre-D-#478 items. */
+  description: string | null;
   attachmentIds: string[];
 }
 
@@ -4975,7 +5032,7 @@ export const CHILD_ASSIGNMENTS = gql<
   query ChildAssignments($studentId: String!, $limit: Int, $offset: Int) {
     childAssignments(studentId: $studentId, limit: $limit, offset: $offset) {
       recordId asId subject weekNumber state pending daysLate deliveryDate dueDate
-      marks totalMarks result feedback isResubmission attachmentIds
+      marks totalMarks result feedback isResubmission description attachmentIds
     }
   }
 `;
