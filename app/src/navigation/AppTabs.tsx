@@ -243,6 +243,7 @@ import MessageTemplateEditScreen from "../screens/admin/MessageTemplateEditScree
 import AccessControlUsersScreen from "../screens/admin/AccessControlUsersScreen";
 import AccessControlEditScreen from "../screens/admin/AccessControlEditScreen";
 import ReconciliationReportScreen from "../screens/admin/ReconciliationReportScreen";
+import AttendanceRankingScreen from "../screens/admin/AttendanceRankingScreen";
 import HwLifecycleReportScreen from "../screens/admin/HwLifecycleReportScreen";
 import AuditLogScreen from "../screens/admin/AuditLogScreen";
 import GuardianEngagementScreen from "../screens/admin/GuardianEngagementScreen";
@@ -1146,6 +1147,7 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="SystemHealth" component={SystemHealthScreen} options={{ title: STR.shTitle }} />
       <AdminStack.Screen name="ReconciliationReport" component={ReconciliationReportScreen} options={{ title: STR.rrTitle }} />
       <AdminStack.Screen name="HwLifecycleReport" component={HwLifecycleReportScreen} options={{ title: STR.hlrTitle }} />
+      <AdminStack.Screen name="AttendanceRanking" component={AttendanceRankingScreen} options={{ title: STR.arTitle }} />
       <AdminStack.Screen name="SectionPicker" component={SectionPickerScreen} options={{ title: STR.pickSection }} />
       <AdminStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
     </AdminStack.Navigator>
