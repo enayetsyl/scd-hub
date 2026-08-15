@@ -137,6 +137,8 @@ export type AssignmentStackParamList = {
   };
   AssignmentChase: undefined;
   AssignmentRollups: { academicYearId: string };
+  /** AG-3 (D-#479): weekly gift winners + 4-week streaks, with the handover tick. */
+  AssignmentGift: { academicYearId: string };
 };
 
 export type RoutineStackParamList = {
