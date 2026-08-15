@@ -14,6 +14,7 @@ import { STR } from "../lib/labels";
 import { fonts, useColors } from "../theme";
 import { AppTabs, LoginScreen } from "./AppTabs";
 import NotificationCenterScreen from "../screens/notifications/NotificationCenterScreen";
+import NotificationDetailScreen from "../screens/notifications/NotificationDetailScreen";
 import ReportProblemScreen from "../screens/common/ReportProblemScreen";
 
 const RootStack = createNativeStackNavigator();
@@ -39,6 +40,20 @@ export function RootNavigator(): React.ReactElement {
                 headerShown: true,
                 presentation: "modal",
                 title: STR.notifications,
+                headerStyle: { backgroundColor: colors.primary },
+                headerTintColor: colors.onPrimary,
+                headerTitleStyle: { fontFamily: fonts.bold },
+              }}
+            />
+            {/* One notification read in full — the inbox row is only a preview, and a
+                digest's own text had nowhere to be read before this (owner, 2026-08-15). */}
+            <RootStack.Screen
+              name="NotificationDetail"
+              component={NotificationDetailScreen}
+              options={{
+                headerShown: true,
+                presentation: "modal",
+                title: STR.notifDetailTitle,
                 headerStyle: { backgroundColor: colors.primary },
                 headerTintColor: colors.onPrimary,
                 headerTitleStyle: { fontFamily: fonts.bold },

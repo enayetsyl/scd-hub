@@ -282,15 +282,19 @@ type BadgeTone = "brand" | "ok" | "warn" | "danger" | "muted" | "info" | "gold";
 export function Badge({
   text,
   tone = "muted",
+  /** Cap the badge's share of a row so a long label cannot crush its sibling text
+   *  column. Defaults to half the row — see the `badge` style note below. */
+  maxWidthPct = 50,
 }: {
   text: string;
   tone?: BadgeTone;
+  maxWidthPct?: number;
 }): React.ReactElement {
   const styles = useStyles();
   const colors = useColors();
   const t = badgeTones(colors)[tone];
   return (
-    <View style={[styles.badge, { backgroundColor: t.bg }]}>
+    <View style={[styles.badge, { backgroundColor: t.bg, maxWidth: `${maxWidthPct}%` }]}>
       <Text style={[styles.badgeText, { color: t.fg }]}>{text}</Text>
     </View>
   );
@@ -675,11 +679,18 @@ const useStyles = makeStyles((colors) => ({
   chipTextOff: { ...typeScale.chip, color: colors.textPrimary },
   chipRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center" },
 
+  // A badge sits beside a text column all over this app. RN defaults flexShrink to
+  // 0, so a long label (an English notification-kind sentence, a parent-facing
+  // status) kept its full intrinsic width and the flexible column next to it
+  // collapsed to a few pixels — the title then wrapped ONE CHARACTER PER LINE
+  // (owner report, 2026-08-15, notification inbox). `flexShrink` + a maxWidth cap
+  // makes the badge yield instead, and its own text wraps inside the cap.
   badge: {
     borderRadius: radius.sm,
     paddingHorizontal: space(2),
     paddingVertical: space(1),
     alignSelf: "flex-start",
+    flexShrink: 1,
   },
   badgeText: typeScale.chip,
 
