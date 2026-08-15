@@ -1034,6 +1034,7 @@ builder.mutationField("declareNoAssignment", (t) =>
         ctx,
         args.sectionId,
         entry?.subject ? await resolveSubjectId(entry.subject) : undefined,
+        "declare_assignment",
       );
       return declareNoAssignmentSvc({
         academicYearId: args.academicYearId,
@@ -1192,6 +1193,7 @@ builder.mutationField("deliverAssignment", (t) =>
         ctx,
         args.sectionId,
         entry?.subject ? await resolveSubjectId(entry.subject) : undefined,
+        "declare_assignment",
       );
       return deliverSvc({
         academicYearId: args.academicYearId,
@@ -1394,7 +1396,14 @@ builder.mutationField("transitionAssignmentRecord", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
+      // Only →SUBMITTED is the delegated "take submission" duty (D-#486); every other
+      // state change on this generic mutation stays teaching/proxy-scoped.
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        await assignmentRecordSubjectId(args.recordId),
+        args.toState === "SUBMITTED" ? "submit_assignment" : undefined,
+      );
       await assertRecordInSection(args.recordId, args.sectionId);
       return transitionSvc(args.recordId, args.toState, ctx.auth.userId as string);
     },
@@ -1751,7 +1760,12 @@ builder.mutationField("assignmentSubmitPass", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await assignmentItemSubjectId(args.itemId));
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        await assignmentItemSubjectId(args.itemId),
+        "submit_assignment",
+      );
       await assertItemInSection(args.itemId, args.sectionId);
       return asSubmitPassSvc(
         args.itemId,

@@ -9,6 +9,9 @@ import {
   grantSupervisory,
   revokeSupervisory,
   supervisoryGrants,
+  grantDelegation,
+  revokeDelegation,
+  delegationGrants,
   grantView,
   type ScopeGrantView,
 } from "../services/ScopeGrantService";
@@ -48,6 +51,9 @@ ScopeGrantRef.implement({
       nullable: true,
       resolve: (g) => g.explicitSet,
     }),
+    // delegation-only detail (null on the other three kinds) — ACS-1, D-#484
+    actions: t.stringList({ nullable: true, resolve: (g) => g.actions }),
+    expiresAt: t.string({ nullable: true, resolve: (g) => g.expiresAt }),
   }),
 });
 
@@ -196,6 +202,76 @@ builder.mutationField("revokeSupervisory", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new Error("Unauthenticated");
       await revokeSupervisory(args.grantId, ctx.auth.userId);
+      return true;
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Delegation grants (ACS-1, D-#484..#489) — the fine-grained "who may do what,
+// WHERE" kind. Gated `access:manage`: RESERVED, Principal-only and ungrantable,
+// NOT the `user:manage` the other grant mutations use. A delegation manufactures
+// write authority across the school, so the power to mint one must not itself be
+// handed onward by AC-1 (D-#487).
+// ---------------------------------------------------------------------------
+
+builder.queryField("delegationGrants", (t) =>
+  t.field({
+    type: [ScopeGrantRef],
+    authScopes: { hasPermission: "access:manage" },
+    description:
+      "Active delegation grants (write-capable extent + action allow-list) for the access " +
+      "editor, newest first — ACS-1. Pass teacherId to scope to one person; omit to list all.",
+    args: { teacherId: t.arg.string({ required: false }) },
+    resolve: (_root, args) => delegationGrants(args.teacherId ?? undefined),
+  }),
+);
+
+builder.mutationField("grantDelegation", (t) =>
+  t.field({
+    type: ProxyGrantIdResultRef,
+    authScopes: { hasPermission: "access:manage" },
+    description:
+      "Grant one person a named DUTY across a wider extent than they teach (D-#484) — " +
+      "e.g. {extent: whole_school, actions: [declare_assignment]}. Read over the extent " +
+      "plus write on the listed actions only; the holder still needs tracker:write. " +
+      "extent ∈ whole_school | subject_dept (needs subjectId) | grade_class (needs classId) | " +
+      "explicit_set (needs explicitSet). expiresAt is optional (open-ended when omitted).",
+    args: {
+      teacherId: t.arg.string({ required: true }),
+      extent: t.arg.string({ required: true }),
+      actions: t.arg.stringList({ required: true }),
+      subjectId: t.arg.string({ required: false }),
+      classId: t.arg.string({ required: false }),
+      explicitSet: t.arg({ type: [SupervisoryPairInput], required: false }),
+      expiresAt: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new Error("Unauthenticated");
+      const grantId = await grantDelegation({
+        teacherId: args.teacherId,
+        extent: args.extent as SupervisoryExtent,
+        actions: [...args.actions],
+        subjectId: args.subjectId ?? undefined,
+        classId: args.classId ?? undefined,
+        explicitSet: args.explicitSet?.map((p) => ({ classId: p.classId, subjectId: p.subjectId })),
+        expiresAt: args.expiresAt ? new Date(args.expiresAt) : undefined,
+        assignedBy: ctx.auth.userId,
+      });
+      return { grantId };
+    },
+  }),
+);
+
+builder.mutationField("revokeDelegation", (t) =>
+  t.field({
+    type: "Boolean",
+    authScopes: { hasPermission: "access:manage" },
+    description: "Revoke a delegation grant — ACS-1, D-#484",
+    args: { grantId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new Error("Unauthenticated");
+      await revokeDelegation(args.grantId, ctx.auth.userId);
       return true;
     },
   }),
