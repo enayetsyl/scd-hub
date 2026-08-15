@@ -438,6 +438,12 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                     onPress={() => navigation.navigate("AssignmentRollups", { academicYearId: yearId })}
                   />
                 ) : null}
+                {canTrackerRead ? (
+                  <Chip
+                    label={`🎁 ${STR.agTitle}`}
+                    onPress={() => navigation.navigate("AssignmentGift", { academicYearId: yearId })}
+                  />
+                ) : null}
               </ChipRow>
             </Card>
           </>
