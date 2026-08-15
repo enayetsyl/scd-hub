@@ -169,13 +169,24 @@ describe("window resolution", () => {
 describe("rankStudents — present % of held days", () => {
   const SEC = "sec1";
 
+  /**
+   * A NURSERY/KG-shaped section (class level 0): those stay section-captured on every
+   * date, so one section row per school day is the whole picture for them. `days[i]`
+   * is the absentee list for the i-th marked date. Dates are post-cutover on purpose —
+   * the legacy branch has its own tests below.
+   */
   function oneSection(days: string[][], students: { id: string; name: string }[]): void {
     mockSectionFind.mockResolvedValue([{ _id: oid(SEC), code: "Main", nameBn: "মূল" }]);
+    mockClassFind.mockResolvedValue([{ _id: oid("cKg"), nameBn: "কেজি", level: 0 }]);
     mockStudentDayFind.mockResolvedValue(
-      days.map((absent) => ({ sectionId: oid(SEC), absentStudentIds: absent.map(oid) })),
+      days.map((absent, i) => ({
+        sectionId: oid(SEC),
+        dateKey: `2026-08-${String(i + 1).padStart(2, "0")}`,
+        absentStudentIds: absent.map(oid),
+      })),
     );
     mockStudentFind.mockResolvedValue(
-      students.map((s) => ({ _id: oid(s.id), name: s.name, sectionId: oid(SEC) })),
+      students.map((s) => ({ _id: oid(s.id), name: s.name, sectionId: oid(SEC), classId: oid("cKg") })),
     );
   }
 
@@ -218,16 +229,22 @@ describe("rankStudents — present % of held days", () => {
       { _id: oid("thin"), code: "A", nameBn: "ক" },
       { _id: oid("thick"), code: "B", nameBn: "খ" },
     ]);
+    mockClassFind.mockResolvedValue([{ _id: oid("cKg"), nameBn: "কেজি", level: 0 }]);
     mockStudentDayFind.mockResolvedValue([
-      ...Array.from({ length: 3 }, () => ({ sectionId: oid("thin"), absentStudentIds: [] })),
+      ...Array.from({ length: 3 }, (_, i) => ({
+        sectionId: oid("thin"),
+        dateKey: `2026-08-${String(i + 1).padStart(2, "0")}`,
+        absentStudentIds: [],
+      })),
       ...Array.from({ length: 20 }, (_, i) => ({
         sectionId: oid("thick"),
+        dateKey: `2026-08-${String(i + 1).padStart(2, "0")}`,
         absentStudentIds: i === 0 ? [oid("solid")] : [],
       })),
     ]);
     mockStudentFind.mockResolvedValue([
-      { _id: oid("thin1"), name: "Thin", sectionId: oid("thin") },
-      { _id: oid("solid"), name: "Solid", sectionId: oid("thick") },
+      { _id: oid("thin1"), name: "Thin", sectionId: oid("thin"), classId: oid("cKg") },
+      { _id: oid("solid"), name: "Solid", sectionId: oid("thick"), classId: oid("cKg") },
     ]);
     const res = await rankStudents({ window: "month", anchorKey: "2026-08-15", axis: "school" });
     expect(res.rows[0].name).toBe("Solid"); // 95% off 20 days outranks 100% off 3
@@ -252,7 +269,7 @@ describe("rankStudents — present % of held days", () => {
   test("a student in a section that held NO day in the window is left out, not scored 0", async () => {
     mockSectionFind.mockResolvedValue([{ _id: oid(SEC), code: "Main", nameBn: "মূল" }]);
     mockStudentDayFind.mockResolvedValue([]);
-    mockStudentFind.mockResolvedValue([{ _id: oid("a"), name: "Ayesha", sectionId: oid(SEC) }]);
+    mockStudentFind.mockResolvedValue([{ _id: oid("a"), name: "Ayesha", sectionId: oid(SEC), classId: oid("cKg") }]);
     const res = await rankStudents({ window: "week", anchorKey: "2026-08-15", axis: "section", axisValue: SEC });
     expect(res.rows).toEqual([]);
     expect(res.unitCount).toBe(0);
@@ -280,7 +297,7 @@ describe("rankStudents — present % of held days", () => {
       Array.from({ length: 10 }, () => ({ sectionId: oid(SEC), absentStudentIds: [] })),
     );
     mockStudentFind.mockResolvedValue([
-      { _id: oid("a"), name: "Ayesha", nameBn: "আয়েশা", sectionId: oid(SEC) },
+      { _id: oid("a"), name: "Ayesha", nameBn: "আয়েশা", sectionId: oid(SEC), classId: oid("cKg") },
     ]);
     const res = await rankStudents({ window: "month", anchorKey: "2026-08-15", axis: "section", axisValue: SEC });
     expect(res.rows[0].name).toBe("আয়েশা");
@@ -367,7 +384,7 @@ describe("lastMarkedKey — an empty ranking says WHY", () => {
     mockStudentDayFind.mockResolvedValue(
       Array.from({ length: 10 }, () => ({ sectionId: oid("s"), absentStudentIds: [] })),
     );
-    mockStudentFind.mockResolvedValue([{ _id: oid("a"), name: "Ayesha", sectionId: oid("s") }]);
+    mockStudentFind.mockResolvedValue([{ _id: oid("a"), name: "Ayesha", sectionId: oid("s"), classId: oid("cKg") }]);
     const res = await rankStudents({ window: "month", anchorKey: "2026-08-15", axis: "school" });
     expect(res.lastMarkedKey).toBe("2026-08-13");
   });
@@ -395,13 +412,24 @@ describe("unitLabel — every class's default section is named the same", () => 
       { _id: oid("cNur"), nameBn: "নার্সারি", level: -1 },
       { _id: oid("cKg"), nameBn: "কেজি", level: 0 },
     ]);
+    // The live 30-vs-32 shape: Nursery marked 32 dates, KG the first 30 of them. Two
+    // units, two denominators — which is exactly why the labels have to distinguish them.
+    const dayKey = (i: number) => `2026-0${i < 30 ? "7" : "8"}-${String((i % 30) + 1).padStart(2, "0")}`;
     mockStudentDayFind.mockResolvedValue([
-      ...Array.from({ length: 32 }, () => ({ sectionId: oid("secNur"), absentStudentIds: [] })),
-      ...Array.from({ length: 30 }, () => ({ sectionId: oid("secKg"), absentStudentIds: [] })),
+      ...Array.from({ length: 32 }, (_, i) => ({
+        sectionId: oid("secNur"),
+        dateKey: dayKey(i),
+        absentStudentIds: [],
+      })),
+      ...Array.from({ length: 30 }, (_, i) => ({
+        sectionId: oid("secKg"),
+        dateKey: dayKey(i),
+        absentStudentIds: [],
+      })),
     ]);
     mockStudentFind.mockResolvedValue([
-      { _id: oid("n1"), name: "Nursery Child", sectionId: oid("secNur") },
-      { _id: oid("k1"), name: "KG Child", sectionId: oid("secKg") },
+      { _id: oid("n1"), name: "Nursery Child", sectionId: oid("secNur"), classId: oid("cNur") },
+      { _id: oid("k1"), name: "KG Child", sectionId: oid("secKg"), classId: oid("cKg") },
     ]);
     const res = await rankStudents({ window: "annual", anchorKey: "2026-08-15", axis: "school" });
     const labels = Object.fromEntries(res.rows.map((r) => [r.name, r.unitLabel]));
@@ -420,8 +448,118 @@ describe("unitLabel — every class's default section is named the same", () => 
     mockStudentDayFind.mockResolvedValue(
       Array.from({ length: 10 }, () => ({ sectionId: oid("s"), absentStudentIds: [] })),
     );
-    mockStudentFind.mockResolvedValue([{ _id: oid("a"), name: "Ayesha", sectionId: oid("s") }]);
+    mockStudentFind.mockResolvedValue([{ _id: oid("a"), name: "Ayesha", sectionId: oid("s"), classId: oid("cKg") }]);
     const res = await rankStudents({ window: "month", anchorKey: "2026-08-15", axis: "school" });
     expect(res.rows[0].unitLabel).toBe("মূল");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// THE REGRESSION (owner, 2026-08-15): "attendance is taken in the Quran class and
+// then sorted to C1–C5". Class 1–5 attendance is captured on their cross-section
+// Quran group (D-#278, live 2026-07-13), NOT on their section. A section-shaped
+// ranking that counted SECTION rows therefore showed classes 1–5 with 8 held days
+// and looked like they had stopped marking — they had only changed units.
+// ---------------------------------------------------------------------------
+
+describe("rankStudents — class/section axes resolve each student's attendance UNIT", () => {
+  const C4 = "c4";
+  const SEC4 = "sec4";
+  const GRP = "hifz1";
+
+  function classFourViaQuran(): void {
+    mockSectionFind.mockResolvedValue([{ _id: oid(SEC4), code: "Main", nameBn: "মূল", classId: oid(C4) }]);
+    mockClassFind.mockResolvedValue([{ _id: oid(C4), nameBn: "চতুর্থ শ্রেণি", level: 4 }]);
+    mockStudentFind.mockResolvedValue([
+      { _id: oid("s1"), name: "Class4 Child", sectionId: oid(SEC4), classId: oid(C4) },
+    ]);
+    mockMembershipFind.mockResolvedValue([{ studentId: oid("s1"), groupId: oid(GRP), track: "quran" }]);
+  }
+
+  test("a class-4 student is counted from their QURAN-GROUP rows, not their section's", async () => {
+    classFourViaQuran();
+    // Post-cutover: 12 group days (one absence) and NO section rows at all.
+    mockStudentDayFind.mockResolvedValue(
+      Array.from({ length: 12 }, (_, i) => ({
+        subjectGroupId: oid(GRP),
+        dateKey: `2026-08-${String(i + 1).padStart(2, "0")}`,
+        absentStudentIds: i === 0 ? [oid("s1")] : [],
+      })),
+    );
+    const res = await rankStudents({ window: "month", anchorKey: "2026-08-15", axis: "class", axisValue: C4 });
+    expect(res.rows).toHaveLength(1);
+    // Before the fix this was 0 rows — the section register held nothing for them.
+    expect(res.rows[0]).toMatchObject({ heldDays: 12, absentDays: 1, belowFloor: false });
+    // …and the label still says class · section: the group is never a display axis.
+    expect(res.rows[0].unitLabel).toBe("চতুর্থ শ্রেণি · মূল");
+  });
+
+  test("dates BEFORE the 2026-07-13 cutover count from the SECTION (D-#292 legacy shape)", async () => {
+    classFourViaQuran();
+    mockStudentDayFind.mockResolvedValue([
+      // legacy: section-captured
+      { sectionId: oid(SEC4), dateKey: "2026-07-06", absentStudentIds: [] },
+      { sectionId: oid(SEC4), dateKey: "2026-07-07", absentStudentIds: [oid("s1")] },
+      // post-cutover: group-captured
+      { subjectGroupId: oid(GRP), dateKey: "2026-07-14", absentStudentIds: [] },
+      // …and a post-cutover SECTION row must NOT count for a class-4 student
+      { sectionId: oid(SEC4), dateKey: "2026-07-15", absentStudentIds: [oid("s1")] },
+    ]);
+    const res = await rankStudents({ window: "month", anchorKey: "2026-07-15", axis: "class", axisValue: C4 });
+    expect(res.rows[0]).toMatchObject({ heldDays: 3, absentDays: 1 });
+  });
+
+  test("Nursery/KG stay SECTION-captured on both sides of the cutover", async () => {
+    mockSectionFind.mockResolvedValue([{ _id: oid("secKg"), code: "Main", nameBn: "মূল", classId: oid("cKg") }]);
+    mockClassFind.mockResolvedValue([{ _id: oid("cKg"), nameBn: "কেজি", level: 0 }]);
+    mockStudentFind.mockResolvedValue([
+      { _id: oid("k1"), name: "KG Child", sectionId: oid("secKg"), classId: oid("cKg") },
+    ]);
+    mockMembershipFind.mockResolvedValue([]); // no Quran membership
+    mockStudentDayFind.mockResolvedValue([
+      { sectionId: oid("secKg"), dateKey: "2026-07-06", absentStudentIds: [] },
+      { sectionId: oid("secKg"), dateKey: "2026-07-14", absentStudentIds: [] },
+    ]);
+    const res = await rankStudents({ window: "month", anchorKey: "2026-07-15", axis: "school" });
+    expect(res.rows[0]).toMatchObject({ heldDays: 2, absentDays: 0, presentPct: 100 });
+  });
+
+  test("a 1–5 student with NO Quran membership falls back to their section, never unrankable", async () => {
+    mockSectionFind.mockResolvedValue([{ _id: oid(SEC4), code: "Main", nameBn: "মূল", classId: oid(C4) }]);
+    mockClassFind.mockResolvedValue([{ _id: oid(C4), nameBn: "চতুর্থ শ্রেণি", level: 4 }]);
+    mockStudentFind.mockResolvedValue([
+      { _id: oid("orphan"), name: "No Group", sectionId: oid(SEC4), classId: oid(C4) },
+    ]);
+    mockMembershipFind.mockResolvedValue([]);
+    mockStudentDayFind.mockResolvedValue([
+      { sectionId: oid(SEC4), dateKey: "2026-08-03", absentStudentIds: [] },
+    ]);
+    const res = await rankStudents({ window: "month", anchorKey: "2026-08-15", axis: "school" });
+    expect(res.rows[0]).toMatchObject({ name: "No Group", heldDays: 1 });
+  });
+
+  test("two students in one section but different Quran groups keep their own denominators", async () => {
+    mockSectionFind.mockResolvedValue([{ _id: oid(SEC4), code: "Main", nameBn: "মূল", classId: oid(C4) }]);
+    mockClassFind.mockResolvedValue([{ _id: oid(C4), nameBn: "চতুর্থ শ্রেণি", level: 4 }]);
+    mockStudentFind.mockResolvedValue([
+      { _id: oid("a"), name: "Hifz Child", sectionId: oid(SEC4), classId: oid(C4) },
+      { _id: oid("b"), name: "Qaida Child", sectionId: oid(SEC4), classId: oid(C4) },
+    ]);
+    mockMembershipFind.mockResolvedValue([
+      { studentId: oid("a"), groupId: oid("hifz"), track: "quran" },
+      { studentId: oid("b"), groupId: oid("qaida"), track: "quran" },
+    ]);
+    mockStudentDayFind.mockResolvedValue([
+      { subjectGroupId: oid("hifz"), dateKey: "2026-08-03", absentStudentIds: [] },
+      { subjectGroupId: oid("hifz"), dateKey: "2026-08-04", absentStudentIds: [] },
+      { subjectGroupId: oid("qaida"), dateKey: "2026-08-03", absentStudentIds: [oid("b")] },
+    ]);
+    const res = await rankStudents({ window: "month", anchorKey: "2026-08-15", axis: "school" });
+    const byName = Object.fromEntries(res.rows.map((r) => [r.name, r]));
+    expect(byName["Hifz Child"]).toMatchObject({ heldDays: 2, absentDays: 0 });
+    expect(byName["Qaida Child"]).toMatchObject({ heldDays: 1, absentDays: 1 });
+    // Same section, same label — the group never surfaces as a display axis.
+    expect(byName["Hifz Child"].unitLabel).toBe("চতুর্থ শ্রেণি · মূল");
+    expect(byName["Qaida Child"].unitLabel).toBe("চতুর্থ শ্রেণি · মূল");
   });
 });

@@ -36,6 +36,12 @@ import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { AcademicYear } from "../../foundation/models/AcademicYear";
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
+import {
+  quranGroupByStudent,
+  isLegacyAttendanceDate,
+  isNurseryKg,
+  unitKey,
+} from "../attendanceUnit";
 
 export type RankWindow = "week" | "month" | "cumulative" | "annual";
 
@@ -252,10 +258,138 @@ async function resolveStudentUnits(
 }
 
 /**
- * Rank students over a window on one axis. Present % of the unit's held days; every
- * enrolled student in a measured unit appears, including those with zero absences
- * (that is the point of a ranking, and absent-only capture means they are otherwise
- * invisible in the attendance rows).
+ * Rank students on a CLASS/SECTION-shaped axis (school | class | section).
+ *
+ * Attendance for Class 1–5 is NOT captured on their section: since the D-#278
+ * cutover (2026-07-13) their first class of the day is a cross-section Quran
+ * `SubjectGroup`, so their day record carries `subjectGroupId`. Nursery/KG stay
+ * section-captured, and every date BEFORE the cutover is section-shaped for
+ * everyone (D-#292).
+ *
+ * So a section-shaped ranking cannot count section rows — it must resolve EACH
+ * STUDENT's own attendance unit FOR EACH DATE and count that, exactly as
+ * `absenteeReport` does. Counting section rows made classes 1–5 look like they
+ * had stopped marking on the cutover date; they had simply moved units.
+ *
+ * Display stays class → section throughout: the group is a record-keeping unit,
+ * never a display axis (prd-attendance-firstclass §3).
+ *
+ * One pass, no per-date queries: memberships and class levels are date-independent,
+ * and only the legacy/cutover branch varies per date.
+ */
+async function rankStudentsByUnit(
+  fromKey: string,
+  toKey: string,
+  axis: "school" | "class" | "section",
+  axisValue: string | undefined,
+): Promise<RankResult> {
+  const studentFilter: Record<string, unknown> = { active: true };
+  if (axis === "class") studentFilter.classId = axisValue;
+  if (axis === "section") studentFilter.sectionId = axisValue;
+  const students = await Student.find(studentFilter).select("name nameBn sectionId classId").lean();
+  if (students.length === 0)
+    return { fromKey, toKey, rows: [], unitCount: 0, lastMarkedKey: await lastMarked(false) };
+
+  // Every day record in the window, BOTH shapes — a student's unit decides which
+  // one covers them, so neither shape can be filtered out up front.
+  const days = (await StudentAttendanceDay.find({ dateKey: { $gte: fromKey, $lte: toKey } })
+    .select("sectionId subjectGroupId dateKey absentStudentIds")
+    .lean()) as unknown as Array<{
+    sectionId?: { toString(): string };
+    subjectGroupId?: { toString(): string };
+    dateKey: string;
+    absentStudentIds?: Array<{ toString(): string }>;
+  }>;
+  if (days.length === 0)
+    return { fromKey, toKey, rows: [], unitCount: 0, lastMarkedKey: await lastMarked(false) };
+
+  // date → (units marked that date, students marked absent that date)
+  const byDate = new Map<string, { units: Set<string>; absent: Set<string> }>();
+  for (const d of days) {
+    let e = byDate.get(d.dateKey);
+    if (!e) {
+      e = { units: new Set(), absent: new Set() };
+      byDate.set(d.dateKey, e);
+    }
+    const u = d.subjectGroupId
+      ? unitKey({ unitType: "subjectgroup", unitId: d.subjectGroupId.toString() })
+      : d.sectionId
+        ? unitKey({ unitType: "section", unitId: d.sectionId.toString() })
+        : null;
+    if (u) e.units.add(u);
+    for (const sid of d.absentStudentIds ?? []) e.absent.add(sid.toString());
+  }
+
+  // The two date-independent inputs to unit resolution.
+  const studentIds = students.map((s) => s._id.toString());
+  const quranGroup = await quranGroupByStudent(studentIds);
+  const classIds = [...new Set(students.map((s) => s.classId.toString()))];
+  const classes = await Class.find({ _id: { $in: classIds } }).select("nameBn level").lean();
+  const levelOf = new Map(classes.map((c) => [c._id.toString(), c.level]));
+  const classNameOf = new Map(
+    classes.map((c) => [c._id.toString(), (c as { nameBn?: string }).nameBn ?? String(c.level)]),
+  );
+  const sections = await Section.find({ _id: { $in: [...new Set(students.map((s) => s.sectionId.toString()))] } })
+    .select("code nameBn")
+    .lean();
+  const sectionNameOf = new Map(
+    sections.map((s) => [s._id.toString(), (s as { nameBn?: string; code?: string }).nameBn ?? s.code ?? ""]),
+  );
+
+  const dates = [...byDate.keys()].sort();
+  const measuredUnits = new Set<string>();
+  const rows = students.flatMap((s) => {
+    const id = s._id.toString();
+    const sectionId = s.sectionId.toString();
+    const level = levelOf.get(s.classId.toString()) ?? 0;
+    const group = quranGroup.get(id);
+    const groupKey = group ? unitKey({ unitType: "subjectgroup", unitId: group }) : null;
+    const sectionKey = unitKey({ unitType: "section", unitId: sectionId });
+
+    let held = 0;
+    let absent = 0;
+    for (const date of dates) {
+      const e = byDate.get(date)!;
+      // The D-#292 legacy shape: before the cutover EVERYONE was section-captured.
+      const myUnit =
+        isLegacyAttendanceDate(date) || isNurseryKg(level) || !groupKey ? sectionKey : groupKey;
+      if (!e.units.has(myUnit)) continue; // their unit did not mark that day
+      held += 1;
+      measuredUnits.add(myUnit);
+      if (e.absent.has(id)) absent += 1;
+    }
+    if (held === 0) return [];
+    const cls = classNameOf.get(s.classId.toString());
+    const sec = sectionNameOf.get(sectionId) ?? "";
+    return [{
+      id,
+      name: (s as { nameBn?: string }).nameBn || s.name,
+      unitLabel: cls ? `${cls} · ${sec}` : sec,
+      heldDays: held,
+      absentDays: absent,
+      presentPct: pct(held, absent),
+      belowFloor: held < MIN_HELD_DAYS,
+    }];
+  });
+
+  return {
+    fromKey,
+    toKey,
+    rows: rankRows(rows),
+    unitCount: measuredUnits.size,
+    lastMarkedKey: await lastMarked(false),
+  };
+}
+
+/**
+ * Rank students over a window on one axis. Present % of held days; every enrolled
+ * student appears, including those with zero absences (that is the point of a
+ * ranking, and absent-only capture means they are otherwise invisible in the rows).
+ *
+ * Two paths, because the two questions are different:
+ *   school | class | section → per-student unit resolution (see above)
+ *   group  | track | level   → the Quran/Arabic register read directly, which is the
+ *                              owner's explicit "Quran-group wise" analysis
  */
 export async function rankStudents(input: {
   window: RankWindow;
@@ -265,6 +399,9 @@ export async function rankStudents(input: {
   academicYearId?: string;
 }): Promise<RankResult> {
   const { fromKey, toKey } = await resolveWindow(input.window, input.anchorKey, input.academicYearId);
+  if (input.axis === "school" || input.axis === "class" || input.axis === "section") {
+    return rankStudentsByUnit(fromKey, toKey, input.axis, input.axisValue);
+  }
   const { byGroup, units } = await resolveStudentUnits(input.axis, input.axisValue);
   const unitIds = units.map((u) => u.id);
   const labelOf = new Map(units.map((u) => [u.id, u.label]));
