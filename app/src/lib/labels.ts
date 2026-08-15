@@ -1704,6 +1704,9 @@ const STR_BN = {
   cnWeekAssignment: "এই সপ্তাহের অ্যাসাইনমেন্ট",
   // DE-6 (D-#477): the guardian action card.
   gpTodo: "করতে হবে",
+  // Notification detail (owner report 2026-08-15).
+  notifDetailTitle: "বিজ্ঞপ্তির বিস্তারিত",
+  notifOpenRelated: "সংশ্লিষ্ট পাতা খুলুন",
   asDescRequired: "অ্যাসাইনমেন্টে কী করতে হবে তা লিখুন",
   asEditSaved: "সংরক্ষণ হয়েছে",
   asMinutesFrozen: "ইস্যু হয়ে গেছে — সময় আর পরিবর্তন করা যাবে না",
@@ -5077,6 +5080,8 @@ const STR_EN: StrTable = {
   cnHwNo: "None",
   cnWeekAssignment: "This week's assignment",
   gpTodo: "To do",
+  notifDetailTitle: "Notification",
+  notifOpenRelated: "Open related page",
   asDescRequired: "Write what the assignment is",
   asEditSaved: "Saved",
   asMinutesFrozen: "Already issued — the time can no longer be changed",

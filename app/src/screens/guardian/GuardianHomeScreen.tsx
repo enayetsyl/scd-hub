@@ -586,7 +586,19 @@ export default function GuardianHomeScreen(): React.ReactElement {
             ) : (
               [...hwByDate.entries()].map(([k, rows]) => (
                 <View key={k} style={{ marginTop: space(2) }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  {/* Owner report 2026-08-15: on a phone these two ran together
+                      ("২০২৬-০৮-০৬পড়ার চাপ: ...") — space-between gives no gap once the
+                      row is full, so they touched. A gap plus flexWrap lets the load
+                      figure drop to its own line instead of colliding. */}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: space(2),
+                    }}
+                  >
                     <Body style={{ fontWeight: "700" }}>{isoDateLabel(k)}</Body>
                     <Muted>
                       {STR.gpDateLoad}: {bnNum(dateMinutes(rows))}/{bnNum(load?.ceiling ?? 120)} {STR.gpMinutes}
@@ -641,7 +653,15 @@ export default function GuardianHomeScreen(): React.ReactElement {
             ) : (
               asgnDates.map((k) => (
                 <View key={k || "-"} style={{ marginTop: space(2) }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: space(2),
+                    }}
+                  >
                     <Body style={{ fontWeight: "700" }}>{k ? isoDateLabel(k) : "—"}</Body>
                     <Muted>
                       {STR.gpDateCount}: {bnNum((asgnByDate.get(k) ?? []).length)}
@@ -653,11 +673,16 @@ export default function GuardianHomeScreen(): React.ReactElement {
                       style={{
                         flexDirection: "row",
                         justifyContent: "space-between",
-                        alignItems: "center",
+                        alignItems: "flex-start",
+                        gap: space(2),
                         marginTop: space(2),
                       }}
                     >
-                      <View style={{ flexShrink: 1 }}>
+                      {/* `flex: 1` (not flexShrink alone) so the column claims the
+                          leftover width; with a shrinkable badge beside it, the AS_ID
+                          stops breaking mid-token ("AS-C-1-ENG-000 / 2" on a phone —
+                          owner report 2026-08-15). */}
+                      <View style={{ flex: 1 }}>
                         <Body>{hwSubjectLabel(a.subject)}</Body>
                         {/* D-#478, the assignment twin of the homework row above. */}
                         {a.description ? <Body>{a.description}</Body> : null}
@@ -695,7 +720,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                   marginTop: space(2),
                 }}
               >
-                <View style={{ flexShrink: 1 }}>
+                <View style={{ flex: 1 }}>
                   <Body>{loan.titleBn ?? loan.accessionNo ?? "—"}</Body>
                   <Muted>
                     {loan.status === "ACTIVE"
@@ -728,7 +753,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 key={v.testId}
                 style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(2) }}
               >
-                <View style={{ flexShrink: 1 }}>
+                <View style={{ flex: 1 }}>
                   <Body>
                     {vocabProgramLabel(v.program)} · {v.label}
                   </Body>
@@ -757,7 +782,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
             (testResultsQ.data?.childTestResults ?? []).map((r) => (
               <View key={r.testId} style={{ marginTop: space(2) }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <View style={{ flexShrink: 1 }}>
+                  <View style={{ flex: 1 }}>
                     <Body>
                       {hwSubjectLabel(r.subject)} · {STR.ctTestNumber} {bnNum(r.testNumber)}
                     </Body>
