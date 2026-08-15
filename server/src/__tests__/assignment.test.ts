@@ -170,6 +170,8 @@ describe("AS_ID generation", () => {
 // ===========================================================================
 
 describe("AJ-3 — deliverAssignmentItem", () => {
+  // D-#478: the brief "what is the assignment" is REQUIRED at deliver.
+  const DESC = "পাতা ১২ — অনুশীলনী ৩";
   const roster = [
     { studentId: oid().toString(), present: true },
     { studentId: oid().toString(), present: true },
@@ -188,6 +190,7 @@ describe("AJ-3 — deliverAssignmentItem", () => {
       weekNumber: 1,
       entryId: ENTRY_ID.toString(),
       roster,
+      description: DESC,
       totalMarks: 10,
       estMinutes: 45,
       actorId: ACTOR,
@@ -212,7 +215,7 @@ describe("AJ-3 — deliverAssignmentItem", () => {
   test("estMinutes defaults to 20 when omitted", async () => {
     mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
     const res = await deliverAssignmentItem({
-      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, actorId: ACTOR,
+      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, description: DESC, actorId: ACTOR,
     });
     expect(res.estMinutes).toBe(20);
   });
@@ -224,7 +227,7 @@ describe("AJ-3 — deliverAssignmentItem", () => {
     const ids = [oid().toString(), oid().toString()];
     mockStoredFind.mockResolvedValue(ids.map((id) => ({ _id: id })));
     await deliverAssignmentItem({
-      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, description: DESC,
       attachmentIds: ids, actorId: ACTOR,
     });
     expect(mockStoredFind).toHaveBeenCalledWith({ _id: { $in: ids }, kind: "assignment_attachment" });
@@ -235,7 +238,7 @@ describe("AJ-3 — deliverAssignmentItem", () => {
   test("D-#298: no attachments → StoredFile never queried", async () => {
     mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
     await deliverAssignmentItem({
-      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, actorId: ACTOR,
+      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, description: DESC, actorId: ACTOR,
     });
     expect(mockStoredFind).not.toHaveBeenCalled();
   });
@@ -244,7 +247,7 @@ describe("AJ-3 — deliverAssignmentItem", () => {
     mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
     await expect(
       deliverAssignmentItem({
-        academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+        academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, description: DESC,
         setId: "ঐচ্ছিক", actorId: ACTOR,
       }),
     ).rejects.toThrow(/valid id/);
@@ -254,7 +257,7 @@ describe("AJ-3 — deliverAssignmentItem", () => {
   test("a blank setId is treated as no link (never reaches create as a string)", async () => {
     mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
     await deliverAssignmentItem({
-      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, description: DESC,
       setId: "   ", actorId: ACTOR,
     });
     const created = mockItemCreate.mock.calls[0][0] as Record<string, unknown>;
@@ -265,7 +268,7 @@ describe("AJ-3 — deliverAssignmentItem", () => {
     mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
     const valid = oid().toString();
     await deliverAssignmentItem({
-      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, description: DESC,
       setId: valid, actorId: ACTOR,
     });
     const created = mockItemCreate.mock.calls[0][0] as Record<string, unknown>;
@@ -277,7 +280,7 @@ describe("AJ-3 — deliverAssignmentItem", () => {
     const ids = Array.from({ length: 6 }, () => oid().toString());
     await expect(
       deliverAssignmentItem({
-        academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+        academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, description: DESC,
         attachmentIds: ids, actorId: ACTOR,
       }),
     ).rejects.toThrow(/At most 5 attachments/);
@@ -289,7 +292,7 @@ describe("AJ-3 — deliverAssignmentItem", () => {
     mockStoredFind.mockResolvedValue([{ _id: ids[0] }]); // the 2nd is some other kind
     await expect(
       deliverAssignmentItem({
-        academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+        academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, description: DESC,
         attachmentIds: ids, actorId: ACTOR,
       }),
     ).rejects.toThrow(/uploaded assignment file/);
@@ -299,7 +302,7 @@ describe("AJ-3 — deliverAssignmentItem", () => {
     mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
     mockItemFindOne.mockResolvedValue({ _id: oid() });
     await expect(
-      deliverAssignmentItem({ academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, actorId: ACTOR }),
+      deliverAssignmentItem({ academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, description: DESC, actorId: ACTOR }),
     ).rejects.toThrow(/already delivered/);
   });
 
@@ -309,7 +312,7 @@ describe("AJ-3 — deliverAssignmentItem", () => {
       { fromDate: new Date(2026, 0, 4), toDate: new Date(2026, 0, 10, 23, 59) },
     ]);
     await expect(
-      deliverAssignmentItem({ academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, actorId: ACTOR }),
+      deliverAssignmentItem({ academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, description: DESC, actorId: ACTOR }),
     ).rejects.toThrow(/suspended/);
   });
 
@@ -317,15 +320,48 @@ describe("AJ-3 — deliverAssignmentItem", () => {
     // week 1 resolves to cycleWeek 2; an entry on cycleWeek 1 must not match.
     mockScheduleFindOne.mockResolvedValue(scheduleWithEntry({ cycleWeek: 1 }));
     await expect(
-      deliverAssignmentItem({ academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, actorId: ACTOR }),
+      deliverAssignmentItem({ academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, description: DESC, actorId: ACTOR }),
     ).rejects.toThrow(/cycle week/);
   });
 
   test("an empty roster is rejected (counts must derive from records)", async () => {
     mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
     await expect(
-      deliverAssignmentItem({ academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster: [], actorId: ACTOR }),
+      deliverAssignmentItem({ academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster: [], description: DESC, actorId: ACTOR }),
     ).rejects.toThrow(/roster/);
+  });
+
+  // --- D-#478: the brief "what is the assignment" ---------------------------
+
+  test("D-#478: the description is stored on the created item", async () => {
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
+    await deliverAssignmentItem({
+      academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+      description: `  ${DESC}  `, actorId: ACTOR,
+    });
+    const created = mockItemCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(created.description).toBe(DESC); // trimmed
+  });
+
+  test("D-#478: a missing description is rejected and nothing is created", async () => {
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
+    await expect(
+      deliverAssignmentItem({
+        academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster, actorId: ACTOR,
+      } as never),
+    ).rejects.toThrow(/কী করতে হবে/);
+    expect(mockItemCreate).not.toHaveBeenCalled();
+  });
+
+  test("D-#478: a whitespace-only description is rejected too", async () => {
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
+    await expect(
+      deliverAssignmentItem({
+        academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(), roster,
+        description: "   ", actorId: ACTOR,
+      }),
+    ).rejects.toThrow(/কী করতে হবে/);
+    expect(mockItemCreate).not.toHaveBeenCalled();
   });
 });
 

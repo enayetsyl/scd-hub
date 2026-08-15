@@ -277,6 +277,7 @@ interface ExpectedItemShape {
   asId: string | null;
   estMinutes: number | null;
   totalMarks: number | null;
+  description: string | null;
   nilDeclared: boolean;
   nilReason: string | null;
   nilDeclarationId: string | null;
@@ -297,6 +298,7 @@ ExpectedItemRef.implement({
     asId: t.string({ nullable: true, resolve: (r) => r.asId }),
     estMinutes: t.int({ nullable: true, resolve: (r) => r.estMinutes }),
     totalMarks: t.int({ nullable: true, resolve: (r) => r.totalMarks }),
+    description: t.string({ nullable: true, resolve: (r) => r.description }),
     nilDeclared: t.exposeBoolean("nilDeclared"),
     nilReason: t.string({ nullable: true, resolve: (r) => r.nilReason }),
     nilDeclarationId: t.string({ nullable: true, resolve: (r) => r.nilDeclarationId }),
@@ -439,6 +441,7 @@ interface ItemShape {
   dueDate: string;
   setId: string | null;
   totalMarks: number | null;
+  description: string | null;
 }
 const ItemRef = builder.objectRef<ItemShape>("AssignmentItem");
 ItemRef.implement({
@@ -457,6 +460,7 @@ ItemRef.implement({
     dueDate: t.exposeString("dueDate"),
     setId: t.string({ nullable: true, resolve: (r) => r.setId }),
     totalMarks: t.int({ nullable: true, resolve: (r) => r.totalMarks }),
+    description: t.string({ nullable: true, resolve: (r) => r.description }),
   }),
 });
 
@@ -737,6 +741,8 @@ interface ChildAssignmentShape {
   result: string | null;
   feedback: string | null;
   isResubmission: boolean;
+  /** D-#478: WHAT the assignment is. Null only for pre-D-#478 items. */
+  description?: string | null;
   /** Delivery-pass attachments on the item (≤5, D-#298) — empty when none. */
   attachmentIds?: string[];
 }
@@ -758,6 +764,7 @@ ChildAssignmentRef.implement({
     result: t.string({ nullable: true, resolve: (r) => r.result }),
     feedback: t.string({ nullable: true, resolve: (r) => r.feedback }),
     isResubmission: t.exposeBoolean("isResubmission"),
+    description: t.string({ nullable: true, resolve: (r) => r.description ?? null }),
     attachmentIds: t.field({ type: ["String"], resolve: (r) => r.attachmentIds ?? [] }),
   }),
 });
@@ -1054,6 +1061,7 @@ builder.mutationField("updateAssignmentItem", (t) =>
       estMinutes: t.arg.int({ required: false }),
       totalMarks: t.arg.int({ required: false }),
       setId: t.arg.string({ required: false }),
+      description: t.arg.string({ required: false }),
       attachmentIds: t.arg.stringList({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
@@ -1064,6 +1072,7 @@ builder.mutationField("updateAssignmentItem", (t) =>
         estMinutes: args.estMinutes ?? undefined,
         totalMarks: args.totalMarks ?? undefined,
         setId: args.setId ?? undefined,
+        description: args.description ?? undefined,
         attachmentIds: args.attachmentIds ? [...args.attachmentIds] : undefined,
         actorId: ctx.auth.userId as string,
         isAdmin: isAdminStaff(ctx.auth),
@@ -1109,6 +1118,10 @@ builder.mutationField("deliverAssignment", (t) =>
       roster: t.arg({ type: [DeliveryRosterInput], required: true }),
       setId: t.arg.string({ required: false }),
       totalMarks: t.arg.int({ required: false }),
+      // D-#478: REQUIRED, exactly as declareHomeworkItem's description is (D-#317) —
+      // these two delivery forms are parity twins and must not diverge on the one
+      // field the guardian reads.
+      description: t.arg.string({ required: true }),
       estMinutes: t.arg.int({ required: false }),
       attachmentIds: t.arg.stringList({ required: false }),
     },
@@ -1129,6 +1142,7 @@ builder.mutationField("deliverAssignment", (t) =>
         roster: args.roster.map((r) => ({ studentId: r.studentId, present: r.present })),
         setId: args.setId ?? undefined,
         totalMarks: args.totalMarks ?? undefined,
+        description: args.description,
         estMinutes: args.estMinutes ?? undefined,
         attachmentIds: args.attachmentIds ? [...args.attachmentIds] : undefined,
         actorId: ctx.auth.userId as string,
@@ -1376,6 +1390,7 @@ builder.queryField("assignmentItems", (t) =>
         dueDate: dateOnlyISO(new Date(d.dueDate)),
         setId: d.setId ? d.setId.toString() : null,
         totalMarks: d.totalMarks ?? null,
+        description: d.description ?? null,
       }));
     },
   }),

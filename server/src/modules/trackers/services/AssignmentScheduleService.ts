@@ -209,6 +209,8 @@ export interface ExpectedItem {
   /** D-#353: current values, so the edit sheet can prefill without a second read. */
   estMinutes: number | null;
   totalMarks: number | null;
+  /** D-#478: same reason — the edit sheet corrects a wrong instruction in place. */
+  description: string | null;
   /** Explicit "no assignment this week" declaration for this expected cell. */
   nilDeclared: boolean;
   nilReason: string | null;
@@ -279,6 +281,7 @@ export async function expectedItemsForWeek(
     status: string;
     estMinutes?: number;
     totalMarks?: number;
+    description?: string;
   }>;
   const itemKey = (sectionId: string, subject: string): string => `${sectionId}|${subject}`;
   const byEntry = new Map(existing.map((i) => [itemKey(i.sectionId.toString(), i.subject), i]));
@@ -321,6 +324,7 @@ export async function expectedItemsForWeek(
         asId: item ? item.asId : null,
         estMinutes: item?.estMinutes ?? null,
         totalMarks: item?.totalMarks ?? null,
+        description: item?.description ?? null,
         nilDeclared: !!nil,
         nilReason: nil?.reason ?? null,
         nilDeclarationId: nil ? nil._id.toString() : null,

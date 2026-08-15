@@ -70,6 +70,11 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attRoster]);
   const [totalMarks, setTotalMarks] = useState("");
+  // D-#478: required. Without it a guardian looking at a late assignment sees an
+  // AS_ID and nothing else — and unlike homework there is no class note to fall
+  // back on, because an assignment is weekly and links to no slot.
+  const [description, setDescription] = useState("");
+  const [descError, setDescError] = useState<string | undefined>(undefined);
   const [estMinutes, setEstMinutes] = useState("");
   const [setId, setSetId] = useState("");
   const [setIdError, setSetIdError] = useState<string | undefined>(undefined);
@@ -106,6 +111,14 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
   async function onDeliver(): Promise<void> {
     setError(null);
     setSetIdError(undefined);
+    setDescError(undefined);
+    // Caught here so the teacher gets an inline message rather than the server's
+    // rejection after the roster round-trip.
+    if (description.trim() === "") {
+      setDescError(STR.asDescRequired);
+      setError(STR.asDescRequired);
+      return;
+    }
     // The set-id link is optional, but a non-blank value must be a real id —
     // else the server rejects it. Catch it here so the teacher gets a clear
     // inline message instead of a failed delivery.
@@ -123,6 +136,7 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
       entryId,
       sectionId,
       roster: students.map((s) => ({ studentId: s.id, present: !absent[s.id] })),
+      description: description.trim(),
       setId: setId.trim() === "" ? undefined : setId.trim(),
       totalMarks: marks,
       estMinutes: mins,
@@ -145,6 +159,14 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
           <Muted style={{ marginTop: 2 }}>
             {STR.asDeliverBy} {day(deliveryDate)} · {STR.asDueBy} {day(dueDate)}
           </Muted>
+          {/* D-#478: first field on the form — it is the one the family reads. */}
+          <Field
+            label={STR.asDescLabel}
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            error={descError}
+          />
           <Field label={STR.asEstMinutes} value={estMinutes} onChangeText={setEstMinutes} keyboardType="number-pad" placeholder="20" />
           <Field label={STR.asTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" />
           <Field label={STR.asSetId} value={setId} onChangeText={setSetId} helper={STR.asSetIdHint} error={setIdError} />

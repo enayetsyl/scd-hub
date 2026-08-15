@@ -1695,6 +1695,10 @@ const STR_BN = {
   asEditTitle: "অ্যাসাইনমেন্ট সম্পাদনা",
   asEditMinutes: "সময় (মিনিট)",
   asEditMarks: "পূর্ণমান",
+  // D-#478: the one line the family reads on a late assignment. Wording matches the
+  // homework twin (hwDescLabel) so the two delivery forms read the same.
+  asDescLabel: "অ্যাসাইনমেন্টে কী করতে হবে",
+  asDescRequired: "অ্যাসাইনমেন্টে কী করতে হবে তা লিখুন",
   asEditSaved: "সংরক্ষণ হয়েছে",
   asMinutesFrozen: "ইস্যু হয়ে গেছে — সময় আর পরিবর্তন করা যাবে না",
   asDelete: "মুছুন",
@@ -5062,6 +5066,8 @@ const STR_EN: StrTable = {
   asEditTitle: "Edit assignment",
   asEditMinutes: "Time (minutes)",
   asEditMarks: "Total marks",
+  asDescLabel: "What the assignment is",
+  asDescRequired: "Write what the assignment is",
   asEditSaved: "Saved",
   asMinutesFrozen: "Already issued — the time can no longer be changed",
   asDelete: "Delete",

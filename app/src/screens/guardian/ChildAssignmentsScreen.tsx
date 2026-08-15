@@ -101,6 +101,10 @@ export default function ChildAssignmentsScreen(): React.ReactElement {
                   tone={a.daysLate > 0 ? "danger" : a.state === "RETURNED" ? "ok" : "brand"}
                 />
               </View>
+              {/* D-#478: WHAT the assignment is. Above the id, because the id is not
+                  what the family came to read. Null on pre-D-#478 items — the card
+                  then renders exactly as it did before. */}
+              {a.description ? <Body style={{ marginTop: space(1) }}>{a.description}</Body> : null}
               <Muted style={{ marginTop: 2 }}>
                 {a.asId} · {STR.asWeek} {bnNum(a.weekNumber)}
                 {a.isResubmission ? ` · ${STR.hwResubmissions}` : ""}

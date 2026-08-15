@@ -4107,6 +4107,8 @@ export interface ExpectedAsItemT {
   asId: string | null;
   estMinutes: number | null;
   totalMarks: number | null;
+  /** D-#478: current value, so the edit sheet prefills without a second read. */
+  description: string | null;
   nilDeclared: boolean;
   nilReason: string | null;
   nilDeclarationId: string | null;
@@ -4133,7 +4135,7 @@ export const EXPECTED_AS_WEEK = gql<
   query ExpectedAssignmentsForWeek($academicYearId: String!, $weekNumber: Int!) {
     expectedAssignmentsForWeek(academicYearId: $academicYearId, weekNumber: $weekNumber) {
       academicYearId weekNumber cycleWeek weekStart year month weekOfMonth suspended deliveryDate dueDate
-      items { entryId cycleWeek classId classLevel sectionId subject teacherId delivered status asItemId asId estMinutes totalMarks nilDeclared nilReason nilDeclarationId }
+      items { entryId cycleWeek classId classLevel sectionId subject teacherId delivered status asItemId asId estMinutes totalMarks description nilDeclared nilReason nilDeclarationId }
     }
   }
 `;
@@ -4178,10 +4180,10 @@ export const REMOVE_NO_ASSIGNMENT = gql<
  *  ISSUED: descriptive only (the time is frozen with the confirmed weekly load). */
 export const UPDATE_ASSIGNMENT_ITEM = gql<
   { updateAssignmentItem: { itemId: string; asId: string; status: string; estMinutes: number; totalMarks: number | null } },
-  { itemId: string; estMinutes?: number | null; totalMarks?: number | null; setId?: string | null }
+  { itemId: string; estMinutes?: number | null; totalMarks?: number | null; setId?: string | null; description?: string | null }
 >`
-  mutation UpdateAssignmentItem($itemId: String!, $estMinutes: Int, $totalMarks: Int, $setId: String) {
-    updateAssignmentItem(itemId: $itemId, estMinutes: $estMinutes, totalMarks: $totalMarks, setId: $setId) {
+  mutation UpdateAssignmentItem($itemId: String!, $estMinutes: Int, $totalMarks: Int, $setId: String, $description: String) {
+    updateAssignmentItem(itemId: $itemId, estMinutes: $estMinutes, totalMarks: $totalMarks, setId: $setId, description: $description) {
       itemId asId status estMinutes totalMarks
     }
   }
@@ -4223,10 +4225,10 @@ export interface AsRosterEntryIn {
 
 export const DELIVER_ASSIGNMENT = gql<
   { deliverAssignment: { itemId: string; asId: string; deliveryDate: string; dueDate: string; status: string; estMinutes: number; presentCount: number; absentCount: number } },
-  { academicYearId: string; weekNumber: number; entryId: string; sectionId: string; roster: AsRosterEntryIn[]; setId?: string | null; totalMarks?: number | null; estMinutes?: number | null; attachmentIds?: string[] | null }
+  { academicYearId: string; weekNumber: number; entryId: string; sectionId: string; roster: AsRosterEntryIn[]; description: string; setId?: string | null; totalMarks?: number | null; estMinutes?: number | null; attachmentIds?: string[] | null }
 >`
-  mutation DeliverAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!, $roster: [AssignmentRosterEntryInput!]!, $setId: String, $totalMarks: Int, $estMinutes: Int, $attachmentIds: [String!]) {
-    deliverAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId, roster: $roster, setId: $setId, totalMarks: $totalMarks, estMinutes: $estMinutes, attachmentIds: $attachmentIds) {
+  mutation DeliverAssignment($academicYearId: String!, $weekNumber: Int!, $entryId: String!, $sectionId: String!, $roster: [AssignmentRosterEntryInput!]!, $description: String!, $setId: String, $totalMarks: Int, $estMinutes: Int, $attachmentIds: [String!]) {
+    deliverAssignment(academicYearId: $academicYearId, weekNumber: $weekNumber, entryId: $entryId, sectionId: $sectionId, roster: $roster, description: $description, setId: $setId, totalMarks: $totalMarks, estMinutes: $estMinutes, attachmentIds: $attachmentIds) {
       itemId asId deliveryDate dueDate status estMinutes presentCount absentCount
     }
   }
@@ -4963,6 +4965,8 @@ export interface ChildAssignmentT {
   result: string | null;
   feedback: string | null;
   isResubmission: boolean;
+  /** D-#478: WHAT the assignment is. Null only for pre-D-#478 items. */
+  description: string | null;
   attachmentIds: string[];
 }
 
@@ -4975,7 +4979,7 @@ export const CHILD_ASSIGNMENTS = gql<
   query ChildAssignments($studentId: String!, $limit: Int, $offset: Int) {
     childAssignments(studentId: $studentId, limit: $limit, offset: $offset) {
       recordId asId subject weekNumber state pending daysLate deliveryDate dueDate
-      marks totalMarks result feedback isResubmission attachmentIds
+      marks totalMarks result feedback isResubmission description attachmentIds
     }
   }
 `;

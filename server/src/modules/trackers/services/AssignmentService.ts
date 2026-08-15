@@ -79,6 +79,8 @@ export interface DeliverAssignmentInput {
   setId?: string;
   /** Teacher-set marks ceiling for checking (D-#87). */
   totalMarks?: number;
+  /** D-#478: the brief "what is the assignment" — required, non-blank. */
+  description?: string;
   /** AS-T6 (D-#274): declared minutes for the weekly load ceiling. Default 20. */
   estMinutes?: number;
   /** Assignment sheet/instruction StoredFile ids (≤5, assignment_attachment, D-#298). */
@@ -169,6 +171,13 @@ export async function deliverAssignmentItem(
   if (!Number.isInteger(estMinutes) || estMinutes < 0) {
     throw new Error("estMinutes must be a non-negative integer");
   }
+  // D-#478: the one line the family reads. Enforced HERE, not only at the resolver,
+  // so every caller path (scripts, future composites) writes an item a guardian can
+  // actually read. Bangla, because a teacher sees it on the delivery form.
+  const description = input.description?.trim();
+  if (!description) {
+    throw new Error("অ্যাসাইনমেন্টে কী করতে হবে তা লিখুন — অভিভাবক এটিই দেখেন");
+  }
 
   // Guard the optional question-set link. setId is free-text on the delivery
   // form; a non-id value (prod incident: a teacher typed the label word into
@@ -203,6 +212,7 @@ export async function deliverAssignmentItem(
     dueDate: resolved.dueDate,
     setId,
     totalMarks: input.totalMarks,
+    description,
     estMinutes,
     status: "DRAFT",
     draftRoster: input.roster.map((r) => ({ studentId: r.studentId, present: r.present })),
@@ -240,6 +250,9 @@ export interface UpdateAssignmentItemInput {
   estMinutes?: number;
   totalMarks?: number;
   setId?: string;
+  /** D-#478: editable in BOTH states — a wrong instruction is exactly the thing a
+   *  teacher must be able to correct after issue (the D-#336 homework posture). */
+  description?: string;
   attachmentIds?: string[];
   actorId: string;
   /** Principal/Office may correct any cell; a teacher only their own rotation cell. */
@@ -335,6 +348,16 @@ export async function updateAssignmentItem(
     }
   }
 
+  if (input.description !== undefined) {
+    const next = input.description.trim();
+    // Editable after issue, but never CLEARABLE — blanking it would put the item
+    // back in the state D-#478 exists to end.
+    if (!next) {
+      throw new Error("অ্যাসাইনমেন্টে কী করতে হবে তা লিখুন — অভিভাবক এটিই দেখেন");
+    }
+    item.description = next;
+  }
+
   if (input.attachmentIds !== undefined) {
     item.attachmentIds = await normalizeAttachmentIds(input.attachmentIds);
   }
@@ -353,6 +376,7 @@ export async function updateAssignmentItem(
       estMinutes: input.estMinutes,
       totalMarks: input.totalMarks,
       setId: input.setId,
+      descriptionEdited: input.description !== undefined,
       attachments: input.attachmentIds?.length,
     },
   });

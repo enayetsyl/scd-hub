@@ -135,6 +135,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
       issued: item.status === "ISSUED",
       estMinutes: item.estMinutes,
       totalMarks: item.totalMarks,
+      description: item.description,
     });
   }
 
