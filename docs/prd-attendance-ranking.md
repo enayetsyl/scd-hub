@@ -49,6 +49,15 @@ A student is ranked **within a unit** (their section, their subject group), beca
 Cumulative and Annual are the same computation over a different end date; they are separate options because they answer different questions and the owner named both.
 
 ## 5. Axes (students)
+
+> **[CORRECTED 2026-08-15, D-#495]** The class/section-shaped axes do **not** read section rows.
+> Class 1–5 attendance is captured on their cross-section Quran `SubjectGroup` (D-#278, live
+> 2026-07-13); Nursery/KG stay section-captured; dates before the cutover are section-shaped for
+> everyone (D-#292). So school/class/section resolve **each student's attendance unit per date**,
+> exactly as `absenteeReport` does via `resolveUnits`. Display is unchanged — rows stay
+> `class · section` and the group is never a display axis. Counting section rows made classes 1–5
+> look like they had stopped marking; corrected, every class resolves to 31 held days on prod.
+
 - **School** — every marked unit, one list
 - **Class** — all sections of one class level together
 - **Section** — one section
