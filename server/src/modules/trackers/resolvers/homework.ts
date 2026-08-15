@@ -1154,7 +1154,12 @@ builder.mutationField("checkHomeworkRecord", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId").lean();
       const item = record ? await HomeworkItem.findById(record.hwItemId).select("subject").lean() : null;
-      await assertCanWrite(ctx, args.sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        item?.subject ? await resolveSubjectId(item.subject) : undefined,
+        "check_homework",
+      );
       const topup =
         args.topupQids && args.topupQids.length > 0
           ? { qids: [...args.topupQids], time: args.topupTime ?? 0 }
@@ -1281,7 +1286,12 @@ builder.mutationField("recordHomeworkOutcome", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId").lean();
       const item = record ? await HomeworkItem.findById(record.hwItemId).select("subject").lean() : null;
-      await assertCanWrite(ctx, args.sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        item?.subject ? await resolveSubjectId(item.subject) : undefined,
+        "check_homework",
+      );
       const topup =
         args.topupQids && args.topupQids.length > 0
           ? { qids: [...args.topupQids], time: args.topupTime ?? 0 }

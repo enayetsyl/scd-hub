@@ -3693,6 +3693,11 @@ export const DELEGATED_ACTIONS = [
   "submit_assignment",
   "check_assignment",
   "enter_classtest_result",
+  // ACS-3: the DUTY gate, not a tracker-row write. This is the one that lets the
+  // ad-hoc school-wide booleans (`User.homeworkSupervisor`, `Section.homeworkConfirmerId`)
+  // be expressed as ordinary delegations instead of schema fields (D-#489). Those two
+  // keep working untouched — the gate reads old flag OR new grant.
+  "confirm_homework_day",
 ] as const;
 export type DelegatedAction = (typeof DELEGATED_ACTIONS)[number];
 
@@ -3706,9 +3711,10 @@ export const DELEGATED_ACTION_BUILD_STATUS: Record<DelegatedAction, "build" | "p
   submit_homework: "build",     // ACS-1: homeworkSubmitPass + transition →SUBMITTED
   declare_assignment: "build",  // ACS-1: deliverAssignment + declareNoAssignment
   submit_assignment: "build",   // ACS-1: assignmentSubmitPass + transition →SUBMITTED
-  check_homework: "pipeline",   // ACS-3
-  check_assignment: "pipeline", // ACS-3
-  enter_classtest_result: "pipeline", // ACS-3
+  check_homework: "build",      // ACS-3: checkHomeworkRecord + recordHomeworkOutcome
+  check_assignment: "build",    // ACS-3: checkAssignmentRecord + recordAssignmentOutcome
+  enter_classtest_result: "build", // ACS-3: enterClassTestResult (+ the publish/unpublish write gate)
+  confirm_homework_day: "build",   // ACS-3: assertCanConfirmHomework (the duty gate, D-#489)
 };
 
 /** True if the delegated action's gate is tagged in this build (editor filter). */
@@ -3724,6 +3730,7 @@ export const DELEGATED_ACTION_LABELS_BN: Record<DelegatedAction, PermissionLabel
   submit_assignment: { name: "অ্যাসাইনমেন্ট জমা নেওয়া", desc: "জমা রোস্টার পাস — জমা হয়েছে চিহ্নিত করা" },
   check_assignment: { name: "অ্যাসাইনমেন্ট দেখা", desc: "জমা দেওয়া অ্যাসাইনমেন্ট যাচাই ও ফলাফল লেখা" },
   enter_classtest_result: { name: "শ্রেণি পরীক্ষার ফল", desc: "শ্রেণি পরীক্ষার নম্বর ও ফলাফল এন্ট্রি" },
+  confirm_homework_day: { name: "দিনের বাড়ির কাজ চূড়ান্ত", desc: "যেকোনো শাখার দিনের বাড়ির কাজ সমন্বয় ও চূড়ান্ত করা" },
 };
 
 export const DELEGATED_ACTION_LABELS_EN: Record<DelegatedAction, PermissionLabel> = {
@@ -3734,4 +3741,5 @@ export const DELEGATED_ACTION_LABELS_EN: Record<DelegatedAction, PermissionLabel
   submit_assignment: { name: "Take assignment submission", desc: "The submission roster pass — mark work submitted" },
   check_assignment: { name: "Check assignment", desc: "Check submitted assignments and record the result" },
   enter_classtest_result: { name: "Enter class-test results", desc: "Enter class-test marks and results" },
+  confirm_homework_day: { name: "Confirm the homework day", desc: "Reconcile and issue any section's daily homework" },
 };

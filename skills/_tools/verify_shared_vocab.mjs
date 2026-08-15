@@ -501,9 +501,10 @@ check("NO PERMISSION collides with a DELEGATED_ACTION string (converse)",
 check("isDelegatedActionActive === (status === build) for every action",
   V.DELEGATED_ACTIONS.every((a) =>
     V.isDelegatedActionActive(a) === (V.DELEGATED_ACTION_BUILD_STATUS[a] === "build")));
-check("ACS-1 build set is exactly the four declare/submit duties (§4.1 — flipping one to build tags its call site in the SAME PR)",
-  eq(V.DELEGATED_ACTIONS.filter((a) => V.DELEGATED_ACTION_BUILD_STATUS[a] === "build"),
-     ["declare_homework", "submit_homework", "declare_assignment", "submit_assignment"]));
+check("NO pipeline delegated actions remain after ACS-3 — every action's gate is tagged (§4.1: flipping one to build tags its call site in the SAME PR)",
+  eq(V.DELEGATED_ACTIONS.filter((a) => V.DELEGATED_ACTION_BUILD_STATUS[a] !== "build"), []));
+check("the ACS-3 duty action exists — the fold that retires the ad-hoc school-wide booleans (D-#489)",
+  V.DELEGATED_ACTIONS.includes("confirm_homework_day"));
 
 console.log("=== C.18 Finance/accounting vocab freeze + finance:manage RBAC (FIN-1 — prd-finance-fin1 §4/§5, D-#221–#223/#247; app-native, NO wire twin REQ §9) ===");
 // ledgers — exactly the 5 (REQ §3); CASH/BANK/ONLINE + the 2 control ledgers

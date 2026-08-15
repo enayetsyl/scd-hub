@@ -262,6 +262,17 @@ export async function assertCanConfirmHomework(ctx: AppContext, sectionId: strin
   // School-wide homework supervisor (read live — immediate, not JWT-baked) may confirm any section.
   const me = await User.findById(ctx.auth.userId).select("homeworkSupervisor").lean();
   if (me?.homeworkSupervisor) return;
+  // ACS-3 fold (D-#489): the same duty, expressed as an ordinary delegation instead of
+  // a schema field. Read OLD FLAG **OR** NEW GRANT — the two checks above are untouched,
+  // so every existing supervisor/delegate keeps working exactly as before and no data
+  // migration is required; this is purely an additional way to hold the same duty.
+  const scopes = await resolveTeacherScopes(ctx);
+  if (canWrite(scopes, sectionId, undefined, {
+    action: "confirm_homework_day",
+    classId: section.classId ? section.classId.toString() : undefined,
+  })) {
+    return;
+  }
   throw new ForbiddenError(
     "Only the class teacher, the assigned homework delegate, a homework supervisor, or the Principal may confirm homework",
   );

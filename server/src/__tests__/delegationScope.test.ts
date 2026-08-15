@@ -18,6 +18,7 @@
 
 const mockGrantFind = jest.fn();
 const mockSectionFindById = jest.fn();
+const mockUserFindById = jest.fn();
 
 jest.mock("../modules/foundation/models/ScopeGrant", () => ({
   ScopeGrant: {
@@ -25,9 +26,19 @@ jest.mock("../modules/foundation/models/ScopeGrant", () => ({
     findById: (id: unknown) => ({ lean: async () => null, then: undefined, _id: id }),
   },
 }));
+// Both call shapes: `.select(...).lean()` (assertCanWrite) and a bare `.lean()`
+// (assertCanConfirmHomework).
 jest.mock("../modules/foundation/models/Section", () => ({
   Section: {
-    findById: (id: unknown) => ({ select: () => ({ lean: async () => mockSectionFindById(id) }) }),
+    findById: (id: unknown) => ({
+      select: () => ({ lean: async () => mockSectionFindById(id) }),
+      lean: async () => mockSectionFindById(id),
+    }),
+  },
+}));
+jest.mock("../modules/foundation/models/User", () => ({
+  User: {
+    findById: (id: unknown) => ({ select: () => ({ lean: async () => mockUserFindById(id) }) }),
   },
 }));
 
@@ -39,7 +50,8 @@ import {
   composeTeacherScope,
   type ScopeItem,
 } from "../modules/foundation/services/ScopeGrantService";
-import { assertCanWrite, ForbiddenError } from "../middleware/authz";
+import { assertCanWrite, assertCanConfirmHomework, ForbiddenError } from "../middleware/authz";
+import { DELEGATED_ACTIONS, DELEGATED_ACTION_BUILD_STATUS } from "@scd/shared";
 import type { AppContext } from "../context";
 
 const SECTION_A = "sectionA";
@@ -255,11 +267,16 @@ describe("validateDelegationGrant (§4.1)", () => {
     expect(validateDelegationGrant({ extent: "whole_school", actions: ["run_the_school"] })).toMatch(/unknown delegated action/);
   });
 
-  // The silent-no-op trap: a pipeline action has no tagged call site, so granting it
-  // would change nothing while looking granted (D-#486).
-  test("a PIPELINE action is refused, not silently accepted", () => {
-    expect(validateDelegationGrant({ extent: "whole_school", actions: ["check_homework"] })).toMatch(/not available in this build/);
-    expect(validateDelegationGrant({ extent: "whole_school", actions: ["declare_homework", "enter_classtest_result"] })).toMatch(/not available in this build/);
+  // The silent-no-op guard (D-#486): a pipeline action has no tagged call site, so
+  // granting it would change nothing while looking granted. After ACS-3 every declared
+  // action IS tagged, so the guard has no live instance left to refuse — what is
+  // asserted here is that fact itself. If a future action lands as `pipeline`, this
+  // test fails and the guard's refusal branch becomes reachable again.
+  test("every declared action is currently grantable — no pipeline action remains after ACS-3", () => {
+    for (const a of DELEGATED_ACTIONS) {
+      expect(DELEGATED_ACTION_BUILD_STATUS[a]).toBe("build");
+      expect(validateDelegationGrant({ extent: "whole_school", actions: [a] })).toBeNull();
+    }
   });
 
   test("an already-past expiry is refused", () => {
@@ -347,6 +364,15 @@ describe("assertCanWrite + delegation (the tagged-gate seam)", () => {
     expect(mockSectionFindById).not.toHaveBeenCalled();
   });
 
+  test("ACS-3: a check delegation passes the check gates but not the declare ones", async () => {
+    mockGrantFind.mockResolvedValue([
+      { _id: "d1", kind: "delegation", active: true, extent: "whole_school", actions: ["check_homework"] },
+    ]);
+    await expect(assertCanWrite(ctx, SECTION_B, SUBJ_ENG, "check_homework")).resolves.toBeUndefined();
+    await expect(assertCanWrite(ctx, SECTION_B, SUBJ_ENG, "check_assignment")).rejects.toThrow(ForbiddenError);
+    await expect(assertCanWrite(ctx, SECTION_B, SUBJ_ENG, "declare_homework")).rejects.toThrow(ForbiddenError);
+  });
+
   test("a lapsed delegation is refused at the gate (D-#488)", async () => {
     mockGrantFind.mockResolvedValue([
       {
@@ -361,5 +387,69 @@ describe("assertCanWrite + delegation (the tagged-gate seam)", () => {
     await expect(
       assertCanWrite(ctx, SECTION_B, SUBJ_ENG, "declare_assignment"),
     ).rejects.toThrow(ForbiddenError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 7. ACS-3: the boolean-flag fold (D-#489) — old flag OR new grant
+// ---------------------------------------------------------------------------
+
+describe("assertCanConfirmHomework + delegation (the ACS-3 fold)", () => {
+  const ctx = { auth: { userId: "jerin", role: "TEACHER" } } as unknown as AppContext;
+
+  beforeEach(() => {
+    mockGrantFind.mockReset();
+    mockSectionFindById.mockReset();
+    mockUserFindById.mockReset();
+    mockGrantFind.mockResolvedValue([]);
+    mockUserFindById.mockResolvedValue({});
+  });
+
+  test("UNCHANGED: the section's class teacher still passes, with no grant in sight", async () => {
+    mockSectionFindById.mockResolvedValue({ classId: CLASS_1, classTeacherId: "jerin" });
+    await expect(assertCanConfirmHomework(ctx, SECTION_A)).resolves.toBeUndefined();
+    expect(mockGrantFind).not.toHaveBeenCalled(); // the old paths short-circuit first
+  });
+
+  test("UNCHANGED: the per-section homework delegate still passes", async () => {
+    mockSectionFindById.mockResolvedValue({ classId: CLASS_1, homeworkConfirmerId: "jerin" });
+    await expect(assertCanConfirmHomework(ctx, SECTION_A)).resolves.toBeUndefined();
+  });
+
+  test("UNCHANGED: the school-wide homeworkSupervisor boolean still passes (no migration needed)", async () => {
+    mockSectionFindById.mockResolvedValue({ classId: CLASS_1 });
+    mockUserFindById.mockResolvedValue({ homeworkSupervisor: true });
+    await expect(assertCanConfirmHomework(ctx, SECTION_A)).resolves.toBeUndefined();
+  });
+
+  test("NEW: a confirm_homework_day delegation passes the same gate", async () => {
+    mockSectionFindById.mockResolvedValue({ classId: CLASS_1 });
+    mockGrantFind.mockResolvedValue([
+      { _id: "d1", kind: "delegation", active: true, extent: "whole_school", actions: ["confirm_homework_day"] },
+    ]);
+    await expect(assertCanConfirmHomework(ctx, SECTION_A)).resolves.toBeUndefined();
+  });
+
+  test("NEW: a grade_class confirm delegation reaches only its class", async () => {
+    mockGrantFind.mockResolvedValue([
+      { _id: "d1", kind: "delegation", active: true, extent: "grade_class", classId: CLASS_1, actions: ["confirm_homework_day"] },
+    ]);
+    mockSectionFindById.mockResolvedValue({ classId: CLASS_1 });
+    await expect(assertCanConfirmHomework(ctx, SECTION_A)).resolves.toBeUndefined();
+    mockSectionFindById.mockResolvedValue({ classId: CLASS_2 });
+    await expect(assertCanConfirmHomework(ctx, SECTION_B)).rejects.toThrow(ForbiddenError);
+  });
+
+  test("a delegation for a DIFFERENT duty does not confer the confirm gate", async () => {
+    mockSectionFindById.mockResolvedValue({ classId: CLASS_1 });
+    mockGrantFind.mockResolvedValue([
+      { _id: "d1", kind: "delegation", active: true, extent: "whole_school", actions: ["declare_homework"] },
+    ]);
+    await expect(assertCanConfirmHomework(ctx, SECTION_A)).rejects.toThrow(ForbiddenError);
+  });
+
+  test("an ordinary teacher with none of the above is still refused", async () => {
+    mockSectionFindById.mockResolvedValue({ classId: CLASS_1, classTeacherId: "someone-else" });
+    await expect(assertCanConfirmHomework(ctx, SECTION_A)).rejects.toThrow(ForbiddenError);
   });
 });

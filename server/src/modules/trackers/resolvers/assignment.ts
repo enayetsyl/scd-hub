@@ -1597,7 +1597,12 @@ builder.mutationField("checkAssignmentRecord", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        await assignmentRecordSubjectId(args.recordId),
+        "check_assignment",
+      );
       await assertRecordInSection(args.recordId, args.sectionId);
       return checkSvc({
         recordId: args.recordId,
@@ -1817,7 +1822,12 @@ builder.mutationField("recordAssignmentOutcome", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        await assignmentRecordSubjectId(args.recordId),
+        "check_assignment",
+      );
       await assertRecordInSection(args.recordId, args.sectionId);
       return recordAsOutcomeSvc({
         recordId: args.recordId,

@@ -58,12 +58,14 @@ async function assertReadTest(ctx: AppContext, testId: string): Promise<void> {
   }
 }
 
-/** Resolve the test's section + enforce WRITE scope on it (publish/unpublish, J4). */
+/** Resolve the test's section + enforce WRITE scope on it (publish/unpublish, J4).
+ *  Tagged `enter_classtest_result` (ACS-3): the result lifecycle is one duty — a
+ *  delegate who may enter marks may also submit/publish that same result set. */
 async function assertWriteTest(ctx: AppContext, testId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const test = await getClassTest(testId);
   if (!test) throw new ForbiddenError("Class test not found");
-  await assertCanWrite(ctx, test.sectionId, await resolveSubjectId(test.subject));
+  await assertCanWrite(ctx, test.sectionId, await resolveSubjectId(test.subject), "enter_classtest_result");
 }
 
 // ---------------------------------------------------------------------------
@@ -141,7 +143,7 @@ builder.mutationField("enterClassTestResult", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const test = await getClassTest(args.testId);
       if (!test) throw new ForbiddenError("Class test not found");
-      await assertCanWrite(ctx, test.sectionId, await resolveSubjectId(test.subject));
+      await assertCanWrite(ctx, test.sectionId, await resolveSubjectId(test.subject), "enter_classtest_result");
       return enterResult({
         testId: args.testId,
         studentId: args.studentId,
