@@ -1,19 +1,20 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://school.local/swapp/ImportEnvelope_v1.json",
-  "title": "School Software — Unified Typed Import Envelope v1 (LOCKED v1.0)",
+  "title": "School Software — Unified Typed Import Envelope v1 (v1.1)",
   "description": "The single ingestion contract (REQ §4, R-IMP1). A stable OUTER contract plus a free-form PAYLOAD selected by doc_type. STATUS: LOCKED v1.0 (2026-06-09, D-PROJ04-005) — plan doc-types stable (wrap the locked Project-03 artifact); the QUESTION payload is now RATIFIED (R-IMP5, Project 04) and a STIMULUS doc-type is added. envelope_version stays '1.0' because both changes are ADDITIVE (a new doc_type enum value + branch + $defs marker; a new tags.paper_role) per the outer-contract stability rule. DESIGN NOTES unchanged: (1) two-layer validation — THIS schema is the outer contract + a LIGHT payload marker-gate; the harness runs a SECOND pass dispatching payload to its FULL schema by doc_type (plans -> C5_PlanSchema_v1.json; question -> QuestionPayload_v1.json; stimulus -> StimulusPayload_v1.json). The canonical, CLOSED (additionalProperties:false) question/stimulus contracts live in those external files, NOT inlined here — the markers below stay additionalProperties:true. (2) ASYMMETRY: plan payload = the whole Project-03 artifact verbatim; question/stimulus payload = envelope-native. (3) outer subject/class_level/curation_tag + the tags block are the app's authoritative INDEXED copies; for questions, tags.{bloom_level,difficulty,topic_tag,paper_role} are lifted from the payload and a harness L3 pass asserts equality. (4) import_batch_id/imported_at/importer_user are app-stamped post-validation. (5) review_status defaults to 'draft' on import. (6) To EXTEND: add a doc_type value + an allOf branch + a $defs marker; the outer contract never changes.",
-  "$comment": "Draft 2020-12 to match validate_plan.py / validate_import.py. v0.2 diff vs v0.1: doc_type += 'stimulus'; tags += 'paper_role'; $defs.questionPayload converted from the fat provisional shape to a LIGHT marker (closure now in QuestionPayload_v1.json); $defs.stimulusPayload added (light marker; closure in StimulusPayload_v1.json); question allOf branch now requires tags with the four indexed copies; stimulus allOf branch added. ref19_topic_id is payload-only (NOT lifted into tags) — the app filters on topic_tag.",
+  "$comment": "v1.1 diff vs v1.0 (2026-08-15, Principal ruling — batch import): doc_type += 'question_batch', a WRAPPER doc-type carrying N standard question envelopes in one upload. The wrapper has no subject/class_level/payload of its own, so the root `required` list moved into a conditional branch: every NON-batch doc_type still requires exactly the v1.0 set (envelope_version, doc_type, subject, class_level, provenance, review_status, payload) and still forbids batch/items; question_batch requires (batch, items) and forbids every single-envelope field. v1.0 envelopes therefore validate byte-identically. `items` is a LIGHT marker here (array of objects, non-empty, no nested question_batch); each element's full closure is enforced by re-running the UNCHANGED single-envelope path per item. item_count vs items.length, the >500-item size guard, and per-item verdicts are importer-side (not expressible as a useful schema error). Draft 2020-12 to match validate_plan.py / validate_import.py. v0.2 diff vs v0.1: doc_type += 'stimulus'; tags += 'paper_role'; $defs.questionPayload converted from the fat provisional shape to a LIGHT marker (closure now in QuestionPayload_v1.json); $defs.stimulusPayload added (light marker; closure in StimulusPayload_v1.json); question allOf branch now requires tags with the four indexed copies; stimulus allOf branch added. ref19_topic_id is payload-only (NOT lifted into tags) — the app filters on topic_tag.",
 
   "type": "object",
-  "required": ["envelope_version", "doc_type", "subject", "class_level", "provenance", "review_status", "payload"],
+  "required": ["envelope_version", "doc_type"],
+  "$comment_required": "v1.1: only the two discriminator fields are unconditionally required. The v1.0 required set is re-imposed verbatim by the first allOf branch for every non-batch doc_type; question_batch requires its own (batch, items) pair instead.",
   "additionalProperties": false,
 
   "properties": {
-    "envelope_version": { "const": "1.0", "description": "Version of THIS outer contract, independent of any payload schema_version." },
+    "envelope_version": { "const": "1.0", "description": "Version of THIS outer contract, independent of any payload schema_version. Stays '1.0' at contract v1.1: question_batch is ADDITIVE (a new doc_type + branch), per the outer-contract stability rule that also kept question/stimulus at 1.0." },
     "doc_type": {
-      "enum": ["chapter_plan", "session_plan", "question", "question_set", "stimulus"],
-      "description": "Selects the payload sub-schema. 'question_set' is app-generated (REQ-ASSEMBLE), reserved for possible bulk import (no branch). 'stimulus' is a shared passage/poem/audio-script/image-set referenced by questions (QDN-09)."
+      "enum": ["chapter_plan", "session_plan", "question", "question_set", "stimulus", "question_batch"],
+      "description": "Selects the payload sub-schema. 'question_set' is app-generated (REQ-ASSEMBLE), reserved for possible bulk import (no branch). 'stimulus' is a shared passage/poem/audio-script/image-set referenced by questions (QDN-09). 'question_batch' (v1.1) is a WRAPPER: it carries no payload of its own, only `batch` metadata + an `items` array of standard question envelopes."
     },
     "subject": { "enum": ["BAN", "ENG", "MATH", "SCI", "BGS"], "description": "Authoritative indexed copy. Harness asserts equality with payload.subject for plan types; question/stimulus payloads do not duplicate it." },
     "class_level": { "type": "integer", "minimum": 1, "maximum": 5, "description": "Authoritative indexed copy (C1–C5)." },
@@ -53,10 +54,44 @@
     },
     "review_status": { "enum": ["draft", "reviewed", "gold"], "description": "Quality gate (D-#3). draft=authored; reviewed=passed substance REVIEW; gold=Principal-locked. Defaults to draft on import." },
     "rendered_markdown": { "type": "string", "minLength": 1, "description": "Co-generated teacher-facing Markdown (Option B). Required for plan doc-types; the app displays/PDFs this and never re-renders. NOT used for question/stimulus (the app renders those itself)." },
-    "payload": { "type": "object", "description": "Doc-type-specific body. Plan = whole Project-03 artifact; question/stimulus = envelope-native (see $defs)." }
+    "payload": { "type": "object", "description": "Doc-type-specific body. Plan = whole Project-03 artifact; question/stimulus = envelope-native (see $defs)." },
+
+    "batch": { "$ref": "#/$defs/batchBlock", "description": "question_batch ONLY (v1.1). Self-describing wrapper metadata; item_count is checked against items.length by the importer." },
+    "items": {
+      "type": "array",
+      "description": "question_batch ONLY (v1.1). N standard question envelopes, each EXACTLY the shape the single-envelope import accepts. Light-gated here (non-empty array of objects, no nesting); every element is fully validated by re-running the unchanged single-envelope path.",
+      "minItems": 1,
+      "items": {
+        "not": { "type": "object", "properties": { "doc_type": { "const": "question_batch" } }, "required": ["doc_type"] },
+        "$comment": "DELIBERATELY the loosest possible element gate. The only structural bar is NESTING (a batch is one level deep by construction), which is a whole-batch reject. Everything else about an element — missing envelope_version, wrong doc_type, a malformed payload — is left to the per-element pass so that ONE bad element fails alone and the rest still import, per the ruling. Tightening this marker would silently convert per-item failures into whole-batch rejections."
+      }
+    }
   },
 
   "allOf": [
+    {
+      "$comment": "v1.1 batch/single split. question_batch is a WRAPPER (no subject/class_level/payload of its own); EVERY other doc_type keeps the v1.0 outer contract verbatim, including the ban on batch/items.",
+      "if": { "properties": { "doc_type": { "const": "question_batch" } }, "required": ["doc_type"] },
+      "then": {
+        "required": ["batch", "items"],
+        "properties": {
+          "subject": false,
+          "class_level": false,
+          "address": false,
+          "curation_tag": false,
+          "pinned_to": false,
+          "provenance": false,
+          "tags": false,
+          "review_status": false,
+          "rendered_markdown": false,
+          "payload": false
+        }
+      },
+      "else": {
+        "required": ["subject", "class_level", "provenance", "review_status", "payload"],
+        "properties": { "batch": false, "items": false }
+      }
+    },
     {
       "$comment": "Chapter Plan.",
       "if": { "properties": { "doc_type": { "const": "chapter_plan" } }, "required": ["doc_type"] },
@@ -92,6 +127,19 @@
   ],
 
   "$defs": {
+    "batchBlock": {
+      "type": "object",
+      "description": "question_batch wrapper metadata (v1.1). Self-describing: the importer FAILs the whole batch when item_count disagrees with items.length — nothing is imported.",
+      "required": ["bank_id", "bank_version", "item_count"],
+      "additionalProperties": false,
+      "properties": {
+        "bank_id": { "type": "string", "minLength": 1, "description": "Upstream question-bank identity (scd-central), e.g. 'C5_BAN_U13_QuestionBank'." },
+        "bank_version": { "type": "string", "minLength": 1, "description": "Upstream bank version, e.g. 'v1'." },
+        "item_count": { "type": "integer", "minimum": 1, "description": "Author-declared element count. MUST equal items.length or the batch is rejected whole." },
+        "digest": { "type": "string", "description": "Optional author-supplied content digest of the items array. Recorded on the batch audit row; not recomputed at import." }
+      }
+    },
+
     "addressBlock": {
       "type": "object",
       "required": ["anchor_word", "number", "title"],

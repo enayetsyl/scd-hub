@@ -10,7 +10,12 @@ import { View, Platform } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation } from "urql";
-import { IMPORT_FILES, type ImportResultT, type ImportFileT } from "../../graphql/operations";
+import {
+  IMPORT_FILES,
+  type ImportResultT,
+  type ImportFileT,
+  type BatchItemVerdictT,
+} from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Button, Chip, ChipRow, Field, Notice, Divider } from "../../components/ui";
 import { FileDropZone } from "../../components/FileDropZone";
@@ -27,6 +32,16 @@ const CURATION_OPTIONS: { value: string; label: string }[] = [
 ];
 
 /** A question bank is a {stimuli,questions} collection — not an envelope or a plan. */
+/** A v1.1 question_batch wrapper — one upload carrying N question envelopes. */
+function looksLikeBatch(content: string): boolean {
+  try {
+    const j = JSON.parse(content) as Record<string, unknown>;
+    return Boolean(j && typeof j === "object" && j.doc_type === "question_batch");
+  } catch {
+    return false;
+  }
+}
+
 function looksLikeBank(content: string): boolean {
   try {
     const j = JSON.parse(content) as Record<string, unknown>;
@@ -36,6 +51,56 @@ function looksLikeBank(content: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Per-element verdicts for a question_batch upload (import contract v1.1).
+ * A batch is NOT all-or-nothing, so a PASS can still hide failed items — the failures are
+ * therefore shown UNCONDITIONALLY with their reason, and the full list is behind a toggle
+ * (a 500-item dump would bury exactly the rows the importer needs to act on).
+ */
+function BatchItemReport({ items }: { items: BatchItemVerdictT[] }): React.ReactElement {
+  const [expanded, setExpanded] = useState(false);
+  const failed = items.filter((v) => v.status === "failed");
+  const superseded = items.filter((v) => v.superseded).length;
+
+  return (
+    <View style={{ marginTop: space(2) }}>
+      {superseded > 0 ? (
+        <Muted>
+          {bnNum(superseded)} {STR.bankItems} — {STR.batchSuperseded}
+        </Muted>
+      ) : null}
+
+      {failed.length > 0 ? (
+        <View style={{ marginTop: space(2) }}>
+          <Muted style={{ fontWeight: "700" }}>
+            {STR.batchFailedItems} ({bnNum(failed.length)})
+          </Muted>
+          {failed.map((v) => (
+            <Body key={v.qid} style={{ marginTop: 4 }}>
+              • {v.qid} — {v.reason ?? ""}
+            </Body>
+          ))}
+        </View>
+      ) : null}
+
+      <Button
+        title={expanded ? STR.batchHideItems : STR.batchShowItems}
+        variant="ghost"
+        onPress={() => setExpanded((s) => !s)}
+      />
+      {expanded
+        ? items.map((v) => (
+            <Body key={v.qid} style={{ fontSize: 12, marginTop: 2 }}>
+              {v.status === "failed" ? "✕" : "✓"} {v.qid}
+              {v.superseded ? ` (${STR.batchSuperseded})` : ""}
+              {v.reason ? ` — ${v.reason}` : ""}
+            </Body>
+          ))
+        : null}
+    </View>
+  );
 }
 
 function StringList({ title, items }: { title: string; items: string[] }): React.ReactElement | null {
@@ -66,6 +131,13 @@ export default function ImportScreen(_props: Props): React.ReactElement {
   // A bank is a single .json collection; questions are app-rendered so any .md is ignored.
   const bankDetected = useMemo(
     () => files.some((f) => looksLikeBank(f.content)) || (paste.trim().length > 0 && looksLikeBank(paste)),
+    [files, paste],
+  );
+
+  // A v1.1 question_batch wrapper. Unlike a bank it needs NO curation tag — every element
+  // is already a built envelope carrying its own — so it gets a plain notice, not the form.
+  const batchDetected = useMemo(
+    () => files.some((f) => looksLikeBatch(f.content)) || (paste.trim().length > 0 && looksLikeBatch(paste)),
     [files, paste],
   );
 
@@ -176,6 +248,8 @@ export default function ImportScreen(_props: Props): React.ReactElement {
         placeholder='{ "envelope_version": "1.0", "doc_type": "session_plan", ... }'
       />
 
+      {batchDetected ? <Notice message={STR.batchDetected} tone="warn" /> : null}
+
       {bankDetected ? (
         <Card>
           <Notice message={STR.questionBankDetected} tone="warn" />
@@ -206,7 +280,17 @@ export default function ImportScreen(_props: Props): React.ReactElement {
             {result.itemsTotal != null ? (
               <Muted style={{ marginTop: space(2) }}>
                 {STR.bankImported}: {bnNum(result.itemsPassed ?? 0)}/{bnNum(result.itemsTotal)} {STR.bankItems}
+                {result.itemsFailed ? ` · ${STR.batchFailedCount}: ${bnNum(result.itemsFailed)}` : ""}
               </Muted>
+            ) : null}
+            {result.bankId ? (
+              <Muted>
+                {STR.batchBank}: {result.bankId}
+                {result.bankVersion ? ` / ${result.bankVersion}` : ""}
+              </Muted>
+            ) : null}
+            {result.batchItems && result.batchItems.length > 0 ? (
+              <BatchItemReport items={result.batchItems} />
             ) : null}
             <StringList title={STR.failChecks} items={result.failChecks} />
             <StringList title={STR.warnings} items={result.warnings} />

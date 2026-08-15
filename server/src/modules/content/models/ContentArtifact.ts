@@ -35,6 +35,9 @@ export interface IContentArtifact extends Document {
   current: boolean;
   /** Points to the document this one supersedes (R-C7). */
   priorVersionId?: Types.ObjectId;
+  /** The question_batch upload this item arrived in (contract v1.1). One id per upload,
+   *  stamped on every item the batch imported; unset for single-envelope imports. */
+  importBatchId?: Types.ObjectId;
   importedBy: Types.ObjectId;
   importedAt: Date;
   /** Principal sign-off record (set when reviewStatus reaches `gold`). */
@@ -68,6 +71,7 @@ const ContentArtifactSchema = new Schema<IContentArtifact>(
     renderedMarkdown: { type: String },
     current: { type: Boolean, required: true, default: true },
     priorVersionId: { type: Schema.Types.ObjectId },
+    importBatchId: { type: Schema.Types.ObjectId },
     importedBy: { type: Schema.Types.ObjectId, required: true },
     importedAt: { type: Date, required: true, default: () => new Date() },
     approvedBy: { type: Schema.Types.ObjectId },
@@ -86,5 +90,7 @@ ContentArtifactSchema.index({ curationTag: 1, current: 1 });
 ContentArtifactSchema.index({ reviewStatus: 1, current: 1 });
 // Question-bank list: newest-first browse + cursor pagination (questions query)
 ContentArtifactSchema.index({ docType: 1, current: 1, importedAt: -1, _id: -1 });
+// Batch traceability: "what did this upload bring in?" (contract v1.1)
+ContentArtifactSchema.index({ importBatchId: 1 }, { sparse: true });
 
 export const ContentArtifact = model<IContentArtifact>("ContentArtifact", ContentArtifactSchema);
