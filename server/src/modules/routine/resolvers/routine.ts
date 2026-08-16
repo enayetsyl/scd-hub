@@ -160,9 +160,18 @@ builder.queryField("subjectGroups", (t) =>
   t.field({
     type: [SubjectGroupRef],
     authScopes: { hasPermission: "routine:read" },
-    args: { track: t.arg.string({ required: false }) },
+    args: {
+      track: t.arg.string({ required: false }),
+      /** Admin screens pass true to manage retired groups; every other caller gets
+       *  live groups only, so a retired level stops appearing in pickers. */
+      includeInactive: t.arg.boolean({ required: false }),
+    },
     resolve: async (_r, args) => {
-      const q = args.track ? { track: args.track } : {};
+      const q: Record<string, unknown> = {};
+      if (args.track) q.track = args.track;
+      // `active` is absent on pre-existing rows (the field post-dates them), so
+      // match "not explicitly false" rather than `active: true`.
+      if (!args.includeInactive) q.active = { $ne: false };
       return SubjectGroup.find(q).sort({ code: 1 }).lean() as unknown as ISubjectGroup[];
     },
   }),
@@ -344,13 +353,56 @@ builder.mutationField("createSubjectGroup", (t) =>
         throw new Error("SubjectGroup track must be quran or arabic");
       if (!(GROUP_GENDERS as readonly string[]).includes(args.gender))
         throw new Error("Invalid gender");
-      return SubjectGroup.create({
-        track: args.track,
-        level: args.level,
-        gender: args.gender,
-        code: args.code,
-        nameBn: args.nameBn,
-      });
+      const level = args.level.trim();
+      const nameBn = args.nameBn.trim();
+      // `code` is the unique key and reads back in every picker — normalise it here
+      // rather than trusting the form, so QURAN_HIFZ_1_BOYS and quran_hifz_1_boys
+      // cannot both exist.
+      const code = args.code.trim().toUpperCase().replace(/\s+/g, "_");
+      if (!level || !nameBn || !code) throw new Error("স্তর, কোড ও বাংলা নাম দিতে হবে");
+
+      const clash = await SubjectGroup.findOne({ code }).select("_id").lean();
+      if (clash) throw new Error(`এই কোডে গ্রুপ আগে থেকেই আছে: ${code}`);
+
+      return SubjectGroup.create({ track: args.track, level, gender: args.gender, code, nameBn });
+    },
+  }),
+);
+
+/**
+ * Retire (or restore) a Quran/Arabic group — the missing half of createSubjectGroup.
+ *
+ * Deactivating is REFUSED while the group still has members, and deliberately so:
+ * `addGroupMember` enforces one group per TRACK by scanning every group of that
+ * track regardless of `active`, so a retired-but-populated group would silently
+ * block each of its students from joining the group that replaces it. Emptying
+ * first is the only order that works, and the error says so.
+ */
+builder.mutationField("setSubjectGroupActive", (t) =>
+  t.field({
+    type: SubjectGroupRef,
+    description:
+      "Retire or restore a Quran/Arabic group. Retiring is refused while members remain — " +
+      "move them to the replacement group first.",
+    authScopes: { hasPermission: "routine:manage" },
+    args: {
+      groupId: t.arg.string({ required: true }),
+      active: t.arg.boolean({ required: true }),
+    },
+    resolve: async (_r, args) => {
+      const group = await SubjectGroup.findById(args.groupId);
+      if (!group) throw new Error("গ্রুপ পাওয়া যায়নি");
+      if (!args.active) {
+        const memberCount = await SubjectGroupMembership.countDocuments({ groupId: args.groupId });
+        if (memberCount > 0) {
+          throw new Error(
+            `এই গ্রুপে এখনও ${memberCount} জন শিক্ষার্থী আছে — আগে তাদের নতুন গ্রুপে সরান, তারপর বন্ধ করুন`,
+          );
+        }
+      }
+      group.active = args.active;
+      await group.save();
+      return group;
     },
   }),
 );

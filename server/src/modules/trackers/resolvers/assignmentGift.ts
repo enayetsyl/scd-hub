@@ -95,11 +95,18 @@ const GiftWeekRef = builder.objectRef<GiftWeek>("GiftWeek").implement({
     weekNumber: t.exposeInt("weekNumber"),
     dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),
     settled: t.exposeBoolean("settled", {
-      description: "False while the due date is still ahead — PENDING, never a loss (D-#481).",
+      description: "False while the due date is still ahead.",
+    }),
+    status: t.exposeString("status", {
+      description: "WON | QUALIFIED (live, everything already in) | PENDING | LOST (D-#497).",
     }),
     issued: t.exposeInt("issued"),
     onTime: t.exposeInt("onTime"),
-    won: t.exposeBoolean("won"),
+    outstanding: t.exposeInt("outstanding"),
+    won: t.exposeBoolean("won", { description: "WON or QUALIFIED." }),
+    provisional: t.exposeBoolean("provisional", {
+      description: "A win the live week could still take back.",
+    }),
     missed: t.field({ type: [GiftMissedItemRef], resolve: (r) => r.missed }),
   }),
 });
@@ -115,6 +122,11 @@ const GiftAwardRef = builder.objectRef<GiftAwardDTO>("GiftAward").implement({
     handedOverBy: t.exposeString("handedOverBy"),
     handedOverByName: t.string({ nullable: true, resolve: (r) => r.handedOverByName }),
     note: t.string({ nullable: true, resolve: (r) => r.note }),
+    entitlementHolds: t.exposeBoolean("entitlementHolds", {
+      description:
+        "False when the derivation no longer names this student a winner for that week — " +
+        "the handover stands as a record of what happened, but the screen flags the mismatch.",
+    }),
   }),
 });
 
@@ -131,6 +143,10 @@ const GiftStudentRowRef = builder.objectRef<GiftStudentRow>("GiftStudentRow").im
     sectionId: t.exposeString("sectionId"),
     weeks: t.field({ type: [GiftWeekRef], resolve: (r) => r.weeks }),
     wonWeeks: t.intList({ resolve: (r) => r.wonWeeks }),
+    pendingWeeks: t.intList({
+      resolve: (r) => r.pendingWeeks,
+      description: "Weeks still awaiting data entry — neither a win nor a loss.",
+    }),
     currentStreak: t.exposeInt("currentStreak"),
     bestStreak: t.exposeInt("bestStreak"),
     streakMilestoneWeeks: t.intList({ resolve: (r) => r.streakMilestoneWeeks }),

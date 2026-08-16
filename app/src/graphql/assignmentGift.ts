@@ -13,13 +13,18 @@ export interface GiftMissedItemT {
   lateSubmission: boolean;
 }
 
+export type GiftWeekStatusT = "WON" | "QUALIFIED" | "PENDING" | "LOST";
+
 export interface GiftWeekT {
   weekNumber: number;
   dueDate: string | null;
   settled: boolean;
+  status: GiftWeekStatusT;
   issued: number;
   onTime: number;
+  outstanding: number;
   won: boolean;
+  provisional: boolean;
   missed: GiftMissedItemT[];
 }
 
@@ -32,6 +37,7 @@ export interface GiftAwardT {
   handedOverBy: string;
   handedOverByName: string | null;
   note: string | null;
+  entitlementHolds: boolean;
 }
 
 export interface GiftStudentRowT {
@@ -43,6 +49,7 @@ export interface GiftStudentRowT {
   sectionId: string;
   weeks: GiftWeekT[];
   wonWeeks: number[];
+  pendingWeeks: number[];
   currentStreak: number;
   bestStreak: number;
   streakMilestoneWeeks: number[];
@@ -102,9 +109,12 @@ export const ASSIGNMENT_GIFT_REPORT = gql<
           weekNumber
           dueDate
           settled
+          status
           issued
           onTime
+          outstanding
           won
+          provisional
           missed {
             asId
             subject
@@ -113,6 +123,7 @@ export const ASSIGNMENT_GIFT_REPORT = gql<
           }
         }
         wonWeeks
+        pendingWeeks
         currentStreak
         bestStreak
         streakMilestoneWeeks
@@ -125,6 +136,7 @@ export const ASSIGNMENT_GIFT_REPORT = gql<
           handedOverBy
           handedOverByName
           note
+          entitlementHolds
         }
       }
     }
@@ -163,6 +175,7 @@ export const RECORD_GIFT_HANDOVER = gql<
       handedOverBy
       handedOverByName
       note
+      entitlementHolds
     }
   }
 `;

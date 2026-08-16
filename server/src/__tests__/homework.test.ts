@@ -445,10 +445,24 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
     const ids = [oidStr(), oidStr(), oidStr()];
     mockStoredFind.mockResolvedValue(ids.map((id) => ({ _id: id })));
     const res = await declareHomeworkItem(validDeclareInput({ attachmentIds: ids }));
-    expect(mockStoredFind).toHaveBeenCalledWith({ _id: { $in: ids }, kind: "hw_question" });
+    expect(mockStoredFind).toHaveBeenCalledWith({
+      _id: { $in: ids },
+      kind: { $in: ["hw_question", "classnote_attachment"] },
+    });
     expect(res.attachmentIds).toEqual(ids);
     const created = mockItemCreate.mock.calls[0][0] as { attachmentIds: mongoose.Types.ObjectId[] };
     expect(created.attachmentIds.map(String)).toEqual(ids);
+  });
+
+  // D-#477: the daily-entry card has ONE picker (POST /files/classnote), so an item
+  // it declares binds `classnote_attachment` files — publishing with an attachment
+  // used to fail the kind check outright.
+  test("D-#477: a classnote_attachment is bindable to a card-declared item", async () => {
+    const ids = [oidStr()];
+    mockStoredFind.mockResolvedValue([{ _id: ids[0] }]);
+    const res = await declareHomeworkItem(validDeclareInput({ attachmentIds: ids }));
+    expect(mockStoredFind.mock.calls[0][0].kind.$in).toContain("classnote_attachment");
+    expect(res.attachmentIds).toEqual(ids);
   });
 
   test("D-#297: no attachments → StoredFile never queried, field stays unset", async () => {

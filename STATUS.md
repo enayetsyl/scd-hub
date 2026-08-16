@@ -1,6 +1,12 @@
 # STATUS
 
 
+- 2026-08-16: **FIXED — the Class-test dashboard's minute-long load (D-#500), branch `fix/classtest-dashboard-perf`.** Owner: "why does this page take so much time to load?"
+  **It was not the network.** `resolveDayType` costs one `HolidayException.findOne` per call; `buildIsOpenDay` called it once per DAY over a ~70-day window, and `reportsStatus` rebuilt that calendar once per EXAM. Measured before touching anything, on five local exams: reportsStatus **75s / 265 db ops**, of which **224 were re-reads of a holiday table holding one row**; principalDashboard and overdueChaseList (both funnel through reportsStatus) another ~22s each — and the screen fires all three at once. Prod has 43 printed exams, so the live page was doing roughly nine times that.
+  **Fix:** `buildDayTypeResolver(from, to)` reads the holiday rows for a whole range in ONE query and pre-expands them to a covered-day set; `reportsStatus` builds one calendar for the entire exam set, one roster aggregate per section and one status aggregate for all exams, with the per-exam math extracted to a pure function. `examReportStatus` is unchanged and still serves single-exam callers. **After: 1.6s / 26 ops, 0.7s / 13, 1.0s / 10** — 749 round trips down to 49.
+  **The number that mattered more than the speed:** a harness diffed every field of the batched rows against the untouched per-exam path, exam by exam, on the live copy — **identical on all 12 fields**, including two overdue exams whose `schoolDaysLate` (22 and 21) is pure calendar arithmetic. A faster calendar that disagreed would have silently moved every class-test deadline.
+  **Gate GREEN (executed):** server tsc, vocab verifier PASS, jest **3245/3245 (182 suites)** with 7 new calendar tests and a batching regression test. Two existing suites needed their mocks migrated — they stubbed the per-exam collaborator that no longer runs — and now express the same intent through roster/entered counts. **NOT DONE:** not yet re-measured against PROD's 43 exams; the before/after above is the local copy's five. **Now / next:** ship, then the owner opens the page and sees whether it is instant.
+
 - 2026-08-15 (cont. 6): **CORRECTED — the ranking was reading the wrong attendance register for classes 1–5 (D-#495), branch `fix/ranking-attendance-unit`.** The owner said it plainly: "the attendance is taken on quran class and then sorted to c1-c5", and told me to read the attendance module. They were right and I had not.
   **What the module actually does (D-#278, live 2026-07-13):** attendance is taken in the FIRST class of the day. For classes 1–5 that is a cross-section Quran `SubjectGroup`, so their day record carries `subjectGroupId`, not `sectionId`; Nursery/KG keep section capture; and every date before the cutover is section-shaped for everyone (D-#292). Reports roll all of it back up to class → section — `absenteeReport` has always done this via `resolveUnits`. My ranking counted section rows instead, which is why classes 1–5 showed 8 held days.
   **So my own earlier claim in STATUS/CHANGELOG — that classes 1–5 "have not marked attendance since 2026-07-12" — was FALSE.** They changed capture unit on precisely that date. Re-checked against prod under the corrected model: every class resolves to **31 held days** (Nursery 32, KG 30), with **no student at zero**. There is no marking problem at the school; there was a reading problem in my code.
@@ -386,8 +392,16 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
   assembled by original index, never completion order. App import screen now shows per-element
   verdicts (failed qids + reason always visible, full list behind a toggle, supersede count) and
   a pre-import notice distinguishing a question_batch WRAPPER from a question BANK.
-  **Next:** vendor `docs/import-contract.md` + `docs/import-contract.schema.json` back into
-  scd-central (the staging copy at `~/Downloads/hubexport_inbox/hub-export/` is still v1.0).
+  **PRODUCIBLE since 2026-08-16 (D-#498):** v1.1 shipped only the consumer half — nothing emitted a
+  batch, so the feature was live but dormant. `build_question_envelopes.py --batch` now wraps the
+  envelopes it already builds (`--bank-id` defaults to the source filename stem, `--bank-version`
+  defaults v1); `item_count` is COMPUTED and `digest` is a real sha256, so the wrapper is honestly
+  self-describing. Owner ruled a batch carries whatever the bank produced, STIMULI INCLUDED.
+  **Next (the last step to make it active end-to-end):** vendor the refreshed bundle into
+  scd-central — `docs/import-contract.md`, `docs/import-contract.schema.json`,
+  `server/import/validate_import.py` and `server/import/build_question_envelopes.py`. All FOUR are
+  stale in the staging copy at `~/Downloads/hubexport_inbox/hub-export/`; until they are refreshed
+  scd-central is authoring against v1.0 and cannot emit a batch.
 - **Daily entry (DE-1..DE-6, D-#477/#478) — COMPLETE: all six slices built — `docs/prd-daily-entry.md`:**
   owner ask — a teacher enters one day in THREE places (class note, homework declare,
   weekend assignment) and a guardian reads it back in three; and a parent whose child is

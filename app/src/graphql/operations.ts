@@ -2929,10 +2929,46 @@ export interface SubjectGroupT {
 
 export const SUBJECT_GROUPS_QUERY = gql<
   { subjectGroups: SubjectGroupT[] },
-  { track?: string | null }
+  { track?: string | null; includeInactive?: boolean | null }
 >`
-  query SubjectGroups($track: String) {
-    subjectGroups(track: $track) { id track level gender code nameBn active }
+  query SubjectGroups($track: String, $includeInactive: Boolean) {
+    subjectGroups(track: $track, includeInactive: $includeInactive) {
+      id track level gender code nameBn active
+    }
+  }
+`;
+
+export const CREATE_SUBJECT_GROUP = gql<
+  { createSubjectGroup: SubjectGroupT },
+  { track: string; level: string; gender: string; code: string; nameBn: string }
+>`
+  mutation CreateSubjectGroup(
+    $track: String!
+    $level: String!
+    $gender: String!
+    $code: String!
+    $nameBn: String!
+  ) {
+    createSubjectGroup(
+      track: $track
+      level: $level
+      gender: $gender
+      code: $code
+      nameBn: $nameBn
+    ) {
+      id track level gender code nameBn active
+    }
+  }
+`;
+
+export const SET_SUBJECT_GROUP_ACTIVE = gql<
+  { setSubjectGroupActive: SubjectGroupT },
+  { groupId: string; active: boolean }
+>`
+  mutation SetSubjectGroupActive($groupId: String!, $active: Boolean!) {
+    setSubjectGroupActive(groupId: $groupId, active: $active) {
+      id track level gender code nameBn active
+    }
   }
 `;
 

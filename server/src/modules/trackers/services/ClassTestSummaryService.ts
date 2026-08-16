@@ -29,6 +29,7 @@ import { Student } from "../../foundation/models/Student";
 import { User } from "../../foundation/models/User";
 import { deriveScore } from "../classTestScoring";
 import { examReportStatus, type ExamReportStatus } from "./ClassTestResultService";
+import { buildIsOpenDayForRange, deriveOverdue, type IsOpenDay } from "../classTestCalendar";
 import { getEffectiveTemplate, interpolate, type EffectiveTemplate } from "../../templates/services/MessageTemplateService";
 
 // ---------------------------------------------------------------------------
@@ -115,6 +116,41 @@ export interface ReportStatusRow extends ExamReportStatus {
   state: ReportState;
 }
 
+/**
+ * The per-exam status math, PURE — identical to `examReportStatus`'s body with its
+ * three I/O inputs (calendar, roster count, entered/present counts) passed in, so a
+ * caller holding many exams computes them all without a single extra round trip.
+ * `examReportStatus` remains the single-exam entry point and is unchanged.
+ */
+function examStatusFrom(
+  exam: IClassTest,
+  io: { now: Date; isOpenDay: IsOpenDay; rosterCount: number; enteredCount: number; presentCount: number },
+): ExamReportStatus {
+  const { now, isOpenDay, rosterCount, enteredCount, presentCount } = io;
+  const complete = rosterCount > 0 && enteredCount >= rosterCount;
+  const { deadline, overdue, schoolDaysLate } = deriveOverdue(
+    new Date(exam.examDate),
+    exam.deadlineDays,
+    now,
+    isOpenDay,
+  );
+  return {
+    testId: exam._id.toString(),
+    ctId: exam.ctId,
+    examDate: new Date(exam.examDate).toISOString(),
+    deadline: deadline.toISOString(),
+    deadlineDays: exam.deadlineDays,
+    rosterCount,
+    enteredCount,
+    presentCount,
+    absentCount: enteredCount - presentCount,
+    pendingCount: Math.max(0, rosterCount - enteredCount),
+    complete,
+    overdue: overdue && !complete,
+    schoolDaysLate: overdue && !complete ? schoolDaysLate : 0,
+  };
+}
+
 export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatusRow[]> {
   const now = filter.asOf ?? new Date();
   const exams = await loadPrintedExams(filter);
@@ -137,9 +173,47 @@ export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatus
   ])) as Array<{ _id: Types.ObjectId; latest: Date }>;
   const publishedByTest = new Map(published.map((p) => [p._id.toString(), p.latest]));
 
+  // ONE calendar and ONE roster/result pass for the WHOLE exam set.
+  //
+  // This loop used to call `examReportStatus(exam)` per exam, and each of those
+  // rebuilt a ~70-day school calendar with one DB round trip PER DAY. Measured
+  // 2026-08-16 on five exams: 75s and 265 round trips, 224 of them re-reading a
+  // holiday table with a single row. The per-exam status math is pure — only the
+  // calendar and the counts need I/O, and both batch.
+  const examDates = exams.map((e) => new Date(e.examDate).getTime());
+  const isOpenDay = await buildIsOpenDayForRange(
+    new Date(Math.min(...examDates)),
+    new Date(Math.max(now.getTime(), Math.max(...examDates)) + 7 * 24 * 60 * 60 * 1000),
+  );
+
+  const sectionIds = [...new Set(exams.map((e) => e.sectionId.toString()))];
+  const rosterCounts = (await Student.aggregate([
+    { $match: { sectionId: { $in: sectionIds.map((id) => new Types.ObjectId(id)) }, active: true } },
+    { $group: { _id: "$sectionId", n: { $sum: 1 } } },
+  ])) as Array<{ _id: Types.ObjectId; n: number }>;
+  const rosterBySection = new Map(rosterCounts.map((r) => [r._id.toString(), r.n]));
+
+  const statusCounts = (await ClassTestResult.aggregate([
+    { $match: { testId: { $in: exams.map((e) => e._id) } } },
+    { $group: { _id: { testId: "$testId", status: "$status" }, n: { $sum: 1 } } },
+  ])) as Array<{ _id: { testId: Types.ObjectId; status: string }; n: number }>;
+  const enteredByTest = new Map<string, number>();
+  const presentByTest = new Map<string, number>();
+  for (const s of statusCounts) {
+    const k = s._id.testId.toString();
+    enteredByTest.set(k, (enteredByTest.get(k) ?? 0) + s.n);
+    if (s._id.status === "PRESENT") presentByTest.set(k, (presentByTest.get(k) ?? 0) + s.n);
+  }
+
   const rows: ReportStatusRow[] = [];
   for (const exam of exams) {
-    const status = await examReportStatus(exam._id.toString(), now);
+    const status = examStatusFrom(exam, {
+      now,
+      isOpenDay,
+      rosterCount: rosterBySection.get(exam.sectionId.toString()) ?? 0,
+      enteredCount: enteredByTest.get(exam._id.toString()) ?? 0,
+      presentCount: presentByTest.get(exam._id.toString()) ?? 0,
+    });
     const teacherId = accountableOf(exam);
     const sub = submittedByTest.get(exam._id.toString());
     const pub = publishedByTest.get(exam._id.toString());

@@ -59,7 +59,7 @@
     "batch": { "$ref": "#/$defs/batchBlock", "description": "question_batch ONLY (v1.1). Self-describing wrapper metadata; item_count is checked against items.length by the importer." },
     "items": {
       "type": "array",
-      "description": "question_batch ONLY (v1.1). N standard question envelopes, each EXACTLY the shape the single-envelope import accepts. Light-gated here (non-empty array of objects, no nesting); every element is fully validated by re-running the unchanged single-envelope path.",
+      "description": "question_batch ONLY (v1.1). N standard envelopes, each EXACTLY the shape the single-envelope import accepts. Light-gated here (non-empty, no nesting); every element is fully validated by re-running the unchanged single-envelope path. A batch may carry `stimulus` elements alongside `question` ones (D-#498) — a Project-04 bank is a {stimuli, questions} collection and is batched whole; the doc-type name is narrower than its contents by design.",
       "minItems": 1,
       "items": {
         "not": { "type": "object", "properties": { "doc_type": { "const": "question_batch" } }, "required": ["doc_type"] },
