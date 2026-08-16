@@ -41,7 +41,8 @@ export const GIFT_STREAK_BLOCK = 4;
 // DTOs
 // ---------------------------------------------------------------------------
 
-/** An assignment the student did NOT get in on time — the "why they lost" detail. */
+/** An assignment the student has not (yet) got in on time. While the week is live
+ *  this is "still awaited"; once settled it is "missed". */
 export interface GiftMissedItem {
   asId: string;
   subject: HwSubject;
@@ -51,16 +52,36 @@ export interface GiftMissedItem {
   lateSubmission: boolean;
 }
 
+/**
+ * Per (student × week) outcome (D-#497 — supersedes D-#481's blanket settled gate).
+ *   WON       — settled, everything in on time. Final.
+ *   QUALIFIED — the week is still LIVE but every issued assignment is already in
+ *               on time. Counts as a win now; still provisional, because a teacher
+ *               may confirm an extra subject later in the same week
+ *               (`confirmAssignmentWeek` re-runs for new drafts), which puts the
+ *               student back to PENDING.
+ *   PENDING   — the week is live and at least one assignment is unmarked. Neither
+ *               a win nor a loss: it does NOT break a streak.
+ *   LOST      — settled and at least one assignment was late or never submitted.
+ */
+export type GiftWeekStatus = "WON" | "QUALIFIED" | "PENDING" | "LOST";
+
 export interface GiftWeek {
   weekNumber: number;
   /** UTC-midnight ISO of the due day, or null when the student had no items. */
   dueDate: string | null;
-  /** False while the due date is still in the future — PENDING, not a loss. */
+  /** False while the due date is still in the future. */
   settled: boolean;
+  status: GiftWeekStatus;
   issued: number;
   onTime: number;
-  /** Settled && issued ≥ 1 && onTime === issued. */
+  /** Issued assignments with no on-time SUBMITTED stamp yet. */
+  outstanding: number;
+  /** WON or QUALIFIED — i.e. counts toward the streak and the weekly gift. */
   won: boolean;
+  /** QUALIFIED rather than WON — a win that the week could still take back. */
+  provisional: boolean;
+  /** The outstanding assignments: what is still awaited (live) or was missed (settled). */
   missed: GiftMissedItem[];
 }
 
@@ -73,6 +94,13 @@ export interface GiftAwardDTO {
   handedOverBy: string;
   handedOverByName: string | null;
   note: string | null;
+  /**
+   * False when the derivation no longer names this student a winner for that week —
+   * the gift was handed over, then a revert (D-#338) or a mid-week extra subject
+   * changed the answer underneath it. Surfaced rather than hidden: the ledger
+   * records what physically happened and must not be silently rewritten.
+   */
+  entitlementHolds: boolean;
 }
 
 export interface GiftStudentRow {
@@ -85,9 +113,11 @@ export interface GiftStudentRow {
   /** Only the weeks inside [weekFrom, weekTo] — the streak is derived over the
    *  student's WHOLE history up to weekTo, not just this window. */
   weeks: GiftWeek[];
-  /** Weeks won inside the window. */
+  /** Weeks won inside the window (WON or QUALIFIED). */
   wonWeeks: number[];
-  /** Consecutive settled wins as of weekTo (bridged over non-eligible weeks). */
+  /** Weeks inside the window still awaiting data entry (PENDING). */
+  pendingWeeks: number[];
+  /** Consecutive wins as of weekTo (bridged over non-eligible and pending weeks). */
   currentStreak: number;
   bestStreak: number;
   /** Weeks (anywhere up to weekTo) where the streak closed a 4-block — the
@@ -312,6 +342,7 @@ export async function assignmentGiftReport(filter: GiftFilter): Promise<GiftRepo
       handedOverBy: a.handedOverBy.toString(),
       handedOverByName: userNameById.get(a.handedOverBy.toString()) ?? null,
       note: a.note ?? null,
+      entitlementHolds: true, // re-checked against the derivation in the walk below
     });
     awardsByStudent.set(sid, list);
   }
@@ -342,36 +373,56 @@ export async function assignmentGiftReport(filter: GiftFilter): Promise<GiftRepo
     const milestoneWeeks: number[] = [];
     const windowWeeks: GiftWeek[] = [];
     const wonWeeks: number[] = [];
+    const pendingWeeks: number[] = [];
+    /** Full-history wins — the window-limited `wonWeeks` cannot validate an award
+     *  handed over before the visible block. */
+    const allWonWeeks = new Set<number>();
 
     // Ascending walk over the WHOLE history to weekTo (D-#482 bridging).
     for (let w = 1; w <= weekTo; w++) {
       const tally = weeks.get(w);
       const settled = tally?.dueDate ? isSettled(tally.dueDate, asOf) : false;
       const eligible = !!tally && tally.issued >= 1;
-      const won = eligible && settled && tally.onTime === tally.issued;
+      const outstanding = tally ? tally.issued - tally.onTime : 0;
 
-      if (settled && eligible) {
-        if (won) {
-          streak += 1;
-          if (streak > bestStreak) bestStreak = streak;
-          if (streak % GIFT_STREAK_BLOCK === 0) milestoneWeeks.push(w);
-        } else {
-          streak = 0;
-        }
+      // D-#497 — four outcomes, not two. A LIVE week with everything already in
+      // is a win NOW (nothing outstanding can arrive late); a live week with work
+      // still unmarked is PENDING and must not touch the streak either way.
+      let status: GiftWeekStatus;
+      if (!eligible) {
+        status = "PENDING"; // no work set — bridged below, never shown as a win
+      } else if (outstanding === 0) {
+        status = settled ? "WON" : "QUALIFIED";
+      } else {
+        status = settled ? "LOST" : "PENDING";
       }
-      // Not settled or not eligible → carried unchanged (bridged).
+      const won = eligible && (status === "WON" || status === "QUALIFIED");
+
+      if (won) {
+        allWonWeeks.add(w);
+        streak += 1;
+        if (streak > bestStreak) bestStreak = streak;
+        if (streak % GIFT_STREAK_BLOCK === 0) milestoneWeeks.push(w);
+      } else if (status === "LOST") {
+        streak = 0;
+      }
+      // PENDING (live, or no work set) → carried unchanged (bridged, D-#482).
 
       if (w >= weekFrom) {
         windowWeeks.push({
           weekNumber: w,
           dueDate: tally?.dueDate ? dateOnlyISO(tally.dueDate) : null,
           settled,
+          status,
           issued: tally?.issued ?? 0,
           onTime: tally?.onTime ?? 0,
+          outstanding,
           won,
+          provisional: status === "QUALIFIED",
           missed: tally?.missed ?? [],
         });
         if (won) wonWeeks.push(w);
+        else if (eligible && status === "PENDING") pendingWeeks.push(w);
       }
     }
 
@@ -384,10 +435,15 @@ export async function assignmentGiftReport(filter: GiftFilter): Promise<GiftRepo
       sectionId: student.sectionId.toString(),
       weeks: windowWeeks,
       wonWeeks,
+      pendingWeeks,
       currentStreak: streak,
       bestStreak,
       streakMilestoneWeeks: milestoneWeeks,
-      awards: awardsByStudent.get(sid) ?? [],
+      awards: (awardsByStudent.get(sid) ?? []).map((a) => ({
+        ...a,
+        entitlementHolds:
+          a.kind === "WEEKLY" ? allWonWeeks.has(a.weekNumber) : milestoneWeeks.includes(a.weekNumber),
+      })),
     });
   }
 
@@ -409,6 +465,12 @@ export async function assignmentGiftReport(filter: GiftFilter): Promise<GiftRepo
 
 export interface GiftEntitlement {
   entitled: boolean;
+  /** Entitled off a LIVE week (QUALIFIED) rather than a settled one — the gift may
+   *  legitimately be handed over now, but an extra subject confirmed later in the
+   *  same week can withdraw it (D-#497). */
+  provisional: boolean;
+  /** The week's outcome, for a message that says WHY when not entitled. */
+  status: GiftWeekStatus | null;
   /** The streak at that week — set for a STREAK entitlement. */
   streakLength: number | null;
   classId: string;
@@ -437,14 +499,24 @@ export async function giftEntitlement(
   });
   const row = report.students.find((s) => s.studentId === studentId);
   if (!row) {
-    return { entitled: false, streakLength: null, classId: "", sectionId: "" };
+    return {
+      entitled: false,
+      provisional: false,
+      status: null,
+      streakLength: null,
+      classId: "",
+      sectionId: "",
+    };
   }
+  const week = row.weeks.find((w) => w.weekNumber === weekNumber) ?? null;
   const entitled =
     kind === "WEEKLY"
       ? row.wonWeeks.includes(weekNumber)
       : row.streakMilestoneWeeks.includes(weekNumber);
   return {
     entitled,
+    provisional: entitled && week?.provisional === true,
+    status: week?.status ?? null,
     streakLength: kind === "STREAK" && entitled ? row.currentStreak : null,
     classId: row.classId,
     sectionId: row.sectionId,
@@ -471,6 +543,11 @@ export async function recordGiftHandover(input: HandoverInput): Promise<GiftAwar
     input.asOf,
   );
   if (!ent.entitled) {
+    // Say WHY: "still waiting on entries" is a different problem for the office
+    // than "this student missed one", and only the first is worth coming back to.
+    if (input.kind === "WEEKLY" && ent.status === "PENDING") {
+      throw new Error("এই সপ্তাহের সব অ্যাসাইনমেন্টের তথ্য এখনও ওঠেনি — বাকিটা উঠলে উপহার দেওয়া যাবে");
+    }
     throw new Error(
       input.kind === "WEEKLY"
         ? "এই সপ্তাহে শিক্ষার্থী সব অ্যাসাইনমেন্ট সময়মতো জমা দেয়নি — উপহার দেওয়া যাবে না"
@@ -533,6 +610,7 @@ export async function recordGiftHandover(input: HandoverInput): Promise<GiftAwar
     handedOverBy: a.handedOverBy.toString(),
     handedOverByName: by?.name ?? null,
     note: a.note ?? null,
+    entitlementHolds: true, // just re-derived above
   };
 }
 
