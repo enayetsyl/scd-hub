@@ -62,3 +62,47 @@ export async function resolveDayType(date: Date): Promise<DayType> {
   }).lean();
   return dayTypeFor(date, holiday !== null);
 }
+
+/** Answers "what kind of day is this?" with no further I/O. */
+export type DayTypeResolver = (date: Date) => DayType;
+
+/**
+ * Build a day-type resolver for a whole DATE RANGE in ONE query.
+ *
+ * `resolveDayType` is per-date and hits the DB every call, which is fine for one
+ * lookup and catastrophic in a loop: the class-test dashboard was spending 224 of
+ * its 265 database round trips re-reading a holiday table holding a single row,
+ * because every exam rebuilt a ~70-day calendar one `findOne` per day (measured
+ * 2026-08-16: `reportsStatus` took 75s on FIVE exams). Callers that need more than
+ * one day should build one of these and reuse it.
+ *
+ * The range is inclusive and the resolver is safe outside it — a date beyond the
+ * loaded window simply sees no holiday and falls back to the weekday rule, which is
+ * the same answer `resolveDayType` gives when no exception covers the day.
+ */
+export async function buildDayTypeResolver(from: Date, to: Date): Promise<DayTypeResolver> {
+  const { start } = dayBounds(from);
+  const { end } = dayBounds(to);
+  const holidays = (await HolidayException.find({
+    active: true,
+    fromDate: { $lte: end },
+    toDate: { $gte: start },
+  })
+    .select("fromDate toDate")
+    .lean()) as unknown as Array<{ fromDate: Date; toDate: Date }>;
+
+  // Pre-expand to a set of covered local-day timestamps: holiday rows are few and
+  // short, so this is far cheaper than an interval scan per lookup.
+  const covered = new Set<number>();
+  for (const h of holidays) {
+    const first = dayBounds(new Date(h.fromDate)).start;
+    const last = dayBounds(new Date(h.toDate)).start;
+    for (let t = first.getTime(); t <= last.getTime(); ) {
+      covered.add(t);
+      const next = new Date(t);
+      next.setDate(next.getDate() + 1);
+      t = next.getTime();
+    }
+  }
+  return (date: Date) => dayTypeFor(date, covered.has(dayBounds(date).start.getTime()));
+}

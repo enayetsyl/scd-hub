@@ -64,6 +64,17 @@ jest.mock("../modules/platform/services/AuditService", () => ({
 const mockResolveDayType = jest.fn();
 jest.mock("../modules/routine/calendar", () => ({
   resolveDayType: (d: Date) => mockResolveDayType(d),
+  // The calendar is now built for a whole RANGE in one query (perf fix 2026-08-16).
+  // Drive it from the same per-date mock so every existing expectation still holds:
+  // pre-resolve each day once, then answer synchronously.
+  buildDayTypeResolver: async (from: Date, to: Date) => {
+    const types = new Map<number, string>();
+    const key = (d: Date): number => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    for (let t = new Date(from); t <= to; t.setDate(t.getDate() + 1)) {
+      types.set(key(t), await mockResolveDayType(new Date(t)));
+    }
+    return (d: Date) => types.get(key(d)) ?? "FULL";
+  },
 }));
 
 // Import AFTER mocks
