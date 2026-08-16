@@ -131,6 +131,9 @@ import {
   DAYS_OF_WEEK,
   PERIOD_TRACK_LABELS_BN,
   PERIOD_TRACK_LABELS_EN,
+  GROUP_GENDER_LABELS_BN,
+  GROUP_GENDER_LABELS_EN,
+  type GroupGender,
   HOLIDAY_TYPES,
   HOLIDAY_TYPE_LABELS_BN,
   HOLIDAY_TYPE_LABELS_EN,
@@ -787,6 +790,10 @@ export const dayOfWeekLabel = (v?: string | null): string =>
 
 export const periodTrackLabel = (v?: string | null): string =>
   (v && pick(PERIOD_TRACK_LABELS_BN, PERIOD_TRACK_LABELS_EN)[v as PeriodTrack]) || v || DASH;
+
+/** Quran/Arabic group gender (boys/girls/mixed). Labels come from vocab.ts. */
+export const groupGenderLabel = (v?: string | null): string =>
+  (v && pick(GROUP_GENDER_LABELS_BN, GROUP_GENDER_LABELS_EN)[v as GroupGender]) || v || DASH;
 
 /** Holiday type (D-#50). Labels come from vocab.ts — the enum's one home. */
 export const holidayTypeLabel = (v?: string | null): string =>
@@ -2125,6 +2132,25 @@ const STR_BN = {
   gmNone: "এখনো কোনো সদস্য নেই।",
   gmAddFrom: "শাখা থেকে যোগ করুন",
   gmNoStudents: "এই শাখায় কোনো শিক্ষার্থী নেই।",
+  // Create / retire a Quran-Arabic group (D-#501)
+  gmNewGroup: "নতুন গ্রুপ তৈরি করুন",
+  gmNewGroupHint: "একটি স্তরকে ছেলে/মেয়ে আলাদা করতে হলে প্রতিটির জন্য আলাদা গ্রুপ তৈরি করুন, তারপর শিক্ষার্থীদের সরিয়ে নিন এবং রুটিনে ক্লাস বসান।",
+  gmTrack: "ধারা",
+  gmLevel: "স্তর",
+  gmLevelHint: "যেমন: হিফজ ১, কায়দা, বুক ২",
+  gmGender: "ছেলে/মেয়ে",
+  gmCode: "কোড",
+  gmCodeHint: "ইংরেজিতে, অনন্য — স্তর ও ছেলে/মেয়ে থেকে নিজে থেকেই বসে যায়।",
+  gmNameBn: "বাংলা নাম",
+  gmCreate: "গ্রুপ তৈরি করুন",
+  gmCreated: "গ্রুপ তৈরি হয়েছে",
+  gmRetire: "গ্রুপ বন্ধ করুন",
+  gmRestore: "আবার চালু করুন",
+  gmRetired: "বন্ধ করা হয়েছে",
+  gmRestored: "আবার চালু হয়েছে",
+  gmInactive: "বন্ধ",
+  gmShowRetired: "বন্ধ গ্রুপও দেখান",
+  gmRetireBlocked: "শিক্ষার্থী থাকা অবস্থায় গ্রুপ বন্ধ করা যায় না — আগে সরান।",
   gmAdd: "যোগ করুন",
   gmMember: "সদস্য ✓",
   gmAdded: "শিক্ষার্থী গ্রুপে যুক্ত হয়েছে।",
@@ -5590,6 +5616,25 @@ const STR_EN: StrTable = {
   gmNone: "No members yet.",
   gmAddFrom: "Add from a section",
   gmNoStudents: "No students in this section.",
+  // Create / retire a Quran-Arabic group (D-#501)
+  gmNewGroup: "Create a new group",
+  gmNewGroupHint: "To split one level into boys and girls, create a group for each, then move the students across and add their periods to the routine.",
+  gmTrack: "Track",
+  gmLevel: "Level",
+  gmLevelHint: "e.g. Hifz 1, Qaida, Book 2",
+  gmGender: "Boys / girls",
+  gmCode: "Code",
+  gmCodeHint: "English, unique — filled in automatically from the level and gender.",
+  gmNameBn: "Bangla name",
+  gmCreate: "Create group",
+  gmCreated: "Group created",
+  gmRetire: "Retire group",
+  gmRestore: "Restore",
+  gmRetired: "Group retired",
+  gmRestored: "Group restored",
+  gmInactive: "Retired",
+  gmShowRetired: "Show retired groups",
+  gmRetireBlocked: "A group with students in it cannot be retired — move them first.",
   gmAdd: "Add",
   gmMember: "Member ✓",
   gmAdded: "Student added to the group.",
