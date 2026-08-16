@@ -386,7 +386,7 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
   assembled by original index, never completion order. App import screen now shows per-element
   verdicts (failed qids + reason always visible, full list behind a toggle, supersede count) and
   a pre-import notice distinguishing a question_batch WRAPPER from a question BANK.
-  **PRODUCIBLE since 2026-08-16 (D-#497):** v1.1 shipped only the consumer half — nothing emitted a
+  **PRODUCIBLE since 2026-08-16 (D-#498):** v1.1 shipped only the consumer half — nothing emitted a
   batch, so the feature was live but dormant. `build_question_envelopes.py --batch` now wraps the
   envelopes it already builds (`--bank-id` defaults to the source filename stem, `--bank-version`
   defaults v1); `item_count` is COMPUTED and `digest` is a real sha256, so the wrapper is honestly

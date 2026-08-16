@@ -44,7 +44,7 @@ Usage:
 --batch (import contract v1.1) wraps the SAME envelopes in one `question_batch` so the whole
 bank uploads once instead of N times. item_count is computed here and digest is a real sha256
 over the canonical items JSON — the wrapper is self-describing or the importer rejects it
-whole. A batch carries whatever the bank produced, STIMULI INCLUDED (D-#497); every element
+whole. A batch carries whatever the bank produced, STIMULI INCLUDED (D-#498); every element
 still runs through validate_import.py unchanged, one at a time, app-side.
 
 Exit 0 = a JSON ARRAY of envelopes written to --out or stdout (UTF-8; stimuli first, then
@@ -113,7 +113,7 @@ def wrap_batch(envelopes, args, env_version):
     whole, so item_count is computed here (never author-supplied) and digest is a real
     sha256 over the canonical items JSON — the app records it and does NOT recompute.
 
-    A batch carries WHATEVER THE BANK PRODUCED, stimuli included (D-#497): a bank is
+    A batch carries WHATEVER THE BANK PRODUCED, stimuli included (D-#498): a bank is
     {stimuli, questions}, and splitting stimuli into separate uploads would defeat the
     point of batching. Every element still takes the unchanged single-envelope path.
 

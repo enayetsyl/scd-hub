@@ -63,6 +63,7 @@ function WinnerRow({
   kind,
   week,
   subtitle,
+  provisional,
   busy,
   onGive,
   onUndo,
@@ -71,6 +72,8 @@ function WinnerRow({
   kind: "WEEKLY" | "STREAK";
   week: number;
   subtitle?: string;
+  /** The week is still live — this win can be withdrawn if another subject lands. */
+  provisional?: boolean;
   busy: boolean;
   onGive: () => void;
   onUndo: () => void;
@@ -83,8 +86,10 @@ function WinnerRow({
           <Body style={{ fontWeight: "700" }}>
             {row.studentName}
             {row.rollNumber ? ` (${bnNum(row.rollNumber)})` : ""}
+            {provisional ? ` · ${STR.agProvisional}` : ""}
           </Body>
           {subtitle ? <Muted>{subtitle}</Muted> : null}
+          {award && !award.entitlementHolds ? <Muted>{STR.agEntitlementBroken}</Muted> : null}
           {award ? (
             <Muted>
               {day(award.handedOverAt)}
@@ -150,8 +155,13 @@ export default function AssignmentGiftScreen({ route }: Props): React.ReactEleme
   const weekMeta = report?.weekDueDates.find((w) => w.weekNumber === week) ?? null;
   const students = report?.students ?? [];
 
+  const weekOf = (s: GiftStudentRowT) => s.weeks.find((w) => w.weekNumber === week) ?? null;
+  // D-#497 — winners appear as soon as they qualify, mid-week included. `wonWeeks`
+  // already covers WON and QUALIFIED, so this list fills continuously.
   const weeklyWinners = students.filter((s) => s.wonWeeks.includes(week));
   const streakWinners = students.filter((s) => s.streakMilestoneWeeks.includes(week));
+  const awaiting = students.filter((s) => s.pendingWeeks.includes(week));
+  const missedOut = students.filter((s) => weekOf(s)?.status === "LOST");
   const running = students.filter((s) => s.currentStreak > 0);
 
   const shiftBlock = (delta: number): void => {
@@ -270,13 +280,14 @@ export default function AssignmentGiftScreen({ route }: Props): React.ReactEleme
                 <Muted>{weekMeta?.settled ? STR.agNoWeekWinners : STR.agPendingHint}</Muted>
               ) : (
                 weeklyWinners.map((row) => {
-                  const wk = row.weeks.find((w) => w.weekNumber === week);
+                  const wk = weekOf(row);
                   return (
                     <WinnerRow
                       key={row.studentId}
                       row={row}
                       kind="WEEKLY"
                       week={week}
+                      provisional={wk?.provisional}
                       subtitle={
                         wk ? `${bnNum(wk.onTime)}/${bnNum(wk.issued)} ${STR.agOnTimeOf}` : undefined
                       }
@@ -288,6 +299,32 @@ export default function AssignmentGiftScreen({ route }: Props): React.ReactEleme
                 })
               )}
             </Card>
+
+            {/* Waiting on entries — the owner's ask: show WHO is still outstanding
+                and WHAT is missing, rather than a blank week. */}
+            {awaiting.length > 0 ? (
+              <Card>
+                <Body style={{ fontWeight: "700" }}>
+                  ⏳ {STR.agAwaitingTitle} ({bnNum(awaiting.length)})
+                </Body>
+                <Muted>{STR.agAwaitingHint}</Muted>
+                {awaiting.map((row) => {
+                  const wk = weekOf(row);
+                  return (
+                    <View key={row.studentId} style={{ marginTop: space(2) }}>
+                      <Body>
+                        {row.studentName} — {bnNum(wk?.onTime ?? 0)}/{bnNum(wk?.issued ?? 0)}{" "}
+                        {STR.agOnTimeOf}
+                      </Body>
+                      <Muted>
+                        {STR.agAwaitingFor}:{" "}
+                        {(wk?.missed ?? []).map((m) => subjectLabel(m.subject)).join(", ")}
+                      </Muted>
+                    </View>
+                  );
+                })}
+              </Card>
+            ) : null}
 
             {/* Higher gift — only the students who CLOSED a 4-block on this week. */}
             <Card>
@@ -303,6 +340,7 @@ export default function AssignmentGiftScreen({ route }: Props): React.ReactEleme
                     row={row}
                     kind="STREAK"
                     week={week}
+                    provisional={weekOf(row)?.provisional}
                     subtitle={`${bnNum(row.currentStreak)} ${STR.agStreakRunning}`}
                     busy={busyKey === `STREAK:${row.studentId}:${week}`}
                     onGive={() => void give(row, "STREAK")}
@@ -335,35 +373,32 @@ export default function AssignmentGiftScreen({ route }: Props): React.ReactEleme
               </Card>
             ) : null}
 
-            {/* Why a student is NOT on the list — the missed detail for the week. */}
-            {weekMeta?.settled ? (
+            {/* Why a student is NOT on the list — LOST only. A live week's
+                outstanding students belong in "waiting on entries" above, not here:
+                calling them missed before the due date would be wrong. */}
+            {missedOut.length > 0 ? (
               <Card>
                 <Body style={{ fontWeight: "700" }}>
-                  {STR.agMissedLabel} — {STR.asWeek} {bnNum(week)}
+                  {STR.agMissedLabel} — {STR.asWeek} {bnNum(week)} ({bnNum(missedOut.length)})
                 </Body>
-                {students
-                  .filter((s) => {
-                    const wk = s.weeks.find((w) => w.weekNumber === week);
-                    return wk && wk.issued > 0 && !wk.won;
-                  })
-                  .map((s) => {
-                    const wk = s.weeks.find((w) => w.weekNumber === week)!;
-                    return (
-                      <View key={s.studentId} style={{ marginTop: space(2) }}>
-                        <Body>
-                          {s.studentName} — {bnNum(wk.onTime)}/{bnNum(wk.issued)} {STR.agOnTimeOf}
-                        </Body>
-                        <Muted>
-                          {wk.missed
-                            .map(
-                              (m) =>
-                                `${subjectLabel(m.subject)} (${m.lateSubmission ? STR.agLate : STR.agNotSubmitted})`,
-                            )
-                            .join(", ")}
-                        </Muted>
-                      </View>
-                    );
-                  })}
+                {missedOut.map((s) => {
+                  const wk = weekOf(s)!;
+                  return (
+                    <View key={s.studentId} style={{ marginTop: space(2) }}>
+                      <Body>
+                        {s.studentName} — {bnNum(wk.onTime)}/{bnNum(wk.issued)} {STR.agOnTimeOf}
+                      </Body>
+                      <Muted>
+                        {wk.missed
+                          .map(
+                            (m) =>
+                              `${subjectLabel(m.subject)} (${m.lateSubmission ? STR.agLate : STR.agNotSubmitted})`,
+                          )
+                          .join(", ")}
+                      </Muted>
+                    </View>
+                  );
+                })}
               </Card>
             ) : null}
           </>

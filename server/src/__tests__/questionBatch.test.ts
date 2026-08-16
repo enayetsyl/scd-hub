@@ -288,7 +288,7 @@ describe("question_batch — import contract v1.1", () => {
     expect(events).toHaveLength(1);
   }, 60_000);
 
-  it("build_question_envelopes.py --batch emits a wrapper that imports, stimuli included (D-#497)", async () => {
+  it("build_question_envelopes.py --batch emits a wrapper that imports, stimuli included (D-#498)", async () => {
     // The PRODUCER side. A Project-04 bank is {stimuli, questions}; ruling (a) is that a
     // batch carries whatever the bank produced, so this asserts a mixed batch end-to-end
     // rather than a questions-only one.
