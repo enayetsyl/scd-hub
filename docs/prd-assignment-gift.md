@@ -1,7 +1,9 @@
 # PRD — Assignment gift & streak reporting (AG-1..AG-3)
 
 Build contract for the owner's new incentive rule. Source: owner ask 2026-08-15,
-clarified in the same session (four rulings, §2). Decisions: **D-#479–#483**.
+clarified in the same session (four rulings, §2). Decisions: **D-#479–#483**, plus
+**D-#497** (continuous evaluation — §3.5, refines D-#481 after the owner reviewed
+the shipped screen on prod).
 
 Rides the EXISTING assignment tracker (`assignment` tracker-kind, D-#85). No new
 tracker-kind, no envelope change, **no `/shared/vocab.ts` edit** — therefore no
@@ -87,12 +89,39 @@ eligible(student, week) := issuedCount(student, week) >= 1
 won(student, week)      := eligible && onTimeCount == issuedCount
 ```
 
-### 3.5 Settled weeks only
+### 3.5 Continuous evaluation — four outcomes (D-#497, supersedes the settled-only gate)
 
-A week is judged only once its `dueDate` has **passed** (`dueDate` day-key <
-today's Dhaka day-key). An in-flight week is reported as `PENDING`, never as a
-loss — otherwise the current week would show the whole school failing while
-records sit legitimately in `DUE`.
+The first cut judged a week only after its due date passed, so the live week showed
+nothing at all. Owner ask 2026-08-16: evaluate continuously — a student who is
+already fully in should appear the moment they qualify, and the rest should be
+visible as *awaiting entry* rather than absent.
+
+Per (student × week), where `outstanding` = issued − onTime:
+
+| | `outstanding = 0` | `outstanding > 0` |
+|---|---|---|
+| **due date passed** | `WON` | `LOST` |
+| **week still live** | `QUALIFIED` | `PENDING` |
+
+- `WON` and `QUALIFIED` both count as a win: they increment the streak and admit a
+  gift handover. Nothing outstanding can arrive late, so a live week that is
+  already complete is genuinely won.
+- `QUALIFIED` is flagged **provisional**. A teacher may deliver and confirm an
+  *extra* subject later in the same week (`confirmAssignmentWeek` re-runs whenever
+  new `DRAFT` items exist), which raises `issued` and pushes the student back to
+  `PENDING`.
+- `PENDING` is neither a win nor a loss: it must **not** reset a streak, since the
+  student can still submit before the due date. Same bridging behaviour as a
+  no-work week (§3.6).
+- A week with no assignments issued to that student is `PENDING` and never shown
+  as a win.
+
+Because a handover can now be recorded against a provisional win, every stored
+award is re-checked against the live derivation on each read and carries
+`entitlementHolds`. When it goes false — a revert (D-#338), or an extra subject
+confirmed after the gift was handed over — the screen **flags the mismatch** and
+the row stands. The ledger records what physically happened; it is never silently
+rewritten to match a changed derivation.
 
 ### 3.6 Streak
 
@@ -129,8 +158,13 @@ Unique on `(academicYearId, studentId, kind, weekNumber)` — ticking twice is a
 idempotent no-op, not a duplicate gift.
 
 **The award never creates entitlement.** Marking a handover is refused unless the
-derivation (§3) currently says that student won that week — so the record can
-never drift from the tracker (D-#481).
+derivation (§3) currently says that student won that week — `WON` or `QUALIFIED`.
+A refusal on a still-`PENDING` week says so explicitly ("the data isn't in yet"),
+which is a different problem for the office than "this student missed one".
+
+Because a handover may now be recorded against a live week, drift is possible
+after the fact; every award therefore carries `entitlementHolds`, re-derived on
+each read and flagged on the screen when false (§3.5).
 
 ---
 
@@ -170,8 +204,12 @@ OFFICE (authz.ts), and the office is exactly who hands out gifts.
    streak displays `5`, and **no** second `STREAK` entitlement (R5).
 6. Weeks 1–2 won, week 3 has no assignments for the section, week 4–5 won →
    streak displays `4` at week 5 and a `STREAK` entitlement fires (§3.6 bridging).
-7. The current (unsettled) week reports `PENDING`, and no student appears as a
-   loss for it.
+7. During a live week: a student with work still unmarked is `PENDING` (not a
+   loss, and the streak carries); a student already fully in is `QUALIFIED`,
+   counts toward the streak, and may be handed the gift now. A `QUALIFIED` week
+   becomes `WON` and a `PENDING` week becomes `LOST` once the due date passes.
+   A handover on a still-pending week is refused with "data not in yet", which is
+   a different message from "the student missed one".
 8. `recordGiftHandover` for a student who did not win that week → refused.
 9. A teacher who is not the section's class teacher and is not admin staff →
    refused on the tick-off, permitted on the read if `assertCanRead` passes.

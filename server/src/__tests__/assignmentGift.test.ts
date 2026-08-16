@@ -358,24 +358,131 @@ describe("higher gift — the 4-week block", () => {
 // §7.7 — the live week
 // ---------------------------------------------------------------------------
 
-describe("settled weeks only", () => {
-  it("§7.7 the current week reports PENDING and produces no loss", async () => {
-    seed([{ week: 1 }, { week: 2 }], [
-      ...[1].map((w) => ({ student: ALICE, week: w, submittedOffset: -1 })),
-      { student: ALICE, week: 2, submittedOffset: null, state: "DUE" },
-    ]);
-    // "Today" is the day BEFORE week 2's due date — week 2 is still live.
-    const report = await assignmentGiftReport({
-      academicYearId: YEAR,
-      weekFrom: 1,
-      weekTo: 2,
-      asOf: at(dueOf(2), -1),
-    });
+describe("the live week (D-#497)", () => {
+  /** Run the report DURING week `w` — the day before its due date. */
+  const duringWeek = (w: number, weekFrom = 1) =>
+    assignmentGiftReport({ academicYearId: YEAR, weekFrom, weekTo: w, asOf: at(dueOf(w), -1) });
+
+  it("§7.7 a live week with work still unmarked is PENDING, not a loss", async () => {
+    seed(
+      [{ week: 1 }, { week: 2 }],
+      [
+        { student: ALICE, week: 1, submittedOffset: -1 },
+        { student: ALICE, week: 2, submittedOffset: null, state: "DUE" },
+      ],
+    );
+    const report = await duringWeek(2);
     const row = rowFor(report, ALICE)!;
-    expect(row.weeks[1]).toMatchObject({ weekNumber: 2, settled: false, won: false });
-    // The unsettled week must not reset the streak earned in week 1.
+    expect(row.weeks[1]).toMatchObject({ weekNumber: 2, settled: false, status: "PENDING", won: false });
+    expect(row.pendingWeeks).toEqual([2]);
+    // The live week must not reset the streak earned in week 1.
     expect(row.currentStreak).toBe(1);
-    expect(report.weekDueDates[1]).toMatchObject({ weekNumber: 2, settled: false });
+  });
+
+  it("a student already fully in DURING the live week qualifies immediately", async () => {
+    seed(
+      [{ week: 1, subject: "ENG" }, { week: 1, subject: "MATH" }],
+      [
+        { student: ALICE, week: 1, submittedOffset: -2, subject: "ENG" },
+        { student: ALICE, week: 1, submittedOffset: -2, subject: "MATH" },
+      ],
+    );
+    const row = rowFor(await duringWeek(1), ALICE)!;
+    expect(row.weeks[0]).toMatchObject({
+      status: "QUALIFIED",
+      settled: false,
+      won: true,
+      provisional: true,
+      outstanding: 0,
+    });
+    expect(row.wonWeeks).toEqual([1]);
+    expect(row.currentStreak).toBe(1);
+  });
+
+  it("mid-week qualification and pending coexist in the same week", async () => {
+    seed(
+      [{ week: 1, subject: "ENG" }, { week: 1, subject: "MATH" }],
+      [
+        { student: ALICE, week: 1, submittedOffset: -2, subject: "ENG" },
+        { student: ALICE, week: 1, submittedOffset: -2, subject: "MATH" },
+        { student: BOB, week: 1, submittedOffset: -2, subject: "ENG" },
+        { student: BOB, week: 1, submittedOffset: null, state: "DUE", subject: "MATH" },
+      ],
+    );
+    const report = await duringWeek(1);
+    expect(rowFor(report, ALICE)!.weeks[0].status).toBe("QUALIFIED");
+    const bob = rowFor(report, BOB)!;
+    expect(bob.weeks[0]).toMatchObject({ status: "PENDING", outstanding: 1 });
+    // The pending detail names WHAT is still awaited.
+    expect(bob.weeks[0].missed.map((m) => m.subject)).toEqual(["MATH"]);
+  });
+
+  it("a qualified live week can close a 4-block — the higher gift does not wait", async () => {
+    const weeks = [1, 2, 3, 4];
+    seed(
+      weeks.map((week) => ({ week })),
+      weeks.map((w) => ({ student: ALICE, week: w, submittedOffset: -2 })),
+    );
+    const row = rowFor(await duringWeek(4), ALICE)!;
+    expect(row.weeks[3].status).toBe("QUALIFIED");
+    expect(row.currentStreak).toBe(4);
+    expect(row.streakMilestoneWeeks).toEqual([4]);
+  });
+
+  it("a qualified week becomes WON once the due date passes — same answer, now final", async () => {
+    seed([{ week: 1 }], [{ student: ALICE, week: 1, submittedOffset: -1 }]);
+    expect(rowFor(await duringWeek(1), ALICE)!.weeks[0]).toMatchObject({
+      status: "QUALIFIED",
+      provisional: true,
+    });
+    expect(rowFor(await reportAfter(1), ALICE)!.weeks[0]).toMatchObject({
+      status: "WON",
+      provisional: false,
+    });
+  });
+
+  it("a pending week becomes LOST once the due date passes with work still unmarked", async () => {
+    seed([{ week: 1 }], [{ student: ALICE, week: 1, submittedOffset: null, state: "DUE" }]);
+    expect(rowFor(await duringWeek(1), ALICE)!.weeks[0].status).toBe("PENDING");
+    expect(rowFor(await reportAfter(1), ALICE)!.weeks[0].status).toBe("LOST");
+  });
+
+  it("a handover is allowed on a live week the student has already qualified for", async () => {
+    seed([{ week: 1 }], [{ student: ALICE, week: 1, submittedOffset: -2 }]);
+    mockStudentFindById.mockReturnValue({ classId: CLASS, sectionId: SECTION });
+    mockClassFindById.mockReturnValue({ level: 1 });
+    mockUserFindById.mockReturnValue({ name: "Office Desk" });
+    mockAwardUpsert.mockReturnValue({
+      _id: new Types.ObjectId(),
+      kind: "WEEKLY",
+      weekNumber: 1,
+      handedOverAt: new Date(),
+      handedOverBy: OFFICER,
+    });
+    await expect(
+      recordGiftHandover({
+        academicYearId: YEAR,
+        studentId: ALICE.toString(),
+        kind: "WEEKLY",
+        weekNumber: 1,
+        handedOverBy: OFFICER.toString(),
+        asOf: at(dueOf(1), -1),
+      }),
+    ).resolves.toMatchObject({ kind: "WEEKLY", weekNumber: 1 });
+  });
+
+  it("a handover on a still-pending week is refused, and says so", async () => {
+    seed([{ week: 1 }], [{ student: ALICE, week: 1, submittedOffset: null, state: "DUE" }]);
+    await expect(
+      recordGiftHandover({
+        academicYearId: YEAR,
+        studentId: ALICE.toString(),
+        kind: "WEEKLY",
+        weekNumber: 1,
+        handedOverBy: OFFICER.toString(),
+        asOf: at(dueOf(1), -1),
+      }),
+    ).rejects.toThrow(/তথ্য এখনও ওঠেনি/);
   });
 });
 
