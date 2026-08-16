@@ -99,7 +99,7 @@ export interface DeclareHomeworkItemInput {
   sessionRef?: string;
   /** D-#317: the teacher's brief "what is the homework" — required, card-visible. */
   description: string;
-  /** StoredFile ids (kind hw_question, ≤5) picked in the declare form. */
+  /** StoredFile ids (≤5, HW_BINDABLE_FILE_KINDS) picked in the declare form. */
   attachmentIds?: string[];
   actorId: string;
 }
@@ -120,9 +120,17 @@ export interface HomeworkItemResult {
 
 export const HW_MAX_ATTACHMENTS = 5;
 
+/** The kinds a homework item may bind. `hw_question` is the declare-form upload
+ *  (D-#297); `classnote_attachment` is admitted because DE-3 (D-#477) merged the
+ *  surfaces — the daily-entry card has ONE picker whose files land on the note AND
+ *  on the item it declares, and that picker uploads via POST /files/classnote. Both
+ *  kinds are staff-uploaded, class-readable question material. What stays excluded
+ *  is what the check was built for: an `hw_answer` (a child's marked work) or a chat
+ *  file must never become class-readable through the item's read gate. */
+const HW_BINDABLE_FILE_KINDS = ["hw_question", "classnote_attachment"] as const;
+
 /** Validate declare-form attachments: ≤5 valid ObjectIds, every one an existing
- *  StoredFile of kind hw_question — anything else (an hw_answer, a chat file)
- *  must never become class-readable through the item's read gate. */
+ *  StoredFile of a bindable kind. */
 async function normalizeAttachmentIds(ids: string[] | undefined): Promise<Types.ObjectId[] | undefined> {
   if (!ids || ids.length === 0) return undefined;
   if (ids.length > HW_MAX_ATTACHMENTS) {
@@ -131,7 +139,7 @@ async function normalizeAttachmentIds(ids: string[] | undefined): Promise<Types.
   if (ids.some((id) => !Types.ObjectId.isValid(id))) {
     throw new Error("Invalid attachment file id");
   }
-  const found = await StoredFile.find({ _id: { $in: ids }, kind: "hw_question" })
+  const found = await StoredFile.find({ _id: { $in: ids }, kind: { $in: HW_BINDABLE_FILE_KINDS } })
     .select("_id")
     .lean();
   if (found.length !== new Set(ids.map(String)).size) {
