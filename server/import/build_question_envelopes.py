@@ -39,13 +39,20 @@ Usage:
       --curation-tag {KEEP_AS_IS|NEEDS_REPLACEMENT|FLEXIBLE}
       [--envelope-schema <path>]   (default: ../../docs/import-contract.schema.json)
       [--author NAME] [--source-file NAME] [--unit-title TITLE] [--out PATH]
+      [--batch [--bank-id ID] [--bank-version V]]
+
+--batch (import contract v1.1) wraps the SAME envelopes in one `question_batch` so the whole
+bank uploads once instead of N times. item_count is computed here and digest is a real sha256
+over the canonical items JSON — the wrapper is self-describing or the importer rejects it
+whole. A batch carries whatever the bank produced, STIMULI INCLUDED (D-#497); every element
+still runs through validate_import.py unchanged, one at a time, app-side.
 
 Exit 0 = a JSON ARRAY of envelopes written to --out or stdout (UTF-8; stimuli first, then
 questions). Exit 2 = refused (not a bank collection / already an envelope / a plan / a mixed
 bank / an item id that does not parse / a required envelope field with no honest source).
 The emitted envelopes are NOT validated here — each is then run through validate_import.py.
 """
-import sys, os, re, json, argparse
+import sys, os, re, json, argparse, hashlib
 
 # Force UTF-8 stdio: when spawned by Node (not a terminal) stdout defaults to the
 # system locale (cp1252 on Windows), which cannot encode the Bangla envelope.
@@ -99,6 +106,42 @@ def parse_identity(item_id, regex, label):
     return m.group(1), int(m.group(2)), int(m.group(3))  # subject, class_level, unit
 
 
+def wrap_batch(envelopes, args, env_version):
+    """Wrap the fanned-out envelopes in a v1.1 `question_batch` (import contract v1.1).
+
+    ONE upload instead of N. The wrapper is self-describing or the importer rejects it
+    whole, so item_count is computed here (never author-supplied) and digest is a real
+    sha256 over the canonical items JSON — the app records it and does NOT recompute.
+
+    A batch carries WHATEVER THE BANK PRODUCED, stimuli included (D-#497): a bank is
+    {stimuli, questions}, and splitting stimuli into separate uploads would defeat the
+    point of batching. Every element still takes the unchanged single-envelope path.
+
+    bank_id/bank_version are IDENTITY, not derived content — so they are taken from the
+    flags, with bank_id falling back to the source filename stem rather than invented.
+    """
+    bank_id = args.bank_id or (
+        os.path.splitext(os.path.basename(args.source_file or args.json_path))[0] if (args.source_file or args.json_path) else None
+    )
+    if not bank_id:
+        die("--batch needs --bank-id (or a --source-file / --json path to take the stem from); nothing fabricated")
+
+    items_json = json.dumps(envelopes, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    digest = "sha256:" + hashlib.sha256(items_json.encode("utf-8")).hexdigest()
+
+    return {
+        "envelope_version": env_version,
+        "doc_type": "question_batch",
+        "batch": {
+            "bank_id": bank_id,
+            "bank_version": args.bank_version,
+            "item_count": len(envelopes),
+            "digest": digest,
+        },
+        "items": envelopes,
+    }
+
+
 def main():
     ap = argparse.ArgumentParser(description="Fan a Project-04 question bank out into per-item import envelopes")
     ap.add_argument("--json", dest="json_path")
@@ -108,7 +151,16 @@ def main():
     ap.add_argument("--source-file")
     ap.add_argument("--unit-title")
     ap.add_argument("--out")
+    # --- import contract v1.1: emit ONE question_batch instead of a bare array ---
+    ap.add_argument("--batch", action="store_true",
+                    help="wrap the output in a v1.1 question_batch envelope (one upload for the whole bank)")
+    ap.add_argument("--bank-id", dest="bank_id",
+                    help="batch.bank_id; defaults to the --source-file / --json filename stem")
+    ap.add_argument("--bank-version", dest="bank_version", default="v1", help="batch.bank_version (default v1)")
     args = ap.parse_args()
+
+    if (args.bank_id or args.bank_version != "v1") and not args.batch:
+        die("--bank-id / --bank-version only apply to --batch; add --batch or drop them")
 
     if not args.json_path:
         die("no input: a question-bank import needs the bank JSON (--json <bank.json>)")
@@ -244,11 +296,13 @@ def main():
             die(f"cannot build a valid envelope for '{ref}' — no source (and no sensible default) for: "
                 + ", ".join(missing) + ". Fix the bank or supply the field; nothing fabricated.")
 
-    out_text = json.dumps(envelopes, ensure_ascii=False, indent=2)
+    payload = wrap_batch(envelopes, args, env_version) if args.batch else envelopes
+    out_text = json.dumps(payload, ensure_ascii=False, indent=2)
     if args.out:
         with open(args.out, "w", encoding="utf-8") as fh:
             fh.write(out_text)
-        sys.stderr.write(f"wrote {len(envelopes)} envelopes to {args.out}\n")
+        kind = "question_batch wrapping" if args.batch else "envelopes:"
+        sys.stderr.write(f"wrote {kind} {len(envelopes)} envelopes to {args.out}\n")
     else:
         sys.stdout.write(out_text)
     sys.exit(0)

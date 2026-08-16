@@ -288,6 +288,59 @@ describe("question_batch — import contract v1.1", () => {
     expect(events).toHaveLength(1);
   }, 60_000);
 
+  it("build_question_envelopes.py --batch emits a wrapper that imports, stimuli included (D-#497)", async () => {
+    // The PRODUCER side. A Project-04 bank is {stimuli, questions}; ruling (a) is that a
+    // batch carries whatever the bank produced, so this asserts a mixed batch end-to-end
+    // rather than a questions-only one.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "scd_emit_"));
+    const examples = JSON.parse(
+      fs.readFileSync(path.join(REPO, "docs/examples/LOCKED_QuestionBank_Examples_v1.json"), "utf8"),
+    );
+    const bank = {
+      stimuli: examples.stimuli.filter((s: Row) => String(s.stimulus_id).startsWith("STIM-ENG-C5-U09")),
+      questions: examples.questions.filter((q: Row) => String(q.qid).startsWith("QP-ENG-C5-U09")),
+    };
+    expect(bank.stimuli.length).toBeGreaterThan(0);
+    expect(bank.questions.length).toBeGreaterThan(0);
+
+    // The `_v1` token is where the builder derives provenance.content_version from.
+    const bankPath = path.join(dir, "C5_ENG_U09_QuestionBank_v1.json");
+    fs.writeFileSync(bankPath, JSON.stringify(bank), "utf8");
+
+    const out = execFileSync(
+      PYTHON,
+      [
+        path.join(REPO, "server/import/build_question_envelopes.py"),
+        "--json", bankPath,
+        "--curation-tag", "KEEP_AS_IS",
+        "--envelope-schema", path.join(REPO, "docs/import-contract.schema.json"),
+        "--author", "Project 04",
+        "--batch",
+      ],
+      { encoding: "utf8", env: { ...process.env, PYTHONIOENCODING: "utf-8" }, maxBuffer: 40 * 1024 * 1024 },
+    );
+    const wrapper = JSON.parse(out) as Record<string, any>;
+
+    // The wrapper is self-describing: the builder computes the count and a real digest.
+    expect(wrapper.doc_type).toBe("question_batch");
+    expect(wrapper.envelope_version).toBe("1.0");
+    expect(wrapper.batch.bank_id).toBe("C5_ENG_U09_QuestionBank_v1");
+    expect(wrapper.batch.item_count).toBe(wrapper.items.length);
+    expect(wrapper.batch.digest).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(new Set(wrapper.items.map((i: Row) => i.doc_type))).toEqual(new Set(["stimulus", "question"]));
+
+    const res = await importQuestionBatch(wrapper, ACTOR);
+
+    expect(res.verdict).toBe("PASS");
+    expect(res.itemsFailed).toBe(0);
+    expect(res.itemsPassed).toBe(wrapper.items.length);
+    // Per-element verdicts key on stimulus_id for stimuli and qid for questions.
+    expect(res.batchItems!.map((v) => v.qid)).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^STIM-/), expect.stringMatching(/^QP-/)]),
+    );
+    expect(currentRows()).toHaveLength(wrapper.items.length);
+  }, 120_000);
+
   it("rejects a NESTED batch whole (the one structural element bar)", async () => {
     const nested = await importQuestionBatch(wrap([wrap(clone(ENVELOPES.slice(0, 2))) as Row]), ACTOR);
 

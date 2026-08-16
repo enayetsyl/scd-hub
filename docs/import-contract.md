@@ -51,6 +51,19 @@ carries no content of its own — no `subject`, `class_level`, `provenance`, `re
 A **nested** `question_batch` inside `items` is also rejected whole — a batch is one level deep by
 construction. Everything else about an element is deliberately left to the per-element pass.
 
+**A batch carries whatever the bank produced — `stimulus` elements included** (D-#497). A Project-04
+bank is a `{stimuli, questions}` collection, and `build_question_envelopes.py` fans out one envelope
+per stimulus *and* per question; splitting the stimuli back out into separate uploads would defeat
+the point of batching. The doc-type name is therefore narrower than its contents by design. Stimulus
+elements take the same unchanged single-envelope path and supersede on `stimulus_id`, exactly as they
+do when imported alone.
+
+**Producing one:** `build_question_envelopes.py --batch [--bank-id ID] [--bank-version V]` wraps the
+envelopes it already builds. `item_count` is computed by the builder (never author-supplied) and
+`digest` is a real sha256 over the canonical `items` JSON; `bank_id` falls back to the source
+filename stem. Without `--batch` the builder still emits a bare array, so the pre-v1.1 flow is
+untouched.
+
 **Per-element, NOT all-or-nothing.** Each element is handed to the *unchanged* single-envelope import
 path — same schema gate, same payload closure, same L3/L4 passes, no new per-item validation logic.
 A bad element fails **alone** with its reason; its siblings still import. The `items` element marker
@@ -107,3 +120,4 @@ Changing one place without the others is a bug — follow `/skills/contract-sync
 |---|---|---|
 | v1.0 | 2026-06-09 | LOCKED (D-PROJ04-005). Plan doc-types + ratified question/stimulus payloads. |
 | v1.1 | 2026-08-15 | Additive: `doc_type: "question_batch"` — one upload wrapping N standard question envelopes. Principal ruling, 2026-08-15. v1.0 shapes unchanged and still accepted. |
+| v1.1 | 2026-08-16 | Clarification (no wire change): a batch may carry `stimulus` elements alongside questions (D-#497), and `build_question_envelopes.py --batch` emits the wrapper. |

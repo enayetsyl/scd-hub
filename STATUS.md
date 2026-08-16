@@ -386,8 +386,16 @@ _Updated: 2026-06-16 (**EximusEdu-familiar navigation reskin — branch `feat/dr
   assembled by original index, never completion order. App import screen now shows per-element
   verdicts (failed qids + reason always visible, full list behind a toggle, supersede count) and
   a pre-import notice distinguishing a question_batch WRAPPER from a question BANK.
-  **Next:** vendor `docs/import-contract.md` + `docs/import-contract.schema.json` back into
-  scd-central (the staging copy at `~/Downloads/hubexport_inbox/hub-export/` is still v1.0).
+  **PRODUCIBLE since 2026-08-16 (D-#497):** v1.1 shipped only the consumer half — nothing emitted a
+  batch, so the feature was live but dormant. `build_question_envelopes.py --batch` now wraps the
+  envelopes it already builds (`--bank-id` defaults to the source filename stem, `--bank-version`
+  defaults v1); `item_count` is COMPUTED and `digest` is a real sha256, so the wrapper is honestly
+  self-describing. Owner ruled a batch carries whatever the bank produced, STIMULI INCLUDED.
+  **Next (the last step to make it active end-to-end):** vendor the refreshed bundle into
+  scd-central — `docs/import-contract.md`, `docs/import-contract.schema.json`,
+  `server/import/validate_import.py` and `server/import/build_question_envelopes.py`. All FOUR are
+  stale in the staging copy at `~/Downloads/hubexport_inbox/hub-export/`; until they are refreshed
+  scd-central is authoring against v1.0 and cannot emit a batch.
 - **Daily entry (DE-1..DE-6, D-#477/#478) — COMPLETE: all six slices built — `docs/prd-daily-entry.md`:**
   owner ask — a teacher enters one day in THREE places (class note, homework declare,
   weekend assignment) and a guardian reads it back in three; and a parent whose child is
