@@ -50,8 +50,20 @@ jest.mock("../modules/trackers/models/ClassTestResult", () => ({
 }));
 
 const mockStudentFind = jest.fn();
+const mockStudentAggregate = jest.fn();
 jest.mock("../modules/foundation/models/Student", () => ({
-  Student: { find: (q: unknown) => mockStudentFind(q) },
+  Student: {
+    find: (q: unknown) => mockStudentFind(q),
+    // Roster counts are batched per section now (perf fix 2026-08-16).
+    aggregate: (p: unknown) => mockStudentAggregate(p),
+  },
+}));
+
+// The calendar is built ONCE per request from the holiday table (perf fix
+// 2026-08-16) instead of `examReportStatus` doing one query per day per exam.
+// Empty here ⇒ the pure Sun–Thu week rule, which is what these fixtures assume.
+jest.mock("../modules/routine/models/HolidayException", () => ({
+  HolidayException: { find: () => ({ select: () => ({ lean: async () => [] }) }) },
 }));
 
 const mockUserFind = jest.fn();
@@ -81,9 +93,42 @@ import { MESSAGE_TEMPLATE_REGISTRY } from "@scd/shared";
 
 const NOW = new Date(2026, 6, 20);
 
+/**
+ * `reportsStatus` no longer calls `examReportStatus` per exam — it batches the same
+ * three inputs (roster count, entered/present counts, one shared calendar). These
+ * helpers express a test's intent in those terms: "this exam has a roster of 10 and
+ * 4 results entered", which is what the mocked collaborator used to stand in for.
+ */
+type ExamCounts = { id: { toString(): string }; sectionId: unknown; roster: number; entered: number; present?: number };
+
+function withCounts(exams: ExamCounts[], submitted: Array<{ _id: unknown; latest: Date }> = []): void {
+  const bySection = new Map<string, number>();
+  for (const e of exams) bySection.set(String(e.sectionId), e.roster);
+  mockStudentAggregate.mockResolvedValue(
+    [...bySection.entries()].map(([id, n]) => ({ _id: { toString: () => id }, n })),
+  );
+  // Three aggregates now run against results: submitted, published, and status counts.
+  mockResAggregate.mockImplementation((pipeline: unknown) => {
+    const match = (pipeline as Array<{ $match?: Record<string, unknown> }>)[0]?.$match ?? {};
+    if ("submittedAt" in match) return Promise.resolve(submitted);
+    if ("publishedAt" in match) return Promise.resolve([]);
+    return Promise.resolve(
+      exams.flatMap((e) => {
+        const present = e.present ?? e.entered;
+        const rows: Array<{ _id: { testId: unknown; status: string }; n: number }> = [];
+        if (present > 0) rows.push({ _id: { testId: e.id, status: "PRESENT" }, n: present });
+        if (e.entered - present > 0)
+          rows.push({ _id: { testId: e.id, status: "ABSENT" }, n: e.entered - present });
+        return rows;
+      }),
+    );
+  });
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockStudentFind.mockReturnValue(leanChain([]));
+  mockStudentAggregate.mockResolvedValue([]);
   mockUserFind.mockReturnValue(leanChain([]));
   mockResAggregate.mockResolvedValue([]);
   // D-#373: one section on file for the chase lines (the fixture's SECTION).
@@ -165,37 +210,58 @@ describe("reportsStatus / principalDashboard", () => {
     const e1 = exam({ _id: oid(), testNumber: 1 });
     const e2 = exam({ _id: oid(), testNumber: 2 });
     mockCtFind.mockReturnValue(leanChain([e1, e2]));
-    mockExamReportStatus
-      .mockResolvedValueOnce(status(e1._id.toString(), { complete: true, enteredCount: 10 }))
-      .mockResolvedValueOnce(status(e2._id.toString(), { overdue: true, enteredCount: 4, schoolDaysLate: 2 }));
+    // e1 complete (10 of 10 entered); e2 incomplete and long past its deadline.
+    withCounts(
+      [
+        { id: e1._id, sectionId: SECTION, roster: 10, entered: 10 },
+        { id: e2._id, sectionId: SECTION, roster: 10, entered: 4 },
+      ],
+      [{ _id: e1._id, latest: new Date(2026, 6, 12) }],
+    );
     // D-#339: row enrichment — author name + newest result submittedAt.
     mockUserFind.mockReturnValue(leanChain([{ _id: T_A, name: "Teacher A" }]));
-    mockResAggregate.mockResolvedValue([{ _id: e1._id, latest: new Date(2026, 6, 12) }]);
 
     const rows = await reportsStatus({ asOf: NOW });
     expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({ testNumber: 1, state: "complete", subject: "MATH", teacherId: T_A.toString() });
-    expect(rows[1]).toMatchObject({ testNumber: 2, state: "overdue", schoolDaysLate: 2 });
+    expect(rows[1]).toMatchObject({ testNumber: 2, state: "overdue" });
+    expect(rows[1].schoolDaysLate).toBeGreaterThan(0); // derived from the shared calendar
     expect(rows[0].teacherName).toBe("Teacher A");
     expect(rows[0].submittedAt).toBe(new Date(2026, 6, 12).toISOString());
     expect(rows[1].submittedAt).toBeNull();
-    // examReportStatus reused with the injected now (deterministic)
-    expect(mockExamReportStatus).toHaveBeenCalledWith(e1._id.toString(), NOW);
+  });
+
+  // The perf property (2026-08-16): the roster/result reads and the calendar are
+  // batched for the WHOLE exam set. This used to be one calendar rebuild — ~70 DB
+  // round trips — per exam, which is what made the dashboard take a minute to load.
+  test("issues ONE roster read for the whole exam set, not one per exam", async () => {
+    const exams = [1, 2, 3, 4, 5].map((n) => exam({ _id: oid(), testNumber: n }));
+    mockCtFind.mockReturnValue(leanChain(exams));
+    withCounts(exams.map((e) => ({ id: e._id, sectionId: SECTION, roster: 10, entered: 10 })));
+
+    const rows = await reportsStatus({ asOf: NOW });
+    expect(rows).toHaveLength(5);
+    expect(mockStudentAggregate).toHaveBeenCalledTimes(1);
   });
 
   test("principalDashboard tallies the KPI partition + completion rate + overdue-by-teacher", async () => {
+    // The four states come from the DATA now: complete = fully entered; overdue =
+    // incomplete and past deadline (the 10 July exam); in_progress / not_started =
+    // incomplete but still inside the deadline (a 19 July exam, NOW being the 20th).
+    const RECENT = { examDate: new Date(2026, 6, 19) };
     const eDone = exam({ _id: oid(), requestedBy: T_A });
     const eOverA = exam({ _id: oid(), requestedBy: T_A });
     const eOverB = exam({ _id: oid(), requestedBy: T_B });
-    const eProg = exam({ _id: oid(), requestedBy: T_B });
-    const eNot = exam({ _id: oid(), requestedBy: T_B });
+    const eProg = exam({ _id: oid(), requestedBy: T_B, ...RECENT });
+    const eNot = exam({ _id: oid(), requestedBy: T_B, ...RECENT });
     mockCtFind.mockReturnValue(leanChain([eDone, eOverA, eOverB, eProg, eNot]));
-    mockExamReportStatus
-      .mockResolvedValueOnce(status(eDone._id.toString(), { complete: true, enteredCount: 10 }))
-      .mockResolvedValueOnce(status(eOverA._id.toString(), { overdue: true, enteredCount: 1 }))
-      .mockResolvedValueOnce(status(eOverB._id.toString(), { overdue: true, enteredCount: 0 }))
-      .mockResolvedValueOnce(status(eProg._id.toString(), { enteredCount: 5 }))
-      .mockResolvedValueOnce(status(eNot._id.toString(), { enteredCount: 0 }));
+    withCounts([
+      { id: eDone._id, sectionId: SECTION, roster: 10, entered: 10 },
+      { id: eOverA._id, sectionId: SECTION, roster: 10, entered: 1 },
+      { id: eOverB._id, sectionId: SECTION, roster: 10, entered: 0 },
+      { id: eProg._id, sectionId: SECTION, roster: 10, entered: 5 },
+      { id: eNot._id, sectionId: SECTION, roster: 10, entered: 0 },
+    ]);
     mockUserFind.mockReturnValue(leanChain([
       { _id: T_A, name: "Ustadh A" },
       { _id: T_B, name: "Ustadh B" },
@@ -301,10 +367,14 @@ describe("overdueChaseList", () => {
     const e2 = exam({ _id: oid(), testNumber: 2, requestedBy: T_A });
     const e3 = exam({ _id: oid(), testNumber: 1, subject: "ENG", requestedBy: T_B });
     mockCtFind.mockReturnValue(leanChain([e1, e2, e3]));
-    mockExamReportStatus
-      .mockResolvedValueOnce(status(e1._id.toString(), { overdue: true, enteredCount: 0, pendingCount: 10, schoolDaysLate: 3 }))
-      .mockResolvedValueOnce(status(e2._id.toString(), { overdue: true, enteredCount: 2, pendingCount: 8, schoolDaysLate: 1 }))
-      .mockResolvedValueOnce(status(e3._id.toString(), { complete: true, enteredCount: 10 })); // not overdue
+    // Overdue-ness, pending counts and lateness are all DERIVED now: e1/e2 sat the
+    // 10 July exam and are still incomplete on the 20th; e3 is fully entered, so it
+    // is complete and never reaches the chase list.
+    withCounts([
+      { id: e1._id, sectionId: SECTION, roster: 10, entered: 0 },
+      { id: e2._id, sectionId: SECTION, roster: 10, entered: 2 },
+      { id: e3._id, sectionId: SECTION, roster: 10, entered: 10 },
+    ]);
     mockUserFind.mockReturnValue(leanChain([{ _id: T_A, name: "Ustadh A", phone: "01711000000" }]));
 
     const list = await overdueChaseList({ asOf: NOW });
@@ -317,9 +387,12 @@ describe("overdueChaseList", () => {
     // its OWN numbered line carrying class+section, subject, test, date, how many
     // students are still missing, how late it is, and the CT id — the old comma-joined
     // "subject টেস্ট n (dd/mm)" named neither of two same-subject same-date exams.
+    // The lateness is the CALENDAR's answer now (10 July exam, 2-school-day deadline,
+    // read on 20 July), not an injected number — so if the school calendar ever
+    // changes shape, this byte-check fails loudly instead of drifting.
     const examList =
-      "১) তৃতীয় শ্রেণি (মূল) · গণিত · টেস্ট ১ · পরীক্ষা ১০/০৭ — ১০/১০ জনের ফলাফল বাকি · ৩ কর্মদিবস দেরি [CT-C3-MATH-0001]\n" +
-      "২) তৃতীয় শ্রেণি (মূল) · গণিত · টেস্ট ২ · পরীক্ষা ১০/০৭ — ৮/১০ জনের ফলাফল বাকি · ১ কর্মদিবস দেরি [CT-C3-MATH-0001]";
+      "১) তৃতীয় শ্রেণি (মূল) · গণিত · টেস্ট ১ · পরীক্ষা ১০/০৭ — ১০/১০ জনের ফলাফল বাকি · ৫ কর্মদিবস দেরি [CT-C3-MATH-0001]\n" +
+      "২) তৃতীয় শ্রেণি (মূল) · গণিত · টেস্ট ২ · পরীক্ষা ১০/০৭ — ৮/১০ জনের ফলাফল বাকি · ৫ কর্মদিবস দেরি [CT-C3-MATH-0001]";
     const expected = interpolate(MESSAGE_TEMPLATE_REGISTRY["class_test.overdue_chase.wa"].bnDefault, {
       TeacherName: "Ustadh A",
       Count: "২",
@@ -350,7 +423,7 @@ describe("overdueChaseList", () => {
   test("empty chase list when nothing is overdue", async () => {
     const e1 = exam({ _id: oid() });
     mockCtFind.mockReturnValue(leanChain([e1]));
-    mockExamReportStatus.mockResolvedValueOnce(status(e1._id.toString(), { complete: true, enteredCount: 10 }));
+    withCounts([{ id: e1._id, sectionId: SECTION, roster: 10, entered: 10 }]); // complete ⇒ never overdue
     const list = await overdueChaseList({ asOf: NOW });
     expect(list.entries).toEqual([]);
     expect(list.unreachableCount).toBe(0);

@@ -2132,7 +2132,7 @@ const STR_BN = {
   gmNone: "এখনো কোনো সদস্য নেই।",
   gmAddFrom: "শাখা থেকে যোগ করুন",
   gmNoStudents: "এই শাখায় কোনো শিক্ষার্থী নেই।",
-  // Create / retire a Quran-Arabic group (D-#500)
+  // Create / retire a Quran-Arabic group (D-#501)
   gmNewGroup: "নতুন গ্রুপ তৈরি করুন",
   gmNewGroupHint: "একটি স্তরকে ছেলে/মেয়ে আলাদা করতে হলে প্রতিটির জন্য আলাদা গ্রুপ তৈরি করুন, তারপর শিক্ষার্থীদের সরিয়ে নিন এবং রুটিনে ক্লাস বসান।",
   gmTrack: "ধারা",
@@ -5616,7 +5616,7 @@ const STR_EN: StrTable = {
   gmNone: "No members yet.",
   gmAddFrom: "Add from a section",
   gmNoStudents: "No students in this section.",
-  // Create / retire a Quran-Arabic group (D-#500)
+  // Create / retire a Quran-Arabic group (D-#501)
   gmNewGroup: "Create a new group",
   gmNewGroupHint: "To split one level into boys and girls, create a group for each, then move the students across and add their periods to the routine.",
   gmTrack: "Track",

@@ -1,5 +1,5 @@
 /**
- * SubjectGroup admin (D-#500) — creating and retiring a Quran/Arabic group.
+ * SubjectGroup admin (D-#501) — creating and retiring a Quran/Arabic group.
  *
  * `createSubjectGroup` existed on the server but was wired to no screen, and
  * there was no way to retire a group at all, so splitting a level (one combined

@@ -281,7 +281,7 @@ export default function GroupMembersScreen(_props: Props): React.ReactElement {
         ) : null}
 
         {/* Retire / restore the selected group — the other half of creating one.
-            Retiring is refused server-side while members remain (D-#500). */}
+            Retiring is refused server-side while members remain (D-#501). */}
         {selectedGroup ? (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
