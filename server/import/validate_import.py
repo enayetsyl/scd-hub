@@ -27,8 +27,18 @@ v0.2 diff vs v0.1 (Project-04 ratification, R-IMP5):
   - The REF-21 advisory scan stays PLAN-SURFACE-ONLY: questions deliberately get NO import
     curation scan (Project-04 decision 5-B; the build-side REF-01+REF-21 self-scan is the gate).
 
+v1.1 diff vs v1.0 (2026-08-15, Principal ruling — batch import):
+  - doc_type += 'question_batch', a WRAPPER carrying N standard question envelopes.
+  - New L1b pass (layer1_batch): batch.item_count MUST equal len(items) and the batch must
+    be within the size guard (BATCH_MAX_ITEMS) — either mismatch FAILs the WHOLE batch, so
+    nothing is imported. The wrapper is self-describing or it is rejected.
+  - No per-item logic lives here. The app unwraps the batch and re-invokes THIS harness once
+    per element, unchanged — a bad element fails alone, the rest still import.
+  - L2/L3/L4/ADV do not apply to the wrapper (it has no payload, no indexed copies, no surface).
+
 Layers:
   L1  Envelope schema       — outer contract (Draft 2020-12) + doc_type discriminator + light marker.
+  L1b question_batch wrapper — item_count vs items length + size guard (batch doc-type only).
   L2  Payload schema        — full closed validation by doc_type (plan / question / stimulus).
   L3  Consistency           — envelope indexed copies vs payload (plan: subject/class_level/
                               curation_tag/address/pinned_to; question: tags.*).
@@ -48,6 +58,8 @@ def warn(code, msg): WARNS.append((code, msg))
 def advise(code, msg): ADVISORIES.append((code, msg))
 
 PLAN_DOC_TYPES = {"chapter_plan", "session_plan"}
+BATCH_DOC_TYPE = "question_batch"   # contract v1.1 — wrapper; L1 only (see layer1_batch)
+BATCH_MAX_ITEMS = 500               # size guard; mirrors shared/vocab.ts BATCH_MAX_ITEMS
 STIM_ID_RE = re.compile(r"^STIM-[A-Z]+-C[1-5]-U\d+(-L\d+)?-\d{2,}$")
 
 # REF-19 canonical topic slugs (auto-extracted from LOCKED_REF-19 v1.10, 2026-06-09; the
@@ -102,6 +114,24 @@ def layer1_envelope(env, env_schema):
     v = Draft202012Validator(env_schema)
     for e in sorted(v.iter_errors(env), key=lambda e: list(e.path)):
         fail("ENVELOPE", f"{list(e.path)}: {e.message}")
+
+
+# ---- L1b: question_batch wrapper self-description (contract v1.1) -------
+def layer1_batch(env):
+    """The wrapper is self-describing or it is rejected: item_count must equal
+    len(items), and the batch must be within the size guard. Both are whole-batch
+    FAILs — nothing in the batch is importable. Per-ITEM validation is NOT done here;
+    the app re-runs this harness once per element through the unchanged single path."""
+    if env.get("doc_type") != BATCH_DOC_TYPE:
+        return
+    items = env.get("items")
+    if not isinstance(items, list):
+        return  # L1 already FAILed the shape
+    declared = (env.get("batch") or {}).get("item_count")
+    if declared is not None and declared != len(items):
+        fail("BATCH-COUNT", f"batch.item_count={declared} != items length {len(items)} — batch REJECTED whole, nothing imported")
+    if len(items) > BATCH_MAX_ITEMS:
+        fail("BATCH-SIZE", f"batch carries {len(items)} items; the size guard is {BATCH_MAX_ITEMS} — split the upload")
 
 
 # ---- L2: payload schema (dispatch by doc_type) --------------------------
@@ -233,6 +263,8 @@ def run(env_path, env_schema_path, schema_paths, ref19_slugs, lexicon_path):
             layer2_payload(env, load_json(schema_paths["question"]), "Q-PAYLOAD")
         elif dt == "stimulus":
             layer2_payload(env, load_json(schema_paths["stimulus"]), "S-PAYLOAD")
+        elif dt == BATCH_DOC_TYPE:
+            layer1_batch(env)
         # question_set: no closed schema (app-generated) — envelope marker only.
         consistency(env)
         question_semantics(env, ref19_slugs)

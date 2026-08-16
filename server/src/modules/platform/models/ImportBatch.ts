@@ -23,6 +23,14 @@ export interface IImportBatch extends Document {
   advisories: string[];
   /** Set to the created artifact's _id on PASS. */
   artifactId?: Types.ObjectId;
+  /** question_batch (contract v1.1): on the per-ITEM row, the _id of the batch row this
+   *  item arrived under. Unset on the batch row itself and on single-envelope imports. */
+  parentBatchId?: Types.ObjectId;
+  /** question_batch (contract v1.1), batch row only: the wrapper's self-description. */
+  bankId?: string;
+  bankVersion?: string;
+  itemCount?: number;
+  digest?: string;
   importedBy: Types.ObjectId;
   importedAt: Date;
 }
@@ -42,6 +50,11 @@ const ImportBatchSchema = new Schema<IImportBatch>(
     warnings: [{ type: String }],
     advisories: [{ type: String }],
     artifactId: { type: Schema.Types.ObjectId },
+    parentBatchId: { type: Schema.Types.ObjectId },
+    bankId: { type: String },
+    bankVersion: { type: String },
+    itemCount: { type: Number },
+    digest: { type: String },
     importedBy: { type: Schema.Types.ObjectId, required: true },
     importedAt: { type: Date, required: true, default: () => new Date() },
   },
@@ -50,5 +63,7 @@ const ImportBatchSchema = new Schema<IImportBatch>(
 
 ImportBatchSchema.index({ importedBy: 1, importedAt: -1 });
 ImportBatchSchema.index({ verdict: 1, importedAt: -1 });
+// Batch traceability: the per-item rows of one question_batch upload (contract v1.1).
+ImportBatchSchema.index({ parentBatchId: 1 }, { sparse: true });
 
 export const ImportBatch = model<IImportBatch>("ImportBatch", ImportBatchSchema);

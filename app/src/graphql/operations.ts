@@ -1314,6 +1314,17 @@ export const WA_LINK_QUERY = gql<
 // Admin (J1 import, J5 users + scope grants)
 // ===========================================================================
 
+/** One element's outcome inside a question_batch upload (import contract v1.1). */
+export interface BatchItemVerdictT {
+  qid: string;
+  /** imported | skipped | failed */
+  status: string;
+  reason: string | null;
+  artifactId: string | null;
+  /** True when a re-imported qid superseded a prior version (not a duplicate row). */
+  superseded: boolean | null;
+}
+
 export interface ImportResultT {
   verdict: string;
   failChecks: string[];
@@ -1327,7 +1338,20 @@ export interface ImportResultT {
   itemsTotal: number | null;
   itemsPassed: number | null;
   itemsFailed: number | null;
+  /** question_batch (v1.1): per-element verdicts (null on every other path). */
+  batchItems: BatchItemVerdictT[] | null;
+  bankId: string | null;
+  bankVersion: string | null;
 }
+
+/** The v1.1 batch fields, shared by both import mutations. */
+const BATCH_RESULT_FIELDS = `
+      itemsTotal
+      itemsPassed
+      itemsFailed
+      bankId
+      bankVersion
+      batchItems { qid status reason artifactId superseded }`;
 
 export const IMPORT_ENVELOPE = gql<{ importEnvelope: ImportResultT }, { envelopeJson: string }>`
   mutation ImportEnvelope($envelopeJson: String!) {
@@ -1338,7 +1362,7 @@ export const IMPORT_ENVELOPE = gql<{ importEnvelope: ImportResultT }, { envelope
       advisories
       artifactId
       batchId
-      envelopeJson
+      envelopeJson${BATCH_RESULT_FIELDS}
     }
   }
 `;
@@ -1366,10 +1390,7 @@ export const IMPORT_FILES = gql<
       advisories
       artifactId
       batchId
-      envelopeJson
-      itemsTotal
-      itemsPassed
-      itemsFailed
+      envelopeJson${BATCH_RESULT_FIELDS}
     }
   }
 `;
