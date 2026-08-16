@@ -7,7 +7,12 @@
  * artifact       — J1.5/J1.7 open one plan (returns rendered_markdown; app never re-renders)
  */
 import { builder } from "../../../schema";
-import { importEnvelope as importEnvelopeSvc, importContentFiles, type ImportFile } from "../services/ContentService";
+import {
+  importEnvelope as importEnvelopeSvc,
+  importContentFiles,
+  type ImportFile,
+  type BatchItemVerdict,
+} from "../services/ContentService";
 import { ContentArtifact } from "../models/ContentArtifact";
 import { User } from "../../foundation/models/User";
 import { ForbiddenError } from "../../../middleware/authz";
@@ -34,11 +39,31 @@ interface ImportResultShape {
   itemsTotal?: number | null;
   itemsPassed?: number | null;
   itemsFailed?: number | null;
+  batchItems?: BatchItemVerdict[] | null;
+  bankId?: string | null;
+  bankVersion?: string | null;
 }
+
+// Per-element verdict inside a question_batch upload (import contract v1.1).
+const BatchItemVerdictRef = builder.objectRef<BatchItemVerdict>("BatchItemVerdict");
+BatchItemVerdictRef.implement({
+  description:
+    "One element's outcome inside a question_batch upload (import contract v1.1). " +
+    "`superseded` marks a re-imported qid: per the single-import rule it became a new " +
+    "version and the prior current row was demoted — not a duplicate row.",
+  fields: (t) => ({
+    qid: t.exposeString("qid"),
+    status: t.exposeString("status", { description: "imported | skipped | failed" }),
+    reason: t.string({ nullable: true, resolve: (r) => r.reason ?? null }),
+    artifactId: t.string({ nullable: true, resolve: (r) => r.artifactId ?? null }),
+    superseded: t.boolean({ nullable: true, resolve: (r) => r.superseded ?? null }),
+  }),
+});
 
 const ImportResultRef = builder.objectRef<ImportResultShape>("ImportResult");
 ImportResultRef.implement({
-  description: "Result of an import (importEnvelope, importFiles, or a question-bank fan-out)",
+  description:
+    "Result of an import (importEnvelope, importFiles, a question-bank fan-out, or a v1.1 question_batch)",
   fields: (t) => ({
     verdict: t.exposeString("verdict"),
     failChecks: t.field({ type: ["String"], resolve: (r) => r.failChecks }),
@@ -52,6 +77,15 @@ ImportResultRef.implement({
     itemsTotal: t.int({ nullable: true, resolve: (r) => r.itemsTotal ?? null }),
     itemsPassed: t.int({ nullable: true, resolve: (r) => r.itemsPassed ?? null }),
     itemsFailed: t.int({ nullable: true, resolve: (r) => r.itemsFailed ?? null }),
+    /** question_batch (v1.1): one verdict per element, in upload order (null on other paths). */
+    batchItems: t.field({
+      type: [BatchItemVerdictRef],
+      nullable: true,
+      resolve: (r) => r.batchItems ?? null,
+    }),
+    /** question_batch (v1.1): echo of the wrapper's self-description. */
+    bankId: t.string({ nullable: true, resolve: (r) => r.bankId ?? null }),
+    bankVersion: t.string({ nullable: true, resolve: (r) => r.bankVersion ?? null }),
   }),
 });
 

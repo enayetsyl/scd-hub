@@ -19,6 +19,7 @@ import * as os from "os";
 import * as path from "path";
 import * as fs from "fs/promises";
 import type { Types } from "mongoose";
+import { BATCH_DOC_TYPE, BATCH_MAX_ITEMS } from "@scd/shared";
 import { ContentArtifact } from "../models/ContentArtifact";
 import { ImportBatch } from "../../platform/models/ImportBatch";
 import { CorpusEvent } from "../../corpus/models/CorpusEvent";
@@ -79,6 +80,28 @@ export interface ImportResult {
   itemsTotal?: number;
   itemsPassed?: number;
   itemsFailed?: number;
+  /** Set on the question_batch path (contract v1.1): one verdict per element, in upload order. */
+  batchItems?: BatchItemVerdict[];
+  /** question_batch only: echo of the wrapper's self-description. */
+  bankId?: string;
+  bankVersion?: string;
+}
+
+/**
+ * One element's outcome inside a question_batch upload (contract v1.1).
+ * `imported` — the element went through the single-envelope path and produced an artifact.
+ *   `superseded` marks the duplicate case: a prior current version of the same qid existed and
+ *   was demoted (the found single-import rule; see importQuestionBatch's doc comment).
+ * `skipped`  — the element was not attempted (reserved; the batch path attempts every element).
+ * `failed`   — the element was rejected; `reason` carries the gate's fail lines.
+ */
+export interface BatchItemVerdict {
+  /** payload.qid / payload.stimulus_id, else `item[<index>]`. */
+  qid: string;
+  status: "imported" | "skipped" | "failed";
+  reason?: string;
+  artifactId?: string;
+  superseded?: boolean;
 }
 
 /** Run the Python import harness against an envelope JSON object. */
@@ -134,11 +157,15 @@ async function persistEnvelope(
   envelope: Record<string, unknown>,
   actorId: Types.ObjectId | string,
   gate: GateOutput,
-): Promise<ImportResult> {
+  /** question_batch only (contract v1.1): the one batch id this element arrived under.
+   *  Recorded on the item's audit row (parentBatchId) and on its artifact (importBatchId). */
+  parentBatchId?: Types.ObjectId,
+): Promise<ImportResult & { superseded?: boolean }> {
   const prov = (envelope.provenance ?? {}) as Record<string, unknown>;
   const addr = (envelope.address ?? {}) as Record<string, unknown>;
 
   const batchDoc = await ImportBatch.create({
+    parentBatchId,
     envelopeSnapshot: envelope,
     // A malformed envelope may omit doc_type; the harness already FAILed it, but
     // the audit row must still be written (J1.2), so fall back to a sentinel
@@ -228,6 +255,7 @@ async function persistEnvelope(
     renderedMarkdown: envelope.rendered_markdown,
     current: true,
     priorVersionId: prior ? prior._id : undefined,
+    importBatchId: parentBatchId,
     importedBy: actorId,
     importedAt: new Date(),
   });
@@ -245,7 +273,9 @@ async function persistEnvelope(
       docType: envelope.doc_type,
       subject: envelope.subject,
       classLevel: envelope.class_level,
-      batchId: batchDoc._id.toString(),
+      // In a question_batch the corpus event carries the ONE upload id, so analytics can
+      // count an upload as a unit without a join back to the per-item audit rows.
+      batchId: (parentBatchId ?? batchDoc._id).toString(),
     },
   });
 
@@ -256,14 +286,23 @@ async function persistEnvelope(
     advisories: gate.advisories,
     artifactId: artifact._id.toString(),
     batchId: batchDoc._id.toString(),
+    superseded: Boolean(prior),
   };
 }
 
-/** Full single-envelope import pipeline: validate → persist → audit → corpus event. */
+/**
+ * Envelope import entry point. Dispatches on `doc_type` exactly as before, with ONE new
+ * branch: a v1.1 `question_batch` wrapper is unwrapped by importQuestionBatch, which then
+ * feeds each element back through this same single-envelope pipeline. Every other doc_type
+ * takes the untouched path: validate → persist → audit → corpus event.
+ */
 export async function importEnvelope(
   envelope: Record<string, unknown>,
   actorId: Types.ObjectId | string,
 ): Promise<ImportResult> {
+  if (envelope.doc_type === BATCH_DOC_TYPE) {
+    return importQuestionBatch(envelope, actorId);
+  }
   const gate = await runImportGate(envelope);
   return persistEnvelope(envelope, actorId, gate);
 }
@@ -449,6 +488,253 @@ export async function importQuestionBank(
     itemsTotal: total,
     itemsPassed: total,
     itemsFailed: 0,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// question_batch ingest (import contract v1.1, Principal ruling 2026-08-15):
+// ONE upload wrapping N standard question envelopes.
+// ---------------------------------------------------------------------------
+
+/** True when a parsed JSON object is a v1.1 question_batch wrapper. */
+export function isQuestionBatch(json: Record<string, unknown> | null): boolean {
+  return Boolean(json && json.doc_type === BATCH_DOC_TYPE);
+}
+
+/**
+ * How many envelopes may sit in the gate at once. Each one spawns a Python process, so
+ * an unbounded `Promise.all` over a 500-item batch would try to run 500 interpreters —
+ * the box thrashes and the whole upload gets slower, not faster. Capped to the machine's
+ * cores (minus one for the event loop), within a sane floor/ceiling; override for tuning.
+ */
+const GATE_CONCURRENCY = (() => {
+  const fromEnv = Number(process.env.IMPORT_GATE_CONCURRENCY);
+  if (Number.isFinite(fromEnv) && fromEnv >= 1) return Math.floor(fromEnv);
+  return Math.max(2, Math.min(12, (os.cpus()?.length ?? 4) - 1));
+})();
+
+/**
+ * How many elements may be PERSISTED at once. These are DB round-trips, not subprocesses,
+ * so the useful cap is higher than the gate's — the limit is the Mongo pool, not the CPU.
+ */
+const PERSIST_CONCURRENCY = (() => {
+  const fromEnv = Number(process.env.IMPORT_PERSIST_CONCURRENCY);
+  if (Number.isFinite(fromEnv) && fromEnv >= 1) return Math.floor(fromEnv);
+  return 8;
+})();
+
+/**
+ * The identity a supersede races on — exactly the version key `persistEnvelope` looks up.
+ * Two elements sharing this string MUST be persisted in order (read-then-write); two that
+ * differ can never touch the same rows and are safe to run concurrently.
+ */
+function versionKeyOf(env: Record<string, unknown>): string {
+  const p = (env.payload ?? {}) as Record<string, unknown>;
+  if (env.doc_type === "question") return `q:${String(p.qid)}`;
+  if (env.doc_type === "stimulus") return `s:${String(p.stimulus_id)}`;
+  const a = (env.address ?? {}) as Record<string, unknown>;
+  return `o:${String(env.doc_type)}:${String(env.subject)}:${String(env.class_level)}:${String(a.anchor_word)}:${String(a.number)}`;
+}
+
+/**
+ * Map with bounded concurrency, preserving INPUT ORDER in the result array.
+ * (No dependency added for this — it is eight lines and the repo has no p-limit.)
+ */
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    for (;;) {
+      const i = next++;
+      if (i >= items.length) return;
+      results[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+/**
+ * Import a question_batch wrapper (contract v1.1).
+ *
+ * WRAPPER-LEVEL (whole-batch, nothing imported on failure):
+ *   - `items` must be a non-empty array;
+ *   - `batch.item_count` must equal `items.length` — the wrapper is self-describing or it is
+ *     rejected;
+ *   - `items.length` must be within the size guard (BATCH_MAX_ITEMS = 500);
+ *   - the wrapper itself must clear the envelope schema (the same Python gate, L1 + L1b).
+ *
+ * ELEMENT-LEVEL (NOT all-or-nothing): each element is handed to the UNCHANGED single-envelope
+ * path (`runImportGate` → `persistEnvelope`). No new per-item validation logic exists here.
+ * A bad element fails alone with its reason; the rest still import.
+ *
+ * DUPLICATE HANDLING — the rule was READ off the existing single-import path
+ * (`persistEnvelope`, the R-C7 supersede-not-overwrite block) and is replicated per element,
+ * not re-invented: for `doc_type: "question"` the version key is
+ * `{docType:"question", envelopeJson.payload.qid, current:true}`. If a current row for that
+ * qid exists it is flipped to `current:false` and a NEW artifact is created with
+ * `priorVersionId` pointing at it. So a re-imported qid is a VERSION BUMP, never an
+ * overwrite and never a second live row: the artifact count grows, the `current:true` count
+ * does not. Those elements are reported `imported` with `superseded: true`.
+ *
+ * The batch gets ONE batchId (the wrapper's own ImportBatch row). It is stamped on every
+ * imported item's artifact (`importBatchId`) and on each item's own audit row
+ * (`parentBatchId`), so one upload is traceable in both directions.
+ */
+export async function importQuestionBatch(
+  wrapper: Record<string, unknown>,
+  actorId: Types.ObjectId | string,
+): Promise<ImportResult> {
+  const batchMeta = (wrapper.batch ?? {}) as Record<string, unknown>;
+  const items = wrapper.items;
+
+  // --- wrapper-level guards. These reject the batch WHOLE; nothing is persisted. ---
+  if (!Array.isArray(items) || items.length === 0) {
+    return failResult("question_batch: `items` must be a non-empty array — batch rejected, nothing imported.");
+  }
+  if (items.length > BATCH_MAX_ITEMS) {
+    return failResult(
+      `question_batch: ${items.length} items exceeds the ${BATCH_MAX_ITEMS}-item size guard — batch rejected, nothing imported. Split the upload.`,
+    );
+  }
+  const declared = batchMeta.item_count;
+  if (typeof declared !== "number" || declared !== items.length) {
+    return failResult(
+      `question_batch: batch.item_count=${JSON.stringify(declared)} does not match items length ${items.length} — batch rejected, nothing imported.`,
+    );
+  }
+
+  // The wrapper passes through the same Python gate as any other envelope (L1 + L1b).
+  const wrapperGate = await runImportGate(wrapper);
+  if (wrapperGate.verdict === "FAIL") {
+    return {
+      verdict: "FAIL",
+      failChecks: wrapperGate.failChecks,
+      warnings: wrapperGate.warnings,
+      advisories: wrapperGate.advisories,
+      batchId: "n/a",
+      itemsTotal: items.length,
+      itemsPassed: 0,
+      itemsFailed: 0,
+      batchItems: [],
+    };
+  }
+
+  // --- the ONE batch row: its _id is the batchId carried by every imported item. ---
+  const batchRow = await ImportBatch.create({
+    // The wrapper snapshot without `items` — the elements get their own audit rows, and a
+    // 500-item copy would bloat every batch row for no added traceability.
+    envelopeSnapshot: { ...wrapper, items: `[${items.length} items — see parentBatchId rows]` },
+    docType: BATCH_DOC_TYPE,
+    bankId: typeof batchMeta.bank_id === "string" ? batchMeta.bank_id : undefined,
+    bankVersion: typeof batchMeta.bank_version === "string" ? batchMeta.bank_version : undefined,
+    itemCount: items.length,
+    digest: typeof batchMeta.digest === "string" ? batchMeta.digest : undefined,
+    verdict: "PASS",
+    failChecks: [],
+    warnings: wrapperGate.warnings,
+    advisories: wrapperGate.advisories,
+    importedBy: actorId,
+    importedAt: new Date(),
+  });
+  const batchId = batchRow._id;
+
+  // --- PHASE 1 (parallel): gate every element. ---
+  // Gating is pure — a temp file, a Python process, its stdout — so elements are
+  // independent and safe to run concurrently, bounded by GATE_CONCURRENCY. This is the
+  // slow half (one interpreter spawn per item); the win scales with the core count.
+  type Gated =
+    | { ok: false; ref: string; reason: string }
+    | { ok: true; ref: string; env: Record<string, unknown>; gate: GateOutput };
+
+  const gated = await mapLimit(items, GATE_CONCURRENCY, async (raw, i): Promise<Gated> => {
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+      return { ok: false, ref: `item[${i}]`, reason: "element is not a JSON object" };
+    }
+    const env = raw as Record<string, unknown>;
+    const ref = envelopeRef(env) || `item[${i}]`;
+    return { ok: true, ref, env, gate: await runImportGate(env) };
+  });
+
+  // --- PHASE 2 (parallel ACROSS version keys, ordered WITHIN one): persist. ---
+  // Superseding is a read-then-write (findOne current:true -> updateOne current:false ->
+  // create), so two elements sharing a version key would race and could leave two live rows
+  // or a broken priorVersionId chain. Elements with DIFFERENT keys touch disjoint rows and
+  // cannot interfere, so the batch is partitioned by key: partitions run concurrently, and
+  // each partition runs strictly in upload order. A duplicate qid inside one batch therefore
+  // still behaves exactly like importing those two envelopes back-to-back on the single path.
+  const persisted = new Array<(ImportResult & { superseded?: boolean }) | undefined>(gated.length);
+  const partitions = new Map<string, number[]>();
+  gated.forEach((g, i) => {
+    if (!g.ok) return;
+    const key = versionKeyOf(g.env);
+    const bucket = partitions.get(key);
+    if (bucket) bucket.push(i);
+    else partitions.set(key, [i]);
+  });
+
+  await mapLimit([...partitions.values()], PERSIST_CONCURRENCY, async (indices) => {
+    for (const i of indices) {
+      const g = gated[i];
+      if (!g.ok) continue;
+      persisted[i] = await persistEnvelope(g.env, actorId, g.gate, batchId);
+    }
+  });
+
+  // Verdicts are assembled by walking the ORIGINAL order, never completion order.
+  const verdicts: BatchItemVerdict[] = [];
+  const warnings: string[] = [];
+  const advisories: string[] = [];
+  let imported = 0;
+  let failed = 0;
+
+  gated.forEach((g, i) => {
+    if (!g.ok) {
+      failed += 1;
+      verdicts.push({ qid: g.ref, status: "failed", reason: g.reason });
+      return;
+    }
+    const res = persisted[i]!;
+
+    for (const w of res.warnings) warnings.push(`${g.ref}: ${w}`);
+    for (const a of res.advisories) advisories.push(`${g.ref}: ${a}`);
+
+    if (res.verdict === "FAIL") {
+      failed += 1;
+      verdicts.push({
+        qid: g.ref,
+        status: "failed",
+        reason: res.failChecks.join("; ") || "rejected by the import gate",
+      });
+    } else {
+      imported += 1;
+      verdicts.push({
+        qid: g.ref,
+        status: "imported",
+        artifactId: res.artifactId,
+        superseded: res.superseded,
+      });
+    }
+  });
+
+  // The batch row records the roll-up. Verdict is PASS when at least one element imported —
+  // a partially-imported batch is a real, recorded outcome, not a failure of the upload.
+  const verdict: "PASS" | "FAIL" = imported > 0 ? "PASS" : "FAIL";
+  const failChecks = verdicts.filter((v) => v.status === "failed").map((v) => `${v.qid}: ${v.reason}`);
+  await ImportBatch.updateOne({ _id: batchId }, { $set: { verdict, failChecks } });
+
+  return {
+    verdict,
+    failChecks,
+    warnings,
+    advisories,
+    batchId: batchId.toString(),
+    itemsTotal: items.length,
+    itemsPassed: imported,
+    itemsFailed: failed,
+    batchItems: verdicts,
+    bankId: typeof batchMeta.bank_id === "string" ? batchMeta.bank_id : undefined,
+    bankVersion: typeof batchMeta.bank_version === "string" ? batchMeta.bank_version : undefined,
   };
 }
 

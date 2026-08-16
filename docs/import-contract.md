@@ -4,11 +4,17 @@ The machine-readable contract is `docs/import-contract.schema.json` (JSON Schema
 that file is the source of truth. This page is the human-readable orientation; the operational flow
 lives in `docs/import-workflow.md`.
 
+> **Contract v1.1 — 2026-08-15.** Adds the `question_batch` doc-type (batch import). Ruled by the
+> Principal on 2026-08-15. **Every v1.0 shape is unchanged and still accepted**: this release is
+> purely additive, and a v1.0 envelope validates byte-identically before and after. `envelope_version`
+> remains `"1.0"` (see Versioning). This file is vendored back into **scd-central**.
+
 ## Shape
 One **unified envelope** carries everything into the app: a stable OUTER contract plus a `payload`
-selected by `doc_type` ∈ {chapter_plan, session_plan, question, question_set, stimulus}. STATUS:
-**LOCKED v1.0** (Project-04, D-#19). `envelope_version` stays `"1.0"` — question + stimulus were
-ADDITIVE (new doc_type + branch + `tags.paper_role`), per the outer-contract stability rule.
+selected by `doc_type` ∈ {chapter_plan, session_plan, question, question_set, stimulus,
+**question_batch**}. STATUS: **v1.1** (batch import, 2026-08-15); v1.0 LOCKED (Project-04, D-#19).
+`envelope_version` stays `"1.0"` — question + stimulus were ADDITIVE (new doc_type + branch +
+`tags.paper_role`), and `question_batch` is additive on the same rule.
 
 - **Outer metadata** (indexed, app-owned): `envelope_version`, `doc_type`, `subject`, `class_level`,
   `address` (anchor_word/number/title), `curation_tag`, `pinned_to`, `provenance`
@@ -21,9 +27,57 @@ ADDITIVE (new doc_type + branch + `tags.paper_role`), per the outer-contract sta
   are LIGHT marker-gates; full closure is enforced by the harness L2 pass. Questions/stimuli are
   app-rendered (no `rendered_markdown`).
 
+## Batch import — `doc_type: "question_batch"` (v1.1)
+A batch of 100+ question items needs **one upload**, so v1.1 adds a WRAPPER doc-type. The wrapper
+carries no content of its own — no `subject`, `class_level`, `provenance`, `review_status` or
+`payload` — only `batch` metadata and an `items` array:
+
+```json
+{
+  "envelope_version": "1.0",
+  "doc_type": "question_batch",
+  "batch": { "bank_id": "...", "bank_version": "...", "item_count": 110, "digest": "..." },
+  "items": [ /* N standard question envelopes, each exactly the shape single import accepts */ ]
+}
+```
+
+`batch.digest` is optional; `bank_id`, `bank_version` and `item_count` are required.
+
+**Whole-batch rejection** (nothing imported, no rows written) on exactly three conditions:
+- `items` is absent, not an array, or empty;
+- `batch.item_count` ≠ `items.length` — *the wrapper is self-describing or it is rejected*;
+- `items.length` > **500** (the size guard; split the upload).
+
+A **nested** `question_batch` inside `items` is also rejected whole — a batch is one level deep by
+construction. Everything else about an element is deliberately left to the per-element pass.
+
+**Per-element, NOT all-or-nothing.** Each element is handed to the *unchanged* single-envelope import
+path — same schema gate, same payload closure, same L3/L4 passes, no new per-item validation logic.
+A bad element fails **alone** with its reason; its siblings still import. The `items` element marker
+in the schema is intentionally the loosest possible one for this reason: tightening it would silently
+convert per-item failures into whole-batch rejections.
+
+**One `batchId` per upload.** The wrapper gets a single `ImportBatch` row; that id is stamped on
+every imported item's artifact (`importBatchId`) and on each element's own audit row
+(`parentBatchId`), so an upload is traceable in both directions.
+
+**Response**: per-element verdicts — `imported` / `skipped` / `failed(reason)` — keyed by `qid`, plus
+the summary tallies (`itemsTotal` / `itemsPassed` / `itemsFailed`) and the `batchId`.
+
+**Duplicate handling** is *not* new behaviour: a re-imported `qid` follows the existing single-import
+rule exactly. That rule was read off the live import path (`persistEnvelope`, R-C7
+supersede-not-overwrite), not assumed: the version key is
+`{docType:"question", envelopeJson.payload.qid, current:true}`; a matching current row is flipped to
+`current:false` and a **new** artifact is created with `priorVersionId` pointing at it. So a
+re-imported item is a **version bump** — never an overwrite, never a second live row. Version history
+grows; the count of `current:true` rows per qid stays at one. Such elements report `imported` with
+`superseded: true`.
+
 ## Validation (the gate)
 `server/import/validate_import.py` enforces the contract at the boundary:
 - **L1 — envelope schema:** outer contract + `doc_type` discriminator + light payload marker.
+- **L1b — `question_batch` wrapper (v1.1):** `batch.item_count` vs `items` length + the 500-item size
+  guard. Batch doc-type only; both are whole-batch FAILs.
 - **L2 — payload schema:** full closed validation, dispatched by `doc_type` — plan →
   `LOCKED_C5_PlanSchema_v1.json`, question → `LOCKED_QuestionPayload_Schema_v1.json`, stimulus →
   `LOCKED_StimulusPayload_Schema_v1.json` (all next to the harness; resolved by glob).
@@ -42,3 +96,14 @@ Changing one place without the others is a bug — follow `/skills/contract-sync
 ## Versioning
 - Outer-contract change → bump `envelope_version` + migration (a Principal/design decision).
 - New plan kind → additive (doc_type value + schema branch); `envelope_version` stays 1.x.
+- **Contract doc version vs `envelope_version`** — these are two different numbers, and v1.1 is the
+  first release where they visibly differ. The *document/contract* revision is **v1.1**; the on-the-wire
+  `envelope_version` field stays the string **`"1.0"`**, exactly as it did when `question` and
+  `stimulus` were added, because `question_batch` is additive. Producers (scd-central) must keep
+  emitting `"1.0"`; `"1.1"` is **not** accepted as an `envelope_version` value.
+
+## Change log (this contract)
+| Version | Date | Change |
+|---|---|---|
+| v1.0 | 2026-06-09 | LOCKED (D-PROJ04-005). Plan doc-types + ratified question/stimulus payloads. |
+| v1.1 | 2026-08-15 | Additive: `doc_type: "question_batch"` — one upload wrapping N standard question envelopes. Principal ruling, 2026-08-15. v1.0 shapes unchanged and still accepted. |
