@@ -10,7 +10,7 @@
  * from a passed-in `now`, never a stored status; the cross-exam Reports-Status /
  * overdue-by-teacher aggregates are CT-4.
  */
-import { resolveDayType } from "../routine/calendar";
+import { buildDayTypeResolver } from "../routine/calendar";
 
 const DAY_MS = 86_400_000;
 
@@ -101,10 +101,31 @@ export function deriveOverdue(
  */
 export async function buildIsOpenDay(examDate: Date, spanDays = 90): Promise<IsOpenDay> {
   const start = atMidnight(examDate);
+  const end = new Date(start.getTime() + spanDays * DAY_MS);
+  // ONE query for the window (was one per day — 224 of the class-test dashboard's
+  // 265 round trips were this loop re-reading a single-row holiday table).
+  const dayType = await buildDayTypeResolver(start, end);
   const open = new Set<number>();
   for (let i = 0; i <= spanDays; i++) {
     const day = new Date(start.getTime() + i * DAY_MS);
-    if ((await resolveDayType(day)) === "FULL") open.add(atMidnight(day).getTime());
+    if (dayType(day) === "FULL") open.add(atMidnight(day).getTime());
+  }
+  return (d: Date) => open.has(atMidnight(d).getTime());
+}
+
+/**
+ * The same predicate for an ARBITRARY window, so a caller with many exams builds the
+ * calendar ONCE and reuses it, instead of rebuilding a ~70-day window per exam.
+ * `deriveOverdue`/`deadlineFrom` are pure, so they can take this directly.
+ */
+export async function buildIsOpenDayForRange(from: Date, to: Date): Promise<IsOpenDay> {
+  const start = atMidnight(from);
+  const end = atMidnight(to);
+  const dayType = await buildDayTypeResolver(start, end);
+  const open = new Set<number>();
+  for (let t = start.getTime(); t <= end.getTime(); t += DAY_MS) {
+    const day = new Date(t);
+    if (dayType(day) === "FULL") open.add(atMidnight(day).getTime());
   }
   return (d: Date) => open.has(atMidnight(d).getTime());
 }
