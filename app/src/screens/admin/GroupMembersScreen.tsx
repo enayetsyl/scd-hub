@@ -12,18 +12,34 @@ import React, { useMemo, useState } from "react";
 import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
+import { GROUP_GENDERS, PERIOD_TRACKS } from "@scd/shared";
 import {
   SUBJECT_GROUPS_QUERY,
   SUBJECT_GROUP_MEMBER_PROFILES,
   STUDENTS_QUERY,
   ADD_GROUP_MEMBER,
   REMOVE_GROUP_MEMBER,
+  CREATE_SUBJECT_GROUP,
+  SET_SUBJECT_GROUP_ACTIVE,
 } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
-import { Screen, Body, Muted, Card, Button, Notice, EmptyState, Select } from "../../components/ui";
+import {
+  Screen,
+  Body,
+  Muted,
+  Card,
+  Button,
+  Chip,
+  ChipRow,
+  Badge,
+  Field,
+  Notice,
+  EmptyState,
+  Select,
+} from "../../components/ui";
 import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
 import { AcademicYearSelect } from "../../components/selects";
-import { STR, periodTrackLabel } from "../../lib/labels";
+import { STR, periodTrackLabel, groupGenderLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -40,13 +56,42 @@ export default function GroupMembersScreen(_props: Props): React.ReactElement {
   const [ok, setOk] = useState<string | null>(null);
   const [, add] = useMutation(ADD_GROUP_MEMBER);
   const [, remove] = useMutation(REMOVE_GROUP_MEMBER);
+  const [, createGroup] = useMutation(CREATE_SUBJECT_GROUP);
+  const [, setGroupActive] = useMutation(SET_SUBJECT_GROUP_ACTIVE);
 
-  const [{ data: groupsData }] = useQuery({ query: SUBJECT_GROUPS_QUERY, variables: {} });
-  const groupOptions = (groupsData?.subjectGroups ?? []).map((g) => ({
-    label: `${periodTrackLabel(g.track)} · ${g.nameBn}`,
+  // Create-group form (collapsed until asked for — this screen's day job is
+  // assigning students, not authoring groups).
+  const [showNew, setShowNew] = useState(false);
+  const [showRetired, setShowRetired] = useState(false);
+  const [newTrack, setNewTrack] = useState<string>("quran");
+  const [newLevel, setNewLevel] = useState("");
+  const [newGender, setNewGender] = useState<string>("boys");
+  const [newNameBn, setNewNameBn] = useState("");
+  const [codeEdited, setCodeEdited] = useState(false);
+  const [newCode, setNewCode] = useState("");
+
+  /** QURAN_HIFZ_1_BOYS — the existing seeded convention, so new rows match. */
+  const suggestedCode = useMemo(
+    () =>
+      [newTrack, newLevel, newGender]
+        .map((p) => p.trim().toUpperCase().replace(/\s+/g, "_"))
+        .filter(Boolean)
+        .join("_"),
+    [newTrack, newLevel, newGender],
+  );
+  const effectiveCode = codeEdited ? newCode : suggestedCode;
+
+  const [groupsQ, refetchGroups] = useQuery({
+    query: SUBJECT_GROUPS_QUERY,
+    variables: { includeInactive: showRetired },
+  });
+  const groups = groupsQ.data?.subjectGroups ?? [];
+  const groupOptions = groups.map((g) => ({
+    label: `${periodTrackLabel(g.track)} · ${g.nameBn}${g.active === false ? ` (${STR.gmInactive})` : ""}`,
     value: g.id,
     hint: g.code,
   }));
+  const selectedGroup = groups.find((g) => g.id === groupId) ?? null;
 
   const [membersQ, refetchMembers] = useQuery({
     query: SUBJECT_GROUP_MEMBER_PROFILES,
@@ -93,6 +138,53 @@ export default function GroupMembersScreen(_props: Props): React.ReactElement {
     refetchMembers({ requestPolicy: "network-only" });
   }
 
+  async function runCreateGroup(): Promise<void> {
+    setBusy(true);
+    setError(null);
+    setOk(null);
+    const res = await createGroup({
+      track: newTrack,
+      level: newLevel.trim(),
+      gender: newGender,
+      code: effectiveCode,
+      nameBn: newNameBn.trim(),
+    });
+    setBusy(false);
+    if (res.error || !res.data?.createSubjectGroup) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    setOk(STR.gmCreated);
+    // Drop straight into the new group so the next step (moving students in) is
+    // one tap away rather than a hunt back through the picker.
+    setGroupId(res.data.createSubjectGroup.id);
+    setNewLevel("");
+    setNewNameBn("");
+    setNewCode("");
+    setCodeEdited(false);
+    setShowNew(false);
+    refetchGroups({ requestPolicy: "network-only" });
+  }
+
+  async function runSetActive(active: boolean): Promise<void> {
+    if (!selectedGroup) return;
+    if (!active && !(await confirmAction({ confirmLabel: STR.gmRetire }))) return;
+    setBusy(true);
+    setError(null);
+    setOk(null);
+    const res = await setGroupActive({ groupId: selectedGroup.id, active });
+    setBusy(false);
+    if (res.error || !res.data?.setSubjectGroupActive) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    setOk(active ? STR.gmRestored : STR.gmRetired);
+    // A retired group leaves the default list — keep it visible so the admin can
+    // see what just happened instead of the selection vanishing.
+    if (!active) setShowRetired(true);
+    refetchGroups({ requestPolicy: "network-only" });
+  }
+
   return (
     <Screen padded={false}>
       <View style={{ padding: space(4), paddingBottom: 0 }}>
@@ -118,6 +210,106 @@ export default function GroupMembersScreen(_props: Props): React.ReactElement {
           placeholder={STR.gmSelectGroup}
           searchable
         />
+
+        <ChipRow>
+          <Chip
+            label={showNew ? `✕ ${STR.gmNewGroup}` : `＋ ${STR.gmNewGroup}`}
+            selected={showNew}
+            onPress={() => setShowNew((v) => !v)}
+          />
+          <Chip
+            label={STR.gmShowRetired}
+            selected={showRetired}
+            onPress={() => setShowRetired((v) => !v)}
+          />
+        </ChipRow>
+
+        {showNew ? (
+          <Card>
+            <Body style={{ fontWeight: "700" }}>{STR.gmNewGroup}</Body>
+            <Muted>{STR.gmNewGroupHint}</Muted>
+
+            <Body style={{ marginTop: space(2) }}>{STR.gmTrack}</Body>
+            <ChipRow>
+              {PERIOD_TRACKS.filter((t) => t === "quran" || t === "arabic").map((t) => (
+                <Chip
+                  key={t}
+                  label={periodTrackLabel(t)}
+                  selected={newTrack === t}
+                  onPress={() => setNewTrack(t)}
+                />
+              ))}
+            </ChipRow>
+
+            <Body style={{ marginTop: space(2) }}>{STR.gmGender}</Body>
+            <ChipRow>
+              {GROUP_GENDERS.map((g) => (
+                <Chip
+                  key={g}
+                  label={groupGenderLabel(g)}
+                  selected={newGender === g}
+                  onPress={() => setNewGender(g)}
+                />
+              ))}
+            </ChipRow>
+
+            <Field
+              label={STR.gmLevel}
+              value={newLevel}
+              onChangeText={setNewLevel}
+              placeholder={STR.gmLevelHint}
+            />
+            <Field label={STR.gmNameBn} value={newNameBn} onChangeText={setNewNameBn} />
+            <Field
+              label={STR.gmCode}
+              value={effectiveCode}
+              onChangeText={(v) => {
+                setCodeEdited(true);
+                setNewCode(v);
+              }}
+              helper={STR.gmCodeHint}
+            />
+
+            <Button
+              title={STR.gmCreate}
+              onPress={() => void runCreateGroup()}
+              loading={busy}
+              disabled={busy || !newLevel.trim() || !newNameBn.trim() || !effectiveCode.trim()}
+              style={{ marginTop: space(2) }}
+            />
+          </Card>
+        ) : null}
+
+        {/* Retire / restore the selected group — the other half of creating one.
+            Retiring is refused server-side while members remain (D-#498). */}
+        {selectedGroup ? (
+          <Card>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+              <View style={{ flex: 1 }}>
+                <Body style={{ fontWeight: "700" }}>{selectedGroup.nameBn}</Body>
+                <Muted>
+                  {selectedGroup.code} · {groupGenderLabel(selectedGroup.gender)}
+                </Muted>
+              </View>
+              {selectedGroup.active === false ? (
+                <>
+                  <Badge text={STR.gmInactive} tone="muted" />
+                  <Button title={STR.gmRestore} onPress={() => void runSetActive(true)} disabled={busy} />
+                </>
+              ) : (
+                <Button
+                  title={STR.gmRetire}
+                  variant="secondary"
+                  onPress={() => void runSetActive(false)}
+                  disabled={busy}
+                />
+              )}
+            </View>
+            {selectedGroup.active !== false && members.length > 0 ? (
+              <Muted>{STR.gmRetireBlocked}</Muted>
+            ) : null}
+          </Card>
+        ) : null}
 
         {groupId === "" ? (
           <EmptyState message={STR.gmPickGroup} />
