@@ -206,12 +206,30 @@ export async function classNotesForRange(
 // Class-note admin (Principal/Office): edit / delete / enriched list of all notes.
 // ---------------------------------------------------------------------------
 
-/** Edit an existing note's summary and/or attachments (Principal/Office). */
+/**
+ * Edit an existing note's summary and/or attachments.
+ *
+ * Principal/Office (`canManage`) may edit any note; every other caller may edit
+ * only the note they authored — the same "your own note" rule the publish upsert
+ * already gives a teacher (D-#336), now reachable from the archive list too.
+ * `actorId` omitted = an internal call, unchecked.
+ */
 export async function updateClassNote(input: {
   id: string;
   taughtSummaryBn?: string | null;
   attachmentIds?: string[] | null;
+  actorId?: string;
+  canManage?: boolean;
 }): Promise<IClassNote> {
+  if (input.actorId && !input.canManage) {
+    const existing = (await ClassNote.findById(input.id).select("publishedBy").lean()) as unknown as {
+      publishedBy: Types.ObjectId;
+    } | null;
+    if (!existing) throw new Error("Class note not found");
+    if (existing.publishedBy.toString() !== input.actorId) {
+      throw new ForbiddenError("You can only edit your own class note");
+    }
+  }
   const set: Record<string, unknown> = {};
   if (input.taughtSummaryBn != null && input.taughtSummaryBn.trim() !== "") set.taughtSummaryBn = input.taughtSummaryBn.trim();
   if (input.attachmentIds !== undefined) set.attachmentIds = normalizeAttachmentIds(input.attachmentIds);
@@ -243,20 +261,23 @@ export interface ClassNoteAdminRow {
   sectionCode: string | null;
   sectionNameBn: string | null;
   subjectGroupNameBn: string | null;
+  /** The section the note belongs to (null for a subject-group note) — the list
+   *  screen filters on it, and the row needs it to render the section column. */
+  sectionId: string | null;
+  classId: string | null;
+  authorId: string | null;
   authorName: string | null;
   publishedAt: string;
   attachments: ClassNoteAttachmentView[];
 }
 
-/** Principal/Office: every class note for a date — or an inclusive date RANGE when
- *  `dateTo` is given (admin filters, D-#309 pattern) — enriched with class/section
- *  names, author name and attachment file names. Newest first. */
-export async function classNotesAdmin(date: Date, dateTo?: Date): Promise<ClassNoteAdminRow[]> {
-  const { start } = dayBounds(dateTo && dateTo < date ? dateTo : date);
-  const { end } = dayBounds(dateTo && dateTo > date ? dateTo : date);
-  const notes = (await ClassNote.find({ date: { $gte: start, $lte: end } })
-    .sort({ publishedAt: -1 })
-    .lean()) as unknown as IClassNote[];
+/**
+ * Enrich raw notes into admin rows: class/section (or subject-group) names, the
+ * author's name and the attachments' file names. One batched lookup per
+ * collection, so the cost is flat in the number of notes — which is what lets the
+ * paginated list below hand it a 50-row page without a per-row query storm.
+ */
+async function enrichClassNotes(notes: IClassNote[]): Promise<ClassNoteAdminRow[]> {
   if (notes.length === 0) return [];
 
   const sectionIds = new Set<string>();
@@ -290,13 +311,17 @@ export async function classNotesAdmin(date: Date, dateTo?: Date): Promise<ClassN
     let sectionCode: string | null = null;
     let sectionNameBn: string | null = null;
     let subjectGroupNameBn: string | null = null;
+    let sectionId: string | null = null;
+    let classId: string | null = null;
     if (n.groupType === "section") {
+      sectionId = n.groupId.toString();
       const sec = sectionById.get(n.groupId.toString());
       if (sec) {
         sectionCode = sec.code ?? null;
         sectionNameBn = sec.nameBn ?? null;
         const cls = sec.classId ? classById.get(sec.classId.toString()) : null;
         if (cls) {
+          classId = sec.classId!.toString();
           classLevel = cls.level ?? null;
           classNameBn = cls.nameBn ?? null;
         }
@@ -314,6 +339,9 @@ export async function classNotesAdmin(date: Date, dateTo?: Date): Promise<ClassN
       sectionCode,
       sectionNameBn,
       subjectGroupNameBn,
+      sectionId,
+      classId,
+      authorId: n.publishedBy.toString(),
       authorName: userById.get(n.publishedBy.toString())?.name ?? null,
       publishedAt: new Date(n.publishedAt).toISOString(),
       attachments: (n.attachmentIds ?? []).map((a) => {
@@ -322,6 +350,157 @@ export async function classNotesAdmin(date: Date, dateTo?: Date): Promise<ClassN
       }),
     };
   });
+}
+
+/** Principal/Office: every class note for a date — or an inclusive date RANGE when
+ *  `dateTo` is given (admin filters, D-#309 pattern) — enriched with class/section
+ *  names, author name and attachment file names. Newest first. */
+export async function classNotesAdmin(date: Date, dateTo?: Date): Promise<ClassNoteAdminRow[]> {
+  const { start } = dayBounds(dateTo && dateTo < date ? dateTo : date);
+  const { end } = dayBounds(dateTo && dateTo > date ? dateTo : date);
+  const notes = (await ClassNote.find({ date: { $gte: start, $lte: end } })
+    .sort({ publishedAt: -1 })
+    .lean()) as unknown as IClassNote[];
+  return enrichClassNotes(notes);
+}
+
+// ---------------------------------------------------------------------------
+// The whole class-note archive: filtered + paginated (owner ask 2026-08-17).
+// ---------------------------------------------------------------------------
+
+export interface ClassNoteListFilter {
+  /** Inclusive date window; either end may stand alone. Omit both = all time. */
+  from?: Date | null;
+  to?: Date | null;
+  classId?: string | null;
+  sectionId?: string | null;
+  subject?: string | null;
+  /** The AUTHOR (publishedBy). The resolver pins this to the caller when they
+   *  lack routine:manage — scoping is never left to the client. */
+  teacherId?: string | null;
+  page?: number | null;
+  pageSize?: number | null;
+}
+
+export interface ClassNotePage {
+  rows: ClassNoteAdminRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export const CLASS_NOTE_PAGE_SIZE = 50;
+const CLASS_NOTE_PAGE_MAX = 200;
+
+const asObjectId = (id: string): Types.ObjectId | null =>
+  Types.ObjectId.isValid(id) ? new Types.ObjectId(id) : null;
+
+/** The mongo filter behind both the page and its filter-option lists. */
+async function classNoteQuery(f: ClassNoteListFilter): Promise<Record<string, unknown>> {
+  const q: Record<string, unknown> = {};
+  if (f.from || f.to) {
+    const a = f.from ?? f.to!;
+    const b = f.to ?? f.from!;
+    q.date = { $gte: dayBounds(a <= b ? a : b).start, $lte: dayBounds(a <= b ? b : a).end };
+  }
+  if (f.subject) q.subject = f.subject;
+  if (f.teacherId) {
+    // An unparseable id must match NOTHING rather than everything — a filter that
+    // silently drops itself would show a teacher the whole school's notes.
+    q.publishedBy = asObjectId(f.teacherId) ?? new Types.ObjectId();
+  }
+  if (f.sectionId) {
+    q.groupType = "section";
+    q.groupId = asObjectId(f.sectionId) ?? new Types.ObjectId();
+  } else if (f.classId) {
+    // A note stores its section, not its class, so the class filter widens to the
+    // class's sections.
+    const secs = (await Section.find({ classId: f.classId }).select("_id").lean()) as unknown as {
+      _id: Types.ObjectId;
+    }[];
+    q.groupType = "section";
+    q.groupId = { $in: secs.map((s) => s._id) };
+  }
+  return q;
+}
+
+/** One page of the class-note archive, newest first, with the total behind it. */
+export async function classNotePage(f: ClassNoteListFilter): Promise<ClassNotePage> {
+  const pageSize = Math.min(Math.max(f.pageSize ?? CLASS_NOTE_PAGE_SIZE, 1), CLASS_NOTE_PAGE_MAX);
+  const page = Math.max(f.page ?? 1, 1);
+  const q = await classNoteQuery(f);
+  const [notes, total] = await Promise.all([
+    ClassNote.find(q)
+      .sort({ date: -1, publishedAt: -1 })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+      .lean() as unknown as Promise<IClassNote[]>,
+    ClassNote.countDocuments(q),
+  ]);
+  return { rows: await enrichClassNotes(notes), total, page, pageSize };
+}
+
+export interface ClassNoteFilterOption {
+  id: string;
+  label: string;
+}
+export interface ClassNoteFilterOptions {
+  classes: ClassNoteFilterOption[];
+  /** `parentId` = the owning class id, so the UI can narrow sections to a class. */
+  sections: (ClassNoteFilterOption & { parentId: string | null })[];
+  subjects: string[];
+  teachers: ClassNoteFilterOption[];
+}
+
+/**
+ * The values that actually EXIST in the caller's slice of the archive — the house
+ * rule that a select never offers an option with zero matches (D-#309). Scoped by
+ * the same `teacherId` pin as the page, so a teacher's selects describe their own
+ * notes only.
+ */
+export async function classNoteFilterOptions(scope: { teacherId?: string | null }): Promise<ClassNoteFilterOptions> {
+  const base = await classNoteQuery({ teacherId: scope.teacherId ?? null });
+  const [subjects, authorIds, sectionIds] = await Promise.all([
+    ClassNote.distinct("subject", base) as unknown as Promise<string[]>,
+    ClassNote.distinct("publishedBy", base) as unknown as Promise<Types.ObjectId[]>,
+    ClassNote.distinct("groupId", { ...base, groupType: "section" }) as unknown as Promise<Types.ObjectId[]>,
+  ]);
+
+  const sections = sectionIds.length
+    ? ((await Section.find({ _id: { $in: sectionIds } })
+        .select("classId code nameBn")
+        .lean()) as unknown as { _id: Types.ObjectId; classId?: Types.ObjectId; code?: string; nameBn?: string }[])
+    : [];
+  const classIds = [...new Set(sections.map((s) => s.classId?.toString()).filter((x): x is string => !!x))];
+  const [classes, users] = await Promise.all([
+    classIds.length
+      ? (Class.find({ _id: { $in: classIds } })
+          .select("level nameBn")
+          .lean() as unknown as Promise<{ _id: Types.ObjectId; level?: number; nameBn?: string }[]>)
+      : Promise.resolve([]),
+    authorIds.length
+      ? (User.find({ _id: { $in: authorIds } })
+          .select("name")
+          .lean() as unknown as Promise<{ _id: Types.ObjectId; name?: string }[]>)
+      : Promise.resolve([]),
+  ]);
+
+  const byLabel = (a: ClassNoteFilterOption, b: ClassNoteFilterOption): number => a.label.localeCompare(b.label);
+  return {
+    classes: classes
+      .map((c) => ({ id: c._id.toString(), label: c.nameBn ?? String(c.level ?? ""), level: c.level ?? 0 }))
+      .sort((a, b) => a.level - b.level)
+      .map(({ id, label }) => ({ id, label })),
+    sections: sections
+      .map((s) => ({
+        id: s._id.toString(),
+        label: s.nameBn ?? s.code ?? "—",
+        parentId: s.classId ? s.classId.toString() : null,
+      }))
+      .sort(byLabel),
+    subjects: [...subjects].sort(),
+    teachers: users.map((u) => ({ id: u._id.toString(), label: u.name ?? "—" })).sort(byLabel),
+  };
 }
 
 /**
