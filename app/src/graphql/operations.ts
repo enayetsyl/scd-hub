@@ -3429,6 +3429,9 @@ export interface ClassNoteAdminRowT {
   sectionCode: string | null;
   sectionNameBn: string | null;
   subjectGroupNameBn: string | null;
+  sectionId?: string | null;
+  classId?: string | null;
+  authorId?: string | null;
   authorName: string | null;
   publishedAt: string;
   attachments: ClassNoteAttachmentT[];
@@ -3457,6 +3460,75 @@ export const UPDATE_CLASS_NOTE = gql<
 `;
 export const DELETE_CLASS_NOTE = gql<{ deleteClassNote: { id: string } }, { id: string }>`
   mutation DeleteClassNote($id: String!) { deleteClassNote(id: $id) { id } }
+`;
+
+/**
+ * The class-note ARCHIVE (owner ask 2026-08-17): every note behind
+ * class/section/subject/teacher/date filters, 50 to a page. The server scopes it —
+ * routine:manage gets the school, everyone else their own notes — so the same
+ * query serves both roles.
+ */
+export interface ClassNotePageT {
+  rows: ClassNoteAdminRowT[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+export interface ClassNotesPageVars {
+  from?: string | null;
+  to?: string | null;
+  classId?: string | null;
+  sectionId?: string | null;
+  subject?: string | null;
+  teacherId?: string | null;
+  page?: number | null;
+  pageSize?: number | null;
+}
+export const CLASS_NOTES_PAGE_QUERY = gql<{ classNotesPage: ClassNotePageT }, ClassNotesPageVars>`
+  query ClassNotesPage(
+    $from: String, $to: String, $classId: String, $sectionId: String,
+    $subject: String, $teacherId: String, $page: Int, $pageSize: Int
+  ) {
+    classNotesPage(
+      from: $from, to: $to, classId: $classId, sectionId: $sectionId,
+      subject: $subject, teacherId: $teacherId, page: $page, pageSize: $pageSize
+    ) {
+      total page pageSize
+      rows {
+        id date subject taughtSummaryBn classLevel classNameBn sectionCode sectionNameBn
+        subjectGroupNameBn sectionId classId authorId authorName publishedAt
+        attachments { id name mime }
+      }
+    }
+  }
+`;
+
+export interface ClassNoteFilterOptionT {
+  id: string;
+  label: string;
+  /** Sections carry their owning class id, so the section select narrows with the class. */
+  parentId: string | null;
+}
+export interface ClassNoteFilterOptionsT {
+  classes: ClassNoteFilterOptionT[];
+  sections: ClassNoteFilterOptionT[];
+  subjects: string[];
+  teachers: ClassNoteFilterOptionT[];
+  canManage: boolean;
+}
+export const CLASS_NOTE_FILTER_OPTIONS_QUERY = gql<
+  { classNoteFilterOptions: ClassNoteFilterOptionsT },
+  NoVars
+>`
+  query ClassNoteFilterOptions {
+    classNoteFilterOptions {
+      classes { id label parentId }
+      sections { id label parentId }
+      subjects
+      teachers { id label parentId }
+      canManage
+    }
+  }
 `;
 
 export interface GuardianAttendanceDayT {

@@ -63,6 +63,7 @@ import LoginScreen from "../screens/auth/LoginScreen";
 import TodayScreen from "../screens/home/TodayScreen";
 import AdminTodayScreen from "../screens/home/AdminTodayScreen";
 import MyClassNotesScreen from "../screens/classnotes/MyClassNotesScreen";
+import AllClassNotesScreen from "../screens/classnotes/AllClassNotesScreen";
 import PrintHomeScreen from "../screens/printing/PrintHomeScreen";
 import NewPrintRequestScreen from "../screens/printing/NewPrintRequestScreen";
 import PrintHistoryScreen from "../screens/printing/PrintHistoryScreen";
@@ -605,6 +606,7 @@ function ClassNotesNavigator(): React.ReactElement {
   return (
     <ClassNotesStack.Navigator screenOptions={stackOptions}>
       <ClassNotesStack.Screen name="MyClassNotes" component={MyClassNotesScreen} options={{ title: STR.drawerItemClassNotes }} />
+      <ClassNotesStack.Screen name="AllClassNotes" component={AllClassNotesScreen} options={{ title: STR.cnAllNotesTitle }} />
     </ClassNotesStack.Navigator>
   );
 }

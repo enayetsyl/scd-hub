@@ -14,6 +14,7 @@ import { DateField } from "../../components/DateField";
 import { STR, bnNum, routineSubjectLabel, getActiveLang, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { REPORT_PAPER } from "../../theme/reportPaper";
 import { dateKey } from "../../lib/dates";
 
 const todayISO = (): string => dateKey();
@@ -55,32 +56,9 @@ function downloadCsv(filename: string, header: string[], rows: string[][]): void
   URL.revokeObjectURL(url);
 }
 
-/**
- * The report table's own "paper" palette.
- *
- * This grid deliberately paints a fixed printed-report look (blue header, blue-tinted
- * zebra rows) instead of the theme surface, because it is the on-screen twin of the
- * print/CSV export. That is a conscious exception to the "screens never hard-code a
- * hex" rule in `theme/tokens.ts` — but it only works if the TEXT colours are pinned
- * here too. They used to come from the theme (`Body` → textPrimary, `Muted` →
- * textSecondary), so on a device set to DARK mode the near-white `#E7ECE9` body text
- * landed on these hard-coded near-white rows and read as washed-out grey, while the
- * same screen looked black-on-white on a light-mode device (owner report 2026-08-02).
- * Paper is paper in both schemes: keep every colour in this table on this one surface.
- */
-const REPORT = {
-  headerBg: "#4f9cf9",
-  headerText: "#fff",
-  headerHint: "rgba(255,255,255,0.65)",
-  headerDivider: "rgba(255,255,255,0.18)",
-  rowEven: "#eef5ff",
-  rowOdd: "#fff",
-  rowPressed: "#dbeafe",
-  rowBorder: "#dde7f5",
-  /** Mirrors lightColors.textPrimary / textSecondary — pinned, not theme-resolved. */
-  text: "#182420",
-  textMuted: "#46554E",
-} as const;
+/** The shared printed-report surface — see `theme/reportPaper.ts` for why it is
+ *  hard-coded rather than theme-resolved. */
+const REPORT = REPORT_PAPER;
 
 function SubjectList({
   subjects,
