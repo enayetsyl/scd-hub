@@ -20,6 +20,11 @@ export function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
 }
 
+/** The last instant of `d`'s local day. */
+export function endOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+}
+
 /**
  * The last instant of the day BEFORE `d` — what a slot's `effectiveTo` becomes when a
  * replacement takes over on `d`.
@@ -44,19 +49,32 @@ export function endOfDayBefore(d: Date): Date {
  *     RoutineSlot.find({ active: true, $and: [liveWindow(on), { $or: [...] }] })
  */
 export function liveWindow(on: Date = new Date()): Record<string, unknown> {
+  // DAY-granular, per this module's contract — compare against the day's BOUNDS,
+  // never the raw instant. Comparing instants made the window depend on the exact
+  // moment and the timezone in which each end was constructed, and the two ends are
+  // NOT built the same way: `effectiveFrom` is stored by `new Date("YYYY-MM-DD")`
+  // (UTC midnight), while readers pass a local-midnight Date (attendance's
+  // `parseDateKey`) or `new Date()` (now). On a UTC+ server those disagree by the
+  // offset, so a slot effective TODAY was live for `new Date()` readers and dead for
+  // local-midnight readers — the routine editor listed it while the attendance
+  // marker resolved to "nobody assigned" (D-#502). Widening to day bounds makes
+  // every reader agree regardless of how either end was constructed.
   return {
-    effectiveFrom: { $lte: on },
-    $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: on } }],
+    effectiveFrom: { $lte: endOfDay(on) },
+    $or: [
+      { effectiveTo: { $exists: false } },
+      { effectiveTo: null },
+      { effectiveTo: { $gte: startOfDay(on) } },
+    ],
   };
 }
 
-/** In-memory twin of `liveWindow` for slots already loaded. */
+/** In-memory twin of `liveWindow` for slots already loaded. Same day-granular rule. */
 export function isLiveOn(
   slot: { effectiveFrom: Date | string; effectiveTo?: Date | string | null },
   on: Date = new Date(),
 ): boolean {
-  const t = on.getTime();
-  if (new Date(slot.effectiveFrom).getTime() > t) return false;
-  if (slot.effectiveTo && new Date(slot.effectiveTo).getTime() < t) return false;
+  if (new Date(slot.effectiveFrom).getTime() > endOfDay(on).getTime()) return false;
+  if (slot.effectiveTo && new Date(slot.effectiveTo).getTime() < startOfDay(on).getTime()) return false;
   return true;
 }

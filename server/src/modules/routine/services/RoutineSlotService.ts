@@ -481,8 +481,7 @@ export async function slotsForDate(
     groupId,
     dayOfWeek,
     active: true,
-    effectiveFrom: { $lte: date },
-    $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: date } }],
+    ...liveWindow(date),
   })
     .sort({ periodNumber: 1 })
     .lean() as unknown as Promise<IRoutineSlot[]>;
@@ -501,8 +500,7 @@ export async function slotsForTeacherOnDate(teacherId: string, date: Date): Prom
     teacherId,
     dayOfWeek,
     active: true,
-    effectiveFrom: { $lte: date },
-    $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: date } }],
+    ...liveWindow(date),
   })
     .sort({ periodNumber: 1 })
     .lean() as unknown as Promise<IRoutineSlot[]>;
@@ -519,8 +517,7 @@ async function liveSectionSlots(sectionId: string, subject?: string, now = new D
     groupId: sectionId,
     active: true,
     isBreak: false,
-    effectiveFrom: { $lte: now },
-    $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: now } }],
+    ...liveWindow(now),
   };
   if (subject) filter.subject = subject;
   return RoutineSlot.find(filter).lean();
@@ -598,9 +595,9 @@ export async function reassignRoutineSubjectTeacher(
     _id: { $nin: targetIds },
     teacherId,
     active: true,
-    effectiveFrom: { $lte: now },
+    // liveWindow carries its own `$or`, so it must go inside the `$and` here.
     $and: [
-      { $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: now } }] },
+      liveWindow(now),
       { $or: slots.map((s) => ({ dayOfWeek: s.dayOfWeek, periodNumber: s.periodNumber })) },
     ],
   })
