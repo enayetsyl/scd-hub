@@ -106,7 +106,7 @@ function DayCard({
         ))
       )}
       {/* The day's homework load — every declared item + the estimated total.
-          D-#504: the "no homework" declarations render ALONGSIDE the declared
+          D-#506: the "no homework" declarations render ALONGSIDE the declared
           items, not instead of them. As an if/else-if, a single declared item hid
           every nil declaration for the rest of the day — so a day where Bangla
           gave work and English deliberately gave none read as "one homework", and

@@ -190,7 +190,7 @@ display requires GP-A).**
 - New STR keys (BN/EN); English codes (HW_ID etc.) stay Latin (D-#61).
 - Gate: app tsc clean + web bundle green; no server/contract change in GP-2.
 
-**GP-9 — the homework screen answers the DAY, subject by subject (D-#504/#505; owner
+**GP-9 — the homework screen answers the DAY, subject by subject (D-#506/#505; owner
 review 2026-08-17).**
 
 *The problem, from the owner's own screens.* `ChildHomeworkScreen` listed only the

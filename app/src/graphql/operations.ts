@@ -3153,7 +3153,7 @@ export const CHILD_ROUTINE_QUERY = gql<
   }
 `;
 
-/** GP-9 (D-#504): one day of the child's routine, with its date. */
+/** GP-9 (D-#506): one day of the child's routine, with its date. */
 export interface GuardianRoutineDayT extends GuardianDayT {
   dateKey: string;
 }

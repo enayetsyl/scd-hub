@@ -1,5 +1,5 @@
 /**
- * Guardian day-card rules (GP-9, D-#504 / D-#505) — APP-side logic, tested here
+ * Guardian day-card rules (GP-9, D-#506 / D-#505) — APP-side logic, tested here
  * because the app workspace has no test runner (the `navInitialRoute.test.ts`
  * posture: the check lives where CI already runs).
  *
@@ -10,7 +10,7 @@
  *    and a FALSE positive is the expensive failure: a warning on every ordinary
  *    English note would train teachers to ignore the real one.
  *
- * 2. The day-card composition rule (D-#504), asserted as a source guard: the
+ * 2. The day-card composition rule (D-#506), asserted as a source guard: the
  *    homework screen must build its per-day list from the ROUTINE window read, must
  *    not resurrect the removed range-wide "no homework" card, and must keep QURAN
  *    out of the homework day (D-#36).
@@ -65,7 +65,7 @@ describe("mentionsHomework (D-#505)", () => {
 });
 
 // ===========================================================================
-// D-#504 — the day card is built from the routine window read
+// D-#506 — the day card is built from the routine window read
 // ===========================================================================
 
 const HOMEWORK_SCREEN = path.resolve(
@@ -77,7 +77,7 @@ const NOTES_SCREEN = path.resolve(
   "../../../app/src/screens/guardian/ChildClassNotesScreen.tsx",
 );
 
-describe("ChildHomeworkScreen composition (D-#504)", () => {
+describe("ChildHomeworkScreen composition (D-#506)", () => {
   const src = readFileSync(HOMEWORK_SCREEN, "utf8");
 
   test("reads the routine for the WINDOW, never one day at a time", () => {
@@ -106,7 +106,7 @@ describe("ChildHomeworkScreen composition (D-#504)", () => {
   });
 });
 
-describe("ChildClassNotesScreen (D-#504)", () => {
+describe("ChildClassNotesScreen (D-#506)", () => {
   const src = readFileSync(NOTES_SCREEN, "utf8");
 
   test("declared homework and 'no homework' declarations can show TOGETHER", () => {

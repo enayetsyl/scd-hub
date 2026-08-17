@@ -108,7 +108,7 @@ const GuardianDayRef = builder.objectRef<GuardianDay>("GuardianDay").implement({
   }),
 });
 
-/** GP-9 (D-#504): the same day shape with its date, for the window read. */
+/** GP-9 (D-#506): the same day shape with its date, for the window read. */
 const GuardianRoutineDayRef = builder.objectRef<GuardianRoutineDay>("GuardianRoutineDay").implement({
   fields: (t) => ({
     dateKey: t.exposeString("dateKey"),

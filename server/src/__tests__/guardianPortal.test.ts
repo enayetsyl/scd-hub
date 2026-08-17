@@ -475,7 +475,7 @@ describe("childRoutine", () => {
 });
 
 // ===========================================================================
-// childRoutineRange (GP-9, D-#504) — the same day, batched over a window
+// childRoutineRange (GP-9, D-#506) — the same day, batched over a window
 // ===========================================================================
 
 describe("childRoutineRange", () => {

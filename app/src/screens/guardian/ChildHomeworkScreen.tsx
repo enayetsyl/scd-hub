@@ -5,7 +5,7 @@
  * top-up, and the প্রশ্নপত্র / উত্তরপত্র viewers when files exist (streamed via
  * GET /files/:id — web-only viewing, mirroring the PDF path).
  *
- * GP-9 (D-#504) — a day's card now answers the whole day, subject by subject.
+ * GP-9 (D-#506) — a day's card now answers the whole day, subject by subject.
  * Before, it listed only the subjects that DECLARED homework, and the class's
  * "no homework" declarations sat in one separate card at the top of the screen
  * covering the entire range. A parent could therefore not tell, for a given day,

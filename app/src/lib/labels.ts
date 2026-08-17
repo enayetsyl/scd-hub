@@ -1665,7 +1665,7 @@ const STR_BN = {
   gpHwGivenTitle: "এই দিনের বাড়ির কাজ",
   gpHwTotalTime: "মোট আনুমানিক সময়",
   gpHwQuestions: "প্রশ্ন",
-  // Per-date day card (GP-9, D-#504): every subject that had a period, and what it
+  // Per-date day card (GP-9, D-#506): every subject that had a period, and what it
   // said about homework. "ঘোষণা করা হয়নি" is deliberately NOT "বাড়ির কাজ নেই" —
   // the teacher never answered, which is a different fact from "there is none".
   gpTodayRoutine: "আজকের রুটিন",
@@ -5167,7 +5167,7 @@ const STR_EN: StrTable = {
   gpHwGivenTitle: "Homework given this day",
   gpHwTotalTime: "Total estimated time",
   gpHwQuestions: "questions",
-  // Per-date day card (GP-9, D-#504)
+  // Per-date day card (GP-9, D-#506)
   gpTodayRoutine: "Today's routine",
   gpHwNotDeclared: "Not declared",
   gpAlertsTitle: "Needs your attention",

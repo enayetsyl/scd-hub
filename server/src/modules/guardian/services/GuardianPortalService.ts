@@ -108,7 +108,7 @@ export interface GuardianDay {
   slots: GuardianSlot[];
 }
 
-/** One day of the child's routine (GP-9, D-#504) — `GuardianDay` with its date, so
+/** One day of the child's routine (GP-9, D-#506) — `GuardianDay` with its date, so
  *  the homework screen can say WHICH subjects had a period on a past day and
  *  therefore which of them never declared anything. */
 export interface GuardianRoutineDay extends GuardianDay {
@@ -404,7 +404,7 @@ export async function childRoutine(studentId: string, date: Date): Promise<Guard
 }
 
 // ---------------------------------------------------------------------------
-// childRoutineRange (GP-9, D-#504) — the SAME resolved day as `childRoutine`, for
+// childRoutineRange (GP-9, D-#506) — the SAME resolved day as `childRoutine`, for
 // a whole window, in a FIXED number of queries.
 //
 // Why it exists: the homework screen has to name the subjects that had a period on
