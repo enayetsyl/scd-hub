@@ -1,15 +1,42 @@
 /**
  * ChildHomeworkScreen (GP-2) — the selected child's homework over a date range,
- * grouped by day, FULL lifecycle per record (GP-J4/J5): stage timeline, chase
+ * ONE CARD PER DAY, FULL lifecycle per record (GP-J4/J5): stage timeline, chase
  * count, result, resubmission chain (same HW_ID adjacent, পুনঃজমা badge),
  * top-up, and the প্রশ্নপত্র / উত্তরপত্র viewers when files exist (streamed via
  * GET /files/:id — web-only viewing, mirroring the PDF path).
+ *
+ * GP-9 (D-#506) — a day's card now answers the whole day, subject by subject.
+ * Before, it listed only the subjects that DECLARED homework, and the class's
+ * "no homework" declarations sat in one separate card at the top of the screen
+ * covering the entire range. A parent could therefore not tell, for a given day,
+ * whether a subject had no homework or nobody had said anything: the two facts
+ * lived on different parts of the screen, or nowhere at all.
+ *
+ * So each card is built from that day's ROUTINE (`childRoutineRange`, one query
+ * for the window) and every subject that had a period appears in period order in
+ * exactly one of three states:
+ *   1. homework declared  → the full lifecycle block,
+ *   2. "no homework" declared (D-#299) → the reason, in the teacher's words,
+ *   3. nothing declared   → "ঘোষণা করা হয়নি" — deliberately NOT worded as
+ *      "no homework", because an unanswered subject is a different fact.
+ * QURAN periods are skipped: Quran homework is out of this channel entirely
+ * (D-#36), so listing it here would ask a parent to chase a declaration that is
+ * never coming. A record or declaration for a subject with no period that day
+ * (a slot retired later) is still shown, appended after the routine subjects —
+ * data is never dropped just because the routine has moved on.
  */
 import React, { useState } from "react";
 import { ScrollView, View, RefreshControl } from "react-native";
 import { useQuery } from "urql";
-import { CHILD_HOMEWORK_QUERY, CHILD_HW_NIL_DAYS, type GuardianHwRecordT } from "../../graphql/operations";
-import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
+import { HW_SUBJECTS } from "@scd/shared";
+import {
+  CHILD_HOMEWORK_QUERY,
+  CHILD_HW_NIL_DAYS,
+  CHILD_ROUTINE_RANGE_QUERY,
+  type GuardianHwRecordT,
+  type GuardianHwNilDayT,
+} from "../../graphql/operations";
+import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState, Divider } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { DateField } from "../../components/DateField";
 import { LoadOlder } from "../../components/LoadOlder";
@@ -44,7 +71,92 @@ function StageRow({ label, at }: { label: string; at: string | null }): React.Re
   );
 }
 
-function RecordCard({
+/** Subjects that can carry homework at all. A QURAN period is NOT one (D-#36:
+ *  Quran homework lives in the Quran tracker), so it is left out of the day rather
+ *  than shown as "nothing declared" forever. */
+const HW_SUBJECT_SET = new Set<string>(HW_SUBJECTS as readonly string[]);
+
+interface DaySubject {
+  subject: string;
+  /** Every record for this subject that day — a resubmission chain stays adjacent. */
+  records: GuardianHwRecordT[];
+  nil: GuardianHwNilDayT | undefined;
+}
+interface DayGroup {
+  day: string;
+  /** Holiday name / day-type, only when the day was not a normal school day. */
+  dayNoteBn: string | null;
+  subjects: DaySubject[];
+}
+
+/**
+ * One group per calendar day: the day's HW-capable periods in PERIOD ORDER, each
+ * resolved to its declaration (or the absence of one).
+ *
+ * A day is included when it had at least one HW-capable period, OR when something
+ * was declared on it. The second half matters: a slot retired or moved after the
+ * fact would otherwise make a real homework record disappear from the parent's
+ * screen, so anything declared for a subject with no period that day is appended
+ * after the routine subjects instead of being dropped.
+ */
+function buildDays(
+  records: GuardianHwRecordT[],
+  nilRows: GuardianHwNilDayT[],
+  routineDays: Array<{ dateKey: string; dayType: string; dayTypeLabelBn: string; holidayNameBn: string | null; slots: Array<{ subject: string; periodNumber: number }> }>,
+): DayGroup[] {
+  const recByDay = new Map<string, GuardianHwRecordT[]>();
+  for (const r of records) {
+    const k = r.dateGiven.slice(0, 10);
+    const b = recByDay.get(k);
+    if (b) b.push(r);
+    else recByDay.set(k, [r]);
+  }
+  const nilByDay = new Map<string, GuardianHwNilDayT[]>();
+  for (const n of nilRows) {
+    const b = nilByDay.get(n.dateKey);
+    if (b) b.push(n);
+    else nilByDay.set(n.dateKey, [n]);
+  }
+  const routineByDay = new Map(routineDays.map((d) => [d.dateKey, d]));
+
+  const keys = new Set<string>([
+    ...routineDays.filter((d) => d.slots.some((s) => HW_SUBJECT_SET.has(s.subject))).map((d) => d.dateKey),
+    ...recByDay.keys(),
+    ...nilByDay.keys(),
+  ]);
+
+  return [...keys]
+    .sort((a, b) => b.localeCompare(a)) // newest day first
+    .map((day) => {
+      const rd = routineByDay.get(day);
+      const recs = recByDay.get(day) ?? [];
+      const nils = nilByDay.get(day) ?? [];
+
+      const ordered: string[] = [];
+      for (const s of [...(rd?.slots ?? [])].sort((a, b) => a.periodNumber - b.periodNumber)) {
+        if (HW_SUBJECT_SET.has(s.subject) && !ordered.includes(s.subject)) ordered.push(s.subject);
+      }
+      for (const subject of [...recs.map((r) => r.subject), ...nils.map((n) => n.subject)]) {
+        if (!ordered.includes(subject)) ordered.push(subject);
+      }
+
+      const offDay = rd && (rd.dayType === "OFF" || rd.dayType === "HOLIDAY");
+      return {
+        day,
+        dayNoteBn: offDay ? rd.holidayNameBn ?? rd.dayTypeLabelBn : null,
+        subjects: ordered.map((subject) => ({
+          subject,
+          records: recs.filter((r) => r.subject === subject),
+          nil: nils.find((n) => n.subject === subject),
+        })),
+      };
+    });
+}
+
+/** One declared homework, in full. A BLOCK inside the day's card (GP-9) — it used
+ *  to be its own Card, which is why a day with three subjects read as three
+ *  unrelated things. */
+function RecordBlock({
   record,
   onOpenFile,
 }: {
@@ -54,7 +166,7 @@ function RecordCard({
   const r = record;
   const { openingId, runOpen } = useFileOpen();
   return (
-    <Card>
+    <View style={{ marginTop: space(2) }}>
       {/* The guardian status is a SENTENCE, not a chip word ("বাড়ির কাজ জমা দেওয়ার সময়
           হয়েছে", worded for parents), so it gets its own full-width line.
           Sitting beside the title it crushed that column to a few pixels — flexShrink is
@@ -144,7 +256,27 @@ function RecordCard({
           ) : null}
         </View>
       ) : null}
-    </Card>
+    </View>
+  );
+}
+
+/** A subject that had a period but declared no homework — either explicitly
+ *  (D-#299, with the teacher's reason) or not at all. Two different facts, worded
+ *  differently on purpose. */
+function NoHomeworkRow({
+  subject,
+  nil,
+}: {
+  subject: string;
+  nil: GuardianHwNilDayT | undefined;
+}): React.ReactElement {
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2), marginTop: space(2) }}>
+      <Body style={{ fontWeight: "700", flexShrink: 1 }}>{subjectLabel(subject)}</Body>
+      <Muted style={{ flexShrink: 1, textAlign: "right" }}>
+        {nil ? `${STR.hwNilGuardian} (${hwNilReasonLabel(nil.reason)})` : STR.gpHwNotDeclared}
+      </Muted>
+    </View>
   );
 }
 
@@ -177,7 +309,13 @@ export default function ChildHomeworkScreen({
     variables: { studentId: selected?.studentId ?? "", from, to },
     pause: !selected,
   });
-  const nilDays = nilQ.data?.childHomeworkNilDays ?? [];
+  // GP-9: the day's periods — the only way to know a subject was taught and said
+  // nothing. ONE query for the window (never one per day, D-#476).
+  const [routineQ, refetchRoutine] = useQuery({
+    query: CHILD_ROUTINE_RANGE_QUERY,
+    variables: { studentId: selected?.studentId ?? "", from, to },
+    pause: !selected,
+  });
 
   // UX-7: pull-to-refresh.
   const { refreshing, onRefresh } = usePullRefresh(hwQ.fetching, () =>
@@ -209,14 +347,9 @@ export default function ChildHomeworkScreen({
   }
 
   const records = hwQ.data?.childHomework ?? [];
-  // Group by day (the server orders newest day first, chain-adjacent inside).
-  const byDay: Array<{ day: string; rows: GuardianHwRecordT[] }> = [];
-  for (const r of records) {
-    const day = r.dateGiven.slice(0, 10);
-    const last = byDay[byDay.length - 1];
-    if (last && last.day === day) last.rows.push(r);
-    else byDay.push({ day, rows: [r] });
-  }
+  const nilRows = nilQ.data?.childHomeworkNilDays ?? [];
+  const routineDays = routineQ.data?.childRoutineRange ?? [];
+  const days = buildDays(records, nilRows, routineDays);
 
   return (
     <Screen padded={false}>
@@ -235,32 +368,36 @@ export default function ChildHomeworkScreen({
         </View>
         {fileError ? <Notice message={fileError} tone="danger" /> : null}
         <QueryGate
-          results={[hwQ, nilQ]}
+          results={[hwQ, nilQ, routineQ]}
           onRetry={() => {
             refetchHw({ requestPolicy: "network-only" });
             refetchNil({ requestPolicy: "network-only" });
+            refetchRoutine({ requestPolicy: "network-only" });
           }}
           loaderLabel={STR.loading}
         >
-          {nilDays.length > 0 ? (
-            <Card>
-              {nilDays.map((n) => (
-                <Muted key={`${n.dateKey}|${n.subject}`}>
-                  {bnNum(n.dateKey)} · {n.subjectLabelBn} — {STR.hwNilGuardian} ({hwNilReasonLabel(n.reason)})
-                </Muted>
-              ))}
-            </Card>
-          ) : null}
-          {byDay.length === 0 ? (
+          {days.length === 0 ? (
             <EmptyState message={STR.gpNoHomework} />
           ) : (
-            byDay.map((g) => (
-              <View key={g.day}>
-                <Muted style={{ marginTop: space(3), marginBottom: space(1) }}>{bnNum(g.day)}</Muted>
-                {g.rows.map((r) => (
-                  <RecordCard key={r.recordId} record={r} onOpenFile={onOpenFile} />
+            days.map((g) => (
+              <Card key={g.day}>
+                {/* The date is the card's title (GP-9) — a parent reads this screen
+                    day by day, so the day has to be the strongest thing on it. */}
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+                  <Body style={{ fontWeight: "700" }}>{bnNum(g.day)}</Body>
+                  {g.dayNoteBn ? <Badge text={g.dayNoteBn} tone="warn" /> : null}
+                </View>
+                {g.subjects.map((s, i) => (
+                  <View key={s.subject}>
+                    {i > 0 ? <Divider /> : null}
+                    {s.records.length > 0 ? (
+                      s.records.map((r) => <RecordBlock key={r.recordId} record={r} onOpenFile={onOpenFile} />)
+                    ) : (
+                      <NoHomeworkRow subject={s.subject} nil={s.nil} />
+                    )}
+                  </View>
                 ))}
-              </View>
+              </Card>
             ))
           )}
           {/* D-#476: the pickers above jump to a period; this walks back from
@@ -268,7 +405,7 @@ export default function ChildHomeworkScreen({
               "a bit further back" without picking a date. */}
           <LoadOlder
             onPress={() => setFrom((f) => addDaysKey(f, -STEP_DAYS))}
-            loading={hwQ.fetching || nilQ.fetching}
+            loading={hwQ.fetching || nilQ.fetching || routineQ.fetching}
             exhausted={daysBetweenKeys(from, to) >= GUARDIAN_MAX_LOOKBACK_DAYS}
           />
         </QueryGate>

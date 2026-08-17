@@ -105,8 +105,13 @@ function DayCard({
           </View>
         ))
       )}
-      {/* The day's homework load — every declared item + the estimated total. */}
-      {hwItems.length > 0 ? (
+      {/* The day's homework load — every declared item + the estimated total.
+          D-#506: the "no homework" declarations render ALONGSIDE the declared
+          items, not instead of them. As an if/else-if, a single declared item hid
+          every nil declaration for the rest of the day — so a day where Bangla
+          gave work and English deliberately gave none read as "one homework", and
+          the owner reasonably asked why two subjects were missing. */}
+      {hwItems.length > 0 || nilDays.length > 0 ? (
         <View style={{ marginTop: space(2) }}>
           <Body style={{ fontWeight: "700" }}>📝 {STR.gpHwGivenTitle}</Body>
           {hwItems.map((r) => (
@@ -116,18 +121,16 @@ function DayCard({
               {bnNum(r.timeDecl + (r.topupTimeMin ?? 0))} {STR.gpMinutes}
             </Muted>
           ))}
-          <Body style={{ fontWeight: "600", marginTop: space(1) }}>
-            {STR.gpHwTotalTime}: {bnNum(totalMinutes)} {STR.gpMinutes}
-          </Body>
-        </View>
-      ) : nilDays.length > 0 ? (
-        <View style={{ marginTop: space(2) }}>
-          <Body style={{ fontWeight: "700" }}>📝 {STR.gpHwGivenTitle}</Body>
           {nilDays.map((n) => (
             <Muted key={`${n.dateKey}-${n.subject}`} style={{ marginTop: space(1) }}>
               {hwSubjectLabel(n.subject)}: {STR.gpNoHomework} — {hwNilReasonLabel(n.reason)}
             </Muted>
           ))}
+          {hwItems.length > 0 ? (
+            <Body style={{ fontWeight: "600", marginTop: space(1) }}>
+              {STR.gpHwTotalTime}: {bnNum(totalMinutes)} {STR.gpMinutes}
+            </Body>
+          ) : null}
         </View>
       ) : null}
     </Card>

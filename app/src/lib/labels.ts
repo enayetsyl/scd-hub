@@ -1680,6 +1680,11 @@ const STR_BN = {
   gpHwGivenTitle: "এই দিনের বাড়ির কাজ",
   gpHwTotalTime: "মোট আনুমানিক সময়",
   gpHwQuestions: "প্রশ্ন",
+  // Per-date day card (GP-9, D-#506): every subject that had a period, and what it
+  // said about homework. "ঘোষণা করা হয়নি" is deliberately NOT "বাড়ির কাজ নেই" —
+  // the teacher never answered, which is a different fact from "there is none".
+  gpTodayRoutine: "আজকের রুটিন",
+  gpHwNotDeclared: "ঘোষণা করা হয়নি",
   gpAlertsTitle: "দৃষ্টি আকর্ষণ",
   gpAlertHwChase: "বাড়ির কাজের রিমাইন্ডার চলছে",
   gpAlertAsgnLate: "অ্যাসাইনমেন্ট দেরিতে/রিমাইন্ডারে",
@@ -1738,6 +1743,9 @@ const STR_BN = {
   // DE-4/DE-5 (D-#477): the period card entry.
   cnHwYes: "আছে",
   cnHwNo: "নেই",
+  // D-#505: the taught-summary announces homework but the card declares none.
+  cnHwTextButNoDeclare:
+    "আপনার লেখায় বাড়ির কাজের উল্লেখ আছে, কিন্তু এই কার্ডে বাড়ির কাজ ঘোষণা করা হচ্ছে না। ঘোষণা না করলে অভিভাবক এটি বাড়ির কাজের তালিকায় দেখতে পাবেন না।",
   cnWeekAssignment: "এই সপ্তাহের অ্যাসাইনমেন্ট",
   // DE-6 (D-#477): the guardian action card.
   gpTodo: "করতে হবে",
@@ -5188,6 +5196,9 @@ const STR_EN: StrTable = {
   gpHwGivenTitle: "Homework given this day",
   gpHwTotalTime: "Total estimated time",
   gpHwQuestions: "questions",
+  // Per-date day card (GP-9, D-#506)
+  gpTodayRoutine: "Today's routine",
+  gpHwNotDeclared: "Not declared",
   gpAlertsTitle: "Needs your attention",
   gpAlertHwChase: "Homework chase in progress",
   gpAlertAsgnLate: "Assignments late or chased",
@@ -5243,6 +5254,9 @@ const STR_EN: StrTable = {
   asDescLabel: "What the assignment is",
   cnHwYes: "Yes",
   cnHwNo: "None",
+  // D-#505
+  cnHwTextButNoDeclare:
+    "Your text mentions homework, but this card is not declaring any. Undeclared homework never reaches the guardian's homework list.",
   cnWeekAssignment: "This week's assignment",
   gpTodo: "To do",
   notifDetailTitle: "Notification",
