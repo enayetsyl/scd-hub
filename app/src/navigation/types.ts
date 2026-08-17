@@ -43,6 +43,8 @@ export type StudentProfileParams = {
 /** Teacher-first Class Notes entry (UX-8, D-#266) — own periods, zero selection. */
 export type ClassNotesStackParamList = {
   MyClassNotes: undefined;
+  /** The archive: every note the caller may see, filtered + paginated. */
+  AllClassNotes: undefined;
 };
 
 export type ContentStackParamList = {

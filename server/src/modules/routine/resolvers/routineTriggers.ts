@@ -34,9 +34,14 @@ import {
   updateClassNote,
   deleteClassNote,
   classNotesAdmin,
+  classNotePage,
+  classNoteFilterOptions,
   type ClassNoteSubmissionRow,
   type ClassNoteAdminRow,
   type ClassNoteAttachmentView,
+  type ClassNotePage,
+  type ClassNoteFilterOption,
+  type ClassNoteFilterOptions,
 } from "../services/RoutineTriggerService";
 
 const BellTriggerRef = builder.objectRef<BellTrigger>("BellTrigger").implement({
@@ -93,6 +98,9 @@ const ClassNoteAdminRowRef = builder.objectRef<ClassNoteAdminRow>("ClassNoteAdmi
     sectionCode: t.string({ nullable: true, resolve: (r) => r.sectionCode }),
     sectionNameBn: t.string({ nullable: true, resolve: (r) => r.sectionNameBn }),
     subjectGroupNameBn: t.string({ nullable: true, resolve: (r) => r.subjectGroupNameBn }),
+    sectionId: t.string({ nullable: true, resolve: (r) => r.sectionId }),
+    classId: t.string({ nullable: true, resolve: (r) => r.classId }),
+    authorId: t.string({ nullable: true, resolve: (r) => r.authorId }),
     authorName: t.string({ nullable: true, resolve: (r) => r.authorName }),
     publishedAt: t.exposeString("publishedAt"),
     attachments: t.field({ type: [ClassNoteAttachmentRef], resolve: (r) => r.attachments }),
@@ -331,20 +339,114 @@ builder.queryField("classNotesAdmin", (t) =>
   }),
 );
 
+// --- The class-note archive: filtered + paginated list (owner ask 2026-08-17) ---
+
+/**
+ * Who the caller may see. Principal/Office (`routine:manage`) read the whole
+ * school and may pick a teacher; anyone else is PINNED to their own notes — the
+ * client's `teacherId` is ignored rather than trusted, so a forged argument can
+ * never widen the slice.
+ */
+function classNoteScopeTeacherId(ctx: AppContext, requested?: string | null): string | null {
+  if (ctx.auth && callerHasPermission(ctx.auth, "routine:manage")) return requested ?? null;
+  return ctx.auth!.userId;
+}
+
+const ClassNotePageRef = builder.objectRef<ClassNotePage>("ClassNotePage").implement({
+  fields: (t) => ({
+    rows: t.field({ type: [ClassNoteAdminRowRef], resolve: (p) => p.rows }),
+    total: t.exposeInt("total"),
+    page: t.exposeInt("page"),
+    pageSize: t.exposeInt("pageSize"),
+  }),
+});
+
+builder.queryField("classNotesPage", (t) =>
+  t.field({
+    type: ClassNotePageRef,
+    description:
+      "The class-note archive: class/section/subject/teacher/date filters, newest first, " +
+      "50 rows a page. routine:manage sees the school; every other caller sees their own notes.",
+    authScopes: { hasPermission: "routine:read" },
+    args: {
+      from: t.arg.string({ required: false }),
+      to: t.arg.string({ required: false }),
+      classId: t.arg.string({ required: false }),
+      sectionId: t.arg.string({ required: false }),
+      subject: t.arg.string({ required: false }),
+      teacherId: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_r, args, ctx) =>
+      classNotePage({
+        from: args.from ? parseDate(args.from) : null,
+        to: args.to ? parseDate(args.to) : null,
+        classId: args.classId ?? null,
+        sectionId: args.sectionId ?? null,
+        subject: args.subject ?? null,
+        teacherId: classNoteScopeTeacherId(ctx, args.teacherId),
+        page: args.page ?? null,
+        pageSize: args.pageSize ?? null,
+      }),
+  }),
+);
+
+const ClassNoteFilterOptionRef = builder.objectRef<ClassNoteFilterOption & { parentId?: string | null }>(
+  "ClassNoteFilterOption",
+).implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    label: t.exposeString("label"),
+    parentId: t.string({ nullable: true, resolve: (o) => o.parentId ?? null }),
+  }),
+});
+
+const ClassNoteFilterOptionsRef = builder.objectRef<ClassNoteFilterOptions & { canManage: boolean }>(
+  "ClassNoteFilterOptions",
+).implement({
+  fields: (t) => ({
+    classes: t.field({ type: [ClassNoteFilterOptionRef], resolve: (o) => o.classes }),
+    sections: t.field({ type: [ClassNoteFilterOptionRef], resolve: (o) => o.sections }),
+    subjects: t.stringList({ resolve: (o) => o.subjects }),
+    teachers: t.field({ type: [ClassNoteFilterOptionRef], resolve: (o) => o.teachers }),
+    /** The caller reads the whole school (and so may edit/delete any row). */
+    canManage: t.exposeBoolean("canManage"),
+  }),
+});
+
+builder.queryField("classNoteFilterOptions", (t) =>
+  t.field({
+    type: ClassNoteFilterOptionsRef,
+    description: "Filter values that exist in the caller's slice of the class-note archive.",
+    authScopes: { hasPermission: "routine:read" },
+    resolve: async (_r, _args, ctx) => {
+      const canManage = !!ctx.auth && callerHasPermission(ctx.auth, "routine:manage");
+      const options = await classNoteFilterOptions({ teacherId: canManage ? null : ctx.auth!.userId });
+      return { ...options, canManage };
+    },
+  }),
+);
+
 builder.mutationField("updateClassNote", (t) =>
   t.field({
     type: ClassNoteRef,
-    authScopes: { hasPermission: "routine:manage" },
+    description:
+      "Edit a note's summary/attachments. routine:manage edits any note; every other caller " +
+      "edits only the note they authored (checked in-service against publishedBy).",
+    authScopes: { hasPermission: "routine:read" },
     args: {
       id: t.arg.string({ required: true }),
       taughtSummaryBn: t.arg.string({ required: false }),
       attachmentIds: t.arg.stringList({ required: false }),
     },
-    resolve: async (_r, args) =>
+    resolve: async (_r, args, ctx) =>
       updateClassNote({
         id: args.id,
         taughtSummaryBn: args.taughtSummaryBn ?? undefined,
         attachmentIds: args.attachmentIds ?? undefined,
+        actorId: ctx.auth!.userId,
+        canManage: !!ctx.auth && callerHasPermission(ctx.auth, "routine:manage"),
       }),
   }),
 );

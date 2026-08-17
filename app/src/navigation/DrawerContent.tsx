@@ -87,7 +87,18 @@ const STAFF_NAV: NavSection[] = [
   },
   { type: "item", route: "AttendanceTab", labelKey: "tabAttendance", icon: "🙋" },
   { type: "item", route: "PrintTab", labelKey: "tabPrint", icon: "🖨️" },
-  { type: "item", route: "ClassNotesTab", labelKey: "drawerItemClassNotes", icon: "📓" },
+  // Class Notes became a GROUP (owner ask 2026-08-17): the teacher's own periods,
+  // and the filtered archive of every note they may see. Both leaves live in the
+  // one ClassNotesTab stack — the Reports-group deep-link shape.
+  {
+    type: "group",
+    titleKey: "drawerItemClassNotes",
+    icon: "📓",
+    items: [
+      { route: "ClassNotesTab", labelKey: "cnMyPeriods", icon: "📓", screen: "MyClassNotes" },
+      { route: "ClassNotesTab", labelKey: "cnAllNotesTitle", icon: "🗃️", screen: "AllClassNotes" },
+    ],
+  },
   { type: "item", route: "CommentsTab", labelKey: "tabComments", icon: "🗣️" },
   { type: "item", route: "ObservationTab", labelKey: "tabObservation", icon: "👁️" },
   { type: "item", route: "FreeMixingTab", labelKey: "tabFreeMixing", icon: "🎥" },
