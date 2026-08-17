@@ -197,6 +197,8 @@ export default function CompareObservationsScreen({ route, navigation }: Props):
               {/* REF-11 qualitative comments */}
               {r.oneStrength ? <Row label={STR.obsOneStrength} value={r.oneStrength} /> : null}
               {r.growthFocus ? <Row label={STR.obsGrowthFocus} value={r.growthFocus} /> : null}
+              {/* CO-16 (D-#503): domain-free suggestion, per reviewer. */}
+              {r.overallSuggestion ? <Row label={STR.obsOverallSuggestion} value={r.overallSuggestion} /> : null}
               {domainNotes.length > 0 ? (
                 <>
                   <Muted style={{ fontWeight: "700", marginTop: space(1) }}>{STR.obsDomainNotes}</Muted>

@@ -164,6 +164,9 @@ ObservationRef.implement({
     prevObservationId: t.string({ nullable: true, resolve: (r) => r.prevObservationId }),
     priorFocusProgress: t.string({ nullable: true, resolve: (r) => r.priorFocusProgress }),
     priorFocusNote: t.string({ nullable: true, resolve: (r) => r.priorFocusNote }),
+    // CO-16 (D-#503): read by whoever may read the row — so the observed teacher gets it
+    // with the rest of the review once it is PUBLISHED (CO-8), which is the point of it.
+    overallSuggestion: t.string({ nullable: true, resolve: (r) => r.overallSuggestion }),
     quran: t.field({ type: QuranPayloadRef, nullable: true, resolve: (r) => r.quran }),
     // CO-7 privacy: the actual scores are visible only to observation:manage (Principal/Office) so the
     // rated OBSERVER never sees their per-observation fairness score. hasFairnessRating is a safe
@@ -341,7 +344,8 @@ builder.mutationField("reviewClassroomObservation", (t) =>
     type: ObservationRef,
     description:
       "The assigned observer scores + comments. REF-11 form: exactly 5 domain levels + notes, 2 gate results, " +
-      "1 strength, 1 growth focus — no average. QURAN form (CO-5): pass `quran` (8 ratings 1–5 + 7 yes/no + " +
+      "1 strength, 1 growth focus, plus an OPTIONAL domain-free `overallSuggestion` (CO-16) — no average. " +
+      "QURAN form (CO-5): pass `quran` (8 ratings 1–5 + 7 yes/no + " +
       "strengths/improvements/suggestions). The form decides which payload is required. → REVIEWED, released to " +
       "the observed teacher (no Principal sign-off). Requires observation:review AND being the assigned observer. Audited.",
     authScopes: { hasPermission: "observation:review" },
@@ -355,6 +359,9 @@ builder.mutationField("reviewClassroomObservation", (t) =>
       growthFocus: t.arg.string({ required: false }),
       priorFocusProgress: t.arg.string({ required: false }),
       priorFocusNote: t.arg.string({ required: false }),
+      // CO-16 (D-#503): optional, domain-free suggestion. REF-11 only — ignored on a
+      // QURAN row, which already asks for `quran.suggestions`.
+      overallSuggestion: t.arg.string({ required: false }),
       // Quran (ClassEcho) payload — provide ONLY for a QURAN-form observation (CO-5).
       quran: t.arg({ type: QuranPayloadInputType, required: false }),
     },
@@ -368,6 +375,7 @@ builder.mutationField("reviewClassroomObservation", (t) =>
         growthFocus: args.growthFocus ?? "",
         priorFocusProgress: args.priorFocusProgress ?? undefined,
         priorFocusNote: args.priorFocusNote ?? undefined,
+        overallSuggestion: args.overallSuggestion ?? undefined,
         quran: args.quran
           ? {
               ratings: args.quran.ratings.map((r) => ({ criterion: r.criterion, score: r.score, note: r.note ?? null })),
