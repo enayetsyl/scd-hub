@@ -15,6 +15,8 @@ import { assertGuardianOfStudent } from "../../../middleware/authz";
 import {
   myChildren,
   childRoutine,
+  childRoutineRange,
+  type GuardianRoutineDay,
   childClassNotes,
   childClassNotesRange,
   type GuardianClassNoteDay,
@@ -99,6 +101,17 @@ const GuardianSlotRef = builder.objectRef<GuardianSlot>("GuardianSlot").implemen
 
 const GuardianDayRef = builder.objectRef<GuardianDay>("GuardianDay").implement({
   fields: (t) => ({
+    dayType: t.exposeString("dayType"),
+    dayTypeLabelBn: t.exposeString("dayTypeLabelBn"),
+    holidayNameBn: t.string({ nullable: true, resolve: (d) => d.holidayNameBn }),
+    slots: t.field({ type: [GuardianSlotRef], resolve: (d) => d.slots }),
+  }),
+});
+
+/** GP-9 (D-#504): the same day shape with its date, for the window read. */
+const GuardianRoutineDayRef = builder.objectRef<GuardianRoutineDay>("GuardianRoutineDay").implement({
+  fields: (t) => ({
+    dateKey: t.exposeString("dateKey"),
     dayType: t.exposeString("dayType"),
     dayTypeLabelBn: t.exposeString("dayTypeLabelBn"),
     holidayNameBn: t.string({ nullable: true, resolve: (d) => d.holidayNameBn }),
@@ -270,6 +283,27 @@ builder.queryField("childRoutine", (t) =>
     resolve: async (_r, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
       return childRoutine(args.studentId, parseDate(args.date));
+    },
+  }),
+);
+
+builder.queryField("childRoutineRange", (t) =>
+  t.field({
+    type: [GuardianRoutineDayRef],
+    description:
+      "The child's resolved routine day-by-day over a window (GP-9) — the same narrow slots as " +
+      "childRoutine (D-#69: subject + period + time only), so a day view can name the subjects " +
+      "that HAD a period and therefore which of them declared no homework. Newest day first; " +
+      "window capped at GUARDIAN_RANGE_MAX_DAYS.",
+    authScopes: { hasPermission: "guardian:read_child" },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      from: t.arg.string({ required: true }),
+      to: t.arg.string({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => {
+      await assertGuardianOfStudent(ctx, args.studentId);
+      return childRoutineRange(args.studentId, parseDate(args.from), parseDate(args.to));
     },
   }),
 );

@@ -46,6 +46,7 @@ import {
   Loader,
   ErrorBanner,
   EmptyState,
+  Notice,
 } from "../../components/ui";
 import { ClassNoteAttachments, type AttachmentRef } from "../../components/ClassNoteAttachments";
 import { DateField } from "../../components/DateField";
@@ -54,6 +55,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, dayTypeLabel, routineSubjectLabel, hwNilReasonLabel, HW_NIL_REASONS } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
+import { mentionsHomework } from "../../lib/homeworkText";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
@@ -65,6 +67,7 @@ const todayISO = (): string => dateKey();
 function canCarryHomework(slot: RoutineSlotT): boolean {
   return slot.groupType === "section" && !!slot.classId && slot.subject !== "QURAN";
 }
+
 
 /**
  * One period card: the published note, or the inline entry box for the whole
@@ -328,6 +331,11 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
                 </>
               ) : null}
               {hwError ? <Muted style={{ color: "#b00020" }}>⚠ {hwError}</Muted> : null}
+              {/* D-#505: the text announces homework but this card is not declaring
+                  any. A reminder, never a block — see `mentionsHomework`. */}
+              {hwMode !== "DECLARE" && mentionsHomework(taught) ? (
+                <Notice message={STR.cnHwTextButNoDeclare} tone="warn" />
+              ) : null}
             </View>
           ) : isSection && dayItems.length > 1 ? (
             // No tracker:write — the old link-an-existing-item path stays available.

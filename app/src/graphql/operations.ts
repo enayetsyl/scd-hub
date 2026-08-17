@@ -3153,6 +3153,25 @@ export const CHILD_ROUTINE_QUERY = gql<
   }
 `;
 
+/** GP-9 (D-#504): one day of the child's routine, with its date. */
+export interface GuardianRoutineDayT extends GuardianDayT {
+  dateKey: string;
+}
+
+/** The child's routine for a WHOLE window in one round-trip — what makes it
+ *  possible to say "this subject had a period and declared nothing". */
+export const CHILD_ROUTINE_RANGE_QUERY = gql<
+  { childRoutineRange: GuardianRoutineDayT[] },
+  { studentId: string; from: string; to: string }
+>`
+  query ChildRoutineRange($studentId: String!, $from: String!, $to: String!) {
+    childRoutineRange(studentId: $studentId, from: $from, to: $to) {
+      dateKey dayType dayTypeLabelBn holidayNameBn
+      slots { subject subjectLabelBn periodNumber startHHMM endHHMM }
+    }
+  }
+`;
+
 /** A worksheet/handout the teacher attached to the note. Bytes stream through
  *  GET /files/:id; the gate checks the guardian has a child in the note's group. */
 export interface GuardianClassNoteAttachmentT {

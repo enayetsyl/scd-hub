@@ -190,6 +190,53 @@ display requires GP-A).**
 - New STR keys (BN/EN); English codes (HW_ID etc.) stay Latin (D-#61).
 - Gate: app tsc clean + web bundle green; no server/contract change in GP-2.
 
+**GP-9 — the homework screen answers the DAY, subject by subject (D-#504/#505; owner
+review 2026-08-17).**
+
+*The problem, from the owner's own screens.* `ChildHomeworkScreen` listed only the
+subjects that DECLARED homework, one card each, under a small muted date. The class's
+"no homework" declarations (D-#299) sat in ONE separate card at the top covering the
+whole date range. So for any given day a parent could not tell whether a subject had
+no homework or whether nobody had said anything — the two facts lived on different
+parts of the screen, or nowhere. On the lesson-history screen the same day showed one
+homework while three subjects had written "H.W …" into their lesson text: only one of
+them had declared an item, and one of the others had declared "no homework" for that
+very period, which the card then hid behind an if/else-if.
+
+*What changes:*
+1. **One card per DAY, the date as its bold title.** Every subject that had a period
+   that day appears in period order, in exactly one of three states: homework declared
+   (the full lifecycle block), "no homework" declared (the teacher's reason), or
+   **"ঘোষণা করা হয়নি"** — worded to be distinct from "বাড়ির কাজ নেই", because an
+   unanswered subject is a different fact from a closed one. The range-wide nil card is
+   gone; its rows belong to their days.
+2. **New read `childRoutineRange(studentId, from, to)`** — the SAME narrow day shape as
+   `childRoutine` (D-#69: subject + period + time, built fresh), for a whole window in
+   a FIXED number of queries: holidays, slots, schedule windows and period grids are
+   each loaded once and the per-day work is pure. Calling `childRoutine` per day would
+   have reinstated exactly the fan-out D-#476 removed. The per-day effective-window
+   filter is the day-granular `isLiveOn` (D-#502), so a slot created or retired
+   mid-window lands on the right days.
+3. **QURAN periods are left out of the homework day** (D-#36: Quran homework is the
+   Quran tracker's channel), rather than shown as forever-undeclared.
+4. **Nothing declared is ever dropped.** A record or nil declaration for a subject with
+   no period that day (a slot retired later) is appended after the routine subjects.
+5. **Lesson history shows both lists together** — declared items AND nil declarations,
+   no longer an if/else-if.
+6. **A declare-time reminder (D-#505).** When the daily-entry card's "যা পড়ালাম" text
+   announces homework (`H.W`, `hw`, `বাড়ির কাজ`, `হোমওয়ার্ক`) while the card declares
+   none, the teacher sees a warning. It NEVER blocks: a note may legitimately mention
+   last week's work. A bare "h w" is deliberately not matched — a false warning on
+   every note would train teachers to ignore the real one.
+7. **The routine card on GuardianHome is titled "আজকের রুটিন"**, not "আজ" — the screen
+   is already "আজ".
+
+*Gate:* server + app tsc, `guardianPortal.test.ts` (childRoutineRange: per-day day
+types, the fixed query count over a 14-day window, per-day effective window,
+QURAN_ONLY Saturday, holiday spans, range cap, narrow shape) + new
+`guardianDayCard.test.ts` (the text heuristic and the screen-composition guards),
+expo web export green.
+
 **GP-3+ — module riders (NOT this contract).** Attendance view, fees view, notices,
 leave-application mutation, push notifications: each lands WITH its module and replaces
 its placeholder card. Push delivery rides the deferred messaging pipeline (D-#52).

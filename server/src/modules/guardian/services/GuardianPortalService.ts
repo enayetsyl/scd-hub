@@ -14,6 +14,7 @@
  */
 import {
   DAY_TYPE_LABELS_BN,
+  DAYS_OF_WEEK,
   ROSTER_CLASS_LABELS_BN,
   ROUTINE_SUBJECT_LABELS_BN,
   HW_SUBJECT_LABELS_BN,
@@ -40,6 +41,7 @@ import { ScheduleWindow, type IScheduleWindow } from "../../routine/models/Sched
 import { PeriodGrid, type IPeriodGrid } from "../../routine/models/PeriodGrid";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { dayTypeFor } from "../../routine/calendar";
+import { isLiveOn } from "../../routine/liveWindow";
 import { computePeriodTimes, windowFor } from "../../routine/schedule";
 import { slotsForDate } from "../../routine/services/RoutineSlotService";
 import { classNotesForDate, classNotesForRange } from "../../routine/services/RoutineTriggerService";
@@ -104,6 +106,13 @@ export interface GuardianDay {
   /** Set only when dayType is HOLIDAY (the exception's Bangla name). */
   holidayNameBn: string | null;
   slots: GuardianSlot[];
+}
+
+/** One day of the child's routine (GP-9, D-#504) — `GuardianDay` with its date, so
+ *  the homework screen can say WHICH subjects had a period on a past day and
+ *  therefore which of them never declared anything. */
+export interface GuardianRoutineDay extends GuardianDay {
+  dateKey: string;
 }
 
 export interface GuardianClassNoteHomework {
@@ -392,6 +401,158 @@ export async function childRoutine(studentId: string, date: Date): Promise<Guard
     .sort((a, b) => a.periodNumber - b.periodNumber);
 
   return { ...base, slots };
+}
+
+// ---------------------------------------------------------------------------
+// childRoutineRange (GP-9, D-#504) — the SAME resolved day as `childRoutine`, for
+// a whole window, in a FIXED number of queries.
+//
+// Why it exists: the homework screen has to name the subjects that had a period on
+// a day in order to say "this one never declared anything". Calling `childRoutine`
+// once per day would cost ~6 queries × 14 days — precisely the fan-out D-#476
+// removed from the class-notes screen. So the day loop here reads nothing: every
+// collection is loaded once for the window and the per-day work is pure.
+// ---------------------------------------------------------------------------
+
+/** Every active HolidayException overlapping the window, in one query. */
+async function holidaysForRange(from: Date, to: Date) {
+  const { start } = dayBounds(from);
+  const { end } = dayBounds(to);
+  return HolidayException.find({
+    active: true,
+    fromDate: { $lte: end },
+    toDate: { $gte: start },
+  }).lean();
+}
+
+/** period → clock times, for EVERY season, so a window that crosses a schedule
+ *  window (Ramadan → regular) still costs two queries rather than two per day. */
+async function periodTimesBySeasonFor(
+  classLevel: number,
+): Promise<{
+  windows: IScheduleWindow[];
+  gridBySeason: Map<string, IPeriodGrid>;
+}> {
+  const windows = (await ScheduleWindow.find({ active: true }).lean()) as unknown as IScheduleWindow[];
+  const grids = (await PeriodGrid.find({
+    classLevels: classLevel,
+    active: true,
+  }).lean()) as unknown as IPeriodGrid[];
+  return { windows, gridBySeason: new Map(grids.map((g) => [g.season, g])) };
+}
+
+export async function childRoutineRange(
+  studentId: string,
+  from: Date,
+  to: Date,
+): Promise<GuardianRoutineDay[]> {
+  assertGuardianRange(from, to);
+  const student = await requireStudent(studentId);
+  const groups = await groupsOf(studentId);
+
+  // Every slot of every unit the child belongs to, ONCE. The per-day filter below
+  // re-applies exactly what `slotsForDate` asks the database for — dayOfWeek plus
+  // the day-granular effective window (`isLiveOn`, D-#502) — so a slot created or
+  // retired mid-window lands on the right days and no others.
+  const units: Array<{ groupType: "section" | "subjectgroup"; groupId: string; track?: string }> = [
+    { groupType: "section", groupId: student.sectionId.toString() },
+    ...groups.map((g) => ({
+      groupType: "subjectgroup" as const,
+      groupId: g._id.toString(),
+      track: g.track,
+    })),
+  ];
+  const slotDocs = (await RoutineSlot.find({
+    active: true,
+    $or: units.map((u) => ({ groupType: u.groupType, groupId: u.groupId })),
+  }).lean()) as unknown as Array<{
+    groupType: string;
+    groupId: unknown;
+    dayOfWeek: string;
+    subject: RoutineSubject;
+    periodNumber: number;
+    isBreak?: boolean;
+    effectiveFrom: Date;
+    effectiveTo?: Date | null;
+  }>;
+  /** Saturday is Quran-group only (D-#50) — the same rule `childRoutine` applies. */
+  const quranGroupIds = new Set(
+    groups.filter((g) => g.track === "quran").map((g) => g._id.toString()),
+  );
+
+  const holidays = await holidaysForRange(from, to);
+  const cls = await Class.findById(student.classId).lean();
+  const { windows, gridBySeason } = cls
+    ? await periodTimesBySeasonFor(cls.level)
+    : { windows: [] as IScheduleWindow[], gridBySeason: new Map<string, IPeriodGrid>() };
+  /** Clock times per season, computed at most once per season in the window. */
+  const timesBySeason = new Map<string, Map<number, { startHHMM: string; endHHMM: string }>>();
+
+  const out: GuardianRoutineDay[] = [];
+  const cursor = dayBounds(from).start;
+  const last = dayBounds(to).start.getTime();
+  for (let t = cursor.getTime(); t <= last; ) {
+    const date = new Date(t);
+    const { start, end } = dayBounds(date);
+    const holiday =
+      holidays.find(
+        (h) => new Date(h.fromDate).getTime() <= end.getTime() && new Date(h.toDate).getTime() >= start.getTime(),
+      ) ?? null;
+    const dayType = dayTypeFor(date, holiday !== null);
+    const day: GuardianRoutineDay = {
+      dateKey: localDayKey(date),
+      dayType,
+      dayTypeLabelBn: DAY_TYPE_LABELS_BN[dayType],
+      holidayNameBn: holiday ? holiday.nameBn : null,
+      slots: [],
+    };
+
+    if (dayType !== "OFF" && dayType !== "HOLIDAY") {
+      const dayOfWeek = DAYS_OF_WEEK[date.getDay()];
+      const win = windowFor(date, windows);
+      const season = win ? win.season : "regular";
+      let times = timesBySeason.get(season);
+      if (!times) {
+        times = new Map<number, { startHHMM: string; endHHMM: string }>();
+        const grid = gridBySeason.get(season);
+        if (grid) {
+          for (const p of computePeriodTimes(win ? win.dayStartMinutes : 420, grid.periods)) {
+            times.set(p.number, { startHHMM: p.startHHMM, endHHMM: p.endHHMM });
+          }
+        }
+        timesBySeason.set(season, times);
+      }
+      day.slots = slotDocs
+        .filter((s) => {
+          if (s.isBreak) return false;
+          if (s.dayOfWeek !== dayOfWeek) return false;
+          if (!isLiveOn(s, date)) return false;
+          // QURAN_ONLY Saturdays: the child's Quran group only, never the section.
+          if (dayType === "QURAN_ONLY") {
+            return s.groupType === "subjectgroup" && quranGroupIds.has(String(s.groupId));
+          }
+          return true;
+        })
+        // Built FRESH, never a spread of the slot document (D-#69) — a staff field
+        // must not be able to ride along into a guardian payload.
+        .map((s) => ({
+          subject: s.subject,
+          subjectLabelBn: ROUTINE_SUBJECT_LABELS_BN[s.subject] ?? s.subject,
+          periodNumber: s.periodNumber,
+          startHHMM: times!.get(s.periodNumber)?.startHHMM ?? null,
+          endHHMM: times!.get(s.periodNumber)?.endHHMM ?? null,
+        }))
+        .sort((a, b) => a.periodNumber - b.periodNumber);
+    }
+
+    out.push(day);
+    // Step by calendar day, not by +86.4e6 ms — a DST-shifting zone would drift.
+    const next = new Date(date);
+    next.setDate(next.getDate() + 1);
+    t = next.getTime();
+  }
+
+  return out.sort((a, b) => b.dateKey.localeCompare(a.dateKey)); // newest day first
 }
 
 // ---------------------------------------------------------------------------

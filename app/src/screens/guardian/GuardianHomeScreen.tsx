@@ -453,10 +453,13 @@ export default function GuardianHomeScreen(): React.ReactElement {
           ) : null}
         </Card>
 
-        {/* Today's routine (subject + period + time ONLY, D-#69) */}
+        {/* Today's routine (subject + period + time ONLY, D-#69). Titled "আজকের
+            রুটিন", not "আজ" (owner ask 2026-08-17): the screen as a whole is
+            "আজ", so a card inside it repeating that title said nothing about
+            what the card actually holds. */}
         <Card>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Body style={{ fontWeight: "700" }}>{STR.gpToday}</Body>
+            <Body style={{ fontWeight: "700" }}>{STR.gpTodayRoutine}</Body>
             {day ? (
               <Badge
                 text={day.dayType === "HOLIDAY" && day.holidayNameBn ? day.holidayNameBn : dayTypeLabel(day.dayType)}

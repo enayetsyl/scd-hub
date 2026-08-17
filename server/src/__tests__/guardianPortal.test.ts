@@ -81,8 +81,13 @@ jest.mock("../modules/routine/models/SubjectGroupMembership", () => ({
 }));
 
 const mockHolidayFindOne = jest.fn();
+const mockHolidayFind = jest.fn();
 jest.mock("../modules/routine/models/HolidayException", () => ({
-  HolidayException: { findOne: (q: unknown) => ({ lean: () => mockHolidayFindOne(q) }) },
+  HolidayException: {
+    findOne: (q: unknown) => ({ lean: () => mockHolidayFindOne(q) }),
+    // GP-9: the window read takes every overlapping holiday in ONE query.
+    find: (q: unknown) => ({ lean: () => mockHolidayFind(q) }),
+  },
 }));
 
 const mockWindowFind = jest.fn();
@@ -91,8 +96,13 @@ jest.mock("../modules/routine/models/ScheduleWindow", () => ({
 }));
 
 const mockGridFindOne = jest.fn();
+const mockGridFind = jest.fn();
 jest.mock("../modules/routine/models/PeriodGrid", () => ({
-  PeriodGrid: { findOne: (q: unknown) => ({ lean: () => mockGridFindOne(q) }) },
+  PeriodGrid: {
+    findOne: (q: unknown) => ({ lean: () => mockGridFindOne(q) }),
+    // GP-9: every season's grid at once, so the day loop reads nothing.
+    find: (q: unknown) => ({ lean: () => mockGridFind(q) }),
+  },
 }));
 
 const mockRoutineSlotFind = jest.fn();
@@ -138,6 +148,7 @@ import { assertGuardianOfStudent, ForbiddenError } from "../middleware/authz";
 import {
   myChildren,
   childRoutine,
+  childRoutineRange,
   childClassNotes,
   childClassNotesRange,
   GUARDIAN_RANGE_MAX_DAYS,
@@ -243,6 +254,20 @@ beforeEach(() => {
       { number: 3, durationMin: 40, isBreak: false, track: "arabic", nameBn: "৩য়" },
     ],
   });
+  mockHolidayFind.mockResolvedValue([]);
+  mockGridFind.mockResolvedValue([
+    {
+      audienceKey: "class_1_5",
+      classLevels: [1, 2, 3, 4, 5],
+      season: "regular",
+      periods: [
+        { number: 1, durationMin: 45, isBreak: false, track: "quran", nameBn: "১ম" },
+        { number: 2, durationMin: 45, isBreak: false, track: "quran", nameBn: "২য়" },
+        { number: 3, durationMin: 40, isBreak: false, track: "arabic", nameBn: "৩য়" },
+      ],
+    },
+  ]);
+  mockRoutineSlotFind.mockResolvedValue([]);
   mockMembershipFind.mockResolvedValue([]);
   mockGroupFind.mockResolvedValue([]);
   mockSlotsForDate.mockResolvedValue([]);
@@ -446,6 +471,158 @@ describe("childRoutine", () => {
     expect(day.dayType).toBe("HOLIDAY");
     expect(day.holidayNameBn).toBe("ঈদুল আজহা");
     expect(day.slots).toEqual([]);
+  });
+});
+
+// ===========================================================================
+// childRoutineRange (GP-9, D-#504) — the same day, batched over a window
+// ===========================================================================
+
+describe("childRoutineRange", () => {
+  // Mon 2026-06-01 .. Sat 2026-06-06: FULL Mon–Thu, Friday OFF, Saturday QURAN_ONLY.
+  const MONDAY = new Date(2026, 5, 1);
+
+  test("one entry per calendar day, newest first, with the day type resolved per day", async () => {
+    const days = await childRoutineRange(STUDENT_ID.toString(), MONDAY, SATURDAY);
+
+    expect(days.map((d) => d.dateKey)).toEqual([
+      "2026-06-06",
+      "2026-06-05",
+      "2026-06-04",
+      "2026-06-03",
+      "2026-06-02",
+      "2026-06-01",
+    ]);
+    const byKey = new Map(days.map((d) => [d.dateKey, d]));
+    expect(byKey.get("2026-06-02")!.dayType).toBe("FULL");
+    expect(byKey.get("2026-06-05")!.dayType).toBe("OFF"); // Friday
+    expect(byKey.get("2026-06-06")!.dayType).toBe("QURAN_ONLY"); // Saturday
+    // A non-teaching day carries its label and NO slots.
+    expect(byKey.get("2026-06-05")!.slots).toEqual([]);
+  });
+
+  test("the whole window costs a FIXED number of queries — never one set per day (D-#476 posture)", async () => {
+    mockRoutineSlotFind.mockResolvedValue([staffSlot(4, "BAN")]);
+
+    // 14 days — the window the homework screen opens on.
+    await childRoutineRange(STUDENT_ID.toString(), MONDAY, new Date(2026, 5, 14));
+
+    expect(mockRoutineSlotFind).toHaveBeenCalledTimes(1);
+    expect(mockHolidayFind).toHaveBeenCalledTimes(1);
+    expect(mockWindowFind).toHaveBeenCalledTimes(1);
+    expect(mockGridFind).toHaveBeenCalledTimes(1);
+    // And the per-day helpers of the single-day read are not used at all.
+    expect(mockSlotsForDate).not.toHaveBeenCalled();
+    expect(mockHolidayFindOne).not.toHaveBeenCalled();
+    expect(mockGridFindOne).not.toHaveBeenCalled();
+  });
+
+  test("a slot lands on its OWN weekday only, in the NARROW shape (D-#69)", async () => {
+    mockRoutineSlotFind.mockResolvedValue([
+      staffSlot(4, "BAN", { dayOfWeek: "TUE" }),
+      staffSlot(2, "MATH", { dayOfWeek: "TUE" }),
+      staffSlot(1, "ENG", { dayOfWeek: "WED" }),
+      staffSlot(5, "TIFFIN", { dayOfWeek: "TUE", isBreak: true, subject: "BAN" }), // break → dropped
+    ]);
+
+    const days = await childRoutineRange(STUDENT_ID.toString(), MONDAY, SATURDAY);
+    const byKey = new Map(days.map((d) => [d.dateKey, d]));
+
+    // Tuesday: both TUE slots, period-sorted, break dropped.
+    expect(byKey.get("2026-06-02")!.slots.map((s) => s.periodNumber)).toEqual([2, 4]);
+    expect(byKey.get("2026-06-03")!.slots.map((s) => s.subject)).toEqual(["ENG"]); // Wednesday
+    expect(byKey.get("2026-06-01")!.slots).toEqual([]); // Monday has none
+    // The fixture slots carry teacherId/roomId — the guardian shape must not.
+    for (const s of byKey.get("2026-06-02")!.slots) {
+      expect(Object.keys(s).sort()).toEqual(
+        ["endHHMM", "periodNumber", "startHHMM", "subject", "subjectLabelBn"].sort(),
+      );
+      expect("teacherId" in s).toBe(false);
+      expect("roomId" in s).toBe(false);
+    }
+    expect(byKey.get("2026-06-02")!.slots[0]).toEqual({
+      subject: "MATH",
+      subjectLabelBn: "গণিত",
+      periodNumber: 2,
+      startHHMM: "07:45",
+      endHHMM: "08:30",
+    });
+  });
+
+  test("the effective window is applied PER DAY and is day-granular (D-#502)", async () => {
+    // Created effective 2026-06-03, retired at the end of 2026-06-04.
+    mockRoutineSlotFind.mockResolvedValue([
+      staffSlot(4, "BAN", {
+        dayOfWeek: "TUE",
+        effectiveFrom: new Date(2026, 5, 3),
+        effectiveTo: new Date(2026, 5, 4, 23, 59, 59, 999),
+      }),
+      staffSlot(1, "MATH", { dayOfWeek: "TUE", effectiveFrom: new Date(2026, 5, 3) }),
+    ]);
+
+    const days = await childRoutineRange(STUDENT_ID.toString(), MONDAY, new Date(2026, 5, 16));
+    const subjectsOn = (k: string) =>
+      days.find((d) => d.dateKey === k)!.slots.map((s) => s.subject);
+
+    expect(subjectsOn("2026-06-02")).toEqual([]); // Tuesday BEFORE effectiveFrom
+    expect(subjectsOn("2026-06-09")).toEqual(["MATH"]); // BAN retired by then, MATH still live
+    expect(subjectsOn("2026-06-16")).toEqual(["MATH"]);
+  });
+
+  test("Saturday returns the Quran GROUP's slots only — never the section's (D-#50)", async () => {
+    mockMembershipFind.mockResolvedValue([
+      { groupId: QURAN_GROUP_ID, studentId: STUDENT_ID },
+      { groupId: ARABIC_GROUP_ID, studentId: STUDENT_ID },
+    ]);
+    mockGroupFind.mockResolvedValue([quranGroup, arabicGroup]);
+    mockRoutineSlotFind.mockResolvedValue([
+      staffSlot(1, "QURAN", {
+        groupType: "subjectgroup",
+        groupId: QURAN_GROUP_ID,
+        dayOfWeek: "SAT",
+      }),
+      staffSlot(2, "ARABIC", {
+        groupType: "subjectgroup",
+        groupId: ARABIC_GROUP_ID,
+        dayOfWeek: "SAT",
+      }),
+      staffSlot(3, "BAN", { dayOfWeek: "SAT" }), // a section slot on Saturday
+    ]);
+
+    const sat = (await childRoutineRange(STUDENT_ID.toString(), SATURDAY, SATURDAY))[0];
+
+    expect(sat.dayType).toBe("QURAN_ONLY");
+    expect(sat.slots.map((s) => s.subject)).toEqual(["QURAN"]);
+  });
+
+  test("a holiday covering part of the window marks only those days", async () => {
+    mockHolidayFind.mockResolvedValue([
+      {
+        nameBn: "ঈদুল আজহা",
+        type: "eid",
+        active: true,
+        fromDate: new Date(2026, 5, 2),
+        toDate: new Date(2026, 5, 3),
+      },
+    ]);
+    mockRoutineSlotFind.mockResolvedValue([staffSlot(4, "BAN", { dayOfWeek: "TUE" })]);
+
+    const days = await childRoutineRange(STUDENT_ID.toString(), MONDAY, SATURDAY);
+    const byKey = new Map(days.map((d) => [d.dateKey, d]));
+
+    expect(byKey.get("2026-06-02")!.dayType).toBe("HOLIDAY");
+    expect(byKey.get("2026-06-02")!.holidayNameBn).toBe("ঈদুল আজহা");
+    expect(byKey.get("2026-06-02")!.slots).toEqual([]); // a holiday teaches nothing
+    expect(byKey.get("2026-06-03")!.dayType).toBe("HOLIDAY");
+    expect(byKey.get("2026-06-01")!.dayType).toBe("FULL");
+    expect(byKey.get("2026-06-01")!.holidayNameBn).toBeNull();
+  });
+
+  test("an over-long window is refused before any database read", async () => {
+    const from = new Date(2026, 0, 1);
+    const to = new Date(2026, 0, 1 + GUARDIAN_RANGE_MAX_DAYS);
+    await expect(childRoutineRange(STUDENT_ID.toString(), from, to)).rejects.toThrow(/Range too wide/);
+    expect(mockRoutineSlotFind).not.toHaveBeenCalled();
   });
 });
 
