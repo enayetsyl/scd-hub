@@ -967,6 +967,8 @@ const STR_BN = {
   cnEditingNote: "নোট সম্পাদনা করা হচ্ছে",
   cnActionEdit: "সম্পাদনা",
   cnActionDelete: "মুছুন",
+  cnExpandAll: "সব খুলুন",
+  cnCollapseAll: "সব বন্ধ করুন",
   myPeriods: "আমার পিরিয়ড",
   pendingWork: "অসমাপ্ত কাজ",
   /** Today redesign (ux-audit F7). */
@@ -4501,6 +4503,8 @@ const STR_EN: StrTable = {
   cnEditingNote: "Editing note",
   cnActionEdit: "Edit",
   cnActionDelete: "Delete",
+  cnExpandAll: "Expand all",
+  cnCollapseAll: "Collapse all",
   myPeriods: "My periods",
   pendingWork: "Unresolved work",
   /** Today redesign (ux-audit F7). */
