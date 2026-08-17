@@ -10,7 +10,7 @@
  *
  * Pure — no mocks, no DB.
  */
-import { liveWindow, isLiveOn, startOfDay, endOfDayBefore } from "../modules/routine/liveWindow";
+import { liveWindow, isLiveOn, startOfDay, endOfDay, endOfDayBefore } from "../modules/routine/liveWindow";
 import { effectiveOverlap } from "../modules/routine/conflicts";
 
 const D = (s: string): Date => {
@@ -82,15 +82,25 @@ describe("isLiveOn", () => {
 });
 
 describe("liveWindow (the Mongo predicate)", () => {
+  // D-#502: the bounds are the DAY's edges, not the raw instant. Previously this
+  // asserted identity with `on`, which pinned an instant comparison — and that made
+  // the window depend on how each caller happened to construct its Date. See
+  // liveWindowDayBoundary.test.ts for the prod failure that forced the change.
   test("matches open-ended, null and still-running rows, and nothing that started later", () => {
     const on = D("2026-09-01");
     const f = liveWindow(on) as { effectiveFrom: { $lte: Date }; $or: Array<Record<string, unknown>> };
-    expect(f.effectiveFrom.$lte).toBe(on);
+    expect(f.effectiveFrom.$lte).toEqual(endOfDay(on));
     expect(f.$or).toEqual([
       { effectiveTo: { $exists: false } },
       { effectiveTo: null },
-      { effectiveTo: { $gte: on } },
+      { effectiveTo: { $gte: startOfDay(on) } },
     ]);
+  });
+
+  test("a row that starts LATER is still excluded", () => {
+    const f = liveWindow(D("2026-09-01")) as { effectiveFrom: { $lte: Date } };
+    // The widening reaches the end of 09-01 and no further — 09-02 stays out.
+    expect(D("2026-09-02").getTime()).toBeGreaterThan(f.effectiveFrom.$lte.getTime());
   });
 
   test("defaults to now", () => {
