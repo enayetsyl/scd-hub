@@ -390,6 +390,14 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
             ) : null}
             {/* CO-10 (D-#363): how the prior focus moved, in the observer's words. */}
             {obs.priorFocusNote ? <Row label={STR.obsPriorFocusNote} value={obs.priorFocusNote} /> : null}
+            {/* CO-16 (D-#503): the domain-free suggestion — separated by a divider so the
+                observed teacher reads it as an idea, not as another scored line. */}
+            {obs.overallSuggestion ? (
+              <>
+                <Divider />
+                <Row label={STR.obsOverallSuggestion} value={obs.overallSuggestion} />
+              </>
+            ) : null}
           </Card>
         ) : null}
 

@@ -16,7 +16,8 @@
  * violation and otherwise returns the normalised payload (trimmed notes/strings,
  * canonical domain/gate order). The optional carry-forward (`priorFocusProgress` +
  * the CO-10 `priorFocusNote`, D-#363) is validated only when present — an observation
- * with no prior observation carries neither.
+ * with no prior observation carries neither. The CO-16 `overallSuggestion` (D-#503) is
+ * optional in the same way: normalised to null when blank, never required.
  */
 import {
   OBSERVATION_DOMAINS,
@@ -52,6 +53,7 @@ export interface Ref11PayloadInput {
   growthFocus: string;
   priorFocusProgress?: string | null;
   priorFocusNote?: string | null;
+  overallSuggestion?: string | null;
 }
 
 export interface DomainScore {
@@ -71,6 +73,7 @@ export interface Ref11Payload {
   growthFocus: string;
   priorFocusProgress: GrowthProgress | null;
   priorFocusNote: string | null;
+  overallSuggestion: string | null;
 }
 
 function nonEmpty(s: string | null | undefined): string {
@@ -158,5 +161,18 @@ export function validateRef11Payload(input: Ref11PayloadInput): Ref11Payload {
   // Free text on HOW the focus moved (D-#363) — trimmed, null when blank.
   const priorFocusNote = nonEmpty(input.priorFocusNote) || null;
 
-  return { domains, gates, oneStrength, growthFocus, priorFocusProgress, priorFocusNote };
+  // --- optional overall suggestion (CO-16, D-#503) ---------------------------------
+  // A suggestion that fits no single domain. NEVER required: the observer who has
+  // nothing to add leaves it empty, and a blank is stored as null rather than "".
+  const overallSuggestion = nonEmpty(input.overallSuggestion) || null;
+
+  return {
+    domains,
+    gates,
+    oneStrength,
+    growthFocus,
+    priorFocusProgress,
+    priorFocusNote,
+    overallSuggestion,
+  };
 }

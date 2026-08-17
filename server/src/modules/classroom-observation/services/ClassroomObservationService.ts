@@ -120,6 +120,9 @@ export interface ClassroomObservationShape {
   priorFocusProgress: string | null;
   /** CO-10 (D-#363): how the prior focus moved, in the observer's own words. */
   priorFocusNote: string | null;
+  /** CO-16 (D-#503): an optional suggestion belonging to no single domain — stored and
+   *  shown, never scored. REF-11 only. */
+  overallSuggestion: string | null;
   /** The Quran (ClassEcho) payload — set on a QURAN-form row at review, else null. */
   quran: QuranPayloadShape | null;
   /** CO-7 teacher fairness rating of the review (1–5; null until rated). */
@@ -164,6 +167,7 @@ function shape(d: IClassroomObservation): ClassroomObservationShape {
     prevObservationId: d.prevObservationId ? d.prevObservationId.toString() : null,
     priorFocusProgress: d.priorFocusProgress ?? null,
     priorFocusNote: d.priorFocusNote ?? null,
+    overallSuggestion: d.overallSuggestion ?? null,
     quran: d.quran
       ? {
           ratings: (d.quran.ratings ?? []).map((x) => ({
@@ -434,6 +438,7 @@ export async function reviewObservation(input: ReviewObservationInput): Promise<
     doc.growthFocus = payload.growthFocus;
     doc.priorFocusProgress = payload.priorFocusProgress;
     doc.priorFocusNote = payload.priorFocusNote;
+    doc.overallSuggestion = payload.overallSuggestion; // CO-16 (D-#503)
   }
   doc.state = "REVIEWED"; // observer/Principal-only until PUBLISHED (CO-8, D-#271)
   doc.reviewedAt = new Date();

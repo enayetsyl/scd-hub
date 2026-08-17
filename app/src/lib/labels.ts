@@ -3858,6 +3858,11 @@ const STR_BN = {
   obsPriorFocusReReview: "একই ক্লাসের পুনঃপর্যালোচনা",
   obsPriorFocusPrevVerdict: "সেবারের রায়",
   obsPriorFocusNone: "এই শিক্ষকের আগের কোনো পর্যবেক্ষণ নেই — তাই অগ্রগতির প্রশ্ন নেই।",
+  // Overall suggestion (CO-16, D-#503) — domain-free, optional, never scored
+  obsOverallSuggestion: "সামগ্রিক পরামর্শ",
+  obsOverallSuggestionHelp:
+    "কোনো একটি ডোমেইনের মধ্যে পড়ে না এমন ব্যবহারিক পরামর্শ — যেমন শিক্ষার্থীদের এনার্জি জোড়ায় কাজ, হাতে-কলমে উপকরণ বা লেখার কাজে চ্যানেল করা। এটি কোনো স্কোরে যোগ হয় না।",
+  obsOverallSuggestionLabel: "পরামর্শ (ঐচ্ছিক)",
   obsQuranRatings: "কুরআন রেটিং (১–৫)",
   obsQuranCompliance: "কমপ্লায়েন্স (হ্যাঁ/না)",
   obsQuranStrengths: "ভালো দিকগুলো",
@@ -7332,6 +7337,11 @@ const STR_EN: StrTable = {
   obsPriorFocusReReview: "Re-review of the same session",
   obsPriorFocusPrevVerdict: "Verdict that time",
   obsPriorFocusNone: "No earlier observation for this teacher — nothing to carry forward.",
+  // Overall suggestion (CO-16, D-#503) — domain-free, optional, never scored
+  obsOverallSuggestion: "Overall suggestion",
+  obsOverallSuggestionHelp:
+    "A practical idea that does not sit inside one domain — e.g. channelling the students' energy into pair work, hands-on materials or writing. It is not added to any score.",
+  obsOverallSuggestionLabel: "Suggestion (optional)",
   obsQuranRatings: "Quran ratings (1–5)",
   obsQuranCompliance: "Compliance (yes/no)",
   obsQuranStrengths: "Strengths",
