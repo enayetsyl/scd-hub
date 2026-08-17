@@ -12,8 +12,9 @@
  * `sectionId` (general/Islam) or a `subjectGroupId` (Arabic/Quran groups, D-#48/#56).
  *
  * REF-11 payload (set at REVIEW, null until then): 5 domain levels (1–4) + notes, 2
- * PASS/BREACH gates, one strength, one growth focus, an optional carry-forward. There
- * is NO total/average field — by design (§4, D-#194).
+ * PASS/BREACH gates, one strength, one growth focus, an optional carry-forward, and an
+ * optional domain-free `overallSuggestion` (CO-16). There is NO total/average field —
+ * by design (§4, D-#194).
  *
  * Lifecycle `state` ∈ OBSERVATION_STATES: UPLOADED → ASSIGNED → REVIEWED → (published) →
  * TEACHER_RESPONDED (CO-3). Since CO-8 (D-#271) REVIEWED no longer releases to the
@@ -152,6 +153,12 @@ export interface IClassroomObservation extends Document {
   /** CO-10 (D-#363): free text on HOW the prior focus moved — the enum alone cannot
    *  say that. REF-11 only, optional; null when the observer leaves it blank. */
   priorFocusNote?: string | null;
+  /** CO-16 (D-#503): a suggestion that belongs to no single domain — a practical idea for
+   *  the class as a whole ("channel this energy into pair work / hands-on modelling").
+   *  REF-11 only, optional, and DESCRIPTIVE: it is stored and shown, never scored, so
+   *  offering an idea can never read as a domain weakness. The QURAN form already has
+   *  `quran.suggestions` and does not get a second one. */
+  overallSuggestion?: string | null;
   // --- Quran (ClassEcho) payload (CO-5; set at REVIEW on a QURAN-form row, else
   //     unset). A REF-11 observation leaves this null and vice-versa. -------------
   quran?: IQuranPayload | null;
@@ -245,6 +252,7 @@ const ClassroomObservationSchema = new Schema<IClassroomObservation>(
     prevObservationId: { type: Schema.Types.ObjectId, ref: "ClassroomObservation", default: null },
     priorFocusProgress: { type: String, enum: GROWTH_PROGRESS, default: null },
     priorFocusNote: { type: String, trim: true, default: null },
+    overallSuggestion: { type: String, trim: true, default: null },
     quran: { type: QuranPayloadSchema, default: null },
     fairnessRating: { type: Number, min: 1, max: 5, default: null },
     usefulnessRating: { type: Number, min: 1, max: 5, default: null },

@@ -7,7 +7,9 @@
  *           observation (CO-10, D-#363) — the carry-forward pair: prior-focus progress
  *           plus a free-text note on how it moved. The prior focus itself is quoted in
  *           a card above the form (`observationPriorFocusContext`), so the observer is
- *           never asked to recall it across a sitting of several teachers.
+ *           never asked to recall it across a sitting of several teachers. Last, the
+ *           CO-16 (D-#503) optional `overallSuggestion` — a domain-free idea for the
+ *           class, deliberately outside the scored block.
  *   QURAN (ClassEcho): 8 ratings (1–5) + 7 yes/no compliance items + strengths /
  *           improvements / suggestions.
  * reviewClassroomObservation → REVIEWED, released to the observed teacher (no Principal
@@ -75,6 +77,7 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
   const [growthFocus, setGrowthFocus] = useState("");
   const [priorFocusProgress, setPriorFocusProgress] = useState<string | null>(null);
   const [priorFocusNote, setPriorFocusNote] = useState("");
+  const [overallSuggestion, setOverallSuggestion] = useState("");
 
   // Quran state
   const [quranScores, setQuranScores] = useState<Record<string, string | null>>({});
@@ -106,6 +109,7 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
       growthFocus,
       priorFocusProgress,
       priorFocusNote,
+      overallSuggestion,
       quranScores,
       quranNotes,
       compliance,
@@ -122,6 +126,7 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
       growthFocus,
       priorFocusProgress,
       priorFocusNote,
+      overallSuggestion,
       quranScores,
       quranNotes,
       compliance,
@@ -139,6 +144,7 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
     setGrowthFocus(d.growthFocus ?? "");
     setPriorFocusProgress(d.priorFocusProgress ?? null);
     setPriorFocusNote(d.priorFocusNote ?? "");
+    setOverallSuggestion(d.overallSuggestion ?? "");
     setQuranScores(d.quranScores ?? {});
     setQuranNotes(d.quranNotes ?? {});
     setCompliance(d.compliance ?? {});
@@ -221,6 +227,8 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
         // prior the fields are hidden, so never send stale state.
         priorFocusProgress: prior ? priorFocusProgress ?? null : null,
         priorFocusNote: prior ? priorFocusNote.trim() || null : null,
+        // CO-16: never required — an empty box is sent as null, not "".
+        overallSuggestion: overallSuggestion.trim() || null,
       });
     }
     setBusy(false);
@@ -384,6 +392,21 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
               ) : (
                 <Muted style={{ marginTop: space(1) }}>{STR.obsPriorFocusNone}</Muted>
               )}
+            </Card>
+
+            {/* CO-16 (D-#503): the domain-free box. Its own card, AFTER the scored part,
+                so a practical idea for the class ("channel the energy into pair work")
+                is written as a suggestion — not squeezed into a domain note, where it
+                would read as that domain's weakness. Optional by design. */}
+            <Card>
+              <Body style={{ fontWeight: "700" }}>{STR.obsOverallSuggestion}</Body>
+              <Muted style={{ marginTop: space(1), marginBottom: space(2) }}>{STR.obsOverallSuggestionHelp}</Muted>
+              <Field
+                label={STR.obsOverallSuggestionLabel}
+                value={overallSuggestion}
+                onChangeText={setOverallSuggestion}
+                multiline
+              />
             </Card>
           </>
         )}

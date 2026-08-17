@@ -17,7 +17,7 @@
 - **Anchor:** a session = a `RoutineSlot` + date → teacher, subject, period, and the **Section** (general/Islam) or **SubjectGroup** (Arabic groups; Quran groups Qaida/Ammapara/Najera/Hifz, D-#56/#48).
 - **Plane:** identity/operational **staff** data; **no corpus/student path** — ADR-005 firewall unaffected.
 - **Contract surface:** app-native `/shared/vocab.ts` additions only — **no wire twin, no two-/three-place sync** (D-#46/#52). Vocab verifier stays green.
-- **Build order:** **CO-1** REF-11 form core + pipeline + roles → **CO-2** footage upload → **CO-3** release + teacher response + notify/escalate (in-app) → **CO-4** trend → **CO-5** Quran (ClassEcho) form → **CO-6** review scheduler → **CO-7** reviewer effectiveness → **CO-8** publish gate (D-#271) → **CO-9** parallel multi-reviewer co-review + compare (D-#272) → **CO-10** prior-focus carry-forward on the review form (D-#363) → **CO-11** the observer's own review history (D-#363) → **CO-12** withhold (D-#369) → **CO-13** AI review analysis (D-#426/#427) → **CO-14** AI review rota from a written instruction (D-#426/#427) → **CO-15** cancel a planned review (D-#428).
+- **Build order:** **CO-1** REF-11 form core + pipeline + roles → **CO-2** footage upload → **CO-3** release + teacher response + notify/escalate (in-app) → **CO-4** trend → **CO-5** Quran (ClassEcho) form → **CO-6** review scheduler → **CO-7** reviewer effectiveness → **CO-8** publish gate (D-#271) → **CO-9** parallel multi-reviewer co-review + compare (D-#272) → **CO-10** prior-focus carry-forward on the review form (D-#363) → **CO-11** the observer's own review history (D-#363) → **CO-12** withhold (D-#369) → **CO-13** AI review analysis (D-#426/#427) → **CO-14** AI review rota from a written instruction (D-#426/#427) → **CO-15** cancel a planned review (D-#428) → **CO-16** overall suggestion on the review form (D-#503).
 - **The AI pair (CO-13/CO-14) share one rule:** the model **chooses and narrates; it never computes.** Every number, date, period and clock time is produced server-side and handed to it; its output is validated against that same server-built set before anything is shown. See D-#426.
 
 ---
@@ -39,6 +39,7 @@ One consistent, growth-framed way to review teaching across the school: REF-11 f
 | Reading the reviews | A Principal reads 34+ free-text reviews by hand to see who needs help. | A ranked, narrated per-teacher read, computed server-side and worded by the model (CO-13). |
 | Abandoning a plan | No way out — an uploaded/assigned row can only move forward, and sits in the queue and counts forever. | Principal/Office cancel with a required reason; reversible; footage kept (CO-15). |
 | Planning the next month | The CO-6 due list says *who*; turning that into dated sessions is manual against a routine that changes often. | A written instruction ("Zarir every other day, rotate his 3 classes…") → a validated dated rota (CO-14). |
+| A suggestion that fits no domain | Every free-text box on the REF-11 form hangs off something scored, so a cross-cutting idea has to be filed as a domain weakness — or left unsaid. | One optional, unscored `overallSuggestion` beside the review (CO-16). |
 
 ## §3 — Reused / unchanged (do not rebuild)
 
@@ -276,6 +277,28 @@ verifier PASS, expo web export exit 0.
 - [ ] The Cancelled filter returns exactly the cancelled rows and the default list excludes them.
 - [ ] A caller without `observation:manage` is refused. Vocab verifier (new notification kind + BN/EN labels) + server tsc + tests green.
 
+### CO-16 — Overall suggestion: an idea that belongs to no domain — D-#503
+
+**The problem this fixes.** Reviewer feedback (2026-08-17, class 2 Math): watching the footage, the useful thought was *"these students have a lot of energy — channel it through writing, pair/group work, visual materials or hands-on activities; e.g. model a money problem in pairs with the school's fake notes"*. The REF-11 form has nowhere to put that. Every free-text box on it is **attached to something scored** — a domain note, a breach note, `oneStrength`, `growthFocus`, the CO-10 progress note. So a cross-cutting, practical, take-it-or-leave-it idea has to be filed under a domain, where it reads as **that domain's weakness**. Some of these ideas do relate to a domain (engagement), but not all do, and none of them are findings. The observer's real alternative today is to say nothing.
+
+**One optional field: `overallSuggestion`** on `ClassroomObservation` — trimmed, `null` when blank, validated with the rest of the REF-11 payload (`validateRef11Payload`), **never required**. On the form it is its own card **after** the scored block, with help text saying in as many words that it is not added to any score.
+
+**DESCRIPTIVE, not a signal — the part to get right.** The field is stored and displayed and **read by nothing that computes**. It does not enter the CO-4 trend, CO-7 reviewer effectiveness, the CO-6 tier, or the CO-13 ranking — all of which read domain levels, gate results and fairness ratings only. This is the whole point of the ask: making a suggestion must not cost the teacher a mark, and the absence of one must not look like a clean sheet. Turning it into a signal later would be a new decision, not a refinement.
+
+**REF-11 only, deliberately.** The QURAN (ClassEcho) form already asks for `quran.suggestions` (CO-5); a second suggestion box there would just split the same answer in two. Sent on a QURAN row it is ignored, exactly as the other REF-11 fields are (owner ruling, 2026-08-17).
+
+**Visibility rides the existing gate.** It is a plain field on the row, so it reaches the observed teacher **when the review is published** (CO-8), together with the rest — and never before. No new permission, no widening: a withheld (CO-12) review's suggestion stays unseen like the rest of that review.
+
+**No vocab, no migration.** No enum, no schema/`shared/vocab.ts` change (so no two-place contract sync). `overallSuggestion` defaults null, so every existing row reads as "no suggestion offered".
+
+**Acceptance:**
+- [ ] A REF-11 review submitted with a suggestion stores it trimmed; submitted without one stores `null` (never `""`), and the review is accepted either way.
+- [ ] The field appears on the review form in its own card after the scored block, with the not-scored help text, and is restored by the local draft autosave like every other answer.
+- [ ] A QURAN row never stores it, even when a client sends it; `quran.suggestions` is unaffected.
+- [ ] Reviewing with vs without a suggestion produces identical domains/gates/strength/focus — a test pins that it changes no score.
+- [ ] The observed teacher sees it on the published review and cannot read it before publish; observer + Principal/Office see it from review onward.
+- [ ] It renders on `ObservationDetailScreen` and per reviewer on the CO-9 compare view; server + app tsc and tests green.
+
 ## §6 — Given/When/Then journeys
 
 1. **Upload & assign.** *Given* a recorded session, *when* Office uploads it and assigns a senior teacher (not the class's own teacher), *then* it is ASSIGNED and audited.
@@ -291,6 +314,7 @@ verifier PASS, expo web export exit 0.
 11. **Analysis (CO-13).** *Given* a term of completed reviews, *when* the Principal opens the analysis, *then* teachers are ordered breach-first then weakest-mean-first with a narrative reason each, low-confidence single-review teachers are marked as such, and with the AI provider unavailable the same order still renders with rule-based chips.
 12. **Rota (CO-14).** *Given* a written instruction and a month, *when* the Principal generates a rota, *then* the app shows one dated session per school day with class, subject, period and clock time drawn from the live routine, alongside a restatement of the constraints it applied — and if the model breaks one of them, the Principal sees the violation, not a table.
 13. **Cancel (CO-15).** *Given* an uploaded or assigned observation that will not now happen — unusable footage, a teacher on leave, a duplicate upload — *when* Principal or Office cancels it with a reason, *then* it leaves the observer's queue and the to-review count, the assigned observer is told once, the observed teacher is told nothing, the footage is kept, and the row stays readable under the Cancelled filter with who cancelled it and why. *And when* it was cancelled in error, restoring it returns it to the same state and observer.
+14. **Overall suggestion (CO-16).** *Given* an observer whose most useful thought about a class fits no single domain — "channel this energy into pair work and hands-on modelling" — *when* they write it in the overall-suggestion box and submit, *then* it is stored as a suggestion, shown to the observed teacher when the review is published, and counted in no score at all.
 
 ## §7 — Out of scope
 
@@ -298,4 +322,4 @@ Appraisal / pay / discipline (REF-11 §1.3; HR / School Handbook) — and this d
 
 ## §8 — Traceability
 
-REF-11 v1.1 (D-PROJ00-054/-065) · REF-18 §4 (Bloom, D2) · D-#17 (supervisory overlay) · D-#28 (observation input / appraisal-outcome reserved to Principal) · D-#36 (HW_SUBJECTS, Quran excluded from HW) · D-#46/#52 (app-native vocab, no wire twin; deferred push) · D-#48/#56 (SubjectGroup; Quran/Arabic groups; Deen→Islam) · D-#54 (ROUTINE_SUBJECTS incl. QURAN) · ADR-005 (firewall) · ADR-008 (audit). New: **D-#146–#152**; **D-#271** (CO-8 publish gate) · **D-#272** (CO-9 co-review) · **D-#324** (published filter) · **D-#363** (CO-10 carry-forward + CO-11 review history) · **D-#369** (CO-12 withhold flag) · **D-#426** (CO-13/CO-14: the model chooses and narrates, never computes) · **D-#427** (observation free text goes outbound unmodified — the student-name carve-out from D-#399(a)) · **D-#428** (CO-15 cancel: additive flags, UPLOADED/ASSIGNED only, withhold owns the reviewed case). Reuses the MR-4 AI seam: `CommentProvider` / `GeminiCommentProvider` / `validateNumerals` / `promptHashOf` (`server/src/modules/reports/services/MonthlyCommentService.ts`, D-#399), `GEMINI_API_KEY`; and CO-6's `supportTierOf`. Vocab: `OBSERVATION_FORMS/DOMAINS/LEVELS/GATES/GATE_RESULTS/STATES`, `QURAN_REVIEW_CRITERIA`, `QURAN_COMPLIANCE_ITEMS`, `GROWTH_PROGRESS`, `SUPPORT_TIERS`, `observation:{upload,review,read,manage}`; reuses `RoutineSlot`, `SubjectGroup`, `Section`, `HW_SUBJECTS`, `ROUTINE_SUBJECTS`.
+REF-11 v1.1 (D-PROJ00-054/-065) · REF-18 §4 (Bloom, D2) · D-#17 (supervisory overlay) · D-#28 (observation input / appraisal-outcome reserved to Principal) · D-#36 (HW_SUBJECTS, Quran excluded from HW) · D-#46/#52 (app-native vocab, no wire twin; deferred push) · D-#48/#56 (SubjectGroup; Quran/Arabic groups; Deen→Islam) · D-#54 (ROUTINE_SUBJECTS incl. QURAN) · ADR-005 (firewall) · ADR-008 (audit). New: **D-#146–#152**; **D-#271** (CO-8 publish gate) · **D-#272** (CO-9 co-review) · **D-#324** (published filter) · **D-#363** (CO-10 carry-forward + CO-11 review history) · **D-#369** (CO-12 withhold flag) · **D-#426** (CO-13/CO-14: the model chooses and narrates, never computes) · **D-#427** (observation free text goes outbound unmodified — the student-name carve-out from D-#399(a)) · **D-#428** (CO-15 cancel: additive flags, UPLOADED/ASSIGNED only, withhold owns the reviewed case) · **D-#503** (CO-16 overall suggestion: optional, REF-11-only, descriptive — never scored). Reuses the MR-4 AI seam: `CommentProvider` / `GeminiCommentProvider` / `validateNumerals` / `promptHashOf` (`server/src/modules/reports/services/MonthlyCommentService.ts`, D-#399), `GEMINI_API_KEY`; and CO-6's `supportTierOf`. Vocab: `OBSERVATION_FORMS/DOMAINS/LEVELS/GATES/GATE_RESULTS/STATES`, `QURAN_REVIEW_CRITERIA`, `QURAN_COMPLIANCE_ITEMS`, `GROWTH_PROGRESS`, `SUPPORT_TIERS`, `observation:{upload,review,read,manage}`; reuses `RoutineSlot`, `SubjectGroup`, `Section`, `HW_SUBJECTS`, `ROUTINE_SUBJECTS`.

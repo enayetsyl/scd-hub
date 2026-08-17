@@ -75,6 +75,8 @@ export interface ClassroomObservationT {
   priorFocusProgress: string | null;
   /** CO-10 (D-#363): how the prior focus moved, in the observer's own words. */
   priorFocusNote: string | null;
+  /** CO-16 (D-#503): an optional suggestion that belongs to no single domain. */
+  overallSuggestion: string | null;
   quran: ObsQuranPayloadT | null;
   recordingId: string | null;
   hasFairnessRating: boolean;
@@ -87,7 +89,7 @@ export interface ClassroomObservationT {
 }
 
 const QURAN_PAYLOAD_FIELDS = `quran { ratings { criterion score note } compliance { item yesNo } strengths improvements suggestions }`;
-const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt publishedAt publishedBy withheldAt withheldBy withheldReason cancelledAt cancelledBy cancelledReason domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress priorFocusNote ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
+const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt publishedAt publishedBy withheldAt withheldBy withheldReason cancelledAt cancelledBy cancelledReason domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress priorFocusNote overallSuggestion ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
 
 export const CLASSROOM_OBSERVATION_QUERY = gql<
   { classroomObservation: ClassroomObservationT | null },
@@ -281,18 +283,19 @@ export const REVIEW_CLASSROOM_OBSERVATION = gql<
     growthFocus?: string | null;
     priorFocusProgress?: string | null;
     priorFocusNote?: string | null;
+    overallSuggestion?: string | null;
     quran?: QuranReviewInput | null;
   }
 >`
   mutation ReviewClassroomObservation(
     $observationId: String!, $domains: [Ref11DomainInput!], $gates: [Ref11GateInput!],
     $oneStrength: String, $growthFocus: String, $priorFocusProgress: String,
-    $priorFocusNote: String, $quran: QuranReviewInput
+    $priorFocusNote: String, $overallSuggestion: String, $quran: QuranReviewInput
   ) {
     reviewClassroomObservation(
       observationId: $observationId, domains: $domains, gates: $gates,
       oneStrength: $oneStrength, growthFocus: $growthFocus, priorFocusProgress: $priorFocusProgress,
-      priorFocusNote: $priorFocusNote, quran: $quran
+      priorFocusNote: $priorFocusNote, overallSuggestion: $overallSuggestion, quran: $quran
     ) { ${OBSERVATION_FIELDS} }
   }
 `;
