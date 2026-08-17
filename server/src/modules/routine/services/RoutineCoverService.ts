@@ -16,6 +16,7 @@ import { enrichRoutineSlots } from "../slotView";
 import { emitCoverAssigned } from "../../notifications/services/emitters";
 import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
 import { userIdsOnLeave } from "../../hr/services/CoverService";
+import { liveWindow } from "../liveWindow";
 
 /** Local-day bounds for date-range queries. */
 function dayBounds(date: Date): { start: Date; end: Date } {
@@ -32,8 +33,7 @@ async function daySlots(date: Date): Promise<
   return RoutineSlot.find({
     dayOfWeek,
     active: true,
-    effectiveFrom: { $lte: date },
-    $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: date } }],
+    ...liveWindow(date),
   }).lean() as unknown as Array<{ _id: Types.ObjectId; teacherId?: Types.ObjectId; periodNumber: number }>;
 }
 

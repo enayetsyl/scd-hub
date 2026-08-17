@@ -23,6 +23,7 @@ import { computePeriodTimes, windowFor } from "../schedule";
 import { buildBellSchedule, type BellTrigger } from "../trigger";
 import { ForbiddenError } from "../../../middleware/authz";
 import { emitClassNotePublished } from "../../notifications/services/emitters";
+import { liveWindow } from "../liveWindow";
 
 function dayBounds(date: Date): { start: Date; end: Date } {
   const s = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
@@ -357,8 +358,7 @@ export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSu
     dayOfWeek,
     active: true,
     isBreak: false,
-    effectiveFrom: { $lte: date },
-    $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: date } }],
+    ...liveWindow(date),
   })
     .sort({ groupType: 1, groupId: 1, periodNumber: 1 })
     .lean()) as unknown as IRoutineSlot[];
@@ -487,8 +487,7 @@ export async function unwrittenClassNoteSlots(date: Date, teacherId?: string): P
     dayOfWeek,
     active: true,
     isBreak: false,
-    effectiveFrom: { $lte: date },
-    $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: date } }],
+    ...liveWindow(date),
   })
     .sort({ periodNumber: 1 })
     .lean()) as unknown as IRoutineSlot[];

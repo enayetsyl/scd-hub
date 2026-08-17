@@ -42,6 +42,7 @@ import { myMarkingUnits } from "../../attendance/services/StudentAttendanceServi
 import { classPresenceForDate, type ClassPresence } from "../../attendance/services/AttendanceReportService";
 import { pendingWorkFor, type PendingAlert, type AssignmentPrep } from "./PendingAlertService";
 import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
+import { liveWindow } from "../liveWindow";
 
 type IdLike = { toString(): string };
 
@@ -95,8 +96,7 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
       dayOfWeek,
       active: true,
       isBreak: false,
-      effectiveFrom: { $lte: d },
-      $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: null }, { effectiveTo: { $gte: d } }],
+      ...liveWindow(d),
     })
       .sort({ periodNumber: 1 })
       .lean()) as unknown as IRoutineSlot[];
