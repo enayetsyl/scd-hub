@@ -117,3 +117,45 @@ describe("ChildClassNotesScreen (D-#506)", () => {
     expect(src).not.toContain(") : nilDays.length > 0 ?");
   });
 });
+
+// ===========================================================================
+// GP-10 — the two live-screen corrections (owner, 2026-08-18)
+// ===========================================================================
+
+describe("ChildHomeworkScreen — GP-10 corrections", () => {
+  const src = readFileSync(HOMEWORK_SCREEN, "utf8");
+
+  test("a subject that is not EXPECTED to declare is not reported as a gap (D-#308)", () => {
+    // ARABIC is out of HW_DECLARATION_EXPECTED_SUBJECTS by owner ruling: its work is
+    // written into the class note, so "ঘোষণা করা হয়নি" against it every day is noise
+    // that teaches parents to ignore the wording when it DOES mean something.
+    expect(src).toContain("HW_DECLARATION_EXPECTED_SUBJECTS");
+    expect(src).toContain("HW_EXPECTED_SET");
+    expect(src).toContain("STR.gpHwSeeClassNote");
+    // ...and the strict wording survives for the subjects that ARE expected.
+    expect(src).toContain("STR.gpHwNotDeclared");
+  });
+
+  test("the outstanding card reads its OWN wide window, not the date pickers'", () => {
+    // A parent narrowing the range to this week must not make last month's
+    // unsubmitted homework vanish from a card whose claim is "everything pending".
+    expect(src).toContain("GUARDIAN_RANGE_MAX_DAYS");
+    expect(src).toContain("buildPending");
+    expect(src).toContain("CHILD_ASSIGNMENTS");
+  });
+
+  test("outstanding means the same thing here as on the home screen (DE-6)", () => {
+    // Homework: DUE/CHASE only. Assignments: chased, or pending AND late.
+    expect(src).toContain('TODO_HW_STATES = new Set(["DUE", "CHASE"])');
+    expect(src).toContain('a.state === "CHASE" || (a.pending && a.daysLate > 0)');
+    // A resubmission re-issues the same item — counting both shows one piece of
+    // work twice.
+    expect(src).toContain("r.resubOf === null");
+  });
+
+  test("the description is clamped with an expand caret, per row", () => {
+    expect(src).toContain("COLLAPSED_LINES");
+    expect(src).toContain("numberOfLines={open ? undefined : COLLAPSED_LINES}");
+    expect(src).toContain("openPending");
+  });
+});
