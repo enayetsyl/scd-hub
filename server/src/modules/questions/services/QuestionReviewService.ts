@@ -26,7 +26,7 @@ import { ReviewAssignment } from "../../content/models/ReviewAssignment";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
-import { emitReviewAssigned } from "../../notifications/services/emitters";
+import { emitQuestionReviewAssigned } from "../../notifications/services/emitters";
 import {
   ReviewError,
   addressKeyOf,
@@ -179,19 +179,38 @@ export async function assignQuestionReview(input: AssignQuestionReviewInput): Pr
     meta: { artifactId: input.artifactId, reviewerId: input.reviewerId, roundNumber, qid },
   });
 
-  // Best-effort notification — never blocks the assignment (D-#72).
-  await emitReviewAssigned({
-    _id: created._id,
-    reviewerId: created.reviewerId,
-    artifactId: created.artifactId,
-    subject: created.subject,
-    classLevel: created.classLevel,
-    anchorWord: created.anchorWord,
-    addressNumber: created.addressNumber,
-    roundNumber: created.roundNumber,
-  });
-
+  // NOTE: no notification here. Questions are assigned in bulk as the normal path, so a
+  // per-round emit would fire dozens of pushes for one click. The caller notifies ONCE —
+  // see notifyAssigned below, used by both the single and bulk entry points.
   return (await decorate([created as unknown as RawAssignment]))[0];
+}
+
+/** One notification per assign ACTION (D-#508). Best-effort; never blocks (D-#72). */
+async function notifyAssigned(
+  reviewerId: string,
+  rounds: QuestionReviewRoundDTO[],
+  batchStamp: string,
+): Promise<void> {
+  if (rounds.length === 0) return;
+  await emitQuestionReviewAssigned({
+    reviewerId,
+    // The batch is usually one subject/class slice; the first round names it.
+    subject: rounds[0].subject,
+    classLevel: rounds[0].classLevel,
+    count: rounds.length,
+    sampleAssignmentId: rounds[0].id,
+    batchStamp,
+  });
+}
+
+/** Single-question assign PLUS its notification — the resolver's entry point. Kept separate
+ *  from `assignQuestionReview` so the bulk path can assign N rounds and notify exactly once. */
+export async function assignQuestionReviewOne(
+  input: AssignQuestionReviewInput,
+): Promise<QuestionReviewRoundDTO> {
+  const round = await assignQuestionReview(input);
+  await notifyAssigned(input.reviewerId, [round], round.id);
+  return round;
 }
 
 /** Assign MANY questions to ONE reviewer; per-question failures are collected, not fatal. */
@@ -201,22 +220,25 @@ export async function assignQuestionReviewBulk(input: {
   assignedBy: string;
   actorRole?: string;
 }): Promise<BulkResult> {
-  let okCount = 0;
+  const done: QuestionReviewRoundDTO[] = [];
   const failures: { artifactId: string; error: string }[] = [];
   for (const artifactId of [...new Set(input.artifactIds)]) {
     try {
-      await assignQuestionReview({
-        artifactId,
-        reviewerId: input.reviewerId,
-        assignedBy: input.assignedBy,
-        actorRole: input.actorRole,
-      });
-      okCount += 1;
+      done.push(
+        await assignQuestionReview({
+          artifactId,
+          reviewerId: input.reviewerId,
+          assignedBy: input.assignedBy,
+          actorRole: input.actorRole,
+        }),
+      );
     } catch (err) {
       failures.push({ artifactId, error: err instanceof Error ? err.message : String(err) });
     }
   }
-  return { okCount, failedCount: failures.length, failures };
+  // ONE notification for the whole batch, after the writes land.
+  await notifyAssigned(input.reviewerId, done, done[0]?.id ?? "none");
+  return { okCount: done.length, failedCount: failures.length, failures };
 }
 
 // ---------------------------------------------------------------------------

@@ -1156,6 +1156,17 @@ describe("QR-3 — only a published question may enter a set (Q3.4)", () => {
     expect(doc.save).toHaveBeenCalled();
   });
 
+  test("Q5.3 — the assigned REVIEWER may read an unpublished question but still cannot select it", async () => {
+    // The read-scope override (Q3.2) is read-only and artifact-scoped. assertPublished has
+    // deliberately NO reviewer exemption, so being the reviewer changes nothing here.
+    mockSetFindById.mockResolvedValue(setDoc());
+    mockArtifactFindById.mockResolvedValue(unpublished("reviewed"));
+
+    await expect(
+      addQuestionToSet(SET_ID.toString(), UNPUBLISHED_ID.toString(), ACTOR_ID.toString()),
+    ).rejects.toThrow(/প্রকাশিত/);
+  });
+
   test("createSetWithQuestions refuses if ANY question is unpublished — atomic, nothing written", async () => {
     const ART_OK = new mongoose.Types.ObjectId();
     mockArtifactFind.mockResolvedValue([

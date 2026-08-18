@@ -452,7 +452,14 @@ export async function reviewerMayReadArtifact(reviewerId: string, artifactId: st
  * (superseded/cancelled) drop off. Submitted-first so freshly decided rounds surface.
  */
 export async function listMyReviewAssignments(reviewerId: string): Promise<ReviewAssignmentDTO[]> {
-  const docs = await ReviewAssignment.find({ reviewerId, status: { $in: ["assigned", "submitted"] } })
+  const docs = await ReviewAssignment.find({
+    reviewerId,
+    // PLANS ONLY (D-#508). `ReviewAssignment` now holds question rounds too; without this
+    // they would surface in the plan queue, where the card opens a plan viewer and the
+    // submit form demands the feedback questions do not require.
+    docType: { $in: PLAN_DOC_TYPES },
+    status: { $in: ["assigned", "submitted"] },
+  })
     .sort({ status: 1, assignedAt: -1 })
     .lean();
   return (docs as unknown as RawAssignment[]).map(toDTO);
@@ -461,7 +468,11 @@ export async function listMyReviewAssignments(reviewerId: string): Promise<Revie
 /** Principal/Office inbox: submitted rounds awaiting action, newest first (R2.3). The
  *  `feedback` field is the text the admin copies into Claude Desktop. */
 export async function planReviewInbox(): Promise<ReviewAssignmentDTO[]> {
-  const docs = await ReviewAssignment.find({ status: "submitted" }).sort({ submittedAt: -1 }).lean();
+  // PLANS ONLY (D-#508) — question rounds have their own inbox (questionReviewInbox),
+  // split by verdict into the publish queue and the rejected list.
+  const docs = await ReviewAssignment.find({ docType: { $in: PLAN_DOC_TYPES }, status: "submitted" })
+    .sort({ submittedAt: -1 })
+    .lean();
   return (docs as unknown as RawAssignment[]).map(toDTO);
 }
 
@@ -470,6 +481,11 @@ export async function planReviewInbox(): Promise<ReviewAssignmentDTO[]> {
 export async function planReviewThread(artifactId: string): Promise<ReviewAssignmentDTO[]> {
   const artifact = await ContentArtifact.findById(artifactId).lean();
   if (!artifact) throw new ReviewError("Artifact not found");
+  // A question threads on its qid, not its address (D-#508). Resolving one here would key on
+  // the shared unit address and return its unit-mates' rounds — refuse instead of misleading.
+  if (!isPlanDocType(artifact.docType)) {
+    throw new ReviewError("Not a plan — use questionReviewThread for questions");
+  }
   const key = addressKeyOf(artifact);
   const docs = await ReviewAssignment.find({
     docType: key.docType,
@@ -613,7 +629,9 @@ export interface ReviewerLoadDTO {
 /** Per-reviewer open-round counts — "what has how many content assigned" (Principal overview). */
 export async function reviewerAssignmentLoad(): Promise<ReviewerLoadDTO[]> {
   const rows = (await ReviewAssignment.aggregate([
-    { $match: { status: { $in: ["assigned", "submitted"] } } },
+    // PLANS ONLY (D-#508) — this is the plan-assignment overview; mixing question rounds in
+    // would make "who has how many" a number that answers no question anyone asked.
+    { $match: { docType: { $in: [...PLAN_DOC_TYPES] }, status: { $in: ["assigned", "submitted"] } } },
     { $group: { _id: { reviewerId: "$reviewerId", status: "$status" }, n: { $sum: 1 } } },
   ])) as { _id: { reviewerId: { toString(): string }; status: string }; n: number }[];
 

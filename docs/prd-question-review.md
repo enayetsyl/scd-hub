@@ -11,6 +11,13 @@ firewall; nothing here adds a corpus→identity path.
 This file is the **build contract**: per-role journeys with testable acceptance criteria + a slice-by-
 slice build order that seeds the Jest+Supertest gate. Traceability points at `DECISIONS.md` (`D-#nn`).
 
+> **CORRECTED at build time (D-#509):** the claim below holds for permissions, enums and the
+> wire contract, but **two app-native message-template keys were added** —
+> `question.review.assigned.title`/`.body`. The plan keys name a *plan* and quote an address,
+> and a question shares its unit address with dozens of others, so reusing that copy pointed
+> the reviewer at the wrong artifact. Vocab verifier still PASSes; there is still no
+> two-place/harness sync.
+>
 > **No wire-contract change and no vocab change.** `REVIEW_STATUSES` (`draft/reviewed/gold`),
 > `REVIEW_VERDICTS` (`APPROVE`/`CHANGES_REQUESTED`), the import-envelope schema, and the permission set
 > are all **untouched** — `content:assign_review`, `content:review`, `content:promote_gold` already

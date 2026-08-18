@@ -21,7 +21,7 @@ import { ForbiddenError } from "../../../middleware/authz";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { ReviewError } from "../../content/services/ReviewService";
 import {
-  assignQuestionReview as assignSvc,
+  assignQuestionReviewOne as assignSvc,
   assignQuestionReviewBulk as assignBulkSvc,
   submitQuestionReview as submitSvc,
   publishQuestion as publishSvc,

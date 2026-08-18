@@ -137,6 +137,11 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
 
   const isEmpty =
     !fetching && !error && qb.items.length === 0 && (data?.questions?.length ?? 0) === 0;
+
+  // Q3.7 (D-#508): with no filters applied, an empty bank is NOT a filter problem — the
+  // shelf only ever shows PUBLISHED questions, and telling the teacher to change filters
+  // they never set would send them hunting for something that isn't there.
+  const noFiltersApplied = chips.length === 0;
   const loadingMore = fetching && qb.after !== null;
 
   function renderCardBody(q: QuestionListItem): React.ReactElement {
@@ -233,10 +238,14 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
         onRetry={() => reexecute({ requestPolicy: "network-only" })}
         isEmpty={isEmpty}
         empty={
-          <EmptyState
-            message={STR.qbEmptyFiltered}
-            action={<Button title={STR.qbClearFilters} variant="secondary" onPress={qb.clearAll} />}
-          />
+          noFiltersApplied ? (
+            <EmptyState message={STR.qrUnpublishedBankNote} />
+          ) : (
+            <EmptyState
+              message={STR.qbEmptyFiltered}
+              action={<Button title={STR.qbClearFilters} variant="secondary" onPress={qb.clearAll} />}
+            />
+          )
         }
         loaderLabel={STR.loading}
       >

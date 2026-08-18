@@ -11,6 +11,7 @@
  *     deliberately never gated (§5a), because a published question's stimulus_ref must
  *     always resolve.
  */
+import { PERMISSIONS, ROLE_PERMISSIONS } from "@scd/shared";
 import type { AuthPayload } from "../context";
 import {
   seesPublishedOnly,
@@ -92,6 +93,39 @@ describe("applyMixedDocTypeGate (Q3.3 — contentArtifacts / contentTree)", () =
     const filter: Record<string, unknown> = { current: true };
     applyMixedDocTypeGate(filter, auth("OFFICE"));
     expect(filter.$and).toBeUndefined();
+  });
+});
+
+describe("Q5.1 — D-#508 adds NO permission", () => {
+  test("the review/publish loop reuses the three permissions the plan loop already had", () => {
+    // If a future change adds a question:review or question:publish permission, this fails —
+    // which is the point. D-#508's whole "no vocab change, no contract sync" claim rests on
+    // the loop reusing content:assign_review / content:review / content:promote_gold.
+    const declared = PERMISSIONS as readonly string[];
+    expect(declared).toContain("content:assign_review");
+    expect(declared).toContain("content:review");
+    expect(declared).toContain("content:promote_gold");
+    expect(declared.filter((p) => /^question:/.test(p)).sort()).toEqual([
+      "question:read",
+      "question:select",
+    ]);
+    expect(declared).not.toContain("question:publish");
+    expect(declared).not.toContain("question:assign_review");
+  });
+
+  test("publishing stays Principal-locked; Office may assign but not publish", () => {
+    const principal = ROLE_PERMISSIONS.PRINCIPAL as readonly string[];
+    const office = ROLE_PERMISSIONS.OFFICE as readonly string[];
+    const teacher = ROLE_PERMISSIONS.TEACHER as readonly string[];
+
+    expect(principal).toContain("content:promote_gold");
+    expect(office).not.toContain("content:promote_gold");
+    expect(teacher).not.toContain("content:promote_gold");
+
+    expect(office).toContain("content:assign_review");
+    expect(teacher).not.toContain("content:assign_review");
+    // The reviewer's own permission.
+    expect(teacher).toContain("content:review");
   });
 });
 

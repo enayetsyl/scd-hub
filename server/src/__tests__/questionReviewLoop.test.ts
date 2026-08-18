@@ -24,6 +24,8 @@ const mockReviewUpdateOne = jest.fn();
 const mockUserFind = jest.fn();
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
 const mockEmitReviewAssigned = jest.fn().mockResolvedValue(undefined);
+const mockEmitQuestionReviewAssigned = jest.fn().mockResolvedValue(undefined);
+const mockReviewAggregate = jest.fn().mockResolvedValue([]);
 
 jest.mock("../modules/content/models/ContentArtifact", () => ({
   ContentArtifact: {
@@ -41,6 +43,7 @@ jest.mock("../modules/content/models/ReviewAssignment", () => ({
     find: (f: unknown) => mockReviewFind(f),
     findById: (id: unknown) => mockReviewFindById(id),
     updateOne: (f: unknown, u: unknown) => mockReviewUpdateOne(f, u),
+    aggregate: (p: unknown) => mockReviewAggregate(p),
   },
 }));
 
@@ -54,17 +57,26 @@ jest.mock("../modules/platform/services/AuditService", () => ({
 
 jest.mock("../modules/notifications/services/emitters", () => ({
   emitReviewAssigned: (...args: unknown[]) => mockEmitReviewAssigned(...args),
+  emitQuestionReviewAssigned: (...args: unknown[]) => mockEmitQuestionReviewAssigned(...args),
 }));
 
 // Import AFTER mocks
 import {
   assignQuestionReview,
+  assignQuestionReviewOne,
   assignQuestionReviewBulk,
   submitQuestionReview,
   publishQuestion,
   publishQuestionBulk,
 } from "../modules/questions/services/QuestionReviewService";
-import { submitPlanReview, ReviewError } from "../modules/content/services/ReviewService";
+import {
+  submitPlanReview,
+  listMyReviewAssignments,
+  planReviewInbox,
+  planReviewThread,
+  reviewerAssignmentLoad,
+  ReviewError,
+} from "../modules/content/services/ReviewService";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -141,7 +153,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("assignQuestionReview (Q2.1)", () => {
-  test("creates a round carrying the qid, round 1, status assigned; audits + notifies", async () => {
+  test("creates a round carrying the qid, round 1, status assigned; audits", async () => {
     mockArtifactFindById.mockReturnValue(questionDoc());
     mockReviewCreate.mockImplementation((a: Record<string, unknown>) =>
       Promise.resolve({ ...a, _id: ASSIGNMENT_ID }),
@@ -165,7 +177,7 @@ describe("assignQuestionReview (Q2.1)", () => {
     expect(mockWriteAudit).toHaveBeenCalledWith(
       expect.objectContaining({ eventKind: "REVIEW_ASSIGNED", meta: expect.objectContaining({ qid: QID }) }),
     );
-    expect(mockEmitReviewAssigned).toHaveBeenCalled();
+    // Notification is the CALLER's job now (see the bulk-notifies-once tests below).
     expect(dto.qid).toBe(QID);
   });
 
@@ -220,6 +232,106 @@ describe("assignQuestionReview (Q2.1)", () => {
     expect(res.okCount).toBe(1);
     expect(res.failedCount).toBe(1);
     expect(res.failures[0].error).toMatch(/not found/i);
+  });
+
+  test("a BULK assign notifies ONCE, not once per question", async () => {
+    const ids = [
+      new mongoose.Types.ObjectId(),
+      new mongoose.Types.ObjectId(),
+      new mongoose.Types.ObjectId(),
+    ];
+    mockArtifactFindById.mockImplementation((id: unknown) => questionDoc({ _id: id }));
+    mockReviewCreate.mockImplementation((a: Record<string, unknown>) =>
+      Promise.resolve({ ...a, _id: new mongoose.Types.ObjectId() }),
+    );
+
+    const res = await assignQuestionReviewBulk({
+      artifactIds: ids.map((i) => i.toString()),
+      reviewerId: REVIEWER_ID.toString(),
+      assignedBy: ADMIN_ID.toString(),
+    });
+
+    expect(res.okCount).toBe(3);
+    // Three rounds, ONE push — assigning a subject slice must not spam the reviewer.
+    expect(mockEmitQuestionReviewAssigned).toHaveBeenCalledTimes(1);
+    expect(mockEmitQuestionReviewAssigned).toHaveBeenCalledWith(
+      expect.objectContaining({ reviewerId: REVIEWER_ID.toString(), count: 3 }),
+    );
+    // And never the PLAN-worded notification, which names a plan and quotes an address.
+    expect(mockEmitReviewAssigned).not.toHaveBeenCalled();
+  });
+
+  test("a single assign notifies once, with count 1", async () => {
+    mockArtifactFindById.mockReturnValue(questionDoc());
+    mockReviewCreate.mockImplementation((a: Record<string, unknown>) =>
+      Promise.resolve({ ...a, _id: ASSIGNMENT_ID }),
+    );
+
+    await assignQuestionReviewOne({
+      artifactId: ARTIFACT_ID.toString(),
+      reviewerId: REVIEWER_ID.toString(),
+      assignedBy: ADMIN_ID.toString(),
+    });
+
+    expect(mockEmitQuestionReviewAssigned).toHaveBeenCalledTimes(1);
+    expect(mockEmitQuestionReviewAssigned).toHaveBeenCalledWith(expect.objectContaining({ count: 1 }));
+  });
+
+  test("assignQuestionReview alone does NOT notify (the caller owns that)", async () => {
+    mockArtifactFindById.mockReturnValue(questionDoc());
+    mockReviewCreate.mockImplementation((a: Record<string, unknown>) =>
+      Promise.resolve({ ...a, _id: ASSIGNMENT_ID }),
+    );
+
+    await assignQuestionReview({
+      artifactId: ARTIFACT_ID.toString(),
+      reviewerId: REVIEWER_ID.toString(),
+      assignedBy: ADMIN_ID.toString(),
+    });
+
+    expect(mockEmitQuestionReviewAssigned).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The plan surfaces must not show question rounds (regression — both loops now
+// share the ReviewAssignment collection, which they did not before QR-2).
+// ---------------------------------------------------------------------------
+
+describe("plan/question separation on shared ReviewAssignment", () => {
+  test("listMyReviewAssignments asks for PLAN docTypes only", async () => {
+    mockReviewFind.mockReturnValue(query([]));
+    await listMyReviewAssignments(REVIEWER_ID.toString());
+
+    const filter = mockReviewFind.mock.calls[0][0] as Record<string, unknown>;
+    expect(filter.docType).toEqual({ $in: ["chapter_plan", "session_plan"] });
+  });
+
+  test("planReviewInbox asks for PLAN docTypes only", async () => {
+    mockReviewFind.mockReturnValue(query([]));
+    await planReviewInbox();
+
+    const filter = mockReviewFind.mock.calls[0][0] as Record<string, unknown>;
+    expect(filter.docType).toEqual({ $in: ["chapter_plan", "session_plan"] });
+    expect(filter.status).toBe("submitted");
+  });
+
+  test("reviewerAssignmentLoad counts PLAN rounds only", async () => {
+    mockReviewAggregate.mockResolvedValue([]);
+    await reviewerAssignmentLoad();
+
+    const pipeline = mockReviewAggregate.mock.calls[0][0] as { $match?: Record<string, unknown> }[];
+    expect(pipeline[0].$match).toEqual(
+      expect.objectContaining({ docType: { $in: ["chapter_plan", "session_plan"] } }),
+    );
+  });
+
+  test("planReviewThread REFUSES a question — its address key would return unit-mates", async () => {
+    mockArtifactFindById.mockReturnValue(questionDoc());
+
+    await expect(planReviewThread(ARTIFACT_ID.toString())).rejects.toThrow(
+      /use questionReviewThread/i,
+    );
   });
 });
 
