@@ -497,6 +497,8 @@ describe("J3.1 — basket accumulation (addQuestionToSet)", () => {
     docType: "question",
     subject: "BAN",
     classLevel: 5,
+    // PUBLISHED — since QR-3 only a `gold` question may enter a set (Q3.4 / D-#508).
+    reviewStatus: "gold",
     envelopeJson: {
       payload: { qid: "QP-BAN-C5-U13-Q01", question_type: "mcq", marks: 1 },
     },
@@ -866,12 +868,20 @@ describe("F6/F10 — createSetWithQuestions (transactional one-step create)", ()
   const ART_B = new mongoose.Types.ObjectId();
   const ART_C = new mongoose.Types.ObjectId();
 
-  function artifact(id: mongoose.Types.ObjectId, qid: string, marks: number, docType = "question") {
+  /** Defaults to PUBLISHED — since QR-3 only a `gold` question may enter a set (Q3.4). */
+  function artifact(
+    id: mongoose.Types.ObjectId,
+    qid: string,
+    marks: number,
+    docType = "question",
+    reviewStatus = "gold",
+  ) {
     return {
       _id: id,
       docType,
       subject: "BAN",
       classLevel: 5,
+      reviewStatus,
       envelopeJson: { payload: { qid, marks } },
     };
   }
@@ -1009,7 +1019,7 @@ describe("F6/F10 — createSetWithQuestions (transactional one-step create)", ()
 
   test("marks default to 1 when payload has no numeric marks; qid falls back to artifactId", async () => {
     mockArtifactFind.mockResolvedValue([
-      { _id: ART_A, docType: "question", subject: "BAN", classLevel: 5, envelopeJson: { payload: {} } },
+      { _id: ART_A, docType: "question", subject: "BAN", classLevel: 5, reviewStatus: "gold", envelopeJson: { payload: {} } },
     ]);
 
     await createSetWithQuestions(baseInput({ artifactIds: [ART_A.toString()] }));
@@ -1089,5 +1099,88 @@ describe("QR-1 — re-import supersedes a question's review rounds by qid (Q1.2)
     await importEnvelope({ ...QUESTION_ENVELOPE }, ACTOR_ID);
 
     expect(mockReviewFind).not.toHaveBeenCalled();
+  });
+});
+
+// ===========================================================================
+// QR-3 — the publish gate on SELECTION (Q3.4 / D-#508)
+// ===========================================================================
+
+describe("QR-3 — only a published question may enter a set (Q3.4)", () => {
+  const UNPUBLISHED_ID = new mongoose.Types.ObjectId();
+
+  function unpublished(reviewStatus: string) {
+    return {
+      _id: UNPUBLISHED_ID,
+      docType: "question",
+      subject: "BAN",
+      classLevel: 5,
+      reviewStatus,
+      envelopeJson: { payload: { qid: "QP-BAN-C5-U13-Q99", marks: 1 } },
+    };
+  }
+
+  function setDoc() {
+    return {
+      _id: SET_ID,
+      sectionId: SECTION_ID,
+      classId: CLASS_ID,
+      status: "draft",
+      basketItems: [] as unknown[],
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+  }
+
+  test.each(["draft", "reviewed"])(
+    "addQuestionToSet refuses a '%s' question, writes nothing, emits no corpus event",
+    async (status) => {
+      mockSetFindById.mockResolvedValue(setDoc());
+      mockArtifactFindById.mockResolvedValue(unpublished(status));
+
+      await expect(
+        addQuestionToSet(SET_ID.toString(), UNPUBLISHED_ID.toString(), ACTOR_ID.toString()),
+      ).rejects.toThrow(/প্রকাশিত/);
+
+      expect(mockEventCreate).not.toHaveBeenCalled();
+    },
+  );
+
+  test("addQuestionToSet accepts a published (gold) question", async () => {
+    const doc = setDoc();
+    mockSetFindById.mockResolvedValue(doc);
+    mockArtifactFindById.mockResolvedValue(unpublished("gold"));
+
+    const res = await addQuestionToSet(SET_ID.toString(), UNPUBLISHED_ID.toString(), ACTOR_ID.toString());
+
+    expect(res.itemCount).toBe(1);
+    expect(doc.save).toHaveBeenCalled();
+  });
+
+  test("createSetWithQuestions refuses if ANY question is unpublished — atomic, nothing written", async () => {
+    const ART_OK = new mongoose.Types.ObjectId();
+    mockArtifactFind.mockResolvedValue([
+      {
+        _id: ART_OK,
+        docType: "question",
+        subject: "BAN",
+        classLevel: 5,
+        reviewStatus: "gold",
+        envelopeJson: { payload: { qid: "QP-OK", marks: 1 } },
+      },
+      unpublished("reviewed"),
+    ]);
+
+    await expect(
+      createSetWithQuestions({
+        setType: "HW",
+        sectionId: SECTION_ID.toString(),
+        classId: CLASS_ID.toString(),
+        artifactIds: [ART_OK.toString(), UNPUBLISHED_ID.toString()],
+        actorId: ACTOR_ID.toString(),
+      }),
+    ).rejects.toThrow(/প্রকাশিত/);
+
+    expect(mockSetCreate).not.toHaveBeenCalled();
+    expect(mockEventInsertMany).not.toHaveBeenCalled();
   });
 });

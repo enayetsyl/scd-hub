@@ -140,6 +140,8 @@ export interface ReviewAssignmentDTO {
   classLevel: number;
   anchorWord: string;
   addressNumber: string;
+  /** Question rounds only (D-#508) — the thread anchor. Null on plan rounds. */
+  qid: string | null;
   artifactId: string;
   reviewerId: string;
   assignedBy: string;
@@ -151,13 +153,14 @@ export interface ReviewAssignmentDTO {
   submittedAt: string | null;
 }
 
-interface RawAssignment {
+export interface RawAssignment {
   _id: Types.ObjectId | { toString(): string };
   docType: string;
   subject: string;
   classLevel: number;
   anchorWord: string;
   addressNumber: string;
+  qid?: string | null;
   artifactId: { toString(): string };
   reviewerId: { toString(): string };
   assignedBy: { toString(): string };
@@ -177,6 +180,7 @@ export function toDTO(d: RawAssignment): ReviewAssignmentDTO {
     classLevel: d.classLevel,
     anchorWord: d.anchorWord,
     addressNumber: d.addressNumber,
+    qid: d.qid ?? null,
     artifactId: d.artifactId.toString(),
     reviewerId: d.reviewerId.toString(),
     assignedBy: d.assignedBy.toString(),

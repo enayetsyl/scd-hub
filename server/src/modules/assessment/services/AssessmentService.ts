@@ -81,6 +81,22 @@ export async function createSet(input: CreateSetInput): Promise<CreateSetResult>
   };
 }
 
+/**
+ * The publish gate on SELECTION (Q3.4 / D-#508). Only a published (`gold`) question may
+ * enter a set. Enforced here, in the service, so the resolvers, the REST set-PDF route and
+ * any future caller all inherit it rather than each re-deriving the rule.
+ *
+ * Note there is NO reviewer exemption: a teacher reviewing an unpublished question may READ
+ * it (Q3.2) but may not put it in a paper (Q5.3).
+ *
+ * The message is deliberately Bangla-first — it reaches the teacher's screen verbatim.
+ */
+function assertPublished(artifact: { reviewStatus?: string; envelopeJson?: unknown }): void {
+  if (artifact.reviewStatus !== "gold") {
+    throw new Error("এই প্রশ্নটি এখনও প্রকাশিত হয়নি — প্রকাশিত প্রশ্নই কেবল সেটে যোগ করা যায়।");
+  }
+}
+
 /** Add a question artifact to the basket. Write-scope enforced by the resolver.
  *  Emits a de-identified questions_selected CorpusEvent (J3.1, ADR-005). */
 export async function addQuestionToSet(
@@ -96,6 +112,7 @@ export async function addQuestionToSet(
   const artifact = await ContentArtifact.findById(artifactId).lean();
   if (!artifact) throw new Error("Question artifact not found");
   if (artifact.docType !== "question") throw new Error("Artifact is not a question");
+  assertPublished(artifact);
 
   const env = artifact.envelopeJson as Record<string, unknown>;
   const payload = (env.payload ?? {}) as Record<string, unknown>;
@@ -167,6 +184,7 @@ export async function createSetWithQuestions(
     const artifact = byId.get(artifactId);
     if (!artifact) throw new Error("Question artifact not found");
     if (artifact.docType !== "question") throw new Error("Artifact is not a question");
+    assertPublished(artifact);
     const env = artifact.envelopeJson as Record<string, unknown>;
     const payload = (env.payload ?? {}) as Record<string, unknown>;
     return {
