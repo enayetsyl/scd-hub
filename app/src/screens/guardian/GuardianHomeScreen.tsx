@@ -789,7 +789,12 @@ export default function GuardianHomeScreen(): React.ReactElement {
                     <Body>
                       {hwSubjectLabel(r.subject)} · {STR.ctTestNumber} {bnNum(r.testNumber)}
                     </Body>
-                    <Muted>{isoDateLabel(r.examDate)}</Muted>
+                    {/* D-#507: a group exam names the GROUP — a parent should not have
+                        to guess why an Arabic mark arrived with no class attached. */}
+                    <Muted>
+                      {isoDateLabel(r.examDate)}
+                      {r.groupNameBn ? ` · ${r.groupNameBn}` : ""}
+                    </Muted>
                   </View>
                   <Badge
                     text={

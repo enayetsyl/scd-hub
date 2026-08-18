@@ -158,7 +158,7 @@ async function deliverResult(
   const notifiedGuardianIds = await emitClassTestGuardianResult({
     testId: test._id,
     studentId: doc.studentId,
-    sectionId: test.sectionId,
+    sectionId: test.sectionId ?? null,
     publishedVersion: doc.publishedVersion,
     titleBn,
     messageBn,

@@ -22,7 +22,12 @@ import {
   REGISTER_CLASS_TEST_OFFICIAL,
   SUGGEST_CLASS_TEST_NUMBER_QUERY,
 } from "../../graphql/classTest";
-import { ASSESSMENT_SETS_QUERY, ACADEMIC_YEARS_QUERY, TEACHERS_QUERY } from "../../graphql/operations";
+import {
+  ASSESSMENT_SETS_QUERY,
+  ACADEMIC_YEARS_QUERY,
+  TEACHERS_QUERY,
+  SUBJECT_GROUPS_QUERY,
+} from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Field, Chip, Select } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { MoreOptions } from "../../components/MoreOptions";
@@ -53,6 +58,11 @@ export default function RequestClassTestScreen(): React.ReactElement {
   const yearId = (years.find((y) => y.current) ?? years[0])?.id ?? "";
 
   const [section, setSection] = useState<SectionPick | null>(null);
+  // D-#507: the exam's UNIT. A section (the default and the common case), or a
+  // cross-class Arabic group — those groups mix students from 2–4 classes, so a
+  // group exam is anchored on the group and its roster is the membership.
+  const [unit, setUnit] = useState<"SECTION" | "GROUP">("SECTION");
+  const [groupId, setGroupId] = useState<string | null>(null);
   const [subject, setSubject] = useState<string | null>(null);
   const [source, setSource] = useState<"POOL_SET" | "UPLOADED_PAPER">("POOL_SET");
   // D-#339: register as ALREADY official — no print request, no print questions.
@@ -106,11 +116,29 @@ export default function RequestClassTestScreen(): React.ReactElement {
       hint: `${bnNum(s.basketItems.length)} ${STR.questionsWord} · ${bnNum(s.totalMarks ?? 0)} ${STR.marks}`,
     }));
 
-  // Auto-suggest the next test# once a section + subject are chosen (editable).
+  // The Arabic groups, for the group anchor (D-#507). Only Arabic groups can carry a
+  // class test: Quran is out of the homework/class-test subject axis entirely (D-#36).
+  const [groupsQ] = useQuery({
+    query: SUBJECT_GROUPS_QUERY,
+    variables: { track: "arabic", includeInactive: false },
+    pause: unit !== "GROUP",
+  });
+  const groupOptions = (groupsQ.data?.subjectGroups ?? []).map((g) => ({
+    label: g.nameBn || g.code,
+    value: g.id,
+    hint: g.code,
+  }));
+
+  // Auto-suggest the next test# once the unit + subject are chosen (editable). A
+  // group's Test # line is its own, so the anchor decides which line is read.
+  const anchorReady = unit === "GROUP" ? !!groupId : !!section;
   const [suggestQ] = useQuery({
     query: SUGGEST_CLASS_TEST_NUMBER_QUERY,
-    variables: { sectionId: section?.sectionId ?? "", subject: subject ?? "" },
-    pause: !section || !subject,
+    variables:
+      unit === "GROUP"
+        ? { subjectGroupId: groupId, sectionId: null, subject: subject ?? "" }
+        : { sectionId: section?.sectionId ?? "", subjectGroupId: null, subject: subject ?? "" },
+    pause: !anchorReady || !subject,
   });
   useEffect(() => {
     if (suggestQ.data?.suggestClassTestNumber != null && testNumber === "") {
@@ -159,7 +187,10 @@ export default function RequestClassTestScreen(): React.ReactElement {
     setFieldErrors({});
     const total = Number(totalMarks);
     const { firstErrorKey, errors } = required({
-      section: { value: section, message: `${STR.section} — ${STR.fieldRequired}` },
+      // Exactly one anchor is required — whichever one the unit chip selected (D-#507).
+      ...(unit === "GROUP"
+        ? { subjectGroupId: { value: groupId, message: `${STR.ctArabicGroup} — ${STR.fieldRequired}` } }
+        : { section: { value: section, message: `${STR.section} — ${STR.fieldRequired}` } }),
       subject: { value: subject, message: `${STR.ctSubject} — ${STR.fieldRequired}` },
       examDate: { value: examDate.trim(), message: `${STR.ctExamDate} — ${STR.fieldRequired}` },
       totalMarks: {
@@ -192,7 +223,9 @@ export default function RequestClassTestScreen(): React.ReactElement {
     }
     setBusy(true);
     const common = {
-      sectionId: section!.sectionId,
+      // EXACTLY ONE anchor reaches the server (D-#507) — it refuses both or neither.
+      sectionId: unit === "GROUP" ? null : section!.sectionId,
+      subjectGroupId: unit === "GROUP" ? groupId : null,
       subject: subject!,
       examDate: examDate.trim(),
       totalMarks: total,
@@ -233,23 +266,57 @@ export default function RequestClassTestScreen(): React.ReactElement {
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.ctNewRequest}</Body>
-          {yearId ? (
+          {/* D-#507: which UNIT sat the exam. Arabic is taught both ways at this
+              school — 12 section-shaped periods and 25 group-shaped ones — and a
+              group exam cannot be filed under any one section, because its students
+              come from several classes. */}
+          <View style={{ flexDirection: "row", gap: space(2), marginBottom: space(2) }}>
+            <Chip label={STR.ctUnitSection} selected={unit === "SECTION"} onPress={() => setUnit("SECTION")} />
+            <Chip label={STR.ctUnitGroup} selected={unit === "GROUP"} onPress={() => setUnit("GROUP")} />
+          </View>
+          {unit === "GROUP" ? (
+            <>
+              <Select
+                label={STR.ctArabicGroup}
+                value={groupId}
+                options={groupOptions}
+                onChange={(v) => {
+                  setGroupId(v);
+                  // A group exam is an ARABIC exam by definition — nothing else is
+                  // taught to these groups, so the subject is settled, not asked.
+                  setSubject("ARABIC");
+                  // ...and its paper is uploaded: pool sets belong to a class.
+                  setSource("UPLOADED_PAPER");
+                }}
+                placeholder={groupsQ.fetching ? STR.loading : STR.ctPickArabicGroup}
+                error={fieldErrors.subjectGroupId}
+              />
+              <Muted style={{ marginBottom: space(2) }}>{STR.ctGroupExamHelp}</Muted>
+            </>
+          ) : yearId ? (
             <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} />
           ) : (
             // No current year = nothing can be filed. SAY so — a blank form with no
             // explanation is how this codebase has hidden config gaps before.
             <Muted>{yearsQ.fetching ? STR.loading : STR.noCurrentYear}</Muted>
           )}
-          <Select
-            label={STR.ctSubject}
-            value={subject}
-            options={(HW_SUBJECTS as readonly string[]).map((s) => ({ label: hwSubjectLabel(s), value: s }))}
-            onChange={setSubject}
-            placeholder={STR.ctPickSubject}
-          />
+          {unit === "SECTION" ? (
+            <Select
+              label={STR.ctSubject}
+              value={subject}
+              options={(HW_SUBJECTS as readonly string[]).map((s) => ({ label: hwSubjectLabel(s), value: s }))}
+              onChange={setSubject}
+              placeholder={STR.ctPickSubject}
+            />
+          ) : null}
 
           <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
-            <Chip label={STR.ctSourcePoolSet} selected={source === "POOL_SET"} onPress={() => setSource("POOL_SET")} />
+            {/* A CT pool set is assembled for a section's class, so a cross-class
+                group has none to pick (D-#507) — offering the chip would open a
+                permanently empty list. The group path uploads its paper. */}
+            {unit === "SECTION" ? (
+              <Chip label={STR.ctSourcePoolSet} selected={source === "POOL_SET"} onPress={() => setSource("POOL_SET")} />
+            ) : null}
             <Chip label={STR.ctSourceUpload} selected={source === "UPLOADED_PAPER"} onPress={() => setSource("UPLOADED_PAPER")} />
           </View>
 

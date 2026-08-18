@@ -510,7 +510,9 @@ export async function emitVocabGuardianResult(ev: VocabGuardianResultEvent): Pro
 export interface ClassTestGuardianResultEvent {
   testId: IdLike;
   studentId: IdLike;
-  sectionId: IdLike;
+  /** Absent on a group-anchored exam (D-#507) — it belongs to a cross-class Arabic
+   *  group, not to a section. Only carried in `refs` metadata. */
+  sectionId?: IdLike | null;
   /** Bumped on each (re)publish — part of the dedupeKey so a republish re-notifies (D-#122). */
   publishedVersion: number;
   /** Pre-rendered (the class_test.result.title template). */
@@ -544,7 +546,12 @@ export async function emitClassTestGuardianResult(ev: ClassTestGuardianResultEve
           kind: "CLASS_TEST_RESULT",
           titleBn: ev.titleBn,
           bodyBn: ev.messageBn,
-          refs: { classTestId: ev.testId.toString(), studentId: ev.studentId.toString(), sectionId: ev.sectionId.toString() },
+          refs: {
+            classTestId: ev.testId.toString(),
+            studentId: ev.studentId.toString(),
+            // Group-anchored exams carry no section (D-#507).
+            ...(ev.sectionId ? { sectionId: ev.sectionId.toString() } : {}),
+          },
           dedupeKey: dedupeKeys.classTestResult(
             ev.testId.toString(),
             ev.studentId.toString(),

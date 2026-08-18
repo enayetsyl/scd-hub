@@ -290,9 +290,11 @@ async function classTestsCard(): Promise<AdminTodayCard> {
         unknown[]
       >,
     ]);
-    const rows = queue.map((t: { ctId: string; subject: string; classLevel: number; examDate: string }) => ({
+    // classLevel is null on a group-anchored exam (D-#507) — the subject alone is the
+    // honest subtitle there; the ctId already names the group (CT-G-{CODE}-nnnn).
+    const rows = queue.map((t: { ctId: string; subject: string; classLevel: number | null; examDate: string }) => ({
       title: `${t.ctId}`,
-      subtitle: `${lvl(t.classLevel)} · ${t.subject}`,
+      subtitle: t.classLevel == null ? t.subject : `${lvl(t.classLevel)} · ${t.subject}`,
       value: t.examDate ? String(t.examDate).slice(0, 10) : null,
       tone: "warn",
     }));

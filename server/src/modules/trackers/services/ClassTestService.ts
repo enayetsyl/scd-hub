@@ -27,9 +27,12 @@ import {
 import type { HwSubject, ClassTestSource } from "@scd/shared";
 import { ClassTest, type IClassTest } from "../models/ClassTest";
 import { ClassTestSequence } from "../models/ClassTestSequence";
+import { ClassTestGroupSequence } from "../models/ClassTestGroupSequence";
 import { ClassTestResult } from "../models/ClassTestResult";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
+import { AcademicYear } from "../../foundation/models/AcademicYear";
+import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { User } from "../../foundation/models/User";
 import { dateKeyOf } from "../../attendance/dates";
 import { AssessmentSet } from "../../assessment/models/AssessmentSet";
@@ -57,6 +60,28 @@ export async function generateCtId(
   return `CT-C${classLevel}-${subject}-${n}`;
 }
 
+/**
+ * The group twin (D-#507): `CT-G-{GROUP_CODE}-{nnnn}`, one number line per group
+ * per year (see `ClassTestGroupSequence` for why it is a separate collection).
+ * The code is already unique and upper-snake in the live data
+ * (`ARABIC_BOOK_2_GIRLS`); it is normalised anyway so an id can never carry a
+ * space or a lower-case surprise.
+ */
+export async function generateGroupCtId(
+  academicYearId: string,
+  subjectGroupId: string,
+  groupCode: string,
+): Promise<string> {
+  const counter = await ClassTestGroupSequence.findOneAndUpdate(
+    { academicYearId, subjectGroupId },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true },
+  );
+  const n = String(counter.seq).padStart(4, "0");
+  const code = groupCode.trim().toUpperCase().replace(/\s+/g, "_");
+  return `CT-G-${code}-${n}`;
+}
+
 /** The next human "Test #": one past the highest existing testNumber for this
  *  (year × class × subject), counting REQUESTED + PRINTED (a cancelled request
  *  doesn't consume a number). Default 1 when none exist. Editable by the teacher. */
@@ -77,12 +102,34 @@ export async function suggestTestNumber(
   return (top?.testNumber ?? 0) + 1;
 }
 
+/** The same suggestion for a group anchor (D-#507): per (year × group × subject).
+ *  A group's Test # line is its own — it is not one class's. */
+export async function suggestGroupTestNumber(
+  academicYearId: string,
+  subjectGroupId: string,
+  subject: HwSubject,
+): Promise<number> {
+  const top = (await ClassTest.findOne({
+    academicYearId,
+    subjectGroupId,
+    subject,
+    status: { $ne: "CANCELLED" },
+  })
+    .sort({ testNumber: -1 })
+    .select("testNumber")
+    .lean()) as { testNumber?: number } | null;
+  return (top?.testNumber ?? 0) + 1;
+}
+
 // ---------------------------------------------------------------------------
 // createRequest (teacher files the print request — J1)
 // ---------------------------------------------------------------------------
 
 export interface CreateClassTestRequestInput {
-  sectionId: string;
+  /** EXACTLY ONE of sectionId / subjectGroupId (D-#507). */
+  sectionId?: string;
+  /** D-#507: a cross-class Quran/Arabic group exam — no section, no class level. */
+  subjectGroupId?: string;
   subject: string;
   examDate: string;
   totalMarks: number;
@@ -131,9 +178,12 @@ export interface ClassTestShape {
   id: string;
   ctId: string;
   academicYearId: string;
-  classLevel: number;
-  classId: string;
-  sectionId: string;
+  /** Null on a group-anchored test (D-#507) — a group spans classes. */
+  classLevel: number | null;
+  classId: string | null;
+  /** EXACTLY ONE of sectionId / subjectGroupId is non-null (D-#507). */
+  sectionId: string | null;
+  subjectGroupId: string | null;
   subject: string;
   testNumber: number;
   examDate: string;
@@ -158,9 +208,10 @@ export function classTestShape(d: IClassTest): ClassTestShape {
     id: d._id.toString(),
     ctId: d.ctId,
     academicYearId: d.academicYearId.toString(),
-    classLevel: d.classLevel,
-    classId: d.classId.toString(),
-    sectionId: d.sectionId.toString(),
+    classLevel: d.classLevel ?? null,
+    classId: d.classId ? d.classId.toString() : null,
+    sectionId: d.sectionId ? d.sectionId.toString() : null,
+    subjectGroupId: d.subjectGroupId ? d.subjectGroupId.toString() : null,
     subject: d.subject,
     testNumber: d.testNumber,
     examDate: new Date(d.examDate).toISOString(),
@@ -198,15 +249,49 @@ export async function createRequest(
   }
   const source = input.source as ClassTestSource;
 
-  // --- derive year/level/class from the section (D-#143; never client-supplied)
-  const section = (await Section.findById(input.sectionId)
-    .select("classId")
-    .lean()) as { classId: Types.ObjectId } | null;
-  if (!section) throw new Error("Section not found");
-  const klass = (await Class.findById(section.classId)
-    .select("level academicYearId")
-    .lean()) as { level: number; academicYearId: Types.ObjectId } | null;
-  if (!klass) throw new Error("Class not found for this section");
+  // --- the anchor: EXACTLY ONE of section / subject group (D-#507)
+  if (!input.sectionId === !input.subjectGroupId) {
+    throw new Error("Provide exactly one of sectionId or subjectGroupId");
+  }
+
+  // Section anchor (every row before D-#507): derive year/level/class from the
+  // section (D-#143; never client-supplied). Group anchor: a group spans classes,
+  // so the class fields stay null and the year is the current one.
+  let classLevel: number | null = null;
+  let classId: Types.ObjectId | null = null;
+  let academicYearId: Types.ObjectId;
+  let group: { _id: Types.ObjectId; code: string; track: string; active?: boolean } | null = null;
+
+  if (input.sectionId) {
+    const section = (await Section.findById(input.sectionId)
+      .select("classId")
+      .lean()) as { classId: Types.ObjectId } | null;
+    if (!section) throw new Error("Section not found");
+    const klass = (await Class.findById(section.classId)
+      .select("level academicYearId")
+      .lean()) as { level: number; academicYearId: Types.ObjectId } | null;
+    if (!klass) throw new Error("Class not found for this section");
+    classLevel = klass.level;
+    classId = section.classId;
+    academicYearId = klass.academicYearId;
+  } else {
+    group = (await SubjectGroup.findById(input.subjectGroupId)
+      .select("code track active")
+      .lean()) as { _id: Types.ObjectId; code: string; track: string; active?: boolean } | null;
+    if (!group) throw new Error("Subject group not found");
+    if (group.active === false) throw new Error("That subject group is retired");
+    // QURAN is out of the HW_SUBJECTS axis entirely (D-#36), so a Quran group can
+    // only ever be examined in a subject it does not teach. Refuse it here rather
+    // than let a Quran group carry an ARABIC exam.
+    if (group.track !== "arabic") {
+      throw new Error("Only an Arabic subject group can carry a class test");
+    }
+    const year = (await AcademicYear.findOne({ current: true })
+      .select("_id")
+      .lean()) as { _id: Types.ObjectId } | null;
+    if (!year) throw new Error("No current academic year");
+    academicYearId = year._id;
+  }
 
   // --- exam date
   const examDate = new Date(input.examDate);
@@ -257,7 +342,9 @@ export async function createRequest(
   // --- test number (auto-suggest unless the teacher overrides)
   let testNumber = input.testNumber;
   if (testNumber === undefined) {
-    testNumber = await suggestTestNumber(klass.academicYearId.toString(), klass.level, subject);
+    testNumber = group
+      ? await suggestGroupTestNumber(academicYearId.toString(), group._id.toString(), subject)
+      : await suggestTestNumber(academicYearId.toString(), classLevel!, subject);
   }
   if (!Number.isInteger(testNumber) || testNumber < 1) {
     throw new Error("testNumber must be a positive integer");
@@ -276,8 +363,12 @@ export async function createRequest(
   // keying on the date would have let both live incidents through on a re-entry a day
   // later. CANCELLED rows are excluded, matching `suggestTestNumber`, so a withdrawn
   // request never blocks its own replacement.
+  // The same guard applies per ANCHOR — a group's Test # 1 and a section's Test # 1
+  // are different exams, so the key is the anchor, not always the section (D-#507).
   const existing = (await ClassTest.findOne({
-    sectionId: new Types.ObjectId(input.sectionId),
+    ...(group
+      ? { subjectGroupId: group._id }
+      : { sectionId: new Types.ObjectId(input.sectionId!) }),
     subject,
     testNumber,
     status: { $ne: "CANCELLED" },
@@ -307,15 +398,30 @@ export async function createRequest(
   if (copiesMode === "FIXED" && (!Number.isInteger(copies) || copies < 1)) {
     throw new Error("copies must be a positive integer");
   }
+  // CLASS_PRESENT counts the students present in ONE CLASS on the exam day (D-#303).
+  // A cross-class group has no such class, so the count has nothing to read — refuse
+  // it rather than silently print the wrong number of papers (D-#507).
+  if (copiesMode === "CLASS_PRESENT" && group) {
+    throw new Error("Copies-per-present needs a class; a group exam must give a fixed number of copies");
+  }
 
-  const ctId = await generateCtId(klass.academicYearId.toString(), klass.level, subject);
+  const ctId = group
+    ? await generateGroupCtId(academicYearId.toString(), group._id.toString(), group.code)
+    : await generateCtId(academicYearId.toString(), classLevel!, subject);
 
   // The ACCOUNTABLE subject teacher: an explicit pick (Principal/Office requesting
-  // on a teacher's behalf) wins; otherwise the routine names the section×subject
+  // on a teacher's behalf) wins; otherwise the routine names the unit×subject
   // teacher for the exam day; only if the routine names nobody does it fall back to
   // the requester. Keeps the exam in the right teacher's account and report row.
+  // Same rule for both anchors — the group's routine slots answer it (D-#507).
   const routineTeacherId =
-    input.teacherId ?? (await resolveSubjectTeacher(input.sectionId, subject, examDate));
+    input.teacherId ??
+    (await resolveSubjectTeacher(
+      group ? group._id.toString() : input.sectionId!,
+      subject,
+      examDate,
+      group ? "subjectgroup" : "section",
+    ));
   // Guard (D-#366): a Principal/Office creator who neither picked a teacher nor has a
   // routine teacher for this cell must not silently self-own the exam — force an
   // explicit pick. A plain subject teacher still falls back to themselves (their test).
@@ -332,10 +438,11 @@ export async function createRequest(
   const now = new Date();
   const doc = await ClassTest.create({
     ctId,
-    academicYearId: klass.academicYearId,
-    classLevel: klass.level,
-    classId: section.classId,
-    sectionId: new Types.ObjectId(input.sectionId),
+    academicYearId,
+    classLevel,
+    classId,
+    sectionId: input.sectionId ? new Types.ObjectId(input.sectionId) : null,
+    subjectGroupId: group ? group._id : null,
     subject,
     testNumber,
     examDate,
@@ -388,7 +495,8 @@ export async function createRequest(
     sides: input.sides ?? null,
     copies: copiesMode === "FIXED" ? copies : null,
     copiesMode,
-    copiesClassId: copiesMode === "CLASS_PRESENT" ? doc.classId.toString() : null,
+    // Non-null by the CLASS_PRESENT guard above: that mode is refused without a class.
+    copiesClassId: copiesMode === "CLASS_PRESENT" ? doc.classId!.toString() : null,
     neededByKey: dateKeyOf(examDate),
     classId: doc.classId?.toString() ?? null,
     sectionId: input.sectionId,

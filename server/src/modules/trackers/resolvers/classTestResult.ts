@@ -39,8 +39,8 @@ import {
   type SubmitOutcome,
 } from "../services/ClassTestPublishService";
 import { Subject } from "../../foundation/models/Subject";
-import { assertCanWrite, assertCanRead, ForbiddenError } from "../../../middleware/authz";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
+import { ForbiddenError } from "../../../middleware/authz";
+import { assertAnchorRead, assertAnchorWrite, classTestRosterStudents } from "../classTestAnchor";
 
 async function resolveSubjectId(subject: string): Promise<string> {
   const doc = await Subject.findOne({ code: subject }).select("_id").lean();
@@ -48,24 +48,24 @@ async function resolveSubjectId(subject: string): Promise<string> {
   return doc._id.toString();
 }
 
-/** Resolve the test's section + enforce staff read-scope on it (teachers only). */
+/** Resolve the test's unit + enforce staff read-scope on it (teachers only).
+ *  Anchor-aware since D-#507: a group exam is read-scoped by "you teach that
+ *  group", since it has no section to hold a grant. */
 async function assertReadTest(ctx: AppContext, testId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const test = await getClassTest(testId);
   if (!test) throw new ForbiddenError("Class test not found");
-  if (!isAdminStaff(ctx.auth)) {
-    await assertCanRead(ctx, test.sectionId, test.classId);
-  }
+  await assertAnchorRead(ctx, test);
 }
 
-/** Resolve the test's section + enforce WRITE scope on it (publish/unpublish, J4).
+/** Resolve the test's unit + enforce WRITE scope on it (publish/unpublish, J4).
  *  Tagged `enter_classtest_result` (ACS-3): the result lifecycle is one duty — a
  *  delegate who may enter marks may also submit/publish that same result set. */
 async function assertWriteTest(ctx: AppContext, testId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const test = await getClassTest(testId);
   if (!test) throw new ForbiddenError("Class test not found");
-  await assertCanWrite(ctx, test.sectionId, await resolveSubjectId(test.subject), "enter_classtest_result");
+  await assertAnchorWrite(ctx, test, () => resolveSubjectId(test.subject), "enter_classtest_result");
 }
 
 // ---------------------------------------------------------------------------
@@ -143,7 +143,7 @@ builder.mutationField("enterClassTestResult", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const test = await getClassTest(args.testId);
       if (!test) throw new ForbiddenError("Class test not found");
-      await assertCanWrite(ctx, test.sectionId, await resolveSubjectId(test.subject), "enter_classtest_result");
+      await assertAnchorWrite(ctx, test, () => resolveSubjectId(test.subject), "enter_classtest_result");
       return enterResult({
         testId: args.testId,
         studentId: args.studentId,
@@ -175,6 +175,43 @@ builder.queryField("classTestStudentResult", (t) =>
     resolve: async (_root, args, ctx) => {
       await assertReadTest(ctx, args.testId);
       return studentResult(args.testId, args.studentId);
+    },
+  }),
+);
+
+/** The exam's own roster — D-#507. The marks screen used `studentsInSection`, which
+ *  a group-anchored exam has no answer for: its students come from several sections.
+ *  One anchor-aware read means the client never has to know which shape it is. */
+const ClassTestRosterStudentRef = builder
+  .objectRef<{ id: string; schoolId: string; name: string; nameBn: string | null; sectionNameBn: string | null }>(
+    "ClassTestRosterStudent",
+  )
+  .implement({
+    fields: (t) => ({
+      id: t.exposeString("id"),
+      schoolId: t.exposeString("schoolId"),
+      name: t.exposeString("name"),
+      nameBn: t.string({ nullable: true, resolve: (s) => s.nameBn }),
+      /** Set for a GROUP exam: which section the child comes from — the group mixes
+       *  several, and a teacher marking 11 children from 4 classes needs to tell them
+       *  apart. Null on a section exam, where it would repeat the header. */
+      sectionNameBn: t.string({ nullable: true, resolve: (s) => s.sectionNameBn }),
+    }),
+  });
+
+builder.queryField("classTestRoster", (t) =>
+  t.field({
+    type: [ClassTestRosterStudentRef],
+    description:
+      "The active students who sat this exam (D-#507): the section's roster, or the Arabic " +
+      "GROUP's members for a group-anchored exam. Requires tracker:read + read scope on the unit.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: { testId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      await assertReadTest(ctx, args.testId);
+      const test = await getClassTest(args.testId);
+      if (!test) throw new ForbiddenError("Class test not found");
+      return classTestRosterStudents(test);
     },
   }),
 );
