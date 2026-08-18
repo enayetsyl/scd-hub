@@ -26,15 +26,17 @@
  * data is never dropped just because the routine has moved on.
  */
 import React, { useState } from "react";
-import { ScrollView, View, RefreshControl } from "react-native";
+import { ScrollView, View, RefreshControl, Pressable } from "react-native";
 import { useQuery } from "urql";
-import { HW_SUBJECTS } from "@scd/shared";
+import { HW_SUBJECTS, HW_DECLARATION_EXPECTED_SUBJECTS } from "@scd/shared";
 import {
   CHILD_HOMEWORK_QUERY,
   CHILD_HW_NIL_DAYS,
   CHILD_ROUTINE_RANGE_QUERY,
+  CHILD_ASSIGNMENTS,
   type GuardianHwRecordT,
   type GuardianHwNilDayT,
+  type ChildAssignmentT,
 } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState, Divider } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -48,7 +50,13 @@ import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/
 import { useFileOpen } from "../../lib/useFileOpen";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
-import { dateKey, addDaysKey, daysBetweenKeys, GUARDIAN_MAX_LOOKBACK_DAYS } from "../../lib/dates";
+import {
+  dateKey,
+  addDaysKey,
+  daysBetweenKeys,
+  GUARDIAN_MAX_LOOKBACK_DAYS,
+  GUARDIAN_RANGE_MAX_DAYS,
+} from "../../lib/dates";
 
 const isoDay = (d: Date): string => dateKey(d);
 const daysAgo = (n: number): string => {
@@ -75,6 +83,17 @@ function StageRow({ label, at }: { label: string; at: string | null }): React.Re
  *  Quran homework lives in the Quran tracker), so it is left out of the day rather
  *  than shown as "nothing declared" forever. */
 const HW_SUBJECT_SET = new Set<string>(HW_SUBJECTS as readonly string[]);
+
+/** Subjects the school EXPECTS to declare daily (D-#308 — ARABIC is deliberately
+ *  out: the Arabic teacher declares homework only when there is any, and in
+ *  practice Arabic work is written into the class note instead).
+ *
+ *  GP-10 (owner, from a live screen): with that convention, an ARABIC period with
+ *  no declaration is not a gap — it is the normal state, and printing
+ *  "ঘোষণা করা হয়নি" against it every single day teaches parents to ignore the one
+ *  wording that is supposed to mean something. A non-expected subject therefore
+ *  points at where its work actually lives instead of reporting an absence. */
+const HW_EXPECTED_SET = new Set<string>(HW_DECLARATION_EXPECTED_SUBJECTS as readonly string[]);
 
 interface DaySubject {
   subject: string;
@@ -260,6 +279,108 @@ function RecordBlock({
   );
 }
 
+/** Lines of the description a collapsed pending row shows (the AllClassNotes
+ *  idiom — clamp, caret, press to unclamp). */
+const COLLAPSED_LINES = 2;
+
+/** The two homework states a family can still ACT on (the DE-6 rule): DUE = hand
+ *  it in, CHASE = did not bring it. Submitted/checked/returned is progress, not a
+ *  to-do, and must not sit in a card headed "still pending". */
+const TODO_HW_STATES = new Set(["DUE", "CHASE"]);
+
+interface PendingRow {
+  key: string;
+  kind: "HW" | "ASSIGNMENT";
+  subject: string;
+  /** The date the work was GIVEN — what a parent recognises it by. */
+  dateGiven: string;
+  /** Due date when known, so "how late" is readable without arithmetic. */
+  dueDate: string | null;
+  description: string | null;
+  /** The state chip's words + tone. */
+  labelBn: string;
+  tone: "warn" | "danger";
+}
+
+/**
+ * Everything still outstanding, newest first (GP-10). Homework in DUE/CHASE, plus
+ * assignments that are pending-and-late or being chased — the same rule the
+ * "করতে হবে" card on the home screen uses, so the two can never disagree about
+ * what counts as outstanding.
+ */
+function buildPending(records: GuardianHwRecordT[], assignments: ChildAssignmentT[]): PendingRow[] {
+  const hw: PendingRow[] = records
+    // A resubmission re-issues the same item; counting both would show one piece
+    // of work twice.
+    .filter((r) => r.resubOf === null && TODO_HW_STATES.has(r.state))
+    .map((r) => ({
+      key: `hw:${r.recordId}`,
+      kind: "HW" as const,
+      subject: r.subject,
+      dateGiven: r.dateGiven.slice(0, 10),
+      dueDate: r.dueDate ? r.dueDate.slice(0, 10) : null,
+      description: r.description,
+      labelBn: hwGuardianStatusLabel(r.state),
+      tone: r.state === "CHASE" ? ("danger" as const) : ("warn" as const),
+    }));
+
+  const asgn: PendingRow[] = assignments
+    .filter((a) => a.state === "CHASE" || (a.pending && a.daysLate > 0))
+    .map((a) => ({
+      key: `as:${a.recordId}`,
+      kind: "ASSIGNMENT" as const,
+      subject: a.subject,
+      dateGiven: (a.deliveryDate ?? a.dueDate ?? "").slice(0, 10),
+      dueDate: a.dueDate ? a.dueDate.slice(0, 10) : null,
+      description: a.description,
+      labelBn:
+        a.daysLate > 0 ? `${STR.gpLateBy} ${bnNum(a.daysLate)} ${STR.gpDaysWord}` : STR.gpPendingWord,
+      tone: a.daysLate > 0 ? ("danger" as const) : ("warn" as const),
+    }));
+
+  return [...hw, ...asgn].sort((a, b) => b.dateGiven.localeCompare(a.dateGiven));
+}
+
+/** One outstanding item: subject + dates + the work itself, clamped until pressed. */
+function PendingRowView({
+  row,
+  open,
+  onToggle,
+}: {
+  row: PendingRow;
+  open: boolean;
+  onToggle: () => void;
+}): React.ReactElement {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${subjectLabel(row.subject)} — ${row.labelBn}`}
+      onPress={onToggle}
+      style={({ pressed }) => [{ marginTop: space(2) }, pressed && { opacity: 0.7 }]}
+    >
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+        <Body style={{ fontWeight: "700", flexShrink: 1 }}>
+          {subjectLabel(row.subject)}
+          {row.kind === "ASSIGNMENT" ? ` · ${STR.gpAssignmentWord}` : ""}
+        </Body>
+        <Badge text={row.labelBn} tone={row.tone} />
+      </View>
+      <Muted>
+        {STR.gpGivenOn} {bnNum(row.dateGiven)}
+        {row.dueDate ? ` · ${STR.gpDueOn} ${bnNum(row.dueDate)}` : ""}
+      </Muted>
+      {row.description ? (
+        <View style={{ flexDirection: "row", gap: space(1), marginTop: space(1) }}>
+          <Muted>{open ? "▾" : "▸"}</Muted>
+          <Body style={{ flexShrink: 1 }} numberOfLines={open ? undefined : COLLAPSED_LINES}>
+            {row.description}
+          </Body>
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
+
 /** A subject that had a period but declared no homework — either explicitly
  *  (D-#299, with the teacher's reason) or not at all. Two different facts, worded
  *  differently on purpose. */
@@ -274,7 +395,11 @@ function NoHomeworkRow({
     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2), marginTop: space(2) }}>
       <Body style={{ fontWeight: "700", flexShrink: 1 }}>{subjectLabel(subject)}</Body>
       <Muted style={{ flexShrink: 1, textAlign: "right" }}>
-        {nil ? `${STR.hwNilGuardian} (${hwNilReasonLabel(nil.reason)})` : STR.gpHwNotDeclared}
+        {nil
+          ? `${STR.hwNilGuardian} (${hwNilReasonLabel(nil.reason)})`
+          : HW_EXPECTED_SET.has(subject)
+            ? STR.gpHwNotDeclared
+            : STR.gpHwSeeClassNote}
       </Muted>
     </View>
   );
@@ -291,6 +416,8 @@ export default function ChildHomeworkScreen({
   const [from, setFrom] = useState(route?.params?.from ?? daysAgo(14));
   const [to, setTo] = useState(route?.params?.to ?? isoDay(new Date()));
   const [fileError, setFileError] = useState<string | null>(null);
+  /** GP-10: which outstanding rows are unclamped (a Set, so several can be open). */
+  const [openPending, setOpenPending] = useState<Set<string>>(new Set());
 
   const deepLinkedChild = route?.params?.studentId;
   React.useEffect(() => {
@@ -314,6 +441,26 @@ export default function ChildHomeworkScreen({
   const [routineQ, refetchRoutine] = useQuery({
     query: CHILD_ROUTINE_RANGE_QUERY,
     variables: { studentId: selected?.studentId ?? "", from, to },
+    pause: !selected,
+  });
+  // GP-10: what is still OUTSTANDING — deliberately read over its own wide window,
+  // NOT the one the pickers describe. A parent narrowing the range to this week
+  // must not make last month's unsubmitted homework disappear from a card whose
+  // whole claim is "everything still pending".
+  const [pendingQ, refetchPending] = useQuery({
+    query: CHILD_HOMEWORK_QUERY,
+    variables: {
+      studentId: selected?.studentId ?? "",
+      from: addDaysKey(isoDay(new Date()), -(GUARDIAN_RANGE_MAX_DAYS - 1)),
+      to: isoDay(new Date()),
+    },
+    pause: !selected,
+  });
+  // Assignments carry their own history (limit/offset optional, D-#476), so one
+  // read serves the whole outstanding list.
+  const [asgnQ, refetchAsgn] = useQuery({
+    query: CHILD_ASSIGNMENTS,
+    variables: { studentId: selected?.studentId ?? "" },
     pause: !selected,
   });
 
@@ -350,6 +497,10 @@ export default function ChildHomeworkScreen({
   const nilRows = nilQ.data?.childHomeworkNilDays ?? [];
   const routineDays = routineQ.data?.childRoutineRange ?? [];
   const days = buildDays(records, nilRows, routineDays);
+  const pending = buildPending(
+    pendingQ.data?.childHomework ?? [],
+    asgnQ.data?.childAssignments ?? [],
+  );
 
   return (
     <Screen padded={false}>
@@ -367,12 +518,47 @@ export default function ChildHomeworkScreen({
           </View>
         </View>
         {fileError ? <Notice message={fileError} tone="danger" /> : null}
+
+        {/* GP-10 (owner ask): what is still OUTSTANDING, before the day-by-day log.
+            A parent opens this screen to find out what the child still owes; making
+            them read every day's card to assemble that list is the work the app
+            should be doing. Read over its own wide window (see `pendingQ`), so
+            narrowing the pickers cannot hide an older unsubmitted item. Hidden
+            entirely when nothing is outstanding — a permanent empty card would be
+            noise on the good days. */}
+        {pending.length > 0 ? (
+          <Card>
+            <Body style={{ fontWeight: "700" }}>
+              {STR.gpPendingTitle} ({bnNum(pending.length)})
+            </Body>
+            {pending.map((row, i) => (
+              <View key={row.key}>
+                {i > 0 ? <Divider /> : null}
+                <PendingRowView
+                  row={row}
+                  open={openPending.has(row.key)}
+                  onToggle={() =>
+                    setOpenPending((cur) => {
+                      const next = new Set(cur);
+                      if (next.has(row.key)) next.delete(row.key);
+                      else next.add(row.key);
+                      return next;
+                    })
+                  }
+                />
+              </View>
+            ))}
+          </Card>
+        ) : null}
+
         <QueryGate
           results={[hwQ, nilQ, routineQ]}
           onRetry={() => {
             refetchHw({ requestPolicy: "network-only" });
             refetchNil({ requestPolicy: "network-only" });
             refetchRoutine({ requestPolicy: "network-only" });
+            refetchPending({ requestPolicy: "network-only" });
+            refetchAsgn({ requestPolicy: "network-only" });
           }}
           loaderLabel={STR.loading}
         >
