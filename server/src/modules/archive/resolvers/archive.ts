@@ -48,6 +48,7 @@ import {
 import { ClassTest } from "../../trackers/models/ClassTest";
 import { Subject } from "../../foundation/models/Subject";
 import { assertCanWrite, ForbiddenError } from "../../../middleware/authz";
+import { assertAnchorWrite } from "../../trackers/classTestAnchor";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
 
 // ---------------------------------------------------------------------------
@@ -359,13 +360,24 @@ builder.mutationField("fileScriptBundle", (t) =>
         // Plain teacher: may only file THEIR OWN section's test (write-scope on
         // the test's real section + subject, resolved server-side).
         if (kind !== "CLASS_TEST") throw new ForbiddenError();
-        const test = await ClassTest.findById(args.refId).select("sectionId subject").lean();
+        const test = await ClassTest.findById(args.refId)
+          .select("sectionId classId subjectGroupId subject")
+          .lean();
         if (!test) throw new Error("ক্লাস টেস্ট পাওয়া যায়নি");
-        const subjectDoc = await Subject.findOne({ code: test.subject }).select("_id").lean();
-        await assertCanWrite(
+        // Anchor-aware since D-#507: a group-anchored exam has no section to hold the
+        // grant, so its scripts are filed by the teacher the routine names on that group.
+        await assertAnchorWrite(
           ctx,
-          test.sectionId.toString(),
-          subjectDoc?._id ? subjectDoc._id.toString() : undefined,
+          {
+            sectionId: test.sectionId ? test.sectionId.toString() : null,
+            classId: test.classId ? test.classId.toString() : null,
+            subjectGroupId: test.subjectGroupId ? test.subjectGroupId.toString() : null,
+            subject: test.subject,
+          },
+          async () => {
+            const subjectDoc = await Subject.findOne({ code: test.subject }).select("_id").lean();
+            return subjectDoc?._id ? subjectDoc._id.toString() : "";
+          },
         );
       }
       return fileBundleSvc({

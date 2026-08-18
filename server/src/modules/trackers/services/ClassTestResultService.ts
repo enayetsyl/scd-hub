@@ -24,8 +24,10 @@ import { CLASS_TEST_ATTENDANCE_STATUSES } from "@scd/shared";
 import type { ClassTestAttendanceStatus } from "@scd/shared";
 import { ClassTest, type IClassTest } from "../models/ClassTest";
 import { ClassTestResult, type IClassTestResult } from "../models/ClassTestResult";
-import { Student } from "../../foundation/models/Student";
+import { SubjectGroup } from "../../routine/models/SubjectGroup";
+import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { writeAudit } from "../../platform/services/AuditService";
+import { rosterCount } from "../classTestAnchor";
 import { deriveScore, type DerivedScore } from "../classTestScoring";
 import { resolveClassTestDeadline, resolveClassTestOverdue, atMidnight } from "../classTestCalendar";
 
@@ -105,6 +107,23 @@ export async function enterResult(input: EnterResultInput): Promise<ClassTestRes
   // has no exam to score yet.
   if (test.status !== "PRINTED") {
     throw new ClassTestResultError("Results can only be entered on a printed (official) exam");
+  }
+
+  // D-#507: on a GROUP-anchored exam the roster is the group's membership, and the
+  // write scope ("you teach this group") is not per-student — so without this guard a
+  // group teacher could score any child in the school. A section exam keeps its
+  // existing behaviour: the section grant is the check, and a mid-year section move
+  // must not invalidate marks already entered.
+  if (test.subjectGroupId) {
+    const member = await SubjectGroupMembership.findOne({
+      groupId: test.subjectGroupId,
+      studentId: new Types.ObjectId(input.studentId),
+    })
+      .select("_id")
+      .lean();
+    if (!member) {
+      throw new ClassTestResultError("That student is not a member of this exam's group");
+    }
   }
 
   // On/after the exam date (J3). Date-only comparison (the exam day itself counts).
@@ -240,18 +259,28 @@ export interface ExamReportStatus {
 export async function examReportStatus(testId: string, now: Date = new Date()): Promise<ExamReportStatus> {
   const test = await loadTest(testId);
 
-  const [rosterCount, results] = await Promise.all([
-    Student.countDocuments({ sectionId: test.sectionId, active: true }),
+  // The denominator is the exam's OWN roster: the section's active students, or —
+  // on a group-anchored exam (D-#507) — the group's active members, who come from
+  // several sections. Using a section roster there would be wrong in both
+  // directions at once (extra children, missing members).
+  const [roster, results] = await Promise.all([
+    rosterCount({
+      sectionId: test.sectionId ? test.sectionId.toString() : null,
+      classId: test.classId ? test.classId.toString() : null,
+      subjectGroupId: test.subjectGroupId ? test.subjectGroupId.toString() : null,
+      subject: test.subject,
+    }),
     ClassTestResult.find({ testId: new Types.ObjectId(testId) }).select("status").lean() as Promise<
       Array<{ status: ClassTestAttendanceStatus }>
     >,
   ]);
+  const rosterCountValue = roster;
 
   const enteredCount = results.length;
   const presentCount = results.filter((r) => r.status === "PRESENT").length;
   const absentCount = enteredCount - presentCount;
-  const pendingCount = Math.max(0, rosterCount - enteredCount);
-  const complete = rosterCount > 0 && enteredCount >= rosterCount;
+  const pendingCount = Math.max(0, rosterCountValue - enteredCount);
+  const complete = rosterCountValue > 0 && enteredCount >= rosterCountValue;
 
   const { deadline, overdue, schoolDaysLate } = await resolveClassTestOverdue(
     new Date(test.examDate),
@@ -265,7 +294,7 @@ export async function examReportStatus(testId: string, now: Date = new Date()): 
     examDate: new Date(test.examDate).toISOString(),
     deadline: deadline.toISOString(),
     deadlineDays: test.deadlineDays,
-    rosterCount,
+    rosterCount: rosterCountValue,
     enteredCount,
     presentCount,
     absentCount,
@@ -299,7 +328,8 @@ export interface GuardianClassTestResult {
   subject: string;
   testNumber: number;
   examDate: string;
-  classLevel: number;
+  /** Null on a group-anchored exam (D-#507) — see `groupNameBn` below. */
+  classLevel: number | null;
   status: ClassTestAttendanceStatus;
   marks: number | null;
   totalMarks: number;
@@ -308,6 +338,10 @@ export interface GuardianClassTestResult {
   weakness: string | null;
   guardianAction: string | null;
   publishedAt: string | null;
+  /** D-#507: the Bangla name of the Arabic GROUP this exam was held for, when it was
+   *  a group exam (`classLevel` is then null). A parent needs to know their child
+   *  was examined as "আরবি বই ২ (মেয়ে)" and not as their class. */
+  groupNameBn: string | null;
 }
 
 /**
@@ -329,6 +363,15 @@ export async function childTestResults(studentId: string): Promise<GuardianClass
     .lean()) as unknown as IClassTest[];
   const testById = new Map(tests.map((t) => [t._id.toString(), t]));
 
+  // Group names for the group-anchored exams among them, in one batched read.
+  const groupIds = [...new Set(tests.filter((t) => t.subjectGroupId).map((t) => t.subjectGroupId!.toString()))];
+  const groups = groupIds.length
+    ? ((await SubjectGroup.find({ _id: { $in: groupIds.map((id) => new Types.ObjectId(id)) } })
+        .select("nameBn")
+        .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn: string }>)
+    : [];
+  const groupNameById = new Map(groups.map((g) => [g._id.toString(), g.nameBn]));
+
   const out: GuardianClassTestResult[] = [];
   for (const d of docs) {
     const test = testById.get(d.testId.toString());
@@ -345,7 +388,8 @@ export async function childTestResults(studentId: string): Promise<GuardianClass
       subject: test.subject,
       testNumber: test.testNumber,
       examDate: new Date(test.examDate).toISOString(),
-      classLevel: test.classLevel,
+      classLevel: test.classLevel ?? null,
+      groupNameBn: test.subjectGroupId ? groupNameById.get(test.subjectGroupId.toString()) ?? null : null,
       status: score.status,
       marks: score.marks,
       totalMarks: score.totalMarks,

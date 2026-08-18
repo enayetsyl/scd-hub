@@ -16,9 +16,14 @@ export interface ClassTestT {
   id: string;
   ctId: string;
   academicYearId: string;
-  classLevel: number;
-  classId: string;
-  sectionId: string;
+  /** D-#507: null on a group-anchored exam — an Arabic group spans classes. */
+  classLevel: number | null;
+  classId: string | null;
+  /** EXACTLY ONE of sectionId / subjectGroupId is non-null (D-#507). */
+  sectionId: string | null;
+  subjectGroupId: string | null;
+  /** D-#507: the Arabic group's Bangla name on a group-anchored exam, else null. */
+  groupNameBn: string | null;
   subject: string;
   testNumber: number;
   examDate: string;
@@ -38,7 +43,27 @@ export interface ClassTestT {
   notes: string | null;
 }
 
-const CLASS_TEST_FIELDS = `id ctId academicYearId classLevel classId sectionId subject testNumber examDate totalMarks passMark source setId questionFileId status deadlineDays teacherId requestedBy requestedAt printedBy printedAt notes`;
+const CLASS_TEST_FIELDS = `id ctId academicYearId classLevel classId sectionId subjectGroupId groupNameBn subject testNumber examDate totalMarks passMark source setId questionFileId status deadlineDays teacherId requestedBy requestedAt printedBy printedAt notes`;
+
+/** The exam's own roster (D-#507) — the section's students, or the Arabic group's
+ *  members with the class·section each comes from. Replaces `studentsInSection` on
+ *  the marks screen, which a group exam has no answer for. */
+export interface ClassTestRosterStudentT {
+  id: string;
+  schoolId: string;
+  name: string;
+  nameBn: string | null;
+  sectionNameBn: string | null;
+}
+
+export const CLASS_TEST_ROSTER_QUERY = gql<
+  { classTestRoster: ClassTestRosterStudentT[] },
+  { testId: string }
+>`
+  query ClassTestRoster($testId: String!) {
+    classTestRoster(testId: $testId) { id schoolId name nameBn sectionNameBn }
+  }
+`;
 
 // PQ-5 (D-#281): the class-test print queue was absorbed into the unified PrintRequest
 // queue (`app/src/graphql/printing.ts`). The server resolvers remain for back-compat and
@@ -88,17 +113,19 @@ export const RESTORE_CLASS_TEST = gql<{ restoreClassTest: ClassTestT }, { id: st
 
 export const SUGGEST_CLASS_TEST_NUMBER_QUERY = gql<
   { suggestClassTestNumber: number },
-  { sectionId: string; subject: string }
+  { sectionId?: string | null; subjectGroupId?: string | null; subject: string }
 >`
-  query SuggestClassTestNumber($sectionId: String!, $subject: String!) {
-    suggestClassTestNumber(sectionId: $sectionId, subject: $subject)
+  query SuggestClassTestNumber($sectionId: String, $subjectGroupId: String, $subject: String!) {
+    suggestClassTestNumber(sectionId: $sectionId, subjectGroupId: $subjectGroupId, subject: $subject)
   }
 `;
 
 export const CREATE_CLASS_TEST_REQUEST = gql<
   { createClassTestRequest: ClassTestT },
   {
-    sectionId: string;
+    /** EXACTLY ONE of sectionId / subjectGroupId (D-#507). */
+    sectionId?: string | null;
+    subjectGroupId?: string | null;
     subject: string;
     examDate: string;
     totalMarks: number;
@@ -118,13 +145,13 @@ export const CREATE_CLASS_TEST_REQUEST = gql<
   }
 >`
   mutation CreateClassTestRequest(
-    $sectionId: String!, $subject: String!, $examDate: String!, $totalMarks: Int!,
+    $sectionId: String, $subjectGroupId: String, $subject: String!, $examDate: String!, $totalMarks: Int!,
     $passMark: Int, $source: String!, $setId: String, $questionFileId: String,
     $colour: String, $sides: String, $copies: Int, $copiesMode: String,
     $testNumber: Int, $deadlineDays: Int, $notes: String, $teacherId: String
   ) {
     createClassTestRequest(
-      sectionId: $sectionId, subject: $subject, examDate: $examDate, totalMarks: $totalMarks,
+      sectionId: $sectionId, subjectGroupId: $subjectGroupId, subject: $subject, examDate: $examDate, totalMarks: $totalMarks,
       passMark: $passMark, source: $source, setId: $setId, questionFileId: $questionFileId,
       colour: $colour, sides: $sides, copies: $copies, copiesMode: $copiesMode,
       testNumber: $testNumber, deadlineDays: $deadlineDays, notes: $notes, teacherId: $teacherId
@@ -136,7 +163,9 @@ export const CREATE_CLASS_TEST_REQUEST = gql<
 export const REGISTER_CLASS_TEST_OFFICIAL = gql<
   { registerClassTestOfficial: ClassTestT },
   {
-    sectionId: string;
+    /** EXACTLY ONE of sectionId / subjectGroupId (D-#507). */
+    sectionId?: string | null;
+    subjectGroupId?: string | null;
     subject: string;
     examDate: string;
     totalMarks: number;
@@ -152,12 +181,12 @@ export const REGISTER_CLASS_TEST_OFFICIAL = gql<
   }
 >`
   mutation RegisterClassTestOfficial(
-    $sectionId: String!, $subject: String!, $examDate: String!, $totalMarks: Int!,
+    $sectionId: String, $subjectGroupId: String, $subject: String!, $examDate: String!, $totalMarks: Int!,
     $passMark: Int, $source: String!, $setId: String, $questionFileId: String,
     $testNumber: Int, $deadlineDays: Int, $notes: String, $teacherId: String
   ) {
     registerClassTestOfficial(
-      sectionId: $sectionId, subject: $subject, examDate: $examDate, totalMarks: $totalMarks,
+      sectionId: $sectionId, subjectGroupId: $subjectGroupId, subject: $subject, examDate: $examDate, totalMarks: $totalMarks,
       passMark: $passMark, source: $source, setId: $setId, questionFileId: $questionFileId,
       testNumber: $testNumber, deadlineDays: $deadlineDays, notes: $notes, teacherId: $teacherId
     ) { ${CLASS_TEST_FIELDS} }
@@ -321,8 +350,10 @@ export interface ClassTestReportStatusRowT {
   ctId: string;
   subject: string;
   testNumber: number;
-  classLevel: number;
-  sectionId: string;
+  /** D-#507: both null on a group-anchored exam; `subjectGroupId` is set instead. */
+  classLevel: number | null;
+  sectionId: string | null;
+  subjectGroupId: string | null;
   teacherId: string;
   /** D-#339: report author's name + newest result submittedAt (null until proposed). */
   teacherName: string;
@@ -375,7 +406,7 @@ export const CLASS_TEST_REPORTS_STATUS_QUERY = gql<
 >`
   query ClassTestReportsStatus(${REPORTS_ARG_DEFS}) {
     classTestReportsStatus(${REPORTS_ARG_USE}) {
-      testId ctId subject testNumber classLevel sectionId teacherId teacherName submittedAt publishedAt examDate deadline deadlineDays
+      testId ctId subject testNumber classLevel sectionId subjectGroupId teacherId teacherName submittedAt publishedAt examDate deadline deadlineDays
       rosterCount enteredCount presentCount absentCount pendingCount complete overdue schoolDaysLate state
     }
   }
@@ -552,7 +583,9 @@ export interface GuardianClassTestResultT {
   subject: string;
   testNumber: number;
   examDate: string;
-  classLevel: number;
+  /** D-#507: null when the exam was held for an Arabic GROUP — see groupNameBn. */
+  classLevel: number | null;
+  groupNameBn: string | null;
   status: string;
   marks: number | null;
   totalMarks: number;
@@ -569,7 +602,7 @@ export const CHILD_TEST_RESULTS_QUERY = gql<
 >`
   query ChildTestResults($studentId: String!) {
     childTestResults(studentId: $studentId) {
-      testId ctId subject testNumber examDate classLevel status marks totalMarks percent pass weakness guardianAction publishedAt
+      testId ctId subject testNumber examDate classLevel groupNameBn status marks totalMarks percent pass weakness guardianAction publishedAt
     }
   }
 `;

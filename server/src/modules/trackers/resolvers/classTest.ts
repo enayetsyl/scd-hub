@@ -23,6 +23,7 @@ import {
   markPrinted as markPrintedSvc,
   cancelRequest as cancelRequestSvc,
   suggestTestNumber as suggestTestNumberSvc,
+  suggestGroupTestNumber as suggestGroupTestNumberSvc,
   getClassTest as getClassTestSvc,
   listPrintQueue as listPrintQueueSvc,
   listMyClassTests as listMyClassTestsSvc,
@@ -34,11 +35,13 @@ import {
 } from "../services/ClassTestService";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
+import { AcademicYear } from "../../foundation/models/AcademicYear";
 import {
   assertCanWrite,
   assertCanRead,
   ForbiddenError,
 } from "../../../middleware/authz";
+import { assertAnchorRead, assertAnchorWrite, groupNameBn } from "../classTestAnchor";
 import { Subject } from "../../foundation/models/Subject";
 import type { Types } from "mongoose";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
@@ -82,9 +85,19 @@ ClassTestRef.implement({
     id: t.exposeString("id"),
     ctId: t.exposeString("ctId"),
     academicYearId: t.exposeString("academicYearId"),
-    classLevel: t.exposeInt("classLevel"),
-    classId: t.exposeString("classId"),
-    sectionId: t.exposeString("sectionId"),
+    // D-#507: null on a group-anchored exam (a group spans classes).
+    classLevel: t.int({ nullable: true, resolve: (r) => r.classLevel }),
+    classId: t.string({ nullable: true, resolve: (r) => r.classId }),
+    sectionId: t.string({ nullable: true, resolve: (r) => r.sectionId }),
+    subjectGroupId: t.string({ nullable: true, resolve: (r) => r.subjectGroupId }),
+    /** D-#507: the group's Bangla name, so every screen that printed "class · subject"
+     *  can print "আরবি বই ২ (মেয়ে) · আরবি" instead. Null (and NO query) on a
+     *  section-anchored row — only a group row pays the lookup, and the school has
+     *  five groups in total. */
+    groupNameBn: t.string({
+      nullable: true,
+      resolve: (r) => (r.subjectGroupId ? groupNameBn(r) : null),
+    }),
     subject: t.exposeString("subject"),
     testNumber: t.exposeInt("testNumber"),
     examDate: t.exposeString("examDate"),
@@ -113,10 +126,13 @@ builder.mutationField("createClassTestRequest", (t) =>
     type: ClassTestRef,
     description:
       "File a class-test print request (J1): a CT-kind pool set (setId) or an uploaded paper " +
-      "(questionFileId). Year/class resolved server-side from the section. Born REQUESTED.",
+      "(questionFileId). Year/class resolved server-side from the section. Born REQUESTED. " +
+      "Pass EXACTLY ONE of sectionId or subjectGroupId — the latter for a cross-class Arabic " +
+      "group exam (D-#507), whose roster is the group's members and whose class level is null.",
     authScopes: { hasPermission: "tracker:write" },
     args: {
-      sectionId: t.arg.string({ required: true }),
+      sectionId: t.arg.string({ required: false }),
+      subjectGroupId: t.arg.string({ required: false }),
       subject: t.arg.string({ required: true }),
       examDate: t.arg.string({ required: true }),
       totalMarks: t.arg.int({ required: true }),
@@ -141,9 +157,19 @@ builder.mutationField("createClassTestRequest", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
+      await assertAnchorWrite(
+        ctx,
+        {
+          sectionId: args.sectionId ?? null,
+          classId: null,
+          subjectGroupId: args.subjectGroupId ?? null,
+          subject: args.subject,
+        },
+        () => resolveSubjectId(args.subject),
+      );
       return createRequestSvc({
-        sectionId: args.sectionId,
+        sectionId: args.sectionId ?? undefined,
+        subjectGroupId: args.subjectGroupId ?? undefined,
         subject: args.subject,
         examDate: args.examDate,
         totalMarks: args.totalMarks,
@@ -175,10 +201,12 @@ builder.mutationField("registerClassTestOfficial", (t) =>
     description:
       "Register a class test as official WITHOUT a print request (D-#339): born PRINTED " +
       "(printedBy/At = actor/now), no print-queue row — results + overdue tracking start " +
-      "immediately. Subject teacher (write-scope) or Principal/Office.",
+      "immediately. Subject teacher (write-scope) or Principal/Office. Pass EXACTLY ONE of " +
+      "sectionId or subjectGroupId (D-#507).",
     authScopes: { authenticated: true },
     args: {
-      sectionId: t.arg.string({ required: true }),
+      sectionId: t.arg.string({ required: false }),
+      subjectGroupId: t.arg.string({ required: false }),
       subject: t.arg.string({ required: true }),
       examDate: t.arg.string({ required: true }),
       totalMarks: t.arg.int({ required: true }),
@@ -199,10 +227,20 @@ builder.mutationField("registerClassTestOfficial", (t) =>
       const admin = isAdminStaff(ctx.auth);
       if (!admin) {
         if (!callerHasPermission(ctx.auth, "tracker:write")) throw new ForbiddenError();
-        await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
+        await assertAnchorWrite(
+          ctx,
+          {
+            sectionId: args.sectionId ?? null,
+            classId: null,
+            subjectGroupId: args.subjectGroupId ?? null,
+            subject: args.subject,
+          },
+          () => resolveSubjectId(args.subject),
+        );
       }
       return createRequestSvc({
-        sectionId: args.sectionId,
+        sectionId: args.sectionId ?? undefined,
+        subjectGroupId: args.subjectGroupId ?? undefined,
         subject: args.subject,
         examDate: args.examDate,
         totalMarks: args.totalMarks,
@@ -226,16 +264,42 @@ builder.queryField("suggestClassTestNumber", (t) =>
   t.field({
     type: "Int",
     description:
-      "The next human Test# for a section's class+subject (max+1). UI pre-fill for the request form (J1).",
+      "The next human Test# for a section's class+subject, or for a subject GROUP's own " +
+      "line (D-#507) — max+1. UI pre-fill for the request form (J1). Pass exactly one anchor.",
     authScopes: { hasPermission: "tracker:write" },
     args: {
-      sectionId: t.arg.string({ required: true }),
+      sectionId: t.arg.string({ required: false }),
+      subjectGroupId: t.arg.string({ required: false }),
       subject: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
-      const section = (await Section.findById(args.sectionId).select("classId").lean()) as {
+      if (!args.sectionId === !args.subjectGroupId) {
+        throw new Error("Provide exactly one of sectionId or subjectGroupId");
+      }
+      await assertAnchorWrite(
+        ctx,
+        {
+          sectionId: args.sectionId ?? null,
+          classId: null,
+          subjectGroupId: args.subjectGroupId ?? null,
+          subject: args.subject,
+        },
+        () => resolveSubjectId(args.subject),
+      );
+      if (args.subjectGroupId) {
+        // A group's Test # line is its own (year × group × subject).
+        const year = (await AcademicYear.findOne({ current: true }).select("_id").lean()) as {
+          _id: Types.ObjectId;
+        } | null;
+        if (!year) throw new Error("No current academic year");
+        return suggestGroupTestNumberSvc(
+          year._id.toString(),
+          args.subjectGroupId,
+          args.subject as never,
+        );
+      }
+      const section = (await Section.findById(args.sectionId!).select("classId").lean()) as {
         classId: Types.ObjectId;
       } | null;
       if (!section) throw new Error("Section not found");
@@ -401,10 +465,9 @@ builder.queryField("classTest", (t) =>
       assertStaffRead(ctx);
       const shape = await getClassTestSvc(args.id);
       if (!shape) return null;
-      // Teachers (not Principal/Office) need read-scope on the test's section.
-      if (!isAdminStaff(ctx.auth)) {
-        await assertCanRead(ctx, shape.sectionId, shape.classId);
-      }
+      // Teachers (not Principal/Office) need read-scope on the test's unit — its
+      // section, or "you teach that group" for a group anchor (D-#507).
+      await assertAnchorRead(ctx, shape);
       return shape;
     },
   }),

@@ -142,6 +142,87 @@ blocks all new duplicates in the meantime.
 
 ---
 
+## CT-12 — A class test may be anchored on a SUBJECT GROUP, not only a section (D-#507)
+
+**The problem this fixes — measured in the live data, not theorised.** The owner asked
+whether an Arabic class test can be recorded the way classes 1–5 record theirs. Arabic is
+taught **both** ways at this school:
+
+| shape | active ARABIC slots | units |
+|---|---|---|
+| section (the whole section together) | 12 | 4 sections |
+| **subject group** (cross-class, D-#48/#56) | **25** | **5 Arabic groups** |
+
+and each group mixes students from **several classes**:
+`ARABIC_BOOK_1_MIXED` 16 members / 3 classes · `ARABIC_BOOK_2_GIRLS` 11 / 4 ·
+`ARABIC_BOOK_2_BOYS` 10 / 3 · `ARABIC_BOOK_3_MIXED` 13 / 3 ·
+`ARABIC_QURANIC_ARABIC_MIXED` 8 / 2.
+
+`ClassTest` required a `sectionId`, derived `classLevel`/`classId` from it, and counted
+`Student.countDocuments({sectionId, active:true})` as the completion denominator. So a
+group exam could only be filed by pretending it belonged to one section — and then the
+marks screen listed that section's children who **do not attend** the group, offered no
+way to reach the members from the **other** classes, and the "how many still pending"
+count was meaningless. The live evidence that this never worked: **zero** ARABIC class
+tests exist.
+
+**The anchor.** EXACTLY ONE of `sectionId` or `subjectGroupId`, the shape
+`ClassroomObservation` already uses for the same reason (D-#48/#56). On a group anchor
+`classId`/`classLevel` are **null** — a group has no single class level — and the year comes
+from the CURRENT `AcademicYear` instead of the section's class.
+
+**What follows from the anchor, and why each is a decision:**
+- **Roster = the group's ACTIVE membership** (`classTestAnchor.rosterStudentIds`). This is
+  the whole feature; a section roster is wrong in both directions at once.
+- **Id scheme `CT-G-{GROUP_CODE}-{nnnn}`**, counted in a NEW `ClassTestGroupSequence`
+  collection keyed by (year, group). Not a nullable `classLevel` on the existing sequence:
+  its unique index is (year, classLevel, subject), so every group's ARABIC counter would
+  collide on (year, null, ARABIC) — and fixing that means dropping a unique index on a live
+  collection, a migration this feature does not need.
+- **Authz is the routine, not a section grant.** Teacher scopes ARE grants over sections,
+  so "do you write section X?" is not a stricter or looser question for a cross-class group
+  — it is a meaningless one. A group exam is writable by the teacher the routine names on
+  that group (`teachesSubjectGroup`), with PRINCIPAL passing and OFFICE/GUARDIAN refused,
+  mirroring `assertCanWrite`'s own role behaviour exactly. Same source as the accountable-
+  teacher default, so the two can never disagree about whose group it is.
+- **A per-student membership guard on `enterResult`** for group exams only: the group write
+  scope is not per-student, so without it a group teacher could score any child in the
+  school. Section exams keep their existing behaviour (a mid-year section move must not
+  invalidate marks already entered).
+- **Only ARABIC groups.** A Quran group is refused: Quran is out of the HW_SUBJECTS axis
+  entirely (D-#36), so a Quran group could only ever be examined in a subject it does not
+  teach.
+- **Copies-per-present is refused on a group** (D-#303 counts one CLASS present on the exam
+  day; a cross-class group has no such class), and the CT-11 duplicate guard keys on the
+  ANCHOR — a group's Test # 1 and a section's Test # 1 are different exams.
+- **The marks roster is a server read** (`classTestRoster`), not `studentsInSection`, and on
+  a group exam each row carries the child's `class · section` — eleven children from four
+  classes need telling apart.
+- **The guardian sees the GROUP's name.** `classLevel` on the guardian result is now
+  nullable (an `exposeInt` over null fails the whole field at request time, taking the
+  parent's list down) and `groupNameBn` rides beside it, so a parent reads "আরবি বই ২ (মেয়ে)"
+  rather than a class the exam was not held for.
+
+**Deliberately NOT in this slice:** the section-keyed CT-4 dashboards keep working and stay
+section-keyed — a group exam's roster is counted correctly in `reportsStatus` (a second
+batched aggregate, so D-#500's fixed-query-count property survives) and its overdue chase
+line names the group, but the class/section FILTERS do not offer groups yet. Nothing else
+changes shape: no vocab, no new permission, no migration (`subjectGroupId` defaults null,
+so every existing row reads as section-anchored).
+
+**Acceptance:**
+- [ ] A group-anchored request stores `subjectGroupId` with `sectionId`/`classId`/`classLevel` null, mints `CT-G-{CODE}-0001`, and takes the current academic year.
+- [ ] Both anchors, or neither, are refused; a Quran-track group and a retired group are refused.
+- [ ] The exam is attributed to the teacher the GROUP's routine names on the exam day, else the requester.
+- [ ] The roster and the completion denominator are the group's active members; an inactive member is excluded; a section exam still counts its section.
+- [ ] `enterResult` refuses a student who is not a member of the exam's group.
+- [ ] Copies-per-present is refused on a group anchor; the duplicate guard keys on the group.
+- [ ] PRINCIPAL may write a group exam; OFFICE may not; the group's routine teacher may; another teacher may not.
+- [ ] The marks screen lists the group's members with each child's class·section; the guardian card names the group.
+- [ ] Server + app tsc clean, full jest green, expo web export exit 0.
+
+---
+
 ## Build status (2026-07-09, D-#277)
 All slices BUILT in one pass (server+app tsc clean, jest 1629/1629, expo web export green):
 - ✅ **CT-6** read-only view · ✅ **CT-7** cumulative comments · ✅ **CT-8** approval gate

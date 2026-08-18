@@ -8,6 +8,14 @@
  * source = POOL_SET) or the teacher's own uploaded paper (`questionFileId` →
  * StoredFile `classtest_question`, when source = UPLOADED_PAPER) — exactly one.
  *
+ * ANCHOR (D-#507): EXACTLY ONE of `sectionId` (a general-subject exam for one
+ * section — every row before D-#507) or `subjectGroupId` (a cross-class Quran/
+ * Arabic group, D-#48/#56). The ClassroomObservation anchor shape, for the same
+ * reason: Arabic is taught to groups that mix students from several CLASSES, so a
+ * group exam has no single section and no single class level. On a group-anchored
+ * row `classId`/`classLevel` are therefore null and the roster is the group's
+ * membership, not a section's.
+ *
  * Build rulings (server-only, single-school live repo — AGENTS rule 3):
  *  - D-#145: NO `schoolId` (the §3.2 sketch lists it, but every live feature
  *    model drops it under the single-school convention — MT D-#140 precedent).
@@ -17,6 +25,8 @@
  *    client-supplied — the §3.2 sketch named only classLevel+sectionId, but the
  *    §3.4 "year-continuous" sequence needs the year, and deriving the level
  *    server-side blocks sequence-key spoofing (the AssignmentItem D-#34 posture).
+ *    On a group anchor there is no section to derive from, so the year comes from
+ *    the CURRENT AcademicYear and the class fields stay null.
  *
  * `testNumber` is the human "Test #" (auto-suggested = max for this
  * class+subject + 1, editable); `ctId` is the atomic unique key. `deadlineDays`
@@ -32,12 +42,18 @@ import type { HwSubject, ClassTestSource, ClassTestStatus } from "@scd/shared";
 
 export interface IClassTest extends Document {
   _id: Types.ObjectId;
-  /** CT_ID — CT-C{class}-{SUBJECT}-{nnnn} (D-#34). Unique, year-continuous. */
+  /** CT_ID — `CT-C{class}-{SUBJECT}-{nnnn}` for a section anchor (D-#34), or
+   *  `CT-G-{GROUP_CODE}-{nnnn}` for a subject-group anchor (D-#507). Unique,
+   *  year-continuous. */
   ctId: string;
   academicYearId: Types.ObjectId;
-  classLevel: number;
-  classId: Types.ObjectId;
-  sectionId: Types.ObjectId;
+  /** Section anchor only — null on a group-anchored row (a group spans classes). */
+  classLevel?: number | null;
+  classId?: Types.ObjectId | null;
+  /** EXACTLY ONE of sectionId / subjectGroupId is set (validated in the service). */
+  sectionId?: Types.ObjectId | null;
+  /** D-#507: the cross-class Quran/Arabic group this exam was held for. */
+  subjectGroupId?: Types.ObjectId | null;
   subject: HwSubject;
   /** Human "Test #" — auto-suggested (max+1 for class+subject), editable. */
   testNumber: number;
@@ -76,9 +92,11 @@ const ClassTestSchema = new Schema<IClassTest>(
   {
     ctId: { type: String, required: true, unique: true },
     academicYearId: { type: Schema.Types.ObjectId, required: true },
-    classLevel: { type: Number, required: true },
-    classId: { type: Schema.Types.ObjectId, ref: "Class", required: true },
-    sectionId: { type: Schema.Types.ObjectId, ref: "Section", required: true },
+    // Section anchor: class fields derived from it. Group anchor: all three null.
+    classLevel: { type: Number, default: null },
+    classId: { type: Schema.Types.ObjectId, ref: "Class", default: null },
+    sectionId: { type: Schema.Types.ObjectId, ref: "Section", default: null },
+    subjectGroupId: { type: Schema.Types.ObjectId, ref: "SubjectGroup", default: null },
     subject: { type: String, enum: HW_SUBJECTS, required: true },
     testNumber: { type: Number, required: true, min: 1 },
     examDate: { type: Date, required: true },
@@ -107,5 +125,7 @@ ClassTestSchema.index({ requestedBy: 1, requestedAt: -1 });
 // The subject teacher's own exams (their account / the report's teacher filter).
 ClassTestSchema.index({ teacherId: 1, requestedAt: -1 });
 ClassTestSchema.index({ sectionId: 1, status: 1 });
+// D-#507: the group's own exams (the group teacher's list + the roster reads).
+ClassTestSchema.index({ subjectGroupId: 1, requestedAt: -1 });
 
 export const ClassTest = model<IClassTest>("ClassTest", ClassTestSchema);
