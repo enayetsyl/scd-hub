@@ -76,6 +76,24 @@ jest.mock("../modules/assessment/models/AssessmentSet", () => ({
   },
 }));
 
+// Review rounds + audit — persistEnvelope supersedes an open review round when a revised
+// version is re-imported (D-#508 for questions, R2.2 for plans). Mocked so the import tests
+// stay DB-free; the supersession logic itself is covered in questionReview.test.ts.
+const mockReviewFind = jest.fn((_f?: unknown) => ({ lean: () => Promise.resolve([]) }));
+const mockReviewUpdateOne = jest.fn().mockResolvedValue({ acknowledged: true });
+const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("../modules/content/models/ReviewAssignment", () => ({
+  ReviewAssignment: {
+    find: (f: unknown) => mockReviewFind(f),
+    updateOne: (f: unknown, u: unknown) => mockReviewUpdateOne(f, u),
+  },
+}));
+
+jest.mock("../modules/platform/services/AuditService", () => ({
+  writeAudit: (p: unknown) => mockWriteAudit(p),
+}));
+
 jest.mock("child_process");
 
 // Import AFTER mocks
@@ -1001,5 +1019,75 @@ describe("F6/F10 — createSetWithQuestions (transactional one-step create)", ()
     expect(items[0].marks).toBe(1);
     expect(items[0].qid).toBe(ART_A.toString());
     expect(arg.totalMarks).toBe(1);
+  });
+});
+
+// ===========================================================================
+// QR-1 — the import gate for questions (D-#508)
+// ===========================================================================
+
+describe("QR-1 — questions always land at draft (Q1.3)", () => {
+  beforeEach(() => {
+    mockArtifactFindOneResult.mockResolvedValue(null);
+    mockBatchCreate.mockResolvedValue(makeBatchDoc());
+    mockArtifactCreate.mockResolvedValue(makeArtifactDoc());
+  });
+
+  test("a question declaring review_status=gold is clamped to draft", async () => {
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE, review_status: "gold" }, ACTOR_ID);
+
+    const createArg = mockArtifactCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(createArg.reviewStatus).toBe("draft");
+  });
+
+  test("a question declaring review_status=reviewed is clamped to draft", async () => {
+    // QUESTION_ENVELOPE declares "reviewed" as shipped — the clamp must beat it.
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE }, ACTOR_ID);
+
+    const createArg = mockArtifactCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(createArg.reviewStatus).toBe("draft");
+  });
+
+  test("the ImportBatch audit row still records what ARRIVED, not the clamp", async () => {
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE, review_status: "gold" }, ACTOR_ID);
+
+    const batchArg = mockBatchCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(batchArg.reviewStatus).toBe("gold");
+  });
+});
+
+describe("QR-1 — re-import supersedes a question's review rounds by qid (Q1.2)", () => {
+  beforeEach(() => {
+    mockBatchCreate.mockResolvedValue(makeBatchDoc());
+    mockArtifactCreate.mockResolvedValue(makeArtifactDoc());
+    mockReviewFind.mockReturnValue({ lean: () => Promise.resolve([]) });
+  });
+
+  test("a superseding re-import asks for open rounds by {docType, qid}", async () => {
+    // A prior current version exists → the supersession path runs.
+    mockArtifactFindOneResult.mockResolvedValue({ _id: new mongoose.Types.ObjectId() });
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE }, ACTOR_ID);
+
+    expect(mockReviewFind).toHaveBeenCalledWith({
+      docType: "question",
+      qid: "QP-BAN-C5-U13-Q01",
+      status: { $in: ["assigned", "submitted"] },
+    });
+    // The unit address must never be consulted — that is the 40-questions-one-thread bug.
+    const filter = mockReviewFind.mock.calls[0][0] as unknown as Record<string, unknown>;
+    expect(filter).not.toHaveProperty("anchorWord");
+    expect(filter).not.toHaveProperty("addressNumber");
+  });
+
+  test("a FIRST import (no prior version) supersedes nothing", async () => {
+    mockArtifactFindOneResult.mockResolvedValue(null);
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE }, ACTOR_ID);
+
+    expect(mockReviewFind).not.toHaveBeenCalled();
   });
 });

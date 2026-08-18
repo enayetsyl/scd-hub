@@ -90,6 +90,45 @@ export function addressKeyOf(a: AddressKeyInput): AddressKey {
   };
 }
 
+// --- Question thread anchor (D-#508) -------------------------------------------------
+// A question's identity is its `qid`, NOT its address: persistEnvelope supersedes questions
+// on `envelopeJson.payload.qid` precisely because a whole unit of questions shares ONE
+// address. Anchoring question rounds on the address would put every question in the unit on
+// a single thread, so one supersede would cancel dozens of unrelated rounds.
+
+/** Extract the stable question identity from an artifact-shaped object, or null. */
+export function qidOf(a: { envelopeJson?: Record<string, unknown> | null }): string | null {
+  const payload = (a.envelopeJson?.payload ?? {}) as Record<string, unknown>;
+  const qid = payload.qid;
+  return typeof qid === "string" && qid.trim() !== "" ? qid.trim() : null;
+}
+
+/** The question thread key. */
+export interface ReviewQidKey {
+  docType: string;
+  qid: string;
+}
+
+export type ReviewThreadKey = AddressKey | ReviewQidKey;
+
+type ThreadKeyInput = AddressKeyInput & { envelopeJson?: Record<string, unknown> | null };
+
+/**
+ * The version-stable thread anchor for ANY reviewable artifact, as a ReviewAssignment
+ * filter: `{docType, qid}` for questions, the 5-field address key for everything else.
+ * Use this instead of `addressKeyOf` on every path that must serve both doc-types.
+ * Throws for a question with no `qid` — such an item cannot be threaded, and silently
+ * falling back to the address is exactly the bug this function exists to prevent.
+ */
+export function threadKeyOf(a: ThreadKeyInput): ReviewThreadKey {
+  if (a.docType === "question") {
+    const qid = qidOf(a);
+    if (!qid) throw new ReviewError("Question artifact has no payload.qid — it cannot be reviewed");
+    return { docType: "question", qid };
+  }
+  return addressKeyOf(a);
+}
+
 // ---------------------------------------------------------------------------
 // DTO
 // ---------------------------------------------------------------------------
@@ -164,12 +203,13 @@ export interface ReviewAddressKey {
 }
 
 /**
- * Mark every open (assigned|submitted) round for an address `superseded` and audit
- * each. Returns how many were superseded. Used when a new round is assigned (D-#40)
- * and when a revised version is re-imported (R2.2 — persistEnvelope calls this).
+ * Mark every open (assigned|submitted) round matching `key` `superseded` and audit each.
+ * Returns how many were superseded. `key` is a thread anchor — an address key for plans or
+ * a `{docType, qid}` key for questions (D-#508); the two never collide because a question
+ * round's address fields are populated but never queried, and `qid` is unset on plan rounds.
  */
-export async function supersedeOpenRoundsForAddress(
-  key: ReviewAddressKey,
+export async function supersedeOpenRounds(
+  key: ReviewThreadKey,
   reason: string,
   actorId?: string,
   actorRole?: string,
@@ -190,6 +230,27 @@ export async function supersedeOpenRoundsForAddress(
     });
   }
   return open.length;
+}
+
+/** Address-keyed supersession (plans). Retained as the named entry point its callers and
+ *  tests already use; the behaviour is unchanged. */
+export async function supersedeOpenRoundsForAddress(
+  key: ReviewAddressKey,
+  reason: string,
+  actorId?: string,
+  actorRole?: string,
+): Promise<number> {
+  return supersedeOpenRounds(key, reason, actorId, actorRole);
+}
+
+/** Qid-keyed supersession (questions, D-#508) — the re-import hook for a revised question. */
+export async function supersedeOpenRoundsForQid(
+  qid: string,
+  reason: string,
+  actorId?: string,
+  actorRole?: string,
+): Promise<number> {
+  return supersedeOpenRounds({ docType: "question", qid }, reason, actorId, actorRole);
 }
 
 // ---------------------------------------------------------------------------
