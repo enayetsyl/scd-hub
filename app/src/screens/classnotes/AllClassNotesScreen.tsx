@@ -13,9 +13,11 @@
  * follow the same line — a teacher edits the note they authored, deleting stays
  * routine:manage.
  *
- * The columns the owner asked for do not include the note's text, so the body
- * lives one tap away: pressing a row opens a detail band with the full summary
- * and its attachment links.
+ * The note's text is a COLUMN (owner ask, 2026-08-17), clamped to two lines with a
+ * ▸/▾ caret; pressing anywhere on the row unclamps it and reveals its attachment
+ * links, and "Expand all / Collapse all" does the whole page at once. Rows stay
+ * one-line-tall by default so 50 of them are still scannable — the point of a
+ * table — while a long note is one tap from being read in full.
  */
 import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -57,12 +59,18 @@ const COLUMNS = [
   { key: "date", labelKey: "cnColDate", width: 120 },
   { key: "subject", labelKey: "subject", width: 140 },
   { key: "class", labelKey: "cnColClass", width: 130 },
+  // The note itself (owner ask, 2026-08-17): two lines in the row, the whole thing
+  // one tap away. It sits beside the class/subject that identify it, not at the far
+  // end past the columns nobody reads a note by.
+  { key: "note", labelKey: "cnContent", width: 340 },
   { key: "teacher", labelKey: "cnPostedBy", width: 170 },
   { key: "attachment", labelKey: "cnAttachments", width: 110 },
   { key: "section", labelKey: "section", width: 120 },
   { key: "actions", labelKey: "cnColActions", width: 190 },
 ] as const;
 const TABLE_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
+/** Lines of the note a collapsed row shows before it has to be expanded. */
+const COLLAPSED_LINES = 2;
 
 function Cell({ width, children }: { width: number; children: React.ReactNode }): React.ReactElement {
   return <View style={{ width, padding: space(2), justifyContent: "center" }}>{children}</View>;
@@ -110,7 +118,18 @@ export default function AllClassNotesScreen(): React.ReactElement {
   const firstRow = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const lastRow = Math.min(page * pageSize, total);
 
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Expanded rows, by id — a SET rather than one id, because the owner asked to be
+  // able to open the notes and shut them again, which only reads as "expand all /
+  // collapse all" if more than one can be open at once.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleRow = (id: string): void =>
+    setExpanded((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const allExpanded = rows.length > 0 && rows.every((r) => expanded.has(r.id));
   const [editRow, setEditRow] = useState<ClassNoteAdminRowT | null>(null);
   const [editText, setEditText] = useState("");
   const [editFiles, setEditFiles] = useState<AttachmentRef[]>([]);
@@ -245,6 +264,13 @@ export default function AllClassNotesScreen(): React.ReactElement {
               text={`${STR.rtTableShowing} ${bnNum(firstRow)}–${bnNum(lastRow)} ${STR.rtTableOf} ${bnNum(total)}`}
               tone="muted"
             />
+            {rows.length > 0 ? (
+              <Button
+                title={allExpanded ? `▴ ${STR.cnCollapseAll}` : `▾ ${STR.cnExpandAll}`}
+                variant="secondary"
+                onPress={() => setExpanded(allExpanded ? new Set() : new Set(rows.map((r) => r.id)))}
+              />
+            ) : null}
             <Button title={STR.rtTableReset} variant="ghost" onPress={onReset} />
           </View>
         </Card>
@@ -298,11 +324,11 @@ export default function AllClassNotesScreen(): React.ReactElement {
                 </View>
 
                 {rows.map((r, index) => {
-                  const expanded = expandedId === r.id;
+                  const isOpen = expanded.has(r.id);
                   return (
                     <View key={r.id}>
                       <Pressable
-                        onPress={() => setExpandedId(expanded ? null : r.id)}
+                        onPress={() => toggleRow(r.id)}
                         style={({ pressed }) => [
                           {
                             flexDirection: "row",
@@ -322,18 +348,34 @@ export default function AllClassNotesScreen(): React.ReactElement {
                         <Cell width={COLUMNS[2].width}>
                           <Body style={{ color: REPORT.text }}>{rowClass(r)}</Body>
                         </Cell>
+                        {/* The note, two lines deep, with the expand/shrink control
+                            ON the text — the row is pressable anywhere, but a
+                            caret is what tells the reader there is more. */}
                         <Cell width={COLUMNS[3].width}>
-                          <Body style={{ color: REPORT.text }}>{r.authorName ?? "—"}</Body>
+                          <View style={{ flexDirection: "row", gap: space(1), alignItems: "flex-start" }}>
+                            <Text style={{ color: REPORT.textMuted, fontSize: 13, lineHeight: 20 }}>
+                              {isOpen ? "▾" : "▸"}
+                            </Text>
+                            <Body
+                              style={{ color: REPORT.text, flex: 1 }}
+                              numberOfLines={isOpen ? undefined : COLLAPSED_LINES}
+                            >
+                              {r.taughtSummaryBn}
+                            </Body>
+                          </View>
                         </Cell>
                         <Cell width={COLUMNS[4].width}>
+                          <Body style={{ color: REPORT.text }}>{r.authorName ?? "—"}</Body>
+                        </Cell>
+                        <Cell width={COLUMNS[5].width}>
                           <Muted style={{ color: REPORT.textMuted }}>
                             {r.attachments.length > 0 ? `📎 ${bnNum(r.attachments.length)}` : "—"}
                           </Muted>
                         </Cell>
-                        <Cell width={COLUMNS[5].width}>
+                        <Cell width={COLUMNS[6].width}>
                           <Muted style={{ color: REPORT.textMuted }}>{rowSection(r)}</Muted>
                         </Cell>
-                        <Cell width={COLUMNS[6].width}>
+                        <Cell width={COLUMNS[7].width}>
                           <View style={{ flexDirection: "row", gap: space(1) }}>
                             {mayEdit(r) ? (
                               <Button title={`✏️ ${STR.cnActionEdit}`} variant="secondary" onPress={() => startEdit(r)} />
@@ -346,9 +388,10 @@ export default function AllClassNotesScreen(): React.ReactElement {
                         </Cell>
                       </Pressable>
 
-                      {/* The note's own text + files — the columns the owner listed
-                          have no room for them, so they open under the row. */}
-                      {expanded ? (
+                      {/* Expanding also surfaces the attachments, which the count
+                          column can only tell you exist. The note text itself is
+                          already unclamped in the row above. */}
+                      {isOpen && r.attachments.length > 0 ? (
                         <View
                           style={{
                             width: TABLE_WIDTH,
@@ -359,19 +402,16 @@ export default function AllClassNotesScreen(): React.ReactElement {
                             gap: space(1),
                           }}
                         >
-                          <Body style={{ color: REPORT.text }}>{r.taughtSummaryBn}</Body>
-                          {r.attachments.length > 0 ? (
-                            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
-                              {r.attachments.map((a) => (
-                                <Button
-                                  key={a.id}
-                                  title={`📎 ${a.name}`}
-                                  variant="ghost"
-                                  onPress={() => void openStoredFile(a.id).catch(() => toast.show(STR.errGeneric, "danger"))}
-                                />
-                              ))}
-                            </View>
-                          ) : null}
+                          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+                            {r.attachments.map((a) => (
+                              <Button
+                                key={a.id}
+                                title={`📎 ${a.name}`}
+                                variant="ghost"
+                                onPress={() => void openStoredFile(a.id).catch(() => toast.show(STR.errGeneric, "danger"))}
+                              />
+                            ))}
+                          </View>
                         </View>
                       ) : null}
                     </View>
