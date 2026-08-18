@@ -25,7 +25,7 @@ import {
   type ClassTestPublishOutcomeT,
 } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Field, Loader, Notice } from "../../components/ui";
-import { STR, hwSubjectLabel, classLevelLabel, bnNum } from "../../lib/labels";
+import { STR, hwSubjectLabel, ctUnitLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
@@ -120,7 +120,7 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
               (owner ask 2026-08-02). */}
           {test ? (
             <Muted>
-              {classLevelLabel(test.classLevel)} · {hwSubjectLabel(test.subject)} · {STR.ctTotalMarks}{" "}
+              {ctUnitLabel(test)} · {hwSubjectLabel(test.subject)} · {STR.ctTotalMarks}{" "}
               {bnNum(test.totalMarks)} · {STR.ctPassMark} {bnNum(test.passMark)}
             </Muted>
           ) : null}

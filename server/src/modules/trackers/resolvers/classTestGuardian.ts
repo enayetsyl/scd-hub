@@ -23,7 +23,13 @@ GuardianClassTestResultRef.implement({
     subject: t.exposeString("subject"),
     testNumber: t.exposeInt("testNumber"),
     examDate: t.exposeString("examDate"),
-    classLevel: t.exposeInt("classLevel"),
+    // D-#507: null on a group-anchored exam. It MUST be declared nullable — an
+    // exposeInt over a null value fails the field at request time, which would take
+    // the parent's whole result list down rather than one label.
+    classLevel: t.int({ nullable: true, resolve: (r) => r.classLevel }),
+    /** The Arabic group's name, when the exam was a group exam (D-#507) — a parent
+     *  should read "আরবি বই ২" and not their child's class. */
+    groupNameBn: t.string({ nullable: true, resolve: (r) => r.groupNameBn }),
     status: t.exposeString("status"),
     marks: t.int({ nullable: true, resolve: (r) => r.marks }),
     totalMarks: t.exposeInt("totalMarks"),

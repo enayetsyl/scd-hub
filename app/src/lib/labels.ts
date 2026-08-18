@@ -445,6 +445,12 @@ export const docTypeLabel = (v?: string | null): string =>
   (v && pick(DOC_TYPE_LABELS_BN, DOC_TYPE_LABELS_EN)[v as DocType]) || v || DASH;
 
 /** Roster-aware: pre-primary (−1 Nursery / 0 KG) use the roster label; 1..5 stay "শ্রেণি N" / "Class N". */
+/** The exam's UNIT, in one label (D-#507): a class-anchored exam reads as its class,
+ *  a group-anchored one as the Arabic group's own name — a group spans classes, so
+ *  there is no class level to print. */
+export const ctUnitLabel = (test: { classLevel: number | null; groupNameBn: string | null }): string =>
+  test.classLevel != null ? classLevelLabel(test.classLevel) : test.groupNameBn ?? "—";
+
 export const classLevelLabel = (level: number): string => {
   const roster = pick(ROSTER_CLASS_LABELS_BN, ROSTER_CLASS_LABELS_EN);
   if (level <= 0) return roster[level as RosterClassLevel] ?? (_lang === "en" ? `Class ${bnNum(level)}` : `শ্রেণি ${bnNum(level)}`);
@@ -1743,6 +1749,13 @@ const STR_BN = {
   // homework twin (hwDescLabel) so the two delivery forms read the same.
   asDescLabel: "অ্যাসাইনমেন্টে কী করতে হবে",
   // DE-4/DE-5 (D-#477): the period card entry.
+  // Class-test unit anchor (D-#507): a section, or a cross-class Arabic group.
+  ctUnitSection: "শাখা",
+  ctUnitGroup: "আরবি গ্রুপ",
+  ctArabicGroup: "আরবি গ্রুপ",
+  ctPickArabicGroup: "গ্রুপ নির্বাচন করুন",
+  ctGroupExamHelp:
+    "এই গ্রুপের সদস্যরাই পরীক্ষার তালিকায় আসবেন — তাঁরা একাধিক শ্রেণির হতে পারেন। বিষয় স্বয়ংক্রিয়ভাবে আরবি।",
   cnHwYes: "আছে",
   cnHwNo: "নেই",
   // D-#505: the taught-summary announces homework but the card declares none.
@@ -5256,6 +5269,13 @@ const STR_EN: StrTable = {
   asEditMinutes: "Time (minutes)",
   asEditMarks: "Total marks",
   asDescLabel: "What the assignment is",
+  // Class-test unit anchor (D-#507)
+  ctUnitSection: "Section",
+  ctUnitGroup: "Arabic group",
+  ctArabicGroup: "Arabic group",
+  ctPickArabicGroup: "Pick a group",
+  ctGroupExamHelp:
+    "The group's members are the exam roster — they may come from several classes. The subject is Arabic.",
   cnHwYes: "Yes",
   cnHwNo: "None",
   // D-#505

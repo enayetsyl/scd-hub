@@ -11,9 +11,9 @@ import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { STUDENTS_QUERY } from "../../graphql/operations";
 import {
   CLASS_TEST_QUERY,
+  CLASS_TEST_ROSTER_QUERY,
   CLASS_TEST_RESULTS_QUERY,
   ENTER_CLASS_TEST_RESULT,
   RETIRE_CLASS_TEST,
@@ -21,7 +21,7 @@ import {
   UPDATE_CLASS_TEST_DETAILS,
 } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Chip, Field, Loader, Notice } from "../../components/ui";
-import { STR, hwSubjectLabel, classLevelLabel, bnNum } from "../../lib/labels";
+import { STR, hwSubjectLabel, ctUnitLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
@@ -42,8 +42,11 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
 
   const [testQ, refetchTest] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
   const test = testQ.data?.classTest ?? null;
-  const [studentsQ] = useQuery({ query: STUDENTS_QUERY, variables: { sectionId: test?.sectionId ?? "" }, pause: !test });
-  const students = (studentsQ.data?.studentsInSection ?? []).filter((s) => s.active);
+  // D-#507: the exam's OWN roster — the section's students, or the Arabic group's
+  // members. `studentsInSection` cannot answer for a group exam: its students come
+  // from several sections, so the server resolves the roster per anchor instead.
+  const [studentsQ] = useQuery({ query: CLASS_TEST_ROSTER_QUERY, variables: { testId }, pause: !test });
+  const students = studentsQ.data?.classTestRoster ?? [];
   const [resultsQ, refetch] = useQuery({ query: CLASS_TEST_RESULTS_QUERY, variables: { testId } });
   const results = resultsQ.data?.classTestResults ?? [];
   const byStudent = useMemo(() => {
@@ -181,7 +184,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
         <Card>
           <Body style={{ fontWeight: "700" }}>{title}</Body>
           <Muted>
-            {classLevelLabel(test.classLevel)} · {hwSubjectLabel(test.subject)}
+            {ctUnitLabel(test)} · {hwSubjectLabel(test.subject)}
           </Muted>
           <View style={{ marginTop: space(2) }}>
             <Badge text={STR.ctRetiredBadge} tone="muted" />
@@ -220,7 +223,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
               looking at "English · Test # 1" had no way to tell which class it belongs
               to (owner ask 2026-08-02). */}
           <Muted>
-            {classLevelLabel(test.classLevel)} · {hwSubjectLabel(test.subject)} · {STR.ctTotalMarks}{" "}
+            {ctUnitLabel(test)} · {hwSubjectLabel(test.subject)} · {STR.ctTotalMarks}{" "}
             {bnNum(test.totalMarks)} · {STR.ctPassMark} {bnNum(test.passMark)}
           </Muted>
           <View style={{ marginTop: space(2) }}>
@@ -304,7 +307,10 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View style={{ flexShrink: 1 }}>
                     <Body style={{ fontWeight: "700" }}>{s.name}</Body>
-                    <Muted>{s.schoolId}</Muted>
+                    {/* On a group exam the children come from several classes, so the
+                        class·section is what tells two same-named children apart
+                        (D-#507). Null — and absent — on a section exam. */}
+                    <Muted>{s.sectionNameBn ? `${s.schoolId} · ${s.sectionNameBn}` : s.schoolId}</Muted>
                   </View>
                   {existing ? (
                     existing.status === "ABSENT" ? (

@@ -22,6 +22,7 @@ import { DAYS_OF_WEEK } from "@scd/shared";
 import { RoutineSlot } from "../routine/models/RoutineSlot";
 
 interface SlotLite {
+  groupType?: "section" | "subjectgroup";
   groupId: { toString(): string };
   subject: string;
   dayOfWeek: string;
@@ -31,11 +32,18 @@ interface SlotLite {
   effectiveTo?: Date | null;
 }
 
-/** One attribution question: "who owns `subject` in `sectionId` on `on`?" */
+/** One attribution question: "who owns `subject` in this unit on `on`?"
+ *
+ *  The unit is a Section by default. D-#507 admits `groupType: "subjectgroup"` for
+ *  the cross-class Quran/Arabic groups, so a group-anchored class test attributes
+ *  by the SAME rule instead of a second copy of it. */
 export interface SubjectTeacherQuery {
   /** Caller's own key — the returned map is keyed by this. */
   key: string;
+  /** The section id, or the SubjectGroup id when groupType is "subjectgroup". */
   sectionId: string;
+  /** Defaults to "section" — every pre-D-#507 caller. */
+  groupType?: "section" | "subjectgroup";
   subject: string;
   /** The row's date (homework dateGiven, class-test examDate). */
   on: Date;
@@ -52,22 +60,25 @@ export async function resolveSubjectTeachers(
   const out = new Map<string, string>();
   if (queries.length === 0) return out;
 
-  const sectionIds = [...new Set(queries.map((q) => q.sectionId))];
+  const unitIds = [...new Set(queries.map((q) => q.sectionId))];
   const subjects = [...new Set(queries.map((q) => q.subject))];
+  // Both unit shapes in ONE query — the cell key carries the groupType, so a
+  // section and a group that happened to share an id could never be confused.
+  const groupTypes = [...new Set(queries.map((q) => q.groupType ?? "section"))];
   const slots = (await RoutineSlot.find({
-    groupType: "section",
+    groupType: groupTypes.length === 1 ? groupTypes[0] : { $in: groupTypes },
     active: true,
     isBreak: false,
-    groupId: { $in: sectionIds },
+    groupId: { $in: unitIds },
     subject: { $in: subjects },
   })
-    .select("groupId dayOfWeek periodNumber subject teacherId effectiveFrom effectiveTo")
+    .select("groupType groupId dayOfWeek periodNumber subject teacherId effectiveFrom effectiveTo")
     .lean()) as unknown as SlotLite[];
 
   const byCell = new Map<string, SlotLite[]>();
   for (const s of slots) {
     if (!s.teacherId) continue;
-    const k = `${s.groupId.toString()}|${s.subject}`;
+    const k = `${s.groupType ?? "section"}|${s.groupId.toString()}|${s.subject}`;
     (byCell.get(k) ?? byCell.set(k, []).get(k)!).push(s);
   }
 
@@ -80,7 +91,7 @@ export async function resolveSubjectTeachers(
   };
 
   for (const q of queries) {
-    const cell = byCell.get(`${q.sectionId}|${q.subject}`) ?? [];
+    const cell = byCell.get(`${q.groupType ?? "section"}|${q.sectionId}|${q.subject}`) ?? [];
     const d = new Date(q.on);
     const t = d.getTime();
     const dow = DAYS_OF_WEEK[d.getDay()];
@@ -98,7 +109,34 @@ export async function resolveSubjectTeacher(
   sectionId: string,
   subject: string,
   on: Date,
+  groupType: "section" | "subjectgroup" = "section",
 ): Promise<string | null> {
-  const m = await resolveSubjectTeachers([{ key: "x", sectionId, subject, on }]);
+  const m = await resolveSubjectTeachers([{ key: "x", sectionId, groupType, subject, on }]);
   return m.get("x") ?? null;
+}
+
+/**
+ * Does the routine name this teacher on ANY live slot of this subject-group?
+ * (D-#507 authz.) `assertCanWrite` is section-shaped — teacher scopes are grants
+ * over sections — so a cross-class group has no section to check. The routine is
+ * the honest answer to "is this your group?", and it is the same source the
+ * accountable-teacher default above reads, so the two can never disagree.
+ */
+export async function teachesSubjectGroup(
+  teacherId: string,
+  subjectGroupId: string,
+  subject: string,
+): Promise<boolean> {
+  const slots = (await RoutineSlot.find({
+    groupType: "subjectgroup",
+    groupId: subjectGroupId,
+    subject,
+    teacherId,
+    active: true,
+    isBreak: false,
+  })
+    .select("_id")
+    .limit(1)
+    .lean()) as unknown as Array<{ _id: unknown }>;
+  return slots.length > 0;
 }

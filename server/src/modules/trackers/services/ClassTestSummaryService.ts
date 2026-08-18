@@ -26,6 +26,8 @@ import { bnNum } from "../../../lib/bnNum";
 import { ClassTest, type IClassTest } from "../models/ClassTest";
 import { ClassTestResult, type IClassTestResult } from "../models/ClassTestResult";
 import { Student } from "../../foundation/models/Student";
+import { SubjectGroup } from "../../routine/models/SubjectGroup";
+import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { User } from "../../foundation/models/User";
 import { deriveScore } from "../classTestScoring";
 import { examReportStatus, type ExamReportStatus } from "./ClassTestResultService";
@@ -104,8 +106,10 @@ export function reportStateOf(s: { complete: boolean; overdue: boolean; enteredC
 export interface ReportStatusRow extends ExamReportStatus {
   subject: string;
   testNumber: number;
-  classLevel: number;
-  sectionId: string;
+  /** Both null on a group-anchored exam (D-#507); `subjectGroupId` is set instead. */
+  classLevel: number | null;
+  sectionId: string | null;
+  subjectGroupId: string | null;
   teacherId: string;
   /** D-#339: the report author's display name (drill-down rows). */
   teacherName: string;
@@ -186,12 +190,37 @@ export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatus
     new Date(Math.max(now.getTime(), Math.max(...examDates)) + 7 * 24 * 60 * 60 * 1000),
   );
 
-  const sectionIds = [...new Set(exams.map((e) => e.sectionId.toString()))];
-  const rosterCounts = (await Student.aggregate([
-    { $match: { sectionId: { $in: sectionIds.map((id) => new Types.ObjectId(id)) }, active: true } },
-    { $group: { _id: "$sectionId", n: { $sum: 1 } } },
-  ])) as Array<{ _id: Types.ObjectId; n: number }>;
+  const sectionIds = [...new Set(exams.filter((e) => e.sectionId).map((e) => e.sectionId!.toString()))];
+  const rosterCounts = sectionIds.length
+    ? ((await Student.aggregate([
+        { $match: { sectionId: { $in: sectionIds.map((id) => new Types.ObjectId(id)) }, active: true } },
+        { $group: { _id: "$sectionId", n: { $sum: 1 } } },
+      ])) as Array<{ _id: Types.ObjectId; n: number }>)
+    : [];
   const rosterBySection = new Map(rosterCounts.map((r) => [r._id.toString(), r.n]));
+
+  // D-#507: a group-anchored exam's denominator is its GROUP's active membership.
+  // Batched exactly like the section roster above — the D-#500 property (a fixed
+  // number of queries for the whole exam set) must survive this addition.
+  const groupIds = [...new Set(exams.filter((e) => e.subjectGroupId).map((e) => e.subjectGroupId!.toString()))];
+  const rosterByGroup = new Map<string, number>();
+  if (groupIds.length) {
+    const memberCounts = (await SubjectGroupMembership.aggregate([
+      { $match: { groupId: { $in: groupIds.map((id) => new Types.ObjectId(id)) } } },
+      {
+        $lookup: {
+          from: "students",
+          localField: "studentId",
+          foreignField: "_id",
+          as: "student",
+          pipeline: [{ $match: { active: true } }, { $project: { _id: 1 } }],
+        },
+      },
+      { $match: { "student.0": { $exists: true } } },
+      { $group: { _id: "$groupId", n: { $sum: 1 } } },
+    ])) as Array<{ _id: Types.ObjectId; n: number }>;
+    for (const r of memberCounts) rosterByGroup.set(r._id.toString(), r.n);
+  }
 
   const statusCounts = (await ClassTestResult.aggregate([
     { $match: { testId: { $in: exams.map((e) => e._id) } } },
@@ -210,7 +239,9 @@ export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatus
     const status = examStatusFrom(exam, {
       now,
       isOpenDay,
-      rosterCount: rosterBySection.get(exam.sectionId.toString()) ?? 0,
+      rosterCount: exam.subjectGroupId
+        ? rosterByGroup.get(exam.subjectGroupId.toString()) ?? 0
+        : rosterBySection.get(exam.sectionId!.toString()) ?? 0,
       enteredCount: enteredByTest.get(exam._id.toString()) ?? 0,
       presentCount: presentByTest.get(exam._id.toString()) ?? 0,
     });
@@ -221,8 +252,9 @@ export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatus
       ...status,
       subject: exam.subject,
       testNumber: exam.testNumber,
-      classLevel: exam.classLevel,
-      sectionId: exam.sectionId.toString(),
+      classLevel: exam.classLevel ?? null,
+      sectionId: exam.sectionId ? exam.sectionId.toString() : null,
+      subjectGroupId: exam.subjectGroupId ? exam.subjectGroupId.toString() : null,
       teacherId,
       teacherName: teacherNames.get(teacherId) ?? "শিক্ষক",
       submittedAt: sub ? new Date(sub).toISOString() : null,
@@ -706,7 +738,9 @@ export async function overdueChaseList(filter: SummaryFilter): Promise<OverdueCh
   // unique — two sections sitting "ইংরেজি টেস্ট ১" on the same date rendered as the SAME
   // string twice, so the teacher could not tell which two exams were meant. ONE batched
   // query (the N+1 guard above applies here too), not a lookup per exam.
-  const sectionIds = [...new Set(overdueRows.map((r) => r.sectionId))].filter(Boolean);
+  const sectionIds = [...new Set(overdueRows.map((r) => r.sectionId))].filter(
+    (id): id is string => !!id,
+  );
   const sections =
     sectionIds.length === 0
       ? [] // nothing overdue → don't round-trip for section names at all
@@ -714,6 +748,19 @@ export async function overdueChaseList(filter: SummaryFilter): Promise<OverdueCh
           .select("nameBn code")
           .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string; code?: string }>);
   const sectionById = new Map(sections.map((s) => [s._id.toString(), s.nameBn || s.code || ""]));
+
+  // D-#507: a group-anchored exam has no class+section to name, so the chase line
+  // names the GROUP instead ("আরবি বই ২ (মেয়ে)"). Batched like the sections above.
+  const chaseGroupIds = [...new Set(overdueRows.map((r) => r.subjectGroupId))].filter(
+    (id): id is string => !!id,
+  );
+  const chaseGroups =
+    chaseGroupIds.length === 0
+      ? []
+      : ((await SubjectGroup.find({ _id: { $in: chaseGroupIds.map((id) => new Types.ObjectId(id)) } })
+          .select("nameBn code")
+          .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string; code?: string }>);
+  const groupById = new Map(chaseGroups.map((g) => [g._id.toString(), g.nameBn || g.code || ""]));
 
   const entries: OverdueChaseEntry[] = [];
   let unreachableCount = 0;
@@ -739,8 +786,12 @@ export async function overdueChaseList(filter: SummaryFilter): Promise<OverdueCh
     // ASCII digits reads half-translated.
     const examList = examRows
       .map((r, i) => {
-        const section = sectionById.get(r.sectionId);
-        const where = section ? `${classBn(r.classLevel)} (${section})` : classBn(r.classLevel);
+        const section = r.sectionId ? sectionById.get(r.sectionId) : null;
+        const group = r.subjectGroupId ? groupById.get(r.subjectGroupId) : null;
+        const where =
+          section && r.classLevel != null
+            ? `${classBn(r.classLevel)} (${section})`
+            : group ?? (r.classLevel != null ? classBn(r.classLevel) : subjectBn(r.subject));
         const pending = `${bnNum(r.pendingCount)}/${bnNum(r.rosterCount)} জনের ফলাফল বাকি`;
         const late = r.schoolDaysLate > 0 ? ` · ${bnNum(r.schoolDaysLate)} কর্মদিবস দেরি` : "";
         return (

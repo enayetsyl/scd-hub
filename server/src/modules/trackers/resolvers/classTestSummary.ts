@@ -124,8 +124,13 @@ ReportStatusRowRef.implement({
     ctId: t.exposeString("ctId"),
     subject: t.exposeString("subject"),
     testNumber: t.exposeInt("testNumber"),
-    classLevel: t.exposeInt("classLevel"),
-    sectionId: t.exposeString("sectionId"),
+    // D-#507: both null on a group-anchored exam. They MUST be declared nullable —
+    // an exposeInt/exposeString over null fails the field at REQUEST time (Pothos
+    // types do not catch it), which would take the whole Reports-Status list down
+    // rather than blank one cell.
+    classLevel: t.int({ nullable: true, resolve: (r) => r.classLevel }),
+    sectionId: t.string({ nullable: true, resolve: (r) => r.sectionId }),
+    subjectGroupId: t.string({ nullable: true, resolve: (r) => r.subjectGroupId }),
     teacherId: t.exposeString("teacherId"),
     // D-#339: drill-down row enrichment.
     teacherName: t.exposeString("teacherName"),
