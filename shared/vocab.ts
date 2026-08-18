@@ -1690,6 +1690,8 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "homework.autoIssued.body",
   "review.assigned.title",
   "review.assigned.body",
+  "question.review.assigned.title",
+  "question.review.assigned.body",
   "cover.assigned.title",
   "cover.assigned.body",
   "bell.reminder.title",
@@ -1822,6 +1824,19 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     group: "review", labelBn: "পর্যালোচনার দায়িত্ব — বার্তা",
     placeholders: ["subject", "classLevel", "anchorWord", "addressNumber", "roundNumber"],
     bnDefault: "{subject} · শ্রেণি {classLevel} · {anchorWord} {addressNumber} — পরিকল্পনাটি আপনার পর্যালোচনার জন্য নির্ধারিত হয়েছে (রাউন্ড {roundNumber})।", defaultLangMode: "BN",
+  },
+  // --- Question review assigned (D-#508) ---
+  // Separate from review.assigned.* because that copy names a PLAN and quotes an address;
+  // a question shares its unit address with dozens of others, so the plan wording would
+  // point the reviewer at the wrong thing entirely.
+  "question.review.assigned.title": {
+    group: "review", labelBn: "প্রশ্ন পর্যালোচনার দায়িত্ব — শিরোনাম", placeholders: [],
+    bnDefault: "প্রশ্ন পর্যালোচনার দায়িত্ব", defaultLangMode: "BN",
+  },
+  "question.review.assigned.body": {
+    group: "review", labelBn: "প্রশ্ন পর্যালোচনার দায়িত্ব — বার্তা",
+    placeholders: ["subject", "classLevel", "count"],
+    bnDefault: "{subject} · শ্রেণি {classLevel} — {count}টি প্রশ্ন আপনার পর্যালোচনার জন্য নির্ধারিত হয়েছে।", defaultLangMode: "BN",
   },
   // --- Cover assigned (N1.6) ---
   "cover.assigned.title": {

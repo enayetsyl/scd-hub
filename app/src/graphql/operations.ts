@@ -708,6 +708,157 @@ export const ASSIGN_PLAN_REVIEW_BULK = gql<
 `;
 
 // ===========================================================================
+// Question review & publish loop (QR-2/QR-4, D-#508)
+// ===========================================================================
+
+export interface QuestionReviewRoundT {
+  id: string;
+  artifactId: string;
+  qid: string | null;
+  subject: string;
+  classLevel: number;
+  anchorWord: string;
+  addressNumber: string;
+  reviewerId: string;
+  reviewerName: string | null;
+  assignedAt: string;
+  roundNumber: number;
+  status: string;
+  verdict: string | null;
+  /** The reviewer's rejection reason — OPTIONAL for questions, so often null. */
+  reason: string | null;
+  submittedAt: string | null;
+  questionText: string | null;
+  questionType: string | null;
+  marks: number | null;
+  topicTag: string | null;
+  payloadJson: string | null;
+  artifactReviewStatus: string | null;
+  artifactSuperseded: boolean;
+}
+
+const QUESTION_ROUND_FIELDS = `
+  id artifactId qid subject classLevel anchorWord addressNumber
+  reviewerId reviewerName assignedAt roundNumber status
+  verdict reason submittedAt
+  questionText questionType marks topicTag payloadJson
+  artifactReviewStatus artifactSuperseded
+`;
+
+/** The reviewer's own queue: assigned first, then already-decided rounds. */
+export const MY_QUESTION_REVIEWS = gql<{ myQuestionReviews: QuestionReviewRoundT[] }, NoVars>`
+  query MyQuestionReviews {
+    myQuestionReviews { ${QUESTION_ROUND_FIELDS} }
+  }
+`;
+
+/** Principal lists: verdict=APPROVE is the publish queue, CHANGES_REQUESTED the rejected list. */
+export const QUESTION_REVIEW_INBOX = gql<
+  { questionReviewInbox: QuestionReviewRoundT[] },
+  { verdict?: string | null }
+>`
+  query QuestionReviewInbox($verdict: String) {
+    questionReviewInbox(verdict: $verdict) { ${QUESTION_ROUND_FIELDS} }
+  }
+`;
+
+export const QUESTION_REVIEW_THREAD = gql<
+  { questionReviewThread: QuestionReviewRoundT[] },
+  { artifactId: string }
+>`
+  query QuestionReviewThread($artifactId: String!) {
+    questionReviewThread(artifactId: $artifactId) { ${QUESTION_ROUND_FIELDS} }
+  }
+`;
+
+export interface AssignableQuestionT {
+  artifactId: string;
+  qid: string | null;
+  subject: string;
+  classLevel: number;
+  anchorWord: string;
+  addressNumber: string;
+  questionText: string | null;
+  questionType: string | null;
+  marks: number | null;
+  topicTag: string | null;
+  reviewStatus: string;
+  currentReviewerId: string | null;
+  currentReviewerName: string | null;
+  currentAssignmentId: string | null;
+  roundStatus: string | null;
+}
+
+export const ASSIGNABLE_QUESTIONS = gql<
+  { assignableQuestions: AssignableQuestionT[] },
+  { subject?: string | null; classLevel?: number | null; search?: string | null; limit?: number | null }
+>`
+  query AssignableQuestions($subject: String, $classLevel: Int, $search: String, $limit: Int) {
+    assignableQuestions(subject: $subject, classLevel: $classLevel, search: $search, limit: $limit) {
+      artifactId qid subject classLevel anchorWord addressNumber
+      questionText questionType marks topicTag reviewStatus
+      currentReviewerId currentReviewerName currentAssignmentId roundStatus
+    }
+  }
+`;
+
+export interface QuestionBulkResultT {
+  okCount: number;
+  failedCount: number;
+  failures: string[];
+}
+
+export const ASSIGN_QUESTION_REVIEW_BULK = gql<
+  { assignQuestionReviewBulk: QuestionBulkResultT },
+  { artifactIds: string[]; reviewerId: string }
+>`
+  mutation AssignQuestionReviewBulk($artifactIds: [String!]!, $reviewerId: String!) {
+    assignQuestionReviewBulk(artifactIds: $artifactIds, reviewerId: $reviewerId) {
+      okCount failedCount failures
+    }
+  }
+`;
+
+/** Accept or reject. `reason` is optional even on CHANGES_REQUESTED (Q2.4). */
+export const SUBMIT_QUESTION_REVIEW = gql<
+  { submitQuestionReview: QuestionReviewRoundT },
+  { assignmentId: string; verdict: string; reason?: string | null }
+>`
+  mutation SubmitQuestionReview($assignmentId: String!, $verdict: String!, $reason: String) {
+    submitQuestionReview(assignmentId: $assignmentId, verdict: $verdict, reason: $reason) {
+      ${QUESTION_ROUND_FIELDS}
+    }
+  }
+`;
+
+export interface PublishQuestionResultT {
+  artifactId: string;
+  reviewStatus: string;
+  override: boolean;
+}
+
+/** Publish one question. `overrideReason` is REQUIRED to publish a rejected/draft one. */
+export const PUBLISH_QUESTION = gql<
+  { publishQuestion: PublishQuestionResultT },
+  { artifactId: string; overrideReason?: string | null }
+>`
+  mutation PublishQuestion($artifactId: String!, $overrideReason: String) {
+    publishQuestion(artifactId: $artifactId, overrideReason: $overrideReason) {
+      artifactId reviewStatus override
+    }
+  }
+`;
+
+export const PUBLISH_QUESTION_BULK = gql<
+  { publishQuestionBulk: QuestionBulkResultT },
+  { artifactIds: string[] }
+>`
+  mutation PublishQuestionBulk($artifactIds: [String!]!) {
+    publishQuestionBulk(artifactIds: $artifactIds) { okCount failedCount failures }
+  }
+`;
+
+// ===========================================================================
 // Questions (J2)
 // ===========================================================================
 

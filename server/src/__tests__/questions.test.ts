@@ -76,6 +76,24 @@ jest.mock("../modules/assessment/models/AssessmentSet", () => ({
   },
 }));
 
+// Review rounds + audit — persistEnvelope supersedes an open review round when a revised
+// version is re-imported (D-#508 for questions, R2.2 for plans). Mocked so the import tests
+// stay DB-free; the supersession logic itself is covered in questionReview.test.ts.
+const mockReviewFind = jest.fn((_f?: unknown) => ({ lean: () => Promise.resolve([]) }));
+const mockReviewUpdateOne = jest.fn().mockResolvedValue({ acknowledged: true });
+const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("../modules/content/models/ReviewAssignment", () => ({
+  ReviewAssignment: {
+    find: (f: unknown) => mockReviewFind(f),
+    updateOne: (f: unknown, u: unknown) => mockReviewUpdateOne(f, u),
+  },
+}));
+
+jest.mock("../modules/platform/services/AuditService", () => ({
+  writeAudit: (p: unknown) => mockWriteAudit(p),
+}));
+
 jest.mock("child_process");
 
 // Import AFTER mocks
@@ -479,6 +497,8 @@ describe("J3.1 — basket accumulation (addQuestionToSet)", () => {
     docType: "question",
     subject: "BAN",
     classLevel: 5,
+    // PUBLISHED — since QR-3 only a `gold` question may enter a set (Q3.4 / D-#508).
+    reviewStatus: "gold",
     envelopeJson: {
       payload: { qid: "QP-BAN-C5-U13-Q01", question_type: "mcq", marks: 1 },
     },
@@ -848,12 +868,20 @@ describe("F6/F10 — createSetWithQuestions (transactional one-step create)", ()
   const ART_B = new mongoose.Types.ObjectId();
   const ART_C = new mongoose.Types.ObjectId();
 
-  function artifact(id: mongoose.Types.ObjectId, qid: string, marks: number, docType = "question") {
+  /** Defaults to PUBLISHED — since QR-3 only a `gold` question may enter a set (Q3.4). */
+  function artifact(
+    id: mongoose.Types.ObjectId,
+    qid: string,
+    marks: number,
+    docType = "question",
+    reviewStatus = "gold",
+  ) {
     return {
       _id: id,
       docType,
       subject: "BAN",
       classLevel: 5,
+      reviewStatus,
       envelopeJson: { payload: { qid, marks } },
     };
   }
@@ -991,7 +1019,7 @@ describe("F6/F10 — createSetWithQuestions (transactional one-step create)", ()
 
   test("marks default to 1 when payload has no numeric marks; qid falls back to artifactId", async () => {
     mockArtifactFind.mockResolvedValue([
-      { _id: ART_A, docType: "question", subject: "BAN", classLevel: 5, envelopeJson: { payload: {} } },
+      { _id: ART_A, docType: "question", subject: "BAN", classLevel: 5, reviewStatus: "gold", envelopeJson: { payload: {} } },
     ]);
 
     await createSetWithQuestions(baseInput({ artifactIds: [ART_A.toString()] }));
@@ -1001,5 +1029,169 @@ describe("F6/F10 — createSetWithQuestions (transactional one-step create)", ()
     expect(items[0].marks).toBe(1);
     expect(items[0].qid).toBe(ART_A.toString());
     expect(arg.totalMarks).toBe(1);
+  });
+});
+
+// ===========================================================================
+// QR-1 — the import gate for questions (D-#508)
+// ===========================================================================
+
+describe("QR-1 — questions always land at draft (Q1.3)", () => {
+  beforeEach(() => {
+    mockArtifactFindOneResult.mockResolvedValue(null);
+    mockBatchCreate.mockResolvedValue(makeBatchDoc());
+    mockArtifactCreate.mockResolvedValue(makeArtifactDoc());
+  });
+
+  test("a question declaring review_status=gold is clamped to draft", async () => {
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE, review_status: "gold" }, ACTOR_ID);
+
+    const createArg = mockArtifactCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(createArg.reviewStatus).toBe("draft");
+  });
+
+  test("a question declaring review_status=reviewed is clamped to draft", async () => {
+    // QUESTION_ENVELOPE declares "reviewed" as shipped — the clamp must beat it.
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE }, ACTOR_ID);
+
+    const createArg = mockArtifactCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(createArg.reviewStatus).toBe("draft");
+  });
+
+  test("the ImportBatch audit row still records what ARRIVED, not the clamp", async () => {
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE, review_status: "gold" }, ACTOR_ID);
+
+    const batchArg = mockBatchCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(batchArg.reviewStatus).toBe("gold");
+  });
+});
+
+describe("QR-1 — re-import supersedes a question's review rounds by qid (Q1.2)", () => {
+  beforeEach(() => {
+    mockBatchCreate.mockResolvedValue(makeBatchDoc());
+    mockArtifactCreate.mockResolvedValue(makeArtifactDoc());
+    mockReviewFind.mockReturnValue({ lean: () => Promise.resolve([]) });
+  });
+
+  test("a superseding re-import asks for open rounds by {docType, qid}", async () => {
+    // A prior current version exists → the supersession path runs.
+    mockArtifactFindOneResult.mockResolvedValue({ _id: new mongoose.Types.ObjectId() });
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE }, ACTOR_ID);
+
+    expect(mockReviewFind).toHaveBeenCalledWith({
+      docType: "question",
+      qid: "QP-BAN-C5-U13-Q01",
+      status: { $in: ["assigned", "submitted"] },
+    });
+    // The unit address must never be consulted — that is the 40-questions-one-thread bug.
+    const filter = mockReviewFind.mock.calls[0][0] as unknown as Record<string, unknown>;
+    expect(filter).not.toHaveProperty("anchorWord");
+    expect(filter).not.toHaveProperty("addressNumber");
+  });
+
+  test("a FIRST import (no prior version) supersedes nothing", async () => {
+    mockArtifactFindOneResult.mockResolvedValue(null);
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE }, ACTOR_ID);
+
+    expect(mockReviewFind).not.toHaveBeenCalled();
+  });
+});
+
+// ===========================================================================
+// QR-3 — the publish gate on SELECTION (Q3.4 / D-#508)
+// ===========================================================================
+
+describe("QR-3 — only a published question may enter a set (Q3.4)", () => {
+  const UNPUBLISHED_ID = new mongoose.Types.ObjectId();
+
+  function unpublished(reviewStatus: string) {
+    return {
+      _id: UNPUBLISHED_ID,
+      docType: "question",
+      subject: "BAN",
+      classLevel: 5,
+      reviewStatus,
+      envelopeJson: { payload: { qid: "QP-BAN-C5-U13-Q99", marks: 1 } },
+    };
+  }
+
+  function setDoc() {
+    return {
+      _id: SET_ID,
+      sectionId: SECTION_ID,
+      classId: CLASS_ID,
+      status: "draft",
+      basketItems: [] as unknown[],
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+  }
+
+  test.each(["draft", "reviewed"])(
+    "addQuestionToSet refuses a '%s' question, writes nothing, emits no corpus event",
+    async (status) => {
+      mockSetFindById.mockResolvedValue(setDoc());
+      mockArtifactFindById.mockResolvedValue(unpublished(status));
+
+      await expect(
+        addQuestionToSet(SET_ID.toString(), UNPUBLISHED_ID.toString(), ACTOR_ID.toString()),
+      ).rejects.toThrow(/প্রকাশিত/);
+
+      expect(mockEventCreate).not.toHaveBeenCalled();
+    },
+  );
+
+  test("addQuestionToSet accepts a published (gold) question", async () => {
+    const doc = setDoc();
+    mockSetFindById.mockResolvedValue(doc);
+    mockArtifactFindById.mockResolvedValue(unpublished("gold"));
+
+    const res = await addQuestionToSet(SET_ID.toString(), UNPUBLISHED_ID.toString(), ACTOR_ID.toString());
+
+    expect(res.itemCount).toBe(1);
+    expect(doc.save).toHaveBeenCalled();
+  });
+
+  test("Q5.3 — the assigned REVIEWER may read an unpublished question but still cannot select it", async () => {
+    // The read-scope override (Q3.2) is read-only and artifact-scoped. assertPublished has
+    // deliberately NO reviewer exemption, so being the reviewer changes nothing here.
+    mockSetFindById.mockResolvedValue(setDoc());
+    mockArtifactFindById.mockResolvedValue(unpublished("reviewed"));
+
+    await expect(
+      addQuestionToSet(SET_ID.toString(), UNPUBLISHED_ID.toString(), ACTOR_ID.toString()),
+    ).rejects.toThrow(/প্রকাশিত/);
+  });
+
+  test("createSetWithQuestions refuses if ANY question is unpublished — atomic, nothing written", async () => {
+    const ART_OK = new mongoose.Types.ObjectId();
+    mockArtifactFind.mockResolvedValue([
+      {
+        _id: ART_OK,
+        docType: "question",
+        subject: "BAN",
+        classLevel: 5,
+        reviewStatus: "gold",
+        envelopeJson: { payload: { qid: "QP-OK", marks: 1 } },
+      },
+      unpublished("reviewed"),
+    ]);
+
+    await expect(
+      createSetWithQuestions({
+        setType: "HW",
+        sectionId: SECTION_ID.toString(),
+        classId: CLASS_ID.toString(),
+        artifactIds: [ART_OK.toString(), UNPUBLISHED_ID.toString()],
+        actorId: ACTOR_ID.toString(),
+      }),
+    ).rejects.toThrow(/প্রকাশিত/);
+
+    expect(mockSetCreate).not.toHaveBeenCalled();
+    expect(mockEventInsertMany).not.toHaveBeenCalled();
   });
 });

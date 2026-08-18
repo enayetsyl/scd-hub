@@ -18,6 +18,7 @@ import { User } from "../../foundation/models/User";
 import { ForbiddenError } from "../../../middleware/authz";
 import { buildContentScope, contentScopeAllows } from "../contentScope";
 import { reviewerMayReadArtifact } from "../services/ReviewService";
+import { applyMixedDocTypeGate } from "../../questions/publishGate";
 import type { Types, FlattenMaps } from "mongoose";
 import type { FilterQuery } from "mongoose";
 import type { IContentArtifact } from "../models/ContentArtifact";
@@ -309,6 +310,7 @@ builder.queryField("contentArtifacts", (t) =>
       if (args.docType) filter.docType = args.docType;
       if (args.curationTag) filter.curationTag = args.curationTag;
       if (args.reviewStatus) filter.reviewStatus = args.reviewStatus;
+      applyMixedDocTypeGate(filter as Record<string, unknown>, ctx.auth);
 
       // Scope (J1.6 / D-#257): PRINCIPAL/OFFICE see everything; a TEACHER sees content
       // covered by a routine teaching/proxy or supervisory grant (subject + class). Scope
@@ -414,6 +416,7 @@ builder.queryField("contentTree", (t) =>
       if (args.currentOnly !== false) filter.current = true;
       if (args.subject) filter.subject = args.subject;
       if (args.classLevel != null) filter.classLevel = args.classLevel;
+      applyMixedDocTypeGate(filter as Record<string, unknown>, ctx.auth);
 
       // The sort is done in JS, NOT in Mongo — deliberately. Sorting in the database on
       // `envelopeJson.payload.session_plan.period_index` (a path inside a Mixed blob) can
