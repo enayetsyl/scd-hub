@@ -1693,6 +1693,17 @@ const STR_BN = {
   // the teacher never answered, which is a different fact from "there is none".
   gpTodayRoutine: "আজকের রুটিন",
   gpHwNotDeclared: "ঘোষণা করা হয়নি",
+  // GP-10: a subject that is not expected to declare daily (আরবি, D-#308) — its work
+  // is written in the class note, so the row points there instead of reporting a gap.
+  gpHwSeeClassNote: "ক্লাস নোটে দেখুন",
+  // GP-10: the outstanding card at the top of the homework screen.
+  gpPendingTitle: "এখনো বাকি",
+  gpAssignmentWord: "অ্যাসাইনমেন্ট",
+  gpGivenOn: "দেওয়া হয়েছে",
+  gpDueOn: "জমার তারিখ",
+  gpLateBy: "দেরি",
+  gpDaysWord: "দিন",
+  gpPendingWord: "বাকি আছে",
   gpAlertsTitle: "দৃষ্টি আকর্ষণ",
   gpAlertHwChase: "বাড়ির কাজের রিমাইন্ডার চলছে",
   gpAlertAsgnLate: "অ্যাসাইনমেন্ট দেরিতে/রিমাইন্ডারে",
@@ -5216,6 +5227,15 @@ const STR_EN: StrTable = {
   // Per-date day card (GP-9, D-#506)
   gpTodayRoutine: "Today's routine",
   gpHwNotDeclared: "Not declared",
+  // GP-10
+  gpHwSeeClassNote: "See the class note",
+  gpPendingTitle: "Still pending",
+  gpAssignmentWord: "Assignment",
+  gpGivenOn: "Given",
+  gpDueOn: "Due",
+  gpLateBy: "Late by",
+  gpDaysWord: "days",
+  gpPendingWord: "Pending",
   gpAlertsTitle: "Needs your attention",
   gpAlertHwChase: "Homework chase in progress",
   gpAlertAsgnLate: "Assignments late or chased",
