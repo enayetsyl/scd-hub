@@ -5,10 +5,16 @@
  * teacher reviewer. The teacher submits a verdict + feedback; an APPROVE drives the
  * artifact's reviewStatus draft→reviewed (the loop closes later at Principal sign-off).
  *
- * Keyed by the version-STABLE plan address (docType, subject, classLevel, anchorWord,
- * addressNumber) — the same key persistEnvelope supersedes on — so the review *thread*
- * spans every re-imported version of the plan. `artifactId` snapshots the exact version
- * shown to the reviewer.
+ * Keyed by the version-STABLE thread anchor — the SAME key persistEnvelope supersedes on —
+ * so the review *thread* spans every re-imported version of the item. `artifactId` snapshots
+ * the exact version shown to the reviewer. The anchor differs by doc-type (D-#508):
+ *   • plans     — the address (docType, subject, classLevel, anchorWord, addressNumber);
+ *                 one plan per address.
+ *   • questions — the `qid`. A whole unit of questions SHARES one address, so anchoring a
+ *                 question round on the address would put every question in the unit on one
+ *                 thread and let a single supersede cancel dozens of unrelated rounds.
+ * `qid` is therefore set on question rounds and unset on plan rounds; the address fields stay
+ * populated on both (they still describe the item, they just don't anchor a question).
  *
  * Identity-bearing (references a teacher userId + free-text feedback): operational/
  * identity plane, behind the ADR-005 firewall. The corpus plane never imports this.
@@ -38,6 +44,9 @@ export interface IReviewAssignment extends Document {
   classLevel: number;
   anchorWord: string;
   addressNumber: string;
+  /** Question rounds only (D-#508): the stable item identity that anchors the thread.
+   *  Unset on plan rounds, which anchor on the address fields above. */
+  qid?: string;
   // --- the specific version under review this round ---
   artifactId: Types.ObjectId;
   // --- the round ---
@@ -61,6 +70,7 @@ const ReviewAssignmentSchema = new Schema<IReviewAssignment>(
     classLevel: { type: Number, required: true },
     anchorWord: { type: String, required: true },
     addressNumber: { type: String, required: true },
+    qid: { type: String },
     artifactId: { type: Schema.Types.ObjectId, ref: "ContentArtifact", required: true },
     reviewerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     assignedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -74,8 +84,10 @@ const ReviewAssignmentSchema = new Schema<IReviewAssignment>(
   { timestamps: true },
 );
 
-// Open round for an address key (one-at-a-time guard, supersession, round numbering)
+// Open round for an address key (one-at-a-time guard, supersession, round numbering) — PLANS
 ReviewAssignmentSchema.index({ docType: 1, subject: 1, classLevel: 1, anchorWord: 1, addressNumber: 1, status: 1 });
+// Open round for a qid (same three jobs) — QUESTIONS (D-#508). Sparse: only question rounds carry a qid.
+ReviewAssignmentSchema.index({ qid: 1, status: 1 }, { sparse: true });
 // Teacher inbox: my assigned rounds
 ReviewAssignmentSchema.index({ reviewerId: 1, status: 1 });
 // Principal/Office inbox: submitted rounds awaiting action

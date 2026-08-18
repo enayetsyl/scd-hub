@@ -56,6 +56,8 @@ const dedupeKeys = {
     `HWCG:${hwItemId}:${studentId}:${dateKey}:${guardianId}`,
   /** Per assignment: re-running the host mutation can't double-notify. */
   reviewAssigned: (assignmentId: string) => `REV:${assignmentId}`,
+  /** One key per (reviewer, batch) — a bulk question assign notifies ONCE, not per question. */
+  questionReviewAssigned: (reviewerId: string, stamp: string) => `QREV:${reviewerId}:${stamp}`,
   /** Per substitution: one notification per recorded cover. */
   coverAssigned: (substitutionId: string) => `COV:${substitutionId}`,
   /** One delivered-notice per print job (PQ-5, D-#281). */
@@ -363,6 +365,43 @@ export async function emitReviewAssigned(assignment: ReviewAssignedEvent): Promi
         artifactId: assignment.artifactId.toString(),
       },
       dedupeKey: dedupeKeys.reviewAssigned(assignment._id.toString()),
+    });
+  });
+}
+
+/**
+ * Question-review assignment (D-#508) — ONE notification per assign action, not per
+ * question. The Principal's normal move is to send a whole subject/class slice at once, so
+ * a per-round emit would have fired dozens of pushes for a single click.
+ *
+ * Uses its own template keys: `review.assigned.*` names a PLAN and quotes an address, and a
+ * question shares its unit address with dozens of others, so that copy would point the
+ * reviewer at the wrong thing.
+ */
+export interface QuestionReviewAssignedEvent {
+  reviewerId: string;
+  subject: string;
+  classLevel: number;
+  count: number;
+  /** Any one round from the batch — carried so the notification can deep-link. */
+  sampleAssignmentId: string;
+  /** Stable per-batch stamp for the dedupe key. */
+  batchStamp: string;
+}
+
+export async function emitQuestionReviewAssigned(ev: QuestionReviewAssignedEvent): Promise<void> {
+  return bestEffort("question review assigned", async () => {
+    await emit({
+      recipientUserId: ev.reviewerId,
+      kind: "REVIEW_ASSIGNED",
+      titleBn: await renderTemplate("question.review.assigned.title"),
+      bodyBn: await renderTemplate("question.review.assigned.body", {
+        subject: ev.subject,
+        classLevel: ev.classLevel,
+        count: ev.count,
+      }),
+      refs: { reviewAssignmentId: ev.sampleAssignmentId },
+      dedupeKey: dedupeKeys.questionReviewAssigned(ev.reviewerId, ev.batchStamp),
     });
   });
 }

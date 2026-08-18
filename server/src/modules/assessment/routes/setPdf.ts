@@ -166,7 +166,15 @@ async function renderSetToPdf(
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const env = artifactsMap.get(item.artifactId.toString());
-      if (!env) continue;
+      if (!env) {
+        // Q3.6 (D-#508): the question this set cites no longer exists. Render a VISIBLE gap
+        // rather than skipping silently — a silent `continue` renumbers every later question
+        // and hands out a paper that looks complete but isn't.
+        doc.fontSize(11);
+        mixedText(doc, `${i + 1}. [প্রশ্নটি আর নেই]`, { lineGap: 2 });
+        doc.moveDown(0.6);
+        continue;
+      }
       const payload = (env.payload ?? {}) as Record<string, unknown>;
       renderQuestion(doc, i + 1, item.marks, payload, opts);
     }
