@@ -23,7 +23,7 @@ import { BATCH_DOC_TYPE, BATCH_MAX_ITEMS } from "@scd/shared";
 import { ContentArtifact } from "../models/ContentArtifact";
 import { ImportBatch } from "../../platform/models/ImportBatch";
 import { CorpusEvent } from "../../corpus/models/CorpusEvent";
-import { isPlanDocType, supersedeOpenRoundsForAddress } from "./ReviewService";
+import { isPlanDocType, supersedeOpenRoundsForAddress, supersedeOpenRoundsForQid } from "./ReviewService";
 
 /** Wrap execFile in a Promise that always resolves (never throws) — returns {stdout,stderr,code}. */
 function execFilePromise(
@@ -219,9 +219,10 @@ async function persistEnvelope(
   const prior = await ContentArtifact.findOne(versionKey).lean();
   if (prior) {
     await ContentArtifact.updateOne({ _id: prior._id }, { $set: { current: false } });
-    // Re-import carries the review thread forward (R2.2): a revised plan version
-    // supersedes any open review round on the prior version. The next round is then
-    // assigned on this new version (born `draft`). Plans only; harmless no-op otherwise.
+    // Re-import carries the review thread forward (R2.2): a revised version supersedes any
+    // open review round on the prior version. The next round is then assigned on this new
+    // version (born `draft`). The thread anchor is doc-type specific (D-#508) — the address
+    // for plans, the `qid` for questions, mirroring the version key chosen just above.
     if (typeof envelope.doc_type === "string" && isPlanDocType(envelope.doc_type)) {
       await supersedeOpenRoundsForAddress(
         {
@@ -234,6 +235,8 @@ async function persistEnvelope(
         "superseded_by_reimport",
         actorId.toString(),
       );
+    } else if (envelope.doc_type === "question" && typeof payload.qid === "string" && payload.qid.trim() !== "") {
+      await supersedeOpenRoundsForQid(payload.qid.trim(), "superseded_by_reimport", actorId.toString());
     }
   }
 
@@ -247,7 +250,12 @@ async function persistEnvelope(
       title: addr.title,
     },
     curationTag: envelope.curation_tag,
-    reviewStatus: envelope.review_status,
+    // Questions ALWAYS land at `draft`, whatever the envelope declares (Q1.3 / D-#508).
+    // The envelope schema permits `review_status: "gold"`, so without this clamp an upload
+    // could publish itself straight onto the teachers' shelf and skip the review the whole
+    // loop exists to enforce. Plans keep honouring the declared value (D-#38 is unchanged).
+    // The ImportBatch audit row above deliberately records what ARRIVED, not this clamp.
+    reviewStatus: envelope.doc_type === "question" ? "draft" : envelope.review_status,
     pinned_to: envelope.pinned_to,
     tags: envelope.tags,
     provenance: envelope.provenance,

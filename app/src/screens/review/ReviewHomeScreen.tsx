@@ -113,6 +113,32 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
 
   return (
     <Screen scroll>
+      {/* Question review & publish (QR-4, D-#508) — a separate workspace from the plan
+          loop above: different unit of work (one question, bulk-assigned), different
+          rules (optional rejection reason), and a publish step plans do not have. */}
+      {canReview ? (
+        <Card onPress={() => navigation.navigate("QuestionReviewQueue")}>
+          <Body style={{ fontWeight: "700" }}>{STR.qrMyQueue}</Body>
+          <Muted style={{ marginTop: 2 }}>{STR.qrQueueTitle}</Muted>
+        </Card>
+      ) : null}
+      {canAssign ? (
+        <View style={{ marginBottom: space(4) }}>
+          <View style={{ height: space(3) }} />
+          <Card onPress={() => navigation.navigate("AssignQuestions")}>
+            <Body style={{ fontWeight: "700" }}>{STR.qrAssignTitle}</Body>
+            <Muted style={{ marginTop: 2 }}>{STR.rvAssign}</Muted>
+          </Card>
+          <View style={{ height: space(3) }} />
+          <Card onPress={() => navigation.navigate("PublishQuestions")}>
+            <Body style={{ fontWeight: "700" }}>{STR.qrPublishTitle}</Body>
+            <Muted style={{ marginTop: 2 }}>{`${STR.qrAccepted} · ${STR.qrRejected}`}</Muted>
+          </Card>
+        </View>
+      ) : null}
+
+      {canAssign || canReview ? <Divider /> : null}
+
       {canAssign ? (
         <View style={{ marginBottom: space(4) }}>
           <Card onPress={() => navigation.navigate("AssignReviews")}>

@@ -90,6 +90,45 @@ export function addressKeyOf(a: AddressKeyInput): AddressKey {
   };
 }
 
+// --- Question thread anchor (D-#508) -------------------------------------------------
+// A question's identity is its `qid`, NOT its address: persistEnvelope supersedes questions
+// on `envelopeJson.payload.qid` precisely because a whole unit of questions shares ONE
+// address. Anchoring question rounds on the address would put every question in the unit on
+// a single thread, so one supersede would cancel dozens of unrelated rounds.
+
+/** Extract the stable question identity from an artifact-shaped object, or null. */
+export function qidOf(a: { envelopeJson?: Record<string, unknown> | null }): string | null {
+  const payload = (a.envelopeJson?.payload ?? {}) as Record<string, unknown>;
+  const qid = payload.qid;
+  return typeof qid === "string" && qid.trim() !== "" ? qid.trim() : null;
+}
+
+/** The question thread key. */
+export interface ReviewQidKey {
+  docType: string;
+  qid: string;
+}
+
+export type ReviewThreadKey = AddressKey | ReviewQidKey;
+
+type ThreadKeyInput = AddressKeyInput & { envelopeJson?: Record<string, unknown> | null };
+
+/**
+ * The version-stable thread anchor for ANY reviewable artifact, as a ReviewAssignment
+ * filter: `{docType, qid}` for questions, the 5-field address key for everything else.
+ * Use this instead of `addressKeyOf` on every path that must serve both doc-types.
+ * Throws for a question with no `qid` — such an item cannot be threaded, and silently
+ * falling back to the address is exactly the bug this function exists to prevent.
+ */
+export function threadKeyOf(a: ThreadKeyInput): ReviewThreadKey {
+  if (a.docType === "question") {
+    const qid = qidOf(a);
+    if (!qid) throw new ReviewError("Question artifact has no payload.qid — it cannot be reviewed");
+    return { docType: "question", qid };
+  }
+  return addressKeyOf(a);
+}
+
 // ---------------------------------------------------------------------------
 // DTO
 // ---------------------------------------------------------------------------
@@ -101,6 +140,8 @@ export interface ReviewAssignmentDTO {
   classLevel: number;
   anchorWord: string;
   addressNumber: string;
+  /** Question rounds only (D-#508) — the thread anchor. Null on plan rounds. */
+  qid: string | null;
   artifactId: string;
   reviewerId: string;
   assignedBy: string;
@@ -112,13 +153,14 @@ export interface ReviewAssignmentDTO {
   submittedAt: string | null;
 }
 
-interface RawAssignment {
+export interface RawAssignment {
   _id: Types.ObjectId | { toString(): string };
   docType: string;
   subject: string;
   classLevel: number;
   anchorWord: string;
   addressNumber: string;
+  qid?: string | null;
   artifactId: { toString(): string };
   reviewerId: { toString(): string };
   assignedBy: { toString(): string };
@@ -138,6 +180,7 @@ export function toDTO(d: RawAssignment): ReviewAssignmentDTO {
     classLevel: d.classLevel,
     anchorWord: d.anchorWord,
     addressNumber: d.addressNumber,
+    qid: d.qid ?? null,
     artifactId: d.artifactId.toString(),
     reviewerId: d.reviewerId.toString(),
     assignedBy: d.assignedBy.toString(),
@@ -164,12 +207,13 @@ export interface ReviewAddressKey {
 }
 
 /**
- * Mark every open (assigned|submitted) round for an address `superseded` and audit
- * each. Returns how many were superseded. Used when a new round is assigned (D-#40)
- * and when a revised version is re-imported (R2.2 — persistEnvelope calls this).
+ * Mark every open (assigned|submitted) round matching `key` `superseded` and audit each.
+ * Returns how many were superseded. `key` is a thread anchor — an address key for plans or
+ * a `{docType, qid}` key for questions (D-#508); the two never collide because a question
+ * round's address fields are populated but never queried, and `qid` is unset on plan rounds.
  */
-export async function supersedeOpenRoundsForAddress(
-  key: ReviewAddressKey,
+export async function supersedeOpenRounds(
+  key: ReviewThreadKey,
   reason: string,
   actorId?: string,
   actorRole?: string,
@@ -190,6 +234,27 @@ export async function supersedeOpenRoundsForAddress(
     });
   }
   return open.length;
+}
+
+/** Address-keyed supersession (plans). Retained as the named entry point its callers and
+ *  tests already use; the behaviour is unchanged. */
+export async function supersedeOpenRoundsForAddress(
+  key: ReviewAddressKey,
+  reason: string,
+  actorId?: string,
+  actorRole?: string,
+): Promise<number> {
+  return supersedeOpenRounds(key, reason, actorId, actorRole);
+}
+
+/** Qid-keyed supersession (questions, D-#508) — the re-import hook for a revised question. */
+export async function supersedeOpenRoundsForQid(
+  qid: string,
+  reason: string,
+  actorId?: string,
+  actorRole?: string,
+): Promise<number> {
+  return supersedeOpenRounds({ docType: "question", qid }, reason, actorId, actorRole);
 }
 
 // ---------------------------------------------------------------------------
@@ -387,7 +452,14 @@ export async function reviewerMayReadArtifact(reviewerId: string, artifactId: st
  * (superseded/cancelled) drop off. Submitted-first so freshly decided rounds surface.
  */
 export async function listMyReviewAssignments(reviewerId: string): Promise<ReviewAssignmentDTO[]> {
-  const docs = await ReviewAssignment.find({ reviewerId, status: { $in: ["assigned", "submitted"] } })
+  const docs = await ReviewAssignment.find({
+    reviewerId,
+    // PLANS ONLY (D-#508). `ReviewAssignment` now holds question rounds too; without this
+    // they would surface in the plan queue, where the card opens a plan viewer and the
+    // submit form demands the feedback questions do not require.
+    docType: { $in: PLAN_DOC_TYPES },
+    status: { $in: ["assigned", "submitted"] },
+  })
     .sort({ status: 1, assignedAt: -1 })
     .lean();
   return (docs as unknown as RawAssignment[]).map(toDTO);
@@ -396,7 +468,11 @@ export async function listMyReviewAssignments(reviewerId: string): Promise<Revie
 /** Principal/Office inbox: submitted rounds awaiting action, newest first (R2.3). The
  *  `feedback` field is the text the admin copies into Claude Desktop. */
 export async function planReviewInbox(): Promise<ReviewAssignmentDTO[]> {
-  const docs = await ReviewAssignment.find({ status: "submitted" }).sort({ submittedAt: -1 }).lean();
+  // PLANS ONLY (D-#508) — question rounds have their own inbox (questionReviewInbox),
+  // split by verdict into the publish queue and the rejected list.
+  const docs = await ReviewAssignment.find({ docType: { $in: PLAN_DOC_TYPES }, status: "submitted" })
+    .sort({ submittedAt: -1 })
+    .lean();
   return (docs as unknown as RawAssignment[]).map(toDTO);
 }
 
@@ -405,6 +481,11 @@ export async function planReviewInbox(): Promise<ReviewAssignmentDTO[]> {
 export async function planReviewThread(artifactId: string): Promise<ReviewAssignmentDTO[]> {
   const artifact = await ContentArtifact.findById(artifactId).lean();
   if (!artifact) throw new ReviewError("Artifact not found");
+  // A question threads on its qid, not its address (D-#508). Resolving one here would key on
+  // the shared unit address and return its unit-mates' rounds — refuse instead of misleading.
+  if (!isPlanDocType(artifact.docType)) {
+    throw new ReviewError("Not a plan — use questionReviewThread for questions");
+  }
   const key = addressKeyOf(artifact);
   const docs = await ReviewAssignment.find({
     docType: key.docType,
@@ -548,7 +629,9 @@ export interface ReviewerLoadDTO {
 /** Per-reviewer open-round counts — "what has how many content assigned" (Principal overview). */
 export async function reviewerAssignmentLoad(): Promise<ReviewerLoadDTO[]> {
   const rows = (await ReviewAssignment.aggregate([
-    { $match: { status: { $in: ["assigned", "submitted"] } } },
+    // PLANS ONLY (D-#508) — this is the plan-assignment overview; mixing question rounds in
+    // would make "who has how many" a number that answers no question anyone asked.
+    { $match: { docType: { $in: [...PLAN_DOC_TYPES] }, status: { $in: ["assigned", "submitted"] } } },
     { $group: { _id: { reviewerId: "$reviewerId", status: "$status" }, n: { $sum: 1 } } },
   ])) as { _id: { reviewerId: { toString(): string }; status: string }; n: number }[];
 

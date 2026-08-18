@@ -102,6 +102,10 @@ import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
 import AssignReviewsScreen from "../screens/review/AssignReviewsScreen";
+import QuestionReviewQueueScreen from "../screens/review/QuestionReviewQueueScreen";
+import AssignQuestionsScreen from "../screens/review/AssignQuestionsScreen";
+import PublishQuestionsScreen from "../screens/review/PublishQuestionsScreen";
+import QuestionReviewThreadScreen from "../screens/review/QuestionReviewThreadScreen";
 import RoutineHomeScreen from "../screens/routine/RoutineHomeScreen";
 import MyRoutineScreen from "../screens/routine/MyRoutineScreen";
 import RoutineMasterScreen from "../screens/routine/RoutineMasterScreen";
@@ -722,6 +726,29 @@ function ReviewNavigator(): React.ReactElement {
       <ReviewStack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} options={{ title: STR.submitReview }} />
       <ReviewStack.Screen name="ReviewThread" component={ReviewThreadScreen} options={{ title: STR.reviewThread }} />
       <ReviewStack.Screen name="AssignReviews" component={AssignReviewsScreen} options={{ title: STR.rvAssignTitle }} />
+      {/* Question review & publish (QR-4, D-#508). All after ReviewHome — the first screen
+          registered becomes the stack's initial route, and a param-taking screen there
+          crashes the whole tab. */}
+      <ReviewStack.Screen
+        name="QuestionReviewQueue"
+        component={QuestionReviewQueueScreen}
+        options={{ title: STR.qrQueueTitle }}
+      />
+      <ReviewStack.Screen
+        name="AssignQuestions"
+        component={AssignQuestionsScreen}
+        options={{ title: STR.qrAssignTitle }}
+      />
+      <ReviewStack.Screen
+        name="PublishQuestions"
+        component={PublishQuestionsScreen}
+        options={{ title: STR.qrPublishTitle }}
+      />
+      <ReviewStack.Screen
+        name="QuestionReviewThread"
+        component={QuestionReviewThreadScreen}
+        options={{ title: STR.reviewThread }}
+      />
     </ReviewStack.Navigator>
   );
 }

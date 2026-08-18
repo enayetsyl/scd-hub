@@ -53,6 +53,10 @@ async function assertTopupSelectedFromPool(
       docType: "question",
       "envelopeJson.payload.qid": qid,
       current: true,
+      // Publish gate (Q3.5 / D-#508): a top-up cannot pull an unvetted question into a
+      // child's work. An unpublished qid reads as "not an existing question" below, which
+      // is the right message — from the teacher's side it is not on the shelf.
+      reviewStatus: "gold",
     };
     const q = await ContentArtifact.findOne(filter).lean();
     if (!q) {

@@ -89,6 +89,12 @@ export type ReviewStackParamList = {
   };
   ReviewThread: { artifactId: string };
   AssignReviews: undefined;
+  // --- Question review & publish loop (QR-4, D-#508). Registered AFTER ReviewHome so a
+  // param-taking screen never becomes the stack's initial route.
+  QuestionReviewQueue: undefined;
+  AssignQuestions: undefined;
+  PublishQuestions: undefined;
+  QuestionReviewThread: { artifactId: string };
 };
 
 export type HomeworkStackParamList = {

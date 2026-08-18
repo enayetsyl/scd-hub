@@ -596,6 +596,9 @@ describe("listMyReviewAssignments (R2.5)", () => {
     expect(list).toHaveLength(2);
     expect(mockReviewFind).toHaveBeenCalledWith({
       reviewerId: REVIEWER_ID.toString(),
+      // PLANS ONLY since D-#508 — question rounds share this collection and have their
+      // own queue (myQuestionReviews); they must not appear in the plan queue.
+      docType: { $in: ["chapter_plan", "session_plan"] },
       status: { $in: ["assigned", "submitted"] },
     });
   });

@@ -18,6 +18,8 @@ import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { ForbiddenError } from "../../../middleware/authz";
 import { buildContentScope, contentScopeAllows, contentScopeMongo } from "../../content/contentScope";
 import { normalizeBanglaDigits, escapeRegex } from "../search";
+import { reviewerMayReadArtifact } from "../../content/services/ReviewService";
+import { applyQuestionOnlyGate, seesPublishedOnly } from "../publishGate";
 import type { Types, FlattenMaps, FilterQuery } from "mongoose";
 import type { IContentArtifact } from "../../content/models/ContentArtifact";
 
@@ -165,6 +167,10 @@ builder.queryField("questions", (t) =>
       if (args.classLevel != null) filter.classLevel = args.classLevel;
       if (args.reviewStatus) filter.reviewStatus = args.reviewStatus;
 
+      // Publish gate (Q3.1): a teacher sees ONLY published questions. Set last so an
+      // explicit reviewStatus arg can never widen it back open.
+      applyQuestionOnlyGate(filter as Record<string, unknown>, ctx.auth);
+
       // Tag-level filters stored in envelopeJson.tags or envelopeJson.payload
       if (args.topicTag) filter["envelopeJson.tags.topic_tag"] = args.topicTag;
       if (args.bloomLevel) filter["envelopeJson.tags.bloom_level"] = args.bloomLevel;
@@ -252,6 +258,13 @@ builder.queryField("question", (t) =>
       if (!doc || doc.docType !== "question") return null;
       const scope = await buildContentScope(ctx);
       if (!contentScopeAllows(scope, doc.subject, doc.classLevel)) throw new ForbiddenError();
+      // Publish gate (Q3.2) — with ONE exception: the assigned reviewer must be able to read
+      // exactly the unpublished question they were asked to review. That override is
+      // read-only and artifact-scoped; it grants no right to select it into a set (Q5.3).
+      if (seesPublishedOnly(ctx.auth) && doc.reviewStatus !== "gold") {
+        const isReviewer = await reviewerMayReadArtifact(ctx.auth.userId, doc._id);
+        if (!isReviewer) return null;
+      }
       return docToShape(doc);
     },
   }),
@@ -278,6 +291,8 @@ builder.queryField("questionTopicTags", (t) =>
       const filter: FilterQuery<IContentArtifact> = { docType: "question", current: true };
       if (args.subject) filter.subject = args.subject;
       if (args.classLevel != null) filter.classLevel = args.classLevel;
+      // An unpublished question must not leak its topic into the filter chips (Q3.1).
+      applyQuestionOnlyGate(filter as Record<string, unknown>, ctx.auth);
 
       const scope = await buildContentScope(ctx);
       const scopeFilter = contentScopeMongo(scope);
@@ -303,6 +318,12 @@ builder.queryField("stimuli", (t) =>
   t.field({
     type: [QuestionArtifactRef],
     description: "Browse stimulus artifacts (shared passages/poems/audio-scripts).",
+    // DELIBERATELY NOT publish-gated (D-#508 §5a). A question payload carries a
+    // `stimulus_ref` that must resolve to a stored stimulus; gating stimuli on reviewStatus
+    // would render a PUBLISHED question without its passage whenever the shared stimulus was
+    // still `draft` — a silent failure landing on a paper in a child's hand. Stimuli are
+    // supporting material, not assessable content. A test asserts this exemption; do not
+    // "tidy" it into line with questions().
     authScopes: { hasPermission: "question:read" },
     args: {
       subject: t.arg.string({ required: false }),

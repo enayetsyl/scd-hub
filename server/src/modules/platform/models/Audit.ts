@@ -20,6 +20,7 @@ export type AuditEventKind =
   | "REVIEW_SUBMITTED"    // reviewer submitted a verdict + feedback (D-#38)
   | "REVIEW_CANCELLED"    // an open review round was cancelled/superseded (D-#40)
   | "PLAN_APPROVED"       // Principal sign-off: reviewed → gold (D-#38; PR-2)
+  | "QUESTION_PUBLISHED"  // Principal publish: a question reaches the teachers' shelf (D-#508)
   // Book production (SB-1, D-#403–#428). SECURITY log only — who did what. The
   // EDITORIAL "why" lives in the book plane's own BookEvent (D-#411); the two answer
   // different questions and neither is derivable from the other.
