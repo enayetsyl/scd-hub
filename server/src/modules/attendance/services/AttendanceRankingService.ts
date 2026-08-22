@@ -633,3 +633,187 @@ export async function rankStaff(input: {
     lastMarkedKey: await lastMarked("staff"),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Per-group breakdown (AR-4, D-#514)
+// ---------------------------------------------------------------------------
+
+/** One group's card: the group, its denominator, and its own ranked list. */
+export interface GroupRankBlock {
+  groupId: string;
+  code: string;
+  nameBn: string;
+  level: string;
+  gender: string;
+  /** Active members on the roster — NOT the number of ranked rows. The two differ
+   *  whenever the group held no day in the window, and the gap is worth seeing. */
+  memberCount: number;
+  /** Days THIS group marked in the window. Its own denominator; groups in the same
+   *  breakdown routinely differ (Hifz 1 started marking a month after Ammapara). */
+  heldDays: number;
+  rows: RankRow[];
+}
+
+export interface GroupRankBreakdown {
+  fromKey: string;
+  toKey: string;
+  lastMarkedKey: string | null;
+  /** EVERY active group of the track, including ones that marked nothing — an absent
+   *  card would read as "this group does not exist" rather than "nobody marked it". */
+  groups: GroupRankBlock[];
+  groupsMeasured: number;
+  studentsRanked: number;
+  maxHeldDays: number;
+  perfectCount: number;
+}
+
+type BreakdownStudent = {
+  _id: { toString(): string };
+  name: string;
+  nameBn?: string;
+  classId?: { toString(): string };
+};
+
+/**
+ * Rank EVERY group of one track side by side, each against its own denominator.
+ *
+ * The existing `rankStudents({axis:"track"})` pools every Quran student into ONE list
+ * with one shared ranking — useful for "who attends best school-wide", useless for
+ * "how is each group doing", because a group that held 4 days and a group that held 28
+ * are ranked against each other on incomparable denominators.
+ *
+ * Deliberately ONE set of queries for all groups, not a loop of `rankStudents` per
+ * group: a per-group fan-out is the exact pattern D-#476 removed from the guardian
+ * screen, and with 8 Quran groups it would mean ~40 round trips per screen open.
+ *
+ * A student belongs to at most one group per track (the unique `(studentId, track)`
+ * index behind D-#48), so absences can be tallied per STUDENT without ambiguity about
+ * which group's day the absence belongs to.
+ */
+export async function rankStudentsByGroupBreakdown(input: {
+  window: RankWindow;
+  anchorKey: string;
+  track: "quran" | "arabic";
+  sortBy?: StudentRankSort;
+  academicYearId?: string;
+}): Promise<GroupRankBreakdown> {
+  const { fromKey, toKey } = await resolveWindow(input.window, input.anchorKey, input.academicYearId);
+  const empty = {
+    fromKey,
+    toKey,
+    groups: [],
+    groupsMeasured: 0,
+    studentsRanked: 0,
+    maxHeldDays: 0,
+    perfectCount: 0,
+  };
+
+  // Ordered in JS, not Mongo: `level` is a free string ("Qaida", "Hifz 1", "Book 2"),
+  // so a Mongo sort on it is alphabetical too — this just keeps the ordering visible
+  // next to the code that depends on it.
+  const groups = (await SubjectGroup.find({ track: input.track, active: true })
+    .select("nameBn code level gender")
+    .lean()).sort(
+      (a, b) => String(a.level).localeCompare(String(b.level)) || String(a.gender).localeCompare(String(b.gender)),
+    );
+  if (groups.length === 0) return { ...empty, lastMarkedKey: await lastMarked(true) };
+
+  const groupIds = groups.map((g) => g._id.toString());
+  const days = await StudentAttendanceDay.find({
+    dateKey: { $gte: fromKey, $lte: toKey },
+    subjectGroupId: { $in: groupIds },
+  })
+    .select("subjectGroupId absentStudentIds")
+    .lean();
+
+  // heldDays PER GROUP (each keeps its own denominator) + absences per student.
+  const held = new Map<string, number>();
+  const absences = new Map<string, number>();
+  for (const d of days) {
+    const gid = d.subjectGroupId?.toString();
+    if (!gid) continue;
+    held.set(gid, (held.get(gid) ?? 0) + 1);
+    for (const sid of d.absentStudentIds ?? []) {
+      const k = sid.toString();
+      absences.set(k, (absences.get(k) ?? 0) + 1);
+    }
+  }
+
+  const memberships = await SubjectGroupMembership.find({ groupId: { $in: groupIds } })
+    .select("groupId studentId")
+    .lean();
+  const groupOfStudent = new Map<string, string>();
+  for (const m of memberships) groupOfStudent.set(m.studentId.toString(), m.groupId.toString());
+
+  const students = (await Student.find({
+    _id: { $in: [...groupOfStudent.keys()] },
+    active: true,
+  })
+    .select("name nameBn classId")
+    .lean()) as unknown as BreakdownStudent[];
+  const classOf = await classLabelByStudent(students);
+
+  const membersByGroup = new Map<string, BreakdownStudent[]>();
+  for (const s of students) {
+    const gid = groupOfStudent.get(s._id.toString());
+    if (!gid) continue;
+    const arr = membersByGroup.get(gid);
+    if (arr) arr.push(s);
+    else membersByGroup.set(gid, [s]);
+  }
+
+  const sortBy = input.sortBy ?? "rank";
+  const blocks: GroupRankBlock[] = groups.map((g) => {
+    const gid = g._id.toString();
+    const h = held.get(gid) ?? 0;
+    const members = membersByGroup.get(gid) ?? [];
+    const nameBn = (g as { nameBn?: string }).nameBn ?? g.code;
+    // h === 0: the group held no day in this window, so there is nothing to rank on.
+    // The card still ships, saying so, rather than the group vanishing.
+    const rows = h === 0
+      ? []
+      : rankRows(
+          members.map((s) => {
+            const id = s._id.toString();
+            const a = absences.get(id) ?? 0;
+            const cls = classOf.get(id);
+            return {
+              id,
+              name: s.nameBn || s.name,
+              unitLabel: nameBn,
+              classLabel: cls?.label,
+              classLevel: cls?.level,
+              heldDays: h,
+              absentDays: a,
+              presentPct: pct(h, a),
+              belowFloor: h < MIN_HELD_DAYS,
+            };
+          }),
+        );
+    return {
+      groupId: gid,
+      code: g.code,
+      nameBn,
+      level: g.level,
+      gender: g.gender,
+      memberCount: members.length,
+      heldDays: h,
+      rows: sortRows(rows, sortBy),
+    };
+  });
+
+  const measured = blocks.filter((b) => b.rows.length > 0);
+  return {
+    fromKey,
+    toKey,
+    lastMarkedKey: await lastMarked(true),
+    groups: blocks,
+    groupsMeasured: measured.length,
+    studentsRanked: measured.reduce((n, b) => n + b.rows.length, 0),
+    maxHeldDays: measured.reduce((n, b) => Math.max(n, b.heldDays), 0),
+    perfectCount: measured.reduce(
+      (n, b) => n + b.rows.filter((r) => r.presentPct === 100).length,
+      0,
+    ),
+  };
+}
