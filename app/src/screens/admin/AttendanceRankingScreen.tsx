@@ -44,6 +44,8 @@ type Subject = "students" | "staff";
 type Window = "week" | "month" | "cumulative" | "annual";
 /** UI axis → the server's (axis, axisValue) pair. */
 type Axis = "school" | "class" | "section" | "quran" | "arabic" | "group";
+/** Row ORDER only — the server never renumbers ranks for it (D-#511). */
+type Sort = "rank" | "class";
 
 const PAGE = 40;
 
@@ -56,6 +58,7 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
   const [classId, setClassId] = useState("");
   const [sectionId, setSectionId] = useState("");
   const [groupId, setGroupId] = useState("");
+  const [sortBy, setSortBy] = useState<Sort>("rank");
   const [shown, setShown] = useState(PAGE);
 
   const [{ data: classData }] = useQuery({
@@ -92,7 +95,7 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
 
   const [studentQ] = useQuery({
     query: STUDENT_ATTENDANCE_RANKING_QUERY,
-    variables: { window, anchorKey, axis: serverAxis, axisValue },
+    variables: { window, anchorKey, axis: serverAxis, axisValue, sortBy },
     pause: subject !== "students" || !ready,
   });
   const [staffQ] = useQuery({
@@ -116,6 +119,11 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
     { key: "month", label: STR.arMonth },
     { key: "cumulative", label: STR.arCumulative },
     { key: "annual", label: STR.arAnnual },
+  ];
+
+  const sortChips: { key: Sort; label: string }[] = [
+    { key: "rank", label: STR.arSortRank },
+    { key: "class", label: STR.arSortClass },
   ];
 
   const axisChips: { key: Axis; label: string }[] = [
@@ -153,6 +161,21 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
             <ChipRow>
               {axisChips.map((a) => (
                 <Chip key={a.key} label={a.label} selected={axis === a.key} onPress={() => pickAxis(a.key)} />
+              ))}
+            </ChipRow>
+
+            <Muted style={{ marginTop: space(2) }}>{STR.arSort}</Muted>
+            <ChipRow>
+              {sortChips.map((so) => (
+                <Chip
+                  key={so.key}
+                  label={so.label}
+                  selected={sortBy === so.key}
+                  onPress={() => {
+                    setSortBy(so.key);
+                    setShown(PAGE);
+                  }}
+                />
               ))}
             </ChipRow>
 
@@ -230,13 +253,21 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
           <Muted style={{ marginBottom: space(2) }}>
             {STR.arFloorNote.replace("{n}", String(result.minHeldDays))}
           </Muted>
+          {sortBy === "class" ? (
+            <Muted style={{ marginBottom: space(2) }}>{STR.arSortClassNote}</Muted>
+          ) : null}
 
           {rows.slice(0, shown).map((r) => (
             <Card key={r.id}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
                 <Body style={{ fontWeight: "700", minWidth: 34 }}>{r.rank}</Body>
                 <View style={{ flex: 1 }}>
-                  <Body style={{ fontWeight: "700" }}>{r.name}</Body>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: space(1), flexWrap: "wrap" }}>
+                    <Body style={{ fontWeight: "700" }}>{r.name}</Body>
+                    {r.classLabel && !r.unitLabel.startsWith(r.classLabel) ? (
+                      <Badge text={r.classLabel} tone="muted" />
+                    ) : null}
+                  </View>
                   <Muted style={{ marginTop: 2 }}>
                     {r.unitLabel} · {STR.arHeld}: {r.heldDays} · {STR.arAbsent}: {r.absentDays}
                     {r.lateDays !== null ? ` · ${STR.arLate}: ${r.lateDays}` : ""}

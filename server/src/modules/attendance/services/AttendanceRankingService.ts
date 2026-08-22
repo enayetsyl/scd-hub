@@ -49,6 +49,15 @@ export type RankWindow = "week" | "month" | "cumulative" | "annual";
  *  last three read SUBJECT-GROUP rows — never both in one list. */
 export type StudentRankAxis = "school" | "class" | "section" | "group" | "track" | "level";
 
+/**
+ * Row ORDER only. `rank` is computed from attendance and never changes with this —
+ * sorting by class regroups the same numbered rows, so a rank means the same thing in
+ * both views and a screenshot of one cannot be misread as the other (D-#511).
+ * Renumbering per class would make "1" mean group-winner in one view and class-winner
+ * in the other, with nothing on the row to say which.
+ */
+export type StudentRankSort = "rank" | "class";
+
 /** Below this many held days a row still appears, but flagged and sorted last: a
  *  student with 3 held days at 100% must not outrank one with 60 days at 98%
  *  (PRD §9 Q3, owner-confirmed). A constant, deliberately easy to retune. */
@@ -62,6 +71,18 @@ export interface RankRow {
   name: string;
   /** The unit this person's denominator came from (section or group name). */
   unitLabel: string;
+  /**
+   * The student's GENERAL class (students only; absent on staff rows).
+   *
+   * On a section-shaped axis this repeats what `unitLabel` already leads with, but on
+   * the Quran/Arabic axes it is the only place the class appears at all — those groups
+   * are cross-grade by design (D-#48), so "কায়দা" alone never says whether a name is a
+   * class-1 child or a class-5 one. That was the question the first live read produced.
+   */
+  classLabel?: string;
+  /** Roster level behind `classLabel` (-1 nursery, 0 KG, 1..5) — what `sortBy: "class"`
+   *  orders on, so nursery sorts before KG before class 1 rather than alphabetically. */
+  classLevel?: number;
   heldDays: number;
   absentDays: number;
   /** 0..100, one decimal. */
@@ -196,6 +217,47 @@ function rankRows(rows: Omit<RankRow, "rank">[]): RankRow[] {
 
 const pct = (held: number, absent: number): number =>
   held === 0 ? 0 : Math.round(((held - absent) / held) * 1000) / 10;
+
+/**
+ * studentId → their general class label + roster level, in ONE query for the whole set.
+ * `nameBn` is the school's own wording for the class; the numeric level is the fallback
+ * so a class row missing a Bangla name still renders something rather than a blank cell.
+ */
+async function classLabelByStudent(
+  students: { _id: { toString(): string }; classId?: { toString(): string } }[],
+): Promise<Map<string, { label: string; level: number }>> {
+  const classIds = [...new Set(students.map((s) => s.classId?.toString()).filter(Boolean))];
+  if (classIds.length === 0) return new Map();
+  const classes = await Class.find({ _id: { $in: classIds } }).select("nameBn level").lean();
+  const byClass = new Map(
+    classes.map((c) => {
+      const level = (c as { level?: number }).level ?? 0;
+      return [c._id.toString(), { label: (c as { nameBn?: string }).nameBn ?? String(level), level }];
+    }),
+  );
+  const out = new Map<string, { label: string; level: number }>();
+  for (const s of students) {
+    const hit = s.classId ? byClass.get(s.classId.toString()) : undefined;
+    if (hit) out.set(s._id.toString(), hit);
+  }
+  return out;
+}
+
+/**
+ * Reorder finished rows for delivery. `rank` is already assigned and is NOT touched.
+ *
+ * Sorting by class keeps each class's rows in their existing ranked order (the input is
+ * already qualifying-first, present % desc), so within a class the best attender still
+ * leads. A student whose class could not be resolved sorts last rather than colliding
+ * with nursery at level 0 — `?? 99`, not `?? 0`.
+ */
+function sortRows(rows: RankRow[], sortBy: StudentRankSort): RankRow[] {
+  if (sortBy !== "class") return rows;
+  return rows
+    .map((row, i) => ({ row, i }))
+    .sort((a, b) => (a.row.classLevel ?? 99) - (b.row.classLevel ?? 99) || a.i - b.i)
+    .map((x) => x.row);
+}
 
 /** The latest day either register was marked, window-independent (see `lastMarkedKey`). */
 async function lastMarked(byGroup: boolean | "staff"): Promise<string | null> {
@@ -365,6 +427,8 @@ async function rankStudentsByUnit(
       id,
       name: (s as { nameBn?: string }).nameBn || s.name,
       unitLabel: cls ? `${cls} · ${sec}` : sec,
+      classLabel: cls,
+      classLevel: level,
       heldDays: held,
       absentDays: absent,
       presentPct: pct(held, absent),
@@ -392,6 +456,21 @@ async function rankStudentsByUnit(
  *                              owner's explicit "Quran-group wise" analysis
  */
 export async function rankStudents(input: {
+  window: RankWindow;
+  anchorKey: string;
+  axis: StudentRankAxis;
+  axisValue?: string;
+  academicYearId?: string;
+  sortBy?: StudentRankSort;
+}): Promise<RankResult> {
+  // Ranking and ordering are separate steps on purpose: the ranked set is computed once,
+  // identically for both sorts, and only the delivery order differs (D-#511). Applied here
+  // rather than inside each path so neither path can forget it — both have early returns.
+  const result = await rankStudentsRanked(input);
+  return { ...result, rows: sortRows(result.rows, input.sortBy ?? "rank") };
+}
+
+async function rankStudentsRanked(input: {
   window: RankWindow;
   anchorKey: string;
   axis: StudentRankAxis;
@@ -434,23 +513,32 @@ export async function rankStudents(input: {
 
   // Roster per measured unit → student's unit membership.
   const unitOfStudent = new Map<string, string>();
-  let students: { _id: { toString(): string }; name: string; nameBn?: string }[] = [];
+  let students: {
+    _id: { toString(): string };
+    name: string;
+    nameBn?: string;
+    classId?: { toString(): string };
+  }[] = [];
   if (byGroup) {
     const memberships = await SubjectGroupMembership.find({ groupId: { $in: measured } })
       .select("groupId studentId")
       .lean();
     for (const m of memberships) unitOfStudent.set(m.studentId.toString(), m.groupId.toString());
     students = await Student.find({ _id: { $in: [...unitOfStudent.keys()] }, active: true })
-      .select("name nameBn")
+      .select("name nameBn classId")
       .lean();
   } else {
     students = await Student.find({ sectionId: { $in: measured }, active: true })
-      .select("name nameBn sectionId")
+      .select("name nameBn sectionId classId")
       .lean();
     for (const s of students as unknown as { _id: { toString(): string }; sectionId: { toString(): string } }[]) {
       unitOfStudent.set(s._id.toString(), s.sectionId.toString());
     }
   }
+
+  // The general class per student. On the group axes this is the ONLY class signal on
+  // the row — the group is cross-grade, so `unitLabel` cannot carry it.
+  const classOf = await classLabelByStudent(students);
 
   const rows = students.flatMap((s) => {
     const id = s._id.toString();
@@ -458,10 +546,13 @@ export async function rankStudents(input: {
     const h = unitId ? held.get(unitId) ?? 0 : 0;
     if (!unitId || h === 0) return []; // unit held no day in the window — nothing to rank on
     const a = absences.get(id) ?? 0;
+    const cls = classOf.get(id);
     return [{
       id,
       name: s.nameBn || s.name,
       unitLabel: labelOf.get(unitId) ?? "—",
+      classLabel: cls?.label,
+      classLevel: cls?.level,
       heldDays: h,
       absentDays: a,
       presentPct: pct(h, a),
