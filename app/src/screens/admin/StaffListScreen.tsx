@@ -8,6 +8,8 @@
 import React from "react";
 import { View } from "react-native";
 import { useQuery } from "urql";
+import { useNavigation, type NavigationProp } from "@react-navigation/native";
+import type { AdminStackParamList } from "../../navigation/types";
 import { HR_CATEGORIES } from "@scd/shared";
 import { STAFF_QUERY, type StaffT } from "../../graphql/operations";
 import {
@@ -43,10 +45,19 @@ function formatDate(iso: string | null): string {
   return bnNum(`${d}/${m}/${y}`);
 }
 
-function StaffCard({ s }: { s: StaffT }): React.ReactElement {
+function StaffCard({
+  s,
+  onEdit,
+}: {
+  s: StaffT;
+  onEdit: (s: StaffT) => void;
+}): React.ReactElement {
   return (
     <Card>
-      <Body style={{ fontWeight: "700" }}>{s.nameBn || s.name}</Body>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <Body style={{ fontWeight: "700", flex: 1 }}>{s.nameBn || s.name}</Body>
+        <Button title={STR.staffEditAction} variant="ghost" onPress={() => onEdit(s)} />
+      </View>
       {s.nameBn ? <Muted>{s.name}</Muted> : null}
       <Muted>{`${hrCategoryLabel(s.category)}${s.designation ? ` · ${s.designation}` : ""}`}</Muted>
       <Divider />
@@ -76,8 +87,17 @@ function StaffCard({ s }: { s: StaffT }): React.ReactElement {
 }
 
 export default function StaffListScreen(): React.ReactElement {
+  const nav = useNavigation<NavigationProp<AdminStackParamList>>();
   const [category, setCategory] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState("");
+
+  // Refetch on focus: returning from the form must show the record just saved, not the
+  // list as it was before it existed.
+  React.useEffect(
+    () => nav.addListener("focus", () => refetch({ requestPolicy: "network-only" })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nav],
+  );
 
   const [{ data, fetching, error }, refetch] = useQuery({
     query: STAFF_QUERY,
@@ -104,6 +124,8 @@ export default function StaffListScreen(): React.ReactElement {
       <H2>{STR.staff}</H2>
 
       <Field label={undefined} value={search} onChangeText={setSearch} placeholder={STR.searchStaff} />
+
+      <Button title={STR.staffNew} onPress={() => nav.navigate("StaffForm")} />
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1), marginBottom: space(2) }}>
         <Button
@@ -134,7 +156,9 @@ export default function StaffListScreen(): React.ReactElement {
       ) : shown.length === 0 ? (
         <EmptyState message={STR.noMatches} />
       ) : (
-        shown.map((s) => <StaffCard key={s.id} s={s} />)
+        shown.map((s) => (
+          <StaffCard key={s.id} s={s} onEdit={(row) => nav.navigate("StaffForm", { staff: row })} />
+        ))
       )}
     </Screen>
   );

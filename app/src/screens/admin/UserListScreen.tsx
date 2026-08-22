@@ -9,7 +9,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import { ROLES } from "@scd/shared";
 import type { Role } from "@scd/shared";
-import { CREATE_USER, USERS_QUERY } from "../../graphql/operations";
+import { CREATE_USER, USERS_QUERY, RESET_USER_PASSWORD } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Row, Chip, ChipRow, Button, Field, Notice, Divider, Loader, EmptyState, ErrorBanner } from "../../components/ui";
 import { STR } from "../../lib/labels";
@@ -57,6 +57,26 @@ export default function UserListScreen(_props: Props): React.ReactElement {
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, createUser] = useMutation(CREATE_USER);
+  const [, resetPassword] = useMutation(RESET_USER_PASSWORD);
+
+  // The generated password is shown ONCE and never stored in readable form (D-#526),
+  // the same contract as the staff/guardian credential screens.
+  const [resetFor, setResetFor] = useState<string | null>(null);
+  const [freshPassword, setFreshPassword] = useState<{ id: string; identifier: string; password: string } | null>(null);
+
+  async function onReset(userId: string): Promise<void> {
+    setResetFor(userId);
+    setError(null);
+    setFreshPassword(null);
+    const res = await resetPassword({ userId });
+    setResetFor(null);
+    if (res.error || !res.data) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    const c = res.data.resetUserPassword;
+    setFreshPassword({ id: userId, identifier: c.identifier, password: c.password });
+  }
 
   async function onCreate(): Promise<void> {
     if (!name.trim() || !email.trim() || !password || !role || busy) return;
@@ -102,6 +122,24 @@ export default function UserListScreen(_props: Props): React.ReactElement {
                     </Body>
                     <Row label={STR.role} value={u.role} />
                     <Row label={STR.emailOrPhone} value={u.email ?? u.phone ?? "—"} />
+                    {/* Email logins only: a phone login is reset from the staff
+                        credentials screen, which also re-derives the role from the HR
+                        category (D-#60). */}
+                    {u.email ? (
+                      <Button
+                        title={STR.regeneratePassword}
+                        variant="secondary"
+                        loading={resetFor === u.id}
+                        onPress={() => void onReset(u.id)}
+                      />
+                    ) : null}
+                    {freshPassword?.id === u.id ? (
+                      <Notice
+                        tone="ok"
+                        message={`${STR.loginId}: ${freshPassword.identifier}
+${STR.generatedPassword}: ${freshPassword.password}`}
+                      />
+                    ) : null}
                   </Card>
                 ))
               )}

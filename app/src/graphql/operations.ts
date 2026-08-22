@@ -313,6 +313,57 @@ export interface StaffT {
   active: boolean;
 }
 
+export interface StaffProfileInputT {
+  schoolId?: string; name?: string; nameBn?: string; category?: string; designation?: string;
+  employmentType?: string; employmentStatus?: string; joiningDate?: string; biometricId?: string;
+  gender?: string; dob?: string; bloodGroup?: string; maritalStatus?: string; nationality?: string;
+  qualification?: string; majoredIn?: string; studiedAt?: string; fatherName?: string;
+  motherName?: string; spouseName?: string; phone?: string; whatsapp?: string; email?: string;
+  presentAddress?: string; permanentAddress?: string; nid?: string; bankAccount?: string;
+  active?: boolean;
+}
+
+export const CREATE_STAFF_PROFILE = gql<
+  { createStaffProfile: { id: string; name: string; schoolId: string } },
+  { input: StaffProfileInputT }
+>`
+  mutation CreateStaffProfile($input: StaffProfileInput!) {
+    createStaffProfile(input: $input) { id name schoolId }
+  }
+`;
+
+export const UPDATE_STAFF_PROFILE = gql<
+  { updateStaffProfile: { id: string; name: string; schoolId: string } },
+  { staffProfileId: string; input: StaffProfileInputT }
+>`
+  mutation UpdateStaffProfile($staffProfileId: String!, $input: StaffProfileInput!) {
+    updateStaffProfile(staffProfileId: $staffProfileId, input: $input) { id name schoolId }
+  }
+`;
+
+export const RESET_USER_PASSWORD = gql<
+  {
+    resetUserPassword: {
+      identifier: string;
+      identifierKind: string;
+      password: string;
+      name: string;
+      contextLabel: string;
+    };
+  },
+  { userId: string }
+>`
+  mutation ResetUserPassword($userId: String!) {
+    resetUserPassword(userId: $userId) {
+      identifier
+      identifierKind
+      password
+      name
+      contextLabel
+    }
+  }
+`;
+
 export const STAFF_QUERY = gql<{ staff: StaffT[] }, { category?: string | null }>`
   query Staff($category: String) {
     staff(category: $category) {
