@@ -401,6 +401,8 @@ export type AdminStackParamList = {
   SupervisoryGrant: undefined;
   Roster: undefined;
   Staff: undefined;
+  /** Create (no param) or edit (the row) an HR staff record — D-#526. */
+  StaffForm: { staff?: import("../graphql/operations").StaffT } | undefined;
   AssignClassTeacher: undefined;
   AssignSubjectTeacher: undefined;
   GroupMembers: undefined;

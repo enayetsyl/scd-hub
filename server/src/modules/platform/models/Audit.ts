@@ -36,6 +36,9 @@ export type AuditEventKind =
   | "BOOK_COMMENT_RESOLVED"    // a per-item review note was marked dealt with (D-#440)
   | "BOOK_LESSON_SIGNED_OFF"   // the content sign-off was recorded on a পাঠ
   | "BOOK_BUILD_QUEUED"        // a render was queued (SB-4); `forced` records a gate override
+  | "STAFF_PROFILE_CREATED"  // an HR staff record created from the app (D-#526)
+  | "STAFF_PROFILE_UPDATED"  // an HR staff record edited from the app; meta lists WHICH
+                             // fields moved, never their values (NID/bank live here)
   | "CREDENTIAL_PROVISIONED" // login generated/reset for a guardian or staff member (D-#59/#60)
   | "SECTIONS_MERGED"     // a class's gender sections combined into one (D-#62)
   | "SECTIONS_SPLIT"      // a merged class split back to its source sections (D-#62)
