@@ -77,6 +77,24 @@ describe("D-#511 — orderQuestionCategories", () => {
     expect(out).toEqual(["QCAT-MCQ"]);
   });
 
+  test("a real LESSON HANDLE in lesson_ref is not a category", () => {
+    // Found on live data: QP-MATH-C5-U03-L01-Q40 carries lesson_ref "L01" — the field's
+    // contract meaning. Without the namespace gate that handle became a category chip
+    // and the whole group rendered for a subject that has no categories at all.
+    expect(orderQuestionCategories(["L01"], QUESTION_CATEGORIES)).toEqual([]);
+    expect(orderQuestionCategories(["L01", "U03-L02", "lesson-1"], QUESTION_CATEGORIES)).toEqual([]);
+  });
+
+  test("a slice mixing lesson handles with categories yields only the categories", () => {
+    expect(
+      orderQuestionCategories(["L01", "QCAT-SOBDARTH", "L02", "QCAT-MCQ"], QUESTION_CATEGORIES),
+    ).toEqual(["QCAT-MCQ", "QCAT-SOBDARTH"]);
+  });
+
+  test("the bare prefix is not a category", () => {
+    expect(orderQuestionCategories(["QCAT-"], QUESTION_CATEGORIES)).toEqual([]);
+  });
+
   test("duplicates collapse", () => {
     expect(orderQuestionCategories(["QCAT-MCQ", "QCAT-MCQ"], QUESTION_CATEGORIES)).toEqual([
       "QCAT-MCQ",
