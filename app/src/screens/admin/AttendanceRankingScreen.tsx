@@ -44,7 +44,7 @@ type Subject = "students" | "staff";
 type Window = "week" | "month" | "cumulative" | "annual";
 /** UI axis → the server's (axis, axisValue) pair. */
 type Axis = "school" | "class" | "section" | "quran" | "arabic" | "group";
-/** Row ORDER only — the server never renumbers ranks for it (D-#511). */
+/** Row ORDER only — the server never renumbers ranks for it (D-#512). */
 type Sort = "rank" | "class";
 
 const PAGE = 40;

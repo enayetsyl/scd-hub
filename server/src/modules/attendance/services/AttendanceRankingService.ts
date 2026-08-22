@@ -52,7 +52,7 @@ export type StudentRankAxis = "school" | "class" | "section" | "group" | "track"
 /**
  * Row ORDER only. `rank` is computed from attendance and never changes with this —
  * sorting by class regroups the same numbered rows, so a rank means the same thing in
- * both views and a screenshot of one cannot be misread as the other (D-#511).
+ * both views and a screenshot of one cannot be misread as the other (D-#512).
  * Renumbering per class would make "1" mean group-winner in one view and class-winner
  * in the other, with nothing on the row to say which.
  */
@@ -464,7 +464,7 @@ export async function rankStudents(input: {
   sortBy?: StudentRankSort;
 }): Promise<RankResult> {
   // Ranking and ordering are separate steps on purpose: the ranked set is computed once,
-  // identically for both sorts, and only the delivery order differs (D-#511). Applied here
+  // identically for both sorts, and only the delivery order differs (D-#512). Applied here
   // rather than inside each path so neither path can forget it — both have early returns.
   const result = await rankStudentsRanked(input);
   return { ...result, rows: sortRows(result.rows, input.sortBy ?? "rank") };
