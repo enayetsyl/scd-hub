@@ -5,6 +5,7 @@ import {
   resetGuardianPassword,
   staffCredentialCandidates,
   provisionStaffLogin,
+  resetUserPassword,
   resetStaffPassword,
   type GuardianCandidate,
   type StaffCandidate,
@@ -139,5 +140,18 @@ builder.mutationField("resetStaffPassword", (t) =>
     args: { userId: t.arg.string({ required: true }) },
     resolve: (_root, args, ctx) =>
       resetStaffPassword(args.userId, { userId: ctx.auth?.userId, role: ctx.auth?.role }),
+  }),
+);
+
+builder.mutationField("resetUserPassword", (t) =>
+  t.field({
+    type: ProvisionedCredentialRef,
+    authScopes: { hasPermission: "user:manage" },
+    description:
+      "Reset an EMAIL login's password and return it once (D-#526). Phone logins keep " +
+      "resetStaffPassword, which also re-derives the role from the HR category.",
+    args: { userId: t.arg.string({ required: true }) },
+    resolve: (_root, args, ctx) =>
+      resetUserPassword(args.userId, { userId: ctx.auth?.userId, role: ctx.auth?.role }),
   }),
 );

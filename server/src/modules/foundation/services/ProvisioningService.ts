@@ -303,6 +303,52 @@ export async function provisionStaffLogin(staffProfileId: string, actor: Actor):
   };
 }
 
+/**
+ * Reset an EMAIL login's password (D-#526).
+ *
+ * `resetStaffPassword` refuses anyone without a phone ("Only phone-login staff are managed
+ * here"), and email users are created by `createUser` with a password the Principal types —
+ * so until this, an email account whose password was forgotten could not be recovered at
+ * all, the Principal's own included. Same generate-show-once shape as the staff/guardian
+ * resets so there is one credential story, not three.
+ *
+ * No WhatsApp link: the identifier is an email, and the staff/guardian links are built from
+ * a phone number. The password is copied from the screen instead.
+ */
+export async function resetUserPassword(userId: string, actor: Actor): Promise<ProvisionedCredential> {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+  if (!user.email) {
+    // Phone logins keep their own path, which also re-derives the role from HR category.
+    throw new Error("This is a phone login — reset it from the staff credentials screen");
+  }
+
+  const password = generatePassword();
+  user.passwordHash = await hashPassword(password);
+  user.active = true;
+  await user.save();
+
+  await writeAudit({
+    eventKind: "CREDENTIAL_PROVISIONED",
+    actorId: actor.userId,
+    actorRole: actor.role,
+    targetId: user._id,
+    targetKind: "User",
+    meta: { audience: "staff", action: "reset", email: user.email, role: user.role },
+  });
+
+  return {
+    identifier: user.email,
+    identifierKind: "email",
+    password,
+    name: user.name,
+    contextLabel: user.role,
+    studentCount: 0,
+    waLink: "",
+    alreadyExisted: true,
+  };
+}
+
 export async function resetStaffPassword(userId: string, actor: Actor): Promise<ProvisionedCredential> {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
