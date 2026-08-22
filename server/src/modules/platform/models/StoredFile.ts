@@ -44,6 +44,9 @@ export type StoredFileKind =
   | "assignment_attachment"
   /** A PDF/DOCX English Drive document uploaded as a binary (owner 2026-07-25). */
   | "english_drive"
+  /** A PDF/DOCX teacher-facing pedagogy note (TN-1, prd-teaching-notes). Read-gated by
+   *  the owning note's (class × subject) teaching scope — staff only, no guardian path. */
+  | "teaching_note"
   /** Book production (SB-2, D-#409/#419). The four stages of a slot's image chain
    *  plus the rendered editions. `raw` is what the illustrator brought in from
    *  ChatGPT/Gemini or the in-app API; `compliant` is what book.json names. */
@@ -71,6 +74,7 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "print_upload",
   "assignment_attachment",
   "english_drive",
+  "teaching_note",
   "book_image_raw",
   "book_image_approved",
   "book_image_compliant",
