@@ -1,17 +1,18 @@
 # PRD — Teaching Notes (শিক্ষক নোট): per (class × subject) note library with teacher improvement comments
 
-**Status:** BUILT 2026-08-22 on `feat/teaching-notes` — TN-1 and TN-2 in full, TN-3's print half.
-The decisions landed as **D-#514–#518**; the D-#513–#516 proposed below were renumbered because
-`origin/dev` took D-#513 while this was in flight. The BN library name shipped as **নোট ও গাইড**,
-not the শিক্ষক নোট proposed in §7 — that string is already the English Drive `TN` kind's label and
-would have collided in the drawer. It still needs owner sign-off.
+**Status:** BUILT 2026-08-22 on `feat/teaching-notes` — **TN-1, TN-2 and TN-3 complete** (library,
+comment loop, print, notifications). The decisions landed as **D-#514–#518**; the D-#513–#516
+proposed below were renumbered because `origin/dev` took D-#513 while this was in flight. The BN
+library name shipped as **নোট ও গাইড**, not the শিক্ষক নোট proposed in §7 — that string is already
+the English Drive `TN` kind's label and would have collided in the drawer. It still needs owner
+sign-off.
 
-**Not built, and why:** TN-3's **notification** half. It needs three new `NOTIFICATION_KINDS` in
-`shared/vocab.ts`, and the unlanded `feat/exams` (last commit 2026-07-29) already edits those exact
-three regions — `NOTIFICATION_KINDS` and both label maps. AGENTS "Parallel sessions" §5 serializes
-contract files, so building it now is the collision that rule exists to prevent. Unblock, once
-`feat/exams` lands or is abandoned: append `TEACHING_NOTE_PUBLISHED` / `TEACHING_NOTE_COMMENT` /
-`TEACHING_NOTE_COMMENT_ADDRESSED` plus BN+EN labels, run the vocab verifier, wire the emitters.
+**Contract note on TN-3's notifications.** They add three `NOTIFICATION_KINDS`, six message-template
+keys and the verifier's exact-equality list — all in `shared/vocab.ts`, which the unlanded
+`feat/exams` (last commit 2026-07-29) also edits in the same three regions. AGENTS "Parallel
+sessions" §5 serializes contract files; this was built anyway on the owner's explicit instruction
+to finish the feature. Every edit is **append-at-end** of its list, so rebasing `feat/exams` is a
+both-sides-keep resolution rather than a rewrite.
 
 **One design change made during the build, recorded in D-#516:** §3's visibility rule said the
 scope walk alone. It is not sufficient — `Subject.code` is FOUNDATION_SUBJECTS, so ARABIC and QURAN
