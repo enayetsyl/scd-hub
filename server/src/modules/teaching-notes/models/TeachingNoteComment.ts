@@ -1,6 +1,6 @@
 /**
  * TeachingNoteComment — one teacher's improvement note on a teaching note
- * (TN-2, prd-teaching-notes, D-#514/#516).
+ * (TN-2, prd-teaching-notes, D-#520/#522).
  *
  * THE ANCHOR IS THE DOCUMENT IDENTITY, NOT THE VERSION ROW. This is the
  * load-bearing choice of the whole slice and it is not a detail.
@@ -18,7 +18,7 @@
  * author was actually looking at. A reader then sees "written on v2, current is
  * v3" and can answer "did v3 act on this?" without archaeology.
  *
- * COMMENTS ARE RESOLVABLE (D-#514). A note nobody has to answer is a note that
+ * COMMENTS ARE RESOLVABLE (D-#520). A note nobody has to answer is a note that
  * gets skipped in a busy week — the same reasoning already in force for
  * `BookItemComment` and for escalations. ADDRESSED is set by the note's
  * uploader or by Principal/Office, optionally with a line saying what changed.

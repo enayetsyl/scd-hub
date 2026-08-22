@@ -1,7 +1,7 @@
 /**
  * TeachingNote — one TEACHER-FACING pedagogy document for a (class × subject):
  * "how to answer a Class 5 Bangla long question", a chapter helper note, a
- * subject syllabus (TN-1, prd-teaching-notes, D-#513–#516).
+ * subject syllabus (TN-1, prd-teaching-notes, D-#519–#523).
  *
  * NOT curriculum content: no envelope, no import contract, no ContentArtifact,
  * no corpus path (ADR-005). This is an operational-plane STAFF library —

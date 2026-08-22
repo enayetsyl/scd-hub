@@ -79,7 +79,7 @@ export const TEACHING_NOTE_VERSIONS = gql<
 
 // ---------------------------------------------------------------------------
 // TN-2 — improvement comments. The thread is anchored to the note's IDENTITY,
-// so passing any version's id returns the same comments (D-#516).
+// so passing any version's id returns the same comments (D-#522).
 // ---------------------------------------------------------------------------
 
 export interface TeachingNoteCommentT {

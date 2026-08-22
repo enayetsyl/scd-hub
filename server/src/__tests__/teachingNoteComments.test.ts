@@ -1,5 +1,5 @@
 /**
- * Teaching-note comment tests (TN-2, prd-teaching-notes, D-#514/#516).
+ * Teaching-note comment tests (TN-2, prd-teaching-notes, D-#520/#522).
  *
  * ANCHOR   — the load-bearing one: a comment is queried by DOCUMENT IDENTITY,
  *            so the thread survives a replacement and passing v1's OR v2's id
@@ -208,7 +208,7 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// The anchor (D-#516)
+// The anchor (D-#522)
 // ---------------------------------------------------------------------------
 
 describe("the anchor survives replacement", () => {
@@ -361,7 +361,7 @@ describe("scope", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Status (D-#514)
+// Status (D-#520)
 // ---------------------------------------------------------------------------
 
 describe("status", () => {

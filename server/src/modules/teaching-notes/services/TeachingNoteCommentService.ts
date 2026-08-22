@@ -2,7 +2,7 @@
  * TeachingNoteCommentService (TN-2, prd-teaching-notes) — the improvement-comment
  * thread on a teaching note, and the Principal's cross-subject outstanding list.
  *
- * WHO MAY DO WHAT (no new permission, D-#513):
+ * WHO MAY DO WHAT (no new permission, D-#519):
  *   comment              — anyone who may READ the note (the same pair scope).
  *                          Many comments per teacher, many teachers per note:
  *                          that falls out of the model, it is not a feature.
@@ -54,7 +54,7 @@ export interface TeachingNoteCommentShape {
   subject: string;
   kind: string;
   seq: number;
-  /** The version the author was looking at — the D-#516 anchor stamp. */
+  /** The version the author was looking at — the D-#522 anchor stamp. */
   versionSeen: number;
   bodyBn: string;
   anchor: string | null;

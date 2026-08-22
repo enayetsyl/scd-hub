@@ -1,5 +1,5 @@
 /**
- * Teaching Notes tests (TN-1, prd-teaching-notes, D-#513–#516).
+ * Teaching Notes tests (TN-1, prd-teaching-notes, D-#519–#523).
  *
  * Encoding — the guard that matters (PRD §5): a mojibake title or body is
  *            REJECTED and nothing persists. Every seed document arrived broken.

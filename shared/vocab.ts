@@ -1150,8 +1150,8 @@ export const NOTIFICATION_KINDS = [
   // weekend heads-up. Contact-only guardians are reached manually via the
   // staff weekly report's wa.me lines.
   "HW_WEEKLY_DIGEST",
-  // Teaching-notes library (TN-3, D-#514–#518; app-native, NO wire twin). All three
-  // are STAFF-only — this library has no guardian path at all (D-#516).
+  // Teaching-notes library (TN-3, D-#519–#523; app-native, NO wire twin). All three
+  // are STAFF-only — this library has no guardian path at all (D-#521).
   //   PUBLISHED → the (class × subject)'s teachers, when a note or a new version lands
   //   COMMENT   → the note's uploader + the Principal, when a teacher leaves a suggestion
   //   ADDRESSED → the comment's author, when their suggestion is marked addressed
@@ -2310,7 +2310,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর এই সপ্তাহের ({WeekRange}) বাড়ির কাজ:\n{Unsubmitted}\n{HeadsUp}\nমাআসসালামাহ।",
     defaultLangMode: "BN",
   },
-  // --- Teaching notes / নোট ও গাইড (TN-3, D-#514–#518). Staff-facing only. ---
+  // --- Teaching notes / নোট ও গাইড (TN-3, D-#519–#523). Staff-facing only. ---
   "teachingNote.published.title": {
     group: "teachingNote", labelBn: "নতুন নোট ও গাইড — শিরোনাম", placeholders: [],
     bnDefault: "নতুন নোট ও গাইড", defaultLangMode: "BN",

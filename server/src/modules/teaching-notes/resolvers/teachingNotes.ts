@@ -1,6 +1,6 @@
 /**
  * Teaching Notes resolvers (TN-1, prd-teaching-notes). No new permission
- * (D-#513) — upload rides `roster:manage`, reads ride the caller's teaching
+ * (D-#519) — upload rides `roster:manage`, reads ride the caller's teaching
  * scope, resolved in the service:
  *
  *   teachingNotes         — authenticated; the (class × subject) library, scoped.

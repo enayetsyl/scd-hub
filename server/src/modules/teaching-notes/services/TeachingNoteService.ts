@@ -2,7 +2,7 @@
  * TeachingNoteService (TN-1, prd-teaching-notes) — the (class × subject) note
  * library: upload/replace, the scope-filtered reads, and the file read gate.
  *
- * VISIBILITY (D-#515) — a teacher sees a note when they teach that subject to
+ * VISIBILITY (D-#521) — a teacher sees a note when they teach that subject to
  * that class; Principal/Office see everything; GUARDIAN has no path at all.
  *
  * The allowed set is a set of (classLevel, subject) PAIRS, not two independent
@@ -722,7 +722,7 @@ export async function sendTeachingNoteToPrint(
 // implementation; TN-1 ships the seam so the shape never changes under the app.
 // ---------------------------------------------------------------------------
 
-/** The identity a comment thread anchors to (D-#516) — NOT the version row. */
+/** The identity a comment thread anchors to (D-#522) — NOT the version row. */
 export function identityKey(doc: {
   classLevel: number;
   subject: string;

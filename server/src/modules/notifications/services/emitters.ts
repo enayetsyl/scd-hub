@@ -1365,11 +1365,11 @@ export async function emitClassTestUpcoming(ev: ClassTestUpcomingEvent): Promise
 }
 
 // ---------------------------------------------------------------------------
-// Teaching notes / নোট ও গাইড (TN-3, D-#514–#518). STAFF-ONLY: this library has
-// no guardian path (D-#516), so every recipient here is a User.
+// Teaching notes / নোট ও গাইড (TN-3, D-#519–#523). STAFF-ONLY: this library has
+// no guardian path (D-#521), so every recipient here is a User.
 //
 // The published-event audience is resolved from the ROUTINE, for the same reason
-// the library's read scope is (D-#516): ARABIC and QURAN have no `Subject` row,
+// the library's read scope is (D-#521): ARABIC and QURAN have no `Subject` row,
 // so a grant-based lookup would silently notify nobody for those two subjects —
 // and "nobody complained" is indistinguishable from "it worked".
 // ---------------------------------------------------------------------------
@@ -1404,7 +1404,7 @@ async function teachersOfPair(classLevel: number, subject: string): Promise<stri
   for (const s of slots) {
     if (!s.teacherId) continue;
     // A cross-grade group (Quran/Arabic) spans classes by construction — its
-    // teacher is an audience for that subject at every level (D-#516).
+    // teacher is an audience for that subject at every level (D-#521).
     if (s.groupType === "subjectgroup") ids.add(s.teacherId.toString());
     else if (s.classId && classIds.includes(s.classId.toString())) ids.add(s.teacherId.toString());
   }

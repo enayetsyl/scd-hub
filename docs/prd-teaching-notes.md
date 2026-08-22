@@ -1,8 +1,10 @@
 # PRD — Teaching Notes (শিক্ষক নোট): per (class × subject) note library with teacher improvement comments
 
 **Status:** BUILT 2026-08-22 on `feat/teaching-notes` — **TN-1, TN-2 and TN-3 complete** (library,
-comment loop, print, notifications). The decisions landed as **D-#514–#518**; the D-#513–#516
-proposed below were renumbered because `origin/dev` took D-#513 while this was in flight. The BN
+comment loop, print, notifications). The decisions landed as **D-#519–#523** — renumbered TWICE
+while this was in flight, as `origin/dev` took D-#513 (question-category namespace) and then D-#514
+(AR-4 group breakdown). §3 below still shows the original proposed numbers where it says
+"Proposed"; the live numbers are the ones in `DECISIONS.md`. The BN
 library name shipped as **নোট ও গাইড**, not the শিক্ষক নোট proposed in §7 — that string is already
 the English Drive `TN` kind's label and would have collided in the drawer. It still needs owner
 sign-off.
@@ -14,7 +16,7 @@ sessions" §5 serializes contract files; this was built anyway on the owner's ex
 to finish the feature. Every edit is **append-at-end** of its list, so rebasing `feat/exams` is a
 both-sides-keep resolution rather than a rewrite.
 
-**One design change made during the build, recorded in D-#516:** §3's visibility rule said the
+**One design change made during the build, recorded in D-#521:** §3's visibility rule said the
 scope walk alone. It is not sufficient — `Subject.code` is FOUNDATION_SUBJECTS, so ARABIC and QURAN
 have no `Subject` row to grant and are reachable only through `RoutineSlot`. The shipped rule walks
 the routine AND the grants.
@@ -58,23 +60,23 @@ enum is app-native with no wire twin (the routine/HR shape, D-#46/#52). `/skills
 
 ## 3. Decisions locked by the owner (2026-08-22)
 
-**Proposed D-#513 — Upload/replace is Principal + Office only, on the existing `roster:manage`.**
+**D-#519 — Upload/replace is Principal + Office only, on the existing `roster:manage`.**
 No new permission string. A senior teacher who should curate a subject is granted it individually
 through Access Control (AC-1), which is exactly the case that surface exists for — widening the
 TEACHER role to get one curator would hand upload of every subject to every teacher.
 
-**Proposed D-#514 — An improvement comment carries `OPEN | ADDRESSED` status.** A comment nobody
+**D-#520 — An improvement comment carries `OPEN | ADDRESSED` status.** A comment nobody
 has to answer is a comment that gets skipped in a busy week; this is the same reasoning already in
 force for `BookItemComment` and for escalations. ADDRESSED is set by the uploader or Principal/Office
 with an optional one-line note. The Principal then gets a real cross-subject "still outstanding"
 list rather than a wall of undifferentiated remarks.
 
-**Proposed D-#515 — Read visibility is (class × subject)-scoped for teachers; Principal/Office read
+**D-#521 — Read visibility is (class × subject)-scoped for teachers; Principal/Office read
 all; GUARDIAN has no path.** A teacher sees the Class 5 Bangla guide when they hold a teaching or
 proxy scope for BAN in any section of a class at level 5 — the `EnglishDriveService` walk,
 generalised from "English only, class-keyed" to "any ROUTINE_SUBJECT, (class × subject)-keyed".
 
-**Proposed D-#516 — The comment thread anchors to the document IDENTITY, not the version row, and
+**D-#522 — The comment thread anchors to the document IDENTITY, not the version row, and
 each comment stamps `versionSeen`.** This is the load-bearing choice and it is not a detail. Comments
 pinned to a version row would vanish the moment the improved file replaced the old one — destroying
 the exact feedback the feature exists to collect, and destroying it silently. Anchoring to
@@ -108,13 +110,13 @@ Index: `{ classLevel, subject, kind, seq, replacedAt }` — the library list is 
 
 | Field | Type | Note |
 |---|---|---|
-| `noteKey` | `{ classLevel, subject, kind, seq }` | the ANCHOR — survives replacement (D-#516) |
+| `noteKey` | `{ classLevel, subject, kind, seq }` | the ANCHOR — survives replacement (D-#522) |
 | `noteId` | → `TeachingNote` | the exact version commented on |
 | `versionSeen` | int | denormalized from that row so the anchor renders without a join |
 | `bodyBn` | string | |
 | `anchor` | string \| null | optional free text — "Type 5 — তুলনা / পার্থক্য". NOT inline PDF annotation |
 | `authorId` | → `User` | |
-| `status` | `OPEN \| ADDRESSED` | D-#514 |
+| `status` | `OPEN \| ADDRESSED` | D-#520 |
 | `addressedBy` / `addressedAt` / `addressedNote` | | |
 
 Indexes: `{ noteKey…, status, createdAt }` (the thread + the outstanding list) and
@@ -123,7 +125,7 @@ Indexes: `{ noteKey…, status, createdAt }` (the thread + the outstanding list)
 ### 4.3 One new `StoredFileKind`: `teaching_note`
 
 Plus a branch in the `GET /files/:id` read gate dispatching to `assertTeachingNoteFileReadAccess`
-— the same §3/D-#515 visibility rule as the GraphQL read, enforced independently at the byte path.
+— the same §3/D-#521 visibility rule as the GraphQL read, enforced independently at the byte path.
 
 ## 5. Upload boundary — the encoding guard (non-negotiable)
 

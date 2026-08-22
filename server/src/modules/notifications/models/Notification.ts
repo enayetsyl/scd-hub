@@ -74,7 +74,7 @@ export interface NotificationRefs {
   ctId?: string;
   /** Staff leave submitted → approver (deep-link: the Staff leave inbox; owner 2026-07-26). */
   leaveApplicationId?: string;
-  /** Teaching notes (deep-link: TeachingNoteDoc; TN-3, D-#514–#518). The note id is
+  /** Teaching notes (deep-link: TeachingNoteDoc; TN-3, D-#519–#523). The note id is
    *  the VERSION row the event names; the comment id is set on the two comment kinds. */
   teachingNoteId?: string;
   teachingNoteCommentId?: string;

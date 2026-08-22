@@ -1120,7 +1120,7 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       await assertEnglishDriveFileReadAccess(ctx, file);
     } else if (file.kind === "teaching_note") {
       // Staff-only pedagogy material: the owning note's (class × subject) teaching
-      // scope, resolved the same way the GraphQL read resolves it (TN-1, D-#515).
+      // scope, resolved the same way the GraphQL read resolves it (TN-1, D-#521).
       await assertTeachingNoteFileReadAccess(ctx, file);
     } else if (file.kind === "print_upload") {
       // A print upload is readable by the teacher who sent it and by the Office/Principal
