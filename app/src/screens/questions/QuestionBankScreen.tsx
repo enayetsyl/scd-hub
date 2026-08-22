@@ -99,8 +99,9 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
     variables: {
       subject: qb.filters.subject,
       classLevel: qb.filters.classLevel,
-      topicTag: qb.filters.topicTag,
-      questionType: qb.filters.questionType,
+      topicTags: qb.filters.topicTags,
+      questionTypes: qb.filters.questionTypes,
+      chapters: qb.filters.chapters,
       category: qb.filters.category,
       paperRole: qb.filters.paperRole,
       difficulty: qb.filters.difficulty,
@@ -128,9 +129,27 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
   const f = qb.filters;
   if (f.subject) chips.push({ key: "subject", label: subjectLabel(f.subject) });
   if (f.classLevel != null) chips.push({ key: "classLevel", label: classLevelLabel(f.classLevel) });
-  if (f.topicTag) chips.push({ key: "topicTag", label: f.topicTag });
+  // One chip per multi-select axis, not one per value: a 23-chapter pick would
+  // otherwise push 23 chips and bury the rest of the bar (D-#524).
+  if (f.chapters.length > 0) {
+    chips.push({
+      key: "chapters",
+      label: `${STR.qbChapter}: ${f.chapters.map((c) => bnNum(c)).join(", ")}`,
+    });
+  }
+  if (f.topicTags.length > 0) {
+    chips.push({
+      key: "topicTags",
+      label: f.topicTags.length === 1 ? f.topicTags[0] : `${STR.qbTopicTag} (${bnNum(f.topicTags.length)})`,
+    });
+  }
   if (f.reviewStatus) chips.push({ key: "reviewStatus", label: reviewStatusLabel(f.reviewStatus) });
-  if (f.questionType) chips.push({ key: "questionType", label: prettyCode(f.questionType) });
+  if (f.questionTypes.length > 0) {
+    chips.push({
+      key: "questionTypes",
+      label: f.questionTypes.map((q) => prettyCode(q)).join(", "),
+    });
+  }
   if (f.category) chips.push({ key: "category", label: questionCategoryLabel(f.category) });
   if (f.paperRole) chips.push({ key: "paperRole", label: paperRoleLabel(f.paperRole) });
   if (f.difficulty) chips.push({ key: "difficulty", label: difficultyLabel(f.difficulty) });

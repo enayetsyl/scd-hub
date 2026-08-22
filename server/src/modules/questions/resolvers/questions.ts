@@ -17,7 +17,14 @@ import { builder } from "../../../schema";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { ForbiddenError } from "../../../middleware/authz";
 import { buildContentScope, contentScopeAllows, contentScopeMongo } from "../../content/contentScope";
-import { normalizeBanglaDigits, escapeRegex, orderQuestionCategories } from "../search";
+import {
+  normalizeBanglaDigits,
+  escapeRegex,
+  orderQuestionCategories,
+  orderQuestionChapters,
+  applyMultiFilter,
+  chapterMatchValues,
+} from "../search";
 import { reviewerMayReadArtifact } from "../../content/services/ReviewService";
 import { applyQuestionOnlyGate, seesPublishedOnly } from "../publishGate";
 import { QUESTION_CATEGORIES } from "@scd/shared";
@@ -141,8 +148,17 @@ builder.queryField("questions", (t) =>
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
+      /** Single-value forms. KEPT: an installed app that has not taken the OTA
+       *  still sends these, and dropping them would blank its bank (D-#524). */
       topicTag: t.arg.string({ required: false }),
       questionType: t.arg.string({ required: false }),
+      /** Multi-select forms (D-#524). When a list is given it wins over the
+       *  single-value arg of the same axis; an EMPTY list means "no constraint",
+       *  never "match nothing" — clearing the last chip must widen, not blank. */
+      topicTags: t.arg.stringList({ required: false }),
+      questionTypes: t.arg.stringList({ required: false }),
+      /** Chapter numbers, from the artifact's own address (D-#524). */
+      chapters: t.arg.intList({ required: false }),
       category: t.arg.string({ required: false }),
       bloomLevel: t.arg.string({ required: false }),
       difficulty: t.arg.string({ required: false }),
@@ -177,12 +193,21 @@ builder.queryField("questions", (t) =>
       // explicit reviewStatus arg can never widen it back open.
       applyQuestionOnlyGate(filter as Record<string, unknown>, ctx.auth);
 
-      // Tag-level filters stored in envelopeJson.tags or envelopeJson.payload
-      if (args.topicTag) filter["envelopeJson.tags.topic_tag"] = args.topicTag;
+      // Tag-level filters stored in envelopeJson.tags or envelopeJson.payload.
+      // Multi-select (D-#524): a non-empty list wins over the single-value arg for
+      // that axis; an empty list is no constraint at all.
+      applyMultiFilter(filter, "envelopeJson.tags.topic_tag", args.topicTags, args.topicTag);
+      applyMultiFilter(filter, "envelopeJson.payload.question_type", args.questionTypes, args.questionType);
+      // Chapter (D-#524) — the artifact's OWN address, not a tag. `address.number` is
+      // Mixed on the model and older imports wrote it as a string, so both forms are
+      // matched; filtering on the number alone would silently drop those rows.
+      const chapters = (args.chapters ?? []).filter((c) => Number.isFinite(c));
+      if (chapters.length > 0) {
+        filter["address.number"] = { $in: chapterMatchValues(chapters) };
+      }
       if (args.bloomLevel) filter["envelopeJson.tags.bloom_level"] = args.bloomLevel;
       if (args.difficulty) filter["envelopeJson.tags.difficulty"] = args.difficulty;
       if (args.paperRole) filter["envelopeJson.tags.paper_role"] = args.paperRole;
-      if (args.questionType) filter["envelopeJson.payload.question_type"] = args.questionType;
       // Category (D-#511) — the exercise family, carried in the payload's free-text
       // lesson_ref. Payload-side like question_type, because it is not an envelope tag.
       if (args.category) filter["envelopeJson.payload.lesson_ref"] = args.category;
@@ -355,6 +380,42 @@ builder.queryField("questionCategories", (t) =>
         filter,
       )) as unknown[];
       return orderQuestionCategories(codes, QUESTION_CATEGORIES);
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Query: questionChapters — distinct chapter numbers for the FilterSheet (D-#524)
+// ---------------------------------------------------------------------------
+
+builder.queryField("questionChapters", (t) =>
+  t.field({
+    type: ["Int"],
+    description:
+      "Distinct chapter numbers (the artifact's address.number) across readable questions, " +
+      "ascending. Optionally narrowed by subject/classLevel. Feeds the bank's chapter filter; " +
+      "an empty result is how the client knows not to render the group. TEACHER scope enforced.",
+    authScopes: { hasPermission: "question:read" },
+    args: {
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+
+      const filter: FilterQuery<IContentArtifact> = { docType: "question", current: true };
+      if (args.subject) filter.subject = args.subject;
+      if (args.classLevel != null) filter.classLevel = args.classLevel;
+      // An unpublished question must not leak its chapter into the filter chips (Q3.1).
+      applyQuestionOnlyGate(filter as Record<string, unknown>, ctx.auth);
+
+      const scope = await buildContentScope(ctx);
+      const scopeFilter = contentScopeMongo(scope);
+      if (scopeFilter === null) return [];
+      if (scopeFilter) filter.$or = scopeFilter.$or;
+
+      const raw = (await ContentArtifact.distinct("address.number", filter)) as unknown[];
+      return orderQuestionChapters(raw);
     },
   }),
 );

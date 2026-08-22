@@ -884,8 +884,9 @@ export interface QuestionListItem {
 export interface QuestionsVars {
   subject?: string | null;
   classLevel?: number | null;
-  topicTag?: string | null;
-  questionType?: string | null;
+  topicTags?: string[] | null;
+  questionTypes?: string[] | null;
+  chapters?: number[] | null;
   category?: string | null;
   bloomLevel?: string | null;
   difficulty?: string | null;
@@ -905,8 +906,9 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
   query Questions(
     $subject: String
     $classLevel: Int
-    $topicTag: String
-    $questionType: String
+    $topicTags: [String!]
+    $questionTypes: [String!]
+    $chapters: [Int!]
     $category: String
     $bloomLevel: String
     $difficulty: String
@@ -922,8 +924,9 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
     questions(
       subject: $subject
       classLevel: $classLevel
-      topicTag: $topicTag
-      questionType: $questionType
+      topicTags: $topicTags
+      questionTypes: $questionTypes
+      chapters: $chapters
       category: $category
       bloomLevel: $bloomLevel
       difficulty: $difficulty
@@ -960,6 +963,15 @@ export const QUESTION_TOPIC_TAGS_QUERY = gql<
 >`
   query QuestionTopicTags($subject: String, $classLevel: Int) {
     questionTopicTags(subject: $subject, classLevel: $classLevel)
+  }
+`;
+
+export const QUESTION_CHAPTERS_QUERY = gql<
+  { questionChapters: number[] },
+  { subject?: string | null; classLevel?: number | null }
+>`
+  query QuestionChapters($subject: String, $classLevel: Int) {
+    questionChapters(subject: $subject, classLevel: $classLevel)
   }
 `;
 
