@@ -820,6 +820,39 @@ export const ASSIGN_QUESTION_REVIEW_BULK = gql<
 `;
 
 /** Accept or reject. `reason` is optional even on CHANGES_REQUESTED (Q2.4). */
+export const ASSIGN_QUESTION_REVIEW_BY_CHAPTER = gql<
+  {
+    assignQuestionReviewByChapter: {
+      assigned: number;
+      skippedPublished: number;
+      skippedReviewed: number;
+      skippedOpenRound: number;
+      total: number;
+    };
+  },
+  { subject: string; classLevel: number; chapters: number[]; reviewerId: string }
+>`
+  mutation AssignQuestionReviewByChapter(
+    $subject: String!
+    $classLevel: Int!
+    $chapters: [Int!]!
+    $reviewerId: String!
+  ) {
+    assignQuestionReviewByChapter(
+      subject: $subject
+      classLevel: $classLevel
+      chapters: $chapters
+      reviewerId: $reviewerId
+    ) {
+      assigned
+      skippedPublished
+      skippedReviewed
+      skippedOpenRound
+      total
+    }
+  }
+`;
+
 export const SUBMIT_QUESTION_REVIEW = gql<
   { submitQuestionReview: QuestionReviewRoundT },
   { assignmentId: string; verdict: string; reason?: string | null }

@@ -19,6 +19,8 @@ export type AuditEventKind =
   | "REVIEW_ASSIGNED"     // plan-review round assigned to a teacher (D-#39)
   | "REVIEW_SUBMITTED"    // reviewer submitted a verdict + feedback (D-#38)
   | "REVIEW_CANCELLED"    // an open review round was cancelled/superseded (D-#40)
+  | "REVIEW_CONDITION_CLEARED" // a question's APPROVE_WITH_CONDITION hold was cleared and
+                              // sent back to the same reviewer for another round (D-#525)
   | "PLAN_APPROVED"       // Principal sign-off: reviewed → gold (D-#38; PR-2)
   | "QUESTION_PUBLISHED"  // Principal publish: a question reaches the teachers' shelf (D-#508)
   // Book production (SB-1, D-#403–#428). SECURITY log only — who did what. The

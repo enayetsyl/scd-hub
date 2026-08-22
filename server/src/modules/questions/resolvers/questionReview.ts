@@ -23,6 +23,8 @@ import { ReviewError } from "../../content/services/ReviewService";
 import {
   assignQuestionReviewOne as assignSvc,
   assignQuestionReviewBulk as assignBulkSvc,
+  assignQuestionReviewByChapter as assignByChapterSvc,
+  clearQuestionCondition as clearConditionSvc,
   submitQuestionReview as submitSvc,
   publishQuestion as publishSvc,
   publishQuestionBulk as publishBulkSvc,
@@ -179,6 +181,87 @@ builder.mutationField("assignQuestionReviewBulk", (t) =>
         assignedBy: ctx.auth.userId,
         actorRole: ctx.auth.role,
       });
+    },
+  }),
+);
+
+const ChapterAssignResultRef = builder
+  .objectRef<{
+    assigned: number;
+    skippedPublished: number;
+    skippedReviewed: number;
+    skippedOpenRound: number;
+    total: number;
+  }>("QuestionChapterAssignResult");
+ChapterAssignResultRef.implement({
+  description:
+    "Outcome of assigning whole chapters to one reviewer (D-#525). Every skip is counted " +
+    "and reasoned — a bare 'n assigned' out of a 240-question chapter reads as a bug.",
+  fields: (t) => ({
+    assigned: t.exposeInt("assigned"),
+    skippedPublished: t.exposeInt("skippedPublished"),
+    skippedReviewed: t.exposeInt("skippedReviewed"),
+    skippedOpenRound: t.exposeInt("skippedOpenRound"),
+    total: t.exposeInt("total"),
+  }),
+});
+
+builder.mutationField("assignQuestionReviewByChapter", (t) =>
+  t.field({
+    type: ChapterAssignResultRef,
+    description:
+      "Assign every eligible question of one or more CHAPTERS to a single reviewer in one " +
+      "action (D-#525). Already-published, already-reviewed and in-flight questions are " +
+      "SKIPPED, never reassigned, and each skip is reported. Requires content:assign_review.",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: {
+      subject: t.arg.string({ required: true }),
+      classLevel: t.arg.int({ required: true }),
+      chapters: t.arg.intList({ required: true }),
+      reviewerId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await assignByChapterSvc({
+          subject: args.subject,
+          classLevel: args.classLevel,
+          chapters: args.chapters,
+          reviewerId: args.reviewerId,
+          assignedBy: ctx.auth.userId,
+          actorRole: ctx.auth.role,
+        });
+      } catch (err) {
+        return mapReviewError(err);
+      }
+    },
+  }),
+);
+
+builder.mutationField("clearQuestionCondition", (t) =>
+  t.field({
+    type: QuestionReviewRoundRef,
+    description:
+      "Clear an APPROVE_WITH_CONDITION hold and send the question BACK to the same reviewer " +
+      "for a fresh round (D-#525) — clearing does NOT publish. Refuses unless the latest " +
+      "round really is a submitted APPROVE_WITH_CONDITION. Requires content:assign_review.",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: {
+      artifactId: t.arg.string({ required: true }),
+      note: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await clearConditionSvc({
+          artifactId: args.artifactId,
+          note: args.note ?? null,
+          actorId: ctx.auth.userId,
+          actorRole: ctx.auth.role,
+        });
+      } catch (err) {
+        return mapReviewError(err);
+      }
     },
   }),
 );

@@ -185,6 +185,68 @@ export async function assignQuestionReview(input: AssignQuestionReviewInput): Pr
   return (await decorate([created as unknown as RawAssignment]))[0];
 }
 
+/**
+ * Clear a condition and send the question BACK to the reviewer for another round (D-#525).
+ *
+ * `APPROVE_WITH_CONDITION` leaves the question at `draft` — approved in spirit, held in
+ * fact — and the owner ruled that clearing the condition does NOT publish it: it opens a
+ * fresh round so the same reviewer can confirm the condition was actually met. That keeps
+ * the person who raised the condition as the person who signs it off.
+ *
+ * Refuses unless the question's LATEST round really is a submitted APPROVE_WITH_CONDITION,
+ * so this cannot be used as a back door to re-open an ordinary rejection or to re-assign a
+ * round somebody is still working on.
+ */
+export async function clearQuestionCondition(input: {
+  artifactId: string;
+  /** What was done about the condition. Recorded on the audit row, not on the new round —
+   *  the new round is the reviewer's to fill in. */
+  note?: string | null;
+  actorId: string;
+  actorRole: string;
+}): Promise<QuestionReviewRoundDTO> {
+  const artifact = await loadQuestion(input.artifactId);
+  const key = threadKeyOf(artifact);
+
+  const latest = (await ReviewAssignment.find(key)
+    .sort({ roundNumber: -1 })
+    .limit(1)
+    .lean()) as unknown as RawAssignment[];
+  const last = latest[0];
+  if (!last) throw new ReviewError("This question has never been reviewed");
+  if (last.status !== "submitted" || last.verdict !== "APPROVE_WITH_CONDITION") {
+    throw new ReviewError(
+      "No condition to clear — the latest round is not a submitted APPROVE_WITH_CONDITION " +
+        `(status=${last.status}, verdict=${last.verdict ?? "none"})`,
+    );
+  }
+
+  await writeAudit({
+    eventKind: "REVIEW_CONDITION_CLEARED",
+    actorId: input.actorId,
+    actorRole: input.actorRole,
+    targetId: String(last._id),
+    targetKind: "ReviewAssignment",
+    meta: {
+      artifactId: input.artifactId,
+      qid: last.qid ?? null,
+      condition: last.feedback ?? null,
+      note: input.note?.trim() || null,
+      reviewerId: String(last.reviewerId),
+    },
+  });
+
+  // Same reviewer, next round — the round-number bump and supersede live in assign.
+  const round = await assignQuestionReview({
+    artifactId: input.artifactId,
+    reviewerId: String(last.reviewerId),
+    assignedBy: input.actorId,
+    actorRole: input.actorRole,
+  });
+  await notifyAssigned(String(last.reviewerId), [round], round.id);
+  return round;
+}
+
 /** One notification per assign ACTION (D-#508). Best-effort; never blocks (D-#72). */
 async function notifyAssigned(
   reviewerId: string,
@@ -262,6 +324,12 @@ export async function submitQuestionReview(input: SubmitQuestionReviewInput): Pr
   const reason = input.reason?.trim() ?? "";
   // NOTE: no "reason required on reject" guard here, deliberately. submitPlanReview keeps
   // that rule for plans; for questions the owner ruled the reason optional (Q2.4).
+  // The CONDITION, however, is mandatory (D-#525): "approved, but…" with no stated
+  // condition is unactionable — nobody can clear a hold they cannot read, and the
+  // question would sit unpublishable for a reason no one recorded.
+  if (verdict === "APPROVE_WITH_CONDITION" && reason.length === 0) {
+    throw new ReviewError("A condition is required when approving with a condition");
+  }
 
   const assignment = await ReviewAssignment.findById(input.assignmentId);
   if (!assignment) throw new ReviewError("Review assignment not found");
@@ -486,6 +554,121 @@ export async function questionReviewThread(artifactId: string): Promise<Question
  * The assign picker (Q2.2): current questions NOT yet published, each with its open-round
  * state. Filters mirror the question-bank chips so the Principal can slice the same way.
  */
+/**
+ * Assign a WHOLE CHAPTER to one reviewer in a single action (D-#525).
+ *
+ * The Principal picks subject + class + chapter(s) + reviewer; every eligible question in
+ * those chapters gets a round. Eligibility, per the owner's ruling — SKIP, never disturb:
+ *   • already published (`gold`)                 → skipped, it is finished;
+ *   • already `reviewed`                         → skipped, a verdict is in;
+ *   • an OPEN round (assigned|submitted) exists  → skipped, somebody is mid-way through it.
+ * Everything skipped is COUNTED and reasoned, because a bare "42 assigned" out of a
+ * 240-question chapter is indistinguishable from a bug.
+ *
+ * `chapters` matches `address.number` in both its stored forms, the same way the bank
+ * filter does — a chapter written as a string by an older import must not silently vanish.
+ */
+export async function assignQuestionReviewByChapter(input: {
+  subject: string;
+  classLevel: number;
+  chapters: readonly number[];
+  reviewerId: string;
+  assignedBy: string;
+  actorRole: string;
+}): Promise<{
+  assigned: number;
+  skippedPublished: number;
+  skippedReviewed: number;
+  skippedOpenRound: number;
+  total: number;
+  rounds: QuestionReviewRoundDTO[];
+}> {
+  const chapters = input.chapters.filter((c) => Number.isInteger(c));
+  if (chapters.length === 0) throw new ReviewError("Pick at least one chapter");
+
+  const arts = (await ContentArtifact.find({
+    docType: QUESTION_DOC_TYPE,
+    current: true,
+    subject: input.subject,
+    classLevel: input.classLevel,
+    "address.number": { $in: chapters.flatMap((c) => [c, String(c)]) },
+  }).lean()) as unknown as LeanQuestion[];
+
+  const total = arts.length;
+  if (total === 0) {
+    return { assigned: 0, skippedPublished: 0, skippedReviewed: 0, skippedOpenRound: 0, total: 0, rounds: [] };
+  }
+
+  // One query for every open round in the chapter, not one per question.
+  const qids = arts.map((a) => qidOf(a)).filter((q): q is string => q != null);
+  const open = (await ReviewAssignment.find({
+    docType: QUESTION_DOC_TYPE,
+    qid: { $in: qids },
+    status: { $in: ["assigned", "submitted"] },
+  })
+    .select({ qid: 1 })
+    .lean()) as unknown as { qid?: string }[];
+  const busy = new Set(open.map((r) => r.qid ?? ""));
+
+  let skippedPublished = 0;
+  let skippedReviewed = 0;
+  let skippedOpenRound = 0;
+  const eligible: LeanQuestion[] = [];
+  for (const a of arts) {
+    if (a.reviewStatus === "gold") { skippedPublished += 1; continue; }
+    if (a.reviewStatus === "reviewed") { skippedReviewed += 1; continue; }
+    const qid = qidOf(a);
+    if (qid && busy.has(qid)) { skippedOpenRound += 1; continue; }
+    eligible.push(a);
+  }
+
+  // Sequential, not Promise.all: each assign supersedes-then-creates for its own qid, and
+  // the round-number read is a read-then-write. Distinct qids cannot collide, but the audit
+  // rows stay in a readable order and the DB is not hit with 240 concurrent writes.
+  const rounds: QuestionReviewRoundDTO[] = [];
+  for (const a of eligible) {
+    rounds.push(
+      await assignQuestionReview({
+        artifactId: a._id.toString(),
+        reviewerId: input.reviewerId,
+        assignedBy: input.assignedBy,
+        actorRole: input.actorRole,
+      }),
+    );
+  }
+
+  // ONE notification for the whole chapter, not one per question (the D-#508 rule).
+  if (rounds.length > 0) await notifyAssigned(input.reviewerId, rounds, rounds[0].id);
+
+  await writeAudit({
+    eventKind: "REVIEW_ASSIGNED",
+    actorId: input.assignedBy,
+    actorRole: input.actorRole,
+    targetId: input.reviewerId,
+    targetKind: "ReviewAssignment",
+    meta: {
+      byChapter: true,
+      subject: input.subject,
+      classLevel: input.classLevel,
+      chapters,
+      assigned: rounds.length,
+      skippedPublished,
+      skippedReviewed,
+      skippedOpenRound,
+      total,
+    },
+  });
+
+  return {
+    assigned: rounds.length,
+    skippedPublished,
+    skippedReviewed,
+    skippedOpenRound,
+    total,
+    rounds,
+  };
+}
+
 export async function listAssignableQuestions(args: {
   subject?: string | null;
   classLevel?: number | null;
