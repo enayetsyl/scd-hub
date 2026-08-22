@@ -68,3 +68,43 @@ export const STAFF_ATTENDANCE_RANKING_QUERY = gql<
     }
   }
 `;
+
+/** One group's card in the AR-4 breakdown — its own denominator, its own ranking. */
+export interface GroupRankBlockT {
+  groupId: string;
+  code: string;
+  nameBn: string;
+  level: string;
+  gender: string;
+  memberCount: number;
+  heldDays: number;
+  rows: RankRowT[];
+}
+
+export interface GroupRankBreakdownT {
+  fromKey: string;
+  toKey: string;
+  minHeldDays: number;
+  lastMarkedKey: string | null;
+  groupsMeasured: number;
+  studentsRanked: number;
+  maxHeldDays: number;
+  perfectCount: number;
+  groups: GroupRankBlockT[];
+}
+
+export const SUBJECT_GROUP_BREAKDOWN_QUERY = gql<
+  { subjectGroupAttendanceBreakdown: GroupRankBreakdownT },
+  { window: string; anchorKey: string; track: string; sortBy?: string | null }
+>`
+  query SubjectGroupAttendanceBreakdown($window: String!, $anchorKey: String!, $track: String!, $sortBy: String) {
+    subjectGroupAttendanceBreakdown(window: $window, anchorKey: $anchorKey, track: $track, sortBy: $sortBy) {
+      fromKey toKey minHeldDays lastMarkedKey
+      groupsMeasured studentsRanked maxHeldDays perfectCount
+      groups {
+        groupId code nameBn level gender memberCount heldDays
+        rows { rank id name unitLabel classLabel classLevel heldDays absentDays presentPct lateDays leaveDays belowFloor }
+      }
+    }
+  }
+`;

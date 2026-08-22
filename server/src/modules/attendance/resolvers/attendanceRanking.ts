@@ -17,6 +17,9 @@ import {
   type RankWindow,
   type StudentRankAxis,
   type StudentRankSort,
+  rankStudentsByGroupBreakdown,
+  type GroupRankBlock,
+  type GroupRankBreakdown,
 } from "../services/AttendanceRankingService";
 
 const RankRowRef = builder.objectRef<RankRow>("AttendanceRankRow");
@@ -101,6 +104,67 @@ builder.queryField("staffAttendanceRanking", (t) =>
       rankStaff({
         window: args.window as RankWindow,
         anchorKey: args.anchorKey,
+        academicYearId: args.academicYearId ?? undefined,
+      }),
+  }),
+);
+
+const GroupRankBlockRef = builder.objectRef<GroupRankBlock>("SubjectGroupRankBlock");
+GroupRankBlockRef.implement({
+  description:
+    "One group's card in the breakdown: the group, ITS OWN denominator (`heldDays`), and " +
+    "its own ranked list. Groups in one breakdown routinely carry different denominators, " +
+    "which is why each ships its own rather than sharing a header figure.",
+  fields: (t) => ({
+    groupId: t.exposeString("groupId"),
+    code: t.exposeString("code"),
+    nameBn: t.exposeString("nameBn"),
+    level: t.exposeString("level"),
+    gender: t.exposeString("gender"),
+    memberCount: t.exposeInt("memberCount"),
+    heldDays: t.exposeInt("heldDays"),
+    rows: t.field({ type: [RankRowRef], resolve: (b) => b.rows }),
+  }),
+});
+
+const GroupRankBreakdownRef = builder.objectRef<GroupRankBreakdown>("SubjectGroupRankBreakdown");
+GroupRankBreakdownRef.implement({
+  fields: (t) => ({
+    fromKey: t.exposeString("fromKey"),
+    toKey: t.exposeString("toKey"),
+    minHeldDays: t.int({ resolve: () => MIN_HELD_DAYS }),
+    lastMarkedKey: t.string({ nullable: true, resolve: (r) => r.lastMarkedKey }),
+    groupsMeasured: t.exposeInt("groupsMeasured"),
+    studentsRanked: t.exposeInt("studentsRanked"),
+    maxHeldDays: t.exposeInt("maxHeldDays"),
+    perfectCount: t.exposeInt("perfectCount"),
+    groups: t.field({ type: [GroupRankBlockRef], resolve: (r) => r.groups }),
+  }),
+});
+
+builder.queryField("subjectGroupAttendanceBreakdown", (t) =>
+  t.field({
+    type: GroupRankBreakdownRef,
+    description:
+      "Rank EVERY active group of one track side by side, each against its own held-day " +
+      "denominator. `track` ∈ quran | arabic; `window` and `sortBy` behave exactly as on " +
+      "`studentAttendanceRanking`. Unlike axis=track — which pools the whole track into one " +
+      "list — this keeps each group's ranking separate, because a group that held 4 days and " +
+      "one that held 28 are not comparable on a shared list. Requires attendance:manage.",
+    authScopes: { hasPermission: "attendance:manage" },
+    args: {
+      window: t.arg.string({ required: true }),
+      anchorKey: t.arg.string({ required: true }),
+      track: t.arg.string({ required: true }),
+      sortBy: t.arg.string({ required: false }),
+      academicYearId: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args) =>
+      rankStudentsByGroupBreakdown({
+        window: args.window as RankWindow,
+        anchorKey: args.anchorKey,
+        track: args.track === "arabic" ? "arabic" : "quran",
+        sortBy: (args.sortBy as StudentRankSort | null) ?? undefined,
         academicYearId: args.academicYearId ?? undefined,
       }),
   }),
