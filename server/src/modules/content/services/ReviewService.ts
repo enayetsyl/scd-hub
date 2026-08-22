@@ -61,7 +61,13 @@ export function advanceOnApprove(current: ReviewStatus): ReviewStatus | null {
 export function reviewStatusForVerdict(current: ReviewStatus, verdict: ReviewVerdict): ReviewStatus | null {
   if (current === "gold") return null;
   if (verdict === "APPROVE") return current === "draft" ? "reviewed" : null;
-  return current === "reviewed" ? "draft" : null; // CHANGES_REQUESTED
+  // APPROVE_WITH_CONDITION is an approval with a HOLD (D-#525): it must never advance
+  // draft→reviewed, or the Principal could publish a question whose condition nobody has
+  // met. Stated explicitly rather than left to fall through with CHANGES_REQUESTED — the
+  // enum has three values now and a silent fallthrough is how the next one gets it wrong.
+  // Both non-APPROVE verdicts also REVERT reviewed→draft, so a reviewer who changes an
+  // earlier APPROVE to either of them takes the question back off the publishable pile.
+  return current === "reviewed" ? "draft" : null; // APPROVE_WITH_CONDITION | CHANGES_REQUESTED
 }
 
 interface AddressKeyInput {
@@ -342,6 +348,11 @@ export async function submitPlanReview(input: SubmitReviewInput): Promise<Review
     throw new ReviewError(`Unknown verdict: ${input.verdict}`);
   }
   const verdict = input.verdict as ReviewVerdict;
+  // APPROVE_WITH_CONDITION is questions-only (D-#525). The plan loop is shipped and
+  // working; the owner asked for the third verdict on questions and nothing else.
+  if (verdict === "APPROVE_WITH_CONDITION") {
+    throw new ReviewError("APPROVE_WITH_CONDITION is not available on plan reviews");
+  }
   const feedback = input.feedback?.trim() ?? "";
   if (verdict === "CHANGES_REQUESTED" && feedback.length === 0) {
     throw new ReviewError("feedback is required when requesting changes");

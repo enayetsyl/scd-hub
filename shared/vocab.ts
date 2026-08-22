@@ -200,7 +200,12 @@ export type TrackerKind = (typeof TRACKER_KINDS)[number];
 /** Plan-review verdicts (D-#38/#39) — a teacher reviewer's call on an assigned plan.
  *  APPROVE drives the artifact `draft → reviewed`; CHANGES_REQUESTED leaves it `draft`
  *  (the admin re-imports a revision and reassigns). App-native — no wire-contract twin. */
-export const REVIEW_VERDICTS = ["APPROVE", "CHANGES_REQUESTED"] as const;
+/** Reviewer verdicts. `APPROVE_WITH_CONDITION` is QUESTIONS-ONLY (D-#525): the plan
+ *  loop still offers the original two, and `submitPlanReview` refuses the third.
+ *  It is an APPROVAL WITH A HOLD — the question does NOT advance to `reviewed` and so
+ *  cannot be published; the condition text is mandatory, and clearing it sends the
+ *  question back to the reviewer for another round. */
+export const REVIEW_VERDICTS = ["APPROVE", "APPROVE_WITH_CONDITION", "CHANGES_REQUESTED"] as const;
 export type ReviewVerdict = (typeof REVIEW_VERDICTS)[number];
 
 /** Default section auto-created per class (D-#1). Code stays "Main"; UI shows the label. */
@@ -296,6 +301,7 @@ export const REVIEW_STATUS_LABELS_BN: Record<ReviewStatus, string> = {
 
 export const REVIEW_VERDICT_LABELS_BN: Record<ReviewVerdict, string> = {
   APPROVE: "অনুমোদন",
+  APPROVE_WITH_CONDITION: "শর্তসাপেক্ষ অনুমোদন",
   CHANGES_REQUESTED: "পরিবর্তন প্রয়োজন",
 };
 
@@ -836,6 +842,7 @@ export const REVIEW_STATUS_LABELS_EN: Record<ReviewStatus, string> = {
 
 export const REVIEW_VERDICT_LABELS_EN: Record<ReviewVerdict, string> = {
   APPROVE: "Approve",
+  APPROVE_WITH_CONDITION: "Approve with condition",
   CHANGES_REQUESTED: "Changes requested",
 };
 

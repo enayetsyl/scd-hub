@@ -48,7 +48,9 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
   const [{ data, fetching, error }, refetch] = useQuery({ query: MY_QUESTION_REVIEWS });
   const [, submit] = useMutation(SUBMIT_QUESTION_REVIEW);
 
-  const [openReasonFor, setOpenReasonFor] = useState<string | null>(null);
+  /** Which round has a form open, and WHICH form — reject (reason optional) or
+   *  condition (condition mandatory). One at a time, as before (D-#525). */
+  const [openFormFor, setOpenFormFor] = useState<{ id: string; mode: "reject" | "condition" } | null>(null);
   const [reason, setReason] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -64,23 +66,31 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
 
   async function decide(
     round: QuestionReviewRoundT,
-    verdict: "APPROVE" | "CHANGES_REQUESTED",
+    verdict: "APPROVE" | "APPROVE_WITH_CONDITION" | "CHANGES_REQUESTED",
   ): Promise<void> {
+    const trimmed = reason.trim();
+    // Guarded here as well as on the server (D-#525): the condition is what someone later
+    // has to READ and clear, so an empty one is caught before the round is written, not
+    // returned as an error after the reviewer thinks they are done.
+    if (verdict === "APPROVE_WITH_CONDITION" && trimmed === "") {
+      setFailure(STR.qrConditionRequired);
+      return;
+    }
     setBusyId(round.id);
     setFailure(null);
-    const trimmed = reason.trim();
     const res = await submit({
       assignmentId: round.id,
       verdict,
-      // Empty → undefined: an omitted reason is the normal case, not an error (Q2.4).
-      reason: verdict === "CHANGES_REQUESTED" && trimmed !== "" ? trimmed : undefined,
+      // Empty → undefined: an omitted reason is the normal case on a reject (Q2.4); on a
+      // condition it is mandatory and already guaranteed non-empty above.
+      reason: verdict !== "APPROVE" && trimmed !== "" ? trimmed : undefined,
     });
     setBusyId(null);
     if (res.error) {
       setFailure(friendlyError(res.error));
       return;
     }
-    setOpenReasonFor(null);
+    setOpenFormFor(null);
     setReason("");
     setNotice(STR.qrDecisionSaved);
     refetch({ requestPolicy: "network-only" });
@@ -109,7 +119,7 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
         ) : (
           rounds.map((round) => {
             const decided = round.status === "submitted";
-            const reasonOpen = openReasonFor === round.id;
+            const formOpen = openFormFor?.id === round.id ? openFormFor.mode : null;
             return (
               <Card key={round.id} style={{ marginBottom: space(3) }}>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1) }}>
@@ -130,27 +140,36 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
 
                 <Divider />
 
-                {reasonOpen ? (
+                {formOpen ? (
                   <View>
                     <Field
-                      label={STR.qrReasonOptional}
+                      label={formOpen === "condition" ? STR.qrConditionRequired : STR.qrReasonOptional}
                       value={reason}
                       onChangeText={setReason}
                       multiline
-                      helper={STR.qrReasonHint}
+                      helper={formOpen === "condition" ? STR.qrConditionHint : STR.qrReasonHint}
                     />
                     <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
-                      <Button
-                        title={STR.qrReject}
-                        variant="danger"
-                        loading={busyId === round.id}
-                        onPress={() => void decide(round, "CHANGES_REQUESTED")}
-                      />
+                      {formOpen === "condition" ? (
+                        <Button
+                          title={STR.qrApproveWithCondition}
+                          loading={busyId === round.id}
+                          disabled={reason.trim() === ""}
+                          onPress={() => void decide(round, "APPROVE_WITH_CONDITION")}
+                        />
+                      ) : (
+                        <Button
+                          title={STR.qrReject}
+                          variant="danger"
+                          loading={busyId === round.id}
+                          onPress={() => void decide(round, "CHANGES_REQUESTED")}
+                        />
+                      )}
                       <Button
                         title={STR.cancel}
                         variant="ghost"
                         onPress={() => {
-                          setOpenReasonFor(null);
+                          setOpenFormFor(null);
                           setReason("");
                         }}
                       />
@@ -164,11 +183,19 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
                       onPress={() => void decide(round, "APPROVE")}
                     />
                     <Button
+                      title={STR.qrApproveWithCondition}
+                      variant="secondary"
+                      onPress={() => {
+                        setOpenFormFor({ id: round.id, mode: "condition" });
+                        setReason(round.verdict === "APPROVE_WITH_CONDITION" ? round.reason ?? "" : "");
+                      }}
+                    />
+                    <Button
                       title={STR.qrReject}
                       variant="secondary"
                       onPress={() => {
-                        setOpenReasonFor(round.id);
-                        setReason(round.reason ?? "");
+                        setOpenFormFor({ id: round.id, mode: "reject" });
+                        setReason(round.verdict === "CHANGES_REQUESTED" ? round.reason ?? "" : "");
                       }}
                     />
                     <Button
