@@ -869,6 +869,8 @@ export interface QuestionListItem {
   qid: string | null;
   topicTag: string | null;
   questionType: string | null;
+  /** Exercise family code (D-#511), e.g. QCAT-SOBDARTH. Null on older imports. */
+  category: string | null;
   paperRole: string | null;
   bloomLevel: string | null;
   difficulty: string | null;
@@ -884,6 +886,7 @@ export interface QuestionsVars {
   classLevel?: number | null;
   topicTag?: string | null;
   questionType?: string | null;
+  category?: string | null;
   bloomLevel?: string | null;
   difficulty?: string | null;
   paperRole?: string | null;
@@ -904,6 +907,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
     $classLevel: Int
     $topicTag: String
     $questionType: String
+    $category: String
     $bloomLevel: String
     $difficulty: String
     $paperRole: String
@@ -920,6 +924,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       classLevel: $classLevel
       topicTag: $topicTag
       questionType: $questionType
+      category: $category
       bloomLevel: $bloomLevel
       difficulty: $difficulty
       paperRole: $paperRole
@@ -937,6 +942,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       qid
       topicTag
       questionType
+      category
       paperRole
       bloomLevel
       difficulty
@@ -954,6 +960,15 @@ export const QUESTION_TOPIC_TAGS_QUERY = gql<
 >`
   query QuestionTopicTags($subject: String, $classLevel: Int) {
     questionTopicTags(subject: $subject, classLevel: $classLevel)
+  }
+`;
+
+export const QUESTION_CATEGORIES_QUERY = gql<
+  { questionCategories: string[] },
+  { subject?: string | null; classLevel?: number | null }
+>`
+  query QuestionCategories($subject: String, $classLevel: Int) {
+    questionCategories(subject: $subject, classLevel: $classLevel)
   }
 `;
 

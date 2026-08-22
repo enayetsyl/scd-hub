@@ -20,7 +20,7 @@ import {
   BLOOM_LEVELS,
   REVIEW_STATUSES,
 } from "@scd/shared";
-import { QUESTION_TOPIC_TAGS_QUERY } from "../graphql/operations";
+import { QUESTION_TOPIC_TAGS_QUERY, QUESTION_CATEGORIES_QUERY } from "../graphql/operations";
 import { EMPTY_FILTERS, type QbFilters } from "../state/QuestionBankContext";
 import { Chip, ChipRow, Field, Select, Muted, H2, Button } from "./ui";
 import {
@@ -29,6 +29,7 @@ import {
   difficultyLabel,
   paperRoleLabel,
   reviewStatusLabel,
+  questionCategoryLabel,
   bnNum,
 } from "../lib/labels";
 import { prettyCode } from "../lib/question";
@@ -62,6 +63,26 @@ export function FilterSheet({
     pause: !visible,
   });
   const topicTags = tagsQ.data?.questionTopicTags ?? [];
+
+  // Categories present in the chosen subject/class (D-#511). The group is rendered
+  // ONLY when this comes back non-empty — the axis exists for the C5 Bangla bank and
+  // for nothing else yet, and a row of chips that match zero questions is worse than
+  // no row at all. Narrowed by the DRAFT, so picking বাংলা / ৫ reveals it immediately.
+  const [catsQ] = useQuery({
+    query: QUESTION_CATEGORIES_QUERY,
+    variables: { subject: draft.subject, classLevel: draft.classLevel },
+    pause: !visible,
+  });
+  const categories = catsQ.data?.questionCategories ?? [];
+
+  // A category selected earlier must not become unclearable when the subject moves to
+  // one that has no categories: drop it with the group that offered it.
+  useEffect(() => {
+    if (!visible || catsQ.fetching) return;
+    if (draft.category && !categories.includes(draft.category)) {
+      setDraft((prev) => ({ ...prev, category: null }));
+    }
+  }, [visible, catsQ.fetching, categories, draft.category]);
 
   function set<K extends keyof QbFilters>(key: K, value: QbFilters[K]): void {
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -121,6 +142,22 @@ export function FilterSheet({
                 <Chip key={q} label={prettyCode(q)} selected={draft.questionType === q} onPress={() => toggle("questionType", q)} />
               ))}
             </ChipRow>
+
+            {categories.length > 0 ? (
+              <>
+                <Muted style={styles.groupGap}>{STR.qbCategory}</Muted>
+                <ChipRow>
+                  {categories.map((c) => (
+                    <Chip
+                      key={c}
+                      label={questionCategoryLabel(c)}
+                      selected={draft.category === c}
+                      onPress={() => toggle("category", c)}
+                    />
+                  ))}
+                </ChipRow>
+              </>
+            ) : null}
 
             <Muted style={styles.groupGap}>{STR.paperRole}</Muted>
             <ChipRow>
