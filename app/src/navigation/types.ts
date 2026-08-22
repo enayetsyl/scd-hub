@@ -350,6 +350,23 @@ export type EnglishDriveStackParamList = {
   EnglishDriveUpload: undefined;
 };
 
+/** Teaching Notes (TN-1) — the (class × subject) pedagogy library: library home
+ *  (upload entry inside, P/O only), note viewer + comments, upload UI.
+ *  `TeachingNotesHome` MUST stay first — the stack's initial route takes no
+ *  params, and a param-requiring screen in that slot crashes the tab at runtime. */
+export type TeachingNotesStackParamList = {
+  TeachingNotesHome: undefined;
+  TeachingNoteDoc: { noteId: string; title?: string };
+  /** All optional: "new version" prefills the identity, a cold open prefills nothing. */
+  TeachingNoteUpload: {
+    classLevel?: number;
+    subject?: string;
+    kind?: string;
+    seq?: number;
+    title?: string;
+  };
+};
+
 /** Saturday Qur'an-Hifz Revision (SR app surfaces over SR-1..SR-4) — staff stack
  *  (tracker:read || roster:manage tab; GUARDIAN excluded). */
 export type RevisionStackParamList = {
@@ -483,6 +500,7 @@ export type TabParamList = {
   ObservationTab: NavigatorScreenParams<ObservationStackParamList>;
   FreeMixingTab: NavigatorScreenParams<FreeMixingStackParamList>;
   EnglishDriveTab: NavigatorScreenParams<EnglishDriveStackParamList>;
+  TeachingNotesTab: NavigatorScreenParams<TeachingNotesStackParamList>;
   RevisionTab: NavigatorScreenParams<RevisionStackParamList>;
   FinanceTab: NavigatorScreenParams<FinanceStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;

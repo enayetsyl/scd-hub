@@ -44,6 +44,7 @@ import { assertFileReadAccess } from "../modules/trackers/services/HomeworkFileS
 import { assertClassTestFileReadAccess } from "../modules/trackers/services/ClassTestFileService";
 import { assertAssignmentFileReadAccess } from "../modules/trackers/services/AssignmentFileService";
 import { assertEnglishDriveFileReadAccess } from "../modules/english-drive/services/EnglishDriveService";
+import { assertTeachingNoteFileReadAccess } from "../modules/teaching-notes/services/TeachingNoteService";
 import { docxToPdf, isDocxMime } from "../modules/platform/services/docxConvert";
 import {
   validateChatUpload,
@@ -134,6 +135,15 @@ export function validateEnglishDriveUpload(mime: string, sizeBytes: number): str
   if (sizeBytes > MAX_ENGLISH_DRIVE_FILE_BYTES) return FILE_ERRORS_BN.tooLarge;
   if (sizeBytes <= 0) return FILE_ERRORS_BN.badMime;
   return null;
+}
+
+// Teaching-note binaries (TN-1, prd-teaching-notes) — the SAME rule as an English
+// Drive binary (PDF or Word, ≤ 10 MB), reusing that MIME set rather than declaring a
+// second identical one: it is the same question about the same file types, and a
+// duplicate list is a second thing to keep in step for no benefit. Markdown is the
+// primary path for this library and never comes through here.
+export function validateTeachingNoteUpload(mime: string, sizeBytes: number): string | null {
+  return validateEnglishDriveUpload(mime, sizeBytes);
 }
 
 // Class-note attachments (Feature: class notes get attachments) — jpeg/png/pdf ≤ 10 MB,
@@ -737,6 +747,94 @@ filesRouter.post("/english-drive", parseClassNoteUpload, async (req: Request, re
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/teaching-note — Office/Principal upload a PDF/DOCX teaching note
+// (TN-1, prd-teaching-notes §6). roster:manage + pdf/doc/docx ≤ 10 MB, Drive-first
+// (a Drive failure persists nothing). The returned fileId is carried into
+// uploadTeachingNote with format=PDF|DOCX. The read gate (GET below) reverse-
+// resolves the owning note's (class × subject) scope.
+// ---------------------------------------------------------------------------
+
+filesRouter.post("/teaching-note", parseClassNoteUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "roster:manage")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const rejection = validateTeachingNoteUpload(file.mimetype, file.size);
+  if (rejection) {
+    res.status(422).json({ error: rejection });
+    return;
+  }
+  try {
+    const originalName = decodeUploadName(file.originalname);
+    const driveFileId = await uploadToDrive({
+      name: `${Date.now()}_${originalName}`,
+      mime: file.mimetype,
+      data: file.buffer,
+      year: String(new Date().getFullYear()),
+      subfolder: "teaching-notes",
+    });
+    const stored = await StoredFile.create({
+      kind: "teaching_note" as StoredFileKind,
+      mime: file.mimetype,
+      sizeBytes: file.size,
+      originalName,
+      driveFileId,
+      uploadedBy: ctx.auth.userId,
+    });
+
+    // A DOCX is converted so preview + print get a real PDF; the .docx stays the
+    // download. Best-effort — a conversion failure leaves pdfFileId null and the
+    // caller falls back to the original (the English Drive posture).
+    let pdfFileId: string | null = null;
+    if (isDocxMime(file.mimetype)) {
+      try {
+        const pdf = await docxToPdf(file.buffer, originalName);
+        const pdfDriveId = await uploadToDrive({
+          name: `${Date.now()}_${originalName.replace(/\.[^.]+$/, "")}.pdf`,
+          mime: "application/pdf",
+          data: pdf,
+          year: String(new Date().getFullYear()),
+          subfolder: "teaching-notes",
+        });
+        const pdfStored = await StoredFile.create({
+          kind: "teaching_note" as StoredFileKind,
+          mime: "application/pdf",
+          sizeBytes: pdf.byteLength,
+          originalName: `${originalName.replace(/\.[^.]+$/, "")}.pdf`,
+          driveFileId: pdfDriveId,
+          uploadedBy: ctx.auth.userId,
+        });
+        pdfFileId = pdfStored._id.toString();
+      } catch (convErr) {
+        if (convErr instanceof DriveUnavailableError) throw convErr;
+        console.warn("teaching-note DOCX→PDF conversion failed:", (convErr as Error)?.message);
+      }
+    }
+
+    res.json({
+      fileId: stored._id.toString(),
+      pdfFileId,
+      kind: "teaching_note",
+      mime: stored.mime,
+      sizeBytes: stored.sizeBytes,
+      originalName: stored.originalName,
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      res.status(503).json({ error: FILE_ERRORS_BN.driveDown });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /files/comment — teacher attaches a file to a daily student comment (CM-2,
 // prd-comments-meetings §5). tracker:write + the comment's section verified
 // server-side; MIME image/pdf/video/audio ≤ 10 MB (chat parity, D-#108); Drive-first
@@ -1020,6 +1118,10 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       }
     } else if (file.kind === "english_drive") {
       await assertEnglishDriveFileReadAccess(ctx, file);
+    } else if (file.kind === "teaching_note") {
+      // Staff-only pedagogy material: the owning note's (class × subject) teaching
+      // scope, resolved the same way the GraphQL read resolves it (TN-1, D-#515).
+      await assertTeachingNoteFileReadAccess(ctx, file);
     } else if (file.kind === "print_upload") {
       // A print upload is readable by the teacher who sent it and by the Office/Principal
       // who has to print it (PQ-2, D-#281) — nobody else.

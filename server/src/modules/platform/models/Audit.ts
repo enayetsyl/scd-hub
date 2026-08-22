@@ -171,6 +171,8 @@ export type AuditEventKind =
   | "CT_QUESTION_REVIEWED"        // the teacher's verdict on a round — approve (locks) or changes-requested with comment (tracker:write)
   | "ENGLISH_DRIVE_UPLOADED"      // an English Drive md document uploaded — new (class, block, kind) (D-#344; roster:manage)
   | "ENGLISH_DRIVE_REPLACED"      // a newer version replaced an existing (class, block, kind) doc — old row stamped replacedAt (D-#344)
+  | "TEACHING_NOTE_UPLOADED"      // a teaching note uploaded — new (class, subject, kind, seq) (TN-1, D-#513; roster:manage)
+  | "TEACHING_NOTE_REPLACED"      // a newer version replaced an existing teaching note — old row stamped replacedAt, retained (TN-1, D-#516)
   | "ASSIGNMENT_ITEM_EDITED"      // a delivered assignment was edited after the fact (D-#353)
   | "ASSIGNMENT_ITEM_DELETED"     // a still-DRAFT delivered assignment was deleted (D-#353)
   | "MONTHLY_REPORT_CONFIG_SET"    // Principal edited the monthly-report thresholds / gate / calendar — prior + new retained (MR-2, D-#395)
