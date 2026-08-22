@@ -22,6 +22,8 @@ import { Guardian } from "../../foundation/models/Guardian";
 import { User } from "../../foundation/models/User";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { Section } from "../../foundation/models/Section";
+import { Class } from "../../foundation/models/Class";
+import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { dateKeyOf } from "../../attendance/dates";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
@@ -78,6 +80,14 @@ const dedupeKeys = {
   /** Per test+guardian (D-#472). NOT versioned: a reprint of the same paper is the same
    *  exam on the same day, so re-sending it to print must never re-notify the family. */
   classTestUpcoming: (testId: string, guardianId: string) => `CTUP:${testId}:${guardianId}`,
+  /** Per NOTE VERSION + recipient (TN-3): keyed on the version row, so a genuinely
+   *  new version is a new thing to say while re-running the mutation is a no-op. */
+  teachingNotePublished: (noteId: string, userId: string) => `TNPUB:${noteId}:${userId}`,
+  /** Per comment + recipient: a comment is written once, so this is naturally once. */
+  teachingNoteComment: (commentId: string, userId: string) => `TNCMT:${commentId}:${userId}`,
+  /** Per comment: the FIRST close notifies its author. A reopen-then-reclose is
+   *  deliberately silent — the author already knows the thread is being worked. */
+  teachingNoteCommentAddressed: (commentId: string) => `TNCAD:${commentId}`,
   /** Per comment+guardian (CM-2): a comment is delivered once + then immutable, so a
    *  re-delivery is correctly a no-op (no version — unlike the class-test republish). */
   studentComment: (commentId: string, guardianId: string) => `SCMT:${commentId}:${guardianId}`,
@@ -1352,4 +1362,161 @@ export async function emitClassTestUpcoming(ev: ClassTestUpcomingEvent): Promise
     );
   });
   return notified;
+}
+
+// ---------------------------------------------------------------------------
+// Teaching notes / নোট ও গাইড (TN-3, D-#519–#523). STAFF-ONLY: this library has
+// no guardian path (D-#521), so every recipient here is a User.
+//
+// The published-event audience is resolved from the ROUTINE, for the same reason
+// the library's read scope is (D-#521): ARABIC and QURAN have no `Subject` row,
+// so a grant-based lookup would silently notify nobody for those two subjects —
+// and "nobody complained" is indistinguishable from "it worked".
+// ---------------------------------------------------------------------------
+
+export interface TeachingNotePublishedEvent {
+  noteId: IdLike;
+  classLevel: number;
+  subject: string;
+  title: string;
+  className: string;
+  subjectLabel: string;
+  /** The uploader — excluded from their own notification. */
+  uploadedBy: IdLike;
+}
+
+/** The teachers who teach `subject` to `classLevel`, from the routine. */
+async function teachersOfPair(classLevel: number, subject: string): Promise<string[]> {
+  const classes = (await Class.find({ level: classLevel }).select("_id").lean()) as unknown as Array<{
+    _id: IdLike;
+  }>;
+  const classIds = classes.map((c) => c._id.toString());
+
+  const slots = (await RoutineSlot.find({ subject, active: { $ne: false } })
+    .select("teacherId groupType classId")
+    .lean()) as unknown as Array<{
+    teacherId?: IdLike | null;
+    groupType: string;
+    classId?: IdLike | null;
+  }>;
+
+  const ids = new Set<string>();
+  for (const s of slots) {
+    if (!s.teacherId) continue;
+    // A cross-grade group (Quran/Arabic) spans classes by construction — its
+    // teacher is an audience for that subject at every level (D-#521).
+    if (s.groupType === "subjectgroup") ids.add(s.teacherId.toString());
+    else if (s.classId && classIds.includes(s.classId.toString())) ids.add(s.teacherId.toString());
+  }
+  return [...ids];
+}
+
+export async function emitTeachingNotePublished(ev: TeachingNotePublishedEvent): Promise<void> {
+  return bestEffort("teaching note published", async () => {
+    const recipients = (await teachersOfPair(ev.classLevel, ev.subject)).filter(
+      (id) => id !== ev.uploadedBy.toString(),
+    );
+    if (recipients.length === 0) return;
+
+    const titleBn = await renderTemplate("teachingNote.published.title");
+    const bodyBn = await renderTemplate("teachingNote.published.body", {
+      className: ev.className,
+      subject: ev.subjectLabel,
+      title: ev.title,
+    });
+    for (const userId of recipients) {
+      await emit({
+        recipientUserId: userId,
+        kind: "TEACHING_NOTE_PUBLISHED",
+        titleBn,
+        bodyBn,
+        refs: { teachingNoteId: ev.noteId.toString() },
+        dedupeKey: dedupeKeys.teachingNotePublished(ev.noteId.toString(), userId),
+      });
+    }
+  });
+}
+
+export interface TeachingNoteCommentEvent {
+  commentId: IdLike;
+  noteId: IdLike;
+  title: string;
+  className: string;
+  subjectLabel: string;
+  /** The commenting teacher — excluded from their own notification. */
+  authorId: IdLike;
+  authorName: string;
+  /** The uploader of the note's CURRENT version. */
+  uploaderId?: IdLike | null;
+}
+
+/** A new suggestion → the note's uploader + the Principal (who supervises the loop). */
+export async function emitTeachingNoteComment(ev: TeachingNoteCommentEvent): Promise<void> {
+  return bestEffort("teaching note comment", async () => {
+    const principals = (await User.find(actingAsFilter(["PRINCIPAL"]))
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+
+    const ids = new Set<string>(principals.map((p) => p._id.toString()));
+    if (ev.uploaderId) ids.add(ev.uploaderId.toString());
+    ids.delete(ev.authorId.toString()); // never notify someone of their own comment
+    if (ids.size === 0) return;
+
+    const titleBn = await renderTemplate("teachingNote.comment.title");
+    const bodyBn = await renderTemplate("teachingNote.comment.body", {
+      teacherName: ev.authorName,
+      className: ev.className,
+      subject: ev.subjectLabel,
+      title: ev.title,
+    });
+    for (const userId of ids) {
+      await emit({
+        recipientUserId: userId,
+        kind: "TEACHING_NOTE_COMMENT",
+        titleBn,
+        bodyBn,
+        refs: {
+          teachingNoteId: ev.noteId.toString(),
+          teachingNoteCommentId: ev.commentId.toString(),
+        },
+        dedupeKey: dedupeKeys.teachingNoteComment(ev.commentId.toString(), userId),
+      });
+    }
+  });
+}
+
+export interface TeachingNoteCommentAddressedEvent {
+  commentId: IdLike;
+  noteId: IdLike;
+  title: string;
+  className: string;
+  subjectLabel: string;
+  /** The comment's author — the recipient. */
+  authorId: IdLike;
+  /** Who closed it; if that is the author themselves, nothing is emitted. */
+  addressedBy: IdLike;
+}
+
+/** A suggestion marked addressed → tell the teacher who raised it. */
+export async function emitTeachingNoteCommentAddressed(
+  ev: TeachingNoteCommentAddressedEvent,
+): Promise<void> {
+  return bestEffort("teaching note comment addressed", async () => {
+    if (ev.authorId.toString() === ev.addressedBy.toString()) return;
+    await emit({
+      recipientUserId: ev.authorId.toString(),
+      kind: "TEACHING_NOTE_COMMENT_ADDRESSED",
+      titleBn: await renderTemplate("teachingNote.commentAddressed.title"),
+      bodyBn: await renderTemplate("teachingNote.commentAddressed.body", {
+        title: ev.title,
+        className: ev.className,
+        subject: ev.subjectLabel,
+      }),
+      refs: {
+        teachingNoteId: ev.noteId.toString(),
+        teachingNoteCommentId: ev.commentId.toString(),
+      },
+      dedupeKey: dedupeKeys.teachingNoteCommentAddressed(ev.commentId.toString()),
+    });
+  });
 }

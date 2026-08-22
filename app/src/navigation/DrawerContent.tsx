@@ -71,6 +71,8 @@ const STAFF_NAV: NavSection[] = [
       { route: "VocabTab", labelKey: "tabVocab", icon: "🔤" },
       // English Drive (D-#344) — entry point per owner decision #9.
       { route: "EnglishDriveTab", labelKey: "tabEnglishDrive", icon: "🅰️" },
+      // Notes & guides (TN-1) — the (class × subject) teacher note library.
+      { route: "TeachingNotesTab", labelKey: "tabTeachingNotes", icon: "📓" },
     ],
   },
   {

@@ -630,6 +630,58 @@ export async function uploadEnglishDriveAsset(
 }
 
 // ---------------------------------------------------------------------------
+// Teaching-note binaries (TN-1, server: POST /files/teaching-note). Same rule as
+// an English Drive binary — PDF or Word (DOC/DOCX) ≤ 10 MB, Office/Principal.
+// Markdown is the primary path for this library and does NOT come through here;
+// it rides `contentMd` on the mutation, so it stays searchable and diff-able.
+// ---------------------------------------------------------------------------
+
+/** Upload ONE picked binary to POST /files/teaching-note. */
+export async function uploadTeachingNoteAsset(
+  asset: DocumentPicker.DocumentPickerAsset,
+): Promise<UploadedEnglishDriveFile> {
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", {
+      uri: asset.uri,
+      name: asset.name,
+      type: asset.mimeType ?? "application/octet-stream",
+    } as unknown as Blob);
+  }
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/teaching-note`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const body = (await res.json()) as {
+    fileId: string;
+    pdfFileId?: string | null;
+    originalName: string;
+    mime: string;
+  };
+  return {
+    fileId: body.fileId,
+    pdfFileId: body.pdfFileId ?? null,
+    originalName: body.originalName,
+    mime: body.mime,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Drag-and-drop uploads (web): the UploadDropZone hands the screens browser
 // File objects directly — same multipart POSTs (and server-side validation +
 // Bangla error messages) as the pickers, minus DocumentPicker. Web only; on
@@ -675,6 +727,10 @@ export const uploadClassNoteWebFile = (file: File): Promise<UploadedFile> =>
 /** Web drag-drop of a PDF/DOCX English Drive doc — carries the converted pdfFileId. */
 export const uploadEnglishDriveWebFile = (file: File): Promise<UploadedEnglishDriveFile> =>
   postWebFileForm<UploadedEnglishDriveFile>("/files/english-drive", file);
+
+/** Web drag-drop of a PDF/DOCX teaching note — carries the converted pdfFileId. */
+export const uploadTeachingNoteWebFile = (file: File): Promise<UploadedEnglishDriveFile> =>
+  postWebFileForm<UploadedEnglishDriveFile>("/files/teaching-note", file);
 
 export const uploadCommentWebFile = (commentId: string, file: File): Promise<UploadedChatFile> =>
   postWebFileForm<UploadedChatFile>("/files/comment", file, { commentId });

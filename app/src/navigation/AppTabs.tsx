@@ -34,6 +34,7 @@ import type {
   ObservationStackParamList,
   FreeMixingStackParamList,
   EnglishDriveStackParamList,
+  TeachingNotesStackParamList,
   RevisionStackParamList,
   FinanceStackParamList,
   HrStackParamList,
@@ -52,6 +53,7 @@ import { useQuery } from "urql";
 import { useAuth } from "../auth/AuthContext";
 import { MY_VIDEO_REVIEWS } from "../graphql/videoReview";
 import { ENGLISH_DRIVE_MY_CLASS_LEVELS } from "../graphql/englishDrive";
+import { TEACHING_NOTE_MY_SCOPE } from "../graphql/teachingNotes";
 import { useLanguage } from "../state/LanguageContext";
 import { useSidebar, DRAWER_PERMANENT_MIN_WIDTH } from "../state/SidebarContext";
 import { useNotifications } from "../state/NotificationContext";
@@ -177,6 +179,10 @@ import FreeMixingHomeScreen from "../screens/freemixing/FreeMixingHomeScreen";
 import EnglishDriveHomeScreen from "../screens/englishdrive/EnglishDriveHomeScreen";
 import EnglishDriveDocScreen from "../screens/englishdrive/EnglishDriveDocScreen";
 import EnglishDriveUploadScreen from "../screens/englishdrive/EnglishDriveUploadScreen";
+import TeachingNotesHomeScreen from "../screens/teachingnotes/TeachingNotesHomeScreen";
+import TeachingNoteDocScreen from "../screens/teachingnotes/TeachingNoteDocScreen";
+import TeachingNoteUploadScreen from "../screens/teachingnotes/TeachingNoteUploadScreen";
+import TeachingNoteOpenCommentsScreen from "../screens/teachingnotes/TeachingNoteOpenCommentsScreen";
 import ObservationReviewQueueScreen from "../screens/observation/ObservationReviewQueueScreen";
 import MyReviewHistoryScreen from "../screens/observation/MyReviewHistoryScreen";
 import ObservationRotaScreen from "../screens/observation/ObservationRotaScreen";
@@ -1011,6 +1017,37 @@ function EnglishDriveNavigator(): React.ReactElement {
   );
 }
 
+const TeachingNotesStack = createNativeStackNavigator<TeachingNotesStackParamList>();
+function TeachingNotesNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    // TeachingNotesHome stays FIRST: the first registered screen is the stack's
+    // initial route, and a param-requiring screen there crashes the tab at runtime.
+    <TeachingNotesStack.Navigator screenOptions={stackOptions}>
+      <TeachingNotesStack.Screen
+        name="TeachingNotesHome"
+        component={TeachingNotesHomeScreen}
+        options={{ title: STR.tnTitle }}
+      />
+      <TeachingNotesStack.Screen
+        name="TeachingNoteDoc"
+        component={TeachingNoteDocScreen}
+        options={({ route }) => ({ title: route.params.title || STR.tnTitle })}
+      />
+      <TeachingNotesStack.Screen
+        name="TeachingNoteUpload"
+        component={TeachingNoteUploadScreen}
+        options={{ title: STR.tnUploadTitle }}
+      />
+      <TeachingNotesStack.Screen
+        name="TeachingNoteOpenComments"
+        component={TeachingNoteOpenCommentsScreen}
+        options={{ title: STR.tnOpenComments }}
+      />
+    </TeachingNotesStack.Navigator>
+  );
+}
+
 const RevisionStack = createNativeStackNavigator<RevisionStackParamList>();
 function RevisionNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -1276,6 +1313,12 @@ export function AppTabs(): React.ReactElement {
     query: ENGLISH_DRIVE_MY_CLASS_LEVELS,
     pause: !isRole("TEACHER"),
   });
+  // Notes & guides tab (TN-1): P/O always; a TEACHER only when the server says
+  // they hold at least one (class × subject) pair — the same probe the picker uses.
+  const [teachingNotesQ] = useQuery({
+    query: TEACHING_NOTE_MY_SCOPE,
+    pause: !isRole("TEACHER"),
+  });
   // Permanent left sidebar on laptop/desktop web; slide-over (☰) on phone/narrow.
   const { width } = useWindowDimensions();
   const wide = width >= DRAWER_PERMANENT_MIN_WIDTH;
@@ -1335,6 +1378,11 @@ export function AppTabs(): React.ReactElement {
   const canEnglishDrive =
     (can("roster:manage")) ||
     (isRole("TEACHER") && (engDriveQ.data?.englishDriveMyClassLevels.length ?? 0) > 0);
+  // Notes & guides (TN-1): upload = roster:manage (P/O); a teacher sees the tab
+  // only when their (class × subject) pair set is non-empty. GUARDIAN never.
+  const canTeachingNotes =
+    can("roster:manage") ||
+    (isRole("TEACHER") && (teachingNotesQ.data?.teachingNoteMyScope.length ?? 0) > 0);
   // Saturday Qur'an-Hifz Revision (SR app surfaces): Hifz teachers via tracker:read
   // (record/edit/deliver/history); Principal/Office via roster:manage (dashboards +
   // completeness chase). Every action is re-gated + row-scoped server-side. GUARDIAN
@@ -1380,8 +1428,8 @@ export function AppTabs(): React.ReactElement {
     canHome || canContent || canQuestions || canSets || canTrackers || canHomework ||
     canAssignment || canReview || canRoutine || canAttendance || canPrint || canLibrary ||
     canChat || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
-    canEnglishDrive || canRevision || canFinance || canHr || canReports || canSupportBook ||
-    canAdmin || canGuardian;
+    canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
+    canSupportBook || canAdmin || canGuardian;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -1449,6 +1497,7 @@ export function AppTabs(): React.ReactElement {
         {canFreeMixing ? <Drawer.Screen name="FreeMixingTab" component={FreeMixingNavigator} /> : null}
         {/* English Drive (D-#344) — P/O always; a teacher only with an ENG class. */}
         {canEnglishDrive ? <Drawer.Screen name="EnglishDriveTab" component={EnglishDriveNavigator} /> : null}
+        {canTeachingNotes ? <Drawer.Screen name="TeachingNotesTab" component={TeachingNotesNavigator} /> : null}
         {canRevision ? <Drawer.Screen name="RevisionTab" component={RevisionNavigator} /> : null}
         {canFinance ? <Drawer.Screen name="FinanceTab" component={FinanceNavigator} /> : null}
         {canHr ? <Drawer.Screen name="HrTab" component={HrNavigator} /> : null}
