@@ -18,6 +18,8 @@ import { SUBJECTS, CLASS_LEVELS } from "@scd/shared";
 import {
   ASSIGNABLE_QUESTIONS,
   ASSIGN_QUESTION_REVIEW_BULK,
+  ASSIGN_QUESTION_REVIEW_BY_CHAPTER,
+  QUESTION_CHAPTERS_QUERY,
   TEACHERS_QUERY,
 } from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
@@ -60,6 +62,40 @@ export default function AssignQuestionsScreen({ navigation }: Props): React.Reac
   });
   const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY });
   const [, assignBulk] = useMutation(ASSIGN_QUESTION_REVIEW_BULK);
+  const [, assignByChapter] = useMutation(ASSIGN_QUESTION_REVIEW_BY_CHAPTER);
+
+  // Chapter-wise assign (D-#525): the Principal's normal path is a whole chapter at a
+  // time, not 240 checkboxes. Offered only once a subject AND class are chosen, because
+  // a chapter number means nothing without them.
+  const [chapters, setChapters] = useState<number[]>([]);
+  const [{ data: chapterData }] = useQuery({
+    query: QUESTION_CHAPTERS_QUERY,
+    variables: { subject, classLevel },
+    pause: !subject || classLevel == null,
+  });
+  const chapterOptions = chapterData?.questionChapters ?? [];
+
+  async function assignChapters(): Promise<void> {
+    if (!reviewerId || !subject || classLevel == null || chapters.length === 0) return;
+    setBusy(true);
+    setFailure(null);
+    const res = await assignByChapter({ subject, classLevel, chapters, reviewerId });
+    setBusy(false);
+    if (res.error || !res.data) {
+      setFailure(friendlyError(res.error));
+      return;
+    }
+    const r = res.data.assignQuestionReviewByChapter;
+    const skipped = r.skippedPublished + r.skippedReviewed + r.skippedOpenRound;
+    // Always report the skips: "42 assigned" out of a 240-question chapter is
+    // indistinguishable from a bug unless the other 198 are accounted for.
+    setNotice(
+      `${STR.qrChapterAssigned}: ${bnNum(r.assigned)}/${bnNum(r.total)}` +
+        (skipped > 0 ? ` · ${STR.qrChapterSkipped}: ${bnNum(skipped)}` : ""),
+    );
+    setChapters([]);
+    refetch({ requestPolicy: "network-only" });
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -173,6 +209,33 @@ export default function AssignQuestionsScreen({ navigation }: Props): React.Reac
           disabled={!reviewerId || selected.size === 0}
           onPress={() => void assign()}
         />
+
+        {chapterOptions.length > 0 ? (
+          <>
+            <Divider />
+            <Muted>{STR.qrChapterAssign}</Muted>
+            <ChipRow>
+              {chapterOptions.map((c) => (
+                <Chip
+                  key={c}
+                  label={bnNum(c)}
+                  selected={chapters.includes(c)}
+                  onPress={() =>
+                    setChapters((prev) =>
+                      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c].sort((a, b) => a - b),
+                    )
+                  }
+                />
+              ))}
+            </ChipRow>
+            <Button
+              title={STR.qrChapterAssign}
+              loading={busy}
+              disabled={!reviewerId || chapters.length === 0}
+              onPress={() => void assignChapters()}
+            />
+          </>
+        ) : null}
 
         <Divider />
 

@@ -14,8 +14,11 @@ import type { QuestionListItem } from "../graphql/operations";
 export interface QbFilters {
   subject: string | null;
   classLevel: number | null;
-  topicTag: string | null;
-  questionType: string | null;
+  /** Multi-select axes (D-#524). Empty array = no constraint on that axis. */
+  topicTags: string[];
+  questionTypes: string[];
+  /** Chapter numbers, from the artifact's own address (D-#524). */
+  chapters: number[];
   /** Exercise family (D-#511) — only offered where the chosen slice has any. */
   category: string | null;
   paperRole: string | null;
@@ -29,8 +32,9 @@ export interface QbFilters {
 export const EMPTY_FILTERS: QbFilters = {
   subject: null,
   classLevel: null,
-  topicTag: null,
-  questionType: null,
+  topicTags: [],
+  questionTypes: [],
+  chapters: [],
   category: null,
   paperRole: null,
   difficulty: null,
@@ -71,9 +75,53 @@ function countActive(filters: QbFilters): number {
   let n = 0;
   for (const key of Object.keys(filters) as Array<keyof QbFilters>) {
     const v = filters[key];
-    if (v !== null && v !== "") n += 1;
+    // A multi-select axis counts ONCE however many chips are picked, and an empty
+    // array is not a filter at all — `[] !== null && [] !== ""` is true, so the old
+    // scalar test would have counted every cleared axis as active (D-#524).
+    if (Array.isArray(v)) {
+      if (v.length > 0) n += 1;
+    } else if (v !== null && v !== "") {
+      n += 1;
+    }
   }
   return n;
+}
+
+/**
+ * Coerce a persisted blob into the CURRENT filter shape.
+ *
+ * The multi-select axes were scalars before D-#524, and the persisted value survives
+ * an app update — so a returning user's storage still holds `topicTag: "TOP-…"` where
+ * the code now expects `topicTags: [...]`. Without this the first `.map` over it throws
+ * and the bank screen dies on open. Unknown/!!corrupt values fall back to the empty
+ * filter rather than propagating.
+ */
+export function normalizeFilters(raw: unknown): QbFilters {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const strList = (many: unknown, one: unknown): string[] => {
+    if (Array.isArray(many)) return many.filter((v): v is string => typeof v === "string" && v !== "");
+    return typeof one === "string" && one !== "" ? [one] : [];
+  };
+  const numList = (many: unknown): number[] => {
+    if (!Array.isArray(many)) return [];
+    return many.map((v) => Number(v)).filter((n) => Number.isInteger(n));
+  };
+  const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
+  const text = (v: unknown): string => (typeof v === "string" ? v : "");
+  return {
+    subject: str(r.subject),
+    classLevel: Number.isInteger(r.classLevel) ? (r.classLevel as number) : null,
+    topicTags: strList(r.topicTags, r.topicTag),
+    questionTypes: strList(r.questionTypes, r.questionType),
+    chapters: numList(r.chapters),
+    category: str(r.category),
+    paperRole: str(r.paperRole),
+    difficulty: str(r.difficulty),
+    bloomLevel: str(r.bloomLevel),
+    reviewStatus: str(r.reviewStatus),
+    marksMin: text(r.marksMin),
+    marksMax: text(r.marksMax),
+  };
 }
 
 interface BrowseState {
@@ -98,11 +146,10 @@ export function QuestionBankProvider({ children }: { children: React.ReactNode }
       const raw = await getItem(STORAGE_KEY);
       if (raw) {
         try {
-          const parsed = JSON.parse(raw) as Partial<QbFilters & { search: string }>;
-          const { search: persistedSearch, ...rest } = parsed;
+          const parsed = JSON.parse(raw) as Record<string, unknown>;
           setBrowse({
-            filters: { ...EMPTY_FILTERS, ...rest },
-            search: typeof persistedSearch === "string" ? persistedSearch : "",
+            filters: normalizeFilters(parsed),
+            search: typeof parsed.search === "string" ? (parsed.search as string) : "",
           });
         } catch {
           /* ignore corrupt persisted value */
@@ -136,8 +183,9 @@ export function QuestionBankProvider({ children }: { children: React.ReactNode }
   const clearFilter = useCallback(
     (key: keyof QbFilters) => {
       const prev = browseRef.current;
+      const empty = EMPTY_FILTERS[key];
       commit({
-        filters: { ...prev.filters, [key]: key === "marksMin" || key === "marksMax" ? "" : null },
+        filters: { ...prev.filters, [key]: Array.isArray(empty) ? [] : empty },
         search: prev.search,
       });
     },

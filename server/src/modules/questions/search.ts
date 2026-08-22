@@ -52,3 +52,49 @@ export function orderQuestionCategories(
     .sort((a, b) => a.localeCompare(b, "bn"));
   return [...known, ...unknown];
 }
+
+/**
+ * Apply one filter axis that accepts either a multi-select list or a single value (D-#524).
+ *
+ * A NON-EMPTY list wins and becomes `$in`. An EMPTY list is no constraint at all, NOT
+ * "match nothing" — the client sends `[]` the moment the teacher clears the last chip, and
+ * a `$in: []` there would blank the bank instead of widening it. With no list at all the
+ * single-value arg still applies, so an installed app that has not taken the OTA keeps
+ * working against the new server unchanged.
+ */
+export function applyMultiFilter(
+  filter: Record<string, unknown>,
+  path: string,
+  many: readonly (string | null | undefined)[] | null | undefined,
+  one: string | null | undefined,
+): void {
+  const values = (many ?? []).filter((v): v is string => typeof v === "string" && v.trim() !== "");
+  if (values.length > 0) {
+    filter[path] = { $in: values };
+    return;
+  }
+  if (one) filter[path] = one;
+}
+
+/**
+ * The chapter numbers a slice actually contains, ascending (D-#524).
+ *
+ * `address.number` is Mixed on the model: the question builder writes an integer, older
+ * plan imports wrote a string. Both are coerced and de-duplicated so "4" and 4 are one
+ * chapter, and the sort is NUMERIC — a string sort would file chapter 10 before 9.
+ * Anything that is not a positive whole number is dropped rather than rendered as a chip.
+ */
+export function orderQuestionChapters(raw: readonly unknown[]): number[] {
+  const nums = new Set<number>();
+  for (const v of raw) {
+    if (typeof v === "boolean") continue;
+    const n = typeof v === "number" ? v : Number(String(v).trim());
+    if (Number.isInteger(n) && n > 0) nums.add(n);
+  }
+  return [...nums].sort((a, b) => a - b);
+}
+
+/** Both forms a chapter number can take in `address.number`, for a Mongo `$in`. */
+export function chapterMatchValues(chapters: readonly number[]): (number | string)[] {
+  return chapters.filter((c) => Number.isInteger(c)).flatMap((c) => [c, String(c)]);
+}

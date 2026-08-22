@@ -820,6 +820,39 @@ export const ASSIGN_QUESTION_REVIEW_BULK = gql<
 `;
 
 /** Accept or reject. `reason` is optional even on CHANGES_REQUESTED (Q2.4). */
+export const ASSIGN_QUESTION_REVIEW_BY_CHAPTER = gql<
+  {
+    assignQuestionReviewByChapter: {
+      assigned: number;
+      skippedPublished: number;
+      skippedReviewed: number;
+      skippedOpenRound: number;
+      total: number;
+    };
+  },
+  { subject: string; classLevel: number; chapters: number[]; reviewerId: string }
+>`
+  mutation AssignQuestionReviewByChapter(
+    $subject: String!
+    $classLevel: Int!
+    $chapters: [Int!]!
+    $reviewerId: String!
+  ) {
+    assignQuestionReviewByChapter(
+      subject: $subject
+      classLevel: $classLevel
+      chapters: $chapters
+      reviewerId: $reviewerId
+    ) {
+      assigned
+      skippedPublished
+      skippedReviewed
+      skippedOpenRound
+      total
+    }
+  }
+`;
+
 export const SUBMIT_QUESTION_REVIEW = gql<
   { submitQuestionReview: QuestionReviewRoundT },
   { assignmentId: string; verdict: string; reason?: string | null }
@@ -884,8 +917,9 @@ export interface QuestionListItem {
 export interface QuestionsVars {
   subject?: string | null;
   classLevel?: number | null;
-  topicTag?: string | null;
-  questionType?: string | null;
+  topicTags?: string[] | null;
+  questionTypes?: string[] | null;
+  chapters?: number[] | null;
   category?: string | null;
   bloomLevel?: string | null;
   difficulty?: string | null;
@@ -905,8 +939,9 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
   query Questions(
     $subject: String
     $classLevel: Int
-    $topicTag: String
-    $questionType: String
+    $topicTags: [String!]
+    $questionTypes: [String!]
+    $chapters: [Int!]
     $category: String
     $bloomLevel: String
     $difficulty: String
@@ -922,8 +957,9 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
     questions(
       subject: $subject
       classLevel: $classLevel
-      topicTag: $topicTag
-      questionType: $questionType
+      topicTags: $topicTags
+      questionTypes: $questionTypes
+      chapters: $chapters
       category: $category
       bloomLevel: $bloomLevel
       difficulty: $difficulty
@@ -960,6 +996,15 @@ export const QUESTION_TOPIC_TAGS_QUERY = gql<
 >`
   query QuestionTopicTags($subject: String, $classLevel: Int) {
     questionTopicTags(subject: $subject, classLevel: $classLevel)
+  }
+`;
+
+export const QUESTION_CHAPTERS_QUERY = gql<
+  { questionChapters: number[] },
+  { subject?: string | null; classLevel?: number | null }
+>`
+  query QuestionChapters($subject: String, $classLevel: Int) {
+    questionChapters(subject: $subject, classLevel: $classLevel)
   }
 `;
 

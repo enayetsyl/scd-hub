@@ -20,9 +20,13 @@ import {
   BLOOM_LEVELS,
   REVIEW_STATUSES,
 } from "@scd/shared";
-import { QUESTION_TOPIC_TAGS_QUERY, QUESTION_CATEGORIES_QUERY } from "../graphql/operations";
+import {
+  QUESTION_TOPIC_TAGS_QUERY,
+  QUESTION_CATEGORIES_QUERY,
+  QUESTION_CHAPTERS_QUERY,
+} from "../graphql/operations";
 import { EMPTY_FILTERS, type QbFilters } from "../state/QuestionBankContext";
-import { Chip, ChipRow, Field, Select, Muted, H2, Button } from "./ui";
+import { Chip, ChipRow, Field, Muted, H2, Button } from "./ui";
 import {
   STR,
   subjectLabel,
@@ -84,6 +88,33 @@ export function FilterSheet({
     }
   }, [visible, catsQ.fetching, categories, draft.category]);
 
+  // Chapters present in the chosen subject/class (D-#524) — same data-driven rule as
+  // the category group: no chapters, no group.
+  const [chaptersQ] = useQuery({
+    query: QUESTION_CHAPTERS_QUERY,
+    variables: { subject: draft.subject, classLevel: draft.classLevel },
+    pause: !visible,
+  });
+  const chapters = chaptersQ.data?.questionChapters ?? [];
+
+  /** Toggle one value in a multi-select axis. Order is preserved so the chip row and
+   *  the applied-filter bar read the same way twice running. */
+  function toggleIn<K extends "topicTags" | "questionTypes">(key: K, value: string): void {
+    setDraft((prev) => {
+      const cur = prev[key];
+      return { ...prev, [key]: cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value] };
+    });
+  }
+
+  function toggleChapter(n: number): void {
+    setDraft((prev) => ({
+      ...prev,
+      chapters: prev.chapters.includes(n)
+        ? prev.chapters.filter((c) => c !== n)
+        : [...prev.chapters, n].sort((a, b) => a - b),
+    }));
+  }
+
   function set<K extends keyof QbFilters>(key: K, value: QbFilters[K]): void {
     setDraft((prev) => ({ ...prev, [key]: value }));
   }
@@ -115,19 +146,37 @@ export function FilterSheet({
               ))}
             </ChipRow>
 
-            <View style={styles.groupGap}>
-              <Select
-                label={STR.qbTopicTag}
-                value={draft.topicTag}
-                options={[
-                  { label: STR.qbTopicTagAny, value: "" },
-                  ...topicTags.map((t) => ({ label: t, value: t })),
-                ]}
-                onChange={(v) => set("topicTag", v === "" ? null : v)}
-                placeholder={STR.qbTopicTagAny}
-                searchable
-              />
-            </View>
+            {chapters.length > 0 ? (
+              <>
+                <Muted style={styles.groupGap}>{STR.qbChapter}</Muted>
+                <ChipRow>
+                  {chapters.map((c) => (
+                    <Chip
+                      key={c}
+                      label={bnNum(c)}
+                      selected={draft.chapters.includes(c)}
+                      onPress={() => toggleChapter(c)}
+                    />
+                  ))}
+                </ChipRow>
+              </>
+            ) : null}
+
+            {topicTags.length > 0 ? (
+              <>
+                <Muted style={styles.groupGap}>{STR.qbTopicTag}</Muted>
+                <ChipRow>
+                  {topicTags.map((t) => (
+                    <Chip
+                      key={t}
+                      label={t}
+                      selected={draft.topicTags.includes(t)}
+                      onPress={() => toggleIn("topicTags", t)}
+                    />
+                  ))}
+                </ChipRow>
+              </>
+            ) : null}
 
             <Muted style={styles.groupGap}>{STR.reviewStatus}</Muted>
             <ChipRow>
@@ -139,7 +188,12 @@ export function FilterSheet({
             <Muted style={styles.groupGap}>{STR.questionType}</Muted>
             <ChipRow>
               {QUESTION_TYPES.map((q) => (
-                <Chip key={q} label={prettyCode(q)} selected={draft.questionType === q} onPress={() => toggle("questionType", q)} />
+                <Chip
+                  key={q}
+                  label={prettyCode(q)}
+                  selected={draft.questionTypes.includes(q)}
+                  onPress={() => toggleIn("questionTypes", q)}
+                />
               ))}
             </ChipRow>
 
