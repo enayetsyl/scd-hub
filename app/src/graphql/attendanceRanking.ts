@@ -11,6 +11,11 @@ export interface RankRowT {
   id: string;
   name: string;
   unitLabel: string;
+  /** The student’s general class (null on staff rows). On the Quran/Arabic axes this is
+   *  the only class signal — those groups are cross-grade. */
+  classLabel: string | null;
+  /** Roster level behind classLabel; what sortBy="class" orders on. */
+  classLevel: number | null;
   heldDays: number;
   absentDays: number;
   presentPct: number;
@@ -32,15 +37,22 @@ export interface RankingT {
 
 const RANKING_FIELDS = `
   fromKey toKey unitCount minHeldDays lastMarkedKey
-  rows { rank id name unitLabel heldDays absentDays presentPct lateDays leaveDays belowFloor }
+  rows { rank id name unitLabel classLabel classLevel heldDays absentDays presentPct lateDays leaveDays belowFloor }
 `;
 
 export const STUDENT_ATTENDANCE_RANKING_QUERY = gql<
   { studentAttendanceRanking: RankingT },
-  { window: string; anchorKey: string; axis: string; axisValue?: string | null }
+  {
+    window: string;
+    anchorKey: string;
+    axis: string;
+    axisValue?: string | null;
+    /** "rank" (default) | "class" — ORDER only; ranks are never renumbered. */
+    sortBy?: string | null;
+  }
 >`
-  query StudentAttendanceRanking($window: String!, $anchorKey: String!, $axis: String!, $axisValue: String) {
-    studentAttendanceRanking(window: $window, anchorKey: $anchorKey, axis: $axis, axisValue: $axisValue) {
+  query StudentAttendanceRanking($window: String!, $anchorKey: String!, $axis: String!, $axisValue: String, $sortBy: String) {
+    studentAttendanceRanking(window: $window, anchorKey: $anchorKey, axis: $axis, axisValue: $axisValue, sortBy: $sortBy) {
       ${RANKING_FIELDS}
     }
   }

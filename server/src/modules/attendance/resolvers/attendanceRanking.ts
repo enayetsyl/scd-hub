@@ -16,6 +16,7 @@ import {
   type RankRow,
   type RankWindow,
   type StudentRankAxis,
+  type StudentRankSort,
 } from "../services/AttendanceRankingService";
 
 const RankRowRef = builder.objectRef<RankRow>("AttendanceRankRow");
@@ -28,6 +29,8 @@ RankRowRef.implement({
     id: t.exposeString("id"),
     name: t.exposeString("name"),
     unitLabel: t.exposeString("unitLabel"),
+    classLabel: t.string({ nullable: true, resolve: (r) => r.classLabel ?? null }),
+    classLevel: t.int({ nullable: true, resolve: (r) => r.classLevel ?? null }),
     heldDays: t.exposeInt("heldDays"),
     absentDays: t.exposeInt("absentDays"),
     presentPct: t.exposeFloat("presentPct"),
@@ -57,7 +60,9 @@ builder.queryField("studentAttendanceRanking", (t) =>
       "cumulative | annual; `axis` ∈ school | class | section (section register) or " +
       "group | track | level (Quran/Arabic subject-group register) — the two registers are " +
       "never mixed in one list. `axisValue` is the class/section/group id, or the track " +
-      "(\"quran\"/\"arabic\") or level name. Requires attendance:manage.",
+      "(\"quran\"/\"arabic\") or level name. `sortBy` ∈ rank (default) | class — class regroups " +
+      "the SAME numbered rows by the student’s general class and never renumbers them. " +
+      "Requires attendance:manage.",
     authScopes: { hasPermission: "attendance:manage" },
     args: {
       window: t.arg.string({ required: true }),
@@ -65,6 +70,7 @@ builder.queryField("studentAttendanceRanking", (t) =>
       axis: t.arg.string({ required: true }),
       axisValue: t.arg.string({ required: false }),
       academicYearId: t.arg.string({ required: false }),
+      sortBy: t.arg.string({ required: false }),
     },
     resolve: async (_root, args) =>
       rankStudents({
@@ -73,6 +79,7 @@ builder.queryField("studentAttendanceRanking", (t) =>
         axis: args.axis as StudentRankAxis,
         axisValue: args.axisValue ?? undefined,
         academicYearId: args.academicYearId ?? undefined,
+        sortBy: (args.sortBy as StudentRankSort | null) ?? undefined,
       }),
   }),
 );
