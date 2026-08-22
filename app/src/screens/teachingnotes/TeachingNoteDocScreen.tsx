@@ -11,8 +11,12 @@
 import React, { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useQuery } from "urql";
-import { TEACHING_NOTE, TEACHING_NOTE_VERSIONS } from "../../graphql/teachingNotes";
+import { useMutation, useQuery } from "urql";
+import {
+  TEACHING_NOTE,
+  TEACHING_NOTE_VERSIONS,
+  SEND_TEACHING_NOTE_TO_PRINT,
+} from "../../graphql/teachingNotes";
 import type { TeachingNotesStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -28,6 +32,7 @@ import {
 import Markdown from "../../components/Markdown";
 import { QueryGate } from "../../components/QueryGate";
 import TeachingNoteCommentThread from "./TeachingNoteCommentThread";
+import SendToPrintCard from "../../components/SendToPrintCard";
 import { useAuth } from "../../auth/AuthContext";
 import { openStoredFile, FileUploadError } from "../../lib/files";
 import { teachingNoteKindLabel } from "../../lib/teachingNotes";
@@ -55,6 +60,7 @@ export default function TeachingNoteDocScreen({
   });
   const versions = versionsQ.data?.teachingNoteVersions ?? [];
 
+  const [, sendToPrint] = useMutation(SEND_TEACHING_NOTE_TO_PRINT);
   const [openBusy, setOpenBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -148,6 +154,18 @@ export default function TeachingNoteDocScreen({
                   <Markdown source={note.contentMd ?? ""} />
                 </Card>
               )}
+
+              <Card>
+                <SendToPrintCard
+                  successMessage={STR.tnSentToPrint}
+                  onSend={async (opts) => {
+                    const res = await sendToPrint({ id: note.id, ...opts });
+                    return res.error || !res.data?.sendTeachingNoteToPrint
+                      ? friendlyError(res.error)
+                      : null;
+                  }}
+                />
+              </Card>
 
               <TeachingNoteCommentThread
                 noteId={note.id}

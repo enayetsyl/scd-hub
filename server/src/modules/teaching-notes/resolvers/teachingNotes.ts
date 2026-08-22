@@ -20,9 +20,11 @@ import {
   teachingNoteVersions,
   myTeachingNoteScope,
   uploadTeachingNote,
+  sendTeachingNoteToPrint,
   type TeachingNoteShape,
   type TeachingNoteUploadResult,
   type TeachingNoteScopePair,
+  type TeachingNotePrintResult,
 } from "../services/TeachingNoteService";
 
 const TeachingNoteRef = builder.objectRef<TeachingNoteShape>("TeachingNote");
@@ -123,6 +125,41 @@ builder.queryField("teachingNoteMyScope", (t) =>
       "Empty hides the tab; guardians always get [].",
     authScopes: { authenticated: true },
     resolve: async (_root, _args, ctx) => myTeachingNoteScope(ctx),
+  }),
+);
+
+const TeachingNotePrintResultRef =
+  builder.objectRef<TeachingNotePrintResult>("TeachingNotePrintResult");
+TeachingNotePrintResultRef.implement({
+  fields: (t) => ({
+    printRequestId: t.exposeString("printRequestId"),
+    title: t.exposeString("title"),
+  }),
+});
+
+builder.mutationField("sendTeachingNoteToPrint", (t) =>
+  t.field({
+    type: TeachingNotePrintResultRef,
+    description:
+      "File a teaching note into the office print queue. Same read gate as the doc screen — a " +
+      "teacher can only print what they can read. Reuses createPrintRequest untouched.",
+    authScopes: { authenticated: true },
+    args: {
+      id: t.arg.string({ required: true }),
+      colour: t.arg.string({ required: true }),
+      sides: t.arg.string({ required: true }),
+      copies: t.arg.int({ required: true }),
+      copiesMode: t.arg.string({ required: false }),
+      copiesClassId: t.arg.string({ required: false }),
+      neededByKey: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      // The use date is MANDATORY (the English Drive posture): the office queue
+      // needs to know WHEN the print is used, enforced at this teacher-facing seam.
+      if (!args.neededByKey) throw new Error("প্রিন্ট কবে ব্যবহার হবে সেই তারিখ দিন");
+      return sendTeachingNoteToPrint(ctx, args);
+    },
   }),
 );
 

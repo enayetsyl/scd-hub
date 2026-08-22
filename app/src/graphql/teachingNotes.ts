@@ -230,3 +230,39 @@ export const UPLOAD_TEACHING_NOTE = gql<
     }
   }
 `;
+
+export const SEND_TEACHING_NOTE_TO_PRINT = gql<
+  { sendTeachingNoteToPrint: { printRequestId: string; title: string } },
+  {
+    id: string;
+    colour: string;
+    sides: string;
+    copies: number;
+    copiesMode?: string | null;
+    copiesClassId?: string | null;
+    neededByKey?: string | null;
+  }
+>`
+  mutation SendTeachingNoteToPrint(
+    $id: String!
+    $colour: String!
+    $sides: String!
+    $copies: Int!
+    $copiesMode: String
+    $copiesClassId: String
+    $neededByKey: String
+  ) {
+    sendTeachingNoteToPrint(
+      id: $id
+      colour: $colour
+      sides: $sides
+      copies: $copies
+      copiesMode: $copiesMode
+      copiesClassId: $copiesClassId
+      neededByKey: $neededByKey
+    ) {
+      printRequestId
+      title
+    }
+  }
+`;

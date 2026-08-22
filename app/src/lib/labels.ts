@@ -3923,6 +3923,7 @@ const STR_BN = {
   tnDeleteComment: "মুছুন",
   tnAddressAllPrompt: "এই নোটে {n}টি পরামর্শ বাকি আছে। নতুন সংস্করণে কি সেগুলো সমাধান হয়েছে?",
   tnAddressAll: "সবগুলো সমাধান হয়েছে চিহ্নিত করুন",
+  tnSentToPrint: "প্রিন্ট কিউতে পাঠানো হয়েছে।",
   tabFreeMixing: "ফ্রি মিক্সিং পর্যবেক্ষণ",
   vrTitle: "ফ্রি মিক্সিং পর্যবেক্ষণ",
   vrYoutubeUrl: "ইউটিউব লিংক",
@@ -7532,6 +7533,7 @@ const STR_EN: StrTable = {
   tnAddressAllPrompt:
     "{n} suggestion(s) are still open on this note. Did the new version address them?",
   tnAddressAll: "Mark them all addressed",
+  tnSentToPrint: "Sent to the print queue.",
   tabFreeMixing: "Free Mixing Observation",
   vrTitle: "Free Mixing Observation",
   vrYoutubeUrl: "YouTube link",

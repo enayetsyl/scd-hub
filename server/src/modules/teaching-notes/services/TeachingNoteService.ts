@@ -36,7 +36,12 @@
  * in the app verbatim.
  */
 import { Types } from "mongoose";
-import { ROUTINE_SUBJECTS, ROSTER_CLASS_LEVELS, type RoutineSubject } from "@scd/shared";
+import {
+  ROUTINE_SUBJECTS,
+  ROSTER_CLASS_LEVELS,
+  type RoutineSubject,
+  type PrintPurpose,
+} from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError, resolveTeacherScopes } from "../../../middleware/authz";
 import { Subject } from "../../foundation/models/Subject";
@@ -45,6 +50,9 @@ import { User } from "../../foundation/models/User";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { writeAudit } from "../../platform/services/AuditService";
 import { StoredFile } from "../../platform/models/StoredFile";
+import { uploadToDrive, DriveUnavailableError } from "../../platform/services/DriveStore";
+import { createPrintRequest } from "../../printing/services/PrintRequestService";
+import { markdownToPdf } from "../../../routes/pdfRenderer";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import {
   TeachingNote,
@@ -577,6 +585,120 @@ export async function uploadTeachingNote(
     replacedVersion: prev ? prev.version : null,
     openCommentCount: counts.get(identityKey(doc as unknown as ITeachingNote))?.open ?? 0,
   };
+}
+
+// ---------------------------------------------------------------------------
+// TN-3 — send to print. The SAME path English Drive uses (ED-2): render or take
+// the stored binary, file it through `createPrintRequest`, and the office queue,
+// PRINTED/DELIVERED logging and the /files read gate all apply untouched. No new
+// print purpose and no new source type — a teaching note maps onto LESSON_PLAN,
+// which is what it is.
+// ---------------------------------------------------------------------------
+
+const KIND_PRINT_PURPOSE: Record<TeachingNoteKind, PrintPurpose> = {
+  ANSWER_GUIDE: "LESSON_PLAN",
+  LESSON_NOTE: "LESSON_PLAN",
+  SYLLABUS: "LESSON_PLAN",
+  OTHER: "OTHER",
+};
+
+export interface SendTeachingNoteToPrintInput {
+  id: string;
+  colour: string;
+  sides: string;
+  copies: number;
+  copiesMode?: string | null;
+  copiesClassId?: string | null;
+  /** The day the print will be USED (YYYY-MM-DD) — required at the resolver. */
+  neededByKey?: string | null;
+}
+
+export interface TeachingNotePrintResult {
+  printRequestId: string;
+  title: string;
+}
+
+export async function sendTeachingNoteToPrint(
+  ctx: AppContext,
+  input: SendTeachingNoteToPrintInput,
+): Promise<TeachingNotePrintResult> {
+  // Same read gate as the doc screen — a teacher can only print what they can read.
+  const note = await teachingNoteById(ctx, input.id);
+
+  const stamp = `C${note.classLevel}_${note.subject}_${note.kind}${
+    note.seq > 1 ? note.seq : ""
+  }_v${note.version}`;
+  const title = `${note.title} — ${stamp}`.slice(0, 200);
+  const purpose = KIND_PRINT_PURPOSE[note.kind as TeachingNoteKind] ?? "OTHER";
+
+  // A PDF/DOCX note is already print-ready: file the STORED binary directly.
+  // `trusted` skips the print_upload-kind check (the class-test/English Drive
+  // precedent, D-#342) — the file was office-uploaded through
+  // /files/teaching-note and the caller passed the read gate above.
+  if ((note.format ?? "MD") !== "MD") {
+    const printFileId = note.pdfFileId ?? note.fileId;
+    if (!printFileId) throw new Error("ফাইলটি খুঁজে পাওয়া যায়নি");
+    const req = await createPrintRequest({
+      title,
+      purpose,
+      sourceType: "UPLOAD",
+      fileIds: [printFileId],
+      colour: input.colour,
+      sides: input.sides,
+      copies: input.copies,
+      copiesMode: input.copiesMode ?? undefined,
+      copiesClassId: input.copiesClassId ?? undefined,
+      neededByKey: input.neededByKey ?? undefined,
+      subject: note.subject,
+      requestedBy: ctx.auth!.userId as string,
+      trusted: true,
+    });
+    return { printRequestId: req._id.toString(), title: req.title };
+  }
+
+  const source = note.contentMd ?? "";
+  if (source.trim() === "") throw new Error("নোটটি খালি");
+  const pdf = await markdownToPdf(source, { title });
+
+  let driveFileId: string;
+  try {
+    driveFileId = await uploadToDrive({
+      name: `teaching_note_${stamp}.pdf`,
+      mime: "application/pdf",
+      data: pdf,
+      year: String(new Date().getFullYear()),
+      subfolder: "print",
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      throw new Error("ফাইল স্টোরেজ এখন উপলব্ধ নয় — একটু পরে আবার চেষ্টা করুন");
+    }
+    throw e;
+  }
+  const stored = await StoredFile.create({
+    kind: "print_upload",
+    mime: "application/pdf",
+    sizeBytes: pdf.byteLength,
+    originalName: `teaching_note_${stamp}.pdf`,
+    driveFileId,
+    uploadedBy: ctx.auth!.userId,
+  });
+
+  const req = await createPrintRequest({
+    title,
+    purpose,
+    sourceType: "UPLOAD",
+    fileIds: [stored._id.toString()],
+    colour: input.colour,
+    sides: input.sides,
+    copies: input.copies,
+    copiesMode: input.copiesMode ?? undefined,
+    copiesClassId: input.copiesClassId ?? undefined,
+    neededByKey: input.neededByKey ?? undefined,
+    subject: note.subject,
+    requestedBy: ctx.auth!.userId as string,
+  });
+  return { printRequestId: req._id.toString(), title: req.title };
 }
 
 // ---------------------------------------------------------------------------

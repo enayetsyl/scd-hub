@@ -102,10 +102,30 @@ jest.mock("../modules/routine/models/RoutineSlot", () => ({
 }));
 
 const mockStoredFindById = jest.fn();
+const mockStoredCreate = jest.fn();
 jest.mock("../modules/platform/models/StoredFile", () => ({
   StoredFile: {
     findById: (id: unknown) => ({ select: () => ({ lean: async () => mockStoredFindById(id) }) }),
+    create: (d: unknown) => mockStoredCreate(d),
   },
+}));
+
+// TN-3 print collaborators — mocked so this DB-free suite never loads pdfkit,
+// Drive or the print queue.
+const mockUploadToDrive = jest.fn();
+jest.mock("../modules/platform/services/DriveStore", () => {
+  const actual = jest.requireActual("../modules/platform/services/DriveStore");
+  return { ...actual, uploadToDrive: (a: unknown) => mockUploadToDrive(a) };
+});
+
+const mockMarkdownToPdf = jest.fn();
+jest.mock("../routes/pdfRenderer", () => ({
+  markdownToPdf: (md: unknown, o: unknown) => mockMarkdownToPdf(md, o),
+}));
+
+const mockCreatePrint = jest.fn();
+jest.mock("../modules/printing/services/PrintRequestService", () => ({
+  createPrintRequest: (i: unknown) => mockCreatePrint(i),
 }));
 
 const mockResolveScopes = jest.fn();
@@ -125,6 +145,7 @@ import {
   teachingNotes,
   teachingNoteById,
   uploadTeachingNote,
+  sendTeachingNoteToPrint,
   assertTeachingNoteFileReadAccess,
   looksLikeMojibake,
   pairKey,
@@ -205,6 +226,13 @@ beforeEach(() => {
   mockFind.mockReturnValue([]);
   mockFindById.mockReturnValue(null);
   mockCreate.mockImplementation(async (d: Record<string, unknown>) => ({ _id: oid(), ...d }));
+  mockStoredCreate.mockImplementation(async (d: Record<string, unknown>) => ({ _id: oid(), ...d }));
+  mockMarkdownToPdf.mockResolvedValue(Buffer.from("%PDF-1.4 fake"));
+  mockUploadToDrive.mockResolvedValue("drive-file-id");
+  mockCreatePrint.mockImplementation(async (i: { title: string }) => ({
+    _id: oid(),
+    title: i.title,
+  }));
 });
 
 // ---------------------------------------------------------------------------
@@ -450,6 +478,85 @@ describe("upload", () => {
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ format: "PDF", contentMd: "" }),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TN-3 — send to print
+// ---------------------------------------------------------------------------
+
+describe("send to print", () => {
+  const printOpts = {
+    colour: "BW",
+    sides: "SINGLE",
+    copies: 3,
+    neededByKey: "2026-08-25",
+  };
+
+  test("an MD note is rendered and filed as LESSON_PLAN through the print queue", async () => {
+    const note = madeNote();
+    mockFindById.mockReturnValue(note);
+    const res = await sendTeachingNoteToPrint(ctxOf("PRINCIPAL"), {
+      id: note._id.toString(),
+      ...printOpts,
+    });
+
+    expect(mockMarkdownToPdf).toHaveBeenCalled();
+    expect(mockCreatePrint).toHaveBeenCalledWith(
+      expect.objectContaining({
+        purpose: "LESSON_PLAN",
+        sourceType: "UPLOAD",
+        subject: "BAN",
+        copies: 3,
+        neededByKey: "2026-08-25",
+      }),
+    );
+    // The rendered PDF is stored as a print_upload, the queue's own file kind.
+    expect(mockStoredCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "print_upload", mime: "application/pdf" }),
+    );
+    expect(res.printRequestId).toBeTruthy();
+  });
+
+  test("a PDF note files the STORED binary — no re-render", async () => {
+    const fileId = oid();
+    const note = madeNote({ format: "PDF", fileId, contentMd: "" });
+    mockFindById.mockReturnValue(note);
+    await sendTeachingNoteToPrint(ctxOf("OFFICE"), { id: note._id.toString(), ...printOpts });
+
+    expect(mockMarkdownToPdf).not.toHaveBeenCalled();
+    expect(mockCreatePrint).toHaveBeenCalledWith(
+      expect.objectContaining({ fileIds: [fileId.toString()], trusted: true }),
+    );
+  });
+
+  test("a DOCX note prints its CONVERTED pdf, not the .docx", async () => {
+    const fileId = oid();
+    const pdfFileId = oid();
+    const note = madeNote({ format: "DOCX", fileId, pdfFileId, contentMd: "" });
+    mockFindById.mockReturnValue(note);
+    await sendTeachingNoteToPrint(ctxOf("OFFICE"), { id: note._id.toString(), ...printOpts });
+
+    expect(mockCreatePrint).toHaveBeenCalledWith(
+      expect.objectContaining({ fileIds: [pdfFileId.toString()] }),
+    );
+  });
+
+  test("a teacher outside the note's pair cannot print it", async () => {
+    const note = madeNote();
+    mockFindById.mockReturnValue(note);
+    mockSlotFind.mockResolvedValue([sectionSlot("MATH", C3_ID)]);
+    await expect(
+      sendTeachingNoteToPrint(ctxOf("TEACHER"), { id: note._id.toString(), ...printOpts }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+    expect(mockCreatePrint).not.toHaveBeenCalled();
+  });
+
+  test("an OTHER-kind note files as OTHER", async () => {
+    const note = madeNote({ kind: "OTHER" });
+    mockFindById.mockReturnValue(note);
+    await sendTeachingNoteToPrint(ctxOf("PRINCIPAL"), { id: note._id.toString(), ...printOpts });
+    expect(mockCreatePrint).toHaveBeenCalledWith(expect.objectContaining({ purpose: "OTHER" }));
   });
 });
 
