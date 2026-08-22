@@ -1150,6 +1150,14 @@ export const NOTIFICATION_KINDS = [
   // weekend heads-up. Contact-only guardians are reached manually via the
   // staff weekly report's wa.me lines.
   "HW_WEEKLY_DIGEST",
+  // Teaching-notes library (TN-3, D-#514–#518; app-native, NO wire twin). All three
+  // are STAFF-only — this library has no guardian path at all (D-#516).
+  //   PUBLISHED → the (class × subject)'s teachers, when a note or a new version lands
+  //   COMMENT   → the note's uploader + the Principal, when a teacher leaves a suggestion
+  //   ADDRESSED → the comment's author, when their suggestion is marked addressed
+  "TEACHING_NOTE_PUBLISHED",
+  "TEACHING_NOTE_COMMENT",
+  "TEACHING_NOTE_COMMENT_ADDRESSED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1190,6 +1198,9 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   PRINT_DELIVERED: "প্রিন্ট ডেলিভারি হয়েছে",
   PRINT_REQUESTED: "নতুন প্রিন্ট অনুরোধ",
   HW_WEEKLY_DIGEST: "সাপ্তাহিক বাড়ির কাজ রিপোর্ট",
+  TEACHING_NOTE_PUBLISHED: "নতুন নোট ও গাইড",
+  TEACHING_NOTE_COMMENT: "নোটে নতুন পরামর্শ",
+  TEACHING_NOTE_COMMENT_ADDRESSED: "পরামর্শ সমাধান হয়েছে",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1228,6 +1239,9 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   PRINT_DELIVERED: "Print job delivered",
   PRINT_REQUESTED: "New print request",
   HW_WEEKLY_DIGEST: "Weekly homework digest",
+  TEACHING_NOTE_PUBLISHED: "New note / guide",
+  TEACHING_NOTE_COMMENT: "New suggestion on a note",
+  TEACHING_NOTE_COMMENT_ADDRESSED: "Suggestion addressed",
 };
 
 /**
@@ -1824,6 +1838,14 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "homework.weeklyDigest.title",
   "homework.weeklyDigest.body",
   "homework.weeklyDigest.wa",
+  // Teaching-notes library (TN-3). Staff-facing only — no `.wa` variants, because
+  // this library never reaches a guardian and wa.me is the guardian channel.
+  "teachingNote.published.title",
+  "teachingNote.published.body",
+  "teachingNote.comment.title",
+  "teachingNote.comment.body",
+  "teachingNote.commentAddressed.title",
+  "teachingNote.commentAddressed.body",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -2286,6 +2308,36 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     group: "homework", labelBn: "সাপ্তাহিক বাড়ির কাজ রিপোর্ট — হোয়াটসঅ্যাপ",
     placeholders: ["StudentName", "WeekRange", "Unsubmitted", "HeadsUp"],
     bnDefault: "আসসালামু আলাইকুম। {StudentName}-এর এই সপ্তাহের ({WeekRange}) বাড়ির কাজ:\n{Unsubmitted}\n{HeadsUp}\nমাআসসালামাহ।",
+    defaultLangMode: "BN",
+  },
+  // --- Teaching notes / নোট ও গাইড (TN-3, D-#514–#518). Staff-facing only. ---
+  "teachingNote.published.title": {
+    group: "teachingNote", labelBn: "নতুন নোট ও গাইড — শিরোনাম", placeholders: [],
+    bnDefault: "নতুন নোট ও গাইড", defaultLangMode: "BN",
+  },
+  "teachingNote.published.body": {
+    group: "teachingNote", labelBn: "নতুন নোট ও গাইড — বার্তা",
+    placeholders: ["className", "subject", "title"],
+    bnDefault: "{className} · {subject} — “{title}” যোগ করা হয়েছে।", defaultLangMode: "BN",
+  },
+  "teachingNote.comment.title": {
+    group: "teachingNote", labelBn: "নোটে নতুন পরামর্শ — শিরোনাম", placeholders: [],
+    bnDefault: "নোটে নতুন পরামর্শ", defaultLangMode: "BN",
+  },
+  "teachingNote.comment.body": {
+    group: "teachingNote", labelBn: "নোটে নতুন পরামর্শ — বার্তা",
+    placeholders: ["teacherName", "className", "subject", "title"],
+    bnDefault: "{teacherName} “{title}” ({className} · {subject}) নোটে একটি পরামর্শ দিয়েছেন।",
+    defaultLangMode: "BN",
+  },
+  "teachingNote.commentAddressed.title": {
+    group: "teachingNote", labelBn: "পরামর্শ সমাধান হয়েছে — শিরোনাম", placeholders: [],
+    bnDefault: "আপনার পরামর্শ সমাধান হয়েছে", defaultLangMode: "BN",
+  },
+  "teachingNote.commentAddressed.body": {
+    group: "teachingNote", labelBn: "পরামর্শ সমাধান হয়েছে — বার্তা",
+    placeholders: ["title", "className", "subject"],
+    bnDefault: "“{title}” ({className} · {subject}) নোটে আপনার দেওয়া পরামর্শটি সমাধান হয়েছে বলে চিহ্নিত করা হয়েছে।",
     defaultLangMode: "BN",
   },
 };

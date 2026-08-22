@@ -39,7 +39,10 @@ import { Types } from "mongoose";
 import {
   ROUTINE_SUBJECTS,
   ROSTER_CLASS_LEVELS,
+  ROUTINE_SUBJECT_LABELS_BN,
+  ROSTER_CLASS_LABELS_BN,
   type RoutineSubject,
+  type RosterClassLevel,
   type PrintPurpose,
 } from "@scd/shared";
 import type { AppContext } from "../../../context";
@@ -54,6 +57,7 @@ import { uploadToDrive, DriveUnavailableError } from "../../platform/services/Dr
 import { createPrintRequest } from "../../printing/services/PrintRequestService";
 import { markdownToPdf } from "../../../routes/pdfRenderer";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
+import { emitTeachingNotePublished } from "../../notifications/services/emitters";
 import {
   TeachingNote,
   TEACHING_NOTE_KINDS,
@@ -577,6 +581,18 @@ export async function uploadTeachingNote(
       format,
       ...(prev ? { prevVersion: prev.version } : {}),
     },
+  });
+
+  // Tell the (class × subject)'s teachers a note landed. Best-effort by contract —
+  // a notification failure must never roll back the upload (D-#72/#75).
+  await emitTeachingNotePublished({
+    noteId: doc._id,
+    classLevel: input.classLevel,
+    subject: input.subject,
+    title,
+    className: ROSTER_CLASS_LABELS_BN[input.classLevel as RosterClassLevel] ?? String(input.classLevel),
+    subjectLabel: ROUTINE_SUBJECT_LABELS_BN[input.subject as RoutineSubject] ?? input.subject,
+    uploadedBy: input.actorId,
   });
 
   const counts = await commentCountsFor([doc as unknown as ITeachingNote]);

@@ -120,6 +120,16 @@ jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (e: unknown) => mockWriteAudit(e),
 }));
 
+// TN-3 emitters are best-effort and reach User/Class/RoutineSlot; mocked so this
+// DB-free suite never touches an unconnected model. Recipient selection has its
+// own assertions below.
+const mockEmitComment = jest.fn();
+const mockEmitAddressed = jest.fn();
+jest.mock("../modules/notifications/services/emitters", () => ({
+  emitTeachingNoteComment: (e: unknown) => mockEmitComment(e),
+  emitTeachingNoteCommentAddressed: (e: unknown) => mockEmitAddressed(e),
+}));
+
 const mockUserFind = jest.fn();
 jest.mock("../modules/foundation/models/User", () => ({
   User: {
@@ -277,6 +287,44 @@ describe("multiple comments and commenters", () => {
       }),
     ).rejects.toThrow(/এনকোডিং/);
     expect(store).toHaveLength(0);
+  });
+
+  test("a new comment notifies the uploader + Principal, never its own author", async () => {
+    const c = await addTeachingNoteComment(ctxOf("TEACHER", T1_ID), {
+      noteId: V1_ID.toString(),
+      bodyBn: "এক",
+    });
+    expect(mockEmitComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commentId: expect.anything(),
+        authorId: expect.anything(),
+        authorName: "Teacher One",
+        subjectLabel: "বাংলা",
+      }),
+    );
+    // The emitter itself drops the author; the event carries them so it can.
+    expect(mockEmitComment.mock.calls[0][0].authorId.toString()).toBe(T1_ID.toString());
+    expect(c.status).toBe("OPEN");
+  });
+
+  test("closing a comment notifies its author; reopening says nothing", async () => {
+    const c = await addTeachingNoteComment(ctxOf("TEACHER", T1_ID), {
+      noteId: V1_ID.toString(),
+      bodyBn: "এক",
+    });
+    await setTeachingNoteCommentStatus(ctxOf("PRINCIPAL", OFFICE_ID), {
+      commentId: c.id,
+      status: "ADDRESSED",
+    });
+    expect(mockEmitAddressed).toHaveBeenCalledTimes(1);
+    expect(mockEmitAddressed.mock.calls[0][0].authorId.toString()).toBe(T1_ID.toString());
+
+    mockEmitAddressed.mockClear();
+    await setTeachingNoteCommentStatus(ctxOf("PRINCIPAL", OFFICE_ID), {
+      commentId: c.id,
+      status: "OPEN",
+    });
+    expect(mockEmitAddressed).not.toHaveBeenCalled();
   });
 
   test("commenting is audited", async () => {

@@ -17,11 +17,21 @@
  * Errors are Bangla; every write is audited (ADR-008).
  */
 import { Types } from "mongoose";
-import { callerHasPermission } from "@scd/shared";
+import {
+  callerHasPermission,
+  ROUTINE_SUBJECT_LABELS_BN,
+  ROSTER_CLASS_LABELS_BN,
+  type RoutineSubject,
+  type RosterClassLevel,
+} from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
+import {
+  emitTeachingNoteComment,
+  emitTeachingNoteCommentAddressed,
+} from "../../notifications/services/emitters";
 import { TeachingNote, type ITeachingNote } from "../models/TeachingNote";
 import {
   TeachingNoteComment,
@@ -310,6 +320,23 @@ export async function addTeachingNoteComment(
   });
 
   const names = await namesFor([doc.authorId]);
+
+  // Tell the note's uploader + the Principal. Best-effort by contract (D-#72/#75):
+  // a notification failure must never roll back the comment.
+  const current = (await TeachingNote.findOne({ ...identityFilter(note), replacedAt: null })
+    .select("uploadedBy")
+    .lean()) as unknown as { uploadedBy: Types.ObjectId } | null;
+  await emitTeachingNoteComment({
+    commentId: doc._id,
+    noteId: note._id,
+    title: note.title,
+    className: ROSTER_CLASS_LABELS_BN[note.classLevel as RosterClassLevel] ?? String(note.classLevel),
+    subjectLabel: ROUTINE_SUBJECT_LABELS_BN[note.subject as RoutineSubject] ?? note.subject,
+    authorId: doc.authorId,
+    authorName: names.get(doc.authorId.toString()) ?? "",
+    uploaderId: current?.uploadedBy ?? null,
+  });
+
   return shape(doc as unknown as ITeachingNoteComment, names, {
     version: note.version,
     title: note.title,
@@ -370,6 +397,22 @@ export async function setTeachingNoteCommentStatus(
 
   const current = await currentFor(c as unknown as ITeachingNoteComment);
   const names = await namesFor([c.authorId, c.addressedBy]);
+
+  // Closing tells the teacher who raised it that their suggestion landed — the
+  // half of the loop that makes commenting feel worth doing. Reopening says
+  // nothing: the author already knows the thread is live.
+  if (status === "ADDRESSED") {
+    await emitTeachingNoteCommentAddressed({
+      commentId: c._id,
+      noteId: c.noteId,
+      title: current.title,
+      className: ROSTER_CLASS_LABELS_BN[c.classLevel as RosterClassLevel] ?? String(c.classLevel),
+      subjectLabel: ROUTINE_SUBJECT_LABELS_BN[c.subject as RoutineSubject] ?? c.subject,
+      authorId: c.authorId,
+      addressedBy: ctx.auth.userId as string,
+    });
+  }
+
   return shape(c as unknown as ITeachingNoteComment, names, current);
 }
 

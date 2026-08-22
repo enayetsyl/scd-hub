@@ -71,6 +71,13 @@ jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (e: unknown) => mockWriteAudit(e),
 }));
 
+// TN-3: the upload now notifies the pair's teachers. Best-effort and it reaches
+// Class/RoutineSlot, so it is mocked here — the emit is asserted, not executed.
+const mockEmitPublished = jest.fn();
+jest.mock("../modules/notifications/services/emitters", () => ({
+  emitTeachingNotePublished: (e: unknown) => mockEmitPublished(e),
+}));
+
 const mockUserFind = jest.fn();
 jest.mock("../modules/foundation/models/User", () => ({
   User: {
@@ -417,6 +424,18 @@ describe("upload", () => {
     expect(res.replacedVersion).toBeNull();
     expect(mockWriteAudit).toHaveBeenCalledWith(
       expect.objectContaining({ eventKind: "TEACHING_NOTE_UPLOADED" }),
+    );
+  });
+
+  test("notifies the pair's teachers, naming the class and subject in Bangla", async () => {
+    await uploadTeachingNote(validUpload());
+    expect(mockEmitPublished).toHaveBeenCalledWith(
+      expect.objectContaining({
+        classLevel: 5,
+        subject: "BAN",
+        subjectLabel: "বাংলা",
+        uploadedBy: OFFICE_ID.toString(),
+      }),
     );
   });
 
