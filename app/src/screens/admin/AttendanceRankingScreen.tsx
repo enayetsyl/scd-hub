@@ -19,7 +19,9 @@ import { useQuery } from "urql";
 import {
   STUDENT_ATTENDANCE_RANKING_QUERY,
   STAFF_ATTENDANCE_RANKING_QUERY,
+  SUBJECT_GROUP_BREAKDOWN_QUERY,
   type RankRowT,
+  type GroupRankBlockT,
 } from "../../graphql/attendanceRanking";
 import { CLASSES_QUERY, SUBJECT_GROUPS_QUERY } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
@@ -43,11 +45,111 @@ type Props = NativeStackScreenProps<AdminStackParamList, "AttendanceRanking">;
 type Subject = "students" | "staff";
 type Window = "week" | "month" | "cumulative" | "annual";
 /** UI axis → the server's (axis, axisValue) pair. */
-type Axis = "school" | "class" | "section" | "quran" | "arabic" | "group";
+type Axis = "school" | "class" | "section" | "quran" | "arabic" | "group" | "breakdown";
+/** Which track the per-group breakdown covers. */
+type Track = "quran" | "arabic";
 /** Row ORDER only — the server never renumbers ranks for it (D-#512). */
 type Sort = "rank" | "class";
 
 const PAGE = 40;
+/** Rows shown per group card before the reader expands it. */
+const GROUP_PREVIEW = 5;
+
+/** One number in the breakdown's summary strip. */
+function Stat({ label, value }: { label: string; value: number }): React.ReactElement {
+  return (
+    <View style={{ minWidth: 96 }}>
+      <Body style={{ fontWeight: "700", fontSize: 20 }}>{value}</Body>
+      <Muted>{label}</Muted>
+    </View>
+  );
+}
+
+/**
+ * One group's card in the per-group breakdown.
+ *
+ * `heldDays` sits in the CARD HEADER, not on each row, because in this view it is the
+ * group's property and every row shares it — and the whole reason the groups are shown
+ * side by side rather than pooled is that these denominators differ.
+ *
+ * The class badge is unconditional here: the group name is the unit label, so unlike the
+ * flat list there is never a class already on the row to duplicate.
+ */
+function GroupCard({
+  block,
+  open,
+  onToggle,
+}: {
+  block: GroupRankBlockT;
+  open: boolean;
+  onToggle: () => void;
+}): React.ReactElement {
+  const shown = open ? block.rows : block.rows.slice(0, GROUP_PREVIEW);
+  return (
+    <Card>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: space(2),
+        }}
+      >
+        <View style={{ flex: 1 }}>
+          <Body style={{ fontWeight: "700" }}>{block.nameBn}</Body>
+          <Muted>
+            {block.level} · {block.gender} · {block.memberCount} {STR.arGroupEnrolled}
+          </Muted>
+        </View>
+        <View style={{ alignItems: "flex-end", flexShrink: 0 }}>
+          <Body style={{ fontWeight: "700", fontSize: 18 }}>{block.heldDays}</Body>
+          <Muted>{STR.arHeld}</Muted>
+        </View>
+      </View>
+
+      {block.rows.length === 0 ? (
+        <Muted style={{ marginTop: space(2) }}>{STR.arGroupNoDays}</Muted>
+      ) : (
+        <View style={{ marginTop: space(2), gap: space(1) }}>
+          {shown.map((r) => (
+            <View key={r.id} style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+              <Body style={{ fontWeight: "700", minWidth: 28 }}>{r.rank}</Body>
+              <View style={{ flex: 1 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: space(1),
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Body>{r.name}</Body>
+                  {r.classLabel ? <Badge text={r.classLabel} tone="muted" /> : null}
+                  {r.belowFloor ? <Badge text={STR.arThin} tone="warn" /> : null}
+                </View>
+                <Muted>
+                  {STR.arAbsent}: {r.absentDays}
+                </Muted>
+              </View>
+              <Body style={{ fontWeight: "700", flexShrink: 0 }}>{r.presentPct}%</Body>
+            </View>
+          ))}
+          {block.rows.length > GROUP_PREVIEW ? (
+            <Chip
+              label={
+                open
+                  ? STR.arShowTop
+                  : STR.arShowAllInGroup.replace("{n}", String(block.rows.length))
+              }
+              selected={false}
+              onPress={onToggle}
+            />
+          ) : null}
+        </View>
+      )}
+    </Card>
+  );
+}
 
 export default function AttendanceRankingScreen(_props: Props): React.ReactElement {
   const [subject, setSubject] = useState<Subject>("students");
@@ -59,6 +161,9 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
   const [sectionId, setSectionId] = useState("");
   const [groupId, setGroupId] = useState("");
   const [sortBy, setSortBy] = useState<Sort>("rank");
+  const [track, setTrack] = useState<Track>("quran");
+  /** Group ids the reader has expanded past the top-5 preview. */
+  const [openGroups, setOpenGroups] = useState<string[]>([]);
   const [shown, setShown] = useState(PAGE);
 
   const [{ data: classData }] = useQuery({
@@ -89,14 +194,21 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
     : axis === "group" ? groupId
     : null;
 
-  /** An axis that needs a target is not queryable until one is picked. */
+  /** An axis that needs a target is not queryable until one is picked. The breakdown
+   *  needs none — it covers every group of the track by definition. */
   const needsTarget = axis === "class" || axis === "section" || axis === "group";
-  const ready = subject === "staff" || !needsTarget || !!axisValue;
+  const ready = subject === "staff" || axis === "breakdown" || !needsTarget || !!axisValue;
+  const isBreakdown = subject === "students" && axis === "breakdown";
 
   const [studentQ] = useQuery({
     query: STUDENT_ATTENDANCE_RANKING_QUERY,
     variables: { window, anchorKey, axis: serverAxis, axisValue, sortBy },
     pause: subject !== "students" || !ready,
+  });
+  const [breakdownQ] = useQuery({
+    query: SUBJECT_GROUP_BREAKDOWN_QUERY,
+    variables: { window, anchorKey, track, sortBy },
+    pause: subject !== "students" || axis !== "breakdown",
   });
   const [staffQ] = useQuery({
     query: STAFF_ATTENDANCE_RANKING_QUERY,
@@ -104,7 +216,8 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
     pause: subject !== "staff",
   });
 
-  const q = subject === "students" ? studentQ : staffQ;
+  const q = isBreakdown ? breakdownQ : subject === "students" ? studentQ : staffQ;
+  const breakdown = breakdownQ.data?.subjectGroupAttendanceBreakdown;
   const result =
     subject === "students" ? studentQ.data?.studentAttendanceRanking : staffQ.data?.staffAttendanceRanking;
   const rows: RankRowT[] = result?.rows ?? [];
@@ -112,6 +225,11 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
   function pickAxis(a: Axis): void {
     setAxis(a);
     setShown(PAGE);
+    setOpenGroups([]);
+  }
+
+  function toggleGroup(id: string): void {
+    setOpenGroups((open) => (open.includes(id) ? open.filter((g) => g !== id) : [...open, id]));
   }
 
   const windowChips: { key: Window; label: string }[] = [
@@ -133,6 +251,7 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
     { key: "quran", label: STR.arAxisQuran },
     { key: "arabic", label: STR.arAxisArabic },
     { key: "group", label: STR.arAxisGroup },
+    { key: "breakdown", label: STR.arAxisBreakdown },
   ];
 
   return (
@@ -178,6 +297,30 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
                 />
               ))}
             </ChipRow>
+
+            {axis === "breakdown" ? (
+              <View>
+                <Muted style={{ marginTop: space(2) }}>{STR.arTrack}</Muted>
+                <ChipRow>
+                  <Chip
+                    label={STR.arAxisQuran}
+                    selected={track === "quran"}
+                    onPress={() => {
+                      setTrack("quran");
+                      setOpenGroups([]);
+                    }}
+                  />
+                  <Chip
+                    label={STR.arAxisArabic}
+                    selected={track === "arabic"}
+                    onPress={() => {
+                      setTrack("arabic");
+                      setOpenGroups([]);
+                    }}
+                  />
+                </ChipRow>
+              </View>
+            ) : null}
 
             {axis === "class" || axis === "section" ? (
               <AcademicYearSelect
@@ -231,10 +374,51 @@ export default function AttendanceRankingScreen(_props: Props): React.ReactEleme
 
       {!ready ? (
         <Notice message={STR.arPickTarget} tone="info" />
-      ) : q.fetching && !result ? (
+      ) : q.fetching && !result && !breakdown ? (
         <Loader label={STR.loading} />
       ) : q.error ? (
         <ErrorBanner message={friendlyError(q.error)} />
+      ) : isBreakdown ? (
+        !breakdown || breakdown.groups.length === 0 ? (
+          <EmptyState
+            message={
+              breakdown?.lastMarkedKey
+                ? `${STR.arNoData} ${STR.arLastMarked.replace("{d}", breakdown.lastMarkedKey)}`
+                : STR.arNoData
+            }
+          />
+        ) : (
+          <View>
+            <Muted style={{ marginBottom: space(1) }}>
+              {breakdown.fromKey} → {breakdown.toKey}
+            </Muted>
+
+            <Card>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(3) }}>
+                <Stat label={STR.arGroupsMeasured} value={breakdown.groupsMeasured} />
+                <Stat label={STR.arStudentsRanked} value={breakdown.studentsRanked} />
+                <Stat label={STR.arMaxHeld} value={breakdown.maxHeldDays} />
+                <Stat label={STR.arPerfect} value={breakdown.perfectCount} />
+              </View>
+            </Card>
+
+            <Muted style={{ marginBottom: space(1) }}>
+              {STR.arFloorNote.replace("{n}", String(breakdown.minHeldDays))}
+            </Muted>
+            {sortBy === "class" ? (
+              <Muted style={{ marginBottom: space(2) }}>{STR.arSortClassNote}</Muted>
+            ) : null}
+
+            {breakdown.groups.map((g) => (
+              <GroupCard
+                key={g.groupId}
+                block={g}
+                open={openGroups.includes(g.groupId)}
+                onToggle={() => toggleGroup(g.groupId)}
+              />
+            ))}
+          </View>
+        )
       ) : !result || rows.length === 0 ? (
         // An empty ranking is ambiguous on its own, and the usual cause is a window
         // ahead of the data (asking for "this week" on a day off). Say so.

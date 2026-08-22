@@ -75,6 +75,7 @@ import {
   weekRange,
   monthRange,
   MIN_HELD_DAYS,
+  rankStudentsByGroupBreakdown,
 } from "../modules/attendance/services/AttendanceRankingService";
 
 const oid = (s: string) => ({ toString: () => s });
@@ -709,5 +710,121 @@ describe("classLabel — the cross-grade axes carry each student's own class", (
     // The screen hides the badge when unitLabel already leads with the class; that
     // suppression is only correct while this prefix relationship actually holds.
     expect(res.rows[0].unitLabel.startsWith(res.rows[0].classLabel!)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Per-group breakdown (AR-4, D-#514)
+// ---------------------------------------------------------------------------
+
+describe("rankStudentsByGroupBreakdown — every group against its OWN denominator", () => {
+  const BIG = "gBig";
+  const SMALL = "gSmall";
+  const IDLE = "gIdle";
+
+  /**
+   * Two groups that mark on different schedules plus one that never marked — the exact
+   * live shape that motivated the view (Ammapara 28 days vs Hifz 1 boys 4, and two
+   * groups with no rows at all).
+   */
+  function twoTrackGroups(): void {
+    mockGroupFind.mockResolvedValue([
+      { _id: oid(BIG), nameBn: "আম্মাপারা", code: "AMMA", level: "Ammapara", gender: "mixed" },
+      { _id: oid(SMALL), nameBn: "হিফজ ১", code: "HIFZ1", level: "Hifz 1", gender: "boys" },
+      { _id: oid(IDLE), nameBn: "পরীক্ষা", code: "ZZTEST", level: "Test", gender: "boys" },
+    ]);
+    mockStudentDayFind.mockResolvedValue([
+      // BIG marked 12 days; b2 missed 3 of them.
+      ...Array.from({ length: 12 }, (_, i) => ({
+        subjectGroupId: oid(BIG),
+        absentStudentIds: i < 3 ? [oid("b2")] : [],
+      })),
+      // SMALL marked only 4 — below the floor, deliberately.
+      ...Array.from({ length: 4 }, () => ({ subjectGroupId: oid(SMALL), absentStudentIds: [] })),
+      // IDLE marked nothing at all.
+    ]);
+    mockMembershipFind.mockResolvedValue([
+      { groupId: oid(BIG), studentId: oid("b1") },
+      { groupId: oid(BIG), studentId: oid("b2") },
+      { groupId: oid(SMALL), studentId: oid("s1") },
+      { groupId: oid(IDLE), studentId: oid("z1") },
+    ]);
+    mockStudentFind.mockResolvedValue([
+      { _id: oid("b1"), name: "Big One", classId: oid("c1") },
+      { _id: oid("b2"), name: "Big Two", classId: oid("c5") },
+      { _id: oid("s1"), name: "Small One", classId: oid("c5") },
+      { _id: oid("z1"), name: "Idle One", classId: oid("c1") },
+    ]);
+    mockClassFind.mockResolvedValue([
+      { _id: oid("c1"), nameBn: "প্রথম শ্রেণি", level: 1 },
+      { _id: oid("c5"), nameBn: "পঞ্চম শ্রেণি", level: 5 },
+    ]);
+  }
+
+  const run = (extra: Record<string, unknown> = {}) =>
+    rankStudentsByGroupBreakdown({
+      window: "month",
+      anchorKey: "2026-08-15",
+      track: "quran",
+      ...extra,
+    } as Parameters<typeof rankStudentsByGroupBreakdown>[0]);
+
+  test("each group keeps its own heldDays — they are never pooled or averaged", async () => {
+    twoTrackGroups();
+    const res = await run();
+    const byCode = Object.fromEntries(res.groups.map((g) => [g.code, g]));
+    expect(byCode.AMMA.heldDays).toBe(12);
+    expect(byCode.HIFZ1.heldDays).toBe(4);
+    // 12 and 4 in one payload is the whole point: axis="track" would have pooled these
+    // into one list and ranked a 4-day record against a 12-day one.
+    expect(byCode.AMMA.rows.every((r) => r.heldDays === 12)).toBe(true);
+    expect(byCode.HIFZ1.rows.every((r) => r.heldDays === 4)).toBe(true);
+  });
+
+  test("a group that marked NOTHING still ships a card, with its roster count intact", async () => {
+    twoTrackGroups();
+    const res = await run();
+    const idle = res.groups.find((g) => g.code === "ZZTEST")!;
+    // Dropping it would read as "this group does not exist" rather than "nobody marked it".
+    expect(idle.rows).toEqual([]);
+    expect(idle.heldDays).toBe(0);
+    expect(idle.memberCount).toBe(1);
+  });
+
+  test("the floor is per group: 4 held days badges the whole group, 12 does not", async () => {
+    twoTrackGroups();
+    const res = await run();
+    const byCode = Object.fromEntries(res.groups.map((g) => [g.code, g]));
+    expect(byCode.HIFZ1.rows.every((r) => r.belowFloor)).toBe(true);
+    expect(byCode.AMMA.rows.every((r) => !r.belowFloor)).toBe(true);
+  });
+
+  test("the summary counts only groups that actually held a day", async () => {
+    twoTrackGroups();
+    const res = await run();
+    expect(res.groupsMeasured).toBe(2); // the idle group is shown but not counted
+    expect(res.studentsRanked).toBe(3);
+    expect(res.maxHeldDays).toBe(12);
+    // b1 (0 of 12) and s1 (0 of 4) are perfect; b2 missed 3.
+    expect(res.perfectCount).toBe(2);
+  });
+
+  test("rows carry the class, and sortBy class reorders inside EACH group", async () => {
+    twoTrackGroups();
+    const res = await run({ sortBy: "class" });
+    const big = res.groups.find((g) => g.code === "AMMA")!;
+    // b2 is class 5 and ranks BELOW b1 (class 1) on attendance, so both sorts agree
+    // here on order — what matters is the class landed and the ranks are untouched.
+    expect(big.rows.map((r) => r.classLabel)).toEqual(["প্রথম শ্রেণি", "পঞ্চম শ্রেণি"]);
+    expect(big.rows.map((r) => r.classLevel)).toEqual([1, 5]);
+    expect(big.rows.map((r) => r.rank)).toEqual([1, 2]);
+  });
+
+  test("an empty track returns no groups rather than throwing", async () => {
+    mockGroupFind.mockResolvedValue([]);
+    const res = await run({ track: "arabic" });
+    expect(res.groups).toEqual([]);
+    expect(res.groupsMeasured).toBe(0);
+    expect(res.maxHeldDays).toBe(0);
   });
 });
