@@ -16,7 +16,9 @@ import {
   DIFFICULTY_LABELS_BN,
   DIFFICULTY_LABELS_EN,
   PAPER_ROLE_LABELS_BN,
+  QUESTION_CATEGORY_LABELS_BN,
   PAPER_ROLE_LABELS_EN,
+  QUESTION_CATEGORY_LABELS_EN,
   REVIEW_STATUS_LABELS_BN,
   REVIEW_STATUS_LABELS_EN,
   REVIEW_VERDICT_LABELS_BN,
@@ -41,6 +43,7 @@ import {
   type Subject,
   type Difficulty,
   type PaperRole,
+  type QuestionCategory,
   type ReviewStatus,
   type ReviewVerdict,
   type CurationTag,
@@ -394,6 +397,14 @@ export const difficultyLabel = (v?: string | null): string =>
 
 export const paperRoleLabel = (v?: string | null): string =>
   (v && pick(PAPER_ROLE_LABELS_BN, PAPER_ROLE_LABELS_EN)[v as PaperRole]) || v || DASH;
+
+/** Exercise family (D-#511). An unknown code — a category a newer import introduced
+ *  that this build has no label for — is shown VERBATIM rather than as a dash, so the
+ *  filter still works on a phone that has not been updated. */
+export const questionCategoryLabel = (v?: string | null): string =>
+  (v && pick(QUESTION_CATEGORY_LABELS_BN, QUESTION_CATEGORY_LABELS_EN)[v as QuestionCategory]) ||
+  v ||
+  DASH;
 
 export const reviewStatusLabel = (v?: string | null): string =>
   (v && pick(REVIEW_STATUS_LABELS_BN, REVIEW_STATUS_LABELS_EN)[v as ReviewStatus]) || v || DASH;
@@ -1334,6 +1345,7 @@ const STR_BN = {
   qbEmptyFiltered: "এই ফিল্টারে কোনো প্রশ্ন নেই — ফিল্টার বদলে দেখুন।",
   qbClearFilters: "সব ফিল্টার মুছুন",
   qbTopicTag: "টপিক ট্যাগ",
+  qbCategory: "প্রশ্নের ধরন-শ্রেণি",
   qbTopicTagAny: "যেকোনো টপিক",
   qbSelectQuestion: "প্রশ্ন নির্বাচন করুন",
   qbDeselectQuestion: "নির্বাচন বাতিল করুন",
@@ -4907,6 +4919,7 @@ const STR_EN: StrTable = {
   qbEmptyFiltered: "No questions match these filters — try changing them.",
   qbClearFilters: "Clear all filters",
   qbTopicTag: "Topic tag",
+  qbCategory: "Question category",
   qbTopicTagAny: "Any topic",
   qbSelectQuestion: "Select question",
   qbDeselectQuestion: "Deselect question",

@@ -35,6 +35,7 @@ import {
   reviewStatusLabel,
   classLevelLabel,
   bnNum,
+  questionCategoryLabel,
 } from "../../lib/labels";
 import { useBasket } from "../../state/BasketContext";
 import { useQuestionBank, type QbFilters } from "../../state/QuestionBankContext";
@@ -100,6 +101,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
       classLevel: qb.filters.classLevel,
       topicTag: qb.filters.topicTag,
       questionType: qb.filters.questionType,
+      category: qb.filters.category,
       paperRole: qb.filters.paperRole,
       difficulty: qb.filters.difficulty,
       bloomLevel: qb.filters.bloomLevel,
@@ -129,6 +131,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
   if (f.topicTag) chips.push({ key: "topicTag", label: f.topicTag });
   if (f.reviewStatus) chips.push({ key: "reviewStatus", label: reviewStatusLabel(f.reviewStatus) });
   if (f.questionType) chips.push({ key: "questionType", label: prettyCode(f.questionType) });
+  if (f.category) chips.push({ key: "category", label: questionCategoryLabel(f.category) });
   if (f.paperRole) chips.push({ key: "paperRole", label: paperRoleLabel(f.paperRole) });
   if (f.difficulty) chips.push({ key: "difficulty", label: difficultyLabel(f.difficulty) });
   if (f.bloomLevel) chips.push({ key: "bloomLevel", label: f.bloomLevel });
@@ -162,6 +165,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
           {q.topicTag ? <Badge text={q.topicTag} tone="muted" /> : null}
           {q.questionType ? <Badge text={prettyCode(q.questionType)} tone="muted" /> : null}
+          {q.category ? <Badge text={questionCategoryLabel(q.category)} tone="muted" /> : null}
           {q.paperRole ? <Badge text={paperRoleLabel(q.paperRole)} tone="muted" /> : null}
           {q.difficulty ? <Badge text={difficultyLabel(q.difficulty)} tone="muted" /> : null}
         </View>

@@ -137,6 +137,41 @@ export type QuestionType = (typeof QUESTION_TYPES)[number];
 export const PAPER_ROLES = ["mcq", "short", "structured", "creative"] as const;
 export type PaperRole = (typeof PAPER_ROLES)[number];
 
+/** Question CATEGORY — the exercise family an item belongs to inside its chapter
+ *  (শব্দার্থ vs বিপরীত শব্দ vs এক কথায় প্রকাশ …). A THIRD axis, distinct from both
+ *  QuestionType (the answer carrier) and PaperRole (the paper section): শব্দার্থ,
+ *  বিপরীত শব্দ and এক কথায় প্রকাশ are all `short_answer` + `short` + 1 mark and are
+ *  otherwise indistinguishable, so a teacher assembling a vocabulary section had no
+ *  way to ask for one and not the others (D-#511).
+ *
+ *  APP-NATIVE, no wire twin — the same shape as the routine/HR vocab (D-#46/#52), so
+ *  there is NO two-place contract sync. The import contract carries the value in the
+ *  question payload's OPTIONAL free-text `lesson_ref`; it is not an envelope enum, and
+ *  the LOCKED question payload is closed (additionalProperties:false) so no new payload
+ *  key could be added for it. A question that carries no category simply never matches
+ *  a category filter — the axis is additive and absent on every pre-existing import.
+ *
+ *  The list is Bangla-subject-shaped today because that is the bank that exists; it is a
+ *  plain string on the wire, so another subject's categories extend this array and its
+ *  label map together, and nothing else. */
+export const QUESTION_CATEGORIES = [
+  "QCAT-SHORT",
+  "QCAT-MCQ",
+  "QCAT-FILL",
+  "QCAT-SOBDARTH",
+  "QCAT-BIPORIT",
+  "QCAT-SOMARTHOK",
+  "QCAT-EKKOTHAY",
+  "QCAT-BHASHARITI",
+  "QCAT-POD",
+  "QCAT-KAL",
+  "QCAT-BAKKO",
+  "QCAT-JUKTOBORNO",
+  "QCAT-LONG",
+  "QCAT-MULBHAV",
+] as const;
+export type QuestionCategory = (typeof QUESTION_CATEGORIES)[number];
+
 /** Quality gate. MIRROR of envelope `review_status`. Export/analytics filter on this (D-#3). */
 export const REVIEW_STATUSES = ["draft", "reviewed", "gold"] as const;
 export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
@@ -234,6 +269,23 @@ export const PAPER_ROLE_LABELS_BN: Record<PaperRole, string> = {
   short: "সংক্ষিপ্ত",
   structured: "কাঠামোবদ্ধ",
   creative: "সৃজনশীল",
+};
+
+export const QUESTION_CATEGORY_LABELS_BN: Record<QuestionCategory, string> = {
+  "QCAT-SHORT": "সংক্ষিপ্ত উত্তর",
+  "QCAT-MCQ": "বহুনির্বাচনি",
+  "QCAT-FILL": "শূন্যস্থান পূরণ",
+  "QCAT-SOBDARTH": "শব্দার্থ",
+  "QCAT-BIPORIT": "বিপরীত শব্দ",
+  "QCAT-SOMARTHOK": "সমার্থক শব্দ",
+  "QCAT-EKKOTHAY": "এক কথায় প্রকাশ",
+  "QCAT-BHASHARITI": "ভাষারীতি পরিবর্তন",
+  "QCAT-POD": "পদ নির্ণয়",
+  "QCAT-KAL": "ক্রিয়ার কাল",
+  "QCAT-BAKKO": "বাক্য গঠন",
+  "QCAT-JUKTOBORNO": "যুক্তবর্ণ বিভাজন",
+  "QCAT-LONG": "বিস্তৃত উত্তর",
+  "QCAT-MULBHAV": "মূলভাব",
 };
 
 export const REVIEW_STATUS_LABELS_BN: Record<ReviewStatus, string> = {
@@ -757,6 +809,23 @@ export const PAPER_ROLE_LABELS_EN: Record<PaperRole, string> = {
   short: "Short",
   structured: "Structured",
   creative: "Creative",
+};
+
+export const QUESTION_CATEGORY_LABELS_EN: Record<QuestionCategory, string> = {
+  "QCAT-SHORT": "Short answer",
+  "QCAT-MCQ": "MCQ",
+  "QCAT-FILL": "Fill in the blanks",
+  "QCAT-SOBDARTH": "Word meaning",
+  "QCAT-BIPORIT": "Antonym",
+  "QCAT-SOMARTHOK": "Synonym",
+  "QCAT-EKKOTHAY": "One-word expression",
+  "QCAT-BHASHARITI": "Register change",
+  "QCAT-POD": "Parts of speech",
+  "QCAT-KAL": "Verb tense",
+  "QCAT-BAKKO": "Sentence making",
+  "QCAT-JUKTOBORNO": "Conjunct letters",
+  "QCAT-LONG": "Long answer",
+  "QCAT-MULBHAV": "Central idea",
 };
 
 export const REVIEW_STATUS_LABELS_EN: Record<ReviewStatus, string> = {
