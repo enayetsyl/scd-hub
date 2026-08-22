@@ -3529,7 +3529,11 @@ const STR_BN = {
   arLeave: "ছুটি",
   arThin: "কম দিন",
   arMore: "আরও দেখুন",
+  arSort: "সাজান",
+  arSortRank: "র‍্যাঙ্ক",
+  arSortClass: "শ্রেণি",
   arFloorNote: "{n} দিনের কম হাজিরার রেকর্ড আলাদাভাবে চিহ্নিত এবং তালিকার শেষে।",
+  arSortClassNote: "শ্রেণি অনুযায়ী সাজালে র‍্যাঙ্ক বদলায় না — একই র‍্যাঙ্ক শুধু শ্রেণি অনুযায়ী সাজানো হয়।",
 
   // Delegated duties (ACS-2) — the EXTENT axis inside the access editor
   dgTitle: "দায়িত্ব বণ্টন",
@@ -7076,7 +7080,11 @@ const STR_EN: StrTable = {
   arLeave: "Leave",
   arThin: "Few days",
   arMore: "Show more",
+  arSort: "Sort",
+  arSortRank: "Rank",
+  arSortClass: "Class",
   arFloorNote: "Records with fewer than {n} held days are badged and sorted last.",
+  arSortClassNote: "Sorting by class regroups the same ranks — it does not renumber them.",
 
   // Delegated duties (ACS-2) — the EXTENT axis inside the access editor
   dgTitle: "Delegated duties",

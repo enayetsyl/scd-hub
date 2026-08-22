@@ -563,3 +563,151 @@ describe("rankStudents — class/section axes resolve each student's attendance 
     expect(byName["Qaida Child"].unitLabel).toBe("চতুর্থ শ্রেণি · মূল");
   });
 });
+
+// ---------------------------------------------------------------------------
+// The class column + the class sort (D-#511)
+// ---------------------------------------------------------------------------
+
+describe("classLabel — the cross-grade axes carry each student's own class", () => {
+  const GRP = "grpQaida";
+  /** 12 held days for the group, so every row clears MIN_HELD_DAYS and the
+   *  qualifying/below-floor partition cannot be what orders the assertions. */
+  function groupRegister(absencesByStudent: Record<string, number>): void {
+    mockGroupFind.mockResolvedValue([
+      { _id: oid(GRP), nameBn: "কায়দা", code: "QAIDA", track: "quran" },
+    ]);
+    mockStudentDayFind.mockResolvedValue(
+      Array.from({ length: 12 }, (_, i) => ({
+        subjectGroupId: oid(GRP),
+        absentStudentIds: Object.entries(absencesByStudent)
+          .filter(([, n]) => i < n)
+          .map(([id]) => oid(id)),
+      })),
+    );
+  }
+
+  const CLASSES = [
+    { _id: oid("cNur"), nameBn: "নার্সারি", level: -1 },
+    { _id: oid("c1"), nameBn: "প্রথম শ্রেণি", level: 1 },
+    { _id: oid("c5"), nameBn: "পঞ্চম শ্রেণি", level: 5 },
+  ];
+
+  /** Three members of ONE Quran group drawn from three different classes — the
+   *  shape the group axis exists for, and the one `unitLabel` cannot describe. */
+  function crossGradeGroup(): void {
+    groupRegister({ s5: 0, s1: 1, sN: 2 });
+    mockMembershipFind.mockResolvedValue([
+      { groupId: oid(GRP), studentId: oid("s5") },
+      { groupId: oid(GRP), studentId: oid("s1") },
+      { groupId: oid(GRP), studentId: oid("sN") },
+    ]);
+    mockStudentFind.mockResolvedValue([
+      { _id: oid("s5"), name: "Class Five Child", classId: oid("c5") },
+      { _id: oid("s1"), name: "Class One Child", classId: oid("c1") },
+      { _id: oid("sN"), name: "Nursery Child", classId: oid("cNur") },
+    ]);
+    mockClassFind.mockResolvedValue(CLASSES);
+  }
+
+  test("a Quran group row names the student's general class, which unitLabel cannot", async () => {
+    crossGradeGroup();
+    const res = await rankStudents({
+      window: "month",
+      anchorKey: "2026-08-15",
+      axis: "group",
+      axisValue: GRP,
+    });
+    const byName = Object.fromEntries(res.rows.map((r) => [r.name, r]));
+    // Every row shares one unitLabel — that is exactly why the class is needed.
+    expect(res.rows.every((r) => r.unitLabel === "কায়দা")).toBe(true);
+    expect(byName["Class Five Child"]).toMatchObject({ classLabel: "পঞ্চম শ্রেণি", classLevel: 5 });
+    expect(byName["Class One Child"]).toMatchObject({ classLabel: "প্রথম শ্রেণি", classLevel: 1 });
+    expect(byName["Nursery Child"]).toMatchObject({ classLabel: "নার্সারি", classLevel: -1 });
+  });
+
+  test("sortBy class REORDERS but never renumbers — the ranks travel with the rows", async () => {
+    crossGradeGroup();
+    const base = {
+      window: "month" as const,
+      anchorKey: "2026-08-15",
+      axis: "group" as const,
+      axisValue: GRP,
+    };
+
+    const byRank = await rankStudents(base);
+    expect(byRank.rows.map((r) => r.name)).toEqual([
+      "Class Five Child", // 12/12 → 100%
+      "Class One Child", // 11/12 → 91.7%
+      "Nursery Child", // 10/12 → 83.3%
+    ]);
+    expect(byRank.rows.map((r) => r.rank)).toEqual([1, 2, 3]);
+
+    const byClass = await rankStudents({ ...base, sortBy: "class" });
+    // Nursery (-1) → class 1 → class 5: ordered on the LEVEL, not the label.
+    expect(byClass.rows.map((r) => r.name)).toEqual([
+      "Nursery Child",
+      "Class One Child",
+      "Class Five Child",
+    ]);
+    // The load-bearing assertion: 3, 2, 1 — the same numbers, regrouped. A
+    // renumbering implementation would print 1, 2, 3 here and read identically
+    // to the rank sort while meaning something completely different.
+    expect(byClass.rows.map((r) => r.rank)).toEqual([3, 2, 1]);
+    expect(byClass.rows.map((r) => r.presentPct)).toEqual([83.3, 91.7, 100]);
+  });
+
+  test("the default sort is unchanged — omitting sortBy is the old behaviour", async () => {
+    crossGradeGroup();
+    const base = { window: "month" as const, anchorKey: "2026-08-15", axis: "group" as const, axisValue: GRP };
+    const implicit = await rankStudents(base);
+    const explicit = await rankStudents({ ...base, sortBy: "rank" });
+    expect(implicit.rows).toEqual(explicit.rows);
+  });
+
+  test("a student whose class cannot be resolved sorts LAST, not alongside nursery", async () => {
+    // `?? 99`, not `?? 0`: nursery is level -1 and KG is 0, so an unresolved class
+    // defaulting to 0 would bury it in the middle of the list instead of the end.
+    groupRegister({ sN: 0, sOrphan: 6 });
+    mockMembershipFind.mockResolvedValue([
+      { groupId: oid(GRP), studentId: oid("sN") },
+      { groupId: oid(GRP), studentId: oid("sOrphan") },
+    ]);
+    mockStudentFind.mockResolvedValue([
+      { _id: oid("sN"), name: "Nursery Child", classId: oid("cNur") },
+      { _id: oid("sOrphan"), name: "Orphan Row", classId: oid("cGone") },
+    ]);
+    mockClassFind.mockResolvedValue([{ _id: oid("cNur"), nameBn: "নার্সারি", level: -1 }]);
+
+    const res = await rankStudents({
+      window: "month",
+      anchorKey: "2026-08-15",
+      axis: "group",
+      axisValue: GRP,
+      sortBy: "class",
+    });
+    expect(res.rows.map((r) => r.name)).toEqual(["Nursery Child", "Orphan Row"]);
+    expect(res.rows[1].classLabel).toBeUndefined();
+  });
+
+  test("the section axis carries the class too, matching the unitLabel prefix", async () => {
+    mockSectionFind.mockResolvedValue([{ _id: oid("secMain"), code: "Main", nameBn: "মূল" }]);
+    mockStudentDayFind.mockResolvedValue(
+      Array.from({ length: 10 }, () => ({ sectionId: oid("secMain"), absentStudentIds: [] })),
+    );
+    mockStudentFind.mockResolvedValue([
+      { _id: oid("a"), name: "Ayesha", sectionId: oid("secMain"), classId: oid("cKg") },
+    ]);
+    mockClassFind.mockResolvedValue([{ _id: oid("cKg"), nameBn: "কেজি", level: 0 }]);
+
+    const res = await rankStudents({
+      window: "month",
+      anchorKey: "2026-08-15",
+      axis: "section",
+      axisValue: "secMain",
+    });
+    expect(res.rows[0]).toMatchObject({ classLabel: "কেজি", classLevel: 0 });
+    // The screen hides the badge when unitLabel already leads with the class; that
+    // suppression is only correct while this prefix relationship actually holds.
+    expect(res.rows[0].unitLabel.startsWith(res.rows[0].classLabel!)).toBe(true);
+  });
+});
