@@ -365,6 +365,8 @@ export type TeachingNotesStackParamList = {
     seq?: number;
     title?: string;
   };
+  /** The Principal's cross-subject outstanding-suggestions list (TN-2). */
+  TeachingNoteOpenComments: undefined;
 };
 
 /** Saturday Qur'an-Hifz Revision (SR app surfaces over SR-1..SR-4) — staff stack

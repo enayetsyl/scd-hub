@@ -182,6 +182,7 @@ import EnglishDriveUploadScreen from "../screens/englishdrive/EnglishDriveUpload
 import TeachingNotesHomeScreen from "../screens/teachingnotes/TeachingNotesHomeScreen";
 import TeachingNoteDocScreen from "../screens/teachingnotes/TeachingNoteDocScreen";
 import TeachingNoteUploadScreen from "../screens/teachingnotes/TeachingNoteUploadScreen";
+import TeachingNoteOpenCommentsScreen from "../screens/teachingnotes/TeachingNoteOpenCommentsScreen";
 import ObservationReviewQueueScreen from "../screens/observation/ObservationReviewQueueScreen";
 import MyReviewHistoryScreen from "../screens/observation/MyReviewHistoryScreen";
 import ObservationRotaScreen from "../screens/observation/ObservationRotaScreen";
@@ -1037,6 +1038,11 @@ function TeachingNotesNavigator(): React.ReactElement {
         name="TeachingNoteUpload"
         component={TeachingNoteUploadScreen}
         options={{ title: STR.tnUploadTitle }}
+      />
+      <TeachingNotesStack.Screen
+        name="TeachingNoteOpenComments"
+        component={TeachingNoteOpenCommentsScreen}
+        options={{ title: STR.tnOpenComments }}
       />
     </TeachingNotesStack.Navigator>
   );

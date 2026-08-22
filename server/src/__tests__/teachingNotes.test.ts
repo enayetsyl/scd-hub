@@ -51,6 +51,21 @@ jest.mock("../modules/teaching-notes/models/TeachingNote", () => {
   };
 });
 
+// TN-2 collaborator: the library rows carry comment badge counts, so the note
+// service now reaches TeachingNoteComment. Mocked empty — the counts have their
+// own suite (teachingNoteComments.test.ts); without this the DB-free suite would
+// hit a real (unconnected) model and time out on Mongoose buffering.
+const mockCommentFind = jest.fn();
+jest.mock("../modules/teaching-notes/models/TeachingNoteComment", () => {
+  const actual = jest.requireActual("../modules/teaching-notes/models/TeachingNoteComment");
+  return {
+    ...actual,
+    TeachingNoteComment: {
+      find: (q: unknown) => ({ select: () => ({ lean: async () => mockCommentFind(q) }) }),
+    },
+  };
+});
+
 const mockWriteAudit = jest.fn();
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (e: unknown) => mockWriteAudit(e),
@@ -175,6 +190,7 @@ const validUpload = (over: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockCommentFind.mockReturnValue([]);
   mockSlotFind.mockResolvedValue([]);
   mockResolveScopes.mockResolvedValue([]);
   mockSubjectFind.mockReturnValue([]);

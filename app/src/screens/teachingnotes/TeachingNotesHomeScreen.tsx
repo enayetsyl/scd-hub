@@ -117,11 +117,18 @@ export default function TeachingNotesHomeScreen({ navigation }: Props): React.Re
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {canUpload ? (
-          <View style={{ marginBottom: space(2) }}>
+          <View style={{ marginBottom: space(2), gap: space(2) }}>
             <Button
               title={`⬆ ${STR.tnUpload}`}
               variant="secondary"
               onPress={() => navigation.navigate("TeachingNoteUpload", {})}
+            />
+            {/* The outstanding list is what makes the status worth carrying — without
+                it, feedback is only ever seen by whoever opens that one file. */}
+            <Button
+              title={`💬 ${STR.tnOpenComments}`}
+              variant="secondary"
+              onPress={() => navigation.navigate("TeachingNoteOpenComments")}
             />
           </View>
         ) : null}

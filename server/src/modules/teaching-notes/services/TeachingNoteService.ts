@@ -263,6 +263,7 @@ export interface TeachingNoteShape {
   fileName: string | null;
   fileMime: string | null;
   uploadedAt: string;
+  uploadedById: string;
   uploadedByName: string | null;
   /** Null on library-list rows — only the single-note read carries the markdown. */
   contentMd: string | null;
@@ -291,6 +292,7 @@ function shape(
     fileName: doc.fileName ?? null,
     fileMime: doc.fileMime ?? null,
     uploadedAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
+    uploadedById: doc.uploadedBy.toString(),
     uploadedByName,
     contentMd: withContent ? doc.contentMd : null,
     commentCount: counts?.total ?? 0,
@@ -593,8 +595,10 @@ export function identityKey(doc: {
 }
 
 export async function commentCountsFor(
-  _docs: Array<{ classLevel: number; subject: string; kind: string; seq?: number }>,
+  docs: Array<{ classLevel: number; subject: string; kind: string; seq?: number }>,
 ): Promise<Map<string, { total: number; open: number }>> {
-  // TN-2 replaces this with a grouped count over TeachingNoteComment.
-  return new Map();
+  // Imported lazily: the comment service imports THIS module (for the pair
+  // scope and the encoding guard), so a top-level import here would be a cycle.
+  const { commentCountsForIdentities } = await import("./TeachingNoteCommentService");
+  return commentCountsForIdentities(docs);
 }

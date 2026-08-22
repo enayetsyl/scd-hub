@@ -27,6 +27,7 @@ import {
 } from "../../components/ui";
 import Markdown from "../../components/Markdown";
 import { QueryGate } from "../../components/QueryGate";
+import TeachingNoteCommentThread from "./TeachingNoteCommentThread";
 import { useAuth } from "../../auth/AuthContext";
 import { openStoredFile, FileUploadError } from "../../lib/files";
 import { teachingNoteKindLabel } from "../../lib/teachingNotes";
@@ -42,7 +43,7 @@ export default function TeachingNoteDocScreen({
   navigation,
 }: Props): React.ReactElement {
   const { noteId } = route.params;
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const canUpload = can("roster:manage");
 
   const [noteQ, refetchNote] = useQuery({ query: TEACHING_NOTE, variables: { id: noteId } });
@@ -147,6 +148,12 @@ export default function TeachingNoteDocScreen({
                   <Markdown source={note.contentMd ?? ""} />
                 </Card>
               )}
+
+              <TeachingNoteCommentThread
+                noteId={note.id}
+                uploaderIsMe={note.uploadedById === user?.id}
+                onCountsChanged={() => refetchNote({ requestPolicy: "network-only" })}
+              />
 
               {versions.length > 1 ? (
                 <Card>

@@ -24,6 +24,7 @@ export interface TeachingNoteT {
   fileName: string | null;
   fileMime: string | null;
   uploadedAt: string;
+  uploadedById: string;
   uploadedByName: string | null;
   commentCount: number;
   openCommentCount: number;
@@ -40,7 +41,7 @@ export interface TeachingNoteScopePairT {
 
 const TEACHING_NOTE_FIELDS = `
   id classLevel subject kind seq title version format fileId pdfFileId fileName fileMime
-  uploadedAt uploadedByName commentCount openCommentCount
+  uploadedAt uploadedById uploadedByName commentCount openCommentCount
 `;
 
 export const TEACHING_NOTE_MY_SCOPE = gql<
@@ -73,6 +74,105 @@ export const TEACHING_NOTE_VERSIONS = gql<
 >`
   query TeachingNoteVersions($id: String!) {
     teachingNoteVersions(id: $id) { ${TEACHING_NOTE_FIELDS} }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// TN-2 — improvement comments. The thread is anchored to the note's IDENTITY,
+// so passing any version's id returns the same comments (D-#516).
+// ---------------------------------------------------------------------------
+
+export interface TeachingNoteCommentT {
+  id: string;
+  noteId: string;
+  classLevel: number;
+  subject: string;
+  kind: string;
+  seq: number;
+  /** The version its author was reading. */
+  versionSeen: number;
+  bodyBn: string;
+  anchor: string | null;
+  authorId: string;
+  authorName: string | null;
+  status: string;
+  addressedByName: string | null;
+  addressedAt: string | null;
+  addressedNote: string | null;
+  createdAt: string;
+  /** True when versionSeen < currentVersion — "written on v2, current is v3". */
+  staleForCurrentVersion: boolean;
+  currentVersion: number;
+  noteTitle: string;
+}
+
+const TEACHING_NOTE_COMMENT_FIELDS = `
+  id noteId classLevel subject kind seq versionSeen bodyBn anchor authorId authorName
+  status addressedByName addressedAt addressedNote createdAt staleForCurrentVersion
+  currentVersion noteTitle
+`;
+
+export const TEACHING_NOTE_COMMENTS = gql<
+  { teachingNoteComments: TeachingNoteCommentT[] },
+  { noteId: string }
+>`
+  query TeachingNoteComments($noteId: String!) {
+    teachingNoteComments(noteId: $noteId) { ${TEACHING_NOTE_COMMENT_FIELDS} }
+  }
+`;
+
+export const OPEN_TEACHING_NOTE_COMMENTS = gql<
+  { openTeachingNoteComments: TeachingNoteCommentT[] },
+  NoVars
+>`
+  query OpenTeachingNoteComments {
+    openTeachingNoteComments { ${TEACHING_NOTE_COMMENT_FIELDS} }
+  }
+`;
+
+export const ADD_TEACHING_NOTE_COMMENT = gql<
+  { addTeachingNoteComment: TeachingNoteCommentT },
+  { noteId: string; bodyBn: string; anchor?: string | null }
+>`
+  mutation AddTeachingNoteComment($noteId: String!, $bodyBn: String!, $anchor: String) {
+    addTeachingNoteComment(noteId: $noteId, bodyBn: $bodyBn, anchor: $anchor) {
+      ${TEACHING_NOTE_COMMENT_FIELDS}
+    }
+  }
+`;
+
+export const SET_TEACHING_NOTE_COMMENT_STATUS = gql<
+  { setTeachingNoteCommentStatus: TeachingNoteCommentT },
+  { commentId: string; status: string; addressedNote?: string | null }
+>`
+  mutation SetTeachingNoteCommentStatus(
+    $commentId: String!
+    $status: String!
+    $addressedNote: String
+  ) {
+    setTeachingNoteCommentStatus(
+      commentId: $commentId
+      status: $status
+      addressedNote: $addressedNote
+    ) { ${TEACHING_NOTE_COMMENT_FIELDS} }
+  }
+`;
+
+export const ADDRESS_TEACHING_NOTE_COMMENTS = gql<
+  { addressTeachingNoteComments: number },
+  { commentIds: string[]; addressedNote?: string | null }
+>`
+  mutation AddressTeachingNoteComments($commentIds: [String!]!, $addressedNote: String) {
+    addressTeachingNoteComments(commentIds: $commentIds, addressedNote: $addressedNote)
+  }
+`;
+
+export const DELETE_TEACHING_NOTE_COMMENT = gql<
+  { deleteTeachingNoteComment: boolean },
+  { commentId: string }
+>`
+  mutation DeleteTeachingNoteComment($commentId: String!) {
+    deleteTeachingNoteComment(commentId: $commentId)
   }
 `;
 

@@ -18,7 +18,12 @@ import * as DocumentPicker from "expo-document-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import { ROSTER_CLASS_LEVELS, ROUTINE_SUBJECTS } from "@scd/shared";
-import { TEACHING_NOTES, UPLOAD_TEACHING_NOTE } from "../../graphql/teachingNotes";
+import {
+  TEACHING_NOTES,
+  UPLOAD_TEACHING_NOTE,
+  TEACHING_NOTE_COMMENTS,
+  ADDRESS_TEACHING_NOTE_COMMENTS,
+} from "../../graphql/teachingNotes";
 import type { TeachingNotesStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -81,8 +86,17 @@ export default function TeachingNoteUploadScreen({ route }: Props): React.ReactE
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  /** The just-uploaded note whose open suggestions can be closed in one tap. */
+  const [pendingAddress, setPendingAddress] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const [, upload] = useMutation(UPLOAD_TEACHING_NOTE);
+  const [, addressAll] = useMutation(ADDRESS_TEACHING_NOTE_COMMENTS);
+  const [commentsQ, refetchComments] = useQuery({
+    query: TEACHING_NOTE_COMMENTS,
+    variables: { noteId: pendingAddress ?? "" },
+    pause: pendingAddress === null,
+  });
 
   // The whole library — Principal/Office are unrestricted, so this is what the
   // replace-conflict notice reads.
@@ -229,6 +243,13 @@ export default function TeachingNoteUploadScreen({ route }: Props): React.ReactE
       }
       const replaced = res.data?.uploadTeachingNote.replacedVersion ?? null;
       setDone(replaced === null ? STR.tnUploaded : `${STR.tnUploaded} ${STR.tnReplacedToast}`);
+      // A replacing upload is the ONE moment the uploader remembers what they
+      // changed — so this is where the open suggestions get offered for closing,
+      // rather than leaving them to rot until someone opens the file again.
+      const newNoteId = res.data?.uploadTeachingNote.note.id ?? null;
+      const stillOpen = res.data?.uploadTeachingNote.openCommentCount ?? 0;
+      setPendingAddress(replaced !== null && stillOpen > 0 && newNoteId ? newNoteId : null);
+      setPendingCount(stillOpen);
       setStaged(null);
       setTitle("");
       refetchExisting({ requestPolicy: "network-only" });
@@ -239,6 +260,32 @@ export default function TeachingNoteUploadScreen({ route }: Props): React.ReactE
     }
   }, [ready, staged, classLevel, subject, kind, seqNum, title, upload, refetchExisting]);
 
+  /** Close every still-open suggestion on the note just replaced. */
+  const closeOpenSuggestions = useCallback(async (): Promise<void> => {
+    if (pendingAddress === null || busy) return;
+    const openIds = (commentsQ.data?.teachingNoteComments ?? [])
+      .filter((c) => c.status === "OPEN")
+      .map((c) => c.id);
+    if (openIds.length === 0) {
+      setPendingAddress(null);
+      setPendingCount(0);
+      return;
+    }
+    setBusy(true);
+    // No per-comment note here on purpose: this is the blanket "the new version
+    // covers these" action. Anything more specific belongs on the thread, one
+    // comment at a time, where the person can say what actually changed.
+    const res = await addressAll({ commentIds: openIds, addressedNote: null });
+    setBusy(false);
+    if (res.error) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    setPendingAddress(null);
+    setPendingCount(0);
+    refetchComments({ requestPolicy: "network-only" });
+  }, [pendingAddress, busy, commentsQ.data, addressAll, refetchComments]);
+
   return (
     <Screen>
       <UploadDropZone onFiles={onDropFiles} disabled={busy || ingesting}>
@@ -247,6 +294,20 @@ export default function TeachingNoteUploadScreen({ route }: Props): React.ReactE
 
         {error ? <Notice message={error} tone="danger" /> : null}
         {done ? <Notice message={done} tone="ok" /> : null}
+
+        {pendingAddress !== null && pendingCount > 0 ? (
+          <Card>
+            <Body style={{ marginBottom: space(2) }}>
+              {STR.tnAddressAllPrompt.replace("{n}", bnNum(pendingCount))}
+            </Body>
+            <Button
+              title={STR.tnAddressAll}
+              variant="secondary"
+              disabled={busy}
+              onPress={() => void closeOpenSuggestions()}
+            />
+          </Card>
+        ) : null}
 
         <Card>
           <Button

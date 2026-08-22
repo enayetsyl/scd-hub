@@ -106,4 +106,5 @@ import "./modules/saturday-revision/resolvers/revisionSummary";
 import "./modules/saturday-revision/resolvers/revisionGuardian";
 import "./modules/english-drive/resolvers/englishDrive";
 import "./modules/teaching-notes/resolvers/teachingNotes";
+import "./modules/teaching-notes/resolvers/teachingNoteComments";
 import "./modules/archive/resolvers/archive";

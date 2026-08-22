@@ -44,6 +44,7 @@ TeachingNoteRef.implement({
     fileName: t.string({ nullable: true, resolve: (r) => r.fileName }),
     fileMime: t.string({ nullable: true, resolve: (r) => r.fileMime }),
     uploadedAt: t.exposeString("uploadedAt"),
+    uploadedById: t.exposeString("uploadedById"),
     uploadedByName: t.string({ nullable: true, resolve: (r) => r.uploadedByName }),
     contentMd: t.string({ nullable: true, resolve: (r) => r.contentMd }),
     commentCount: t.exposeInt("commentCount"),
