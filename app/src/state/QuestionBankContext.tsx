@@ -16,6 +16,8 @@ export interface QbFilters {
   classLevel: number | null;
   topicTag: string | null;
   questionType: string | null;
+  /** Exercise family (D-#511) — only offered where the chosen slice has any. */
+  category: string | null;
   paperRole: string | null;
   difficulty: string | null;
   bloomLevel: string | null;
@@ -29,6 +31,7 @@ export const EMPTY_FILTERS: QbFilters = {
   classLevel: null,
   topicTag: null,
   questionType: null,
+  category: null,
   paperRole: null,
   difficulty: null,
   bloomLevel: null,

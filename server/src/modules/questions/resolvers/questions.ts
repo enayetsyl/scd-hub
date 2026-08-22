@@ -17,9 +17,10 @@ import { builder } from "../../../schema";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { ForbiddenError } from "../../../middleware/authz";
 import { buildContentScope, contentScopeAllows, contentScopeMongo } from "../../content/contentScope";
-import { normalizeBanglaDigits, escapeRegex } from "../search";
+import { normalizeBanglaDigits, escapeRegex, orderQuestionCategories } from "../search";
 import { reviewerMayReadArtifact } from "../../content/services/ReviewService";
 import { applyQuestionOnlyGate, seesPublishedOnly } from "../publishGate";
+import { QUESTION_CATEGORIES } from "@scd/shared";
 import type { Types, FlattenMaps, FilterQuery } from "mongoose";
 import type { IContentArtifact } from "../../content/models/ContentArtifact";
 
@@ -43,6 +44,8 @@ interface QuestionArtifactShape {
   qid?: string | null;
   topicTag?: string | null;
   questionType?: string | null;
+  /** Exercise family (D-#511) — payload lesson_ref. */
+  category?: string | null;
   paperRole?: string | null;
   bloomLevel?: string | null;
   difficulty?: string | null;
@@ -66,6 +69,7 @@ QuestionArtifactRef.implement({
     qid: t.string({ nullable: true, resolve: (q) => q.qid ?? null }),
     topicTag: t.string({ nullable: true, resolve: (q) => q.topicTag ?? null }),
     questionType: t.string({ nullable: true, resolve: (q) => q.questionType ?? null }),
+    category: t.string({ nullable: true, resolve: (q) => q.category ?? null }),
     paperRole: t.string({ nullable: true, resolve: (q) => q.paperRole ?? null }),
     bloomLevel: t.string({ nullable: true, resolve: (q) => q.bloomLevel ?? null }),
     difficulty: t.string({ nullable: true, resolve: (q) => q.difficulty ?? null }),
@@ -96,6 +100,7 @@ function docToShape(doc: LeanArtifact): QuestionArtifactShape {
     qid: (payload.qid as string | undefined) ?? null,
     topicTag: (tags.topic_tag as string | undefined) ?? null,
     questionType: (payload.question_type as string | undefined) ?? null,
+    category: (payload.lesson_ref as string | undefined) ?? null,
     paperRole: (payload.paper_role as string | undefined) ??
                (tags.paper_role as string | undefined) ?? null,
     bloomLevel: (payload.bloom_level as string | undefined) ??
@@ -138,6 +143,7 @@ builder.queryField("questions", (t) =>
       classLevel: t.arg.int({ required: false }),
       topicTag: t.arg.string({ required: false }),
       questionType: t.arg.string({ required: false }),
+      category: t.arg.string({ required: false }),
       bloomLevel: t.arg.string({ required: false }),
       difficulty: t.arg.string({ required: false }),
       paperRole: t.arg.string({ required: false }),
@@ -177,6 +183,9 @@ builder.queryField("questions", (t) =>
       if (args.difficulty) filter["envelopeJson.tags.difficulty"] = args.difficulty;
       if (args.paperRole) filter["envelopeJson.tags.paper_role"] = args.paperRole;
       if (args.questionType) filter["envelopeJson.payload.question_type"] = args.questionType;
+      // Category (D-#511) — the exercise family, carried in the payload's free-text
+      // lesson_ref. Payload-side like question_type, because it is not an envelope tag.
+      if (args.category) filter["envelopeJson.payload.lesson_ref"] = args.category;
 
       // Marks range filter on payload.marks
       if (args.marksMin != null || args.marksMax != null) {
@@ -306,6 +315,46 @@ builder.queryField("questionTopicTags", (t) =>
       return tags
         .filter((tag): tag is string => typeof tag === "string" && tag.trim() !== "")
         .sort((a, b) => a.localeCompare(b, "bn"));
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Query: questionCategories — distinct exercise families for the FilterSheet (D-#511)
+// ---------------------------------------------------------------------------
+
+builder.queryField("questionCategories", (t) =>
+  t.field({
+    type: ["String"],
+    description:
+      "Distinct question CATEGORY codes (payload lesson_ref) across readable questions — " +
+      "feeds the bank's category filter. Optionally narrowed by subject/classLevel. " +
+      "Returns [] where the chosen slice carries no categories, which is how the client " +
+      "knows not to render the group at all. TEACHER content scope enforced.",
+    authScopes: { hasPermission: "question:read" },
+    args: {
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+
+      const filter: FilterQuery<IContentArtifact> = { docType: "question", current: true };
+      if (args.subject) filter.subject = args.subject;
+      if (args.classLevel != null) filter.classLevel = args.classLevel;
+      // An unpublished question must not leak its category into the filter chips (Q3.1).
+      applyQuestionOnlyGate(filter as Record<string, unknown>, ctx.auth);
+
+      const scope = await buildContentScope(ctx);
+      const scopeFilter = contentScopeMongo(scope);
+      if (scopeFilter === null) return [];
+      if (scopeFilter) filter.$or = scopeFilter.$or;
+
+      const codes = (await ContentArtifact.distinct(
+        "envelopeJson.payload.lesson_ref",
+        filter,
+      )) as unknown[];
+      return orderQuestionCategories(codes, QUESTION_CATEGORIES);
     },
   }),
 );
