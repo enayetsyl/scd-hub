@@ -1,0 +1,35 @@
+{
+  "envelope_version": "1.0",
+  "doc_type": "question",
+  "subject": "BAN",
+  "class_level": 5,
+  "curation_tag": "KEEP_AS_IS",
+  "review_status": "draft",
+  "provenance": {
+    "source_project": "P04",
+    "author": "amendment-test",
+    "content_version": "v1"
+  },
+  "tags": {
+    "topic_tag": "TOP-BAN-C5-05",
+    "difficulty": "medium",
+    "bloom_level": "Understand",
+    "paper_role": "structured"
+  },
+  "payload": {
+    "qid": "QP-BAN-C5-U17-Q08001",
+    "topic_tag": "TOP-BAN-C5-05",
+    "ref19_topic_id": "BAN-INFOTEXT",
+    "question_text": "উয়ারী-বটেশ্বরে প্রাচীন নগরের সন্ধান কীভাবে পাওয়া গেল — ব্যাখ্যা করো।",
+    "question_type": "descriptive",
+    "paper_role": "structured",
+    "bloom_level": "Understand",
+    "difficulty": "medium",
+    "tier": "tier1",
+    "marks": 5,
+    "model_answer": {
+      "text": "উয়ারী-বটেশ্বরে নগরের খোঁজ হঠাৎ মেলেনি; ১৯৩৩ সালের মুদ্রা থেকে ২০০০ সালের খনন পর্যন্ত ধাপে ধাপে তা প্রকাশ পেয়েছে।",
+      "marker_note": "not in the contract"
+    }
+  }
+}

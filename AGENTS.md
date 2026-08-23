@@ -60,6 +60,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
 | Purpose | Command |
 |---|---|
 | Shared vocab/RBAC verifier | `npx tsx skills/_tools/verify_shared_vocab.mjs docs/import-contract.schema.json` |
+| Descriptive answer-carrier conformance | `node skills/_tools/verify_descriptive_carriers.mjs` — runs the harness over `server/import/cases/descriptive/` (`pass_*` must import, `fail_*` must be rejected). Run after any edit to the question payload schema. |
 | Import-envelope conformance | `python server/import/validate_import.py <envelope.json> --envelope-schema docs/import-contract.schema.json [--plan-schema <plan-schema.json>]` |
 | Auto-wrap a plan → envelope | `python server/import/build_envelope.py --json <plan.json> --md <plan.md> --envelope-schema docs/import-contract.schema.json --out <envelope.json>` (then run the conformance check above) |
 | Typecheck (server) | `npm run typecheck --workspace=server` |

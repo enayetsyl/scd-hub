@@ -65,5 +65,27 @@ export function AnswerCarrier({
       </View>
     );
   }
+  if (type === "descriptive") {
+    // A descriptive item carries a model_answer, a rubric, or both (D-#529). The rubric
+    // itself has no renderer yet, so a rubric-only item still shows the pointer label.
+    const ma = payload.model_answer ?? {};
+    const keyPoints = ma.key_points ?? [];
+    if (!ma.text && keyPoints.length === 0) {
+      return <Muted>{STR.descriptiveSeeRubric}</Muted>;
+    }
+    return (
+      <View>
+        {ma.text ? <Muted>{STR.modelAnswerLabel}: {ma.text}</Muted> : null}
+        {keyPoints.length ? (
+          <View>
+            <Muted>{STR.keyPointsLabel}:</Muted>
+            {keyPoints.map((p, i) => (
+              <Muted key={i}>{"    • "}{p}</Muted>
+            ))}
+          </View>
+        ) : null}
+      </View>
+    );
+  }
   return null;
 }
