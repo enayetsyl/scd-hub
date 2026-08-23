@@ -137,6 +137,37 @@ describe("DE-3 — resolveClassNoteHomework (routing)", () => {
     );
   });
 
+  test("an edit sends ONLY what the note carries — no fabricated revItem (D-#528)", async () => {
+    // `revItem: hw.revItem ?? false` used to be sent on every edit. The class-note form
+    // never collects a revision flag, so on a declared item that silently CLEARED it, and
+    // on an issued one it tripped the frozen-field guard — making an issued day’s note
+    // permanently uneditable. An absent field must stay absent.
+    mockFindForDay.mockResolvedValue("ITEM_OLD");
+    await resolveClassNoteHomework({
+      target: TARGET,
+      date: DATE,
+      hw: { mode: "DECLARE", topTags: ["T"], description: "d", qCount: 6 },
+      actorId: ACTOR,
+    });
+    const sent = mockUpdate.mock.calls[0][0] as Record<string, unknown>;
+    expect("revItem" in sent).toBe(false);
+    expect("timeDecl" in sent).toBe(false);
+    expect("poolRef" in sent).toBe(false);
+    // What the note DOES carry still goes through untouched.
+    expect(sent.description).toBe("d");
+    expect(sent.qCount).toBe(6);
+  });
+
+  test("a revision flag the note DOES carry is still forwarded (D-#528)", async () => {
+    mockFindForDay.mockResolvedValue("ITEM_OLD");
+    await resolveClassNoteHomework({
+      target: TARGET,
+      date: DATE,
+      hw: { mode: "DECLARE", topTags: ["T"], description: "d", qCount: 6, revItem: true },
+      actorId: ACTOR,
+    });
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ revItem: true }));
+  });
   test("the day lookup is keyed on (class, section, subject, date)", async () => {
     await resolveClassNoteHomework({
       target: TARGET,
