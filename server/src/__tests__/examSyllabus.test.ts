@@ -39,6 +39,15 @@ jest.mock("../modules/exams/models/ExamSyllabus", () => {
   };
 });
 
+const mockNoteFindOne = jest.fn();
+const mockNoteCreate = jest.fn();
+jest.mock("../modules/exams/models/ExamClassNote", () => ({
+  ExamClassNote: {
+    findOne: (q: unknown) => Promise.resolve(mockNoteFindOne(q)),
+    create: (d: unknown) => mockNoteCreate(d),
+  },
+}));
+
 jest.mock("../modules/exams/models/Exam", () => ({
   Exam: { findById: jest.fn(async () => ({ _id: "exam1", name: "বার্ষিক পরীক্ষা ২০২৬" })) },
 }));
@@ -56,6 +65,7 @@ jest.mock("../modules/platform/services/AuditService", () => ({
 }));
 
 import {
+  saveExamClassNote,
   routineHoldersFor,
   defaultApproverFor,
   isRoutineHolder,
@@ -518,5 +528,65 @@ describe("publishSyllabus", () => {
     mockSyllabusFindById.mockReturnValue(doc);
     await expect(publishSyllabus(PRINCIPAL, "s1")).rejects.toThrow(/30|৩০/);
     expect(doc.status).toBe("PRINCIPAL_REVIEW");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The per-CLASS question-type footer (§5.5)
+// ---------------------------------------------------------------------------
+
+describe("saveExamClassNote", () => {
+  const input = {
+    examId: oid().toString(),
+    classId: CLASS,
+    questionTypes: ["mcq", "fill_blank", "creative"] as never,
+    noteMd: "পরীক্ষায় ক্লাস অনুযায়ী বহুনির্বাচনী প্রশ্ন-উত্তর থাকবে, ইন শা আল্লাহ।",
+  };
+
+  beforeEach(() => {
+    mockNoteFindOne.mockReturnValue(null);
+    mockNoteCreate.mockImplementation(async (d: Record<string, unknown>) => ({ _id: oid(), ...d }));
+  });
+
+  test("a teacher cannot write the class footer", async () => {
+    await expect(saveExamClassNote(TEACHER, input)).rejects.toThrow(/অনুমতি নেই/);
+  });
+
+  test("Office creates it and the write is audited", async () => {
+    await saveExamClassNote(OFFICE, input);
+    expect(mockNoteCreate).toHaveBeenCalled();
+    expect(mockAudit.mock.calls[0][0].eventKind).toBe("EXAM_CLASS_NOTE_SAVED");
+  });
+
+  test("refuses mojibake in the footer — the same D-#523 guard", async () => {
+    await expect(
+      saveExamClassNote(OFFICE, { ...input, noteMd: "à¦¬à¦¾à¦à¦²à¦¾" }),
+    ).rejects.toThrow(/এনকোডিং/);
+    expect(mockNoteCreate).not.toHaveBeenCalled();
+  });
+
+  test("upserts rather than versioning — a second write updates the same row", async () => {
+    const existing = {
+      _id: oid(),
+      questionTypes: ["mcq"],
+      noteMd: "পুরনো",
+      updatedBy: null,
+      save: jest.fn(async function (this: unknown) {
+        return this;
+      }),
+    };
+    mockNoteFindOne.mockReturnValue(existing);
+    await saveExamClassNote(OFFICE, input);
+    expect(mockNoteCreate).not.toHaveBeenCalled();
+    expect(existing.noteMd).toBe(input.noteMd);
+    expect(existing.questionTypes).toEqual(["mcq", "fill_blank", "creative"]);
+  });
+
+  test("stays writable after the class's first subject has gone for sign-off", async () => {
+    // Deliberately NOT gated on the syllabus status machine: the footer states exam
+    // FORMAT, not what a teacher must cover, and would otherwise become un-editable
+    // the moment one subject advanced.
+    mockSyllabusFindById.mockReturnValue(docFor({ status: "PRINCIPAL_REVIEW" }));
+    await expect(saveExamClassNote(OFFICE, input)).resolves.toBeDefined();
   });
 });

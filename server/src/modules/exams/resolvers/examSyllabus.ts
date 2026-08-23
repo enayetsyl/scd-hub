@@ -20,6 +20,7 @@
 import { builder } from "../../../schema";
 import {
   saveSyllabus,
+  saveExamClassNote,
   submitSyllabusToTeacher,
   approveSyllabusAsTeacher,
   sendBackSyllabus,
@@ -32,6 +33,8 @@ import {
   syllabusDetail,
   guardianChildSyllabus,
   mySyllabusApprovals,
+  mySyllabusApprovalCount,
+  examSyllabusBoard,
   type SyllabusShape,
   type ClassSyllabusView,
 } from "../services/ExamSyllabusReadService";
@@ -157,6 +160,16 @@ builder.queryFields((t) => ({
     resolve: async (_root, args, ctx) => classSyllabus(ctx, args.examId, args.classId),
   }),
 
+  examSyllabusBoard: t.field({
+    type: [ClassSyllabusRef],
+    description:
+      "Every class of one exam with its subjects — the Principal's coverage board. exam:manage " +
+      "only: it is the one read that deliberately shows unpublished rows school-wide.",
+    authScopes: { hasPermission: "exam:manage" },
+    args: { examId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => examSyllabusBoard(ctx, args.examId),
+  }),
+
   examSyllabusDetail: t.field({
     type: SyllabusRef,
     nullable: true,
@@ -192,6 +205,15 @@ builder.queryFields((t) => ({
     resolve: async (_root, _args, ctx) => mySyllabusApprovals(ctx),
   }),
 
+  mySyllabusApprovalCount: t.int({
+    description:
+      "How many syllabuses await THIS caller's subject-teacher sign-off. The drawer badge's " +
+      "source: returns 0 rather than refusing, for any role, so a drawer render can never be " +
+      "taken down by it (the 791e5fe rule).",
+    authScopes: { authenticated: true },
+    resolve: async (_root, _args, ctx) => mySyllabusApprovalCount(ctx),
+  }),
+
   examSyllabusApprover: t.field({
     type: ApproverOptionsRef,
     description: "The routine holders for a (class × subject), most periods first (§7.1).",
@@ -212,6 +234,31 @@ builder.queryFields((t) => ({
 // ---------------------------------------------------------------------------
 
 builder.mutationFields((t) => ({
+  saveExamClassNote: t.field({
+    type: ClassSyllabusRef,
+    description:
+      "Write the per-CLASS question-type footer (§5.5) — the single line the source sheet prints " +
+      "under each class's table. Upserted, and deliberately NOT gated on the syllabus status " +
+      "machine: it is a statement of exam FORMAT, not of what a teacher must cover, so it stays " +
+      "editable after the class's first subject reaches PRINCIPAL_REVIEW.",
+    authScopes: { hasPermission: "exam:manage" },
+    args: {
+      examId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+      questionTypes: t.arg.stringList({ required: true }),
+      noteMd: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      await saveExamClassNote(ctx, {
+        examId: args.examId,
+        classId: args.classId,
+        questionTypes: args.questionTypes as ClassSyllabusView["questionTypes"],
+        noteMd: args.noteMd,
+      });
+      return classSyllabus(ctx, args.examId, args.classId);
+    },
+  }),
+
   saveExamSyllabus: t.field({
     type: SyllabusRef,
     description:

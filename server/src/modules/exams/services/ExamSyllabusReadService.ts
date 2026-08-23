@@ -318,3 +318,84 @@ export async function mySyllabusApprovals(ctx: AppContext): Promise<SyllabusShap
 
   return rows.map((r) => toShape(r, true));
 }
+
+/**
+ * How many syllabuses are waiting on THIS caller's sign-off — the drawer badge.
+ *
+ * A COUNT rather than `mySyllabusApprovals().length`: the drawer polls this every
+ * 60s for every signed-in teacher, and the full row carries `bodyMd` plus the
+ * whole mark table. Same fail-soft contract as the list — `0`, never a refusal,
+ * because a drawer render must never depend on a query succeeding (791e5fe).
+ */
+export async function mySyllabusApprovalCount(ctx: AppContext): Promise<number> {
+  if (!ctx.auth || ctx.auth.role === "GUARDIAN") return 0;
+  return ExamSyllabus.countDocuments({
+    approverUserId: new Types.ObjectId(ctx.auth.userId),
+    status: "TEACHER_REVIEW",
+  });
+}
+
+/**
+ * The Principal's coverage board: EVERY class of one exam, each with its
+ * subjects. `exam:manage` only — it is the one read that deliberately shows
+ * unpublished rows across the whole school.
+ *
+ * ONE pass over the exam's syllabus rows plus ONE class read, rather than a
+ * `classSyllabus` call per class: seven classes would be fourteen round trips,
+ * which is exactly the fan-out D-#476 removed from the guardian screen.
+ */
+export async function examSyllabusBoard(
+  ctx: AppContext,
+  examId: string,
+): Promise<ClassSyllabusView[]> {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  if (!isAdminStaff(ctx.auth)) {
+    throw new ForbiddenError("সিলেবাস বোর্ড দেখার অনুমতি নেই");
+  }
+
+  const classes = (await Class.find({}).select("label level").lean()) as unknown as Array<{
+    _id: Types.ObjectId;
+    label?: string;
+    level?: number;
+  }>;
+
+  const rows = (await ExamSyllabus.find({ examId }).lean()) as unknown as Array<
+    Parameters<typeof toShape>[0] & { classId: Types.ObjectId }
+  >;
+
+  const notes = (await ExamClassNote.find({ examId }).lean()) as unknown as Array<{
+    classId: Types.ObjectId;
+    questionTypes?: SyllabusItemType[];
+    noteMd?: string;
+  }>;
+  const noteByClass = new Map(notes.map((n) => [n.classId.toString(), n]));
+
+  const byClass = new Map<string, SyllabusShape[]>();
+  for (const r of rows) {
+    const k = r.classId.toString();
+    const list = byClass.get(k) ?? [];
+    list.push(toShape(r, false));
+    byClass.set(k, list);
+  }
+
+  const order = new Map(ROUTINE_SUBJECTS.map((s, i) => [s, i]));
+  return classes
+    // Roster order: Nursery is −1 and KG is 0, so sorting by label would bury
+    // the pre-primary classes in the middle of the board.
+    .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
+    .map((c) => {
+      const k = c._id.toString();
+      const note = noteByClass.get(k);
+      return {
+        examId,
+        classId: k,
+        classLabel: c.label ?? "",
+        classLevel: c.level ?? 0,
+        questionTypes: note?.questionTypes ?? [],
+        noteMd: note?.noteMd ?? "",
+        subjects: (byClass.get(k) ?? []).sort(
+          (a, b) => (order.get(a.subject) ?? 99) - (order.get(b.subject) ?? 99),
+        ),
+      };
+    });
+}

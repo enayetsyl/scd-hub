@@ -187,6 +187,7 @@ import SyllabusDetailScreen from "../screens/syllabus/SyllabusDetailScreen";
 import SyllabusEntryScreen from "../screens/syllabus/SyllabusEntryScreen";
 import SyllabusEditorScreen from "../screens/syllabus/SyllabusEditorScreen";
 import SyllabusApprovalsScreen from "../screens/syllabus/SyllabusApprovalsScreen";
+import SyllabusClassNoteScreen from "../screens/syllabus/SyllabusClassNoteScreen";
 import ChildSyllabusScreen from "../screens/guardian/ChildSyllabusScreen";
 import TeachingNoteDocScreen from "../screens/teachingnotes/TeachingNoteDocScreen";
 import TeachingNoteUploadScreen from "../screens/teachingnotes/TeachingNoteUploadScreen";
@@ -1058,6 +1059,11 @@ function SyllabusNavigator(): React.ReactElement {
         name="SyllabusApprovals"
         component={SyllabusApprovalsScreen}
         options={{ title: STR.syApprovals }}
+      />
+      <SyllabusStack.Screen
+        name="SyllabusClassNote"
+        component={SyllabusClassNoteScreen}
+        options={({ route }) => ({ title: route.params.title || STR.syClassNote })}
       />
     </SyllabusStack.Navigator>
   );

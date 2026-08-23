@@ -211,6 +211,7 @@ export type AuditEventKind =
   | "EXAM_SYLLABUS_SENT_BACK"         // teacher or Principal returned it to DRAFT with a mandatory reason
   | "EXAM_SYLLABUS_REOPENED"          // a content edit cleared an existing teacher approval (§7.3, the D-#520 rule)
   | "EXAM_SYLLABUS_PUBLISHED"         // Principal published — publishedAt set, guardians can now read it
+  | "EXAM_CLASS_NOTE_SAVED"            // the per-class question-type footer written/updated (§5.5)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

@@ -17,7 +17,7 @@ import { RefreshControl, View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import {
   MY_SYLLABUS_APPROVALS,
-  EXAM_SYLLABUS_CLASS,
+  EXAM_SYLLABUS_BOARD,
   APPROVE_EXAM_SYLLABUS,
   SEND_BACK_EXAM_SYLLABUS,
   PUBLISH_EXAM_SYLLABUS,
@@ -37,8 +37,11 @@ import {
   Notice,
 } from "../../components/ui";
 import SyllabusView from "../../components/SyllabusView";
+import SyllabusMatrix, { type MatrixRow } from "../../components/SyllabusMatrix";
+import { ROUTINE_SUBJECTS } from "@scd/shared";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, routineSubjectLabel, examTermLabel } from "../../lib/labels";
+import { useState as useLocalState } from "react";
 import { useSyllabusPickers } from "../../lib/useSyllabusPickers";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { friendlyError } from "../../lib/errors";
@@ -171,26 +174,34 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
   );
 
   const pick = useSyllabusPickers();
-  const [classQ, refetchClass] = useQuery({
-    query: EXAM_SYLLABUS_CLASS,
-    variables: { examId: pick.examId ?? "", classId: pick.classId ?? "" },
-    pause: !isPrincipal || !pick.examId || !pick.classId,
+  // The Principal reads the WHOLE exam in one query — the board's question is
+  // coverage across classes, and a per-class call would be seven round trips.
+  const [boardQ, refetchBoard] = useQuery({
+    query: EXAM_SYLLABUS_BOARD,
+    variables: { examId: pick.examId ?? "" },
+    pause: !isPrincipal || !pick.examId,
   });
-  const awaitingPrincipal = useMemo(
+  const board = useMemo<MatrixRow[]>(
     () =>
-      (classQ.data?.examSyllabusClass.subjects ?? []).filter(
-        (s) => s.status === "PRINCIPAL_REVIEW",
-      ),
-    [classQ.data?.examSyllabusClass.subjects],
+      (boardQ.data?.examSyllabusBoard ?? []).map((c) => ({
+        classId: c.classId,
+        classLabel: c.classLabel,
+        subjects: c.subjects,
+      })),
+    [boardQ.data?.examSyllabusBoard],
   );
 
-  const refresh = usePullRefresh(mineQ.fetching || classQ.fetching, () => {
+  /** The cell the Principal opened, if any. */
+  const [openCell, setOpenCell] = useLocalState<SyllabusT | null>(null);
+
+  const refresh = usePullRefresh(mineQ.fetching || boardQ.fetching, () => {
     refetchMine({ requestPolicy: "network-only" });
-    refetchClass({ requestPolicy: "network-only" });
+    refetchBoard({ requestPolicy: "network-only" });
   });
   const reload = (): void => {
     refetchMine({ requestPolicy: "network-only" });
-    refetchClass({ requestPolicy: "network-only" });
+    refetchBoard({ requestPolicy: "network-only" });
+    setOpenCell(null);
   };
 
   return (
@@ -210,7 +221,7 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
 
       {isPrincipal ? (
         <View style={{ marginTop: space(5), gap: space(3) }}>
-          <Body style={typeScale.sectionTitle}>{STR.syStatPrincipal}</Body>
+          <Body style={typeScale.sectionTitle}>{STR.syTitle}</Body>
           <Select
             label={STR.syPickExam}
             value={pick.examId}
@@ -219,26 +230,29 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
               value: e.id,
               hint: examTermLabel(e.term),
             }))}
-            onChange={pick.setExamId}
+            onChange={(v) => {
+              pick.setExamId(v);
+              setOpenCell(null);
+            }}
           />
-          <Select
-            label={STR.syPickClass}
-            value={pick.classId}
-            options={pick.classes.map((c) => ({ label: c.label, value: c.id }))}
-            onChange={pick.setClassId}
-          />
-          {awaitingPrincipal.length === 0 ? (
-            <EmptyState message={STR.syNoApprovals} />
+
+          {board.length === 0 ? (
+            <EmptyState message={STR.syNoExam} />
           ) : (
-            awaitingPrincipal.map((row) => (
-              <ApprovalCard
-                key={row.id ?? row.subject}
-                row={row}
-                mode="principal"
-                onDone={reload}
+            <Card>
+              <SyllabusMatrix
+                rows={board}
+                subjectOrder={[...ROUTINE_SUBJECTS]}
+                onPressCell={(_classId, _subject, row) => setOpenCell(row ?? null)}
               />
-            ))
+            </Card>
           )}
+
+          {/* A cell opens its row in place. Publish and send-back are the SAME
+              controls the teacher stage uses — one card, two audiences. */}
+          {openCell ? (
+            <ApprovalCard key={openCell.id ?? openCell.subject} row={openCell} mode="principal" onDone={reload} />
+          ) : null}
         </View>
       ) : null}
     </Screen>

@@ -76,6 +76,16 @@ export const EXAM_SYLLABUS_CLASS = gql<
   }
 `;
 
+/** The Principal's coverage board — every class of one exam, in ONE query. */
+export const EXAM_SYLLABUS_BOARD = gql<
+  { examSyllabusBoard: ClassSyllabusT[] },
+  { examId: string }
+>`
+  query ExamSyllabusBoard($examId: String!) {
+    examSyllabusBoard(examId: $examId) { ${CLASS_SYLLABUS_FIELDS} }
+  }
+`;
+
 export const EXAM_SYLLABUS_DETAIL = gql<
   { examSyllabusDetail: SyllabusT | null },
   { examId: string; classId: string; subject: string }
@@ -186,5 +196,32 @@ export const SEND_BACK_EXAM_SYLLABUS = gql<
 export const PUBLISH_EXAM_SYLLABUS = gql<{ publishExamSyllabus: SyllabusT }, { id: string }>`
   mutation PublishExamSyllabus($id: String!) {
     publishExamSyllabus(id: $id) { ${SYLLABUS_FIELDS} }
+  }
+`;
+
+/** The drawer badge's source — a count, not the rows (see the server comment). */
+export const MY_SYLLABUS_APPROVAL_COUNT = gql<{ mySyllabusApprovalCount: number }, NoVars>`
+  query MySyllabusApprovalCount {
+    mySyllabusApprovalCount
+  }
+`;
+
+/** The per-CLASS question-type footer (§5.5) — one line under the class's table. */
+export const SAVE_EXAM_CLASS_NOTE = gql<
+  { saveExamClassNote: ClassSyllabusT },
+  { examId: string; classId: string; questionTypes: string[]; noteMd: string }
+>`
+  mutation SaveExamClassNote(
+    $examId: String!
+    $classId: String!
+    $questionTypes: [String!]!
+    $noteMd: String!
+  ) {
+    saveExamClassNote(
+      examId: $examId
+      classId: $classId
+      questionTypes: $questionTypes
+      noteMd: $noteMd
+    ) { ${CLASS_SYLLABUS_FIELDS} }
   }
 `;

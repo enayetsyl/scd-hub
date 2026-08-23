@@ -9,12 +9,9 @@
  * status and CT aggregation; none of that is invented here.
  */
 import { builder } from "../../../schema";
-import { ForbiddenError } from "../../../middleware/authz";
-import { writeAudit } from "../../platform/services/AuditService";
-import { EXAM_TERMS } from "@scd/shared";
-import type { ExamTerm } from "@scd/shared";
 import { Types } from "mongoose";
 import { Exam } from "../models/Exam";
+import { createExam } from "../services/ExamService";
 
 interface ExamShape {
   id: string;
@@ -88,33 +85,13 @@ builder.mutationFields((t) => ({
       endDateKey: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      if (!(EXAM_TERMS as readonly string[]).includes(args.term)) {
-        throw new ForbiddenError("পরীক্ষার ধরন সঠিক নয়");
-      }
-      // Checked explicitly so the caller gets a Bangla reason rather than a raw
-      // duplicate-key error from the unique index.
-      const dupe = await Exam.findOne({ academicYearId: args.academicYearId, term: args.term });
-      if (dupe) throw new ForbiddenError("এই শিক্ষাবর্ষে এই ধরনের পরীক্ষা আগেই তৈরি করা হয়েছে");
-
-      const created = await Exam.create({
-        academicYearId: new Types.ObjectId(args.academicYearId),
-        term: args.term as ExamTerm,
+      const created = await createExam(ctx, {
+        academicYearId: args.academicYearId,
+        term: args.term,
         name: args.name,
         startDateKey: args.startDateKey ?? null,
         endDateKey: args.endDateKey ?? null,
-        createdBy: new Types.ObjectId(ctx.auth.userId),
       });
-
-      await writeAudit({
-        eventKind: "EXAM_CREATED",
-        actorId: ctx.auth.userId,
-        actorRole: ctx.auth.role,
-        targetId: created._id,
-        targetKind: "Exam",
-        meta: { term: args.term, name: args.name },
-      });
-
       return toShape(created as unknown as Parameters<typeof toShape>[0]);
     },
   }),

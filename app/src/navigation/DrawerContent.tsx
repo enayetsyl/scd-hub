@@ -24,6 +24,7 @@ import { bnNum } from "../lib/labels";
 import { PRINT_QUEUE_COUNTS } from "../graphql/printing";
 import { CT_QUESTION_COUNTS } from "../graphql/classTest";
 import { STAFF_LEAVE_PENDING_COUNT, COMMENT_REVIEW_COUNT, OBSERVATION_COUNTS } from "../graphql/operations";
+import { MY_SYLLABUS_APPROVAL_COUNT } from "../graphql/examSyllabus";
 import { subscribeLiveEvents } from "../lib/liveEvents";
 import { useAuth } from "../auth/AuthContext";
 import { useBasket } from "../state/BasketContext";
@@ -315,6 +316,29 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   }, [canLeaveBadge, refetchLeaveCount]);
   const leavePending = leaveCountQ.data?.staffLeavePendingCount ?? 0;
 
+  // Exam syllabus (SY-5): how many syllabuses await THIS caller's subject-teacher
+  // sign-off. The field is `authenticated: true` and returns 0 for every role, so
+  // unlike the observation probe that white-screened the app in 791e5fe it CANNOT
+  // be refused — and it is still read with `?.` and paused for guardians, because
+  // the rule is the shape, not the individual field.
+  const canSyllabusBadge = !!role && role !== "GUARDIAN";
+  const syllabusCountContext = React.useMemo(
+    () => ({ additionalTypenames: ["ExamSyllabus"] }),
+    [],
+  );
+  const [syllabusCountQ, refetchSyllabusCount] = useQuery({
+    query: MY_SYLLABUS_APPROVAL_COUNT,
+    pause: !canSyllabusBadge,
+    requestPolicy: "cache-and-network",
+    context: syllabusCountContext,
+  });
+  React.useEffect(() => {
+    if (!canSyllabusBadge) return;
+    const id = setInterval(() => refetchSyllabusCount({ requestPolicy: "network-only" }), 60_000);
+    return () => clearInterval(id);
+  }, [canSyllabusBadge, refetchSyllabusCount]);
+  const syllabusPending = syllabusCountQ.data?.mySyllabusApprovalCount ?? 0;
+
   // Owner 2026-07-26: Comments drawer badge — undelivered comments awaiting
   // Principal/Office review (roster:manage), mirroring Print. Refreshes on any
   // StudentComment mutation (record / edit / deliver).
@@ -357,7 +381,14 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     route === "QuestionsTab" && basket.count > 0 ? basket.count : undefined;
 
   /** Extra tinted badges (D-#294): [count, background] pairs, rendered when > 0. */
-  const tintedBadgesFor = (route: RouteName): Array<{ count: number; bg: string }> => {
+  const tintedBadgesFor = (
+    route: RouteName,
+    /** The deep-linked screen, when the route hosts several leaves (Syllabus, Reports). */
+    screen?: string,
+  ): Array<{ count: number; bg: string }> => {
+    if (route === "SyllabusTab" && screen === "SyllabusApprovals" && syllabusPending > 0) {
+      return [{ count: syllabusPending, bg: colors.warning }];
+    }
     if (route === "PrintTab" && isPrintOperator && printCounts) {
       const out: Array<{ count: number; bg: string }> = [];
       if (printCounts.requested > 0) out.push({ count: printCounts.requested, bg: colors.error });
@@ -399,7 +430,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     if (!visibleLeaf(leaf)) return null;
     const active = leaf.route === activeRoute && (!leaf.screen || leaf.screen === activeNested);
     const badge = badgeFor(leaf.route);
-    const tinted = tintedBadgesFor(leaf.route);
+    const tinted = tintedBadgesFor(leaf.route, leaf.screen);
     return (
       <Pressable
         onPress={() => go(leaf)}

@@ -365,6 +365,7 @@ export type SyllabusStackParamList = {
   SyllabusEntry: undefined;
   SyllabusEditor: { examId: string; classId: string; subject: string; title?: string };
   SyllabusApprovals: undefined;
+  SyllabusClassNote: { examId: string; classId: string; title?: string };
 };
 
 export type GuardianSyllabusStackParamList = {

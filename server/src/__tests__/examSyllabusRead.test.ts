@@ -41,6 +41,7 @@ jest.mock("../modules/exams/models/ExamSyllabus", () => {
 
 jest.mock("../modules/exams/models/ExamClassNote", () => ({
   ExamClassNote: {
+    find: () => ({ lean: async () => [] }),
     findOne: () => ({
       lean: async () => ({ questionTypes: ["mcq", "descriptive"], noteMd: "শ্রেণি ভিত্তিক নোট" }),
     }),
@@ -50,6 +51,7 @@ jest.mock("../modules/exams/models/ExamClassNote", () => ({
 jest.mock("../modules/foundation/models/Class", () => ({
   Class: {
     findById: () => ({ select: () => ({ lean: async () => ({ label: "শ্রেণি ৩", level: 3 }) }) }),
+    find: () => ({ select: () => ({ lean: async () => [] }) }),
   },
 }));
 
@@ -289,5 +291,55 @@ describe("mySyllabusApprovals", () => {
       auth: null,
     });
     expect(rows).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The Principal's coverage board (SY-5)
+// ---------------------------------------------------------------------------
+
+describe("examSyllabusBoard", () => {
+  test("a TEACHER is refused — it is the one read that shows drafts school-wide", async () => {
+    const { examSyllabusBoard } = await import(
+      "../modules/exams/services/ExamSyllabusReadService"
+    );
+    await expect(
+      examSyllabusBoard(ctxFor("TEACHER", TEACHER_ID), EXAM.toString()),
+    ).rejects.toThrow(/অনুমতি নেই/);
+  });
+
+  test("a GUARDIAN is refused", async () => {
+    const { examSyllabusBoard } = await import(
+      "../modules/exams/services/ExamSyllabusReadService"
+    );
+    await expect(
+      examSyllabusBoard(ctxFor("GUARDIAN"), EXAM.toString()),
+    ).rejects.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The drawer badge's source (SY-5)
+// ---------------------------------------------------------------------------
+
+describe("mySyllabusApprovalCount", () => {
+  test("a GUARDIAN gets 0 without touching the database — the drawer must never error", async () => {
+    const { mySyllabusApprovalCount } = await import(
+      "../modules/exams/services/ExamSyllabusReadService"
+    );
+    expect(await mySyllabusApprovalCount(ctxFor("GUARDIAN"))).toBe(0);
+  });
+
+  test("an unauthenticated caller gets 0 rather than throwing (the 791e5fe rule)", async () => {
+    const { mySyllabusApprovalCount } = await import(
+      "../modules/exams/services/ExamSyllabusReadService"
+    );
+    expect(
+      await mySyllabusApprovalCount({
+        req: {} as AppContext["req"],
+        res: {} as AppContext["res"],
+        auth: null,
+      }),
+    ).toBe(0);
   });
 });

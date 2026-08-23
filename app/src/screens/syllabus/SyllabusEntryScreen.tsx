@@ -16,7 +16,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { EXAM_SYLLABUS_CLASS, type SyllabusT } from "../../graphql/examSyllabus";
 import type { SyllabusStackParamList } from "../../navigation/types";
-import { Screen, Body, Muted, Card, Select, Badge, EmptyState } from "../../components/ui";
+import { Screen, Body, Muted, Card, Select, Badge, Button, EmptyState, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum, routineSubjectLabel, examTermLabel } from "../../lib/labels";
 import { useSyllabusPickers } from "../../lib/useSyllabusPickers";
@@ -94,6 +94,21 @@ export default function SyllabusEntryScreen({ navigation }: Props): React.ReactE
       <QueryGate result={syllabusQ} onRetry={() => refetch({ requestPolicy: "network-only" })}>
         {view ? (
           <View style={{ gap: space(3), marginTop: space(3) }}>
+            {/* The per-class footer is a CLASS fact covering all eight subjects
+                (§5.5); an unwritten one is called out here because nothing on the
+                subject rows would ever reveal that it is missing. */}
+            {!view.noteMd ? <Notice message={STR.syClassNote} tone="warn" /> : null}
+            <Button
+              title={STR.syClassNote}
+              variant="secondary"
+              onPress={() =>
+                navigation.navigate("SyllabusClassNote", {
+                  examId: view.examId,
+                  classId: view.classId,
+                  title: `${view.classLabel} — ${STR.syClassNote}`,
+                })
+              }
+            />
             <Card>
               <Body style={{ ...typeScale.bodyStrong }}>{view.classLabel}</Body>
               <Muted>

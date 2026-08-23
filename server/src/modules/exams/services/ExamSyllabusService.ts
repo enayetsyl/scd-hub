@@ -32,6 +32,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { assertNotMojibake } from "../../platform/services/encodingGuard";
 import { Exam } from "../models/Exam";
+import { ExamClassNote, type IExamClassNote } from "../models/ExamClassNote";
 import {
   ExamSyllabus,
   validateMarkRows,
@@ -451,3 +452,74 @@ export async function publishSyllabus(ctx: AppContext, id: string): Promise<IExa
 }
 
 export { SYLLABUS_FULL_MARKS };
+
+// ---------------------------------------------------------------------------
+// The per-CLASS footer (§5.5)
+// ---------------------------------------------------------------------------
+
+/**
+ * Write the exam's per-class question-type footer — the single line the source
+ * sheet prints under each class's table:
+ *
+ *   "পরীক্ষায় ক্লাস অনুযায়ী বহুনির্বাচনী প্রশ্ন-উত্তর, শূন্যস্থান পূরণ, সত্য-মিথ্যা
+ *    নির্ণয়, মিলকরন, ছোট প্রশ্ন, বড় প্রশ্ন ইত্যাদি থাকবে, ইন শা আল্লাহ।"
+ *
+ * A CLASS fact, not a subject fact — Class 3's version adds সৃজনশীল and it applies
+ * to all eight of that class's subjects at once. Upserted rather than versioned:
+ * unlike a syllabus it carries no approval chain, because it is a statement of
+ * exam format rather than of what a teacher has to cover.
+ *
+ * Deliberately NOT gated on the syllabus status machine: the footer is normally
+ * written once at the start and would otherwise be un-editable the moment the
+ * first subject of that class reached PRINCIPAL_REVIEW.
+ */
+export async function saveExamClassNote(
+  ctx: AppContext,
+  input: {
+    examId: string;
+    classId: string;
+    questionTypes: SyllabusItemType[];
+    noteMd: string;
+  },
+): Promise<IExamClassNote> {
+  assertCanManage(ctx);
+  const auth = requireAuth(ctx);
+
+  assertNotMojibake(input.noteMd);
+
+  const exam = await Exam.findById(input.examId);
+  if (!exam) throw new ForbiddenError("পরীক্ষা পাওয়া যায়নি");
+
+  const existing = await ExamClassNote.findOne({
+    examId: input.examId,
+    classId: input.classId,
+  });
+
+  let saved: IExamClassNote;
+  if (existing) {
+    existing.questionTypes = input.questionTypes;
+    existing.noteMd = input.noteMd;
+    existing.updatedBy = new Types.ObjectId(auth.userId);
+    await existing.save();
+    saved = existing;
+  } else {
+    saved = await ExamClassNote.create({
+      examId: new Types.ObjectId(input.examId),
+      classId: new Types.ObjectId(input.classId),
+      questionTypes: input.questionTypes,
+      noteMd: input.noteMd,
+      updatedBy: new Types.ObjectId(auth.userId),
+    });
+  }
+
+  await writeAudit({
+    eventKind: "EXAM_CLASS_NOTE_SAVED",
+    actorId: auth.userId,
+    actorRole: auth.role,
+    targetId: saved._id,
+    targetKind: "ExamClassNote",
+    meta: { examId: input.examId, classId: input.classId, types: input.questionTypes.length },
+  });
+
+  return saved;
+}
