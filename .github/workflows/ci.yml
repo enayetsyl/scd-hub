@@ -32,6 +32,8 @@ jobs:
         run: npm run typecheck --workspace=server
       - name: Vocab/RBAC verifier
         run: npx tsx skills/_tools/verify_shared_vocab.mjs docs/import-contract.schema.json
+      - name: Descriptive answer-carrier conformance (D-#529)
+        run: node skills/_tools/verify_descriptive_carriers.mjs
       - name: Server tests (jest)
         run: npm run test --workspace=server
       - name: Typecheck app

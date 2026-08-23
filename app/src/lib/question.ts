@@ -31,6 +31,7 @@ export interface QuestionPayload {
   blanks?: QuestionBlank[];
   pairs?: QuestionPair[];
   answer_key?: { accepted?: string[]; model_note?: string };
+  model_answer?: { text?: string; key_points?: string[] };
   [k: string]: unknown;
 }
 
