@@ -20,6 +20,7 @@ import { useQuery, useMutation } from "urql";
 import {
   MY_QUESTION_REVIEWS,
   SUBMIT_QUESTION_REVIEW,
+  SUBMIT_QUESTION_REVIEW_BULK,
   type QuestionReviewRoundT,
 } from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
@@ -37,16 +38,28 @@ import {
   ErrorBanner,
   Notice,
   Divider,
+  Chip,
+  ChipRow,
 } from "../../components/ui";
 import { STR, subjectLabel, classLevelLabel, reviewVerdictLabel, bnNum } from "../../lib/labels";
+import { parsePayload } from "../../lib/question";
+import { AnswerCarrier } from "../../components/QuestionAnswer";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { useColors } from "../../theme";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "QuestionReviewQueue">;
 
 export default function QuestionReviewQueueScreen({ navigation }: Props): React.ReactElement {
   const [{ data, fetching, error }, refetch] = useQuery({ query: MY_QUESTION_REVIEWS });
   const [, submit] = useMutation(SUBMIT_QUESTION_REVIEW);
+  const [, submitBulk] = useMutation(SUBMIT_QUESTION_REVIEW_BULK);
+  const colors = useColors();
+
+  /** Rounds ticked for a bulk verdict (D-#527). Ids, so a refetch cannot desync them. */
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkReason, setBulkReason] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   /** Which round has a form open, and WHICH form — reject (reason optional) or
    *  condition (condition mandatory). One at a time, as before (D-#525). */
@@ -63,6 +76,48 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
   );
 
   const rounds = data?.myQuestionReviews ?? [];
+
+  const toggle = (id: string): void => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  /**
+   * One verdict across every ticked round (D-#527). APPROVE_WITH_CONDITION is absent by
+   * design: a condition is written about ONE question, so it stays a per-card action.
+   */
+  async function decideSelected(verdict: "APPROVE" | "CHANGES_REQUESTED"): Promise<void> {
+    if (selected.size === 0) return;
+    setBulkBusy(true);
+    setFailure(null);
+    const trimmed = bulkReason.trim();
+    const res = await submitBulk({
+      assignmentIds: [...selected],
+      verdict,
+      reason: verdict === "CHANGES_REQUESTED" && trimmed !== "" ? trimmed : undefined,
+    });
+    setBulkBusy(false);
+    if (res.error) {
+      setFailure(friendlyError(res.error));
+      return;
+    }
+    // Partial success is expected, not an anomaly: a round superseded by a re-import is
+    // refused while its neighbours succeed. Show BOTH counts rather than a flat "saved"
+    // that would hide the ones which did not land.
+    const r = res.data?.submitQuestionReviewBulk;
+    setNotice(
+      r && r.failedCount > 0
+        ? `${STR.qrBulkDone} (${bnNum(r.okCount)} ✓, ${bnNum(r.failedCount)} ✗)`
+        : STR.qrBulkDone,
+    );
+    setSelected(new Set());
+    setBulkReason("");
+    refetch({ requestPolicy: "network-only" });
+  }
 
   async function decide(
     round: QuestionReviewRoundT,
@@ -114,6 +169,50 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
         {failure ? <ErrorBanner message={failure} /> : null}
         {notice ? <Notice tone="ok" message={notice} /> : null}
 
+        {/* Bulk bar (D-#527). A reviewer is handed a whole chapter at once (241 questions
+            in the first real assignment), so one card at a time is the bottleneck. */}
+        {rounds.length > 0 ? (
+          <View style={{ marginBottom: space(3) }}>
+            <ChipRow>
+              <Chip
+                label={STR.qrSelectAll}
+                selected={selected.size === rounds.length && rounds.length > 0}
+                onPress={() => setSelected(new Set(rounds.map((r) => r.id)))}
+              />
+              <Chip
+                label={STR.qrClearSelection}
+                selected={false}
+                onPress={() => setSelected(new Set())}
+              />
+            </ChipRow>
+            {selected.size > 0 ? (
+              <View style={{ marginTop: space(2) }}>
+                <Muted>{`${bnNum(selected.size)} ${STR.qrSelected}`}</Muted>
+                <Field
+                  label={STR.qrBulkReasonOptional}
+                  value={bulkReason}
+                  onChangeText={setBulkReason}
+                  multiline
+                />
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
+                  <Button
+                    title={STR.qrAcceptSelected}
+                    loading={bulkBusy}
+                    onPress={() => void decideSelected("APPROVE")}
+                  />
+                  <Button
+                    title={STR.qrRejectSelected}
+                    variant="danger"
+                    loading={bulkBusy}
+                    onPress={() => void decideSelected("CHANGES_REQUESTED")}
+                  />
+                </View>
+              </View>
+            ) : null}
+            <Divider />
+          </View>
+        ) : null}
+
         {rounds.length === 0 ? (
           <EmptyState message={STR.qrNoQueue} />
         ) : (
@@ -132,9 +231,22 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
                       tone={round.verdict === "APPROVE" ? "ok" : "warn"}
                     />
                   ) : null}
+                  <Chip
+                    label={STR.qrSelect}
+                    selected={selected.has(round.id)}
+                    onPress={() => toggle(round.id)}
+                  />
                 </View>
 
                 <Body>{round.questionText ?? "—"}</Body>
+                {/* The answer shows BY DEFAULT (owner ruling). 48 of the first chapter’s 241
+                    questions are MCQ and 32 fill-in-the-blank, and the reviewer’s actual job is
+                    checking that the marked-correct answer IS correct — without this they were
+                    approving a stem they had no way to verify. Same renderer as the bank preview
+                    and set detail, so all three read identically. */}
+                <View style={{ marginTop: space(1) }}>
+                  <AnswerCarrier payload={parsePayload(round.payloadJson)} correctColor={colors.primary} />
+                </View>
                 {round.qid ? <Muted>{round.qid}</Muted> : null}
                 {round.artifactSuperseded ? <Notice tone="warn" message={STR.qrRoundClosed} /> : null}
 

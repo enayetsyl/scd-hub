@@ -382,6 +382,64 @@ export async function submitQuestionReview(input: SubmitQuestionReviewInput): Pr
   return (await decorate([assignment as unknown as RawAssignment]))[0];
 }
 
+/**
+ * One verdict applied to a MULTI-SELECTION of the reviewer's own rounds (D-#527).
+ *
+ * A reviewer works a chapter at a time — 241 questions landed in a single assignment — and
+ * deciding them one card at a time is the bottleneck the bulk bar removes.
+ *
+ * Every item goes through `submitQuestionReview` itself rather than a faster batch write, so
+ * each keeps its reviewer check, its status sync (draft→reviewed) and its own audit row. A
+ * bulk decision must be indistinguishable from the same decisions made one at a time —
+ * otherwise the audit trail changes shape depending on which button was pressed.
+ *
+ * Per-item failures are COLLECTED, not fatal: one closed round (superseded by a re-import)
+ * must not throw away the other 240 verdicts.
+ *
+ * APPROVE_WITH_CONDITION is deliberately refused. The condition is the text somebody must
+ * later read and clear, and one condition pasted across a selection is not a condition — it
+ * is a note about no particular question. Same reasoning as `publishQuestionBulk` refusing
+ * an override reason.
+ */
+export async function submitQuestionReviewBulk(input: {
+  assignmentIds: string[];
+  verdict: string;
+  reason?: string;
+  reviewerId: string;
+  actorRole?: string;
+}): Promise<BulkResult> {
+  if (input.verdict === "APPROVE_WITH_CONDITION") {
+    throw new ReviewError(
+      "A condition applies to ONE question — approve with a condition one at a time",
+    );
+  }
+  let okCount = 0;
+  const failures: { artifactId: string; error: string }[] = [];
+  for (const assignmentId of [...new Set(input.assignmentIds)]) {
+    try {
+      await submitQuestionReview({
+        assignmentId,
+        reviewerId: input.reviewerId,
+        verdict: input.verdict,
+        reason: input.reason,
+        actorRole: input.actorRole,
+      });
+      okCount += 1;
+    } catch (err) {
+      // Report the ARTIFACT the reviewer recognises rather than the internal round id;
+      // fall back to the round id when the assignment itself could not be loaded.
+      const found = (await ReviewAssignment.findById(assignmentId)
+        .select({ artifactId: 1 })
+        .lean()) as { artifactId?: unknown } | null;
+      failures.push({
+        artifactId: found?.artifactId ? String(found.artifactId) : assignmentId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  return { okCount, failedCount: failures.length, failures };
+}
+
 // ---------------------------------------------------------------------------
 // publishQuestion (Q2.8, Q2.9)
 // ---------------------------------------------------------------------------
