@@ -804,6 +804,18 @@ export const MY_QUESTION_REVIEWS = gql<{ myQuestionReviews: QuestionReviewRoundT
 `;
 
 /** Principal lists: verdict=APPROVE is the publish queue, CHANGES_REQUESTED the rejected list. */
+/** One verdict across a multi-selection of the reviewer's own rounds (D-#527). The server
+ *  refuses APPROVE_WITH_CONDITION here — a condition belongs to ONE question. */
+export const SUBMIT_QUESTION_REVIEW_BULK = gql<
+  { submitQuestionReviewBulk: { okCount: number; failedCount: number; failures: string[] } },
+  { assignmentIds: string[]; verdict: string; reason?: string | null }
+>`
+  mutation SubmitQuestionReviewBulk($assignmentIds: [String!]!, $verdict: String!, $reason: String) {
+    submitQuestionReviewBulk(assignmentIds: $assignmentIds, verdict: $verdict, reason: $reason) {
+      okCount failedCount failures
+    }
+  }
+`;
 export const QUESTION_REVIEW_INBOX = gql<
   { questionReviewInbox: QuestionReviewRoundT[] },
   { verdict?: string | null }

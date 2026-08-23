@@ -26,6 +26,7 @@ import {
   assignQuestionReviewByChapter as assignByChapterSvc,
   clearQuestionCondition as clearConditionSvc,
   submitQuestionReview as submitSvc,
+  submitQuestionReviewBulk as submitBulkSvc,
   publishQuestion as publishSvc,
   publishQuestionBulk as publishBulkSvc,
   listMyQuestionReviews,
@@ -296,6 +297,37 @@ builder.mutationField("submitQuestionReview", (t) =>
   }),
 );
 
+
+builder.mutationField("submitQuestionReviewBulk", (t) =>
+  t.field({
+    type: QuestionBulkResultRef,
+    description:
+      "Apply ONE verdict to a multi-selection of the caller's own rounds (D-#527) — the " +
+      "reviewer works a whole chapter, so deciding one card at a time is the bottleneck. " +
+      "APPROVE_WITH_CONDITION is refused: a condition belongs to ONE question. Per-item " +
+      "failures are collected, not fatal. Requires content:review.",
+    authScopes: { hasPermission: "content:review" },
+    args: {
+      assignmentIds: t.arg.stringList({ required: true }),
+      verdict: t.arg.string({ required: true }),
+      reason: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await submitBulkSvc({
+          assignmentIds: args.assignmentIds,
+          verdict: args.verdict,
+          reason: args.reason ?? undefined,
+          reviewerId: ctx.auth.userId,
+          actorRole: ctx.auth.role,
+        });
+      } catch (err) {
+        return mapReviewError(err);
+      }
+    },
+  }),
+);
 builder.mutationField("publishQuestion", (t) =>
   t.field({
     type: PublishQuestionResultRef,
