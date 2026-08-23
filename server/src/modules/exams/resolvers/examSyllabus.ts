@@ -8,7 +8,7 @@
  *   examSyllabusApprover    — exam:manage; who the routine says teaches this pair.
  *   saveExamSyllabus        — exam:manage
  *   submitExamSyllabus      — exam:manage
- *   approveExamSyllabus     — authenticated; gated to the NAMED routine holder in the service (D-#530)
+ *   approveExamSyllabus     — authenticated; gated to the NAMED routine holder in the service (D-#533)
  *   sendBackExamSyllabus    — authenticated; gated per stage in the service
  *   publishExamSyllabus     — exam:manage + PRINCIPAL role, enforced in the service (§7.4)
  *
@@ -48,7 +48,7 @@ const MarkRowRef = builder.objectRef<SyllabusShape["marks"][number]>("SyllabusMa
 MarkRowRef.implement({
   description:
     "One numbered line of the মানবন্টন. A row carrying `component` (CT/ADAB) IS a report-card " +
-    "component rather than a question item and has no count/marksEach (D-#528).",
+    "component rather than a question item and has no count/marksEach (D-#531).",
   fields: (t) => ({
     seq: t.exposeInt("seq"),
     label: t.exposeString("label"),
@@ -130,7 +130,7 @@ ApproverOptionsRef.implement({
 const MarkRowInput = builder.inputType("SyllabusMarkRowInput", {
   description:
     "One মানবন্টন row. Provide count+marksEach for a question row, or `component` (CT/ADAB) for a " +
-    "report-card component row — never both (D-#528). `total` is always authoritative.",
+    "report-card component row — never both (D-#531). `total` is always authoritative.",
   fields: (t) => ({
     seq: t.int({ required: true }),
     label: t.string({ required: true }),

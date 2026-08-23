@@ -366,6 +366,23 @@ export interface UpdateHomeworkItemInput {
   actorId: string;
 }
 
+/**
+ * Is a frozen field being left as it already is? Only a real difference may be refused.
+ *
+ * Arrays compare by content (selectedQids is rebuilt on every save, so a fresh array of
+ * the same ids is not an edit), and POOL_REF normalises absent/null/"" to one value so
+ * "no pool" sent three different ways never reads as a change.
+ */
+function sameFrozenValue(sent: unknown, stored: unknown): boolean {
+  if (Array.isArray(sent) || Array.isArray(stored)) {
+    const a = (Array.isArray(sent) ? sent : []).map(String);
+    const b = (Array.isArray(stored) ? stored : []).map(String);
+    return a.length === b.length && a.every((v, i) => v === b[i]);
+  }
+  const norm = (v: unknown): unknown => (v === null || v === undefined || v === "" ? null : v);
+  return norm(sent) === norm(stored);
+}
+
 /** Tiered edit (D-#336):
  *    declared (+ day unreconciled) → every declare-form field EXCEPT the identity
  *      trio subject/classLevel/dateGiven (they are baked into hwId and, at issue,
@@ -374,20 +391,29 @@ export interface UpdateHomeworkItemInput {
  *    issued → descriptive fields only (description, topTags, attachmentIds). All
  *      downstream reads live-join the item, so these propagate cleanly; timeDecl/
  *      qCount are frozen because tallyDay recomputes live and an edit would
- *      silently rewrite the reconciled DAY_TOTAL under the 120-min ceiling gate. */
+ *      silently rewrite the reconciled DAY_TOTAL under the 120-min ceiling gate.
+ *
+ *  The frozen check compares against what is STORED, so it refuses a real CHANGE
+ *  rather than the mere mention of a field. It used to reject on presence, which made
+ *  a whole caller impossible: the class-note bridge always passes qCount/revItem, so
+ *  once a day was issued the teacher could no longer edit that note AT ALL — not even
+ *  the description and attachments this very rule promises stay editable. A no-op write
+ *  rewrites no DAY_TOTAL, so there was never anything to protect against. */
 export async function updateHomeworkItem(input: UpdateHomeworkItemInput): Promise<HomeworkItemResult> {
   const item = await HomeworkItem.findById(input.itemId);
   if (!item) throw new Error("HomeworkItem not found");
 
   if (item.status !== "declared") {
-    const frozen: [string, unknown][] = [
-      ["TIME_DECL", input.timeDecl],
-      ["Q_COUNT", input.qCount],
-      ["POOL_REF", input.poolRef],
-      ["selected questions", input.selectedQids],
-      ["revision flag", input.revItem],
+    const frozen: [string, unknown, unknown][] = [
+      ["TIME_DECL", input.timeDecl, item.timeDecl],
+      ["Q_COUNT", input.qCount, item.qCount],
+      ["POOL_REF", input.poolRef, item.poolRef ?? null],
+      ["selected questions", input.selectedQids, item.selectedQids],
+      ["revision flag", input.revItem, item.revItem],
     ];
-    const attempted = frozen.filter(([, v]) => v !== undefined).map(([k]) => k);
+    const attempted = frozen
+      .filter(([, sent, stored]) => sent !== undefined && !sameFrozenValue(sent, stored))
+      .map(([k]) => k);
     if (attempted.length > 0) {
       throw new Error(
         `Item is already issued — ${attempted.join(", ")} is frozen (only description, topics and attachments stay editable)`,

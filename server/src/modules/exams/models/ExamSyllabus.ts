@@ -9,10 +9,10 @@
  * Two rules are enforced here rather than in a resolver, because a row that
  * violates either is wrong no matter which caller wrote it:
  *
- *   1. `Σ marks[].total === 100`, in EVERY class (D-#529). One universal guard,
+ *   1. `Σ marks[].total === 100`, in EVERY class (D-#532). One universal guard,
  *      not a per-class-band lookup — what FILLS the 100 stays per subject.
  *   2. A row tagged with a report-card `component` (CT/ADAB) carries NO
- *      count/marksEach (D-#528): its number comes from the paper, and typing it
+ *      count/marksEach (D-#531): its number comes from the paper, and typing it
  *      twice is how the syllabus a parent reads and the report card the same
  *      parent receives start to disagree.
  *
@@ -41,7 +41,7 @@ export interface ISyllabusMarkRow {
   itemType?: SyllabusItemType | null;
   /**
    * Set when this row IS a report-card component rather than a question item —
-   * the sheet's "ক্লাস টেস্ট 10" / "আখলাক 10" (D-#528). Such a row has no
+   * the sheet's "ক্লাস টেস্ট 10" / "আখলাক 10" (D-#531). Such a row has no
    * count/marksEach.
    */
   component?: ExamComponent | null;
@@ -64,7 +64,7 @@ export interface IExamSyllabus extends Document {
 
   status: SyllabusStatus;
 
-  /** The subject teacher this row was sent to. Routine-derived at send time (D-#530). */
+  /** The subject teacher this row was sent to. Routine-derived at send time (D-#533). */
   approverUserId?: Types.ObjectId | null;
   teacherApprovedBy?: Types.ObjectId | null;
   teacherApprovedAt?: Date | null;
@@ -154,7 +154,7 @@ export function validateMarkRows(rows: ISyllabusMarkRow[]): string | null {
 
   for (const r of rows) {
     if (r.component) {
-      // A component row's number comes from the paper (D-#528).
+      // A component row's number comes from the paper (D-#531).
       if (r.count != null || r.marksEach != null) {
         return `"${r.label}" একটি কম্পোনেন্ট সারি — এখানে সংখ্যা বা প্রতি নম্বর দেওয়া যাবে না।`;
       }

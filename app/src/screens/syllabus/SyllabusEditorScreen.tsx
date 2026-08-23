@@ -285,7 +285,7 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
                 onChange={(v) =>
                   // Choosing a component CLEARS count/marksEach: the number comes
                   // from the exam paper, and typing it twice is how the syllabus
-                  // and the report card start to disagree (D-#528).
+                  // and the report card start to disagree (D-#531).
                   patch(i, v ? { component: v, count: null, marksEach: null } : { component: null })
                 }
               />

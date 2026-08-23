@@ -617,32 +617,32 @@ check("STORAGE_BOX_STATUS_LABELS_BN total",    total(V.STORAGE_BOX_STATUS_LABELS
 check("STORAGE_BOX_STATUS_LABELS_EN total",    total(V.STORAGE_BOX_STATUS_LABELS_EN, V.STORAGE_BOX_STATUSES));
 check("no archive:* permission declared — composed perms only (D-#447)", !V.PERMISSIONS.some((p) => p.startsWith("archive:")));
 
-console.log("=== SY. Exam syllabus (docs/prd-exam-syllabus.md §4, D-#527–#532; APP-NATIVE, NO wire twin) ===");
+console.log("=== SY. Exam syllabus (docs/prd-exam-syllabus.md §4, D-#530–#532; APP-NATIVE, NO wire twin) ===");
 check("EXAM_TERMS exact — HALF_YEARLY/ANNUAL (§4)", eq(V.EXAM_TERMS, ["HALF_YEARLY","ANNUAL"]));
 check("EXAM_TERM_LABELS_BN total", total(V.EXAM_TERM_LABELS_BN, V.EXAM_TERMS));
 check("EXAM_TERM_LABELS_EN total", total(V.EXAM_TERM_LABELS_EN, V.EXAM_TERMS));
-check("EXAM_COMPONENTS exact — CT/ADAB/FINAL (§5.2, D-#528)", eq(V.EXAM_COMPONENTS, ["CT","ADAB","FINAL"]));
+check("EXAM_COMPONENTS exact — CT/ADAB/FINAL (§5.2, D-#531)", eq(V.EXAM_COMPONENTS, ["CT","ADAB","FINAL"]));
 check("EXAM_COMPONENT_LABELS_BN total", total(V.EXAM_COMPONENT_LABELS_BN, V.EXAM_COMPONENTS));
 check("EXAM_COMPONENT_LABELS_EN total", total(V.EXAM_COMPONENT_LABELS_EN, V.EXAM_COMPONENTS));
-check("SYLLABUS_STATUSES exact — DRAFT/TEACHER_REVIEW/PRINCIPAL_REVIEW/PUBLISHED (D-#530)",
+check("SYLLABUS_STATUSES exact — DRAFT/TEACHER_REVIEW/PRINCIPAL_REVIEW/PUBLISHED (D-#533)",
   eq(V.SYLLABUS_STATUSES, ["DRAFT","TEACHER_REVIEW","PRINCIPAL_REVIEW","PUBLISHED"]));
 check("SYLLABUS_STATUS_LABELS_BN total", total(V.SYLLABUS_STATUS_LABELS_BN, V.SYLLABUS_STATUSES));
 check("SYLLABUS_STATUS_LABELS_EN total", total(V.SYLLABUS_STATUS_LABELS_EN, V.SYLLABUS_STATUSES));
-check("SYLLABUS_ITEM_TYPES exact — 6 QUESTION_TYPES codes + creative/oral/practical/other (D-#527)",
+check("SYLLABUS_ITEM_TYPES exact — 6 QUESTION_TYPES codes + creative/oral/practical/other (D-#530)",
   eq(V.SYLLABUS_ITEM_TYPES, ["mcq","short_answer","true_false","fill_blank","matching","descriptive","creative","oral","practical","other"]));
 check("SYLLABUS_ITEM_TYPE_LABELS_BN total", total(V.SYLLABUS_ITEM_TYPE_LABELS_BN, V.SYLLABUS_ITEM_TYPES));
 check("SYLLABUS_ITEM_TYPE_LABELS_EN total", total(V.SYLLABUS_ITEM_TYPE_LABELS_EN, V.SYLLABUS_ITEM_TYPES));
-// D-#527 — the load-bearing check: the syllabus enum must NEVER be fused into the
+// D-#530 — the load-bearing check: the syllabus enum must NEVER be fused into the
 // mirrored, wire-contract QUESTION_TYPES. Section A already pins QUESTION_TYPES to the
 // envelope schema; this pins the two apart, so a "tidy-up" that merges them fails here.
-check("QUESTION_TYPES is UNCHANGED by SY-1 — still exactly the 6 mirrored codes (D-#527)",
+check("QUESTION_TYPES is UNCHANGED by SY-1 — still exactly the 6 mirrored codes (D-#530)",
   eq(V.QUESTION_TYPES, ["mcq","short_answer","true_false","fill_blank","matching","descriptive"]));
-check("SYLLABUS_ITEM_TYPES is a SUPERSET of QUESTION_TYPES, sharing code strings (D-#527)",
+check("SYLLABUS_ITEM_TYPES is a SUPERSET of QUESTION_TYPES, sharing code strings (D-#530)",
   V.QUESTION_TYPES.every((t) => V.SYLLABUS_ITEM_TYPES.includes(t)) && V.SYLLABUS_ITEM_TYPES.length > V.QUESTION_TYPES.length);
-check("SYLLABUS_FULL_MARKS === 100 — one universal guard, every class (D-#529)", V.SYLLABUS_FULL_MARKS === 100);
-// D-#530 — the sign-off is routine-derived, NOT a permission. A future exam:approve
+check("SYLLABUS_FULL_MARKS === 100 — one universal guard, every class (D-#532)", V.SYLLABUS_FULL_MARKS === 100);
+// D-#533 — the sign-off is routine-derived, NOT a permission. A future exam:approve
 // string would let AC-1 hand sign-off to someone who does not teach the subject.
-check("no exam:approve / exam:publish permission — sign-off is routine-derived, publish rides the ROLE (D-#530/#397)",
+check("no exam:approve / exam:publish permission — sign-off is routine-derived, publish rides the ROLE (D-#533/#397)",
   !V.PERMISSIONS.some((p) => p === "exam:approve" || p === "exam:publish"));
 check("exam:manage held by PRINCIPAL + OFFICE only; TEACHER read-only; GUARDIAN none (§4)",
   V.roleHasPermission("PRINCIPAL","exam:manage") && V.roleHasPermission("OFFICE","exam:manage")

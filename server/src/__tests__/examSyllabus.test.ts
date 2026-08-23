@@ -1,11 +1,11 @@
 /**
- * Exam syllabus tests (SY-2/SY-3, docs/prd-exam-syllabus.md §6, D-#527–#532).
+ * Exam syllabus tests (SY-2/SY-3, docs/prd-exam-syllabus.md §6, D-#530–#532).
  *
- * Marks    — Σ = 100 in EVERY class (D-#529); a component row carries no
- *            count/marksEach (D-#528); count × marksEach must equal total. The
+ * Marks    — Σ = 100 in EVERY class (D-#532); a component row carries no
+ *            count/marksEach (D-#531); count × marksEach must equal total. The
  *            Nursery-Arabic sheet from §5.1 is the fixture, because it is the one
  *            row-set the owner actually wrote down.
- * Approver — routine-derived, NOT typed and NOT granted (D-#530). ARABIC reaches
+ * Approver — routine-derived, NOT typed and NOT granted (D-#533). ARABIC reaches
  *            an approver only through a cross-grade subjectgroup slot; a scope
  *            grant confers read, never sign-off.
  * Chain    — DRAFT → TEACHER_REVIEW → PRINCIPAL_REVIEW → PUBLISHED, no stage
@@ -159,7 +159,7 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// Mark distribution — the Σ = 100 guard (D-#528/#529)
+// Mark distribution — the Σ = 100 guard (D-#531/#529)
 // ---------------------------------------------------------------------------
 
 describe("validateMarkRows", () => {
@@ -182,7 +182,7 @@ describe("validateMarkRows", () => {
     expect(validateMarkRows([])).toBeTruthy();
   });
 
-  test("a CT/ADAB component row carrying count or marksEach is refused (D-#528)", () => {
+  test("a CT/ADAB component row carrying count or marksEach is refused (D-#531)", () => {
     const bad = NURSERY_ARABIC.map((r) =>
       r.component === "CT" ? { ...r, count: 2, marksEach: 5 } : r,
     );
@@ -201,7 +201,7 @@ describe("validateMarkRows", () => {
     expect(validateMarkRows(bad)).toBeTruthy();
   });
 
-  test("a KG-shaped 2-row sheet is valid — composition is per subject, not per band (D-#529)", () => {
+  test("a KG-shaped 2-row sheet is valid — composition is per subject, not per band (D-#532)", () => {
     const kg: ISyllabusMarkRow[] = [
       { seq: 1, label: "আদব", component: "ADAB", total: 10 },
       { seq: 2, label: "লিখিত পরীক্ষা", count: 9, marksEach: 10, total: 90 },
@@ -218,7 +218,7 @@ describe("validateMarkRows", () => {
 });
 
 // ---------------------------------------------------------------------------
-// The routine-derived approver (D-#530)
+// The routine-derived approver (D-#533)
 // ---------------------------------------------------------------------------
 
 describe("routine-derived approver", () => {

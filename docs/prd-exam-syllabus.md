@@ -3,7 +3,7 @@
 **Status:** BUILD CONTRACT — owner rulings ratified 2026-08-23; no open blockers
 **Owner:** Principal
 **Module:** `server/src/modules/exams` (new) — identity/operational plane, behind ADR-005 (no corpus path)
-**Decisions:** **D-#527–#532** (reserved 2026-08-23, pre-flighted against `origin/dev` @ `26a7e0e`, live max was D-#526)
+**Decisions:** **D-#530–#532** (reserved 2026-08-23, pre-flighted against `origin/dev` @ `26a7e0e`, live max was D-#526)
 **Source evidence:** owner's *Annual Exam Syllabus 2026 (SCD Sylhet)* — Nursery → Class 5, one table per class, one row per subject, carrying syllabus prose + a numbered mark distribution + a per-class question-type footer.
 
 ---
@@ -53,7 +53,7 @@ Three failure modes this closes:
 - `EXAM_COMPONENTS = [CT, ADAB, FINAL]` — শ্রেণি পরীক্ষা / আদব / সেমিস্টার ফাইনাল. *(Same — landed here, EX-1 reuses it.)*
 - Permissions: `exam:manage` (PRINCIPAL, OFFICE) · `exam:read` (row-scoped staff read). **Guardians read through the existing `guardian:read_child`** — no new guardian permission.
 
-### D-#527 — do not extend `QUESTION_TYPES`
+### D-#530 — do not extend `QUESTION_TYPES`
 
 `QUESTION_TYPES` (`shared/vocab.ts:130`) is a **mirrored, wire-contract enum** bound to the import-envelope schema. It carries exactly six of the ten codes this feature needs, which makes extending it the obvious move and the wrong one: adding `creative`/`oral`/`practical` there triggers the two-place contract sync and changes the import contract for a reason that has nothing to do with importing. `SYLLABUS_ITEM_TYPES` is therefore a **separate, app-native enum that deliberately reuses the same six code strings**, so a later "assemble this paper from the bank" join is still a straight string match, and no envelope changes.
 
@@ -77,7 +77,7 @@ Worked example — **Nursery Arabic**, the sheet's most explicit মানবন
 | 8 | আখলাক *(ADAB)* | — | 10 |
 | | **মোট** | | **100** |
 
-### 5.2 A mark row may BE a report-card component — D-#528
+### 5.2 A mark row may BE a report-card component — D-#531
 
 Rows 7 and 8 above are not question items; they are the **CT and Adab components** that `prd-exams.md` §5.2 models on `ExamPaper`. So each mark row carries an optional `component ∈ EXAM_COMPONENTS`, and the invariant is:
 
@@ -87,7 +87,7 @@ Rows 7 and 8 above are not question items; they are the **CT and Adab components
 
 Without that link, the syllabus handed to a parent and the report card issued to the same parent can disagree about how a subject was marked, and nothing in the app would notice. A row carrying a `component` takes **no** `count`/`marksEach` — its number comes from the paper, so nobody types it twice.
 
-### 5.3 This supersedes `prd-exams.md` §9.4 for the annual exam — D-#529
+### 5.3 This supersedes `prd-exams.md` §9.4 for the annual exam — D-#532
 
 §9.4 / D-#377 ratified **Nursery = FINAL /100 only, no CT, no Adab** — read off the 2026 *Half-Yearly* report cards. The 2026 **Annual** syllabus contradicts it: Nursery Arabic carries CT 10 + Adab 10. The owner ruled (2026-08-23) that **every subject in every class totals 100** and composition stays per paper. §9.4 is therefore **descriptive of the half-yearly, not a rule for the module**. This costs nothing to implement because **D-#376 already moved composition onto the paper** rather than the class band; a per-band constant would have made this a migration.
 
@@ -111,7 +111,7 @@ Exam { academicYearId, term∈EXAM_TERMS, name, startDateKey?, endDateKey?,
        createdBy/At }
 ```
 Deliberately minimal — `status`, `gradeScale`, `failRule`, `ctAggregation` are **EX-1's** fields and are not invented here. Unique on `(academicYearId, term)`.
-**Acceptance:** [ ] vocab verifier green with the four new enums + two permissions; [ ] BN and EN labels present for every code; [ ] `QUESTION_TYPES` and `docs/import-contract.schema.json` **unchanged** (D-#527); [ ] a second `Exam` for the same year+term is refused.
+**Acceptance:** [ ] vocab verifier green with the four new enums + two permissions; [ ] BN and EN labels present for every code; [ ] `QUESTION_TYPES` and `docs/import-contract.schema.json` **unchanged** (D-#530); [ ] a second `Exam` for the same year+term is refused.
 
 ### SY-2 — `ExamSyllabus` + the Σ guard
 ```
@@ -182,4 +182,4 @@ Mark entry, rechecking, tabulation, report cards, the custody chain (**all of th
 
 Reuses D-#1 · D-#46/#52 (app-native vocab, no wire twin) · D-#54 (`ROUTINE_SUBJECTS`) · D-#85 (derive, never store — §5.4) · D-#271/CO-8 (`publishedAt` as an additive publish gate) · D-#277/CT-8 (approve + send-back-with-reason) · D-#366 (never silently self-assign an accountable teacher) · D-#376 (per-paper composition — what makes §5.3 free) · D-#377/§9.4 (superseded for the annual exam, §5.3) · D-#405 (per-leaf drawer permission gating) · D-#520 (a closure does not survive a change to what it closed) · D-#521 (routine-derived class × subject pairs; ARABIC/QURAN have no `Subject` row) · D-#523 (mojibake refusal) · ADR-005 · ADR-008.
 
-**New: D-#527–#532.** D-#527 separate app-native `SYLLABUS_ITEM_TYPES`, `QUESTION_TYPES` untouched · D-#528 a mark row may be a report-card component; Σ = 100 = Σ paper components · D-#529 every subject totals 100, superseding §9.4 for the annual exam · D-#530 subject-teacher sign-off between Office and Principal, routine-derived, grants excluded · D-#531 bypass + re-approval rules (§7.1–7.3) · D-#532 the drawer badge is a permission-gated probe (the `791e5fe` rule).
+**New: D-#530–#532.** D-#530 separate app-native `SYLLABUS_ITEM_TYPES`, `QUESTION_TYPES` untouched · D-#531 a mark row may be a report-card component; Σ = 100 = Σ paper components · D-#532 every subject totals 100, superseding §9.4 for the annual exam · D-#533 subject-teacher sign-off between Office and Principal, routine-derived, grants excluded · D-#534 bypass + re-approval rules (§7.1–7.3) · D-#535 the drawer badge is a permission-gated probe (the `791e5fe` rule).

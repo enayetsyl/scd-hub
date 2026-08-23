@@ -1,6 +1,6 @@
 /**
  * ExamSyllabusService — the syllabus approval chain (SY-3,
- * docs/prd-exam-syllabus.md §6/§7, D-#527–#532).
+ * docs/prd-exam-syllabus.md §6/§7, D-#530–#532).
  *
  *   DRAFT ──submit──▶ TEACHER_REVIEW ──approve──▶ PRINCIPAL_REVIEW ──publish──▶ PUBLISHED
  *     ▲                     │                            │
@@ -9,7 +9,7 @@
  * Three rules carry the design:
  *
  *  1. **The sign-off actor is derived from the ROUTINE, never typed and never a
- *     permission** (D-#530). `RoutineSlot` is the only source that reaches ARABIC
+ *     permission** (D-#533). `RoutineSlot` is the only source that reaches ARABIC
  *     and QURAN — they have no `Subject` row and are taught through cross-grade
  *     subject groups (D-#521) — so a grant-only or Subject-only lookup would have
  *     shipped an approval stage no Arabic teacher could act on.
@@ -72,7 +72,7 @@ function assertCanPublish(ctx: AppContext): void {
 }
 
 // ---------------------------------------------------------------------------
-// The routine-derived approver set (D-#530)
+// The routine-derived approver set (D-#533)
 // ---------------------------------------------------------------------------
 
 export interface RoutineHolder {

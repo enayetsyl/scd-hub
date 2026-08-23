@@ -96,8 +96,20 @@ grows; the count of `current:true` rows per qid stays at one. Such elements repo
   `LOCKED_StimulusPayload_Schema_v1.json` (all next to the harness; resolved by glob).
 - **L3 — consistency:** envelope indexed copies must agree with the payload (plan: subject/class_level/
   curation_tag/address/pinned_to; question: `tags.{bloom_level,difficulty,topic_tag,paper_role}`).
-- **L4 — question semantics:** marks sums (per-blank/pair/step); `ref19_topic_id` must be in the REF-19
-  registry (HARD fail; override the default 121-slug set via `--ref19-registry`); `stimulus_ref` form (WARN).
+- **L4 — question semantics:** marks sums (per-blank/pair/step); a `descriptive` item must carry a
+  `rubric` or a `model_answer` (HARD fail — the payload schema gates it too, this restates it in
+  actionable terms); `ref19_topic_id` must be in the REF-19 registry (HARD fail; override the default
+  121-slug set via `--ref19-registry`); `stimulus_ref` form (WARN).
+
+### Answer carriers (one per `question_type`, QDN-04 xor)
+`mcq → options`, `true_false → tf_answer`, `fill_blank → blanks`, `matching → pairs`,
+`short_answer → answer_key`, `descriptive → rubric and/or model_answer`. Every other carrier is
+forbidden on each branch. **`descriptive` is the one branch with two legal carriers** (v1.1, D-#529):
+a `rubric` for an open-ended REF-09 §5 task, a `model_answer` for an exam-bank বড় প্রশ্ন that has a
+definite expected answer, or both. `model_answer` is teacher-facing marker guidance — it is never
+machine-matched, and it is forbidden on all five other branches. When a rubric IS present its
+mandatory `islamic_alignment` criterion row is unchanged; the amendment relaxed only *when* a rubric
+is required, never *what* a rubric must contain.
 - **ADV — REF-21 advisory scan:** plan surface only; NEVER blocks (D-#4 / Project-04 decision 5-B).
 
 ## Mirrored enums (two-/three-place rule)

@@ -3422,12 +3422,12 @@ export const PERMISSIONS = [
   "book:review_senior",    // answer escalations, content sign-off, anchor HUMAN_VERIFIED
   "book:assemble",         // queue a build, release an edition
   "book:manage",           // create books, upload policy versions, assign people, read everything
-  // exams — syllabus first (SY-1, D-#527/#530); prd-exams EX-1.. reuses BOTH
+  // exams — syllabus first (SY-1, D-#530/#530); prd-exams EX-1.. reuses BOTH
   "exam:manage",           // create an exam, write + submit a syllabus, send one back (Principal/Office). PUBLISH rides
                            // the ROLE inside the resolver (PRINCIPAL only, D-#397's posture), not a second permission —
                            // so AC-1 can hand syllabus authoring to a senior teacher without handing them the release.
                            // The SUBJECT-TEACHER sign-off is likewise NOT a permission: it is routine-derived in the
-                           // resolver (D-#530), the CO-1 assigned-observer posture.
+                           // resolver (D-#533), the CO-1 assigned-observer posture.
   "exam:read",             // read a syllabus, ROW-SCOPED in the resolver (published rows for staff; Office/Principal see drafts). Staff-internal — GUARDIAN reads via guardian:read_child (§4)
   // guardian portal (ACTIVE since GP-1, D-#68)
   "guardian:read_child",   // reads linked children's permitted operational slices
@@ -3522,7 +3522,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     // `selfVerified` STAMP rather than a refusal — recorded, never silently allowed.
     "book:read", "book:author", "book:illustrate", "book:review",
     "book:review_senior", "book:assemble", "book:manage",
-    "exam:manage", "exam:read", // exam syllabus (SY-1, D-#530) — the Principal is the publish gate
+    "exam:manage", "exam:read", // exam syllabus (SY-1, D-#533) — the Principal is the publish gate
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
   // fills trackers; authors nothing in-app (no content:import). message:dispatch
@@ -3540,7 +3540,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "message:dispatch",
     "observation:review",    // the assigned senior-teacher observer scores+comments — gated to observerId in the resolver (CO-1, D-#147)
     "observation:read",      // read own observations as observer + own (observed) at/after REVIEWED — row-scoped in the resolver (CO-1)
-    "exam:read",             // read PUBLISHED syllabuses for the classes they teach (SY-6, D-#530). NOT exam:manage — the subject-teacher SIGN-OFF is routine-derived in the resolver, not a permission
+    "exam:read",             // read PUBLISHED syllabuses for the classes they teach (SY-6, D-#533). NOT exam:manage — the subject-teacher SIGN-OFF is routine-derived in the resolver, not a permission
   ],
   // Roster, guardian linkage, messaging dispatch (REQ §2), plus content import (the
   // publisher seam), plan-review assignment (D-#39), and routine authoring (D-#46).
@@ -3559,7 +3559,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
                              // Principal-only by role, so a bulk mistake has exactly one owner.
     "exam:manage", "exam:read", // exam syllabus: create the exam, write and submit a syllabus (SY-1/SY-4). PUBLISH
                              // is refused to Office BY STATE, not by permission — the row must reach
-                             // PRINCIPAL_REVIEW and only the Principal moves it on (D-#530, §7.4).
+                             // PRINCIPAL_REVIEW and only the Principal moves it on (D-#533, §7.4).
   ],
   // Guardian portal v1 (GP-1, D-#68): the single grant is ACTIVE — guardian-scoped
   // resolvers read linked children only (assertGuardianOfStudent, link-scoped).
@@ -3915,7 +3915,7 @@ export const DELEGATED_ACTION_LABELS_EN: Record<DelegatedAction, PermissionLabel
 };
 
 /* ===========================================================================
- * Exam syllabus — SY-1  (docs/prd-exam-syllabus.md §4, D-#527–#532)
+ * Exam syllabus — SY-1  (docs/prd-exam-syllabus.md §4, D-#530–#532)
  *
  * APP-NATIVE, no wire twin, no three-place sync — the routine/HR shape
  * (D-#46/#52). The import envelope and docs/import-contract.schema.json are
@@ -3941,7 +3941,7 @@ export const EXAM_TERM_LABELS_EN: Record<ExamTerm, string> = {
 };
 
 /** The report card's three mark columns. A SYLLABUS MARK ROW may BE one of these
- *  (D-#528): the source sheet writes "ক্লাস টেস্ট 10" and "আখলাক 10" as rows 7-8 of
+ *  (D-#531): the source sheet writes "ক্লাস টেস্ট 10" and "আখলাক 10" as rows 7-8 of
  *  Nursery Arabic's মানবন্টন, which are not question items but the CT and Adab
  *  components. Tagging the row ties the syllabus handed to a parent to the report
  *  card issued to the same parent — Σ rows = 100 = Σ ExamPaper.components. */
@@ -3960,7 +3960,7 @@ export const EXAM_COMPONENT_LABELS_EN: Record<ExamComponent, string> = {
   FINAL: "Semester Final",
 };
 
-/** The syllabus approval chain (D-#530). Office writes → the SUBJECT TEACHER signs
+/** The syllabus approval chain (D-#533). Office writes → the SUBJECT TEACHER signs
  *  off → the Principal publishes. `PUBLISHED` is the only state a guardian can
  *  reach, and it is carried by an additive `publishedAt` (the CO-8 / D-#271 shape),
  *  never by a second predicate. Send-back from either review stage returns to
@@ -3984,7 +3984,7 @@ export const SYLLABUS_STATUS_LABELS_EN: Record<SyllabusStatus, string> = {
 
 /** The exercise family a mark-distribution row belongs to.
  *
- *  D-#527 — this is a SEPARATE, APP-NATIVE enum and NOT an extension of
+ *  D-#530 — this is a SEPARATE, APP-NATIVE enum and NOT an extension of
  *  `QUESTION_TYPES`. That enum (line ~130) is MIRRORED against the envelope
  *  schema's `questionPayload.question_type`, so adding `creative`/`oral`/
  *  `practical` there would trigger the two-place contract sync and change the
@@ -4033,7 +4033,7 @@ export const SYLLABUS_ITEM_TYPE_LABELS_EN: Record<SyllabusItemType, string> = {
   other: "Other",
 };
 
-/** Every subject totals 100, in EVERY class (owner ruling 2026-08-23, D-#529).
+/** Every subject totals 100, in EVERY class (owner ruling 2026-08-23, D-#532).
  *  One universal guard rather than a per-class-band lookup; what FILLS the 100
  *  stays per subject, exactly as the source sheet writes it. */
 export const SYLLABUS_FULL_MARKS = 100;

@@ -113,13 +113,17 @@ export async function resolveClassNoteHomework(input: {
 
   const existing = await findHomeworkItemIdForDay(target.classId, target.sectionId, target.subject, date);
   if (existing) {
+    // Send ONLY what the caller actually supplied. `revItem: hw.revItem ?? false` used
+    // to fabricate a value the class-note form never collects, which on a still-declared
+    // item silently cleared the revision flag on every note save — a data loss with no
+    // error at all — and on an issued one tripped the frozen-field guard.
     const updated = await updateHomeworkItem({
       itemId: existing,
       description,
       topTags,
       attachmentIds,
-      qCount,
-      revItem: hw.revItem ?? false,
+      ...(hw.qCount != null ? { qCount: hw.qCount } : {}),
+      ...(hw.revItem != null ? { revItem: hw.revItem } : {}),
       ...(hw.timeDecl != null ? { timeDecl: hw.timeDecl } : {}),
       ...(hw.poolRef?.trim() ? { poolRef: hw.poolRef.trim() } : {}),
       actorId,

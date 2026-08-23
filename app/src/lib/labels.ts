@@ -1402,6 +1402,8 @@ const STR_BN = {
   true: "সত্য (True)",
   false: "মিথ্যা (False)",
   descriptiveSeeRubric: "[বর্ণনামূলক — রুব্রিক দেখুন]",
+  modelAnswerLabel: "নমুনা উত্তর",
+  keyPointsLabel: "মূল বিষয়",
 
   // Sets
   sets: "সেট",
@@ -5114,6 +5116,8 @@ const STR_EN: StrTable = {
   true: "True",
   false: "False",
   descriptiveSeeRubric: "[Descriptive — see rubric]",
+  modelAnswerLabel: "Model answer",
+  keyPointsLabel: "Key points",
 
   // Sets
   sets: "Sets",

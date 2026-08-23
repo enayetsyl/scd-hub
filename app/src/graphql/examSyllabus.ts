@@ -13,7 +13,7 @@ export interface SyllabusMarkRowT {
   label: string;
   /** SYLLABUS_ITEM_TYPES code — `oral` is what derives the written/oral split. */
   itemType: string | null;
-  /** CT | ADAB | FINAL — set when this row IS a report-card component (D-#528). */
+  /** CT | ADAB | FINAL — set when this row IS a report-card component (D-#531). */
   component: string | null;
   count: number | null;
   marksEach: number | null;
