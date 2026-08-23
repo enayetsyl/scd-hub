@@ -35,6 +35,8 @@ import type {
   FreeMixingStackParamList,
   EnglishDriveStackParamList,
   TeachingNotesStackParamList,
+  SyllabusStackParamList,
+  GuardianSyllabusStackParamList,
   RevisionStackParamList,
   FinanceStackParamList,
   HrStackParamList,
@@ -180,6 +182,12 @@ import EnglishDriveHomeScreen from "../screens/englishdrive/EnglishDriveHomeScre
 import EnglishDriveDocScreen from "../screens/englishdrive/EnglishDriveDocScreen";
 import EnglishDriveUploadScreen from "../screens/englishdrive/EnglishDriveUploadScreen";
 import TeachingNotesHomeScreen from "../screens/teachingnotes/TeachingNotesHomeScreen";
+import SyllabusHomeScreen from "../screens/syllabus/SyllabusHomeScreen";
+import SyllabusDetailScreen from "../screens/syllabus/SyllabusDetailScreen";
+import SyllabusEntryScreen from "../screens/syllabus/SyllabusEntryScreen";
+import SyllabusEditorScreen from "../screens/syllabus/SyllabusEditorScreen";
+import SyllabusApprovalsScreen from "../screens/syllabus/SyllabusApprovalsScreen";
+import ChildSyllabusScreen from "../screens/guardian/ChildSyllabusScreen";
 import TeachingNoteDocScreen from "../screens/teachingnotes/TeachingNoteDocScreen";
 import TeachingNoteUploadScreen from "../screens/teachingnotes/TeachingNoteUploadScreen";
 import TeachingNoteOpenCommentsScreen from "../screens/teachingnotes/TeachingNoteOpenCommentsScreen";
@@ -1018,6 +1026,57 @@ function EnglishDriveNavigator(): React.ReactElement {
   );
 }
 
+const SyllabusStack = createNativeStackNavigator<SyllabusStackParamList>();
+function SyllabusNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    // SyllabusHome stays FIRST: the first registered screen is the stack's initial
+    // route, and a param-requiring screen there crashes the tab at runtime — which
+    // neither tsc nor `expo export` catches.
+    <SyllabusStack.Navigator screenOptions={stackOptions}>
+      <SyllabusStack.Screen
+        name="SyllabusHome"
+        component={SyllabusHomeScreen}
+        options={{ title: STR.syTitle }}
+      />
+      <SyllabusStack.Screen
+        name="SyllabusDetail"
+        component={SyllabusDetailScreen}
+        options={({ route }) => ({ title: route.params.title || STR.syTitle })}
+      />
+      <SyllabusStack.Screen
+        name="SyllabusEntry"
+        component={SyllabusEntryScreen}
+        options={{ title: STR.syEntry }}
+      />
+      <SyllabusStack.Screen
+        name="SyllabusEditor"
+        component={SyllabusEditorScreen}
+        options={({ route }) => ({ title: route.params.title || STR.syEntry })}
+      />
+      <SyllabusStack.Screen
+        name="SyllabusApprovals"
+        component={SyllabusApprovalsScreen}
+        options={{ title: STR.syApprovals }}
+      />
+    </SyllabusStack.Navigator>
+  );
+}
+
+const GuardianSyllabusStack = createNativeStackNavigator<GuardianSyllabusStackParamList>();
+function GuardianSyllabusNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <GuardianSyllabusStack.Navigator screenOptions={stackOptions}>
+      <GuardianSyllabusStack.Screen
+        name="ChildSyllabus"
+        component={ChildSyllabusScreen}
+        options={{ title: STR.syTitle }}
+      />
+    </GuardianSyllabusStack.Navigator>
+  );
+}
+
 const TeachingNotesStack = createNativeStackNavigator<TeachingNotesStackParamList>();
 function TeachingNotesNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -1420,6 +1479,10 @@ export function AppTabs(): React.ReactElement {
   // ROLE (the reconciliationReport resolver's own gate; OFFICE holds no tracker:read).
   // D-#467: template-aware, so an OFFICE template added to a teacher actually delivers
   // this tab — a bare `role ===` compared only the primary role and silently hid it.
+  // Exam syllabus (SY-1..SY-6): every staff role holds exam:read on its template,
+  // so no probe query is needed for the tab itself — one less permission-carrying
+  // drawer request, which is the shape that white-screened the app in 791e5fe.
+  const canSyllabus = can("exam:read") || can("exam:manage");
   const canReports = isRole("PRINCIPAL") || isRole("OFFICE");
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
@@ -1435,7 +1498,7 @@ export function AppTabs(): React.ReactElement {
     canAssignment || canReview || canRoutine || canAttendance || canPrint || canLibrary ||
     canChat || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
-    canSupportBook || canAdmin || canGuardian;
+    canSupportBook || canAdmin || canGuardian || canSyllabus;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -1504,6 +1567,7 @@ export function AppTabs(): React.ReactElement {
         {/* English Drive (D-#344) — P/O always; a teacher only with an ENG class. */}
         {canEnglishDrive ? <Drawer.Screen name="EnglishDriveTab" component={EnglishDriveNavigator} /> : null}
         {canTeachingNotes ? <Drawer.Screen name="TeachingNotesTab" component={TeachingNotesNavigator} /> : null}
+        {canSyllabus ? <Drawer.Screen name="SyllabusTab" component={SyllabusNavigator} /> : null}
         {canRevision ? <Drawer.Screen name="RevisionTab" component={RevisionNavigator} /> : null}
         {canFinance ? <Drawer.Screen name="FinanceTab" component={FinanceNavigator} /> : null}
         {canHr ? <Drawer.Screen name="HrTab" component={HrNavigator} /> : null}
@@ -1514,6 +1578,7 @@ export function AppTabs(): React.ReactElement {
         {canGuardian ? <Drawer.Screen name="GuardianHomeTab" component={GuardianHomeNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianHomeworkTab" component={GuardianHomeworkNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianRoutineTab" component={GuardianRoutineNavigator} /> : null}
+        {canGuardian ? <Drawer.Screen name="GuardianSyllabusTab" component={GuardianSyllabusNavigator} /> : null}
         {canGuardian ? (
           <Drawer.Screen name="GuardianAssignmentsTab" component={GuardianAssignmentsNavigator} />
         ) : null}

@@ -72,6 +72,7 @@ SyllabusRef.implement({
     questionTypes: t.stringList({ resolve: (r) => r.questionTypes }),
     examDateKey: t.string({ nullable: true, resolve: (r) => r.examDateKey }),
     status: t.exposeString("status"),
+    sendBackReason: t.string({ nullable: true, resolve: (r) => r.sendBackReason }),
     isMine: t.exposeBoolean("isMine"),
     writtenMarks: t.exposeInt("writtenMarks"),
     oralMarks: t.exposeInt("oralMarks"),

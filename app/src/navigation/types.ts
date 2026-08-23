@@ -354,6 +354,22 @@ export type EnglishDriveStackParamList = {
  *  (upload entry inside, P/O only), note viewer + comments, upload UI.
  *  `TeachingNotesHome` MUST stay first — the stack's initial route takes no
  *  params, and a param-requiring screen in that slot crashes the tab at runtime. */
+/**
+ * Exam syllabus (SY-4..SY-6). SyllabusHome is param-less and MUST stay first in
+ * its stack — the first registered screen is the initial route, and a
+ * param-requiring screen there crashes the tab at runtime.
+ */
+export type SyllabusStackParamList = {
+  SyllabusHome: undefined;
+  SyllabusDetail: { examId: string; classId: string; subject: string; title?: string };
+  SyllabusEntry: undefined;
+  SyllabusEditor: { examId: string; classId: string; subject: string; title?: string };
+  SyllabusApprovals: undefined;
+};
+
+export type GuardianSyllabusStackParamList = {
+  ChildSyllabus: undefined;
+};
 export type TeachingNotesStackParamList = {
   TeachingNotesHome: undefined;
   TeachingNoteDoc: { noteId: string; title?: string };
@@ -505,6 +521,8 @@ export type TabParamList = {
   FreeMixingTab: NavigatorScreenParams<FreeMixingStackParamList>;
   EnglishDriveTab: NavigatorScreenParams<EnglishDriveStackParamList>;
   TeachingNotesTab: NavigatorScreenParams<TeachingNotesStackParamList>;
+  SyllabusTab: NavigatorScreenParams<SyllabusStackParamList>;
+  GuardianSyllabusTab: NavigatorScreenParams<GuardianSyllabusStackParamList>;
   RevisionTab: NavigatorScreenParams<RevisionStackParamList>;
   FinanceTab: NavigatorScreenParams<FinanceStackParamList>;
   HrTab: NavigatorScreenParams<HrStackParamList>;

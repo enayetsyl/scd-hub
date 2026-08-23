@@ -48,6 +48,8 @@ export interface SyllabusShape {
   writtenMarks: number;
   oralMarks: number;
   totalMarks: number;
+  /** The last send-back reason, if any. Office's instruction for what to fix. */
+  sendBackReason: string | null;
   /** A placeholder for a subject with no published row yet. */
   pending: boolean;
 }
@@ -93,6 +95,7 @@ function toShape(
     questionTypes: SyllabusItemType[];
     examDateKey?: string | null;
     status: SyllabusStatus;
+    sendBackReason?: string | null;
   },
   isMine: boolean,
 ): SyllabusShape {
@@ -106,6 +109,7 @@ function toShape(
     questionTypes: row.questionTypes,
     examDateKey: row.examDateKey ?? null,
     status: row.status,
+    sendBackReason: row.sendBackReason ?? null,
     isMine,
     ...splitWrittenOral(row.marks),
     pending: false,
@@ -128,6 +132,7 @@ function placeholder(
     questionTypes: [],
     examDateKey: null,
     status: "DRAFT",
+    sendBackReason: null,
     isMine,
     writtenMarks: 0,
     oralMarks: 0,

@@ -87,6 +87,19 @@ const STAFF_NAV: NavSection[] = [
       { route: "RevisionTab", labelKey: "tabRevision", icon: "🕌" },
     ],
   },
+  // Exam syllabus (SY-4..SY-6). Three leaves in one stack — the Reports shape.
+  // `সিলেবাস দেখুন` is every staff role; the other two carry their own perms, so
+  // a plain teacher sees only the read leaf.
+  {
+    type: "group",
+    titleKey: "syDrawerGroup",
+    icon: "📋",
+    items: [
+      { route: "SyllabusTab", labelKey: "syRead", icon: "📋", screen: "SyllabusHome" },
+      { route: "SyllabusTab", labelKey: "syEntry", icon: "✍️", screen: "SyllabusEntry", perms: ["exam:manage"] },
+      { route: "SyllabusTab", labelKey: "syApprovals", icon: "✅", screen: "SyllabusApprovals" },
+    ],
+  },
   { type: "item", route: "AttendanceTab", labelKey: "tabAttendance", icon: "🙋" },
   { type: "item", route: "PrintTab", labelKey: "tabPrint", icon: "🖨️" },
   // Class Notes became a GROUP (owner ask 2026-08-17): the teacher's own periods,
@@ -209,6 +222,7 @@ const GUARDIAN_NAV: NavSection[] = [
       { route: "GuardianRoutineTab", labelKey: "tabRoutine", icon: "📅" },
       { route: "GuardianHomeworkTab", labelKey: "tabHomework", icon: "📒" },
       { route: "GuardianAssignmentsTab", labelKey: "tabAssignment", icon: "📋" },
+      { route: "GuardianSyllabusTab", labelKey: "syTitle", icon: "📋" },
     ],
   },
 ];

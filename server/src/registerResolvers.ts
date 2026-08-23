@@ -108,4 +108,5 @@ import "./modules/english-drive/resolvers/englishDrive";
 import "./modules/teaching-notes/resolvers/teachingNotes";
 import "./modules/teaching-notes/resolvers/teachingNoteComments";
 import "./modules/archive/resolvers/archive";
+import "./modules/exams/resolvers/exams";
 import "./modules/exams/resolvers/examSyllabus";
