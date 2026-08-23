@@ -66,7 +66,7 @@ export function AnswerCarrier({
     );
   }
   if (type === "descriptive") {
-    // A descriptive item carries a model_answer, a rubric, or both (D-#528). The rubric
+    // A descriptive item carries a model_answer, a rubric, or both (D-#529). The rubric
     // itself has no renderer yet, so a rubric-only item still shows the pointer label.
     const ma = payload.model_answer ?? {};
     const keyPoints = ma.key_points ?? [];

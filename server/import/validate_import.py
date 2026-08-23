@@ -203,7 +203,7 @@ def question_semantics(env, ref19_slugs):
     elif qt == "descriptive":
         # The payload schema already gates this (anyOf on the descriptive branch), but its
         # error reads "not valid under any of the given schemas" and dumps the whole payload.
-        # Restate it in terms an author can act on (D-#528).
+        # Restate it in terms an author can act on (D-#529).
         if not p.get("rubric") and not p.get("model_answer"):
             fail("Q-DESCRIPTIVE",
                  "descriptive items must carry a 'rubric' (open-ended task) or a "

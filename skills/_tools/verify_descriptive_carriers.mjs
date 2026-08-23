@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Conformance regression net for the `descriptive` answer-carrier branch (D-#528).
+ * Conformance regression net for the `descriptive` answer-carrier branch (D-#529).
  *
  * The branch is the one place in the question payload where TWO carriers are legal
  * (`rubric` and/or `model_answer`), so an edit to the LOCKED payload schema can loosen

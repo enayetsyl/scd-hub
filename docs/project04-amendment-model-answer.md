@@ -5,7 +5,7 @@
 **Re:** `LOCKED_QuestionPayload_Schema_v1.json` · **the `descriptive` answer-carrier branch**
 **Channel:** consult-via-human (neither side edits the other's governance)
 **Status:** amendment in effect in SCD Hub, awaiting Project-04 confirmation or correction
-**Date raised:** 2026-08-23 · **SCD Hub ref:** DECISIONS D-#528 (adoption was D-#19 / D-PROJ04-005)
+**Date raised:** 2026-08-23 · **SCD Hub ref:** DECISIONS D-#529 (adoption was D-#19 / D-PROJ04-005)
 
 ---
 

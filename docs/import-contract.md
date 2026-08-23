@@ -104,7 +104,7 @@ grows; the count of `current:true` rows per qid stays at one. Such elements repo
 ### Answer carriers (one per `question_type`, QDN-04 xor)
 `mcq → options`, `true_false → tf_answer`, `fill_blank → blanks`, `matching → pairs`,
 `short_answer → answer_key`, `descriptive → rubric and/or model_answer`. Every other carrier is
-forbidden on each branch. **`descriptive` is the one branch with two legal carriers** (v1.1, D-#528):
+forbidden on each branch. **`descriptive` is the one branch with two legal carriers** (v1.1, D-#529):
 a `rubric` for an open-ended REF-09 §5 task, a `model_answer` for an exam-bank বড় প্রশ্ন that has a
 definite expected answer, or both. `model_answer` is teacher-facing marker guidance — it is never
 machine-matched, and it is forbidden on all five other branches. When a rubric IS present its

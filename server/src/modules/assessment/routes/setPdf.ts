@@ -237,7 +237,7 @@ function renderQuestion(
       doc.fillColor("#000000");
     }
   } else if (opts.showAnswers && questionType === "descriptive") {
-    // model_answer, rubric, or both (D-#528). Rubric-only items keep the pointer line.
+    // model_answer, rubric, or both (D-#529). Rubric-only items keep the pointer line.
     const ma = (payload.model_answer ?? {}) as Record<string, unknown>;
     const maText = typeof ma.text === "string" ? ma.text : "";
     const keyPoints = Array.isArray(ma.key_points) ? (ma.key_points as string[]) : [];
