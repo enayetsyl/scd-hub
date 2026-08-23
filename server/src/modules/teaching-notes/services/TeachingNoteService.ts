@@ -89,20 +89,21 @@ export function pairKey(classLevel: number, subject: string): string {
  * library list (the title is mangled but present) and is only discovered when a
  * teacher opens it, by which time the correct original may be gone.
  */
-const MOJIBAKE_RE = /à[¦§]/;
+/**
+ * MOVED to `platform/services/encodingGuard` at SY-2, unchanged. The exam
+ * syllabus needs the same guard (docs/prd-exam-syllabus.md §5.6), and importing
+ * it from HERE would drag this module's Drive / PDF-renderer / print-queue
+ * dependencies into that module's tests — whose usual escape is a second copy of
+ * the regex, which is how two callers start disagreeing about what counts as
+ * broken. Re-exported so every existing import keeps working (D-#523).
+ */
+import { assertNotMojibake } from "../../platform/services/encodingGuard";
 
-export const TEACHING_NOTE_MOJIBAKE_ERROR =
-  "ফাইলটির বাংলা লেখা ভেঙে গেছে (এনকোডিং ভুল)। ফাইলটি UTF-8 হিসেবে সেভ করে আবার আপলোড করুন।";
-
-/** True when `text` carries the UTF-8-read-as-Latin-1 signature. */
-export function looksLikeMojibake(text: string): boolean {
-  return MOJIBAKE_RE.test(text);
-}
-
-/** Throw the Bangla encoding error when `text` is mojibake. Used for title + body. */
-export function assertNotMojibake(text: string): void {
-  if (looksLikeMojibake(text)) throw new Error(TEACHING_NOTE_MOJIBAKE_ERROR);
-}
+export {
+  looksLikeMojibake,
+  assertNotMojibake,
+  MOJIBAKE_ERROR as TEACHING_NOTE_MOJIBAKE_ERROR,
+} from "../../platform/services/encodingGuard";
 
 // ---------------------------------------------------------------------------
 // Visibility

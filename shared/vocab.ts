@@ -3422,6 +3422,13 @@ export const PERMISSIONS = [
   "book:review_senior",    // answer escalations, content sign-off, anchor HUMAN_VERIFIED
   "book:assemble",         // queue a build, release an edition
   "book:manage",           // create books, upload policy versions, assign people, read everything
+  // exams — syllabus first (SY-1, D-#527/#530); prd-exams EX-1.. reuses BOTH
+  "exam:manage",           // create an exam, write + submit a syllabus, send one back (Principal/Office). PUBLISH rides
+                           // the ROLE inside the resolver (PRINCIPAL only, D-#397's posture), not a second permission —
+                           // so AC-1 can hand syllabus authoring to a senior teacher without handing them the release.
+                           // The SUBJECT-TEACHER sign-off is likewise NOT a permission: it is routine-derived in the
+                           // resolver (D-#530), the CO-1 assigned-observer posture.
+  "exam:read",             // read a syllabus, ROW-SCOPED in the resolver (published rows for staff; Office/Principal see drafts). Staff-internal — GUARDIAN reads via guardian:read_child (§4)
   // guardian portal (ACTIVE since GP-1, D-#68)
   "guardian:read_child",   // reads linked children's permitted operational slices
 ] as const;
@@ -3479,6 +3486,8 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "book:review_senior": "build",  // SB-3
   "book:assemble": "build",       // SB-4
   "book:manage": "build",         // SB-1
+  "exam:manage": "build",         // SY-1 (exam row + syllabus authoring/publish)
+  "exam:read": "build",           // SY-1 (row-scoped syllabus read)
   "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
 };
 
@@ -3513,6 +3522,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     // `selfVerified` STAMP rather than a refusal — recorded, never silently allowed.
     "book:read", "book:author", "book:illustrate", "book:review",
     "book:review_senior", "book:assemble", "book:manage",
+    "exam:manage", "exam:read", // exam syllabus (SY-1, D-#530) — the Principal is the publish gate
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
   // fills trackers; authors nothing in-app (no content:import). message:dispatch
@@ -3530,6 +3540,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "message:dispatch",
     "observation:review",    // the assigned senior-teacher observer scores+comments — gated to observerId in the resolver (CO-1, D-#147)
     "observation:read",      // read own observations as observer + own (observed) at/after REVIEWED — row-scoped in the resolver (CO-1)
+    "exam:read",             // read PUBLISHED syllabuses for the classes they teach (SY-6, D-#530). NOT exam:manage — the subject-teacher SIGN-OFF is routine-derived in the resolver, not a permission
   ],
   // Roster, guardian linkage, messaging dispatch (REQ §2), plus content import (the
   // publisher seam), plan-review assignment (D-#39), and routine authoring (D-#46).
@@ -3546,6 +3557,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "report:release",        // monthly progress report: release/re-release, individually or in a batch (D-#397).
                              // NOT the overrides — a coverage-block override, a revoke and a hard-lock reopen are
                              // Principal-only by role, so a bulk mistake has exactly one owner.
+    "exam:manage", "exam:read", // exam syllabus: create the exam, write and submit a syllabus (SY-1/SY-4). PUBLISH
+                             // is refused to Office BY STATE, not by permission — the row must reach
+                             // PRINCIPAL_REVIEW and only the Principal moves it on (D-#530, §7.4).
   ],
   // Guardian portal v1 (GP-1, D-#68): the single grant is ACTIVE — guardian-scoped
   // resolvers read linked children only (assertGuardianOfStudent, link-scoped).
@@ -3765,6 +3779,8 @@ export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
   "book:review_senior": { name: "বই সিনিয়র রিভিউ", desc: "এসকালেশনের উত্তর ও চূড়ান্ত সাইন-অফ" },
   "book:assemble": { name: "বই তৈরি", desc: "বিল্ড চালানো ও সংস্করণ প্রকাশ" },
   "book:manage": { name: "বই পরিচালনা", desc: "বই তৈরি, নীতিমালা ও দায়িত্ব বণ্টন" },
+  "exam:manage": { name: "পরীক্ষার সিলেবাস ব্যবস্থাপনা", desc: "পরীক্ষা তৈরি, সিলেবাস ও মানবন্টন লেখা এবং অনুমোদনে পাঠানো — প্রকাশ কেবল প্রধান শিক্ষক" },
+  "exam:read": { name: "পরীক্ষার সিলেবাস দেখা", desc: "প্রকাশিত সিলেবাস ও মানবন্টন দেখা" },
   "guardian:read_child": { name: "সন্তানের তথ্য দেখা (অভিভাবক প্লেন)", desc: "অভিভাবক প্লেন — স্টাফকে দেওয়া যায় না" },
 };
 
@@ -3818,6 +3834,8 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "book:review_senior": { name: "Senior book review", desc: "Answer escalations, content sign-off" },
   "book:assemble": { name: "Assemble books", desc: "Queue a build, release an edition" },
   "book:manage": { name: "Manage book production", desc: "Create books, policy versions, assignments" },
+  "exam:manage": { name: "Manage exam syllabus", desc: "Create an exam, write the syllabus and mark distribution, send for approval — publish is Principal-only" },
+  "exam:read": { name: "Read exam syllabus", desc: "Read published syllabuses and mark distributions" },
   "guardian:read_child": { name: "Read child (guardian plane)", desc: "Guardian plane — not grantable to staff" },
 };
 
@@ -3895,3 +3913,127 @@ export const DELEGATED_ACTION_LABELS_EN: Record<DelegatedAction, PermissionLabel
   enter_classtest_result: { name: "Enter class-test results", desc: "Enter class-test marks and results" },
   confirm_homework_day: { name: "Confirm the homework day", desc: "Reconcile and issue any section's daily homework" },
 };
+
+/* ===========================================================================
+ * Exam syllabus — SY-1  (docs/prd-exam-syllabus.md §4, D-#527–#532)
+ *
+ * APP-NATIVE, no wire twin, no three-place sync — the routine/HR shape
+ * (D-#46/#52). The import envelope and docs/import-contract.schema.json are
+ * UNTOUCHED by everything in this block.
+ *
+ * `EXAM_TERMS` and `EXAM_COMPONENTS` are ALSO specified by docs/prd-exams.md §4.
+ * They land HERE first, unchanged, because the syllabus ships before EX-1;
+ * EX-1 reuses them rather than declaring a second copy.
+ * ======================================================================== */
+
+/** The two term exams in an academic year. Each stands alone (prd-exams §9.7). */
+export const EXAM_TERMS = ["HALF_YEARLY", "ANNUAL"] as const;
+export type ExamTerm = (typeof EXAM_TERMS)[number];
+
+export const EXAM_TERM_LABELS_BN: Record<ExamTerm, string> = {
+  HALF_YEARLY: "অর্ধ-বার্ষিক",
+  ANNUAL: "বার্ষিক",
+};
+
+export const EXAM_TERM_LABELS_EN: Record<ExamTerm, string> = {
+  HALF_YEARLY: "Half Yearly",
+  ANNUAL: "Annual",
+};
+
+/** The report card's three mark columns. A SYLLABUS MARK ROW may BE one of these
+ *  (D-#528): the source sheet writes "ক্লাস টেস্ট 10" and "আখলাক 10" as rows 7-8 of
+ *  Nursery Arabic's মানবন্টন, which are not question items but the CT and Adab
+ *  components. Tagging the row ties the syllabus handed to a parent to the report
+ *  card issued to the same parent — Σ rows = 100 = Σ ExamPaper.components. */
+export const EXAM_COMPONENTS = ["CT", "ADAB", "FINAL"] as const;
+export type ExamComponent = (typeof EXAM_COMPONENTS)[number];
+
+export const EXAM_COMPONENT_LABELS_BN: Record<ExamComponent, string> = {
+  CT: "শ্রেণি পরীক্ষা",
+  ADAB: "আদব",
+  FINAL: "সেমিস্টার ফাইনাল",
+};
+
+export const EXAM_COMPONENT_LABELS_EN: Record<ExamComponent, string> = {
+  CT: "Class Test",
+  ADAB: "Adab",
+  FINAL: "Semester Final",
+};
+
+/** The syllabus approval chain (D-#530). Office writes → the SUBJECT TEACHER signs
+ *  off → the Principal publishes. `PUBLISHED` is the only state a guardian can
+ *  reach, and it is carried by an additive `publishedAt` (the CO-8 / D-#271 shape),
+ *  never by a second predicate. Send-back from either review stage returns to
+ *  DRAFT with a mandatory reason. */
+export const SYLLABUS_STATUSES = ["DRAFT", "TEACHER_REVIEW", "PRINCIPAL_REVIEW", "PUBLISHED"] as const;
+export type SyllabusStatus = (typeof SYLLABUS_STATUSES)[number];
+
+export const SYLLABUS_STATUS_LABELS_BN: Record<SyllabusStatus, string> = {
+  DRAFT: "খসড়া",
+  TEACHER_REVIEW: "শিক্ষকের অনুমোদনে",
+  PRINCIPAL_REVIEW: "প্রধান শিক্ষকের অনুমোদনে",
+  PUBLISHED: "প্রকাশিত",
+};
+
+export const SYLLABUS_STATUS_LABELS_EN: Record<SyllabusStatus, string> = {
+  DRAFT: "Draft",
+  TEACHER_REVIEW: "With the subject teacher",
+  PRINCIPAL_REVIEW: "With the Principal",
+  PUBLISHED: "Published",
+};
+
+/** The exercise family a mark-distribution row belongs to.
+ *
+ *  D-#527 — this is a SEPARATE, APP-NATIVE enum and NOT an extension of
+ *  `QUESTION_TYPES`. That enum (line ~130) is MIRRORED against the envelope
+ *  schema's `questionPayload.question_type`, so adding `creative`/`oral`/
+ *  `practical` there would trigger the two-place contract sync and change the
+ *  import contract for a reason that has nothing to do with importing.
+ *
+ *  The first six codes are DELIBERATELY the same strings as `QUESTION_TYPES`, so
+ *  a later "assemble this paper from the bank" join stays a straight string match
+ *  without either enum depending on the other. */
+export const SYLLABUS_ITEM_TYPES = [
+  "mcq",
+  "short_answer",
+  "true_false",
+  "fill_blank",
+  "matching",
+  "descriptive",
+  "creative",
+  "oral",
+  "practical",
+  "other",
+] as const;
+export type SyllabusItemType = (typeof SYLLABUS_ITEM_TYPES)[number];
+
+export const SYLLABUS_ITEM_TYPE_LABELS_BN: Record<SyllabusItemType, string> = {
+  mcq: "বহুনির্বাচনী",
+  short_answer: "ছোট প্রশ্ন",
+  true_false: "সত্য-মিথ্যা",
+  fill_blank: "শূন্যস্থান পূরণ",
+  matching: "মিলকরণ",
+  descriptive: "বড় প্রশ্ন",
+  creative: "সৃজনশীল",
+  oral: "মৌখিক",
+  practical: "ব্যবহারিক",
+  other: "অন্যান্য",
+};
+
+export const SYLLABUS_ITEM_TYPE_LABELS_EN: Record<SyllabusItemType, string> = {
+  mcq: "MCQ",
+  short_answer: "Short answer",
+  true_false: "True / false",
+  fill_blank: "Fill in the blanks",
+  matching: "Matching",
+  descriptive: "Descriptive",
+  creative: "Creative",
+  oral: "Oral",
+  practical: "Practical",
+  other: "Other",
+};
+
+/** Every subject totals 100, in EVERY class (owner ruling 2026-08-23, D-#529).
+ *  One universal guard rather than a per-class-band lookup; what FILLS the 100
+ *  stays per subject, exactly as the source sheet writes it. */
+export const SYLLABUS_FULL_MARKS = 100;
