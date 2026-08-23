@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://school.local/swapp/QuestionPayload_v1.json",
   "title": "Project 04 — Question Payload v1 (LOCKED v1.0)",
-  "description": "LOCKED v1.0 (2026-06-09, D-PROJ04-005). The ratified question-bank data contract (R-IMP5), replacing the PROVISIONAL questionPayload $def in SCHOOLSW_ImportEnvelope_Schema. This is the SINGLE SOURCE OF RECORD for one question (QDN-01): the teacher-facing Markdown production file, master read-file, and register TSV all render from it; the app ingests it and renders display/PDF itself. It is the body that rides under envelope.payload when doc_type='question'. INTEGRATION: deliverable 5 either inlines this as the envelope's $defs.questionPayload (additionalProperties false) or external-$refs this $id; the harness runs it as the L2-for-questions pass. STANDARDS: complies with REF-09 (Tier-1 floor) / REF-10 (Tier-2 stretch), REF-17/18 (Bloom), REF-19 (topic identity — ref19_topic_id hard-validated against it), REF-22 (English vocabulary — glossary), REF-24/REF-01 C-05/C-02 (media), REF-07 §3.5 (topic-tag scheme); it redefines none of them. PEDAGOGY (QDN-06): tier / bloom_level / difficulty are orthogonal axes, so an easy-difficulty high-Bloom open item is natural to express; descriptive items carry a first-class rubric whose Islamic-alignment row is mandatory.",
-  "$comment": "Draft 2020-12 to match the envelope and validate_plan.py (Draft202012Validator). House style mirrors C5_PlanSchema_v1.json: additionalProperties:false throughout, $defs for reuse, allOf+if/then on a discriminator (here question_type). Checks NOT expressible here and owed to the harness L2-for-questions pass: (a) marks == rubric total for descriptive items; (b) per-step / per-blank / per-pair breakdown sums to marks; (c) ref19_topic_id ∈ the REF-19 registry (pattern only here); (d) stimulus_ref resolves to a stored stimulus_id; (e) ENG content is Latin-pure on the rendered surface (ported ENG-LATIN rule). The 'exactly one correct MCQ option' rule IS expressed here via contains + minContains/maxContains.",
+  "description": "LOCKED v1.0 (2026-06-09, D-PROJ04-005). The ratified question-bank data contract (R-IMP5), replacing the PROVISIONAL questionPayload $def in SCHOOLSW_ImportEnvelope_Schema. This is the SINGLE SOURCE OF RECORD for one question (QDN-01): the teacher-facing Markdown production file, master read-file, and register TSV all render from it; the app ingests it and renders display/PDF itself. It is the body that rides under envelope.payload when doc_type='question'. INTEGRATION: deliverable 5 either inlines this as the envelope's $defs.questionPayload (additionalProperties false) or external-$refs this $id; the harness runs it as the L2-for-questions pass. STANDARDS: complies with REF-09 (Tier-1 floor) / REF-10 (Tier-2 stretch), REF-17/18 (Bloom), REF-19 (topic identity — ref19_topic_id hard-validated against it), REF-22 (English vocabulary — glossary), REF-24/REF-01 C-05/C-02 (media), REF-07 §3.5 (topic-tag scheme); it redefines none of them. PEDAGOGY (QDN-06): tier / bloom_level / difficulty are orthogonal axes, so an easy-difficulty high-Bloom open item is natural to express; descriptive items carry a first-class rubric whose Islamic-alignment row is mandatory. AMENDED v1.1 (2026-08-23, D-#528): a descriptive item may satisfy its branch with a `model_answer` INSTEAD of a `rubric`, for exam-bank বড় প্রশ্ন that have a definite expected answer rather than an open-ended task. When a rubric IS present the Islamic-alignment row remains mandatory — the amendment relaxes when a rubric is required, never what a rubric must contain.",
+  "$comment": "Draft 2020-12 to match the envelope and validate_plan.py (Draft202012Validator). House style mirrors C5_PlanSchema_v1.json: additionalProperties:false throughout, $defs for reuse, allOf+if/then on a discriminator (here question_type). Checks NOT expressible here and owed to the harness L2-for-questions pass: (a) NOT ENFORCED — descriptive rubrics are qualitative (bands carry no per-band marks), so there is no rubric total to compare `marks` against; validate_import.py records this at the L4 marks check; (b) per-step / per-blank / per-pair breakdown sums to marks; (c) ref19_topic_id ∈ the REF-19 registry (pattern only here); (d) stimulus_ref resolves to a stored stimulus_id; (e) ENG content is Latin-pure on the rendered surface (ported ENG-LATIN rule). The 'exactly one correct MCQ option' rule IS expressed here via contains + minContains/maxContains.",
 
   "type": "object",
   "additionalProperties": false,
@@ -105,7 +105,8 @@
     "blanks":     { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/fillBlank" }, "description": "fill_blank only — answer-carrier." },
     "pairs":      { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/matchPair" }, "description": "matching only — answer-carrier." },
     "answer_key": { "$ref": "#/$defs/answerKey", "description": "short_answer only — answer-carrier." },
-    "rubric":     { "$ref": "#/$defs/rubric", "description": "descriptive only — criteria rubric (no single answer)." }
+    "rubric":     { "$ref": "#/$defs/rubric", "description": "descriptive only — criteria rubric (no single answer)." },
+    "model_answer": { "$ref": "#/$defs/modelAnswer", "description": "descriptive only — teacher-facing model answer for an exam-bank বড় প্রশ্ন. Satisfies the descriptive branch on its own; may also accompany a rubric." }
   },
 
   "allOf": [
@@ -116,6 +117,7 @@
         "required": ["options"],
         "properties": {
           "tf_answer": false, "blanks": false, "pairs": false, "answer_key": false, "rubric": false,
+          "model_answer": false,
           "options": {
             "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/mcqOption" },
             "contains": { "type": "object", "properties": { "is_correct": { "const": true } }, "required": ["is_correct"] },
@@ -129,7 +131,7 @@
       "if": { "properties": { "question_type": { "const": "true_false" } }, "required": ["question_type"] },
       "then": {
         "required": ["tf_answer"],
-        "properties": { "options": false, "blanks": false, "pairs": false, "answer_key": false, "rubric": false }
+        "properties": { "options": false, "blanks": false, "pairs": false, "answer_key": false, "rubric": false, "model_answer": false }
       }
     },
     {
@@ -137,7 +139,7 @@
       "if": { "properties": { "question_type": { "const": "fill_blank" } }, "required": ["question_type"] },
       "then": {
         "required": ["blanks"],
-        "properties": { "options": false, "tf_answer": false, "pairs": false, "answer_key": false, "rubric": false }
+        "properties": { "options": false, "tf_answer": false, "pairs": false, "answer_key": false, "rubric": false, "model_answer": false }
       }
     },
     {
@@ -145,7 +147,7 @@
       "if": { "properties": { "question_type": { "const": "matching" } }, "required": ["question_type"] },
       "then": {
         "required": ["pairs"],
-        "properties": { "options": false, "tf_answer": false, "blanks": false, "answer_key": false, "rubric": false }
+        "properties": { "options": false, "tf_answer": false, "blanks": false, "answer_key": false, "rubric": false, "model_answer": false }
       }
     },
     {
@@ -153,14 +155,14 @@
       "if": { "properties": { "question_type": { "const": "short_answer" } }, "required": ["question_type"] },
       "then": {
         "required": ["answer_key"],
-        "properties": { "options": false, "tf_answer": false, "blanks": false, "pairs": false, "rubric": false }
+        "properties": { "options": false, "tf_answer": false, "blanks": false, "pairs": false, "rubric": false, "model_answer": false }
       }
     },
     {
-      "$comment": "descriptive -> rubric; forbid all closed carriers (QDN-04 xor).",
+      "$comment": "descriptive -> rubric OR model_answer (v1.1, D-#528); forbid all closed carriers (QDN-04 xor). v1.0 required 'rubric' outright, which fit an open-ended REF-09 §5 task but not an exam-bank বড় প্রশ্ন with a teacher answer key. Both carriers together are legal (rubric scores it, model_answer guides the marker); neither present FAILs.",
       "if": { "properties": { "question_type": { "const": "descriptive" } }, "required": ["question_type"] },
       "then": {
-        "required": ["rubric"],
+        "anyOf": [ { "required": ["rubric"] }, { "required": ["model_answer"] } ],
         "properties": { "options": false, "tf_answer": false, "blanks": false, "pairs": false, "answer_key": false }
       }
     }
@@ -266,6 +268,21 @@
           "minProperties": 2,
           "additionalProperties": { "type": "string", "minLength": 1 },
           "description": "Maps each band label (from rubric.bands) to its descriptor text."
+        }
+      }
+    },
+
+    "modelAnswer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "description": "v1.1 (D-#528). The teacher-facing expected answer for a descriptive exam-bank item. NOT a machine-matched key — descriptive items are never auto-marked; this is marker guidance, the open-item counterpart of answerKey.model_note. Content language, same as the item.",
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "description": "The model answer prose, as a teacher would write it on the answer sheet." },
+        "key_points": {
+          "type": "array", "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Optional. The scannable checkpoints a full answer must contain — what the marker actually ticks. Carries the substance when a rubric is absent."
         }
       }
     },

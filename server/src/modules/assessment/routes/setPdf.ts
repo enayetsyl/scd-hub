@@ -237,9 +237,28 @@ function renderQuestion(
       doc.fillColor("#000000");
     }
   } else if (opts.showAnswers && questionType === "descriptive") {
-    doc.fontSize(10).fillColor("#444444");
-    mixedText(doc, "    [বর্ণনামূলক — রুব্রিক দেখুন]", { lineGap: 1 });
-    doc.fillColor("#000000");
+    // model_answer, rubric, or both (D-#528). Rubric-only items keep the pointer line.
+    const ma = (payload.model_answer ?? {}) as Record<string, unknown>;
+    const maText = typeof ma.text === "string" ? ma.text : "";
+    const keyPoints = Array.isArray(ma.key_points) ? (ma.key_points as string[]) : [];
+    if (maText || keyPoints.length) {
+      if (maText) {
+        doc.fontSize(10);
+        mixedText(doc, `    নমুনা উত্তর: ${maText}`, { lineGap: 1 });
+      }
+      if (keyPoints.length) {
+        doc.fontSize(9).fillColor("#444444");
+        mixedText(doc, "    মূল বিষয়:", { lineGap: 1 });
+        for (const p of keyPoints) {
+          mixedText(doc, `      • ${p}`, { lineGap: 1 });
+        }
+        doc.fillColor("#000000");
+      }
+    } else {
+      doc.fontSize(10).fillColor("#444444");
+      mixedText(doc, "    [বর্ণনামূলক — রুব্রিক দেখুন]", { lineGap: 1 });
+      doc.fillColor("#000000");
+    }
   }
 
   doc.moveDown(0.5);

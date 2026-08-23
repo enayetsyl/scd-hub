@@ -200,6 +200,14 @@ def question_semantics(env, ref19_slugs):
         if sb and marks is not None and not _sum_eq(sum(s["marks"] for s in sb), marks):
             fail("SUM", f"short_answer step_breakdown sum {sum(s['marks'] for s in sb)} != item marks {marks}")
     # descriptive rubrics are qualitative (no per-band marks) — no machine sum check.
+    elif qt == "descriptive":
+        # The payload schema already gates this (anyOf on the descriptive branch), but its
+        # error reads "not valid under any of the given schemas" and dumps the whole payload.
+        # Restate it in terms an author can act on (D-#528).
+        if not p.get("rubric") and not p.get("model_answer"):
+            fail("Q-DESCRIPTIVE",
+                 "descriptive items must carry a 'rubric' (open-ended task) or a "
+                 "'model_answer' (exam-bank বড় প্রশ্ন), or both — neither is present")
 
     slug = p.get("ref19_topic_id")
     if slug and slug not in ref19_slugs:
