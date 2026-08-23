@@ -1305,9 +1305,13 @@ export function AppTabs(): React.ReactElement {
   const colors = useColors();
   // Free Mixing Observation tab (D-#341, owner ruling): a TEACHER sees it ONLY
   // when at least one video is assigned to them; Principal/Office always.
+  // The pause ALSO carries the permission: a teacher whose `observation:review` was
+  // revoked in the access editor (AC-1) would otherwise fire a query the server refuses,
+  // and a refused field comes back `null` inside `data` — which used to crash the whole
+  // navigator here. Every gate below therefore reads its list with `?.` too.
   const [freeMixQ] = useQuery({
     query: MY_VIDEO_REVIEWS,
-    pause: !isRole("TEACHER"),
+    pause: !isRole("TEACHER") || !can("observation:review"),
   });
   // English Drive tab (D-#344): P/O always; a TEACHER only when the server says
   // they have an English involvement in at least one class (PRD §5).
@@ -1374,17 +1378,17 @@ export function AppTabs(): React.ReactElement {
   // only once something is actually assigned to them (owner ruling 2026-07-20).
   const canFreeMixing =
     (can("observation:upload")) ||
-    (isRole("TEACHER") && (freeMixQ.data?.myVideoReviews.length ?? 0) > 0);
+    (isRole("TEACHER") && (freeMixQ.data?.myVideoReviews?.length ?? 0) > 0);
   // English Drive (D-#344): upload = roster:manage (P/O); a teacher sees the tab
   // only when the server-resolved English class set is non-empty. GUARDIAN never.
   const canEnglishDrive =
     (can("roster:manage")) ||
-    (isRole("TEACHER") && (engDriveQ.data?.englishDriveMyClassLevels.length ?? 0) > 0);
+    (isRole("TEACHER") && (engDriveQ.data?.englishDriveMyClassLevels?.length ?? 0) > 0);
   // Notes & guides (TN-1): upload = roster:manage (P/O); a teacher sees the tab
   // only when their (class × subject) pair set is non-empty. GUARDIAN never.
   const canTeachingNotes =
     can("roster:manage") ||
-    (isRole("TEACHER") && (teachingNotesQ.data?.teachingNoteMyScope.length ?? 0) > 0);
+    (isRole("TEACHER") && (teachingNotesQ.data?.teachingNoteMyScope?.length ?? 0) > 0);
   // Saturday Qur'an-Hifz Revision (SR app surfaces): Hifz teachers via tracker:read
   // (record/edit/deliver/history); Principal/Office via roster:manage (dashboards +
   // completeness chase). Every action is re-gated + row-scoped server-side. GUARDIAN
