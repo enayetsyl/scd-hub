@@ -199,6 +199,20 @@ export type AuditEventKind =
   | "SCRIPT_BUNDLE_DISPOSED"       // outside-retention bundle disposed with a reason (D-#446; shred AFTER this row)
   | "SCRIPT_BUNDLE_VOIDED"         // a filed-in-error bundle voided — record kept, unique slot freed
   | "STORAGE_BOX_CHANGED"          // box create/update/retire — prior+new in meta (the LIBRARY_CATALOG_CHANGED pattern)
+  // Exam syllabus (SY-1..SY-6, docs/prd-exam-syllabus.md §6/§7, D-#530–#532)
+  | "EXAM_CREATED"                    // an exam row created (exam:manage)
+  | "EXAM_UPDATED"                    // an exam's name/date window edited; meta lists WHICH fields moved, never their values (the D-#526 posture)
+  | "EXAM_SYLLABUS_SAVED"             // Office wrote/edited a syllabus row — prose, mark rows, question types
+  | "EXAM_SYLLABUS_SUBMITTED"         // sent to the named SUBJECT TEACHER for sign-off (approverUserId in meta)
+  | "EXAM_SYLLABUS_TEACHER_APPROVED"  // the subject teacher signed it off (D-#533)
+  | "EXAM_SYLLABUS_TEACHER_BYPASSED"  // the Principal signed off IN THE TEACHER'S PLACE — no routine holder (§7.2).
+                                      // A DISTINCT kind on purpose: folding it into _TEACHER_APPROVED would make the
+                                      // stage decorative the first time it was inconvenient, and leave no way to ask
+                                      // afterwards which sign-offs a teacher actually gave.
+  | "EXAM_SYLLABUS_SENT_BACK"         // teacher or Principal returned it to DRAFT with a mandatory reason
+  | "EXAM_SYLLABUS_REOPENED"          // a content edit cleared an existing teacher approval (§7.3, the D-#520 rule)
+  | "EXAM_SYLLABUS_PUBLISHED"         // Principal published — publishedAt set, guardians can now read it
+  | "EXAM_CLASS_NOTE_SAVED"            // the per-class question-type footer written/updated (§5.5)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

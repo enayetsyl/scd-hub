@@ -18,6 +18,7 @@ import "./registerResolvers";
 
 import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";
+import { syllabusPdfRouter } from "./modules/exams/routes/syllabusPdf";
 import { setPdfRouter } from "./modules/assessment/routes/setPdf";
 import { englishDrivePdfRouter } from "./modules/english-drive/routes/englishDrivePdf";
 import { archiveCoverPdfRouter } from "./modules/archive/routes/archiveCoverPdf";
@@ -196,6 +197,7 @@ app.use("/pdf/student-profile", studentProfilePdfRouter);
 app.use("/pdf/monthly-report", monthlyReportPdfRouter);
 app.use("/export/monthly-comments", monthlyCommentExportRouter);
 app.use("/pdf/archive-cover", archiveCoverPdfRouter);
+app.use("/pdf/syllabus", syllabusPdfRouter);
 
 // Thin HTTP surface — homework files (GP-A, D-#70): server-in-the-middle
 // upload/download; Drive is never exposed to a client.
