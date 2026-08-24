@@ -1008,8 +1008,13 @@ export interface ReprintInput {
   sourceRequestId: string;
   /** The date the reprint will be USED — a reprint is always for a new day. */
   neededByKey: string;
-  /** Override the original count; omitted keeps it. */
+  /** Override the original count; omitted keeps it. Only meaningful under FIXED —
+   *  a CLASS_PRESENT job's count comes from the use day's attendance (D-#294). */
   copies?: number | null;
+  /** How THIS reprint counts (D-#294); omitted keeps the original's mode. A
+   *  CLASS_PRESENT job reprinted as FIXED is the "just print N this time" case —
+   *  it drops `copiesClassId` so the typed number is what the Office prints. */
+  copiesMode?: string | null;
   notes?: string | null;
   actorId: string;
   isOffice: boolean;
@@ -1031,6 +1036,16 @@ export async function reprintPrintRequest(input: ReprintInput): Promise<IPrintRe
   }
   const copies = input.copies ?? original.copies;
   if (!Number.isInteger(copies) || copies < 1) throw new PrintRequestError("copies must be a positive integer");
+  // D-#294: the count mode carries over unless the reprint overrides it. A CLASS_PRESENT
+  // clone IGNORES `copies` (it resolves from the use day's attendance and finalizes at
+  // markPrinted), so a typed number is only honoured under FIXED — hence the override.
+  const copiesMode = (input.copiesMode ?? original.copiesMode ?? "FIXED") as "FIXED" | "CLASS_PRESENT";
+  if (copiesMode !== "FIXED" && copiesMode !== "CLASS_PRESENT") {
+    throw new PrintRequestError("Invalid copiesMode");
+  }
+  if (copiesMode === "CLASS_PRESENT" && !original.copiesClassId) {
+    throw new PrintRequestError("A per-class-present reprint needs the original's class");
+  }
   if (original.purpose === "ASSIGNMENT") {
     await assertAssignmentTagging(
       original.classId?.toString(),
@@ -1054,8 +1069,12 @@ export async function reprintPrintRequest(input: ReprintInput): Promise<IPrintRe
     colour: original.colour,
     sides: original.sides,
     copies,
-    copiesMode: original.copiesMode ?? "FIXED",
-    ...(original.copiesClassId ? { copiesClassId: original.copiesClassId } : {}),
+    copiesMode,
+    // Only a CLASS_PRESENT clone keeps the counting class — carrying it onto a FIXED
+    // reprint would leave the row looking like it still counts from attendance.
+    ...(copiesMode === "CLASS_PRESENT" && original.copiesClassId
+      ? { copiesClassId: original.copiesClassId }
+      : {}),
     neededByKey: input.neededByKey,
     ...(original.classId ? { classId: original.classId } : {}),
     ...(original.sectionId ? { sectionId: original.sectionId } : {}),
@@ -1077,6 +1096,7 @@ export async function reprintPrintRequest(input: ReprintInput): Promise<IPrintRe
       purpose: original.purpose,
       sourceType: source,
       copies,
+      copiesMode,
     },
   });
   publishRealtime("print_queue", { op: "created", id: doc._id.toString() });

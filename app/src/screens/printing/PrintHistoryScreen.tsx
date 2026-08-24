@@ -99,6 +99,10 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
   const [tagSubject, setTagSubject] = useState<string | null>(null);
   const [useDate, setUseDate] = useState("");
   const [copies, setCopies] = useState("");
+  // D-#294: how THIS reprint counts. Carried over from the earlier job, but switchable —
+  // a per-class-present job resolves its count from the use day's attendance, so a typed
+  // number only reaches the Office once the mode is FIXED.
+  const [copiesMode, setCopiesMode] = useState<"FIXED" | "CLASS_PRESENT">("FIXED");
   const [busy, setBusy] = useState(false);
 
   // The date window is the only filter that goes to the SERVER: it is applied to the
@@ -252,6 +256,7 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
     // Prefilled from the earlier job — a reprint usually differs only in the date.
     setUseDate(todayKey());
     setCopies(String(r.latest.copies));
+    setCopiesMode(r.latest.copiesMode === "CLASS_PRESENT" ? "CLASS_PRESENT" : "FIXED");
   }
 
   async function sendReprint(r: PrintHistoryRowT): Promise<void> {
@@ -259,7 +264,10 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
     const res = await reprint({
       id: r.latest.id,
       neededByKey: useDate,
-      copies: Number(copies),
+      // Under CLASS_PRESENT the count comes from attendance — sending the prefilled
+      // number would only look like it was honoured.
+      copies: copiesMode === "FIXED" ? Number(copies) : null,
+      copiesMode,
     });
     setBusy(false);
     if (res.error) {
@@ -273,7 +281,9 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
     navigation.navigate("PrintHome");
   }
 
-  const reprintValid = ISO_DATE.test(useDate) && Number.isInteger(Number(copies)) && Number(copies) >= 1;
+  const reprintValid =
+    ISO_DATE.test(useDate) &&
+    (copiesMode === "CLASS_PRESENT" || (Number.isInteger(Number(copies)) && Number(copies) >= 1));
 
   return (
     <Screen scroll>
@@ -538,7 +548,32 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
             {reprintFor === r.key ? (
               <View style={{ marginTop: space(2) }}>
                 <DateField label={STR.prUseDate} value={useDate} onChange={setUseDate} helper={STR.hrDateHint} />
-                <Field label={STR.prCopies} value={copies} onChangeText={setCopies} keyboardType="number-pad" />
+                {/* D-#294: only a job that counted per class present offers the choice —
+                    for it, a typed number is honoured ONLY under "type a number". */}
+                {r.latest.copiesMode === "CLASS_PRESENT" ? (
+                  <ChipRow>
+                    <Chip
+                      label={STR.prCopiesFixed}
+                      selected={copiesMode === "FIXED"}
+                      onPress={() => setCopiesMode("FIXED")}
+                    />
+                    <Chip
+                      label={
+                        STR.prCopiesClass +
+                        (r.latest.copiesClassLevel !== null
+                          ? ` (${classLevelLabel(r.latest.copiesClassLevel)})`
+                          : "")
+                      }
+                      selected={copiesMode === "CLASS_PRESENT"}
+                      onPress={() => setCopiesMode("CLASS_PRESENT")}
+                    />
+                  </ChipRow>
+                ) : null}
+                {copiesMode === "CLASS_PRESENT" ? (
+                  <Muted style={{ marginTop: space(1) }}>{STR.prReprintPerPresent}</Muted>
+                ) : (
+                  <Field label={STR.prCopies} value={copies} onChangeText={setCopies} keyboardType="number-pad" />
+                )}
                 <Button
                   title={STR.prSend}
                   loading={busy}
