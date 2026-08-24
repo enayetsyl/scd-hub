@@ -71,12 +71,12 @@ export function MarkDistribution({ marks }: { marks: SyllabusT["marks"] }): Reac
               {bnNum(r.seq)}. {r.label}
             </Body>
             {/* A component row says so — it is not a question item, and its number
-                comes from the exam paper rather than from count x marks. */}
-            {r.component ? (
-              <Badge tone="gold" text={examComponentLabel(r.component)} />
-            ) : r.itemType ? (
-              <Muted>{syllabusItemTypeLabel(r.itemType)}</Muted>
-            ) : null}
+                comes from the exam paper rather than from count x marks, so the badge
+                stays. The itemType line that used to sit here did NOT stay: it
+                repeated "ছোট প্রশ্ন" under most of fifteen rows, which is noise on the
+                sheet a parent reads. The types are already listed once, as chips,
+                under প্রশ্নের ধরন. */}
+            {r.component ? <Badge tone="gold" text={examComponentLabel(r.component)} /> : null}
           </View>
           <Body style={num}>{r.count == null ? "—" : bnNum(r.count)}</Body>
           <Body style={num}>{r.marksEach == null ? "—" : bnNum(r.marksEach)}</Body>

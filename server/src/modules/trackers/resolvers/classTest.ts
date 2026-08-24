@@ -370,8 +370,10 @@ builder.mutationField("updateClassTestDetails", (t) =>
     type: ClassTestRef,
     description:
       "Correct an exam's total marks / pass mark / exam date. Principal/Office, or the exam's OWN " +
-      "teacher (accountable subject teacher or the person who filed it). Refused once any result is " +
-      "entered — the total is the denominator of every percentage, so editing it would re-grade them.",
+      "teacher (accountable subject teacher or the person who filed it). Once results exist, " +
+      "totalMarks and examDate are refused (the total is the denominator of every percentage), but " +
+      "passMark may still be corrected while every result is DRAFT — refused once any result has " +
+      "been submitted or published, since it can flip a student between pass and fail (D-#277).",
     authScopes: { authenticated: true },
     args: {
       id: t.arg.string({ required: true }),

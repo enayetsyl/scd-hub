@@ -567,14 +567,59 @@ async function decorate(rounds: RawAssignment[]): Promise<QuestionReviewRoundDTO
   });
 }
 
-/** The reviewer's queue (Q2.5): rounds they can still act on, undecided first. */
-export async function listMyQuestionReviews(reviewerId: string): Promise<QuestionReviewRoundDTO[]> {
+/** Rows per page when the caller does not say. Sized so one page stays small
+ *  enough to render instantly on a mid-range Android phone. */
+export const MY_QUESTION_REVIEWS_PAGE = 50;
+/** Hard ceiling, so a client cannot ask for the unbounded read back. */
+const MY_QUESTION_REVIEWS_MAX = 200;
+
+/** How many rounds the caller's queue holds in total — the pager's denominator. */
+export async function countMyQuestionReviews(reviewerId: string): Promise<number> {
+  return ReviewAssignment.countDocuments({
+    reviewerId,
+    docType: QUESTION_DOC_TYPE,
+    status: { $in: ["assigned", "submitted"] },
+  });
+}
+
+/**
+ * The reviewer's queue (Q2.5): rounds they can still act on, undecided first.
+ *
+ * PAGINATED, and it has to be. This read was unbounded, and on prod one
+ * reviewer-only teacher held **2,742 assigned rounds**: 2,743 documents joined to
+ * 2,743 content artifacts, serialised with each question's full payload —
+ * **1.77 MB in a single response**, then 2,743 rows rendered at once. The screen
+ * did not fail, it froze, which is why it read as "the app hangs" rather than as
+ * an error. Nobody else had enough assigned questions to notice.
+ *
+ * `payloadJson` is what makes each row expensive, and the list genuinely needs it
+ * (the reviewer reads the answer inline, D-#527). So the fix is to fetch fewer
+ * rows, not thinner ones.
+ *
+ * An old client that sends no arguments gets the first page rather than
+ * everything — a behaviour change, and the right one: it degrades to "the first
+ * 50" instead of to a hang.
+ */
+export async function listMyQuestionReviews(
+  reviewerId: string,
+  opts: { limit?: number | null; offset?: number | null } = {},
+): Promise<QuestionReviewRoundDTO[]> {
+  const limit = Math.min(
+    Math.max(1, opts.limit ?? MY_QUESTION_REVIEWS_PAGE),
+    MY_QUESTION_REVIEWS_MAX,
+  );
+  const offset = Math.max(0, opts.offset ?? 0);
+
   const rounds = (await ReviewAssignment.find({
     reviewerId,
     docType: QUESTION_DOC_TYPE,
     status: { $in: ["assigned", "submitted"] },
   })
-    .sort({ status: 1, assignedAt: -1 })
+    // `status` ascending puts "assigned" before "submitted" — the work before the
+    // history. The secondary sort keys the page boundary, so it must be stable.
+    .sort({ status: 1, assignedAt: -1, _id: 1 })
+    .skip(offset)
+    .limit(limit)
     .lean()) as unknown as RawAssignment[];
   return decorate(rounds);
 }
