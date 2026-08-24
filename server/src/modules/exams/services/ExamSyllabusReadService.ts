@@ -29,6 +29,7 @@ import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { Student } from "../../foundation/models/Student";
 import { Class } from "../../foundation/models/Class";
 import { myTeachingNoteScope } from "../../teaching-notes/services/TeachingNoteService";
+import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { ExamSyllabus, type ISyllabusMarkRow } from "../models/ExamSyllabus";
 import { ExamClassNote } from "../models/ExamClassNote";
 
@@ -141,6 +142,34 @@ function placeholder(
   };
 }
 
+/**
+ * The subjects a class is actually taught, per the live routine.
+ *
+ * Section slots are matched on this class; `subjectgroup` slots are included for
+ * EVERY class because those groups are cross-grade by construction (Quran/Arabic)
+ * and carry no classId — the same `$or` the approver lookup uses, and the only
+ * path that reaches ARABIC and QURAN at all, since neither has a `Subject` row.
+ */
+async function subjectsTaughtIn(classId: string): Promise<Set<string>> {
+  const slots = (await RoutineSlot.find({
+    active: { $ne: false },
+    $or: [
+      { groupType: "section", classId: new Types.ObjectId(classId) },
+      { groupType: "subjectgroup" },
+    ],
+  })
+    .select("subject")
+    .lean()) as unknown as Array<{ subject?: string | null }>;
+
+  const out = new Set<string>();
+  for (const s of slots) {
+    if (s.subject && (ROUTINE_SUBJECTS as readonly string[]).includes(s.subject)) {
+      out.add(s.subject);
+    }
+  }
+  return out;
+}
+
 /** The caller's own (classLevel, subject) pairs, as a `level:subject` key set. */
 async function myPairKeys(ctx: AppContext): Promise<Set<string> | null> {
   if (!ctx.auth) return new Set();
@@ -186,9 +215,31 @@ export async function classSyllabus(
   const bySubject = new Map<string, SyllabusShape>();
   for (const r of rows) bySubject.set(r.subject, toShape(r, isMineFor(r.subject)));
 
-  // A teacher also sees THEIR OWN subjects that are not published yet, as
-  // placeholders — "not ready" rather than "does not exist".
-  if (!admin && mine !== null) {
+  if (admin) {
+    // Office/Principal need EVERY subject the class sits, whether or not a row
+    // exists yet — this list is the writing surface, and a subject with no row is
+    // precisely the one that still has to be written.
+    //
+    // Without this the board was empty until a syllabus already existed, which is
+    // unwritable-by-construction: "০ এর মধ্যে ০ টি বিষয়" with nothing to tap, and no
+    // way to create the first row. Found on prod, not by the tests — every test
+    // mocked the row list and handed back rows, so none of them ever saw the
+    // empty-database case the school actually starts from.
+    let taught = await subjectsTaughtIn(classId);
+    // A class with no routine yet must not be a dead end either. Falling back to
+    // the full subject list keeps Office moving; the ones that do not apply are
+    // simply never written, which the board already renders as বাকি.
+    if (taught.size === 0) taught = new Set<string>(ROUTINE_SUBJECTS);
+    for (const code of taught) {
+      if (bySubject.has(code)) continue;
+      bySubject.set(
+        code,
+        placeholder(examId, classId, code as RoutineSubject, isMineFor(code as RoutineSubject)),
+      );
+    }
+  } else if (mine !== null) {
+    // A teacher sees THEIR OWN subjects that are not published yet, as
+    // placeholders — "not ready" rather than "does not exist".
     for (const code of ROUTINE_SUBJECTS) {
       if (bySubject.has(code)) continue;
       if (isMineFor(code)) {
