@@ -97,7 +97,7 @@ export default function SyllabusEntryScreen({ navigation }: Props): React.ReactE
             {/* The per-class footer is a CLASS fact covering all eight subjects
                 (§5.5); an unwritten one is called out here because nothing on the
                 subject rows would ever reveal that it is missing. */}
-            {!view.noteMd ? <Notice message={STR.syClassNote} tone="warn" /> : null}
+            {!view.noteMd ? <Notice message={STR.syClassNoteMissing} tone="warn" /> : null}
             <Button
               title={STR.syClassNote}
               variant="secondary"
@@ -116,6 +116,11 @@ export default function SyllabusEntryScreen({ navigation }: Props): React.ReactE
               </Muted>
             </Card>
 
+            {/* An empty Card rendered as a bare white box on prod when a class had
+                no subjects yet. There is always something to say instead. */}
+            {view.subjects.length === 0 ? (
+              <EmptyState message={STR.syNoSubjects} />
+            ) : (
             <Card>
               {view.subjects.map((s) => {
                 const chip = statusChip(s);
@@ -156,6 +161,7 @@ export default function SyllabusEntryScreen({ navigation }: Props): React.ReactE
                 );
               })}
             </Card>
+            )}
           </View>
         ) : null}
       </QueryGate>

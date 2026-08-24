@@ -39,6 +39,13 @@ jest.mock("../modules/exams/models/ExamSyllabus", () => {
   };
 });
 
+const mockRoutineSlots = jest.fn();
+jest.mock("../modules/routine/models/RoutineSlot", () => ({
+  RoutineSlot: {
+    find: () => ({ select: () => ({ lean: async () => mockRoutineSlots() }) }),
+  },
+}));
+
 jest.mock("../modules/exams/models/ExamClassNote", () => ({
   ExamClassNote: {
     find: () => ({ lean: async () => [] }),
@@ -118,6 +125,11 @@ function row(over: Record<string, unknown> = {}) {
   };
 }
 
+beforeEach(() => {
+  // Default for every test: the admin board reads the routine on each call, so an
+  // unset mock would throw rather than fail a meaningful assertion.
+  mockRoutineSlots.mockReturnValue([]);
+});
 beforeEach(() => {
   jest.clearAllMocks();
   mockScope.mockResolvedValue([]);
@@ -341,5 +353,89 @@ describe("mySyllabusApprovalCount", () => {
         auth: null,
       }),
     ).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The empty-database case — how the board actually starts (found on prod)
+// ---------------------------------------------------------------------------
+
+describe("classSyllabus with NO syllabus rows yet", () => {
+  /**
+   * The bug this pins: every earlier test mocked the row list and handed back
+   * rows, so none of them saw the state the school actually starts from — an exam
+   * created, nothing written. Office got an empty board with nothing to tap and no
+   * way to create the first row, which made the whole module unusable.
+   */
+  beforeEach(() => {
+    mockSyllabusFind.mockReturnValue([]);
+    mockRoutineSlots.mockReturnValue([
+      { subject: "BAN" },
+      { subject: "BAN" },
+      { subject: "MATH" },
+      { subject: "ARABIC" },
+      { subject: "NOT_A_SUBJECT" },
+    ]);
+  });
+
+  test("OFFICE gets one writable placeholder per subject the ROUTINE says the class sits", async () => {
+    const { classSyllabus } = await import(
+      "../modules/exams/services/ExamSyllabusReadService"
+    );
+    const view = await classSyllabus(ctxFor("OFFICE"), EXAM.toString(), CLASS.toString());
+    expect(view.subjects.map((s) => s.subject).sort()).toEqual(["ARABIC", "BAN", "MATH"]);
+    // Every one is a placeholder waiting to be written — not a saved row.
+    expect(view.subjects.every((s) => s.pending && s.id === null)).toBe(true);
+  });
+
+  test("a subject the routine does not carry is NOT offered", async () => {
+    const { classSyllabus } = await import(
+      "../modules/exams/services/ExamSyllabusReadService"
+    );
+    const view = await classSyllabus(ctxFor("OFFICE"), EXAM.toString(), CLASS.toString());
+    expect(view.subjects.map((s) => s.subject)).not.toContain("SCI");
+  });
+
+  test("an unrecognised routine subject is ignored rather than offered", async () => {
+    const { classSyllabus } = await import(
+      "../modules/exams/services/ExamSyllabusReadService"
+    );
+    const view = await classSyllabus(ctxFor("OFFICE"), EXAM.toString(), CLASS.toString());
+    expect(view.subjects.map((s) => s.subject)).not.toContain("NOT_A_SUBJECT");
+  });
+
+  test("a class with NO routine at all still gets a full writable board, never a dead end", async () => {
+    mockRoutineSlots.mockReturnValue([]);
+    const { classSyllabus } = await import(
+      "../modules/exams/services/ExamSyllabusReadService"
+    );
+    const view = await classSyllabus(ctxFor("OFFICE"), EXAM.toString(), CLASS.toString());
+    expect(view.subjects.length).toBeGreaterThan(0);
+  });
+
+  test("PRINCIPAL gets the same writable board as Office", async () => {
+    const { classSyllabus } = await import(
+      "../modules/exams/services/ExamSyllabusReadService"
+    );
+    const view = await classSyllabus(
+      ctxFor("PRINCIPAL"),
+      EXAM.toString(),
+      CLASS.toString(),
+    );
+    expect(view.subjects.length).toBe(3);
+  });
+
+  test("a TEACHER still sees only their own pairs — the fix does not widen their board", async () => {
+    const { classSyllabus } = await import(
+      "../modules/exams/services/ExamSyllabusReadService"
+    );
+    const view = await classSyllabus(
+      ctxFor("TEACHER", TEACHER_ID),
+      EXAM.toString(),
+      CLASS.toString(),
+    );
+    // The teacher scope mock decides this; what matters is that the ADMIN branch
+    // did not leak the whole routine into a teacher's view.
+    expect(view.subjects.every((s) => s.isMine)).toBe(true);
   });
 });
