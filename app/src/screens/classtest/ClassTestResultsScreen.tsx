@@ -240,14 +240,21 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
           {/* Correct a mis-typed total / pass mark / date (owner ask 2026-08-03 — a
               32-mark paper had been recorded as 42, and there was no update path at all,
               only a script). Open to Principal/Office AND the exam's own teacher, so a
-              teacher can fix their own typo. The server refuses once any mark exists,
-              since the total is the denominator of every percentage. */}
+              teacher can fix their own typo. Once marks exist the server refuses the
+              TOTAL (it is the denominator of every percentage) but still allows the PASS
+              MARK while every result is DRAFT — see updateClassTestDetails. */}
           {canEditDetails ? (
             <View style={{ marginTop: space(3) }}>
               {editOpen ? (
                 <>
                   <Field label={STR.ctTotalMarks} value={editTotal} onChangeText={setEditTotal} keyboardType="number-pad" />
                   <Field label={STR.ctPassMark} value={editPass} onChangeText={setEditPass} keyboardType="number-pad" />
+                  {/* The server's refusal (marks already entered, results already
+                      published, pass mark above the total) has to land HERE, beside the
+                      Save button. The only other Notice on this screen sits in the
+                      CANCELLED early-return branch, so before this the reason was set in
+                      state and never rendered — Save just appeared to do nothing. */}
+                  {error ? <Notice message={error} tone="danger" /> : null}
                   <View style={{ flexDirection: "row", gap: space(2) }}>
                     <Button title={STR.save} onPress={() => void onSaveDetails()} loading={editBusy} disabled={editBusy} />
                     <Button title={STR.cancel} variant="ghost" onPress={() => setEditOpen(false)} disabled={editBusy} />
@@ -258,6 +265,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                   title={STR.ctEditDetails}
                   variant="ghost"
                   onPress={() => {
+                    setError(null); // don't reopen onto a stale refusal from a previous attempt
                     setEditTotal(String(test.totalMarks));
                     setEditPass(String(test.passMark));
                     setEditOpen(true);

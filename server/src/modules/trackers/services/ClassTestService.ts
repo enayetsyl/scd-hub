@@ -637,10 +637,18 @@ export interface UpdateClassTestDetailsInput {
  * or whoever filed it, matching `listMyClassTests`'s notion of "mine". A teacher fixing
  * their own typo shouldn't need an admin.
  *
- * REFUSED once ANY result exists (owner's decision). totalMarks is the denominator of
- * every percentage and pass/fail flag, so changing it under existing marks would
- * silently re-grade students — and shift numbers already published to guardians. The
- * marks have to be cleared first, deliberately.
+ * ONCE RESULTS EXIST the three fields part company (owner ask 2026-08-24, relaxing the
+ * original blanket refusal):
+ *
+ *   - `totalMarks` — still REFUSED. It is the denominator of every percentage (D-#121),
+ *     so changing it under existing marks silently re-grades every student and shifts
+ *     numbers already published to guardians. Clear the marks first, deliberately.
+ *   - `examDate` — still REFUSED (it anchors the D-#120 school-day deadline).
+ *   - `passMark` — ALLOWED while every result is still DRAFT. pass/fail is DERIVED and
+ *     never stored (D-#85), so no stored row needs re-grading; the badges recompute on
+ *     the next read. Refused once any result is SUBMITTED or RELEASED, because D-#277's
+ *     rule is that a guardian never sees a result change with no re-notify — and moving
+ *     the pass mark can flip a student between পাস and দুর্বল. Recall / unpublish first.
  */
 export async function updateClassTestDetails(input: UpdateClassTestDetailsInput): Promise<ClassTestShape> {
   const doc = await ClassTest.findById(input.id);
@@ -656,11 +664,47 @@ export async function updateClassTestDetails(input: UpdateClassTestDetailsInput)
     if (!owns) throw new Error("Only this exam's own teacher (or Office/Principal) can edit its details");
   }
 
+  // Only the fields the caller actually supplied, and only when they really differ —
+  // re-saving the same number must never trip a guard.
+  const totalChanging = input.totalMarks !== undefined && input.totalMarks !== doc.totalMarks;
+  const passChanging = input.passMark !== undefined && input.passMark !== doc.passMark;
+  const dateChanging =
+    input.examDate !== undefined &&
+    new Date(input.examDate).getTime() !== new Date(doc.examDate).getTime();
+
   const marked = await ClassTestResult.countDocuments({ testId: doc._id });
   if (marked > 0) {
-    throw new Error(
-      `This exam has ${marked} result(s) entered — clear the marks first, since changing the total would re-grade them`,
-    );
+    // totalMarks is the denominator of every percentage (D-#121), so changing it under
+    // existing marks silently re-grades every student. Still refused outright.
+    if (totalChanging) {
+      throw new Error(
+        `This exam has ${marked} result(s) entered — clear the marks first, since changing the total marks would re-grade them`,
+      );
+    }
+    // examDate anchors the D-#120 school-day deadline; left refused until asked for.
+    if (dateChanging) {
+      throw new Error(
+        `This exam has ${marked} result(s) entered — clear the marks first before changing the exam date`,
+      );
+    }
+    // passMark is the one that CAN move while marks exist. pass/fail is DERIVED and
+    // never stored (D-#85), so there is nothing to re-grade in the data — the badges
+    // recompute on the next read. The real constraint is D-#277: a guardian who has
+    // already been shown a result must never see it flip with no re-notify. So it is
+    // allowed while every result is still DRAFT, and refused once any result has been
+    // submitted or released — recall / unpublish first, exactly like editing a mark.
+    if (passChanging) {
+      const beyondDraft = await ClassTestResult.countDocuments({
+        testId: doc._id,
+        $or: [{ submittedAt: { $ne: null } }, { publishedAt: { $ne: null } }, { publishedVersion: { $gt: 0 } }],
+      });
+      if (beyondDraft > 0) {
+        throw new Error(
+          `${beyondDraft} of this exam's ${marked} result(s) have already been submitted or published — ` +
+            `recall or unpublish them first, since changing the pass mark can flip a student between pass and fail`,
+        );
+      }
+    }
   }
 
   const before = { totalMarks: doc.totalMarks, passMark: doc.passMark, examDate: doc.examDate };
