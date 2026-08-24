@@ -136,7 +136,15 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
     setSaved(false);
   }
 
-  async function onSave(): Promise<void> {
+  /**
+   * Returns the saved row's id, or null when the save was refused.
+   *
+   * The id is RETURNED rather than read back off `stored` because `stored` is the
+   * last query result held in this render's closure: right after a save it is
+   * still the PREVIOUS value (null, for a subject being written for the first
+   * time), and the refetch has not landed. Submitting off it silently did nothing.
+   */
+  async function onSave(): Promise<string | null> {
     setErr(null);
     const res = await save({
       examId,
@@ -149,20 +157,28 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
     });
     if (res.error) {
       setErr(friendlyError(res.error));
-      return;
+      return null;
     }
     setSaved(true);
     refetchDetail({ requestPolicy: "network-only" });
+    return res.data?.saveExamSyllabus.id ?? stored?.id ?? null;
   }
 
+  /**
+   * Save, then send for sign-off — ONE press, including the very first time this
+   * subject is written.
+   *
+   * A subject with no row yet is a placeholder whose `id` is null, so gating this
+   * on `stored?.id` made the button permanently dead on exactly the case it exists
+   * for: a fresh syllabus, balanced at 100, with an approver named, and the primary
+   * action greyed out saying nothing. Save is what CREATES the row, so it has to
+   * run first and hand its id straight over.
+   */
   async function onSubmit(): Promise<void> {
     setErr(null);
-    await onSave();
-    if (!stored?.id) {
-      refetchDetail({ requestPolicy: "network-only" });
-      return;
-    }
-    const res = await submit({ id: stored.id, approverUserId });
+    const id = await onSave();
+    if (!id) return; // the save was refused; onSave has already surfaced why
+    const res = await submit({ id, approverUserId });
     if (res.error) {
       setErr(friendlyError(res.error));
       return;
@@ -379,10 +395,17 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
         <Button
           title={STR.sySubmitToTeacher}
           onPress={onSubmit}
-          // Disabled until the rows balance — the badge above says why.
-          disabled={!balanced || holders.length === 0 || !stored?.id}
+          // Gated on the two things the CALLER can act on: the rows must balance,
+          // and the routine must name someone to send it to. NOT on `stored?.id` —
+          // a subject being written for the first time has no row yet, and save is
+          // what creates it, so that condition made the button dead on precisely
+          // the case it exists for.
+          disabled={!balanced || holders.length === 0}
         />
+        {/* Always say WHY it is disabled. A greyed primary action with no reason
+            is the state this screen shipped in. */}
         {!balanced ? <Muted>{STR.syMustBe100}</Muted> : null}
+        {balanced && holders.length === 0 ? <Muted>{STR.syNoApprover}</Muted> : null}
       </View>
     </Screen>
   );
