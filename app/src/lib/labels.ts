@@ -4696,6 +4696,7 @@ const STR_BN = {
   syStatPrincipal: "আপনার কাছে",
   syStatPublished: "প্রকাশিত",
   syBlockedSum: "মানবন্টন মেলেনি — প্রকাশ করা যাবে না।",
+  qrLoadMore: "আরও দেখুন",
   // --- Exam admin (SY-7) ---
   syExams: "পরীক্ষা",
   syExamManage: "পরীক্ষা ব্যবস্থাপনা",
@@ -8400,6 +8401,7 @@ const STR_EN: StrTable = {
   syStatPrincipal: "With you",
   syStatPublished: "Published",
   syBlockedSum: "The mark distribution does not add up — this cannot be published.",
+  qrLoadMore: "Load more",
   // --- Exam admin (SY-7) ---
   syExams: "Exams",
   syExamManage: "Manage exams",
