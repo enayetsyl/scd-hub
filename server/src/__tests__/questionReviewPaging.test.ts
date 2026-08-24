@@ -154,3 +154,41 @@ describe("the queue pager is self-contained", () => {
     expect(single).not.toMatch(/refetch\(\{ requestPolicy: "network-only" \}\)/);
   });
 });
+
+/**
+ * Paging must not move the reader.
+ *
+ * RefreshControl was wired to `fetching`, which is true for a "load more" as well
+ * as for a pull-to-refresh — and a RefreshControl turning on drags a list back to
+ * the top. Tapping আরও দেখুন therefore threw the reader to the first card, with
+ * nothing to indicate whether rows had been appended.
+ */
+describe("paging does not yank the reader to the top", () => {
+  const SRC = require("fs").readFileSync(
+    require("path").resolve(__dirname, "../../../app/src/screens/review/QuestionReviewQueueScreen.tsx"),
+    "utf8",
+  ) as string;
+
+  test("RefreshControl reflects a pull-to-refresh, NOT any in-flight query", () => {
+    expect(SRC).toMatch(/refreshing=\{refreshing\}/);
+    expect(SRC).not.toMatch(/refreshing=\{fetching\}/);
+  });
+
+  test("only reload() raises the refreshing flag", () => {
+    const i = SRC.indexOf("const reload = useCallback");
+    const body = SRC.slice(i, SRC.indexOf("}, [", i));
+    expect(body).toMatch(/setRefreshing\(true\)/);
+  });
+
+  test("the flag is cleared when a page lands, so it cannot stick on", () => {
+    expect(SRC).toMatch(/setRefreshing\(false\)/);
+  });
+
+  test("the load-more control carries the progress, since the caption is off-screen", () => {
+    // A reader who has just paged is at the BOTTOM; the N / M line at the top is
+    // invisible to them, so the count rides on the button itself.
+    const i = SRC.indexOf("<LoadOlder");
+    const block = SRC.slice(i, i + 600);
+    expect(block).toMatch(/bnNum\(rounds\.length\)/);
+  });
+});
