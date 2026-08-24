@@ -796,10 +796,26 @@ const QUESTION_ROUND_FIELDS = `
   artifactReviewStatus artifactSuperseded
 `;
 
-/** The reviewer's own queue: assigned first, then already-decided rounds. */
-export const MY_QUESTION_REVIEWS = gql<{ myQuestionReviews: QuestionReviewRoundT[] }, NoVars>`
-  query MyQuestionReviews {
-    myQuestionReviews { ${QUESTION_ROUND_FIELDS} }
+/**
+ * The reviewer's own queue: assigned first, then already-decided rounds.
+ *
+ * PAGINATED. This was an unbounded read, and on prod one reviewer held 2,742
+ * assigned rounds — 1.77 MB of payloadJson in a single response and 2,742 rows
+ * rendered at once, which froze the screen rather than failing it.
+ */
+export const MY_QUESTION_REVIEWS = gql<
+  { myQuestionReviews: QuestionReviewRoundT[] },
+  { limit?: number | null; offset?: number | null }
+>`
+  query MyQuestionReviews($limit: Int, $offset: Int) {
+    myQuestionReviews(limit: $limit, offset: $offset) { ${QUESTION_ROUND_FIELDS} }
+  }
+`;
+
+/** The pager's denominator, so the screen can say '50 of 2,742'. */
+export const MY_QUESTION_REVIEW_COUNT = gql<{ myQuestionReviewCount: number }, NoVars>`
+  query MyQuestionReviewCount {
+    myQuestionReviewCount
   }
 `;
 

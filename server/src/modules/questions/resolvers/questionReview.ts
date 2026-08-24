@@ -30,6 +30,7 @@ import {
   publishQuestion as publishSvc,
   publishQuestionBulk as publishBulkSvc,
   listMyQuestionReviews,
+  countMyQuestionReviews,
   questionReviewInbox as inboxSvc,
   questionReviewThread as threadSvc,
   listAssignableQuestions,
@@ -388,11 +389,30 @@ builder.queryField("myQuestionReviews", (t) =>
     type: [QuestionReviewRoundRef],
     description:
       "The caller's question-review queue: assigned (awaiting a verdict) first, then submitted " +
-      "(decided, still editable). Requires content:review.",
+      "(decided, still editable). PAGINATED — `limit` defaults to 50 and is capped at 200. " +
+      "Requires content:review.",
+    authScopes: { hasPermission: "content:review" },
+    args: {
+      limit: t.arg.int({ required: false }),
+      offset: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return listMyQuestionReviews(ctx.auth.userId, { limit: args.limit, offset: args.offset });
+    },
+  }),
+);
+
+builder.queryField("myQuestionReviewCount", (t) =>
+  t.int({
+    description:
+      "How many rounds the caller's question-review queue holds in total — the pager's " +
+      "denominator, so the screen can say '50 of 2,742' rather than implying the page is all " +
+      "there is. Requires content:review.",
     authScopes: { hasPermission: "content:review" },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      return listMyQuestionReviews(ctx.auth.userId);
+      return countMyQuestionReviews(ctx.auth.userId);
     },
   }),
 );
