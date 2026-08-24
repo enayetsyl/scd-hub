@@ -1135,6 +1135,9 @@ const STR_BN = {
   prPickClass: "শ্রেণি বেছে নিন",
   prCopiesPending: "সংখ্যা পাওয়া যায়নি — উপস্থিতি বাকি",
   prCopiesFromPresent: "উপস্থিত অনুযায়ী",
+  /** The reprint form: the earlier job counted by attendance, so a typed number would
+   *  not be what the Office prints unless the mode is switched to "সংখ্যা লিখুন". */
+  prReprintPerPresent: "ব্যবহারের দিনের উপস্থিত শিক্ষার্থী অনুযায়ী কপি ছাপা হবে — সংখ্যা লেখার দরকার নেই",
   prManualCount: "কত কপি ছাপছেন? (উপস্থিতি বাকি — নিজে লিখুন)",
   /** D-#296 — the browser-push permission wall (owner ruling: mandatory for all). */
   pushWallTitle: "নোটিফিকেশন চালু করুন",
@@ -4796,6 +4799,7 @@ const STR_EN: StrTable = {
   prPickClass: "Pick a class",
   prCopiesPending: "Count not available — attendance pending",
   prCopiesFromPresent: "per present students",
+  prReprintPerPresent: "Copies will match the students present on the use day — no number to type",
   prManualCount: "How many copies are you printing? (attendance pending — enter manually)",
   prNotes: "Notes",
   prLinkUrl: "Link",
