@@ -404,7 +404,8 @@ builder.queryField("myQuestionReviews", (t) =>
 );
 
 builder.queryField("myQuestionReviewCount", (t) =>
-  t.int({
+  t.field({
+    type: "Int",
     description:
       "How many rounds the caller's question-review queue holds in total — the pager's " +
       "denominator, so the screen can say '50 of 2,742' rather than implying the page is all " +
