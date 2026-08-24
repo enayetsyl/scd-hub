@@ -779,6 +779,52 @@ describe("updateClassTestDetails", () => {
     expect(doc.save).not.toHaveBeenCalled();
   });
 
+  // The passMark relaxation (owner ask 2026-08-24). pass/fail is DERIVED, never stored
+  // (D-#85), so marks existing is NOT by itself a reason to refuse — D-#277 is: a
+  // guardian must never see a released result flip with no re-notify.
+  test("passMark IS editable while marks exist but every result is still DRAFT", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount
+      .mockResolvedValueOnce(14) // marked
+      .mockResolvedValueOnce(0); // none submitted or published
+    const res = await updateClassTestDetails({ ...admin(doc), passMark: 15 });
+    expect(res.passMark).toBe(15);
+    expect(res.totalMarks).toBe(42); // untouched
+    expect(doc.save).toHaveBeenCalled();
+  });
+
+  test("passMark is REFUSED once any result has been submitted or published (D-#277)", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount
+      .mockResolvedValueOnce(14) // marked
+      .mockResolvedValueOnce(14); // all already submitted/published
+    await expect(updateClassTestDetails({ ...admin(doc), passMark: 15 })).rejects.toThrow(
+      /submitted or published/,
+    );
+    expect(doc.save).not.toHaveBeenCalled();
+  });
+
+  test("totalMarks stays refused even when every result is still DRAFT", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0 as unknown as number).mockResolvedValueOnce(14);
+    await expect(updateClassTestDetails({ ...admin(doc), totalMarks: 32 })).rejects.toThrow(
+      /changing the total marks would re-grade them/,
+    );
+    expect(doc.save).not.toHaveBeenCalled();
+  });
+
+  test("re-saving the SAME passMark with marks present is a no-op, not a refusal", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(14); // marks exist, but nothing is changing
+    const res = await updateClassTestDetails({ ...admin(doc), passMark: 21, totalMarks: 42 });
+    expect(res.passMark).toBe(21);
+    expect(doc.save).toHaveBeenCalled();
+  });
+
   test("the exam's OWN teacher may edit it without roster:manage", async () => {
     const doc = makeDoc();
     mockCtFindById.mockReturnValue(findByIdResult(doc));
