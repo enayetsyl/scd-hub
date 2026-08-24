@@ -622,6 +622,9 @@ builder.mutationField("reprintPrintRequest", (t) =>
       /** The date the reprint will be USED — a reprint is always for a new day. */
       neededByKey: t.arg.string({ required: true }),
       copies: t.arg.int({ required: false }),
+      /** D-#294: keeps the original's mode when omitted. Pass FIXED to reprint a
+       *  per-class-present job as a plain typed count — then `copies` is honoured. */
+      copiesMode: t.arg.string({ required: false }),
       notes: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
@@ -634,6 +637,7 @@ builder.mutationField("reprintPrintRequest", (t) =>
         sourceRequestId: args.id,
         neededByKey: args.neededByKey,
         copies: args.copies,
+        copiesMode: args.copiesMode,
         notes: args.notes,
         actorId: ctx.auth.userId,
         isOffice: office,

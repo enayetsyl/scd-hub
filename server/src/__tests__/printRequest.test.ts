@@ -1255,6 +1255,51 @@ describe("reprintPrintRequest — send an earlier print again, no re-upload", ()
     expect(mockCreate.mock.calls[0][0]).toMatchObject({ copies: 35 });
   });
 
+  // The count mode carries over, so a CLASS_PRESENT job reprinted as-is still counts from
+  // the use day's attendance — and the typed number it was prefilled with must NOT look
+  // like the count the Office will print.
+  test("a CLASS_PRESENT original keeps its mode and its counting class", async () => {
+    const file = oid(), cls = oid();
+    const original = histDoc({ fileIds: [file], copies: 11, copiesMode: "CLASS_PRESENT", copiesClassId: cls });
+    mockFindById.mockReturnValue({ lean: async () => original });
+    mockStoredFileFind.mockResolvedValue([{ _id: file }]);
+    mockCreate.mockImplementation(async (d: Record<string, unknown>) => ({ _id: oid(), ...d }));
+
+    await reprintPrintRequest({ ...reprintArgs, sourceRequestId: original._id.toString() });
+    expect(mockCreate.mock.calls[0][0]).toMatchObject({ copiesMode: "CLASS_PRESENT", copiesClassId: cls });
+  });
+
+  // The bug this fixes: the reprint form's copy count was stored but ignored — the Office
+  // saw the attendance count (i.e. the ORIGINAL number) because the clone stayed
+  // CLASS_PRESENT, and markPrinted finalized from attendance too.
+  test("reprinting a CLASS_PRESENT job as FIXED honours the typed count and drops the class", async () => {
+    const file = oid(), cls = oid();
+    const original = histDoc({ fileIds: [file], copies: 11, copiesMode: "CLASS_PRESENT", copiesClassId: cls });
+    mockFindById.mockReturnValue({ lean: async () => original });
+    mockStoredFileFind.mockResolvedValue([{ _id: file }]);
+    mockCreate.mockImplementation(async (d: Record<string, unknown>) => ({ _id: oid(), ...d }));
+
+    await reprintPrintRequest({
+      ...reprintArgs, sourceRequestId: original._id.toString(), copies: 25, copiesMode: "FIXED",
+    });
+    const created = mockCreate.mock.calls[0][0];
+    expect(created).toMatchObject({ copies: 25, copiesMode: "FIXED" });
+    expect(created.copiesClassId).toBeUndefined();
+  });
+
+  test("a CLASS_PRESENT reprint of a job that names no class is refused", async () => {
+    const file = oid();
+    const original = histDoc({ fileIds: [file] }); // FIXED, so no copiesClassId
+    mockFindById.mockReturnValue({ lean: async () => original });
+    mockStoredFileFind.mockResolvedValue([{ _id: file }]);
+
+    await expect(
+      reprintPrintRequest({
+        ...reprintArgs, sourceRequestId: original._id.toString(), copiesMode: "CLASS_PRESENT",
+      }),
+    ).rejects.toThrow(/needs the original's class/i);
+  });
+
   test("NEVER re-links the class test — the exam record keeps its own lifecycle", async () => {
     const file = oid();
     const original = histDoc({ fileIds: [file], classTestId: oid(), purpose: "CLASS_TEST" });

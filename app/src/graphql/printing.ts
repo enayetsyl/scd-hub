@@ -223,10 +223,21 @@ export const TAG_PRINT_REQUESTS = gql<
 /** Re-queue an already-printed job — same source, no re-upload — for a new use date. */
 export const REPRINT_PRINT_REQUEST = gql<
   { reprintPrintRequest: PrintRequestT },
-  { id: string; neededByKey: string; copies?: number | null; notes?: string | null }
+  {
+    id: string;
+    neededByKey: string;
+    copies?: number | null;
+    /** D-#294: omitted keeps the original's mode; FIXED makes `copies` the count. */
+    copiesMode?: string | null;
+    notes?: string | null;
+  }
 >`
-  mutation ReprintPrintRequest($id: String!, $neededByKey: String!, $copies: Int, $notes: String) {
-    reprintPrintRequest(id: $id, neededByKey: $neededByKey, copies: $copies, notes: $notes) {
+  mutation ReprintPrintRequest(
+    $id: String!, $neededByKey: String!, $copies: Int, $copiesMode: String, $notes: String
+  ) {
+    reprintPrintRequest(
+      id: $id, neededByKey: $neededByKey, copies: $copies, copiesMode: $copiesMode, notes: $notes
+    ) {
       ${PRINT_REQUEST_FIELDS}
     }
   }
