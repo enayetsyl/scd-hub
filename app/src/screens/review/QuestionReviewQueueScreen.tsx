@@ -70,13 +70,29 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
     variables: { limit: PAGE_SIZE, offset },
   });
   const [countQ, refetchCount] = useQuery({ query: MY_QUESTION_REVIEW_COUNT });
+  /** Nice-to-have only. It drives the 'N / M' caption and NOTHING else — see hasMore. */
   const total = countQ.data?.myQuestionReviewCount ?? 0;
+
+  /**
+   * Whether another page exists, decided from the LAST PAGE'S SIZE rather than from
+   * the count.
+   *
+   * The first cut computed this as `rows.length < total`, which quietly couples the
+   * pager's existence to a second query: if the count is slow, refused, or errors,
+   * `total` falls back to 0, `hasMore` goes false, and the control renders its
+   * exhausted state — a screen with 50 of 2,742 rows and no way to reach the rest,
+   * indistinguishable from genuinely having reached the end. A full page is
+   * self-contained evidence that there may be more; a short page is the end.
+   */
+  const [lastPageSize, setLastPageSize] = useState<number | null>(null);
+  const hasMore = lastPageSize === null ? false : lastPageSize === PAGE_SIZE;
 
   // Append each arriving page. Keyed by id so a re-fetch of the same page
   // replaces rather than duplicates.
   useEffect(() => {
     const page = data?.myQuestionReviews;
     if (!page) return;
+    setLastPageSize(page.length);
     setRows((prev) => {
       const byId = new Map(prev.map((r) => [r.id, r]));
       for (const r of page) byId.set(r.id, r);
@@ -88,6 +104,7 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
   const reload = useCallback(() => {
     setRows([]);
     setOffset(0);
+    setLastPageSize(null);
     refetch({ requestPolicy: "network-only" });
     refetchCount({ requestPolicy: "network-only" });
   }, [refetch, refetchCount]);
@@ -128,7 +145,6 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
   );
 
   const rounds = rows;
-  const hasMore = rows.length < total;
 
   const toggle = (id: string): void => {
     setSelected((prev) => {
@@ -223,9 +239,9 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
         <H2>{STR.qrMyQueue}</H2>
         {/* A page is not the queue. Without this, 50 rows out of 2,742 reads as
             'you are nearly done' — the opposite of the truth. */}
-        {total > 0 ? (
+        {rounds.length > 0 ? (
           <Muted>
-            {bnNum(rounds.length)} / {bnNum(total)}
+            {total > 0 ? `${bnNum(rounds.length)} / ${bnNum(total)}` : bnNum(rounds.length)}
           </Muted>
         ) : null}
         {error ? <ErrorBanner message={friendlyError(error)} /> : null}

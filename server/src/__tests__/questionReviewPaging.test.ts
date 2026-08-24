@@ -108,3 +108,49 @@ describe("countMyQuestionReviews", () => {
     expect(q.status).toEqual({ $in: ["assigned", "submitted"] });
   });
 });
+
+/**
+ * The pager must not depend on the COUNT query.
+ *
+ * A static read of the screen, for the same reason the syllabus gate test is one:
+ * the app workspace has no runner, and this was a well-typed boolean that was
+ * simply wrong. The first cut computed `hasMore = rows.length < total`, so a
+ * count that is slow, refused or errored made `total` fall back to 0, `hasMore`
+ * go false, and the control render its EXHAUSTED state — 50 rows out of 2,742
+ * with no way to reach the rest, and no way to tell that apart from having
+ * genuinely reached the end. That is exactly how it was reported: "can't see any
+ * pagination button".
+ */
+describe("the queue pager is self-contained", () => {
+  const SRC = require("fs").readFileSync(
+    require("path").resolve(__dirname, "../../../app/src/screens/review/QuestionReviewQueueScreen.tsx"),
+    "utf8",
+  ) as string;
+
+  test("hasMore is decided by the last page's SIZE, not by the total", () => {
+    const m = /const hasMore = ([^;]+);/.exec(SRC);
+    expect(m).not.toBeNull();
+    expect(m![1]).toMatch(/lastPageSize/);
+    expect(m![1]).not.toMatch(/total/);
+  });
+
+  test("the page size the screen requests matches the server's own default", () => {
+    const m = /const PAGE_SIZE = (\d+);/.exec(SRC);
+    expect(m).not.toBeNull();
+    expect(Number(m![1])).toBe(MY_QUESTION_REVIEWS_PAGE);
+  });
+
+  test("a reload forgets the page-size evidence, so the pager re-arms", () => {
+    const i = SRC.indexOf("const reload =");
+    const body = SRC.slice(i, SRC.indexOf("}, [", i));
+    expect(body).toMatch(/setLastPageSize\(null\)/);
+  });
+
+  test("a verdict does NOT re-pull the whole queue", () => {
+    // Every verdict used to end in refetch(network-only), which re-downloaded the
+    // entire list — the reason approving felt slower the more work was left.
+    const single = SRC.slice(SRC.indexOf("async function decide("));
+    expect(single).toMatch(/dropRows\(\[round\.id\]\)/);
+    expect(single).not.toMatch(/refetch\(\{ requestPolicy: "network-only" \}\)/);
+  });
+});
