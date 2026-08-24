@@ -11,7 +11,7 @@
 import { builder } from "../../../schema";
 import { Types } from "mongoose";
 import { Exam } from "../models/Exam";
-import { createExam } from "../services/ExamService";
+import { createExam, updateExam } from "../services/ExamService";
 
 interface ExamShape {
   id: string;
@@ -73,6 +73,30 @@ builder.queryFields((t) => ({
 }));
 
 builder.mutationFields((t) => ({
+  updateExam: t.field({
+    type: ExamRef,
+    description:
+      "PATCH an exam's name / date window — an omitted field is left alone (the D-#526 shape). " +
+      "`academicYearId` and `term` are NOT editable: together they are the row's identity and its " +
+      "unique index, and moving an exam would silently re-home every syllabus hanging off it.",
+    authScopes: { hasPermission: "exam:manage" },
+    args: {
+      id: t.arg.string({ required: true }),
+      name: t.arg.string({ required: false }),
+      startDateKey: t.arg.string({ required: false }),
+      endDateKey: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const updated = await updateExam(ctx, {
+        id: args.id,
+        name: args.name ?? null,
+        startDateKey: args.startDateKey ?? undefined,
+        endDateKey: args.endDateKey ?? undefined,
+      });
+      return toShape(updated as unknown as Parameters<typeof toShape>[0]);
+    },
+  }),
+
   createExam: t.field({
     type: ExamRef,
     description: "Create an exam. One row per (academic year × term) — a duplicate is refused.",

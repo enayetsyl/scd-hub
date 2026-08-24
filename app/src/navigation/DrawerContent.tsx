@@ -97,6 +97,7 @@ const STAFF_NAV: NavSection[] = [
     icon: "📋",
     items: [
       { route: "SyllabusTab", labelKey: "syRead", icon: "📋", screen: "SyllabusHome" },
+      { route: "SyllabusTab", labelKey: "syExamManage", icon: "🗓️", screen: "SyllabusExams", perms: ["exam:manage"] },
       { route: "SyllabusTab", labelKey: "syEntry", icon: "✍️", screen: "SyllabusEntry", perms: ["exam:manage"] },
       { route: "SyllabusTab", labelKey: "syApprovals", icon: "✅", screen: "SyllabusApprovals" },
     ],

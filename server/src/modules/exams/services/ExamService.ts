@@ -64,3 +64,60 @@ export async function createExam(ctx: AppContext, input: CreateExamInput): Promi
 
   return created;
 }
+
+export interface UpdateExamInput {
+  id: string;
+  name?: string | null;
+  startDateKey?: string | null;
+  endDateKey?: string | null;
+}
+
+/**
+ * PATCH an exam's descriptive fields. An omitted field is left alone (the D-#526
+ * staff-profile shape), so a caller fixing a date cannot blank the name by not
+ * sending it.
+ *
+ * `academicYearId` and `term` are deliberately NOT editable: together they are the
+ * row's identity and its unique index. Moving an exam to another year or term
+ * would silently re-home every syllabus hanging off it — which is a migration, not
+ * an edit. Create the right exam instead.
+ */
+export async function updateExam(ctx: AppContext, input: UpdateExamInput): Promise<IExam> {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  if (!callerHasPermission(ctx.auth, "exam:manage")) {
+    throw new ForbiddenError("পরীক্ষা সম্পাদনার অনুমতি নেই");
+  }
+
+  const exam = await Exam.findById(input.id);
+  if (!exam) throw new ForbiddenError("পরীক্ষা পাওয়া যায়নি");
+
+  const changed: string[] = [];
+  if (input.name != null && input.name.trim() && input.name !== exam.name) {
+    exam.name = input.name.trim();
+    changed.push("name");
+  }
+  if (input.startDateKey !== undefined && input.startDateKey !== exam.startDateKey) {
+    exam.startDateKey = input.startDateKey;
+    changed.push("startDateKey");
+  }
+  if (input.endDateKey !== undefined && input.endDateKey !== exam.endDateKey) {
+    exam.endDateKey = input.endDateKey;
+    changed.push("endDateKey");
+  }
+
+  if (changed.length === 0) return exam;
+
+  await exam.save();
+
+  await writeAudit({
+    eventKind: "EXAM_UPDATED",
+    actorId: ctx.auth.userId,
+    actorRole: ctx.auth.role,
+    targetId: exam._id,
+    targetKind: "Exam",
+    // WHICH fields moved, not their values — the D-#526 posture.
+    meta: { fields: changed },
+  });
+
+  return exam;
+}

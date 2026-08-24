@@ -17,9 +17,11 @@ const oid = () => new mongoose.Types.ObjectId();
 
 const mockExamFindOne = jest.fn();
 const mockExamCreate = jest.fn();
+const mockExamFindById = jest.fn();
 jest.mock("../modules/exams/models/Exam", () => ({
   Exam: {
     findOne: (q: unknown) => Promise.resolve(mockExamFindOne(q)),
+    findById: (id: unknown) => Promise.resolve(mockExamFindById(id)),
     create: (d: unknown) => mockExamCreate(d),
   },
 }));
@@ -29,7 +31,7 @@ jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockAudit(p),
 }));
 
-import { createExam } from "../modules/exams/services/ExamService";
+import { createExam, updateExam } from "../modules/exams/services/ExamService";
 
 function ctxFor(role: "PRINCIPAL" | "OFFICE" | "TEACHER" | "GUARDIAN"): AppContext {
   return {
@@ -99,5 +101,83 @@ describe("createExam", () => {
         input,
       ),
     ).rejects.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateExam (SY-7) — the exam is editable in the app, so a typo is not fatal
+// ---------------------------------------------------------------------------
+
+describe("updateExam", () => {
+  function examDoc(over: Record<string, unknown> = {}) {
+    return {
+      _id: oid(),
+      academicYearId: oid(),
+      term: "ANNUAL",
+      name: "বার্ষিক পরীক্ষা ২০২৬",
+      startDateKey: "2026-12-07",
+      endDateKey: "2026-12-16",
+      save: jest.fn(async function (this: unknown) {
+        return this;
+      }),
+      ...over,
+    };
+  }
+
+  test("renames an exam and audits WHICH field moved, not its value", async () => {
+    const doc = examDoc();
+    mockExamFindById.mockReturnValue(doc);
+    await updateExam(ctxFor("OFFICE"), { id: "e1", name: "বার্ষিক পরীক্ষা ২০২৬ (সংশোধিত)" });
+    expect(doc.name).toBe("বার্ষিক পরীক্ষা ২০২৬ (সংশোধিত)");
+    const audit = mockAudit.mock.calls[0][0];
+    expect(audit.eventKind).toBe("EXAM_UPDATED");
+    expect(audit.meta.fields).toEqual(["name"]);
+    // The new name must NOT be in the audit meta — the D-#526 posture.
+    expect(JSON.stringify(audit.meta)).not.toContain("সংশোধিত");
+  });
+
+  test("is a PATCH — an omitted field is left alone, not blanked", async () => {
+    const doc = examDoc();
+    mockExamFindById.mockReturnValue(doc);
+    await updateExam(ctxFor("OFFICE"), { id: "e1", name: "নতুন নাম" });
+    expect(doc.startDateKey).toBe("2026-12-07");
+    expect(doc.endDateKey).toBe("2026-12-16");
+  });
+
+  test("a no-op update writes nothing and audits nothing", async () => {
+    const doc = examDoc();
+    mockExamFindById.mockReturnValue(doc);
+    await updateExam(ctxFor("OFFICE"), { id: "e1", name: doc.name as string });
+    expect(doc.save).not.toHaveBeenCalled();
+    expect(mockAudit).not.toHaveBeenCalled();
+  });
+
+  test("an empty name is ignored rather than wiping the exam's name", async () => {
+    const doc = examDoc();
+    mockExamFindById.mockReturnValue(doc);
+    await updateExam(ctxFor("OFFICE"), { id: "e1", name: "   " });
+    expect(doc.name).toBe("বার্ষিক পরীক্ষা ২০২৬");
+  });
+
+  test("dates can be cleared explicitly by passing null", async () => {
+    const doc = examDoc();
+    mockExamFindById.mockReturnValue(doc);
+    await updateExam(ctxFor("OFFICE"), { id: "e1", startDateKey: null, endDateKey: null });
+    expect(doc.startDateKey).toBeNull();
+    expect(mockAudit.mock.calls[0][0].meta.fields).toEqual(["startDateKey", "endDateKey"]);
+  });
+
+  test("a teacher cannot edit an exam", async () => {
+    mockExamFindById.mockReturnValue(examDoc());
+    await expect(updateExam(ctxFor("TEACHER"), { id: "e1", name: "x" })).rejects.toThrow(
+      /অনুমতি নেই/,
+    );
+  });
+
+  test("a missing exam is refused", async () => {
+    mockExamFindById.mockReturnValue(null);
+    await expect(updateExam(ctxFor("OFFICE"), { id: "nope", name: "x" })).rejects.toThrow(
+      /পাওয়া যায়নি/,
+    );
   });
 });

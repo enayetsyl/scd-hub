@@ -201,6 +201,7 @@ export type AuditEventKind =
   | "STORAGE_BOX_CHANGED"          // box create/update/retire — prior+new in meta (the LIBRARY_CATALOG_CHANGED pattern)
   // Exam syllabus (SY-1..SY-6, docs/prd-exam-syllabus.md §6/§7, D-#530–#532)
   | "EXAM_CREATED"                    // an exam row created (exam:manage)
+  | "EXAM_UPDATED"                    // an exam's name/date window edited; meta lists WHICH fields moved, never their values (the D-#526 posture)
   | "EXAM_SYLLABUS_SAVED"             // Office wrote/edited a syllabus row — prose, mark rows, question types
   | "EXAM_SYLLABUS_SUBMITTED"         // sent to the named SUBJECT TEACHER for sign-off (approverUserId in meta)
   | "EXAM_SYLLABUS_TEACHER_APPROVED"  // the subject teacher signed it off (D-#533)

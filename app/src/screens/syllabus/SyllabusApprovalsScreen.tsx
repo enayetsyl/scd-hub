@@ -95,7 +95,7 @@ function ApprovalCard({
       {row.examDateKey ? <Muted>{row.examDateKey}</Muted> : null}
 
       <Button
-        title={open ? STR.syOpenMarks : STR.syOpenMarks}
+        title={open ? STR.syHideMarks : STR.syOpenMarks}
         variant="ghost"
         onPress={() => setOpen((v) => !v)}
       />
@@ -129,31 +129,51 @@ function ApprovalCard({
         </>
       ) : (
         <>
-          {!balanced ? <Notice message={STR.syBlockedSum} tone="warn" /> : null}
-          <Field
-            label={STR.sySendBackReason}
-            value={reason}
-            onChangeText={setReason}
-            helper={STR.sySendBackReasonHint}
-            multiline
-          />
-          <View style={{ flexDirection: "row", gap: space(2) }}>
-            <View style={{ flex: 1 }}>
-              <Button
-                title={STR.sySendBack}
-                variant="danger"
-                disabled={!reason.trim()}
-                onPress={() => run(() => sendBack({ id: row.id!, reason }))}
+          {/* The matrix opens ANY cell, so this card sees every stage — but the
+              actions belong to one stage each. Offering প্রকাশ করুন on a row that is
+              still with Office or with the teacher is a button whose only possible
+              outcome is the server's refusal. */}
+          {row.status === "DRAFT" ? (
+            <Notice
+              message={`${STR.syWithOffice} — ${STR.syNoActionNeeded}`}
+              tone="info"
+            />
+          ) : row.status === "PUBLISHED" ? (
+            <Notice message={STR.syPublished} tone="ok" />
+          ) : (
+            <>
+              {row.status === "TEACHER_REVIEW" ? (
+                <Notice message={STR.syAwaitingTeacher} tone="info" />
+              ) : null}
+              {!balanced ? <Notice message={STR.syBlockedSum} tone="warn" /> : null}
+              <Field
+                label={STR.sySendBackReason}
+                value={reason}
+                onChangeText={setReason}
+                helper={STR.sySendBackReasonHint}
+                multiline
               />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Button
-                title={STR.syPublish}
-                disabled={!balanced}
-                onPress={() => run(() => publish({ id: row.id! }))}
-              />
-            </View>
-          </View>
+              <View style={{ flexDirection: "row", gap: space(2) }}>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title={STR.sySendBack}
+                    variant="danger"
+                    disabled={!reason.trim()}
+                    onPress={() => run(() => sendBack({ id: row.id!, reason }))}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    // Publish belongs to PRINCIPAL_REVIEW alone; a row still with
+                    // the teacher can only be recalled, not released.
+                    title={row.status === "TEACHER_REVIEW" ? STR.syRecall : STR.syPublish}
+                    disabled={row.status === "TEACHER_REVIEW" || !balanced}
+                    onPress={() => run(() => publish({ id: row.id! }))}
+                  />
+                </View>
+              </View>
+            </>
+          )}
         </>
       )}
     </Card>

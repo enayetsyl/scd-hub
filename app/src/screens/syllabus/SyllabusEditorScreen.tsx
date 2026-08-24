@@ -26,6 +26,7 @@ import {
   type SyllabusMarkRowT,
 } from "../../graphql/examSyllabus";
 import { TEACHERS_QUERY } from "../../graphql/operations";
+import { DateField } from "../../components/DateField";
 import type { SyllabusStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -213,14 +214,17 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
             }}
             multiline
           />
-          <Field
-            label={STR.syPickExam}
+          {/* The date THIS subject is sat. It was labelled "পরীক্ষা" and typed as
+              free text against a format hint — a label that named the wrong thing
+              and a field that could hold anything. It is a date, so it gets the
+              same picker every other date on the app uses. */}
+          <DateField
+            label={STR.syExamDate}
             value={examDateKey}
-            onChangeText={(v) => {
+            onChange={(v) => {
               setExamDateKey(v);
               setSaved(false);
             }}
-            placeholder="2026-12-09"
           />
           <Body style={{ ...typeScale.bodyStrong, marginTop: space(3) }}>{STR.syQuestionTypes}</Body>
           <ChipRow>

@@ -48,3 +48,19 @@ export const CREATE_EXAM = gql<
     ) { ${EXAM_FIELDS} }
   }
 `;
+
+export const UPDATE_EXAM = gql<
+  { updateExam: ExamT },
+  { id: string; name?: string | null; startDateKey?: string | null; endDateKey?: string | null }
+>`
+  mutation UpdateExam(
+    $id: String!
+    $name: String
+    $startDateKey: String
+    $endDateKey: String
+  ) {
+    updateExam(id: $id, name: $name, startDateKey: $startDateKey, endDateKey: $endDateKey) {
+      ${EXAM_FIELDS}
+    }
+  }
+`;

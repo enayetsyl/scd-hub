@@ -51,8 +51,10 @@ Office types three things — the syllabus prose, the **mark distribution** (ম
 
 ### 0.3 Not built — do NOT log these as bugs
 
-- **There is no create-exam screen.** `createExam` exists as a mutation only; step **1.1** creates the
-  exam over GraphQL. This is a real gap, already known.
+- **Everything in this guide is reachable from the UI.** Exam creation, syllabus entry, both sign-off
+  stages and every display are screens — no GraphQL is needed to run the feature. The only GraphQL
+  steps left are the deliberate **negative** checks (4.5, 4.6, 5.7, 5.8, 6.7), which exist precisely
+  because the UI does not offer those paths.
 - **No notifications.** A teacher learns a syllabus is waiting from the **drawer badge only**. No push,
   no WhatsApp, no email.
 - **No bulk publish.** Publishing is deliberately per subject (§7.6) — Class 5 Bangla is ready weeks
@@ -82,27 +84,26 @@ Office types three things — the syllabus prose, the **mark distribution** (ম
 
 ## 1 · Setup (Principal or Office)
 
-### 1.1 Create the exam — GraphQL, no UI yet
+### 1.1 Create the exam — Drawer → পরীক্ষার সিলেবাস → পরীক্ষা ব্যবস্থাপনা
 
-- [ ] **1.1.1** Log in as Principal/Office, open the GraphQL endpoint (`/graphql`), and get an academic
-  year id: `query { academicYears { id label isCurrent } }`.
-- [ ] **1.1.2** Create the exam:
-  ```graphql
-  mutation {
-    createExam(
-      academicYearId: "<YEAR_ID>"
-      term: "ANNUAL"
-      name: "বার্ষিক পরীক্ষা ২০২৬"
-      startDateKey: "2026-12-07"
-      endDateKey: "2026-12-16"
-    ) { id name term }
-  }
-  ```
-- [ ] **1.1.3** Run the **same mutation again** → refused with *"এই শিক্ষাবর্ষে এই ধরনের পরীক্ষা আগেই তৈরি
-  করা হয়েছে"*. One exam per (year × term).
-- [ ] **1.1.4** Create a second exam with `term: "HALF_YEARLY"` → **accepted**. The two terms stand alone.
-- [ ] **1.1.5** Try `term: "TERMLY"` → refused (*"পরীক্ষার ধরন সঠিক নয়"*).
-
+- [ ] **1.1.1** As Principal/Office the drawer group shows **পরীক্ষা ব্যবস্থাপনা** above সিলেবাস এন্ট্রি.
+      As a **teacher** neither leaf is there.
+- [ ] **1.1.2** The screen opens on the **current academic year**, already selected.
+- [ ] **1.1.3** With no exams yet it reads *"এখনও কোনো পরীক্ষা নেই। নিচে একটি তৈরি করুন।"*
+- [ ] **1.1.4** In **নতুন পরীক্ষা**: pick ধরন **বার্ষিক**, name it `বার্ষিক পরীক্ষা ২০২৬`, and set শুরুর
+      তারিখ / শেষ তারিখ with the **date picker** (not a typed string).
+- [ ] **1.1.5** The end-date picker will not offer a date **before** the start date.
+- [ ] **1.1.6** Press **পরীক্ষা তৈরি করুন** → *পরীক্ষা সংরক্ষণ হয়েছে*, and the exam appears in the list above.
+- [ ] **1.1.7 The duplicate rule, made visible.** Open নতুন পরীক্ষা again → **বার্ষিক is no longer offered**
+      in the ধরন picker, because this year already has one. Only অর্ধ-বার্ষিক remains.
+- [ ] **1.1.8** Create the half-yearly exam too → accepted. Now the form says the year is full
+      (*"শিক্ষাবর্ষ ও ধরন পরে বদলানো যায় না…"*) and offers no create button.
+- [ ] **1.1.9 Editing.** Press **সম্পাদনা** on an exam → name and both dates are editable; **ধরন and
+      শিক্ষাবর্ষ are shown as plain text, never as pickers**. Change the name, save → the list updates.
+- [ ] **1.1.10** Press সম্পাদনা, change nothing, save → accepted, nothing breaks.
+- [ ] **1.1.11** Press সম্পাদনা, clear the name entirely → **সংরক্ষণ করুন is disabled**. An exam cannot
+      be left nameless.
+- [ ] **1.1.12** Switch the শিক্ষাবর্ষ picker to a different year → the exam list changes with it.
 ### 1.2 Confirm the routine has a subject teacher
 
 The sign-off stage needs someone who actually teaches the pair.
@@ -132,6 +133,8 @@ Drawer → **পরীক্ষার সিলেবাস** → **সিলে
 
 - [ ] **2.2.1** Open a subject. Two tabs: **সিলেবাস** | **মানবন্টন**.
 - [ ] **2.2.2** Type Bangla prose into the সিলেবাস tab and press **সংরক্ষণ করুন** → *সংরক্ষণ হয়েছে*.
+- [ ] **2.2.2b** The **পরীক্ষার তারিখ** field is a **date picker** and is labelled as a date. (It was
+      previously labelled "পরীক্ষা" and accepted free text — if you see either, log it.)
 - [ ] **2.2.3** **Mojibake guard.** Paste `à¦¬à¦¾à¦à¦²à¦¾` into the body and save → refused with a Bangla
   encoding error naming the fix. **Nothing persists.**
 - [ ] **2.2.4** Paste the same mojibake into a **mark-row label** (not the body) → also refused.
@@ -235,6 +238,13 @@ Log in as the teacher named in **2.6.1**.
   - [ ] **4.2.4** Classes run Nursery → Class 5, not alphabetically.
   - [ ] **4.2.5** Subjects a class does not sit show `—`, and those cells are not pressable.
 - [ ] **4.3** Tap the cell from **3.9** → the row opens below with **প্রকাশ করুন** and **ফেরত দিন**.
+- [ ] **4.3.0 Per-stage actions.** The matrix opens *any* cell, so check the card matches the stage:
+  - [ ] a **খসড়া** cell → *অফিসের কাছে — এখন আপনার কিছু করার নেই*, **no publish button**;
+  - [ ] a **শিক্ষকের কাছে** cell → *শিক্ষকের অনুমোদনের অপেক্ষায়*, send-back offered, publish **disabled**;
+  - [ ] a **প্রকাশিত** cell → *প্রকাশিত*, no action controls;
+  - [ ] only a **আপনার কাছে** cell offers a live **প্রকাশ করুন**.
+- [ ] **4.3.0b** The mark-distribution toggle reads **মানবন্টন দেখুন** when closed and
+      **মানবন্টন লুকান** when open — not the same label both ways.
   - [ ] **4.3.1** Send back with a reason → returns to খসড়া. Re-run 2.6/3.9 to bring it back.
   - [ ] **4.3.2** Press **প্রকাশ করুন** → status **প্রকাশিত**, cell turns ✓.
 - [ ] **4.4 The §7.2 bypass.** Take the subject from **1.2.2** (no routine teacher). As Office, write it
