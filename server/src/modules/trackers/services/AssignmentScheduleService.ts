@@ -14,6 +14,7 @@
  * The open-day predicate comes from the ONE calendar source (D-#50): routine
  * `dayTypeFor` + `HolidayException` ranges — no second calendar truth.
  */
+import { Types } from "mongoose";
 import { HW_SUBJECTS, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
 import type { HwSubject } from "@scd/shared";
 import { Class } from "../../foundation/models/Class";
@@ -295,6 +296,22 @@ export async function expectedItemsForWeek(
   academicYearId: string,
   weekNumber: number,
 ): Promise<ExpectedWeek> {
+  // A blank or malformed id must be refused HERE, before Mongoose casts it.
+  //
+  // `assignmentExpectedWeek` takes a GraphQL `String!`, which is non-null but still
+  // accepts "" — so a client with no academic year resolved yet sent one straight
+  // through to `findOne({ academicYearId: "" })`. Mongoose then threw CastError, and
+  // because CastError keeps its own constructor.name it is NOT an expected error
+  // (sentry.ts): a client-side blank paged the maintainer as a server fault, twice on
+  // 2026-08-13. A plain `new Error` is this codebase's business-denial convention —
+  // not reported, and safe to show the user (D-#259).
+  //
+  // The guard sits in the service rather than the resolver because all three callers
+  // funnel through here, and the other two (PendingAlertService, ReconReportService)
+  // only avoid this today by luck of where their ids come from.
+  if (!Types.ObjectId.isValid(academicYearId)) {
+    throw new Error("No academic year selected — choose one before opening the assignment week");
+  }
   const schedule = await AssignmentSchedule.findOne({ academicYearId });
   if (!schedule) {
     throw new Error("No AssignmentSchedule for this academic year — set the term anchor first");

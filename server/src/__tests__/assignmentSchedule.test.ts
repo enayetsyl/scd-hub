@@ -240,6 +240,24 @@ describe("schedule CRUD validation", () => {
 // ===========================================================================
 
 describe("AJ-1 — expectedItemsForWeek", () => {
+  // prod 2026-08-13: the resolver's GraphQL `String!` accepts "", which reached
+  // findOne() and threw CastError — a REPORTED fault (CastError keeps its own
+  // constructor.name) rather than the business denial it actually is.
+  test.each([["", "empty string"], ["   ", "blank"], ["not-an-oid", "malformed"]])(
+    "refuses a %s academic year id as a business denial, never a CastError",
+    async (bad) => {
+      mockScheduleFindOne.mockClear();
+      await expect(expectedItemsForWeek(bad, 15)).rejects.toThrow(/No academic year selected/);
+      // and it never reaches Mongoose, so no CastError can be raised
+      expect(mockScheduleFindOne).not.toHaveBeenCalled();
+    },
+  );
+
+  test("a blank id throws a PLAIN Error, so sentry treats it as expected (D-#259)", async () => {
+    const err = await expectedItemsForWeek("", 15).catch((e: unknown) => e);
+    expect(Object.getPrototypeOf(err)?.constructor?.name).toBe("Error");
+  });
+
   test("week 15 resolves cycleWeek-3 entries with §4 dates; delivered join applied", async () => {
     const e3a = entry({ cycleWeek: 3 });
     const e3b = entry({ cycleWeek: 3, subject: "MATH" });
