@@ -87,12 +87,23 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
   const [lastPageSize, setLastPageSize] = useState<number | null>(null);
   const hasMore = lastPageSize === null ? false : lastPageSize === PAGE_SIZE;
 
+  /**
+   * True only for a PULL-TO-REFRESH, never for a 'load more'.
+   *
+   * RefreshControl was wired to `fetching`, so every page load animated the
+   * spinner in — and a RefreshControl turning on drags the list back to the TOP.
+   * Tapping আরও দেখুন therefore threw the reader to the first card, with no way
+   * to tell whether anything had been appended.
+   */
+  const [refreshing, setRefreshing] = useState(false);
+
   // Append each arriving page. Keyed by id so a re-fetch of the same page
   // replaces rather than duplicates.
   useEffect(() => {
     const page = data?.myQuestionReviews;
     if (!page) return;
     setLastPageSize(page.length);
+    setRefreshing(false);
     setRows((prev) => {
       const byId = new Map(prev.map((r) => [r.id, r]));
       for (const r of page) byId.set(r.id, r);
@@ -102,6 +113,7 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
 
   /** Forget every page and pull the first again — used on pull-to-refresh and on focus. */
   const reload = useCallback(() => {
+    setRefreshing(true);
     setRows([]);
     setOffset(0);
     setLastPageSize(null);
@@ -231,7 +243,7 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
         contentContainerStyle={{ flexGrow: 1, padding: space(4) }}
         refreshControl={
           <RefreshControl
-            refreshing={fetching}
+            refreshing={refreshing}
             onRefresh={reload}
           />
         }
@@ -403,12 +415,19 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
           })
         )}
 
+        {/* The N / M caption also sits at the TOP, but a reader who has just
+            paged is at the BOTTOM and cannot see it — so the count rides on the
+            button itself, which is the only way to tell that a tap added rows. */}
         {rounds.length > 0 ? (
           <LoadOlder
             onPress={() => setOffset(rounds.length)}
             loading={fetching}
             exhausted={!hasMore}
-            label={STR.qrLoadMore}
+            label={
+              total > 0
+                ? `${STR.qrLoadMore} (${bnNum(rounds.length)} / ${bnNum(total)})`
+                : `${STR.qrLoadMore} (${bnNum(rounds.length)})`
+            }
           />
         ) : null}
       </ScrollView>
