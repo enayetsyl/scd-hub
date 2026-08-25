@@ -47,10 +47,16 @@ export interface PreparePayrollInput {
 
 /** Stored unpaid-leave days per staff for a month — summed from APPROVED leaves whose
  *  fromKey falls in the month (D-#110: the leave application's STORED split is the
- *  payroll truth; a cross-month leave's unpaid days attribute to its start month). */
+ *  payroll truth; a cross-month leave's unpaid days attribute to its start month).
+ *
+ *  EXCLUDES probation-held leave (SH-3, D-#540): those days are unpaid but deliberately
+ *  NOT payable now — they sit on the ProbationLeaveDebt ledger and are collected once,
+ *  at confirmation (against the new pool) or at exit (against the final settlement).
+ *  Counting them here would dock the same absence twice. */
 async function unpaidLeaveDaysByStaff(monthKey: string): Promise<Map<string, number>> {
   const rows = await StaffLeaveApplication.find({
     status: "approved",
+    probationHeld: { $ne: true },
     fromKey: { $gte: `${monthKey}-01`, $lte: `${monthKey}-31` },
   })
     .select("staffProfileId unpaidDays")

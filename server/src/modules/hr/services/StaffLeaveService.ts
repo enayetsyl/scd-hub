@@ -240,6 +240,10 @@ export async function decideLeave(
       app.paidDays = 0;
       app.unpaidDays = app.days;
       app.exceedWarning = null;
+      // HELD, not payable now (D-#540). Without this, payroll's unpaid-leave line
+      // would dock these very days this month AND the ledger would collect them
+      // again at confirmation — the same absence charged twice.
+      app.probationHeld = true;
       await recordProbationDebt({
         staffProfileId: app.staffProfileId,
         leaveApplicationId: app._id,
@@ -271,6 +275,10 @@ export async function decideLeave(
       app.paidDays = split.paidDays;
       app.unpaidDays = split.unpaidDays;
       app.exceedWarning = split.exceedWarning;
+      // Cleared explicitly: re-approving a leave that was previously held (the staff
+      // member has since been confirmed) must make its unpaid days payable again.
+      app.probationHeld = false;
+      await clearProbationDebt(app._id);
     }
   } else {
     app.status = decision === "reject" ? "rejected" : "cancelled";

@@ -547,6 +547,37 @@ describe("decideLeave", () => {
       expect(ProbationLeaveDebt.findOneAndUpdate).toHaveBeenCalled();
     });
 
+    /**
+     * The rule contradicts itself without this flag. Probation leave is unpaid, and
+     * payroll deducts day-rate × unpaidDays for every approved leave in the month — so
+     * "recorded as unpaid, adjusted at confirmation or on the final salary" would have
+     * silently become "docked this month", and then collected AGAIN by the ledger.
+     */
+    test("held leave is FLAGGED so payroll cannot dock it this month (D-#540)", async () => {
+      const app = leaveDoc({ days: 3, fromKey: "2026-06-01" });
+      probationer(null);
+      mockLeaveFindById.mockResolvedValue(app);
+      const res = await decideLeave(app._id.toString(), "approve", ACTOR);
+      expect(res.probationHeld).toBe(true);
+    });
+
+    test("confirmed-service leave is NOT flagged, so its unpaid overflow still deducts", async () => {
+      const app = leaveDoc({ days: 3, fromKey: "2026-08-01" });
+      probationer(new Date("2026-07-01"));
+      mockLeaveFindById.mockResolvedValue(app);
+      const res = await decideLeave(app._id.toString(), "approve", ACTOR);
+      expect(res.probationHeld).toBe(false);
+    });
+
+    test("re-approving after confirmation clears the flag AND the debt — the days become payable", async () => {
+      const app = leaveDoc({ days: 2, fromKey: "2026-08-05", probationHeld: true });
+      probationer(new Date("2026-07-01")); // now confirmed; the leave is after it
+      mockLeaveFindById.mockResolvedValue(app);
+      const res = await decideLeave(app._id.toString(), "approve", ACTOR);
+      expect(res.probationHeld).toBe(false);
+      expect(ProbationLeaveDebt.deleteOne).toHaveBeenCalled();
+    });
+
     /** The reason the rule keys off a DATE and not employmentStatus: a leave that
      *  STARTED before confirmation stays probation leave forever, even after the
      *  person is confirmed. Otherwise confirming would retroactively pay for it. */

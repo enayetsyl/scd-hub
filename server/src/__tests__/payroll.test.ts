@@ -187,6 +187,36 @@ describe("the lateness rule (SH-4, D-#541 — pure)", () => {
 
 // ===========================================================================
 describe("preparePayrollRun", () => {
+  /**
+   * SH-3 / D-#540 — the double-charge guard. Probation leave is stored unpaid but
+   * HELD: the ProbationLeaveDebt ledger collects it once, at confirmation or exit.
+   * If payroll also counted it, the same absence would be charged twice — once
+   * silently, that month, against the owner's explicit rule that it is not.
+   */
+  test("EXCLUDES probation-held leave from the unpaid-leave deduction", async () => {
+    mockRunFindOne.mockResolvedValue(null);
+    const staffA = oid();
+    mockStaffFind.mockResolvedValue([
+      { _id: staffA, name: "A", category: "teacher", monthlySalary: 30000, paymentMethod: "bank" },
+    ]);
+    mockAdvFind.mockResolvedValue([]);
+    mockRunCreate.mockResolvedValue({ _id: oid(), monthKey: "2026-06", status: "prepared" });
+    mockSlipInsert.mockImplementation(async (docs: unknown) => docs);
+    // The service's query carries `probationHeld: { $ne: true }`, so a held row never
+    // reaches this mock. Assert the FILTER, not just the arithmetic — the arithmetic
+    // would look right even if the exclusion were dropped and no held leave existed.
+    mockLeaveFind.mockResolvedValue([]);
+
+    await preparePayrollRun({ monthKey: "2026-06", workingDays: 30, actorId: ACTOR });
+
+    expect(mockLeaveFind).toHaveBeenCalledWith(
+      expect.objectContaining({ probationHeld: { $ne: true } }),
+    );
+    const slip = (mockSlipInsert.mock.calls[0][0] as Array<Record<string, unknown>>)[0];
+    expect(slip.unpaidLeaveDays).toBe(0);
+    expect(slip.netPay).toBe(30000); // nothing docked
+  });
+
   test("computes a payslip per salaried staff with leave + advance applied", async () => {
     const runId = oid();
     const staffA = oid(), staffB = oid();
