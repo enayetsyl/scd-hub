@@ -29,15 +29,30 @@ export const REST_BASE = API_URL.replace(/\/graphql\/?$/, "");
 // "a request failed" into "ChildHomework failed", which is the difference between noise
 // and a lead. `url` distinguishes a phone that cannot reach the API from a web session
 // hitting the same-origin proxy.
+// Network errors that are NOT app faults and must not reach the dashboard.
+//
+// urql's fetch source throws `Error("No Content")` when a response carries no body —
+// which is what an in-flight request looks like when it is cut short: the phone is
+// backgrounded, the screen unmounts, the connection drops mid-response. The app already
+// handles it (the query surfaces an error state and retries), so reporting it competes
+// with real faults for attention. This is the same rule the server applies in
+// `sentry.ts` (D-#387): if we are willing to SHOW it to a user, it is not a fault.
+//
+// `TypeError: Network request failed` is deliberately NOT in this list — it is the
+// signal that told us the ErrorBoundary crash was an offline-resume incident.
+const EXPECTED_NETWORK_ERRORS = [/^No Content$/i];
+
 const errorReportExchange = mapExchange({
   onError(error, operation) {
-    if (error.networkError)
-      captureAppError(error.networkError, {
-        kind: "network",
-        operation: getOperationName(operation.query) ?? "unknown",
-        operationKind: operation.kind,
-        url: API_URL,
-      });
+    if (!error.networkError) return;
+    const msg = error.networkError.message ?? "";
+    if (EXPECTED_NETWORK_ERRORS.some((re) => re.test(msg))) return;
+    captureAppError(error.networkError, {
+      kind: "network",
+      operation: getOperationName(operation.query) ?? "unknown",
+      operationKind: operation.kind,
+      url: API_URL,
+    });
   },
 });
 

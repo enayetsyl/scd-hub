@@ -832,9 +832,16 @@ function headerValue(headers: Record<string, string>, name: string): string | un
   return undefined;
 }
 
+/** Monotonic suffix so two opens of the SAME file never share a temp path. */
+let tmpSeq = 0;
+
 async function openStoredFileAndroid(fileId: string): Promise<void> {
   const token = getToken();
-  const target = `${FileSystem.cacheDirectory}scdhub-tmp-${fileId}`;
+  // The temp path used to be `scdhub-tmp-${fileId}` — FIXED per file. Two overlapping
+  // opens of the same attachment therefore downloaded to the same path, the first
+  // moveAsync renamed it away, and the second failed with "File ... could not be moved"
+  // (GlitchTip, prod). A per-call suffix makes the download private to this invocation.
+  const target = `${FileSystem.cacheDirectory}scdhub-tmp-${fileId}-${++tmpSeq}`;
   const res = await FileSystem.downloadAsync(`${REST_BASE}/files/${encodeURIComponent(fileId)}`, target, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -863,14 +870,48 @@ async function openStoredFileAndroid(fileId: string): Promise<void> {
     await FileSystem.moveAsync({ from: res.uri, to: uri });
   }
   const contentUri = await FileSystem.getContentUriAsync(uri);
-  await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
-    data: contentUri,
-    flags: 1,
-    type: rawMime || "*/*",
-  });
+  try {
+    await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
+      data: contentUri,
+      flags: 1,
+      type: rawMime || "*/*",
+    });
+  } catch (e) {
+    // "IntentLauncher activity is already started. You need to wait for its result
+    // before starting another activity." Android allows ONE launched activity at a
+    // time, and the promise stays pending while the viewer is in the foreground — so
+    // this is a user-recoverable state, not a defect. Raised as a FileUploadError it
+    // reaches the caller's existing catch and shows a notice, instead of surfacing to
+    // GlitchTip as an app fault (prod: 6 events, all from taps landing on top of an
+    // open viewer).
+    if (e instanceof Error && /already started/i.test(e.message)) {
+      throw new FileUploadError("A file is already opening — wait for it to finish");
+    }
+    throw e;
+  }
 }
 
-export async function openStoredFile(fileId: string): Promise<void> {
+/**
+ * Opens in flight, keyed by file id — a double-tap gets the SAME promise back rather
+ * than starting a second download.
+ *
+ * `useFileOpen` (BUG-014) already guards re-entry, but only within the component that
+ * uses it: `ClassNoteAttachments` and `DeliverAssignmentScreen` call `openStoredFile`
+ * directly, and two different components cannot see each other's busy state anyway.
+ * The guard belongs HERE, at the one choke point every caller passes through — the
+ * same reason the blank-academic-year check sits in its service rather than a resolver.
+ */
+const openInFlight = new Map<string, Promise<void>>();
+
+export function openStoredFile(fileId: string): Promise<void> {
+  const existing = openInFlight.get(fileId);
+  if (existing) return existing;
+  const run = openStoredFileOnce(fileId).finally(() => openInFlight.delete(fileId));
+  openInFlight.set(fileId, run);
+  return run;
+}
+
+async function openStoredFileOnce(fileId: string): Promise<void> {
   if (Platform.OS === "android") return openStoredFileAndroid(fileId);
   if (Platform.OS !== "web") {
     throw new FileUploadError("File viewing is web-only in this build");
