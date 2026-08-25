@@ -62,6 +62,32 @@ const emptyRow = (seq: number): Draft => ({
   total: 0,
 });
 
+/**
+ * Narrow anything row-shaped down to exactly the input fields.
+ *
+ * `SyllabusMarkRowInput` has no `__typename`, and GraphQL rejects the WHOLE
+ * mutation when an input object carries a field the type does not define. urql's
+ * cacheExchange stamps `__typename` onto every object it returns, so a saved row
+ * that is loaded back and saved again fails with:
+ *
+ *   Field "__typename" is not defined by type "SyllabusMarkRowInput"
+ *
+ * The first save of a NEW subject always worked, because those rows come from
+ * emptyRow() and never touched the cache — which is why this survived testing.
+ * Listing the fields explicitly means no future cache metadata can ride along.
+ */
+function toDraft(r: Draft): Draft {
+  return {
+    seq: r.seq,
+    label: r.label,
+    itemType: r.itemType,
+    component: r.component,
+    count: r.count,
+    marksEach: r.marksEach,
+    total: r.total,
+  };
+}
+
 /** Digits only; empty string means "not given", which is NOT the same as zero. */
 function num(v: string): number | null {
   const t = v.trim();
@@ -94,7 +120,10 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
   useEffect(() => {
     if (!stored) return;
     setBodyMd(stored.bodyMd);
-    setRows(stored.marks.length ? stored.marks.map((m) => ({ ...m })) : [emptyRow(1)]);
+    // Rebuild each row FIELD BY FIELD rather than spreading the query result.
+    // urql's cacheExchange stamps __typename onto every object it returns, and a
+    // spread carries it into local state and then back out as mutation input.
+    setRows(stored.marks.length ? stored.marks.map(toDraft) : [emptyRow(1)]);
     setQuestionTypes(stored.questionTypes);
     setExamDateKey(stored.examDateKey ?? "");
   }, [stored?.id, stored?.status]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -151,7 +180,7 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
       classId,
       subject,
       bodyMd,
-      marks: rows.map((r, i) => ({ ...r, seq: i + 1 })),
+      marks: rows.map((r, i) => ({ ...toDraft(r), seq: i + 1 })),
       questionTypes,
       examDateKey: examDateKey || null,
     });
