@@ -12,6 +12,10 @@
  *                          APPROVE = the publish queue, CHANGES_REQUESTED = the rejected list.
  *   questionReviewThread — round history for one question.
  *   assignableQuestions  — content:assign_review. The picker.
+ *   questionReviewerProgress / questionReviewerRounds / questionReviewerRoundCount
+ *                        — content:assign_review. Who was given what, and how they ruled
+ *                          (QR-5, D-#537). Verdict-bucketed, so publishing a question does
+ *                          not erase the reviewer's decision from their tally.
  *
  * Permissions are the SAME ones the plan loop uses — D-#508 adds none.
  */
@@ -34,7 +38,11 @@ import {
   questionReviewInbox as inboxSvc,
   questionReviewThread as threadSvc,
   listAssignableQuestions,
+  questionReviewerProgress as progressSvc,
+  listQuestionReviewerRounds as reviewerRoundsSvc,
+  countQuestionReviewerRounds as reviewerRoundCountSvc,
   type QuestionReviewRoundDTO,
+  type QuestionReviewerProgressDTO,
   type AssignableQuestionDTO,
   type PublishQuestionResult,
   type BulkResult,
@@ -492,6 +500,113 @@ builder.queryField("assignableQuestions", (t) =>
         search: args.search,
         limit: args.limit,
       });
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Reviewer progress (QR-5, D-#537)
+// ---------------------------------------------------------------------------
+
+const QuestionReviewerProgressRef =
+  builder.objectRef<QuestionReviewerProgressDTO>("QuestionReviewerProgress");
+QuestionReviewerProgressRef.implement({
+  description:
+    "One reviewer's question-review workload and how they ruled on it (D-#537). Counts are " +
+    "bucketed by VERDICT, not by round status, so a decision keeps counting after the " +
+    "question it was about has been published. Identity-plane; behind the ADR-005 firewall.",
+  fields: (t) => ({
+    reviewerId: t.exposeString("reviewerId"),
+    reviewerName: t.string({ nullable: true, resolve: (r) => r.reviewerName }),
+    assigned: t.exposeInt("assigned"),
+    pending: t.exposeInt("pending"),
+    approved: t.exposeInt("approved"),
+    approvedWithCondition: t.exposeInt("approvedWithCondition"),
+    rejected: t.exposeInt("rejected"),
+    cancelled: t.exposeInt("cancelled"),
+    decided: t.exposeInt("decided"),
+  }),
+});
+
+builder.queryField("questionReviewerProgress", (t) =>
+  t.field({
+    type: [QuestionReviewerProgressRef],
+    description:
+      "Per-reviewer question-review progress, optionally narrowed to one class and/or subject " +
+      "(Q5.1). Reviewers who still owe work come first. Requires content:assign_review.",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: {
+      classLevel: t.arg.int({ required: false }),
+      subject: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return progressSvc({ classLevel: args.classLevel, subject: args.subject });
+    },
+  }),
+);
+
+builder.queryField("questionReviewerRounds", (t) =>
+  t.field({
+    type: [QuestionReviewRoundRef],
+    description:
+      "One reviewer's rounds in ONE bucket (PENDING | APPROVE | APPROVE_WITH_CONDITION | " +
+      "CHANGES_REQUESTED | CANCELLED) — the drill-down behind a progress counter (Q5.2). " +
+      "Unlike questionReviewInbox this is NOT limited to still-open rounds, so a decision " +
+      "stays visible after its question is published. PAGINATED: `limit` defaults to 50 and " +
+      "is capped at 200. Requires content:assign_review.",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: {
+      reviewerId: t.arg.string({ required: true }),
+      bucket: t.arg.string({ required: true }),
+      classLevel: t.arg.int({ required: false }),
+      subject: t.arg.string({ required: false }),
+      limit: t.arg.int({ required: false }),
+      offset: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await reviewerRoundsSvc({
+          reviewerId: args.reviewerId,
+          bucket: args.bucket,
+          classLevel: args.classLevel,
+          subject: args.subject,
+          limit: args.limit,
+          offset: args.offset,
+        });
+      } catch (err) {
+        return mapReviewError(err);
+      }
+    },
+  }),
+);
+
+builder.queryField("questionReviewerRoundCount", (t) =>
+  t.field({
+    type: "Int",
+    description:
+      "How many rounds one reviewer × bucket holds in total — the drill-down pager's " +
+      "denominator, so the screen can say '50 of 2,742'. Requires content:assign_review.",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: {
+      reviewerId: t.arg.string({ required: true }),
+      bucket: t.arg.string({ required: true }),
+      classLevel: t.arg.int({ required: false }),
+      subject: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await reviewerRoundCountSvc({
+          reviewerId: args.reviewerId,
+          bucket: args.bucket,
+          classLevel: args.classLevel,
+          subject: args.subject,
+        });
+      } catch (err) {
+        return mapReviewError(err);
+      }
     },
   }),
 );

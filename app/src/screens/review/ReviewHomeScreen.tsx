@@ -134,6 +134,13 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
             <Body style={{ fontWeight: "700" }}>{STR.qrPublishTitle}</Body>
             <Muted style={{ marginTop: 2 }}>{`${STR.qrAccepted} · ${STR.qrRejected}`}</Muted>
           </Card>
+          <View style={{ height: space(3) }} />
+          {/* QR-5 (D-#537): the assign and publish cards are both about QUESTIONS; this
+              one is about the PEOPLE reviewing them. */}
+          <Card onPress={() => navigation.navigate("QuestionReviewProgress")}>
+            <Body style={{ fontWeight: "700" }}>{STR.qpTitle}</Body>
+            <Muted style={{ marginTop: 2 }}>{STR.qpSubtitle}</Muted>
+          </Card>
         </View>
       ) : null}
 

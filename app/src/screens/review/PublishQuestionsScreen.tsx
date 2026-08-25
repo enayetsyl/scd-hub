@@ -20,6 +20,7 @@ import {
   QUESTION_REVIEW_INBOX,
   PUBLISH_QUESTION,
   PUBLISH_QUESTION_BULK,
+  CLEAR_QUESTION_CONDITION,
   type QuestionReviewRoundT,
 } from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
@@ -45,13 +46,15 @@ import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "PublishQuestions">;
-type Tab = "APPROVE" | "CHANGES_REQUESTED";
+type Tab = "APPROVE" | "APPROVE_WITH_CONDITION" | "CHANGES_REQUESTED";
 
 export default function PublishQuestionsScreen({ navigation }: Props): React.ReactElement {
   const [tab, setTab] = useState<Tab>("APPROVE");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [overrideFor, setOverrideFor] = useState<string | null>(null);
   const [overrideReason, setOverrideReason] = useState("");
+  const [clearFor, setClearFor] = useState<string | null>(null);
+  const [clearNote, setClearNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -62,6 +65,7 @@ export default function PublishQuestionsScreen({ navigation }: Props): React.Rea
   });
   const [, publishOne] = useMutation(PUBLISH_QUESTION);
   const [, publishBulk] = useMutation(PUBLISH_QUESTION_BULK);
+  const [, clearCondition] = useMutation(CLEAR_QUESTION_CONDITION);
 
   useFocusEffect(
     useCallback(() => {
@@ -76,6 +80,8 @@ export default function PublishQuestionsScreen({ navigation }: Props): React.Rea
     setSelected(new Set());
     setOverrideFor(null);
     setOverrideReason("");
+    setClearFor(null);
+    setClearNote("");
     setNotice(null);
     setFailure(null);
   }
@@ -129,6 +135,31 @@ export default function PublishQuestionsScreen({ navigation }: Props): React.Rea
     refetch({ requestPolicy: "network-only" });
   }
 
+  /**
+   * Release a conditional hold (D-#525). Deliberately NOT a publish: the server opens a
+   * fresh round for the same reviewer, so the person who set the condition is the person
+   * who confirms it was met. The row leaves this tab either way, which is why the notice
+   * has to say where it went.
+   */
+  async function clearConditionOn(round: QuestionReviewRoundT): Promise<void> {
+    setBusy(true);
+    setFailure(null);
+    const note = clearNote.trim();
+    const res = await clearCondition({
+      artifactId: round.artifactId,
+      note: note === "" ? null : note,
+    });
+    setBusy(false);
+    if (res.error) {
+      setFailure(friendlyError(res.error));
+      return;
+    }
+    setClearFor(null);
+    setClearNote("");
+    setNotice(STR.qrConditionCleared);
+    refetch({ requestPolicy: "network-only" });
+  }
+
   if (fetching && rounds.length === 0) return <Loader />;
 
   return (
@@ -146,6 +177,13 @@ export default function PublishQuestionsScreen({ navigation }: Props): React.Rea
 
         <ChipRow>
           <Chip label={STR.qrAccepted} selected={tab === "APPROVE"} onPress={() => switchTab("APPROVE")} />
+          {/* The third verdict had no tab at all until QR-5, so a conditional approval was
+              invisible here and the question simply stalled. */}
+          <Chip
+            label={STR.qrConditional}
+            selected={tab === "APPROVE_WITH_CONDITION"}
+            onPress={() => switchTab("APPROVE_WITH_CONDITION")}
+          />
           <Chip
             label={STR.qrRejected}
             selected={tab === "CHANGES_REQUESTED"}
@@ -168,7 +206,15 @@ export default function PublishQuestionsScreen({ navigation }: Props): React.Rea
         <Divider />
 
         {rounds.length === 0 ? (
-          <EmptyState message={tab === "APPROVE" ? STR.qrNoAccepted : STR.qrNoRejected} />
+          <EmptyState
+            message={
+              tab === "APPROVE"
+                ? STR.qrNoAccepted
+                : tab === "APPROVE_WITH_CONDITION"
+                  ? STR.qrNoConditional
+                  : STR.qrNoRejected
+            }
+          />
         ) : (
           rounds.map((round) => {
             const isSelected = selected.has(round.artifactId);
@@ -190,6 +236,52 @@ export default function PublishQuestionsScreen({ navigation }: Props): React.Rea
                   <Body>{round.questionText ?? round.qid ?? "—"}</Body>
                   {round.qid ? <Muted>{round.qid}</Muted> : null}
                 </Pressable>
+
+                {tab === "APPROVE_WITH_CONDITION" ? (
+                  <>
+                    {/* Unlike a rejection reason, the condition is MANDATORY server-side,
+                        so it is always here and is the whole point of the row. */}
+                    <Muted>
+                      {STR.qrCondition}: {round.reason && round.reason.trim() !== "" ? round.reason : "—"}
+                    </Muted>
+                    <Divider />
+                    {clearFor === round.id ? (
+                      <View>
+                        <Muted>{STR.qrClearConditionHint}</Muted>
+                        <Field
+                          label={STR.qrClearNote}
+                          value={clearNote}
+                          onChangeText={setClearNote}
+                          multiline
+                        />
+                        <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+                          <Button
+                            title={STR.qrClearCondition}
+                            loading={busy}
+                            onPress={() => void clearConditionOn(round)}
+                          />
+                          <Button
+                            title={STR.cancel}
+                            variant="ghost"
+                            onPress={() => {
+                              setClearFor(null);
+                              setClearNote("");
+                            }}
+                          />
+                        </View>
+                      </View>
+                    ) : (
+                      <Button
+                        title={STR.qrClearCondition}
+                        variant="secondary"
+                        onPress={() => {
+                          setClearFor(round.id);
+                          setClearNote("");
+                        }}
+                      />
+                    )}
+                  </>
+                ) : null}
 
                 {tab === "CHANGES_REQUESTED" ? (
                   <>
