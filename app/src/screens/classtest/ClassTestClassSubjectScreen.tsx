@@ -37,12 +37,12 @@ export default function ClassTestClassSubjectScreen({ route }: Props): React.Rea
           <Notice message={friendlyError(q.error)} tone="danger" />
         ) : q.fetching ? (
           <Loader label={STR.loading} />
-        ) : !data || data.students.length === 0 ? (
+        ) : (data?.students ?? []).length === 0 ? (
           <Card>
             <Muted>{STR.ctNoReports}</Muted>
           </Card>
         ) : (
-          data.students.map((s) => (
+          (data?.students ?? []).map((s) => (
             <Card key={s.studentId}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <View style={{ flexShrink: 1 }}>

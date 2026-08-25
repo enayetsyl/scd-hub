@@ -26,8 +26,8 @@ export default function GroupRoutineScreen({ route }: Props): React.ReactElement
         <Muted style={{ fontWeight: "700" }}>{title}</Muted>
         {q.fetching ? <Loader /> : null}
         {q.error ? <Notice message={friendlyError(q.error)} tone="danger" /> : null}
-        {q.data ? <SlotList slots={q.data.routineSlots} /> : null}
-        {!q.fetching && !q.error && q.data && q.data.routineSlots.length === 0 ? (
+        {q.data ? <SlotList slots={q.data.routineSlots ?? []} /> : null}
+        {!q.fetching && !q.error && q.data && (q.data.routineSlots ?? []).length === 0 ? (
           <Muted>{STR.rtNoSlots}</Muted>
         ) : null}
       </ScrollView>
