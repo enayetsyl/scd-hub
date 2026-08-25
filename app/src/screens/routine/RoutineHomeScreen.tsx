@@ -115,8 +115,8 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
 
         <Body style={{ fontWeight: "700", marginTop: space(2) }}>{STR.rtSubjectGroups}</Body>
         <QueryGate result={groupsQ} onRetry={() => refetchGroups({ requestPolicy: "network-only" })}>
-        {groupsQ.data && groupsQ.data.subjectGroups.length === 0 ? <Muted>{STR.empty}</Muted> : null}
-        {groupsQ.data?.subjectGroups.map((g) => (
+        {groupsQ.data && (groupsQ.data.subjectGroups ?? []).length === 0 ? <Muted>{STR.empty}</Muted> : null}
+        {(groupsQ.data?.subjectGroups ?? []).map((g) => (
           <Card key={g.id}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <View style={{ flex: 1 }}>

@@ -392,10 +392,10 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
                 <ErrorBanner message={friendlyError(gapsQ.error)} onRetry={() => refetchGaps({ requestPolicy: "network-only" })} />
               ) : gapsQ.fetching && !gapsQ.data ? (
                 <Loader label={STR.loading} />
-              ) : (gapsQ.data?.reconciliationReport.asNotPrinted.length ?? 0) === 0 ? (
+              ) : (gapsQ.data?.reconciliationReport?.asNotPrinted?.length ?? 0) === 0 ? (
                 <EmptyState message={STR.prsNotSubmittedEmpty} />
               ) : (
-                gapsQ.data!.reconciliationReport.asNotPrinted.map((m) => (
+                (gapsQ.data?.reconciliationReport?.asNotPrinted ?? []).map((m) => (
                   <Card key={`${m.sectionId}|${m.subject}`}>
                     <Body style={{ fontWeight: "600" }}>
                       {classLevelLabel(m.classLevel)}

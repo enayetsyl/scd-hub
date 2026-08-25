@@ -340,7 +340,7 @@ export default function StudentProfileScreen(): React.ReactElement {
             <Notice message={friendlyError(ctQ.error)} tone="danger" />
           ) : ctQ.fetching ? (
             <Loader label={STR.loading} />
-          ) : !ctQ.data || ctQ.data.studentProfileClassTest.results.length === 0 ? (
+          ) : !ctQ.data || (ctQ.data.studentProfileClassTest?.results ?? []).length === 0 ? (
             <Muted>{narrowed ? STR.spNoDataMySubjects : STR.ctNoProfile}</Muted>
           ) : (
             <ClassTestPanel profile={ctQ.data.studentProfileClassTest} />
