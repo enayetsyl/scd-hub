@@ -110,6 +110,8 @@ import QuestionReviewQueueScreen from "../screens/review/QuestionReviewQueueScre
 import AssignQuestionsScreen from "../screens/review/AssignQuestionsScreen";
 import PublishQuestionsScreen from "../screens/review/PublishQuestionsScreen";
 import QuestionReviewThreadScreen from "../screens/review/QuestionReviewThreadScreen";
+import QuestionReviewProgressScreen from "../screens/review/QuestionReviewProgressScreen";
+import QuestionReviewerRoundsScreen from "../screens/review/QuestionReviewerRoundsScreen";
 import RoutineHomeScreen from "../screens/routine/RoutineHomeScreen";
 import MyRoutineScreen from "../screens/routine/MyRoutineScreen";
 import RoutineMasterScreen from "../screens/routine/RoutineMasterScreen";
@@ -765,6 +767,17 @@ function ReviewNavigator(): React.ReactElement {
         name="QuestionReviewThread"
         component={QuestionReviewThreadScreen}
         options={{ title: STR.reviewThread }}
+      />
+      {/* Reviewer progress (QR-5, D-#537) — also after ReviewHome, same reason. */}
+      <ReviewStack.Screen
+        name="QuestionReviewProgress"
+        component={QuestionReviewProgressScreen}
+        options={{ title: STR.qpTitle }}
+      />
+      <ReviewStack.Screen
+        name="QuestionReviewerRounds"
+        component={QuestionReviewerRoundsScreen}
+        options={{ title: STR.qpTitle }}
       />
     </ReviewStack.Navigator>
   );

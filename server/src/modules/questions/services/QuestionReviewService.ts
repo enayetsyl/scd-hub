@@ -834,3 +834,204 @@ export async function listAssignableQuestions(args: {
     };
   });
 }
+
+// ---------------------------------------------------------------------------
+// Reviewer progress (QR-5, D-#537)
+// ---------------------------------------------------------------------------
+
+/**
+ * The five buckets a question-review round can be in, from the ASSIGNER's point of view.
+ *
+ * These are NOT `ReviewAssignment.status` values, and deliberately so. Status answers "is
+ * this round still open?"; the Principal is asking "what did my reviewer decide?" — and
+ * those two diverge the moment a question is published, because `publishQuestion` calls
+ * `supersedeOpenRounds` and the round's status flips `submitted → superseded` while its
+ * verdict stays exactly where it was. Bucketing on status would therefore make every
+ * approval SILENTLY VANISH from the reviewer's tally as soon as it was acted on — the
+ * harder-working the reviewer, the emptier their column.
+ *
+ * So: a decided round is bucketed by its VERDICT for the rest of time, whatever later
+ * happened to the question. CANCELLED is the genuinely undecided remainder — a round that
+ * closed (re-import, or a publish that overrode it) before the reviewer ever ruled.
+ */
+export const REVIEWER_PROGRESS_BUCKETS = [
+  "PENDING",
+  "APPROVE",
+  "APPROVE_WITH_CONDITION",
+  "CHANGES_REQUESTED",
+  "CANCELLED",
+] as const;
+export type ReviewerProgressBucket = (typeof REVIEWER_PROGRESS_BUCKETS)[number];
+
+export interface QuestionReviewerProgressDTO {
+  reviewerId: string;
+  reviewerName: string | null;
+  /**
+   * Every ROUND ever handed to them within the filter — the denominator.
+   *
+   * Rounds, not distinct questions, and that is the intended reading: it is "what I asked
+   * this person to do". A question re-assigned after a re-import, or sent back by
+   * `clearQuestionCondition`, is a second piece of work and counts twice — once under the
+   * verdict that closed each round.
+   */
+  assigned: number;
+  /** Still owed: status `assigned`, no verdict yet. */
+  pending: number;
+  approved: number;
+  approvedWithCondition: number;
+  rejected: number;
+  /** Closed before they could rule (re-import / override-publish). */
+  cancelled: number;
+  /** approved + approvedWithCondition + rejected. */
+  decided: number;
+}
+
+/** Mongo filter for one bucket. Kept beside the enum so a new bucket cannot be half-added. */
+function bucketFilter(bucket: ReviewerProgressBucket): Record<string, unknown> {
+  switch (bucket) {
+    case "PENDING":
+      return { status: "assigned" };
+    case "CANCELLED":
+      // `verdict: null` matches BOTH an absent field and an explicit null, which is what
+      // an assigned-then-superseded round actually looks like on disk.
+      return { status: { $in: ["superseded", "cancelled"] }, verdict: null };
+    default:
+      return { verdict: bucket };
+  }
+}
+
+/** Shared subject/class narrowing. Both live ON the round (denormalised at assign time),
+ *  so neither the rollup nor the drill-down needs to touch ContentArtifact to filter. */
+function progressScope(args: {
+  classLevel?: number | null;
+  subject?: string | null;
+}): Record<string, unknown> {
+  const match: Record<string, unknown> = { docType: QUESTION_DOC_TYPE };
+  if (args.subject) match.subject = args.subject;
+  if (args.classLevel != null) match.classLevel = args.classLevel;
+  return match;
+}
+
+/**
+ * One row per reviewer: how much was handed to them and how they ruled (Q5.1).
+ *
+ * A single grouped aggregate — no per-round artifact join, because every field it counts
+ * lives on the round itself. `cancelled` is derived by subtraction rather than matched
+ * separately, which is what guarantees the four sub-buckets always add back up to
+ * `assigned`; a state the enum forgot shows up as cancelled rather than going missing.
+ *
+ * Ordered by who still owes work — the Principal opens this screen to chase, not to browse.
+ */
+export async function questionReviewerProgress(args: {
+  classLevel?: number | null;
+  subject?: string | null;
+}): Promise<QuestionReviewerProgressDTO[]> {
+  const rows = (await ReviewAssignment.aggregate([
+    { $match: progressScope(args) },
+    {
+      $group: {
+        _id: "$reviewerId",
+        assigned: { $sum: 1 },
+        pending: { $sum: { $cond: [{ $eq: ["$status", "assigned"] }, 1, 0] } },
+        approved: { $sum: { $cond: [{ $eq: ["$verdict", "APPROVE"] }, 1, 0] } },
+        approvedWithCondition: {
+          $sum: { $cond: [{ $eq: ["$verdict", "APPROVE_WITH_CONDITION"] }, 1, 0] },
+        },
+        rejected: { $sum: { $cond: [{ $eq: ["$verdict", "CHANGES_REQUESTED"] }, 1, 0] } },
+      },
+    },
+  ])) as {
+    _id: Types.ObjectId;
+    assigned: number;
+    pending: number;
+    approved: number;
+    approvedWithCondition: number;
+    rejected: number;
+  }[];
+  if (rows.length === 0) return [];
+
+  const users = await User.find({ _id: { $in: rows.map((r) => r._id) } })
+    .select({ name: 1 })
+    .lean();
+  const nameOf = new Map(users.map((u) => [u._id.toString(), u.name]));
+
+  return rows
+    .map((r) => {
+      const decided = r.approved + r.approvedWithCondition + r.rejected;
+      return {
+        reviewerId: r._id.toString(),
+        reviewerName: nameOf.get(r._id.toString()) ?? null,
+        assigned: r.assigned,
+        pending: r.pending,
+        approved: r.approved,
+        approvedWithCondition: r.approvedWithCondition,
+        rejected: r.rejected,
+        cancelled: Math.max(0, r.assigned - r.pending - decided),
+        decided,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.pending - a.pending ||
+        b.assigned - a.assigned ||
+        (a.reviewerName ?? "").localeCompare(b.reviewerName ?? ""),
+    );
+}
+
+/** Rows per page for the drill-down. Same ceiling as the reviewer's own queue, and for the
+ *  same reason: these rows carry `payloadJson`, and one prod reviewer holds 2,742 rounds. */
+export const REVIEWER_ROUNDS_PAGE = 50;
+const REVIEWER_ROUNDS_MAX = 200;
+
+export interface ReviewerRoundsArgs {
+  reviewerId: string;
+  bucket: string;
+  classLevel?: number | null;
+  subject?: string | null;
+}
+
+function reviewerRoundsFilter(args: ReviewerRoundsArgs): Record<string, unknown> {
+  if (!(REVIEWER_PROGRESS_BUCKETS as readonly string[]).includes(args.bucket)) {
+    throw new ReviewError(`Unknown bucket: ${args.bucket}`);
+  }
+  return {
+    ...progressScope(args),
+    reviewerId: args.reviewerId,
+    ...bucketFilter(args.bucket as ReviewerProgressBucket),
+  };
+}
+
+/** The pager's denominator for one reviewer × bucket. */
+export async function countQuestionReviewerRounds(args: ReviewerRoundsArgs): Promise<number> {
+  return ReviewAssignment.countDocuments(reviewerRoundsFilter(args));
+}
+
+/**
+ * The drill-down behind one counter (Q5.2): this reviewer's rounds in one bucket.
+ *
+ * Kept as its OWN query rather than as filters bolted onto `questionReviewInbox`, because
+ * the inbox means "the publish queue" — it is pinned to `status: submitted` on purpose, so
+ * a published question leaves it. That is right for publishing and wrong for a reviewer's
+ * record of work, which has to survive publication. Two questions, two reads.
+ *
+ * PAGINATED FROM BIRTH. The reviewer-queue incident of 2026-08-24 was exactly this shape of
+ * read — rounds joined to artifacts, each carrying a full question payload — and it shipped
+ * unbounded because nobody held enough rows to notice until somebody did.
+ */
+export async function listQuestionReviewerRounds(
+  args: ReviewerRoundsArgs & { limit?: number | null; offset?: number | null },
+): Promise<QuestionReviewRoundDTO[]> {
+  const filter = reviewerRoundsFilter(args);
+  const limit = Math.min(Math.max(1, args.limit ?? REVIEWER_ROUNDS_PAGE), REVIEWER_ROUNDS_MAX);
+  const offset = Math.max(0, args.offset ?? 0);
+
+  const rounds = (await ReviewAssignment.find(filter)
+    // Newest decision first for a decided bucket, newest assignment first for PENDING.
+    // `_id` last keeps the page boundary stable when a bulk assign gives hundreds of rounds
+    // the same timestamp — the same tiebreak, for the same reason, as the reviewer queue.
+    .sort({ submittedAt: -1, assignedAt: -1, _id: 1 })
+    .skip(offset)
+    .limit(limit)
+    .lean()) as unknown as RawAssignment[];
+  return decorate(rounds);
+}
