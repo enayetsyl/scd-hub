@@ -271,6 +271,9 @@ export type HrStackParamList = {
   StaffConduct: { staffProfileId: string; name: string };
   StaffCpd: { staffProfileId: string; name: string };
   GrievanceInbox: undefined;
+  // SH-8: the school-wide HR numbers (payroll:manage). Param-free, so its
+  // position in this stack is safe either way.
+  HrPolicy: undefined;
   // PR-4: offboarding
   OffboardingHome: undefined;
   OffboardingCase: { caseId: string; name: string };

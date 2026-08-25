@@ -7784,3 +7784,87 @@ export const HR_POLICY_QUERY = gql<{ hrPolicy: HrPolicyT }, Record<string, never
     }
   }
 `;
+
+// --- SH-8: the own-row reads the app never actually queried ------------------
+// `myStaffAttendance` and `myPayslips` have existed on the server since AT-1/PR-2,
+// but no app operation ever called them — so a teacher could not see their own
+// punch times or their own payslip anywhere in the app.
+
+export interface MyAttendanceDayT {
+  id: string;
+  dateKey: string;
+  status: string;
+  punchIn: string | null;
+  punchOut: string | null;
+  shift: string | null;
+}
+
+export const MY_STAFF_ATTENDANCE_QUERY = gql<
+  { myStaffAttendance: MyAttendanceDayT[] },
+  { fromKey: string; toKey: string }
+>`
+  query MyStaffAttendance($fromKey: String!, $toKey: String!) {
+    myStaffAttendance(fromKey: $fromKey, toKey: $toKey) {
+      id dateKey status punchIn punchOut shift
+    }
+  }
+`;
+
+export interface MyPayslipT {
+  id: string;
+  monthKey: string;
+  grossSalary: number;
+  netPay: number;
+  totalDeductions: number;
+  totalAdditions: number;
+  unpaidLeaveDays: number;
+  deductions: Array<{ type: string; amount: number; days: number | null; note: string | null }>;
+}
+
+export const MY_PAYSLIPS_QUERY = gql<{ myPayslips: MyPayslipT[] }, Record<string, never>>`
+  query MyPayslips {
+    myPayslips {
+      id monthKey grossSalary netPay totalDeductions totalAdditions unpaidLeaveDays
+      deductions { type amount days note }
+    }
+  }
+`;
+
+export const SET_HR_POLICY = gql<
+  { setHrPolicy: HrPolicyT },
+  {
+    annualLeaveDays?: number | null;
+    lateDaysPerCharge?: number | null;
+    latenessRuleEnabled?: boolean | null;
+    probationDebtEnabled?: boolean | null;
+    signatoryName?: string | null;
+    signatoryTitle?: string | null;
+    weeklyHoursText?: string | null;
+    letterRefPrefix?: string | null;
+  }
+>`
+  mutation SetHrPolicy(
+    $annualLeaveDays: Int
+    $lateDaysPerCharge: Int
+    $latenessRuleEnabled: Boolean
+    $probationDebtEnabled: Boolean
+    $signatoryName: String
+    $signatoryTitle: String
+    $weeklyHoursText: String
+    $letterRefPrefix: String
+  ) {
+    setHrPolicy(
+      annualLeaveDays: $annualLeaveDays
+      lateDaysPerCharge: $lateDaysPerCharge
+      latenessRuleEnabled: $latenessRuleEnabled
+      probationDebtEnabled: $probationDebtEnabled
+      signatoryName: $signatoryName
+      signatoryTitle: $signatoryTitle
+      weeklyHoursText: $weeklyHoursText
+      letterRefPrefix: $letterRefPrefix
+    ) {
+      annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled
+      signatoryName signatoryTitle weeklyHoursText letterRefPrefix
+    }
+  }
+`;
