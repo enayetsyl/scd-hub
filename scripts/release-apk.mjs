@@ -93,7 +93,20 @@ console.log(`APK built: ${APK_OUT} (${mb} MB)`);
 // --- version.json manifest (what UpdateGate polls) ---
 const manifest = path.join(ANDROID, "app", "build", "outputs", "apk", "release", "version.json");
 fs.writeFileSync(manifest, JSON.stringify({
-  versionCode, versionName, apkUrl: "/downloads/scd-hub-latest.apk",
+  versionCode,
+  versionName,
+  // Point at the VERSIONED file, never the mutable scd-hub-latest.apk.
+  //
+  // Cloudflare caches /downloads/* with its default max-age=14400, and
+  // scd-hub-latest.apk is one URL whose BYTES change every release — so for four
+  // hours after a publish the edge kept serving the PREVIOUS apk while version.json
+  // (deliberately no-store, see the Caddyfile) already advertised the new
+  // versionCode. Phones were told "update to N" and handed N-1. Caught on the v1.1.5
+  // publish: version.json said 8 while the edge served 1.1.4 bytes (cf-cache-status
+  // HIT, Age 3447, last-modified = the 1.1.4 publish time).
+  //
+  // The versioned name is never reused, so caching it is not just safe but desirable.
+  apkUrl: `/downloads/scd-hub-${versionName}-c${versionCode}.apk`,
 }, null, 2) + "\n");
 console.log(`Manifest written: ${manifest}`);
 
