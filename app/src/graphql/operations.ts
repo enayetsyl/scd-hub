@@ -819,6 +819,110 @@ export const MY_QUESTION_REVIEW_COUNT = gql<{ myQuestionReviewCount: number }, N
   }
 `;
 
+/**
+ * Release an APPROVE_WITH_CONDITION hold (D-#525). This does NOT publish: it opens a fresh
+ * round for the SAME reviewer, who checks the condition was actually met. The mutation has
+ * existed server-side since fa2f418 with no caller — QR-5 wires it up, because a verdict the
+ * Principal can see but not act on is a dead end.
+ */
+export const CLEAR_QUESTION_CONDITION = gql<
+  { clearQuestionCondition: QuestionReviewRoundT },
+  { artifactId: string; note?: string | null }
+>`
+  mutation ClearQuestionCondition($artifactId: String!, $note: String) {
+    clearQuestionCondition(artifactId: $artifactId, note: $note) { ${QUESTION_ROUND_FIELDS} }
+  }
+`;
+
+// --- Reviewer progress (QR-5, D-#537) -------------------------------------------------
+
+/** The five buckets the progress screen counts and drills into. */
+export const REVIEWER_BUCKETS = [
+  "PENDING",
+  "APPROVE",
+  "APPROVE_WITH_CONDITION",
+  "CHANGES_REQUESTED",
+  "CANCELLED",
+] as const;
+export type ReviewerBucketT = (typeof REVIEWER_BUCKETS)[number];
+
+export interface QuestionReviewerProgressT {
+  reviewerId: string;
+  reviewerName: string | null;
+  assigned: number;
+  pending: number;
+  approved: number;
+  approvedWithCondition: number;
+  rejected: number;
+  cancelled: number;
+  decided: number;
+}
+
+/** "Who did I give what to, and how did they rule?" — counted by VERDICT, so a decision
+ *  keeps counting after the Principal has published the question it was about. */
+export const QUESTION_REVIEWER_PROGRESS = gql<
+  { questionReviewerProgress: QuestionReviewerProgressT[] },
+  { classLevel?: number | null; subject?: string | null }
+>`
+  query QuestionReviewerProgress($classLevel: Int, $subject: String) {
+    questionReviewerProgress(classLevel: $classLevel, subject: $subject) {
+      reviewerId reviewerName assigned pending
+      approved approvedWithCondition rejected cancelled decided
+    }
+  }
+`;
+
+/** The drill-down behind one counter. PAGINATED — these rows carry payloadJson. */
+export const QUESTION_REVIEWER_ROUNDS = gql<
+  { questionReviewerRounds: QuestionReviewRoundT[] },
+  {
+    reviewerId: string;
+    bucket: string;
+    classLevel?: number | null;
+    subject?: string | null;
+    limit?: number | null;
+    offset?: number | null;
+  }
+>`
+  query QuestionReviewerRounds(
+    $reviewerId: String!
+    $bucket: String!
+    $classLevel: Int
+    $subject: String
+    $limit: Int
+    $offset: Int
+  ) {
+    questionReviewerRounds(
+      reviewerId: $reviewerId
+      bucket: $bucket
+      classLevel: $classLevel
+      subject: $subject
+      limit: $limit
+      offset: $offset
+    ) { ${QUESTION_ROUND_FIELDS} }
+  }
+`;
+
+/** The drill-down pager's denominator. */
+export const QUESTION_REVIEWER_ROUND_COUNT = gql<
+  { questionReviewerRoundCount: number },
+  { reviewerId: string; bucket: string; classLevel?: number | null; subject?: string | null }
+>`
+  query QuestionReviewerRoundCount(
+    $reviewerId: String!
+    $bucket: String!
+    $classLevel: Int
+    $subject: String
+  ) {
+    questionReviewerRoundCount(
+      reviewerId: $reviewerId
+      bucket: $bucket
+      classLevel: $classLevel
+      subject: $subject
+    )
+  }
+`;
+
 /** Principal lists: verdict=APPROVE is the publish queue, CHANGES_REQUESTED the rejected list. */
 /** One verdict across a multi-selection of the reviewer's own rounds (D-#527). The server
  *  refuses APPROVE_WITH_CONDITION here — a condition belongs to ONE question. */

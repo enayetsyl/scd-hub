@@ -95,6 +95,18 @@ export type ReviewStackParamList = {
   AssignQuestions: undefined;
   PublishQuestions: undefined;
   QuestionReviewThread: { artifactId: string };
+  // --- Reviewer progress (QR-5, D-#537). Same rule: both AFTER ReviewHome.
+  QuestionReviewProgress: undefined;
+  QuestionReviewerRounds: {
+    reviewerId: string;
+    reviewerName: string | null;
+    /** Which counter was tapped — the tab the screen opens on. */
+    bucket: string;
+    /** Carried through from the progress screen's filters so the drill-down agrees
+     *  with the number that was tapped. */
+    classLevel: number | null;
+    subject: string | null;
+  };
 };
 
 export type HomeworkStackParamList = {
