@@ -39,6 +39,14 @@ export interface IStaffProfile extends Document {
   employmentType: EmploymentType;
   employmentStatus: EmploymentStatus;
   joiningDate?: Date;
+  /**
+   * The date probation ended and confirmed service began (SH-2, D-#540). ABSENT means
+   * still on probation — `employmentStatus` alone could never answer "when", and every
+   * probation rule needs a date, not a state: leave is unpaid iff it STARTS before this
+   * day, so a later confirmation can never retroactively pay for it.
+   * Written only by `confirmStaffEmployment`, never by the generic profile input.
+   */
+  confirmationDate?: Date;
   /** Attendance mapping key for later biometric ingest (H1.5); unique when present. */
   biometricId?: string;
 
@@ -84,6 +92,7 @@ const StaffProfileSchema = new Schema<IStaffProfile>(
     employmentType: { type: String, enum: EMPLOYMENT_TYPES, required: true, default: "full_time" },
     employmentStatus: { type: String, enum: EMPLOYMENT_STATUSES, required: true, default: "confirmed" },
     joiningDate: { type: Date },
+    confirmationDate: { type: Date },
     biometricId: { type: String, trim: true, unique: true, sparse: true },
 
     gender: { type: String, enum: ["male", "female", "other"] },

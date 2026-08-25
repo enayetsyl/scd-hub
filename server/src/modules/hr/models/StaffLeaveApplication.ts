@@ -61,6 +61,17 @@ export interface IStaffLeaveApplication extends Document {
   /** Split stamped at approval (paid draws balance; unpaid = LWP overflow / unpaid type). */
   paidDays?: number;
   unpaidDays?: number;
+  /**
+   * SH-3 / D-#540 — these `unpaidDays` are HELD as probation debt, NOT payable now.
+   *
+   * Without this flag the rule contradicts itself: probation leave is unpaid, and
+   * `PayrollService.unpaidLeaveDaysByStaff` deducts day-rate × `unpaidDays` for every
+   * approved leave in the month — so "recorded as unpaid, adjusted at confirmation or
+   * on the final salary" would have become "docked this month" too, charging the same
+   * days twice. Payroll excludes these rows; the `ProbationLeaveDebt` ledger is what
+   * eventually collects them, once, at confirmation or exit.
+   */
+  probationHeld?: boolean;
   /** Warning surfaced when the application exceeds the remaining balance (§3.3). */
   exceedWarning?: string | null;
   appliedBy: Types.ObjectId;   // the actor who recorded it (self or Office on behalf)
@@ -87,6 +98,8 @@ const StaffLeaveApplicationSchema = new Schema<IStaffLeaveApplication>(
     status: { type: String, enum: LEAVE_STATUSES, required: true, default: "applied" },
     paidDays: { type: Number, min: 0 },
     unpaidDays: { type: Number, min: 0 },
+    // Absent reads as false — every pre-SH-3 row is payable-as-usual, no migration.
+    probationHeld: { type: Boolean, default: false },
     exceedWarning: { type: String, default: null },
     appliedBy: { type: Schema.Types.ObjectId, required: true },
     decidedBy: { type: Schema.Types.ObjectId },

@@ -648,6 +648,83 @@ export const CLEARANCE_ITEM_STATUS_LABELS_EN: Record<ClearanceItemStatus, string
   pending: "Pending", done: "Done", waived: "Waived",
 };
 
+// --- A.5d STAFF-HUB ENUMS (app-native; docs/prd-staff-hub.md, D-#539–#545) ----
+// Identity/operational plane, behind the ADR-005 firewall — NO wire-contract twin,
+// NO envelope-schema mirror, NO two-place sync; only /shared + the vocab verifier.
+
+/** The letters the app issues for a staff member (SH-1, D-#542). `appointment` and
+ *  `confirmation` are the two the owner asked for; `service_certificate` is the exit
+ *  document prd-hr §6.5 already promises on retention, issued from the same machinery. */
+export const STAFF_LETTER_KINDS = ["appointment", "confirmation", "service_certificate"] as const;
+export type StaffLetterKind = (typeof STAFF_LETTER_KINDS)[number];
+
+export const STAFF_LETTER_KIND_LABELS_BN: Record<StaffLetterKind, string> = {
+  appointment: "নিয়োগপত্র", confirmation: "স্থায়ীকরণ পত্র", service_certificate: "প্রত্যয়নপত্র",
+};
+export const STAFF_LETTER_KIND_LABELS_EN: Record<StaffLetterKind, string> = {
+  appointment: "Appointment letter", confirmation: "Confirmation letter",
+  service_certificate: "Service certificate",
+};
+
+/** A letter is NEVER edited (D-#542): its snapshot is what was handed over and signed.
+ *  A wrong letter is `void`ed — kept, marked, still renderable so the paper copy in
+ *  someone's file can still be matched — and a fresh one issued with a new ref no. */
+export const STAFF_LETTER_STATUSES = ["issued", "void"] as const;
+export type StaffLetterStatus = (typeof STAFF_LETTER_STATUSES)[number];
+
+export const STAFF_LETTER_STATUS_LABELS_BN: Record<StaffLetterStatus, string> = {
+  issued: "ইস্যুকৃত", void: "বাতিল",
+};
+export const STAFF_LETTER_STATUS_LABELS_EN: Record<StaffLetterStatus, string> = {
+  issued: "Issued", void: "Void",
+};
+
+/** The appointment letter's clause 1 (salary) and clause 2 (honorary) are MUTUALLY
+ *  EXCLUSIVE — the Word template carries both, which is a copy-paste artefact, not a
+ *  document that can be signed. The issuer picks one and only that clause prints. */
+export const SALARY_MODES = ["paid", "honorary"] as const;
+export type SalaryMode = (typeof SALARY_MODES)[number];
+
+export const SALARY_MODE_LABELS_BN: Record<SalaryMode, string> = {
+  paid: "বেতনসহ", honorary: "সম্মানী (অবৈতনিক)",
+};
+export const SALARY_MODE_LABELS_EN: Record<SalaryMode, string> = {
+  paid: "Paid", honorary: "Honorary (unpaid)",
+};
+
+/**
+ * HR policy DEFAULTS (SH-3, D-#539/#541) — the read-time fallback for the `HrPolicy`
+ * singleton, the D-#97 / LibraryPolicy posture: admin DATA with defaults read at
+ * request time, so NO seed or startup write ever runs against the shared live Atlas
+ * and an absent row simply reads as these values.
+ *
+ * `annualLeaveDays` is the ONE pool `casual` + `sick` + `bereavement` draw from — the
+ * appointment letter's clause 7 ("Total 20 days including sick leave and casual leave").
+ *
+ * `latenessRuleEnabled` is deliberately FALSE: prd-hr H4.3 made the lateness deduction
+ * an opt-in Principal-configurable rule, so shipping this code changes no existing
+ * payroll figure until the Principal switches it on.
+ */
+export const HR_POLICY_DEFAULTS = {
+  annualLeaveDays: 20,
+  lateDaysPerCharge: 3,
+  latenessRuleEnabled: false,
+  probationDebtEnabled: true,
+  /** Letter defaults (SH-1). The signatory is DATA, never a literal in the renderer —
+   *  the convener changes without a deploy, and a letter already issued keeps the
+   *  name it was signed with because the snapshot froze it (D-#542). */
+  signatoryName: "Md. Enamul Haque",
+  signatoryTitle: "Convener, Managing Committee",
+  /** Clause 4's printed working-hours text. */
+  weeklyHoursText: "25 (5*5)",
+  /** Ref-no prefix: `${prefix}/${year}/${seq}` → "SCD/HR/2026/0052". */
+  letterRefPrefix: "SCD/HR",
+} as const;
+
+/** The leave types that draw the ONE shared annual pool (D-#539). Everything else is
+ *  either unpaid by type (maternity/hajj/unpaid_lwp) or has no balance at all. */
+export const POOLED_LEAVE_TYPES = ["casual", "sick", "bereavement"] as const satisfies readonly LeaveType[];
+
 // --- A.6 HOMEWORK-TRACKER ENUMS (app-native; Project-06 handoff — HW-T1) ------
 // Daily HW-… channel. NO wire-contract twin: trackers are a feature, not import
 // content (no `doc_type: tracker`), and Layer-B records live on the operational/

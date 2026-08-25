@@ -1,0 +1,158 @@
+/**
+ * ConfirmEmploymentScreen (SH-2; docs/prd-staff-hub.md, D-#540) — end probation.
+ *
+ * Confirming is not a field edit, and this screen is built to make that obvious: it
+ * shows the LEDGER before the button is pressed. The held probation-leave days are
+ * debited from the pool the person is about to be granted, and anything the pool cannot
+ * absorb becomes a salary charge — so the Principal sees "10 allowance − 6 held = 4
+ * remaining" rather than discovering it on a payslip a month later.
+ *
+ * The preview is a dry run (`confirmationPreview`); reading it settles nothing.
+ */
+import React from "react";
+import { View } from "react-native";
+import { useMutation, useQuery } from "urql";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { AdminStackParamList } from "../../navigation/types";
+import {
+  CONFIRMATION_PREVIEW_QUERY,
+  CONFIRM_STAFF_EMPLOYMENT,
+} from "../../graphql/operations";
+import {
+  Screen,
+  H2,
+  Body,
+  Muted,
+  Card,
+  Row,
+  Field,
+  Chip,
+  ChipRow,
+  Button,
+  Divider,
+  Loader,
+  Notice,
+} from "../../components/ui";
+import { STR, bnNum, employmentStatusLabel } from "../../lib/labels";
+import { friendlyError } from "../../lib/errors";
+import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
+import { space } from "../../theme/tokens";
+
+type Props = NativeStackScreenProps<AdminStackParamList, "ConfirmEmployment">;
+
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export default function ConfirmEmploymentScreen({ route, navigation }: Props): React.ReactElement {
+  const { staff } = route.params;
+  const [{ data, fetching }] = useQuery({
+    query: CONFIRMATION_PREVIEW_QUERY,
+    variables: { staffProfileId: staff.id },
+  });
+  const [, confirm] = useMutation(CONFIRM_STAFF_EMPLOYMENT);
+
+  const [confirmationDate, setConfirmationDate] = React.useState(todayKey());
+  const [extraText, setExtraText] = React.useState("");
+  const [withLetter, setWithLetter] = React.useState(true);
+  const [busy, setBusy] = React.useState(false);
+  const [failure, setFailure] = React.useState<string | null>(null);
+
+  const p = data?.confirmationPreview;
+  const remainingAfter = p ? Math.max(0, p.poolRemaining - p.fromPool) : 0;
+  const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(confirmationDate);
+
+  if (staff.confirmationDate) {
+    return (
+      <Screen scroll>
+        <H2>{STR.stfConfirmTitle}</H2>
+        <Notice tone="info" message={STR.stfAlreadyConfirmed} />
+        <Button title={STR.close} variant="secondary" onPress={() => navigation.goBack()} />
+      </Screen>
+    );
+  }
+
+  async function onConfirm(): Promise<void> {
+    setBusy(true);
+    setFailure(null);
+    const res = await confirm({
+      staffProfileId: staff.id,
+      confirmationDate,
+      extraText: extraText.trim() || null,
+      issueLetter: withLetter,
+    });
+    setBusy(false);
+    if (res.error || !res.data) {
+      setFailure(friendlyError(res.error));
+      return;
+    }
+    const letterId = res.data.confirmStaffEmployment.letterId;
+    if (letterId && PDF_SUPPORTED) await openPdf(`/pdf/staff-letter/${letterId}`);
+    navigation.goBack();
+  }
+
+  return (
+    <Screen scroll>
+      <H2>{`${STR.stfConfirmTitle} — ${staff.nameBn || staff.name}`}</H2>
+      {failure ? <Notice tone="danger" message={failure} /> : null}
+
+      <Card>
+        <Field
+          label={STR.stfConfirmDate}
+          value={confirmationDate}
+          onChangeText={setConfirmationDate}
+          placeholder="YYYY-MM-DD"
+        />
+        <Muted>{STR.stfConfirmDateNote}</Muted>
+      </Card>
+
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfConfirmEffects}</Body>
+        {fetching && !p ? (
+          <Loader label={STR.loading} />
+        ) : (
+          <>
+            <Row
+              label={STR.stfConfirmStatusChange}
+              value={`${employmentStatusLabel(staff.employmentStatus)} → ${employmentStatusLabel("confirmed")}`}
+            />
+            <Divider />
+            <Row label={STR.stfConfirmPoolAllowance} value={`${bnNum(String(p?.poolRemaining ?? 0))} ${STR.stfDays}`} />
+            <Row label={STR.stfConfirmHeldDeduct} value={`− ${bnNum(String(p?.fromPool ?? 0))} ${STR.stfDays}`} />
+            <Divider />
+            <Row label={STR.stfConfirmRemainingAfter} value={`${bnNum(String(remainingAfter))} ${STR.stfDays}`} />
+            {p && p.toSalary > 0 ? (
+              <Notice
+                tone="warn"
+                message={`${STR.stfConfirmExcessWarning} (${bnNum(String(p.toSalary))} ${STR.stfDays})`}
+              />
+            ) : null}
+          </>
+        )}
+      </Card>
+
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfConfirmIssueLetter}</Body>
+        <ChipRow>
+          <Chip label={STR.stfYes} selected={withLetter} onPress={() => setWithLetter(true)} />
+          <Chip label={STR.stfNo} selected={!withLetter} onPress={() => setWithLetter(false)} />
+        </ChipRow>
+        {withLetter ? (
+          <Field
+            label={STR.stfExtraText}
+            value={extraText}
+            onChangeText={setExtraText}
+            placeholder={STR.stfExtraTextPlaceholder}
+            multiline
+          />
+        ) : null}
+      </Card>
+
+      <View style={{ flexDirection: "row", gap: space(2) }}>
+        <Button title={STR.cancel} variant="secondary" onPress={() => navigation.goBack()} />
+        <Button title={STR.stfConfirmAction} loading={busy} disabled={!dateOk} onPress={() => void onConfirm()} />
+      </View>
+    </Screen>
+  );
+}

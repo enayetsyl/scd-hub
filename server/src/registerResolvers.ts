@@ -55,6 +55,7 @@ import "./modules/hr/resolvers/payroll";
 import "./modules/hr/resolvers/performance";
 import "./modules/hr/resolvers/offboarding";
 import "./modules/hr/resolvers/staffDirectory";
+import "./modules/hr/resolvers/staffHub";
 import "./modules/guardian/resolvers/guardianPortal";
 import "./modules/notifications/resolvers/notifications";
 import "./modules/notifications/resolvers/webPush";

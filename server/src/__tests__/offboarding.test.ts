@@ -26,6 +26,9 @@ const mockResolveUserId = jest.fn();
 const mockBalancesForStaff = jest.fn().mockResolvedValue([]);
 const mockActiveAdvanceByStaff = jest.fn().mockResolvedValue(new Map());
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
+/** SH-3 (D-#540): held probation-leave rows. Default "nothing held" keeps every
+ *  pre-existing figure in this suite unchanged. */
+const mockDebtFind = jest.fn(() => [] as unknown[]);
 
 const leanChain = (val: unknown) => {
   const o: Record<string, unknown> = {};
@@ -54,6 +57,21 @@ jest.mock("../modules/foundation/models/User", () => ({
 }));
 jest.mock("../modules/foundation/models/AcademicYear", () => ({
   AcademicYear: { findOne: (q: unknown) => ({ select: () => ({ lean: () => mockAYFindOne(q) }) }) },
+}));
+// SH-3 (D-#540): the exit settlement now reads any HELD probation-leave debt, and
+// marks it settled at RELEASE. Default here is "nothing held", so every pre-existing
+// figure in this suite is unchanged; the debt-carrying case is asserted separately.
+jest.mock("../modules/hr/models/ProbationLeaveDebt", () => ({
+  ProbationLeaveDebt: {
+    find: (..._a: unknown[]) => ({
+      select: () => ({ lean: async () => mockDebtFind() }),
+      sort: () => ({ lean: async () => mockDebtFind() }),
+      lean: async () => mockDebtFind(),
+    }),
+    updateOne: jest.fn().mockResolvedValue({}),
+    deleteOne: jest.fn().mockResolvedValue({}),
+    findOneAndUpdate: jest.fn().mockResolvedValue({}),
+  },
 }));
 jest.mock("../modules/hr/models/AdvanceLoan", () => ({
   AdvanceLoan: { findById: (id: unknown) => mockAdvanceFindById(id) },
@@ -90,6 +108,7 @@ import {
   releaseFinalSettlement,
   cancelOffboarding,
 } from "../modules/hr/services/OffboardingService";
+import { ProbationLeaveDebt } from "../modules/hr/models/ProbationLeaveDebt";
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -274,7 +293,9 @@ describe("final settlement (H6.4, D-#29)", () => {
     const advId = oid();
     const advance = { balance: 4000, status: "active", save: jest.fn() };
     const c: Record<string, unknown> = {
-      _id: oid(), status: "access_revoked",
+      // staffProfileId is on every real case; the SH-3 exit settlement needs it to
+      // settle the held probation debt at release.
+      _id: oid(), staffProfileId: oid(), status: "access_revoked",
       settlement: { held: true, advanceId: advId, advanceRecovered: 4000, netPay: 31770 },
       clearanceItems: [{ status: "done" }, { status: "waived" }],
       save: jest.fn(), markModified: jest.fn(),
@@ -287,6 +308,48 @@ describe("final settlement (H6.4, D-#29)", () => {
     expect((c.settlement as Record<string, unknown>).held).toBe(false);
     expect(c.status).toBe("completed");
     expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "FINAL_SETTLEMENT_RELEASED" }));
+  });
+
+  // --- SH-3 / D-#540: the probationer who leaves before confirmation -----------
+  test("a probationer's HELD leave is deducted at day-rate from the final settlement", async () => {
+    const staffId = oid();
+    const c: Record<string, unknown> = {
+      _id: oid(), staffProfileId: staffId, status: "access_revoked",
+      clearanceItems: [{ status: "done" }],
+      save: jest.fn(), markModified: jest.fn(),
+    };
+    mockCaseFindById.mockResolvedValue(c);
+    mockStaffFindById.mockResolvedValue({ _id: staffId, monthlySalary: 30000 });
+    // 6 days held from probation leave that was never paid and never deducted.
+    mockDebtFind.mockReturnValue([{ _id: oid(), days: 4 }, { _id: oid(), days: 2 }]);
+
+    await computeFinalSettlement({ caseId: (c._id as mongoose.Types.ObjectId).toString(), workingDays: 30, actorId: oid().toString() });
+
+    const s = c.settlement as { deductions: Array<{ type: string; amount: number; days?: number }>; netPay: number };
+    const held = s.deductions.find((d) => d.days === 6);
+    expect(held).toBeDefined();
+    expect(held!.amount).toBe(6000); // 6 × (30000/30)
+    expect(s.netPay).toBe(24000);
+  });
+
+  test("computing the settlement does NOT settle the debt — only releasing it does", async () => {
+    const staffId = oid();
+    const c: Record<string, unknown> = {
+      _id: oid(), staffProfileId: staffId, status: "access_revoked",
+      clearanceItems: [{ status: "done" }],
+      save: jest.fn(), markModified: jest.fn(),
+    };
+    mockCaseFindById.mockResolvedValue(c);
+    mockStaffFindById.mockResolvedValue({ _id: staffId, monthlySalary: 30000 });
+    mockDebtFind.mockReturnValue([{ _id: oid(), days: 3 }]);
+
+    await computeFinalSettlement({ caseId: (c._id as mongoose.Types.ObjectId).toString(), workingDays: 30, actorId: oid().toString() });
+    // A recompute must be able to run any number of times without consuming the debt —
+    // otherwise the second computation would silently drop the deduction.
+    expect(ProbationLeaveDebt.updateOne).not.toHaveBeenCalled();
+
+    await releaseFinalSettlement((c._id as mongoose.Types.ObjectId).toString(), oid().toString());
+    expect(ProbationLeaveDebt.updateOne).toHaveBeenCalled();
   });
 });
 

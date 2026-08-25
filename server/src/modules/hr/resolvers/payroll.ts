@@ -326,6 +326,19 @@ builder.queryField("myPayslips", (t) =>
   }),
 );
 
+builder.queryField("staffPayslips", (t) =>
+  t.field({
+    type: [PayslipRef],
+    description:
+      "ONE staff member's payslips, newest month first — the admin twin of myPayslips, " +
+      "for the staff hub's বেতন tab (SH-5). Same LOCKED-runs-only rule: a prepared run " +
+      "is not a payslip yet, whoever is looking. Requires payroll:manage.",
+    authScopes: { hasPermission: "payroll:manage" },
+    args: { staffProfileId: t.arg.string({ required: true }) },
+    resolve: async (_root, args) => payslipsForStaff(args.staffProfileId),
+  }),
+);
+
 builder.queryField("staffAdvances", (t) =>
   t.field({
     type: [AdvanceLoanRef],
