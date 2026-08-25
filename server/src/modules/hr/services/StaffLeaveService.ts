@@ -33,9 +33,21 @@ import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { AcademicYear } from "../../foundation/models/AcademicYear";
 import { writeAudit } from "../../platform/services/AuditService";
 import { countLeaveDays, parseDateKey, rangeCovers, roundLeaveDays, LeaveError } from "./dates";
-import { computeRemaining, takenPaidDays } from "./LeaveEntitlementService";
+import {
+  computeRemaining,
+  takenPaidDays,
+  takenPooledDays,
+  pooledBalanceForStaff,
+} from "./LeaveEntitlementService";
+import { getHrPolicy } from "./HrPolicyService";
+import {
+  isProbationLeaveForStaff,
+  recordProbationDebt,
+  clearProbationDebt,
+} from "./ProbationDebtService";
 import { fanOutCoverSlots, revokeCoversForLeave, resolvePartialPeriods } from "./CoverService";
 import { emitStaffLeaveSubmitted } from "../../notifications/services/emitters";
+import { POOLED_LEAVE_TYPES } from "@scd/shared";
 
 // --- pure split math -------------------------------------------------------
 
@@ -60,6 +72,38 @@ export function splitLeaveDays(leaveType: LeaveType, days: number, remainingBala
       ? `Exceeds ${leaveType} balance by ${roundLeaveDays(unpaidDays)} day(s) — recorded as unpaid (LWP). (§3.3)`
       : null;
   return { paidDays, unpaidDays, exceedWarning };
+}
+
+// --- balance lookups used by the approve path -------------------------------
+//
+// Both EXCLUDE the application being decided, so re-approving an already-approved
+// leave cannot count its own days against itself.
+
+/** Remaining days in the ONE shared pool (D-#539), excluding this application. */
+async function pooledRemainingExcluding(
+  staffProfileId: string,
+  academicYearId: string,
+  excludeId: string,
+): Promise<number> {
+  const pool = await pooledBalanceForStaff(staffProfileId, academicYearId);
+  const taken = await takenPooledDays(staffProfileId, academicYearId, excludeId);
+  return computeRemaining(pool.allowanceDays, pool.carriedOverDays, taken);
+}
+
+/** The pre-D-#539 per-type path, kept for any balance-tracked type outside the pool. */
+async function perTypeRemainingExcluding(
+  staffProfileId: string,
+  academicYearId: string,
+  leaveType: LeaveType,
+  excludeId: string,
+): Promise<number> {
+  const ent = await StaffLeaveEntitlement.findOne({
+    staffProfileId: new Types.ObjectId(staffProfileId),
+    academicYearId: new Types.ObjectId(academicYearId),
+    leaveType,
+  }).lean();
+  const taken = await takenPaidDays(staffProfileId, academicYearId, leaveType, excludeId);
+  return computeRemaining(ent?.allowanceDays ?? 0, ent?.carriedOverDays ?? 0, taken);
 }
 
 // --- academic-year resolution ----------------------------------------------
@@ -181,30 +225,60 @@ export async function decideLeave(
 
   if (decision === "approve") {
     const rules = LEAVE_TYPE_RULES[app.leaveType];
-    let remaining = 0;
-    if (rules.balanceTracked && app.academicYearId) {
-      const ent = await StaffLeaveEntitlement.findOne({
+
+    // --- SH-3 / D-#540: probation leave is HELD, not paid and not deducted --------
+    // The pivot is the leave's own start date against confirmationDate, never the
+    // live employmentStatus — see ProbationDebtService for why.
+    const policy = await getHrPolicy();
+    const onProbation =
+      policy.probationDebtEnabled &&
+      rules.balanceTracked &&
+      (await isProbationLeaveForStaff(app.staffProfileId, app.fromKey));
+
+    if (onProbation) {
+      app.status = "approved";
+      app.paidDays = 0;
+      app.unpaidDays = app.days;
+      app.exceedWarning = null;
+      await recordProbationDebt({
         staffProfileId: app.staffProfileId,
-        academicYearId: app.academicYearId,
+        leaveApplicationId: app._id,
+        fromKey: app.fromKey,
         leaveType: app.leaveType,
-      }).lean();
-      const taken = await takenPaidDays(
-        app.staffProfileId.toString(),
-        app.academicYearId.toString(),
-        app.leaveType,
-        app._id.toString(),
-      );
-      remaining = computeRemaining(ent?.allowanceDays ?? 0, ent?.carriedOverDays ?? 0, taken);
+        days: app.days,
+      });
+    } else {
+      let remaining = 0;
+      if (rules.balanceTracked && app.academicYearId) {
+        // D-#539: the pooled types share ONE allowance, so the balance this leave
+        // draws is the pool's — not this type's own row. Non-pooled balance-tracked
+        // types (none today, but the enum may grow) keep the per-type path.
+        remaining = (POOLED_LEAVE_TYPES as readonly LeaveType[]).includes(app.leaveType)
+          ? await pooledRemainingExcluding(
+              app.staffProfileId.toString(),
+              app.academicYearId.toString(),
+              app._id.toString(),
+            )
+          : await perTypeRemainingExcluding(
+              app.staffProfileId.toString(),
+              app.academicYearId.toString(),
+              app.leaveType,
+              app._id.toString(),
+            );
+      }
+      const split = splitLeaveDays(app.leaveType, app.days, remaining);
+      app.status = "approved";
+      app.paidDays = split.paidDays;
+      app.unpaidDays = split.unpaidDays;
+      app.exceedWarning = split.exceedWarning;
     }
-    const split = splitLeaveDays(app.leaveType, app.days, remaining);
-    app.status = "approved";
-    app.paidDays = split.paidDays;
-    app.unpaidDays = split.unpaidDays;
-    app.exceedWarning = split.exceedWarning;
   } else {
     app.status = decision === "reject" ? "rejected" : "cancelled";
     // Pull back any live cover write-access for a leave that is no longer happening.
     await revokeCoversForLeave(app._id.toString(), actorId);
+    // An absence that is not happening must not carry a held charge into the person's
+    // confirmation (D-#540).
+    await clearProbationDebt(app._id);
   }
   app.decidedBy = new Types.ObjectId(actorId);
   app.decidedAt = new Date();

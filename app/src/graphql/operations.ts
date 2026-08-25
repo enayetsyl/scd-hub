@@ -294,6 +294,10 @@ export interface StaffT {
   employmentType: string;
   employmentStatus: string;
   joiningDate: string | null;
+  /** SH-2 (D-#540): null = still on probation. Written only by confirmStaffEmployment. */
+  confirmationDate: string | null;
+  monthlySalary: number | null;
+  paymentMethod: string | null;
   gender: string | null;
   dob: string | null;
   bloodGroup: string | null;
@@ -376,6 +380,9 @@ export const STAFF_QUERY = gql<{ staff: StaffT[] }, { category?: string | null }
       employmentType
       employmentStatus
       joiningDate
+      confirmationDate
+      monthlySalary
+      paymentMethod
       gender
       dob
       bloodGroup
@@ -7464,6 +7471,316 @@ export const CHILD_UPCOMING_CLASS_TESTS_QUERY = gql<
   query ChildUpcomingClassTests($studentId: String!) {
     childUpcomingClassTests(studentId: $studentId) {
       id subject subjectLabelBn chapter testNumber examDate totalMarks durationMinutes daysAway
+    }
+  }
+`;
+
+// ===========================================================================
+// Staff hub (SH-1..SH-5; docs/prd-staff-hub.md)
+//
+// One operation per TAB, never one aggregate: a caller who lacks a permission
+// simply never fires that request. Folding them into a single query would rebuild
+// the D-#532 failure — a permission-carrying field returning null under a screen
+// that reads through it.
+// ===========================================================================
+
+export interface StaffLetterT {
+  id: string;
+  staffProfileId: string;
+  kind: string;
+  refNo: string;
+  issuedOn: string;
+  status: string;
+  extraText: string | null;
+  voidReason: string | null;
+  salaryMode: string;
+  monthlySalary: number | null;
+  designation: string;
+  effectiveFrom: string;
+  letterDate: string;
+  annualLeaveDays: number;
+}
+
+export const STAFF_LETTERS_QUERY = gql<
+  { staffLetters: StaffLetterT[] },
+  { staffProfileId: string }
+>`
+  query StaffLetters($staffProfileId: String!) {
+    staffLetters(staffProfileId: $staffProfileId) {
+      id staffProfileId kind refNo issuedOn status extraText voidReason
+      salaryMode monthlySalary designation effectiveFrom letterDate annualLeaveDays
+    }
+  }
+`;
+
+export const ISSUE_STAFF_LETTER = gql<
+  { issueStaffLetter: StaffLetterT },
+  {
+    staffProfileId: string;
+    kind: string;
+    effectiveFrom: string;
+    salaryMode: string;
+    letterDate?: string | null;
+    monthlySalary?: number | null;
+    designation?: string | null;
+    weeklyHours?: string | null;
+    extraText?: string | null;
+  }
+>`
+  mutation IssueStaffLetter(
+    $staffProfileId: String!
+    $kind: String!
+    $effectiveFrom: String!
+    $salaryMode: String!
+    $letterDate: String
+    $monthlySalary: Float
+    $designation: String
+    $weeklyHours: String
+    $extraText: String
+  ) {
+    issueStaffLetter(
+      staffProfileId: $staffProfileId
+      kind: $kind
+      effectiveFrom: $effectiveFrom
+      salaryMode: $salaryMode
+      letterDate: $letterDate
+      monthlySalary: $monthlySalary
+      designation: $designation
+      weeklyHours: $weeklyHours
+      extraText: $extraText
+    ) {
+      id staffProfileId kind refNo issuedOn status extraText voidReason
+      salaryMode monthlySalary designation effectiveFrom letterDate annualLeaveDays
+    }
+  }
+`;
+
+export const VOID_STAFF_LETTER = gql<
+  { voidStaffLetter: { id: string; kind: string; refNo: string; status: string; voidReason: string | null } },
+  { letterId: string; reason: string }
+>`
+  mutation VoidStaffLetter($letterId: String!, $reason: String!) {
+    voidStaffLetter(letterId: $letterId, reason: $reason) {
+      id kind refNo status voidReason
+    }
+  }
+`;
+
+export interface StaffLeavePoolT {
+  academicYearId: string | null;
+  allowanceDays: number;
+  carriedOverDays: number;
+  takenDays: number;
+  remainingDays: number;
+  overridden: boolean;
+  proRated: boolean;
+}
+
+export const STAFF_LEAVE_POOL_QUERY = gql<
+  { staffLeavePool: StaffLeavePoolT },
+  { staffProfileId: string }
+>`
+  query StaffLeavePool($staffProfileId: String!) {
+    staffLeavePool(staffProfileId: $staffProfileId) {
+      academicYearId allowanceDays carriedOverDays takenDays remainingDays overridden proRated
+    }
+  }
+`;
+
+export const MY_LEAVE_POOL_QUERY = gql<{ myLeavePool: StaffLeavePoolT }, Record<string, never>>`
+  query MyLeavePool {
+    myLeavePool {
+      academicYearId allowanceDays carriedOverDays takenDays remainingDays overridden proRated
+    }
+  }
+`;
+
+export interface ProbationDebtRowT {
+  id: string;
+  fromKey: string;
+  leaveType: string;
+  days: number;
+}
+
+export interface ProbationDebtT {
+  totalDays: number;
+  rows: ProbationDebtRowT[];
+}
+
+export const STAFF_PROBATION_DEBT_QUERY = gql<
+  { staffProbationDebt: ProbationDebtT },
+  { staffProfileId: string }
+>`
+  query StaffProbationDebt($staffProfileId: String!) {
+    staffProbationDebt(staffProfileId: $staffProfileId) {
+      totalDays
+      rows { id fromKey leaveType days }
+    }
+  }
+`;
+
+export const MY_PROBATION_DEBT_QUERY = gql<{ myProbationDebt: ProbationDebtT }, Record<string, never>>`
+  query MyProbationDebt {
+    myProbationDebt {
+      totalDays
+      rows { id fromKey leaveType days }
+    }
+  }
+`;
+
+export interface StaffAttendanceDayT {
+  staffProfileId: string;
+  dateKey: string;
+  status: string;
+  punchIn: string | null;
+  punchOut: string | null;
+  shift: string | null;
+}
+
+export const STAFF_ATTENDANCE_QUERY = gql<
+  { staffAttendance: StaffAttendanceDayT[] },
+  { staffProfileId: string; fromKey: string; toKey: string }
+>`
+  query StaffAttendance($staffProfileId: String!, $fromKey: String!, $toKey: String!) {
+    staffAttendance(staffProfileId: $staffProfileId, fromKey: $fromKey, toKey: $toKey) {
+      staffProfileId dateKey status punchIn punchOut shift
+    }
+  }
+`;
+
+export interface StaffMonthSummaryT {
+  present: number;
+  late: number;
+  leave: number;
+  absent: number;
+  total: number;
+  presentPct: number;
+}
+
+export const STAFF_ATTENDANCE_SUMMARY_QUERY = gql<
+  { staffAttendanceSummary: StaffMonthSummaryT },
+  { staffProfileId: string; fromKey: string; toKey: string }
+>`
+  query StaffAttendanceSummary($staffProfileId: String!, $fromKey: String!, $toKey: String!) {
+    staffAttendanceSummary(staffProfileId: $staffProfileId, fromKey: $fromKey, toKey: $toKey) {
+      present late leave absent total presentPct
+    }
+  }
+`;
+
+export interface LatenessPreviewT {
+  enabled: boolean;
+  lateCount: number;
+  lateDateKeys: string[];
+  lateDaysPerCharge: number;
+  chargedDays: number;
+  paidFromLeave: number;
+  chargedToSalary: number;
+  latesUntilNextCharge: number;
+}
+
+export const STAFF_LATENESS_PREVIEW_QUERY = gql<
+  { staffLatenessPreview: LatenessPreviewT },
+  { staffProfileId: string; monthKey: string }
+>`
+  query StaffLatenessPreview($staffProfileId: String!, $monthKey: String!) {
+    staffLatenessPreview(staffProfileId: $staffProfileId, monthKey: $monthKey) {
+      enabled lateCount lateDateKeys lateDaysPerCharge chargedDays paidFromLeave
+      chargedToSalary latesUntilNextCharge
+    }
+  }
+`;
+
+export interface StaffHubPayslipT {
+  id: string;
+  monthKey: string;
+  grossSalary: number;
+  netPay: number;
+  totalDeductions: number;
+  totalAdditions: number;
+  unpaidLeaveDays: number;
+  deductions: Array<{ type: string; amount: number; days: number | null; note: string | null }>;
+}
+
+export const STAFF_PAYSLIPS_QUERY = gql<
+  { staffPayslips: StaffHubPayslipT[] },
+  { staffProfileId: string }
+>`
+  query StaffPayslips($staffProfileId: String!) {
+    staffPayslips(staffProfileId: $staffProfileId) {
+      id monthKey grossSalary netPay totalDeductions totalAdditions unpaidLeaveDays
+      deductions { type amount days note }
+    }
+  }
+`;
+
+export interface ConfirmationPreviewT {
+  heldDays: number;
+  poolAllowance: number;
+  poolRemaining: number;
+  fromPool: number;
+  toSalary: number;
+}
+
+export const CONFIRMATION_PREVIEW_QUERY = gql<
+  { confirmationPreview: ConfirmationPreviewT },
+  { staffProfileId: string }
+>`
+  query ConfirmationPreview($staffProfileId: String!) {
+    confirmationPreview(staffProfileId: $staffProfileId) {
+      heldDays poolAllowance poolRemaining fromPool toSalary
+    }
+  }
+`;
+
+export interface ConfirmationResultT {
+  staffProfileId: string;
+  confirmationDate: string;
+  heldDays: number;
+  settledFromPool: number;
+  settledToSalary: number;
+  poolRemainingAfter: number;
+  letterId: string | null;
+}
+
+export const CONFIRM_STAFF_EMPLOYMENT = gql<
+  { confirmStaffEmployment: ConfirmationResultT },
+  { staffProfileId: string; confirmationDate: string; extraText?: string | null; issueLetter?: boolean }
+>`
+  mutation ConfirmStaffEmployment(
+    $staffProfileId: String!
+    $confirmationDate: String!
+    $extraText: String
+    $issueLetter: Boolean
+  ) {
+    confirmStaffEmployment(
+      staffProfileId: $staffProfileId
+      confirmationDate: $confirmationDate
+      extraText: $extraText
+      issueLetter: $issueLetter
+    ) {
+      staffProfileId confirmationDate heldDays settledFromPool settledToSalary
+      poolRemainingAfter letterId
+    }
+  }
+`;
+
+export interface HrPolicyT {
+  annualLeaveDays: number;
+  lateDaysPerCharge: number;
+  latenessRuleEnabled: boolean;
+  probationDebtEnabled: boolean;
+  signatoryName: string;
+  signatoryTitle: string;
+  weeklyHoursText: string;
+  letterRefPrefix: string;
+}
+
+export const HR_POLICY_QUERY = gql<{ hrPolicy: HrPolicyT }, Record<string, never>>`
+  query HrPolicy {
+    hrPolicy {
+      annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled
+      signatoryName signatoryTitle weeklyHoursText letterRefPrefix
     }
   }
 `;
