@@ -50,6 +50,12 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
           <Muted>{STR.hrPayrollSub}</Muted>
         </Card>
       ) : null}
+      {canPayroll ? (
+        <Card onPress={() => navigation.navigate("HrPolicy")}>
+          <Body style={{ fontWeight: "700" }}>{STR.stfPolicyTitle}</Body>
+          <Muted>{STR.stfPolicySub}</Muted>
+        </Card>
+      ) : null}
       {canPerformance ? (
         <Card onPress={() => navigation.navigate("PerformanceHome")}>
           <Body style={{ fontWeight: "700" }}>{STR.hrPerformance}</Body>
