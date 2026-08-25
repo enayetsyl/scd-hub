@@ -37,7 +37,10 @@ import {
   ErrorBanner,
 } from "../../components/ui";
 import { STR, subjectLabel, classLevelLabel, reviewStatusLabel, bnNum } from "../../lib/labels";
+import { AnswerCarrier } from "../../components/QuestionAnswer";
+import { parsePayload } from "../../lib/question";
 import { friendlyError } from "../../lib/errors";
+import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "QuestionReviewerRounds">;
@@ -56,6 +59,7 @@ export default function QuestionReviewerRoundsScreen({
   route,
   navigation,
 }: Props): React.ReactElement {
+  const colors = useColors();
   const { reviewerId, reviewerName, classLevel, subject } = route.params;
   const [bucket, setBucket] = useState<ReviewerBucketT>(route.params.bucket as ReviewerBucketT);
   const [offset, setOffset] = useState(0);
@@ -180,6 +184,9 @@ export default function QuestionReviewerRoundsScreen({
                   {r.questionText}
                 </Body>
               ) : null}
+              {/* The options and the answer key — the same carrier the reviewer decided
+                  against, so the Principal reads exactly what she read. */}
+              <AnswerCarrier payload={parsePayload(r.payloadJson)} correctColor={colors.primary} />
               {r.reason ? (
                 <Muted style={{ marginTop: space(1) }}>{`${STR.qrReason}: ${r.reason}`}</Muted>
               ) : null}
