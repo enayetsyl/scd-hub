@@ -9,8 +9,9 @@
  *                    date, resolve its day-type (FULL Sun–Thu / QURAN_ONLY Sat /
  *                    OFF Fri / HOLIDAY), and add the teacher's matching slots on
  *                    teaching days only — netting out holidays, honouring each
- *                    slot's [effectiveFrom, effectiveTo) window, and counting only
- *                    quran-track slots on Saturdays.
+ *                    slot's CLOSED [effectiveFrom, effectiveTo] window (effectiveTo is
+ *                    inclusive — see slotInForceOn), and counting only quran-track
+ *                    slots on Saturdays.
  *   - slots        — the enriched weekly grid (day · period · time · subject ·
  *                    section/group) for the drill-down detail.
  *
@@ -51,6 +52,26 @@ export interface TeacherClassLoadShape {
 
 const dayStart = (d: Date): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
 const dayEnd = (d: Date): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
+/**
+ * Is this slot in force on `date`? The ONE place the effective window is interpreted,
+ * so the weekly grid and the monthly count can never disagree.
+ *
+ * `effectiveTo` is INCLUSIVE — the window is CLOSED, `[effectiveFrom, effectiveTo]`.
+ * That is not a style choice, it is what the writer produces: `RoutineSlotService`
+ * closes a superseded slot with `endOfDayBefore(changeFrom)`, so the outgoing row ends
+ * at 23:59:59.999 on its last valid day and the replacement's `effectiveFrom` is 00:00
+ * the NEXT day. The two never overlap, so no changeover day is ever double-counted.
+ *
+ * Verified against prod (Shah Mahfuj Ahmed, SUN P6 → P5, changed 2026-08-24):
+ *   P6 effectiveTo   = 2026-08-23T17:59:59.999Z = Sun 23 Aug 23:59:59 +06
+ *   P5 effectiveFrom = 2026-08-23T18:00:00.000Z = Mon 24 Aug 00:00:00 +06
+ */
+function slotInForceOn(s: SlotLite, date: Date): boolean {
+  if (new Date(s.effectiveFrom) > dayEnd(date)) return false;
+  if (s.effectiveTo && new Date(s.effectiveTo) < dayStart(date)) return false;
+  return true;
+}
 
 interface SlotLite {
   teacherId: Types.ObjectId;
@@ -114,18 +135,43 @@ export async function teacherClassLoad(
   }
   const monthTeachingDays = calendar.filter((c) => c.dayType === "FULL" || c.dayType === "QURAN_ONLY").length;
 
-  // Enriched detail (names/times/group labels) for every slot — batched, no N+1.
-  const enriched = await enrichRoutineSlots(slots);
+  // The WEEKLY view (perWeekday / weekTotal / the drill-down grid) is a snapshot of ONE
+  // timetable, not a union over the month. The month-overlap query above deliberately
+  // returns every version of a slot that touched the month, which is right for the
+  // calendar-accurate monthTotal but wrong here: after a mid-month routine change both
+  // the outgoing and incoming versions matched, so the teacher appeared twice in the
+  // same week (prod: Shah Mahfuj Ahmed showed প্রথম শ্রেণি · বাংলা at BOTH P5 and P6 on
+  // Sunday, while the routine grid correctly showed P6 as someone else's গণিত).
+  //
+  // Reference date = today, clamped into the month:
+  //   current month → today      (so it matches what the routine screen shows)
+  //   past month    → month end  (the pattern as it stood when the month closed)
+  //   future month  → month start
+  const nowMs = Date.now();
+  const asOf = new Date(Math.min(Math.max(nowMs, monthStart.getTime()), monthEnd.getTime()));
+  const inForce = slots.filter((s) => slotInForceOn(s, asOf));
+
+  // Enriched detail (names/times/group labels) — only the in-force timetable.
+  const enriched = await enrichRoutineSlots(inForce);
   const enrichedByTeacher = new Map<string, typeof enriched>();
   for (const s of enriched) {
     const tid = s.teacherId.toString();
     (enrichedByTeacher.get(tid) ?? enrichedByTeacher.set(tid, []).get(tid)!).push(s);
   }
 
+  // Every version that touched the month — drives monthTotal (per-date filtered below)
+  // and decides which teachers appear at all.
   const byTeacher = new Map<string, SlotLite[]>();
   for (const s of slots) {
     const tid = s.teacherId.toString();
     (byTeacher.get(tid) ?? byTeacher.set(tid, []).get(tid)!).push(s);
+  }
+
+  // Only the timetable in force at `asOf` — drives perWeekday / weekTotal.
+  const inForceByTeacher = new Map<string, SlotLite[]>();
+  for (const s of inForce) {
+    const tid = s.teacherId.toString();
+    (inForceByTeacher.get(tid) ?? inForceByTeacher.set(tid, []).get(tid)!).push(s);
   }
 
   const users = (await User.find({ _id: { $in: [...byTeacher.keys()] } })
@@ -135,8 +181,10 @@ export async function teacherClassLoad(
 
   const out: TeacherClassLoadShape[] = [];
   for (const [tid, tslots] of byTeacher) {
+    // Weekly pattern: the in-force timetable only, never the union of versions.
+    const weekSlots = inForceByTeacher.get(tid) ?? [];
     const perWeekdayMap = new Map<string, number>();
-    for (const s of tslots) perWeekdayMap.set(s.dayOfWeek, (perWeekdayMap.get(s.dayOfWeek) ?? 0) + 1);
+    for (const s of weekSlots) perWeekdayMap.set(s.dayOfWeek, (perWeekdayMap.get(s.dayOfWeek) ?? 0) + 1);
     const perWeekday = DAYS_OF_WEEK.map((dow) => ({ dayOfWeek: dow, count: perWeekdayMap.get(dow) ?? 0 })).filter(
       (x) => x.count > 0,
     );
@@ -146,8 +194,7 @@ export async function teacherClassLoad(
       if (dayType !== "FULL" && dayType !== "QURAN_ONLY") continue;
       for (const s of tslots) {
         if (s.dayOfWeek !== dow) continue;
-        if (new Date(s.effectiveFrom) > dayEnd(date)) continue;
-        if (s.effectiveTo && new Date(s.effectiveTo) < dayStart(date)) continue;
+        if (!slotInForceOn(s, date)) continue;
         if (dayType === "QURAN_ONLY" && s.track !== "quran") continue;
         monthTotal += 1;
       }
@@ -173,7 +220,7 @@ export async function teacherClassLoad(
       teacherId: tid,
       teacherName: nameById.get(tid) ?? tid,
       perWeekday,
-      weekTotal: tslots.length,
+      weekTotal: weekSlots.length,
       monthKey,
       monthTotal,
       monthTeachingDays,
