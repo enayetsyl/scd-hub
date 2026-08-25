@@ -433,6 +433,13 @@ export type AdminStackParamList = {
   Staff: undefined;
   /** Create (no param) or edit (the row) an HR staff record — D-#526. */
   StaffForm: { staff?: import("../graphql/operations").StaffT } | undefined;
+  // Staff hub (SH-6, docs/prd-staff-hub.md). All FOUR take params or are create-only,
+  // so none of them may be registered first in this stack — a param-taking initial
+  // route crashes the whole tab, and neither tsc nor expo export catches it.
+  StaffHub: { staff: import("../graphql/operations").StaffT };
+  StaffJoin: undefined;
+  IssueLetter: { staff: import("../graphql/operations").StaffT; kind: string };
+  ConfirmEmployment: { staff: import("../graphql/operations").StaffT };
   AssignClassTeacher: undefined;
   AssignSubjectTeacher: undefined;
   GroupMembers: undefined;

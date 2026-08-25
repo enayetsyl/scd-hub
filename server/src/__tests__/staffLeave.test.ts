@@ -13,6 +13,7 @@ const mockStaffFind = jest.fn();
 const mockUserFindById = jest.fn();
 const mockUserFindOne = jest.fn();
 const mockAYFindOne = jest.fn();
+const mockAYFindById = jest.fn();
 const mockLeaveCreate = jest.fn();
 const mockLeaveFindById = jest.fn();
 const mockLeaveFind = jest.fn();
@@ -54,8 +55,19 @@ jest.mock("../modules/foundation/models/User", () => ({
     findOne: (q: unknown) => ({ select: () => ({ lean: () => mockUserFindOne(q) }) }),
   },
 }));
+// `.select()` is optional on this one: resolveAcademicYearId selects, but the SH-3
+// pooled balance needs startDate/endDate and so reads the whole document.
 jest.mock("../modules/foundation/models/AcademicYear", () => ({
-  AcademicYear: { findOne: (q: unknown) => ({ select: () => ({ lean: () => mockAYFindOne(q) }) }) },
+  AcademicYear: {
+    findOne: (q: unknown) => ({
+      select: () => ({ lean: () => mockAYFindOne(q) }),
+      lean: () => mockAYFindOne(q),
+    }),
+    findById: (id: unknown) => ({
+      select: () => ({ lean: () => mockAYFindById(id) }),
+      lean: () => mockAYFindById(id),
+    }),
+  },
 }));
 jest.mock("../modules/hr/models/StaffLeaveApplication", () => ({
   StaffLeaveApplication: {
@@ -77,6 +89,26 @@ jest.mock("../modules/hr/models/StaffCoverSlot", () => ({
     findById: (id: unknown) => mockSlotFindById(id),
     find: (q: unknown) => mockSlotFind(q),
     findOne: (q: unknown) => ({ select: () => ({ lean: () => mockSlotFindOne(q) }) }),
+  },
+}));
+// SH-3 (D-#539/#540): decideLeave now reads the HR policy and, for probation leave,
+// writes a held-debt row. Both are mocked to their DEFAULTS here — an absent HrPolicy
+// row reads as HR_POLICY_DEFAULTS in production too, so `findOne → null` is the real
+// shape, not a stub. Probation is switched OFF for this suite (every fixture staff has
+// a confirmationDate below) so the pre-existing paid/unpaid assertions still describe
+// confirmed-service leave; the probation path has its own suite.
+jest.mock("../modules/hr/models/HrPolicy", () => ({
+  HrPolicy: {
+    findOne: () => ({ lean: async () => null }),
+    findOneAndUpdate: jest.fn().mockResolvedValue({}),
+  },
+}));
+jest.mock("../modules/hr/models/ProbationLeaveDebt", () => ({
+  ProbationLeaveDebt: {
+    find: () => ({ sort: () => ({ lean: async () => [] }), select: () => ({ lean: async () => [] }), lean: async () => [] }),
+    findOneAndUpdate: jest.fn().mockResolvedValue({}),
+    deleteOne: jest.fn().mockResolvedValue({}),
+    updateOne: jest.fn().mockResolvedValue({}),
   },
 }));
 jest.mock("../modules/foundation/models/ScopeGrant", () => ({
@@ -140,11 +172,56 @@ import {
   resolvePartialPeriods,
 } from "../modules/hr/services/CoverService";
 import { resolveUserIdForStaff, resolveStaffProfileForUser } from "../modules/hr/services/staffMatch";
-import { LEAVE_TYPE_RULES, PARTIAL_DAY_FRACTION } from "@scd/shared";
+import { isProbationLeave } from "../modules/hr/services/ProbationDebtService";
+import { ProbationLeaveDebt } from "../modules/hr/models/ProbationLeaveDebt";
+import { LEAVE_TYPE_RULES, PARTIAL_DAY_FRACTION, HR_POLICY_DEFAULTS } from "@scd/shared";
 
 const ACTOR = oid().toString();
 
 beforeEach(() => jest.clearAllMocks());
+
+// ===========================================================================
+describe("isProbationLeave — the date pivot (SH-3, D-#540)", () => {
+  test("no confirmation date at all → every leave is probation leave", () => {
+    expect(isProbationLeave("2026-06-01", null)).toBe(true);
+    expect(isProbationLeave("2020-01-01", undefined)).toBe(true);
+  });
+
+  test("starts before confirmation → probation; on or after → confirmed service", () => {
+    const confirmed = new Date("2026-07-01");
+    expect(isProbationLeave("2026-06-30", confirmed)).toBe(true);
+    expect(isProbationLeave("2026-07-01", confirmed)).toBe(false); // boundary: paid
+    expect(isProbationLeave("2026-07-02", confirmed)).toBe(false);
+  });
+
+  test("the answer never changes once given — the same leave reads the same after confirmation", () => {
+    // A leave in March, evaluated against a July confirmation, is STILL probation
+    // leave. This is the guarantee that keeps a confirmation from retroactively
+    // paying for months of leave that were decided as unpaid at the time.
+    expect(isProbationLeave("2026-03-05", new Date("2026-07-01"))).toBe(true);
+    expect(isProbationLeave("2026-03-05", new Date("2026-12-31"))).toBe(true);
+  });
+});
+
+// ===========================================================================
+describe("the shared annual pool (SH-3, D-#539)", () => {
+  test("the default pool is the 20 days the appointment letter promises", () => {
+    expect(HR_POLICY_DEFAULTS.annualLeaveDays).toBe(20);
+  });
+
+  test("computeRemaining floors at zero — an over-drawn pool is 0, never negative", () => {
+    expect(computeRemaining(20, 0, 25)).toBe(0);
+    expect(computeRemaining(20, 3, 10)).toBe(13);
+  });
+
+  test("a mid-year joiner's pool is pro-rated, not granted in full", () => {
+    const start = new Date("2026-01-01");
+    const end = new Date("2026-12-31");
+    expect(proRateAllowance(20, new Date("2026-01-01"), start, end)).toBe(20);
+    expect(proRateAllowance(20, new Date("2026-07-02"), start, end)).toBe(10);
+    expect(proRateAllowance(20, null, start, end)).toBe(20);
+  });
+});
 
 // ===========================================================================
 describe("pure leave math", () => {
@@ -358,19 +435,37 @@ describe("applyForLeave", () => {
 });
 
 describe("decideLeave", () => {
+  const YEAR_START = new Date("2026-01-01");
+  const YEAR_END = new Date("2026-12-31");
+
   function leaveDoc(over: Record<string, unknown> = {}): any {
     const d: Record<string, unknown> = {
       _id: oid(), staffProfileId: oid(), academicYearId: oid(),
-      leaveType: "casual", days: 3, status: "applied", ...over,
+      leaveType: "casual", fromKey: "2026-06-01", days: 3, status: "applied", ...over,
     };
     d.save = jest.fn().mockResolvedValue(d);
     return d;
   }
 
-  test("approve within balance → all paid, status approved, audited", async () => {
+  /** SH-3: every fixture here is a CONFIRMED staff member joined before the year
+   *  started, so these cases describe confirmed-service leave. Probation has its own
+   *  block below — the two rules must not be tangled in one fixture. */
+  function confirmedStaff(joining = new Date("2020-01-01")): void {
+    mockStaffFindById.mockResolvedValue({
+      _id: oid(), active: true, name: "X",
+      confirmationDate: new Date("2021-01-01"),
+      joiningDate: joining,
+    });
+    mockAYFindById.mockResolvedValue({ _id: oid(), startDate: YEAR_START, endDate: YEAR_END });
+    mockAYFindOne.mockResolvedValue({ _id: oid(), startDate: YEAR_START, endDate: YEAR_END });
+  }
+
+  test("approve within the pool → all paid, status approved, audited", async () => {
     const app = leaveDoc({ days: 3 });
+    confirmedStaff();
     mockLeaveFindById.mockResolvedValue(app);
-    mockEntFindOne.mockResolvedValue({ allowanceDays: 10, carriedOverDays: 0 });
+    // A per-staff entitlement row is the D-#539 OVERRIDE of the school-wide pool.
+    mockEntFind.mockResolvedValue([{ leaveType: "casual", allowanceDays: 10, carriedOverDays: 0 }]);
     mockLeaveFind.mockReturnValue(leanChain([])); // no prior taken
     const res = await decideLeave(app._id.toString(), "approve", ACTOR);
     expect(res.status).toBe("approved");
@@ -379,10 +474,11 @@ describe("decideLeave", () => {
     expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "STAFF_LEAVE_DECIDED" }));
   });
 
-  test("approve over balance → excess unpaid + warning (never blocks)", async () => {
+  test("approve over the pool → excess unpaid + warning (never blocks)", async () => {
     const app = leaveDoc({ days: 5 });
+    confirmedStaff();
     mockLeaveFindById.mockResolvedValue(app);
-    mockEntFindOne.mockResolvedValue({ allowanceDays: 2, carriedOverDays: 0 });
+    mockEntFind.mockResolvedValue([{ leaveType: "casual", allowanceDays: 2, carriedOverDays: 0 }]);
     mockLeaveFind.mockReturnValue(leanChain([]));
     const res = await decideLeave(app._id.toString(), "approve", ACTOR);
     expect(res.paidDays).toBe(2);
@@ -390,13 +486,29 @@ describe("decideLeave", () => {
     expect(res.exceedWarning).toMatch(/unpaid/i);
   });
 
+  /** D-#539: this is the whole point of the pool. Under the old per-type model, sick
+   *  leave had its OWN 20 days, so casual days already taken were invisible to it and a
+   *  teacher could take 40 paid days against a letter promising 20. */
+  test("sick leave draws the SAME pool casual already drew from (D-#539)", async () => {
+    const app = leaveDoc({ leaveType: "sick", days: 4 });
+    confirmedStaff();
+    mockLeaveFindById.mockResolvedValue(app);
+    mockEntFind.mockResolvedValue([]); // no override → the school-wide 20-day pool
+    // 18 days already taken as CASUAL this year. Only 2 remain, for any pooled type.
+    mockLeaveFind.mockReturnValue(leanChain([{ paidDays: 18, days: 18 }]));
+    const res = await decideLeave(app._id.toString(), "approve", ACTOR);
+    expect(res.paidDays).toBe(2);
+    expect(res.unpaidDays).toBe(2);
+  });
+
   test("approve maternity → wholly unpaid (D-#23)", async () => {
     const app = leaveDoc({ leaveType: "maternity", days: 60 });
+    confirmedStaff();
     mockLeaveFindById.mockResolvedValue(app);
     const res = await decideLeave(app._id.toString(), "approve", ACTOR);
     expect(res.paidDays).toBe(0);
     expect(res.unpaidDays).toBe(60);
-    expect(mockEntFindOne).not.toHaveBeenCalled(); // not balance-tracked
+    expect(mockEntFind).not.toHaveBeenCalled(); // not balance-tracked
   });
 
   test("cancel revokes live cover grants", async () => {
@@ -409,6 +521,92 @@ describe("decideLeave", () => {
     expect(res.status).toBe("cancelled");
     expect(mockRevokeProxy).toHaveBeenCalledWith(grantId.toString(), ACTOR); // captured before the service nulls it
     expect(slot.proxyGrantId).toBeNull();
+  });
+
+  // --- SH-3 / D-#540: probation leave is HELD, not paid and not deducted -------
+  describe("probation leave (D-#540)", () => {
+    function probationer(confirmationDate: Date | null): void {
+      mockStaffFindById.mockResolvedValue({
+        _id: oid(), active: true, name: "X",
+        confirmationDate,
+        joiningDate: new Date("2026-01-01"),
+      });
+      mockAYFindById.mockResolvedValue({ _id: oid(), startDate: YEAR_START, endDate: YEAR_END });
+      mockAYFindOne.mockResolvedValue({ _id: oid(), startDate: YEAR_START, endDate: YEAR_END });
+      mockEntFind.mockResolvedValue([]);
+      mockLeaveFind.mockReturnValue(leanChain([]));
+    }
+
+    test("no confirmationDate → 0 paid, all unpaid, and a debt row is written", async () => {
+      const app = leaveDoc({ days: 3, fromKey: "2026-06-01" });
+      probationer(null);
+      mockLeaveFindById.mockResolvedValue(app);
+      const res = await decideLeave(app._id.toString(), "approve", ACTOR);
+      expect(res.paidDays).toBe(0);
+      expect(res.unpaidDays).toBe(3);
+      expect(ProbationLeaveDebt.findOneAndUpdate).toHaveBeenCalled();
+    });
+
+    /**
+     * The rule contradicts itself without this flag. Probation leave is unpaid, and
+     * payroll deducts day-rate × unpaidDays for every approved leave in the month — so
+     * "recorded as unpaid, adjusted at confirmation or on the final salary" would have
+     * silently become "docked this month", and then collected AGAIN by the ledger.
+     */
+    test("held leave is FLAGGED so payroll cannot dock it this month (D-#540)", async () => {
+      const app = leaveDoc({ days: 3, fromKey: "2026-06-01" });
+      probationer(null);
+      mockLeaveFindById.mockResolvedValue(app);
+      const res = await decideLeave(app._id.toString(), "approve", ACTOR);
+      expect(res.probationHeld).toBe(true);
+    });
+
+    test("confirmed-service leave is NOT flagged, so its unpaid overflow still deducts", async () => {
+      const app = leaveDoc({ days: 3, fromKey: "2026-08-01" });
+      probationer(new Date("2026-07-01"));
+      mockLeaveFindById.mockResolvedValue(app);
+      const res = await decideLeave(app._id.toString(), "approve", ACTOR);
+      expect(res.probationHeld).toBe(false);
+    });
+
+    test("re-approving after confirmation clears the flag AND the debt — the days become payable", async () => {
+      const app = leaveDoc({ days: 2, fromKey: "2026-08-05", probationHeld: true });
+      probationer(new Date("2026-07-01")); // now confirmed; the leave is after it
+      mockLeaveFindById.mockResolvedValue(app);
+      const res = await decideLeave(app._id.toString(), "approve", ACTOR);
+      expect(res.probationHeld).toBe(false);
+      expect(ProbationLeaveDebt.deleteOne).toHaveBeenCalled();
+    });
+
+    /** The reason the rule keys off a DATE and not employmentStatus: a leave that
+     *  STARTED before confirmation stays probation leave forever, even after the
+     *  person is confirmed. Otherwise confirming would retroactively pay for it. */
+    test("leave STARTING before confirmationDate is still probation leave", async () => {
+      const app = leaveDoc({ days: 2, fromKey: "2026-03-05" });
+      probationer(new Date("2026-07-01"));
+      mockLeaveFindById.mockResolvedValue(app);
+      const res = await decideLeave(app._id.toString(), "approve", ACTOR);
+      expect(res.paidDays).toBe(0);
+      expect(res.unpaidDays).toBe(2);
+    });
+
+    test("leave starting ON the confirmation date is confirmed-service leave — paid", async () => {
+      const app = leaveDoc({ days: 2, fromKey: "2026-07-01" });
+      probationer(new Date("2026-07-01"));
+      mockLeaveFindById.mockResolvedValue(app);
+      const res = await decideLeave(app._id.toString(), "approve", ACTOR);
+      expect(res.paidDays).toBe(2);
+      expect(res.unpaidDays).toBe(0);
+    });
+
+    test("cancelling a probation leave clears its held debt — an absence that did not happen carries no charge", async () => {
+      const app = leaveDoc({ status: "applied" });
+      probationer(null);
+      mockLeaveFindById.mockResolvedValue(app);
+      mockSlotFind.mockResolvedValue([]);
+      await decideLeave(app._id.toString(), "cancel", ACTOR);
+      expect(ProbationLeaveDebt.deleteOne).toHaveBeenCalled();
+    });
   });
 });
 

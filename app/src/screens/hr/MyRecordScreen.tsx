@@ -3,10 +3,13 @@
  * appraisals (incl. outcome), conduct ladder, grievances (+ raise), CPD log, and
  * any observations the caller authored as a supervisor. All own-row, no permission.
  *
- * NOT shown — no own-row server read exists yet (flagged for the coordinator):
- *   - own payslips  (payslips are payslipsForRun / payroll:manage only)
- *   - own staff attendance (teacherAttendance* is attendance:manage only)
- * These surface as "pending" notices rather than a fabricated/over-privileged read.
+ * SH-7 adds the own-row leave picture: the shared annual pool (D-#539) and any held
+ * probation-leave days (D-#540) — the balance a teacher is most likely to ask about,
+ * and the one number that can now drop without them having applied for anything.
+ *
+ * The two gaps this header used to flag are both closed elsewhere and NOT duplicated
+ * here: own payslips are `myPayslips` (locked runs only, on MyLeave/payroll surfaces)
+ * and own attendance is `myStaffAttendance`.
  */
 import React from "react";
 import { View } from "react-native";
@@ -17,6 +20,8 @@ import {
   MY_GRIEVANCES_QUERY,
   MY_DEVELOPMENT_LOG_QUERY,
   MY_OBSERVATIONS_QUERY,
+  MY_LEAVE_POOL_QUERY,
+  MY_PROBATION_DEBT_QUERY,
   RAISE_GRIEVANCE,
   SUBJECTS_QUERY,
 } from "../../graphql/operations";
@@ -64,6 +69,9 @@ export default function MyRecordScreen(): React.ReactElement {
   const [cpdQ] = useQuery({ query: MY_DEVELOPMENT_LOG_QUERY });
   const [obsQ] = useQuery({ query: MY_OBSERVATIONS_QUERY });
   const [subjectsQ] = useQuery({ query: SUBJECTS_QUERY });
+  // SH-7 — the two own-row reads MyRecordScreen has lacked since PR-1.
+  const [poolQ] = useQuery({ query: MY_LEAVE_POOL_QUERY });
+  const [debtQ] = useQuery({ query: MY_PROBATION_DEBT_QUERY });
 
   const [, raise] = useMutation(RAISE_GRIEVANCE);
 
@@ -73,6 +81,8 @@ export default function MyRecordScreen(): React.ReactElement {
   const cpd = cpdQ.data?.myDevelopmentLog ?? [];
   const observations = obsQ.data?.myObservations ?? [];
   const subjectName = new Map((subjectsQ.data?.subjects ?? []).map((s) => [s.id, s.nameBn]));
+  const pool = poolQ.data?.myLeavePool;
+  const heldDebt = debtQ.data?.myProbationDebt;
 
   const anyLoading = apprQ.fetching || conductQ.fetching || grievQ.fetching || cpdQ.fetching;
   const firstError = apprQ.error ?? conductQ.error ?? grievQ.error ?? cpdQ.error ?? obsQ.error;
@@ -116,6 +126,31 @@ export default function MyRecordScreen(): React.ReactElement {
   return (
     <Screen scroll>
       <H2>{STR.hrMyRecord}</H2>
+
+      {/* SH-7: own leave balance + held probation days. Both are own-row (no
+          permission) and return a zeroed view for a login with no linked
+          StaffProfile, so this block can never be the thing that breaks the screen. */}
+      <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfMyLeavePool}</Body>
+      <Card>
+        <Row label={STR.stfPoolAllowance} value={`${bnNum(String(pool?.allowanceDays ?? 0))} ${STR.stfDays}`} />
+        <Row label={STR.stfPoolTaken} value={`${bnNum(String(pool?.takenDays ?? 0))} ${STR.stfDays}`} />
+        <Row label={STR.stfPoolRemaining} value={`${bnNum(String(pool?.remainingDays ?? 0))} ${STR.stfDays}`} />
+        <Muted>{STR.stfPoolNote}</Muted>
+      </Card>
+
+      {heldDebt && heldDebt.totalDays > 0 ? (
+        <>
+          <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.stfMyHeldDebt}</Body>
+          <Card>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Muted style={{ flex: 1 }}>{STR.stfHeldDebtNote}</Muted>
+              <Badge text={`${bnNum(String(heldDebt.totalDays))} ${STR.stfDays}`} tone="warn" />
+            </View>
+            <Row label={STR.stfHeldOnConfirm} value={STR.stfHeldOnConfirmValue} />
+            <Row label={STR.stfHeldOnExit} value={STR.stfHeldOnExitValue} />
+          </Card>
+        </>
+      ) : null}
 
       {/* Appraisals */}
       <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.hrMyAppraisals}</Body>

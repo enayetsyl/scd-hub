@@ -25,6 +25,7 @@ import { AdvanceLoan } from "../models/AdvanceLoan";
 import { writeAudit } from "../../platform/services/AuditService";
 import { assertMonthKey, dayRate, computePayslip, PayrollError, type PayLineInput } from "./payrollMath";
 import { activeAdvanceByStaff } from "./AdvanceService";
+import { computeLatenessCharge, freezeLatenessCharges } from "./LatenessService";
 
 export interface StaffAdjustment {
   staffProfileId: string;
@@ -46,10 +47,16 @@ export interface PreparePayrollInput {
 
 /** Stored unpaid-leave days per staff for a month — summed from APPROVED leaves whose
  *  fromKey falls in the month (D-#110: the leave application's STORED split is the
- *  payroll truth; a cross-month leave's unpaid days attribute to its start month). */
+ *  payroll truth; a cross-month leave's unpaid days attribute to its start month).
+ *
+ *  EXCLUDES probation-held leave (SH-3, D-#540): those days are unpaid but deliberately
+ *  NOT payable now — they sit on the ProbationLeaveDebt ledger and are collected once,
+ *  at confirmation (against the new pool) or at exit (against the final settlement).
+ *  Counting them here would dock the same absence twice. */
 async function unpaidLeaveDaysByStaff(monthKey: string): Promise<Map<string, number>> {
   const rows = await StaffLeaveApplication.find({
     status: "approved",
+    probationHeld: { $ne: true },
     fromKey: { $gte: `${monthKey}-01`, $lte: `${monthKey}-31` },
   })
     .select("staffProfileId unpaidDays")
@@ -103,11 +110,23 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
     const adj = adjByStaff.get(sid);
     const gross = adj?.payableDays != null ? Math.round(rate * adj.payableDays) : s.monthlySalary!;
     const advance = advances.get(sid);
+    // SH-4 / D-#541: the 3-lates-to-a-day charge. Returns null while the rule is off,
+    // in which case nothing is passed and the payslip is byte-identical to today. An
+    // explicit per-staff `latenessDeduction` adjustment still wins — it is the manual
+    // override the Office has always had.
+    const latenessRow = await computeLatenessCharge({
+      staffProfileId: sid,
+      monthKey: input.monthKey,
+      dayRate: rate,
+      actorId: input.actorId,
+      payrollRunId: run._id,
+    });
+    const latenessDeduction = adj?.latenessDeduction ?? (latenessRow?.amount || undefined);
     const computed = computePayslip({
       grossSalary: gross,
       dayRate: rate,
       unpaidLeaveDays: leaveDays.get(sid) ?? 0,
-      latenessDeduction: adj?.latenessDeduction,
+      latenessDeduction,
       manualDeductions: adj?.manualDeductions,
       manualAdditions: adj?.manualAdditions,
       advance: advance
@@ -172,6 +191,11 @@ export async function approvePayrollRun(runId: string, actorId: string): Promise
     await advance.save();
   }
 
+  // SH-4 / D-#541: freeze this month's lateness charges alongside the payslips they
+  // fed. A re-uploaded attendance sheet REPLACES that date's rows wholesale (AT1.5),
+  // so an unfrozen charge would let a later correction restate an already-paid payslip.
+  const frozen = await freezeLatenessCharges(run.monthKey, run._id);
+
   run.status = "approved_locked";
   run.approvedBy = new Types.ObjectId(actorId);
   run.approvedAt = new Date();
@@ -182,7 +206,7 @@ export async function approvePayrollRun(runId: string, actorId: string): Promise
     actorId,
     targetId: run._id,
     targetKind: "PayrollRun",
-    meta: { monthKey: run.monthKey, advancesRecovered: payslips.length },
+    meta: { monthKey: run.monthKey, advancesRecovered: payslips.length, latenessChargesFrozen: frozen },
   });
   return run;
 }

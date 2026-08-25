@@ -255,6 +255,10 @@ import BookEscalationInboxScreen from "../screens/supportbook/BookEscalationInbo
 import BookAssembleScreen from "../screens/supportbook/BookAssembleScreen";
 import StaffListScreen from "../screens/admin/StaffListScreen";
 import StaffFormScreen from "../screens/admin/StaffFormScreen";
+import StaffHubScreen from "../screens/hr/StaffHubScreen";
+import StaffJoinScreen from "../screens/admin/StaffJoinScreen";
+import IssueLetterScreen from "../screens/hr/IssueLetterScreen";
+import ConfirmEmploymentScreen from "../screens/hr/ConfirmEmploymentScreen";
 import AssignClassTeacherScreen from "../screens/admin/AssignClassTeacherScreen";
 import AssignSubjectTeacherScreen from "../screens/admin/AssignSubjectTeacherScreen";
 import GroupMembersScreen from "../screens/admin/GroupMembersScreen";
@@ -1271,6 +1275,10 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="Roster" component={RosterScreen} options={{ title: STR.roster }} />
       <AdminStack.Screen name="Staff" component={StaffListScreen} options={{ title: STR.staff }} />
       <AdminStack.Screen name="StaffForm" component={StaffFormScreen} options={{ title: STR.staffNew }} />
+      <AdminStack.Screen name="StaffHub" component={StaffHubScreen} options={{ title: STR.stfTitle }} />
+      <AdminStack.Screen name="StaffJoin" component={StaffJoinScreen} options={{ title: STR.stfJoinTitle }} />
+      <AdminStack.Screen name="IssueLetter" component={IssueLetterScreen} options={{ title: STR.stfIssueLetterTitle }} />
+      <AdminStack.Screen name="ConfirmEmployment" component={ConfirmEmploymentScreen} options={{ title: STR.stfConfirmTitle }} />
       <AdminStack.Screen name="AssignClassTeacher" component={AssignClassTeacherScreen} options={{ title: STR.assignClassTeacher }} />
       <AdminStack.Screen name="AssignSubjectTeacher" component={AssignSubjectTeacherScreen} options={{ title: STR.assignSubjectTeacher }} />
       <AdminStack.Screen name="GroupMembers" component={GroupMembersScreen} options={{ title: STR.gmTitle }} />

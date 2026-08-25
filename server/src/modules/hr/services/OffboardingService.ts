@@ -29,6 +29,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { dateKeyOf } from "../../attendance/dates";
 import { parseDateKey } from "./dates";
 import { dayRate, computePayslip, type PayLineInput } from "./payrollMath";
+import { pendingExitDebt, settleOnExit } from "./ProbationDebtService";
 import { balancesForStaff } from "./LeaveEntitlementService";
 import { activeAdvanceByStaff } from "./AdvanceService";
 import { resolveUserIdForStaff } from "./staffMatch";
@@ -245,13 +246,29 @@ export async function computeFinalSettlement(input: ComputeSettlementInput): Pro
     additions.push({ type: "leave_encashment", amount: Math.round(rate * encashableDays), days: encashableDays });
   }
 
+  // SH-3 / D-#540 — a probationer who leaves before being confirmed carries their HELD
+  // leave debt to the final settlement: the pool that would have absorbed it was never
+  // granted. Read-only here; the rows are marked settled only when the settlement is
+  // RELEASED, so a recompute cannot consume the debt and then leave it out of the
+  // figure the Principal actually approves.
+  const heldProbationDays = await pendingExitDebt(c.staffProfileId.toString());
+  const deductions: PayLineInput[] = [...(input.manualDeductions ?? [])];
+  if (heldProbationDays > 0) {
+    deductions.push({
+      type: "unpaid_leave",
+      amount: Math.round(rate * heldProbationDays),
+      days: heldProbationDays,
+      note: "শিক্ষানবিশকালীন জমা ছুটি (D-#540)",
+    });
+  }
+
   // H6.4 — outstanding advance netted in FULL at exit (one_shot), capped by the net-pay guard.
   const advance = (await activeAdvanceByStaff()).get(c.staffProfileId.toString());
   const computed = computePayslip({
     grossSalary: gross,
     dayRate: rate,
     unpaidLeaveDays: 0,
-    manualDeductions: input.manualDeductions,
+    manualDeductions: deductions,
     manualAdditions: additions,
     advance: advance
       ? { advanceId: advance._id.toString(), recoveryMode: "one_shot", balance: advance.balance }
@@ -316,6 +333,11 @@ export async function releaseFinalSettlement(caseId: string, actorId: string): P
       await advance.save();
     }
   }
+
+  // SH-3 / D-#540 — the held probation debt is marked settled only NOW, at release:
+  // the deduction is part of the figure being paid out, and a recompute before this
+  // point must never have consumed it.
+  await settleOnExit(c.staffProfileId.toString(), actorId);
 
   c.settlement.held = false;
   c.settlement.releasedAt = new Date();

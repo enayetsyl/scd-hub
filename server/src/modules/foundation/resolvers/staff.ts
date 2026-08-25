@@ -18,7 +18,7 @@ import type { Types } from "mongoose";
 type StaffShape = Pick<
   IStaffProfile,
   | "schoolId" | "name" | "nameBn" | "category" | "designation"
-  | "employmentType" | "employmentStatus" | "joiningDate" | "biometricId"
+  | "employmentType" | "employmentStatus" | "joiningDate" | "confirmationDate" | "biometricId"
   | "gender" | "dob" | "bloodGroup" | "maritalStatus" | "nationality"
   | "qualification" | "majoredIn" | "studiedAt"
   | "fatherName" | "motherName" | "spouseName"
@@ -41,6 +41,9 @@ StaffRef.implement({
     employmentType: t.exposeString("employmentType"),
     employmentStatus: t.exposeString("employmentStatus"),
     joiningDate: t.string({ nullable: true, resolve: (s) => iso(s.joiningDate) }),
+    // SH-2 (D-#540): ABSENT means still on probation. Read-only here — it is written
+    // only by confirmStaffEmployment, which also settles the held leave debt.
+    confirmationDate: t.string({ nullable: true, resolve: (s) => iso(s.confirmationDate) }),
     biometricId: t.string({ nullable: true, resolve: (s) => s.biometricId ?? null }),
     gender: t.string({ nullable: true, resolve: (s) => s.gender ?? null }),
     dob: t.string({ nullable: true, resolve: (s) => iso(s.dob) }),

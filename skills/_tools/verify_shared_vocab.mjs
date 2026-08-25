@@ -198,6 +198,28 @@ check("casual/sick/bereavement are paid+balance-tracked+carryover+encashable (§
   }));
 check("unpaid_lwp = no balance, no pay (§3.3 overflow bucket)",
   V.LEAVE_TYPE_RULES.unpaid_lwp.paid === false && V.LEAVE_TYPE_RULES.unpaid_lwp.balanceTracked === false);
+
+console.log("=== C.8b Staff-hub vocab (docs/prd-staff-hub.md, D-#539–#545) ===");
+check("STAFF_LETTER_KIND_LABELS_BN total",   total(V.STAFF_LETTER_KIND_LABELS_BN, V.STAFF_LETTER_KINDS));
+check("STAFF_LETTER_KIND_LABELS_EN total",   total(V.STAFF_LETTER_KIND_LABELS_EN, V.STAFF_LETTER_KINDS));
+check("STAFF_LETTER_STATUS_LABELS_BN total", total(V.STAFF_LETTER_STATUS_LABELS_BN, V.STAFF_LETTER_STATUSES));
+check("STAFF_LETTER_STATUS_LABELS_EN total", total(V.STAFF_LETTER_STATUS_LABELS_EN, V.STAFF_LETTER_STATUSES));
+check("SALARY_MODE_LABELS_BN total",         total(V.SALARY_MODE_LABELS_BN, V.SALARY_MODES));
+check("SALARY_MODE_LABELS_EN total",         total(V.SALARY_MODE_LABELS_EN, V.SALARY_MODES));
+check("letter kinds exact (D-#542)",         eq(V.STAFF_LETTER_KINDS, ["appointment","confirmation","service_certificate"]));
+check("a letter is issued or void — never 'edited' (D-#542)", eq(V.STAFF_LETTER_STATUSES, ["issued","void"]));
+check("salary modes are exactly paid|honorary — the two clauses are exclusive (D-#542)", eq(V.SALARY_MODES, ["paid","honorary"]));
+check("POOLED_LEAVE_TYPES ⊂ LEAVE_TYPES and are exactly the balance-tracked ones (D-#539)",
+  V.POOLED_LEAVE_TYPES.every((t) => V.LEAVE_TYPES.includes(t)) &&
+  eq(V.POOLED_LEAVE_TYPES, V.LEAVE_TYPES.filter((t) => V.LEAVE_TYPE_RULES[t].balanceTracked)));
+check("the pool is 20 days — the appointment letter's clause 7 (D-#539)", V.HR_POLICY_DEFAULTS.annualLeaveDays === 20);
+check("3 late days per charged day (D-#541)", V.HR_POLICY_DEFAULTS.lateDaysPerCharge === 3);
+check("lateness rule ships OFF — prd-hr H4.3 made it opt-in, so no existing payslip changes on deploy (D-#541)",
+  V.HR_POLICY_DEFAULTS.latenessRuleEnabled === false);
+check("'lateness' is already a declared PAY_DEDUCTION_TYPE — SH-4 wires the existing slot, it adds none",
+  V.PAY_DEDUCTION_TYPES.includes("lateness"));
+check("no staff-hub permission added — letters ride staff:manage, policy rides payroll:manage (§3)",
+  !V.PERMISSIONS.some((p) => p.startsWith("letter") || p.startsWith("staffhub")));
 check("leave:manage = PRINCIPAL+OFFICE only — TEACHER self-applies own-row (no perm), GUARDIAN none (prd-hr H2.6/H2.7)",
   V.roleHasPermission("PRINCIPAL","leave:manage") && V.roleHasPermission("OFFICE","leave:manage") &&
   !V.roleHasPermission("TEACHER","leave:manage") && !V.roleHasPermission("GUARDIAN","leave:manage"));
