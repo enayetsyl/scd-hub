@@ -936,12 +936,101 @@ export const SUBMIT_QUESTION_REVIEW_BULK = gql<
     }
   }
 `;
+/** The publish inbox. Filterable on the same axes as the assign screen and PAGINATED
+ *  (QR-6) — it was an unbounded read of every submitted round in the school. */
+export interface InboxFilterT {
+  verdict?: string | null;
+  subject?: string | null;
+  classLevel?: number | null;
+  chapter?: number | null;
+  questionType?: string | null;
+  search?: string | null;
+}
+
 export const QUESTION_REVIEW_INBOX = gql<
   { questionReviewInbox: QuestionReviewRoundT[] },
-  { verdict?: string | null }
+  InboxFilterT & { limit?: number | null; offset?: number | null }
 >`
-  query QuestionReviewInbox($verdict: String) {
-    questionReviewInbox(verdict: $verdict) { ${QUESTION_ROUND_FIELDS} }
+  query QuestionReviewInbox(
+    $verdict: String
+    $subject: String
+    $classLevel: Int
+    $chapter: Int
+    $questionType: String
+    $search: String
+    $limit: Int
+    $offset: Int
+  ) {
+    questionReviewInbox(
+      verdict: $verdict
+      subject: $subject
+      classLevel: $classLevel
+      chapter: $chapter
+      questionType: $questionType
+      search: $search
+      limit: $limit
+      offset: $offset
+    ) { ${QUESTION_ROUND_FIELDS} }
+  }
+`;
+
+/** The pager's denominator — and the number the publish-all confirmation quotes. */
+export const QUESTION_REVIEW_INBOX_COUNT = gql<
+  { questionReviewInboxCount: number },
+  InboxFilterT
+>`
+  query QuestionReviewInboxCount(
+    $verdict: String
+    $subject: String
+    $classLevel: Int
+    $chapter: Int
+    $questionType: String
+    $search: String
+  ) {
+    questionReviewInboxCount(
+      verdict: $verdict
+      subject: $subject
+      classLevel: $classLevel
+      chapter: $chapter
+      questionType: $questionType
+      search: $search
+    )
+  }
+`;
+
+/**
+ * Publish everything matching the current filter (QR-6). The server takes the SAME filter
+ * the list and the count take, so the number in the confirmation is the number that
+ * publishes — which matters here more than anywhere else, because nothing demotes a
+ * published question. `remaining` is non-zero when the batch hit its per-call ceiling.
+ */
+export const PUBLISH_QUESTIONS_MATCHING = gql<
+  {
+    publishQuestionsMatching: {
+      okCount: number;
+      failedCount: number;
+      remaining: number;
+      failures: string[];
+    };
+  },
+  InboxFilterT & { verdict: string }
+>`
+  mutation PublishQuestionsMatching(
+    $verdict: String!
+    $subject: String
+    $classLevel: Int
+    $chapter: Int
+    $questionType: String
+    $search: String
+  ) {
+    publishQuestionsMatching(
+      verdict: $verdict
+      subject: $subject
+      classLevel: $classLevel
+      chapter: $chapter
+      questionType: $questionType
+      search: $search
+    ) { okCount failedCount remaining failures }
   }
 `;
 

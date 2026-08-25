@@ -15,12 +15,16 @@ import { QUESTION_REVIEW_THREAD } from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Loader, EmptyState, ErrorBanner, Divider } from "../../components/ui";
 import { STR, subjectLabel, classLevelLabel, reviewVerdictLabel, reviewRoundStatusLabel, bnNum } from "../../lib/labels";
+import { AnswerCarrier } from "../../components/QuestionAnswer";
+import { parsePayload } from "../../lib/question";
 import { friendlyError } from "../../lib/errors";
+import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "QuestionReviewThread">;
 
 export default function QuestionReviewThreadScreen({ route }: Props): React.ReactElement {
+  const colors = useColors();
   const { artifactId } = route.params;
   const [{ data, fetching, error }] = useQuery({
     query: QUESTION_REVIEW_THREAD,
@@ -44,6 +48,11 @@ export default function QuestionReviewThreadScreen({ route }: Props): React.Reac
         </View>
       ) : null}
       {first?.questionText ? <Body>{first.questionText}</Body> : null}
+      {/* The options and the answer key. A thread exists to explain a verdict, and a
+          verdict about an MCQ is unreadable without the options it was cast on. */}
+      {first ? (
+        <AnswerCarrier payload={parsePayload(first.payloadJson)} correctColor={colors.primary} />
+      ) : null}
 
       <Divider />
 

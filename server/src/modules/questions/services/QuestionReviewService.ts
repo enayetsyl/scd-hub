@@ -19,7 +19,7 @@
  * Identity-plane (reviewer ids + free-text reasons) behind the ADR-005 firewall — no
  * analytics/corpus path is added here.
  */
-import { Types } from "mongoose";
+import { Types, type PipelineStage } from "mongoose";
 import { REVIEW_VERDICTS } from "@scd/shared";
 import type { ReviewVerdict } from "@scd/shared";
 import { ReviewAssignment } from "../../content/models/ReviewAssignment";
@@ -626,20 +626,187 @@ export async function listMyQuestionReviews(
 
 /**
  * The Principal's lists (Q2.6 accepted / Q2.7 rejected): submitted question rounds,
- * newest first, optionally narrowed to one verdict.
+ * newest first, narrowed by verdict and — since QR-6 — by the same axes the assign screen
+ * slices on, so a 6,000-question bank can be published a chapter at a time.
+ *
+ * `subject`, `classLevel` and the chapter live ON the round (denormalised at assign time),
+ * so those three never touch ContentArtifact. `questionType` and `search` live in the
+ * artifact's payload, so those two — and only those two — add a `$lookup`.
  */
-export async function questionReviewInbox(verdict?: string): Promise<QuestionReviewRoundDTO[]> {
+export interface InboxFilterArgs {
+  verdict?: string | null;
+  subject?: string | null;
+  classLevel?: number | null;
+  chapter?: number | null;
+  questionType?: string | null;
+  search?: string | null;
+}
+
+/** Rows per page. The inbox was an unbounded read of every submitted round; an old client
+ *  that sends no `limit` now degrades to "the first 50" rather than to the 1.77 MB
+ *  response shape that froze the reviewer queue on 2026-08-24. */
+export const INBOX_PAGE = 50;
+const INBOX_MAX = 200;
+
+/** Round-level half of the filter — everything answerable without the artifact. */
+function inboxRoundMatch(args: InboxFilterArgs): Record<string, unknown> {
   const filter: Record<string, unknown> = { docType: QUESTION_DOC_TYPE, status: "submitted" };
-  if (verdict) {
-    if (!(REVIEW_VERDICTS as readonly string[]).includes(verdict)) {
-      throw new ReviewError(`Unknown verdict: ${verdict}`);
+  if (args.verdict) {
+    if (!(REVIEW_VERDICTS as readonly string[]).includes(args.verdict)) {
+      throw new ReviewError(`Unknown verdict: ${args.verdict}`);
     }
-    filter.verdict = verdict;
+    filter.verdict = args.verdict;
   }
-  const rounds = (await ReviewAssignment.find(filter)
-    .sort({ submittedAt: -1 })
-    .lean()) as unknown as RawAssignment[];
+  if (args.subject) filter.subject = args.subject;
+  if (args.classLevel != null) filter.classLevel = args.classLevel;
+  // The round stores the chapter as a string whatever the artifact used, so one form is enough.
+  if (args.chapter != null) filter.addressNumber = String(args.chapter);
+  return filter;
+}
+
+/** Artifact-level half, or null when the filter does not need the join at all. */
+function inboxArtifactMatch(args: InboxFilterArgs): Record<string, unknown> | null {
+  const match: Record<string, unknown> = {};
+  if (args.questionType) match["art.envelopeJson.payload.question_type"] = args.questionType;
+  const term = args.search?.trim() ?? "";
+  if (term !== "") {
+    const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    match.$or = [
+      { "art.envelopeJson.payload.question_text": re },
+      { "art.envelopeJson.payload.qid": re },
+    ];
+  }
+  return Object.keys(match).length > 0 ? match : null;
+}
+
+/** Join only when the filter actually reaches into the payload. */
+function inboxLookupStages(artifactMatch: Record<string, unknown>): PipelineStage[] {
+  return [
+    {
+      $lookup: {
+        from: ContentArtifact.collection.name,
+        localField: "artifactId",
+        foreignField: "_id",
+        as: "art",
+        pipeline: [{ $project: { envelopeJson: 1 } }],
+      },
+    },
+    { $unwind: "$art" },
+    { $match: artifactMatch },
+  ];
+}
+
+/**
+ * The rounds themselves. ONE filter builder feeds the list, its count and publish-all, so
+ * "publish all 47" can only ever mean the same 47 the list is showing.
+ */
+export async function questionReviewInbox(
+  args: InboxFilterArgs = {},
+  opts: { limit?: number | null; offset?: number | null } = {},
+): Promise<QuestionReviewRoundDTO[]> {
+  const roundMatch = inboxRoundMatch(args);
+  const artifactMatch = inboxArtifactMatch(args);
+  const limit = Math.min(Math.max(1, opts.limit ?? INBOX_PAGE), INBOX_MAX);
+  const offset = Math.max(0, opts.offset ?? 0);
+  // `_id` last: a bulk-submitted verdict gives hundreds of rounds one submittedAt, and
+  // without a unique final key a page boundary repeats or skips a row.
+  const sort = { submittedAt: -1 as const, _id: 1 as const };
+
+  if (!artifactMatch) {
+    const rounds = (await ReviewAssignment.find(roundMatch)
+      .sort(sort)
+      .skip(offset)
+      .limit(limit)
+      .lean()) as unknown as RawAssignment[];
+    return decorate(rounds);
+  }
+
+  const pipeline: PipelineStage[] = [
+    { $match: roundMatch },
+    ...inboxLookupStages(artifactMatch),
+    { $sort: sort },
+    { $skip: offset },
+    { $limit: limit },
+    // decorate() re-reads the artifacts it needs; carrying the joined copy would double
+    // the payload on the wire out of Mongo for no gain.
+    { $project: { art: 0 } },
+  ];
+  const rounds = (await ReviewAssignment.aggregate(pipeline)) as unknown as RawAssignment[];
   return decorate(rounds);
+}
+
+/** The pager's denominator, and the number the publish-all confirmation quotes. */
+export async function countQuestionReviewInbox(args: InboxFilterArgs = {}): Promise<number> {
+  const roundMatch = inboxRoundMatch(args);
+  const artifactMatch = inboxArtifactMatch(args);
+  if (!artifactMatch) return ReviewAssignment.countDocuments(roundMatch);
+
+  const pipeline: PipelineStage[] = [
+    { $match: roundMatch },
+    ...inboxLookupStages(artifactMatch),
+    { $count: "n" },
+  ];
+  const rows = (await ReviewAssignment.aggregate(pipeline)) as { n: number }[];
+  return rows[0]?.n ?? 0;
+}
+
+/**
+ * Publish EVERY accepted question matching the current filter (QR-6).
+ *
+ * Two guards, because `gold` is a one-way door — there is no demote anywhere in the
+ * service, and a published question becomes readable by every published-only caller the
+ * moment it lands:
+ *
+ *   • APPROVE only. A CHANGES_REQUESTED round can be published, but only with a per-question
+ *     override reason (D-#525 — an override is a judgement, written down each time), so a
+ *     bulk call over rejected rounds could only ever fail every item. Refusing is clearer
+ *     than returning 700 identical failures.
+ *   • A hard ceiling per call. The publish loop is sequential — each item saves the
+ *     artifact, supersedes its open rounds and writes an audit row — so an uncapped
+ *     "publish all" over a 6,000-question bank would run past any sane request timeout and
+ *     leave the caller unable to tell what landed. `remaining` tells the client to press
+ *     again rather than silently truncating.
+ */
+export const PUBLISH_ALL_MAX = 500;
+
+export async function publishQuestionsMatching(input: {
+  filter: InboxFilterArgs;
+  actorId: string;
+  actorRole?: string;
+}): Promise<BulkResult & { remaining: number }> {
+  if (input.filter.verdict !== "APPROVE") {
+    throw new ReviewError(
+      "Publish-all covers accepted questions only. A rejected question needs its own " +
+        "override reason, one at a time.",
+    );
+  }
+
+  const roundMatch = inboxRoundMatch(input.filter);
+  const artifactMatch = inboxArtifactMatch(input.filter);
+  const total = await countQuestionReviewInbox(input.filter);
+
+  const idPipeline: PipelineStage[] = [
+    { $match: roundMatch },
+    ...(artifactMatch ? inboxLookupStages(artifactMatch) : []),
+    { $sort: { submittedAt: -1, _id: 1 } },
+    { $limit: PUBLISH_ALL_MAX },
+    { $project: { artifactId: 1 } },
+  ];
+  const rounds = artifactMatch
+    ? ((await ReviewAssignment.aggregate(idPipeline)) as { artifactId: Types.ObjectId }[])
+    : ((await ReviewAssignment.find(roundMatch)
+        .sort({ submittedAt: -1, _id: 1 })
+        .limit(PUBLISH_ALL_MAX)
+        .select({ artifactId: 1 })
+        .lean()) as unknown as { artifactId: Types.ObjectId }[]);
+
+  const artifactIds = [...new Set(rounds.map((r) => r.artifactId.toString()))];
+  const res = await publishQuestionBulk({
+    artifactIds,
+    actorId: input.actorId,
+    actorRole: input.actorRole,
+  });
+  return { ...res, remaining: Math.max(0, total - res.okCount) };
 }
 
 /** Full round history for a question (by any of its versions), oldest→newest. */

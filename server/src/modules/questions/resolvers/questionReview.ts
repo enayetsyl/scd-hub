@@ -5,11 +5,15 @@
  *   assignQuestionReview / assignQuestionReviewBulk — content:assign_review (Principal/Office)
  *   submitQuestionReview — content:review (the ASSIGNED reviewer only). Reason optional.
  *   publishQuestion / publishQuestionBulk — content:promote_gold (Principal-locked)
+ *   publishQuestionsMatching — content:promote_gold. Publish everything matching the inbox
+ *                          filter (QR-6, D-#538). APPROVE only, capped per call.
  *
  * Queries:
  *   myQuestionReviews    — content:review. The caller's question queue.
- *   questionReviewInbox  — content:assign_review. Submitted rounds, filterable by verdict:
- *                          APPROVE = the publish queue, CHANGES_REQUESTED = the rejected list.
+ *   questionReviewInbox / questionReviewInboxCount
+ *                        — content:assign_review. Submitted rounds, filterable by verdict:
+ *                          APPROVE = the publish queue, CHANGES_REQUESTED = the rejected list;
+ *                          plus subject / class / chapter / type / search, paginated (QR-6).
  *   questionReviewThread — round history for one question.
  *   assignableQuestions  — content:assign_review. The picker.
  *   questionReviewerProgress / questionReviewerRounds / questionReviewerRoundCount
@@ -36,11 +40,14 @@ import {
   listMyQuestionReviews,
   countMyQuestionReviews,
   questionReviewInbox as inboxSvc,
+  countQuestionReviewInbox as inboxCountSvc,
+  publishQuestionsMatching as publishMatchingSvc,
   questionReviewThread as threadSvc,
   listAssignableQuestions,
   questionReviewerProgress as progressSvc,
   listQuestionReviewerRounds as reviewerRoundsSvc,
   countQuestionReviewerRounds as reviewerRoundCountSvc,
+  type InboxFilterArgs,
   type QuestionReviewRoundDTO,
   type QuestionReviewerProgressDTO,
   type AssignableQuestionDTO,
@@ -388,6 +395,59 @@ builder.mutationField("publishQuestionBulk", (t) =>
   }),
 );
 
+const PublishAllResultRef = builder.objectRef<BulkResult & { remaining: number }>(
+  "PublishAllResult",
+);
+PublishAllResultRef.implement({
+  description:
+    "Outcome of a publish-all (QR-6). `remaining` is how many matching questions are still " +
+    "unpublished after this call — non-zero when the batch hit its per-call ceiling, so the " +
+    "client can say 'press again' instead of quietly stopping short.",
+  fields: (t) => ({
+    okCount: t.exposeInt("okCount"),
+    failedCount: t.exposeInt("failedCount"),
+    remaining: t.exposeInt("remaining"),
+    failures: t.field({
+      type: ["String"],
+      resolve: (r) => r.failures.map((f) => `${f.artifactId}: ${f.error}`),
+    }),
+  }),
+});
+
+builder.mutationField("publishQuestionsMatching", (t) =>
+  t.field({
+    type: PublishAllResultRef,
+    description:
+      "Publish EVERY accepted question matching the given filter (QR-6) — the same filter the " +
+      "inbox list and its count take, so the number in the confirmation is the number that " +
+      "publishes. verdict MUST be APPROVE: a rejected question needs a per-question override " +
+      "reason (D-#525), so a bulk call over rejected rounds is refused rather than failing " +
+      "every item. Capped per call; read `remaining`. Requires content:promote_gold.",
+    authScopes: { hasPermission: "content:promote_gold" },
+    args: {
+      verdict: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      chapter: t.arg.int({ required: false }),
+      questionType: t.arg.string({ required: false }),
+      search: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await publishMatchingSvc({
+          filter: filterFromArgs(args),
+          actorId: ctx.auth.userId,
+          actorRole: ctx.auth.role,
+        });
+      } catch (err) {
+        return mapReviewError(err);
+      }
+    },
+  }),
+);
+
+
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
@@ -426,21 +486,81 @@ builder.queryField("myQuestionReviewCount", (t) =>
   }),
 );
 
+/**
+ * The inbox filter, read off the GraphQL args in ONE place.
+ *
+ * The list, its count and publish-all all take the same six arguments and all build the
+ * filter through here, so "publish all 47" cannot come to mean a different 47 from the one
+ * the screen is showing — which, for a one-way operation, is the difference between a
+ * feature and an incident.
+ */
+function filterFromArgs(a: {
+  verdict?: string | null;
+  subject?: string | null;
+  classLevel?: number | null;
+  chapter?: number | null;
+  questionType?: string | null;
+  search?: string | null;
+}): InboxFilterArgs {
+  return {
+    verdict: a.verdict,
+    subject: a.subject,
+    classLevel: a.classLevel,
+    chapter: a.chapter,
+    questionType: a.questionType,
+    search: a.search,
+  };
+}
+
 builder.queryField("questionReviewInbox", (t) =>
   t.field({
     type: [QuestionReviewRoundRef],
     description:
       "Submitted question rounds, newest first. verdict=APPROVE is the Principal's publish queue " +
       "(Q2.6); verdict=CHANGES_REQUESTED is the rejected list with each reviewer's reason (Q2.7). " +
-      "Requires content:assign_review (Principal/Office).",
+      "Narrowable by subject / classLevel / chapter / questionType / search (QR-6). PAGINATED: " +
+      "`limit` defaults to 50 and is capped at 200. Requires content:assign_review.",
     authScopes: { hasPermission: "content:assign_review" },
     args: {
       verdict: t.arg.string({ required: false }),
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      chapter: t.arg.int({ required: false }),
+      questionType: t.arg.string({ required: false }),
+      search: t.arg.string({ required: false }),
+      limit: t.arg.int({ required: false }),
+      offset: t.arg.int({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       try {
-        return await inboxSvc(args.verdict ?? undefined);
+        return await inboxSvc(filterFromArgs(args), { limit: args.limit, offset: args.offset });
+      } catch (err) {
+        return mapReviewError(err);
+      }
+    },
+  }),
+);
+
+builder.queryField("questionReviewInboxCount", (t) =>
+  t.field({
+    type: "Int",
+    description:
+      "How many submitted rounds match the same filter — the pager's denominator, and the " +
+      "number the publish-all confirmation quotes. Requires content:assign_review.",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: {
+      verdict: t.arg.string({ required: false }),
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      chapter: t.arg.int({ required: false }),
+      questionType: t.arg.string({ required: false }),
+      search: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await inboxCountSvc(filterFromArgs(args));
       } catch (err) {
         return mapReviewError(err);
       }
