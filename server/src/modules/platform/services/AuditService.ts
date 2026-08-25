@@ -23,3 +23,27 @@ export async function writeAudit(params: AuditParams): Promise<void> {
     console.error("[AuditService] Failed to write audit event:", err);
   }
 }
+
+/**
+ * The same append, for MANY rows in ONE round trip (D-#539).
+ *
+ * Identical semantics to calling `writeAudit` per row — same fields, same stamping, same
+ * never-throws contract — and it exists purely because the per-row version costs a network
+ * round trip each. A bulk operation over 244 questions was spending more time writing its
+ * audit log than doing the work the log describes.
+ *
+ * `ordered: false` so one rejected row cannot discard the rest of the batch; the audit log
+ * is append-only, and a partial log beats no log.
+ */
+export async function writeAuditMany(rows: AuditParams[]): Promise<void> {
+  if (rows.length === 0) return;
+  try {
+    const eventAt = new Date();
+    await Audit.insertMany(
+      rows.map((r) => ({ ...r, eventAt })),
+      { ordered: false },
+    );
+  } catch (err) {
+    console.error("[AuditService] Failed to write audit batch:", err);
+  }
+}

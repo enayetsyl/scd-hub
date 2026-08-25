@@ -31,8 +31,12 @@ jest.mock("../modules/content/models/ContentArtifact", () => ({
   ContentArtifact: {
     findById: (id: unknown) => mockArtifactFindById(id),
     find: (f: unknown) => ({ lean: () => mockReviewArtifactFind(f) }),
+    updateMany: (f: unknown, u: unknown) => mockArtifactUpdateMany(f, u),
+    collection: { name: "contentartifacts" },
   },
 }));
+
+const mockArtifactUpdateMany = jest.fn().mockResolvedValue({ modifiedCount: 0 });
 
 // Separate handle so `find` can be steered independently of `findById`.
 const mockReviewArtifactFind = jest.fn().mockResolvedValue([]);
@@ -43,9 +47,14 @@ jest.mock("../modules/content/models/ReviewAssignment", () => ({
     find: (f: unknown) => mockReviewFind(f),
     findById: (id: unknown) => mockReviewFindById(id),
     updateOne: (f: unknown, u: unknown) => mockReviewUpdateOne(f, u),
+    updateMany: (f: unknown, u: unknown) => mockReviewUpdateMany(f, u),
+    countDocuments: (f: unknown) => mockReviewCount(f),
     aggregate: (p: unknown) => mockReviewAggregate(p),
   },
 }));
+
+const mockReviewUpdateMany = jest.fn().mockResolvedValue({ modifiedCount: 0 });
+const mockReviewCount = jest.fn().mockResolvedValue(0);
 
 jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (f: unknown) => ({ select: () => ({ lean: () => mockUserFind(f) }) }) },
@@ -53,7 +62,10 @@ jest.mock("../modules/foundation/models/User", () => ({
 
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
+  writeAuditMany: (rows: unknown) => mockWriteAuditMany(rows),
 }));
+
+const mockWriteAuditMany = jest.fn().mockResolvedValue(undefined);
 
 jest.mock("../modules/notifications/services/emitters", () => ({
   emitReviewAssigned: (...args: unknown[]) => mockEmitReviewAssigned(...args),
@@ -519,13 +531,15 @@ describe("publishQuestion (Q2.8, Q2.9)", () => {
   });
 
   test("Q2.10 — bulk publishes the accepted ones and reports the rest", async () => {
+    // Bulk reads its artifacts in ONE `find` rather than a findById per item (D-#539);
+    // the behaviour asserted below is unchanged, only where the fixture is steered.
     const OK_ID = new mongoose.Types.ObjectId();
     const BAD_ID = new mongoose.Types.ObjectId();
-    mockArtifactFindById.mockImplementation((id: unknown) =>
-      String(id) === OK_ID.toString()
-        ? questionDoc({ _id: OK_ID, reviewStatus: "reviewed" })
-        : questionDoc({ _id: BAD_ID, reviewStatus: "draft" }),
-    );
+    mockReviewArtifactFind.mockResolvedValue([
+      questionDoc({ _id: OK_ID, reviewStatus: "reviewed" }),
+      questionDoc({ _id: BAD_ID, reviewStatus: "draft" }),
+    ]);
+    mockReviewFind.mockReturnValue(query([]));
 
     const res = await publishQuestionBulk({
       artifactIds: [OK_ID.toString(), BAD_ID.toString()],
@@ -535,5 +549,46 @@ describe("publishQuestion (Q2.8, Q2.9)", () => {
     expect(res.okCount).toBe(1);
     expect(res.failedCount).toBe(1);
     expect(res.failures[0].error).toMatch(/override reason/i);
+  });
+
+  test("Q2.10 — bulk does the writes in a FIXED number of queries, not one set per question", async () => {
+    // The owner published 244 questions and it took minutes: the old path cost ~6 sequential
+    // Atlas round trips PER question (findById, save, round read, updateOne, two audit
+    // inserts) — roughly 1,500 for that one action. This pins the fix: however many
+    // questions go in, the artifact write, the round write and the audit write happen ONCE.
+    const ids = Array.from({ length: 25 }, () => new mongoose.Types.ObjectId());
+    mockReviewArtifactFind.mockResolvedValue(
+      ids.map((id) => questionDoc({ _id: id, reviewStatus: "reviewed" })),
+    );
+    mockReviewFind.mockReturnValue(query([]));
+
+    const res = await publishQuestionBulk({
+      artifactIds: ids.map((i) => i.toString()),
+      actorId: ADMIN_ID.toString(),
+    });
+
+    expect(res.okCount).toBe(25);
+    expect(mockArtifactUpdateMany).toHaveBeenCalledTimes(1);
+    expect(mockWriteAuditMany).toHaveBeenCalledTimes(1);
+    // One audit ROW per published question still — batching the write must not lose the log.
+    expect((mockWriteAuditMany.mock.calls[0][0] as unknown[]).length).toBe(25);
+    expect(mockWriteAudit).not.toHaveBeenCalled();
+  });
+
+  test("Q2.10 — a published question's open rounds are superseded in one write", async () => {
+    const OK_ID = new mongoose.Types.ObjectId();
+    const ROUND_A = new mongoose.Types.ObjectId();
+    const ROUND_B = new mongoose.Types.ObjectId();
+    mockReviewArtifactFind.mockResolvedValue([questionDoc({ _id: OK_ID, reviewStatus: "reviewed" })]);
+    mockReviewFind.mockReturnValue(query([{ _id: ROUND_A }, { _id: ROUND_B }]));
+
+    await publishQuestionBulk({ artifactIds: [OK_ID.toString()], actorId: ADMIN_ID.toString() });
+
+    expect(mockReviewUpdateMany).toHaveBeenCalledTimes(1);
+    expect(mockReviewUpdateMany.mock.calls[0][1]).toEqual({ $set: { status: "superseded" } });
+    // Still one REVIEW_CANCELLED row per closed round, plus the publish row.
+    const rows = mockWriteAuditMany.mock.calls[0][0] as { eventKind: string }[];
+    expect(rows.filter((r) => r.eventKind === "REVIEW_CANCELLED")).toHaveLength(2);
+    expect(rows.filter((r) => r.eventKind === "QUESTION_PUBLISHED")).toHaveLength(1);
   });
 });
