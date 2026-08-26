@@ -19,12 +19,14 @@ import React from "react";
 import { View } from "react-native";
 import { Linking } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { useMutation } from "urql";
+import { useMutation, useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { AdminStackParamList } from "../../navigation/types";
-import { HR_CATEGORIES, EMPLOYMENT_TYPES } from "@scd/shared";
+import { HR_CATEGORIES, EMPLOYMENT_TYPES, PAYMENT_METHODS } from "@scd/shared";
 import {
   CREATE_STAFF_PROFILE,
+  STAFF_QUERY,
+  UPDATE_STAFF_PROFILE,
   SET_STAFF_PAY,
   PROVISION_STAFF_LOGIN,
   ISSUE_STAFF_LETTER,
@@ -46,7 +48,7 @@ import {
   Badge,
   Notice,
 } from "../../components/ui";
-import { STR, bnNum, hrCategoryLabel, employmentTypeLabel } from "../../lib/labels";
+import { STR, bnNum, hrCategoryLabel, employmentTypeLabel, paymentMethodLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
@@ -61,6 +63,20 @@ function todayKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/**
+ * Digits (and at most one decimal point) only. On web `keyboardType` is a hint, not a
+ * restriction, so the field accepts anything typed into it. `Number("Tk. 6000,")` is
+ * NaN, JSON serialises NaN as null, and the server reads null as "leave unchanged" —
+ * so an unparsable salary used to save the payment method alone and look like success,
+ * surfacing three steps later as a letter that refused to print (prod E2E, 2026-08-26).
+ */
+function parseAmount(raw: string): number | null {
+  const t = raw.trim();
+  if (t === "") return null;
+  if (!/^\d+(\.\d+)?$/.test(t)) return null;
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
 function Stepper({ step }: { step: number }): React.ReactElement {
   const labels = [STR.stfJoinStepInfo, STR.stfJoinStepPay, STR.stfJoinStepLogin, STR.stfJoinStepLetter];
   return (
@@ -88,6 +104,18 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
   const [, setPay] = useMutation(SET_STAFF_PAY);
   const [, provision] = useMutation(PROVISION_STAFF_LOGIN);
   const [, issue] = useMutation(ISSUE_STAFF_LETTER);
+  const [, updateStaff] = useMutation(UPDATE_STAFF_PROFILE);
+
+  // The next id after the highest on record. Typed blind, this meant looking the last
+  // one up elsewhere before you could even start.
+  const [{ data: rosterData }] = useQuery({ query: STAFF_QUERY, variables: { category: null } });
+  const suggestedId = React.useMemo(() => {
+    const nums = (rosterData?.staff ?? [])
+      .map((r) => Number(r.schoolId))
+      .filter((n) => Number.isFinite(n));
+    return nums.length ? String(Math.max(...nums) + 1) : "";
+  }, [rosterData]);
+  const [idTouched, setIdTouched] = React.useState(false);
 
   const [step, setStep] = React.useState(1);
   const [busy, setBusy] = React.useState(false);
@@ -109,12 +137,18 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
   });
   const set = (k: string) => (v: string) => setForm((prev) => ({ ...prev, [k]: v }));
 
+  React.useEffect(() => {
+    if (!suggestedId || idTouched) return;
+    setForm((prev) => (prev.schoolId === "" ? { ...prev, schoolId: suggestedId } : prev));
+  }, [suggestedId, idTouched]);
+
   // created record
   const [staffId, setStaffId] = React.useState<string | null>(null);
 
   // step 2
   const [salary, setSalary] = React.useState("");
   const [paymentMethod, setPaymentMethod] = React.useState("bank");
+  const [account, setAccount] = React.useState("");
 
   // step 3
   const [cred, setCred] = React.useState<ProvisionedCredentialT | null>(null);
@@ -144,6 +178,11 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
   }
 
   async function submitStep2(skip: boolean): Promise<void> {
+    const amount = parseAmount(salary);
+    if (!skip && salary.trim() !== "" && amount === null) {
+      setFailure(STR.stfSalaryNotANumber);
+      return;
+    }
     if (skip || !salary.trim()) {
       // No salary means no PAID appointment letter, so the letter step defaults to
       // honorary rather than presenting a choice that would only be refused.
@@ -155,13 +194,22 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
     setFailure(null);
     const res = await setPay({
       staffProfileId: staffId!,
-      monthlySalary: Number(salary),
+      monthlySalary: amount,
       paymentMethod,
     });
     setBusy(false);
     if (res.error) {
       setFailure(friendlyError(res.error));
       return;
+    }
+    // A payment method with no account is a method that cannot be paid into — the
+    // disbursement file exists to carry exactly this number.
+    if (paymentMethod !== "cash" && account.trim() !== "") {
+      const upd = await updateStaff({ staffProfileId: staffId!, input: { bankAccount: account.trim() } });
+      if (upd.error) {
+        setFailure(friendlyError(upd.error));
+        return;
+      }
     }
     setStep(3);
   }
@@ -213,7 +261,12 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
       {step === 1 ? (
         <>
           <Card>
-            <Field label={`${STR.staffId} *`} value={form.schoolId} onChangeText={set("schoolId")} />
+            <Field
+              label={`${STR.staffId} *`}
+              value={form.schoolId}
+              onChangeText={(v) => { setIdTouched(true); set("schoolId")(v); }}
+            />
+            {suggestedId && !idTouched ? <Muted>{STR.stfIdSuggested}</Muted> : null}
             <Field label={`${STR.name} *`} value={form.name} onChangeText={set("name")} autoCapitalize="words" />
             <Field label={STR.nameBnLabel} value={form.nameBn} onChangeText={set("nameBn")} />
             <Field label={STR.designation} value={form.designation} onChangeText={set("designation")} />
@@ -267,12 +320,23 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
         <>
           <Card>
             <Field label={STR.stfMonthlySalary} value={salary} onChangeText={setSalary} keyboardType="numeric" />
+            <Muted>{STR.stfSalaryDigitsOnly}</Muted>
             <Muted>{STR.stfPaymentMethod}</Muted>
             <ChipRow>
-              {["bank", "bkash", "cash"].map((m) => (
-                <Chip key={m} label={m} selected={paymentMethod === m} onPress={() => setPaymentMethod(m)} />
+              {PAYMENT_METHODS.map((m) => (
+                <Chip key={m} label={paymentMethodLabel(m)} selected={paymentMethod === m} onPress={() => setPaymentMethod(m)} />
               ))}
             </ChipRow>
+            {paymentMethod !== "cash" ? (
+              <>
+                <Field
+                  label={paymentMethod === "bkash" ? STR.stfBkashNumber : STR.bankAccount}
+                  value={account}
+                  onChangeText={setAccount}
+                />
+                <Muted>{STR.stfAccountNeededNote}</Muted>
+              </>
+            ) : null}
             <Muted>{STR.stfJoinSalaryNote}</Muted>
           </Card>
           <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
@@ -293,6 +357,7 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
               {cred ? (
                 <>
                   <Row label={STR.loginId} value={cred.identifier} />
+                  <Row label={STR.stfRoleAssigned} value={cred.contextLabel} />
                   <Row label={STR.generatedPassword} value={cred.password} />
                   <Notice tone="warn" message={STR.credentialOnceWarning} />
                   <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
