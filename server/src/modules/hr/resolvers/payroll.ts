@@ -157,6 +157,15 @@ builder.mutationField("setStaffPay", (t) =>
     resolve: async (_root, args, ctx) => {
       const staff = await StaffProfile.findById(args.staffProfileId);
       if (!staff) throw new Error("Staff profile not found");
+      // A caller that MEANT to set a salary but sent a non-number must be told so, not
+      // silently given a payment-method-only save. Found in the 2026-08-26 prod E2E
+      // test: `Number("Tk. 6000,")` is NaN, JSON serialises NaN as null, null reads
+      // here as "not provided" — so the payment method saved, the salary vanished, the
+      // screen advanced as though both had, and the loss only surfaced three steps
+      // later when the letter refused to print a figure that was never stored.
+      if (args.monthlySalary != null && !Number.isFinite(args.monthlySalary)) {
+        throw new Error("monthlySalary must be a number");
+      }
       if (args.monthlySalary != null) {
         if (args.monthlySalary < 0) throw new Error("monthlySalary must be ≥ 0");
         staff.monthlySalary = args.monthlySalary;

@@ -11,6 +11,7 @@ import mongoose from "mongoose";
 const oid = () => new mongoose.Types.ObjectId();
 
 const mockStaffFindById = jest.fn();
+const mockStaffUpdateOne = jest.fn().mockResolvedValue({});
 const mockLetterCreate = jest.fn();
 const mockLetterFindOne = jest.fn();
 const mockLetterFindById = jest.fn();
@@ -28,6 +29,7 @@ jest.mock("../modules/foundation/models/StaffProfile", () => ({
       // .lean() resolves the doc itself.
       return Object.assign(Promise.resolve(mockStaffFindById(id)), chain);
     },
+    updateOne: (...a: unknown[]) => mockStaffUpdateOne(...a),
   },
 }));
 jest.mock("../modules/hr/models/StaffLetter", () => ({
@@ -239,6 +241,56 @@ describe("issueLetter — the snapshot is the record (D-#542)", () => {
       actorId: ACTOR,
     });
     expect((letter as unknown as { snapshot: ILetterSnapshot }).snapshot.monthlySalary).toBeNull();
+  });
+
+  /**
+   * SH-9. The letter IS the agreed terms; the record that pays them must carry the same
+   * figure. In the 2026-08-26 prod E2E test a letter was issued promising Tk. 12,345
+   * against a profile with NO salary — the override lived only in the snapshot, nothing
+   * looked wrong, and payroll would have computed nothing for that person.
+   */
+  test("a PAID letter writes its salary back to the profile", async () => {
+    mockStaffFindById.mockResolvedValue(staffDoc({ monthlySalary: null }));
+    await issueLetter({
+      staffProfileId: staffId.toString(),
+      kind: "appointment",
+      effectiveFrom: "2026-09-01",
+      salaryMode: "paid",
+      monthlySalary: 12345,
+      actorId: ACTOR,
+    });
+    expect(mockStaffUpdateOne).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: staffId }),
+      { $set: { monthlySalary: 12345 } },
+    );
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventKind: "STAFF_PAY_SET", meta: expect.objectContaining({ via: "letter" }) }),
+    );
+  });
+
+  test("no write-back when the profile already carries that figure", async () => {
+    mockStaffFindById.mockResolvedValue(staffDoc({ monthlySalary: 5000 }));
+    await issueLetter({
+      staffProfileId: staffId.toString(),
+      kind: "appointment",
+      effectiveFrom: "2026-09-01",
+      salaryMode: "paid",
+      monthlySalary: 5000,
+      actorId: ACTOR,
+    });
+    expect(mockStaffUpdateOne).not.toHaveBeenCalled();
+  });
+
+  test("an HONORARY letter writes nothing back — it promises no figure to honour", async () => {
+    mockStaffFindById.mockResolvedValue(staffDoc({ monthlySalary: null }));
+    await issueLetter({
+      staffProfileId: staffId.toString(),
+      kind: "appointment",
+      effectiveFrom: "2026-09-01",
+      salaryMode: "honorary",
+      actorId: ACTOR,
+    });
+    expect(mockStaffUpdateOne).not.toHaveBeenCalled();
   });
 
   test("an honorary letter DROPS a salary even when one is on the profile", async () => {
