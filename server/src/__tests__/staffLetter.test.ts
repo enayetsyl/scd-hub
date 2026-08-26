@@ -228,7 +228,7 @@ describe("issueLetter — the snapshot is the record (D-#542)", () => {
         salaryMode: "paid",
         actorId: ACTOR,
       }),
-    ).rejects.toThrow(/salary/i);
+    ).rejects.toThrow(/বেতন/);
   });
 
   test("an honorary letter needs no salary and stores none", async () => {
@@ -422,7 +422,7 @@ describe("confirmEmployment — the settlement ledger (D-#540)", () => {
         issueLetter: false,
         actorId: ACTOR,
       }),
-    ).rejects.toThrow(/already confirmed/i);
+    ).rejects.toThrow(/ইতিমধ্যে স্থায়ী/);
   });
 
   test("refuses a confirmation dated BEFORE joining", async () => {
@@ -435,7 +435,7 @@ describe("confirmEmployment — the settlement ledger (D-#540)", () => {
         issueLetter: false,
         actorId: ACTOR,
       }),
-    ).rejects.toThrow(/precede the joining date/i);
+    ).rejects.toThrow(/যোগদানের তারিখের আগে/);
   });
 
   test("refuses a malformed date rather than storing an Invalid Date", async () => {

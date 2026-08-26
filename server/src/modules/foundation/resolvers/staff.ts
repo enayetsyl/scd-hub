@@ -23,7 +23,8 @@ type StaffShape = Pick<
   | "qualification" | "majoredIn" | "studiedAt"
   | "fatherName" | "motherName" | "spouseName"
   | "phone" | "whatsapp" | "email" | "presentAddress" | "permanentAddress"
-  | "nid" | "bankAccount" | "monthlySalary" | "paymentMethod" | "active"
+  | "nid" | "bankAccount" | "bankAccountName" | "bankName" | "bankBranch"
+  | "monthlySalary" | "paymentMethod" | "active"
 > & { _id: Types.ObjectId };
 
 const iso = (d?: Date | null) => (d ? d.toISOString() : null);
@@ -64,6 +65,9 @@ StaffRef.implement({
     // sensitive rows (H1.4) — only reachable through this staff:manage-gated type
     nid: t.string({ nullable: true, resolve: (s) => s.nid ?? null }),
     bankAccount: t.string({ nullable: true, resolve: (s) => s.bankAccount ?? null }),
+    bankAccountName: t.string({ nullable: true, resolve: (s) => s.bankAccountName ?? null }),
+    bankName: t.string({ nullable: true, resolve: (s) => s.bankName ?? null }),
+    bankBranch: t.string({ nullable: true, resolve: (s) => s.bankBranch ?? null }),
     monthlySalary: t.float({ nullable: true, resolve: (s) => s.monthlySalary ?? null }),
     paymentMethod: t.string({ nullable: true, resolve: (s) => s.paymentMethod ?? null }),
     active: t.exposeBoolean("active"),
@@ -151,6 +155,9 @@ const StaffProfileInputRef = builder.inputType("StaffProfileInput", {
     permanentAddress: t.string({ required: false }),
     nid: t.string({ required: false }),
     bankAccount: t.string({ required: false }),
+    bankAccountName: t.string({ required: false }),
+    bankName: t.string({ required: false }),
+    bankBranch: t.string({ required: false }),
     active: t.boolean({ required: false }),
   }),
 });
