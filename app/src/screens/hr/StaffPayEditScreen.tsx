@@ -26,6 +26,10 @@ import {
 } from "../../components/ui";
 import { STR, paymentMethodLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import BankDetailsFields, {
+  isBankDetailsComplete,
+  type BankDetails,
+} from "../../components/BankDetailsFields";
 import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 
@@ -51,7 +55,13 @@ export default function StaffPayEditScreen({ route, navigation }: Props): React.
 
   const [salary, setSalary] = React.useState(staff.monthlySalary != null ? String(staff.monthlySalary) : "");
   const [method, setMethod] = React.useState(staff.paymentMethod ?? "bank");
-  const [account, setAccount] = React.useState(staff.bankAccount ?? "");
+  const [bank, setBank] = React.useState<BankDetails>({
+    bankAccount: staff.bankAccount ?? "",
+    bankAccountName: staff.bankAccountName ?? "",
+    bankName: staff.bankName ?? "",
+    bankBranch: staff.bankBranch ?? "",
+  });
+  const [bankTouched, setBankTouched] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [failure, setFailure] = React.useState<string | null>(null);
 
@@ -62,8 +72,9 @@ export default function StaffPayEditScreen({ route, navigation }: Props): React.
   // which the server would read as "leave unchanged" — saving the method alone and
   // looking, to the operator, exactly like success.
   const salaryInvalid = salaryTouched && amount === null;
-  const needsAccount = method !== "cash";
-  const canSave = !salaryInvalid && !busy;
+  // A method with no details cannot be paid into; the disbursement file carries them.
+  const bankOk = isBankDetailsComplete(method, bank);
+  const canSave = !salaryInvalid && bankOk && !busy;
 
   async function onSave(): Promise<void> {
     setBusy(true);
@@ -77,7 +88,15 @@ export default function StaffPayEditScreen({ route, navigation }: Props): React.
       if (res.error) { setBusy(false); setFailure(friendlyError(res.error)); return; }
     }
     if (canStaff) {
-      const res = await updateStaff({ staffProfileId: staff.id, input: { bankAccount: account.trim() } });
+      const res = await updateStaff({
+        staffProfileId: staff.id,
+        input: {
+          bankAccount: bank.bankAccount.trim(),
+          bankAccountName: bank.bankAccountName.trim(),
+          bankName: bank.bankName.trim(),
+          bankBranch: bank.bankBranch.trim(),
+        },
+      });
       if (res.error) { setBusy(false); setFailure(friendlyError(res.error)); return; }
     }
     setBusy(false);
@@ -113,15 +132,14 @@ export default function StaffPayEditScreen({ route, navigation }: Props): React.
         <Notice tone="info" message={STR.stfPayNeedsPayrollPerm} />
       )}
 
-      {canStaff && needsAccount ? (
+      {canStaff ? (
         <Card>
-          <Field
-            label={method === "bkash" ? STR.stfBkashNumber : STR.bankAccount}
-            value={account}
-            onChangeText={setAccount}
-            placeholder={method === "bkash" ? "01xxxxxxxxx" : "A/C no."}
+          <BankDetailsFields
+            method={method}
+            value={bank}
+            onChange={(v) => { setBankTouched(true); setBank(v); }}
+            showIncompleteWarning={bankTouched}
           />
-          <Muted>{STR.stfAccountNeededNote}</Muted>
         </Card>
       ) : null}
 

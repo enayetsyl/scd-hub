@@ -175,22 +175,28 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
         <Muted>{STR.reviewStatus}: {reviewStatusLabel(q.reviewStatus)}</Muted>
       </Card>
 
-      <Button
-        title={inBasket ? STR.inBasket : STR.addToBasket}
-        variant={inBasket ? "secondary" : "primary"}
-        onPress={() =>
-          inBasket
-            ? basket.remove(q.id)
-            : basket.add({
-                artifactId: q.id,
-                qid: q.qid ?? q.id,
-                marks: q.marks ?? 0,
-                label: text || q.qid || q.id,
-                subject: q.subject,
-                classLevel: q.classLevel,
-              })
-        }
-      />
+      {/* A RETIRED question offers no basket (D-#566). The server refuses it now —
+          assertPublished checks `retiredAt` as well — but a button that exists only to fail
+          is worse than no button: it says the question is still usable, directly under a
+          notice saying it is not. */}
+      {q.retired ? null : (
+        <Button
+          title={inBasket ? STR.inBasket : STR.addToBasket}
+          variant={inBasket ? "secondary" : "primary"}
+          onPress={() =>
+            inBasket
+              ? basket.remove(q.id)
+              : basket.add({
+                  artifactId: q.id,
+                  qid: q.qid ?? q.id,
+                  marks: q.marks ?? 0,
+                  label: text || q.qid || q.id,
+                  subject: q.subject,
+                  classLevel: q.classLevel,
+                })
+          }
+        />
+      )}
 
       {/* Correct or retire the question in place (QR-8, D-#548) — Principal + Office. The
           bank is where a wrong answer is usually spotted, so the fix belongs here too, not
