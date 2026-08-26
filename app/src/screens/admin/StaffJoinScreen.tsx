@@ -52,6 +52,11 @@ import { STR, bnNum, hrCategoryLabel, employmentTypeLabel, paymentMethodLabel } 
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
+import BankDetailsFields, {
+  isBankDetailsComplete,
+  EMPTY_BANK_DETAILS,
+  type BankDetails,
+} from "../../components/BankDetailsFields";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "StaffJoin">;
@@ -148,7 +153,8 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
   // step 2
   const [salary, setSalary] = React.useState("");
   const [paymentMethod, setPaymentMethod] = React.useState("bank");
-  const [account, setAccount] = React.useState("");
+  const [bank, setBank] = React.useState<BankDetails>(EMPTY_BANK_DETAILS);
+  const [bankTouched, setBankTouched] = React.useState(false);
 
   // step 3
   const [cred, setCred] = React.useState<ProvisionedCredentialT | null>(null);
@@ -158,8 +164,18 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
   const [salaryMode, setSalaryMode] = React.useState<"paid" | "honorary">("paid");
   const [extraText, setExtraText] = React.useState("");
 
+  /**
+   * পদবি is REQUIRED here even though the model allows it to be absent, because step ৪
+   * cannot issue a letter without it — `issueLetter` refuses, since it is what clause 5
+   * prints. Letting step ১ past a field step ৪ needs just moves the failure three
+   * screens away from the mistake (owner, prod test 2026-08-26).
+   */
   const step1Ok =
-    form.schoolId.trim() !== "" && form.name.trim() !== "" && form.category !== "" && form.employmentType !== "";
+    form.schoolId.trim() !== "" &&
+    form.name.trim() !== "" &&
+    form.designation.trim() !== "" &&
+    form.category !== "" &&
+    form.employmentType !== "";
 
   async function submitStep1(): Promise<void> {
     setBusy(true);
@@ -167,13 +183,20 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
     // A new joiner ALWAYS starts on probation — the confirmation date is set later,
     // from the hub, because it is an event with a settlement attached (D-#540).
     const input = { ...form, employmentStatus: "probation" } as unknown as StaffProfileInputT;
-    const res = await createStaff({ input });
+    // Coming BACK to step ১ and going forward again must EDIT the record, never create a
+    // second one — otherwise the button that fixes a typo silently duplicates the staff
+    // member. `staffId` is the whole test: set means it already exists.
+    const res = staffId
+      ? await updateStaff({ staffProfileId: staffId, input })
+      : await createStaff({ input });
     setBusy(false);
     if (res.error || !res.data) {
       setFailure(friendlyError(res.error));
       return;
     }
-    setStaffId(res.data.createStaffProfile.id);
+    if (!staffId && "createStaffProfile" in res.data) {
+      setStaffId((res.data as { createStaffProfile: { id: string } }).createStaffProfile.id);
+    }
     setStep(2);
   }
 
@@ -181,6 +204,13 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
     const amount = parseAmount(salary);
     if (!skip && salary.trim() !== "" && amount === null) {
       setFailure(STR.stfSalaryNotANumber);
+      return;
+    }
+    // A payment method with no details cannot be paid into, and the disbursement file
+    // exists to carry exactly those details — so this blocks rather than warns.
+    if (!skip && salary.trim() !== "" && !isBankDetailsComplete(paymentMethod, bank)) {
+      setBankTouched(true);
+      setFailure(STR.stfBankDetailsRequired);
       return;
     }
     if (skip || !salary.trim()) {
@@ -202,10 +232,16 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
       setFailure(friendlyError(res.error));
       return;
     }
-    // A payment method with no account is a method that cannot be paid into — the
-    // disbursement file exists to carry exactly this number.
-    if (paymentMethod !== "cash" && account.trim() !== "") {
-      const upd = await updateStaff({ staffProfileId: staffId!, input: { bankAccount: account.trim() } });
+    if (paymentMethod !== "cash") {
+      const upd = await updateStaff({
+        staffProfileId: staffId!,
+        input: {
+          bankAccount: bank.bankAccount.trim(),
+          bankAccountName: bank.bankAccountName.trim(),
+          bankName: bank.bankName.trim(),
+          bankBranch: bank.bankBranch.trim(),
+        },
+      });
       if (upd.error) {
         setFailure(friendlyError(upd.error));
         return;
@@ -269,7 +305,7 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
             {suggestedId && !idTouched ? <Muted>{STR.stfIdSuggested}</Muted> : null}
             <Field label={`${STR.name} *`} value={form.name} onChangeText={set("name")} autoCapitalize="words" />
             <Field label={STR.nameBnLabel} value={form.nameBn} onChangeText={set("nameBn")} />
-            <Field label={STR.designation} value={form.designation} onChangeText={set("designation")} />
+            <Field label={`${STR.designation} *`} value={form.designation} onChangeText={set("designation")} />
             <Muted style={{ marginTop: -space(2), marginBottom: space(3) }}>{STR.stfJoinDesignationForLetter}</Muted>
 
             <Muted>{`${STR.category} *`}</Muted>
@@ -327,19 +363,16 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
                 <Chip key={m} label={paymentMethodLabel(m)} selected={paymentMethod === m} onPress={() => setPaymentMethod(m)} />
               ))}
             </ChipRow>
-            {paymentMethod !== "cash" ? (
-              <>
-                <Field
-                  label={paymentMethod === "bkash" ? STR.stfBkashNumber : STR.bankAccount}
-                  value={account}
-                  onChangeText={setAccount}
-                />
-                <Muted>{STR.stfAccountNeededNote}</Muted>
-              </>
-            ) : null}
+            <BankDetailsFields
+              method={paymentMethod}
+              value={bank}
+              onChange={setBank}
+              showIncompleteWarning={bankTouched}
+            />
             <Muted>{STR.stfJoinSalaryNote}</Muted>
           </Card>
           <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
+            <Button title={STR.stfBack} variant="secondary" onPress={() => setStep(1)} />
             <Button title={STR.stfJoinNoPaySkip} variant="secondary" onPress={() => void submitStep2(true)} />
             <Button
               title={`${STR.stfJoinNext}: ${STR.stfJoinStepLogin}`}
@@ -395,6 +428,7 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
             </Card>
           )}
           <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
+            <Button title={STR.stfBack} variant="secondary" onPress={() => setStep(2)} />
             <Button title={STR.stfJoinSkipStep} variant="secondary" onPress={() => setStep(4)} />
             <Button title={`${STR.stfJoinNext}: ${STR.stfJoinStepLetter}`} onPress={() => setStep(4)} />
           </View>
@@ -431,6 +465,7 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
           </Card>
           <Notice tone="warn" message={STR.stfIssueWarning} />
           <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
+            <Button title={STR.stfBack} variant="secondary" onPress={() => setStep(3)} />
             <Button title={STR.stfJoinFinish} variant="secondary" onPress={() => void submitStep4(true)} />
             <Button
               title={STR.stfIssueAndPdf}

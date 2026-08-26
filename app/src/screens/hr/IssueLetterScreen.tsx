@@ -134,7 +134,7 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
             />
           </ChipRow>
           <Muted>{STR.stfSalaryModeNote}</Muted>
-          {!hasSalary && salaryMode === "paid" ? (
+          {salaryMode === "paid" && parseAmount(salary) === null ? (
             <Notice tone="warn" message={STR.stfJoinSalaryNote} />
           ) : null}
         </Card>

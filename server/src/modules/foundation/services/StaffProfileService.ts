@@ -61,6 +61,9 @@ export interface StaffProfileInput {
   permanentAddress?: string | null;
   nid?: string | null;
   bankAccount?: string | null;
+  bankAccountName?: string | null;
+  bankName?: string | null;
+  bankBranch?: string | null;
   active?: boolean | null;
 }
 
@@ -142,6 +145,9 @@ export function buildPatch(input: StaffProfileInput): Record<string, unknown> {
   put("permanentAddress", clean(input.permanentAddress));
   put("nid", clean(input.nid));
   put("bankAccount", clean(input.bankAccount));
+  put("bankAccountName", clean(input.bankAccountName));
+  put("bankName", clean(input.bankName));
+  put("bankBranch", clean(input.bankBranch));
   if (typeof input.active === "boolean") patch.active = input.active;
   return patch;
 }

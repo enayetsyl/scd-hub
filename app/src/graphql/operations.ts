@@ -314,6 +314,9 @@ export interface StaffT {
   biometricId: string | null;
   nid: string | null;
   bankAccount: string | null;
+  bankAccountName: string | null;
+  bankName: string | null;
+  bankBranch: string | null;
   active: boolean;
 }
 
@@ -324,6 +327,7 @@ export interface StaffProfileInputT {
   qualification?: string; majoredIn?: string; studiedAt?: string; fatherName?: string;
   motherName?: string; spouseName?: string; phone?: string; whatsapp?: string; email?: string;
   presentAddress?: string; permanentAddress?: string; nid?: string; bankAccount?: string;
+  bankAccountName?: string; bankName?: string; bankBranch?: string;
   active?: boolean;
 }
 
@@ -398,6 +402,9 @@ export const STAFF_QUERY = gql<{ staff: StaffT[] }, { category?: string | null }
       permanentAddress
       biometricId
       nid
+      bankAccountName
+      bankName
+      bankBranch
       bankAccount
       active
     }
@@ -8150,7 +8157,7 @@ export const STAFF_PROFILE_QUERY = gql<
       id schoolId name nameBn category designation employmentType employmentStatus
       joiningDate confirmationDate monthlySalary paymentMethod gender dob bloodGroup
       maritalStatus qualification fatherName motherName spouseName phone whatsapp email
-      presentAddress permanentAddress biometricId nid bankAccount active
+      presentAddress permanentAddress biometricId nid bankAccount bankAccountName bankName bankBranch active
     }
   }
 `;

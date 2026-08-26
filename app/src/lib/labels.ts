@@ -3394,6 +3394,13 @@ const STR_BN = {
   stfMyAttendance: "আমার উপস্থিতি",
   stfYes: "হ্যাঁ",
   stfNo: "না",
+  // --- SH-10: bank details, wizard back, required designation ---
+  stfBankAccountName: "হিসাবধারীর নাম",
+  stfBankName: "ব্যাংকের নাম",
+  stfBankBranch: "শাখার নাম",
+  stfBankDetailsRequired: "পেমেন্ট মেথড ব্যাংক হলে হিসাব নম্বর, হিসাবধারীর নাম, ব্যাংক ও শাখা — চারটিই দিতে হবে।",
+  stfDesignationRequired: "পদবি দিন — নিয়োগপত্রে এটিই ছাপা হয়।",
+  stfBack: "পূর্ববর্তী",
   // --- SH-9: fixes from the 2026-08-26 prod E2E test ---
   stfTabPerformance: "মূল্যায়ন",
   stfTabExit: "প্রস্থান",
@@ -7418,6 +7425,13 @@ const STR_EN: StrTable = {
   stfMyAttendance: "My attendance",
   stfYes: "Yes",
   stfNo: "No",
+  // --- SH-10: bank details, wizard back, required designation ---
+  stfBankAccountName: "Account holder name",
+  stfBankName: "Bank name",
+  stfBankBranch: "Branch",
+  stfBankDetailsRequired: "For a bank transfer all four are needed — account number, account holder name, bank and branch.",
+  stfDesignationRequired: "A designation is required — it is printed in the letter.",
+  stfBack: "Back",
   // --- SH-9: fixes from the 2026-08-26 prod E2E test ---
   stfTabPerformance: "Performance",
   stfTabExit: "Exit",
