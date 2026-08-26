@@ -66,6 +66,10 @@ import {
   recordsWithOpenClaims,
   WorkClaimError,
 } from "../modules/trackers/services/WorkClaimService";
+import {
+  workClaimEligible,
+  earliestClaimableDueDate,
+} from "../modules/trackers/services/WorkClaimView";
 
 const oid = () => new mongoose.Types.ObjectId();
 const STUDENT = oid();
@@ -264,6 +268,53 @@ describe("fileWorkClaim — the guard table", () => {
 // ---------------------------------------------------------------------------
 // §6.2 — auto-accept (D-#552)
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// The window, shared by the button and the guard (D-#553)
+// ---------------------------------------------------------------------------
+
+describe("the claim window is ONE rule — canClaim and fileWorkClaim cannot disagree", () => {
+  const input = {
+    tracker: "HOMEWORK" as const,
+    recordId: RECORD.toString(),
+    guardianId: GUARDIAN.toString(),
+    actorUserId: USER.toString(),
+    at: new Date("2026-08-26T09:00:00"),
+  };
+
+  test("earliestClaimableDueDate walks back 7 OPEN days, skipping Fri/Sat", async () => {
+    // From Wed 26 Aug: 26,25,24,23 then Sat/Fri are closed, then 20,19,18.
+    const d = await earliestClaimableDueDate(new Date("2026-08-26T09:00:00"));
+    // LOCAL parts: the helper returns local midnight, and toISOString would shift
+    // it a day at +06:00 — the trap that makes date assertions lie.
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    expect(key).toBe("2026-08-18");
+  });
+
+  test("a row inside the window is claimable AND files", async () => {
+    mockHwFindById.mockResolvedValue(hwRecord({ dueDate: new Date("2026-08-24T00:00:00") }));
+    const earliest = await earliestClaimableDueDate(input.at);
+    expect(workClaimEligible("CHASE", undefined, 0, new Date("2026-08-24"), earliest)).toBe(true);
+    await expect(fileWorkClaim(input)).resolves.toBeDefined();
+  });
+
+  test("a row OUTSIDE the window is neither claimable nor filable — the button never appears", async () => {
+    // 16 Aug is 9 open days back: the exact prod row (HW-C3-MATH-0017) that used
+    // to show a button the server then refused.
+    const earliest = await earliestClaimableDueDate(input.at);
+    expect(workClaimEligible("CHASE", undefined, 0, new Date("2026-08-16"), earliest)).toBe(false);
+
+    mockHwFindById.mockResolvedValue(hwRecord({ dueDate: new Date("2026-08-16T00:00:00") }));
+    await expect(fileWorkClaim(input)).rejects.toThrow(/সময়সীমা/);
+  });
+
+  test("with no window supplied the predicate still answers the other three rules", async () => {
+    expect(workClaimEligible("GIVEN", undefined, 0)).toBe(false);
+    expect(workClaimEligible("CHASE", { status: "PENDING" }, 0)).toBe(false);
+    expect(workClaimEligible("CHASE", undefined, 2)).toBe(false);
+    expect(workClaimEligible("CHASE", undefined, 0)).toBe(true);
+  });
+});
 
 describe("acceptClaimsForRecords — closes on the teacher's ordinary submit", () => {
   function openClaim() {

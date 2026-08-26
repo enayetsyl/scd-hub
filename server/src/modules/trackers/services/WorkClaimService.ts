@@ -34,6 +34,7 @@ import { HomeworkItem } from "../models/HomeworkItem";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { resolveDayType } from "../../routine/calendar";
 import { dateKeyOf } from "../../attendance/dates";
+import { earliestClaimableDueDate } from "./WorkClaimView";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { writeAudit } from "../../platform/services/AuditService";
 
@@ -223,10 +224,12 @@ export async function fileWorkClaim(
     );
   }
 
-  // (5) the 7-school-day window, measured from the due date.
+  // (5) the 7-school-day window, measured from the due date. Uses the SAME
+  //     helper the read path uses for canClaim, so the button a parent sees and
+  //     the guard that answers it can never disagree about which rows are open.
   if (record.dueDate) {
-    const openDays = await openDaysBetween(record.dueDate, at);
-    if (openDays > WORK_CLAIM_WINDOW_SCHOOL_DAYS) {
+    const earliest = await earliestClaimableDueDate(at);
+    if (new Date(record.dueDate).getTime() < earliest.getTime()) {
       throw new WorkClaimError("জানানোর সময়সীমা পেরিয়ে গেছে");
     }
   }
