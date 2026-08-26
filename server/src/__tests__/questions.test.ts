@@ -1206,6 +1206,73 @@ describe("QR-3 — only a published question may enter a set (Q3.4)", () => {
     expect(doc.save).toHaveBeenCalled();
   });
 
+  /**
+   * D-#566 — a RETIRED question must not reach a set, and `reviewStatus` cannot answer that.
+   *
+   * Retiring leaves the status alone, so a question retired while `gold` passed the publish
+   * check untouched. D-#548 claimed retiring hides a question from "the bank, the assign
+   * picker and set assembly"; the first two were built and this one never was, so a question
+   * pulled for having a WRONG ANSWER could still be assembled into a new paper.
+   *
+   * Found by retiring a published question on prod and seeing the basket button still offered.
+   */
+  function retiredGold() {
+    return { ...unpublished("gold"), retiredAt: new Date() };
+  }
+
+  test("addQuestionToSet refuses a RETIRED question even though it is still gold", async () => {
+    const doc = setDoc();
+    mockSetFindById.mockResolvedValue(doc);
+    mockArtifactFindById.mockResolvedValue(retiredGold());
+
+    await expect(
+      addQuestionToSet(SET_ID.toString(), UNPUBLISHED_ID.toString(), ACTOR_ID.toString()),
+    ).rejects.toThrow(/বাতিল/);
+
+    // Nothing written, and NOT the unpublished message — the reason a teacher reads must
+    // say the question was withdrawn, not that it was never published.
+    expect(doc.save).not.toHaveBeenCalled();
+    expect(mockEventCreate).not.toHaveBeenCalled();
+  });
+
+  test("a live gold question is still accepted — the guard did not over-reach", async () => {
+    const doc = setDoc();
+    mockSetFindById.mockResolvedValue(doc);
+    // retiredAt explicitly null, the shape a restored question has.
+    mockArtifactFindById.mockResolvedValue({ ...unpublished("gold"), retiredAt: null });
+
+    const res = await addQuestionToSet(SET_ID.toString(), UNPUBLISHED_ID.toString(), ACTOR_ID.toString());
+    expect(res.itemCount).toBe(1);
+  });
+
+  test("createSetWithQuestions refuses if ANY question is retired — atomic, nothing written", async () => {
+    const ART_OK = new mongoose.Types.ObjectId();
+    mockArtifactFind.mockResolvedValue([
+      {
+        _id: ART_OK,
+        docType: "question",
+        subject: "BAN",
+        classLevel: 5,
+        reviewStatus: "gold",
+        retiredAt: null,
+        envelopeJson: { payload: { qid: "QP-OK", marks: 1 } },
+      },
+      retiredGold(),
+    ]);
+
+    await expect(
+      createSetWithQuestions({
+        setType: "HW",
+        sectionId: SECTION_ID.toString(),
+        classId: CLASS_ID.toString(),
+        artifactIds: [ART_OK.toString(), UNPUBLISHED_ID.toString()],
+        actorId: ACTOR_ID.toString(),
+      }),
+    ).rejects.toThrow(/বাতিল/);
+
+    expect(mockEventCreate).not.toHaveBeenCalled();
+  });
+
   test("Q5.3 — the assigned REVIEWER may read an unpublished question but still cannot select it", async () => {
     // The read-scope override (Q3.2) is read-only and artifact-scoped. assertPublished has
     // deliberately NO reviewer exemption, so being the reviewer changes nothing here.
