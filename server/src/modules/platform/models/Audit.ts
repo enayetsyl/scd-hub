@@ -230,6 +230,13 @@ export type AuditEventKind =
   | "EXAM_SYLLABUS_REOPENED"          // a content edit cleared an existing teacher approval (§7.3, the D-#520 rule)
   | "EXAM_SYLLABUS_PUBLISHED"         // Principal published — publishedAt set, guardians can now read it
   | "EXAM_CLASS_NOTE_SAVED"            // the per-class question-type footer written/updated (§5.5)
+  // Guardian work claim (GC-2, D-#551..#554). The claim NEVER writes a lifecycle
+  // state, so these rows are the only record that a family spoke and who answered.
+  | "WORK_CLAIM_FILED"        // a guardian asserted the work was done at home
+  | "WORK_CLAIM_ACCEPTED"     // closed by the teacher’s ordinary submit pass (resolution AUTO)
+  | "WORK_CLAIM_REJECTED"     // the one manual close — reason is a picker value, never free text
+  | "WORK_CLAIM_NUDGED"       // Office re-fired the teacher’s notification (Office cannot resolve)
+  | "WORK_CLAIM_EXPIRED"      // 7 school days with no answer — leaves the queue, stays here
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

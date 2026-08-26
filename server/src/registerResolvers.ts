@@ -33,6 +33,7 @@ import "./modules/trackers/resolvers/assignmentGift";
 import "./modules/printing/resolvers/printRequest";
 import "./modules/trackers/resolvers/wholePicture";
 import "./modules/trackers/resolvers/studentProfile";
+import "./modules/trackers/resolvers/workClaim";
 import "./modules/reports/resolvers/monthlyReport";
 import "./modules/trackers/resolvers/reconReport";
 import "./modules/trackers/resolvers/hwLifecycleReport";

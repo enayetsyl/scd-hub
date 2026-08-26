@@ -457,6 +457,7 @@ export type AdminStackParamList = {
   AccessControlEdit: { userId: string; name: string; role: string };
   // Owner ask 2026-07-20: the Principal's audit-log viewer (audit:read).
   AuditLog: undefined;
+  WorkClaimQueue: undefined;
   // GE-1/GE-3 (D-#464/#465): the guardian-engagement report, same audit:read gate.
   GuardianEngagement: undefined;
   SystemHealth: undefined;

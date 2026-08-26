@@ -1242,6 +1242,18 @@ export const NOTIFICATION_KINDS = [
   "TEACHING_NOTE_PUBLISHED",
   "TEACHING_NOTE_COMMENT",
   "TEACHING_NOTE_COMMENT_ADDRESSED",
+  // Guardian work claim (GC-1, D-#551..#554; app-native, NO wire twin).
+  //   FILED     → the item's issuedBy teacher, the instant a parent taps
+  //   ESCALATED → Office at 11:30, Principal at 13:00 on the claim's ACTION DAY,
+  //               as ONE digest row per user per day — never one row per claim
+  //   RESOLVED  → the guardian who filed it: accepted, or rejected with the reason
+  "WORK_CLAIM_FILED",
+  "WORK_CLAIM_ESCALATED",
+  "WORK_CLAIM_RESOLVED",
+  // RL-2 (D-#556): a student is back after an absence — to the CLASS TEACHER only,
+  // fired when attendance CONFIRMS the return (owner ruling 2026-08-25). The leave
+  // register records an intention; only attendance records what happened.
+  "STUDENT_RETURNED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1285,6 +1297,10 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   TEACHING_NOTE_PUBLISHED: "নতুন নোট ও গাইড",
   TEACHING_NOTE_COMMENT: "নোটে নতুন পরামর্শ",
   TEACHING_NOTE_COMMENT_ADDRESSED: "পরামর্শ সমাধান হয়েছে",
+  WORK_CLAIM_FILED: "অভিভাবক জানিয়েছেন কাজ হয়েছে",
+  WORK_CLAIM_ESCALATED: "অভিভাবকের জানানো নিষ্পন্ন হয়নি",
+  WORK_CLAIM_RESOLVED: "আপনার জানানোর উত্তর এসেছে",
+  STUDENT_RETURNED: "ছুটি শেষে ফিরেছে",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1326,6 +1342,10 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   TEACHING_NOTE_PUBLISHED: "New note / guide",
   TEACHING_NOTE_COMMENT: "New suggestion on a note",
   TEACHING_NOTE_COMMENT_ADDRESSED: "Suggestion addressed",
+  WORK_CLAIM_FILED: "Guardian says the work is done",
+  WORK_CLAIM_ESCALATED: "Guardian claim unresolved",
+  WORK_CLAIM_RESOLVED: "Your report has an answer",
+  STUDENT_RETURNED: "Back after an absence",
 };
 
 /**
@@ -4122,3 +4142,93 @@ export const SYLLABUS_ITEM_TYPE_LABELS_EN: Record<SyllabusItemType, string> = {
  *  One universal guard rather than a per-class-band lookup; what FILLS the 100
  *  stays per subject, exactly as the source sheet writes it. */
 export const SYLLABUS_FULL_MARKS = 100;
+
+// =============================================================================
+// GUARDIAN WORK CLAIM — "বাড়িতে সম্পন্ন হয়েছে" (GC-1, D-#551..#554/#557)
+//
+// A parent asserts that homework/assignment sitting at DUE or CHASE was actually
+// done at home. The claim is a PARALLEL row and NEVER writes a lifecycle state
+// (D-#551) — only a teacher moves a record to SUBMITTED. App-native vocabulary:
+// no envelope twin, no import-contract sync (the D-#46/#52 pattern).
+// =============================================================================
+
+/** Which tracker a claim points at. The two record models are symmetric, so ONE
+ *  claim type spans both (owner ruling 2026-08-25). */
+export const WORK_CLAIM_TRACKERS = ["HOMEWORK", "ASSIGNMENT"] as const;
+export type WorkClaimTracker = (typeof WORK_CLAIM_TRACKERS)[number];
+
+export const WORK_CLAIM_TRACKER_LABELS_BN: Record<WorkClaimTracker, string> = {
+  HOMEWORK: "বাড়ির কাজ",
+  ASSIGNMENT: "অ্যাসাইনমেন্ট",
+};
+export const WORK_CLAIM_TRACKER_LABELS_EN: Record<WorkClaimTracker, string> = {
+  HOMEWORK: "Homework",
+  ASSIGNMENT: "Assignment",
+};
+
+/** PENDING → ACCEPTED | REJECTED | EXPIRED. ACCEPTED is reached AUTOMATICALLY by
+ *  the teacher's ordinary submit pass (D-#552); EXPIRED by the 7-school-day sweep. */
+export const WORK_CLAIM_STATUSES = ["PENDING", "ACCEPTED", "REJECTED", "EXPIRED"] as const;
+export type WorkClaimStatus = (typeof WORK_CLAIM_STATUSES)[number];
+
+export const WORK_CLAIM_STATUS_LABELS_BN: Record<WorkClaimStatus, string> = {
+  PENDING: "অপেক্ষমাণ",
+  ACCEPTED: "গৃহীত",
+  REJECTED: "নাকচ",
+  EXPIRED: "মেয়াদোত্তীর্ণ",
+};
+export const WORK_CLAIM_STATUS_LABELS_EN: Record<WorkClaimStatus, string> = {
+  PENDING: "Pending",
+  ACCEPTED: "Accepted",
+  REJECTED: "Rejected",
+  EXPIRED: "Expired",
+};
+
+/** A PICKER, never free text (D-#552). Without a recorded reason, "the teacher
+ *  hasn't answered yet" and "the child genuinely didn't bring it" look identical
+ *  to the Office — which would then chase a teacher who did nothing wrong. */
+export const WORK_CLAIM_REJECT_REASONS = [
+  "NOT_BROUGHT",
+  "NOT_FOUND",
+  "INCOMPLETE",
+  "ALREADY_RECORDED",
+  "OTHER",
+] as const;
+export type WorkClaimRejectReason = (typeof WORK_CLAIM_REJECT_REASONS)[number];
+
+export const WORK_CLAIM_REJECT_REASON_LABELS_BN: Record<WorkClaimRejectReason, string> = {
+  NOT_BROUGHT: "খাতা আনেনি",
+  NOT_FOUND: "খাতা পাইনি",
+  INCOMPLETE: "অসম্পূর্ণ",
+  ALREADY_RECORDED: "আগেই জমা লেখা হয়েছে",
+  OTHER: "অন্যান্য",
+};
+export const WORK_CLAIM_REJECT_REASON_LABELS_EN: Record<WorkClaimRejectReason, string> = {
+  NOT_BROUGHT: "Did not bring the notebook",
+  NOT_FOUND: "Notebook not received",
+  INCOMPLETE: "Incomplete",
+  ALREADY_RECORDED: "Already recorded as submitted",
+  OTHER: "Other",
+};
+
+/** Lifecycle states a guardian may file a claim against (D-#553). GIVEN is not
+ *  late yet; ABSENT_REDELIVER means the child never RECEIVED the work, so the
+ *  answer there is redelivery — which the return-from-leave card surfaces —
+ *  and a claim would be answering a question nobody asked. */
+export const WORK_CLAIM_ELIGIBLE_STATES: readonly LifecycleState[] = ["DUE", "CHASE"];
+
+/** The claim window, in SCHOOL days, measured from the record's due date
+ *  (D-#553). Matches the D-#279 Today-dashboard look-back so "recent" means one
+ *  thing across the app. Older than this, the term's reconciliation owns it. */
+export const WORK_CLAIM_WINDOW_SCHOOL_DAYS = 7;
+
+/** At most one re-claim after a rejection (D-#553): attempt 1 is the original,
+ *  attempt 2 the single retry. A parent who still disagrees is a conversation. */
+export const WORK_CLAIM_MAX_ATTEMPTS = 2;
+
+/** Same-day escalation fire points, minutes-from-midnight (D-#554, owner ruling
+ *  2026-08-25). The Office is told at 11:30 and the Principal at 13:00 on the
+ *  claim's ACTION DAY if the teacher still has not marked the work. Both ride
+ *  the existing 60s ticker, which already fires at arbitrary HH:MM. */
+export const WORK_CLAIM_OFFICE_RUNG_MIN = 11 * 60 + 30;
+export const WORK_CLAIM_PRINCIPAL_RUNG_MIN = 13 * 60;

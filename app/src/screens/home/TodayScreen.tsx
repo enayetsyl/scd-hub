@@ -35,6 +35,7 @@ import { useMutation, useQuery } from "urql";
 import type { Role } from "@scd/shared";
 import {
   MY_DAY_QUERY,
+  MY_WORK_CLAIMS_QUERY,
   MY_SECTION_ATTENDANCE,
   MY_RECENT_SETS,
   MY_HW_LIFECYCLE_QUERY,
@@ -50,6 +51,8 @@ import { HwPendingSheet, type HwPendingTarget } from "../../components/HwPending
 import { useSectionContext } from "../../state/SectionContext";
 import { Screen, H1, H2, Body, Muted, Card, Badge, Button, EmptyState, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { WorkClaimTeacherCard } from "../../components/WorkClaimTeacherCard";
+import { ReturningStudentsCard } from "../../components/ReturningStudentsCard";
 import { Icon, type IconName } from "../../components/Icon";
 import {
   STR,
@@ -95,6 +98,10 @@ export default function TodayScreen(): React.ReactElement {
   const date = todayISO();
 
   const [q, refetch] = useQuery({ query: MY_DAY_QUERY, variables: { date } });
+  // GC-4: the caller's own open guardian claims. The server field is
+  // authenticated-only and returns [] for a caller with none, so this needs no
+  // permission probe — the D-#535 lesson about probes that can white-screen.
+  const [claimsQ, refetchClaims] = useQuery({ query: MY_WORK_CLAIMS_QUERY, variables: {} });
 
   // The SAME gates AppTabs uses for the target tabs (no new gating logic).
   const canDeclare = can("tracker:read");
@@ -109,6 +116,17 @@ export default function TodayScreen(): React.ReactElement {
   const canSets = can("set:read");
   const canTrackers = can("tracker:read");
   const canHr = !!role && role !== "GUARDIAN";
+
+        {/* GC-4 — অভিভাবকের জানানো: claims waiting on THIS teacher. Renders nothing
+            when there are none, and myWorkClaims returns [] rather than refusing for
+            a caller with no claims at all (D-#535). */}
+        <WorkClaimTeacherCard
+          rows={claimsQ.data?.myWorkClaims ?? []}
+          onChanged={() => refetchClaims({ requestPolicy: "network-only" })}
+        />
+
+        {/* RL-1 — ছুটি শেষে ফিরেছে: who is back today, and what to ask them for. */}
+        <ReturningStudentsCard rows={q.data?.myDay?.returningStudents ?? []} />
 
   // D-#318: the teacher's OWN sections' attendance at a glance (admins land on
   // the card dashboard instead, so no pause needed beyond the guardian gate).

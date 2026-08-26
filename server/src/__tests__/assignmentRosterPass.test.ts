@@ -11,6 +11,15 @@ import mongoose from "mongoose";
 const mockRecFindById = jest.fn();
 const mockItemFindById = jest.fn();
 
+// GC-2: the submit edge now closes any open guardian claim, and the chase edge
+// asks whether one is open. This suite is DB-free, so the claim model is stubbed
+// EMPTY — without it every transition would buffer against a dead connection.
+jest.mock("../modules/trackers/models/GuardianWorkClaim", () => ({
+  GuardianWorkClaim: {
+    find: () => Promise.resolve([]),
+    exists: () => Promise.resolve(null),
+  },
+}));
 jest.mock("../modules/trackers/models/AssignmentStudentRecord", () => ({
   AssignmentStudentRecord: {
     findById: (id: unknown) => mockRecFindById(id),

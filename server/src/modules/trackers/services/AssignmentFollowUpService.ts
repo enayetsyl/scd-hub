@@ -22,6 +22,7 @@ import { AssignmentFollowUp, type FollowUpStep, type IAssignmentFollowUp } from 
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { AssignmentItem, type IAssignmentItem } from "../models/AssignmentItem";
 import { Student } from "../../foundation/models/Student";
+import { hasOpenClaim } from "./WorkClaimService";
 import { emitAssignmentGuardianChase } from "../../notifications/services/emitters";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { atMidnight, dateOnlyISO } from "../assignmentCalendar";
@@ -219,8 +220,14 @@ export async function escalateAssignmentChase(input: EscalateInput): Promise<Esc
   let waLink: string | undefined;
   let notified: string[] = [];
 
+  // D-#554 §6.4: an OPEN guardian claim mutes the family-facing rungs of the
+  // ladder. The follow-up is still RECORDED (the step is taken, the teacher’s view
+  // is unchanged) — only the push is held, because pushing a reminder for work the
+  // family has already reported is what would stop them ever reporting again.
+  const claimOpen = await hasOpenClaim(rec._id);
+
   if (step === "IN_APP_1" || step === "IN_APP_2") {
-    if (!input.skipInApp) {
+    if (!input.skipInApp && !claimOpen) {
       notified = await emitAssignmentGuardianChase({
         recordId: rec._id,
         asItemId: item._id,

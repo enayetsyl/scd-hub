@@ -80,6 +80,13 @@ jest.mock("../modules/trackers/services/HomeworkReconciliationService", () => ({
 }));
 // The ticker also runs the homework auto-DUE sweep (GIVEN → DUE on the due morning).
 // Mock it so the scheduler test stays DB-free (the sweep is covered in homeworkDueSweep.test.ts).
+// GC-5: the ticker now runs the 11:30/13:00 work-claim rungs and the expiry
+// sweep. Stubbed here like every other sweep this suite drives — the rungs have
+// their own tests in workClaimSweep.test.ts.
+jest.mock("../modules/trackers/services/WorkClaimSweepService", () => ({
+  runWorkClaimRung: jest.fn().mockResolvedValue({ openCount: 0, notified: 0 }),
+  expireStaleWorkClaims: jest.fn().mockResolvedValue(0),
+}));
 jest.mock("../modules/trackers/services/HomeworkDueSweepService", () => ({
   sweepHomeworkDue: (d: unknown) => mockSweepHomeworkDue(d),
 }));

@@ -28,6 +28,11 @@
  * (Saturdays stay attendance-free by ruling, D-#278).
  */
 import { Types } from "mongoose";
+import {
+  returningStudentsFor,
+  previousSchoolDayKey,
+} from "../../trackers/services/ReturnFromLeaveService";
+import { emitStudentReturned } from "../../notifications/services/emitters";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import { resolveDayType } from "../../routine/calendar";
@@ -326,6 +331,50 @@ async function upsertDay(
  * The unit's marker writes TODAY's absentees (absent-only; everyone else present).
  * Re-submitting the same day overwrites it — editable until end of day (O2).
  */
+/**
+ * RL-2: tell the CLASS TEACHER which students are back today and what to ask them
+ * for. Class teacher only (D-#556) — the card is scoped to subject teachers too,
+ * but one returning student would otherwise push every teacher who meets them.
+ *
+ * Best-effort: a notification must never fail an attendance save.
+ */
+async function notifyReturnsFromLeave(
+  unit: AttendanceUnit,
+  dateKey: string,
+  now: Date,
+): Promise<void> {
+  try {
+    // Section units only: a Quran/Arabic group has no class teacher to tell.
+    if (unit.unitType !== "section") return;
+    const section = (await Section.findById(unit.unitId).select("classTeacherId").lean()) as
+      | { classTeacherId?: unknown }
+      | null;
+    if (!section?.classTeacherId) return;
+
+    const prevKey = await previousSchoolDayKey(parseDateKey(dateKey), async (probe) => {
+      const dt = await resolveDayType(probe);
+      return dt !== "OFF" && dt !== "HOLIDAY";
+    });
+    const returning = await returningStudentsFor([unit.unitId], dateKey, prevKey);
+
+    for (const r of returning) {
+      // Only the attendance-CONFIRMED half is ever pushed.
+      if (r.source !== "RETURNED") continue;
+      await emitStudentReturned({
+        studentId: r.studentId,
+        studentNameBn: r.studentNameBn,
+        sectionId: unit.unitId,
+        teacherId: section.classTeacherId as never,
+        redeliverCount: r.items.filter((i) => i.group === "REDELIVER").length,
+        collectCount: r.items.filter((i) => i.group === "COLLECT").length,
+        at: now,
+      });
+    }
+  } catch (err) {
+    console.error("[attendance] return-from-leave notify failed (save unaffected):", err);
+  }
+}
+
 export async function markAttendanceUnit(
   ctx: AppContext,
   unit: AttendanceUnit,
@@ -344,7 +393,15 @@ export async function markAttendanceUnit(
   }
   await assertFullDay(dateKey);
   const absentIds = await validateAbsentees(unit, absentStudentIds, dateKey);
-  return upsertDay(unit, dateKey, absentIds, ctx.auth!.userId, false);
+  const day = await upsertDay(unit, dateKey, absentIds, ctx.auth!.userId, false);
+
+  // RL-2 (D-#556, owner ruling 2026-08-25): the return push fires HERE, the moment
+  // attendance CONFIRMS a child is back — not at the school-day start and not off
+  // the leave register. The register records an intention; only this records what
+  // happened, and a notification teachers learn to distrust is worse than none.
+  await notifyReturnsFromLeave(unit, dateKey, now);
+
+  return day;
 }
 
 export async function markSectionAttendance(
@@ -374,7 +431,11 @@ export async function amendAttendanceUnit(
   }
   await assertFullDay(dateKey);
   const absentIds = await validateAbsentees(unit, absentStudentIds, dateKey);
-  return upsertDay(unit, dateKey, absentIds, actorId, true);
+  const day = await upsertDay(unit, dateKey, absentIds, actorId, true);
+  // An amendment can be the first time a return is recorded, so it fires too —
+  // the (date, student, teacher) dedupe makes a re-save a no-op.
+  await notifyReturnsFromLeave(unit, dateKey, now);
+  return day;
 }
 
 export async function amendStudentAttendance(

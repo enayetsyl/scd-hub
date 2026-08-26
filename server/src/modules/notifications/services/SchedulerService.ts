@@ -41,6 +41,7 @@
  * Identity-plane only (ADR-005); no corpus path (N5.1).
  */
 import type { AttendanceReminderTier } from "@scd/shared";
+import { WORK_CLAIM_OFFICE_RUNG_MIN, WORK_CLAIM_PRINCIPAL_RUNG_MIN } from "@scd/shared";
 import { ROUTINE_SUBJECT_LABELS_BN } from "@scd/shared";
 import { resolveDayType } from "../../routine/calendar";
 import { hhmmToMinutes } from "../../routine/schedule";
@@ -57,6 +58,10 @@ import { runDueOffboardingRevocations } from "../../hr/services/OffboardingServi
 import { runObservationEscalation } from "../../classroom-observation/services/ObservationEscalationService";
 import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconciliationService";
 import { sweepHomeworkDue } from "../../trackers/services/HomeworkDueSweepService";
+import {
+  runWorkClaimRung,
+  expireStaleWorkClaims,
+} from "../../trackers/services/WorkClaimSweepService";
 import {
   sweepHomeworkAutoChase,
   HW_AUTO_CHASE_MINUTES,
@@ -111,6 +116,15 @@ export const HW_CONFIRM_ESCALATION_RUNGS = [
   { min: 14 * 60, role: "OFFICE" },
   { min: 16 * 60, role: "PRINCIPAL" },
 ] as const;
+/** Guardian work-claim rungs (D-#554, owner ruling 2026-08-25): the Office is told
+ *  at 11:30 and the Principal at 13:00, on the claim's stored ACTION DAY. Both ride
+ *  this same ticker — the attendance tiers already fire at 12:10/12:45, so neither
+ *  time needed any new scheduling machinery. */
+export const WORK_CLAIM_RUNGS = [
+  { min: WORK_CLAIM_OFFICE_RUNG_MIN, role: "OFFICE" },
+  { min: WORK_CLAIM_PRINCIPAL_RUNG_MIN, role: "PRINCIPAL" },
+] as const;
+
 /** Weekly guardian homework digest (D-#452) — 17:00 on the LAST OPEN day of the
  *  Sun–Thu school week (normally Thursday). */
 export const HW_WEEKLY_DIGEST_MINUTES = 17 * 60;
@@ -352,6 +366,32 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
           `[scheduler] hw weekly digest: ${res.students} student(s), ${res.notified} guardian notification(s)`,
         );
       }
+    });
+  });
+
+  // --- Guardian work claims (GC-5, D-#554): 11:30 → Office, 13:00 → Principal.
+  // ONE digest row per recipient per rung per day, carrying the count. A claim
+  // still open tomorrow appears in tomorrow's rows too — that IS the chasing.
+  await family("work claim rungs", async () => {
+    const rung = WORK_CLAIM_RUNGS.find((r) => windowOpen(nowMin, r.min));
+    if (!rung) return;
+    await runOnce(dateKey, `WCR-${rung.role}`, async () => {
+      const res = await runWorkClaimRung(rung.role, now);
+      if (res.openCount > 0) {
+        console.log(
+          `[scheduler] work claims → ${rung.role}: ${res.openCount} open, ${res.notified} row(s)`,
+        );
+      }
+    });
+  });
+
+  // Queue hygiene: claims nobody answered inside the window leave the queue and
+  // stay in the audit log. Once a day, alongside the Principal rung.
+  await family("work claim expiry", async () => {
+    if (!windowOpen(nowMin, WORK_CLAIM_PRINCIPAL_RUNG_MIN)) return;
+    await runOnce(dateKey, "WCEXP", async () => {
+      const expired = await expireStaleWorkClaims(now);
+      if (expired > 0) console.log(`[scheduler] work claims expired: ${expired}`);
     });
   });
 

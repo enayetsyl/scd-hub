@@ -14,6 +14,12 @@
  *     other student).
  */
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
+import { GuardianWorkClaim } from "../models/GuardianWorkClaim";
+import {
+  workClaimEligible,
+  workClaimViewOf2,
+  type GuardianWorkClaimView,
+} from "./WorkClaimView";
 import { AssignmentItem, type IAssignmentItem } from "../models/AssignmentItem";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { loadOpenDayPredicate } from "./AssignmentScheduleService";
@@ -244,6 +250,9 @@ export interface ChildAssignmentEntry {
   isResubmission: boolean;
   /** D-#478: WHAT the assignment is. Null only for pre-D-#478 items. */
   description: string | null;
+  /** GC-3: may a guardian file "done at home" on this row right now? */
+  canClaim: boolean;
+  claim: GuardianWorkClaimView | null;
   /** Delivery-pass attachments on the item (≤5, D-#298) — empty when none. */
   attachmentIds: string[];
 }
@@ -272,6 +281,20 @@ export async function childAssignments(
   const itemById = new Map(items.map((i) => [i._id.toString(), i]));
   const today = atMidnight(asOf).getTime();
 
+  // ONE query for every record's claim (the D-#476 lesson), latest first.
+  const claimRows = (await GuardianWorkClaim.find({
+    recordId: { $in: records.map((r) => r._id) },
+  })
+    .sort({ claimedAt: -1 })
+    .lean()) as unknown as Array<Record<string, any>>;
+  const claimByRecord = new Map<string, Record<string, any>>();
+  const attemptsByRecord = new Map<string, number>();
+  for (const c of claimRows) {
+    const key = c.recordId.toString();
+    if (!claimByRecord.has(key)) claimByRecord.set(key, c);
+    attemptsByRecord.set(key, (attemptsByRecord.get(key) ?? 0) + 1);
+  }
+
   return records.map((r) => {
     const item = itemById.get(r.asItemId.toString());
     const open = !isTerminalState(r.state as never);
@@ -282,6 +305,8 @@ export async function childAssignments(
         : 0;
     return {
       recordId: r._id.toString(),
+      canClaim: workClaimEligible(r.state as never, claimByRecord.get(r._id.toString()), attemptsByRecord.get(r._id.toString()) ?? 0),
+      claim: workClaimViewOf2(claimByRecord.get(r._id.toString()), attemptsByRecord.get(r._id.toString()) ?? 0),
       asId: r.asId,
       subject: item?.subject ?? "?",
       weekNumber: item?.weekNumber ?? 0,

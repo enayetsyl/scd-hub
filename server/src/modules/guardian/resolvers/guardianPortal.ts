@@ -12,6 +12,11 @@
  */
 import { builder } from "../../../schema";
 import { assertGuardianOfStudent } from "../../../middleware/authz";
+import { WORK_CLAIM_TRACKERS } from "@scd/shared";
+import type { WorkClaimTracker } from "@scd/shared";
+import { fileWorkClaim } from "../../trackers/services/WorkClaimService";
+import { GuardianWorkClaimGqlRef } from "../../trackers/resolvers/workClaim";
+import { emitWorkClaimFiled } from "../../notifications/services/emitters";
 import {
   myChildren,
   childRoutine,
@@ -36,6 +41,8 @@ import {
   type GuardianClassNoteAttachment,
   type GuardianClassNoteHomework,
   type GuardianHomeworkRecord,
+  type GuardianWorkClaimView,
+  workClaimViewOf,
   type GuardianAttendanceHistory,
   type GuardianAttendanceDay,
   type GuardianFeeDue,
@@ -201,6 +208,12 @@ const GuardianHomeworkRecordRef = builder
       questionFileId: t.string({ nullable: true, resolve: (r) => r.questionFileId }),
       answerFileId: t.string({ nullable: true, resolve: (r) => r.answerFileId }),
       attachmentIds: t.field({ type: ["String"], resolve: (r) => r.attachmentIds ?? [] }),
+      canClaim: t.exposeBoolean("canClaim"),
+      claim: t.field({
+        type: GuardianWorkClaimGqlRef,
+        nullable: true,
+        resolve: (r) => r.claim,
+      }),
     }),
   });
 
@@ -495,6 +508,53 @@ builder.queryField("childUpcomingClassTests", (t) =>
     resolve: async (_r, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
       return childUpcomingClassTests(args.studentId);
+    },
+  }),
+);
+
+// --- GC-3: the guardian files "বাড়িতে সম্পন্ন হয়েছে" ------------------------
+
+builder.mutationField("fileChildWorkClaim", (t) =>
+  t.field({
+    type: GuardianWorkClaimGqlRef,
+    authScopes: { hasPermission: "guardian:read_child" },
+    description:
+      "Declare that a DUE/CHASE homework or assignment was done at home (D-#551). " +
+      "Files a claim; the teacher is notified immediately and all three staff roles " +
+      "see it at once. NEVER writes a lifecycle state. Idempotent: filing twice " +
+      "returns the existing open claim. Link-gated.",
+    args: {
+      studentId: t.arg.string({ required: true }),
+      tracker: t.arg.string({ required: true }),
+      recordId: t.arg.string({ required: true }),
+      note: t.arg.string({ required: false }),
+    },
+    resolve: async (_r, args, ctx) => {
+      await assertGuardianOfStudent(ctx, args.studentId);
+      if (!WORK_CLAIM_TRACKERS.includes(args.tracker as WorkClaimTracker)) {
+        throw new Error("tracker must be HOMEWORK or ASSIGNMENT");
+      }
+      const claim = await fileWorkClaim({
+        tracker: args.tracker as WorkClaimTracker,
+        recordId: args.recordId,
+        guardianId: ctx.auth!.userId,
+        actorUserId: ctx.auth!.userId,
+        note: args.note ?? null,
+      });
+
+      // Best-effort: the teacher's notification must never fail the parent's tap.
+      await emitWorkClaimFiled({
+        claimId: claim._id.toString(),
+        tracker: claim.tracker,
+        workId: claim.workId,
+        subject: claim.subject,
+        studentId: claim.studentId.toString(),
+        sectionId: claim.sectionId.toString(),
+        teacherId: claim.teacherId.toString(),
+        claimedByGuardianId: claim.claimedByGuardianId.toString(),
+      });
+
+      return workClaimViewOf(claim);
     },
   }),
 );
