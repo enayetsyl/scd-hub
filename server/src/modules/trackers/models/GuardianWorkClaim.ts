@@ -1,9 +1,9 @@
 /**
- * GuardianWorkClaim (GC-1, D-#548..#551/#554) — "বাড়িতে সম্পন্ন হয়েছে".
+ * GuardianWorkClaim (GC-1, D-#551..#554/#557) — "বাড়িতে সম্পন্ন হয়েছে".
  *
  * A guardian asserts that homework/assignment sitting at DUE or CHASE was in fact
  * done at home. The row is PARALLEL to the tracker and NEVER writes a lifecycle
- * state (D-#548): only a teacher moves a record to SUBMITTED. What this collection
+ * state (D-#551): only a teacher moves a record to SUBMITTED. What this collection
  * records is the assertion, and whether anybody has answered it yet.
  *
  * ONE row type spans both trackers (owner ruling 2026-08-25) because
@@ -17,7 +17,7 @@
  * untouched, exactly like `HomeworkStudentRecord`.
  *
  * The one-open-claim invariant is a PARTIAL UNIQUE INDEX, not just a service
- * check (D-#550): two guardians of the same child tapping at the same moment is a
+ * check (D-#553): two guardians of the same child tapping at the same moment is a
  * real race, and a service-level guard loses it.
  */
 import { Schema, model, Document, Types } from "mongoose";
@@ -33,7 +33,7 @@ import type {
 } from "@scd/shared";
 
 /** How a claim reached a terminal status — AUTO means the teacher's ordinary
- *  submit pass closed it without a second tap (D-#549). */
+ *  submit pass closed it without a second tap (D-#552). */
 export const WORK_CLAIM_RESOLUTIONS = ["AUTO", "MANUAL"] as const;
 export type WorkClaimResolution = (typeof WORK_CLAIM_RESOLUTIONS)[number];
 
@@ -58,7 +58,7 @@ export interface IGuardianWorkClaim extends Document {
   claimedByUserId: Types.ObjectId;
   claimedAt: Date;
   /**
-   * THE ACTION DAY (D-#554) — `YYYY-MM-DD`, resolved ONCE at file time and stored.
+   * THE ACTION DAY (D-#557) — `YYYY-MM-DD`, resolved ONCE at file time and stored.
    * The 11:30 / 13:00 rungs read this field and never re-derive it, so the ladder
    * cannot depend on when the ticker happened to run. It is the first school day
    * on which BOTH rungs still lie ahead: filed before 11:30 on a school day → that
@@ -68,19 +68,19 @@ export interface IGuardianWorkClaim extends Document {
   /** Optional parent note, ≤200 chars ("খাতা ব্যাগে দিয়ে দিয়েছি"). */
   note?: string;
   status: WorkClaimStatus;
-  /** 1 = the original, 2 = the single retry allowed after a rejection (D-#550). */
+  /** 1 = the original, 2 = the single retry allowed after a rejection (D-#553). */
   attemptNumber: number;
   resolvedBy?: Types.ObjectId;
   resolvedAt?: Date;
   resolution?: WorkClaimResolution;
-  /** Required when status is REJECTED — a picker value, never free text (D-#549). */
+  /** Required when status is REJECTED — a picker value, never free text (D-#552). */
   rejectReason?: WorkClaimRejectReason;
   /** ≤200 chars; only meaningful (and only required) when rejectReason is OTHER. */
   rejectNote?: string;
   /** Rung idempotency — set once each, which is what makes the sweep restart-safe. */
   officeNotifiedAt?: Date;
   principalNotifiedAt?: Date;
-  /** The Office nudge, rate-limited to once per claim per day (D-#551). */
+  /** The Office nudge, rate-limited to once per claim per day (D-#554). */
   lastNudgedAt?: Date;
   nudgeCount: number;
   createdAt: Date;
@@ -119,7 +119,7 @@ const GuardianWorkClaimSchema = new Schema<IGuardianWorkClaim>(
 );
 
 /** A REJECTED row without a reason would make the Office queue unreadable and
- *  defeat the whole point of D-#549 — so the shape is enforced, not trusted. */
+ *  defeat the whole point of D-#552 — so the shape is enforced, not trusted. */
 GuardianWorkClaimSchema.pre("validate", function (next) {
   if (this.status === "REJECTED" && !this.rejectReason) {
     next(new Error("GuardianWorkClaim: a REJECTED claim requires a rejectReason"));
@@ -132,14 +132,14 @@ GuardianWorkClaimSchema.pre("validate", function (next) {
   next();
 });
 
-// THE one-open-claim invariant (D-#550), enforced by the database.
+// THE one-open-claim invariant (D-#553), enforced by the database.
 GuardianWorkClaimSchema.index(
   { recordId: 1 },
   { unique: true, partialFilterExpression: { status: "PENDING" } },
 );
 // The roster badge + "does this record have a claim" lookups.
 GuardianWorkClaimSchema.index({ recordId: 1, status: 1 });
-// The 11:30 / 13:00 sweep: open claims whose action day has arrived (D-#551/#554).
+// The 11:30 / 13:00 sweep: open claims whose action day has arrived (D-#554/#557).
 GuardianWorkClaimSchema.index({ status: 1, actionDateKey: 1 });
 // The student's own history (guardian screen, student profile).
 GuardianWorkClaimSchema.index({ studentId: 1, claimedAt: -1 });

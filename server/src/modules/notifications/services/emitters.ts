@@ -61,14 +61,14 @@ const dedupeKeys = {
    *  this family with a day suffix so a nudge can re-notify without colliding. */
   workClaimFiled: (claimId: string) => `WCF:${claimId}`,
   workClaimNudged: (claimId: string, dateKey: string) => `WCN:${claimId}:${dateKey}`,
-  /** ONE digest row per recipient per rung per day (D-#551) — never one per claim.
+  /** ONE digest row per recipient per rung per day (D-#554) — never one per claim.
    *  At hours-scale escalation the per-claim shape would put N rows a day into the
    *  Principal's inbox instead of one, and an unreadable inbox is an ignored one. */
   workClaimEscalated: (dateKey: string, rung: string, recipientId: string) =>
     `WCE:${dateKey}:${rung}:${recipientId}`,
   /** Per claim: the family is told exactly once how it ended. */
   workClaimResolved: (claimId: string) => `WCR:${claimId}`,
-  /** RL-2: one return notice per student per day per teacher (D-#553). */
+  /** RL-2: one return notice per student per day per teacher (D-#556). */
   studentReturned: (dateKey: string, studentId: string, teacherId: string) =>
     `SRET:${dateKey}:${studentId}:${teacherId}`,
   /** Per assignment: re-running the host mutation can't double-notify. */
@@ -1537,8 +1537,8 @@ export async function emitTeachingNoteCommentAddressed(
 }
 
 // ---------------------------------------------------------------------------
-// Guardian work claim (GC-2/GC-5, D-#548..#551) + the return-from-leave push
-// (RL-2, D-#553). Bodies are built inline rather than through renderTemplate:
+// Guardian work claim (GC-2/GC-5, D-#551..#554) + the return-from-leave push
+// (RL-2, D-#556). Bodies are built inline rather than through renderTemplate:
 // these are app-native strings with no message-template key, and keeping the
 // Bangla in one visible place matters more here than template indirection.
 // ---------------------------------------------------------------------------
@@ -1583,7 +1583,7 @@ export async function emitWorkClaimFiled(ev: WorkClaimNotifyEvent): Promise<void
   });
 }
 
-/** The Office nudge (D-#551): re-fire the SAME message, once per claim per day.
+/** The Office nudge (D-#554): re-fire the SAME message, once per claim per day.
  *  Office cannot resolve a claim — this is the entire extent of what it can do. */
 export async function emitWorkClaimNudge(ev: WorkClaimNotifyEvent, at: Date): Promise<void> {
   return bestEffort("work claim nudge", async () => {
@@ -1652,7 +1652,7 @@ export async function emitWorkClaimResolved(claim: {
 }
 
 /**
- * The 11:30 / 13:00 rung (D-#551). ONE digest row per recipient per rung per day,
+ * The 11:30 / 13:00 rung (D-#554). ONE digest row per recipient per rung per day,
  * carrying the COUNT — never one row per claim. Recipients are every active user
  * in the rung's role.
  */
@@ -1690,7 +1690,7 @@ export async function emitWorkClaimEscalation(
 }
 
 /**
- * RL-2 (D-#553): a student is back after an absence. CLASS TEACHER only — the card
+ * RL-2 (D-#556): a student is back after an absence. CLASS TEACHER only — the card
  * is scoped to subject teachers too, but one returning student would otherwise push
  * every teacher who meets them that day. Fired from the attendance mark/amend seam,
  * so it only ever announces a return attendance has CONFIRMED.

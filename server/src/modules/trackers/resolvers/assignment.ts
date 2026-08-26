@@ -748,7 +748,7 @@ interface ChildAssignmentShape {
   description?: string | null;
   /** Delivery-pass attachments on the item (≤5, D-#298) — empty when none. */
   attachmentIds?: string[];
-  /** GC-3 — the guardian “done at home” control (D-#548/#550). */
+  /** GC-3 — the guardian “done at home” control (D-#551/#553). */
   canClaim?: boolean;
   claim?: GuardianWorkClaimView | null;
 }

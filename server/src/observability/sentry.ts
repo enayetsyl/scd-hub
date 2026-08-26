@@ -30,7 +30,7 @@ import type { AppContext } from "../context";
  * are NOT sent to GlitchTip. Add new domain error classes here as modules grow.
  */
 export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
-  // A guardian work-claim refusal (GC-2, D-#550): the record is not at DUE/CHASE, a
+  // A guardian work-claim refusal (GC-2, D-#553): the record is not at DUE/CHASE, a
   // claim is already open, the family has used its one re-claim, the 7-school-day
   // window has passed, or the guardian is not linked to that child. Every one is a
   // Bangla sentence written for the parent to read — a refusal, never a fault.

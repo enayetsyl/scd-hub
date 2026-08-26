@@ -80,7 +80,7 @@ export interface MyDayResult {
   /** The sections the caller is CLASS TEACHER of (D-#42 daily coordinator) — the
    *  Today dashboard names the duty so the reconcile alerts have a face. */
   classTeacherOf: ClassTeacherSection[];
-  /** RL-1 (D-#552/#553): students back today after an absence, with the work to
+  /** RL-1 (D-#555/#556): students back today after an absence, with the work to
    *  hand back out and the work to collect. Derived every load — no stored row.
    *  Empty for a caller with no reach; NEVER an error (the D-#535 rule). */
   returningStudents: ReturningStudent[];
@@ -261,7 +261,7 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
     ? await classPresenceForDate(dateKey)
     : [];
 
-  // 6. RL-1 — who is back today, and what to ask them for (D-#552/#553).
+  // 6. RL-1 — who is back today, and what to ask them for (D-#555/#556).
   //    Scope follows the caller's REACH, and degrades to [] rather than refusing:
   //      class teacher  → the whole section, every subject
   //      subject teacher → only classes they have a period with TODAY, and only

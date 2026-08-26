@@ -78,7 +78,7 @@ export interface NotificationRefs {
    *  the VERSION row the event names; the comment id is set on the two comment kinds. */
   teachingNoteId?: string;
   teachingNoteCommentId?: string;
-  /** Guardian work claim (GC-1, D-#548..#551) — deep-link: the teacher roster pass /
+  /** Guardian work claim (GC-1, D-#551..#554) — deep-link: the teacher roster pass /
    *  the Office queue / the guardian record card, depending on the recipient. */
   workClaimId?: string;
 }

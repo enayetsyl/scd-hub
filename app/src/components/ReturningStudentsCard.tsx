@@ -1,5 +1,5 @@
 /**
- * ReturningStudentsCard (RL-1, D-#552/#553) — "ছুটি শেষে ফিরেছে".
+ * ReturningStudentsCard (RL-1, D-#555/#556) — "ছুটি শেষে ফিরেছে".
  *
  * The two groups are never mixed, because they are different asks:
  *   পুনরায় দিতে হবে — the child never RECEIVED this (ABSENT_REDELIVER)

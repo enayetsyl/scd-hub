@@ -680,7 +680,7 @@ export async function transitionAssignmentRecord(
   rec.stateDates.push({ state: to, at, by: new Types.ObjectId(actorId) });
   await rec.save();
 
-  // D-#549: the assignment twin of the homework hook — marking a student
+  // D-#552: the assignment twin of the homework hook — marking a student
   // submitted through any path closes an open guardian claim as ACCEPTED,
   // with no second tap for the teacher.
   if (to === "SUBMITTED") {

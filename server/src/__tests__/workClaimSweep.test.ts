@@ -1,5 +1,5 @@
 /**
- * GC-5 tests — the same-day escalation rungs and the expiry sweep (D-#551/#554).
+ * GC-5 tests — the same-day escalation rungs and the expiry sweep (D-#554/#557).
  *
  * What must hold:
  *   - a rung reads the STORED action day, so a claim filed this afternoon is not
@@ -77,7 +77,7 @@ describe("runWorkClaimRung — the 11:30 / 13:00 ladder", () => {
 
   test("a claim scheduled for TOMORROW is not part of today's query", async () => {
     // The filter is $lte today, so tomorrow's action day cannot match — this is
-    // the D-#554 guarantee that an afternoon filing is not escalated the same day.
+    // the D-#557 guarantee that an afternoon filing is not escalated the same day.
     mockFind.mockResolvedValue([]);
     const res = await runWorkClaimRung("OFFICE", AT);
     expect(res.openCount).toBe(0);

@@ -1,5 +1,5 @@
 /**
- * The guardian-visible shape of a work claim (GC-3, D-#548/#550).
+ * The guardian-visible shape of a work claim (GC-3, D-#551/#553).
  *
  * Lives in one module because BOTH guardian reads project it — the homework
  * screen through `GuardianPortalService` and the assignment screen through
@@ -24,12 +24,12 @@ export interface GuardianWorkClaimView {
   rejectReasonLabelBn: string | null;
   rejectNote: string | null;
   attemptNumber: number;
-  /** False once the family has used its one re-claim (D-#550). */
+  /** False once the family has used its one re-claim (D-#553). */
   canReclaim: boolean;
 }
 
 /**
- * The D-#550 rule, computed SERVER-SIDE so no screen re-implements it: an
+ * The D-#553 rule, computed SERVER-SIDE so no screen re-implements it: an
  * eligible state, no claim currently open, and at least one attempt left.
  */
 export function workClaimEligible(

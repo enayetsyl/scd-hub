@@ -281,7 +281,7 @@ function RecordBlock({
         </View>
       ) : null}
 
-      {/* GC-3 — "বাড়িতে সম্পন্ন হয়েছে". The whole eligibility rule (D-#550) is
+      {/* GC-3 — "বাড়িতে সম্পন্ন হয়েছে". The whole eligibility rule (D-#553) is
           server-computed into canClaim, so this screen never re-implements it. */}
       <WorkClaimBlock
         studentId={studentId}

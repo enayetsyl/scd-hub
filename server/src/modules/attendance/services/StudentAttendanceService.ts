@@ -333,7 +333,7 @@ async function upsertDay(
  */
 /**
  * RL-2: tell the CLASS TEACHER which students are back today and what to ask them
- * for. Class teacher only (D-#553) — the card is scoped to subject teachers too,
+ * for. Class teacher only (D-#556) — the card is scoped to subject teachers too,
  * but one returning student would otherwise push every teacher who meets them.
  *
  * Best-effort: a notification must never fail an attendance save.
@@ -395,7 +395,7 @@ export async function markAttendanceUnit(
   const absentIds = await validateAbsentees(unit, absentStudentIds, dateKey);
   const day = await upsertDay(unit, dateKey, absentIds, ctx.auth!.userId, false);
 
-  // RL-2 (D-#553, owner ruling 2026-08-25): the return push fires HERE, the moment
+  // RL-2 (D-#556, owner ruling 2026-08-25): the return push fires HERE, the moment
   // attendance CONFIRMS a child is back — not at the school-day start and not off
   // the leave register. The register records an intention; only this records what
   // happened, and a notification teachers learn to distrust is worse than none.

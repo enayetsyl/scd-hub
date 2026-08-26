@@ -796,7 +796,7 @@ export async function transitionRecord(
   // D-#260: EVERY chase pushes the student's login-enabled guardians an in-app
   // reminder (in-app + push), deduped once per student+item per day inside the
   // emitter. Best-effort — a notification problem never blocks the transition.
-  // D-#551 §6.4: while a guardian is waiting for an answer on THIS record, the
+  // D-#554 §6.4: while a guardian is waiting for an answer on THIS record, the
   // app must not push them a reminder for the very work they reported. The state
   // still advances and chaseCount still increments — the teacher's view is
   // unchanged — only the family-facing push is held.
@@ -823,7 +823,7 @@ export async function transitionRecord(
     });
   }
 
-  // D-#549: the ONE homework hook. Marking a student submitted through ANY path
+  // D-#552: the ONE homework hook. Marking a student submitted through ANY path
   // — the roster pass, the workspace card, the outcome service — closes an open
   // guardian claim as ACCEPTED. Placing it on the edge rather than in the roster
   // pass is what stops a future submit path bypassing it. Best-effort inside.

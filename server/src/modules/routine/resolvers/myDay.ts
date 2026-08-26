@@ -108,7 +108,7 @@ const ReturningOpenItemRef = builder.objectRef<ReturningOpenItem>("ReturningOpen
 
 const ReturningStudentRef = builder.objectRef<ReturningStudent>("ReturningStudent").implement({
   description:
-    "A student back today after an absence (RL-1, D-#552). source RETURNED means " +
+    "A student back today after an absence (RL-1, D-#555). source RETURNED means " +
     "attendance confirmed it; EXPECTED means only the leave register says so — " +
     "available from 07:00, and deliberately never pushed.",
   fields: (t) => ({

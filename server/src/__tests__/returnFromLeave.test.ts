@@ -1,5 +1,5 @@
 /**
- * RL-1/RL-2 tests — the return-from-leave card and its push (D-#552/#553).
+ * RL-1/RL-2 tests — the return-from-leave card and its push (D-#555/#556).
  *
  * The rules that matter:
  *   - "back today" = absent on the last MARKED day, not absent today
@@ -156,7 +156,7 @@ describe("returningStudentsFor — the card", () => {
     expect(rows[0].items[0].tracker).toBe("ASSIGNMENT");
   });
 
-  test("a SUBJECT teacher sees only their own subject's items (D-#553)", async () => {
+  test("a SUBJECT teacher sees only their own subject's items (D-#556)", async () => {
     backYesterday();
     const mathItem = oid();
     const banItem = oid();

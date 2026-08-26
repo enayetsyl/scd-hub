@@ -3,7 +3,7 @@
 **Status:** BUILD CONTRACT — **all owner rulings ratified 2026-08-25 (§11); no open questions.** Wireframes attached (§10). Nothing built.
 **Owner:** Principal
 **Modules:** `server/src/modules/trackers` (the claim row + resolution), `server/src/modules/guardian` (the file mutation), `server/src/modules/routine` (`myDay` — the return card), `server/src/modules/notifications` (four new kinds)
-**Decisions:** **D-#548–#554** (2026-08-25, pre-flighted against `origin/dev` @ `630ab49`; live max was D-#547. *An earlier pre-flight against `8ceb013` had reserved #547–#553; `D-#547` then landed on dev the same day — the HR policy screen — so the whole block shifted up by one before anything was written.*)
+**Decisions:** **D-#551–#554** (2026-08-25, pre-flighted against `origin/dev` @ `630ab49`; live max was D-#547. *An earlier pre-flight against `8ceb013` had reserved #547–#553; `D-#547` then landed on dev the same day — the HR policy screen — so the whole block shifted up by one before anything was written.*)
 **Source:** owner ask 2026-08-25 — *"the guardian makes sure the student completes the homework but the student didn't submit at school, so the teacher never marks it submitted"* and *"when a student comes back after a leave, remind the teacher to ask that student for the homework and assignment."*
 
 ---
@@ -12,10 +12,10 @@
 
 Two separate features that close the two ends of the same leak: **work that was done but never got recorded as done.**
 
-- **A — the guardian declaration (GC-1..GC-5).** On any of the child's homework/assignment rows sitting at `DUE` or `CHASE`, a guardian taps **"বাড়িতে সম্পন্ন হয়েছে"**. That files a `GuardianWorkClaim`. **All three roles see it at once** — teacher, Office and Principal. The teacher is notified immediately; if the work is still not marked by **11:30** the Office is notified, and by **13:00** the Principal is (owner ruling, D-#551). The Office can **nudge the teacher**, not mark the work submitted.
+- **A — the guardian declaration (GC-1..GC-5).** On any of the child's homework/assignment rows sitting at `DUE` or `CHASE`, a guardian taps **"বাড়িতে সম্পন্ন হয়েছে"**. That files a `GuardianWorkClaim`. **All three roles see it at once** — teacher, Office and Principal. The teacher is notified immediately; if the work is still not marked by **11:30** the Office is notified, and by **13:00** the Principal is (owner ruling, D-#554). The Office can **nudge the teacher**, not mark the work submitted.
 - **B — the return-from-leave reminder (RL-1..RL-2).** The Today dashboard grows a card naming the students who are back today after an absence, with each one's still-open homework and assignments split into **"পুনরায় দিতে হবে"** (never received it — `ABSENT_REDELIVER`) and **"জমা নিতে হবে"** (received it, still not handed in).
-- **The claim NEVER moves the lifecycle.** A guardian cannot write `SUBMITTED`. The tracker stays the teacher's record; the claim is a parallel row that says *a parent asserts this was done* and *nobody has answered them yet* (D-#548).
-- **The teacher gets no extra tap.** Marking the student submitted through any existing path auto-resolves the claim (D-#549). The only manual close is an explicit **reject with a reason**, which is what stops the Office chasing a teacher who genuinely never received the notebook.
+- **The claim NEVER moves the lifecycle.** A guardian cannot write `SUBMITTED`. The tracker stays the teacher's record; the claim is a parallel row that says *a parent asserts this was done* and *nobody has answered them yet* (D-#551).
+- **The teacher gets no extra tap.** Marking the student submitted through any existing path auto-resolves the claim (D-#552). The only manual close is an explicit **reject with a reason**, which is what stops the Office chasing a teacher who genuinely never received the notebook.
 - **Plane:** identity/operational. Names a student and a guardian; **no corpus/analytics join** — ADR-005 untouched, the fail-closed firewall test stays green.
 - **Contract surface:** app-native `/shared/vocab.ts` additions only — **no envelope twin, no harness sync** (the D-#46/#52 pattern). Vocab verifier stays green.
 - **Build order:** RL-1/RL-2 are **independent of A** and are the cheaper half — they can ship first.
@@ -69,7 +69,7 @@ Nothing ever *reminds anyone to walk that edge.* A child back after three days h
   - `STUDENT_RETURNED` — `ছুটি শেষে ফিরেছে` → the class teacher, once per student per day (RL-2; **confirmed by the owner 2026-08-25**, §11.2).
 - Audit kinds: `WORK_CLAIM_FILED`, `WORK_CLAIM_ACCEPTED`, `WORK_CLAIM_REJECTED`, `WORK_CLAIM_NUDGED`, `WORK_CLAIM_EXPIRED`.
 - `Notification.refs` gains `workClaimId?: string` — **and it must be added to `RefsSchema`**, not only to the TS interface. A ref present on the interface but absent from the sub-schema is silently stripped by Mongoose on write; that exact bug is already recorded in the model's own comments for `ctQuestionRequestId`.
-- **No new permission.** Guardians file under `guardian:read_child`; teachers resolve under the `tracker:write` they already need in order to mark submitted; Office/Principal read the queue under `tracker:read`. Office nudging is deliberately *not* a permission — see D-#551.
+- **No new permission.** Guardians file under `guardian:read_child`; teachers resolve under the `tracker:write` they already need in order to mark submitted; Office/Principal read the queue under `tracker:read`. Office nudging is deliberately *not* a permission — see D-#554.
 
 ## §5 — The data model
 
@@ -89,10 +89,10 @@ Nothing ever *reminds anyone to walk that edge.* A child back after three days h
 | `actionDateKey` | string | `YYYY-MM-DD` — **the action day (§6.3.1), resolved once at file time and stored.** The 11:30 / 13:00 rungs read this field; they never re-derive it. Computing it per sweep would make the ladder depend on when the ticker happened to run. |
 | `note` | string? | ≤200 chars, optional — "খাতা ব্যাগে দিয়ে দিয়েছি". |
 | `status` | `WorkClaimStatus` | PENDING → ACCEPTED \| REJECTED \| EXPIRED. |
-| `attemptNumber` | number | 1 or 2 (D-#550 caps re-claims at one). |
+| `attemptNumber` | number | 1 or 2 (D-#553 caps re-claims at one). |
 | `resolvedBy` | ObjectId? | The teacher/Principal who closed it. |
 | `resolvedAt` | Date? | |
-| `resolution` | `"AUTO" \| "MANUAL"` | AUTO = the ordinary submit path closed it (D-#549). |
+| `resolution` | `"AUTO" \| "MANUAL"` | AUTO = the ordinary submit path closed it (D-#552). |
 | `rejectReason` | `WorkClaimRejectReason?` | Required when `status = REJECTED`. |
 | `rejectNote` | string? | ≤200 chars; required only when the reason is `OTHER`. |
 | `officeNotifiedAt`, `principalNotifiedAt` | Date? | Ladder idempotency — makes the sweep restart-safe. |
@@ -106,7 +106,7 @@ Nothing ever *reminds anyone to walk that edge.* A child back after three days h
 
 ## §6 — The rules
 
-### 6.1 When may a guardian file? (D-#550)
+### 6.1 When may a guardian file? (D-#553)
 
 All five must hold, checked server-side — the app hides the button, the server does not trust that:
 
@@ -118,7 +118,7 @@ All five must hold, checked server-side — the app hides the button, the server
 
 A duplicate file is **idempotent** — it returns the existing open claim rather than erroring, the same posture as `emit()`.
 
-### 6.2 How it closes (D-#549)
+### 6.2 How it closes (D-#552)
 
 | Path | Result |
 |---|---|
@@ -129,7 +129,7 @@ A duplicate file is **idempotent** — it returns the existing open claim rather
 
 The auto-resolve hook lives in **`HomeworkRosterPassService` / `AssignmentRosterPassService` and on `transitionRecord`'s submit edge** — one place per tracker, so no future submit path can bypass it.
 
-### 6.3 Visibility is immediate; the notification ladder is same-day (D-#551, owner ruling 2026-08-25)
+### 6.3 Visibility is immediate; the notification ladder is same-day (D-#554, owner ruling 2026-08-25)
 
 **Two different things, and the distinction is the whole design.**
 
@@ -147,7 +147,7 @@ Both fire points run inside the existing 60-second `SchedulerService` ticker, wh
 
 **The digest shape is what makes a same-day ladder survivable.** With the Principal now told within hours rather than days, the count matters: one row per person per day listing N claims is one notification; one row per claim is N. At 91 students the second shape makes the Principal's inbox unreadable inside a week, and an unreadable inbox is an ignored one.
 
-### 6.3.1 Which day's 11:30 does a claim get? — the action day (D-#554)
+### 6.3.1 Which day's 11:30 does a claim get? — the action day (D-#557)
 
 The owner's ruling fixes the clock but not the calendar. Their two worked examples settle it:
 
@@ -169,7 +169,7 @@ While a claim is `PENDING`, `emitHwGuardianChase` / `emitAssignmentGuardianChase
 
 ## §7 — Feature B: the return-from-leave card
 
-### 7.1 Who counts as "returning" (D-#552)
+### 7.1 Who counts as "returning" (D-#555)
 
 Two sources, both derived on every Today load — **no stored row, no sweep, nothing to backfill or repair**:
 
@@ -185,7 +185,7 @@ Per returning student: name, section, how many school days absent, and their ope
 - **পুনরায় দিতে হবে** — `ABSENT_REDELIVER`. The child never received this. The row's action is the existing redeliver edge.
 - **জমা নিতে হবে** — `DUE` / `CHASE`. The child has it and has not handed it in.
 
-### 7.3 Scope, and why it degrades (D-#553)
+### 7.3 Scope, and why it degrades (D-#556)
 
 `myDay` is `authenticated: true` and every field internally re-uses an existing gate. The card follows:
 
@@ -384,7 +384,7 @@ Visible to all three roles from the moment a claim is filed. The **checkpoint** 
 +--------------------------------------------------------------------------+
 ```
 
-Row 4 is the shape the draft could not show: a claim **already visible to the Office and the Principal, before either has been notified**. That is the separation D-#551 turns on.
+Row 4 is the shape the draft could not show: a claim **already visible to the Office and the Principal, before either has been notified**. That is the separation D-#554 turns on.
 
 A claim filed after 11:30 shows `আগামীকাল ১১:৩০` — the action day (§6.3.1) rendered where staff can see it, so nobody reads a quiet row as a missed one.
 
@@ -414,9 +414,9 @@ A claim filed after 11:30 shows `আগামীকাল ১১:৩০` — the
 
 1. **The Bangla strings are accepted as drawn** — including `তাগাদা দিন` on the Office nudge. The `তাগাদা`/`মনে করিয়ে দিন` ambiguity was raised and the owner confirmed the wording; it is closed, not deferred.
 2. **RL-2 ships. The push is in**, not held back for a week of observation. The design recommendation was to watch the card first; the owner ruled for the push, so it is in the slice list as committed work (§7.4).
-3. **Escalation is same-day, by the clock — this SUPERSEDES the +1/+2-school-day ladder the draft proposed.** Everyone (teacher, Office, Principal) *sees* the claim immediately; the Office is *notified* at **11:30** and the Principal at **13:00** if the teacher has not marked it (§6.3, D-#551).
+3. **Escalation is same-day, by the clock — this SUPERSEDES the +1/+2-school-day ladder the draft proposed.** Everyone (teacher, Office, Principal) *sees* the claim immediately; the Office is *notified* at **11:30** and the Principal at **13:00** if the teacher has not marked it (§6.3, D-#554).
 4. **Assignments are in scope from the start** — one claim type across both trackers, exactly as drawn. No change from the draft.
-5. **The action day is confirmed (D-#554).** The rule inferred from the owner's two examples — *"the first school day on which both rungs still lie ahead"* — was put back to them and accepted. Monday night → Tuesday 11:30; Thursday 09:00 → that same Thursday.
+5. **The action day is confirmed (D-#557).** The rule inferred from the owner's two examples — *"the first school day on which both rungs still lie ahead"* — was put back to them and accepted. Monday night → Tuesday 11:30; Thursday 09:00 → that same Thursday.
 6. **The RL-2 push fires when attendance is marked** — *"once the attendance is done, that time will count"* — not at the school-day start, and not from the leave register. This **replaces** the draft's proposed fire point (§7.4). The card keeps both sources; only the push is narrowed to the confirmed one.
 
 **No open questions remain. Every value in this document is either an owner ruling or a stated derivation from one.**
@@ -429,10 +429,10 @@ Contact-only guardians (no inbox — the recorded D-#31/#72 limitation; they are
 
 | Decision | Statement |
 |---|---|
-| **D-#548** | A guardian claim NEVER writes a lifecycle state. It is a parallel `GuardianWorkClaim` row recording an assertion and whether anyone has answered it; the tracker stays single-authored by the teacher. |
-| **D-#549** | The claim auto-resolves on the teacher's ORDINARY submit path — the roster pass and both submit edges — so the feature adds no tap for the person it is asking to act. The only manual close is an explicit reject **with a reason from a picker**, because "no answer yet" and "the child genuinely didn't bring it" must not look the same to the Office. |
-| **D-#550** | Claimable states are `DUE`/`CHASE` only, one PENDING claim per record (partial-unique, enforced in the DB), one re-claim after a rejection, and a 7-school-day window. `ABSENT_REDELIVER` is deliberately excluded — the answer there is redelivery, which RL-1 surfaces. |
-| **D-#551** | **SEEING and BEING TOLD are separated.** All three roles — teacher, Office, Principal — see a claim in their queue the instant it is filed. Notification is a same-day ladder by the clock: teacher immediately, **Office at 11:30**, **Principal at 13:00**, each as **one digest row per user per day** listing every unresolved claim. Office can nudge and cannot resolve — `OFFICE` holds no tracker permission and this feature does not grant one. *(Owner ruling 2026-08-25, superseding the draft's +1/+2-school-day ladder. The digest shape is now load-bearing: at hours-scale the per-claim shape would put N notifications a day into the Principal's inbox instead of one, and it is the same 60s ticker either way — the attendance tiers already fire at 12:10/12:45, so neither time needs new infrastructure.)* |
-| **D-#552** | The return-from-leave card is DERIVED on every Today load from two sources (attendance-confirmed, leave-application-expected) — no stored row, no sweep, nothing to backfill. |
-| **D-#553** | The card is scoped by the caller's routine reach (class teacher = whole section; subject teacher = own subject, classes taught today) and permission-degrades to an empty list, never an error (the D-#532 rule). The RL-2 push is narrower still on **both** axes — **class teacher only** (one returning student would otherwise push every subject teacher who meets them that day) and **attendance-confirmed only**, fired from the marking seam (owner ruling 2026-08-25). The card may show a maybe; a push may not. Pushing off the leave register would notify a teacher about a child who then turns out to still be absent, and a notification teachers learn to distrust is worse than none. |
-| **D-#554** | **Every claim is stamped with an ACTION DAY at file time (`actionDateKey`), and the 11:30 / 13:00 rungs read that field rather than re-deriving it.** The action day is the first school day on which both rungs still lie ahead: filed before 11:30 on a school day → that day; filed at any other time → the next school day. *(Derived from the owner's own two examples — "Monday night" and "before Thursday 9am" — which only both reach a real 11:30 under this rule. It exists to stop a 12:00 filing skipping the Office rung and reaching the Principal an hour later, and storing it rather than recomputing it stops the ladder depending on when the ticker happened to run. Inferred, then **put back to the owner and confirmed 2026-08-25**.)* |
+| **D-#551** | A guardian claim NEVER writes a lifecycle state. It is a parallel `GuardianWorkClaim` row recording an assertion and whether anyone has answered it; the tracker stays single-authored by the teacher. |
+| **D-#552** | The claim auto-resolves on the teacher's ORDINARY submit path — the roster pass and both submit edges — so the feature adds no tap for the person it is asking to act. The only manual close is an explicit reject **with a reason from a picker**, because "no answer yet" and "the child genuinely didn't bring it" must not look the same to the Office. |
+| **D-#553** | Claimable states are `DUE`/`CHASE` only, one PENDING claim per record (partial-unique, enforced in the DB), one re-claim after a rejection, and a 7-school-day window. `ABSENT_REDELIVER` is deliberately excluded — the answer there is redelivery, which RL-1 surfaces. |
+| **D-#554** | **SEEING and BEING TOLD are separated.** All three roles — teacher, Office, Principal — see a claim in their queue the instant it is filed. Notification is a same-day ladder by the clock: teacher immediately, **Office at 11:30**, **Principal at 13:00**, each as **one digest row per user per day** listing every unresolved claim. Office can nudge and cannot resolve — `OFFICE` holds no tracker permission and this feature does not grant one. *(Owner ruling 2026-08-25, superseding the draft's +1/+2-school-day ladder. The digest shape is now load-bearing: at hours-scale the per-claim shape would put N notifications a day into the Principal's inbox instead of one, and it is the same 60s ticker either way — the attendance tiers already fire at 12:10/12:45, so neither time needs new infrastructure.)* |
+| **D-#555** | The return-from-leave card is DERIVED on every Today load from two sources (attendance-confirmed, leave-application-expected) — no stored row, no sweep, nothing to backfill. |
+| **D-#556** | The card is scoped by the caller's routine reach (class teacher = whole section; subject teacher = own subject, classes taught today) and permission-degrades to an empty list, never an error (the D-#532 rule). The RL-2 push is narrower still on **both** axes — **class teacher only** (one returning student would otherwise push every subject teacher who meets them that day) and **attendance-confirmed only**, fired from the marking seam (owner ruling 2026-08-25). The card may show a maybe; a push may not. Pushing off the leave register would notify a teacher about a child who then turns out to still be absent, and a notification teachers learn to distrust is worse than none. |
+| **D-#557** | **Every claim is stamped with an ACTION DAY at file time (`actionDateKey`), and the 11:30 / 13:00 rungs read that field rather than re-deriving it.** The action day is the first school day on which both rungs still lie ahead: filed before 11:30 on a school day → that day; filed at any other time → the next school day. *(Derived from the owner's own two examples — "Monday night" and "before Thursday 9am" — which only both reach a real 11:30 under this rule. It exists to stop a 12:00 filing skipping the Office rung and reaching the Principal an hour later, and storing it rather than recomputing it stops the ladder depending on when the ticker happened to run. Inferred, then **put back to the owner and confirmed 2026-08-25**.)* |

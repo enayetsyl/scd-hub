@@ -1,5 +1,5 @@
 /**
- * WorkClaimSweepService (GC-5, D-#551/#554) — the same-day escalation rungs and
+ * WorkClaimSweepService (GC-5, D-#554/#557) — the same-day escalation rungs and
  * the expiry sweep, driven by the existing 60-second ticker.
  *
  *   11:30 → every active Office user
@@ -10,7 +10,7 @@
  * at 91 students, per-claim rows would make the Principal's inbox unreadable
  * inside a week, and an unreadable inbox is an ignored one.
  *
- * A claim is due at a rung when its STORED `actionDateKey` (D-#554) has arrived —
+ * A claim is due at a rung when its STORED `actionDateKey` (D-#557) has arrived —
  * today or earlier. "Or earlier" matters: a claim nobody answered yesterday
  * re-appears in today's 11:30 and 13:00 rows, which IS the chasing behaviour.
  *
@@ -66,7 +66,7 @@ export async function runWorkClaimRung(
 }
 
 /**
- * Expire claims nobody answered inside the window (D-#550). They leave the queue
+ * Expire claims nobody answered inside the window (D-#553). They leave the queue
  * and stay in the audit log — the record of a family that spoke and got no reply
  * is exactly the thing that must not be deleted.
  *

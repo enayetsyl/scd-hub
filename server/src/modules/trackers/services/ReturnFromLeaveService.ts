@@ -1,13 +1,13 @@
 /**
- * ReturnFromLeaveService (RL-1/RL-2, D-#552/#553) — "ছুটি শেষে ফিরেছে".
+ * ReturnFromLeaveService (RL-1/RL-2, D-#555/#556) — "ছুটি শেষে ফিরেছে".
  *
  * `ABSENT_REDELIVER` records carry no due date by design, so the due sweep skips
  * them forever. The redeliver edge has always existed; nothing ever prompted
  * anyone to walk it at the one moment it matters — the morning the child is back.
  *
- * Everything here is DERIVED on read (D-#552). No stored "returning student" row
+ * Everything here is DERIVED on read (D-#555). No stored "returning student" row
  * exists, so there is nothing to create, expire, or repair when attendance is
- * amended. Two sources, deliberately used differently (D-#553):
+ * amended. Two sources, deliberately used differently (D-#556):
  *
  *   RETURNED  — attendance-confirmed. Accurate, but only once someone has marked
  *               the day. This is the ONLY source the RL-2 push will fire on.
@@ -160,7 +160,7 @@ export async function leaveRegisterExpectedReturns(
 
 /**
  * Every open item for these students, split into the two groups. `subjectFilter`
- * narrows to one subject for a SUBJECT teacher (D-#553) — a class teacher passes
+ * narrows to one subject for a SUBJECT teacher (D-#556) — a class teacher passes
  * none and sees the whole section.
  */
 export async function openItemsForStudents(

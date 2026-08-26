@@ -1,18 +1,18 @@
 /**
- * WorkClaimService (GC-2, D-#548..#551/#554) — the guardian "done at home" loop.
+ * WorkClaimService (GC-2, D-#551..#554/#557) — the guardian "done at home" loop.
  *
  * A parent asserts that work sitting at DUE or CHASE was done at home. The claim
- * is a PARALLEL row: nothing in this file ever writes a lifecycle state (D-#548).
+ * is a PARALLEL row: nothing in this file ever writes a lifecycle state (D-#551).
  * The teacher remains the only author of the tracker.
  *
  * The four ways a claim leaves PENDING:
  *   fileWorkClaim        — creates it (five guards, §6.1)
  *   acceptClaimsForRecords — AUTOMATIC, called from the teacher's ordinary submit
- *                          path; no second tap exists for the teacher (D-#549)
+ *                          path; no second tap exists for the teacher (D-#552)
  *   rejectWorkClaim      — the ONLY manual close, and it demands a picker reason
  *   expireStaleClaims    — the 7-school-day sweep (GC-5)
  *
- * `resolveActionDateKey` is the other load-bearing piece (D-#554): the escalation
+ * `resolveActionDateKey` is the other load-bearing piece (D-#557): the escalation
  * rungs read a STORED action day, so the ladder cannot depend on when the ticker
  * happened to run.
  *
@@ -47,7 +47,7 @@ const MAX_DAY_WALK = 30;
 export class WorkClaimError extends Error {}
 
 // ---------------------------------------------------------------------------
-// The action day (D-#554)
+// The action day (D-#557)
 // ---------------------------------------------------------------------------
 
 /** Local midnight-to-midnight, matching `dateKeyOf`'s local-day convention. */
@@ -66,7 +66,7 @@ async function isOpenDay(d: Date): Promise<boolean> {
 }
 
 /**
- * The first school day on which BOTH escalation rungs still lie ahead (D-#554).
+ * The first school day on which BOTH escalation rungs still lie ahead (D-#557).
  *
  * Filed strictly before 11:30 on an open day → that day. Anything else — an
  * evening, 11:35, a Thursday afternoon, a Friday, a holiday — rolls to the next
@@ -87,7 +87,7 @@ export async function resolveActionDateKey(at: Date): Promise<string> {
   );
 }
 
-/** How many OPEN days sit in `[from, to]` — the window guard's unit (D-#550). */
+/** How many OPEN days sit in `[from, to]` — the window guard's unit (D-#553). */
 async function openDaysBetween(from: Date, to: Date): Promise<number> {
   let count = 0;
   const cursor = new Date(from.getFullYear(), from.getMonth(), from.getDate());
@@ -160,7 +160,7 @@ async function subjectOf(tracker: WorkClaimTracker, itemId: Types.ObjectId): Pro
 }
 
 // ---------------------------------------------------------------------------
-// file (D-#550 — the five guards)
+// file (D-#553 — the five guards)
 // ---------------------------------------------------------------------------
 
 export interface FileWorkClaimInput {
@@ -288,7 +288,7 @@ export async function fileWorkClaim(
 }
 
 // ---------------------------------------------------------------------------
-// accept — AUTOMATIC, from the teacher's ordinary submit path (D-#549)
+// accept — AUTOMATIC, from the teacher's ordinary submit path (D-#552)
 // ---------------------------------------------------------------------------
 
 /**
@@ -341,7 +341,7 @@ export async function acceptClaimsForRecords(
 }
 
 // ---------------------------------------------------------------------------
-// reject — the ONLY manual close (D-#549)
+// reject — the ONLY manual close (D-#552)
 // ---------------------------------------------------------------------------
 
 export interface RejectWorkClaimInput {
@@ -388,7 +388,7 @@ export async function rejectWorkClaim(
 // ---------------------------------------------------------------------------
 
 /**
- * Which of these records currently carry an open claim (D-#551 §6.4).
+ * Which of these records currently carry an open claim (D-#554 §6.4).
  *
  * The chase emitters call this: while a parent is waiting for an answer, the app
  * must not push them a reminder for the very work they reported. Returns a Set of

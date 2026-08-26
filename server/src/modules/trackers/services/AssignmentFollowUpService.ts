@@ -220,7 +220,7 @@ export async function escalateAssignmentChase(input: EscalateInput): Promise<Esc
   let waLink: string | undefined;
   let notified: string[] = [];
 
-  // D-#551 §6.4: an OPEN guardian claim mutes the family-facing rungs of the
+  // D-#554 §6.4: an OPEN guardian claim mutes the family-facing rungs of the
   // ladder. The follow-up is still RECORDED (the step is taken, the teacher’s view
   // is unchanged) — only the push is held, because pushing a reminder for work the
   // family has already reported is what would stop them ever reporting again.

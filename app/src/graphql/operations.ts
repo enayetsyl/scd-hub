@@ -793,6 +793,8 @@ export interface QuestionReviewRoundT {
   payloadJson: string | null;
   artifactReviewStatus: string | null;
   artifactSuperseded: boolean;
+  /** Marked important (QR-9, D-#550) — the reviewer toggles it from her queue. */
+  important: boolean;
 }
 
 const QUESTION_ROUND_FIELDS = `
@@ -800,7 +802,7 @@ const QUESTION_ROUND_FIELDS = `
   reviewerId reviewerName assignedAt roundNumber status
   verdict reason submittedAt
   questionText questionType marks topicTag payloadJson
-  artifactReviewStatus artifactSuperseded
+  artifactReviewStatus artifactSuperseded important
 `;
 
 /**
@@ -838,6 +840,84 @@ export const CLEAR_QUESTION_CONDITION = gql<
 >`
   mutation ClearQuestionCondition($artifactId: String!, $note: String) {
     clearQuestionCondition(artifactId: $artifactId, note: $note) { ${QUESTION_ROUND_FIELDS} }
+  }
+`;
+
+// --- Question corrections (QR-8, D-#548) ----------------------------------------------
+
+export interface QuestionEditResultT {
+  artifactId: string;
+  qid: string | null;
+  changedFields: string[];
+  wasPublished: boolean;
+  retiredAt: string | null;
+}
+
+const QUESTION_EDIT_FIELDS = `artifactId qid changedFields wasPublished retiredAt`;
+
+export interface QuestionOptionInputT {
+  optionId?: string | null;
+  text: string;
+  isCorrect: boolean;
+}
+
+/**
+ * Correct a question's content or answer, in place. Any field omitted is left alone, so the
+ * screen sends only what it changed. Subject/class/chapter/type are deliberately not here —
+ * they are the question's address, and moving one strands review rounds and assembled sets.
+ */
+export const UPDATE_QUESTION_CONTENT = gql<
+  { updateQuestionContent: QuestionEditResultT },
+  {
+    artifactId: string;
+    questionText?: string | null;
+    marks?: number | null;
+    options?: QuestionOptionInputT[] | null;
+    tfAnswer?: boolean | null;
+    blanks?: { blankNo: number; accepted: string[] }[] | null;
+    answerAccepted?: string[] | null;
+    modelNote?: string | null;
+  }
+>`
+  mutation UpdateQuestionContent(
+    $artifactId: String!
+    $questionText: String
+    $marks: Float
+    $options: [QuestionOptionInput!]
+    $tfAnswer: Boolean
+    $blanks: [QuestionBlankInput!]
+    $answerAccepted: [String!]
+    $modelNote: String
+  ) {
+    updateQuestionContent(
+      artifactId: $artifactId
+      questionText: $questionText
+      marks: $marks
+      options: $options
+      tfAnswer: $tfAnswer
+      blanks: $blanks
+      answerAccepted: $answerAccepted
+      modelNote: $modelNote
+    ) { ${QUESTION_EDIT_FIELDS} }
+  }
+`;
+
+/** Soft delete — the question leaves the bank but assembled sets keep resolving. */
+export const RETIRE_QUESTION = gql<
+  { retireQuestion: QuestionEditResultT },
+  { artifactId: string; reason?: string | null }
+>`
+  mutation RetireQuestion($artifactId: String!, $reason: String) {
+    retireQuestion(artifactId: $artifactId, reason: $reason) { ${QUESTION_EDIT_FIELDS} }
+  }
+`;
+
+export const RESTORE_QUESTION = gql<
+  { restoreQuestion: QuestionEditResultT },
+  { artifactId: string }
+>`
+  mutation RestoreQuestion($artifactId: String!) {
+    restoreQuestion(artifactId: $artifactId) { ${QUESTION_EDIT_FIELDS} }
   }
 `;
 
@@ -1189,6 +1269,8 @@ export interface QuestionListItem {
   marks: number | null;
   curationTag: string;
   reviewStatus: string;
+  /** Marked important (QR-9, D-#550) — shown as a gold tag; everyone sees it. */
+  important: boolean;
   /** Full payload JSON — list rows read question_text from it. */
   payloadJson: string;
 }
@@ -1206,6 +1288,8 @@ export interface QuestionsVars {
   marksMin?: number | null;
   marksMax?: number | null;
   reviewStatus?: string | null;
+  /** Narrow to the IMPORTANT questions (QR-9, D-#550), or with false to the normal ones. */
+  important?: boolean | null;
   /** Free-text over question_text + qid; Bangla digits match Latin qids. */
   search?: string | null;
   limit?: number | null;
@@ -1228,6 +1312,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
     $marksMin: Float
     $marksMax: Float
     $reviewStatus: String
+    $important: Boolean
     $search: String
     $limit: Int
     $offset: Int
@@ -1246,6 +1331,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       marksMin: $marksMin
       marksMax: $marksMax
       reviewStatus: $reviewStatus
+      important: $important
       search: $search
       limit: $limit
       offset: $offset
@@ -1264,6 +1350,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       marks
       curationTag
       reviewStatus
+      important
       payloadJson
     }
   }
@@ -1320,6 +1407,7 @@ export const QUESTION_QUERY = gql<{ question: QuestionDetail | null }, { id: str
       marks
       curationTag
       reviewStatus
+      important
       current
       importedAt
     }
@@ -7919,6 +8007,21 @@ export const SET_HR_POLICY = gql<
     ) {
       annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled
       signatoryName signatoryTitle weeklyHoursText letterRefPrefix
+    }
+  }
+`;
+
+/**
+ * Raise or lower the IMPORTANT mark (QR-9, D-#550). Principal and Office may mark any
+ * question from the bank at any time; a reviewer may mark one in her own open queue.
+ */
+export const SET_QUESTION_IMPORTANT = gql<
+  { setQuestionImportant: { artifactId: string; important: boolean; changedFields: string[] } },
+  { artifactId: string; important: boolean }
+>`
+  mutation SetQuestionImportant($artifactId: String!, $important: Boolean!) {
+    setQuestionImportant(artifactId: $artifactId, important: $important) {
+      artifactId important changedFields
     }
   }
 `;

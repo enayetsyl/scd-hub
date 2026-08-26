@@ -1242,7 +1242,7 @@ export const NOTIFICATION_KINDS = [
   "TEACHING_NOTE_PUBLISHED",
   "TEACHING_NOTE_COMMENT",
   "TEACHING_NOTE_COMMENT_ADDRESSED",
-  // Guardian work claim (GC-1, D-#548..#551; app-native, NO wire twin).
+  // Guardian work claim (GC-1, D-#551..#554; app-native, NO wire twin).
   //   FILED     → the item's issuedBy teacher, the instant a parent taps
   //   ESCALATED → Office at 11:30, Principal at 13:00 on the claim's ACTION DAY,
   //               as ONE digest row per user per day — never one row per claim
@@ -1250,7 +1250,7 @@ export const NOTIFICATION_KINDS = [
   "WORK_CLAIM_FILED",
   "WORK_CLAIM_ESCALATED",
   "WORK_CLAIM_RESOLVED",
-  // RL-2 (D-#553): a student is back after an absence — to the CLASS TEACHER only,
+  // RL-2 (D-#556): a student is back after an absence — to the CLASS TEACHER only,
   // fired when attendance CONFIRMS the return (owner ruling 2026-08-25). The leave
   // register records an intention; only attendance records what happened.
   "STUDENT_RETURNED",
@@ -3459,6 +3459,7 @@ export const PERMISSIONS = [
   // questions + assembly
   "question:read",
   "question:select",
+  "question:manage",       // correct a question's content/answer, or retire it (Principal + Office, D-#548)
   "set:read",
   "set:assemble",
   "set:export",            // server-side PDF (R-A4/R-C6)
@@ -3541,6 +3542,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "content:promote_gold": "build",
   "question:read": "build",
   "question:select": "build",
+  "question:manage": "build",
   "set:read": "build",
   "set:assemble": "build",
   "set:export": "build",
@@ -3595,7 +3597,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // unscoped staff views (tracker:read), not the guardian-scoped resolver path.
   PRINCIPAL: [
     "content:read", "content:import", "content:assign_review", "content:review", "content:promote_gold",
-    "question:read", "question:select",
+    "question:read", "question:select", "question:manage",
     "set:read", "set:assemble", "set:export",
     "tracker:read", "tracker:write", "tracker:export",
     "routine:read", "routine:manage",
@@ -3645,6 +3647,10 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   OFFICE: [
     "roster:manage", "staff:manage", "leave:manage", "payroll:manage", "performance:manage", "guardian:link", "message:dispatch",
     "content:import", "content:assign_review",
+    // Office corrects question content and retires a bad question (D-#548); read comes with
+    // it because you cannot edit what you cannot open. NOT question:select — assembling a
+    // set is a teaching decision, not a desk one.
+    "question:read", "question:manage",
     "routine:read", "routine:manage",
     "attendance:manage",     // upload teacher Excel, assign markers, chase guardians (D-#64/#65; no mark)
     "library:read", "library:manage", // the default library desk (D-#81)
@@ -3834,6 +3840,7 @@ export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
   "content:promote_gold": { name: "গোল্ড চিহ্নিত", desc: "রিভিউড→গোল্ড চূড়ান্ত সাইন-অফ" },
   "question:read": { name: "প্রশ্ন দেখা", desc: "প্রশ্নব্যাংক পড়া" },
   "question:select": { name: "প্রশ্ন নির্বাচন", desc: "সেটের জন্য প্রশ্ন বাছাই" },
+  "question:manage": { name: "প্রশ্ন সম্পাদনা", desc: "প্রশ্নের বিষয়বস্তু ও উত্তর সংশোধন, প্রশ্ন বাতিল" },
   "set:read": { name: "সেট দেখা", desc: "অ্যাসেসমেন্ট সেট পড়া" },
   "set:assemble": { name: "সেট তৈরি", desc: "প্রশ্ন সেট সংকলন" },
   "set:export": { name: "সেট এক্সপোর্ট", desc: "সেট পিডিএফ এক্সপোর্ট" },
@@ -3889,6 +3896,7 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "content:promote_gold": { name: "Promote to gold", desc: "Reviewed→gold final sign-off" },
   "question:read": { name: "Read questions", desc: "Browse the question bank" },
   "question:select": { name: "Select questions", desc: "Pick questions for a set" },
+  "question:manage": { name: "Manage questions", desc: "Correct question content and answers, retire a question" },
   "set:read": { name: "Read sets", desc: "View assessment sets" },
   "set:assemble": { name: "Assemble sets", desc: "Compose question sets" },
   "set:export": { name: "Export sets", desc: "Server-side set PDF" },
@@ -4136,11 +4144,11 @@ export const SYLLABUS_ITEM_TYPE_LABELS_EN: Record<SyllabusItemType, string> = {
 export const SYLLABUS_FULL_MARKS = 100;
 
 // =============================================================================
-// GUARDIAN WORK CLAIM — "বাড়িতে সম্পন্ন হয়েছে" (GC-1, D-#548..#551/#554)
+// GUARDIAN WORK CLAIM — "বাড়িতে সম্পন্ন হয়েছে" (GC-1, D-#551..#554/#557)
 //
 // A parent asserts that homework/assignment sitting at DUE or CHASE was actually
 // done at home. The claim is a PARALLEL row and NEVER writes a lifecycle state
-// (D-#548) — only a teacher moves a record to SUBMITTED. App-native vocabulary:
+// (D-#551) — only a teacher moves a record to SUBMITTED. App-native vocabulary:
 // no envelope twin, no import-contract sync (the D-#46/#52 pattern).
 // =============================================================================
 
@@ -4159,7 +4167,7 @@ export const WORK_CLAIM_TRACKER_LABELS_EN: Record<WorkClaimTracker, string> = {
 };
 
 /** PENDING → ACCEPTED | REJECTED | EXPIRED. ACCEPTED is reached AUTOMATICALLY by
- *  the teacher's ordinary submit pass (D-#549); EXPIRED by the 7-school-day sweep. */
+ *  the teacher's ordinary submit pass (D-#552); EXPIRED by the 7-school-day sweep. */
 export const WORK_CLAIM_STATUSES = ["PENDING", "ACCEPTED", "REJECTED", "EXPIRED"] as const;
 export type WorkClaimStatus = (typeof WORK_CLAIM_STATUSES)[number];
 
@@ -4176,7 +4184,7 @@ export const WORK_CLAIM_STATUS_LABELS_EN: Record<WorkClaimStatus, string> = {
   EXPIRED: "Expired",
 };
 
-/** A PICKER, never free text (D-#549). Without a recorded reason, "the teacher
+/** A PICKER, never free text (D-#552). Without a recorded reason, "the teacher
  *  hasn't answered yet" and "the child genuinely didn't bring it" look identical
  *  to the Office — which would then chase a teacher who did nothing wrong. */
 export const WORK_CLAIM_REJECT_REASONS = [
@@ -4203,22 +4211,22 @@ export const WORK_CLAIM_REJECT_REASON_LABELS_EN: Record<WorkClaimRejectReason, s
   OTHER: "Other",
 };
 
-/** Lifecycle states a guardian may file a claim against (D-#550). GIVEN is not
+/** Lifecycle states a guardian may file a claim against (D-#553). GIVEN is not
  *  late yet; ABSENT_REDELIVER means the child never RECEIVED the work, so the
  *  answer there is redelivery — which the return-from-leave card surfaces —
  *  and a claim would be answering a question nobody asked. */
 export const WORK_CLAIM_ELIGIBLE_STATES: readonly LifecycleState[] = ["DUE", "CHASE"];
 
 /** The claim window, in SCHOOL days, measured from the record's due date
- *  (D-#550). Matches the D-#279 Today-dashboard look-back so "recent" means one
+ *  (D-#553). Matches the D-#279 Today-dashboard look-back so "recent" means one
  *  thing across the app. Older than this, the term's reconciliation owns it. */
 export const WORK_CLAIM_WINDOW_SCHOOL_DAYS = 7;
 
-/** At most one re-claim after a rejection (D-#550): attempt 1 is the original,
+/** At most one re-claim after a rejection (D-#553): attempt 1 is the original,
  *  attempt 2 the single retry. A parent who still disagrees is a conversation. */
 export const WORK_CLAIM_MAX_ATTEMPTS = 2;
 
-/** Same-day escalation fire points, minutes-from-midnight (D-#551, owner ruling
+/** Same-day escalation fire points, minutes-from-midnight (D-#554, owner ruling
  *  2026-08-25). The Office is told at 11:30 and the Principal at 13:00 on the
  *  claim's ACTION DAY if the teacher still has not marked the work. Both ride
  *  the existing 60s ticker, which already fires at arbitrary HH:MM. */

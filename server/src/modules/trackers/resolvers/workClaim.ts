@@ -1,7 +1,7 @@
 /**
- * Guardian work-claim resolvers — the STAFF side (GC-4/GC-5, D-#548..#551).
+ * Guardian work-claim resolvers — the STAFF side (GC-4/GC-5, D-#551..#554).
  *
- * Seeing and being told are separate (D-#551): every one of these reads is open
+ * Seeing and being told are separate (D-#554): every one of these reads is open
  * to all three staff roles from the instant a claim is filed. The 11:30 / 13:00
  * notifications are a scheduler concern, not a visibility one.
  *
@@ -40,7 +40,7 @@ export const GuardianWorkClaimGqlRef = builder
   .implement({
     description:
       "A guardian's \"বাড়িতে সম্পন্ন হয়েছে\" declaration on one homework/assignment " +
-      "record (GC-3, D-#548). It records an assertion and its answer — it NEVER " +
+      "record (GC-3, D-#551). It records an assertion and its answer — it NEVER " +
       "moves the record's lifecycle state; only a teacher does that.",
     fields: (t) => ({
       claimId: t.exposeString("claimId"),
@@ -56,7 +56,7 @@ export const GuardianWorkClaimGqlRef = builder
   });
 
 /** One row of either staff list. `checkpoint` is what the queue sorts on — the
- *  same-day ladder made "how many days old" the wrong question (D-#551). */
+ *  same-day ladder made "how many days old" the wrong question (D-#554). */
 interface WorkClaimRow {
   claimId: string;
   tracker: string;
@@ -76,7 +76,7 @@ interface WorkClaimRow {
   /** WAITING | OFFICE_TOLD | PRINCIPAL_TOLD | SCHEDULED_TOMORROW */
   checkpoint: string;
   checkpointLabelBn: string;
-  /** True once the Office has nudged this claim TODAY (rate limit, D-#551). */
+  /** True once the Office has nudged this claim TODAY (rate limit, D-#554). */
   nudgedToday: boolean;
 }
 
@@ -183,7 +183,7 @@ async function toRows(claims: Array<Record<string, any>>, now: Date): Promise<Wo
 }
 
 // ---------------------------------------------------------------------------
-// Reads — visible to all three roles from the moment a claim is filed (D-#551)
+// Reads — visible to all three roles from the moment a claim is filed (D-#554)
 // ---------------------------------------------------------------------------
 
 builder.queryField("myWorkClaims", (t) =>
@@ -217,7 +217,7 @@ builder.queryField("workClaimQueue", (t) =>
     resolve: async (_r, _a, ctx) => {
       // The queue is the OFFICE/PRINCIPAL screen and is unscoped by design: the
       // whole point of a claim is that somebody above the teacher can see it
-      // (D-#551). A teacher reads their OWN claims through myWorkClaims instead.
+      // (D-#554). A teacher reads their OWN claims through myWorkClaims instead.
       if (!isAdminStaff(ctx.auth)) throw new ForbiddenError();
       const claims = (await GuardianWorkClaim.find({ status: "PENDING" })
         .sort({ claimedAt: 1 })
@@ -228,7 +228,7 @@ builder.queryField("workClaimQueue", (t) =>
 );
 
 // ---------------------------------------------------------------------------
-// The one manual close (D-#549) — needs tracker:write, which OFFICE never holds
+// The one manual close (D-#552) — needs tracker:write, which OFFICE never holds
 // ---------------------------------------------------------------------------
 
 const RejectReasonEnum = builder.enumType("WorkClaimRejectReason", {
@@ -241,7 +241,7 @@ builder.mutationField("rejectWorkClaim", (t) =>
     type: WorkClaimRowRef,
     authScopes: { hasPermission: "tracker:write" },
     description:
-      "Close a guardian claim with a reason the family will see (D-#549). The ONLY " +
+      "Close a guardian claim with a reason the family will see (D-#552). The ONLY " +
       "manual close — accepting happens automatically when the teacher marks the " +
       "student submitted, with no second tap.",
     args: {
@@ -264,7 +264,7 @@ builder.mutationField("rejectWorkClaim", (t) =>
 );
 
 // ---------------------------------------------------------------------------
-// The nudge (D-#551) — the entire extent of what the Office can do
+// The nudge (D-#554) — the entire extent of what the Office can do
 // ---------------------------------------------------------------------------
 
 builder.mutationField("nudgeWorkClaim", (t) =>
@@ -274,12 +274,12 @@ builder.mutationField("nudgeWorkClaim", (t) =>
     description:
       "Re-fire the teacher's notification for one open claim, at most once per claim " +
       "per day. This is ALL the Office can do — it holds no tracker:write and can " +
-      "never mark the work submitted itself (D-#551).",
+      "never mark the work submitted itself (D-#554).",
     args: { claimId: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => {
       // The queue is the OFFICE/PRINCIPAL screen and is unscoped by design: the
       // whole point of a claim is that somebody above the teacher can see it
-      // (D-#551). A teacher reads their OWN claims through myWorkClaims instead.
+      // (D-#554). A teacher reads their OWN claims through myWorkClaims instead.
       if (!isAdminStaff(ctx.auth)) throw new ForbiddenError();
       const claim = await GuardianWorkClaim.findById(args.claimId);
       if (!claim) throw new Error("জানানোটি পাওয়া যায়নি");

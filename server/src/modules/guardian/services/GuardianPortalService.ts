@@ -183,7 +183,7 @@ export interface GuardianHomeworkRecord {
   questionFileId: string | null;
   answerFileId: string | null;
   /** GC-3: may a guardian file "done at home" against this record right now?
-   *  Server-computed so the app never has to know the D-#550 rule. */
+   *  Server-computed so the app never has to know the D-#553 rule. */
   canClaim: boolean;
   /** The latest claim on this record, if any. */
   claim: GuardianWorkClaimView | null;

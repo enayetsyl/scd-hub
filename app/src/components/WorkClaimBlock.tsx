@@ -1,5 +1,5 @@
 /**
- * WorkClaimBlock (GC-3, D-#548) — the guardian's "বাড়িতে সম্পন্ন হয়েছে" control
+ * WorkClaimBlock (GC-3, D-#551) — the guardian's "বাড়িতে সম্পন্ন হয়েছে" control
  * and the three states a claim can be in afterwards.
  *
  * Used on BOTH guardian record cards (homework and assignment): the two record
@@ -25,7 +25,7 @@ export interface WorkClaimBlockProps {
   studentId: string;
   tracker: "HOMEWORK" | "ASSIGNMENT";
   recordId: string;
-  /** Server-computed (D-#550) — the app never re-implements the eligibility rule. */
+  /** Server-computed (D-#553) — the app never re-implements the eligibility rule. */
   canClaim: boolean;
   claim: GuardianWorkClaimT | null;
   /** Label for the work, shown in the confirmation sheet. */
@@ -110,7 +110,7 @@ export function WorkClaimBlock({
       ) : null}
 
       {/* --- the button ---------------------------------------------------
-          `canClaim` comes from the server, so the D-#550 rule lives in exactly
+          `canClaim` comes from the server, so the D-#553 rule lives in exactly
           one place. A rejected claim with a retry left shows the reclaim wording. */}
       {canClaim ? (
         <View style={{ gap: space(1) }}>

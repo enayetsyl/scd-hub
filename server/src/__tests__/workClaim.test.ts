@@ -1,5 +1,5 @@
 /**
- * GC-2 tests — the guardian "done at home" claim service (D-#548..#551/#554).
+ * GC-2 tests — the guardian "done at home" claim service (D-#551..#554/#557).
  *
  * The four things worth pinning:
  *   §6.1  the five file guards, including the two states that must be REFUSED
@@ -114,7 +114,7 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// §6.3.1 — the action day (D-#554)
+// §6.3.1 — the action day (D-#557)
 // ---------------------------------------------------------------------------
 
 describe("resolveActionDateKey — the owner's two examples must both land on a real 11:30", () => {
@@ -153,7 +153,7 @@ describe("resolveActionDateKey — the owner's two examples must both land on a 
 });
 
 // ---------------------------------------------------------------------------
-// §6.1 — the five file guards (D-#550)
+// §6.1 — the five file guards (D-#553)
 // ---------------------------------------------------------------------------
 
 describe("fileWorkClaim — the guard table", () => {
@@ -250,7 +250,7 @@ describe("fileWorkClaim — the guard table", () => {
     expect(claim.workId).toBe("AS-C4-BAN-0003");
   });
 
-  test("the claim NEVER writes a lifecycle state (D-#548)", async () => {
+  test("the claim NEVER writes a lifecycle state (D-#551)", async () => {
     const rec = hwRecord();
     mockHwFindById.mockResolvedValue(rec);
     await fileWorkClaim(input);
@@ -262,7 +262,7 @@ describe("fileWorkClaim — the guard table", () => {
 });
 
 // ---------------------------------------------------------------------------
-// §6.2 — auto-accept (D-#549)
+// §6.2 — auto-accept (D-#552)
 // ---------------------------------------------------------------------------
 
 describe("acceptClaimsForRecords — closes on the teacher's ordinary submit", () => {
@@ -294,7 +294,7 @@ describe("acceptClaimsForRecords — closes on the teacher's ordinary submit", (
     expect(mockClaimFind).not.toHaveBeenCalled();
   });
 
-  test("a failure NEVER throws into the submit that called it (D-#549)", async () => {
+  test("a failure NEVER throws into the submit that called it (D-#552)", async () => {
     // A claim row must never be able to fail a teacher's submit. Worst case the
     // claim stays open and escalates once more.
     mockClaimFind.mockRejectedValue(new Error("mongo is down"));
@@ -302,7 +302,7 @@ describe("acceptClaimsForRecords — closes on the teacher's ordinary submit", (
   });
 });
 // ---------------------------------------------------------------------------
-// The manual close (D-#549)
+// The manual close (D-#552)
 // ---------------------------------------------------------------------------
 
 describe("rejectWorkClaim — the only manual close, and it demands a reason", () => {

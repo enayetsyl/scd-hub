@@ -178,6 +178,18 @@ export function FilterSheet({
               </>
             ) : null}
 
+            {/* The IMPORTANT lens (QR-9, D-#550). One chip, because the mark is binary and
+                the useful question is “only the marked ones” — nobody asks for only the
+                unmarked. `toggle` already turns a second tap back into “no constraint”. */}
+            <Muted style={styles.groupGap}>{STR.qImportant}</Muted>
+            <ChipRow>
+              <Chip
+                label={STR.qImportantOnly}
+                selected={draft.important === true}
+                onPress={() => toggle("important", true)}
+              />
+            </ChipRow>
+
             <Muted style={styles.groupGap}>{STR.reviewStatus}</Muted>
             <ChipRow>
               {REVIEW_STATUSES.map((r) => (

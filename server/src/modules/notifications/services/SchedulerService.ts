@@ -116,7 +116,7 @@ export const HW_CONFIRM_ESCALATION_RUNGS = [
   { min: 14 * 60, role: "OFFICE" },
   { min: 16 * 60, role: "PRINCIPAL" },
 ] as const;
-/** Guardian work-claim rungs (D-#551, owner ruling 2026-08-25): the Office is told
+/** Guardian work-claim rungs (D-#554, owner ruling 2026-08-25): the Office is told
  *  at 11:30 and the Principal at 13:00, on the claim's stored ACTION DAY. Both ride
  *  this same ticker — the attendance tiers already fire at 12:10/12:45, so neither
  *  time needed any new scheduling machinery. */
@@ -369,7 +369,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     });
   });
 
-  // --- Guardian work claims (GC-5, D-#551): 11:30 → Office, 13:00 → Principal.
+  // --- Guardian work claims (GC-5, D-#554): 11:30 → Office, 13:00 → Principal.
   // ONE digest row per recipient per rung per day, carrying the count. A claim
   // still open tomorrow appears in tomorrow's rows too — that IS the chasing.
   await family("work claim rungs", async () => {

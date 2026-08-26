@@ -519,7 +519,7 @@ builder.mutationField("fileChildWorkClaim", (t) =>
     type: GuardianWorkClaimGqlRef,
     authScopes: { hasPermission: "guardian:read_child" },
     description:
-      "Declare that a DUE/CHASE homework or assignment was done at home (D-#548). " +
+      "Declare that a DUE/CHASE homework or assignment was done at home (D-#551). " +
       "Files a claim; the teacher is notified immediately and all three staff roles " +
       "see it at once. NEVER writes a lifecycle state. Idempotent: filing twice " +
       "returns the existing open claim. Link-gated.",

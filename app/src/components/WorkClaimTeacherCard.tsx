@@ -1,5 +1,5 @@
 /**
- * WorkClaimTeacherCard (GC-4, D-#549/#551) — "অভিভাবকের জানানো" on Today.
+ * WorkClaimTeacherCard (GC-4, D-#552/#554) — "অভিভাবকের জানানো" on Today.
  *
  * The card makes the notification visible, but the roster pass is where the work
  * actually gets done: marking the student submitted there closes the claim with
