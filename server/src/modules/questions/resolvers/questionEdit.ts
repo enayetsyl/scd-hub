@@ -4,15 +4,21 @@
  *   updateQuestionContent — fix what a question says or what its answer is.
  *   retireQuestion        — soft delete; hidden from bank/picker/assembly, sets still resolve.
  *   restoreQuestion       — undo a retirement.
+ *   setQuestionImportant  — raise or lower the IMPORTANT mark (QR-9, D-#550).
  *
- * All three require `question:manage` (Principal + Office). A TEACHER — reviewer included —
+ * The first three require `question:manage` (Principal + Office). A TEACHER — reviewer included —
  * never edits directly: they raise a verdict, and the desk acts on it. That is the whole
  * shape of the review loop, and letting a reviewer edit would quietly bypass it.
+ *
+ * `setQuestionImportant` is the ONE exception, and only in a confined way: a reviewer may
+ * mark a question she currently holds an open round for. Marking says “look at this”; it
+ * changes no content, no answer and no status, so it cannot bypass a verdict.
  *
  * Every mutation writes an audit row naming the actor, the question, and exactly which
  * fields moved with their before and after values.
  */
 import { GraphQLError } from "graphql";
+import { callerHasPermission } from "@scd/shared";
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
 import { ReviewError } from "../../content/services/ReviewService";
@@ -20,6 +26,7 @@ import {
   updateQuestionContent as updateSvc,
   retireQuestion as retireSvc,
   restoreQuestion as restoreSvc,
+  setQuestionImportant as setImportantSvc,
   type QuestionEditResult,
 } from "../services/QuestionEditService";
 
@@ -35,6 +42,8 @@ QuestionEditResultRef.implement({
     /** True when the edited question was already on the published shelf. */
     wasPublished: t.exposeBoolean("wasPublished"),
     retiredAt: t.string({ nullable: true, resolve: (r) => r.retiredAt }),
+    /** The IMPORTANT mark AFTER the call (QR-9, D-#550). */
+    important: t.exposeBoolean("important"),
   }),
 });
 
@@ -156,6 +165,40 @@ builder.mutationField("restoreQuestion", (t) =>
           artifactId: args.artifactId,
           actorId: ctx.auth.userId,
           actorRole: ctx.auth.role,
+        });
+      } catch (err) {
+        return mapEditError(err);
+      }
+    },
+  }),
+);
+
+builder.mutationField("setQuestionImportant", (t) =>
+  t.field({
+    type: QuestionEditResultRef,
+    description:
+      "Raise or lower the IMPORTANT mark on a question (QR-9, D-#550). Normal is the usual " +
+      "state; the mark is visible to EVERYONE who can see the question, teachers included, " +
+      "and is separately filterable via questions(important: true). Principal and Office may " +
+      "mark any question at any time (question:manage); a reviewer (content:review) may mark " +
+      "only a question in her own open review queue. Setting the state it already holds " +
+      "writes nothing.",
+    // Either gate opens this door, so the scope check lives in the service where it can be
+    // executed against a real round rather than asserted about a permission string.
+    authScopes: { hasAnyPermission: ["question:manage", "content:review"] },
+    args: {
+      artifactId: t.arg.string({ required: true }),
+      important: t.arg.boolean({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await setImportantSvc({
+          artifactId: args.artifactId,
+          important: args.important,
+          actorId: ctx.auth.userId,
+          actorRole: ctx.auth.role,
+          mayManage: callerHasPermission(ctx.auth, "question:manage"),
         });
       } catch (err) {
         return mapEditError(err);

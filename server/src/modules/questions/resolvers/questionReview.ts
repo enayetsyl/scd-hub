@@ -89,6 +89,8 @@ QuestionReviewRoundRef.implement({
     payloadJson: t.string({ nullable: true, resolve: (r) => r.payloadJson }),
     artifactReviewStatus: t.string({ nullable: true, resolve: (r) => r.artifactReviewStatus }),
     artifactSuperseded: t.exposeBoolean("artifactSuperseded"),
+    /** Marked important (QR-9, D-#550) — shown as a tag, and the reviewer toggles it here. */
+    important: t.exposeBoolean("important"),
   }),
 });
 

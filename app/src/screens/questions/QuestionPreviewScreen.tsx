@@ -6,8 +6,8 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useQuery } from "urql";
-import { QUESTION_QUERY } from "../../graphql/operations";
+import { useQuery, useMutation } from "urql";
+import { QUESTION_QUERY, SET_QUESTION_IMPORTANT } from "../../graphql/operations";
 import { QuestionEditSheet } from "../../components/QuestionEditSheet";
 import { useAuth } from "../../auth/AuthContext";
 import type { QuestionsStackParamList } from "../../navigation/types";
@@ -105,6 +105,8 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
   const { can } = useAuth();
   const mayManage = can("question:manage");
   const [editing, setEditing] = useState(false);
+  const [markBusy, setMarkBusy] = useState(false);
+  const [, setImportant] = useMutation(SET_QUESTION_IMPORTANT);
   const [notice, setNotice] = useState<string | null>(null);
   const basket = useBasket();
   const [{ data, fetching, error }, refetch] = useQuery({ query: QUESTION_QUERY, variables: { id } });
@@ -135,6 +137,13 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Muted style={{ fontWeight: "700" }}>{q.qid ?? q.id.slice(-6)}</Muted>
         <Badge text={`${bnNum(q.marks ?? 0)} ${STR.marks}`} tone="brand" />
+        {/* The IMPORTANT mark (QR-9, D-#550) — visible to EVERY caller who can open the
+            question, teachers included, because it is a signal for whoever assembles a set. */}
+        {q.important ? (
+          <View style={{ marginLeft: space(2) }}>
+            <Badge text={STR.qImportant} tone="gold" />
+          </View>
+        ) : null}
       </View>
 
       <H2>{text || "—"}</H2>
@@ -199,8 +208,24 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
             onCancel={() => setEditing(false)}
           />
         ) : (
-          <View style={{ marginTop: space(3) }}>
+          <View style={{ marginTop: space(3), flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
             <Button title={STR.qeEdit} variant="secondary" onPress={() => setEditing(true)} />
+            {/* Office and the Principal mark from the bank at ANY time (QR-9, D-#550) — not
+                only while a review round is open, which is the reviewer’s path. */}
+            <Button
+              title={q.important ? STR.qUnmarkImportant : STR.qMarkImportant}
+              variant="secondary"
+              loading={markBusy}
+              onPress={() => {
+                setMarkBusy(true);
+                void setImportant({ artifactId: q.id, important: !q.important }).then((res) => {
+                  setMarkBusy(false);
+                  if (res.error) { setNotice(friendlyError(res.error)); return; }
+                  setNotice(q.important ? STR.qImportantCleared : STR.qImportantMarked);
+                  refetch({ requestPolicy: "network-only" });
+                });
+              }}
+            />
           </View>
         )
       ) : null}

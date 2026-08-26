@@ -71,6 +71,7 @@ export interface QuestionEditResult {
   changedFields: string[];
   wasPublished: boolean;
   retiredAt: string | null;
+  important: boolean;
 }
 
 interface LeanArtifact {
@@ -80,6 +81,7 @@ interface LeanArtifact {
   classLevel: number;
   reviewStatus: string;
   retiredAt?: Date | null;
+  importantAt?: Date | null;
   envelopeJson?: Record<string, unknown>;
 }
 
@@ -239,6 +241,7 @@ export async function updateQuestionContent(input: {
       changedFields: [],
       wasPublished,
       retiredAt: lean.retiredAt ? lean.retiredAt.toISOString() : null,
+    important: lean.importantAt != null,
     };
   }
 
@@ -272,6 +275,7 @@ export async function updateQuestionContent(input: {
     changedFields: changed,
     wasPublished,
     retiredAt: lean.retiredAt ? lean.retiredAt.toISOString() : null,
+    important: lean.importantAt != null,
   };
 }
 
@@ -332,6 +336,7 @@ export async function retireQuestion(input: {
     changedFields: ["retiredAt"],
     wasPublished: lean.reviewStatus === "gold",
     retiredAt: retiredAt.toISOString(),
+    important: lean.importantAt != null,
   };
 }
 
@@ -367,6 +372,107 @@ export async function restoreQuestion(input: {
     changedFields: ["retiredAt"],
     wasPublished: lean.reviewStatus === "gold",
     retiredAt: null,
+    important: lean.importantAt != null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// setQuestionImportant (QR-9, D-#550)
+// ---------------------------------------------------------------------------
+
+/**
+ * Raise or lower the IMPORTANT mark on a question.
+ *
+ * Normal is the usual state and `null` is how it is stored, so “important” is a positive
+ * claim somebody made rather than a default nobody chose. The mark is visible to EVERYONE
+ * who can see the question, teachers included (owner ruling): it is a signal about the
+ * question worth acting on when a set is assembled, not a private desk annotation.
+ *
+ * WHO may mark, and the one asymmetry that matters:
+ *   • `question:manage` (Principal + Office) — any question, at any time, from the bank;
+ *   • `content:review` (a reviewer) — ONLY a question she currently holds an open round
+ *     for. A reviewer marks while REVIEWING, which is exactly the set of questions she was
+ *     handed; letting her flag arbitrary bank rows would hand every teacher with the review
+ *     permission a write on 6,900 documents she was never assigned.
+ *
+ * Un-marking is open to anyone who may mark (owner ruling) — the flag is a shared signal,
+ * not a personal one, so whoever sees it is wrong may lower it.
+ *
+ * Idempotent: setting the state it is already in writes NOTHING, so a double-tap cannot
+ * produce a second audit row claiming a change that did not happen.
+ */
+export async function setQuestionImportant(input: {
+  artifactId: string;
+  important: boolean;
+  actorId: string;
+  actorRole?: string;
+  /** True when the caller holds `question:manage`; false for a reviewer. */
+  mayManage: boolean;
+}): Promise<QuestionEditResult> {
+  const doc = await loadQuestionDoc(input.artifactId);
+  const lean = doc.toObject() as unknown as LeanArtifact;
+  const payload = payloadOf(lean);
+  const qid = typeof payload.qid === "string" ? payload.qid : null;
+
+  // A reviewer is confined to her own open rounds. Checked against the ROUND rather than a
+  // permission because `content:review` is a TEACHER base permission — the check IS the
+  // scope. Refused before any write, so a rejected call leaves nothing half-done.
+  if (!input.mayManage) {
+    if (!qid) throw new ReviewError("Question artifact has no payload.qid — it cannot be marked");
+    const mine = await ReviewAssignment.countDocuments({
+      docType: QUESTION_DOC_TYPE,
+      qid,
+      reviewerId: new Types.ObjectId(input.actorId),
+      status: { $in: ["assigned", "submitted"] },
+    });
+    if (mine === 0) {
+      throw new ReviewError(
+        "Not authorized to mark this question — it is not in your review queue",
+      );
+    }
+  }
+
+  const was = lean.importantAt != null;
+  if (was === input.important) {
+    // No-op: the same posture the edit path takes (D-#548). Nothing written, nothing audited.
+    return {
+      artifactId: doc._id.toString(),
+      qid,
+      changedFields: [],
+      wasPublished: lean.reviewStatus === "gold",
+      retiredAt: lean.retiredAt ? lean.retiredAt.toISOString() : null,
+      important: was,
+    };
+  }
+
+  doc.set("importantAt", input.important ? new Date() : null);
+  doc.set("importantBy", input.important ? new Types.ObjectId(input.actorId) : undefined);
+  await doc.save();
+
+  await writeAudit({
+    eventKind: input.important ? "QUESTION_MARKED_IMPORTANT" : "QUESTION_UNMARKED_IMPORTANT",
+    actorId: input.actorId,
+    actorRole: input.actorRole,
+    targetId: doc._id.toString(),
+    targetKind: "ContentArtifact",
+    meta: {
+      qid,
+      subject: lean.subject,
+      classLevel: lean.classLevel,
+      reviewStatus: lean.reviewStatus,
+      // Whether this came from the desk or from a reviewer working her queue — the two
+      // reach the mutation through different gates and mean different things.
+      viaReviewQueue: !input.mayManage,
+    },
+  });
+
+  return {
+    artifactId: doc._id.toString(),
+    qid,
+    changedFields: ["importantAt"],
+    wasPublished: lean.reviewStatus === "gold",
+    retiredAt: lean.retiredAt ? lean.retiredAt.toISOString() : null,
+    important: input.important,
   };
 }
 

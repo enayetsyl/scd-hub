@@ -22,6 +22,7 @@ import {
   MY_QUESTION_REVIEW_COUNT,
   SUBMIT_QUESTION_REVIEW,
   SUBMIT_QUESTION_REVIEW_BULK,
+  SET_QUESTION_IMPORTANT,
   type QuestionReviewRoundT,
 } from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
@@ -135,6 +136,7 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
   }, []);
   const [, submit] = useMutation(SUBMIT_QUESTION_REVIEW);
   const [, submitBulk] = useMutation(SUBMIT_QUESTION_REVIEW_BULK);
+  const [, setImportant] = useMutation(SET_QUESTION_IMPORTANT);
   const colors = useColors();
 
   /** Rounds ticked for a bulk verdict (D-#527). Ids, so a refetch cannot desync them. */
@@ -200,6 +202,25 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
     setBulkReason("");
     dropRows(decided);
     refetchCount({ requestPolicy: "network-only" });
+  }
+
+  /**
+   * Raise or lower the IMPORTANT mark from the queue (QR-9, D-#550). The reviewer is the
+   * one reading the question closely, so this is where the judgement is actually formed —
+   * the server confines her to rounds she holds, so the button can be offered on every
+   * card here without a permission check in the UI.
+   */
+  async function toggleImportant(round: QuestionReviewRoundT): Promise<void> {
+    setBusyId(round.id);
+    setFailure(null);
+    const res = await setImportant({ artifactId: round.artifactId, important: !round.important });
+    setBusyId(null);
+    if (res.error) {
+      setFailure(friendlyError(res.error));
+      return;
+    }
+    setNotice(round.important ? STR.qImportantCleared : STR.qImportantMarked);
+    refetch({ requestPolicy: "network-only" });
   }
 
   async function decide(
@@ -326,6 +347,14 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
                     label={STR.qrSelect}
                     selected={selected.has(round.id)}
                     onPress={() => toggle(round.id)}
+                  />
+                  {/* The mark itself (QR-9, D-#550) — gold, so it reads as “valued” rather
+                      than the warn/danger tones this screen already uses for problems. */}
+                  {round.important ? <Badge text={STR.qImportant} tone="gold" /> : null}
+                  <Chip
+                    label={round.important ? STR.qUnmarkImportant : STR.qMarkImportant}
+                    selected={round.important}
+                    onPress={() => void toggleImportant(round)}
                   />
                 </View>
 

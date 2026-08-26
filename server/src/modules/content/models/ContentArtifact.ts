@@ -59,6 +59,19 @@ export interface IContentArtifact extends Document {
    * is what the import chain walks. Overloading it would make a retired question look like
    * an old version and vice versa.
    */
+  /**
+   * IMPORTANT flag (QR-9, D-#550). `null` is the usual state; a date is the mark. The
+   * At/By pair rather than a bare boolean so the audit question — who raised this, and
+   * when — is answerable from the document as well as from the audit log.
+   *
+   * Unlike an in-place EDIT, this SURVIVES a re-import of the same qid: importance is a
+   * judgement about the question, not about its current wording, and a routine batch
+   * re-upload that silently cleared every mark would be indistinguishable from nobody
+   * having marked anything. `persistEnvelope` copies it onto the new version.
+   */
+  importantAt?: Date | null;
+  importantBy?: Types.ObjectId;
+
   retiredAt?: Date | null;
   retiredBy?: Types.ObjectId;
   retireReason?: string;
@@ -92,6 +105,8 @@ const ContentArtifactSchema = new Schema<IContentArtifact>(
     approvedAt: { type: Date },
     approvalNote: { type: String },
     approvalOverride: { type: Boolean },
+    importantAt: { type: Date, default: null },
+    importantBy: { type: Schema.Types.ObjectId },
     retiredAt: { type: Date, default: null },
     retiredBy: { type: Schema.Types.ObjectId },
     retireReason: { type: String },

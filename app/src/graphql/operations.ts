@@ -793,6 +793,8 @@ export interface QuestionReviewRoundT {
   payloadJson: string | null;
   artifactReviewStatus: string | null;
   artifactSuperseded: boolean;
+  /** Marked important (QR-9, D-#550) — the reviewer toggles it from her queue. */
+  important: boolean;
 }
 
 const QUESTION_ROUND_FIELDS = `
@@ -800,7 +802,7 @@ const QUESTION_ROUND_FIELDS = `
   reviewerId reviewerName assignedAt roundNumber status
   verdict reason submittedAt
   questionText questionType marks topicTag payloadJson
-  artifactReviewStatus artifactSuperseded
+  artifactReviewStatus artifactSuperseded important
 `;
 
 /**
@@ -1267,6 +1269,8 @@ export interface QuestionListItem {
   marks: number | null;
   curationTag: string;
   reviewStatus: string;
+  /** Marked important (QR-9, D-#550) — shown as a gold tag; everyone sees it. */
+  important: boolean;
   /** Full payload JSON — list rows read question_text from it. */
   payloadJson: string;
 }
@@ -1284,6 +1288,8 @@ export interface QuestionsVars {
   marksMin?: number | null;
   marksMax?: number | null;
   reviewStatus?: string | null;
+  /** Narrow to the IMPORTANT questions (QR-9, D-#550), or with false to the normal ones. */
+  important?: boolean | null;
   /** Free-text over question_text + qid; Bangla digits match Latin qids. */
   search?: string | null;
   limit?: number | null;
@@ -1306,6 +1312,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
     $marksMin: Float
     $marksMax: Float
     $reviewStatus: String
+    $important: Boolean
     $search: String
     $limit: Int
     $offset: Int
@@ -1324,6 +1331,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       marksMin: $marksMin
       marksMax: $marksMax
       reviewStatus: $reviewStatus
+      important: $important
       search: $search
       limit: $limit
       offset: $offset
@@ -1342,6 +1350,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       marks
       curationTag
       reviewStatus
+      important
       payloadJson
     }
   }
@@ -1398,6 +1407,7 @@ export const QUESTION_QUERY = gql<{ question: QuestionDetail | null }, { id: str
       marks
       curationTag
       reviewStatus
+      important
       current
       importedAt
     }
@@ -7943,6 +7953,21 @@ export const SET_HR_POLICY = gql<
     ) {
       annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled
       signatoryName signatoryTitle weeklyHoursText letterRefPrefix
+    }
+  }
+`;
+
+/**
+ * Raise or lower the IMPORTANT mark (QR-9, D-#550). Principal and Office may mark any
+ * question from the bank at any time; a reviewer may mark one in her own open queue.
+ */
+export const SET_QUESTION_IMPORTANT = gql<
+  { setQuestionImportant: { artifactId: string; important: boolean; changedFields: string[] } },
+  { artifactId: string; important: boolean }
+>`
+  mutation SetQuestionImportant($artifactId: String!, $important: Boolean!) {
+    setQuestionImportant(artifactId: $artifactId, important: $important) {
+      artifactId important changedFields
     }
   }
 `;

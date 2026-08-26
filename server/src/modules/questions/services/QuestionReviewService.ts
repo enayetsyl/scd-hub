@@ -59,6 +59,8 @@ export interface QuestionReviewRoundDTO extends ReviewAssignmentDTO {
   artifactReviewStatus: string | null;
   /** True when the artifact under review is no longer the current version. */
   artifactSuperseded: boolean;
+  /** The IMPORTANT mark on the question (QR-9, D-#550) — the reviewer sets it from here. */
+  important: boolean;
   reviewerName: string | null;
 }
 
@@ -104,6 +106,7 @@ interface LeanQuestion {
   address: { anchorWord: string; number: number | string; title?: string | null };
   reviewStatus: string;
   current: boolean;
+  importantAt?: Date | null;
   envelopeJson?: Record<string, unknown>;
 }
 
@@ -646,6 +649,7 @@ async function decorate(rounds: RawAssignment[]): Promise<QuestionReviewRoundDTO
       payloadJson: a ? JSON.stringify(payload) : null,
       artifactReviewStatus: a?.reviewStatus ?? null,
       artifactSuperseded: a ? a.current === false : false,
+      important: a?.importantAt != null,
       reviewerName: nameOf.get(r.reviewerId.toString()) ?? null,
     };
   });

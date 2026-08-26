@@ -1102,6 +1102,56 @@ describe("QR-1 — re-import supersedes a question's review rounds by qid (Q1.2)
   });
 });
 
+describe("QR-9 — the IMPORTANT mark survives a re-import (D-#550)", () => {
+  beforeEach(() => {
+    mockBatchCreate.mockResolvedValue(makeBatchDoc());
+    mockArtifactCreate.mockResolvedValue(makeArtifactDoc());
+    mockReviewFind.mockReturnValue({ lean: () => Promise.resolve([]) });
+  });
+
+  test("a marked prior version hands its mark to the new one", async () => {
+    // This is the deliberate DIFFERENCE from an in-place edit (D-#548), which a re-import
+    // overwrites: the upload re-delivers the question TEXT, but importance is a judgement
+    // ABOUT the question. Without this, one routine batch re-upload silently clears every
+    // mark in the bank and reads exactly like nobody having marked anything.
+    const markedAt = new Date("2026-08-20T00:00:00.000Z");
+    const marker = new mongoose.Types.ObjectId();
+    mockArtifactFindOneResult.mockResolvedValue({
+      _id: new mongoose.Types.ObjectId(),
+      importantAt: markedAt,
+      importantBy: marker,
+    });
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE }, ACTOR_ID);
+
+    const createArg = mockArtifactCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(createArg.importantAt).toEqual(markedAt);
+    expect(String(createArg.importantBy)).toBe(marker.toString());
+  });
+
+  test("an UNMARKED prior version hands over nothing", async () => {
+    mockArtifactFindOneResult.mockResolvedValue({
+      _id: new mongoose.Types.ObjectId(),
+      importantAt: null,
+    });
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE }, ACTOR_ID);
+
+    const createArg = mockArtifactCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(createArg.importantAt).toBeNull();
+  });
+
+  test("a FIRST import lands normal — there is no prior mark to inherit", async () => {
+    mockArtifactFindOneResult.mockResolvedValue(null);
+    mockHarnessPass();
+    await importEnvelope({ ...QUESTION_ENVELOPE }, ACTOR_ID);
+
+    const createArg = mockArtifactCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(createArg.importantAt).toBeNull();
+    expect(createArg.importantBy).toBeUndefined();
+  });
+});
+
 // ===========================================================================
 // QR-3 — the publish gate on SELECTION (Q3.4 / D-#508)
 // ===========================================================================

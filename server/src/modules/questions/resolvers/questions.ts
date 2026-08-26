@@ -59,6 +59,8 @@ interface QuestionArtifactShape {
   marks?: number | null;
   curationTag: string;
   reviewStatus: string;
+  /** The IMPORTANT mark (QR-9, D-#550) — visible to everyone who can see the question. */
+  important: boolean;
   current: boolean;
   importedAt: Date;
 }
@@ -83,6 +85,8 @@ QuestionArtifactRef.implement({
     marks: t.float({ nullable: true, resolve: (q) => q.marks ?? null }),
     curationTag: t.exposeString("curationTag"),
     reviewStatus: t.exposeString("reviewStatus"),
+    /** Marked important by a reviewer or the desk (QR-9, D-#550). Everyone sees it. */
+    important: t.exposeBoolean("important"),
     current: t.exposeBoolean("current"),
     importedAt: t.string({ resolve: (q) => q.importedAt.toISOString() }),
   }),
@@ -117,6 +121,7 @@ function docToShape(doc: LeanArtifact): QuestionArtifactShape {
     marks: typeof payload.marks === "number" ? payload.marks : null,
     curationTag: doc.curationTag,
     reviewStatus: doc.reviewStatus,
+    important: doc.importantAt != null,
     current: doc.current,
     importedAt: doc.importedAt,
   };
@@ -180,6 +185,13 @@ builder.queryField("questions", (t) =>
       /** Show the RETIRED questions instead of the live ones (D-#548) — the only way to
        *  find one in order to restore it. Honoured for question:manage holders. */
       retired: t.arg.boolean({ required: false }),
+      /**
+       * Narrow to the questions somebody marked IMPORTANT (QR-9, D-#550), or to the normal
+       * ones with `false`. Omitted is no constraint at all — the mark is a lens over the
+       * bank, not a partition of it. Open to EVERY caller, teachers included: the mark is
+       * visible to anyone who can see the question, so it must be filterable by them too.
+       */
+      important: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -199,6 +211,11 @@ builder.queryField("questions", (t) =>
       // so much as a view nobody else has a use for.
       const mayManage = callerHasPermission(ctx.auth, "question:manage");
       filter.retiredAt = mayManage && args.retired === true ? { $ne: null } : null;
+
+      // The important lens (D-#550). Not a permission boundary and not gated: a teacher
+      // picking questions for a set is exactly who the mark is FOR.
+      if (args.important === true) filter.importantAt = { $ne: null };
+      else if (args.important === false) filter.importantAt = null;
 
       // Publish gate (Q3.1): a teacher sees ONLY published questions. Set last so an
       // explicit reviewStatus arg can never widen it back open.

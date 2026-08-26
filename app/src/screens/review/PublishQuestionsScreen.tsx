@@ -475,6 +475,10 @@ export default function PublishQuestionsScreen({ navigation }: Props): React.Rea
                       <Badge text={classLevelLabel(round.classLevel)} />
                       {round.questionType ? <Badge text={prettyCode(round.questionType)} /> : null}
                       {round.reviewerName ? <Badge text={round.reviewerName} /> : null}
+                      {/* The mark, carried onto the publish queue too (QR-9, D-#550): the
+                          Principal deciding what reaches the shelf should see what the
+                          reviewer flagged while reading it. */}
+                      {round.important ? <Badge text={STR.qImportant} tone="gold" /> : null}
                     </View>
                     <Body>{round.questionText ?? round.qid ?? "—"}</Body>
                     {round.qid ? <Muted>{round.qid}</Muted> : null}

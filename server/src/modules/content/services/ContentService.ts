@@ -263,6 +263,13 @@ async function persistEnvelope(
     renderedMarkdown: envelope.rendered_markdown,
     current: true,
     priorVersionId: prior ? prior._id : undefined,
+    // The IMPORTANT mark follows the qid onto the new version (QR-9, D-#550). An in-place
+    // edit is deliberately overwritten by a re-import (D-#548) because the upload re-delivers
+    // the question TEXT — but importance is a judgement ABOUT the question, and a batch
+    // re-upload that silently cleared every mark would read as “nobody ever marked one”.
+    // Only questions carry it; a plan re-import is untouched.
+    importantAt: prior && envelope.doc_type === "question" ? (prior.importantAt ?? null) : null,
+    importantBy: prior && envelope.doc_type === "question" ? prior.importantBy : undefined,
     importBatchId: parentBatchId,
     importedBy: actorId,
     importedAt: new Date(),
