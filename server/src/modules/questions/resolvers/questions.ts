@@ -27,7 +27,7 @@ import {
 } from "../search";
 import { reviewerMayReadArtifact } from "../../content/services/ReviewService";
 import { applyQuestionOnlyGate, seesPublishedOnly } from "../publishGate";
-import { QUESTION_CATEGORIES } from "@scd/shared";
+import { QUESTION_CATEGORIES, callerHasPermission } from "@scd/shared";
 import type { Types, FlattenMaps, FilterQuery } from "mongoose";
 import type { IContentArtifact } from "../../content/models/ContentArtifact";
 
@@ -177,6 +177,9 @@ builder.queryField("questions", (t) =>
        *  unknown/vanished id is silently ignored (falls back to page 1 —
        *  the client dedupes appended pages by id). */
       after: t.arg.string({ required: false }),
+      /** Show the RETIRED questions instead of the live ones (D-#548) — the only way to
+       *  find one in order to restore it. Honoured for question:manage holders. */
+      retired: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -188,6 +191,14 @@ builder.queryField("questions", (t) =>
       if (args.subject) filter.subject = args.subject;
       if (args.classLevel != null) filter.classLevel = args.classLevel;
       if (args.reviewStatus) filter.reviewStatus = args.reviewStatus;
+
+      // Retired questions (D-#548) are hidden from everyone by default — a soft delete that
+      // still showed up in the bank would not be a delete. `retired: true` is the way back
+      // in, so somebody with question:manage can find one and restore it; for anyone else
+      // the argument is ignored rather than refused, since it is not a permission boundary
+      // so much as a view nobody else has a use for.
+      const mayManage = callerHasPermission(ctx.auth, "question:manage");
+      filter.retiredAt = mayManage && args.retired === true ? { $ne: null } : null;
 
       // Publish gate (Q3.1): a teacher sees ONLY published questions. Set last so an
       // explicit reviewStatus arg can never widen it back open.
@@ -322,7 +333,7 @@ builder.queryField("questionTopicTags", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
 
-      const filter: FilterQuery<IContentArtifact> = { docType: "question", current: true };
+      const filter: FilterQuery<IContentArtifact> = { docType: "question", current: true, retiredAt: null };
       if (args.subject) filter.subject = args.subject;
       if (args.classLevel != null) filter.classLevel = args.classLevel;
       // An unpublished question must not leak its topic into the filter chips (Q3.1).
@@ -364,7 +375,7 @@ builder.queryField("questionCategories", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
 
-      const filter: FilterQuery<IContentArtifact> = { docType: "question", current: true };
+      const filter: FilterQuery<IContentArtifact> = { docType: "question", current: true, retiredAt: null };
       if (args.subject) filter.subject = args.subject;
       if (args.classLevel != null) filter.classLevel = args.classLevel;
       // An unpublished question must not leak its category into the filter chips (Q3.1).
@@ -403,7 +414,7 @@ builder.queryField("questionChapters", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
 
-      const filter: FilterQuery<IContentArtifact> = { docType: "question", current: true };
+      const filter: FilterQuery<IContentArtifact> = { docType: "question", current: true, retiredAt: null };
       if (args.subject) filter.subject = args.subject;
       if (args.classLevel != null) filter.classLevel = args.classLevel;
       // An unpublished question must not leak its chapter into the filter chips (Q3.1).

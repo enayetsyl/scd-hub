@@ -954,6 +954,7 @@ export async function assignQuestionReviewByChapter(input: {
   const arts = (await ContentArtifact.find({
     docType: QUESTION_DOC_TYPE,
     current: true,
+    retiredAt: null,
     subject: input.subject,
     classLevel: input.classLevel,
     "address.number": { $in: chapters.flatMap((c) => [c, String(c)]) },
@@ -1042,7 +1043,7 @@ export async function listAssignableQuestions(args: {
   search?: string | null;
   limit?: number | null;
 }): Promise<AssignableQuestionDTO[]> {
-  const filter: Record<string, unknown> = { docType: QUESTION_DOC_TYPE, current: true };
+  const filter: Record<string, unknown> = { docType: QUESTION_DOC_TYPE, current: true, retiredAt: null };
   // Published questions are done — they are not assignable.
   filter.reviewStatus = args.reviewStatus ? args.reviewStatus : { $ne: "gold" };
   if (args.subject) filter.subject = args.subject;

@@ -3,11 +3,13 @@
  * carrier rendered per type (MCQ options, T/F, fill-blank, matching, short
  * answer, descriptive). Add-to-basket from here too.
  */
-import React from "react";
+import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { QUESTION_QUERY } from "../../graphql/operations";
+import { QuestionEditSheet } from "../../components/QuestionEditSheet";
+import { useAuth } from "../../auth/AuthContext";
 import type { QuestionsStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -100,6 +102,10 @@ function AnswerCarrier({ p }: { p: QuestionPayload }): React.ReactElement | null
 
 export default function QuestionPreviewScreen({ route }: Props): React.ReactElement {
   const { id } = route.params;
+  const { can } = useAuth();
+  const mayManage = can("question:manage");
+  const [editing, setEditing] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const basket = useBasket();
   const [{ data, fetching, error }, refetch] = useQuery({ query: QUESTION_QUERY, variables: { id } });
 
@@ -175,6 +181,30 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
               })
         }
       />
+
+      {/* Correct or retire the question in place (QR-8, D-#548) — Principal + Office. The
+          bank is where a wrong answer is usually spotted, so the fix belongs here too, not
+          only on the review screens. */}
+      {mayManage ? (
+        editing ? (
+          <QuestionEditSheet
+            artifactId={q.id}
+            payload={p}
+            isPublished={q.reviewStatus === "gold"}
+            onDone={(message) => {
+              setEditing(false);
+              setNotice(message);
+              refetch({ requestPolicy: "network-only" });
+            }}
+            onCancel={() => setEditing(false)}
+          />
+        ) : (
+          <View style={{ marginTop: space(3) }}>
+            <Button title={STR.qeEdit} variant="secondary" onPress={() => setEditing(true)} />
+          </View>
+        )
+      ) : null}
+      {notice ? <Notice tone="ok" message={notice} /> : null}
     </Screen>
   );
 }

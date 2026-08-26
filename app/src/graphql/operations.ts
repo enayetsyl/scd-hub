@@ -834,6 +834,84 @@ export const CLEAR_QUESTION_CONDITION = gql<
   }
 `;
 
+// --- Question corrections (QR-8, D-#548) ----------------------------------------------
+
+export interface QuestionEditResultT {
+  artifactId: string;
+  qid: string | null;
+  changedFields: string[];
+  wasPublished: boolean;
+  retiredAt: string | null;
+}
+
+const QUESTION_EDIT_FIELDS = `artifactId qid changedFields wasPublished retiredAt`;
+
+export interface QuestionOptionInputT {
+  optionId?: string | null;
+  text: string;
+  isCorrect: boolean;
+}
+
+/**
+ * Correct a question's content or answer, in place. Any field omitted is left alone, so the
+ * screen sends only what it changed. Subject/class/chapter/type are deliberately not here —
+ * they are the question's address, and moving one strands review rounds and assembled sets.
+ */
+export const UPDATE_QUESTION_CONTENT = gql<
+  { updateQuestionContent: QuestionEditResultT },
+  {
+    artifactId: string;
+    questionText?: string | null;
+    marks?: number | null;
+    options?: QuestionOptionInputT[] | null;
+    tfAnswer?: boolean | null;
+    blanks?: { blankNo: number; accepted: string[] }[] | null;
+    answerAccepted?: string[] | null;
+    modelNote?: string | null;
+  }
+>`
+  mutation UpdateQuestionContent(
+    $artifactId: String!
+    $questionText: String
+    $marks: Float
+    $options: [QuestionOptionInput!]
+    $tfAnswer: Boolean
+    $blanks: [QuestionBlankInput!]
+    $answerAccepted: [String!]
+    $modelNote: String
+  ) {
+    updateQuestionContent(
+      artifactId: $artifactId
+      questionText: $questionText
+      marks: $marks
+      options: $options
+      tfAnswer: $tfAnswer
+      blanks: $blanks
+      answerAccepted: $answerAccepted
+      modelNote: $modelNote
+    ) { ${QUESTION_EDIT_FIELDS} }
+  }
+`;
+
+/** Soft delete — the question leaves the bank but assembled sets keep resolving. */
+export const RETIRE_QUESTION = gql<
+  { retireQuestion: QuestionEditResultT },
+  { artifactId: string; reason?: string | null }
+>`
+  mutation RetireQuestion($artifactId: String!, $reason: String) {
+    retireQuestion(artifactId: $artifactId, reason: $reason) { ${QUESTION_EDIT_FIELDS} }
+  }
+`;
+
+export const RESTORE_QUESTION = gql<
+  { restoreQuestion: QuestionEditResultT },
+  { artifactId: string }
+>`
+  mutation RestoreQuestion($artifactId: String!) {
+    restoreQuestion(artifactId: $artifactId) { ${QUESTION_EDIT_FIELDS} }
+  }
+`;
+
 // --- Reviewer progress (QR-5, D-#537) -------------------------------------------------
 
 /** The five buckets the progress screen counts and drills into. */

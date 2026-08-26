@@ -48,6 +48,20 @@ export interface IContentArtifact extends Document {
   approvalNote?: string;
   /** True when the sign-off bypassed the normal `reviewed` gate (override). */
   approvalOverride?: boolean;
+  /**
+   * Soft delete (D-#548). Set when Principal/Office retire a question; the document stays,
+   * so an `AssessmentSet` that already references this `artifactId`/`qid` keeps resolving.
+   * A HARD delete would orphan every set the question was assembled into. Retired items are
+   * excluded from the bank, the assign picker and set assembly; `retiredAt: null` is the
+   * live state, and un-retiring simply clears these three fields.
+   *
+   * Deliberately NOT `current: false` — that flag means "a newer VERSION superseded me" and
+   * is what the import chain walks. Overloading it would make a retired question look like
+   * an old version and vice versa.
+   */
+  retiredAt?: Date | null;
+  retiredBy?: Types.ObjectId;
+  retireReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -78,6 +92,9 @@ const ContentArtifactSchema = new Schema<IContentArtifact>(
     approvedAt: { type: Date },
     approvalNote: { type: String },
     approvalOverride: { type: Boolean },
+    retiredAt: { type: Date, default: null },
+    retiredBy: { type: Schema.Types.ObjectId },
+    retireReason: { type: String },
   },
   { timestamps: true },
 );
