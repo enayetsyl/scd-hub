@@ -224,16 +224,30 @@ describe("publishQuestionsMatching", () => {
     expect(chain.limit).toHaveBeenCalledWith(PUBLISH_ALL_MAX);
   });
 
-  test("reports what is left rather than silently stopping short", async () => {
+  test("`remaining` is RE-COUNTED after the batch, never total − okCount", async () => {
+    // The owner published 244 in one go and was told 1 remained, with nothing left to
+    // publish. Subtracting was wrong two ways: the total counts ROUNDS while okCount counts
+    // ARTIFACTS (two rounds on one question leave a phantom 1), and a legitimate failure —
+    // already published, never reviewed — would count as outstanding forever, so pressing
+    // again could never clear it. Publishing supersedes the rounds, so asking the filter
+    // again is the truth by construction.
     const ids = Array.from({ length: 4 }, () => ({ artifactId: new mongoose.Types.ObjectId() }));
     chain.lean.mockResolvedValue(ids);
-    mockCount.mockResolvedValue(9);
-    // Every publish fails (findById returns null → "Artifact not found"), which is fine:
-    // this asserts the arithmetic, and okCount 0 means nothing was published.
+    // 7 is what the filter still matches AFTER the writes. `remaining` must be exactly that
+    // number, read back from the database — not derived from a count taken beforehand.
+    mockCount.mockResolvedValue(7);
     const res = await publishQuestionsMatching({ filter: { verdict: "APPROVE" }, actorId: ACTOR });
-    expect(res.okCount).toBe(0);
-    expect(res.failedCount).toBe(4);
-    expect(res.remaining).toBe(9);
+    expect(res.remaining).toBe(7);
+    // Counted ONCE, and only after publishing — a pre-count would be the stale subtraction.
+    expect(mockCount).toHaveBeenCalledTimes(1);
+  });
+
+  test("a phantom remainder cannot survive two rounds pointing at one question", async () => {
+    const shared = new mongoose.Types.ObjectId();
+    chain.lean.mockResolvedValue([{ artifactId: shared }, { artifactId: shared }]);
+    mockCount.mockResolvedValue(0);
+    const res = await publishQuestionsMatching({ filter: { verdict: "APPROVE" }, actorId: ACTOR });
+    expect(res.remaining).toBe(0);
   });
 
   test("deduplicates artifact ids before publishing", async () => {

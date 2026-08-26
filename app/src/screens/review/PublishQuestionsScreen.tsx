@@ -56,6 +56,7 @@ import {
   Divider,
 } from "../../components/ui";
 import { AnswerCarrier } from "../../components/QuestionAnswer";
+import { QuestionEditSheet } from "../../components/QuestionEditSheet";
 import { parsePayload, prettyCode } from "../../lib/question";
 import {
   STR,
@@ -64,6 +65,7 @@ import {
   bnNum,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useAuth } from "../../auth/AuthContext";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
 
@@ -74,6 +76,10 @@ const PAGE_SIZE = 50;
 
 export default function PublishQuestionsScreen({ navigation }: Props): React.ReactElement {
   const colors = useColors();
+  const { can } = useAuth();
+  /** Principal + Office may correct or retire a question in place (QR-8, D-#548). */
+  const mayManage = can("question:manage");
+  const [editing, setEditing] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("APPROVE");
 
   // --- filters (QR-6) — the same axes the assign screen slices on -----------------
@@ -469,6 +475,10 @@ export default function PublishQuestionsScreen({ navigation }: Props): React.Rea
                       <Badge text={classLevelLabel(round.classLevel)} />
                       {round.questionType ? <Badge text={prettyCode(round.questionType)} /> : null}
                       {round.reviewerName ? <Badge text={round.reviewerName} /> : null}
+                      {/* The mark, carried onto the publish queue too (QR-9, D-#550): the
+                          Principal deciding what reaches the shelf should see what the
+                          reviewer flagged while reading it. */}
+                      {round.important ? <Badge text={STR.qImportant} tone="gold" /> : null}
                     </View>
                     <Body>{round.questionText ?? round.qid ?? "—"}</Body>
                     {round.qid ? <Muted>{round.qid}</Muted> : null}
@@ -573,11 +583,36 @@ export default function PublishQuestionsScreen({ navigation }: Props): React.Rea
                     </>
                   ) : null}
 
-                  <Button
-                    title={STR.reviewThread}
-                    variant="ghost"
-                    onPress={() => navigation.navigate("QuestionReviewThread", { artifactId: round.artifactId })}
-                  />
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+                    <Button
+                      title={STR.reviewThread}
+                      variant="ghost"
+                      onPress={() => navigation.navigate("QuestionReviewThread", { artifactId: round.artifactId })}
+                    />
+                    {/* The missing half of the loop (QR-8): a reviewer's condition asks for
+                        the answer to change, and until now nobody could change it. */}
+                    {mayManage ? (
+                      <Button
+                        title={STR.qeEdit}
+                        variant="ghost"
+                        onPress={() => setEditing(editing === round.id ? null : round.id)}
+                      />
+                    ) : null}
+                  </View>
+
+                  {mayManage && editing === round.id ? (
+                    <QuestionEditSheet
+                      artifactId={round.artifactId}
+                      payload={parsePayload(round.payloadJson)}
+                      isPublished={round.artifactReviewStatus === "gold"}
+                      onDone={(message) => {
+                        setEditing(null);
+                        setNotice(message);
+                        reload();
+                      }}
+                      onCancel={() => setEditing(null)}
+                    />
+                  ) : null}
                 </Card>
               );
             })}

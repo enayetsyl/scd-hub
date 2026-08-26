@@ -23,6 +23,16 @@ export type AuditEventKind =
                               // sent back to the same reviewer for another round (D-#525)
   | "PLAN_APPROVED"       // Principal sign-off: reviewed → gold (D-#38; PR-2)
   | "QUESTION_PUBLISHED"  // Principal publish: a question reaches the teachers' shelf (D-#508)
+  // Question corrections (D-#548). meta carries the qid, WHICH fields moved, and their
+  // before/after values — question content is curriculum, not identity, so unlike the D-#526
+  // staff posture the values themselves are the point: "who changed what, when".
+  | "QUESTION_EDITED"     // content/answer corrected in place by Principal or Office
+  | "QUESTION_RETIRED"    // soft-deleted: hidden from bank/picker/assembly, sets still resolve
+  | "QUESTION_RESTORED"   // a retirement undone
+  // The IMPORTANT mark (QR-9, D-#550). meta.viaReviewQueue separates a reviewer working
+  // her own queue from a desk mark, because the two reach the mutation by different gates.
+  | "QUESTION_MARKED_IMPORTANT"   // raised: normal → important
+  | "QUESTION_UNMARKED_IMPORTANT" // lowered back to the usual state
   // Book production (SB-1, D-#403–#428). SECURITY log only — who did what. The
   // EDITORIAL "why" lives in the book plane's own BookEvent (D-#411); the two answer
   // different questions and neither is derivable from the other.
