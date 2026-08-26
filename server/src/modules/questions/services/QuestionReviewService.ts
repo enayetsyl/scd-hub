@@ -662,12 +662,29 @@ export const MY_QUESTION_REVIEWS_PAGE = 50;
 const MY_QUESTION_REVIEWS_MAX = 200;
 
 /** How many rounds the caller's queue holds in total — the pager's denominator. */
-export async function countMyQuestionReviews(reviewerId: string): Promise<number> {
-  return ReviewAssignment.countDocuments({
-    reviewerId,
-    docType: QUESTION_DOC_TYPE,
-    status: { $in: ["assigned", "submitted"] },
-  });
+export async function countMyQuestionReviews(
+  reviewerId: string,
+  args: MyReviewsFilterArgs = {},
+): Promise<number> {
+  // The denominator must answer the SAME question the list does, or the pager reads
+  // "৫০ / ২৯৫১" while the filtered list holds twelve rows (QR-11).
+  if (noReviewerFilter(args)) {
+    return ReviewAssignment.countDocuments({
+      reviewerId,
+      docType: QUESTION_DOC_TYPE,
+      status: { $in: ["assigned", "submitted"] },
+    });
+  }
+  const roundMatch = myReviewsRoundMatch(reviewerId, args);
+  const artifactMatch = myReviewsArtifactMatch(args);
+  if (!artifactMatch) return ReviewAssignment.countDocuments(roundMatch);
+
+  const out = (await ReviewAssignment.aggregate([
+    { $match: roundMatch },
+    ...inboxLookupStages(artifactMatch),
+    { $count: "n" },
+  ])) as unknown as { n: number }[];
+  return out[0]?.n ?? 0;
 }
 
 /**
@@ -691,24 +708,54 @@ export async function countMyQuestionReviews(reviewerId: string): Promise<number
 export async function listMyQuestionReviews(
   reviewerId: string,
   opts: { limit?: number | null; offset?: number | null } = {},
+  args: MyReviewsFilterArgs = {},
 ): Promise<QuestionReviewRoundDTO[]> {
   const limit = Math.min(
     Math.max(1, opts.limit ?? MY_QUESTION_REVIEWS_PAGE),
     MY_QUESTION_REVIEWS_MAX,
   );
   const offset = Math.max(0, opts.offset ?? 0);
+  // `status` ascending puts "assigned" before "submitted" — the work before the history.
+  // The secondary keys the page boundary, so it must be stable.
+  const sort = { status: 1 as const, assignedAt: -1 as const, _id: 1 as const };
 
-  const rounds = (await ReviewAssignment.find({
-    reviewerId,
-    docType: QUESTION_DOC_TYPE,
-    status: { $in: ["assigned", "submitted"] },
-  })
-    // `status` ascending puts "assigned" before "submitted" — the work before the
-    // history. The secondary sort keys the page boundary, so it must be stable.
-    .sort({ status: 1, assignedAt: -1, _id: 1 })
-    .skip(offset)
-    .limit(limit)
-    .lean()) as unknown as RawAssignment[];
+  // An unfiltered queue keeps the exact query it has always used — no pipeline, no join.
+  if (noReviewerFilter(args)) {
+    const rounds = (await ReviewAssignment.find({
+      reviewerId,
+      docType: QUESTION_DOC_TYPE,
+      status: { $in: ["assigned", "submitted"] },
+    })
+      .sort(sort)
+      .skip(offset)
+      .limit(limit)
+      .lean()) as unknown as RawAssignment[];
+    return decorate(rounds);
+  }
+
+  const roundMatch = myReviewsRoundMatch(reviewerId, args);
+  const artifactMatch = myReviewsArtifactMatch(args);
+
+  if (!artifactMatch) {
+    const rounds = (await ReviewAssignment.find(roundMatch)
+      .sort(sort)
+      .skip(offset)
+      .limit(limit)
+      .lean()) as unknown as RawAssignment[];
+    return decorate(rounds);
+  }
+
+  const pipeline: PipelineStage[] = [
+    { $match: roundMatch },
+    ...inboxLookupStages(artifactMatch),
+    { $sort: sort },
+    { $skip: offset },
+    { $limit: limit },
+    // decorate() re-reads the artifacts it needs; carrying the joined copy would double
+    // the payload out of Mongo for no gain.
+    { $project: { art: 0 } },
+  ];
+  const rounds = (await ReviewAssignment.aggregate(pipeline)) as unknown as RawAssignment[];
   return decorate(rounds);
 }
 
@@ -776,12 +823,84 @@ function inboxLookupStages(artifactMatch: Record<string, unknown>): PipelineStag
         localField: "artifactId",
         foreignField: "_id",
         as: "art",
-        pipeline: [{ $project: { envelopeJson: 1 } }],
+        // `importantAt` rides along so the D-#550 mark can be filtered from this SAME
+        // join (QR-11) rather than a second lookup; it is one date field.
+        pipeline: [{ $project: { envelopeJson: 1, importantAt: 1 } }],
       },
     },
     { $unwind: "$art" },
     { $match: artifactMatch },
   ];
+}
+
+/**
+ * The REVIEWER queue filter (QR-11, D-#559).
+ *
+ * The first real assignment handed one reviewer 2,951 rounds with no way to narrow them,
+ * while the Principal’s publish inbox got these axes back in QR-6. Same axes, same split,
+ * deliberately the same shape: `subject`/`classLevel`/`chapter` are denormalised ONTO the
+ * round so they never touch ContentArtifact, and only `questionType`/`search`/`important`
+ * reach into the artifact and pay for a `$lookup`.
+ *
+ * `undecided` is the one axis the publish inbox has no use for: it hides rounds she has
+ * already ruled on, which is what turns a 2,951-row history back into a work list.
+ */
+export interface MyReviewsFilterArgs {
+  subject?: string | null;
+  classLevel?: number | null;
+  chapter?: number | null;
+  questionType?: string | null;
+  search?: string | null;
+  /** Only questions somebody marked IMPORTANT (D-#550). */
+  important?: boolean | null;
+  /** Only rounds with no verdict yet — the work, not the history. */
+  undecided?: boolean | null;
+}
+
+/** Round-level half — everything answerable without the artifact. */
+function myReviewsRoundMatch(reviewerId: string, args: MyReviewsFilterArgs): Record<string, unknown> {
+  const filter: Record<string, unknown> = {
+    // An ObjectId, NOT the raw string. `find()` casts a string against the schema; an
+    // aggregate pipeline does NOT, and an uncast reviewerId matches zero rounds — which
+    // reads as “her queue is empty”, not as a bug.
+    reviewerId: new Types.ObjectId(reviewerId),
+    docType: QUESTION_DOC_TYPE,
+    status: args.undecided === true ? "assigned" : { $in: ["assigned", "submitted"] },
+  };
+  if (args.subject) filter.subject = args.subject;
+  if (args.classLevel != null) filter.classLevel = args.classLevel;
+  // The round stores the chapter as a string whatever the artifact used (QR-6).
+  if (args.chapter != null) filter.addressNumber = String(args.chapter);
+  return filter;
+}
+
+/** Artifact-level half, or null when the filter does not need the join at all. */
+function myReviewsArtifactMatch(args: MyReviewsFilterArgs): Record<string, unknown> | null {
+  const match: Record<string, unknown> = {};
+  if (args.questionType) match["art.envelopeJson.payload.question_type"] = args.questionType;
+  if (args.important === true) match["art.importantAt"] = { $ne: null };
+  const term = args.search?.trim() ?? "";
+  if (term !== "") {
+    const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    match.$or = [
+      { "art.envelopeJson.payload.question_text": re },
+      { "art.envelopeJson.payload.qid": re },
+    ];
+  }
+  return Object.keys(match).length > 0 ? match : null;
+}
+
+/** True when the caller asked for nothing — the plain `find` path then stays untouched. */
+export function noReviewerFilter(args: MyReviewsFilterArgs): boolean {
+  return (
+    !args.subject &&
+    args.classLevel == null &&
+    args.chapter == null &&
+    !args.questionType &&
+    !(args.search?.trim()) &&
+    args.important !== true &&
+    args.undecided !== true
+  );
 }
 
 /**

@@ -1,5 +1,18 @@
 # STATUS
 
+- 2026-08-26 (cont. 3): **BUILT — filters on the reviewer’s queue (QR-11, D-#559), branch `feat/qr11-reviewer-filters`.** Owner ask, watching Kaynat work: give her class / question-type / chapter filters so she can approve or reject a slice at a time.
+  **The asymmetry it fixes.** QR-6 gave the PRINCIPAL subject/class/chapter/type/search + pagination on the publish inbox. The reviewer — the person actually reading 2,951 questions — had “সব নির্বাচন / নির্বাচন বাতিল” and nothing else.
+  **Reused, not invented.** Same axes, same round-vs-artifact split, same `inboxLookupStages`: subject/class/chapter are denormalised onto the round and never join; only questionType/search/important pay for a `$lookup`, and `importantAt` now rides the SAME projection as `envelopeJson` so the D-#550 mark costs no second lookup. Two axes are new and are hers alone — `undecided` (hides what she has already ruled on) and `important`.
+  **Two traps, both now pinned by tests.** (1) An aggregate pipeline does NOT cast `reviewerId` the way `find()` does — an uncast string matches zero rounds and reads as “her queue is empty”, not as a bug. (2) The FILTER and PAGING argument sets are kept separate: the count resolver takes the filter and not `limit`/`offset`, and fusing them is exactly what broke the Class-test dashboard in prod on 2026-08-03.
+  **The suite caught both of my own mistakes before they shipped.** `graphqlDocuments.test` rejected the first cut of the count query (`Unknown argument “limit”`), and the new `reviewerQueueFilter.test` caught a mangled regex escape — `\"\# STATUS
+
+\"` had become `\"# STATUS
+
+\"`, so a search for a literal `.` or `*` would have wildcarded across the bank.
+  **Gate GREEN (executed):** shared-vocab verifier PASS, shared + server + app `tsc` clean, **server jest 3867/3867 (214 suites)** with **14 new**, expo web export **exit 0**.
+  **NOT DONE:** not driven at the running app — no filter has been applied on the real 2,951-round queue, and the `$lookup` axes (question type / search / important) have never run against prod volume.
+  **Also open, unrelated to this slice:** `origin/dev` carries DUPLICATE decision numbers — D-#551..556 are each used twice, once by guardian-work-claim and once by staff-hub SH-9. Two parallel sessions claimed the same range. Mirrored as-is here rather than renumbered inside a feature PR; it wants its own cleanup.
+
 - 2026-08-26 (cont. 2): **FIXED — retire had no undo in the app; `restoreQuestion` was unreachable (QR-10, D-#558), branch `feat/qr10-restore-question`.**
   **Found by driving the app, not by reading the code.** Walking the owner through a prod test plan for D-#548, the step before “retire a question” was to check the way back. There wasn’t one: `RESTORE_QUESTION` sat in `operations.ts` imported by NO screen, `qeRestore`/`qeRestored`/`qeRetired` were labels nothing rendered, and the app never sent the `retired: true` argument the server already accepted. So the soft delete D-#548 justified as “reversible” was, for every real user, permanent — the undo existed only for someone who could call GraphQL directly.
   **A second latent defect caught while building it:** `QUESTION_QUERY` did not select `retired`, so `q.retired` would have been `undefined` on the preview and the new ফেরান button would never have rendered — the same class of bug as the `important` selection miss earlier the same day, and one `tsc` cannot catch because the TS type says the field is there.

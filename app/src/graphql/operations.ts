@@ -812,19 +812,41 @@ const QUESTION_ROUND_FIELDS = `
  * assigned rounds — 1.77 MB of payloadJson in a single response and 2,742 rows
  * rendered at once, which froze the screen rather than failing it.
  */
+/** The reviewer’s own queue, with the QR-11 filter (D-#559). */
+export interface MyReviewsVars {
+  limit?: number | null;
+  offset?: number | null;
+  subject?: string | null;
+  classLevel?: number | null;
+  chapter?: number | null;
+  questionType?: string | null;
+  search?: string | null;
+  important?: boolean | null;
+  undecided?: boolean | null;
+}
+
+// The FILTER args only. Kept separate from paging because the COUNT resolver takes the
+// filter and NOT limit/offset — bolting all of them into one string is the exact shape
+// that broke the Class-test dashboard in prod on 2026-08-03 (see graphqlDocuments.test).
+const MY_REVIEWS_FILTER_DEFS = `$subject: String, $classLevel: Int, $chapter: Int,
+  $questionType: String, $search: String, $important: Boolean, $undecided: Boolean`;
+const MY_REVIEWS_FILTER_USE = `subject: $subject, classLevel: $classLevel, chapter: $chapter,
+  questionType: $questionType, search: $search, important: $important, undecided: $undecided`;
+
 export const MY_QUESTION_REVIEWS = gql<
   { myQuestionReviews: QuestionReviewRoundT[] },
-  { limit?: number | null; offset?: number | null }
+  MyReviewsVars
 >`
-  query MyQuestionReviews($limit: Int, $offset: Int) {
-    myQuestionReviews(limit: $limit, offset: $offset) { ${QUESTION_ROUND_FIELDS} }
+  query MyQuestionReviews($limit: Int, $offset: Int, ${MY_REVIEWS_FILTER_DEFS}) {
+    myQuestionReviews(limit: $limit, offset: $offset, ${MY_REVIEWS_FILTER_USE}) { ${QUESTION_ROUND_FIELDS} }
   }
 `;
 
-/** The pager's denominator, so the screen can say '50 of 2,742'. */
-export const MY_QUESTION_REVIEW_COUNT = gql<{ myQuestionReviewCount: number }, NoVars>`
-  query MyQuestionReviewCount {
-    myQuestionReviewCount
+/** The pager’s denominator. Takes the SAME filter as the list — otherwise the screen says
+ *  ৫০ / ২৯৫১ over a filtered list holding twelve rows (D-#559). */
+export const MY_QUESTION_REVIEW_COUNT = gql<{ myQuestionReviewCount: number }, MyReviewsVars>`
+  query MyQuestionReviewCount(${MY_REVIEWS_FILTER_DEFS}) {
+    myQuestionReviewCount(${MY_REVIEWS_FILTER_USE})
   }
 `;
 
