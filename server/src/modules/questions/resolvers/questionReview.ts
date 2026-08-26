@@ -465,10 +465,30 @@ builder.queryField("myQuestionReviews", (t) =>
     args: {
       limit: t.arg.int({ required: false }),
       offset: t.arg.int({ required: false }),
+      /** The QR-11 filter (D-#559) — same axes as the publish inbox, plus `undecided`. */
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      chapter: t.arg.int({ required: false }),
+      questionType: t.arg.string({ required: false }),
+      search: t.arg.string({ required: false }),
+      important: t.arg.boolean({ required: false }),
+      undecided: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      return listMyQuestionReviews(ctx.auth.userId, { limit: args.limit, offset: args.offset });
+      return listMyQuestionReviews(
+        ctx.auth.userId,
+        { limit: args.limit, offset: args.offset },
+        {
+        subject: args.subject,
+        classLevel: args.classLevel,
+        chapter: args.chapter,
+        questionType: args.questionType,
+        search: args.search,
+        important: args.important,
+        undecided: args.undecided,
+        },
+      );
     },
   }),
 );
@@ -481,9 +501,27 @@ builder.queryField("myQuestionReviewCount", (t) =>
       "denominator, so the screen can say '50 of 2,742' rather than implying the page is all " +
       "there is. Requires content:review.",
     authScopes: { hasPermission: "content:review" },
-    resolve: async (_root, _args, ctx) => {
+    args: {
+      /** The QR-11 filter (D-#559) — same axes as the publish inbox, plus `undecided`. */
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      chapter: t.arg.int({ required: false }),
+      questionType: t.arg.string({ required: false }),
+      search: t.arg.string({ required: false }),
+      important: t.arg.boolean({ required: false }),
+      undecided: t.arg.boolean({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      return countMyQuestionReviews(ctx.auth.userId);
+      return countMyQuestionReviews(ctx.auth.userId, {
+        subject: args.subject,
+        classLevel: args.classLevel,
+        chapter: args.chapter,
+        questionType: args.questionType,
+        search: args.search,
+        important: args.important,
+        undecided: args.undecided,
+      });
     },
   }),
 );
