@@ -35,6 +35,7 @@ import {
   CHILD_ROUTINE_RANGE_QUERY,
   CHILD_ASSIGNMENTS,
   type GuardianHwRecordT,
+  type GuardianWorkClaimT,
   type GuardianHwNilDayT,
   type ChildAssignmentT,
 } from "../../graphql/operations";
@@ -318,6 +319,15 @@ interface PendingRow {
   /** The state chip's words + tone. */
   labelBn: string;
   tone: "warn" | "danger";
+  /** GC-3: the outstanding list is where a parent actually looks, so the
+   *  "বাড়িতে সম্পন্ন হয়েছে" control belongs here too — not only on the
+   *  day-by-day history further down the screen. */
+  recordId: string;
+  /** The human handle (HW-… / AS-…), not the ObjectId. */
+  workId: string;
+  tracker: "HOMEWORK" | "ASSIGNMENT";
+  canClaim: boolean;
+  claim: GuardianWorkClaimT | null;
 }
 
 /**
@@ -340,6 +350,11 @@ function buildPending(records: GuardianHwRecordT[], assignments: ChildAssignment
       description: r.description,
       labelBn: hwGuardianStatusLabel(r.state),
       tone: r.state === "CHASE" ? ("danger" as const) : ("warn" as const),
+      recordId: r.recordId,
+      workId: r.hwId,
+      tracker: "HOMEWORK" as const,
+      canClaim: r.canClaim,
+      claim: r.claim,
     }));
 
   const asgn: PendingRow[] = assignments
@@ -354,6 +369,11 @@ function buildPending(records: GuardianHwRecordT[], assignments: ChildAssignment
       labelBn:
         a.daysLate > 0 ? `${STR.gpLateBy} ${bnNum(a.daysLate)} ${STR.gpDaysWord}` : STR.gpPendingWord,
       tone: a.daysLate > 0 ? ("danger" as const) : ("warn" as const),
+      recordId: a.recordId,
+      workId: a.asId,
+      tracker: "ASSIGNMENT" as const,
+      canClaim: a.canClaim,
+      claim: a.claim,
     }));
 
   return [...hw, ...asgn].sort((a, b) => b.dateGiven.localeCompare(a.dateGiven));
@@ -364,12 +384,17 @@ function PendingRowView({
   row,
   open,
   onToggle,
+  studentId,
+  onClaimChanged,
 }: {
   row: PendingRow;
   open: boolean;
   onToggle: () => void;
+  studentId: string;
+  onClaimChanged: () => void;
 }): React.ReactElement {
   return (
+    <View>
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${subjectLabel(row.subject)} — ${row.labelBn}`}
@@ -396,6 +421,22 @@ function PendingRowView({
         </View>
       ) : null}
     </Pressable>
+
+    {/* GC-3 — the outstanding list is the first thing a parent reads, so the
+        control lives here as well as on the day-by-day history. Outside the
+        Pressable above: nesting a button inside the row's expand-toggle press
+        target makes the tap ambiguous. */}
+    <WorkClaimBlock
+      studentId={studentId}
+      tracker={row.tracker}
+      recordId={row.recordId}
+      canClaim={row.canClaim}
+      claim={row.claim}
+      subjectLabel={subjectLabel(row.subject)}
+      workId={row.workId}
+      onChanged={onClaimChanged}
+    />
+    </View>
   );
 }
 
@@ -487,7 +528,8 @@ export default function ChildHomeworkScreen({
   const refetchClaims = React.useCallback(() => {
     refetchHw({ requestPolicy: "network-only" });
     refetchPending({ requestPolicy: "network-only" });
-  }, [refetchHw, refetchPending]);
+    refetchAsgn({ requestPolicy: "network-only" });
+  }, [refetchHw, refetchPending, refetchAsgn]);
 
   // UX-7: pull-to-refresh.
   const { refreshing, onRefresh } = usePullRefresh(hwQ.fetching, () =>
@@ -561,6 +603,8 @@ export default function ChildHomeworkScreen({
                 {i > 0 ? <Divider /> : null}
                 <PendingRowView
                   row={row}
+                  studentId={selected!.studentId}
+                  onClaimChanged={refetchClaims}
                   open={openPending.has(row.key)}
                   onToggle={() =>
                     setOpenPending((cur) => {
