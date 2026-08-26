@@ -134,6 +134,13 @@ jest.mock("../modules/platform/models/StoredFile", () => ({
 }));
 
 const mockHwRecordFind = jest.fn();
+// GC-3: childHomework now batch-loads each record’s guardian claim. DB-free suite,
+// so the claim model is stubbed EMPTY — every row simply reports no claim.
+jest.mock("../modules/trackers/models/GuardianWorkClaim", () => ({
+  GuardianWorkClaim: {
+    find: () => ({ sort: () => ({ lean: () => Promise.resolve([]) }) }),
+  },
+}));
 jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
   HomeworkStudentRecord: { find: (q: unknown) => ({ lean: () => mockHwRecordFind(q) }) },
 }));
