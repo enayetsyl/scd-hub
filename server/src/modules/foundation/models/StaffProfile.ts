@@ -70,7 +70,19 @@ export interface IStaffProfile extends Document {
 
   // --- Principal/Office-only sensitive rows (H1.4) -------------------------
   nid?: string;
+  /**
+   * Disbursement details (SH-10). `bankAccount` is the ACCOUNT NUMBER and predates the
+   * other three, so it keeps its name — renaming it would touch the payment export for
+   * no gain. The rest were added after the owner pointed out, driving the wizard, that
+   * a number alone cannot be paid into: a bank transfer needs the name the account is
+   * held in, the bank, and the branch.
+   *
+   * For `bkash` only `bankAccount` (the number) applies; `cash` needs none of them.
+   */
   bankAccount?: string;
+  bankAccountName?: string;
+  bankName?: string;
+  bankBranch?: string;
   /** Consolidated monthly salary — one figure, no basic/allowance split (HR-3, §4.1).
    *  Payroll-sensitive; set via setStaffPay (payroll:manage). Absent = no run line. */
   monthlySalary?: number;
@@ -113,7 +125,11 @@ const StaffProfileSchema = new Schema<IStaffProfile>(
     permanentAddress: { type: String, trim: true },
 
     nid: { type: String, trim: true },
+    // All four absent on every pre-SH-10 row — additive, no migration.
     bankAccount: { type: String, trim: true },
+    bankAccountName: { type: String, trim: true },
+    bankName: { type: String, trim: true },
+    bankBranch: { type: String, trim: true },
     monthlySalary: { type: Number, min: 0 },
     paymentMethod: { type: String, enum: PAYMENT_METHODS },
 

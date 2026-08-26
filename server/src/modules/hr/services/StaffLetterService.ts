@@ -75,7 +75,7 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
   if (!SALARY_MODES.includes(input.salaryMode)) throw new LetterError(`Unknown salary mode: ${input.salaryMode}`);
 
   const staff = await StaffProfile.findById(input.staffProfileId).lean();
-  if (!staff) throw new LetterError("Staff profile not found");
+  if (!staff) throw new LetterError("কর্মীর প্রোফাইল পাওয়া যায়নি");
 
   const policy = await getHrPolicy();
   const letterDate = input.letterDate ?? todayKey();
@@ -85,7 +85,7 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
   if (!designation) {
     // Clause 6 names the post. The Word template's stray "principal" is exactly what
     // happens when this is left to a default, so refuse rather than print a wrong one.
-    throw new LetterError("A designation is required — it is printed in the letter (clause 6)");
+    throw new LetterError("পদবি দিন — নিয়োগপত্রের ধারা ৫-এ এটিই ছাপা হয়");
   }
 
   // The two clauses are MUTUALLY EXCLUSIVE (D-#542). An honorary letter carries no
@@ -94,7 +94,7 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
     input.salaryMode === "honorary" ? null : input.monthlySalary ?? staff.monthlySalary ?? null;
   if (input.salaryMode === "paid" && (monthlySalary === null || monthlySalary <= 0)) {
     throw new LetterError(
-      "A paid appointment letter prints a salary figure — set the monthly salary first, or issue it as honorary",
+      "বেতনসহ নিয়োগপত্রে বেতনের অঙ্ক ছাপা হয় — আগে মাসিক বেতন নির্ধারণ করুন, অথবা সম্মানী (অবৈতনিক) হিসেবে ইস্যু করুন",
     );
   }
 
@@ -175,6 +175,32 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
     });
   }
 
+  /**
+   * SH-10 — the designation follows the same rule as the salary, and for the same
+   * reason. Found in the 2026-08-26 prod test: a letter printed "Teacher" from what was
+   * typed on the letter form while the profile's `designation` stayed empty, so the post
+   * the person was appointed to existed only inside the PDF. Anything the letter states
+   * as a term of employment has to reach the record.
+   */
+  if (staff.designation?.trim() !== designation) {
+    const previous = staff.designation ?? null;
+    await StaffProfile.updateOne({ _id: staff._id }, { $set: { designation } });
+    await writeAudit({
+      eventKind: "STAFF_PROFILE_UPDATED",
+      actorId: input.actorId,
+      targetId: staff._id,
+      targetKind: "StaffProfile",
+      meta: {
+        fields: ["designation"],
+        from: previous,
+        to: designation,
+        via: "letter",
+        letterRefNo: doc.refNo,
+        reason: "the post a letter appoints someone to is written back to the record",
+      },
+    });
+  }
+
   return doc;
 }
 
@@ -218,9 +244,9 @@ export async function voidLetter(
   actorId: string,
 ): Promise<IStaffLetter> {
   const letter = await StaffLetter.findById(letterId);
-  if (!letter) throw new LetterError("Letter not found");
+  if (!letter) throw new LetterError("পত্রটি পাওয়া যায়নি");
   if (letter.status === "void") return letter;
-  if (!reason.trim()) throw new LetterError("A reason is required to void a letter");
+  if (!reason.trim()) throw new LetterError("পত্র বাতিলের কারণ লিখুন");
 
   letter.status = "void";
   letter.voidedBy = new Types.ObjectId(actorId);

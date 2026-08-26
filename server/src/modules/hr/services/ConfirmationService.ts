@@ -73,14 +73,14 @@ export async function confirmEmployment(
   }
 
   const staff = await StaffProfile.findById(input.staffProfileId);
-  if (!staff) throw new LeaveError("Staff profile not found");
+  if (!staff) throw new LeaveError("কর্মীর প্রোফাইল পাওয়া যায়নি");
   if (staff.confirmationDate) {
-    throw new LeaveError("This staff member is already confirmed — edit the date from the profile if it is wrong");
+    throw new LeaveError("এই কর্মী ইতিমধ্যে স্থায়ী — তারিখ ভুল হলে প্রোফাইল থেকে সংশোধন করুন");
   }
   if (staff.joiningDate) {
     const joinKey = staff.joiningDate.toISOString().slice(0, 10);
     if (input.confirmationDate < joinKey) {
-      throw new LeaveError("Confirmation cannot precede the joining date");
+      throw new LeaveError("স্থায়ীকরণের তারিখ যোগদানের তারিখের আগে হতে পারে না");
     }
   }
 
