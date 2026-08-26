@@ -12,7 +12,7 @@
  * An already-decided round stays editable until it closes, so the card keeps its verdict
  * badge and the reviewer can change their mind.
  */
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { View, ScrollView, RefreshControl } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
@@ -23,6 +23,7 @@ import {
   SUBMIT_QUESTION_REVIEW,
   SUBMIT_QUESTION_REVIEW_BULK,
   SET_QUESTION_IMPORTANT,
+  QUESTION_CHAPTERS_QUERY,
   type QuestionReviewRoundT,
 } from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
@@ -44,7 +45,8 @@ import {
   ChipRow,
 } from "../../components/ui";
 import { STR, subjectLabel, classLevelLabel, reviewVerdictLabel, bnNum } from "../../lib/labels";
-import { parsePayload } from "../../lib/question";
+import { SUBJECTS, CLASS_LEVELS, QUESTION_TYPES } from "@scd/shared";
+import { parsePayload, prettyCode } from "../../lib/question";
 import { AnswerCarrier } from "../../components/QuestionAnswer";
 import { LoadOlder } from "../../components/LoadOlder";
 import { friendlyError } from "../../lib/errors";
@@ -60,17 +62,52 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
    * to render 2,742 cards — it froze rather than erroring, which is why it was
    * reported as 'the app hangs'.
    */
+  /**
+   * The QR-11 filter (D-#559). She was handed 2,951 rounds with no way to narrow them.
+   * Same axes as the Principal’s publish inbox, plus `undecided` — the one that turns a
+   * long history back into a work list.
+   */
+  const [subject, setSubject] = useState<string | null>(null);
+  const [classLevel, setClassLevel] = useState<number | null>(null);
+  const [chapter, setChapter] = useState<number | null>(null);
+  const [questionType, setQuestionType] = useState<string | null>(null);
+  const [important, setImportantOnly] = useState(false);
+  const [undecided, setUndecided] = useState(false);
+
   const PAGE_SIZE = 50;
   const [offset, setOffset] = useState(0);
   /** Pages accumulated so far. Held here, not in the cache, so a verdict can drop
    *  ONE row without re-pulling every page behind it. */
   const [rows, setRows] = useState<QuestionReviewRoundT[]>([]);
 
+  /** ONE filter object, sent to BOTH the list and the count — otherwise the caption reads
+   *  ৫০ / ২৯৫১ over a filtered list holding twelve rows. */
+  const filter = useMemo(
+    () => ({
+      subject,
+      classLevel,
+      chapter,
+      questionType,
+      important: important ? true : null,
+      undecided: undecided ? true : null,
+    }),
+    [subject, classLevel, chapter, questionType, important, undecided],
+  );
+
   const [{ data, fetching, error }, refetch] = useQuery({
     query: MY_QUESTION_REVIEWS,
-    variables: { limit: PAGE_SIZE, offset },
+    variables: { ...filter, limit: PAGE_SIZE, offset },
   });
-  const [countQ, refetchCount] = useQuery({ query: MY_QUESTION_REVIEW_COUNT });
+  const [countQ, refetchCount] = useQuery({ query: MY_QUESTION_REVIEW_COUNT, variables: filter });
+
+  // Chapter chips only mean something once a subject AND a class are chosen — the same
+  // gate the publish inbox uses, and the same query behind it.
+  const [{ data: chapterData }] = useQuery({
+    query: QUESTION_CHAPTERS_QUERY,
+    variables: { subject, classLevel },
+    pause: !subject || classLevel == null,
+  });
+  const chapterOptions = chapterData?.questionChapters ?? [];
   /** Nice-to-have only. It drives the 'N / M' caption and NOTHING else — see hasMore. */
   const total = countQ.data?.myQuestionReviewCount ?? 0;
 
@@ -143,6 +180,18 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkReason, setBulkReason] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
+
+  /**
+   * A filter change starts a NEW list, so the accumulated pages must go — they belong to
+   * the previous filter. The ticked selection goes with them: a bulk verdict must never
+   * carry an id the reviewer can no longer see.
+   */
+  useEffect(() => {
+    setRows([]);
+    setOffset(0);
+    setLastPageSize(null);
+    setSelected(new Set());
+  }, [filter]);
 
   /** Which round has a form open, and WHICH form — reject (reason optional) or
    *  condition (condition mandatory). One at a time, as before (D-#525). */
@@ -280,6 +329,58 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
         {error ? <ErrorBanner message={friendlyError(error)} /> : null}
         {failure ? <ErrorBanner message={failure} /> : null}
         {notice ? <Notice tone="ok" message={notice} /> : null}
+
+        {/* --- filters (QR-11, D-#559) ------------------------------------------
+            Same axes and same chip shape as the Principal’s publish inbox, so the two
+            review screens read alike. Selecting a subject or class clears the chapter,
+            because a chapter number only means something inside one of them. */}
+        <ChipRow>
+          <Chip label={STR.all} selected={subject === null} onPress={() => { setSubject(null); setChapter(null); }} />
+          {SUBJECTS.map((s) => (
+            <Chip
+              key={s}
+              label={subjectLabel(s)}
+              selected={subject === s}
+              onPress={() => { setSubject(subject === s ? null : s); setChapter(null); }}
+            />
+          ))}
+        </ChipRow>
+        <ChipRow>
+          <Chip label={STR.all} selected={classLevel === null} onPress={() => { setClassLevel(null); setChapter(null); }} />
+          {CLASS_LEVELS.map((c) => (
+            <Chip
+              key={c}
+              label={classLevelLabel(c)}
+              selected={classLevel === c}
+              onPress={() => { setClassLevel(classLevel === c ? null : c); setChapter(null); }}
+            />
+          ))}
+        </ChipRow>
+        <ChipRow>
+          <Chip label={STR.all} selected={questionType === null} onPress={() => setQuestionType(null)} />
+          {QUESTION_TYPES.map((q) => (
+            <Chip
+              key={q}
+              label={prettyCode(q)}
+              selected={questionType === q}
+              onPress={() => setQuestionType(questionType === q ? null : q)}
+            />
+          ))}
+        </ChipRow>
+        {chapterOptions.length > 0 ? (
+          <ChipRow>
+            <Chip label={STR.all} selected={chapter === null} onPress={() => setChapter(null)} />
+            {chapterOptions.map((c) => (
+              <Chip key={c} label={bnNum(c)} selected={chapter === c} onPress={() => setChapter(chapter === c ? null : c)} />
+            ))}
+          </ChipRow>
+        ) : null}
+        <ChipRow>
+          {/* The two axes the publish inbox has no use for: her own marks, and the work
+              she has not yet ruled on — which is what makes 2,951 rows a work list. */}
+          <Chip label={STR.qrUndecidedOnly} selected={undecided} onPress={() => setUndecided(!undecided)} />
+          <Chip label={STR.qImportantOnly} selected={important} onPress={() => setImportantOnly(!important)} />
+        </ChipRow>
 
         {/* Bulk bar (D-#527). A reviewer is handed a whole chapter at once (241 questions
             in the first real assignment), so one card at a time is the bottleneck. */}
