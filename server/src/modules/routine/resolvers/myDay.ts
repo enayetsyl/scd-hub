@@ -11,6 +11,10 @@ import { ForbiddenError } from "../../../middleware/authz";
 import type { IRoutineSlot } from "../models/RoutineSlot";
 import { RoutineSlotRef } from "./routineSlots";
 import { myDayFor, type MyDayHomeworkCounts, type MyDayResult, type ClassTeacherSection } from "../services/MyDayService";
+import type {
+  ReturningStudent,
+  ReturningOpenItem,
+} from "../../trackers/services/ReturnFromLeaveService";
 import type { PendingAlert, AssignmentPrep, AssignmentPrepCell } from "../services/PendingAlertService";
 import type { ClassPresence } from "../../attendance/services/AttendanceReportService";
 
@@ -85,6 +89,39 @@ const ClassTeacherSectionRef = builder.objectRef<ClassTeacherSection>("ClassTeac
   }),
 });
 
+const ReturningOpenItemRef = builder.objectRef<ReturningOpenItem>("ReturningOpenItem").implement({
+  description:
+    "One still-open item for a returning student. group is REDELIVER (the child " +
+    "never received it — ABSENT_REDELIVER) or COLLECT (they have it and have not " +
+    "handed it in). The two are never mixed: they are different asks.",
+  fields: (t) => ({
+    recordId: t.exposeString("recordId"),
+    tracker: t.exposeString("tracker"),
+    workId: t.exposeString("workId"),
+    subject: t.exposeString("subject"),
+    state: t.exposeString("state"),
+    description: t.string({ nullable: true, resolve: (r) => r.description }),
+    chaseCount: t.exposeInt("chaseCount"),
+    group: t.exposeString("group"),
+  }),
+});
+
+const ReturningStudentRef = builder.objectRef<ReturningStudent>("ReturningStudent").implement({
+  description:
+    "A student back today after an absence (RL-1, D-#552). source RETURNED means " +
+    "attendance confirmed it; EXPECTED means only the leave register says so — " +
+    "available from 07:00, and deliberately never pushed.",
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    studentNameBn: t.exposeString("studentNameBn"),
+    sectionId: t.exposeString("sectionId"),
+    source: t.exposeString("source"),
+    daysAbsent: t.exposeInt("daysAbsent"),
+    leaveEndedKey: t.string({ nullable: true, resolve: (r) => r.leaveEndedKey }),
+    items: t.field({ type: [ReturningOpenItemRef], resolve: (r) => r.items ?? [] }),
+  }),
+});
+
 const MyDayRef = builder.objectRef<MyDayResult>("MyDay").implement({
   description:
     "The caller's day at a glance (UX-4): own routine periods for the date (cover-overlaid, " +
@@ -107,6 +144,14 @@ const MyDayRef = builder.objectRef<MyDayResult>("MyDay").implement({
     }),
     classPresence: t.field({ type: [ClassPresenceRef], resolve: (r) => r.classPresence }),
     classTeacherOf: t.field({ type: [ClassTeacherSectionRef], resolve: (r) => r.classTeacherOf }),
+    returningStudents: t.field({
+      type: [ReturningStudentRef],
+      description:
+        "Students back today after an absence, with what to hand back out and what " +
+        "to collect (RL-1). Scoped to the caller's reach; [] rather than an error " +
+        "for a caller with none.",
+      resolve: (r) => r.returningStudents ?? [],
+    }),
   }),
 });
 
