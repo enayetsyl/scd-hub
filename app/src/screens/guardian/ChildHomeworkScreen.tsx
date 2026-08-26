@@ -48,6 +48,7 @@ import { useRecordView } from "../../lib/useRecordView";
 import { STR, bnNum, lifecycleStateLabel, hwGuardianStatusLabel, subjectLabel, hwResultLabel, hwNilReasonLabel } from "../../lib/labels";
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
+import { WorkClaimBlock } from "../../components/WorkClaimBlock";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
 import {
@@ -178,9 +179,13 @@ function buildDays(
 function RecordBlock({
   record,
   onOpenFile,
+  studentId,
+  onClaimChanged,
 }: {
   record: GuardianHwRecordT;
   onOpenFile: (fileId: string) => void;
+  studentId: string;
+  onClaimChanged: () => void;
 }): React.ReactElement {
   const r = record;
   const { openingId, runOpen } = useFileOpen();
@@ -275,6 +280,19 @@ function RecordBlock({
           ) : null}
         </View>
       ) : null}
+
+      {/* GC-3 — "বাড়িতে সম্পন্ন হয়েছে". The whole eligibility rule (D-#550) is
+          server-computed into canClaim, so this screen never re-implements it. */}
+      <WorkClaimBlock
+        studentId={studentId}
+        tracker="HOMEWORK"
+        recordId={r.recordId}
+        canClaim={r.canClaim}
+        claim={r.claim}
+        subjectLabel={subjectLabel(r.subject)}
+        workId={r.hwId}
+        onChanged={onClaimChanged}
+      />
     </View>
   );
 }
@@ -464,6 +482,13 @@ export default function ChildHomeworkScreen({
     pause: !selected,
   });
 
+  // GC-3: after a claim is filed the row’s canClaim/claim change, and so does the
+  // pending card (an open claim mutes the chase), so both reads are re-run.
+  const refetchClaims = React.useCallback(() => {
+    refetchHw({ requestPolicy: "network-only" });
+    refetchPending({ requestPolicy: "network-only" });
+  }, [refetchHw, refetchPending]);
+
   // UX-7: pull-to-refresh.
   const { refreshing, onRefresh } = usePullRefresh(hwQ.fetching, () =>
     refetchHw({ requestPolicy: "network-only" }),
@@ -577,7 +602,15 @@ export default function ChildHomeworkScreen({
                   <View key={s.subject}>
                     {i > 0 ? <Divider /> : null}
                     {s.records.length > 0 ? (
-                      s.records.map((r) => <RecordBlock key={r.recordId} record={r} onOpenFile={onOpenFile} />)
+                      s.records.map((r) => (
+                        <RecordBlock
+                          key={r.recordId}
+                          record={r}
+                          onOpenFile={onOpenFile}
+                          studentId={selected!.studentId}
+                          onClaimChanged={refetchClaims}
+                        />
+                      ))
                     ) : (
                       <NoHomeworkRow subject={s.subject} nil={s.nil} />
                     )}

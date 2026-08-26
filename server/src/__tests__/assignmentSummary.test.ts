@@ -18,6 +18,13 @@ const mockRecSkip = jest.fn();
 const mockRecLimit = jest.fn();
 const mockHolidayFind = jest.fn();
 
+// GC-3: childAssignments now batch-loads each record’s guardian claim. DB-free
+// suite, so the claim model is stubbed EMPTY — every row reports no claim.
+jest.mock("../modules/trackers/models/GuardianWorkClaim", () => ({
+  GuardianWorkClaim: {
+    find: () => ({ sort: () => ({ lean: () => Promise.resolve([]) }) }),
+  },
+}));
 jest.mock("../modules/trackers/models/AssignmentSchedule", () => ({
   AssignmentSchedule: { findOne: (q: unknown) => mockScheduleFindOne(q) },
 }));

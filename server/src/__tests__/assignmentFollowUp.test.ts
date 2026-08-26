@@ -25,6 +25,11 @@ const mockItemFind = jest.fn();
 const mockEmitChase = jest.fn();
 const mockGuardianLinkFind = jest.fn();
 
+// GC-2: the follow-up ladder now asks whether a guardian claim is open before it
+// pushes the family (§6.4). Stubbed EMPTY here — without it every step buffers.
+jest.mock("../modules/trackers/models/GuardianWorkClaim", () => ({
+  GuardianWorkClaim: { exists: () => Promise.resolve(null) },
+}));
 jest.mock("../modules/trackers/models/AssignmentStudentRecord", () => ({
   AssignmentStudentRecord: {
     findById: (id: unknown) => ({ lean: () => mockRecFindById(id) }),

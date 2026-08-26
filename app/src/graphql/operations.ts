@@ -3066,6 +3066,7 @@ export interface MyDayT {
   assignmentPrep: AssignmentPrepT | null;
   classPresence: ClassPresenceT[];
   classTeacherOf: ClassTeacherSectionT[];
+  returningStudents: ReturningStudentT[];
 }
 // D-#316 — the Principal/Office Today dashboard (generic cards).
 export interface AdminCardBadgeT {
@@ -3127,6 +3128,29 @@ export const MY_SECTION_ATTENDANCE = gql<
   }
 `;
 
+export interface ReturningOpenItemT {
+  recordId: string;
+  tracker: string;
+  workId: string;
+  subject: string;
+  state: string;
+  description: string | null;
+  chaseCount: number;
+  /** REDELIVER (hand it out) | COLLECT (take it in) — never mixed. */
+  group: string;
+}
+
+export interface ReturningStudentT {
+  studentId: string;
+  studentNameBn: string;
+  sectionId: string;
+  /** RETURNED (attendance confirmed) | EXPECTED (leave register only). */
+  source: string;
+  daysAbsent: number;
+  leaveEndedKey: string | null;
+  items: ReturningOpenItemT[];
+}
+
 export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
   query MyDay($date: String!) {
     myDay(date: $date) {
@@ -3141,6 +3165,10 @@ export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
         classId classLevel classNameBn markedCount presentCount absentCount totalCount complete
       }
       classTeacherOf { sectionId nameBn classLevel }
+      returningStudents {
+        studentId studentNameBn sectionId source daysAbsent leaveEndedKey
+        items { recordId tracker workId subject state description chaseCount group }
+      }
     }
   }
 `;
@@ -3750,7 +3778,27 @@ export interface GuardianHwRecordT {
   questionFileId: string | null;
   answerFileId: string | null;
   attachmentIds: string[];
+  /** GC-3: may a guardian file "done at home" on this row right now? */
+  canClaim: boolean;
+  claim: GuardianWorkClaimT | null;
 }
+
+export interface GuardianWorkClaimT {
+  claimId: string;
+  status: string;
+  statusLabelBn: string;
+  claimedAt: string;
+  resolvedAt: string | null;
+  rejectReasonLabelBn: string | null;
+  rejectNote: string | null;
+  attemptNumber: number;
+  canReclaim: boolean;
+}
+
+const WORK_CLAIM_FIELDS = `
+  claimId status statusLabelBn claimedAt resolvedAt
+  rejectReasonLabelBn rejectNote attemptNumber canReclaim
+`;
 
 export const CHILD_HOMEWORK_QUERY = gql<
   { childHomework: GuardianHwRecordT[] },
@@ -3763,6 +3811,8 @@ export const CHILD_HOMEWORK_QUERY = gql<
       chaseCount result resultLabelBn description qCount timeDecl resubOf
       topupFlag topupQCount topupTimeMin
       questionFileId answerFileId attachmentIds
+      canClaim
+      claim { ${WORK_CLAIM_FIELDS} }
     }
   }
 `;
@@ -5658,7 +5708,9 @@ export interface ChildAssignmentT {
   isResubmission: boolean;
   /** D-#478: WHAT the assignment is. Null only for pre-D-#478 items. */
   description: string | null;
-  attachmentIds: string[];
+  attachmentIds: string[];
+  canClaim: boolean;
+  claim: GuardianWorkClaimT | null;
 }
 
 /** D-#476: limit/offset are optional server-side, so omitting them still returns
@@ -5670,6 +5722,8 @@ export const CHILD_ASSIGNMENTS = gql<
   query ChildAssignments($studentId: String!, $limit: Int, $offset: Int) {
     childAssignments(studentId: $studentId, limit: $limit, offset: $offset) {
       recordId asId subject weekNumber state pending daysLate deliveryDate dueDate
+      canClaim
+      claim { ${WORK_CLAIM_FIELDS} }
       marks totalMarks result feedback isResubmission description attachmentIds
     }
   }
@@ -7866,5 +7920,85 @@ export const SET_HR_POLICY = gql<
       annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled
       signatoryName signatoryTitle weeklyHoursText letterRefPrefix
     }
+  }
+`;
+
+// --- GC-3/GC-4/GC-5: the guardian "done at home" loop -----------------------
+
+export const FILE_CHILD_WORK_CLAIM = gql<
+  { fileChildWorkClaim: GuardianWorkClaimT },
+  { studentId: string; tracker: string; recordId: string; note?: string | null }
+>`
+  mutation FileChildWorkClaim(
+    $studentId: String!
+    $tracker: String!
+    $recordId: String!
+    $note: String
+  ) {
+    fileChildWorkClaim(
+      studentId: $studentId
+      tracker: $tracker
+      recordId: $recordId
+      note: $note
+    ) {
+      ${WORK_CLAIM_FIELDS}
+    }
+  }
+`;
+
+export interface WorkClaimRowT {
+  claimId: string;
+  tracker: string;
+  workId: string;
+  subject: string;
+  studentId: string;
+  studentNameBn: string;
+  sectionId: string;
+  sectionNameBn: string;
+  teacherId: string;
+  teacherName: string;
+  claimedAt: string;
+  actionDateKey: string;
+  note: string | null;
+  status: string;
+  statusLabelBn: string;
+  checkpoint: string;
+  checkpointLabelBn: string;
+  nudgedToday: boolean;
+}
+
+const WORK_CLAIM_ROW_FIELDS = `
+  claimId tracker workId subject
+  studentId studentNameBn sectionId sectionNameBn
+  teacherId teacherName claimedAt actionDateKey note
+  status statusLabelBn checkpoint checkpointLabelBn nudgedToday
+`;
+
+export const MY_WORK_CLAIMS_QUERY = gql<{ myWorkClaims: WorkClaimRowT[] }, Record<string, never>>`
+  query MyWorkClaims {
+    myWorkClaims { ${WORK_CLAIM_ROW_FIELDS} }
+  }
+`;
+
+export const WORK_CLAIM_QUEUE_QUERY = gql<{ workClaimQueue: WorkClaimRowT[] }, Record<string, never>>`
+  query WorkClaimQueue {
+    workClaimQueue { ${WORK_CLAIM_ROW_FIELDS} }
+  }
+`;
+
+export const REJECT_WORK_CLAIM = gql<
+  { rejectWorkClaim: WorkClaimRowT },
+  { claimId: string; reason: string; note?: string | null }
+>`
+  mutation RejectWorkClaim($claimId: String!, $reason: WorkClaimRejectReason!, $note: String) {
+    rejectWorkClaim(claimId: $claimId, reason: $reason, note: $note) {
+      ${WORK_CLAIM_ROW_FIELDS}
+    }
+  }
+`;
+
+export const NUDGE_WORK_CLAIM = gql<{ nudgeWorkClaim: WorkClaimRowT }, { claimId: string }>`
+  mutation NudgeWorkClaim($claimId: String!) {
+    nudgeWorkClaim(claimId: $claimId) { ${WORK_CLAIM_ROW_FIELDS} }
   }
 `;

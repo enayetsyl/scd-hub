@@ -25,6 +25,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { LoadOlder } from "../../components/LoadOlder";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { WorkClaimBlock } from "../../components/WorkClaimBlock";
 import { useRecordView } from "../../lib/useRecordView";
 import { STR, bnNum, hwSubjectLabel, hwResultLabel, lifecycleStateLabel } from "../../lib/labels";
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
@@ -134,6 +135,20 @@ export default function ChildAssignmentsScreen(): React.ReactElement {
                   ))}
                 </View>
               ) : null}
+
+              {/* GC-3 — the same control the homework card carries. One component,
+                  because the two record models are symmetric and the family should
+                  not meet two different affordances for the same act. */}
+              <WorkClaimBlock
+                studentId={studentId}
+                tracker="ASSIGNMENT"
+                recordId={a.recordId}
+                canClaim={a.canClaim}
+                claim={a.claim}
+                subjectLabel={hwSubjectLabel(a.subject)}
+                workId={a.asId}
+                onChanged={() => refetchQ({ requestPolicy: "network-only" })}
+              />
             </Card>
           ))
         )}

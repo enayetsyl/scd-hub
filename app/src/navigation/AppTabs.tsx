@@ -275,6 +275,7 @@ import ReconciliationReportScreen from "../screens/admin/ReconciliationReportScr
 import AttendanceRankingScreen from "../screens/admin/AttendanceRankingScreen";
 import HwLifecycleReportScreen from "../screens/admin/HwLifecycleReportScreen";
 import AuditLogScreen from "../screens/admin/AuditLogScreen";
+import WorkClaimQueueScreen from "../screens/admin/WorkClaimQueueScreen";
 import GuardianEngagementScreen from "../screens/admin/GuardianEngagementScreen";
 import SystemHealthScreen from "../screens/admin/SystemHealthScreen";
 import ReportsHomeScreen from "../screens/reports/ReportsHomeScreen";
@@ -1301,6 +1302,7 @@ function AdminNavigator(): React.ReactElement {
         options={({ route }) => ({ title: route.params.name || STR.acTitle })}
       />
       <AdminStack.Screen name="AuditLog" component={AuditLogScreen} options={{ title: STR.audTitle }} />
+      <AdminStack.Screen name="WorkClaimQueue" component={WorkClaimQueueScreen} options={{ title: STR.wcQueueTitle }} />
       <AdminStack.Screen
         name="GuardianEngagement"
         component={GuardianEngagementScreen}

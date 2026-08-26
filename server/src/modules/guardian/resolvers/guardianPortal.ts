@@ -15,6 +15,7 @@ import { assertGuardianOfStudent } from "../../../middleware/authz";
 import { WORK_CLAIM_TRACKERS } from "@scd/shared";
 import type { WorkClaimTracker } from "@scd/shared";
 import { fileWorkClaim } from "../../trackers/services/WorkClaimService";
+import { GuardianWorkClaimGqlRef } from "../../trackers/resolvers/workClaim";
 import { emitWorkClaimFiled } from "../../notifications/services/emitters";
 import {
   myChildren,
@@ -178,26 +179,6 @@ const GuardianClassNoteDayRef = builder
     }),
   });
 
-const GuardianWorkClaimRef = builder
-  .objectRef<GuardianWorkClaimView>("GuardianWorkClaim")
-  .implement({
-    description:
-      "A guardian's \"বাড়িতে সম্পন্ন হয়েছে\" declaration on one homework/assignment " +
-      "record (GC-3, D-#548). It records an assertion and its answer — it NEVER moves " +
-      "the record's lifecycle state; only a teacher does that.",
-    fields: (t) => ({
-      claimId: t.exposeString("claimId"),
-      status: t.exposeString("status"),
-      statusLabelBn: t.exposeString("statusLabelBn"),
-      claimedAt: t.exposeString("claimedAt"),
-      resolvedAt: t.string({ nullable: true, resolve: (r) => r.resolvedAt }),
-      rejectReasonLabelBn: t.string({ nullable: true, resolve: (r) => r.rejectReasonLabelBn }),
-      rejectNote: t.string({ nullable: true, resolve: (r) => r.rejectNote }),
-      attemptNumber: t.exposeInt("attemptNumber"),
-      canReclaim: t.exposeBoolean("canReclaim"),
-    }),
-  });
-
 const GuardianHomeworkRecordRef = builder
   .objectRef<GuardianHomeworkRecord>("GuardianHomeworkRecord")
   .implement({
@@ -229,7 +210,7 @@ const GuardianHomeworkRecordRef = builder
       attachmentIds: t.field({ type: ["String"], resolve: (r) => r.attachmentIds ?? [] }),
       canClaim: t.exposeBoolean("canClaim"),
       claim: t.field({
-        type: GuardianWorkClaimRef,
+        type: GuardianWorkClaimGqlRef,
         nullable: true,
         resolve: (r) => r.claim,
       }),
@@ -535,7 +516,7 @@ builder.queryField("childUpcomingClassTests", (t) =>
 
 builder.mutationField("fileChildWorkClaim", (t) =>
   t.field({
-    type: GuardianWorkClaimRef,
+    type: GuardianWorkClaimGqlRef,
     authScopes: { hasPermission: "guardian:read_child" },
     description:
       "Declare that a DUE/CHASE homework or assignment was done at home (D-#548). " +

@@ -33,12 +33,15 @@ import { Guardian } from "../../foundation/models/Guardian";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { GuardianWorkClaim } from "../../trackers/models/GuardianWorkClaim";
 import {
-  WORK_CLAIM_ELIGIBLE_STATES,
-  WORK_CLAIM_MAX_ATTEMPTS,
-  WORK_CLAIM_STATUS_LABELS_BN,
-  WORK_CLAIM_REJECT_REASON_LABELS_BN,
-} from "@scd/shared";
-import type { WorkClaimStatus, WorkClaimRejectReason } from "@scd/shared";
+  workClaimEligible,
+  workClaimViewOf2,
+  workClaimViewOf,
+  type GuardianWorkClaimView,
+} from "../../trackers/services/WorkClaimView";
+// Re-exported so the guardian resolver keeps importing the claim view from the
+// service it already talks to; the LOGIC lives in one place (WorkClaimView).
+export { workClaimViewOf };
+export type { GuardianWorkClaimView };
 import { Student, type IStudent } from "../../foundation/models/Student";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
@@ -188,23 +191,6 @@ export interface GuardianHomeworkRecord {
   attachmentIds: string[];
 }
 
-/**
- * The guardian-visible state of a "বাড়িতে সম্পন্ন হয়েছে" claim (GC-3, D-#548).
- * Null on a record with no claim ever filed.
- */
-export interface GuardianWorkClaimView {
-  claimId: string;
-  status: WorkClaimStatus;
-  statusLabelBn: string;
-  claimedAt: string;
-  resolvedAt: string | null;
-  /** The teacher's picker reason, already in Bangla. Null unless REJECTED. */
-  rejectReasonLabelBn: string | null;
-  rejectNote: string | null;
-  attemptNumber: number;
-  /** False once the family has used its one re-claim (D-#550). */
-  canReclaim: boolean;
-}
 
 export interface GuardianAttendanceDay {
   dateKey: string;
@@ -733,44 +719,8 @@ export async function childClassNotesRange(
 // childHomework (GP-1 §4.4) — FULL lifecycle, resubmission chain via hwId
 // ---------------------------------------------------------------------------
 
-/** The D-#550 rule, computed server-side so the app never re-implements it:
- *  a DUE/CHASE record with no OPEN claim and at least one attempt left. */
-function claimableNow(
-  state: LifecycleState,
-  latest: Record<string, any> | undefined,
-  attempts: number,
-): boolean {
-  if (!WORK_CLAIM_ELIGIBLE_STATES.includes(state)) return false;
-  if (latest && latest.status === "PENDING") return false;
-  return attempts < WORK_CLAIM_MAX_ATTEMPTS;
-}
 
-/** The mutation returns the same shape the read does — one view builder, so the
- *  card a parent sees after tapping cannot disagree with the card they reload. */
-export function workClaimViewOf(c: Record<string, any>): GuardianWorkClaimView {
-  return toClaimView(c, c.attemptNumber ?? 1)!;
-}
 
-function toClaimView(
-  c: Record<string, any> | undefined,
-  attempts: number,
-): GuardianWorkClaimView | null {
-  if (!c) return null;
-  const status = c.status as WorkClaimStatus;
-  return {
-    claimId: idStr(c._id),
-    status,
-    statusLabelBn: WORK_CLAIM_STATUS_LABELS_BN[status] ?? status,
-    claimedAt: new Date(c.claimedAt).toISOString(),
-    resolvedAt: c.resolvedAt ? new Date(c.resolvedAt).toISOString() : null,
-    rejectReasonLabelBn: c.rejectReason
-      ? WORK_CLAIM_REJECT_REASON_LABELS_BN[c.rejectReason as WorkClaimRejectReason] ?? null
-      : null,
-    rejectNote: c.rejectNote ?? null,
-    attemptNumber: c.attemptNumber ?? 1,
-    canReclaim: status === "REJECTED" && attempts < WORK_CLAIM_MAX_ATTEMPTS,
-  };
-}
 
 export async function childHomework(
   studentId: string,
@@ -837,8 +787,8 @@ export async function childHomework(
       questionFileId: item.questionFileId ? item.questionFileId.toString() : null,
       answerFileId: r.answerFileId ? r.answerFileId.toString() : null,
       attachmentIds: (item.attachmentIds ?? []).map((id) => id.toString()),
-      canClaim: claimableNow(r.state, claimByRecord.get(idStr(r._id)), attemptsByRecord.get(idStr(r._id)) ?? 0),
-      claim: toClaimView(claimByRecord.get(idStr(r._id)), attemptsByRecord.get(idStr(r._id)) ?? 0),
+      canClaim: workClaimEligible(r.state, claimByRecord.get(idStr(r._id)), attemptsByRecord.get(idStr(r._id)) ?? 0),
+      claim: workClaimViewOf2(claimByRecord.get(idStr(r._id)), attemptsByRecord.get(idStr(r._id)) ?? 0),
     });
   }
 

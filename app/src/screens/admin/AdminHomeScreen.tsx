@@ -24,6 +24,9 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // access:manage is RESERVED-locked + Principal-only — roleHasPermission is exact here.
   const canAccess = can("access:manage");
   const canAudit = can("audit:read");
+  // GC-5: the guardian-claim queue is an Office/Principal screen and rides the
+  // tracker:read they already hold — no new permission (D-#551).
+  const canWorkClaims = can("tracker:read");
   // AR-2: the ranking reads the two attendance registers, so it sits behind the gate
   // that already owns them — `attendance:manage` is Principal + Office exactly.
   const canAttendance = can("attendance:manage");
@@ -80,6 +83,13 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         <Card onPress={() => navigation.navigate("AttendanceRanking")}>
           <Body style={{ fontWeight: "700" }}>{STR.arTitle}</Body>
           <Muted>{STR.arHint}</Muted>
+        </Card>
+      ) : null}
+
+      {canWorkClaims ? (
+        <Card onPress={() => navigation.navigate("WorkClaimQueue")}>
+          <Body style={{ fontWeight: "700" }}>{STR.wcQueueTitle}</Body>
+          <Muted>{STR.wcOfficeFooter}</Muted>
         </Card>
       ) : null}
 

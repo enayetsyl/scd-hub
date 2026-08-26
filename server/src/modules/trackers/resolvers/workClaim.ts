@@ -25,9 +25,35 @@ import { Student } from "../../foundation/models/Student";
 import { Section } from "../../foundation/models/Section";
 import { User } from "../../foundation/models/User";
 import { rejectWorkClaim as rejectSvc } from "../services/WorkClaimService";
+import type { GuardianWorkClaimView } from "../services/WorkClaimView";
 import { emitWorkClaimNudge, emitWorkClaimResolved } from "../../notifications/services/emitters";
 import { writeAudit } from "../../platform/services/AuditService";
 import { dateKeyOf } from "../../attendance/dates";
+
+/**
+ * The guardian-facing claim view, defined HERE and imported by the guardian
+ * portal and the assignment resolver. One GraphQL type, so a parent reading the
+ * homework screen and the assignment screen cannot be shown two different shapes.
+ */
+export const GuardianWorkClaimGqlRef = builder
+  .objectRef<GuardianWorkClaimView>("GuardianWorkClaim")
+  .implement({
+    description:
+      "A guardian's \"বাড়িতে সম্পন্ন হয়েছে\" declaration on one homework/assignment " +
+      "record (GC-3, D-#548). It records an assertion and its answer — it NEVER " +
+      "moves the record's lifecycle state; only a teacher does that.",
+    fields: (t) => ({
+      claimId: t.exposeString("claimId"),
+      status: t.exposeString("status"),
+      statusLabelBn: t.exposeString("statusLabelBn"),
+      claimedAt: t.exposeString("claimedAt"),
+      resolvedAt: t.string({ nullable: true, resolve: (r) => r.resolvedAt }),
+      rejectReasonLabelBn: t.string({ nullable: true, resolve: (r) => r.rejectReasonLabelBn }),
+      rejectNote: t.string({ nullable: true, resolve: (r) => r.rejectNote }),
+      attemptNumber: t.exposeInt("attemptNumber"),
+      canReclaim: t.exposeBoolean("canReclaim"),
+    }),
+  });
 
 /** One row of either staff list. `checkpoint` is what the queue sorts on — the
  *  same-day ladder made "how many days old" the wrong question (D-#551). */
