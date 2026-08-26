@@ -25,7 +25,7 @@ import type { ReviewVerdict } from "@scd/shared";
 import { ReviewAssignment } from "../../content/models/ReviewAssignment";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { User } from "../../foundation/models/User";
-import { writeAudit } from "../../platform/services/AuditService";
+import { writeAudit, writeAuditMany } from "../../platform/services/AuditService";
 import { emitQuestionReviewAssigned } from "../../notifications/services/emitters";
 import {
   ReviewError,
@@ -59,6 +59,8 @@ export interface QuestionReviewRoundDTO extends ReviewAssignmentDTO {
   artifactReviewStatus: string | null;
   /** True when the artifact under review is no longer the current version. */
   artifactSuperseded: boolean;
+  /** The IMPORTANT mark on the question (QR-9, D-#550) — the reviewer sets it from here. */
+  important: boolean;
   reviewerName: string | null;
 }
 
@@ -104,6 +106,7 @@ interface LeanQuestion {
   address: { anchorWord: string; number: number | string; title?: string | null };
   reviewStatus: string;
   current: boolean;
+  importantAt?: Date | null;
   envelopeJson?: Record<string, unknown>;
 }
 
@@ -512,24 +515,108 @@ export async function publishQuestion(input: {
   return { artifactId: artifact._id.toString(), reviewStatus: "gold", override: isOverride };
 }
 
-/** Publish a multi-selection (Q2.10). Override-publish stays one-at-a-time — a reason is
- *  per question, so this path deliberately carries no `overrideReason`. */
+/**
+ * Publish a multi-selection (Q2.10). Override-publish stays one-at-a-time — a reason is
+ * per question, so this path deliberately carries no `overrideReason`.
+ *
+ * BATCHED, not a loop over `publishQuestion` (D-#549). The per-item version cost about six
+ * sequential Atlas round trips each — findById, save, the open-round read, an updateOne and
+ * an audit insert per round, then the publish audit — so the owner's real 244-question
+ * publish spent roughly 1,500 round trips end to end and took minutes. This does the same
+ * work in a fixed handful of queries: one read, one updateMany, one round read, one
+ * updateMany, one audit insertMany.
+ *
+ * The REFUSALS are deliberately identical to the single path, message for message, because
+ * a question that cannot be published must fail the same way whichever door it came
+ * through.
+ */
 export async function publishQuestionBulk(input: {
   artifactIds: string[];
   actorId: string;
   actorRole?: string;
 }): Promise<BulkResult> {
-  let okCount = 0;
+  const ids = [...new Set(input.artifactIds)];
+  if (ids.length === 0) return { okCount: 0, failedCount: 0, failures: [] };
+
+  const arts = (await ContentArtifact.find({ _id: { $in: ids } }).lean()) as unknown as LeanQuestion[];
+  const byId = new Map(arts.map((a) => [a._id.toString(), a]));
+
+  // Same refusals, in the same order, as the single-question path — this loop decides
+  // WHETHER each item publishes; the writes below are what changed.
   const failures: { artifactId: string; error: string }[] = [];
-  for (const artifactId of [...new Set(input.artifactIds)]) {
-    try {
-      await publishQuestion({ artifactId, actorId: input.actorId, actorRole: input.actorRole });
-      okCount += 1;
-    } catch (err) {
-      failures.push({ artifactId, error: err instanceof Error ? err.message : String(err) });
+  const eligible: LeanQuestion[] = [];
+  for (const id of ids) {
+    const a = byId.get(id);
+    if (!a) {
+      failures.push({ artifactId: id, error: "Artifact not found" });
+    } else if (a.docType !== QUESTION_DOC_TYPE) {
+      failures.push({ artifactId: id, error: `Only questions can be published here (got docType=${a.docType})` });
+    } else if (a.reviewStatus === "gold") {
+      failures.push({ artifactId: id, error: "Question is already published" });
+    } else if (a.reviewStatus !== "reviewed") {
+      // Bulk carries no override reason on purpose (D-#525), so an unreviewed question
+      // cannot ride along in a batch — it has to be published one at a time, with words.
+      failures.push({
+        artifactId: id,
+        error:
+          `Question must be accepted by a reviewer before publishing (is '${a.reviewStatus}'). ` +
+          "To publish it anyway, provide an override reason.",
+      });
+    } else {
+      eligible.push(a);
     }
   }
-  return { okCount, failedCount: failures.length, failures };
+  if (eligible.length === 0) return { okCount: 0, failedCount: failures.length, failures };
+
+  const approvedAt = new Date();
+  const actor = new Types.ObjectId(input.actorId);
+  await ContentArtifact.updateMany(
+    { _id: { $in: eligible.map((a) => a._id) } },
+    { $set: { reviewStatus: "gold", approvedBy: actor, approvedAt, approvalOverride: false } },
+  );
+
+  // Close every thread in ONE pair of queries rather than a supersede per question.
+  const qids = eligible.map((a) => qidOf(a)).filter((q): q is string => q != null);
+  const open = (await ReviewAssignment.find({
+    docType: QUESTION_DOC_TYPE,
+    qid: { $in: qids },
+    status: { $in: ["assigned", "submitted"] },
+  })
+    .select({ _id: 1 })
+    .lean()) as unknown as { _id: Types.ObjectId }[];
+  if (open.length > 0) {
+    await ReviewAssignment.updateMany(
+      { _id: { $in: open.map((o) => o._id) } },
+      { $set: { status: "superseded" } },
+    );
+  }
+
+  // One insert for the whole batch — same rows the per-item path would have written.
+  await writeAuditMany([
+    ...open.map((o) => ({
+      eventKind: "REVIEW_CANCELLED" as const,
+      actorId: input.actorId,
+      actorRole: input.actorRole,
+      targetId: o._id.toString(),
+      targetKind: "ReviewAssignment",
+      meta: { reason: "published" },
+    })),
+    ...eligible.map((a) => ({
+      eventKind: "QUESTION_PUBLISHED" as const,
+      actorId: input.actorId,
+      actorRole: input.actorRole,
+      targetId: a._id.toString(),
+      targetKind: "ContentArtifact",
+      meta: {
+        qid: qidOf(a),
+        subject: a.subject,
+        classLevel: a.classLevel,
+        override: false,
+      },
+    })),
+  ]);
+
+  return { okCount: eligible.length, failedCount: failures.length, failures };
 }
 
 // ---------------------------------------------------------------------------
@@ -562,6 +649,7 @@ async function decorate(rounds: RawAssignment[]): Promise<QuestionReviewRoundDTO
       payloadJson: a ? JSON.stringify(payload) : null,
       artifactReviewStatus: a?.reviewStatus ?? null,
       artifactSuperseded: a ? a.current === false : false,
+      important: a?.importantAt != null,
       reviewerName: nameOf.get(r.reviewerId.toString()) ?? null,
     };
   });
@@ -783,7 +871,6 @@ export async function publishQuestionsMatching(input: {
 
   const roundMatch = inboxRoundMatch(input.filter);
   const artifactMatch = inboxArtifactMatch(input.filter);
-  const total = await countQuestionReviewInbox(input.filter);
 
   const idPipeline: PipelineStage[] = [
     { $match: roundMatch },
@@ -806,7 +893,19 @@ export async function publishQuestionsMatching(input: {
     actorId: input.actorId,
     actorRole: input.actorRole,
   });
-  return { ...res, remaining: Math.max(0, total - res.okCount) };
+
+  /**
+   * RE-COUNT rather than subtract (D-#549). `total − okCount` was wrong in two real ways:
+   * the total counts ROUNDS while okCount counts ARTIFACTS, so two rounds on one question
+   * left a phantom 1; and anything that legitimately failed (already published, never
+   * reviewed) counted as "still to do" forever, so pressing again could never clear it.
+   *
+   * Publishing supersedes the rounds it publishes, so they leave `status: submitted` on
+   * their own — asking the same filter again is therefore the truth by construction, and it
+   * costs one query on an operation that just did hundreds of writes.
+   */
+  const remaining = await countQuestionReviewInbox(input.filter);
+  return { ...res, remaining };
 }
 
 /** Full round history for a question (by any of its versions), oldest→newest. */
@@ -859,6 +958,7 @@ export async function assignQuestionReviewByChapter(input: {
   const arts = (await ContentArtifact.find({
     docType: QUESTION_DOC_TYPE,
     current: true,
+    retiredAt: null,
     subject: input.subject,
     classLevel: input.classLevel,
     "address.number": { $in: chapters.flatMap((c) => [c, String(c)]) },
@@ -947,7 +1047,7 @@ export async function listAssignableQuestions(args: {
   search?: string | null;
   limit?: number | null;
 }): Promise<AssignableQuestionDTO[]> {
-  const filter: Record<string, unknown> = { docType: QUESTION_DOC_TYPE, current: true };
+  const filter: Record<string, unknown> = { docType: QUESTION_DOC_TYPE, current: true, retiredAt: null };
   // Published questions are done — they are not assignable.
   filter.reviewStatus = args.reviewStatus ? args.reviewStatus : { $ne: "gold" };
   if (args.subject) filter.subject = args.subject;

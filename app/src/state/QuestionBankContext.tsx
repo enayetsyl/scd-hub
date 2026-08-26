@@ -25,6 +25,8 @@ export interface QbFilters {
   difficulty: string | null;
   bloomLevel: string | null;
   reviewStatus: string | null;
+  /** The IMPORTANT lens (QR-9, D-#550): true = marked only, null = every question. */
+  important: boolean | null;
   marksMin: string;
   marksMax: string;
 }
@@ -40,6 +42,7 @@ export const EMPTY_FILTERS: QbFilters = {
   difficulty: null,
   bloomLevel: null,
   reviewStatus: null,
+  important: null,
   marksMin: "",
   marksMax: "",
 };
@@ -119,6 +122,7 @@ export function normalizeFilters(raw: unknown): QbFilters {
     difficulty: str(r.difficulty),
     bloomLevel: str(r.bloomLevel),
     reviewStatus: str(r.reviewStatus),
+    important: r.important === true ? true : null,
     marksMin: text(r.marksMin),
     marksMax: text(r.marksMax),
   };

@@ -107,6 +107,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
       difficulty: qb.filters.difficulty,
       bloomLevel: qb.filters.bloomLevel,
       reviewStatus: qb.filters.reviewStatus,
+      important: qb.filters.important,
       marksMin: num(qb.filters.marksMin),
       marksMax: num(qb.filters.marksMax),
       search: qb.search.trim() || null,
@@ -144,6 +145,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
     });
   }
   if (f.reviewStatus) chips.push({ key: "reviewStatus", label: reviewStatusLabel(f.reviewStatus) });
+  if (f.important) chips.push({ key: "important", label: STR.qImportantOnly });
   if (f.questionTypes.length > 0) {
     chips.push({
       key: "questionTypes",
@@ -175,6 +177,9 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
             {q.qid ?? q.id.slice(-6)} · {bnNum(q.marks ?? 0)} {STR.marks}
           </Muted>
           <Badge text={reviewStatusLabel(q.reviewStatus)} tone={reviewTone(q.reviewStatus)} />
+          {/* The IMPORTANT mark (QR-9, D-#550). Gold, and placed beside the status badge so
+              a marked question is identifiable while scanning the list, not only on open. */}
+          {q.important ? <Badge text={STR.qImportant} tone="gold" /> : null}
         </View>
         {/* Grapheme-safe clamp (F15): numberOfLines, NEVER a substring — a
             code-unit slice can cut a Bangla conjunct mid-cluster. */}

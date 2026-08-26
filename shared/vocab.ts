@@ -3439,6 +3439,7 @@ export const PERMISSIONS = [
   // questions + assembly
   "question:read",
   "question:select",
+  "question:manage",       // correct a question's content/answer, or retire it (Principal + Office, D-#548)
   "set:read",
   "set:assemble",
   "set:export",            // server-side PDF (R-A4/R-C6)
@@ -3521,6 +3522,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "content:promote_gold": "build",
   "question:read": "build",
   "question:select": "build",
+  "question:manage": "build",
   "set:read": "build",
   "set:assemble": "build",
   "set:export": "build",
@@ -3575,7 +3577,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // unscoped staff views (tracker:read), not the guardian-scoped resolver path.
   PRINCIPAL: [
     "content:read", "content:import", "content:assign_review", "content:review", "content:promote_gold",
-    "question:read", "question:select",
+    "question:read", "question:select", "question:manage",
     "set:read", "set:assemble", "set:export",
     "tracker:read", "tracker:write", "tracker:export",
     "routine:read", "routine:manage",
@@ -3625,6 +3627,10 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   OFFICE: [
     "roster:manage", "staff:manage", "leave:manage", "payroll:manage", "performance:manage", "guardian:link", "message:dispatch",
     "content:import", "content:assign_review",
+    // Office corrects question content and retires a bad question (D-#548); read comes with
+    // it because you cannot edit what you cannot open. NOT question:select — assembling a
+    // set is a teaching decision, not a desk one.
+    "question:read", "question:manage",
     "routine:read", "routine:manage",
     "attendance:manage",     // upload teacher Excel, assign markers, chase guardians (D-#64/#65; no mark)
     "library:read", "library:manage", // the default library desk (D-#81)
@@ -3814,6 +3820,7 @@ export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
   "content:promote_gold": { name: "গোল্ড চিহ্নিত", desc: "রিভিউড→গোল্ড চূড়ান্ত সাইন-অফ" },
   "question:read": { name: "প্রশ্ন দেখা", desc: "প্রশ্নব্যাংক পড়া" },
   "question:select": { name: "প্রশ্ন নির্বাচন", desc: "সেটের জন্য প্রশ্ন বাছাই" },
+  "question:manage": { name: "প্রশ্ন সম্পাদনা", desc: "প্রশ্নের বিষয়বস্তু ও উত্তর সংশোধন, প্রশ্ন বাতিল" },
   "set:read": { name: "সেট দেখা", desc: "অ্যাসেসমেন্ট সেট পড়া" },
   "set:assemble": { name: "সেট তৈরি", desc: "প্রশ্ন সেট সংকলন" },
   "set:export": { name: "সেট এক্সপোর্ট", desc: "সেট পিডিএফ এক্সপোর্ট" },
@@ -3869,6 +3876,7 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "content:promote_gold": { name: "Promote to gold", desc: "Reviewed→gold final sign-off" },
   "question:read": { name: "Read questions", desc: "Browse the question bank" },
   "question:select": { name: "Select questions", desc: "Pick questions for a set" },
+  "question:manage": { name: "Manage questions", desc: "Correct question content and answers, retire a question" },
   "set:read": { name: "Read sets", desc: "View assessment sets" },
   "set:assemble": { name: "Assemble sets", desc: "Compose question sets" },
   "set:export": { name: "Export sets", desc: "Server-side set PDF" },
