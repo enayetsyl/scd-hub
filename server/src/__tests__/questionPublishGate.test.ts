@@ -105,11 +105,17 @@ describe("Q5.1 — D-#508 adds NO permission", () => {
     expect(declared).toContain("content:assign_review");
     expect(declared).toContain("content:review");
     expect(declared).toContain("content:promote_gold");
+    // question:manage joined the list in QR-8 (D-#548) and does NOT weaken this claim: it is
+    // the power to CORRECT a question’s content or retire it, held by Principal + Office. The
+    // review/publish loop still reuses the three content:* permissions and adds none of its
+    // own — which is what the not.toContain lines below pin.
     expect(declared.filter((p) => /^question:/.test(p)).sort()).toEqual([
+      "question:manage",
       "question:read",
       "question:select",
     ]);
     expect(declared).not.toContain("question:publish");
+    expect(declared).not.toContain("question:review");
     expect(declared).not.toContain("question:assign_review");
   });
 
