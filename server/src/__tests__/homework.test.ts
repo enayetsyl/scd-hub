@@ -57,6 +57,16 @@ jest.mock("../modules/trackers/models/HomeworkNilDeclaration", () => ({
 }));
 
 const mockRecordUpdateMany = jest.fn();
+// GC-2: the CHASE edge asks whether a guardian claim is open (§6.4) and the
+// SUBMITTED edge closes one. DB-free suite, so the model is stubbed EMPTY — without
+// it every chase buffers 10s against a dead connection and the 15s test timeout
+// starts firing, which also lets a late call land inside the NEXT test.
+jest.mock("../modules/trackers/models/GuardianWorkClaim", () => ({
+  GuardianWorkClaim: {
+    exists: () => Promise.resolve(null),
+    find: () => Promise.resolve([]),
+  },
+}));
 jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
   HomeworkStudentRecord: {
     insertMany: (a: unknown) => mockRecordInsertMany(a),
