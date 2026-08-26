@@ -225,6 +225,7 @@ import LeaveCoverScreen from "../screens/hr/LeaveCoverScreen";
 import LeaveAdminScreen from "../screens/hr/LeaveAdminScreen";
 import NeedsCoverInboxScreen from "../screens/hr/NeedsCoverInboxScreen";
 import PayrollHomeScreen from "../screens/hr/PayrollHomeScreen";
+import HrPolicyScreen from "../screens/hr/HrPolicyScreen";
 import PreparePayrollScreen from "../screens/hr/PreparePayrollScreen";
 import PayrollRunDetailScreen from "../screens/hr/PayrollRunDetailScreen";
 import PaymentExportScreen from "../screens/hr/PaymentExportScreen";
@@ -255,6 +256,10 @@ import BookEscalationInboxScreen from "../screens/supportbook/BookEscalationInbo
 import BookAssembleScreen from "../screens/supportbook/BookAssembleScreen";
 import StaffListScreen from "../screens/admin/StaffListScreen";
 import StaffFormScreen from "../screens/admin/StaffFormScreen";
+import StaffHubScreen from "../screens/hr/StaffHubScreen";
+import StaffJoinScreen from "../screens/admin/StaffJoinScreen";
+import IssueLetterScreen from "../screens/hr/IssueLetterScreen";
+import ConfirmEmploymentScreen from "../screens/hr/ConfirmEmploymentScreen";
 import AssignClassTeacherScreen from "../screens/admin/AssignClassTeacherScreen";
 import AssignSubjectTeacherScreen from "../screens/admin/AssignSubjectTeacherScreen";
 import GroupMembersScreen from "../screens/admin/GroupMembersScreen";
@@ -1192,6 +1197,7 @@ function HrNavigator(): React.ReactElement {
       <HrStack.Screen name="LeaveAdmin" component={LeaveAdminScreen} options={{ title: STR.hrLeaveAdmin }} />
       <HrStack.Screen name="NeedsCoverInbox" component={NeedsCoverInboxScreen} options={{ title: STR.hrNeedsCoverTitle }} />
       <HrStack.Screen name="PayrollHome" component={PayrollHomeScreen} options={{ title: STR.hrPayroll }} />
+      <HrStack.Screen name="HrPolicy" component={HrPolicyScreen} options={{ title: STR.stfPolicyTitle }} />
       <HrStack.Screen name="PreparePayroll" component={PreparePayrollScreen} options={{ title: STR.hrPrepareRun }} />
       <HrStack.Screen
         name="PayrollRunDetail"
@@ -1271,6 +1277,10 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="Roster" component={RosterScreen} options={{ title: STR.roster }} />
       <AdminStack.Screen name="Staff" component={StaffListScreen} options={{ title: STR.staff }} />
       <AdminStack.Screen name="StaffForm" component={StaffFormScreen} options={{ title: STR.staffNew }} />
+      <AdminStack.Screen name="StaffHub" component={StaffHubScreen} options={{ title: STR.stfTitle }} />
+      <AdminStack.Screen name="StaffJoin" component={StaffJoinScreen} options={{ title: STR.stfJoinTitle }} />
+      <AdminStack.Screen name="IssueLetter" component={IssueLetterScreen} options={{ title: STR.stfIssueLetterTitle }} />
+      <AdminStack.Screen name="ConfirmEmployment" component={ConfirmEmploymentScreen} options={{ title: STR.stfConfirmTitle }} />
       <AdminStack.Screen name="AssignClassTeacher" component={AssignClassTeacherScreen} options={{ title: STR.assignClassTeacher }} />
       <AdminStack.Screen name="AssignSubjectTeacher" component={AssignSubjectTeacherScreen} options={{ title: STR.assignSubjectTeacher }} />
       <AdminStack.Screen name="GroupMembers" component={GroupMembersScreen} options={{ title: STR.gmTitle }} />

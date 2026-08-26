@@ -58,6 +58,13 @@ export type AuditEventKind =
   | "STAFF_LEAVE_ENTITLEMENT_SET" // staff leave allowance granted/edited per year (HR-2, prd-hr §3.1)
   | "STAFF_LEAVE_SUBMITTED"       // staff leave application recorded (HR-2, prd-hr H2.1)
   | "STAFF_LEAVE_DECIDED"         // staff leave approved/rejected/cancelled (HR-2, H2.3/H2.6)
+  // --- Staff hub (SH-1..SH-4; docs/prd-staff-hub.md, D-#539–#545) -----------
+  | "HR_POLICY_SET"               // the annual leave pool / lateness rule edited (SH-3, D-#539/#541)
+  | "STAFF_LETTER_ISSUED"         // an appointment/confirmation/service letter issued (SH-1, D-#542)
+  | "STAFF_LETTER_VOIDED"         // a letter voided — kept + renderable, superseded by a new ref no (SH-1, D-#542)
+  | "STAFF_EMPLOYMENT_CONFIRMED"  // probation → confirmed, with the date the pool starts from (SH-2, D-#540)
+  | "PROBATION_DEBT_SETTLED"      // held probation leave settled against the pool or the final salary (SH-3, D-#540)
+  | "STAFF_LATENESS_CHARGED"      // a month's 3-lates-to-a-day reckoning written at payroll prepare (SH-4, D-#541)
   | "STAFF_COVER_PROPOSED"        // a covering teacher proposed for a leave's cover slot (HR-2, D-#22)
   | "STAFF_COVER_DECIDED"         // cover slot approved (→ proxy grant) or returned to needs-cover (HR-2, D-#22)
   | "STAFF_PAY_SET"               // staff monthly salary / payment method set or edited (HR-3, prd-hr §4.1)

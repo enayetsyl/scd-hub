@@ -25,7 +25,7 @@ export async function writeAudit(params: AuditParams): Promise<void> {
 }
 
 /**
- * The same append, for MANY rows in ONE round trip (D-#539).
+ * The same append, for MANY rows in ONE round trip (D-#549).
  *
  * Identical semantics to calling `writeAudit` per row — same fields, same stamping, same
  * never-throws contract — and it exists purely because the per-row version costs a network

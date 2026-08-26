@@ -3,10 +3,16 @@
  * appraisals (incl. outcome), conduct ladder, grievances (+ raise), CPD log, and
  * any observations the caller authored as a supervisor. All own-row, no permission.
  *
- * NOT shown — no own-row server read exists yet (flagged for the coordinator):
- *   - own payslips  (payslips are payslipsForRun / payroll:manage only)
- *   - own staff attendance (teacherAttendance* is attendance:manage only)
- * These surface as "pending" notices rather than a fabricated/over-privileged read.
+ * SH-7 adds the own-row leave picture: the shared annual pool (D-#539) and any held
+ * probation-leave days (D-#540) — the balance a teacher is most likely to ask about,
+ * and the one number that can now drop without them having applied for anything.
+ *
+ * SH-8 closes the two gaps this header flagged since PR-1 — and they were still open:
+ * `myPayslips` and `myStaffAttendance` have existed on the SERVER since PR-2/AT-1, but
+ * no app operation ever called them, so a teacher could not see their own punch times
+ * or their own payslip anywhere. Both are own-row (no permission) and return empty for
+ * a login with no linked StaffProfile, so neither can be what breaks this screen.
+ * Payslips are LOCKED runs only — a prepared run is not a payslip yet.
  */
 import React from "react";
 import { View } from "react-native";
@@ -17,6 +23,10 @@ import {
   MY_GRIEVANCES_QUERY,
   MY_DEVELOPMENT_LOG_QUERY,
   MY_OBSERVATIONS_QUERY,
+  MY_LEAVE_POOL_QUERY,
+  MY_PROBATION_DEBT_QUERY,
+  MY_STAFF_ATTENDANCE_QUERY,
+  MY_PAYSLIPS_QUERY,
   RAISE_GRIEVANCE,
   SUBJECTS_QUERY,
 } from "../../graphql/operations";
@@ -47,6 +57,34 @@ import {
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
+/** SH-8 — the last 30 days, as the two date keys myStaffAttendance takes. */
+function last30(): { fromKey: string; toKey: string } {
+  const key = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const to = new Date();
+  const from = new Date(to.getTime() - 29 * 24 * 60 * 60 * 1000);
+  return { fromKey: key(from), toKey: key(to) };
+}
+
+/** `2026-08-25` → `২৫/০৮/২০২৬`. */
+function fmtDayKey(dateKey: string): string {
+  const [y, m, d] = dateKey.split("-");
+  return y && m && d ? bnNum(`${d}/${m}/${y}`) : dateKey;
+}
+
+const ATT_TONE: Record<string, "ok" | "warn" | "danger" | "muted"> = {
+  PRESENT: "ok",
+  LATE: "warn",
+  ABSENT: "danger",
+  LEAVE: "muted",
+};
+function attStatusLabel(status: string): string {
+  if (status === "PRESENT") return STR.stfPresent;
+  if (status === "LATE") return STR.stfLate;
+  if (status === "ABSENT") return STR.stfAbsent;
+  if (status === "LEAVE") return STR.stfOnLeave;
+  return status;
+}
 function grievanceTone(s: string): "info" | "ok" | "muted" {
   return s === "resolved" || s === "closed" ? "ok" : s === "under_review" ? "info" : "muted";
 }
@@ -64,6 +102,12 @@ export default function MyRecordScreen(): React.ReactElement {
   const [cpdQ] = useQuery({ query: MY_DEVELOPMENT_LOG_QUERY });
   const [obsQ] = useQuery({ query: MY_OBSERVATIONS_QUERY });
   const [subjectsQ] = useQuery({ query: SUBJECTS_QUERY });
+  // SH-7 — the two own-row reads MyRecordScreen has lacked since PR-1.
+  const [poolQ] = useQuery({ query: MY_LEAVE_POOL_QUERY });
+  const [debtQ] = useQuery({ query: MY_PROBATION_DEBT_QUERY });
+  const attRange = React.useMemo(() => last30(), []);
+  const [attQ] = useQuery({ query: MY_STAFF_ATTENDANCE_QUERY, variables: attRange });
+  const [slipQ] = useQuery({ query: MY_PAYSLIPS_QUERY });
 
   const [, raise] = useMutation(RAISE_GRIEVANCE);
 
@@ -73,6 +117,10 @@ export default function MyRecordScreen(): React.ReactElement {
   const cpd = cpdQ.data?.myDevelopmentLog ?? [];
   const observations = obsQ.data?.myObservations ?? [];
   const subjectName = new Map((subjectsQ.data?.subjects ?? []).map((s) => [s.id, s.nameBn]));
+  const pool = poolQ.data?.myLeavePool;
+  const heldDebt = debtQ.data?.myProbationDebt;
+  const attendance = attQ.data?.myStaffAttendance ?? [];
+  const payslips = slipQ.data?.myPayslips ?? [];
 
   const anyLoading = apprQ.fetching || conductQ.fetching || grievQ.fetching || cpdQ.fetching;
   const firstError = apprQ.error ?? conductQ.error ?? grievQ.error ?? cpdQ.error ?? obsQ.error;
@@ -117,8 +165,84 @@ export default function MyRecordScreen(): React.ReactElement {
     <Screen scroll>
       <H2>{STR.hrMyRecord}</H2>
 
+      {/* SH-7: own leave balance + held probation days. Both are own-row (no
+          permission) and return a zeroed view for a login with no linked
+          StaffProfile, so this block can never be the thing that breaks the screen. */}
+      <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfMyLeavePool}</Body>
+      <Card>
+        <Row label={STR.stfPoolAllowance} value={`${bnNum(String(pool?.allowanceDays ?? 0))} ${STR.stfDays}`} />
+        <Row label={STR.stfPoolTaken} value={`${bnNum(String(pool?.takenDays ?? 0))} ${STR.stfDays}`} />
+        <Row label={STR.stfPoolRemaining} value={`${bnNum(String(pool?.remainingDays ?? 0))} ${STR.stfDays}`} />
+        <Muted>{STR.stfPoolNote}</Muted>
+      </Card>
+
+      {heldDebt && heldDebt.totalDays > 0 ? (
+        <>
+          <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.stfMyHeldDebt}</Body>
+          <Card>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Muted style={{ flex: 1 }}>{STR.stfHeldDebtNote}</Muted>
+              <Badge text={`${bnNum(String(heldDebt.totalDays))} ${STR.stfDays}`} tone="warn" />
+            </View>
+            <Row label={STR.stfHeldOnConfirm} value={STR.stfHeldOnConfirmValue} />
+            <Row label={STR.stfHeldOnExit} value={STR.stfHeldOnExitValue} />
+          </Card>
+        </>
+      ) : null}
+
+      {/* SH-8 — own attendance, last 30 days. The punch times a teacher could not see
+          anywhere in the app until now. Newest first: the question is almost always
+          "what did today/yesterday record", not "what did last month". */}
+      <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>
+        {STR.stfMyAttendanceRecent}
+      </Body>
+      <Card>
+        {attendance.length === 0 ? (
+          <Muted>{STR.stfMyNoAttendance}</Muted>
+        ) : (
+          attendance
+            .slice()
+            .reverse()
+            .map((d, i) => (
+              <View key={d.id}>
+                {i > 0 ? <Divider /> : null}
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+                  <Body style={{ flex: 1 }}>{fmtDayKey(d.dateKey)}</Body>
+                  <Badge text={attStatusLabel(d.status)} tone={ATT_TONE[d.status] ?? "muted"} />
+                  <Muted>{`${d.punchIn ?? "—"} · ${d.punchOut ?? "—"}`}</Muted>
+                </View>
+              </View>
+            ))
+        )}
+      </Card>
+
+      {/* SH-8 — own payslips (LOCKED runs only). */}
+      <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>
+        {STR.stfMyPayslips}
+      </Body>
+      {payslips.length === 0 ? (
+        <Card><Muted>{STR.stfMyNoPayslips}</Muted></Card>
+      ) : (
+        payslips.map((s) => (
+          <Card key={s.id}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Body style={{ fontWeight: "700" }}>{s.monthKey}</Body>
+              <Body style={{ fontWeight: "700" }}>{`৳ ${bnNum(String(s.netPay))}`}</Body>
+            </View>
+            <Row label={STR.stfPoolAllowance} value={`৳ ${bnNum(String(s.grossSalary))}`} />
+            {s.deductions.map((d, i) => (
+              <Row
+                key={`${s.id}-${i}`}
+                label={d.note ?? d.type}
+                value={`− ৳ ${bnNum(String(d.amount))}${d.days ? ` (${bnNum(String(d.days))} ${STR.stfDays})` : ""}`}
+              />
+            ))}
+          </Card>
+        ))
+      )}
+
       {/* Appraisals */}
-      <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.hrMyAppraisals}</Body>
+      <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrMyAppraisals}</Body>
       {appraisals.length === 0 ? (
         <Card><Muted>{STR.empty}</Muted></Card>
       ) : (

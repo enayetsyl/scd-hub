@@ -531,7 +531,7 @@ describe("publishQuestion (Q2.8, Q2.9)", () => {
   });
 
   test("Q2.10 — bulk publishes the accepted ones and reports the rest", async () => {
-    // Bulk reads its artifacts in ONE `find` rather than a findById per item (D-#539);
+    // Bulk reads its artifacts in ONE `find` rather than a findById per item (D-#549);
     // the behaviour asserted below is unchanged, only where the fixture is steered.
     const OK_ID = new mongoose.Types.ObjectId();
     const BAD_ID = new mongoose.Types.ObjectId();

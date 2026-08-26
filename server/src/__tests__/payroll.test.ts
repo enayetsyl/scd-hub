@@ -55,6 +55,21 @@ jest.mock("../modules/hr/models/AdvanceLoan", () => ({
     create: (d: unknown) => mockAdvCreate(d),
   },
 }));
+// SH-4 (D-#541): prepare/approve now touch the lateness reckoning. The policy is
+// mocked to its DEFAULT — an absent HrPolicy row reads as HR_POLICY_DEFAULTS in
+// production too, and the default has `latenessRuleEnabled: false`. That is exactly
+// what the assertions below rely on: with the rule off, every payslip figure in this
+// suite must be identical to what it was before SH-4 existed.
+jest.mock("../modules/hr/models/HrPolicy", () => ({
+  HrPolicy: { findOne: () => ({ lean: async () => null }) },
+}));
+jest.mock("../modules/hr/models/LatenessCharge", () => ({
+  LatenessCharge: {
+    findOne: () => ({ lean: async () => null }),
+    findOneAndUpdate: jest.fn().mockResolvedValue({ _id: "x", amount: 0 }),
+    updateMany: jest.fn().mockResolvedValue({ modifiedCount: 0 }),
+  },
+}));
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
 }));
@@ -62,6 +77,8 @@ jest.mock("../modules/platform/services/AuditService", () => ({
 import { assertMonthKey, dayRate, computePayslip, PayrollError } from "../modules/hr/services/payrollMath";
 import { preparePayrollRun, approvePayrollRun, cancelPayrollRun, paymentExport } from "../modules/hr/services/PayrollService";
 import { issueAdvance, settleAdvance } from "../modules/hr/services/AdvanceService";
+import { splitLatenessCharge } from "../modules/hr/services/LatenessService";
+import { HR_POLICY_DEFAULTS } from "@scd/shared";
 
 const ACTOR = oid().toString();
 beforeEach(() => jest.clearAllMocks());
@@ -107,6 +124,49 @@ describe("payroll math (pure)", () => {
     const r = computePayslip({ grossSalary: 10000, dayRate: 333, unpaidLeaveDays: 0, latenessDeduction: 250 });
     expect(r.deductions.some((d) => d.type === "lateness" && d.amount === 250)).toBe(true);
   });
+});
+
+// ===========================================================================
+describe("the lateness rule (SH-4, D-#541 — pure)", () => {
+  const N = HR_POLICY_DEFAULTS.lateDaysPerCharge; // 3
+
+  test("the rule ships OFF, so landing SH-4 changes no existing payslip", () => {
+    expect(HR_POLICY_DEFAULTS.latenessRuleEnabled).toBe(false);
+    expect(N).toBe(3);
+  });
+
+  test("every 3 lates cost one day; 1–2 leftovers are forgiven at month end", () => {
+    expect(splitLatenessCharge(2, N, 20)).toMatchObject({ chargedDays: 0, forgivenLates: 2 });
+    expect(splitLatenessCharge(3, N, 20)).toMatchObject({ chargedDays: 1, forgivenLates: 0 });
+    expect(splitLatenessCharge(5, N, 20)).toMatchObject({ chargedDays: 1, forgivenLates: 2 });
+    expect(splitLatenessCharge(7, N, 20)).toMatchObject({ chargedDays: 2, forgivenLates: 1 });
+  });
+
+  test("the charge comes off the leave pool FIRST, then salary", () => {
+    // Pool covers it entirely.
+    expect(splitLatenessCharge(6, N, 20)).toMatchObject({ chargedDays: 2, paidFromLeave: 2, chargedToSalary: 0 });
+    // Pool covers one of the two.
+    expect(splitLatenessCharge(6, N, 1)).toMatchObject({ chargedDays: 2, paidFromLeave: 1, chargedToSalary: 1 });
+    // Empty pool → straight to salary. This is the probationer's case: they have no
+    // pool at all, so every third late is money.
+    expect(splitLatenessCharge(3, N, 0)).toMatchObject({ chargedDays: 1, paidFromLeave: 0, chargedToSalary: 1 });
+  });
+
+  test("a fractional pool cannot absorb a whole charged day (D-#361 partial days are 1/3)", () => {
+    // 2/3 of a day left is not a day. Floor it, or the balance is left with an
+    // unexplainable stub and the payslip is short by a third of a day-rate.
+    expect(splitLatenessCharge(3, N, 0.67)).toMatchObject({ paidFromLeave: 0, chargedToSalary: 1 });
+    expect(splitLatenessCharge(3, N, 1.33)).toMatchObject({ paidFromLeave: 1, chargedToSalary: 0 });
+  });
+
+  test("no lates → nothing charged; a negative count is treated as zero", () => {
+    expect(splitLatenessCharge(0, N, 20)).toMatchObject({ chargedDays: 0, paidFromLeave: 0, chargedToSalary: 0 });
+    expect(splitLatenessCharge(-4, N, 20)).toMatchObject({ chargedDays: 0, forgivenLates: 0 });
+  });
+
+  test("a policy of 0 days per charge is refused rather than dividing by zero", () => {
+    expect(() => splitLatenessCharge(5, 0, 20)).toThrow();
+  });
   test("advance net-pay guard: one-shot caps at net, never negative (excess rolls forward, D-#27)", () => {
     const r = computePayslip({
       grossSalary: 10000, dayRate: 333, unpaidLeaveDays: 0,
@@ -127,6 +187,36 @@ describe("payroll math (pure)", () => {
 
 // ===========================================================================
 describe("preparePayrollRun", () => {
+  /**
+   * SH-3 / D-#540 — the double-charge guard. Probation leave is stored unpaid but
+   * HELD: the ProbationLeaveDebt ledger collects it once, at confirmation or exit.
+   * If payroll also counted it, the same absence would be charged twice — once
+   * silently, that month, against the owner's explicit rule that it is not.
+   */
+  test("EXCLUDES probation-held leave from the unpaid-leave deduction", async () => {
+    mockRunFindOne.mockResolvedValue(null);
+    const staffA = oid();
+    mockStaffFind.mockResolvedValue([
+      { _id: staffA, name: "A", category: "teacher", monthlySalary: 30000, paymentMethod: "bank" },
+    ]);
+    mockAdvFind.mockResolvedValue([]);
+    mockRunCreate.mockResolvedValue({ _id: oid(), monthKey: "2026-06", status: "prepared" });
+    mockSlipInsert.mockImplementation(async (docs: unknown) => docs);
+    // The service's query carries `probationHeld: { $ne: true }`, so a held row never
+    // reaches this mock. Assert the FILTER, not just the arithmetic — the arithmetic
+    // would look right even if the exclusion were dropped and no held leave existed.
+    mockLeaveFind.mockResolvedValue([]);
+
+    await preparePayrollRun({ monthKey: "2026-06", workingDays: 30, actorId: ACTOR });
+
+    expect(mockLeaveFind).toHaveBeenCalledWith(
+      expect.objectContaining({ probationHeld: { $ne: true } }),
+    );
+    const slip = (mockSlipInsert.mock.calls[0][0] as Array<Record<string, unknown>>)[0];
+    expect(slip.unpaidLeaveDays).toBe(0);
+    expect(slip.netPay).toBe(30000); // nothing docked
+  });
+
   test("computes a payslip per salaried staff with leave + advance applied", async () => {
     const runId = oid();
     const staffA = oid(), staffB = oid();

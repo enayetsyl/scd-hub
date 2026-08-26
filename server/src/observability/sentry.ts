@@ -76,6 +76,11 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "DriveUnavailableError",
   "FinanceError",
   "LeaveError",
+  // A staff-letter refusal (SH-1, D-#542): no designation to print in clause 6, a paid
+  // letter with no salary set, an unknown kind, a void with no reason. Each is a
+  // sentence the Office is meant to read and fix before a document goes out — the
+  // refusal is the feature, since the alternative is a wrong letter someone signs.
+  "LetterError",
   "LibraryError",
   "MeetingCommentError",
   "MessageTemplateError",

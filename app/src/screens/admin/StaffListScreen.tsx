@@ -45,15 +45,23 @@ function formatDate(iso: string | null): string {
   return bnNum(`${d}/${m}/${y}`);
 }
 
+/**
+ * SH-6: the row is now a DOORWAY, not the record itself. Every detail that used to be
+ * dumped here lives on the hub, one tap away, beside the leave / attendance / payroll /
+ * letters that were previously scattered across five other screens. What stays on the
+ * card is only what you scan a list for — who they are and whether they are confirmed.
+ */
 function StaffCard({
   s,
+  onOpen,
   onEdit,
 }: {
   s: StaffT;
+  onOpen: (s: StaffT) => void;
   onEdit: (s: StaffT) => void;
 }): React.ReactElement {
   return (
-    <Card>
+    <Card onPress={() => onOpen(s)}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Body style={{ fontWeight: "700", flex: 1 }}>{s.nameBn || s.name}</Body>
         <Button title={STR.staffEditAction} variant="ghost" onPress={() => onEdit(s)} />
@@ -65,23 +73,7 @@ function StaffCard({
       <Row label={STR.employmentType} value={employmentTypeLabel(s.employmentType)} />
       <Row label={STR.employmentStatus} value={employmentStatusLabel(s.employmentStatus)} />
       <Row label={STR.joiningDate} value={formatDate(s.joiningDate)} />
-      <Row label={STR.gender} value={genderLabel(s.gender)} />
-      <Row label={STR.dob} value={formatDate(s.dob)} />
-      <Row label={STR.bloodGroup} value={s.bloodGroup ?? "—"} />
-      {s.maritalStatus ? <Row label={STR.maritalStatus} value={s.maritalStatus} /> : null}
-      {s.qualification ? <Row label={STR.qualification} value={s.qualification} /> : null}
-      <Divider />
       <Row label={STR.phone} value={s.phone ?? "—"} />
-      {s.whatsapp ? <Row label={STR.whatsapp} value={s.whatsapp} /> : null}
-      {s.email ? <Row label={STR.email} value={s.email} /> : null}
-      {s.presentAddress ? <Row label={STR.address} value={s.presentAddress} /> : null}
-      {s.fatherName ? <Row label={STR.fatherName} value={s.fatherName} /> : null}
-      {s.motherName ? <Row label={STR.motherName} value={s.motherName} /> : null}
-      {s.spouseName ? <Row label={STR.spouseName} value={s.spouseName} /> : null}
-      {s.biometricId || s.nid || s.bankAccount ? <Divider /> : null}
-      {s.biometricId ? <Row label={STR.biometricId} value={s.biometricId} /> : null}
-      {s.nid ? <Row label={STR.nid} value={s.nid} /> : null}
-      {s.bankAccount ? <Row label={STR.bankAccount} value={s.bankAccount} /> : null}
     </Card>
   );
 }
@@ -125,7 +117,8 @@ export default function StaffListScreen(): React.ReactElement {
 
       <Field label={undefined} value={search} onChangeText={setSearch} placeholder={STR.searchStaff} />
 
-      <Button title={STR.staffNew} onPress={() => nav.navigate("StaffForm")} />
+      {/* SH-6: joining walks the 4-step wizard; the flat form stays for EDITS only. */}
+      <Button title={STR.staffNew} onPress={() => nav.navigate("StaffJoin")} />
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1), marginBottom: space(2) }}>
         <Button
@@ -157,7 +150,12 @@ export default function StaffListScreen(): React.ReactElement {
         <EmptyState message={STR.noMatches} />
       ) : (
         shown.map((s) => (
-          <StaffCard key={s.id} s={s} onEdit={(row) => nav.navigate("StaffForm", { staff: row })} />
+          <StaffCard
+            key={s.id}
+            s={s}
+            onOpen={(row) => nav.navigate("StaffHub", { staff: row })}
+            onEdit={(row) => nav.navigate("StaffForm", { staff: row })}
+          />
         ))
       )}
     </Screen>

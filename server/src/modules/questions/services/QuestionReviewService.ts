@@ -516,7 +516,7 @@ export async function publishQuestion(input: {
  * Publish a multi-selection (Q2.10). Override-publish stays one-at-a-time — a reason is
  * per question, so this path deliberately carries no `overrideReason`.
  *
- * BATCHED, not a loop over `publishQuestion` (D-#539). The per-item version cost about six
+ * BATCHED, not a loop over `publishQuestion` (D-#549). The per-item version cost about six
  * sequential Atlas round trips each — findById, save, the open-round read, an updateOne and
  * an audit insert per round, then the publish audit — so the owner's real 244-question
  * publish spent roughly 1,500 round trips end to end and took minutes. This does the same
@@ -891,7 +891,7 @@ export async function publishQuestionsMatching(input: {
   });
 
   /**
-   * RE-COUNT rather than subtract (D-#539). `total − okCount` was wrong in two real ways:
+   * RE-COUNT rather than subtract (D-#549). `total − okCount` was wrong in two real ways:
    * the total counts ROUNDS while okCount counts ARTIFACTS, so two rounds on one question
    * left a phantom 1; and anything that legitimately failed (already published, never
    * reviewed) counted as "still to do" forever, so pressing again could never clear it.
