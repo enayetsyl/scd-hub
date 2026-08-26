@@ -1271,6 +1271,8 @@ export interface QuestionListItem {
   reviewStatus: string;
   /** Marked important (QR-9, D-#550) — shown as a gold tag; everyone sees it. */
   important: boolean;
+  /** Soft-deleted (D-#548). Only present under the retired lens (D-#558). */
+  retired: boolean;
   /** Full payload JSON — list rows read question_text from it. */
   payloadJson: string;
 }
@@ -1290,6 +1292,8 @@ export interface QuestionsVars {
   reviewStatus?: string | null;
   /** Narrow to the IMPORTANT questions (QR-9, D-#550), or with false to the normal ones. */
   important?: boolean | null;
+  /** Show the RETIRED questions instead of the live ones (D-#558) — the way back to restore. */
+  retired?: boolean | null;
   /** Free-text over question_text + qid; Bangla digits match Latin qids. */
   search?: string | null;
   limit?: number | null;
@@ -1313,6 +1317,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
     $marksMax: Float
     $reviewStatus: String
     $important: Boolean
+    $retired: Boolean
     $search: String
     $limit: Int
     $offset: Int
@@ -1332,6 +1337,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       marksMax: $marksMax
       reviewStatus: $reviewStatus
       important: $important
+      retired: $retired
       search: $search
       limit: $limit
       offset: $offset
@@ -1351,6 +1357,7 @@ export const QUESTIONS_QUERY = gql<{ questions: QuestionListItem[] }, QuestionsV
       curationTag
       reviewStatus
       important
+      retired
       payloadJson
     }
   }
@@ -1408,6 +1415,7 @@ export const QUESTION_QUERY = gql<{ question: QuestionDetail | null }, { id: str
       curationTag
       reviewStatus
       important
+      retired
       current
       importedAt
     }

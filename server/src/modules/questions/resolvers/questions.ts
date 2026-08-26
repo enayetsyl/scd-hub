@@ -61,6 +61,8 @@ interface QuestionArtifactShape {
   reviewStatus: string;
   /** The IMPORTANT mark (QR-9, D-#550) — visible to everyone who can see the question. */
   important: boolean;
+  /** Soft-deleted (D-#548). Only ever true when the caller asked for `retired: true`. */
+  retired: boolean;
   current: boolean;
   importedAt: Date;
 }
@@ -87,6 +89,8 @@ QuestionArtifactRef.implement({
     reviewStatus: t.exposeString("reviewStatus"),
     /** Marked important by a reviewer or the desk (QR-9, D-#550). Everyone sees it. */
     important: t.exposeBoolean("important"),
+    /** Soft-deleted (D-#548) — the bank shows these only under the retired lens (D-#558). */
+    retired: t.exposeBoolean("retired"),
     current: t.exposeBoolean("current"),
     importedAt: t.string({ resolve: (q) => q.importedAt.toISOString() }),
   }),
@@ -122,6 +126,7 @@ function docToShape(doc: LeanArtifact): QuestionArtifactShape {
     curationTag: doc.curationTag,
     reviewStatus: doc.reviewStatus,
     important: doc.importantAt != null,
+    retired: doc.retiredAt != null,
     current: doc.current,
     importedAt: doc.importedAt,
   };

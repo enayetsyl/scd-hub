@@ -190,6 +190,18 @@ export function FilterSheet({
               />
             </ChipRow>
 
+            {/* The RETIRED lens (D-#558). Soft-deleted questions are hidden from the bank
+                by default — this is the ONLY way to find one in order to restore it, so
+                without it `restoreQuestion` is unreachable and retire is a one-way door. */}
+            <Muted style={styles.groupGap}>{STR.qeRetired}</Muted>
+            <ChipRow>
+              <Chip
+                label={STR.qbShowRetired}
+                selected={draft.retired === true}
+                onPress={() => toggle("retired", true)}
+              />
+            </ChipRow>
+
             <Muted style={styles.groupGap}>{STR.reviewStatus}</Muted>
             <ChipRow>
               {REVIEW_STATUSES.map((r) => (

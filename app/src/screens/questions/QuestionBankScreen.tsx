@@ -108,6 +108,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
       bloomLevel: qb.filters.bloomLevel,
       reviewStatus: qb.filters.reviewStatus,
       important: qb.filters.important,
+      retired: qb.filters.retired,
       marksMin: num(qb.filters.marksMin),
       marksMax: num(qb.filters.marksMax),
       search: qb.search.trim() || null,
@@ -146,6 +147,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
   }
   if (f.reviewStatus) chips.push({ key: "reviewStatus", label: reviewStatusLabel(f.reviewStatus) });
   if (f.important) chips.push({ key: "important", label: STR.qImportantOnly });
+  if (f.retired) chips.push({ key: "retired", label: STR.qbShowRetired });
   if (f.questionTypes.length > 0) {
     chips.push({
       key: "questionTypes",
@@ -180,6 +182,9 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
           {/* The IMPORTANT mark (QR-9, D-#550). Gold, and placed beside the status badge so
               a marked question is identifiable while scanning the list, not only on open. */}
           {q.important ? <Badge text={STR.qImportant} tone="gold" /> : null}
+          {/* A retired row can only appear under the retired lens, so the badge is not
+              redundant with the filter chip — it is what marks the list as NOT the bank. */}
+          {q.retired ? <Badge text={STR.qeRetired} tone="danger" /> : null}
         </View>
         {/* Grapheme-safe clamp (F15): numberOfLines, NEVER a substring — a
             code-unit slice can cut a Bangla conjunct mid-cluster. */}
