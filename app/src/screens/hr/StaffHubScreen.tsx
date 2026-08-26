@@ -1,28 +1,32 @@
 /**
- * StaffHubScreen (SH-6; docs/prd-staff-hub.md) — ONE screen for a staff member's whole
- * record, replacing the six destinations the owner had to walk between: the staff list,
- * the credentials screen, leave admin, payroll, performance and offboarding.
+ * StaffHubScreen (SH-6, corrected in SH-9) — ONE screen for a staff member's whole
+ * record, replacing the destinations the owner had to walk between.
  *
- * TABS ARE LAZY AND SEPARATELY GATED. Each tab runs its own query and is only mounted
- * when it is the active tab, so a caller who lacks `payroll:manage` never fires the
- * payroll query at all. That is deliberate: D-#532 was a permission-carrying field
- * returning `null` under a screen that read through it, and it took down the whole
- * navigator. Nothing here reads through a refused field, because nothing here asks for
- * one it cannot hold.
+ * LIVE DATA, NOT THE ROUTE PARAM. The record arrives as a navigation parameter for the
+ * first paint (so the header never flashes empty), but every read after that comes from
+ * `staffProfile(id)` and is refetched on focus. The 2026-08-26 prod E2E test found why
+ * this matters: a confirmation succeeded server-side — status flipped, date stamped,
+ * letter issued, audit written — and the screen still read শিক্ষানবিশ with the
+ * স্থায়ীকরণ button sitting there inviting a second press. The param is a snapshot taken
+ * when the row was tapped; it cannot know about anything that happened since.
  *
- * Registered in the ADMIN stack, beside the staff list it is opened from and the
- * StaffForm its সম্পাদনা action returns to — one stack, so every navigate here is
- * type-checked against the routes that actually exist. It is never registered FIRST:
- * this screen takes params, and a param-taking initial route crashes the whole tab on
- * open, which neither tsc nor `expo export` catches.
+ * TABS ARE LAZY AND SEPARATELY GATED. Each tab runs its own query and mounts only when
+ * active, so a caller without `payroll:manage` never fires the payroll request. D-#532
+ * was a permission-carrying field returning `null` under a screen that read through it,
+ * which took down the whole navigator; nothing here reads through a refused field.
+ *
+ * Registered in the ADMIN stack, beside the staff list it opens from. Never FIRST: it
+ * takes params, and a param-taking initial route crashes the tab on open — something
+ * neither tsc nor `expo export` catches.
  */
 import React from "react";
 import { View } from "react-native";
-import { useQuery } from "urql";
+import { useQuery, useMutation } from "urql";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { AdminStackParamList } from "../../navigation/types";
 import {
+  STAFF_PROFILE_QUERY,
   STAFF_LETTERS_QUERY,
   STAFF_LEAVE_POOL_QUERY,
   STAFF_PROBATION_DEBT_QUERY,
@@ -30,10 +34,14 @@ import {
   STAFF_ATTENDANCE_SUMMARY_QUERY,
   STAFF_LATENESS_PREVIEW_QUERY,
   STAFF_PAYSLIPS_QUERY,
+  STAFF_APPRAISALS_QUERY,
+  STAFF_CONDUCT_RECORDS_QUERY,
+  STAFF_OBSERVATIONS_QUERY,
+  OFFBOARDING_CASES_QUERY,
+  HR_POLICY_QUERY,
   VOID_STAFF_LETTER,
   type StaffT,
 } from "../../graphql/operations";
-import { useMutation } from "urql";
 import {
   Screen,
   H2,
@@ -58,6 +66,13 @@ import {
   employmentTypeLabel,
   employmentStatusLabel,
   leaveTypeLabel,
+  paymentMethodLabel,
+  appraisalStatusLabel,
+  appraisalOutcomeLabel,
+  conductStageLabel,
+  conductRecordStatusLabel,
+  offboardingStatusLabel,
+  offboardingTriggerLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
@@ -66,9 +81,8 @@ import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "StaffHub">;
 
-type TabKey = "profile" | "attendance" | "leave" | "payroll" | "documents";
+type TabKey = "profile" | "attendance" | "leave" | "payroll" | "documents" | "performance" | "exit";
 
-/** ISO/date-key → DD/MM/YYYY in Bangla numerals. */
 function fmtDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   const [y, m, d] = iso.slice(0, 10).split("-");
@@ -88,49 +102,38 @@ function shiftMonth(monthKey: string, delta: number): string {
   const [y, m] = monthKey.split("-").map(Number);
   return monthKeyOf(new Date(y, m - 1 + delta, 1));
 }
-/** "2026-08" → "আগস্ট ২০২৬" (BN) / "August 2026" (EN). */
 const MONTHS_BN = ["জানুয়ারি","ফেব্রুয়ারি","মার্চ","এপ্রিল","মে","জুন","জুলাই","আগস্ট","সেপ্টেম্বর","অক্টোবর","নভেম্বর","ডিসেম্বর"];
 const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function isEn(): boolean {
+  return STR.stfTabProfile === "Profile";
+}
 function monthLabel(monthKey: string): string {
   const [y, m] = monthKey.split("-").map(Number);
-  const en = STR.stfTabProfile === "Profile";
-  return en ? `${MONTHS_EN[m - 1]} ${y}` : `${MONTHS_BN[m - 1]} ${bnNum(String(y))}`;
+  return isEn() ? `${MONTHS_EN[m - 1]} ${y}` : `${MONTHS_BN[m - 1]} ${bnNum(String(y))}`;
 }
 
 const STATUS_TONE: Record<string, "ok" | "warn" | "danger" | "muted"> = {
-  PRESENT: "ok",
-  LATE: "warn",
-  ABSENT: "danger",
-  LEAVE: "muted",
+  PRESENT: "ok", LATE: "warn", ABSENT: "danger", LEAVE: "muted",
 };
 function attendanceStatusLabel(s: string): string {
-  const en = STR.stfTabProfile === "Profile";
   const bn: Record<string, string> = { PRESENT: "উপস্থিত", LATE: "বিলম্বে", ABSENT: "অনুপস্থিত", LEAVE: "ছুটিতে" };
-  const eng: Record<string, string> = { PRESENT: "Present", LATE: "Late", ABSENT: "Absent", LEAVE: "On leave" };
-  return (en ? eng : bn)[s] ?? s;
+  const en: Record<string, string> = { PRESENT: "Present", LATE: "Late", ABSENT: "Absent", LEAVE: "On leave" };
+  return (isEn() ? en : bn)[s] ?? s;
 }
+const taka = (n: number): string => `৳ ${bnNum(n.toLocaleString("en-US"))}`;
 
-// ---------------------------------------------------------------------------
-// Tabs
 // ---------------------------------------------------------------------------
 
 function ProfileTab({ staff, canLeave }: { staff: StaffT; canLeave: boolean }): React.ReactElement {
-  // The at-a-glance strip is the consolidation payoff, but it is the ONE place the
-  // profile tab reaches into another tab's data — so it is gated on the same
-  // permission that tab is, and simply absent otherwise.
+  const onProbation = !staff.confirmationDate;
   const [{ data: pool }] = useQuery({
-    query: STAFF_LEAVE_POOL_QUERY,
-    variables: { staffProfileId: staff.id },
-    pause: !canLeave,
+    query: STAFF_LEAVE_POOL_QUERY, variables: { staffProfileId: staff.id }, pause: !canLeave,
   });
   const [{ data: debt }] = useQuery({
-    query: STAFF_PROBATION_DEBT_QUERY,
-    variables: { staffProfileId: staff.id },
-    pause: !canLeave,
+    query: STAFF_PROBATION_DEBT_QUERY, variables: { staffProfileId: staff.id }, pause: !canLeave,
   });
-
-  const onProbation = !staff.confirmationDate;
   const held = debt?.staffProbationDebt.totalDays ?? 0;
+  const remaining = pool?.staffLeavePool.remainingDays ?? 0;
 
   return (
     <View>
@@ -139,7 +142,14 @@ function ProfileTab({ staff, canLeave }: { staff: StaffT; canLeave: boolean }): 
       {canLeave ? (
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfAtAGlance}</Body>
-          <Row label={STR.stfLeaveRemaining} value={`${bnNum(String(pool?.staffLeavePool.remainingDays ?? 0))} ${STR.stfDays}`} />
+          {/* On probation the pool is NOT spendable — every day taken is unpaid and
+              held until confirmation. Labelling it "ছুটি বাকি" next to a probation
+              notice told the Principal the opposite of the rule (prod E2E, 2026-08-26). */}
+          <Row
+            label={onProbation ? STR.stfPoolOnConfirmation : STR.stfLeaveRemaining}
+            value={`${bnNum(String(remaining))} ${STR.stfDays}`}
+          />
+          {onProbation ? <Muted>{STR.stfPoolNotDrawableYet}</Muted> : null}
           {held > 0 ? <Row label={STR.stfHeldUnpaid} value={`${bnNum(String(held))} ${STR.stfDays}`} /> : null}
         </Card>
       ) : null}
@@ -169,16 +179,20 @@ function ProfileTab({ staff, canLeave }: { staff: StaffT; canLeave: boolean }): 
         ) : null}
       </Card>
 
-      <Card>
-        <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfPersonal}</Body>
-        <Row label={STR.dob} value={fmtDate(staff.dob)} />
-        <Row label={STR.bloodGroup} value={staff.bloodGroup ?? "—"} />
-        {staff.maritalStatus ? <Row label={STR.maritalStatus} value={staff.maritalStatus} /> : null}
-        {staff.qualification ? <Row label={STR.qualification} value={staff.qualification} /> : null}
-        {staff.fatherName ? <Row label={STR.fatherName} value={staff.fatherName} /> : null}
-        {staff.motherName ? <Row label={STR.motherName} value={staff.motherName} /> : null}
-        {staff.spouseName ? <Row label={STR.spouseName} value={staff.spouseName} /> : null}
-      </Card>
+      {/* Empty rows for a record with nothing in them are noise — show what exists. */}
+      {staff.dob || staff.bloodGroup || staff.maritalStatus || staff.qualification ||
+       staff.fatherName || staff.motherName || staff.spouseName ? (
+        <Card>
+          <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfPersonal}</Body>
+          {staff.dob ? <Row label={STR.dob} value={fmtDate(staff.dob)} /> : null}
+          {staff.bloodGroup ? <Row label={STR.bloodGroup} value={staff.bloodGroup} /> : null}
+          {staff.maritalStatus ? <Row label={STR.maritalStatus} value={staff.maritalStatus} /> : null}
+          {staff.qualification ? <Row label={STR.qualification} value={staff.qualification} /> : null}
+          {staff.fatherName ? <Row label={STR.fatherName} value={staff.fatherName} /> : null}
+          {staff.motherName ? <Row label={STR.motherName} value={staff.motherName} /> : null}
+          {staff.spouseName ? <Row label={STR.spouseName} value={staff.spouseName} /> : null}
+        </Card>
+      ) : null}
 
       {staff.nid || staff.bankAccount ? (
         <Card>
@@ -197,20 +211,15 @@ function ProfileTab({ staff, canLeave }: { staff: StaffT; canLeave: boolean }): 
 function AttendanceTab({ staff }: { staff: StaffT }): React.ReactElement {
   const [monthKey, setMonthKey] = React.useState(() => monthKeyOf(new Date()));
   const { fromKey, toKey } = monthBounds(monthKey);
-
   const [{ data, fetching, error }] = useQuery({
-    query: STAFF_ATTENDANCE_QUERY,
-    variables: { staffProfileId: staff.id, fromKey, toKey },
+    query: STAFF_ATTENDANCE_QUERY, variables: { staffProfileId: staff.id, fromKey, toKey },
   });
   const [{ data: sum }] = useQuery({
-    query: STAFF_ATTENDANCE_SUMMARY_QUERY,
-    variables: { staffProfileId: staff.id, fromKey, toKey },
+    query: STAFF_ATTENDANCE_SUMMARY_QUERY, variables: { staffProfileId: staff.id, fromKey, toKey },
   });
   const [{ data: late }] = useQuery({
-    query: STAFF_LATENESS_PREVIEW_QUERY,
-    variables: { staffProfileId: staff.id, monthKey },
+    query: STAFF_LATENESS_PREVIEW_QUERY, variables: { staffProfileId: staff.id, monthKey },
   });
-
   const days = data?.staffAttendance ?? [];
   const s = sum?.staffAttendanceSummary;
   const l = late?.staffLatenessPreview;
@@ -236,32 +245,19 @@ function AttendanceTab({ staff }: { staff: StaffT }): React.ReactElement {
         </Card>
       ) : null}
 
-      {/* The lateness reckoning is shown where the lates are, not only on the payslip:
-          a teacher should learn a charge is coming before it lands on their pay. */}
       {l && l.lateCount > 0 ? (
         <Notice
           tone={l.enabled ? "warn" : "info"}
-          message={
-            l.enabled
-              ? `${STR.stfLatenessExplain} — ${bnNum(String(l.lateCount))} / ${bnNum(String(l.lateDaysPerCharge))}`
-              : STR.stfLatenessOff
-          }
+          message={l.enabled ? STR.stfLatenessExplain : STR.stfLatenessOff}
         />
       ) : null}
 
       <Card>
         <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfPunchTimes}</Body>
-        {error ? (
-          <Notice tone="danger" message={friendlyError(error)} />
-        ) : fetching ? (
-          <Loader label={STR.loading} />
-        ) : days.length === 0 ? (
-          <EmptyState message={STR.stfNoAttendance} />
-        ) : (
-          days
-            .slice()
-            .reverse()
-            .map((d) => (
+        {error ? <Notice tone="danger" message={friendlyError(error)} />
+          : fetching ? <Loader label={STR.loading} />
+          : days.length === 0 ? <EmptyState message={STR.stfNoAttendance} />
+          : days.slice().reverse().map((d) => (
               <View key={d.dateKey}>
                 <Divider />
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
@@ -270,8 +266,7 @@ function AttendanceTab({ staff }: { staff: StaffT }): React.ReactElement {
                   <Muted>{`${d.punchIn ?? "—"} · ${d.punchOut ?? "—"}`}</Muted>
                 </View>
               </View>
-            ))
-        )}
+            ))}
         <Divider />
         <Muted>{STR.stfBiometricNote}</Muted>
       </Card>
@@ -280,18 +275,15 @@ function AttendanceTab({ staff }: { staff: StaffT }): React.ReactElement {
 }
 
 function LeaveTab({ staff }: { staff: StaffT }): React.ReactElement {
+  const onProbation = !staff.confirmationDate;
   const [{ data: pool, fetching }] = useQuery({
-    query: STAFF_LEAVE_POOL_QUERY,
-    variables: { staffProfileId: staff.id },
+    query: STAFF_LEAVE_POOL_QUERY, variables: { staffProfileId: staff.id },
   });
   const [{ data: debt }] = useQuery({
-    query: STAFF_PROBATION_DEBT_QUERY,
-    variables: { staffProfileId: staff.id },
+    query: STAFF_PROBATION_DEBT_QUERY, variables: { staffProfileId: staff.id },
   });
-
   const p = pool?.staffLeavePool;
   const d = debt?.staffProbationDebt;
-
   if (fetching && !p) return <Loader label={STR.loading} />;
 
   return (
@@ -299,11 +291,17 @@ function LeaveTab({ staff }: { staff: StaffT }): React.ReactElement {
       <Card>
         <Body style={{ fontWeight: "700" }}>{STR.stfLeavePool}</Body>
         <Muted>{STR.stfPoolNote}</Muted>
+        {/* The pool exists for a probationer, but they cannot draw it yet. Saying so
+            here is the difference between a figure and a promise. */}
+        {onProbation ? <Notice tone="warn" message={STR.stfPoolNotDrawableYet} /> : null}
         <Divider />
         <Row label={STR.stfPoolAllowance} value={`${bnNum(String(p?.allowanceDays ?? 0))} ${STR.stfDays}`} />
         <Row label={STR.stfPoolCarried} value={`${bnNum(String(p?.carriedOverDays ?? 0))} ${STR.stfDays}`} />
         <Row label={STR.stfPoolTaken} value={`${bnNum(String(p?.takenDays ?? 0))} ${STR.stfDays}`} />
-        <Row label={STR.stfPoolRemaining} value={`${bnNum(String(p?.remainingDays ?? 0))} ${STR.stfDays}`} />
+        <Row
+          label={onProbation ? STR.stfPoolOnConfirmation : STR.stfPoolRemaining}
+          value={`${bnNum(String(p?.remainingDays ?? 0))} ${STR.stfDays}`}
+        />
         {p?.overridden ? <Muted>{STR.stfPoolOverridden}</Muted> : null}
         {p?.proRated ? <Muted>{STR.stfPoolProRated}</Muted> : null}
       </Card>
@@ -313,9 +311,7 @@ function LeaveTab({ staff }: { staff: StaffT }): React.ReactElement {
           <Body style={{ fontWeight: "700", flex: 1 }}>{STR.stfHeldDebt}</Body>
           {d && d.totalDays > 0 ? <Badge text={`${bnNum(String(d.totalDays))} ${STR.stfDays}`} tone="warn" /> : null}
         </View>
-        {!d || d.totalDays === 0 ? (
-          <Muted>{STR.stfNoHeldDebt}</Muted>
-        ) : (
+        {!d || d.totalDays === 0 ? <Muted>{STR.stfNoHeldDebt}</Muted> : (
           <>
             <Muted>{STR.stfHeldDebtNote}</Muted>
             <Divider />
@@ -323,11 +319,8 @@ function LeaveTab({ staff }: { staff: StaffT }): React.ReactElement {
             <Row label={STR.stfHeldOnExit} value={STR.stfHeldOnExitValue} />
             <Divider />
             {d.rows.map((r) => (
-              <Row
-                key={r.id}
-                label={`${fmtDate(r.fromKey)} · ${leaveTypeLabel(r.leaveType)}`}
-                value={`${bnNum(String(r.days))} ${STR.stfDays}`}
-              />
+              <Row key={r.id} label={`${fmtDate(r.fromKey)} · ${leaveTypeLabel(r.leaveType)}`}
+                value={`${bnNum(String(r.days))} ${STR.stfDays}`} />
             ))}
           </>
         )}
@@ -336,12 +329,21 @@ function LeaveTab({ staff }: { staff: StaffT }): React.ReactElement {
   );
 }
 
-function PayrollTab({ staff }: { staff: StaffT }): React.ReactElement {
+function PayrollTab({ staff, onSetPay }: { staff: StaffT; onSetPay: () => void }): React.ReactElement {
+  const monthKey = monthKeyOf(new Date());
   const [{ data, fetching, error }] = useQuery({
-    query: STAFF_PAYSLIPS_QUERY,
-    variables: { staffProfileId: staff.id },
+    query: STAFF_PAYSLIPS_QUERY, variables: { staffProfileId: staff.id },
+  });
+  const [{ data: pol }] = useQuery({ query: HR_POLICY_QUERY });
+  const [{ data: late }] = useQuery({
+    query: STAFF_LATENESS_PREVIEW_QUERY, variables: { staffProfileId: staff.id, monthKey },
   });
   const slips = data?.staffPayslips ?? [];
+  const p = pol?.hrPolicy;
+  const l = late?.staffLatenessPreview;
+  const salary = staff.monthlySalary;
+  // Indicative only — payroll computes the real rate from the run's working days.
+  const dayRate = salary != null && salary > 0 ? Math.round(salary / 26) : null;
 
   return (
     <View>
@@ -350,56 +352,61 @@ function PayrollTab({ staff }: { staff: StaffT }): React.ReactElement {
           <Body style={{ fontWeight: "700", flex: 1 }}>{STR.stfSalarySetup}</Body>
           <Badge text={STR.stfPrincipalOnly} tone="gold" />
         </View>
-        <Row
-          label={STR.stfMonthlySalary}
-          value={staff.monthlySalary != null ? `৳ ${bnNum(String(staff.monthlySalary))}` : "—"}
-        />
-        <Row label={STR.stfPaymentMethod} value={staff.paymentMethod ?? "—"} />
+        <Row label={STR.stfMonthlySalary} value={salary != null ? taka(salary) : "—"} />
+        <Row label={STR.stfPaymentMethod} value={staff.paymentMethod ? paymentMethodLabel(staff.paymentMethod) : "—"} />
+        {dayRate != null ? <Row label={STR.stfDayRate} value={taka(dayRate)} /> : null}
+        {staff.bankAccount ? <Row label={STR.bankAccount} value={staff.bankAccount} /> : null}
+        {salary == null ? <Notice tone="warn" message={STR.stfNoSalaryYet} /> : null}
+        {/* Setting pay used to mean leaving the hub entirely for the payroll screens —
+            the exact scatter this hub exists to end. */}
+        <Button title={STR.stfSetPay} variant="secondary" onPress={onSetPay} style={{ marginTop: space(2) }} />
+      </Card>
+
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfLatenessRule}</Body>
+        {p && !p.latenessRuleEnabled ? <Notice tone="info" message={STR.stfLatenessOff} /> : null}
+        <Muted>{STR.stfLatenessExplain}</Muted>
+        {l ? (
+          <>
+            <Divider />
+            <Row label={`${STR.stfLate} — ${monthLabel(monthKey)}`} value={`${bnNum(String(l.lateCount))} ${STR.stfDays}`} />
+            <Row label={STR.stfChargedDays} value={`${bnNum(String(l.chargedDays))} ${STR.stfDays}`} />
+            <Row label={STR.stfFromLeave} value={`${bnNum(String(l.paidFromLeave))} ${STR.stfDays}`} />
+            <Row label={STR.stfToSalary} value={`${bnNum(String(l.chargedToSalary))} ${STR.stfDays}`} />
+            {l.chargedDays === 0 ? (
+              <Muted>{`${STR.stfLatesUntilCharge}: ${bnNum(String(l.latesUntilNextCharge))}`}</Muted>
+            ) : null}
+          </>
+        ) : null}
       </Card>
 
       <Card>
         <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfPayslips}</Body>
-        {error ? (
-          <Notice tone="danger" message={friendlyError(error)} />
-        ) : fetching && slips.length === 0 ? (
-          <Loader label={STR.loading} />
-        ) : slips.length === 0 ? (
-          <EmptyState message={STR.stfNoPayslips} />
-        ) : (
-          slips.map((s) => (
-            <View key={s.id}>
-              <Divider />
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Body style={{ fontWeight: "700" }}>{monthLabel(s.monthKey)}</Body>
-                <Body style={{ fontWeight: "700" }}>{`৳ ${bnNum(String(s.netPay))}`}</Body>
+        {error ? <Notice tone="danger" message={friendlyError(error)} />
+          : fetching && slips.length === 0 ? <Loader label={STR.loading} />
+          : slips.length === 0 ? <EmptyState message={STR.stfNoPayslips} />
+          : slips.map((s) => (
+              <View key={s.id}>
+                <Divider />
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Body style={{ fontWeight: "700" }}>{monthLabel(s.monthKey)}</Body>
+                  <Body style={{ fontWeight: "700" }}>{taka(s.netPay)}</Body>
+                </View>
+                {s.deductions.length > 0 ? (
+                  <Muted>{`${STR.stfDeductions}: ${s.deductions.map((x) => `${x.type} ${taka(x.amount)}`).join(" · ")}`}</Muted>
+                ) : null}
               </View>
-              {s.deductions.length > 0 ? (
-                <Muted>
-                  {`${STR.stfDeductions}: ${s.deductions
-                    .map((x) => `${x.type} ৳${bnNum(String(x.amount))}`)
-                    .join(" · ")}`}
-                </Muted>
-              ) : null}
-            </View>
-          ))
-        )}
+            ))}
       </Card>
     </View>
   );
 }
 
 function DocumentsTab({
-  staff,
-  onIssue,
-  onConfirm,
-}: {
-  staff: StaffT;
-  onIssue: (kind: string) => void;
-  onConfirm: () => void;
-}): React.ReactElement {
+  staff, onIssue, onConfirm,
+}: { staff: StaffT; onIssue: (kind: string) => void; onConfirm: () => void }): React.ReactElement {
   const [{ data, fetching, error }, refetch] = useQuery({
-    query: STAFF_LETTERS_QUERY,
-    variables: { staffProfileId: staff.id },
+    query: STAFF_LETTERS_QUERY, variables: { staffProfileId: staff.id },
   });
   const [, voidLetter] = useMutation(VOID_STAFF_LETTER);
   const [voidingId, setVoidingId] = React.useState<string | null>(null);
@@ -413,17 +420,11 @@ function DocumentsTab({
 
   async function onVoid(letterId: string): Promise<void> {
     if (!reason.trim()) return;
-    setBusy(true);
-    setFailure(null);
+    setBusy(true); setFailure(null);
     const res = await voidLetter({ letterId, reason: reason.trim() });
     setBusy(false);
-    if (res.error) {
-      setFailure(friendlyError(res.error));
-      return;
-    }
-    setVoidingId(null);
-    setReason("");
-    setNotice(STR.stfLetterVoided);
+    if (res.error) { setFailure(friendlyError(res.error)); return; }
+    setVoidingId(null); setReason(""); setNotice(STR.stfLetterVoided);
     refetch({ requestPolicy: "network-only" });
   }
 
@@ -440,8 +441,12 @@ function DocumentsTab({
           <Button title={STR.stfLetterConfirmation} variant="secondary" onPress={() => onIssue("confirmation")} />
         ) : (
           <>
+            {/* The caption explains why the LETTER is unavailable; the button beside it
+                starts the confirmation that makes it available. Previously the caption
+                read as though the button itself were disabled. */}
+            <Muted>{STR.stfConfirmFirstNote}</Muted>
+            <View style={{ height: space(1) }} />
             <Button title={STR.stfConfirmTitle} variant="secondary" onPress={onConfirm} />
-            <Muted style={{ marginTop: space(1) }}>{STR.stfConfirmFirstNote}</Muted>
           </>
         )}
         <View style={{ height: space(2) }} />
@@ -450,52 +455,123 @@ function DocumentsTab({
 
       <Card>
         <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfIssuedLetters}</Body>
-        {error ? (
-          <Notice tone="danger" message={friendlyError(error)} />
-        ) : fetching && letters.length === 0 ? (
-          <Loader label={STR.loading} />
-        ) : letters.length === 0 ? (
-          <EmptyState message={STR.stfNoLetters} />
-        ) : (
-          letters.map((l) => (
-            <View key={l.id}>
-              <Divider />
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
-                <Body style={{ fontWeight: "700", flex: 1 }}>{letterKindLabel(l.kind)}</Body>
-                <Badge
-                  text={l.status === "void" ? STR.stfVoidLetter : STR.stfLetterIssued}
-                  tone={l.status === "void" ? "danger" : "ok"}
-                />
-              </View>
-              <Muted>{`${l.refNo} · ${fmtDate(l.letterDate)}`}</Muted>
-              <Muted>{`${l.designation} · ${l.salaryMode === "paid" ? STR.stfSalaryModePaid : STR.stfSalaryModeHonorary}`}</Muted>
-              {l.voidReason ? <Muted>{l.voidReason}</Muted> : null}
-              <View style={{ flexDirection: "row", gap: space(2), marginTop: space(1), flexWrap: "wrap" }}>
-                {PDF_SUPPORTED ? (
-                  <Button title={STR.stfViewPdf} variant="secondary" onPress={() => void openPdf(`/pdf/staff-letter/${l.id}`)} />
-                ) : null}
-                {l.status === "issued" ? (
-                  <Button title={STR.stfVoidLetter} variant="ghost" onPress={() => setVoidingId(l.id)} />
-                ) : null}
-              </View>
-              {voidingId === l.id ? (
-                <View style={{ marginTop: space(2) }}>
-                  <Field label={STR.stfVoidReasonPrompt} value={reason} onChangeText={setReason} />
-                  <Button
-                    title={STR.stfVoidLetter}
-                    variant="danger"
-                    loading={busy}
-                    disabled={!reason.trim()}
-                    onPress={() => void onVoid(l.id)}
-                  />
+        {error ? <Notice tone="danger" message={friendlyError(error)} />
+          : fetching && letters.length === 0 ? <Loader label={STR.loading} />
+          : letters.length === 0 ? <EmptyState message={STR.stfNoLetters} />
+          : letters.map((l) => (
+              <View key={l.id}>
+                <Divider />
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: space(2) }}>
+                  <Body style={{ fontWeight: "700", flex: 1 }}>{letterKindLabel(l.kind)}</Body>
+                  <Badge text={l.status === "void" ? STR.stfVoidLetter : STR.stfLetterIssued}
+                    tone={l.status === "void" ? "danger" : "ok"} />
                 </View>
-              ) : null}
-            </View>
-          ))
-        )}
+                <Muted>{`${l.refNo} · ${fmtDate(l.letterDate)}`}</Muted>
+                <Muted>{`${l.designation} · ${l.salaryMode === "paid" ? STR.stfSalaryModePaid : STR.stfSalaryModeHonorary}`}</Muted>
+                {l.voidReason ? <Muted>{l.voidReason}</Muted> : null}
+                <View style={{ flexDirection: "row", gap: space(2), marginTop: space(1), flexWrap: "wrap" }}>
+                  {PDF_SUPPORTED ? (
+                    <Button title={STR.stfViewPdf} variant="secondary" onPress={() => void openPdf(`/pdf/staff-letter/${l.id}`)} />
+                  ) : null}
+                  {l.status === "issued" ? (
+                    <Button title={STR.stfVoidLetter} variant="ghost" onPress={() => setVoidingId(l.id)} />
+                  ) : null}
+                </View>
+                {voidingId === l.id ? (
+                  <View style={{ marginTop: space(2) }}>
+                    <Field label={STR.stfVoidReasonPrompt} value={reason} onChangeText={setReason} />
+                    <Button title={STR.stfVoidLetter} variant="danger" loading={busy}
+                      disabled={!reason.trim()} onPress={() => void onVoid(l.id)} />
+                  </View>
+                ) : null}
+              </View>
+            ))}
         <Divider />
         <Muted>{STR.stfLetterFrozenNote}</Muted>
       </Card>
+    </View>
+  );
+}
+
+function PerformanceTab({ staff }: { staff: StaffT }): React.ReactElement {
+  const [{ data: appr, fetching }] = useQuery({
+    query: STAFF_APPRAISALS_QUERY, variables: { staffProfileId: staff.id },
+  });
+  const [{ data: cond }] = useQuery({
+    query: STAFF_CONDUCT_RECORDS_QUERY, variables: { staffProfileId: staff.id },
+  });
+  const [{ data: obs }] = useQuery({
+    query: STAFF_OBSERVATIONS_QUERY, variables: { staffProfileId: staff.id },
+  });
+  const appraisals = appr?.staffAppraisals ?? [];
+  const conduct = cond?.staffConductRecords ?? [];
+  const observations = obs?.staffObservations ?? [];
+  if (fetching && appraisals.length === 0) return <Loader label={STR.loading} />;
+
+  return (
+    <View>
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.hrMyAppraisals}</Body>
+        {appraisals.length === 0 ? <Muted>{STR.empty}</Muted> : appraisals.map((a) => (
+          <View key={a.id}>
+            <Divider />
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Body style={{ fontWeight: "700" }}>{bnNum(a.createdAt.slice(0, 4))}</Body>
+              <Badge text={appraisalStatusLabel(a.status)} tone={a.status === "signed_off" ? "ok" : "info"} />
+            </View>
+            {a.overallOutcome ? <Row label={STR.hrAppraisalOutcome} value={appraisalOutcomeLabel(a.overallOutcome)} /> : null}
+          </View>
+        ))}
+      </Card>
+
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.hrMyConduct}</Body>
+        {conduct.length === 0 ? <Muted>{STR.empty}</Muted> : conduct.map((c) => (
+          <View key={c.id}>
+            <Divider />
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Body style={{ fontWeight: "700" }}>{conductStageLabel(c.stage)}</Body>
+              <Badge text={conductRecordStatusLabel(c.status)} tone={c.status === "lapsed" ? "muted" : "info"} />
+            </View>
+            <Muted>{c.issue}</Muted>
+          </View>
+        ))}
+      </Card>
+
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfObservations}</Body>
+        {observations.length === 0 ? <Muted>{STR.empty}</Muted> : (
+          <Muted>{`${bnNum(String(observations.length))} ${STR.stfObservationCount}`}</Muted>
+        )}
+      </Card>
+    </View>
+  );
+}
+
+function ExitTab({ staff }: { staff: StaffT }): React.ReactElement {
+  const [{ data, fetching }] = useQuery({ query: OFFBOARDING_CASES_QUERY, variables: { status: null } });
+  const mine = (data?.offboardingCases ?? []).filter((c) => c.staffProfileId === staff.id);
+  if (fetching && mine.length === 0) return <Loader label={STR.loading} />;
+
+  return (
+    <View>
+      {mine.length === 0 ? (
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.stfNoExitCase}</Body>
+          {/* Starting an exit stays in the HR tab deliberately: it opens a clearance
+              workflow with a settlement, not a field on a profile. */}
+          <Muted>{STR.stfExitStartElsewhere}</Muted>
+        </Card>
+      ) : mine.map((c) => (
+        <Card key={c.id}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Body style={{ fontWeight: "700", flex: 1 }}>{offboardingTriggerLabel(c.trigger)}</Body>
+            <Badge text={offboardingStatusLabel(c.status)} tone={c.status === "settled" ? "ok" : "warn"} />
+          </View>
+          <Row label={STR.stfExitLastDay} value={fmtDate(c.lastWorkingDayKey)} />
+          <Row label={STR.stfExitAccessRevoked} value={c.accessRevoked ? STR.stfYes : STR.stfNo} />
+        </Card>
+      ))}
     </View>
   );
 }
@@ -507,28 +583,42 @@ function letterKindLabel(kind: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Screen
-// ---------------------------------------------------------------------------
 
 export default function StaffHubScreen({ route, navigation }: Props): React.ReactElement {
-  const { staff } = route.params;
+  const initial = route.params.staff;
   const { can } = useAuth();
   const nav = useNavigation<NavigationProp<AdminStackParamList>>();
+
+  const [{ data, error }, refetch] = useQuery({
+    query: STAFF_PROFILE_QUERY,
+    variables: { staffProfileId: initial.id },
+  });
+
+  // Any write on this screen navigates away and back, so refetching on focus is what
+  // makes a confirmation, an edit or a letter visible without a manual reload.
+  React.useEffect(
+    () => navigation.addListener("focus", () => refetch({ requestPolicy: "network-only" })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [navigation],
+  );
+
+  // The param paints the first frame; the live record replaces it the moment it lands.
+  const staff: StaffT = data?.staffProfile ?? initial;
 
   const canStaff = can("staff:manage");
   const canLeave = can("leave:manage");
   const canAttendance = can("attendance:manage");
   const canPayroll = can("payroll:manage");
+  const canPerformance = can("performance:manage");
 
-  // Only the tabs the caller can actually read are offered — the gate is here, and
-  // the server enforces it again. A tab the caller lacks is absent, not disabled:
-  // an inert control that never explains itself is worse than no control.
   const tabs: Array<{ key: TabKey; label: string }> = [
     { key: "profile", label: STR.stfTabProfile },
     ...(canAttendance ? [{ key: "attendance" as TabKey, label: STR.stfTabAttendance }] : []),
     ...(canLeave ? [{ key: "leave" as TabKey, label: STR.stfTabLeave }] : []),
     ...(canPayroll ? [{ key: "payroll" as TabKey, label: STR.stfTabPayroll }] : []),
     ...(canStaff ? [{ key: "documents" as TabKey, label: STR.stfTabDocuments }] : []),
+    ...(canPerformance ? [{ key: "performance" as TabKey, label: STR.stfTabPerformance }] : []),
+    ...(canStaff ? [{ key: "exit" as TabKey, label: STR.stfTabExit }] : []),
   ];
   const [tab, setTab] = React.useState<TabKey>("profile");
 
@@ -537,11 +627,10 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
       <H2>{staff.nameBn || staff.name}</H2>
       <Muted>{`${staff.designation ?? hrCategoryLabel(staff.category)} · ${STR.staffId} ${staff.schoolId}`}</Muted>
 
+      {error ? <Notice tone="warn" message={friendlyError(error)} /> : null}
+
       <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2), flexWrap: "wrap" }}>
-        <Badge
-          text={employmentStatusLabel(staff.employmentStatus)}
-          tone={staff.confirmationDate ? "ok" : "warn"}
-        />
+        <Badge text={employmentStatusLabel(staff.employmentStatus)} tone={staff.confirmationDate ? "ok" : "warn"} />
       </View>
 
       <View style={{ marginTop: space(3) }}>
@@ -556,16 +645,10 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfQuickActions}</Body>
           <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
-            <Button
-              title={STR.staffEditAction}
-              variant="secondary"
-              onPress={() => nav.navigate("StaffForm", { staff })}
-            />
+            <Button title={STR.staffEditAction} variant="secondary" onPress={() => nav.navigate("StaffForm", { staff })} />
+            <Button title={STR.resetPassword} variant="secondary" onPress={() => nav.navigate("StaffCredentials")} />
             {!staff.confirmationDate ? (
-              <Button
-                title={STR.stfConfirmTitle}
-                onPress={() => nav.navigate("ConfirmEmployment", { staff })}
-              />
+              <Button title={STR.stfConfirmTitle} onPress={() => nav.navigate("ConfirmEmployment", { staff })} />
             ) : null}
           </View>
         </Card>
@@ -574,7 +657,9 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
       {tab === "profile" ? <ProfileTab staff={staff} canLeave={canLeave} /> : null}
       {tab === "attendance" && canAttendance ? <AttendanceTab staff={staff} /> : null}
       {tab === "leave" && canLeave ? <LeaveTab staff={staff} /> : null}
-      {tab === "payroll" && canPayroll ? <PayrollTab staff={staff} /> : null}
+      {tab === "payroll" && canPayroll ? (
+        <PayrollTab staff={staff} onSetPay={() => navigation.navigate("StaffPayEdit", { staff })} />
+      ) : null}
       {tab === "documents" && canStaff ? (
         <DocumentsTab
           staff={staff}
@@ -582,6 +667,8 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
           onConfirm={() => navigation.navigate("ConfirmEmployment", { staff })}
         />
       ) : null}
+      {tab === "performance" && canPerformance ? <PerformanceTab staff={staff} /> : null}
+      {tab === "exit" && canStaff ? <ExitTab staff={staff} /> : null}
     </Screen>
   );
 }

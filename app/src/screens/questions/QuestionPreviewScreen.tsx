@@ -7,7 +7,7 @@ import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { QUESTION_QUERY, SET_QUESTION_IMPORTANT } from "../../graphql/operations";
+import { QUESTION_QUERY, SET_QUESTION_IMPORTANT, RESTORE_QUESTION } from "../../graphql/operations";
 import { QuestionEditSheet } from "../../components/QuestionEditSheet";
 import { useAuth } from "../../auth/AuthContext";
 import type { QuestionsStackParamList } from "../../navigation/types";
@@ -107,6 +107,7 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
   const [editing, setEditing] = useState(false);
   const [markBusy, setMarkBusy] = useState(false);
   const [, setImportant] = useMutation(SET_QUESTION_IMPORTANT);
+  const [, restore] = useMutation(RESTORE_QUESTION);
   const [notice, setNotice] = useState<string | null>(null);
   const basket = useBasket();
   const [{ data, fetching, error }, refetch] = useQuery({ query: QUESTION_QUERY, variables: { id } });
@@ -208,7 +209,31 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
             onCancel={() => setEditing(false)}
           />
         ) : (
-          <View style={{ marginTop: space(3), flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+          <View style={{ marginTop: space(3) }}>
+            {/* A RETIRED question is a different object to act on (D-#558). Editing or
+                marking one is meaningless while it is out of the bank, so the only offer
+                here is the way back — which is what made retire a one-way door until now. */}
+            {q.retired ? (
+              <View>
+                <Notice tone="warn" message={STR.qeRetiredNotice} />
+                <View style={{ marginTop: space(2) }}>
+                  <Button
+                    title={STR.qeRestore}
+                    loading={markBusy}
+                    onPress={() => {
+                      setMarkBusy(true);
+                      void restore({ artifactId: q.id }).then((res) => {
+                        setMarkBusy(false);
+                        if (res.error) { setNotice(friendlyError(res.error)); return; }
+                        setNotice(STR.qeRestored);
+                        refetch({ requestPolicy: "network-only" });
+                      });
+                    }}
+                  />
+                </View>
+              </View>
+            ) : (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
             <Button title={STR.qeEdit} variant="secondary" onPress={() => setEditing(true)} />
             {/* Office and the Principal mark from the bank at ANY time (QR-9, D-#550) — not
                 only while a review round is open, which is the reviewer’s path. */}
@@ -226,6 +251,8 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
                 });
               }}
             />
+            </View>
+            )}
           </View>
         )
       ) : null}

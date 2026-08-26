@@ -85,6 +85,26 @@ builder.queryField("staff", (t) =>
   }),
 );
 
+/**
+ * ONE staff record, live (SH-9). The hub used to render the row object it was handed as
+ * a navigation parameter — a snapshot taken when the row was tapped — so after any
+ * write it kept showing the old values. In the 2026-08-26 prod E2E test a confirmation
+ * succeeded server-side (status flipped, date stamped, letter issued, audit written)
+ * and the screen still read শিক্ষানবিশ with the স্থায়ীকরণ button waiting to be pressed
+ * a second time. Same `staff:manage` gate and same shape as the list; the hub now
+ * refetches this on focus.
+ */
+builder.queryField("staffProfile", (t) =>
+  t.field({
+    type: StaffRef,
+    nullable: true,
+    description: "One staff record by id, live (SH-9). Requires staff:manage.",
+    authScopes: { hasPermission: "staff:manage" },
+    args: { staffProfileId: t.arg.string({ required: true }) },
+    resolve: async (_root, args) => StaffProfile.findById(args.staffProfileId).lean(),
+  }),
+);
+
 // ---------------------------------------------------------------------------
 // Writes (D-#526) — create + edit a staff record from the app.
 //

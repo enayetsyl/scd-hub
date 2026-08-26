@@ -443,6 +443,7 @@ export type AdminStackParamList = {
   StaffJoin: undefined;
   IssueLetter: { staff: import("../graphql/operations").StaffT; kind: string };
   ConfirmEmployment: { staff: import("../graphql/operations").StaffT };
+  StaffPayEdit: { staff: import("../graphql/operations").StaffT };
   AssignClassTeacher: undefined;
   AssignSubjectTeacher: undefined;
   GroupMembers: undefined;
