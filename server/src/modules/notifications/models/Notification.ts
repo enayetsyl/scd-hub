@@ -78,6 +78,9 @@ export interface NotificationRefs {
    *  the VERSION row the event names; the comment id is set on the two comment kinds. */
   teachingNoteId?: string;
   teachingNoteCommentId?: string;
+  /** Guardian work claim (GC-1, D-#548..#551) — deep-link: the teacher roster pass /
+   *  the Office queue / the guardian record card, depending on the recipient. */
+  workClaimId?: string;
 }
 
 export interface INotification extends Document {
@@ -134,6 +137,10 @@ const RefsSchema = new Schema<NotificationRefs>(
     ctQuestionRequestId: { type: String },
     ctId: { type: String },
     leaveApplicationId: { type: String },
+    // MUST stay in lockstep with the interface above: a ref present on the TS type
+    // but absent here is silently STRIPPED by mongoose on write (the recorded
+    // ctQuestionRequestId bug). GC-1.
+    workClaimId: { type: String },
   },
   { _id: false },
 );
