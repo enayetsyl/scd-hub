@@ -37,6 +37,7 @@ import {
   workClaimViewOf2,
   workClaimViewOf,
   type GuardianWorkClaimView,
+  earliestClaimableDueDate,
 } from "../../trackers/services/WorkClaimView";
 // Re-exported so the guardian resolver keeps importing the claim view from the
 // service it already talks to; the LOGIC lives in one place (WorkClaimView).
@@ -736,6 +737,10 @@ export async function childHomework(
   }).lean()) as unknown as IHomeworkItem[];
   const itemById = new Map(items.map((i) => [i._id.toString(), i]));
 
+  // The claim window, resolved ONCE for the whole page (D-#553) — the same
+  // helper fileWorkClaim uses, so the button and the guard agree exactly.
+  const earliestClaimable = await earliestClaimableDueDate(new Date());
+
   // ONE query for every record's claim, not one per row — the D-#476 lesson.
   // Latest-first so the map keeps the most recent attempt per record.
   const claimRows = (await GuardianWorkClaim.find({
@@ -787,7 +792,7 @@ export async function childHomework(
       questionFileId: item.questionFileId ? item.questionFileId.toString() : null,
       answerFileId: r.answerFileId ? r.answerFileId.toString() : null,
       attachmentIds: (item.attachmentIds ?? []).map((id) => id.toString()),
-      canClaim: workClaimEligible(r.state, claimByRecord.get(idStr(r._id)), attemptsByRecord.get(idStr(r._id)) ?? 0),
+      canClaim: workClaimEligible(r.state, claimByRecord.get(idStr(r._id)), attemptsByRecord.get(idStr(r._id)) ?? 0, r.dueDate, earliestClaimable),
       claim: workClaimViewOf2(claimByRecord.get(idStr(r._id)), attemptsByRecord.get(idStr(r._id)) ?? 0),
     });
   }

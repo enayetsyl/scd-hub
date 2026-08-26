@@ -17,6 +17,7 @@ import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { GuardianWorkClaim } from "../models/GuardianWorkClaim";
 import {
   workClaimEligible,
+  earliestClaimableDueDate,
   workClaimViewOf2,
   type GuardianWorkClaimView,
 } from "./WorkClaimView";
@@ -281,6 +282,9 @@ export async function childAssignments(
   const itemById = new Map(items.map((i) => [i._id.toString(), i]));
   const today = atMidnight(asOf).getTime();
 
+  // The claim window, resolved ONCE for the whole list (D-#553).
+  const earliestClaimable = await earliestClaimableDueDate(new Date());
+
   // ONE query for every record's claim (the D-#476 lesson), latest first.
   const claimRows = (await GuardianWorkClaim.find({
     recordId: { $in: records.map((r) => r._id) },
@@ -305,7 +309,7 @@ export async function childAssignments(
         : 0;
     return {
       recordId: r._id.toString(),
-      canClaim: workClaimEligible(r.state as never, claimByRecord.get(r._id.toString()), attemptsByRecord.get(r._id.toString()) ?? 0),
+      canClaim: workClaimEligible(r.state as never, claimByRecord.get(r._id.toString()), attemptsByRecord.get(r._id.toString()) ?? 0, r.dueDate, earliestClaimable),
       claim: workClaimViewOf2(claimByRecord.get(r._id.toString()), attemptsByRecord.get(r._id.toString()) ?? 0),
       asId: r.asId,
       subject: item?.subject ?? "?",

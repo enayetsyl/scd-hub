@@ -20,6 +20,15 @@ const mockHolidayFind = jest.fn();
 
 // GC-3: childAssignments now batch-loads each record’s guardian claim. DB-free
 // suite, so the claim model is stubbed EMPTY — every row reports no claim.
+// GC-3: canClaim now resolves the claim WINDOW, which reads the school calendar.
+// DB-free suite — every day is a normal open day here; the window rule has its own
+// tests in workClaim.test.ts.
+jest.mock("../modules/routine/calendar", () => ({
+  // PARTIAL: dayTypeFor and the rest are used elsewhere in this suite — only the
+  // DB-touching resolveDayType is stubbed.
+  ...jest.requireActual("../modules/routine/calendar"),
+  resolveDayType: async () => "FULL",
+}));
 jest.mock("../modules/trackers/models/GuardianWorkClaim", () => ({
   GuardianWorkClaim: {
     find: () => ({ sort: () => ({ lean: () => Promise.resolve([]) }) }),
