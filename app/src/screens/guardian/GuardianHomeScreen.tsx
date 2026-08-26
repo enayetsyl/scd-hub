@@ -28,6 +28,7 @@ import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState, D
 import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { WorkClaimBlock } from "../../components/WorkClaimBlock";
 import { useRecordView } from "../../lib/useRecordView";
 import { useNotifications } from "../../state/NotificationContext";
 import { CHILD_TRAJECTORY_QUERY } from "../../graphql/wholePicture";
@@ -142,6 +143,15 @@ export default function GuardianHomeScreen(): React.ReactElement {
     variables: { studentId: sid },
     pause: !selected,
   });
+
+
+
+  // GC-3: filing a claim changes canClaim/claim on the row AND mutes its chase,
+  // so both reads behind করতে হবে are re-run.
+  const refetchTodo = React.useCallback(() => {
+    refetchHw({ requestPolicy: "network-only" });
+    refetchAsgn({ requestPolicy: "network-only" });
+  }, [refetchHw, refetchAsgn]);
   const [feeQ, refetchFee] = useQuery({
     query: CHILD_FEE_DUE_QUERY,
     variables: { studentId: sid },
@@ -493,7 +503,8 @@ export default function GuardianHomeScreen(): React.ReactElement {
           <Card>
             <Body style={{ fontWeight: "700" }}>{STR.gpTodo}</Body>
             {todoHomework.map((r) => (
-              <Pressable key={r.recordId} accessibilityRole="button" onPress={goHomework} style={{ marginTop: space(2) }}>
+              <View key={r.recordId}>
+              <Pressable accessibilityRole="button" onPress={goHomework} style={{ marginTop: space(2) }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
                   <Body style={{ fontWeight: "700", flexShrink: 1 }}>{subjectLabel(r.subject)}</Body>
                   <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "warn"} />
@@ -505,9 +516,23 @@ export default function GuardianHomeScreen(): React.ReactElement {
                   {r.questionFileId || r.attachmentIds.length > 0 ? ` · 📎 ${STR.gpQuestionFile}` : ""}
                 </Muted>
               </Pressable>
+              {/* GC-3: করতে হবে is the FIRST card a parent sees, so the control
+                  belongs here too. Outside the Pressable, which navigates away. */}
+              <WorkClaimBlock
+                studentId={selected!.studentId}
+                tracker="HOMEWORK"
+                recordId={r.recordId}
+                canClaim={r.canClaim}
+                claim={r.claim}
+                subjectLabel={subjectLabel(r.subject)}
+                workId={r.hwId}
+                onChanged={refetchTodo}
+              />
+              </View>
             ))}
             {todoAssignments.map((a) => (
-              <Pressable key={a.recordId} accessibilityRole="button" onPress={goAssignments} style={{ marginTop: space(2) }}>
+              <View key={a.recordId}>
+              <Pressable accessibilityRole="button" onPress={goAssignments} style={{ marginTop: space(2) }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
                   <Body style={{ fontWeight: "700", flexShrink: 1 }}>
                     {hwSubjectLabel(a.subject)} · {STR.gpAssignments}
@@ -522,6 +547,17 @@ export default function GuardianHomeScreen(): React.ReactElement {
                   {a.dueDate ? `${STR.asDueBy} ${isoDateLabel(a.dueDate.slice(0, 10))}` : a.asId}
                 </Muted>
               </Pressable>
+              <WorkClaimBlock
+                studentId={selected!.studentId}
+                tracker="ASSIGNMENT"
+                recordId={a.recordId}
+                canClaim={a.canClaim}
+                claim={a.claim}
+                subjectLabel={hwSubjectLabel(a.subject)}
+                workId={a.asId}
+                onChanged={refetchTodo}
+              />
+              </View>
             ))}
           </Card>
         ) : null}
