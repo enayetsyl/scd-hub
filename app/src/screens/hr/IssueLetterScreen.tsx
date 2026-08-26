@@ -45,6 +45,19 @@ function todayKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/**
+ * Digits only. `keyboardType` is a hint on web, not a restriction — an unparsable
+ * salary becomes NaN, serialises to null and reaches the server as "not provided",
+ * which is how a letter came to promise a figure the record never stored.
+ */
+function parseAmount(raw: string): number | null {
+  const t = raw.trim();
+  if (t === "") return null;
+  if (!/^\d+(\.\d+)?$/.test(t)) return null;
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 function kindLabel(kind: string): string {
   if (kind === "appointment") return STR.stfLetterAppointment;
   if (kind === "confirmation") return STR.stfLetterConfirmation;
@@ -74,7 +87,7 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
     designation.trim() !== "" &&
     /^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom) &&
     /^\d{4}-\d{2}-\d{2}$/.test(letterDate) &&
-    (salaryMode === "honorary" || Number(salary) > 0);
+    (salaryMode === "honorary" || parseAmount(salary) !== null);
 
   async function onSubmit(): Promise<void> {
     setBusy(true);
@@ -85,7 +98,7 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
       effectiveFrom,
       salaryMode,
       letterDate,
-      monthlySalary: salaryMode === "paid" ? Number(salary) : null,
+      monthlySalary: salaryMode === "paid" ? parseAmount(salary) : null,
       designation: designation.trim(),
       weeklyHours: weeklyHours.trim() || null,
       extraText: extraText.trim() || null,

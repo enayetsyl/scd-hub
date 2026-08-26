@@ -144,6 +144,37 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
       monthlySalary,
     },
   });
+
+  /**
+   * The letter IS the agreed terms, so the figure it promises must reach the record
+   * that pays it. Found in the 2026-08-26 prod E2E test: a letter was issued promising
+   * Tk. 12,345 against a profile with NO salary, because the override lived only in the
+   * snapshot. Nothing looked wrong — the letter was correct, the record was silently
+   * incomplete, and payroll would have computed nothing for that person.
+   *
+   * So a PAID letter whose figure the profile does not already carry writes it back,
+   * audited under the ordinary pay-change kind (this is a pay change; it just arrived
+   * through the letter). The snapshot is untouched either way — it stays frozen.
+   * An honorary letter writes nothing: it promises no figure to honour.
+   */
+  if (input.salaryMode === "paid" && monthlySalary !== null && staff.monthlySalary !== monthlySalary) {
+    const previous = staff.monthlySalary ?? null;
+    await StaffProfile.updateOne({ _id: staff._id }, { $set: { monthlySalary } });
+    await writeAudit({
+      eventKind: "STAFF_PAY_SET",
+      actorId: input.actorId,
+      targetId: staff._id,
+      targetKind: "StaffProfile",
+      meta: {
+        monthlySalary,
+        previous,
+        via: "letter",
+        letterRefNo: doc.refNo,
+        reason: "the salary a paid letter promises is written back to the record that pays it",
+      },
+    });
+  }
+
   return doc;
 }
 
