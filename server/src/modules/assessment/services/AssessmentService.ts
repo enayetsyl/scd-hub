@@ -91,9 +91,22 @@ export async function createSet(input: CreateSetInput): Promise<CreateSetResult>
  *
  * The message is deliberately Bangla-first — it reaches the teacher's screen verbatim.
  */
-function assertPublished(artifact: { reviewStatus?: string; envelopeJson?: unknown }): void {
+function assertPublished(artifact: {
+  reviewStatus?: string;
+  retiredAt?: Date | null;
+  envelopeJson?: unknown;
+}): void {
   if (artifact.reviewStatus !== "gold") {
     throw new Error("এই প্রশ্নটি এখনও প্রকাশিত হয়নি — প্রকাশিত প্রশ্নই কেবল সেটে যোগ করা যায়।");
+  }
+  // RETIRED is a separate refusal from unpublished, and it has to be checked separately:
+  // a retired question keeps whatever `reviewStatus` it had, so a question retired while
+  // `gold` sails straight through the publish check (D-#566). D-#548 claimed retiring hides
+  // a question from "the bank, the assign picker and set assembly" — the first two were
+  // built, this third one never was, so a question retired for having a WRONG ANSWER could
+  // still be assembled into a new paper. Found by driving the app, not by a test.
+  if (artifact.retiredAt != null) {
+    throw new Error("এই প্রশ্নটি বাতিল করা হয়েছে — এটি নতুন সেটে যোগ করা যাবে না।");
   }
 }
 
