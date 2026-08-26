@@ -37,6 +37,11 @@ import { RoutineSlot, type IRoutineSlot } from "../models/RoutineSlot";
 import { RoutineSubstitution } from "../models/RoutineSubstitution";
 import { enrichRoutineSlots, type SlotViewFields } from "../slotView";
 import { resolveDayType, dayTypeAdmitsTrack } from "../calendar";
+import {
+  returningStudentsFor,
+  previousSchoolDayKey,
+  type ReturningStudent,
+} from "../../trackers/services/ReturnFromLeaveService";
 import { homeworkClassOverview } from "../../trackers/services/HomeworkSummaryService";
 import { myMarkingUnits } from "../../attendance/services/StudentAttendanceService";
 import { classPresenceForDate, type ClassPresence } from "../../attendance/services/AttendanceReportService";
@@ -75,6 +80,10 @@ export interface MyDayResult {
   /** The sections the caller is CLASS TEACHER of (D-#42 daily coordinator) — the
    *  Today dashboard names the duty so the reconcile alerts have a face. */
   classTeacherOf: ClassTeacherSection[];
+  /** RL-1 (D-#555/#556): students back today after an absence, with the work to
+   *  hand back out and the work to collect. Derived every load — no stored row.
+   *  Empty for a caller with no reach; NEVER an error (the D-#535 rule). */
+  returningStudents: ReturningStudent[];
 }
 
 export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayResult> {
@@ -252,5 +261,48 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
     ? await classPresenceForDate(dateKey)
     : [];
 
-  return { date: dateKey, dayType, slots, homework, attendancePending, alerts, assignmentPrep, classPresence, classTeacherOf };
+  // 6. RL-1 — who is back today, and what to ask them for (D-#555/#556).
+  //    Scope follows the caller's REACH, and degrades to [] rather than refusing:
+  //      class teacher  → the whole section, every subject
+  //      subject teacher → only classes they have a period with TODAY, and only
+  //                        their own subject's items — nobody is handed a list
+  //                        they have no lesson in which to act on
+  //      anyone else    → []
+  let returningStudents: ReturningStudent[] = [];
+  try {
+    const ctSectionIds = classTeacherOf.map((s) => s.sectionId);
+    if (ctSectionIds.length > 0) {
+      const prevKey = await previousSchoolDayKey(d, async (probe) => {
+        const dt = await resolveDayType(probe);
+        return dt !== "OFF" && dt !== "HOLIDAY";
+      });
+      returningStudents = await returningStudentsFor(ctSectionIds, dateKey, prevKey);
+    } else if (slots.length > 0) {
+      // Subject teacher: today's own periods give both the sections and the subjects.
+      // Section slots only: a Quran/Arabic SubjectGroup slot has no section behind
+      // it (groupType "subjectgroup"), and this card is section-scoped.
+      const sectionSlots = slots.filter((sl) => sl.groupType === "section");
+      const todaySectionIds = [...new Set(sectionSlots.map((sl) => sl.groupId?.toString()).filter(Boolean))] as string[];
+      const todaySubjects = [...new Set(sectionSlots.map((sl) => sl.subject).filter(Boolean))] as string[];
+      if (todaySectionIds.length > 0) {
+        const prevKey = await previousSchoolDayKey(d, async (probe) => {
+          const dt = await resolveDayType(probe);
+          return dt !== "OFF" && dt !== "HOLIDAY";
+        });
+        returningStudents = await returningStudentsFor(
+          todaySectionIds,
+          dateKey,
+          prevKey,
+          todaySubjects,
+        );
+      }
+    }
+  } catch (err) {
+    // A dashboard field that can refuse is a field that can white-screen the app
+    // (D-#535). An empty card is always better than a broken navigator.
+    console.error("[myDay] returning-students card failed; rendering empty:", err);
+    returningStudents = [];
+  }
+
+  return { date: dateKey, dayType, slots, homework, attendancePending, alerts, assignmentPrep, classPresence, classTeacherOf, returningStudents };
 }

@@ -22,6 +22,8 @@
  *     (the GP-1 link gate) — AJ-8.
  */
 import { builder } from "../../../schema";
+import type { GuardianWorkClaimView } from "../services/WorkClaimView";
+import { GuardianWorkClaimGqlRef } from "./workClaim";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
 import type { Role, LifecycleState } from "@scd/shared";
@@ -746,6 +748,9 @@ interface ChildAssignmentShape {
   description?: string | null;
   /** Delivery-pass attachments on the item (≤5, D-#298) — empty when none. */
   attachmentIds?: string[];
+  /** GC-3 — the guardian “done at home” control (D-#551/#553). */
+  canClaim?: boolean;
+  claim?: GuardianWorkClaimView | null;
 }
 const ChildAssignmentRef = builder.objectRef<ChildAssignmentShape>("ChildAssignment");
 ChildAssignmentRef.implement({
@@ -766,6 +771,12 @@ ChildAssignmentRef.implement({
     feedback: t.string({ nullable: true, resolve: (r) => r.feedback }),
     isResubmission: t.exposeBoolean("isResubmission"),
     description: t.string({ nullable: true, resolve: (r) => r.description ?? null }),
+    canClaim: t.boolean({ resolve: (r) => r.canClaim ?? false }),
+    claim: t.field({
+      type: GuardianWorkClaimGqlRef,
+      nullable: true,
+      resolve: (r) => r.claim ?? null,
+    }),
     attachmentIds: t.field({ type: ["String"], resolve: (r) => r.attachmentIds ?? [] }),
   }),
 });

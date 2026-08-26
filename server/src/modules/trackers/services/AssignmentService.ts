@@ -21,6 +21,8 @@
  * Write-scope (assertCanWrite) is enforced by the resolver, not here.
  */
 import type { LifecycleState, HwSubject } from "@scd/shared";
+import { acceptClaimsForRecords } from "./WorkClaimService";
+import { emitWorkClaimResolved } from "../../notifications/services/emitters";
 import { AS_WEEKLY_CEILING_MIN } from "@scd/shared";
 import { Types } from "mongoose";
 import { StoredFile } from "../../platform/models/StoredFile";
@@ -677,6 +679,15 @@ export async function transitionAssignmentRecord(
   rec.state = to;
   rec.stateDates.push({ state: to, at, by: new Types.ObjectId(actorId) });
   await rec.save();
+
+  // D-#552: the assignment twin of the homework hook — marking a student
+  // submitted through any path closes an open guardian claim as ACCEPTED,
+  // with no second tap for the teacher.
+  if (to === "SUBMITTED") {
+    const accepted = await acceptClaimsForRecords([rec._id], actorId, at);
+    for (const claim of accepted) await emitWorkClaimResolved(claim);
+  }
+
   return transitionShape(rec);
 }
 

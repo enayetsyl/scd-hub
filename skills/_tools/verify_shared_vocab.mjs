@@ -124,7 +124,7 @@ check("attendance: PRINCIPAL+OFFICE manage (not mark), TEACHER mark (not manage)
 console.log("=== C.5 Notification kinds + own-row posture (D-#72–#75) ===");
 check("NOTIFICATION_KIND_LABELS_BN total", total(V.NOTIFICATION_KIND_LABELS_BN, V.NOTIFICATION_KINDS));
 check("NOTIFICATION_KIND_LABELS_EN total", total(V.NOTIFICATION_KIND_LABELS_EN, V.NOTIFICATION_KINDS));
-check("kinds are exactly the 8 phase-1 kinds + 2 library kinds + 1 class-test kind + 1 vocab kind + 1 student-comment kind + 5 classroom-observation kinds + 1 finance kind + 2 saturday-revision kinds + 1 homework-chase kind + 1 assignment-chase kind + 3 homework-confirm kinds + 2 print kinds + 2 ct-question kinds + 2 ct-result kinds + 1 upcoming-class-test kind (D-#472) (D-#72/#74/#84/#122; VC-4 += VOCAB_RESULT, D-#154; CM-2 += STUDENT_COMMENT, D-#172; CO-3 += OBSERVATION_*; CO-8 += OBSERVATION_READY_TO_PUBLISH, D-#271; FIN-2B += FINANCE_FEE_DUE, D-#227; SR-2 += SR_ABSENT/SR_DIGEST, D-#244; HW per-chase += HW_CHASE, D-#260; AS-T4 per-chase += ASSIGNMENT_CHASE, D-#88/#94; HW pending-confirm += HW_PENDING_REMINDER/HW_PENDING_ESCALATION; auto-issue += HW_AUTO_ISSUED, D-#314; PQ-5 += PRINT_DELIVERED, D-#281; web-push += PRINT_REQUESTED, D-#296; CT question loop += CT_QUESTION_REVIEW/CT_QUESTION_OFFICE, D-#342; CT-8 submit/approve loop += CT_RESULT_SUBMITTED/CT_RESULT_PUBLISHED; MR-6 += MONTHLY_REPORT; weekly digest += HW_WEEKLY_DIGEST, D-#452)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","HW_CHASE","ASSIGNMENT_CHASE","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE","CLASS_TEST_RESULT","CLASS_TEST_UPCOMING","VOCAB_RESULT","STUDENT_COMMENT","MONTHLY_REPORT","OBSERVATION_RELEASED","OBSERVATION_RESPONSE_REMINDER","OBSERVATION_ESCALATED","OBSERVATION_RESPONDED","OBSERVATION_READY_TO_PUBLISH","FINANCE_FEE_DUE","SR_ABSENT","SR_DIGEST","HW_PENDING_REMINDER","HW_PENDING_ESCALATION","HW_AUTO_ISSUED","CT_QUESTION_REVIEW","CT_QUESTION_OFFICE","CT_RESULT_SUBMITTED","CT_RESULT_PUBLISHED","PRINT_DELIVERED","PRINT_REQUESTED","STAFF_LEAVE_SUBMITTED","HW_WEEKLY_DIGEST","TEACHING_NOTE_PUBLISHED","TEACHING_NOTE_COMMENT","TEACHING_NOTE_COMMENT_ADDRESSED"]));
+check("kinds are exactly the 8 phase-1 kinds + 2 library kinds + 1 class-test kind + 1 vocab kind + 1 student-comment kind + 5 classroom-observation kinds + 1 finance kind + 2 saturday-revision kinds + 1 homework-chase kind + 1 assignment-chase kind + 3 homework-confirm kinds + 2 print kinds + 2 ct-question kinds + 2 ct-result kinds + 1 upcoming-class-test kind (D-#472) (D-#72/#74/#84/#122; VC-4 += VOCAB_RESULT, D-#154; CM-2 += STUDENT_COMMENT, D-#172; CO-3 += OBSERVATION_*; CO-8 += OBSERVATION_READY_TO_PUBLISH, D-#271; FIN-2B += FINANCE_FEE_DUE, D-#227; SR-2 += SR_ABSENT/SR_DIGEST, D-#244; HW per-chase += HW_CHASE, D-#260; AS-T4 per-chase += ASSIGNMENT_CHASE, D-#88/#94; HW pending-confirm += HW_PENDING_REMINDER/HW_PENDING_ESCALATION; auto-issue += HW_AUTO_ISSUED, D-#314; PQ-5 += PRINT_DELIVERED, D-#281; web-push += PRINT_REQUESTED, D-#296; CT question loop += CT_QUESTION_REVIEW/CT_QUESTION_OFFICE, D-#342; CT-8 submit/approve loop += CT_RESULT_SUBMITTED/CT_RESULT_PUBLISHED; MR-6 += MONTHLY_REPORT; weekly digest += HW_WEEKLY_DIGEST, D-#452; guardian work claim += WORK_CLAIM_FILED/WORK_CLAIM_ESCALATED/WORK_CLAIM_RESOLVED, D-#551..#554; RL-2 += STUDENT_RETURNED, D-#556)", eq(V.NOTIFICATION_KINDS, ["BELL_REMINDER","ATTENDANCE_REMINDER","CLASS_NOTE_PROMPT","CLASS_NOTE_ESCALATION","CLASS_NOTE_PUBLISHED","HW_PARENT_COMMS","HW_CHASE","ASSIGNMENT_CHASE","REVIEW_ASSIGNED","COVER_ASSIGNED","LIBRARY_DUE_SOON","LIBRARY_OVERDUE","CLASS_TEST_RESULT","CLASS_TEST_UPCOMING","VOCAB_RESULT","STUDENT_COMMENT","MONTHLY_REPORT","OBSERVATION_RELEASED","OBSERVATION_RESPONSE_REMINDER","OBSERVATION_ESCALATED","OBSERVATION_RESPONDED","OBSERVATION_READY_TO_PUBLISH","FINANCE_FEE_DUE","SR_ABSENT","SR_DIGEST","HW_PENDING_REMINDER","HW_PENDING_ESCALATION","HW_AUTO_ISSUED","CT_QUESTION_REVIEW","CT_QUESTION_OFFICE","CT_RESULT_SUBMITTED","CT_RESULT_PUBLISHED","PRINT_DELIVERED","PRINT_REQUESTED","STAFF_LEAVE_SUBMITTED","HW_WEEKLY_DIGEST","TEACHING_NOTE_PUBLISHED","TEACHING_NOTE_COMMENT","TEACHING_NOTE_COMMENT_ADDRESSED","WORK_CLAIM_FILED","WORK_CLAIM_ESCALATED","WORK_CLAIM_RESOLVED","STUDENT_RETURNED"]));
 check("homework.weeklyDigest.* template keys registered (title + body + wa — MT registry, D-#131/#452)",
   ["homework.weeklyDigest.title","homework.weeklyDigest.body","homework.weeklyDigest.wa"].every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k) && V.MESSAGE_TEMPLATE_REGISTRY[k]));
 check("STAFF_LEAVE_SUBMITTED is a registered NotificationKind (leave submit → approvers, extends §C.5, owner 2026-07-26)", V.NOTIFICATION_KINDS.includes("STAFF_LEAVE_SUBMITTED"));
@@ -675,6 +675,32 @@ check("exam:manage held by PRINCIPAL + OFFICE only; TEACHER read-only; GUARDIAN 
   V.roleHasPermission("PRINCIPAL","exam:manage") && V.roleHasPermission("OFFICE","exam:manage")
   && !V.roleHasPermission("TEACHER","exam:manage") && V.roleHasPermission("TEACHER","exam:read")
   && !V.roleHasPermission("GUARDIAN","exam:read") && !V.roleHasPermission("GUARDIAN","exam:manage"));
+
+// --- Guardian work claim + return-from-leave (GC-1/RL-2, D-#551..#557) ------
+// App-native vocabulary: no envelope twin, no import-contract sync (D-#46/#52).
+check("WORK_CLAIM_TRACKER_LABELS_BN total", total(V.WORK_CLAIM_TRACKER_LABELS_BN, V.WORK_CLAIM_TRACKERS));
+check("WORK_CLAIM_TRACKER_LABELS_EN total", total(V.WORK_CLAIM_TRACKER_LABELS_EN, V.WORK_CLAIM_TRACKERS));
+check("WORK_CLAIM_STATUS_LABELS_BN total", total(V.WORK_CLAIM_STATUS_LABELS_BN, V.WORK_CLAIM_STATUSES));
+check("WORK_CLAIM_STATUS_LABELS_EN total", total(V.WORK_CLAIM_STATUS_LABELS_EN, V.WORK_CLAIM_STATUSES));
+check("WORK_CLAIM_REJECT_REASON_LABELS_BN total", total(V.WORK_CLAIM_REJECT_REASON_LABELS_BN, V.WORK_CLAIM_REJECT_REASONS));
+check("WORK_CLAIM_REJECT_REASON_LABELS_EN total", total(V.WORK_CLAIM_REJECT_REASON_LABELS_EN, V.WORK_CLAIM_REJECT_REASONS));
+check("work-claim statuses are exactly PENDING/ACCEPTED/REJECTED/EXPIRED (D-#552)",
+  eq(V.WORK_CLAIM_STATUSES, ["PENDING", "ACCEPTED", "REJECTED", "EXPIRED"]));
+check("a claim is only ever filable against DUE or CHASE — GIVEN is not late yet and ABSENT_REDELIVER means the child never received the work (D-#553)",
+  eq(V.WORK_CLAIM_ELIGIBLE_STATES, ["DUE", "CHASE"]));
+check("every eligible state is a real LifecycleState (D-#37 mirror)",
+  V.WORK_CLAIM_ELIGIBLE_STATES.every((st) => V.LIFECYCLE_STATES.includes(st)));
+check("the same-day rungs are 11:30 (Office) then 13:00 (Principal), in that order — owner ruling 2026-08-25, D-#554",
+  V.WORK_CLAIM_OFFICE_RUNG_MIN === 690 && V.WORK_CLAIM_PRINCIPAL_RUNG_MIN === 780 &&
+  V.WORK_CLAIM_OFFICE_RUNG_MIN < V.WORK_CLAIM_PRINCIPAL_RUNG_MIN);
+check("one re-claim only, and a 7-school-day window (D-#553)",
+  V.WORK_CLAIM_MAX_ATTEMPTS === 2 && V.WORK_CLAIM_WINDOW_SCHOOL_DAYS === 7);
+check("NO work-claim permission is added — guardians file under guardian:read_child, teachers resolve under tracker:write, Office reads under tracker:read (D-#551/#554)",
+  !V.PERMISSIONS.some((p) => p.startsWith("claim") || p.startsWith("workclaim") || p.startsWith("work_claim")));
+check("OFFICE still holds NO tracker permission — the Office nudges and can never resolve a claim (D-#554)",
+  !V.ROLE_PERMISSIONS.OFFICE.some((p) => p.startsWith("tracker:")));
+check("GUARDIAN gains no new permission for filing a claim (D-#551)",
+  eq(V.ROLE_PERMISSIONS.GUARDIAN, ["guardian:read_child"]));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

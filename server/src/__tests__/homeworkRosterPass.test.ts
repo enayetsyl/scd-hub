@@ -13,6 +13,15 @@ const mockRecFind = jest.fn();
 const mockEmitChase = jest.fn().mockResolvedValue(undefined);
 const mockEmitParentComms = jest.fn().mockResolvedValue(undefined);
 
+// GC-2: the submit edge now closes any open guardian claim, and the chase edge
+// asks whether one is open. This suite is DB-free, so the claim model is stubbed
+// EMPTY — without it every transition would buffer against a dead connection.
+jest.mock("../modules/trackers/models/GuardianWorkClaim", () => ({
+  GuardianWorkClaim: {
+    find: () => Promise.resolve([]),
+    exists: () => Promise.resolve(null),
+  },
+}));
 jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
   HomeworkStudentRecord: {
     findById: (id: unknown) => mockRecFindById(id),

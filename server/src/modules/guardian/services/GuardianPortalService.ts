@@ -31,6 +31,17 @@ import { StoredFile } from "../../platform/models/StoredFile";
 import { parseDateKey } from "../../attendance/dates";
 import { Guardian } from "../../foundation/models/Guardian";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
+import { GuardianWorkClaim } from "../../trackers/models/GuardianWorkClaim";
+import {
+  workClaimEligible,
+  workClaimViewOf2,
+  workClaimViewOf,
+  type GuardianWorkClaimView,
+} from "../../trackers/services/WorkClaimView";
+// Re-exported so the guardian resolver keeps importing the claim view from the
+// service it already talks to; the LOGIC lives in one place (WorkClaimView).
+export { workClaimViewOf };
+export type { GuardianWorkClaimView };
 import { Student, type IStudent } from "../../foundation/models/Student";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
@@ -171,9 +182,15 @@ export interface GuardianHomeworkRecord {
   /** StoredFile ids — populated by GP-A; null when no file is attached. */
   questionFileId: string | null;
   answerFileId: string | null;
+  /** GC-3: may a guardian file "done at home" against this record right now?
+   *  Server-computed so the app never has to know the D-#553 rule. */
+  canClaim: boolean;
+  /** The latest claim on this record, if any. */
+  claim: GuardianWorkClaimView | null;
   /** Declare-form multi-attachments on the item (≤5) — empty when none. */
   attachmentIds: string[];
 }
+
 
 export interface GuardianAttendanceDay {
   dateKey: string;
@@ -416,6 +433,7 @@ export async function childRoutine(studentId: string, date: Date): Promise<Guard
 
 /** Every active HolidayException overlapping the window, in one query. */
 async function holidaysForRange(from: Date, to: Date) {
+
   const { start } = dayBounds(from);
   const { end } = dayBounds(to);
   return HolidayException.find({
@@ -600,6 +618,7 @@ async function toGuardianClassNotes(notes: IClassNote[]): Promise<GuardianClassN
       : [];
   const itemById = new Map(items.map((i) => [i._id.toString(), i]));
 
+
   return notes.map((n) => {
     const item = n.homeworkItemId ? itemById.get(n.homeworkItemId.toString()) : undefined;
     const subject = n.subject as RoutineSubject;
@@ -700,6 +719,9 @@ export async function childClassNotesRange(
 // childHomework (GP-1 §4.4) — FULL lifecycle, resubmission chain via hwId
 // ---------------------------------------------------------------------------
 
+
+
+
 export async function childHomework(
   studentId: string,
   from: Date,
@@ -713,6 +735,21 @@ export async function childHomework(
     _id: { $in: itemIds },
   }).lean()) as unknown as IHomeworkItem[];
   const itemById = new Map(items.map((i) => [i._id.toString(), i]));
+
+  // ONE query for every record's claim, not one per row — the D-#476 lesson.
+  // Latest-first so the map keeps the most recent attempt per record.
+  const claimRows = (await GuardianWorkClaim.find({
+    recordId: { $in: records.map((r) => r._id) },
+  })
+    .sort({ claimedAt: -1 })
+    .lean()) as unknown as Array<Record<string, any>>;
+  const claimByRecord = new Map<string, Record<string, any>>();
+  const attemptsByRecord = new Map<string, number>();
+  for (const c of claimRows) {
+    const key = c.recordId.toString();
+    if (!claimByRecord.has(key)) claimByRecord.set(key, c);
+    attemptsByRecord.set(key, (attemptsByRecord.get(key) ?? 0) + 1);
+  }
 
   const { start } = dayBounds(from);
   const { end } = dayBounds(to);
@@ -750,6 +787,8 @@ export async function childHomework(
       questionFileId: item.questionFileId ? item.questionFileId.toString() : null,
       answerFileId: r.answerFileId ? r.answerFileId.toString() : null,
       attachmentIds: (item.attachmentIds ?? []).map((id) => id.toString()),
+      canClaim: workClaimEligible(r.state, claimByRecord.get(idStr(r._id)), attemptsByRecord.get(idStr(r._id)) ?? 0),
+      claim: workClaimViewOf2(claimByRecord.get(idStr(r._id)), attemptsByRecord.get(idStr(r._id)) ?? 0),
     });
   }
 

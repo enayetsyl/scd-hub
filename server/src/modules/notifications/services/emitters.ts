@@ -14,7 +14,8 @@
  * Identity-plane only (reads roster/guardian linkage to resolve recipients);
  * no corpus path (N5.1).
  */
-import { ROUTINE_SUBJECT_LABELS_BN, NOTIFICATION_KINDS } from "@scd/shared";
+import { ROUTINE_SUBJECT_LABELS_BN, NOTIFICATION_KINDS, WORK_CLAIM_REJECT_REASON_LABELS_BN } from "@scd/shared";
+import type { WorkClaimRejectReason } from "@scd/shared";
 import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { Student } from "../../foundation/models/Student";
@@ -56,6 +57,20 @@ const dedupeKeys = {
    *  re-chasing the same student the same day is a no-op for the inbox (once/day). */
   hwGuardianChase: (hwItemId: string, studentId: string, dateKey: string, guardianId: string) =>
     `HWCG:${hwItemId}:${studentId}:${dateKey}:${guardianId}`,
+  /** Per claim: the teacher is told once when it is filed. The Office NUDGE reuses
+   *  this family with a day suffix so a nudge can re-notify without colliding. */
+  workClaimFiled: (claimId: string) => `WCF:${claimId}`,
+  workClaimNudged: (claimId: string, dateKey: string) => `WCN:${claimId}:${dateKey}`,
+  /** ONE digest row per recipient per rung per day (D-#554) — never one per claim.
+   *  At hours-scale escalation the per-claim shape would put N rows a day into the
+   *  Principal's inbox instead of one, and an unreadable inbox is an ignored one. */
+  workClaimEscalated: (dateKey: string, rung: string, recipientId: string) =>
+    `WCE:${dateKey}:${rung}:${recipientId}`,
+  /** Per claim: the family is told exactly once how it ended. */
+  workClaimResolved: (claimId: string) => `WCR:${claimId}`,
+  /** RL-2: one return notice per student per day per teacher (D-#556). */
+  studentReturned: (dateKey: string, studentId: string, teacherId: string) =>
+    `SRET:${dateKey}:${studentId}:${teacherId}`,
   /** Per assignment: re-running the host mutation can't double-notify. */
   reviewAssigned: (assignmentId: string) => `REV:${assignmentId}`,
   /** One key per (reviewer, batch) — a bulk question assign notifies ONCE, not per question. */
@@ -1517,6 +1532,202 @@ export async function emitTeachingNoteCommentAddressed(
         teachingNoteCommentId: ev.commentId.toString(),
       },
       dedupeKey: dedupeKeys.teachingNoteCommentAddressed(ev.commentId.toString()),
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Guardian work claim (GC-2/GC-5, D-#551..#554) + the return-from-leave push
+// (RL-2, D-#556). Bodies are built inline rather than through renderTemplate:
+// these are app-native strings with no message-template key, and keeping the
+// Bangla in one visible place matters more here than template indirection.
+// ---------------------------------------------------------------------------
+
+export interface WorkClaimNotifyEvent {
+  claimId: string;
+  tracker: string;
+  workId: string;
+  subject: string;
+  studentId: string;
+  sectionId: string;
+  teacherId: string;
+  claimedByGuardianId: string;
+  status?: string;
+  rejectReasonLabelBn?: string | null;
+}
+
+const trackerLabelBn = (tracker: string) =>
+  tracker === "ASSIGNMENT" ? "অ্যাসাইনমেন্ট" : "বাড়ির কাজ";
+
+/** A parent tapped — tell the teacher who issued the work, immediately. */
+export async function emitWorkClaimFiled(ev: WorkClaimNotifyEvent): Promise<void> {
+  return bestEffort("work claim filed", async () => {
+    const student = (await Student.findById(ev.studentId).select("nameBn name").lean()) as
+      | { nameBn?: string; name?: string }
+      | null;
+    const who = student?.nameBn || student?.name || "একজন শিক্ষার্থী";
+    await emit({
+      recipientUserId: ev.teacherId,
+      kind: "WORK_CLAIM_FILED",
+      titleBn: "অভিভাবক জানিয়েছেন কাজ হয়েছে",
+      bodyBn:
+        `${who} — ${trackerLabelBn(ev.tracker)} (${ev.workId}) বাড়িতে সম্পন্ন হয়েছে বলে ` +
+        `অভিভাবক জানিয়েছেন। খাতা নিয়ে অ্যাপে জমা লিখে দিন।`,
+      refs: {
+        workClaimId: ev.claimId,
+        studentId: ev.studentId,
+        sectionId: ev.sectionId,
+      },
+      dedupeKey: dedupeKeys.workClaimFiled(ev.claimId),
+    });
+  });
+}
+
+/** The Office nudge (D-#554): re-fire the SAME message, once per claim per day.
+ *  Office cannot resolve a claim — this is the entire extent of what it can do. */
+export async function emitWorkClaimNudge(ev: WorkClaimNotifyEvent, at: Date): Promise<void> {
+  return bestEffort("work claim nudge", async () => {
+    const student = (await Student.findById(ev.studentId).select("nameBn name").lean()) as
+      | { nameBn?: string; name?: string }
+      | null;
+    const who = student?.nameBn || student?.name || "একজন শিক্ষার্থী";
+    await emit({
+      recipientUserId: ev.teacherId,
+      kind: "WORK_CLAIM_FILED",
+      titleBn: "অভিভাবকের জানানো এখনো বাকি",
+      bodyBn:
+        `${who} — ${trackerLabelBn(ev.tracker)} (${ev.workId})। অফিস থেকে মনে করিয়ে ` +
+        `দেওয়া হলো: খাতা নিয়ে জমা লিখে দিন, অথবা কারণসহ নাকচ করুন।`,
+      refs: {
+        workClaimId: ev.claimId,
+        studentId: ev.studentId,
+        sectionId: ev.sectionId,
+      },
+      dedupeKey: dedupeKeys.workClaimNudged(ev.claimId, dateKeyOf(at)),
+    });
+  });
+}
+
+/** Tell the family how it ended — accepted, or rejected with the teacher's reason.
+ *  A claim that ends in silence is the exact failure this feature exists to remove. */
+export async function emitWorkClaimResolved(claim: {
+  _id: IdLike;
+  tracker: string;
+  workId: string;
+  claimedByGuardianId: IdLike;
+  studentId: IdLike;
+  sectionId: IdLike;
+  status: string;
+  rejectReason?: string | null;
+}): Promise<void> {
+  return bestEffort("work claim resolved", async () => {
+    const guardian = await Guardian.findOne({
+      _id: claim.claimedByGuardianId,
+      loginEnabled: true,
+      active: true,
+    })
+      .select("_id")
+      .lean();
+    if (!guardian) return; // contact-only guardian — no inbox (D-#31/#72)
+
+    const accepted = claim.status === "ACCEPTED";
+    const reasonBn = claim.rejectReason
+      ? WORK_CLAIM_REJECT_REASON_LABELS_BN[claim.rejectReason as WorkClaimRejectReason]
+      : null;
+    await emit({
+      recipientGuardianId: claim.claimedByGuardianId.toString(),
+      kind: "WORK_CLAIM_RESOLVED",
+      titleBn: accepted ? "শিক্ষক জমা লিখে দিয়েছেন" : "আপনার জানানোর উত্তর এসেছে",
+      bodyBn: accepted
+        ? `${trackerLabelBn(claim.tracker)} (${claim.workId}) জমা হিসেবে লেখা হয়েছে। ধন্যবাদ।`
+        : `${trackerLabelBn(claim.tracker)} (${claim.workId}) — শিক্ষক: ${reasonBn ?? "নাকচ"}।`,
+      refs: {
+        workClaimId: claim._id.toString(),
+        studentId: claim.studentId.toString(),
+        sectionId: claim.sectionId.toString(),
+      },
+      dedupeKey: dedupeKeys.workClaimResolved(claim._id.toString()),
+    });
+  });
+}
+
+/**
+ * The 11:30 / 13:00 rung (D-#554). ONE digest row per recipient per rung per day,
+ * carrying the COUNT — never one row per claim. Recipients are every active user
+ * in the rung's role.
+ */
+export async function emitWorkClaimEscalation(
+  role: "OFFICE" | "PRINCIPAL",
+  openCount: number,
+  at: Date,
+): Promise<number> {
+  let sent = 0;
+  await bestEffort("work claim escalation", async () => {
+    if (openCount <= 0) return;
+    const recipients = (await User.find(actingAsFilter([role])).select("_id").lean()) as unknown as Array<{
+      _id: IdLike;
+    }>;
+    const dateKey = dateKeyOf(at);
+    const rung = role === "OFFICE" ? "1130" : "1300";
+    const titleBn = "অভিভাবকের জানানো নিষ্পন্ন হয়নি";
+    const bodyBn =
+      role === "OFFICE"
+        ? `${openCount} টি জানানো এখনো শিক্ষক নিষ্পন্ন করেননি। তালিকা দেখে মনে করিয়ে দিন।`
+        : `${openCount} টি জানানো দুপুর ১টা পর্যন্ত নিষ্পন্ন হয়নি।`;
+    for (const r of recipients) {
+      await emit({
+        recipientUserId: r._id.toString(),
+        kind: "WORK_CLAIM_ESCALATED",
+        titleBn,
+        bodyBn,
+        refs: { date: dateKey, stage: rung },
+        dedupeKey: dedupeKeys.workClaimEscalated(dateKey, rung, r._id.toString()),
+      });
+      sent += 1;
+    }
+  });
+  return sent;
+}
+
+/**
+ * RL-2 (D-#556): a student is back after an absence. CLASS TEACHER only — the card
+ * is scoped to subject teachers too, but one returning student would otherwise push
+ * every teacher who meets them that day. Fired from the attendance mark/amend seam,
+ * so it only ever announces a return attendance has CONFIRMED.
+ */
+export interface StudentReturnedEvent {
+  studentId: IdLike;
+  studentNameBn: string;
+  sectionId: IdLike;
+  teacherId: IdLike;
+  /** Open ABSENT_REDELIVER items — "hand these out". */
+  redeliverCount: number;
+  /** Open DUE/CHASE items — "collect these". */
+  collectCount: number;
+  at: Date;
+}
+
+export async function emitStudentReturned(ev: StudentReturnedEvent): Promise<void> {
+  return bestEffort("student returned", async () => {
+    if (ev.redeliverCount + ev.collectCount === 0) return; // nothing to ask for
+    const parts: string[] = [];
+    if (ev.redeliverCount > 0) parts.push(`${ev.redeliverCount} টি পুনরায় দিতে হবে`);
+    if (ev.collectCount > 0) parts.push(`${ev.collectCount} টি জমা নিতে হবে`);
+    await emit({
+      recipientUserId: ev.teacherId.toString(),
+      kind: "STUDENT_RETURNED",
+      titleBn: "ছুটি শেষে ফিরেছে",
+      bodyBn: `${ev.studentNameBn} আজ ফিরেছে — ${parts.join(", ")}।`,
+      refs: {
+        studentId: ev.studentId.toString(),
+        sectionId: ev.sectionId.toString(),
+        date: dateKeyOf(ev.at),
+      },
+      dedupeKey: dedupeKeys.studentReturned(
+        dateKeyOf(ev.at),
+        ev.studentId.toString(),
+        ev.teacherId.toString(),
+      ),
     });
   });
 }
