@@ -8105,3 +8105,22 @@ export const NUDGE_WORK_CLAIM = gql<{ nudgeWorkClaim: WorkClaimRowT }, { claimId
     nudgeWorkClaim(claimId: $claimId) { ${WORK_CLAIM_ROW_FIELDS} }
   }
 `;
+
+/**
+ * SH-9 — ONE staff record, live. The hub used to render the row object handed to it as
+ * a navigation parameter, so after any write it kept showing pre-write values (a
+ * confirmation that had succeeded still read শিক্ষানবিশ). It refetches this on focus.
+ */
+export const STAFF_PROFILE_QUERY = gql<
+  { staffProfile: StaffT | null },
+  { staffProfileId: string }
+>`
+  query StaffProfile($staffProfileId: String!) {
+    staffProfile(staffProfileId: $staffProfileId) {
+      id schoolId name nameBn category designation employmentType employmentStatus
+      joiningDate confirmationDate monthlySalary paymentMethod gender dob bloodGroup
+      maritalStatus qualification fatherName motherName spouseName phone whatsapp email
+      presentAddress permanentAddress biometricId nid bankAccount active
+    }
+  }
+`;

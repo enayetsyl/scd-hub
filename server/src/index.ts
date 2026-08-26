@@ -104,6 +104,12 @@ const EXPOSED_DOMAIN_ERRORS = new Set<string>([
   // told something broke when the system is working exactly as designed (D-#437).
   "BuildGateError", "ReviewRuleError", "PatchShapeError", "AuthorChatError",
   "CommentRuleError",
+  // Staff letters (SH-1). Found in the 2026-08-26 prod E2E test: refusing to print a
+  // paid letter with no salary on record is the guard working, and its message says
+  // exactly what to do — "set the monthly salary first, or issue it as honorary".
+  // Unregistered, Yoga masked it to "Unexpected error." and the operator was left to
+  // guess, three steps away from the mistake. The D-#536 failure, repeated.
+  "LetterError",
 ]);
 
 /**
