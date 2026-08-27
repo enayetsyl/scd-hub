@@ -558,7 +558,10 @@ function ItemCard({
               // A resubmission (the student's redo) is badged so it isn't mistaken for
               // a duplicate of their original still awaiting return (owner 2026-07-26).
               badge:
-                (r.resubOf ? `🔁 ${STR.hwResubTag}` : "") +
+                // BUG-WC-4: a parent has reported this done at home. Shown HERE,
+                // where the teacher actually commits the pass — not only on Today.
+                (r.hasGuardianClaim ? `👪 ${STR.wcRosterChip} · ` : "") +
+                  (r.resubOf ? `🔁 ${STR.hwResubTag}` : "") +
                   (r.chaseCount > 0 ? `${r.resubOf ? " · " : ""}${STR.hwChaseAction} ${bnNum(r.chaseCount)}` : "") ||
                 undefined,
             }))}

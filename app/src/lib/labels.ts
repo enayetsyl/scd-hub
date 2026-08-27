@@ -1735,6 +1735,7 @@ const STR_BN = {
   wcOfficeTold: "অফিসকে জানানো হয়েছে",
   wcPrincipalTold: "প্রধান শিক্ষককে জানানো হয়েছে",
   // GC-5 — the office queue
+  wcRosterChip: "অভিভাবক",
   wcQueueTitle: "অভিভাবকের জানানো — অনিষ্পন্ন",
   wcNudge: "তাগাদা দিন",
   wcNudgedToday: "আজ পাঠানো হয়েছে",
@@ -5790,6 +5791,7 @@ const STR_EN: StrTable = {
   wcRejectSeenByGuardian: "The guardian will see this reason.",
   wcOfficeTold: "Office notified",
   wcPrincipalTold: "Principal notified",
+  wcRosterChip: "Guardian",
   wcQueueTitle: "Guardian reports — unresolved",
   wcNudge: "Remind",
   wcNudgedToday: "Sent today",

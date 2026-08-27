@@ -51,8 +51,12 @@ export interface IGuardianWorkClaim extends Document {
   subject: string;
   /** The record's due date at file time — context for the queue, NOT the clock. */
   dueDate?: Date;
-  /** The teacher who issued the item — the FILED notification's recipient. */
+  /** WHO must answer this — derived from the ROUTINE, not from issuedBy (BUG-WC-5).
+   *  See ClaimRecipient.resolveClaimRecipient for the chain. */
   teacherId: Types.ObjectId;
+  /** How the recipient was found: ROUTINE | CONFIRMER | CLASS_TEACHER | ISSUER.
+   *  Stored so a mis-addressed claim can be explained rather than guessed at. */
+  teacherSource?: string;
   claimedByGuardianId: Types.ObjectId;
   /** The portal logs in as a User; kept for the audit trail. */
   claimedByUserId: Types.ObjectId;
@@ -98,6 +102,7 @@ const GuardianWorkClaimSchema = new Schema<IGuardianWorkClaim>(
     subject: { type: String, required: true },
     dueDate: { type: Date },
     teacherId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    teacherSource: { type: String },
     claimedByGuardianId: { type: Schema.Types.ObjectId, ref: "Guardian", required: true },
     claimedByUserId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     claimedAt: { type: Date, required: true },

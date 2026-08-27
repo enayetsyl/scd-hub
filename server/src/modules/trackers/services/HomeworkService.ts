@@ -36,7 +36,7 @@ import { Student } from "../../foundation/models/Student";
 import { assertTransition, isEntryState } from "../lifecycle";
 import { isSchoolDay } from "../calendar";
 import { resolveHomeworkDueDate, resolveHomeworkDueDateByItem } from "../homeworkDueDate";
-import { acceptClaimsForRecords, hasOpenClaim } from "./WorkClaimService";
+import { acceptClaimsForRecords, hasOpenClaim, recordsWithOpenClaims } from "./WorkClaimService";
 import { emitHwParentComms, emitHwGuardianChase, emitWorkClaimResolved } from "../../notifications/services/emitters";
 
 const GENERIC_TOPIC_LABEL_BN = "সাধারণ (নির্দিষ্ট অধ্যায় নয়)";
@@ -899,6 +899,9 @@ export interface OpenRecordDTO {
   studentName: string;
   state: string;
   chaseCount: number;
+  /** BUG-WC-4: a guardian has reported this one done at home and is waiting.
+   *  Shown where the teacher actually works, not only on the Today card. */
+  hasGuardianClaim: boolean;
   hasAnswerFile: boolean;
   /** The attached answer file's id — so the checking queue can OPEN what the
    *  student handed in, not merely announce that something is attached. Reading
@@ -931,6 +934,11 @@ export async function listOpenRecords(sectionId: string, states: LifecycleState[
 
   const itemIds = [...new Set(recs.map((r) => r.hwItemId.toString()))];
   const studentIds = [...new Set(recs.map((r) => r.studentId.toString()))];
+
+  // BUG-WC-4: which of these records a guardian has reported done at home. ONE
+  // query for the whole roster (the D-#476 rule), and fail-open — a lookup
+  // problem must never keep a teacher from committing the pass.
+  const claimed = await recordsWithOpenClaims(recs.map((r) => r._id));
   const items = await HomeworkItem.find({ _id: { $in: itemIds } })
     .select({ subject: 1, dateGiven: 1, topTags: 1, description: 1 })
     .lean();
@@ -955,6 +963,7 @@ export async function listOpenRecords(sectionId: string, states: LifecycleState[
         state: r.state,
         chaseCount: r.chaseCount ?? 0,
         hasAnswerFile: !!r.answerFileId,
+        hasGuardianClaim: claimed.has(r._id.toString()),
         answerFileId: r.answerFileId ? r.answerFileId.toString() : null,
         dueDate: r.dueDate ? new Date(r.dueDate as unknown as Date).toISOString() : null,
         result: r.result ?? null,

@@ -184,6 +184,11 @@ async function toRows(claims: Array<Record<string, any>>, now: Date): Promise<Wo
 
 // ---------------------------------------------------------------------------
 // Reads — visible to all three roles from the moment a claim is filed (D-#554)
+//
+// NOT gated on tracker:read (BUG-WC-3): OFFICE holds no tracker permission at
+// all — that is the very guarantee that stops it marking work submitted — so
+// gating its own queue on that permission locked the Office out of the screen
+// built for it. The isAdminStaff check in each resolver is the real gate.
 // ---------------------------------------------------------------------------
 
 builder.queryField("myWorkClaims", (t) =>
@@ -210,7 +215,7 @@ builder.queryField("myWorkClaims", (t) =>
 builder.queryField("workClaimQueue", (t) =>
   t.field({
     type: [WorkClaimRowRef],
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { authenticated: true },
     description:
       "Every unresolved guardian claim, checkpoint-first (13:00 passed → 11:30 passed → " +
       "waiting → scheduled for the next school day). The Office/Principal queue.",
@@ -270,7 +275,7 @@ builder.mutationField("rejectWorkClaim", (t) =>
 builder.mutationField("nudgeWorkClaim", (t) =>
   t.field({
     type: WorkClaimRowRef,
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { authenticated: true },
     description:
       "Re-fire the teacher's notification for one open claim, at most once per claim " +
       "per day. This is ALL the Office can do — it holds no tracker:write and can " +
