@@ -8182,3 +8182,36 @@ export const STAFF_PROFILE_QUERY = gql<
     }
   }
 `;
+
+/** Which slices each reviewer holds — who received what (QR-14, D-#568). */
+export interface ReviewerSliceT {
+  reviewerId: string;
+  reviewerName: string | null;
+  subject: string;
+  classLevel: number;
+  chapter: string;
+  assigned: number;
+  decided: number;
+  pending: number;
+}
+
+export const QUESTION_REVIEWER_SLICES = gql<
+  { questionReviewerSlices: ReviewerSliceT[] },
+  { classLevel?: number | null; subject?: string | null; chapter?: number | null }
+>`
+  query QuestionReviewerSlices($classLevel: Int, $subject: String, $chapter: Int) {
+    questionReviewerSlices(classLevel: $classLevel, subject: $subject, chapter: $chapter) {
+      reviewerId reviewerName subject classLevel chapter assigned decided pending
+    }
+  }
+`;
+
+/** The chapters the CALLER holds rounds for — her queue filter (QR-14, D-#568). */
+export const MY_REVIEW_CHAPTERS = gql<
+  { myReviewChapters: number[] },
+  { subject?: string | null; classLevel?: number | null }
+>`
+  query MyReviewChapters($subject: String, $classLevel: Int) {
+    myReviewChapters(subject: $subject, classLevel: $classLevel)
+  }
+`;
