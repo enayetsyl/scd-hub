@@ -2507,6 +2507,7 @@ export interface HwOpenRecordT {
   state: string;
   chaseCount: number;
   hasAnswerFile: boolean;
+  hasGuardianClaim: boolean;
   /** The attached answer file — the checking queue OPENS it (web) rather than
    *  only badging that a submission exists. Null when nothing is attached. */
   answerFileId: string | null;
@@ -2526,7 +2527,7 @@ export const HOMEWORK_OPEN_RECORDS = gql<
 >`
   query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
     homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
-      id hwId hwItemId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile answerFileId dueDate result stampCount lastStateAt resubOf
+      id hwId hwItemId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile hasGuardianClaim answerFileId dueDate result stampCount lastStateAt resubOf
     }
   }
 `;

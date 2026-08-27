@@ -34,12 +34,17 @@ import { HomeworkItem } from "../models/HomeworkItem";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { resolveDayType } from "../../routine/calendar";
 import { dateKeyOf } from "../../attendance/dates";
+import { resolveClaimRecipient } from "./ClaimRecipient";
 import { earliestClaimableDueDate } from "./WorkClaimView";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { writeAudit } from "../../platform/services/AuditService";
 
 /** Days the app treats as closed — the same gate the notification ticker uses. */
-const CLOSED_DAY_TYPES = new Set(["OFF", "HOLIDAY"]);
+// QURAN_ONLY (Saturday, D-#50) is CLOSED for the claim ladder: only Quran runs,
+// and Quran is excluded from the homework tracker entirely (D-#36), so no claim
+// can ever be actionable on one. Deliberately narrower than the notification
+// ticker, which legitimately fires on Saturday for Quran bells. (BUG-WC-1)
+const CLOSED_DAY_TYPES = new Set(["OFF", "HOLIDAY", "QURAN_ONLY"]);
 
 /** A defensive bound on the forward walk: a run of closed days longer than this
  *  means the calendar is misconfigured, and we would rather stop than spin. */
@@ -236,6 +241,17 @@ export async function fileWorkClaim(
 
   const actionDateKey = await resolveActionDateKey(at);
   const subject = await subjectOf(input.tracker, record.itemId);
+
+  // WHO answers this (BUG-WC-2 / BUG-WC-5). NOT record.issuedBy: on assignments
+  // that is whoever ran the delivery pass, and on historical homework it is the
+  // null ObjectId. Derived from the routine, with the section's own owners as
+  // the fallback chain.
+  const recipient = await resolveClaimRecipient(record.sectionId, subject, record.issuedBy);
+  if (!recipient) {
+    throw new WorkClaimError(
+      "এই কাজটির জন্য দায়িত্বপ্রাপ্ত শিক্ষক পাওয়া যায়নি — অফিসে জানান",
+    );
+  }
   const note = input.note?.trim() ? input.note.trim().slice(0, 200) : undefined;
 
   let claim: IGuardianWorkClaim;
@@ -249,7 +265,8 @@ export async function fileWorkClaim(
       classId: record.classId,
       subject,
       dueDate: record.dueDate,
-      teacherId: record.issuedBy,
+      teacherId: recipient.teacherId,
+      teacherSource: recipient.source,
       claimedByGuardianId: new Types.ObjectId(input.guardianId),
       claimedByUserId: new Types.ObjectId(input.actorUserId),
       claimedAt: at,
@@ -283,6 +300,8 @@ export async function fileWorkClaim(
       studentId: record.studentId.toString(),
       state: record.state,
       attemptNumber: claim.attemptNumber,
+      teacherId: recipient.teacherId.toString(),
+      teacherSource: recipient.source,
       actionDateKey,
     },
   });
