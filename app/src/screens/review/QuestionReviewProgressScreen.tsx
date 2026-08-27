@@ -15,7 +15,12 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "urql";
 import { SUBJECTS, CLASS_LEVELS } from "@scd/shared";
-import { QUESTION_REVIEWER_PROGRESS, type QuestionReviewerProgressT } from "../../graphql/operations";
+import {
+  QUESTION_REVIEWER_PROGRESS,
+  QUESTION_COVERAGE,
+  QUESTION_CHAPTERS_QUERY,
+  type QuestionReviewerProgressT,
+} from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -39,10 +44,12 @@ type Props = NativeStackScreenProps<ReviewStackParamList, "QuestionReviewProgres
 export default function QuestionReviewProgressScreen({ navigation }: Props): React.ReactElement {
   const [subject, setSubject] = useState<string | null>(null);
   const [classLevel, setClassLevel] = useState<number | null>(null);
+  /** The chapter axis (QR-13, D-#567) — “what did I assign her for chapter 23”. */
+  const [chapter, setChapter] = useState<number | null>(null);
 
   const [{ data, fetching, error }, refetch] = useQuery({
     query: QUESTION_REVIEWER_PROGRESS,
-    variables: { subject, classLevel },
+    variables: { subject, classLevel, chapter },
   });
 
   useFocusEffect(
@@ -50,6 +57,22 @@ export default function QuestionReviewProgressScreen({ navigation }: Props): Rea
       refetch({ requestPolicy: "network-only" });
     }, [refetch]),
   );
+
+  /** Coverage for the SLICE, not for any one reviewer — so it sits above the cards. */
+  const [coverageQ] = useQuery({
+    query: QUESTION_COVERAGE,
+    variables: { subject, classLevel, chapter },
+  });
+  const coverage = coverageQ.data?.questionCoverage ?? null;
+
+  // Chapter chips only mean something once a subject AND a class are chosen — the same
+  // gate the publish inbox and the reviewer queue use, and the same query behind it.
+  const [{ data: chapterData }] = useQuery({
+    query: QUESTION_CHAPTERS_QUERY,
+    variables: { subject, classLevel },
+    pause: !subject || classLevel == null,
+  });
+  const chapterOptions = chapterData?.questionChapters ?? [];
 
   const rows = data?.questionReviewerProgress ?? [];
 
@@ -60,27 +83,55 @@ export default function QuestionReviewProgressScreen({ navigation }: Props): Rea
 
       <View style={{ height: space(3) }} />
       <ChipRow>
-        <Chip label={STR.all} selected={classLevel === null} onPress={() => setClassLevel(null)} />
+        <Chip label={STR.all} selected={classLevel === null} onPress={() => { setClassLevel(null); setChapter(null); }} />
         {CLASS_LEVELS.map((c) => (
           <Chip
             key={c}
             label={classLevelLabel(c)}
             selected={classLevel === c}
-            onPress={() => setClassLevel(classLevel === c ? null : c)}
+            onPress={() => { setClassLevel(classLevel === c ? null : c); setChapter(null); }}
           />
         ))}
       </ChipRow>
       <ChipRow>
-        <Chip label={STR.all} selected={subject === null} onPress={() => setSubject(null)} />
+        <Chip label={STR.all} selected={subject === null} onPress={() => { setSubject(null); setChapter(null); }} />
         {SUBJECTS.map((s) => (
           <Chip
             key={s}
             label={subjectLabel(s)}
             selected={subject === s}
-            onPress={() => setSubject(subject === s ? null : s)}
+            onPress={() => { setSubject(subject === s ? null : s); setChapter(null); }}
           />
         ))}
       </ChipRow>
+      {chapterOptions.length > 0 ? (
+        <ChipRow>
+          <Chip label={STR.all} selected={chapter === null} onPress={() => setChapter(null)} />
+          {chapterOptions.map((c) => (
+            <Chip key={c} label={bnNum(c)} selected={chapter === c} onPress={() => setChapter(chapter === c ? null : c)} />
+          ))}
+        </ChipRow>
+      ) : null}
+
+      {/* Coverage for the SLICE (QR-13, D-#567). The reviewer cards below say how the
+          ASSIGNED work is going; this says how much of the subject was assigned at all —
+          without it a reviewer at 13% reads the same whether she holds the whole subject
+          or a tenth of it. Deliberately above the cards, because it is not about any one
+          reviewer. */}
+      {coverage ? (
+        <View style={{ marginTop: space(3) }}>
+          <Card>
+            <Muted>{STR.qcTitle}</Muted>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(3), marginTop: space(2) }}>
+              <CoverStat label={STR.qcInBank} n={coverage.inBank} />
+              <CoverStat label={STR.qcAssigned} n={coverage.assigned} />
+              <CoverStat label={STR.qcNotAssigned} n={coverage.notAssigned} warn={coverage.notAssigned > 0} />
+              <CoverStat label={STR.qcReviewed} n={coverage.reviewed} />
+              <CoverStat label={STR.qcPublished} n={coverage.published} />
+            </View>
+          </Card>
+        </View>
+      ) : null}
 
       <View style={{ height: space(3) }} />
       {error ? (
@@ -203,5 +254,20 @@ function Counter({
       <Body style={{ fontWeight: "700", color: fg }}>{bnNum(n)}</Body>
       <Muted>{label}</Muted>
     </Card>
+  );
+}
+
+/**
+ * One number on the coverage strip (QR-13, D-#567). Bangla numerals, because every other
+ * count on this screen is — a Latin figure here would read as a different kind of thing.
+ * `warn` tints only বরাদ্দ হয়নি: it is the one number that means work nobody has picked up.
+ */
+function CoverStat({ label, n, warn }: { label: string; n: number; warn?: boolean }): React.ReactElement {
+  const colors = useColors();
+  return (
+    <View style={{ minWidth: 92 }}>
+      <Body style={{ fontWeight: "700", color: warn ? colors.warning : colors.textPrimary }}>{bnNum(n)}</Body>
+      <Muted>{label}</Muted>
+    </View>
   );
 }

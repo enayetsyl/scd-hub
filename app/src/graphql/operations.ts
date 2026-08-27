@@ -978,12 +978,32 @@ export interface QuestionReviewerProgressT {
  *  keeps counting after the Principal has published the question it was about. */
 export const QUESTION_REVIEWER_PROGRESS = gql<
   { questionReviewerProgress: QuestionReviewerProgressT[] },
-  { classLevel?: number | null; subject?: string | null }
+  { classLevel?: number | null; subject?: string | null; chapter?: number | null }
 >`
-  query QuestionReviewerProgress($classLevel: Int, $subject: String) {
-    questionReviewerProgress(classLevel: $classLevel, subject: $subject) {
+  query QuestionReviewerProgress($classLevel: Int, $subject: String, $chapter: Int) {
+    questionReviewerProgress(classLevel: $classLevel, subject: $subject, chapter: $chapter) {
       reviewerId reviewerName assigned pending
       approved approvedWithCondition rejected cancelled decided
+    }
+  }
+`;
+
+/** How much of a subject has been put into review AT ALL, and how far it got (QR-13, D-#567). */
+export interface QuestionCoverageT {
+  inBank: number;
+  assigned: number;
+  notAssigned: number;
+  reviewed: number;
+  published: number;
+}
+
+export const QUESTION_COVERAGE = gql<
+  { questionCoverage: QuestionCoverageT },
+  { classLevel?: number | null; subject?: string | null; chapter?: number | null }
+>`
+  query QuestionCoverage($classLevel: Int, $subject: String, $chapter: Int) {
+    questionCoverage(classLevel: $classLevel, subject: $subject, chapter: $chapter) {
+      inBank assigned notAssigned reviewed published
     }
   }
 `;

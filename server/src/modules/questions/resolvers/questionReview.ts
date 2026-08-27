@@ -37,6 +37,8 @@ import {
   submitQuestionReviewBulk as submitBulkSvc,
   publishQuestion as publishSvc,
   publishQuestionBulk as publishBulkSvc,
+  questionCoverage as coverageSvc,
+  type QuestionCoverageDTO,
   listMyQuestionReviews,
   countMyQuestionReviews,
   questionReviewInbox as inboxSvc,
@@ -668,6 +670,22 @@ builder.queryField("assignableQuestions", (t) =>
 // Reviewer progress (QR-5, D-#537)
 // ---------------------------------------------------------------------------
 
+const QuestionCoverageRef = builder.objectRef<QuestionCoverageDTO>("QuestionCoverage");
+QuestionCoverageRef.implement({
+  description:
+    "Coverage for one (subject × class × chapter) slice (QR-13, D-#567): how many questions " +
+    "exist, how many were ever put into review, how many are still untouched, how many were " +
+    "ruled on and how many reached the shelf. `assigned`/`reviewed` count DISTINCT QUESTIONS, " +
+    "not rounds — a second round on the same question must not count twice.",
+  fields: (t) => ({
+    inBank: t.exposeInt("inBank"),
+    assigned: t.exposeInt("assigned"),
+    notAssigned: t.exposeInt("notAssigned"),
+    reviewed: t.exposeInt("reviewed"),
+    published: t.exposeInt("published"),
+  }),
+});
+
 const QuestionReviewerProgressRef =
   builder.objectRef<QuestionReviewerProgressDTO>("QuestionReviewerProgress");
 QuestionReviewerProgressRef.implement({
@@ -698,10 +716,11 @@ builder.queryField("questionReviewerProgress", (t) =>
     args: {
       classLevel: t.arg.int({ required: false }),
       subject: t.arg.string({ required: false }),
+      chapter: t.arg.int({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      return progressSvc({ classLevel: args.classLevel, subject: args.subject });
+      return progressSvc({ classLevel: args.classLevel, subject: args.subject, chapter: args.chapter });
     },
   }),
 );
@@ -767,6 +786,28 @@ builder.queryField("questionReviewerRoundCount", (t) =>
       } catch (err) {
         return mapReviewError(err);
       }
+    },
+  }),
+);
+
+builder.queryField("questionCoverage", (t) =>
+  t.field({
+    type: QuestionCoverageRef,
+    description:
+      "How much of a (subject × class × chapter) slice has been put into review at all, and " +
+      "how far it got (QR-13, D-#567). The progress screen could say how the ASSIGNED work was " +
+      "going and nothing about how much of the subject had been assigned, so a reviewer at 13% " +
+      "looked the same whether she held the whole subject or a tenth of it. Requires " +
+      "content:assign_review.",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: {
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      chapter: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return coverageSvc({ subject: args.subject, classLevel: args.classLevel, chapter: args.chapter });
     },
   }),
 );

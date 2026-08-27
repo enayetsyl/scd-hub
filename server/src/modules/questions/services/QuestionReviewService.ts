@@ -1288,13 +1288,110 @@ function bucketFilter(bucket: ReviewerProgressBucket): Record<string, unknown> {
 
 /** Shared subject/class narrowing. Both live ON the round (denormalised at assign time),
  *  so neither the rollup nor the drill-down needs to touch ContentArtifact to filter. */
+// ---------------------------------------------------------------------------
+// questionCoverage (QR-13, D-#567)
+// ---------------------------------------------------------------------------
+
+/** What share of a subject has actually been put into review, and how far it got. */
+export interface QuestionCoverageDTO {
+  /** Live questions in the bank for this scope — current, not retired. */
+  inBank: number;
+  /** Distinct questions that have EVER been assigned to a reviewer. */
+  assigned: number;
+  /** inBank − assigned, floored at 0. The number the progress screen could not answer. */
+  notAssigned: number;
+  /** Distinct questions a reviewer has actually ruled on (any verdict). */
+  reviewed: number;
+  /** Live questions already on the teachers’ shelf (`gold`). */
+  published: number;
+}
+
+/**
+ * The ARTIFACT-side scope. The chapter lives at `address.number`, which is Mixed on the
+ * model — older imports wrote it as a string, newer ones as a number — so BOTH forms are
+ * matched. Filtering on the number alone silently drops every older row, which is the
+ * D-#511 lesson applied to a count instead of a list.
+ */
+function coverageArtifactScope(args: {
+  subject?: string | null;
+  classLevel?: number | null;
+  chapter?: number | null;
+}): Record<string, unknown> {
+  const match: Record<string, unknown> = {
+    docType: QUESTION_DOC_TYPE,
+    current: true,
+    // A retired question is not “in the bank” by any reading (D-#548/#566).
+    retiredAt: null,
+  };
+  if (args.subject) match.subject = args.subject;
+  if (args.classLevel != null) match.classLevel = args.classLevel;
+  if (args.chapter != null) {
+    match["address.number"] = { $in: [args.chapter, String(args.chapter)] };
+  }
+  return match;
+}
+
+/**
+ * Coverage for one (subject × class × chapter) slice (QR-13).
+ *
+ * The progress screen could say how the ASSIGNED work was going and nothing about how much
+ * of the subject had been assigned at all — so a reviewer at 13% looked identical whether
+ * she had been given the whole subject or a tenth of it.
+ *
+ * `assigned` and `reviewed` count DISTINCT QUESTIONS, not rounds: a question sent back for a
+ * second round would otherwise count twice and could push “assigned” past the bank total.
+ * They are counted off the ROUND (subject/class/chapter are denormalised there), while
+ * `inBank` and `published` are counted off the ARTIFACT — the two sides of the same slice.
+ *
+ * `notAssigned` is floored at 0 rather than trusted: rounds survive their question being
+ * retired or superseded, so `assigned` can legitimately exceed today’s `inBank`, and a
+ * negative “not assigned” on a Principal’s dashboard is worse than a zero.
+ */
+export async function questionCoverage(args: {
+  subject?: string | null;
+  classLevel?: number | null;
+  chapter?: number | null;
+}): Promise<QuestionCoverageDTO> {
+  const artifactScope = coverageArtifactScope(args);
+  const roundScope = progressScope(args);
+
+  const [inBank, published, assignedRows, reviewedRows] = await Promise.all([
+    ContentArtifact.countDocuments(artifactScope),
+    ContentArtifact.countDocuments({ ...artifactScope, reviewStatus: "gold" }),
+    ReviewAssignment.aggregate([
+      { $match: roundScope },
+      { $group: { _id: "$qid" } },
+      { $count: "n" },
+    ]) as unknown as Promise<{ n: number }[]>,
+    ReviewAssignment.aggregate([
+      { $match: { ...roundScope, verdict: { $ne: null } } },
+      { $group: { _id: "$qid" } },
+      { $count: "n" },
+    ]) as unknown as Promise<{ n: number }[]>,
+  ]);
+
+  const assigned = assignedRows[0]?.n ?? 0;
+  const reviewed = reviewedRows[0]?.n ?? 0;
+  return {
+    inBank,
+    assigned,
+    notAssigned: Math.max(0, inBank - assigned),
+    reviewed,
+    published,
+  };
+}
+
 function progressScope(args: {
   classLevel?: number | null;
   subject?: string | null;
+  chapter?: number | null;
 }): Record<string, unknown> {
   const match: Record<string, unknown> = { docType: QUESTION_DOC_TYPE };
   if (args.subject) match.subject = args.subject;
   if (args.classLevel != null) match.classLevel = args.classLevel;
+  // The chapter is denormalised onto the round as a STRING whatever the artifact used
+  // (the QR-6 rule), so one form is enough here too (QR-13).
+  if (args.chapter != null) match.addressNumber = String(args.chapter);
   return match;
 }
 
@@ -1310,6 +1407,7 @@ function progressScope(args: {
  */
 export async function questionReviewerProgress(args: {
   classLevel?: number | null;
+  chapter?: number | null;
   subject?: string | null;
 }): Promise<QuestionReviewerProgressDTO[]> {
   const rows = (await ReviewAssignment.aggregate([
