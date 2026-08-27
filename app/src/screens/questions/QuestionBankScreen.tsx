@@ -23,6 +23,7 @@ import { Screen, Body, Muted, Card, Badge, Button, EmptyState } from "../../comp
 import { QueryGate } from "../../components/QueryGate";
 import { SearchField } from "../../components/SearchField";
 import { FilterBar, type FilterChip } from "../../components/FilterBar";
+import { useAuth } from "../../auth/AuthContext";
 import { FilterSheet } from "../../components/FilterSheet";
 import { SelectableCard } from "../../components/SelectableCard";
 import { SelectionTray } from "../../components/SelectionTray";
@@ -167,7 +168,16 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
   // Q3.7 (D-#508): with no filters applied, an empty bank is NOT a filter problem — the
   // shelf only ever shows PUBLISHED questions, and telling the teacher to change filters
   // they never set would send them hunting for something that isn't there.
-  const noFiltersApplied = chips.length === 0;
+  const { can } = useAuth();
+  /**
+   * A SEARCH counts as narrowing (D-#570). It did not, so an unmatched search fell into the
+   * “nothing here at all” branch and answered a search with “only published questions are
+   * shown here” — which sent the reader looking in the wrong place for a question that was
+   * simply retired.
+   */
+  const nothingNarrowed = chips.length === 0 && qb.search.trim() === "";
+  /** That note is only TRUE for a caller the publish gate actually applies to. */
+  const gatedToPublished = !can("question:manage");
   const loadingMore = fetching && qb.after !== null;
 
   function renderCardBody(q: QuestionListItem): React.ReactElement {
@@ -271,7 +281,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
         onRetry={() => reexecute({ requestPolicy: "network-only" })}
         isEmpty={isEmpty}
         empty={
-          noFiltersApplied ? (
+          nothingNarrowed && gatedToPublished ? (
             <EmptyState message={STR.qrUnpublishedBankNote} />
           ) : (
             <EmptyState

@@ -18,7 +18,8 @@ import { SUBJECTS, CLASS_LEVELS } from "@scd/shared";
 import {
   QUESTION_REVIEWER_PROGRESS,
   QUESTION_COVERAGE,
-  QUESTION_CHAPTERS_QUERY,
+  QUESTION_REVIEWER_SLICES,
+  type ReviewerSliceT,
   type QuestionReviewerProgressT,
 } from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
@@ -65,14 +66,29 @@ export default function QuestionReviewProgressScreen({ navigation }: Props): Rea
   });
   const coverage = coverageQ.data?.questionCoverage ?? null;
 
-  // Chapter chips only mean something once a subject AND a class are chosen — the same
-  // gate the publish inbox and the reviewer queue use, and the same query behind it.
-  const [{ data: chapterData }] = useQuery({
-    query: QUESTION_CHAPTERS_QUERY,
+  /**
+   * Slices come from the ASSIGNMENTS, not the bank (D-#568). The bank query is publish-gated
+   * and answers “what chapters EXIST”; the question on this screen is “what did I hand out”.
+   * One query feeds BOTH the chapter chips and the per-reviewer breakdown rows below.
+   */
+  const [slicesQ] = useQuery({
+    query: QUESTION_REVIEWER_SLICES,
     variables: { subject, classLevel },
-    pause: !subject || classLevel == null,
   });
-  const chapterOptions = chapterData?.questionChapters ?? [];
+  const slices: ReviewerSliceT[] = slicesQ.data?.questionReviewerSlices ?? [];
+
+  /** Chapters actually ASSIGNED in this scope, numerically ordered. */
+  const chapterOptions = [
+    ...new Set(slices.map((s) => Number(s.chapter)).filter((n) => Number.isInteger(n) && n > 0)),
+  ].sort((a, b) => a - b);
+
+  /** Grouped for the rows inside each reviewer card. */
+  const slicesByReviewer = new Map<string, ReviewerSliceT[]>();
+  for (const s of slices) {
+    const list = slicesByReviewer.get(s.reviewerId) ?? [];
+    list.push(s);
+    slicesByReviewer.set(s.reviewerId, list);
+  }
 
   const rows = data?.questionReviewerProgress ?? [];
 
@@ -128,7 +144,7 @@ export default function QuestionReviewProgressScreen({ navigation }: Props): Rea
               <CoverStat label={STR.qcNotAssigned} n={coverage.notAssigned} warn={coverage.notAssigned > 0} />
               <CoverStat label={STR.qcReviewed} n={coverage.reviewed} />
               <CoverStat label={STR.qcPublished} n={coverage.published} />
-            </View>
+              </View>
           </Card>
         </View>
       ) : null}
@@ -148,6 +164,7 @@ export default function QuestionReviewProgressScreen({ navigation }: Props): Rea
           <ReviewerCard
             key={r.reviewerId}
             row={r}
+            slices={slicesByReviewer.get(r.reviewerId) ?? []}
             onOpen={(bucket) =>
               navigation.navigate("QuestionReviewerRounds", {
                 reviewerId: r.reviewerId,
@@ -166,9 +183,11 @@ export default function QuestionReviewProgressScreen({ navigation }: Props): Rea
 
 function ReviewerCard({
   row,
+  slices,
   onOpen,
 }: {
   row: QuestionReviewerProgressT;
+  slices: ReviewerSliceT[];
   onOpen: (bucket: string) => void;
 }): React.ReactElement {
   const colors = useColors();
@@ -224,6 +243,34 @@ function ReviewerCard({
           />
         ) : null}
       </View>
+
+      {/* Which slices this reviewer actually holds (QR-14, D-#568). The counters above say
+          how MUCH; without this, “which chapters did I give her” meant tapping through every
+          subject × class combination and reading the headline each time. Counts are ROUNDS,
+          so these rows sum to the assigned total on this same card. */}
+      {slices.length > 0 ? (
+        <View style={{ marginTop: space(3) }}>
+          <Muted style={{ fontWeight: "700" }}>{STR.qpSlices}</Muted>
+          {slices.map((s) => (
+            <View
+              key={`${s.subject}-${s.classLevel}-${s.chapter}`}
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                paddingVertical: space(1),
+              }}
+            >
+              <Body style={{ flexShrink: 1 }}>
+                {subjectLabel(s.subject)} · {classLevelLabel(s.classLevel)} · {STR.qbChapter} {bnNum(Number(s.chapter) || 0)}
+              </Body>
+              <Muted>
+                {bnNum(s.decided)}/{bnNum(s.assigned)}
+              </Muted>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </Card>
   );
 }

@@ -159,7 +159,7 @@ export function QuestionEditSheet({
         {failure ? <Notice tone="danger" message={failure} /> : null}
         <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
           <Button title={STR.qeDelete} variant="danger" loading={busy} onPress={() => void doDelete()} />
-          <Button title={STR.cancel} variant="ghost" onPress={() => setConfirmDelete(false)} />
+          <Button title={STR.qeCancel} variant="ghost" onPress={() => setConfirmDelete(false)} />
         </View>
       </Card>
     );
@@ -216,7 +216,7 @@ export function QuestionEditSheet({
       <Divider />
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
         <Button title={STR.qeSave} loading={busy} onPress={() => void save()} />
-        <Button title={STR.cancel} variant="ghost" onPress={onCancel} />
+        <Button title={STR.qeCancel} variant="ghost" onPress={onCancel} />
         <Button title={STR.qeDelete} variant="danger" onPress={() => setConfirmDelete(true)} />
       </View>
     </Card>
