@@ -96,17 +96,15 @@ function assertPublished(artifact: {
   retiredAt?: Date | null;
   envelopeJson?: unknown;
 }): void {
-  if (artifact.reviewStatus !== "gold") {
-    throw new Error("এই প্রশ্নটি এখনও প্রকাশিত হয়নি — প্রকাশিত প্রশ্নই কেবল সেটে যোগ করা যায়।");
-  }
-  // RETIRED is a separate refusal from unpublished, and it has to be checked separately:
-  // a retired question keeps whatever `reviewStatus` it had, so a question retired while
-  // `gold` sails straight through the publish check (D-#566). D-#548 claimed retiring hides
-  // a question from "the bank, the assign picker and set assembly" — the first two were
-  // built, this third one never was, so a question retired for having a WRONG ANSWER could
-  // still be assembled into a new paper. Found by driving the app, not by a test.
+  // RETIRED is checked FIRST (D-#570). It is the more specific and more actionable reason:
+  // a retired DRAFT told “not published yet” sends the teacher to the Principal to publish a
+  // question somebody deliberately withdrew — the exact trap D-#566 avoided for gold ones and
+  // left open for drafts. Order matters because only the first refusal is ever seen.
   if (artifact.retiredAt != null) {
     throw new Error("এই প্রশ্নটি বাতিল করা হয়েছে — এটি নতুন সেটে যোগ করা যাবে না।");
+  }
+  if (artifact.reviewStatus !== "gold") {
+    throw new Error("এই প্রশ্নটি এখনও প্রকাশিত হয়নি — প্রকাশিত প্রশ্নই কেবল সেটে যোগ করা যায়।");
   }
 }
 

@@ -23,7 +23,7 @@ import {
   SUBMIT_QUESTION_REVIEW,
   SUBMIT_QUESTION_REVIEW_BULK,
   SET_QUESTION_IMPORTANT,
-  QUESTION_CHAPTERS_QUERY,
+  MY_REVIEW_CHAPTERS,
   type QuestionReviewRoundT,
 } from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
@@ -100,14 +100,14 @@ export default function QuestionReviewQueueScreen({ navigation }: Props): React.
   });
   const [countQ, refetchCount] = useQuery({ query: MY_QUESTION_REVIEW_COUNT, variables: filter });
 
-  // Chapter chips only mean something once a subject AND a class are chosen — the same
-  // gate the publish inbox uses, and the same query behind it.
+  // Chapters SHE HOLDS (D-#568) — not the bank’s. `questionChapters` walks the bank and is
+  // publish-gated for a teacher, so it offered her only chapters whose work was already done.
   const [{ data: chapterData }] = useQuery({
-    query: QUESTION_CHAPTERS_QUERY,
+    query: MY_REVIEW_CHAPTERS,
     variables: { subject, classLevel },
     pause: !subject || classLevel == null,
   });
-  const chapterOptions = chapterData?.questionChapters ?? [];
+  const chapterOptions = chapterData?.myReviewChapters ?? [];
   /** Nice-to-have only. It drives the 'N / M' caption and NOTHING else — see hasMore. */
   const total = countQ.data?.myQuestionReviewCount ?? 0;
 
