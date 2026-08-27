@@ -6,12 +6,15 @@
  * (the standing gate stays green, jest unaffected) AND that the expected/business
  * error filter keeps deliberate denials out of the dashboard while real faults pass.
  */
+import { GraphQLError, locatedError } from "graphql";
 import { ForbiddenError } from "../middleware/authz";
 import {
   isExpectedError,
   sentryEnabled,
   captureServerError,
   sentryYogaPlugin,
+  expectedGraphQLError,
+  EXPECTED_DOMAIN_ERROR_CODE,
   EXPECTED_ERROR_NAMES,
 } from "../observability/sentry";
 
@@ -127,6 +130,68 @@ describe("observability / sentry seam (MON-2)", () => {
       expect(isExpectedError(undefined)).toBe(false);
       expect(isExpectedError(null)).toBe(false);
       expect(isExpectedError("string")).toBe(false);
+    });
+  });
+
+  /**
+   * The regression that reached prod on 2026-08-27.
+   *
+   * `ReviewError` has been registered since MON-2, and the 2026-07-29 fix taught the
+   * lookup to read `constructor.name` so empty-bodied subclasses match. Both were right.
+   * What nobody checked is that four resolvers CATCH the registered error and re-throw a
+   * BARE `GraphQLError` carrying only its message — `mapReviewError` (plans + questions),
+   * `mapEditError`, `mapStaffError` — so by the time the Yoga plugin classifies it the
+   * class is gone. A bare GraphQLError is not a registered name, is not a plain `Error`,
+   * and does not say "not authorized", so it fell through every branch and reported as a
+   * fault: the D-#569 refusal "This question is already assigned to a reviewer — cancel
+   * that round before reassigning" paged the maintainer for working exactly as designed.
+   *
+   * The registry could not have caught this: it scans for `class XError extends Error`,
+   * and the thing that reached GlitchTip was not one of those.
+   */
+  describe("expectedGraphQLError — a re-wrapped refusal stays classified (D-#569 noise)", () => {
+    const REFUSAL =
+      "This question is already assigned to a reviewer — cancel that round before reassigning";
+
+    it("a BARE GraphQLError re-wrap is what leaked — this is the bug, pinned", () => {
+      expect(isExpectedError(new GraphQLError(REFUSAL))).toBe(false);
+    });
+
+    it("the marked refusal is expected — not a fault", () => {
+      expect(isExpectedError(expectedGraphQLError(REFUSAL))).toBe(true);
+    });
+
+    /**
+     * The shape the plugin ACTUALLY sees. graphql-js does not hand the executor's error
+     * straight through: a resolver's throw is re-wrapped by `locatedError` into a new
+     * GraphQLError carrying `path`/`nodes`, with ours as `originalError`. The plugin tests
+     * both links (`originalError ?? err`, then `err`), so assert the marker is reachable
+     * from EITHER — a fix that only works on the inner error would break the day
+     * graphql-js stops copying extensions upward.
+     */
+    it("survives the graphql-js located re-wrap the plugin sees", () => {
+      const located = locatedError(expectedGraphQLError(REFUSAL), [], ["assignQuestionReview"]);
+
+      expect(located).not.toBe(expectedGraphQLError(REFUSAL)); // it really was re-wrapped
+      expect(isExpectedError(located.originalError)).toBe(true);
+      expect(isExpectedError(located)).toBe(true);
+    });
+
+    it("keeps the message intact — the refusal is still what the caller reads", () => {
+      // The whole reason these resolvers wrap at all: a plain Error is masked to
+      // "Unexpected error", so the person never learns to cancel the open round.
+      expect(expectedGraphQLError(REFUSAL).message).toBe(REFUSAL);
+      expect(expectedGraphQLError(REFUSAL).extensions.code).toBe(EXPECTED_DOMAIN_ERROR_CODE);
+    });
+
+    it("marks NOTHING else — an unmarked GraphQLError is still a fault", () => {
+      // "Cannot return null for non-nullable field" is graphql-js's own GraphQLError and
+      // is a REAL bug. Blanket-trusting GraphQLError would have swallowed it.
+      const nonNull = new GraphQLError("Cannot return null for non-nullable field Query.x.");
+      expect(isExpectedError(nonNull)).toBe(false);
+      expect(isExpectedError(new GraphQLError("boom", { extensions: { code: "OTHER" } }))).toBe(
+        false,
+      );
     });
   });
 });

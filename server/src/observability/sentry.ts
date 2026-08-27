@@ -21,7 +21,7 @@
  */
 import * as Sentry from "@sentry/node";
 import type { Plugin } from "graphql-yoga";
-import type { GraphQLError } from "graphql";
+import { GraphQLError } from "graphql";
 import type { AppContext } from "../context";
 
 /**
@@ -116,11 +116,52 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
 /** The Pothos scope-auth plugin denials surface as "Not authorized ..." text — also expected. */
 const EXPECTED_MESSAGE_RE = /not authori[sz]ed|unauthenticated|forbidden/i;
 
+/**
+ * The marker a resolver stamps on a `GraphQLError` it raises DELIBERATELY, to show a
+ * person a refusal they are meant to read and act on.
+ *
+ * Why a marker is needed at all. Several resolvers CATCH a registered domain error and
+ * re-throw it as a `GraphQLError` so the message survives Yoga's mask — `mapReviewError`,
+ * `mapEditError`, `mapStaffError`. That re-wrap THREW AWAY the classification: the class
+ * the registry knows (`ReviewError`, `StaffProfileError`) is gone by the time the Yoga
+ * plugin looks, and what it sees is a bare `GraphQLError` — not a registered name, not a
+ * plain `Error`, no "not authorized" text — so every one of them was reported as a real
+ * fault. Prod, 2026-08-27: ReviewError("This question is already assigned to a reviewer —
+ * cancel that round before reassigning") — the D-#569 refusal, working exactly as designed
+ * — paged the maintainer.
+ *
+ * This is the SAME hole as the 2026-07-29 `constructor.name` bug one layer up: the registry
+ * was right, the lookup could not reach it. Hence `expectedGraphQLError` below — the only
+ * way a resolver should build a refusal, so the classification travels with the error.
+ */
+export const EXPECTED_DOMAIN_ERROR_CODE = "EXPECTED_DOMAIN_ERROR";
+
+/**
+ * Build a client-facing refusal that is NOT reported as a fault.
+ *
+ * Use this — never a bare `new GraphQLError(...)` — whenever a resolver turns a caught
+ * domain error into a message for the caller. The `extensions.code` marker rides along on
+ * the error graphql-js hands the Yoga plugin, so `isExpectedError` can still tell a
+ * deliberate denial from a crash. Masking is unaffected: the error still reaches the
+ * client with its message intact, exactly as a bare `GraphQLError` did.
+ */
+export function expectedGraphQLError(message: string): GraphQLError {
+  return new GraphQLError(message, { extensions: { code: EXPECTED_DOMAIN_ERROR_CODE } });
+}
+
 /** True ⇒ a deliberate business/validation/authz denial (skip), not a fault worth capturing. */
 export function isExpectedError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const e = err as { name?: string; message?: string };
   const ctorName = Object.getPrototypeOf(err)?.constructor?.name as string | undefined;
+
+  // A refusal a resolver built with `expectedGraphQLError` (see above). Checked FIRST and
+  // by extensions rather than by class, because the class is precisely what the re-wrap
+  // destroyed. graphql-js re-wraps a resolver's throw in a located `GraphQLError` whose
+  // `originalError` is ours, and the plugin below tests BOTH, so the marker is reachable
+  // from either link.
+  const code = (err as { extensions?: { code?: unknown } }).extensions?.code;
+  if (code === EXPECTED_DOMAIN_ERROR_CODE) return true;
 
   // Match on BOTH the instance `.name` and the CONSTRUCTOR name.
   //

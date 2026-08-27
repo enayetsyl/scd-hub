@@ -91,3 +91,51 @@ describe("EXPECTED_ERROR_NAMES registry", () => {
     expect(both).toEqual([]);
   });
 });
+
+/**
+ * The registry's blind spot, closed (D-#569 noise, 2026-08-27).
+ *
+ * Registering a class only helps while the class SURVIVES to the point of classification.
+ * Four resolvers caught a registered error and re-threw a bare `new GraphQLError(message)`
+ * so the text would survive Yoga's mask — and in doing so threw the class away. The Yoga
+ * plugin then saw an unregistered, non-plain error and reported the refusal as a fault.
+ * `expectedGraphQLError` carries the classification across that re-wrap; this keeps the
+ * bare form from creeping back, the same way the scan above keeps the list honest.
+ *
+ * `server/src/index.ts` is deliberately out of scope: `maskErrorExposingDomain` builds the
+ * client's masked error AFTER classification has already happened.
+ */
+describe("no bare GraphQLError in a module resolver", () => {
+  function modulesSources(): Map<string, string> {
+    const out = new Map<string, string>();
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(p);
+          continue;
+        }
+        if (p.endsWith(".ts") && !p.includes("__tests__")) out.set(p, readFileSync(p, "utf8"));
+      }
+    };
+    walk(path.join(SERVER_SRC, "modules"));
+    return out;
+  }
+
+  it("builds every client-facing refusal with expectedGraphQLError", () => {
+    const offenders: string[] = [];
+    for (const [file, src] of modulesSources()) {
+      if (!src.includes("new GraphQLError(")) continue;
+      offenders.push(path.relative(SERVER_SRC, file).replace(/\\/g, "/"));
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("the scan can actually see the call sites it is guarding", () => {
+    // Guard the guard: if the helper ever moves, this fails instead of passing vacuously.
+    const users = [...modulesSources().values()].filter((s) =>
+      s.includes("expectedGraphQLError("),
+    );
+    expect(users.length).toBeGreaterThanOrEqual(4);
+  });
+});
