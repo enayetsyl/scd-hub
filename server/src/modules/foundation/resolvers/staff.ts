@@ -6,7 +6,7 @@ import {
   StaffProfileError,
   type StaffProfileInput,
 } from "../services/StaffProfileService";
-import { GraphQLError } from "graphql";
+import { expectedGraphQLError } from "../../../observability/sentry";
 import type { Types } from "mongoose";
 
 /**
@@ -164,7 +164,7 @@ const StaffProfileInputRef = builder.inputType("StaffProfileInput", {
 
 /** A refusal the Principal can act on, not a stack trace. */
 function mapStaffError(err: unknown): never {
-  if (err instanceof StaffProfileError) throw new GraphQLError(err.message);
+  if (err instanceof StaffProfileError) throw expectedGraphQLError(err.message);
   throw err as Error;
 }
 
@@ -177,7 +177,7 @@ builder.mutationField("createStaffProfile", (t) =>
     authScopes: { hasPermission: "staff:manage" },
     args: { input: t.arg({ type: StaffProfileInputRef, required: true }) },
     resolve: async (_root, args, ctx) => {
-      if (!ctx.auth) throw new GraphQLError("Unauthenticated");
+      if (!ctx.auth) throw expectedGraphQLError("Unauthenticated");
       try {
         return (await createStaffProfile(args.input as StaffProfileInput, {
           userId: ctx.auth.userId,
@@ -202,7 +202,7 @@ builder.mutationField("updateStaffProfile", (t) =>
       input: t.arg({ type: StaffProfileInputRef, required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      if (!ctx.auth) throw new GraphQLError("Unauthenticated");
+      if (!ctx.auth) throw expectedGraphQLError("Unauthenticated");
       try {
         return (await updateStaffProfile(args.staffProfileId, args.input as StaffProfileInput, {
           userId: ctx.auth.userId,

@@ -17,10 +17,10 @@
  * Every mutation writes an audit row naming the actor, the question, and exactly which
  * fields moved with their before and after values.
  */
-import { GraphQLError } from "graphql";
 import { callerHasPermission } from "@scd/shared";
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
+import { expectedGraphQLError } from "../../../observability/sentry";
 import { ReviewError } from "../../content/services/ReviewService";
 import {
   updateQuestionContent as updateSvc,
@@ -65,7 +65,7 @@ const QuestionBlankInputRef = builder.inputType("QuestionBlankInput", {
 function mapEditError(err: unknown): never {
   if (err instanceof ReviewError) {
     if (err.message.startsWith("FORBIDDEN")) throw new ForbiddenError(err.message);
-    throw new GraphQLError(err.message);
+    throw expectedGraphQLError(err.message);
   }
   throw err;
 }

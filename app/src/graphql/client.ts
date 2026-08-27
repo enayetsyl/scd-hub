@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import { createClient, cacheExchange, fetchExchange, mapExchange, getOperationName } from "urql";
 import { getToken } from "../lib/tokenStore";
+import { isKnownOffline } from "../lib/netStatus";
 import { captureAppError } from "../observability/sentry";
 
 // On WEB the app is served same-origin behind the reverse proxy (Caddy serves
@@ -39,7 +40,8 @@ export const REST_BASE = API_URL.replace(/\/graphql\/?$/, "");
 // `sentry.ts` (D-#387): if we are willing to SHOW it to a user, it is not a fault.
 //
 // `TypeError: Network request failed` is deliberately NOT in this list — it is the
-// signal that told us the ErrorBoundary crash was an offline-resume incident.
+// signal that told us the ErrorBoundary crash was an offline-resume incident. It is
+// gated on connectivity instead; see `isKnownOffline` below.
 const EXPECTED_NETWORK_ERRORS = [/^No Content$/i];
 
 const errorReportExchange = mapExchange({
@@ -47,6 +49,16 @@ const errorReportExchange = mapExchange({
     if (!error.networkError) return;
     const msg = error.networkError.message ?? "";
     if (EXPECTED_NETWORK_ERRORS.some((re) => re.test(msg))) return;
+    // A phone with NO network link is not a fault (GlitchTip, 2026-08-27: a release-APK
+    // issue that was nothing but `TypeError: Network request failed`, one event per query
+    // per lost signal). Every request in flight when the signal drops raises this, and the
+    // app already handles it — QueryGate shows the offline banner and the query retries.
+    //
+    // We keep reporting it while the device HAS a link, because that is the case the
+    // earlier decision cared about: online-but-cannot-reach-the-API is a real outage
+    // signal (DNS, the proxy, a down server), and it is the one that diagnosed the
+    // offline-resume ErrorBoundary crash. Unknown connectivity still reports (tri-state).
+    if (isKnownOffline()) return;
     captureAppError(error.networkError, {
       kind: "network",
       operation: getOperationName(operation.query) ?? "unknown",
