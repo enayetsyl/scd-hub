@@ -117,17 +117,6 @@ export default function TodayScreen(): React.ReactElement {
   const canTrackers = can("tracker:read");
   const canHr = !!role && role !== "GUARDIAN";
 
-        {/* GC-4 — অভিভাবকের জানানো: claims waiting on THIS teacher. Renders nothing
-            when there are none, and myWorkClaims returns [] rather than refusing for
-            a caller with no claims at all (D-#535). */}
-        <WorkClaimTeacherCard
-          rows={claimsQ.data?.myWorkClaims ?? []}
-          onChanged={() => refetchClaims({ requestPolicy: "network-only" })}
-        />
-
-        {/* RL-1 — ছুটি শেষে ফিরেছে: who is back today, and what to ask them for. */}
-        <ReturningStudentsCard rows={q.data?.myDay?.returningStudents ?? []} />
-
   // D-#318: the teacher's OWN sections' attendance at a glance (admins land on
   // the card dashboard instead, so no pause needed beyond the guardian gate).
   const [mySectionsQ, refetchMySections] = useQuery({
@@ -623,6 +612,17 @@ export default function TodayScreen(): React.ReactElement {
             })}
           </ScrollView>
         )}
+
+        {/* GC-4 — অভিভাবকের জানানো: claims waiting on THIS teacher. Renders nothing
+            when there are none, and myWorkClaims returns [] rather than refusing for
+            a caller with no claims at all (D-#535). */}
+        <WorkClaimTeacherCard
+          rows={claimsQ.data?.myWorkClaims ?? []}
+          onChanged={() => refetchClaims({ requestPolicy: "network-only" })}
+        />
+
+        {/* RL-1 — ছুটি শেষে ফিরেছে: who is back today, and what to ask them for. */}
+        <ReturningStudentsCard rows={q.data?.myDay?.returningStudents ?? []} />
 
         {/* D-#318: the teacher's OWN sections' attendance at a glance — tap for names. */}
         {!canManage && mySections.length > 0 ? (
