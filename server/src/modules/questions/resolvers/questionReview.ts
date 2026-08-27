@@ -23,9 +23,9 @@
  *
  * Permissions are the SAME ones the plan loop uses — D-#508 adds none.
  */
-import { GraphQLError } from "graphql";
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
+import { expectedGraphQLError } from "../../../observability/sentry";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { ReviewError } from "../../content/services/ReviewService";
 import {
@@ -146,7 +146,7 @@ function mapReviewError(err: unknown): never {
   if (err instanceof ReviewError) {
     if (err.message.startsWith("FORBIDDEN")) throw new ForbiddenError(err.message);
     const closed = /not open for submission/i.test(err.message);
-    throw new GraphQLError(
+    throw expectedGraphQLError(
       closed
         ? "This review round is closed — the question was published or a newer version was imported."
         : err.message,
