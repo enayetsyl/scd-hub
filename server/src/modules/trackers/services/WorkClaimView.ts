@@ -31,7 +31,11 @@ export interface GuardianWorkClaimView {
 }
 
 /** Days the app treats as closed — the same gate the notification ticker uses. */
-const CLOSED_DAY_TYPES = new Set(["OFF", "HOLIDAY"]);
+// QURAN_ONLY (Saturday, D-#50) is CLOSED for the claim ladder: only Quran runs,
+// and Quran is excluded from the homework tracker entirely (D-#36), so no claim
+// can ever be actionable on one. Deliberately narrower than the notification
+// ticker, which legitimately fires on Saturday for Quran bells. (BUG-WC-1)
+const CLOSED_DAY_TYPES = new Set(["OFF", "HOLIDAY", "QURAN_ONLY"]);
 
 /**
  * The earliest due date still inside the claim window (D-#553): walk back

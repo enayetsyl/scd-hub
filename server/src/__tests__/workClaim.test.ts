@@ -25,6 +25,7 @@ const mockAsItem = jest.fn();
 const mockLinkFindOne = jest.fn();
 const mockResolveDayType = jest.fn();
 const mockWriteAudit = jest.fn();
+const mockRecipient = jest.fn();
 
 jest.mock("../modules/trackers/models/GuardianWorkClaim", () => ({
   GuardianWorkClaim: {
@@ -53,6 +54,10 @@ jest.mock("../modules/foundation/models/GuardianLink", () => ({
 }));
 jest.mock("../modules/routine/calendar", () => ({
   resolveDayType: (d: Date) => mockResolveDayType(d),
+}));
+jest.mock("../modules/trackers/services/ClaimRecipient", () => ({
+  NULL_OBJECT_ID: "000000000000000000000000",
+  resolveClaimRecipient: (...a: unknown[]) => mockRecipient(...a),
 }));
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
@@ -115,6 +120,7 @@ beforeEach(() => {
     _id: oid(),
   }));
   mockWriteAudit.mockResolvedValue(undefined);
+  mockRecipient.mockResolvedValue({ teacherId: TEACHER, source: "ROUTINE" });
 });
 
 // ---------------------------------------------------------------------------
@@ -143,6 +149,18 @@ describe("resolveActionDateKey — the owner's two examples must both land on a 
   });
 
   test("Thursday afternoon waits for Sunday — nobody collects a notebook on Fri/Sat", async () => {
+    expect(await resolveActionDateKey(new Date("2026-08-27T15:00:00"))).toBe("2026-08-30");
+  });
+
+  test("Saturday is CLOSED for the ladder — Quran-only, and Quran is not tracked (BUG-WC-1)", async () => {
+    // Thursday afternoon must wait for SUNDAY, not land on the Quran-only Saturday.
+    mockResolveDayType.mockImplementation(async (d: Date) => {
+      const day = d.getDay();
+      if (day === 5) return "OFF";
+      if (day === 6) return "QURAN_ONLY";
+      return "FULL";
+    });
+    // 2026-08-27 is a Thursday; 08-29 Saturday; 08-30 Sunday.
     expect(await resolveActionDateKey(new Date("2026-08-27T15:00:00"))).toBe("2026-08-30");
   });
 

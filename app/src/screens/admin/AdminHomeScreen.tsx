@@ -26,7 +26,9 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   const canAudit = can("audit:read");
   // GC-5: the guardian-claim queue is an Office/Principal screen and rides the
   // tracker:read they already hold — no new permission (D-#554).
-  const canWorkClaims = can("tracker:read");
+  // BUG-WC-3: gated on ROLE, not tracker:read — OFFICE deliberately holds no
+  // tracker permission, so the old gate hid the queue from the role it is for.
+  const canWorkClaims = role === "PRINCIPAL" || role === "OFFICE";
   // AR-2: the ranking reads the two attendance registers, so it sits behind the gate
   // that already owns them — `attendance:manage` is Principal + Office exactly.
   const canAttendance = can("attendance:manage");
