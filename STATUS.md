@@ -1,5 +1,12 @@
 # STATUS
 
+- 2026-08-27 (cont. 2): **FIXED — pasting into the new drill-down editor navigated away (QR-16, D-#573), branch `fix/qr16-edit-sheet-navigation`.** Reported within minutes of QR-15 reaching prod.
+  **My bug, and a plain one.** The reviewer-rounds `Card` carries `onPress` → navigate to the review thread, and QR-15 put the edit sheet INSIDE it. Every touch in a text field bubbled to the card, so a paste threw the user out to পর্যালোচনার ইতিহাস with the edit lost.
+  **Why the same component was fine on the publish queue** — and why that misled me: there the `Pressable` wraps only the header block and closes ~120 lines before the sheet. It got this right by accident of layout, not by a rule, so copying the integration copied nothing that protected it.
+  **Both halves applied.** The sheet is now a SIBLING of the card, and the card’s `onPress` is `undefined` while that row is being edited — our `Card` renders a plain `View` when it has no handler, so it genuinely stops listening rather than swallowing taps. Either alone fixes the symptom; neither alone is a rule worth keeping. A tappable card under an open editor is wrong whether or not a paste triggers it.
+  **Gate GREEN (executed):** shared-vocab verifier PASS, shared + server + app `tsc` clean, **server jest 3907/3907 (217 suites)**, expo web export **exit 0**.
+  **NOT DONE:** not re-driven at the running app — the paste has not been retried since the fix, which is the one check that settles it.
+
 - 2026-08-27 (cont.): **BUILT — সম্পাদনা on the reviewer-rounds drill-down (QR-15, D-#572), branch `feat/qr15-edit-from-drilldown`.** Owner ask while reading a শর্তসাপেক্ষ list: let the Principal or Office edit right here.
   **The gap was a missed surface, not a missing rule.** QR-8 put the edit sheet on the publish queue and the bank preview; the drill-down reached by tapping a reviewer’s counter is the THIRD place a condition is read, and it had no affordance — so reading the reason and fixing it were split across two screens for no reason but the app’s own layout. Same component, same `question:manage` gate, same re-import warning.
   **QR-14 verified on prod in passing.** The owner opened the new slice rows against real data: Kaynat ৪৮২+৫৭৬+৬৭৪+৫৫৭+৪৫৪+৫০৫ = ৩২৪৮ and ০+০+০+০+১৯১+৫০০ = ৬৯১; Sajeda ৭১১+৭৪৩ = ১৪৫৪ and ০+১১০ = ১১০. Both sum EXACTLY to their cards, which is the invariant the rows exist to keep. The chapter chips now show the six chapters actually assigned rather than the two that happened to hold published questions.
