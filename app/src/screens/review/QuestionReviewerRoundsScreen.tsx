@@ -175,12 +175,23 @@ export default function QuestionReviewerRoundsScreen({
       ) : (
         <>
           {rounds.map((r) => (
-            <Card
-              key={r.id}
-              onPress={() =>
-                navigation.navigate("QuestionReviewThread", { artifactId: r.artifactId })
-              }
-            >
+            <React.Fragment key={r.id}>
+              <Card
+                /**
+                 * NOT pressable while this row is being edited (D-#573).
+                 *
+                 * The whole card navigates to the review thread, and the edit sheet used to
+                 * render INSIDE it — so a paste into a field bubbled up and threw the editor
+                 * away mid-sentence. The sheet is now a SIBLING of the card, and the card
+                 * stops listening while it is open: either alone would fix the symptom, but
+                 * a tappable card sitting under an open editor is wrong regardless.
+                 */
+                onPress={
+                  editing === r.id
+                    ? undefined
+                    : () => navigation.navigate("QuestionReviewThread", { artifactId: r.artifactId })
+                }
+              >
               <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>
                 <Body style={{ fontWeight: "700" }}>{r.qid ?? r.addressNumber}</Body>
                 {r.questionType ? (
@@ -217,6 +228,10 @@ export default function QuestionReviewerRoundsScreen({
                   onPress={() => setEditing(editing === r.id ? null : r.id)}
                 />
               ) : null}
+              </Card>
+
+              {/* OUTSIDE the card on purpose (D-#573): the card navigates on press, so a
+                  paste into a field inside it bubbled up and threw the editor away. */}
               {mayManage && editing === r.id ? (
                 <QuestionEditSheet
                   artifactId={r.artifactId}
@@ -234,7 +249,7 @@ export default function QuestionReviewerRoundsScreen({
                   onCancel={() => setEditing(null)}
                 />
               ) : null}
-            </Card>
+            </React.Fragment>
           ))}
           {hasMore ? (
             <View style={{ marginTop: space(3) }}>
@@ -250,4 +265,4 @@ export default function QuestionReviewerRoundsScreen({
       )}
     </Screen>
   );
-}
+}undefined
