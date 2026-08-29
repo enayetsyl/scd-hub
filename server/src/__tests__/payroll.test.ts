@@ -70,6 +70,18 @@ jest.mock("../modules/hr/models/LatenessCharge", () => ({
     updateMany: jest.fn().mockResolvedValue({ modifiedCount: 0 }),
   },
 }));
+// D-#587 — payroll now resolves the salary EFFECTIVE in the month being run. Mocked
+// empty by default, which is the state of every staff member who has never had a
+// change recorded: the run then uses the profile's current figure, and every existing
+// assertion in this file must still hold to the taka.
+const mockPayChangeFind = jest.fn(() => [] as unknown[]);
+jest.mock("../modules/hr/models/StaffPayChange", () => ({
+  StaffPayChange: {
+    find: () => ({ sort: () => ({ select: () => ({ lean: async () => mockPayChangeFind() }) }) }),
+    findOne: () => ({ sort: () => ({ select: () => ({ lean: async () => null }) }) }),
+    create: jest.fn().mockResolvedValue({ _id: "x" }),
+  },
+}));
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
 }));
@@ -433,5 +445,59 @@ describe("advances (qard hasan, D-#27)", () => {
     mockAdvFindById.mockResolvedValue(advance2);
     await settleAdvance(advance2._id.toString(), true, ACTOR);
     expect(advance2.status).toBe("written_off");
+  });
+});
+
+// ===========================================================================
+describe("a mid-year raise (D-#587)", () => {
+  const alice = oid();
+
+  beforeEach(() => {
+    mockRunFindOne.mockResolvedValue(null);
+    mockRunCreate.mockImplementation(async (d: Record<string, unknown>) => ({ ...d, _id: oid() }));
+    mockLeaveFind.mockReturnValue([]);
+    mockAdvFind.mockReturnValue([]);
+    mockSlipInsert.mockImplementation(async (docs: unknown[]) => docs);
+    // Her CURRENT salary is 6,000 — she was raised from 5,000.
+    mockStaffFind.mockResolvedValue([
+      { _id: alice, name: "Alice", category: "teacher", monthlySalary: 6000, paymentMethod: "bank" },
+    ]);
+  });
+
+  async function grossFor(monthKey: string): Promise<number> {
+    const { payslips } = await preparePayrollRun({
+      monthKey,
+      workingDays: 30,
+      actorId: ACTOR,
+    });
+    return (payslips[0] as unknown as { grossSalary: number }).grossSalary;
+  }
+
+  test("with NO recorded change, every month pays the profile's figure — today's behaviour", async () => {
+    mockPayChangeFind.mockReturnValue([]);
+    expect(await grossFor("2026-05")).toBe(6000);
+    expect(await grossFor("2026-09")).toBe(6000);
+  });
+
+  test("a raise effective in July pays 6,000 from July and 5,000 before it", async () => {
+    // The service asks for rows with effectiveFrom ≤ monthKey, ascending; the mock
+    // answers what the query would return for each month.
+    mockPayChangeFind.mockReturnValue([{ staffProfileId: alice, monthlySalary: 5000 }]);
+    expect(await grossFor("2026-06")).toBe(5000);
+
+    mockPayChangeFind.mockReturnValue([
+      { staffProfileId: alice, monthlySalary: 5000 },
+      { staffProfileId: alice, monthlySalary: 6000 },
+    ]);
+    // Ascending order means the LAST row in range wins — the latest change already in
+    // effect. Getting this backwards would pay the raise a month early, every month.
+    expect(await grossFor("2026-07")).toBe(6000);
+  });
+
+  test("the day rate follows the effective salary, so leave is docked at the right rate", async () => {
+    mockPayChangeFind.mockReturnValue([{ staffProfileId: alice, monthlySalary: 5000 }]);
+    const { payslips } = await preparePayrollRun({ monthKey: "2026-06", workingDays: 30, actorId: ACTOR });
+    // 5000 / 30 = 167, not 6000 / 30 = 200.
+    expect((payslips[0] as unknown as { dayRate: number }).dayRate).toBe(167);
   });
 });

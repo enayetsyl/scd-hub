@@ -16,18 +16,19 @@
  */
 import React from "react";
 import { View } from "react-native";
-import { useMutation } from "urql";
+import { useMutation, useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { AdminStackParamList } from "../../navigation/types";
 import { PAYMENT_METHODS } from "@scd/shared";
-import { SET_STAFF_PAY, UPDATE_STAFF_PROFILE } from "../../graphql/operations";
+import { SET_STAFF_PAY, UPDATE_STAFF_PROFILE, STAFF_PAY_HISTORY_QUERY } from "../../graphql/operations";
 import {
-  Screen, H2, Body, Muted, Card, Field, Chip, ChipRow, Button, Divider, Notice,
+  Screen, H2, Body, Muted, Card, Row, Field, Chip, ChipRow, Button, Divider, Notice,
 } from "../../components/ui";
-import { STR, paymentMethodLabel } from "../../lib/labels";
+import { STR, bnNum, paymentMethodLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import BankDetailsFields, {
   isBankDetailsComplete,
+  detailsForMethod,
   type BankDetails,
 } from "../../components/BankDetailsFields";
 import { useAuth } from "../../auth/AuthContext";
@@ -42,6 +43,48 @@ function parseAmount(raw: string): number | null {
   if (!/^\d+(\.\d+)?$/.test(t)) return null;
   const n = Number(t);
   return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+const MONTH_KEY = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** This month, as YYYY-MM — the default effective month for a raise entered today. */
+function currentMonthKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * What this person has earned, and from when (D-#587).
+ *
+ * Shown beside the field that changes it, because the question 'was that raise
+ * recorded from July or from today' is asked at exactly the moment someone is about
+ * to type another one.
+ */
+function PayHistoryCard({ staffProfileId }: { staffProfileId: string }): React.ReactElement | null {
+  const [{ data }] = useQuery({
+    query: STAFF_PAY_HISTORY_QUERY,
+    variables: { staffProfileId },
+    requestPolicy: "cache-and-network",
+  });
+  const rows = data?.staffPayHistory ?? [];
+  if (rows.length === 0) return null;
+  return (
+    <Card>
+      <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfPayHistory}</Body>
+      {rows.map((r) => (
+        <Row
+          key={r.id}
+          label={bnNum(r.effectiveFrom)}
+          value={
+            r.previousSalary != null
+              ? `৳ ${bnNum(String(r.previousSalary))} → ৳ ${bnNum(String(r.monthlySalary))}`
+              : `৳ ${bnNum(String(r.monthlySalary))}`
+          }
+        />
+      ))}
+      <Muted>{STR.stfPayHistoryNote}</Muted>
+    </Card>
+  );
 }
 
 export default function StaffPayEditScreen({ route, navigation }: Props): React.ReactElement {
@@ -62,6 +105,10 @@ export default function StaffPayEditScreen({ route, navigation }: Props): React.
     bankBranch: staff.bankBranch ?? "",
   });
   const [bankTouched, setBankTouched] = React.useState(false);
+  // A raise is dated: entering it in September does not make it a September raise.
+  // Defaults to this month, which is the common case (D-#587).
+  const [effectiveFrom, setEffectiveFrom] = React.useState(currentMonthKey());
+  const [payNote, setPayNote] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [failure, setFailure] = React.useState<string | null>(null);
 
@@ -72,9 +119,12 @@ export default function StaffPayEditScreen({ route, navigation }: Props): React.
   // which the server would read as "leave unchanged" — saving the method alone and
   // looking, to the operator, exactly like success.
   const salaryInvalid = salaryTouched && amount === null;
+  // Only a CHANGED figure needs a date and a reason — re-saving the same salary,
+  // or editing only the payment method, must not ask for either.
+  const salaryChanged = amount !== null && amount !== (staff.monthlySalary ?? null);
   // A method with no details cannot be paid into; the disbursement file carries them.
   const bankOk = isBankDetailsComplete(method, bank);
-  const canSave = !salaryInvalid && bankOk && !busy;
+  const canSave = !salaryInvalid && bankOk && !busy && (!salaryChanged || MONTH_KEY.test(effectiveFrom.trim()));
 
   async function onSave(): Promise<void> {
     setBusy(true);
@@ -84,6 +134,8 @@ export default function StaffPayEditScreen({ route, navigation }: Props): React.
         staffProfileId: staff.id,
         monthlySalary: amount,
         paymentMethod: method,
+        effectiveFrom,
+        payChangeNote: payNote.trim() || null,
       });
       if (res.error) { setBusy(false); setFailure(friendlyError(res.error)); return; }
     }
@@ -124,13 +176,37 @@ export default function StaffPayEditScreen({ route, navigation }: Props): React.
           <Muted>{STR.stfPaymentMethod}</Muted>
           <ChipRow>
             {PAYMENT_METHODS.map((m) => (
-              <Chip key={m} label={paymentMethodLabel(m)} selected={method === m} onPress={() => setMethod(m)} />
+              <Chip
+                key={m}
+                label={paymentMethodLabel(m)}
+                selected={method === m}
+                // Switching method clears the NUMBER: an account number left under a
+                // বিকাশ label is a payment sent somewhere else (D-#588).
+                onPress={() => {
+                  setBank((b) => detailsForMethod(b, method, m));
+                  setMethod(m);
+                }}
+              />
             ))}
           </ChipRow>
         </Card>
       ) : (
         <Notice tone="info" message={STR.stfPayNeedsPayrollPerm} />
       )}
+
+      {/* When the change takes effect, and why. Payroll pays the figure effective in
+          the month being run, so a backdated raise reaches the months it belongs to
+          rather than only the next one (D-#587). */}
+      {canPay && salaryChanged ? (
+        <Card>
+          <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfPayChangeSection}</Body>
+          <Field label={STR.stfPayEffectiveFrom} value={effectiveFrom} onChangeText={setEffectiveFrom} placeholder="2026-07" />
+          <Muted>{STR.stfPayEffectiveHint}</Muted>
+          <Field label={STR.stfPayChangeReason} value={payNote} onChangeText={setPayNote} autoCapitalize="sentences" />
+        </Card>
+      ) : null}
+
+      {canPay ? <PayHistoryCard staffProfileId={staff.id} /> : null}
 
       {canStaff ? (
         <Card>

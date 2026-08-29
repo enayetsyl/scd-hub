@@ -54,6 +54,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import BankDetailsFields, {
   isBankDetailsComplete,
+  detailsForMethod,
   EMPTY_BANK_DETAILS,
   type BankDetails,
 } from "../../components/BankDetailsFields";
@@ -369,7 +370,17 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
             <Muted>{STR.stfPaymentMethod}</Muted>
             <ChipRow>
               {PAYMENT_METHODS.map((m) => (
-                <Chip key={m} label={paymentMethodLabel(m)} selected={paymentMethod === m} onPress={() => setPaymentMethod(m)} />
+                <Chip
+                  key={m}
+                  label={paymentMethodLabel(m)}
+                  selected={paymentMethod === m}
+                  // Clear the number when the method changes — an account number left
+                  // sitting under a বিকাশ label is a payment sent elsewhere (D-#588).
+                  onPress={() => {
+                    setBank((b) => detailsForMethod(b, paymentMethod, m));
+                    setPaymentMethod(m);
+                  }}
+                />
               ))}
             </ChipRow>
             <BankDetailsFields

@@ -6671,12 +6671,51 @@ export interface StaffPayT {
   paymentMethod: string | null;
 }
 
+/** One recorded salary change (D-#587). */
+export interface StaffPayChangeT {
+  id: string;
+  effectiveFrom: string;
+  monthlySalary: number;
+  previousSalary: number | null;
+  note: string | null;
+}
+
+export const STAFF_PAY_HISTORY_QUERY = gql<
+  { staffPayHistory: StaffPayChangeT[] },
+  { staffProfileId: string }
+>`
+  query StaffPayHistory($staffProfileId: String!) {
+    staffPayHistory(staffProfileId: $staffProfileId) {
+      id effectiveFrom monthlySalary previousSalary note
+    }
+  }
+`;
+
 export const SET_STAFF_PAY = gql<
   { setStaffPay: StaffPayT },
-  { staffProfileId: string; monthlySalary?: number | null; paymentMethod?: string | null }
+  {
+    staffProfileId: string;
+    monthlySalary?: number | null;
+    paymentMethod?: string | null;
+    /** YYYY-MM — the month the new figure takes effect (D-#587). */
+    effectiveFrom?: string | null;
+    payChangeNote?: string | null;
+  }
 >`
-  mutation SetStaffPay($staffProfileId: String!, $monthlySalary: Float, $paymentMethod: String) {
-    setStaffPay(staffProfileId: $staffProfileId, monthlySalary: $monthlySalary, paymentMethod: $paymentMethod) {
+  mutation SetStaffPay(
+    $staffProfileId: String!
+    $monthlySalary: Float
+    $paymentMethod: String
+    $effectiveFrom: String
+    $payChangeNote: String
+  ) {
+    setStaffPay(
+      staffProfileId: $staffProfileId
+      monthlySalary: $monthlySalary
+      paymentMethod: $paymentMethod
+      effectiveFrom: $effectiveFrom
+      payChangeNote: $payChangeNote
+    ) {
       id monthlySalary paymentMethod
     }
   }

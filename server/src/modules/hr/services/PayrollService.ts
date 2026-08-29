@@ -22,6 +22,7 @@ import { StaffLeaveApplication } from "../models/StaffLeaveApplication";
 import { PayrollRun, type IPayrollRun } from "../models/PayrollRun";
 import { Payslip, type IPayslip } from "../models/Payslip";
 import { AdvanceLoan } from "../models/AdvanceLoan";
+import { salariesEffectiveIn } from "./PayHistoryService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { assertMonthKey, dayRate, computePayslip, PayrollError, type PayLineInput } from "./payrollMath";
 import { activeAdvanceByStaff } from "./AdvanceService";
@@ -84,12 +85,16 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
     await PayrollRun.deleteOne({ _id: existing._id });
   }
 
-  const [staff, leaveDays, advances] = await Promise.all([
+  const [staff, leaveDays, advances, effectiveSalaries] = await Promise.all([
     StaffProfile.find({ active: true, monthlySalary: { $gt: 0 } })
       .select("name category monthlySalary paymentMethod")
       .lean(),
     unpaidLeaveDaysByStaff(input.monthKey),
     activeAdvanceByStaff(),
+    // The salary EFFECTIVE IN THIS MONTH (D-#587). Empty for anyone with no recorded
+    // change, and then the profile's current figure is used — which is exactly what
+    // this did before history existed, so landing it moves no existing run.
+    salariesEffectiveIn(input.monthKey),
   ]);
 
   const adjByStaff = new Map((input.adjustments ?? []).map((a) => [a.staffProfileId, a]));
@@ -106,9 +111,13 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
   const payslipDocs: Array<Partial<IPayslip>> = [];
   for (const s of staff) {
     const sid = s._id.toString();
-    const rate = dayRate(s.monthlySalary!, input.workingDays);
+    // A raise agreed in July but entered in September is a JULY raise, and re-running
+    // August must still pay the old figure. The recorded change decides; the profile's
+    // current salary is the fallback for everyone who has never had one recorded.
+    const salary = effectiveSalaries.get(sid) ?? s.monthlySalary!;
+    const rate = dayRate(salary, input.workingDays);
     const adj = adjByStaff.get(sid);
-    const gross = adj?.payableDays != null ? Math.round(rate * adj.payableDays) : s.monthlySalary!;
+    const gross = adj?.payableDays != null ? Math.round(rate * adj.payableDays) : salary;
     const advance = advances.get(sid);
     // SH-4 / D-#541: the 3-lates-to-a-day charge. Returns null while the rule is off,
     // in which case nothing is passed and the payslip is byte-identical to today. An
