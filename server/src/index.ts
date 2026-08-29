@@ -20,6 +20,7 @@ import { builder } from "./schema";
 import { pdfRouter } from "./routes/pdf";
 import { syllabusPdfRouter } from "./modules/exams/routes/syllabusPdf";
 import { staffLetterPdfRouter } from "./modules/hr/routes/staffLetterPdf";
+import { paymentExportCsvRouter } from "./modules/hr/routes/paymentExportCsv";
 import { setPdfRouter } from "./modules/assessment/routes/setPdf";
 import { englishDrivePdfRouter } from "./modules/english-drive/routes/englishDrivePdf";
 import { archiveCoverPdfRouter } from "./modules/archive/routes/archiveCoverPdf";
@@ -203,6 +204,9 @@ app.use("/pdf/english-drive", englishDrivePdfRouter);
 app.use("/pdf/student-profile", studentProfilePdfRouter);
 app.use("/pdf/monthly-report", monthlyReportPdfRouter);
 app.use("/export/monthly-comments", monthlyCommentExportRouter);
+// Under the ALREADY-ALLOWLISTED /export prefix on the VM's Caddyfile — a new top-level
+// prefix would have 200'd the SPA's index.html instead of reaching the server.
+app.use("/export/payment", paymentExportCsvRouter);
 app.use("/pdf/archive-cover", archiveCoverPdfRouter);
 app.use("/pdf/syllabus", syllabusPdfRouter);
 app.use("/pdf/staff-letter", staffLetterPdfRouter);

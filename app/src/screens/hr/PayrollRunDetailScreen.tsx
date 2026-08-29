@@ -32,7 +32,15 @@ import {
   Notice,
 } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
-import { STR, bnNum, money, payrollRunStatusLabel, payDeductionTypeLabel, payAdditionTypeLabel } from "../../lib/labels";
+import {
+  STR,
+  bnNum,
+  money,
+  payrollRunStatusLabel,
+  payDeductionTypeLabel,
+  payAdditionTypeLabel,
+  payLineNote,
+} from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
@@ -42,7 +50,7 @@ type Props = NativeStackScreenProps<HrStackParamList, "PayrollRunDetail">;
 function PayLineRow({ label, line }: { label: string; line: PayLineT }): React.ReactElement {
   return (
     <Row
-      label={`${label}${line.days != null ? ` · ${bnNum(line.days)}` : ""}${line.note ? ` · ${line.note}` : ""}`}
+      label={`${label}${line.days != null ? ` · ${bnNum(line.days)}` : ""}${payLineNote(line.note) ? ` · ${payLineNote(line.note)}` : ""}`}
       value={money(line.amount)}
     />
   );
@@ -59,7 +67,11 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
   const [error, setError] = React.useState<string | null>(null);
   const [ok, setOk] = React.useState<string | null>(null);
 
-  const [{ data, fetching, error: qErr }, refetch] = useQuery({ query: PAYSLIPS_FOR_RUN_QUERY, variables: { runId } });
+  const [{ data, fetching, error: qErr }, refetch] = useQuery({
+    query: PAYSLIPS_FOR_RUN_QUERY,
+    variables: { runId },
+    requestPolicy: "cache-and-network",
+  });
   const [, approve] = useMutation(APPROVE_PAYROLL_RUN);
   const [, cancel] = useMutation(CANCEL_PAYROLL_RUN);
 
@@ -93,6 +105,9 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
     }
     setStatus(res.data.cancelPayrollRun.status);
     setOk(STR.hrRunCancelled);
+    // Cancelling DELETES the run's payslips, so this screen now has nothing left to
+    // show — and the list behind it excludes cancelled runs entirely (D-#578).
+    refetch({ requestPolicy: "network-only" });
   }
 
   return (
@@ -126,7 +141,7 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
 
       {/* Payslips */}
       <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrPayslips}</Body>
-      {fetching ? (
+      {fetching && payslips.length === 0 ? (
         <Loader label={STR.loading} />
       ) : qErr ? (
         <ErrorBanner message={friendlyError(qErr)} onRetry={() => refetch({ requestPolicy: "network-only" })} />

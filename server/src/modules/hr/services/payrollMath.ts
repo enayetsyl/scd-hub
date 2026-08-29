@@ -106,7 +106,10 @@ export function computePayslip(input: ComputePayslipInput): ComputedPayslip {
     // NET-PAY GUARD: never push net below zero; the excess rolls forward in `balance`.
     advanceRepaid = Math.max(0, Math.min(desired, netBeforeAdvance));
     if (advanceRepaid > 0) {
-      deductions.push({ type: "advance_repayment", amount: advanceRepaid, note: `advance ${advanceId}` });
+      // No note: it used to be `advance <ObjectId>`, and that string is PRINTED on the
+      // payslip line a teacher reads. The id is already on the payslip's `advanceId`
+      // field, which is where a system needs it and a person does not.
+      deductions.push({ type: "advance_repayment", amount: advanceRepaid });
     }
   }
 

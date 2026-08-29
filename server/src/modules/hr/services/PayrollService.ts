@@ -259,8 +259,26 @@ export interface PaymentExportRow {
   name: string;
   paymentMethod: string;
   account: string | null;
+  /** SH-10's three fields. A bank transfer cannot be made from a number alone. */
+  accountName: string | null;
+  bankName: string | null;
+  bankBranch: string | null;
   netPay: number;
+  /**
+   * `null` when the row can actually be paid; otherwise WHY it cannot — a missing
+   * account, or a net of zero.
+   *
+   * Blocked rows are RETURNED, not filtered out (D-#579). Dropping them silently is
+   * how a person misses a salary: the operator sees a list, pays it, and nobody
+   * notices the two names that were never on it. They are returned and shown apart,
+   * and only the payable ones go into the file.
+   */
+  blockedReason: string | null;
 }
+
+const NO_ACCOUNT = "অ্যাকাউন্ট নম্বর নেই";
+const NO_BANK_DETAILS = "ব্যাংকের নাম/শাখা/হিসাবধারীর নাম অসম্পূর্ণ";
+const ZERO_NET = "নিট বেতন শূন্য";
 
 /** Net pay per staff for bank/bKash bulk upload — cash EXCLUDED (§4.6). Locked run only. */
 export async function paymentExport(runId: string): Promise<PaymentExportRow[]> {
@@ -269,16 +287,32 @@ export async function paymentExport(runId: string): Promise<PaymentExportRow[]> 
   if (run.status !== "approved_locked") throw new PayrollError("Payment export issues only from a locked run (§4.6)");
   const slips = await Payslip.find({ payrollRunId: new Types.ObjectId(runId), paymentMethod: { $ne: "cash" } }).lean();
   const staff = await StaffProfile.find({ _id: { $in: slips.map((s) => s.staffProfileId) } })
-    .select("bankAccount")
+    .select("bankAccount bankAccountName bankName bankBranch")
     .lean();
-  const acctById = new Map(staff.map((s) => [s._id.toString(), s.bankAccount ?? null]));
+  const byId = new Map(staff.map((s) => [s._id.toString(), s]));
   return slips
-    .map((s) => ({
-      staffProfileId: s.staffProfileId.toString(),
-      name: s.snapshotName,
-      paymentMethod: s.paymentMethod ?? "",
-      account: acctById.get(s.staffProfileId.toString()) ?? null,
-      netPay: s.netPay,
-    }))
+    .map((s) => {
+      const d = byId.get(s.staffProfileId.toString());
+      const account = d?.bankAccount?.trim() || null;
+      const accountName = d?.bankAccountName?.trim() || null;
+      const bankName = d?.bankName?.trim() || null;
+      const bankBranch = d?.bankBranch?.trim() || null;
+      // bKash pays to a number; a bank transfer needs the name, bank and branch too.
+      const bankIncomplete =
+        s.paymentMethod === "bank" && !(accountName && bankName && bankBranch);
+      const blockedReason =
+        s.netPay <= 0 ? ZERO_NET : !account ? NO_ACCOUNT : bankIncomplete ? NO_BANK_DETAILS : null;
+      return {
+        staffProfileId: s.staffProfileId.toString(),
+        name: s.snapshotName,
+        paymentMethod: s.paymentMethod ?? "",
+        account,
+        accountName,
+        bankName,
+        bankBranch,
+        netPay: s.netPay,
+        blockedReason,
+      };
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 }

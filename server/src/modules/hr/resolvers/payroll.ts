@@ -106,7 +106,13 @@ PaymentExportRowRef.implement({
     name: t.exposeString("name"),
     paymentMethod: t.exposeString("paymentMethod"),
     account: t.string({ nullable: true, resolve: (r) => r.account }),
+    accountName: t.string({ nullable: true, resolve: (r) => r.accountName }),
+    bankName: t.string({ nullable: true, resolve: (r) => r.bankName }),
+    bankBranch: t.string({ nullable: true, resolve: (r) => r.bankBranch }),
     netPay: t.exposeFloat("netPay"),
+    // Non-null = this line CANNOT be paid, and why. Shown apart from the payable
+    // list rather than dropped, so a missing salary is visible (D-#579).
+    blockedReason: t.string({ nullable: true, resolve: (r) => r.blockedReason }),
   }),
 });
 

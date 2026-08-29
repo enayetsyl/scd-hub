@@ -923,6 +923,20 @@ export const payDeductionTypeLabel = (v?: string | null): string =>
 export const payAdditionTypeLabel = (v?: string | null): string =>
   (v && pick(PAY_ADDITION_TYPE_LABELS_BN, PAY_ADDITION_TYPE_LABELS_EN)[v as PayAdditionType]) || v || DASH;
 
+/**
+ * A pay-line note, or null when it is not fit to print.
+ *
+ * `advance_repayment` lines written before this fix carry `advance <ObjectId>` as their
+ * note, and those payslips sit in LOCKED runs — history, not editable. The id is on the
+ * payslip's own `advanceId` field where it belongs, so it is suppressed at display
+ * rather than migrated. New lines never carry it (payrollMath).
+ */
+const LEGACY_ADVANCE_NOTE = /^advance [0-9a-f]{24}$/i;
+export const payLineNote = (note?: string | null): string | null => {
+  const t = (note ?? "").trim();
+  return t === "" || LEGACY_ADVANCE_NOTE.test(t) ? null : t;
+};
+
 export const advanceStatusLabel = (v?: string | null): string =>
   (v && pick(ADVANCE_STATUS_LABELS_BN, ADVANCE_STATUS_LABELS_EN)[v as AdvanceStatus]) || v || DASH;
 
@@ -3421,6 +3435,14 @@ const STR_BN = {
   stfRecordLeaveNote: "যাঁদের অ্যাপ-লগইন নেই (আয়া, দারোয়ান, বাবুর্চি) তাঁদের ছুটি এখান থেকে লিখে রাখুন — এরপর উপরের তালিকা থেকে অনুমোদন করতে হবে।",
   stfRecordLeaveSubmit: "ছুটি নথিভুক্ত করুন",
   stfRecordLeaveDone: "ছুটি নথিভুক্ত হয়েছে — উপরের তালিকা থেকে অনুমোদন করুন।",
+  stfExportPayableTitle: "যাঁদের পাঠানো যাবে",
+  stfExportBlockedTitle: "যাঁদের পাঠানো যাবে না",
+  stfExportBlockedNote: "এঁদের বেতন ফাইলে যাবে না। তথ্য ঠিক করে আবার এই পাতায় আসুন।",
+  stfExportPayableCount: "পাঠানো যাবে",
+  stfExportPeople: "জন",
+  stfExportTotal: "মোট",
+  stfExportCsv: "CSV ফাইল ডাউনলোড",
+  stfExportWebOnly: "ফাইল ডাউনলোড শুধু ওয়েব ব্রাউজারে কাজ করে।",
   stfAccountNeededNote: "পেমেন্ট ফাইলে এই নম্বরটিই যাবে — না দিলে এই কর্মী ফাইল থেকে বাদ পড়বেন।",
   stfObservations: "পর্যবেক্ষণ",
   stfObservationCount: "টি পর্যবেক্ষণ",
@@ -7468,6 +7490,14 @@ const STR_EN: StrTable = {
   stfRecordLeaveNote: "For staff with no app login (helpers, guards, cooks) — record the leave here, then approve it from the list above.",
   stfRecordLeaveSubmit: "Record leave",
   stfRecordLeaveDone: "Leave recorded — approve it from the list above.",
+  stfExportPayableTitle: "Can be paid",
+  stfExportBlockedTitle: "Cannot be paid",
+  stfExportBlockedNote: "These are not in the file. Fix the details and come back to this page.",
+  stfExportPayableCount: "Payable",
+  stfExportPeople: "people",
+  stfExportTotal: "Total",
+  stfExportCsv: "Download CSV",
+  stfExportWebOnly: "File download works in a web browser only.",
   stfAccountNeededNote: "This is the number the payment file carries — without it this person is excluded from it.",
   stfObservations: "Observations",
   stfObservationCount: "observations",

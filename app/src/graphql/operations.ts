@@ -5854,7 +5854,7 @@ export interface ChildAssignmentT {
   isResubmission: boolean;
   /** D-#478: WHAT the assignment is. Null only for pre-D-#478 items. */
   description: string | null;
-  attachmentIds: string[];
+  attachmentIds: string[];
   canClaim: boolean;
   claim: GuardianWorkClaimT | null;
 }
@@ -6760,7 +6760,12 @@ export interface PaymentExportRowT {
   name: string;
   paymentMethod: string;
   account: string | null;
+  accountName: string | null;
+  bankName: string | null;
+  bankBranch: string | null;
   netPay: number;
+  /** Non-null = cannot be paid, and why (D-#579). Never silently dropped. */
+  blockedReason: string | null;
 }
 
 export const PAYROLL_PAYMENT_EXPORT_QUERY = gql<
@@ -6768,7 +6773,9 @@ export const PAYROLL_PAYMENT_EXPORT_QUERY = gql<
   { runId: string }
 >`
   query PayrollPaymentExport($runId: String!) {
-    payrollPaymentExport(runId: $runId) { staffProfileId name paymentMethod account netPay }
+    payrollPaymentExport(runId: $runId) {
+      staffProfileId name paymentMethod account accountName bankName bankBranch netPay blockedReason
+    }
   }
 `;
 

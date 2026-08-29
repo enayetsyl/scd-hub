@@ -76,6 +76,7 @@ jest.mock("../modules/platform/services/AuditService", () => ({
 
 import { assertMonthKey, dayRate, computePayslip, PayrollError } from "../modules/hr/services/payrollMath";
 import { preparePayrollRun, approvePayrollRun, cancelPayrollRun, paymentExport } from "../modules/hr/services/PayrollService";
+import { csvCell, csvLine } from "../modules/hr/routes/paymentExportCsv";
 import { issueAdvance, settleAdvance } from "../modules/hr/services/AdvanceService";
 import { splitLatenessCharge } from "../modules/hr/services/LatenessService";
 import { HR_POLICY_DEFAULTS } from "@scd/shared";
@@ -310,17 +311,88 @@ describe("cancelPayrollRun", () => {
 
 // ===========================================================================
 describe("paymentExport (§4.6)", () => {
-  test("locked run → net per non-cash staff, account joined", async () => {
-    const sA = oid();
+  const locked = () =>
     mockRunFindById.mockReturnValue({ lean: async () => ({ _id: oid(), status: "approved_locked" }) });
+
+  test("locked run → net per non-cash staff, full disbursement details joined", async () => {
+    const sA = oid();
+    locked();
     mockSlipFind.mockReturnValue([{ staffProfileId: sA, snapshotName: "A", paymentMethod: "bank", netPay: 26000 }]);
-    mockStaffFind.mockResolvedValue([{ _id: sA, bankAccount: "12345" }]);
+    mockStaffFind.mockResolvedValue([
+      { _id: sA, bankAccount: "12345", bankAccountName: "A", bankName: "IBBL", bankBranch: "Uttara" },
+    ]);
     const rows = await paymentExport(oid().toString());
-    expect(rows).toEqual([{ staffProfileId: sA.toString(), name: "A", paymentMethod: "bank", account: "12345", netPay: 26000 }]);
+    expect(rows).toEqual([
+      {
+        staffProfileId: sA.toString(),
+        name: "A",
+        paymentMethod: "bank",
+        account: "12345",
+        accountName: "A",
+        bankName: "IBBL",
+        bankBranch: "Uttara",
+        netPay: 26000,
+        blockedReason: null,
+      },
+    ]);
   });
+
+  // D-#579 — these three used to be indistinguishable from payable rows.
+  test("no account number → BLOCKED, and still returned so the person is visible", async () => {
+    const sA = oid();
+    locked();
+    mockSlipFind.mockReturnValue([{ staffProfileId: sA, snapshotName: "A", paymentMethod: "bkash", netPay: 9000 }]);
+    mockStaffFind.mockResolvedValue([{ _id: sA }]);
+    const rows = await paymentExport(oid().toString());
+    expect(rows).toHaveLength(1);
+    expect(rows[0].blockedReason).toBe("অ্যাকাউন্ট নম্বর নেই");
+  });
+
+  test("a ৳0 net is blocked — a bank upload cannot accept it", async () => {
+    const sA = oid();
+    locked();
+    mockSlipFind.mockReturnValue([{ staffProfileId: sA, snapshotName: "A", paymentMethod: "bkash", netPay: 0 }]);
+    mockStaffFind.mockResolvedValue([{ _id: sA, bankAccount: "017…" }]);
+    const rows = await paymentExport(oid().toString());
+    expect(rows[0].blockedReason).toBe("নিট বেতন শূন্য");
+  });
+
+  test("a bank transfer needs name + bank + branch; bKash needs only the number", async () => {
+    const bankOnly = oid();
+    const bkash = oid();
+    locked();
+    mockSlipFind.mockReturnValue([
+      { staffProfileId: bankOnly, snapshotName: "A", paymentMethod: "bank", netPay: 100 },
+      { staffProfileId: bkash, snapshotName: "B", paymentMethod: "bkash", netPay: 100 },
+    ]);
+    mockStaffFind.mockResolvedValue([
+      { _id: bankOnly, bankAccount: "12345" }, // number alone — not payable by transfer
+      { _id: bkash, bankAccount: "017…" }, // a number IS the whole instruction here
+    ]);
+    const rows = await paymentExport(oid().toString());
+    expect(rows.find((r) => r.name === "A")!.blockedReason).toBe("ব্যাংকের নাম/শাখা/হিসাবধারীর নাম অসম্পূর্ণ");
+    expect(rows.find((r) => r.name === "B")!.blockedReason).toBeNull();
+  });
+
   test("export refused on a non-locked run", async () => {
     mockRunFindById.mockReturnValue({ lean: async () => ({ _id: oid(), status: "prepared" }) });
     await expect(paymentExport(oid().toString())).rejects.toThrow(/locked run/i);
+  });
+});
+
+// ===========================================================================
+describe("payment CSV (D-#579)", () => {
+  test("every field is quoted, so a leading zero survives and a comma cannot shift a column", () => {
+    expect(csvLine(["মোঃ করিম, জুনিয়র", "bank", "0012345", 26000])).toBe(
+      '"মোঃ করিম, জুনিয়র","bank","0012345","26000"',
+    );
+  });
+  test("an inner quote is doubled, never dropped", () => {
+    expect(csvCell('A "B" C')).toBe('"A ""B"" C"');
+  });
+  test("null/undefined become an empty cell, not the string 'null'", () => {
+    expect(csvCell(null)).toBe('""');
+    expect(csvCell(undefined)).toBe('""');
   });
 });
 

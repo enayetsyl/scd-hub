@@ -22,7 +22,17 @@ function statusTone(s: string): "info" | "ok" | "muted" {
 }
 
 export default function PayrollHomeScreen({ navigation }: Props): React.ReactElement {
-  const [{ data, fetching, error }, refetch] = useQuery({ query: PAYROLL_RUNS_QUERY });
+  // The list must re-read on focus. `payrollRuns` EXCLUDES cancelled runs, so a
+  // cache-first replay after cancelling one still shows it, still badged প্রস্তুত —
+  // which reads as "cancel did nothing" and was reported as exactly that (D-#578).
+  const [{ data, fetching, error }, refetch] = useQuery({
+    query: PAYROLL_RUNS_QUERY,
+    requestPolicy: "cache-and-network",
+  });
+  React.useEffect(
+    () => navigation.addListener("focus", () => refetch({ requestPolicy: "network-only" })),
+    [navigation, refetch],
+  );
   const runs = data?.payrollRuns ?? [];
 
   return (
@@ -42,7 +52,7 @@ export default function PayrollHomeScreen({ navigation }: Props): React.ReactEle
       </Card>
 
       <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrPayrollRuns}</Body>
-      {fetching ? (
+      {fetching && runs.length === 0 ? (
         <Loader label={STR.loading} />
       ) : error ? (
         <ErrorBanner message={friendlyError(error)} onRetry={() => refetch({ requestPolicy: "network-only" })} />

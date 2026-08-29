@@ -53,6 +53,8 @@ import {
   conductStageLabel,
   conductRecordStatusLabel,
   grievanceStatusLabel,
+  payDeductionTypeLabel,
+  payLineNote,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -237,11 +239,14 @@ export default function MyRecordScreen(): React.ReactElement {
               <Body style={{ fontWeight: "700" }}>{s.monthKey}</Body>
               <Body style={{ fontWeight: "700" }}>{`৳ ${bnNum(String(s.netPay))}`}</Body>
             </View>
-            <Row label={STR.stfPoolAllowance} value={`৳ ${bnNum(String(s.grossSalary))}`} />
+            <Row label={STR.hrPayGross} value={`৳ ${bnNum(String(s.grossSalary))}`} />
             {s.deductions.map((d, i) => (
               <Row
                 key={`${s.id}-${i}`}
-                label={d.note ?? d.type}
+                // Was `d.note ?? d.type` — which printed a teacher her own payslip line
+                // as the raw English type, or as "advance 665f…" with a database id in
+                // it. The type has a Bangla label; the note is only ever an extra.
+                label={`${payDeductionTypeLabel(d.type)}${payLineNote(d.note) ? ` · ${payLineNote(d.note)}` : ""}`}
                 value={`− ৳ ${bnNum(String(d.amount))}${d.days ? ` (${bnNum(String(d.days))} ${STR.stfDays})` : ""}`}
               />
             ))}
