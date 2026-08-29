@@ -13,6 +13,11 @@
 import { builder } from "../../../schema";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { recordPayChange, payHistoryForStaff } from "../services/PayHistoryService";
+import {
+  paymentAdvice,
+  type AdviceGroup,
+  type AdviceRow,
+} from "../services/PaymentAdviceService";
 import { writeAudit } from "../../platform/services/AuditService";
 import type { PaymentMethod } from "@scd/shared";
 import {
@@ -116,6 +121,90 @@ PaymentExportRowRef.implement({
     blockedReason: t.string({ nullable: true, resolve: (r) => r.blockedReason }),
   }),
 });
+
+/**
+ * The salary-advice pack as DATA, so the screen can show the three lists before anyone
+ * downloads the PDF (D-#591) — and, more importantly, show who is BLOCKED while there
+ * is still time to fix it.
+ *
+ * `ready`/`missing` describe the letterhead, not the staff: the PDF route refuses when
+ * the school's own bank details are unset, and the screen should say so rather than
+ * hand the operator a download that returns a 400.
+ */
+const AdviceRowRef = builder.objectRef<AdviceRow>("PaymentAdviceRow");
+AdviceRowRef.implement({
+  fields: (t) => ({
+    staffProfileId: t.exposeString("staffProfileId"),
+    name: t.exposeString("name"),
+    accountName: t.string({ nullable: true, resolve: (r) => r.accountName }),
+    account: t.string({ nullable: true, resolve: (r) => r.account }),
+    bankName: t.string({ nullable: true, resolve: (r) => r.bankName }),
+    bankBranch: t.string({ nullable: true, resolve: (r) => r.bankBranch }),
+    routingNo: t.string({ nullable: true, resolve: (r) => r.routingNo }),
+    amount: t.exposeFloat("amount"),
+    blockedReason: t.string({ nullable: true, resolve: (r) => r.blockedReason }),
+  }),
+});
+
+const AdviceGroupRef = builder.objectRef<AdviceGroup>("PaymentAdviceGroup");
+AdviceGroupRef.implement({
+  fields: (t) => ({
+    channel: t.exposeString("channel"),
+    total: t.exposeFloat("total"),
+    rows: t.field({ type: [AdviceRowRef], resolve: (g) => g.rows }),
+    blocked: t.field({ type: [AdviceRowRef], resolve: (g) => g.blocked }),
+  }),
+});
+
+interface AdviceView {
+  monthKey: string;
+  paymentInfo: string;
+  letterDate: string;
+  ready: boolean;
+  missing: string[];
+  groups: AdviceGroup[];
+}
+const AdviceRef = builder.objectRef<AdviceView>("PaymentAdvice");
+AdviceRef.implement({
+  description:
+    "The bank advice pack for a locked run (D-#591): own-bank, BEFTN, bKash and cash, " +
+    "each with its payable rows, its total and anyone it cannot pay.",
+  fields: (t) => ({
+    monthKey: t.exposeString("monthKey"),
+    paymentInfo: t.exposeString("paymentInfo"),
+    letterDate: t.exposeString("letterDate"),
+    ready: t.exposeBoolean("ready"),
+    missing: t.exposeStringList("missing"),
+    groups: t.field({ type: [AdviceGroupRef], resolve: (a) => a.groups }),
+  }),
+});
+
+builder.queryField("paymentAdvice", (t) =>
+  t.field({
+    type: AdviceRef,
+    description: "The bank advice pack for a LOCKED run (D-#591). Requires payroll:manage.",
+    authScopes: { hasPermission: "payroll:manage" },
+    args: { runId: t.arg.string({ required: true }) },
+    resolve: async (_root, args) => {
+      const a = await paymentAdvice(args.runId);
+      const p = a.policy;
+      const missing = [
+        !p.employerNameBn.trim() ? "প্রতিষ্ঠানের নাম (বাংলা)" : "",
+        !p.orgAddress.trim() ? "ঠিকানা" : "",
+        !p.schoolBankName.trim() ? "স্কুলের ব্যাংকের নাম" : "",
+        !p.schoolAccountNo.trim() ? "স্কুলের হিসাব নম্বর" : "",
+      ].filter(Boolean);
+      return {
+        monthKey: a.monthKey,
+        paymentInfo: a.paymentInfo,
+        letterDate: a.letterDate,
+        ready: missing.length === 0,
+        missing,
+        groups: a.groups,
+      };
+    },
+  }),
+);
 
 const PayLineInputRef = builder.inputType("PayLineInput", {
   description: "A manual deduction/addition line (arrears/bonus/clawback/statutory/other).",
@@ -234,6 +323,8 @@ builder.mutationField("setStaffPay", (t) =>
           monthlySalary: args.monthlySalary,
           effectiveFrom: args.effectiveFrom ?? null,
           previousSalary,
+          // The FIRST row is dated from her joining month, not today (D-#590).
+          joiningMonth: staff.joiningDate ? staff.joiningDate.toISOString().slice(0, 7) : null,
           note: args.payChangeNote ?? null,
           actorId: ctx.auth!.userId,
         });

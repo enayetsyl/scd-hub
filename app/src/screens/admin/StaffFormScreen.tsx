@@ -64,6 +64,7 @@ export default function StaffFormScreen({ navigation, route }: Props): React.Rea
     category: existing?.category ?? "teacher",
     designation: existing?.designation ?? "",
     weeklyHours: existing?.weeklyHours ?? "",
+    routingNo: existing?.routingNo ?? "",
     employmentType: existing?.employmentType ?? "full_time",
     employmentStatus: existing?.employmentStatus ?? "probation",
     joiningDate: dateInput(existing?.joiningDate),
@@ -207,6 +208,9 @@ export default function StaffFormScreen({ navigation, route }: Props): React.Rea
         {/* Principal/Office-only rows (H1.4) — already behind the staff:manage gate. */}
         <Field label={STR.nid} value={form.nid} onChangeText={set("nid")} />
         <Field label={STR.bankAccount} value={form.bankAccount} onChangeText={set("bankAccount")} />
+        {/* BEFTN to another bank cannot be instructed without it (D-#591). */}
+        <Field label={STR.stfRoutingNo} value={form.routingNo} onChangeText={set("routingNo")} />
+        <Muted style={{ marginTop: -space(2), marginBottom: space(3) }}>{STR.stfRoutingNoHint}</Muted>
         <Field label={STR.biometricId} value={form.biometricId} onChangeText={set("biometricId")} />
         <Muted>{STR.staffPayElsewhere}</Muted>
 

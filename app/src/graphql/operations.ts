@@ -293,6 +293,8 @@ export interface StaffT {
   designation: string | null;
   /** Contracted weekly hours as the letter states them, e.g. "25 (5*5)" (D-#584). */
   weeklyHours: string | null;
+  /** The bank's routing number — a BEFTN transfer cannot be instructed without it (D-#591). */
+  routingNo: string | null;
   employmentType: string;
   employmentStatus: string;
   joiningDate: string | null;
@@ -325,6 +327,7 @@ export interface StaffT {
 export interface StaffProfileInputT {
   schoolId?: string; name?: string; nameBn?: string; category?: string; designation?: string;
   weeklyHours?: string;
+  routingNo?: string;
   employmentType?: string; employmentStatus?: string; joiningDate?: string; biometricId?: string;
   gender?: string; dob?: string; bloodGroup?: string; maritalStatus?: string; nationality?: string;
   qualification?: string; majoredIn?: string; studiedAt?: string; fatherName?: string;
@@ -385,6 +388,7 @@ export const STAFF_QUERY = gql<{ staff: StaffT[] }, { category?: string | null }
       category
       designation
       weeklyHours
+      routingNo
       employmentType
       employmentStatus
       joiningDate
@@ -6842,6 +6846,53 @@ export interface PaymentExportRowT {
   blockedReason: string | null;
 }
 
+/** One line on a bank advice sheet (D-#591). */
+export interface AdviceRowT {
+  staffProfileId: string;
+  name: string;
+  accountName: string | null;
+  account: string | null;
+  bankName: string | null;
+  bankBranch: string | null;
+  routingNo: string | null;
+  amount: number;
+  blockedReason: string | null;
+}
+
+export interface AdviceGroupT {
+  channel: string;
+  rows: AdviceRowT[];
+  blocked: AdviceRowT[];
+  total: number;
+}
+
+export interface PaymentAdviceT {
+  monthKey: string;
+  paymentInfo: string;
+  letterDate: string;
+  ready: boolean;
+  missing: string[];
+  groups: AdviceGroupT[];
+}
+
+const ADVICE_ROW_FIELDS = `staffProfileId name accountName account bankName bankBranch routingNo amount blockedReason`;
+
+export const PAYMENT_ADVICE_QUERY = gql<
+  { paymentAdvice: PaymentAdviceT },
+  { runId: string }
+>`
+  query PaymentAdvice($runId: String!) {
+    paymentAdvice(runId: $runId) {
+      monthKey paymentInfo letterDate ready missing
+      groups {
+        channel total
+        rows { ${ADVICE_ROW_FIELDS} }
+        blocked { ${ADVICE_ROW_FIELDS} }
+      }
+    }
+  }
+`;
+
 export const PAYROLL_PAYMENT_EXPORT_QUERY = gql<
   { payrollPaymentExport: PaymentExportRowT[] },
   { runId: string }
@@ -8093,6 +8144,13 @@ export interface HrPolicyT {
   signatoryTitle: string;
   weeklyHoursText: string;
   /** The Bangla contract block. Empty until set once — the contract refuses without it. */
+  orgRegistrationNo: string;
+  orgAddress: string;
+  orgPhone: string;
+  orgEmail: string;
+  schoolBankName: string;
+  schoolBankBranch: string;
+  schoolAccountNo: string;
   employerNameBn: string;
   employerAddressBn: string;
   signatoryNameBn: string;
@@ -8106,6 +8164,7 @@ export const HR_POLICY_QUERY = gql<{ hrPolicy: HrPolicyT }, Record<string, never
       annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled probationMonths
       signatoryName signatoryTitle weeklyHoursText letterRefPrefix
       employerNameBn employerAddressBn signatoryNameBn signatoryTitleBn
+      orgRegistrationNo orgAddress orgPhone orgEmail schoolBankName schoolBankBranch schoolAccountNo
     }
   }
 `;
@@ -8166,6 +8225,13 @@ export const SET_HR_POLICY = gql<
     signatoryName?: string | null;
     signatoryTitle?: string | null;
     weeklyHoursText?: string | null;
+    orgRegistrationNo?: string | null;
+    orgAddress?: string | null;
+    orgPhone?: string | null;
+    orgEmail?: string | null;
+    schoolBankName?: string | null;
+    schoolBankBranch?: string | null;
+    schoolAccountNo?: string | null;
     employerNameBn?: string | null;
     employerAddressBn?: string | null;
     signatoryNameBn?: string | null;
@@ -8182,6 +8248,13 @@ export const SET_HR_POLICY = gql<
     $signatoryName: String
     $signatoryTitle: String
     $weeklyHoursText: String
+    $orgRegistrationNo: String
+    $orgAddress: String
+    $orgPhone: String
+    $orgEmail: String
+    $schoolBankName: String
+    $schoolBankBranch: String
+    $schoolAccountNo: String
     $employerNameBn: String
     $employerAddressBn: String
     $signatoryNameBn: String
@@ -8197,6 +8270,13 @@ export const SET_HR_POLICY = gql<
       signatoryName: $signatoryName
       signatoryTitle: $signatoryTitle
       weeklyHoursText: $weeklyHoursText
+      orgRegistrationNo: $orgRegistrationNo
+      orgAddress: $orgAddress
+      orgPhone: $orgPhone
+      orgEmail: $orgEmail
+      schoolBankName: $schoolBankName
+      schoolBankBranch: $schoolBankBranch
+      schoolAccountNo: $schoolAccountNo
       employerNameBn: $employerNameBn
       employerAddressBn: $employerAddressBn
       signatoryNameBn: $signatoryNameBn

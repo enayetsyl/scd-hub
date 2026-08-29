@@ -74,6 +74,8 @@ import {
   GRIEVANCE_STATUS_LABELS_BN,
   GRIEVANCE_STATUS_LABELS_EN,
   PAYMENT_METHOD_LABELS_BN,
+  PAYMENT_CHANNEL_LABELS_BN,
+  PAYMENT_CHANNEL_LABELS_EN,
   PAYMENT_METHOD_LABELS_EN,
   PAYROLL_RUN_STATUS_LABELS_BN,
   PAYROLL_RUN_STATUS_LABELS_EN,
@@ -102,6 +104,7 @@ import {
   type AppraisalOutcome,
   type GrievanceStatus,
   type PaymentMethod,
+  type PaymentChannel,
   type PayrollRunStatus,
   type PayDeductionType,
   type PayAdditionType,
@@ -936,6 +939,9 @@ export const payLineNote = (note?: string | null): string | null => {
   const t = (note ?? "").trim();
   return t === "" || LEGACY_ADVANCE_NOTE.test(t) ? null : t;
 };
+
+export const paymentChannelLabel = (v?: string | null): string =>
+  (v && pick(PAYMENT_CHANNEL_LABELS_BN, PAYMENT_CHANNEL_LABELS_EN)[v as PaymentChannel]) || v || DASH;
 
 export const advanceStatusLabel = (v?: string | null): string =>
   (v && pick(ADVANCE_STATUS_LABELS_BN, ADVANCE_STATUS_LABELS_EN)[v as AdvanceStatus]) || v || DASH;
@@ -3478,6 +3484,25 @@ const STR_BN = {
   stfPayChangeReason: "কারণ",
   stfPayHistory: "বেতনের ইতিহাস",
   stfPayHistoryNote: "প্রতিটি পরিবর্তন কোন মাস থেকে কার্যকর হয়েছে। পে-রোল যে মাসের হিসাব করছে, সেই মাসে কার্যকর বেতনই ব্যবহার করে।",
+  // --- D-#590 ---
+  stfConfirmBody: "পত্রের মূল বক্তব্য",
+  stfConfirmBodyPlaceholder: "এখানে যা লিখবেন, পত্রে হুবহু তাই ছাপা হবে। খালি রাখলে প্রচলিত বয়ান ছাপা হবে।",
+  stfConfirmBodyDraft: "প্রচলিত বয়ান বসান",
+  stfJoinSupportContractNote: "সহায়ক কর্মী ইংরেজি নিয়োগপত্র নয়, বাংলা নিয়োগ চুক্তিপত্রে স্বাক্ষর করেন। পরের ধাপে দায়িত্বসমূহ দেখে নিয়ে চুক্তিপত্র তৈরি করুন।",
+  // --- D-#591: the bank advice pack ---
+  stfRoutingNo: "রাউটিং নম্বর",
+  stfRoutingNoHint: "অন্য ব্যাংকে (BEFTN) পাঠাতে লাগবে। নিজ ব্যাংকে লাগে না।",
+  stfAdviceDownload: "ব্যাংকের চিঠি ও শিট (PDF)",
+  stfAdvicePaymentInfo: "পেমেন্ট ইনফো",
+  stfAdviceNotReady: "চিঠির তথ্য নির্ধারিত নেই — এইচআর নীতিমালা থেকে একবার লিখে দিন:",
+  stfPolicyLetterhead: "চিঠির লেটারহেড ও স্কুলের ব্যাংক",
+  stfOrgRegistrationNo: "রেজিস্ট্রেশন নম্বর",
+  stfOrgAddress: "ঠিকানা",
+  stfOrgPhone: "ফোন",
+  stfOrgEmail: "ইমেইল",
+  stfSchoolBankName: "স্কুলের ব্যাংকের নাম",
+  stfSchoolBankBranch: "স্কুলের ব্যাংক শাখা",
+  stfSchoolAccountNo: "স্কুলের হিসাব নম্বর",
   stfAdjustmentsTitle: "এই মাসের আলাদা সমন্বয়",
   stfAdjustmentsNote: "মাঝপথে বেতন বাড়লে আগের মাসের পাওনা এখানে বকেয়া হিসেবে যোগ করুন। বোনাস বা আলাদা কর্তনও এখান থেকে দেওয়া যায়। কিছু না দিলে হিসাব আগের মতোই হবে।",
   stfAdjustmentSign: "যোগ না কর্তন",
@@ -7577,6 +7602,25 @@ const STR_EN: StrTable = {
   stfPayChangeReason: "Reason",
   stfPayHistory: "Salary history",
   stfPayHistoryNote: "When each change took effect. Payroll uses the salary effective in the month it is running.",
+  // --- D-#590 ---
+  stfConfirmBody: "Letter body",
+  stfConfirmBodyPlaceholder: "Whatever you write here is printed verbatim. Leave it empty for the standard wording.",
+  stfConfirmBodyDraft: "Insert the standard wording",
+  stfJoinSupportContractNote: "Support staff sign the Bangla contract, not the English appointment letter. Review the duties on the next screen and issue it.",
+  // --- D-#591: the bank advice pack ---
+  stfRoutingNo: "Routing number",
+  stfRoutingNoHint: "Needed to send by BEFTN to another bank. Not needed for our own bank.",
+  stfAdviceDownload: "Bank letter + advice sheet (PDF)",
+  stfAdvicePaymentInfo: "Payment info",
+  stfAdviceNotReady: "The letter details are not set — fill these once in HR policy:",
+  stfPolicyLetterhead: "Letterhead and the school's bank",
+  stfOrgRegistrationNo: "Registration number",
+  stfOrgAddress: "Address",
+  stfOrgPhone: "Phone",
+  stfOrgEmail: "Email",
+  stfSchoolBankName: "School's bank",
+  stfSchoolBankBranch: "School's branch",
+  stfSchoolAccountNo: "School's account number",
   stfAdjustmentsTitle: "Adjustments for this month",
   stfAdjustmentsNote: "If a salary rose mid-year, add the earlier months' back-pay here as arrears. One-off bonuses and agreed deductions go here too. Leave it empty and the run computes exactly as before.",
   stfAdjustmentSign: "Addition or deduction",

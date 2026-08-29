@@ -70,6 +70,27 @@ export function bnDigits(s: string | number): string {
   return String(s).replace(/[0-9]/g, (d) => BN_DIGITS[Number(d)]);
 }
 
+/**
+ * The Bangla WORD for a small whole number, for the contract's "২০ (বিশ) দিন" style.
+ *
+ * The source contracts write the digits and then the word — "২০ (বিশ) দিন", "৩ (তিন)
+ * মাস". The first version printed the digits twice ("২০ (২০) দিন"), which reads as a
+ * typo on a document someone signs (D-#590). Beyond the table the bracket is dropped
+ * rather than filled with a wrong word: a contract should never invent Bangla.
+ */
+const BN_WORDS: Record<number, string> = {
+  1: "এক", 2: "দুই", 3: "তিন", 4: "চার", 5: "পাঁচ", 6: "ছয়", 7: "সাত", 8: "আট",
+  9: "নয়", 10: "দশ", 11: "এগারো", 12: "বারো", 15: "পনেরো", 18: "আঠারো", 20: "বিশ",
+  21: "একুশ", 24: "চব্বিশ", 25: "পঁচিশ", 30: "ত্রিশ", 36: "ছত্রিশ", 40: "চল্লিশ",
+  45: "পঁয়তাল্লিশ", 50: "পঞ্চাশ", 60: "ষাট",
+};
+
+/** "২০ (বিশ)" when the word is known, plain "২০" when it is not. */
+export function bnCount(n: number): string {
+  const word = BN_WORDS[n];
+  return word ? `${bnDigits(n)} (${word})` : bnDigits(n);
+}
+
 const MONTHS_BN = [
   "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
   "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর",

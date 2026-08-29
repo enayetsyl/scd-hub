@@ -326,7 +326,7 @@ function ProfileTab({ staff, canLeave }: { staff: StaffT; canLeave: boolean }): 
             <Badge text={STR.stfPrincipalOnly} tone="gold" />
           </View>
           {staff.nid ? <Row label={STR.nid} value={staff.nid} /> : null}
-          {staff.bankAccount ? <Row label={STR.bankAccount} value={staff.bankAccount} /> : null}
+          {staff.bankAccount ? <Row label={staff.paymentMethod === "bkash" ? STR.stfBkashNumber : STR.bankAccount} value={staff.bankAccount} /> : null}
         </Card>
       ) : null}
     </View>
@@ -480,7 +480,7 @@ function PayrollTab({ staff, onSetPay }: { staff: StaffT; onSetPay: () => void }
         <Row label={STR.stfMonthlySalary} value={salary != null ? taka(salary) : "—"} />
         <Row label={STR.stfPaymentMethod} value={staff.paymentMethod ? paymentMethodLabel(staff.paymentMethod) : "—"} />
         {dayRate != null ? <Row label={STR.stfDayRate} value={taka(dayRate)} /> : null}
-        {staff.bankAccount ? <Row label={STR.bankAccount} value={staff.bankAccount} /> : null}
+        {staff.bankAccount ? <Row label={staff.paymentMethod === "bkash" ? STR.stfBkashNumber : STR.bankAccount} value={staff.bankAccount} /> : null}
         {salary == null ? <Notice tone="warn" message={STR.stfNoSalaryYet} /> : null}
         {/* Setting pay used to mean leaving the hub entirely for the payroll screens —
             the exact scatter this hub exists to end. */}

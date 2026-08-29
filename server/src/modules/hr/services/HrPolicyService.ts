@@ -24,6 +24,13 @@ export interface HrPolicyView {
   signatoryName: string;
   signatoryTitle: string;
   weeklyHoursText: string;
+  orgRegistrationNo: string;
+  orgAddress: string;
+  orgPhone: string;
+  orgEmail: string;
+  schoolBankName: string;
+  schoolBankBranch: string;
+  schoolAccountNo: string;
   employerNameBn: string;
   employerAddressBn: string;
   signatoryNameBn: string;
@@ -48,6 +55,13 @@ export async function getHrPolicy(): Promise<HrPolicyView> {
     weeklyHoursText: row.weeklyHoursText || HR_POLICY_DEFAULTS.weeklyHoursText,
     // These four default to EMPTY, so `||` would be a no-op — `??` keeps a set value
     // and an unset one reads as "", which the support contract refuses on.
+    orgRegistrationNo: row.orgRegistrationNo ?? HR_POLICY_DEFAULTS.orgRegistrationNo,
+    orgAddress: row.orgAddress ?? HR_POLICY_DEFAULTS.orgAddress,
+    orgPhone: row.orgPhone ?? HR_POLICY_DEFAULTS.orgPhone,
+    orgEmail: row.orgEmail ?? HR_POLICY_DEFAULTS.orgEmail,
+    schoolBankName: row.schoolBankName ?? HR_POLICY_DEFAULTS.schoolBankName,
+    schoolBankBranch: row.schoolBankBranch ?? HR_POLICY_DEFAULTS.schoolBankBranch,
+    schoolAccountNo: row.schoolAccountNo ?? HR_POLICY_DEFAULTS.schoolAccountNo,
     employerNameBn: row.employerNameBn ?? HR_POLICY_DEFAULTS.employerNameBn,
     employerAddressBn: row.employerAddressBn ?? HR_POLICY_DEFAULTS.employerAddressBn,
     signatoryNameBn: row.signatoryNameBn ?? HR_POLICY_DEFAULTS.signatoryNameBn,
@@ -65,6 +79,13 @@ export interface SetHrPolicyInput {
   signatoryName?: string;
   signatoryTitle?: string;
   weeklyHoursText?: string;
+  orgRegistrationNo?: string;
+  orgAddress?: string;
+  orgPhone?: string;
+  orgEmail?: string;
+  schoolBankName?: string;
+  schoolBankBranch?: string;
+  schoolAccountNo?: string;
   employerNameBn?: string;
   employerAddressBn?: string;
   signatoryNameBn?: string;
@@ -100,6 +121,13 @@ export async function setHrPolicy(input: SetHrPolicyInput): Promise<HrPolicyView
     signatoryName: input.signatoryName ?? current.signatoryName,
     signatoryTitle: input.signatoryTitle ?? current.signatoryTitle,
     weeklyHoursText: input.weeklyHoursText ?? current.weeklyHoursText,
+    orgRegistrationNo: input.orgRegistrationNo ?? current.orgRegistrationNo,
+    orgAddress: input.orgAddress ?? current.orgAddress,
+    orgPhone: input.orgPhone ?? current.orgPhone,
+    orgEmail: input.orgEmail ?? current.orgEmail,
+    schoolBankName: input.schoolBankName ?? current.schoolBankName,
+    schoolBankBranch: input.schoolBankBranch ?? current.schoolBankBranch,
+    schoolAccountNo: input.schoolAccountNo ?? current.schoolAccountNo,
     employerNameBn: input.employerNameBn ?? current.employerNameBn,
     employerAddressBn: input.employerAddressBn ?? current.employerAddressBn,
     signatoryNameBn: input.signatoryNameBn ?? current.signatoryNameBn,
