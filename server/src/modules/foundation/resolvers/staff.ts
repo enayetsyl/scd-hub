@@ -17,7 +17,7 @@ import type { Types } from "mongoose";
  */
 type StaffShape = Pick<
   IStaffProfile,
-  | "schoolId" | "name" | "nameBn" | "category" | "designation"
+  | "schoolId" | "name" | "nameBn" | "category" | "designation" | "weeklyHours"
   | "employmentType" | "employmentStatus" | "joiningDate" | "confirmationDate" | "biometricId"
   | "gender" | "dob" | "bloodGroup" | "maritalStatus" | "nationality"
   | "qualification" | "majoredIn" | "studiedAt"
@@ -39,6 +39,7 @@ StaffRef.implement({
     nameBn: t.string({ nullable: true, resolve: (s) => s.nameBn ?? null }),
     category: t.exposeString("category"),
     designation: t.string({ nullable: true, resolve: (s) => s.designation ?? null }),
+    weeklyHours: t.string({ nullable: true, resolve: (s) => s.weeklyHours ?? null }),
     employmentType: t.exposeString("employmentType"),
     employmentStatus: t.exposeString("employmentStatus"),
     joiningDate: t.string({ nullable: true, resolve: (s) => iso(s.joiningDate) }),
@@ -133,6 +134,7 @@ const StaffProfileInputRef = builder.inputType("StaffProfileInput", {
     nameBn: t.string({ required: false }),
     category: t.string({ required: false }),
     designation: t.string({ required: false }),
+    weeklyHours: t.string({ required: false }),
     employmentType: t.string({ required: false }),
     employmentStatus: t.string({ required: false }),
     joiningDate: t.string({ required: false }),

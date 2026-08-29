@@ -44,6 +44,8 @@ export interface ConfirmEmploymentResult {
   /** The pool AFTER the debt was debited — what the person actually has left. */
   poolRemainingAfter: number;
   letterId: string | null;
+  /** Set when the confirmation SUCCEEDED but the letter could not be issued (D-#574). */
+  letterError: string | null;
 }
 
 /**
@@ -84,6 +86,18 @@ export async function confirmEmployment(
     }
   }
 
+  // 0. Everything that CAN refuse is checked BEFORE the first write (D-#574).
+  //
+  // The letter needs a designation; without this check the refusal arrives at step 3,
+  // after the status flip and the debt settlement have already committed. Validating
+  // here turns "half-done and reported as failed" into a clean refusal that changed
+  // nothing — which is what the operator's error message already implied had happened.
+  if (input.issueLetter !== false && !(staff.designation ?? "").trim()) {
+    throw new LeaveError(
+      "পদবি ছাড়া স্থায়ীকরণ পত্র তৈরি করা যায় না — আগে পদবি দিন, অথবা পত্র ছাড়া স্থায়ী করুন",
+    );
+  }
+
   // 1. Stamp the date first — the pool's pro-ration and every paid/unpaid test read it.
   //
   // UTC midnight, NOT local: `new Date("2026-07-01")` parses a bare date-only string as
@@ -101,20 +115,37 @@ export async function confirmEmployment(
   const settlement = await settleOnConfirmation(input.staffProfileId, pool.remainingDays, input.actorId);
   const poolRemainingAfter = Math.max(0, pool.remainingDays - settlement.fromPool);
 
-  // 3. The letter, from the same data.
+  // 3. The letter, from the same data — NON-FATAL (D-#574).
+  //
+  // Found by driving prod: a staff member with no `designation` reached this line, the
+  // letter refused (it is what clause 5 prints), the whole mutation threw — and steps 1
+  // and 2 had ALREADY COMMITTED. She was confirmed, her 3 held days were settled, the
+  // operator was told "failed" twice, and because `writeAudit` sits below this line the
+  // confirmation went into the record with NO AUDIT ROW AT ALL.
+  //
+  // The confirmation is the act that matters; the letter is a document that can be
+  // issued afterwards from the কাগজপত্র tab. So a letter failure is REPORTED, never
+  // fatal — and the audit is written either way. The step-0 designation check above
+  // catches the known cause before anything is written, so this catch is the backstop
+  // for a failure we did not foresee, not the primary guard.
   let letterId: string | null = null;
+  let letterError: string | null = null;
   if (input.issueLetter !== false) {
-    const letter = await issueLetter({
-      staffProfileId: input.staffProfileId,
-      kind: "confirmation",
-      effectiveFrom: input.confirmationDate,
-      // A confirmation letter restates the standing terms; honorary staff have no
-      // figure to restate, so the mode follows whether a salary is actually on record.
-      salaryMode: staff.monthlySalary && staff.monthlySalary > 0 ? "paid" : "honorary",
-      extraText: input.extraText ?? null,
-      actorId: input.actorId,
-    });
-    letterId = letter._id.toString();
+    try {
+      const letter = await issueLetter({
+        staffProfileId: input.staffProfileId,
+        kind: "confirmation",
+        effectiveFrom: input.confirmationDate,
+        // A confirmation letter restates the standing terms; honorary staff have no
+        // figure to restate, so the mode follows whether a salary is actually on record.
+        salaryMode: staff.monthlySalary && staff.monthlySalary > 0 ? "paid" : "honorary",
+        extraText: input.extraText ?? null,
+        actorId: input.actorId,
+      });
+      letterId = letter._id.toString();
+    } catch (err) {
+      letterError = err instanceof Error ? err.message : String(err);
+    }
   }
 
   await writeAudit({
@@ -129,6 +160,7 @@ export async function confirmEmployment(
       settledToSalary: settlement.toSalary,
       poolRemainingAfter,
       letterId,
+      letterError,
     },
   });
 
@@ -138,6 +170,7 @@ export async function confirmEmployment(
     settlement,
     poolRemainingAfter,
     letterId,
+    letterError,
   };
 }
 

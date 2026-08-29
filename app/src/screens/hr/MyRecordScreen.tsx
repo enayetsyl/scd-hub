@@ -53,6 +53,8 @@ import {
   conductStageLabel,
   conductRecordStatusLabel,
   grievanceStatusLabel,
+  payDeductionTypeLabel,
+  payLineNote,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -170,9 +172,17 @@ export default function MyRecordScreen(): React.ReactElement {
           StaffProfile, so this block can never be the thing that breaks the screen. */}
       <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfMyLeavePool}</Body>
       <Card>
+        {/* A probationer's pool is what she WILL get, not what she can take now: every
+            day off before confirmation is held unpaid (D-#540). Labelling it "বাকি" was
+            the exact opposite of the rule she is under, so the label follows the flag. */}
+        {pool?.onProbation ? <Notice tone="warn" message={STR.stfOnProbationNotice} /> : null}
         <Row label={STR.stfPoolAllowance} value={`${bnNum(String(pool?.allowanceDays ?? 0))} ${STR.stfDays}`} />
         <Row label={STR.stfPoolTaken} value={`${bnNum(String(pool?.takenDays ?? 0))} ${STR.stfDays}`} />
-        <Row label={STR.stfPoolRemaining} value={`${bnNum(String(pool?.remainingDays ?? 0))} ${STR.stfDays}`} />
+        <Row
+          label={pool?.onProbation ? STR.stfPoolOnConfirmation : STR.stfPoolRemaining}
+          value={`${bnNum(String(pool?.remainingDays ?? 0))} ${STR.stfDays}`}
+        />
+        {pool?.onProbation ? <Muted>{STR.stfPoolNotDrawableYet}</Muted> : null}
         <Muted>{STR.stfPoolNote}</Muted>
       </Card>
 
@@ -229,11 +239,14 @@ export default function MyRecordScreen(): React.ReactElement {
               <Body style={{ fontWeight: "700" }}>{s.monthKey}</Body>
               <Body style={{ fontWeight: "700" }}>{`৳ ${bnNum(String(s.netPay))}`}</Body>
             </View>
-            <Row label={STR.stfPoolAllowance} value={`৳ ${bnNum(String(s.grossSalary))}`} />
+            <Row label={STR.hrPayGross} value={`৳ ${bnNum(String(s.grossSalary))}`} />
             {s.deductions.map((d, i) => (
               <Row
                 key={`${s.id}-${i}`}
-                label={d.note ?? d.type}
+                // Was `d.note ?? d.type` — which printed a teacher her own payslip line
+                // as the raw English type, or as "advance 665f…" with a database id in
+                // it. The type has a Bangla label; the note is only ever an extra.
+                label={`${payDeductionTypeLabel(d.type)}${payLineNote(d.note) ? ` · ${payLineNote(d.note)}` : ""}`}
                 value={`− ৳ ${bnNum(String(d.amount))}${d.days ? ` (${bnNum(String(d.days))} ${STR.stfDays})` : ""}`}
               />
             ))}
@@ -342,12 +355,6 @@ export default function MyRecordScreen(): React.ReactElement {
         </>
       ) : null}
 
-      {/* Flagged gaps — no own-row server read exists for these yet. */}
-      <Divider />
-      <Body style={{ fontWeight: "700", marginTop: space(2), marginBottom: space(2) }}>{STR.hrPayslipsTitle}</Body>
-      <Notice message={STR.hrNoServerRead} tone="info" />
-      <Body style={{ fontWeight: "700", marginTop: space(2), marginBottom: space(2) }}>{STR.hrAttendanceTitle}</Body>
-      <Notice message={STR.hrNoServerRead} tone="info" />
     </Screen>
   );
 }

@@ -211,7 +211,8 @@ check("STAFF_LETTER_STATUS_LABELS_BN total", total(V.STAFF_LETTER_STATUS_LABELS_
 check("STAFF_LETTER_STATUS_LABELS_EN total", total(V.STAFF_LETTER_STATUS_LABELS_EN, V.STAFF_LETTER_STATUSES));
 check("SALARY_MODE_LABELS_BN total",         total(V.SALARY_MODE_LABELS_BN, V.SALARY_MODES));
 check("SALARY_MODE_LABELS_EN total",         total(V.SALARY_MODE_LABELS_EN, V.SALARY_MODES));
-check("letter kinds exact (D-#542)",         eq(V.STAFF_LETTER_KINDS, ["appointment","confirmation","service_certificate"]));
+check("letter kinds exact (D-#542, +support_contract D-#586)",
+  eq(V.STAFF_LETTER_KINDS, ["appointment","confirmation","service_certificate","support_contract"]));
 check("a letter is issued or void — never 'edited' (D-#542)", eq(V.STAFF_LETTER_STATUSES, ["issued","void"]));
 check("salary modes are exactly paid|honorary — the two clauses are exclusive (D-#542)", eq(V.SALARY_MODES, ["paid","honorary"]));
 check("POOLED_LEAVE_TYPES ⊂ LEAVE_TYPES and are exactly the balance-tracked ones (D-#539)",
@@ -219,6 +220,7 @@ check("POOLED_LEAVE_TYPES ⊂ LEAVE_TYPES and are exactly the balance-tracked on
   eq(V.POOLED_LEAVE_TYPES, V.LEAVE_TYPES.filter((t) => V.LEAVE_TYPE_RULES[t].balanceTracked)));
 check("the pool is 20 days — the appointment letter's clause 7 (D-#539)", V.HR_POLICY_DEFAULTS.annualLeaveDays === 20);
 check("3 late days per charged day (D-#541)", V.HR_POLICY_DEFAULTS.lateDaysPerCharge === 3);
+check("probation runs 6 months here, not the Dhaka branch's 3 (D-#586)", V.HR_POLICY_DEFAULTS.probationMonths === 6);
 check("lateness rule ships OFF — prd-hr H4.3 made it opt-in, so no existing payslip changes on deploy (D-#541)",
   V.HR_POLICY_DEFAULTS.latenessRuleEnabled === false);
 check("'lateness' is already a declared PAY_DEDUCTION_TYPE — SH-4 wires the existing slot, it adds none",

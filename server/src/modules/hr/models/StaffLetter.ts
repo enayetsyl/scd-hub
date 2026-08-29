@@ -52,6 +52,46 @@ export interface ILetterSnapshot {
   effectiveFrom: string;
   /** Confirmation letters only: the date employment was confirmed (YYYY-MM-DD). */
   confirmationDate?: string | null;
+  /**
+   * Service-certificate dates (D-#583), snapshotted like everything else here.
+   *
+   * A certificate with no dates certifies almost nothing — a bank or a next employer
+   * needs the period, not just the fact. `serviceTo` is null while the person is still
+   * employed, and that is what decides the TENSE: "has been serving since X" for a
+   * current employee, "served from X to Y" for someone who has left. The first version
+   * said "served" for everyone, which reads as a leaving certificate to anyone holding
+   * it — the opposite of what a serving teacher needs it to say.
+   */
+  serviceFrom?: string | null;
+  serviceTo?: string | null;
+  /**
+   * How long probation runs, in months, as THIS letter states it (D-#586). Frozen like
+   * everything else: the policy may move from six to three next year, and a letter
+   * already signed still promises what it promised. 0 omits the clause.
+   */
+  probationMonths?: number | null;
+
+  // --- the Bangla support-staff contract only (D-#586) ---------------------
+  //
+  // A different DOCUMENT, not a translation: a two-party contract with a duties
+  // schedule and both signatures. These fields are absent on the English letters.
+  /** Bangla contract title, e.g. "খালা (সহায়ক কর্মী…) নিয়োগ চুক্তিপত্র". */
+  contractTitleBn?: string | null;
+  /** The employer block: "এস সি ডি, মোহাম্মদপুর শাখা" + its address. */
+  employerNameBn?: string | null;
+  employerAddressBn?: string | null;
+  permanentAddressBn?: string | null;
+  presentAddressBn?: string | null;
+  contactBn?: string | null;
+  joiningDateBn?: string | null;
+  /** §৩ — one line per duty, printed as a bulleted schedule. */
+  dutiesBn?: string[];
+  /** §৩ — the working-hours + weekly-off lines, free text as the contract states them. */
+  workingHoursBn?: string | null;
+  /** §৪ — a monthly food allowance the caretaker's contract carries and the খালা's does not. */
+  foodAllowance?: number | null;
+  /** The employee signs too: their name is printed under a signature rule. */
+  employeeSignatureNameBn?: string | null;
   // signature block
   signatoryName: string;
   signatoryTitle: string;
@@ -94,6 +134,20 @@ const LetterSnapshotSchema = new Schema<ILetterSnapshot>(
     annualLeaveDays: { type: Number, required: true, min: 0 },
     effectiveFrom: { type: String, required: true },
     confirmationDate: { type: String, default: null },
+    serviceFrom: { type: String, default: null },
+    serviceTo: { type: String, default: null },
+    probationMonths: { type: Number, default: null, min: 0 },
+    contractTitleBn: { type: String, default: null },
+    employerNameBn: { type: String, default: null },
+    employerAddressBn: { type: String, default: null },
+    permanentAddressBn: { type: String, default: null },
+    presentAddressBn: { type: String, default: null },
+    contactBn: { type: String, default: null },
+    joiningDateBn: { type: String, default: null },
+    dutiesBn: { type: [String], default: undefined },
+    workingHoursBn: { type: String, default: null },
+    foodAllowance: { type: Number, default: null, min: 0 },
+    employeeSignatureNameBn: { type: String, default: null },
     signatoryName: { type: String, required: true },
     signatoryTitle: { type: String, required: true },
     letterDate: { type: String, required: true },

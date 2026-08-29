@@ -58,6 +58,9 @@ export default function ConfirmEmploymentScreen({ route, navigation }: Props): R
   const [withLetter, setWithLetter] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
   const [failure, setFailure] = React.useState<string | null>(null);
+  // Confirmed, but the letter did not come out (D-#574). Not a failure — a different
+  // outcome, and one the operator has to see or she will assume a letter was filed.
+  const [letterFailure, setLetterFailure] = React.useState<string | null>(null);
 
   const p = data?.confirmationPreview;
   const remainingAfter = p ? Math.max(0, p.poolRemaining - p.fromPool) : 0;
@@ -87,9 +90,26 @@ export default function ConfirmEmploymentScreen({ route, navigation }: Props): R
       setFailure(friendlyError(res.error));
       return;
     }
-    const letterId = res.data.confirmStaffEmployment.letterId;
+    const { letterId, letterError } = res.data.confirmStaffEmployment;
+    if (letterError) {
+      // Stay put. The confirmation stands and is audited; the letter can be issued
+      // from কাগজপত্র once the reason is fixed.
+      setLetterFailure(letterError);
+      return;
+    }
     if (letterId && PDF_SUPPORTED) await openPdf(`/pdf/staff-letter/${letterId}`);
     navigation.goBack();
+  }
+
+  if (letterFailure) {
+    return (
+      <Screen scroll>
+        <H2>{`${STR.stfConfirmTitle} — ${staff.nameBn || staff.name}`}</H2>
+        <Notice tone="ok" message={STR.stfConfirmedNoLetterOk} />
+        <Notice tone="warn" message={`${STR.stfConfirmedNoLetter} ${letterFailure}`} />
+        <Button title={STR.close} variant="secondary" onPress={() => navigation.goBack()} />
+      </Screen>
+    );
   }
 
   return (
