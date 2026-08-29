@@ -18,7 +18,11 @@ import { View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { AdminStackParamList } from "../../navigation/types";
-import { ISSUE_STAFF_LETTER, HR_POLICY_QUERY } from "../../graphql/operations";
+import {
+  ISSUE_STAFF_LETTER,
+  HR_POLICY_QUERY,
+  SUPPORT_CONTRACT_DEFAULTS_QUERY,
+} from "../../graphql/operations";
 import {
   Screen,
   H2,
@@ -27,6 +31,7 @@ import {
   Card,
   Row,
   Field,
+  Select,
   Chip,
   ChipRow,
   Button,
@@ -61,6 +66,7 @@ function parseAmount(raw: string): number | null {
 function kindLabel(kind: string): string {
   if (kind === "appointment") return STR.stfLetterAppointment;
   if (kind === "confirmation") return STR.stfLetterConfirmation;
+  if (kind === "support_contract") return STR.stfLetterContract;
   return STR.stfLetterCertificate;
 }
 
@@ -79,16 +85,47 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
   const [salary, setSalary] = React.useState(staff.monthlySalary != null ? String(staff.monthlySalary) : "");
   const [weeklyHours, setWeeklyHours] = React.useState("");
   const [extraText, setExtraText] = React.useState("");
+  // The Bangla contract (D-#586). `role` picks which default duties schedule loads;
+  // the operator then edits the text, and it is the EDITED text that is issued.
+  const [role, setRole] = React.useState<string>("helper");
+  const [duties, setDuties] = React.useState("");
+  const [hoursBn, setHoursBn] = React.useState("");
+  const [foodAllowance, setFoodAllowance] = React.useState("");
+  const [permanentBn, setPermanentBn] = React.useState("");
+  const [presentBn, setPresentBn] = React.useState("");
+  const [contactBn, setContactBn] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [failure, setFailure] = React.useState<string | null>(null);
 
-  const p = policy?.hrPolicy;
   const isCertificate = kind === "service_certificate";
+  const isContract = kind === "support_contract";
+
+  const [{ data: defaults }] = useQuery({
+    query: SUPPORT_CONTRACT_DEFAULTS_QUERY,
+    variables: { role },
+    pause: !isContract,
+  });
+
+  // Loading a role's defaults REPLACES the draft — switching খালা → দারোয়ান must not
+  // leave the previous role's duties behind. Anything typed after that is kept.
+  const loadedRole = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const d = defaults?.supportContractDefaults;
+    if (!d || loadedRole.current === d.role) return;
+    loadedRole.current = d.role;
+    setDuties(d.dutiesBn.join("\n"));
+    setHoursBn(d.workingHoursBn);
+  }, [defaults]);
+
+  const p = policy?.hrPolicy;
   const canSubmit =
     designation.trim() !== "" &&
     /^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom) &&
     /^\d{4}-\d{2}-\d{2}$/.test(letterDate) &&
-    (salaryMode === "honorary" || parseAmount(salary) !== null);
+    (salaryMode === "honorary" || parseAmount(salary) !== null) &&
+    // A contract with no duties is not a contract; the server refuses it, so the
+    // button refuses first rather than sending a request that can only fail.
+    (!isContract || duties.split("\n").some((d) => d.trim() !== ""));
 
   async function onSubmit(): Promise<void> {
     setBusy(true);
@@ -103,6 +140,18 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
       designation: designation.trim(),
       weeklyHours: weeklyHours.trim() || null,
       extraText: extraText.trim() || null,
+      contract: isContract
+        ? {
+            role,
+            // One duty per line — the textarea IS the schedule.
+            dutiesBn: duties.split("\n").map((d) => d.trim()).filter(Boolean),
+            workingHoursBn: hoursBn.trim(),
+            foodAllowance: parseAmount(foodAllowance),
+            permanentAddressBn: permanentBn.trim() || null,
+            presentAddressBn: presentBn.trim() || null,
+            contactBn: contactBn.trim() || null,
+          }
+        : null,
     });
     setBusy(false);
     if (res.error || !res.data) {
@@ -166,6 +215,37 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
           />
         ) : null}
       </Card>
+
+      {isContract ? (
+        <Card>
+          <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfContractSection}</Body>
+          {!p?.employerNameBn || !p?.signatoryNameBn ? (
+            <Notice tone="warn" message={STR.stfContractPolicyMissing} />
+          ) : null}
+          <Select
+            label={STR.stfContractRole}
+            value={role}
+            options={[
+              { label: STR.stfContractRoleHelper, value: "helper" },
+              { label: STR.stfContractRoleGuard, value: "guard" },
+            ]}
+            onChange={(v) => setRole(v ?? "helper")}
+          />
+          <Field label={STR.stfContractHours} value={hoursBn} onChangeText={setHoursBn} multiline />
+          <Field label={STR.stfContractDuties} value={duties} onChangeText={setDuties} multiline />
+          <Muted style={{ marginTop: -space(2), marginBottom: space(3) }}>{STR.stfContractDutiesHint}</Muted>
+          <Field
+            label={STR.stfContractFood}
+            value={foodAllowance}
+            onChangeText={setFoodAllowance}
+            keyboardType="numeric"
+            placeholder={STR.stfContractFoodHint}
+          />
+          <Field label={STR.stfContractPermanent} value={permanentBn} onChangeText={setPermanentBn} multiline />
+          <Field label={STR.stfContractPresent} value={presentBn} onChangeText={setPresentBn} multiline />
+          <Field label={STR.stfContractContact} value={contactBn} onChangeText={setContactBn} />
+        </Card>
+      ) : null}
 
       {p ? (
         <Card>

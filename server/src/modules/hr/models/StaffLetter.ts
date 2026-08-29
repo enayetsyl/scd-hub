@@ -64,6 +64,34 @@ export interface ILetterSnapshot {
    */
   serviceFrom?: string | null;
   serviceTo?: string | null;
+  /**
+   * How long probation runs, in months, as THIS letter states it (D-#586). Frozen like
+   * everything else: the policy may move from six to three next year, and a letter
+   * already signed still promises what it promised. 0 omits the clause.
+   */
+  probationMonths?: number | null;
+
+  // --- the Bangla support-staff contract only (D-#586) ---------------------
+  //
+  // A different DOCUMENT, not a translation: a two-party contract with a duties
+  // schedule and both signatures. These fields are absent on the English letters.
+  /** Bangla contract title, e.g. "খালা (সহায়ক কর্মী…) নিয়োগ চুক্তিপত্র". */
+  contractTitleBn?: string | null;
+  /** The employer block: "এস সি ডি, মোহাম্মদপুর শাখা" + its address. */
+  employerNameBn?: string | null;
+  employerAddressBn?: string | null;
+  permanentAddressBn?: string | null;
+  presentAddressBn?: string | null;
+  contactBn?: string | null;
+  joiningDateBn?: string | null;
+  /** §৩ — one line per duty, printed as a bulleted schedule. */
+  dutiesBn?: string[];
+  /** §৩ — the working-hours + weekly-off lines, free text as the contract states them. */
+  workingHoursBn?: string | null;
+  /** §৪ — a monthly food allowance the caretaker's contract carries and the খালা's does not. */
+  foodAllowance?: number | null;
+  /** The employee signs too: their name is printed under a signature rule. */
+  employeeSignatureNameBn?: string | null;
   // signature block
   signatoryName: string;
   signatoryTitle: string;
@@ -108,6 +136,18 @@ const LetterSnapshotSchema = new Schema<ILetterSnapshot>(
     confirmationDate: { type: String, default: null },
     serviceFrom: { type: String, default: null },
     serviceTo: { type: String, default: null },
+    probationMonths: { type: Number, default: null, min: 0 },
+    contractTitleBn: { type: String, default: null },
+    employerNameBn: { type: String, default: null },
+    employerAddressBn: { type: String, default: null },
+    permanentAddressBn: { type: String, default: null },
+    presentAddressBn: { type: String, default: null },
+    contactBn: { type: String, default: null },
+    joiningDateBn: { type: String, default: null },
+    dutiesBn: { type: [String], default: undefined },
+    workingHoursBn: { type: String, default: null },
+    foodAllowance: { type: Number, default: null, min: 0 },
+    employeeSignatureNameBn: { type: String, default: null },
     signatoryName: { type: String, required: true },
     signatoryTitle: { type: String, required: true },
     letterDate: { type: String, required: true },

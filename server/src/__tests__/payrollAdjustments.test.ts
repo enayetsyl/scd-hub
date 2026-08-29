@@ -6,15 +6,10 @@
  * second silently replaced the first and a payslip came out short — the kind of error
  * nobody notices until someone counts their pay.
  *
- * The helper lives in the app workspace (pure TS, no React Native imports) and is
- * tested here, where CI already runs a test runner.
+ * The helper lives in /shared: it is the shape of the contract between the form and the
+ * mutation, and a server test cannot import across the app workspace's rootDir.
  */
-import {
-  buildAdjustments,
-  rowComplete,
-  rowStarted,
-  type AdjRow,
-} from "../../../app/src/lib/payrollAdjustments";
+import { buildAdjustments, rowComplete, rowStarted, type AdjRow } from "@scd/shared";
 
 const STAFF_A = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const STAFF_B = "bbbbbbbbbbbbbbbbbbbbbbbb";

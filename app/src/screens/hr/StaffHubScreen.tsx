@@ -126,6 +126,21 @@ function attendanceStatusLabel(s: string): string {
 }
 const taka = (n: number): string => `৳ ${bnNum(n.toLocaleString("en-US"))}`;
 
+/**
+ * joiningDate + N months → the date probation was due to end (D-#586).
+ *
+ * Month arithmetic, not 30-day arithmetic: six months from 31 January is 31 July,
+ * and JS rolls a short month forward on its own (31 Aug + 6 → 3 Mar), which is close
+ * enough for a reminder and never silently wrong by a month.
+ */
+export function probationEndKey(joiningIso: string | null | undefined, months: number): string | null {
+  if (!joiningIso || months <= 0) return null;
+  const d = new Date(joiningIso);
+  if (Number.isNaN(d.getTime())) return null;
+  const end = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + months, d.getUTCDate()));
+  return end.toISOString().slice(0, 10);
+}
+
 // ---------------------------------------------------------------------------
 
 /**
@@ -227,6 +242,13 @@ function CredentialCard({ staff }: { staff: StaffT }): React.ReactElement {
 
 function ProfileTab({ staff, canLeave }: { staff: StaffT; canLeave: boolean }): React.ReactElement {
   const onProbation = !staff.confirmationDate;
+  const [{ data: policyData }] = useQuery({ query: HR_POLICY_QUERY });
+  const probationEnd = onProbation
+    ? probationEndKey(staff.joiningDate, policyData?.hrPolicy.probationMonths ?? 0)
+    : null;
+  // Overdue is the whole reason to compute the date: the confirmation, its held-leave
+  // settlement (D-#540) and the letter all wait on someone noticing.
+  const probationOverdue = probationEnd !== null && probationEnd < new Date().toISOString().slice(0, 10);
   const [{ data: pool }] = useQuery({
     query: STAFF_LEAVE_POOL_QUERY, variables: { staffProfileId: staff.id }, pause: !canLeave, requestPolicy: "cache-and-network",
   });
@@ -263,6 +285,8 @@ function ProfileTab({ staff, canLeave }: { staff: StaffT; canLeave: boolean }): 
         <Row label={STR.employmentStatus} value={employmentStatusLabel(staff.employmentStatus)} />
         <Row label={STR.joiningDate} value={fmtDate(staff.joiningDate)} />
         {staff.confirmationDate ? <Row label={STR.stfConfirmedOn} value={fmtDate(staff.confirmationDate)} /> : null}
+        {probationEnd ? <Row label={STR.stfProbationEnds} value={fmtDate(probationEnd)} /> : null}
+        {probationOverdue ? <Notice tone="warn" message={STR.stfProbationOverdue} /> : null}
         {staff.biometricId ? <Row label={STR.biometricId} value={staff.biometricId} /> : null}
       </Card>
 
@@ -552,6 +576,14 @@ function DocumentsTab({
         )}
         <View style={{ height: space(2) }} />
         <Button title={STR.stfLetterCertificate} variant="secondary" onPress={() => onIssue("service_certificate")} />
+        {/* The Bangla চুক্তিপত্র, for staff who sign a contract rather than receive an
+            appointment letter — the খালা and the দারোয়ান (D-#586). */}
+        {staff.category === "support" ? (
+          <>
+            <View style={{ height: space(2) }} />
+            <Button title={STR.stfLetterContract} variant="secondary" onPress={() => onIssue("support_contract")} />
+          </>
+        ) : null}
       </Card>
 
       <Card>
@@ -680,6 +712,7 @@ function ExitTab({ staff }: { staff: StaffT }): React.ReactElement {
 function letterKindLabel(kind: string): string {
   if (kind === "appointment") return STR.stfLetterAppointment;
   if (kind === "confirmation") return STR.stfLetterConfirmation;
+  if (kind === "support_contract") return STR.stfLetterContract;
   return STR.stfLetterCertificate;
 }
 

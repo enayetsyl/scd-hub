@@ -655,15 +655,25 @@ export const CLEARANCE_ITEM_STATUS_LABELS_EN: Record<ClearanceItemStatus, string
 /** The letters the app issues for a staff member (SH-1, D-#542). `appointment` and
  *  `confirmation` are the two the owner asked for; `service_certificate` is the exit
  *  document prd-hr §6.5 already promises on retention, issued from the same machinery. */
-export const STAFF_LETTER_KINDS = ["appointment", "confirmation", "service_certificate"] as const;
+/**
+ * The letters the school issues (D-#586 adds the fourth).
+ *
+ *  is the Bangla নিয়োগ চুক্তিপত্র the খালা and দারোয়ান sign — a different
+ * DOCUMENT, not a translation of the appointment letter: it is a two-party contract with a
+ * duties schedule, both signatures, and no probation-then-regularize arc. Making it a kind of
+ * its own is what lets one renderer stay faithful to each without either drifting.
+ */
+export const STAFF_LETTER_KINDS = ["appointment", "confirmation", "service_certificate", "support_contract"] as const;
 export type StaffLetterKind = (typeof STAFF_LETTER_KINDS)[number];
 
 export const STAFF_LETTER_KIND_LABELS_BN: Record<StaffLetterKind, string> = {
   appointment: "নিয়োগপত্র", confirmation: "স্থায়ীকরণ পত্র", service_certificate: "প্রত্যয়নপত্র",
+  support_contract: "নিয়োগ চুক্তিপত্র",
 };
 export const STAFF_LETTER_KIND_LABELS_EN: Record<StaffLetterKind, string> = {
   appointment: "Appointment letter", confirmation: "Confirmation letter",
   service_certificate: "Service certificate",
+  support_contract: "Support-staff contract",
 };
 
 /** A letter is NEVER edited (D-#542): its snapshot is what was handed over and signed.
@@ -710,6 +720,16 @@ export const HR_POLICY_DEFAULTS = {
   lateDaysPerCharge: 3,
   latenessRuleEnabled: false,
   probationDebtEnabled: true,
+  /**
+   * How long probation runs, in months (D-#586).
+   *
+   * SIX, not the three the Dhaka branch uses — the owner's ruling. It is a POLICY number
+   * rather than a constant precisely because it differs by branch, and a per-staff override
+   * exists on top for anyone whose letter says something else. It never decides whether
+   * someone IS on probation — `confirmationDate` alone does that (D-#540) — it only says when
+   * the probation was due to end, which is what makes an overdue confirmation visible.
+   */
+  probationMonths: 6,
   /** Letter defaults (SH-1). The signatory is DATA, never a literal in the renderer —
    *  the convener changes without a deploy, and a letter already issued keeps the
    *  name it was signed with because the snapshot froze it (D-#542). */
@@ -717,6 +737,19 @@ export const HR_POLICY_DEFAULTS = {
   signatoryTitle: "Convener, Managing Committee",
   /** Clause 4's printed working-hours text. */
   weeklyHoursText: "25 (5*5)",
+  /**
+   * The Bangla support-staff contract block (D-#586), EMPTY by default.
+   *
+   * Deliberately not seeded with the Mohammadpur branch text that appears in the
+   * sample contracts: this deployment is a different branch, and a plausible-looking
+   * wrong address on a signed contract is worse than a refusal. The contract will not
+   * issue until these are set once in HR নীতিমালা.
+   */
+  employerNameBn: "",
+  employerAddressBn: "",
+  /** The Bangla contract is signed by the Principal, not the English letters' Convener. */
+  signatoryNameBn: "",
+  signatoryTitleBn: "",
   /** Ref-no prefix: `${prefix}/${year}/${seq}` → "SCD/HR/2026/0052". */
   letterRefPrefix: "SCD/HR",
 } as const;

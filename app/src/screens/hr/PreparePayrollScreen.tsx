@@ -21,7 +21,7 @@ import { useMutation } from "urql";
 import { PAY_ADDITION_TYPES, PAY_DEDUCTION_TYPES } from "@scd/shared";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { PREPARE_PAYROLL_RUN } from "../../graphql/operations";
-import { buildAdjustments, rowComplete, rowStarted, type AdjRow } from "../../lib/payrollAdjustments";
+import { buildAdjustments, rowComplete, rowStarted, type AdjRow } from "@scd/shared";
 import type { HrStackParamList } from "../../navigation/types";
 import {
   Screen,

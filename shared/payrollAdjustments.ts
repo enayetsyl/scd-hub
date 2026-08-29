@@ -6,7 +6,9 @@
  * must become ONE adjustment with two lines — the server keys adjustments by staff, so
  * two separate entries would mean the second silently replaced the first.
  *
- * Pure TypeScript, no React Native imports, so the server's Jest project can load it.
+ * It lives in /shared rather than in the app because it is the SHAPE OF A CONTRACT between
+ * the form and `preparePayrollRun`, and because a test cannot import across the server
+ * workspace's rootDir. Pure TypeScript, no React Native imports.
  */
 
 export interface PayLineInput {

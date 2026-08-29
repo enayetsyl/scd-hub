@@ -7755,6 +7755,34 @@ export const STAFF_LETTERS_QUERY = gql<
   }
 `;
 
+/** The Bangla নিয়োগ চুক্তিপত্র's own fields (D-#586). */
+export interface SupportContractInputT {
+  role: string;
+  dutiesBn: string[];
+  workingHoursBn: string;
+  foodAllowance?: number | null;
+  permanentAddressBn?: string | null;
+  presentAddressBn?: string | null;
+  contactBn?: string | null;
+}
+
+export interface SupportContractDefaultsT {
+  role: string;
+  titleBn: string;
+  workingHoursBn: string;
+  dutiesBn: string[];
+}
+
+/** The starting draft for a contract — the form loads it and the operator EDITS. */
+export const SUPPORT_CONTRACT_DEFAULTS_QUERY = gql<
+  { supportContractDefaults: SupportContractDefaultsT },
+  { role: string }
+>`
+  query SupportContractDefaults($role: String!) {
+    supportContractDefaults(role: $role) { role titleBn workingHoursBn dutiesBn }
+  }
+`;
+
 export const ISSUE_STAFF_LETTER = gql<
   { issueStaffLetter: StaffLetterT },
   {
@@ -7767,6 +7795,8 @@ export const ISSUE_STAFF_LETTER = gql<
     designation?: string | null;
     weeklyHours?: string | null;
     extraText?: string | null;
+    /** Required when kind is `support_contract` (D-#586). */
+    contract?: SupportContractInputT | null;
   }
 >`
   mutation IssueStaffLetter(
@@ -7779,6 +7809,7 @@ export const ISSUE_STAFF_LETTER = gql<
     $designation: String
     $weeklyHours: String
     $extraText: String
+    $contract: SupportContractInput
   ) {
     issueStaffLetter(
       staffProfileId: $staffProfileId
@@ -7790,6 +7821,7 @@ export const ISSUE_STAFF_LETTER = gql<
       designation: $designation
       weeklyHours: $weeklyHours
       extraText: $extraText
+      contract: $contract
     ) {
       id staffProfileId kind refNo issuedOn status extraText voidReason
       salaryMode monthlySalary designation effectiveFrom letterDate annualLeaveDays
@@ -8016,17 +8048,25 @@ export interface HrPolicyT {
   lateDaysPerCharge: number;
   latenessRuleEnabled: boolean;
   probationDebtEnabled: boolean;
+  /** How long probation runs here — six months, not the Dhaka branch's three (D-#586). */
+  probationMonths: number;
   signatoryName: string;
   signatoryTitle: string;
   weeklyHoursText: string;
+  /** The Bangla contract block. Empty until set once — the contract refuses without it. */
+  employerNameBn: string;
+  employerAddressBn: string;
+  signatoryNameBn: string;
+  signatoryTitleBn: string;
   letterRefPrefix: string;
 }
 
 export const HR_POLICY_QUERY = gql<{ hrPolicy: HrPolicyT }, Record<string, never>>`
   query HrPolicy {
     hrPolicy {
-      annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled
+      annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled probationMonths
       signatoryName signatoryTitle weeklyHoursText letterRefPrefix
+      employerNameBn employerAddressBn signatoryNameBn signatoryTitleBn
     }
   }
 `;
@@ -8083,9 +8123,14 @@ export const SET_HR_POLICY = gql<
     lateDaysPerCharge?: number | null;
     latenessRuleEnabled?: boolean | null;
     probationDebtEnabled?: boolean | null;
+    probationMonths?: number | null;
     signatoryName?: string | null;
     signatoryTitle?: string | null;
     weeklyHoursText?: string | null;
+    employerNameBn?: string | null;
+    employerAddressBn?: string | null;
+    signatoryNameBn?: string | null;
+    signatoryTitleBn?: string | null;
     letterRefPrefix?: string | null;
   }
 >`
@@ -8094,9 +8139,14 @@ export const SET_HR_POLICY = gql<
     $lateDaysPerCharge: Int
     $latenessRuleEnabled: Boolean
     $probationDebtEnabled: Boolean
+    $probationMonths: Int
     $signatoryName: String
     $signatoryTitle: String
     $weeklyHoursText: String
+    $employerNameBn: String
+    $employerAddressBn: String
+    $signatoryNameBn: String
+    $signatoryTitleBn: String
     $letterRefPrefix: String
   ) {
     setHrPolicy(
@@ -8104,9 +8154,14 @@ export const SET_HR_POLICY = gql<
       lateDaysPerCharge: $lateDaysPerCharge
       latenessRuleEnabled: $latenessRuleEnabled
       probationDebtEnabled: $probationDebtEnabled
+      probationMonths: $probationMonths
       signatoryName: $signatoryName
       signatoryTitle: $signatoryTitle
       weeklyHoursText: $weeklyHoursText
+      employerNameBn: $employerNameBn
+      employerAddressBn: $employerAddressBn
+      signatoryNameBn: $signatoryNameBn
+      signatoryTitleBn: $signatoryTitleBn
       letterRefPrefix: $letterRefPrefix
     ) {
       annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled
