@@ -91,6 +91,12 @@ export interface IStaffProfile extends Document {
   bankAccountName?: string;
   bankName?: string;
   bankBranch?: string;
+  /**
+   * The bank's routing number, for a BEFTN transfer to a bank that is not the
+   * school's own (D-#591). The BEFTN advice sheet has a column for it and the
+   * transfer cannot be instructed without one; an internal transfer never needs it.
+   */
+  routingNo?: string;
   /** Consolidated monthly salary — one figure, no basic/allowance split (HR-3, §4.1).
    *  Payroll-sensitive; set via setStaffPay (payroll:manage). Absent = no run line. */
   monthlySalary?: number;
@@ -138,6 +144,7 @@ const StaffProfileSchema = new Schema<IStaffProfile>(
     bankAccountName: { type: String, trim: true },
     bankName: { type: String, trim: true },
     bankBranch: { type: String, trim: true },
+    routingNo: { type: String, trim: true },
     weeklyHours: { type: String, trim: true },
     monthlySalary: { type: Number, min: 0 },
     paymentMethod: { type: String, enum: PAYMENT_METHODS },

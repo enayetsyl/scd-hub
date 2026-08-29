@@ -55,6 +55,13 @@ export default function HrPolicyScreen(): React.ReactElement {
   const [employerAddressBn, setEmployerAddressBn] = React.useState("");
   const [signatoryNameBn, setSignatoryNameBn] = React.useState("");
   const [signatoryTitleBn, setSignatoryTitleBn] = React.useState("");
+  const [orgRegistrationNo, setOrgRegistrationNo] = React.useState("");
+  const [orgAddress, setOrgAddress] = React.useState("");
+  const [orgPhone, setOrgPhone] = React.useState("");
+  const [orgEmail, setOrgEmail] = React.useState("");
+  const [schoolBankName, setSchoolBankName] = React.useState("");
+  const [schoolBankBranch, setSchoolBankBranch] = React.useState("");
+  const [schoolAccountNo, setSchoolAccountNo] = React.useState("");
 
   const [busy, setBusy] = React.useState(false);
   const [notice, setNotice] = React.useState<string | null>(null);
@@ -79,6 +86,13 @@ export default function HrPolicyScreen(): React.ReactElement {
     setEmployerAddressBn(p.employerAddressBn);
     setSignatoryNameBn(p.signatoryNameBn);
     setSignatoryTitleBn(p.signatoryTitleBn);
+    setOrgRegistrationNo(p.orgRegistrationNo);
+    setOrgAddress(p.orgAddress);
+    setOrgPhone(p.orgPhone);
+    setOrgEmail(p.orgEmail);
+    setSchoolBankName(p.schoolBankName);
+    setSchoolBankBranch(p.schoolBankBranch);
+    setSchoolAccountNo(p.schoolAccountNo);
   }, [p]);
 
   const poolChanged = !!p && Number(annualLeaveDays) !== p.annualLeaveDays;
@@ -108,6 +122,13 @@ export default function HrPolicyScreen(): React.ReactElement {
       employerAddressBn: employerAddressBn.trim(),
       signatoryNameBn: signatoryNameBn.trim(),
       signatoryTitleBn: signatoryTitleBn.trim(),
+      orgRegistrationNo: orgRegistrationNo.trim(),
+      orgAddress: orgAddress.trim(),
+      orgPhone: orgPhone.trim(),
+      orgEmail: orgEmail.trim(),
+      schoolBankName: schoolBankName.trim(),
+      schoolBankBranch: schoolBankBranch.trim(),
+      schoolAccountNo: schoolAccountNo.trim(),
     });
     setBusy(false);
     if (res.error) {
@@ -218,6 +239,19 @@ export default function HrPolicyScreen(): React.ReactElement {
         />
         <Field label={STR.stfSignatoryNameBn} value={signatoryNameBn} onChangeText={setSignatoryNameBn} />
         <Field label={STR.stfSignatoryTitleBn} value={signatoryTitleBn} onChangeText={setSignatoryTitleBn} />
+      </Card>
+
+      {/* --- the salary-advice letterhead + the school's own bank (D-#591) ------ */}
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfPolicyLetterhead}</Body>
+        <Muted>{STR.stfAdviceNotReady}</Muted>
+        <Field label={STR.stfOrgRegistrationNo} value={orgRegistrationNo} onChangeText={setOrgRegistrationNo} />
+        <Field label={STR.stfOrgAddress} value={orgAddress} onChangeText={setOrgAddress} />
+        <Field label={STR.stfOrgPhone} value={orgPhone} onChangeText={setOrgPhone} />
+        <Field label={STR.stfOrgEmail} value={orgEmail} onChangeText={setOrgEmail} />
+        <Field label={STR.stfSchoolBankName} value={schoolBankName} onChangeText={setSchoolBankName} />
+        <Field label={STR.stfSchoolBankBranch} value={schoolBankBranch} onChangeText={setSchoolBankBranch} />
+        <Field label={STR.stfSchoolAccountNo} value={schoolAccountNo} onChangeText={setSchoolAccountNo} />
       </Card>
 
       <View style={{ marginTop: space(2) }}>

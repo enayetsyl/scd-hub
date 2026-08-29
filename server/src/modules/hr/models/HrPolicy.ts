@@ -37,6 +37,14 @@ export interface IHrPolicy extends Document {
   signatoryName: string;
   signatoryTitle: string;
   weeklyHoursText: string;
+  /** The salary-advice letterhead + the school's own bank (D-#591). */
+  orgRegistrationNo: string;
+  orgAddress: string;
+  orgPhone: string;
+  orgEmail: string;
+  schoolBankName: string;
+  schoolBankBranch: string;
+  schoolAccountNo: string;
   /** The Bangla support-staff contract block (D-#586). */
   employerNameBn: string;
   employerAddressBn: string;
@@ -59,6 +67,13 @@ const HrPolicySchema = new Schema<IHrPolicy>(
     signatoryName: { type: String, trim: true },
     signatoryTitle: { type: String, trim: true },
     weeklyHoursText: { type: String, trim: true },
+    orgRegistrationNo: { type: String, trim: true },
+    orgAddress: { type: String, trim: true },
+    orgPhone: { type: String, trim: true },
+    orgEmail: { type: String, trim: true },
+    schoolBankName: { type: String, trim: true },
+    schoolBankBranch: { type: String, trim: true },
+    schoolAccountNo: { type: String, trim: true },
     employerNameBn: { type: String, trim: true },
     employerAddressBn: { type: String, trim: true },
     signatoryNameBn: { type: String, trim: true },
