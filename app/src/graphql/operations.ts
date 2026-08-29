@@ -6700,12 +6700,43 @@ export const PAYROLL_RUNS_QUERY = gql<{ payrollRuns: PayrollRunT[] }, NoVars>`
   }
 `;
 
+/** One manual line on a payslip — an addition (arrears, bonus) or a deduction. */
+export interface PayLineInputT {
+  type: string;
+  amount: number;
+  note?: string | null;
+}
+
+/** Per-staff overrides for ONE run (D-#585). The server has taken these since HR-3. */
+export interface StaffPayrollAdjustmentInputT {
+  staffProfileId: string;
+  payableDays?: number | null;
+  latenessDeduction?: number | null;
+  manualDeductions?: PayLineInputT[];
+  manualAdditions?: PayLineInputT[];
+}
+
 export const PREPARE_PAYROLL_RUN = gql<
   { preparePayrollRun: PayrollRunT },
-  { monthKey: string; workingDays: number; note?: string | null }
+  {
+    monthKey: string;
+    workingDays: number;
+    note?: string | null;
+    adjustments?: StaffPayrollAdjustmentInputT[];
+  }
 >`
-  mutation PreparePayrollRun($monthKey: String!, $workingDays: Int!, $note: String) {
-    preparePayrollRun(monthKey: $monthKey, workingDays: $workingDays, note: $note) { ${PAYROLL_RUN_FIELDS} }
+  mutation PreparePayrollRun(
+    $monthKey: String!
+    $workingDays: Int!
+    $note: String
+    $adjustments: [StaffPayrollAdjustmentInput!]
+  ) {
+    preparePayrollRun(
+      monthKey: $monthKey
+      workingDays: $workingDays
+      note: $note
+      adjustments: $adjustments
+    ) { ${PAYROLL_RUN_FIELDS} }
   }
 `;
 
