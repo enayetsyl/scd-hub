@@ -333,7 +333,7 @@ export function buildContractSections(s: ILetterSnapshot): ContractSection[] {
     s.probationMonths && s.probationMonths > 0
       ? [
           `যোগদানের তারিখ থেকে ${bnDigits(s.probationMonths)} (${bnDigits(s.probationMonths)}) মাস ` +
-            `শিক্ষানবিশকাল হিসাবে গণ্য হইবে। এই সময়ের মধ্যে চুক্তিবহির্ভূত কিছু পরিলক্ষিত হইলে ` +
+            `প্রবেশনকাল হিসাবে গণ্য হইবে। এই সময়ের মধ্যে চুক্তিবহির্ভূত কিছু পরিলক্ষিত হইলে ` +
             `তাৎক্ষণিকভাবে চাকরিচ্যুত করা হইবে।`,
         ]
       : [];

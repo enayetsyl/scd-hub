@@ -355,7 +355,7 @@ export const EMPLOYMENT_STATUSES = ["probation", "confirmed", "resigned", "termi
 export type EmploymentStatus = (typeof EMPLOYMENT_STATUSES)[number];
 
 export const EMPLOYMENT_STATUS_LABELS_BN: Record<EmploymentStatus, string> = {
-  probation: "শিক্ষানবিশ",
+  probation: "প্রবেশন",
   confirmed: "স্থায়ী",
   resigned: "পদত্যাগী",
   terminated: "অব্যাহতিপ্রাপ্ত",
@@ -986,7 +986,7 @@ export const EMPLOYMENT_TYPE_LABELS_EN: Record<EmploymentType, string> = {
 
 export const EMPLOYMENT_STATUS_LABELS_EN: Record<EmploymentStatus, string> = {
   probation: "Probation",
-  confirmed: "Confirmed",
+  confirmed: "Permanent",
   resigned: "Resigned",
   terminated: "Terminated",
   retired: "Retired",
