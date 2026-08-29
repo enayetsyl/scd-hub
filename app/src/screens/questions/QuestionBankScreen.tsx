@@ -240,6 +240,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
                 marks: q.marks ?? 0,
                 label: text || q.qid || q.id,
                 subject: q.subject,
+                questionType: q.questionType,
                 classLevel: q.classLevel,
               })
         }
@@ -316,6 +317,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
         <SelectionTray
           count={basket.count}
           totalMarks={basket.totalMarks}
+          examMinutes={basket.examMinutes}
           onCreate={() => setCreateOpen(true)}
           onClear={basket.clear}
         />

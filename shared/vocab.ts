@@ -193,6 +193,85 @@ export type AnchorWord = (typeof ANCHOR_WORDS)[number];
 export const SET_TYPES = ["HW", "AS", "CT"] as const;
 export type SetType = (typeof SET_TYPES)[number];
 
+// ---------------------------------------------------------------------------
+// A.5e QUESTION TIME (QT-1, D-#574) — app-native, NO wire twin
+// ---------------------------------------------------------------------------
+
+/**
+ * Minutes per MARK, by (subject × question type).
+ *
+ * Seeded from the Class-5 scholarship time-allocation sheet. Time is NOT proportional to
+ * marks alone and NOT uniform across subjects, which is why this is a grid rather than one
+ * number: a maths MCQ needs working out where a Bangla one is recall (1.3 vs 1.0), and a
+ * maths problem earns its marks FASTER than a composition does (1.25 vs 2.0) because it
+ * pays per step.
+ *
+ * Lives in `shared` so the APP computes a basket total with the identical numbers the
+ * SERVER snapshots onto the set. Two implementations of the same arithmetic would drift,
+ * and the first symptom would be a homework whose stated duration changed when it was saved.
+ *
+ * App-native: no envelope field mirrors this, so /skills/contract-sync does not apply.
+ */
+export const QUESTION_TIME_RATES: Record<Subject, Record<QuestionType, number>> = {
+  BAN:  { mcq: 1.0, short_answer: 1.5, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 2.0 },
+  ENG:  { mcq: 1.0, short_answer: 1.2, true_false: 0.8, fill_blank: 0.8, matching: 0.8, descriptive: 2.0 },
+  MATH: { mcq: 1.3, short_answer: 2.0, true_false: 1.0, fill_blank: 1.2, matching: 1.0, descriptive: 1.25 },
+  SCI:  { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
+  BGS:  { mcq: 1.0, short_answer: 1.2, true_false: 1.0, fill_blank: 1.0, matching: 1.0, descriptive: 1.67 },
+};
+
+/** Fallback when a question carries a subject or type the grid does not know. */
+export const QUESTION_TIME_DEFAULT_RATE = 1.25;
+
+/**
+ * How long the same questions take by what you are BUILDING (owner ruling 2026-08-27).
+ *
+ * A class test IS an exam, so it takes exam time. Homework and assignments are done without
+ * a teacher, a clock, or the pressure that makes exam pace possible — the ruling is DOUBLE,
+ * and the source sheet's own homework column ranges 1.9–2.5×, so 2 sits inside it.
+ */
+export const SET_TYPE_TIME_MULTIPLIER: Record<SetType, number> = {
+  HW: 2,
+  AS: 2,
+  CT: 1,
+};
+
+/** One question's minutes per mark, with the documented fallback. */
+export function questionTimeRate(subject: string, questionType: string | null | undefined): number {
+  const row = (QUESTION_TIME_RATES as Record<string, Record<string, number> | undefined>)[subject];
+  const rate = row && questionType ? row[questionType] : undefined;
+  return typeof rate === "number" ? rate : QUESTION_TIME_DEFAULT_RATE;
+}
+
+export interface TimedQuestion {
+  subject: string;
+  questionType?: string | null;
+  marks?: number | null;
+}
+
+/**
+ * Exam minutes for a WHOLE set: ceil the SUM, never the parts (owner ruling 2026-08-27).
+ *
+ * Rounding each question up first inflates badly on objective work — five 1-mark Bangla
+ * short answers at 1.5 would be ceil(1.5)×5 = 10 against a true 8, and the error compounds
+ * with every row. The per-question figure on a card is a display convenience; the number
+ * that goes on a real homework is the honest sum.
+ */
+export function setExamMinutes(items: readonly TimedQuestion[]): number {
+  const raw = items.reduce(
+    (sum, it) =>
+      sum + (typeof it.marks === "number" ? it.marks : 0) * questionTimeRate(it.subject, it.questionType),
+    0,
+  );
+  return Math.ceil(raw);
+}
+
+/** What the SET says it takes: exam minutes scaled by what is being built. */
+export function setDurationMinutes(setType: string, items: readonly TimedQuestion[]): number {
+  const mult = (SET_TYPE_TIME_MULTIPLIER as Record<string, number | undefined>)[setType] ?? 1;
+  return setExamMinutes(items) * mult;
+}
+
 /** Tracker kinds (ARCH §4; REQ-TRACK). `generic` is the extensible pattern (R-T4). */
 export const TRACKER_KINDS = ["classtest", "assignment", "homework", "generic"] as const;
 export type TrackerKind = (typeof TRACKER_KINDS)[number];

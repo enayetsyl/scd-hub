@@ -192,6 +192,7 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
                   marks: q.marks ?? 0,
                   label: text || q.qid || q.id,
                   subject: q.subject,
+                  questionType: q.questionType,
                   classLevel: q.classLevel,
                 })
           }

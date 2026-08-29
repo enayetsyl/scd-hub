@@ -5,6 +5,7 @@
  * The basket count badges the Questions tab.
  */
 import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
+import { setExamMinutes } from "@scd/shared";
 
 export interface BasketEntry {
   artifactId: string;
@@ -13,6 +14,8 @@ export interface BasketEntry {
   /** Short label for display (question text or qid). */
   label: string;
   subject: string;
+  /** Drives the time estimate (QT-1, D-#574) — the rate is per (subject × type). */
+  questionType: string | null;
   /** Content class level (1..5) — used to guard against assigning to a mismatched section. */
   classLevel: number;
 }
@@ -21,6 +24,14 @@ interface BasketContextValue {
   items: BasketEntry[];
   count: number;
   totalMarks: number;
+  /**
+   * Exam minutes for the basket AS A WHOLE (QT-1, D-#574).
+   *
+   * Computed with the SAME shared helper the server snapshots onto the set, so the number
+   * the teacher reads while choosing cannot differ from the one that is saved. Ceiled on
+   * the SUM, never per question, so a basket of one-mark questions is not inflated.
+   */
+  examMinutes: number;
   has: (artifactId: string) => boolean;
   add: (entry: BasketEntry) => void;
   remove: (artifactId: string) => void;
@@ -67,6 +78,7 @@ export function BasketProvider({ children }: { children: React.ReactNode }): Rea
       items,
       count: items.length,
       totalMarks: items.reduce((s, i) => s + (i.marks || 0), 0),
+      examMinutes: setExamMinutes(items),
       has,
       add,
       remove,

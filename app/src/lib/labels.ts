@@ -425,10 +425,18 @@ export const curationTagLabel = (v?: string | null): string =>
   (v && pick(CURATION_TAG_LABELS_BN, CURATION_TAG_LABELS_EN)[v as CurationTag]) || v || DASH;
 
 /** Selection-tray summary (ux-audit F6): "৫টি প্রশ্ন · ২০ নম্বর" / "5 questions · 20 marks". */
-export function selectionSummaryLabel(count: number, marks: number): string {
-  return _lang === "en"
+/**
+ * The tray summary. `minutes` is the basket's EXAM time (QT-1, D-#574) — omitted when 0,
+ * because a basket of unmarked questions saying "0 মি" reads as a broken estimate rather
+ * than an absent one.
+ */
+export function selectionSummaryLabel(count: number, marks: number, minutes?: number): string {
+  const en = _lang === "en";
+  const head = en
     ? `${count} question${count === 1 ? "" : "s"} · ${marks} marks`
     : `${bnNum(count)}টি প্রশ্ন · ${bnNum(marks)} নম্বর`;
+  if (!minutes || minutes <= 0) return head;
+  return en ? `${head} · ~${minutes} min` : `${head} · ~${bnNum(minutes)} মি`;
 }
 
 export const teacherAttendanceStatusLabel = (v?: string | null): string =>
