@@ -16,6 +16,7 @@ import { Types } from "mongoose";
 import { STAFF_LETTER_KINDS, SALARY_MODES, type StaffLetterKind, type SalaryMode } from "@scd/shared";
 import { StaffLetter, type IStaffLetter, type ILetterSnapshot } from "../models/StaffLetter";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
+import { OffboardingCase } from "../models/OffboardingCase";
 import { getHrPolicy } from "./HrPolicyService";
 import { writeAudit } from "../../platform/services/AuditService";
 
@@ -61,6 +62,9 @@ export interface IssueLetterInput {
   actorId: string;
 }
 
+/** Employment statuses that mean the person no longer serves (D-#583). */
+const HAS_LEFT: string[] = ["resigned", "terminated", "retired", "contract_ended"];
+
 function todayKey(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -98,6 +102,18 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
     );
   }
 
+  // The end of service, for someone who has actually left. It comes from the
+  // offboarding case's last working day — the date the school itself recorded — not
+  // from whatever date the operator happened to type into this form (D-#583).
+  const serviceTo = HAS_LEFT.includes(staff.employmentStatus)
+    ? (
+        await OffboardingCase.findOne({ staffProfileId: staff._id })
+          .sort({ lastWorkingDayKey: -1 })
+          .select("lastWorkingDayKey")
+          .lean()
+      )?.lastWorkingDayKey ?? null
+    : null;
+
   const snapshot: ILetterSnapshot = {
     staffName: staff.name,
     staffNameBn: staff.nameBn ?? null,
@@ -106,11 +122,21 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
     address: staff.presentAddress ?? staff.permanentAddress ?? null,
     salaryMode: input.salaryMode,
     monthlySalary,
-    weeklyHours: input.weeklyHours ?? policy.weeklyHoursText,
+    // This letter's own override, else THIS PERSON's contracted hours, else the
+    // school-wide default. The middle step is the point: the owner's note driving prod
+    // was that weekly hours vary per teacher, and until D-#584 the only two options
+    // were "type it again on every letter" or "print a figure that is wrong".
+    weeklyHours: input.weeklyHours ?? staff.weeklyHours ?? policy.weeklyHoursText,
     annualLeaveDays: policy.annualLeaveDays,
     effectiveFrom,
     confirmationDate:
       input.kind === "confirmation" ? input.effectiveFrom : null,
+    // A service certificate has to say WHEN (D-#583). The end date is set only for
+    // someone who has actually left — for a serving teacher it stays null, and the
+    // renderer then writes "has been serving since …" rather than "served", which is
+    // what makes the difference between a service certificate and a leaving one.
+    serviceFrom: staff.joiningDate ? staff.joiningDate.toISOString().slice(0, 10) : null,
+    serviceTo,
     signatoryName: policy.signatoryName,
     signatoryTitle: policy.signatoryTitle,
     letterDate,

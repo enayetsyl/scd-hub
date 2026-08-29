@@ -63,6 +63,7 @@ export default function StaffFormScreen({ navigation, route }: Props): React.Rea
     nameBn: existing?.nameBn ?? "",
     category: existing?.category ?? "teacher",
     designation: existing?.designation ?? "",
+    weeklyHours: existing?.weeklyHours ?? "",
     employmentType: existing?.employmentType ?? "full_time",
     employmentStatus: existing?.employmentStatus ?? "probation",
     joiningDate: dateInput(existing?.joiningDate),
@@ -126,6 +127,14 @@ export default function StaffFormScreen({ navigation, route }: Props): React.Rea
         <Field label={`${STR.name} *`} value={form.name} onChangeText={set("name")} autoCapitalize="words" />
         <Field label={STR.nameBnLabel} value={form.nameBn} onChangeText={set("nameBn")} />
         <Field label={STR.designation} value={form.designation} onChangeText={set("designation")} />
+        {/* Per-teacher contracted hours (D-#584) — the appointment letter prints this,
+            and it varies by person, so a school-wide default cannot stand in for it. */}
+        <Field
+          label={STR.stfWeeklyHours}
+          value={form.weeklyHours}
+          onChangeText={set("weeklyHours")}
+          placeholder={STR.stfWeeklyHoursPlaceholder}
+        />
 
         <Muted>{`${STR.category} *`}</Muted>
         <ChipRow>

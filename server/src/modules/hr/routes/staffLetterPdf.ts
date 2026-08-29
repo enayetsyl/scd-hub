@@ -84,6 +84,20 @@ staffLetterPdfRouter.get("/:id", async (req: Request, res: Response) => {
  * exactly one of them is emitted here. Numbering is generated from the emitted list,
  * so dropping one never leaves a gap.
  */
+/**
+ * Start a new page if `needed` points of vertical space are not left on this one.
+ *
+ * Exported for the test: the arithmetic is what keeps a signature block whole, and it
+ * is easier to assert on than a rendered PDF.
+ */
+export function needsNewPage(y: number, pageHeight: number, bottomMargin: number, needed: number): boolean {
+  return y + needed > pageHeight - bottomMargin;
+}
+
+function keepTogether(doc: PDFKit.PDFDocument, needed: number): void {
+  if (needsNewPage(doc.y, doc.page.height, doc.page.margins.bottom, needed)) doc.addPage();
+}
+
 export function buildClauses(s: ILetterSnapshot): string[] {
   const clauses: string[] = [];
 
@@ -158,6 +172,41 @@ export function buildClauses(s: ILetterSnapshot): string[] {
   return clauses;
 }
 
+/**
+ * The service certificate (D-#583).
+ *
+ * It said: "…served the School for Community Development as X. This certificate is
+ * issued on request." Three things wrong with that for the person holding it. It is
+ * PAST TENSE for someone still teaching, so it reads as a leaving certificate. It
+ * carries no DATES, and a period of service is the one fact a bank or a next employer
+ * actually needs. And "issued on request" says nothing at all.
+ *
+ * So the tense follows `serviceTo`: absent means still serving. Dates are printed when
+ * the profile has them, and the sentence still stands when it does not — a certificate
+ * with a missing joining date should be weaker, not unissuable.
+ */
+export function certificateBody(s: ILetterSnapshot): string {
+  const who = `${s.staffName} (ID ${s.schoolId})`;
+  const school = "the School for Community Development (SCD)";
+  const from = s.serviceFrom ? longDate(s.serviceFrom) : null;
+
+  if (s.serviceTo) {
+    const period = from
+      ? ` from ${from} to ${longDate(s.serviceTo)}`
+      : ` until ${longDate(s.serviceTo)}`;
+    return (
+      `This is to certify that ${who} served ${school} as ${s.designation}${period}. ` +
+      `We wish them every success in their future endeavours.`
+    );
+  }
+
+  const since = from ? ` since ${from}` : "";
+  return (
+    `This is to certify that ${who} has been serving ${school} as ${s.designation}${since}, ` +
+    `and remains in the service of the school as at ${longDate(s.letterDate)}.`
+  );
+}
+
 /** The confirmation letter is short — it restates the terms rather than re-issuing them. */
 export function confirmationBody(s: ILetterSnapshot): string {
   const salaryLine =
@@ -213,31 +262,33 @@ async function renderLetterToPdf(letter: IStaffLetter): Promise<Buffer> {
     mixedText(doc, `Date: ${longDate(s.letterDate)}`, { align: "right" });
     doc.moveDown(1.2);
 
+    // A service certificate is written to be SHOWN — to a bank, a landlord, the next
+    // employer. Stamping it "STRICTLY CONFIDENTIAL" told the holder not to use it for
+    // the only purpose it has (D-#583); that header belongs on the letters that carry
+    // salary terms. The certificate is addressed to whoever ends up reading it.
+    const isCertificate = letter.kind === "service_certificate";
     doc.fontSize(11);
-    mixedText(doc, "STRICTLY CONFIDENTIAL");
+    mixedText(doc, isCertificate ? "TO WHOM IT MAY CONCERN" : "STRICTLY CONFIDENTIAL");
     doc.moveDown(1);
 
-    // Addressee
     doc.fontSize(10);
-    mixedText(doc, "To");
-    mixedText(doc, s.staffName);
-    if (s.staffNameBn) mixedText(doc, s.staffNameBn);
-    if (s.address) mixedText(doc, s.address, { width });
-    doc.moveDown(1);
+    if (!isCertificate) {
+      // Addressee
+      mixedText(doc, "To");
+      mixedText(doc, s.staffName);
+      if (s.staffNameBn) mixedText(doc, s.staffNameBn);
+      if (s.address) mixedText(doc, s.address, { width });
+      doc.moveDown(1);
 
-    mixedText(doc, "Assalaamu 'Alaikum,");
-    doc.moveDown(0.8);
+      mixedText(doc, "Assalaamu 'Alaikum,");
+      doc.moveDown(0.8);
+    }
 
     if (letter.kind === "confirmation") {
       mixedText(doc, confirmationBody(s), { width, align: "justify", lineGap: 1.5 });
       doc.moveDown(0.8);
-    } else if (letter.kind === "service_certificate") {
-      mixedText(
-        doc,
-        `This is to certify that ${s.staffName} (ID ${s.schoolId}) served the School for Community ` +
-          `Development as ${s.designation}. This certificate is issued on request.`,
-        { width, align: "justify", lineGap: 1.5 },
-      );
+    } else if (isCertificate) {
+      mixedText(doc, certificateBody(s), { width, align: "justify", lineGap: 1.5 });
       doc.moveDown(0.8);
     } else {
       mixedText(
@@ -283,7 +334,14 @@ async function renderLetterToPdf(letter: IStaffLetter): Promise<Buffer> {
       doc.moveDown(1.2);
     }
 
-    // Signature block
+    // Signature block — kept whole (D-#583).
+    //
+    // pdfkit breaks wherever the text happens to reach the bottom margin, and on a
+    // full-page appointment letter that landed mid-block: the signatory's name at the
+    // foot of page 2 and his title at the head of page 3, or the acceptance line
+    // orphaned from the signature rule it belongs to. A signature split across a page
+    // is not a formatting nit on a document someone signs and files.
+    keepTogether(doc, letter.kind === "appointment" ? 190 : 70);
     mixedText(doc, s.signatoryName);
     mixedText(doc, s.signatoryTitle);
     mixedText(doc, "School for Community Development");

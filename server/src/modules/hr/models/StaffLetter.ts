@@ -52,6 +52,18 @@ export interface ILetterSnapshot {
   effectiveFrom: string;
   /** Confirmation letters only: the date employment was confirmed (YYYY-MM-DD). */
   confirmationDate?: string | null;
+  /**
+   * Service-certificate dates (D-#583), snapshotted like everything else here.
+   *
+   * A certificate with no dates certifies almost nothing — a bank or a next employer
+   * needs the period, not just the fact. `serviceTo` is null while the person is still
+   * employed, and that is what decides the TENSE: "has been serving since X" for a
+   * current employee, "served from X to Y" for someone who has left. The first version
+   * said "served" for everyone, which reads as a leaving certificate to anyone holding
+   * it — the opposite of what a serving teacher needs it to say.
+   */
+  serviceFrom?: string | null;
+  serviceTo?: string | null;
   // signature block
   signatoryName: string;
   signatoryTitle: string;
@@ -94,6 +106,8 @@ const LetterSnapshotSchema = new Schema<ILetterSnapshot>(
     annualLeaveDays: { type: Number, required: true, min: 0 },
     effectiveFrom: { type: String, required: true },
     confirmationDate: { type: String, default: null },
+    serviceFrom: { type: String, default: null },
+    serviceTo: { type: String, default: null },
     signatoryName: { type: String, required: true },
     signatoryTitle: { type: String, required: true },
     letterDate: { type: String, required: true },

@@ -132,6 +132,7 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
     name: "",
     nameBn: "",
     designation: "",
+    weeklyHours: "",
     category: "teacher",
     employmentType: "full_time",
     joiningDate: todayKey(),
@@ -276,6 +277,7 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
       salaryMode,
       monthlySalary: salaryMode === "paid" ? Number(salary) : null,
       designation: form.designation.trim() || null,
+      weeklyHours: form.weeklyHours.trim() || null,
       extraText: extraText.trim() || null,
     });
     setBusy(false);
@@ -306,6 +308,13 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
             <Field label={`${STR.name} *`} value={form.name} onChangeText={set("name")} autoCapitalize="words" />
             <Field label={STR.nameBnLabel} value={form.nameBn} onChangeText={set("nameBn")} />
             <Field label={`${STR.designation} *`} value={form.designation} onChangeText={set("designation")} />
+            {/* Optional: blank falls back to the school-wide default (D-#584). */}
+            <Field
+              label={STR.stfWeeklyHours}
+              value={form.weeklyHours}
+              onChangeText={set("weeklyHours")}
+              placeholder={STR.stfWeeklyHoursPlaceholder}
+            />
             <Muted style={{ marginTop: -space(2), marginBottom: space(3) }}>{STR.stfJoinDesignationForLetter}</Muted>
 
             <Muted>{`${STR.category} *`}</Muted>

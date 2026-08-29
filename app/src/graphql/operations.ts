@@ -291,6 +291,8 @@ export interface StaffT {
   nameBn: string | null;
   category: string;
   designation: string | null;
+  /** Contracted weekly hours as the letter states them, e.g. "25 (5*5)" (D-#584). */
+  weeklyHours: string | null;
   employmentType: string;
   employmentStatus: string;
   joiningDate: string | null;
@@ -322,6 +324,7 @@ export interface StaffT {
 
 export interface StaffProfileInputT {
   schoolId?: string; name?: string; nameBn?: string; category?: string; designation?: string;
+  weeklyHours?: string;
   employmentType?: string; employmentStatus?: string; joiningDate?: string; biometricId?: string;
   gender?: string; dob?: string; bloodGroup?: string; maritalStatus?: string; nationality?: string;
   qualification?: string; majoredIn?: string; studiedAt?: string; fatherName?: string;
@@ -381,6 +384,7 @@ export const STAFF_QUERY = gql<{ staff: StaffT[] }, { category?: string | null }
       nameBn
       category
       designation
+      weeklyHours
       employmentType
       employmentStatus
       joiningDate

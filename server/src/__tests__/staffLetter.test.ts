@@ -65,7 +65,7 @@ jest.mock("../modules/platform/services/AuditService", () => ({
 import { issueLetter, effectiveFromText, LetterError } from "../modules/hr/services/StaffLetterService";
 import { confirmEmployment, previewConfirmation } from "../modules/hr/services/ConfirmationService";
 import { toDateKey, isProbationLeave } from "../modules/hr/services/ProbationDebtService";
-import { buildClauses, longDate, taka } from "../modules/hr/routes/staffLetterPdf";
+import { buildClauses, longDate, taka, certificateBody, needsNewPage } from "../modules/hr/routes/staffLetterPdf";
 import { HR_POLICY_DEFAULTS } from "@scd/shared";
 import type { ILetterSnapshot } from "../modules/hr/models/StaffLetter";
 
@@ -515,5 +515,76 @@ describe("confirmEmployment — the settlement ledger (D-#540)", () => {
         actorId: ACTOR,
       }),
     ).rejects.toThrow(/Invalid confirmation date/i);
+  });
+});
+
+// ===========================================================================
+describe("service certificate (D-#583)", () => {
+  function certSnap(over: Partial<ILetterSnapshot> = {}): ILetterSnapshot {
+    return {
+      staffName: "Suhel Ahmad",
+      staffNameBn: null,
+      schoolId: "20163",
+      designation: "Junior Teacher",
+      address: null,
+      salaryMode: "honorary",
+      monthlySalary: null,
+      weeklyHours: null,
+      annualLeaveDays: 20,
+      effectiveFrom: "January, 2022",
+      confirmationDate: null,
+      serviceFrom: "2022-01-10",
+      serviceTo: null,
+      signatoryName: "X",
+      signatoryTitle: "Convener",
+      letterDate: "2026-08-29",
+      ...over,
+    } as ILetterSnapshot;
+  }
+
+  test("a SERVING teacher gets the present tense — not a leaving certificate", () => {
+    const body = certificateBody(certSnap());
+    expect(body).toContain("has been serving");
+    expect(body).not.toMatch(/\bserved\b/);
+    // The one fact a bank or a next employer actually needs.
+    expect(body).toContain("10 January, 2022");
+    expect(body).toContain("29 August, 2026");
+  });
+
+  test("someone who has LEFT gets the past tense and both dates", () => {
+    const body = certificateBody(certSnap({ serviceTo: "2026-06-30" }));
+    expect(body).toContain("served");
+    expect(body).toContain("from 10 January, 2022 to 30 June, 2026");
+    expect(body).not.toContain("has been serving");
+  });
+
+  test("a missing joining date weakens the sentence, it does not break it", () => {
+    const serving = certificateBody(certSnap({ serviceFrom: null }));
+    expect(serving).toContain("has been serving");
+    expect(serving).not.toContain("since");
+
+    const left = certificateBody(certSnap({ serviceFrom: null, serviceTo: "2026-06-30" }));
+    expect(left).toContain("until 30 June, 2026");
+  });
+});
+
+// ===========================================================================
+describe("the signature block is kept whole (D-#583)", () => {
+  // A4 is 842pt tall; the letter uses a 56pt margin.
+  const PAGE = 842;
+  const MARGIN = 56;
+
+  test("a block that fits stays on the page", () => {
+    expect(needsNewPage(400, PAGE, MARGIN, 190)).toBe(false);
+  });
+
+  test("a block that would cross the bottom margin starts a new page", () => {
+    expect(needsNewPage(700, PAGE, MARGIN, 190)).toBe(true);
+  });
+
+  test("the boundary is the bottom MARGIN, not the page edge", () => {
+    // Exactly reaching the margin is fine; one point past it is not.
+    expect(needsNewPage(PAGE - MARGIN - 190, PAGE, MARGIN, 190)).toBe(false);
+    expect(needsNewPage(PAGE - MARGIN - 189, PAGE, MARGIN, 190)).toBe(true);
   });
 });

@@ -83,6 +83,7 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
   const [failure, setFailure] = React.useState<string | null>(null);
 
   const p = policy?.hrPolicy;
+  const isCertificate = kind === "service_certificate";
   const canSubmit =
     designation.trim() !== "" &&
     /^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom) &&
@@ -144,7 +145,12 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
         <Field label={STR.designation} value={designation} onChangeText={setDesignation} />
         <Muted style={{ marginTop: -space(2), marginBottom: space(3) }}>{STR.stfJoinDesignationForLetter}</Muted>
 
-        <Field label={STR.stfEffectiveFrom} value={effectiveFrom} onChangeText={setEffectiveFrom} placeholder="YYYY-MM-DD" />
+        {/* A service certificate has no "effective from": it certifies a period the
+            record already knows (joining date → the offboarding case's last working
+            day, D-#583). The field was collected, ignored, and printed nowhere. */}
+        {isCertificate ? null : (
+          <Field label={STR.stfEffectiveFrom} value={effectiveFrom} onChangeText={setEffectiveFrom} placeholder="YYYY-MM-DD" />
+        )}
         <Field label={STR.stfLetterDate} value={letterDate} onChangeText={setLetterDate} placeholder="YYYY-MM-DD" />
 
         {salaryMode === "paid" && kind !== "service_certificate" ? (
@@ -163,8 +169,16 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
 
       {p ? (
         <Card>
-          <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfLeavePool}</Body>
-          <Row label={STR.stfPoolAllowance} value={`${bnNum(String(p.annualLeaveDays))} ${STR.stfDays}`} />
+          {/* The leave allowance is shown because the APPOINTMENT letter's clause 7
+              prints it. A service certificate mentions no leave at all, so showing the
+              pool there just invited the question "why does a certificate care?"
+              (D-#583). The signatory applies to every letter and stays. */}
+          {isCertificate ? null : (
+            <>
+              <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfLeavePool}</Body>
+              <Row label={STR.stfPoolAllowance} value={`${bnNum(String(p.annualLeaveDays))} ${STR.stfDays}`} />
+            </>
+          )}
           <Row label={STR.stfIssuedBy} value={`${p.signatoryName} · ${p.signatoryTitle}`} />
         </Card>
       ) : null}
