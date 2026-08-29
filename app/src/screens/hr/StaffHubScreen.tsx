@@ -127,10 +127,10 @@ const taka = (n: number): string => `৳ ${bnNum(n.toLocaleString("en-US"))}`;
 function ProfileTab({ staff, canLeave }: { staff: StaffT; canLeave: boolean }): React.ReactElement {
   const onProbation = !staff.confirmationDate;
   const [{ data: pool }] = useQuery({
-    query: STAFF_LEAVE_POOL_QUERY, variables: { staffProfileId: staff.id }, pause: !canLeave,
+    query: STAFF_LEAVE_POOL_QUERY, variables: { staffProfileId: staff.id }, pause: !canLeave, requestPolicy: "cache-and-network",
   });
   const [{ data: debt }] = useQuery({
-    query: STAFF_PROBATION_DEBT_QUERY, variables: { staffProfileId: staff.id }, pause: !canLeave,
+    query: STAFF_PROBATION_DEBT_QUERY, variables: { staffProfileId: staff.id }, pause: !canLeave, requestPolicy: "cache-and-network",
   });
   const held = debt?.staffProbationDebt.totalDays ?? 0;
   const remaining = pool?.staffLeavePool.remainingDays ?? 0;
@@ -212,13 +212,13 @@ function AttendanceTab({ staff }: { staff: StaffT }): React.ReactElement {
   const [monthKey, setMonthKey] = React.useState(() => monthKeyOf(new Date()));
   const { fromKey, toKey } = monthBounds(monthKey);
   const [{ data, fetching, error }] = useQuery({
-    query: STAFF_ATTENDANCE_QUERY, variables: { staffProfileId: staff.id, fromKey, toKey },
+    query: STAFF_ATTENDANCE_QUERY, variables: { staffProfileId: staff.id, fromKey, toKey }, requestPolicy: "cache-and-network",
   });
   const [{ data: sum }] = useQuery({
-    query: STAFF_ATTENDANCE_SUMMARY_QUERY, variables: { staffProfileId: staff.id, fromKey, toKey },
+    query: STAFF_ATTENDANCE_SUMMARY_QUERY, variables: { staffProfileId: staff.id, fromKey, toKey }, requestPolicy: "cache-and-network",
   });
   const [{ data: late }] = useQuery({
-    query: STAFF_LATENESS_PREVIEW_QUERY, variables: { staffProfileId: staff.id, monthKey },
+    query: STAFF_LATENESS_PREVIEW_QUERY, variables: { staffProfileId: staff.id, monthKey }, requestPolicy: "cache-and-network",
   });
   const days = data?.staffAttendance ?? [];
   const s = sum?.staffAttendanceSummary;
@@ -277,10 +277,10 @@ function AttendanceTab({ staff }: { staff: StaffT }): React.ReactElement {
 function LeaveTab({ staff }: { staff: StaffT }): React.ReactElement {
   const onProbation = !staff.confirmationDate;
   const [{ data: pool, fetching }] = useQuery({
-    query: STAFF_LEAVE_POOL_QUERY, variables: { staffProfileId: staff.id },
+    query: STAFF_LEAVE_POOL_QUERY, variables: { staffProfileId: staff.id }, requestPolicy: "cache-and-network",
   });
   const [{ data: debt }] = useQuery({
-    query: STAFF_PROBATION_DEBT_QUERY, variables: { staffProfileId: staff.id },
+    query: STAFF_PROBATION_DEBT_QUERY, variables: { staffProfileId: staff.id }, requestPolicy: "cache-and-network",
   });
   const p = pool?.staffLeavePool;
   const d = debt?.staffProbationDebt;
@@ -332,11 +332,11 @@ function LeaveTab({ staff }: { staff: StaffT }): React.ReactElement {
 function PayrollTab({ staff, onSetPay }: { staff: StaffT; onSetPay: () => void }): React.ReactElement {
   const monthKey = monthKeyOf(new Date());
   const [{ data, fetching, error }] = useQuery({
-    query: STAFF_PAYSLIPS_QUERY, variables: { staffProfileId: staff.id },
+    query: STAFF_PAYSLIPS_QUERY, variables: { staffProfileId: staff.id }, requestPolicy: "cache-and-network",
   });
   const [{ data: pol }] = useQuery({ query: HR_POLICY_QUERY });
   const [{ data: late }] = useQuery({
-    query: STAFF_LATENESS_PREVIEW_QUERY, variables: { staffProfileId: staff.id, monthKey },
+    query: STAFF_LATENESS_PREVIEW_QUERY, variables: { staffProfileId: staff.id, monthKey }, requestPolicy: "cache-and-network",
   });
   const slips = data?.staffPayslips ?? [];
   const p = pol?.hrPolicy;
@@ -406,7 +406,7 @@ function DocumentsTab({
   staff, onIssue, onConfirm,
 }: { staff: StaffT; onIssue: (kind: string) => void; onConfirm: () => void }): React.ReactElement {
   const [{ data, fetching, error }, refetch] = useQuery({
-    query: STAFF_LETTERS_QUERY, variables: { staffProfileId: staff.id },
+    query: STAFF_LETTERS_QUERY, variables: { staffProfileId: staff.id }, requestPolicy: "cache-and-network",
   });
   const [, voidLetter] = useMutation(VOID_STAFF_LETTER);
   const [voidingId, setVoidingId] = React.useState<string | null>(null);
@@ -495,13 +495,13 @@ function DocumentsTab({
 
 function PerformanceTab({ staff }: { staff: StaffT }): React.ReactElement {
   const [{ data: appr, fetching }] = useQuery({
-    query: STAFF_APPRAISALS_QUERY, variables: { staffProfileId: staff.id },
+    query: STAFF_APPRAISALS_QUERY, variables: { staffProfileId: staff.id }, requestPolicy: "cache-and-network",
   });
   const [{ data: cond }] = useQuery({
-    query: STAFF_CONDUCT_RECORDS_QUERY, variables: { staffProfileId: staff.id },
+    query: STAFF_CONDUCT_RECORDS_QUERY, variables: { staffProfileId: staff.id }, requestPolicy: "cache-and-network",
   });
   const [{ data: obs }] = useQuery({
-    query: STAFF_OBSERVATIONS_QUERY, variables: { staffProfileId: staff.id },
+    query: STAFF_OBSERVATIONS_QUERY, variables: { staffProfileId: staff.id }, requestPolicy: "cache-and-network",
   });
   const appraisals = appr?.staffAppraisals ?? [];
   const conduct = cond?.staffConductRecords ?? [];
@@ -549,7 +549,7 @@ function PerformanceTab({ staff }: { staff: StaffT }): React.ReactElement {
 }
 
 function ExitTab({ staff }: { staff: StaffT }): React.ReactElement {
-  const [{ data, fetching }] = useQuery({ query: OFFBOARDING_CASES_QUERY, variables: { status: null } });
+  const [{ data, fetching }] = useQuery({ query: OFFBOARDING_CASES_QUERY, variables: { status: null }, requestPolicy: "cache-and-network" });
   const mine = (data?.offboardingCases ?? []).filter((c) => c.staffProfileId === staff.id);
   if (fetching && mine.length === 0) return <Loader label={STR.loading} />;
 
@@ -591,13 +591,17 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
 
   const [{ data, error }, refetch] = useQuery({
     query: STAFF_PROFILE_QUERY,
-    variables: { staffProfileId: initial.id },
+    variables: { staffProfileId: initial.id }, requestPolicy: "cache-and-network",
   });
 
   // Any write on this screen navigates away and back, so refetching on focus is what
   // makes a confirmation, an edit or a letter visible without a manual reload.
   React.useEffect(
-    () => navigation.addListener("focus", () => refetch({ requestPolicy: "network-only" })),
+    () =>
+      navigation.addListener("focus", () => {
+        refetch({ requestPolicy: "network-only" });
+        setReloadKey((n) => n + 1);
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [navigation],
   );
@@ -621,6 +625,10 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
     ...(canStaff ? [{ key: "exit" as TabKey, label: STR.stfTabExit }] : []),
   ];
   const [tab, setTab] = React.useState<TabKey>("profile");
+  // Bumped on focus so the ACTIVE tab remounts when we return from a write. The hub
+  // stays mounted while a confirm/letter screen sits on top of it, so nothing else
+  // would make its queries run again (D-#575).
+  const [reloadKey, setReloadKey] = React.useState(0);
 
   return (
     <Screen scroll>
@@ -654,21 +662,22 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
         </Card>
       ) : null}
 
-      {tab === "profile" ? <ProfileTab staff={staff} canLeave={canLeave} /> : null}
-      {tab === "attendance" && canAttendance ? <AttendanceTab staff={staff} /> : null}
-      {tab === "leave" && canLeave ? <LeaveTab staff={staff} /> : null}
+      {tab === "profile" ? <ProfileTab key={reloadKey} staff={staff} canLeave={canLeave} /> : null}
+      {tab === "attendance" && canAttendance ? <AttendanceTab key={reloadKey} staff={staff} /> : null}
+      {tab === "leave" && canLeave ? <LeaveTab key={reloadKey} staff={staff} /> : null}
       {tab === "payroll" && canPayroll ? (
-        <PayrollTab staff={staff} onSetPay={() => navigation.navigate("StaffPayEdit", { staff })} />
+        <PayrollTab key={reloadKey} staff={staff} onSetPay={() => navigation.navigate("StaffPayEdit", { staff })} />
       ) : null}
       {tab === "documents" && canStaff ? (
         <DocumentsTab
+          key={reloadKey}
           staff={staff}
           onIssue={(kind) => navigation.navigate("IssueLetter", { staff, kind })}
           onConfirm={() => navigation.navigate("ConfirmEmployment", { staff })}
         />
       ) : null}
-      {tab === "performance" && canPerformance ? <PerformanceTab staff={staff} /> : null}
-      {tab === "exit" && canStaff ? <ExitTab staff={staff} /> : null}
+      {tab === "performance" && canPerformance ? <PerformanceTab key={reloadKey} staff={staff} /> : null}
+      {tab === "exit" && canStaff ? <ExitTab key={reloadKey} staff={staff} /> : null}
     </Screen>
   );
 }

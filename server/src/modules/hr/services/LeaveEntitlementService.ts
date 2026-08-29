@@ -210,6 +210,15 @@ export interface PooledBalanceView {
   overridden: boolean;
   /** True when the allowance was pro-rated for a mid-year joiner. */
   proRated: boolean;
+  /**
+   * True while the staff member has no `confirmationDate` (D-#576).
+   *
+   * The pool EXISTS for a probationer — it is what they will get on confirmation — but
+   * they cannot draw it: every day taken now is unpaid and held (D-#540). Without this
+   * flag the own-row screen showed a probationer "বাকি ২০ দিন", which is the opposite of
+   * the rule she is actually under, and the figure she would plan a week off around.
+   */
+  onProbation: boolean;
 }
 
 /**
@@ -234,11 +243,16 @@ export async function pooledBalanceForStaff(
     remainingDays: 0,
     overridden: false,
     proRated: false,
+    onProbation: false,
   };
   if (!year) return zero;
 
   const policy = await getHrPolicy();
   const yearId = year._id.toString();
+
+  // Probation is decided by the DATE, never the live employmentStatus (D-#540).
+  const profile = await StaffProfile.findById(staffProfileId).select("joiningDate confirmationDate").lean();
+  const onProbation = !profile?.confirmationDate;
 
   // A per-staff row for ANY pooled type overrides the school-wide pool. Highest wins
   // when several exist, so an override can only ever be read generously — never as a
@@ -257,8 +271,7 @@ export async function pooledBalanceForStaff(
   if (overridden) {
     allowanceDays = overrides.reduce((max, e) => Math.max(max, e.allowanceDays ?? 0), 0);
   } else {
-    const staff = await StaffProfile.findById(staffProfileId).select("joiningDate").lean();
-    const joined = staff?.joiningDate ?? null;
+    const joined = profile?.joiningDate ?? null;
     allowanceDays = proRateAllowance(policy.annualLeaveDays, joined, year.startDate, year.endDate);
     proRated = allowanceDays !== policy.annualLeaveDays;
   }
@@ -272,5 +285,6 @@ export async function pooledBalanceForStaff(
     remainingDays: roundLeaveDays(computeRemaining(allowanceDays, carriedOverDays, takenDays)),
     overridden,
     proRated,
+    onProbation,
   };
 }

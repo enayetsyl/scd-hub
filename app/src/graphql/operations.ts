@@ -7774,6 +7774,8 @@ export interface StaffLeavePoolT {
   remainingDays: number;
   overridden: boolean;
   proRated: boolean;
+  /** True while the person has no confirmation date — the pool exists but cannot be drawn (D-#576). */
+  onProbation: boolean;
 }
 
 export const STAFF_LEAVE_POOL_QUERY = gql<
@@ -7782,7 +7784,7 @@ export const STAFF_LEAVE_POOL_QUERY = gql<
 >`
   query StaffLeavePool($staffProfileId: String!) {
     staffLeavePool(staffProfileId: $staffProfileId) {
-      academicYearId allowanceDays carriedOverDays takenDays remainingDays overridden proRated
+      academicYearId allowanceDays carriedOverDays takenDays remainingDays overridden proRated onProbation
     }
   }
 `;
@@ -7790,7 +7792,7 @@ export const STAFF_LEAVE_POOL_QUERY = gql<
 export const MY_LEAVE_POOL_QUERY = gql<{ myLeavePool: StaffLeavePoolT }, Record<string, never>>`
   query MyLeavePool {
     myLeavePool {
-      academicYearId allowanceDays carriedOverDays takenDays remainingDays overridden proRated
+      academicYearId allowanceDays carriedOverDays takenDays remainingDays overridden proRated onProbation
     }
   }
 `;
@@ -7941,6 +7943,8 @@ export interface ConfirmationResultT {
   settledToSalary: number;
   poolRemainingAfter: number;
   letterId: string | null;
+  /** Set when the confirmation SUCCEEDED but the letter could not be issued (D-#574). */
+  letterError: string | null;
 }
 
 export const CONFIRM_STAFF_EMPLOYMENT = gql<
@@ -7960,7 +7964,7 @@ export const CONFIRM_STAFF_EMPLOYMENT = gql<
       issueLetter: $issueLetter
     ) {
       staffProfileId confirmationDate heldDays settledFromPool settledToSalary
-      poolRemainingAfter letterId
+      poolRemainingAfter letterId letterError
     }
   }
 `;

@@ -412,6 +412,73 @@ describe("confirmEmployment — the settlement ledger (D-#540)", () => {
     }
   });
 
+  /**
+   * D-#574. Found by driving prod: a staff member with no designation was confirmed and
+   * her held days settled, then the letter threw, the mutation errored, and — because
+   * writeAudit sat below the letter — the confirmation went in with NO AUDIT ROW. The
+   * operator was told twice that it had failed.
+   */
+  test("refuses BEFORE any write when the letter cannot be issued", async () => {
+    const staff = liveStaff({ designation: undefined });
+    mockStaffFindById.mockResolvedValue(staff);
+    mockPooledBalance.mockResolvedValue({ allowanceDays: 20, remainingDays: 20 });
+
+    await expect(
+      confirmEmployment({
+        staffProfileId: staffId.toString(),
+        confirmationDate: "2026-07-01",
+        issueLetter: true,
+        actorId: ACTOR,
+      }),
+    ).rejects.toThrow(/পদবি/);
+
+    // Nothing committed: no save, no settlement, no audit — a clean refusal.
+    expect(staff.save).not.toHaveBeenCalled();
+    expect(mockWriteAudit).not.toHaveBeenCalled();
+  });
+
+  test("a letter failure is NON-FATAL — the confirmation stands and is audited", async () => {
+    const staff = liveStaff({ designation: "Teacher" });
+    mockStaffFindById.mockResolvedValue(staff);
+    mockPooledBalance.mockResolvedValue({ allowanceDays: 20, remainingDays: 20 });
+    // Something we did not foresee goes wrong inside the letter.
+    mockLetterCreate.mockRejectedValueOnce(new Error("printer on fire"));
+
+    const res = await confirmEmployment({
+      staffProfileId: staffId.toString(),
+      confirmationDate: "2026-07-01",
+      issueLetter: true,
+      actorId: ACTOR,
+    });
+
+    expect(staff.employmentStatus).toBe("confirmed");
+    expect(res.letterId).toBeNull();
+    expect(res.letterError).toMatch(/printer on fire/);
+    // The audit is the point: the confirmation must never be invisible.
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventKind: "STAFF_EMPLOYMENT_CONFIRMED",
+        meta: expect.objectContaining({ letterId: null, letterError: expect.stringMatching(/printer/) }),
+      }),
+    );
+  });
+
+  test("confirming WITHOUT a letter needs no designation at all", async () => {
+    const staff = liveStaff({ designation: undefined });
+    mockStaffFindById.mockResolvedValue(staff);
+    mockPooledBalance.mockResolvedValue({ allowanceDays: 20, remainingDays: 20 });
+
+    const res = await confirmEmployment({
+      staffProfileId: staffId.toString(),
+      confirmationDate: "2026-07-01",
+      issueLetter: false,
+      actorId: ACTOR,
+    });
+    expect(res.letterId).toBeNull();
+    expect(res.letterError).toBeNull();
+    expect(staff.employmentStatus).toBe("confirmed");
+  });
+
   test("refuses a second confirmation — the date is not a field to re-edit here", async () => {
     mockStaffFindById.mockResolvedValue(liveStaff({ confirmationDate: new Date("2026-01-01") }));
     mockPooledBalance.mockResolvedValue({ allowanceDays: 20, remainingDays: 20 });

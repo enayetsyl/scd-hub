@@ -170,9 +170,17 @@ export default function MyRecordScreen(): React.ReactElement {
           StaffProfile, so this block can never be the thing that breaks the screen. */}
       <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfMyLeavePool}</Body>
       <Card>
+        {/* A probationer's pool is what she WILL get, not what she can take now: every
+            day off before confirmation is held unpaid (D-#540). Labelling it "বাকি" was
+            the exact opposite of the rule she is under, so the label follows the flag. */}
+        {pool?.onProbation ? <Notice tone="warn" message={STR.stfOnProbationNotice} /> : null}
         <Row label={STR.stfPoolAllowance} value={`${bnNum(String(pool?.allowanceDays ?? 0))} ${STR.stfDays}`} />
         <Row label={STR.stfPoolTaken} value={`${bnNum(String(pool?.takenDays ?? 0))} ${STR.stfDays}`} />
-        <Row label={STR.stfPoolRemaining} value={`${bnNum(String(pool?.remainingDays ?? 0))} ${STR.stfDays}`} />
+        <Row
+          label={pool?.onProbation ? STR.stfPoolOnConfirmation : STR.stfPoolRemaining}
+          value={`${bnNum(String(pool?.remainingDays ?? 0))} ${STR.stfDays}`}
+        />
+        {pool?.onProbation ? <Muted>{STR.stfPoolNotDrawableYet}</Muted> : null}
         <Muted>{STR.stfPoolNote}</Muted>
       </Card>
 
@@ -342,12 +350,6 @@ export default function MyRecordScreen(): React.ReactElement {
         </>
       ) : null}
 
-      {/* Flagged gaps — no own-row server read exists for these yet. */}
-      <Divider />
-      <Body style={{ fontWeight: "700", marginTop: space(2), marginBottom: space(2) }}>{STR.hrPayslipsTitle}</Body>
-      <Notice message={STR.hrNoServerRead} tone="info" />
-      <Body style={{ fontWeight: "700", marginTop: space(2), marginBottom: space(2) }}>{STR.hrAttendanceTitle}</Body>
-      <Notice message={STR.hrNoServerRead} tone="info" />
     </Screen>
   );
 }

@@ -124,6 +124,9 @@ PooledBalanceRef.implement({
     remainingDays: t.float({ resolve: (b) => b.remainingDays }),
     overridden: t.exposeBoolean("overridden"),
     proRated: t.exposeBoolean("proRated"),
+    // D-#576: the pool exists for a probationer but cannot be DRAWN. The screens label
+    // it "স্থায়ী হলে পাবেন" rather than "ছুটি বাকি" when this is true.
+    onProbation: t.exposeBoolean("onProbation"),
   }),
 });
 
@@ -233,6 +236,7 @@ interface ConfirmResultShape {
   settledToSalary: number;
   poolRemainingAfter: number;
   letterId: string | null;
+  letterError: string | null;
 }
 const ConfirmResultRef = builder.objectRef<ConfirmResultShape>("ConfirmationResult");
 ConfirmResultRef.implement({
@@ -244,6 +248,9 @@ ConfirmResultRef.implement({
     settledToSalary: t.exposeFloat("settledToSalary"),
     poolRemainingAfter: t.exposeFloat("poolRemainingAfter"),
     letterId: t.string({ nullable: true, resolve: (r) => r.letterId }),
+    // D-#574: the confirmation SUCCEEDED but the letter did not. Non-null here means
+    // "confirmed; letter still to issue" — never "nothing happened".
+    letterError: t.string({ nullable: true, resolve: (r) => r.letterError }),
   }),
 });
 
@@ -392,6 +399,7 @@ builder.queryField("myLeavePool", (t) =>
           remainingDays: 0,
           overridden: false,
           proRated: false,
+          onProbation: false,
         };
       }
       return pooledBalanceForStaff(sid);
@@ -544,6 +552,7 @@ builder.mutationField("confirmStaffEmployment", (t) =>
         settledToSalary: res.settlement.toSalary,
         poolRemainingAfter: res.poolRemainingAfter,
         letterId: res.letterId,
+        letterError: res.letterError,
       };
     },
   }),
