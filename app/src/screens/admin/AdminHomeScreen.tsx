@@ -167,12 +167,6 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {canManageUsers ? (
-        <Card onPress={() => navigation.navigate("StaffCredentials")}>
-          <Body style={{ fontWeight: "700" }}>{STR.staffCredentials}</Body>
-          <Muted>{STR.admSubStaffCreds}</Muted>
-        </Card>
-      ) : null}
 
       {canTemplates ? (
         <Card onPress={() => navigation.navigate("MessageTemplates")}>

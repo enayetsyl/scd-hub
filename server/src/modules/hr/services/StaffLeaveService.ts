@@ -48,6 +48,7 @@ import {
 import { fanOutCoverSlots, revokeCoversForLeave, resolvePartialPeriods } from "./CoverService";
 import { emitStaffLeaveSubmitted } from "../../notifications/services/emitters";
 import { POOLED_LEAVE_TYPES } from "@scd/shared";
+import { bnNum } from "../../../lib/bnNum";
 
 // --- pure split math -------------------------------------------------------
 
@@ -67,9 +68,13 @@ export function splitLeaveDays(leaveType: LeaveType, days: number, remainingBala
   }
   const paidDays = Math.max(0, Math.min(days, remainingBalance));
   const unpaidDays = days - paidDays;
+  // Bangla, and about the POOL rather than the type. This string is stored on the
+  // application and shown verbatim to the applicant and the approver, and it read
+  // "Exceeds casual balance by 2 day(s) — recorded as unpaid (LWP). (§3.3)" — English,
+  // a section number, and a per-type balance that stopped existing at D-#539.
   const exceedWarning =
     unpaidDays > 0
-      ? `Exceeds ${leaveType} balance by ${roundLeaveDays(unpaidDays)} day(s) — recorded as unpaid (LWP). (§3.3)`
+      ? `ছুটির জমার চেয়ে ${bnNum(roundLeaveDays(unpaidDays))} দিন বেশি — এই দিনগুলো অবৈতনিক হিসেবে গণ্য হবে।`
       : null;
   return { paidDays, unpaidDays, exceedWarning };
 }

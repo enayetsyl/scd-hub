@@ -3443,6 +3443,11 @@ const STR_BN = {
   stfExportTotal: "মোট",
   stfExportCsv: "CSV ফাইল ডাউনলোড",
   stfExportWebOnly: "ফাইল ডাউনলোড শুধু ওয়েব ব্রাউজারে কাজ করে।",
+  // A badge names a STATE. `stfVoidLetter` is a button ("বাতিল করুন") and
+  // `stfLetterIssued` is a toast sentence; both were being shown as badges.
+  stfLetterStatusVoid: "বাতিল",
+  stfLetterStatusIssued: "ইস্যুকৃত",
+  stfNoCredentialRow: "এই কর্মীর লগইন-তথ্য পাওয়া যায়নি (নিষ্ক্রিয় কর্মী হতে পারেন)।",
   stfAccountNeededNote: "পেমেন্ট ফাইলে এই নম্বরটিই যাবে — না দিলে এই কর্মী ফাইল থেকে বাদ পড়বেন।",
   stfObservations: "পর্যবেক্ষণ",
   stfObservationCount: "টি পর্যবেক্ষণ",
@@ -7498,6 +7503,9 @@ const STR_EN: StrTable = {
   stfExportTotal: "Total",
   stfExportCsv: "Download CSV",
   stfExportWebOnly: "File download works in a web browser only.",
+  stfLetterStatusVoid: "Void",
+  stfLetterStatusIssued: "Issued",
+  stfNoCredentialRow: "No login record for this staff member (they may be inactive).",
   stfAccountNeededNote: "This is the number the payment file carries — without it this person is excluded from it.",
   stfObservations: "Observations",
   stfObservationCount: "observations",

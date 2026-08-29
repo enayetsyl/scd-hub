@@ -261,7 +261,9 @@ describe("splitLeaveDays (§3.2/§3.3 exceed-warns-not-blocks)", () => {
     const s = splitLeaveDays("casual", 5, 2);
     expect(s.paidDays).toBe(2);
     expect(s.unpaidDays).toBe(3);
-    expect(s.exceedWarning).toMatch(/unpaid/i);
+    // The warning is Bangla and speaks of the POOL, not a per-type balance (D-#580).
+    expect(s.exceedWarning).toContain("অবৈতনিক");
+    expect(s.exceedWarning).toContain("৩ দিন বেশি");
   });
   test("maternity is wholly unpaid (D-#23)", () => {
     expect(splitLeaveDays("maternity", 60, 999)).toEqual({ paidDays: 0, unpaidDays: 60, exceedWarning: null });
@@ -483,7 +485,7 @@ describe("decideLeave", () => {
     const res = await decideLeave(app._id.toString(), "approve", ACTOR);
     expect(res.paidDays).toBe(2);
     expect(res.unpaidDays).toBe(3);
-    expect(res.exceedWarning).toMatch(/unpaid/i);
+    expect(res.exceedWarning).toContain("অবৈতনিক");
   });
 
   /** D-#539: this is the whole point of the pool. Under the old per-type model, sick

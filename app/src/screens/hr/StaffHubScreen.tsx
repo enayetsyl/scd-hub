@@ -20,7 +20,8 @@
  * neither tsc nor `expo export` catches.
  */
 import React from "react";
-import { View } from "react-native";
+import { Linking, View } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { useQuery, useMutation } from "urql";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -40,6 +41,9 @@ import {
   OFFBOARDING_CASES_QUERY,
   HR_POLICY_QUERY,
   VOID_STAFF_LETTER,
+  STAFF_CREDENTIAL_CANDIDATES,
+  PROVISION_STAFF_LOGIN,
+  type ProvisionedCredentialT,
   type StaffT,
 } from "../../graphql/operations";
 import {
@@ -121,6 +125,103 @@ function attendanceStatusLabel(s: string): string {
   return (isEn() ? en : bn)[s] ?? s;
 }
 const taka = (n: number): string => `৳ ${bnNum(n.toLocaleString("en-US"))}`;
+
+// ---------------------------------------------------------------------------
+
+/**
+ * The app login for THIS staff member (D-#581).
+ *
+ * পাসওয়ার্ড রিসেট used to navigate to a school-wide credentials list — from a screen
+ * that already knew exactly whose password was being reset — where the operator then
+ * had to find the same person again among 25 rows. The list screen is gone; this card
+ * does the whole job in place.
+ *
+ * `provisionStaffLogin` covers BOTH cases: it creates the login if there is none and
+ * resets the password if there is (returning `alreadyExisted`), so one button and one
+ * mutation are enough. The candidates query is still what says whether a login exists
+ * and, when one cannot be made, why — a support staff member has no app login at all
+ * (D-#25) and a staff member with no phone has no login id.
+ */
+function CredentialCard({ staff }: { staff: StaffT }): React.ReactElement {
+  const [{ data, fetching }, refetch] = useQuery({
+    query: STAFF_CREDENTIAL_CANDIDATES,
+    requestPolicy: "cache-and-network",
+  });
+  const [, provision] = useMutation(PROVISION_STAFF_LOGIN);
+  const [busy, setBusy] = React.useState(false);
+  const [cred, setCred] = React.useState<ProvisionedCredentialT | null>(null);
+  const [err, setErr] = React.useState<string | null>(null);
+  const [copied, setCopied] = React.useState(false);
+
+  const row = (data?.staffCredentialCandidates ?? []).find((c) => c.staffId === staff.id);
+
+  async function run(): Promise<void> {
+    setBusy(true);
+    setErr(null);
+    setCred(null);
+    setCopied(false);
+    const res = await provision({ staffProfileId: staff.id });
+    setBusy(false);
+    if (res.error || !res.data?.provisionStaffLogin) {
+      setErr(friendlyError(res.error));
+      return;
+    }
+    setCred(res.data.provisionStaffLogin);
+    refetch({ requestPolicy: "network-only" });
+  }
+
+  return (
+    <Card>
+      <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.staffCredentials}</Body>
+      {err ? <Notice message={err} tone="danger" /> : null}
+      {fetching && !row ? (
+        <Loader label={STR.loading} />
+      ) : !row ? (
+        <Muted>{STR.stfNoCredentialRow}</Muted>
+      ) : (
+        <>
+          {row.phone ? <Row label={STR.loginId} value={row.phone} /> : null}
+          {row.mappedRole ? <Row label={STR.role} value={row.mappedRole} /> : null}
+          <View style={{ marginTop: space(1), flexDirection: "row" }}>
+            <Badge
+              text={row.loginExists ? STR.loginExistsLabel : row.provisionable ? STR.noLoginLabel : (row.reason ?? STR.noLoginLabel)}
+              tone={row.loginExists ? "ok" : row.provisionable ? "muted" : "warn"}
+            />
+          </View>
+          {row.provisionable ? (
+            <Button
+              title={row.loginExists ? STR.resetPassword : STR.generateLogin}
+              onPress={run}
+              loading={busy}
+              disabled={busy}
+              variant={row.loginExists ? "secondary" : "primary"}
+              style={{ marginTop: space(2) }}
+            />
+          ) : null}
+        </>
+      )}
+
+      {cred ? (
+        <View style={{ marginTop: space(2) }}>
+          <Row label={STR.loginId} value={cred.identifier} />
+          <Row label={STR.generatedPassword} value={cred.password} />
+          <Notice message={STR.credentialOnceWarning} tone="warn" />
+          <Button title={STR.shareWhatsApp} onPress={() => Linking.openURL(cred.waLink)} style={{ marginTop: space(2) }} />
+          <Button
+            title={copied ? STR.copied : STR.copy}
+            variant="secondary"
+            style={{ marginTop: space(1) }}
+            onPress={() => {
+              void Clipboard.setStringAsync(
+                `${STR.loginId}: ${cred.identifier}\n${STR.generatedPassword}: ${cred.password}`,
+              ).then(() => setCopied(true));
+            }}
+          />
+        </View>
+      ) : null}
+    </Card>
+  );
+}
 
 // ---------------------------------------------------------------------------
 
@@ -463,7 +564,7 @@ function DocumentsTab({
                 <Divider />
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: space(2) }}>
                   <Body style={{ fontWeight: "700", flex: 1 }}>{letterKindLabel(l.kind)}</Body>
-                  <Badge text={l.status === "void" ? STR.stfVoidLetter : STR.stfLetterIssued}
+                  <Badge text={l.status === "void" ? STR.stfLetterStatusVoid : STR.stfLetterStatusIssued}
                     tone={l.status === "void" ? "danger" : "ok"} />
                 </View>
                 <Muted>{`${l.refNo} · ${fmtDate(l.letterDate)}`}</Muted>
@@ -610,6 +711,10 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
   const staff: StaffT = data?.staffProfile ?? initial;
 
   const canStaff = can("staff:manage");
+  // Provisioning a login is `user:manage`, NOT `staff:manage` — Office holds the
+  // second and not the first, and was offered a button that could only refuse
+  // (D-#581). The gate here is now the same one the mutation asserts.
+  const canCredentials = can("user:manage");
   const canLeave = can("leave:manage");
   const canAttendance = can("attendance:manage");
   const canPayroll = can("payroll:manage");
@@ -654,13 +759,17 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfQuickActions}</Body>
           <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
             <Button title={STR.staffEditAction} variant="secondary" onPress={() => nav.navigate("StaffForm", { staff })} />
-            <Button title={STR.resetPassword} variant="secondary" onPress={() => nav.navigate("StaffCredentials")} />
             {!staff.confirmationDate ? (
               <Button title={STR.stfConfirmTitle} onPress={() => nav.navigate("ConfirmEmployment", { staff })} />
             ) : null}
           </View>
         </Card>
       ) : null}
+
+      {/* The password is reset HERE, for THIS person (D-#581). It used to navigate to a
+          school-wide credentials list, where you then had to find the same person
+          again — from a screen that already knew who they were. */}
+      {canCredentials ? <CredentialCard staff={staff} /> : null}
 
       {tab === "profile" ? <ProfileTab key={reloadKey} staff={staff} canLeave={canLeave} /> : null}
       {tab === "attendance" && canAttendance ? <AttendanceTab key={reloadKey} staff={staff} /> : null}
