@@ -23,7 +23,7 @@ type StaffShape = Pick<
   | "qualification" | "majoredIn" | "studiedAt"
   | "fatherName" | "motherName" | "spouseName"
   | "phone" | "whatsapp" | "email" | "presentAddress" | "permanentAddress"
-  | "nid" | "bankAccount" | "bankAccountName" | "bankName" | "bankBranch"
+  | "nid" | "bankAccount" | "bankAccountName" | "bankName" | "bankBranch" | "routingNo"
   | "monthlySalary" | "paymentMethod" | "active"
 > & { _id: Types.ObjectId };
 
@@ -40,6 +40,7 @@ StaffRef.implement({
     category: t.exposeString("category"),
     designation: t.string({ nullable: true, resolve: (s) => s.designation ?? null }),
     weeklyHours: t.string({ nullable: true, resolve: (s) => s.weeklyHours ?? null }),
+    routingNo: t.string({ nullable: true, resolve: (s) => s.routingNo ?? null }),
     employmentType: t.exposeString("employmentType"),
     employmentStatus: t.exposeString("employmentStatus"),
     joiningDate: t.string({ nullable: true, resolve: (s) => iso(s.joiningDate) }),
@@ -135,6 +136,7 @@ const StaffProfileInputRef = builder.inputType("StaffProfileInput", {
     category: t.string({ required: false }),
     designation: t.string({ required: false }),
     weeklyHours: t.string({ required: false }),
+    routingNo: t.string({ required: false }),
     employmentType: t.string({ required: false }),
     employmentStatus: t.string({ required: false }),
     joiningDate: t.string({ required: false }),

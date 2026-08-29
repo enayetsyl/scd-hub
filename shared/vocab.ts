@@ -663,6 +663,25 @@ export const CLEARANCE_ITEM_STATUS_LABELS_EN: Record<ClearanceItemStatus, string
  * duties schedule, both signatures, and no probation-then-regularize arc. Making it a kind of
  * its own is what lets one renderer stay faithful to each without either drifting.
  */
+/**
+ * How a month's pay actually leaves the school (D-#591).
+ *
+ * The bank needs THREE different documents, and the split is not the same as
+ * `paymentMethod`: a bank transfer to the school's OWN bank is an internal transfer
+ * listed on one advice sheet, while a transfer to any other bank goes by BEFTN and
+ * needs a routing number the internal sheet has no column for. Cash is handed over by
+ * the office and appears on neither.
+ */
+export const PAYMENT_CHANNELS = ["internal", "beftn", "bkash", "cash"] as const;
+export type PaymentChannel = (typeof PAYMENT_CHANNELS)[number];
+
+export const PAYMENT_CHANNEL_LABELS_BN: Record<PaymentChannel, string> = {
+  internal: "নিজ ব্যাংক (অভ্যন্তরীণ)", beftn: "অন্য ব্যাংক (BEFTN)", bkash: "বিকাশ", cash: "নগদ",
+};
+export const PAYMENT_CHANNEL_LABELS_EN: Record<PaymentChannel, string> = {
+  internal: "Own bank (internal)", beftn: "Other bank (BEFTN)", bkash: "bKash", cash: "Cash",
+};
+
 export const STAFF_LETTER_KINDS = ["appointment", "confirmation", "service_certificate", "support_contract"] as const;
 export type StaffLetterKind = (typeof STAFF_LETTER_KINDS)[number];
 
@@ -745,6 +764,23 @@ export const HR_POLICY_DEFAULTS = {
    * wrong address on a signed contract is worse than a refusal. The contract will not
    * issue until these are set once in HR নীতিমালা.
    */
+  /**
+   * The salary-advice letterhead and the school's own bank (D-#591), EMPTY by default.
+   *
+   * Every one of these is printed on a letter that goes to a bank over the school's
+   * name, and none of them can be guessed from another deployment's paperwork. The
+   * advice pack refuses until they are set once, for the same reason the Bangla
+   * contract does.
+   */
+  orgRegistrationNo: "",
+  orgAddress: "",
+  orgPhone: "",
+  orgEmail: "",
+  /** The bank the school banks with — the letters are addressed to its manager. */
+  schoolBankName: "",
+  schoolBankBranch: "",
+  /** The school's own bearing account, quoted in the letter as the source of funds. */
+  schoolAccountNo: "",
   employerNameBn: "",
   employerAddressBn: "",
   /** The Bangla contract is signed by the Principal, not the English letters' Convener. */
