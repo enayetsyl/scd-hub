@@ -32,6 +32,7 @@ import {
   ISSUE_STAFF_LETTER,
   type StaffProfileInputT,
   type ProvisionedCredentialT,
+  type StaffT,
 } from "../../graphql/operations";
 import {
   Screen,
@@ -143,6 +144,8 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
     presentAddress: "",
   });
   const set = (k: string) => (v: string) => setForm((prev) => ({ ...prev, [k]: v }));
+  // Support staff sign the Bangla contract and have no app login (D-#25/#590).
+  const isSupport = form.category === "support";
 
   React.useEffect(() => {
     if (!suggestedId || idTouched) return;
@@ -151,6 +154,7 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
 
   // created record
   const [staffId, setStaffId] = React.useState<string | null>(null);
+  const [createdStaff, setCreatedStaff] = React.useState<StaffT | null>(null);
 
   // step 2
   const [salary, setSalary] = React.useState("");
@@ -196,8 +200,15 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
       setFailure(friendlyError(res.error));
       return;
     }
-    if (!staffId && "createStaffProfile" in res.data) {
-      setStaffId((res.data as { createStaffProfile: { id: string } }).createStaffProfile.id);
+    // Keep the saved record, not just its id: a support hire hands straight over to the
+    // contract form, which takes the whole staff object as a route param (D-#590).
+    const saved =
+      "createStaffProfile" in res.data
+        ? (res.data as { createStaffProfile: StaffT }).createStaffProfile
+        : (res.data as { updateStaffProfile: StaffT }).updateStaffProfile;
+    if (saved) {
+      setCreatedStaff(saved);
+      if (!staffId) setStaffId(saved.id);
     }
     setStep(2);
   }
@@ -455,7 +466,33 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
         </>
       ) : null}
 
-      {step === 4 ? (
+      {step === 4 && isSupport ? (
+        <>
+          {/* A সহায়ক কর্মী signs the Bangla চুক্তিপত্র, not the teachers' English
+              appointment letter (D-#590). The contract form needs its own fields, so
+              this hands over to it rather than issuing anything from here. */}
+          <Card>
+            <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfLetterContract}</Body>
+            <Muted>{STR.stfJoinSupportContractNote}</Muted>
+          </Card>
+          <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
+            <Button title={STR.stfBack} variant="secondary" onPress={() => setStep(3)} />
+            <Button title={STR.stfJoinFinish} variant="secondary" onPress={() => navigation.goBack()} />
+            <Button
+              title={STR.stfLetterContract}
+              onPress={() => {
+                if (!createdStaff) return;
+                navigation.replace("IssueLetter", {
+                  staff: createdStaff!,
+                  kind: "support_contract",
+                });
+              }}
+            />
+          </View>
+        </>
+      ) : null}
+
+      {step === 4 && !isSupport ? (
         <>
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfSalaryMode}</Body>
