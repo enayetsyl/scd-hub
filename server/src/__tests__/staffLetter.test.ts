@@ -699,7 +699,7 @@ describe("the Bangla support-staff contract (D-#586)", () => {
 
   test("the probation period appears in §৭, in Bangla digits, and is omitted at zero", () => {
     expect(all(buildContractSections(contractSnap()))).toContain("৬ (৬) মাস");
-    expect(all(buildContractSections(contractSnap({ probationMonths: 0 })))).not.toContain("শিক্ষানবিশকাল");
+    expect(all(buildContractSections(contractSnap({ probationMonths: 0 })))).not.toContain("প্রবেশনকাল");
   });
 
   test("money and dates are Bangla throughout — this document has no English in it", () => {
