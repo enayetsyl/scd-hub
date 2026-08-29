@@ -1,6 +1,6 @@
 # STATUS
 
-- 2026-08-27 (cont. 3): **BUILT — automatic time estimates for a set (QT-1, D-#574), branch `feat/qt1-question-time`. NOT PUSHED — github.com is unreachable from this session.**
+- 2026-08-27 (cont. 3): **BUILT — automatic time estimates for a set (QT-1, D-#592), branch `feat/qt1-question-time`. NOT PUSHED — github.com is unreachable from this session.**
   **Derived, not stored.** Minutes = `marks × rate(subject × question type)`. Storing per-question minutes was rejected: 11,785 questions cannot be hand-tagged, the importer would need a contract change to carry the field, and a stored number goes stale the moment a rate is edited. Deriving works retroactively on the whole bank and on anything imported next month.
   **A grid, because the owner's sheet says so.** Time is neither proportional to marks nor uniform across subjects — a maths MCQ is 1.3 min/mark against Bangla's 1.0 (working out vs recall), and a maths problem is 1.25 against a composition's 2.0 because it pays per step. A flat rate would have understated long-form work by ~40%.
   **The ceiling ruling is the one that matters.** Ceil the SUM, never the parts: five 1-mark short answers are 8 minutes, not 10, and the error compounds with every row. A direct consequence is that the per-question figure is NOT displayed anywhere — under this rule it does not compose, and five cards reading “2 মি” beside a total of 8 would look broken.

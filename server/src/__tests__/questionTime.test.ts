@@ -1,5 +1,5 @@
 /**
- * Question time estimates (QT-1, D-#574).
+ * Question time estimates (QT-1, D-#592).
  *
  * The owner asked for a homework duration that is "objective and automatic". Two rulings
  * decide the whole design, and both are pinned here because both are easy to break later:

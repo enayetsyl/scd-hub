@@ -120,7 +120,17 @@ export default function StaffListScreen(): React.ReactElement {
       {/* SH-6: joining walks the 4-step wizard; the flat form stays for EDITS only. */}
       <Button title={STR.staffNew} onPress={() => nav.navigate("StaffJoin")} />
 
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1), marginBottom: space(2) }}>
+      {/* The filter row sat flush against নতুন কর্মী above it, so the primary action and
+          the filters read as one control block (D-#590). */}
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          gap: space(1),
+          marginTop: space(3),
+          marginBottom: space(2),
+        }}
+      >
         <Button
           title={STR.allCategories}
           variant={category === null ? "primary" : "secondary"}

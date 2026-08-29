@@ -44,6 +44,9 @@ jest.mock("../modules/hr/models/StaffLetter", () => ({
 jest.mock("../modules/hr/models/HrPolicy", () => ({
   HrPolicy: { findOne: () => ({ lean: () => mockPolicyFindOne() }) },
 }));
+jest.mock("../modules/hr/models/StaffLeaveApplication", () => ({
+  StaffLeaveApplication: { updateOne: jest.fn().mockResolvedValue({}) },
+}));
 jest.mock("../modules/hr/models/ProbationLeaveDebt", () => ({
   ProbationLeaveDebt: {
     find: () => ({
@@ -698,7 +701,7 @@ describe("the Bangla support-staff contract (D-#586)", () => {
   });
 
   test("the probation period appears in §৭, in Bangla digits, and is omitted at zero", () => {
-    expect(all(buildContractSections(contractSnap()))).toContain("৬ (৬) মাস");
+    expect(all(buildContractSections(contractSnap()))).toContain("৬ (ছয়) মাস");
     expect(all(buildContractSections(contractSnap({ probationMonths: 0 })))).not.toContain("প্রবেশনকাল");
   });
 
@@ -706,5 +709,59 @@ describe("the Bangla support-staff contract (D-#586)", () => {
     expect(all(buildContractSections(contractSnap()))).toContain("১০,০০০");
     expect(longDateBn("2025-06-24")).toBe("২৪ জুন ২০২৫");
     expect(bnDigits(2026)).toBe("২০২৬");
+  });
+});
+
+// ===========================================================================
+describe("the round-5 document fixes (D-#590)", () => {
+  function contractSnap2(over: Partial<ILetterSnapshot> = {}): ILetterSnapshot {
+    return {
+      staffName: "Parul Begum",
+      schoolId: "30012",
+      designation: "খালা (সহায়ক কর্মী)",
+      salaryMode: "paid",
+      monthlySalary: 10000,
+      annualLeaveDays: 20,
+      effectiveFrom: "August, 2026",
+      probationMonths: 6,
+      contractTitleBn: "খালা নিয়োগ চুক্তিপত্র",
+      employerNameBn: "এস সি ডি",
+      employerAddressBn: "ঠিকানা",
+      dutiesBn: ["ক্লাসরুম পরিষ্কার রাখা।"],
+      workingHoursBn: "সকাল ৭:০০ – সন্ধ্যা ৬:৩০",
+      signatoryName: "মোঃ এনায়েতুর রহমান",
+      signatoryTitle: "অধ্যক্ষ",
+      letterDate: "2026-08-29",
+      ...over,
+    } as ILetterSnapshot;
+  }
+  const all2 = (secs: ReturnType<typeof buildContractSections>): string =>
+    secs.map((s) => [s.heading, ...s.lines].join(" ")).join(" ");
+
+  test("the contract's §৭ carries the probation period — it was silently missing", () => {
+    // Prod: SCD/HR/2026/0005 had probationMonths null, so a খালা signed a contract with
+    // no probation clause while her own source document has one.
+    const text = all2(buildContractSections(contractSnap2()));
+    expect(text).toContain("প্রবেশনকাল");
+    expect(text).toContain("৬ (ছয়) মাস");
+  });
+
+  test("Bangla numerals print the digits and the WORD, never the digits twice", () => {
+    const text = all2(buildContractSections(contractSnap2()));
+    // Was "২০ (২০) দিন" — reads as a typo on a document someone signs.
+    expect(text).toContain("২০ (বিশ) দিন");
+    expect(text).not.toContain("২০ (২০)");
+    expect(text).not.toContain("৬ (৬)");
+  });
+
+  test("an unknown count drops the bracket rather than inventing a Bangla word", () => {
+    const text = all2(buildContractSections(contractSnap2({ annualLeaveDays: 23 })));
+    expect(text).toContain("বাৎসরিক ২৩ দিন");
+    expect(text).not.toContain("২৩ (");
+  });
+
+  test("zero probation months still omits the clause entirely", () => {
+    const text = all2(buildContractSections(contractSnap2({ probationMonths: 0 })));
+    expect(text).not.toContain("প্রবেশনকাল");
   });
 });

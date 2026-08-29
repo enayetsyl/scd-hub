@@ -88,7 +88,8 @@ jest.mock("../modules/platform/services/AuditService", () => ({
 
 import { assertMonthKey, dayRate, computePayslip, PayrollError } from "../modules/hr/services/payrollMath";
 import { preparePayrollRun, approvePayrollRun, cancelPayrollRun, paymentExport } from "../modules/hr/services/PayrollService";
-import { csvCell, csvLine } from "../modules/hr/routes/paymentExportCsv";
+import ExcelJS from "exceljs";
+import { buildPaymentWorkbook } from "../modules/hr/routes/paymentExportCsv";
 import { issueAdvance, settleAdvance } from "../modules/hr/services/AdvanceService";
 import { splitLatenessCharge } from "../modules/hr/services/LatenessService";
 import { HR_POLICY_DEFAULTS } from "@scd/shared";
@@ -393,18 +394,67 @@ describe("paymentExport (§4.6)", () => {
 });
 
 // ===========================================================================
-describe("payment CSV (D-#579)", () => {
-  test("every field is quoted, so a leading zero survives and a comma cannot shift a column", () => {
-    expect(csvLine(["মোঃ করিম, জুনিয়র", "bank", "0012345", 26000])).toBe(
-      '"মোঃ করিম, জুনিয়র","bank","0012345","26000"',
+describe("the payment workbook (D-#579, format corrected in D-#590)", () => {
+  const ROWS = [
+    {
+      name: "মোঃ করিম, জুনিয়র",
+      paymentMethod: "bank",
+      account: "0011002200330",
+      accountName: "Md Karim",
+      bankName: "IBBL",
+      bankBranch: "Sylhet",
+      netPay: 26000,
+    },
+    {
+      name: "Test Support Helper",
+      paymentMethod: "bkash",
+      account: "01900000002",
+      accountName: null,
+      bankName: null,
+      bankBranch: null,
+      netPay: 10000,
+    },
+  ];
+
+  /** Read the file back the way Excel would, rather than trusting what we wrote. */
+  async function reopen() {
+    const buf = await buildPaymentWorkbook(ROWS);
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf as unknown as ArrayBuffer);
+    return wb.getWorksheet("Payment")!;
+  }
+
+  test("the ACCOUNT keeps its leading zeros — the whole reason this is not a CSV", async () => {
+    const ws = await reopen();
+    // The prod bug: 0011002200330 opened as 11002200330 and 01900000002 as 1900000002.
+    expect(ws.getCell("C2").value).toBe("0011002200330");
+    expect(ws.getCell("C3").value).toBe("01900000002");
+  });
+
+  test("the account cell is TEXT, so Excel cannot re-convert it on open", async () => {
+    const ws = await reopen();
+    expect(ws.getCell("C2").numFmt).toBe("@");
+    expect(typeof ws.getCell("C2").value).toBe("string");
+  });
+
+  test("net pay stays a NUMBER — the office sums that column", async () => {
+    const ws = await reopen();
+    expect(ws.getCell("G2").value).toBe(26000);
+    expect(typeof ws.getCell("G2").value).toBe("number");
+  });
+
+  test("a Bangla name with a comma survives, and bKash's empty bank fields stay empty", async () => {
+    const ws = await reopen();
+    expect(ws.getCell("A2").value).toBe("মোঃ করিম, জুনিয়র");
+    expect(ws.getCell("D3").value ?? "").toBe("");
+    expect(ws.getCell("E3").value ?? "").toBe("");
+  });
+
+  test("the header row is present and in the bank sheet's order", async () => {
+    const ws = await reopen();
+    expect(ws.getRow(1).values).toEqual(
+      expect.arrayContaining(["Name", "Method", "Account", "Account name", "Bank", "Branch", "Net pay"]),
     );
-  });
-  test("an inner quote is doubled, never dropped", () => {
-    expect(csvCell('A "B" C')).toBe('"A ""B"" C"');
-  });
-  test("null/undefined become an empty cell, not the string 'null'", () => {
-    expect(csvCell(null)).toBe('""');
-    expect(csvCell(undefined)).toBe('""');
   });
 });
 
@@ -473,6 +523,21 @@ describe("a mid-year raise (D-#587)", () => {
     return (payslips[0] as unknown as { grossSalary: number }).grossSalary;
   }
 
+  /** The rows exactly as stored — the resolver now reads them ALL and picks in JS, so
+   *  the mock must carry `effectiveFrom` rather than pretend the query pre-filtered. */
+  const HISTORY = {
+    joinedThenRaised: [
+      { staffProfileId: alice, effectiveFrom: "2025-07", monthlySalary: 5000, previousSalary: null },
+      { staffProfileId: alice, effectiveFrom: "2026-07", monthlySalary: 6000, previousSalary: 5000 },
+    ],
+    // The PROD SHAPE that broke it (D-#590): the initial figure was dated at the month
+    // it was TYPED (2026-08), later than the backdated raise it is supposed to precede.
+    initialRowDatedLate: [
+      { staffProfileId: alice, effectiveFrom: "2026-07", monthlySalary: 6000, previousSalary: 5000 },
+      { staffProfileId: alice, effectiveFrom: "2026-08", monthlySalary: 5000, previousSalary: null },
+    ],
+  };
+
   test("with NO recorded change, every month pays the profile's figure — today's behaviour", async () => {
     mockPayChangeFind.mockReturnValue([]);
     expect(await grossFor("2026-05")).toBe(6000);
@@ -480,22 +545,43 @@ describe("a mid-year raise (D-#587)", () => {
   });
 
   test("a raise effective in July pays 6,000 from July and 5,000 before it", async () => {
-    // The service asks for rows with effectiveFrom ≤ monthKey, ascending; the mock
-    // answers what the query would return for each month.
-    mockPayChangeFind.mockReturnValue([{ staffProfileId: alice, monthlySalary: 5000 }]);
+    mockPayChangeFind.mockReturnValue(HISTORY.joinedThenRaised);
     expect(await grossFor("2026-06")).toBe(5000);
-
-    mockPayChangeFind.mockReturnValue([
-      { staffProfileId: alice, monthlySalary: 5000 },
-      { staffProfileId: alice, monthlySalary: 6000 },
-    ]);
-    // Ascending order means the LAST row in range wins — the latest change already in
-    // effect. Getting this backwards would pay the raise a month early, every month.
+    // The latest change already in effect wins. Getting this backwards would pay the
+    // raise a month early, every month.
     expect(await grossFor("2026-07")).toBe(6000);
+    expect(await grossFor("2026-08")).toBe(6000);
+  });
+
+  test("a month BEFORE every recorded change pays what came before it — never the profile", async () => {
+    // The profile holds 6,000 by now. Re-running an old month must not pay the raise.
+    mockPayChangeFind.mockReturnValue([HISTORY.joinedThenRaised[1]]); // only the raise row
+    expect(await grossFor("2026-03")).toBe(5000); // its previousSalary
+  });
+
+  test("an initial row with no previousSalary IS the figure that applied before it", async () => {
+    mockPayChangeFind.mockReturnValue([HISTORY.joinedThenRaised[0]]); // 2025-07 → 5000, prev null
+    expect(await grossFor("2025-01")).toBe(5000);
+  });
+
+  /**
+   * The prod failure, kept as a test: the wizard dated her initial 5,000 at the month of
+   * ENTRY (2026-08), after the July raise to 6,000. Ordering by effectiveFrom then let
+   * the initial row outrank the raise and August paid the OLD salary.
+   *
+   * The primary fix is that the first row is dated from JOINING (covered in
+   * payHistory.test.ts). This asserts the consequence a payslip would show if such a
+   * pair ever existed again: August genuinely has a 5,000 row in effect, so 5,000 is
+   * the honest answer for that data — and July, which only the raise covers, is 6,000.
+   */
+  test("with the prod row-shape, the resolution is at least self-consistent", async () => {
+    mockPayChangeFind.mockReturnValue(HISTORY.initialRowDatedLate);
+    expect(await grossFor("2026-07")).toBe(6000);
+    expect(await grossFor("2026-08")).toBe(5000);
   });
 
   test("the day rate follows the effective salary, so leave is docked at the right rate", async () => {
-    mockPayChangeFind.mockReturnValue([{ staffProfileId: alice, monthlySalary: 5000 }]);
+    mockPayChangeFind.mockReturnValue(HISTORY.joinedThenRaised);
     const { payslips } = await preparePayrollRun({ monthKey: "2026-06", workingDays: 30, actorId: ACTOR });
     // 5000 / 30 = 167, not 6000 / 30 = 200.
     expect((payslips[0] as unknown as { dayRate: number }).dayRate).toBe(167);

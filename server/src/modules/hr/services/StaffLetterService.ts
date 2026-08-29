@@ -201,7 +201,14 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
     serviceTo,
     // The probation length AS THIS LETTER STATES IT (D-#586) — frozen, so a policy that
     // moves from six months to three never rewrites a letter already signed.
-    probationMonths: input.kind === "appointment" ? policy.probationMonths : null,
+    //
+    // The CONTRACT needs it too (D-#590). It was set for `appointment` alone, so §৭ of
+    // the Bangla চুক্তিপত্র silently lost the probation bullet its own source document
+    // carries — a খালা signed a contract with no probation period in it.
+    probationMonths:
+      input.kind === "appointment" || input.kind === "support_contract"
+        ? policy.probationMonths
+        : null,
     signatoryName: policy.signatoryName,
     signatoryTitle: policy.signatoryTitle,
     letterDate,

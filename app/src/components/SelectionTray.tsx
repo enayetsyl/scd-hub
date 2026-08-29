@@ -21,7 +21,7 @@ export function SelectionTray({
 }: {
   count: number;
   totalMarks: number;
-  /** Basket exam minutes (QT-1, D-#574); the sheet doubles it for homework. */
+  /** Basket exam minutes (QT-1, D-#592); the sheet doubles it for homework. */
   examMinutes?: number;
   onCreate: () => void;
   onClear: () => void;

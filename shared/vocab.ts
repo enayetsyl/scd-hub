@@ -194,7 +194,7 @@ export const SET_TYPES = ["HW", "AS", "CT"] as const;
 export type SetType = (typeof SET_TYPES)[number];
 
 // ---------------------------------------------------------------------------
-// A.5e QUESTION TIME (QT-1, D-#574) — app-native, NO wire twin
+// A.5e QUESTION TIME (QT-1, D-#592) — app-native, NO wire twin
 // ---------------------------------------------------------------------------
 
 /**

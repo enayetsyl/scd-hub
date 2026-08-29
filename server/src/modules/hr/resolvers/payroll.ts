@@ -234,6 +234,8 @@ builder.mutationField("setStaffPay", (t) =>
           monthlySalary: args.monthlySalary,
           effectiveFrom: args.effectiveFrom ?? null,
           previousSalary,
+          // The FIRST row is dated from her joining month, not today (D-#590).
+          joiningMonth: staff.joiningDate ? staff.joiningDate.toISOString().slice(0, 7) : null,
           note: args.payChangeNote ?? null,
           actorId: ctx.auth!.userId,
         });

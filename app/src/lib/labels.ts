@@ -426,7 +426,7 @@ export const curationTagLabel = (v?: string | null): string =>
 
 /** Selection-tray summary (ux-audit F6): "৫টি প্রশ্ন · ২০ নম্বর" / "5 questions · 20 marks". */
 /**
- * The tray summary. `minutes` is the basket's EXAM time (QT-1, D-#574) — omitted when 0,
+ * The tray summary. `minutes` is the basket's EXAM time (QT-1, D-#592) — omitted when 0,
  * because a basket of unmarked questions saying "0 মি" reads as a broken estimate rather
  * than an absent one.
  */
@@ -3486,6 +3486,11 @@ const STR_BN = {
   stfPayChangeReason: "কারণ",
   stfPayHistory: "বেতনের ইতিহাস",
   stfPayHistoryNote: "প্রতিটি পরিবর্তন কোন মাস থেকে কার্যকর হয়েছে। পে-রোল যে মাসের হিসাব করছে, সেই মাসে কার্যকর বেতনই ব্যবহার করে।",
+  // --- D-#590 ---
+  stfConfirmBody: "পত্রের মূল বক্তব্য",
+  stfConfirmBodyPlaceholder: "এখানে যা লিখবেন, পত্রে হুবহু তাই ছাপা হবে। খালি রাখলে প্রচলিত বয়ান ছাপা হবে।",
+  stfConfirmBodyDraft: "প্রচলিত বয়ান বসান",
+  stfJoinSupportContractNote: "সহায়ক কর্মী ইংরেজি নিয়োগপত্র নয়, বাংলা নিয়োগ চুক্তিপত্রে স্বাক্ষর করেন। পরের ধাপে দায়িত্বসমূহ দেখে নিয়ে চুক্তিপত্র তৈরি করুন।",
   stfAdjustmentsTitle: "এই মাসের আলাদা সমন্বয়",
   stfAdjustmentsNote: "মাঝপথে বেতন বাড়লে আগের মাসের পাওনা এখানে বকেয়া হিসেবে যোগ করুন। বোনাস বা আলাদা কর্তনও এখান থেকে দেওয়া যায়। কিছু না দিলে হিসাব আগের মতোই হবে।",
   stfAdjustmentSign: "যোগ না কর্তন",
@@ -7585,6 +7590,11 @@ const STR_EN: StrTable = {
   stfPayChangeReason: "Reason",
   stfPayHistory: "Salary history",
   stfPayHistoryNote: "When each change took effect. Payroll uses the salary effective in the month it is running.",
+  // --- D-#590 ---
+  stfConfirmBody: "Letter body",
+  stfConfirmBodyPlaceholder: "Whatever you write here is printed verbatim. Leave it empty for the standard wording.",
+  stfConfirmBodyDraft: "Insert the standard wording",
+  stfJoinSupportContractNote: "Support staff sign the Bangla contract, not the English appointment letter. Review the duties on the next screen and issue it.",
   stfAdjustmentsTitle: "Adjustments for this month",
   stfAdjustmentsNote: "If a salary rose mid-year, add the earlier months' back-pay here as arrears. One-off bonuses and agreed deductions go here too. Leave it empty and the run computes exactly as before.",
   stfAdjustmentSign: "Addition or deduction",
