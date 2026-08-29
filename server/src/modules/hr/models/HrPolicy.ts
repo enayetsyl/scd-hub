@@ -25,12 +25,23 @@ export interface IHrPolicy extends Document {
   lateDaysPerCharge: number;
   /** Master switch for the lateness rule. Ships FALSE (prd-hr H4.3 made it opt-in). */
   latenessRuleEnabled: boolean;
+  /**
+   * How long probation runs, in months (D-#586). Six here; the Dhaka branch uses three,
+   * which is exactly why it is policy DATA and not a constant. It never decides whether
+   * someone is on probation — only when theirs was due to end.
+   */
+  probationMonths: number;
   /** Master switch for the probation held-debt ledger (D-#540). */
   probationDebtEnabled: boolean;
   /** Letter defaults (SH-1) — the signatory is DATA so it changes without a deploy. */
   signatoryName: string;
   signatoryTitle: string;
   weeklyHoursText: string;
+  /** The Bangla support-staff contract block (D-#586). */
+  employerNameBn: string;
+  employerAddressBn: string;
+  signatoryNameBn: string;
+  signatoryTitleBn: string;
   letterRefPrefix: string;
   updatedBy?: Types.ObjectId | null;
   createdAt: Date;
@@ -43,10 +54,15 @@ const HrPolicySchema = new Schema<IHrPolicy>(
     annualLeaveDays: { type: Number, required: true, min: 0 },
     lateDaysPerCharge: { type: Number, required: true, min: 1 },
     latenessRuleEnabled: { type: Boolean, required: true, default: false },
+    probationMonths: { type: Number, min: 0 },
     probationDebtEnabled: { type: Boolean, required: true, default: true },
     signatoryName: { type: String, trim: true },
     signatoryTitle: { type: String, trim: true },
     weeklyHoursText: { type: String, trim: true },
+    employerNameBn: { type: String, trim: true },
+    employerAddressBn: { type: String, trim: true },
+    signatoryNameBn: { type: String, trim: true },
+    signatoryTitleBn: { type: String, trim: true },
     letterRefPrefix: { type: String, trim: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
   },

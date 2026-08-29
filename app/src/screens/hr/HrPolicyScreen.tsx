@@ -50,6 +50,11 @@ export default function HrPolicyScreen(): React.ReactElement {
   const [signatoryTitle, setSignatoryTitle] = React.useState("");
   const [weeklyHoursText, setWeeklyHoursText] = React.useState("");
   const [letterRefPrefix, setLetterRefPrefix] = React.useState("");
+  const [probationMonths, setProbationMonths] = React.useState("");
+  const [employerNameBn, setEmployerNameBn] = React.useState("");
+  const [employerAddressBn, setEmployerAddressBn] = React.useState("");
+  const [signatoryNameBn, setSignatoryNameBn] = React.useState("");
+  const [signatoryTitleBn, setSignatoryTitleBn] = React.useState("");
 
   const [busy, setBusy] = React.useState(false);
   const [notice, setNotice] = React.useState<string | null>(null);
@@ -69,12 +74,19 @@ export default function HrPolicyScreen(): React.ReactElement {
     setSignatoryTitle(p.signatoryTitle);
     setWeeklyHoursText(p.weeklyHoursText);
     setLetterRefPrefix(p.letterRefPrefix);
+    setProbationMonths(String(p.probationMonths));
+    setEmployerNameBn(p.employerNameBn);
+    setEmployerAddressBn(p.employerAddressBn);
+    setSignatoryNameBn(p.signatoryNameBn);
+    setSignatoryTitleBn(p.signatoryTitleBn);
   }, [p]);
 
   const poolChanged = !!p && Number(annualLeaveDays) !== p.annualLeaveDays;
   const canSave =
     Number(annualLeaveDays) >= 0 &&
     Number(lateDaysPerCharge) >= 1 &&
+    // 0 is a school with no probation; blank or text is a mistake, not a zero.
+    /^\d+$/.test(probationMonths.trim()) &&
     signatoryName.trim() !== "" &&
     signatoryTitle.trim() !== "";
 
@@ -91,6 +103,11 @@ export default function HrPolicyScreen(): React.ReactElement {
       signatoryTitle: signatoryTitle.trim(),
       weeklyHoursText: weeklyHoursText.trim(),
       letterRefPrefix: letterRefPrefix.trim(),
+      probationMonths: Number(probationMonths),
+      employerNameBn: employerNameBn.trim(),
+      employerAddressBn: employerAddressBn.trim(),
+      signatoryNameBn: signatoryNameBn.trim(),
+      signatoryTitleBn: signatoryTitleBn.trim(),
     });
     setBusy(false);
     if (res.error) {
@@ -177,7 +194,30 @@ export default function HrPolicyScreen(): React.ReactElement {
         <Field label={STR.stfPolicySignatoryTitle} value={signatoryTitle} onChangeText={setSignatoryTitle} />
         <Field label={STR.stfPolicyWeeklyHours} value={weeklyHoursText} onChangeText={setWeeklyHoursText} />
         <Field label={STR.stfPolicyRefPrefix} value={letterRefPrefix} onChangeText={setLetterRefPrefix} />
+        {/* Printed as clause 1 of the appointment letter and §৭ of the Bangla
+            contract. Six months here; the Dhaka branch uses three (D-#586). */}
+        <Field
+          label={STR.stfProbationMonths}
+          value={probationMonths}
+          onChangeText={setProbationMonths}
+          keyboardType="number-pad"
+        />
         <Muted>{STR.stfPolicyLettersNote}</Muted>
+      </Card>
+
+      {/* --- the Bangla contract block ------------------------------------- */}
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfLetterContract}</Body>
+        <Muted>{STR.stfContractPolicyMissing}</Muted>
+        <Field label={STR.stfEmployerNameBn} value={employerNameBn} onChangeText={setEmployerNameBn} />
+        <Field
+          label={STR.stfEmployerAddressBn}
+          value={employerAddressBn}
+          onChangeText={setEmployerAddressBn}
+          multiline
+        />
+        <Field label={STR.stfSignatoryNameBn} value={signatoryNameBn} onChangeText={setSignatoryNameBn} />
+        <Field label={STR.stfSignatoryTitleBn} value={signatoryTitleBn} onChangeText={setSignatoryTitleBn} />
       </Card>
 
       <View style={{ marginTop: space(2) }}>

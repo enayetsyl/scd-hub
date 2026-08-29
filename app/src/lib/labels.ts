@@ -923,6 +923,20 @@ export const payDeductionTypeLabel = (v?: string | null): string =>
 export const payAdditionTypeLabel = (v?: string | null): string =>
   (v && pick(PAY_ADDITION_TYPE_LABELS_BN, PAY_ADDITION_TYPE_LABELS_EN)[v as PayAdditionType]) || v || DASH;
 
+/**
+ * A pay-line note, or null when it is not fit to print.
+ *
+ * `advance_repayment` lines written before this fix carry `advance <ObjectId>` as their
+ * note, and those payslips sit in LOCKED runs — history, not editable. The id is on the
+ * payslip's own `advanceId` field where it belongs, so it is suppressed at display
+ * rather than migrated. New lines never carry it (payrollMath).
+ */
+const LEGACY_ADVANCE_NOTE = /^advance [0-9a-f]{24}$/i;
+export const payLineNote = (note?: string | null): string | null => {
+  const t = (note ?? "").trim();
+  return t === "" || LEGACY_ADVANCE_NOTE.test(t) ? null : t;
+};
+
 export const advanceStatusLabel = (v?: string | null): string =>
   (v && pick(ADVANCE_STATUS_LABELS_BN, ADVANCE_STATUS_LABELS_EN)[v as AdvanceStatus]) || v || DASH;
 
@@ -3344,6 +3358,7 @@ const STR_BN = {
   stfEffectiveFrom: "কার্যকর তারিখ",
   stfLetterDate: "পত্রের তারিখ",
   stfWeeklyHours: "সাপ্তাহিক কর্মঘণ্টা",
+  stfWeeklyHoursPlaceholder: "যেমন ২৫ (৫*৫) — খালি রাখলে স্কুলের সাধারণ নিয়ম প্রযোজ্য",
   stfExtraText: "অতিরিক্ত অনুচ্ছেদ (ঐচ্ছিক)",
   stfExtraTextPlaceholder: "পত্রের শেষে যোগ করার মতো কিছু থাকলে লিখুন…",
   stfIssueAndPdf: "তৈরি করে PDF",
@@ -3414,6 +3429,66 @@ const STR_BN = {
   stfSalaryDigitsOnly: "শুধু অঙ্ক, যেমন ১২৩৪৫",
   stfPayNeedsPayrollPerm: "বেতন নির্ধারণের অনুমতি আপনার নেই।",
   stfBkashNumber: "বিকাশ নম্বর",
+  // --- round 4: fixes from the 2026-08-29 prod E2E test ---
+  stfConfirmedNoLetterOk: "কর্মী স্থায়ী হয়েছেন — তারিখ ও ছুটির হিসাব সংরক্ষিত হয়েছে।",
+  stfConfirmedNoLetter: "তবে স্থায়ীকরণ পত্র তৈরি হয়নি। কারণ:",
+  stfRecordLeaveTitle: "কর্মীর পক্ষে ছুটি নথিভুক্ত করুন",
+  stfRecordLeaveNote: "যাঁদের অ্যাপ-লগইন নেই (আয়া, দারোয়ান, বাবুর্চি) তাঁদের ছুটি এখান থেকে লিখে রাখুন — এরপর উপরের তালিকা থেকে অনুমোদন করতে হবে।",
+  stfRecordLeaveSubmit: "ছুটি নথিভুক্ত করুন",
+  stfRecordLeaveDone: "ছুটি নথিভুক্ত হয়েছে — উপরের তালিকা থেকে অনুমোদন করুন।",
+  stfExportPayableTitle: "যাঁদের পাঠানো যাবে",
+  stfExportBlockedTitle: "যাঁদের পাঠানো যাবে না",
+  stfExportBlockedNote: "এঁদের বেতন ফাইলে যাবে না। তথ্য ঠিক করে আবার এই পাতায় আসুন।",
+  stfExportPayableCount: "পাঠানো যাবে",
+  stfExportPeople: "জন",
+  stfExportTotal: "মোট",
+  stfExportCsv: "CSV ফাইল ডাউনলোড",
+  stfExportWebOnly: "ফাইল ডাউনলোড শুধু ওয়েব ব্রাউজারে কাজ করে।",
+  // A badge names a STATE. `stfVoidLetter` is a button ("বাতিল করুন") and
+  // `stfLetterIssued` is a toast sentence; both were being shown as badges.
+  stfLetterStatusVoid: "বাতিল",
+  stfLetterStatusIssued: "ইস্যুকৃত",
+  stfNoCredentialRow: "এই কর্মীর লগইন-তথ্য পাওয়া যায়নি (নিষ্ক্রিয় কর্মী হতে পারেন)।",
+  // --- D-#586: the Bangla support-staff contract + the probation period ---
+  stfLetterContract: "নিয়োগ চুক্তিপত্র",
+  stfContractSection: "চুক্তিপত্রের তথ্য",
+  stfContractPolicyMissing: "প্রতিষ্ঠানের নাম, ঠিকানা ও স্বাক্ষরকারীর তথ্য (বাংলা) এখনো নির্ধারিত হয়নি — এইচআর নীতিমালা থেকে একবার লিখে দিন, নইলে চুক্তিপত্র তৈরি হবে না।",
+  stfContractRole: "পদ",
+  stfContractRoleHelper: "খালা (সহায়ক কর্মী)",
+  stfContractRoleGuard: "দারোয়ান (গেটকিপার)",
+  stfContractHours: "কর্মঘণ্টা",
+  stfContractDuties: "দায়িত্বসমূহ",
+  stfContractDutiesHint: "প্রতি লাইনে একটি দায়িত্ব। উপরের তালিকা শুধু খসড়া — প্রয়োজনমতো বদলে নিন।",
+  stfContractFood: "খাবার বাবদ (মাসিক)",
+  stfContractFoodHint: "প্রযোজ্য না হলে খালি রাখুন",
+  stfContractPermanent: "স্থায়ী ঠিকানা",
+  stfContractPresent: "বর্তমান ঠিকানা",
+  stfContractContact: "যোগাযোগ",
+  stfProbationMonths: "শিক্ষানবিশকাল (মাস)",
+  stfProbationEnds: "শিক্ষানবিশকাল শেষ",
+  stfProbationOverdue: "শিক্ষানবিশকাল শেষ হয়ে গেছে — স্থায়ীকরণ বাকি",
+  stfEmployerNameBn: "প্রতিষ্ঠানের নাম (বাংলা)",
+  stfEmployerAddressBn: "প্রতিষ্ঠানের ঠিকানা (বাংলা)",
+  stfSignatoryNameBn: "স্বাক্ষরকারীর নাম (বাংলা)",
+  stfSignatoryTitleBn: "স্বাক্ষরকারীর পদবি (বাংলা)",
+  // --- D-#587: a dated salary change ---
+  stfPayChangeSection: "বেতন পরিবর্তন",
+  stfPayEffectiveFrom: "কোন মাস থেকে কার্যকর",
+  stfPayEffectiveHint: "YYYY-MM লিখুন, যেমন ২০২৬-০৭। আগের মাস দিলে ওই মাস থেকেই নতুন বেতনে পে-রোল হিসাব হবে; ইতিমধ্যে লক হওয়া মাসের পাওনা বকেয়া হিসেবে দিতে হবে।",
+  stfPayChangeReason: "কারণ",
+  stfPayHistory: "বেতনের ইতিহাস",
+  stfPayHistoryNote: "প্রতিটি পরিবর্তন কোন মাস থেকে কার্যকর হয়েছে। পে-রোল যে মাসের হিসাব করছে, সেই মাসে কার্যকর বেতনই ব্যবহার করে।",
+  stfAdjustmentsTitle: "এই মাসের আলাদা সমন্বয়",
+  stfAdjustmentsNote: "মাঝপথে বেতন বাড়লে আগের মাসের পাওনা এখানে বকেয়া হিসেবে যোগ করুন। বোনাস বা আলাদা কর্তনও এখান থেকে দেওয়া যায়। কিছু না দিলে হিসাব আগের মতোই হবে।",
+  stfAdjustmentSign: "যোগ না কর্তন",
+  stfAdjustmentAddition: "যোগ",
+  stfAdjustmentDeduction: "কর্তন",
+  stfAdjustmentType: "ধরন",
+  stfAdjustmentAmount: "টাকার অঙ্ক",
+  stfAdjustmentReason: "কারণ (পে-স্লিপে ছাপা হবে)",
+  stfAdjustmentReasonPlaceholder: "যেমন জুলাই–আগস্টের বর্ধিত বেতনের বকেয়া",
+  stfAdjustmentAdd: "সমন্বয় যোগ করুন",
+  stfAdjustmentIncomplete: "একটি সমন্বয়ের ঘর অসম্পূর্ণ — কর্মী, ধরন ও অঙ্ক তিনটিই দিন, অথবা ঘরটি মুছে দিন।",
   stfAccountNeededNote: "পেমেন্ট ফাইলে এই নম্বরটিই যাবে — না দিলে এই কর্মী ফাইল থেকে বাদ পড়বেন।",
   stfObservations: "পর্যবেক্ষণ",
   stfObservationCount: "টি পর্যবেক্ষণ",
@@ -7384,6 +7459,7 @@ const STR_EN: StrTable = {
   stfEffectiveFrom: "Effective from",
   stfLetterDate: "Letter date",
   stfWeeklyHours: "Weekly hours",
+  stfWeeklyHoursPlaceholder: "e.g. 25 (5*5) — blank uses the school-wide default",
   stfExtraText: "Extra paragraph (optional)",
   stfExtraTextPlaceholder: "Anything to add at the end of the letter…",
   stfIssueAndPdf: "Issue & open PDF",
@@ -7454,6 +7530,64 @@ const STR_EN: StrTable = {
   stfSalaryDigitsOnly: "Digits only, e.g. 12345",
   stfPayNeedsPayrollPerm: "You do not have permission to set pay.",
   stfBkashNumber: "bKash number",
+  // --- round 4: fixes from the 2026-08-29 prod E2E test ---
+  stfConfirmedNoLetterOk: "Confirmed — the date and the leave settlement are saved.",
+  stfConfirmedNoLetter: "The confirmation letter was not issued. Reason:",
+  stfRecordLeaveTitle: "Record leave on a staff member's behalf",
+  stfRecordLeaveNote: "For staff with no app login (helpers, guards, cooks) — record the leave here, then approve it from the list above.",
+  stfRecordLeaveSubmit: "Record leave",
+  stfRecordLeaveDone: "Leave recorded — approve it from the list above.",
+  stfExportPayableTitle: "Can be paid",
+  stfExportBlockedTitle: "Cannot be paid",
+  stfExportBlockedNote: "These are not in the file. Fix the details and come back to this page.",
+  stfExportPayableCount: "Payable",
+  stfExportPeople: "people",
+  stfExportTotal: "Total",
+  stfExportCsv: "Download CSV",
+  stfExportWebOnly: "File download works in a web browser only.",
+  stfLetterStatusVoid: "Void",
+  stfLetterStatusIssued: "Issued",
+  stfNoCredentialRow: "No login record for this staff member (they may be inactive).",
+  // --- D-#586: the Bangla support-staff contract + the probation period ---
+  stfLetterContract: "Contract",
+  stfContractSection: "Contract details",
+  stfContractPolicyMissing: "The Bangla employer and signatory details are not set yet — set them once in HR policy, or the contract cannot be issued.",
+  stfContractRole: "Role",
+  stfContractRoleHelper: "Helper",
+  stfContractRoleGuard: "Guard",
+  stfContractHours: "Working hours",
+  stfContractDuties: "Duties",
+  stfContractDutiesHint: "One duty per line. The list above is a draft — edit it as needed.",
+  stfContractFood: "Food allowance (monthly)",
+  stfContractFoodHint: "Leave blank if not applicable",
+  stfContractPermanent: "Permanent address",
+  stfContractPresent: "Present address",
+  stfContractContact: "Contact",
+  stfProbationMonths: "Probation (months)",
+  stfProbationEnds: "Probation ends",
+  stfProbationOverdue: "Probation has ended — confirmation is outstanding",
+  stfEmployerNameBn: "Employer name (Bangla)",
+  stfEmployerAddressBn: "Employer address (Bangla)",
+  stfSignatoryNameBn: "Signatory name (Bangla)",
+  stfSignatoryTitleBn: "Signatory title (Bangla)",
+  // --- D-#587: a dated salary change ---
+  stfPayChangeSection: "Salary change",
+  stfPayEffectiveFrom: "Effective from",
+  stfPayEffectiveHint: "YYYY-MM, e.g. 2026-07. Backdate it and payroll pays the new figure from that month; months already locked need an arrears line.",
+  stfPayChangeReason: "Reason",
+  stfPayHistory: "Salary history",
+  stfPayHistoryNote: "When each change took effect. Payroll uses the salary effective in the month it is running.",
+  stfAdjustmentsTitle: "Adjustments for this month",
+  stfAdjustmentsNote: "If a salary rose mid-year, add the earlier months' back-pay here as arrears. One-off bonuses and agreed deductions go here too. Leave it empty and the run computes exactly as before.",
+  stfAdjustmentSign: "Addition or deduction",
+  stfAdjustmentAddition: "Addition",
+  stfAdjustmentDeduction: "Deduction",
+  stfAdjustmentType: "Type",
+  stfAdjustmentAmount: "Amount",
+  stfAdjustmentReason: "Reason (printed on the payslip)",
+  stfAdjustmentReasonPlaceholder: "e.g. arrears for the July–August increase",
+  stfAdjustmentAdd: "Add an adjustment",
+  stfAdjustmentIncomplete: "An adjustment row is incomplete — give the staff member, type and amount, or remove the row.",
   stfAccountNeededNote: "This is the number the payment file carries — without it this person is excluded from it.",
   stfObservations: "Observations",
   stfObservationCount: "observations",

@@ -40,7 +40,7 @@ export default function UserListScreen(_props: Props): React.ReactElement {
       )
     : users;
 
-  // Refresh on focus: logins provisioned on another screen (StaffCredentials)
+  // Refresh on focus: logins provisioned from the staff hub's credential card
   // won't appear otherwise — urql's document cache isn't invalidated by
   // provisionStaffLogin (it returns a ProvisionedCredential, not a User).
   useFocusEffect(

@@ -19,32 +19,17 @@ import React from "react";
 import { View } from "react-native";
 import { Field, Muted, Notice } from "./ui";
 import { STR } from "../lib/labels";
+import { isBankDetailsComplete as isComplete, type BankDetails as Details } from "@scd/shared";
 
-export interface BankDetails {
-  bankAccount: string;
-  bankAccountName: string;
-  bankName: string;
-  bankBranch: string;
-}
-
-export const EMPTY_BANK_DETAILS: BankDetails = {
-  bankAccount: "",
-  bankAccountName: "",
-  bankName: "",
-  bankBranch: "",
-};
-
-/** Which fields a method actually requires — the single source both screens read. */
-export function isBankDetailsComplete(method: string, d: BankDetails): boolean {
-  if (method === "cash") return true;
-  if (method === "bkash") return d.bankAccount.trim() !== "";
-  return (
-    d.bankAccount.trim() !== "" &&
-    d.bankAccountName.trim() !== "" &&
-    d.bankName.trim() !== "" &&
-    d.bankBranch.trim() !== ""
-  );
-}
+// The RULES live in /shared — they are the shape of the contract between this form and
+// the write, and a .tsx cannot be imported by the server test project (D-#588). They
+// are re-exported here so every existing import of this module keeps working.
+export {
+  isBankDetailsComplete,
+  detailsForMethod,
+  EMPTY_BANK_DETAILS,
+  type BankDetails,
+} from "@scd/shared";
 
 export default function BankDetailsFields({
   method,
@@ -53,15 +38,15 @@ export default function BankDetailsFields({
   showIncompleteWarning = false,
 }: {
   method: string;
-  value: BankDetails;
-  onChange: (next: BankDetails) => void;
+  value: Details;
+  onChange: (next: Details) => void;
   /** Surface WHY the caller is blocking — silence would just look broken. */
   showIncompleteWarning?: boolean;
 }): React.ReactElement | null {
   if (method === "cash") return null;
-  const set = (k: keyof BankDetails) => (v: string) => onChange({ ...value, [k]: v });
+  const set = (k: keyof Details) => (v: string) => onChange({ ...value, [k]: v });
   const bkash = method === "bkash";
-  const incomplete = showIncompleteWarning && !isBankDetailsComplete(method, value);
+  const incomplete = showIncompleteWarning && !isComplete(method, value);
 
   return (
     <View>

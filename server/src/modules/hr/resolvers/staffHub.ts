@@ -36,6 +36,13 @@ import {
   type IssueLetterInput,
 } from "../services/StaffLetterService";
 import { confirmEmployment, previewConfirmation } from "../services/ConfirmationService";
+import {
+  SUPPORT_ROLES,
+  SUPPORT_CONTRACT_TITLE_BN,
+  SUPPORT_WORKING_HOURS_BN,
+  SUPPORT_DUTIES_BN,
+  type SupportRole,
+} from "../services/supportContract";
 import { pooledBalanceForStaff, type PooledBalanceView } from "../services/LeaveEntitlementService";
 import { heldDebtForStaff, type HeldDebtView } from "../services/ProbationDebtService";
 import { previewLateness, latenessChargeFor, type LatenessPreview } from "../services/LatenessService";
@@ -79,9 +86,14 @@ HrPolicyRef.implement({
     lateDaysPerCharge: t.exposeInt("lateDaysPerCharge"),
     latenessRuleEnabled: t.exposeBoolean("latenessRuleEnabled"),
     probationDebtEnabled: t.exposeBoolean("probationDebtEnabled"),
+    probationMonths: t.exposeInt("probationMonths"),
     signatoryName: t.exposeString("signatoryName"),
     signatoryTitle: t.exposeString("signatoryTitle"),
     weeklyHoursText: t.exposeString("weeklyHoursText"),
+    employerNameBn: t.exposeString("employerNameBn"),
+    employerAddressBn: t.exposeString("employerAddressBn"),
+    signatoryNameBn: t.exposeString("signatoryNameBn"),
+    signatoryTitleBn: t.exposeString("signatoryTitleBn"),
     letterRefPrefix: t.exposeString("letterRefPrefix"),
   }),
 });
@@ -111,6 +123,24 @@ StaffLetterRef.implement({
   }),
 });
 
+/**
+ * The Bangla support-staff contract's own fields (D-#586). Only `support_contract`
+ * reads them; the service refuses that kind without them, so they are not optional in
+ * practice — just optional for the three kinds that have no contract at all.
+ */
+const SupportContractInputRef = builder.inputType("SupportContractInput", {
+  description: "The Bangla নিয়োগ চুক্তিপত্র's own fields (D-#586). Required for kind=support_contract.",
+  fields: (t) => ({
+    role: t.string({ required: true, description: "helper | guard — which default duties schedule." }),
+    dutiesBn: t.stringList({ required: true, description: "The duties schedule, one line each, AS EDITED." }),
+    workingHoursBn: t.string({ required: true }),
+    foodAllowance: t.float({ required: false }),
+    permanentAddressBn: t.string({ required: false }),
+    presentAddressBn: t.string({ required: false }),
+    contactBn: t.string({ required: false }),
+  }),
+});
+
 const PooledBalanceRef = builder.objectRef<PooledBalanceView>("StaffLeavePool");
 PooledBalanceRef.implement({
   description:
@@ -124,6 +154,9 @@ PooledBalanceRef.implement({
     remainingDays: t.float({ resolve: (b) => b.remainingDays }),
     overridden: t.exposeBoolean("overridden"),
     proRated: t.exposeBoolean("proRated"),
+    // D-#576: the pool exists for a probationer but cannot be DRAWN. The screens label
+    // it "স্থায়ী হলে পাবেন" rather than "ছুটি বাকি" when this is true.
+    onProbation: t.exposeBoolean("onProbation"),
   }),
 });
 
@@ -233,6 +266,7 @@ interface ConfirmResultShape {
   settledToSalary: number;
   poolRemainingAfter: number;
   letterId: string | null;
+  letterError: string | null;
 }
 const ConfirmResultRef = builder.objectRef<ConfirmResultShape>("ConfirmationResult");
 ConfirmResultRef.implement({
@@ -244,6 +278,9 @@ ConfirmResultRef.implement({
     settledToSalary: t.exposeFloat("settledToSalary"),
     poolRemainingAfter: t.exposeFloat("poolRemainingAfter"),
     letterId: t.string({ nullable: true, resolve: (r) => r.letterId }),
+    // D-#574: the confirmation SUCCEEDED but the letter did not. Non-null here means
+    // "confirmed; letter still to issue" — never "nothing happened".
+    letterError: t.string({ nullable: true, resolve: (r) => r.letterError }),
   }),
 });
 
@@ -392,6 +429,7 @@ builder.queryField("myLeavePool", (t) =>
           remainingDays: 0,
           overridden: false,
           proRated: false,
+          onProbation: false,
         };
       }
       return pooledBalanceForStaff(sid);
@@ -437,9 +475,14 @@ builder.mutationField("setHrPolicy", (t) =>
       lateDaysPerCharge: t.arg.int({ required: false }),
       latenessRuleEnabled: t.arg.boolean({ required: false }),
       probationDebtEnabled: t.arg.boolean({ required: false }),
+      probationMonths: t.arg.int({ required: false }),
       signatoryName: t.arg.string({ required: false }),
       signatoryTitle: t.arg.string({ required: false }),
       weeklyHoursText: t.arg.string({ required: false }),
+      employerNameBn: t.arg.string({ required: false }),
+      employerAddressBn: t.arg.string({ required: false }),
+      signatoryNameBn: t.arg.string({ required: false }),
+      signatoryTitleBn: t.arg.string({ required: false }),
       letterRefPrefix: t.arg.string({ required: false }),
     },
     resolve: async (_r, args, ctx) => {
@@ -449,12 +492,57 @@ builder.mutationField("setHrPolicy", (t) =>
         lateDaysPerCharge: args.lateDaysPerCharge ?? undefined,
         latenessRuleEnabled: args.latenessRuleEnabled ?? undefined,
         probationDebtEnabled: args.probationDebtEnabled ?? undefined,
+        probationMonths: args.probationMonths ?? undefined,
         signatoryName: args.signatoryName ?? undefined,
         signatoryTitle: args.signatoryTitle ?? undefined,
         weeklyHoursText: args.weeklyHoursText ?? undefined,
+        employerNameBn: args.employerNameBn ?? undefined,
+        employerAddressBn: args.employerAddressBn ?? undefined,
+        signatoryNameBn: args.signatoryNameBn ?? undefined,
+        signatoryTitleBn: args.signatoryTitleBn ?? undefined,
         letterRefPrefix: args.letterRefPrefix ?? undefined,
         actorId: ctx.auth!.userId,
       });
+    },
+  }),
+);
+
+interface ContractDefaultsShape {
+  role: string;
+  titleBn: string;
+  workingHoursBn: string;
+  dutiesBn: string[];
+}
+const ContractDefaultsRef = builder.objectRef<ContractDefaultsShape>("SupportContractDefaults");
+ContractDefaultsRef.implement({
+  description:
+    "The starting point for a Bangla support-staff contract (D-#586): the title, hours " +
+    "and duties transcribed from the school's own signed contracts. The form loads " +
+    "these and the operator EDITS before issuing — they are a draft, not the contract.",
+  fields: (t) => ({
+    role: t.exposeString("role"),
+    titleBn: t.exposeString("titleBn"),
+    workingHoursBn: t.exposeString("workingHoursBn"),
+    dutiesBn: t.exposeStringList("dutiesBn"),
+  }),
+});
+
+builder.queryField("supportContractDefaults", (t) =>
+  t.field({
+    type: ContractDefaultsRef,
+    description: "Default title/hours/duties for a support-staff contract role (D-#586).",
+    authScopes: { authenticated: true },
+    args: { role: t.arg.string({ required: true }) },
+    resolve: (_r, args, ctx) => {
+      require_(ctx, "staff:manage");
+      const role = args.role as SupportRole;
+      if (!SUPPORT_ROLES.includes(role)) throw new ForbiddenError("অজানা পদ");
+      return {
+        role,
+        titleBn: SUPPORT_CONTRACT_TITLE_BN[role],
+        workingHoursBn: SUPPORT_WORKING_HOURS_BN[role],
+        dutiesBn: [...SUPPORT_DUTIES_BN[role]],
+      };
     },
   }),
 );
@@ -475,6 +563,7 @@ builder.mutationField("issueStaffLetter", (t) =>
       designation: t.arg.string({ required: false }),
       weeklyHours: t.arg.string({ required: false }),
       extraText: t.arg.string({ required: false }),
+      contract: t.arg({ type: SupportContractInputRef, required: false }),
     },
     resolve: async (_r, args, ctx) => {
       require_(ctx, "staff:manage");
@@ -488,6 +577,18 @@ builder.mutationField("issueStaffLetter", (t) =>
         designation: args.designation ?? undefined,
         weeklyHours: args.weeklyHours ?? undefined,
         extraText: args.extraText ?? undefined,
+        // Only read for `support_contract`; the service refuses that kind without it.
+        contract: args.contract
+          ? {
+              role: args.contract.role as SupportRole,
+              dutiesBn: args.contract.dutiesBn,
+              workingHoursBn: args.contract.workingHoursBn,
+              foodAllowance: args.contract.foodAllowance ?? null,
+              permanentAddressBn: args.contract.permanentAddressBn ?? null,
+              presentAddressBn: args.contract.presentAddressBn ?? null,
+              contactBn: args.contract.contactBn ?? null,
+            }
+          : null,
         actorId: ctx.auth!.userId,
       };
       return issueLetter(input);
@@ -544,6 +645,7 @@ builder.mutationField("confirmStaffEmployment", (t) =>
         settledToSalary: res.settlement.toSalary,
         poolRemainingAfter: res.poolRemainingAfter,
         letterId: res.letterId,
+        letterError: res.letterError,
       };
     },
   }),

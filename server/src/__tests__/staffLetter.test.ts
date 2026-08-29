@@ -65,7 +65,15 @@ jest.mock("../modules/platform/services/AuditService", () => ({
 import { issueLetter, effectiveFromText, LetterError } from "../modules/hr/services/StaffLetterService";
 import { confirmEmployment, previewConfirmation } from "../modules/hr/services/ConfirmationService";
 import { toDateKey, isProbationLeave } from "../modules/hr/services/ProbationDebtService";
-import { buildClauses, longDate, taka } from "../modules/hr/routes/staffLetterPdf";
+import {
+  buildClauses,
+  longDate,
+  taka,
+  certificateBody,
+  needsNewPage,
+  buildContractSections,
+} from "../modules/hr/routes/staffLetterPdf";
+import { bnDigits, longDateBn } from "../modules/hr/services/supportContract";
 import { HR_POLICY_DEFAULTS } from "@scd/shared";
 import type { ILetterSnapshot } from "../modules/hr/models/StaffLetter";
 
@@ -119,28 +127,32 @@ describe("clause building — the .docx contradiction is RESOLVED, not reproduce
     } as ILetterSnapshot;
   }
 
+  /** Clause text + its sub-clauses, flattened — what the page actually says (D-#586). */
+  const flat = (cs: ReturnType<typeof buildClauses>): string =>
+    cs.map((c) => [c.text, ...(c.subs ?? [])].join(" ")).join(" ");
+
   test("a PAID letter prints the salary and NEVER the honorary clause", () => {
     const c = buildClauses(snap({ salaryMode: "paid", monthlySalary: 5000 }));
-    expect(c[0]).toContain("Tk. 5,000");
-    expect(c.join(" ")).not.toMatch(/honorary/i);
+    expect(flat(c)).toContain("Tk. 5,000");
+    expect(flat(c)).not.toMatch(/honorary/i);
   });
 
   test("an HONORARY letter prints no figure at all", () => {
     const c = buildClauses(snap({ salaryMode: "honorary", monthlySalary: null }));
-    expect(c[0]).toMatch(/honorary/i);
-    expect(c.join(" ")).not.toMatch(/Tk\./);
+    expect(flat(c)).toMatch(/honorary/i);
+    expect(flat(c)).not.toMatch(/Tk\./);
   });
 
   test("clause 6 names the real post — never the template's stray 'principal'", () => {
     const c = buildClauses(snap({ designation: "Assistant Teacher" }));
-    const jobDesc = c.find((x) => x.startsWith("Job Description"));
+    const jobDesc = c.find((x) => x.text.startsWith("Job Description"))?.text;
     expect(jobDesc).toContain("Assistant Teacher");
     expect(jobDesc).not.toMatch(/as a principal/i);
   });
 
   test("the leave clause carries the policy's pool figure, not a hardcoded 20", () => {
-    expect(buildClauses(snap({ annualLeaveDays: 20 })).join(" ")).toContain("total of 20 days");
-    expect(buildClauses(snap({ annualLeaveDays: 25 })).join(" ")).toContain("total of 25 days");
+    expect(flat(buildClauses(snap({ annualLeaveDays: 20 })))).toContain("total of 20 days");
+    expect(flat(buildClauses(snap({ annualLeaveDays: 25 })))).toContain("total of 25 days");
   });
 
   test("numbering is generated, so dropping a clause never leaves a gap", () => {
@@ -412,6 +424,73 @@ describe("confirmEmployment — the settlement ledger (D-#540)", () => {
     }
   });
 
+  /**
+   * D-#574. Found by driving prod: a staff member with no designation was confirmed and
+   * her held days settled, then the letter threw, the mutation errored, and — because
+   * writeAudit sat below the letter — the confirmation went in with NO AUDIT ROW. The
+   * operator was told twice that it had failed.
+   */
+  test("refuses BEFORE any write when the letter cannot be issued", async () => {
+    const staff = liveStaff({ designation: undefined });
+    mockStaffFindById.mockResolvedValue(staff);
+    mockPooledBalance.mockResolvedValue({ allowanceDays: 20, remainingDays: 20 });
+
+    await expect(
+      confirmEmployment({
+        staffProfileId: staffId.toString(),
+        confirmationDate: "2026-07-01",
+        issueLetter: true,
+        actorId: ACTOR,
+      }),
+    ).rejects.toThrow(/পদবি/);
+
+    // Nothing committed: no save, no settlement, no audit — a clean refusal.
+    expect(staff.save).not.toHaveBeenCalled();
+    expect(mockWriteAudit).not.toHaveBeenCalled();
+  });
+
+  test("a letter failure is NON-FATAL — the confirmation stands and is audited", async () => {
+    const staff = liveStaff({ designation: "Teacher" });
+    mockStaffFindById.mockResolvedValue(staff);
+    mockPooledBalance.mockResolvedValue({ allowanceDays: 20, remainingDays: 20 });
+    // Something we did not foresee goes wrong inside the letter.
+    mockLetterCreate.mockRejectedValueOnce(new Error("printer on fire"));
+
+    const res = await confirmEmployment({
+      staffProfileId: staffId.toString(),
+      confirmationDate: "2026-07-01",
+      issueLetter: true,
+      actorId: ACTOR,
+    });
+
+    expect(staff.employmentStatus).toBe("confirmed");
+    expect(res.letterId).toBeNull();
+    expect(res.letterError).toMatch(/printer on fire/);
+    // The audit is the point: the confirmation must never be invisible.
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventKind: "STAFF_EMPLOYMENT_CONFIRMED",
+        meta: expect.objectContaining({ letterId: null, letterError: expect.stringMatching(/printer/) }),
+      }),
+    );
+  });
+
+  test("confirming WITHOUT a letter needs no designation at all", async () => {
+    const staff = liveStaff({ designation: undefined });
+    mockStaffFindById.mockResolvedValue(staff);
+    mockPooledBalance.mockResolvedValue({ allowanceDays: 20, remainingDays: 20 });
+
+    const res = await confirmEmployment({
+      staffProfileId: staffId.toString(),
+      confirmationDate: "2026-07-01",
+      issueLetter: false,
+      actorId: ACTOR,
+    });
+    expect(res.letterId).toBeNull();
+    expect(res.letterError).toBeNull();
+    expect(staff.employmentStatus).toBe("confirmed");
+  });
+
   test("refuses a second confirmation — the date is not a field to re-edit here", async () => {
     mockStaffFindById.mockResolvedValue(liveStaff({ confirmationDate: new Date("2026-01-01") }));
     mockPooledBalance.mockResolvedValue({ allowanceDays: 20, remainingDays: 20 });
@@ -448,5 +527,184 @@ describe("confirmEmployment — the settlement ledger (D-#540)", () => {
         actorId: ACTOR,
       }),
     ).rejects.toThrow(/Invalid confirmation date/i);
+  });
+});
+
+// ===========================================================================
+describe("service certificate (D-#583)", () => {
+  function certSnap(over: Partial<ILetterSnapshot> = {}): ILetterSnapshot {
+    return {
+      staffName: "Suhel Ahmad",
+      staffNameBn: null,
+      schoolId: "20163",
+      designation: "Junior Teacher",
+      address: null,
+      salaryMode: "honorary",
+      monthlySalary: null,
+      weeklyHours: null,
+      annualLeaveDays: 20,
+      effectiveFrom: "January, 2022",
+      confirmationDate: null,
+      serviceFrom: "2022-01-10",
+      serviceTo: null,
+      signatoryName: "X",
+      signatoryTitle: "Convener",
+      letterDate: "2026-08-29",
+      ...over,
+    } as ILetterSnapshot;
+  }
+
+  test("a SERVING teacher gets the present tense — not a leaving certificate", () => {
+    const body = certificateBody(certSnap());
+    expect(body).toContain("has been serving");
+    expect(body).not.toMatch(/\bserved\b/);
+    // The one fact a bank or a next employer actually needs.
+    expect(body).toContain("10 January, 2022");
+    expect(body).toContain("29 August, 2026");
+  });
+
+  test("someone who has LEFT gets the past tense and both dates", () => {
+    const body = certificateBody(certSnap({ serviceTo: "2026-06-30" }));
+    expect(body).toContain("served");
+    expect(body).toContain("from 10 January, 2022 to 30 June, 2026");
+    expect(body).not.toContain("has been serving");
+  });
+
+  test("a missing joining date weakens the sentence, it does not break it", () => {
+    const serving = certificateBody(certSnap({ serviceFrom: null }));
+    expect(serving).toContain("has been serving");
+    expect(serving).not.toContain("since");
+
+    const left = certificateBody(certSnap({ serviceFrom: null, serviceTo: "2026-06-30" }));
+    expect(left).toContain("until 30 June, 2026");
+  });
+});
+
+// ===========================================================================
+describe("the signature block is kept whole (D-#583)", () => {
+  // A4 is 842pt tall; the letter uses a 56pt margin.
+  const PAGE = 842;
+  const MARGIN = 56;
+
+  test("a block that fits stays on the page", () => {
+    expect(needsNewPage(400, PAGE, MARGIN, 190)).toBe(false);
+  });
+
+  test("a block that would cross the bottom margin starts a new page", () => {
+    expect(needsNewPage(700, PAGE, MARGIN, 190)).toBe(true);
+  });
+
+  test("the boundary is the bottom MARGIN, not the page edge", () => {
+    // Exactly reaching the margin is fine; one point past it is not.
+    expect(needsNewPage(PAGE - MARGIN - 190, PAGE, MARGIN, 190)).toBe(false);
+    expect(needsNewPage(PAGE - MARGIN - 189, PAGE, MARGIN, 190)).toBe(true);
+  });
+});
+
+// ===========================================================================
+describe("the probation clause (D-#586)", () => {
+  function snap2(over: Partial<ILetterSnapshot> = {}): ILetterSnapshot {
+    return {
+      staffName: "Suhel Ahmad",
+      schoolId: "20163",
+      designation: "Hifz Teacher",
+      salaryMode: "paid",
+      monthlySalary: 13000,
+      weeklyHours: "44 (5*8+1*4)",
+      annualLeaveDays: 20,
+      effectiveFrom: "March, 2025",
+      probationMonths: 6,
+      signatoryName: "X",
+      signatoryTitle: "Convener",
+      letterDate: "2025-03-01",
+      ...over,
+    } as ILetterSnapshot;
+  }
+  const flat2 = (cs: ReturnType<typeof buildClauses>): string =>
+    cs.map((c) => [c.text, ...(c.subs ?? [])].join(" ")).join(" ");
+
+  test("probation is clause 1 and spells the length out, as the template does", () => {
+    const c = buildClauses(snap2());
+    expect(c[0].text).toMatch(/^Probation:/);
+    expect(c[0].text).toContain("“Six” months");
+    expect(c[0].text).toContain("regularized");
+  });
+
+  test("the length comes from the letter, not a constant — Dhaka's three still prints", () => {
+    expect(buildClauses(snap2({ probationMonths: 3 }))[0].text).toContain("“Three” months");
+    expect(buildClauses(snap2({ probationMonths: 1 }))[0].text).toContain("“One” month");
+    expect(buildClauses(snap2({ probationMonths: 1 }))[0].text).not.toContain("months");
+  });
+
+  test("zero months omits the clause rather than printing 'Zero months'", () => {
+    const c = buildClauses(snap2({ probationMonths: 0 }));
+    expect(c[0].text).toMatch(/^Remuneration:/);
+    expect(flat2(c)).not.toMatch(/probation of/i);
+  });
+
+  test("the updated template's structure is present: sub-clauses, Holidays, misconduct", () => {
+    const c = buildClauses(snap2());
+    // Increments moved under Remuneration as sub-clause (a).
+    expect(c.find((x) => x.text.startsWith("Remuneration:"))?.subs?.[0]).toMatch(/Increments/);
+    // Holidays is its own clause, not a sentence at the end of Leave.
+    expect(c.some((x) => x.text.startsWith("Holidays:"))).toBe(true);
+    const leave = c.find((x) => x.text.startsWith("Leave:"))!;
+    expect(leave.subs).toHaveLength(3);
+    expect(leave.subs![0]).toMatch(/Vice Principal/);
+    // The three gross-misconduct grounds + the release-letter consequence.
+    const term = c.find((x) => x.text.startsWith("Termination:"))!;
+    expect(term.subs).toHaveLength(4);
+    expect(term.subs!.join(" ")).toMatch(/Religious Extremism/);
+    expect(term.subs![3]).toMatch(/Release Letter or Testimonial/);
+  });
+});
+
+// ===========================================================================
+describe("the Bangla support-staff contract (D-#586)", () => {
+  function contractSnap(over: Partial<ILetterSnapshot> = {}): ILetterSnapshot {
+    return {
+      staffName: "Parul Begum",
+      staffNameBn: "পারুল বেগম",
+      schoolId: "30012",
+      designation: "খালা (সহায়ক কর্মী)",
+      salaryMode: "paid",
+      monthlySalary: 10000,
+      annualLeaveDays: 20,
+      effectiveFrom: "June, 2025",
+      probationMonths: 6,
+      contractTitleBn: "খালা (সহায়ক কর্মী) নিয়োগ চুক্তিপত্র",
+      employerNameBn: "এস সি ডি",
+      employerAddressBn: "ঠিকানা",
+      dutiesBn: ["ক্লাসরুম পরিষ্কার রাখা।"],
+      workingHoursBn: "সকাল ৭:০০ – সন্ধ্যা ৬:৩০",
+      signatoryName: "মো: রিজভী রহমান",
+      signatoryTitle: "অধ্যক্ষ",
+      letterDate: "2025-06-24",
+      ...over,
+    } as ILetterSnapshot;
+  }
+  const all = (secs: ReturnType<typeof buildContractSections>): string =>
+    secs.map((s) => [s.heading, ...s.lines].join(" ")).join(" ");
+
+  test("the leave line follows the school POOL, not a per-contract figure (owner's ruling)", () => {
+    expect(all(buildContractSections(contractSnap()))).toContain("বাৎসরিক ২০");
+    expect(all(buildContractSections(contractSnap({ annualLeaveDays: 25 })))).toContain("বাৎসরিক ২৫");
+  });
+
+  test("the food allowance appears only when there is one — the খালা's contract has none", () => {
+    expect(all(buildContractSections(contractSnap()))).not.toContain("খাবার বাবদ");
+    expect(all(buildContractSections(contractSnap({ foodAllowance: 2500 })))).toContain("খাবার বাবদ");
+    expect(all(buildContractSections(contractSnap({ foodAllowance: 2500 })))).toContain("২,৫০০");
+  });
+
+  test("the probation period appears in §৭, in Bangla digits, and is omitted at zero", () => {
+    expect(all(buildContractSections(contractSnap()))).toContain("৬ (৬) মাস");
+    expect(all(buildContractSections(contractSnap({ probationMonths: 0 })))).not.toContain("শিক্ষানবিশকাল");
+  });
+
+  test("money and dates are Bangla throughout — this document has no English in it", () => {
+    expect(all(buildContractSections(contractSnap()))).toContain("১০,০০০");
+    expect(longDateBn("2025-06-24")).toBe("২৪ জুন ২০২৫");
+    expect(bnDigits(2026)).toBe("২০২৬");
   });
 });

@@ -22,6 +22,7 @@ import { StaffLeaveApplication } from "../models/StaffLeaveApplication";
 import { PayrollRun, type IPayrollRun } from "../models/PayrollRun";
 import { Payslip, type IPayslip } from "../models/Payslip";
 import { AdvanceLoan } from "../models/AdvanceLoan";
+import { salariesEffectiveIn } from "./PayHistoryService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { assertMonthKey, dayRate, computePayslip, PayrollError, type PayLineInput } from "./payrollMath";
 import { activeAdvanceByStaff } from "./AdvanceService";
@@ -84,12 +85,16 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
     await PayrollRun.deleteOne({ _id: existing._id });
   }
 
-  const [staff, leaveDays, advances] = await Promise.all([
+  const [staff, leaveDays, advances, effectiveSalaries] = await Promise.all([
     StaffProfile.find({ active: true, monthlySalary: { $gt: 0 } })
       .select("name category monthlySalary paymentMethod")
       .lean(),
     unpaidLeaveDaysByStaff(input.monthKey),
     activeAdvanceByStaff(),
+    // The salary EFFECTIVE IN THIS MONTH (D-#587). Empty for anyone with no recorded
+    // change, and then the profile's current figure is used — which is exactly what
+    // this did before history existed, so landing it moves no existing run.
+    salariesEffectiveIn(input.monthKey),
   ]);
 
   const adjByStaff = new Map((input.adjustments ?? []).map((a) => [a.staffProfileId, a]));
@@ -106,9 +111,13 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
   const payslipDocs: Array<Partial<IPayslip>> = [];
   for (const s of staff) {
     const sid = s._id.toString();
-    const rate = dayRate(s.monthlySalary!, input.workingDays);
+    // A raise agreed in July but entered in September is a JULY raise, and re-running
+    // August must still pay the old figure. The recorded change decides; the profile's
+    // current salary is the fallback for everyone who has never had one recorded.
+    const salary = effectiveSalaries.get(sid) ?? s.monthlySalary!;
+    const rate = dayRate(salary, input.workingDays);
     const adj = adjByStaff.get(sid);
-    const gross = adj?.payableDays != null ? Math.round(rate * adj.payableDays) : s.monthlySalary!;
+    const gross = adj?.payableDays != null ? Math.round(rate * adj.payableDays) : salary;
     const advance = advances.get(sid);
     // SH-4 / D-#541: the 3-lates-to-a-day charge. Returns null while the rule is off,
     // in which case nothing is passed and the payslip is byte-identical to today. An
@@ -259,8 +268,26 @@ export interface PaymentExportRow {
   name: string;
   paymentMethod: string;
   account: string | null;
+  /** SH-10's three fields. A bank transfer cannot be made from a number alone. */
+  accountName: string | null;
+  bankName: string | null;
+  bankBranch: string | null;
   netPay: number;
+  /**
+   * `null` when the row can actually be paid; otherwise WHY it cannot — a missing
+   * account, or a net of zero.
+   *
+   * Blocked rows are RETURNED, not filtered out (D-#579). Dropping them silently is
+   * how a person misses a salary: the operator sees a list, pays it, and nobody
+   * notices the two names that were never on it. They are returned and shown apart,
+   * and only the payable ones go into the file.
+   */
+  blockedReason: string | null;
 }
+
+const NO_ACCOUNT = "অ্যাকাউন্ট নম্বর নেই";
+const NO_BANK_DETAILS = "ব্যাংকের নাম/শাখা/হিসাবধারীর নাম অসম্পূর্ণ";
+const ZERO_NET = "নিট বেতন শূন্য";
 
 /** Net pay per staff for bank/bKash bulk upload — cash EXCLUDED (§4.6). Locked run only. */
 export async function paymentExport(runId: string): Promise<PaymentExportRow[]> {
@@ -269,16 +296,32 @@ export async function paymentExport(runId: string): Promise<PaymentExportRow[]> 
   if (run.status !== "approved_locked") throw new PayrollError("Payment export issues only from a locked run (§4.6)");
   const slips = await Payslip.find({ payrollRunId: new Types.ObjectId(runId), paymentMethod: { $ne: "cash" } }).lean();
   const staff = await StaffProfile.find({ _id: { $in: slips.map((s) => s.staffProfileId) } })
-    .select("bankAccount")
+    .select("bankAccount bankAccountName bankName bankBranch")
     .lean();
-  const acctById = new Map(staff.map((s) => [s._id.toString(), s.bankAccount ?? null]));
+  const byId = new Map(staff.map((s) => [s._id.toString(), s]));
   return slips
-    .map((s) => ({
-      staffProfileId: s.staffProfileId.toString(),
-      name: s.snapshotName,
-      paymentMethod: s.paymentMethod ?? "",
-      account: acctById.get(s.staffProfileId.toString()) ?? null,
-      netPay: s.netPay,
-    }))
+    .map((s) => {
+      const d = byId.get(s.staffProfileId.toString());
+      const account = d?.bankAccount?.trim() || null;
+      const accountName = d?.bankAccountName?.trim() || null;
+      const bankName = d?.bankName?.trim() || null;
+      const bankBranch = d?.bankBranch?.trim() || null;
+      // bKash pays to a number; a bank transfer needs the name, bank and branch too.
+      const bankIncomplete =
+        s.paymentMethod === "bank" && !(accountName && bankName && bankBranch);
+      const blockedReason =
+        s.netPay <= 0 ? ZERO_NET : !account ? NO_ACCOUNT : bankIncomplete ? NO_BANK_DETAILS : null;
+      return {
+        staffProfileId: s.staffProfileId.toString(),
+        name: s.snapshotName,
+        paymentMethod: s.paymentMethod ?? "",
+        account,
+        accountName,
+        bankName,
+        bankBranch,
+        netPay: s.netPay,
+        blockedReason,
+      };
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 }

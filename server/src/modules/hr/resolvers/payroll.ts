@@ -12,6 +12,7 @@
  */
 import { builder } from "../../../schema";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
+import { recordPayChange, payHistoryForStaff } from "../services/PayHistoryService";
 import { writeAudit } from "../../platform/services/AuditService";
 import type { PaymentMethod } from "@scd/shared";
 import {
@@ -106,7 +107,13 @@ PaymentExportRowRef.implement({
     name: t.exposeString("name"),
     paymentMethod: t.exposeString("paymentMethod"),
     account: t.string({ nullable: true, resolve: (r) => r.account }),
+    accountName: t.string({ nullable: true, resolve: (r) => r.accountName }),
+    bankName: t.string({ nullable: true, resolve: (r) => r.bankName }),
+    bankBranch: t.string({ nullable: true, resolve: (r) => r.bankBranch }),
     netPay: t.exposeFloat("netPay"),
+    // Non-null = this line CANNOT be paid, and why. Shown apart from the payable
+    // list rather than dropped, so a missing salary is visible (D-#579).
+    blockedReason: t.string({ nullable: true, resolve: (r) => r.blockedReason }),
   }),
 });
 
@@ -129,6 +136,46 @@ const StaffAdjustmentInputRef = builder.inputType("StaffPayrollAdjustmentInput",
     manualAdditions: t.field({ type: [PayLineInputRef], required: false }),
   }),
 });
+
+interface PayChangeShape {
+  id: string;
+  effectiveFrom: string;
+  monthlySalary: number;
+  previousSalary: number | null;
+  note: string | null;
+}
+const PayChangeRef = builder.objectRef<PayChangeShape>("StaffPayChange");
+PayChangeRef.implement({
+  description:
+    "One recorded salary change: the figure, the month it takes effect, and what it " +
+    "replaced (D-#587). Payroll pays the figure effective in the month being run.",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    effectiveFrom: t.exposeString("effectiveFrom"),
+    monthlySalary: t.exposeFloat("monthlySalary"),
+    previousSalary: t.float({ nullable: true, resolve: (r) => r.previousSalary }),
+    note: t.string({ nullable: true, resolve: (r) => r.note }),
+  }),
+});
+
+builder.queryField("staffPayHistory", (t) =>
+  t.field({
+    type: [PayChangeRef],
+    description: "A staff member's recorded salary changes, newest first. payroll:manage.",
+    authScopes: { hasPermission: "payroll:manage" },
+    args: { staffProfileId: t.arg.string({ required: true }) },
+    resolve: async (_root, args) => {
+      const rows = await payHistoryForStaff(args.staffProfileId);
+      return rows.map((r) => ({
+        id: r._id.toString(),
+        effectiveFrom: r.effectiveFrom,
+        monthlySalary: r.monthlySalary,
+        previousSalary: r.previousSalary ?? null,
+        note: r.note ?? null,
+      }));
+    },
+  }),
+);
 
 interface StaffPayView { id: string; monthlySalary: number | null; paymentMethod: string | null }
 const StaffPayRef = builder.objectRef<StaffPayView>("StaffPay");
@@ -153,10 +200,15 @@ builder.mutationField("setStaffPay", (t) =>
       staffProfileId: t.arg.string({ required: true }),
       monthlySalary: t.arg.float({ required: false }),
       paymentMethod: t.arg.string({ required: false }),
+      /** YYYY-MM — the month the new figure takes effect (D-#587). Defaults to now. */
+      effectiveFrom: t.arg.string({ required: false }),
+      /** Why it changed, for the history row. */
+      payChangeNote: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       const staff = await StaffProfile.findById(args.staffProfileId);
       if (!staff) throw new Error("Staff profile not found");
+      const previousSalary = staff.monthlySalary ?? null;
       // A caller that MEANT to set a salary but sent a non-number must be told so, not
       // silently given a payment-method-only save. Found in the 2026-08-26 prod E2E
       // test: `Number("Tk. 6000,")` is NaN, JSON serialises NaN as null, null reads
@@ -172,6 +224,21 @@ builder.mutationField("setStaffPay", (t) =>
       }
       if (args.paymentMethod != null) staff.paymentMethod = args.paymentMethod as PaymentMethod;
       await staff.save();
+
+      // A CHANGED figure gets a history row with the month it takes effect (D-#587).
+      // Re-saving the same number is not a change and writes nothing — otherwise a
+      // payment-method edit would leave a trail of identical "raises".
+      if (args.monthlySalary != null && args.monthlySalary !== previousSalary) {
+        await recordPayChange({
+          staffProfileId: staff._id.toString(),
+          monthlySalary: args.monthlySalary,
+          effectiveFrom: args.effectiveFrom ?? null,
+          previousSalary,
+          note: args.payChangeNote ?? null,
+          actorId: ctx.auth!.userId,
+        });
+      }
+
       await writeAudit({
         eventKind: "STAFF_PAY_SET",
         actorId: ctx.auth!.userId,

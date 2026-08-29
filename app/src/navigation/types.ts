@@ -450,7 +450,6 @@ export type AdminStackParamList = {
   AcademicYear: undefined;
   SectionConfig: undefined;
   GuardianCredentials: undefined;
-  StaffCredentials: undefined;
   MessageTemplates: undefined;
   MessageTemplateEdit: { key: string; labelBn: string };
   // Access Control (AC-2): per-user permission editor (access:manage / Principal).

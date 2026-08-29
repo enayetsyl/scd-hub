@@ -16,6 +16,12 @@ import { Types } from "mongoose";
 import { STAFF_LETTER_KINDS, SALARY_MODES, type StaffLetterKind, type SalaryMode } from "@scd/shared";
 import { StaffLetter, type IStaffLetter, type ILetterSnapshot } from "../models/StaffLetter";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
+import { OffboardingCase } from "../models/OffboardingCase";
+import {
+  SUPPORT_CONTRACT_TITLE_BN,
+  SUPPORT_WORKING_HOURS_BN,
+  type SupportRole,
+} from "./supportContract";
 import { getHrPolicy } from "./HrPolicyService";
 import { writeAudit } from "../../platform/services/AuditService";
 
@@ -45,9 +51,26 @@ function formatRefNo(prefix: string, year: number, seq: number): string {
   return `${prefix}/${year}/${String(seq).padStart(4, "0")}`;
 }
 
+export interface SupportContractInput {
+  /** Which default duties schedule the form started from. */
+  role: SupportRole;
+  /** The duties as EDITED on the form — one line each. The defaults are a starting
+   *  point, never the contract itself. */
+  dutiesBn: string[];
+  workingHoursBn: string;
+  /** The দারোয়ান's contract carries a monthly food allowance; the খালা's does not. */
+  foodAllowance?: number | null;
+  /** Bangla addresses/contact as the contract prints them. */
+  permanentAddressBn?: string | null;
+  presentAddressBn?: string | null;
+  contactBn?: string | null;
+}
+
 export interface IssueLetterInput {
   staffProfileId: string;
   kind: StaffLetterKind;
+  /** Required for `support_contract`, ignored for every other kind. */
+  contract?: SupportContractInput | null;
   /** The letter's printed date (YYYY-MM-DD). Defaults to today. */
   letterDate?: string;
   /** When the appointment/confirmation takes effect (YYYY-MM-DD). */
@@ -60,6 +83,9 @@ export interface IssueLetterInput {
   extraText?: string | null;
   actorId: string;
 }
+
+/** Employment statuses that mean the person no longer serves (D-#583). */
+const HAS_LEFT: string[] = ["resigned", "terminated", "retired", "contract_ended"];
 
 function todayKey(): string {
   const d = new Date();
@@ -98,6 +124,58 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
     );
   }
 
+  // The end of service, for someone who has actually left. It comes from the
+  // offboarding case's last working day — the date the school itself recorded — not
+  // from whatever date the operator happened to type into this form (D-#583).
+  const serviceTo = HAS_LEFT.includes(staff.employmentStatus)
+    ? (
+        await OffboardingCase.findOne({ staffProfileId: staff._id })
+          .sort({ lastWorkingDayKey: -1 })
+          .select("lastWorkingDayKey")
+          .lean()
+      )?.lastWorkingDayKey ?? null
+    : null;
+
+  // The Bangla contract's own block (D-#586). Refused rather than half-printed: a
+  // contract with no employer name, no duties or no signatory is not a document anyone
+  // can sign, and the employer block is EMPTY by default precisely so this deployment
+  // cannot inherit the sample contracts' Mohammadpur address by accident.
+  let contractFields: Partial<ILetterSnapshot> = {};
+  if (input.kind === "support_contract") {
+    const c = input.contract;
+    if (!c) throw new LetterError("চুক্তিপত্রের তথ্য দিন");
+    if (!policy.employerNameBn.trim() || !policy.employerAddressBn.trim()) {
+      throw new LetterError(
+        "প্রতিষ্ঠানের নাম ও ঠিকানা (বাংলা) নির্ধারিত নেই — এইচআর নীতিমালা থেকে একবার লিখে দিন",
+      );
+    }
+    if (!policy.signatoryNameBn.trim() || !policy.signatoryTitleBn.trim()) {
+      throw new LetterError(
+        "চুক্তিপত্রে স্বাক্ষরকারীর নাম ও পদবি (বাংলা) নির্ধারিত নেই — এইচআর নীতিমালা থেকে একবার লিখে দিন",
+      );
+    }
+    const duties = (c.dutiesBn ?? []).map((d) => d.trim()).filter(Boolean);
+    if (duties.length === 0) throw new LetterError("চুক্তিপত্রে অন্তত একটি দায়িত্ব লিখুন");
+
+    contractFields = {
+      contractTitleBn: SUPPORT_CONTRACT_TITLE_BN[c.role],
+      employerNameBn: policy.employerNameBn,
+      employerAddressBn: policy.employerAddressBn,
+      permanentAddressBn: c.permanentAddressBn?.trim() || staff.permanentAddress || null,
+      presentAddressBn: c.presentAddressBn?.trim() || staff.presentAddress || null,
+      contactBn: c.contactBn?.trim() || staff.phone || null,
+      joiningDateBn: staff.joiningDate ? staff.joiningDate.toISOString().slice(0, 10) : null,
+      dutiesBn: duties,
+      workingHoursBn: c.workingHoursBn?.trim() || SUPPORT_WORKING_HOURS_BN[c.role],
+      foodAllowance: c.foodAllowance ?? null,
+      employeeSignatureNameBn: staff.nameBn || staff.name,
+      // The contract is signed by the Principal in Bangla, not the English letters'
+      // Convener — so these override the signature block for this kind only.
+      signatoryName: policy.signatoryNameBn,
+      signatoryTitle: policy.signatoryTitleBn,
+    };
+  }
+
   const snapshot: ILetterSnapshot = {
     staffName: staff.name,
     staffNameBn: staff.nameBn ?? null,
@@ -106,14 +184,29 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
     address: staff.presentAddress ?? staff.permanentAddress ?? null,
     salaryMode: input.salaryMode,
     monthlySalary,
-    weeklyHours: input.weeklyHours ?? policy.weeklyHoursText,
+    // This letter's own override, else THIS PERSON's contracted hours, else the
+    // school-wide default. The middle step is the point: the owner's note driving prod
+    // was that weekly hours vary per teacher, and until D-#584 the only two options
+    // were "type it again on every letter" or "print a figure that is wrong".
+    weeklyHours: input.weeklyHours ?? staff.weeklyHours ?? policy.weeklyHoursText,
     annualLeaveDays: policy.annualLeaveDays,
     effectiveFrom,
     confirmationDate:
       input.kind === "confirmation" ? input.effectiveFrom : null,
+    // A service certificate has to say WHEN (D-#583). The end date is set only for
+    // someone who has actually left — for a serving teacher it stays null, and the
+    // renderer then writes "has been serving since …" rather than "served", which is
+    // what makes the difference between a service certificate and a leaving one.
+    serviceFrom: staff.joiningDate ? staff.joiningDate.toISOString().slice(0, 10) : null,
+    serviceTo,
+    // The probation length AS THIS LETTER STATES IT (D-#586) — frozen, so a policy that
+    // moves from six months to three never rewrites a letter already signed.
+    probationMonths: input.kind === "appointment" ? policy.probationMonths : null,
     signatoryName: policy.signatoryName,
     signatoryTitle: policy.signatoryTitle,
     letterDate,
+    // Last, so the contract's own signatory overrides the English one for that kind.
+    ...contractFields,
   };
 
   const year = Number(letterDate.slice(0, 4));

@@ -1,6 +1,6 @@
 /**
  * MyLeaveScreen — a staff member's own leave self-service (prd-hr H2.7, own-row).
- * Shows per-type balances for the current academic year, the list of own
+ * Shows the shared annual leave pool (D-#539) for the current academic year, the list of own
  * applications (with the approval paid/unpaid split + any exceed warning), an
  * apply form, own-cancel, and a link to each application's cover slots.
  * All reads/writes are own-row (no permission); the server resolves the caller's
@@ -12,9 +12,9 @@ import { useQuery, useMutation } from "urql";
 import { LEAVE_TYPES, LEAVE_DAY_PARTS } from "@scd/shared";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
-  ACADEMIC_YEARS_QUERY,
   MY_STAFF_LEAVE_QUERY,
-  MY_STAFF_LEAVE_BALANCES_QUERY,
+  MY_LEAVE_POOL_QUERY,
+  MY_PROBATION_DEBT_QUERY,
   APPLY_FOR_STAFF_LEAVE,
   DECIDE_STAFF_LEAVE,
   type StaffLeaveT,
@@ -71,22 +71,16 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
   const [error, setError] = React.useState<string | null>(null);
   const [ok, setOk] = React.useState<string | null>(null);
 
-  const [yearsQ] = useQuery({ query: ACADEMIC_YEARS_QUERY });
-  const years = yearsQ.data?.academicYears ?? [];
-  const yearId = (years.find((y) => y.current) ?? years[0])?.id ?? "";
-
-  const [leaveQ, refetchLeave] = useQuery({ query: MY_STAFF_LEAVE_QUERY });
-  const [balQ, refetchBal] = useQuery({
-    query: MY_STAFF_LEAVE_BALANCES_QUERY,
-    variables: { academicYearId: yearId },
-    pause: yearId === "",
-  });
+  const [leaveQ, refetchLeave] = useQuery({ query: MY_STAFF_LEAVE_QUERY, requestPolicy: "cache-and-network" });
+  const [balQ, refetchBal] = useQuery({ query: MY_LEAVE_POOL_QUERY, requestPolicy: "cache-and-network" });
+  const [debtQ, refetchDebt] = useQuery({ query: MY_PROBATION_DEBT_QUERY, requestPolicy: "cache-and-network" });
 
   const [, applyLeave] = useMutation(APPLY_FOR_STAFF_LEAVE);
   const [, decideLeave] = useMutation(DECIDE_STAFF_LEAVE);
 
   const applications = leaveQ.data?.myStaffLeave ?? [];
-  const balances = balQ.data?.myStaffLeaveBalances ?? [];
+  const pool = balQ.data?.myLeavePool;
+  const heldDebt = debtQ.data?.myProbationDebt;
 
   // A partial day (D-#361) is single-date only, so the day-part control appears only
   // once both dates are set and equal — and any date edit that breaks that resets it,
@@ -134,6 +128,7 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
     setReason("");
     refetchLeave({ requestPolicy: "network-only" });
     refetchBal({ requestPolicy: "network-only" });
+    refetchDebt({ requestPolicy: "network-only" });
   }
 
   async function cancel(app: StaffLeaveT): Promise<void> {
@@ -150,6 +145,7 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
     setOk(STR.hrLeaveCancelled);
     refetchLeave({ requestPolicy: "network-only" });
     refetchBal({ requestPolicy: "network-only" });
+    refetchDebt({ requestPolicy: "network-only" });
   }
 
   return (
@@ -161,33 +157,35 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
 
       {/* Balances */}
       <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.hrLeaveBalances}</Body>
-      {balQ.fetching ? (
+      {balQ.fetching && !pool ? (
         <Loader label={STR.loading} />
-      ) : balances.length === 0 ? (
-        <Card>
-          <Muted>{STR.empty}</Muted>
-        </Card>
       ) : (
-        balances.map((b) => (
-          <Card key={b.leaveType}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Body style={{ fontWeight: "700" }}>{leaveTypeLabel(b.leaveType)}</Body>
-              {b.paid ? null : <Badge text={STR.hrLeaveUnpaidBadge} tone="muted" />}
-            </View>
-            {b.balanceTracked ? (
-              <>
-                <Row label={STR.hrLeaveAllowance} value={bnNum(b.allowanceDays)} />
-                <Row label={STR.hrLeaveCarried} value={bnNum(b.carriedOverDays)} />
-                <Row label={STR.hrLeaveTaken} value={bnNum(b.takenDays)} />
-                <Row label={STR.hrLeaveRemaining} value={bnNum(b.remainingDays)} />
-                <Row label={STR.hrLeaveEncashable} value={bnNum(b.encashableDays)} />
-              </>
-            ) : (
-              <Muted>{STR.hrLeaveTaken}: {bnNum(b.takenDays)}</Muted>
-            )}
-          </Card>
-        ))
+        <Card>
+          {/* One pool, not three buckets: casual + sick + bereavement draw together. */}
+          {pool?.onProbation ? <Notice tone="warn" message={STR.stfOnProbationNotice} /> : null}
+          <Row label={STR.stfPoolAllowance} value={`${bnNum(String(pool?.allowanceDays ?? 0))} ${STR.stfDays}`} />
+          <Row label={STR.stfPoolCarried} value={`${bnNum(String(pool?.carriedOverDays ?? 0))} ${STR.stfDays}`} />
+          <Row label={STR.stfPoolTaken} value={`${bnNum(String(pool?.takenDays ?? 0))} ${STR.stfDays}`} />
+          <Row
+            label={pool?.onProbation ? STR.stfPoolOnConfirmation : STR.stfPoolRemaining}
+            value={`${bnNum(String(pool?.remainingDays ?? 0))} ${STR.stfDays}`}
+          />
+          {pool?.onProbation ? <Muted>{STR.stfPoolNotDrawableYet}</Muted> : null}
+          {pool?.proRated ? <Muted>{STR.stfPoolProRated}</Muted> : null}
+          <Muted>{STR.stfPoolNote}</Muted>
+        </Card>
       )}
+
+      {/* Days already taken on probation and HELD — not deducted from any salary yet,
+          and settled against the pool on confirmation (D-#540). */}
+      {heldDebt && heldDebt.totalDays > 0 ? (
+        <Card>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Muted style={{ flex: 1 }}>{STR.stfHeldDebtNote}</Muted>
+            <Badge text={`${bnNum(String(heldDebt.totalDays))} ${STR.stfDays}`} tone="warn" />
+          </View>
+        </Card>
+      ) : null}
 
       {/* Apply form */}
       <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrApplyLeave}</Body>

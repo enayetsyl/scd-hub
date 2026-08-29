@@ -47,6 +47,14 @@ export interface IStaffProfile extends Document {
    * Written only by `confirmStaffEmployment`, never by the generic profile input.
    */
   confirmationDate?: Date;
+  /**
+   * Contracted weekly hours, as the appointment letter states them (D-#584).
+   *
+   * FREE TEXT, not a number: the letters say "25 (5*5)" — hours AND the day pattern —
+   * and the owner's point driving prod was that this varies per teacher, so a school-wide
+   * policy default cannot stand in for it. Absent falls back to HrPolicy.weeklyHoursText.
+   */
+  weeklyHours?: string;
   /** Attendance mapping key for later biometric ingest (H1.5); unique when present. */
   biometricId?: string;
 
@@ -130,6 +138,7 @@ const StaffProfileSchema = new Schema<IStaffProfile>(
     bankAccountName: { type: String, trim: true },
     bankName: { type: String, trim: true },
     bankBranch: { type: String, trim: true },
+    weeklyHours: { type: String, trim: true },
     monthlySalary: { type: Number, min: 0 },
     paymentMethod: { type: String, enum: PAYMENT_METHODS },
 
