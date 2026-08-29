@@ -259,7 +259,16 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
               <Row label={STR.stfPoolAllowance} value={`${bnNum(String(p.annualLeaveDays))} ${STR.stfDays}`} />
             </>
           )}
-          <Row label={STR.stfIssuedBy} value={`${p.signatoryName} · ${p.signatoryTitle}`} />
+          {/* The contract is signed by the Bangla signatory, not the English letters'
+              convener — so show the name that will actually be on it (D-#590). */}
+          <Row
+            label={STR.stfIssuedBy}
+            value={
+              isContract
+                ? `${p.signatoryNameBn || "—"} · ${p.signatoryTitleBn || "—"}`
+                : `${p.signatoryName} · ${p.signatoryTitle}`
+            }
+          />
         </Card>
       ) : null}
 

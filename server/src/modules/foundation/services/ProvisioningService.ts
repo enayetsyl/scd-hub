@@ -263,7 +263,7 @@ export async function provisionStaffLogin(staffProfileId: string, actor: Actor):
   if (!staff) throw new Error("Staff profile not found");
 
   const role = roleForCategory(staff.category);
-  if (!role) throw new Error("Support staff have no app login (D-#25)");
+  if (!role) throw new Error("সহায়ক কর্মীর অ্যাপ লগইন নেই");
   if (!staff.phone) throw new Error("Staff has no phone number to use as a login id");
   const phone = normalizePhone(staff.phone);
 

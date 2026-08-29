@@ -23,6 +23,7 @@
 import { Types } from "mongoose";
 import { ProbationLeaveDebt, type IProbationLeaveDebt } from "../models/ProbationLeaveDebt";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
+import { StaffLeaveApplication } from "../models/StaffLeaveApplication";
 import { writeAudit } from "../../platform/services/AuditService";
 import { roundLeaveDays } from "./dates";
 
@@ -166,6 +167,30 @@ export async function settleOnConfirmation(
   for (const r of rows) {
     const pooled = Math.max(0, Math.min(r.days, poolLeft));
     poolLeft -= pooled;
+
+    /**
+     * THE LEAVE ITSELF IS RE-STAMPED, not just the ledger row (D-#590).
+     *
+     * The pool's `taken` is the sum of approved PAID days, so ticking the debt row
+     * "settled" while the application still read `paidDays: 0, probationHeld: true`
+     * debited nothing: the confirmation preview promised "20 − 3 = 17", the audit
+     * recorded `poolRemainingAfter: 17`, and the pool went on reading 20. Payroll
+     * skips `probationHeld` rows too, so the days were not charged to salary either —
+     * they simply left the accounting. Found by the owner driving prod: "3 leave
+     * didn't adjust".
+     *
+     * So the days the pool absorbs BECOME PAID LEAVE, which is what "settled from the
+     * pool" has always meant, and the pool then debits them by its ordinary rule. The
+     * remainder stays unpaid with the held flag CLEARED, so it is ordinary unpaid
+     * leave that payroll will collect if its month is ever run; for a month already
+     * locked, `toSalary` is returned for the office to put on the next run as a
+     * deduction (D-#110, and D-#585 made that possible).
+     */
+    await StaffLeaveApplication.updateOne(
+      { _id: r.leaveApplicationId },
+      { $set: { paidDays: pooled, unpaidDays: r.days - pooled, probationHeld: false } },
+    );
+
     await ProbationLeaveDebt.updateOne(
       { _id: r._id },
       {

@@ -25,7 +25,7 @@ import { callerHasPermission } from "@scd/shared";
 import { mixedText } from "../../../routes/pdfRenderer";
 import { buildContext } from "../../../context";
 import { StaffLetter, type IStaffLetter, type ILetterSnapshot } from "../models/StaffLetter";
-import { bnDigits, longDateBn, takaBn } from "../services/supportContract";
+import { bnCount, bnDigits, longDateBn, takaBn } from "../services/supportContract";
 
 const FONT_PATH = path.resolve(__dirname, "../../../../assets/fonts/NotoSansBengali-Regular.ttf");
 
@@ -293,7 +293,18 @@ export function certificateBody(s: ILetterSnapshot): string {
   );
 }
 
-/** The confirmation letter is short — it restates the terms rather than re-issuing them. */
+/**
+ * The confirmation letter's body.
+ *
+ * WHOEVER ISSUES IT OWNS THE WORDS (D-#590). The owner's instruction: "I want the full
+ * body, I will paste. The system should not put anything." So `extraText` is not an
+ * extra paragraph for this kind — when it is present it IS the body, printed as
+ * written, and nothing generated appears above or below it.
+ *
+ * `confirmationBody` remains as the DRAFT the form offers, so the common case is still
+ * one click; it is text the issuer can accept, edit or replace entirely, rather than a
+ * fixed string in a renderer they cannot reach.
+ */
 export function confirmationBody(s: ILetterSnapshot): string {
   const salaryLine =
     s.salaryMode === "paid" && s.monthlySalary
@@ -332,7 +343,7 @@ export function buildContractSections(s: ILetterSnapshot): ContractSection[] {
   const probation =
     s.probationMonths && s.probationMonths > 0
       ? [
-          `যোগদানের তারিখ থেকে ${bnDigits(s.probationMonths)} (${bnDigits(s.probationMonths)}) মাস ` +
+          `যোগদানের তারিখ থেকে ${bnCount(s.probationMonths)} মাস ` +
             `প্রবেশনকাল হিসাবে গণ্য হইবে। এই সময়ের মধ্যে চুক্তিবহির্ভূত কিছু পরিলক্ষিত হইলে ` +
             `তাৎক্ষণিকভাবে চাকরিচ্যুত করা হইবে।`,
         ]
@@ -356,7 +367,7 @@ export function buildContractSections(s: ILetterSnapshot): ContractSection[] {
         "কর্মী প্রতি সপ্তাহে শুক্রবার ছুটি পাইবেন।",
         // The pool, not a per-contract figure: what the contract promises and what
         // আমার ছুটি shows must be the same number (owner's ruling, D-#586).
-        `বাৎসরিক ${bnDigits(s.annualLeaveDays)} (${bnDigits(s.annualLeaveDays)}) দিন ছুটি ভোগ করিতে পারিবেন।`,
+        `বাৎসরিক ${bnCount(s.annualLeaveDays)} দিন ছুটি ভোগ করিতে পারিবেন।`,
         "জরুরি প্রয়োজনে অতিরিক্ত ছুটির ক্ষেত্রে কর্তৃপক্ষের পূর্বানুমতি নিতে হইবে।",
         "অনুমতি ছাড়া অনুপস্থিত থাকিলে দৈনিক বেতন কর্তন এবং প্রয়োজনে ব্যবস্থা গ্রহণ করা হইবে।",
       ],
@@ -431,6 +442,12 @@ function renderContract(doc: PDFKit.PDFDocument, letter: IStaffLetter, width: nu
 
   // §২ first, then §৩ (hours + duties), then the rest — the contract's own order.
   const drawSection = (sec: ContractSection): void => {
+    // A heading must not sit at the foot of a page with its bullets overleaf, and a
+    // lone last bullet must not be orphaned on the next page away from its heading
+    // (D-#590 — §৮'s closing line landed alone above the signatures). 34pt per line is
+    // deliberately generous: over-reserving costs a page break, under-reserving costs
+    // a split section on a signed document.
+    keepTogether(doc, 22 + sec.lines.length * 34);
     mixedText(doc, sec.heading, { width });
     for (const line of sec.lines) {
       mixedText(doc, `• ${line}`, { width: width - 12, indent: 12, align: "justify", lineGap: 1.5 });
@@ -552,7 +569,13 @@ async function renderLetterToPdf(letter: IStaffLetter): Promise<Buffer> {
     }
 
     if (letter.kind === "confirmation") {
-      mixedText(doc, confirmationBody(s), { width, align: "justify", lineGap: 1.5 });
+      // The issuer's own text IS the body when they supplied one (D-#590); the
+      // generated paragraph is only the draft they started from.
+      mixedText(doc, letter.extraText?.trim() || confirmationBody(s), {
+        width,
+        align: "justify",
+        lineGap: 1.5,
+      });
       doc.moveDown(0.8);
     } else if (isCertificate) {
       mixedText(doc, certificateBody(s), { width, align: "justify", lineGap: 1.5 });
@@ -587,7 +610,9 @@ async function renderLetterToPdf(letter: IStaffLetter): Promise<Buffer> {
     }
 
     // The owner's optional extra paragraph — part of the snapshot, printed as written.
-    if (letter.extraText) {
+    // NOT for a confirmation letter: there the same text is the body itself (D-#590),
+    // and printing it twice was the first thing this change had to avoid.
+    if (letter.extraText && letter.kind !== "confirmation") {
       doc.moveDown(0.4);
       mixedText(doc, letter.extraText, { width, align: "justify", lineGap: 1.5 });
       doc.moveDown(0.6);
